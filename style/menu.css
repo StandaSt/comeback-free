@@ -1,0 +1,535 @@
+/* style/menu.css
+ * Menu (Dropdown + Sidebar) pro IS Comeback
+ * Verze: V13
+ * Aktualizace: 26.1.2026
+ * Počet řádků: 535
+ *
+ * BLOK: MENU
+ * Tento soubor styluje JEN prvky menu:
+ * - dropdown menu (horní, vodorovné, 3 úrovně)
+ * - sidebar menu (levé, s rozbalováním, 3. úroveň je overlay)
+ *
+ * CO TADY NENÍ:
+ * - žádné body/html/container/header/footer layout stránky (to je mimo menu)
+ *
+ * TIP: Když chceš doladit „profi“ vzhled, většinou stačí sáhnout do:
+ * - :root (proměnné)  → barvy, šířky, mezery
+ * - padding u tlačítek → výška tlačítek
+ * - border-radius      → „kulatost“
+ * - box-shadow         → hloubka panelů
+ */
+
+/* =========================================================
+   PROMĚNNÉ (CSS custom properties)
+   BLOK: MENU (globálně pro menu)
+   Použití:
+   - aby šly snadno měnit barvy/šířky bez přepisování selektorů
+   ========================================================= */
+:root{
+  /* šířka jednoho tlačítka 1. úrovně v dropdown režimu
+     Kde: dropdown (horní řada tlačítek) */
+  --dropdown-w: 128px;
+
+  /* šířka sidebaru (L1 tlačítka) – JEDINÝ zdroj pravdy
+     Kde: sidebar min-width tlačítek + hlavička (logo blok) přes var(--sidebar-w) */
+  --sidebar-w: calc(var(--dropdown-w) * 1.10);
+
+  /* mezera mezi „svislými“ panely v dropdownu (L2 → L3)
+     Kde: dropdown (aby L3 nebyla nalepená na L2) */
+  --dropdown-gap: 8px;
+
+  /* silnější/hlavní rámeček (tlačítka, panely)
+     Kde: dropdown + sidebar (tlačítka i panely) */
+  --border-strong: #dcdcdc;
+
+  /* základní pozadí tlačítek (default stav)
+     Kde: dropdown L1, sidebar L1, přepínač režimu */
+  --btn: #f2f2f2;
+
+  /* pozadí samotného menu (plochy pod tlačítky/panely)
+     Kde: dropdown bar + sidebar area */
+  --menu-bg: #fff;
+
+  /* aktivní stav (vybráno / rozbaleno)
+     Kde: dropdown L1 active, dropdown L2 active, sidebar L1 active, (L2 řeší JS i hover) */
+  --active-bg: #dfe9ff;
+  --active-bd: #5b7cff;
+  --active-tx: #1f3fbf;
+
+  /* hover pozadí (hlavně sidebar L2)
+     Kde: sidebar L2 hover */
+  --hover-bg: #f3f5f9;
+}
+
+/* =========================================================
+   OBAL MENU (společné)
+   BLOK: MENU
+   Kde: dropdown i sidebar
+   Selektor: .cb-menu je kořen menu v include souborech
+   ========================================================= */
+.cb-menu{
+  /* odsazení menu od okrajů content oblasti (mění „vzduch“ kolem menu) */
+  margin: 8px 20px;
+}
+
+/* =========================================================
+   HORNÍ LIŠTA (dropdown) – rozložení menu + přepínač režimu
+   BLOK: MENU / DROPDOWN
+   Kde: jen dropdown varianta, uvnitř .cb-menu-top
+   ========================================================= */
+.cb-menu .cb-menu-top{
+  display:flex;                  /* řádek: menu vlevo, přepínač vpravo */
+  gap:12px;                      /* mezera mezi levou a pravou částí */
+  align-items:flex-start;        /* horní zarovnání (tlačítka) */
+  justify-content:space-between; /* roztáhnout: levá část + pravá část */
+
+  /* kvůli absolutně umístěné ikoně přepínače vpravo nahoře */
+  position: relative;
+}
+
+/* =========================================================
+   PŘEPÍNAČ REŽIMU (obal tlačítka)
+   BLOK: MENU
+   ========================================================= */
+.cb-menu .cb-menu-switch{
+  flex:0 0 auto;               /* nepovol roztahování, drž si svou šířku */
+  margin-top:10px;             /* v sidebaru je to „odsazení od menu“ */
+}
+
+/* =========================================================
+   TLAČÍTKO PŘEPÍNAČE REŽIMU
+   BLOK: MENU
+   ========================================================= */
+.cb-menu .cb-menu-btn{
+  /* padding = „výška“ tlačítka přepínače (kdyby bylo moc velké/malé, uprav zde) */
+  padding:5px 10px;
+
+  border:1px solid var(--border-strong); /* rámeček tlačítka */
+  border-radius:10px;                   /* zaoblení */
+  background:var(--btn);                /* pozadí */
+  cursor:pointer;                       /* ručička */
+  font:inherit;                         /* písmo zděděné z rodiče */
+  color:#222;                           /* barva textu */
+}
+
+/* hover = lehce ztmavit pozadí */
+.cb-menu .cb-menu-btn:hover{background:#eaeaea}
+
+/* focus (klik myší) – bez outline */
+.cb-menu .cb-menu-btn:focus{outline:none}
+
+/* focus-visible (klávesnice) – jasný obrys */
+.cb-menu .cb-menu-btn:focus-visible{
+  outline:2px solid var(--active-bd);
+  outline-offset:2px;
+}
+
+/* =========================================================
+   PŘEPÍNAČ REŽIMU – POZICE IKON (jen CSS)
+   BLOK: MENU
+   ========================================================= */
+
+/* DROPDOWN: ikona vpravo nahoře */
+.cb-menu--dropdown .cb-menu-switch{
+  position:absolute;
+  top:5px;
+  right:5px;
+  margin-top:0;
+}
+
+/* SIDEBAR: nastavíme kotvu pro absolutní pozici ikony + rezervu dole */
+.cb-menu--sidebar .cb-sidebar-area{
+  position:relative;
+  padding-bottom:52px;         /* aby ikona nepřekryla poslední položky */
+  background: var(--menu-bg);
+}
+
+/* SIDEBAR: ikona vlevo dole */
+.cb-menu--sidebar .cb-menu-switch{
+  position:absolute;
+  left:5px;
+  bottom:5px;
+  margin-top:0;
+}
+
+/* ikona v tlačítku přepínače (velikost SVG/IMG) */
+.cb-menu .cb-menu-btn img{
+  display:block;
+  width:18px;   /* šířka ikony */
+  height:18px;  /* výška ikony */
+}
+
+/* =========================================================
+   SPOLEČNÉ OVERLAY PANELY (pro sidebar i dropdown)
+   BLOK: MENU
+   Pozn.: sidebar overlaye jsou vkládané do <body>, takže nesmí být vázané na .cb-menu--*
+   ========================================================= */
+
+/* L3 panel (používá dropdown i sidebar) */
+.dd-l3panel{
+  display:none;
+  border:1px solid var(--border-strong);
+  border-radius:10px;          /* zaoblení panelu */
+  background:#fff;
+  padding:8px;                 /* vnitřní odsazení panelu (ovlivní i výpočet top v JS) */
+
+  width:max-content;
+  max-width:min(520px,92vw);
+
+  box-shadow:0 10px 24px rgba(0,0,0,.10); /* „hloubka“ panelu */
+}
+.dd-l3panel.open{display:block}
+
+/* L2 panel pro sidebar (L2 doprava) */
+.sb-l2panel{
+  display:none;
+  border:1px solid var(--border-strong);
+  border-radius:10px;
+  background:#fff;
+  padding:6px;                 /* vnitřní odsazení L2 panelu (sidebar) */
+  width:max-content;
+  max-width:min(420px,70vw);
+
+  box-shadow:0 10px 24px rgba(0,0,0,.10);
+}
+.sb-l2panel.open{display:block}
+
+/* v L2 panelu chceme kompaktní seznam (sidebar) */
+.sb-l2panel .sb-l2{
+  border-top:0;
+  padding-top:0;
+  margin-top:0;
+}
+.sb-l2panel .sb-l2 + .sb-l2{
+  margin-top:0;                /* bez mezer mezi L2 */
+  padding-top:0;
+  border-top:0;
+}
+
+/* =========================================================
+   DROPDOWN – obecné
+   BLOK: MENU / DROPDOWN
+   ========================================================= */
+
+/* obal dropdown lišty */
+.cb-dropdown-bar{
+  border:0;
+  background:var(--menu-bg);
+  padding:0;
+
+  /* z-index kvůli panelům (aby nepřepadly pod ostatní obsah) */
+  position:relative;
+  z-index:10;
+}
+
+/* řada tlačítek 1. úrovně */
+.cb-menu--dropdown .dd-row{
+  display:flex;        /* tlačítka vedle sebe */
+  gap:8px;             /* mezera mezi tlačítky */
+  flex-wrap:wrap;      /* zalamování na další řádek */
+  align-items:flex-start;
+
+  /* rezerva vpravo, aby se tlačítka při zalomení netloukla s ikonou */
+  padding-right:52px;
+
+  /* odsazení shora (aby tlačítka seděla „na stejné lajně“) */
+  padding-top:5px;
+}
+
+/* obal jedné položky 1. úrovně (tlačítko + panel) */
+.cb-menu--dropdown .dd-l1{
+  position:relative;   /* panel 2. úrovně je absolutní vůči tomuhle */
+  width:var(--dropdown-w); /* šířka tlačítka 1. úrovně (dropdown) */
+}
+
+/* =========================================================
+   DROPDOWN – 1. ÚROVEŇ (L1)
+   BLOK: MENU / DROPDOWN
+   ========================================================= */
+.cb-menu--dropdown .dd-l1 > button{
+  width:100%;
+  text-align:left;
+
+  padding:5px 8px;      /* výška tlačítka (měň 1. číslo) a horizontální „vzduch“ (2. číslo) */
+  line-height:1.00;     /* výška řádku textu (když by se „rozjíždělo“ vertikální zarovnání) */
+
+  border-radius:10px;
+  border:1px solid var(--border-strong);
+  background:var(--btn);
+  cursor:pointer;
+
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:8px;
+
+  font:inherit;
+  font-weight:400;
+  color:#222;
+}
+
+.cb-menu--dropdown .dd-l1 > button:hover{background:#eaeaea}
+.cb-menu--dropdown .dd-l1 > button:focus{outline:none}
+.cb-menu--dropdown .dd-l1 > button:focus-visible{
+  outline:2px solid var(--active-bd);
+  outline-offset:2px;
+}
+
+/* aktivní L1 (zvolená/otevřená sekce) */
+.cb-menu--dropdown .dd-l1.active > button{
+  background:var(--active-bg);
+  border-color:var(--active-bd);
+  color:var(--active-tx);
+  font-weight:700;
+}
+
+/* =========================================================
+   DROPDOWN – PANEL 2. ÚROVNĚ (L2 PANEL)
+   BLOK: MENU / DROPDOWN
+   ========================================================= */
+.cb-menu--dropdown .dd-panel{
+  display:none;
+  position:absolute;
+  left:0;
+
+  top:calc(100% + 8px); /* mezera mezi tlačítkem L1 a panelem L2 */
+
+  border:1px solid var(--border-strong);
+  border-radius:10px;
+  background:#fff;
+  padding:8px;          /* vnitřní odsazení panelu (ovlivní šířku/výšku panelu) */
+
+  width:max-content;
+  max-width:min(520px, 92vw);
+
+  box-shadow:0 10px 24px rgba(0,0,0,.10);
+  z-index:50;
+}
+
+.cb-menu--dropdown .dd-l1.open .dd-panel{display:block}
+
+/* =========================================================
+   DROPDOWN – 2. ÚROVEŇ (L2)
+   BLOK: MENU / DROPDOWN
+   ========================================================= */
+.cb-menu--dropdown .dd-col2{
+  display:flex;
+  flex-direction:column;
+}
+
+.cb-menu--dropdown .dd-l2btn{
+  width:100%;
+  text-align:left;
+  font:inherit;
+
+  padding:5px 10px;      /* výška L2 tlačítka + horizontální odsazení */
+  border-radius:8px;
+
+  /* důležité: border je vždy přítomný (1px), jen je průhledný → nic „neskáče“ při hover */
+  border:1px solid transparent;
+
+  background:#fff;
+  cursor:pointer;
+  font-weight:400;
+  color:#222;
+
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+
+  white-space:nowrap;
+}
+
+/* V12: L2 hover má rámeček + modré zvýraznění (sjednocení se sidebar/ostatními úrovněmi) */
+.cb-menu--dropdown .dd-l2btn:hover{
+  background:var(--active-bg);
+  border-color:var(--active-bd);
+  color:var(--active-tx);
+}
+
+.cb-menu--dropdown .dd-l2btn:focus{outline:none}
+.cb-menu--dropdown .dd-l2btn:focus-visible{outline:2px solid var(--active-bd);outline-offset:2px}
+
+/* V12: aktivní L2 má rámeček (dřív byl border transparent → „bez rámečku“) */
+.cb-menu--dropdown .dd-l2btn.active{
+  background:var(--active-bg);
+  border-color:var(--active-bd);
+  color:var(--active-tx);
+}
+
+/* =========================================================
+   DROPDOWN – 3. ÚROVEŇ (L3 PANEL)
+   BLOK: MENU / DROPDOWN
+   ========================================================= */
+.cb-menu--dropdown .dd-l3panel{
+  position:absolute;
+
+  /* V12: malý odstup mezi L2 a L3 (aby nebyly „nalepené“) */
+  left:calc(100% + var(--dropdown-gap));
+
+  top:0;       /* top nastavuje JS podle zvolené položky v L2 (klesání) */
+  z-index:51;
+}
+
+/* jednotlivé položky L3 */
+.dd-l3{
+  display:block;
+  width:100%;
+  text-align:left;
+  font:inherit;
+
+  padding:2px 10px;      /* výška L3 tlačítka (1. číslo) + horizontální odsazení */
+  border-radius:8px;
+
+  /* border je vždy přítomný (1px), jen je průhledný → nic „neskáče“ při hover */
+  border:1px solid transparent;
+
+  background:#fff;
+  cursor:pointer;
+
+  line-height:0.95;      /* výška řádku textu (když by se rozjížděla výška položek) */
+
+  color:#222;
+  white-space:nowrap;
+}
+
+/* L3 hover má rámeček + modré zvýraznění */
+.dd-l3:hover{
+  background:var(--active-bg);
+  border-color:var(--active-bd);
+  color:var(--active-tx);
+}
+
+/* šipka v L1 (dropdown) */
+.chev{font-weight:700}
+
+/* =========================================================
+   SIDEBAR – obecné
+   BLOK: MENU / SIDEBAR
+   ========================================================= */
+.cb-sidebar-area{
+  border:0;
+  background:transparent;
+  padding:0;
+  overflow:visible;
+}
+
+/* šířka sidebaru podle obsahu (fit-content) */
+.cb-menu--sidebar #sidebar{
+  width:fit-content;
+  max-width:100%;
+}
+
+/* =========================================================
+   SIDEBAR – 1. ÚROVEŇ (L1)
+   BLOK: MENU / SIDEBAR
+   ========================================================= */
+.cb-menu--sidebar .sb-l1{
+  background:transparent;
+  margin-bottom:8px; /* mezera mezi L1 položkami */
+}
+
+.cb-menu--sidebar .sb-l1 > button{
+  width:100%;
+  text-align:left;
+
+  /* min-width = „šířka tlačítek“ v sidebaru (aby působily jednotně)
+     Pozn.: je to MINIMUM, reálná šířka se může zvětšit podle textu */
+  min-width: var(--sidebar-w);
+
+  /* padding = výška tlačítka (1. číslo) + horizontální odsazení (2. číslo) */
+  padding:6px 10px;
+
+  border:1px solid var(--border-strong);
+  border-radius:10px;
+  background:var(--btn);
+  cursor:pointer;
+  font:inherit;
+  font-weight:400;
+  color:#222;
+}
+
+.cb-menu--sidebar .sb-l1 > button:hover{background:#eaeaea}
+.cb-menu--sidebar .sb-l1 > button:focus{outline:2px solid var(--active-bd);outline-offset:2px}
+
+/* aktivní (otevřená) L1 */
+.cb-menu--sidebar .sb-l1.active > button{
+  background:var(--active-bg);
+  border-color:var(--active-bd);
+  color:var(--active-tx);
+  font-weight:700;
+}
+
+/* =========================================================
+   SIDEBAR – 2. ÚROVEŇ (L2) – tlačítka uvnitř overlay panelu
+   BLOK: MENU / SIDEBAR
+   Pozn.: wrapper .sb-l2 vytváří JS do overlay panelu (.sb-l2panel)
+   ========================================================= */
+.sb-l2 > button{
+  width:100%;
+  text-align:left;
+
+  /* padding = výška L2 tlačítka (1. číslo) + horizontální odsazení (2. číslo) */
+  padding:4px 10px;
+  line-height:1.00;
+
+  border:1px solid transparent; /* border je vždy přítomný → nesmí „skákat“ při hover/active */
+  background:#fff;
+  cursor:pointer;
+  font:inherit;
+  font-weight:400;
+  color:#222;
+  border-radius:10px;
+}
+
+/* L2 hover má rámeček + modré zvýraznění */
+.sb-l2 > button:hover{
+  background:var(--active-bg);
+  border-color:var(--active-bd);
+  color:var(--active-tx);
+}
+
+.sb-l2 > button:focus{outline:2px solid var(--active-bd);outline-offset:2px}
+
+/* aktivní L2 má rámeček stejně jako L1/L3 */
+.sb-l2 > button.active{
+  background:var(--active-bg);
+  border-color:var(--active-bd);
+  color:var(--active-tx);
+}
+
+/* =========================================================
+   MOBIL (do 900px)
+   BLOK: MENU – responsivní úpravy
+   ========================================================= */
+@media (max-width: 900px){
+  .cb-menu{margin:8px 12px;}
+  .cb-menu--dropdown .dd-l1{width:100%}
+  .cb-menu--sidebar #sidebar{width:100%;max-width:100%}
+  .cb-menu--dropdown .dd-panel{width:100%;max-width:100%}
+  .cb-menu--dropdown .dd-l3panel{
+    position:static;
+    margin-top:8px; /* mezera mezi L2 a L3 na mobilu (když jsou pod sebou) */
+    width:100%;
+    max-width:100%;
+    box-shadow:0 10px 24px rgba(0,0,0,.10);
+  }
+  .cb-menu .cb-menu-top{flex-direction:column;align-items:stretch;}
+  .cb-menu .cb-menu-switch{margin-top:0;}
+
+  .cb-menu--dropdown .cb-menu-switch{
+    position: static;
+    align-self: flex-end;
+    margin-top: 6px;
+  }
+  .cb-menu--dropdown .dd-row{
+    padding-right:0;
+    padding-top:0;
+  }
+  .cb-menu--sidebar .cb-sidebar-area{
+    padding-bottom:58px;
+  }
+}
+
+/* style/menu.css V13 – počet řádků: 535 – aktuální čas v ČR: 26.1.2026 */

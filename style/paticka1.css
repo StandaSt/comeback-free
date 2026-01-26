@@ -1,0 +1,52 @@
+/* style/paticka1.css
+ * Patička projektu IS Comeback
+ * Verze: V3
+ * Aktualizace: 22.1.2026
+ * Počet řádků: 52
+ */
+
+/* =========================
+   PATIČKA
+   ========================= */
+
+.footer {
+    margin-top: auto;
+    border-top: 1px solid #e5e5e5;
+    padding-top: 6px;
+    font-size: 11px;
+    color: #555;
+
+    background: transparent;         /* původní */
+    /* background: #4da3ff;                  /* DEBUG: patička = modrá */
+
+    border-radius: 6px;
+    padding: 6px 12px;
+}
+
+.footer-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: end;
+}
+
+.footer-left { text-align: left; }
+.footer-center { text-align: center; }
+.footer-right { text-align: right; }
+
+/* =========================
+   MOBIL
+   ========================= */
+
+@media (max-width: 700px) {
+    .footer-inner {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        text-align: center;
+    }
+    .footer-left,
+    .footer-right {
+        text-align: center;
+    }
+}
+
+/* style/paticka1.css – konec souboru */

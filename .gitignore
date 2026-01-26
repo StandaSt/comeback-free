@@ -1,0 +1,15 @@
+/vendor/
+/node_modules/
+/.env
+.env.*
+/temp/
+/tmp/
+/cache/
+/log/
+/logs/
+*.log
+/config/secrets.php
+.DS_Store
+Thumbs.db
+pomocne/
+csv/*.csv

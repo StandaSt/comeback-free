@@ -1,0 +1,303 @@
+/* style/global1.css
+ * Globální styly projektu IS Comeback
+ * Verze: V3
+ * Aktualizace: 22.1.2026
+ * Počet řádků: 292
+ */
+
+/* =========================
+   ZÁKLADNÍ NASTAVENÍ
+   ========================= */
+
+* { box-sizing: border-box; }
+
+html {
+    height: 100%;
+    scrollbar-gutter: stable;
+}
+
+body {
+    margin: 0;
+    min-height: 100%;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f4f6f8;
+    color: #333;
+}
+
+/* =========================
+   TRACE / DEBUG
+   ========================= */
+
+.trace-box,
+.trace-msg {
+    font: 12px/1.4 monospace;
+    margin: 4px 0;
+}
+
+/* =========================
+   TABULKY – OBECNÉ
+   ========================= */
+
+.table-wrap { overflow-x: auto; }
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 900px;
+}
+
+.table-fixed { table-layout: fixed; }
+
+.table th,
+.table td {
+    padding: 8px;
+    border-bottom: 1px solid #3f3092;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.table th {
+    background: #fafafa;
+    font-size: 13px;
+    color: #555;
+}
+
+/* =========================
+   FILTRY V TABULKÁCH
+   ========================= */
+
+.filter-row th {
+    background: #fff;
+    border-bottom: 1px solid #eee;
+}
+
+.filter-input {
+    width: 100%;
+    padding: 6px 8px;
+    font-size: 13px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* =========================
+   IKONY – GLOBÁLNÍ
+   ========================= */
+
+.icon-btn {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    text-decoration: none;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #f2f2f2;
+    color: #333;
+    cursor: pointer;
+    padding: 0;
+}
+
+.icon-btn:hover { background: #e0e0e0; }
+
+.icon-btn.disabled {
+    opacity: .5;
+    pointer-events: none;
+}
+
+/* =========================
+   TOOLTIP – GLOBÁLNÍ (cb-tip)
+   ========================= */
+
+/*
+ * Použití:
+ *   <a class="cb-tip" data-tip="Text tooltipu">...</a>
+ * Tooltip se zobrazí vlevo od prvku a trochu níž, aby nebyl zakrytý kurzorem
+ * a zároveň aby nemizel mimo okno (vpravo).
+ */
+
+.cb-tip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.cb-tip::after {
+    content: attr(data-tip);
+    position: absolute;
+
+    /* VLEVO od prvku */
+    right: calc(100% + 10px);
+
+    /* NÍŽ (oproti středu) */
+    top: 50%;
+    transform: translateY(-35%);
+
+    white-space: nowrap;
+    pointer-events: none;
+
+    opacity: 0;
+    visibility: hidden;
+
+    font: 12px/1.2 Arial, Helvetica, sans-serif;
+    color: #fff;
+    background: rgba(0,0,0,.85);
+    border-radius: 6px;
+    padding: 6px 8px;
+    z-index: 9999;
+}
+
+.cb-tip::before {
+    content: "";
+    position: absolute;
+
+    /* šipka mezi tooltipem a prvkem (míří doprava k ikoně) */
+    right: calc(100% + 4px);
+
+    /* stejná svislá pozice jako tooltip, taky trochu níž */
+    top: 50%;
+    transform: translateY(-35%);
+
+    pointer-events: none;
+
+    opacity: 0;
+    visibility: hidden;
+
+    border: 6px solid transparent;
+    border-left-color: rgba(0,0,0,.85); /* šipka doprava */
+    z-index: 9999;
+}
+
+.cb-tip:hover::after,
+.cb-tip:hover::before,
+.cb-tip:focus-visible::after,
+.cb-tip:focus-visible::before {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* =========================
+   ENTER + X – GLOBÁLNÍ
+   ========================= */
+
+.icon-enter {
+    width: 90px;
+    min-width: 90px;
+    height: 32px;
+    line-height: 32px;
+    padding: 0 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.icon-x {
+    width: 60px;
+    min-width: 60px;
+    height: 32px;
+    line-height: 32px;
+    padding: 0 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+/* =========================
+   PAGINACE
+   ========================= */
+
+.icon-btn.w44 { min-width: 44px; width: auto; }
+
+.icon-btn.page-current {
+    pointer-events: none;
+    font-weight: 700;
+    background: #dfe9ff;
+    border: 1px solid #5b7cff;
+    color: #1f3fbf;
+}
+
+.icon-btn.placeholder { visibility: hidden; }
+
+/* =========================
+   SPODNÍ OVLÁDACÍ LIŠTA
+   ========================= */
+
+.list-bottom {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.per-form {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    white-space: nowrap;
+}
+
+.per-form.right { justify-content: flex-end; }
+
+.per-select { min-width: 90px; }
+.blk-select { min-width: 160px; }
+
+/* =========================
+   ZÁKAZNÍCI – KONKRÉTNÍ TABULKA
+   ========================= */
+
+.zakaznici-table .c-id { width: 9ch; text-align: right; }
+.zakaznici-table .c-prijmeni { width: 16ch; text-align: right; padding-right: 15px; }
+.zakaznici-table .c-jmeno { width: 14ch; }
+.zakaznici-table .c-telefon { width: 15.5ch; text-align: right; }
+.zakaznici-table .c-email { width: 26ch; text-align: right; }
+.zakaznici-table .c-ulice { width: 26ch; }
+.zakaznici-table .c-mesto { width: 13ch; }
+.zakaznici-table .c-pobocka { width: 12ch; text-align: right; }
+.zakaznici-table .c-posl_obj { width: 13ch; text-align: right; }
+
+/* sudé sloupce – jen zákazníci */
+
+.zakaznici-table thead th:nth-child(even),
+.zakaznici-table tbody td:nth-child(even) {
+    background: #e0e0e0;
+}
+
+/* ENTER – kratší, jen pro zákazníky */
+
+.zakaznici-table .icon-enter {
+    width: 51px;
+    min-width: 51px;
+}
+
+/* ENTER + X ve filtru */
+
+.filter-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* malý křížek – jen zákazníci */
+
+.zakaznici-table .icon-x.small {
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    font-size: 18px;
+}
+
+/* =========================
+   MOBILNÍ ZOBRAZENÍ – jen globální prvky
+   ========================= */
+
+@media (max-width: 700px) {
+    .list-bottom { grid-template-columns: 1fr; justify-items: center; gap: 10px; }
+}
+
+/* style/global1.css – konec souboru */
