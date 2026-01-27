@@ -97,4 +97,4 @@ $cb_menu_mode = ($cb_menu_mode === 'sidebar') ? 'sidebar' : 'dropdown';
             <main>
 
 <?php
-/* includes/hlavicka.php V15 – konec souboru */
+/* includes/hlavicka.php V15 – konec souboru */ 
