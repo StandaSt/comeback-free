@@ -1,8 +1,8 @@
-/* style/menu.css * Verze: V18 * Aktualizace: 28.1.2026 * Počet řádků: 399 */
+/* style/menu.css * Verze: V19 * Aktualizace: 28.1.2026 * Počet řádků: 353 */
 
 /*
  * JEDINÝ CÍL TÉTO ÚPRAVY:
- * - L1 tlačítka v sidebaru zmodrají při hover i když nemají L2 (např. "Denní report").
+ * - ODSTRANIT všechno, co se týká 3. úrovně – kód i styly.
  * - nic dalšího.
  *
  * Pozn. (sjednocení ikon):
@@ -17,7 +17,6 @@
 :root{
   --dropdown-w: 128px;
   --sidebar-w: calc(var(--dropdown-w) * 1.10);
-  --dropdown-gap: 8px;
 
   --border-strong: #dcdcdc;
 
@@ -110,21 +109,8 @@
 }
 
 /* =========================================================
-   OVERLAY PANELY (pro sidebar i dropdown)
-   Pozn.: sidebar overlaye jsou vkládané do <body>
+   OVERLAY PANEL (pro sidebar) – L2 overlay je vkládaný do <body>
    ========================================================= */
-.dd-l3panel{
-  display:none;
-  border:1px solid var(--border-strong);
-  border-radius:10px;
-  background:#fff;
-  padding:8px;
-  width:max-content;
-  max-width:min(520px,92vw);
-  box-shadow:0 10px 24px rgba(0,0,0,.10);
-}
-.dd-l3panel.open{display:block}
-
 .sb-l2panel{
   display:none;
   border:1px solid var(--border-strong);
@@ -272,36 +258,6 @@
   color:var(--active-tx);
 }
 
-/* =========================================================
-   DROPDOWN – 3. ÚROVEŇ (L3 PANEL)
-   ========================================================= */
-.cb-menu--dropdown .dd-l3panel{
-  position:absolute;
-  left:calc(100% + var(--dropdown-gap));
-  top:0;
-  z-index:51;
-}
-
-.dd-l3{
-  display:block;
-  width:100%;
-  text-align:left;
-  font:inherit;
-  padding:2px 10px;
-  border-radius:8px;
-  border:1px solid transparent;
-  background:#fff;
-  cursor:pointer;
-  line-height:0.95;
-  color:#222;
-  white-space:nowrap;
-}
-.dd-l3:hover{
-  background:var(--active-bg);
-  border-color:var(--active-bd);
-  color:var(--active-tx);
-}
-
 .chev{font-weight:700}
 
 /* =========================================================
@@ -387,13 +343,6 @@
   .cb-menu--dropdown .dd-l1{width:100%}
   .cb-menu--sidebar #sidebar{width:100%;max-width:100%}
   .cb-menu--dropdown .dd-panel{width:100%;max-width:100%}
-  .cb-menu--dropdown .dd-l3panel{
-    position:static;
-    margin-top:8px;
-    width:100%;
-    max-width:100%;
-    box-shadow:0 10px 24px rgba(0,0,0,.10);
-  }
   .cb-menu .cb-menu-top{flex-direction:column;align-items:stretch;}
   .cb-menu .cb-menu-switch{margin-top:0;}
   .cb-menu--dropdown .cb-menu-switch{position: static;align-self: flex-end;margin-top: 6px;}
@@ -401,4 +350,4 @@
   .cb-menu--sidebar .cb-sidebar-area{padding-bottom:58px;}
 }
 
-/* style/menu.css * Verze: V18 * Aktualizace: 28.1.2026 * Počet řádků: 399 */
+/* style/menu.css * Verze: V19 * Aktualizace: 28.1.2026 * Počet řádků: 353 */
