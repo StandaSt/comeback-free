@@ -1,7 +1,5 @@
 <?php
-// includes/menu_s.php
-// Verze: V11
-// Aktualizace: 27.1.2026
+// includes/menu_s.php * Verze: V14 * Aktualizace: 28.1.2026 * Počet řádků: 430
 declare(strict_types=1);
 
 if (defined('COMEBACK_MENU_S_RENDERED')) return;
@@ -14,13 +12,28 @@ define('COMEBACK_MENU_S_RENDERED', true);
  * - L1 bez L2 je klikací (page)
  * - L2 hover otevře L3 overlay, jen když existuje
  * - L2 bez L3 je klikací (page)
+ *
+ * Sjednocení SVG ikon:
+ * - KAŽDÉ tlačítko, které obsahuje img/svg ikonu, má JEDINOU třídu: .ikona-svg
+ * - Přepínač režimu = .ikona-svg (bez dalších tříd).
+ *
+ * Chování jako dropdown:
+ * - při přejezdu z L1 na L2 se L2 nezavře hned (má krátké zpoždění)
+ * - zavření se ruší, pokud myš přejede na L2 overlay
  */
 ?>
 <div class="cb-menu cb-menu--sidebar">
   <div class="cb-sidebar-area">
     <div id="sidebar"></div>
+
     <div class="cb-menu-switch">
-      <button type="button" class="cb-menu-btn" id="cbMenuToDropdown" aria-label="Přepnout na dropdown">
+      <!-- HOME: JEDINÁ třída pro SVG tlačítko -->
+      <button type="button" class="ikona-svg" id="cbMenuHome" aria-label="Home">
+        <img src="<?= h(cb_url('img/icons/home.svg')) ?>" alt="">
+      </button>
+
+      <!-- Přepínač režimu: JEDINÁ třída pro SVG tlačítko -->
+      <button type="button" class="ikona-svg" id="cbMenuToDropdown" aria-label="Přepnout na dropdown">
         <img src="<?= h(cb_url('img/icons/dropdown.svg')) ?>" alt="">
       </button>
     </div>
@@ -40,6 +53,7 @@ if (!defined('COMEBACK_MENU_DATA_JS_INCLUDED')) {
 (function () {
   const MENU_RAW = window.MENU || [];
 
+  // Normalizace dat menu
   const MENU = (Array.isArray(MENU_RAW) ? MENU_RAW : [])
     .map(sec => ({
       key: String(sec.key || '').trim(),
@@ -66,7 +80,9 @@ if (!defined('COMEBACK_MENU_DATA_JS_INCLUDED')) {
   if (!sidebarEl) return;
 
   const btnToDropdown = document.getElementById('cbMenuToDropdown');
+  const btnHome = document.getElementById('cbMenuHome');
 
+  // Přepnutí režimu menu (jen změna parametru v URL)
   function setMenuModeInUrl(mode) {
     try {
       const u = new URL(window.location.href);
@@ -84,6 +100,7 @@ if (!defined('COMEBACK_MENU_DATA_JS_INCLUDED')) {
     });
   }
 
+  // Router: vždy přes index.php?page=...
   function goPage(page) {
     const p = String(page || '').trim();
     if (!p) return;
@@ -95,6 +112,13 @@ if (!defined('COMEBACK_MENU_DATA_JS_INCLUDED')) {
     } catch (e) {
       window.location.href = 'index.php?page=' + encodeURIComponent(p);
     }
+  }
+
+  if (btnHome) {
+    btnHome.addEventListener('click', (e) => {
+      e.preventDefault();
+      goPage('uvod');
+    });
   }
 
   const GAP = 8;
@@ -155,6 +179,23 @@ if (!defined('COMEBACK_MENU_DATA_JS_INCLUDED')) {
 
   function clearL2Active() {
     Array.from(l2Overlay.querySelectorAll('.sb-l2 > button')).forEach(b => b.classList.remove('active'));
+  }
+
+  // ===== Chování jako dropdown: krátké zpoždění zavření =====
+  const CLOSE_DELAY_MS = 180;
+  let closeTimer = null;
+  let currentL1 = null;
+
+  function cancelClose() {
+    if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
+  }
+
+  function scheduleClose() {
+    cancelClose();
+    closeTimer = setTimeout(() => {
+      closeAllSidebarL1();
+      currentL1 = null;
+    }, CLOSE_DELAY_MS);
   }
 
   function openSidebarL3(anchorBtnEl, items) {
@@ -229,6 +270,7 @@ if (!defined('COMEBACK_MENU_DATA_JS_INCLUDED')) {
 
       if (hasL3) {
         btn.addEventListener('mouseenter', () => {
+          cancelClose();
           clearL2Active();
           btn.classList.add('active');
           openSidebarL3(btn, g.level3);
@@ -237,6 +279,7 @@ if (!defined('COMEBACK_MENU_DATA_JS_INCLUDED')) {
         btn.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
+          cancelClose();
           clearL2Active();
           btn.classList.add('active');
           openSidebarL3(btn, g.level3);
@@ -244,6 +287,7 @@ if (!defined('COMEBACK_MENU_DATA_JS_INCLUDED')) {
         });
       } else {
         btn.addEventListener('mouseenter', () => {
+          cancelClose();
           clearL2Active();
           btn.classList.add('active');
           closeSidebarL3();
@@ -302,29 +346,41 @@ if (!defined('COMEBACK_MENU_DATA_JS_INCLUDED')) {
 
       if (hasL2) {
         l1.addEventListener('mouseenter', () => {
+          cancelClose();
           closeAllSidebarL1(l1);
           l1.classList.add('open');
           l1.classList.add('active');
+          currentL1 = l1;
           openSidebarL2(l1btn, sec);
+        });
+
+        l1.addEventListener('mouseleave', () => {
+          // stejné jako dropdown: neshodit hned, dej šanci dojet myší na L2 overlay
+          scheduleClose();
         });
 
         l1btn.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
+          cancelClose();
           const willOpen = !l1.classList.contains('open');
           closeAllSidebarL1(l1);
           if (willOpen) {
             l1.classList.add('open');
             l1.classList.add('active');
+            currentL1 = l1;
             openSidebarL2(l1btn, sec);
           } else {
             l1.classList.remove('open');
             l1.classList.remove('active');
             closeSidebarL2();
+            currentL1 = null;
           }
           l1btn.blur();
         });
       } else {
+        l1btn.addEventListener('mouseenter', cancelClose);
+
         l1btn.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -336,6 +392,19 @@ if (!defined('COMEBACK_MENU_DATA_JS_INCLUDED')) {
       l1.appendChild(l1btn);
       sidebarEl.appendChild(l1);
     });
+  }
+
+  function wireHoverCloseOnce() {
+    if (window.__COMEBACK_SIDEBAR_HOVER_WIRED__) return;
+    window.__COMEBACK_SIDEBAR_HOVER_WIRED__ = true;
+
+    // Když je myš nad L2 overlay, nikdy nezavírej (ruší timer).
+    l2Overlay.addEventListener('mouseenter', cancelClose);
+    l2Overlay.addEventListener('mouseleave', scheduleClose);
+
+    // Stejné pro L3 overlay (když by bylo zapnuté).
+    l3Overlay.addEventListener('mouseenter', cancelClose);
+    l3Overlay.addEventListener('mouseleave', scheduleClose);
   }
 
   function wireGlobalCloseOnce() {
@@ -351,13 +420,11 @@ if (!defined('COMEBACK_MENU_DATA_JS_INCLUDED')) {
   }
 
   renderSidebar();
+  wireHoverCloseOnce();
   wireGlobalCloseOnce();
 })();
 </script>
 
 <?php
-/* includes/menu_s.php
- * Verze: V11
- * Aktualizace: 27.1.2026
- */
+// includes/menu_s.php * Verze: V14 * Aktualizace: 28.1.2026 * Počet řádků: 430
 ?>

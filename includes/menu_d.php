@@ -1,7 +1,5 @@
 <?php
-// includes/menu_d.php
-// Verze: V8
-// Aktualizace: 27.1.2026
+// includes/menu_d.php * Verze: V10 * Aktualizace: 28.1.2026
 declare(strict_types=1);
 
 if (defined('COMEBACK_MENU_D_RENDERED')) return;
@@ -14,7 +12,11 @@ define('COMEBACK_MENU_D_RENDERED', true);
  * - L1 bez L2 je klikací (page)
  * - L2 hover otevře L3 jen když existuje
  * - L2 bez L3 je klikací (page)
- * - Home ikona vlevo jako první položka (čtverec řeší CSS)
+ * - Home ikona je jen SVG tlačítko (není to „L1 tlačítko“ se stylem)
+ *
+ * Sjednocení SVG ikon:
+ * - KAŽDÉ tlačítko, které obsahuje img/svg ikonu, má JEDINOU třídu: .ikona-svg
+ * - Styly L1/L2 tlačítek se na .ikona-svg NESMÍ aplikovat (řeší menu.css přes :not(.ikona-svg)).
  */
 ?>
 <div class="cb-menu cb-menu--dropdown">
@@ -23,7 +25,8 @@ define('COMEBACK_MENU_D_RENDERED', true);
       <div class="dd-row" id="dropdown"></div>
 
       <div class="cb-menu-switch">
-        <button type="button" class="cb-menu-btn" id="cbMenuToSidebar" aria-label="Přepnout na sidebar">
+        <!-- Přepínač režimu: JEDINÁ třída pro SVG tlačítko -->
+        <button type="button" class="ikona-svg" id="cbMenuToSidebar" aria-label="Přepnout na sidebar">
           <img src="<?= h(cb_url('img/icons/sidebar.svg')) ?>" alt="">
         </button>
       </div>
@@ -44,7 +47,7 @@ if (!defined('COMEBACK_MENU_DATA_JS_INCLUDED')) {
 (function () {
   const MENU_RAW = window.MENU || [];
 
-  // znormalizovat data (odstranit prázdné labely, prázdné levely, trim)
+  // Normalizace dat menu (trim, vyhození prázdných labelů apod.)
   const MENU = (Array.isArray(MENU_RAW) ? MENU_RAW : [])
     .map(sec => ({
       key: String(sec.key || '').trim(),
@@ -72,6 +75,7 @@ if (!defined('COMEBACK_MENU_DATA_JS_INCLUDED')) {
 
   const btnToSidebar = document.getElementById('cbMenuToSidebar');
 
+  // Přepnutí režimu menu (jen změna parametru v URL)
   function setMenuModeInUrl(mode) {
     try {
       const u = new URL(window.location.href);
@@ -89,14 +93,13 @@ if (!defined('COMEBACK_MENU_DATA_JS_INCLUDED')) {
     });
   }
 
-  // VŽDY přes router
+  // Router: vždy přes index.php?page=...
   function goPage(page) {
     const p = String(page || '').trim();
     if (!p) return;
 
     try {
       const u = new URL(window.location.href);
-      // zachovej menu=..., přepiš page
       u.searchParams.set('page', p);
       window.location.href = u.toString();
     } catch (e) {
@@ -192,10 +195,15 @@ if (!defined('COMEBACK_MENU_DATA_JS_INCLUDED')) {
       const l1btn = document.createElement('button');
       l1btn.type = 'button';
 
-      // HOME ikona
+      // HOME (ikona): stejné SVG tlačítko jako ostatní ikony v menu (JEDINÁ třída .ikona-svg)
       if (sec.icon) {
-        l1btn.classList.add('dd-homebtn');
-        l1btn.innerHTML = '<img class="dd-homeicon" src="' + sec.icon + '" alt="">';
+        l1.classList.add('dd-l1--icon'); // jen pro šířku/pozici wrapperu (aby ikona nebyla „půl metru“)
+        l1btn.classList.add('ikona-svg');
+        l1btn.innerHTML = '<img src="' + sec.icon + '" alt="">';
+        l1btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          goPage(sec.page);
+        });
       } else {
         l1btn.innerHTML =
           '<span>' + sec.label + '</span>' +
@@ -283,8 +291,8 @@ if (!defined('COMEBACK_MENU_DATA_JS_INCLUDED')) {
           if (willOpen) openL1(l1, panel, true);
           else closeOneL1(l1);
         });
-      } else {
-        // L1 bez L2: klik = page
+      } else if (!sec.icon) {
+        // L1 bez L2: klik = page (ale ne pro HOME ikonu – ta už má klik výše)
         l1btn.addEventListener('click', (e) => {
           e.stopPropagation();
           goPage(sec.page);
@@ -311,8 +319,5 @@ if (!defined('COMEBACK_MENU_DATA_JS_INCLUDED')) {
 </script>
 
 <?php
-/* includes/menu_d.php
- * Verze: V8
- * Aktualizace: 27.1.2026
- */
+// includes/menu_d.php * Verze: V10 * Aktualizace: 28.1.2026
 ?>
