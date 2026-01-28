@@ -1,9 +1,9 @@
 <?php
-// pages/prehledy.php V2 – počet řádků: 22 – 18.1.2026 11:47
+// pages/reporty_porovnani.php V2 – počet řádků: 22 – 18.1.2026 11:47
 declare(strict_types=1);
 
 /*
- * OBSAH STRÁNKY – Přehledy
+ * OBSAH STRÁNKY – reporty porovnani
  *
  * - pouze obsah stránky
  * - žádná hlavička, žádná patička
@@ -14,7 +14,7 @@ declare(strict_types=1);
 ?>
 
 <section class="card">
-    <p>místo pro text</p>
+    <p>Reporty porovnání</p>
 </section>
 <?php
-/* pages/prehledy.php V2 – počet řádků: 22 – 18.1.2026 11:47 */
+/* pages/reporty_porovnani.php V2 – počet řádků: 22 – 18.1.2026 11:47 */

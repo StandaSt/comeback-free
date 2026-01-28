@@ -1,11 +1,8 @@
-/* style/central1.css
- * Centrální blok (container + obsah) projektu IS Comeback
- * Verze: V6
- * Aktualizace: 25.1.2026
- * Počet řádků: 136
- */
-
-/* =========================
+/* style/central1.css * Verze: V7  * Aktualizace: 27.1.2026 12:20
+   Počet řádků: 136
+   Centrální blok (container + obsah) projektu IS Comeback
+ 
+ =========================
    KONTEJNER STRÁNKY
    BLOK: CENTRÁL – obal celé stránky
    ========================= */
@@ -13,124 +10,98 @@
 .container {
     max-width: 1200px;
     margin: 0 auto;
-
     background: #fff;
-
     /* padding: 0 0 20px; */         /* původní */
     padding: 0;                      /* změna: ať patička sedí úplně dole bez spodní mezery */
-
     border-radius: 6px;
-
     min-height: 100vh;
     display: flex;
     flex-direction: column;
 }
-
 /* =========================
    CENTRAL LAYOUT (MENU + CONTENT)
    BLOK: CENTRÁL – pouze rozložení
    ========================= */
-
 .cb-central {
     flex: 1;
     min-height: 0;
     display: flex;
 }
-
 /* dropdown: menu nahoře, content pod ním */
 .cb-central--dropdown {
     flex-direction: column;
 }
-
 /* sidebar: menu vlevo, content vpravo */
 .cb-central--sidebar {
     flex-direction: row;
     align-items: stretch;
 }
-
 /* =========================
    MENU BLOK (umístění v centrálu)
    BLOK: CENTRÁL / MENU
-   ========================= */
-
+   ======================== */
 .cb-central-menu {
     flex: 0 0 auto;
     background: transparent;
 }
-
 /* =========================
    CONTENT BLOK
    BLOK: CENTRÁL / CONTENT
    ========================= */
-
 .cb-central-content {
     flex: 1 1 auto;
     min-width: 0; /* důležité: aby se obsah mohl zmenšit vedle sidebaru */
     min-height: 0;
-
     /* změna: aby <main> a .card mohly zabrat dostupnou výšku */
     display: flex;
     flex-direction: column;
 }
-
 /* =========================
    OBSAH STRÁNKY – HLAVIČKA OBSAHU
    BLOK: CENTRÁL / CONTENT
    ========================= */
-
 .page-head {
     background: transparent;
-
     border-radius: 6px;
     padding: 6px 20px;
     margin: 0;
 }
-
 .page-head h2 {
     margin: 0 0 4px;
     font-size: 16px;
 }
-
 .page-meta {
     color:#666;
     font-size: 12px;
 }
-
 /* =========================
    MAIN
    BLOK: CENTRÁL / CONTENT
    ========================= */
-
 .cb-central-content main {
     flex: 1;
     display: flex;
     flex-direction: column;
     min-height: 0;
-
     background: transparent;
-
     border-radius: 6px;
     padding: 0;
     margin: 0;
 }
-
 /* =========================
    CARD – HLAVNÍ OBSAH
    BLOK: CENTRÁL / CONTENT
    ========================= */
-
 .cb-central-content .card {
     border: 1px solid #3f3092;
     border-radius: 6px;
     padding: 14px 20px;
-
     background: #fff;
-
     /* flex: 0 0 auto; */            /* původní (V4) */
-    flex: 1;                         /* změna: card má zabrat dostupnou výšku */
-
-    min-height: 0;
+    flex: 1;                         /* card má zabrat dostupnou výšku */
+    min-height: 550px;               /* NOVĚ: pevné minimum */
     overflow: auto;
 }
-
-/* style/central1.css – konec souboru */
+/* style/central1.css  * Verze: V7 * Aktualizace: 27.1.2026 12:20
+Počet řádků: 136
+konec souboru */

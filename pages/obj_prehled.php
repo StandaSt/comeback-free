@@ -1,9 +1,9 @@
 <?php
-// pages/statistiky.php V2 – počet řádků: 22 – 18.1.2026 11:38
+// pages/obj_prehled.php V1 – počet řádků: 22 – 18.1.2026 11:38
 declare(strict_types=1);
 
 /*
- * OBSAH STRÁNKY – Statistiky
+ * OBSAH STRÁNKY – obj_prehled
  *
  * - pouze obsah stránky
  * - žádná hlavička, žádná patička
@@ -15,7 +15,7 @@ declare(strict_types=1);
 
 
 <section class="card">
-    <p>místo pro text</p>
+    <p>Objednávky přehled</p>
 </section>
 <?php
-/* pages/statistiky.php V2 – počet řádků: 22 – 18.1.2026 11:38 */
+/* pages/obj_prehled.php V1 – počet řádků: 22 – 18.1.2026 11:38 */

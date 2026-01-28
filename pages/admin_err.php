@@ -1,5 +1,5 @@
 <?php
-// pages/admin_sekce.php V8 – počet řádků: 197 – aktuální čas v ČR: 19.1.2026 15:25
+// pages/admin_err.php V8 – počet řádků: 197 – aktuální čas v ČR: 19.1.2026 15:25
 declare(strict_types=1);
 
 /*
@@ -35,7 +35,7 @@ if ($cbIdUser > 0) {
     }
 }
 
-// echo '<div class="page-head"><h2>Admin sekce</h2></div>';
+// echo '<div class="page-head"><h2>Admin err</h2></div>';
 
 if (!$jeAdmin) {
     echo '<section class="card"><p>Nemáš oprávnění.</p></section>';
@@ -192,4 +192,4 @@ if ($sekce === 'chyby') {
 </section>
 
 <?php
-/* pages/admin_sekce.php V8 – počet řádků: 197 – aktuální čas v ČR: 19.1.2026 15:25 */
+/* pages/admin_err.php V8 – počet řádků: 197 – aktuální čas v ČR: 19.1.2026 15:25 */

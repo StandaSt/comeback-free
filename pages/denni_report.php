@@ -1,9 +1,9 @@
 <?php
-// pages/report.php V2 – počet řádků: 21 – 18.1.2026 11:45
+// pages/denni_report.php V1 – počet řádků: 21 – 18.1.2026 11:45
 declare(strict_types=1);
 
 /*
- * OBSAH STRÁNKY – report
+ * OBSAH STRÁNKY – denni_report
  * - pouze obsah stránky
  * - žádná hlavička, žádná patička
  * - žádné include globálního layoutu
@@ -13,7 +13,7 @@ declare(strict_types=1);
 ?>
 
 <section class="card">
-    <p>místo pro text</p>
+    <p>denní report</p>
 </section>
 <?php
-/* pages/report.php V2 – počet řádků: 21 – 18.1.2026 11:45 */
+/* pages/dennireport.php V1 – počet řádků: 21 – 18.1.2026 11:45 */
