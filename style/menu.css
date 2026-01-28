@@ -1,8 +1,8 @@
 /* style/menu.css
  * Menu (Dropdown + Sidebar) pro IS Comeback
- * Verze: V15
- * Aktualizace: 28.1.2026
- * Počet řádků: 453
+ * Verze: V14
+ * Aktualizace: 27.1.2026 15:21
+ * Počet řádků: 428
  *
  * BLOK: MENU
  * Tento soubor styluje JEN prvky menu:
@@ -147,31 +147,6 @@
   display:block;
   width:18px;
   height:18px;
-}
-
-/* =========================================================
-   HOME (ikona vlevo v dropdownu) – čtverec jako přepínač režimu
-   BLOK: MENU / DROPDOWN
-   Pozn.: Cílíme primárně na 1. položku v řádku; pokud máš v HTML/JS data-key="home",
-          funguje i druhé pravidlo.
-   ========================================================= */
-.cb-menu--dropdown .dd-row > .dd-l1:first-child,
-.cb-menu--dropdown .dd-row > .dd-l1[data-key="home"]{
-  width:auto;               /* zrušit 128px */
-  flex:0 0 auto;
-}
-
-.cb-menu--dropdown .dd-row > .dd-l1:first-child > button,
-.cb-menu--dropdown .dd-row > .dd-l1[data-key="home"] > button{
-  width:auto;               /* zrušit 100% */
-  padding:5px 10px;         /* stejné jako .cb-menu-btn */
-  justify-content:center;   /* icon uprostřed */
-}
-
-/* kdyby JS nechal v HOME tlačítku i text/šipku, schovat */
-.cb-menu--dropdown .dd-row > .dd-l1:first-child > button span,
-.cb-menu--dropdown .dd-row > .dd-l1[data-key="home"] > button span{
-  display:none;
 }
 
 /* =========================================================
@@ -450,4 +425,4 @@
   .cb-menu--sidebar .cb-sidebar-area{padding-bottom:58px;}
 }
 
-/* style/menu.css V15 – Aktualizace: 28.1.2026 – Počet řádků: 453 */
+/* style/menu.css V14 – Aktualizace: 27.1.2026 15:21 – Počet řádků: 428 */
