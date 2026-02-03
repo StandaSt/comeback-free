@@ -1,52 +1,53 @@
-/* style/paticka1.css
- * Patička projektu IS Comeback
- * Verze: V3
- * Aktualizace: 22.1.2026
- * Počet řádků: 52
- */
+/* style/paticka1.css * Verze: V5 * Aktualizace: 2.2.2026 */
 
 /* =========================
    PATIČKA
    ========================= */
 
-.footer {
-    margin-top: auto;
-    border-top: 1px solid #e5e5e5;
-    padding-top: 6px;
-    font-size: 11px;
-    color: #555;
+.footer {                                   /* hlavní obal patičky */
+    margin-top: auto;                       /* vytlačí patičku dolů (flex layout) */
+    border-top: 1px solid #e5e5e5;          /* horní oddělovací linka */
+    padding-top: 6px;                       /* horní vnitřní odsazení */
+    font-size: 11px;                        /* velikost písma v patičce */
+    color: #555;                            /* barva textu */
+    background: #97d8f1;         /* pozadí */
+    border-radius: 6px;                     /* zaoblení rohů */
+    padding: 6px 12px;                      /* vnitřní odsazení (přepíše padding-top) */
+}                                           /* konec .footer */
 
-    background: transparent;         /* původní */
-    /* background: #4da3ff;                  /* DEBUG: patička = modrá */
+.footer-inner {                             /* vnitřní řádek patičky (3 sloupce) */
+    display: grid;                          /* použije CSS grid (mřížku) */
+    grid-template-columns: 1fr 1fr 1fr;     /* 3 stejné sloupce */
+    align-items: end;                       /* zarovnání obsahu dolů */
+}                                           /* konec .footer-inner */
 
-    border-radius: 6px;
-    padding: 6px 12px;
-}
+.footer-left { 
+    text-align: left;                        /* levý sloupec zarovnat vlevo */
+}         
 
-.footer-inner {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    align-items: end;
-}
+.footer-center { 
+    text-align: center;                     /* střední sloupec zarovnat na střed */
+}      
 
-.footer-left { text-align: left; }
-.footer-center { text-align: center; }
-.footer-right { text-align: right; }
+.footer-right { 
+    text-align: right;                       /* pravý sloupec zarovnat vpravo */
+}       
 
 /* =========================
    MOBIL
    ========================= */
 
-@media (max-width: 700px) {
-    .footer-inner {
-        grid-template-columns: 1fr;
-        gap: 8px;
-        text-align: center;
-    }
-    .footer-left,
-    .footer-right {
-        text-align: center;
-    }
-}
+@media (max-width: 700px) {                 /* pravidla pro obrazovky do 700px */
+    .footer-inner {                         /* v mobilu: vnitřní řádek patičky */
+        grid-template-columns: 1fr;         /* 1 sloupec (pod sebe) */
+        gap: 8px;                           /* mezera mezi řádky */
+        text-align: center;                 /* výchozí zarovnání textu na střed */
+    }                                       /* konec .footer-inner v @media */
+    .footer-left,                           /* levý sloupec v mobilu */
+    .footer-right {                         /* pravý sloupec v mobilu */
+        text-align: center;                 /* zarovnat na střed */
+    }                                       /* konec .footer-left, .footer-right v @media */
+}                                           /* konec @media */
 
-/* style/paticka1.css – konec souboru */
+/* style/paticka1.css * Verze: V5 * Aktualizace: 2.2.2026 * Počet řádků: 56
+   konec souboru */

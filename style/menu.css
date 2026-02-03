@@ -1,14 +1,15 @@
-/* style/menu.css * Verze: V19 * Aktualizace: 28.1.2026 * Počet řádků: 353 */
+/* style/menu.css * Verze: V22 * Aktualizace: 29.1.2026 * Počet řádků:  (doplníš po vložení) */
 
 /*
- * JEDINÝ CÍL TÉTO ÚPRAVY:
- * - ODSTRANIT všechno, co se týká 3. úrovně – kód i styly.
- * - nic dalšího.
+ * CÍL:
+ * - SVG tlačítka (HOME + přepínač režimu) mít mimo renderované menu a správně je rozmístit:
+ *   - dropdown: HOME vlevo od menu, přepínač vpravo
+ *   - sidebar: tlačítka pod menu (v běžném toku)
+ * - vždy ukázat jen správný přepínač (dropdown->sidebar / sidebar->dropdown)
  *
  * Pozn. (sjednocení ikon):
  * - všechna tlačítka s SVG/IMG ikonou mají JEDINOU třídu: .ikona-svg
- * - aby se nic „nepřepisovalo“, styly pro L1/L2 tlačítka jsou psané tak,
- *   že se na .ikona-svg nikdy neaplikují (přes :not(.ikona-svg)).
+ * - styly pro L1/L2 tlačítka se na .ikona-svg nikdy neaplikují (přes :not(.ikona-svg)).
  */
 
 /* =========================================================
@@ -32,7 +33,6 @@
 
 /* =========================================================
    SPOLEČNÁ IKONA (SVG/IMG) – jednotná třída pro ikony v menu
-   Pozn.: třída je obecná (ne jen pod .cb-menu), aby šla použít i jinde.
    ========================================================= */
 .ikona-svg{
   width:30px;
@@ -67,46 +67,73 @@
 .cb-menu{ margin: 5px 20px 10px; }
 
 /* =========================================================
-   HORNÍ LIŠTA (dropdown) – rozložení menu + přepínač režimu
+   DROPDOWN: rozložení (HOME vlevo, menu uprostřed, switch vpravo)
    ========================================================= */
-.cb-menu .cb-menu-top{
-  display:flex;
+.cb-menu--dropdown .cb-menu-top{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
   gap:12px;
-  align-items:flex-start;
-  justify-content:space-between;
-  position: relative;
+  align-items:center; /* změna: ne "start", ale stejná výška jako L1 */
+  position:relative;
 }
+
+/*
+  KRITICKÉ:
+  .cb-menu-switch je přímý potomek .cb-menu-top (grid),
+  ale jeho děti (.cb-svg-home/.cb-svg-switch) chceme rozložit do gridu.
+  Proto musí obal zmizet => display: contents.
+  !important je schválně, aby to nic nepřebilo.
+*/
+.cb-menu--dropdown .cb-menu-top > .cb-menu-switch{
+  display:contents !important;
+}
+
+.cb-menu--dropdown .cb-svg-home{ grid-column:1; }
+.cb-menu--dropdown .dd-row{ grid-column:2; }
+.cb-menu--dropdown .cb-svg-switch{ grid-column:3; }
+
+/* v dropdownu: zarovnání ikon do stejné výšky jako L1 */
+.cb-menu--dropdown .cb-svg-home,
+.cb-menu--dropdown .cb-svg-switch{
+  margin-top:0;
+  display:flex;
+  gap:8px;
+  align-items:center;
+      background: #a556ee;   /* barva pro hledání chyby  */
+}
+
+/* v dropdownu zobrazit jen přepnutí NA sidebar */
+.cb-menu--dropdown #cbMenuToDropdown{ display:none; }
+.cb-menu--dropdown #cbMenuToSidebar{ display:inline-flex; }
 
 /* =========================================================
-   PŘEPÍNAČ REŽIMU (obal)
+   SIDEBAR: tlačítka pod menu (běžný tok, ne absolutně)
    ========================================================= */
-.cb-menu .cb-menu-switch{
-  flex:0 0 auto;
-  margin-top:10px;
-}
-
-/* DROPDOWN: ikona vpravo nahoře */
-.cb-menu--dropdown .cb-menu-switch{
-  position:absolute;
-  top:2px;
-  right:5px;
-  margin-top:0;
-}
-
-/* SIDEBAR: kotva pro absolutní pozici ikony + rezerva dole */
 .cb-menu--sidebar .cb-sidebar-area{
   position:relative;
-  padding-bottom:52px;
-  background: var(--menu-bg);
+  background: var(--menu-bg);   
+  /* background: #16df27;   zelená pro editaci */
+  padding-bottom:0;
 }
 
-/* SIDEBAR: ikona vlevo dole */
 .cb-menu--sidebar .cb-menu-switch{
-  position:absolute;
-  left:5px;
-  bottom:5px;
-  margin-top:0;
+  margin-top:10px;
+  display:flex;
+  gap:8px;
+  align-items:center;
 }
+
+/* uvnitř lišty: home vlevo, switch vpravo */
+.cb-menu--sidebar .cb-svg-home{ flex:0 0 auto; }
+.cb-menu--sidebar .cb-svg-switch{
+  flex:0 0 auto;
+  display:flex;
+  gap:8px;
+}
+
+/* v sidebaru zobrazit jen přepnutí NA dropdown */
+.cb-menu--sidebar #cbMenuToSidebar{ display:none; }
+.cb-menu--sidebar #cbMenuToDropdown{ display:inline-flex; }
 
 /* =========================================================
    OVERLAY PANEL (pro sidebar) – L2 overlay je vkládaný do <body>
@@ -131,7 +158,7 @@
    ========================================================= */
 .cb-dropdown-bar{
   border:0;
-  background:var(--menu-bg);
+  background:var(--menu-bg); 
   padding:0;
   position:relative;
   z-index:10;
@@ -142,8 +169,9 @@
   gap:8px;
   flex-wrap:wrap;
   align-items:flex-start;
-  padding-right:52px;
+  padding-right:0;
   padding-top:0;
+  background: #86ee8e;   /* barva jsem pro hladání chyby  */
 }
 
 /* obal jedné položky 1. úrovně */
@@ -152,14 +180,8 @@
   width:var(--dropdown-w);
 }
 
-/* HOME (ikona) nesmí mít šířku jako běžné L1 položky */
-.cb-menu--dropdown .dd-l1.dd-l1--icon{
-  width:auto;
-}
-
 /* =========================================================
    DROPDOWN – 1. ÚROVEŇ (L1)
-   DŮLEŽITÉ: styl L1 se NESMÍ aplikovat na .ikona-svg
    ========================================================= */
 .cb-menu--dropdown .dd-l1 > button:not(.ikona-svg){
   width:100%;
@@ -182,17 +204,13 @@
   font-weight:400;
   color:#222;
 }
-
-/* HOVER L1: vždy "modrý" (i když L1 nemá L2) */
 .cb-menu--dropdown .dd-l1 > button:not(.ikona-svg):hover{
   background:var(--active-bg);
   border-color:var(--active-bd);
   color:var(--active-tx);
 }
-
 .cb-menu--dropdown .dd-l1 > button:not(.ikona-svg):focus{outline:none}
 .cb-menu--dropdown .dd-l1 > button:not(.ikona-svg):focus-visible{outline:2px solid var(--active-bd);outline-offset:2px}
-
 .cb-menu--dropdown .dd-l1.active > button:not(.ikona-svg){
   background:var(--active-bg);
   border-color:var(--active-bd);
@@ -288,14 +306,11 @@
   font-weight:400;
   color:#222;
 }
-
-/* HOVER L1: vždy "modrý" (i když L1 nemá L2) */
 .cb-menu--sidebar .sb-l1 > button:hover{
   background:var(--active-bg);
   border-color:var(--active-bd);
   color:var(--active-tx);
 }
-
 .cb-menu--sidebar .sb-l1 > button:focus{outline:2px solid var(--active-bd);outline-offset:2px}
 .cb-menu--sidebar .sb-l1.active > button{
   background:var(--active-bg);
@@ -340,14 +355,36 @@
    ========================================================= */
 @media (max-width: 900px){
   .cb-menu{margin:8px 12px;}
+
+  /* dropdown: na mobilu pod sebe */
+  .cb-menu--dropdown .cb-menu-top{
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:8px;
+  }
+
+  /* na mobilu nechceme contents */
+  .cb-menu--dropdown .cb-menu-top > .cb-menu-switch{
+    display:flex !important;
+    justify-content:space-between;
+    align-items:center;
+    gap:8px;
+  }
+
+  .cb-menu--dropdown .cb-svg-home,
+  .cb-menu--dropdown .cb-svg-switch{
+    margin-top:0;
+
+  }
+  .cb-menu--dropdown .cb-svg-switch{
+    justify-content:flex-end;
+  }
+
   .cb-menu--dropdown .dd-l1{width:100%}
   .cb-menu--sidebar #sidebar{width:100%;max-width:100%}
   .cb-menu--dropdown .dd-panel{width:100%;max-width:100%}
-  .cb-menu .cb-menu-top{flex-direction:column;align-items:stretch;}
-  .cb-menu .cb-menu-switch{margin-top:0;}
-  .cb-menu--dropdown .cb-menu-switch{position: static;align-self: flex-end;margin-top: 6px;}
-  .cb-menu--dropdown .dd-row{padding-right:0;padding-top:0;}
-  .cb-menu--sidebar .cb-sidebar-area{padding-bottom:58px;}
 }
 
-/* style/menu.css * Verze: V19 * Aktualizace: 28.1.2026 * Počet řádků: 353 */
+/* style/menu.css * Verze: V22 * Aktualizace: 29.1.2026
+   konec souboru */

@@ -1,7 +1,7 @@
 /* style/hlavicka1.css
  * Hlavička projektu IS Comeback
- * Verze: V31
- * Aktualizace: 27.1.2026 14:58
+ * Verze: V32
+ * Aktualizace: 29.1.2026
  * Počet řádků: 198
  */
 
@@ -16,7 +16,7 @@
   align-items:center;
 
   height:100px;
-  background:#fff;
+  background:#fdecec; /* pastelově červená */
   border-radius:6px;
 
   /* zarovnání na card + nad sidebar */
@@ -196,8 +196,8 @@
 }
 
 /* style/hlavicka1.css
- * Verze: V31
- * Aktualizace: 27.1.2026 14:58
+ * Verze: V32
+ * Aktualizace: 29.1.2026
  * Počet řádků: 198
  * konec souboru
  */
