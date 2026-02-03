@@ -15,16 +15,16 @@ define('COMEBACK_MENU_D_RENDERED', true);
  * - variantu určuje $CB_MENU_VARIANTA = 'dropdown'
  */
 ?>
-<div class="cb-menu cb-menu--dropdown">
-  <div class="cb-dropdown-bar">
-    <div class="cb-menu-top">
+<div class="menu menu-dropdown">
+  <div class="menu-bar">
+    <div class="menu-top">
 
       <?php
       $CB_MENU_VARIANTA = 'dropdown';
       require __DIR__ . '/tlacitka_svg.php';
       ?>
 
-      <div class="dd-row" id="dropdown"></div>
+      <div class="menu-row" id="dropdown"></div>
 
     </div>
   </div>
@@ -55,7 +55,7 @@ if (!defined('COMEBACK_MENU_OBSLUHA_JS_INCLUDED')) {
 
   // SVG tlačítka
   const btnHome = document.getElementById('cbMenuHome');
-  const btnToSidebar = document.getElementById('cbMenuToSidebar');
+  const btnToSidebar = document.getElementById('menuToSidebar');
 
   if (btnHome) {
     btnHome.addEventListener('click', (e) => {

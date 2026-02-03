@@ -1,5 +1,5 @@
 <?php
-// includes/hlavicka.php V15 – počet řádků: 100 – aktuální čas v ČR: 22.1.2026
+// includes/hlavicka.php  * Verze: V16 * Aktualizace: 2.2.2026 * Počet řádků: 102
 declare(strict_types=1);
 
 if (defined('COMEBACK_HEADER_RENDERED')) {
@@ -29,7 +29,8 @@ $cb_menu_mode = ($cb_menu_mode === 'sidebar') ? 'sidebar' : 'dropdown';
     <link rel="stylesheet" href="<?= h(cb_url('style/hlavicka1.css')) ?>">
     <link rel="stylesheet" href="<?= h(cb_url('style/central1.css')) ?>">
     <link rel="stylesheet" href="<?= h(cb_url('style/paticka1.css')) ?>">
-    <link rel="stylesheet" href="<?= h(cb_url('style/menu.css')) ?>">
+    <link rel="stylesheet" href="<?= h(cb_url('style/menu1.css')) ?>">
+    <link rel="stylesheet" href="<?= h(cb_url('style/ikony_svg1.css')) ?>">
 </head>
 <body>
 
@@ -44,30 +45,34 @@ $cb_menu_mode = ($cb_menu_mode === 'sidebar') ? 'sidebar' : 'dropdown';
             </a>
         </div>
 
-        <!-- PRAVÁ ČÁST: 4 BLOKY (3× technické údaje + 1× login) -->
-        <div class="header-right">
+        <!-- CENTRÁLNÍ ČÁST: 3 TECH BLOKY -->
+        <div class="header-central">
 
-            <div class="hr-col hc-col">
+            <div class="hc-col hc-col">
                 <div class="hc-row"><span class="hc-label">Server:</span><span class="hc-value">cosi.cz</span></div>
                 <div class="hc-row"><span class="hc-label">Prostředí:</span><span class="hc-value"><?= h($PROSTREDI) ?></span></div>
                 <div class="hc-row"><span class="hc-label">DB:</span><span class="hc-value">OK</span></div>
                 <div class="hc-row"><span class="hc-label">Dotazy:</span><span class="hc-value">123</span></div>
             </div>
 
-            <div class="hr-col hc-col">
+            <div class="hc-col hc-col">
                 <div class="hc-row"><span class="hc-label">Aktualizace:</span><span class="hc-value">22.1.2026 14:30</span></div>
                 <div class="hc-row"><span class="hc-label">Cache:</span><span class="hc-value">zapnuta</span></div>
                 <div class="hc-row"><span class="hc-label">Verze IS:</span><span class="hc-value">DEV</span></div>
                 <div class="hc-row"><span class="hc-label">Build:</span><span class="hc-value">---</span></div>
             </div>
 
-            <div class="hr-col hc-col">
+            <div class="hc-col hc-col">
                 <div class="hc-row"><span class="hc-label">API:</span><span class="hc-value">---</span></div>
                 <div class="hc-row"><span class="hc-label">DB host:</span><span class="hc-value">---</span></div>
                 <div class="hc-row"><span class="hc-label">PHP:</span><span class="hc-value"><?= h(PHP_VERSION) ?></span></div>
                 <div class="hc-row"><span class="hc-label">Pozn.:</span><span class="hc-value">---</span></div>
             </div>
 
+        </div>
+
+        <!-- PRAVÁ ČÁST: LOGIN -->
+        <div class="header-right">
             <div class="hr-col hr-login">
                 <?php
                 $login = __DIR__ . '/login_form.php';
@@ -76,14 +81,13 @@ $cb_menu_mode = ($cb_menu_mode === 'sidebar') ? 'sidebar' : 'dropdown';
                 }
                 ?>
             </div>
-
         </div>
 
     </div>
 
     <!-- CENTRAL -->
-    <div class="cb-central cb-central--<?= h($cb_menu_mode) ?>">
-        <div class="cb-central-menu">
+    <div class="central menu-<?= h($cb_menu_mode) ?>">
+        <div class="central-menu">
             <?php
             if ($cb_menu_mode === 'sidebar') {
                 require_once __DIR__ . '/menu_s.php';
@@ -93,8 +97,9 @@ $cb_menu_mode = ($cb_menu_mode === 'sidebar') ? 'sidebar' : 'dropdown';
             ?>
         </div>
 
-        <div class="cb-central-content">
+        <div class="central-content">
             <main>
-
 <?php
-/* includes/hlavicka.php V15 – konec souboru */ 
+// includes/hlavicka.php  * Verze: V16 
+// Aktualizace: 2.2.2026 * Počet řádků: 102 
+// * konec souboru

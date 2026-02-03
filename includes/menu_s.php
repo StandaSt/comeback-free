@@ -15,8 +15,8 @@ define('COMEBACK_MENU_S_RENDERED', true);
  * - variantu určuje $CB_MENU_VARIANTA = 'sidebar'
  */
 ?>
-<div class="cb-menu cb-menu--sidebar">
-  <div class="cb-sidebar-area">
+<div class="menu menu-sidebar">
+  <div class="menu-area">
     <div id="sidebar"></div>
 
     <?php
@@ -51,7 +51,7 @@ if (!defined('COMEBACK_MENU_OBSLUHA_JS_INCLUDED')) {
 
   // SVG tlačítka
   const btnHome = document.getElementById('cbMenuHome');
-  const btnToDropdown = document.getElementById('cbMenuToDropdown');
+  const btnToDropdown = document.getElementById('menuToDropdown');
 
   if (btnHome) {
     btnHome.addEventListener('click', (e) => {

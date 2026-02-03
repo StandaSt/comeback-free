@@ -1,5 +1,7 @@
 <?php
-// includes/login_form.php V17 – počet řádků: 87 – aktuální čas v ČR: 26.1.2026
+/* includes/login_form.php * Verze: V18 * 
+   Aktualizace: 2.2.2026  */
+
 declare(strict_types=1);
 
 /*
@@ -46,10 +48,10 @@ if (is_array($cbUser) && !empty($cbUser['email'])) {
     <div class="login-status">
         <div class="login-user">
             Přihlášen: <strong><?= h($displayName) ?></strong>
-            <a class="login-logout cb-tip"
+            <a class="login-logout cb-tip ikona-svg"
                href="<?= h(cb_url('lib/logout.php')) ?>"
                data-tip="Odhlásit">
-                <img class="login-logout-icon" src="<?= h(cb_url('img/icons/exit.svg')) ?>" alt="Odhlásit">
+                <img src="<?= h(cb_url('img/icons/exit.svg')) ?>" alt="Odhlásit">
             </a>
         </div>
 
@@ -69,7 +71,7 @@ if (is_array($cbUser) && !empty($cbUser['email'])) {
                 <div class="login-help">Použij stejné přihlašovací údaje jako v Plánování směn</div>
             </div>
 
-            <button type="submit" class="login-submit" aria-label="Přihlásit">
+            <button type="submit" class="ikona-svg" aria-label="Přihlásit">
                 <img src="<?= h(cb_url('img/icons/login.svg')) ?>" alt="">
             </button>
         </div>
@@ -84,4 +86,6 @@ if ($cbFlash !== '' && $cbFlash !== 'Přihlášení OK') {
     <?php
 }
 
-/* includes/login_form.php V17 – konec souboru – počet řádků: 87 – aktuální čas v ČR: 26.1.2026 */
+/* includes/login_form.php * Verze: V18 * 
+   Aktualizace: 2.2.2026 * Počet řádků: 91
+   konec souboru */

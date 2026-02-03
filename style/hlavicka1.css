@@ -1,203 +1,174 @@
-/* style/hlavicka1.css
- * Hlavička projektu IS Comeback
- * Verze: V32
- * Aktualizace: 29.1.2026
- * Počet řádků: 198
- */
+/* style/hlavicka1.css * Verze: V35 * Aktualizace: 2.2.2026 */
 
 /* =========================
    HLAVIČKA
    ========================= */
 
-.header{
-  display:grid;
-  grid-template-columns:calc(var(--dropdown-w) * 1.10) 1fr; /* logo | 4 bloky */
-  column-gap:20px; /* mezera jako sidebar ↔ card */
-  align-items:center;
-
-  height:100px;
-  background:#fdecec; /* pastelově červená */
-  border-radius:6px;
-
-  /* zarovnání na card + nad sidebar */
-  padding:0 10px 0 20px;
+.header{                                                   /* začátek definice stylu pro blok .header */
+  display:grid;                                            /* zapne CSS grid (mřížku) */
+  grid-template-columns:90px 1fr 240px;                    /* sloupce: logo | střed | pravý blok */
+  column-gap:0px;                                         /* mezera mezi sloupci gridu */
+  align-items:center;                                      /* svislé zarovnání obsahu sloupců na střed */
+  background: #97d8f1;                                  /* pozadí */
+  border-radius:6px;                                       /* zaoblení rohů hlavičky */
+  padding:0;                                               /* vnitřní odsazení hlavičky */
+  margin:0;                                                /* vnější odsazení hlavičky */
 }
 
 /* =========================
    LOGO
    ========================= */
 
-.header-left{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:0 20px; /* aby logo nebylo nalepené */
-  min-width:0;
+.header-left{                                              
+  display:flex;                                            /* zapne flex (řádkové skládání prvků) */
+  align-items:center;                                      /* svislé zarovnání obsahu na střed */
+  justify-content:center;                                  /* vodorovné zarovnání obsahu na střed */
+  padding:3px;                                             /* vnitřní odsazení (uvnitř rámečku) */
+  margin:0px;                                              /* 3 vnější odsazení (mimo rámeček) */
+  /* border:2px solid #000;                                 /* černý rámeček 2px */
+  /* background:#5e75db;                                    /* barva pozadí (kontrolní) */
+  height:88px;    /* standa kontrola */                    /* pevná výška bloku loga (komentář ponechán) */
 }
-.header-left img{max-height:80px;display:block;}
+
+.header-left img{
+  max-height:80px;      /* max výška obrázku  */
+  display:block;        /*  odstranění inline mezery */
+  border-radius:8px;                                       /* zaoblení rohů karty */
+}          
 
 /* =========================
-   4 BLOKY (3× tech + login)
+   CENTRÁL – 3 TECH BLOKY
    ========================= */
 
-.header-right{
-  display:grid;
-  grid-template-columns:repeat(4,1fr);
-  gap:12px;
-  min-width:0;
-  align-items:start;
-
-  font-size:12px;
-  line-height:1.3;
-  color:#333;
+.header-central{                           /* začátek definice stylu pro blok .header-central */
+  display:grid;                            /* zapne CSS grid (mřížku) */
+  grid-template-columns:repeat(3,1fr);     /* 3 stejně široké sloupce */
+  gap:10px;                                /* mezera mezi bloky uvnitř gridu */
+  min-width:0;                             /* dovolí zmenšení (aby nepřetékalo v flex/grid layoutu) */
+  align-items:stretch;                       /* start - zarovná obsah buněk nahoru, stretch - vyplní blok */
+  height:88px;                     /* standa kontrola     */
+  font-size:12px;                          /* velikost písma uvnitř */
+  line-height:1.3;                         /* 1.3 výška řádku textu */
+  color:#333;                            /* barva textu */
+  padding:0px;                             /* 3 vnitřní odsazení (uvnitř rámečku) */
+  margin:5px;                              /* 3 vnější odsazení (mimo rámeček) */
+  /* border:2px solid #000;                 /* černý rámeček 2px */
+  /* background:#d7ec12;                    /* barva pozadí (kontrolní) */
 }
 
-.header-right .hr-col{
-  background:#f3f3f3;
-  border-radius:8px;
-  padding:6px 10px;
-  height:88px;            /* pevná výška všech 4 bloků */
-  box-sizing:border-box;
-  min-width:0;
-  overflow:hidden;
+.header-central .hc-col{                                   /* začátek stylu pro jeden technický blok (kartu) */
+  background:#f3f3f3;                                    /* pozadí karty */
+  border-radius:8px;                                       /* zaoblení rohů karty */
+  padding:6px 10px;                                        /* vnitřní odsazení karty */
+  box-sizing:border-box;                                   /* šířka/výška včetně padding/border */
+  min-width:0;                                             /* dovolí zmenšení obsahu (ellipsis) */
+  overflow:hidden;                                         /* skryje přetékající obsah */
+  display:grid;                                            /* v kartě se použije grid pro řádky/2 sloupce */
+  grid-template-rows:repeat(4,min-content);                /* 4 řádky, každý jen tak vysoký jak je třeba */
+  row-gap:2px;                                             /* mezera mezi řádky */
+  grid-template-columns:max-content 1fr;                   /* sloupce: popisek (min) | hodnota (zbytek) */
+  column-gap:6px;                                          /* mezera mezi popiskem a hodnotou */
+}
+
+.header-central .hc-row{display:contents;}                 /* “obal” řádku neexistuje v layoutu (jen děti) */
+.header-central .hc-label{                                 /* styl pro popisek (levý sloupec) */
+  grid-column:1;                                           /* umístění do 1. sloupce */
+  white-space:nowrap;                                      /* nezalamovat text */
+  text-align:left;                                         /* zarovnání textu vlevo */
+  color:#555;                                            /* barva popisku */
+}
+
+.header-central .hc-value{                                 /* styl pro hodnotu (pravý sloupec) */
+  grid-column:2;                                           /* umístění do 2. sloupce */
+  white-space:nowrap;                                      /* nezalamovat text */
+  overflow:hidden;                                         /* skryje přetékající text */
+  text-overflow:ellipsis;                                  /* tři tečky při přetečení */
+  font-weight:700;                                         /* tučně (důraz na hodnotu) */
 }
 
 /* =========================
-   TECH BLOKY – zarovnání hodnot
+   LOGIN – pravý sloupec
    ========================= */
 
-.header-right .hc-col{
-  display:grid;
-  grid-template-rows:repeat(4,min-content);
-  row-gap:2px;
-  grid-template-columns:max-content 1fr;
-  column-gap:6px;
-}
-.header-right .hc-row{display:contents;}
-.header-right .hc-label{
-  grid-column:1;
-  white-space:nowrap;
-  text-align:left;
-  color:#555;
-}
-.header-right .hc-value{
-  grid-column:2;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  font-weight:700;
+.header-right{                                             /* začátek definice pravého bloku hlavičky */
+  display:flex;                                            /* flex pro umístění obsahu (login) */
+  align-items:flex-start;                                  /* zarovnání obsahu nahoře */
+  justify-content:flex-end;                                /* zarovnání obsahu doprava */
+  padding:3px;                                             /* vnitřní odsazení (uvnitř rámečku) */
+  margin-left:10px;                                              /* 3 vnější odsazení (mimo rámeček) */
+  /* border:2px solid #000;                                 /* černý rámeček 2px */
+  /* background:#3ee755;    */ 
+  background:#f3f3f3;                                    /* pozadí karty */
+  border-radius:8px;                                      /* barva pozadí (kontrolní) */
+  height:88px;                                             /* pevná výška pravého bloku */
 }
 
-/* =========================
-   LOGIN – přihlášen / nepřihlášen
-   ========================= */
-
-.header-right .hr-login{
-  align-self:flex-start;
-  padding-top:10px;
+/* login blok (obal) */
+.header-right .hr-login{                                   /* obal login obsahu uvnitř pravého bloku */
+  width:240px;                                             /* šířka samotného login bloku */
+  padding-top:10px;                                        /* odsazení shora (posunutí obsahu dolů) */
 }
 
 /* přihlášen (status) */
-.header-right .hr-login .login-status{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
+.header-right .hr-login .login-status{                     /* obal stavu přihlášení */
+  display:flex;                                            /* flex pro svislé skládání */
+  flex-direction:column;                                   /* skládání pod sebe */
+  gap:6px;                                                 /* mezera mezi řádky */
 }
-.header-right .hr-login .login-user{
-  font-size:12px;
-  line-height:1.2;
-  color:#252525;
+
+.header-right .hr-login .login-user{                       /* řádek “Přihlášen…” */
+  font-size:12px;                                          /* velikost písma */
+  line-height:1.2;                                         /* výška řádku */
+  color:#252525;                                         /* barva textu */
 }
-.header-right .hr-login .login-meta{
-  display:flex;
-  flex-direction:column;
-  gap:2px;
-  font-size:12px;
-  line-height:1.2;
-  color:#555;
-}
-.header-right .hr-login .login-logout-icon{
-  width:16px;
-  height:16px;
-  margin-left:6px;
-  vertical-align:middle;
+
+.header-right .hr-login .login-meta{                       /* blok s role/last login */
+  display:flex;                                            /* flex pro svislé skládání */
+  flex-direction:column;                                   /* pod sebe */
+  gap:2px;                                                 /* malá mezera mezi řádky */
+  font-size:12px;                                          /* velikost písma */
+  line-height:1.2;                                         /* výška řádku */
+  color:#555;                                            /* barva textu */
 }
 
 /* nepřihlášen (form) – 2 inputy vlevo, ikona vpravo */
-.header-right .hr-login .login-form{margin:0;}
-.header-right .hr-login .login-grid{
-  display:grid;
-  grid-template-columns:170px 38px; /* pevná šířka inputů + čtvercová ikona */
-  column-gap:8px;
-  align-items:start;
+.header-right .hr-login .login-form{margin:0;}             /* zruší default margin formuláře */
+.header-right .hr-login .login-grid{                       /* grid pro pole + tlačítko ikony */
+  display:grid;                                            /* zapne grid */
+  grid-template-columns:170px 38px;                        /* sloupce: inputy | ikona */
+  column-gap:8px;                                          /* mezera mezi sloupci */
+  align-items:start;                                       /* zarovnání obsahu nahoře */
 }
-.header-right .hr-login .login-fields{min-width:0;}
+
+.header-right .hr-login .login-fields{min-width:0;}        /* dovolí zmenšení obsahu v levém sloupci */
 
 /* inputy (sjednoceno: email + heslo) */
-.header-right .hr-login .login-input{
-  width:100%;
-  box-sizing:border-box;
-
-  height:22px;
-  padding:3px 6px;
-  border:1px solid #bdbdbd;
-  border-radius:4px;
-
-  font-family:inherit;
-  font-size:11px;
-  font-weight:400;
-  line-height:1.1;
-  color:inherit;
-
-  appearance:none;
+.header-right .hr-login .login-input{                      /* společný styl pro oba inputy */
+  width:100%;                                              /* šířka přes celý sloupec */
+  box-sizing:border-box;                                   /* výpočet šířky včetně padding/border */
+  height:22px;                                             /* výška inputu */
+  padding:3px 6px;                                         /* vnitřní odsazení textu */
+  border:1px solid #bdbdbd;                                /* rámeček inputu */
+  border-radius:4px;                                       /* zaoblení rohů */
+  font-family:inherit;                                     /* font podle rodiče */
+  font-size:11px;                                          /* velikost písma */
+  font-weight:400;                                         /* tloušťka písma */
+  line-height:1.1;                                         /* výška řádku */
+  color:inherit;                                           /* barva textu podle rodiče */
+  appearance:none;                                         /* vypne systémové styly (prohlížeč) */
 }
 
 /* mini mezera mezi email a heslo */
-.header-right .hr-login .login-input + .login-input{margin-top:2px;}
+.header-right .hr-login .login-input + .login-input{margin-top:2px;} /* mezera mezi dvěma inputy */
 
 /* nápověda pod inputy */
-.header-right .hr-login .login-help{
-  display:block;
-  margin-top:4px;
-  font-size:11px;
-  line-height:1.1;
-  color:#555;
+.header-right .hr-login .login-help{                       /* text nápovědy pod inputy */
+  display:block;                                           /* chovat se jako blok */
+  margin-top:0px;                                          /* 4 odsazení shora */
+  font-size:11px;                                          /* velikost písma */
+  line-height:1.1;                                         /* výška řádku */
+  color:#555;                                            /* barva textu */
 }
 
-/* ikona = čtverec, výška jako 2 inputy + 2px mezera */
-.header-right .hr-login .login-submit{
-  align-self:start;
-  width:38px;
-  height:46px;            /* 2×22 + 2px */
-  padding:0;
-  border:1px solid #dcdcdc;
-  border-radius:8px;
-  background:#f2f2f2;
-  cursor:pointer;
-  box-sizing:border-box;
-
-  font:inherit;
-  line-height:1;
-}
-.header-right .hr-login .login-submit:hover{background:#eaeaea;}
-.header-right .hr-login .login-submit:active{transform:none;}
-.header-right .hr-login .login-submit:focus{outline:none;}
-.header-right .hr-login .login-submit:focus-visible{
-  outline:2px solid #5b7cff;
-  outline-offset:2px;
-}
-
-/* ikona o 50% větší */
-.header-right .hr-login .login-submit img{
-  display:block;
-  width:27px;
-  height:27px;
-  margin:auto;
-}
-
-/* style/hlavicka1.css
- * Verze: V32
- * Aktualizace: 29.1.2026
- * Počet řádků: 198
- * konec souboru
- */
+/* style/hlavicka1.css * Verze: V35 * Aktualizace: 2.2.2026 * Počet řádků: 171
+   konec souboru */

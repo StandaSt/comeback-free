@@ -1,0 +1,42 @@
+/* style/ikons_svg.css * Verze: V2 *  Aktualizace: 2.2.2026 
+
+   =========================================================
+   SPOLEČNÁ IKONA (SVG/IMG) – jednotná třída pro ikony v menu
+   ========================================================= */
+
+.ikona-svg{                                
+  width:30px;                              /* šířka ikony */
+  height:30px;                             /* výška ikony */
+  display:inline-flex;                     /* inline-flex pro snadné zarovnání obsahu */
+  align-items:center;                      /* svislé vycentrování obsahu */
+  justify-content:center;                  /* vodorovné vycentrování obsahu */
+  padding:0;                               /* žádné vnitřní odsazení */
+  border:1px solid var(--border-strong);   /* rámeček ikony (sdílená CSS proměnná) */
+  border-radius:10px;                      /* zaoblení rohů */
+  background:var(--btn);                   /* pozadí ikony (sdílená CSS proměnná) */
+  cursor:pointer;                          /* kurzor ruky (klikatelné) */
+  color:#222;                            /* barva obsahu (např. SVG přes currentColor) */
+}                                         
+
+.ikona-svg:hover{
+    background:#eaeaea                   /* změna pozadí při najetí myší */
+}      
+
+.ikona-svg:focus{
+  outline:none                            /* odstranění výchozího focus rámečku */
+}             
+
+.ikona-svg:focus-visible{                  /* focus stav při ovládání klávesnicí */
+  outline:2px solid var(--active-bd);      /* zvýrazněný obrys (aktivní barva) */
+  outline-offset:2px;                      /* odsazení obrysu od ikony */
+}                                          /* konec :focus-visible */
+
+.ikona-svg img{                            /* styl pro img/SVG uvnitř ikony */
+  display:block;                           /* odstranění inline mezery */
+  width:22px;                              /* šířka SVG/IMG */
+  height:22px;                             /* výška SVG/IMG */
+}                                          /* konec .ikona-svg img */
+
+/* style/ikons_svg.css * Verze: V2 *
+   Aktualizace: 2.2.2026 * Počet řádků: 42
+   konec souboru */
