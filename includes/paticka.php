@@ -1,5 +1,5 @@
 <?php
-// includes/paticka.php V3 – počet řádků: 34 – aktuální čas v ČR: 21.1.2026
+// includes/paticka.php V4 – počet řádků: 34 – aktuální čas v ČR: 4.2.2026
 declare(strict_types=1);
 
 if (defined('COMEBACK_FOOTER_RENDERED')) {
@@ -31,4 +31,4 @@ define('COMEBACK_FOOTER_RENDERED', true);
 </body>
 </html>
 <?php
-/* includes/paticka.php V3 – počet řádků: 34 – aktuální čas v ČR: 21.1.2026 */
+/* includes/paticka.php V4 – počet řádků: 34 – aktuální čas v ČR: 4.2.2026 */

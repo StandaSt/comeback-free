@@ -1,5 +1,5 @@
 <?php
-// includes/hlavicka.php  * Verze: V16 * Aktualizace: 2.2.2026 * Počet řádků: 102
+// includes/hlavicka.php  * Verze: V17 * Aktualizace: 4.2.2026 * Počet řádků: 103
 declare(strict_types=1);
 
 if (defined('COMEBACK_HEADER_RENDERED')) {
@@ -7,7 +7,8 @@ if (defined('COMEBACK_HEADER_RENDERED')) {
 }
 define('COMEBACK_HEADER_RENDERED', true);
 
-    require_once __DIR__ . '/../lib/bootstrap.php';
+require_once __DIR__ . '/../lib/bootstrap.php';
+
 /*
  * Volba menu:
  * - ?menu=dropdown  (výchozí)
@@ -72,7 +73,7 @@ $cb_menu_mode = ($cb_menu_mode === 'sidebar') ? 'sidebar' : 'dropdown';
 
         <!-- PRAVÁ ČÁST: LOGIN -->
         <div class="header-right">
-            <div class="hr-col hr-login">
+            <div class="hr-login">
                 <?php
                 $login = __DIR__ . '/login_form.php';
                 if (is_file($login)) {
@@ -85,20 +86,18 @@ $cb_menu_mode = ($cb_menu_mode === 'sidebar') ? 'sidebar' : 'dropdown';
     </div>
 
     <!-- CENTRAL -->
-    <div class="central menu-<?= h($cb_menu_mode) ?>">
-        <div class="central-menu">
-            <?php
-            if ($cb_menu_mode === 'sidebar') {
-                require_once __DIR__ . '/menu_s.php';
-            } else {
-                require_once __DIR__ . '/menu_d.php';
-            }
-            ?>
-        </div>
+    <div class="central central-<?= h($cb_menu_mode) ?>">
+        <?php
+        if ($cb_menu_mode === 'sidebar') {
+            require_once __DIR__ . '/menu_s.php';
+        } else {
+            require_once __DIR__ . '/menu_d.php';
+        }
+        ?>
 
         <div class="central-content">
             <main>
 <?php
-// includes/hlavicka.php  * Verze: V16 
-// Aktualizace: 2.2.2026 * Počet řádků: 102 
-// * konec souboru
+// includes/hlavicka.php  * Verze: V17
+// Aktualizace: 4.2.2026 * Počet řádků: 103
+// konec souboru

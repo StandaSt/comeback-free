@@ -18,7 +18,24 @@ body {                                                      /* element body (tě
     font-family: Arial, Helvetica, sans-serif;              /* výchozí fonty stránky */
     background: #f4f6f8;                                    /* barva pozadí stránky */
     color: #333;                                            /* výchozí barva textu */
-}                                                          /* konec body */
+    overflow: auto;
+}                                                         
+
+ /* =========================
+   KONTEJNER STRÁNKY
+   BLOK: CENTRÁL – obal celé stránky
+   ========================= */
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: #e66060;
+    padding: 0;                      /* ať patička sedí úplně dole bez spodní mezery */
+    border-radius: 6px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
 
 /* =========================
    TRACE / DEBUG
