@@ -10,7 +10,7 @@
 .container {
     max-width: 1200px;
     margin: 0 auto;
-    background: #fff;
+    background: #e66060;
     /* padding: 0 0 20px; */         /* původní */
     padding: 0;                      /* změna: ať patička sedí úplně dole bez spodní mezery */
     border-radius: 6px;
@@ -27,15 +27,7 @@
     min-height: 0;
     display: flex;
 }
-/* dropdown: menu nahoře, content pod ním */
-.cb-central--dropdown {
-    flex-direction: column;
-}
-/* sidebar: menu vlevo, content vpravo */
-.cb-central--sidebar {
-    flex-direction: row;
-    align-items: stretch;
-}
+
 /* =========================
    MENU BLOK (umístění v centrálu)
    BLOK: CENTRÁL / MENU

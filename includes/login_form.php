@@ -10,7 +10,7 @@ declare(strict_types=1);
  * - odesílá na lib/login_smeny.php
  */
 
-require_once __DIR__ . '/../lib/bootstrap.php';
+/* require_once __DIR__ . '/../lib/bootstrap.php'; */
 
 $cbUser  = $_SESSION['cb_user'] ?? null;
 $cbFlash = (string)($_SESSION['cb_flash'] ?? '');

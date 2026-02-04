@@ -7,8 +7,7 @@ if (defined('COMEBACK_HEADER_RENDERED')) {
 }
 define('COMEBACK_HEADER_RENDERED', true);
 
-require_once __DIR__ . '/../lib/bootstrap.php';
-
+    require_once __DIR__ . '/../lib/bootstrap.php';
 /*
  * Volba menu:
  * - ?menu=dropdown  (výchozí)
