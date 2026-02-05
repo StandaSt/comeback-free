@@ -1,70 +1,51 @@
-/* style/central1.css * Verze: V10  * Aktualizace: 4.2.2026  * Počet řádků: 89
-   Centrální blok (container + obsah) projektu IS Comeback */
+/* style/central1.css * Verze: V10  * Aktualizace: 4.2.2026  * Počet řádků: 84
+   Centrální blok (central) projektu IS Comeback */
 
-/* =========================
-   CENTRAL
-   (hlavní blok mezi hlavičkou a patičkou)
-   ========================= */
-
-.central{
-    flex: 1;
-    display: flex;
-    min-height: 0;                   /* důležité pro vnitřní scroll */
+.central {
+    flex: 1;                         /* vyplní prostor mezi hlavičkou a patičkou */
+    display: flex;                   /* uvnitř se skládá menu + obsah */
+    min-height: 0;                   /* dovolí vnitřní scroll */
+    overflow: hidden;                /* nic nesmí přetékat ven (scroll bude jen v .card) */
 }
 
-/* dropdown: menu nahoře, obsah pod ním */
-.central.central-dropdown{
-    flex-direction: column;
+/* =========================
+   ROZLOŽENÍ CENTRAL
+   ========================= */
+
+/* dropdown: menu nad obsahem */
+.central.menu-dropdown { 
+    flex-direction: column; 
+    background:#97d8f1; 
 }
 
 /* sidebar: menu vlevo, obsah vpravo */
-.central.central-sidebar{
-    flex-direction: row;
-    align-items: stretch;
-}
-
-/* menu v sidebaru nemá růst do šířky obsahu */
-.central.central-sidebar .menu{
-    flex: 0 0 auto;
+.central.menu-sidebar { 
+    flex-direction: row; 
+    background:#97d8f1; 
 }
 
 /* =========================
-   OBSAH (pravá část / pod menu)
+   OBSAH (obal pro <main>)
    ========================= */
 
-.central-content{
-    flex: 1;
+.central-content {
+    flex: 1;                         /* zabere zbytek šířky/výšky v central */
     display: flex;
     flex-direction: column;
-    min-width: 0;                    /* dovolí zmenšení (ellipsis) */
-    min-height: 0;                   /* dovolí vnitřní scroll */
-}
-
-/* =========================
-   OBSAH STRÁNKY – HLAVIČKA OBSAHU
-   ========================= */
-
-.page-head{
-    background: transparent;
-    border-radius: 6px;
-    padding: 6px 20px;
-    margin: 0;
-}
-
-.page-head h2{
-    margin: 0 0 4px;
-    font-size: 16px;
+    min-height: 0;                   /* důležité pro overflow uvnitř */
+    min-width: 0;                    /* důležité pro sidebar (aby card mohla zmenšit šířku) */
 }
 
 /* =========================
    MAIN
    ========================= */
 
-main{
-    flex: 1;
+main {
+    flex: 1;                         /* vyplní dostupnou výšku */
     display: flex;
     flex-direction: column;
-    min-height: 0;
+    min-height: 0;                   /* dovolí vnitřní scroll */
+    min-width: 0;
     background: transparent;
     border-radius: 6px;
     padding: 0;
@@ -72,18 +53,34 @@ main{
 }
 
 /* =========================
-   CARD – HLAVNÍ OBSAH
+   CARD – HLAVNÍ OBSAH (JEDINÝ SCROLL)
    ========================= */
 
-.card{
+.card {
     border: 1px solid #3f3092;
     border-radius: 6px;
     padding: 14px 20px;
     background: #fff;
-    flex: 1;
-    min-height: 0;
+    flex: 1;                         /* zabere zbytek výšky (v main) */
+    min-height: 0;                   /* nesmí vynucovat výšku (kvůli scrollu) */
     overflow: auto;                  /* scroll jen uvnitř card */
 }
 
-/* style/central1.css  * Verze: V10 * Aktualizace: 4.2.2026 * Počet řádků: 89
+/* =========================
+   OBSAH STRÁNKY – HLAVIČKA OBSAHU
+   ========================= */
+
+.page-head {
+    background: transparent;
+    border-radius: 6px;
+    padding: 6px 20px;
+    margin: 0;
+}
+
+.page-head h2 {
+    margin: 0 0 4px;
+    font-size: 16px;
+}
+
+/* style/central1.css  * Verze: V10 * Aktualizace: 4.2.2026 * Počet řádků: 84
    konec souboru */

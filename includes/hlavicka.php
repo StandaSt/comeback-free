@@ -1,5 +1,5 @@
 <?php
-// includes/hlavicka.php  * Verze: V17 * Aktualizace: 4.2.2026 * Počet řádků: 103
+// includes/hlavicka.php  * Verze: V18 * Aktualizace: 5.2.2026 * Počet řádků: 102
 declare(strict_types=1);
 
 if (defined('COMEBACK_HEADER_RENDERED')) {
@@ -8,7 +8,6 @@ if (defined('COMEBACK_HEADER_RENDERED')) {
 define('COMEBACK_HEADER_RENDERED', true);
 
 require_once __DIR__ . '/../lib/bootstrap.php';
-
 /*
  * Volba menu:
  * - ?menu=dropdown  (výchozí)
@@ -40,9 +39,11 @@ $cb_menu_mode = ($cb_menu_mode === 'sidebar') ? 'sidebar' : 'dropdown';
 
         <!-- LEVÁ ČÁST: LOGO -->
         <div class="header-left">
-            <a href="https://pizzacomeback.cz" target="_blank" rel="noopener">
-                <img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback">
-            </a>
+            <div class="header-left-inner">
+                <a href="https://pizzacomeback.cz" target="_blank" rel="noopener">
+                    <img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback">
+                </a>
+            </div>
         </div>
 
         <!-- CENTRÁLNÍ ČÁST: 3 TECH BLOKY -->
@@ -86,7 +87,7 @@ $cb_menu_mode = ($cb_menu_mode === 'sidebar') ? 'sidebar' : 'dropdown';
     </div>
 
     <!-- CENTRAL -->
-    <div class="central central-<?= h($cb_menu_mode) ?>">
+    <div class="central menu-<?= h($cb_menu_mode) ?>">
         <?php
         if ($cb_menu_mode === 'sidebar') {
             require_once __DIR__ . '/menu_s.php';
@@ -98,6 +99,6 @@ $cb_menu_mode = ($cb_menu_mode === 'sidebar') ? 'sidebar' : 'dropdown';
         <div class="central-content">
             <main>
 <?php
-// includes/hlavicka.php  * Verze: V17
-// Aktualizace: 4.2.2026 * Počet řádků: 103
+// includes/hlavicka.php  * Verze: V18
+// Aktualizace: 5.2.2026 * Počet řádků: 102
 // konec souboru

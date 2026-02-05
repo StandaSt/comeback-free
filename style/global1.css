@@ -1,5 +1,5 @@
-/* style/global1.css * Verze: V4 *
-   Aktualizace: 2.2.2026 * Počet řádků: 291 */
+/* style/global1.css * Verze: V5 *
+   Aktualizace: 4.2.2026 * Počet řádků: 308 */
 
 /* =========================
    ZÁKLADNÍ NASTAVENÍ
@@ -14,35 +14,36 @@ html {                                                      /* element html (cel
 
 body {                                                      /* element body (tělo stránky) */
     margin: 0;                                              /* zruší výchozí okraje */
-    min-height: 100%;                                       /* minimální výška těla na 100 % okna */
+    height: 100vh;                                          /* výška těla = výška okna */
     font-family: Arial, Helvetica, sans-serif;              /* výchozí fonty stránky */
     background: #f4f6f8;                                    /* barva pozadí stránky */
     color: #333;                                            /* výchozí barva textu */
-    overflow: auto;
-}                                                         
+    overflow: hidden;                                       /* žádný scroll na body (scroll bude jen v .card) */
+}                                                          /* konec body */
 
- /* =========================
+/* =========================
    KONTEJNER STRÁNKY
-   BLOK: CENTRÁL – obal celé stránky
+   BLOK: KONTEJNER – obal celé stránky
    ========================= */
 
 .container {
-    max-width: 1200px;
+    min-width: 1200px;
+    max-width: 2100px;
     margin: 0 auto;
-    background: #e66060;
-    padding: 0;                      /* ať patička sedí úplně dole bez spodní mezery */
+    background: #f4f6f8;   
+    padding: 0;                                             /* ať patička sedí úplně dole bez spodní mezery */
     border-radius: 6px;
-    min-height: 100vh;
+    height: 100vh;                                          /* container = výška okna */
     display: flex;
     flex-direction: column;
-}
+}                                                          /* konec .container */
 
 /* =========================
    TRACE / DEBUG
    ========================= */
 
 .trace-box,                                                 /* společné styly: .trace-box */
-.trace-msg {                                                 /* společné styly: .trace-msg */
+.trace-msg {                                                /* společné styly: .trace-msg */
     font: 12px/1.4 monospace;                               /* font pro debug (velikost/řádkování/typ) */
     margin: 4px 0;                                          /* svislé odsazení debug prvků */
 }                                                          /* konec .trace-box, .trace-msg */
@@ -53,7 +54,7 @@ body {                                                      /* element body (tě
 
 .table-wrap { overflow-x: auto; }                           /* povolí vodorovný scroll, když je tabulka široká */
 
-.table {                                                     /* obecná tabulka */
+.table {                                                    /* obecná tabulka */
     width: 100%;                                            /* tabulka přes celou šířku */
     border-collapse: collapse;                              /* spojí okraje buněk */
     min-width: 900px;                                       /* minimální šířka (kvůli čitelnosti) */
@@ -61,8 +62,8 @@ body {                                                      /* element body (tě
 
 .table-fixed { table-layout: fixed; }                       /* pevné rozložení sloupců (tabulka) */
 
-.table th,                                                   /* hlavička tabulky */
-.table td {                                                  /* buňky tabulky */
+.table th,                                                  /* hlavička tabulky */
+.table td {                                                 /* buňky tabulky */
     padding: 8px;                                           /* vnitřní odsazení buněk */
     border-bottom: 1px solid #3f3092;                       /* spodní linka buněk */
     font-size: 14px;                                        /* velikost písma v buňkách */
@@ -71,7 +72,7 @@ body {                                                      /* element body (tě
     text-overflow: ellipsis;                                /* tři tečky při přetečení */
 }                                                          /* konec .table th, .table td */
 
-.table th {                                                  /* speciálně pro hlavičku tabulky */
+.table th {                                                 /* speciálně pro hlavičku tabulky */
     background: #fafafa;                                    /* pozadí hlavičky */
     font-size: 13px;                                        /* velikost písma hlavičky */
     color: #555;                                            /* barva textu hlavičky */
@@ -81,12 +82,12 @@ body {                                                      /* element body (tě
    FILTRY V TABULKÁCH
    ========================= */
 
-.filter-row th {                                             /* buňky hlavičky ve filtračním řádku */
+.filter-row th {                                            /* buňky hlavičky ve filtračním řádku */
     background: #fff;                                       /* bílé pozadí filtru */
     border-bottom: 1px solid #eee;                          /* jemná spodní linka */
 }                                                          /* konec .filter-row th */
 
-.filter-input {                                              /* vstupní pole filtru */
+.filter-input {                                             /* vstupní pole filtru */
     width: 100%;                                            /* přes celou šířku buňky */
     padding: 6px 8px;                                       /* vnitřní odsazení */
     font-size: 13px;                                        /* velikost písma */
@@ -98,7 +99,7 @@ body {                                                      /* element body (tě
    IKONY – GLOBÁLNÍ
    ========================= */
 
-.icon-btn {                                                  /* univerzální tlačítko-ikona */
+.icon-btn {                                                 /* univerzální tlačítko-ikona */
     width: 40px;                                            /* šířka tlačítka */
     height: 40px;                                           /* výška tlačítka */
     display: inline-flex;                                   /* inline-flex (zarovnání obsahu) */
@@ -116,7 +117,7 @@ body {                                                      /* element body (tě
 
 .icon-btn:hover { background: #e0e0e0; }                    /* hover stav – změna pozadí */
 
-.icon-btn.disabled {                                         /* zakázaný stav tlačítka */
+.icon-btn.disabled {                                        /* zakázaný stav tlačítka */
     opacity: .5;                                            /* průhlednost */
     pointer-events: none;                                   /* neklikatelné */
 }                                                          /* konec .icon-btn.disabled */
@@ -132,13 +133,13 @@ body {                                                      /* element body (tě
  * a zároveň aby nemizel mimo okno (vpravo).
  */
 
-.cb-tip {                                                    /* prvek s tooltipem */
+.cb-tip {                                                   /* prvek s tooltipem */
     position: relative;                                     /* kotva pro pseudo-prvky ::before/::after */
     display: inline-flex;                                   /* inline-flex (zarovnání) */
     align-items: center;                                    /* svislé zarovnání obsahu */
 }                                                          /* konec .cb-tip */
 
-.cb-tip::after {                                             /* samotný tooltip (bublina) */
+.cb-tip::after {                                            /* samotný tooltip (bublina) */
     content: attr(data-tip);                                /* text tooltipu z atributu data-tip */
     position: absolute;                                     /* absolutní pozice vůči .cb-tip */
     /* VLEVO od prvku */
@@ -158,7 +159,7 @@ body {                                                      /* element body (tě
     z-index: 9999;                                          /* nad ostatním obsahem */
 }                                                          /* konec .cb-tip::after */
 
-.cb-tip::before {                                            /* šipka tooltipu */
+.cb-tip::before {                                           /* šipka tooltipu */
     content: "";                                            /* prázdný obsah (tvar z borderů) */
     position: absolute;                                     /* absolutní pozice vůči .cb-tip */
     /* šipka mezi tooltipem a prvkem (míří doprava k ikoně) */
@@ -170,14 +171,14 @@ body {                                                      /* element body (tě
     opacity: 0;                                             /* výchozí neviditelné */
     visibility: hidden;                                     /* výchozí skryté */
     border: 6px solid transparent;                          /* základ šipky */
-    border-left-color: rgba(0,0,0,.85); /* šipka doprava */
+    border-left-color: rgba(0,0,0,.85);                     /* šipka doprava */
     z-index: 9999;                                          /* nad ostatním obsahem */
 }                                                          /* konec .cb-tip::before */
 
-.cb-tip:hover::after,                                        /* tooltip při hover (bublina) */
-.cb-tip:hover::before,                                       /* tooltip při hover (šipka) */
-.cb-tip:focus-visible::after,                                /* tooltip při focus-visible (bublina) */
-.cb-tip:focus-visible::before {                              /* tooltip při focus-visible (šipka) */
+.cb-tip:hover::after,                                       /* tooltip při hover (bublina) */
+.cb-tip:hover::before,                                      /* tooltip při hover (šipka) */
+.cb-tip:focus-visible::after,                               /* tooltip při focus-visible (bublina) */
+.cb-tip:focus-visible::before {                             /* tooltip při focus-visible (šipka) */
     opacity: 1;                                             /* zobrazit */
     visibility: visible;                                    /* zviditelnit */
 }                                                          /* konec stavů tooltipu */
@@ -186,7 +187,7 @@ body {                                                      /* element body (tě
    ENTER + X – GLOBÁLNÍ
    ========================= */
 
-.icon-enter {                                                /* tlačítko Enter (širší) */
+.icon-enter {                                               /* tlačítko Enter (širší) */
     width: 90px;                                            /* šířka */
     min-width: 90px;                                        /* minimální šířka */
     height: 32px;                                           /* výška */
@@ -198,7 +199,7 @@ body {                                                      /* element body (tě
     font-size: 18px;                                        /* velikost ikony/textu */
 }                                                          /* konec .icon-enter */
 
-.icon-x {                                                    /* tlačítko X (užší) */
+.icon-x {                                                   /* tlačítko X (užší) */
     width: 60px;                                            /* šířka */
     min-width: 60px;                                        /* minimální šířka */
     height: 32px;                                           /* výška */
@@ -216,7 +217,7 @@ body {                                                      /* element body (tě
 
 .icon-btn.w44 { min-width: 44px; width: auto; }             /* varianta tlačítka: min 44px, šířka dle obsahu */
 
-.icon-btn.page-current {                                     /* tlačítko aktuální stránky */
+.icon-btn.page-current {                                    /* tlačítko aktuální stránky */
     pointer-events: none;                                   /* neklikatelné */
     font-weight: 700;                                       /* tučné */
     background: #dfe9ff;                                    /* pozadí */
@@ -230,7 +231,7 @@ body {                                                      /* element body (tě
    SPODNÍ OVLÁDACÍ LIŠTA
    ========================= */
 
-.list-bottom {                                               /* spodní lišta pod seznamem */
+.list-bottom {                                              /* spodní lišta pod seznamem */
     display: grid;                                          /* rozložení do gridu */
     grid-template-columns: auto 1fr auto;                   /* sloupce: vlevo | střed | vpravo */
     align-items: center;                                    /* svislé zarovnání obsahu */
@@ -238,7 +239,7 @@ body {                                                      /* element body (tě
     margin-top: 14px;                                       /* mezera nad lištou */
 }                                                          /* konec .list-bottom */
 
-.per-form {                                                  /* obal formuláře pro výběry (per-page apod.) */
+.per-form {                                                 /* obal formuláře pro výběry (per-page apod.) */
     display: inline-flex;                                   /* inline-flex */
     gap: 8px;                                               /* mezera mezi prvky */
     align-items: center;                                    /* svislé zarovnání */
@@ -266,21 +267,21 @@ body {                                                      /* element body (tě
 
 /* sudé sloupce – jen zákazníci */
 
-.zakaznici-table thead th:nth-child(even),                   /* sudé sloupce v hlavičce */
-.zakaznici-table tbody td:nth-child(even) {                  /* sudé sloupce v těle */
+.zakaznici-table thead th:nth-child(even),                  /* sudé sloupce v hlavičce */
+.zakaznici-table tbody td:nth-child(even) {                 /* sudé sloupce v těle */
     background: #e0e0e0;                                    /* šedé pozadí sudých sloupců */
 }                                                          /* konec sudých sloupců */
 
 /* ENTER – kratší, jen pro zákazníky */
 
-.zakaznici-table .icon-enter {                               /* úprava Enter pro zákazníky */
+.zakaznici-table .icon-enter {                              /* úprava Enter pro zákazníky */
     width: 51px;                                            /* šířka */
     min-width: 51px;                                        /* minimální šířka */
 }                                                          /* konec .zakaznici-table .icon-enter */
 
 /* ENTER + X ve filtru */
 
-.filter-actions {                                            /* obal pro Enter + X ve filtru */
+.filter-actions {                                           /* obal pro Enter + X ve filtru */
     display: flex;                                          /* flex rozložení */
     gap: 8px;                                               /* mezera mezi tlačítky */
     align-items: center;                                    /* svislé zarovnání */
@@ -288,7 +289,7 @@ body {                                                      /* element body (tě
 
 /* malý křížek – jen zákazníci */
 
-.zakaznici-table .icon-x.small {                             /* malý křížek (jen zákazníci) */
+.zakaznici-table .icon-x.small {                            /* malý křížek (jen zákazníci) */
     width: 32px;                                            /* šířka */
     min-width: 32px;                                        /* minimální šířka */
     height: 32px;                                           /* výška */
@@ -299,10 +300,10 @@ body {                                                      /* element body (tě
    MOBILNÍ ZOBRAZENÍ – jen globální prvky
    ========================= */
 
-@media (max-width: 700px) {                                  /* pravidla pro obrazovky do 700px */
+@media (max-width: 700px) {                                 /* pravidla pro obrazovky do 700px */
     .list-bottom { grid-template-columns: 1fr; justify-items: center; gap: 10px; } /* lišta: pod sebe + centrování + menší gap */
 }                                                          /* konec @media */
 
-/* style/global1.css * Verze: V4 *
-   Aktualizace: 2.2.2026 * Počet řádků: 291
+/* style/global1.css * Verze: V5 *
+   Aktualizace: 4.2.2026 * Počet řádků: 308
    konec souboru */

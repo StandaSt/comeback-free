@@ -6,12 +6,12 @@
 
 .footer {                                   /* hlavní obal patičky */
     margin-top: auto;                       /* vytlačí patičku dolů (flex layout) */
-    border-top: 1px solid #e5e5e5;          /* horní oddělovací linka */
+    /* border-top: 1px solid #e5e5e5;  */          /* horní oddělovací linka */
     padding-top: 6px;                       /* horní vnitřní odsazení */
     font-size: 11px;                        /* velikost písma v patičce */
     color: #555;                            /* barva textu */
     background: #97d8f1;         /* pozadí */
-    border-radius: 6px;                     /* zaoblení rohů */
+   /* border-radius: 6px;   */                  /* zaoblení rohů */
     padding: 6px 12px;                      /* vnitřní odsazení (přepíše padding-top) */
 }                                           /* konec .footer */
 

@@ -1,4 +1,4 @@
-/* style/hlavicka1.css * Verze: V35 * Aktualizace: 2.2.2026 */
+/* style/hlavicka1.css * Verze: V36 * Aktualizace: 5.2.2026 */
 
 /* =========================
    HLAVIČKA
@@ -6,11 +6,11 @@
 
 .header{                                                   /* začátek definice stylu pro blok .header */
   display:grid;                                            /* zapne CSS grid (mřížku) */
-  grid-template-columns:100px 1fr 240px;                    /* sloupce: logo | střed | pravý blok */
+  grid-template-columns:140px minmax(860px, 1fr) 240px;                    /* sloupce: logo | střed | pravý blok */
   column-gap:0px;                                         /* mezera mezi sloupci gridu */
   align-items:center;                                      /* svislé zarovnání obsahu sloupců na střed */
   background: #97d8f1;                                  /* pozadí */
-  border-radius:6px;                                       /* zaoblení rohů hlavičky */
+  /* border-radius:6px;   */                                    /* zaoblení rohů hlavičky */
   padding:0;                                               /* vnitřní odsazení hlavičky */
   margin:0;                                                /* vnější odsazení hlavičky */
 }
@@ -23,16 +23,39 @@
   display:flex;                                            /* zapne flex (řádkové skládání prvků) */
   align-items:center;                                      /* svislé zarovnání obsahu na střed */
   justify-content:center;                                  /* vodorovné zarovnání obsahu na střed */
-  padding:3px;                                             /* vnitřní odsazení (uvnitř rámečku) */
+  padding:0px;                                             /* vnitřní odsazení (uvnitř rámečku) */
   margin-left:8px;                                              /* 3 vnější odsazení (mimo rámeček) */
   margin-right:8px;   
   /* border:2px solid #000;                                 /* černý rámeček 2px */
   /* background:#5e75db;                                    /* barva pozadí (kontrolní) */
+  /* width:90px;  */
   height:88px;    /* standa kontrola */                    /* pevná výška bloku loga (komentář ponechán) */
+}
+
+/* nový obal pro logo (bílé pozadí + kontrola šířky) */
+.header-left-inner{
+  width:100%;
+  height:100%;
+  background:#fff;
+  border-radius:8px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.header-left-inner a{
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 
 .header-left img{
   max-height:88px;      /* max výška obrázku  */
+  max-width:100%;
+  width:auto;
+  height:auto;
   display:block;        /*  odstranění inline mezery */
   border-radius:8px;                                       /* zaoblení rohů karty */
 }          
@@ -45,7 +68,7 @@
   display:grid;                            /* zapne CSS grid (mřížku) */
   grid-template-columns:repeat(3,1fr);     /* 3 stejně široké sloupce */
   gap:10px;                                /* mezera mezi bloky uvnitř gridu */
-  min-width:0;                             /* dovolí zmenšení (aby nepřetékalo v flex/grid layoutu) */
+  min-width:750;                             /* dovolí zmenšení (aby nepřetékalo v flex/grid layoutu) */
   align-items:stretch;                       /* start - zarovná obsah buněk nahoru, stretch - vyplní blok */
   height:88px;                     /* standa kontrola     */
   font-size:12px;                          /* velikost písma uvnitř */
@@ -54,7 +77,7 @@
   padding:0px;                             /* 3 vnitřní odsazení (uvnitř rámečku) */
   margin:5px;                              /* 3 vnější odsazení (mimo rámeček) */
   /* border:2px solid #000;                 /* černý rámeček 2px */
-  /* background:#d7ec12;                    /* barva pozadí (kontrolní) */
+  /* background:#deee51;   */                 /* barva pozadí (kontrolní) */
 }
 
 .hc-col{                                   /* začátek stylu pro jeden technický blok (kartu) */
@@ -62,14 +85,14 @@
   border-radius:8px;                                       /* zaoblení rohů karty */
   padding:6px 10px;                                        /* vnitřní odsazení karty */
   box-sizing:border-box;                                   /* šířka/výška včetně padding/border */
-  min-width:0;                                             /* dovolí zmenšení obsahu (ellipsis) */
+  min-width:240;                                             /* dovolí zmenšení obsahu (ellipsis) */
   overflow:hidden;                                         /* skryje přetékající obsah */
   display:grid;                                            /* v kartě se použije grid pro řádky/2 sloupce */
   grid-template-rows:repeat(4,min-content);                /* 4 řádky, každý jen tak vysoký jak je třeba */
   row-gap:2px;                                             /* mezera mezi řádky */
   grid-template-columns:max-content 1fr;                   /* sloupce: popisek (min) | hodnota (zbytek) */
   column-gap:6px;                                          /* mezera mezi popiskem a hodnotou */
-}
+  }
 
 .hc-row{display:contents;}                 /* “obal” řádku neexistuje v layoutu (jen děti) */
 .hc-label{                                 /* styl pro popisek (levý sloupec) */
@@ -172,5 +195,5 @@
   color:#555;                                            /* barva textu */
 }
 
-/* style/hlavicka1.css * Verze: V35 * Aktualizace: 2.2.2026 * Počet řádků: 171
+/* style/hlavicka1.css * Verze: V36 * Aktualizace: 5.2.2026 * Počet řádků: 199
    konec souboru */
