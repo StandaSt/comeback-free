@@ -1,0 +1,167 @@
+/* style/menu_tlac1.css * Verze: V3 * Aktualizace: 5.2.2026 */
+
+/* =========================================================
+   SPOLEČNÁ TLAČÍTKA (HOME + SWITCH)
+   ========================================================= */
+
+/*
+ * Tyto obaly (menu-home / menu-toggle) jsou použité v obou variantách:
+ * - dropdown: jsou přímo v gridu (.menu-top)
+ * - sidebar: jsou ve flex řádku (.menu-switch)
+ *
+ * ZMĚNA V3:
+ * - pevná výška 30px pro obaly → ikony pak nemění výšku řádku (stabilita zarovnání)
+ */
+.menu-home,
+.menu-toggle{
+  margin-top:0;
+  display:flex;
+  gap:8px;
+  align-items:center;
+  height:30px;            /* stabilní výška pro zarovnání s L1 tlačítky */
+}
+
+/* =========================================================
+   1. ÚROVEŇ (u1) – společné pro dropdown + sidebar
+   ========================================================= */
+
+.menu .menu-u1 > button{
+  width:100%;
+  text-align:left;
+  height:30px;
+  padding:0 10px;
+  line-height:30px;
+  border-radius:10px;
+  border:1px solid var(--border-strong);
+  background:var(--btn);
+  cursor:pointer;
+  font:inherit;
+  font-weight:400;
+  color:#222;
+}
+
+.menu .menu-u1 > button:hover{
+  background:var(--active-bg);
+  border-color:var(--active-bd);
+  color:var(--active-tx);
+}
+
+.menu .menu-u1 > button:focus{ outline:none; }
+
+.menu .menu-u1 > button:focus-visible{
+  outline:2px solid var(--active-bd);
+  outline-offset:2px;
+}
+
+.menu .menu-u1.active > button{
+  background:var(--active-bg);
+  border-color:var(--active-bd);
+  color:var(--active-tx);
+  font-weight:700;
+}
+
+/* =========================================================
+   DROPDOWN – u1 tlačítko (šipka + rozložení obsahu)
+   ========================================================= */
+
+.menu-dropdown .menu-u1 > button{
+  padding:0 8px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+}
+
+/* =========================================================
+   2. ÚROVEŇ (u2) – společné (dropdown i sidebar, pokud používá .menu-u2btn)
+   ========================================================= */
+
+.menu-u2btn{
+  width:100%;
+  text-align:left;
+  font:inherit;
+  height:30px;
+  padding:0 10px;
+  line-height:30px;
+  border-radius:8px;
+  border:1px solid transparent;
+  background:#fff;
+  cursor:pointer;
+  font-weight:400;
+  color:#222;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  white-space:nowrap;
+}
+
+.menu-u2btn:hover{
+  background:var(--active-bg);
+  border-color:var(--active-bd);
+  color:var(--active-tx);
+}
+
+.menu-u2btn:focus{ outline:none; }
+
+.menu-u2btn:focus-visible{
+  outline:2px solid var(--active-bd);
+  outline-offset:2px;
+}
+
+.menu-u2btn.active{
+  background:var(--active-bg);
+  border-color:var(--active-bd);
+  color:var(--active-tx);
+}
+
+.chev{ font-weight:700; }
+
+/* =========================================================
+   SIDEBAR – 1. ÚROVEŇ (u1) – jen specifika (šířka)
+   ========================================================= */
+
+.menu-sidebar .menu-u1 > button{
+  min-width:var(--sidebar-w);
+}
+
+/* =========================================================
+   SIDEBAR – 2. ÚROVEŇ (u2)
+   ========================================================= */
+
+.menu-u2 > button{
+  width:100%;
+  text-align:left;
+  height:30px;
+  padding:0 10px;
+  line-height:30px;
+  border:1px solid transparent;
+  background:#fff;
+  cursor:pointer;
+  font:inherit;
+  font-weight:400;
+  color:#222;
+  border-radius:10px;
+}
+
+.menu-u2 > button:hover{
+  background:var(--active-bg);
+  border-color:var(--active-bd);
+  color:var(--active-tx);
+}
+
+.menu-u2 > button:focus{ outline:none; }
+
+.menu-u2 > button:focus-visible{
+  outline:2px solid var(--active-bd);
+  outline-offset:2px;
+}
+
+.menu-u2 > button.active{
+  background:var(--active-bg);
+  border-color:var(--active-bd);
+  color:var(--active-tx);
+}
+
+/* style/menu_tlac1.css * Verze: V3 * Aktualizace: 5.2.2026 * Počet řádků: 167
+   konec souboru */

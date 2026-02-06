@@ -1,4 +1,4 @@
-/* style/menu1.css * Verze: V26 * Aktualizace: 3.2.2026 */
+/* style/menu1.css * Verze: V30 * Aktualizace: 6.2.2026 */
 
 /*
  * CÍL:
@@ -9,27 +9,12 @@
  *
  * Pozn. (sjednocení ikon):
  * - všechna tlačítka s SVG/IMG ikonou mají JEDINOU třídu: .ikona-svg
+ *
+ * ZMĚNA V30:
+ * - PEVNÝ GRID 80px | 1fr | 80px
+ * - žádné auto, žádné přepočty
+ * - layout je deterministický a nemůže „skákat“
  */
-
-/* =========================================================
-   PROMĚNNÉ (CSS custom properties)
-   ========================================================= */
-
-:root{
-  --dropdown-w: 130px;
-  --sidebar-w: 130px;
-
-  --border-strong: #dcdcdc;
-
-  --btn: #f2f2f2;
-  --menu-bg: #fff;
-
-  --active-bg: #dfe9ff;
-  --active-bd: #5b7cff;
-  --active-tx: #1f3fbf;
-
-  --hover-bg: #f3f5f9;
-}
 
 /* =========================================================
    OBAL MENU (společné)
@@ -40,34 +25,34 @@
 }
 
 /* =========================================================
-   SPOLEČNÁ TLAČÍTKA (HOME + SWITCH)
-   ========================================================= */
-
-.menu-home,
-.menu-toggle{
-  margin-top:0;
-  display:flex;
-  gap:8px;
-  align-items:center;
-}
-
-/* =========================================================
    DROPDOWN: rozložení (HOME vlevo, menu uprostřed, switch vpravo)
    ========================================================= */
 
 .menu-dropdown .menu-top{
-  display:grid;
-  grid-template-columns:auto 1fr auto;
-  grid-auto-rows:30px;
+  /* display:grid; */
+  grid:80px 1fr 80px;   /* HOME | MENU | SWITCH – PEVNÉ */
+   grid-auto-rows:auto; 
   gap:12px;
-  align-items:center;
-  position:relative;
+  /* align-items:center; */
+  /* position:relative;  */
 }
 
-.menu-dropdown .menu-home{ grid-column:1; justify-self:start; }
-.menu-dropdown .menu-row{ grid-column:2; }
-.menu-dropdown .menu-toggle{ grid-column:3; justify-self:end; }
+/* umístění do gridu */
+.menu-dropdown .menu-home{
+  grid-column:1;
+  justify-self:start; 
+}
 
+.menu-dropdown .menu-row{
+  grid-column:2;
+}
+
+.menu-dropdown .menu-toggle{
+  grid-column:3;
+  justify-self:end;
+}
+
+/* v dropdown režimu ukázat jen přepínač "na sidebar" */
 .menu-dropdown #menuToDropdown{ display:none; }
 .menu-dropdown #menuToSidebar{ display:inline-flex; }
 
@@ -77,7 +62,7 @@
 
 .menu-sidebar .menu-area{
   position:relative;
-  background:#97d8f1; 
+  background:var(--bg-ram);
   padding-bottom:0;
 }
 
@@ -134,17 +119,24 @@
 
 .menu-bar{
   border:0;
-  background:#97d8f1; 
+  background:var(--bg-ram);
   padding:0;
   position:relative;
   z-index:10;
 }
 
+/*
+ * Střední řádek s L1 tlačítky:
+ * - 1 řádek, žádné zalamování
+ * - když se nevejde → horizontální posuv
+ */
 .menu-dropdown .menu-row{
   display:flex;
   gap:8px;
-  flex-wrap:wrap;
-  align-items:center;   /* ← JEDINÁ ZMĚNA */
+  flex-wrap:nowrap;
+  overflow-x:auto;
+  overflow-y:hidden;
+  align-items:center;
   min-width:0;
   padding-right:0;
   padding-top:0;
@@ -153,57 +145,7 @@
 .menu-dropdown .menu-u1{
   position:relative;
   width:var(--dropdown-w);
-}
-
-/* =========================================================
-   1. ÚROVEŇ (u1) – společné pro dropdown + sidebar
-   ========================================================= */
-
-.menu .menu-u1 > button{
-  width:100%;
-  text-align:left;
-  height:30px;
-  padding:0 10px;
-  line-height:30px;
-  border-radius:10px;
-  border:1px solid var(--border-strong);
-  background:var(--btn);
-  cursor:pointer;
-  font:inherit;
-  font-weight:400;
-  color:#222;
-}
-
-.menu .menu-u1 > button:hover{
-  background:var(--active-bg);
-  border-color:var(--active-bd);
-  color:var(--active-tx);
-}
-
-.menu .menu-u1 > button:focus{ outline:none; }
-
-.menu .menu-u1 > button:focus-visible{
-  outline:2px solid var(--active-bd);
-  outline-offset:2px;
-}
-
-.menu .menu-u1.active > button{
-  background:var(--active-bg);
-  border-color:var(--active-bd);
-  color:var(--active-tx);
-  font-weight:700;
-}
-
-/* =========================================================
-   DROPDOWN – u1 tlačítko (šipka + rozložení obsahu)
-   ========================================================= */
-
-.menu-dropdown .menu-u1 > button{
-  padding:0 8px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:8px;
+  flex:0 0 var(--dropdown-w);
 }
 
 /* =========================================================
@@ -236,47 +178,6 @@
   flex-direction:column;
 }
 
-.menu-dropdown .menu-u2btn{
-  width:100%;
-  text-align:left;
-  font:inherit;
-  height:30px;
-  padding:0 10px;
-  line-height:30px;
-  border-radius:8px;
-  border:1px solid transparent;
-  background:#fff;
-  cursor:pointer;
-  font-weight:400;
-  color:#222;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:10px;
-  white-space:nowrap;
-}
-
-.menu-dropdown .menu-u2btn:hover{
-  background:var(--active-bg);
-  border-color:var(--active-bd);
-  color:var(--active-tx);
-}
-
-.menu-dropdown .menu-u2btn:focus{ outline:none; }
-
-.menu-dropdown .menu-u2btn:focus-visible{
-  outline:2px solid var(--active-bd);
-  outline-offset:2px;
-}
-
-.menu-dropdown .menu-u2btn.active{
-  background:var(--active-bg);
-  border-color:var(--active-bd);
-  color:var(--active-tx);
-}
-
-.chev{ font-weight:700; }
-
 /* =========================================================
    SIDEBAR – obecné
    ========================================================= */
@@ -294,54 +195,12 @@
 }
 
 /* =========================================================
-   SIDEBAR – 1. ÚROVEŇ (u1) – jen specifika (šířka + mezery)
+   SIDEBAR – 1. ÚROVEŇ (u1) – jen specifika (mezery)
    ========================================================= */
 
 .menu-sidebar .menu-u1{
   background:transparent;
   margin-bottom:8px;
-}
-
-.menu-sidebar .menu-u1 > button{
-  min-width:var(--sidebar-w);
-}
-
-/* =========================================================
-   SIDEBAR – 2. ÚROVEŇ (u2)
-   ========================================================= */
-
-.menu-u2 > button{
-  width:100%;
-  text-align:left;
-  height:30px;
-  padding:0 10px;
-  line-height:30px;
-  border:1px solid transparent;
-  background:#fff;
-  cursor:pointer;
-  font:inherit;
-  font-weight:400;
-  color:#222;
-  border-radius:10px;
-}
-
-.menu-u2 > button:hover{
-  background:var(--active-bg);
-  border-color:var(--active-bd);
-  color:var(--active-tx);
-}
-
-.menu-u2 > button:focus{ outline:none; }
-
-.menu-u2 > button:focus-visible{
-  outline:2px solid var(--active-bd);
-  outline-offset:2px;
-}
-
-.menu-u2 > button.active{
-  background:var(--active-bg);
-  border-color:var(--active-bd);
-  color:var(--active-tx);
 }
 
 /* =========================================================
@@ -359,13 +218,18 @@
     gap:8px;
   }
 
+  .menu-dropdown .menu-row{
+    overflow-x:visible;
+    flex-wrap:wrap;
+  }
+
   .menu-dropdown .menu-home{ justify-content:flex-start; }
   .menu-dropdown .menu-toggle{ justify-content:flex-end; }
 
-  .menu-dropdown .menu-u1{ width:100%; }
+  .menu-dropdown .menu-u1{ width:100%; flex:0 0 auto; }
   .menu-sidebar #sidebar{ width:100%; max-width:100%; }
   .menu-dropdown .menu-panel{ width:100%; max-width:100%; }
 }
 
-/* style/menu1.css * Verze: V26 * Aktualizace: 3.2.2026 * Počet řádků: 379
+/* style/menu1.css * Verze: V30 * Aktualizace: 6.2.2026 * Počet řádků: 235
    konec souboru */

@@ -42,6 +42,7 @@ if (!function_exists('db_connect')) {
         $user = (string)($cfg['user'] ?? '');
         $pass = (string)($cfg['pass'] ?? '');
         $name = (string)($cfg['name'] ?? '');
+  
 
         if ($host === '' || $user === '' || $name === '') {
             throw new RuntimeException('Neúplné DB přihlašovací údaje');

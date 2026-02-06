@@ -1,5 +1,6 @@
 <?php
-// lib/app.php V3 – počet řádků: 78 – aktuální čas v ČR: 19.1.2026 18:12
+// lib/app.php * Verze: V4 * Aktualizace: 5.2.2026
+// lib/app.php V4 – počet řádků: 140 – aktuální čas v ČR: 5.2.2026
 declare(strict_types=1);
 
 /*
@@ -8,6 +9,7 @@ declare(strict_types=1);
  * - PROSTREDI (LOCAL / SERVER)
  * - BASE_PATH: určené na ROOT projektu (kvůli přímému volání /lib/*.php)
  * - cb_url() vrací absolutní URL od rootu webu
+ * - cb_header_info(): jedno místo pro technická data do hlavičky (bez HTML)
  */
 
 date_default_timezone_set('Europe/Prague');
@@ -71,4 +73,68 @@ function cb_url(string $path): string {
     return ($BASE_PATH !== '' ? $BASE_PATH : '') . $path;
 }
 
-/* lib/app.php V3 – počet řádků: 78 – aktuální čas v ČR: 19.1.2026 18:12 */
+/**
+ * Jediné místo pro "technické" informace do hlavičky.
+ *
+ * Cíl:
+ * - hlavička (includes/hlavicka.php) zůstane "hloupá" → jen vypíše hodnoty
+ * - tady se připraví vše potřebné (bez HTML a bez DB dotazů "jen kvůli UI")
+ *
+ * Pozn.:
+ * - secrets.php se načítá v bootstrap.php; proto tu DB údaje čteme jen pokud už existují v $SECRETS
+ * - nikdy sem nedáváme hesla ani uživatele DB
+ */
+function cb_header_info(): array {
+    // Host podle HTTP požadavku (to, co je v URL / hlavičce Host)
+    $httpHost = (string)($_SERVER['HTTP_HOST'] ?? '---');
+
+    // "Server" = jméno stroje, na kterém běží PHP (nejkonkrétnější bez dalších závislostí)
+    $serverName = (string)(php_uname('n') ?: '---');
+
+    // PHP verze (přímo z runtime)
+    $phpVersion = (string)PHP_VERSION;
+
+    // Aktuální čas (zatím čas generování stránky; později lze nahradit časem poslední synchronizace)
+    $aktualizace = date('j.n.Y H:i');
+
+    // DB info jen jako "metadata" (host + jméno DB), bez připojování do DB
+    $dbInfo = '---';
+    if (isset($GLOBALS['SECRETS']) && is_array($GLOBALS['SECRETS'])) {
+        $SECRETS = $GLOBALS['SECRETS']; // lokální kopie kvůli čitelnosti
+        if (isset($SECRETS['db']) && is_array($SECRETS['db'])) {
+            $cfg = null;
+            if (isset($GLOBALS['PROSTREDI']) && $GLOBALS['PROSTREDI'] === 'LOCAL') {
+                $cfg = $SECRETS['db']['local'] ?? null;
+            } else {
+                $cfg = $SECRETS['db']['server'] ?? null;
+            }
+
+            if (is_array($cfg)) {
+                $dbHost = trim((string)($cfg['host'] ?? ''));
+                $dbName = trim((string)($cfg['name'] ?? ''));
+                if ($dbHost !== '' && $dbName !== '') {
+                    $dbInfo = $dbHost . ' / ' . $dbName;
+                } elseif ($dbName !== '') {
+                    $dbInfo = $dbName;
+                } elseif ($dbHost !== '') {
+                    $dbInfo = $dbHost;
+                }
+            }
+        }
+    }
+
+    return [
+        // plánované 4 položky pro první technický blok
+        'server'      => $serverName,
+        'db'          => $dbInfo,
+        'host'        => $httpHost,
+        'aktualizace' => $aktualizace,
+
+        // další užitečné položky do dalších bloků (když budeš chtít)
+        'php'         => $phpVersion,
+    ];
+}
+
+// lib/app.php * Verze: V4 * Aktualizace: 5.2.2026
+// lib/app.php V4 – počet řádků: 140 – aktuální čas v ČR: 5.2.2026
+// konec souboru

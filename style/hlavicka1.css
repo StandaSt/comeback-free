@@ -1,4 +1,4 @@
-/* style/hlavicka1.css * Verze: V36 * Aktualizace: 5.2.2026 */
+/* style/hlavicka1.css * Verze: V37 * Aktualizace: 6.2.2026 */
 
 /* =========================
    HLAVIČKA
@@ -6,10 +6,10 @@
 
 .header{                                                   /* začátek definice stylu pro blok .header */
   display:grid;                                            /* zapne CSS grid (mřížku) */
-  grid-template-columns:140px minmax(860px, 1fr) 240px;                    /* sloupce: logo | střed | pravý blok */
+  grid-template-columns:140px minmax(860px, 1fr);                    /* sloupce: logo | střed | pravý blok */
   column-gap:0px;                                         /* mezera mezi sloupci gridu */
   align-items:center;                                      /* svislé zarovnání obsahu sloupců na střed */
-  background: #97d8f1;                                  /* pozadí */
+  background: var(--bg-ram);                               /* pozadí */
   /* border-radius:6px;   */                                    /* zaoblení rohů hlavičky */
   padding:0;                                               /* vnitřní odsazení hlavičky */
   margin:0;                                                /* vnější odsazení hlavičky */
@@ -66,7 +66,7 @@
 
 .header-central{                           /* začátek definice stylu pro blok .header-central */
   display:grid;                            /* zapne CSS grid (mřížku) */
-  grid-template-columns:repeat(3,1fr);     /* 3 stejně široké sloupce */
+  grid-template-columns:repeat(4,1fr);     /* 3 stejně široké sloupce */
   gap:10px;                                /* mezera mezi bloky uvnitř gridu */
   min-width:750;                             /* dovolí zmenšení (aby nepřetékalo v flex/grid layoutu) */
   align-items:stretch;                       /* start - zarovná obsah buněk nahoru, stretch - vyplní blok */
@@ -195,5 +195,5 @@
   color:#555;                                            /* barva textu */
 }
 
-/* style/hlavicka1.css * Verze: V36 * Aktualizace: 5.2.2026 * Počet řádků: 199
+/* style/hlavicka1.css * Verze: V37 * Aktualizace: 6.2.2026 * Počet řádků: 199
    konec souboru */

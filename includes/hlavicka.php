@@ -1,5 +1,5 @@
 <?php
-// includes/hlavicka.php  * Verze: V18 * Aktualizace: 5.2.2026 * Počet řádků: 102
+// includes/hlavicka.php  * Verze: V20 * Aktualizace: 5.2.2026 * Počet řádků: 118
 declare(strict_types=1);
 
 if (defined('COMEBACK_HEADER_RENDERED')) {
@@ -8,6 +8,7 @@ if (defined('COMEBACK_HEADER_RENDERED')) {
 define('COMEBACK_HEADER_RENDERED', true);
 
 require_once __DIR__ . '/../lib/bootstrap.php';
+
 /*
  * Volba menu:
  * - ?menu=dropdown  (výchozí)
@@ -15,6 +16,10 @@ require_once __DIR__ . '/../lib/bootstrap.php';
  */
 $cb_menu_mode = (string)($_GET['menu'] ?? 'dropdown');
 $cb_menu_mode = ($cb_menu_mode === 'sidebar') ? 'sidebar' : 'dropdown';
+
+/* technická data pro hlavičku (jediné chytré místo je v app.php) */
+$CB_HEADER = cb_header_info();
+
 ?>
 <!doctype html>
 <html lang="cs">
@@ -24,11 +29,13 @@ $cb_menu_mode = ($cb_menu_mode === 'sidebar') ? 'sidebar' : 'dropdown';
     <title>Comeback</title>
 
     <!-- styly -->
+    <link rel="stylesheet" href="<?= h(cb_url('style/nastaveni1.css')) ?>">
     <link rel="stylesheet" href="<?= h(cb_url('style/global1.css')) ?>">
     <link rel="stylesheet" href="<?= h(cb_url('style/hlavicka1.css')) ?>">
     <link rel="stylesheet" href="<?= h(cb_url('style/central1.css')) ?>">
     <link rel="stylesheet" href="<?= h(cb_url('style/paticka1.css')) ?>">
     <link rel="stylesheet" href="<?= h(cb_url('style/menu1.css')) ?>">
+    <link rel="stylesheet" href="<?= h(cb_url('style/menu_tlac1.css')) ?>">
     <link rel="stylesheet" href="<?= h(cb_url('style/ikony_svg1.css')) ?>">
 </head>
 <body>
@@ -46,35 +53,34 @@ $cb_menu_mode = ($cb_menu_mode === 'sidebar') ? 'sidebar' : 'dropdown';
             </div>
         </div>
 
-        <!-- CENTRÁLNÍ ČÁST: 3 TECH BLOKY -->
+        <!-- CENTRÁLNÍ ČÁST: 4 TECH BLOKY -->
         <div class="header-central">
 
-            <div class="hc-col hc-col">
-                <div class="hc-row"><span class="hc-label">Server:</span><span class="hc-value">cosi.cz</span></div>
-                <div class="hc-row"><span class="hc-label">Prostředí:</span><span class="hc-value"><?= h($PROSTREDI) ?></span></div>
-                <div class="hc-row"><span class="hc-label">DB:</span><span class="hc-value">OK</span></div>
-                <div class="hc-row"><span class="hc-label">Dotazy:</span><span class="hc-value">123</span></div>
+            <!-- BLOK 1: TECH DATA -->
+            <div class="hc-col">
+                <div class="hc-row"><span class="hc-label">Server:</span><span class="hc-value"><?= h($CB_HEADER['server'] ?? '---') ?></span></div>
+                <div class="hc-row"><span class="hc-label">DB:</span><span class="hc-value"><?= h($CB_HEADER['db'] ?? '---') ?></span></div>
+                <div class="hc-row"><span class="hc-label">Host:</span><span class="hc-value"><?= h($CB_HEADER['host'] ?? '---') ?></span></div>
+                <div class="hc-row"><span class="hc-label">Aktualizace:</span><span class="hc-value"><?= h($CB_HEADER['aktualizace'] ?? '---') ?></span></div>
             </div>
 
-            <div class="hc-col hc-col">
-                <div class="hc-row"><span class="hc-label">Aktualizace:</span><span class="hc-value">22.1.2026 14:30</span></div>
+            <!-- BLOK 2 – STAV APLIKACE -->
+            <div class="hc-col">
                 <div class="hc-row"><span class="hc-label">Cache:</span><span class="hc-value">zapnuta</span></div>
                 <div class="hc-row"><span class="hc-label">Verze IS:</span><span class="hc-value">DEV</span></div>
                 <div class="hc-row"><span class="hc-label">Build:</span><span class="hc-value">---</span></div>
             </div>
 
-            <div class="hc-col hc-col">
+            <!-- BLOK 3 – INTEGRACE -->
+            <div class="hc-col">
                 <div class="hc-row"><span class="hc-label">API:</span><span class="hc-value">---</span></div>
                 <div class="hc-row"><span class="hc-label">DB host:</span><span class="hc-value">---</span></div>
                 <div class="hc-row"><span class="hc-label">PHP:</span><span class="hc-value"><?= h(PHP_VERSION) ?></span></div>
                 <div class="hc-row"><span class="hc-label">Pozn.:</span><span class="hc-value">---</span></div>
             </div>
 
-        </div>
-
-        <!-- PRAVÁ ČÁST: LOGIN -->
-        <div class="header-right">
-            <div class="hr-login">
+            <!-- BLOK 4 – PŘIHLÁŠENÍ -->
+            <div class="hc-col">
                 <?php
                 $login = __DIR__ . '/login_form.php';
                 if (is_file($login)) {
@@ -82,6 +88,7 @@ $cb_menu_mode = ($cb_menu_mode === 'sidebar') ? 'sidebar' : 'dropdown';
                 }
                 ?>
             </div>
+
         </div>
 
     </div>
@@ -99,6 +106,6 @@ $cb_menu_mode = ($cb_menu_mode === 'sidebar') ? 'sidebar' : 'dropdown';
         <div class="central-content">
             <main>
 <?php
-// includes/hlavicka.php  * Verze: V18
-// Aktualizace: 5.2.2026 * Počet řádků: 102
+// includes/hlavicka.php  * Verze: V20
+// Aktualizace: 5.2.2026 * Počet řádků: 111
 // konec souboru

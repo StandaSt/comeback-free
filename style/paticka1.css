@@ -1,4 +1,4 @@
-/* style/paticka1.css * Verze: V5 * Aktualizace: 2.2.2026 */
+/* style/paticka1.css * Verze: V6 * Aktualizace: 6.2.2026 */
 
 /* =========================
    PATIČKA
@@ -10,7 +10,7 @@
     padding-top: 6px;                       /* horní vnitřní odsazení */
     font-size: 11px;                        /* velikost písma v patičce */
     color: #555;                            /* barva textu */
-    background: #97d8f1;         /* pozadí */
+    background: var(--bg-ram);              /* pozadí */
    /* border-radius: 6px;   */                  /* zaoblení rohů */
     padding: 6px 12px;                      /* vnitřní odsazení (přepíše padding-top) */
 }                                           /* konec .footer */
@@ -49,5 +49,5 @@
     }                                       /* konec .footer-left, .footer-right v @media */
 }                                           /* konec @media */
 
-/* style/paticka1.css * Verze: V5 * Aktualizace: 2.2.2026 * Počet řádků: 56
+/* style/paticka1.css * Verze: V6 * Aktualizace: 6.2.2026 * Počet řádků: 53
    konec souboru */

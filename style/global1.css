@@ -1,5 +1,5 @@
-/* style/global1.css * Verze: V5 *
-   Aktualizace: 4.2.2026 * Počet řádků: 308 */
+/* style/global1.css * Verze: V6 *
+   Aktualizace: 6.2.2026 * Počet řádků: 309 */
 
 /* =========================
    ZÁKLADNÍ NASTAVENÍ
@@ -16,8 +16,8 @@ body {                                                      /* element body (tě
     margin: 0;                                              /* zruší výchozí okraje */
     height: 100vh;                                          /* výška těla = výška okna */
     font-family: Arial, Helvetica, sans-serif;              /* výchozí fonty stránky */
-    background: #f4f6f8;                                    /* barva pozadí stránky */
-    color: #333;                                            /* výchozí barva textu */
+    background: var(--bg-body);                             /* barva pozadí stránky */
+    color: var(--tx-base);                                  /* výchozí barva textu */
     overflow: hidden;                                       /* žádný scroll na body (scroll bude jen v .card) */
 }                                                          /* konec body */
 
@@ -29,9 +29,11 @@ body {                                                      /* element body (tě
 .container {
     min-width: 1200px;
     max-width: 2100px;
-    margin: 0 auto;
-    background: #f4f6f8;   
-    padding: 0;                                             /* ať patička sedí úplně dole bez spodní mezery */
+   /*   margin: 0 auto; */
+    background: var(--bg-ram);
+    padding: 0;   
+    padding-right: 10px;       
+    padding-left: 10px;                                
     border-radius: 6px;
     height: 100vh;                                          /* container = výška okna */
     display: flex;
@@ -65,7 +67,7 @@ body {                                                      /* element body (tě
 .table th,                                                  /* hlavička tabulky */
 .table td {                                                 /* buňky tabulky */
     padding: 8px;                                           /* vnitřní odsazení buněk */
-    border-bottom: 1px solid #3f3092;                       /* spodní linka buněk */
+    border-bottom: 1px solid var(--border-accent);          /* spodní linka buněk */
     font-size: 14px;                                        /* velikost písma v buňkách */
     white-space: nowrap;                                    /* nezalamovat text */
     overflow: hidden;                                       /* skrýt přetékající text */
@@ -304,6 +306,6 @@ body {                                                      /* element body (tě
     .list-bottom { grid-template-columns: 1fr; justify-items: center; gap: 10px; } /* lišta: pod sebe + centrování + menší gap */
 }                                                          /* konec @media */
 
-/* style/global1.css * Verze: V5 *
-   Aktualizace: 4.2.2026 * Počet řádků: 308
+/* style/global1.css * Verze: V6 *
+   Aktualizace: 6.2.2026 * Počet řádků: 309
    konec souboru */
