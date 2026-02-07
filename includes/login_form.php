@@ -1,16 +1,12 @@
 <?php
-/* includes/login_form.php * Verze: V18 * 
-   Aktualizace: 2.2.2026  */
-
+// includes/login_form.php * Verze: V19 * Aktualizace: 7.2.2026 * Počet řádků: 95
 declare(strict_types=1);
 
 /*
- * Přihlášení – obsah do <div class="header-login"> v hlavicka.php
+ * Přihlášení – obsah do <div class="hc-col"> v hlavicka.php
  * - zobrazuje stav přihlášení + flash hlášku
  * - odesílá na lib/login_smeny.php
  */
-
-/* require_once __DIR__ . '/../lib/bootstrap.php'; */
 
 $cbUser  = $_SESSION['cb_user'] ?? null;
 $cbFlash = (string)($_SESSION['cb_flash'] ?? '');
@@ -46,22 +42,32 @@ if (is_array($cbUser) && !empty($cbUser['email'])) {
 
     ?>
     <div class="login-status">
-        <div class="login-user">
-            Přihlášen: <strong><?= h($displayName) ?></strong>
+        <div class="login-grid">
+            <div class="login-fields">
+                <div class="login-user">
+                    Přihlášen: <strong><?= h($displayName) ?></strong>
+                </div>
+
+                <div class="login-meta">
+                    <div class="login-role">Role: <?= h($role) ?></div>
+                     <div class="login-role">Kdo ví co: něco sem dáme</div>
+                    <div class="login-last">Last login: 7.2.2026 14:35</div>
+                    <div class="login-last">Odhlášení za: 6 min.</div>
+                </div>
+            </div>
+
             <a class="login-logout cb-tip ikona-svg"
                href="<?= h(cb_url('lib/logout.php')) ?>"
-               data-tip="Odhlásit">
-                <img src="<?= h(cb_url('img/icons/exit.svg')) ?>" alt="Odhlásit">
+               data-tip="Odhlásit"
+               aria-label="Odhlásit">
+                <img src="<?= h(cb_url('img/icons/exit.svg')) ?>" alt="">
             </a>
-        </div>
-
-        <div class="login-meta">
-            <div class="login-role">Role: <?= h($role) ?></div>
-            <div class="login-last">Last login: <?= h($lastLogin) ?></div>
         </div>
     </div>
     <?php
+
 } else {
+
     ?>
     <form method="post" action="<?= h(cb_url('lib/login_smeny.php')) ?>" class="login-form">
         <div class="login-grid">
@@ -77,6 +83,7 @@ if (is_array($cbUser) && !empty($cbUser['email'])) {
         </div>
     </form>
     <?php
+
 }
 
 /* Flash hlášku "Přihlášení OK" nezobrazujeme */
@@ -86,6 +93,5 @@ if ($cbFlash !== '' && $cbFlash !== 'Přihlášení OK') {
     <?php
 }
 
-/* includes/login_form.php * Verze: V18 * 
-   Aktualizace: 2.2.2026 * Počet řádků: 91
-   konec souboru */
+// includes/login_form.php * Verze: V19 * Aktualizace: 7.2.2026 * Počet řádků: 95
+// konec souboru

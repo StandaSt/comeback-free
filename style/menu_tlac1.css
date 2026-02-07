@@ -11,7 +11,7 @@
    1. ÚROVEŇ (u1) – společné pro dropdown + sidebar
    ========================================================= */
 
-.menu .menu-u1 > button{
+.menu-u1 > button{
   width:120px;
   text-align:left;
   height:30px;
@@ -24,22 +24,22 @@
   font:inherit;
   font-weight:400;
   color:#222;
-}
+} 
 
-.menu .menu-u1 > button:hover{
+.menu-u1 > button:hover{
   background:var(--active-bg);
   border-color:var(--active-bd);
   color:var(--active-tx);
 }
 
-.menu .menu-u1 > button:focus{ outline:none; }
+.menu-u1 > button:focus{ outline:none; }
 
-.menu .menu-u1 > button:focus-visible{
+.menu-u1 > button:focus-visible{
   outline:2px solid var(--active-bd);
   outline-offset:2px;
 }
 
-.menu .menu-u1.active > button{
+.menu-u1.active > button{
   background:var(--active-bg);
   border-color:var(--active-bd);
   color:var(--active-tx);

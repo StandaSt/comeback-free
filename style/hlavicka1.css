@@ -90,7 +90,8 @@
   grid-template-rows:repeat(4,min-content);                /* 4 řádky, každý jen tak vysoký jak je třeba */
   row-gap:2px;                                             /* mezera mezi řádky */
   grid-template-columns:max-content 1fr;                   /* sloupce: popisek (min) | hodnota (zbytek) */
-  column-gap:6px;                                          /* mezera mezi popiskem a hodnotou */
+  column-gap:6px;   
+  line-height:1.1;                                       /* mezera mezi popiskem a hodnotou */
   }
 
 .hc-row{display:contents;}                 /* “obal” řádku neexistuje v layoutu (jen děti) */
@@ -113,26 +114,6 @@
    LOGIN – pravý sloupec
    ========================= */
 
-.header-right{                                             /* začátek definice pravého bloku hlavičky */
-  display:flex;                                            /* flex pro umístění obsahu (login) */
-  align-items:flex-start;                                  /* zarovnání obsahu nahoře */
-  justify-content:flex-end;                                /* zarovnání obsahu doprava */
-  /* padding:5px; */                                             /* vnitřní odsazení (uvnitř rámečku) */
-  /* margin-left:6px; */                                              /* 3 vnější odsazení (mimo rámeček) */
-  /* margin-right:10px; */   
-  /* border:2px solid #000;                                 /* černý rámeček 2px */
-  /* background:#3ee755;    */ 
-  background:#f3f3f3;                                    /* pozadí karty */
-  border-radius:8px;                                      /* barva pozadí (kontrolní) */
-  height:88px;                                             /* pevná výška pravého bloku */
-}
-
-/* login blok (obal) */
-.hr-login{                                   /* obal login obsahu uvnitř pravého bloku */
-  width:240px;                                             /* šířka samotného login bloku */
-  /* padding-top:10px; */                                        /* odsazení shora (posunutí obsahu dolů) */
-}
-
 /* přihlášen (status) */
 .login-status{                     /* obal stavu přihlášení */
   display:flex;                                            /* flex pro svislé skládání */
@@ -151,7 +132,7 @@
   flex-direction:column;                                   /* pod sebe */
   gap:4px;                                                 /* malá mezera mezi řádky */
   font-size:12px;                                          /* velikost písma */
-  line-height:1.2;                                         /* výška řádku */
+  line-height:1.1;                                         /* výška řádku */
   color:#555;                                            /* barva textu */
 }
 
@@ -196,5 +177,5 @@ margin-top:2px;     /* mezera mezi dvěma inputy */
   color:#555;                                            /* barva textu */
 }
 
-/* style/hlavicka1.css * Verze: V38 * Aktualizace: 6.2.2026 * Počet řádků: 199
+/* style/hlavicka1.css * Verze: V38 * Aktualizace: 6.2.2026 * Počet řádků: 186
    konec souboru */

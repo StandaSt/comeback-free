@@ -58,25 +58,29 @@ $CB_HEADER = cb_header_info();
 
             <!-- BLOK 1: TECH DATA -->
             <div class="hc-col">
+                <div class="hc-row"><span class="hc-label"></span><span class="hc-value">Server</span></div>
                 <div class="hc-row"><span class="hc-label">Server:</span><span class="hc-value"><?= h($CB_HEADER['server'] ?? '---') ?></span></div>
-                <div class="hc-row"><span class="hc-label">DB:</span><span class="hc-value"><?= h($CB_HEADER['db'] ?? '---') ?></span></div>
                 <div class="hc-row"><span class="hc-label">Host:</span><span class="hc-value"><?= h($CB_HEADER['host'] ?? '---') ?></span></div>
+                <div class="hc-row"><span class="hc-label">PHP verze:</span><span class="hc-value"><?= h(PHP_VERSION) ?></span></div>
                 <div class="hc-row"><span class="hc-label">Aktualizace:</span><span class="hc-value"><?= h($CB_HEADER['aktualizace'] ?? '---') ?></span></div>
             </div>
 
             <!-- BLOK 2 – STAV APLIKACE -->
             <div class="hc-col">
-                <div class="hc-row"><span class="hc-label">Cache:</span><span class="hc-value">zapnuta</span></div>
-                <div class="hc-row"><span class="hc-label">Verze IS:</span><span class="hc-value">DEV</span></div>
-                <div class="hc-row"><span class="hc-label">Build:</span><span class="hc-value">---</span></div>
+                <div class="hc-row"><span class="hc-label"></span><span class="hc-value">Databáze</span></div>
+                <div class="hc-row"><span class="hc-label">Název DB:</span><span class="hc-value"><?= h($CB_HEADER['db'] ?? '---') ?></span></div>
+                <div class="hc-row"><span class="hc-label">Verze DB:</span><span class="hc-value">10.4.32-MariaDB</span></div>
+                <div class="hc-row"><span class="hc-label">Dotazů:</span><span class="hc-value">652 145 / 325</span></div>
+                <div class="hc-row"><span class="hc-label">Velikost:</span><span class="hc-value">826 MB</span></div>
             </div>
 
             <!-- BLOK 3 – INTEGRACE -->
             <div class="hc-col">
-                <div class="hc-row"><span class="hc-label">API:</span><span class="hc-value">---</span></div>
-                <div class="hc-row"><span class="hc-label">DB host:</span><span class="hc-value">---</span></div>
-                <div class="hc-row"><span class="hc-label">PHP:</span><span class="hc-value"><?= h(PHP_VERSION) ?></span></div>
-                <div class="hc-row"><span class="hc-label">Pozn.:</span><span class="hc-value">---</span></div>
+                <div class="hc-row"><span class="hc-label"></span><span class="hc-value">Objednávky</span></div>
+                <div class="hc-row"><span class="hc-label">Celkem:</span><span class="hc-value">38 468</span></div>
+                <div class="hc-row"><span class="hc-label">Položky:</span><span class="hc-value">751</span></div>
+                <div class="hc-row"><span class="hc-label">Něco:</span><span class="hc-value">---</span></div>
+                <div class="hc-row"><span class="hc-label">Něco:</span><span class="hc-value">---</span></div>
             </div>
 
             <!-- BLOK 4 – PŘIHLÁŠENÍ -->
