@@ -1,37 +1,23 @@
-/* style/menu_tlac1.css * Verze: V3 * Aktualizace: 5.2.2026 */
-
-/* =========================================================
-   SPOLEČNÁ TLAČÍTKA (HOME + SWITCH)
-   ========================================================= */
+/* style/menu_tlac1.css * Verze: V4 * Aktualizace: 6.2.2026 */
 
 /*
- * Tyto obaly (menu-home / menu-toggle) jsou použité v obou variantách:
- * - dropdown: jsou přímo v gridu (.menu-top)
- * - sidebar: jsou ve flex řádku (.menu-switch)
- *
- * ZMĚNA V3:
- * - pevná výška 30px pro obaly → ikony pak nemění výšku řádku (stabilita zarovnání)
+ * POZN. V4:
+ * - z tohoto souboru odstraněny styly pro obaly ikon (menu-home / menu-toggle)
+ * - důvod: jedna třída = jeden soubor (domluva)
+ * - sidebar obaly ikon zůstaly funkčně stejné, jejich styly jsou přesunuty do style/menu1.css
  */
-.menu-home,
-.menu-toggle{
-  margin-top:0;
-  display:flex;
-  gap:8px;
-  align-items:center;
-  height:30px;            /* stabilní výška pro zarovnání s L1 tlačítky */
-}
 
 /* =========================================================
    1. ÚROVEŇ (u1) – společné pro dropdown + sidebar
    ========================================================= */
 
 .menu .menu-u1 > button{
-  width:100%;
+  width:120px;
   text-align:left;
   height:30px;
   padding:0 10px;
   line-height:30px;
-  border-radius:10px;
+  border-radius:8px;
   border:1px solid var(--border-strong);
   background:var(--btn);
   cursor:pointer;
@@ -65,11 +51,11 @@
    ========================================================= */
 
 .menu-dropdown .menu-u1 > button{
-  padding:0 8px;
+  padding:0 8px;        /* */
   display:flex;
   justify-content:space-between;
   align-items:center;
-  gap:8px;
+  gap:0px;
 }
 
 /* =========================================================
@@ -92,7 +78,7 @@
   display:flex;
   justify-content:space-between;
   align-items:center;
-  gap:10px;
+  gap:0px;
   white-space:nowrap;
 }
 
@@ -133,7 +119,7 @@
   width:100%;
   text-align:left;
   height:30px;
-  padding:0 10px;
+  padding:0 5px;
   line-height:30px;
   border:1px solid transparent;
   background:#fff;
@@ -141,7 +127,7 @@
   font:inherit;
   font-weight:400;
   color:#222;
-  border-radius:10px;
+  border-radius:8px;
 }
 
 .menu-u2 > button:hover{
@@ -163,5 +149,5 @@
   color:var(--active-tx);
 }
 
-/* style/menu_tlac1.css * Verze: V3 * Aktualizace: 5.2.2026 * Počet řádků: 167
+/* style/menu_tlac1.css * Verze: V4 * Aktualizace: 6.2.2026 * Počet řádků: 153
    konec souboru */

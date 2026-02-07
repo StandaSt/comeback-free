@@ -1,5 +1,5 @@
 <?php
-// includes/menu_d.php * Verze: V14 * Aktualizace: 29.1.2026
+// includes/menu_d.php * Verze: V16 * Aktualizace: 6.2.2026 * Počet řádků: 101
 declare(strict_types=1);
 
 if (defined('COMEBACK_MENU_D_RENDERED')) return;
@@ -10,23 +10,38 @@ define('COMEBACK_MENU_D_RENDERED', true);
  * - obsluha (otevírání/zavírání/router) je v lib/menu_obsluha.js
  * - tento soubor řeší jen umístění (horizontální) + HTML kotvy
  *
- * SVG tlačítka (HOME + přepínače režimu):
- * - společně v includes/tlacitka_svg.php
- * - variantu určuje $CB_MENU_VARIANTA = 'dropdown'
+ * Ikony (HOME + přepínače režimu):
+ * - jsou technicky mimo samotné menu (nejsou součást window.MENU)
+ * - render řeší includes/tlacitka_svg.php
+ * - zde je jen rozmístíme do 3sloupcového gridu: 80px | 1fr | 80px
  */
 ?>
 <div class="menu menu-dropdown">
-  <div class="menu-bar">
-    <div class="menu-top">
 
+  <!-- RÁM DROPDOWNU: 80px | 1fr | 80px -->
+  <div class="menu-ddbar">
+
+    <!-- LEVÝ SLOT (80px): HOME -->
+    <div class="menu-ddslot-left">
       <?php
       $CB_MENU_VARIANTA = 'dropdown';
+      $CB_TLACITKA_SLOT = 'home';
       require __DIR__ . '/tlacitka_svg.php';
       ?>
-
-      <div class="menu-row" id="dropdown"></div>
-
     </div>
+
+    <!-- STŘED (1fr): SEM JS VYRENDERUJE L1/L2 -->
+    <div class="menu-row" id="dropdown"></div>
+
+    <!-- PRAVÝ SLOT (80px): SWITCH -->
+    <div class="menu-ddslot-right">
+      <?php
+      $CB_MENU_VARIANTA = 'dropdown';
+      $CB_TLACITKA_SLOT = 'switch';
+      require __DIR__ . '/tlacitka_svg.php';
+      ?>
+    </div>
+
   </div>
 </div>
 
@@ -81,6 +96,6 @@ if (!defined('COMEBACK_MENU_OBSLUHA_JS_INCLUDED')) {
 </script>
 
 <?php
-// includes/menu_d.php * Verze: V14 * Aktualizace: 29.1.2026
+// includes/menu_d.php * Verze: V16 * Aktualizace: 6.2.2026 * Počet řádků: 101
 // konec souboru
 ?>

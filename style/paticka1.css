@@ -1,53 +1,70 @@
-/* style/paticka1.css * Verze: V6 * Aktualizace: 6.2.2026 */
+/* style/paticka1.css * Verze: V12 * Aktualizace: 6.2.2026 */
 
 /* =========================
    PATIČKA
    ========================= */
 
-.footer {                                   /* hlavní obal patičky */
-    margin-top: auto;                       /* vytlačí patičku dolů (flex layout) */
-    /* border-top: 1px solid #e5e5e5;  */          /* horní oddělovací linka */
-    padding-top: 6px;                       /* horní vnitřní odsazení */
-    font-size: 11px;                        /* velikost písma v patičce */
-    color: #555;                            /* barva textu */
-    background: var(--bg-ram);              /* pozadí */
-   /* border-radius: 6px;   */                  /* zaoblení rohů */
-    padding: 6px 12px;                      /* vnitřní odsazení (přepíše padding-top) */
-}                                           /* konec .footer */
+.footer{
+  /* pevná výška patičky je dána min-height; obsah se dorovná posunem */
+  min-height:25px;
+  background:var(--bg-ram);
+  font-size:11px;
+  color:#555;
 
-.footer-inner {                             /* vnitřní řádek patičky (3 sloupce) */
-    display: grid;                          /* použije CSS grid (mřížku) */
-    grid-template-columns: 1fr 1fr 1fr;     /* 3 stejné sloupce */
-    align-items: end;                       /* zarovnání obsahu dolů */
-}                                           /* konec .footer-inner */
+  display:flex;
+  align-items:stretch;
 
-.footer-left { 
-    text-align: left;                        /* levý sloupec zarovnat vlevo */
-}         
+  /* vodorovné odsazení, a jemné dorovnání obsahu o 5px výš */
+  padding:0 0 7px 0; /* dole 5px = posun textu výš */
+  box-sizing:border-box;
+}
 
-.footer-center { 
-    text-align: center;                     /* střední sloupec zarovnat na střed */
-}      
+.footer-inner{
+  flex:1;
+  width:100%;
+  display:flex;
+  align-items:center;             /* svisle na střed uvnitř footer-inner */
+  justify-content:space-between;  /* vlevo | střed | vpravo */
+  gap:10px;
+  box-sizing:border-box;
+}
 
-.footer-right { 
-    text-align: right;                       /* pravý sloupec zarovnat vpravo */
-}       
+.footer-left{
+  text-align:left;
+  max-width:350px;
+}
+
+.footer-center{
+  text-align:center;
+  flex:1;
+  min-width:0;
+}
+
+.footer-right{
+  text-align:right;
+  max-width:350px;
+}
 
 /* =========================
    MOBIL
    ========================= */
 
-@media (max-width: 700px) {                 /* pravidla pro obrazovky do 700px */
-    .footer-inner {                         /* v mobilu: vnitřní řádek patičky */
-        grid-template-columns: 1fr;         /* 1 sloupec (pod sebe) */
-        gap: 8px;                           /* mezera mezi řádky */
-        text-align: center;                 /* výchozí zarovnání textu na střed */
-    }                                       /* konec .footer-inner v @media */
-    .footer-left,                           /* levý sloupec v mobilu */
-    .footer-right {                         /* pravý sloupec v mobilu */
-        text-align: center;                 /* zarovnat na střed */
-    }                                       /* konec .footer-left, .footer-right v @media */
-}                                           /* konec @media */
+@media (max-width:700px){
+  .footer-inner{
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    gap:6px;
+  }
 
-/* style/paticka1.css * Verze: V6 * Aktualizace: 6.2.2026 * Počet řádků: 53
+  .footer-left,
+  .footer-center,
+  .footer-right{
+    text-align:center;
+    flex:0;
+    max-width:none;
+  }
+}
+
+/* style/paticka1.css * Verze: V12 * Aktualizace: 6.2.2026 * Počet řádků: 70
    konec souboru */

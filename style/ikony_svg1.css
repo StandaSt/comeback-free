@@ -23,7 +23,7 @@
   justify-content:center;                 /* vodorovné vycentrování obsahu */
   padding:0;                              /* žádné vnitřní odsazení */
   border:1px solid var(--border-strong);  /* rámeček ikony (sdílená CSS proměnná) */
-  border-radius:10px;                     /* zaoblení rohů */
+  border-radius:8px;                     /* zaoblení rohů */
   background:var(--btn);                  /* pozadí ikony (sdílená CSS proměnná) */
   cursor:pointer;                         /* kurzor ruky (klikatelné) */
   color:#222;                             /* barva obsahu (např. SVG přes currentColor) */

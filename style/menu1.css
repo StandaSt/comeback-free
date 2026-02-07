@@ -1,19 +1,13 @@
-/* style/menu1.css * Verze: V30 * Aktualizace: 6.2.2026 */
+/* style/menu1.css * Verze: V32 * Aktualizace: 6.2.2026 */
 
 /*
  * CÍL:
- * - SVG tlačítka (HOME + přepínač režimu) mít mimo renderované menu a správně je rozmístit:
- *   - dropdown: HOME vlevo od menu, přepínač vpravo
- *   - sidebar: tlačítka pod menu (v běžném toku)
- * - vždy ukázat jen správný přepínač (dropdown -> sidebar / sidebar -> dropdown)
+ * - dropdown + sidebar layout
  *
- * Pozn. (sjednocení ikon):
- * - všechna tlačítka s SVG/IMG ikonou mají JEDINOU třídu: .ikona-svg
- *
- * ZMĚNA V30:
- * - PEVNÝ GRID 80px | 1fr | 80px
- * - žádné auto, žádné přepočty
- * - layout je deterministický a nemůže „skákat“
+ * DOMLUVA (úklid ikon):
+ * - ikony nejsou "menu" → u dropdownu se řeší mimo renderované položky menu
+ * - v menu1.css (dropdown) už nejsou žádné třídy ikon ani ID tlačítek
+ * - sidebar část necháváme funkčně beze změn (jen přesun stylů obalů ikon sem, protože menu_tlac1.css už je nemá)
  */
 
 /* =========================================================
@@ -21,49 +15,81 @@
    ========================================================= */
 
 .menu{
-  margin: 10px 6px 0px;
+ /* margin: 0px 6px 0px; */
+ /*  background:#e97373; */
 }
 
 /* =========================================================
-   DROPDOWN: rozložení (HOME vlevo, menu uprostřed, switch vpravo)
+   DROPDOWN: jen MENU (rám 80px | 1fr | 80px)
    ========================================================= */
 
-.menu-dropdown .menu-top{
-  /* display:grid; */
-  grid:80px 1fr 80px;   /* HOME | MENU | SWITCH – PEVNÉ */
-   grid-auto-rows:auto; 
+/* rám pro dropdown – holý grid */
+.menu-ddbar{
+  display:grid;
+  grid-template-columns:127px 1fr 33px;
   gap:12px;
-  /* align-items:center; */
-  /* position:relative;  */
+  align-items:center;
+  margin: 0 0 10px 0;
 }
 
-/* umístění do gridu */
-.menu-dropdown .menu-home{
-  grid-column:1;
-  justify-self:start; 
+/* střední část: L1 položky vedle sebe, při nedostatku místa se zalomí do další řady
+   (bez horizontálního scrollu, aby U2 panel nebyl nikdy ořezaný) */
+.menu-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+  overflow:visible;
+  min-width:0;
 }
 
-.menu-dropdown .menu-row{
-  grid-column:2;
+/* každá L1 položka je samostatný blok */
+.menu-row .menu-u1{
+  position:relative;
+  width:var(--dropdown-w);
 }
-
-.menu-dropdown .menu-toggle{
-  grid-column:3;
-  justify-self:end;
-}
-
-/* v dropdown režimu ukázat jen přepínač "na sidebar" */
-.menu-dropdown #menuToDropdown{ display:none; }
-.menu-dropdown #menuToSidebar{ display:inline-flex; }
 
 /* =========================================================
-   SIDEBAR: tlačítka pod menu (běžný tok)
+   DROPDOWN – PANEL 2. ÚROVNĚ (u2 panel)
+   ========================================================= */
+
+.menu-panel{
+  display:none;
+  position:absolute;
+  left:0;
+  top:calc(100% + 8px);
+  border:1px solid var(--border-strong);
+  border-radius:10px;
+  background:#fff;
+  padding:8px;
+  width:max-content;
+  max-width:min(520px,92vw);
+  box-shadow:0 10px 24px rgba(0,0,0,.10);
+  z-index:50;
+}
+
+.menu-u1.open .menu-panel{
+  display:block;
+}
+
+/* =========================================================
+   DROPDOWN – 2. ÚROVEŇ (u2)
+   ========================================================= */
+
+.menu-col2{
+  display:flex;
+  flex-direction:column;
+}
+
+/* =========================================================
+   SIDEBAR: BEZE ZMĚN FUNKCE (původní pravidla + přesun obalů ikon sem)
    ========================================================= */
 
 .menu-sidebar .menu-area{
   position:relative;
   background:var(--bg-ram);
   padding-bottom:0;
+  margin: 0 10px 0 0;
 }
 
 .menu-sidebar .menu-switch{
@@ -71,6 +97,16 @@
   display:flex;
   gap:8px;
   align-items:center;
+}
+
+/* obaly ikon pro sidebar (přesunuto sem z menu_tlac1.css) */
+.menu-sidebar .menu-home,
+.menu-sidebar .menu-toggle{
+  margin-top:0;
+  display:flex;
+  gap:8px;
+  align-items:center;
+  height:30px;
 }
 
 .menu-sidebar .menu-home{ flex:0 0 auto; }
@@ -125,59 +161,6 @@
   z-index:10;
 }
 
-/*
- * Střední řádek s L1 tlačítky:
- * - 1 řádek, žádné zalamování
- * - když se nevejde → horizontální posuv
- */
-.menu-dropdown .menu-row{
-  display:flex;
-  gap:8px;
-  flex-wrap:nowrap;
-  overflow-x:auto;
-  overflow-y:hidden;
-  align-items:center;
-  min-width:0;
-  padding-right:0;
-  padding-top:0;
-}
-
-.menu-dropdown .menu-u1{
-  position:relative;
-  width:var(--dropdown-w);
-  flex:0 0 var(--dropdown-w);
-}
-
-/* =========================================================
-   DROPDOWN – PANEL 2. ÚROVNĚ (u2 panel)
-   ========================================================= */
-
-.menu-dropdown .menu-panel{
-  display:none;
-  position:absolute;
-  left:0;
-  top:calc(100% + 8px);
-  border:1px solid var(--border-strong);
-  border-radius:10px;
-  background:#fff;
-  padding:8px;
-  width:max-content;
-  max-width:min(520px,92vw);
-  box-shadow:0 10px 24px rgba(0,0,0,.10);
-  z-index:50;
-}
-
-.menu-dropdown .menu-u1.open .menu-panel{ display:block; }
-
-/* =========================================================
-   DROPDOWN – 2. ÚROVEŇ (u2)
-   ========================================================= */
-
-.menu-dropdown .menu-col2{
-  display:flex;
-  flex-direction:column;
-}
-
 /* =========================================================
    SIDEBAR – obecné
    ========================================================= */
@@ -194,10 +177,6 @@
   max-width:100%;
 }
 
-/* =========================================================
-   SIDEBAR – 1. ÚROVEŇ (u1) – jen specifika (mezery)
-   ========================================================= */
-
 .menu-sidebar .menu-u1{
   background:transparent;
   margin-bottom:8px;
@@ -211,25 +190,24 @@
 
   .menu{ margin:8px 12px; }
 
-  .menu-dropdown .menu-top{
+  /* na mobilu je vše pod sebou – zachováme původní chování */
+  .menu-ddbar{
     display:flex;
     flex-direction:column;
     align-items:stretch;
     gap:8px;
   }
 
-  .menu-dropdown .menu-row{
-    overflow-x:visible;
-    flex-wrap:wrap;
+  .menu-row{
+    flex-direction:column;
+    flex-wrap:nowrap;
+    align-items:stretch;
   }
 
-  .menu-dropdown .menu-home{ justify-content:flex-start; }
-  .menu-dropdown .menu-toggle{ justify-content:flex-end; }
-
-  .menu-dropdown .menu-u1{ width:100%; flex:0 0 auto; }
+  .menu-row .menu-u1{ width:100%; }
   .menu-sidebar #sidebar{ width:100%; max-width:100%; }
-  .menu-dropdown .menu-panel{ width:100%; max-width:100%; }
+  .menu-panel{ width:100%; max-width:100%; }
 }
 
-/* style/menu1.css * Verze: V30 * Aktualizace: 6.2.2026 * Počet řádků: 235
+/* style/menu1.css * Verze: V32 * Aktualizace: 6.2.2026 * Počet řádků: 210
    konec souboru */

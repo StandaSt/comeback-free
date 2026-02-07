@@ -157,7 +157,7 @@ function show_error(bool $TRACE, Throwable $e, array $qGet): void {
     } else {
         // "příjemná cesta": rovnou link na stejné parametry + trace=1
         $q = $qGet;
-        $q['page'] = 'uzivatele';
+        $q['page'] = 'hr_uzivatele';
         $q['trace'] = '1';
         $href = '?' . http_build_query($q);
         echo '<p><a href="' . h($href) . '">Zobrazit detaily</a></p>';
@@ -287,7 +287,7 @@ try {
 
     /* ===== URL BASE ===== */
     $baseQ = [
-        'page' => 'uzivatele',
+        'page' => 'hr_uzivatele',
         'per'  => $per,
         'p'    => $page,
         'akt'  => $akt,
@@ -298,7 +298,7 @@ try {
     /* ===== TABULKA ===== */
     echo '<div class="card"><div class="table-wrap">';
     echo '<form method="get">';
-    echo '<input type="hidden" name="page" value="uzivatele">';
+    echo '<input type="hidden" name="page" value="hr_uzivatele">';
     if ($TRACE) echo '<input type="hidden" name="trace" value="1">';
     echo '<input type="hidden" name="p" value="1">';
 
@@ -312,7 +312,7 @@ try {
         if ($key === 'reg') {
             echo '<button type="submit" class="icon-btn icon-enter">⏎</button>';
         } elseif ($key === 'aktivni') {
-            $href = build_url(['page' => 'uzivatele'] + ($TRACE ? ['trace' => '1'] : []));
+            $href = build_url(['page' => 'hr_uzivatele'] + ($TRACE ? ['trace' => '1'] : []));
             echo '<a class="icon-btn icon-x" href="' . h($href) . '">×</a>';
         } elseif ($c['filter']) {
             echo '<input class="filter-input" name="f[' . h($key) . ']" value="' . h($filters[$key] ?? '') . '">';

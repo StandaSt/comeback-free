@@ -1,5 +1,5 @@
 <?php
-// pages/oobj_zakaznici.php V4 – počet řádků: 415 – aktuální čas v ČR: 18.1.2026 11:23
+// pages/obj_zakaznici.php V4 – počet řádků: 415 – aktuální čas v ČR: 18.1.2026 11:23
 declare(strict_types=1);
 
 /*
@@ -248,7 +248,7 @@ try {
 
     /* ===== URL BASE ===== */
     $baseQ = [
-        'page' => 'zakaznici',
+        'page' => 'obj_zakaznici',
         'per'  => $per,
         'p'    => $page,
         'blk'  => $blk,
@@ -259,7 +259,7 @@ try {
     /* ===== TABULKA ===== */
     echo '<div class="card"><div class="table-wrap">';
     echo '<form method="get">';
-    echo '<input type="hidden" name="page" value="zakaznici">';
+    echo '<input type="hidden" name="page" value="obj_zakaznici">';
     if ($TRACE) echo '<input type="hidden" name="trace" value="1">';
     echo '<input type="hidden" name="p" value="1">';
 
@@ -271,7 +271,7 @@ try {
         echo '<th class="c-' . h($key) . '">';
 
         if ($key === 'posl_obj') {
-            $href = build_url(['page' => 'zakaznici'] + ($TRACE ? ['trace' => '1'] : []));
+            $href = build_url(['page' => 'obj_zakaznici'] + ($TRACE ? ['trace' => '1'] : []));
             echo '<div class="filter-actions">';
             echo '<button type="submit" class="icon-btn icon-enter">⏎</button>';
             echo '<a class="icon-btn icon-x small" href="' . h($href) . '">×</a>';

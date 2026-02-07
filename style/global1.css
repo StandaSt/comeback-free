@@ -1,4 +1,4 @@
-/* style/global1.css * Verze: V6 *
+/* style/global1.css * Verze: V7 *
    Aktualizace: 6.2.2026 * Počet řádků: 309 */
 
 /* =========================
@@ -13,7 +13,7 @@ html {                                                      /* element html (cel
 }                                                          /* konec html */
 
 body {                                                      /* element body (tělo stránky) */
-    margin: 0;                                              /* zruší výchozí okraje */
+    /* margin: 0; */                                              /* zruší výchozí okraje */
     height: 100vh;                                          /* výška těla = výška okna */
     font-family: Arial, Helvetica, sans-serif;              /* výchozí fonty stránky */
     background: var(--bg-body);                             /* barva pozadí stránky */
@@ -31,12 +31,10 @@ body {                                                      /* element body (tě
     max-width: 2100px;
    /*   margin: 0 auto; */
     background: var(--bg-ram);
-    padding: 0;   
-    padding-right: 10px;       
-    padding-left: 10px;                                
+    padding: 0px 10px 0 10px; 
     border-radius: 6px;
-    height: 100vh;                                          /* container = výška okna */
-    display: flex;
+    height: 100vh;                 /*  test  container = výška okna */
+    display: flex; 
     flex-direction: column;
 }                                                          /* konec .container */
 
@@ -47,7 +45,7 @@ body {                                                      /* element body (tě
 .trace-box,                                                 /* společné styly: .trace-box */
 .trace-msg {                                                /* společné styly: .trace-msg */
     font: 12px/1.4 monospace;                               /* font pro debug (velikost/řádkování/typ) */
-    margin: 4px 0;                                          /* svislé odsazení debug prvků */
+    /* margin: 4px 0; */                                          /* svislé odsazení debug prvků */
 }                                                          /* konec .trace-box, .trace-msg */
 
 /* =========================
@@ -59,14 +57,14 @@ body {                                                      /* element body (tě
 .table {                                                    /* obecná tabulka */
     width: 100%;                                            /* tabulka přes celou šířku */
     border-collapse: collapse;                              /* spojí okraje buněk */
-    min-width: 900px;                                       /* minimální šířka (kvůli čitelnosti) */
+                                           /* minimální šířka (kvůli čitelnosti) */
 }                                                          /* konec .table */
 
 .table-fixed { table-layout: fixed; }                       /* pevné rozložení sloupců (tabulka) */
 
 .table th,                                                  /* hlavička tabulky */
 .table td {                                                 /* buňky tabulky */
-    padding: 8px;                                           /* vnitřní odsazení buněk */
+    /* padding: 8px; */                                           /* vnitřní odsazení buněk */
     border-bottom: 1px solid var(--border-accent);          /* spodní linka buněk */
     font-size: 14px;                                        /* velikost písma v buňkách */
     white-space: nowrap;                                    /* nezalamovat text */
@@ -91,7 +89,7 @@ body {                                                      /* element body (tě
 
 .filter-input {                                             /* vstupní pole filtru */
     width: 100%;                                            /* přes celou šířku buňky */
-    padding: 6px 8px;                                       /* vnitřní odsazení */
+    /* padding: 6px 8px; */                                       /* vnitřní odsazení */
     font-size: 13px;                                        /* velikost písma */
     border: 1px solid #ccc;                                 /* rámeček */
     border-radius: 4px;                                     /* zaoblení rohů */
@@ -114,7 +112,7 @@ body {                                                      /* element body (tě
     background: #f2f2f2;                                    /* pozadí */
     color: #333;                                            /* barva obsahu */
     cursor: pointer;                                        /* kurzor ruky */
-    padding: 0;                                             /* bez vnitřního odsazení */
+    /* padding: 0; */                                             /* bez vnitřního odsazení */
 }                                                          /* konec .icon-btn */
 
 .icon-btn:hover { background: #e0e0e0; }                    /* hover stav – změna pozadí */
@@ -157,7 +155,7 @@ body {                                                      /* element body (tě
     color: #fff;                                            /* barva textu tooltipu */
     background: rgba(0,0,0,.85);                            /* pozadí tooltipu */
     border-radius: 6px;                                     /* zaoblení rohů */
-    padding: 6px 8px;                                       /* vnitřní odsazení tooltipu */
+    /* padding: 6px 8px; */                                       /* vnitřní odsazení tooltipu */
     z-index: 9999;                                          /* nad ostatním obsahem */
 }                                                          /* konec .cb-tip::after */
 
@@ -194,7 +192,7 @@ body {                                                      /* element body (tě
     min-width: 90px;                                        /* minimální šířka */
     height: 32px;                                           /* výška */
     line-height: 32px;                                      /* svislé vycentrování textu */
-    padding: 0 10px;                                        /* vodorovné odsazení */
+    /* padding: 0 10px; */                                        /* vodorovné odsazení */
     display: inline-flex;                                   /* inline-flex (zarovnání obsahu) */
     align-items: center;                                    /* svislé zarovnání obsahu */
     justify-content: center;                                /* vodorovné zarovnání obsahu */
@@ -206,7 +204,7 @@ body {                                                      /* element body (tě
     min-width: 60px;                                        /* minimální šířka */
     height: 32px;                                           /* výška */
     line-height: 32px;                                      /* svislé vycentrování textu */
-    padding: 0 10px;                                        /* vodorovné odsazení */
+    /* padding: 0 10px; */                                        /* vodorovné odsazení */
     display: inline-flex;                                   /* inline-flex (zarovnání obsahu) */
     align-items: center;                                    /* svislé zarovnání obsahu */
     justify-content: center;                                /* vodorovné zarovnání obsahu */
@@ -238,7 +236,7 @@ body {                                                      /* element body (tě
     grid-template-columns: auto 1fr auto;                   /* sloupce: vlevo | střed | vpravo */
     align-items: center;                                    /* svislé zarovnání obsahu */
     gap: 12px;                                              /* mezera mezi sloupci */
-    margin-top: 14px;                                       /* mezera nad lištou */
+    /* margin-top: 14px; */                                       /* mezera nad lištou */
 }                                                          /* konec .list-bottom */
 
 .per-form {                                                 /* obal formuláře pro výběry (per-page apod.) */
@@ -258,7 +256,7 @@ body {                                                      /* element body (tě
    ========================= */
 
 .zakaznici-table .c-id { width: 9ch; text-align: right; }   /* sloupec ID (šířka + zarovnání) */
-.zakaznici-table .c-prijmeni { width: 16ch; text-align: right; padding-right: 15px; } /* příjmení (šířka + zarovnání + odsazení) */
+.zakaznici-table .c-prijmeni { width: 16ch; text-align: right; /* padding-right: 15px; */ } /* příjmení (šířka + zarovnání + odsazení) */
 .zakaznici-table .c-jmeno { width: 14ch; }                  /* jméno (šířka) */
 .zakaznici-table .c-telefon { width: 15.5ch; text-align: right; } /* telefon (šířka + zarovnání) */
 .zakaznici-table .c-email { width: 26ch; text-align: right; } /* email (šířka + zarovnání) */
@@ -306,6 +304,6 @@ body {                                                      /* element body (tě
     .list-bottom { grid-template-columns: 1fr; justify-items: center; gap: 10px; } /* lišta: pod sebe + centrování + menší gap */
 }                                                          /* konec @media */
 
-/* style/global1.css * Verze: V6 *
+/* style/global1.css * Verze: V7 *
    Aktualizace: 6.2.2026 * Počet řádků: 309
    konec souboru */

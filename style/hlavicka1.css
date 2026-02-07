@@ -1,4 +1,4 @@
-/* style/hlavicka1.css * Verze: V37 * Aktualizace: 6.2.2026 */
+/* style/hlavicka1.css * Verze: V38 * Aktualizace: 6.2.2026 */
 
 /* =========================
    HLAVIČKA
@@ -11,8 +11,8 @@
   align-items:center;                                      /* svislé zarovnání obsahu sloupců na střed */
   background: var(--bg-ram);                               /* pozadí */
   /* border-radius:6px;   */                                    /* zaoblení rohů hlavičky */
-  padding:0;                                               /* vnitřní odsazení hlavičky */
-  margin:0;                                                /* vnější odsazení hlavičky */
+  /* padding:0; */                                               /* vnitřní odsazení hlavičky */
+  margin: 10px 0 10px 0;                                            /* vnější odsazení hlavičky */
 }
 
 /* =========================
@@ -23,12 +23,11 @@
   display:flex;                                            /* zapne flex (řádkové skládání prvků) */
   align-items:center;                                      /* svislé zarovnání obsahu na střed */
   justify-content:center;                                  /* vodorovné zarovnání obsahu na střed */
-  padding:0px;                                             /* vnitřní odsazení (uvnitř rámečku) */
-  margin-left:8px;                                              /* 3 vnější odsazení (mimo rámeček) */
-  margin-right:8px;   
+  /* padding:0px; */                                             /* vnitřní odsazení (uvnitř rámečku) */
+  /* margin-left:8px; */                                              /* 3 vnější odsazení (mimo rámeček) */
+   margin-right:10px;   
   /* border:2px solid #000;                                 /* černý rámeček 2px */
   /* background:#5e75db;                                    /* barva pozadí (kontrolní) */
-  /* width:90px;  */
   height:88px;    /* standa kontrola */                    /* pevná výška bloku loga (komentář ponechán) */
 }
 
@@ -49,7 +48,7 @@
   display:flex;
   align-items:center;
   justify-content:center;
-}
+} 
 
 .header-left img{
   max-height:88px;      /* max výška obrázku  */
@@ -68,14 +67,14 @@
   display:grid;                            /* zapne CSS grid (mřížku) */
   grid-template-columns:repeat(4,1fr);     /* 3 stejně široké sloupce */
   gap:10px;                                /* mezera mezi bloky uvnitř gridu */
-  min-width:750;                             /* dovolí zmenšení (aby nepřetékalo v flex/grid layoutu) */
+  /* min-width:750px; */                            /* dovolí zmenšení (aby nepřetékalo v flex/grid layoutu) */
   align-items:stretch;                       /* start - zarovná obsah buněk nahoru, stretch - vyplní blok */
   height:88px;                     /* standa kontrola     */
   font-size:12px;                          /* velikost písma uvnitř */
   line-height:1.3;                         /* 1.3 výška řádku textu */
   color:#333;                            /* barva textu */
-  padding:0px;                             /* 3 vnitřní odsazení (uvnitř rámečku) */
-  margin:5px;                              /* 3 vnější odsazení (mimo rámeček) */
+  /* padding:0px; */                             /* 3 vnitřní odsazení (uvnitř rámečku) */
+  /* margin:5px; */                              /* 3 vnější odsazení (mimo rámeček) */
   /* border:2px solid #000;                 /* černý rámeček 2px */
   /* background:#deee51;   */                 /* barva pozadí (kontrolní) */
 }
@@ -85,7 +84,7 @@
   border-radius:8px;                                       /* zaoblení rohů karty */
   padding:6px 10px;                                        /* vnitřní odsazení karty */
   box-sizing:border-box;                                   /* šířka/výška včetně padding/border */
-  min-width:240;                                             /* dovolí zmenšení obsahu (ellipsis) */
+  /* min-width:240px; */                                             /* dovolí zmenšení obsahu (ellipsis) */
   overflow:hidden;                                         /* skryje přetékající obsah */
   display:grid;                                            /* v kartě se použije grid pro řádky/2 sloupce */
   grid-template-rows:repeat(4,min-content);                /* 4 řádky, každý jen tak vysoký jak je třeba */
@@ -118,9 +117,9 @@
   display:flex;                                            /* flex pro umístění obsahu (login) */
   align-items:flex-start;                                  /* zarovnání obsahu nahoře */
   justify-content:flex-end;                                /* zarovnání obsahu doprava */
-  padding:5px;                                             /* vnitřní odsazení (uvnitř rámečku) */
-  margin-left:6px;                                              /* 3 vnější odsazení (mimo rámeček) */
-  margin-right:10px;   
+  /* padding:5px; */                                             /* vnitřní odsazení (uvnitř rámečku) */
+  /* margin-left:6px; */                                              /* 3 vnější odsazení (mimo rámeček) */
+  /* margin-right:10px; */   
   /* border:2px solid #000;                                 /* černý rámeček 2px */
   /* background:#3ee755;    */ 
   background:#f3f3f3;                                    /* pozadí karty */
@@ -131,7 +130,7 @@
 /* login blok (obal) */
 .hr-login{                                   /* obal login obsahu uvnitř pravého bloku */
   width:240px;                                             /* šířka samotného login bloku */
-  padding-top:10px;                                        /* odsazení shora (posunutí obsahu dolů) */
+  /* padding-top:10px; */                                        /* odsazení shora (posunutí obsahu dolů) */
 }
 
 /* přihlášen (status) */
@@ -150,29 +149,29 @@
 .login-meta{                       /* blok s role/last login */
   display:flex;                                            /* flex pro svislé skládání */
   flex-direction:column;                                   /* pod sebe */
-  gap:2px;                                                 /* malá mezera mezi řádky */
+  gap:4px;                                                 /* malá mezera mezi řádky */
   font-size:12px;                                          /* velikost písma */
   line-height:1.2;                                         /* výška řádku */
   color:#555;                                            /* barva textu */
 }
 
 /* nepřihlášen (form) – 2 inputy vlevo, ikona vpravo */
-.login-form{margin:0;}             /* zruší default margin formuláře */
+.login-form{ /* margin:0; */ }             /* zruší default margin formuláře */
 .login-grid{                       /* grid pro pole + tlačítko ikony */
   display:grid;                                            /* zapne grid */
-  grid-template-columns:170px 38px;                        /* sloupce: inputy | ikona */
-  column-gap:8px;                                          /* mezera mezi sloupci */
+  grid-template-columns:205px 30px;                        /* sloupce: inputy | ikona */
+  column-gap:10px;                                          /* mezera mezi sloupci */
   align-items:start;                                       /* zarovnání obsahu nahoře */
 }
 
-.login-fields{min-width:0;}        /* dovolí zmenšení obsahu v levém sloupci */
+/* .login-fields{min-width:195;}    */    /* dovolí zmenšení obsahu v levém sloupci */
 
 /* inputy (sjednoceno: email + heslo) */
 .login-input{                      /* společný styl pro oba inputy */
   width:100%;                                              /* šířka přes celý sloupec */
   box-sizing:border-box;                                   /* výpočet šířky včetně padding/border */
   height:22px;                                             /* výška inputu */
-  padding:3px 6px;                                         /* vnitřní odsazení textu */
+  /* padding:3px 6px; */                                         /* vnitřní odsazení textu */
   border:1px solid #bdbdbd;                                /* rámeček inputu */
   border-radius:4px;                                       /* zaoblení rohů */
   font-family:inherit;                                     /* font podle rodiče */
@@ -184,16 +183,18 @@
 }
 
 /* mini mezera mezi email a heslo */
-.login-input + .login-input{margin-top:2px;} /* mezera mezi dvěma inputy */
+.login-input + .login-input{ 
+margin-top:2px;     /* mezera mezi dvěma inputy */
+}
 
 /* nápověda pod inputy */
 .login-help{                       /* text nápovědy pod inputy */
   display:block;                                           /* chovat se jako blok */
-  margin-top:0px;                                          /* 4 odsazení shora */
+  margin-top:4px;                                           /* 4 odsazení shora */
   font-size:11px;                                          /* velikost písma */
-  line-height:1.1;                                         /* výška řádku */
+  line-height:1.3;                                         /* výška řádku */
   color:#555;                                            /* barva textu */
 }
 
-/* style/hlavicka1.css * Verze: V37 * Aktualizace: 6.2.2026 * Počet řádků: 199
+/* style/hlavicka1.css * Verze: V38 * Aktualizace: 6.2.2026 * Počet řádků: 199
    konec souboru */
