@@ -94,8 +94,7 @@ try {
     .infoblok-muted { color: #666; font-size: 13px; margin: 0 0 12px; }
   </style>
 
-  <p class="infoblok-muted">Přehled informací, které umíme zjistit (server, DB, klient).</p>
-
+  <h2>pages/admin_infoblok.php - Přehled informací, které umíme zjistit (server, DB, klient).</h2>
   <div class="infoblok-wrap">
 
     <div class="infoblok-box">

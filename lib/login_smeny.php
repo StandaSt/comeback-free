@@ -1,5 +1,5 @@
 <?php
-// lib/login_smeny.php V8 – počet řádků: 205 – aktuální čas v ČR: 19.1.2026 18:05
+// lib/login_smeny.php V9 – počet řádků: 238 – aktuální čas v ČR: 7.2.2026
 declare(strict_types=1);
 
 /*
@@ -41,15 +41,27 @@ function cb_log_line(string $step, array $ctx = [], ?Throwable $e = null): void
 
     $ctxParts = [];
     foreach ($ctx as $k => $v) {
-        if (is_bool($v)) $v = $v ? 'true' : 'false';
-        elseif ($v === null) $v = 'null';
-        elseif (is_array($v)) $v = json_encode($v, JSON_UNESCAPED_UNICODE);
-        else $v = (string)$v;
+        if (is_bool($v)) {
+            if ($v) {
+                $v = 'true';
+            } else {
+                $v = 'false';
+            }
+        } elseif ($v === null) {
+            $v = 'null';
+        } elseif (is_array($v)) {
+            $v = json_encode($v, JSON_UNESCAPED_UNICODE);
+        } else {
+            $v = (string)$v;
+        }
 
         $v = str_replace(["\r", "\n"], [' ', ' '], $v);
         $ctxParts[] = $k . '=' . $v;
     }
-    $ctxTxt = $ctxParts ? (' | ' . implode(' | ', $ctxParts)) : '';
+    $ctxTxt = '';
+    if ($ctxParts) {
+        $ctxTxt = ' | ' . implode(' | ', $ctxParts);
+    }
 
     $exTxt = '';
     if ($e) {
@@ -193,6 +205,16 @@ try {
         'approved'  => (bool)($u['approved'] ?? false),
     ];
 
+    // NOVĚ: token do session (pouze pro další GraphQL dotazy, nikam se neloguje ani neukládá do txt)
+    $_SESSION['cb_token'] = $token;
+
+    // NOVĚ: po úspěšném loginu spustíme průzkum API a zápis do pomocne/data_smeny.txt
+    try {
+        require_once __DIR__ . '/../pomocne/cteni_dat.php';
+    } catch (Throwable $e) {
+        cb_log_line('cteni_dat_fail', ['email' => $email], $e);
+    }
+
     $_SESSION['cb_flash'] = 'Přihlášení OK';
 
     cb_log_line('redirect_ok', ['to' => cb_url('index.php?page=uvod'), 'id_user' => (string)(int)$u['id']]);
@@ -204,6 +226,7 @@ try {
     cb_log_line('error', ['email' => (string)($_POST['email'] ?? '')], $e);
 
     unset($_SESSION['cb_user']);
+    unset($_SESSION['cb_token']);
     $_SESSION['cb_flash'] = $e->getMessage();
 
     cb_log_line('redirect_fail', ['to' => cb_url('index.php?page=uvod')]);
@@ -212,4 +235,4 @@ try {
     exit;
 }
 
-/* lib/login_smeny.php V8 – počet řádků: 205 – aktuální čas v ČR: 19.1.2026 18:05 */
+/* lib/login_smeny.php V9 – počet řádků: 238 – aktuální čas v ČR: 7.2.2026 */

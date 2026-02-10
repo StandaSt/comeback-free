@@ -1,19 +1,23 @@
 <?php
-// lib/logout.php V3 – počet řádků: 18 – aktuální čas v ČR: 19.1.2026 15:05
+// lib/logout.php * Verze: V4 * Aktualizace: 10.2.2026
 declare(strict_types=1);
 
 /*
  * Odhlášení uživatele
- * - technická akce (není výstup)
+ * - cíleně zruší přihlašovací session proměnné
  * - zruší session a vrátí na úvod
  */
 
-session_start(); 
+session_start();
+
+unset($_SESSION['login_ok']);
+unset($_SESSION['cb_user']);
+unset($_SESSION['cb_token']);
+unset($_SESSION['cb_flash']);
 
 session_destroy();
 
 header('Location: /comeback/index.php');
 exit;
 
-/* lib/logout.php V3 – počet řádků: 18 – aktuální čas v ČR: 19.1.2026 15:05
-konec souboru */
+// lib/logout.php * Verze: V4 * Aktualizace: 10.2.2026
