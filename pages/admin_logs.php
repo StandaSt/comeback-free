@@ -1,16 +1,16 @@
 <?php
 declare(strict_types=1);
-// pages/admin_logs.php * Verze: V7 * Aktualizace: 8.2.2026 * Počet řádků: 251
+// pages/admin_logs.php * Verze: V8 * Aktualizace: 12.2.2026 * Počet řádků: 209
 
 /*
  * ADMIN – výpis diagnostiky Směny (pomocne/data_smeny.txt)
  *
- * V7 (8.2.2026):
- * - Zrušena introspection/auto/try/one tlačítka a práce se schema_cache.json.
- * - Zobrazuje jen 2 tabulky z txt:
- *   1) Přihlášený uživatel + povolené pobočky (userGetLogged + actionHistoryFindById: workingBranchNames, mainBranchName)
- *   2) Číselník rolí (shiftRoleTypeFindAll: id, name)
- * - Tabulky jsou „DB pohled“: u každého pole návrh typu.
+ * V8 (12.2.2026):
+ * - ZOBRAZUJE JEN TABULKU 1:
+ *   Přihlášený uživatel + povolené pobočky
+ *   (USER:PROFILE + USER:BRANCHES)
+ * - Tabulka 2 (ROLETYPE:LIST) je odstraněna.
+ * - Stránka nic nestahuje, jen čte txt soubor.
  */
 
 require_once __DIR__ . '/../lib/bootstrap.php';
@@ -64,13 +64,11 @@ function cb_parse_line(string $line): ?array
 
 function cb_explain_label(string $label): string
 {
-    if ($label === 'RUN:LOGIN') return 'Automatický běh po přihlášení.';
+    if ($label === 'RUN:START') return 'Zápis diagnostiky po přihlášení – začátek.';
+    if ($label === 'RUN:END') return 'Zápis diagnostiky po přihlášení – konec.';
     if ($label === 'USER:PROFILE') return 'Profil přihlášeného uživatele (userGetLogged).';
-    if ($label === 'USER:BRANCHES') return 'Povolené pobočky + hlavní pobočka (actionHistoryFindById).';
-    if ($label === 'ROLETYPE:LIST') return 'Číselník rolí (shiftRoleTypeFindAll).';
-    if ($label === 'SMENY:ERROR') return 'Chyba ve čtení dat (např. chybí token).';
-    if ($label === 'SMENY:FATAL') return 'Neočekávaná chyba.';
-    if (str_contains($label, ':ERROR')) return 'Chyba při získávání dat.';
+    if ($label === 'USER:BRANCHES') return 'Povolené pobočky + hlavní pobočka (working/main).';
+    if (str_contains($label, ':ERROR')) return 'Chyba při zápisu diagnostiky.';
     return '';
 }
 
@@ -135,7 +133,6 @@ function cb_pick(array $src, array $keys): array
 
 $profile = null;
 $branches = null;
-$roleTypes = null;
 
 if (is_file($txtFile)) {
     $lines = @file($txtFile, FILE_IGNORE_NEW_LINES);
@@ -153,11 +150,6 @@ if (is_file($txtFile)) {
                 $branches = $r['data_mixed'];
                 continue;
             }
-
-            if ($r['label'] === 'ROLETYPE:LIST' && is_array($r['data_mixed'])) {
-                $roleTypes = $r['data_mixed'];
-                continue;
-            }
         }
     }
 }
@@ -171,20 +163,9 @@ if (is_array($branches)) {
     $rowsUser = array_merge($rowsUser, cb_as_rows_assoc($b));
 }
 
-$rowsRoles = [];
-if (is_array($roleTypes)) {
-    foreach ($roleTypes as $item) {
-        if (!is_array($item)) continue;
-        $rowsRoles[] = [
-            'id' => (string)($item['id'] ?? ''),
-            'name' => (string)($item['name'] ?? ''),
-        ];
-    }
-}
-
 ?>
 <section class="card">
-    <h2>pages/admin_logs.php – Směny: data z txt (2 tabulky)</h2>
+    <h2>pages/admin_logs.php – Směny: data z txt (1 tabulka)</h2>
 
     <style>
         table.cb-admin-log { border-collapse: collapse; table-layout: auto; }
@@ -223,29 +204,6 @@ if (is_array($roleTypes)) {
             </tbody>
         </table>
     <?php endif; ?>
-
-    <h3>Tabulka 2 – číselník rolí (shiftRoleTypeFindAll)</h3>
-
-    <?php if (!$rowsRoles): ?>
-        <p>V txt zatím nejsou data (ROLETYPE:LIST).</p>
-    <?php else: ?>
-        <table class="cb-admin-log">
-            <thead>
-            <tr>
-                <th class="cb-nowrap">id (INT)</th>
-                <th>name (VARCHAR(100))</th>
-            </tr>
-            </thead>
-            <tbody>
-            <?php foreach ($rowsRoles as $r): ?>
-                <tr>
-                    <td class="cb-nowrap"><?= h($r['id']) ?></td>
-                    <td><?= h($r['name']) ?></td>
-                </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-    <?php endif; ?>
 </section>
 <?php
-// pages/admin_logs.php * Verze: V7 * Aktualizace: 8.2.2026 * Počet řádků: 251
+// pages/admin_logs.php * Verze: V8 * Aktualizace: 12.2.2026 * Počet řádků: 209

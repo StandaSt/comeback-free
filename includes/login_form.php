@@ -1,5 +1,5 @@
 <?php
-// includes/login_form.php * Verze: V19 * Aktualizace: 7.2.2026 * Počet řádků: 95
+// includes/login_form.php * Verze: V20 * Aktualizace: 11.2.2026 * Počet řádků: 99
 declare(strict_types=1);
 
 /*
@@ -14,6 +14,8 @@ if ($cbFlash !== '') {
     unset($_SESSION['cb_flash']);
 }
 
+$loginOk = (bool)($_SESSION['login_ok'] ?? false);
+
 function cb_fmt_dt_cz($v): string
 {
     if ($v === null || $v === '') {
@@ -26,7 +28,7 @@ function cb_fmt_dt_cz($v): string
     return date('j.n.Y H:i', $ts);
 }
 
-if (is_array($cbUser) && !empty($cbUser['email'])) {
+if ($loginOk && is_array($cbUser) && !empty($cbUser['email'])) {
 
     $displayName = trim(
         (string)($cbUser['name'] ?? '') . ' ' . (string)($cbUser['surname'] ?? '')
@@ -50,7 +52,7 @@ if (is_array($cbUser) && !empty($cbUser['email'])) {
 
                 <div class="login-meta">
                     <div class="login-role">Role: <?= h($role) ?></div>
-                     <div class="login-role">Kdo ví co: něco sem dáme</div>
+                    <div class="login-role">Kdo ví co: něco sem dáme</div>
                     <div class="login-last">Last login: 7.2.2026 14:35</div>
                     <div class="login-last">Odhlášení za: 6 min.</div>
                 </div>
@@ -93,5 +95,5 @@ if ($cbFlash !== '' && $cbFlash !== 'Přihlášení OK') {
     <?php
 }
 
-// includes/login_form.php * Verze: V19 * Aktualizace: 7.2.2026 * Počet řádků: 95
+// includes/login_form.php * Verze: V20 * Aktualizace: 11.2.2026 * Počet řádků: 99
 // konec souboru
