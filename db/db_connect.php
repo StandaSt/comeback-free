@@ -1,5 +1,5 @@
 <?php
-// lib/db_connect.php V4 – počet řádků: 59 – aktuální čas v ČR: 18.1.2026 12:35
+// db/db_connect.php * V4 * aktuálizace: 18.1.2026 
 declare(strict_types=1);
 
 /*
@@ -57,4 +57,4 @@ if (!function_exists('db_connect')) {
     }
 }
 
-/* lib/db_connect.php V4 – počet řádků: 59 – aktuální čas v ČR: 18.1.2026 12:35 */
+/* db/db_connect.php V4 * počet řádků: 60 * aktuálizace: 18.1.2026 */
