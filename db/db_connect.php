@@ -1,18 +1,18 @@
 <?php
-// db/db_connect.php * V4 * aktuálizace: 18.1.2026 
+// db/db_connect.php * V4 * aktualizace: 18.1.2026
 declare(strict_types=1);
 
 /*
  * DB připojení – JEDINÉ MÍSTO
  *
- * - používá app.php (prostředí) + config/secrets.php
+ * - používá lib/app.php (prostředí) + config/secrets.php
  * - rozlišuje LOCAL / SERVER podle $PROSTREDI
  * - vrací mysqli připojení (funkce db_connect())
  * - žádná autodetekce, žádná magie
  * - žádné echo / exit (chyby řeší volající)
  */
 
-require_once __DIR__ . '/app.php';
+require_once __DIR__ . '/../lib/app.php';
 require_once __DIR__ . '/../config/secrets.php';
 
 if (!function_exists('db_connect')) {
@@ -30,9 +30,11 @@ if (!function_exists('db_connect')) {
             throw new RuntimeException('Chybí konfigurace DB v secrets.php');
         }
 
-        $cfg = ($PROSTREDI === 'LOCAL')
-            ? ($SECRETS['db']['local'] ?? null)
-            : ($SECRETS['db']['server'] ?? null);
+        if ($PROSTREDI === 'LOCAL') {
+            $cfg = $SECRETS['db']['local'] ?? null;
+        } else {
+            $cfg = $SECRETS['db']['server'] ?? null;
+        }
 
         if (!is_array($cfg)) {
             throw new RuntimeException('Neplatná konfigurace DB pro prostředí: ' . $PROSTREDI);
@@ -42,7 +44,6 @@ if (!function_exists('db_connect')) {
         $user = (string)($cfg['user'] ?? '');
         $pass = (string)($cfg['pass'] ?? '');
         $name = (string)($cfg['name'] ?? '');
-  
 
         if ($host === '' || $user === '' || $name === '') {
             throw new RuntimeException('Neúplné DB přihlašovací údaje');
@@ -57,4 +58,5 @@ if (!function_exists('db_connect')) {
     }
 }
 
-/* db/db_connect.php V4 * počet řádků: 60 * aktuálizace: 18.1.2026 */
+/* db/db_connect.php V4 * počet řádků: 62 * aktualizace: 18.1.2026 */
+// Konec souboru

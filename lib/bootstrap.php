@@ -1,5 +1,5 @@
 <?php
-// lib/bootstrap.php V4 – počet řádků: 55 – aktuální čas v ČR: 18.1.2026 12:35
+// lib/bootstrap.php * Verze: V5 * Aktualizace: 12.2.2026
 declare(strict_types=1);
 
 /*
@@ -42,14 +42,17 @@ if (!function_exists('db')) {
     function db(): mysqli
     {
         static $conn = null;
+
         if ($conn instanceof mysqli) {
             return $conn;
         }
 
-        require_once __DIR__ . '/db_connect.php';
+        require_once __DIR__ . '/../db/db_connect.php';
         $conn = db_connect();
+
         return $conn;
     }
 }
 
-/* lib/bootstrap.php V4 – počet řádků: 55 – aktuální čas v ČR: 18.1.2026 12:35 */
+/* lib/bootstrap.php * Verze: V5 * Aktualizace: 12.2.2026 * Počet řádků: 60 */
+// Konec souboru

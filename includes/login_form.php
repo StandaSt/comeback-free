@@ -1,5 +1,5 @@
 <?php
-// includes/login_form.php * Verze: V20 * Aktualizace: 11.2.2026 * Počet řádků: 99
+// includes/login_form.php * Verze: V21 * Aktualizace: 12.2.2026
 declare(strict_types=1);
 
 /*
@@ -21,8 +21,15 @@ function cb_fmt_dt_cz($v): string
     if ($v === null || $v === '') {
         return '---';
     }
-    $ts = is_int($v) ? $v : strtotime((string)$v);
-    if (!$ts) {
+
+    $ts = 0;
+    if (is_int($v)) {
+        $ts = $v;
+    } else {
+        $ts = (int)strtotime((string)$v);
+    }
+
+    if ($ts <= 0) {
         return '---';
     }
     return date('j.n.Y H:i', $ts);
@@ -95,5 +102,5 @@ if ($cbFlash !== '' && $cbFlash !== 'Přihlášení OK') {
     <?php
 }
 
-// includes/login_form.php * Verze: V20 * Aktualizace: 11.2.2026 * Počet řádků: 99
-// konec souboru
+/* includes/login_form.php * Verze: V21 * Aktualizace: 12.2.2026 * Počet řádků: 106 */
+// Konec souboru

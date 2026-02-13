@@ -1,5 +1,5 @@
 <?php
-// lib/smeny_graphql.php * Verze: V1 * Aktualizace: 12.2.2026 * Počet řádků: 63
+// lib/smeny_graphql.php * Verze: V1 * Aktualizace: 12.2.2026 * Počet řádků: 64
 declare(strict_types=1);
 
 /*
@@ -60,4 +60,5 @@ function cb_smeny_graphql(string $url, string $query, array $vars = [], ?string 
     return is_array($data) ? $data : [];
 }
 
-// lib/smeny_graphql.php * Verze: V1 * Aktualizace: 12.2.2026 * Počet řádků: 63
+// lib/smeny_graphql.php * Verze: V1 * Aktualizace: 12.2.2026 * Počet řádků: 64
+// konec souboru

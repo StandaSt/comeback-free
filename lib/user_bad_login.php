@@ -1,5 +1,5 @@
 <?php
-// lib/user_bad_login.php * Verze: V1 * Aktualizace: 12.2.2026 * Počet řádků: 33
+// lib/user_bad_login.php * Verze: V1 * Aktualizace: 12.2.2026 * Počet řádků: 34
 declare(strict_types=1);
 
 /*
@@ -30,4 +30,5 @@ function cb_user_bad_login_log(string $email, string $heslo): void
     }
 }
 
-// lib/user_bad_login.php * Verze: V1 * Aktualizace: 12.2.2026 * Počet řádků: 33
+// lib/user_bad_login.php * Verze: V1 * Aktualizace: 12.2.2026 * Počet řádků: 34
+// Konec souboru

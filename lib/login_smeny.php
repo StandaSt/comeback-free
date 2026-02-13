@@ -1,5 +1,5 @@
 <?php
-// lib/login_smeny.php * Verze: V11 * Aktualizace: 12.2.2026 * Počet řádků: 296
+// lib/login_smeny.php * Verze: V12 * Aktualizace: 12.2.2026
 declare(strict_types=1);
 
 /*
@@ -22,7 +22,7 @@ declare(strict_types=1);
  *    - cb_user_profile    (plný profil pro DB + txt; včetně rolí a slotů)
  *    - cb_user_branches   (pobočky pro DB + txt)
  * 7) lib/zapis_dat_txt.php    (jen diagnostika do pomocne/data_smeny.txt; BEZ dalšího API)
- * 8) lib/db_user_login.php    (srovnání DB; BEZ dalšího API)
+ * 8) db/db_user_login.php     (srovnání DB; BEZ dalšího API)
  * 9) login_ok = 1, redirect
  *
  * Důležité zásady:
@@ -212,10 +212,15 @@ try {
         $working = [];
     }
 
+    $mainTxt = 'null';
+    if (is_string($main)) {
+        $mainTxt = $main;
+    }
+
     cb_login_log_line('gql_branches_ok', [
         'id_user' => (string)$idUser,
         'working_count' => (string)count($working),
-        'main' => is_string($main) ? $main : 'null',
+        'main' => $mainTxt,
     ]);
 
     // --- SESSION: uložíme data ze Směn (od teď už nic z API znovu netaháme) ---
@@ -259,7 +264,7 @@ try {
     require_once __DIR__ . '/zapis_dat_txt.php';
 
     // 6) DB sync (bez API)
-    require_once __DIR__ . '/db_user_login.php';
+    require_once __DIR__ . '/../db/db_user_login.php';
     cb_db_user_login();
 
     // 7) hotovo
@@ -292,5 +297,5 @@ try {
     exit;
 }
 
-// lib/login_smeny.php * Verze: V11 * Aktualizace: 12.2.2026 * Počet řádků: 296
+/* lib/login_smeny.php * Verze: V12 * Aktualizace: 12.2.2026 * Počet řádků: 301 */
 // Konec souboru

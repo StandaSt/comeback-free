@@ -1,5 +1,5 @@
 <?php
-// lib/db_user_login.php * Verze: V3 * Aktualizace: 12.2.2026 * Počet řádků: 114
+// db/db_user_login.php * Verze: V4 * Aktualizace: 12.2.2026
 declare(strict_types=1);
 
 /*
@@ -15,8 +15,8 @@ declare(strict_types=1);
  * - při chybě vyhodí výjimku (login_smeny.php to chytí a přihlášení zruší)
  */
 
-require_once __DIR__ . '/bootstrap.php';
-require_once __DIR__ . '/login_diagnostika.php';
+require_once __DIR__ . '/../lib/bootstrap.php';
+require_once __DIR__ . '/../lib/login_diagnostika.php';
 require_once __DIR__ . '/db_user.php';
 require_once __DIR__ . '/db_pobocka.php';
 require_once __DIR__ . '/db_povoleni.php';
@@ -110,5 +110,5 @@ if (!function_exists('cb_db_user_login')) {
     }
 }
 
-// lib/db_user_login.php * Verze: V3 * Aktualizace: 12.2.2026 * Počet řádků: 114
+/* db/db_user_login.php * Verze: V4 * Aktualizace: 12.2.2026 * Počet řádků: 114 */
 // Konec souboru

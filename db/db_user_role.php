@@ -1,5 +1,5 @@
 <?php
-// lib/db_user_role.php * Verze: V2 * Aktualizace: 12.2.2026 * Počet řádků: 196
+// db/db_user_role.php * Verze: V3 * Aktualizace: 12.2.2026
 declare(strict_types=1);
 
 /*
@@ -15,11 +15,11 @@ declare(strict_types=1);
  * Pozn.:
  * - tohle není „chyba/nesoulad“, je to běžná synchronizace změn práv
  * - nic z API se tady nevolá (bere to jen ze session)
- * - volá se uvnitř transakce z lib/db_user_login.php
+ * - volá se uvnitř transakce z db/db_user_login.php
  */
 
-require_once __DIR__ . '/bootstrap.php';
-require_once __DIR__ . '/login_diagnostika.php';
+require_once __DIR__ . '/../lib/bootstrap.php';
+require_once __DIR__ . '/../lib/login_diagnostika.php';
 
 if (!function_exists('db_user_role_sync')) {
 
@@ -192,5 +192,5 @@ if (!function_exists('db_user_role_sync')) {
     }
 }
 
-// lib/db_user_role.php * Verze: V2 * Aktualizace: 12.2.2026 * Počet řádků: 196
+/* db/db_user_role.php * Verze: V3 * Aktualizace: 12.2.2026 * Počet řádků: 196 */
 // Konec souboru

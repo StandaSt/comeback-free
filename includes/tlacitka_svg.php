@@ -1,5 +1,5 @@
 <?php
-// includes/tlacitka_svg.php * Verze: V9 * Aktualizace: 6.2.2026 * Počet řádků: 160
+// includes/tlacitka_svg.php * Verze: V10 * Aktualizace: 12.2.2026
 declare(strict_types=1);
 
 /*
@@ -62,9 +62,9 @@ if ($variant === 'dropdown') {
   if ($slot === 'all') {
     $wantHome = true;
     $wantSwitch = true;
-  } else if ($slot === 'home') {
+  } elseif ($slot === 'home') {
     $wantHome = true;
-  } else if ($slot === 'switch') {
+  } elseif ($slot === 'switch') {
     $wantSwitch = true;
   }
 
@@ -155,6 +155,5 @@ if ($variant === 'dropdown') {
 ?>
 
 <?php
-// includes/tlacitka_svg.php * Verze: V9 * Aktualizace: 6.2.2026 * Počet řádků: 160
-// konec souboru
-?>
+/* includes/tlacitka_svg.php * Verze: V10 * Aktualizace: 12.2.2026 * Počet řádků: 159 */
+// Konec souboru

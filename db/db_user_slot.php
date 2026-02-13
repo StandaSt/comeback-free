@@ -1,5 +1,5 @@
 <?php
-// lib/db_user_slot.php * Verze: V2 * Aktualizace: 12.2.2026 * Počet řádků: 193
+// db/db_user_slot.php * Verze: V3 * Aktualizace: 12.2.2026
 declare(strict_types=1);
 
 /*
@@ -15,11 +15,11 @@ declare(strict_types=1);
  * Pozn.:
  * - "sloty" jsou ve Směnách názvy (shiftRoleTypeNames), ne ID
  * - nic z API se tady nevolá (bere to jen ze session)
- * - volá se uvnitř transakce z lib/db_user_login.php
+ * - volá se uvnitř transakce z db/db_user_login.php
  */
 
-require_once __DIR__ . '/bootstrap.php';
-require_once __DIR__ . '/login_diagnostika.php';
+require_once __DIR__ . '/../lib/bootstrap.php';
+require_once __DIR__ . '/../lib/login_diagnostika.php';
 
 if (!function_exists('db_user_slot_sync')) {
 
@@ -189,5 +189,5 @@ if (!function_exists('db_user_slot_sync')) {
     }
 }
 
-// lib/db_user_slot.php * Verze: V2 * Aktualizace: 12.2.2026 * Počet řádků: 193
+/* db/db_user_slot.php * Verze: V3 * Aktualizace: 12.2.2026 * Počet řádků: 193 */
 // Konec souboru

@@ -1,5 +1,5 @@
 <?php
-// lib/db_user.php * Verze: V1 * Aktualizace: 12.2.2026 * Počet řádků: 112
+// db/db_user.php * Verze: V2 * Aktualizace: 12.2.2026
 declare(strict_types=1);
 
 /*
@@ -9,7 +9,7 @@ declare(strict_types=1);
  * - malé, jednoučelové funkce pro práci s tabulkou user a user_login
  */
 
-require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/../lib/bootstrap.php';
 
 /**
  * Převod hodnoty na DATETIME string pro MySQL, nebo null.
@@ -41,8 +41,16 @@ function cb_db_upsert_user(mysqli $conn, array $p): void
     $prijmeni = (string)($p['surname'] ?? '');
     $email = (string)($p['email'] ?? '');
     $telefon = (string)($p['phoneNumber'] ?? '');
-    $aktivni = !empty($p['active']) ? 1 : 0;
-    $schvalen = !empty($p['approved']) ? 1 : 0;
+
+    $aktivni = 0;
+    if (!empty($p['active'])) {
+        $aktivni = 1;
+    }
+
+    $schvalen = 0;
+    if (!empty($p['approved'])) {
+        $schvalen = 1;
+    }
 
     $vytvoren = cb_db_dt_or_null($p['createTime'] ?? null);
     $visit = cb_db_dt_or_null($p['lastLoginTime'] ?? null);
@@ -109,4 +117,5 @@ function cb_db_insert_login_event(mysqli $conn, int $idUser, int $akce): void
     $stmt->close();
 }
 
-// lib/db_user.php * Verze: V1 * Aktualizace: 12.2.2026 * Počet řádků: 112
+/* db/db_user.php * Verze: V2 * Aktualizace: 12.2.2026 * Počet řádků: 121 */
+// Konec souboru

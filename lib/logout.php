@@ -1,5 +1,5 @@
 <?php
-// lib/logout.php * Verze: V7 * Aktualizace: 12.2.2026 * Počet řádků: 70
+// lib/logout.php * Verze: V8 * Aktualizace: 12.2.2026
 declare(strict_types=1);
 
 /*
@@ -67,4 +67,5 @@ session_destroy();
 header('Location: ' . cb_url('index.php?page=uvod'));
 exit;
 
-// lib/logout.php * Verze: V7 * Aktualizace: 12.2.2026 * Počet řádků: 70
+/* lib/logout.php * Verze: V8 * Aktualizace: 12.2.2026 * Počet řádků: 71 */
+// Konec souboru

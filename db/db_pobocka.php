@@ -1,5 +1,5 @@
 <?php
-// lib/db_pobocka.php * Verze: V1 * Aktualizace: 12.2.2026 * Počet řádků: 90
+// db/db_pobocka.php * Verze: V1 * Aktualizace: 12.2.2026
 declare(strict_types=1);
 
 /*
@@ -10,8 +10,8 @@ declare(strict_types=1);
  * - když neexistuje, vytvořit placeholder (dočasné hodnoty)
  */
 
-require_once __DIR__ . '/bootstrap.php';
-require_once __DIR__ . '/login_diagnostika.php';
+require_once __DIR__ . '/../lib/bootstrap.php';
+require_once __DIR__ . '/../lib/login_diagnostika.php';
 
 /**
  * Najde id_pob podle pobocka.kod.
@@ -68,7 +68,9 @@ function cb_db_ensure_branches_get_ids(mysqli $conn, array $codes): array
 
     foreach ($codes as $kod) {
         $kod = trim((string)$kod);
-        if ($kod === '') continue;
+        if ($kod === '') {
+            continue;
+        }
 
         $idPob = cb_db_find_pob_id_by_kod($conn, $kod);
         if ($idPob === null) {
@@ -87,4 +89,5 @@ function cb_db_ensure_branches_get_ids(mysqli $conn, array $codes): array
     return $ids;
 }
 
-// lib/db_pobocka.php * Verze: V1 * Aktualizace: 12.2.2026 * Počet řádků: 90
+/* db/db_pobocka.php * Verze: V1 * Aktualizace: 12.2.2026 * Počet řádků: 93 */
+// Konec souboru

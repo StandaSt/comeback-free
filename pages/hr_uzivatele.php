@@ -272,7 +272,7 @@ try {
         qcol('u', 'jmeno')     . ' AS ' . bt('jmeno') . ', ' .
         'COALESCE(' . qcol('u', 'telefon') . ", '') AS " . bt('telefon') . ', ' .
         'COALESCE(' . qcol('u', 'email') . ", '') AS " . bt('email') . ', ' .
-        qcol('u', 'user_reg')  . ' AS ' . bt('reg') . ', ' .
+        qcol('u', 'vytvoren_smeny')  . ' AS ' . bt('reg') . ', ' .
         qcol('u', 'aktivni')   . ' AS ' . bt('aktivni');
 
     $sql =

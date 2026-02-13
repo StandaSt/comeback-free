@@ -1,8 +1,10 @@
 <?php
-// includes/menu_d.php * Verze: V16 * Aktualizace: 6.2.2026 * Počet řádků: 101
+// includes/menu_d.php * Verze: V17 * Aktualizace: 12.2.2026
 declare(strict_types=1);
 
-if (defined('COMEBACK_MENU_D_RENDERED')) return;
+if (defined('COMEBACK_MENU_D_RENDERED')) {
+    return;
+}
 define('COMEBACK_MENU_D_RENDERED', true);
 
 /*
@@ -96,6 +98,5 @@ if (!defined('COMEBACK_MENU_OBSLUHA_JS_INCLUDED')) {
 </script>
 
 <?php
-// includes/menu_d.php * Verze: V16 * Aktualizace: 6.2.2026 * Počet řádků: 101
-// konec souboru
-?>
+/* includes/menu_d.php * Verze: V17 * Aktualizace: 12.2.2026 * Počet řádků: 102 */
+// Konec souboru

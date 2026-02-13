@@ -1,5 +1,5 @@
 <?php
-// lib/db_povoleni.php * Verze: V1 * Aktualizace: 12.2.2026 * Počet řádků: 79
+// db/db_povoleni.php * Verze: V1 * Aktualizace: 12.2.2026
 declare(strict_types=1);
 
 /*
@@ -10,7 +10,7 @@ declare(strict_types=1);
  * - při změnách zapisovat historii do pob_povoleni_hist
  */
 
-require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/../lib/bootstrap.php';
 
 /**
  * Zápis do pob_povoleni_hist (aktivni 1/0)
@@ -76,4 +76,5 @@ function cb_db_sync_permissions(mysqli $conn, int $idUser, array $desiredPobIds)
     return ['add' => count($toAdd), 'del' => count($toDel)];
 }
 
-// lib/db_povoleni.php * Verze: V1 * Aktualizace: 12.2.2026 * Počet řádků: 79
+/* db/db_povoleni.php * Verze: V1 * Aktualizace: 12.2.2026 * Počet řádků: 80 */
+// Konec souboru

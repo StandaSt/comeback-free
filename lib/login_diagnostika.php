@@ -1,5 +1,5 @@
 <?php
-// lib/login_diagnostika.php * Verze: V1 * Aktualizace: 12.2.2026 * Počet řádků: 67
+// lib/login_diagnostika.php * Verze: V1 * Aktualizace: 12.2.2026 * Počet řádků: 63
 declare(strict_types=1);
 
 /*
@@ -59,5 +59,5 @@ function cb_login_log_line(string $step, array $ctx = [], ?Throwable $e = null):
 
     @file_put_contents($file, $line, FILE_APPEND);
 }
-
-// lib/login_diagnostika.php * Verze: V1 * Aktualizace: 12.2.2026 * Počet řádků: 67
+// lib/login_diagnostika.php * Verze: V1 * Aktualizace: 12.2.2026 * Počet řádků: 63
+// konec souboru

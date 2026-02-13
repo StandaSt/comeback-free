@@ -1,6 +1,5 @@
 <?php
-// lib/app.php * Verze: V4 * Aktualizace: 5.2.2026
-// lib/app.php V4 – počet řádků: 140 – aktuální čas v ČR: 5.2.2026
+// lib/app.php * Verze: V5 * Aktualizace: 12.2.2026
 declare(strict_types=1);
 
 /*
@@ -23,7 +22,10 @@ $JE_LOCAL =
     ($HOST === '127.0.0.1') ||
     str_starts_with($HOST, '127.0.0.1:');
 
-$PROSTREDI = $JE_LOCAL ? 'LOCAL' : 'SERVER';
+$PROSTREDI = 'SERVER';
+if ($JE_LOCAL) {
+    $PROSTREDI = 'LOCAL';
+}
 
 // ====== BASE_PATH (neprůstřelné) ======
 // 1) Primárně z URL: root projektu (funguje i když se volá /lib/*.php přímo)
@@ -62,15 +64,21 @@ if ($BASE_PATH === '') {
             $suffix = str_replace('\\', '/', $suffix);
             $suffix = '/' . ltrim($suffix, '/');
             $BASE_PATH = rtrim($suffix, '/');
-            if ($BASE_PATH === '/') $BASE_PATH = '';
+            if ($BASE_PATH === '/') {
+                $BASE_PATH = '';
+            }
         }
     }
 }
 
-function cb_url(string $path): string {
+function cb_url(string $path): string
+{
     global $BASE_PATH;
     $path = '/' . ltrim($path, '/');
-    return ($BASE_PATH !== '' ? $BASE_PATH : '') . $path;
+    if ($BASE_PATH !== '') {
+        return $BASE_PATH . $path;
+    }
+    return $path;
 }
 
 /**
@@ -84,7 +92,8 @@ function cb_url(string $path): string {
  * - secrets.php se načítá v bootstrap.php; proto tu DB údaje čteme jen pokud už existují v $SECRETS
  * - nikdy sem nedáváme hesla ani uživatele DB
  */
-function cb_header_info(): array {
+function cb_header_info(): array
+{
     // Host podle HTTP požadavku (to, co je v URL / hlavičce Host)
     $httpHost = (string)($_SERVER['HTTP_HOST'] ?? '---');
 
@@ -135,6 +144,5 @@ function cb_header_info(): array {
     ];
 }
 
-// lib/app.php * Verze: V4 * Aktualizace: 5.2.2026
-// lib/app.php V4 – počet řádků: 140 – aktuální čas v ČR: 5.2.2026
-// konec souboru
+/* lib/app.php * Verze: V5 * Aktualizace: 12.2.2026 * Počet řádků: 148 */
+// Konec souboru
