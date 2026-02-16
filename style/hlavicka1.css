@@ -1,4 +1,4 @@
-/* style/hlavicka1.css * Verze: V38 * Aktualizace: 6.2.2026 */
+/* style/hlavicka1.css * Verze: V39 * Aktualizace: 16.2.2026 */
 
 /* =========================
    HLAVIČKA
@@ -6,29 +6,29 @@
 
 .header{                                                   /* začátek definice stylu pro blok .header */
   display:grid;                                            /* zapne CSS grid (mřížku) */
-  grid-template-columns:140px minmax(860px, 1fr);                    /* sloupce: logo | střed | pravý blok */
-  column-gap:0px;                                         /* mezera mezi sloupci gridu */
+  grid-template-columns:140px minmax(860px, 1fr);          /* sloupce: logo | střed | pravý blok */
+  column-gap:0px;                                          /* mezera mezi sloupci gridu */
   align-items:center;                                      /* svislé zarovnání obsahu sloupců na střed */
   background: var(--bg-ram);                               /* pozadí */
-  /* border-radius:6px;   */                                    /* zaoblení rohů hlavičky */
-  /* padding:0; */                                               /* vnitřní odsazení hlavičky */
-  margin: 10px 0 10px 0;                                            /* vnější odsazení hlavičky */
+  /* border-radius:6px;   */                               /* zaoblení rohů hlavičky */
+  /* padding:0; */                                         /* vnitřní odsazení hlavičky */
+  margin: 10px 0 10px 0;                                   /* vnější odsazení hlavičky */
 }
 
 /* =========================
    LOGO
    ========================= */
 
-.header-left{                                              
+.header-left{
   display:flex;                                            /* zapne flex (řádkové skládání prvků) */
   align-items:center;                                      /* svislé zarovnání obsahu na střed */
   justify-content:center;                                  /* vodorovné zarovnání obsahu na střed */
-  /* padding:0px; */                                             /* vnitřní odsazení (uvnitř rámečku) */
-  /* margin-left:8px; */                                              /* 3 vnější odsazení (mimo rámeček) */
-   margin-right:10px;   
-  /* border:2px solid #000;                                 /* černý rámeček 2px */
-  /* background:#5e75db;                                    /* barva pozadí (kontrolní) */
-  height:88px;    /* standa kontrola */                    /* pevná výška bloku loga (komentář ponechán) */
+  /* padding:0px; */                                       /* vnitřní odsazení (uvnitř rámečku) */
+  /* margin-left:8px; */                                   /* vnější odsazení (mimo rámeček) */
+  margin-right:10px;
+  /* border:2px solid #000; */                             /* černý rámeček 2px */
+  /* background:#5e75db; */                                /* barva pozadí (kontrolní) */
+  height:88px;                                             /* standa kontrola */
 }
 
 /* nový obal pro logo (bílé pozadí + kontrola šířky) */
@@ -48,61 +48,62 @@
   display:flex;
   align-items:center;
   justify-content:center;
-} 
+}
 
 .header-left img{
-  max-height:88px;      /* max výška obrázku  */
+  max-height:88px;                                         /* max výška obrázku */
   max-width:100%;
   width:auto;
   height:auto;
-  display:block;        /*  odstranění inline mezery */
+  display:block;                                           /* odstranění inline mezery */
   border-radius:8px;                                       /* zaoblení rohů karty */
-}          
+}
 
 /* =========================
    CENTRÁL – 3 TECH BLOKY
    ========================= */
 
-.header-central{                           /* začátek definice stylu pro blok .header-central */
-  display:grid;                            /* zapne CSS grid (mřížku) */
-  grid-template-columns:repeat(4,1fr);     /* 3 stejně široké sloupce */
-  gap:10px;                                /* mezera mezi bloky uvnitř gridu */
-  /* min-width:750px; */                            /* dovolí zmenšení (aby nepřetékalo v flex/grid layoutu) */
-  align-items:stretch;                       /* start - zarovná obsah buněk nahoru, stretch - vyplní blok */
-  height:88px;                     /* standa kontrola     */
-  font-size:12px;                          /* velikost písma uvnitř */
-  line-height:1.3;                         /* 1.3 výška řádku textu */
-  color:#333;                            /* barva textu */
-  /* padding:0px; */                             /* 3 vnitřní odsazení (uvnitř rámečku) */
-  /* margin:5px; */                              /* 3 vnější odsazení (mimo rámeček) */
-  /* border:2px solid #000;                 /* černý rámeček 2px */
-  /* background:#deee51;   */                 /* barva pozadí (kontrolní) */
+.header-central{                                           /* začátek definice stylu pro blok .header-central */
+  display:grid;                                            /* zapne CSS grid (mřížku) */
+ grid-template-columns:repeat(3, 1fr) 350px;                    /* 4 stejně široké sloupce */
+  gap:10px;                                                /* mezera mezi bloky uvnitř gridu */
+  /* min-width:750px; */                                   /* dovolí zmenšení (aby nepřetékalo v flex/grid layoutu) */
+  align-items:stretch;                                     /* stretch - vyplní blok */
+  height:88px;                                             /* standa kontrola */
+  font-size:12px;                                          /* velikost písma uvnitř */
+  line-height:1.3;                                         /* výška řádku textu */
+  color:#333;                                              /* barva textu */
+  /* padding:0px; */                                       /* vnitřní odsazení (uvnitř rámečku) */
+  /* margin:5px; */                                        /* vnější odsazení (mimo rámeček) */
+  /* border:2px solid #000; */                             /* černý rámeček 2px */
+  /* background:#deee51; */                                /* barva pozadí (kontrolní) */
 }
 
-.hc-col{                                   /* začátek stylu pro jeden technický blok (kartu) */
-  background:#f3f3f3;                                    /* pozadí karty */
+.hc-col{                                                   /* začátek stylu pro jeden technický blok (kartu) */
+  background:#f3f3f3;                                      /* pozadí karty */
   border-radius:8px;                                       /* zaoblení rohů karty */
   padding:6px 10px;                                        /* vnitřní odsazení karty */
   box-sizing:border-box;                                   /* šířka/výška včetně padding/border */
-  /* min-width:240px; */                                             /* dovolí zmenšení obsahu (ellipsis) */
+  /* min-width:240px; */                                   /* dovolí zmenšení obsahu (ellipsis) */
   overflow:hidden;                                         /* skryje přetékající obsah */
   display:grid;                                            /* v kartě se použije grid pro řádky/2 sloupce */
   grid-template-rows:repeat(4,min-content);                /* 4 řádky, každý jen tak vysoký jak je třeba */
   row-gap:2px;                                             /* mezera mezi řádky */
   grid-template-columns:max-content 1fr;                   /* sloupce: popisek (min) | hodnota (zbytek) */
-  column-gap:6px;   
-  line-height:1.1;                                       /* mezera mezi popiskem a hodnotou */
-  }
+  column-gap:6px;                                          /* mezera mezi popiskem a hodnotou */
+  line-height:1.1;                                         /* výška řádku */
+}
 
-.hc-row{display:contents;}                 /* “obal” řádku neexistuje v layoutu (jen děti) */
-.hc-label{                                 /* styl pro popisek (levý sloupec) */
+.hc-row{display:contents;}                                 /* “obal” řádku neexistuje v layoutu (jen děti) */
+
+.hc-label{                                                 /* styl pro popisek (levý sloupec) */
   grid-column:1;                                           /* umístění do 1. sloupce */
   white-space:nowrap;                                      /* nezalamovat text */
   text-align:left;                                         /* zarovnání textu vlevo */
-  color:#555;                                            /* barva popisku */
+  color:#555;                                              /* barva popisku */
 }
 
-.hc-value{                                 /* styl pro hodnotu (pravý sloupec) */
+.hc-value{                                                 /* styl pro hodnotu (pravý sloupec) */
   grid-column:2;                                           /* umístění do 2. sloupce */
   white-space:nowrap;                                      /* nezalamovat text */
   overflow:hidden;                                         /* skryje přetékající text */
@@ -114,68 +115,118 @@
    LOGIN – pravý sloupec
    ========================= */
 
+/*
+ * Poznámka k layoutu:
+ * - login používá .login-grid (2 sloupce: text | ikona)
+ * - levý sloupec musí být pružný (1fr), aby se ikona vždy držela úplně vpravo
+ * - ikona se ještě jistí přes justify-self:end
+ */
+
 /* přihlášen (status) */
-.login-status{                     /* obal stavu přihlášení */
+.login-status{                                             /* obal stavu přihlášení */
   display:flex;                                            /* flex pro svislé skládání */
   flex-direction:column;                                   /* skládání pod sebe */
-  gap:6px;                                                 /* mezera mezi řádky */
+  gap:6px;                                                 /* mezera mezi bloky */
 }
 
-.login-user{                       /* řádek “Přihlášen…” */
-  font-size:12px;                                          /* velikost písma */
-  line-height:1.3;                                         /* výška řádku */
-  color:#252525;                                         /* barva textu */
+/* společné rozložení: text vlevo, ikona vpravo */
+.login-grid{                                               /* grid pro text + ikonu */
+  display:grid;
+  grid-template-columns:1fr 30px;                          /* sloupce: text (pružný) | ikona (pevná) */
+  column-gap:10px;
+  align-items:start;
 }
 
-.login-meta{                       /* blok s role/last login */
-  display:flex;                                            /* flex pro svislé skládání */
-  flex-direction:column;                                   /* pod sebe */
-  gap:4px;                                                 /* malá mezera mezi řádky */
-  font-size:12px;                                          /* velikost písma */
-  line-height:1.1;                                         /* výška řádku */
-  color:#555;                                            /* barva textu */
+/* levý sloupec (texty) */
+.login-fields{
+  min-width:0;                                             /* důležité pro ellipsis vevnitř */
+}
+
+/* ikona odhlášení / přihlášení (pravý sloupec) */
+.login-logout{
+  justify-self:end;                                        /* přilepí prvek k pravému okraji grid buňky */
+  align-self:start;                                        /* nahoře (ne na střed) */
+  display:flex;                                            /* ať je klikací plocha stabilní */
+  align-items:flex-start;
+}
+
+/* řádek “Přihlášen…” */
+.login-user{
+  font-size:12px;
+  line-height:1.3;
+  color:#252525;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* blok s detailními řádky (poslední přístup, seance, statistika, ...) */
+.login-meta{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  font-size:12px;
+  line-height:1.1;
+  color:#555;
+}
+
+/* každý řádek v login-meta: držet na jedné řádce + případně tečky */
+.login-meta > div{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* flash hláška pod loginem (jen když je potřeba) */
+.login-flash{
+  margin-top:4px;
+  padding:4px 6px;
+  border-radius:6px;
+  background:#fff;
+  border:1px solid #dcdcdc;
+  font-size:12px;
+  line-height:1.2;
+  color:#333;
 }
 
 /* nepřihlášen (form) – 2 inputy vlevo, ikona vpravo */
-.login-form{ /* margin:0; */ }             /* zruší default margin formuláře */
-.login-grid{                       /* grid pro pole + tlačítko ikony */
-  display:grid;                                            /* zapne grid */
-  grid-template-columns:205px 30px;                        /* sloupce: inputy | ikona */
-  column-gap:10px;                                          /* mezera mezi sloupci */
-  align-items:start;                                       /* zarovnání obsahu nahoře */
-}
-
-/* .login-fields{min-width:195;}    */    /* dovolí zmenšení obsahu v levém sloupci */
+.login-form{ /* margin:0; */ }                             /* zruší default margin formuláře */
 
 /* inputy (sjednoceno: email + heslo) */
-.login-input{                      /* společný styl pro oba inputy */
-  width:100%;                                              /* šířka přes celý sloupec */
-  box-sizing:border-box;                                   /* výpočet šířky včetně padding/border */
-  height:22px;                                             /* výška inputu */
-  /* padding:3px 6px; */                                         /* vnitřní odsazení textu */
-  border:1px solid #bdbdbd;                                /* rámeček inputu */
-  border-radius:4px;                                       /* zaoblení rohů */
-  font-family:inherit;                                     /* font podle rodiče */
-  font-size:12px;                                          /* velikost písma */
-  font-weight:400;                                         /* tloušťka písma */
-  line-height:1.1;                                         /* výška řádku */
-  color:inherit;                                           /* barva textu podle rodiče */
-  appearance:none;                                         /* vypne systémové styly (prohlížeč) */
+.login-input{
+  width:100%;
+  box-sizing:border-box;
+  height:22px;
+  /* padding:3px 6px; */
+  border:1px solid #bdbdbd;
+  border-radius:4px;
+  font-family:inherit;
+  font-size:12px;
+  font-weight:400;
+  line-height:1.1;
+  color:inherit;
+  appearance:none;
 }
 
 /* mini mezera mezi email a heslo */
-.login-input + .login-input{ 
-margin-top:2px;     /* mezera mezi dvěma inputy */
+.login-input + .login-input{
+  margin-top:2px;
 }
 
 /* nápověda pod inputy */
-.login-help{                       /* text nápovědy pod inputy */
-  display:block;                                           /* chovat se jako blok */
-  margin-top:4px;                                           /* 4 odsazení shora */
-  font-size:11px;                                          /* velikost písma */
-  line-height:1.3;                                         /* výška řádku */
-  color:#555;                                            /* barva textu */
+.login-help{
+  display:block;
+  margin-top:4px;
+  font-size:11px;
+  line-height:1.3;
+  color:#555;
 }
 
-/* style/hlavicka1.css * Verze: V38 * Aktualizace: 6.2.2026 * Počet řádků: 186
+/* LOGIN blok musí v kartě (.hc-col) zabrat oba sloupce rodičovského gridu */
+.login-status,
+.login-form{
+  grid-column:1 / -1;    /* roztáhne přes oba sloupce .hc-col */
+}
+
+/* style/hlavicka1.css * Verze: V39 * Aktualizace: 16.2.2026 * Počet řádků: 232
    konec souboru */

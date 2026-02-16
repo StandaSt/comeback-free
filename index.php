@@ -1,5 +1,5 @@
 <?php
-// index.php * Verze: V8 * Aktualizace: 13.2.2026 * Počet řádků: 128
+// index.php * Verze: V9 * Aktualizace: 14.2.2026 
 declare(strict_types=1);
 
 /*
@@ -7,23 +7,31 @@ declare(strict_types=1);
  *
  * Účel:
  * - načíst bootstrap (start projektu)
- * - vykreslit hlavičku (otevře HTML + layout)
- * - načíst konkrétní stránku z /pages podle parametru ?page=
- * - když stránka neexistuje, vrátit 404 + zapsat do DB tabulky chyba (pokud půjde)
- * - vykreslit patičku (uzavře layout + HTML)
- *
- * Poznámka k bezpečnosti:
- * - NEPOUŽÍVÁ se whitelist (seznam povolených stránek).
- * - Bezpečnost je řešená tím, že page se čistí na [a-z0-9_],
- *   takže nejde použít znaky jako ../ pro únik z adresáře /pages.
- *
- * Nově (V8):
- * - Podpora AJAX režimu pro načítání jen obsahu do <main> (bez hlavičky/patičky).
+ * - FULL load: vždy zobrazí "uvod" (URL se nemění, page se nebere z URL)
+ * - AJAX (partial): vrací jen obsah do <main> podle hlavičky X-Comeback-Page
+ * - přepnutí menu režimu: uloží do session přes POST + X-Comeback-Set-Menu
  */
 
 require_once __DIR__ . '/lib/bootstrap.php';
 
-// AJAX (partial) režim: když je hlavička X-Comeback-Partial: 1
+/* =========================
+   0) Nastavení menu do session (POST)
+   ========================= */
+if (
+    ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
+    && isset($_SERVER['HTTP_X_COMEBACK_SET_MENU'])
+) {
+    $m = (string)$_SERVER['HTTP_X_COMEBACK_SET_MENU'];
+    $m = ($m === 'sidebar') ? 'sidebar' : 'dropdown';
+    $_SESSION['cb_menu_mode'] = $m;
+
+    http_response_code(204);
+    exit;
+}
+
+/* =========================
+   1) AJAX (partial) režim
+   ========================= */
 $cbIsPartial = false;
 if (isset($_SERVER['HTTP_X_COMEBACK_PARTIAL'])) {
     $cbIsPartial = ((string)$_SERVER['HTTP_X_COMEBACK_PARTIAL'] === '1');
@@ -34,20 +42,26 @@ if (!$cbIsPartial) {
     require_once __DIR__ . '/includes/hlavicka.php';
 }
 
-// Parametr page z URL:
-// - když chybí, použije se "uvod"
-$pageKey = (string)($_GET['page'] ?? 'uvod');
+/* =========================
+   2) Volba stránky
+   ========================= */
+// FULL load: vždy uvod (URL se nemění a page z URL ignorujeme)
+$pageKey = 'uvod';
 
-// Očištění page na povolené znaky:
-// - povoleno: a–z, 0–9, podtržítko
-// - všechno ostatní se odstraní
-// - když po vyčištění zbyde prázdno, vrátí se "uvod"
+// AJAX: stránka se bere jen z hlavičky X-Comeback-Page
+if ($cbIsPartial) {
+    $pageKey = (string)($_SERVER['HTTP_X_COMEBACK_PAGE'] ?? 'uvod');
+}
+
+// Očištění page na povolené znaky: a–z, 0–9, podtržítko
 $pageKey = preg_replace('~[^a-z0-9_]+~i', '', $pageKey) ?: 'uvod';
 
 // Sestavení cesty k souboru stránky v /pages
 $file = __DIR__ . '/pages/' . $pageKey . '.php';
 
-// Když soubor neexistuje → 404 + pokus o log do DB (nesmí shodit stránku)
+/* =========================
+   3) Render / 404 + log
+   ========================= */
 if (!is_file($file)) {
     http_response_code(404);
 
@@ -124,5 +138,5 @@ if (!$cbIsPartial) {
     require_once __DIR__ . '/includes/paticka.php';
 }
 
-/* index.php * Verze: V8 * Aktualizace: 13.2.2026 * Počet řádků: 128 */
+/* index.php * Verze: V9 * Aktualizace: 14.2.2026 * Počet řádků: 142 */
 // Konec souboru

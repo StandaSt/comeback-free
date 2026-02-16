@@ -1,6 +1,6 @@
-RewriteEngine On
+# .htaccess * Verze: V3 * Aktualizace: 14.2.2026 * Počet řádků: 28
 
-# Pokud je to /comeback/ ve webrootu, stačí toto:
+RewriteEngine On
 RewriteBase /comeback/
 
 # Nezasahovat do existujících souborů/složek (CSS/JS/IMG atd.)
@@ -8,8 +8,21 @@ RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
-# /comeback => index.php
-RewriteRule ^$ index.php [L]
+# 1) Vyčištění URL: /comeback/neco => /comeback/
+# (jen když je to "něco" a není to už root ani index.php)
+RewriteCond %{THE_REQUEST} \s/+comeback/([^\s?]+) [NC]
+RewriteCond %{REQUEST_URI} !^/comeback/$ [NC]
+RewriteCond %{REQUEST_URI} !^/comeback/index\.php$ [NC]
+RewriteRule ^.+$ /comeback/ [R=302,L]
 
-# /comeback/neco => index.php?page=neco
-RewriteRule ^([A-Za-z0-9_]+)$ index.php?page=$1 [L,QSA]
+# Pojistka: samotný index.php už dál nepřepisuj
+RewriteRule ^index\.php$ - [L]
+
+# 2) Root obslouží index.php (interně, bez změny URL)
+RewriteRule ^$ index.php [L,QSA]
+
+# 3) Cokoliv dalšího (kdyby něco prošlo) obslouží index.php
+RewriteRule ^.*$ index.php [L,QSA]
+
+# .htaccess * Verze: V3 * Aktualizace: 14.2.2026 * Počet řádků: 28
+# Konec souboru

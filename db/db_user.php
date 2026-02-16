@@ -1,5 +1,5 @@
 <?php
-// db/db_user.php * Verze: V2 * Aktualizace: 12.2.2026
+// db/db_user.php * Verze: V3 * Aktualizace: 16.2.2026 * Počet řádků: 124
 declare(strict_types=1);
 
 /*
@@ -16,12 +16,18 @@ require_once __DIR__ . '/../lib/bootstrap.php';
  */
 function cb_db_dt_or_null(mixed $v): ?string
 {
-    if ($v === null) return null;
+    if ($v === null) {
+        return null;
+    }
     $s = trim((string)$v);
-    if ($s === '') return null;
+    if ($s === '') {
+        return null;
+    }
 
     $ts = strtotime($s);
-    if (!$ts) return null;
+    if (!$ts) {
+        return null;
+    }
 
     return date('Y-m-d H:i:s', $ts);
 }
@@ -68,6 +74,8 @@ function cb_db_upsert_user(mysqli $conn, array $p): void
             'INSERT INTO user (id_user,jmeno,prijmeni,email,telefon,aktivni,schvalen,vytvoren_smeny,visit_smeny)
              VALUES (?,?,?,?,?,?,?,?,?)'
         );
+
+        // 9 hodnot: i s s s s i i s s
         $stmt->bind_param(
             'issssiiss',
             $idUser,
@@ -90,6 +98,8 @@ function cb_db_upsert_user(mysqli $conn, array $p): void
          SET jmeno=?, prijmeni=?, email=?, telefon=?, aktivni=?, schvalen=?, vytvoren_smeny=?, visit_smeny=?
          WHERE id_user=?'
     );
+
+    // 9 hodnot: s s s s i i s s i
     $stmt->bind_param(
         'ssssiissi',
         $jmeno,
@@ -117,5 +127,5 @@ function cb_db_insert_login_event(mysqli $conn, int $idUser, int $akce): void
     $stmt->close();
 }
 
-/* db/db_user.php * Verze: V2 * Aktualizace: 12.2.2026 * Počet řádků: 121 */
+// db/db_user.php * Verze: V3 * Aktualizace: 16.2.2026 * Počet řádků: 124
 // Konec souboru

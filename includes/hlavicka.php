@@ -1,5 +1,5 @@
 <?php
-// includes/hlavicka.php * Verze: V21 * Aktualizace: 12.2.2026
+// includes/hlavicka.php * Verze: V22 * Aktualizace: 14.2.2026 
 declare(strict_types=1);
 
 if (defined('COMEBACK_HEADER_RENDERED')) {
@@ -11,10 +11,10 @@ require_once __DIR__ . '/../lib/bootstrap.php';
 
 /*
  * Volba menu:
- * - ?menu=dropdown  (výchozí)
- * - ?menu=sidebar
+ * - nebere se z URL
+ * - bere se ze session: $_SESSION['cb_menu_mode'] ('dropdown' | 'sidebar')
  */
-$cb_menu_mode = (string)($_GET['menu'] ?? 'dropdown');
+$cb_menu_mode = (string)($_SESSION['cb_menu_mode'] ?? 'dropdown');
 if ($cb_menu_mode !== 'sidebar') {
     $cb_menu_mode = 'dropdown';
 }
@@ -112,5 +112,5 @@ $CB_HEADER = cb_header_info();
         <div class="central-content">
             <main>
 <?php
-/* includes/hlavicka.php * Verze: V21 * Aktualizace: 12.2.2026 * Počet řádků: 116 */
+/* includes/hlavicka.php * Verze: V22 * Aktualizace: 14.2.2026 * Počet řádků: 118 */
 // Konec souboru

@@ -1,5 +1,5 @@
 <?php
-// includes/paticka.php * Verze: V5 * Aktualizace: 12.2.2026
+// includes/paticka.php * Verze: V6 * Aktualizace: 16.2.2026
 declare(strict_types=1);
 
 if (defined('COMEBACK_FOOTER_RENDERED')) {
@@ -28,8 +28,11 @@ define('COMEBACK_FOOTER_RENDERED', true);
     </footer>
 
 </div>
+
+<script src="<?= h(cb_url('js/casovac_odhlaseni.js')) ?>"></script>
+
 </body>
 </html>
 <?php
-/* includes/paticka.php * Verze: V5 * Aktualizace: 12.2.2026 * Počet řádků: 36 */
+/* includes/paticka.php * Verze: V6 * Aktualizace: 16.2.2026 * Počet řádků: 38 */
 // Konec souboru

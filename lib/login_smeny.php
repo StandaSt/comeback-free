@@ -1,34 +1,21 @@
 <?php
-// lib/login_smeny.php * Verze: V12 * Aktualizace: 12.2.2026
+// lib/login_smeny.php * Verze: V16 * Aktualizace: 16.2.2026
 declare(strict_types=1);
 
 /*
  * PŘIHLÁŠENÍ PŘES SMĚNY (GraphQL API)
  *
- * Co to je:
- * - jediný „spouštěcí“ skript pro login uživatele proti systému Směny
- * - po úspěchu uloží do session všechno potřebné (token + data uživatele)
- * - po uložení do session už NIKDY znovu nevolá Směny (API) v rámci tohoto loginu
+ * Co to dělá:
+ * - ověří email/heslo přes Směny (GraphQL)
+ * - načte profil, role/sloty a pobočky
+ * - uloží data do session
+ * - zavolá DB sync (db/db_user_login.php)
+ * - nastaví session pro časovač neaktivity (timeout + start + poslední aktivita)
+ * - redirect na úvod
  *
- * Tok (kroky):
- * 1) POST email + heslo
- * 2) Směny: userLogin -> accessToken (token)
- * 3) Směny: userGetLogged -> profil (tady vzniká id_user)
- * 4) Směny: userGetLogged -> role + sloty (jen pro přihlášeného uživatele)
- * 5) Směny: actionHistoryFindById -> workingBranchNames + mainBranchName
- * 6) session:
- *    - cb_token
- *    - cb_user            (základ pro UI; rychlé a malé)
- *    - cb_user_profile    (plný profil pro DB + txt; včetně rolí a slotů)
- *    - cb_user_branches   (pobočky pro DB + txt)
- * 7) lib/zapis_dat_txt.php    (jen diagnostika do pomocne/data_smeny.txt; BEZ dalšího API)
- * 8) db/db_user_login.php     (srovnání DB; BEZ dalšího API)
- * 9) login_ok = 1, redirect
- *
- * Důležité zásady:
- * - heslo se nikdy neloguje
- * - po chybě nesmí zůstat mezistav v session
- * - cílem je držet login „atomický“: buď projde celý, nebo neprojde nic
+ * Důležité:
+ * - timeout neaktivity je jedna hodnota pro celý systém (zatím natvrdo zde).
+ *   Později se sem napojí načtení z administrace (DB).
  */
 
 require_once __DIR__ . '/bootstrap.php';
@@ -38,11 +25,12 @@ require_once __DIR__ . '/user_bad_login.php';
 
 $GQL_URL = 'https://smeny.pizzacomeback.cz/graphql';
 
-/**
- * Bezpečné čtení stringu z POST.
- * - vrací vždy string (i kdyby v POST nebylo nic)
- * - trim() kvůli mezerám
+/*
+ * Timeout neaktivity (minuty) – JEDINÝ zdroj hodnoty.
+ * - pokud chceš testovat rychlejší odhlášení, změň jen tady (např. 2).
  */
+$CB_TIMEOUT_MIN = 2;
+
 function post_str(string $k): string
 {
     return trim((string)($_POST[$k] ?? ''));
@@ -51,41 +39,42 @@ function post_str(string $k): string
 try {
     cb_login_log_line('start');
 
-    // Ochrana: očekáváme jen POST (z formuláře login stránky)
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
         cb_login_log_line('bad_method');
         throw new RuntimeException('Neplatný požadavek.');
     }
 
-    // Vstupy z formuláře
     $email = post_str('email');
     $heslo = post_str('heslo');
 
-    // Základní kontrola (bez toho nemá cenu volat Směny)
     if ($email === '' || $heslo === '') {
         cb_login_log_line('missing_credentials', [
             'email' => $email,
-            'heslo_len' => (string)strlen($heslo), // jen délka, nikdy ne samotné heslo
+            'heslo_len' => (string)strlen($heslo),
         ]);
         throw new RuntimeException('Vyplň email a heslo.');
     }
 
-    // 1) token (přihlášení do Směn)
     cb_login_log_line('gql_login_request', ['email' => $email]);
 
-    $login = cb_smeny_graphql(
-        $GQL_URL,
-        'query($email:String!,$password:String!){
-            userLogin(email:$email,password:$password){
-                accessToken
-            }
-        }',
-        ['email' => $email, 'password' => $heslo]
-    );
+    try {
+        $login = cb_smeny_graphql(
+            $GQL_URL,
+            'query($email:String!,$password:String!){
+                userLogin(email:$email,password:$password){
+                    accessToken
+                }
+            }',
+            ['email' => $email, 'password' => $heslo]
+        );
+    } catch (Throwable $e) {
+        cb_login_log_line('gql_login_fail', ['email' => $email], $e);
+        cb_user_bad_login_log($email, $heslo);
+        throw new RuntimeException('Neplatné přihlašovací údaje.');
+    }
 
     $token = $login['userLogin']['accessToken'] ?? null;
     if (!is_string($token) || $token === '') {
-        // Neplatné přihlášení: zalogujeme do DB tabulky user_bad_login (heslo se loguje jako hash v tom helperu)
         cb_login_log_line('no_token', ['email' => $email]);
         cb_user_bad_login_log($email, $heslo);
         throw new RuntimeException('Neplatné přihlašovací údaje.');
@@ -96,7 +85,6 @@ try {
         'token_len' => (string)strlen($token),
     ]);
 
-    // 2) profil (tady vzniká id_user)
     cb_login_log_line('gql_me_request', ['email' => $email]);
 
     $me = cb_smeny_graphql(
@@ -131,15 +119,6 @@ try {
         'email' => (string)$u['email'],
     ]);
 
-    // 3) role + sloty (jen pro přihlášeného uživatele)
-    //
-    // Role:
-    // - Směny vrací u uživatele "roles" jako pole objektů Role { id, name }
-    //
-    // Sloty:
-    // - ve Směnách je to "shiftRoleTypeNames" (pole názvů: Instor, Kurýr, ...)
-    //
-    // Pozn.: Záměrně nevoláme žádné FindAll (číselníky). Chceme data jen pro přihlášeného uživatele.
     cb_login_log_line('gql_roles_slot_request', ['id_user' => (string)$idUser]);
 
     $rs = cb_smeny_graphql(
@@ -161,19 +140,16 @@ try {
         throw new RuntimeException('Nepodařilo se načíst role/sloty uživatele.');
     }
 
-    // roles = pole objektů (id,name)
     $roles = $rsUser['roles'] ?? [];
     if (!is_array($roles)) {
         $roles = [];
     }
 
-    // shiftRoleTypeNames = pole stringů (názvy slotů)
     $sloty = $rsUser['shiftRoleTypeNames'] ?? [];
     if (!is_array($sloty)) {
         $sloty = [];
     }
 
-    // Uložíme do profilu (plná data pro DB + txt), ať je vše na jednom místě
     $u['roles'] = $roles;
     $u['shiftRoleTypeNames'] = $sloty;
 
@@ -183,7 +159,6 @@ try {
         'sloty_count' => (string)count($sloty),
     ]);
 
-    // 4) pobočky (working + main)
     cb_login_log_line('gql_branches_request', ['id_user' => (string)$idUser]);
 
     $br = cb_smeny_graphql(
@@ -223,15 +198,10 @@ try {
         'main' => $mainTxt,
     ]);
 
-    // --- SESSION: uložíme data ze Směn (od teď už nic z API znovu netaháme) ---
-    //
-    // cb_token:
-    // - token pro Směny (používá se jen tam, kde je to výslovně povoleno)
+    // Token pro další volání Směn (zatím interní, později se možná omezí)
     $_SESSION['cb_token'] = $token;
 
-    // cb_user:
-    // - malé a rychlé info pro UI (např. hlavička, menu, apod.)
-    // - role a sloty jsou tu kvůli řízení práv v IS
+    // Základní user data pro UI
     $_SESSION['cb_user'] = [
         'id_user'   => $idUser,
         'name'      => (string)($u['name'] ?? ''),
@@ -240,62 +210,68 @@ try {
         'telefon'   => (string)($u['phoneNumber'] ?? ''),
         'active'    => (bool)($u['active'] ?? false),
         'approved'  => (bool)($u['approved'] ?? false),
-
-        // role = pole objektů Role {id, name}
         'roles'     => $roles,
-
-        // sloty = pole názvů slotů (shiftRoleTypeNames)
         'sloty'     => $sloty,
     ];
 
-    // cb_user_profile:
-    // - plný profil pro DB + txt
-    // - včetně rolí a slotů (aby se při loginu nic dalšího z API nemusel tahat)
+    // Plný profil pro DB sync (bere si z toho role i sloty)
     $_SESSION['cb_user_profile'] = $u;
 
-    // cb_user_branches:
-    // - pobočky pro DB + txt
+    // Pobočky pro DB sync
     $_SESSION['cb_user_branches'] = [
         'workingBranchNames' => $working,
         'mainBranchName' => $main,
     ];
 
-    // 5) diagnostika do txt (bez API)
     require_once __DIR__ . '/zapis_dat_txt.php';
 
-    // 6) DB sync (bez API)
+    // DB sync po loginu (transakce + user_login + user_spy + role/sloty/povolení…)
     require_once __DIR__ . '/../db/db_user_login.php';
     cb_db_user_login();
 
-    // 7) hotovo
+    /*
+     * ČASOVAČ (neaktivita) – session hodnoty pro login blok + JS
+     *
+     * Proč až tady:
+     * - chceme mít jistotu, že po DB syncu je session v konzistentním stavu
+     * - a že nic dalšího už tyto hodnoty nepřepíše
+     */
+    $_SESSION['cb_timeout_min'] = (int)$CB_TIMEOUT_MIN;
+    $_SESSION['cb_session_start_ts'] = time();
+    $_SESSION['cb_last_activity_ts'] = time();
+
     $_SESSION['login_ok'] = 1;
     $_SESSION['cb_flash'] = 'Přihlášení OK';
 
     cb_login_log_line('redirect_ok', [
-        'to' => cb_url('index.php?page=uvod'),
+        'to' => cb_url(''),
         'id_user' => (string)$idUser,
     ]);
 
-    header('Location: ' . cb_url('index.php?page=uvod'));
+    header('Location: ' . cb_url(''));
     exit;
 
 } catch (Throwable $e) {
     cb_login_log_line('error', ['email' => (string)($_POST['email'] ?? '')], $e);
 
-    // Vyčistit login session (žádný mezistav)
     unset($_SESSION['login_ok']);
     unset($_SESSION['cb_user']);
     unset($_SESSION['cb_token']);
     unset($_SESSION['cb_user_profile']);
     unset($_SESSION['cb_user_branches']);
 
+    // i kdyby něco z časovače existovalo, po chybě loginu to nesmí zůstat
+    unset($_SESSION['cb_timeout_min']);
+    unset($_SESSION['cb_session_start_ts']);
+    unset($_SESSION['cb_last_activity_ts']);
+
     $_SESSION['cb_flash'] = $e->getMessage();
 
-    cb_login_log_line('redirect_fail', ['to' => cb_url('index.php?page=uvod')]);
+    cb_login_log_line('redirect_fail', ['to' => cb_url('')]);
 
-    header('Location: ' . cb_url('index.php?page=uvod'));
+    header('Location: ' . cb_url(''));
     exit;
 }
 
-/* lib/login_smeny.php * Verze: V12 * Aktualizace: 12.2.2026 * Počet řádků: 301 */
+/* lib/login_smeny.php * Verze: V16 * Aktualizace: 16.2.2026 * Počet řádků: 277 */
 // Konec souboru

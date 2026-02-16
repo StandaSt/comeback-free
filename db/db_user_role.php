@@ -1,5 +1,5 @@
 <?php
-// db/db_user_role.php * Verze: V3 * Aktualizace: 12.2.2026
+// db/db_user_role.php * Verze: V4 * Aktualizace: 16.2.2026
 declare(strict_types=1);
 
 /*
@@ -11,6 +11,11 @@ declare(strict_types=1);
  * - porovná s aktuálním stavem v user_role
  * - smaže jen to, co bylo ve Směnách odebráno
  * - přidá jen to, co bylo ve Směnách přidáno
+ *
+ * Nově ve V4:
+ * - určí „efektivní roli“ pro IS jako nejnižší id_role (MIN)
+ * - zapíše ji do comeback.user.id_role (musí existovat sloupec id_role)
+ * - uloží ji do session: $_SESSION['cb_role_id'] a $_SESSION['cb_role_name']
  *
  * Pozn.:
  * - tohle není „chyba/nesoulad“, je to běžná synchronizace změn práv
@@ -167,7 +172,33 @@ if (!function_exists('db_user_role_sync')) {
             $stmt->close();
         }
 
-        // 7) log: přidáno/odebráno
+        // 7) efektivní role pro IS = nejnižší id_role
+        if (count($desiredIds) > 0) {
+            $idRoleEffective = min(array_keys($desiredIds));
+            $roleEffectiveName = (string)($desiredIds[$idRoleEffective] ?? '');
+
+            $stmt = $conn->prepare('UPDATE user SET id_role=? WHERE id_user=?');
+            if ($stmt === false) {
+                throw new RuntimeException('DB: prepare selhal (user id_role update).');
+            }
+            $stmt->bind_param('ii', $idRoleEffective, $idUser);
+            $stmt->execute();
+            $stmt->close();
+
+            $_SESSION['cb_role_id'] = $idRoleEffective;
+            $_SESSION['cb_role_name'] = $roleEffectiveName;
+
+            cb_login_log_line('db_user_role_effective', [
+                'id_user' => (string)$idUser,
+                'id_role' => (string)$idRoleEffective,
+                'role' => $roleEffectiveName,
+            ]);
+        } else {
+            unset($_SESSION['cb_role_id']);
+            unset($_SESSION['cb_role_name']);
+        }
+
+        // 8) log: přidáno/odebráno
         if ($addCount > 0) {
             cb_login_log_line('db_user_role_add', [
                 'id_user' => (string)$idUser,
@@ -192,5 +223,5 @@ if (!function_exists('db_user_role_sync')) {
     }
 }
 
-/* db/db_user_role.php * Verze: V3 * Aktualizace: 12.2.2026 * Počet řádků: 196 */
+/* db/db_user_role.php * Verze: V4 * Aktualizace: 16.2.2026 * Počet řádků: 227 */
 // Konec souboru
