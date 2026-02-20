@@ -1,5 +1,5 @@
 <?php
-// lib/login_smeny.php * Verze: V16 * Aktualizace: 16.2.2026
+// lib/login_smeny.php * Verze: V17 * Aktualizace: 17.2.2026
 declare(strict_types=1);
 
 /*
@@ -7,14 +7,15 @@ declare(strict_types=1);
  *
  * Co to dělá:
  * - ověří email/heslo přes Směny (GraphQL)
- * - načte profil, role/sloty a pobočky
+ * - načte profil + role/sloty (1 dotaz)
+ * - načte pobočky (2. dotaz – vyžaduje id_user)
  * - uloží data do session
  * - zavolá DB sync (db/db_user_login.php)
  * - nastaví session pro časovač neaktivity (timeout + start + poslední aktivita)
  * - redirect na úvod
  *
  * Důležité:
- * - timeout neaktivity je jedna hodnota pro celý systém (zatím natvrdo zde).
+ * - timeout neaktivity je JEDINÁ hodnota pro celý systém (zatím natvrdo zde).
  *   Později se sem napojí načtení z administrace (DB).
  */
 
@@ -27,9 +28,8 @@ $GQL_URL = 'https://smeny.pizzacomeback.cz/graphql';
 
 /*
  * Timeout neaktivity (minuty) – JEDINÝ zdroj hodnoty.
- * - pokud chceš testovat rychlejší odhlášení, změň jen tady (např. 2).
  */
-$CB_TIMEOUT_MIN = 2;
+$CB_TIMEOUT_MIN = 20;
 
 function post_str(string $k): string
 {
@@ -85,7 +85,28 @@ try {
         'token_len' => (string)strlen($token),
     ]);
 
-    cb_login_log_line('gql_me_request', ['email' => $email]);
+    /*
+     * PŮVODNÍ dotazy (ponecháno pro rychlý návrat):
+     *
+     * 1) Profil:
+     * 'query{
+     *     userGetLogged{
+     *         id name surname email phoneNumber active approved createTime lastLoginTime
+     *     }
+     * }'
+     *
+     * 2) Role + sloty:
+     * 'query{
+     *     userGetLogged{
+     *         id
+     *         roles{ id name }
+     *         shiftRoleTypeNames
+     *     }
+     * }'
+     */
+
+    // 1) Sloučeno: profil + role + sloty
+    cb_login_log_line('gql_me_rs_request', ['email' => $email]);
 
     $me = cb_smeny_graphql(
         $GQL_URL,
@@ -100,6 +121,8 @@ try {
                 approved
                 createTime
                 lastLoginTime
+                roles{ id name }
+                shiftRoleTypeNames
             }
         }',
         [],
@@ -114,51 +137,23 @@ try {
 
     $idUser = (int)$u['id'];
 
-    cb_login_log_line('gql_me_ok', [
-        'id_user' => (string)$idUser,
-        'email' => (string)$u['email'],
-    ]);
-
-    cb_login_log_line('gql_roles_slot_request', ['id_user' => (string)$idUser]);
-
-    $rs = cb_smeny_graphql(
-        $GQL_URL,
-        'query{
-            userGetLogged{
-                id
-                roles{ id name }
-                shiftRoleTypeNames
-            }
-        }',
-        [],
-        $token
-    );
-
-    $rsUser = $rs['userGetLogged'] ?? null;
-    if (!is_array($rsUser)) {
-        cb_login_log_line('roles_slot_invalid', ['id_user' => (string)$idUser]);
-        throw new RuntimeException('Nepodařilo se načíst role/sloty uživatele.');
-    }
-
-    $roles = $rsUser['roles'] ?? [];
+    $roles = $u['roles'] ?? [];
     if (!is_array($roles)) {
         $roles = [];
     }
 
-    $sloty = $rsUser['shiftRoleTypeNames'] ?? [];
+    $sloty = $u['shiftRoleTypeNames'] ?? [];
     if (!is_array($sloty)) {
         $sloty = [];
     }
 
-    $u['roles'] = $roles;
-    $u['shiftRoleTypeNames'] = $sloty;
-
-    cb_login_log_line('gql_roles_slot_ok', [
+    cb_login_log_line('gql_me_rs_ok', [
         'id_user' => (string)$idUser,
         'roles_count' => (string)count($roles),
         'sloty_count' => (string)count($sloty),
     ]);
 
+    // 2) Pobočky (vyžaduje id_user)
     cb_login_log_line('gql_branches_request', ['id_user' => (string)$idUser]);
 
     $br = cb_smeny_graphql(
@@ -198,15 +193,13 @@ try {
         'main' => $mainTxt,
     ]);
 
-    // Token pro další volání Směn (zatím interní, později se možná omezí)
     $_SESSION['cb_token'] = $token;
 
-    // Základní user data pro UI
     $_SESSION['cb_user'] = [
         'id_user'   => $idUser,
         'name'      => (string)($u['name'] ?? ''),
         'surname'   => (string)($u['surname'] ?? ''),
-        'email'     => (string)$u['email'],
+        'email'     => (string)($u['email'] ?? ''),
         'telefon'   => (string)($u['phoneNumber'] ?? ''),
         'active'    => (bool)($u['active'] ?? false),
         'approved'  => (bool)($u['approved'] ?? false),
@@ -214,10 +207,8 @@ try {
         'sloty'     => $sloty,
     ];
 
-    // Plný profil pro DB sync (bere si z toho role i sloty)
     $_SESSION['cb_user_profile'] = $u;
 
-    // Pobočky pro DB sync
     $_SESSION['cb_user_branches'] = [
         'workingBranchNames' => $working,
         'mainBranchName' => $main,
@@ -225,17 +216,9 @@ try {
 
     require_once __DIR__ . '/zapis_dat_txt.php';
 
-    // DB sync po loginu (transakce + user_login + user_spy + role/sloty/povolení…)
     require_once __DIR__ . '/../db/db_user_login.php';
     cb_db_user_login();
 
-    /*
-     * ČASOVAČ (neaktivita) – session hodnoty pro login blok + JS
-     *
-     * Proč až tady:
-     * - chceme mít jistotu, že po DB syncu je session v konzistentním stavu
-     * - a že nic dalšího už tyto hodnoty nepřepíše
-     */
     $_SESSION['cb_timeout_min'] = (int)$CB_TIMEOUT_MIN;
     $_SESSION['cb_session_start_ts'] = time();
     $_SESSION['cb_last_activity_ts'] = time();
@@ -260,7 +243,6 @@ try {
     unset($_SESSION['cb_user_profile']);
     unset($_SESSION['cb_user_branches']);
 
-    // i kdyby něco z časovače existovalo, po chybě loginu to nesmí zůstat
     unset($_SESSION['cb_timeout_min']);
     unset($_SESSION['cb_session_start_ts']);
     unset($_SESSION['cb_last_activity_ts']);
@@ -273,5 +255,5 @@ try {
     exit;
 }
 
-/* lib/login_smeny.php * Verze: V16 * Aktualizace: 16.2.2026 * Počet řádků: 277 */
+// lib/login_smeny.php * Verze: V17 * Aktualizace: 17.2.2026 * Počet řádků: 259
 // Konec souboru

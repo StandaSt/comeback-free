@@ -1,4 +1,4 @@
-// lib/menu_dropdown.js * Verze: V2 * Aktualizace: 13.2.2026
+// js/menu_dropdown.js * Verze: V4 * Aktualizace: 17.2.2026
 'use strict';
 
 /*
@@ -10,28 +10,47 @@
  * 2) klik na U1 s U2:
  *    - desktop priorita: ignorovat klik (otevírá jen hoverem)
  *    - touch zatím neřešíme (ignoruje se také)
+ *
+ * V4:
+ * - úklid opakované logiky (U1/U2 stavy), bez ukládání pomocných dat na DOM prvky
  */
 
 (function (w) {
   const CB_MENU = w.CB_MENU || (w.CB_MENU = {});
 
-  function closeAllDropdown(rootEl) {
-    Array.from(rootEl.querySelectorAll('.menu-u1')).forEach((l1) => {
-      l1.classList.remove('open');
-      l1.classList.remove('active');
-      const panel = l1.querySelector('.menu-panel');
-      if (panel) {
-        Array.from(panel.querySelectorAll('.menu-u2btn')).forEach(b => b.classList.remove('active'));
-      }
-    });
+  function getU1Els(rootEl) {
+    return rootEl ? Array.from(rootEl.querySelectorAll('.menu-u1')) : [];
   }
 
-  function closeThisDropdown(l1, col2) {
-    l1.classList.remove('open');
-    l1.classList.remove('active');
-    if (col2) {
-      Array.from(col2.querySelectorAll('.menu-u2btn')).forEach(x => x.classList.remove('active'));
+  function setU1State(l1, isOpen) {
+    if (!l1) return;
+    if (isOpen) {
+      l1.classList.add('open');
+      l1.classList.add('active');
+    } else {
+      l1.classList.remove('open');
+      l1.classList.remove('active');
     }
+  }
+
+  function clearU2Active(containerEl) {
+    if (!containerEl) return;
+    containerEl.querySelectorAll('.menu-u2btn').forEach((b) => b.classList.remove('active'));
+  }
+
+  function closeOne(l1, col2) {
+    setU1State(l1, false);
+    clearU2Active(col2);
+  }
+
+  function closeAll(rootEl) {
+    getU1Els(rootEl).forEach((l1) => {
+      setU1State(l1, false);
+      const panel = l1.querySelector('.menu-panel');
+      if (panel) {
+        clearU2Active(panel);
+      }
+    });
   }
 
   function renderDropdown(rootEl, opts) {
@@ -52,16 +71,19 @@
 
       l1.appendChild(l1btn);
 
-      const panel = document.createElement('div');
-      panel.className = 'menu-panel';
-
-      const col2 = document.createElement('div');
-      col2.className = 'menu-col2';
-      panel.appendChild(col2);
-
       const hasL2 = (CB_MENU.hasL2 && CB_MENU.hasL2(sec));
 
+      let col2 = null;
+      let closeTimer = null;
+
       if (hasL2) {
+        const panel = document.createElement('div');
+        panel.className = 'menu-panel';
+
+        col2 = document.createElement('div');
+        col2.className = 'menu-col2';
+        panel.appendChild(col2);
+
         sec.level2.forEach((g) => {
           const b = document.createElement('button');
           b.type = 'button';
@@ -69,60 +91,47 @@
           b.textContent = g.label;
           col2.appendChild(b);
 
-          const timerRef = { timer: null };
-
           b.addEventListener('mouseenter', () => {
-            if (timerRef.timer) timerRef.timer.cancel();
-            Array.from(col2.querySelectorAll('.menu-u2btn')).forEach(x => x.classList.remove('active'));
+            if (closeTimer) closeTimer.cancel();
+            clearU2Active(col2);
             b.classList.add('active');
           });
 
           b.addEventListener('click', (e) => {
             e.stopPropagation();
             // 1) po výběru U2 hned zavřít
-            closeThisDropdown(l1, col2);
+            closeOne(l1, col2);
             CB_MENU.goPage(g.page);
           });
-
-          // uložíme timerRef až po vytvoření timeru (níže)
-          b.__cbTimerRef = timerRef;
         });
 
         l1.appendChild(panel);
       }
 
-      const timer = CB_MENU.makeCloseTimer(() => {
-        closeThisDropdown(l1, col2);
+      closeTimer = CB_MENU.makeCloseTimer(() => {
+        closeOne(l1, col2);
       }, closeDelay);
 
-      // doplníme timerRef do U2 tlačítek
-      if (hasL2) {
-        Array.from(col2.querySelectorAll('.menu-u2btn')).forEach((b) => {
-          if (b.__cbTimerRef) b.__cbTimerRef.timer = timer;
-        });
-      }
-
       function openThis() {
-        closeAllDropdown(rootEl);
+        closeAll(rootEl);
         if (!hasL2) return;
-        l1.classList.add('open');
-        l1.classList.add('active');
-        Array.from(col2.querySelectorAll('.menu-u2btn')).forEach(x => x.classList.remove('active'));
+        setU1State(l1, true);
+        clearU2Active(col2);
       }
 
       l1.addEventListener('mouseenter', () => {
-        timer.cancel();
+        closeTimer.cancel();
         openThis();
       });
 
       l1.addEventListener('mouseleave', () => {
         if (!hasL2) return;
-        timer.schedule();
+        closeTimer.schedule();
       });
 
-      if (hasL2) {
-        col2.addEventListener('mouseenter', () => timer.cancel());
-        col2.addEventListener('mouseleave', () => timer.schedule());
+      if (hasL2 && col2) {
+        col2.addEventListener('mouseenter', () => closeTimer.cancel());
+        col2.addEventListener('mouseleave', () => closeTimer.schedule());
       }
 
       l1btn.addEventListener('click', (e) => {
@@ -130,7 +139,7 @@
 
         // L1 bez L2 zůstává klikací (navigace)
         if (!hasL2) {
-          closeAllDropdown(rootEl);
+          closeAll(rootEl);
           CB_MENU.goPage(sec.page);
           return;
         }
@@ -144,7 +153,7 @@
     });
 
     return {
-      closeAll: () => closeAllDropdown(rootEl)
+      closeAll: () => closeAll(rootEl)
     };
   }
 
@@ -164,5 +173,5 @@
 
 })(window);
 
-// lib/menu_dropdown.js * Verze: V2 * počet řádků 178 * Aktualizace: 13.2.2026
+// js/menu_dropdown.js * Verze: V4 * Aktualizace: 17.2.2026 * počet řádků: 177
 // konec souboru

@@ -1,5 +1,5 @@
 <?php
-// includes/hlavicka.php * Verze: V22 * Aktualizace: 14.2.2026 
+// includes/hlavicka.php * Verze: V23 * Aktualizace: 18.2.2026
 declare(strict_types=1);
 
 if (defined('COMEBACK_HEADER_RENDERED')) {
@@ -31,14 +31,17 @@ $CB_HEADER = cb_header_info();
     <title>Comeback</title>
 
     <!-- styly -->
-    <link rel="stylesheet" href="<?= h(cb_url('style/nastaveni1.css')) ?>">
-    <link rel="stylesheet" href="<?= h(cb_url('style/global1.css')) ?>">
-    <link rel="stylesheet" href="<?= h(cb_url('style/hlavicka1.css')) ?>">
-    <link rel="stylesheet" href="<?= h(cb_url('style/central1.css')) ?>">
-    <link rel="stylesheet" href="<?= h(cb_url('style/paticka1.css')) ?>">
-    <link rel="stylesheet" href="<?= h(cb_url('style/menu1.css')) ?>">
-    <link rel="stylesheet" href="<?= h(cb_url('style/menu_tlac1.css')) ?>">
-    <link rel="stylesheet" href="<?= h(cb_url('style/ikony_svg1.css')) ?>">
+    <link rel="stylesheet" href="<?= h(cb_url('style/1/nastaveni.css')) ?>">
+    <link rel="stylesheet" href="<?= h(cb_url('style/1/global.css')) ?>">
+    <link rel="stylesheet" href="<?= h(cb_url('style/1/hlavicka.css')) ?>">
+    <link rel="stylesheet" href="<?= h(cb_url('style/1/central.css')) ?>">
+    <link rel="stylesheet" href="<?= h(cb_url('style/1/paticka.css')) ?>">
+    <link rel="stylesheet" href="<?= h(cb_url('style/1/menu.css')) ?>">
+    <link rel="stylesheet" href="<?= h(cb_url('style/1/tabulky.css')) ?>">
+    <link rel="stylesheet" href="<?= h(cb_url('style/1/pages/hr_uzivatele.css')) ?>">
+    <link rel="stylesheet" href="<?= h(cb_url('style/1/pages/obj_zakaznici.css')) ?>">
+    <link rel="stylesheet" href="<?= h(cb_url('style/1/menu_tlac.css')) ?>">
+    <link rel="stylesheet" href="<?= h(cb_url('style/1/ikony_svg.css')) ?>">
 </head>
 <body>
 
@@ -112,5 +115,5 @@ $CB_HEADER = cb_header_info();
         <div class="central-content">
             <main>
 <?php
-/* includes/hlavicka.php * Verze: V22 * Aktualizace: 14.2.2026 * Počet řádků: 118 */
+/* includes/hlavicka.php * Verze: V23 * Aktualizace: 18.2.2026 * Počet řádků: 118 */
 // Konec souboru

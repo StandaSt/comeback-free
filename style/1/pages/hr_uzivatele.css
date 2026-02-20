@@ -1,0 +1,55 @@
+/* style/1/pages/hr_uzivatele.css * Verze: V6 * Aktualizace: 20.2.2026 */
+
+/*
+ * HR → UŽIVATELÉ (tabulka)
+ * - jen věci specifické pro tuto stránku
+ * - šířky sloupců patří SEM (ne do tabulky.css)
+ */
+
+/* =========================
+   TABULKA – rozložení sloupců
+   ========================= */
+
+/* tabulka se roztáhne na 100% šířky dostupného prostoru */
+.table.uzivatele-table{
+  display:table;
+  table-layout:auto;      /* min-width sloupců funguje jen s auto */
+  width:100%;
+}
+
+/* minimální šířky sloupců (sloupce se mohou roztahovat, ale ne zmenšit pod minimum) */
+.uzivatele-table .c-id{ min-width:70px; }
+.uzivatele-table .c-prijmeni{ min-width:170px; }
+.uzivatele-table .c-jmeno{ min-width:150px; }
+.uzivatele-table .c-telefon{ min-width:120px; }
+.uzivatele-table .c-email{ min-width:230px; }
+.uzivatele-table .c-reg{ min-width:120px; }
+.uzivatele-table .c-aktivni{ min-width:100px; }
+.uzivatele-table .c-akce{ min-width:220px; }
+
+/* aby se tabulka zbytečně neroztahovala prázdnými buňkami */
+.uzivatele-table td:empty::after{
+  content:"";
+}
+
+/* ikony v pravém sloupci */
+.uzivatele-table .row-icons{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  white-space:nowrap;
+}
+
+.uzivatele-table .row-icons img{
+  width:18px;
+  height:18px;
+  display:block;
+}
+
+/* X pro vyčištění filtrů vpravo v ikonovém sloupci */
+.uzivatele-table .filter-row th.c-akce .filter-actions-right{
+  justify-content:flex-end;
+}
+
+/* style/1/pages/hr_uzivatele.css * Verze: V6 * Aktualizace: 20.2.2026 * Počet řádků: 55
+   konec souboru */

@@ -1,0 +1,35 @@
+/* style/1/nastaveni.css * Verze: V2 * Aktualizace: 18.2.2026 */
+
+/*
+ * CÍL:
+ * - JEDINÉ místo pro globální nastavení vzhledu (hlavně barvy)
+ * - obsahuje jen CSS proměnné (:root)
+ */
+
+:root {
+    /* layout – šířky menu */
+    --dropdown-w: 130px;
+    --sidebar-w: 130px;
+
+    /* globální barvy projektu */
+    --bg-ram: #97d8f1;        /* hlavička/patička/pozadí pod menu/central */
+    --bg-body: #f4f6f8;       /* pozadí stránky + container */
+    --tx-base: #333;          /* základní text */
+    --tx-muted: #555;         /* tlumený text */
+
+    /* společné barvy UI */
+    --border-strong: #dcdcdc;
+    --border-accent: #3f3092;
+
+    --btn: #f2f2f2;
+    --menu-bg: #fff;
+
+    --active-bg: #dfe9ff;
+    --active-bd: #5b7cff;
+    --active-tx: #1f3fbf;
+
+    --hover-bg: #f3f5f9;
+}
+
+/* style/1/nastaveni.css * Verze: V2 * Aktualizace: 18.2.2026 * Počet řádků: 35
+   konec souboru */

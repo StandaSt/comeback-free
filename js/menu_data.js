@@ -1,4 +1,4 @@
-// lib/menu_data.js * Verze: V4 * Aktualizace: 29.1.2026
+// js/menu_data.js * Verze: V5 * Aktualizace: 17.2.2026
 /*
  * POZN.:
  * - window.MENU obsahuje jen textové položky (L1/L2)
@@ -86,5 +86,5 @@
   window.MENU = MENU;
 })();
 
-// lib/menu_data.js * Verze: V4 * Aktualizace: 29.1.2026
-// konec souboru 
+// js/menu_data.js * Verze: V5 * počet řádků 90 * Aktualizace: 17.2.2026
+// konec souboru

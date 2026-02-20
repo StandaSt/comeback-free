@@ -1,10 +1,10 @@
-/* style/menu_tlac1.css * Verze: V4 * Aktualizace: 6.2.2026 */
+/* style/1/menu_tlac.css * Verze: V5 * Aktualizace: 18.2.2026 */
 
 /*
- * POZN. V4:
- * - z tohoto souboru odstraněny styly pro obaly ikon (menu-home / menu-toggle)
+ * POZN.:
+ * - z tohoto souboru jsou odstraněny styly pro obaly ikon (menu-home / menu-toggle)
  * - důvod: jedna třída = jeden soubor (domluva)
- * - sidebar obaly ikon zůstaly funkčně stejné, jejich styly jsou přesunuty do style/menu1.css
+ * - obaly ikon pro sidebar jsou v style/1/menu.css
  */
 
 /* =========================================================
@@ -24,7 +24,7 @@
   font:inherit;
   font-weight:400;
   color:#222;
-} 
+}
 
 .menu-u1 > button:hover{
   background:var(--active-bg);
@@ -51,7 +51,7 @@
    ========================================================= */
 
 .menu-dropdown .menu-u1 > button{
-  padding:0 8px;        /* */
+  padding:0 8px;
   display:flex;
   justify-content:space-between;
   align-items:center;
@@ -149,5 +149,5 @@
   color:var(--active-tx);
 }
 
-/* style/menu_tlac1.css * Verze: V4 * Aktualizace: 6.2.2026 * Počet řádků: 153
+/* style/1/menu_tlac.css * Verze: V5 * Aktualizace: 18.2.2026 * Počet řádků: 153
    konec souboru */

@@ -1,4 +1,4 @@
-// lib/menu_core.js * Verze: V3 * Aktualizace: 14.2.2026
+// js/menu_core.js * Verze: V4 * Aktualizace: 17.2.2026
 'use strict';
 
 /*
@@ -140,5 +140,5 @@
 
 })(window);
 
-// lib/menu_core.js * Verze: V3 * Aktualizace: 14.2.2026 * počet řádků 144
+// js/menu_core.js * Verze: V4 * Aktualizace: 17.2.2026 * počet řádků 144
 // konec souboru

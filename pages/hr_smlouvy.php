@@ -13,7 +13,7 @@ declare(strict_types=1);
 ?>
 
 <section class="card">
-    <p>HR smlouvy</p>
+    <p>HR smlouvy</p>              
 </section>
 <?php
 /* pages/hr_smlouvy.php V1 – počet řádků: 19 – 18.1.2026 11:45 */

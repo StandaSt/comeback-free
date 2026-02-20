@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-// db/db_bad_login.php * Verze: V2 * Aktualizace: 16.2.2026 * Počet řádků: 103
+// db/db_bad_login.php * Verze: V3 * Aktualizace: 20.2.2026 * Počet řádků: 110
 
 /*
  * DB: user_bad_login (neúspěšný login)
@@ -10,15 +10,14 @@ declare(strict_types=1);
  * - lib/ soubory jen volají DB vrstvu
  *
  * Co dělá:
- * 1) Normalizuje vstupy (IP/UA/screen)
- * 2) Udělá hash hesla SHA-256
- * 3) Vloží řádek do user_bad_login:
+ * 1) Normalizuje vstupy (email/IP/UA/screen)
+ * 2) Vloží řádek do user_bad_login:
  *    - email
- *    - heslo (hash)
+ *    - heslo (nekódovaný řetězec, jak ho zadal uživatel)
  *    - ip
  *    - user_agent
  *    - screen_w, screen_h, is_touch
- * 4) Vrátí id_bad_login (AUTO_INCREMENT)
+ * 3) Vrátí id_bad_login (AUTO_INCREMENT)
  *
  * Poznámky:
  * - tabulka user_bad_login má ip NOT NULL → když IP není k dispozici, uloží se prázdný string
@@ -45,10 +44,10 @@ if (!function_exists('db_bad_login_log')) {
     ): int {
         $email = trim($email);
 
-        // 1) hash hesla (nikdy neukládáme čitelně)
-        $hash = hash('sha256', $hesloPlain);
+        // heslo ukládáme jako nekódovaný řetězec (požadavek projektu)
+        $heslo = (string)$hesloPlain;
 
-        // 2) IP (NOT NULL v DB) → prázdný string, pokud nic není
+        // IP (NOT NULL v DB) → prázdný string, pokud nic není
         if (is_string($ip)) {
             $ip = trim($ip);
         }
@@ -56,7 +55,7 @@ if (!function_exists('db_bad_login_log')) {
             $ip = '';
         }
 
-        // 3) user agent (může být NULL)
+        // user agent (může být NULL)
         if (is_string($userAgent)) {
             $userAgent = trim($userAgent);
             if ($userAgent === '') {
@@ -66,7 +65,7 @@ if (!function_exists('db_bad_login_log')) {
             $userAgent = null;
         }
 
-        // 4) screen_w/screen_h: buď NULL, nebo kladné číslo v rozsahu SMALLINT
+        // screen_w/screen_h: buď NULL, nebo kladné číslo v rozsahu SMALLINT
         if ($screenW !== null) {
             $screenW = (int)$screenW;
             if ($screenW < 1 || $screenW > 65535) {
@@ -80,9 +79,13 @@ if (!function_exists('db_bad_login_log')) {
             }
         }
 
-        // 5) is_touch: NULL nebo 0/1
+        // is_touch: NULL nebo 0/1
         if ($isTouch !== null) {
-            $isTouch = ((int)$isTouch === 1) ? 1 : 0;
+            if ((int)$isTouch === 1) {
+                $isTouch = 1;
+            } else {
+                $isTouch = 0;
+            }
         }
 
         $conn = db();
@@ -91,7 +94,11 @@ if (!function_exists('db_bad_login_log')) {
             'INSERT INTO user_bad_login (email, heslo, ip, user_agent, screen_w, screen_h, is_touch)
              VALUES (?,?,?,?,?,?,?)'
         );
-        $stmt->bind_param('ssssiii', $email, $hash, $ip, $userAgent, $screenW, $screenH, $isTouch);
+        if ($stmt === false) {
+            throw new RuntimeException('DB: prepare selhal (user_bad_login).');
+        }
+
+        $stmt->bind_param('ssssiii', $email, $heslo, $ip, $userAgent, $screenW, $screenH, $isTouch);
         $stmt->execute();
         $stmt->close();
 
@@ -99,5 +106,5 @@ if (!function_exists('db_bad_login_log')) {
     }
 }
 
-// db/db_bad_login.php * Verze: V2 * Aktualizace: 16.2.2026 * Počet řádků: 103
+// db/db_bad_login.php * Verze: V3 * Aktualizace: 20.2.2026 * Počet řádků: 110
 // Konec souboru

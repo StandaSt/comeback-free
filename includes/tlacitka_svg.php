@@ -141,7 +141,7 @@ if ($variant === 'dropdown') {
  * ----------------------------------------------------------------
  * .ikona-svg
  * - jednotná třída pro vzhled ikonového tlačítka (šířka, výška, border, hover, focus…)
- * - definovaná ve style/ikony_svg1.css
+ * - definovaná ve style/?/ikony_svg.css
  *
  * Dropdown obaly:
  * - .ikona_home   → obal pro HOME v dropdownu (v levém 80px slotu)

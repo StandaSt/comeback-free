@@ -1,5 +1,5 @@
 <?php
-// includes/menu_d.php * Verze: V18 * Aktualizace: 13.2.2026
+// includes/menu_d.php * Verze: V19 * Aktualizace: 17.2.2026
 declare(strict_types=1);
 
 if (defined('COMEBACK_MENU_D_RENDERED')) {
@@ -9,7 +9,7 @@ define('COMEBACK_MENU_D_RENDERED', true);
 
 /*
  * Dropdown menu (2 úrovně) – router verze
- * - obsluha je rozdělená do více JS souborů (lib/menu_*.js), pořád pod window.CB_MENU
+ * - obsluha je rozdělená do více JS souborů (js/menu_*.js), pořád pod window.CB_MENU
  * - tento soubor řeší jen umístění (horizontální) + HTML kotvy
  *
  * Ikony (HOME + přepínače režimu):
@@ -48,7 +48,7 @@ define('COMEBACK_MENU_D_RENDERED', true);
 if (!defined('COMEBACK_MENU_DATA_JS_INCLUDED')) {
     define('COMEBACK_MENU_DATA_JS_INCLUDED', true);
     ?>
-    <script src="<?= h(cb_url('lib/menu_data.js')) ?>"></script>
+    <script src="<?= h(cb_url('js/menu_data.js')) ?>"></script>
     <?php
 }
 
@@ -56,25 +56,25 @@ if (!defined('COMEBACK_MENU_DATA_JS_INCLUDED')) {
 if (!defined('COMEBACK_MENU_AJAX_JS_INCLUDED')) {
     define('COMEBACK_MENU_AJAX_JS_INCLUDED', true);
     ?>
-    <script src="<?= h(cb_url('lib/menu_ajax.js')) ?>"></script>
+    <script src="<?= h(cb_url('js/menu_ajax.js')) ?>"></script>
     <?php
 }
 if (!defined('COMEBACK_MENU_CORE_JS_INCLUDED')) {
     define('COMEBACK_MENU_CORE_JS_INCLUDED', true);
     ?>
-    <script src="<?= h(cb_url('lib/menu_core.js')) ?>"></script>
+    <script src="<?= h(cb_url('js/menu_core.js')) ?>"></script>
     <?php
 }
 if (!defined('COMEBACK_MENU_DD_JS_INCLUDED')) {
     define('COMEBACK_MENU_DD_JS_INCLUDED', true);
     ?>
-    <script src="<?= h(cb_url('lib/menu_dropdown.js')) ?>"></script>
+    <script src="<?= h(cb_url('js/menu_dropdown.js')) ?>"></script>
     <?php
 }
 if (!defined('COMEBACK_MENU_SB_JS_INCLUDED')) {
     define('COMEBACK_MENU_SB_JS_INCLUDED', true);
     ?>
-    <script src="<?= h(cb_url('lib/menu_sidebar.js')) ?>"></script>
+    <script src="<?= h(cb_url('js/menu_sidebar.js')) ?>"></script>
     <?php
 }
 ?>
@@ -110,5 +110,5 @@ if (!defined('COMEBACK_MENU_SB_JS_INCLUDED')) {
 </script>
 
 <?php
-/* includes/menu_d.php * Verze: V18 * počet řádků 114 * Aktualizace: 13.2.2026 */
+/* includes/menu_d.php * Verze: V19 * počet řádků 114 * Aktualizace: 17.2.2026 */
  // Konec souboru

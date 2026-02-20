@@ -1,5 +1,5 @@
 <?php
-// includes/login_form.php * Verze: V24 * Aktualizace: 16.2.2026
+// includes/login_form.php * Verze: V25 * Aktualizace: 17.2.2026
 declare(strict_types=1);
 
 /*
@@ -27,9 +27,6 @@ $loginOk = (bool)($_SESSION['login_ok'] ?? false);
 
 /**
  * Formát datumu/času pro CZ (jen pro zobrazení).
- * Vstup může být:
- * - string "YYYY-mm-dd HH:ii:ss"
- * - unix timestamp (int)
  */
 function cb_fmt_dt_cz($v): string
 {
@@ -99,39 +96,42 @@ if ($loginOk && is_array($cbUser) && !empty($cbUser['email'])) {
     $today = is_array($stats) ? (int)($stats['today'] ?? 0) : 0;
 
     /*
-     * Timeout (neaktivita) – bez „záložní hodnoty“.
-     *
-     * Pravidlo:
-     * - hodnota timeoutu se nastavuje na JEDINÉM místě: lib/login_smeny.php
-     * - tady ji jen čteme ze session (žádné "když chybí, tak 20")
+     * Timeout (neaktivita) – bez fallbacku.
+     * - hodnota se nastavuje na JEDINÉM místě: lib/login_smeny.php
+     * - tady ji jen čteme ze session
      */
     $timeoutMin = cb_sess_int('cb_timeout_min', 0);
 
     /*
-     * Časy pro odpočet:
-     * - cb_session_start_ts: začátek seance (sekundy)
-     * - cb_last_activity_ts: poslední aktivita (sekundy)
-     *
-     * Tyto hodnoty nastavuje server při přihlášení.
-     * JS pak jen přepočítává a přepisuje čísla v řádku "Čas seance".
+     * Časy pro odpočet (sekundy)
+     * - cb_session_start_ts: začátek seance
+     * - cb_last_activity_ts: poslední aktivita
      */
-    $lastTs = cb_sess_int('cb_last_activity_ts', time());
-    $startTs = cb_sess_int('cb_session_start_ts', time());
+    $lastTs = cb_sess_int('cb_last_activity_ts', 0);
+    $startTs = cb_sess_int('cb_session_start_ts', 0);
 
-    // Výchozí hodnoty pro první render (JS je pak bude aktualizovat každou minutu).
-    $runMin = (int)floor((time() - $startTs) / 60);
-    if ($runMin < 0) {
-        $runMin = 0;
-    }
+    // Startovní (PHP) výpočet – jen pro první vykreslení.
+    $runTxt = '!';
+    $remainTxt = '!';
 
-    $idleMin = (int)floor((time() - $lastTs) / 60);
-    if ($idleMin < 0) {
-        $idleMin = 0;
-    }
+    if ($timeoutMin > 0 && $startTs > 0 && $lastTs > 0) {
+        $runMin = (int)floor((time() - $startTs) / 60);
+        if ($runMin < 0) {
+            $runMin = 0;
+        }
 
-    $remain = $timeoutMin - $idleMin;
-    if ($remain < 0) {
-        $remain = 0;
+        $idleMin = (int)floor((time() - $lastTs) / 60);
+        if ($idleMin < 0) {
+            $idleMin = 0;
+        }
+
+        $remain = $timeoutMin - $idleMin;
+        if ($remain < 0) {
+            $remain = 0;
+        }
+
+        $runTxt = (string)$runMin;
+        $remainTxt = (string)$remain;
     }
 
     ?>
@@ -139,7 +139,7 @@ if ($loginOk && is_array($cbUser) && !empty($cbUser['email'])) {
         <div class="login-grid"
              data-start-ts="<?= h((string)$startTs) ?>"
              data-last-ts="<?= h((string)$lastTs) ?>"
-             data-timeout-min="<?= h((string)$timeoutMin) ?>"
+             <?php if ($timeoutMin > 0) { ?>data-timeout-min="<?= h((string)$timeoutMin) ?>"<?php } ?>
              data-logout-url="<?= h(cb_url('lib/logout.php')) ?>">
 
             <div class="login-fields">
@@ -156,8 +156,8 @@ if ($loginOk && is_array($cbUser) && !empty($cbUser['email'])) {
 
                     <!-- 3) Aktuální seance (živě se dopočítává v JS) -->
                     <div class="login-last">
-                        Čas seance: <span class="cb-run-min"><?= h((string)$runMin) ?></span> min /
-                        zbývá <span class="cb-remain-min"><?= h((string)$remain) ?></span> min /
+                        Čas seance: <span class="cb-run-min"><?= h($runTxt) ?></span> min /
+                        zbývá <span class="cb-remain-min"><?= h($remainTxt) ?></span> min /
                         <?= h($curIp) ?>
                     </div>
 
@@ -200,12 +200,7 @@ if ($loginOk && is_array($cbUser) && !empty($cbUser['email'])) {
 
 }
 
-/* Flash hlášku "Přihlášení OK" nezobrazujeme */
-if ($cbFlash !== '' && $cbFlash !== 'Přihlášení OK') {
-    ?>
-    <div class="login-flash"><?= h($cbFlash) ?></div>
-    <?php
-}
 
-/* includes/login_form.php * Verze: V24 * Aktualizace: 16.2.2026 * Počet řádků: 211 */
+
+/* includes/login_form.php * Verze: V25 * Aktualizace: 17.2.2026 * Počet řádků: 211 */
 // Konec souboru

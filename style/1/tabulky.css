@@ -1,0 +1,175 @@
+/* style/1/tabulky.css * Verze: V4 * Aktualizace: 20.2.2026 */
+
+/*
+ * TABULKY – SPOLEČNÉ
+ * - jen věci, které chcete mít stejné ve všech tabulkách
+ * - konkrétní šířky sloupců a speciální vzhled patří do CSS konkrétní stránky
+ */
+
+/* =========================
+   OBAL TABULKY
+   ========================= */
+
+.table-wrap{
+  overflow-x:auto;                             /* vodorovný scroll, když je tabulka široká */
+}
+
+/* =========================
+   TABULKA – ZÁKLAD (vzhled)
+   ========================= */
+
+.table{
+  width:100%;
+  border-collapse:collapse;
+  background:#fff;
+}
+
+.table th,
+.table td{
+  padding:6px 8px;                             /* odsazení buněk */
+  border:1px solid var(--border-strong);       /* orámování buněk */
+  font-size:14px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  vertical-align:middle;
+}
+
+.table thead th{
+  background:#fafafa;
+  font-size:13px;
+  color:#555;
+  font-weight:700;
+}
+
+/* =========================
+   ZEBRA (PO ŘÁDCÍCH)
+   ========================= */
+
+/*
+ * Výchozí zebra:
+ * - sudé řádky v <tbody>
+ * - pokud někde zebra nechcete, dá se na konkrétní stránce přepsat
+ */
+.table tbody tr:nth-child(even) td{
+  background:#f1f1f1;
+}
+
+/* =========================
+   FILTRY V TABULKÁCH
+   ========================= */
+
+.filter-row th{
+  background:#fff;
+}
+
+.filter-input{
+  width:100%;
+  box-sizing:border-box;
+  height:22px;
+  padding:2px 6px;
+  font-size:13px;
+  border:1px solid #ccc;
+  border-radius:4px;
+}
+
+/* ENTER + X ve filtru (společné rozložení) */
+.filter-actions{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+
+/* malý křížek vedle Enter (čtverec) */
+.icon-x.small{
+  width:32px;
+  min-width:32px;
+  height:32px;
+  line-height:32px;
+  border-radius:4px;
+}
+
+/* reset filtrů: výchozí stav skrytý (zobrazí JS až když je něco vyplněno) */
+.filter-row .icon-x{
+  visibility:hidden;
+  opacity:0;
+  pointer-events:none;
+}
+
+/* =========================
+   SPODNÍ OVLÁDACÍ LIŠTA
+   ========================= */
+
+.list-bottom{
+  margin-top:10px;
+  padding:0;
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  gap:12px;
+}
+
+.per-form{
+  display:inline-flex;
+  gap:8px;
+  align-items:center;
+  white-space:nowrap;
+}
+
+.per-form.right{
+  justify-content:flex-end;
+}
+
+/* stránkování uprostřed */
+.pagination-icon{
+  justify-self:center;
+  display:inline-flex;
+  gap:6px;
+  align-items:center;
+}
+
+/* zmenšení stránkování cca o 25 % */
+.icon-btn.w44{
+  min-width:34px;
+  width:auto;
+  height:24px;
+  line-height:24px;
+  font-size:12px;
+  padding:0 6px;
+}
+
+/* aktuální stránka */
+.icon-btn.page-current{
+  pointer-events:none;
+  font-weight:700;
+  background:var(--active-bg);
+  border:1px solid var(--active-bd);
+  color:var(--active-tx);
+}
+
+/* držák místa (neviditelný, ale drží šířku) */
+.icon-btn.placeholder{
+  visibility:hidden;
+}
+
+/* selecty ve spodní liště */
+.per-select{ min-width:90px; }
+.blk-select{ min-width:160px; }
+
+/* =========================
+   MOBIL
+   ========================= */
+
+@media (max-width:700px){
+  .list-bottom{
+    grid-template-columns:1fr;
+    justify-items:center;
+    gap:10px;
+    padding:0;
+  }
+
+  .per-form.right{ justify-content:center; }
+}
+
+/* style/1/tabulky.css * Verze: V4 * Aktualizace: 20.2.2026 * Počet řádků: 175
+   konec souboru */

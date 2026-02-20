@@ -1,4 +1,4 @@
-/* style/menu1.css * Verze: V32 * Aktualizace: 6.2.2026 */
+/* style/1/menu.css * Verze: V33 * Aktualizace: 18.2.2026 */
 
 /*
  * CÍL:
@@ -6,8 +6,8 @@
  *
  * DOMLUVA (úklid ikon):
  * - ikony nejsou "menu" → u dropdownu se řeší mimo renderované položky menu
- * - v menu1.css (dropdown) už nejsou žádné třídy ikon ani ID tlačítek
- * - sidebar část necháváme funkčně beze změn (jen přesun stylů obalů ikon sem, protože menu_tlac1.css už je nemá)
+ * - v menu.css (dropdown) nejsou žádné třídy ikon ani ID tlačítek
+ * - sidebar část necháváme funkčně beze změn
  */
 
 /* =========================================================
@@ -15,12 +15,11 @@
    ========================================================= */
 
 .menu{
- /* margin: 0px 6px 0px; */
- /*  background:#e97373; */
+  /* margin: 0px 6px 0px; */
 }
 
 /* =========================================================
-   DROPDOWN: jen MENU (rám 80px | 1fr | 80px)
+   DROPDOWN: jen MENU (rám: vlevo ikony | střed položky | vpravo ikona)
    ========================================================= */
 
 /* rám pro dropdown – holý grid */
@@ -32,8 +31,7 @@
   margin: 0 0 10px 0;
 }
 
-/* střední část: L1 položky vedle sebe, při nedostatku místa se zalomí do další řady
-   (bez horizontálního scrollu, aby U2 panel nebyl nikdy ořezaný) */
+/* střední část: L1 položky vedle sebe, při nedostatku místa se zalomí do další řady */
 .menu-row{
   display:flex;
   flex-wrap:wrap;
@@ -82,7 +80,7 @@
 }
 
 /* =========================================================
-   SIDEBAR: BEZE ZMĚN FUNKCE (původní pravidla + přesun obalů ikon sem)
+   SIDEBAR: BEZE ZMĚN FUNKCE (původní pravidla + obaly ikon)
    ========================================================= */
 
 .menu-sidebar .menu-area{
@@ -99,7 +97,7 @@
   align-items:center;
 }
 
-/* obaly ikon pro sidebar (přesunuto sem z menu_tlac1.css) */
+/* obaly ikon pro sidebar (přesunuto sem z menu_tlac.css) */
 .menu-sidebar .menu-home,
 .menu-sidebar .menu-toggle{
   margin-top:0;
@@ -209,5 +207,5 @@
   .menu-panel{ width:100%; max-width:100%; }
 }
 
-/* style/menu1.css * Verze: V32 * Aktualizace: 6.2.2026 * Počet řádků: 210
+/* style/1/menu.css * Verze: V33 * Aktualizace: 18.2.2026 * Počet řádků: 211
    konec souboru */

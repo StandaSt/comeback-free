@@ -1,4 +1,4 @@
-// lib/menu_sidebar.js * Verze: V1 * Aktualizace: 13.2.2026
+// js/menu_sidebar.js * Verze: V2 * Aktualizace: 17.2.2026
 'use strict';
 
 /*
@@ -10,6 +10,9 @@
  * 2) klik na U1 s U2:
  *    - desktop bez touch: ignorovat (otevírá jen hoverem)
  *    - touch: klik toggle jako dřív
+ *
+ * V2:
+ * - úklid opakované logiky: sjednocené zavírání/otevírání + helper funkce pro overlay a U1 stavy
  */
 
 (function (w) {
@@ -30,15 +33,53 @@
     return el;
   }
 
-  function closeSidebar(rootEl, l2Overlay) {
-    Array.from(rootEl.querySelectorAll('.menu-u1')).forEach((l1) => {
+  function getU1Els(rootEl) {
+    return rootEl ? Array.from(rootEl.querySelectorAll('.menu-u1')) : [];
+  }
+
+  function setU1State(l1, isOpen) {
+    if (!l1) return;
+    if (isOpen) {
+      l1.classList.add('open');
+      l1.classList.add('active');
+    } else {
       l1.classList.remove('open');
       l1.classList.remove('active');
-    });
+    }
+  }
+
+  function resetAllU1(rootEl) {
+    getU1Els(rootEl).forEach((l1) => setU1State(l1, false));
+  }
+
+  function resetOverlay(l2Overlay) {
+    if (!l2Overlay) return;
     l2Overlay.classList.remove('open');
     l2Overlay.innerHTML = '';
     l2Overlay.style.left = '0';
     l2Overlay.style.top = '0';
+  }
+
+  function closeAll(rootEl, l2Overlay) {
+    resetAllU1(rootEl);
+    resetOverlay(l2Overlay);
+  }
+
+  function closeAllExcept(rootEl, l2Overlay, exceptL1El) {
+    getU1Els(rootEl).forEach((l1) => {
+      if (l1 !== exceptL1El) setU1State(l1, false);
+    });
+    resetOverlay(l2Overlay);
+  }
+
+  function getPadTop(el) {
+    const v = parseFloat(getComputedStyle(el).paddingTop);
+    return Number.isFinite(v) ? v : 0;
+  }
+
+  function clearL2Active(l2Overlay) {
+    if (!l2Overlay) return;
+    l2Overlay.querySelectorAll('.menu-u2 > button').forEach((b) => b.classList.remove('active'));
   }
 
   function renderSidebar(rootEl, opts) {
@@ -48,16 +89,7 @@
 
     const l2Overlay = ensureOverlay('comeback-l2overlay', 'menu-u2panel', 998);
 
-    function getPadTop(el) {
-      const v = parseFloat(getComputedStyle(el).paddingTop);
-      return Number.isFinite(v) ? v : 0;
-    }
-
-    function clearL2Active() {
-      Array.from(l2Overlay.querySelectorAll('.menu-u2 > button')).forEach(b => b.classList.remove('active'));
-    }
-
-    const timer = CB_MENU.makeCloseTimer(() => closeSidebar(rootEl, l2Overlay), closeDelay);
+    const timer = CB_MENU.makeCloseTimer(() => closeAll(rootEl, l2Overlay), closeDelay);
 
     function openL2(anchorBtnEl, sec) {
       const level2 = sec.level2;
@@ -76,7 +108,7 @@
 
         btn.addEventListener('mouseenter', () => {
           timer.cancel();
-          clearL2Active();
+          clearL2Active(l2Overlay);
           btn.classList.add('active');
         });
 
@@ -85,7 +117,7 @@
           e.stopPropagation();
 
           // 1) po výběru U2 hned zavřít
-          closeSidebar(rootEl, l2Overlay);
+          closeAll(rootEl, l2Overlay);
 
           CB_MENU.goPage(g.page);
           btn.blur();
@@ -108,7 +140,8 @@
 
       requestAnimationFrame(() => {
         const r = l2Overlay.getBoundingClientRect();
-        let nx = r.left, ny = r.top;
+        let nx = r.left;
+        let ny = r.top;
 
         if (r.right > window.innerWidth - 6) nx = Math.max(6, window.innerWidth - r.width - 6);
         if (r.bottom > window.innerHeight - 6) ny = Math.max(6, window.innerHeight - r.height - 6);
@@ -116,17 +149,6 @@
         l2Overlay.style.left = Math.round(nx) + 'px';
         l2Overlay.style.top = Math.round(ny) + 'px';
       });
-    }
-
-    function closeAllExcept(exceptL1El) {
-      Array.from(rootEl.querySelectorAll('.menu-u1')).forEach((l1) => {
-        if (l1 !== exceptL1El) {
-          l1.classList.remove('open');
-          l1.classList.remove('active');
-        }
-      });
-      l2Overlay.classList.remove('open');
-      l2Overlay.innerHTML = '';
     }
 
     if (!w.__COMEBACK_SIDEBAR_HOVER_WIRED__) {
@@ -154,13 +176,12 @@
         timer.cancel();
 
         if (!hasL2) {
-          closeSidebar(rootEl, l2Overlay);
+          closeAll(rootEl, l2Overlay);
           return;
         }
 
-        closeAllExcept(l1);
-        l1.classList.add('open');
-        l1.classList.add('active');
+        closeAllExcept(rootEl, l2Overlay, l1);
+        setU1State(l1, true);
         openL2(l1btn, sec);
       });
 
@@ -175,7 +196,7 @@
         timer.cancel();
 
         if (!hasL2) {
-          closeSidebar(rootEl, l2Overlay);
+          closeAll(rootEl, l2Overlay);
           CB_MENU.goPage(sec.page);
           l1btn.blur();
           return;
@@ -190,14 +211,13 @@
 
         // touch: klik toggle jako dřív
         const willOpen = !l1.classList.contains('open');
-        closeAllExcept(l1);
+        closeAllExcept(rootEl, l2Overlay, l1);
 
         if (willOpen) {
-          l1.classList.add('open');
-          l1.classList.add('active');
+          setU1State(l1, true);
           openL2(l1btn, sec);
         } else {
-          closeSidebar(rootEl, l2Overlay);
+          closeAll(rootEl, l2Overlay);
         }
 
         l1btn.blur();
@@ -208,7 +228,7 @@
     });
 
     return {
-      closeAll: () => closeSidebar(rootEl, l2Overlay)
+      closeAll: () => closeAll(rootEl, l2Overlay)
     };
   }
 
@@ -231,5 +251,5 @@
 
 })(window);
 
-// lib/menu_sidebar.js * Verze: V1 * počet řádků 235 * Aktualizace: 13.2.2026
+// js/menu_sidebar.js * Verze: V2 * Aktualizace: 17.2.2026 * počet řádků: 255
 // konec souboru

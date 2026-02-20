@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
-// lib/user_bad_login.php * Verze: V3 * Aktualizace: 16.2.2026 * Počet řádků: 68
+// lib/user_bad_login.php * Verze: V4 * Aktualizace: 20.2.2026 * Počet řádků: 69
 
 /*
- * NEÚSPĚNÝ LOGIN – WRAPPER (bez DB)
+ * NEÚSPĚŠNÝ LOGIN – WRAPPER (bez DB)
  *
  * Cíl:
  * - lib/ soubory do DB NESAHÁ
@@ -12,14 +12,15 @@ declare(strict_types=1);
  * Co dělá:
  * 1) sesbírá data o pokusu o přihlášení:
  *    - email
- *    - heslo (jen pro vytvoření hash v DB vrstvě; nikam se neposílá čitelně do logu)
+ *    - heslo (ukládá se do DB jako nekódovaný řetězec – jen pro interní diagnostiku)
  *    - IP (REMOTE_ADDR)
  *    - user_agent (HTTP_USER_AGENT)
  *    - screen_w, screen_h, is_touch (pokud jsou ve „wait spy info“ v session)
  * 2) zavolá db/db_bad_login.php → db_bad_login_log()
  *
- * Bezpečnost:
- * - heslo se nikdy neloguje ani neukládá čitelně
+ * Pozn.:
+ * - záznam se dělá pokaždé, když Směny nevrátí token
+ * - pokud DB zápis selže, login se tím neblokuje (jen se zapíše diagnostika)
  */
 
 require_once __DIR__ . '/bootstrap.php';
@@ -54,7 +55,7 @@ function cb_user_bad_login_log(string $email, string $heslo): void
             }
         }
 
-        // DB vrstva si řeší normalizace + hash hesla
+        // DB vrstva si řeší normalizace vstupů a vložení řádku
         db_bad_login_log($email, $heslo, $ip, $ua, $screenW, $screenH, $isTouch);
 
     } catch (Throwable $e) {
@@ -64,5 +65,5 @@ function cb_user_bad_login_log(string $email, string $heslo): void
     }
 }
 
-// lib/user_bad_login.php * Verze: V3 * Aktualizace: 16.2.2026 * Počet řádků: 68
+// lib/user_bad_login.php * Verze: V4 * Aktualizace: 20.2.2026 * Počet řádků: 69
 // Konec souboru

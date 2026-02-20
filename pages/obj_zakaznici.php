@@ -1,5 +1,5 @@
 <?php
-// pages/obj_zakaznici.php V4 – počet řádků: 415 – aktuální čas v ČR: 18.1.2026 11:23
+// pages/obj_zakaznici.php V6 – počet řádků: 445 – aktuální čas v ČR: 18.1.2026 11:23
 declare(strict_types=1);
 
 /*
@@ -59,6 +59,13 @@ function fmt_tel(string $v): string {
     return trim(substr($digits, 0, 3) . ' ' . substr($digits, 3, 3) . ' ' . substr($digits, 6));
 }
 
+/* telefon do tabulky: prázdné -> "-" */
+function fmt_tel_cell(mixed $v): string {
+    $sv = trim((string)$v);
+    if ($sv === '') return '-';
+    return fmt_tel($sv);
+}
+
 /* poslední objednávka – jen datum "12.6.24" */
 function fmt_datum(mixed $v): string {
     $s = trim((string)$v);
@@ -68,6 +75,10 @@ function fmt_datum(mixed $v): string {
     if ($ts === false) return $s;
 
     return date('j.n.y', $ts); // 12.6.24
+}
+
+function fmt_datum_cell(mixed $v): string {
+    return fmt_datum($v);
 }
 
 function stmtExec(mysqli $conn, string $sql, array $params = [], string $types = ''): mysqli_stmt {
@@ -153,15 +164,61 @@ if (!in_array($blk, ['0', '1', 'all'], true)) $blk = '0';
 
 /* ===== KONFIG ZOBRAZENÍ (bez sloupce blok) ===== */
 $cols = [
-    'id'       => ['label' => 'id',       'filter' => false], // bez filtru
-    'prijmeni' => ['label' => 'prijmeni', 'filter' => true],
-    'jmeno'    => ['label' => 'jmeno',    'filter' => true],
-    'telefon'  => ['label' => 'telefon',  'filter' => true],
-    'email'    => ['label' => 'email',    'filter' => true],
-    'ulice'    => ['label' => 'ulice',    'filter' => true],
-    'mesto'    => ['label' => 'mesto',    'filter' => true],
-    'pobocka'  => ['label' => 'pobočka',  'filter' => true],
-    'posl_obj' => ['label' => 'posl_obj', 'filter' => false], // ENTER + X
+    'id' => [
+        'label'   => 'id',
+        'filter'  => false,
+        'db'      => 'id_zak',
+    ],
+    'prijmeni' => [
+        'label'   => 'prijmeni',
+        'filter'  => true,
+        'db'      => 'prijmeni',
+        'where'   => qcol('z', 'prijmeni'),
+    ],
+    'jmeno' => [
+        'label'   => 'jmeno',
+        'filter'  => true,
+        'db'      => 'jmeno',
+        'where'   => qcol('z', 'jmeno'),
+    ],
+    'telefon' => [
+        'label'   => 'telefon',
+        'filter'  => true,
+        'db'      => 'telefon',
+        'where'   => qcol('z', 'telefon'),
+        'fmt'     => 'fmt_tel_cell',
+    ],
+    'email' => [
+        'label'   => 'email',
+        'filter'  => true,
+        'db'      => 'email',
+        'where'   => qcol('z', 'email'),
+    ],
+    'ulice' => [
+        'label'   => 'ulice',
+        'filter'  => true,
+        'db'      => 'ulice',
+        'where'   => qcol('z', 'ulice'),
+    ],
+    'mesto' => [
+        'label'   => 'mesto',
+        'filter'  => true,
+        'db'      => 'mesto',
+        'where'   => qcol('z', 'mesto'),
+    ],
+    'pobocka' => [
+        'label'   => 'pobočka',
+        'filter'  => true,
+        'db'      => 'pobocka',
+        'where'   => qcol('p', 'kod'),
+    ],
+    'posl_obj' => [
+        'label'     => 'posl_obj',
+        'filter'    => false,
+        'db'        => 'posledni_obj',
+        'fmt'       => 'fmt_datum_cell',
+        'filter_ui' => 'reset',
+    ],
 ];
 
 try {
@@ -185,29 +242,14 @@ try {
     }
 
     foreach ($cols as $key => $c) {
-        if (!$c['filter']) continue;
+        if (empty($c['filter'])) continue;
+
         $val = trim((string)($filters[$key] ?? ''));
         if ($val === '') continue;
 
-        if ($key === 'pobocka') {
-            $where[]  = qcol('p', 'kod') . ' LIKE ?';
-            $params[] = '%' . $val . '%';
-            $types   .= 's';
-            continue;
-        }
+        if (empty($c['where'])) continue;
 
-        $map = [
-            'prijmeni' => 'prijmeni',
-            'jmeno'    => 'jmeno',
-            'telefon'  => 'telefon',
-            'email'    => 'email',
-            'ulice'    => 'ulice',
-            'mesto'    => 'mesto',
-        ];
-        $col = $map[$key] ?? null;
-        if (!$col) continue;
-
-        $where[]  = qcol('z', $col) . ' LIKE ?';
+        $where[]  = $c['where'] . ' LIKE ?';
         $params[] = '%' . $val . '%';
         $types   .= 's';
     }
@@ -263,20 +305,20 @@ try {
     if ($TRACE) echo '<input type="hidden" name="trace" value="1">';
     echo '<input type="hidden" name="p" value="1">';
 
-    echo '<table class="table table-fixed zakaznici-table"><thead>';
+    echo '<table class="table zakaznici-table"><thead>';
 
     /* FILTRY */
     echo '<tr class="filter-row">';
     foreach ($cols as $key => $c) {
         echo '<th class="c-' . h($key) . '">';
 
-        if ($key === 'posl_obj') {
+        if (!empty($c['filter_ui']) && $c['filter_ui'] === 'reset') {
             $href = build_url(['page' => 'obj_zakaznici'] + ($TRACE ? ['trace' => '1'] : []));
             echo '<div class="filter-actions">';
-            echo '<button type="submit" class="icon-btn icon-enter">⏎</button>';
             echo '<a class="icon-btn icon-x small" href="' . h($href) . '">×</a>';
             echo '</div>';
-        } elseif ($c['filter']) {
+
+        } elseif (!empty($c['filter'])) {
             echo '<input class="filter-input" name="f[' . h($key) . ']" value="' . h($filters[$key] ?? '') . '">';
         }
 
@@ -300,28 +342,15 @@ try {
             echo '<tr>';
 
             foreach ($cols as $key => $c) {
-                $val = '';
+                $dbKey = (string)($c['db'] ?? '');
+                $raw = ($dbKey !== '') ? ($r[$dbKey] ?? '') : '';
 
-                if ($key === 'id')       $val = $r['id_zak'] ?? '';
-                if ($key === 'prijmeni') $val = $r['prijmeni'] ?? '';
-                if ($key === 'jmeno')    $val = $r['jmeno'] ?? '';
-                if ($key === 'telefon')  $val = $r['telefon'] ?? '';
-                if ($key === 'email')    $val = $r['email'] ?? '';
-                if ($key === 'ulice')    $val = $r['ulice'] ?? '';
-                if ($key === 'mesto')    $val = $r['mesto'] ?? '';
-                if ($key === 'pobocka')  $val = $r['pobocka'] ?? '';
-                if ($key === 'posl_obj') $val = $r['posledni_obj'] ?? '';
-
-                if ($key === 'telefon') {
-                    $sv = trim((string)$val);
-                    $val = ($sv === '') ? '-' : fmt_tel((string)$val);
+                $val = (string)$raw;
+                if (!empty($c['fmt'])) {
+                    $val = (string)call_user_func($c['fmt'], $raw);
                 }
 
-                if ($key === 'posl_obj') {
-                    $val = fmt_datum($val);
-                }
-
-                echo '<td class="c-' . h($key) . '">' . h((string)$val) . '</td>';
+                echo '<td class="c-' . h($key) . '">' . h($val) . '</td>';
             }
 
             echo '</tr>';
@@ -412,5 +441,5 @@ try {
     }
 }
 
-/* pages/obj_zakaznici.php V4 – počet řádků: 415 – aktuální čas v ČR: 18.1.2026 11:23 */
+/* pages/obj_zakaznici.php V6 – počet řádků: 445 – aktuální čas v ČR: 18.1.2026 11:23 */
 ?>

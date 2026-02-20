@@ -1,12 +1,12 @@
 <?php
-// pages/hr_uzivatele.php V5 – počet řádků: 445 – aktuální čas v ČR: 19.1.2026 15:00
+// pages/hr_uzivatele.php * Verze: V11 * Aktualizace: 20.2.2026 * Počet řádků: 483
 declare(strict_types=1);
 
 /*
  * Uživatelé
  * - bez hlavičky/patičky (řeší index.php)
  * - bez mysqli::get_result() (kvůli hostingu)
- * - TRACE režim: ?page=uzivatele&trace=1
+ * - TRACE režim: ?page=hr_uzivatele&trace=1
  *
  * Pozn.: email + telefon jsou přímo v tabulce `user` (1 email, 1 telefon).
  */
@@ -27,6 +27,7 @@ if ($TRACE) {
     mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 }
 
+/* ===== helpers ===== */
 function bt(string $name): string {
     return '`' . str_replace('`', '``', $name) . '`';
 }
@@ -64,44 +65,12 @@ function fmt_tel(string $v): string {
     return trim(substr($digits, 0, 3) . ' ' . substr($digits, 3, 3) . ' ' . substr($digits, 6));
 }
 
-final class SqlFail extends RuntimeException {
-    public string $sql;
-    public array $ctx;
-
-    public function __construct(string $message, string $sql, array $ctx = [], int $code = 0, ?Throwable $prev = null) {
-        parent::__construct($message, $code, $prev);
-        $this->sql = $sql;
-        $this->ctx = $ctx;
-    }
-}
-
 function stmtExec(mysqli $conn, string $sql, array $params = [], string $types = ''): mysqli_stmt {
-    try {
-        $stmt = $conn->prepare($sql);
-        if (!$stmt) {
-            throw new SqlFail('SQL prepare selhal.', $sql, [
-                'errno' => $conn->errno,
-                'error' => $conn->error,
-            ]);
-        }
-
-        if ($params) {
-            if ($types === '') {
-                throw new SqlFail('Interní chyba: chybí $types pro bind_param().', $sql);
-            }
-            $stmt->bind_param($types, ...$params);
-        }
-
-        $stmt->execute();
-        return $stmt;
-
-    } catch (mysqli_sql_exception $e) {
-        // v TRACE režimu to sem půjde (mysqli_report STRICT). Přemapujeme na naši výjimku s kontextem.
-        throw new SqlFail('SQL execute selhal.', $sql, [
-            'errno' => $e->getCode(),
-            'error' => $e->getMessage(),
-        ], 0, $e);
-    }
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) throw new RuntimeException('Nepodařilo se připravit SQL dotaz.');
+    if ($params) $stmt->bind_param($types, ...$params);
+    $stmt->execute();
+    return $stmt;
 }
 
 function stmtFetchAllAssoc(mysqli_stmt $stmt): array {
@@ -137,48 +106,28 @@ function build_url(array $base, array $override = []): string {
     return '?' . http_build_query($q);
 }
 
-function show_error(bool $TRACE, Throwable $e, array $qGet): void {
-    echo '<section class="card">';
-    echo '<p><strong>Chyba při načítání uživatelů.</strong></p>';
+/* logger (do /log/error.log) */
+function log_error(Throwable $e): void {
+    $dir = __DIR__ . '/../log';
+    @mkdir($dir, 0775, true);
+    $file = $dir . '/error.log';
 
-    if ($TRACE) {
-        echo '<div class="trace-box">';
-        echo '<div><strong>Typ:</strong> ' . h(get_class($e)) . '</div>';
-        echo '<div><strong>Zpráva:</strong> ' . h($e->getMessage()) . '</div>';
+    $line =
+        '[' . date('Y-m-d H:i:s') . '] ' .
+        get_class($e) . ': ' . $e->getMessage() .
+        ' in ' . $e->getFile() . ':' . $e->getLine() . PHP_EOL .
+        $e->getTraceAsString() . PHP_EOL .
+        str_repeat('-', 80) . PHP_EOL;
 
-        if ($e instanceof SqlFail) {
-            echo '<div><strong>SQL:</strong> <code>' . h($e->sql) . '</code></div>';
-            if (!empty($e->ctx)) {
-                echo '<div><strong>Kontext:</strong> <code>' . h(json_encode($e->ctx, JSON_UNESCAPED_UNICODE)) . '</code></div>';
-            }
-        }
-
-        echo '</div>';
-    } else {
-        // "příjemná cesta": rovnou link na stejné parametry + trace=1
-        $q = $qGet;
-        $q['page'] = 'hr_uzivatele';
-        $q['trace'] = '1';
-        $href = '?' . http_build_query($q);
-        echo '<p><a href="' . h($href) . '">Zobrazit detaily</a></p>';
-    }
-
-    echo '</section>';
+    @file_put_contents($file, $line, FILE_APPEND);
 }
 
-/* ===== KONFIG ===== */
-$cols = [
-    'id'       => ['label' => 'id',       'filter' => true],
-    'prijmeni' => ['label' => 'prijmeni', 'filter' => true],
-    'jmeno'    => ['label' => 'jmeno',    'filter' => true],
-    'telefon'  => ['label' => 'telefon',  'filter' => true],
-    'email'    => ['label' => 'email',    'filter' => true],
-    'reg'      => ['label' => 'reg',      'filter' => false], // ENTER
-    'aktivni'  => ['label' => 'aktivni',  'filter' => false], // X
-];
-
-/* ===== UI hlavička ===== */
-// echo '<div class="page-head"><h2>Seznam uživatelů</h2></div>';
+/* TRACE výpis (bez inline stylů) */
+function trace_msg(bool $TRACE, string $msg): void {
+    if (!$TRACE) return;
+    echo '<div class="trace-msg">' . h($msg) . '</div>';
+    @flush();
+}
 
 /* ===== VSTUPY ===== */
 $per  = clampInt($_GET['per'] ?? 20, 20, 100, 20);
@@ -189,6 +138,73 @@ $filters = is_array($_GET['f'] ?? null) ? $_GET['f'] : [];
 $akt = (string)($_GET['akt'] ?? '1');
 if (!in_array($akt, ['1', '0', 'all'], true)) $akt = '1';
 
+/* ===== KONFIG ZOBRAZENÍ ===== */
+$cols = [
+    'id' => [
+        'label' => 'Poř.č.',
+        'filter' => 'eq_int',
+        'sql' => qcol('u', 'id_user'),
+        'alias' => 'id_user',
+        'fmt' => null,
+    ],
+    'prijmeni' => [
+        'label' => 'příjmení',
+        'filter' => 'like',
+        'sql' => qcol('u', 'prijmeni'),
+        'alias' => 'prijmeni',
+        'fmt' => null,
+    ],
+    'jmeno' => [
+        'label' => 'jméno',
+        'filter' => 'like',
+        'sql' => qcol('u', 'jmeno'),
+        'alias' => 'jmeno',
+        'fmt' => null,
+    ],
+    'telefon' => [
+        'label' => 'telefon',
+        'filter' => 'like',
+        'sql' => "COALESCE(" . qcol('u', 'telefon') . ", '')",
+        'alias' => 'telefon',
+        'fmt' => function(mixed $v): string {
+            $sv = trim((string)$v);
+            if ($sv === '') return '-';
+            return fmt_tel($sv);
+        },
+    ],
+    'email' => [
+        'label' => 'email',
+        'filter' => 'like',
+        'sql' => "COALESCE(" . qcol('u', 'email') . ", '')",
+        'alias' => 'email',
+        'fmt' => null,
+    ],
+    'reg' => [
+        'label' => 'registrován',
+        'filter' => false,
+        'sql' => qcol('u', 'vytvoren_smeny'),
+        'alias' => 'reg',
+        'fmt' => null,
+    ],
+    'aktivni' => [
+        'label' => 'aktivní',
+        'filter' => false,
+        'sql' => qcol('u', 'aktivni'),
+        'alias' => 'aktivni',
+        'fmt' => function(mixed $v): string {
+            if ((string)$v === '1') return 'Ano';
+            return 'Ne';
+        },
+    ],
+    'akce' => [
+        'label' => 'detaily uživatele',
+        'filter' => false,
+        'sql' => "''",
+        'alias' => 'akce',
+        'fmt' => null,
+    ],
+];
+
 try {
     $conn = db();
     $conn->set_charset('utf8mb4');
@@ -198,52 +214,35 @@ try {
 
     /* ===== WHERE ===== */
     $params = [];
-    $types = '';
-    $where = [];
+    $types  = '';
+    $where  = [];
 
     if ($akt !== 'all') {
-        $where[] = qcol('u', 'aktivni') . ' = ?';
+        $where[]  = qcol('u', 'aktivni') . ' = ?';
         $params[] = (int)$akt;
-        $types .= 'i';
+        $types   .= 'i';
     }
 
     foreach ($cols as $key => $c) {
-        if (!$c['filter']) continue;
-        $val = trim((string)($filters[$key] ?? ''));
-        if ($val === '') continue;
+        $ft = $c['filter'] ?? false;
+        if ($ft === false) continue;
 
-        if ($key === 'id') {
-            $where[] = qcol('u', 'id_user') . ' = ?';
-            $params[] = (int)$val;
-            $types .= 'i';
+        $raw = trim((string)($filters[$key] ?? ''));
+        if ($raw === '') continue;
+
+        if ($ft === 'eq_int') {
+            $i = filter_var($raw, FILTER_VALIDATE_INT);
+            if ($i === false) continue;
+            $where[]  = ($c['sql']) . ' = ?';
+            $params[] = (int)$i;
+            $types   .= 'i';
             continue;
         }
 
-        if ($key === 'prijmeni') {
-            $where[] = qcol('u', 'prijmeni') . ' LIKE ?';
-            $params[] = '%' . $val . '%';
-            $types .= 's';
-            continue;
-        }
-
-        if ($key === 'jmeno') {
-            $where[] = qcol('u', 'jmeno') . ' LIKE ?';
-            $params[] = '%' . $val . '%';
-            $types .= 's';
-            continue;
-        }
-
-        if ($key === 'telefon') {
-            $where[] = qcol('u', 'telefon') . ' LIKE ?';
-            $params[] = '%' . $val . '%';
-            $types .= 's';
-            continue;
-        }
-
-        if ($key === 'email') {
-            $where[] = qcol('u', 'email') . ' LIKE ?';
-            $params[] = '%' . $val . '%';
-            $types .= 's';
+        if ($ft === 'like') {
+            $where[]  = ($c['sql']) . ' LIKE ?';
+            $params[] = '%' . $raw . '%';
+            $types   .= 's';
             continue;
         }
     }
@@ -251,32 +250,23 @@ try {
     $whereSql = $where ? ' WHERE ' . implode(' AND ', $where) : '';
 
     /* ===== COUNT ===== */
-    $stmtCnt = stmtExec(
-        $conn,
-        'SELECT COUNT(*) FROM ' . $fromSql . $whereSql,
-        $params,
-        $types
-    );
+    $stmtCnt = stmtExec($conn, 'SELECT COUNT(*) FROM ' . $fromSql . $whereSql, $params, $types);
     $stmtCnt->bind_result($total);
     $stmtCnt->fetch();
     $stmtCnt->close();
 
-    $pages = max(1, (int)ceil((int)$total / $per));
-    $page = min($page, $pages);
+    $pages  = max(1, (int)ceil((int)$total / $per));
+    $page   = min($page, $pages);
     $offset = ($page - 1) * $per;
 
     /* ===== DATA ===== */
-    $selectSql =
-        qcol('u', 'id_user')   . ' AS ' . bt('id_user') . ', ' .
-        qcol('u', 'prijmeni')  . ' AS ' . bt('prijmeni') . ', ' .
-        qcol('u', 'jmeno')     . ' AS ' . bt('jmeno') . ', ' .
-        'COALESCE(' . qcol('u', 'telefon') . ", '') AS " . bt('telefon') . ', ' .
-        'COALESCE(' . qcol('u', 'email') . ", '') AS " . bt('email') . ', ' .
-        qcol('u', 'vytvoren_smeny')  . ' AS ' . bt('reg') . ', ' .
-        qcol('u', 'aktivni')   . ' AS ' . bt('aktivni');
+    $selectParts = [];
+    foreach ($cols as $key => $c) {
+        $selectParts[] = ($c['sql']) . ' AS ' . bt($c['alias']);
+    }
 
     $sql =
-        'SELECT ' . $selectSql .
+        'SELECT ' . implode(', ', $selectParts) .
         ' FROM ' . $fromSql . $whereSql .
         ' ORDER BY ' . qcol('u', 'id_user') . ' DESC' .
         ' LIMIT ' . (int)$per . ' OFFSET ' . (int)$offset;
@@ -302,24 +292,45 @@ try {
     if ($TRACE) echo '<input type="hidden" name="trace" value="1">';
     echo '<input type="hidden" name="p" value="1">';
 
-    echo '<table class="table table-fixed uzivatele-table"><thead>';
+    echo '<table class="table uzivatele-table"><thead>';
 
     /* FILTRY */
+    $resetQ = ['page' => 'hr_uzivatele'];
+    if ($TRACE) $resetQ['trace'] = '1';
+
     echo '<tr class="filter-row">';
-    foreach ($cols as $key => $c) {
-        echo '<th class="c-' . h($key) . '">';
+
+    $keys = array_keys($cols);
+    $i = 0;
+    $n = count($keys);
+
+    while ($i < $n) {
+        $key = $keys[$i];
+        $c = $cols[$key];
 
         if ($key === 'reg') {
-            echo '<button type="submit" class="icon-btn icon-enter">⏎</button>';
-        } elseif ($key === 'aktivni') {
-            $href = build_url(['page' => 'hr_uzivatele'] + ($TRACE ? ['trace' => '1'] : []));
-            echo '<a class="icon-btn icon-x" href="' . h($href) . '">×</a>';
-        } elseif ($c['filter']) {
+            // sloučit 3 pravé buňky (reg + aktivni + akce) do jedné
+            $href = build_url($resetQ);
+            echo '<th class="c-filtr-reset" colspan="3">';
+            echo '<div class="filter-actions">';
+            echo '<a class="icon-btn icon-x small" href="' . h($href) . '">×</a>';
+            echo '</div>';
+            echo '</th>';
+            $i += 3;
+            continue;
+        }
+
+        echo '<th class="c-' . h($key) . '">';
+
+        $ft = $c['filter'] ?? false;
+        if ($ft !== false) {
             echo '<input class="filter-input" name="f[' . h($key) . ']" value="' . h($filters[$key] ?? '') . '">';
         }
 
         echo '</th>';
+        $i++;
     }
+
     echo '</tr>';
 
     /* HLAVIČKY */
@@ -334,26 +345,32 @@ try {
     if (!$rowsData) {
         echo '<tr><td colspan="' . count($cols) . '">Žádná data</td></tr>';
     } else {
+        $iconsHtml =
+            '<span class="row-icons">' .
+            '<img src="img/icons/search.svg" alt="Detail uživatele">' .
+            '<img src="img/icons/calendar.svg" alt="Směny">' .
+            '<img src="img/icons/clock-3.svg" alt="Hodiny">' .
+            '<img src="img/icons/key.svg" alt="Loginy">' .
+            '<img src="img/icons/role.svg" alt="Práva/pozice">' .
+            '<img src="img/icons/graf.svg" alt="Aktivita">' .
+            '<img src="img/icons/notes.svg" alt="Poznámka">' .
+            '</span>';
+
         foreach ($rowsData as $r) {
             echo '<tr>';
 
             foreach ($cols as $key => $c) {
-                $val = '';
-
-                if ($key === 'id')       $val = $r['id_user'] ?? '';
-                if ($key === 'prijmeni') $val = $r['prijmeni'] ?? '';
-                if ($key === 'jmeno')    $val = $r['jmeno'] ?? '';
-                if ($key === 'telefon')  $val = $r['telefon'] ?? '';
-                if ($key === 'email')    $val = $r['email'] ?? '';
-                if ($key === 'reg')      $val = $r['reg'] ?? '';
-                if ($key === 'aktivni')  $val = $r['aktivni'] ?? '';
-
-                if ($key === 'telefon') {
-                    $sv = trim((string)$val);
-                    $val = ($sv === '') ? '-' : fmt_tel((string)$val);
+                if ($key === 'akce') {
+                    echo '<td class="c-' . h($key) . '">' . $iconsHtml . '</td>';
+                    continue;
                 }
-                if ($key === 'aktivni') {
-                    $val = ((string)$val === '1') ? 'Ano' : 'Ne';
+
+                $alias = $c['alias'];
+                $val = $r[$alias] ?? '';
+
+                $fmt = $c['fmt'] ?? null;
+                if (is_callable($fmt)) {
+                    $val = $fmt($val);
                 }
 
                 echo '<td class="c-' . h($key) . '">' . h((string)$val) . '</td>';
@@ -368,23 +385,26 @@ try {
     /* ===== SPODNÍ LIŠTA ===== */
     echo '<div class="list-bottom">';
 
-    // vlevo řádkování
     echo '<div class="per-form">';
     echo '<span>Zobrazuji</span>';
     echo '<select name="per" class="filter-input per-select" onchange="this.form.p.value=1; this.form.submit();">';
     foreach ([20, 50, 100] as $opt) {
-        $sel = ($per === $opt) ? ' selected' : '';
+        $sel = '';
+        if ($per === $opt) $sel = ' selected';
         echo '<option value="' . (int)$opt . '"' . $sel . '>' . (int)$opt . ' řádků</option>';
     }
     echo '</select>';
     echo '</div>';
 
-    // střed stránkování (ikonové, pevné 7-slotové)
     echo '<div class="pagination-icon">';
 
     $mk = function(int $p, string $label, bool $disabled = false) use ($baseQ): string {
-        $href = $disabled ? '#' : build_url($baseQ, ['p' => $p]);
-        $cls  = 'icon-btn w44' . ($disabled ? ' disabled' : '');
+        $href = '#';
+        if (!$disabled) $href = build_url($baseQ, ['p' => $p]);
+
+        $cls = 'icon-btn w44';
+        if ($disabled) $cls .= ' disabled';
+
         return '<a class="' . h($cls) . '" href="' . h($href) . '">' . h($label) . '</a>';
     };
 
@@ -425,12 +445,21 @@ try {
 
     echo '</div>';
 
-    // vpravo aktivní/neaktivní/vše
     echo '<div class="per-form right">';
     echo '<select name="akt" class="filter-input akt-select" onchange="this.form.p.value=1; this.form.submit();">';
-    echo '<option value="1"' . ($akt === '1' ? ' selected' : '') . '>Aktivní</option>';
-    echo '<option value="0"' . ($akt === '0' ? ' selected' : '') . '>Neaktivní</option>';
-    echo '<option value="all"' . ($akt === 'all' ? ' selected' : '') . '>Vše</option>';
+
+    $selAkt1 = '';
+    if ($akt === '1') $selAkt1 = ' selected';
+    echo '<option value="1"' . $selAkt1 . '>Aktivní</option>';
+
+    $selAkt0 = '';
+    if ($akt === '0') $selAkt0 = ' selected';
+    echo '<option value="0"' . $selAkt0 . '>Neaktivní</option>';
+
+    $selAktAll = '';
+    if ($akt === 'all') $selAktAll = ' selected';
+    echo '<option value="all"' . $selAktAll . '>Vše</option>';
+
     echo '</select>';
     echo '</div>';
 
@@ -439,7 +468,16 @@ try {
     echo '</form></div></div>';
 
 } catch (Throwable $e) {
-    show_error($TRACE, $e, $_GET);
+    log_error($e);
+
+    echo '<section class="card"><p>Omlouváme se, ale stránku nelze momentálně zobrazit.</p></section>';
+
+    if ($TRACE) {
+        trace_msg(true, 'CHYBA: ' . $e->getMessage());
+        trace_msg(true, 'Soubor: ' . $e->getFile() . ':' . $e->getLine());
+        trace_msg(true, 'Log: /log/error.log');
+    }
 }
 
-/* pages/hr_uzivatele.php V5 – počet řádků: 445 – aktuální čas v ČR: 19.1.2026 15:00 */
+/* pages/hr_uzivatele.php * Verze: V11 * Aktualizace: 20.2.2026 * Počet řádků: 483 */
+?>

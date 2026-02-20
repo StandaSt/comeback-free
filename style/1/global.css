@@ -1,0 +1,150 @@
+/* style/1/global.css * Verze: V9 * Aktualizace: 18.2.2026 */
+
+/* =========================
+   ZÁKLADNÍ NASTAVENÍ
+   ========================= */
+
+*{ box-sizing:border-box; }
+
+html{
+  height:100%;
+  scrollbar-gutter:stable;
+}
+
+body{
+  height:100vh;
+  font-family:Arial, Helvetica, sans-serif;
+  background:var(--bg-body);
+  color:var(--tx-base);
+  overflow:hidden; /* scroll pouze v .card */
+  margin:0;
+}
+
+/* =========================
+   KONTEJNER STRÁNKY
+   ========================= */
+
+.container{
+  min-width:1200px;
+  /* max-width:2100px;   komentář standa */
+  background:var(--bg-ram);
+  padding:0px 10px 0px 10px;              
+
+  /* border-radius:6px;   komentář standa */
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+}
+
+/* =========================
+   TRACE / DEBUG
+   ========================= */
+
+.trace-box,
+.trace-msg{
+  font:12px/1.4 monospace;
+}
+
+/* =========================
+   IKONY – GLOBÁLNÍ TLAČÍTKA
+   ========================= */
+
+.icon-btn{
+  width:40px;
+  height:40px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:18px;
+  text-decoration:none;
+  border:1px solid #ccc;
+  border-radius:4px;
+  background:#f2f2f2;
+  color:#333;
+  cursor:pointer;
+}
+
+.icon-btn:hover{ background:#e0e0e0; }
+
+.icon-btn.disabled{
+  opacity:.5;
+  pointer-events:none;
+}
+
+/* =========================
+   TOOLTIP – GLOBÁLNÍ
+   ========================= */
+
+.cb-tip{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+}
+
+.cb-tip::after{
+  content:attr(data-tip);
+  position:absolute;
+  right:calc(100% + 10px);
+  top:50%;
+  transform:translateY(-35%);
+  white-space:nowrap;
+  pointer-events:none;
+  opacity:0;
+  visibility:hidden;
+  font:12px/1.2 Arial, Helvetica, sans-serif;
+  color:#fff;
+  background:rgba(0,0,0,.85);
+  border-radius:6px;
+  z-index:9999;
+}
+
+.cb-tip::before{
+  content:"";
+  position:absolute;
+  right:calc(100% + 4px);
+  top:50%;
+  transform:translateY(-35%);
+  pointer-events:none;
+  opacity:0;
+  visibility:hidden;
+  border:6px solid transparent;
+  border-left-color:rgba(0,0,0,.85);
+  z-index:9999;
+}
+
+.cb-tip:hover::after,
+.cb-tip:hover::before,
+.cb-tip:focus-visible::after,
+.cb-tip:focus-visible::before{
+  opacity:1;
+  visibility:visible;
+}
+
+/* =========================
+   ENTER + X – GLOBÁLNÍ
+   ========================= */
+
+.icon-enter{
+  width:90px;
+  min-width:90px;
+  height:32px;
+  line-height:32px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:18px;
+}
+
+.icon-x{
+  width:60px;
+  min-width:60px;
+  height:32px;
+  line-height:32px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:18px;
+}
+
+/* style/1/global.css * Verze: V9 * Aktualizace: 18.2.2026 * Počet řádků: 149
+   konec souboru */

@@ -1,0 +1,80 @@
+/* style/1/central.css * Verze: V13 * Aktualizace: 18.2.2026
+   Centrální blok (central) projektu IS Comeback */
+
+/* =========================
+   CENTRAL (obal menu + obsahu)
+   ========================= */
+
+.central{
+  flex:1;                         /* vyplní prostor mezi hlavičkou a patičkou */
+  display:flex;                   /* uvnitř se skládá menu + obsah */
+  min-height:0;                   /* dovolí vnitřní scroll */
+  overflow:hidden;                /* nic nesmí přetékat ven (scroll bude jen v .card) */
+  background:var(--bg-ram);
+}
+
+/* dropdown: menu nad obsahem */
+.central.menu-dropdown{
+  flex-direction:column;
+}
+
+/* sidebar: menu vlevo, obsah vpravo */
+.central.menu-sidebar{
+  flex-direction:row;
+}
+
+/* =========================
+   OBSAH (obal pro <main>)
+   ========================= */
+
+.central-content{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  min-width:0;                    /* důležité pro sidebar (aby se obsah mohl zmenšit) */
+}
+
+/* =========================
+   MAIN
+   ========================= */
+
+main{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  min-width:0;
+  background:transparent;
+  border-radius:6px;
+}
+
+/* =========================
+   CARD – HLAVNÍ OBSAH (JEDINÝ SCROLL)
+   ========================= */
+
+.card{
+  border:1px solid var(--border-accent);
+  border-radius:6px;
+  padding:10px;                   /* dřív bylo vpravo 0 -> tabulka byla naražená doprava */
+  background:#fff;
+  flex:1;
+  min-height:0;
+  overflow:auto;                  /* scroll jen uvnitř card */
+}
+
+/* =========================
+   HLAVIČKA OBSAHU STRÁNKY
+   ========================= */
+
+.page-head{
+  background:transparent;
+  border-radius:6px;
+}
+
+.page-head h2{
+  font-size:16px;
+}
+
+/* style/1/central.css * Verze: V13 * Aktualizace: 18.2.2026 * Počet řádků: 80
+   konec souboru */

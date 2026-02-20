@@ -1,5 +1,5 @@
 <?php
-// includes/paticka.php * Verze: V6 * Aktualizace: 16.2.2026
+// includes/paticka.php * Verze: V7 * Aktualizace: 19.2.2026
 declare(strict_types=1);
 
 if (defined('COMEBACK_FOOTER_RENDERED')) {
@@ -29,10 +29,15 @@ define('COMEBACK_FOOTER_RENDERED', true);
 
 </div>
 
+<script src="<?= h(cb_url('js/ajax_core.js')) ?>"></script>
+<script src="<?= h(cb_url('js/menu_ajax.js')) ?>"></script>
+<script src="<?= h(cb_url('js/filtry.js')) ?>"></script>
+<script src="<?= h(cb_url('js/filtry_reset.js')) ?>"></script>
+<script src="<?= h(cb_url('js/strankovani.js')) ?>"></script>
 <script src="<?= h(cb_url('js/casovac_odhlaseni.js')) ?>"></script>
 
 </body>
 </html>
 <?php
-/* includes/paticka.php * Verze: V6 * Aktualizace: 16.2.2026 * Počet řádků: 38 */
+/* includes/paticka.php * Verze: V7 * Aktualizace: 19.2.2026 * Počet řádků: 42 */
 // Konec souboru

@@ -1,0 +1,23 @@
+/* style/1/pages/obj_zakaznici.css * Verze: V1 * Aktualizace: 18.2.2026 */
+
+/*
+ * OBJEDNÁVKY → ZÁKAZNÍCI (tabulka)
+ * - jen věci specifické pro tuto stránku
+ */
+
+/* =========================
+   TABULKA – rozložení sloupců
+   ========================= */
+
+/* šířky podle obsahu (přepíše .table-fixed v HTML, pokud tam zůstane) */
+.zakaznici-table{
+  table-layout:auto;
+}
+
+/* aby se tabulka zbytečně neroztahovala prázdnými buňkami */
+.zakaznici-table td:empty::after{
+  content:"";
+}
+
+/* style/1/pages/obj_zakaznici.css * Verze: V1 * Aktualizace: 18.2.2026 * Počet řádků: 23
+   konec souboru */
