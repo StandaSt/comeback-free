@@ -1,5 +1,5 @@
 <?php
-// lib/login_smeny.php * Verze: V17 * Aktualizace: 17.2.2026
+// lib/login_smeny.php * Verze: V20 * Aktualizace: 21.2.2026
 declare(strict_types=1);
 
 /*
@@ -8,7 +8,7 @@ declare(strict_types=1);
  * Co to dělá:
  * - ověří email/heslo přes Směny (GraphQL)
  * - načte profil + role/sloty (1 dotaz)
- * - načte pobočky (2. dotaz – vyžaduje id_user)
+ * - načte pobočky (workingBranchNames) přes userGetLogged (2. dotaz)
  * - uloží data do session
  * - zavolá DB sync (db/db_user_login.php)
  * - nastaví session pro časovač neaktivity (timeout + start + poslední aktivita)
@@ -23,6 +23,8 @@ require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/login_diagnostika.php';
 require_once __DIR__ . '/smeny_graphql.php';
 require_once __DIR__ . '/user_bad_login.php';
+
+require_once __DIR__ . '/../db/db_api_smeny.php';
 
 $GQL_URL = 'https://smeny.pizzacomeback.cz/graphql';
 
@@ -85,26 +87,6 @@ try {
         'token_len' => (string)strlen($token),
     ]);
 
-    /*
-     * PŮVODNÍ dotazy (ponecháno pro rychlý návrat):
-     *
-     * 1) Profil:
-     * 'query{
-     *     userGetLogged{
-     *         id name surname email phoneNumber active approved createTime lastLoginTime
-     *     }
-     * }'
-     *
-     * 2) Role + sloty:
-     * 'query{
-     *     userGetLogged{
-     *         id
-     *         roles{ id name }
-     *         shiftRoleTypeNames
-     *     }
-     * }'
-     */
-
     // 1) Sloučeno: profil + role + sloty
     cb_login_log_line('gql_me_rs_request', ['email' => $email]);
 
@@ -153,44 +135,34 @@ try {
         'sloty_count' => (string)count($sloty),
     ]);
 
-    // 2) Pobočky (vyžaduje id_user)
+    // 2) Pobočky: workingBranchNames (seznam povolených poboček uživatele)
     cb_login_log_line('gql_branches_request', ['id_user' => (string)$idUser]);
 
     $br = cb_smeny_graphql(
         $GQL_URL,
-        'query($id:Int!){
-            actionHistoryFindById(id:$id){
-                user{
-                    workingBranchNames
-                    mainBranchName
-                }
+        'query{
+            userGetLogged{
+                workingBranchNames
             }
         }',
-        ['id' => $idUser],
+        [],
         $token
     );
 
-    $brUser = $br['actionHistoryFindById']['user'] ?? null;
+    $brUser = $br['userGetLogged'] ?? null;
     if (!is_array($brUser)) {
         cb_login_log_line('branches_invalid', ['id_user' => (string)$idUser]);
         throw new RuntimeException('Nepodařilo se načíst pobočky uživatele.');
     }
 
     $working = $brUser['workingBranchNames'] ?? [];
-    $main = $brUser['mainBranchName'] ?? null;
     if (!is_array($working)) {
         $working = [];
-    }
-
-    $mainTxt = 'null';
-    if (is_string($main)) {
-        $mainTxt = $main;
     }
 
     cb_login_log_line('gql_branches_ok', [
         'id_user' => (string)$idUser,
         'working_count' => (string)count($working),
-        'main' => $mainTxt,
     ]);
 
     $_SESSION['cb_token'] = $token;
@@ -211,7 +183,7 @@ try {
 
     $_SESSION['cb_user_branches'] = [
         'workingBranchNames' => $working,
-        'mainBranchName' => $main,
+        'mainBranchName' => null,
     ];
 
     require_once __DIR__ . '/zapis_dat_txt.php';
@@ -235,6 +207,18 @@ try {
     exit;
 
 } catch (Throwable $e) {
+
+    /*
+     * Neúspěšný login / chyba:
+     * - zapíšeme log volání Směn i bez id_user a id_login (NULL)
+     * - nic z toho nesmí shodit redirect ani chování loginu
+     */
+    try {
+        db_api_smeny_flush(db(), null, null);
+    } catch (Throwable $eLog) {
+        error_log('api_smeny flush (fail) selhal: ' . $eLog->getMessage());
+    }
+
     cb_login_log_line('error', ['email' => (string)($_POST['email'] ?? '')], $e);
 
     unset($_SESSION['login_ok']);
@@ -255,5 +239,6 @@ try {
     exit;
 }
 
-// lib/login_smeny.php * Verze: V17 * Aktualizace: 17.2.2026 * Počet řádků: 259
+// lib/login_smeny.php * Verze: V20 * Aktualizace: 21.2.2026
+// Počet řádků: 0
 // Konec souboru

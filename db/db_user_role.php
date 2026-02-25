@@ -1,5 +1,5 @@
 <?php
-// db/db_user_role.php * Verze: V4 * Aktualizace: 16.2.2026
+// db/db_user_role.php * Verze: V5 * Aktualizace: 21.2.2026
 declare(strict_types=1);
 
 /*
@@ -12,13 +12,21 @@ declare(strict_types=1);
  * - smaže jen to, co bylo ve Směnách odebráno
  * - přidá jen to, co bylo ve Směnách přidáno
  *
- * Nově ve V4:
- * - určí „efektivní roli“ pro IS jako nejnižší id_role (MIN)
- * - zapíše ji do comeback.user.id_role (musí existovat sloupec id_role)
- * - uloží ji do session: $_SESSION['cb_role_id'] a $_SESSION['cb_role_name']
+ * Efektivní role pro IS:
+ * - Směny mohou vrátit více rolí (např. zaměstnanec + manager).
+ * - Pro řízení práv v IS používáme jedno číslo:
+ *   nejnižší id_role (MIN) z rolí namapovaných ze Směn.
+ *
+ * Co ukládáme:
+ * - DB:
+ *   - tabulka user_role = všechny role uživatele (aktuální stav)
+ *   - tabulka user.id_role = efektivní role (MIN)
+ * - SESSION:
+ *   - pouze do $_SESSION['cb_user']:
+ *     - $_SESSION['cb_user']['id_role'] = <int>
+ *     - $_SESSION['cb_user']['role']    = <string>
  *
  * Pozn.:
- * - tohle není „chyba/nesoulad“, je to běžná synchronizace změn práv
  * - nic z API se tady nevolá (bere to jen ze session)
  * - volá se uvnitř transakce z db/db_user_login.php
  */
@@ -30,6 +38,12 @@ if (!function_exists('db_user_role_sync')) {
 
     /**
      * Synchronizuje role uživatele podle session.
+     *
+     * Vstup:
+     * - $profile['roles'] ... role ze Směn (pole objektů, typicky s klíčem 'name')
+     *
+     * Výstup:
+     * - add/del počty + seznamy názvů rolí, které se přidaly/odebraly.
      *
      * @return array{add:int,del:int,add_names:string[],del_names:string[]}
      */
@@ -54,7 +68,9 @@ if (!function_exists('db_user_role_sync')) {
         }
         $desiredNames = array_keys($desiredNamesMap);
 
-        // 2) desiredIds = id_role z cis_role (mapujeme přes název, protože id_role ve Směnách nemusí být jisté)
+        // 2) desiredIds = id_role z cis_role (mapujeme přes název role)
+        //    Struktura:
+        //    - $desiredIds[<id_role>] = <název role>
         $desiredIds = [];
         if (count($desiredNames) > 0) {
             $in = implode(',', array_fill(0, count($desiredNames), '?'));
@@ -88,7 +104,9 @@ if (!function_exists('db_user_role_sync')) {
             }
             $stmt->close();
 
-            // Pokud Směny poslaly role, ale my je neumíme namapovat v cis_role → nic nemažeme, jen zalogujeme.
+            // Pokud Směny poslaly role, ale my je neumíme namapovat v cis_role:
+            // - nic nemažeme (abychom neodstřelili role omylem)
+            // - jen zalogujeme a skončíme bez změn
             if (count($desiredIds) === 0) {
                 cb_login_log_line('db_user_role_map_empty', [
                     'id_user' => (string)$idUser,
@@ -103,9 +121,16 @@ if (!function_exists('db_user_role_sync')) {
             }
         }
 
-        // 3) currentIds = id_role v user_role
+        // 3) currentIds = aktuální role uživatele v DB (user_role)
+        //    Struktura:
+        //    - $currentIds[<id_role>] = <název role>
         $currentIds = [];
-        $stmt = $conn->prepare('SELECT ur.id_role, cr.role FROM user_role ur JOIN cis_role cr ON cr.id_role = ur.id_role WHERE ur.id_user=?');
+        $stmt = $conn->prepare(
+            'SELECT ur.id_role, cr.role
+             FROM user_role ur
+             JOIN cis_role cr ON cr.id_role = ur.id_role
+             WHERE ur.id_user=?'
+        );
         if ($stmt === false) {
             throw new RuntimeException('DB: prepare selhal (user_role select).');
         }
@@ -121,7 +146,7 @@ if (!function_exists('db_user_role_sync')) {
         }
         $stmt->close();
 
-        // 4) diff
+        // 4) diff (co přidat / co smazat)
         $toAdd = [];
         foreach ($desiredIds as $idRole => $name) {
             if (!array_key_exists($idRole, $currentIds)) {
@@ -172,7 +197,9 @@ if (!function_exists('db_user_role_sync')) {
             $stmt->close();
         }
 
-        // 7) efektivní role pro IS = nejnižší id_role
+        // 7) efektivní role pro IS = nejnižší id_role (MIN) z rolí ze Směn
+        //    - zapíšeme do user.id_role
+        //    - uložíme do session (jen do cb_user)
         if (count($desiredIds) > 0) {
             $idRoleEffective = min(array_keys($desiredIds));
             $roleEffectiveName = (string)($desiredIds[$idRoleEffective] ?? '');
@@ -185,8 +212,11 @@ if (!function_exists('db_user_role_sync')) {
             $stmt->execute();
             $stmt->close();
 
-            $_SESSION['cb_role_id'] = $idRoleEffective;
-            $_SESSION['cb_role_name'] = $roleEffectiveName;
+            if (!isset($_SESSION['cb_user']) || !is_array($_SESSION['cb_user'])) {
+                $_SESSION['cb_user'] = [];
+            }
+            $_SESSION['cb_user']['id_role'] = $idRoleEffective;
+            $_SESSION['cb_user']['role'] = $roleEffectiveName;
 
             cb_login_log_line('db_user_role_effective', [
                 'id_user' => (string)$idUser,
@@ -194,8 +224,12 @@ if (!function_exists('db_user_role_sync')) {
                 'role' => $roleEffectiveName,
             ]);
         } else {
-            unset($_SESSION['cb_role_id']);
-            unset($_SESSION['cb_role_name']);
+            // Směny nevrátily žádnou roli:
+            // - v session odstraníme jen údaje o efektivní roli
+            // - do DB user.id_role už teď nesahejme (necháváme poslední známý stav)
+            if (isset($_SESSION['cb_user']) && is_array($_SESSION['cb_user'])) {
+                unset($_SESSION['cb_user']['id_role'], $_SESSION['cb_user']['role']);
+            }
         }
 
         // 8) log: přidáno/odebráno
@@ -223,5 +257,6 @@ if (!function_exists('db_user_role_sync')) {
     }
 }
 
-/* db/db_user_role.php * Verze: V4 * Aktualizace: 16.2.2026 * Počet řádků: 227 */
+// db/db_user_role.php * Verze: V5 * Aktualizace: 21.2.2026
+// Počet řádků: 262
 // Konec souboru

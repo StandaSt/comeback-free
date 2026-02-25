@@ -1,16 +1,18 @@
 <?php
-// lib/bootstrap.php * Verze: V5 * Aktualizace: 12.2.2026
-declare(strict_types=1);
+// lib/bootstrap.php * Verze: V6 * Aktualizace: 24.2.2026
 
 /*
  * Startovací (spouštěcí) soubor projektu
  * - spustí session
  * - načte prostředí (app.php)
+ * - načte system.php (nastavení)
  * - načte secrets.php (přístupy)
  * - zpřístupní helpery
  * - zpřístupní DB přes db() (jediné místo)
  * - NIC jiného sem nepatří
  */
+
+declare(strict_types=1);
 
 if (defined('COMEBACK_BOOTSTRAP_LOADED')) {
     return;
@@ -22,6 +24,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 }
 
 require_once __DIR__ . '/app.php';
+require_once __DIR__ . '/system.php';
 require_once __DIR__ . '/../config/secrets.php';
 
 /**
@@ -54,5 +57,5 @@ if (!function_exists('db')) {
     }
 }
 
-/* lib/bootstrap.php * Verze: V5 * Aktualizace: 12.2.2026 * Počet řádků: 60 */
+/* lib/bootstrap.php * Verze: V6 * Aktualizace: 24.2.2026 * Počet řádků: 61 */
 // Konec souboru

@@ -1,43 +1,36 @@
 <?php
-// includes/paticka.php * Verze: V7 * Aktualizace: 19.2.2026
+// includes/paticka.php * Verze: V8 * Aktualizace: 24.2.2026
+
+/*
+ * PATIČKA (jen footer)
+ *
+ * Co dělá:
+ * - vykreslí patičku stránky (footer)
+ *
+ * Pozn.:
+ * - žádné <script> ani </body></html> (to je v index.php)
+ */
+
 declare(strict_types=1);
 
-if (defined('COMEBACK_FOOTER_RENDERED')) {
-    return;
-}
-define('COMEBACK_FOOTER_RENDERED', true);
 ?>
-            </main>
+
+<footer class="footer">
+    <div class="footer-inner">
+        <div class="footer-left">
+            <strong>Comeback -</strong> informační systém
+        </div>
+
+        <div class="footer-center">
+            © 2026 Comeback (Stst)
+        </div>
+
+        <div class="footer-right">
+            <strong>verze 0.1</strong> (test)
         </div>
     </div>
+</footer>
 
-    <footer class="footer">
-        <div class="footer-inner">
-            <div class="footer-left">
-                <strong>Comeback -</strong> informační systém
-            </div>
-
-            <div class="footer-center">
-                © 2026 Comeback (Stst)
-            </div>
-
-            <div class="footer-right">
-                <strong>verze 0.1</strong> (test)
-            </div>
-        </div>
-    </footer>
-
-</div>
-
-<script src="<?= h(cb_url('js/ajax_core.js')) ?>"></script>
-<script src="<?= h(cb_url('js/menu_ajax.js')) ?>"></script>
-<script src="<?= h(cb_url('js/filtry.js')) ?>"></script>
-<script src="<?= h(cb_url('js/filtry_reset.js')) ?>"></script>
-<script src="<?= h(cb_url('js/strankovani.js')) ?>"></script>
-<script src="<?= h(cb_url('js/casovac_odhlaseni.js')) ?>"></script>
-
-</body>
-</html>
 <?php
-/* includes/paticka.php * Verze: V7 * Aktualizace: 19.2.2026 * Počet řádků: 42 */
+/* includes/paticka.php * Verze: V8 * Aktualizace: 24.2.2026 * Počet řádků: 40 */
 // Konec souboru

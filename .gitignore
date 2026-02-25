@@ -9,6 +9,7 @@
 /logs/
 *.log
 /config/secrets.php
+/config/restia_refresh.txt
 .DS_Store
 Thumbs.db
 pomocne/

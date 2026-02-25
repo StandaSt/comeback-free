@@ -1,6 +1,5 @@
 <?php
-// includes/login_form.php * Verze: V25 * Aktualizace: 17.2.2026
-declare(strict_types=1);
+// includes/login_form.php * Verze: V26 * Aktualizace: 24.2.2026
 
 /*
  * Přihlášení – obsah do <div class="hc-col"> v hlavicka.php
@@ -17,12 +16,9 @@ declare(strict_types=1);
  * - všechno čte ze session, kterou naplní login_smeny.php + db/db_user_login.php
  */
 
-$cbUser  = $_SESSION['cb_user'] ?? null;
-$cbFlash = (string)($_SESSION['cb_flash'] ?? '');
-if ($cbFlash !== '') {
-    unset($_SESSION['cb_flash']);
-}
+declare(strict_types=1);
 
+$cbUser = $_SESSION['cb_user'] ?? [];
 $loginOk = (bool)($_SESSION['login_ok'] ?? false);
 
 /**
@@ -62,14 +58,18 @@ function cb_sess_int(string $k, int $default = 0): int
     return $default;
 }
 
-if ($loginOk && is_array($cbUser) && !empty($cbUser['email'])) {
+if ($loginOk) {
 
     $displayName = trim(
         (string)($cbUser['name'] ?? '') . ' ' . (string)($cbUser['surname'] ?? '')
     );
 
     if ($displayName === '') {
-        $displayName = (string)$cbUser['email'];
+        $displayName = (string)($cbUser['email'] ?? '');
+    }
+
+    if ($displayName === '') {
+        $displayName = '---';
     }
 
     // Efektivní role pro UI (název role) je uložená do session při loginu (db/db_user_login.php).
@@ -134,13 +134,15 @@ if ($loginOk && is_array($cbUser) && !empty($cbUser['email'])) {
         $remainTxt = (string)$remain;
     }
 
+    $logoutUrl = cb_url('lib/logout.php');
+
     ?>
     <div class="login-status">
         <div class="login-grid"
              data-start-ts="<?= h((string)$startTs) ?>"
              data-last-ts="<?= h((string)$lastTs) ?>"
              <?php if ($timeoutMin > 0) { ?>data-timeout-min="<?= h((string)$timeoutMin) ?>"<?php } ?>
-             data-logout-url="<?= h(cb_url('lib/logout.php')) ?>">
+             data-logout-url="<?= h($logoutUrl) ?>">
 
             <div class="login-fields">
 
@@ -171,7 +173,7 @@ if ($loginOk && is_array($cbUser) && !empty($cbUser['email'])) {
             </div>
 
             <a class="login-logout cb-tip ikona-svg"
-               href="<?= h(cb_url('lib/logout.php')) ?>"
+               href="<?= h($logoutUrl) ?>"
                data-tip="Odhlásit"
                aria-label="Odhlásit">
                 <img src="<?= h(cb_url('img/icons/exit.svg')) ?>" alt="">
@@ -202,5 +204,5 @@ if ($loginOk && is_array($cbUser) && !empty($cbUser['email'])) {
 
 
 
-/* includes/login_form.php * Verze: V25 * Aktualizace: 17.2.2026 * Počet řádků: 211 */
+/* includes/login_form.php * Verze: V26 * Aktualizace: 24.2.2026 * Počet řádků: 208 */
 // Konec souboru
