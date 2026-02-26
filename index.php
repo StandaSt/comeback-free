@@ -1,5 +1,5 @@
 <?php
-// index.php * Verze: V11 * Aktualizace: 24.2.2026
+// index.php * Verze: V16 * Aktualizace: 26.2.2026
 
 /*
  * FRONT CONTROLLER (centrální vstup aplikace)
@@ -10,6 +10,9 @@
  * - AJAX (partial): vrací jen obsah do <main> podle hlavičky X-Comeback-Page (bez layoutu)
  * - přepnutí menu režimu: uloží do session přes POST + X-Comeback-Set-Menu
  * - 404: vrátí hlášku a pokusí se zapsat záznam do DB tabulky `chyba`
+ * - V12: nepřihlášený uvidí jen hlavičku + modální přihlášení (includes/login_modal.php)
+ * - V15: prvni_login se zobrazuje jako MODÁL (includes/prvni_login.php), stejně jako login modal
+ * - V16: kontrola spárování mobilu je jen existence aktivního řádku v push_zarizeni; pokud chybí id_user v session, vynutí prvni_login
  *
  * Volá / závisí na:
  * - lib/bootstrap.php
@@ -154,6 +157,12 @@ if (!$cbPageExists) {
    4) AJAX (partial): jen obsah stránky
    ========================= */
 if ($cbIsPartial) {
+    if (empty($_SESSION['login_ok'])) {
+        http_response_code(401);
+        echo '<section class="card"><p>Nutné přihlášení.</p></section>';
+        exit;
+    }
+
     if ($cbPageExists) {
         require $file;
     } else {
@@ -183,11 +192,69 @@ if ($cbIsPartial) {
 
 require_once __DIR__ . '/includes/hlavicka.php';
 
+if (empty($_SESSION['login_ok'])) {
+
+    echo '<div class="cb-login-fill"></div>';
+
+    require_once __DIR__ . '/includes/login_modal.php';
+
+    ?>
+</div>
+</body>
+</html>
+<?php
+    exit;
+}
+
+/*
+ * V15+V16: přihlášený bez spárovaného mobilu uvidí prvni_login (MODÁL)
+ *
+ * - kontrola: existuje aktivní záznam v push_zarizeni pro id_user
+ * - pokud chybí id_user v session, prvni_login se vynutí (bez id_user nedokážeme spárování ověřit)
+ */
+$cbUser = $_SESSION['cb_user'] ?? null;
+$idUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
+
+$maMobil = false;
+
+if ($idUser > 0) {
+
+    $conn = db();
+
+    $stmt = $conn->prepare('
+        SELECT id
+        FROM push_zarizeni
+        WHERE id_user=? AND aktivni=1
+        LIMIT 1
+    ');
+
+    if ($stmt) {
+        $stmt->bind_param('i', $idUser);
+        $stmt->execute();
+        $stmt->store_result();
+        $maMobil = ($stmt->num_rows > 0);
+        $stmt->close();
+    }
+}
+
+if (!$maMobil) {
+
+    echo '<div class="cb-login-fill"></div>';
+
+    require_once __DIR__ . '/includes/prvni_login.php';
+
+    ?>
+</div>
+</body>
+</html>
+<?php
+    exit;
+}
+
 $cb_page_exists = $cbPageExists;
 $cb_page_file = $file;
 
 require_once __DIR__ . '/includes/central.php';
-// require_once __DIR__ . '/pages/uvod_demo_rotace.php';
 
 require_once __DIR__ . '/includes/paticka.php';
 
@@ -204,5 +271,5 @@ require_once __DIR__ . '/includes/paticka.php';
 </body>
 </html>
 <?php
-/* index.php * Verze: V11 * Aktualizace: 24.2.2026 * Počet řádků: 207 */
+/* index.php * Verze: V16 * Aktualizace: 26.2.2026 * Počet řádků: 275 */
 // Konec souboru
