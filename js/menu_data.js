@@ -78,6 +78,7 @@
         { label: 'Přehled logování',       page: 'admin_logs' },
         { label: 'Neoprávněné přístupy',   page: 'admin_hack' },
         { label: 'Informace o systému',    page: 'admin_infoblok' },
+        { label: 'Náhledy zobrazení',      page: 'admin_ukazky' },
         { label: 'Chyby',                  page: 'admin_err' }
       ]
     }

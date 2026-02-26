@@ -1,5 +1,5 @@
 <?php
-// includes/parovani_mobilu.php * Verze: V2 * Aktualizace: 26.2.2026 * Počet řádků: 390
+// includes/parovani_mobilu.php * Verze: V4 * Aktualizace: 26.2.2026 * Počet řádků: 380
 declare(strict_types=1);
 
 /*
@@ -232,47 +232,37 @@ $tokenOk = ($tokenRow !== null);
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Comeback – párování mobilu</title>
-  <style>
-    body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; padding: 18px; background: #eaf2fb; }
-    .card{ max-width: 560px; margin: 0 auto; background: #fff; border: 1px solid rgba(0,0,0,.12); border-radius: 16px; padding: 16px; box-shadow: 0 10px 26px rgba(0,0,0,.10); }
-    h1{ font-size: 18px; margin: 0 0 10px 0; }
-    p{ margin: 8px 0; line-height: 1.35; }
-    button{ width: 100%; padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(0,0,0,.14); font-size: 14px; cursor: pointer; background: #fff; }
-    button.primary{ background: rgba(37,99,235,.96); border-color: rgba(37,99,235,.35); color: #fff; font-weight: 600; }
-    button:disabled{ opacity: .55; cursor: default; }
-    .muted{ color: rgba(15,23,42,.70); font-size: 13px; }
-    .out{ margin-top: 10px; padding: 10px 12px; border-radius: 14px; background: rgba(15,23,42,.06); font-size: 13px; }
-    .logo{ width: 46px; height: 46px; border-radius: 14px; border: 1px solid rgba(0,0,0,.14); background: #fff; display: grid; place-items: center; overflow: hidden; }
-    .logo img{ width: 100%; height: 100%; object-fit: contain; padding: 7px; }
-    .row{ display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
-    code{ background: rgba(15,23,42,.08); padding: 2px 6px; border-radius: 8px; }
-  </style>
 </head>
 <body>
-  <div class="card">
-    <div class="row">
-      <div class="logo"><img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback"></div>
-      <div>
-        <h1>Párování mobilu</h1>
-        <div class="muted">Povol notifikace a spáruj mobil pro schvalování přihlášení.</div>
+  <div class="modal-page">
+    <div class="modal">
+
+      <a class="modal-x" href="about:blank" aria-label="Zavřít">×</a>
+
+      <div class="modal-head">
+        <div class="modal-logo"><img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback"></div>
+        <div>
+          <p class="modal-title">Párování mobilu</p>
+          <div class="modal-sub">Povol notifikace a spáruj mobil pro schvalování přihlášení.</div>
+        </div>
       </div>
+
+      <?php if ($vapidPublic === '') { ?>
+        <p><strong>Chybí VAPID public key.</strong></p>
+        <p class="muted">Nastav konstantu <code>CB_VAPID_PUBLIC</code> v <code>lib/system.php</code>.</p>
+      <?php } elseif (!$tokenOk) { ?>
+        <p><strong>Neplatný nebo expirovaný odkaz.</strong></p>
+        <p class="muted">Vrať se na PC, otevři IS a vygeneruj nový QR kód pro párování.</p>
+      <?php } else { ?>
+        <p class="muted">Postup: 1) Povolit notifikace → 2) Spárovat mobil.</p>
+
+        <button type="button" class="modal-btn" id="btnPerm">1) Povolit notifikace</button>
+        <div style="height:10px"></div>
+        <button type="button" class="modal-btn primary" id="btnPair" disabled>2) Spárovat mobil</button>
+
+        <div class="out" id="out">Stav: čekám…</div>
+      <?php } ?>
     </div>
-
-    <?php if ($vapidPublic === '') { ?>
-      <p><strong>Chybí VAPID public key.</strong></p>
-      <p class="muted">Nastav konstantu <code>CB_VAPID_PUBLIC</code> v <code>lib/system.php</code>.</p>
-    <?php } elseif (!$tokenOk) { ?>
-      <p><strong>Neplatný nebo expirovaný odkaz.</strong></p>
-      <p class="muted">Vrať se na PC, otevři IS a vygeneruj nový QR kód pro párování.</p>
-    <?php } else { ?>
-      <p class="muted">Postup: 1) Povolit notifikace → 2) Spárovat mobil.</p>
-
-      <button type="button" id="btnPerm">1) Povolit notifikace</button>
-      <div style="height:10px"></div>
-      <button type="button" class="primary" id="btnPair" disabled>2) Spárovat mobil</button>
-
-      <div class="out" id="out">Stav: čekám…</div>
-    <?php } ?>
   </div>
 
 <?php if ($vapidPublic !== '' && $tokenOk) { ?>
@@ -386,5 +376,5 @@ $tokenOk = ($tokenRow !== null);
 </body>
 </html>
 <?php
-/* includes/parovani_mobilu.php * Verze: V2 * Aktualizace: 26.2.2026 * Počet řádků: 390 */
+/* includes/parovani_mobilu.php * Verze: V4 * Aktualizace: 26.2.2026 * Počet řádků: 380 */
 // Konec souboru

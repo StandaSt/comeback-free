@@ -240,5 +240,5 @@ try {
 }
 
 // lib/login_smeny.php * Verze: V20 * Aktualizace: 21.2.2026
-// Počet řádků: 0
+// Počet řádků: 244
 // Konec souboru

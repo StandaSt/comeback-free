@@ -25,5 +25,5 @@ define('CB_VAPID_PUBLIC', 'BGoTpm1YhMYflfQZDPMva5DpjihYquvRqtHXrN061Z5OKOAvhq41G
 define('CB_VAPID_PRIVATE', 'k3_uCR9VHDc1kAUDbvE98fPKr40KffvtwUMN78n7wH0');
 
 
-/* lib/system.php * Verze: V1 * Aktualizace: 24.2.2026 * Počet řádků: 24 */
+/* lib/system.php * Verze: V1 * Aktualizace: 24.2.2026 * Počet řádků: 29 */
 // Konec souboru

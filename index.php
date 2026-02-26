@@ -1,5 +1,5 @@
 <?php
-// index.php * Verze: V16 * Aktualizace: 26.2.2026
+// index.php * Verze: V17 * Aktualizace: 26.2.2026
 
 /*
  * FRONT CONTROLLER (centrální vstup aplikace)
@@ -13,6 +13,7 @@
  * - V12: nepřihlášený uvidí jen hlavičku + modální přihlášení (includes/login_modal.php)
  * - V15: prvni_login se zobrazuje jako MODÁL (includes/prvni_login.php), stejně jako login modal
  * - V16: kontrola spárování mobilu je jen existence aktivního řádku v push_zarizeni; pokud chybí id_user v session, vynutí prvni_login
+ * - V17: v prostředí LOCAL je kontrola párování vypnutá (prosté přihlášení)
  *
  * Volá / závisí na:
  * - lib/bootstrap.php
@@ -211,13 +212,20 @@ if (empty($_SESSION['login_ok'])) {
  *
  * - kontrola: existuje aktivní záznam v push_zarizeni pro id_user
  * - pokud chybí id_user v session, prvni_login se vynutí (bez id_user nedokážeme spárování ověřit)
+ *
+ * V17:
+ * - v prostředí LOCAL je kontrola párování vypnutá (maMobil = true)
  */
 $cbUser = $_SESSION['cb_user'] ?? null;
 $idUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
 
+$prostredi = (string)($GLOBALS['PROSTREDI'] ?? 'SERVER');
+
 $maMobil = false;
 
-if ($idUser > 0) {
+if ($prostredi === 'LOCAL') {
+    $maMobil = true;
+} elseif ($idUser > 0) {
 
     $conn = db();
 
@@ -271,5 +279,5 @@ require_once __DIR__ . '/includes/paticka.php';
 </body>
 </html>
 <?php
-/* index.php * Verze: V16 * Aktualizace: 26.2.2026 * Počet řádků: 275 */
+/* index.php * Verze: V17 * Aktualizace: 26.2.2026 * Počet řádků: 283 */
 // Konec souboru

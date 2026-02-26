@@ -1,0 +1,244 @@
+/* style/1/login_modal.css * Verze: V2 * Aktualizace: 26.2.2026 * Počet řádků: 244 */
+
+/*
+ * Jednotné CSS pro všechny modály / „karty“ okolo přihlášení a párování.
+ *
+ * Princip:
+ * - PC modál: .modal-overlay + .modal
+ * - Mobilní stránka: .modal-page + .modal
+ *
+ * Pozn.: Styly se aktivují jen přes třídy níže, takže globální načtení v hlavicka.php nevadí.
+ */
+
+/* ===== Základ (typografie, barvy drobností) ===== */
+.modal-page{
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  margin: 0;
+  padding: 18px;
+  background: #eaf2fb;
+}
+
+.modal-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 20, 40, .35);
+  backdrop-filter: blur(26px);
+  -webkit-backdrop-filter: blur(26px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 18px;
+}
+
+/* ===== Tělo modálu (box) ===== */
+.modal{
+  position: relative;
+  width: min(560px, 100%);
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,.14);
+  border-radius: 18px;
+  box-shadow: 0 18px 46px rgba(0,0,0,.18);
+  padding: 16px 16px 14px 16px;
+}
+
+/* ===== Zavírací X (vpravo nahoře) ===== */
+.modal-x{
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  border: 1px solid rgba(220, 38, 38, .45);
+  background: rgba(220, 38, 38, .10);
+  color: rgb(220, 38, 38);
+  font-size: 22px;
+  line-height: 30px;
+  text-align: center;
+  cursor: pointer;
+  text-decoration: none;
+  padding: 0;
+}
+
+.modal-x:hover{
+  background: rgba(220, 38, 38, .16);
+}
+
+.modal-x:active{
+  transform: translateY(1px);
+}
+
+/* ===== Hlavička modálu (logo + titulek) ===== */
+.modal-head{
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.modal-logo{
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,.12);
+  background: #fff;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.modal-logo img{
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 7px;
+}
+
+.modal-title{
+  font-weight: 800;
+  font-size: 16px;
+  margin: 0;
+}
+
+.modal-sub{
+  margin: 2px 0 0 0;
+  color: rgba(15, 23, 42, .75);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+/* ===== Zvýrazněná informační „krabice“ (např. telefon) ===== */
+.modal-box{
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(15,23,42,.06);
+  border: 1px solid rgba(0,0,0,.10);
+}
+
+.modal-label{
+  font-size: 13px;
+  color: rgba(15, 23, 42, .70);
+  margin: 0 0 6px 0;
+}
+
+.modal-phone{
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: .3px;
+  margin: 0;
+}
+
+/* ===== QR + instrukce (PC modál) ===== */
+.modal-row{
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.modal-qr{
+  width: 180px;
+  height: 180px;
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,.12);
+  background: #fff;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  flex: 0 0 auto;
+  padding: 8px;
+}
+
+.modal-qr canvas,
+.modal-qr img{
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.modal-instr{
+  flex: 1 1 260px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: rgba(15, 23, 42, .85);
+}
+
+.modal-url{
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.9);
+  border: 1px solid rgba(0,0,0,.10);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+/* ===== Patička modálu (status + tlačítko) ===== */
+.modal-foot{
+  margin-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.modal-status{
+  font-size: 13px;
+  color: rgba(15, 23, 42, .75);
+}
+
+/* ===== Tlačítka ===== */
+.modal-btn{
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,.14);
+  font-size: 14px;
+  cursor: pointer;
+  background: #fff;
+}
+
+.modal-foot .modal-btn{
+  width: auto;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.modal-btn.primary{
+  background: rgba(37,99,235,.96);
+  border-color: rgba(37,99,235,.35);
+  color: #fff;
+  font-weight: 600;
+}
+
+.modal-btn:disabled{
+  opacity: .55;
+  cursor: default;
+}
+
+/* ===== Pomocné texty / výstup ===== */
+.muted{
+  color: rgba(15,23,42,.70);
+  font-size: 13px;
+}
+
+.out{
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(15,23,42,.06);
+  font-size: 13px;
+}
+
+code{
+  background: rgba(15,23,42,.08);
+  padding: 2px 6px;
+  border-radius: 8px;
+}
+
+/* style/1/login_modal.css * Verze: V2 * Aktualizace: 26.2.2026 * Počet řádků: 244 */

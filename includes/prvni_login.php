@@ -1,5 +1,5 @@
 <?php
-// includes/prvni_login.php * Verze: V2 * Aktualizace: 26.2.2026 * Počet řádků: 336
+// includes/prvni_login.php * Verze: V4 * Aktualizace: 26.2.2026 * Počet řádků: 246
 declare(strict_types=1);
 
 /*
@@ -11,6 +11,10 @@ declare(strict_types=1);
  * - zobrazí QR kód (generuje se v prohlížeči přes js/qrcode.min.js) + textovou adresu
  * - průběžně kontroluje, jestli už je v DB aktivní zařízení (push_zarizeni.aktivni=1)
  *   a jakmile ano, automaticky přesměruje do IS
+ *
+ * Bezpečnost:
+ * - zavření modálu (X) = zrušení párování + logout
+ * - timeout 5 minut = zrušení párování + logout
  *
  * Pozn.:
  * - mobilní párování běží bez session přes includes/parovani_mobilu.php?t=...
@@ -60,6 +64,32 @@ if (isset($_GET['check']) && (string)$_GET['check'] === '1') {
 }
 
 /* =========================
+   0b) JSON abort (zavření modálu / timeout)
+   ========================= */
+if (isset($_GET['abort']) && (string)$_GET['abort'] === '1') {
+    header('Content-Type: application/json; charset=utf-8');
+
+    if ($loginOk && $idUser > 0) {
+        $stmt = db()->prepare('
+            UPDATE push_parovani
+            SET aktivni=0
+            WHERE id_user=? AND aktivni=1 AND pouzito_kdy IS NULL
+        ');
+        if ($stmt) {
+            $stmt->bind_param('i', $idUser);
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
+
+    $_SESSION = [];
+    session_destroy();
+
+    echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/* =========================
    1) Vygeneruj párovací token (DB: push_parovani)
    ========================= */
 $pairUrl = '';
@@ -101,176 +131,39 @@ if ($loginOk && $idUser > 0) {
    2) HTML (modál)
    ========================= */
 ?>
-<style>
-  .cb-prvni-overlay{
-    position: fixed;
-    inset: 0;
-    background: rgba(10, 20, 40, .35);
-    backdrop-filter: blur(26px);
-    -webkit-backdrop-filter: blur(26px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    padding: 18px;
-  }
-  .cb-prvni-modal{
-    width: min(560px, 100%);
-    background: #ffffff;
-    border: 1px solid rgba(0,0,0,.14);
-    border-radius: 18px;
-    box-shadow: 0 18px 46px rgba(0,0,0,.18);
-    padding: 16px 16px 14px 16px;
-  }
-  .cb-prvni-head{
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    margin-bottom: 10px;
-  }
-  .cb-prvni-logo{
-    width: 52px;
-    height: 52px;
-    border-radius: 14px;
-    border: 1px solid rgba(0,0,0,.12);
-    background: #fff;
-    display: grid;
-    place-items: center;
-    overflow: hidden;
-    flex: 0 0 auto;
-  }
-  .cb-prvni-logo img{
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    padding: 7px;
-  }
-  .cb-prvni-title{
-    font-weight: 800;
-    font-size: 16px;
-    margin: 0;
-  }
-  .cb-prvni-sub{
-    margin: 2px 0 0 0;
-    color: rgba(15, 23, 42, .75);
-    font-size: 13px;
-    line-height: 1.35;
-  }
-  .cb-prvni-box{
-    margin-top: 10px;
-    padding: 12px;
-    border-radius: 14px;
-    background: rgba(15,23,42,.06);
-    border: 1px solid rgba(0,0,0,.10);
-  }
-  .cb-prvni-label{
-    font-size: 13px;
-    color: rgba(15, 23, 42, .70);
-    margin: 0 0 6px 0;
-  }
-  .cb-prvni-phone{
-    font-size: 18px;
-    font-weight: 900;
-    letter-spacing: .3px;
-    margin: 0;
-  }
-  .cb-prvni-row{
-    display: flex;
-    gap: 14px;
-    align-items: center;
-    margin-top: 12px;
-    flex-wrap: wrap;
-  }
-  .cb-prvni-qr{
-    width: 180px;
-    height: 180px;
-    border-radius: 14px;
-    border: 1px solid rgba(0,0,0,.12);
-    background: #fff;
-    display: grid;
-    place-items: center;
-    overflow: hidden;
-    flex: 0 0 auto;
-    padding: 8px;
-  }
-  .cb-prvni-qr canvas,
-  .cb-prvni-qr img{
-    width: 100% !important;
-    height: 100% !important;
-    display: block;
-  }
-  .cb-prvni-instr{
-    flex: 1 1 260px;
-    font-size: 13px;
-    line-height: 1.4;
-    color: rgba(15, 23, 42, .85);
-  }
-  .cb-prvni-url{
-    margin-top: 8px;
-    padding: 8px 10px;
-    border-radius: 12px;
-    background: rgba(255,255,255,.9);
-    border: 1px solid rgba(0,0,0,.10);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    font-size: 12px;
-    word-break: break-all;
-  }
-  .cb-prvni-foot{
-    margin-top: 12px;
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    align-items: center;
-  }
-  .cb-prvni-status{
-    font-size: 13px;
-    color: rgba(15, 23, 42, .75);
-  }
-  .cb-prvni-btn{
-    border: 1px solid rgba(0,0,0,.14);
-    background: #fff;
-    border-radius: 14px;
-    padding: 10px 12px;
-    font-size: 13px;
-    cursor: pointer;
-  }
-  .cb-prvni-btn:disabled{
-    opacity: .55;
-    cursor: default;
-  }
-</style>
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-label="První přihlášení">
+  <div class="modal">
 
-<div class="cb-prvni-overlay" role="dialog" aria-modal="true" aria-label="První přihlášení">
-  <div class="cb-prvni-modal">
+    <button type="button" class="modal-x" id="cbPrvniClose" aria-label="Zavřít">×</button>
 
-    <div class="cb-prvni-head">
-      <div class="cb-prvni-logo">
+    <div class="modal-head">
+      <div class="modal-logo">
         <img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback">
       </div>
       <div>
-        <p class="cb-prvni-title">První přihlášení</p>
-        <p class="cb-prvni-sub">Je toto Vaše telefonní číslo?</p>
+        <p class="modal-title">První přihlášení</p>
+        <p class="modal-sub">Je toto Vaše telefonní číslo?</p>
       </div>
     </div>
 
-    <div class="cb-prvni-box">
-      <p class="cb-prvni-label">Telefon (ze Směn):</p>
-      <p class="cb-prvni-phone"><?= h($telefon !== '' ? $telefon : '---') ?></p>
+    <div class="modal-box">
+      <p class="modal-label">Telefon (ze Směn):</p>
+      <p class="modal-phone"><?= h($telefon !== '' ? $telefon : '---') ?></p>
     </div>
 
-    <div class="cb-prvni-row">
-      <div class="cb-prvni-qr" id="cbPrvniQr"></div>
+    <div class="modal-row">
+      <div class="modal-qr" id="cbPrvniQr"></div>
 
-      <div class="cb-prvni-instr">
+      <div class="modal-instr">
         Pokud telefonní číslo používáte, naskenujte QR kód, nebo zadejte do prohlížeče v mobilním telefonu tuto adresu:
-        <div class="cb-prvni-url" id="cbPrvniUrl"><?= h($pairUrl !== '' ? $pairUrl : '---') ?></div>
+        <div class="modal-url" id="cbPrvniUrl"><?= h($pairUrl !== '' ? $pairUrl : '---') ?></div>
         Dále postupujte podle pokynů v mobilním telefonu.
       </div>
     </div>
 
-    <div class="cb-prvni-foot">
-      <div class="cb-prvni-status" id="cbPrvniStatus">Čekám na spárování mobilu…</div>
-      <button type="button" class="cb-prvni-btn" id="cbPrvniReload">Zkontrolovat</button>
+    <div class="modal-foot">
+      <div class="modal-status" id="cbPrvniStatus">Čekám na spárování mobilu…</div>
+      <button type="button" class="modal-btn" id="cbPrvniReload">Zkontrolovat</button>
     </div>
 
   </div>
@@ -281,9 +174,16 @@ if ($loginOk && $idUser > 0) {
 (function(){
   var btn = document.getElementById('cbPrvniReload');
   var st  = document.getElementById('cbPrvniStatus');
+  var x   = document.getElementById('cbPrvniClose');
 
   function setTxt(t){
     st.textContent = t;
+  }
+
+  function doAbort(){
+    fetch('<?= h(cb_url('includes/prvni_login.php?abort=1')) ?>', { cache: 'no-store' })
+      .then(function(){ window.location.href = '<?= h(cb_url('')) ?>'; })
+      .catch(function(){ window.location.href = '<?= h(cb_url('')) ?>'; });
   }
 
   function checkNow(){
@@ -310,6 +210,10 @@ if ($loginOk && $idUser > 0) {
     checkNow();
   });
 
+  x.addEventListener('click', function(){
+    doAbort();
+  });
+
   // QR (classic, čitelný čtečkami)
   try {
     var target = document.getElementById('cbPrvniQr');
@@ -329,8 +233,14 @@ if ($loginOk && $idUser > 0) {
   }
 
   setInterval(checkNow, 2500);
+
+  // Timeout 5 minut: bez párování => logout
+  setTimeout(function(){
+    doAbort();
+  }, 300000);
+
 })();
 </script>
 <?php
-/* includes/prvni_login.php * Verze: V2 * Aktualizace: 26.2.2026 * Počet řádků: 336 */
+/* includes/prvni_login.php * Verze: V4 * Aktualizace: 26.2.2026 * Počet řádků: 246 */
 // Konec souboru

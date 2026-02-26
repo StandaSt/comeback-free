@@ -192,7 +192,7 @@ declare(strict_types=1);
                  id="cb_pass"
                  name="heslo"
                  type="password"
-                 autocomplete="new-password"
+                 autocomplete="current-password"
                  required>
         </div>
 

@@ -50,5 +50,5 @@ session_destroy();
 header('Location: ' . cb_url('/'));
 exit;
 
-/* lib/logout.php * Verze: V9 * Aktualizace: 16.2.2026 * Počet řádků: 57 */
+/* lib/logout.php * Verze: V9 * Aktualizace: 16.2.2026 * Počet řádků: 54 */
 // Konec souboru
