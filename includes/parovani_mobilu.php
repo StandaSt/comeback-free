@@ -1,5 +1,5 @@
 <?php
-// includes/parovani_mobilu.php * Verze: V4 * Aktualizace: 26.2.2026 * Počet řádků: 380
+// includes/parovani_mobilu.php * Verze: V5 * Aktualizace: 27.2.2026
 declare(strict_types=1);
 
 /*
@@ -14,6 +14,9 @@ declare(strict_types=1);
  * - server ověří token v tabulce push_parovani (hash, aktivní, neexpirace, nepoužitý)
  * - pravidlo: vždy jen 1 aktivní zařízení (ostatní deaktivuje)
  * - uloží subscription do DB do push_zarizeni a označí token jako použitý
+ *
+ * CSS:
+ * - používá jednotné třídy z style/1/modal_alert.css (modal-page, modal, modal-btn, atd.)
  */
 
 require_once __DIR__ . '/../lib/bootstrap.php';
@@ -27,6 +30,11 @@ if (isset($_GET['t'])) {
     $token = trim((string)$_GET['t']);
 }
 
+/*
+ * Najde aktivní a nevypršelý párovací token.
+ * - token se porovnává přes hash v DB (SHA2)
+ * - vrací id řádku push_parovani a id_user
+ */
 function cb_find_pair_token(string $token): ?array
 {
     if ($token === '' || strlen($token) < 20) {
@@ -232,37 +240,38 @@ $tokenOk = ($tokenRow !== null);
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Comeback – párování mobilu</title>
+  <link rel="stylesheet" href="<?= h(cb_url('style/1/modal_alert.css')) ?>">
 </head>
-<body>
-  <div class="modal-page">
-    <div class="modal">
+<body class="modal-page">
 
-      <a class="modal-x" href="about:blank" aria-label="Zavřít">×</a>
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Párování mobilu">
 
-      <div class="modal-head">
-        <div class="modal-logo"><img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback"></div>
-        <div>
-          <p class="modal-title">Párování mobilu</p>
-          <div class="modal-sub">Povol notifikace a spáruj mobil pro schvalování přihlášení.</div>
-        </div>
+    <a class="modal-x" href="about:blank" aria-label="Zavřít">×</a>
+
+    <div class="modal-head">
+      <div class="modal-logo"><img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback"></div>
+      <div>
+        <p class="modal-title">Párování mobilu</p>
+        <div class="modal-sub">Povol notifikace a spáruj mobil pro schvalování přihlášení.</div>
       </div>
-
-      <?php if ($vapidPublic === '') { ?>
-        <p><strong>Chybí VAPID public key.</strong></p>
-        <p class="muted">Nastav konstantu <code>CB_VAPID_PUBLIC</code> v <code>lib/system.php</code>.</p>
-      <?php } elseif (!$tokenOk) { ?>
-        <p><strong>Neplatný nebo expirovaný odkaz.</strong></p>
-        <p class="muted">Vrať se na PC, otevři IS a vygeneruj nový QR kód pro párování.</p>
-      <?php } else { ?>
-        <p class="muted">Postup: 1) Povolit notifikace → 2) Spárovat mobil.</p>
-
-        <button type="button" class="modal-btn" id="btnPerm">1) Povolit notifikace</button>
-        <div style="height:10px"></div>
-        <button type="button" class="modal-btn primary" id="btnPair" disabled>2) Spárovat mobil</button>
-
-        <div class="out" id="out">Stav: čekám…</div>
-      <?php } ?>
     </div>
+
+    <?php if ($vapidPublic === '') { ?>
+      <p><strong>Chybí VAPID public key.</strong></p>
+      <p class="muted">Nastav konstantu <code>CB_VAPID_PUBLIC</code> v <code>lib/system.php</code>.</p>
+    <?php } elseif (!$tokenOk) { ?>
+      <p><strong>Neplatný nebo expirovaný odkaz.</strong></p>
+      <p class="muted">Vrať se na PC, otevři IS a vygeneruj nový QR kód pro párování.</p>
+    <?php } else { ?>
+      <p class="muted">Postup: 1) Povolit notifikace → 2) Spárovat mobil.</p>
+
+      <button type="button" class="modal-btn" id="btnPerm">1) Povolit notifikace</button>
+      <div class="modal-row" aria-hidden="true"></div>
+      <button type="button" class="modal-btn primary" id="btnPair" disabled>2) Spárovat mobil</button>
+
+      <div class="out" id="out">Stav: čekám…</div>
+    <?php } ?>
+
   </div>
 
 <?php if ($vapidPublic !== '' && $tokenOk) { ?>
@@ -376,5 +385,5 @@ $tokenOk = ($tokenRow !== null);
 </body>
 </html>
 <?php
-/* includes/parovani_mobilu.php * Verze: V4 * Aktualizace: 26.2.2026 * Počet řádků: 380 */
+/* includes/parovani_mobilu.php * Verze: V5 * Aktualizace: 27.2.2026 * Počet řádků: 389 */
 // Konec souboru

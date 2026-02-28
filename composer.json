@@ -1,0 +1,6 @@
+{
+    "name": "comeback/app",
+    "require": {
+        "minishlink/web-push": "^10.0"
+    }
+}

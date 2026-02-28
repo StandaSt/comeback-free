@@ -20,6 +20,8 @@ declare(strict_types=1);
 
 ?>
 <!-- styly -->
+ <link rel="stylesheet" href="<?= h(cb_url('style/1/pages/a_ukazka.css')) ?>">
+ <link rel="stylesheet" href="<?= h(cb_url('style/1/pages/admin_ukazka.css')) ?>">
 <link rel="stylesheet" href="<?= h(cb_url('style/1/nastaveni.css')) ?>">
 <link rel="stylesheet" href="<?= h(cb_url('style/1/global.css')) ?>">
 <link rel="stylesheet" href="<?= h(cb_url('style/1/hlavicka.css')) ?>">
@@ -31,7 +33,8 @@ declare(strict_types=1);
 <link rel="stylesheet" href="<?= h(cb_url('style/1/pages/obj_zakaznici.css')) ?>">
 <link rel="stylesheet" href="<?= h(cb_url('style/1/menu_tlac.css')) ?>">
 <link rel="stylesheet" href="<?= h(cb_url('style/1/ikony_svg.css')) ?>">
-<link rel="stylesheet" href="<?= h(cb_url('style/1/login_modal.css')) ?>">
+<link rel="stylesheet" href="<?= h(cb_url('style/1/modal_alert.css')) ?>">
+
 <?php
 /* lib/nacti_styly.php * Verze: V1 * Aktualizace: 24.2.2026 * Počet řádků: 37 */
 // Konec souboru

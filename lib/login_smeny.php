@@ -1,28 +1,30 @@
 <?php
-// lib/login_smeny.php * Verze: V20 * Aktualizace: 21.2.2026
+// lib/login_smeny.php * Verze: V23 * Aktualizace: 27.2.2026
 declare(strict_types=1);
 
 /*
- * PŘIHLÁŠENÍ PŘES SMĚNY (GraphQL API)
+ * PŘIHLÁŠENÍ PŘES SMĚNY (GraphQL API) + 2FA (schválení na mobilu)
  *
  * Co to dělá:
  * - ověří email/heslo přes Směny (GraphQL)
  * - načte profil + role/sloty (1 dotaz)
  * - načte pobočky (workingBranchNames) přes userGetLogged (2. dotaz)
- * - uloží data do session
+ * - uloží data do session (bez login_ok)
  * - zavolá DB sync (db/db_user_login.php)
- * - nastaví session pro časovač neaktivity (timeout + start + poslední aktivita)
- * - redirect na úvod
+ * - připraví 2FA výzvu do DB (push_login_2fa) a odešle notifikaci na spárované zařízení (push_zarizeni)
+ * - redirect na úvod (index.php zobrazí čekací modál)
  *
  * Důležité:
- * - timeout neaktivity je JEDINÁ hodnota pro celý systém (zatím natvrdo zde).
- *   Později se sem napojí načtení z administrace (DB).
+ * - login_ok se nastaví AŽ po schválení 2FA (mobil)
+ * - LOCAL: 2FA se nepoužívá (notifikace z LOCAL nechodí) – po ověření ve Směnách se nastaví login_ok hned
  */
 
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/login_diagnostika.php';
 require_once __DIR__ . '/smeny_graphql.php';
 require_once __DIR__ . '/user_bad_login.php';
+
+require_once __DIR__ . '/push_send.php';
 
 require_once __DIR__ . '/../db/db_api_smeny.php';
 
@@ -195,12 +197,76 @@ try {
     $_SESSION['cb_session_start_ts'] = time();
     $_SESSION['cb_last_activity_ts'] = time();
 
-    $_SESSION['login_ok'] = 1;
-    $_SESSION['cb_flash'] = 'Přihlášení OK';
+    // LOCAL: bez 2FA (notifikace z LOCAL nechodí) => rovnou přihlásit
+    if ((string)($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL') {
+        $_SESSION['login_ok'] = 1;
+        unset($_SESSION['cb_2fa_token']);
 
-    cb_login_log_line('redirect_ok', [
-        'to' => cb_url(''),
+        header('Location: ' . cb_url(''));
+        exit;
+    }
+
+    // ====== 2FA: vytvoř výzvu a čekej na schválení ======
+    $limitSec = 300;
+    if (defined('CB_2FA_LIMIT_SEC')) {
+        $limitSec = (int)CB_2FA_LIMIT_SEC;
+        if ($limitSec <= 0) {
+            $limitSec = 300;
+        }
+    }
+
+    // token je 64 hex znaků (32 bytes)
+    $token2fa = bin2hex(random_bytes(32));
+
+    $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+    if ($ip === '') {
+        $ip = 'UNKNOWN';
+    }
+
+    $ua = (string)($_SERVER['HTTP_USER_AGENT'] ?? '');
+    $ua = trim($ua);
+    if ($ua === '') {
+        $ua = null;
+    }
+
+    $conn = db();
+    $stmt = $conn->prepare('
+        INSERT INTO push_login_2fa
+        (id_user, token, stav, ip, prohlizec, vytvoreno, vyprsi, rozhodnuto, id_zarizeni)
+        VALUES
+        (?, ?, \'ceka\', ?, ?, NOW(), (NOW() + INTERVAL ? SECOND), NULL, NULL)
+    ');
+    if (!$stmt) {
+        throw new RuntimeException('2FA: DB prepare selhal.');
+    }
+
+    $stmt->bind_param('isssi', $idUser, $token2fa, $ip, $ua, $limitSec);
+    $stmt->execute();
+    $stmt->close();
+
+    // Ulož do session jen identifikátor aktuální 2FA výzvy
+    $_SESSION['cb_2fa_token'] = $token2fa;
+
+    // login_ok zatím NEEXISTUJE
+    unset($_SESSION['login_ok']);
+
+    // ====== Odeslání Web Push notifikace ======
+    cb_login_log_line('2fa_push_send_start', [
         'id_user' => (string)$idUser,
+    ]);
+
+    $sent = cb_push_send_2fa($idUser, $token2fa);
+
+    cb_login_log_line('2fa_push_send_done', [
+        'id_user' => (string)$idUser,
+        'sent' => $sent ? '1' : '0',
+    ]);
+
+    $_SESSION['cb_flash'] = 'Čekám na schválení přihlášení na mobilu';
+
+    cb_login_log_line('2fa_wait', [
+        'id_user' => (string)$idUser,
+        'token_len' => (string)strlen($token2fa),
     ]);
 
     header('Location: ' . cb_url(''));
@@ -226,6 +292,7 @@ try {
     unset($_SESSION['cb_token']);
     unset($_SESSION['cb_user_profile']);
     unset($_SESSION['cb_user_branches']);
+    unset($_SESSION['cb_2fa_token']);
 
     unset($_SESSION['cb_timeout_min']);
     unset($_SESSION['cb_session_start_ts']);
@@ -239,6 +306,6 @@ try {
     exit;
 }
 
-// lib/login_smeny.php * Verze: V20 * Aktualizace: 21.2.2026
-// Počet řádků: 244
+// lib/login_smeny.php * Verze: V23 * Aktualizace: 27.2.2026
+// Počet řádků: 312
 // Konec souboru

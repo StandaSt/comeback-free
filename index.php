@@ -1,5 +1,5 @@
 <?php
-// index.php * Verze: V17 * Aktualizace: 26.2.2026
+// index.php * Verze: V19 * Aktualizace: 27.2.2026
 
 /*
  * FRONT CONTROLLER (centrální vstup aplikace)
@@ -13,7 +13,9 @@
  * - V12: nepřihlášený uvidí jen hlavičku + modální přihlášení (includes/login_modal.php)
  * - V15: prvni_login se zobrazuje jako MODÁL (includes/prvni_login.php), stejně jako login modal
  * - V16: kontrola spárování mobilu je jen existence aktivního řádku v push_zarizeni; pokud chybí id_user v session, vynutí prvni_login
- * - V17: v prostředí LOCAL je kontrola párování vypnutá (prosté přihlášení)
+ * - V17: 2FA (schválení přihlášení) – po zadání hesla čeká na mobil (push_login_2fa); login_ok vzniká až po schválení
+ * - V18: 2FA čekací modál: místo URL ukazuje QR kód + text (fallback když notifikace nepřijde)
+ * - V19: 2FA čekací modál – CSS přesunuto do style/1/modal_2fa.css (bez inline <style>)
  *
  * Volá / závisí na:
  * - lib/bootstrap.php
@@ -40,7 +42,9 @@ if (
     && isset($_SERVER['HTTP_X_COMEBACK_SET_MENU'])
 ) {
     $m = (string)$_SERVER['HTTP_X_COMEBACK_SET_MENU'];
-    $m = ($m === 'sidebar') ? 'sidebar' : 'dropdown';
+    if ($m !== 'sidebar') {
+        $m = 'dropdown';
+    }
     $_SESSION['cb_menu_mode'] = $m;
 
     http_response_code(204);
@@ -185,6 +189,7 @@ if ($cbIsPartial) {
     <title>Comeback</title>
 
     <?php require_once __DIR__ . '/lib/nacti_styly.php'; ?>
+    <link rel="stylesheet" href="<?= h(cb_url('style/1/modal_alert.css')) ?>">
 </head>
 <body>
 
@@ -193,10 +198,134 @@ if ($cbIsPartial) {
 
 require_once __DIR__ . '/includes/hlavicka.php';
 
+/*
+ * Nepřihlášený stav:
+ * - buď klasický login modal
+ * - nebo čekání na 2FA (po zadání hesla)
+ */
 if (empty($_SESSION['login_ok'])) {
 
-    echo '<div class="cb-login-fill"></div>';
+    // 2FA čekání (po úspěšném ověření email/heslo)
+    $cb2faToken = (string)($_SESSION['cb_2fa_token'] ?? '');
 
+    if ($cb2faToken !== '') {
+
+        $pollMs = 2000;
+        if (defined('CB_2FA_POLL_MS')) {
+            $pollMs = (int)CB_2FA_POLL_MS;
+        }
+
+        $pairUrl = cb_url('https://pokus.xo.je/includes/2fa_mobil.php?t=' . rawurlencode($cb2faToken));
+        $checkUrl = cb_url('lib/push_2fa_api.php?check=1');
+        $cancelUrl = cb_url('lib/push_2fa_api.php?cancel=1');
+
+        echo '<div class="cb-login-fill"></div>';
+
+        ?>
+
+        <div id="cb-2fa-ovl" role="dialog" aria-modal="true" aria-label="Schválení přihlášení">
+          <div class="cb-2fa-card">
+            <div class="cb-2fa-top">
+              <p class="cb-2fa-title">Schválení přihlášení</p>
+              <button type="button" class="cb-2fa-x" id="cb2faClose" aria-label="Zavřít">×</button>
+            </div>
+
+            <div class="cb-2fa-body">
+              <div class="cb-2fa-box">
+                Čeká se na schválení Vašeho přístupu.<br>
+                Prosím, zkontrolujte si Vaše registrované zařízení.
+                <div class="cb-2fa-qrwrap">
+                  <div class="cb-2fa-qr" id="cb2faQr"></div>
+                  <div class="cb-2fa-qrhint">
+                    Pokud jste neobdržel notifikaci na zaregistrované zařízení,<br>
+                    načtěte tento QR kód.
+                  </div>
+                </div>
+              </div>
+
+              <div class="cb-2fa-status" id="cb2faStatus">Čekám na rozhodnutí na mobilu…</div>
+            </div>
+          </div>
+        </div>
+
+        <script src="<?= h(cb_url('js/qrcode.min.js')) ?>"></script>
+        <script>
+          (function(){
+            var st = document.getElementById('cb2faStatus');
+            var btnX = document.getElementById('cb2faClose');
+
+            function setTxt(t){
+              if (st) st.textContent = t;
+            }
+
+            try {
+              if (typeof QRCode !== 'undefined') {
+                var el = document.getElementById('cb2faQr');
+                if (el) {
+                  new QRCode(el, {
+                    text: <?= json_encode($pairUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>,
+                    width: 220,
+                    height: 220
+                  });
+                }
+              }
+            } catch (e) {
+              // QR je jen fallback, nesmí shodit stránku.
+            }
+
+            function poll(){
+              fetch('<?= h($checkUrl) ?>', { cache: 'no-store' })
+                .then(function(r){ return r.json(); })
+                .then(function(j){
+                  if (!j || j.ok !== true) {
+                    setTxt('Chyba kontroly. Zkus to znovu.');
+                    return;
+                  }
+                  if (j.stav === 'ok') {
+                    window.location.href = '<?= h(cb_url('')) ?>';
+                    return;
+                  }
+                  if (j.stav === 'ne') {
+                    setTxt('Přístup zamítnut. Přesměrovávám…');
+                    window.location.href = '<?= h(cb_url('')) ?>';
+                    return;
+                  }
+                  if (j.stav === 'exp') {
+                    setTxt('Vypršelo. Přesměrovávám…');
+                    window.location.href = '<?= h(cb_url('')) ?>';
+                    return;
+                  }
+                  if (typeof j.zbyva_sec === 'number') {
+                    setTxt('Čekám na rozhodnutí na mobilu… (zbývá ' + j.zbyva_sec + ' s)');
+                    return;
+                  }
+                  setTxt('Čekám na rozhodnutí na mobilu…');
+                })
+                .catch(function(){
+                  setTxt('Chyba kontroly. Zkus to znovu.');
+                });
+            }
+
+            if (btnX) {
+              btnX.addEventListener('click', function(){
+                fetch('<?= h($cancelUrl) ?>', { cache: 'no-store' })
+                  .then(function(){ window.location.href = '<?= h(cb_url('')) ?>'; })
+                  .catch(function(){ window.location.href = '<?= h(cb_url('')) ?>'; });
+              });
+            }
+
+            poll();
+            setInterval(poll, <?= (int)$pollMs ?>);
+          })();
+        </script>
+        </div>
+        </body>
+        </html>
+        <?php
+        exit;
+    }
+
+    echo '<div class="cb-login-fill"></div>';
     require_once __DIR__ . '/includes/login_modal.php';
 
     ?>
@@ -212,36 +341,36 @@ if (empty($_SESSION['login_ok'])) {
  *
  * - kontrola: existuje aktivní záznam v push_zarizeni pro id_user
  * - pokud chybí id_user v session, prvni_login se vynutí (bez id_user nedokážeme spárování ověřit)
- *
- * V17:
- * - v prostředí LOCAL je kontrola párování vypnutá (maMobil = true)
+ * - LOCAL: kontrola párování je vypnutá (stačí přihlášení)
  */
 $cbUser = $_SESSION['cb_user'] ?? null;
 $idUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
 
-$prostredi = (string)($GLOBALS['PROSTREDI'] ?? 'SERVER');
-
 $maMobil = false;
 
+$prostredi = (string)($GLOBALS['PROSTREDI'] ?? '');
 if ($prostredi === 'LOCAL') {
     $maMobil = true;
-} elseif ($idUser > 0) {
+} else {
 
-    $conn = db();
+    if ($idUser > 0) {
 
-    $stmt = $conn->prepare('
-        SELECT id
-        FROM push_zarizeni
-        WHERE id_user=? AND aktivni=1
-        LIMIT 1
-    ');
+        $conn = db();
 
-    if ($stmt) {
-        $stmt->bind_param('i', $idUser);
-        $stmt->execute();
-        $stmt->store_result();
-        $maMobil = ($stmt->num_rows > 0);
-        $stmt->close();
+        $stmt = $conn->prepare('
+            SELECT id
+            FROM push_zarizeni
+            WHERE id_user=? AND aktivni=1
+            LIMIT 1
+        ');
+
+        if ($stmt) {
+            $stmt->bind_param('i', $idUser);
+            $stmt->execute();
+            $stmt->store_result();
+            $maMobil = ($stmt->num_rows > 0);
+            $stmt->close();
+        }
     }
 }
 
@@ -279,5 +408,5 @@ require_once __DIR__ . '/includes/paticka.php';
 </body>
 </html>
 <?php
-/* index.php * Verze: V17 * Aktualizace: 26.2.2026 * Počet řádků: 283 */
+/* index.php * Verze: V19 * Aktualizace: 27.2.2026 * Počet řádků: 413 */
 // Konec souboru
