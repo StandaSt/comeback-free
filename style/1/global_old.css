@@ -1,4 +1,4 @@
-/* style/1/global.css * Verze: V10 * Aktualizace: 2.3.2026 */
+/* style/1/global.css * Verze: V9 * Aktualizace: 18.2.2026 */
 
 /* =========================
    ZÁKLADNÍ NASTAVENÍ
@@ -12,22 +12,12 @@ html{
 }
 
 body{
-  height:100%;
+  height:100vh;
   font-family:Arial, Helvetica, sans-serif;
   background:var(--bg-body);
   color:var(--tx-base);
+  overflow:hidden; /* scroll pouze v .card */
   margin:0;
-  display:flex;
-  flex-direction:column;
-}
-
-/* =========================
-   HLAVNÍ LAYOUT (header / main / footer)
-   ========================= */
-
-main{
-  flex:1;
-  overflow:auto;   /* scroll jen zde */
 }
 
 /* =========================
@@ -35,8 +25,13 @@ main{
    ========================= */
 
 .container{
+  min-width:1200px;
+  /* max-width:2100px;   komentář standa */
   background:var(--bg-ram);
-  padding:0px 10px 0px 10px;
+  padding:0px 10px 0px 10px;              
+
+  /* border-radius:6px;   komentář standa */
+  height:100vh;
   display:flex;
   flex-direction:column;
 }
@@ -62,14 +57,14 @@ main{
   justify-content:center;
   font-size:18px;
   text-decoration:none;
-  border:1px solid var(--border-strong);
+  border:1px solid #ccc;
   border-radius:4px;
-  background:var(--btn);
-  color:var(--tx-base);
+  background:#f2f2f2;
+  color:#333;
   cursor:pointer;
 }
 
-.icon-btn:hover{ background:var(--hover-bg); }
+.icon-btn:hover{ background:#e0e0e0; }
 
 .icon-btn.disabled{
   opacity:.5;
@@ -101,7 +96,6 @@ main{
   background:rgba(0,0,0,.85);
   border-radius:6px;
   z-index:9999;
-  padding:6px 8px;
 }
 
 .cb-tip::before{
@@ -152,5 +146,5 @@ main{
   font-size:18px;
 }
 
-/* style/1/global.css * Verze: V10 * Aktualizace: 2.3.2026 * Počet řádků: 158
+/* style/1/global.css * Verze: V9 * Aktualizace: 18.2.2026 * Počet řádků: 149
    konec souboru */

@@ -1,0 +1,456 @@
+/* style/1/layout.css * Verze: V6 * Aktualizace: 2.3.2026 */
+
+/*
+ * LAYOUT – celkový systém
+ * - hlavička + central + patička
+ * - nový dashboard header (cb-*)
+ */
+
+/* =========================
+   CONTAINER
+   ========================= */
+
+.container{
+  min-width:1200px;
+  background:var(--bg-ram);
+  padding:0px 10px 0px 10px;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+}
+
+/* =========================
+   HEADER (NOVÝ)
+   ========================= */
+
+.cb-header{
+  margin:10px 0 10px 0;
+}
+
+.cb-hdr{
+  display:grid;
+  grid-template-columns: 140px 1fr 240px;
+  grid-template-rows: auto auto;
+  gap: 10px;
+  align-items:stretch;
+}
+
+/* =========================
+   BRAND / LOGO
+   ========================= */
+
+.cb-brand{
+  grid-column:1;
+  grid-row:1 / span 2;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#fff;
+  border-radius:14px;
+  border:1px solid var(--cb-bd);
+  padding:10px;
+  min-height:110px;
+  text-decoration:none;
+}
+
+.cb-logo{
+  max-width:100%;
+  max-height:92px;
+  display:block;
+}
+
+/* =========================
+   TOP ROW: OBDOBÍ + KPI + TECH
+   ========================= */
+
+.cb-top{
+  grid-column:2;
+  grid-row:1;
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  background: transparent;
+  border:0;
+  padding: 0;
+  min-width:0;
+}
+
+/* OBDOBÍ */
+.cb-interval{
+  display:grid;
+  grid-template-rows:auto auto;
+  gap:4px;
+  min-width:260px;
+  background:#fff;
+  border:1px solid var(--cb-bd);
+  border-radius:14px;
+  padding: 6px 10px;
+}
+
+.cb-int-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+}
+
+.cb-date{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:12px;
+}
+
+.cb-date span{
+  width:22px;
+  color: var(--cb-muted);
+}
+
+.cb-date input[type="date"]{
+  height:26px;
+  padding:0 8px;
+  border:1px solid var(--cb-bd);
+  border-radius:8px;
+  font: 12px/1 Arial, Helvetica, sans-serif;
+  background:#fff;
+}
+
+.cb-quick{
+  display:flex;
+  gap:8px;
+}
+
+.cb-pill{
+  height:26px;
+  padding:0 12px;
+  border-radius:999px;
+  border:1px solid var(--cb-bd);
+  background:#fff;
+  font-size:12px;
+  cursor:pointer;
+}
+
+.cb-pill:hover{
+  background: var(--cb-hover);
+}
+
+.cb-pill.is-on{
+  background: var(--cb-accent);
+  border-color: var(--cb-accent);
+  color:#fff;
+  font-weight:700;
+}
+
+/* ŠIPKA mezi boxy */
+.cb-arrow{
+  color: var(--cb-muted);
+  font-size:20px;
+  padding:0 2px;
+}
+
+/* KPI */
+.cb-kpi{
+  flex:1;
+  min-width:0;
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap:10px;
+  align-items:center;
+  background:#fff;
+  border:1px solid var(--cb-bd);
+  border-radius:14px;
+  padding: 6px 10px;
+}
+
+.cb-kpi-item{
+  min-width:0;
+}
+
+.cb-kpi-k{
+  font-size:12px;
+  color: var(--cb-muted);
+}
+
+.cb-kpi-v{
+  font-size:14px;
+  font-weight:700;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.cb-delta{
+  font-weight:700;
+  margin-left:6px;
+}
+
+.cb-delta.is-pos{ color:#0a7a2a; }
+.cb-delta.is-neg{ color:#b30000; }
+
+/* TECH tlačítko */
+.cb-tech{
+  width:36px;
+  height:36px;
+  border-radius:10px;
+  border:1px solid var(--cb-bd);
+  background:#fff;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.cb-tech:hover{
+  background: var(--cb-hover);
+}
+
+/* =========================
+   BOTTOM ROW: MENU + STAV SYSTÉMU
+   ========================= */
+
+.cb-bottom{
+  grid-column:2;
+  grid-row:2;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+
+  background:#fff;
+  border-radius:14px;
+  border:1px solid var(--cb-bd);
+  padding:8px 10px;
+}
+
+.cb-menu{
+  display:flex;
+  gap:10px;
+}
+
+.cb-menu-btn{
+  height:30px;
+  min-width:120px;
+  padding:0 14px;
+  border-radius:9px;
+  border:1px solid var(--cb-bd);
+  background:#f6f6f6;
+  cursor:pointer;
+  font-size:13px;
+}
+
+.cb-menu-btn:hover{
+  background: var(--cb-hover);
+}
+
+.cb-menu-btn.is-on{
+  background: var(--cb-accent);
+  border-color: var(--cb-accent);
+  color:#fff;
+  font-weight:700;
+}
+
+.cb-sys{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  align-items:flex-end;
+  font-size:12px;
+  color: var(--cb-muted);
+}
+
+.cb-sys-title{
+  font-size:12px;
+  color: var(--cb-muted);
+}
+
+.cb-sys-line{
+  display:flex;
+  gap:12px;
+  align-items:center;
+}
+
+.cb-sys-item{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+
+.cb-led{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  display:inline-block;
+  border:1px solid rgba(0,0,0,.12);
+}
+
+.cb-led.is-ok{ background:#2aa84a; }
+.cb-led.is-var{ background:#f1b400; }
+.cb-led.is-bad{ background:#d22; }
+
+/* =========================
+   USER BOX (RIGHT)
+   ========================= */
+
+.cb-user{
+  grid-column:3;
+  grid-row:1 / span 2;
+  background:#fff;
+  border-radius:14px;
+  border:1px solid var(--cb-bd);
+  padding:10px 10px 10px 12px;
+
+  display:grid;
+  grid-template-columns: 1fr 1fr 34px;
+  column-gap:10px;
+  align-items:start;
+  min-height:110px;
+}
+
+.cb-user-col{
+  min-width:0;
+}
+
+.cb-user-name{
+  font-size:13px;
+  margin-bottom:6px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.cb-user-role{
+  font-size:13px;
+  margin-bottom:6px;
+  text-align:right;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.cb-user-lab,
+.cb-user-val{
+  font-size:12px;
+  line-height:1.25;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.cb-user-lab{ color: var(--cb-muted); }
+.cb-user-val{ text-align:right; }
+
+.cb-user-exit{
+  grid-column:3;
+  grid-row:1 / span 4;
+  justify-self:end;
+  align-self:center;
+  width:34px;
+  height:34px;
+  border-radius:10px;
+  border:1px solid var(--cb-bd);
+  background:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#444;
+  text-decoration:none;
+}
+
+.cb-user-exit:hover{
+  background: var(--cb-hover);
+}
+
+.cb-user-exit-ico{
+  display:block;
+}
+
+/* =========================
+   TOOLTIP (používá se i jinde)
+   ========================= */
+
+.cb-tip{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+}
+
+.cb-tip::after{
+  content:attr(data-tip);
+  position:absolute;
+  right:calc(100% + 10px);
+  top:50%;
+  transform:translateY(-35%);
+  white-space:nowrap;
+  pointer-events:none;
+  opacity:0;
+  visibility:hidden;
+  font:12px/1.2 Arial, Helvetica, sans-serif;
+  color:#fff;
+  background:rgba(0,0,0,.85);
+  padding:6px 8px;
+  border-radius:8px;
+  z-index:9999;
+}
+
+.cb-tip::before{
+  content:"";
+  position:absolute;
+  right:calc(100% + 4px);
+  top:50%;
+  transform:translateY(-35%);
+  pointer-events:none;
+  opacity:0;
+  visibility:hidden;
+  border:6px solid transparent;
+  border-left-color:rgba(0,0,0,.85);
+  z-index:9999;
+}
+
+.cb-tip:hover::after,
+.cb-tip:hover::before,
+.cb-tip:focus-visible::after,
+.cb-tip:focus-visible::before{
+  opacity:1;
+  visibility:visible;
+}
+
+/* =========================
+   RESPONSIVE (jen minimálně)
+   ========================= */
+
+@media (max-width:1400px){
+  .cb-hdr{
+    grid-template-columns: 140px 1fr;
+    grid-template-rows: auto auto auto;
+  }
+
+  .cb-brand{
+    grid-row:1;
+    grid-column:1;
+  }
+
+  .cb-top{
+    grid-column:2;
+    grid-row:1;
+  }
+
+  .cb-bottom{
+    grid-column:1 / -1;
+    grid-row:2;
+  }
+
+  .cb-user{
+    grid-column:1 / -1;
+    grid-row:3;
+  }
+}
+
+/* =========================
+   MAPOVÁNÍ NA STARÉ TŘÍDY (pro jistotu)
+   ========================= */
+
+/* pokud někde zůstalo .header/.footer, ať to alespoň drží */
+.header{ background:var(--bg-ram); }
+.footer{ background:var(--bg-ram); }
+
+/* style/1/layout.css * Verze: V6 * Aktualizace: 2.3.2026 * Počet řádků: 305 */

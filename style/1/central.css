@@ -1,80 +1,67 @@
-/* style/1/central.css * Verze: V13 * Aktualizace: 18.2.2026
-   Centrální blok (central) projektu IS Comeback */
+/* style/1/central.css * Verze: V14 * Aktualizace: 2.3.2026
+   Central – dashboard (header / main / footer) */
 
 /* =========================
-   CENTRAL (obal menu + obsahu)
-   ========================= */
-
-.central{
-  flex:1;                         /* vyplní prostor mezi hlavičkou a patičkou */
-  display:flex;                   /* uvnitř se skládá menu + obsah */
-  min-height:0;                   /* dovolí vnitřní scroll */
-  overflow:hidden;                /* nic nesmí přetékat ven (scroll bude jen v .card) */
-  background:var(--bg-ram);
-}
-
-/* dropdown: menu nad obsahem */
-.central.menu-dropdown{
-  flex-direction:column;
-}
-
-/* sidebar: menu vlevo, obsah vpravo */
-.central.menu-sidebar{
-  flex-direction:row;
-}
-
-/* =========================
-   OBSAH (obal pro <main>)
-   ========================= */
-
-.central-content{
-  flex:1;
-  display:flex;
-  flex-direction:column;
-  min-height:0;
-  min-width:0;                    /* důležité pro sidebar (aby se obsah mohl zmenšit) */
-}
-
-/* =========================
-   MAIN
+   MAIN – DASHBOARD GRID
    ========================= */
 
 main{
   flex:1;
-  display:flex;
-  flex-direction:column;
   min-height:0;
   min-width:0;
-  background:transparent;
-  border-radius:6px;
+
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap:12px;
+
+  padding:12px;
+  background:var(--bg-ram);
+
+  overflow:auto;   /* jediný scroll v systému */
 }
 
 /* =========================
-   CARD – HLAVNÍ OBSAH (JEDINÝ SCROLL)
+   KARTY
    ========================= */
 
 .card{
+  background:#fff;
   border:1px solid var(--border-accent);
   border-radius:6px;
-  padding:10px;                   /* dřív bylo vpravo 0 -> tabulka byla naražená doprava */
-  background:#fff;
-  flex:1;
-  min-height:0;
-  overflow:auto;                  /* scroll jen uvnitř card */
+  padding:12px;
+  display:flex;
+  flex-direction:column;
+}
+
+/* šířky karet */
+
+.w1{ grid-column: span 1; }   /* 1/4 */
+.w2{ grid-column: span 2; }   /* 1/2 */
+.w4{ grid-column: span 4; }   /* 1/1 */
+
+/* =========================
+   RESPONSIVE
+   ========================= */
+
+@media (max-width:1200px){
+  main{
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width:700px){
+  main{
+    grid-template-columns: 1fr;
+  }
 }
 
 /* =========================
-   HLAVIČKA OBSAHU STRÁNKY
+   HLAVIČKA OBSAHU (volitelné)
    ========================= */
-
-.page-head{
-  background:transparent;
-  border-radius:6px;
-}
 
 .page-head h2{
   font-size:16px;
 }
 
-/* style/1/central.css * Verze: V13 * Aktualizace: 18.2.2026 * Počet řádků: 80
+/* style/1/central.css * Verze: V14 * Aktualizace: 2.3.2026 * Počet řádků: 75
    konec souboru */

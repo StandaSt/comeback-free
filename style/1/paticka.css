@@ -1,40 +1,31 @@
-/* style/1/paticka.css * Verze: V13 * Aktualizace: 18.2.2026 */
+/* style/1/paticka.css * Verze: V14 * Aktualizace: 2.3.2026 */
 
 /* =========================
    PATIČKA
    ========================= */
 
-.footer{
-  /* pevná výška patičky je dána min-height; obsah se dorovná posunem */
-  min-height:25px;
+footer{
+  min-height:30px;
   background:var(--bg-ram);
   font-size:11px;
-  color:#555;
+  color:var(--tx-muted);
 
   display:flex;
-  align-items:stretch;
+  align-items:center;
+  justify-content:space-between;
 
-  /* vodorovné odsazení, a jemné dorovnání obsahu o 5px výš */
-  padding:0 0 7px 0; /* dole 5px = posun textu výš */
-  box-sizing:border-box;
-}
-
-.footer-inner{
-  flex:1;
-  width:100%;
-  display:flex;
-  align-items:center;             /* svisle na střed uvnitř footer-inner */
-  justify-content:space-between;  /* vlevo | střed | vpravo */
+  padding:6px 12px;
   gap:10px;
-  box-sizing:border-box;
 }
+
+/* bloky */
 
 .footer-left{
   text-align:left;
   max-width:350px;
 }
 
-.footer-center{
+.footer-stred{
   text-align:center;
   flex:1;
   min-width:0;
@@ -50,21 +41,18 @@
    ========================= */
 
 @media (max-width:700px){
-  .footer-inner{
+  footer{
     flex-direction:column;
-    justify-content:center;
     align-items:center;
-    gap:6px;
+    text-align:center;
   }
 
   .footer-left,
-  .footer-center,
+  .footer-stred,
   .footer-right{
-    text-align:center;
-    flex:0;
     max-width:none;
   }
 }
 
-/* style/1/paticka.css * Verze: V13 * Aktualizace: 18.2.2026 * Počet řádků: 70
+/* style/1/paticka.css * Verze: V14 * Aktualizace: 2.3.2026 * Počet řádků: 54
    konec souboru */
