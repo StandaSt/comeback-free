@@ -192,7 +192,7 @@ if ($cbIsPartial) {
 </head>
 <body>
 
-<div class="container">
+  <div class="container">
 <?php
 
 require_once __DIR__ . '/includes/hlavicka.php';

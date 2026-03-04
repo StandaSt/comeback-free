@@ -1,19 +1,37 @@
-/* style/1/central.css * Verze: V16 * Aktualizace: 03.03.2026
-   Central – DASHBOARD kostra (scroll jen v main) */
-/* Počet řádků: 38 */
-/* Předchozí počet řádků: 54 */
+/* style/1/central.css * Verze: V20 * Aktualizace: 05.03.2026
+   Central – dashboard výška (Varianta A: .container = hlavní flex sloupec)
+   Počet řádků: 50
+   Předchozí počet řádků: 54 */
 
 /*
- * Cíl:
- * - Hlavička a patička zůstávají na místě (body je flex sloupec v global.css).
- * - Scroll je pouze v .dash_box (main).
- * - .dash_grid je pouze layoutová mřížka pro karty.
+ * DŮLEŽITÉ:
+ * - V aktuálním HTML (includes/central.php) je CENTRAL = <main class="dash_wrap"> ... </main>
+ *   viz <main class="dash_wrap"> fileciteturn73file0L28-L37
+ * - Tj. žádný wrapper .central se už nepoužívá, proto se zde řídí výška přímo přes .dash_wrap.
+ *
+ * Varianta A:
+ * - <div class="container"> MUSÍ existovat a musí obalovat: hlavicka + central(main) + paticka.
+ * - .container je flex sloupec s min-height:100vh.
+ * - .dash_wrap je flex:1 a udělá skutečný prostor mezi hlavičkou a patičkou.
  */
 
-/* DASH WRAP = prostor mezi hlavičkou a patičkou (scroll jen zde) */
-.dash_box{
+/* HLAVNÍ OBAL STRÁNKY (musí obalovat hlavičku + <main class="dash_wrap"> + patičku) */
+.container{
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
+  width:100%;
+  box-sizing:border-box;
+}
+
+/* DASH WRAP = <main> mezi hlavičkou a patičkou (scroll jen zde) */
+.dash_wrap{
   flex:1;
   min-height:0;          /* nutné pro správné scrollování ve flex layoutu */
+  min-width:0;
+  width:100%;
+  align-self:stretch;
+
   overflow-y:auto;
   padding:14px;
   box-sizing:border-box;
@@ -29,10 +47,4 @@
   box-sizing:border-box;
 }
 
-/*
- * Pozn.:
- * - Vzhled karet je v style/1/karty.css (card_*).
- * - Zde zůstává pouze rozložení a scroll.
- */
-
-/* style/1/central.css * Verze: V16 * Aktualizace: 03.03.2026 * Počet řádků: 38 */
+/* style/1/central.css * Verze: V20 * Aktualizace: 05.03.2026 * Počet řádků: 50 */
