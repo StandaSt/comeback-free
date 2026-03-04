@@ -1,13 +1,15 @@
 <?php
-// includes/central.php * Verze: V2 * Aktualizace: 1.3.2026
+// includes/central.php * Verze: V3 * Aktualizace: 03.03.2026
+// Počet řádků: 45
+// Předchozí počet řádků: 37
 
 /*
- * CENTRAL (obsah)
+ * CENTRAL (obsah) – KOSTRA DASHBOARDU
  *
- * Nově:
- * - menu je součástí hlavičky (includes/hlavicka.php)
- * - žádný sidebar
- * - central drží jen obal + <main> (renderuje pages/<pageKey>.php)
+ * Cíl:
+ * - Hlavička a patička se nehýbou (řeší body flex + dash_wrap scroll).
+ * - Scroll je pouze uvnitř <main class="dash_wrap">.
+ * - Uvnitř main je jen layoutový obal <div class="dash_grid">, ve kterém stránky typicky renderují karty.
  *
  * Volá / závisí na:
  * - proměnné z index.php: $cb_page_exists, $cb_page_file
@@ -16,21 +18,27 @@
 declare(strict_types=1);
 ?>
 
-<div class="central">
-  <div class="central-content">
-    <main>
-      <?php
-      if (!empty($cb_page_exists) && !empty($cb_page_file) && is_file($cb_page_file)) {
-          require $cb_page_file;
-      } else {
-          echo '<div class="page-head"><h2>Stránka nenalezena</h2></div>';
-          echo '<section class="card"><p>Požadovaná stránka neexistuje.</p></section>';
-      }
-      ?>
-    </main>
+<!-- CENTRAL START: dashboard kostra -->
+<main class="dash_wrap">
+  <?php
+  /*
+   * dash_grid = layoutový obal pro rozložení karet.
+   * Pozn.: Neřeší vzhled karet, jen jejich umístění.
+   */
+  ?>
+  <div class="dash_grid">
+    <?php
+    if (!empty($cb_page_exists) && !empty($cb_page_file) && is_file($cb_page_file)) {
+        require $cb_page_file;
+    } else {
+        echo '<div class="page-head"><h2>Stránka nenalezena</h2></div>';
+        echo '<section class="card"><p>Požadovaná stránka neexistuje.</p></section>';
+    }
+    ?>
   </div>
-</div>
+</main>
+<!-- CENTRAL END -->
 
 <?php
-/* includes/central.php * Verze: V2 * Aktualizace: 1.3.2026 * Počet řádků: 35 */
+/* includes/central.php * Verze: V3 * Aktualizace: 03.03.2026 * Počet řádků: 45 */
 // Konec souboru

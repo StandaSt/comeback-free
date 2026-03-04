@@ -1,5 +1,5 @@
 <?php
-// index.php * Verze: V19 * Aktualizace: 27.2.2026
+// index.php * Verze: V20 * Aktualizace: 03.03.2026
 
 /*
  * FRONT CONTROLLER (centrální vstup aplikace)
@@ -189,7 +189,6 @@ if ($cbIsPartial) {
     <title>Comeback</title>
 
     <?php require_once __DIR__ . '/lib/nacti_styly.php'; ?>
-    <link rel="stylesheet" href="<?= h(cb_url('style/1/modal_alert.css')) ?>">
 </head>
 <body>
 
@@ -408,5 +407,5 @@ require_once __DIR__ . '/includes/paticka.php';
 </body>
 </html>
 <?php
-/* index.php * Verze: V19 * Aktualizace: 27.2.2026 * Počet řádků: 413 */
+/* index.php * Verze: V20 * Aktualizace: 03.03.2026 * Počet řádků: 411 */
 // Konec souboru

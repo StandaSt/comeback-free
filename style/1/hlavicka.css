@@ -1,25 +1,29 @@
-/* style/1/hlavicka.css * Verze: V43 * Aktualizace: 3.3.2026
+/* style/1/hlavicka.css * Verze: V46 * Aktualizace: 03.03.2026
+   Počet řádků: 339
+   Předchozí počet řádků: 333
    Hlavička (včetně menu a user bloku) */
 
 /* =========================
    HLAVIČKA
    ========================= */
 
-.cb-header{
+.head_wrap{
   background:var(--bg-ram);
   padding:10px 10px 0 10px;
 }
 
-.cb-hdr{
+.head_grid{
   display:grid;
-  grid-template-columns: 150px 1fr 300px;
+  grid-template-columns: minmax(140px, 170px) minmax(0, 1fr) minmax(280px, 340px);
   grid-template-rows: auto auto;
   gap:10px;
   align-items:stretch;
+  width:100%;
+  box-sizing:border-box;
 }
 
 /* logo vlevo (2 řádky) */
-.cb-brand{
+.head_logo_img{
   grid-row:1 / span 2;
   display:flex;
   align-items:center;
@@ -29,17 +33,21 @@
   border:1px solid rgba(0,0,0,.12);
   padding:8px;
   text-decoration:none;
+  width:88px;    /* tento řádek jsem přidal */
+  height:88px;   /* a tento také */
 }
-
-.cb-logo{
+/*
+tento blok není třeba, proč tu sakra byl?
+.head_logo{
   max-width:100%;
   height:auto;
   max-height:86px;
   display:block;
 }
+  */
 
 /* pravý user blok (2 řádky) */
-.cb-user{
+.head_user{
   grid-column:3;
   grid-row:1 / span 2;
   background:#fff;
@@ -56,7 +64,7 @@
   align-content:start;
 }
 
-.cb-user-name{
+.head_user_name{
   grid-column:1 / 3;
   font-size:13px;
   font-weight:700;
@@ -65,7 +73,7 @@
   white-space:nowrap;
 }
 
-.cb-user-role{
+.head_user_role{
   grid-column:2;
   grid-row:1;
   justify-self:end;
@@ -73,18 +81,18 @@
   color:#444;
 }
 
-.cb-user-lab{
+.head_user_lab{
   color:#666;
   white-space:nowrap;
 }
 
-.cb-user-val{
+.head_user_val{
   justify-self:end;
   font-weight:600;
   white-space:nowrap;
 }
 
-.cb-user-exit{
+.head_user_exit{
   grid-column:3;
   grid-row:1 / span 4;
   align-self:center;
@@ -100,29 +108,30 @@
   text-decoration:none;
 }
 
-.cb-user-exit:hover{
+.head_user_exit:hover{
   background:rgba(0,0,0,.04);
 }
 
 /* horní řádek uprostřed (období + KPI + tech) */
-.cb-top{
+.head_top{
   grid-column:2;
   grid-row:1;
   display:grid;
   grid-template-columns: 380px 30px 1fr 48px;
   gap:10px;
   align-items:stretch;
+  min-width:0; /* střední sloupec se může zúžit */
 }
 
-.cb-interval,
-.cb-kpi{
+.head_interval,
+.head_kpi{
   background:#fff;
   border-radius:10px;
   border:1px solid rgba(0,0,0,.12);
   padding:10px 12px;
 }
 
-.cb-int-row{
+.head_int_row{
   display:flex;
   align-items:center;
   justify-content:space-between;
@@ -130,7 +139,7 @@
   margin-bottom:8px;
 }
 
-.cb-date{
+.head_date{
   display:flex;
   align-items:center;
   gap:8px;
@@ -138,7 +147,7 @@
   color:#444;
 }
 
-.cb-date input{
+.head_date input{
   height:26px;
   border-radius:8px;
   border:1px solid rgba(0,0,0,.18);
@@ -146,12 +155,12 @@
   font:inherit;
 }
 
-.cb-quick{
+.head_quick{
   display:flex;
   gap:8px;
 }
 
-.cb-pill{
+.head_pill{
   height:26px;
   padding:0 12px;
   border-radius:999px;
@@ -162,14 +171,14 @@
 }
 
 /* AKTIVNÍ OBDOBÍ – červeně */
-.cb-pill.is-on{
+.head_pill.is-on{
   background:#c82424;
   border-color:#c82424;
   color:#fff;
   font-weight:700;
 }
 
-.cb-arrow{
+.head_arrow{
   display:flex;
   align-items:center;
   justify-content:center;
@@ -177,24 +186,24 @@
   color:#333;
 }
 
-.cb-kpi{
+.head_kpi{
   display:grid;
   grid-template-columns: repeat(4, 1fr);
   gap:10px;
   align-items:center;
 }
 
-.cb-kpi-item{
+.head_kpi_item{
   min-width:0;
 }
 
-.cb-kpi-k{
+.head_kpi_k{
   font-size:11px;
   color:#666;
   margin-bottom:2px;
 }
 
-.cb-kpi-v{
+.head_kpi_v{
   font-size:13px;
   font-weight:700;
   white-space:nowrap;
@@ -202,15 +211,15 @@
   text-overflow:ellipsis;
 }
 
-.cb-delta{
+.head_delta{
   font-weight:800;
 }
 
-.cb-delta.is-pos{
+.head_delta.is-pos{
   color:#0a7a2f;
 }
 
-.cb-tech{
+.head_tech{
   background:#fff;
   border-radius:10px;
   border:1px solid rgba(0,0,0,.12);
@@ -222,30 +231,31 @@
 }
 
 /* spodní řádek uprostřed (menu + stav) */
-.cb-bottom{
+.head_bottom{
   grid-column:2;
   grid-row:2;
   display:grid;
   grid-template-columns: 1fr 260px;
   gap:10px;
   align-items:stretch;
+  min-width:0; /* střední sloupec se může zúžit */
 }
 
-.cb-menu,
-.cb-sys{
+.head_menu,
+.head_sys{
   background:#fff;
   border-radius:10px;
   border:1px solid rgba(0,0,0,.12);
   padding:10px 12px;
 }
 
-.cb-menu{
+.head_menu{
   display:flex;
   gap:10px;
   align-items:center;
 }
 
-.cb-menu-btn{
+.head_menu_btn{
   height:28px;
   padding:0 22px;
   border-radius:8px;
@@ -256,14 +266,14 @@
 }
 
 /* AKTIVNÍ MENU – červeně */
-.cb-menu-btn.is-on{
+.head_menu_btn.is-on{
   background:#c82424;
   border-color:#c82424;
   color:#fff;
   font-weight:700;
 }
 
-.cb-sys-title{
+.head_sys_title{
   font-size:12px;
   font-weight:700;
   color:#555;
@@ -271,7 +281,7 @@
   margin-bottom:4px;
 }
 
-.cb-sys-line{
+.head_sys_line{
   display:flex;
   justify-content:flex-end;
   gap:12px;
@@ -279,17 +289,17 @@
   font-size:12px;
 }
 
-.cb-sys-item{
+.head_sys_item{
   display:flex;
   align-items:center;
   gap:6px;
 }
 
-.cb-sys-lab{
+.head_sys_lab{
   color:#444;
 }
 
-.cb-led{
+.head_led{
   width:10px;
   height:10px;
   border-radius:50%;
@@ -297,12 +307,12 @@
   display:inline-block;
 }
 
-.cb-led.is-ok{  background:#2ecc71; }
-.cb-led.is-var{ background:#f1c40f; }
-.cb-led.is-bad{ background:#e74c3c; }
+.head_led.is-ok{  background:#2ecc71; }
+.head_led.is-var{ background:#f1c40f; }
+.head_led.is-bad{ background:#e74c3c; }
 
 /* nepřihlášený */
-.cb-guest{
+.head_guest{
   grid-column:2 / span 2;
   grid-row:1 / span 2;
   min-height:110px;
@@ -310,24 +320,24 @@
 
 /* RESPONSIVE */
 @media (max-width:1400px){
-  .cb-hdr{
+  .head_grid{
     grid-template-columns: 150px 1fr;
     grid-template-rows: auto auto auto;
   }
-  .cb-user{
+  .head_user{
     grid-column:1 / -1;
     grid-row:3;
   }
-  .cb-top{
+  .head_top{
     grid-template-columns: 1fr;
   }
-  .cb-bottom{
+  .head_bottom{
     grid-template-columns: 1fr;
   }
-  .cb-kpi{
+  .head_kpi{
     grid-template-columns: repeat(2, 1fr);
   }
 }
-
-/* style/1/hlavicka.css * Verze: V43 * Aktualizace: 3.3.2026 * Počet řádků: 333
+/* style/1/hlavicka.css * Verze: V46 * Aktualizace: 03.03.2026 * Počet řádků: 339
+   Předchozí počet řádků: 333
    konec souboru */

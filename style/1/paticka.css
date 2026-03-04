@@ -1,4 +1,4 @@
-/* style/1/paticka.css * Verze: V14 * Aktualizace: 2.3.2026 */
+/* style/1/paticka.css * Verze: V15 * Aktualizace: 03.03.2026 */
 
 /* =========================
    PATIČKA
@@ -9,27 +9,28 @@ footer{
   background:var(--bg-ram);
   font-size:11px;
   color:var(--tx-muted);
-
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-
   padding:6px 12px;
-  gap:10px;
 }
 
 /* bloky */
+/* vnitřní řádek (paticka.php používá .footer-inner) */
+.footer-inner{
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+/* střední blok – kompatibilně pro .footer-center i starší .footer-stred */
+.footer-center,
+
 
 .footer-left{
   text-align:left;
   max-width:350px;
 }
 
-.footer-stred{
-  text-align:center;
-  flex:1;
-  min-width:0;
-}
 
 .footer-right{
   text-align:right;
@@ -41,18 +42,17 @@ footer{
    ========================= */
 
 @media (max-width:700px){
-  footer{
-    flex-direction:column;
-    align-items:center;
-    text-align:center;
-  }
-
-  .footer-left,
-  .footer-stred,
-  .footer-right{
-    max-width:none;
-  }
+footer{
+  min-height:30px;
+  background:var(--bg-ram);
+  font-size:11px;
+  color:var(--tx-muted);
+  padding:6px 12px;
 }
 
-/* style/1/paticka.css * Verze: V14 * Aktualizace: 2.3.2026 * Počet řádků: 54
+  .footer-left,
+}
+
+
+/* style/1/paticka.css * Verze: V15 * Aktualizace: 03.03.2026 * Počet řádků: 57
    konec souboru */

@@ -1,54 +1,38 @@
-/* style/1/central.css * Verze: V15 * Aktualizace: 3.3.2026
-   Central – obsah (main + karty), scroll jen v main */
+/* style/1/central.css * Verze: V16 * Aktualizace: 03.03.2026
+   Central – DASHBOARD kostra (scroll jen v main) */
+/* Počet řádků: 39 */
+/* Předchozí počet řádků: 54 */
 
-/* obal obsahu mezi hlavičkou a patičkou */
-.central{
+/*
+ * Cíl:
+ * - Hlavička a patička zůstávají na místě (body je flex sloupec v global.css).
+ * - Scroll je pouze v .dash_wrap (main).
+ * - .dash_grid je pouze layoutová mřížka pro karty.
+ */
+
+/* DASH WRAP = prostor mezi hlavičkou a patičkou (scroll jen zde) */
+.dash_wrap{
   flex:1;
-  min-height:0;
-  display:flex;
-  background:var(--bg-ram);
+  min-height:0;          /* nutné pro správné scrollování ve flex layoutu */
+  overflow-y:auto;
+  padding:14px;
+  box-sizing:border-box;
 }
 
-.central-content{
-  flex:1;
-  min-height:0;
-  min-width:0;
-  display:flex;
-}
-
-/* MAIN = jediný scroll */
-main{
-  flex:1;
-  min-height:0;
-  min-width:0;
-
-  display:flex;
-  flex-direction:column;
+/* DASH GRID = rozložení karet */
+.dash_grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(340px, 1fr));
   gap:12px;
-
-  padding:12px;
-
-  overflow:auto;     /* jediný scroll v systému */
-  background:transparent;
+  align-content:start;
+  width:100%;
+  box-sizing:border-box;
 }
 
-/* karty */
-.card{
-  background:#fff;
-  border:1px solid var(--border-accent);
-  border-radius:6px;
-  padding:12px;
-}
+/*
+ * Pozn.:
+ * - Vzhled karet je v style/1/karty.css (card_*).
+ * - Zde zůstává pouze rozložení a scroll.
+ */
 
-/* hlavička stránky (pokud je) */
-.page-head{
-  background:transparent;
-}
-
-.page-head h2{
-  font-size:16px;
-  margin:0 0 8px 0;
-}
-
-/* style/1/central.css * Verze: V15 * Aktualizace: 3.3.2026 * Počet řádků: 54
-   konec souboru */
+/* style/1/central.css * Verze: V16 * Aktualizace: 03.03.2026 * Počet řádků: 39 */
