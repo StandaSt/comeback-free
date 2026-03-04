@@ -1,38 +1,37 @@
-/* style/1/paticka.css * Verze: V15 * Aktualizace: 03.03.2026 */
+/* style/1/paticka.css * Verze: V16 * Aktualizace: 04.03.2026 */
 
 /* =========================
    PATIČKA
    ========================= */
 
-footer{
-  min-height:30px;
-  background:var(--bg-ram);
-  font-size:11px;
-  color:var(--tx-muted);
-  padding:6px 12px;
+.footer{
+  width:100%;
+  background:#fff;
+  border-top:1px solid rgba(0,0,0,.12);
 }
 
-/* bloky */
-/* vnitřní řádek (paticka.php používá .footer-inner) */
-.footer-inner{
+.footer_box{
   width:100%;
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:10px;
+  padding:6px 12px;
+  font-size:14px;
 }
 
-/* střední blok – kompatibilně pro .footer-center i starší .footer-stred */
-.footer-center,
-
-
-.footer-left{
+.foot_left{
   text-align:left;
   max-width:350px;
 }
 
+.foot_center{
+  text-align:center;
+  flex:1;
+  opacity:.85;
+}
 
-.footer-right{
+.foot_right{
   text-align:right;
   max-width:350px;
 }
@@ -41,18 +40,14 @@ footer{
    MOBIL
    ========================= */
 
-@media (max-width:700px){
-footer{
-  min-height:30px;
-  background:var(--bg-ram);
-  font-size:11px;
-  color:var(--tx-muted);
-  padding:6px 12px;
+@media (max-width: 720px){
+  .footer_box{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:4px;
+  }
+  .foot_center{ text-align:left; }
+  .foot_right{ text-align:left; }
 }
 
-  .footer-left,
-}
-
-
-/* style/1/paticka.css * Verze: V15 * Aktualizace: 03.03.2026 * Počet řádků: 57
-   konec souboru */
+/* style/1/paticka.css */

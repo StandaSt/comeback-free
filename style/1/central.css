@@ -1,17 +1,17 @@
 /* style/1/central.css * Verze: V16 * Aktualizace: 03.03.2026
    Central – DASHBOARD kostra (scroll jen v main) */
-/* Počet řádků: 39 */
+/* Počet řádků: 38 */
 /* Předchozí počet řádků: 54 */
 
 /*
  * Cíl:
  * - Hlavička a patička zůstávají na místě (body je flex sloupec v global.css).
- * - Scroll je pouze v .dash_wrap (main).
+ * - Scroll je pouze v .dash_box (main).
  * - .dash_grid je pouze layoutová mřížka pro karty.
  */
 
 /* DASH WRAP = prostor mezi hlavičkou a patičkou (scroll jen zde) */
-.dash_wrap{
+.dash_box{
   flex:1;
   min-height:0;          /* nutné pro správné scrollování ve flex layoutu */
   overflow-y:auto;
@@ -35,4 +35,4 @@
  * - Zde zůstává pouze rozložení a scroll.
  */
 
-/* style/1/central.css * Verze: V16 * Aktualizace: 03.03.2026 * Počet řádků: 39 */
+/* style/1/central.css * Verze: V16 * Aktualizace: 03.03.2026 * Počet řádků: 38 */

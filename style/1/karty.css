@@ -1,4 +1,4 @@
-/* style/1/karty.css * Verze: V1 * Aktualizace: 03.03.2026
+/* style/1/karty.css * Verze: V2 * Aktualizace: 04.03.2026
    Počet řádků: 43
    Předchozí počet řádků: 0 */
 
@@ -17,10 +17,11 @@
 .card_box,
 .card{
   background:#ffffff;
-  border:1px solid rgba(0,0,0,.12);
-  border-radius:10px;
-  padding:12px;
+  border:1px solid var(--border-strong);
+  border-radius:12px;
+  padding:14px;
   box-sizing:border-box;
+  box-shadow:0 1px 2px rgba(0,0,0,.04);
 }
 
 /* vnitřní části (když je použiješ) */

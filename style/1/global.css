@@ -27,8 +27,9 @@ body{
 
 main{
   flex:1;
-  overflow:auto;   /* scroll jen zde */
+  overflow:hidden;   /* scroll řeší .dash_box */
 }
+
 
 /* =========================
    KONTEJNER STRÁNKY

@@ -1,4 +1,4 @@
-/* style/1/nastaveni.css * Verze: V2 * Aktualizace: 18.2.2026 */
+/* style/1/nastaveni.css * Verze: V3 * Aktualizace: 04.03.2026 */
 
 /*
  * CÍL:
@@ -12,23 +12,23 @@
     --sidebar-w: 130px;
 
     /* globální barvy projektu */
-    --bg-ram: #97d8f1;        /* hlavička/patička/pozadí pod menu/central */
-    --bg-body: #f4f6f8;       /* pozadí stránky + container */
-    --tx-base: #333;          /* základní text */
-    --tx-muted: #555;         /* tlumený text */
+    --bg-ram: #ffffff;        /* hlavička/patička/pozadí pod menu/central */
+    --bg-body: #f5f6f8;       /* pozadí stránky + container */
+    --tx-base: #1f2933;       /* základní text */
+    --tx-muted: #52606d;      /* tlumený text */
 
     /* společné barvy UI */
-    --border-strong: #dcdcdc;
-    --border-accent: #3f3092;
+    --border-strong: #d9e2ec;
+    --border-accent: #1d4ed8;
 
-    --btn: #f2f2f2;
-    --menu-bg: #fff;
+    --btn: #f3f4f6;
+    --menu-bg: #ffffff;
 
-    --active-bg: #dfe9ff;
-    --active-bd: #5b7cff;
-    --active-tx: #1f3fbf;
+    --active-bg: #e0e7ff;
+    --active-bd: #6366f1;
+    --active-tx: #1d4ed8;
 
-    --hover-bg: #f3f5f9;
+    --hover-bg: #eef2f7;
 }
 
 /* style/1/nastaveni.css * Verze: V2 * Aktualizace: 18.2.2026 * Počet řádků: 35

@@ -1,21 +1,18 @@
 <?php
-// includes/hlavicka.php * Verze: V38 * Aktualizace: 03.03.2026
+// includes/hlavicka.php * Verze: V39 * Aktualizace: 04.03.2026
 declare(strict_types=1);
 
 /*
- * HLAVIČKA (dashboard) – kostra pro grid 3×2
+ * HLAVIČKA (dashboard)
  *
- * Cíl:
- * - vlevo logo přes 2 řádky
- * - střed:
- *   (1) období + KPI + TECH
- *   (2) menu + stav systému
- * - vpravo user blok přes 2 řádky
- * - bez sidebaru / dropdownu
- *
- * Pozn.:
- * - Třídy v hlavičce používají prefix head_* (hlavička).
- * - Tooltip třída cb-tip zůstává zatím beze změny (řeší se jinde).
+ * Bloky:
+ * - logo
+ * - období
+ * - KPI
+ * - TECH
+ * - menu
+ * - stav systému
+ * - user blok
  */
 
 $cbLoginOk = !empty($_SESSION['login_ok']);
@@ -23,8 +20,15 @@ $cbLoginOk = !empty($_SESSION['login_ok']);
 $cbUser = $_SESSION['cb_user'] ?? [];
 $cbUserName = 'Uživatel';
 $cbUserRole = '—';
+
 if (is_array($cbUser)) {
-    $cbUserName = (string)($cbUser['jmeno'] ?? $cbUser['email'] ?? $cbUser['login'] ?? $cbUserName);
+    $fullName = trim((string)($cbUser['name'] ?? '') . ' ' . (string)($cbUser['surname'] ?? ''));
+    if ($fullName !== '') {
+        $cbUserName = $fullName;
+    } else {
+        $cbUserName = (string)($cbUser['jmeno'] ?? $cbUser['email'] ?? $cbUser['login'] ?? $cbUserName);
+    }
+
     $cbUserRole = (string)($cbUser['role'] ?? $cbUser['nazev_role'] ?? $cbUserRole);
 }
 
@@ -34,7 +38,7 @@ $sysSmeny = 'ok';
 $sysRestia = 'var';
 
 ?>
-<header class="head_wrap">
+<header class="head_box">
   <div class="head_grid">
 
     <a class="head_logo" href="<?= h(cb_url('')) ?>" aria-label="PizzaComeback">
@@ -43,8 +47,7 @@ $sysRestia = 'var';
 
     <?php if ($cbLoginOk): ?>
 
-      <div class="head_top">
-
+      <div class="head_top" aria-label="Horní řádek hlavičky">
         <div class="head_interval" aria-label="Období">
           <div class="head_int_row">
             <label class="head_date">
@@ -69,8 +72,6 @@ $sysRestia = 'var';
           </div>
         </div>
 
-        <div class="head_arrow" aria-hidden="true">→</div>
-
         <div class="head_kpi" aria-label="KPI">
           <div class="head_kpi_item">
             <div class="head_kpi_k">Tržba</div>
@@ -89,14 +90,9 @@ $sysRestia = 'var';
             <div class="head_kpi_v">268 h</div>
           </div>
         </div>
-
-        <button type="button" class="head_tech cb-tip" data-tip="TECH" aria-label="TECH">
-          <span aria-hidden="true">⚙</span>
-        </button>
-
       </div>
 
-      <nav class="head_bottom" aria-label="Menu a stav systému">
+      <nav class="head_bottom" aria-label="Dolní řádek hlavičky">
         <div class="head_menu" role="navigation" aria-label="Hlavní menu">
           <button type="button" class="head_menu_btn is-on" onclick="if(window.CB_MENU){CB_MENU.goPage('top_dashboard');}">Dashboard</button>
           <button type="button" class="head_menu_btn" onclick="if(window.CB_MENU){CB_MENU.goPage('reporty_porovnani');}">Reporty</button>
@@ -106,6 +102,9 @@ $sysRestia = 'var';
 
         <div class="head_sys" aria-label="Stav systému">
           <div class="head_sys_title">Stav systému</div>
+          <button type="button" class="head_tech cb-tip" data-tip="TECH" aria-label="TECH">
+            <span aria-hidden="true">⚙</span>
+          </button>
           <div class="head_sys_line">
             <span class="head_sys_item"><span class="head_sys_lab">DB</span><span class="head_led is-<?= h($sysDb) ?>" aria-hidden="true"></span></span>
             <span class="head_sys_item"><span class="head_sys_lab">Směny</span><span class="head_led is-<?= h($sysSmeny) ?>" aria-hidden="true"></span></span>
@@ -120,6 +119,7 @@ $sysRestia = 'var';
           <div class="head_user_lab">Poslední přístup</div>
           <div class="head_user_lab">Přihlášení</div>
           <div class="head_user_lab">Seance</div>
+          <div class="head_user_lab">Do konce</div>
         </div>
 
         <div class="head_user_col head_user_col--right">
@@ -127,6 +127,7 @@ $sysRestia = 'var';
           <div class="head_user_val">1.3.2026 08:35</div>
           <div class="head_user_val">celkem 87× / dnes 2×</div>
           <div class="head_user_val">0 min / zbývá 20 min</div>
+          <div class="head_user_val" data-thermo="65" style="--thermo:65%">&nbsp;</div>
         </div>
 
         <a class="head_user_exit cb-tip" data-tip="Odhlásit" href="<?= h(cb_url('lib/logout.php')) ?>" aria-label="Odhlásit">
@@ -144,9 +145,7 @@ $sysRestia = 'var';
 </header>
 
 
-
 <?php
-// includes/hlavicka.php * Verze: V38 * Aktualizace: 03.03.2026 * Počet řádků: 152
-// Předchozí počet řádků: 140
+// includes/hlavicka.php * Verze: V39 * Aktualizace: 04.03.2026 * Počet řádků: 150
 // konec souboru
 ?>

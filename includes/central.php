@@ -8,7 +8,7 @@
  *
  * Cíl:
  * - Hlavička a patička se nehýbou (řeší body flex + dash_wrap scroll).
- * - Scroll je pouze uvnitř <main class="dash_wrap">.
+ * - Scroll je pouze uvnitř <main class="dash_box">.
  * - Uvnitř main je jen layoutový obal <div class="dash_grid">, ve kterém stránky typicky renderují karty.
  *
  * Volá / závisí na:
@@ -19,7 +19,7 @@ declare(strict_types=1);
 ?>
 
 <!-- CENTRAL START: dashboard kostra -->
-<main class="dash_wrap">
+<main class="dash_box">
   <?php
   /*
    * dash_grid = layoutový obal pro rozložení karet.

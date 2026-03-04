@@ -16,16 +16,16 @@ declare(strict_types=1);
 ?>
 
 <footer class="footer">
-    <div class="footer-inner">
-        <div class="footer-left">
+    <div class="footer_box">
+        <div class="foot_left">
             <strong>Comeback -</strong> informační systém
         </div>
 
-        <div class="footer-center">
+        <div class="foot_center">
             © 2026 Comeback (Stst)
         </div>
 
-        <div class="footer-right">
+        <div class="foot_right">
             <strong>verze 0.1</strong> (test)
         </div>
     </div>
