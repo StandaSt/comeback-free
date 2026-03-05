@@ -26,7 +26,7 @@ declare(strict_types=1);
         </div>
 
         <div class="foot_right">
-            <strong>verze 0.1</strong> (test)
+            <strong>verze 0.8</strong> 
         </div>
     </div>
 </footer>
