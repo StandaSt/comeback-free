@@ -1,6 +1,5 @@
-/* style/1/hlavicka.css * Verze: V49 * Aktualizace: 04.03.2026
-   Počet řádků: 345
-   Předchozí počet řádků: 339 */
+/* style/1/hlavicka.css * Verze: V55 * Aktualizace: 05.03.2026 */
+
 
 /* =========================
    HLAVIČKA (dashboard)
@@ -10,7 +9,7 @@
 
 .head_box{
   width:100%;
-  padding:6px 10px 6px 0;
+  padding:4px 10px 4px 0;
   background:var(--bg-body);
 }
 
@@ -18,9 +17,9 @@
 .head_grid{
   width:100%;
   display:grid;
-  grid-template-columns: 110px 1fr 330px;
+  grid-template-columns: 92px 1fr 330px;
   grid-template-rows:auto auto;
-  gap:8px;
+  gap:4px;
   align-items:stretch;
 }
 
@@ -28,8 +27,8 @@
 .head_logo{
   grid-column:1;
   grid-row:1 / span 2;
-  width:105px;
-  height:105px;
+  width:88px;
+  height:88px;
   display:block;
   border-radius:10px;
   overflow:hidden;
@@ -39,8 +38,8 @@
 }
 
 .head_logo_img{
-  width:100%;
-  height:100%;
+  width:90%;
+  height:90%;
   display:block;
   object-fit:contain;
 }
@@ -61,8 +60,8 @@
 }
 
 /* rozmístění */
-.head_top{ grid-column:2; grid-row:1; display:flex; align-items:center; gap:8px; min-width:0; }
-.head_bottom{ grid-column:2; grid-row:2; display:flex; align-items:center; gap:8px; min-width:0; }
+.head_top{ grid-column:2; grid-row:1; display:flex; align-items:center; gap:6px; min-width:0; }
+.head_bottom{ grid-column:2; grid-row:2; display:flex; align-items:center; gap:6px; min-width:0; }
 .head_user{ grid-column:3; grid-row:1 / span 2; }
 
 /* TECH – jen ikona (bez rámečku) */
@@ -84,20 +83,25 @@
 
 .head_tech span{ display:block; line-height:1; }
 
+/* TECH vpravo ve stav systému */
+.head_sys .head_tech{ margin-left:10px; order:99; }
+
 /* OBDOBÍ */
 .head_interval{
-    position:relative;
-display:flex;
+  position:relative;
+  display:flex;
   flex-direction:column;
   justify-content:center;
   gap:4px;
-  padding:6px 8px;
+  padding:4px 8px;
+  flex:0 0 300px;      /* pevná šířka bloku období */
+  max-width:300px;
 }
 
 
 /* šipka: vyhrazené místo mezi Období a KPI */
 .head_top .head_interval{
-  margin-right:26px;
+  margin-right:18px;
 }
 
 .head_interval::after{
@@ -117,7 +121,7 @@ display:flex;
   display:flex;
   align-items:center;
   justify-content:center;
-  gap:8px;
+  gap:6px;
 }
 
 .head_date{
@@ -131,31 +135,32 @@ display:flex;
 .head_date span{ min-width:20px; }
 
 .head_date input{
-  height: 22px;
-  padding:0 8px;
+  height: 18px;
+  padding:0 6px;
   border-radius:8px;
   border:1px solid rgba(0,0,0,.18);
   font-size:12px;
 }
 
 .head_quick{
-  display:grid;
-  grid-template-columns:repeat(4, 1fr);
+  display:flex;
   gap:6px;
   width:100%;
-  max-width:240px;
+  justify-content:flex-start;
 }
 
 .head_pill{
   height: 20px;
-  padding:0 8px;
-  border-radius:999px;
+  padding:0 6px;
+  border-radius:8px;   /* A varianta (méně kulaté) */
   border:1px solid rgba(0,0,0,.18);
   background:#fff;
   font-size:12px;
   cursor:pointer;
   white-space:nowrap;
-  width:100%;
+  text-align:center;
+  width:60px;          /* pevná šířka tlačítek období (užší) */
+  flex:0 0 60px;
 }
 
 .head_pill:hover{
@@ -163,22 +168,22 @@ display:flex;
 }
 
 .head_pill.is-on{
-  background:#2563eb;
-  border-color:#2563eb;
+  background:#4f8df6;
+  border-color:#4f8df6;
   color:#fff;
   font-weight:700;
 }
 
 .head_pill.is-on:hover{
-  background:#1d4ed8;
-  border-color:#1d4ed8;
+  background:#3f7fe8;
+  border-color:#3f7fe8;
 }
 
 
 /* pevná výška: období + KPI (stejné) */
 .head_interval,
 .head_kpi{
-  height:74px;
+  height:60px;
 }
 
 /* KPI */
@@ -188,13 +193,23 @@ display:flex;
   display:grid;
   grid-template-columns:repeat(4, minmax(0, 1fr));
   gap:6px;
-  align-items:center;
-  padding:6px 8px 6px 14px;
+  align-items:start;   /* zarovnání obsahu nahoru */
+  align-content:start;
+  padding:6px 8px;
 }
 
 .head_kpi_item{ min-width:0; }
 .head_kpi_k{ font-size:12px; color:#555; }
 .head_kpi_v{ font-size:14px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* KPI – optické oddělení (varianta A: mini-karty) */
+.head_kpi_item{
+  background:#eef6ff;
+  border:1px solid rgba(79,141,246,.25);
+  border-radius:8px;
+  padding:2px 6px;
+}
+
 
 .head_delta{
   font-size:12px;
@@ -210,7 +225,7 @@ display:flex;
   display:flex;
   align-items:center;
   gap:10px;
-  padding:0 8px;
+  padding:0 6px;
   overflow-x:auto;
   flex-wrap:nowrap;
   flex:1 1 auto;
@@ -218,16 +233,16 @@ display:flex;
 }
 
 .head_menu_btn{
-  height:22px;
-  line-height:22px;
+  height:20px;
+  line-height:20px;
   padding:0 14px;
-  border-radius:999px;
+  border-radius:6px;   /* B varianta (méně kulaté) */
   border:1px solid rgba(0,0,0,.18);
   background:#f6f6f6;
   cursor:pointer;
   font-size:13px;
   white-space:nowrap;
-  flex:0 0 auto;
+  flex:0 0 110px;
 }
 
 .head_menu_btn:hover{
@@ -235,15 +250,15 @@ display:flex;
 }
 
 .head_menu_btn.is-on{
-  background:#2563eb;
-  border-color:#2563eb;
+  background:#4f8df6;
+  border-color:#4f8df6;
   color:#fff;
   font-weight:700;
 }
 
 .head_menu_btn.is-on:hover{
-  background:#1d4ed8;
-  border-color:#1d4ed8;
+  background:#3f7fe8;
+  border-color:#3f7fe8;
 }
 
 /* STAV SYSTÉMU */
@@ -251,36 +266,41 @@ display:flex;
 /* stejné výšky: menu + stav systému */
 .head_bottom .head_menu,
 .head_bottom .head_sys{
-  height:44px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  height:40px;
 }
 
 .head_sys{
-  display:grid;
-  grid-template-columns:1fr auto;
-  grid-template-rows:auto auto;
+  display:flex;
   align-items:center;
-  gap:4px;
-  padding:0 8px;
-  flex:0 0 auto;
+  gap:10px;
+  padding:0 6px;
+  flex:0 0 260px;      /* pevná šířka bloku stav systému */
+  justify-content:flex-start;
 }
 
 .head_sys_title{
-  grid-column:1;
-  grid-row:1;
+
   font-size:12px;
   font-weight:700;
   color:#555;
   text-align:left;
+  white-space:nowrap;
 }
 
+.head_sys_title::after{ content:":"; }
+
+
 .head_sys_line{
-  grid-column:1 / span 2;
-  grid-row:2;
   display:flex;
+  order:1;
   justify-content:flex-end;
   gap:12px;
   align-items:center;
   flex-wrap:nowrap;
+  margin-left:auto;
 }
 
 .head_sys_item{
@@ -315,7 +335,7 @@ display:flex;
 
 .head_user_col{
   min-width:0;
-  padding:8px 10px;
+  padding:6px 10px;
   display:flex;
   flex-direction:column;
   justify-content:flex-start;
@@ -323,7 +343,7 @@ display:flex;
 }
 
 .head_user_col--left{ flex:1 1 55%; }
-.head_user_col--right{ flex:1 1 45%; text-align:left; }
+.head_user_col--right{ flex:1 1 45%; text-align:left;  padding-left:4px; }
 
 .head_user_name{
   font-size:14px;
@@ -354,9 +374,9 @@ display:flex;
 }
 
 /* LOGOUT – přilepeno vpravo */
-.head_user_exit{
-  flex:0 0 auto;
-  width:30px;
+\.head_user_exit{
+  flex:0 0 26px;
+  width:26px;
   display:flex;
   align-items:center;
   justify-content:center;
@@ -415,7 +435,10 @@ display:flex;
   .head_interval{ grid-column:2; grid-row:1; }
   .head_kpi{ grid-column:2; grid-row:2; }
   .head_tech{ grid-column:3; grid-row:1; }
-  .head_sys{ grid-column:3; grid-row:2; }
+  .head_sys{
+  display:flex;
+  align-items:center;
+  gap:6px; grid-column:3; grid-row:2; }
   .head_menu{ grid-column:2 / span 2; grid-row:3; }
   .head_user{ grid-column:4; grid-row:1 / span 3; }
 }
@@ -432,7 +455,10 @@ display:flex;
   .head_kpi{ grid-column:1 / span 2; grid-row:3; }
   .head_menu{ grid-column:1 / span 2; grid-row:4; }
   .head_tech{ display:none; }
-  .head_sys{ display:none; }
+  .head_sys{
+  display:flex;
+  align-items:center;
+  gap:6px; display:none; }
 }
 
 /* style/1/hlavicka.css */
@@ -458,3 +484,10 @@ display:flex;
   width:var(--thermo, 65%);
   background:linear-gradient(90deg, #22c55e 0%, #facc15 55%, #ef4444 100%);
 }
+
+/* style/1/hlavicka.css * Verze: V55 * Aktualizace: 05.03.2026 * Počet řádků: 493 */
+/* konec souboru */
+
+
+/* style/1/hlavicka.css * Verze: V55 * Aktualizace: 05.03.2026 * Počet řádků: 493 */
+/* konec souboru */
