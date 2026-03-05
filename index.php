@@ -390,7 +390,7 @@ if (!$maMobil) {
 $cb_page_exists = $cbPageExists;
 $cb_page_file = $file;
 
-require_once __DIR__ . '/includes/central.php';
+require_once __DIR__ . '/includes/main.php';
 
 require_once __DIR__ . '/includes/paticka.php';
 

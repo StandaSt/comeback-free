@@ -1,4 +1,4 @@
-/* style/1/global.css * Verze: V11 * Aktualizace: 03.03.2026 */
+/* style/1/global.css * Verze: V12 * Aktualizace: 05.03.2026 */
 
 /* =========================
    ZÁKLADNÍ NASTAVENÍ
@@ -40,11 +40,13 @@ main{
   padding:0px 10px 0px 10px;
   display:flex;
   flex-direction:column;
+  min-height:100vh;      /* výška celé stránky */
+  width:100%;
+  box-sizing:border-box;
   flex:1;               /* kontejner vyplní výšku mezi body okraji */
   min-height:0;         /* nutné pro správné fungování flex+scroll */
   overflow:hidden;      /* zabrání 'rozjíždění' layoutu mimo kontejner */
 }
-
 /* =========================
    TRACE / DEBUG
    ========================= */
@@ -157,5 +159,5 @@ main{
 }
 
 
-/* style/1/global.css * Verze: V11 * Aktualizace: 03.03.2026 * Počet řádků: 159 */
+/* style/1/global.css * Verze: V12 * Aktualizace: 05.03.2026 * Počet řádků: 163 */
 /* konec souboru */
