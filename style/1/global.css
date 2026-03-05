@@ -1,4 +1,4 @@
-/* style/1/global.css * Verze: V12 * Aktualizace: 05.03.2026 */
+/* style/1/global.css * Verze: V13 * Aktualizace: 05.03.2026 */
 
 /* =========================
    ZÁKLADNÍ NASTAVENÍ
@@ -27,7 +27,7 @@ body{
 
 main{
   flex:1;
-  overflow:hidden;   /* scroll řeší .dash_box */
+  overflow:hidden;   /* scroll řeší .dash_wrap */
 }
 
 
@@ -159,5 +159,5 @@ main{
 }
 
 
-/* style/1/global.css * Verze: V12 * Aktualizace: 05.03.2026 * Počet řádků: 163 */
+/* style/1/global.css * Verze: V13 * Aktualizace: 05.03.2026 * Počet řádků: 163 */
 /* konec souboru */

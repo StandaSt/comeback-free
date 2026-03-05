@@ -1,5 +1,5 @@
 <?php
-// index.php * Verze: V20 * Aktualizace: 03.03.2026
+// index.php * Verze: V21 * Aktualizace: 05.03.2026
 
 /*
  * FRONT CONTROLLER (centrální vstup aplikace)
@@ -69,8 +69,8 @@ if (isset($_SERVER['HTTP_X_COMEBACK_PARTIAL'])) {
  *
  * Pozn.: když by system.php ještě nebyl načtený, spadne to na 'uvod'.
  */
-$defaultGuest = defined('CB_DEFAULT_PAGE_GUEST') ? (string)CB_DEFAULT_PAGE_GUEST : 'uvod';
-$defaultUser  = defined('CB_DEFAULT_PAGE_USER')  ? (string)CB_DEFAULT_PAGE_USER  : 'uvod';
+$defaultGuest = 'dashboard';
+$defaultUser  = 'dashboard';
 $defaultPage  = (!empty($_SESSION['login_ok'])) ? $defaultUser : $defaultGuest;
 
 // FULL load: vždy výchozí stránka (URL se nemění a page z URL ignorujeme)
@@ -84,8 +84,14 @@ if ($cbIsPartial) {
 // Očištění page na povolené znaky: a–z, 0–9, podtržítko
 $pageKey = preg_replace('~[^a-z0-9_]+~i', '', $pageKey) ?: $defaultPage;
 
-// Sestavení cesty k souboru stránky v /pages
-$file = __DIR__ . '/pages/' . $pageKey . '.php';
+// Sestavení cesty k souboru stránky
+// - FULL: vždy dashboard (includes/dashboard.php)
+// - AJAX: jede dál přes /pages/<pageKey>.php
+if ($cbIsPartial) {
+    $file = __DIR__ . '/pages/' . $pageKey . '.php';
+} else {
+    $file = __DIR__ . '/includes/dashboard.php';
+}
 
 /* =========================
    3) Render / 404 + log
@@ -407,5 +413,5 @@ require_once __DIR__ . '/includes/paticka.php';
 </body>
 </html>
 <?php
-/* index.php * Verze: V20 * Aktualizace: 03.03.2026 * Počet řádků: 411 */
+/* index.php * Verze: V21 * Aktualizace: 05.03.2026 * Počet řádků: 417 */
 // Konec souboru

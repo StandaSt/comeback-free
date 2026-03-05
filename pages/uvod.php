@@ -15,7 +15,7 @@ declare(strict_types=1);
 
 
 <section class="card">
-    <p>Úvod</p>
+    <p>Úvod tady nebude</p>
 </section>
 <?php
 /* pages/uvod.php V1 – počet řádků: 22 – 18.1.2026 11:38 */

@@ -342,7 +342,7 @@
   gap:6px;
 }
 
-.head_user_col--left{ flex:1 1 55%; }
+.head_user_col--left{ flex:1 1 25%; }
 .head_user_col--right{ flex:1 1 45%; text-align:left;  padding-left:4px; }
 
 .head_user_name{
