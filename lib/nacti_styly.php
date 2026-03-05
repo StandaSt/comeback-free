@@ -8,7 +8,7 @@
  *
  * Zásady:
  * - NENAČÍTAT "page" CSS globálně (style/1/pages/*). Tyto soubory mohou rozbíjet jiné stránky.
- * - NENAČÍTAT style/1/layout.css (legacy). Nový layout je v global.css + hlavicka.css + central.css + paticka.css.
+ * - NENAČÍTAT style/1/layout.css (legacy). Nový layout je v global.css + hlavicka.css + main.css + paticka.css.
  *
  * Volá / závisí na:
  * - cb_url() (sestavení URL cesty)
@@ -27,14 +27,15 @@ declare(strict_types=1);
 
 <!-- 3) části layoutu -->
 <link rel="stylesheet" href="<?= h(cb_url('style/1/hlavicka.css')) ?>">
-<link rel="stylesheet" href="<?= h(cb_url('style/1/central.css')) ?>">
-<link rel="stylesheet" href="<?= h(cb_url('style/1/karty.css')) ?>">
+<link rel="stylesheet" href="<?= h(cb_url('style/1/main.css')) ?>">
 <link rel="stylesheet" href="<?= h(cb_url('style/1/paticka.css')) ?>">
+<link rel="stylesheet" href="<?= h(cb_url('style/1/karty.css')) ?>">
+
 
 <!-- moduly (globálně používané) -->
 <link rel="stylesheet" href="<?= h(cb_url('style/1/menu.css')) ?>">
 <link rel="stylesheet" href="<?= h(cb_url('style/1/tabulky.css')) ?>">
-<link rel="stylesheet" href="<?= h(cb_url('style/1/menu_tlac.css')) ?>">
+<!-- <link rel="stylesheet" href="<?= h(cb_url('style/1/menu_tlac.css')) ?>">  -->
 <link rel="stylesheet" href="<?= h(cb_url('style/1/ikony_svg.css')) ?>">
 <link rel="stylesheet" href="<?= h(cb_url('style/1/modal_alert.css')) ?>">
 

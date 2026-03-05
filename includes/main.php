@@ -1,10 +1,10 @@
 <?php
-// includes/central.php * Verze: V3 * Aktualizace: 03.03.2026
+// includes/main.php * Verze: V3 * Aktualizace: 03.03.2026
 // Počet řádků: 45
 // Předchozí počet řádků: 37
 
 /*
- * CENTRAL (obsah) – KOSTRA DASHBOARDU
+ * MAIN (obsah) – KOSTRA DASHBOARDU
  *
  * Cíl:
  * - Hlavička a patička se nehýbou (řeší body flex + dash_wrap scroll).
@@ -18,7 +18,7 @@
 declare(strict_types=1);
 ?>
 
-<!-- CENTRAL START: dashboard kostra -->
+<!-- MAIN START: dashboard kostra -->
 <main class="dash_box">
   <?php
   /*
@@ -37,8 +37,8 @@ declare(strict_types=1);
     ?>
   </div>
 </main>
-<!-- CENTRAL END -->
+<!-- main END -->
 
 <?php
-/* includes/central.php * Verze: V3 * Aktualizace: 03.03.2026 * Počet řádků: 45 */
+/* includes/main.php * Verze: V3 * Aktualizace: 03.03.2026 * Počet řádků: 45 */
 // Konec souboru

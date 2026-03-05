@@ -1,16 +1,16 @@
-/* style/1/central.css * Verze: V21 * Aktualizace: 05.03.2026
-   Central – dashboard výška (Varianta A: .container = hlavní flex sloupec)
+/* style/1/main.css * Verze: V21 * Aktualizace: 05.03.2026
+ Main – dashboard výška (Varianta A: .container = hlavní flex sloupec)
    Počet řádků: 41
    Předchozí počet řádků: 50 */
 
 /*
- * DŮLEŽITÉ:
- * - V aktuálním HTML (includes/central.php) je CENTRAL = <main class="dash_wrap"> ... </main>
+ * DŮLEŽITÉ:main
+ * - V aktuálním HTML (includes/main.php) je MAIN = <main class="dash_wrap"> ... </main>
  *   viz <main class="dash_wrap"> fileciteturn73file0L28-L37
  * - Tj. žádný wrapper .central se už nepoužívá, proto se zde řídí výška přímo přes .dash_wrap.
  *
  * Varianta A:
- * - <div class="container"> MUSÍ existovat a musí obalovat: hlavicka + central(main) + paticka.
+ * - <div class="container"> MUSÍ existovat a musí obalovat: hlavicka + main + paticka.
  * - .container je flex sloupec s min-height:100vh.
  * - .dash_wrap je flex:1 a udělá skutečný prostor mezi hlavičkou a patičkou.
  */
@@ -38,4 +38,4 @@
   box-sizing:border-box;
 }
 
-/* style/1/central.css * Verze: V21 * Aktualizace: 05.03.2026 * Počet řádků: 41 */
+/* style/1/main.css * Verze: V21 * Aktualizace: 05.03.2026 * Počet řádků: 41 */

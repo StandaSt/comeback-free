@@ -21,7 +21,7 @@
  * - lib/bootstrap.php
  * - lib/nacti_styly.php
  * - includes/hlavicka.php
- * - includes/central.php
+ * - includes/main.php
  * - includes/paticka.php
  * - pages/<pageKey>.php
  *

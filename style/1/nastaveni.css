@@ -12,7 +12,7 @@
     --sidebar-w: 130px;
 
     /* globální barvy projektu */
-    --bg-ram: #ffffff;        /* hlavička/patička/pozadí pod menu/central */
+    --bg-ram: #ffffff;        /* hlavička/patička/pozadí pod menu/main */
     --bg-body: #f5f6f8;       /* pozadí stránky + container */
     --tx-base: #1f2933;       /* základní text */
     --tx-muted: #52606d;      /* tlumený text */
