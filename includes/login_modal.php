@@ -1,5 +1,5 @@
 <?php
-// includes/login_modal.php * Verze: V3 * Aktualizace: 27.2.2026
+// includes/login_modal.php * Verze: V4 * Aktualizace: 06.03.2026
 declare(strict_types=1);
 
 /*
@@ -16,53 +16,44 @@ declare(strict_types=1);
  */
 
 ?>
-<div id="cb-login-overlay" class="modal-overlay" aria-modal="true" role="dialog" aria-label="Přihlášení uživatele">
+<div id="cb-login-overlay" class="modal-overlay" aria-modal="true" role="dialog" aria-label="Přihlášení do IS Comeback">
   <div class="modal">
 
-    <!-- hlavička modálu: logo + titulek -->
     <div class="modal-head">
       <div class="modal-logo" aria-hidden="true">
         <img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback">
       </div>
       <div>
-        <p class="modal-title">Informační systém Comeback</p>
-        <p class="modal-sub">Přihlášení uživatele</p>
+        <p class="modal-title">Přihlášení do IS Comeback</p>
+        <p class="modal-sub">Použijte přihlašovací údaje ze systému Směny.</p>
       </div>
     </div>
 
-    <!-- tělo modálu: info + formulář -->
-    <div class="cb-login-body">
-      <div class="cb-info">
-        Vstupujete do IS společnosti <strong>…</strong>.<br>
-        K přihlášení prosím použijte přihlašovací údaje ze systému pro plánování směn.
+    <form method="post" action="<?= h(cb_url('lib/login_smeny.php')) ?>">
+      <div class="cb-field">
+        <label for="cb_email">E-mail</label>
+        <input class="cb-input"
+               id="cb_email"
+               name="email"
+               type="email"
+               autocomplete="username"
+               required>
       </div>
 
-      <form method="post" action="<?= h(cb_url('lib/login_smeny.php')) ?>">
-        <div class="cb-field">
-          <label for="cb_email">E-mail</label>
-          <input class="cb-input"
-                 id="cb_email"
-                 name="email"
-                 type="email"
-                 autocomplete="username"
-                 required>
-        </div>
+      <div class="cb-field">
+        <label for="cb_pass">Heslo</label>
+        <input class="cb-input"
+               id="cb_pass"
+               name="heslo"
+               type="password"
+               autocomplete="current-password"
+               required>
+      </div>
 
-        <div class="cb-field">
-          <label for="cb_pass">Heslo</label>
-          <input class="cb-input"
-                 id="cb_pass"
-                 name="heslo"
-                 type="password"
-                 autocomplete="current-password"
-                 required>
-        </div>
-
-        <div class="cb-actions">
-          <button class="modal-btn primary" type="submit">Přihlásit</button>
-        </div>
-      </form>
-    </div>
+      <div class="cb-actions">
+        <button class="modal-btn primary" type="submit">Přihlásit</button>
+      </div>
+    </form>
 
   </div>
 </div>
@@ -77,5 +68,6 @@ declare(strict_types=1);
   })();
 </script>
 <?php
-/* includes/login_modal.php * Verze: V3 * Aktualizace: 27.2.2026 * Počet řádků: 81 */
+/* includes/login_modal.php * Verze: V4 * Aktualizace: 06.03.2026 * Počet řádků: 73 */
+/* Předchozí počet řádků: 81 */
 // Konec souboru
