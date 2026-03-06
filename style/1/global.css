@@ -86,13 +86,13 @@ main{
    TOOLTIP – GLOBÁLNÍ
    ========================= */
 
-.cb-tip{
+.tip_box{
   position:relative;
   display:inline-flex;
   align-items:center;
 }
 
-.cb-tip::after{
+.tip_box::after{
   content:attr(data-tip);
   position:absolute;
   right:calc(100% + 10px);
@@ -110,7 +110,7 @@ main{
   padding:6px 8px;
 }
 
-.cb-tip::before{
+.tip_box::before{
   content:"";
   position:absolute;
   right:calc(100% + 4px);
@@ -124,10 +124,27 @@ main{
   z-index:9999;
 }
 
-.cb-tip:hover::after,
-.cb-tip:hover::before,
-.cb-tip:focus-visible::after,
-.cb-tip:focus-visible::before{
+
+.tip_box_head::after{
+  left:50% !important;
+  right:auto !important;
+  top:auto !important;
+  bottom:100% !important;
+  transform:translate(-50%, -8px) !important;
+}
+
+.tip_box_head::before{
+  left:50% !important;
+  right:auto !important;
+  top:auto !important;
+  bottom:100% !important;
+  transform:translate(-50%, -2px) !important;
+}
+
+.tip_box:hover::after,
+.tip_box:hover::before,
+.tip_box:focus-visible::after,
+.tip_box:focus-visible::before{
   opacity:1;
   visibility:visible;
 }

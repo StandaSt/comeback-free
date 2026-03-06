@@ -1,0 +1,49 @@
+<?php
+// includes/mod_parovani.php * Verze: V1 * Aktualizace: 06.03.2026
+declare(strict_types=1);
+
+/*
+ * Kontrola spárovaného mobilu po přihlášení
+ * - LOCAL: párování se nevynucuje
+ * - ostatní prostředí: bez aktivního zařízení zobrazí prvni_login.php
+ *
+ * Vstup z index.php:
+ * - přihlášený uživatel v session
+ */
+
+$cbUser = $_SESSION['cb_user'] ?? null;
+$idUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
+
+$maMobil = false;
+
+$prostredi = (string)($GLOBALS['PROSTREDI'] ?? '');
+if ($prostredi === 'LOCAL') {
+    $maMobil = true;
+} else {
+    if ($idUser > 0) {
+        $conn = db();
+
+        $stmt = $conn->prepare('\n            SELECT id\n            FROM push_zarizeni\n            WHERE id_user=? AND aktivni=1\n            LIMIT 1\n        ');
+
+        if ($stmt) {
+            $stmt->bind_param('i', $idUser);
+            $stmt->execute();
+            $stmt->store_result();
+            $maMobil = ($stmt->num_rows > 0);
+            $stmt->close();
+        }
+    }
+}
+
+if ($maMobil) {
+    return;
+}
+
+echo '<div class="cb-login-fill"></div>';
+require_once __DIR__ . '/prvni_login.php';
+?>
+</div>
+</body>
+</html>
+<?php
+exit;

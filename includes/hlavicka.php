@@ -102,7 +102,7 @@ $sysRestia = 'var';
 
         <div class="head_sys" aria-label="Stav systému">
           <div class="head_sys_title">Stav systému</div>
-          <button type="button" class="head_tech cb-tip" data-tip="TECH" aria-label="TECH">
+          <button type="button" class="head_tech tip_box tip_box_head" data-tip="TECH" aria-label="TECH">
             <span aria-hidden="true">⚙</span>
           </button>
           <div class="head_sys_line">
@@ -130,7 +130,7 @@ $sysRestia = 'var';
           <div class="head_user_val" data-thermo="65" style="--thermo:65%">&nbsp;</div>
         </div>
 
-        <a class="head_user_exit cb-tip" data-tip="Odhlásit" href="<?= h(cb_url('lib/logout.php')) ?>" aria-label="Odhlásit">
+        <a class="head_user_exit tip_box tip_box_head" data-tip="Odhlásit" href="<?= h(cb_url('lib/logout.php')) ?>" aria-label="Odhlásit">
           <svg class="head_user_exit_ico" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" /><path d="M9 12h12l-3 -3" /><path d="M18 15l3 -3" /></svg>
         </a>
       </div>

@@ -81,6 +81,14 @@ function cb_url(string $path): string
     return $path;
 }
 
+function cb_url_abs(string $path): string
+{
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host   = (string)($_SERVER['HTTP_HOST'] ?? 'localhost');
+
+    return $scheme . '://' . $host . cb_url($path);
+}
+
 /**
  * Jediné místo pro "technické" informace do hlavičky.
  *

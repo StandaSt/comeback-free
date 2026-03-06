@@ -389,21 +389,7 @@
 
 /* LOGOUT hover (neutrální) */
 
-/* tooltip (cb-tip) pro logout: nad tlačítko */
-.head_user_exit.cb-tip::after{
-  left:50% !important;
-  right:auto !important;
-  top:auto !important;
-  bottom:100% !important;
-  transform:translate(-50%, -8px) !important;
-}
-.head_user_exit.cb-tip::before{
-  left:50% !important;
-  right:auto !important;
-  top:auto !important;
-  bottom:100% !important;
-  transform:translate(-50%, -2px) !important;
-}
+
 
 .head_user_exit:hover{
   background:#fee2e2;

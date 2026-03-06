@@ -1,44 +1,36 @@
 <?php
-// includes/main.php * Verze: V4 * Aktualizace: 05.03.2026
-// Počet řádků: 44
-// Předchozí počet řádků: 45
-
-/*
- * MAIN (obsah) – KOSTRA DASHBOARDU
- *
- * Cíl:
- * - Hlavička a patička se nehýbou (řeší body flex + dash_wrap scroll).
- * - Scroll je pouze uvnitř <main class="dash_wrap">.
- * - Uvnitř main je jen layoutový obal <div class="dash_grid">, ve kterém stránky typicky renderují karty.
- *
- * Volá / závisí na:
- * - proměnné z index.php: $cb_page_exists, $cb_page_file
- */
+// includes/main.php * Verze: V6 * Aktualizace: 06.03.2026
+// Počet řádků: 36
+// Předchozí počet řádků: 36
 
 declare(strict_types=1);
+
+/*
+ * MAIN (obsah) – kostra mezi hlavičkou a patičkou
+ *
+ * Cíl:
+ * - scroll je pouze uvnitř <main class="dash_box">
+ * - uvnitř main se renderuje obsah z aktuální include/page
+ * - dashboard už nepoužívá žádný další vnořený obal pro scroll
+ */
 ?>
 
-<!-- MAIN START: dashboard kostra -->
-<main class="dash_wrap">
+<!-- MAIN START -->
+<main class="dash_box">
   <?php
   /*
-   * dash_grid = layoutový obal pro rozložení karet.
-   * Pozn.: Neřeší vzhled karet, jen jejich umístění.
+   * Obsah renderuje zvolená include/page.
+   * Rozložení dashboard karet řeší dashboard.php přes .dash_grid.
    */
+  if (isset($file) && is_string($file) && $file !== '' && is_file($file)) {
+      require $file;
+  } else {
+      echo '<section class="card_box"><p>Obsah stránky nebyl nalezen.</p></section>';
+  }
   ?>
-  <div class="dash_grid">
-    <?php
-    if (!empty($cb_page_exists) && !empty($cb_page_file) && is_file($cb_page_file)) {
-        require $cb_page_file;
-    } else {
-        echo '<div class="page-head"><h2>Stránka nenalezena</h2></div>';
-        echo '<section class="card"><p>Požadovaná stránka neexistuje.</p></section>';
-    }
-    ?>
-  </div>
 </main>
-<!-- main END -->
+<!-- MAIN END -->
 
 <?php
-/* includes/main.php * Verze: V4 * Aktualizace: 05.03.2026 * Počet řádků: 45 */
+/* includes/main.php * Verze: V6 * Aktualizace: 06.03.2026 * Počet řádků: 36 */
 // Konec souboru

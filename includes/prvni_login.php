@@ -1,5 +1,5 @@
 <?php
-// includes/prvni_login.php * Verze: V4 * Aktualizace: 26.2.2026 * Počet řádků: 246
+// includes/prvni_login.php * Verze: V5 * Aktualizace: 06.03.2026
 declare(strict_types=1);
 
 /*
@@ -124,7 +124,7 @@ if ($loginOk && $idUser > 0) {
         $stmt->close();
     }
 
-    $pairUrl = 'https://pokus.xo.je/includes/parovani_mobilu.php?t=' . rawurlencode($token);
+    $pairUrl = cb_url('includes/parovani_mobilu.php?t=' . rawurlencode($token));
 }
 
 /* =========================
