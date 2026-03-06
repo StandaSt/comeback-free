@@ -1,5 +1,5 @@
 <?php
-// includes/mod_login.php * Verze: V1 * Aktualizace: 06.03.2026
+// includes/mod_login.php * Verze: V2 * Aktualizace: 06.03.2026
 declare(strict_types=1);
 
 /*
@@ -37,24 +37,36 @@ if ($cb2faToken !== '') {
     <div id="cb-2fa-ovl" role="dialog" aria-modal="true" aria-label="Schválení přihlášení">
       <div class="cb-2fa-card">
         <div class="cb-2fa-top">
-          <p class="cb-2fa-title">Schválení přihlášení</p>
+          <div class="cb-2fa-head">
+            <div class="cb-2fa-logo" aria-hidden="true">
+              <img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback">
+            </div>
+            <div>
+              <p class="cb-2fa-title">Schválení přihlášení</p>
+              <p class="cb-2fa-sub">IS Pizzacomeback</p>
+            </div>
+          </div>
           <button type="button" class="cb-2fa-x" id="cb2faClose" aria-label="Zavřít">×</button>
         </div>
 
         <div class="cb-2fa-body">
           <div class="cb-2fa-box">
-            Čeká se na schválení Vašeho přístupu.<br>
-            Prosím, zkontrolujte si Vaše registrované zařízení.
-            <div class="cb-2fa-qrwrap">
-              <div class="cb-2fa-qr" id="cb2faQr"></div>
-              <div class="cb-2fa-qrhint">
-                Pokud jste neobdržel notifikaci na zaregistrované zařízení,<br>
-                načtěte tento QR kód.
-              </div>
+            <div class="cb-2fa-main">
+              Potvrďte přihlášení na Vašem zařízení.
             </div>
+            <div class="cb-2fa-status" id="cb2faStatus">Na potvrzení přihlášení zbývá: --:--</div>
           </div>
 
-          <div class="cb-2fa-status" id="cb2faStatus">Čekám na rozhodnutí na mobilu…</div>
+          <div class="cb-2fa-fallback">
+            <div class="cb-2fa-fallback-line"></div>
+            <div class="cb-2fa-qrhint">
+              Pokud jste neobdržel/a notifikaci na registrované zařízení,<br>
+              načtěte tento QR kód.
+            </div>
+            <div class="cb-2fa-qrwrap">
+              <div class="cb-2fa-qr" id="cb2faQr"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -65,8 +77,19 @@ if ($cb2faToken !== '') {
         var st = document.getElementById('cb2faStatus');
         var btnX = document.getElementById('cb2faClose');
 
+        function fmt(sec){
+          if (typeof sec !== 'number' || sec < 0) {
+            sec = 0;
+          }
+          var m = Math.floor(sec / 60);
+          var s = sec % 60;
+          return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+        }
+
         function setTxt(t){
-          if (st) st.textContent = t;
+          if (st) {
+            st.textContent = t;
+          }
         }
 
         try {
@@ -75,8 +98,8 @@ if ($cb2faToken !== '') {
             if (el) {
               new QRCode(el, {
                 text: <?= json_encode($pairUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>,
-                width: 220,
-                height: 220
+                width: 168,
+                height: 168
               });
             }
           }
@@ -89,7 +112,7 @@ if ($cb2faToken !== '') {
             .then(function(r){ return r.json(); })
             .then(function(j){
               if (!j || j.ok !== true) {
-                setTxt('Chyba kontroly. Zkus to znovu.');
+                setTxt('Chyba kontroly. Zkuste to znovu.');
                 return;
               }
               if (j.stav === 'ok') {
@@ -107,13 +130,13 @@ if ($cb2faToken !== '') {
                 return;
               }
               if (typeof j.zbyva_sec === 'number') {
-                setTxt('Čekám na rozhodnutí na mobilu… (zbývá ' + j.zbyva_sec + ' s)');
+                setTxt('Na potvrzení přihlášení zbývá: ' + fmt(j.zbyva_sec));
                 return;
               }
-              setTxt('Čekám na rozhodnutí na mobilu…');
+              setTxt('Na potvrzení přihlášení zbývá: --:--');
             })
             .catch(function(){
-              setTxt('Chyba kontroly. Zkus to znovu.');
+              setTxt('Chyba kontroly. Zkuste to znovu.');
             });
         }
 
@@ -143,4 +166,6 @@ require_once __DIR__ . '/login_modal.php';
 </body>
 </html>
 <?php
-exit;
+/* includes/mod_login.php * Verze: V2 * Aktualizace: 06.03.2026 * Počet řádků: 143 */
+/* Předchozí počet řádků: 147 */
+// Konec souboru
