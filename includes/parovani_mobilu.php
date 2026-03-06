@@ -1,9 +1,10 @@
 <?php
-// includes/parovani_mobilu.php * Verze: V5 * Aktualizace: 27.2.2026
+// includes/parovani_mobilu.php * Verze: V6 * Aktualizace: 06.03.2026 * Počet řádků: 393
+// Předchozí počet řádků: 389
 declare(strict_types=1);
 
 /*
- * PÁROVÁNÍ MOBILU (mobilní stránka)
+ * REGISTRACE ZAŘÍZENÍ (mobilní stránka)
  *
  * Co dělá:
  * - jede BEZ session: identifikace uživatele je přes token v URL (?t=...)
@@ -30,11 +31,6 @@ if (isset($_GET['t'])) {
     $token = trim((string)$_GET['t']);
 }
 
-/*
- * Najde aktivní a nevypršelý párovací token.
- * - token se porovnává přes hash v DB (SHA2)
- * - vrací id řádku push_parovani a id_user
- */
 function cb_find_pair_token(string $token): ?array
 {
     if ($token === '' || strlen($token) < 20) {
@@ -77,9 +73,6 @@ function cb_find_pair_token(string $token): ?array
     ];
 }
 
-/* =========================
-   0) POST JSON: uložení subscription do DB (párování)
-   ========================= */
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     header('Content-Type: application/json; charset=utf-8');
 
@@ -93,116 +86,96 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             exit;
         }
 
-        $data = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+        $data = json_decode($raw, true);
         if (!is_array($data)) {
             http_response_code(400);
             echo json_encode(['ok' => false, 'err' => 'Neplatný JSON.'], JSON_UNESCAPED_UNICODE);
             exit;
         }
 
-        $t = $data['token'] ?? '';
-        if (!is_string($t)) {
-            $t = '';
-        }
-        $t = trim($t);
+        $tokenPost = isset($data['token']) ? trim((string)$data['token']) : '';
+        $subscription = $data['subscription'] ?? null;
+        $nazev = isset($data['nazev']) ? trim((string)$data['nazev']) : 'Zařízení';
 
-        $tok = cb_find_pair_token($t);
-        if ($tok === null) {
-            http_response_code(403);
-            echo json_encode(['ok' => false, 'err' => 'Neplatný nebo expirovaný token.'], JSON_UNESCAPED_UNICODE);
-            exit;
+        if ($nazev === '') {
+            $nazev = 'Zařízení';
         }
 
-        $idPar = (int)$tok['id'];
-        $idUser = (int)$tok['id_user'];
-
-        $sub = $data['subscription'] ?? null;
-        if (!is_array($sub)) {
+        if (!is_array($subscription)) {
             http_response_code(400);
             echo json_encode(['ok' => false, 'err' => 'Chybí subscription.'], JSON_UNESCAPED_UNICODE);
             exit;
         }
 
-        $endpoint = $sub['endpoint'] ?? '';
-        if (!is_string($endpoint) || trim($endpoint) === '') {
-            http_response_code(400);
-            echo json_encode(['ok' => false, 'err' => 'Chybí endpoint.'], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-        $endpoint = trim($endpoint);
+        $endpoint = isset($subscription['endpoint']) ? trim((string)$subscription['endpoint']) : '';
+        $keys = $subscription['keys'] ?? null;
 
-        $keys = $sub['keys'] ?? null;
-        if (!is_array($keys)) {
+        if ($endpoint === '' || !is_array($keys)) {
             http_response_code(400);
-            echo json_encode(['ok' => false, 'err' => 'Chybí keys.'], JSON_UNESCAPED_UNICODE);
+            echo json_encode(['ok' => false, 'err' => 'Neplatná subscription data.'], JSON_UNESCAPED_UNICODE);
             exit;
         }
 
-        $kPublic = $keys['p256dh'] ?? '';
-        $kAuth   = $keys['auth'] ?? '';
+        $p256dh = isset($keys['p256dh']) ? trim((string)$keys['p256dh']) : '';
+        $auth = isset($keys['auth']) ? trim((string)$keys['auth']) : '';
 
-        if (!is_string($kPublic) || trim($kPublic) === '') {
+        if ($p256dh === '' || $auth === '') {
             http_response_code(400);
-            echo json_encode(['ok' => false, 'err' => 'Chybí klic_public.'], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-        if (!is_string($kAuth) || trim($kAuth) === '') {
-            http_response_code(400);
-            echo json_encode(['ok' => false, 'err' => 'Chybí klic_auth.'], JSON_UNESCAPED_UNICODE);
+            echo json_encode(['ok' => false, 'err' => 'Chybí klíče subscription.'], JSON_UNESCAPED_UNICODE);
             exit;
         }
 
-        $kPublic = trim($kPublic);
-        $kAuth = trim($kAuth);
+        $pair = cb_find_pair_token($tokenPost);
+        if (!is_array($pair)) {
+            http_response_code(410);
+            echo json_encode(['ok' => false, 'err' => 'Token je neplatný nebo vypršel.'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
 
-        $nazev = $data['nazev'] ?? '';
-        if (!is_string($nazev)) {
-            $nazev = '';
-        }
-        $nazev = trim($nazev);
-        if ($nazev === '') {
-            $nazev = 'Mobil';
-        }
+        $idPar = (int)$pair['id'];
+        $idUser = (int)$pair['id_user'];
 
         $conn = db();
         $conn->begin_transaction();
 
-        // 1) deaktivuj stará zařízení (pravidlo: 1 aktivní)
-        $stmt = $conn->prepare('UPDATE push_zarizeni SET aktivni=0 WHERE id_user=?');
-        if ($stmt === false) {
-            throw new RuntimeException('DB: prepare selhal (deaktivace).');
+        $stmt = $conn->prepare('
+            UPDATE push_zarizeni
+            SET aktivni=0
+            WHERE id_user=?
+        ');
+        if (!$stmt) {
+            throw new RuntimeException('Nelze deaktivovat stará zařízení.');
         }
         $stmt->bind_param('i', $idUser);
         $stmt->execute();
         $stmt->close();
 
-        // 2) vlož/aktualizuj nové jako aktivní
-        $sql = '
-            INSERT INTO push_zarizeni
-            (id_user, endpoint, endpoint_hash, klic_public, klic_auth, nazev, aktivni, vytvoreno, naposledy)
-            VALUES
-            (?, ?, UNHEX(SHA2(?,256)), ?, ?, ?, 1, NOW(), NOW())
-            ON DUPLICATE KEY UPDATE
-              klic_public = VALUES(klic_public),
-              klic_auth   = VALUES(klic_auth),
-              nazev       = VALUES(nazev),
-              aktivni     = 1,
-              naposledy   = NOW()
-        ';
-
-        $stmt = $conn->prepare($sql);
-        if ($stmt === false) {
-            throw new RuntimeException('DB: prepare selhal (insert).');
+        $subJson = json_encode($subscription, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($subJson === false) {
+            throw new RuntimeException('Nelze serializovat subscription.');
         }
 
-        $stmt->bind_param('isssss', $idUser, $endpoint, $endpoint, $kPublic, $kAuth, $nazev);
+        $stmt = $conn->prepare('
+            INSERT INTO push_zarizeni
+              (id_user, nazev, endpoint, p256dh, auth, subscription_json, aktivni, vytvoreno_kdy)
+            VALUES
+              (?, ?, ?, ?, ?, ?, 1, NOW())
+        ');
+        if (!$stmt) {
+            throw new RuntimeException('Nelze uložit zařízení.');
+        }
+        $stmt->bind_param('isssss', $idUser, $nazev, $endpoint, $p256dh, $auth, $subJson);
         $stmt->execute();
         $stmt->close();
 
-        // 3) označ token jako použitý (a zneaktivni)
-        $stmt = $conn->prepare('UPDATE push_parovani SET aktivni=0, pouzito_kdy=NOW() WHERE id=?');
-        if ($stmt === false) {
-            throw new RuntimeException('DB: prepare selhal (token used).');
+        $stmt = $conn->prepare('
+            UPDATE push_parovani
+            SET pouzito_kdy=NOW(), aktivni=0
+            WHERE id=?
+            LIMIT 1
+        ');
+        if (!$stmt) {
+            throw new RuntimeException('Nelze uzavřít token.');
         }
         $stmt->bind_param('i', $idPar);
         $stmt->execute();
@@ -215,62 +188,58 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
 
     } catch (Throwable $e) {
         if ($conn instanceof mysqli) {
-            try {
-                $conn->rollback();
-            } catch (Throwable $e2) {
-                // nic
-            }
+            $conn->rollback();
         }
-
         http_response_code(500);
         echo json_encode(['ok' => false, 'err' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
         exit;
     }
 }
 
-/* =========================
-   1) HTML
-   ========================= */
-$tokenRow = cb_find_pair_token($token);
-$tokenOk = ($tokenRow !== null);
+$pair = cb_find_pair_token($token);
+$tokenOk = is_array($pair);
 ?>
 <!doctype html>
 <html lang="cs">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Comeback – párování mobilu</title>
+  <title>Comeback – registrace zařízení</title>
   <link rel="stylesheet" href="<?= h(cb_url('style/1/modal_alert.css')) ?>">
 </head>
 <body class="modal-page">
 
-  <div class="modal" role="dialog" aria-modal="true" aria-label="Párování mobilu">
+  <div class="modal modal-device-register" role="dialog" aria-modal="true" aria-label="Registrace zařízení">
 
     <a class="modal-x" href="about:blank" aria-label="Zavřít">×</a>
 
-    <div class="modal-head">
-      <div class="modal-logo"><img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback"></div>
-      <div>
-        <p class="modal-title">Párování mobilu</p>
-        <div class="modal-sub">Povol notifikace a spáruj mobil pro schvalování přihlášení.</div>
-      </div>
+    <div class="modal-head modal-head-top">
+      <div class="modal-logo modal-logo-lg"><img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback"></div>
     </div>
 
-    <?php if ($vapidPublic === '') { ?>
-      <p><strong>Chybí VAPID public key.</strong></p>
-      <p class="muted">Nastav konstantu <code>CB_VAPID_PUBLIC</code> v <code>lib/system.php</code>.</p>
-    <?php } elseif (!$tokenOk) { ?>
-      <p><strong>Neplatný nebo expirovaný odkaz.</strong></p>
-      <p class="muted">Vrať se na PC, otevři IS a vygeneruj nový QR kód pro párování.</p>
-    <?php } else { ?>
-      <p class="muted">Postup: 1) Povolit notifikace → 2) Spárovat mobil.</p>
+    <div class="modal-center modal-center-lg">
+      <p class="modal-title modal-title-center">Registrace zařízení</p>
 
-      <button type="button" class="modal-btn" id="btnPerm">1) Povolit notifikace</button>
-      <div class="modal-row" aria-hidden="true"></div>
-      <button type="button" class="modal-btn primary" id="btnPair" disabled>2) Spárovat mobil</button>
+      <?php if ($vapidPublic === '') { ?>
+        <p><strong>Chybí VAPID public key.</strong></p>
+        <p class="muted">Nastav konstantu <code>CB_VAPID_PUBLIC</code> v <code>lib/system.php</code>.</p>
+      <?php } elseif (!$tokenOk) { ?>
+        <p><strong>Neplatný nebo expirovaný odkaz.</strong></p>
+        <p class="muted">Vraťte se na PC, otevřete IS a vygenerujte nový QR kód pro registraci zařízení.</p>
+      <?php } else { ?>
+        <div class="modal-copy modal-copy-wide">
+          Je třeba povolit notifikace a zaregistrovat toto zařízení.
+        </div>
 
-      <div class="out" id="out">Stav: čekám…</div>
-    <?php } ?>
+        <button type="button" class="modal-btn" id="btnPerm">Povolit notifikace</button>
+        <div class="modal-spacer"></div>
+        <button type="button" class="modal-btn primary" id="btnPair" disabled>Registrovat zařízení</button>
+
+        <div class="modal-status modal-status-center" id="countdownTxt">Na zaregistrování zařízení zbývá: 05:00</div>
+        <div class="out" id="out">Stav: čekám…</div>
+      <?php } ?>
+
+    </div>
 
   </div>
 
@@ -280,9 +249,31 @@ $tokenOk = ($tokenRow !== null);
   var out = document.getElementById('out');
   var btnPerm = document.getElementById('btnPerm');
   var btnPair = document.getElementById('btnPair');
+  var countdownTxt = document.getElementById('countdownTxt');
+  var deadlineTs = Date.now() + 300000;
+
+  function pad(n){
+    return String(n).padStart(2, '0');
+  }
+
+  function renderCountdown(){
+    if (!countdownTxt) {
+      return;
+    }
+    var ms = deadlineTs - Date.now();
+    if (ms < 0) {
+      ms = 0;
+    }
+    var sec = Math.floor(ms / 1000);
+    var min = Math.floor(sec / 60);
+    var rest = sec % 60;
+    countdownTxt.textContent = 'Na zaregistrování zařízení zbývá: ' + pad(min) + ':' + pad(rest);
+  }
 
   function log(msg){
-    out.textContent = 'Stav: ' + msg;
+    if (out) {
+      out.textContent = 'Stav: ' + msg;
+    }
   }
 
   if (!('serviceWorker' in navigator)) {
@@ -312,33 +303,22 @@ $tokenOk = ($tokenRow !== null);
     return outputArray;
   }
 
-  navigator.serviceWorker.register('/sw.js').then(function(reg){
-    log('Service Worker registrován.');
-    if (Notification.permission === 'granted') {
-      btnPair.disabled = false;
-      log('Notifikace jsou povolené.');
-    }
-    return reg;
-  }).catch(function(err){
-    log('Registrace Service Worker selhala: ' + (err && err.message ? err.message : err));
-  });
-
   btnPerm.addEventListener('click', function(){
-    Notification.requestPermission().then(function(p){
-      if (p === 'granted') {
+    Notification.requestPermission().then(function(permission){
+      if (permission === 'granted') {
+        log('Notifikace byly povoleny.');
         btnPair.disabled = false;
-        log('Notifikace povoleny.');
-        return;
+      } else {
+        log('Notifikace nebyly povoleny.');
       }
-      log('Notifikace nejsou povoleny: ' + p);
     }).catch(function(err){
-      log('requestPermission selhal: ' + (err && err.message ? err.message : err));
+      log('Chyba: ' + (err && err.message ? err.message : err));
     });
   });
 
   btnPair.addEventListener('click', function(){
     if (Notification.permission !== 'granted') {
-      log('Nejdřív povol notifikace.');
+      log('Nejdřív povolte notifikace.');
       return;
     }
 
@@ -361,7 +341,7 @@ $tokenOk = ($tokenRow !== null);
         body: JSON.stringify({
           token: token,
           subscription: subscription,
-          nazev: 'Mobil'
+          nazev: 'Zařízení'
         })
       });
     }).then(function(res){
@@ -373,17 +353,21 @@ $tokenOk = ($tokenRow !== null);
         log('Uložení selhalo: ' + (r.data && r.data.err ? r.data.err : 'neznámá chyba'));
         return;
       }
-      log('Hotovo: mobil spárován. Můžeš se vrátit na PC.');
+      log('Hotovo: zařízení je zaregistrováno. Můžete se vrátit na PC.');
+      btnPair.disabled = true;
     }).catch(function(err){
       log('Chyba: ' + (err && err.message ? err.message : err));
     });
   });
 
+  renderCountdown();
+  setInterval(renderCountdown, 1000);
 })();
 </script>
 <?php } ?>
 </body>
 </html>
 <?php
-/* includes/parovani_mobilu.php * Verze: V5 * Aktualizace: 27.2.2026 * Počet řádků: 389 */
+/* includes/parovani_mobilu.php * Verze: V6 * Aktualizace: 06.03.2026 * Počet řádků: 393 */
+// Předchozí počet řádků: 389
 // Konec souboru

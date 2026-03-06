@@ -1,14 +1,14 @@
 <?php
-// includes/prvni_login.php * Verze: V5 * Aktualizace: 06.03.2026
+// includes/prvni_login.php * Verze: V5 * Aktualizace: 06.03.2026 * Počet řádků: 245
+// Předchozí počet řádků: 246
 declare(strict_types=1);
 
 /*
- * PRVNÍ PŘIHLÁŠENÍ – PC MODÁL (blokuje vstup do IS, dokud není spárovaný mobil)
+ * PRVNÍ PŘIHLÁŠENÍ – PC MODÁL (blokuje vstup do IS, dokud není spárované zařízení)
  *
  * Co dělá:
- * - zobrazí modální okno s informací + telefonem ze Směn (needotovatelné)
  * - vytvoří (nebo obnoví) párovací token v DB tabulce push_parovani (časově omezený)
- * - zobrazí QR kód (generuje se v prohlížeči přes js/qrcode.min.js) + textovou adresu
+ * - zobrazí QR kód pro registraci zařízení
  * - průběžně kontroluje, jestli už je v DB aktivní zařízení (push_zarizeni.aktivni=1)
  *   a jakmile ano, automaticky přesměruje do IS
  *
@@ -17,8 +17,9 @@ declare(strict_types=1);
  * - timeout 5 minut = zrušení párování + logout
  *
  * Pozn.:
- * - mobilní párování běží bez session přes includes/parovani_mobilu.php?t=...
+ * - mobilní registrace běží bez session přes includes/parovani_mobilu.php?t=...
  * - QR se generuje v prohlížeči; knihovna musí být uložená lokálně jako js/qrcode.min.js
+ * - vzhled řeší společné CSS v style/1/modal_alert.css
  */
 
 require_once __DIR__ . '/../lib/bootstrap.php';
@@ -28,11 +29,10 @@ header('X-Robots-Tag: noindex, nofollow');
 $loginOk = !empty($_SESSION['login_ok']);
 $cbUser  = $_SESSION['cb_user'] ?? null;
 
-$idUser  = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
-$telefon = (is_array($cbUser) && isset($cbUser['telefon'])) ? (string)$cbUser['telefon'] : '';
+$idUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
 
 /* =========================
-   0) JSON kontrola spárování (polling z PC)
+   0) JSON kontrola registrace (polling z PC)
    ========================= */
 if (isset($_GET['check']) && (string)$_GET['check'] === '1') {
     header('Content-Type: application/json; charset=utf-8');
@@ -93,77 +93,68 @@ if (isset($_GET['abort']) && (string)$_GET['abort'] === '1') {
    1) Vygeneruj párovací token (DB: push_parovani)
    ========================= */
 $pairUrl = '';
-$token   = '';
 
 if ($loginOk && $idUser > 0) {
-
-    // 64 hex znaků (32 bytes)
     $token = bin2hex(random_bytes(32));
 
-    $conn = db();
-
-    // 1) zneplatni starší aktivní tokeny uživatele
-    $stmt = $conn->prepare('UPDATE push_parovani SET aktivni=0 WHERE id_user=? AND aktivni=1');
+    $stmt = db()->prepare('
+        UPDATE push_parovani
+        SET aktivni=0
+        WHERE id_user=? AND aktivni=1 AND pouzito_kdy IS NULL
+    ');
     if ($stmt) {
         $stmt->bind_param('i', $idUser);
         $stmt->execute();
         $stmt->close();
     }
 
-    // 2) vlož nový token (hash v DB), expirace 10 minut
-    $stmt = $conn->prepare('
-        INSERT INTO push_parovani
-        (id_user, token_hash, aktivni, vytvoreno, expirace, pouzito_kdy)
-        VALUES
-        (?, UNHEX(SHA2(?,256)), 1, NOW(), (NOW() + INTERVAL 10 MINUTE), NULL)
+    $stmt = db()->prepare('
+        INSERT INTO push_parovani (id_user, token_hash, expirace, aktivni)
+        VALUES (?, UNHEX(SHA2(?, 256)), DATE_ADD(NOW(), INTERVAL 5 MINUTE), 1)
     ');
-
     if ($stmt) {
         $stmt->bind_param('is', $idUser, $token);
         $stmt->execute();
         $stmt->close();
     }
 
-    $pairUrl = cb_url_abs('includes/parovani_mobilu.php?t=' . rawurlencode($token));
+    $pairUrl = 'https://pokus.xo.je/includes/parovani_mobilu.php?t=' . rawurlencode($token);
 }
 
 /* =========================
    2) HTML (modál)
    ========================= */
 ?>
-<div class="modal-overlay" role="dialog" aria-modal="true" aria-label="První přihlášení">
-  <div class="modal">
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-label="Přihlašujete se poprvé do IS Pizzacomeback">
+  <div class="modal modal-pair-first">
 
     <button type="button" class="modal-x" id="cbPrvniClose" aria-label="Zavřít">×</button>
 
-    <div class="modal-head">
-      <div class="modal-logo">
+    <div class="modal-head modal-head-top">
+      <div class="modal-logo modal-logo-lg">
         <img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback">
       </div>
-      <div>
-        <p class="modal-title">První přihlášení</p>
-        <p class="modal-sub">Je toto Vaše telefonní číslo?</p>
+    </div>
+
+    <div class="modal-center modal-center-lg">
+      <p class="modal-title modal-title-center">Přihlašujete se poprvé</p>
+      <p class="modal-title modal-title-center">do IS Pizzacomeback</p>
+
+      <div class="modal-copy modal-copy-wide">
+        Je nutné zaregistrovat mobilní zařízení<br>
+        pro budoucí ověřování Vaší identity.
       </div>
-    </div>
 
-    <div class="modal-box">
-      <p class="modal-label">Telefon (ze Směn):</p>
-      <p class="modal-phone"><?= h($telefon !== '' ? $telefon : '---') ?></p>
-    </div>
-
-    <div class="modal-row">
-      <div class="modal-qr" id="cbPrvniQr"></div>
-
-      <div class="modal-instr">
-        Pokud telefonní číslo používáte, naskenujte QR kód, nebo zadejte do prohlížeče v mobilním telefonu tuto adresu:
-        <div class="modal-url" id="cbPrvniUrl"><?= h($pairUrl !== '' ? $pairUrl : '---') ?></div>
-        Dále postupujte podle pokynů v mobilním telefonu.
+      <div class="modal-copy modal-copy-wide">
+        Naskenujte QR kód pomocí zařízení<br>
+        které budete používat
       </div>
-    </div>
 
-    <div class="modal-foot">
-      <div class="modal-status" id="cbPrvniStatus">Čekám na spárování mobilu…</div>
-      <button type="button" class="modal-btn" id="cbPrvniReload">Zkontrolovat</button>
+      <div class="modal-qr modal-qr-main" id="cbPrvniQr"></div>
+
+      <div class="modal-status modal-status-center" id="cbPrvniStatus">
+        Na zaregistrování zařízení zbývá: 05:00
+      </div>
     </div>
 
   </div>
@@ -172,12 +163,29 @@ if ($loginOk && $idUser > 0) {
 <script src="<?= h(cb_url('js/qrcode.min.js')) ?>"></script>
 <script>
 (function(){
-  var btn = document.getElementById('cbPrvniReload');
-  var st  = document.getElementById('cbPrvniStatus');
-  var x   = document.getElementById('cbPrvniClose');
+  var st = document.getElementById('cbPrvniStatus');
+  var x  = document.getElementById('cbPrvniClose');
+  var deadlineTs = Date.now() + 300000;
 
   function setTxt(t){
-    st.textContent = t;
+    if (st) {
+      st.textContent = t;
+    }
+  }
+
+  function pad(n){
+    return String(n).padStart(2, '0');
+  }
+
+  function renderCountdown(){
+    var ms = deadlineTs - Date.now();
+    if (ms < 0) {
+      ms = 0;
+    }
+    var sec = Math.floor(ms / 1000);
+    var min = Math.floor(sec / 60);
+    var rest = sec % 60;
+    setTxt('Na zaregistrování zařízení zbývá: ' + pad(min) + ':' + pad(rest));
   }
 
   function doAbort(){
@@ -195,36 +203,33 @@ if ($loginOk && $idUser > 0) {
           return;
         }
         if (j.paired === true) {
-          setTxt('Mobil je spárován. Načítám IS…');
+          setTxt('Zařízení je zaregistrováno. Načítám IS…');
           window.location.href = '<?= h(cb_url('')) ?>';
           return;
         }
-        setTxt('Čekám na spárování mobilu…');
+        renderCountdown();
       })
       .catch(function(){
         setTxt('Chyba kontroly. Zkuste to znovu.');
       });
   }
 
-  btn.addEventListener('click', function(){
-    checkNow();
-  });
+  if (x) {
+    x.addEventListener('click', function(){
+      doAbort();
+    });
+  }
 
-  x.addEventListener('click', function(){
-    doAbort();
-  });
-
-  // QR (classic, čitelný čtečkami)
   try {
     var target = document.getElementById('cbPrvniQr');
-    var url    = <?php echo json_encode($pairUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+    var url = <?php echo json_encode($pairUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
     if (target && typeof QRCode === 'function' && url) {
       new QRCode(target, {
         text: url,
-        width: 164,
-        height: 164,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
+        width: 220,
+        height: 220,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
         correctLevel: QRCode.CorrectLevel.M
       });
     }
@@ -232,15 +237,16 @@ if ($loginOk && $idUser > 0) {
     // QR nesmí shodit modál
   }
 
+  renderCountdown();
+  setInterval(renderCountdown, 1000);
   setInterval(checkNow, 2500);
 
-  // Timeout 5 minut: bez párování => logout
   setTimeout(function(){
     doAbort();
   }, 300000);
-
 })();
 </script>
 <?php
-/* includes/prvni_login.php * Verze: V4 * Aktualizace: 26.2.2026 * Počet řádků: 246 */
+/* includes/prvni_login.php * Verze: V5 * Aktualizace: 06.03.2026 * Počet řádků: 245 */
+// Předchozí počet řádků: 246
 // Konec souboru

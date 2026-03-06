@@ -1,4 +1,5 @@
-/* style/1/modal_alert.css * Verze: V5 * Aktualizace: 06.03.2026 * Počet řádků: 429 */
+/* style/1/modal_alert.css * Verze: V6 * Aktualizace: 06.03.2026 * Počet řádků: 320 */
+/* Předchozí počet řádků: 429 */
 
 /*
  * Jednotné CSS pro všechny modály / „karty“ okolo přihlášení a párování.
@@ -7,10 +8,9 @@
  * - PC modál: .modal-overlay + .modal
  * - Mobilní stránka: .modal-page + .modal
  *
- * Pozn.: Styly se aktivují jen přes třídy níže, takže globální načtení v hlavicka.php nevadí.
+ * Pozn.: Styly se aktivují jen přes třídy níže, takže globální načtení nevadí.
  */
 
-/* ===== Základ (typografie, barvy drobností) ===== */
 .modal-page{
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   margin: 0;
@@ -31,7 +31,6 @@
   padding: 18px;
 }
 
-/* ===== Tělo modálu (box) ===== */
 .modal{
   position: relative;
   width: min(560px, 100%);
@@ -39,15 +38,13 @@
   border: 1px solid rgba(0,0,0,.14);
   border-radius: 18px;
   box-shadow: 0 18px 46px rgba(0,0,0,.18);
-  padding: 16px 16px 14px 16px;
+  padding: 16px 16px 18px 16px;
 }
 
-/* ===== Malá vertikální mezera (náhrada za inline style="height:10px") ===== */
 .modal-spacer{
   height: 10px;
 }
 
-/* ===== Zavírací X (vpravo nahoře) ===== */
 .modal-x{
   position: absolute;
   top: 10px;
@@ -74,12 +71,17 @@
   transform: translateY(1px);
 }
 
-/* ===== Hlavička modálu (logo + titulek) ===== */
 .modal-head{
   display: flex;
   gap: 12px;
   align-items: center;
   margin-bottom: 10px;
+}
+
+.modal-head-top{
+  justify-content: flex-start;
+  align-items: flex-start;
+  margin-bottom: 18px;
 }
 
 .modal-logo{
@@ -92,6 +94,12 @@
   place-items: center;
   overflow: hidden;
   flex: 0 0 auto;
+}
+
+.modal-logo-lg{
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
 }
 
 .modal-logo img{
@@ -107,6 +115,12 @@
   margin: 0;
 }
 
+.modal-title-center{
+  text-align: center;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
 .modal-sub{
   margin: 2px 0 0 0;
   color: rgba(15, 23, 42, .75);
@@ -114,7 +128,25 @@
   line-height: 1.35;
 }
 
-/* ===== Zvýrazněná informační „krabice“ (např. telefon) ===== */
+.modal-center{
+  display: grid;
+  gap: 16px;
+}
+
+.modal-center-lg{
+  gap: 18px;
+}
+
+.modal-copy{
+  font-size: 17px;
+  line-height: 1.45;
+  color: rgba(15, 23, 42, .88);
+}
+
+.modal-copy-wide{
+  text-align: center;
+}
+
 .modal-box{
   margin-top: 10px;
   padding: 12px;
@@ -136,7 +168,6 @@
   margin: 0;
 }
 
-/* ===== QR + instrukce (PC modál) ===== */
 .modal-row{
   display: flex;
   gap: 14px;
@@ -156,6 +187,12 @@
   overflow: hidden;
   flex: 0 0 auto;
   padding: 8px;
+}
+
+.modal-qr-main{
+  width: 250px;
+  height: 250px;
+  margin: 0 auto;
 }
 
 .modal-qr canvas,
@@ -183,7 +220,6 @@
   word-break: break-all;
 }
 
-/* ===== Patička modálu (status + tlačítko) ===== */
 .modal-foot{
   margin-top: 12px;
   display: flex;
@@ -197,13 +233,19 @@
   color: rgba(15, 23, 42, .75);
 }
 
-/* ===== Tlačítka ===== */
+.modal-status-center{
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
 .modal-btn{
   width: 100%;
   padding: 12px 14px;
   border-radius: 14px;
   border: 1px solid rgba(0,0,0,.14);
-  font-size: 14px;
+  font-size: 16px;
   cursor: pointer;
   background: #fff;
 }
@@ -226,7 +268,6 @@
   cursor: default;
 }
 
-/* ===== Pomocné texty / výstup ===== */
 .muted{
   color: rgba(15,23,42,.70);
   font-size: 13px;
@@ -246,68 +287,12 @@ code{
   border-radius: 8px;
 }
 
-/* ===== Login modal ===== */
-.cb-login-card{
-  width: min(460px, 100%);
-}
-
-.cb-login-body{
-  display: grid;
-  gap: 14px;
-}
-
-.cb-info{
-  display: none;
-}
-
-.cb-field{
-  display: grid;
-  gap: 6px;
-}
-
-.cb-field label{
-  font-size: 13px;
-  color: rgba(15, 23, 42, .76);
-  font-weight: 700;
-}
-
-.cb-input{
-  width: 100%;
-  height: 44px;
-  border: 1px solid rgba(15, 23, 42, .16);
-  border-radius: 14px;
-  padding: 0 14px;
-  font-size: 15px;
-  color: #0f172a;
-  background: #fff;
-  box-sizing: border-box;
-}
-
-.cb-input:focus{
-  outline: none;
-  border-color: rgba(37,99,235,.55);
-  box-shadow: 0 0 0 4px rgba(37,99,235,.10);
-}
-
-.cb-actions{
-  margin-top: 4px;
-}
-
-.cb-login-submit{
-  width: 100%;
-  min-height: 46px;
-  font-size: 15px;
-  font-weight: 700;
-}
-
 /* ===== 2FA čekací modál v index.php (PC) ===== */
 #cb-2fa-ovl{
   position: fixed;
   inset: 0;
   z-index: 99999;
-  background: rgba(8, 12, 18, .20);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(8, 12, 18, .72);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -315,13 +300,8 @@ code{
 }
 
 .cb-2fa-card{
-  width: min(520px, 100%);
-  background:
-    linear-gradient(to bottom, rgba(255,255,255,.92), rgba(255,255,255,.98)),
-    url('../img/logo_comeback.png');
-  background-repeat: no-repeat;
-  background-position: center 24px;
-  background-size: 220px auto;
+  width: min(560px, 100%);
+  background: #fff;
   border: 1px solid rgba(15, 23, 42, .14);
   border-radius: 18px;
   box-shadow: 0 18px 44px rgba(0,0,0,.22);
@@ -331,48 +311,17 @@ code{
 .cb-2fa-top{
   padding: 16px 18px 12px 18px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   border-bottom: 1px solid rgba(15, 23, 42, .14);
 }
 
-.cb-2fa-head{
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.cb-2fa-logo{
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  border: 1px solid rgba(0,0,0,.12);
-  background: #fff;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  flex: 0 0 auto;
-}
-
-.cb-2fa-logo img{
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  padding: 6px;
-}
-
 .cb-2fa-title{
   margin: 0;
-  font-size: 15px;
+  font-size: 24px;
   font-weight: 800;
-}
-
-.cb-2fa-sub{
-  margin: 2px 0 0 0;
-  color: rgba(15, 23, 42, .72);
-  font-size: 12.5px;
-  line-height: 1.35;
+  line-height: 1.25;
 }
 
 .cb-2fa-x{
@@ -392,52 +341,29 @@ code{
 .cb-2fa-body{
   padding: 14px 18px 18px 18px;
   display: grid;
-  gap: 14px;
+  gap: 16px;
 }
 
 .cb-2fa-box{
-  padding: 14px;
+  padding: 0;
   border-radius: 14px;
-  background: rgba(255,255,255,.88);
-  border: 1px solid rgba(0,0,0,.10);
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.cb-2fa-main{
-  font-size: 15px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.cb-2fa-status{
-  margin-top: 8px;
-  font-size: 14px;
-  color: rgba(15, 23, 42, .80);
-  font-weight: 700;
-}
-
-.cb-2fa-fallback{
-  display: grid;
-  gap: 10px;
-  justify-items: center;
-}
-
-.cb-2fa-fallback-line{
-  width: 100%;
-  height: 1px;
-  background: linear-gradient(90deg, rgba(15,23,42,0), rgba(15,23,42,.14), rgba(15,23,42,0));
+  background: transparent;
+  border: 0;
+  font-size: 18px;
+  line-height: 1.5;
+  color: rgba(15, 23, 42, .88);
 }
 
 .cb-2fa-qrwrap{
+  margin-top: 8px;
   display: grid;
   place-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .cb-2fa-qr{
-  width: 168px;
-  height: 168px;
+  width: 190px;
+  height: 190px;
   border-radius: 16px;
   background: #fff;
   border: 1px solid rgba(0,0,0,.12);
@@ -445,15 +371,9 @@ code{
   display: grid;
   place-items: center;
   overflow: hidden;
-  padding: 8px;
-  box-sizing: border-box;
 }
 
-.cb-2fa-qr > img{
-  width: 100%;
-  height: 100%;
-}
-
+.cb-2fa-qr > img,
 .cb-2fa-qr canvas,
 .cb-2fa-qr img{
   width: 100% !important;
@@ -462,12 +382,45 @@ code{
 }
 
 .cb-2fa-qrhint{
-  font-size: 12.5px;
+  font-size: 16px;
   color: rgba(15, 23, 42, .75);
   text-align: center;
   line-height: 1.45;
 }
 
-/* style/1/modal_alert.css * Verze: V5 * Aktualizace: 06.03.2026 * Počet řádků: 429 */
-/* Předchozí počet řádků: 361 */
+.cb-2fa-status{
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: center;
+}
+
+@media (max-width: 640px){
+  .modal,
+  .cb-2fa-card{
+    width: 100%;
+  }
+
+  .modal-title-center,
+  .cb-2fa-title{
+    font-size: 20px;
+  }
+
+  .modal-copy,
+  .cb-2fa-box,
+  .cb-2fa-status,
+  .modal-status-center,
+  .cb-2fa-qrhint{
+    font-size: 16px;
+  }
+
+  .modal-qr-main,
+  .cb-2fa-qr{
+    width: 210px;
+    height: 210px;
+  }
+}
+
+/* style/1/modal_alert.css * Verze: V6 * Aktualizace: 06.03.2026 * Počet řádků: 320 */
+/* Předchozí počet řádků: 429 */
 /* Konec souboru */

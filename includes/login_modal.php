@@ -16,15 +16,15 @@ declare(strict_types=1);
  */
 
 ?>
-<div id="cb-login-overlay" class="modal-overlay" aria-modal="true" role="dialog" aria-label="Přihlášení do IS Pizzacomeback">
-  <div class="modal cb-login-card">
+<div id="cb-login-overlay" class="modal-overlay" aria-modal="true" role="dialog" aria-label="Přihlášení do IS Comeback">
+  <div class="modal">
 
     <div class="modal-head">
       <div class="modal-logo" aria-hidden="true">
         <img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback">
       </div>
       <div>
-        <p class="modal-title">Přihlášení do IS Pizzacomeback</p>
+        <p class="modal-title">Přihlášení do IS Comeback</p>
         <p class="modal-sub">Použijte přihlašovací údaje ze systému Směny.</p>
       </div>
     </div>
@@ -51,7 +51,7 @@ declare(strict_types=1);
       </div>
 
       <div class="cb-actions">
-        <button class="modal-btn primary cb-login-submit" type="submit">Přihlásit</button>
+        <button class="modal-btn primary" type="submit">Přihlásit</button>
       </div>
     </form>
 
@@ -60,6 +60,7 @@ declare(strict_types=1);
 
 <script>
   (function(){
+    // malá prodleva kvůli renderu modálu, pak fokus do E-mail
     var email = document.getElementById('cb_email');
     if (email) {
       setTimeout(function(){ email.focus(); }, 60);
@@ -67,6 +68,6 @@ declare(strict_types=1);
   })();
 </script>
 <?php
-/* includes/login_modal.php * Verze: V4 * Aktualizace: 06.03.2026 * Počet řádků: 63 */
+/* includes/login_modal.php * Verze: V4 * Aktualizace: 06.03.2026 * Počet řádků: 73 */
 /* Předchozí počet řádků: 81 */
 // Konec souboru
