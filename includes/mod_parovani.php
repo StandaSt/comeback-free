@@ -1,5 +1,5 @@
 <?php
-// includes/mod_parovani.php * Verze: V1 * Aktualizace: 06.03.2026
+// includes/mod_parovani.php * Verze: V2 * Aktualizace: 06.03.2026
 declare(strict_types=1);
 
 /*
@@ -10,6 +10,10 @@ declare(strict_types=1);
  * Vstup z index.php:
  * - přihlášený uživatel v session
  */
+
+if (empty($_SESSION['login_ok'])) {
+    return;
+}
 
 $cbUser = $_SESSION['cb_user'] ?? null;
 $idUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
@@ -23,7 +27,12 @@ if ($prostredi === 'LOCAL') {
     if ($idUser > 0) {
         $conn = db();
 
-        $stmt = $conn->prepare('\n            SELECT id\n            FROM push_zarizeni\n            WHERE id_user=? AND aktivni=1\n            LIMIT 1\n        ');
+        $stmt = $conn->prepare('
+            SELECT id
+            FROM push_zarizeni
+            WHERE id_user=? AND aktivni=1
+            LIMIT 1
+        ');
 
         if ($stmt) {
             $stmt->bind_param('i', $idUser);

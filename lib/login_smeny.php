@@ -1,5 +1,5 @@
 <?php
-// lib/login_smeny.php * Verze: V23 * Aktualizace: 27.2.2026
+// lib/login_smeny.php * Verze: V24 * Aktualizace: 06.03.2026
 declare(strict_types=1);
 
 /*
@@ -11,11 +11,12 @@ declare(strict_types=1);
  * - načte pobočky (workingBranchNames) přes userGetLogged (2. dotaz)
  * - uloží data do session (bez login_ok)
  * - zavolá DB sync (db/db_user_login.php)
- * - připraví 2FA výzvu do DB (push_login_2fa) a odešle notifikaci na spárované zařízení (push_zarizeni)
- * - redirect na úvod (index.php zobrazí čekací modál)
+ * - při prvním loginu bez aktivního zařízení přeskočí 2FA a pustí uživatele do párování mobilu
+ * - při dalším loginu připraví 2FA výzvu do DB (push_login_2fa) a odešle notifikaci na spárované zařízení (push_zarizeni)
+ * - redirect na úvod (index.php zobrazí čekací modál nebo modál párování)
  *
  * Důležité:
- * - login_ok se nastaví AŽ po schválení 2FA (mobil)
+ * - login_ok se nastaví AŽ po schválení 2FA (mobil), nebo hned při LOCAL / prvním loginu bez zařízení
  * - LOCAL: 2FA se nepoužívá (notifikace z LOCAL nechodí) – po ověření ve Směnách se nastaví login_ok hned
  */
 
@@ -206,6 +207,36 @@ try {
         exit;
     }
 
+    // SERVER: bez aktivního zařízení je to první login => přeskoč 2FA a pusť párování
+    $maAktivniZarizeni = false;
+
+    $stmtDevice = db()->prepare('
+        SELECT id
+        FROM push_zarizeni
+        WHERE id_user=? AND aktivni=1
+        LIMIT 1
+    ');
+
+    if ($stmtDevice) {
+        $stmtDevice->bind_param('i', $idUser);
+        $stmtDevice->execute();
+        $stmtDevice->store_result();
+        $maAktivniZarizeni = ($stmtDevice->num_rows > 0);
+        $stmtDevice->close();
+    }
+
+    if (!$maAktivniZarizeni) {
+        $_SESSION['login_ok'] = 1;
+        unset($_SESSION['cb_2fa_token']);
+
+        cb_login_log_line('first_login_no_device', [
+            'id_user' => (string)$idUser,
+        ]);
+
+        header('Location: ' . cb_url(''));
+        exit;
+    }
+
     // ====== 2FA: vytvoř výzvu a čekej na schválení ======
     $limitSec = 300;
     if (defined('CB_2FA_LIMIT_SEC')) {
@@ -306,6 +337,6 @@ try {
     exit;
 }
 
-// lib/login_smeny.php * Verze: V23 * Aktualizace: 27.2.2026
-// Počet řádků: 312
+// lib/login_smeny.php * Verze: V24 * Aktualizace: 06.03.2026
+// Počet řádků: 334
 // Konec souboru

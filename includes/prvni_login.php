@@ -124,7 +124,7 @@ if ($loginOk && $idUser > 0) {
         $stmt->close();
     }
 
-    $pairUrl = cb_url('includes/parovani_mobilu.php?t=' . rawurlencode($token));
+    $pairUrl = cb_url_abs('includes/parovani_mobilu.php?t=' . rawurlencode($token));
 }
 
 /* =========================
