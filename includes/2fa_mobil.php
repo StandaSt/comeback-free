@@ -1,5 +1,5 @@
 <?php
-// includes/2fa_mobil.php * Verze: V7 * Aktualizace: 06.03.2026
+// includes/2fa_mobil.php * Verze: V8 * Aktualizace: 07.03.2026
 declare(strict_types=1);
 
 /*
@@ -176,6 +176,14 @@ if ($ip === '') {
 /* Čas rozhodnutí */
 $kdyRozhodnuto = date('j. n. Y \v H:i') . ' hod.';
 
+/* Debug */
+$dbgToken = substr($token, 0, 8);
+$dbgStav = $stav;
+if ($dbgStav === '') {
+    $dbgStav = is_array($row) ? 'ceka' : 'neznamy';
+}
+$dbgText = 'DBG: V8 | user ' . $idUser . ' | token ' . $dbgToken . ' | stav ' . $dbgStav;
+
 /* Texty do UI podle stavu */
 $title = 'Schválení přihlášení';
 $info = '';
@@ -311,6 +319,8 @@ $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
       </div>
     </div>
 
+    <div class="modal-copy"><?= h1($dbgText) ?></div>
+
     <?php if ($canDecide) { ?>
       <div class="approve-box">
         <p class="approve-label">Přihlašuje se uživatel:</p>
@@ -419,6 +429,6 @@ $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
 </body>
 </html>
 <?php
-/* includes/2fa_mobil.php * Verze: V7 * Aktualizace: 06.03.2026 * Počet řádků: 327 */
-/* Předchozí počet řádků: 282 */
+/* includes/2fa_mobil.php * Verze: V8 * Aktualizace: 07.03.2026 * Počet řádků: 434 */
+/* Předchozí počet řádků: 327 */
 // Konec souboru

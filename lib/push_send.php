@@ -1,5 +1,5 @@
 <?php
-// lib/push_send.php * Verze: V1 * Aktualizace: 26.2.2026
+// lib/push_send.php * Verze: V2 * Aktualizace: 07.03.2026
 declare(strict_types=1);
 
 /*
@@ -130,14 +130,17 @@ function cb_push_send_2fa(int $idUser, string $token2fa): bool
 
     $webPush = new Minishlink\WebPush\WebPush($auth);
 
-    $url = cb_url('includes/2fa_mobil.php?t=' . rawurlencode($token2fa));
+    $url = cb_url_abs('includes/2fa_mobil.php?t=' . rawurlencode($token2fa));
+    $dbgToken = substr($token2fa, 0, 8);
+    $dbgText = 'DBG: V2 | user ' . $idUser . ' | token ' . $dbgToken . ' | stav ceka';
 
     $payloadArr = [
         'type' => '2FA_LOGIN',
         'title' => 'Comeback',
-        'body' => 'Schvalte přihlášení do IS.',
+        'body' => 'Schvalte přihlášení do IS. ' . $dbgText,
         'url' => $url,
         'token' => $token2fa,
+        'debug' => $dbgText,
     ];
 
     $payload = json_encode($payloadArr, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -198,5 +201,6 @@ function cb_push_send_2fa(int $idUser, string $token2fa): bool
     return true;
 }
 
-// lib/push_send.php * Verze: V1 * Aktualizace: 26.2.2026 * Počet řádků: 202
+// lib/push_send.php * Verze: V2 * Aktualizace: 07.03.2026 * Počet řádků: 206
+// Předchozí počet řádků: 202
 // Konec souboru

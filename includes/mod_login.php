@@ -1,5 +1,5 @@
 <?php
-// includes/mod_login.php * Verze: V2 * Aktualizace: 06.03.2026
+// includes/mod_login.php * Verze: V3 * Aktualizace: 07.03.2026
 declare(strict_types=1);
 
 /*
@@ -31,6 +31,13 @@ if ($cb2faToken !== '') {
     $checkUrl = cb_url('lib/push_2fa_api.php?check=1');
     $cancelUrl = cb_url('lib/push_2fa_api.php?cancel=1');
 
+    $dbgUser = 0;
+    if (isset($_SESSION['cb_user']) && is_array($_SESSION['cb_user']) && isset($_SESSION['cb_user']['id_user'])) {
+        $dbgUser = (int)$_SESSION['cb_user']['id_user'];
+    }
+    $dbgToken = substr($cb2faToken, 0, 8);
+    $dbgText = 'DBG: V3 | user ' . $dbgUser . ' | token ' . $dbgToken . ' | stav ceka';
+
     echo '<div class="cb-login-fill"></div>';
     ?>
 
@@ -55,6 +62,7 @@ if ($cb2faToken !== '') {
               Potvrďte přihlášení na Vašem zařízení.
             </div>
             <div class="cb-2fa-status" id="cb2faStatus">Na potvrzení přihlášení zbývá: --:--</div>
+            <div class="cb-2fa-status" id="cb2faDbg"><?= h($dbgText) ?></div>
           </div>
 
           <div class="cb-2fa-fallback">
@@ -166,6 +174,6 @@ require_once __DIR__ . '/login_modal.php';
 </body>
 </html>
 <?php
-/* includes/mod_login.php * Verze: V2 * Aktualizace: 06.03.2026 * Počet řádků: 143 */
-/* Předchozí počet řádků: 147 */
+/* includes/mod_login.php * Verze: V3 * Aktualizace: 07.03.2026 * Počet řádků: 179 */
+/* Předchozí počet řádků: 143 */
 // Konec souboru

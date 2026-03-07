@@ -1,6 +1,6 @@
 <?php
-// includes/parovani_mobilu.php * Verze: V6 * Aktualizace: 06.03.2026 * Počet řádků: 393
-// Předchozí počet řádků: 389
+// includes/parovani_mobilu.php * Verze: V7 * Aktualizace: 07.03.2026 * Počet řádků: 376
+// Předchozí počet řádků: 393
 declare(strict_types=1);
 
 /*
@@ -198,6 +198,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
 
 $pair = cb_find_pair_token($token);
 $tokenOk = is_array($pair);
+$dbgUser = $tokenOk ? (int)($pair['id_user'] ?? 0) : 0;
+$dbgToken = substr($token, 0, 8);
+$dbgStav = $tokenOk ? 'token_ok' : 'token_bad';
+$dbgText = 'DBG: V7 | user ' . $dbgUser . ' | token ' . $dbgToken . ' | stav ' . $dbgStav;
 ?>
 <!doctype html>
 <html lang="cs">
@@ -219,6 +223,7 @@ $tokenOk = is_array($pair);
 
     <div class="modal-center modal-center-lg">
       <p class="modal-title modal-title-center">Registrace zařízení</p>
+      <div class="modal-copy modal-copy-wide"><?= h($dbgText) ?></div>
 
       <?php if ($vapidPublic === '') { ?>
         <p><strong>Chybí VAPID public key.</strong></p>
@@ -368,6 +373,4 @@ $tokenOk = is_array($pair);
 </body>
 </html>
 <?php
-/* includes/parovani_mobilu.php * Verze: V6 * Aktualizace: 06.03.2026 * Počet řádků: 393 */
-// Předchozí počet řádků: 389
 // Konec souboru
