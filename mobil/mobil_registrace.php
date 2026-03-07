@@ -1,23 +1,23 @@
 <?php
-// mobil/mobil_registrace.php * Verze: V7 * Aktualizace: 07.03.2026 * Po�et ��dk�: 376
-// P�edchoz� po�et ��dk�: 393
+// mobil/mobil_registrace.php * Verze: V7 * Aktualizace: 07.03.2026 * Počet řádků: 376
+// Předchozí počet řádků: 393
 declare(strict_types=1);
 
 /*
- * REGISTRACE ZA��ZEN� (mobiln� str�nka)
+ * REGISTRACE ZAŘÍZENÍ (mobilní stránka)
  *
- * Co d�l�:
- * - jede BEZ session: identifikace u�ivatele je p�es token v URL (?t=...)
- * - vy��d� povolen� notifikac�
+ * Co dělá:
+ * - jede BEZ session: identifikace uživatele je přes token v URL (?t=...)
+ * - vyžádá povolení notifikací
  * - zaregistruje Service Worker (/sw.js)
- * - vytvo�� Push subscription (VAPID public)
- * - ode�le subscription + token na server (POST)
- * - server ov��� token v tabulce push_parovani (hash, aktivn�, neexpirace, nepou�it�)
- * - pravidlo: v�dy jen 1 aktivn� za��zen� (ostatn� deaktivuje)
- * - ulo�� subscription do DB do push_zarizeni a ozna�� token jako pou�it�
+ * - vytvoří Push subscription (VAPID public)
+ * - odešle subscription + token na server (POST)
+ * - server ověří token v tabulce push_parovani (hash, aktivní, neexpirace, nepoužitý)
+ * - pravidlo: vždy jen 1 aktivní zařízení (ostatní deaktivuje)
+ * - uloží subscription do DB do push_zarizeni a označí token jako použitý
  *
  * CSS:
- * - pou��v� jednotn� t��dy z style/1/modal_alert.css (modal-page, modal, modal-btn, atd.)
+ * - používá jednotné třídy z style/1/modal_alert.css (modal-page, modal, modal-btn, atd.)
  */
 
 require_once __DIR__ . '/../lib/bootstrap.php';
@@ -82,28 +82,28 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $raw = (string)file_get_contents('php://input');
         if ($raw === '') {
             http_response_code(400);
-            echo json_encode(['ok' => false, 'err' => 'Chyb� JSON.'], JSON_UNESCAPED_UNICODE);
+            echo json_encode(['ok' => false, 'err' => 'Chybí JSON.'], JSON_UNESCAPED_UNICODE);
             exit;
         }
 
         $data = json_decode($raw, true);
         if (!is_array($data)) {
             http_response_code(400);
-            echo json_encode(['ok' => false, 'err' => 'Neplatn� JSON.'], JSON_UNESCAPED_UNICODE);
+            echo json_encode(['ok' => false, 'err' => 'Neplatný JSON.'], JSON_UNESCAPED_UNICODE);
             exit;
         }
 
         $tokenPost = isset($data['token']) ? trim((string)$data['token']) : '';
         $subscription = $data['subscription'] ?? null;
-        $nazev = isset($data['nazev']) ? trim((string)$data['nazev']) : 'Za��zen�';
+        $nazev = isset($data['nazev']) ? trim((string)$data['nazev']) : 'Zařízení';
 
         if ($nazev === '') {
-            $nazev = 'Za��zen�';
+            $nazev = 'Zařízení';
         }
 
         if (!is_array($subscription)) {
             http_response_code(400);
-            echo json_encode(['ok' => false, 'err' => 'Chyb� subscription.'], JSON_UNESCAPED_UNICODE);
+            echo json_encode(['ok' => false, 'err' => 'Chybí subscription.'], JSON_UNESCAPED_UNICODE);
             exit;
         }
 
@@ -112,7 +112,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
 
         if ($endpoint === '' || !is_array($keys)) {
             http_response_code(400);
-            echo json_encode(['ok' => false, 'err' => 'Neplatn� subscription data.'], JSON_UNESCAPED_UNICODE);
+            echo json_encode(['ok' => false, 'err' => 'Neplatná subscription data.'], JSON_UNESCAPED_UNICODE);
             exit;
         }
 
@@ -121,14 +121,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
 
         if ($p256dh === '' || $auth === '') {
             http_response_code(400);
-            echo json_encode(['ok' => false, 'err' => 'Chyb� kl��e subscription.'], JSON_UNESCAPED_UNICODE);
+            echo json_encode(['ok' => false, 'err' => 'Chybí klíče subscription.'], JSON_UNESCAPED_UNICODE);
             exit;
         }
 
         $pair = cb_find_pair_token($tokenPost);
         if (!is_array($pair)) {
             http_response_code(410);
-            echo json_encode(['ok' => false, 'err' => 'Token je neplatn� nebo vypr�el.'], JSON_UNESCAPED_UNICODE);
+            echo json_encode(['ok' => false, 'err' => 'Token je neplatný nebo vypršel.'], JSON_UNESCAPED_UNICODE);
             exit;
         }
 
@@ -144,7 +144,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             WHERE id_user=?
         ');
         if (!$stmt) {
-            throw new RuntimeException('Nelze deaktivovat star� za��zen�.');
+            throw new RuntimeException('Nelze deaktivovat stará zařízení.');
         }
         $stmt->bind_param('i', $idUser);
         $stmt->execute();
@@ -162,7 +162,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
               (?, ?, ?, ?, ?, ?, 1, NOW())
         ');
         if (!$stmt) {
-            throw new RuntimeException('Nelze ulo�it za��zen�.');
+            throw new RuntimeException('Nelze uložit zařízení.');
         }
         $stmt->bind_param('isssss', $idUser, $nazev, $endpoint, $p256dh, $auth, $subJson);
         $stmt->execute();
@@ -175,7 +175,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             LIMIT 1
         ');
         if (!$stmt) {
-            throw new RuntimeException('Nelze uzav��t token.');
+            throw new RuntimeException('Nelze uzavřít token.');
         }
         $stmt->bind_param('i', $idPar);
         $stmt->execute();
@@ -208,40 +208,40 @@ $dbgText = 'DBG: V7 | user ' . $dbgUser . ' | token ' . $dbgToken . ' | stav ' .
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Comeback � registrace za��zen�</title>
+  <title>Comeback – registrace zařízení</title>
   <link rel="stylesheet" href="<?= h(cb_url('style/1/modal_alert.css')) ?>">
 </head>
 <body class="modal-page">
 
-  <div class="modal modal-device-register" role="dialog" aria-modal="true" aria-label="Registrace za��zen�">
+  <div class="modal modal-device-register" role="dialog" aria-modal="true" aria-label="Registrace zařízení">
 
-    <a class="modal-x" href="about:blank" aria-label="Zav��t">�</a>
+    <a class="modal-x" href="about:blank" aria-label="Zavřít">×</a>
 
     <div class="modal-head modal-head-top">
       <div class="modal-logo modal-logo-lg"><img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback"></div>
     </div>
 
     <div class="modal-center modal-center-lg">
-      <p class="modal-title modal-title-center">Registrace za��zen�</p>
+      <p class="modal-title modal-title-center">Registrace zařízení</p>
       <div class="modal-copy modal-copy-wide"><?= h($dbgText) ?></div>
 
       <?php if ($vapidPublic === '') { ?>
-        <p><strong>Chyb� VAPID public key.</strong></p>
+        <p><strong>Chybí VAPID public key.</strong></p>
         <p class="muted">Nastav konstantu <code>CB_VAPID_PUBLIC</code> v <code>lib/system.php</code>.</p>
       <?php } elseif (!$tokenOk) { ?>
-        <p><strong>Neplatn� nebo expirovan� odkaz.</strong></p>
-        <p class="muted">Vra�te se na PC, otev�ete IS a vygenerujte nov� QR k�d pro registraci za��zen�.</p>
+        <p><strong>Neplatný nebo expirovaný odkaz.</strong></p>
+        <p class="muted">Vraťte se na PC, otevřete IS a vygenerujte nový QR kód pro registraci zařízení.</p>
       <?php } else { ?>
         <div class="modal-copy modal-copy-wide">
-          Je t�eba povolit notifikace a zaregistrovat toto za��zen�.
+          Je třeba povolit notifikace a zaregistrovat toto zařízení.
         </div>
 
         <button type="button" class="modal-btn" id="btnPerm">Povolit notifikace</button>
         <div class="modal-spacer"></div>
-        <button type="button" class="modal-btn primary" id="btnPair" disabled>Registrovat za��zen�</button>
+        <button type="button" class="modal-btn primary" id="btnPair" disabled>Registrovat zařízení</button>
 
-        <div class="modal-status modal-status-center" id="countdownTxt">Na zaregistrov�n� za��zen� zb�v�: 05:00</div>
-        <div class="out" id="out">Stav: �ek�m�</div>
+        <div class="modal-status modal-status-center" id="countdownTxt">Na zaregistrování zařízení zbývá: 05:00</div>
+        <div class="out" id="out">Stav: čekám…</div>
       <?php } ?>
 
     </div>
@@ -272,7 +272,7 @@ $dbgText = 'DBG: V7 | user ' . $dbgUser . ' | token ' . $dbgToken . ' | stav ' .
     var sec = Math.floor(ms / 1000);
     var min = Math.floor(sec / 60);
     var rest = sec % 60;
-    countdownTxt.textContent = 'Na zaregistrov�n� za��zen� zb�v�: ' + pad(min) + ':' + pad(rest);
+    countdownTxt.textContent = 'Na zaregistrování zařízení zbývá: ' + pad(min) + ':' + pad(rest);
   }
 
   function log(msg){
@@ -282,15 +282,15 @@ $dbgText = 'DBG: V7 | user ' . $dbgUser . ' | token ' . $dbgToken . ' | stav ' .
   }
 
   if (!('serviceWorker' in navigator)) {
-    log('Service Worker nen� podporovan�.');
+    log('Service Worker není podporovaný.');
     return;
   }
   if (!('Notification' in window)) {
-    log('Notifikace nejsou podporovan�.');
+    log('Notifikace nejsou podporované.');
     return;
   }
   if (!('PushManager' in window)) {
-    log('PushManager nen� podporovan�.');
+    log('PushManager není podporovaný.');
     return;
   }
 
@@ -323,7 +323,7 @@ $dbgText = 'DBG: V7 | user ' . $dbgUser . ' | token ' . $dbgToken . ' | stav ' .
 
   btnPair.addEventListener('click', function(){
     if (Notification.permission !== 'granted') {
-      log('Nejd��v povolte notifikace.');
+      log('Nejdřív povolte notifikace.');
       return;
     }
 
@@ -338,7 +338,7 @@ $dbgText = 'DBG: V7 | user ' . $dbgUser . ' | token ' . $dbgToken . ' | stav ' .
         });
       });
     }).then(function(subscription){
-      log('Subscription z�sk�n, ukl�d�m do DB�');
+      log('Subscription získán, ukládám do DB…');
 
       return fetch('', {
         method: 'POST',
@@ -346,7 +346,7 @@ $dbgText = 'DBG: V7 | user ' . $dbgUser . ' | token ' . $dbgToken . ' | stav ' .
         body: JSON.stringify({
           token: token,
           subscription: subscription,
-          nazev: 'Za��zen�'
+          nazev: 'Zařízení'
         })
       });
     }).then(function(res){
@@ -355,10 +355,10 @@ $dbgText = 'DBG: V7 | user ' . $dbgUser . ' | token ' . $dbgToken . ' | stav ' .
       });
     }).then(function(r){
       if (r.status !== 200 || !r.data || r.data.ok !== true) {
-        log('Ulo�en� selhalo: ' + (r.data && r.data.err ? r.data.err : 'nezn�m� chyba'));
+        log('Uložení selhalo: ' + (r.data && r.data.err ? r.data.err : 'neznámá chyba'));
         return;
       }
-      log('Hotovo: za��zen� je zaregistrov�no. M��ete se vr�tit na PC.');
+      log('Hotovo: zařízení je zaregistrováno. Můžete se vrátit na PC.');
       btnPair.disabled = true;
     }).catch(function(err){
       log('Chyba: ' + (err && err.message ? err.message : err));

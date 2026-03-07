@@ -3,15 +3,15 @@
 declare(strict_types=1);
 
 /*
- * Nep�ihl�en� stav
- * - zobraz� �ek�n� na 2FA po zad�n� hesla
- * - nebo klasick� login modal
+ * Nepřihlášený stav
+ * - zobrazí čekání na 2FA po zadání hesla
+ * - nebo klasický login modal
  *
  * Vstup z index.php:
- * - otev�en� layout kontejneru a hlavi�ka
+ * - otevřený layout kontejneru a hlavička
  *
- * Chov�n�:
- * - po vykreslen� mod�lu ukon�� request p�es exit
+ * Chování:
+ * - po vykreslení modálu ukončí request přes exit
  */
 
 if (!empty($_SESSION['login_ok'])) {
@@ -41,7 +41,7 @@ if ($cb2faToken !== '') {
     echo '<div class="cb-login-fill"></div>';
     ?>
 
-    <div id="cb-2fa-ovl" role="dialog" aria-modal="true" aria-label="Schv�len� p�ihl�en�">
+    <div id="cb-2fa-ovl" role="dialog" aria-modal="true" aria-label="Schválení přihlášení">
       <div class="cb-2fa-card">
         <div class="cb-2fa-top">
           <div class="cb-2fa-head">
@@ -49,27 +49,27 @@ if ($cb2faToken !== '') {
               <img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback">
             </div>
             <div>
-              <p class="cb-2fa-title">Schv�len� p�ihl�en�</p>
+              <p class="cb-2fa-title">Schválení přihlášení</p>
               <p class="cb-2fa-sub">IS Pizzacomeback</p>
             </div>
           </div>
-          <button type="button" class="cb-2fa-x" id="cb2faClose" aria-label="Zav��t">�</button>
+          <button type="button" class="cb-2fa-x" id="cb2faClose" aria-label="Zavřít">×</button>
         </div>
 
         <div class="cb-2fa-body">
           <div class="cb-2fa-box">
             <div class="cb-2fa-main">
-              Potvr�te p�ihl�en� na Va�em za��zen�.
+              Potvrďte přihlášení na Vašem zařízení.
             </div>
-            <div class="cb-2fa-status" id="cb2faStatus">Na potvrzen� p�ihl�en� zb�v�: --:--</div>
+            <div class="cb-2fa-status" id="cb2faStatus">Na potvrzení přihlášení zbývá: --:--</div>
             <div class="cb-2fa-status" id="cb2faDbg"><?= h($dbgText) ?></div>
           </div>
 
           <div class="cb-2fa-fallback">
             <div class="cb-2fa-fallback-line"></div>
             <div class="cb-2fa-qrhint">
-              Pokud jste neobdr�el/a notifikaci na registrovan� za��zen�,<br>
-              na�t�te tento QR k�d.
+              Pokud jste neobdržel/a notifikaci na registrované zařízení,<br>
+              načtěte tento QR kód.
             </div>
             <div class="cb-2fa-qrwrap">
               <div class="cb-2fa-qr" id="cb2faQr"></div>
@@ -112,7 +112,7 @@ if ($cb2faToken !== '') {
             }
           }
         } catch (e) {
-          // QR je jen n�hradn� mo�nost, nesm� shodit str�nku.
+          // QR je jen náhradní možnost, nesmí shodit stránku.
         }
 
         function kontrola2fa(){
@@ -128,20 +128,20 @@ if ($cb2faToken !== '') {
                 return;
               }
               if (j.stav === 'ne') {
-                setTxt('P��stup zam�tnut. P�esm�rov�v�m�');
+                setTxt('Přístup zamítnut. Přesměrovávám…');
                 window.location.href = '<?= h(cb_url('')) ?>';
                 return;
               }
               if (j.stav === 'exp') {
-                setTxt('Vypr�elo. P�esm�rov�v�m�');
+                setTxt('Vypršelo. Přesměrovávám…');
                 window.location.href = '<?= h(cb_url('')) ?>';
                 return;
               }
               if (typeof j.zbyva_sec === 'number') {
-                setTxt('Na potvrzen� p�ihl�en� zb�v�: ' + fmt(j.zbyva_sec));
+                setTxt('Na potvrzení přihlášení zbývá: ' + fmt(j.zbyva_sec));
                 return;
               }
-              setTxt('Na potvrzen� p�ihl�en� zb�v�: --:--');
+              setTxt('Na potvrzení přihlášení zbývá: --:--');
             })
             .catch(function(){
               setTxt('Chyba kontroly. Zkuste to znovu.');
@@ -174,6 +174,6 @@ require_once __DIR__ . '/modal_login.php';
 </body>
 </html>
 <?php
-/* modaly/modal_overeni.php * Verze: V3 * Aktualizace: 07.03.2026 * Po�et ��dk�: 179 */
-/* P�edchoz� po�et ��dk�: 143 */
+/* modaly/modal_overeni.php * Verze: V3 * Aktualizace: 07.03.2026 * Počet řádků: 179 */
+/* Předchozí počet řádků: 143 */
 // Konec souboru

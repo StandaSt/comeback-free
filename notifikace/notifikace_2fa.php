@@ -3,20 +3,20 @@
 declare(strict_types=1);
 
 /*
- * Web Push � odesl�n� notifikace (server -> mobil)
+ * Web Push – odeslání notifikace (server -> mobil)
  *
- * Pou�it�:
+ * Použití:
  * - require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
  * - cb_push_send_2fa($idUser, $token2fa);
  *
- * Z�vislosti:
- * - composer bal�k minishlink/web-push (vendor/autoload.php)
- * - tabulka push_zarizeni (subscription ulo�en� z mobilu)
+ * Závislosti:
+ * - composer balík minishlink/web-push (vendor/autoload.php)
+ * - tabulka push_zarizeni (subscription uložená z mobilu)
  * - tabulka push_login_2fa (pro token a stav)
  *
- * Pozn�mky:
- * - log odesl�n� zapisuje do push_audit (pokud existuje)
- * - pokud nen� ��dn� aktivn� za��zen�, vr�t� false (bez chyby)
+ * Poznámky:
+ * - log odeslání zapisuje do push_audit (pokud existuje)
+ * - pokud není žádné aktivní zařízení, vrátí false (bez chyby)
  */
 
 require_once __DIR__ . '/../lib/bootstrap.php';
@@ -61,7 +61,7 @@ function cb_push_audit_try_insert(
         $stmt->execute();
         $stmt->close();
     } catch (Throwable $e) {
-        // audit nesm� shodit login
+        // audit nesmí shodit login
     }
 }
 
@@ -137,7 +137,7 @@ function cb_push_send_2fa(int $idUser, string $token2fa): bool
     $payloadArr = [
         'type' => '2FA_LOGIN',
         'title' => 'Comeback',
-        'body' => 'Schvalte p�ihl�en� do IS. ' . $dbgText,
+        'body' => 'Schvalte přihlášení do IS. ' . $dbgText,
         'url' => $url,
         'token' => $token2fa,
         'debug' => $dbgText,
@@ -201,6 +201,6 @@ function cb_push_send_2fa(int $idUser, string $token2fa): bool
     return true;
 }
 
-// notifikace/notifikace_2fa.php * Verze: V2 * Aktualizace: 07.03.2026 * Po�et ��dk�: 206
-// P�edchoz� po�et ��dk�: 202
+// notifikace/notifikace_2fa.php * Verze: V2 * Aktualizace: 07.03.2026 * Počet řádků: 206
+// Předchozí počet řádků: 202
 // Konec souboru

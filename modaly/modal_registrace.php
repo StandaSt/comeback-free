@@ -3,22 +3,22 @@
 declare(strict_types=1);
 
 /*
- * PRVN� P�IHL��EN� � PC MOD�L (blokuje vstup do IS, dokud nen� sp�rovan� za��zen�)
+ * PRVNÍ PŘIHLÁŠENÍ – PC MODÁL (blokuje vstup do IS, dokud není spárované zařízení)
  *
- * Co d�l�:
- * - zobraz� mod�ln� okno pro sp�rov�n� za��zen�
- * - vytvo�� (nebo obnov�) p�rovac� token v DB tabulce push_parovani (�asov� omezen�)
- * - zobraz� QR k�d (generuje se v prohl�e�i p�es js/qrcode.min.js)
- * - pr�b�n� kontroluje, jestli u� je v DB aktivn� za��zen� (push_zarizeni.aktivni=1)
- *   a jakmile ano, automaticky p�esm�ruje do IS
+ * Co dělá:
+ * - zobrazí modální okno pro spárování zařízení
+ * - vytvoří (nebo obnoví) párovací token v DB tabulce push_parovani (časově omezený)
+ * - zobrazí QR kód (generuje se v prohlížeči přes js/qrcode.min.js)
+ * - průběžně kontroluje, jestli už je v DB aktivní zařízení (push_zarizeni.aktivni=1)
+ *   a jakmile ano, automaticky přesměruje do IS
  *
- * Bezpe�nost:
- * - zav�en� mod�lu (X) = zru�en� p�rov�n� + logout
- * - timeout 5 minut = zru�en� p�rov�n� + logout
+ * Bezpečnost:
+ * - zavření modálu (X) = zrušení párování + logout
+ * - timeout 5 minut = zrušení párování + logout
  *
  * Pozn.:
- * - p�rov�n� za��zen� b�� bez session p�es mobil/mobil_registrace.php?t=...
- * - QR se generuje v prohl�e�i; knihovna mus� b�t ulo�en� lok�ln� jako js/qrcode.min.js
+ * - párování zařízení běží bez session přes mobil/mobil_registrace.php?t=...
+ * - QR se generuje v prohlížeči; knihovna musí být uložená lokálně jako js/qrcode.min.js
  */
 
 require_once __DIR__ . '/../lib/bootstrap.php';
@@ -114,24 +114,24 @@ if ($loginOk && $idUser > 0) {
     $pairUrl = cb_url_abs('mobil/mobil_registrace.php?t=' . rawurlencode($token));
 }
 ?>
-<div class="modal-overlay" role="dialog" aria-modal="true" aria-label="Prvn� p�ihl�en�">
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-label="První přihlášení">
   <div class="modal cb-prvni-card">
 
-    <button type="button" class="modal-x" id="cbPrvniClose" aria-label="Zav��t">�</button>
+    <button type="button" class="modal-x" id="cbPrvniClose" aria-label="Zavřít">×</button>
 
     <div class="modal-head">
       <div class="modal-logo cb-prvni-logo">
         <img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback">
       </div>
       <div>
-        <p class="modal-title">Prvn� p�ihl�en�</p>
-        <p class="modal-sub">Sp�rujte za��zen� pro schvalov�n� p�ihl�en�.</p>
+        <p class="modal-title">První přihlášení</p>
+        <p class="modal-sub">Spárujte zařízení pro schvalování přihlášení.</p>
       </div>
     </div>
 
     <div class="cb-prvni-box">
-      <div class="cb-prvni-main">Na�t�te QR k�d na za��zen�, kter� chcete pou��vat pro schvalov�n� p�ihl�en�.</div>
-      <div class="cb-prvni-sub">Po na�ten� pokra�ujte podle pokyn� na za��zen�.</div>
+      <div class="cb-prvni-main">Načtěte QR kód na zařízení, které chcete používat pro schvalování přihlášení.</div>
+      <div class="cb-prvni-sub">Po načtení pokračujte podle pokynů na zařízení.</div>
     </div>
 
     <div class="cb-prvni-qrwrap">
@@ -139,7 +139,7 @@ if ($loginOk && $idUser > 0) {
     </div>
 
     <div class="modal-foot">
-      <div class="modal-status" id="cbPrvniStatus">�ek�m na sp�rov�n� za��zen�</div>
+      <div class="modal-status" id="cbPrvniStatus">Čekám na spárování zařízení…</div>
       <button type="button" class="modal-btn" id="cbPrvniReload">Zkontrolovat</button>
     </div>
 
@@ -208,11 +208,11 @@ if ($loginOk && $idUser > 0) {
           return;
         }
         if (j.paired === true) {
-          setTxt('Za��zen� je sp�rov�no. Na��t�m IS�');
+          setTxt('Zařízení je spárováno. Načítám IS…');
           window.location.href = '<?= h(cb_url('')) ?>';
           return;
         }
-        setTxt('�ek�m na sp�rov�n� za��zen�');
+        setTxt('Čekám na spárování zařízení…');
       })
       .catch(function(){
         setTxt('Chyba kontroly. Zkuste to znovu.');
@@ -252,6 +252,6 @@ if ($loginOk && $idUser > 0) {
 })();
 </script>
 <?php
-/* modaly/modal_registrace.php * Verze: V6 * Aktualizace: 06.03.2026 * Po�et ��dk�: 212 */
-/* P�edchoz� po�et ��dk�: 246 */
+/* modaly/modal_registrace.php * Verze: V6 * Aktualizace: 06.03.2026 * Počet řádků: 212 */
+/* Předchozí počet řádků: 246 */
 // Konec souboru
