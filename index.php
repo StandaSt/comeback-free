@@ -10,8 +10,8 @@
  * - AJAX (partial): vrací jen obsah do <main> podle hlavičky X-Comeback-Page (bez layoutu)
  * - přepnutí menu režimu: uloží do session přes POST + X-Comeback-Set-Menu
  * - 404: vrátí hlášku a pokusí se zapsat záznam do DB tabulky `chyba`
- * - V12: nepřihlášený uvidí jen hlavičku + modální přihlášení (includes/login_modal.php)
- * - V15: prvni_login se zobrazuje jako MODÁL (includes/prvni_login.php), stejně jako login modal
+ * - V12: nepřihlášený uvidí jen hlavičku + modální přihlášení (modaly/modal_login.php)
+ * - V15: prvni_login se zobrazuje jako MODÁL (modaly/modal_registrace.php), stejně jako login modal
  * - V16: kontrola spárování mobilu je jen existence aktivního řádku v push_zarizeni; pokud chybí id_user v session, vynutí prvni_login
  * - V17: 2FA (schválení přihlášení) – po zadání hesla čeká na mobil (push_login_2fa); login_ok vzniká až po schválení
  * - V18: 2FA čekací modál: místo URL ukazuje QR kód + text (fallback když notifikace nepřijde)
@@ -142,7 +142,7 @@ require_once __DIR__ . '/includes/hlavicka.php';
  * - login modal
  * - nebo čekání na 2FA po zadání hesla
  */
-require_once __DIR__ . '/includes/mod_login.php';
+require_once __DIR__ . '/modaly/modal_overeni.php';
 
 /*
  * Přihlášený bez spárovaného mobilu uvidí modál párování.

@@ -5,7 +5,7 @@ declare(strict_types=1);
 /*
  * Kontrola spárovaného mobilu po přihlášení
  * - LOCAL: párování se nevynucuje
- * - ostatní prostředí: bez aktivního zařízení zobrazí prvni_login.php
+ * - ostatní prostředí: bez aktivního zařízení zobrazí modal_registrace.php
  *
  * Vstup z index.php:
  * - přihlášený uživatel v session
@@ -49,7 +49,7 @@ if ($maMobil) {
 }
 
 echo '<div class="cb-login-fill"></div>';
-require_once __DIR__ . '/prvni_login.php';
+require_once __DIR__ . '/../modaly/modal_registrace.php';
 ?>
 </div>
 </body>

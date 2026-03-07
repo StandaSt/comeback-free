@@ -1,27 +1,27 @@
 <?php
-// includes/2fa_mobil.php * Verze: V8 * Aktualizace: 07.03.2026
+// mobil/mobil_overeni.php * Verze: V8 * Aktualizace: 07.03.2026
 declare(strict_types=1);
 
 /*
- * 2FA – schválení přihlášení (mobilní stránka)
+ * 2FA � schv�len� p�ihl�en� (mobiln� str�nka)
  *
  * URL:
- * - includes/2fa_mobil.php?t=<token>
+ * - mobil/mobil_overeni.php?t=<token>
  *
- * Co dělá:
- * - načte 2FA požadavek z DB tabulky push_login_2fa podle tokenu
- * - zobrazí informace o pokusu o přihlášení
- * - umožní rozhodnout: ok / ne (jen pokud stav=ceka a nevypršelo)
- * - po povolení ukáže velké potvrzení a po chvíli odejde na prázdnou stránku
- * - po zamítnutí ukáže varování a nabídne zavření okna
+ * Co d�l�:
+ * - na�te 2FA po�adavek z DB tabulky push_login_2fa podle tokenu
+ * - zobraz� informace o pokusu o p�ihl�en�
+ * - umo�n� rozhodnout: ok / ne (jen pokud stav=ceka a nevypr�elo)
+ * - po povolen� uk�e velk� potvrzen� a po chv�li odejde na pr�zdnou str�nku
+ * - po zam�tnut� uk�e varov�n� a nab�dne zav�en� okna
  *
  * Pozn.:
- * - toto je stránka pro mobil, NE API pro PC polling (to řeší lib/push_2fa_api.php)
+ * - toto je str�nka pro mobil, NE API pro PC polling (to �e�� lib/push_2fa_api.php)
  */
 
 require_once __DIR__ . '/../lib/bootstrap.php';
 
-/* Limit pro odpočet v UI (sekundy). Hodnota je i v DB (vyprsi), UI je jen zobrazení. */
+/* Limit pro odpo�et v UI (sekundy). Hodnota je i v DB (vyprsi), UI je jen zobrazen�. */
 $limitSecPhp = 300;
 if (defined('CB_2FA_LIMIT_SEC')) {
     $limitSecPhp = (int)CB_2FA_LIMIT_SEC;
@@ -34,13 +34,13 @@ if (defined('CB_2FA_LIMIT_SEC')) {
 $token = (string)($_GET['t'] ?? '');
 $token = trim($token);
 
-/* HTML escape (ochrana proti vložení HTML do stránky) */
+/* HTML escape (ochrana proti vlo�en� HTML do str�nky) */
 function h1(string $s): string
 {
     return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
-/* Načtení řádku 2FA z DB podle tokenu */
+/* Na�ten� ��dku 2FA z DB podle tokenu */
 function cb_fetch_2fa(string $token): ?array
 {
     if ($token === '') {
@@ -80,7 +80,7 @@ function cb_fetch_2fa(string $token): ?array
     ];
 }
 
-/* Načtení jména a emailu uživatele */
+/* Na�ten� jm�na a emailu u�ivatele */
 function cb_fetch_user_info(int $idUser): array
 {
     if ($idUser <= 0) {
@@ -115,7 +115,7 @@ function cb_fetch_user_info(int $idUser): array
     ];
 }
 
-/* Zapsání rozhodnutí (ok/ne) do DB – jen když stav=ceka a vyprsi > NOW() */
+/* Zaps�n� rozhodnut� (ok/ne) do DB � jen kdy� stav=ceka a vyprsi > NOW() */
 function cb_set_2fa_decision(string $token, string $decision): bool
 {
     if ($token === '') {
@@ -138,7 +138,7 @@ function cb_set_2fa_decision(string $token, string $decision): bool
     return $changed;
 }
 
-/* Zpracování POST (klik na tlačítko) */
+/* Zpracov�n� POST (klik na tla��tko) */
 $didPost = (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST');
 $decision = '';
 
@@ -151,7 +151,7 @@ if ($didPost) {
     }
 }
 
-/* Načti aktuální stav z DB (po případném POSTu) */
+/* Na�ti aktu�ln� stav z DB (po p��padn�m POSTu) */
 $row = cb_fetch_2fa($token);
 
 $stav = is_array($row) ? (string)($row['stav'] ?? '') : '';
@@ -173,7 +173,7 @@ if ($ip === '') {
     $ip = '---';
 }
 
-/* Čas rozhodnutí */
+/* �as rozhodnut� */
 $kdyRozhodnuto = date('j. n. Y \v H:i') . ' hod.';
 
 /* Debug */
@@ -185,24 +185,24 @@ if ($dbgStav === '') {
 $dbgText = 'DBG: V8 | user ' . $idUser . ' | token ' . $dbgToken . ' | stav ' . $dbgStav;
 
 /* Texty do UI podle stavu */
-$title = 'Schválení přihlášení';
+$title = 'Schv�len� p�ihl�en�';
 $info = '';
 
 if (!is_array($row)) {
-    $info = 'Neplatný nebo neznámý požadavek.';
+    $info = 'Neplatn� nebo nezn�m� po�adavek.';
 } else {
     if ($stav === 'ok') {
-        $info = 'Přístup byl povolen';
+        $info = 'P��stup byl povolen';
     } elseif ($stav === 'ne') {
-        $info = 'Zamítl/a jste přihlášení pro uživatele „' . $celeJmeno . '“ dne ' . $kdyRozhodnuto . '.';
+        $info = 'Zam�tl/a jste p�ihl�en� pro u�ivatele �' . $celeJmeno . '� dne ' . $kdyRozhodnuto . '.';
     } elseif ($stav === 'exp' || $zbyvaSec <= 0) {
-        $info = 'Tento požadavek vypršel.';
+        $info = 'Tento po�adavek vypr�el.';
     } else {
-        $info = 'Rozhodni o přístupu do IS.';
+        $info = 'Rozhodni o p��stupu do IS.';
     }
 }
 
-/* Rozhodování je povolené jen v okně platnosti */
+/* Rozhodov�n� je povolen� jen v okn� platnosti */
 $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
 
 ?>
@@ -298,15 +298,15 @@ $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
 </head>
 <body class="modal-page">
 
-  <div class="modal" role="dialog" aria-modal="true" aria-label="Schválení přihlášení">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Schv�len� p�ihl�en�">
 
     <?php if ($canDecide) { ?>
       <form method="post">
         <input type="hidden" name="decision" value="ne">
-        <button type="submit" class="modal-x" aria-label="Zavřít">×</button>
+        <button type="submit" class="modal-x" aria-label="Zav��t">�</button>
       </form>
     <?php } else { ?>
-      <button type="button" class="modal-x" id="btnX" aria-label="Zavřít">×</button>
+      <button type="button" class="modal-x" id="btnX" aria-label="Zav��t">�</button>
     <?php } ?>
 
     <div class="modal-head">
@@ -323,46 +323,46 @@ $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
 
     <?php if ($canDecide) { ?>
       <div class="approve-box">
-        <p class="approve-label">Přihlašuje se uživatel:</p>
+        <p class="approve-label">P�ihla�uje se u�ivatel:</p>
         <p class="approve-value"><?= h1($celeJmeno) ?></p>
 
         <div class="modal-spacer"></div>
 
-        <p class="approve-label">Email použitý k přihlášení:</p>
+        <p class="approve-label">Email pou�it� k p�ihl�en�:</p>
         <p class="approve-email"><?= h1($email) ?></p>
 
         <div class="modal-spacer"></div>
 
-        <p class="approve-label">Přihlášení z IP:</p>
+        <p class="approve-label">P�ihl�en� z IP:</p>
         <p class="approve-value"><?= h1($ip) ?></p>
       </div>
 
-      <div class="approve-time" id="countTxt">Na rozhodnutí zbývá: --:-- min.</div>
+      <div class="approve-time" id="countTxt">Na rozhodnut� zb�v�: --:-- min.</div>
 
       <div class="modal-spacer"></div>
 
       <form method="post">
         <input type="hidden" name="decision" value="ok">
-        <button class="modal-btn btn-ok" type="submit">Ano, jsem to já</button>
+        <button class="modal-btn btn-ok" type="submit">Ano, jsem to j�</button>
       </form>
 
       <div class="modal-spacer"></div>
 
       <form method="post">
         <input type="hidden" name="decision" value="ne">
-        <button class="modal-btn btn-danger" type="submit">Zamítnout přístup</button>
+        <button class="modal-btn btn-danger" type="submit">Zam�tnout p��stup</button>
       </form>
     <?php } elseif ($stav === 'ne') { ?>
       <div class="warn-box">
-        Pokud máte podezření na zneužití Vašich přihlašovacích údajů do systému „Směny“ společnosti Pizza Comeback, změňte si co nejdříve heslo.<br><br>
+        Pokud m�te podez�en� na zneu�it� Va�ich p�ihla�ovac�ch �daj� do syst�mu �Sm�ny� spole�nosti Pizza Comeback, zm��te si co nejd��ve heslo.<br><br>
         <a href="https://smeny.pizzacomeback.cz/" target="_blank" rel="noopener noreferrer">https://smeny.pizzacomeback.cz/</a>
       </div>
 
       <div class="modal-spacer"></div>
 
-      <button class="modal-btn btn-danger" type="button" id="btnClose">Zavři okno</button>
+      <button class="modal-btn btn-danger" type="button" id="btnClose">Zav�i okno</button>
     <?php } else { ?>
-      <button class="modal-btn" type="button" id="btnClose">Zavři okno</button>
+      <button class="modal-btn" type="button" id="btnClose">Zav�i okno</button>
     <?php } ?>
 
   </div>
@@ -397,7 +397,7 @@ $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
 
   function render(){
     if (countTxt && canDecide) {
-      countTxt.textContent = 'Na rozhodnutí zbývá: ' + fmt(zbyva) + ' min.';
+      countTxt.textContent = 'Na rozhodnut� zb�v�: ' + fmt(zbyva) + ' min.';
     }
   }
 
@@ -429,6 +429,6 @@ $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
 </body>
 </html>
 <?php
-/* includes/2fa_mobil.php * Verze: V8 * Aktualizace: 07.03.2026 * Počet řádků: 434 */
-/* Předchozí počet řádků: 327 */
+/* mobil/mobil_overeni.php * Verze: V8 * Aktualizace: 07.03.2026 * Po�et ��dk�: 434 */
+/* P�edchoz� po�et ��dk�: 327 */
 // Konec souboru

@@ -1,25 +1,25 @@
 <?php
-// lib/push_send.php * Verze: V2 * Aktualizace: 07.03.2026
+// notifikace/notifikace_2fa.php * Verze: V2 * Aktualizace: 07.03.2026
 declare(strict_types=1);
 
 /*
- * Web Push – odeslání notifikace (server -> mobil)
+ * Web Push � odesl�n� notifikace (server -> mobil)
  *
- * Použití:
- * - require_once __DIR__ . '/push_send.php';
+ * Pou�it�:
+ * - require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
  * - cb_push_send_2fa($idUser, $token2fa);
  *
- * Závislosti:
- * - composer balík minishlink/web-push (vendor/autoload.php)
- * - tabulka push_zarizeni (subscription uložená z mobilu)
+ * Z�vislosti:
+ * - composer bal�k minishlink/web-push (vendor/autoload.php)
+ * - tabulka push_zarizeni (subscription ulo�en� z mobilu)
  * - tabulka push_login_2fa (pro token a stav)
  *
- * Poznámky:
- * - log odeslání zapisuje do push_audit (pokud existuje)
- * - pokud není žádné aktivní zařízení, vrátí false (bez chyby)
+ * Pozn�mky:
+ * - log odesl�n� zapisuje do push_audit (pokud existuje)
+ * - pokud nen� ��dn� aktivn� za��zen�, vr�t� false (bez chyby)
  */
 
-require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/../lib/bootstrap.php';
 
 function cb_push_has_vendor(): bool
 {
@@ -61,7 +61,7 @@ function cb_push_audit_try_insert(
         $stmt->execute();
         $stmt->close();
     } catch (Throwable $e) {
-        // audit nesmí shodit login
+        // audit nesm� shodit login
     }
 }
 
@@ -130,14 +130,14 @@ function cb_push_send_2fa(int $idUser, string $token2fa): bool
 
     $webPush = new Minishlink\WebPush\WebPush($auth);
 
-    $url = cb_url_abs('includes/2fa_mobil.php?t=' . rawurlencode($token2fa));
+    $url = cb_url_abs('mobil/mobil_overeni.php?t=' . rawurlencode($token2fa));
     $dbgToken = substr($token2fa, 0, 8);
     $dbgText = 'DBG: V2 | user ' . $idUser . ' | token ' . $dbgToken . ' | stav ceka';
 
     $payloadArr = [
         'type' => '2FA_LOGIN',
         'title' => 'Comeback',
-        'body' => 'Schvalte přihlášení do IS. ' . $dbgText,
+        'body' => 'Schvalte p�ihl�en� do IS. ' . $dbgText,
         'url' => $url,
         'token' => $token2fa,
         'debug' => $dbgText,
@@ -201,6 +201,6 @@ function cb_push_send_2fa(int $idUser, string $token2fa): bool
     return true;
 }
 
-// lib/push_send.php * Verze: V2 * Aktualizace: 07.03.2026 * Počet řádků: 206
-// Předchozí počet řádků: 202
+// notifikace/notifikace_2fa.php * Verze: V2 * Aktualizace: 07.03.2026 * Po�et ��dk�: 206
+// P�edchoz� po�et ��dk�: 202
 // Konec souboru

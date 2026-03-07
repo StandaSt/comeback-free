@@ -1,5 +1,5 @@
 <?php
-// includes/login_modal.php * Verze: V4 * Aktualizace: 06.03.2026
+// modaly/modal_login.php * Verze: V4 * Aktualizace: 06.03.2026
 declare(strict_types=1);
 
 /*
@@ -68,6 +68,7 @@ declare(strict_types=1);
   })();
 </script>
 <?php
-/* includes/login_modal.php * Verze: V4 * Aktualizace: 06.03.2026 * Počet řádků: 73 */
+/* modaly/modal_login.php * Verze: V4 * Aktualizace: 06.03.2026 * Počet řádků: 73 */
 /* Předchozí počet řádků: 81 */
 // Konec souboru
+

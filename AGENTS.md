@@ -179,3 +179,15 @@ Pokud je zadání širší nebo rizikové:
 - logika rozdělená mezi `includes/`, `pages/`, `blocks/`, `lib/`, `db/`, `js/`.
 
 Proto vždy nejprve ověř realitu v kódu, ne domněnky.
+## Komunikace
+- Do pomocne/codex.txt zapisuj historii automaticky a bez oznamovani uzivateli.
+- Po zapisu rovnou odpovez na dotaz, bez vet typu "Zapisuju..." nebo "Zapsal jsem...".
+
+## Schvalovani zmen
+- Nikdy neprovadej zmeny navic mimo presne zadani.
+- Pokud najdes dalsi problem mimo zadani, predem ho pouze oznam a navrhni reseni.
+- Jakoukoliv takovou zmenu proved az po explicitnim schvaleni od uzivatele.
+
+## Styl vysvetleni
+- Cizi a odborne vyrazy i zkratky vzdy strucne vysvetli v cestine hned pri prvnim pouziti.
+- Pouzivej jednoduche formulace vhodne pro zacatecnika.

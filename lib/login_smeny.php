@@ -25,7 +25,7 @@ require_once __DIR__ . '/login_diagnostika.php';
 require_once __DIR__ . '/smeny_graphql.php';
 require_once __DIR__ . '/user_bad_login.php';
 
-require_once __DIR__ . '/push_send.php';
+require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
 
 require_once __DIR__ . '/../db/db_api_smeny.php';
 
