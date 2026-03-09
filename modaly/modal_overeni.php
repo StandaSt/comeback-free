@@ -5,6 +5,7 @@ if (!empty($_SESSION['login_ok'])) {
     return;
 }
 
+$cbAuthOk = !empty($_SESSION['cb_auth_ok']);
 $cb2faToken = (string)($_SESSION['cb_2fa_token'] ?? '');
 
 if ($cb2faToken !== '') {
@@ -126,6 +127,10 @@ if ($cb2faToken !== '') {
     </html>
     <?php
     exit;
+}
+
+if ($cbAuthOk) {
+    return;
 }
 
 echo '<div class="cb-login-fill"></div>';

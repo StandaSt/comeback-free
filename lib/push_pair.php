@@ -27,7 +27,9 @@ try {
         exit;
     }
 
-    if (empty($_SESSION['login_ok'])) {
+    $loginOk = !empty($_SESSION['login_ok']);
+    $cbAuthOk = !empty($_SESSION['cb_auth_ok']);
+    if (!$loginOk && !$cbAuthOk) {
         http_response_code(401);
         echo json_encode(['ok' => false, 'err' => 'Nutné přihlášení.'], JSON_UNESCAPED_UNICODE);
         exit;

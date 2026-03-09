@@ -197,10 +197,12 @@ try {
     $_SESSION['cb_timeout_min'] = (int)$CB_TIMEOUT_MIN;
     $_SESSION['cb_session_start_ts'] = time();
     $_SESSION['cb_last_activity_ts'] = time();
+    $_SESSION['cb_auth_ok'] = 1;
 
     // LOCAL: bez 2FA (notifikace z LOCAL nechodí) => rovnou přihlásit
     if ((string)($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL') {
         $_SESSION['login_ok'] = 1;
+        unset($_SESSION['cb_auth_ok']);
         unset($_SESSION['cb_2fa_token']);
 
         header('Location: ' . cb_url(''));
@@ -226,7 +228,7 @@ try {
     }
 
     if (!$maAktivniZarizeni) {
-        $_SESSION['login_ok'] = 1;
+        unset($_SESSION['login_ok']);
         unset($_SESSION['cb_2fa_token']);
 
         cb_login_log_line('first_login_no_device', [
@@ -280,6 +282,7 @@ try {
 
     // login_ok zatím NEEXISTUJE
     unset($_SESSION['login_ok']);
+    unset($_SESSION['cb_auth_ok']);
 
     // ====== Odeslání Web Push notifikace ======
     cb_login_log_line('2fa_push_send_start', [
@@ -324,6 +327,7 @@ try {
     unset($_SESSION['cb_user_profile']);
     unset($_SESSION['cb_user_branches']);
     unset($_SESSION['cb_2fa_token']);
+    unset($_SESSION['cb_auth_ok']);
 
     unset($_SESSION['cb_timeout_min']);
     unset($_SESSION['cb_session_start_ts']);

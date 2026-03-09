@@ -11,7 +11,7 @@ declare(strict_types=1);
  * - přihlášený uživatel v session
  */
 
-if (empty($_SESSION['login_ok'])) {
+if (empty($_SESSION['login_ok']) && empty($_SESSION['cb_auth_ok'])) {
     return;
 }
 
@@ -45,6 +45,10 @@ if ($prostredi === 'LOCAL') {
 }
 
 if ($maMobil) {
+    if (empty($_SESSION['login_ok']) && !empty($_SESSION['cb_auth_ok'])) {
+        $_SESSION['login_ok'] = 1;
+        unset($_SESSION['cb_auth_ok']);
+    }
     return;
 }
 

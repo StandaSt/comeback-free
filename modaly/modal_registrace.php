@@ -6,13 +6,14 @@ require_once __DIR__ . '/../lib/bootstrap.php';
 header('X-Robots-Tag: noindex, nofollow');
 
 $loginOk = !empty($_SESSION['login_ok']);
+$cbAuthOk = !empty($_SESSION['cb_auth_ok']);
 $cbUser = $_SESSION['cb_user'] ?? null;
 $idUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
 
 if (isset($_GET['check']) && (string)($_GET['check']) === '1') {
     header('Content-Type: application/json; charset=utf-8');
 
-    if (!$loginOk || $idUser <= 0) {
+    if ((!$loginOk && !$cbAuthOk) || $idUser <= 0) {
         echo json_encode(['ok' => true, 'paired' => false], JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -34,6 +35,12 @@ if (isset($_GET['check']) && (string)($_GET['check']) === '1') {
         $stmt->close();
     }
 
+    if ($paired && !$loginOk && $cbAuthOk) {
+        $_SESSION['login_ok'] = 1;
+        unset($_SESSION['cb_auth_ok']);
+        $loginOk = true;
+    }
+
     echo json_encode(['ok' => true, 'paired' => $paired], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -41,7 +48,7 @@ if (isset($_GET['check']) && (string)($_GET['check']) === '1') {
 if (isset($_GET['abort']) && (string)($_GET['abort']) === '1') {
     header('Content-Type: application/json; charset=utf-8');
 
-    if ($loginOk && $idUser > 0) {
+    if (($loginOk || $cbAuthOk) && $idUser > 0) {
         $stmt = db()->prepare('
             UPDATE push_parovani
             SET aktivni=0
@@ -64,7 +71,7 @@ if (isset($_GET['abort']) && (string)($_GET['abort']) === '1') {
 $pairUrl = '';
 $token = '';
 
-if ($loginOk && $idUser > 0) {
+if (($loginOk || $cbAuthOk) && $idUser > 0) {
     $token = bin2hex(random_bytes(32));
     $conn = db();
 
