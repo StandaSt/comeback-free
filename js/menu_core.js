@@ -1,4 +1,4 @@
-// js/menu_core.js * Verze: V5 * Aktualizace: 08.03.2026
+﻿// js/menu_core.js * Verze: V5 * Aktualizace: 08.03.2026
 'use strict';
 
 /*
@@ -32,7 +32,7 @@
 
   function normalizeMenuPage(pageKey) {
     const p = String(pageKey || '').trim() || 'home';
-    if (p === 'admin') return 'admin_dashboard';
+    if (p === 'admin_dashboard') return 'admin';
     return p;
   }
 

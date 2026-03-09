@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+
+$aktualniUrl = cb_url_abs('');
 ?>
 <div id="cb-login-overlay" class="modal-overlay" aria-modal="true" role="dialog" aria-label="Přihlášení do IS Comeback">
   <div class="modal">
@@ -37,6 +39,10 @@ declare(strict_types=1);
       <div class="modal-actions">
         <button class="modal-btn primary" type="submit">Přihlásit</button>
       </div>
+
+      <p class="modal-sub modal-url" style="margin-top:10px;">
+        URL: <code><?= h($aktualniUrl) ?></code>
+      </p>
     </form>
   </div>
 </div>
@@ -49,3 +55,4 @@ declare(strict_types=1);
     }
   })();
 </script>
+
