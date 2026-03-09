@@ -7,7 +7,7 @@
  * Co dělá:
  * - načte bootstrap (start projektu, session, helpery, db())
  * - FULL load: vždy zobrazí výchozí stránku podle přihlášení (nastavení v lib/system.php)
- * - AJAX (partial): vrací jen obsah do <main> podle hlavičky X-Comeback-Page (bez layoutu)
+ * - AJAX (partial): vrací jen obsah do <main> podle sekce (bez layoutu)
  * - přepnutí menu režimu: uloží do session přes POST + X-Comeback-Set-Menu
  * - 404: vrátí hlášku a pokusí se zapsat záznam do DB tabulky `chyba`
  * - V12: nepřihlášený uvidí jen hlavičku + modální přihlášení (modaly/modal_login.php)
@@ -23,10 +23,10 @@
  * - includes/hlavicka.php
  * - includes/main.php
  * - includes/paticka.php
- * - pages/<pageKey>.php
+ * - includes/dashboard.php
  *
  * Requestuje / čte:
- * - HTTP hlavičky: X-Comeback-Set-Menu, X-Comeback-Partial, X-Comeback-Page
+ * - HTTP hlavičky: X-Comeback-Set-Menu, X-Comeback-Partial, X-Comeback-Sekce
  * - session: login_ok (volba výchozí stránky), cb_menu_mode, cb_user[id_user] (pro log 404)
  */
 
@@ -105,38 +105,44 @@ if (isset($_SERVER['HTTP_X_COMEBACK_PARTIAL'])) {
 }
 
 /* =========================
-   2) Volba stránky
+   2) Volba sekce dashboardu
    ========================= */
-/*
- * Výchozí stránka je definovaná v lib/system.php:
- * - CB_DEFAULT_PAGE_GUEST (nepřihlášený)
- * - CB_DEFAULT_PAGE_USER  (přihlášený)
- *
- * Pozn.: když by system.php ještě nebyl načtený, spadne to na 'uvod'.
- */
-$defaultGuest = 'dashboard';
-$defaultUser  = 'dashboard';
-$defaultPage  = (!empty($_SESSION['login_ok'])) ? $defaultUser : $defaultGuest;
-
-// FULL load: vždy výchozí stránka (URL se nemění a page z URL ignorujeme)
-$pageKey = $defaultPage;
-
-// AJAX: stránka se bere jen z hlavičky X-Comeback-Page (fallback = výchozí stránka)
-if ($cbIsPartial) {
-    $pageKey = (string)($_SERVER['HTTP_X_COMEBACK_PAGE'] ?? $defaultPage);
+$sekceRaw = '';
+if (isset($_GET['sekce'])) {
+    $sekceRaw = (string)$_GET['sekce'];
+} elseif (isset($_SERVER['HTTP_X_COMEBACK_SEKCE'])) {
+    $sekceRaw = (string)$_SERVER['HTTP_X_COMEBACK_SEKCE'];
+} elseif (isset($_SERVER['HTTP_X_COMEBACK_PAGE'])) {
+    // Kompatibilita se starsim JS (home/manager/admin).
+    $legacy = (string)$_SERVER['HTTP_X_COMEBACK_PAGE'];
+    if ($legacy === 'home') {
+        $sekceRaw = '3';
+    } elseif ($legacy === 'manager') {
+        $sekceRaw = '2';
+    } elseif ($legacy === 'admin' || $legacy === 'admin_dashboard') {
+        $sekceRaw = '1';
+    }
 }
 
-// Očištění page na povolené znaky: a–z, 0–9, podtržítko
-$pageKey = preg_replace('~[^a-z0-9_]+~i', '', $pageKey) ?: $defaultPage;
-
-// Sestavení cesty k souboru stránky
-// - FULL: vždy dashboard (includes/dashboard.php)
-// - AJAX: jede dál přes /pages/<pageKey>.php
-if ($cbIsPartial) {
-    $file = __DIR__ . '/pages/' . $pageKey . '.php';
-} else {
-    $file = __DIR__ . '/includes/dashboard.php';
+$cbSekce = (int)$sekceRaw;
+if (!in_array($cbSekce, [1, 2, 3], true)) {
+    $cbSekce = 3;
 }
+
+$cbUser = $_SESSION['cb_user'] ?? [];
+$cbUserRoleId = (int)($cbUser['id_role'] ?? 9);
+if ($cbUserRoleId <= 0) {
+    $cbUserRoleId = 9;
+}
+
+// Bezpecnost: pokud uzivatel vyzada sekci, na kterou nema pravo, vraci se na home (3).
+if ($cbSekce < 3 && $cbUserRoleId > $cbSekce) {
+    $cbSekce = 3;
+}
+
+$cb_dashboard_sekce = $cbSekce;
+$pageKey = 'dashboard';
+$file = __DIR__ . '/includes/dashboard.php';
 
 /* =========================
    3) Render / 404 + log

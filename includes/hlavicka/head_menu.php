@@ -1,10 +1,23 @@
-﻿<?php
-// includes/hlavicka/head_menu.php * Verze: V4 * Aktualizace: 08.03.2026
+<?php
+// includes/hlavicka/head_menu.php * Verze: V5 * Aktualizace: 09.03.2026
+declare(strict_types=1);
+
+$sekceAkt = (int)($cb_dashboard_sekce ?? 3);
+if (!in_array($sekceAkt, [1, 2, 3], true)) {
+    $sekceAkt = 3;
+}
+
+$roleId = (int)($cbUserRoleId ?? 9);
+$showManager = ($roleId > 0 && $roleId <= 2);
+$showAdmin = ($roleId === 1);
 ?>
 <div class="head_menu" role="navigation" aria-label="Hlavni menu">
-  <!-- Tri hlavni sekce menu volane pres AJAX router CB_MENU -->
-  <button type="button" class="head_menu_btn is-on" data-page="home" onclick="if(window.CB_MENU){CB_MENU.goPage('home');}">Home</button>
-  <button type="button" class="head_menu_btn" data-page="manager" onclick="if(window.CB_MENU){CB_MENU.goPage('manager');}">manager</button>
-  <button type="button" class="head_menu_btn" data-page="admin" onclick="if(window.CB_MENU){CB_MENU.goPage('admin');}">admin</button>
+  <button type="button" class="head_menu_btn<?= $sekceAkt === 3 ? ' is-on' : '' ?>" data-sekce="3" onclick="if(window.CB_MENU){CB_MENU.goSekce('3');}">home</button>
+  <?php if ($showManager): ?>
+    <button type="button" class="head_menu_btn<?= $sekceAkt === 2 ? ' is-on' : '' ?>" data-sekce="2" onclick="if(window.CB_MENU){CB_MENU.goSekce('2');}">manager</button>
+  <?php endif; ?>
+  <?php if ($showAdmin): ?>
+    <button type="button" class="head_menu_btn<?= $sekceAkt === 1 ? ' is-on' : '' ?>" data-sekce="1" onclick="if(window.CB_MENU){CB_MENU.goSekce('1');}">admin</button>
+  <?php endif; ?>
 </div>
 

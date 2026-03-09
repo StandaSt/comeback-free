@@ -38,20 +38,26 @@
     );
   }
 
-  function notifyMainSwap(pageKey) {
+  function notifyMainSwap(sekce) {
     document.dispatchEvent(new CustomEvent('cb:main-swapped', {
-      detail: { page: String(pageKey || '') }
+      detail: { sekce: String(sekce || ''), page: String(sekce || '') }
     }));
   }
 
   let activeController = null;
 
-  function fetchMainAndSwap(pageKey) {
+  function fetchMainAndSwap(sekceKey) {
     const mainEl = getMainEl();
-    const p = String(pageKey || '').trim() || 'home';
+    const normalizeSekce = (typeof CB_MENU.normalizeSekce === 'function')
+      ? CB_MENU.normalizeSekce
+      : function (v) { return String(v || '3').trim() || '3'; };
+    const s = normalizeSekce(sekceKey || '3');
+    const reqUrl = (typeof CB_MENU.buildSekceUrl === 'function')
+      ? CB_MENU.buildSekceUrl(s)
+      : w.location.href;
 
     if (!mainEl) {
-      console.error('[CB_MENU AJAX] ChybÄ‚Â­ <main>, nelze provÄ‚Â©st swap. page=', p);
+      console.error('[CB_MENU AJAX] ChybÄ‚Â­ <main>, nelze provÄ‚Â©st swap. sekce=', s);
       return;
     }
 
@@ -71,21 +77,24 @@
 
     setMainLoading(mainEl);
 
-    CB_AJAX.fetchText(w.location.href, {
+    CB_AJAX.fetchText(reqUrl, {
       'X-Comeback-Partial': '1',
-      'X-Comeback-Page': p
+      'X-Comeback-Sekce': s
     }, ctrl.signal).then((html) => {
       if (activeController === ctrl) activeController = null;
 
       mainEl.innerHTML = html;
-      CB_MENU._currentPage = p;
-      notifyMainSwap(p);
+      CB_MENU._currentPage = s;
+      if (w.history && typeof w.history.replaceState === 'function') {
+        w.history.replaceState(null, '', reqUrl);
+      }
+      notifyMainSwap(s);
     }).catch((err) => {
       if (err && err.name === 'AbortError') return;
       if (activeController === ctrl) activeController = null;
 
       const msg = (err && err.message) ? err.message : 'AJAX chyba';
-      console.error('[CB_MENU AJAX] Chyba naĂ„Ĺ¤tenÄ‚Â­ page=', p, err);
+      console.error('[CB_MENU AJAX] Chyba naĂ„Ĺ¤tenÄ‚Â­ sekce=', s, err);
       setMainError(mainEl, msg);
     });
   }

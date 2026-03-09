@@ -7,10 +7,8 @@ declare(strict_types=1);
  *
  * V7:
  * - karty se nacitaji z DB tabulky `karty`
- * - jednoduchy rezim podle scope menu: home / manager / admin
- * - home: min_role >= 3
- * - manager: min_role >= 2
- * - admin: min_role >= 1
+ * - jednoduchy rezim podle sekce: 3=home, 2=manager, 1=admin
+ * - nacita jen karty dane sekce (min_role = sekce)
  * - razeni: poradi ASC, id_karta ASC
  *
  * Poznamka:
@@ -81,48 +79,27 @@ function cb_dashboard_card_classes(array $row): string
 }
 
 /*
- * Nacitani karet pro dashboard (jednoduchy rezim bez vyjimek):
- *
- * 1) Zjisti aktivni sekci menu ze scope (`home`, `manager`, `admin`).
- *    Pokud prijde neplatna hodnota, pouzije se bezpecny default `home`.
- *
- * 2) Podle sekce se nastavi jedna hranice `minRoleScope`:
- *    - home    -> 3
- *    - manager -> 2
- *    - admin   -> 1
- *
- * 3) Spusti se jeden SQL dotaz do tabulky `karty`:
- *    - bere jen aktivni karty (`aktivni = 1`)
- *    - bere jen karty splnujici hranici (`min_role >= ?`)
- *    - razeni je stabilni: `poradi ASC`, potom `id_karta ASC`
- *
- * 4) Vysledek se po radcich plni do pole `$karty`.
- *    Tohle pole je finalni seznam, ktery se pak vykresli v `dash_grid`.
+ * Nacitani karet pro dashboard:
+ * - sekce je cislo 3/2/1 (home/manager/admin)
+ * - nactou se jen karty se stejnou hodnotou min_role
  */
-$scope = (string)($cb_dashboard_scope ?? 'home');
-if (!in_array($scope, ['home', 'manager', 'admin'], true)) {
-    $scope = 'home';
+$sekce = (int)($cb_dashboard_sekce ?? 3);
+if (!in_array($sekce, [1, 2, 3], true)) {
+    $sekce = 3;
 }
 
 $karty = [];
-if ($scope === 'home') {
-    $minRoleScope = 3;
-} elseif ($scope === 'manager') {
-    $minRoleScope = 2;
-} else {
-    $minRoleScope = 1;
-}
 
 $stmt = db()->prepare('
     SELECT id_karta, kod, nazev, soubor, min_role, poradi
     FROM karty
     WHERE aktivni = 1
-      AND min_role >= ?
+      AND min_role = ?
     ORDER BY poradi ASC, id_karta ASC
 ');
 
 if ($stmt) {
-    $stmt->bind_param('i', $minRoleScope);
+    $stmt->bind_param('i', $sekce);
     $stmt->execute();
     $stmt->bind_result($idKarta, $kod, $nazev, $soubor, $minRole, $poradi);
 
@@ -140,13 +117,13 @@ if ($stmt) {
     $stmt->close();
 }
 
-// Požadovaný text od uživatele pro prázdný stav v jednotlivých sekcích.
+// Pozadovany text od uzivatele pro prazdny stav v jednotlivych sekcich.
 $emptyMap = [
-    'home' => 'Žádná karta k zobrazení (home)',
-    'manager' => 'Žádná karta k zobrazení (manager)',
-    'admin' => 'Žádná karta k zobrazení (admin)',
+    3 => 'Zadna karta k zobrazeni (home)',
+    2 => 'Zadna karta k zobrazeni (manager)',
+    1 => 'Zadna karta k zobrazeni (admin)',
 ];
-$emptyText = (string)($emptyMap[$scope] ?? $emptyMap['home']);
+$emptyText = (string)($emptyMap[$sekce] ?? $emptyMap[3]);
 ?>
 
 <div class="dash_grid">

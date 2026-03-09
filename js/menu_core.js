@@ -30,46 +30,63 @@
 
   CB_MENU.isTouchLike = isTouchLike;
 
-  function normalizeMenuPage(pageKey) {
-    const p = String(pageKey || '').trim() || 'home';
-    if (p === 'admin_dashboard') return 'admin';
-    return p;
+  function normalizeSekce(raw) {
+    const v = String(raw || '').trim();
+    if (v === '1' || v === '2' || v === '3') return v;
+    if (v === 'home') return '3';
+    if (v === 'manager') return '2';
+    if (v === 'admin' || v === 'admin_dashboard') return '1';
+    return '3';
   }
 
-  function syncActiveTopMenu(pageKey) {
-    const p = normalizeMenuPage(pageKey);
-    const btns = document.querySelectorAll('.head_menu .head_menu_btn[data-page]');
+  CB_MENU.normalizeSekce = normalizeSekce;
+
+  function buildSekceUrl(sekce) {
+    const u = new URL(w.location.href);
+    u.searchParams.set('sekce', normalizeSekce(sekce));
+    return u.toString();
+  }
+
+  CB_MENU.buildSekceUrl = buildSekceUrl;
+
+  function syncActiveTopMenu(sekce) {
+    const s = normalizeSekce(sekce);
+    const btns = document.querySelectorAll('.head_menu .head_menu_btn[data-sekce]');
     if (!btns || btns.length === 0) return;
 
     btns.forEach((btn) => {
-      const key = String(btn.getAttribute('data-page') || '').trim();
-      btn.classList.toggle('is-on', key === p);
+      const key = normalizeSekce(btn.getAttribute('data-sekce') || '3');
+      btn.classList.toggle('is-on', key === s);
     });
   }
 
   CB_MENU.syncActiveTopMenu = syncActiveTopMenu;
 
-  function goPageInternal(pageKey) {
-    const p = normalizeMenuPage(pageKey);
+  function goSekceInternal(sekce) {
+    const s = normalizeSekce(sekce);
 
-    syncActiveTopMenu(p);
+    syncActiveTopMenu(s);
 
-    const cur = normalizeMenuPage(CB_MENU._currentPage || 'home');
-    if (cur === p) {
+    const cur = normalizeSekce(CB_MENU._currentPage || '3');
+    if (cur === s) {
       return;
     }
 
     if (CB_MENU._ajaxWirePopstateOnce) CB_MENU._ajaxWirePopstateOnce();
     if (CB_MENU._ajaxFetchMainAndSwap) {
-      CB_MENU._ajaxFetchMainAndSwap(p);
+      CB_MENU._ajaxFetchMainAndSwap(s);
       return;
     }
 
-    w.location.href = w.location.href;
+    w.location.href = buildSekceUrl(s);
   }
 
   CB_MENU.goPage = function goPage(page) {
-    goPageInternal(page);
+    goSekceInternal(page);
+  };
+
+  CB_MENU.goSekce = function goSekce(sekce) {
+    goSekceInternal(sekce);
   };
 
   CB_MENU.setMenuMode = function setMenuMode(mode) {
@@ -152,14 +169,15 @@
   };
 
   if (!CB_MENU._currentPage) {
-    CB_MENU._currentPage = 'home';
+    const u = new URL(w.location.href);
+    CB_MENU._currentPage = normalizeSekce(u.searchParams.get('sekce') || '3');
   }
 
   syncActiveTopMenu(CB_MENU._currentPage);
 
   document.addEventListener('cb:main-swapped', (ev) => {
-    const page = String(ev?.detail?.page || CB_MENU._currentPage || 'home');
-    syncActiveTopMenu(page);
+    const sekce = normalizeSekce(ev?.detail?.sekce || ev?.detail?.page || CB_MENU._currentPage || '3');
+    syncActiveTopMenu(sekce);
   });
 
 })(window);
