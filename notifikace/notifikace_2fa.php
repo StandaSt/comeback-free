@@ -131,16 +131,13 @@ function cb_push_send_2fa(int $idUser, string $token2fa): bool
     $webPush = new Minishlink\WebPush\WebPush($auth);
 
     $url = cb_url_abs('mobil/mobil_overeni.php?t=' . rawurlencode($token2fa));
-    $dbgToken = substr($token2fa, 0, 8);
-    $dbgText = 'DBG: V2 | user ' . $idUser . ' | token ' . $dbgToken . ' | stav ceka';
 
     $payloadArr = [
         'type' => '2FA_LOGIN',
         'title' => 'Comeback',
-        'body' => 'Schvalte přihlášení do IS. ' . $dbgText,
+        'body' => 'Schvalte přihlášení do IS.',
         'url' => $url,
         'token' => $token2fa,
-        'debug' => $dbgText,
     ];
 
     $payload = json_encode($payloadArr, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

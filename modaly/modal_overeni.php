@@ -1,18 +1,5 @@
 <?php
-// modaly/modal_overeni.php * Verze: V3 * Aktualizace: 07.03.2026
 declare(strict_types=1);
-
-/*
- * Nepřihlášený stav
- * - zobrazí čekání na 2FA po zadání hesla
- * - nebo klasický login modal
- *
- * Vstup z index.php:
- * - otevřený layout kontejneru a hlavička
- *
- * Chování:
- * - po vykreslení modálu ukončí request přes exit
- */
 
 if (!empty($_SESSION['login_ok'])) {
     return;
@@ -21,60 +8,40 @@ if (!empty($_SESSION['login_ok'])) {
 $cb2faToken = (string)($_SESSION['cb_2fa_token'] ?? '');
 
 if ($cb2faToken !== '') {
-
-    $pollMs = 2000;
-    if (defined('CB_2FA_POLL_MS')) {
-        $pollMs = (int)CB_2FA_POLL_MS;
-    }
+    $pollMs = defined('CB_2FA_POLL_MS') ? (int)CB_2FA_POLL_MS : 2000;
 
     $pairUrl = cb_url_abs('mobil/mobil_overeni.php?t=' . rawurlencode($cb2faToken));
     $checkUrl = cb_url('lib/push_2fa_api.php?check=1');
     $cancelUrl = cb_url('lib/push_2fa_api.php?cancel=1');
 
-    $dbgUser = 0;
-    if (isset($_SESSION['cb_user']) && is_array($_SESSION['cb_user']) && isset($_SESSION['cb_user']['id_user'])) {
-        $dbgUser = (int)$_SESSION['cb_user']['id_user'];
-    }
-    $dbgToken = substr($cb2faToken, 0, 8);
-    $dbgText = 'DBG: V3 | user ' . $dbgUser . ' | token ' . $dbgToken . ' | stav ceka';
-
     echo '<div class="cb-login-fill"></div>';
     ?>
+    <div id="cb-2fa-ovl" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Schválení přihlášení">
+      <div class="modal">
+        <button type="button" class="modal-x" id="cb2faClose" aria-label="Zavřít">×</button>
 
-    <div id="cb-2fa-ovl" role="dialog" aria-modal="true" aria-label="Schválení přihlášení">
-      <div class="cb-2fa-card">
-        <div class="cb-2fa-top">
-          <div class="cb-2fa-head">
-            <div class="cb-2fa-logo" aria-hidden="true">
-              <img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback">
-            </div>
-            <div>
-              <p class="cb-2fa-title">Schválení přihlášení</p>
-              <p class="cb-2fa-sub">IS Pizzacomeback</p>
-            </div>
+        <div class="modal-head">
+          <div class="modal-logo" aria-hidden="true">
+            <img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback">
           </div>
-          <button type="button" class="cb-2fa-x" id="cb2faClose" aria-label="Zavřít">×</button>
+          <div>
+            <p class="modal-title">Schválení přihlášení</p>
+            <p class="modal-sub">IS Comeback</p>
+          </div>
         </div>
 
-        <div class="cb-2fa-body">
-          <div class="cb-2fa-box">
-            <div class="cb-2fa-main">
-              Potvrďte přihlášení na Vašem zařízení.
-            </div>
-            <div class="cb-2fa-status" id="cb2faStatus">Na potvrzení přihlášení zbývá: --:--</div>
-            <div class="cb-2fa-status" id="cb2faDbg"><?= h($dbgText) ?></div>
+        <div class="modal-center">
+          <div class="modal-box">
+            <p class="modal-copy">Potvrďte přihlášení na Vašem zařízení.</p>
+            <div class="modal-status modal-status-center" id="cb2faStatus">Na potvrzení přihlášení zbývá: --:--</div>
           </div>
 
-          <div class="cb-2fa-fallback">
-            <div class="cb-2fa-fallback-line"></div>
-            <div class="cb-2fa-qrhint">
-              Pokud jste neobdržel/a notifikaci na registrované zařízení,<br>
-              načtěte tento QR kód.
-            </div>
-            <div class="cb-2fa-qrwrap">
-              <div class="cb-2fa-qr" id="cb2faQr"></div>
-            </div>
-          </div>
+          <div class="modal-divider"></div>
+
+          <p class="modal-sub modal-copy-wide">
+            Pokud jste neobdržel/a notifikaci na registrované zařízení, načtěte tento QR kód.
+          </p>
+          <div class="modal-qr modal-qr-main" id="cb2faQr"></div>
         </div>
       </div>
     </div>
@@ -86,18 +53,14 @@ if ($cb2faToken !== '') {
         var btnX = document.getElementById('cb2faClose');
 
         function fmt(sec){
-          if (typeof sec !== 'number' || sec < 0) {
-            sec = 0;
-          }
+          if (typeof sec !== 'number' || sec < 0) sec = 0;
           var m = Math.floor(sec / 60);
           var s = sec % 60;
           return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
         }
 
         function setTxt(t){
-          if (st) {
-            st.textContent = t;
-          }
+          if (st) st.textContent = t;
         }
 
         try {
@@ -111,9 +74,7 @@ if ($cb2faToken !== '') {
               });
             }
           }
-        } catch (e) {
-          // QR je jen náhradní možnost, nesmí shodit stránku.
-        }
+        } catch (e) {}
 
         function kontrola2fa(){
           fetch('<?= h($checkUrl) ?>', { cache: 'no-store' })
@@ -173,7 +134,3 @@ require_once __DIR__ . '/modal_login.php';
 </div>
 </body>
 </html>
-<?php
-/* modaly/modal_overeni.php * Verze: V3 * Aktualizace: 07.03.2026 * Počet řádků: 179 */
-/* Předchozí počet řádků: 143 */
-// Konec souboru

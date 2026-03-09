@@ -1,44 +1,51 @@
-/* style/1/modal_alert.css * Verze: V6 * Aktualizace: 06.03.2026 * Počet řádků: 320 */
-/* Předchozí počet řádků: 429 */
+/* style/1/modal_alert.css */
 
-/*
- * Jednotné CSS pro všechny modály / „karty“ okolo přihlášení a párování.
- *
- * Princip:
- * - PC modál: .modal-overlay + .modal
- * - Mobilní stránka: .modal-page + .modal
- *
- * Pozn.: Styly se aktivují jen přes třídy níže, takže globální načtení nevadí.
- */
-
-.modal-page{
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  margin: 0;
-  padding: 18px;
-  background: #eaf2fb;
+:root{
+  --cb-modal-bg: #ffffff;
+  --cb-modal-border: rgba(15, 23, 42, 0.16);
+  --cb-modal-text: #0f172a;
+  --cb-modal-muted: rgba(15, 23, 42, 0.72);
+  --cb-modal-overlay: rgba(8, 12, 18, 0.62);
+  --cb-modal-shadow: 0 24px 56px rgba(2, 8, 23, 0.28);
+  --cb-modal-primary: #2563eb;
+  --cb-modal-primary-hover: #1d4ed8;
+  --cb-modal-danger: #dc2626;
+  --cb-modal-panel: rgba(15, 23, 42, 0.05);
 }
 
-.modal-overlay{
+.modal-page{
+  font-family: "Segoe UI", "Trebuchet MS", Arial, sans-serif;
+  margin: 0;
+  padding: 18px;
+  background:
+    radial-gradient(1000px 540px at 10% 0%, #dbeafe 0%, transparent 62%),
+    radial-gradient(900px 500px at 90% 100%, #e2e8f0 0%, transparent 58%),
+    #eef3fa;
+  color: var(--cb-modal-text);
+}
+
+.modal-overlay,
+#cb-2fa-ovl{
   position: fixed;
   inset: 0;
-  background: rgba(10, 20, 40, .35);
-  backdrop-filter: blur(26px);
-  -webkit-backdrop-filter: blur(26px);
+  z-index: 99999;
+  background: var(--cb-modal-overlay);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
   padding: 18px;
 }
 
 .modal{
   position: relative;
   width: min(560px, 100%);
-  background: #ffffff;
-  border: 1px solid rgba(0,0,0,.14);
+  background: var(--cb-modal-bg);
+  border: 1px solid var(--cb-modal-border);
   border-radius: 18px;
-  box-shadow: 0 18px 46px rgba(0,0,0,.18);
-  padding: 16px 16px 18px 16px;
+  box-shadow: var(--cb-modal-shadow);
+  padding: 20px;
 }
 
 .modal-spacer{
@@ -47,24 +54,27 @@
 
 .modal-x{
   position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 34px;
-  height: 34px;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
   border-radius: 12px;
-  border: 1px solid rgba(220, 38, 38, .45);
-  background: rgba(220, 38, 38, .10);
-  color: rgb(220, 38, 38);
+  border: 1px solid rgba(220, 38, 38, 0.45);
+  background: rgba(220, 38, 38, 0.08);
+  color: var(--cb-modal-danger);
   font-size: 22px;
-  line-height: 30px;
+  line-height: 1;
   text-align: center;
   cursor: pointer;
   text-decoration: none;
+  display: grid;
+  place-items: center;
   padding: 0;
+  transition: background .14s ease, transform .14s ease;
 }
 
 .modal-x:hover{
-  background: rgba(220, 38, 38, .16);
+  background: rgba(220, 38, 38, 0.14);
 }
 
 .modal-x:active{
@@ -75,20 +85,20 @@
   display: flex;
   gap: 12px;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 14px;
+  padding-right: 46px;
 }
 
 .modal-head-top{
   justify-content: flex-start;
   align-items: flex-start;
-  margin-bottom: 18px;
 }
 
 .modal-logo{
-  width: 52px;
-  height: 52px;
+  width: 54px;
+  height: 54px;
   border-radius: 14px;
-  border: 1px solid rgba(0,0,0,.12);
+  border: 1px solid rgba(15, 23, 42, 0.12);
   background: #fff;
   display: grid;
   place-items: center;
@@ -110,37 +120,38 @@
 }
 
 .modal-title{
-  font-weight: 800;
-  font-size: 16px;
   margin: 0;
+  font-size: 28px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  font-weight: 800;
+  color: var(--cb-modal-text);
 }
 
 .modal-title-center{
   text-align: center;
-  font-size: 24px;
-  line-height: 1.2;
 }
 
 .modal-sub{
-  margin: 2px 0 0 0;
-  color: rgba(15, 23, 42, .75);
-  font-size: 13px;
-  line-height: 1.35;
+  margin: 4px 0 0 0;
+  color: var(--cb-modal-muted);
+  font-size: 14px;
+  line-height: 1.45;
 }
 
 .modal-center{
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 .modal-center-lg{
-  gap: 18px;
+  gap: 16px;
 }
 
 .modal-copy{
-  font-size: 17px;
-  line-height: 1.45;
-  color: rgba(15, 23, 42, .88);
+  font-size: 16px;
+  line-height: 1.5;
+  color: rgba(15, 23, 42, 0.9);
 }
 
 .modal-copy-wide{
@@ -148,23 +159,57 @@
 }
 
 .modal-box{
-  margin-top: 10px;
-  padding: 12px;
+  margin-top: 2px;
+  padding: 14px;
   border-radius: 14px;
-  background: rgba(15,23,42,.06);
-  border: 1px solid rgba(0,0,0,.10);
+  background: var(--cb-modal-panel);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+}
+
+.modal-divider{
+  height: 1px;
+  margin: 2px 0;
+  background: linear-gradient(to right, transparent, rgba(15, 23, 42, 0.18), transparent);
 }
 
 .modal-label{
   font-size: 13px;
-  color: rgba(15, 23, 42, .70);
+  color: var(--cb-modal-muted);
   margin: 0 0 6px 0;
+  display: block;
+}
+
+.modal-field{
+  display: grid;
+  gap: 6px;
+}
+
+.modal-form{
+  display: grid;
+  gap: 12px;
+}
+
+.modal-input{
+  width: 100%;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  border-radius: 12px;
+  padding: 11px 12px;
+  font-size: 16px;
+  color: var(--cb-modal-text);
+  background: #fff;
+  outline: 0;
+  transition: border-color .14s ease, box-shadow .14s ease;
+}
+
+.modal-input:focus{
+  border-color: rgba(37, 99, 235, 0.58);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
 }
 
 .modal-phone{
   font-size: 18px;
-  font-weight: 900;
-  letter-spacing: .3px;
+  font-weight: 800;
+  letter-spacing: .2px;
   margin: 0;
 }
 
@@ -177,10 +222,10 @@
 }
 
 .modal-qr{
-  width: 180px;
-  height: 180px;
+  width: 184px;
+  height: 184px;
   border-radius: 14px;
-  border: 1px solid rgba(0,0,0,.12);
+  border: 1px solid rgba(15, 23, 42, 0.14);
   background: #fff;
   display: grid;
   place-items: center;
@@ -190,8 +235,8 @@
 }
 
 .modal-qr-main{
-  width: 250px;
-  height: 250px;
+  width: 220px;
+  height: 220px;
   margin: 0 auto;
 }
 
@@ -204,50 +249,68 @@
 
 .modal-instr{
   flex: 1 1 260px;
-  font-size: 13px;
-  line-height: 1.4;
-  color: rgba(15, 23, 42, .85);
+  font-size: 14px;
+  line-height: 1.45;
+  color: rgba(15, 23, 42, 0.84);
 }
 
 .modal-url{
   margin-top: 8px;
   padding: 8px 10px;
   border-radius: 12px;
-  background: rgba(255,255,255,.9);
-  border: 1px solid rgba(0,0,0,.10);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(15, 23, 42, 0.12);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   font-size: 12px;
   word-break: break-all;
 }
 
 .modal-foot{
-  margin-top: 12px;
+  margin-top: 8px;
   display: flex;
   justify-content: space-between;
   gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.modal-actions{
+  margin-top: 4px;
+  display: grid;
+  gap: 10px;
 }
 
 .modal-status{
-  font-size: 13px;
-  color: rgba(15, 23, 42, .75);
+  font-size: 14px;
+  color: var(--cb-modal-muted);
 }
 
 .modal-status-center{
   text-align: center;
   font-size: 18px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--cb-modal-text);
 }
 
 .modal-btn{
   width: 100%;
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(0,0,0,.14);
-  font-size: 16px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
   background: #fff;
+  color: var(--cb-modal-text);
+  transition: border-color .14s ease, background .14s ease, transform .14s ease;
+}
+
+.modal-btn:hover{
+  border-color: rgba(15, 23, 42, 0.36);
+}
+
+.modal-btn:active{
+  transform: translateY(1px);
 }
 
 .modal-foot .modal-btn{
@@ -257,170 +320,58 @@
 }
 
 .modal-btn.primary{
-  background: rgba(37,99,235,.96);
-  border-color: rgba(37,99,235,.35);
+  background: var(--cb-modal-primary);
+  border-color: rgba(37, 99, 235, 0.46);
   color: #fff;
-  font-weight: 600;
+}
+
+.modal-btn.primary:hover{
+  background: var(--cb-modal-primary-hover);
 }
 
 .modal-btn:disabled{
-  opacity: .55;
+  opacity: 0.55;
   cursor: default;
+  transform: none;
 }
 
 .muted{
-  color: rgba(15,23,42,.70);
+  color: var(--cb-modal-muted);
   font-size: 13px;
 }
 
 .out{
   margin-top: 10px;
   padding: 10px 12px;
-  border-radius: 14px;
-  background: rgba(15,23,42,.06);
+  border-radius: 12px;
+  background: var(--cb-modal-panel);
   font-size: 13px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
 }
 
 code{
-  background: rgba(15,23,42,.08);
+  background: rgba(15, 23, 42, 0.08);
   padding: 2px 6px;
   border-radius: 8px;
 }
 
-/* ===== 2FA čekací modál v index.php (PC) ===== */
-#cb-2fa-ovl{
-  position: fixed;
-  inset: 0;
-  z-index: 99999;
-  background: rgba(8, 12, 18, .72);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 18px;
-}
-
-.cb-2fa-card{
-  width: min(560px, 100%);
-  background: #fff;
-  border: 1px solid rgba(15, 23, 42, .14);
-  border-radius: 18px;
-  box-shadow: 0 18px 44px rgba(0,0,0,.22);
-  overflow: hidden;
-}
-
-.cb-2fa-top{
-  padding: 16px 18px 12px 18px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  border-bottom: 1px solid rgba(15, 23, 42, .14);
-}
-
-.cb-2fa-title{
-  margin: 0;
-  font-size: 24px;
-  font-weight: 800;
-  line-height: 1.25;
-}
-
-.cb-2fa-x{
-  width: 34px;
-  height: 34px;
-  border-radius: 12px;
-  border: 1px solid rgba(15, 23, 42, .18);
-  background: #fff;
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  font-size: 18px;
-  line-height: 1;
-  color: rgba(220, 38, 38, .92);
-}
-
-.cb-2fa-body{
-  padding: 14px 18px 18px 18px;
-  display: grid;
-  gap: 16px;
-}
-
-.cb-2fa-box{
-  padding: 0;
-  border-radius: 14px;
-  background: transparent;
-  border: 0;
-  font-size: 18px;
-  line-height: 1.5;
-  color: rgba(15, 23, 42, .88);
-}
-
-.cb-2fa-qrwrap{
-  margin-top: 8px;
-  display: grid;
-  place-items: center;
-  gap: 10px;
-}
-
-.cb-2fa-qr{
-  width: 190px;
-  height: 190px;
-  border-radius: 16px;
-  background: #fff;
-  border: 1px solid rgba(0,0,0,.12);
-  box-shadow: 0 10px 26px rgba(0,0,0,.10);
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-}
-
-.cb-2fa-qr > img,
-.cb-2fa-qr canvas,
-.cb-2fa-qr img{
-  width: 100% !important;
-  height: 100% !important;
-  display: block;
-}
-
-.cb-2fa-qrhint{
-  font-size: 16px;
-  color: rgba(15, 23, 42, .75);
-  text-align: center;
-  line-height: 1.45;
-}
-
-.cb-2fa-status{
-  font-size: 18px;
-  font-weight: 700;
-  color: #0f172a;
-  text-align: center;
-}
-
 @media (max-width: 640px){
-  .modal,
-  .cb-2fa-card{
+  .modal{
     width: 100%;
+    padding: 16px;
   }
 
-  .modal-title-center,
-  .cb-2fa-title{
-    font-size: 20px;
+  .modal-title{
+    font-size: 22px;
   }
 
   .modal-copy,
-  .cb-2fa-box,
-  .cb-2fa-status,
-  .modal-status-center,
-  .cb-2fa-qrhint{
+  .modal-status-center{
     font-size: 16px;
   }
 
-  .modal-qr-main,
-  .cb-2fa-qr{
-    width: 210px;
-    height: 210px;
+  .modal-qr-main{
+    width: 200px;
+    height: 200px;
   }
 }
-
-/* style/1/modal_alert.css * Verze: V6 * Aktualizace: 06.03.2026 * Počet řádků: 320 */
-/* Předchozí počet řádků: 429 */
-/* Konec souboru */

@@ -1,23 +1,30 @@
-/* style/1/pages/obj_zakaznici.css * Verze: V1 * Aktualizace: 18.2.2026 */
+/* style/1/pages/obj_zakaznici.css * Verze: V2 * Aktualizace: 07.03.2026 */
 
 /*
- * OBJEDNÁVKY → ZÁKAZNÍCI (tabulka)
- * - jen věci specifické pro tuto stránku
+ * OBJ -> ZAKAZNICI (tabulka)
+ * - specificke sirky a chovani sloupcu
  */
 
-/* =========================
-   TABULKA – rozložení sloupců
-   ========================= */
-
-/* šířky podle obsahu (přepíše .table-fixed v HTML, pokud tam zůstane) */
 .zakaznici-table{
   table-layout:auto;
+  width:100%;
 }
 
-/* aby se tabulka zbytečně neroztahovala prázdnými buňkami */
+/* minimalni sirky sloupcu */
+.zakaznici-table .c-id{ min-width:70px; white-space:nowrap; }
+.zakaznici-table .c-prijmeni{ min-width:150px; }
+.zakaznici-table .c-jmeno{ min-width:140px; }
+.zakaznici-table .c-telefon{ min-width:130px; white-space:nowrap; }
+.zakaznici-table .c-email{ min-width:220px; overflow-wrap:anywhere; }
+.zakaznici-table .c-ulice{ min-width:200px; overflow-wrap:anywhere; }
+.zakaznici-table .c-mesto{ min-width:140px; }
+.zakaznici-table .c-pobocka{ min-width:110px; white-space:nowrap; }
+.zakaznici-table .c-posl_obj{ min-width:100px; white-space:nowrap; }
+
+/* prazdne bunky at netahaji sirku */
 .zakaznici-table td:empty::after{
   content:"";
 }
 
-/* style/1/pages/obj_zakaznici.css * Verze: V1 * Aktualizace: 18.2.2026 * Počet řádků: 23
+/* style/1/pages/obj_zakaznici.css * Verze: V2 * Aktualizace: 07.03.2026
    konec souboru */

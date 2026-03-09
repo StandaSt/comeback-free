@@ -1,24 +1,8 @@
 <?php
-// modaly/modal_login.php * Verze: V4 * Aktualizace: 06.03.2026
 declare(strict_types=1);
-
-/*
- * LOGIN MODÁL (PC)
- *
- * Co dělá:
- * - vykreslí modální okno s formulářem pro přihlášení (email + heslo)
- * - odesílá POST na lib/login_smeny.php
- * - po vykreslení nastaví fokus (kurzor) do pole E-mail
- *
- * Pozn.:
- * - vzhled řeší společné CSS v style/1/modal_alert.css (třídy .modal-*)
- * - tento soubor neřeší ověření hesla ani session – to dělá lib/login_smeny.php
- */
-
 ?>
 <div id="cb-login-overlay" class="modal-overlay" aria-modal="true" role="dialog" aria-label="Přihlášení do IS Comeback">
   <div class="modal">
-
     <div class="modal-head">
       <div class="modal-logo" aria-hidden="true">
         <img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback">
@@ -29,10 +13,10 @@ declare(strict_types=1);
       </div>
     </div>
 
-    <form method="post" action="<?= h(cb_url('lib/login_smeny.php')) ?>">
-      <div class="cb-field">
-        <label for="cb_email">E-mail</label>
-        <input class="cb-input"
+    <form method="post" action="<?= h(cb_url('lib/login_smeny.php')) ?>" class="modal-form">
+      <div class="modal-field">
+        <label class="modal-label" for="cb_email">E-mail</label>
+        <input class="modal-input"
                id="cb_email"
                name="email"
                type="email"
@@ -40,9 +24,9 @@ declare(strict_types=1);
                required>
       </div>
 
-      <div class="cb-field">
-        <label for="cb_pass">Heslo</label>
-        <input class="cb-input"
+      <div class="modal-field">
+        <label class="modal-label" for="cb_pass">Heslo</label>
+        <input class="modal-input"
                id="cb_pass"
                name="heslo"
                type="password"
@@ -50,25 +34,18 @@ declare(strict_types=1);
                required>
       </div>
 
-      <div class="cb-actions">
+      <div class="modal-actions">
         <button class="modal-btn primary" type="submit">Přihlásit</button>
       </div>
     </form>
-
   </div>
 </div>
 
 <script>
   (function(){
-    // malá prodleva kvůli renderu modálu, pak fokus do E-mail
     var email = document.getElementById('cb_email');
     if (email) {
       setTimeout(function(){ email.focus(); }, 60);
     }
   })();
 </script>
-<?php
-/* modaly/modal_login.php * Verze: V4 * Aktualizace: 06.03.2026 * Počet řádků: 73 */
-/* Předchozí počet řádků: 81 */
-// Konec souboru
-

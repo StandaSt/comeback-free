@@ -1,0 +1,105 @@
+/* style/1/karty/zadani_reportu.css * Verze: V1 * Aktualizace: 08.03.2026 */
+
+.zr_card{
+  padding:0;
+}
+
+.zr_compact{
+  padding:14px 12px;
+}
+
+.zr_compact.is-hidden{
+  display:none;
+}
+
+.zr_expanded{
+  padding:12px;
+  border-top:1px solid rgba(0,0,0,.10);
+}
+
+.zr_expanded.is-hidden{
+  display:none;
+}
+
+.zr_form{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.zr_block{
+  border:1px solid rgba(0,0,0,.10);
+  border-radius:10px;
+  padding:10px;
+  background:#fff;
+}
+
+.zr_block h4{
+  margin:0 0 8px 0;
+  font-size:14px;
+}
+
+.zr_grid{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(130px, 1fr));
+  gap:8px 10px;
+}
+
+.zr_grid_top{
+  grid-template-columns:repeat(4, minmax(120px, 1fr));
+}
+
+.zr_grid label{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  font-size:12px;
+  color:rgba(15,23,42,.75);
+}
+
+.zr_grid input,
+.zr_grid select{
+  height:32px;
+}
+
+.zr_chk{
+  justify-content:flex-end;
+}
+
+.zr_chk input{
+  width:16px;
+  height:16px;
+  margin-top:7px;
+}
+
+.zr_block_api{
+  background:linear-gradient(180deg, rgba(59,130,246,.07), #fff);
+}
+
+.zr_block_api input[readonly]{
+  background:rgba(148,163,184,.18);
+  color:#0f172a;
+  border:1px solid rgba(100,116,139,.35);
+}
+
+.zr_actions{
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+}
+
+@media (max-width: 1200px){
+  .zr_grid,
+  .zr_grid_top{
+    grid-template-columns:repeat(2, minmax(120px, 1fr));
+  }
+}
+
+@media (max-width: 720px){
+  .zr_grid,
+  .zr_grid_top{
+    grid-template-columns:1fr;
+  }
+}
+
+/* style/1/karty/zadani_reportu.css * Verze: V1 * Aktualizace: 08.03.2026 */

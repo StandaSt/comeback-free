@@ -257,6 +257,42 @@ if (!function_exists('db_user_role_sync')) {
     }
 }
 
+if (!function_exists('db_user_role_effective_id')) {
+    /**
+     * Vrati efektivni roli uzivatele jako nejmensi id_role z tabulky user_role.
+     * Kdyz uzivatel nema zadnou roli, vraci null.
+     */
+    function db_user_role_effective_id(mysqli $conn, int $idUser): ?int
+    {
+        if ($idUser <= 0) {
+            return null;
+        }
+
+        $stmt = $conn->prepare('
+            SELECT MIN(id_role) AS min_role
+            FROM user_role
+            WHERE id_user=?
+        ');
+        if ($stmt === false) {
+            return null;
+        }
+
+        $stmt->bind_param('i', $idUser);
+        $stmt->execute();
+        $stmt->bind_result($minRole);
+
+        $out = null;
+        if ($stmt->fetch()) {
+            $v = (int)$minRole;
+            if ($v > 0) {
+                $out = $v;
+            }
+        }
+        $stmt->close();
+        return $out;
+    }
+}
+
 // db/db_user_role.php * Verze: V5 * Aktualizace: 21.2.2026
 // Počet řádků: 262
 // Konec souboru

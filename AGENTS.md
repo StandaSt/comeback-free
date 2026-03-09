@@ -1,10 +1,11 @@
 # AGENTS.md
 
-Při auditu, hledání chyb, duplicit a dead code ignoruj složky: vendor/, testy/, pomocne/.
+Při auditu, hledání chyb, duplicit a dead code ignoruj složky: `vendor/`, `testy/`, `pomocne/`.
 
 ## Projekt
 Tento projekt je interní IS „Comeback“ pro lokální provoz a postupný přechod na dashboardový a kartový přístup.
-Projekt obsahuje i starší části a neuklizený kód. Neber vše jako čistě navržený systém. Před úpravou vždy nejprve zjisti, co je aktuálně skutečně používané.
+Projekt obsahuje i starší části a neuklizený kód. Neber vše jako čistě navržený systém.
+Před úpravou vždy nejprve zjisti, co je aktuálně skutečně používané.
 
 ## Hlavní zásady práce
 - Nehádej.
@@ -42,38 +43,38 @@ Proto:
 - citlivá konfigurace a secrets.
 
 ### `db/`
-- databázová vrstva.
-- soubory `db_*` obvykle řeší konkrétní tabulku nebo konkrétní DB operaci.
+- databázová vrstva,
+- soubory `db_*` obvykle řeší konkrétní tabulku nebo konkrétní DB operaci,
 - při změnách datové logiky vždy kontroluj i návaznost na `lib/`.
 
 ### `funkce/`
-- menší pomocné funkce.
+- menší pomocné funkce,
 - neplést s hlavní aplikační logikou v `lib/`.
 
 ### `includes/`
-- sdílené části aplikace a layoutu.
-- jsou zde i části loginu, párování, modálů a dashboard skládání.
+- sdílené části aplikace a layoutu,
+- jsou zde i části loginu, párování, modálů a dashboard skládání,
 - při změnách layoutu nebo společných prvků vždy zkontroluj nejdřív tuto složku.
 
 ### `blocks/`
-- bloky dashboardu a kartového zobrazení.
-- toto je důležitá současná část projektu.
-- bloky často nahrazují nebo postupně vytlačují starší pojetí stránek.
+- bloky dashboardu a kartového zobrazení,
+- důležitá současná část projektu,
+- bloky často nahrazují nebo postupně vytlačují starší pojetí stránek,
 - při dashboardových úpravách hledej nejdřív zde.
 
 ### `pages/`
-- jednotlivé stránky aplikace.
-- část je aktivní, část může být starší nebo přechodová.
+- jednotlivé stránky aplikace,
+- část je aktivní, část může být starší nebo přechodová,
 - nepředpokládej, že každá stránka je hlavní zdroj pravdy pro danou funkci.
 
 ### `lib/`
-- hlavní aplikační logika.
-- login, logout, Restia, směny, push, bootstrap, systémové utility.
+- hlavní aplikační logika,
+- login, logout, Restia, směny, push, bootstrap, systémové utility,
 - při funkčních změnách chování aplikace bývá klíčová právě tato složka.
 
 ### `js/`
-- frontend logika.
-- menu, AJAX, filtry, stránkování, časovače.
+- frontend logika,
+- menu, AJAX, filtry, stránkování, časovače,
 - při změnách chování rozhraní kontroluj spolu s `includes/`, `pages/` a `style/`.
 
 ### `style/1/`
@@ -87,14 +88,14 @@ Hlavní CSS je rozdělené po logických částech:
 - další specializované CSS soubory dle názvu.
 
 ### `style/1/pages/`
-- CSS konkrétních stránek.
+- CSS konkrétních stránek,
 - při úpravě vzhledu vždy nejprve zjisti, zda styl není přepisovaný právě zde.
 
 ### `img/`
 - obrázky a SVG ikony.
 
 ### `pomocne/`
-- pomocné, testovací, diagnostické a dočasné věci.
+- pomocné, testovací, diagnostické a dočasné věci,
 - neber tuto složku jako zdroj architektonické pravdy, pokud to není výslovně potvrzené.
 
 ### `testy/`
@@ -111,13 +112,7 @@ Při práci s layoutem vždy nejprve zjisti:
 4. které CSS opravdu vyhrává.
 
 Nepředpokládej, že vše řídí jeden soubor.
-Styl může být kombinací:
-- globálního CSS,
-- layout CSS,
-- CSS pro karty,
-- CSS pro tabulky,
-- stránkového CSS,
-- případně JS chování.
+Styl může být kombinací globálního CSS, layout CSS, CSS pro karty, CSS pro tabulky, stránkového CSS a případně JS chování.
 
 Při úpravě vzhledu vždy nejprve vypiš:
 - které soubory HTML/PHP renderují prvek,
@@ -125,13 +120,10 @@ Při úpravě vzhledu vždy nejprve vypiš:
 - zda do toho zasahuje JS.
 
 ## Dashboard a bloky
-Projekt se posouvá směrem:
-- od klasických samostatných stránek
-- k dashboardu, kartám a blokům.
-
+Projekt se posouvá od klasických samostatných stránek k dashboardu, kartám a blokům.
 Proto při nových úpravách zvaž:
 - zda je změna v `blocks/`,
-- zda starší `pages/` už jen nereferují starý stav,
+- zda starší `pages/` už nereferují starý stav,
 - zda není stejná funkce řešena nově i starým způsobem paralelně.
 
 ## Login, modály, párování
@@ -179,15 +171,19 @@ Pokud je zadání širší nebo rizikové:
 - logika rozdělená mezi `includes/`, `pages/`, `blocks/`, `lib/`, `db/`, `js/`.
 
 Proto vždy nejprve ověř realitu v kódu, ne domněnky.
+
 ## Komunikace
-- Do pomocne/codex.txt zapisuj historii automaticky a bez oznamovani uzivateli.
-- Po zapisu rovnou odpovez na dotaz, bez vet typu "Zapisuju..." nebo "Zapsal jsem...".
+- Do `pomocne/codex.txt` zapisuj historii automaticky a bez oznamování uživateli.
+- Po zápisu rovnou odpověz na dotaz, bez vět typu „Zapisuju...“ nebo „Zapsal jsem...“.
 
-## Schvalovani zmen
-- Nikdy neprovadej zmeny navic mimo presne zadani.
-- Pokud najdes dalsi problem mimo zadani, predem ho pouze oznam a navrhni reseni.
-- Jakoukoliv takovou zmenu proved az po explicitnim schvaleni od uzivatele.
+## Schvalování změn
+- Nikdy neprováděj změny navíc mimo přesné zadání.
+- Pokud najdeš další problém mimo zadání, předem ho pouze oznam a navrhni řešení.
+- Jakoukoliv takovou změnu proveď až po explicitním schválení od uživatele.
 
-## Styl vysvetleni
-- Cizi a odborne vyrazy i zkratky vzdy strucne vysvetli v cestine hned pri prvnim pouziti.
-- Pouzivej jednoduche formulace vhodne pro zacatecnika.
+## Styl vysvětlení
+- Cizí a odborné výrazy i zkratky vždy stručně vysvětli v češtině hned při prvním použití.
+- Používej jednoduché formulace vhodné pro začátečníka.
+
+## Kódování
+- Kódování všech upravovaných souborů: UTF-8 bez BOM (bez výjimky).

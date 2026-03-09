@@ -150,21 +150,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $stmt->execute();
         $stmt->close();
 
-        $subJson = json_encode($subscription, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        if ($subJson === false) {
-            throw new RuntimeException('Nelze serializovat subscription.');
-        }
-
         $stmt = $conn->prepare('
             INSERT INTO push_zarizeni
-              (id_user, nazev, endpoint, p256dh, auth, subscription_json, aktivni, vytvoreno_kdy)
+              (id_user, endpoint, endpoint_hash, klic_public, klic_auth, nazev, aktivni, vytvoreno, naposledy)
             VALUES
-              (?, ?, ?, ?, ?, ?, 1, NOW())
+              (?, ?, UNHEX(SHA2(?,256)), ?, ?, ?, 1, NOW(), NOW())
         ');
         if (!$stmt) {
             throw new RuntimeException('Nelze uložit zařízení.');
         }
-        $stmt->bind_param('isssss', $idUser, $nazev, $endpoint, $p256dh, $auth, $subJson);
+        $stmt->bind_param('isssss', $idUser, $endpoint, $endpoint, $p256dh, $auth, $nazev);
         $stmt->execute();
         $stmt->close();
 
@@ -198,10 +193,6 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
 
 $pair = cb_find_pair_token($token);
 $tokenOk = is_array($pair);
-$dbgUser = $tokenOk ? (int)($pair['id_user'] ?? 0) : 0;
-$dbgToken = substr($token, 0, 8);
-$dbgStav = $tokenOk ? 'token_ok' : 'token_bad';
-$dbgText = 'DBG: V7 | user ' . $dbgUser . ' | token ' . $dbgToken . ' | stav ' . $dbgStav;
 ?>
 <!doctype html>
 <html lang="cs">
@@ -210,6 +201,11 @@ $dbgText = 'DBG: V7 | user ' . $dbgUser . ' | token ' . $dbgToken . ' | stav ' .
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Comeback – registrace zařízení</title>
   <link rel="stylesheet" href="<?= h(cb_url('style/1/modal_alert.css')) ?>">
+  <style>
+    .modal-device-register{
+      width: min(315px, 100%);
+    }
+  </style>
 </head>
 <body class="modal-page">
 
@@ -223,8 +219,6 @@ $dbgText = 'DBG: V7 | user ' . $dbgUser . ' | token ' . $dbgToken . ' | stav ' .
 
     <div class="modal-center modal-center-lg">
       <p class="modal-title modal-title-center">Registrace zařízení</p>
-      <div class="modal-copy modal-copy-wide"><?= h($dbgText) ?></div>
-
       <?php if ($vapidPublic === '') { ?>
         <p><strong>Chybí VAPID public key.</strong></p>
         <p class="muted">Nastav konstantu <code>CB_VAPID_PUBLIC</code> v <code>lib/system.php</code>.</p>
@@ -374,3 +368,4 @@ $dbgText = 'DBG: V7 | user ' . $dbgUser . ' | token ' . $dbgToken . ' | stav ' .
 </html>
 <?php
 // Konec souboru
+

@@ -1,0 +1,70 @@
+Comeback IS - denni historie
+Datum: 2026-03-08
+Cas zapisu: 2026-03-08 02:49:54
+Autor: Codex + Standa
+
+1) Shrnuti dne
+- Prvni den spoluprace nad projektem Comeback IS.
+- Presun z puvodniho (legacy) pristupu na novy dashboardovy IS.
+- Vyresene velke tema: hlavicka (layout, obdobi, KPI, menu, stav systemu, user blok, session teplomer).
+- Pripraveny zaklad pro role/karty/opravneni a admin spravu.
+- Zalozena slozka pro trvalou historii spoluprace: codex/.
+
+2) Hlavni funkcni zmeny
+- Presuny a prejmenovani souboru pro login/2FA/mobil/notifikace.
+- Upravene odkazy po presunech souboru napric skripty.
+- Opravy cest po presunech (include/require), vcetne kontroly registrace mobilu.
+- Opravy kodovani (UTF-8/BOM) na kritickych souborech.
+- Sjednoceni modalu a CSS smeru (style/1/*).
+- Rozdeleni hlavicky do komponent (includes/hlavicka/*).
+- Obdobi v hlavicce: funkcni tlacitka vcera/tyden/mesic/rok + zapis do session.
+- User blok: posledni pristup, statistika prihlaseni, session/zbyva, logout, teplomer.
+- Casovac session: aktivita resetuje timeout, periodicky touch na server, auto-logout.
+- Oprava touch endpointu v index.php, aby po reloadu nebyl spatny zbyvajici cas.
+- Menu v hlavicce: AJAX navigace opravena (doplneno nacteni menu_core.js).
+- Stav systemu: upravy rozlozeni + TECH ikona.
+- Vyber pobocky napojen z DB (hlavicka).
+
+3) Prava/karty/admin (novy zaklad)
+- Pripraven DB navrh + SQL pro karty a vyjimky opravneni.
+- API vrstva pro admin spravu karet/vyjimek.
+- Admin rozhrani pro spravu karet a vyjimek (zaklad funkcni).
+- Rozsireni o historii zmen a strankovani (prubezne doladovano).
+
+4) Dashboard a stranky
+- Zprovoznen zaklad dashboard routingu.
+- Uklid pages/: odstraneny nefunkcni/placeholder soubory dle dohody.
+- Presun admin stranky do includes (podle dohody).
+- Hrube nasazeni prvnich realnych karet z existujicich datovych stranek (hr_uzivatele, obj_zakaznici) vcetne CSS/uprav dotazu.
+
+5) Restia a data strategie
+- Potvrzen smer: netahat data z Google reportu pres Restia CSV mezivrstvu.
+- Plan: historie a provozni data brat primarne pres Restia API + vlastni DB model.
+- Odhad importu 1.5M radku: orientacne hodiny az desitky hodin podle limitu API/DB.
+- Doporucen batch import po pobockach a mesicich s checkpointy + retry/backoff.
+
+6) Google Sheets (ukazkova sada)
+- Rozbalen ZIP: sheets/Stst-20260308T012112Z-3-001.zip
+- Obsah rozbalen do: sheets/unpacked/Stst
+- Proveden rychly pruzkum reportovych XLSX (listy Report/Kontrola/DatabaseRestia/Směny/HR/Denik atd.).
+- Identifikovany kandidati na rucne zadavana data (trzby, online platby, smeny, provozni pole).
+
+7) UX/CSS hlavicky - aktualni stav na konci dne
+- Teplomer: funkcni a opraveny podle pozadavku (odkryvani barevnych pasem).
+- Menu: funkcni.
+- Logout sloupec: opraveny.
+- Otevrene jemne doladeni px v hlavicce (vizualni zarovnani menu/stav/logo) - rozpracovano iteracne dle screenu.
+
+8) Dulezita rozhodnuti
+- Zadne necekane zmeny bez schvaleni uzivatelem.
+- Cizi terminy/zkratky vysvetlovat strucne.
+- Priorita: stabilita, prehlednost, modularita, zadne duplicitni chaos soubory.
+- Ignorovane slozky pri auditech: vendor, testy, pomocne.
+
+9) Co navazuje priste
+- Dokoncit pixel-perfect doladeni hlavicky (jen finalni kosmetika).
+- Pripravit navrh DB schema pro migraci denniho reportu z Google Sheetu.
+- Pripravit import script pro XLSX analyzu/mapovani.
+- Pripravit benchmark script pro Restia batch import (pobocka x mesic).
+
+Konec zapisu.

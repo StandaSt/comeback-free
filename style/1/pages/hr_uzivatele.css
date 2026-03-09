@@ -1,38 +1,31 @@
-/* style/1/pages/hr_uzivatele.css * Verze: V6 * Aktualizace: 20.2.2026 */
+/* style/1/pages/hr_uzivatele.css * Verze: V7 * Aktualizace: 07.03.2026 */
 
 /*
- * HR → UŽIVATELÉ (tabulka)
- * - jen věci specifické pro tuto stránku
- * - šířky sloupců patří SEM (ne do tabulky.css)
+ * HR -> UZIVATELE (tabulka)
+ * - specificke sirky a vizual sloupcu
  */
 
-/* =========================
-   TABULKA – rozložení sloupců
-   ========================= */
-
-/* tabulka se roztáhne na 100% šířky dostupného prostoru */
 .table.uzivatele-table{
   display:table;
-  table-layout:auto;      /* min-width sloupců funguje jen s auto */
+  table-layout:auto;
   width:100%;
 }
 
-/* minimální šířky sloupců (sloupce se mohou roztahovat, ale ne zmenšit pod minimum) */
-.uzivatele-table .c-id{ min-width:70px; }
+/* minimalni sirky sloupcu */
+.uzivatele-table .c-id{ min-width:70px; white-space:nowrap; }
 .uzivatele-table .c-prijmeni{ min-width:170px; }
 .uzivatele-table .c-jmeno{ min-width:150px; }
-.uzivatele-table .c-telefon{ min-width:120px; }
-.uzivatele-table .c-email{ min-width:230px; }
-.uzivatele-table .c-reg{ min-width:120px; }
-.uzivatele-table .c-aktivni{ min-width:100px; }
+.uzivatele-table .c-telefon{ min-width:130px; white-space:nowrap; }
+.uzivatele-table .c-email{ min-width:230px; overflow-wrap:anywhere; }
+.uzivatele-table .c-reg{ min-width:120px; white-space:nowrap; }
+.uzivatele-table .c-aktivni{ min-width:100px; white-space:nowrap; }
 .uzivatele-table .c-akce{ min-width:220px; }
 
-/* aby se tabulka zbytečně neroztahovala prázdnými buňkami */
 .uzivatele-table td:empty::after{
   content:"";
 }
 
-/* ikony v pravém sloupci */
+/* ikony v pravem sloupci */
 .uzivatele-table .row-icons{
   display:inline-flex;
   align-items:center;
@@ -44,12 +37,13 @@
   width:18px;
   height:18px;
   display:block;
+  opacity:.92;
 }
 
-/* X pro vyčištění filtrů vpravo v ikonovém sloupci */
-.uzivatele-table .filter-row th.c-akce .filter-actions-right{
-  justify-content:flex-end;
+.uzivatele-table .row-icons img:hover{
+  opacity:1;
+  transform:translateY(-1px);
 }
 
-/* style/1/pages/hr_uzivatele.css * Verze: V6 * Aktualizace: 20.2.2026 * Počet řádků: 55
+/* style/1/pages/hr_uzivatele.css * Verze: V7 * Aktualizace: 07.03.2026
    konec souboru */

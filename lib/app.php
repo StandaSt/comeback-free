@@ -39,7 +39,7 @@ if ($scriptName !== '') {
     if ($dir !== '') {
         $parts = explode('/', trim($dir, '/')); // ["comeback","lib"]
         $last = end($parts);
-        if (in_array($last, ['lib', 'pages', 'includes'], true)) {
+        if (in_array($last, ['lib', 'pages', 'includes', 'mobil', 'modaly', 'notifikace'], true)) {
             array_pop($parts);
             $dir = $parts ? '/' . implode('/', $parts) : '';
         }

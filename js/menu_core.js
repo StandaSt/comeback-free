@@ -1,17 +1,16 @@
-// js/menu_core.js * Verze: V4 * Aktualizace: 17.2.2026
+// js/menu_core.js * Verze: V5 * Aktualizace: 08.03.2026
 'use strict';
 
 /*
  * menu_core.js
  * - CB_MENU namespace (window.CB_MENU)
  * - router (goPage / setMenuMode)
- * - globální zavírání (click mimo / ESC / resize / scroll)
- * - timer pro zpožděné zavření
- * - detekce touch/desktop pro chování kliků na U1 s U2
+ * - globalni zavirani (click mimo / ESC / resize / scroll)
+ * - timer pro zpozdene zavreni
+ * - detekce touch/desktop
  *
- * V3:
- * - URL se nemění nikdy: page i menu se řeší přes session + AJAX headers
- * - ochrana proti zbytečnému AJAX reloadu: pokud kliknu na stejnou stránku, nic se neděje
+ * V5:
+ * - synchronizace aktivniho tlacitka v horni liste menu
  */
 
 (function (w) {
@@ -31,11 +30,31 @@
 
   CB_MENU.isTouchLike = isTouchLike;
 
-  function goPageInternal(pageKey) {
-    const p = String(pageKey || '').trim() || 'uvod';
+  function normalizeMenuPage(pageKey) {
+    const p = String(pageKey || '').trim() || 'home';
+    if (p === 'admin') return 'admin_dashboard';
+    return p;
+  }
 
-    // když už je stránka otevřená, nic nedělej
-    const cur = String(CB_MENU._currentPage || '').trim() || 'uvod';
+  function syncActiveTopMenu(pageKey) {
+    const p = normalizeMenuPage(pageKey);
+    const btns = document.querySelectorAll('.head_menu .head_menu_btn[data-page]');
+    if (!btns || btns.length === 0) return;
+
+    btns.forEach((btn) => {
+      const key = String(btn.getAttribute('data-page') || '').trim();
+      btn.classList.toggle('is-on', key === p);
+    });
+  }
+
+  CB_MENU.syncActiveTopMenu = syncActiveTopMenu;
+
+  function goPageInternal(pageKey) {
+    const p = normalizeMenuPage(pageKey);
+
+    syncActiveTopMenu(p);
+
+    const cur = normalizeMenuPage(CB_MENU._currentPage || 'home');
     if (cur === p) {
       return;
     }
@@ -46,7 +65,6 @@
       return;
     }
 
-    // fallback
     w.location.href = w.location.href;
   }
 
@@ -133,12 +151,18 @@
     return !!(sec && sec.level2 && sec.level2.length > 0);
   };
 
-  // výchozí (FULL load vždy uvod)
   if (!CB_MENU._currentPage) {
-    CB_MENU._currentPage = 'uvod';
+    CB_MENU._currentPage = 'home';
   }
+
+  syncActiveTopMenu(CB_MENU._currentPage);
+
+  document.addEventListener('cb:main-swapped', (ev) => {
+    const page = String(ev?.detail?.page || CB_MENU._currentPage || 'home');
+    syncActiveTopMenu(page);
+  });
 
 })(window);
 
-// js/menu_core.js * Verze: V4 * Aktualizace: 17.2.2026 * počet řádků 144
+// js/menu_core.js * Verze: V5 * Aktualizace: 08.03.2026
 // konec souboru

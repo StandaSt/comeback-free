@@ -52,6 +52,51 @@ if (
 }
 
 /* =========================
+   0b) Nastaveni pobocky do session (POST)
+   ========================= */
+if (
+    ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
+    && isset($_SERVER['HTTP_X_COMEBACK_SET_BRANCH'])
+) {
+    header('Content-Type: application/json; charset=utf-8');
+
+    $raw = (string)file_get_contents('php://input');
+    $data = json_decode($raw, true);
+    if (!is_array($data)) {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'err' => 'Neplatny JSON'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $idPob = (int)($data['id_pob'] ?? 0);
+    if ($idPob <= 0) {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'err' => 'Neplatna pobocka'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $_SESSION['cb_pobocka_id'] = $idPob;
+    echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/* =========================
+   0c) Touch aktivity (POST)
+   ========================= */
+if (
+    ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
+    && isset($_SERVER['HTTP_X_COMEBACK_TOUCH'])
+) {
+    $nowTs = time();
+    if (!isset($_SESSION['cb_session_start_ts']) || (int)$_SESSION['cb_session_start_ts'] <= 0) {
+        $_SESSION['cb_session_start_ts'] = $nowTs;
+    }
+    $_SESSION['cb_last_activity_ts'] = $nowTs;
+    http_response_code(204);
+    exit;
+}
+
+/* =========================
    1) AJAX (partial) režim
    ========================= */
 $cbIsPartial = false;
@@ -147,7 +192,7 @@ require_once __DIR__ . '/modaly/modal_overeni.php';
 /*
  * Přihlášený bez spárovaného mobilu uvidí modál párování.
  */
-require_once __DIR__ . '/includes/mod_parovani.php';
+require_once __DIR__ . '/lib/kontrola_registrace.php';
 
 $cb_page_exists = $cbPageExists;
 $cb_page_file = $file;
@@ -160,6 +205,7 @@ require_once __DIR__ . '/includes/paticka.php';
 </div>
 
 <script src="<?= h(cb_url('js/ajax_core.js')) ?>"></script>
+<script src="<?= h(cb_url('js/menu_core.js')) ?>"></script>
 <script src="<?= h(cb_url('js/menu_ajax.js')) ?>"></script>
 <script src="<?= h(cb_url('js/filtry.js')) ?>"></script>
 <script src="<?= h(cb_url('js/filtry_reset.js')) ?>"></script>

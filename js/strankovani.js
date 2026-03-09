@@ -72,7 +72,7 @@
       return;
     }
 
-    const p = extractPageFromUrl(targetUrl) || 'uvod';
+    const p = extractPageFromUrl(targetUrl) || 'home';
 
     if (activeController) {
       activeController.abort();

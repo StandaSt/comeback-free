@@ -1,30 +1,95 @@
-/* style/1/karty.css * Verze: V3 * Aktualizace: 06.03.2026
-   Počet řádků: 43
-   Předchozí počet řádků: 43 */
+/* style/1/karty.css * Verze: V4 * Aktualizace: 08.03.2026 */
 
 /*
  * KARTY (dashboard)
  *
  * Prefix:
- * - card_* = jedna karta (komponenta)
+ * - card_* = sdilene casti vsech karet
+ * - card_tool_* = ovladaci prvky v horni liste
  *
  * Pozn.:
- * - Rozložení karet (mřížka) je v style/1/main.css (.dash_grid).
- * - Zde je jen vzhled a vnitřní struktura karty.
+ * - Rozlozeni karet (mrizka) je v style/1/main.css (.dash_grid).
+ * - Zde jsou pouze opakovatelne styly pro vsechny karty.
+ * - Individualni styly konkretni karty patri do style/1/karty/<nazev>.css.
  */
 
-/* základní karta */
+/* zakladni karta */
 .card_box,
-.card{
+.card,
+.dash_card{
   background:#ffffff;
   border:1px solid var(--border-strong);
   border-radius:12px;
-  padding:14px;
   box-sizing:border-box;
   box-shadow:0 1px 2px rgba(0,0,0,.04);
+  min-width:0;
+  overflow:hidden;
 }
 
-/* vnitřní části (když je použiješ) */
+/* bezny obsah karty */
+.card,
+.card_box{
+  padding:14px;
+}
+
+/* horni lista karty */
+.card_top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 12px;
+  border-bottom:1px solid rgba(0,0,0,.10);
+  background:rgba(15,23,42,.03);
+}
+
+.card_title{
+  margin:0;
+  font-size:15px;
+  line-height:1.25;
+  font-weight:700;
+  color:#0f172a;
+}
+
+.card_subtitle{
+  margin:3px 0 0 0;
+  font-size:12px;
+  line-height:1.3;
+  color:rgba(15,23,42,.62);
+}
+
+.card_tools{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.card_tool_btn{
+  width:26px;
+  height:26px;
+  padding:0;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid rgba(0,0,0,.16);
+  border-radius:8px;
+  background:#fff;
+  color:#334155;
+  line-height:1;
+  cursor:pointer;
+}
+
+.card_tool_btn:hover{
+  background:rgba(59,130,246,.08);
+  border-color:rgba(59,130,246,.35);
+}
+
+.card_tool_btn:focus-visible{
+  outline:2px solid rgba(59,130,246,.35);
+  outline-offset:1px;
+}
+
+/* vnitrni casti */
 .card_head{
   font-weight:700;
   margin:0 0 8px 0;
@@ -34,10 +99,21 @@
   margin:0;
 }
 
+.card_text{
+  margin:0;
+  font-size:14px;
+  line-height:1.45;
+  color:#0f172a;
+}
+
+.card_text_muted{
+  color:rgba(15,23,42,.62);
+}
+
 .card_footer{
   margin-top:10px;
   padding-top:10px;
   border-top:1px solid rgba(0,0,0,.10);
 }
 
-/* style/1/karty.css * Verze: V3 * Aktualizace: 06.03.2026 * Počet řádků: 43 */
+/* style/1/karty.css * Verze: V4 * Aktualizace: 08.03.2026 */

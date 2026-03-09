@@ -1,19 +1,17 @@
-// js/casovac_odhlaseni.js * Verze: V5 * Aktualizace: 17.2.2026
+// js/casovac_odhlaseni.js * Verze: V9 * Aktualizace: 08.03.2026
 'use strict';
 
 /*
- * Časovač neaktivity + živé přepočítávání v login bloku
+ * Casovac neaktivity v user bloku hlavicky.
  *
- * Pravidla:
- * - timeoutMin se NESMÍ potichu opravovat žádným fallbackem (žádné "20").
- * - když je timeoutMin neplatný / chybí, jen zobrazíme "!" a časovač nespouštíme.
- *
- * Aktivita: klik, klávesa, scroll.
- * Krok: 1 minuta.
+ * Co dela:
+ * - zobrazuje "Seance/zbyva" (delka aktualni session / zbyvajici cas)
+ * - pri aktivite uzivatele resetuje neaktivitu na plny timeout
+ * - prubezne updatuje teplomer neaktivity (odkryva barevny pas)
+ * - periodicky posila "touch" na server
  */
 
 (function (w, d) {
-
   function toInt(v) {
     const n = parseInt(String(v || ''), 10);
     return Number.isFinite(n) ? n : 0;
@@ -23,28 +21,51 @@
     return Math.floor(Date.now() / 1000);
   }
 
-  const grid = d.querySelector('.login-grid[data-timeout-min]');
-  if (!grid) return;
+  function clamp(v, min, max) {
+    return Math.max(min, Math.min(max, v));
+  }
 
-  const runEl = grid.querySelector('.cb-run-min');
-  const remEl = grid.querySelector('.cb-remain-min');
-  if (!runEl || !remEl) return;
+  const box = d.querySelector('.head_user[data-timeout-min]');
+  if (!box) return;
 
-  const timeoutMin = toInt(grid.getAttribute('data-timeout-min'));
-  const logoutUrl = String(grid.getAttribute('data-logout-url') || '').trim();
+  const comboEl = box.querySelector('.cb-session-combo');
+  const thermoEl = box.querySelector('.cb-session-thermo');
+  if (!comboEl || !thermoEl) return;
+
+  const timeoutMin = toInt(box.getAttribute('data-timeout-min'));
+  const logoutUrl = String(box.getAttribute('data-logout-url') || '').trim();
+  const touchUrl = String(box.getAttribute('data-touch-url') || '').trim();
 
   if (timeoutMin <= 0) {
-    runEl.textContent = '!';
-    remEl.textContent = '!';
+    comboEl.textContent = '!';
     return;
   }
 
-  let startTs = toInt(grid.getAttribute('data-start-ts'));
-  let lastTs = toInt(grid.getAttribute('data-last-ts'));
+  let startTs = toInt(box.getAttribute('data-start-ts'));
+  let lastTs = toInt(box.getAttribute('data-last-ts'));
   const now0 = nowTs();
 
   if (startTs <= 0 || startTs > now0) startTs = now0;
   if (lastTs <= 0 || lastTs > now0 || lastTs < startTs) lastTs = now0;
+
+  let lastTouchSentAt = 0;
+
+  function touchServer(force) {
+    const now = nowTs();
+    if (!force && (now - lastTouchSentAt) < 10) return;
+    lastTouchSentAt = now;
+
+    if (!touchUrl) return;
+
+    fetch(touchUrl, {
+      method: 'POST',
+      headers: {
+        'X-Comeback-Touch': '1'
+      }
+    }).catch(function () {
+      // Tichy fail, UI bezi dal.
+    });
+  }
 
   function render() {
     const ts = nowTs();
@@ -52,16 +73,29 @@
     let runMin = Math.floor((ts - startTs) / 60);
     if (runMin < 0) runMin = 0;
 
-    let idleMin = Math.floor((ts - lastTs) / 60);
+    let idleSec = ts - lastTs;
+    if (idleSec < 0) idleSec = 0;
+
+    const timeoutSec = timeoutMin * 60;
+    let remainSec = timeoutSec - idleSec;
+    if (remainSec < 0) remainSec = 0;
+
+    // Minuty nechavame po celych minutach jako dosud.
+    let idleMin = Math.floor(idleSec / 60);
     if (idleMin < 0) idleMin = 0;
 
-    let remain = timeoutMin - idleMin;
-    if (remain < 0) remain = 0;
+    let remainMin = timeoutMin - idleMin;
+    if (remainMin < 0) remainMin = 0;
 
-    runEl.textContent = String(runMin);
-    remEl.textContent = String(remain);
+    comboEl.textContent = String(runMin) + ' min/' + String(remainMin) + ' min';
 
-    if (remain <= 0 && logoutUrl) {
+    // Teplomer = procento vycerpane neaktivity.
+    let thermoPct = Math.round((idleSec / timeoutSec) * 100);
+    thermoPct = clamp(thermoPct, 0, 100);
+
+    thermoEl.setAttribute('data-thermo', String(thermoPct));
+    thermoEl.style.setProperty('--thermo', String(thermoPct) + '%');
+    if (remainSec <= 0 && logoutUrl) {
       w.location.href = logoutUrl;
     }
   }
@@ -69,16 +103,17 @@
   function activity() {
     lastTs = nowTs();
     render();
+    touchServer(false);
   }
 
   d.addEventListener('click', activity, true);
   d.addEventListener('keydown', activity, true);
   d.addEventListener('scroll', activity, true);
+  d.addEventListener('pointerdown', activity, true);
 
   render();
-  w.setInterval(render, 60 * 1000);
-
+  touchServer(true);
+  w.setInterval(render, 1000);
 })(window, document);
 
-// js/casovac_odhlaseni.js * Verze: V5 * Aktualizace: 17.2.2026 * Počet řádků: 84
-// Konec souboru
+// js/casovac_odhlaseni.js * Verze: V9 * Aktualizace: 08.03.2026
