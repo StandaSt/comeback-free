@@ -11,9 +11,6 @@ declare(strict_types=1);
  * - expires_at (datetime(3))
  * - vytvoreno (datetime(3))
  */
-
-require_once __DIR__ . '/../lib/bootstrap.php';
-
 if (!function_exists('db_restia_token_get')) {
 
     /**

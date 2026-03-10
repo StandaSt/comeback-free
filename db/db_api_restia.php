@@ -28,9 +28,6 @@ declare(strict_types=1);
  * - flush se volá až když máme id_user + id_login (ideálně po úspěšném loginu)
  * - při problému s logováním se nesmí shodit hlavní běh (import/login)
  */
-
-require_once __DIR__ . '/../lib/bootstrap.php';
-
 if (!function_exists('db_api_restia_flush')) {
 
     /**

@@ -9,9 +9,6 @@ declare(strict_types=1);
  * - synchronizovat aktuální povolení poboček (pob_povoleni) podle seznamu id_pob
  * - při změnách zapisovat historii do pob_povoleni_hist
  */
-
-require_once __DIR__ . '/../lib/bootstrap.php';
-
 /**
  * Zápis do pob_povoleni_hist (aktivni 1/0)
  */

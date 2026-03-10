@@ -24,16 +24,12 @@ $apiUrl = cb_url('lib/karty_admin_api.php');
     <table class="table">
       <tbody>
         <tr>
-          <th><label for="cb-kod">Kod</label></th>
-          <td><input id="cb-kod" name="kod" type="text" required maxlength="80" placeholder="napr. trzby" /></td>
-        </tr>
-        <tr>
           <th><label for="cb-nazev">Nazev</label></th>
           <td><input id="cb-nazev" name="nazev" type="text" required maxlength="120" placeholder="napr. Trzby" /></td>
         </tr>
         <tr>
           <th><label for="cb-soubor">Soubor</label></th>
-          <td><input id="cb-soubor" name="soubor" type="text" required maxlength="190" placeholder="napr. blocks/trzby.php" /></td>
+          <td><input id="cb-soubor" name="soubor" type="text" required maxlength="80" placeholder="napr. zadani_reportu" /></td>
         </tr>
         <tr>
           <th><label for="cb-min-role">Min role</label></th>
@@ -60,7 +56,6 @@ $apiUrl = cb_url('lib/karty_admin_api.php');
       <thead>
         <tr>
           <th>ID</th>
-          <th>Kod</th>
           <th>Nazev</th>
           <th>Soubor</th>
           <th>Min role</th>
@@ -70,7 +65,7 @@ $apiUrl = cb_url('lib/karty_admin_api.php');
         </tr>
       </thead>
       <tbody data-cb-karty-list>
-        <tr><td colspan="8">Nacitam...</td></tr>
+        <tr><td colspan="7">Nacitam...</td></tr>
       </tbody>
     </table>
   </div>

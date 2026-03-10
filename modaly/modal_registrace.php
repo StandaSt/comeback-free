@@ -1,72 +1,10 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/../lib/bootstrap.php';
-
-header('X-Robots-Tag: noindex, nofollow');
-
 $loginOk = !empty($_SESSION['login_ok']);
 $cbAuthOk = !empty($_SESSION['cb_auth_ok']);
 $cbUser = $_SESSION['cb_user'] ?? null;
 $idUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
-
-if (isset($_GET['check']) && (string)($_GET['check']) === '1') {
-    header('Content-Type: application/json; charset=utf-8');
-
-    if ((!$loginOk && !$cbAuthOk) || $idUser <= 0) {
-        echo json_encode(['ok' => true, 'paired' => false], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-
-    $paired = false;
-
-    $stmt = db()->prepare('
-        SELECT id
-        FROM push_zarizeni
-        WHERE id_user=? AND aktivni=1
-        LIMIT 1
-    ');
-
-    if ($stmt) {
-        $stmt->bind_param('i', $idUser);
-        $stmt->execute();
-        $stmt->store_result();
-        $paired = ($stmt->num_rows > 0);
-        $stmt->close();
-    }
-
-    if ($paired && !$loginOk && $cbAuthOk) {
-        $_SESSION['login_ok'] = 1;
-        unset($_SESSION['cb_auth_ok']);
-        $loginOk = true;
-    }
-
-    echo json_encode(['ok' => true, 'paired' => $paired], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
-if (isset($_GET['abort']) && (string)($_GET['abort']) === '1') {
-    header('Content-Type: application/json; charset=utf-8');
-
-    if (($loginOk || $cbAuthOk) && $idUser > 0) {
-        $stmt = db()->prepare('
-            UPDATE push_parovani
-            SET aktivni=0
-            WHERE id_user=? AND aktivni=1 AND pouzito_kdy IS NULL
-        ');
-        if ($stmt) {
-            $stmt->bind_param('i', $idUser);
-            $stmt->execute();
-            $stmt->close();
-        }
-    }
-
-    $_SESSION = [];
-    session_destroy();
-
-    echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
-    exit;
-}
 
 $pairUrl = '';
 $token = '';
@@ -143,13 +81,14 @@ if (($loginOk || $cbAuthOk) && $idUser > 0) {
   }
 
   function doAbort(){
-    fetch('<?= h(cb_url('modaly/modal_registrace.php?abort=1')) ?>', { cache: 'no-store' })
+    fetch('<?= h(cb_url('?action=registrace_abort')) ?>', { cache: 'no-store' })
       .then(function(){ window.location.href = '<?= h(cb_url('')) ?>'; })
       .catch(function(){ window.location.href = '<?= h(cb_url('')) ?>'; });
   }
 
   function checkNow(){
-    fetch('<?= h(cb_url('modaly/modal_registrace.php?check=1')) ?>', { cache: 'no-store' })
+    setTxt('Kontroluji stav párování…');
+    fetch('<?= h(cb_url('?action=registrace_check')) ?>', { cache: 'no-store' })
       .then(function(r){ return r.json(); })
       .then(function(j){
         if (!j || j.ok !== true) {
@@ -161,7 +100,11 @@ if (($loginOk || $cbAuthOk) && $idUser > 0) {
           window.location.href = '<?= h(cb_url('')) ?>';
           return;
         }
-        setTxt('Čekám na spárování zařízení…');
+        var now = new Date();
+        var h = String(now.getHours()).padStart(2, '0');
+        var m = String(now.getMinutes()).padStart(2, '0');
+        var s = String(now.getSeconds()).padStart(2, '0');
+        setTxt('Zařízení zatím není spárováno. Zkontrolováno v ' + h + ':' + m + ':' + s + '.');
       })
       .catch(function(){
         setTxt('Chyba kontroly. Zkuste to znovu.');

@@ -1,5 +1,5 @@
 <?php
-// karty/admin_karty.php * Verze: V4 * Aktualizace: 08.03.2026
+// karty/admin_karty.php * Verze: V6 * Aktualizace: 09.03.2026
 declare(strict_types=1);
 
 $apiUrl = cb_url('lib/karty_admin_api.php');
@@ -9,6 +9,9 @@ $isAdmin = ($idRole === 1);
 
 $karetCount = 0;
 $lastAddedName = '-';
+$souborOptions = [];
+$usedSouborMap = [];
+
 try {
     $res = db()->query('SELECT COUNT(*) AS cnt FROM karty');
     if ($res) {
@@ -26,9 +29,47 @@ try {
         }
         $resLast->free();
     }
+
+    $resUsed = db()->query('SELECT soubor FROM karty');
+    if ($resUsed) {
+        while ($rowUsed = $resUsed->fetch_assoc()) {
+            $used = trim((string)($rowUsed['soubor'] ?? ''));
+            if ($used !== '') {
+                $usedSouborMap[strtolower($used)] = true;
+            }
+        }
+        $resUsed->free();
+    }
 } catch (Throwable $e) {
     $karetCount = 0;
     $lastAddedName = '-';
+    $usedSouborMap = [];
+}
+
+try {
+    $dir = __DIR__;
+    $all = scandir($dir);
+    if (is_array($all)) {
+        foreach ($all as $f) {
+            if (!is_string($f) || $f === '.' || $f === '..') {
+                continue;
+            }
+            if (!preg_match('~^[a-z0-9_]{2,80}\.php$~i', $f)) {
+                continue;
+            }
+            $name = preg_replace('~\.php$~i', '', $f);
+            if (!is_string($name) || $name === '') {
+                continue;
+            }
+            if (isset($usedSouborMap[strtolower($name)])) {
+                continue;
+            }
+            $souborOptions[] = $name;
+        }
+    }
+    sort($souborOptions, SORT_NATURAL | SORT_FLAG_CASE);
+} catch (Throwable $e) {
+    $souborOptions = [];
 }
 ?>
 
@@ -45,7 +86,7 @@ try {
         data-admink-toggle="1"
         aria-expanded="false"
         title="Rozbalit/sbalit"
-      >&#8599;&#8601;</button>
+      >⤢</button>
     </div>
   </div>
 
@@ -76,40 +117,44 @@ try {
       <div class="cb-admin-karty-msg admin_karty_msg" aria-live="polite"></div>
 
       <section class="admin_karty_panel" data-admink-panel="nova">
-        <p class="card_text card_text_muted">Přidání nové karty včetně nastavení kódu, souboru, pořadí a minimální role.</p>
+        <p class="card_text card_text_muted">Přidání nové karty včetně názvu souboru, pořadí a minimální role.</p>
         <form class="cb-admin-karty-add admin_karty_form" autocomplete="off">
           <div class="admin_karty_form_grid">
-            <label>Kód
-              <input name="kod" type="text" required maxlength="80" placeholder="např. admin_karty" />
-            </label>
             <label>Nadpis
               <input name="nazev" type="text" required maxlength="120" placeholder="např. Správa karet" />
             </label>
             <label>Soubor
-              <input name="soubor" type="text" required maxlength="190" placeholder="např. karty/admin_karty.php" />
+              <select name="soubor" required>
+                <option value="">Vyber soubor...</option>
+                <?php foreach ($souborOptions as $opt): ?>
+                  <option value="<?= h($opt) ?>"><?= h($opt) ?></option>
+                <?php endforeach; ?>
+              </select>
             </label>
-            <label>Min role
-              <input name="min_role" type="number" min="1" max="99" value="9" required />
+            <label>Karta povolena pro:
+              <select name="min_role" required>
+                <option value="1">admin</option>
+                <option value="2">manager</option>
+                <option value="3" selected>všichni</option>
+              </select>
             </label>
             <label>Pořadí
               <input name="poradi" type="number" min="1" max="9999" value="100" required />
             </label>
+            <label class="admin_karty_submit_wrap" aria-label="Akce">
+              <span>&nbsp;</span>
+              <button type="submit">Přidat kartu</button>
+            </label>
           </div>
-          <p class="admin_karty_actions">
-            <button type="submit">Přidat kartu</button>
-            <button type="button" data-cb-karty-refresh="1">Obnovit seznam</button>
-          </p>
         </form>
-      </section>
 
-      <section class="admin_karty_panel is-hidden" data-admink-panel="poradi">
-        <p class="card_text card_text_muted">Pořadí měníš šipkami nahoru/dolů nebo úpravou hodnoty ve sloupci pořadí.</p>
+        <div class="admin_karty_sep"></div>
+        <h4 class="admin_karty_list_title">Seznam existujících karet</h4>
         <div class="table-wrap">
           <table class="table">
             <thead>
               <tr>
                 <th>ID</th>
-                <th>Kód</th>
                 <th>Název</th>
                 <th>Soubor</th>
                 <th>Min role</th>
@@ -119,7 +164,29 @@ try {
               </tr>
             </thead>
             <tbody data-cb-karty-list>
-              <tr><td colspan="8">Načítám...</td></tr>
+              <tr><td colspan="7">Načítám...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin_karty_panel is-hidden" data-admink-panel="poradi">
+        <p class="card_text card_text_muted">Pořadí měníš šipkami nahoru/dolů nebo úpravou hodnoty ve sloupci pořadí.</p>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Název</th>
+                <th>Soubor</th>
+                <th>Min role</th>
+                <th>Pořadí</th>
+                <th>Aktivní</th>
+                <th>Akce</th>
+              </tr>
+            </thead>
+            <tbody data-cb-karty-list>
+              <tr><td colspan="7">Načítám...</td></tr>
             </tbody>
           </table>
         </div>
@@ -132,7 +199,6 @@ try {
             <thead>
               <tr>
                 <th>ID</th>
-                <th>Kód</th>
                 <th>Název</th>
                 <th>Soubor</th>
                 <th>Min role</th>
@@ -142,7 +208,7 @@ try {
               </tr>
             </thead>
             <tbody data-cb-karty-list>
-              <tr><td colspan="8">Načítám...</td></tr>
+              <tr><td colspan="7">Načítám...</td></tr>
             </tbody>
           </table>
         </div>
@@ -155,7 +221,6 @@ try {
             <thead>
               <tr>
                 <th>ID</th>
-                <th>Kód</th>
                 <th>Název</th>
                 <th>Soubor</th>
                 <th>Min role</th>
@@ -165,7 +230,7 @@ try {
               </tr>
             </thead>
             <tbody data-cb-karty-list>
-              <tr><td colspan="8">Načítám...</td></tr>
+              <tr><td colspan="7">Načítám...</td></tr>
             </tbody>
           </table>
         </div>
@@ -175,5 +240,5 @@ try {
 </article>
 
 <?php
-/* karty/admin_karty.php * Verze: V4 * Aktualizace: 08.03.2026 */
+/* karty/admin_karty.php * Verze: V6 * Aktualizace: 09.03.2026 */
 ?>

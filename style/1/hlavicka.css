@@ -22,9 +22,9 @@
 /* ===== Obal ===== */
 .head_box{
   width:100%;
-  padding:4px 8px 6px 0;
-  background:linear-gradient(180deg,#f7f9fc 0%, #eef3fa 100%);
-  border-bottom:1px solid rgba(15,23,42,.08);
+  padding:4px 12px 6px 12px;
+  background:#dbeafe;
+  border-bottom:0;
 }
 
 .head_grid{
@@ -283,6 +283,9 @@
   min-width:0;
   overflow:hidden;
   justify-content:flex-start;
+  border:0;
+  background:transparent;
+  box-shadow:none;
 }
 
 .head_menu_btn{
@@ -382,12 +385,13 @@
   align-items:center;
   justify-content:center;
   padding:4px 8px;
-  border:1px solid var(--head-border);
+  border:0;
   border-radius:10px;
-  background:var(--head-card);
+  background:transparent;
   width:170px;
   min-width:170px;
   max-width:170px;
+  box-shadow:none;
 }
 
 .head_branch_select{

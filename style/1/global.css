@@ -4,6 +4,26 @@
    ZÁKLADNÍ NASTAVENÍ
    ========================= */
 
+:root {
+  /* globalni barvy projektu */
+  --bg-ram: #ffffff;  /* hlavicka/paticka/pozadi pod menu/main */
+  --bg-body: #f5f6f8; /* pozadi stranky + container */
+  --tx-base: #1f2933; /* zakladni text */
+  --tx-muted: #52606d; /* tlumeny text */
+
+  /* spolecne barvy UI */
+  --border-strong: #d9e2ec;
+  --border-accent: #1d4ed8;
+
+  --btn: #f3f4f6;
+  --menu-bg: #ffffff;
+
+  --active-bg: #e0e7ff;
+  --active-bd: #6366f1;
+  --active-tx: #1d4ed8;
+
+  --hover-bg: #eef2f7;
+}
 *{ box-sizing:border-box; }
 
 html{
@@ -36,7 +56,7 @@ main{
    ========================= */
 
 .container{
-  background:var(--bg-ram);
+  background:#dbeafe;
   padding:0px 10px 0px 10px;
   display:flex;
   flex-direction:column;

@@ -15,9 +15,6 @@ declare(strict_types=1);
  * - žádné obnovování tokenu (to dělá lib/restia_init.php)
  * - žádné přímé výpisy
  */
-
-require_once __DIR__ . '/bootstrap.php';
-
 if (!function_exists('cb_restia_dt6_utc_now')) {
     function cb_restia_dt6_utc_now(): string
     {

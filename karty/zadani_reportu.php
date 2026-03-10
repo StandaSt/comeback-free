@@ -1,5 +1,5 @@
 <?php
-// karty/zadani_reportu.php * Verze: V1 * Aktualizace: 08.03.2026
+// karty/zadani_reportu.php * Verze: V2 * Aktualizace: 09.03.2026
 declare(strict_types=1);
 ?>
 
@@ -16,7 +16,7 @@ declare(strict_types=1);
         data-zr-toggle="1"
         aria-expanded="false"
         title="Rozbalit/sbalit"
-      >&#8599;&#8601;</button>
+      >⤢</button>
     </div>
   </div>
 
@@ -194,5 +194,5 @@ declare(strict_types=1);
 </article>
 
 <?php
-/* karty/zadani_reportu.php * Verze: V1 * Aktualizace: 08.03.2026 */
+/* karty/zadani_reportu.php * Verze: V2 * Aktualizace: 09.03.2026 */
 ?>

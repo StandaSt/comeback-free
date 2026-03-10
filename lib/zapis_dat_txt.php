@@ -19,9 +19,6 @@ declare(strict_types=1);
  * - dříve to bývalo v souboru cteni_dat.php a umělo tahat data z API
  * - teď je to čistě zápis diagnostiky do txt
  */
-
-require_once __DIR__ . '/bootstrap.php';
-
 $OUT_FILE = __DIR__ . '/../pomocne/data_smeny.txt';
 
 /**

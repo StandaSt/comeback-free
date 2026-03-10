@@ -18,9 +18,6 @@ declare(strict_types=1);
  * - log odeslání zapisuje do push_audit (pokud existuje)
  * - pokud není žádné aktivní zařízení, vrátí false (bez chyby)
  */
-
-require_once __DIR__ . '/../lib/bootstrap.php';
-
 function cb_push_has_vendor(): bool
 {
     $autoload = __DIR__ . '/../vendor/autoload.php';

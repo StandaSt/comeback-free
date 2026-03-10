@@ -22,9 +22,6 @@ declare(strict_types=1);
  *   - po úspěšném loginu: s id_user + id_login
  *   - po neúspěšném loginu: bez id_user + id_login (NULL)
  */
-
-require_once __DIR__ . '/../lib/bootstrap.php';
-
 if (!function_exists('db_api_smeny_flush')) {
 
     /**

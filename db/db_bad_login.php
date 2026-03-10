@@ -23,9 +23,6 @@ declare(strict_types=1);
  * - tabulka user_bad_login má ip NOT NULL → když IP není k dispozici, uloží se prázdný string
  * - screen_* a is_touch mohou být NULL
  */
-
-require_once __DIR__ . '/../lib/bootstrap.php';
-
 if (!function_exists('db_bad_login_log')) {
 
     /**

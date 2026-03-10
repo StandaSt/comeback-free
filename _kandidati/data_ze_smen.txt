@@ -1,0 +1,75 @@
+=== 2026-03-10 04:46:29 | cele_jmeno ===
+{
+    "userGetLogged": {
+        "id": 1,
+        "name": "Standa",
+        "surname": "Stst"
+    }
+}
+
+=== 2026-03-10 04:46:29 | role ===
+{
+    "userGetLogged": {
+        "id": 1,
+        "roles": [
+            {
+                "id": 1,
+                "name": "Admin"
+            },
+            {
+                "id": 2,
+                "name": "Manager"
+            },
+            {
+                "id": 3,
+                "name": "Zaměstnanec"
+            }
+        ]
+    }
+}
+
+=== 2026-03-10 04:46:29 | sloty ===
+{
+    "userGetLogged": {
+        "id": 1,
+        "shiftRoleTypeNames": [
+            "Instor",
+            "Kurýr",
+            "Přípravář",
+            "Zdobič",
+            "Lobby",
+            "Závozák"
+        ]
+    }
+}
+
+=== 2026-03-10 04:46:29 | povolene_pobocky ===
+{
+    "userGetLogged": {
+        "id": 1,
+        "workingBranchNames": [
+            "Chodov",
+            "Malešice",
+            "Zličín",
+            "Libuš",
+            "Prosek",
+            "Plzeň - Bolevec"
+        ]
+    }
+}
+
+=== 2026-03-10 04:46:29 | main_pobocka ===
+{
+    "userGetLogged": {
+        "id": 1,
+        "workingBranchNames": [
+            "Chodov",
+            "Malešice",
+            "Zličín",
+            "Libuš",
+            "Prosek",
+            "Plzeň - Bolevec"
+        ]
+    }
+}
+

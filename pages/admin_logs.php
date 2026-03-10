@@ -12,9 +12,6 @@ declare(strict_types=1);
  * - Tabulka 2 (ROLETYPE:LIST) je odstraněna.
  * - Stránka nic nestahuje, jen čte txt soubor.
  */
-
-require_once __DIR__ . '/../lib/bootstrap.php';
-
 $txtFile = __DIR__ . '/../pomocne/data_smeny.txt';
 
 /** @return array{label:string, data_raw:string, data_mixed:mixed, ok:bool, explain:string, ts:string} */

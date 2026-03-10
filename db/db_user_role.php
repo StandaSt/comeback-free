@@ -30,8 +30,6 @@ declare(strict_types=1);
  * - nic z API se tady nevolá (bere to jen ze session)
  * - volá se uvnitř transakce z db/db_user_login.php
  */
-
-require_once __DIR__ . '/../lib/bootstrap.php';
 require_once __DIR__ . '/../lib/login_diagnostika.php';
 
 if (!function_exists('db_user_role_sync')) {

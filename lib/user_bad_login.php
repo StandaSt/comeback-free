@@ -22,8 +22,6 @@ declare(strict_types=1);
  * - záznam se dělá pokaždé, když Směny nevrátí token
  * - pokud DB zápis selže, login se tím neblokuje (jen se zapíše diagnostika)
  */
-
-require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/../db/db_bad_login.php';
 
 /**

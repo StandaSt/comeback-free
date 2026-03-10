@@ -19,8 +19,13 @@ declare(strict_types=1);
  * - login_ok se nastaví AŽ po schválení 2FA (mobil), nebo hned při LOCAL / prvním loginu bez zařízení
  * - LOCAL: 2FA se nepoužívá (notifikace z LOCAL nechodí) – po ověření ve Směnách se nastaví login_ok hned
  */
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
 
-require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/app.php';
+require_once __DIR__ . '/system.php';
+require_once __DIR__ . '/../config/secrets.php';
 require_once __DIR__ . '/login_diagnostika.php';
 require_once __DIR__ . '/smeny_graphql.php';
 require_once __DIR__ . '/user_bad_login.php';

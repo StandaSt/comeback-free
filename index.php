@@ -2,57 +2,126 @@
 // index.php * Verze: V22 * Aktualizace: 06.03.2026
 
 /*
- * FRONT CONTROLLER (centrální vstup aplikace)
+ * FRONT CONTROLLER (centralni vstup aplikace)
  *
- * Co dělá:
- * - načte bootstrap (start projektu, session, helpery, db())
- * - FULL load: vždy zobrazí výchozí stránku podle přihlášení (nastavení v lib/system.php)
- * - AJAX (partial): vrací jen obsah do <main> podle sekce (bez layoutu)
- * - přepnutí menu režimu: uloží do session přes POST + X-Comeback-Set-Menu
- * - 404: vrátí hlášku a pokusí se zapsat záznam do DB tabulky `chyba`
- * - V12: nepřihlášený uvidí jen hlavičku + modální přihlášení (modaly/modal_login.php)
- * - V15: prvni_login se zobrazuje jako MODÁL (modaly/modal_registrace.php), stejně jako login modal
- * - V16: kontrola spárování mobilu je jen existence aktivního řádku v push_zarizeni; pokud chybí id_user v session, vynutí prvni_login
- * - V17: 2FA (schválení přihlášení) – po zadání hesla čeká na mobil (push_login_2fa); login_ok vzniká až po schválení
- * - V18: 2FA čekací modál: místo URL ukazuje QR kód + text (fallback když notifikace nepřijde)
- * - V19: 2FA čekací modál – CSS přesunuto do style/1/modal_2fa.css (bez inline <style>)
+ * Co dela:
+ * - startuje session + nacita app/system/secrets
+ * - FULL load: zobrazi vychozi stranku podle prihlaseni
+ * - AJAX (partial): vraci jen obsah do <main> podle sekce
+ * - 404: vrati hlasku a zapise zaznam do DB tabulky chyba
  *
- * Volá / závisí na:
- * - lib/bootstrap.php
+ * Zavislosti:
+ * - lib/app.php, lib/system.php, config/secrets.php
  * - lib/nacti_styly.php
- * - includes/hlavicka.php
- * - includes/main.php
- * - includes/paticka.php
- * - includes/dashboard.php
- *
- * Requestuje / čte:
- * - HTTP hlavičky: X-Comeback-Set-Menu, X-Comeback-Partial, X-Comeback-Sekce
- * - session: login_ok (volba výchozí stránky), cb_menu_mode, cb_user[id_user] (pro log 404)
+ * - includes/hlavicka.php, includes/main.php, includes/paticka.php, includes/dashboard.php
  */
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/lib/bootstrap.php';
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+
+require_once __DIR__ . '/lib/app.php';
+require_once __DIR__ . '/lib/system.php';
+require_once __DIR__ . '/config/secrets.php';
 
 /* =========================
-   0) Nastavení menu do session (POST)
+   0) Logout (GET)
    ========================= */
-if (
-    ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
-    && isset($_SERVER['HTTP_X_COMEBACK_SET_MENU'])
-) {
-    $m = (string)$_SERVER['HTTP_X_COMEBACK_SET_MENU'];
-    if ($m !== 'sidebar') {
-        $m = 'dropdown';
+if (isset($_GET['action']) && (string)$_GET['action'] === 'logout') {
+    $cbUser = $_SESSION['cb_user'] ?? null;
+    if (is_array($cbUser) && !empty($cbUser['id_user'])) {
+        $idUser = (int)$cbUser['id_user'];
+        try {
+            $stmt = db()->prepare('INSERT INTO user_login (id_user, akce) VALUES (?,0)');
+            if ($stmt) {
+                $stmt->bind_param('i', $idUser);
+                $stmt->execute();
+                $stmt->close();
+            }
+        } catch (Throwable $e) {
+            // tichy fail - logout musi pokracovat i kdyz log selze
+        }
     }
-    $_SESSION['cb_menu_mode'] = $m;
 
-    http_response_code(204);
+    $_SESSION = [];
+    session_destroy();
+
+    header('Location: ' . cb_url('/'));
     exit;
 }
 
 /* =========================
-   0b) Nastaveni pobocky do session (POST)
+   0a) Registrace zarizeni (JSON)
+   ========================= */
+if (isset($_GET['action']) && (string)$_GET['action'] === 'registrace_check') {
+    header('Content-Type: application/json; charset=utf-8');
+
+    $loginOk = !empty($_SESSION['login_ok']);
+    $cbAuthOk = !empty($_SESSION['cb_auth_ok']);
+    $cbUser = $_SESSION['cb_user'] ?? null;
+    $idUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
+
+    if ((!$loginOk && !$cbAuthOk) || $idUser <= 0) {
+        echo json_encode(['ok' => true, 'paired' => false], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $paired = false;
+    $stmt = db()->prepare('
+        SELECT id
+        FROM push_zarizeni
+        WHERE id_user=? AND aktivni=1
+        LIMIT 1
+    ');
+    if ($stmt) {
+        $stmt->bind_param('i', $idUser);
+        $stmt->execute();
+        $stmt->store_result();
+        $paired = ($stmt->num_rows > 0);
+        $stmt->close();
+    }
+
+    if ($paired && !$loginOk && $cbAuthOk) {
+        $_SESSION['login_ok'] = 1;
+        unset($_SESSION['cb_auth_ok']);
+    }
+
+    echo json_encode(['ok' => true, 'paired' => $paired], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if (isset($_GET['action']) && (string)$_GET['action'] === 'registrace_abort') {
+    header('Content-Type: application/json; charset=utf-8');
+
+    $loginOk = !empty($_SESSION['login_ok']);
+    $cbAuthOk = !empty($_SESSION['cb_auth_ok']);
+    $cbUser = $_SESSION['cb_user'] ?? null;
+    $idUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
+
+    if (($loginOk || $cbAuthOk) && $idUser > 0) {
+        $stmt = db()->prepare('
+            UPDATE push_parovani
+            SET aktivni=0
+            WHERE id_user=? AND aktivni=1 AND pouzito_kdy IS NULL
+        ');
+        if ($stmt) {
+            $stmt->bind_param('i', $idUser);
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
+
+    $_SESSION = [];
+    session_destroy();
+
+    echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/* =========================
+   0) Nastaveni pobocky do session (POST)
    ========================= */
 if (
     ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
@@ -97,7 +166,7 @@ if (
 }
 
 /* =========================
-   1) AJAX (partial) režim
+   1) AJAX (partial) rezim
    ========================= */
 $cbIsPartial = false;
 if (isset($_SERVER['HTTP_X_COMEBACK_PARTIAL'])) {
@@ -150,26 +219,26 @@ $file = __DIR__ . '/includes/dashboard.php';
 require_once __DIR__ . '/includes/log_a_404.php';
 
 /* =========================
-   4) AJAX (partial): jen obsah stránky
+   4) AJAX (partial): jen obsah stranky
    ========================= */
 if ($cbIsPartial) {
     if (empty($_SESSION['login_ok'])) {
         http_response_code(401);
-        echo '<section class="card"><p>Nutné přihlášení.</p></section>';
+        echo '<section class="card"><p>Nutne prihlaseni.</p></section>';
         exit;
     }
 
     if ($cbPageExists) {
         require $file;
     } else {
-        echo '<div class="page-head"><h2>Stránka nenalezena</h2></div>';
-        echo '<section class="card"><p>Požadovaná stránka neexistuje.</p></section>';
+        echo '<div class="page-head"><h2>Stranka nenalezena</h2></div>';
+        echo '<section class="card"><p>Pozadovana stranka neexistuje.</p></section>';
     }
     exit;
 }
 
 /* =========================
-   5) FULL render: layout + stránka
+   5) FULL render: layout + stranka
    ========================= */
 ?>
 <!doctype html>
@@ -189,14 +258,14 @@ if ($cbIsPartial) {
 require_once __DIR__ . '/includes/hlavicka.php';
 
 /*
- * Nepřihlášený stav:
+ * Neprihlaseny stav:
  * - login modal
- * - nebo čekání na 2FA po zadání hesla
+ * - nebo cekani na 2FA po zadani hesla
  */
 require_once __DIR__ . '/modaly/modal_overeni.php';
 
 /*
- * Přihlášený bez spárovaného mobilu uvidí modál párování.
+ * Prihlaseny bez sparovaneho mobilu uvidi modal parovani.
  */
 require_once __DIR__ . '/lib/kontrola_registrace.php';
 
@@ -210,9 +279,14 @@ require_once __DIR__ . '/includes/paticka.php';
 ?>
 </div>
 
+
 <script src="<?= h(cb_url('js/ajax_core.js')) ?>"></script>
 <script src="<?= h(cb_url('js/menu_core.js')) ?>"></script>
 <script src="<?= h(cb_url('js/menu_ajax.js')) ?>"></script>
+<script src="<?= h(cb_url('js/karty_api_get.js')) ?>"></script>
+<script src="<?= h(cb_url('js/karty_tabulka.js')) ?>"></script>
+<script src="<?= h(cb_url('js/karty_form.js')) ?>"></script>
+<script src="<?= h(cb_url('js/karty_min_max.js')) ?>"></script>
 <script src="<?= h(cb_url('js/filtry.js')) ?>"></script>
 <script src="<?= h(cb_url('js/filtry_reset.js')) ?>"></script>
 <script src="<?= h(cb_url('js/strankovani.js')) ?>"></script>
@@ -223,3 +297,4 @@ require_once __DIR__ . '/includes/paticka.php';
 <?php
 /* index.php * Verze: V22 * Aktualizace: 06.03.2026 */
 // Konec souboru
+

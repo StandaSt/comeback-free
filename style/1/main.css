@@ -19,7 +19,9 @@
   align-self:stretch;
   overflow-y:auto;
   overflow-x:hidden;
-  padding:12px;
+  padding:0 12px;
+  background:#dbeafe;
+  background-clip:content-box;
   box-sizing:border-box;
 }
 

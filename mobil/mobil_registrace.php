@@ -19,9 +19,13 @@ declare(strict_types=1);
  * CSS:
  * - používá jednotné třídy z style/1/modal_alert.css (modal-page, modal, modal-btn, atd.)
  */
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
 
-require_once __DIR__ . '/../lib/bootstrap.php';
-
+require_once __DIR__ . '/../lib/app.php';
+require_once __DIR__ . '/../lib/system.php';
+require_once __DIR__ . '/../config/secrets.php';
 header('X-Robots-Tag: noindex, nofollow');
 
 $vapidPublic = defined('CB_VAPID_PUBLIC') ? (string)CB_VAPID_PUBLIC : '';

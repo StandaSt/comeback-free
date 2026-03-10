@@ -8,9 +8,6 @@ declare(strict_types=1);
  * Účel:
  * - malé, jednoučelové funkce pro práci s tabulkou user a user_login
  */
-
-require_once __DIR__ . '/../lib/bootstrap.php';
-
 /**
  * Převod hodnoty na DATETIME string pro MySQL, nebo null.
  */

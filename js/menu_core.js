@@ -4,7 +4,7 @@
 /*
  * menu_core.js
  * - CB_MENU namespace (window.CB_MENU)
- * - router (goPage / setMenuMode)
+ * - router (goPage)
  * - globalni zavirani (click mimo / ESC / resize / scroll)
  * - timer pro zpozdene zavreni
  * - detekce touch/desktop
@@ -41,10 +41,15 @@
 
   CB_MENU.normalizeSekce = normalizeSekce;
 
-  function buildSekceUrl(sekce) {
+  function buildCleanUrlWithoutSekce() {
     const u = new URL(w.location.href);
-    u.searchParams.set('sekce', normalizeSekce(sekce));
-    return u.toString();
+    u.searchParams.delete('sekce');
+    const qs = u.searchParams.toString();
+    return u.pathname + (qs ? ('?' + qs) : '') + (u.hash || '');
+  }
+
+  function buildSekceUrl(sekce) {
+    return buildCleanUrlWithoutSekce();
   }
 
   CB_MENU.buildSekceUrl = buildSekceUrl;
@@ -69,6 +74,9 @@
 
     const cur = normalizeSekce(CB_MENU._currentPage || '3');
     if (cur === s) {
+      document.dispatchEvent(new CustomEvent('cb:menu-same-sekce', {
+        detail: { sekce: s }
+      }));
       return;
     }
 
@@ -87,21 +95,6 @@
 
   CB_MENU.goSekce = function goSekce(sekce) {
     goSekceInternal(sekce);
-  };
-
-  CB_MENU.setMenuMode = function setMenuMode(mode) {
-    const m = (String(mode || '').trim() === 'sidebar') ? 'sidebar' : 'dropdown';
-
-    fetch(w.location.href, {
-      method: 'POST',
-      headers: {
-        'X-Comeback-Set-Menu': m
-      }
-    }).then(() => {
-      w.location.href = w.location.href;
-    }).catch(() => {
-      w.location.href = w.location.href;
-    });
   };
 
   CB_MENU.wireGlobalCloseOnce = function wireGlobalCloseOnce(opts) {
@@ -171,6 +164,10 @@
   if (!CB_MENU._currentPage) {
     const u = new URL(w.location.href);
     CB_MENU._currentPage = normalizeSekce(u.searchParams.get('sekce') || '3');
+
+    if (u.searchParams.has('sekce') && w.history && typeof w.history.replaceState === 'function') {
+      w.history.replaceState(null, '', buildCleanUrlWithoutSekce());
+    }
   }
 
   syncActiveTopMenu(CB_MENU._currentPage);

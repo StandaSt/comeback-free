@@ -18,9 +18,13 @@ declare(strict_types=1);
  * Pozn.:
  * - toto je stránka pro mobil, NE API pro PC polling (to řeší lib/push_2fa_api.php)
  */
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
 
-require_once __DIR__ . '/../lib/bootstrap.php';
-
+require_once __DIR__ . '/../lib/app.php';
+require_once __DIR__ . '/../lib/system.php';
+require_once __DIR__ . '/../config/secrets.php';
 /* Limit pro odpočet v UI (sekundy). Hodnota je i v DB (vyprsi), UI je jen zobrazení. */
 $limitSecPhp = 300;
 if (defined('CB_2FA_LIMIT_SEC')) {

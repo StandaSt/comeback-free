@@ -23,8 +23,6 @@ declare(strict_types=1);
  * - 1 řádek v user_login (akce=1)
  * - 1 řádek v user_spy
  */
-
-require_once __DIR__ . '/../lib/bootstrap.php';
 require_once __DIR__ . '/../lib/login_diagnostika.php';
 
 require_once __DIR__ . '/db_user.php';

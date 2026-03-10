@@ -19,7 +19,13 @@ declare(strict_types=1);
  * - bez mazani, pouze aktivace/deaktivace
  */
 
-require_once __DIR__ . '/bootstrap.php';
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+
+require_once __DIR__ . '/app.php';
+require_once __DIR__ . '/system.php';
+require_once __DIR__ . '/../config/secrets.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -34,8 +40,24 @@ if (!$isAdmin) {
     exit;
 }
 
-$isKod = static function (string $v): bool {
+$isName = static function (string $v): bool {
     return (bool)preg_match('~^[a-z0-9_]{2,80}$~', $v);
+};
+
+$normalizeSoubor = static function (string $v) use ($isName): string {
+    $s = trim(str_replace('\\', '/', $v));
+    if ($s === '') {
+        return '';
+    }
+
+    // Kompatibilita: pokud prijde stary format cesty, vezmeme basename.
+    $s = basename($s);
+    $s = preg_replace('~\.php$~i', '', $s) ?: '';
+
+    if (!$isName($s)) {
+        return '';
+    }
+    return $s;
 };
 
 $send = static function (int $code, array $payload): never {
@@ -53,7 +75,7 @@ try {
         if ($action === 'list') {
             $items = [];
             $res = $conn->query('
-                SELECT id_karta, kod, nazev, soubor, min_role, poradi, aktivni, zalozeno
+                SELECT id_karta, nazev, soubor, min_role, poradi, aktivni, zalozeno
                 FROM karty
                 ORDER BY poradi ASC, id_karta ASC
             ');
@@ -61,9 +83,8 @@ try {
                 while ($r = $res->fetch_assoc()) {
                     $items[] = [
                         'id_karta' => (int)$r['id_karta'],
-                        'kod' => (string)$r['kod'],
                         'nazev' => (string)$r['nazev'],
-                        'soubor' => (string)$r['soubor'],
+                        'soubor' => $normalizeSoubor((string)$r['soubor']) ?: (string)$r['soubor'],
                         'min_role' => (int)$r['min_role'],
                         'poradi' => (int)$r['poradi'],
                         'aktivni' => (int)$r['aktivni'],
@@ -124,7 +145,7 @@ try {
             $items = [];
             $stmt = $conn->prepare('
                 SELECT
-                    k.id_karta, k.kod, k.nazev, k.soubor, k.min_role, k.poradi, k.aktivni,
+                    k.id_karta, k.nazev, k.soubor, k.min_role, k.poradi, k.aktivni,
                     kv.akce, kv.aktivni
                 FROM karty k
                 LEFT JOIN karty_vyjimky kv
@@ -139,7 +160,6 @@ try {
             $stmt->execute();
             $stmt->bind_result(
                 $idKarta,
-                $kod,
                 $nazev,
                 $soubor,
                 $minRole,
@@ -165,9 +185,8 @@ try {
 
                 $items[] = [
                     'id_karta' => (int)$idKarta,
-                    'kod' => (string)$kod,
                     'nazev' => (string)$nazev,
-                    'soubor' => (string)$soubor,
+                    'soubor' => $normalizeSoubor((string)$soubor) ?: (string)$soubor,
                     'min_role' => (int)$minRole,
                     'poradi' => (int)$poradi,
                     'karta_aktivni' => (int)$kartaAktivni,
@@ -259,7 +278,6 @@ try {
                     u2.jmeno AS provedl_jmeno,
                     u2.prijmeni AS provedl_prijmeni,
                     u2.email AS provedl_email,
-                    k.kod AS karta_kod,
                     k.nazev AS karta_nazev
                 FROM karty_vyjimky_log l
                 LEFT JOIN user u1 ON u1.id_user = l.id_user_cil
@@ -306,7 +324,6 @@ try {
                         'cil_email' => (string)($r['cil_email'] ?? ''),
                         'provedl_jmeno' => trim((string)($r['provedl_prijmeni'] ?? '') . ' ' . (string)($r['provedl_jmeno'] ?? '')),
                         'provedl_email' => (string)($r['provedl_email'] ?? ''),
-                        'karta_kod' => (string)($r['karta_kod'] ?? ''),
                         'karta_nazev' => (string)($r['karta_nazev'] ?? ''),
                     ];
                 }
@@ -340,24 +357,23 @@ try {
     $action = (string)($data['action'] ?? '');
 
     if ($action === 'add') {
-        $kod = trim((string)($data['kod'] ?? ''));
         $nazev = trim((string)($data['nazev'] ?? ''));
-        $soubor = trim((string)($data['soubor'] ?? ''));
+        $soubor = $normalizeSoubor((string)($data['soubor'] ?? ''));
         $minRole = (int)($data['min_role'] ?? 9);
         $poradi = (int)($data['poradi'] ?? 999);
 
-        if (!$isKod($kod) || $nazev === '' || $soubor === '') {
+        if ($nazev === '' || $soubor === '') {
             $send(422, ['ok' => false, 'err' => 'Neplatna vstupni data.']);
         }
 
         $stmt = $conn->prepare('
-            INSERT INTO karty (kod, nazev, soubor, min_role, poradi, aktivni, zalozeno)
-            VALUES (?, ?, ?, ?, ?, 1, NOW())
+            INSERT INTO karty (nazev, soubor, min_role, poradi, aktivni, zalozeno)
+            VALUES (?, ?, ?, ?, 1, NOW())
         ');
         if (!$stmt) {
             throw new RuntimeException('DB prepare selhal.');
         }
-        $stmt->bind_param('sssii', $kod, $nazev, $soubor, $minRole, $poradi);
+        $stmt->bind_param('ssii', $nazev, $soubor, $minRole, $poradi);
         $stmt->execute();
         $stmt->close();
 
@@ -367,7 +383,7 @@ try {
     if ($action === 'update') {
         $idKarta = (int)($data['id_karta'] ?? 0);
         $nazev = trim((string)($data['nazev'] ?? ''));
-        $soubor = trim((string)($data['soubor'] ?? ''));
+        $soubor = $normalizeSoubor((string)($data['soubor'] ?? ''));
         $minRole = (int)($data['min_role'] ?? 9);
         $poradi = (int)($data['poradi'] ?? 999);
 

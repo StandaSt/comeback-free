@@ -15,7 +15,7 @@ require_once __DIR__ . '/api_smeny_log.php';
 /**
  * @return array<string, mixed>  data část odpovědi GraphQL
  */
-function cb_smeny_graphql(string $url, string $query, array $vars = [], ?string $token = null): array
+function cb_smeny_graphql(string $url, string $query, array $vars = [], ?string $token = null, ?int $timeoutSec = null): array
 {
     $startTs = microtime(true);
 
@@ -31,6 +31,11 @@ function cb_smeny_graphql(string $url, string $query, array $vars = [], ?string 
         $headers[] = 'Authorization: Bearer ' . $token;
     }
 
+    $timeout = (int)($timeoutSec ?? 20);
+    if ($timeout <= 0) {
+        $timeout = 20;
+    }
+
     curl_setopt_array($ch, [
         CURLOPT_POST            => true,
         CURLOPT_RETURNTRANSFER  => true,
@@ -38,7 +43,7 @@ function cb_smeny_graphql(string $url, string $query, array $vars = [], ?string 
         CURLOPT_POSTFIELDS      => $payloadJson,
         CURLOPT_SSL_VERIFYPEER  => false,
         CURLOPT_SSL_VERIFYHOST  => 0,
-        CURLOPT_TIMEOUT         => 20,
+        CURLOPT_TIMEOUT         => $timeout,
     ]);
 
     $out = '';

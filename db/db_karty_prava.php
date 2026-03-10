@@ -17,31 +17,30 @@ declare(strict_types=1);
  *   deny (vyjimka) > allow (vyjimka) > role (min_role)
  */
 
-if (!function_exists('cb_karty_get_by_kod')) {
+if (!function_exists('cb_karty_get_by_id')) {
     /**
-     * Nacte 1 aktivni kartu podle kodu.
+     * Nacte 1 aktivni kartu podle ID.
      */
-    function cb_karty_get_by_kod(mysqli $conn, string $kod): ?array
+    function cb_karty_get_by_id(mysqli $conn, int $idKarta): ?array
     {
         $stmt = $conn->prepare('
-            SELECT id_karta, kod, nazev, soubor, min_role, poradi, aktivni
+            SELECT id_karta, nazev, soubor, min_role, poradi, aktivni
             FROM karty
-            WHERE kod=? AND aktivni=1
+            WHERE id_karta=? AND aktivni=1
             LIMIT 1
         ');
         if (!$stmt) {
             return null;
         }
 
-        $stmt->bind_param('s', $kod);
+        $stmt->bind_param('i', $idKarta);
         $stmt->execute();
-        $stmt->bind_result($idKarta, $kodDb, $nazev, $soubor, $minRole, $poradi, $aktivni);
+        $stmt->bind_result($idKartaDb, $nazev, $soubor, $minRole, $poradi, $aktivni);
 
         $row = null;
         if ($stmt->fetch()) {
             $row = [
-                'id_karta' => (int)$idKarta,
-                'kod' => (string)$kodDb,
+                'id_karta' => (int)$idKartaDb,
                 'nazev' => (string)$nazev,
                 'soubor' => (string)$soubor,
                 'min_role' => (int)$minRole,
@@ -52,6 +51,20 @@ if (!function_exists('cb_karty_get_by_kod')) {
         $stmt->close();
 
         return $row;
+    }
+}
+
+if (!function_exists('cb_karty_get_by_kod')) {
+    /**
+     * Zpetna kompatibilita: po zruseni sloupce `kod` umi pracovat jen s ciselny hodnotou.
+     */
+    function cb_karty_get_by_kod(mysqli $conn, string $kod): ?array
+    {
+        $id = (int)$kod;
+        if ($id <= 0) {
+            return null;
+        }
+        return cb_karty_get_by_id($conn, $id);
     }
 }
 
@@ -90,19 +103,19 @@ if (!function_exists('cb_karty_get_user_override')) {
 
 if (!function_exists('cb_karty_user_can_view')) {
     /**
-     * Vyhodnoti, zda uzivatel muze videt kartu podle kodu.
+     * Vyhodnoti, zda uzivatel muze videt kartu podle ID.
      */
-    function cb_karty_user_can_view(mysqli $conn, int $idUser, int $idRole, string $kodKarty): bool
+    function cb_karty_user_can_view(mysqli $conn, int $idUser, int $idRole, int $idKarta): bool
     {
-        $karta = cb_karty_get_by_kod($conn, $kodKarty);
+        $karta = cb_karty_get_by_id($conn, $idKarta);
         if (!is_array($karta)) {
             return false;
         }
 
-        $idKarta = (int)$karta['id_karta'];
+        $idKartaDb = (int)$karta['id_karta'];
         $minRole = (int)$karta['min_role'];
 
-        $override = cb_karty_get_user_override($conn, $idUser, $idKarta);
+        $override = cb_karty_get_user_override($conn, $idUser, $idKartaDb);
         if ($override === 'deny') {
             return false;
         }
@@ -125,7 +138,7 @@ if (!function_exists('cb_karty_load_visible_for_user')) {
         $out = [];
 
         $stmt = $conn->prepare('
-            SELECT k.id_karta, k.kod, k.nazev, k.soubor, k.min_role, k.poradi, kv.akce
+            SELECT k.id_karta, k.nazev, k.soubor, k.min_role, k.poradi, kv.akce
             FROM karty k
             LEFT JOIN karty_vyjimky kv
               ON kv.id_karta = k.id_karta
@@ -140,7 +153,7 @@ if (!function_exists('cb_karty_load_visible_for_user')) {
 
         $stmt->bind_param('i', $idUser);
         $stmt->execute();
-        $stmt->bind_result($idKarta, $kod, $nazev, $soubor, $minRole, $poradi, $akce);
+        $stmt->bind_result($idKarta, $nazev, $soubor, $minRole, $poradi, $akce);
 
         while ($stmt->fetch()) {
             $v = is_string($akce) ? $akce : null;
@@ -158,7 +171,6 @@ if (!function_exists('cb_karty_load_visible_for_user')) {
             if ($can) {
                 $out[] = [
                     'id_karta' => (int)$idKarta,
-                    'kod' => (string)$kod,
                     'nazev' => (string)$nazev,
                     'soubor' => (string)$soubor,
                     'min_role' => (int)$minRole,

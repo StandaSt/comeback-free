@@ -9,8 +9,6 @@ declare(strict_types=1);
  * - najít pobočku podle kódu (pobocka.kod)
  * - když neexistuje, vytvořit placeholder (dočasné hodnoty)
  */
-
-require_once __DIR__ . '/../lib/bootstrap.php';
 require_once __DIR__ . '/../lib/login_diagnostika.php';
 
 /**
