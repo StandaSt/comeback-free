@@ -73,24 +73,24 @@ try {
 }
 ?>
 
-<article class="admin_karty_card cb-admin-karty" data-api="<?= h($apiUrl) ?>">
+<article class="card_shell cb-admin-karty" data-api="<?= h($apiUrl) ?>">
   <div class="card_top">
     <div>
-      <h3 class="card_title">Správa karet</h3>
-      <p class="card_subtitle">Centrální správa dashboard karet v IS Comeback</p>
+      <h3 class="card_title"><?= h((string)($cb_card_title ?? 'Správa karet')) ?></h3>
+      <p class="card_subtitle"><span class="card_code"><?= h((string)($cb_card_code ?? '')) ?></span>Centrální správa dashboard karet v IS Comeback</p>
     </div>
     <div class="card_tools">
       <button
         type="button"
         class="card_tool_btn"
-        data-admink-toggle="1"
+        data-card-toggle="1"
         aria-expanded="false"
         title="Rozbalit/sbalit"
       >⤢</button>
     </div>
   </div>
 
-  <div class="admin_karty_compact" data-admink-compact>
+  <div class="card_compact" data-card-compact>
     <table class="admin_karty_meta" aria-label="Přehled karet">
       <tr>
         <th>Počet karet v IS:</th>
@@ -103,7 +103,7 @@ try {
     </table>
   </div>
 
-  <div class="admin_karty_expanded is-hidden" data-admink-expanded>
+  <div class="card_expanded is-hidden" data-card-expanded>
     <?php if (!$isAdmin): ?>
       <p class="card_text">Nemáš oprávnění pro správu karet.</p>
     <?php else: ?>
@@ -118,30 +118,30 @@ try {
 
       <section class="admin_karty_panel" data-admink-panel="nova">
         <p class="card_text card_text_muted">Přidání nové karty včetně názvu souboru, pořadí a minimální role.</p>
-        <form class="cb-admin-karty-add admin_karty_form" autocomplete="off">
+        <form class="cb-admin-karty-add admin_karty_form card_stack" autocomplete="off">
           <div class="admin_karty_form_grid">
-            <label>Nadpis
-              <input name="nazev" type="text" required maxlength="120" placeholder="např. Správa karet" />
+            <label class="card_field">Nadpis
+              <input class="card_input" name="nazev" type="text" required maxlength="120" placeholder="např. Správa karet" />
             </label>
-            <label>Soubor
-              <select name="soubor" required>
+            <label class="card_field">Soubor
+              <select class="card_select" name="soubor" required>
                 <option value="">Vyber soubor...</option>
                 <?php foreach ($souborOptions as $opt): ?>
                   <option value="<?= h($opt) ?>"><?= h($opt) ?></option>
                 <?php endforeach; ?>
               </select>
             </label>
-            <label>Karta povolena pro:
-              <select name="min_role" required>
+            <label class="card_field">Karta povolena pro:
+              <select class="card_select" name="min_role" required>
                 <option value="1">admin</option>
                 <option value="2">manager</option>
                 <option value="3" selected>všichni</option>
               </select>
             </label>
-            <label>Pořadí
-              <input name="poradi" type="number" min="1" max="9999" value="100" required />
+            <label class="card_field">Pořadí
+              <input class="card_input" name="poradi" type="number" min="1" max="9999" value="100" required />
             </label>
-            <label class="admin_karty_submit_wrap" aria-label="Akce">
+            <label class="card_field admin_karty_submit_wrap" aria-label="Akce">
               <span>&nbsp;</span>
               <button type="submit">Přidat kartu</button>
             </label>

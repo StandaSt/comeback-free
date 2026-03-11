@@ -3,7 +3,161 @@
 
 (function (w) {
   const ICON_MAX = '\u2922'; // ⤢
-  const ICON_MIN = '\u2921'; // ⤡
+  const ICON_MIN = '\u2212'; // −
+  let activeMaxi = null;
+
+  function getDashBox(root) {
+    if (!root) return null;
+    return root.closest('.dash_box') || document.querySelector('.dash_box');
+  }
+
+  function getLayer(dashBox) {
+    if (!dashBox) return null;
+
+    let layer = dashBox.querySelector('.dash_maxi_layer');
+    if (layer) return layer;
+
+    layer = document.createElement('div');
+    layer.className = 'dash_maxi_layer';
+    layer.innerHTML = '<div class="dash_maxi_stage"></div>';
+    dashBox.appendChild(layer);
+    return layer;
+  }
+
+  function updateToggle(toggle, isOn) {
+    if (!toggle) return;
+    toggle.textContent = isOn ? ICON_MIN : ICON_MAX;
+    toggle.setAttribute('aria-expanded', isOn ? 'true' : 'false');
+  }
+
+  function closeActiveMaxi() {
+    if (!activeMaxi) return;
+
+    const item = activeMaxi;
+    const {
+      root,
+      compact,
+      expanded,
+      toggle,
+      dashCard,
+      dashBox,
+      layer,
+      stage,
+      overlayCard,
+      expandedNextSibling,
+      overlayToggle
+    } = item;
+
+    if (overlayToggle) {
+      overlayToggle.removeEventListener('click', item.handleOverlayClose);
+    }
+
+    if (expanded && root) {
+      if (expandedNextSibling && expandedNextSibling.parentNode === root) {
+        root.insertBefore(expanded, expandedNextSibling);
+      } else {
+        root.appendChild(expanded);
+      }
+      expanded.classList.add('is-hidden');
+    }
+
+    if (compact) compact.classList.remove('is-hidden');
+    if (toggle) updateToggle(toggle, false);
+    if (typeof w.cbSetBranchSelectDisabledForRoot === 'function') {
+      w.cbSetBranchSelectDisabledForRoot(root, false);
+    }
+    if (dashCard) {
+      dashCard.classList.remove('is-expanded');
+      dashCard.classList.remove('is-maxi-source');
+    }
+    if (dashBox) dashBox.classList.remove('has-maxi');
+    if (stage && overlayCard && overlayCard.parentNode === stage) {
+      stage.removeChild(overlayCard);
+    }
+    if (layer) layer.classList.remove('is-active');
+
+    activeMaxi = null;
+  }
+
+  function openMaxi(root, compactSel, expandedSel, toggleSel) {
+    if (!root) return;
+
+    if (activeMaxi && activeMaxi.root === root) {
+      closeActiveMaxi();
+      return;
+    }
+
+    closeActiveMaxi();
+
+    const compact = root.querySelector(compactSel);
+    const expanded = root.querySelector(expandedSel);
+    const toggle = root.querySelector(toggleSel);
+    const dashCard = root.closest('.dash_card');
+    const dashBox = getDashBox(root);
+    const layer = getLayer(dashBox);
+    const stage = layer ? layer.querySelector('.dash_maxi_stage') : null;
+
+    if (!compact || !expanded || !toggle || !dashCard || !dashBox || !layer || !stage) {
+      return;
+    }
+
+    const accentClasses = Array.from(dashCard.classList).filter((name) => /^card_/.test(name));
+    const overlayCard = document.createElement('section');
+    overlayCard.className = ['dash_maxi_card'].concat(accentClasses).join(' ');
+
+    const head = root.querySelector('.card_top');
+    const headClone = head ? head.cloneNode(true) : document.createElement('div');
+    const overlayToggle = headClone.querySelector(toggleSel);
+
+    const expandedNextSibling = expanded.nextSibling;
+    const handleOverlayClose = () => {
+      closeActiveMaxi();
+    };
+
+    expanded.classList.remove('is-hidden');
+    compact.classList.add('is-hidden');
+    dashCard.classList.add('is-expanded');
+    dashCard.classList.add('is-maxi-source');
+    dashBox.classList.add('has-maxi');
+    updateToggle(toggle, true);
+    if (typeof w.cbSetBranchSelectDisabledForRoot === 'function') {
+      w.cbSetBranchSelectDisabledForRoot(root, true);
+    }
+
+    if (overlayToggle) {
+      updateToggle(overlayToggle, true);
+      overlayToggle.addEventListener('click', handleOverlayClose);
+    }
+
+    if (headClone) {
+      headClone.addEventListener('dblclick', (event) => {
+        if (event.target instanceof Element && event.target.closest(toggleSel)) {
+          return;
+        }
+        handleOverlayClose();
+      });
+    }
+
+    overlayCard.appendChild(headClone);
+    overlayCard.appendChild(expanded);
+    stage.appendChild(overlayCard);
+    layer.classList.add('is-active');
+
+    activeMaxi = {
+      root,
+      compact,
+      expanded,
+      toggle,
+      dashCard,
+      dashBox,
+      layer,
+      stage,
+      overlayCard,
+      overlayToggle,
+      expandedNextSibling,
+      handleOverlayClose
+    };
+  }
 
   function setExpanded(root, compactSel, expandedSel, toggleSel, on) {
     if (!root) return;
@@ -14,162 +168,78 @@
     const dashCard = root.closest('.dash_card');
     const isOn = !!on;
 
-    if (compact) compact.classList.toggle('is-hidden', isOn);
-    if (expanded) expanded.classList.toggle('is-hidden', !isOn);
-    if (dashCard) dashCard.classList.toggle('is-expanded', isOn);
-
-    if (toggle) {
-      toggle.textContent = isOn ? ICON_MIN : ICON_MAX;
-      toggle.setAttribute('aria-expanded', isOn ? 'true' : 'false');
+    if (isOn) {
+      openMaxi(root, compactSel, expandedSel, toggleSel);
+      return;
     }
+
+    if (activeMaxi && activeMaxi.root === root) {
+      closeActiveMaxi();
+      return;
+    }
+
+    if (compact) compact.classList.remove('is-hidden');
+    if (expanded) expanded.classList.add('is-hidden');
+    if (dashCard) dashCard.classList.remove('is-expanded');
+    updateToggle(toggle, false);
   }
 
-  function initAdminKartyCard(root) {
-    if (!root || root.getAttribute('data-admink-init') === '1') return;
-    root.setAttribute('data-admink-init', '1');
+  function initCard(root) {
+    if (!root || root.getAttribute('data-card-init') === '1') return;
+    root.setAttribute('data-card-init', '1');
 
-    const toggle = root.querySelector('[data-admink-toggle]');
-    const tabs = root.querySelectorAll('[data-admink-tab]');
-    const panels = root.querySelectorAll('[data-admink-panel]');
-    const tabKey = 'cb_admin_karty_tab';
+    const toggle = root.querySelector('[data-card-toggle]');
+    const head = root.querySelector('.card_top');
 
-    const readSavedTab = () => {
-      try {
-        return String(window.sessionStorage.getItem(tabKey) || 'nova');
-      } catch (e) {
-        return 'nova';
-      }
-    };
-
-    const saveTab = (v) => {
-      try {
-        window.sessionStorage.setItem(tabKey, String(v || 'nova'));
-      } catch (e) {
-        // ignore
-      }
-    };
-
-    const setTab = (name) => {
-      const key = String(name || 'nova');
-      tabs.forEach((btn) => {
-        const active = String(btn.getAttribute('data-admink-tab') || '') === key;
-        btn.classList.toggle('is-active', active);
-        btn.setAttribute('aria-selected', active ? 'true' : 'false');
-      });
-      panels.forEach((panel) => {
-        const active = String(panel.getAttribute('data-admink-panel') || '') === key;
-        panel.classList.toggle('is-hidden', !active);
-      });
-      saveTab(key);
-    };
-
-    setExpanded(root, '[data-admink-compact]', '[data-admink-expanded]', '[data-admink-toggle]', false);
-    setTab(readSavedTab());
-
-    if (toggle) {
-      toggle.addEventListener('click', () => {
-        const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-        setExpanded(root, '[data-admink-compact]', '[data-admink-expanded]', '[data-admink-toggle]', !isExpanded);
-      });
+    if (!toggle || !head || !root.querySelector('[data-card-compact]') || !root.querySelector('[data-card-expanded]')) {
+      return;
     }
 
-    tabs.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        setTab(btn.getAttribute('data-admink-tab') || 'nova');
-      });
+    setExpanded(root, '[data-card-compact]', '[data-card-expanded]', '[data-card-toggle]', false);
+
+    toggle.addEventListener('click', () => {
+      const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+      setExpanded(root, '[data-card-compact]', '[data-card-expanded]', '[data-card-toggle]', !isExpanded);
     });
-  }
 
-  function initZadaniReportuCard(root) {
-    if (!root || root.getAttribute('data-zr-init') === '1') return;
-    root.setAttribute('data-zr-init', '1');
-
-    const toggle = root.querySelector('[data-zr-toggle]');
-
-    const setMockApiValues = () => {
-      const map = {
-        api_pocet_obj: '78',
-        api_make_time: '13 min 24 s',
-        api_zrusene_ks: '0',
-        api_zrusene_castka: '0'
-      };
-      Object.keys(map).forEach((key) => {
-        const el = root.querySelector('[name="' + key + '"]');
-        if (el instanceof HTMLInputElement) {
-          el.value = map[key];
-        }
-      });
-    };
-
-    setExpanded(root, '[data-zr-compact]', '[data-zr-expanded]', '[data-zr-toggle]', false);
-    setMockApiValues();
-
-    if (toggle) {
-      toggle.addEventListener('click', () => {
-        const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-        setExpanded(root, '[data-zr-compact]', '[data-zr-expanded]', '[data-zr-toggle]', !isExpanded);
-      });
-    }
-  }
-
-  function initUzivateleCard(root) {
-    if (!root || root.getAttribute('data-uz-init') === '1') return;
-    root.setAttribute('data-uz-init', '1');
-
-    const toggle = root.querySelector('[data-uz-toggle]');
-    setExpanded(root, '[data-uz-compact]', '[data-uz-expanded]', '[data-uz-toggle]', false);
-
-    if (toggle) {
-      toggle.addEventListener('click', () => {
-        const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-        setExpanded(root, '[data-uz-compact]', '[data-uz-expanded]', '[data-uz-toggle]', !isExpanded);
-      });
-    }
-  }
-
-  function initZakazniciCard(root) {
-    if (!root || root.getAttribute('data-zak-init') === '1') return;
-    root.setAttribute('data-zak-init', '1');
-
-    const toggle = root.querySelector('[data-zak-toggle]');
-    setExpanded(root, '[data-zak-compact]', '[data-zak-expanded]', '[data-zak-toggle]', false);
-
-    if (toggle) {
-      toggle.addEventListener('click', () => {
-        const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-        setExpanded(root, '[data-zak-compact]', '[data-zak-expanded]', '[data-zak-toggle]', !isExpanded);
-      });
-    }
+    head.addEventListener('dblclick', (event) => {
+      if (event.target instanceof Element && event.target.closest('[data-card-toggle]')) {
+        return;
+      }
+      const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+      setExpanded(root, '[data-card-compact]', '[data-card-expanded]', '[data-card-toggle]', !isExpanded);
+    });
   }
 
   function forceCompact() {
-    document.querySelectorAll('.cb-admin-karty').forEach((root) => {
-      setExpanded(root, '[data-admink-compact]', '[data-admink-expanded]', '[data-admink-toggle]', false);
-    });
-    document.querySelectorAll('.cb-zadani-reportu').forEach((root) => {
-      setExpanded(root, '[data-zr-compact]', '[data-zr-expanded]', '[data-zr-toggle]', false);
-    });
-    document.querySelectorAll('.cb-uzivatele').forEach((root) => {
-      setExpanded(root, '[data-uz-compact]', '[data-uz-expanded]', '[data-uz-toggle]', false);
-    });
-    document.querySelectorAll('.cb-zakaznici').forEach((root) => {
-      setExpanded(root, '[data-zak-compact]', '[data-zak-expanded]', '[data-zak-toggle]', false);
+    closeActiveMaxi();
+    document.querySelectorAll('.card_shell').forEach((root) => {
+      if (!(root instanceof HTMLElement)) return;
+      if (!root.querySelector('[data-card-toggle]') || !root.querySelector('[data-card-compact]') || !root.querySelector('[data-card-expanded]')) {
+        return;
+      }
+      setExpanded(root, '[data-card-compact]', '[data-card-expanded]', '[data-card-toggle]', false);
     });
   }
 
   function initKartyMinMax() {
-    document.querySelectorAll('.cb-admin-karty').forEach(initAdminKartyCard);
-    document.querySelectorAll('.cb-zadani-reportu').forEach(initZadaniReportuCard);
-    document.querySelectorAll('.cb-uzivatele').forEach(initUzivateleCard);
-    document.querySelectorAll('.cb-zakaznici').forEach(initZakazniciCard);
+    document.querySelectorAll('.card_shell').forEach(initCard);
   }
 
   function wireOnce() {
     if (w.__CB_KARTY_MINMAX_WIRED__) return;
     w.__CB_KARTY_MINMAX_WIRED__ = true;
 
-    document.addEventListener('cb:main-swapped', initKartyMinMax);
+    document.addEventListener('cb:main-swapped', () => {
+      closeActiveMaxi();
+      initKartyMinMax();
+    });
     document.addEventListener('cb:menu-same-sekce', forceCompact);
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closeActiveMaxi();
+      }
+    });
   }
 
   wireOnce();

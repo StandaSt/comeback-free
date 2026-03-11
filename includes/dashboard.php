@@ -126,6 +126,8 @@ $emptyText = (string)($emptyMap[$sekce] ?? $emptyMap[3]);
       <?php
       $fullPath = cb_dashboard_resolve_file((string)($karta['soubor'] ?? ''));
       $classes = cb_dashboard_card_classes($karta);
+      $cb_card_code = 'K' . (string)($karta['id_karta'] ?? 0);
+      $cb_card_title = (string)($karta['nazev'] ?? '');
       ?>
       <section class="<?= h($classes) ?>">
         <?php if ($fullPath !== null): ?>

@@ -1,5 +1,14 @@
 # AGENTS.md
 
+## KRITICKE PRAVIDLO KODOVANI
+- V tomto projektu je striktne zakazano pouzivat jakekoliv jine kodovani nez `UTF-8 bez BOM`.
+- Pri kazdem cteni, kontrole i zapisu souboru vzdy pracuj tak, aby vysledkem bylo `UTF-8 bez BOM`.
+- Jakakoliv odchylka od `UTF-8 bez BOM` je v tomto projektu nepripustna.
+
+## KRITICKE PRAVIDLO JEDNODUCHOSTI
+- Vzdy navrhuj nejjednodussi funkcni reseni.
+- Ucelem projektu neni mit slozite toky, ktere generuji chyby, ale funkcni, stabilni a uzitecny informacni system.
+
 Při auditu, hledání chyb, duplicit a dead code ignoruj složky: `vendor/`, `testy/`, `pomocne/`.
 
 ## Projekt
@@ -180,6 +189,9 @@ Proto vždy nejprve ověř realitu v kódu, ne domněnky.
 - Nikdy neprováděj změny navíc mimo přesné zadání.
 - Pokud najdeš další problém mimo zadání, předem ho pouze oznam a navrhni řešení.
 - Jakoukoliv takovou změnu proveď až po explicitním schválení od uživatele.
+- Pred kazdou upravou vzdy nejprve vypis dotcene soubory.
+- U kazdeho dotceneho souboru strucne napis, jak se ho zmena dotkne.
+- Po tomto vypisu vzdy pockej na schvaleni od uzivatele a teprve potom proved zmenu.
 
 ## Styl vysvětlení
 - Cizí a odborné výrazy i zkratky vždy stručně vysvětli v češtině hned při prvním použití.

@@ -75,24 +75,24 @@ try {
 }
 ?>
 
-<article class="zak_card cb-zakaznici">
+<article class="card_shell cb-zakaznici">
   <div class="card_top">
     <div>
-      <h3 class="card_title">Seznam zákazníků</h3>
-      <p class="card_subtitle">Souhrn zákaznické báze</p>
+      <h3 class="card_title"><?= h((string)($cb_card_title ?? 'Seznam zákazníků')) ?></h3>
+      <p class="card_subtitle"><span class="card_code"><?= h((string)($cb_card_code ?? '')) ?></span>Souhrn zákaznické báze</p>
     </div>
     <div class="card_tools">
       <button
         type="button"
         class="card_tool_btn"
-        data-zak-toggle="1"
+        data-card-toggle="1"
         aria-expanded="false"
         title="Rozbalit/sbalit"
       >⤢</button>
     </div>
   </div>
 
-  <div class="zak_compact" data-zak-compact>
+  <div class="card_compact card_stack" data-card-compact>
     <p class="card_text">Nalezeno zákazníků: <strong><?= h((string)$totalZak) ?></strong></p>
     <p class="card_text">Aktivních / blokovaných: <strong><?= h((string)$activeZak) ?></strong> / <strong><?= h((string)$blockedZak) ?></strong></p>
     <p class="card_text">Nejaktivnější zákazníci:</p>
@@ -101,7 +101,7 @@ try {
     <p class="card_text"><?= h($topLines[2]) ?></p>
   </div>
 
-  <div class="zak_expanded is-hidden" data-zak-expanded>
+  <div class="card_expanded is-hidden" data-card-expanded>
     <p class="card_text card_text_muted">Maximalizovanou variantu karty připravíme v dalším kroku.</p>
   </div>
 </article>

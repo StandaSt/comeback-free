@@ -287,6 +287,11 @@ require_once __DIR__ . '/includes/paticka.php';
 <script src="<?= h(cb_url('js/karty_tabulka.js')) ?>"></script>
 <script src="<?= h(cb_url('js/karty_form.js')) ?>"></script>
 <script src="<?= h(cb_url('js/karty_min_max.js')) ?>"></script>
+<script src="<?= h(cb_url('js/karty_hlavicka.js')) ?>"></script>
+<script src="<?= h(cb_url('js/karty_report_restia.js')) ?>"></script>
+<script src="<?= h(cb_url('js/karty_report_form.js')) ?>"></script>
+<script src="<?= h(cb_url('js/karty_report_person.js')) ?>"></script>
+<script src="<?= h(cb_url('js/admin_karty.js')) ?>"></script>
 <script src="<?= h(cb_url('js/filtry.js')) ?>"></script>
 <script src="<?= h(cb_url('js/filtry_reset.js')) ?>"></script>
 <script src="<?= h(cb_url('js/strankovani.js')) ?>"></script>

@@ -14,6 +14,8 @@ CEKAJICI:
 12. logování akcí uživatele, použití karty, menu, vyhledávání, filtrování období; pokud se přihlásí a po 20 minutách nečinnosti ho systém odhlásí, není to čas strávený v systému, ale je to vhodné jako zápis "imitace práce" :-)
 13. modal "Prvni prihlaseni": doplnit odpocet 5 minut (limit sparovani)
 14. napsat smeny_naplanovane.php (novy cisty skript od nuly)
+15. pridat out rezim karty (otevreni karty mimo dashboard do samostatneho okna)
+16. uprava reportu: umoznit editaci/opraveni s auditni stopou; pri oprave zneplatnit puvodni report i jeho person radky a ulozit novy; mit platny i v cb_reporty_person; sledovat zapis_od a zapis_do; povolit i ulozeni beze zmeny; po ulozeni poslat push notifikaci do mobilu (napr. "Vas report za pobocku XY byl uspesne zaznamenan.")
 
 SPLNENO:
 2. spouštění bootstrapu pouze kde je to nezbytné

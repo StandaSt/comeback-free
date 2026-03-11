@@ -1,4 +1,4 @@
-﻿// js/menu_core.js * Verze: V5 * Aktualizace: 08.03.2026
+// js/menu_core.js * Verze: V5 * Aktualizace: 08.03.2026
 'use strict';
 
 /*

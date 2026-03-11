@@ -1,17 +1,9 @@
-/* style/1/karty/admin_karty.css * Verze: V2 * Aktualizace: 08.03.2026 */
+/* style/1/karty/admin_karty.css * Verze: V3 * Aktualizace: 11.03.2026 */
 
 /*
  * INDIVIDUALNI STYL KARTY: admin_karty
  * - vzhled panelu, tabu a formulare konkretne pro tuto kartu
  */
-
-.admin_karty_card{
-  padding:0;
-}
-
-.admin_karty_compact{
-  padding:12px;
-}
 
 .admin_karty_meta{
   border-collapse:collapse;
@@ -29,19 +21,6 @@
   font-weight:500;
   color:rgba(15,23,42,.70);
   white-space:nowrap;
-}
-
-.admin_karty_compact.is-hidden{
-  display:none;
-}
-
-.admin_karty_expanded{
-  padding:12px;
-  border-top:1px solid rgba(0,0,0,.10);
-}
-
-.admin_karty_expanded.is-hidden{
-  display:none;
 }
 
 .admin_karty_tabs{
@@ -85,14 +64,6 @@
   gap:10px;
 }
 
-.admin_karty_form_grid label{
-  display:flex;
-  flex-direction:column;
-  gap:4px;
-  font-size:12px;
-  color:rgba(15,23,42,.72);
-}
-
 .admin_karty_form_grid input{
   height:32px;
 }
@@ -133,4 +104,4 @@
   }
 }
 
-/* style/1/karty/admin_karty.css * Verze: V2 * Aktualizace: 08.03.2026 */
+/* style/1/karty/admin_karty.css * Verze: V3 * Aktualizace: 11.03.2026 */

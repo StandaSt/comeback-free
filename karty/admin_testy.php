@@ -31,35 +31,49 @@ if (is_string($baseDir) && $baseDir !== '' && is_dir($baseDir)) {
 }
 ?>
 
-<article class="admin_testy_card">
+<article class="card_shell admin_testy_card cb-admin-testy">
   <div class="card_top">
     <div>
-      <h3 class="card_title">Admin testy</h3>
-      <p class="card_subtitle">Spouštění testovacích skriptů</p>
+      <h3 class="card_title"><?= h((string)($cb_card_title ?? 'Admin testy')) ?></h3>
+      <p class="card_subtitle"><span class="card_code"><?= h((string)($cb_card_code ?? '')) ?></span>Spouštění testovacích skriptů</p>
+    </div>
+    <div class="card_tools">
+      <button
+        type="button"
+        class="card_tool_btn"
+        data-card-toggle="1"
+        aria-expanded="false"
+        title="Rozbalit/sbalit"
+      >⤢</button>
     </div>
   </div>
 
-  <div class="card" style="border:0;padding:12px;">
+  <div class="card_compact card_stack" data-card-compact>
     <p class="card_text">Toto je panel pro spouštění testovacích scriptů.</p>
+  </div>
 
-    <div style="margin-top:10px;">
-      <label for="cbAdminTestSelect">Vyber soubor</label>
-      <select id="cbAdminTestSelect" style="display:block;width:100%;max-width:460px;margin-top:4px;">
-        <option value="">Vyber *.php z admin_testy</option>
-        <?php foreach ($items as $it): ?>
-          <option
-            value="<?= h((string)$it['url']) ?>"
-            data-abs="<?= h((string)$it['abs']) ?>"
-          ><?= h((string)$it['file']) ?></option>
-        <?php endforeach; ?>
-      </select>
+  <div class="card_expanded is-hidden card_stack" data-card-expanded>
+    <div>
+      <label class="card_field" for="cbAdminTestSelect">Vyber soubor
+        <select id="cbAdminTestSelect" class="card_select card_control">
+          <option value="">Vyber *.php z admin_testy</option>
+          <?php foreach ($items as $it): ?>
+            <option
+              value="<?= h((string)$it['url']) ?>"
+              data-abs="<?= h((string)$it['abs']) ?>"
+            ><?= h((string)$it['file']) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </label>
     </div>
 
-    <div id="cbAdminTestPathWrap" style="display:none;margin-top:10px;">
-      <div style="font-size:13px;">
+    <div id="cbAdminTestPathWrap" class="card_stack is-hidden">
+      <div class="card_small_text">
         Cesta: <span id="cbAdminTestPath"></span>
       </div>
-      <button id="cbAdminTestRun" type="button" style="margin-top:8px;">Spustit</button>
+      <div>
+        <button id="cbAdminTestRun" type="button">Spustit</button>
+      </div>
     </div>
   </div>
 </article>
@@ -87,12 +101,12 @@ if (is_string($baseDir) && $baseDir !== '' && is_dir($baseDir)) {
     selectedUrl = url;
     if (url === '') {
       path.textContent = '';
-      pathWrap.style.display = 'none';
+      pathWrap.classList.add('is-hidden');
       return;
     }
 
     path.textContent = abs;
-    pathWrap.style.display = 'block';
+    pathWrap.classList.remove('is-hidden');
   });
 
   runBtn.addEventListener('click', function () {
