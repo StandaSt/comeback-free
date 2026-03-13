@@ -9,7 +9,16 @@
 - Vzdy navrhuj nejjednodussi funkcni reseni.
 - Ucelem projektu neni mit slozite toky, ktere generuji chyby, ale funkcni, stabilni a uzitecny informacni system.
 
-Při auditu, hledání chyb, duplicit a dead code ignoruj složky: `vendor/`, `testy/`, `pomocne/`.
+## KRITICKE PRAVIDLO OVERENI
+- AI nikdy nesmi predpokladat, ze neco plati jen proto, ze to tak vypada v kodu.
+- AI musi nejdriv overit skutecny stav, tedy co se opravdu renderuje, nacita a aplikuje v bezicim projektu.
+- U HTML, CSS a JS je zakazano pracovat podle domnenek; nejdriv se musi potvrdit skutecny vystup, skutecne nacteny soubor a skutecne aplikovany selector nebo handler.
+- Pokud neco neni overene, AI to nesmi podavat jako fakt.
+
+## KRITICKE PRIPOMENUTI PRO AI
+- Pred dalsi praci si precti `codex/shrnuti_pro_AI.txt` a rid se jim stejne prisne jako timto AGENTS.md.
+
+Při auditu, hledání chyb, duplicit a dead code ignoruj složky: `vendor/`, `_kandidati/`.
 
 ## Projekt
 Tento projekt je interní IS „Comeback“ pro lokální provoz a postupný přechod na dashboardový a kartový přístup.

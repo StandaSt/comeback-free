@@ -1,0 +1,68 @@
+VYKAZ PRACE - 12.03.2026
+
+1) Audit projektu
+- Proveden audit aktivnich casti projektu se zamerenim na:
+  - zbytecnou slozitost,
+  - duplicity,
+  - globalni JS/CSS,
+  - nefunkcni nebo mrtve casti.
+- Pro bod 1 pripraveny ukazkove old/new soubory v _kandidati/sandboxAI.
+
+2) K1 - odstraneni API a zbytecneho JS
+- K1 admin_karty prepsana na prime POST zpracovani v PHP.
+- Smazany 4 soubory:
+  - js/karty_form.js
+  - js/karty_tabulka.js
+  - js/karty_api_get.js
+  - lib/karty_admin_api.php
+- Zruseny zalozky a karta zjednodusena na jednu obrazovku s aktivnimi a neaktivnimi kartami.
+
+3) K1 - stabilizace chovani
+- Opraven navrat po POST zpet do admin sekce.
+- Doplneno zachovani rozbaleneho stavu po POST.
+- Doplnene asset versioning pro CSS/JS.
+- Pro K1 odstraneny zbytky mrtveho a zbytecneho CSS.
+
+4) K1 - zjednoduseni struktury
+- Formular “Pridat kartu” predelan z komplikovanejsich variant do jednoduche tabulkove podoby.
+- K1 nakonec prepsana na jednu spolecnou tabulku se sekcnimi radky.
+- Pocet lokalnich trid v admin_karty.css zredukovan na minimum.
+
+5) Zpevneni dashboard CSS discipliny
+- Dokonceno cisteni K1, K2 a admin_testy smerem k lokalnim tridam a mensi kolizi CSS.
+- Odstraneny inline handlery a cast inline stylu.
+- Zavedeny dalsi data-* vazby misto pevných id tam, kde to davalo smysl.
+
+6) Playwright
+- Do projektu nainstalovan Playwright a browsery.
+- Vytvoren a upraven lokalni Playwright test pro K1.
+- Overeny konkretni problemy v testu:
+  - spatne root-relative URL,
+  - diagnosticke logovani po padu,
+  - overovani expanded vrstvy u maxi karty.
+- Domluven novy postup:
+  - “otestuj” = over pres Playwright.
+
+7) K2 - vzhled a rozlozeni
+- Provedena rada vizualnich uprav K2:
+  - vzhled sekci,
+  - sirky intro bloku,
+  - cerné labely,
+  - trvale viditelne PHM,
+  - upravy Restie a Operativy,
+  - pokusy o srovnani Instor/Kuryr.
+- K2 byla behem dne vicrat menena a cast zmen se ukazala jako slepa nebo nedotazena.
+
+8) Agenti a pravidla
+- Do AGENTS.md doplneno kriticke pravidlo overeni:
+  - nic nepredpokladat,
+  - nejdriv potvrdit skutecny render, soubor a selector.
+
+9) Stav na konci dne
+- K1 je funkcni a vyrazne jednodussi nez rano.
+- Playwright je zprovoznen a pripraven pro dalsi UI overovani.
+- K2 neni finalni a ceka na dalsi ciste dotazeni rozlozeni.
+
+POZNAMKA
+- Velka cast dne byla spotrebovana na opravy slepych pokusu a opakovane predelavani K2.
+- Hlavni pouceni dne: nejdriv overit realitu, pak teprve menit.

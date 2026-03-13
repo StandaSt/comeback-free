@@ -1,260 +1,349 @@
-/* style/1/karty/zadani_reportu.css * Verze: V3 * Aktualizace: 11.03.2026 */
+/* style/1/karty/zadani_reportu.css * Verze: V6 * Aktualizace: 12.03.2026 */
+
+.cb-zadani-reportu .card_expanded{
+  background:
+    linear-gradient(180deg, rgba(248,250,252,.98), rgba(241,245,249,.96));
+}
+
+.zr_form{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
 
 .zr_layout{
   display:grid;
-  grid-template-columns:minmax(0, 2.15fr) minmax(210px, .62fr);
-  gap:10px;
+  grid-template-columns:minmax(0, 1fr) 300px;
+  gap:14px;
   align-items:start;
 }
 
-.zr_main,
+.zr_main{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.zr_top{
+  display:grid;
+  grid-template-columns:280px minmax(0, 1fr);
+  gap:14px;
+  align-items:start;
+}
+
+.zr_left,
 .zr_side{
   min-width:0;
 }
 
+.zr_left,
 .zr_side{
-  position:sticky;
-  top:10px;
-  z-index:2;
-  overflow:hidden;
-}
-
-.zr_grid_cash{
-  display:grid;
-  grid-template-columns:repeat(2, minmax(110px, 1fr));
-  gap:6px 8px;
-}
-
-.zr_people_stack{
   display:flex;
   flex-direction:column;
-  gap:6px;
+  gap:14px;
 }
 
-.zr_person_row{
-  display:grid;
-  gap:6px 8px;
-  padding:6px 8px;
-  border:1px dashed rgba(15,23,42,.14);
-  border-radius:10px;
-  background:rgba(248,250,252,.72);
+.zr_side{
+  justify-content:flex-start;
 }
 
-.zr_person_row_staff{
-  grid-template-columns:174px 62px 62px 43px minmax(86px, 1fr) 104px;
+.zr_section{
+  padding:12px 14px;
+  border-color:rgba(148,163,184,.30);
+  border-radius:14px;
+  box-shadow:0 10px 24px rgba(148,163,184,.10);
 }
 
-.zr_person_row_kuryr{
-  grid-template-columns:174px 62px 62px 43px 86px 138px 62px minmax(104px, 1fr) 104px;
+.zr_intro_section .zr_intro_label{
+  width:72px;
 }
 
-.zr_person_name{
-  min-width:0;
+.zr_table{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
 }
 
-.zr_saved_rows{
-  display:flex;
-  flex-direction:column;
-  gap:4px;
+.zr_table th,
+.zr_table td{
+  padding:5px 6px;
+  vertical-align:middle;
 }
 
-.zr_saved_row{
-  display:grid;
-  gap:6px 8px;
-  padding:5px 8px;
-  border:1px solid rgba(15,23,42,.08);
-  border-radius:10px;
-  background:#fff;
+.zr_table th{
+  font-size:12px;
+  font-weight:600;
+  color:#475569;
+  text-align:left;
 }
 
-.zr_saved_row_instor{
-  grid-template-columns:174px 62px 62px 43px 86px;
-}
-
-.zr_saved_row_kuryr{
-  grid-template-columns:174px 62px 62px 43px 86px 138px 62px 104px;
-}
-
-.zr_saved_cell{
-  min-width:0;
-}
-
-.zr_saved_value{
-  display:block;
-  min-height:24px;
-  line-height:24px;
+.zr_table td{
   font-size:12px;
   color:#0f172a;
-  font-weight:600;
 }
 
-.zr_intro_layout{
-  display:grid;
-  grid-template-columns:190px 452px;
-  gap:10px;
-  align-items:start;
-  justify-content:space-between;
-  margin-bottom:10px;
-}
-
-.zr_intro_left{
-  display:grid;
-  gap:4px;
-}
-
-.zr_intro_box{
-  padding:8px 10px;
-}
-
-.zr_intro_box_left{
-  width:190px;
-}
-
-.zr_cash_box{
-  max-width:452px;
-  justify-self:end;
-}
-
-.zr_cash_box .card_section_title{
-  margin-bottom:4px;
-}
-
-.zr_cash_box .card_field{
-  min-width:0;
-}
-
-.zr_cash_box .card_input{
+.zr_form input,
+.zr_form select{
   width:100%;
-  max-width:70px;
-}
-
-.zr_cash_box .zr_grid_cash{
-  grid-template-columns:repeat(4, minmax(92px, 1fr));
-  gap:4px 8px;
-}
-
-.zr_layout input,
-.zr_layout select{
-  height:24px;
-  min-height:24px;
-  padding-top:1px;
-  padding-bottom:1px;
+  height:28px;
+  min-height:28px;
+  padding:2px 8px;
   font-size:12px;
-}
-
-.zr_date_display{
-  min-width:0;
-  width:170px;
-  max-width:170px;
-}
-
-.zr_intro_left .card_select{
-  width:170px;
-  max-width:170px;
-}
-
-.zr_money_input{
-  width:9ch;
-  min-width:9ch;
-  max-width:9ch;
+  border:1px solid #cbd5e1;
+  border-radius:9px;
+  background:#fff;
+  box-sizing:border-box;
+  box-shadow:inset 0 1px 1px rgba(15,23,42,.04);
 }
 
 .zr_req_label{
-  color:#b91c1c;
-  transition:color .15s ease;
+  color:#0f172a;
 }
 
 .zr_req_label.is-valid{
-  color:#2563eb;
+  color:#0f172a;
+}
+
+.zr_form input:focus,
+.zr_form select:focus{
+  outline:none;
+  border-color:#3b82f6;
+  box-shadow:0 0 0 3px rgba(59,130,246,.12);
+}
+
+.zr_date_display{
+  width:160px;
+  max-width:160px;
+  font-weight:700;
+  color:#0f172a;
+  background:linear-gradient(180deg, #fff, #f8fafc);
+}
+
+.zr_intro_select{
+  width:160px;
+  max-width:160px;
+}
+
+.zr_money_input{
+  width:10ch;
+  max-width:10ch;
+}
+
+.zr_cash_table th,
+.zr_cash_table td{
+  padding:4px 6px;
+}
+
+.zr_cash_table th{
+  padding-bottom:3px;
+  color:#334155;
+}
+
+.zr_cash_table thead th,
+.zr_cash_table tbody tr:nth-child(2) th{
+  font-size:11px;
+  letter-spacing:.03em;
+}
+
+.zr_cash_table tbody tr:nth-child(odd) td{
+  background:rgba(255,255,255,.92);
+}
+
+.zr_cash_table tbody tr:nth-child(even) td{
+  background:rgba(248,250,252,.92);
+}
+
+.zr_person_table th,
+.zr_person_table td{
+  padding:6px 4px;
+}
+
+.zr_person_table{
+  table-layout:fixed;
+}
+
+.zr_person_table thead th{
+  font-size:11px;
+  letter-spacing:.03em;
+  color:#475569;
+}
+
+.zr_person_table tbody tr{
+  border-top:1px solid rgba(148,163,184,.18);
+}
+
+.zr_person_table tbody tr:nth-child(odd) td{
+  background:rgba(255,255,255,.94);
+}
+
+.zr_person_col_name{
+  width:90px;
+}
+
+.zr_person_col_time{
+  width:45px;
+}
+
+.zr_person_col_break{
+  width:25px;
+}
+
+.zr_person_col_hours{
+  width:30px;
+}
+
+.zr_person_col_save{
+  width:108px;
+}
+
+.zr_person_cell_save{
+  text-align:right;
+}
+
+.zr_hours_value{
+  display:inline-block;
+  line-height:28px;
+  font-size:12px;
+  font-weight:700;
+  color:#0f172a;
+}
+
+.zr_delivery_wrap{
+  display:flex;
+  align-items:center;
+  gap:3px;
+}
+
+.zr_delivery_input{
+  width:5ch;
+  max-width:5ch;
+  text-align:center;
+}
+
+.zr_delivery_plus{
+  font-weight:700;
+  line-height:28px;
 }
 
 .zr_chk{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:flex-start;
   text-align:center;
 }
 
 .zr_chk input{
   width:14px;
   height:14px;
-  margin-top:4px;
-  margin-left:0;
-  margin-right:0;
+  margin:0 auto;
 }
 
-.zr_block_api{
-  background:linear-gradient(180deg, rgba(59,130,246,.06), #fff);
+.zr_kuryr_extra{
+  display:grid;
+  grid-template-columns:minmax(0, 1.35fr) minmax(96px, .85fr) minmax(110px, .95fr) 108px;
+  gap:8px;
+  align-items:center;
 }
 
-.zr_block_api_minor{
-  background:#f5f7fb;
+.zr_kuryr_extra_item{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
 }
 
-.zr_block_api input[readonly]{
-  background:rgba(148,163,184,.18);
+.zr_kuryr_extra_item_car{
+  white-space:nowrap;
+}
+
+.zr_kuryr_extra_item_save{
+  justify-content:flex-end;
+}
+
+.zr_kuryr_extra_label{
+  font-size:11px;
+  color:#475569;
+  white-space:nowrap;
+}
+
+.zr_instor_section .zr_person_cell_name select,
+.zr_kuryr_section .zr_person_cell_name select{
+  width:170px;
+}
+
+.zr_delivery_wrap_kuryr{
+  min-width:0;
+}
+
+.zr_person_cell_car_inline{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.zr_row_save{
+  width:104px;
+  height:30px;
+  border:1px solid #1d4ed8;
+  border-radius:10px;
+  background:linear-gradient(180deg, #3b82f6, #2563eb);
+  color:#fff;
+  font-size:13px;
+  font-weight:700;
+  box-shadow:0 6px 14px rgba(37,99,235,.18);
+}
+
+.zr_row_save:disabled{
+  cursor:not-allowed;
+  opacity:.45;
+}
+
+.zr_saved_value{
+  display:inline-block;
+  line-height:28px;
+  font-weight:600;
   color:#0f172a;
-  border:1px solid rgba(100,116,139,.35);
 }
 
-.zr_metric_total{
+.zr_phm_field.is-hidden{
+  display:none;
+}
+
+.zr_restia_total{
   display:flex;
   flex-direction:column;
   gap:3px;
-  padding:9px 10px;
-  margin-bottom:8px;
-  border:1px solid rgba(59,130,246,.20);
-  border-radius:10px;
-  background:#ffffff;
+  padding:12px 14px;
+  margin-bottom:10px;
+  border:1px solid rgba(37,99,235,.18);
+  border-radius:14px;
+  background:linear-gradient(135deg, #eff6ff, #ffffff);
 }
 
 .zr_metric_label{
   font-size:12px;
-  color:rgba(15,23,42,.62);
+  letter-spacing:.05em;
+  color:#64748b;
 }
 
 .zr_metric_value{
-  font-size:24px;
+  font-size:28px;
   line-height:1.1;
   color:#0f172a;
 }
 
-.zr_auto_list{
-  display:flex;
-  flex-direction:column;
-  gap:3px;
+.zr_restia_table td{
+  padding:7px 8px;
+  border:1px solid rgba(148,163,184,.18);
+  background:#fff;
 }
 
-.zr_auto_grid{
-  display:grid;
-  grid-template-columns:1fr;
-  gap:3px;
+.zr_restia_key{
+  color:#334155;
 }
 
-.zr_auto_row{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  min-height:22px;
-  padding:2px 7px;
-  border:1px solid rgba(15,23,42,.08);
-  border-radius:10px;
-  background:#ffffff;
-  font-size:11px;
-  overflow:hidden;
-}
-
-.zr_auto_row span{
-  color:rgba(15,23,42,.72);
-  min-width:0;
-}
-
-.zr_auto_row strong{
+.zr_restia_value{
+  text-align:right;
+  font-weight:700;
   white-space:nowrap;
-  color:#0f172a;
-  flex:0 0 auto;
 }
 
 .zr_submit{
@@ -265,147 +354,59 @@
   border:1px solid #1d4ed8;
   border-radius:14px;
   background:linear-gradient(90deg, #2563eb, #1d4ed8);
-  color:#ffffff;
+  color:#fff;
   font-size:18px;
   font-weight:700;
+}
+
+.zr_intro_section{
+  background:linear-gradient(180deg, #eff6ff, #f8fbff);
+}
+
+.zr_cash_section{
+  background:linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.zr_instor_section,
+.zr_kuryr_section{
+  background:linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.zr_restia_section,
+.zr_ops_section{
+  background:linear-gradient(180deg, #f8fafc, #eef2f7);
+}
+
+.zr_restia_section{
+  margin-top:0;
+}
+
+.zr_restia_section .card_section_title,
+.zr_ops_section .card_section_title,
+.zr_instor_section .card_section_title,
+.zr_kuryr_section .card_section_title,
+.zr_cash_section .card_section_title{
+  margin-bottom:10px;
+  font-size:15px;
+  font-weight:700;
   letter-spacing:.01em;
-  text-align:center;
-  box-shadow:0 10px 24px rgba(37,99,235,.16);
 }
 
-.zr_submit:hover{
-  filter:brightness(1.03);
+.zr_intro_section .zr_table td,
+.zr_intro_section .zr_table th{
+  padding-top:6px;
+  padding-bottom:6px;
 }
 
-.zr_submit:focus-visible{
-  outline:2px solid rgba(37,99,235,.34);
-  outline-offset:2px;
-}
-
-.zr_hours_field{
-  display:flex;
-  flex-direction:column;
-  justify-content:flex-start;
-  gap:2px;
-}
-
-.zr_hours_label{
-  color:rgba(15,23,42,.72);
-}
-
-.zr_hours_value{
-  font-size:14px;
-  line-height:24px;
-  color:#0f172a;
-  font-weight:700;
-}
-
-.zr_field_value_row{
-  min-height:24px;
-}
-
-.zr_delivery_field{
-  display:flex;
-  flex-direction:column;
-  gap:2px;
-}
-
-.zr_delivery_label{
-  color:rgba(15,23,42,.72);
-}
-
-.zr_delivery_inputs{
-  display:flex;
-  align-items:center;
-  gap:4px;
-  min-height:24px;
-}
-
-.zr_delivery_input{
-  width:6ch;
-  min-width:6ch;
-  max-width:6ch;
-  text-align:center;
-}
-
-.zr_delivery_plus{
-  font-weight:700;
-  color:#0f172a;
-  line-height:24px;
-}
-
-.zr_phm_field.is-hidden{
-  visibility:hidden;
-}
-
-.zr_row_save_wrap{
-  display:flex;
-  align-items:end;
-  justify-content:flex-end;
-}
-
-.zr_row_save{
-  width:104px;
-  min-height:32px;
-  padding:6px 10px;
-  border:1px solid #1d4ed8;
-  border-radius:10px;
-  background:linear-gradient(180deg, #3b82f6, #2563eb);
-  color:#fff;
-  font-size:14px;
-  font-weight:700;
-}
-
-.zr_row_save:hover{
-  filter:brightness(1.03);
-}
-
-.zr_row_save:disabled{
-  cursor:not-allowed;
-  opacity:.45;
-  filter:none;
-  box-shadow:none;
+.zr_ops_section .zr_restia_table td,
+.zr_restia_section .zr_restia_table td{
+  background:rgba(255,255,255,.92);
 }
 
 @media (max-width: 1200px){
-  .zr_layout{
-    grid-template-columns:1fr;
-  }
-
-  .zr_side{
-    position:static;
-  }
-
-  .zr_intro_layout{
-    grid-template-columns:1fr;
-  }
-
-  .zr_grid_cash{
-    grid-template-columns:repeat(2, minmax(110px, 1fr));
-  }
-
-  .zr_person_row_staff,
-  .zr_person_row_kuryr{
-    grid-template-columns:repeat(2, minmax(120px, 1fr));
-  }
-
-  .zr_cash_box,
-  .zr_date_display,
-  .zr_intro_left .card_select{
-    width:100%;
-    max-width:none;
-  }
-}
-
-@media (max-width: 720px){
-  .zr_grid_cash{
-    grid-template-columns:1fr;
-  }
-
-  .zr_person_row_staff,
-  .zr_person_row_kuryr{
+  .zr_layout,
+  .zr_top,
+  .zr_body{
     grid-template-columns:1fr;
   }
 }
-
-/* style/1/karty/zadani_reportu.css * Verze: V3 * Aktualizace: 11.03.2026 */

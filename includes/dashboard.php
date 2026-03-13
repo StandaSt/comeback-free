@@ -116,7 +116,7 @@ $emptyText = (string)($emptyMap[$sekce] ?? $emptyMap[3]);
 
 <div class="dash_grid">
   <?php if (empty($karty)): ?>
-    <section class="dash_col_12 dash_card card_blue">
+    <section class="dash_col_12 dash_card card_blue" data-cb-dash-card="1">
       <div class="dash_card_body">
         <p class="small_note"><?= $emptyText ?></p>
       </div>
@@ -129,7 +129,7 @@ $emptyText = (string)($emptyMap[$sekce] ?? $emptyMap[3]);
       $cb_card_code = 'K' . (string)($karta['id_karta'] ?? 0);
       $cb_card_title = (string)($karta['nazev'] ?? '');
       ?>
-      <section class="<?= h($classes) ?>">
+      <section class="<?= h($classes) ?>" data-cb-dash-card="1">
         <?php if ($fullPath !== null): ?>
           <?php require $fullPath; ?>
         <?php else: ?>

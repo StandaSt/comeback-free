@@ -17,25 +17,34 @@
 
 declare(strict_types=1);
 
+if (!function_exists('cb_asset_url')) {
+    function cb_asset_url(string $path): string
+    {
+        $full = __DIR__ . '/../' . ltrim($path, '/');
+        $ver = is_file($full) ? (string)filemtime($full) : '1';
+        return cb_url($path) . '?v=' . $ver;
+    }
+}
+
 ?>
 <!-- styly -->
 <!-- 1) skelet stranky -->
-<link rel="stylesheet" href="<?= h(cb_url('style/1/global.css')) ?>">
+<link rel="stylesheet" href="<?= h(cb_asset_url('style/1/global.css')) ?>">
 
 <!-- 2) casti layoutu -->
-<link rel="stylesheet" href="<?= h(cb_url('style/1/hlavicka.css')) ?>">
-<link rel="stylesheet" href="<?= h(cb_url('style/1/main.css')) ?>">
-<link rel="stylesheet" href="<?= h(cb_url('style/1/paticka.css')) ?>">
-<link rel="stylesheet" href="<?= h(cb_url('style/1/karty/karty.css')) ?>">
-<link rel="stylesheet" href="<?= h(cb_url('style/1/karty/admin_karty.css')) ?>">
-<link rel="stylesheet" href="<?= h(cb_url('style/1/karty/zadani_reportu.css')) ?>">
+<link rel="stylesheet" href="<?= h(cb_asset_url('style/1/hlavicka.css')) ?>">
+<link rel="stylesheet" href="<?= h(cb_asset_url('style/1/main.css')) ?>">
+<link rel="stylesheet" href="<?= h(cb_asset_url('style/1/paticka.css')) ?>">
+<link rel="stylesheet" href="<?= h(cb_asset_url('style/1/karty/karty.css')) ?>">
+<link rel="stylesheet" href="<?= h(cb_asset_url('style/1/karty/admin_karty.css')) ?>">
+<link rel="stylesheet" href="<?= h(cb_asset_url('style/1/karty/zadani_reportu.css')) ?>">
 
 <!-- moduly (globalne pouzivane) -->
-<link rel="stylesheet" href="<?= h(cb_url('style/1/menu.css')) ?>">
-<link rel="stylesheet" href="<?= h(cb_url('style/1/tabulky.css')) ?>">
+<link rel="stylesheet" href="<?= h(cb_asset_url('style/1/menu.css')) ?>">
+<link rel="stylesheet" href="<?= h(cb_asset_url('style/1/tabulky.css')) ?>">
 <!-- <link rel="stylesheet" href="<?= h(cb_url('style/1/menu_tlac.css')) ?>">  -->
-<link rel="stylesheet" href="<?= h(cb_url('style/1/ikony_svg.css')) ?>">
-<link rel="stylesheet" href="<?= h(cb_url('style/1/modal_alert.css')) ?>">
+<link rel="stylesheet" href="<?= h(cb_asset_url('style/1/ikony_svg.css')) ?>">
+<link rel="stylesheet" href="<?= h(cb_asset_url('style/1/modal_alert.css')) ?>">
 
 <?php
 /*

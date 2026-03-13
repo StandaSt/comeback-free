@@ -17,10 +17,25 @@
     return (field instanceof HTMLInputElement || field instanceof HTMLSelectElement) ? field : null;
   }
 
+  function syncSaveButton(row) {
+    if (!(row instanceof HTMLElement)) return;
+
+    const type = String(row.getAttribute('data-zr-person-row') || '');
+    if (type === '') return;
+
+    const nameField = getEditorField(row, 'jmeno');
+    const saveBtn = row.querySelector('[data-zr-save-row="' + type + '"]');
+
+    if (!(nameField instanceof HTMLSelectElement) || !(saveBtn instanceof HTMLButtonElement)) {
+      return;
+    }
+
+    saveBtn.disabled = String(nameField.value || '').trim() === '';
+  }
+
   function buildSavedCell(text) {
-    const cell = document.createElement('div');
-    cell.className = 'zr_saved_cell';
-    const value = document.createElement('span');
+    const cell = document.createElement('td');
+    const value = document.createElement('strong');
     value.className = 'zr_saved_value';
     value.textContent = String(text || '');
     cell.appendChild(value);
@@ -100,7 +115,6 @@
     const manualEl = row.querySelector('input[name="kuryr_pocet_rozvozu_manual[]"]');
     const totalEl = row.querySelector('[data-zr-delivery-total]');
     const carCheck = row.querySelector('[data-zr-car-check]');
-    const phmField = row.querySelector('[data-zr-phm-field]');
     const phmValueEl = row.querySelector('[data-zr-phm-value]');
     const phmHiddenEl = row.querySelector('[data-zr-phm-hidden]');
 
@@ -125,9 +139,6 @@
       }
     }
 
-    if (carCheck instanceof HTMLInputElement && phmField instanceof HTMLElement) {
-      phmField.classList.toggle('is-hidden', !carCheck.checked);
-    }
   }
 
   function resetEditorRow(root, type) {
@@ -175,10 +186,7 @@
       }
     });
     syncKuryrExtras(row);
-    const saveBtn = root.querySelector(type === 'kuryr' ? '#zr_kuryr_ulozit' : '#zr_instor_ulozit');
-    if (saveBtn instanceof HTMLButtonElement) {
-      saveBtn.disabled = true;
-    }
+    syncSaveButton(row);
   }
 
   function saveEditorRow(root, type) {
@@ -197,20 +205,20 @@
       return;
     }
 
-    const savedRow = document.createElement('div');
-    savedRow.className = 'zr_saved_row ' + (type === 'kuryr' ? 'zr_saved_row_kuryr' : 'zr_saved_row_instor');
+    const savedRow = document.createElement('tr');
 
-    savedRow.appendChild(buildSavedCell(name.value));
+    const nameCell = buildSavedCell(name.value);
+    nameCell.appendChild(buildHidden(type + '_jmeno[]', name.value));
+    nameCell.appendChild(buildHidden(type + '_zacatek[]', start.value));
+    nameCell.appendChild(buildHidden(type + '_konec[]', end.value));
+    nameCell.appendChild(buildHidden(type + '_pauza_hod[]', breakEl.value || '0'));
+    nameCell.appendChild(buildHidden(type + '_hodiny[]', hoursHiddenEl.value));
+
+    savedRow.appendChild(nameCell);
     savedRow.appendChild(buildSavedCell(start.value));
     savedRow.appendChild(buildSavedCell(end.value));
     savedRow.appendChild(buildSavedCell(breakEl.value || '0'));
     savedRow.appendChild(buildSavedCell(hoursHiddenEl.value + ' hod.'));
-
-    savedRow.appendChild(buildHidden(type + '_jmeno[]', name.value));
-    savedRow.appendChild(buildHidden(type + '_zacatek[]', start.value));
-    savedRow.appendChild(buildHidden(type + '_konec[]', end.value));
-    savedRow.appendChild(buildHidden(type + '_pauza_hod[]', breakEl.value || '0'));
-    savedRow.appendChild(buildHidden(type + '_hodiny[]', hoursHiddenEl.value));
 
     if (type === 'kuryr') {
       const deliveryRestia = getEditorField(row, 'delivery_restia');
@@ -225,15 +233,19 @@
       const carValue = carCheck instanceof HTMLInputElement && carCheck.checked ? '1' : '0';
       const phmValue = phmHidden instanceof HTMLInputElement ? (phmHidden.value || '0') : '0';
 
-      savedRow.appendChild(buildSavedCell(deliveryRestiaValue + ' + ' + deliveryManualValue));
+      const deliveryCell = buildSavedCell(deliveryRestiaValue + ' + ' + deliveryManualValue);
+      deliveryCell.appendChild(buildHidden('kuryr_pocet_rozvozu_restia[]', deliveryRestiaValue));
+      deliveryCell.appendChild(buildHidden('kuryr_pocet_rozvozu_manual[]', deliveryManualValue));
+      deliveryCell.appendChild(buildHidden('kuryr_pocet_rozvozu[]', deliveryTotalValue));
+      deliveryCell.appendChild(buildHidden('kuryr_vlastni_vuz[]', carValue));
+      deliveryCell.appendChild(buildHidden('kuryr_vyplatit_phm[]', phmValue));
+
+      savedRow.appendChild(deliveryCell);
       savedRow.appendChild(buildSavedCell(carValue === '1' ? 'Ano' : 'Ne'));
       savedRow.appendChild(buildSavedCell(String(phmValue).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' Kč'));
-
-      savedRow.appendChild(buildHidden('kuryr_pocet_rozvozu_restia[]', deliveryRestiaValue));
-      savedRow.appendChild(buildHidden('kuryr_pocet_rozvozu_manual[]', deliveryManualValue));
-      savedRow.appendChild(buildHidden('kuryr_pocet_rozvozu[]', deliveryTotalValue));
-      savedRow.appendChild(buildHidden('kuryr_vlastni_vuz[]', carValue));
-      savedRow.appendChild(buildHidden('kuryr_vyplatit_phm[]', phmValue));
+      savedRow.appendChild(buildSavedCell(''));
+    } else {
+      savedRow.appendChild(buildSavedCell(''));
     }
 
     list.appendChild(savedRow);
@@ -259,6 +271,7 @@
 
         syncHoursForRow(row);
         syncKuryrExtras(row);
+        syncSaveButton(row);
         if (typeof w.cbSyncReportFormState === 'function') {
           w.cbSyncReportFormState(root);
         }
@@ -278,6 +291,7 @@
         if (!row) return;
         syncHoursForRow(row);
         syncKuryrExtras(row);
+        syncSaveButton(row);
         if (typeof w.cbSyncReportFormState === 'function') {
           w.cbSyncReportFormState(root);
         }
@@ -304,6 +318,7 @@
     bindPeopleRows(root);
     root.querySelectorAll('[data-zr-person-row]').forEach(syncHoursForRow);
     root.querySelectorAll('[data-zr-person-row]').forEach(syncKuryrExtras);
+    root.querySelectorAll('[data-zr-person-row]').forEach(syncSaveButton);
     if (typeof w.cbSyncReportFormState === 'function') {
       w.cbSyncReportFormState(root);
     }

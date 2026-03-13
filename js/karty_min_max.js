@@ -5,10 +5,48 @@
   const ICON_MAX = '\u2922'; // ⤢
   const ICON_MIN = '\u2212'; // −
   let activeMaxi = null;
+  const CARD_ROOT_SELECTOR = '.card_shell';
+  const CARD_TOGGLE_SELECTOR = '[data-card-toggle]';
+  const CARD_COMPACT_SELECTOR = '[data-card-compact]';
+  const CARD_EXPANDED_SELECTOR = '[data-card-expanded]';
 
   function getDashBox(root) {
     if (!root) return null;
     return root.closest('.dash_box') || document.querySelector('.dash_box');
+  }
+
+  function getDashCard(root) {
+    if (!root) return null;
+    return root.closest('[data-cb-dash-card="1"]');
+  }
+
+  function getCardHead(root) {
+    if (!root) return null;
+
+    const toggle = root.querySelector(CARD_TOGGLE_SELECTOR);
+    if (toggle instanceof HTMLElement) {
+      const head = toggle.closest('.card_top');
+      if (head instanceof HTMLElement) {
+        return head;
+      }
+    }
+
+    const fallback = root.querySelector('.card_top');
+    return fallback instanceof HTMLElement ? fallback : null;
+  }
+
+  function getCardRoots() {
+    const roots = new Set();
+
+    document.querySelectorAll(CARD_TOGGLE_SELECTOR).forEach((toggle) => {
+      if (!(toggle instanceof HTMLElement)) return;
+      const root = toggle.closest(CARD_ROOT_SELECTOR);
+      if (root instanceof HTMLElement) {
+        roots.add(root);
+      }
+    });
+
+    return Array.from(roots);
   }
 
   function getLayer(dashBox) {
@@ -92,7 +130,7 @@
     const compact = root.querySelector(compactSel);
     const expanded = root.querySelector(expandedSel);
     const toggle = root.querySelector(toggleSel);
-    const dashCard = root.closest('.dash_card');
+    const dashCard = getDashCard(root);
     const dashBox = getDashBox(root);
     const layer = getLayer(dashBox);
     const stage = layer ? layer.querySelector('.dash_maxi_stage') : null;
@@ -105,7 +143,7 @@
     const overlayCard = document.createElement('section');
     overlayCard.className = ['dash_maxi_card'].concat(accentClasses).join(' ');
 
-    const head = root.querySelector('.card_top');
+    const head = getCardHead(root);
     const headClone = head ? head.cloneNode(true) : document.createElement('div');
     const overlayToggle = headClone.querySelector(toggleSel);
 
@@ -165,7 +203,7 @@
     const compact = root.querySelector(compactSel);
     const expanded = root.querySelector(expandedSel);
     const toggle = root.querySelector(toggleSel);
-    const dashCard = root.closest('.dash_card');
+    const dashCard = getDashCard(root);
     const isOn = !!on;
 
     if (isOn) {
@@ -188,42 +226,42 @@
     if (!root || root.getAttribute('data-card-init') === '1') return;
     root.setAttribute('data-card-init', '1');
 
-    const toggle = root.querySelector('[data-card-toggle]');
-    const head = root.querySelector('.card_top');
+    const toggle = root.querySelector(CARD_TOGGLE_SELECTOR);
+    const head = getCardHead(root);
 
-    if (!toggle || !head || !root.querySelector('[data-card-compact]') || !root.querySelector('[data-card-expanded]')) {
+    if (!toggle || !head || !root.querySelector(CARD_COMPACT_SELECTOR) || !root.querySelector(CARD_EXPANDED_SELECTOR)) {
       return;
     }
 
-    setExpanded(root, '[data-card-compact]', '[data-card-expanded]', '[data-card-toggle]', false);
+    const startExpanded = root.getAttribute('data-card-start-expanded') === '1';
+    setExpanded(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR, startExpanded);
 
     toggle.addEventListener('click', () => {
       const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-      setExpanded(root, '[data-card-compact]', '[data-card-expanded]', '[data-card-toggle]', !isExpanded);
+      setExpanded(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR, !isExpanded);
     });
 
     head.addEventListener('dblclick', (event) => {
-      if (event.target instanceof Element && event.target.closest('[data-card-toggle]')) {
+      if (event.target instanceof Element && event.target.closest(CARD_TOGGLE_SELECTOR)) {
         return;
       }
       const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-      setExpanded(root, '[data-card-compact]', '[data-card-expanded]', '[data-card-toggle]', !isExpanded);
+      setExpanded(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR, !isExpanded);
     });
   }
 
   function forceCompact() {
     closeActiveMaxi();
-    document.querySelectorAll('.card_shell').forEach((root) => {
-      if (!(root instanceof HTMLElement)) return;
-      if (!root.querySelector('[data-card-toggle]') || !root.querySelector('[data-card-compact]') || !root.querySelector('[data-card-expanded]')) {
+    getCardRoots().forEach((root) => {
+      if (!root.querySelector(CARD_TOGGLE_SELECTOR) || !root.querySelector(CARD_COMPACT_SELECTOR) || !root.querySelector(CARD_EXPANDED_SELECTOR)) {
         return;
       }
-      setExpanded(root, '[data-card-compact]', '[data-card-expanded]', '[data-card-toggle]', false);
+      setExpanded(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR, false);
     });
   }
 
   function initKartyMinMax() {
-    document.querySelectorAll('.card_shell').forEach(initCard);
+    getCardRoots().forEach(initCard);
   }
 
   function wireOnce() {

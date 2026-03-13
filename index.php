@@ -276,26 +276,32 @@ require_once __DIR__ . '/includes/main.php';
 
 require_once __DIR__ . '/includes/paticka.php';
 
+if (!function_exists('cb_asset_url')) {
+    function cb_asset_url(string $path): string
+    {
+        $full = __DIR__ . '/' . ltrim($path, '/');
+        $ver = is_file($full) ? (string)filemtime($full) : '1';
+        return cb_url($path) . '?v=' . $ver;
+    }
+}
+
 ?>
 </div>
 
 
-<script src="<?= h(cb_url('js/ajax_core.js')) ?>"></script>
-<script src="<?= h(cb_url('js/menu_core.js')) ?>"></script>
-<script src="<?= h(cb_url('js/menu_ajax.js')) ?>"></script>
-<script src="<?= h(cb_url('js/karty_api_get.js')) ?>"></script>
-<script src="<?= h(cb_url('js/karty_tabulka.js')) ?>"></script>
-<script src="<?= h(cb_url('js/karty_form.js')) ?>"></script>
-<script src="<?= h(cb_url('js/karty_min_max.js')) ?>"></script>
-<script src="<?= h(cb_url('js/karty_hlavicka.js')) ?>"></script>
-<script src="<?= h(cb_url('js/karty_report_restia.js')) ?>"></script>
-<script src="<?= h(cb_url('js/karty_report_form.js')) ?>"></script>
-<script src="<?= h(cb_url('js/karty_report_person.js')) ?>"></script>
-<script src="<?= h(cb_url('js/admin_karty.js')) ?>"></script>
-<script src="<?= h(cb_url('js/filtry.js')) ?>"></script>
-<script src="<?= h(cb_url('js/filtry_reset.js')) ?>"></script>
-<script src="<?= h(cb_url('js/strankovani.js')) ?>"></script>
-<script src="<?= h(cb_url('js/casovac_odhlaseni.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/ajax_core.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/menu_core.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/menu_ajax.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/karty_min_max.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/karty_hlavicka.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/karty_report_restia.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/karty_report_form.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/karty_report_person.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/admin_karty.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/filtry.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/filtry_reset.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/strankovani.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/casovac_odhlaseni.js')) ?>"></script>
 
 </body>
 </html>

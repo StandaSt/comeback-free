@@ -3,7 +3,7 @@
 declare(strict_types=1);
 ?>
 <div class="head_branch" aria-label="Pobočka">
-  <select id="cbPobockaSelect" class="head_branch_select" <?= $cbPobocky ? '' : 'disabled' ?> >
+  <select id="cbPobockaSelect" class="head_branch_select" data-cb-branch-select="1" <?= $cbPobocky ? '' : 'disabled' ?> >
     <?php if ($cbPobocky): ?>
       <?php foreach ($cbPobocky as $p): ?>
         <option value="<?= (int)$p['id_pob'] ?>"<?= ((int)$p['id_pob'] === (int)$cbPobockaId ? ' selected' : '') ?>><?= h($p['nazev']) ?></option>
@@ -16,7 +16,7 @@ declare(strict_types=1);
 
 <script>
 (function(){
-  var sel = document.getElementById('cbPobockaSelect');
+  var sel = document.querySelector('[data-cb-branch-select="1"]');
   if (!sel) return;
 
   sel.addEventListener('change', function(){

@@ -31,7 +31,7 @@ if (is_string($baseDir) && $baseDir !== '' && is_dir($baseDir)) {
 }
 ?>
 
-<article class="card_shell admin_testy_card cb-admin-testy">
+<article class="card_shell cb-admin-testy">
   <div class="card_top">
     <div>
       <h3 class="card_title"><?= h((string)($cb_card_title ?? 'Admin testy')) ?></h3>
@@ -55,7 +55,7 @@ if (is_string($baseDir) && $baseDir !== '' && is_dir($baseDir)) {
   <div class="card_expanded is-hidden card_stack" data-card-expanded>
     <div>
       <label class="card_field" for="cbAdminTestSelect">Vyber soubor
-        <select id="cbAdminTestSelect" class="card_select card_control">
+        <select id="cbAdminTestSelect" class="card_select card_control admin_testy_select" data-admin-testy-select>
           <option value="">Vyber *.php z admin_testy</option>
           <?php foreach ($items as $it): ?>
             <option
@@ -67,12 +67,12 @@ if (is_string($baseDir) && $baseDir !== '' && is_dir($baseDir)) {
       </label>
     </div>
 
-    <div id="cbAdminTestPathWrap" class="card_stack is-hidden">
-      <div class="card_small_text">
-        Cesta: <span id="cbAdminTestPath"></span>
+    <div id="cbAdminTestPathWrap" class="card_stack is-hidden admin_testy_path_wrap" data-admin-testy-path-wrap>
+      <div class="card_small_text admin_testy_path_text">
+        Cesta: <span id="cbAdminTestPath" data-admin-testy-path></span>
       </div>
       <div>
-        <button id="cbAdminTestRun" type="button">Spustit</button>
+        <button id="cbAdminTestRun" type="button" data-admin-testy-run>Spustit</button>
       </div>
     </div>
   </div>
@@ -82,10 +82,15 @@ if (is_string($baseDir) && $baseDir !== '' && is_dir($baseDir)) {
 (function () {
   'use strict';
 
-  var select = document.getElementById('cbAdminTestSelect');
-  var pathWrap = document.getElementById('cbAdminTestPathWrap');
-  var path = document.getElementById('cbAdminTestPath');
-  var runBtn = document.getElementById('cbAdminTestRun');
+  var root = document.querySelector('.cb-admin-testy');
+  if (!root) {
+    return;
+  }
+
+  var select = root.querySelector('[data-admin-testy-select]');
+  var pathWrap = root.querySelector('[data-admin-testy-path-wrap]');
+  var path = root.querySelector('[data-admin-testy-path]');
+  var runBtn = root.querySelector('[data-admin-testy-run]');
 
   if (!select || !pathWrap || !path || !runBtn) {
     return;

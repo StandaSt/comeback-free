@@ -1,107 +1,183 @@
-/* style/1/karty/admin_karty.css * Verze: V3 * Aktualizace: 11.03.2026 */
+/* style/1/karty/admin_karty.css * Verze: V4 * Aktualizace: 12.03.2026 */
 
 /*
  * INDIVIDUALNI STYL KARTY: admin_karty
- * - vzhled panelu, tabu a formulare konkretne pro tuto kartu
+ * - vsechno jen pro K1 pod vlastnim jmennym prostorem
  */
 
-.admin_karty_meta{
+.cb-admin-karty .admin_karty_meta{
   border-collapse:collapse;
 }
 
-.admin_karty_meta th,
-.admin_karty_meta td{
+.cb-admin-karty .admin_karty_meta th,
+.cb-admin-karty .admin_karty_meta td{
   border:none;
   padding:2px 0;
   text-align:left;
 }
 
-.admin_karty_meta th{
+.cb-admin-karty .admin_karty_meta th{
   padding-right:10px;
   font-weight:500;
   color:rgba(15,23,42,.70);
   white-space:nowrap;
 }
 
-.admin_karty_tabs{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  margin:0 0 10px 0;
-}
-
-.admin_karty_tab{
-  border:1px solid rgba(0,0,0,.18);
-  border-radius:999px;
-  background:#fff;
-  padding:6px 11px;
-  line-height:1.2;
-  cursor:pointer;
-}
-
-.admin_karty_tab.is-active{
-  background:rgba(59,130,246,.10);
-  border-color:rgba(59,130,246,.38);
-  color:#1e3a8a;
-  font-weight:700;
-}
-
-.admin_karty_msg{
+.cb-admin-karty .admin_karty_msg{
   margin:2px 0 10px 0;
+  min-height:20px;
 }
 
-.admin_karty_panel{
-  display:block;
+.cb-admin-karty .admin_karty_msg_ok{
+  color:#166534;
 }
 
-.admin_karty_panel.is-hidden{
-  display:none;
+.cb-admin-karty .admin_karty_msg_err{
+  color:#b91c1c;
 }
 
-.admin_karty_form_grid{
-  display:grid;
-  grid-template-columns:repeat(6, minmax(130px, 1fr));
-  gap:10px;
-}
-
-.admin_karty_form_grid input{
-  height:32px;
-}
-
-.admin_karty_form_grid select{
-  height:32px;
-}
-
-.admin_karty_submit_wrap{
-  align-self:end;
-}
-
-.admin_karty_submit_wrap button{
-  height:32px;
-  white-space:nowrap;
-}
-
-.admin_karty_sep{
+.cb-admin-karty .admin_karty_sep{
   height:14px;
 }
 
-.admin_karty_list_title{
-  margin:0 0 8px 0;
+.cb-admin-karty .admin_karty_list_title{
+  padding:14px 0 8px 0 !important;
+  border:none !important;
+  background:transparent !important;
+  text-align:left !important;
   font-size:16px;
   font-weight:700;
   color:#0f172a;
 }
 
-@media (max-width: 1200px){
-  .admin_karty_form_grid{
-    grid-template-columns:repeat(3, minmax(140px, 1fr));
-  }
+.cb-admin-karty .admin_karty_table{
+  width:100%;
+  table-layout:fixed;
+}
+
+.cb-admin-karty .admin_karty_table thead th{
+  padding:8px 10px;
+}
+
+.cb-admin-karty .admin_karty_table tbody td{
+  padding:6px 8px;
+}
+
+.cb-admin-karty .admin_karty_sep{
+  height:14px;
+  padding:0 !important;
+  border:none !important;
+  background:transparent !important;
+}
+
+.cb-admin-karty col.admin_karty_col_id{
+  width:6%;
+}
+
+.cb-admin-karty col.admin_karty_col_nazev{
+  width:27%;
+}
+
+.cb-admin-karty col.admin_karty_col_soubor{
+  width:22%;
+}
+
+.cb-admin-karty col.admin_karty_col_role{
+  width:12%;
+}
+
+.cb-admin-karty col.admin_karty_col_poradi{
+  width:10%;
+}
+
+.cb-admin-karty col.admin_karty_col_aktivni{
+  width:9%;
+}
+
+.cb-admin-karty col.admin_karty_col_akce{
+  width:14%;
+}
+
+.cb-admin-karty .admin_karty_table td:nth-child(1),
+.cb-admin-karty .admin_karty_table td:nth-child(6),
+.cb-admin-karty .admin_karty_table th:nth-child(1),
+.cb-admin-karty .admin_karty_table th:nth-child(6){
+  text-align:center;
+  padding-left:0;
+  padding-right:0;
+}
+
+.cb-admin-karty .admin_karty_table td:last-child:not([colspan]){
+  white-space:nowrap;
+}
+
+.cb-admin-karty .admin_karty_table input.card_input,
+.cb-admin-karty .admin_karty_table select.card_select{
+  width:100%;
+  min-width:0;
+  height:22px;
+  padding:2px 6px;
+  border:1px solid #ce079c;
+  border-radius:16px;
+  box-sizing:border-box;
+}
+
+.cb-admin-karty .admin_karty_btn{
+  min-width:0;
+  height:28px;
+  padding:0 9px;
+  margin:0 4px 0 0;
+  border:1px solid rgba(15,23,42,.18);
+  border-radius:6px;
+  background:#fff;
+  line-height:26px;
+  vertical-align:middle;
+  cursor:pointer;
+}
+
+.cb-admin-karty .admin_karty_btn:last-child{
+  margin-right:0;
+}
+
+.cb-admin-karty .admin_karty_btn:hover{
+  background:#f8fafc;
+}
+
+.cb-admin-karty .admin_karty_btn_icon{
+  width:28px;
+  padding:0;
+}
+
+.cb-admin-karty .admin_karty_btn_danger{
+  color:#b91c1c;
+  border-color:rgba(185,28,28,.28);
+  background:#fff7f7;
+}
+
+.cb-admin-karty .admin_karty_btn_danger:hover{
+  background:#feecec;
 }
 
 @media (max-width: 720px){
-  .admin_karty_form_grid{
-    grid-template-columns:1fr;
+  .cb-admin-karty .admin_karty_table,
+  .cb-admin-karty .admin_karty_table thead,
+  .cb-admin-karty .admin_karty_table tbody,
+  .cb-admin-karty .admin_karty_table tr,
+  .cb-admin-karty .admin_karty_table th,
+  .cb-admin-karty .admin_karty_table td{
+    display:block;
+    width:100%;
+    box-sizing:border-box;
+  }
+
+  .cb-admin-karty .admin_karty_table thead{
+    display:none;
+  }
+
+  .cb-admin-karty .admin_karty_table tbody td{
+    padding:6px 0;
+    border:none;
   }
 }
 
-/* style/1/karty/admin_karty.css * Verze: V3 * Aktualizace: 11.03.2026 */
+/* style/1/karty/admin_karty.css * Verze: V4 * Aktualizace: 12.03.2026 */

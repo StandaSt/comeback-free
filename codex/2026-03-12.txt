@@ -1,0 +1,79 @@
+Comeback IS - denni historie
+Datum: 2026-03-12
+Cas zapisu: 2026-03-13 00:05:00
+Autor: Codex + Standa
+
+1) Shrnuti dne
+- Hlavnim tematem dne byl audit projektu, razantni zjednoduseni K1 a nasledne zprovozneni overovani pres Playwright.
+- Druha velka cast dne padla na vzhled a rozlozeni K2.
+- Den byl zaroven i varovanim, ze bez tvrdeho overeni reality se snadno sklouzne k opakovanym slepym pokusum.
+
+2) Audit projektu
+- Probehl audit se zamerenim na zbytecnou slozitost, duplicity a zbytecne globalni nacitani.
+- Hlavni nalezy:
+  - pretizeny admin API soubor pro karty,
+  - duplicitni DB synchronizace role/sloty,
+  - zbytecne globalni nacitani nekterych JS/CSS,
+  - nefunkcni nebo nedotazene casti toku v hlavicce.
+- Pro bod 1 vznikly i ukazkove old/new soubory v _kandidati/sandboxAI.
+
+3) K1 - odstraneni zbytecnych vrstev
+- K1 byla prepsana z API/JS rezimu na prime serverove POST zpracovani v karty/admin_karty.php.
+- Smazany soubory:
+  - js/karty_form.js
+  - js/karty_tabulka.js
+  - js/karty_api_get.js
+  - lib/karty_admin_api.php
+- Zmizely zalozky, karta dostala primy formular, seznam aktivnich a seznam neaktivnich karet.
+- Po kazde akci zustava K1 rozbalena.
+
+4) K1 - vzhled a struktura
+- K1 byla nekolikrat prekopavana:
+  - z gridu na tabulku,
+  - ze 3 tabulek do jedne spolecne tabulky,
+  - snizovani poctu trid a uklid mrtveho CSS.
+- Zasadni pouceni dne:
+  - stejne veci musi byt mechanicky stejne,
+  - ne “podobne” pres CSS,
+  - ale opravdu stejnou strukturou.
+
+5) Playwright
+- Do projektu byl poprve nainstalovan a rozchozen Playwright.
+- Vznikl diagnosticky test pro K1:
+  - login,
+  - otevreni admin sekce,
+  - log URL a titulku,
+  - screenshot a krokovy log.
+- Playwright odhalil konkretni chyby:
+  - chybne root-relative URL v testu,
+  - chybne overovani expanded obsahu uvnitr zdrojove karty po presunu do overlay vrstvy.
+- Od tohoto dne je domluveno, ze “otestuj” u UI znamena overit pres Playwright.
+
+6) K2 - cisteni a vzhled
+- K2 dostala vice vizualnich a strukturálních zasahu:
+  - zmeny sidebaru Restie/Operativa,
+  - trvale viditelne PHM,
+  - cerné labely,
+  - odstraneni uppercase,
+  - zmeny sirkek vstupu a sloupcu,
+  - pokusy o srovnani Instor/Kuryr.
+- Cast zasahu byla spravna, cast byla slepa a musela se opakovane predelavat.
+- Na konci dne K2 stale neni definitivne dodelana.
+
+7) Pravidla a discipliny
+- Do AGENTS.md bylo doplneno kriticke pravidlo overeni:
+  - nic nepredpokladat,
+  - u HTML/CSS/JS nejdriv potvrdit skutecny vystup a skutecne aplikovane pravidlo.
+- Znovu se ukazalo, ze uzivatel chce:
+  - nejjednodussi funkcni reseni,
+  - bez zbytecnych trid,
+  - bez zbytecnych mezivrstev,
+  - bez “chytrych” oklik.
+
+8) Stav na konci dne
+- K1 je funkcni, jednodussi a bez API vrstvy.
+- Playwright je v projektu a da se pouzivat pro realne UI overeni.
+- K2 je rozpracovana, ale stale potrebuje dalsi dotazeni rozlozeni a jednoducheho srovnani tabulek.
+- Nejvetsi problem dne nebyl nedostatek nastroju, ale nedostatecna disciplinovanost pri navrhu a overovani.
+
+Konec zapisu.

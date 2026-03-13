@@ -2,6 +2,8 @@
 'use strict';
 
 (function (w) {
+  const FORM_CONTROL_SELECTOR = 'input, select, button';
+
   function getFieldValue(root, selector) {
     const field = root.querySelector(selector);
     if (!(field instanceof HTMLInputElement) && !(field instanceof HTMLSelectElement)) {
@@ -79,25 +81,25 @@
       case 'datum':
         return getFieldValue(root, '[data-zr-date]') !== '';
       case 'oteviral':
-        return getFieldValue(root, 'select[name="oteviral"]') !== '';
+        return getFieldValue(root, '[data-zr-field="oteviral"]') !== '';
       case 'zaviral':
-        return getFieldValue(root, 'select[name="zaviral"]') !== '';
+        return getFieldValue(root, '[data-zr-field="zaviral"]') !== '';
       case 'pokladna_hotovost':
-        return parseMoneyValue(getFieldValue(root, 'input[name="pokladna_hotovost"]'), 'int') !== '';
+        return parseMoneyValue(getFieldValue(root, '[data-zr-field="pokladna_hotovost"]'), 'int') !== '';
       case 'pokladna_terminal':
-        return parseMoneyValue(getFieldValue(root, 'input[name="pokladna_terminal"]'), 'decimal') !== '';
+        return parseMoneyValue(getFieldValue(root, '[data-zr-field="pokladna_terminal"]'), 'decimal') !== '';
       case 'pokladna_stravenky':
-        return parseMoneyValue(getFieldValue(root, 'input[name="pokladna_stravenky"]'), 'int') !== '';
+        return parseMoneyValue(getFieldValue(root, '[data-zr-field="pokladna_stravenky"]'), 'int') !== '';
       case 'vydaje_benzin':
-        return parseMoneyValue(getFieldValue(root, 'input[name="vydaje_benzin"]'), 'int') !== '';
+        return parseMoneyValue(getFieldValue(root, '[data-zr-field="vydaje_benzin"]'), 'int') !== '';
       case 'vydaje_auta':
-        return parseMoneyValue(getFieldValue(root, 'input[name="vydaje_auta"]'), 'int') !== '';
+        return parseMoneyValue(getFieldValue(root, '[data-zr-field="vydaje_auta"]'), 'int') !== '';
       case 'vydaje_suroviny':
-        return parseMoneyValue(getFieldValue(root, 'input[name="vydaje_suroviny"]'), 'int') !== '';
+        return parseMoneyValue(getFieldValue(root, '[data-zr-field="vydaje_suroviny"]'), 'int') !== '';
       case 'vydaje_ostatni':
-        return parseMoneyValue(getFieldValue(root, 'input[name="vydaje_ostatni"]'), 'int') !== '';
+        return parseMoneyValue(getFieldValue(root, '[data-zr-field="vydaje_ostatni"]'), 'int') !== '';
       case 'vydaje_phm_soukrome':
-        return parseMoneyValue(getFieldValue(root, 'input[name="vydaje_phm_soukrome"]'), 'int') !== '';
+        return parseMoneyValue(getFieldValue(root, '[data-zr-field="vydaje_phm_soukrome"]'), 'int') !== '';
       case 'instor_jmeno': {
         const field = root.querySelector('[data-zr-editor="instor"] [data-zr-editor-field="jmeno"]');
         return field instanceof HTMLSelectElement && String(field.value || '').trim() !== '';
@@ -195,7 +197,7 @@
       }
 
       const target = event.target;
-      if (!(target instanceof HTMLElement) || !target.matches('input, select, button')) {
+      if (!(target instanceof HTMLElement) || !target.matches(FORM_CONTROL_SELECTOR)) {
         return;
       }
 
@@ -205,7 +207,7 @@
 
       event.preventDefault();
 
-      const focusables = Array.from(form.querySelectorAll('input, select, button'))
+      const focusables = Array.from(form.querySelectorAll(FORM_CONTROL_SELECTOR))
         .filter((el) => {
           if (!(el instanceof HTMLElement)) return false;
           if (el instanceof HTMLInputElement && el.type === 'hidden') return false;

@@ -2,13 +2,18 @@
 'use strict';
 
 (function (w) {
+  function getBranchSelect() {
+    const branchSelect = document.querySelector('[data-cb-branch-select="1"]');
+    return branchSelect instanceof HTMLSelectElement ? branchSelect : null;
+  }
+
   function setBranchSelectDisabledForRoot(root, isDisabled) {
     if (!(root instanceof Element) || !root.classList.contains('cb-zadani-reportu')) {
       return;
     }
 
-    const branchSelect = document.getElementById('cbPobockaSelect');
-    if (!(branchSelect instanceof HTMLSelectElement)) {
+    const branchSelect = getBranchSelect();
+    if (!branchSelect) {
       return;
     }
 
@@ -16,10 +21,10 @@
   }
 
   function syncBranchTitle() {
-    const branchSelect = document.getElementById('cbPobockaSelect');
+    const branchSelect = getBranchSelect();
     let branchName = '';
 
-    if (branchSelect instanceof HTMLSelectElement) {
+    if (branchSelect) {
       const option = branchSelect.selectedOptions && branchSelect.selectedOptions[0]
         ? branchSelect.selectedOptions[0]
         : branchSelect.options[branchSelect.selectedIndex] || null;
@@ -35,8 +40,8 @@
   }
 
   function initKartyHlavicka() {
-    const branchSelect = document.getElementById('cbPobockaSelect');
-    if (branchSelect instanceof HTMLSelectElement && branchSelect.getAttribute('data-zr-title-bound') !== '1') {
+    const branchSelect = getBranchSelect();
+    if (branchSelect && branchSelect.getAttribute('data-zr-title-bound') !== '1') {
       branchSelect.setAttribute('data-zr-title-bound', '1');
       branchSelect.addEventListener('change', syncBranchTitle);
     }
