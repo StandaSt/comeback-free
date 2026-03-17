@@ -1,17 +1,5 @@
-/* style/1/pages/hr_uzivatele.css * Verze: V7 * Aktualizace: 07.03.2026 */
+/* style/1/karty/uzivatele.css * Verze: V1 * Aktualizace: 13.03.2026 */
 
-/*
- * HR -> UZIVATELE (tabulka)
- * - specificke sirky a vizual sloupcu
- */
-
-.table.uzivatele-table{
-  display:table;
-  table-layout:auto;
-  width:100%;
-}
-
-/* minimalni sirky sloupcu */
 .uzivatele-table .c-id{ min-width:70px; white-space:nowrap; }
 .uzivatele-table .c-prijmeni{ min-width:170px; }
 .uzivatele-table .c-jmeno{ min-width:150px; }
@@ -25,7 +13,10 @@
   content:"";
 }
 
-/* ikony v pravem sloupci */
+.uzivatele_filter_reset{
+  text-align:left;
+}
+
 .uzivatele-table .row-icons{
   display:inline-flex;
   align-items:center;
@@ -45,5 +36,4 @@
   transform:translateY(-1px);
 }
 
-/* style/1/pages/hr_uzivatele.css * Verze: V7 * Aktualizace: 07.03.2026
-   konec souboru */
+/* style/1/karty/uzivatele.css * Verze: V1 * Aktualizace: 13.03.2026 */

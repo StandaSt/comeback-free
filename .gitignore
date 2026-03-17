@@ -14,6 +14,7 @@
 Thumbs.db
 pomocne/
 csv/*.csv
+_kandidati/
 
 # Playwright
 node_modules/

@@ -37,6 +37,7 @@ if (!function_exists('cb_asset_url')) {
 <link rel="stylesheet" href="<?= h(cb_asset_url('style/1/paticka.css')) ?>">
 <link rel="stylesheet" href="<?= h(cb_asset_url('style/1/karty/karty.css')) ?>">
 <link rel="stylesheet" href="<?= h(cb_asset_url('style/1/karty/admin_karty.css')) ?>">
+<link rel="stylesheet" href="<?= h(cb_asset_url('style/1/karty/uzivatele.css')) ?>">
 <link rel="stylesheet" href="<?= h(cb_asset_url('style/1/karty/zadani_reportu.css')) ?>">
 
 <!-- moduly (globalne pouzivane) -->

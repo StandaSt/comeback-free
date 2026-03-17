@@ -38,7 +38,8 @@ Před úpravou vždy nejprve zjisti, co je aktuálně skutečně používané.
   3. navrhni změny,
   4. teprve potom přejmenuj a oprav reference.
 - Bez výslovného pokynu nemaž starý kód jen proto, že vypadá zbytečně.
-- Zachovávej stávající styl projektu, i když není ideální.
+- Zachovávej stávající styl projektu.
+  Pokud navrhneš zlepšení, nejprve ho popiš a počkej na schválení.
 - Neprováděj „vylepšení navíc“, pokud nebyla zadána.
 
 ## Jak přemýšlet o projektu
