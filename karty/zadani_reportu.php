@@ -35,33 +35,16 @@ for ($hour = 0; $hour < 24; $hour++) {
 }
 ?>
 
-<article class="card_shell cb-zadani-reportu">
-  <div class="card_top">
-    <div>
-      <h3
-        class="card_title"
-        data-zr-card-title
-        data-zr-card-title-base="<?= h((string)($cb_card_title ?? 'Zadávání denního reportu')) ?>"
-      ><?= h((string)($cb_card_title ?? 'Zadávání denního reportu')) ?></h3>
-      <p class="card_subtitle"><span class="card_code"><?= h((string)($cb_card_code ?? '')) ?></span>Formulář podle Report Chodov.xlsx</p>
-    </div>
-    <div class="card_tools">
-      <button
-        type="button"
-        class="card_tool_btn"
-        data-card-toggle="1"
-        aria-expanded="false"
-        title="Rozbalit/sbalit"
-      >⤢</button>
-    </div>
-  </div>
+<?php
+ob_start();
+?>
+<p class="card_text">Denní report s ručním zadáním a kontrolou dat z Restie.</p>
+<?php
+$card_min_html=(string)ob_get_clean();
 
-  <div class="card_compact" data-card-compact>
-    <p class="card_text">Denní report s ručním zadáním a kontrolou dat z Restie.</p>
-  </div>
-
-  <div class="card_expanded is-hidden" data-card-expanded>
-    <form class="zr_form" autocomplete="off" data-zr-form>
+ob_start();
+?>
+<form class="zr_form" autocomplete="off" data-zr-form>
       <div class="zr_layout">
         <div class="zr_main">
           <section class="zr_top">
@@ -322,9 +305,7 @@ for ($hour = 0; $hour < 24; $hour++) {
         </aside>
       </div>
     </form>
-  </div>
-</article>
-
 <?php
+$card_max_html=(string)ob_get_clean();
 /* karty/zadani_reportu.php * Verze: V2 * Aktualizace: 09.03.2026 */
 ?>

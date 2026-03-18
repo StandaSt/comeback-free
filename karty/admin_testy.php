@@ -1,5 +1,5 @@
 <?php
-// karty/admin_testy.php * Verze: V1 * Aktualizace: 10.03.2026
+// karty/admin_testy.php * Verze: V2 * Aktualizace: 17.03.2026
 declare(strict_types=1);
 
 $baseDir = realpath(__DIR__ . '/../admin_testy');
@@ -29,54 +29,35 @@ if (is_string($baseDir) && $baseDir !== '' && is_dir($baseDir)) {
         }
     }
 }
+
+$card_min_html = '<p class="card_text">Toto je panel pro spousteni testovacich scriptu.</p>';
+
+ob_start();
 ?>
+<div class="card_stack cb-admin-testy">
+  <div>
+    <label class="card_field" for="cbAdminTestSelect">Vyber soubor
+      <select id="cbAdminTestSelect" class="card_select card_control admin_testy_select" data-admin-testy-select>
+        <option value="">Vyber *.php z admin_testy</option>
+        <?php foreach ($items as $it): ?>
+          <option
+            value="<?= h((string)$it['url']) ?>"
+            data-abs="<?= h((string)$it['abs']) ?>"
+          ><?= h((string)$it['file']) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </label>
+  </div>
 
-<article class="card_shell cb-admin-testy">
-  <div class="card_top">
+  <div id="cbAdminTestPathWrap" class="card_stack is-hidden admin_testy_path_wrap" data-admin-testy-path-wrap>
+    <div class="card_small_text admin_testy_path_text">
+      Cesta: <span id="cbAdminTestPath" data-admin-testy-path></span>
+    </div>
     <div>
-      <h3 class="card_title"><?= h((string)($cb_card_title ?? 'Admin testy')) ?></h3>
-      <p class="card_subtitle"><span class="card_code"><?= h((string)($cb_card_code ?? '')) ?></span>Spouštění testovacích skriptů</p>
-    </div>
-    <div class="card_tools">
-      <button
-        type="button"
-        class="card_tool_btn"
-        data-card-toggle="1"
-        aria-expanded="false"
-        title="Rozbalit/sbalit"
-      >⤢</button>
+      <button id="cbAdminTestRun" type="button" data-admin-testy-run>Spustit</button>
     </div>
   </div>
-
-  <div class="card_compact card_stack" data-card-compact>
-    <p class="card_text">Toto je panel pro spouštění testovacích scriptů.</p>
-  </div>
-
-  <div class="card_expanded is-hidden card_stack" data-card-expanded>
-    <div>
-      <label class="card_field" for="cbAdminTestSelect">Vyber soubor
-        <select id="cbAdminTestSelect" class="card_select card_control admin_testy_select" data-admin-testy-select>
-          <option value="">Vyber *.php z admin_testy</option>
-          <?php foreach ($items as $it): ?>
-            <option
-              value="<?= h((string)$it['url']) ?>"
-              data-abs="<?= h((string)$it['abs']) ?>"
-            ><?= h((string)$it['file']) ?></option>
-          <?php endforeach; ?>
-        </select>
-      </label>
-    </div>
-
-    <div id="cbAdminTestPathWrap" class="card_stack is-hidden admin_testy_path_wrap" data-admin-testy-path-wrap>
-      <div class="card_small_text admin_testy_path_text">
-        Cesta: <span id="cbAdminTestPath" data-admin-testy-path></span>
-      </div>
-      <div>
-        <button id="cbAdminTestRun" type="button" data-admin-testy-run>Spustit</button>
-      </div>
-    </div>
-  </div>
-</article>
+</div>
 
 <script>
 (function () {
@@ -120,7 +101,8 @@ if (is_string($baseDir) && $baseDir !== '' && is_dir($baseDir)) {
   });
 })();
 </script>
-
 <?php
-/* karty/admin_testy.php * Verze: V1 * Aktualizace: 10.03.2026 */
+$card_max_html = (string)ob_get_clean();
+
+/* karty/admin_testy.php * Verze: V2 * Aktualizace: 17.03.2026 */
 ?>

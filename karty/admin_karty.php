@@ -330,25 +330,10 @@ $tableHeadHtml = implode("\n", [
 ]);
 ?>
 
-<article class="card_shell cb-admin-karty"<?= $keepExpanded ? ' data-card-start-expanded="1"' : '' ?>>
-  <div class="card_top">
-    <div>
-      <h3 class="card_title"><?= h((string)($cb_card_title ?? 'Správa karet')) ?></h3>
-      <p class="card_subtitle"><span class="card_code"><?= h((string)($cb_card_code ?? '')) ?></span>Centrální správa dashboard karet v IS Comeback</p>
-    </div>
-    <div class="card_tools">
-      <button
-        type="button"
-        class="card_tool_btn"
-        data-card-toggle="1"
-        aria-expanded="false"
-        title="Rozbalit/sbalit"
-      >⤢</button>
-    </div>
-  </div>
-
-  <div class="card_compact" data-card-compact>
-    <table class="admin_karty_meta" aria-label="Přehled karet">
+<?php
+ob_start();
+?>
+<table class="admin_karty_meta" aria-label="Přehled karet">
       <tr>
         <th>Počet karet v IS:</th>
         <td><strong data-admink-count><?= h((string)$karetCount) ?></strong></td>
@@ -358,10 +343,12 @@ $tableHeadHtml = implode("\n", [
         <td><strong data-admink-last><?= h($lastAddedName) ?></strong></td>
       </tr>
     </table>
-  </div>
+<?php
+$card_min_html = (string)ob_get_clean();
 
-  <div class="card_expanded is-hidden" data-card-expanded>
-    <div class="cb-admin-karty-msg admin_karty_msg <?= $cbMsgErr ? 'admin_karty_msg_err' : 'admin_karty_msg_ok' ?>" aria-live="polite"><?= h($cbMsg) ?></div>
+ob_start();
+?>
+<div class="cb-admin-karty-msg admin_karty_msg <?= $cbMsgErr ? 'admin_karty_msg_err' : 'admin_karty_msg_ok' ?>" aria-live="polite"><?= h($cbMsg) ?></div>
 
     <form id="cb-karta-add" method="post" action="<?= h($formAction) ?>" autocomplete="off">
       <input type="hidden" name="cb_admin_karty_action" value="add">
@@ -472,9 +459,7 @@ $tableHeadHtml = implode("\n", [
         </tbody>
       </table>
     </div>
-  </div>
-</article>
-
 <?php
+$card_max_html = (string)ob_get_clean();
 /* karty/admin_karty.php * Verze: V7 * Aktualizace: 12.03.2026 */
 ?>

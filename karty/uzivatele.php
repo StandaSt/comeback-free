@@ -144,29 +144,16 @@ foreach ($uzFilters as $key => $value) {
 $uzBaseUrl = cb_url('/?' . implode('&', $uzBaseParams));
 ?>
 
-<article class="card_shell cb-uzivatele"<?= $keepExpanded ? ' data-card-start-expanded="1"' : '' ?>>
-  <div class="card_top">
-    <div>
-      <h3 class="card_title"><?= h((string)($cb_card_title ?? 'Seznam uživatelů')) ?></h3>
-      <p class="card_subtitle"><span class="card_code"><?= h((string)($cb_card_code ?? '')) ?></span>Správa uživatelů IS Comeback</p>
-    </div>
-    <div class="card_tools">
-      <button
-        type="button"
-        class="card_tool_btn"
-        data-card-toggle="1"
-        aria-expanded="false"
-        title="Rozbalit/sbalit"
-      >⤢</button>
-    </div>
-  </div>
+<?php
+ob_start();
+?>
+<p class="card_text">Zde bude přehled uživatelů.</p>
+<?php
+$card_min_html = (string)ob_get_clean();
 
-  <div class="card_compact card_stack" data-card-compact>
-    <p class="card_text">Zde bude přehled uživatelů.</p>
-  </div>
-
-  <div class="card_expanded is-hidden card_stack" data-card-expanded>
-    <?php if ($uzError !== ''): ?>
+ob_start();
+?>
+<?php if ($uzError !== ''): ?>
       <p class="card_text card_text_muted"><?= h($uzError) ?></p>
     <?php else: ?>
       <form method="get" action="<?= h($formAction) ?>" class="card_stack" autocomplete="off">
@@ -297,9 +284,7 @@ $uzBaseUrl = cb_url('/?' . implode('&', $uzBaseParams));
         </div>
       </form>
     <?php endif; ?>
-  </div>
-</article>
-
 <?php
+$card_max_html = (string)ob_get_clean();
 /* karty/uzivatele.php * Verze: V15 * Aktualizace: 13.03.2026 */
 ?>

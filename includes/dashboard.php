@@ -1,25 +1,7 @@
 <?php
-// includes/dashboard.php * Verze: V7 * Aktualizace: 08.03.2026
+// includes/dashboard.php * Verze: V8 * Aktualizace: 17.03.2026
 declare(strict_types=1);
 
-/*
- * DASHBOARD
- *
- * V7:
- * - karty se nacitaji z DB tabulky `karty`
- * - jednoduchy rezim podle sekce: 3=home, 2=manager, 1=admin
- * - nacita jen karty dane sekce (min_role = sekce)
- * - razeni: poradi ASC, id_karta ASC
- *
- * Poznamka:
- * - kdyz tabulka `karty` nema zadne zaznamy, dashboard vypise informacni hlasku
- * - layout tridy jsou mapovane podle id_karta, jinak se pouzije default
- */
-
-/**
- * Bezpecne prevede nazev souboru karty na absolutni cestu v projektu.
- * V DB je ulozen jen nazev bez "karty/" a bez ".php" (napr. "zadani_reportu").
- */
 function cb_dashboard_resolve_file(string $soubor): ?string
 {
     $raw = trim(str_replace('\\', '/', $soubor));
@@ -27,7 +9,6 @@ function cb_dashboard_resolve_file(string $soubor): ?string
         return null;
     }
 
-    // Kompatibilita: kdyby v DB zustal starsi format cesty, prevede se na basename.
     $name = basename($raw);
     $name = preg_replace('~\.php$~i', '', $name) ?: '';
     if (!preg_match('~^[a-z0-9_]{2,80}$~', $name)) {
@@ -39,13 +20,10 @@ function cb_dashboard_resolve_file(string $soubor): ?string
         return null;
     }
 
-    $rel = 'karty/' . $name . '.php';
-    $full = realpath($base . '/' . $rel);
+    $full = realpath($base . '/karty/' . $name . '.php');
     if ($full === false || !is_file($full)) {
         return null;
     }
-
-    // Soubor musi zustat uvnitr projektu.
     if (strpos($full, $base) !== 0) {
         return null;
     }
@@ -53,34 +31,30 @@ function cb_dashboard_resolve_file(string $soubor): ?string
     return $full;
 }
 
-/**
- * Vrati CSS tridy pro kartu (sirka + barevny styl).
- */
-function cb_dashboard_card_classes(array $row): string
-{
-    $idKarta = (int)($row['id_karta'] ?? 0);
-
-    // Mapa podle ID karty (lze doplnovat podle potreby).
-    $map = [
-    ];
-
-    return $map[$idKarta] ?? 'dash_col_12 dash_card card_blue';
-}
-
-/*
- * Nacitani karet pro dashboard:
- * - sekce je cislo 3/2/1 (home/manager/admin)
- * - nactou se jen karty se stejnou hodnotou min_role
- */
 $sekce = (int)($cb_dashboard_sekce ?? 3);
 if (!in_array($sekce, [1, 2, 3], true)) {
     $sekce = 3;
 }
 
-$karty = [];
+$idUser = (int)(($_SESSION['cb_user']['id_user'] ?? 0));
+$dashColsClass = 'dash_cols_3';
 
+if ($idUser > 0) {
+    $stmtCols = db()->prepare('SELECT pocet_sl FROM `user` WHERE id_user = ? LIMIT 1');
+    if ($stmtCols) {
+        $stmtCols->bind_param('i', $idUser);
+        $stmtCols->execute();
+        $stmtCols->bind_result($pocetSl);
+        if ($stmtCols->fetch() && (int)$pocetSl === 4) {
+            $dashColsClass = 'dash_cols_4';
+        }
+        $stmtCols->close();
+    }
+}
+
+$karty = [];
 $stmt = db()->prepare('
-    SELECT id_karta, nazev, soubor, min_role, poradi
+    SELECT id_karta, nazev, subtitle_min, subtitle_max, soubor, min_role, aktivni, poradi
     FROM karty
     WHERE aktivni = 1
       AND min_role = ?
@@ -90,22 +64,22 @@ $stmt = db()->prepare('
 if ($stmt) {
     $stmt->bind_param('i', $sekce);
     $stmt->execute();
-    $stmt->bind_result($idKarta, $nazev, $soubor, $minRole, $poradi);
-
+    $stmt->bind_result($idKarta, $nazev, $subtitleMin, $subtitleMax, $soubor, $minRole, $aktivni, $poradi);
     while ($stmt->fetch()) {
         $karty[] = [
             'id_karta' => (int)$idKarta,
             'nazev' => (string)$nazev,
+            'subtitle_min' => (string)$subtitleMin,
+            'subtitle_max' => (string)$subtitleMax,
             'soubor' => (string)$soubor,
             'min_role' => (int)$minRole,
+            'aktivni' => (int)$aktivni,
             'poradi' => (int)$poradi,
         ];
     }
-
     $stmt->close();
 }
 
-// Pozadovany text od uzivatele pro prazdny stav v jednotlivych sekcich.
 $emptyMap = [
     3 => 'Zadna karta k zobrazeni (home)',
     2 => 'Zadna karta k zobrazeni (manager)',
@@ -114,38 +88,71 @@ $emptyMap = [
 $emptyText = (string)($emptyMap[$sekce] ?? $emptyMap[3]);
 ?>
 
-<div class="dash_grid">
+<div class="dash_grid <?= h($dashColsClass) ?>">
   <?php if (empty($karty)): ?>
-    <section class="dash_col_12 dash_card card_blue" data-cb-dash-card="1">
+    <section class="dash_card card_blue" data-cb-dash-card="1">
       <div class="dash_card_body">
-        <p class="small_note"><?= $emptyText ?></p>
+        <p class="small_note"><?= h($emptyText) ?></p>
       </div>
     </section>
   <?php else: ?>
     <?php foreach ($karty as $karta): ?>
       <?php
       $fullPath = cb_dashboard_resolve_file((string)($karta['soubor'] ?? ''));
-      $classes = cb_dashboard_card_classes($karta);
-      $cb_card_code = 'K' . (string)($karta['id_karta'] ?? 0);
-      $cb_card_title = (string)($karta['nazev'] ?? '');
+      $title = (string)($karta['nazev'] ?? '');
+      $subtitleMin = (string)($karta['subtitle_min'] ?? '');
+      $subtitleMax = (string)($karta['subtitle_max'] ?? '');
+      $card_min_html = '';
+      $card_max_html = '';
+      $legacy_html = '';
+
+      if ($fullPath !== null) {
+          ob_start();
+          require $fullPath;
+          $legacy_html = (string)ob_get_clean();
+      }
+
+      if ($card_min_html === '' && $card_max_html === '' && $legacy_html !== '') {
+          $card_min_html = $legacy_html;
+      }
       ?>
-      <section class="<?= h($classes) ?>" data-cb-dash-card="1">
-        <?php if ($fullPath !== null): ?>
-          <?php require $fullPath; ?>
-        <?php else: ?>
-          <div class="dash_card_body">
-            <p class="small_note">
-              Kartu <strong><?= h((string)($karta['nazev'] ?? ('ID ' . (string)($karta['id_karta'] ?? 0)))) ?></strong>
-              nelze nacist. Soubor nebyl nalezen nebo neni povoleny.
-            </p>
-            <p class="small_note">Soubor: <code>karty/<?= h((string)($karta['soubor'] ?? '')) ?>.php</code></p>
+      <section class="dash_card card_blue" data-cb-dash-card="1">
+        <article class="card_shell">
+          <div class="card_top">
+            <div>
+              <h3 class="card_title"><?= h($title) ?></h3>
+              <p
+                class="card_subtitle"
+                data-card-subtitle="1"
+                data-subtitle-min="<?= h($subtitleMin) ?>"
+                data-subtitle-max="<?= h($subtitleMax) ?>"
+              ><?= h($subtitleMin) ?></p>
+            </div>
+            <div class="card_tools">
+              <button
+                type="button"
+                class="card_tool_btn"
+                data-card-toggle="1"
+                aria-expanded="false"
+                title="Rozbalit/sbalit"
+              >⤢</button>
+            </div>
           </div>
-        <?php endif; ?>
+
+          <div class="card_body">
+            <div class="card_min card_compact" data-card-compact>
+              <?= $card_min_html ?>
+            </div>
+            <div class="card_max card_expanded is-hidden" data-card-expanded>
+              <?= $card_max_html ?>
+            </div>
+          </div>
+        </article>
       </section>
     <?php endforeach; ?>
   <?php endif; ?>
 </div>
 
 <?php
-/* includes/dashboard.php * Verze: V7 * Aktualizace: 08.03.2026 */
+/* includes/dashboard.php * Verze: V8 * Aktualizace: 17.03.2026 */
 // Konec souboru

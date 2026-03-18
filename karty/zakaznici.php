@@ -205,34 +205,21 @@ foreach ($zakFilters as $key => $value) {
 $zakBaseUrl = cb_url('/?' . implode('&', $zakBaseParams));
 ?>
 
-<article class="card_shell cb-zakaznici"<?= $keepExpanded ? ' data-card-start-expanded="1"' : '' ?>>
-  <div class="card_top">
-    <div>
-      <h3 class="card_title"><?= h((string)($cb_card_title ?? 'Seznam zákazníků')) ?></h3>
-      <p class="card_subtitle"><span class="card_code"><?= h((string)($cb_card_code ?? '')) ?></span>Souhrn zákaznické báze</p>
-    </div>
-    <div class="card_tools">
-      <button
-        type="button"
-        class="card_tool_btn"
-        data-card-toggle="1"
-        aria-expanded="false"
-        title="Rozbalit/sbalit"
-      >⤢</button>
-    </div>
-  </div>
-
-  <div class="card_compact card_stack" data-card-compact>
-    <p class="card_text">Nalezeno zákazníků: <strong><?= h((string)$totalZak) ?></strong></p>
+<?php
+ob_start();
+?>
+<p class="card_text">Nalezeno zákazníků: <strong><?= h((string)$totalZak) ?></strong></p>
     <p class="card_text">Aktivních / blokovaných: <strong><?= h((string)$activeZak) ?></strong> / <strong><?= h((string)$blockedZak) ?></strong></p>
     <p class="card_text">Nejaktivnější zákazníci:</p>
     <p class="card_text"><?= h($topLines[0]) ?></p>
     <p class="card_text"><?= h($topLines[1]) ?></p>
     <p class="card_text"><?= h($topLines[2]) ?></p>
-  </div>
+<?php
+$card_min_html = (string)ob_get_clean();
 
-  <div class="card_expanded is-hidden card_stack" data-card-expanded>
-    <?php if ($zakError !== ''): ?>
+ob_start();
+?>
+<?php if ($zakError !== ''): ?>
       <p class="card_text card_text_muted"><?= h($zakError) ?></p>
     <?php else: ?>
       <form method="get" action="<?= h($formAction) ?>" class="card_stack" autocomplete="off">
@@ -353,9 +340,7 @@ $zakBaseUrl = cb_url('/?' . implode('&', $zakBaseParams));
         </div>
       </form>
     <?php endif; ?>
-  </div>
-</article>
-
 <?php
+$card_max_html = (string)ob_get_clean();
 /* karty/zakaznici.php * Verze: V9 * Aktualizace: 13.03.2026 */
 ?>

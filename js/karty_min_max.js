@@ -68,6 +68,16 @@
     toggle.setAttribute('aria-expanded', isOn ? 'true' : 'false');
   }
 
+  function updateSubtitle(root, isExpanded) {
+    if (!root) return;
+    const subtitle = root.querySelector('[data-card-subtitle]');
+    if (!(subtitle instanceof HTMLElement)) return;
+
+    const minText = String(subtitle.getAttribute('data-subtitle-min') || '');
+    const maxText = String(subtitle.getAttribute('data-subtitle-max') || '');
+    subtitle.textContent = isExpanded ? maxText : minText;
+  }
+
   function closeActiveMaxi() {
     if (!activeMaxi) return;
 
@@ -101,6 +111,7 @@
 
     if (compact) compact.classList.remove('is-hidden');
     if (toggle) updateToggle(toggle, false);
+    updateSubtitle(root, false);
     if (typeof w.cbSetBranchSelectDisabledForRoot === 'function') {
       w.cbSetBranchSelectDisabledForRoot(root, false);
     }
@@ -158,6 +169,7 @@
     dashCard.classList.add('is-maxi-source');
     dashBox.classList.add('has-maxi');
     updateToggle(toggle, true);
+    updateSubtitle(root, true);
     if (typeof w.cbSetBranchSelectDisabledForRoot === 'function') {
       w.cbSetBranchSelectDisabledForRoot(root, true);
     }
@@ -220,6 +232,7 @@
     if (expanded) expanded.classList.add('is-hidden');
     if (dashCard) dashCard.classList.remove('is-expanded');
     updateToggle(toggle, false);
+    updateSubtitle(root, false);
   }
 
   function initCard(root) {
