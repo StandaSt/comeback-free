@@ -29,7 +29,7 @@
 
 .table th,
 .table td{
-  padding:10px 12px;
+  padding:6px 12px;
   border:1px solid var(--border-strong);
   font-size:14px;
   line-height:1.35;

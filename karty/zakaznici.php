@@ -216,6 +216,29 @@ ob_start();
     <p class="card_text"><?= h($topLines[2]) ?></p>
 <?php
 $card_min_html = (string)ob_get_clean();
+$card_min_html = ''
+    . '<div class="table-wrap">'
+    . '  <table class="table" >'
+    . '    <tbody>'
+    . '      <tr>'
+    . '        <td>Zákazníků v DB</td>'
+    . '        <td style="text-align:right;"><strong>' . h((string)$totalZak) . '</strong></td>'
+    . '      </tr>'
+    . '      <tr>'
+    . '        <td>aktivní/blokovaní</td>'
+    . '        <td style="text-align:right;"><strong>' . h((string)$activeZak) . '/' . h((string)$blockedZak) . '</strong></td>'
+    . '      </tr>'
+    . '      <tr>'
+    . '        <td>nejčastější zákazník:</td>'
+    . '        <td style="text-align:right;"><strong>František Skočdopole</strong></td>'
+    . '      </tr>'
+    . '      <tr>'
+    . '        <td>top zákazník:</td>'
+    . '        <td style="text-align:right;"><strong>Emanuel Bacigala</strong></td>'
+    . '      </tr>'
+    . '    </tbody>'
+    . '  </table>'
+    . '</div>';
 
 ob_start();
 ?>

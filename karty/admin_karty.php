@@ -19,6 +19,11 @@ $activeCards = [];
 $inactiveCards = [];
 $tableColsHtml = '';
 $tableHeadHtml = '';
+$sekceStats = [
+    3 => ['all' => 0, 'on' => 0, 'off' => 0],
+    2 => ['all' => 0, 'on' => 0, 'off' => 0],
+    1 => ['all' => 0, 'on' => 0, 'off' => 0],
+];
 
 $isName = static function (string $v): bool {
     return (bool)preg_match('~^[a-z0-9_]{2,80}$~', $v);
@@ -232,6 +237,33 @@ try {
         $resLast->free();
     }
 
+    $resStats = $conn->query('
+        SELECT
+            SUM(min_role = 1) AS r1_all,
+            SUM(min_role = 1 AND aktivni = 1) AS r1_on,
+            SUM(min_role = 1 AND aktivni = 0) AS r1_off,
+            SUM(min_role = 2) AS r2_all,
+            SUM(min_role = 2 AND aktivni = 1) AS r2_on,
+            SUM(min_role = 2 AND aktivni = 0) AS r2_off,
+            SUM(min_role = 3) AS r3_all,
+            SUM(min_role = 3 AND aktivni = 1) AS r3_on,
+            SUM(min_role = 3 AND aktivni = 0) AS r3_off
+        FROM karty
+    ');
+    if ($resStats) {
+        $rowStats = $resStats->fetch_assoc();
+        $sekceStats[1]['all'] = (int)($rowStats['r1_all'] ?? 0);
+        $sekceStats[1]['on'] = (int)($rowStats['r1_on'] ?? 0);
+        $sekceStats[1]['off'] = (int)($rowStats['r1_off'] ?? 0);
+        $sekceStats[2]['all'] = (int)($rowStats['r2_all'] ?? 0);
+        $sekceStats[2]['on'] = (int)($rowStats['r2_on'] ?? 0);
+        $sekceStats[2]['off'] = (int)($rowStats['r2_off'] ?? 0);
+        $sekceStats[3]['all'] = (int)($rowStats['r3_all'] ?? 0);
+        $sekceStats[3]['on'] = (int)($rowStats['r3_on'] ?? 0);
+        $sekceStats[3]['off'] = (int)($rowStats['r3_off'] ?? 0);
+        $resStats->free();
+    }
+
     $resUsed = $conn->query('SELECT soubor FROM karty');
     if ($resUsed) {
         while ($rowUsed = $resUsed->fetch_assoc()) {
@@ -333,23 +365,37 @@ $tableHeadHtml = implode("\n", [
 <?php
 ob_start();
 ?>
-<table class="admin_karty_meta" aria-label="Přehled karet">
+<p class="card_text"><strong>Přehled dashboard karet</strong></p>
+<div class="table-wrap">
+  <table class="table" aria-label="Přehled dashboard karet">
+    <thead>
       <tr>
-        <th>Počet karet v IS:</th>
-        <td><strong data-admink-count><?= h((string)$karetCount) ?></strong></td>
+        <th>Sekce</th>
+        <th style="text-align:right;">celkem/on/off</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>home</td>
+        <td style="text-align:right;"><strong><?= h((string)$sekceStats[3]['all']) ?>/<?= h((string)$sekceStats[3]['on']) ?>/<?= h((string)$sekceStats[3]['off']) ?></strong></td>
       </tr>
       <tr>
-        <th>Poslední přidaná:</th>
-        <td><strong data-admink-last><?= h($lastAddedName) ?></strong></td>
+        <td>manager</td>
+        <td style="text-align:right;"><strong><?= h((string)$sekceStats[2]['all']) ?>/<?= h((string)$sekceStats[2]['on']) ?>/<?= h((string)$sekceStats[2]['off']) ?></strong></td>
       </tr>
-    </table>
+      <tr>
+        <td>admin</td>
+        <td style="text-align:right;"><strong><?= h((string)$sekceStats[1]['all']) ?>/<?= h((string)$sekceStats[1]['on']) ?>/<?= h((string)$sekceStats[1]['off']) ?></strong></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 <?php
 $card_min_html = (string)ob_get_clean();
+$startExpanded = $keepExpanded;
 
 ob_start();
 ?>
-<div class="cb-admin-karty-msg admin_karty_msg <?= $cbMsgErr ? 'admin_karty_msg_err' : 'admin_karty_msg_ok' ?>" aria-live="polite"><?= h($cbMsg) ?></div>
-
     <form id="cb-karta-add" method="post" action="<?= h($formAction) ?>" autocomplete="off">
       <input type="hidden" name="cb_admin_karty_action" value="add">
     </form>
@@ -458,6 +504,9 @@ ob_start();
           <?php endif; ?>
         </tbody>
       </table>
+    </div>
+    <div class="cb-admin-karty-msg admin_karty_msg <?= $cbMsgErr ? 'admin_karty_msg_err' : 'admin_karty_msg_ok' ?>" aria-live="polite">
+      <br> <strong>&nbsp;&nbsp;Poslední akce:</strong> <?= h($cbMsg) ?>
     </div>
 <?php
 $card_max_html = (string)ob_get_clean();

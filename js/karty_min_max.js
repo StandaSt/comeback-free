@@ -153,7 +153,15 @@
     const accentClasses = Array.from(dashCard.classList).filter((name) => /^card_/.test(name));
     const overlayCard = document.createElement('section');
     overlayCard.className = ['dash_maxi_card'].concat(accentClasses).join(' ');
+    const sourceRect = dashCard.getBoundingClientRect();
+    if (sourceRect.width > 0) {
+      overlayCard.style.minWidth = sourceRect.width + 'px';
+    }
+    if (sourceRect.height > 0) {
+      overlayCard.style.minHeight = sourceRect.height + 'px';
+    }
 
+    updateSubtitle(root, true);
     const head = getCardHead(root);
     const headClone = head ? head.cloneNode(true) : document.createElement('div');
     const overlayToggle = headClone.querySelector(toggleSel);
@@ -169,7 +177,6 @@
     dashCard.classList.add('is-maxi-source');
     dashBox.classList.add('has-maxi');
     updateToggle(toggle, true);
-    updateSubtitle(root, true);
     if (typeof w.cbSetBranchSelectDisabledForRoot === 'function') {
       w.cbSetBranchSelectDisabledForRoot(root, true);
     }

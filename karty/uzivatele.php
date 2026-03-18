@@ -12,6 +12,7 @@ $uzFilters = [];
 $uzError = '';
 $formAction = cb_url('/?sekce=1');
 $keepExpanded = isset($_GET['uz_p']) || isset($_GET['uz_per']) || isset($_GET['uz_akt']) || isset($_GET['uz_f']);
+$roleStats = ['admin' => 0, 'manager' => 0, 'uzivatel' => 0];
 
 $uzCols = [
     'id' => ['label' => 'Poř.č.', 'db' => 'id_user'],
@@ -95,6 +96,21 @@ try {
         $resCount->free();
     }
 
+    $resRoleStats = $conn->query('
+        SELECT
+            SUM(id_role = 1) AS admin_cnt,
+            SUM(id_role = 2) AS manager_cnt,
+            SUM(id_role = 3) AS uzivatel_cnt
+        FROM `user`
+    ');
+    if ($resRoleStats) {
+        $rowRoleStats = $resRoleStats->fetch_assoc();
+        $roleStats['admin'] = (int)($rowRoleStats['admin_cnt'] ?? 0);
+        $roleStats['manager'] = (int)($rowRoleStats['manager_cnt'] ?? 0);
+        $roleStats['uzivatel'] = (int)($rowRoleStats['uzivatel_cnt'] ?? 0);
+        $resRoleStats->free();
+    }
+
     $uzPages = max(1, (int)ceil($uzTotal / $uzPer));
     if ($uzPage > $uzPages) {
         $uzPage = $uzPages;
@@ -150,6 +166,35 @@ ob_start();
 <p class="card_text">Zde bude přehled uživatelů.</p>
 <?php
 $card_min_html = (string)ob_get_clean();
+$card_min_html = ''
+    . '<div class="table-wrap">'
+    . '  <table class="table" aria-label="Přehled uživatelů IS Comeback">'
+    . '    <thead>'
+    . '      <tr>'
+    . '        <th>Přidělená role</th>'
+    . '        <th style="text-align:right;">počet</th>'
+    . '      </tr>'
+    . '    </thead>'
+    . '    <tbody>'
+    . '      <tr>'
+    . '        <td>uživatel</td>'
+    . '        <td style="text-align:right;"><strong>' . h((string)$roleStats['uzivatel']) . '</strong></td>'
+    . '      </tr>'
+    . '      <tr>'
+    . '        <td>manager</td>'
+    . '        <td style="text-align:right;"><strong>' . h((string)$roleStats['manager']) . '</strong></td>'
+    . '      </tr>'
+    . '      <tr>'
+    . '        <td>admin</td>'
+    . '        <td style="text-align:right;"><strong>' . h((string)$roleStats['admin']) . '</strong></td>'
+    . '      </tr>'
+    . '      <tr>'
+    . '        <td><strong>Celkem</strong></td>'
+    . '        <td style="text-align:right;"><strong>' . h((string)($roleStats['uzivatel'] + $roleStats['manager'] + $roleStats['admin'])) . '</strong></td>'
+    . '      </tr>'
+    . '    </tbody>'
+    . '  </table>'
+    . '</div>';
 
 ob_start();
 ?>

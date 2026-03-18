@@ -38,7 +38,7 @@ for ($hour = 0; $hour < 24; $hour++) {
 <?php
 ob_start();
 ?>
-<p class="card_text">Denní report s ručním zadáním a kontrolou dat z Restie.</p>
+<p class="card_text">Denní report za pobočku je možno zadat<br>po ukončení směny (za 1hod. 36min.).</p>
 <?php
 $card_min_html=(string)ob_get_clean();
 

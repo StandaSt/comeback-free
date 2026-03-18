@@ -1,5 +1,5 @@
 <?php
-// karty/admin_smeny.php * Verze: V7 * Aktualizace: 17.03.2026
+// karty/admin_inicializace.php * Verze: V8 * Aktualizace: 18.03.2026
 declare(strict_types=1);
 
 $cbAktualniRok = (int)date('Y');
@@ -38,6 +38,29 @@ $cbImportLog = [];
 $cbImportReport = null;
 $cbImportSpusten = false;
 
+$cbRestiaCount = 0;
+$cbSmenyCount = 0;
+$cbRestiaDate = 'Ne';
+$cbSmenyDate = 'Ne';
+
+$qRestia = db()->query('SELECT COALESCE(MAX(id_obj), 0) AS cnt, MAX(`import`) AS dt FROM objednavka');
+if ($qRestia instanceof mysqli_result) {
+    $r = $qRestia->fetch_assoc();
+    $cbRestiaCount = (int)($r['cnt'] ?? 0);
+    $dt = trim((string)($r['dt'] ?? ''));
+    $cbRestiaDate = ($dt !== '') ? $dt : 'Ne';
+    $qRestia->free();
+}
+
+$qSmeny = db()->query('SELECT COALESCE(MAX(id), 0) AS cnt, MAX(created_at) AS dt FROM smeny_akceptovane');
+if ($qSmeny instanceof mysqli_result) {
+    $r = $qSmeny->fetch_assoc();
+    $cbSmenyCount = (int)($r['cnt'] ?? 0);
+    $dt = trim((string)($r['dt'] ?? ''));
+    $cbSmenyDate = ($dt !== '') ? $dt : 'Ne';
+    $qSmeny->free();
+}
+
 if (isset($_POST['cb_admin_smeny_akce']) && $_POST['cb_admin_smeny_akce'] === 'import_tyden') {
     $cbImportSpusten = true;
 
@@ -63,7 +86,18 @@ if (isset($_POST['cb_admin_smeny_akce']) && $_POST['cb_admin_smeny_akce'] === 'i
     );
 }
 
-$card_min_html = '<p class="card_text">Zde se stahuji historicka data ze Smen</p>';
+$card_min_html = ''
+    . '<p class="card_text"><strong>Nalezené záznamy v DB</strong></p>'
+    . '<div class="table-wrap">'
+    . '<table class="table">'
+    . '<thead><tr><th>Zdroj</th><th style="text-align:right;">záznamů</th><th style="text-align:right;">aktualizace</th></tr></thead>'
+    . '<tbody>'
+    . '<tr><td>Restia</td><td style="text-align:right;"><strong>' . h((string)$cbRestiaCount) . '</strong></td><td style="text-align:right;">' . h($cbRestiaDate) . '</td></tr>'
+    . '<tr><td>Směny</td><td style="text-align:right;"><strong>' . h((string)$cbSmenyCount) . '</strong></td><td style="text-align:right;">' . h($cbSmenyDate) . '</td></tr>'
+    . '<tr><td>Reporty</td><td style="text-align:right;"><strong>0</strong></td><td style="text-align:right;">Ne</td></tr>'
+    . '</tbody>'
+    . '</table>'
+    . '</div>';
 
 ob_start();
 ?>
@@ -133,5 +167,5 @@ ob_start();
 <?php
 $card_max_html = (string)ob_get_clean();
 
-/* karty/admin_smeny.php * Verze: V7 * Aktualizace: 17.03.2026 */
+/* karty/admin_inicializace.php * Verze: V8 * Aktualizace: 18.03.2026 */
 ?>
