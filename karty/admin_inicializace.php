@@ -90,18 +90,130 @@ $card_min_html = ''
     . '<p class="card_text"><strong>Nalezené záznamy v DB</strong></p>'
     . '<div class="table-wrap">'
     . '<table class="table">'
-    . '<thead><tr><th>Zdroj</th><th style="text-align:right;">záznamů</th><th style="text-align:right;">aktualizace</th></tr></thead>'
-    . '<tbody>'
-    . '<tr><td>Restia</td><td style="text-align:right;"><strong>' . h((string)$cbRestiaCount) . '</strong></td><td style="text-align:right;">' . h($cbRestiaDate) . '</td></tr>'
-    . '<tr><td>Směny</td><td style="text-align:right;"><strong>' . h((string)$cbSmenyCount) . '</strong></td><td style="text-align:right;">' . h($cbSmenyDate) . '</td></tr>'
-    . '<tr><td>Reporty</td><td style="text-align:right;"><strong>0</strong></td><td style="text-align:right;">Ne</td></tr>'
+    . '<thead><tr style="border:0;"><th>Zdroj</th><th style="text-align:right;">záznamů</th><th style="text-align:right;">aktualizace</th></tr></thead>'
+    . '<tbody style="border:0;">'
+    . '<tr style="border:0;"><td style="padding:0; border:0;">Restia</td><td style="text-align:right;"><strong>' . h((string)$cbRestiaCount) . '</strong></td><td style="text-align:right;">' . h($cbRestiaDate) . '</td></tr>'
+    . '<tr style="border:0;"><td style="padding:0; border:0;">Směny</td><td style="text-align:right;"><strong>' . h((string)$cbSmenyCount) . '</strong></td><td style="text-align:right;">' . h($cbSmenyDate) . '</td></tr>'
+    . '<tr style="border:0;"><td style="padding:0; border:0;">Reporty</td><td style="text-align:right;"><strong>0</strong></td><td style="text-align:right;">Ne</td></tr>'
     . '</tbody>'
     . '</table>'
     . '</div>';
 
 ob_start();
 ?>
-<div class="card_section">
+<table class="table" style="width:100%; margin:0 0 16px 0;">
+    <tbody style="border:0;">
+      <tr style="border:0;">
+        <th colspan="6" style="text-align:left;">Restia</th>
+      </tr>
+      <tr style="border:0;">
+        <td style="padding:0; border:0;">Co</td>
+        <td style="padding:0; border:0;">zdroj dat</td>
+        <td style="padding:0; border:0;">záznamů</td>
+        <td style="padding:0; border:0;">aktualizace</td>
+        <td style="padding:0; border:0;">script</td>
+        <td style="padding:0; border:0;">akce</td>
+      </tr>
+      <tr style="border:0;">
+        <td style="padding:0; border:0;">položky - menu</td>
+        <td style="padding:0; border:0;">Restia API</td>
+        <td style="padding:0; border:0;">0</td>
+        <td style="padding:0; border:0;">ne</td>
+        <td style="padding:0; border:0;">restia_polozky_api.php</td>
+        <td style="padding:0; border:0;">submit</td>
+      </tr>
+      <tr style="border:0;">
+        <td style="padding:0; border:0;">objednávky</td>
+        <td style="padding:0; border:0;">Restia API</td>
+        <td style="padding:0; border:0;">0</td>
+        <td style="padding:0; border:0;">ne</td>
+        <td style="padding:0; border:0;">restia_objednavky_api.php</td>
+        <td style="padding:0; border:0;">submit</td>
+      </tr>
+      <tr style="border:0;">
+        <td style="padding:0; border:0;">zákazníci</td>
+        <td style="padding:0; border:0;">Restia API</td>
+        <td style="padding:0; border:0;">22 524</td>
+        <td style="padding:0; border:0;">15.2.2026</td>
+        <td style="padding:0; border:0;">restia_zakaznici_api.php</td>
+        <td style="padding:0; border:0;">submit</td>
+      </tr>
+
+      <tr style="border:0;">
+        <th colspan="6" style="text-align:left;">Směny</th>
+      </tr>
+      <tr style="border:0;">
+        <td style="padding:0; border:0;">Co</td>
+        <td style="padding:0; border:0;">zdroj dat</td>
+        <td style="padding:0; border:0;">záznamů</td>
+        <td style="padding:0; border:0;">aktualizace</td>
+        <td style="padding:0; border:0;">script</td>
+        <td style="padding:0; border:0;">akce</td>
+      </tr>
+      <tr style="border:0;">
+        <td style="padding:0; border:0;">akceptované</td>
+        <td style="padding:0; border:0;">směny GraphQL</td>
+        <td style="padding:0; border:0;">356 158</td>
+        <td style="padding:0; border:0;">ne</td>
+        <td style="padding:0; border:0;">smeny_akcept_graphql.php</td>
+        <td style="padding:0; border:0;">submit</td>
+      </tr>
+      <tr style="border:0;">
+        <td style="padding:0; border:0;">odpracované</td>
+        <td style="padding:0; border:0;">Google sheets</td>
+        <td style="padding:0; border:0;">0</td>
+        <td style="padding:0; border:0;">ne</td>
+        <td style="padding:0; border:0;">stahni_smeny_google.php</td>
+        <td style="padding:0; border:0;">submit</td>
+      </tr>
+      <tr style="border:0;">
+        <td style="padding:0; border:0;">přepočet hod. -> směny</td>
+        <td style="padding:0; border:0;">Comeback DB</td>
+        <td style="padding:0; border:0;">0</td>
+        <td style="padding:0; border:0;">ne</td>
+        <td style="padding:0; border:0;">napln_smeny_den.php</td>
+        <td style="padding:0; border:0;">submit</td>
+      </tr>
+
+      <tr style="border:0;">
+        <th colspan="6" style="text-align:left;">Reporty</th>
+      </tr>
+      <tr style="border:0;">
+        <td style="padding:0; border:0;">Co</td>
+        <td style="padding:0; border:0;">zdroj dat</td>
+        <td style="padding:0; border:0;">záznamů</td>
+        <td style="padding:0; border:0;">aktualizace</td>
+        <td style="padding:0; border:0;">script</td>
+        <td style="padding:0; border:0;">akce</td>
+      </tr>
+      <tr style="border:0;">
+        <td style="padding:0; border:0;">reporty - penize</td>
+        <td style="padding:0; border:0;">Google sheets</td>
+        <td style="padding:0; border:0;">0</td>
+        <td style="padding:0; border:0;">ne</td>
+        <td style="padding:0; border:0;">stahni_penize_google.php</td>
+        <td style="padding:0; border:0;">submit</td>
+      </tr>
+      <tr style="border:0;">
+        <td style="padding:0; border:0;">placeholder 29</td>
+        <td style="padding:0; border:0;">placeholder 30</td>
+        <td style="padding:0; border:0;">0</td>
+        <td style="padding:0; border:0;">ne</td>
+        <td style="padding:0; border:0;">nacti_restia_api</td>
+        <td style="padding:0; border:0;">submit</td>
+      </tr>
+      <tr style="border:0;">
+        <td style="padding:0; border:0;">placeholder 33</td>
+        <td style="padding:0; border:0;">placeholder 34</td>
+        <td style="padding:0; border:0;">0</td>
+        <td style="padding:0; border:0;">ne</td>
+        <td style="padding:0; border:0;">nacti_restia_api</td>
+        <td style="padding:0; border:0;">submit</td>
+      </tr>
+    </tbody>
+  </table>
+
+<br> 
   <h4 class="card_section_title">Vyber obdobi</h4>
 
   <form method="post" action="<?= h(cb_url('/?sekce=1')) ?>">
@@ -163,7 +275,7 @@ ob_start();
       </form>
     </div>
   <?php endif; ?>
-</div>
+
 <?php
 $card_max_html = (string)ob_get_clean();
 

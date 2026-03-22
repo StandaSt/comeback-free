@@ -14,7 +14,11 @@ $zakPer = 20;
 $zakBlk = '0';
 $zakFilters = [];
 $zakError = '';
-$formAction = cb_url('/?sekce=1');
+$currentSekce = isset($cb_dashboard_sekce) ? (int)$cb_dashboard_sekce : (int)($_GET['sekce'] ?? 3);
+if (!in_array($currentSekce, [1, 2, 3], true)) {
+    $currentSekce = 3;
+}
+$formAction = cb_url('/?sekce=' . $currentSekce);
 $keepExpanded = isset($_GET['zak_p']) || isset($_GET['zak_per']) || isset($_GET['zak_blk']) || isset($_GET['zak_f']);
 
 $zakCols = [
@@ -27,6 +31,15 @@ $zakCols = [
     'mesto' => ['label' => 'mesto', 'db' => 'mesto', 'filter' => true],
     'pobocka' => ['label' => 'pobočka', 'db' => 'pobocka', 'filter' => true],
     'posl_obj' => ['label' => 'posl_obj', 'db' => 'posledni_obj'],
+];
+$zakFilterStyle = [
+    'prijmeni' => 'width:10ch;',
+    'jmeno' => 'width:8ch;',
+    'telefon' => 'width:10ch;',
+    'email' => 'width:16ch;',
+    'ulice' => 'width:16ch;',
+    'mesto' => 'width:8ch;',
+    'pobocka' => 'width:10ch;',
 ];
 
 $zakPerRaw = (int)($_GET['zak_per'] ?? 20);
@@ -192,7 +205,7 @@ try {
 }
 
 $zakBaseParams = [
-    'sekce=1',
+    'sekce=' . rawurlencode((string)$currentSekce),
     'zak_per=' . rawurlencode((string)$zakPer),
     'zak_blk=' . rawurlencode($zakBlk),
 ];
@@ -218,7 +231,7 @@ ob_start();
 $card_min_html = (string)ob_get_clean();
 $card_min_html = ''
     . '<div class="table-wrap">'
-    . '  <table class="table" >'
+    . '  <table class="table card_table_min" >'
     . '    <tbody>'
     . '      <tr>'
     . '        <td>Zákazníků v DB</td>'
@@ -239,6 +252,7 @@ $card_min_html = ''
     . '    </tbody>'
     . '  </table>'
     . '</div>';
+$startExpanded = $keepExpanded;
 
 ob_start();
 ?>
@@ -246,25 +260,25 @@ ob_start();
       <p class="card_text card_text_muted"><?= h($zakError) ?></p>
     <?php else: ?>
       <form method="get" action="<?= h($formAction) ?>" class="card_stack" autocomplete="off">
-        <input type="hidden" name="sekce" value="1">
+        <input type="hidden" name="sekce" value="<?= h((string)$currentSekce) ?>">
         <input type="hidden" name="zak_p" value="1">
 
         <div class="table-wrap">
-          <table class="table">
+          <table class="table card_table_max">
             <thead>
               <tr class="filter-row">
                 <?php foreach ($zakCols as $key => $cfg): ?>
                   <?php if ($key === 'id'): ?>
                     <th></th>
                   <?php elseif (!empty($cfg['filter'])): ?>
-                    <th><input class="filter-input" type="text" name="zak_f[<?= h($key) ?>]" value="<?= h($zakFilters[$key] ?? '') ?>"></th>
+                    <th><input class="filter-input" style="<?= h((string)($zakFilterStyle[$key] ?? 'width:10ch;')) ?>" type="text" name="zak_f[<?= h($key) ?>]" value="<?= h($zakFilters[$key] ?? '') ?>"></th>
                   <?php else: ?>
-                    <th><a class="icon-btn icon-x small" href="<?= h(cb_url('/?sekce=1')) ?>">×</a></th>
+                    <th><a class="icon-btn icon-x small" href="<?= h($formAction) ?>">×</a></th>
                   <?php endif; ?>
                 <?php endforeach; ?>
               </tr>
               <tr>
-                <?php foreach ($zakCols as $cfg): ?>
+                <?php foreach ($zakCols as $key => $cfg): ?>
                   <th><?= h($cfg['label']) ?></th>
                 <?php endforeach; ?>
               </tr>

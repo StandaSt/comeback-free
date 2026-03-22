@@ -105,6 +105,7 @@ $emptyText = (string)($emptyMap[$sekce] ?? $emptyMap[3]);
       $card_min_html = '';
       $card_max_html = '';
       $legacy_html = '';
+      $startExpanded = false;
 
       if ($fullPath !== null) {
           ob_start();
@@ -117,7 +118,7 @@ $emptyText = (string)($emptyMap[$sekce] ?? $emptyMap[3]);
       }
       ?>
       <section class="dash_card card_blue" data-cb-dash-card="1">
-        <article class="card_shell">
+        <article class="card_shell"<?= $startExpanded ? ' data-card-start-expanded="1"' : '' ?>>
           <div class="card_top">
             <div>
               <h3 class="card_title"><?= h($title) ?></h3>

@@ -43,9 +43,7 @@
 
   function buildCleanUrlWithoutSekce() {
     const u = new URL(w.location.href);
-    u.searchParams.delete('sekce');
-    const qs = u.searchParams.toString();
-    return u.pathname + (qs ? ('?' + qs) : '') + (u.hash || '');
+    return u.pathname + (u.hash || '');
   }
 
   function buildSekceUrl(sekce) {

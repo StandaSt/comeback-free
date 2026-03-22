@@ -90,7 +90,7 @@ $startExpanded = $keepExpanded;
 ob_start();
 ?>
   <div class="table-wrap">
-    <table class="table">
+    <table class="table card_table_max">
       <thead>
         <tr>
           <th>Název</th>

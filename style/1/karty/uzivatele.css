@@ -1,13 +1,13 @@
 /* style/1/karty/uzivatele.css * Verze: V1 * Aktualizace: 13.03.2026 */
 
-.uzivatele-table .c-id{ min-width:70px; white-space:nowrap; }
-.uzivatele-table .c-prijmeni{ min-width:170px; }
-.uzivatele-table .c-jmeno{ min-width:150px; }
-.uzivatele-table .c-telefon{ min-width:130px; white-space:nowrap; }
-.uzivatele-table .c-email{ min-width:230px; overflow-wrap:anywhere; }
-.uzivatele-table .c-reg{ min-width:120px; white-space:nowrap; }
-.uzivatele-table .c-aktivni{ min-width:100px; white-space:nowrap; }
-.uzivatele-table .c-akce{ min-width:220px; }
+.uzivatele-table.card_table_max .c-id{ width:auto; white-space:nowrap; }
+.uzivatele-table.card_table_max .c-prijmeni{ width:auto; }
+.uzivatele-table.card_table_max .c-jmeno{ width:auto; }
+.uzivatele-table.card_table_max .c-telefon{ width:auto; white-space:nowrap; }
+.uzivatele-table.card_table_max .c-email{ width:auto; overflow-wrap:anywhere; }
+.uzivatele-table.card_table_max .c-reg{ width:auto; white-space:nowrap; }
+.uzivatele-table.card_table_max .c-aktivni{ width:auto; white-space:nowrap; }
+.uzivatele-table.card_table_max .c-akce{ width:auto; }
 
 .uzivatele-table td:empty::after{
   content:"";

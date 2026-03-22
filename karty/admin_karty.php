@@ -367,7 +367,7 @@ ob_start();
 ?>
 <p class="card_text"><strong>Přehled dashboard karet</strong></p>
 <div class="table-wrap">
-  <table class="table" aria-label="Přehled dashboard karet">
+  <table class="table card_table_min" aria-label="Přehled dashboard karet">
     <thead>
       <tr>
         <th>Sekce</th>
@@ -400,7 +400,7 @@ ob_start();
       <input type="hidden" name="cb_admin_karty_action" value="add">
     </form>
     <div class="table-wrap">
-      <table class="table admin_karty_table">
+      <table class="table admin_karty_table card_table_max">
 <?= $tableColsHtml . "\n" ?>
         <tbody>
           <tr>

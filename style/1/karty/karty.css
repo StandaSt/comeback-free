@@ -201,4 +201,16 @@
   justify-content:flex-end;
 }
 
+.card_table_min{
+  width:100%;
+}
+
+.card_table_max{
+  width:auto !important;
+}
+
+.card_table_max .filter-input{
+  width:auto;
+}
+
 /* style/1/karty/karty.css * Verze: V6 * Aktualizace: 11.03.2026 */

@@ -1,239 +1,179 @@
-// js/filtry.js * Verze: V3 * Aktualizace: 19.2.2026
+// js/filtry.js * Verze: V6 * Aktualizace: 19.03.2026
 'use strict';
 
 /*
- * filtry.js
- * - filtry v tabulkách (řádek s inputy + Enter + X)
- * - automatické filtrování při psaní (debounce)
- * - běží jen uvnitř <main> (tzn. nemíchá se do menu)
- * - udrží čistou URL (bez ?page=...)
- *
- * V3:
- * - při psaní NEpřekreslí celé <main>, ale jen <tbody> + .list-bottom
- *   → řádek filtrů zůstane, fokus v inputu se neztratí
- * - fallback: když nejde “tělový swap”, udělá původní full swap
+ * Jednotny filtr pro karty:
+ * - live filtrovani pri psani (debounce)
+ * - submit/select bez reloadu stranky
+ * - swap pouze uvnitr aktualni karty (table-wrap + list-bottom)
  */
 
 (function (w) {
   const CB_AJAX = w.CB_AJAX || null;
+  const timers = new WeakMap();
+  const controllers = new WeakMap();
 
-  function getMainEl() {
-    return document.querySelector('.central-content main') || document.querySelector('main');
+  function getPrefixFromName(name) {
+    const s = String(name || '');
+    const m = s.match(/^([a-z0-9_]+)_f\[/i);
+    return m ? String(m[1] || '').toLowerCase() : '';
   }
 
-  function getCleanBaseUrl() {
-    try {
-      const u = new URL(w.location.href);
-      u.search = '';
-      u.hash = '';
-      return u.toString();
-    } catch (e) {
-      return w.location.href;
+  function getCardFilterPrefix(form) {
+    if (!(form instanceof HTMLFormElement)) return '';
+    const el = form.querySelector('input.filter-input[name*="_f["]');
+    return el ? getPrefixFromName(el.name) : '';
+  }
+
+  function getPageInput(form, prefix) {
+    if (!(form instanceof HTMLFormElement) || !prefix) return null;
+    return form.querySelector('input[name="' + prefix + '_p"]');
+  }
+
+  function buildUrlFromForm(form) {
+    const action = form.getAttribute('action') || w.location.href;
+    const url = new URL(action, w.location.href);
+    const fd = new FormData(form);
+    url.search = new URLSearchParams(fd).toString();
+    return url.toString();
+  }
+
+  function findResponseForm(doc, prefix) {
+    if (!doc || !prefix) return null;
+    const marker = doc.querySelector('form input[name="' + prefix + '_p"]');
+    return marker ? marker.closest('form') : null;
+  }
+
+  function swapFormParts(curForm, newForm) {
+    if (!(curForm instanceof HTMLFormElement) || !(newForm instanceof HTMLFormElement)) return false;
+
+    const curTable = curForm.querySelector('.table-wrap');
+    const curBottom = curForm.querySelector('.list-bottom');
+    const newTable = newForm.querySelector('.table-wrap');
+    const newBottom = newForm.querySelector('.list-bottom');
+
+    if (!curTable || !newTable) return false;
+
+    curTable.replaceWith(newTable);
+    if (curBottom && newBottom) {
+      curBottom.replaceWith(newBottom);
+    } else if (curBottom && !newBottom) {
+      curBottom.remove();
+    } else if (!curBottom && newBottom) {
+      curForm.appendChild(newBottom);
     }
-  }
-
-  function keepBrowserUrlClean() {
-    try {
-      w.history.replaceState(null, '', getCleanBaseUrl());
-    } catch (e) {
-      // nic
-    }
-  }
-
-  function extractPageFromUrl(urlStr) {
-    try {
-      const u = new URL(urlStr, w.location.href);
-      const p = String(u.searchParams.get('page') || '').trim();
-      return p || null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function setMainLoading(mainEl) {
-    mainEl.innerHTML = '<section class="card"><p>Načítám…</p></section>';
-  }
-
-  function setMainError(mainEl, msg) {
-    mainEl.innerHTML =
-      '<section class="card">' +
-      '<p><strong>Načtení se nepovedlo.</strong></p>' +
-      '<p>' + String(msg || 'Neznámá chyba') + '</p>' +
-      '</section>';
-  }
-
-  function parseHtml(html) {
-    const s = String(html || '');
-    const p = new DOMParser();
-    return p.parseFromString(s, 'text/html');
-  }
-
-  function swapTableOnly(mainEl, html) {
-    // Aktuální DOM
-    const curTable = mainEl.querySelector('table.table');
-    const curTbody = curTable ? curTable.querySelector('tbody') : null;
-    const curBottom = mainEl.querySelector('.list-bottom');
-
-    if (!curTable || !curTbody || !curBottom) return false;
-
-    // Nový DOM z odpovědi
-    const doc = parseHtml(html);
-    const newTable = doc.querySelector('table.table');
-    const newTbody = newTable ? newTable.querySelector('tbody') : null;
-    const newBottom = doc.querySelector('.list-bottom');
-
-    if (!newTable || !newTbody || !newBottom) return false;
-
-    // Swap jen “dat”
-    curTbody.innerHTML = newTbody.innerHTML;
-    curBottom.innerHTML = newBottom.innerHTML;
 
     return true;
   }
 
-  let activeController = null;
-
-  function ajaxSwapByUrl(targetUrl, mode) {
-    const mainEl = getMainEl();
-    if (!mainEl) return;
-
+  function fetchAndSwap(form, prefix, reqUrlOverride) {
+    if (!(form instanceof HTMLFormElement) || !prefix) return;
     if (!CB_AJAX || typeof CB_AJAX.fetchText !== 'function') {
-      console.error('[CB_FILTRY] Chybí CB_AJAX.fetchText (js/ajax_core.js).');
-      setMainError(mainEl, 'Chybí AJAX core.');
-      keepBrowserUrlClean();
+      form.submit();
       return;
     }
 
-    const p = extractPageFromUrl(targetUrl) || 'home';
+    const oldCtrl = controllers.get(form);
+    if (oldCtrl) oldCtrl.abort();
 
-    if (activeController) {
-      activeController.abort();
-      activeController = null;
-    }
     const ctrl = new AbortController();
-    activeController = ctrl;
+    controllers.set(form, ctrl);
 
-    // při psaní nesmíme přepsat celý <main> (kvůli fokusu)
-    if (mode !== 'table-only') {
-      setMainLoading(mainEl);
-    }
+    const activeEl = document.activeElement;
+    const focusName = (activeEl instanceof HTMLInputElement) ? String(activeEl.name || '') : '';
+    const selStart = (activeEl instanceof HTMLInputElement && typeof activeEl.selectionStart === 'number')
+      ? activeEl.selectionStart
+      : null;
+    const selEnd = (activeEl instanceof HTMLInputElement && typeof activeEl.selectionEnd === 'number')
+      ? activeEl.selectionEnd
+      : null;
 
-    CB_AJAX.fetchText(targetUrl, {
-      'X-Comeback-Partial': '1',
-      'X-Comeback-Page': p
-    }, ctrl.signal).then((html) => {
-      if (activeController === ctrl) activeController = null;
+    const reqUrl = String(reqUrlOverride || buildUrlFromForm(form));
 
-      if (mode === 'table-only') {
-        const ok = swapTableOnly(mainEl, html);
-        if (!ok) {
-          // fallback: když stránka nemá očekávanou strukturu
-          mainEl.innerHTML = html;
+    CB_AJAX.fetchText(reqUrl, { 'X-Comeback-Partial': '1' }, ctrl.signal)
+      .then((html) => {
+        if (controllers.get(form) !== ctrl) return;
+        controllers.delete(form);
+
+        const doc = new DOMParser().parseFromString(String(html || ''), 'text/html');
+        const newForm = findResponseForm(doc, prefix);
+        if (!newForm) return;
+        const ok = swapFormParts(form, newForm);
+        if (!ok) return;
+
+        if (focusName !== '') {
+          const nextInput = form.querySelector('input[name="' + CSS.escape(focusName) + '"]');
+          if (nextInput instanceof HTMLInputElement) {
+            nextInput.focus();
+            if (selStart !== null && selEnd !== null) {
+              const valLen = String(nextInput.value || '').length;
+              const s = Math.min(selStart, valLen);
+              const e = Math.min(selEnd, valLen);
+              nextInput.setSelectionRange(s, e);
+            }
+          }
         }
-      } else {
-        mainEl.innerHTML = html;
-      }
-
-      keepBrowserUrlClean();
-    }).catch((err) => {
-      if (err && err.name === 'AbortError') return;
-      if (activeController === ctrl) activeController = null;
-
-      console.error('[CB_FILTRY] AJAX chyba', err);
-      setMainError(mainEl, (err && err.message) ? err.message : 'Neznámá chyba');
-      keepBrowserUrlClean();
-    });
+      })
+      .catch((err) => {
+        if (err && err.name === 'AbortError') return;
+        controllers.delete(form);
+      });
   }
 
-  function buildGetUrlFromForm(form) {
-    const fd = new FormData(form);
-    const sp = new URLSearchParams();
-    for (const pair of fd.entries()) sp.append(pair[0], String(pair[1]));
+  document.addEventListener('input', (ev) => {
+    const t = ev.target;
+    if (!(t instanceof HTMLInputElement)) return;
+    if (!t.classList.contains('filter-input')) return;
 
-    const url = new URL(w.location.href);
-    url.search = sp.toString();
-    return url.toString();
-  }
+    const prefix = getPrefixFromName(t.name);
+    if (!prefix) return;
+
+    const form = t.closest('form');
+    if (!(form instanceof HTMLFormElement)) return;
+
+    const p = getPageInput(form, prefix);
+    if (p) p.value = '1';
+
+    const oldTimer = timers.get(form);
+    if (oldTimer) clearTimeout(oldTimer);
+
+    const timer = setTimeout(() => {
+      timers.delete(form);
+      fetchAndSwap(form, prefix);
+    }, 250);
+    timers.set(form, timer);
+  }, true);
 
   document.addEventListener('submit', (ev) => {
-    const mainEl = getMainEl();
-    if (!mainEl) return;
-
     const form = ev.target;
-    if (!form || !form.tagName) return;
-    if (String(form.tagName).toLowerCase() !== 'form') return;
-    if (!mainEl.contains(form)) return;
+    if (!(form instanceof HTMLFormElement)) return;
+    if (String(form.method || 'get').toLowerCase() !== 'get') return;
 
-    const method = String(form.getAttribute('method') || 'get').toLowerCase();
-    if (method !== 'get') return;
-
-    if (!form.querySelector('.filter-input') && !form.querySelector('.filter-row')) return;
+    const prefix = getCardFilterPrefix(form);
+    if (!prefix) return;
 
     ev.preventDefault();
-
-    const pInput = form.querySelector('input[name="p"]');
-    if (pInput) pInput.value = '1';
-
-    // submit (Enter) může klidně full swap (nevadí fokus)
-    ajaxSwapByUrl(buildGetUrlFromForm(form), 'full');
+    fetchAndSwap(form, prefix);
   }, true);
 
   document.addEventListener('click', (ev) => {
-    const mainEl = getMainEl();
-    if (!mainEl) return;
+    const a = ev.target instanceof Element ? ev.target.closest('a') : null;
+    if (!(a instanceof HTMLAnchorElement)) return;
 
-    const t = ev.target;
-    if (!t || !t.closest) return;
+    const form = a.closest('form');
+    if (!(form instanceof HTMLFormElement)) return;
 
-    const a = t.closest('a');
-    if (!a) return;
-    if (!mainEl.contains(a)) return;
+    const prefix = getCardFilterPrefix(form);
+    if (!prefix) return;
 
-    if (!a.classList.contains('icon-x')) return;
-
-    const href = a.getAttribute('href');
-    if (!href) return;
-
-    const abs = new URL(href, w.location.href).toString();
-    const p = extractPageFromUrl(abs);
-    if (!p) return;
+    const href = String(a.getAttribute('href') || '').trim();
+    if (href === '' || href === '#') return;
 
     ev.preventDefault();
-
-    // X – full swap je OK
-    ajaxSwapByUrl(abs, 'full');
+    const absHref = new URL(href, w.location.href).toString();
+    fetchAndSwap(form, prefix, absHref);
   }, true);
-
-  let timer = null;
-
-  document.addEventListener('input', (ev) => {
-    const mainEl = getMainEl();
-    if (!mainEl) return;
-
-    const el = ev.target;
-    if (!el || !el.classList) return;
-    if (!el.classList.contains('filter-input')) return;
-    if (!mainEl.contains(el)) return;
-
-    const form = el.closest('form');
-    if (!form) return;
-
-    if (el.tagName && String(el.tagName).toLowerCase() !== 'input') return;
-
-    if (timer) w.clearTimeout(timer);
-
-    timer = w.setTimeout(() => {
-      timer = null;
-
-      const pInput = form.querySelector('input[name="p"]');
-      if (pInput) pInput.value = '1';
-
-      // při psaní: jen tbody + list-bottom (fokus zůstane)
-      ajaxSwapByUrl(buildGetUrlFromForm(form), 'table-only');
-    }, 250);
-  }, true);
-
 })(window);
 
-// js/filtry.js * Verze: V3 * Aktualizace: 19.2.2026 * Počet řádků: 239
+// js/filtry.js * Verze: V6 * Aktualizace: 19.03.2026
 // Konec souboru

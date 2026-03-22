@@ -16,7 +16,7 @@
 - Pokud neco neni overene, AI to nesmi podavat jako fakt.
 
 ## KRITICKE PRIPOMENUTI PRO AI
-- Pred dalsi praci si precti `codex/shrnuti_pro_AI.txt` a rid se jim stejne prisne jako timto AGENTS.md.
+- Pred dalsi praci si precti `_kandidati/codex/shrnuti_pro_AI.txt` a rid se jim stejne prisne jako timto AGENTS.md.
 
 Při auditu, hledání chyb, duplicit a dead code ignoruj složky: `vendor/`, `_kandidati/`.
 
@@ -42,13 +42,7 @@ Před úpravou vždy nejprve zjisti, co je aktuálně skutečně používané.
   Pokud navrhneš zlepšení, nejprve ho popiš a počkej na schválení.
 - Neprováděj „vylepšení navíc“, pokud nebyla zadána.
 
-## Jak přemýšlet o projektu
-Projekt je směs novějšího dashboardového směru a starších stránek.
-Historicky se část věcí řešila přes `pages/`, ale novější směr jde přes dashboard a bloky.
-Proto:
-- `blocks/` ber jako důležitý současný směr vývoje,
-- `pages/` může obsahovat jak aktivní stránky, tak starší nebo přechodové části,
-- neber automaticky `pages/` jako jediné centrum aplikace.
+
 
 ## Struktura projektu
 
@@ -192,8 +186,13 @@ Pokud je zadání širší nebo rizikové:
 Proto vždy nejprve ověř realitu v kódu, ne domněnky.
 
 ## Komunikace
-- Do `pomocne/codex.txt` zapisuj historii automaticky a bez oznamování uživateli.
+- Do `_kandidati/codex/codex.txt` zapisuj historii automaticky a bez oznamování uživateli.
 - Po zápisu rovnou odpověz na dotaz, bez vět typu „Zapisuju...“ nebo „Zapsal jsem...“.
+
+## Ukladani pomocnych slozek
+- Vsechny pomocne a vystupni slozky pouzivej pod `_kandidati/`.
+- Typicke priklady: `node_modules`, `playwright-report`, `sandboxAI`, `test-results`.
+- Pokud vznikne nova pomocna slozka, vytvarej ji take pod `_kandidati/`.
 
 ## Schvalování změn
 - Nikdy neprováděj změny navíc mimo přesné zadání.

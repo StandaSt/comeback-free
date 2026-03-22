@@ -10,7 +10,11 @@ $uzPer = 20;
 $uzAkt = '1';
 $uzFilters = [];
 $uzError = '';
-$formAction = cb_url('/?sekce=1');
+$currentSekce = isset($cb_dashboard_sekce) ? (int)$cb_dashboard_sekce : (int)($_GET['sekce'] ?? 3);
+if (!in_array($currentSekce, [1, 2, 3], true)) {
+    $currentSekce = 3;
+}
+$formAction = cb_url('/?sekce=' . $currentSekce);
 $keepExpanded = isset($_GET['uz_p']) || isset($_GET['uz_per']) || isset($_GET['uz_akt']) || isset($_GET['uz_f']);
 $roleStats = ['admin' => 0, 'manager' => 0, 'uzivatel' => 0];
 
@@ -147,7 +151,7 @@ try {
 }
 
 $uzBaseParams = [
-    'sekce=1',
+    'sekce=' . rawurlencode((string)$currentSekce),
     'uz_per=' . rawurlencode((string)$uzPer),
     'uz_akt=' . rawurlencode($uzAkt),
 ];
@@ -168,7 +172,7 @@ ob_start();
 $card_min_html = (string)ob_get_clean();
 $card_min_html = ''
     . '<div class="table-wrap">'
-    . '  <table class="table" aria-label="Přehled uživatelů IS Comeback">'
+    . '  <table class="table card_table_min" aria-label="Přehled uživatelů IS Comeback">'
     . '    <thead>'
     . '      <tr>'
     . '        <th>Přidělená role</th>'
@@ -195,6 +199,7 @@ $card_min_html = ''
     . '    </tbody>'
     . '  </table>'
     . '</div>';
+$startExpanded = $keepExpanded;
 
 ob_start();
 ?>
@@ -202,21 +207,21 @@ ob_start();
       <p class="card_text card_text_muted"><?= h($uzError) ?></p>
     <?php else: ?>
       <form method="get" action="<?= h($formAction) ?>" class="card_stack" autocomplete="off">
-        <input type="hidden" name="sekce" value="1">
+        <input type="hidden" name="sekce" value="<?= h((string)$currentSekce) ?>">
         <input type="hidden" name="uz_p" value="1">
 
         <div class="table-wrap">
-          <table class="table uzivatele-table">
+          <table class="table uzivatele-table card_table_max">
             <thead>
               <tr class="filter-row">
                 <th class="c-id"></th>
-                <th class="c-prijmeni"><input class="filter-input" type="text" name="uz_f[prijmeni]" value="<?= h($uzFilters['prijmeni'] ?? '') ?>"></th>
-                <th class="c-jmeno"><input class="filter-input" type="text" name="uz_f[jmeno]" value="<?= h($uzFilters['jmeno'] ?? '') ?>"></th>
-                <th class="c-telefon"><input class="filter-input" type="text" name="uz_f[telefon]" value="<?= h($uzFilters['telefon'] ?? '') ?>"></th>
-                <th class="c-email"><input class="filter-input" type="text" name="uz_f[email]" value="<?= h($uzFilters['email'] ?? '') ?>"></th>
+                <th class="c-prijmeni"><input class="filter-input" style="width:10ch;" type="text" name="uz_f[prijmeni]" value="<?= h($uzFilters['prijmeni'] ?? '') ?>"></th>
+                <th class="c-jmeno"><input class="filter-input" style="width:8ch;" type="text" name="uz_f[jmeno]" value="<?= h($uzFilters['jmeno'] ?? '') ?>"></th>
+                <th class="c-telefon"><input class="filter-input" style="width:10ch;" type="text" name="uz_f[telefon]" value="<?= h($uzFilters['telefon'] ?? '') ?>"></th>
+                <th class="c-email"><input class="filter-input" style="width:16ch;" type="text" name="uz_f[email]" value="<?= h($uzFilters['email'] ?? '') ?>"></th>
                 <th class="uzivatele_filter_reset" colspan="3">
                   <div class="filter-actions">
-                    <a class="icon-btn icon-x small" href="<?= h(cb_url('/?sekce=1')) ?>">×</a>
+                    <a class="icon-btn icon-x small" href="<?= h($formAction) ?>">×</a>
                   </div>
                 </th>
               </tr>

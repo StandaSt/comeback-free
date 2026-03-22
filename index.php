@@ -299,8 +299,6 @@ if (!function_exists('cb_asset_url')) {
 <script src="<?= h(cb_asset_url('js/karty_report_person.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/admin_karty.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/filtry.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/filtry_reset.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/strankovani.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/casovac_odhlaseni.js')) ?>"></script>
 
 </body>
