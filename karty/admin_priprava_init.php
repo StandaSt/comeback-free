@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 $initRowsByArea = [
     'Restia' => [],
-    'Smeny' => [],
+    'Směny' => [],
     'Google Sheets' => [],
 ];
-
+$hotovo_proc = 0;
+$celkova_procenta = 0;
 $initTotal = 0;
 $initHotovy = 0;
 $initRozpracovany = 0;
@@ -27,14 +28,11 @@ try {
             zdroj_dat,
             soubor,
             db_tabulky,
-            stav,
             procenta,
-            poznamka,
-            poradi,
-            aktivni
-        FROM init_scripty
-        WHERE aktivni = 1
-        ORDER BY hlavni_oblast ASC, poradi ASC, id_init_script ASC
+            poznamka
+            
+         FROM init_scripty
+         ORDER BY hlavni_oblast ASC, procenta DESC
     ';
 
     $res = $conn->query($sql);
@@ -48,28 +46,31 @@ try {
             $initRowsByArea[$area][] = $row;
             $initTotal++;
 
-            $stav = strtolower(trim((string)($row['stav'] ?? '')));
-            if ($stav === 'hotovy') {
+            $hotovo_proc = $hotovo_proc + $row['procenta'];
+            if ($row['procenta'] === '100') {
                 $initHotovy++;
-            } elseif ($stav === 'rozpracovany') {
-                $initRozpracovany++;
-            } elseif ($stav === 'není') {
+                
+            } elseif ($row['procenta'] === '0') {
                 $initNeni++;
+            } else {
+                $initRozpracovany++;
             }
         }
+
+        $celkova_procenta = ($hotovo_proc / $initTotal ) ;
         $res->free();
     }
 } catch (Throwable $e) {
     $initRowsByArea = [
         'Restia' => [],
-        'Smeny' => [],
+        'Směny' => [],
         'Google Sheets' => [],
     ];
     $initTotal = 0;
     $initHotovy = 0;
     $initRozpracovany = 0;
     $initNeni = 0;
-    $initError = 'Nacteni pripravy inicializace selhalo.';
+    $initError = 'Načtení přípravy inicializace - selhalo.';
 }
 
 if ($initError !== '') {
@@ -80,24 +81,24 @@ if ($initError !== '') {
         . '  <table class="table card_table_min">'
         . '    <tbody>'
         . '      <tr>'
-        . '        <td>Aktivni scripty celkem</td>'
+        . '        <td>Potřebné akce pro inicializaci:</td>'
         . '        <td style="text-align:right;"><strong>' . h((string)$initTotal) . '</strong></td>'
         . '      </tr>'
         . '      <tr>'
-        . '        <td>Stav hotovy</td>'
+        . '        <td>Dokončeno:</td>'
         . '        <td style="text-align:right;"><strong>' . h((string)$initHotovy) . '</strong></td>'
         . '      </tr>'
         . '      <tr>'
-        . '        <td>Stav rozpracovany</td>'
+        . '        <td>Rozpracované soubory:</td>'
         . '        <td style="text-align:right;"><strong>' . h((string)$initRozpracovany) . '</strong></td>'
         . '      </tr>'
         . '      <tr>'
-        . '        <td>Stav neni</td>'
+        . '        <td>Nemá soubor:</td>'
         . '        <td style="text-align:right;"><strong>' . h((string)$initNeni) . '</strong></td>'
         . '      </tr>'
         . '    </tbody>'
         . '  </table>'
-        . '</div>';
+        . '</div><br><strong>  Celkový stav inicializace: </strong>' .  $celkova_procenta  . ' %';
 }
 
 ob_start();
@@ -105,11 +106,8 @@ ob_start();
 <?php if ($initError !== ''): ?>
   <p class="card_text card_text_muted"><?= h($initError) ?></p>
 <?php else: ?>
-<div class="karta-max">
-  <div class="karta-header">
-    <h4 style="margin:0; font-size:1.13rem; font-weight:700;">Příprava inicializace - detailní stav</h4>
-    <div style="font-size:0.97em;color:#555; margin-bottom: 8px;">Souhrnný přehled aktivních přípravných skriptů pro Restia, Směny, Google Sheets.</div>
-  </div>
+<div class="karta-max" style="height:calc(100dvh - 250px);">
+
   <div class="karta-tablewrap">
     <table class="karta-table">
       <thead class="karta-thead-sticky">
@@ -119,8 +117,7 @@ ob_start();
           <th>Zdroj dat</th>
           <th>Soubor</th>
           <th>DB tabulky</th>
-          <th>Stav</th>
-          <th>Hotovo %</th>
+          <th>Hotovo</th>
           <th>Poznamka</th>
         </tr>
       </thead>
@@ -131,8 +128,8 @@ ob_start();
             $areaColor = '';
             if ($areaName === 'Restia') {
                 $areaColor = '#ffeaea';
-            } elseif ($areaName === 'Smeny') {
-                $areaColor = '#eaf3ff';
+            } elseif ($areaName === 'Směny') {
+                $areaColor = '#94c1ee';
             } elseif ($areaName === 'Google Sheets') {
                 $areaColor = '#eaffef';
             }
@@ -144,7 +141,7 @@ ob_start();
           <?php if (!$areaRows): ?>
             <tr
 >
-              <td colspan="8">Zadne aktivni zaznamy</td>
+              <td colspan="8">Žádné aktivní záznamy</td>
             </tr>
           <?php else: ?>
             <?php foreach ($areaRows as $row): ?>
@@ -153,8 +150,7 @@ ob_start();
               $nazev = trim((string)($row['nazev'] ?? ''));
               $zdrojDat = trim((string)($row['zdroj_dat'] ?? ''));
               $soubor = trim((string)($row['soubor'] ?? ''));
-              $dbTabulky = trim((string)($row['db_tabulc jiného - pouze ky'] ?? ''));
-              $stav = trim((string)($row['stav'] ?? ''));
+              $dbTabulky = trim((string)($row['db_tabulky'] ?? ''));
               $procenta = (int)($row['procenta'] ?? 0);
               $poznamka = trim((string)($row['poznamka'] ?? ''));
 
@@ -167,30 +163,34 @@ ob_start();
               if ($zdrojDat === '') {
                   $zdrojDat = '-';
               }
-              if ($soubor === '') {
+              if ($soubor === 'není') {
                   $soubor = '-';
               }
               if ($dbTabulky === '') {
                   $dbTabulky = '-';
-              }
-              if ($stav === '') {
-                  $stav = '-';
               }
               if ($poznamka === '') {
                   $poznamka = '-';
               }
 
               $isHotovo100 = $procenta === 100;
-              $isSouborNeni = (preg_match('~^nen(i|\x{ED})$~ui', $soubor) === 1);
+              $isHotovo0 = $procenta === 0;
+              $styleProcenta = ' style="text-align:right;"';
+              if ($isHotovo100) {
+                  $styleProcenta = ' style="color:#1b7f2a; font-weight:700; text-align:right;"';
+              }
+
+              if ($isHotovo0) {
+                  $styleProcenta = ' style="color:#b00020; font-weight:700; text-align:right;"';
+              }
               ?>
               <tr>
                 <td><?= h($krok) ?></td>
                 <td><?= h($nazev) ?></td>
                 <td><?= h($zdrojDat) ?></td>
-                <td<?= $isSouborNeni ? ' style="color:#b00020; font-weight:700;"' : '' ?>><?= h($soubor) ?></td>
+                <td><?= h($soubor) ?></td>
                 <td><?= h($dbTabulky) ?></td>
-                <td><?= h($stav) ?></td>
-                <td<?= $isHotovo100 ? ' style="color:#1b7f2a; font-weight:700;"' : '' ?>><?= h((string)$procenta) ?> %</td>
+               <td<?= $styleProcenta ?>><?= h((string)$procenta) ?> %</td>
                 <td style="white-space:pre-wrap;"><?= h($poznamka) ?></td>
               </tr>
             <?php endforeach; ?>
