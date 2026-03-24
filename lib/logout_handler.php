@@ -1,0 +1,26 @@
+<?php
+/* =========================
+   0) Logout (GET)
+   ========================= */
+if (isset($_GET['action']) && (string)$_GET['action'] === 'logout') {
+    $cbUser = $_SESSION['cb_user'] ?? null;
+    if (is_array($cbUser) && !empty($cbUser['id_user'])) {
+        $idUser = (int)$cbUser['id_user'];
+        try {
+            $stmt = db()->prepare('INSERT INTO user_login (id_user, akce) VALUES (?,0)');
+            if ($stmt) {
+                $stmt->bind_param('i', $idUser);
+                $stmt->execute();
+                $stmt->close();
+            }
+        } catch (Throwable $e) {
+            // tichy fail - logout musi pokracovat i kdyz log selze
+        }
+    }
+
+    $_SESSION = [];
+    session_destroy();
+
+    header('Location: ' . cb_url('/'));
+    exit;
+}
