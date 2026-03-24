@@ -25,6 +25,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 require_once __DIR__ . '/lib/app.php';
 require_once __DIR__ . '/lib/system.php';
 require_once __DIR__ . '/config/secrets.php';
+require_once __DIR__ . '/lib/restia_access_exist.php';
 
 /* =========================
    0) Logout (GET)

@@ -27,12 +27,13 @@ try {
             nazev,
             zdroj_dat,
             soubor,
+            poradi,
             db_tabulky,
             procenta,
+            spousti,
             poznamka
-            
-         FROM init_scripty
-         ORDER BY hlavni_oblast ASC, procenta DESC
+        FROM init_scripty
+        ORDER BY hlavni_oblast ASC, poradi ASC
     ';
 
     $res = $conn->query($sql);
@@ -113,12 +114,13 @@ ob_start();
       <thead class="karta-thead-sticky">
         <tr>
           <th>Krok</th>
-          <th>Nazev scriptu</th>
+          <th>Název skriptu</th>
           <th>Zdroj dat</th>
           <th>Soubor</th>
           <th>DB tabulky</th>
           <th>Hotovo</th>
-          <th>Poznamka</th>
+          <th>Spouští</th>
+          <th>Poznámka</th>
         </tr>
       </thead>
       <tbody>
@@ -152,6 +154,7 @@ ob_start();
               $soubor = trim((string)($row['soubor'] ?? ''));
               $dbTabulky = trim((string)($row['db_tabulky'] ?? ''));
               $procenta = (int)($row['procenta'] ?? 0);
+              $spousti = trim((string)($row['spousti'] ?? ''));
               $poznamka = trim((string)($row['poznamka'] ?? ''));
 
               if ($krok === '') {
@@ -168,6 +171,9 @@ ob_start();
               }
               if ($dbTabulky === '') {
                   $dbTabulky = '-';
+              }
+             if ($spousti === '') {
+                  $spousti = '-';
               }
               if ($poznamka === '') {
                   $poznamka = '-';
@@ -186,11 +192,12 @@ ob_start();
               ?>
               <tr>
                 <td><?= h($krok) ?></td>
-                <td><?= h($nazev) ?></td>
-                <td><?= h($zdrojDat) ?></td>
-                <td><?= h($soubor) ?></td>
-                <td><?= h($dbTabulky) ?></td>
-               <td<?= $styleProcenta ?>><?= h((string)$procenta) ?> %</td>
+                <td><?= $nazev ?></td>
+                <td><?= $zdrojDat ?></td>
+                <td><?= $soubor ?></td>
+                <td><?= $dbTabulky ?></td>
+                <td<?= $styleProcenta ?>><?= h((string)$procenta) ?> %</td>
+                <td><?= h($spousti) ?></td>
                 <td style="white-space:pre-wrap;"><?= h($poznamka) ?></td>
               </tr>
             <?php endforeach; ?>
