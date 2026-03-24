@@ -41,7 +41,6 @@ if (!function_exists('cb_asset_url')) {
 <link rel="stylesheet" href="<?= h(cb_asset_url('style/1/karty/zadani_reportu.css')) ?>">
 
 <!-- moduly (globalne pouzivane) -->
-<link rel="stylesheet" href="<?= h(cb_asset_url('style/1/menu.css')) ?>">
 <link rel="stylesheet" href="<?= h(cb_asset_url('style/1/tabulky.css')) ?>">
 <!-- <link rel="stylesheet" href="<?= h(cb_url('style/1/menu_tlac.css')) ?>">  -->
 <link rel="stylesheet" href="<?= h(cb_asset_url('style/1/ikony_svg.css')) ?>">

@@ -1,5 +1,5 @@
 <?php
-// includes/log_a_404.php * Verze: V1 * Aktualizace: 06.03.2026
+// includes/log_a_404.php * Verze: V2 * Aktualizace: 24.03.2026
 declare(strict_types=1);
 
 /*
@@ -11,8 +11,13 @@ declare(strict_types=1);
  *
  * Výstup:
  * - nastaví $cbPageExists
- * - při 404 zkusí zapsat záznam do DB tabulky chyba
+ * - při 404 zapíše záznam přes db_zapis_log_chyby()
  */
+
+require_once __DIR__ . '/../db/zapis_log_chyby.php';
+
+$file = $file ?? '';
+$pageKey = $pageKey ?? '';
 
 $cbPageExists = is_file($file);
 
@@ -23,56 +28,31 @@ if (!$cbPageExists) {
         $cbUser = $_SESSION['cb_user'] ?? null;
         $idUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : null;
 
-        $prostredi = (string)($GLOBALS['PROSTREDI'] ?? '');
-        if ($prostredi === '') {
-            $prostredi = 'UNKNOWN';
-        }
-
         $url = (string)($_SERVER['REQUEST_URI'] ?? '');
         if ($url === '') {
-            $url = 'UNKNOWN';
+            $url = null;
         }
 
-        $metoda = (string)($_SERVER['REQUEST_METHOD'] ?? '');
-        $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '');
-        $ua = (string)($_SERVER['HTTP_USER_AGENT'] ?? '');
+        db_zapis_log_chyby(
+            conn: db(),
+            idUser: $idUser,
+            modul: 'HTTP',
+            akce: '404',
+            kod: 'PAGE_NOT_FOUND',
+            zprava: 'Stránka nenalezena',
+            detail: json_encode([
+                'pageKey' => $pageKey,
+                'file' => $file,
+            ], JSON_UNESCAPED_UNICODE),
+            soubor: __FILE__,
+            radek: __LINE__,
+            url: $url,
+            dataJson: null,
+            vyreseno: 0,
+            poznamka: null
+        );
 
-        $oblast = 'HTTP';
-        $kod = '404';
-        $zprava = 'Stránka nenalezena';
-
-        $detail = json_encode([
-            'pageKey' => $pageKey,
-            'file' => $file,
-        ], JSON_UNESCAPED_UNICODE);
-
-        $conn = db();
-
-        $stmt = $conn->prepare('\n            INSERT INTO chyba\n            (prostredi, url, page, metoda, ip, user_agent, id_user, zavaznost, oblast, kod, zprava, detail)\n            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)\n        ');
-
-        if ($stmt) {
-            $zavaznost = 2;
-
-            $stmt->bind_param(
-                'ssssssiissss',
-                $prostredi,
-                $url,
-                $pageKey,
-                $metoda,
-                $ip,
-                $ua,
-                $idUser,
-                $zavaznost,
-                $oblast,
-                $kod,
-                $zprava,
-                $detail
-            );
-
-            $stmt->execute();
-            $stmt->close();
-        }
     } catch (Throwable $e) {
-        // Logování 404 nikdy nesmí shodit stránku.
+        // logování nesmí shodit aplikaci
     }
 }
