@@ -1,14 +1,16 @@
-// js/karty_min_max.js * Verze: V1 * Aktualizace: 09.03.2026
+// js/karty_min_max.js * Verze: V2 * Aktualizace: 25.03.2026
 'use strict';
 
 (function (w) {
-  const ICON_MAX = '\u2922'; // ⤢
-  const ICON_MIN = '\u2212'; // −
+  const ICON_MAX = '\u2922';
+  const ICON_MIN = '\u2212';
   let activeMaxi = null;
   const CARD_ROOT_SELECTOR = '.card_shell';
   const CARD_TOGGLE_SELECTOR = '[data-card-toggle]';
   const CARD_COMPACT_SELECTOR = '[data-card-compact]';
   const CARD_EXPANDED_SELECTOR = '[data-card-expanded]';
+  const CARD_TO_NANO_SELECTOR = '[data-card-to-nano]';
+  const CARD_NANO_TARGET_SELECTOR = '[data-card-nano-target]';
 
   function getDashBox(root) {
     if (!root) return null;
@@ -36,17 +38,7 @@
   }
 
   function getCardRoots() {
-    const roots = new Set();
-
-    document.querySelectorAll(CARD_TOGGLE_SELECTOR).forEach((toggle) => {
-      if (!(toggle instanceof HTMLElement)) return;
-      const root = toggle.closest(CARD_ROOT_SELECTOR);
-      if (root instanceof HTMLElement) {
-        roots.add(root);
-      }
-    });
-
-    return Array.from(roots);
+    return Array.from(document.querySelectorAll(CARD_ROOT_SELECTOR)).filter((el) => el instanceof HTMLElement);
   }
 
   function getLayer(dashBox) {
@@ -78,6 +70,31 @@
     subtitle.textContent = isExpanded ? maxText : minText;
   }
 
+  function requestCardMode(cardId, mode) {
+    return fetch('index.php', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Comeback-Set-Card-Mode': '1'
+      },
+      body: JSON.stringify({ id_karta: cardId, mode: mode })
+    }).then((r) => r.json().catch(() => ({})));
+  }
+
+  function reloadAfterNanoSwitch(root, pendingMode) {
+    const dashCard = getDashCard(root);
+    if (dashCard) {
+      dashCard.classList.add('is-nano-switching');
+    }
+    if (pendingMode === 'maxi') {
+      const cardId = String(root.getAttribute('data-card-id') || '').trim();
+      if (cardId !== '') {
+        try { w.sessionStorage.setItem('cb_open_maxi_card_id', cardId); } catch (e) {}
+      }
+    }
+    w.setTimeout(() => { w.location.reload(); }, 180);
+  }
+
   function closeActiveMaxi() {
     if (!activeMaxi) return;
 
@@ -93,11 +110,15 @@
       stage,
       overlayCard,
       expandedNextSibling,
-      overlayToggle
+      overlayToggle,
+      overlayNanoBtn
     } = item;
 
     if (overlayToggle) {
       overlayToggle.removeEventListener('click', item.handleOverlayClose);
+    }
+    if (overlayNanoBtn) {
+      overlayNanoBtn.removeEventListener('click', item.handleOverlayNano);
     }
 
     if (expanded && root) {
@@ -165,10 +186,18 @@
     const head = getCardHead(root);
     const headClone = head ? head.cloneNode(true) : document.createElement('div');
     const overlayToggle = headClone.querySelector(toggleSel);
+    const overlayNanoBtn = headClone.querySelector(CARD_TO_NANO_SELECTOR);
 
     const expandedNextSibling = expanded.nextSibling;
     const handleOverlayClose = () => {
       closeActiveMaxi();
+    };
+    const handleOverlayNano = () => {
+      const cardId = parseInt(String(root.getAttribute('data-card-id') || '0'), 10);
+      if (cardId <= 0) return;
+      requestCardMode(cardId, 'nano').then(() => {
+        reloadAfterNanoSwitch(root, 'mini');
+      }).catch(() => {});
     };
 
     expanded.classList.remove('is-hidden');
@@ -184,6 +213,9 @@
     if (overlayToggle) {
       updateToggle(overlayToggle, true);
       overlayToggle.addEventListener('click', handleOverlayClose);
+    }
+    if (overlayNanoBtn) {
+      overlayNanoBtn.addEventListener('click', handleOverlayNano);
     }
 
     if (headClone) {
@@ -211,8 +243,10 @@
       stage,
       overlayCard,
       overlayToggle,
+      overlayNanoBtn,
       expandedNextSibling,
-      handleOverlayClose
+      handleOverlayClose,
+      handleOverlayNano
     };
   }
 
@@ -246,10 +280,43 @@
     if (!root || root.getAttribute('data-card-init') === '1') return;
     root.setAttribute('data-card-init', '1');
 
+    const mode = String(root.getAttribute('data-card-mode') || 'mini').trim();
+    const cardId = parseInt(String(root.getAttribute('data-card-id') || '0'), 10);
+    const compact = root.querySelector(CARD_COMPACT_SELECTOR);
+    const expanded = root.querySelector(CARD_EXPANDED_SELECTOR);
+
+    if (mode === 'nano') {
+      if (compact) compact.classList.add('is-hidden');
+      if (expanded) expanded.classList.add('is-hidden');
+
+      const nanoHead = getCardHead(root);
+      if (nanoHead) {
+        nanoHead.addEventListener('dblclick', () => {
+          if (!Number.isFinite(cardId) || cardId <= 0) return;
+          requestCardMode(cardId, 'maxi').then(() => {
+            reloadAfterNanoSwitch(root, 'maxi');
+          }).catch(() => {});
+        });
+      }
+
+      const nanoTargets = root.querySelectorAll(CARD_NANO_TARGET_SELECTOR);
+      nanoTargets.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          if (!Number.isFinite(cardId) || cardId <= 0) return;
+          const target = String(btn.getAttribute('data-card-nano-target') || 'mini').trim();
+          if (!['mini', 'maxi'].includes(target)) return;
+          requestCardMode(cardId, target).then(() => {
+            reloadAfterNanoSwitch(root, target);
+          }).catch(() => {});
+        });
+      });
+      return;
+    }
+
     const toggle = root.querySelector(CARD_TOGGLE_SELECTOR);
     const head = getCardHead(root);
 
-    if (!toggle || !head || !root.querySelector(CARD_COMPACT_SELECTOR) || !root.querySelector(CARD_EXPANDED_SELECTOR)) {
+    if (!toggle || !head || !compact || !expanded) {
       return;
     }
 
@@ -260,6 +327,16 @@
       const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
       setExpanded(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR, !isExpanded);
     });
+
+    const nanoBtn = root.querySelector(CARD_TO_NANO_SELECTOR);
+    if (nanoBtn) {
+      nanoBtn.addEventListener('click', () => {
+        if (!Number.isFinite(cardId) || cardId <= 0) return;
+        requestCardMode(cardId, 'nano').then(() => {
+          reloadAfterNanoSwitch(root, 'mini');
+        }).catch(() => {});
+      });
+    }
 
     head.addEventListener('dblclick', (event) => {
       if (event.target instanceof Element && event.target.closest(CARD_TOGGLE_SELECTOR)) {
@@ -281,7 +358,18 @@
   }
 
   function initKartyMinMax() {
-    getCardRoots().forEach(initCard);
+    const roots = getCardRoots();
+    roots.forEach(initCard);
+
+    let pendingCardId = '';
+    try { pendingCardId = String(w.sessionStorage.getItem('cb_open_maxi_card_id') || ''); } catch (e) {}
+    if (pendingCardId !== '') {
+      const root = roots.find((r) => String(r.getAttribute('data-card-id') || '') === pendingCardId && String(r.getAttribute('data-card-mode') || '') !== 'nano');
+      if (root) {
+        openMaxi(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR);
+      }
+      try { w.sessionStorage.removeItem('cb_open_maxi_card_id'); } catch (e) {}
+    }
   }
 
   function wireOnce() {
@@ -308,5 +396,5 @@
   }
 })(window);
 
-// js/karty_min_max.js * Verze: V1 * Aktualizace: 09.03.2026
+// js/karty_min_max.js * Verze: V2 * Aktualizace: 25.03.2026
 // Konec souboru
