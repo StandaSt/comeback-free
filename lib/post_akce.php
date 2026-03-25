@@ -23,8 +23,156 @@ if (
         exit;
     }
 
+    $cbUser = $_SESSION['cb_user'] ?? null;
+    $idUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
+    if ($idUser <= 0) {
+        http_response_code(401);
+        echo json_encode(['ok' => false, 'err' => 'Nutne prihlaseni'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    try {
+        $allowed = cb_pobocky_get_allowed_for_user($idUser);
+    } catch (Throwable $e) {
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'err' => 'Nelze nacist povolene pobocky'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    $allowedIds = $allowed['ids'];
+    if (!in_array($idPob, $allowedIds, true)) {
+        http_response_code(403);
+        echo json_encode(['ok' => false, 'err' => 'Pobocka neni uzivateli povolena'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    cb_pobocky_set_selected([$idPob]);
+    cb_pobocky_set_mode('single', null);
     $_SESSION['cb_pobocka_id'] = $idPob;
     echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/* =========================
+   0b) Nastaveni multi-vyberu pobocek (POST)
+   ========================= */
+if (
+    ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
+    && isset($_SERVER['HTTP_X_COMEBACK_SET_BRANCHES'])
+) {
+    header('Content-Type: application/json; charset=utf-8');
+
+    $cbUser = $_SESSION['cb_user'] ?? null;
+    $idUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
+    if ($idUser <= 0) {
+        http_response_code(401);
+        echo json_encode(['ok' => false, 'err' => 'Nutne prihlaseni'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $raw = (string)file_get_contents('php://input');
+    $data = json_decode($raw, true);
+    if (!is_array($data)) {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'err' => 'Neplatný JSON'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $mode = trim((string)($data['mode'] ?? ''));
+    if (!in_array($mode, ['area', 'custom'], true)) {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'err' => 'Neplatný režim výběru'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    try {
+        $allowed = cb_pobocky_get_allowed_for_user($idUser);
+    } catch (Throwable $e) {
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'err' => 'Nelze načíst povolené pobočky'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $allowedIds = $allowed['ids'];
+    $allowedIdSet = array_fill_keys($allowedIds, true);
+    if (!$allowedIds) {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'err' => 'Uživatel nemá povolené pobočky'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    if ($mode === 'area') {
+        $rawOblasti = $data['selected_oblasti'] ?? [];
+        if (!is_array($rawOblasti)) {
+            $rawOblasti = [];
+        }
+        $singleOblast = trim((string)($data['selected_oblast'] ?? ''));
+        if ($singleOblast !== '') {
+            $rawOblasti[] = $singleOblast;
+        }
+
+        $selectedOblastiMap = [];
+        foreach ($rawOblasti as $o) {
+            $o = trim((string)$o);
+            if ($o !== '') {
+                $selectedOblastiMap[$o] = true;
+            }
+        }
+        $selectedOblasti = array_keys($selectedOblastiMap);
+        sort($selectedOblasti);
+
+        if (!$selectedOblasti) {
+            http_response_code(422);
+            echo json_encode(['ok' => false, 'err' => 'Oblast není vybrána'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $areaMap = $allowed['oblasti'];
+        $idsMap = [];
+        foreach ($selectedOblasti as $oblast) {
+            $areaIds = $areaMap[$oblast] ?? [];
+            foreach ($areaIds as $idPob) {
+                $idsMap[(int)$idPob] = true;
+            }
+        }
+        $ids = array_keys($idsMap);
+        sort($ids);
+        if (!$ids) {
+            http_response_code(422);
+            echo json_encode(['ok' => false, 'err' => 'Oblast nemá povolené pobočky'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        cb_pobocky_set_selected($ids);
+        cb_pobocky_set_mode('area', $selectedOblasti[0]);
+        $_SESSION['selected_oblasti'] = $selectedOblasti;
+        echo json_encode(['ok' => true, 'count' => count($ids), 'oblasti' => $selectedOblasti], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $rawIds = $data['selected_pobocky'] ?? [];
+    $ids = cb_pobocky_sanitize_ids($rawIds);
+    if (!$ids) {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'err' => 'Není vybrána žádná pobočka'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $valid = [];
+    foreach ($ids as $id) {
+        if (isset($allowedIdSet[$id])) {
+            $valid[] = $id;
+        }
+    }
+    if (!$valid) {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'err' => 'Vybrané pobočky nejsou povolené'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    cb_pobocky_set_selected($valid);
+    cb_pobocky_set_mode('custom', null);
+    $_SESSION['selected_oblasti'] = [];
+    echo json_encode(['ok' => true, 'count' => count($valid)], JSON_UNESCAPED_UNICODE);
     exit;
 }
 

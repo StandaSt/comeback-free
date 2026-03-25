@@ -26,6 +26,9 @@ require_once __DIR__ . '/lib/app.php';
 require_once __DIR__ . '/lib/system.php';
 require_once __DIR__ . '/config/secrets.php';
 require_once __DIR__ . '/config/secrets.php';
+require_once __DIR__ . '/lib/pobocky_vyber.php';
+
+cb_pobocky_bootstrap_session();
 
 require_once __DIR__ . '/lib/detektuj_neplatnou_url.php';
 
@@ -167,6 +170,7 @@ if (!function_exists('cb_asset_url')) {
 <script src="<?= h(cb_asset_url('js/karty_report_restia.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_report_form.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_report_person.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/select_pobocky.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/admin_karty.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/filtry.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/casovac_odhlaseni.js')) ?>"></script>

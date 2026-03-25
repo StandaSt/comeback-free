@@ -105,22 +105,43 @@ $cbThermoPct = (int)round(min(100, max(0, ($cbTimeoutMin > 0 ? (($cbIdleMin / $c
 
 // Seznam pobocek pro vyber v hlavicce.
 $cbPobocky = [];
-$cbPobockaId = (int)($_SESSION['cb_pobocka_id'] ?? 0);
+$cbSelectedPobocky = get_selected_pobocky();
+$cbSelectedMode = trim((string)($_SESSION['selected_pobocky_mode'] ?? ''));
+$cbPobockaMultiFromCard = in_array($cbSelectedMode, ['area', 'custom'], true);
+$cbPobockaId = 0;
+if (!$cbPobockaMultiFromCard && !empty($cbSelectedPobocky)) {
+    $cbPobockaId = (int)$cbSelectedPobocky[0];
+}
 
 if ($cbLoginOk) {
     try {
         $conn = db();
-        $sql = 'SELECT id_pob, nazev FROM pobocka ORDER BY nazev ASC';
-        $res = $conn->query($sql);
-        if ($res instanceof mysqli_result) {
-            while ($r = $res->fetch_assoc()) {
-                $id = (int)($r['id_pob'] ?? 0);
-                $nazev = trim((string)($r['nazev'] ?? ''));
-                if ($id > 0 && $nazev !== '') {
-                    $cbPobocky[] = ['id_pob' => $id, 'nazev' => $nazev];
+        $idUser = (int)($cbUser['id_user'] ?? 0);
+        if ($idUser > 0) {
+            $sql = '
+                SELECT p.id_pob, p.nazev
+                FROM user_pobocka up
+                INNER JOIN pobocka p ON p.id_pob = up.id_pob
+                WHERE up.id_user = ?
+                ORDER BY p.nazev ASC
+            ';
+            $stmt = $conn->prepare($sql);
+            if ($stmt) {
+                $stmt->bind_param('i', $idUser);
+                $stmt->execute();
+                $res = $stmt->get_result();
+                if ($res instanceof mysqli_result) {
+                    while ($r = $res->fetch_assoc()) {
+                        $id = (int)($r['id_pob'] ?? 0);
+                        $nazev = trim((string)($r['nazev'] ?? ''));
+                        if ($id > 0 && $nazev !== '') {
+                            $cbPobocky[] = ['id_pob' => $id, 'nazev' => $nazev];
+                        }
+                    }
+                    $res->close();
                 }
+                $stmt->close();
             }
-            $res->close();
         }
     } catch (Throwable $e) {
         $cbPobocky = [];
@@ -128,16 +149,18 @@ if ($cbLoginOk) {
 }
 
 if ($cbPobocky) {
-    $exists = false;
-    foreach ($cbPobocky as $p) {
-        if ((int)$p['id_pob'] === $cbPobockaId) {
-            $exists = true;
-            break;
+    if (!$cbPobockaMultiFromCard) {
+        $exists = false;
+        foreach ($cbPobocky as $p) {
+            if ((int)$p['id_pob'] === $cbPobockaId) {
+                $exists = true;
+                break;
+            }
         }
-    }
-    if (!$exists) {
-        $cbPobockaId = (int)$cbPobocky[0]['id_pob'];
-        $_SESSION['cb_pobocka_id'] = $cbPobockaId;
+        if (!$exists) {
+            $cbPobockaId = (int)$cbPobocky[0]['id_pob'];
+            cb_pobocky_set_selected([$cbPobockaId]);
+        }
     }
 }
 ?>

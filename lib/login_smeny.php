@@ -143,7 +143,7 @@ try {
         'sloty_count' => (string)count($sloty),
     ]);
 
-    // 2) Pobočky: workingBranchNames (seznam povolených poboček uživatele)
+    // 2) Pobočky: workingBranchNames + mainBranchName
     cb_login_log_line('gql_branches_request', ['id_user' => (string)$idUser]);
 
     $br = cb_smeny_graphql(
@@ -151,6 +151,7 @@ try {
         'query{
             userGetLogged{
                 workingBranchNames
+                mainBranchName
             }
         }',
         [],
@@ -167,10 +168,15 @@ try {
     if (!is_array($working)) {
         $working = [];
     }
+    $mainBranchName = trim((string)($brUser['mainBranchName'] ?? ''));
+    if ($mainBranchName === '') {
+        $mainBranchName = null;
+    }
 
     cb_login_log_line('gql_branches_ok', [
         'id_user' => (string)$idUser,
         'working_count' => (string)count($working),
+        'main_branch' => (string)($mainBranchName ?? ''),
     ]);
 
     $_SESSION['cb_token'] = $token;
@@ -191,7 +197,7 @@ try {
 
     $_SESSION['cb_user_branches'] = [
         'workingBranchNames' => $working,
-        'mainBranchName' => null,
+        'mainBranchName' => $mainBranchName,
     ];
 
     require_once __DIR__ . '/zapis_dat_txt.php';

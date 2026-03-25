@@ -71,13 +71,22 @@ try {
     $conn = db();
     $conn->set_charset('utf8mb4');
 
+    $selectedPobocky = function_exists('get_selected_pobocky') ? get_selected_pobocky() : [];
+    $selectedPobocky = array_values(array_filter(array_map('intval', $selectedPobocky), static function (int $v): bool {
+        return $v > 0;
+    }));
+    $selectedWhere = '';
+    if ($selectedPobocky) {
+        $selectedWhere = ' WHERE z.id_pob IN (' . implode(',', $selectedPobocky) . ')';
+    }
+
     $sqlCount = '
         SELECT
             COUNT(*) AS total_cnt,
             SUM(CASE WHEN blokovany = 0 THEN 1 ELSE 0 END) AS active_cnt,
             SUM(CASE WHEN blokovany = 1 THEN 1 ELSE 0 END) AS blocked_cnt
         FROM zakaznik
-    ';
+    ' . $selectedWhere;
     $resCount = $conn->query($sqlCount);
     if ($resCount) {
         $row = $resCount->fetch_assoc() ?: [];
@@ -95,6 +104,7 @@ try {
             COUNT(o.id_obj) AS obj_count
         FROM objednavka o
         INNER JOIN zakaznik z ON z.id_zak = o.id_zak
+        ' . $selectedWhere . '
         GROUP BY z.id_zak, z.jmeno, z.prijmeni, z.mesto
         ORDER BY obj_count DESC, z.id_zak DESC
         LIMIT 3
@@ -128,6 +138,10 @@ try {
     }
 
     $where = [];
+    if ($selectedPobocky) {
+        $where[] = 'z.id_pob IN (' . implode(',', $selectedPobocky) . ')';
+    }
+
     if ($zakBlk !== 'all') {
         $where[] = 'z.blokovany = ' . (int)$zakBlk;
     }

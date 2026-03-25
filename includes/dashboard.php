@@ -31,9 +31,9 @@ function cb_dashboard_resolve_file(string $soubor): ?string
     return $full;
 }
 
-$sekce = (int)($cb_dashboard_sekce ?? 3);
-if (!in_array($sekce, [1, 2, 3], true)) {
-    $sekce = 3;
+$roleFilter = (int)(($_SESSION['cb_user']['id_role'] ?? 3));
+if (!in_array($roleFilter, [1, 2, 3], true)) {
+    $roleFilter = 3;
 }
 
 $idUser = (int)(($_SESSION['cb_user']['id_user'] ?? 0));
@@ -57,12 +57,12 @@ $stmt = db()->prepare('
     SELECT id_karta, nazev, subtitle_min, subtitle_max, soubor, min_role, aktivni, poradi
     FROM karty
     WHERE aktivni = 1
-      AND min_role = ?
+      AND min_role >= ?
     ORDER BY poradi ASC, id_karta ASC
 ');
 
 if ($stmt) {
-    $stmt->bind_param('i', $sekce);
+    $stmt->bind_param('i', $roleFilter);
     $stmt->execute();
     $stmt->bind_result($idKarta, $nazev, $subtitleMin, $subtitleMax, $soubor, $minRole, $aktivni, $poradi);
     while ($stmt->fetch()) {
@@ -81,11 +81,11 @@ if ($stmt) {
 }
 
 $emptyMap = [
-    3 => 'Zadna karta k zobrazeni (home)',
-    2 => 'Zadna karta k zobrazeni (manager)',
-    1 => 'Zadna karta k zobrazeni (admin)',
+    3 => 'Žádná karta k zobrazení',
+    2 => 'Žádná karta k zobrazení',
+    1 => 'Žádná karta k zobrazení',
 ];
-$emptyText = (string)($emptyMap[$sekce] ?? $emptyMap[3]);
+$emptyText = (string)($emptyMap[$roleFilter] ?? $emptyMap[3]);
 ?>
 
 <div class="dash_grid <?= h($dashColsClass) ?>">

@@ -5,8 +5,11 @@ declare(strict_types=1);
 <div class="head_branch" aria-label="Pobočka">
   <select id="cbPobockaSelect" class="head_branch_select" data-cb-branch-select="1" <?= $cbPobocky ? '' : 'disabled' ?> >
     <?php if ($cbPobocky): ?>
+      <?php if (!empty($cbPobockaMultiFromCard)): ?>
+        <option value="" selected>Vybráno z karty</option>
+      <?php endif; ?>
       <?php foreach ($cbPobocky as $p): ?>
-        <option value="<?= (int)$p['id_pob'] ?>"<?= ((int)$p['id_pob'] === (int)$cbPobockaId ? ' selected' : '') ?>><?= h($p['nazev']) ?></option>
+        <option value="<?= (int)$p['id_pob'] ?>"<?= (empty($cbPobockaMultiFromCard) && ((int)$p['id_pob'] === (int)$cbPobockaId) ? ' selected' : '') ?>><?= h($p['nazev']) ?></option>
       <?php endforeach; ?>
     <?php else: ?>
       <option value="">Pobočka</option>
