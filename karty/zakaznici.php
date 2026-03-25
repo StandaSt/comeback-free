@@ -85,7 +85,7 @@ try {
             COUNT(*) AS total_cnt,
             SUM(CASE WHEN blokovany = 0 THEN 1 ELSE 0 END) AS active_cnt,
             SUM(CASE WHEN blokovany = 1 THEN 1 ELSE 0 END) AS blocked_cnt
-        FROM zakaznik
+        FROM zakaznik z
     ' . $selectedWhere;
     $resCount = $conn->query($sqlCount);
     if ($resCount) {

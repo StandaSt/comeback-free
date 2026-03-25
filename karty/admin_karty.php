@@ -365,7 +365,6 @@ $tableHeadHtml = implode("\n", [
 <?php
 ob_start();
 ?>
-<p class="card_text"><strong>Přehled dashboard karet</strong></p>
 <div class="table-wrap">
   <table class="table card_table_min" aria-label="Přehled dashboard karet">
     <thead>

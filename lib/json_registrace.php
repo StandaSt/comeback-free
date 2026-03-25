@@ -33,6 +33,32 @@ if (isset($_GET['action']) && (string)$_GET['action'] === 'registrace_check') {
     if ($paired && !$loginOk && $cbAuthOk) {
         $_SESSION['login_ok'] = 1;
         unset($_SESSION['cb_auth_ok']);
+
+        try {
+            $today = (new DateTimeImmutable('today'))->format('Y-m-d');
+            $yesterday = (new DateTimeImmutable('yesterday'))->format('Y-m-d');
+
+            $stmtInitUserSet = db()->prepare('
+                INSERT INTO user_set (id_user, pocet_sl, obdobi_od, obdobi_do)
+                SELECT ?, 3, ?, ?
+                FROM DUAL
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM user_set WHERE id_user = ?
+                )
+            ');
+            if ($stmtInitUserSet) {
+                $stmtInitUserSet->bind_param('issi', $idUser, $yesterday, $today, $idUser);
+                $stmtInitUserSet->execute();
+                $inserted = ($stmtInitUserSet->affected_rows > 0);
+                $stmtInitUserSet->close();
+                if ($inserted) {
+                    $_SESSION['cb_obdobi_od'] = $yesterday;
+                    $_SESSION['cb_obdobi_do'] = $today;
+                }
+            }
+        } catch (Throwable $e) {
+            // Pri chybe nezastavuj registraci.
+        }
     }
 
     echo json_encode(['ok' => true, 'paired' => $paired], JSON_UNESCAPED_UNICODE);

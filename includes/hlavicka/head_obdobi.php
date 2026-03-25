@@ -1,28 +1,26 @@
 <?php
-// includes/hlavicka/head_obdobi.php * Verze: V2 * Aktualizace: 07.03.2026
+// includes/hlavicka/head_obdobi.php * Verze: V3 * Aktualizace: 25.03.2026
 ?>
 <div class="head_interval" aria-label="Období">
-  <!-- Řádek "Od" + rychlé volby -->
   <div class="head_int_row">
     <label class="head_date">
       <span>Od</span>
       <input type="date" id="cbObdobiOd" value="<?= h($cbObdobiOd) ?>">
     </label>
     <div class="head_quick">
-      <button type="button" class="head_pill<?= ($cbObdobiTyp === 'vcera' ? ' is-on' : '') ?>" data-range="vcera">Včera</button>
-      <button type="button" class="head_pill<?= ($cbObdobiTyp === 'tyden' ? ' is-on' : '') ?>" data-range="tyden">Týden</button>
+      <button type="button" class="head_pill" data-range="vcera">Včera</button>
+      <button type="button" class="head_pill" data-range="tyden">Týden</button>
     </div>
   </div>
 
-  <!-- Řádek "Do" + rychlé volby -->
   <div class="head_int_row">
     <label class="head_date">
       <span>Do</span>
       <input type="date" id="cbObdobiDo" value="<?= h($cbObdobiDo) ?>">
     </label>
     <div class="head_quick">
-      <button type="button" class="head_pill<?= ($cbObdobiTyp === 'mesic' ? ' is-on' : '') ?>" data-range="mesic">Měsíc</button>
-      <button type="button" class="head_pill<?= ($cbObdobiTyp === 'rok' ? ' is-on' : '') ?>" data-range="rok">Rok</button>
+      <button type="button" class="head_pill" data-range="mesic">Měsíc</button>
+      <button type="button" class="head_pill" data-range="rok">Rok</button>
     </div>
   </div>
 </div>
@@ -37,7 +35,6 @@
     return;
   }
 
-  // Převod Date -> YYYY-MM-DD.
   function fmtDate(dt){
     var y = dt.getFullYear();
     var m = String(dt.getMonth() + 1).padStart(2, '0');
@@ -45,28 +42,49 @@
     return y + '-' + m + '-' + d;
   }
 
-  // Aktivace vizuálního stavu u rychlých voleb.
+  function parseDate(v){
+    var s = String(v || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+    var parts = s.split('-');
+    var y = Number(parts[0]);
+    var m = Number(parts[1]);
+    var d = Number(parts[2]);
+    var dt = new Date(y, m - 1, d);
+    if (dt.getFullYear() !== y || (dt.getMonth() + 1) !== m || dt.getDate() !== d) {
+      return null;
+    }
+    dt.setHours(0, 0, 0, 0);
+    return dt;
+  }
+
+  function clampToToday(v){
+    var dt = parseDate(v);
+    if (!dt) return '';
+    var now = new Date();
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (dt.getTime() > today.getTime()) {
+      dt = today;
+    }
+    return fmtDate(dt);
+  }
+
   function setActive(range){
     quickBtns.forEach(function(btn){
       btn.classList.toggle('is-on', btn.getAttribute('data-range') === range);
     });
   }
 
-  // Uloží období do session přes index.php bez další akce.
-  function savePeriod(od, ddo, typ){
+  function savePeriod(payload){
     fetch('<?= h(cb_url('index.php')) ?>', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Comeback-Set-Period': '1'
       },
-      body: JSON.stringify({ od: od, do: ddo, typ: typ })
-    }).catch(function(){
-      // Zatím bez notifikace; jen tichý fail.
-    });
+      body: JSON.stringify(payload)
+    }).catch(function(){});
   }
 
-  // Vypočte hranice rychlé volby období.
   function computeRange(range){
     var now = new Date();
     var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -79,7 +97,7 @@
     }
 
     if (range === 'tyden') {
-      var day = today.getDay(); // 0 = nedele, 1 = pondeli
+      var day = today.getDay();
       var mondayShift = (day === 0 ? -6 : 1 - day);
       from.setDate(today.getDate() + mondayShift);
       to = new Date(from);
@@ -93,12 +111,10 @@
       return { od: fmtDate(from), do: fmtDate(to) };
     }
 
-    // "rok" = od 1.1. do dneška.
     from = new Date(today.getFullYear(), 0, 1);
     return { od: fmtDate(from), do: fmtDate(today) };
   }
 
-  // Klik na rychlou volbu nastaví datumy + uloží do session.
   quickBtns.forEach(function(btn){
     btn.addEventListener('click', function(){
       var range = btn.getAttribute('data-range') || 'vcera';
@@ -106,20 +122,36 @@
       odInput.value = val.od;
       doInput.value = val.do;
       setActive(range);
-      savePeriod(val.od, val.do, range);
+      savePeriod({ od: val.od, do: val.do });
     });
   });
 
-  // Ruční změna datumů přepne typ na "vlastni".
-  function onManualChange(){
-    if (!odInput.value || !doInput.value) {
-      return;
-    }
-    setActive('');
-    savePeriod(odInput.value, doInput.value, 'vlastni');
-  }
+  var todayStr = fmtDate(new Date());
+  odInput.max = todayStr;
+  doInput.max = todayStr;
 
-  odInput.addEventListener('change', onManualChange);
-  doInput.addEventListener('change', onManualChange);
+  odInput.addEventListener('change', function(){
+    setActive('');
+    var od = clampToToday(odInput.value);
+    var ddo = clampToToday(doInput.value);
+    if (!od || !ddo) return;
+    if (od > ddo) {
+      od = ddo;
+    }
+    odInput.value = od;
+    savePeriod({ od: od });
+  });
+
+  doInput.addEventListener('change', function(){
+    setActive('');
+    var od = clampToToday(odInput.value);
+    var ddo = clampToToday(doInput.value);
+    if (!od || !ddo) return;
+    if (ddo < od) {
+      ddo = od;
+    }
+    doInput.value = ddo;
+    savePeriod({ do: ddo });
+  });
 })();
 </script>

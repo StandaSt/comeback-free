@@ -37,11 +37,6 @@ $sysRestia = 'var';
 $today = (new DateTimeImmutable('today'))->format('Y-m-d');
 $yesterday = (new DateTimeImmutable('yesterday'))->format('Y-m-d');
 
-// Globalni filtr obdobi (bude platit pro KPI i karty dashboardu).
-$cbObdobiOd = (string)($_SESSION['cb_obdobi_od'] ?? $yesterday);
-$cbObdobiDo = (string)($_SESSION['cb_obdobi_do'] ?? $today);
-$cbObdobiTyp = (string)($_SESSION['cb_obdobi_typ'] ?? 'vcera');
-
 // Jednoducha validace formatu datumu YYYY-MM-DD.
 $isDate = static function (string $v): bool {
     if (!preg_match('~^\d{4}-\d{2}-\d{2}$~', $v)) {
@@ -51,15 +46,67 @@ $isDate = static function (string $v): bool {
     return checkdate($m, $d, $y);
 };
 
-if (!$isDate($cbObdobiOd)) {
-    $cbObdobiOd = $yesterday;
+// Globalni filtr obdobi (bude platit pro KPI i karty dashboardu).
+$cbObdobiOd = $yesterday;
+$cbObdobiDo = $today;
+$cbNeedInitUserSetPeriod = false;
+$cbUserIdForPeriod = (int)($cbUser['id_user'] ?? 0);
+
+if ($cbLoginOk && $cbUserIdForPeriod > 0) {
+    try {
+        $conn = db();
+        $stmtPeriod = $conn->prepare('SELECT obdobi_od, obdobi_do FROM user_set WHERE id_user = ? LIMIT 1');
+        if ($stmtPeriod) {
+            $stmtPeriod->bind_param('i', $cbUserIdForPeriod);
+            $stmtPeriod->execute();
+            $stmtPeriod->bind_result($dbObdobiOd, $dbObdobiDo);
+
+            $hasPeriod = false;
+            if ($stmtPeriod->fetch()) {
+                $tmpOd = trim((string)($dbObdobiOd ?? ''));
+                $tmpDo = trim((string)($dbObdobiDo ?? ''));
+                if (
+                    $isDate($tmpOd)
+                    && $isDate($tmpDo)
+                    && $tmpOd <= $today
+                    && $tmpDo <= $today
+                    && $tmpOd <= $tmpDo
+                ) {
+                    $cbObdobiOd = $tmpOd;
+                    $cbObdobiDo = $tmpDo;
+                    $hasPeriod = true;
+                }
+            }
+            $stmtPeriod->close();
+
+            if (!$hasPeriod) {
+                $cbNeedInitUserSetPeriod = true;
+            }
+        }
+
+        if ($cbNeedInitUserSetPeriod) {
+            $stmtInitPeriod = $conn->prepare('UPDATE user_set SET obdobi_od = ?, obdobi_do = ? WHERE id_user = ?');
+            if ($stmtInitPeriod) {
+                $stmtInitPeriod->bind_param('ssi', $cbObdobiOd, $cbObdobiDo, $cbUserIdForPeriod);
+                $stmtInitPeriod->execute();
+                $stmtInitPeriod->close();
+            }
+        }
+    } catch (Throwable $e) {
+        $cbObdobiOd = $yesterday;
+        $cbObdobiDo = $today;
+    }
+} else {
+    $sessionOd = trim((string)($_SESSION['cb_obdobi_od'] ?? ''));
+    $sessionDo = trim((string)($_SESSION['cb_obdobi_do'] ?? ''));
+    if ($isDate($sessionOd) && $isDate($sessionDo) && $sessionOd <= $sessionDo) {
+        $cbObdobiOd = $sessionOd;
+        $cbObdobiDo = $sessionDo;
+    }
 }
-if (!$isDate($cbObdobiDo)) {
-    $cbObdobiDo = $today;
-}
-if ($cbObdobiOd > $cbObdobiDo) {
-    [$cbObdobiOd, $cbObdobiDo] = [$cbObdobiDo, $cbObdobiOd];
-}
+
+$_SESSION['cb_obdobi_od'] = $cbObdobiOd;
+$_SESSION['cb_obdobi_do'] = $cbObdobiDo;
 
 // Data do user bloku.
 $cbLoginInfo = (is_array($_SESSION['cb_login_info'] ?? null)) ? $_SESSION['cb_login_info'] : [];
@@ -176,7 +223,6 @@ if ($cbPobocky) {
       </div>
 
       <nav class="head_bottom" aria-label="Dolni radek hlavicky">
-        <?php require __DIR__ . '/hlavicka/head_menu.php'; ?>
         <?php require __DIR__ . '/hlavicka/head_pobocka.php'; ?>
         <?php require __DIR__ . '/hlavicka/head_stav.php'; ?>
       </nav>

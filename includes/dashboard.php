@@ -40,7 +40,7 @@ $idUser = (int)(($_SESSION['cb_user']['id_user'] ?? 0));
 $dashColsClass = 'dash_cols_3';
 
 if ($idUser > 0) {
-    $stmtCols = db()->prepare('SELECT pocet_sl FROM `user` WHERE id_user = ? LIMIT 1');
+    $stmtCols = db()->prepare('SELECT pocet_sl FROM `user_set` WHERE id_user = ? LIMIT 1');
     if ($stmtCols) {
         $stmtCols->bind_param('i', $idUser);
         $stmtCols->execute();
@@ -102,6 +102,13 @@ $emptyText = (string)($emptyMap[$roleFilter] ?? $emptyMap[3]);
       $title = (string)($karta['nazev'] ?? '');
       $subtitleMin = (string)($karta['subtitle_min'] ?? '');
       $subtitleMax = (string)($karta['subtitle_max'] ?? '');
+      $minRole = (int)($karta['min_role'] ?? 3);
+      $cardTopRoleClass = '';
+      if ($minRole === 1) {
+          $cardTopRoleClass = ' card_top_role_1';
+      } elseif ($minRole === 2) {
+          $cardTopRoleClass = ' card_top_role_2';
+      }
       $card_min_html = '';
       $card_max_html = '';
       $legacy_html = '';
@@ -119,7 +126,7 @@ $emptyText = (string)($emptyMap[$roleFilter] ?? $emptyMap[3]);
       ?>
       <section class="dash_card card_blue" data-cb-dash-card="1">
         <article class="card_shell"<?= $startExpanded ? ' data-card-start-expanded="1"' : '' ?>>
-          <div class="card_top">
+          <div class="card_top<?= h($cardTopRoleClass) ?>">
             <div>
               <h3 class="card_title"><?= h($title) ?></h3>
               <p

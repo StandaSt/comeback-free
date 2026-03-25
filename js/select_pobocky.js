@@ -108,13 +108,7 @@
               saveBtn.disabled = false;
               return;
             }
-            var activeBtn = document.querySelector('.head_menu .head_menu_btn.is-on[data-sekce]');
-            var sekce = activeBtn ? String(activeBtn.getAttribute('data-sekce') || '').trim() : '';
-            if (sekce === '1' || sekce === '2' || sekce === '3') {
-              w.location.href = '?sekce=' + sekce;
-            } else {
-              w.location.href = '?sekce=3';
-            }
+            w.location.reload();
           })
           .catch(function () {
             alert('Uložení výběru selhalo.');

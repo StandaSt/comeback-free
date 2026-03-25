@@ -107,11 +107,11 @@ ob_start();
 <?php if ($initError !== ''): ?>
   <p class="card_text card_text_muted"><?= h($initError) ?></p>
 <?php else: ?>
-<div class="karta-max" style="height:calc(100dvh - 250px);">
+<div class="card_stack">
 
-  <div class="karta-tablewrap">
-    <table class="karta-table">
-      <thead class="karta-thead-sticky">
+  <div class="table-wrap">
+    <table class="table card_table_max">
+      <thead>
         <tr>
           <th>Krok</th>
           <th>Název skriptu</th>
@@ -206,59 +206,8 @@ ob_start();
       </tbody>
     </table>
   </div>
+</div>
 <?php endif; ?>
-<style>
-.karta-max {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  border-radius: 7px;
-  border: 1px solid #e0e0e0;
-  padding:0;
-  margin-bottom: 16px;
-  background:#fff;
-  box-shadow: 0 2px 8px 0 #e0e0e01c;
-}
-.karta-header {
-  position: relative;
-  padding: 16px 18px 6px 18px;
-  background: #f8f8fa;
-  border-bottom: 1px solid #e0e0e0;
-  z-index: 2;
-}
-.karta-tablewrap {
-  flex: 1 1 0;
-  min-height: 160px;
-  overflow: auto;
-  background: #fff;
-  border-radius: 0 0 7px 7px;
-}
-.karta-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-size:1em;
-  min-width: 820px;
-}
-.karta-table th, .karta-table td {
-  padding: 6px 9px;
-  border-bottom: 1px solid #ececec;
-  text-align:left;
-  background: #fff;
-}
-.karta-thead-sticky th {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  background: #f4f4f7;
-  border-bottom: 2px solid #c7d2ff;
-  box-shadow: 0 2px 4px #0001;
-  font-weight: 700;
-}
-.karta-table tr:last-child td {
-  border-bottom: none;
-}
-</style>
 <?php
 $card_max_html = (string)ob_get_clean();
 

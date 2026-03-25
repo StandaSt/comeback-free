@@ -12,8 +12,7 @@
 
 .table-wrap{
   overflow-x:auto;
-  overflow-y:auto;     /* přidat */
-  max-height:500px;    /* přidat – můžeš doladit */
+  overflow-y:auto;     /* scroll uvnitr tabulky */
   border:1px solid var(--border-strong);
   border-radius:12px;
   background:#fff;
@@ -43,9 +42,9 @@
   font-size:13px;
   color:#374151;
   font-weight:700;
-  position: sticky;   /* přidat */
-  top: 0;             /* přidat */
-  z-index: 2;         /* přidat */
+  position: sticky;   /* fixni hlavicka tabulky */
+  top: 0;
+  z-index: 2;
 }
 
 /* =========================

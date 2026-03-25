@@ -87,7 +87,6 @@ if (isset($_POST['cb_admin_smeny_akce']) && $_POST['cb_admin_smeny_akce'] === 'i
 }
 
 $card_min_html = ''
-    . '<p class="card_text"><strong>Nalezené záznamy v DB</strong></p>'
     . '<div class="table-wrap">'
     . '<table class="table">'
     . '<thead><tr style="border:0;"><th>Zdroj</th><th style="text-align:right;">záznamů</th><th style="text-align:right;">aktualizace</th></tr></thead>'

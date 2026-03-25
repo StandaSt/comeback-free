@@ -51,6 +51,14 @@
   background:rgba(15,23,42,.03);
 }
 
+.card_top_role_1{
+  background:#fef2f2;
+}
+
+.card_top_role_2{
+  background:#f0fdf4;
+}
+
 .card_title{
   margin:0;
   font-size:15px;
@@ -211,6 +219,49 @@
 
 .card_table_max .filter-input{
   width:auto;
+}
+
+/* Maxi rezim: scrolluje pouze obsah tabulky, hlavicka tabulky zustava fixni */
+.dash_maxi_card{
+  --accent:#3b82f6;
+  --accent_soft:#eaf2ff;
+  --accent_bd:rgba(59,130,246,0.35);
+
+  width:fit-content;
+  max-width:100%;
+  display:flex;
+  flex-direction:column;
+  height:100%;
+  min-height:0;
+  max-height:none;
+  background:#ffffff;
+  border:1px solid var(--accent_bd);
+  border-radius:14px;
+  box-shadow:0 18px 44px rgba(15,23,42,0.22);
+  overflow:hidden;
+}
+
+.dash_maxi_card .card_expanded{
+  flex:1 1 auto;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+}
+
+.dash_maxi_card .card_expanded .card_stack{
+  flex:1 1 auto;
+  min-height:0;
+}
+
+.dash_maxi_card .card_expanded .table-wrap{
+  flex:1 1 auto;
+  min-height:0;
+  max-height:none;
+}
+
+.dash_maxi_card .card_expanded .list-bottom{
+  flex:0 0 auto;
+  margin-top:0;
 }
 
 /* style/1/karty/karty.css * Verze: V6 * Aktualizace: 11.03.2026 */
