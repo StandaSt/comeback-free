@@ -1,0 +1,13 @@
+{
+  "name": "@shift-planner/deploy",
+  "private": true,
+  "version": "1.0.0",
+  "engines": {
+    "node": "14.15"
+  },
+  "scripts": {
+    "deploy:development": "ENVIROMENT=\"development\" bash client.sh && yarn fromOldConfig",
+    "deploy:production": "ENVIROMENT=\"production\" bash client.sh && yarn fromOldConfig",
+    "fromOldConfig": "cp ../shared/old-config/api.ts ../shared/config/api/index.ts && cp ../shared/old-config/app.ts ../shared/config/app/index.ts && rm -rf ../shared/old-config && mv ../api/ormconfig-old.json ../api/ormconfig.json && cd ../api && yarn conf"
+  }
+}

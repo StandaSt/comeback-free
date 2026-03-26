@@ -1,0 +1,94 @@
+{
+  "name": "@shift-planner/api",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": "14.15"
+  },
+  "scripts": {
+    "prebuild": "rimraf dist",
+    "predev": "rimraf dist",
+    "build": "nest build",
+    "dev": "nest start --watch",
+    "start": "node dist/main",
+    "prod:start": "forever start dist/main.js",
+    "prod:stop": "forever stop dist/main.js",
+    "prod:status": "forever list",
+    "fix": "tsc --noEmit && eslint '*/**/*.{ts,tsx,js}' --fix",
+    "conf": "cp -r ../shared/config/ ./src/",
+    "migration:run": "yarn migration:run:simple",
+    "migration:run:simple": "ts-node ./node_modules/.bin/typeorm migration:run",
+    "migration:revert": "yarn migration:revert:simple",
+    "migration:revert:simple": "ts-node ./node_modules/.bin/typeorm migration:revert",
+    "migration:generate": "ts-node ./node_modules/.bin/typeorm migration:generate",
+    "migration:create": "ts-node ./node_modules/.bin/typeorm migration:create",
+    "premigration:run": "yarn build",
+    "premigration:revert": "yarn build",
+    "premigration:generate": "yarn build",
+    "premigration:create": "yarn build",
+    "generate-vapid-keys": "web-push generate-vapid-keys"
+  },
+  "workspaces": {
+    "nohoist": [
+      "typeorm",
+      "typeorm/**"
+    ]
+  },
+  "dependencies": {
+    "@krystofrezac/coding-standard": "ssh://git@github.com:krystofrezac/coding-standard.git",
+    "@nestjs/common": "^6.7.2",
+    "@nestjs/core": "^6.7.2",
+    "@nestjs/graphql": "^6.5.3",
+    "@nestjs/jwt": "^6.1.1",
+    "@nestjs/passport": "^6.1.1",
+    "@nestjs/platform-express": "^6.7.2",
+    "@nestjs/schedule": "^0.4.1",
+    "@nestjs/schematics": "^6.8.2",
+    "@nestjs/typeorm": "^6.2.0",
+    "@ntegral/nestjs-sendgrid": "^1.0.0",
+    "@sendgrid/client": "^7.1.0",
+    "@sendgrid/helpers": "^7.0.1",
+    "@sendgrid/mail": "^7.1.0",
+    "@shift-planner/shared": "1.0.0",
+    "@types/passport-jwt": "^3.0.3",
+    "apollo-server-express": "^2.9.16",
+    "bcrypt": "^3.0.8",
+    "dateformat": "^3.0.3",
+    "dayjs": "^1.9.6",
+    "generate-password": "^1.5.1",
+    "graphql": "^14.5.8",
+    "graphql-tools": "^4.0.6",
+    "mysql": "^2.18.1",
+    "passport": "^0.4.1",
+    "passport-jwt": "^4.0.0",
+    "reflect-metadata": "^0.1.13",
+    "rimraf": "^3.0.0",
+    "string-template": "^1.0.0",
+    "type-graphql": "^0.17.6",
+    "typeorm": "^0.2.22",
+    "web-push": "^3.4.4"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^6.9.0",
+    "@types/bcrypt": "^3.0.0",
+    "@types/express": "^4.17.1",
+    "@types/string-template": "^1.0.2",
+    "@types/web-push": "^3.3.0",
+    "ts-node": "^8.4.1",
+    "typescript": "^3.6.3"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": "src",
+    "testRegex": ".spec.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "coverageDirectory": "../coverage",
+    "testEnvironment": "node"
+  }
+}

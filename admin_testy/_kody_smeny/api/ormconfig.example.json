@@ -1,0 +1,14 @@
+{
+  "type": "mysql",
+  "host": "",
+  "port": 3306,
+  "username": "",
+  "password": "",
+  "database": "shift-planner",
+  "entities": ["dist/**/*.entity.js"],
+
+  "migrations": ["dist/migrations/*.js"],
+  "cli": {
+    "migrationsDir": "src/migrations"
+  }
+}

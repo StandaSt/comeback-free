@@ -1,0 +1,13 @@
+# compiled output
+/dist
+/node_modules
+ormconfig.json
+config/
+# Logs
+logs
+*.log
+yarn-debug.log*
+yarn-error.log*
+
+# IDEs and editors
+/.idea
