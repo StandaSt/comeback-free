@@ -528,8 +528,8 @@
 }
 
 .dash_card.card_mode_nano{
-  height:45px;
-  min-height:45px;
+  height:49px;
+  min-height:49px;
 }
 
 .dash_card.card_mode_nano .card_shell{
@@ -568,6 +568,20 @@
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
+}
+
+.card_shell[data-card-mode="mini"] .card_top{
+  padding-top:4px;
+  padding-bottom:4px;
+}
+
+.card_shell[data-card-mode="mini"] .card_title{
+  line-height:1.15;
+}
+
+.card_shell[data-card-mode="mini"] .card_subtitle{
+  margin-top:0;
+  line-height:1.15;
 }
 
 .dash_card.is-nano-switching{

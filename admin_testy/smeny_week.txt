@@ -1,0 +1,36 @@
+TEST pobocek po tydnech
+cas startu: 2026-03-24 16:37:38
+rozsah skipWeeks: -284 az 0
+pobocky: 1, 2, 3, 4, 5, 6
+cyklus: 5
+----------------------------------------
+skipWeeks=-284 | id_pob=1 | datum_od=2020-10-19T00:00:00.000Z | ma_data=ANO | pocet_hodin=389
+skipWeeks=-284 | id_pob=2 | datum_od=2020-10-19T00:00:00.000Z | ma_data=ANO | pocet_hodin=597
+skipWeeks=-284 | id_pob=3 | datum_od=2020-10-19T00:00:00.000Z | ma_data=ANO | pocet_hodin=436
+skipWeeks=-284 | id_pob=4 | datum_od=2020-10-19T00:00:00.000Z | ma_data=NE | pocet_hodin=0
+skipWeeks=-284 | id_pob=5 | datum_od=2020-10-19T00:00:00.000Z | ma_data=NE | pocet_hodin=0
+skipWeeks=-284 | id_pob=6 | datum_od=2020-10-19T00:00:00.000Z | ma_data=NE | pocet_hodin=0
+skipWeeks=-283 | id_pob=1 | datum_od=2020-10-26T00:00:00.000Z | ma_data=ANO | pocet_hodin=347
+skipWeeks=-283 | id_pob=2 | datum_od=2020-10-26T00:00:00.000Z | ma_data=ANO | pocet_hodin=609
+skipWeeks=-283 | id_pob=3 | datum_od=2020-10-26T00:00:00.000Z | ma_data=ANO | pocet_hodin=358
+skipWeeks=-283 | id_pob=4 | datum_od=2020-10-26T00:00:00.000Z | ma_data=NE | pocet_hodin=0
+skipWeeks=-283 | id_pob=5 | datum_od=2020-10-26T00:00:00.000Z | ma_data=NE | pocet_hodin=0
+skipWeeks=-283 | id_pob=6 | datum_od=2020-10-26T00:00:00.000Z | ma_data=NE | pocet_hodin=0
+skipWeeks=-282 | id_pob=1 | datum_od=2020-11-02T00:00:00.000Z | ma_data=ANO | pocet_hodin=365
+skipWeeks=-282 | id_pob=2 | datum_od=2020-11-02T00:00:00.000Z | ma_data=ANO | pocet_hodin=613
+skipWeeks=-282 | id_pob=3 | datum_od=2020-11-02T00:00:00.000Z | ma_data=ANO | pocet_hodin=357
+skipWeeks=-282 | id_pob=4 | datum_od=2020-11-02T00:00:00.000Z | ma_data=NE | pocet_hodin=0
+skipWeeks=-282 | id_pob=5 | datum_od=2020-11-02T00:00:00.000Z | ma_data=NE | pocet_hodin=0
+skipWeeks=-282 | id_pob=6 | datum_od=2020-11-02T00:00:00.000Z | ma_data=NE | pocet_hodin=0
+skipWeeks=-281 | id_pob=1 | datum_od=2020-11-09T00:00:00.000Z | ma_data=ANO | pocet_hodin=355
+skipWeeks=-281 | id_pob=2 | datum_od=2020-11-09T00:00:00.000Z | ma_data=ANO | pocet_hodin=564
+skipWeeks=-281 | id_pob=3 | datum_od=2020-11-09T00:00:00.000Z | ma_data=ANO | pocet_hodin=364
+skipWeeks=-281 | id_pob=4 | datum_od=2020-11-09T00:00:00.000Z | ma_data=NE | pocet_hodin=0
+skipWeeks=-281 | id_pob=5 | datum_od=2020-11-09T00:00:00.000Z | ma_data=NE | pocet_hodin=0
+skipWeeks=-281 | id_pob=6 | datum_od=2020-11-09T00:00:00.000Z | ma_data=NE | pocet_hodin=0
+skipWeeks=-280 | id_pob=1 | datum_od=2020-11-16T00:00:00.000Z | ma_data=ANO | pocet_hodin=376
+skipWeeks=-280 | id_pob=2 | datum_od=2020-11-16T00:00:00.000Z | ma_data=ANO | pocet_hodin=635
+skipWeeks=-280 | id_pob=3 | datum_od=2020-11-16T00:00:00.000Z | ma_data=ANO | pocet_hodin=368
+skipWeeks=-280 | id_pob=4 | datum_od=2020-11-16T00:00:00.000Z | ma_data=NE | pocet_hodin=0
+skipWeeks=-280 | id_pob=5 | datum_od=2020-11-16T00:00:00.000Z | ma_data=NE | pocet_hodin=0
+skipWeeks=-280 | id_pob=6 | datum_od=2020-11-16T00:00:00.000Z | ma_data=NE | pocet_hodin=0

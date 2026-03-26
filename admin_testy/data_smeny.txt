@@ -1,0 +1,618 @@
+2026-03-09 14:55:03 | RUN:START | {"mode":"login_auto","email":"2002ok@seznam.cz","id_user":593}
+2026-03-09 14:55:03 | USER:PROFILE | {"id":593,"name":"Standa","surname":"Tester","email":"2002ok@seznam.cz","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2026-02-20T13:03:42.000Z","lastLoginTime":"2026-03-09T13:55:04.000Z","roles":[{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Zdobič"]}
+2026-03-09 14:55:03 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-09 14:55:03 | USER:ROLES | [{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-09 14:55:03 | USER:SLOTY | ["Zdobič"]
+2026-03-09 14:55:03 | RUN:END | {"mode":"login_auto"}
+2026-03-09 16:07:47 | RUN:START | {"mode":"login_auto","email":"2002ok@seznam.cz","id_user":593}
+2026-03-09 16:07:47 | USER:PROFILE | {"id":593,"name":"Standa","surname":"Tester","email":"2002ok@seznam.cz","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2026-02-20T13:03:42.000Z","lastLoginTime":"2026-03-09T15:07:47.000Z","roles":[{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Zdobič"]}
+2026-03-09 16:07:47 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-09 16:07:47 | USER:ROLES | [{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-09 16:07:47 | USER:SLOTY | ["Zdobič"]
+2026-03-09 16:07:47 | RUN:END | {"mode":"login_auto"}
+2026-03-09 16:53:16 | RUN:START | {"mode":"login_auto","email":"2002ok@seznam.cz","id_user":593}
+2026-03-09 16:53:16 | USER:PROFILE | {"id":593,"name":"Standa","surname":"Tester","email":"2002ok@seznam.cz","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2026-02-20T13:03:42.000Z","lastLoginTime":"2026-03-09T15:53:16.000Z","roles":[{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Zdobič"]}
+2026-03-09 16:53:16 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-09 16:53:16 | USER:ROLES | [{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-09 16:53:16 | USER:SLOTY | ["Zdobič"]
+2026-03-09 16:53:16 | RUN:END | {"mode":"login_auto"}
+2026-03-09 16:53:46 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-09 16:53:46 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-09T15:53:46.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-09 16:53:46 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-09 16:53:46 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-09 16:53:46 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-09 16:53:46 | RUN:END | {"mode":"login_auto"}
+2026-03-09 18:13:26 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-09 18:13:26 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-09T17:13:27.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-09 18:13:26 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-09 18:13:26 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-09 18:13:26 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-09 18:13:26 | RUN:END | {"mode":"login_auto"}
+2026-03-09 19:12:42 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-09 19:12:42 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-09T18:12:43.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-09 19:12:42 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-09 19:12:42 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-09 19:12:42 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-09 19:12:42 | RUN:END | {"mode":"login_auto"}
+2026-03-09 21:01:49 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-09 21:01:49 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-09T20:01:49.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-09 21:01:49 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-09 21:01:49 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-09 21:01:49 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-09 21:01:49 | RUN:END | {"mode":"login_auto"}
+2026-03-09 22:08:47 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-09 22:08:47 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-09T21:08:48.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-09 22:08:47 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-09 22:08:47 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-09 22:08:47 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-09 22:08:47 | RUN:END | {"mode":"login_auto"}
+2026-03-09 22:36:32 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-09 22:36:32 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-09T21:36:33.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-09 22:36:32 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-09 22:36:32 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-09 22:36:32 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-09 22:36:32 | RUN:END | {"mode":"login_auto"}
+2026-03-10 02:06:37 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 02:06:37 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T01:06:38.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 02:06:37 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 02:06:37 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 02:06:37 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 02:06:37 | RUN:END | {"mode":"login_auto"}
+2026-03-10 02:53:06 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 02:53:06 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T01:53:07.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 02:53:06 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 02:53:06 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 02:53:06 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 02:53:06 | RUN:END | {"mode":"login_auto"}
+2026-03-10 03:08:39 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 03:08:39 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T02:08:40.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 03:08:39 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 03:08:39 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 03:08:39 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 03:08:39 | RUN:END | {"mode":"login_auto"}
+2026-03-10 03:11:10 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 03:11:10 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T02:11:11.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 03:11:10 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 03:11:10 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 03:11:10 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 03:11:10 | RUN:END | {"mode":"login_auto"}
+2026-03-10 03:19:35 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 03:19:35 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T02:19:37.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 03:19:35 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 03:19:35 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 03:19:35 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 03:19:35 | RUN:END | {"mode":"login_auto"}
+2026-03-10 03:24:52 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 03:24:52 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T02:24:53.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 03:24:52 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 03:24:52 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 03:24:52 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 03:24:52 | RUN:END | {"mode":"login_auto"}
+2026-03-10 03:30:13 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 03:30:13 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T02:30:14.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 03:30:13 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 03:30:13 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 03:30:13 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 03:30:13 | RUN:END | {"mode":"login_auto"}
+2026-03-10 03:58:12 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 03:58:12 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T02:58:13.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 03:58:12 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 03:58:12 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 03:58:12 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 03:58:12 | RUN:END | {"mode":"login_auto"}
+2026-03-10 04:15:08 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 04:15:08 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T03:15:10.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 04:15:08 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 04:15:08 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 04:15:08 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 04:15:08 | RUN:END | {"mode":"login_auto"}
+2026-03-10 04:24:02 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 04:24:02 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T03:24:03.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 04:24:02 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 04:24:02 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 04:24:02 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 04:24:02 | RUN:END | {"mode":"login_auto"}
+2026-03-10 04:46:29 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 04:46:29 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T03:46:30.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 04:46:29 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 04:46:29 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 04:46:29 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 04:46:29 | RUN:END | {"mode":"login_auto"}
+2026-03-10 05:34:45 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 05:34:45 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T04:34:46.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 05:34:45 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 05:34:45 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 05:34:45 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 05:34:45 | RUN:END | {"mode":"login_auto"}
+2026-03-10 05:44:16 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 05:44:16 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T04:44:18.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 05:44:16 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 05:44:16 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 05:44:16 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 05:44:16 | RUN:END | {"mode":"login_auto"}
+2026-03-10 05:51:12 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 05:51:12 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T04:51:14.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 05:51:12 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 05:51:13 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 05:51:13 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 05:51:13 | RUN:END | {"mode":"login_auto"}
+2026-03-10 06:09:34 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 06:09:34 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T05:09:36.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 06:09:34 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 06:09:34 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 06:09:34 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 06:09:34 | RUN:END | {"mode":"login_auto"}
+2026-03-10 11:14:53 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 11:14:53 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T10:14:53.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 11:14:53 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 11:14:53 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 11:14:53 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 11:14:53 | RUN:END | {"mode":"login_auto"}
+2026-03-10 12:11:51 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 12:11:51 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T11:11:51.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 12:11:51 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 12:11:51 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 12:11:51 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 12:11:51 | RUN:END | {"mode":"login_auto"}
+2026-03-10 14:33:29 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 14:33:29 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T13:33:29.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 14:33:29 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 14:33:29 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 14:33:29 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 14:33:29 | RUN:END | {"mode":"login_auto"}
+2026-03-10 15:14:27 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 15:14:27 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T14:14:27.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 15:14:27 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 15:14:27 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 15:14:27 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 15:14:27 | RUN:END | {"mode":"login_auto"}
+2026-03-10 15:14:39 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 15:14:39 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T14:14:40.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 15:14:39 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 15:14:39 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 15:14:39 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 15:14:39 | RUN:END | {"mode":"login_auto"}
+2026-03-10 17:41:50 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 17:41:50 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T16:41:51.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 17:41:50 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 17:41:50 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 17:41:50 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 17:41:50 | RUN:END | {"mode":"login_auto"}
+2026-03-10 19:03:41 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 19:03:41 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T18:03:42.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 19:03:41 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 19:03:41 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 19:03:41 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 19:03:41 | RUN:END | {"mode":"login_auto"}
+2026-03-10 19:24:43 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 19:24:43 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T18:24:44.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 19:24:43 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 19:24:43 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 19:24:43 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 19:24:43 | RUN:END | {"mode":"login_auto"}
+2026-03-10 19:53:09 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 19:53:09 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T18:53:10.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 19:53:09 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 19:53:09 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 19:53:09 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 19:53:09 | RUN:END | {"mode":"login_auto"}
+2026-03-10 22:45:53 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-10 22:45:53 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-10T21:45:54.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-10 22:45:53 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-10 22:45:53 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-10 22:45:53 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-10 22:45:53 | RUN:END | {"mode":"login_auto"}
+2026-03-11 08:47:42 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-11 08:47:42 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-11T07:47:41.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-11 08:47:42 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-11 08:47:42 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-11 08:47:42 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-11 08:47:42 | RUN:END | {"mode":"login_auto"}
+2026-03-11 09:20:21 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-11 09:20:21 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-11T08:20:20.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-11 09:20:21 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-11 09:20:21 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-11 09:20:21 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-11 09:20:21 | RUN:END | {"mode":"login_auto"}
+2026-03-11 09:55:34 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-11 09:55:34 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-11T08:55:34.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-11 09:55:34 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-11 09:55:34 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-11 09:55:34 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-11 09:55:34 | RUN:END | {"mode":"login_auto"}
+2026-03-11 10:24:30 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-11 10:24:30 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-11T09:24:29.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-11 10:24:30 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-11 10:24:30 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-11 10:24:30 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-11 10:24:30 | RUN:END | {"mode":"login_auto"}
+2026-03-11 13:15:18 | RUN:START | {"mode":"login_auto","email":"2002ok@seznam.cz","id_user":593}
+2026-03-11 13:15:18 | USER:PROFILE | {"id":593,"name":"Standa","surname":"Tester","email":"2002ok@seznam.cz","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2026-02-20T13:03:42.000Z","lastLoginTime":"2026-03-11T12:15:18.000Z","roles":[{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Zdobič"]}
+2026-03-11 13:15:18 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-11 13:15:18 | USER:ROLES | [{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-11 13:15:18 | USER:SLOTY | ["Zdobič"]
+2026-03-11 13:15:18 | RUN:END | {"mode":"login_auto"}
+2026-03-11 15:19:58 | RUN:START | {"mode":"login_auto","email":"2002ok@seznam.cz","id_user":593}
+2026-03-11 15:19:58 | USER:PROFILE | {"id":593,"name":"Standa","surname":"Tester","email":"2002ok@seznam.cz","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2026-02-20T13:03:42.000Z","lastLoginTime":"2026-03-11T14:19:57.000Z","roles":[{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Zdobič"]}
+2026-03-11 15:19:58 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-11 15:19:58 | USER:ROLES | [{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-11 15:19:58 | USER:SLOTY | ["Zdobič"]
+2026-03-11 15:19:58 | RUN:END | {"mode":"login_auto"}
+2026-03-11 15:55:09 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-11 15:55:09 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-11T14:55:09.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-11 15:55:09 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-11 15:55:09 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-11 15:55:09 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-11 15:55:09 | RUN:END | {"mode":"login_auto"}
+2026-03-11 17:54:27 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-11 17:54:27 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-11T16:54:27.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-11 17:54:27 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-11 17:54:27 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-11 17:54:27 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-11 17:54:27 | RUN:END | {"mode":"login_auto"}
+2026-03-11 18:32:57 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-11 18:32:57 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-11T17:32:57.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-11 18:32:57 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-11 18:32:57 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-11 18:32:57 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-11 18:32:57 | RUN:END | {"mode":"login_auto"}
+2026-03-11 19:35:59 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-11 19:35:59 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-11T18:35:59.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-11 19:35:59 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-11 19:35:59 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-11 19:35:59 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-11 19:35:59 | RUN:END | {"mode":"login_auto"}
+2026-03-11 20:44:47 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-11 20:44:47 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-11T19:44:47.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-11 20:44:47 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-11 20:44:47 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-11 20:44:47 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-11 20:44:47 | RUN:END | {"mode":"login_auto"}
+2026-03-11 21:30:14 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-11 21:30:14 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-11T20:30:14.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-11 21:30:14 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-11 21:30:14 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-11 21:30:14 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-11 21:30:14 | RUN:END | {"mode":"login_auto"}
+2026-03-11 23:00:31 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-11 23:00:31 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-11T22:00:31.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-11 23:00:31 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-11 23:00:31 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-11 23:00:31 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-11 23:00:31 | RUN:END | {"mode":"login_auto"}
+2026-03-11 23:21:34 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-11 23:21:34 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-11T22:21:35.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-11 23:21:34 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-11 23:21:34 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-11 23:21:34 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-11 23:21:34 | RUN:END | {"mode":"login_auto"}
+2026-03-12 07:14:03 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-12 07:14:03 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-12T06:14:03.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-12 07:14:03 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-12 07:14:03 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-12 07:14:03 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-12 07:14:03 | RUN:END | {"mode":"login_auto"}
+2026-03-12 10:15:37 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-12 10:15:37 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-12T09:15:37.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-12 10:15:37 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-12 10:15:37 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-12 10:15:37 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-12 10:15:37 | RUN:END | {"mode":"login_auto"}
+2026-03-12 11:00:52 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-12 11:00:52 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-12T10:00:52.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-12 11:00:52 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-12 11:00:52 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-12 11:00:52 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-12 11:00:52 | RUN:END | {"mode":"login_auto"}
+2026-03-12 11:35:25 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-12 11:35:25 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-12T10:35:25.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-12 11:35:25 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-12 11:35:25 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-12 11:35:25 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-12 11:35:25 | RUN:END | {"mode":"login_auto"}
+2026-03-12 14:20:52 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-12 14:20:52 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-12T13:20:51.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-12 14:20:52 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-12 14:20:52 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-12 14:20:52 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-12 14:20:52 | RUN:END | {"mode":"login_auto"}
+2026-03-12 15:17:12 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-12 15:17:12 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-12T14:17:12.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-12 15:17:12 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-12 15:17:12 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-12 15:17:12 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-12 15:17:12 | RUN:END | {"mode":"login_auto"}
+2026-03-12 17:50:56 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-12 17:50:56 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-12T16:50:56.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-12 17:50:56 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-12 17:50:56 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-12 17:50:56 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-12 17:50:56 | RUN:END | {"mode":"login_auto"}
+2026-03-12 17:55:25 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-12 17:55:25 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-12T16:55:25.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-12 17:55:25 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-12 17:55:25 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-12 17:55:25 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-12 17:55:25 | RUN:END | {"mode":"login_auto"}
+2026-03-12 18:45:04 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-12 18:45:04 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-12T17:45:04.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-12 18:45:04 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-12 18:45:04 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-12 18:45:04 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-12 18:45:04 | RUN:END | {"mode":"login_auto"}
+2026-03-12 18:49:14 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-12 18:49:14 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-12T17:49:14.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-12 18:49:14 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-12 18:49:14 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-12 18:49:14 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-12 18:49:14 | RUN:END | {"mode":"login_auto"}
+2026-03-12 18:54:10 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-12 18:54:10 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-12T17:54:10.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-12 18:54:10 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-12 18:54:10 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-12 18:54:10 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-12 18:54:10 | RUN:END | {"mode":"login_auto"}
+2026-03-12 18:58:29 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-12 18:58:29 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-12T17:58:29.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-12 18:58:29 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-12 18:58:29 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-12 18:58:29 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-12 18:58:29 | RUN:END | {"mode":"login_auto"}
+2026-03-12 20:15:39 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-12 20:15:39 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-12T19:15:39.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-12 20:15:39 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-12 20:15:39 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-12 20:15:39 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-12 20:15:39 | RUN:END | {"mode":"login_auto"}
+2026-03-12 20:32:10 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-12 20:32:10 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-12T19:32:10.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-12 20:32:10 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-12 20:32:10 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-12 20:32:10 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-12 20:32:10 | RUN:END | {"mode":"login_auto"}
+2026-03-12 20:33:13 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-12 20:33:13 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-12T19:33:14.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-12 20:33:13 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-12 20:33:13 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-12 20:33:13 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-12 20:33:13 | RUN:END | {"mode":"login_auto"}
+2026-03-12 20:33:37 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-12 20:33:37 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-12T19:33:38.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-12 20:33:37 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-12 20:33:37 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-12 20:33:37 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-12 20:33:37 | RUN:END | {"mode":"login_auto"}
+2026-03-12 20:55:08 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-12 20:55:08 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-12T19:55:08.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-12 20:55:08 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-12 20:55:08 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-12 20:55:08 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-12 20:55:08 | RUN:END | {"mode":"login_auto"}
+2026-03-12 20:55:16 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-12 20:55:16 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-12T19:55:17.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-12 20:55:16 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-12 20:55:16 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-12 20:55:16 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-12 20:55:16 | RUN:END | {"mode":"login_auto"}
+2026-03-12 22:52:35 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-12 22:52:35 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-12T21:52:35.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-12 22:52:35 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-12 22:52:35 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-12 22:52:35 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-12 22:52:35 | RUN:END | {"mode":"login_auto"}
+2026-03-12 22:55:36 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-12 22:55:36 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-12T21:55:36.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-12 22:55:36 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-12 22:55:36 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-12 22:55:36 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-12 22:55:36 | RUN:END | {"mode":"login_auto"}
+2026-03-13 18:03:12 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-13 18:03:12 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-13T17:03:12.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-13 18:03:12 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-13 18:03:12 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-13 18:03:12 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-13 18:03:12 | RUN:END | {"mode":"login_auto"}
+2026-03-13 20:45:29 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-13 20:45:29 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-13T19:45:28.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-13 20:45:29 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-13 20:45:29 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-13 20:45:29 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-13 20:45:29 | RUN:END | {"mode":"login_auto"}
+2026-03-13 20:59:14 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-13 20:59:14 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-13T19:59:14.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-13 20:59:14 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-13 20:59:14 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-13 20:59:14 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-13 20:59:14 | RUN:END | {"mode":"login_auto"}
+2026-03-13 22:04:34 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-13 22:04:34 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-13T21:04:34.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-13 22:04:34 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-13 22:04:34 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-13 22:04:34 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-13 22:04:34 | RUN:END | {"mode":"login_auto"}
+2026-03-13 22:20:36 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-13 22:20:36 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-13T21:20:36.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-13 22:20:36 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-13 22:20:36 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-13 22:20:36 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-13 22:20:36 | RUN:END | {"mode":"login_auto"}
+2026-03-13 22:21:05 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-13 22:21:05 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-13T21:21:05.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-13 22:21:05 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-13 22:21:05 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-13 22:21:05 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-13 22:21:05 | RUN:END | {"mode":"login_auto"}
+2026-03-13 22:22:02 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-13 22:22:02 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-13T21:22:02.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-13 22:22:02 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-13 22:22:02 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-13 22:22:02 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-13 22:22:02 | RUN:END | {"mode":"login_auto"}
+2026-03-13 23:57:08 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-13 23:57:08 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-13T22:57:08.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-13 23:57:08 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-13 23:57:08 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-13 23:57:08 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-13 23:57:08 | RUN:END | {"mode":"login_auto"}
+2026-03-15 01:10:43 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-15 01:10:43 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-15T00:10:44.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-15 01:10:43 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-15 01:10:43 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-15 01:10:43 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-15 01:10:43 | RUN:END | {"mode":"login_auto"}
+2026-03-15 12:09:33 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-15 12:09:33 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-15T11:09:34.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-15 12:09:33 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-15 12:09:33 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-15 12:09:33 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-15 12:09:33 | RUN:END | {"mode":"login_auto"}
+2026-03-15 13:40:44 | RUN:START | {"mode":"login_auto","email":"2002ok@seznam.cz","id_user":593}
+2026-03-15 13:40:44 | USER:PROFILE | {"id":593,"name":"Standa","surname":"Tester","email":"2002ok@seznam.cz","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2026-02-20T13:03:42.000Z","lastLoginTime":"2026-03-15T12:40:44.000Z","roles":[{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Zdobič"]}
+2026-03-15 13:40:44 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-15 13:40:44 | USER:ROLES | [{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-15 13:40:44 | USER:SLOTY | ["Zdobič"]
+2026-03-15 13:40:44 | RUN:END | {"mode":"login_auto"}
+2026-03-15 13:40:53 | RUN:START | {"mode":"login_auto","email":"stanislav.roth@pizzacomeback.cz","id_user":594}
+2026-03-15 13:40:53 | USER:PROFILE | {"id":594,"name":"Testovací","surname":"účet","email":"stanislav.roth@pizzacomeback.cz","phoneNumber":"606665544","active":true,"approved":true,"createTime":"2026-02-20T21:28:26.000Z","lastLoginTime":"2026-03-15T12:40:54.000Z","roles":[{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Kurýr"]}
+2026-03-15 13:40:53 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-15 13:40:53 | USER:ROLES | [{"id":3,"name":"Zaměstnanec"}]
+2026-03-15 13:40:53 | USER:SLOTY | ["Kurýr"]
+2026-03-15 13:40:53 | RUN:END | {"mode":"login_auto"}
+2026-03-15 13:53:02 | RUN:START | {"mode":"login_auto","email":"stanislav.roth@pizzacomeback.cz","id_user":594}
+2026-03-15 13:53:02 | USER:PROFILE | {"id":594,"name":"Testovací","surname":"účet","email":"stanislav.roth@pizzacomeback.cz","phoneNumber":"606665544","active":true,"approved":true,"createTime":"2026-02-20T21:28:26.000Z","lastLoginTime":"2026-03-15T12:53:03.000Z","roles":[{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Kurýr"]}
+2026-03-15 13:53:02 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-15 13:53:02 | USER:ROLES | [{"id":3,"name":"Zaměstnanec"}]
+2026-03-15 13:53:02 | USER:SLOTY | ["Kurýr"]
+2026-03-15 13:53:02 | RUN:END | {"mode":"login_auto"}
+2026-03-15 13:53:08 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-15 13:53:08 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-15T12:53:09.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-15 13:53:08 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-15 13:53:08 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-15 13:53:08 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-15 13:53:08 | RUN:END | {"mode":"login_auto"}
+2026-03-15 14:33:22 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-15 14:33:22 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-15T13:33:23.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-15 14:33:22 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-15 14:33:22 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-15 14:33:22 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-15 14:33:22 | RUN:END | {"mode":"login_auto"}
+2026-03-15 14:56:34 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-15 14:56:34 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-15T13:56:34.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-15 14:56:34 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-15 14:56:34 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-15 14:56:34 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-15 14:56:34 | RUN:END | {"mode":"login_auto"}
+2026-03-15 15:39:29 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-15 15:39:29 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-15T14:39:30.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-15 15:39:29 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-15 15:39:29 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-15 15:39:29 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-15 15:39:29 | RUN:END | {"mode":"login_auto"}
+2026-03-15 21:40:53 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-15 21:40:53 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-15T20:40:55.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-15 21:40:53 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-15 21:40:53 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-15 21:40:53 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-15 21:40:53 | RUN:END | {"mode":"login_auto"}
+2026-03-15 22:30:21 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-15 22:30:21 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-15T21:30:22.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-15 22:30:21 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-15 22:30:21 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-15 22:30:21 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-15 22:30:21 | RUN:END | {"mode":"login_auto"}
+2026-03-16 00:36:30 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-16 00:36:30 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-15T23:36:31.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-16 00:36:30 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-16 00:36:30 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-16 00:36:30 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-16 00:36:30 | RUN:END | {"mode":"login_auto"}
+2026-03-16 01:55:07 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-16 01:55:07 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-16T00:55:09.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-16 01:55:07 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-16 01:55:07 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-16 01:55:07 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-16 01:55:07 | RUN:END | {"mode":"login_auto"}
+2026-03-16 02:17:43 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-16 02:17:43 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-16T01:17:45.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-16 02:17:43 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-16 02:17:43 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-16 02:17:43 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-16 02:17:43 | RUN:END | {"mode":"login_auto"}
+2026-03-16 08:51:17 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-16 08:51:17 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-16T07:51:18.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-16 08:51:17 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-16 08:51:17 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-16 08:51:17 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-16 08:51:17 | RUN:END | {"mode":"login_auto"}
+2026-03-16 12:59:31 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-16 12:59:31 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-16T11:59:33.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-16 12:59:31 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-16 12:59:31 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-16 12:59:31 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-16 12:59:31 | RUN:END | {"mode":"login_auto"}
+2026-03-16 13:50:34 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-16 13:50:34 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-16T12:50:35.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-16 13:50:34 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-16 13:50:34 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-16 13:50:34 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-16 13:50:34 | RUN:END | {"mode":"login_auto"}
+2026-03-16 14:49:06 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-16 14:49:06 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-16T13:49:07.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-16 14:49:06 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-16 14:49:06 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-16 14:49:06 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-16 14:49:06 | RUN:END | {"mode":"login_auto"}
+2026-03-16 15:10:49 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-16 15:10:49 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-16T14:10:51.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-16 15:10:49 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-16 15:10:49 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-16 15:10:49 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-16 15:10:49 | RUN:END | {"mode":"login_auto"}
+2026-03-16 15:45:45 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-16 15:45:45 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-16T14:45:46.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-16 15:45:45 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-16 15:45:45 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-16 15:45:45 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-16 15:45:45 | RUN:END | {"mode":"login_auto"}
+2026-03-16 16:21:23 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-16 16:21:23 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-16T15:21:25.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-16 16:21:23 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-16 16:21:23 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-16 16:21:23 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-16 16:21:23 | RUN:END | {"mode":"login_auto"}
+2026-03-16 17:18:40 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-16 17:18:40 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-16T16:18:41.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-16 17:18:40 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-16 17:18:40 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-16 17:18:40 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-16 17:18:40 | RUN:END | {"mode":"login_auto"}
+2026-03-16 19:00:43 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-16 19:00:43 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-16T18:00:45.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-16 19:00:43 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-16 19:00:43 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-16 19:00:43 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-16 19:00:43 | RUN:END | {"mode":"login_auto"}
+2026-03-16 21:18:11 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-16 21:18:11 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-16T20:18:13.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-16 21:18:11 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-16 21:18:11 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-16 21:18:11 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-16 21:18:11 | RUN:END | {"mode":"login_auto"}
+2026-03-16 23:03:21 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-16 23:03:21 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-16T22:03:23.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-16 23:03:21 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-16 23:03:21 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-16 23:03:21 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-16 23:03:21 | RUN:END | {"mode":"login_auto"}
+2026-03-16 23:52:38 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-16 23:52:38 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-16T22:52:40.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-16 23:52:38 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-16 23:52:38 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-16 23:52:38 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-16 23:52:38 | RUN:END | {"mode":"login_auto"}
+2026-03-17 11:33:31 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-03-17 11:33:31 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-03-17T10:33:32.000Z","roles":[{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]}
+2026-03-17 11:33:31 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":null}
+2026-03-17 11:33:31 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":2,"name":"Manager"},{"id":3,"name":"Zaměstnanec"}]
+2026-03-17 11:33:31 | USER:SLOTY | ["Instor","Kurýr","Přípravář","Zdobič","Lobby","Závozák"]
+2026-03-17 11:33:31 | RUN:END | {"mode":"login_auto"}

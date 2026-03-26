@@ -121,7 +121,7 @@ $dashGridClass = $dashColsClass . ' dash_nano_kde_' . $nanoKde;
 
 $renderItems = [];
 if ($nanoKde === 1) {
-    foreach (array_chunk($kartyNano, 4) as $nanoSkupina) {
+    foreach (array_chunk($kartyNano, 5) as $nanoSkupina) {
         $renderItems[] = [
             'kind' => 'nano_group',
             'karty' => $nanoSkupina,
