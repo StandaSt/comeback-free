@@ -16,7 +16,7 @@ declare(strict_types=1);
  * - dopočítá sloty uživatele včetně ID ze Směn (podle číselníku)
  * - výsledek zapíše do pomocne/data_smeny.txt
  *
- * Důležité:
+ * Důležité: 
  * - je to diagnostika, NEMĚNÍ DB
  * - nic nemaže, jen přidává řádky do txt
  * - záměrně NELOGUJE GraphQL chyby (ERRORY), aby výpis nezabíral místo
