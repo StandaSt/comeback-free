@@ -111,11 +111,14 @@
       overlayCard,
       expandedNextSibling,
       overlayToggle,
-      overlayNanoBtn
+      overlayNanoBtn,
+      returnMode
     } = item;
 
+    const targetReturnMode = (returnMode === 'nano') ? 'nano' : 'mini';
+
     if (overlayToggle) {
-      overlayToggle.removeEventListener('click', item.handleOverlayClose);
+      overlayToggle.removeEventListener('click', item.handleOverlayToggle);
     }
     if (overlayNanoBtn) {
       overlayNanoBtn.removeEventListener('click', item.handleOverlayNano);
@@ -147,9 +150,18 @@
     if (layer) layer.classList.remove('is-active');
 
     activeMaxi = null;
+
+    if (targetReturnMode === 'nano') {
+      const cardId = parseInt(String(root.getAttribute('data-card-id') || '0'), 10);
+      if (cardId > 0) {
+        requestCardMode(cardId, 'nano').then(() => {
+          reloadAfterNanoSwitch(root, 'mini');
+        }).catch(() => {});
+      }
+    }
   }
 
-  function openMaxi(root, compactSel, expandedSel, toggleSel) {
+  function openMaxi(root, compactSel, expandedSel, toggleSel, preferredReturnMode) {
     if (!root) return;
 
     if (activeMaxi && activeMaxi.root === root) {
@@ -170,6 +182,11 @@
     if (!compact || !expanded || !toggle || !dashCard || !dashBox || !layer || !stage) {
       return;
     }
+
+    const sourceMode = String(root.getAttribute('data-card-mode') || 'mini').trim();
+    const normalizedReturnMode = (preferredReturnMode === 'nano' || preferredReturnMode === 'mini')
+      ? preferredReturnMode
+      : (sourceMode === 'nano' ? 'nano' : 'mini');
 
     const accentClasses = Array.from(dashCard.classList).filter((name) => /^card_/.test(name));
     const overlayCard = document.createElement('section');
@@ -192,12 +209,17 @@
     const handleOverlayClose = () => {
       closeActiveMaxi();
     };
+    const handleOverlayToggle = () => {
+      if (activeMaxi && activeMaxi.root === root) {
+        activeMaxi.returnMode = 'mini';
+      }
+      closeActiveMaxi();
+    };
     const handleOverlayNano = () => {
-      const cardId = parseInt(String(root.getAttribute('data-card-id') || '0'), 10);
-      if (cardId <= 0) return;
-      requestCardMode(cardId, 'nano').then(() => {
-        reloadAfterNanoSwitch(root, 'mini');
-      }).catch(() => {});
+      if (activeMaxi && activeMaxi.root === root) {
+        activeMaxi.returnMode = 'nano';
+      }
+      closeActiveMaxi();
     };
 
     expanded.classList.remove('is-hidden');
@@ -212,7 +234,7 @@
 
     if (overlayToggle) {
       updateToggle(overlayToggle, true);
-      overlayToggle.addEventListener('click', handleOverlayClose);
+      overlayToggle.addEventListener('click', handleOverlayToggle);
     }
     if (overlayNanoBtn) {
       overlayNanoBtn.addEventListener('click', handleOverlayNano);
@@ -246,7 +268,9 @@
       overlayNanoBtn,
       expandedNextSibling,
       handleOverlayClose,
-      handleOverlayNano
+      handleOverlayToggle,
+      handleOverlayNano,
+      returnMode: normalizedReturnMode
     };
   }
 
@@ -293,6 +317,7 @@
       if (nanoHead) {
         nanoHead.addEventListener('dblclick', () => {
           if (!Number.isFinite(cardId) || cardId <= 0) return;
+          try { w.sessionStorage.setItem('cb_open_maxi_return_mode', 'nano'); } catch (e) {}
           requestCardMode(cardId, 'maxi').then(() => {
             reloadAfterNanoSwitch(root, 'maxi');
           }).catch(() => {});
@@ -362,13 +387,16 @@
     roots.forEach(initCard);
 
     let pendingCardId = '';
+    let pendingReturnMode = '';
     try { pendingCardId = String(w.sessionStorage.getItem('cb_open_maxi_card_id') || ''); } catch (e) {}
+    try { pendingReturnMode = String(w.sessionStorage.getItem('cb_open_maxi_return_mode') || ''); } catch (e) {}
     if (pendingCardId !== '') {
       const root = roots.find((r) => String(r.getAttribute('data-card-id') || '') === pendingCardId && String(r.getAttribute('data-card-mode') || '') !== 'nano');
       if (root) {
-        openMaxi(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR);
+        openMaxi(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR, pendingReturnMode);
       }
       try { w.sessionStorage.removeItem('cb_open_maxi_card_id'); } catch (e) {}
+      try { w.sessionStorage.removeItem('cb_open_maxi_return_mode'); } catch (e) {}
     }
   }
 
