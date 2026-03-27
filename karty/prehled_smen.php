@@ -1,5 +1,5 @@
 <?php
-// karty/prehled_smen.php * Verze: V5 * Aktualizace: 27.03.2026
+// karty/prehled_smen.php * Verze: V6 * Aktualizace: 27.03.2026
 declare(strict_types=1);
 
 $psRows = [];
@@ -15,7 +15,7 @@ if (!in_array($currentSekce, [1, 2, 3], true)) {
     $currentSekce = 3;
 }
 $formAction = cb_url('/?sekce=' . $currentSekce);
-$keepExpanded = isset($_GET['ps_p']) || isset($_GET['ps_per']) || isset($_GET['ps_f']);
+$keepExpanded = isset($_GET['ps_p']) || isset($_GET['ps_per']) || isset($_GET['ps_f']) || isset($_GET['ps_sort']) || isset($_GET['ps_dir']);
 
 $periodOd = trim((string)($_SESSION['cb_obdobi_od'] ?? ''));
 $periodDo = trim((string)($_SESSION['cb_obdobi_do'] ?? ''));
@@ -139,6 +139,30 @@ $psFilters = [
     'chyba' => '',
 ];
 
+$psSortRaw = trim((string)($_GET['ps_sort'] ?? 'datum'));
+$psDirRaw = strtoupper(trim((string)($_GET['ps_dir'] ?? 'DESC')));
+$psSort = 'datum';
+$psDir = 'DESC';
+
+$psSortMap = [
+    'datum' => 'sr.datum',
+    'pobocka' => 'COALESCE(p.nazev, "Vyroba")',
+    'prijmeni' => 'COALESCE(sr.prijmeni, "")',
+    'jmeno' => 'COALESCE(sr.jmeno, "")',
+    'slot' => 'sr.id_slot',
+    'cas_od' => 'COALESCE(sr.cas_od, "")',
+    'cas_do' => 'COALESCE(sr.cas_do, "")',
+    'pauza' => 'COALESCE(sr.pauza, "")',
+    'odpracovano' => 'COALESCE(sr.odpracovano, 0)',
+    'chyba' => 'COALESCE(sr.chyba, 0)',
+];
+if (array_key_exists($psSortRaw, $psSortMap)) {
+    $psSort = $psSortRaw;
+}
+if (in_array($psDirRaw, ['ASC', 'DESC'], true)) {
+    $psDir = $psDirRaw;
+}
+
 $psPerRaw = (int)($_GET['ps_per'] ?? 20);
 if (in_array($psPerRaw, [20, 50, 100], true)) {
     $psPer = $psPerRaw;
@@ -232,7 +256,7 @@ try {
         FROM smeny_report sr
         LEFT JOIN pobocka p ON p.id_pob = sr.id_pob
     ' . $whereSql . '
-        ORDER BY sr.datum DESC, sr.id_pob ASC, sr.prijmeni ASC, sr.jmeno ASC
+        ORDER BY ' . $psSortMap[$psSort] . ' ' . $psDir . ', sr.datum DESC, sr.id_pob ASC, sr.prijmeni ASC, sr.jmeno ASC
         LIMIT ' . (int)$psPer . ' OFFSET ' . (int)$offset;
 
     $resRows = $conn->query($sqlRows);
@@ -261,6 +285,8 @@ $startExpanded = $keepExpanded;
 $psBaseParams = [
     'sekce=' . rawurlencode((string)$currentSekce),
     'ps_per=' . rawurlencode((string)$psPer),
+    'ps_sort=' . rawurlencode($psSort),
+    'ps_dir=' . rawurlencode($psDir),
 ];
 foreach ($psFilters as $key => $value) {
     if ($value === '') {
@@ -278,6 +304,8 @@ ob_start();
   <form method="get" action="<?= h($formAction) ?>" class="card_stack" autocomplete="off">
     <input type="hidden" name="sekce" value="<?= h((string)$currentSekce) ?>">
     <input type="hidden" name="ps_p" value="1">
+    <input type="hidden" name="ps_sort" value="<?= h($psSort) ?>">
+    <input type="hidden" name="ps_dir" value="<?= h($psDir) ?>">
 
     <div class="table-wrap">
       <table class="table card_table_max" style="width:100%; table-layout:fixed;">
@@ -321,8 +349,26 @@ ob_start();
             </th>
           </tr>
           <tr>
-            <?php foreach ($psCols as $label): ?>
-              <th><?= h($label) ?></th>
+            <?php foreach ($psCols as $key => $label): ?>
+              <?php
+              $isActiveSort = ($psSort === $key);
+              $arrow = '↕';
+              if ($isActiveSort) {
+                  $arrow = $psDir === 'ASC' ? '↑' : '↓';
+              }
+              $nextDir = ($isActiveSort && $psDir === 'ASC') ? 'DESC' : 'ASC';
+              $sortParams = $psBaseParams;
+              $sortParams[] = 'ps_p=1';
+              $sortParams[] = 'ps_sort=' . rawurlencode($key);
+              $sortParams[] = 'ps_dir=' . rawurlencode($nextDir);
+              $sortUrl = cb_url('/?' . implode('&', $sortParams));
+              ?>
+              <th class="th-sort<?= $isActiveSort ? ' active' : '' ?>">
+                <a class="th-sort-link<?= $isActiveSort ? ' active' : '' ?>" href="<?= h($sortUrl) ?>">
+                  <span class="th-sort-label"><?= h($label) ?></span>
+                  <span class="th-sort-arrow"><?= h($arrow) ?></span>
+                </a>
+              </th>
             <?php endforeach; ?>
           </tr>
         </thead>
@@ -414,6 +460,6 @@ ob_start();
 <?php
 $card_max_html = (string)ob_get_clean();
 
-/* karty/prehled_smen.php * Verze: V5 * Aktualizace: 27.03.2026 */
-// počet řádků 419
+/* karty/prehled_smen.php * Verze: V6 * Aktualizace: 27.03.2026 */
+// počet řádků 465
 ?>
