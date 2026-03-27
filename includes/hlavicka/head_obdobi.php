@@ -1,5 +1,5 @@
 <?php
-// includes/hlavicka/head_obdobi.php * Verze: V3 * Aktualizace: 25.03.2026
+// includes/hlavicka/head_obdobi.php * Verze: V4 * Aktualizace: 27.03.2026
 ?>
 <div class="head_interval" aria-label="Období">
   <div class="head_int_row">
@@ -75,14 +75,59 @@
   }
 
   function savePeriod(payload){
-    fetch('<?= h(cb_url('index.php')) ?>', {
+    return fetch('<?= h(cb_url('index.php')) ?>', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Comeback-Set-Period': '1'
       },
       body: JSON.stringify(payload)
-    }).catch(function(){});
+    })
+    .then(function(r){ return r.json().catch(function(){ return {}; }); })
+    .then(function(json){
+      if (json && json.ok === true) {
+        window.location.reload();
+      }
+    })
+    .catch(function(){});
+  }
+
+  function getActivePreset(od, ddo){
+    var o = parseDate(od);
+    var d = parseDate(ddo);
+    if (!o || !d) return '';
+
+    var now = new Date();
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    var yFrom = new Date(today);
+    yFrom.setDate(today.getDate() - 1);
+    if (fmtDate(o) === fmtDate(yFrom) && fmtDate(d) === fmtDate(today)) {
+      return 'vcera';
+    }
+
+    var weekFrom = new Date(today);
+    var day = today.getDay();
+    var mondayShift = (day === 0 ? -6 : 1 - day);
+    weekFrom.setDate(today.getDate() + mondayShift);
+    var weekTo = new Date(weekFrom);
+    weekTo.setDate(weekFrom.getDate() + 6);
+    if (fmtDate(o) === fmtDate(weekFrom) && fmtDate(d) === fmtDate(weekTo)) {
+      return 'tyden';
+    }
+
+    var monthFrom = new Date(today.getFullYear(), today.getMonth(), 1);
+    var monthTo = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    if (fmtDate(o) === fmtDate(monthFrom) && fmtDate(d) === fmtDate(monthTo)) {
+      return 'mesic';
+    }
+
+    var yearFrom = new Date(today.getFullYear(), 0, 1);
+    if (fmtDate(o) === fmtDate(yearFrom) && fmtDate(d) === fmtDate(today)) {
+      return 'rok';
+    }
+
+    return '';
   }
 
   function computeRange(range){
@@ -119,6 +164,14 @@
     btn.addEventListener('click', function(){
       var range = btn.getAttribute('data-range') || 'vcera';
       var val = computeRange(range);
+      var currOd = clampToToday(odInput.value);
+      var currDo = clampToToday(doInput.value);
+
+      if (currOd === val.od && currDo === val.do) {
+        setActive(range);
+        return;
+      }
+
       odInput.value = val.od;
       doInput.value = val.do;
       setActive(range);
@@ -138,7 +191,13 @@
     if (od > ddo) {
       od = ddo;
     }
+    var prevOd = clampToToday(odInput.value);
+    var prevDo = clampToToday(doInput.value);
     odInput.value = od;
+    if (prevOd === od && prevDo === ddo) {
+      setActive(getActivePreset(od, ddo));
+      return;
+    }
     savePeriod({ od: od });
   });
 
@@ -150,8 +209,17 @@
     if (ddo < od) {
       ddo = od;
     }
+    var prevOd = clampToToday(odInput.value);
+    var prevDo = clampToToday(doInput.value);
     doInput.value = ddo;
+    if (prevOd === od && prevDo === ddo) {
+      setActive(getActivePreset(od, ddo));
+      return;
+    }
     savePeriod({ do: ddo });
   });
+
+  var initialPreset = getActivePreset(clampToToday(odInput.value), clampToToday(doInput.value));
+  setActive(initialPreset || 'vcera');
 })();
 </script>

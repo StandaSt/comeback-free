@@ -1,14 +1,419 @@
 <?php
-// karty/prehled_smen.php * Verze: V1 * Aktualizace: 24.03.2026
+// karty/prehled_smen.php * Verze: V5 * Aktualizace: 27.03.2026
 declare(strict_types=1);
 
-$card_min_html = '<p class="card_text">Zde bude obsah min režimu</p>';
+$psRows = [];
+$psTotal = 0;
+$psPages = 1;
+$psPage = 1;
+$psPer = 20;
+$psError = '';
+$psErrCount = 0;
+
+$currentSekce = isset($cb_dashboard_sekce) ? (int)$cb_dashboard_sekce : (int)($_GET['sekce'] ?? 3);
+if (!in_array($currentSekce, [1, 2, 3], true)) {
+    $currentSekce = 3;
+}
+$formAction = cb_url('/?sekce=' . $currentSekce);
+$keepExpanded = isset($_GET['ps_p']) || isset($_GET['ps_per']) || isset($_GET['ps_f']);
+
+$periodOd = trim((string)($_SESSION['cb_obdobi_od'] ?? ''));
+$periodDo = trim((string)($_SESSION['cb_obdobi_do'] ?? ''));
+
+if ($periodOd === '' || $periodDo === '') {
+    $today = (new DateTimeImmutable('today'))->format('Y-m-d');
+    $periodOd = $periodOd !== '' ? $periodOd : $today;
+    $periodDo = $periodDo !== '' ? $periodDo : $today;
+}
+
+$selectedPob = function_exists('get_selected_pobocky') ? get_selected_pobocky() : [];
+$selectedPob = array_values(array_filter(array_map('intval', $selectedPob), static fn(int $v): bool => $v >= 0));
+if ($selectedPob === []) {
+    $fallbackPob = (int)($_SESSION['cb_pobocka_id'] ?? 0);
+    if ($fallbackPob >= 0) {
+        $selectedPob = [$fallbackPob];
+    }
+}
+
+if (!function_exists('ps_format_cz_date')) {
+    function ps_format_cz_date(string $ymd): string
+    {
+        $dt = DateTimeImmutable::createFromFormat('Y-m-d', $ymd);
+        if (!$dt) {
+            return $ymd;
+        }
+        return $dt->format('j.n.Y');
+    }
+}
+
+if (!function_exists('ps_format_hm')) {
+    function ps_format_hm(string $time): string
+    {
+        $t = trim($time);
+        if ($t === '') {
+            return '';
+        }
+        if (preg_match('/^(\d{2}):(\d{2})(:\d{2})?$/', $t, $m) === 1) {
+            return $m[1] . ':' . $m[2];
+        }
+        return $t;
+    }
+}
+
+$periodOdCz = ps_format_cz_date($periodOd);
+$periodDoCz = ps_format_cz_date($periodDo);
+
+$selectedMode = trim((string)($_SESSION['selected_pobocky_mode'] ?? ''));
+$selectedOblasti = $_SESSION['selected_oblasti'] ?? [];
+if (!is_array($selectedOblasti)) {
+    $selectedOblasti = [];
+}
+$selectedOblasti = array_values(array_filter(array_map(static fn($v): string => trim((string)$v), $selectedOblasti), static fn(string $v): bool => $v !== ''));
+sort($selectedOblasti);
+
+$selectedOblastSingle = trim((string)($_SESSION['selected_oblast'] ?? ''));
+if ($selectedOblastSingle !== '' && !in_array($selectedOblastSingle, $selectedOblasti, true)) {
+    $selectedOblasti[] = $selectedOblastSingle;
+    sort($selectedOblasti);
+}
+
+$selectedPobNames = [];
+if ($selectedPob !== []) {
+    try {
+        $connNames = db();
+        $inIds = [];
+        foreach ($selectedPob as $idPobName) {
+            $inIds[] = (string)(int)$idPobName;
+        }
+        $sqlNames = 'SELECT id_pob, nazev FROM pobocka WHERE id_pob IN (' . implode(',', $inIds) . ')';
+        $resNames = $connNames->query($sqlNames);
+        if ($resNames instanceof mysqli_result) {
+            $nameMap = [];
+            while ($rowName = $resNames->fetch_assoc()) {
+                $idName = (int)($rowName['id_pob'] ?? 0);
+                $nazev = trim((string)($rowName['nazev'] ?? ''));
+                if ($idName > 0 && $nazev !== '') {
+                    $nameMap[$idName] = $nazev;
+                }
+            }
+            $resNames->free();
+            foreach ($selectedPob as $idSelName) {
+                if ((int)$idSelName === 0) {
+                    $selectedPobNames[] = 'Výroba';
+                } elseif (isset($nameMap[(int)$idSelName])) {
+                    $selectedPobNames[] = $nameMap[(int)$idSelName];
+                }
+            }
+        }
+    } catch (Throwable $e) {
+        $selectedPobNames = [];
+    }
+}
+
+$selectedPobText = '-';
+if ($selectedMode === 'area' && $selectedOblasti !== []) {
+    $selectedPobText = (count($selectedOblasti) === 1 ? 'Oblast: ' : 'Oblasti: ') . implode(', ', $selectedOblasti);
+} elseif ($selectedPobNames !== []) {
+    $selectedPobText = implode(', ', $selectedPobNames);
+} elseif ($selectedPob !== []) {
+    $selectedPobText = implode(', ', array_map(static fn(int $v): string => (string)$v, $selectedPob));
+}
+
+$psCols = [
+    'datum' => 'datum',
+    'pobocka' => 'pobočka',
+    'prijmeni' => 'příjmení',
+    'jmeno' => 'jméno',
+    'slot' => 'slot',
+    'cas_od' => 'od',
+    'cas_do' => 'do',
+    'pauza' => 'pauza',
+    'odpracovano' => 'odpracováno',
+    'chyba' => 'chyba',
+];
+
+$psFilters = [
+    'prijmeni' => '',
+    'jmeno' => '',
+    'slot' => '',
+    'chyba' => '',
+];
+
+$psPerRaw = (int)($_GET['ps_per'] ?? 20);
+if (in_array($psPerRaw, [20, 50, 100], true)) {
+    $psPer = $psPerRaw;
+}
+
+$psPageRaw = (int)($_GET['ps_p'] ?? 1);
+if ($psPageRaw > 1) {
+    $psPage = $psPageRaw;
+}
+
+$psFiltersRaw = $_GET['ps_f'] ?? [];
+if (is_array($psFiltersRaw)) {
+    $psFilters['prijmeni'] = trim((string)($psFiltersRaw['prijmeni'] ?? ''));
+    $psFilters['jmeno'] = trim((string)($psFiltersRaw['jmeno'] ?? ''));
+
+    $slotRaw = trim((string)($psFiltersRaw['slot'] ?? ''));
+    if (in_array($slotRaw, ['', '1', '2', '3'], true)) {
+        $psFilters['slot'] = $slotRaw;
+    }
+
+    $chybaRaw = trim((string)($psFiltersRaw['chyba'] ?? ''));
+    if ($chybaRaw === '1') {
+        $psFilters['chyba'] = '1';
+    }
+}
+
+try {
+    $conn = db();
+    $conn->set_charset('utf8mb4');
+
+    $where = [];
+    $where[] = "sr.datum >= '" . $conn->real_escape_string($periodOd) . "'";
+    $where[] = "sr.datum <= '" . $conn->real_escape_string($periodDo) . "'";
+
+    if ($selectedPob !== []) {
+        $inIds = [];
+        foreach ($selectedPob as $idPob) {
+            $inIds[] = (string)(int)$idPob;
+        }
+        $where[] = 'sr.id_pob IN (' . implode(',', $inIds) . ')';
+    }
+
+    if ($psFilters['prijmeni'] !== '') {
+        $safe = $conn->real_escape_string($psFilters['prijmeni']);
+        $where[] = "COALESCE(sr.prijmeni,'') LIKE '%{$safe}%'";
+    }
+
+    if ($psFilters['jmeno'] !== '') {
+        $safe = $conn->real_escape_string($psFilters['jmeno']);
+        $where[] = "COALESCE(sr.jmeno,'') LIKE '%{$safe}%'";
+    }
+
+    if ($psFilters['slot'] !== '') {
+        $where[] = 'sr.id_slot = ' . (int)$psFilters['slot'];
+    }
+
+    if ($psFilters['chyba'] === '1') {
+        $where[] = 'sr.chyba = 1';
+    }
+
+    $whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
+
+    $sqlCount = 'SELECT COUNT(*) AS cnt, SUM(CASE WHEN sr.chyba = 1 THEN 1 ELSE 0 END) AS err_cnt FROM smeny_report sr' . $whereSql;
+    $resCount = $conn->query($sqlCount);
+    if ($resCount instanceof mysqli_result) {
+        $rowCount = $resCount->fetch_assoc();
+        $psTotal = (int)($rowCount['cnt'] ?? 0);
+        $psErrCount = (int)($rowCount['err_cnt'] ?? 0);
+        $resCount->free();
+    }
+
+    $psPages = max(1, (int)ceil($psTotal / $psPer));
+    if ($psPage > $psPages) {
+        $psPage = $psPages;
+    }
+    $offset = ($psPage - 1) * $psPer;
+
+    $sqlRows = '
+        SELECT
+            sr.datum,
+            sr.id_pob,
+            COALESCE(p.nazev, "Výroba") AS pobocka_nazev,
+            sr.prijmeni,
+            sr.jmeno,
+            sr.id_slot,
+            sr.cas_od,
+            sr.cas_do,
+            sr.pauza,
+            sr.odpracovano,
+            sr.chyba
+        FROM smeny_report sr
+        LEFT JOIN pobocka p ON p.id_pob = sr.id_pob
+    ' . $whereSql . '
+        ORDER BY sr.datum DESC, sr.id_pob ASC, sr.prijmeni ASC, sr.jmeno ASC
+        LIMIT ' . (int)$psPer . ' OFFSET ' . (int)$offset;
+
+    $resRows = $conn->query($sqlRows);
+    if ($resRows instanceof mysqli_result) {
+        while ($row = $resRows->fetch_assoc()) {
+            $psRows[] = $row;
+        }
+        $resRows->free();
+    }
+} catch (Throwable $e) {
+    $psRows = [];
+    $psTotal = 0;
+    $psPages = 1;
+    $psPage = 1;
+    $psErrCount = 0;
+    $psError = 'Načtení přehledu směn selhalo.';
+}
+
+$card_min_html = ''
+    . '<p class="card_text">Období: <strong>' . h($periodOdCz) . ' až ' . h($periodDoCz) . '</strong></p>'
+    . '<p class="card_text">Pobočky: <strong>' . h($selectedPobText) . '</strong></p>'
+    . '<p class="card_text">Řádků: <strong>' . h((string)$psTotal) . '</strong>, chyby: <strong>' . h((string)$psErrCount) . '</strong></p>';
+
+$startExpanded = $keepExpanded;
+
+$psBaseParams = [
+    'sekce=' . rawurlencode((string)$currentSekce),
+    'ps_per=' . rawurlencode((string)$psPer),
+];
+foreach ($psFilters as $key => $value) {
+    if ($value === '') {
+        continue;
+    }
+    $psBaseParams[] = 'ps_f[' . rawurlencode($key) . ']=' . rawurlencode($value);
+}
+$psBaseUrl = cb_url('/?' . implode('&', $psBaseParams));
 
 ob_start();
 ?>
-<p class="card_text">Zde bude max obsah</p>
+<?php if ($psError !== ''): ?>
+  <p class="card_text card_text_muted"><?= h($psError) ?></p>
+<?php else: ?>
+  <form method="get" action="<?= h($formAction) ?>" class="card_stack" autocomplete="off">
+    <input type="hidden" name="sekce" value="<?= h((string)$currentSekce) ?>">
+    <input type="hidden" name="ps_p" value="1">
+
+    <div class="table-wrap">
+      <table class="table card_table_max" style="width:100%; table-layout:fixed;">
+        <colgroup>
+          <col style="width:92px;">
+          <col style="width:110px;">
+          <col style="width:130px;">
+          <col style="width:110px;">
+          <col style="width:90px;">
+          <col style="width:74px;">
+          <col style="width:74px;">
+          <col style="width:74px;">
+          <col style="width:98px;">
+          <col style="width:76px;">
+        </colgroup>
+        <thead>
+          <tr class="filter-row">
+            <th></th>
+            <th></th>
+            <th><input class="filter-input" style="width:10ch;" type="text" name="ps_f[prijmeni]" value="<?= h($psFilters['prijmeni']) ?>"></th>
+            <th><input class="filter-input" style="width:10ch;" type="text" name="ps_f[jmeno]" value="<?= h($psFilters['jmeno']) ?>"></th>
+            <th>
+              <select class="filter-input" name="ps_f[slot]" onchange="this.form.ps_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
+                <option value=""<?= $psFilters['slot'] === '' ? ' selected' : '' ?>>slot</option>
+                <option value="1"<?= $psFilters['slot'] === '1' ? ' selected' : '' ?>>instor</option>
+                <option value="2"<?= $psFilters['slot'] === '2' ? ' selected' : '' ?>>kurýr</option>
+                <option value="3"<?= $psFilters['slot'] === '3' ? ' selected' : '' ?>>výroba</option>
+              </select>
+            </th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th style="text-align:right;">
+              <?php if ($psErrCount > 0): ?>
+                <label style="display:inline-flex; align-items:center; gap:6px; white-space:nowrap; cursor:pointer;">
+                  <input type="checkbox" name="ps_f[chyba]" value="1"<?= $psFilters['chyba'] === '1' ? ' checked' : '' ?> onchange="this.form.ps_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
+                  <span style="color:#c62828; font-weight:700;">Chyby (<?= h((string)$psErrCount) ?>)</span>
+                </label>
+              <?php endif; ?>
+            </th>
+          </tr>
+          <tr>
+            <?php foreach ($psCols as $label): ?>
+              <th><?= h($label) ?></th>
+            <?php endforeach; ?>
+          </tr>
+        </thead>
+        <tbody>
+          <?php if (!$psRows): ?>
+            <tr><td colspan="10">Žádná data</td></tr>
+          <?php else: ?>
+            <?php foreach ($psRows as $row): ?>
+              <?php
+              $slotTxt = match ((int)($row['id_slot'] ?? 0)) {
+                  1 => 'instor',
+                  2 => 'kurýr',
+                  3 => 'výroba',
+                  default => '-',
+              };
+              $chybaTxt = ((int)($row['chyba'] ?? 0) === 1) ? 'ano' : '-';
+              $pobTxt = ((int)($row['id_pob'] ?? 0) === 0) ? 'Výroba' : (string)($row['pobocka_nazev'] ?? '-');
+              ?>
+              <tr>
+                <td><?= h(ps_format_cz_date((string)$row['datum'])) ?></td>
+                <td style="text-align:right;"><?= h($pobTxt) ?></td>
+                <td style="text-align:right;"><?= h((string)($row['prijmeni'] ?? '')) ?></td>
+                <td><?= h((string)($row['jmeno'] ?? '')) ?></td>
+                <td><?= h($slotTxt) ?></td>
+                <td><?= h(ps_format_hm((string)($row['cas_od'] ?? ''))) ?></td>
+                <td><?= h(ps_format_hm((string)($row['cas_do'] ?? ''))) ?></td>
+                <td><?= h(ps_format_hm((string)($row['pauza'] ?? ''))) ?></td>
+                <td style="text-align:right;"><?= h((string)($row['odpracovano'] ?? '')) ?></td>
+                <td><?= h($chybaTxt) ?></td>
+              </tr>
+            <?php endforeach; ?>
+          <?php endif; ?>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="list-bottom">
+      <div class="per-form">
+        <span>Zobrazuji</span>
+        <select name="ps_per" class="filter-input per-select" onchange="this.form.ps_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
+          <option value="20"<?= $psPer === 20 ? ' selected' : '' ?>>20 řádků</option>
+          <option value="50"<?= $psPer === 50 ? ' selected' : '' ?>>50 řádků</option>
+          <option value="100"<?= $psPer === 100 ? ' selected' : '' ?>>100 řádků</option>
+        </select>
+      </div>
+
+      <div class="pagination-icon">
+        <?php $prevDisabled = $psPage <= 1; ?>
+        <?php $nextDisabled = $psPage >= $psPages; ?>
+
+        <a class="icon-btn w44<?= $prevDisabled ? ' disabled' : '' ?>" href="<?= $prevDisabled ? '#' : h($psBaseUrl . '&ps_p=1') ?>">«</a>
+        <a class="icon-btn w44<?= $prevDisabled ? ' disabled' : '' ?>" href="<?= $prevDisabled ? '#' : h($psBaseUrl . '&ps_p=' . (string)max(1, $psPage - 1)) ?>">‹</a>
+
+        <?php
+        $pageItems = [];
+        if ($psPages <= 7) {
+            for ($i = 1; $i <= $psPages; $i++) {
+                $pageItems[] = $i;
+            }
+        } elseif ($psPage <= 4) {
+            $pageItems = [1, 2, 3, 4, 5, '…', $psPages];
+        } elseif ($psPage >= $psPages - 3) {
+            $pageItems = [1, '…', $psPages - 4, $psPages - 3, $psPages - 2, $psPages - 1, $psPages];
+        } else {
+            $pageItems = [1, '…', $psPage - 1, $psPage, $psPage + 1, '…', $psPages];
+        }
+        ?>
+
+        <?php foreach ($pageItems as $item): ?>
+          <?php if ($item === '…'): ?>
+            <span class="icon-btn w44 disabled">…</span>
+          <?php elseif ((int)$item === $psPage): ?>
+            <span class="icon-btn w44 page-current"><?= h((string)$item) ?></span>
+          <?php else: ?>
+            <a class="icon-btn w44" href="<?= h($psBaseUrl . '&ps_p=' . (string)$item) ?>"><?= h((string)$item) ?></a>
+          <?php endif; ?>
+        <?php endforeach; ?>
+
+        <a class="icon-btn w44<?= $nextDisabled ? ' disabled' : '' ?>" href="<?= $nextDisabled ? '#' : h($psBaseUrl . '&ps_p=' . (string)min($psPages, $psPage + 1)) ?>">›</a>
+        <a class="icon-btn w44<?= $nextDisabled ? ' disabled' : '' ?>" href="<?= $nextDisabled ? '#' : h($psBaseUrl . '&ps_p=' . (string)$psPages) ?>">»</a>
+      </div>
+
+      <div class="per-form right">
+        <span>Celkem: <strong><?= h((string)$psTotal) ?></strong></span>
+      </div>
+    </div>
+  </form>
+<?php endif; ?>
 <?php
 $card_max_html = (string)ob_get_clean();
 
-/* karty/prehled_smen.php * Verze: V1 * Aktualizace: 24.03.2026 */
+/* karty/prehled_smen.php * Verze: V5 * Aktualizace: 27.03.2026 */
+// počet řádků 419
 ?>

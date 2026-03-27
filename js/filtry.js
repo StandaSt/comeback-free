@@ -1,4 +1,4 @@
-// js/filtry.js * Verze: V6 * Aktualizace: 19.03.2026
+// js/filtry.js * Verze: V7 * Aktualizace: 27.03.2026
 'use strict';
 
 /*
@@ -140,7 +140,7 @@
     const timer = setTimeout(() => {
       timers.delete(form);
       fetchAndSwap(form, prefix);
-    }, 250);
+    }, 550);
     timers.set(form, timer);
   }, true);
 
@@ -175,5 +175,5 @@
   }, true);
 })(window);
 
-// js/filtry.js * Verze: V6 * Aktualizace: 19.03.2026
+// js/filtry.js * Verze: V7 * Aktualizace: 27.03.2026
 // Konec souboru

@@ -1,4 +1,47 @@
 <?php
+if (!function_exists('cb_pobocky_save_selection_to_db')) {
+    /**
+     * @param int[] $ids
+     */
+    function cb_pobocky_save_selection_to_db(int $idUser, array $ids): void
+    {
+        $clean = cb_pobocky_sanitize_ids($ids);
+        if ($idUser <= 0 || !$clean) {
+            throw new RuntimeException('Neplatny vyber pobocky pro DB ulozeni.');
+        }
+
+        $conn = db();
+
+        $conn->begin_transaction();
+        try {
+            $stmtDel = $conn->prepare('DELETE FROM user_pobocka_set WHERE id_user = ?');
+            if ($stmtDel === false) {
+                throw new RuntimeException('Nepodarilo se pripravit mazani user_pobocka_set.');
+            }
+            $stmtDel->bind_param('i', $idUser);
+            $stmtDel->execute();
+            $stmtDel->close();
+
+            $stmtIns = $conn->prepare('INSERT INTO user_pobocka_set (id_user, id_pob) VALUES (?, ?)');
+            if ($stmtIns === false) {
+                throw new RuntimeException('Nepodarilo se pripravit vlozeni user_pobocka_set.');
+            }
+
+            foreach ($clean as $idPob) {
+                $idPob = (int)$idPob;
+                $stmtIns->bind_param('ii', $idUser, $idPob);
+                $stmtIns->execute();
+            }
+            $stmtIns->close();
+
+            $conn->commit();
+        } catch (Throwable $e) {
+            $conn->rollback();
+            throw $e;
+        }
+    }
+}
+
 /* =========================
    0) Nastaveni pobocky do session (POST)
    ========================= */
@@ -45,11 +88,18 @@ if (
         exit;
     }
 
-    cb_pobocky_set_selected([$idPob]);
-    cb_pobocky_set_mode('single', null);
-    $_SESSION['cb_pobocka_id'] = $idPob;
-    echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
-    exit;
+    try {
+        cb_pobocky_save_selection_to_db($idUser, [$idPob]);
+        cb_pobocky_set_selected([$idPob]);
+        cb_pobocky_set_mode('single', null);
+        $_SESSION['cb_pobocka_id'] = $idPob;
+        echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
+        exit;
+    } catch (Throwable $e) {
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'err' => 'Ulozeni vyberu pobocky selhalo'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 }
 
 /* =========================
@@ -142,11 +192,18 @@ if (
             exit;
         }
 
-        cb_pobocky_set_selected($ids);
-        cb_pobocky_set_mode('area', $selectedOblasti[0]);
-        $_SESSION['selected_oblasti'] = $selectedOblasti;
-        echo json_encode(['ok' => true, 'count' => count($ids), 'oblasti' => $selectedOblasti], JSON_UNESCAPED_UNICODE);
-        exit;
+        try {
+            cb_pobocky_save_selection_to_db($idUser, $ids);
+            cb_pobocky_set_selected($ids);
+            cb_pobocky_set_mode('area', $selectedOblasti[0]);
+            $_SESSION['selected_oblasti'] = $selectedOblasti;
+            echo json_encode(['ok' => true, 'count' => count($ids), 'oblasti' => $selectedOblasti], JSON_UNESCAPED_UNICODE);
+            exit;
+        } catch (Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['ok' => false, 'err' => 'Ulozeni vyberu pobocek selhalo'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
     }
 
     $rawIds = $data['selected_pobocky'] ?? [];
@@ -169,11 +226,18 @@ if (
         exit;
     }
 
-    cb_pobocky_set_selected($valid);
-    cb_pobocky_set_mode('custom', null);
-    $_SESSION['selected_oblasti'] = [];
-    echo json_encode(['ok' => true, 'count' => count($valid)], JSON_UNESCAPED_UNICODE);
-    exit;
+    try {
+        cb_pobocky_save_selection_to_db($idUser, $valid);
+        cb_pobocky_set_selected($valid);
+        cb_pobocky_set_mode('custom', null);
+        $_SESSION['selected_oblasti'] = [];
+        echo json_encode(['ok' => true, 'count' => count($valid)], JSON_UNESCAPED_UNICODE);
+        exit;
+    } catch (Throwable $e) {
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'err' => 'Ulozeni vyberu pobocek selhalo'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 }
 
 /* =========================
