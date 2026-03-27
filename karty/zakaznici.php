@@ -1,6 +1,22 @@
 <?php
-// karty/zakaznici.php * Verze: V9 * Aktualizace: 13.03.2026
+// karty/zakaznici.php * Verze: V11 * Aktualizace: 27.03.2026
 declare(strict_types=1);
+
+/*
+ * Karta "Zakaznici":
+ * - nacita seznam zakazniku,
+ * - umi filtrovani a strankovani v max rezimu,
+ * - mini rezim ponechava jen souhrn.
+ */
+
+// === KONFIG TABULKY: ZAKAZNICI ===
+$tabKonfig = [
+    'enable_filters' => 1,
+    'enable_sort' => 1,
+    'enable_pagination' => 1,
+    'default_per' => 20,
+    'per_options' => [20, 50, 100],
+];
 
 $totalZak = 0;
 $activeZak = 0;
@@ -10,7 +26,7 @@ $zakRows = [];
 $zakTotal = 0;
 $zakPages = 1;
 $zakPage = 1;
-$zakPer = 20;
+$zakPer = (int)$tabKonfig['default_per'];
 $zakBlk = '0';
 $zakFilters = [];
 $zakError = '';
@@ -19,18 +35,19 @@ if (!in_array($currentSekce, [1, 2, 3], true)) {
     $currentSekce = 3;
 }
 $formAction = cb_url('/?sekce=' . $currentSekce);
-$keepExpanded = isset($_GET['zak_p']) || isset($_GET['zak_per']) || isset($_GET['zak_blk']) || isset($_GET['zak_f']);
+$keepExpanded = isset($_GET['zak_p']) || isset($_GET['zak_per']) || isset($_GET['zak_blk']) || isset($_GET['zak_f']) || isset($_GET['zak_sort']) || isset($_GET['zak_dir']);
 
 $zakCols = [
-    'id' => ['label' => 'id', 'db' => 'id_zak'],
-    'prijmeni' => ['label' => 'prijmeni', 'db' => 'prijmeni', 'filter' => true],
-    'jmeno' => ['label' => 'jmeno', 'db' => 'jmeno', 'filter' => true],
+    'id' => ['label' => 'Poř.č.', 'db' => 'id_zak'],
+    'prijmeni' => ['label' => 'příjmení', 'db' => 'prijmeni', 'filter' => true],
+    'jmeno' => ['label' => 'jméno', 'db' => 'jmeno', 'filter' => true],
     'telefon' => ['label' => 'telefon', 'db' => 'telefon', 'filter' => true],
     'email' => ['label' => 'email', 'db' => 'email', 'filter' => true],
     'ulice' => ['label' => 'ulice', 'db' => 'ulice', 'filter' => true],
-    'mesto' => ['label' => 'mesto', 'db' => 'mesto', 'filter' => true],
+    'mesto' => ['label' => 'město', 'db' => 'mesto', 'filter' => true],
     'pobocka' => ['label' => 'pobočka', 'db' => 'pobocka', 'filter' => true],
     'posl_obj' => ['label' => 'posl_obj', 'db' => 'posledni_obj'],
+    'aktivni' => ['label' => 'aktivní', 'db' => 'blokovany'],
 ];
 $zakFilterStyle = [
     'prijmeni' => 'width:10ch;',
@@ -42,13 +59,42 @@ $zakFilterStyle = [
     'pobocka' => 'width:10ch;',
 ];
 
-$zakPerRaw = (int)($_GET['zak_per'] ?? 20);
-if (in_array($zakPerRaw, [20, 50, 100], true)) {
+// Whitelist sloupcu pro trideni.
+$zakSortMap = [
+    'id' => 'z.id_zak',
+    'prijmeni' => 'COALESCE(z.prijmeni, "")',
+    'jmeno' => 'COALESCE(z.jmeno, "")',
+    'telefon' => 'COALESCE(z.telefon, "")',
+    'email' => 'COALESCE(z.email, "")',
+    'ulice' => 'COALESCE(z.ulice, "")',
+    'mesto' => 'COALESCE(z.mesto, "")',
+    'pobocka' => 'COALESCE(p.kod, "")',
+    'posl_obj' => 'COALESCE(z.posledni_obj, "")',
+    'aktivni' => 'z.blokovany',
+];
+$zakSortRaw = trim((string)($_GET['zak_sort'] ?? 'id'));
+$zakDirRaw = strtoupper(trim((string)($_GET['zak_dir'] ?? 'DESC')));
+$zakSort = 'id';
+$zakDir = 'DESC';
+if ((int)$tabKonfig['enable_sort'] === 1 && array_key_exists($zakSortRaw, $zakSortMap)) {
+    $zakSort = $zakSortRaw;
+}
+if ((int)$tabKonfig['enable_sort'] === 1 && in_array($zakDirRaw, ['ASC', 'DESC'], true)) {
+    $zakDir = $zakDirRaw;
+}
+
+$zakPerOptions = array_values(array_filter(array_map('intval', (array)$tabKonfig['per_options']), static fn(int $v): bool => $v > 0));
+if ($zakPerOptions === []) {
+    $zakPerOptions = [20, 50, 100];
+}
+
+$zakPerRaw = (int)($_GET['zak_per'] ?? (int)$tabKonfig['default_per']);
+if ((int)$tabKonfig['enable_pagination'] === 1 && in_array($zakPerRaw, $zakPerOptions, true)) {
     $zakPer = $zakPerRaw;
 }
 
 $zakPageRaw = (int)($_GET['zak_p'] ?? 1);
-if ($zakPageRaw > 1) {
+if ((int)$tabKonfig['enable_pagination'] === 1 && $zakPageRaw > 1) {
     $zakPage = $zakPageRaw;
 }
 
@@ -58,7 +104,7 @@ if (in_array($zakBlkRaw, ['0', '1', 'all'], true)) {
 }
 
 $zakFiltersRaw = $_GET['zak_f'] ?? [];
-if (is_array($zakFiltersRaw)) {
+if ((int)$tabKonfig['enable_filters'] === 1 && is_array($zakFiltersRaw)) {
     foreach ($zakCols as $key => $cfg) {
         if (empty($cfg['filter'])) {
             continue;
@@ -102,7 +148,7 @@ try {
             COALESCE(z.prijmeni, "") AS prijmeni,
             COALESCE(z.mesto, "") AS mesto,
             COUNT(o.id_obj) AS obj_count
-        FROM objednavka o
+        FROM res_objednavky o
         INNER JOIN zakaznik z ON z.id_zak = o.id_zak
         ' . $selectedWhere . '
         GROUP BY z.id_zak, z.jmeno, z.prijmeni, z.mesto
@@ -146,19 +192,21 @@ try {
         $where[] = 'z.blokovany = ' . (int)$zakBlk;
     }
 
-    foreach ($zakFilters as $key => $value) {
-        if ($value === '') {
-            continue;
-        }
-        $safe = $conn->real_escape_string($value);
-        if ($key === 'pobocka') {
-            $where[] = "COALESCE(p.kod, '') LIKE '%" . $safe . "%'";
-        } else {
-            $dbKey = (string)($zakCols[$key]['db'] ?? '');
-            if ($dbKey === '') {
+    if ((int)$tabKonfig['enable_filters'] === 1) {
+        foreach ($zakFilters as $key => $value) {
+            if ($value === '') {
                 continue;
             }
-            $where[] = "COALESCE(z.`" . $dbKey . "`, '') LIKE '%" . $safe . "%'";
+            $safe = $conn->real_escape_string($value);
+            if ($key === 'pobocka') {
+                $where[] = "COALESCE(p.kod, '') LIKE '%" . $safe . "%'";
+            } else {
+                $dbKey = (string)($zakCols[$key]['db'] ?? '');
+                if ($dbKey === '') {
+                    continue;
+                }
+                $where[] = "COALESCE(z.`" . $dbKey . "`, '') LIKE '%" . $safe . "%'";
+            }
         }
     }
 
@@ -176,11 +224,23 @@ try {
         $resZakCount->free();
     }
 
-    $zakPages = max(1, (int)ceil($zakTotal / $zakPer));
-    if ($zakPage > $zakPages) {
-        $zakPage = $zakPages;
+    if ((int)$tabKonfig['enable_pagination'] === 1) {
+        $zakPages = max(1, (int)ceil($zakTotal / $zakPer));
+        if ($zakPage > $zakPages) {
+            $zakPage = $zakPages;
+        }
+        $offset = ($zakPage - 1) * $zakPer;
+    } else {
+        $zakPages = 1;
+        $zakPage = 1;
+        $zakPer = max(1, $zakTotal);
+        $offset = 0;
     }
-    $offset = ($zakPage - 1) * $zakPer;
+
+    $orderSql = 'z.id_zak DESC';
+    if ((int)$tabKonfig['enable_sort'] === 1) {
+        $orderSql = $zakSortMap[$zakSort] . ' ' . $zakDir . ', z.id_zak DESC';
+    }
 
     $dataSql = '
         SELECT
@@ -192,11 +252,12 @@ try {
             COALESCE(z.ulice, "") AS ulice,
             COALESCE(z.mesto, "") AS mesto,
             COALESCE(p.kod, "") AS pobocka,
-            z.posledni_obj
+            z.posledni_obj,
+            z.blokovany
         FROM zakaznik z
         LEFT JOIN pobocka p ON p.id_pob = z.id_pob
     ' . $whereSql . '
-        ORDER BY z.id_zak DESC
+        ORDER BY ' . $orderSql . '
         LIMIT ' . (int)$zakPer . ' OFFSET ' . (int)$offset;
 
     $resZak = $conn->query($dataSql);
@@ -223,11 +284,17 @@ $zakBaseParams = [
     'zak_per=' . rawurlencode((string)$zakPer),
     'zak_blk=' . rawurlencode($zakBlk),
 ];
+if ((int)$tabKonfig['enable_sort'] === 1) {
+    $zakBaseParams[] = 'zak_sort=' . rawurlencode($zakSort);
+    $zakBaseParams[] = 'zak_dir=' . rawurlencode($zakDir);
+}
 foreach ($zakFilters as $key => $value) {
-    if ($value === '') {
-        continue;
+    if ((int)$tabKonfig['enable_filters'] === 1) {
+        if ($value === '') {
+            continue;
+        }
+        $zakBaseParams[] = 'zak_f[' . rawurlencode($key) . ']=' . rawurlencode($value);
     }
-    $zakBaseParams[] = 'zak_f[' . rawurlencode($key) . ']=' . rawurlencode($value);
 }
 $zakBaseUrl = cb_url('/?' . implode('&', $zakBaseParams));
 ?>
@@ -276,6 +343,10 @@ ob_start();
       <form method="get" action="<?= h($formAction) ?>" class="card_stack" autocomplete="off">
         <input type="hidden" name="sekce" value="<?= h((string)$currentSekce) ?>">
         <input type="hidden" name="zak_p" value="1">
+        <?php if ((int)$tabKonfig['enable_sort'] === 1): ?>
+          <input type="hidden" name="zak_sort" value="<?= h($zakSort) ?>">
+          <input type="hidden" name="zak_dir" value="<?= h($zakDir) ?>">
+        <?php endif; ?>
 
         <div class="table-wrap">
           <table class="table card_table_max">
@@ -284,16 +355,42 @@ ob_start();
                 <?php foreach ($zakCols as $key => $cfg): ?>
                   <?php if ($key === 'id'): ?>
                     <th></th>
-                  <?php elseif (!empty($cfg['filter'])): ?>
+                  <?php elseif ((int)$tabKonfig['enable_filters'] === 1 && !empty($cfg['filter'])): ?>
                     <th><input class="filter-input" style="<?= h((string)($zakFilterStyle[$key] ?? 'width:10ch;')) ?>" type="text" name="zak_f[<?= h($key) ?>]" value="<?= h($zakFilters[$key] ?? '') ?>"></th>
                   <?php else: ?>
-                    <th><a class="icon-btn icon-x small" href="<?= h($formAction) ?>">×</a></th>
+                    <th><?= $key === 'posl_obj' ? '<a class="icon-btn icon-x small" href="' . h($formAction) . '">&times;</a>' : '' ?></th>
                   <?php endif; ?>
                 <?php endforeach; ?>
               </tr>
               <tr>
                 <?php foreach ($zakCols as $key => $cfg): ?>
-                  <th><?= h($cfg['label']) ?></th>
+                  <?php
+                  $isSortable = isset($zakSortMap[$key]);
+                  $isActiveSort = ($zakSort === $key);
+                  $arrow = '↕';
+                  if ($isActiveSort) {
+                      $arrow = $zakDir === 'ASC' ? '↑' : '↓';
+                  }
+                  ?>
+                  <?php $thRight = in_array($key, ['prijmeni', 'email', 'ulice', 'mesto', 'posl_obj'], true); ?>
+                  <th class="th-sort<?= $isActiveSort ? ' active' : '' ?>"<?= $thRight ? ' style="text-align:right;"' : '' ?>>
+                    <?php if ((int)$tabKonfig['enable_sort'] === 1 && $isSortable): ?>
+                      <?php
+                      $nextDir = ($isActiveSort && $zakDir === 'ASC') ? 'DESC' : 'ASC';
+                      $sortParams = $zakBaseParams;
+                      $sortParams[] = 'zak_p=1';
+                      $sortParams[] = 'zak_sort=' . rawurlencode($key);
+                      $sortParams[] = 'zak_dir=' . rawurlencode($nextDir);
+                      $sortUrl = cb_url('/?' . implode('&', $sortParams));
+                      ?>
+                      <a class="th-sort-link<?= $isActiveSort ? ' active' : '' ?>" href="<?= h($sortUrl) ?>">
+                        <span class="th-sort-label"><?= h($cfg['label']) ?></span>
+                        <span class="th-sort-arrow"><?= h($arrow) ?></span>
+                      </a>
+                    <?php else: ?>
+                      <span class="th-sort-link"><span class="th-sort-label"><?= h($cfg['label']) ?></span></span>
+                    <?php endif; ?>
+                  </th>
                 <?php endforeach; ?>
               </tr>
             </thead>
@@ -326,9 +423,12 @@ ob_start();
                               $ts = strtotime($rawDate);
                               $value = $ts === false ? $rawDate : date('j.n.y', $ts);
                           }
+                      } elseif ($key === 'aktivni') {
+                          $value = ((int)$value === 1) ? 'Ne' : 'Ano';
                       }
+                      $tdRight = in_array($key, ['prijmeni', 'email', 'ulice', 'mesto', 'posl_obj'], true);
                       ?>
-                      <td><?= h($value) ?></td>
+                      <td<?= $tdRight ? ' style="text-align:right;"' : '' ?>><?= h($value) ?></td>
                     <?php endforeach; ?>
                   </tr>
                 <?php endforeach; ?>
@@ -337,6 +437,7 @@ ob_start();
           </table>
         </div>
 
+        <?php if ((int)$tabKonfig['enable_pagination'] === 1): ?>
         <div class="list-bottom">
           <div class="per-form">
             <span>Zobrazuji</span>
@@ -389,9 +490,11 @@ ob_start();
             </select>
           </div>
         </div>
+        <?php endif; ?>
       </form>
     <?php endif; ?>
 <?php
 $card_max_html = (string)ob_get_clean();
-/* karty/zakaznici.php * Verze: V9 * Aktualizace: 13.03.2026 */
+/* karty/zakaznici.php * Verze: V11 * Aktualizace: 27.03.2026 */
+// pocet radku 500
 ?>

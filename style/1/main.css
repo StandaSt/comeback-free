@@ -28,7 +28,7 @@
 
 .dash_grid{
   display:grid;
-  gap:10px;
+  gap:2px;
   align-items:start;
   align-content:start;
   width:100%;

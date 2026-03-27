@@ -121,7 +121,8 @@ $dashGridClass = $dashColsClass . ' dash_nano_kde_' . $nanoKde;
 
 $renderItems = [];
 if ($nanoKde === 1) {
-    foreach (array_chunk($kartyNano, 5) as $nanoSkupina) {
+    // zde se nastavuje počet karet v gridu pro nano karty
+    foreach (array_chunk($kartyNano, 9) as $nanoSkupina) {
         $renderItems[] = [
             'kind' => 'nano_group',
             'karty' => $nanoSkupina,
@@ -194,16 +195,17 @@ $renderCard = static function (array $karta, bool $isNano, string $gridStyle = '
         <div class="card_top<?= h($cardTopRoleClass) ?>">
           <div>
             <h3 class="card_title"><?= h($title) ?></h3>
-            <p
-              class="card_subtitle"
-              data-card-subtitle="1"
-              data-subtitle-min="<?= h($subtitleMin) ?>"
-              data-subtitle-max="<?= h($subtitleMax) ?>"
-            ><?= h($subtitleMin) ?></p>
+            <?php if (!$isNano): ?>
+              <p
+                class="card_subtitle"
+                data-card-subtitle="1"
+                data-subtitle-min="<?= h($subtitleMin) ?>"
+                data-subtitle-max="<?= h($subtitleMax) ?>"
+              ><?= h($subtitleMin) ?></p>
+            <?php endif; ?>
           </div>
           <div class="card_tools">
             <?php if ($isNano): ?>
-              <button type="button" class="card_tool_btn card_mode_btn" data-card-nano-target="maxi" title="Prepnout na maxi">&#10530;</button>
               <button type="button" class="card_tool_btn card_mode_btn" data-card-nano-target="mini" title="Prepnout na mini">&#8722;</button>
             <?php else: ?>
               <button type="button" class="card_tool_btn card_mode_btn" data-card-toggle="1" aria-expanded="false" title="Prepnout na maxi/mini">&#10530;</button>

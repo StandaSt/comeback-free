@@ -1,12 +1,30 @@
 <?php
-// karty/prehled_smen.php * Verze: V6 * Aktualizace: 27.03.2026
+// karty/prehled_smen.php * Verze: V7 * Aktualizace: 27.03.2026
 declare(strict_types=1);
+
+/*
+ * Karta "Přehled směn":
+ * - čte data ze smeny_report podle globálního období a výběru poboček,
+ * - umí filtry, třídění a stránkování,
+ * - vykreslí min i max režim karty.
+ */
+
+// === KONFIG TABULKY: PREHLED_SMEN ===
+$tabKonfig = [
+    'enable_filters' => 1,
+    'enable_sort' => 1,
+    'enable_pagination' => 1,
+    'default_per' => 20,
+    'per_options' => [20, 50, 100],
+    'default_sort' => 'datum',
+    'default_dir' => 'DESC',
+];
 
 $psRows = [];
 $psTotal = 0;
 $psPages = 1;
 $psPage = 1;
-$psPer = 20;
+$psPer = (int)$tabKonfig['default_per'];
 $psError = '';
 $psErrCount = 0;
 
@@ -17,6 +35,7 @@ if (!in_array($currentSekce, [1, 2, 3], true)) {
 $formAction = cb_url('/?sekce=' . $currentSekce);
 $keepExpanded = isset($_GET['ps_p']) || isset($_GET['ps_per']) || isset($_GET['ps_f']) || isset($_GET['ps_sort']) || isset($_GET['ps_dir']);
 
+// Globální období je nastavené v hlavičce a drží se v session.
 $periodOd = trim((string)($_SESSION['cb_obdobi_od'] ?? ''));
 $periodDo = trim((string)($_SESSION['cb_obdobi_do'] ?? ''));
 
@@ -139,10 +158,11 @@ $psFilters = [
     'chyba' => '',
 ];
 
-$psSortRaw = trim((string)($_GET['ps_sort'] ?? 'datum'));
-$psDirRaw = strtoupper(trim((string)($_GET['ps_dir'] ?? 'DESC')));
-$psSort = 'datum';
-$psDir = 'DESC';
+// Whitelist sloupců pro ORDER BY - ochrana proti neplatným vstupům.
+$psSortRaw = trim((string)($_GET['ps_sort'] ?? (string)$tabKonfig['default_sort']));
+$psDirRaw = strtoupper(trim((string)($_GET['ps_dir'] ?? (string)$tabKonfig['default_dir'])));
+$psSort = (string)$tabKonfig['default_sort'];
+$psDir = (string)$tabKonfig['default_dir'];
 
 $psSortMap = [
     'datum' => 'sr.datum',
@@ -156,25 +176,30 @@ $psSortMap = [
     'odpracovano' => 'COALESCE(sr.odpracovano, 0)',
     'chyba' => 'COALESCE(sr.chyba, 0)',
 ];
-if (array_key_exists($psSortRaw, $psSortMap)) {
+if ((int)$tabKonfig['enable_sort'] === 1 && array_key_exists($psSortRaw, $psSortMap)) {
     $psSort = $psSortRaw;
 }
-if (in_array($psDirRaw, ['ASC', 'DESC'], true)) {
+if ((int)$tabKonfig['enable_sort'] === 1 && in_array($psDirRaw, ['ASC', 'DESC'], true)) {
     $psDir = $psDirRaw;
 }
 
-$psPerRaw = (int)($_GET['ps_per'] ?? 20);
-if (in_array($psPerRaw, [20, 50, 100], true)) {
+// Stránkování lze vypnout přes konfig.
+$perOptions = array_values(array_filter(array_map('intval', (array)$tabKonfig['per_options']), static fn(int $v): bool => $v > 0));
+if ($perOptions === []) {
+    $perOptions = [20, 50, 100];
+}
+$psPerRaw = (int)($_GET['ps_per'] ?? (int)$tabKonfig['default_per']);
+if ((int)$tabKonfig['enable_pagination'] === 1 && in_array($psPerRaw, $perOptions, true)) {
     $psPer = $psPerRaw;
 }
 
 $psPageRaw = (int)($_GET['ps_p'] ?? 1);
-if ($psPageRaw > 1) {
+if ((int)$tabKonfig['enable_pagination'] === 1 && $psPageRaw > 1) {
     $psPage = $psPageRaw;
 }
 
 $psFiltersRaw = $_GET['ps_f'] ?? [];
-if (is_array($psFiltersRaw)) {
+if ((int)$tabKonfig['enable_filters'] === 1 && is_array($psFiltersRaw)) {
     $psFilters['prijmeni'] = trim((string)($psFiltersRaw['prijmeni'] ?? ''));
     $psFilters['jmeno'] = trim((string)($psFiltersRaw['jmeno'] ?? ''));
 
@@ -205,21 +230,22 @@ try {
         $where[] = 'sr.id_pob IN (' . implode(',', $inIds) . ')';
     }
 
-    if ($psFilters['prijmeni'] !== '') {
+    // Dynamické filtry tabulky.
+    if ((int)$tabKonfig['enable_filters'] === 1 && $psFilters['prijmeni'] !== '') {
         $safe = $conn->real_escape_string($psFilters['prijmeni']);
         $where[] = "COALESCE(sr.prijmeni,'') LIKE '%{$safe}%'";
     }
 
-    if ($psFilters['jmeno'] !== '') {
+    if ((int)$tabKonfig['enable_filters'] === 1 && $psFilters['jmeno'] !== '') {
         $safe = $conn->real_escape_string($psFilters['jmeno']);
         $where[] = "COALESCE(sr.jmeno,'') LIKE '%{$safe}%'";
     }
 
-    if ($psFilters['slot'] !== '') {
+    if ((int)$tabKonfig['enable_filters'] === 1 && $psFilters['slot'] !== '') {
         $where[] = 'sr.id_slot = ' . (int)$psFilters['slot'];
     }
 
-    if ($psFilters['chyba'] === '1') {
+    if ((int)$tabKonfig['enable_filters'] === 1 && $psFilters['chyba'] === '1') {
         $where[] = 'sr.chyba = 1';
     }
 
@@ -234,11 +260,23 @@ try {
         $resCount->free();
     }
 
-    $psPages = max(1, (int)ceil($psTotal / $psPer));
-    if ($psPage > $psPages) {
-        $psPage = $psPages;
+    if ((int)$tabKonfig['enable_pagination'] === 1) {
+        $psPages = max(1, (int)ceil($psTotal / $psPer));
+        if ($psPage > $psPages) {
+            $psPage = $psPages;
+        }
+        $offset = ($psPage - 1) * $psPer;
+    } else {
+        $psPages = 1;
+        $psPage = 1;
+        $psPer = max(1, $psTotal);
+        $offset = 0;
     }
-    $offset = ($psPage - 1) * $psPer;
+
+    $orderSql = 'sr.datum DESC, sr.id_pob ASC, sr.prijmeni ASC, sr.jmeno ASC';
+    if ((int)$tabKonfig['enable_sort'] === 1) {
+        $orderSql = $psSortMap[$psSort] . ' ' . $psDir . ', sr.datum DESC, sr.id_pob ASC, sr.prijmeni ASC, sr.jmeno ASC';
+    }
 
     $sqlRows = '
         SELECT
@@ -256,7 +294,7 @@ try {
         FROM smeny_report sr
         LEFT JOIN pobocka p ON p.id_pob = sr.id_pob
     ' . $whereSql . '
-        ORDER BY ' . $psSortMap[$psSort] . ' ' . $psDir . ', sr.datum DESC, sr.id_pob ASC, sr.prijmeni ASC, sr.jmeno ASC
+        ORDER BY ' . $orderSql . '
         LIMIT ' . (int)$psPer . ' OFFSET ' . (int)$offset;
 
     $resRows = $conn->query($sqlRows);
@@ -285,14 +323,18 @@ $startExpanded = $keepExpanded;
 $psBaseParams = [
     'sekce=' . rawurlencode((string)$currentSekce),
     'ps_per=' . rawurlencode((string)$psPer),
-    'ps_sort=' . rawurlencode($psSort),
-    'ps_dir=' . rawurlencode($psDir),
 ];
+if ((int)$tabKonfig['enable_sort'] === 1) {
+    $psBaseParams[] = 'ps_sort=' . rawurlencode($psSort);
+    $psBaseParams[] = 'ps_dir=' . rawurlencode($psDir);
+}
 foreach ($psFilters as $key => $value) {
     if ($value === '') {
         continue;
     }
-    $psBaseParams[] = 'ps_f[' . rawurlencode($key) . ']=' . rawurlencode($value);
+    if ((int)$tabKonfig['enable_filters'] === 1) {
+        $psBaseParams[] = 'ps_f[' . rawurlencode($key) . ']=' . rawurlencode($value);
+    }
 }
 $psBaseUrl = cb_url('/?' . implode('&', $psBaseParams));
 
@@ -304,8 +346,10 @@ ob_start();
   <form method="get" action="<?= h($formAction) ?>" class="card_stack" autocomplete="off">
     <input type="hidden" name="sekce" value="<?= h((string)$currentSekce) ?>">
     <input type="hidden" name="ps_p" value="1">
-    <input type="hidden" name="ps_sort" value="<?= h($psSort) ?>">
-    <input type="hidden" name="ps_dir" value="<?= h($psDir) ?>">
+    <?php if ((int)$tabKonfig['enable_sort'] === 1): ?>
+      <input type="hidden" name="ps_sort" value="<?= h($psSort) ?>">
+      <input type="hidden" name="ps_dir" value="<?= h($psDir) ?>">
+    <?php endif; ?>
 
     <div class="table-wrap">
       <table class="table card_table_max" style="width:100%; table-layout:fixed;">
@@ -325,22 +369,32 @@ ob_start();
           <tr class="filter-row">
             <th></th>
             <th></th>
-            <th><input class="filter-input" style="width:10ch;" type="text" name="ps_f[prijmeni]" value="<?= h($psFilters['prijmeni']) ?>"></th>
-            <th><input class="filter-input" style="width:10ch;" type="text" name="ps_f[jmeno]" value="<?= h($psFilters['jmeno']) ?>"></th>
             <th>
-              <select class="filter-input" name="ps_f[slot]" onchange="this.form.ps_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
-                <option value=""<?= $psFilters['slot'] === '' ? ' selected' : '' ?>>slot</option>
-                <option value="1"<?= $psFilters['slot'] === '1' ? ' selected' : '' ?>>instor</option>
-                <option value="2"<?= $psFilters['slot'] === '2' ? ' selected' : '' ?>>kurýr</option>
-                <option value="3"<?= $psFilters['slot'] === '3' ? ' selected' : '' ?>>výroba</option>
-              </select>
+              <?php if ((int)$tabKonfig['enable_filters'] === 1): ?>
+                <input class="filter-input" style="width:10ch;" type="text" name="ps_f[prijmeni]" value="<?= h($psFilters['prijmeni']) ?>">
+              <?php endif; ?>
+            </th>
+            <th>
+              <?php if ((int)$tabKonfig['enable_filters'] === 1): ?>
+                <input class="filter-input" style="width:10ch;" type="text" name="ps_f[jmeno]" value="<?= h($psFilters['jmeno']) ?>">
+              <?php endif; ?>
+            </th>
+            <th>
+              <?php if ((int)$tabKonfig['enable_filters'] === 1): ?>
+                <select class="filter-input" name="ps_f[slot]" onchange="this.form.ps_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
+                  <option value=""<?= $psFilters['slot'] === '' ? ' selected' : '' ?>>slot</option>
+                  <option value="1"<?= $psFilters['slot'] === '1' ? ' selected' : '' ?>>instor</option>
+                  <option value="2"<?= $psFilters['slot'] === '2' ? ' selected' : '' ?>>kurýr</option>
+                  <option value="3"<?= $psFilters['slot'] === '3' ? ' selected' : '' ?>>výroba</option>
+                </select>
+              <?php endif; ?>
             </th>
             <th></th>
             <th></th>
             <th></th>
             <th></th>
             <th style="text-align:right;">
-              <?php if ($psErrCount > 0): ?>
+              <?php if ((int)$tabKonfig['enable_filters'] === 1 && $psErrCount > 0): ?>
                 <label style="display:inline-flex; align-items:center; gap:6px; white-space:nowrap; cursor:pointer;">
                   <input type="checkbox" name="ps_f[chyba]" value="1"<?= $psFilters['chyba'] === '1' ? ' checked' : '' ?> onchange="this.form.ps_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
                   <span style="color:#c62828; font-weight:700;">Chyby (<?= h((string)$psErrCount) ?>)</span>
@@ -356,18 +410,27 @@ ob_start();
               if ($isActiveSort) {
                   $arrow = $psDir === 'ASC' ? '↑' : '↓';
               }
-              $nextDir = ($isActiveSort && $psDir === 'ASC') ? 'DESC' : 'ASC';
-              $sortParams = $psBaseParams;
-              $sortParams[] = 'ps_p=1';
-              $sortParams[] = 'ps_sort=' . rawurlencode($key);
-              $sortParams[] = 'ps_dir=' . rawurlencode($nextDir);
-              $sortUrl = cb_url('/?' . implode('&', $sortParams));
+              $sortUrl = '';
+              if ((int)$tabKonfig['enable_sort'] === 1) {
+                  $nextDir = ($isActiveSort && $psDir === 'ASC') ? 'DESC' : 'ASC';
+                  $sortParams = $psBaseParams;
+                  $sortParams[] = 'ps_p=1';
+                  $sortParams[] = 'ps_sort=' . rawurlencode($key);
+                  $sortParams[] = 'ps_dir=' . rawurlencode($nextDir);
+                  $sortUrl = cb_url('/?' . implode('&', $sortParams));
+              }
               ?>
               <th class="th-sort<?= $isActiveSort ? ' active' : '' ?>">
-                <a class="th-sort-link<?= $isActiveSort ? ' active' : '' ?>" href="<?= h($sortUrl) ?>">
-                  <span class="th-sort-label"><?= h($label) ?></span>
-                  <span class="th-sort-arrow"><?= h($arrow) ?></span>
-                </a>
+                <?php if ((int)$tabKonfig['enable_sort'] === 1): ?>
+                  <a class="th-sort-link<?= $isActiveSort ? ' active' : '' ?>" href="<?= h($sortUrl) ?>">
+                    <span class="th-sort-label"><?= h($label) ?></span>
+                    <span class="th-sort-arrow"><?= h($arrow) ?></span>
+                  </a>
+                <?php else: ?>
+                  <span class="th-sort-link">
+                    <span class="th-sort-label"><?= h($label) ?></span>
+                  </span>
+                <?php endif; ?>
               </th>
             <?php endforeach; ?>
           </tr>
@@ -405,13 +468,14 @@ ob_start();
       </table>
     </div>
 
+    <?php if ((int)$tabKonfig['enable_pagination'] === 1): ?>
     <div class="list-bottom">
       <div class="per-form">
         <span>Zobrazuji</span>
         <select name="ps_per" class="filter-input per-select" onchange="this.form.ps_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
-          <option value="20"<?= $psPer === 20 ? ' selected' : '' ?>>20 řádků</option>
-          <option value="50"<?= $psPer === 50 ? ' selected' : '' ?>>50 řádků</option>
-          <option value="100"<?= $psPer === 100 ? ' selected' : '' ?>>100 řádků</option>
+          <?php foreach ($perOptions as $optPer): ?>
+            <option value="<?= h((string)$optPer) ?>"<?= $psPer === $optPer ? ' selected' : '' ?>><?= h((string)$optPer) ?> řádků</option>
+          <?php endforeach; ?>
         </select>
       </div>
 
@@ -455,11 +519,12 @@ ob_start();
         <span>Celkem: <strong><?= h((string)$psTotal) ?></strong></span>
       </div>
     </div>
+    <?php endif; ?>
   </form>
 <?php endif; ?>
 <?php
 $card_max_html = (string)ob_get_clean();
 
-/* karty/prehled_smen.php * Verze: V6 * Aktualizace: 27.03.2026 */
-// počet řádků 465
+/* karty/prehled_smen.php * Verze: V7 * Aktualizace: 27.03.2026 */
+// pocet radku 530
 ?>
