@@ -2,7 +2,7 @@
 // karty/admin_pobocky.php * Verze: V2 * Aktualizace: 18.03.2026
 declare(strict_types=1);
 
-$formAction = cb_url('/?sekce=1');
+$formAction = cb_url('/');
 $msg = '';
 $msgErr = false;
 $keepExpanded = false;

@@ -28,11 +28,7 @@ $psPer = (int)$tabKonfig['default_per'];
 $psError = '';
 $psErrCount = 0;
 
-$currentSekce = isset($cb_dashboard_sekce) ? (int)$cb_dashboard_sekce : (int)($_GET['sekce'] ?? 3);
-if (!in_array($currentSekce, [1, 2, 3], true)) {
-    $currentSekce = 3;
-}
-$formAction = cb_url('/?sekce=' . $currentSekce);
+$formAction = cb_url('/');
 $keepExpanded = isset($_GET['ps_p']) || isset($_GET['ps_per']) || isset($_GET['ps_f']) || isset($_GET['ps_sort']) || isset($_GET['ps_dir']);
 
 // Globální období je nastavené v hlavičce a drží se v session.
@@ -321,7 +317,6 @@ $card_min_html = ''
 $startExpanded = $keepExpanded;
 
 $psBaseParams = [
-    'sekce=' . rawurlencode((string)$currentSekce),
     'ps_per=' . rawurlencode((string)$psPer),
 ];
 if ((int)$tabKonfig['enable_sort'] === 1) {
@@ -344,7 +339,6 @@ ob_start();
   <p class="card_text card_text_muted"><?= h($psError) ?></p>
 <?php else: ?>
   <form method="get" action="<?= h($formAction) ?>" class="card_stack" autocomplete="off">
-    <input type="hidden" name="sekce" value="<?= h((string)$currentSekce) ?>">
     <input type="hidden" name="ps_p" value="1">
     <?php if ((int)$tabKonfig['enable_sort'] === 1): ?>
       <input type="hidden" name="ps_sort" value="<?= h($psSort) ?>">

@@ -408,7 +408,6 @@
       closeActiveMaxi();
       initKartyMinMax();
     });
-    document.addEventListener('cb:menu-same-sekce', forceCompact);
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
         closeActiveMaxi();

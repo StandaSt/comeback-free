@@ -41,11 +41,7 @@ $uzPer = (int)$tabKonfig['default_per'];
 $uzAkt = '1';
 $uzFilters = [];
 $uzError = '';
-$currentSekce = isset($cb_dashboard_sekce) ? (int)$cb_dashboard_sekce : (int)($_GET['sekce'] ?? 3);
-if (!in_array($currentSekce, [1, 2, 3], true)) {
-    $currentSekce = 3;
-}
-$formAction = cb_url('/?sekce=' . $currentSekce);
+$formAction = cb_url('/');
 $keepExpanded = isset($_GET['uz_p']) || isset($_GET['uz_per']) || isset($_GET['uz_akt']) || isset($_GET['uz_f']) || isset($_GET['uz_sort']) || isset($_GET['uz_dir']);
 $roleStats = ['admin' => 0, 'manager' => 0, 'uzivatel' => 0];
 
@@ -222,7 +218,6 @@ try {
 }
 
 $uzBaseParams = [
-    'sekce=' . rawurlencode((string)$currentSekce),
     'uz_per=' . rawurlencode((string)$uzPer),
     'uz_akt=' . rawurlencode($uzAkt),
 ];
@@ -284,7 +279,6 @@ ob_start();
       <p class="card_text card_text_muted"><?= h($uzError) ?></p>
     <?php else: ?>
       <form method="get" action="<?= h($formAction) ?>" class="card_stack" autocomplete="off">
-        <input type="hidden" name="sekce" value="<?= h((string)$currentSekce) ?>">
         <input type="hidden" name="uz_p" value="1">
         <?php if ((int)$tabKonfig['enable_sort'] === 1): ?>
           <input type="hidden" name="uz_sort" value="<?= h($uzSort) ?>">

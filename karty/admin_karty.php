@@ -5,7 +5,7 @@ declare(strict_types=1);
 $cbUser = $_SESSION['cb_user'] ?? [];
 $idRole = (int)($cbUser['id_role'] ?? 0);
 $isAdmin = ($idRole === 1);
-$formAction = cb_url('/?sekce=1');
+$formAction = cb_url('/');
 
 $cbMsg = '';
 $cbMsgErr = false;

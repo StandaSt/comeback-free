@@ -105,9 +105,9 @@
 .filter-input{
   width:100%;
   box-sizing:border-box;
-  height:32px;
-  padding:4px 10px;
-  font-size:13px;
+  height:24px;
+  padding:2px 8px;
+  font-size:12px;
   border:1px solid #c9d3df;
   border-radius:8px;
   background:#fff;
@@ -129,10 +129,10 @@
 
 /* maly krizek vedle Enter (ctverec) */
 .icon-x.small{
-  width:32px;
-  min-width:32px;
-  height:32px;
-  line-height:32px;
+  width:24px;
+  min-width:24px;
+  height:24px;
+  line-height:24px;
   border-radius:6px;
 }
 
@@ -161,6 +161,12 @@
   gap:8px;
   align-items:center;
   white-space:nowrap;
+  font-size:12px;
+  line-height:1.2;
+}
+
+.list-bottom .per-form:not(.right) > span:first-child::after{
+  content:":";
 }
 
 .per-form.right{
@@ -171,18 +177,18 @@
 .pagination-icon{
   justify-self:center;
   display:inline-flex;
-  gap:6px;
+  gap:4px;
   align-items:center;
 }
 
 /* kompaktni tlacitka strankovani */
 .icon-btn.w44{
-  min-width:36px;
+  min-width:30px;
   width:auto;
-  height:28px;
-  line-height:28px;
-  font-size:12px;
-  padding:0 8px;
+  height:24px;
+  line-height:24px;
+  font-size:11px;
+  padding:0 6px;
 }
 
 /* aktualni stranka */

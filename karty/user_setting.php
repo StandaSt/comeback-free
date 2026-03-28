@@ -14,11 +14,7 @@ $usNanoKde = 0;
 $usPismo = 2;
 $usDark = 0;
 
-$currentSekce = isset($cb_dashboard_sekce) ? (int)$cb_dashboard_sekce : (int)($_GET['sekce'] ?? 3);
-if (!in_array($currentSekce, [1, 2, 3], true)) {
-    $currentSekce = 3;
-}
-$formAction = cb_url('/?sekce=' . $currentSekce);
+$formAction = cb_url('/');
 
 if ($usUserId > 0) {
     try {
@@ -99,7 +95,6 @@ ob_start();
     </script>
   <?php endif; ?>
   <form method="post" action="<?= h($formAction) ?>" class="card_stack" autocomplete="off">
-    <input type="hidden" name="sekce" value="<?= h((string)$currentSekce) ?>">
     <input type="hidden" name="us_action" value="save">
 
     <section class="card_section">

@@ -30,11 +30,7 @@ $zakPer = (int)$tabKonfig['default_per'];
 $zakBlk = '0';
 $zakFilters = [];
 $zakError = '';
-$currentSekce = isset($cb_dashboard_sekce) ? (int)$cb_dashboard_sekce : (int)($_GET['sekce'] ?? 3);
-if (!in_array($currentSekce, [1, 2, 3], true)) {
-    $currentSekce = 3;
-}
-$formAction = cb_url('/?sekce=' . $currentSekce);
+$formAction = cb_url('/');
 $keepExpanded = isset($_GET['zak_p']) || isset($_GET['zak_per']) || isset($_GET['zak_blk']) || isset($_GET['zak_f']) || isset($_GET['zak_sort']) || isset($_GET['zak_dir']);
 
 $zakCols = [
@@ -46,8 +42,7 @@ $zakCols = [
     'ulice' => ['label' => 'ulice', 'db' => 'ulice', 'filter' => true],
     'mesto' => ['label' => 'město', 'db' => 'mesto', 'filter' => true],
     'pobocka' => ['label' => 'pobočka', 'db' => 'pobocka', 'filter' => true],
-    'posl_obj' => ['label' => 'posl_obj', 'db' => 'posledni_obj'],
-    'aktivni' => ['label' => 'aktivní', 'db' => 'blokovany'],
+    'posl_obj' => ['label' => 'aktivita', 'db' => 'posledni_obj'],
 ];
 $zakFilterStyle = [
     'prijmeni' => 'width:10ch;',
@@ -70,7 +65,6 @@ $zakSortMap = [
     'mesto' => 'COALESCE(z.mesto, "")',
     'pobocka' => 'COALESCE(p.kod, "")',
     'posl_obj' => 'COALESCE(z.posledni_obj, "")',
-    'aktivni' => 'z.blokovany',
 ];
 $zakSortRaw = trim((string)($_GET['zak_sort'] ?? 'id'));
 $zakDirRaw = strtoupper(trim((string)($_GET['zak_dir'] ?? 'DESC')));
@@ -99,7 +93,7 @@ if ((int)$tabKonfig['enable_pagination'] === 1 && $zakPageRaw > 1) {
 }
 
 $zakBlkRaw = (string)($_GET['zak_blk'] ?? '0');
-if (in_array($zakBlkRaw, ['0', '1', 'all'], true)) {
+if (in_array($zakBlkRaw, ['0', '1'], true)) {
     $zakBlk = $zakBlkRaw;
 }
 
@@ -188,9 +182,7 @@ try {
         $where[] = 'z.id_pob IN (' . implode(',', $selectedPobocky) . ')';
     }
 
-    if ($zakBlk !== 'all') {
-        $where[] = 'z.blokovany = ' . (int)$zakBlk;
-    }
+    $where[] = 'z.blokovany = ' . (int)$zakBlk;
 
     if ((int)$tabKonfig['enable_filters'] === 1) {
         foreach ($zakFilters as $key => $value) {
@@ -280,7 +272,6 @@ try {
 }
 
 $zakBaseParams = [
-    'sekce=' . rawurlencode((string)$currentSekce),
     'zak_per=' . rawurlencode((string)$zakPer),
     'zak_blk=' . rawurlencode($zakBlk),
 ];
@@ -341,7 +332,6 @@ ob_start();
       <p class="card_text card_text_muted"><?= h($zakError) ?></p>
     <?php else: ?>
       <form method="get" action="<?= h($formAction) ?>" class="card_stack" autocomplete="off">
-        <input type="hidden" name="sekce" value="<?= h((string)$currentSekce) ?>">
         <input type="hidden" name="zak_p" value="1">
         <?php if ((int)$tabKonfig['enable_sort'] === 1): ?>
           <input type="hidden" name="zak_sort" value="<?= h($zakSort) ?>">
@@ -349,49 +339,40 @@ ob_start();
         <?php endif; ?>
 
         <div class="table-wrap">
-          <table class="table card_table_max">
+          <table class="table card_table_max" style="width:100%; table-layout:fixed;">
+            <colgroup>
+              <col style="width:70px;">
+              <col style="width:130px;">
+              <col style="width:120px;">
+              <col style="width:125px;">
+              <col style="width:180px;">
+              <col style="width:180px;">
+              <col style="width:105px;">
+              <col style="width:135px;">
+              <col style="width:105px;">
+            </colgroup>
             <thead>
               <tr class="filter-row">
-                <?php foreach ($zakCols as $key => $cfg): ?>
-                  <?php if ($key === 'id'): ?>
-                    <th></th>
-                  <?php elseif ((int)$tabKonfig['enable_filters'] === 1 && !empty($cfg['filter'])): ?>
-                    <th><input class="filter-input" style="<?= h((string)($zakFilterStyle[$key] ?? 'width:10ch;')) ?>" type="text" name="zak_f[<?= h($key) ?>]" value="<?= h($zakFilters[$key] ?? '') ?>"></th>
-                  <?php else: ?>
-                    <th><?= $key === 'posl_obj' ? '<a class="icon-btn icon-x small" href="' . h($formAction) . '">&times;</a>' : '' ?></th>
-                  <?php endif; ?>
-                <?php endforeach; ?>
+                <th style="text-align:right;"></th>
+                <th style="text-align:right;"><input class="filter-input" style="<?= h((string)($zakFilterStyle['prijmeni'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[prijmeni]" value="<?= h($zakFilters['prijmeni'] ?? '') ?>"></th>
+                <th style="text-align:left;"><input class="filter-input" style="<?= h((string)($zakFilterStyle['jmeno'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[jmeno]" value="<?= h($zakFilters['jmeno'] ?? '') ?>"></th>
+                <th style="text-align:left;"><input class="filter-input" style="<?= h((string)($zakFilterStyle['telefon'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[telefon]" value="<?= h($zakFilters['telefon'] ?? '') ?>"></th>
+                <th style="text-align:right;"><input class="filter-input" style="<?= h((string)($zakFilterStyle['email'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[email]" value="<?= h($zakFilters['email'] ?? '') ?>"></th>
+                <th style="text-align:right;"><input class="filter-input" style="<?= h((string)($zakFilterStyle['ulice'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[ulice]" value="<?= h($zakFilters['ulice'] ?? '') ?>"></th>
+                <th style="text-align:right;"><input class="filter-input" style="<?= h((string)($zakFilterStyle['mesto'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[mesto]" value="<?= h($zakFilters['mesto'] ?? '') ?>"></th>
+                <th style="text-align:left;"><input class="filter-input" style="<?= h((string)($zakFilterStyle['pobocka'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[pobocka]" value="<?= h($zakFilters['pobocka'] ?? '') ?>"></th>
+                <th style="text-align:right;"> <a class="icon-btn icon-x small" href="<?= h($formAction) ?>">&times;</a></th>
               </tr>
               <tr>
-                <?php foreach ($zakCols as $key => $cfg): ?>
-                  <?php
-                  $isSortable = isset($zakSortMap[$key]);
-                  $isActiveSort = ($zakSort === $key);
-                  $arrow = '↕';
-                  if ($isActiveSort) {
-                      $arrow = $zakDir === 'ASC' ? '↑' : '↓';
-                  }
-                  ?>
-                  <?php $thRight = in_array($key, ['prijmeni', 'email', 'ulice', 'mesto', 'posl_obj'], true); ?>
-                  <th class="th-sort<?= $isActiveSort ? ' active' : '' ?>"<?= $thRight ? ' style="text-align:right;"' : '' ?>>
-                    <?php if ((int)$tabKonfig['enable_sort'] === 1 && $isSortable): ?>
-                      <?php
-                      $nextDir = ($isActiveSort && $zakDir === 'ASC') ? 'DESC' : 'ASC';
-                      $sortParams = $zakBaseParams;
-                      $sortParams[] = 'zak_p=1';
-                      $sortParams[] = 'zak_sort=' . rawurlencode($key);
-                      $sortParams[] = 'zak_dir=' . rawurlencode($nextDir);
-                      $sortUrl = cb_url('/?' . implode('&', $sortParams));
-                      ?>
-                      <a class="th-sort-link<?= $isActiveSort ? ' active' : '' ?>" href="<?= h($sortUrl) ?>">
-                        <span class="th-sort-label"><?= h($cfg['label']) ?></span>
-                        <span class="th-sort-arrow"><?= h($arrow) ?></span>
-                      </a>
-                    <?php else: ?>
-                      <span class="th-sort-link"><span class="th-sort-label"><?= h($cfg['label']) ?></span></span>
-                    <?php endif; ?>
-                  </th>
-                <?php endforeach; ?>
+                <th class="th-sort" style="text-align:right;">Poř.č.</th>
+                <th class="th-sort" style="text-align:right;">příjmení</th>
+                <th class="th-sort" style="text-align:left;">jméno</th>
+                <th class="th-sort" style="text-align:left;">telefon</th>
+                <th class="th-sort" style="text-align:right;">email</th>
+                <th class="th-sort" style="text-align:right;">ulice</th>
+                <th class="th-sort" style="text-align:right;">město</th>
+                <th class="th-sort" style="text-align:left;">pobočka</th>
+                <th class="th-sort" style="text-align:right;">aktivita</th>
               </tr>
             </thead>
             <tbody>
@@ -421,14 +402,12 @@ ob_start();
                               $value = '';
                           } else {
                               $ts = strtotime($rawDate);
-                              $value = $ts === false ? $rawDate : date('j.n.y', $ts);
+                              $value = $ts === false ? $rawDate : date('j.n.Y', $ts);
                           }
-                      } elseif ($key === 'aktivni') {
-                          $value = ((int)$value === 1) ? 'Ne' : 'Ano';
                       }
-                      $tdRight = in_array($key, ['prijmeni', 'email', 'ulice', 'mesto', 'posl_obj'], true);
+                      $colRight = in_array($key, ['id', 'prijmeni', 'email', 'ulice', 'mesto', 'posl_obj'], true);
                       ?>
-                      <td<?= $tdRight ? ' style="text-align:right;"' : '' ?>><?= h($value) ?></td>
+                      <td<?= $colRight ? ' style="text-align:right;"' : '' ?>><?= h($value) ?></td>
                     <?php endforeach; ?>
                   </tr>
                 <?php endforeach; ?>
@@ -483,11 +462,11 @@ ob_start();
           </div>
 
           <div class="per-form right">
-            <select name="zak_blk" class="filter-input blk-select" onchange="this.form.zak_p.value=1; this.form.submit();">
-              <option value="0"<?= $zakBlk === '0' ? ' selected' : '' ?>>Aktivní</option>
-              <option value="1"<?= $zakBlk === '1' ? ' selected' : '' ?>>Blokovaní</option>
-              <option value="all"<?= $zakBlk === 'all' ? ' selected' : '' ?>>Vše</option>
-            </select>
+            <input type="hidden" name="zak_blk" value="0">
+            <label style="display:inline-flex; align-items:center; gap:6px; white-space:nowrap; cursor:pointer;">
+              <input type="checkbox" name="zak_blk" value="1"<?= $zakBlk === '1' ? ' checked' : '' ?> onchange="this.form.zak_p.value=1; this.form.submit();">
+              <span>blokovaní (<?= h((string)$blockedZak) ?>)</span>
+            </label>
           </div>
         </div>
         <?php endif; ?>
