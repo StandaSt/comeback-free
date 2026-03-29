@@ -35,21 +35,9 @@
 .zr_left,
 .zr_side{
   min-width:0;
-}
-
-.zr_left,
-.zr_side{
   display:flex;
   flex-direction:column;
   gap:14px;
-}
-
-.zr_side{
-  justify-content:flex-start;
-}
-
-.zr_side .zr_section{
-  width:100%;
 }
 
 .zr_section{
@@ -66,7 +54,6 @@
 .zr_table{
   width:max-content;
   border-collapse:collapse;
-  table-layout:auto;
 }
 
 .zr_table th,
@@ -111,10 +98,6 @@
   color:#0f172a;
 }
 
-.zr_req_label.is-valid{
-  color:#0f172a;
-}
-
 .zr_form input:focus,
 .zr_form select:focus{
   outline:none;
@@ -124,7 +107,6 @@
 
 .zr_date_display{
   width:160px;
-  max-width:160px;
   font-weight:700;
   color:#0f172a;
   background:linear-gradient(180deg, #fff, #f8fafc);
@@ -132,12 +114,10 @@
 
 .zr_intro_select{
   width:160px;
-  max-width:160px;
 }
 
 .zr_money_input{
   width:10ch;
-  max-width:10ch;
 }
 
 .zr_cash_table th,
@@ -167,10 +147,6 @@
 .zr_person_table th,
 .zr_person_table td{
   padding:6px 4px;
-}
-
-.zr_person_table{
-  table-layout:auto;
 }
 
 .zr_person_table thead th{
@@ -227,7 +203,6 @@
 
 .zr_delivery_input{
   width:5ch;
-  max-width:5ch;
   text-align:center;
 }
 
@@ -348,7 +323,6 @@
 
 .zr_side .zr_restia_table{
   width:100%;
-  table-layout:auto;
 }
 
 .zr_restia_key{
@@ -420,8 +394,7 @@
 
 @media (max-width: 1200px){
   .zr_layout,
-  .zr_top,
-  .zr_body{
+  .zr_top{
     grid-template-columns:1fr;
   }
 }

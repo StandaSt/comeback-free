@@ -1,16 +1,14 @@
 /* style/1/karty/uzivatele.css * Verze: V1 * Aktualizace: 13.03.2026 */
 
-.uzivatele-table.card_table_max .c-id{ width:auto; white-space:nowrap; }
-.uzivatele-table.card_table_max .c-prijmeni{ width:auto; }
-.uzivatele-table.card_table_max .c-jmeno{ width:auto; }
-.uzivatele-table.card_table_max .c-telefon{ width:auto; white-space:nowrap; }
-.uzivatele-table.card_table_max .c-email{ width:auto; overflow-wrap:anywhere; }
-.uzivatele-table.card_table_max .c-reg{ width:auto; white-space:nowrap; }
-.uzivatele-table.card_table_max .c-aktivni{ width:auto; white-space:nowrap; }
-.uzivatele-table.card_table_max .c-akce{ width:auto; }
+.uzivatele-table.card_table_max .c-id,
+.uzivatele-table.card_table_max .c-telefon,
+.uzivatele-table.card_table_max .c-reg,
+.uzivatele-table.card_table_max .c-aktivni{
+  white-space:nowrap;
+}
 
-.uzivatele-table td:empty::after{
-  content:"";
+.uzivatele-table.card_table_max .c-email{
+  overflow-wrap:anywhere;
 }
 
 .uzivatele_filter_reset{
@@ -35,5 +33,3 @@
   opacity:1;
   transform:translateY(-1px);
 }
-
-/* style/1/karty/uzivatele.css * Verze: V1 * Aktualizace: 13.03.2026 */

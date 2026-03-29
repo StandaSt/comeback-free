@@ -957,15 +957,9 @@ main{
   background:#fff;
 }
 
-.table_fit{
-  width:max-content;
-  table-layout:auto;
-}
-
 /* Maxi: sirka tabulky podle obsahu sloupcu */
 .dash_maxi_card .table-wrap .table{
   width:max-content;
-  table-layout:auto;
 }
 
 .table th,
@@ -1066,7 +1060,7 @@ main{
   box-shadow:0 0 0 3px rgba(59,130,246,.15);
 }
 
-   ENTER + X - GLOBALNI
+/* ENTER + X - GLOBALNI */
 .filter-actions{
   display:flex;
   gap:8px;
@@ -1390,7 +1384,8 @@ main{
   justify-content:flex-end;
 }
 
-.card_btn{
+.card_btn,
+.admin_karty_btn{
   display:inline-flex;
   align-items:center;
   justify-content:center;
@@ -1408,7 +1403,8 @@ main{
   text-decoration:none;
 }
 
-.card_btn:hover{
+.card_btn:hover,
+.admin_karty_btn:hover{
   background:#f8fafc;
 }
 
@@ -1809,29 +1805,13 @@ main{
 }
 
 .admin_karty_table tbody th[colspan]{
-  padding:6px 12px !important;
-  border:1px solid var(--border-strong) !important;
-  background:#f6f8fb !important;
-  font-size:13px !important;
-  color:#374151 !important;
-  font-weight:700 !important;
-  text-align:left !important;
-}
-
-.admin_karty_table{
-  width:auto;
-}
-
-.admin_karty_table thead th{
   padding:6px 12px;
+  border:1px solid var(--border-strong);
   background:#f6f8fb;
   font-size:13px;
   color:#374151;
   font-weight:700;
-}
-
-.admin_karty_table tbody td{
-  padding:6px 12px;
+  text-align:left;
 }
 
 .admin_karty_table td:nth-child(1),
@@ -1861,25 +1841,12 @@ main{
 }
 
 .admin_karty_btn{
-  min-width:0;
-  height:28px;
   padding:0 9px;
   margin:0 4px 0 0;
-  border:1px solid rgba(15,23,42,.18);
-  border-radius:6px;
-  background:#fff;
-  line-height:26px;
-  vertical-align:middle;
-  cursor:pointer;
-  white-space:nowrap;
 }
 
 .admin_karty_btn:last-child{
   margin-right:0;
-}
-
-.admin_karty_btn:hover{
-  background:#f8fafc;
 }
 
 .admin_karty_btn_icon{
@@ -1895,27 +1862,5 @@ main{
 
 .admin_karty_btn_danger:hover{
   background:#feecec;
-}
-
-@media (max-width: 720px){
-  .admin_karty_table,
-  .admin_karty_table thead,
-  .admin_karty_table tbody,
-  .admin_karty_table tr,
-  .admin_karty_table th,
-  .admin_karty_table td{
-    display:block;
-    width:100%;
-    box-sizing:border-box;
-  }
-
-  .admin_karty_table thead{
-    display:none;
-  }
-
-  .admin_karty_table tbody td{
-    padding:6px 0;
-    border:none;
-  }
 }
 
