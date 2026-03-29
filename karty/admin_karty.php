@@ -2,13 +2,13 @@
 // karty/admin_karty.php * Verze: V7 * Aktualizace: 12.03.2026
 declare(strict_types=1);
 
-$cbUser = $_SESSION['cb_user'] ?? [];
-$idRole = (int)($cbUser['id_role'] ?? 0);
+$user = $_SESSION['cb_user'] ?? [];
+$idRole = (int)($user['id_role'] ?? 0);
 $isAdmin = ($idRole === 1);
 $formAction = cb_url('/');
 
-$cbMsg = '';
-$cbMsgErr = false;
+$msg = '';
+$msgErr = false;
 $keepExpanded = false;
 $karetCount = 0;
 $lastAddedName = '-';
@@ -44,8 +44,8 @@ $normalizeSoubor = static function (string $v) use ($isName): string {
     return $s;
 };
 
-if ($isAdmin && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['cb_admin_karty_action'])) {
-    $action = trim((string)$_POST['cb_admin_karty_action']);
+if ($isAdmin && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['admin_karty_action'])) {
+    $action = trim((string)$_POST['admin_karty_action']);
     $keepExpanded = true;
 
     try {
@@ -72,7 +72,7 @@ if ($isAdmin && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['c
             $stmt->execute();
             $stmt->close();
 
-            $cbMsg = 'Karta byla pridana.';
+            $msg = 'Karta byla pridana.';
         } elseif ($action === 'save') {
             $idKarta = (int)($_POST['id_karta'] ?? 0);
             $nazev = trim((string)($_POST['nazev'] ?? ''));
@@ -97,7 +97,7 @@ if ($isAdmin && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['c
             $stmt->execute();
             $stmt->close();
 
-            $cbMsg = 'Zmena byla ulozena.';
+            $msg = 'Zmena byla ulozena.';
         } elseif ($action === 'disable' || $action === 'enable') {
             $idKarta = (int)($_POST['id_karta'] ?? 0);
             $aktivni = ($action === 'enable') ? 1 : 0;
@@ -119,7 +119,7 @@ if ($isAdmin && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['c
             $stmt->execute();
             $stmt->close();
 
-            $cbMsg = ($aktivni === 1) ? 'Karta byla povolena.' : 'Karta byla zakazana.';
+            $msg = ($aktivni === 1) ? 'Karta byla povolena.' : 'Karta byla zakazana.';
         } elseif ($action === 'move_up' || $action === 'move_down') {
             $idKarta = (int)($_POST['id_karta'] ?? 0);
             if ($idKarta <= 0) {
@@ -198,15 +198,15 @@ if ($isAdmin && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['c
                 }
 
                 $conn->commit();
-                $cbMsg = 'Poradi bylo upraveno.';
+                $msg = 'Poradi bylo upraveno.';
             } catch (Throwable $e) {
                 $conn->rollback();
                 throw $e;
             }
         }
     } catch (Throwable $e) {
-        $cbMsg = $e->getMessage();
-        $cbMsgErr = true;
+        $msg = $e->getMessage();
+        $msgErr = true;
     }
 }
 
@@ -306,9 +306,9 @@ try {
     $usedSouborMap = [];
     $activeCards = [];
     $inactiveCards = [];
-    if ($cbMsg === '') {
-        $cbMsg = 'Nacteni karet selhalo.';
-        $cbMsgErr = true;
+    if ($msg === '') {
+        $msg = 'Nacteni karet selhalo.';
+        $msgErr = true;
     }
 }
 
@@ -338,17 +338,21 @@ try {
     $souborOptions = [];
 }
 
-$tableColsHtml = implode("\n", [
-    '            <colgroup>',
-    '              <col class="admin_karty_col_id">',
-    '              <col class="admin_karty_col_nazev">',
-    '              <col class="admin_karty_col_soubor">',
-    '              <col class="admin_karty_col_role">',
-    '              <col class="admin_karty_col_poradi">',
-    '              <col class="admin_karty_col_aktivni">',
-    '              <col class="admin_karty_col_akce">',
-    '            </colgroup>',
-]);
+$adminKartyCols = [
+    ['class' => 'admin_karty_col_id'],
+    ['class' => 'admin_karty_col_nazev'],
+    ['class' => 'admin_karty_col_soubor'],
+    ['class' => 'admin_karty_col_role'],
+    ['class' => 'admin_karty_col_poradi'],
+    ['class' => 'admin_karty_col_aktivni'],
+    ['class' => 'admin_karty_col_akce'],
+];
+
+$tableColsHtml = "            <colgroup>\n";
+foreach ($adminKartyCols as $col) {
+    $tableColsHtml .= '              <col class="' . $col['class'] . '">' . "\n";
+}
+$tableColsHtml .= "            </colgroup>";
 $tableHeadHtml = implode("\n", [
     '            <tr>',
     '              <th class="admin_karty_col_id">ID</th>',
@@ -366,25 +370,25 @@ $tableHeadHtml = implode("\n", [
 ob_start();
 ?>
 <div class="table-wrap">
-  <table class="table card_table_min" aria-label="Přehled dashboard karet">
+  <table class="table">
     <thead>
       <tr>
-        <th>Sekce</th>
-        <th style="text-align:right;">celkem/on/off</th>
+        <th class="text_vlevo">Karty podle role</th>
+        <th class="text_vpravo">celkem/on/off</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td>home</td>
-        <td style="text-align:right;"><strong><?= h((string)$sekceStats[3]['all']) ?>/<?= h((string)$sekceStats[3]['on']) ?>/<?= h((string)$sekceStats[3]['off']) ?></strong></td>
+        <td>zaměstnanec</td>
+        <td class="text_vpravo"><strong><?= h((string)$sekceStats[3]['all']) ?>/<?= h((string)$sekceStats[3]['on']) ?>/<?= h((string)$sekceStats[3]['off']) ?></strong></td>
       </tr>
       <tr>
         <td>manager</td>
-        <td style="text-align:right;"><strong><?= h((string)$sekceStats[2]['all']) ?>/<?= h((string)$sekceStats[2]['on']) ?>/<?= h((string)$sekceStats[2]['off']) ?></strong></td>
+        <td class="text_vpravo"><strong><?= h((string)$sekceStats[2]['all']) ?>/<?= h((string)$sekceStats[2]['on']) ?>/<?= h((string)$sekceStats[2]['off']) ?></strong></td>
       </tr>
       <tr>
         <td>admin</td>
-        <td style="text-align:right;"><strong><?= h((string)$sekceStats[1]['all']) ?>/<?= h((string)$sekceStats[1]['on']) ?>/<?= h((string)$sekceStats[1]['off']) ?></strong></td>
+        <td class="text_vpravo"><strong><?= h((string)$sekceStats[1]['all']) ?>/<?= h((string)$sekceStats[1]['on']) ?>/<?= h((string)$sekceStats[1]['off']) ?></strong></td>
       </tr>
     </tbody>
   </table>
@@ -395,24 +399,24 @@ $startExpanded = $keepExpanded;
 
 ob_start();
 ?>
-    <form id="cb-karta-add" method="post" action="<?= h($formAction) ?>" autocomplete="off">
-      <input type="hidden" name="cb_admin_karty_action" value="add">
+    <form id="karta-add" method="post" action="<?= h($formAction) ?>" autocomplete="off">
+      <input type="hidden" name="admin_karty_action" value="add">
     </form>
     <div class="table-wrap">
-      <table class="table admin_karty_table card_table_max">
+      <table class="table admin_karty_table">
 <?= $tableColsHtml . "\n" ?>
         <tbody>
           <tr>
-            <th colspan="7" class="admin_karty_list_title">Přidání nové karty včetně názvu souboru, pořadí a minimální role.</th>
+            <th colspan="7">Přidání nové karty včetně názvu souboru, pořadí a minimální role.</th>
           </tr>
 <?= $tableHeadHtml . "\n" ?>
           <tr>
             <td><?= h((string)$nextCardId) ?></td>
             <td>
-              <input class="card_input" name="nazev" type="text" required maxlength="120" placeholder="např. Správa karet" form="cb-karta-add">
+              <input class="card_input" name="nazev" type="text" required maxlength="120" placeholder="např. Správa karet" form="karta-add">
             </td>
             <td>
-              <select class="card_select" name="soubor" required form="cb-karta-add">
+              <select class="card_select" name="soubor" required form="karta-add">
                 <option value="">Vyber soubor...</option>
                 <?php foreach ($souborOptions as $opt): ?>
                   <option value="<?= h($opt) ?>"><?= h($opt) ?></option>
@@ -420,32 +424,29 @@ ob_start();
               </select>
             </td>
             <td>
-              <select class="card_select" name="min_role" required form="cb-karta-add">
+              <select class="card_select" name="min_role" required form="karta-add">
                 <option value="1">admin</option>
                 <option value="2">manager</option>
                 <option value="3" selected>všichni</option>
               </select>
             </td>
             <td>
-              <input class="card_input" name="poradi" type="number" min="1" max="9999" value="100" required form="cb-karta-add">
+              <input class="card_input" name="poradi" type="number" min="1" max="9999" value="100" required form="karta-add">
             </td>
             <td>0</td>
             <td>
-              <button class="admin_karty_btn" type="submit" form="cb-karta-add">Přidat kartu</button>
+              <button class="admin_karty_btn" type="submit" form="karta-add">Přidat kartu</button>
             </td>
           </tr>
           <tr>
-            <td colspan="7" class="admin_karty_sep"></td>
-          </tr>
-          <tr>
-            <th colspan="7" class="admin_karty_list_title">Seznam aktivních karet</th>
+            <th colspan="7">Seznam aktivních karet</th>
           </tr>
 <?= $tableHeadHtml . "\n" ?>
           <?php if (!$activeCards): ?>
             <tr><td colspan="7">Zatim nejsou zadne aktivni karty.</td></tr>
           <?php else: ?>
             <?php foreach ($activeCards as $card): ?>
-              <?php $formId = 'cb-karta-' . (string)$card['id_karta']; ?>
+              <?php $formId = 'karta-' . (string)$card['id_karta']; ?>
               <tr>
                 <td><?= h((string)$card['id_karta']) ?></td>
                 <td>
@@ -465,26 +466,23 @@ ob_start();
                 <td><input type="number" class="card_input" name="poradi" value="<?= h((string)$card['poradi']) ?>" min="1" max="9999" form="<?= h($formId) ?>"></td>
                 <td>ano</td>
                 <td>
-                  <button class="admin_karty_btn admin_karty_btn_icon" type="submit" name="cb_admin_karty_action" value="move_up" form="<?= h($formId) ?>">&uarr;</button>
-                  <button class="admin_karty_btn admin_karty_btn_icon" type="submit" name="cb_admin_karty_action" value="move_down" form="<?= h($formId) ?>">&darr;</button>
-                  <button class="admin_karty_btn" type="submit" name="cb_admin_karty_action" value="save" form="<?= h($formId) ?>">Uložit</button>
-                  <button class="admin_karty_btn admin_karty_btn_danger" type="submit" name="cb_admin_karty_action" value="disable" form="<?= h($formId) ?>">Zakázat</button>
+                  <button class="admin_karty_btn admin_karty_btn_icon" type="submit" name="admin_karty_action" value="move_up" form="<?= h($formId) ?>">&uarr;</button>
+                  <button class="admin_karty_btn admin_karty_btn_icon" type="submit" name="admin_karty_action" value="move_down" form="<?= h($formId) ?>">&darr;</button>
+                  <button class="admin_karty_btn" type="submit" name="admin_karty_action" value="save" form="<?= h($formId) ?>">Uložit</button>
+                  <button class="admin_karty_btn admin_karty_btn_danger" type="submit" name="admin_karty_action" value="disable" form="<?= h($formId) ?>">Zakázat</button>
                 </td>
               </tr>
             <?php endforeach; ?>
           <?php endif; ?>
           <tr>
-            <td colspan="7" class="admin_karty_sep"></td>
-          </tr>
-          <tr>
-            <th colspan="7" class="admin_karty_list_title">Neaktivní karty</th>
+            <th colspan="7">Neaktivní karty</th>
           </tr>
 <?= $tableHeadHtml . "\n" ?>
           <?php if (!$inactiveCards): ?>
             <tr><td colspan="7">Nejsou žádné neaktivní karty</td></tr>
           <?php else: ?>
             <?php foreach ($inactiveCards as $card): ?>
-              <?php $formId = 'cb-karta-inactive-' . (string)$card['id_karta']; ?>
+              <?php $formId = 'karta-inactive-' . (string)$card['id_karta']; ?>
               <tr>
                 <td><?= h((string)$card['id_karta']) ?></td>
                 <td><?= h($card['nazev']) ?></td>
@@ -496,7 +494,7 @@ ob_start();
                   <form id="<?= h($formId) ?>" method="post" action="<?= h($formAction) ?>">
                     <input type="hidden" name="id_karta" value="<?= h((string)$card['id_karta']) ?>">
                   </form>
-                  <button class="admin_karty_btn admin_karty_btn_danger" type="submit" name="cb_admin_karty_action" value="enable" form="<?= h($formId) ?>">Povolit</button>
+                  <button class="admin_karty_btn admin_karty_btn_danger" type="submit" name="admin_karty_action" value="enable" form="<?= h($formId) ?>">Povolit</button>
                 </td>
               </tr>
             <?php endforeach; ?>
@@ -504,8 +502,8 @@ ob_start();
         </tbody>
       </table>
     </div>
-    <div class="cb-admin-karty-msg admin_karty_msg <?= $cbMsgErr ? 'admin_karty_msg_err' : 'admin_karty_msg_ok' ?>" aria-live="polite">
-      <br> <strong>&nbsp;&nbsp;Poslední akce:</strong> <?= h($cbMsg) ?>
+    <div class="admin_karty_msg <?= $msgErr ? 'text_barva_cervena' : 'text_barva_zelena' ?>">
+      <strong>Poslední akce:</strong> <?= h($msg) ?>
     </div>
 <?php
 $card_max_html = (string)ob_get_clean();

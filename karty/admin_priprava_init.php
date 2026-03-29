@@ -79,27 +79,27 @@ if ($initError !== '') {
 } else {
     $card_min_html = ''
         . '<div class="table-wrap">'
-        . '  <table class="table card_table_min">'
+        . '  <table class="table">'
         . '    <tbody>'
         . '      <tr>'
         . '        <td>Potřebné akce pro inicializaci:</td>'
-        . '        <td style="text-align:right;"><strong>' . h((string)$initTotal) . '</strong></td>'
+        . '        <td class="text_vpravo"><strong>' . h((string)$initTotal) . '</strong></td>'
         . '      </tr>'
         . '      <tr>'
         . '        <td>Dokončeno:</td>'
-        . '        <td style="text-align:right;"><strong>' . h((string)$initHotovy) . '</strong></td>'
+        . '        <td class="text_vpravo"><strong>' . h((string)$initHotovy) . '</strong></td>'
         . '      </tr>'
         . '      <tr>'
         . '        <td>Rozpracované soubory:</td>'
-        . '        <td style="text-align:right;"><strong>' . h((string)$initRozpracovany) . '</strong></td>'
+        . '        <td class="text_vpravo"><strong>' . h((string)$initRozpracovany) . '</strong></td>'
         . '      </tr>'
         . '      <tr>'
         . '        <td>Nemá soubor:</td>'
-        . '        <td style="text-align:right;"><strong>' . h((string)$initNeni) . '</strong></td>'
+        . '        <td class="text_vpravo"><strong>' . h((string)$initNeni) . '</strong></td>'
         . '      </tr>'
         . '    </tbody>'
         . '  </table>'
-        . '</div><br><strong>  Celkový stav inicializace: </strong>' .  $celkova_procenta  . ' %';
+        . '</div><p class="card_text"><strong>Celkový stav inicializace:</strong> ' . h((string)$celkova_procenta) . ' %</p>';
 }
 
 ob_start();
@@ -107,20 +107,32 @@ ob_start();
 <?php if ($initError !== ''): ?>
   <p class="card_text card_text_muted"><?= h($initError) ?></p>
 <?php else: ?>
+<?php
+$sirkaSloupcu = [
+    'krok' => 'width:9ch;',
+    'nazev' => 'width:25ch;',
+    'zdroj' => 'width:24ch;',
+    'soubor' => 'width:24ch;',
+    'db' => 'width:18ch;',
+    'hotovo' => 'width:8ch; text-align:right;',
+    'spousti' => 'width:8ch;',
+    'poznamka' => 'width:34ch;',
+];
+?>
 <div class="card_stack">
 
   <div class="table-wrap">
-    <table class="table card_table_max">
+    <table class="table">
       <thead>
         <tr>
-          <th>Krok</th>
-          <th>Název skriptu</th>
-          <th>Zdroj dat</th>
-          <th>Soubor</th>
-          <th>DB tabulky</th>
-          <th>Hotovo</th>
-          <th>Spouští</th>
-          <th>Poznámka</th>
+          <th style="<?= h($sirkaSloupcu['krok']) ?>">Krok</th>
+          <th style="<?= h($sirkaSloupcu['nazev']) ?>">Název skriptu</th>
+          <th style="<?= h($sirkaSloupcu['zdroj']) ?>">Zdroj dat</th>
+          <th style="<?= h($sirkaSloupcu['soubor']) ?>">Soubor</th>
+          <th style="<?= h($sirkaSloupcu['db']) ?>">DB tabulky</th>
+          <th style="<?= h($sirkaSloupcu['hotovo']) ?>">Hotovo</th>
+          <th style="<?= h($sirkaSloupcu['spousti']) ?>">Spouští</th>
+          <th style="<?= h($sirkaSloupcu['poznamka']) ?>">Poznámka</th>
         </tr>
       </thead>
       <tbody>
@@ -137,7 +149,7 @@ ob_start();
             }
           ?>
           <tr>
-            <th colspan="8" style="text-align:left; font-weight:700; font-size:1.05rem; background:<?= $areaColor ?>;"><?= h($areaName) ?></th>
+            <th colspan="8" class="text_vlevo text_tucny" style="background:<?= $areaColor ?>;"><?= h($areaName) ?></th>
           </tr>
 
           <?php if (!$areaRows): ?>
@@ -181,24 +193,24 @@ ob_start();
 
               $isHotovo100 = $procenta === 100;
               $isHotovo0 = $procenta === 0;
-              $styleProcenta = ' style="text-align:right;"';
+              $procentaClass = 'text_vpravo';
               if ($isHotovo100) {
-                  $styleProcenta = ' style="color:#1b7f2a; font-weight:700; text-align:right;"';
+                  $procentaClass .= ' text_barva_zelena text_tucny';
               }
 
               if ($isHotovo0) {
-                  $styleProcenta = ' style="color:#b00020; font-weight:700; text-align:right;"';
+                  $procentaClass .= ' text_barva_cervena text_tucny';
               }
               ?>
               <tr>
-                <td><?= h($krok) ?></td>
-                <td><?= $nazev ?></td>
-                <td><?= $zdrojDat ?></td>
-                <td><?= $soubor ?></td>
-                <td><?= $dbTabulky ?></td>
-                <td<?= $styleProcenta ?>><?= h((string)$procenta) ?> %</td>
-                <td><?= h($spousti) ?></td>
-                <td style="white-space:pre-wrap;"><?= h($poznamka) ?></td>
+                <td style="<?= h($sirkaSloupcu['krok']) ?>"><?= h($krok) ?></td>
+                <td style="<?= h($sirkaSloupcu['nazev']) ?>"><?= $nazev ?></td>
+                <td style="<?= h($sirkaSloupcu['zdroj']) ?>"><?= $zdrojDat ?></td>
+                <td style="<?= h($sirkaSloupcu['soubor']) ?>"><?= $soubor ?></td>
+                <td style="<?= h($sirkaSloupcu['db']) ?>"><?= $dbTabulky ?></td>
+                <td class="<?= h($procentaClass) ?>"><?= h((string)$procenta) ?> %</td>
+                <td style="<?= h($sirkaSloupcu['spousti']) ?>"><?= h($spousti) ?></td>
+                <td style="<?= h($sirkaSloupcu['poznamka']) ?> white-space:pre-wrap;"><?= h($poznamka) ?></td>
               </tr>
             <?php endforeach; ?>
           <?php endif; ?>

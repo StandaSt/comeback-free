@@ -86,21 +86,29 @@ try {
 
 $card_min_html = '<p class="card_text">Správa poboček</p>';
 $startExpanded = $keepExpanded;
+$sirkaSloupcu = [
+    'nazev' => 'width:15ch;',
+    'ulice' => 'width:20ch;',
+    'mesto' => 'width:12ch;',
+    'psc' => 'width:7ch;',
+    'end' => 'width:4ch; text-align:center;',
+    'akce' => 'width:9ch;',
+];
 
 ob_start();
 ?>
   <div class="table-wrap">
-    <table class="table card_table_max">
+    <table class="table">
       <thead>
         <tr>
-          <th>Název</th>
-          <th>Ulice</th>
-          <th>Město</th>
-          <th>PSČ</th>
+          <th style="<?= h($sirkaSloupcu['nazev']) ?>">Název</th>
+          <th style="<?= h($sirkaSloupcu['ulice']) ?>">Ulice</th>
+          <th style="<?= h($sirkaSloupcu['mesto']) ?>">Město</th>
+          <th style="<?= h($sirkaSloupcu['psc']) ?>">PSČ</th>
           <?php foreach ($endCols as $col): ?>
-            <th><?= h($col) ?></th>
+            <th style="<?= h($sirkaSloupcu['end']) ?>"><?= h($col) ?></th>
           <?php endforeach; ?>
-          <th>Akce</th>
+          <th style="<?= h($sirkaSloupcu['akce']) ?>">Akce</th>
         </tr>
       </thead>
       <tbody>
@@ -116,19 +124,13 @@ ob_start();
                 <input type="hidden" name="id_pob" value="<?= h((string)($row['id_pob'] ?? '0')) ?>">
 
                 <?php foreach ($editCols as $col): ?>
+                  <?php $maxLenAttr = str_starts_with($col, 'end_') ? ' maxlength="3"' : ''; ?>
                   <?php
-                    $maxLenAttr = '';
-                    $styleWidth = '';
-                    // Inline stylovani je zde vyslovne povolene pro specialni sirky sloupcu.
-                    if (str_starts_with($col, 'end_')) {
-                        $maxLenAttr = ' maxlength="3"';
-                        $styleWidth = ' style="width:4ch;"';
-                    } elseif ($col === 'psc') {
-                        $maxLenAttr = ' maxlength="7"';
-                        $styleWidth = ' style="width:8ch;"';
-                    } elseif ($col === 'nazev' || $col === 'mesto') {
-                        $styleWidth = ' style="width:12ch;"';
-                    }
+                    $inputStyle = match (true) {
+                        str_starts_with($col, 'end_') => ' style="' . $sirkaSloupcu['end'] . '"',
+                        isset($sirkaSloupcu[$col]) => ' style="' . $sirkaSloupcu[$col] . '"',
+                        default => '',
+                    };
                   ?>
                   <td>
                     <input
@@ -136,12 +138,12 @@ ob_start();
                       class="card_input"
                       name="<?= h($col) ?>"
                       value="<?= h((string)($row[$col] ?? '')) ?>"
-                      <?= $maxLenAttr ?><?= $styleWidth ?>
+                      <?= $maxLenAttr ?><?= $inputStyle ?>
                     >
                   </td>
                 <?php endforeach; ?>
                 <td>
-                  <button type="submit" class="admin_karty_btn">Uložit</button>
+                  <button type="submit" class="card_btn card_btn_primary">Uložit</button>
                 </td>
               </form>
             </tr>

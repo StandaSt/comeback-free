@@ -1,5 +1,5 @@
 <?php
-// karty/admin_inicializace.php * Verze: V10 * Aktualizace: 27.03.2026
+// karty/admin_inicializace.php * Verze: V11 * Aktualizace: 29.03.2026
 
 declare(strict_types=1);
 
@@ -45,24 +45,42 @@ if ($qReport instanceof mysqli_result) {
 
 $card_min_html = ''
     . '<div class="table-wrap">'
-    . '<table class="table">'
-    . '<thead><tr style="border:0;"><th>Zdroj</th><th style="text-align:right;">záznamů</th><th style="text-align:right;">aktualizace</th></tr></thead>'
-    . '<tbody style="border:0;">'
-    . '<tr style="border:0;"><td style="padding:0; border:0;">Restia</td><td style="text-align:right;"><strong>' . h((string)$cbRestiaCount) . '</strong></td><td style="text-align:right;">' . h($cbRestiaDate) . '</td></tr>'
-    . '<tr style="border:0;"><td style="padding:0; border:0;">Směny</td><td style="text-align:right;"><strong>' . h((string)$cbSmenyCount) . '</strong></td><td style="text-align:right;">' . h($cbSmenyDate) . '</td></tr>'
-    . '<tr style="border:0;"><td style="padding:0; border:0;">Reporty</td><td style="text-align:right;"><strong>' . h((string)$cbReportCount) . '</strong></td><td style="text-align:right;">' . h($cbReportDate) . '</td></tr>'
-    . '</tbody>'
-    . '</table>'
+    . '  <table class="table">'
+    . '    <thead>'
+    . '      <tr>'
+    . '        <th class="text_vlevo">Zdroj</th>'
+    . '        <th class="text_vpravo">záznamů</th>'
+    . '        <th class="text_vpravo">aktualizace</th>'
+    . '      </tr>'
+    . '    </thead>'
+    . '    <tbody>'
+    . '      <tr>'
+    . '        <td>Restia</td>'
+    . '        <td class="text_vpravo"><strong>' . h((string)$cbRestiaCount) . '</strong></td>'
+    . '        <td class="text_vpravo">' . h($cbRestiaDate) . '</td>'
+    . '      </tr>'
+    . '      <tr>'
+    . '        <td>Směny</td>'
+    . '        <td class="text_vpravo"><strong>' . h((string)$cbSmenyCount) . '</strong></td>'
+    . '        <td class="text_vpravo">' . h($cbSmenyDate) . '</td>'
+    . '      </tr>'
+    . '      <tr>'
+    . '        <td>Reporty</td>'
+    . '        <td class="text_vpravo"><strong>' . h((string)$cbReportCount) . '</strong></td>'
+    . '        <td class="text_vpravo">' . h($cbReportDate) . '</td>'
+    . '      </tr>'
+    . '    </tbody>'
+    . '  </table>'
     . '</div>';
 
 ob_start();
 ?>
-<table class="table" style="width:100%; margin:0;">
+<table class="table">
   <thead>
     <tr>
-      <th style="text-align:left;">script</th>
-      <th style="text-align:left;">popis</th>
-      <th style="text-align:left;">akce</th>
+      <th class="text_vlevo">script</th>
+      <th class="text_vlevo">popis</th>
+      <th class="text_vlevo">akce</th>
     </tr>
   </thead>
   <tbody>
@@ -71,34 +89,32 @@ ob_start();
       <td>stáhne naplánované směny</td>
       <td>
         <?php if ($cbSmenyPlanMaData): ?>
-          <span style="color:#c62828; font-weight:700;">DATA!</span>
+          <span class="text_barva_cervena text_tucny">DATA!</span>
         <?php else: ?>
-          <form method="get" action="<?= h(cb_url('/inicializace/plnime_smeny_plan.php')) ?>" style="margin:0;">
-            <button type="submit" class="btn btn-primary">Spustit</button>
+          <form method="get" action="<?= h(cb_url('/inicializace/plnime_smeny_plan.php')) ?>" class="odstup_vnejsi_0">
+            <button type="submit" class="card_btn card_btn_primary">Spustit</button>
           </form>
         <?php endif; ?>
       </td>
     </tr>
-
     <tr>
       <td>inicializace/google_data.php</td>
       <td>stáhne směny z reportů</td>
       <td>
         <?php if ($cbReportMaData): ?>
-          <span style="color:#c62828; font-weight:700;">DATA!</span>
+          <span class="text_barva_cervena text_tucny">DATA!</span>
         <?php else: ?>
-          <form method="get" action="<?= h(cb_url('/inicializace/google_data.php')) ?>" style="margin:0;">
-            <button type="submit" class="btn btn-primary">Spustit</button>
+          <form method="get" action="<?= h(cb_url('/inicializace/google_data.php')) ?>" class="odstup_vnejsi_0">
+            <button type="submit" class="card_btn card_btn_primary">Spustit</button>
           </form>
         <?php endif; ?>
       </td>
     </tr>
-
   </tbody>
 </table>
 <?php
 $card_max_html = (string)ob_get_clean();
 
-// karty/admin_inicializace.php * Verze: V10 * Aktualizace: 27.03.2026
-// počet řádků 94
+// karty/admin_inicializace.php * Verze: V11 * Aktualizace: 29.03.2026
+// počet řádků 96
 ?>

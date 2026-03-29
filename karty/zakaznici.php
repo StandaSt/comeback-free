@@ -339,18 +339,7 @@ ob_start();
         <?php endif; ?>
 
         <div class="table-wrap">
-          <table class="table card_table_max" style="width:100%; table-layout:fixed;">
-            <colgroup>
-              <col style="width:70px;">
-              <col style="width:130px;">
-              <col style="width:120px;">
-              <col style="width:125px;">
-              <col style="width:180px;">
-              <col style="width:180px;">
-              <col style="width:105px;">
-              <col style="width:135px;">
-              <col style="width:105px;">
-            </colgroup>
+          <table class="table card_table_max">
             <thead>
               <tr class="filter-row">
                 <th style="text-align:right;"></th>

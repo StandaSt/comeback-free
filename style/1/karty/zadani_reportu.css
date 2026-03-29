@@ -48,6 +48,10 @@
   justify-content:flex-start;
 }
 
+.zr_side .zr_section{
+  width:100%;
+}
+
 .zr_section{
   padding:12px 14px;
   border-color:rgba(148,163,184,.30);
@@ -60,9 +64,9 @@
 }
 
 .zr_table{
-  width:100%;
+  width:max-content;
   border-collapse:collapse;
-  table-layout:fixed;
+  table-layout:auto;
 }
 
 .zr_table th,
@@ -81,6 +85,12 @@
 .zr_table td{
   font-size:12px;
   color:#0f172a;
+}
+
+.zr_table td input,
+.zr_table td select{
+  width:max-content;
+  max-width:100%;
 }
 
 .zr_form input,
@@ -160,7 +170,7 @@
 }
 
 .zr_person_table{
-  table-layout:fixed;
+  table-layout:auto;
 }
 
 .zr_person_table thead th{
@@ -334,6 +344,11 @@
   padding:7px 8px;
   border:1px solid rgba(148,163,184,.18);
   background:#fff;
+}
+
+.zr_side .zr_restia_table{
+  width:100%;
+  table-layout:auto;
 }
 
 .zr_restia_key{

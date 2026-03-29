@@ -107,7 +107,7 @@ ob_start();
         </select>
       </label>
 
-      <label class="card_field" style="margin-top:10px;">
+      <label class="card_field">
         <span>Nano karty</span>
         <select class="card_select" name="us_nano_kde">
           <option value="0"<?= $usNanoKde === 0 ? ' selected' : '' ?>>0 = řádek</option>
@@ -127,7 +127,7 @@ ob_start();
         </select>
       </label>
 
-      <label class="card_field" style="margin-top:10px;">
+      <label class="card_field">
         <span>Dark režim</span>
         <select class="card_select" name="us_dark">
           <option value="0"<?= $usDark === 0 ? ' selected' : '' ?>>0 = ne</option>
