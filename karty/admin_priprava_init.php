@@ -116,7 +116,7 @@ $sirkaSloupcu = [
     'db' => 'width:18ch;',
     'hotovo' => 'width:8ch; text-align:right;',
     'spousti' => 'width:8ch;',
-    'poznamka' => 'width:34ch;',
+    'poznamka' => 'width:55ch;',
 ];
 ?>
 <div class="card_stack">

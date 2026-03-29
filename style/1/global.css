@@ -1,7 +1,12 @@
 /* style/1/global.css * Verze: V14 * Aktualizace: 28.03.2026 */
+/* =========================================================
+   NOVA CAST CSS (AKTIVNI PO REFAKTORU)
+   ---------------------------------------------------------
+   Sem patri pravidla, ktera chceme ponechat jako cilovy stav.
+   ========================================================= */
 
 /* =========================
-   ZÁKLADNÍ NASTAVENÍ
+   ZAKLADNI NASTAVENI
    ========================= */
 
 :root {
@@ -131,17 +136,17 @@ body{
 }
 
 /* =========================
-   HLAVNÍ LAYOUT (header / main / footer)
+   HLAVNI LAYOUT (header / main / footer)
    ========================= */
 
 main{
   flex:1;
-  overflow:hidden;   /* scroll řeší .dash_wrap */
+  overflow:hidden;   /* scroll resi .dash_wrap */
 }
 
 
 /* =========================
-   KONTEJNER STRÁNKY
+   KONTEJNER STRANKY
    ========================= */
 
 .container{
@@ -149,16 +154,16 @@ main{
   padding:0px 10px 0px 10px;
   display:flex;
   flex-direction:column;
-  min-height:100vh;      /* výška celé stránky */
+  min-height:100vh;      /* vyska cele stranky */
   width:100%;
   box-sizing:border-box;
-  flex:1;               /* kontejner vyplní výšku mezi body okraji */
-  min-height:0;         /* nutné pro správné fungování flex+scroll */
-  overflow:hidden;      /* zabrání 'rozjíždění' layoutu mimo kontejner */
+  flex:1;               /* kontejner vyplni vysku mezi body okraji */
+  min-height:0;         /* nutne pro spravne fungovani flex+scroll */
+  overflow:hidden;      /* zabrani rozjizdeni layoutu mimo kontejner */
 }
 
 /* =========================
-   IKONY – GLOBÁLNÍ TLAČÍTKA
+   IKONY - GLOBALNI TLACITKA
    ========================= */
 
 .icon-btn{
@@ -184,7 +189,7 @@ main{
 }
 
 /* =========================
-   TOOLTIP – GLOBÁLNÍ
+   TOOLTIP - GLOBALNI
    ========================= */
 
 .tip_box{
@@ -251,9 +256,8 @@ main{
 }
 
 /* =========================
-   ENTER + X – GLOBÁLNÍ
+   ENTER + X - GLOBALNI
    ========================= */
-
 
 
 .icon-x{
@@ -267,11 +271,16 @@ main{
   font-size:18px;
 }
 
+/* =========================================================
+   NOVA CAST CSS (AKTIVNI PO REFAKTORU)
+   ---------------------------------------------------------
+   Pokracovani aktivni casti: hlavicka a paticka.
+   ========================================================= */
 /* style/1/hlavicka.css * Verze: V65 * Aktualizace: 08.03.2026 */
 
 /*
  * HLAVICKA (dashboard)
- * Cile:
+ * Cil:
  * - stabilni desktop layout bez skakani bloku
  * - bez horizontalnich posuvniku uvnitr hlavicky
  * - citelne KPI i pri uzsim desktop okne
@@ -279,7 +288,6 @@ main{
  */
 
 :root{
-  --head-bg:#f4f7fb;
   --head-card:#ffffff;
   --head-border:rgba(15,23,42,.14);
   --head-text:#0f172a;
@@ -332,10 +340,6 @@ main{
 .head_logo{
   width:70px;
   height:70px;
-  min-width:70px;
-  max-width:70px;
-  min-height:70px;
-  max-height:70px;
   aspect-ratio:1 / 1;
   display:flex;
   align-items:center;
@@ -361,7 +365,6 @@ main{
   flex-direction:column;
   align-items:center;
   gap:1px;
-  text-decoration:none;
 }
 
 .head_logo_date,
@@ -511,7 +514,6 @@ main{
   padding:4px 6px;
   display:flex;
   flex-direction:column;
-  justify-content:flex-start;
 }
 
 .head_kpi_k{
@@ -535,7 +537,6 @@ main{
   display:block;
   font-size:11px;
   font-weight:700;
-  margin-left:0;
   margin-top:1px;
 }
 
@@ -555,7 +556,6 @@ main{
 
 .head_sys_title{
   font-size:12px;
-  font-weight:700;
   color:#334155;
   white-space:nowrap;
 }
@@ -568,7 +568,6 @@ main{
   gap:10px;
   align-items:center;
   flex-wrap:nowrap;
-  margin-left:0;
   flex:1 1 auto;
   min-width:0;
 }
@@ -579,6 +578,12 @@ main{
   gap:6px;
   font-size:11px;
   color:#1f2937;
+  white-space:nowrap;
+}
+
+.head_sys_lab{
+  font-size:11px;
+  line-height:1.1;
   white-space:nowrap;
 }
 
@@ -650,9 +655,6 @@ main{
   justify-content:flex-start;
   gap:5px;
 }
-
-.head_user_col--left{ text-align:left; }
-.head_user_col--right{ text-align:left; }
 
 .head_user_name{
   font-size:12px;
@@ -765,14 +767,6 @@ main{
 }
 
 /* ===== Responsive ===== */
-@media (max-width: 1240px){
-  .head_grid{ grid-template-columns:70px minmax(0,1fr) 300px; }
-  .head_top{ grid-template-columns:280px minmax(0,1fr); gap:8px; }
-  .head_bottom{ grid-template-columns:minmax(0,1fr) 170px 275px; }
-  .head_top{ grid-template-rows:64px; }
-  .head_kpi{ height:64px; }
-}
-
 @media (max-width: 760px){
   .head_grid{
     grid-template-columns:70px 1fr;
@@ -806,7 +800,7 @@ main{
 /* style/1/paticka.css * Verze: V16 * Aktualizace: 04.03.2026 */
 
 /* =========================
-   PATIČKA
+   PATICKA
    ========================= */
 
 .footer{
@@ -855,20 +849,23 @@ main{
   .foot_right{ text-align:left; }
 }
 
-/* style/1/paticka.css */
 
-
+/* =========================================================
+   NOVA CAST CSS (AKTIVNI PO REFAKTORU)
+   ---------------------------------------------------------
+   Pokracovani aktivni casti: main, tabulky, karty.
+   ========================================================= */
 /* style/1/main.css * Verze: V25 * Aktualizace: 06.03.2026
-   Počet řádků: 248
-   Předchozí počet řádků: 248 */
+   Pocet radku: 248
+   Predchozi pocet radku: 248 */
 
 /*
  * MAIN + DASHBOARD
  *
- * Cíl:
- * - .dash_box = jediné scrollovací místo mezi hlavičkou a patičkou
- * - .dash_grid = rozložení dashboard karet
- * - .dash_wrap už se v aktuálním layoutu nepoužívá
+ * Cil:
+ * - .dash_box = jedine scrollovaci misto mezi hlavickou a patickou
+ * - .dash_grid = rozlozeni dashboard karet
+ * - .dash_wrap uz se v aktualnim layoutu nepouziva
  */
 
 .dash_box{
@@ -919,8 +916,15 @@ main{
   }
 }
 
-/* style/1/main.css * Verze: V25 * Aktualizace: 06.03.2026 * Počet řádků: 248 */
+/* style/1/main.css * Verze: V25 * Aktualizace: 06.03.2026 * Pocet radku: 248 */
 /* konec souboru */
+
+/* =========================================================
+   STARA CAST CSS (LEGACY / KOMPATIBILITA)
+   ---------------------------------------------------------
+   Zde budou docasne relikty behem refaktoru.
+   Po finalnim uklidu pujde tento blok smazat jako celek.
+   ========================================================= */
 
 
 /* style/1/tabulky.css * Verze: V5 * Aktualizace: 07.03.2026 */
@@ -1062,7 +1066,7 @@ main{
   box-shadow:0 0 0 3px rgba(59,130,246,.15);
 }
 
-/* ENTER + X ve filtru */
+   ENTER + X - GLOBALNI
 .filter-actions{
   display:flex;
   gap:8px;
@@ -1914,3 +1918,4 @@ main{
     border:none;
   }
 }
+

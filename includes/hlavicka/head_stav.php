@@ -3,7 +3,7 @@
 declare(strict_types=1);
 ?>
 <div class="head_sys" aria-label="Stav syst&eacute;mu">
-  <div class="head_sys_title">Stav syst&eacute;mu</div>
+  <div class="head_sys_title text_tucny">Stav syst&eacute;mu</div>
 
   <div class="head_sys_line">
     <span class="head_sys_item"><span class="head_sys_lab">DB</span><span class="head_led is-<?= h($sysDb) ?>" aria-hidden="true"></span></span>

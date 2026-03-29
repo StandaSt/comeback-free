@@ -9,14 +9,14 @@ declare(strict_types=1);
      data-logout-url="<?= h(cb_url('index.php?action=logout')) ?>"
      data-touch-url="<?= h(cb_url('index.php')) ?>">
 
-  <div class="head_user_col head_user_col--left">
+  <div class="head_user_col head_user_col--left text_vlevo">
     <div class="head_user_name"><strong><?= h($cbUserName) ?></strong></div>
     <div class="head_user_lab">Poslední přístup:</div>
     <div class="head_user_lab">Přihlášení:</div>
     <div class="head_user_lab">Seance/zbývá:</div>
   </div>
 
-  <div class="head_user_col head_user_col--right">
+  <div class="head_user_col head_user_col--right text_vlevo">
     <div class="head_user_role"><?= h($cbUserRole) ?></div>
     <div class="head_user_val"><?= h($cbLastLoginText) ?></div>
     <div class="head_user_val"><?= h($cbLoginStatsText) ?></div>
