@@ -114,7 +114,7 @@ $sirkaSloupcu = [
     'zdroj' => 'width:24ch;',
     'soubor' => 'width:24ch;',
     'db' => 'width:18ch;',
-    'hotovo' => 'width:8ch; text-align:right;',
+    'hotovo' => 'width:8ch;',
     'spousti' => 'width:8ch;',
     'poznamka' => 'width:55ch;',
 ];

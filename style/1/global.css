@@ -615,35 +615,6 @@ align-items:center;
 }
 
 /* ===== Responsive ===== */
-@media (max-width: 760px){
-  .head_grid{
-    grid-template-columns:70px 1fr;
-    grid-template-rows:auto auto auto;
-  }
-
-  .head_logo_wrap{ grid-column:1; grid-row:1 / span 3; }
-
-  .head_top{
-    grid-column:2;
-    grid-row:1;
-    grid-template-columns:240px minmax(0,1fr);
-  }
-
-  .head_bottom{
-    grid-column:2;
-    grid-row:2;
-    grid-template-columns:minmax(0,1fr) 150px 235px;
-  }
-
-  .head_user{
-    grid-column:2;
-    grid-row:3;
-  }
-
-  .head_interval::after{ display:none; }
-  .head_branch{ width:150px; min-width:150px; max-width:150px; }
-  .head_sys{ width:235px; }
-}
 
 /* =========================
    PATICKA
@@ -676,14 +647,6 @@ align-items:center;
    MOBIL
    ========================= */
 
-@media (max-width: 720px){
-  .footer_box{
-    flex-direction:column;
-    align-items:flex-start;
-  }
-  .foot_center{ }
-  .foot_right{ }
-}
 
 
 /* =========================
@@ -924,14 +887,6 @@ align-items:center;
    MOBIL
    ========================= */
 
-@media (max-width:700px){
-  .list-bottom{
-    grid-template-columns:1fr;
-    justify-items:center;
-  }
-
-  .per-form.right{ justify-content:center; }
-}
 
 /* ----- KARTY ----- */
 
@@ -1622,7 +1577,6 @@ align-items:center;
 
 .zr_delivery_input{
   width:5ch;
-  text-align:center;
 }
 
 .zr_delivery_plus{
@@ -1631,7 +1585,6 @@ align-items:center;
 }
 
 .zr_chk{
-  text-align:center;
 }
 
 .zr_chk input{
@@ -1652,17 +1605,7 @@ align-items:center;
   min-width:0;
 }
 
-@media (max-width: 720px){
-  .footer_box.mezera_mezi_4{
-    gap:4px;
-  }
-}
 
-@media (max-width:700px){
-  .list-bottom.mezera_mezi_10{
-    gap:10px;
-  }
-}
 
 .zr_kuryr_extra_item_car{
   white-space:nowrap;
@@ -1809,50 +1752,69 @@ align-items:center;
   background:rgba(255,255,255,.92);
 }
 
+@media (max-width: 760px){
+  .head_grid{
+    grid-template-columns:70px 1fr;
+    grid-template-rows:auto auto auto;
+  }
+
+  .head_logo_wrap{ grid-column:1; grid-row:1 / span 3; }
+
+  .head_top{
+    grid-column:2;
+    grid-row:1;
+    grid-template-columns:240px minmax(0,1fr);
+  }
+
+  .head_bottom{
+    grid-column:2;
+    grid-row:2;
+    grid-template-columns:minmax(0,1fr) 150px 235px;
+  }
+
+  .head_user{
+    grid-column:2;
+    grid-row:3;
+  }
+
+  .head_interval::after{ display:none; }
+  .head_branch{ width:150px; min-width:150px; max-width:150px; }
+  .head_sys{ width:235px; }
+}
+
+@media (max-width: 720px){
+  .footer_box{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+  .foot_center{ }
+  .foot_right{ }
+}
+
+@media (max-width:700px){
+  .list-bottom{
+    grid-template-columns:1fr;
+    justify-items:center;
+  }
+
+  .per-form.right{ justify-content:center; }
+}
+
+@media (max-width: 720px){
+  .footer_box.mezera_mezi_4{
+    gap:4px;
+  }
+}
+
+@media (max-width:700px){
+  .list-bottom.mezera_mezi_10{
+    gap:10px;
+  }
+}
+
 @media (max-width: 1200px){
   .zr_layout,
   .zr_top{
     grid-template-columns:1fr;
   }
 }
-
-
-/* =========================
-   NEPOUZIVA SE
-   ========================= */
-
-/* Nepouziva se v aktualnich sablonach: .tbl (vcetne .tbl td.num/.tbl th.num). */
-.tbl{
-  width:100%;
-  border-collapse:collapse;
-  font-size:13px;
-}
-
-.tbl th,
-.tbl td{
-  padding:8px 10px;
-  border-bottom:1px solid rgba(15,23,42,0.08);
-}
-
-.tbl th{
-  color:rgba(15,23,42,0.70);
-  font-weight:700;
-}
-
-.tbl td.num,
-.tbl th.num{
-  text-align:right;
-}
-
-.tbl tr:hover td{
-  background:rgba(15,23,42,0.03);
-}
-
-/* Nenalezeno v CSS ani sablonach: .chk_tbl */
-
-/* TODO (utility cleanup): display - dash_btn zatim bez aktivniho pouziti; vratit se pozdeji. */
-/* TODO (utility cleanup): display - badge_up/badge_down zatim bez aktivniho pouziti v sablonach; vratit se pozdeji. */
-/* TODO (utility cleanup): display - .dash_maxi_layer.is-active je stavovy selektor rideny JS; ponechano v CSS. */
-/* TODO (utility cleanup): display - .spark i a .prog b jsou potomci bez samostatne utility tridy; ponechano v CSS. */
-/* TODO (utility cleanup): display - .dash_maxi_card .card_expanded je kontextovy selektor; ponechano v CSS. */
-/* TODO (utility cleanup): display - .card_control zatim bez aktivniho pouziti; vratit se pozdeji. */

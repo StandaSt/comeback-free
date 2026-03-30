@@ -375,11 +375,11 @@ ob_start();
             <th></th>
             <th></th>
             <th></th>
-            <th style="text-align:right;">
+            <th class="text_vpravo">
               <?php if ((int)$tabKonfig['enable_filters'] === 1 && $psErrCount > 0): ?>
-                <label style="display:inline-flex; align-items:center; gap:6px; white-space:nowrap; cursor:pointer;">
+                <label class="displ_inline_flex mezera_mezi_6 cursor_ruka" style="align-items:center; white-space:nowrap;">
                   <input type="checkbox" name="ps_f[chyba]" value="1"<?= $psFilters['chyba'] === '1' ? ' checked' : '' ?> onchange="this.form.ps_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
-                  <span style="color:#c62828; font-weight:700;">Chyby (<?= h((string)$psErrCount) ?>)</span>
+                  <span class="txt_cervena text_tucny">Chyby (<?= h((string)$psErrCount) ?>)</span>
                 </label>
               <?php endif; ?>
             </th>
@@ -434,14 +434,14 @@ ob_start();
               ?>
               <tr>
                 <td><?= h(ps_format_cz_date((string)$row['datum'])) ?></td>
-                <td style="text-align:right;"><?= h($pobTxt) ?></td>
-                <td style="text-align:right;"><?= h((string)($row['prijmeni'] ?? '')) ?></td>
+                <td class="text_vpravo"><?= h($pobTxt) ?></td>
+                <td class="text_vpravo"><?= h((string)($row['prijmeni'] ?? '')) ?></td>
                 <td><?= h((string)($row['jmeno'] ?? '')) ?></td>
                 <td><?= h($slotTxt) ?></td>
                 <td><?= h(ps_format_hm((string)($row['cas_od'] ?? ''))) ?></td>
                 <td><?= h(ps_format_hm((string)($row['cas_do'] ?? ''))) ?></td>
                 <td><?= h(ps_format_hm((string)($row['pauza'] ?? ''))) ?></td>
-                <td style="text-align:right;"><?= h((string)($row['odpracovano'] ?? '')) ?></td>
+                <td class="text_vpravo"><?= h((string)($row['odpracovano'] ?? '')) ?></td>
                 <td><?= h($chybaTxt) ?></td>
               </tr>
             <?php endforeach; ?>

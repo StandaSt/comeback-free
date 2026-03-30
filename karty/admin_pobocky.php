@@ -91,7 +91,7 @@ $sirkaSloupcu = [
     'ulice' => 'width:20ch;',
     'mesto' => 'width:12ch;',
     'psc' => 'width:7ch;',
-    'end' => 'width:4ch; text-align:center;',
+    'end' => 'width:4ch;',
     'akce' => 'width:9ch;',
 ];
 
@@ -106,7 +106,7 @@ ob_start();
           <th style="<?= h($sirkaSloupcu['mesto']) ?>">Město</th>
           <th style="<?= h($sirkaSloupcu['psc']) ?>">PSČ</th>
           <?php foreach ($endCols as $col): ?>
-            <th style="<?= h($sirkaSloupcu['end']) ?>"><?= h($col) ?></th>
+            <th class="text_stred" style="<?= h($sirkaSloupcu['end']) ?>"><?= h($col) ?></th>
           <?php endforeach; ?>
           <th style="<?= h($sirkaSloupcu['akce']) ?>">Akce</th>
         </tr>

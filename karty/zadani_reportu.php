@@ -236,15 +236,15 @@ ob_start();
                       <div class="zr_kuryr_extra_item mezera_mezi_8">
                         <span class="zr_kuryr_extra_label"></span>
                         <div class="zr_delivery_wrap mezera_mezi_4 zr_delivery_wrap_kuryr">
-                          <input class="zr_delivery_input" type="text" inputmode="numeric" value="0" data-zr-editor-field="delivery_restia" data-zr-int-short>
+                          <input class="zr_delivery_input text_stred" type="text" inputmode="numeric" value="0" data-zr-editor-field="delivery_restia" data-zr-int-short>
                           <span class="zr_delivery_plus">+</span>
-                          <input class="zr_delivery_input" type="text" inputmode="numeric" value="" data-zr-editor-field="delivery_manual" data-zr-int-short>
+                          <input class="zr_delivery_input text_stred" type="text" inputmode="numeric" value="" data-zr-editor-field="delivery_manual" data-zr-int-short>
                         </div>
                         <input type="hidden" value="0" data-zr-delivery-total>
                       </div>
                       <div class="zr_kuryr_extra_item mezera_mezi_8 zr_kuryr_extra_item_car">
                         <span class="zr_kuryr_extra_label"></span>
-                        <span class="zr_chk zr_person_cell_car zr_person_cell_car_inline"><input type="checkbox" value="1" data-zr-editor-field="car" data-zr-car-check></span>
+                        <span class="zr_chk text_stred zr_person_cell_car zr_person_cell_car_inline"><input type="checkbox" value="1" data-zr-editor-field="car" data-zr-car-check></span>
                       </div>
                       <div class="zr_kuryr_extra_item mezera_mezi_8 zr_phm_field zr_person_cell_phm" data-zr-phm-field>
                         <span class="zr_kuryr_extra_label"></span>

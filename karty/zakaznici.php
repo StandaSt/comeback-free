@@ -307,19 +307,19 @@ $card_min_html = ''
     . '    <tbody>'
     . '      <tr>'
     . '        <td>Zákazníků v DB</td>'
-    . '        <td style="text-align:right;"><strong>' . h((string)$totalZak) . '</strong></td>'
+    . '        <td class="text_vpravo"><strong>' . h((string)$totalZak) . '</strong></td>'
     . '      </tr>'
     . '      <tr>'
     . '        <td>aktivní/blokovaní</td>'
-    . '        <td style="text-align:right;"><strong>' . h((string)$activeZak) . '/' . h((string)$blockedZak) . '</strong></td>'
+    . '        <td class="text_vpravo"><strong>' . h((string)$activeZak) . '/' . h((string)$blockedZak) . '</strong></td>'
     . '      </tr>'
     . '      <tr>'
     . '        <td>nejčastější zákazník:</td>'
-    . '        <td style="text-align:right;"><strong>František Skočdopole</strong></td>'
+    . '        <td class="text_vpravo"><strong>František Skočdopole</strong></td>'
     . '      </tr>'
     . '      <tr>'
     . '        <td>top zákazník:</td>'
-    . '        <td style="text-align:right;"><strong>Emanuel Bacigala</strong></td>'
+    . '        <td class="text_vpravo"><strong>Emanuel Bacigala</strong></td>'
     . '      </tr>'
     . '    </tbody>'
     . '  </table>'
@@ -342,26 +342,26 @@ ob_start();
           <table class="table ram_normal bg_bila radek_rozvolneny card_table_max">
             <thead>
               <tr class="filter-row">
-                <th style="text-align:right;"></th>
-                <th style="text-align:right;"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['prijmeni'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[prijmeni]" value="<?= h($zakFilters['prijmeni'] ?? '') ?>"></th>
-                <th style="text-align:left;"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['jmeno'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[jmeno]" value="<?= h($zakFilters['jmeno'] ?? '') ?>"></th>
-                <th style="text-align:left;"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['telefon'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[telefon]" value="<?= h($zakFilters['telefon'] ?? '') ?>"></th>
-                <th style="text-align:right;"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['email'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[email]" value="<?= h($zakFilters['email'] ?? '') ?>"></th>
-                <th style="text-align:right;"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['ulice'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[ulice]" value="<?= h($zakFilters['ulice'] ?? '') ?>"></th>
-                <th style="text-align:right;"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['mesto'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[mesto]" value="<?= h($zakFilters['mesto'] ?? '') ?>"></th>
-                <th style="text-align:left;"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['pobocka'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[pobocka]" value="<?= h($zakFilters['pobocka'] ?? '') ?>"></th>
-                <th style="text-align:right;"> <a class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 icon-x small zaobleni_6 vyska_24 radek_24 displ_inline_flex" href="<?= h($formAction) ?>">&times;</a></th>
+                <th class="text_vpravo"></th>
+                <th class="text_vpravo"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['prijmeni'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[prijmeni]" value="<?= h($zakFilters['prijmeni'] ?? '') ?>"></th>
+                <th class="text_vlevo"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['jmeno'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[jmeno]" value="<?= h($zakFilters['jmeno'] ?? '') ?>"></th>
+                <th class="text_vlevo"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['telefon'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[telefon]" value="<?= h($zakFilters['telefon'] ?? '') ?>"></th>
+                <th class="text_vpravo"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['email'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[email]" value="<?= h($zakFilters['email'] ?? '') ?>"></th>
+                <th class="text_vpravo"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['ulice'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[ulice]" value="<?= h($zakFilters['ulice'] ?? '') ?>"></th>
+                <th class="text_vpravo"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['mesto'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[mesto]" value="<?= h($zakFilters['mesto'] ?? '') ?>"></th>
+                <th class="text_vlevo"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['pobocka'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[pobocka]" value="<?= h($zakFilters['pobocka'] ?? '') ?>"></th>
+                <th class="text_vpravo"> <a class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 icon-x small zaobleni_6 vyska_24 radek_24 displ_inline_flex" href="<?= h($formAction) ?>">&times;</a></th>
               </tr>
               <tr>
-                <th class="th-sort" style="text-align:right;">Poř.č.</th>
-                <th class="th-sort" style="text-align:right;">příjmení</th>
-                <th class="th-sort" style="text-align:left;">jméno</th>
-                <th class="th-sort" style="text-align:left;">telefon</th>
-                <th class="th-sort" style="text-align:right;">email</th>
-                <th class="th-sort" style="text-align:right;">ulice</th>
-                <th class="th-sort" style="text-align:right;">město</th>
-                <th class="th-sort" style="text-align:left;">pobočka</th>
-                <th class="th-sort" style="text-align:right;">aktivita</th>
+                <th class="th-sort text_vpravo">Poř.č.</th>
+                <th class="th-sort text_vpravo">příjmení</th>
+                <th class="th-sort text_vlevo">jméno</th>
+                <th class="th-sort text_vlevo">telefon</th>
+                <th class="th-sort text_vpravo">email</th>
+                <th class="th-sort text_vpravo">ulice</th>
+                <th class="th-sort text_vpravo">město</th>
+                <th class="th-sort text_vlevo">pobočka</th>
+                <th class="th-sort text_vpravo">aktivita</th>
               </tr>
             </thead>
             <tbody>
@@ -396,7 +396,7 @@ ob_start();
                       }
                       $colRight = in_array($key, ['id', 'prijmeni', 'email', 'ulice', 'mesto', 'posl_obj'], true);
                       ?>
-                      <td<?= $colRight ? ' style="text-align:right;"' : '' ?>><?= h($value) ?></td>
+                      <td<?= $colRight ? ' class="text_vpravo"' : '' ?>><?= h($value) ?></td>
                     <?php endforeach; ?>
                   </tr>
                 <?php endforeach; ?>
@@ -409,7 +409,7 @@ ob_start();
         <div class="list-bottom mezera_mezi_14 mezera_mezi_10 odstup_vnitrni_0 displ_grid">
           <div class="per-form mezera_mezi_8 displ_inline_flex">
             <span>Zobrazuji</span>
-            <select name="zak_per" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 per-select" onchange="this.form.zak_p.value=1; this.form.submit();">
+            <select name="zak_per" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 per-select" onchange="this.form.querySelectorAll(&quot;input[name^='zak_f[']&quot;).forEach(function(el){if(el.value===''){el.disabled=true;}});this.form.zak_p.value=1;this.form.submit();">
               <option value="20"<?= $zakPer === 20 ? ' selected' : '' ?>>20 řádků</option>
               <option value="50"<?= $zakPer === 50 ? ' selected' : '' ?>>50 řádků</option>
               <option value="100"<?= $zakPer === 100 ? ' selected' : '' ?>>100 řádků</option>
@@ -452,8 +452,8 @@ ob_start();
 
           <div class="per-form mezera_mezi_8 right displ_inline_flex jc_konec">
             <input type="hidden" name="zak_blk" value="0">
-            <label style="display:inline-flex; align-items:center; gap:6px; white-space:nowrap; cursor:pointer;">
-              <input type="checkbox" name="zak_blk" value="1"<?= $zakBlk === '1' ? ' checked' : '' ?> onchange="this.form.zak_p.value=1; this.form.submit();">
+            <label class="displ_inline_flex mezera_mezi_6 cursor_ruka" style="align-items:center; white-space:nowrap;">
+              <input type="checkbox" name="zak_blk" value="1"<?= $zakBlk === '1' ? ' checked' : '' ?> onchange="this.form.querySelectorAll(&quot;input[name^='zak_f[']&quot;).forEach(function(el){if(el.value===''){el.disabled=true;}});this.form.zak_p.value=1;this.form.submit();">
               <span>blokovaní (<?= h((string)$blockedZak) ?>)</span>
             </label>
           </div>

@@ -248,25 +248,25 @@ $card_min_html = ''
     . '    <thead>'
     . '      <tr>'
     . '        <th>Přidělená role</th>'
-    . '        <th style="text-align:right;">počet</th>'
+    . '        <th class="text_vpravo">počet</th>'
     . '      </tr>'
     . '    </thead>'
     . '    <tbody>'
     . '      <tr>'
     . '        <td>uživatel</td>'
-    . '        <td style="text-align:right;"><strong>' . h((string)$roleStats['uzivatel']) . '</strong></td>'
+    . '        <td class="text_vpravo"><strong>' . h((string)$roleStats['uzivatel']) . '</strong></td>'
     . '      </tr>'
     . '      <tr>'
     . '        <td>manager</td>'
-    . '        <td style="text-align:right;"><strong>' . h((string)$roleStats['manager']) . '</strong></td>'
+    . '        <td class="text_vpravo"><strong>' . h((string)$roleStats['manager']) . '</strong></td>'
     . '      </tr>'
     . '      <tr>'
     . '        <td>admin</td>'
-    . '        <td style="text-align:right;"><strong>' . h((string)$roleStats['admin']) . '</strong></td>'
+    . '        <td class="text_vpravo"><strong>' . h((string)$roleStats['admin']) . '</strong></td>'
     . '      </tr>'
     . '      <tr>'
     . '        <td><strong>Celkem</strong></td>'
-    . '        <td style="text-align:right;"><strong>' . h((string)($roleStats['uzivatel'] + $roleStats['manager'] + $roleStats['admin'])) . '</strong></td>'
+    . '        <td class="text_vpravo"><strong>' . h((string)($roleStats['uzivatel'] + $roleStats['manager'] + $roleStats['admin'])) . '</strong></td>'
     . '      </tr>'
     . '    </tbody>'
     . '  </table>'
@@ -311,7 +311,7 @@ ob_start();
                   }
                   ?>
                   <?php $thRight = in_array($key, ['id', 'prijmeni', 'email', 'aktivni'], true); ?>
-                  <th class="c-<?= h($key) ?> th-sort<?= $isActiveSort ? ' active' : '' ?>"<?= $thRight ? ' style="text-align:right;"' : '' ?>>
+                  <th class="c-<?= h($key) ?> th-sort<?= $isActiveSort ? ' active' : '' ?><?= $thRight ? ' text_vpravo' : '' ?>">
                     <?php if ((int)$tabKonfig['enable_sort'] === 1 && $isSortable): ?>
                       <?php
                       $nextDir = ($isActiveSort && $uzDir === 'ASC') ? 'DESC' : 'ASC';
@@ -340,8 +340,8 @@ ob_start();
               <?php else: ?>
                 <?php foreach ($uzRows as $rowUser): ?>
                   <tr>
-                    <td class="c-id" style="text-align:right;"><?= h((string)($rowUser['id_user'] ?? '')) ?></td>
-                    <td class="c-prijmeni" style="text-align:right;"><?= h((string)($rowUser['prijmeni'] ?? '')) ?></td>
+                    <td class="c-id text_vpravo"><?= h((string)($rowUser['id_user'] ?? '')) ?></td>
+                    <td class="c-prijmeni text_vpravo"><?= h((string)($rowUser['prijmeni'] ?? '')) ?></td>
                     <td class="c-jmeno"><?= h((string)($rowUser['jmeno'] ?? '')) ?></td>
                     <td class="c-telefon">
                       <?php
@@ -360,9 +360,9 @@ ob_start();
                       ?>
                       <?= h($phoneValue) ?>
                     </td>
-                    <td class="c-email" style="text-align:right;"><?= h((string)($rowUser['email'] ?? '')) ?></td>
+                    <td class="c-email text_vpravo"><?= h((string)($rowUser['email'] ?? '')) ?></td>
                     <td class="c-reg"><?= h(uz_format_reg_cz((string)($rowUser['reg'] ?? ''))) ?></td>
-                    <td class="c-aktivni" style="text-align:right;"><?= ((string)($rowUser['aktivni'] ?? '') === '1') ? 'Ano' : 'Ne' ?></td>
+                    <td class="c-aktivni text_vpravo"><?= ((string)($rowUser['aktivni'] ?? '') === '1') ? 'Ano' : 'Ne' ?></td>
                     <td class="c-akce">
                       <span class="row-icons mezera_mezi_10">
                         <img src="<?= h(cb_url('img/icons/search.svg')) ?>" alt="Detail uživatele">
@@ -385,7 +385,7 @@ ob_start();
         <div class="list-bottom mezera_mezi_14 mezera_mezi_10 odstup_vnitrni_0 displ_grid">
           <div class="per-form mezera_mezi_8 displ_inline_flex">
             <span>Zobrazuji</span>
-            <select name="uz_per" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 per-select" onchange="this.form.uz_p.value=1; this.form.submit();">
+            <select name="uz_per" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 per-select" onchange="this.form.querySelectorAll(&quot;input[name^='uz_f[']&quot;).forEach(function(el){if(el.value===''){el.disabled=true;}});if(this.form.uz_sort&&this.form.uz_sort.value==='id'){this.form.uz_sort.disabled=true;}if(this.form.uz_dir&&this.form.uz_dir.value==='DESC'){this.form.uz_dir.disabled=true;}var uzAktSel=this.form.querySelector(&quot;select[name='uz_akt']&quot;);if(uzAktSel&&uzAktSel.value==='1'){uzAktSel.disabled=true;}if(this.form.uz_per&&this.form.uz_per.value==='20'){this.form.uz_per.disabled=true;}this.form.uz_p.value=1;this.form.submit();">
               <option value="20"<?= $uzPer === 20 ? ' selected' : '' ?>>20 řádků</option>
               <option value="50"<?= $uzPer === 50 ? ' selected' : '' ?>>50 řádků</option>
               <option value="100"<?= $uzPer === 100 ? ' selected' : '' ?>>100 řádků</option>
@@ -427,7 +427,7 @@ ob_start();
           </div>
 
           <div class="per-form mezera_mezi_8 right displ_inline_flex jc_konec">
-            <select name="uz_akt" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 akt-select sirka_min_160" onchange="this.form.uz_p.value=1; this.form.submit();">
+            <select name="uz_akt" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 akt-select sirka_min_160" onchange="this.form.querySelectorAll(&quot;input[name^='uz_f[']&quot;).forEach(function(el){if(el.value===''){el.disabled=true;}});if(this.form.uz_sort&&this.form.uz_sort.value==='id'){this.form.uz_sort.disabled=true;}if(this.form.uz_dir&&this.form.uz_dir.value==='DESC'){this.form.uz_dir.disabled=true;}if(this.form.uz_akt&&this.form.uz_akt.value==='1'){this.form.uz_akt.disabled=true;}if(this.form.uz_per&&this.form.uz_per.value==='20'){this.form.uz_per.disabled=true;}this.form.uz_p.value=1;this.form.submit();">
               <option value="1"<?= $uzAkt === '1' ? ' selected' : '' ?>>Aktivní</option>
               <option value="0"<?= $uzAkt === '0' ? ' selected' : '' ?>>Neaktivní</option>
               <option value="all"<?= $uzAkt === 'all' ? ' selected' : '' ?>>Vše</option>
