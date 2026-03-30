@@ -276,7 +276,7 @@ require_once __DIR__ . '/includes/log_a_404.php';
 if ($cbIsPartial) {
     if (empty($_SESSION['login_ok'])) {
         http_response_code(401);
-        echo '<section class="card"><p>Nutne prihlaseni.</p></section>';
+        echo '<section class="card odstup_vnitrni_14"><p>Nutne prihlaseni.</p></section>';
         exit;
     }
 
@@ -284,7 +284,7 @@ if ($cbIsPartial) {
         require $file;
     } else {
         echo '<div class="page-head"><h2>Stranka nenalezena</h2></div>';
-        echo '<section class="card"><p>Pozadovana stranka neexistuje.</p></section>';
+        echo '<section class="card odstup_vnitrni_14"><p>Pozadovana stranka neexistuje.</p></section>';
     }
     exit;
 }
@@ -304,7 +304,7 @@ if ($cbIsPartial) {
 </head>
 <body>
 
-  <div class="container">
+  <div class="container bg_modra displ_flex sirka100">
 <?php
 
 require_once __DIR__ . '/includes/hlavicka.php';

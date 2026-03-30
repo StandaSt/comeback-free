@@ -310,9 +310,9 @@ try {
 }
 
 $card_min_html = ''
-    . '<p class="card_text">Období: <strong>' . h($periodOdCz) . ' až ' . h($periodDoCz) . '</strong></p>'
-    . '<p class="card_text">Pobočky: <strong>' . h($selectedPobText) . '</strong></p>'
-    . '<p class="card_text">Řádků: <strong>' . h((string)$psTotal) . '</strong>, chyby: <strong>' . h((string)$psErrCount) . '</strong></p>';
+    . '<p class="card_text txt_seda odstup_vnejsi_0">Období: <strong>' . h($periodOdCz) . ' až ' . h($periodDoCz) . '</strong></p>'
+    . '<p class="card_text txt_seda odstup_vnejsi_0">Pobočky: <strong>' . h($selectedPobText) . '</strong></p>'
+    . '<p class="card_text txt_seda odstup_vnejsi_0">Řádků: <strong>' . h((string)$psTotal) . '</strong>, chyby: <strong>' . h((string)$psErrCount) . '</strong></p>';
 
 $startExpanded = $keepExpanded;
 
@@ -336,34 +336,34 @@ $psBaseUrl = cb_url('/?' . implode('&', $psBaseParams));
 ob_start();
 ?>
 <?php if ($psError !== ''): ?>
-  <p class="card_text card_text_muted"><?= h($psError) ?></p>
+  <p class="card_text txt_seda odstup_vnejsi_0 card_text_muted"><?= h($psError) ?></p>
 <?php else: ?>
-  <form method="get" action="<?= h($formAction) ?>" class="card_stack" autocomplete="off">
+  <form method="get" action="<?= h($formAction) ?>" class="card_stack mezera_mezi_10 displ_flex" autocomplete="off">
     <input type="hidden" name="ps_p" value="1">
     <?php if ((int)$tabKonfig['enable_sort'] === 1): ?>
       <input type="hidden" name="ps_sort" value="<?= h($psSort) ?>">
       <input type="hidden" name="ps_dir" value="<?= h($psDir) ?>">
     <?php endif; ?>
 
-    <div class="table-wrap">
-      <table class="table card_table_max">
+    <div class="table-wrap ram_normal bg_bila zaobleni_12">
+      <table class="table ram_normal bg_bila radek_rozvolneny card_table_max">
         <thead>
           <tr class="filter-row">
             <th></th>
             <th></th>
             <th>
               <?php if ((int)$tabKonfig['enable_filters'] === 1): ?>
-                <input class="filter-input" style="width:10ch;" type="text" name="ps_f[prijmeni]" value="<?= h($psFilters['prijmeni']) ?>">
+                <input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="width:10ch;" type="text" name="ps_f[prijmeni]" value="<?= h($psFilters['prijmeni']) ?>">
               <?php endif; ?>
             </th>
             <th>
               <?php if ((int)$tabKonfig['enable_filters'] === 1): ?>
-                <input class="filter-input" style="width:10ch;" type="text" name="ps_f[jmeno]" value="<?= h($psFilters['jmeno']) ?>">
+                <input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="width:10ch;" type="text" name="ps_f[jmeno]" value="<?= h($psFilters['jmeno']) ?>">
               <?php endif; ?>
             </th>
             <th>
               <?php if ((int)$tabKonfig['enable_filters'] === 1): ?>
-                <select class="filter-input" name="ps_f[slot]" onchange="this.form.ps_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
+                <select class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" name="ps_f[slot]" onchange="this.form.ps_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
                   <option value=""<?= $psFilters['slot'] === '' ? ' selected' : '' ?>>slot</option>
                   <option value="1"<?= $psFilters['slot'] === '1' ? ' selected' : '' ?>>instor</option>
                   <option value="2"<?= $psFilters['slot'] === '2' ? ' selected' : '' ?>>kurýr</option>
@@ -404,12 +404,12 @@ ob_start();
               ?>
               <th class="th-sort<?= $isActiveSort ? ' active' : '' ?>">
                 <?php if ((int)$tabKonfig['enable_sort'] === 1): ?>
-                  <a class="th-sort-link<?= $isActiveSort ? ' active' : '' ?>" href="<?= h($sortUrl) ?>">
+                  <a class="th-sort-link mezera_mezi_8 jc_mezi sirka100<?= $isActiveSort ? ' active' : '' ?>" href="<?= h($sortUrl) ?>">
                     <span class="th-sort-label"><?= h($label) ?></span>
-                    <span class="th-sort-arrow"><?= h($arrow) ?></span>
+                    <span class="th-sort-arrow text_vpravo"><?= h($arrow) ?></span>
                   </a>
                 <?php else: ?>
-                  <span class="th-sort-link">
+                  <span class="th-sort-link mezera_mezi_8 jc_mezi sirka100">
                     <span class="th-sort-label"><?= h($label) ?></span>
                   </span>
                 <?php endif; ?>
@@ -451,22 +451,22 @@ ob_start();
     </div>
 
     <?php if ((int)$tabKonfig['enable_pagination'] === 1): ?>
-    <div class="list-bottom">
-      <div class="per-form">
+    <div class="list-bottom mezera_mezi_14 mezera_mezi_10 odstup_vnitrni_0 displ_grid">
+      <div class="per-form mezera_mezi_8 displ_inline_flex">
         <span>Zobrazuji</span>
-        <select name="ps_per" class="filter-input per-select" onchange="this.form.ps_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
+        <select name="ps_per" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 per-select" onchange="this.form.ps_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
           <?php foreach ($perOptions as $optPer): ?>
             <option value="<?= h((string)$optPer) ?>"<?= $psPer === $optPer ? ' selected' : '' ?>><?= h((string)$optPer) ?> řádků</option>
           <?php endforeach; ?>
         </select>
       </div>
 
-      <div class="pagination-icon">
+      <div class="pagination-icon mezera_mezi_4 displ_inline_flex">
         <?php $prevDisabled = $psPage <= 1; ?>
         <?php $nextDisabled = $psPage >= $psPages; ?>
 
-        <a class="icon-btn w44<?= $prevDisabled ? ' disabled' : '' ?>" href="<?= $prevDisabled ? '#' : h($psBaseUrl . '&ps_p=1') ?>">«</a>
-        <a class="icon-btn w44<?= $prevDisabled ? ' disabled' : '' ?>" href="<?= $prevDisabled ? '#' : h($psBaseUrl . '&ps_p=' . (string)max(1, $psPage - 1)) ?>">‹</a>
+        <a class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24<?= $prevDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $prevDisabled ? '#' : h($psBaseUrl . '&ps_p=1') ?>">«</a>
+        <a class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24<?= $prevDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $prevDisabled ? '#' : h($psBaseUrl . '&ps_p=' . (string)max(1, $psPage - 1)) ?>">‹</a>
 
         <?php
         $pageItems = [];
@@ -485,19 +485,19 @@ ob_start();
 
         <?php foreach ($pageItems as $item): ?>
           <?php if ($item === '…'): ?>
-            <span class="icon-btn w44 disabled">…</span>
+            <span class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24 disabled displ_inline_flex">…</span>
           <?php elseif ((int)$item === $psPage): ?>
-            <span class="icon-btn w44 page-current"><?= h((string)$item) ?></span>
+            <span class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24 page-current displ_inline_flex"><?= h((string)$item) ?></span>
           <?php else: ?>
-            <a class="icon-btn w44" href="<?= h($psBaseUrl . '&ps_p=' . (string)$item) ?>"><?= h((string)$item) ?></a>
+            <a class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24 displ_inline_flex" href="<?= h($psBaseUrl . '&ps_p=' . (string)$item) ?>"><?= h((string)$item) ?></a>
           <?php endif; ?>
         <?php endforeach; ?>
 
-        <a class="icon-btn w44<?= $nextDisabled ? ' disabled' : '' ?>" href="<?= $nextDisabled ? '#' : h($psBaseUrl . '&ps_p=' . (string)min($psPages, $psPage + 1)) ?>">›</a>
-        <a class="icon-btn w44<?= $nextDisabled ? ' disabled' : '' ?>" href="<?= $nextDisabled ? '#' : h($psBaseUrl . '&ps_p=' . (string)$psPages) ?>">»</a>
+        <a class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24<?= $nextDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $nextDisabled ? '#' : h($psBaseUrl . '&ps_p=' . (string)min($psPages, $psPage + 1)) ?>">›</a>
+        <a class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24<?= $nextDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $nextDisabled ? '#' : h($psBaseUrl . '&ps_p=' . (string)$psPages) ?>">»</a>
       </div>
 
-      <div class="per-form right">
+      <div class="per-form mezera_mezi_8 right displ_inline_flex jc_konec">
         <span>Celkem: <strong><?= h((string)$psTotal) ?></strong></span>
       </div>
     </div>

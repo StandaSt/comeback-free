@@ -44,8 +44,8 @@ if ($qReport instanceof mysqli_result) {
 }
 
 $card_min_html = ''
-    . '<div class="table-wrap">'
-    . '  <table class="table">'
+    . '<div class="table-wrap ram_normal bg_bila zaobleni_12">'
+    . '  <table class="table ram_normal bg_bila radek_rozvolneny">'
     . '    <thead>'
     . '      <tr>'
     . '        <th class="text_vlevo">Zdroj</th>'
@@ -75,7 +75,8 @@ $card_min_html = ''
 
 ob_start();
 ?>
-<table class="table">
+<div class="table-wrap ram_normal bg_bila zaobleni_12">
+<table class="table ram_normal bg_bila radek_rozvolneny">
   <thead>
     <tr>
       <th class="text_vlevo">script</th>
@@ -89,10 +90,10 @@ ob_start();
       <td>stáhne naplánované směny</td>
       <td>
         <?php if ($cbSmenyPlanMaData): ?>
-          <span class="text_barva_cervena text_tucny">DATA!</span>
+          <span class="txt_cervena text_tucny">DATA!</span>
         <?php else: ?>
           <form method="get" action="<?= h(cb_url('/inicializace/plnime_smeny_plan.php')) ?>" class="odstup_vnejsi_0">
-            <button type="submit" class="card_btn card_btn_primary">Spustit</button>
+            <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Spustit</button>
           </form>
         <?php endif; ?>
       </td>
@@ -102,16 +103,17 @@ ob_start();
       <td>stáhne směny z reportů</td>
       <td>
         <?php if ($cbReportMaData): ?>
-          <span class="text_barva_cervena text_tucny">DATA!</span>
+          <span class="txt_cervena text_tucny">DATA!</span>
         <?php else: ?>
           <form method="get" action="<?= h(cb_url('/inicializace/google_data.php')) ?>" class="odstup_vnejsi_0">
-            <button type="submit" class="card_btn card_btn_primary">Spustit</button>
+            <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Spustit</button>
           </form>
         <?php endif; ?>
       </td>
     </tr>
-  </tbody>
+</tbody>
 </table>
+</div>
 <?php
 $card_max_html = (string)ob_get_clean();
 

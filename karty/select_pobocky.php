@@ -122,28 +122,28 @@ if ($cbSelectedMode === 'area' && $cbSelectedOblasti) {
 }
 
 $card_min_html = ''
-    . '<p class="card_text">Povolené pobočky: <strong>' . h((string)$cbAllowedCount) . '</strong></p>'
-    . '<p class="card_text">Aktuální výběr: <strong>' . h($cbModeText) . '</strong></p>';
+    . '<p class="card_text txt_seda odstup_vnejsi_0">Povolené pobočky: <strong>' . h((string)$cbAllowedCount) . '</strong></p>'
+    . '<p class="card_text txt_seda odstup_vnejsi_0">Aktuální výběr: <strong>' . h($cbModeText) . '</strong></p>';
 
 ob_start();
 ?>
 <?php if ($cbSelectError !== ''): ?>
-  <p class="card_text card_text_muted"><?= h($cbSelectError) ?></p>
+  <p class="card_text txt_seda odstup_vnejsi_0 card_text_muted"><?= h($cbSelectError) ?></p>
 <?php elseif ($cbUserId <= 0): ?>
-  <p class="card_text card_text_muted">Výběr pobočky je dostupný až po přihlášení.</p>
+  <p class="card_text txt_seda odstup_vnejsi_0 card_text_muted">Výběr pobočky je dostupný až po přihlášení.</p>
 <?php elseif ($cbAllowedCount === 0): ?>
-  <p class="card_text card_text_muted">Pro uživatele nejsou nastavené žádné pobočky.</p>
+  <p class="card_text txt_seda odstup_vnejsi_0 card_text_muted">Pro uživatele nejsou nastavené žádné pobočky.</p>
 <?php elseif ($cbAllowedCount === 1): ?>
-  <p class="card_text">Uživatel má jen jednu povolenou pobočku. Výběr se neprovádí, pobočka je nastavena automaticky.</p>
+  <p class="card_text txt_seda odstup_vnejsi_0">Uživatel má jen jednu povolenou pobočku. Výběr se neprovádí, pobočka je nastavena automaticky.</p>
 <?php else: ?>
-  <div class="card_stack" id="cbSelectPobockyCard" data-save-url="<?= h(cb_url('index.php')) ?>">
-    <section class="card_section">
-      <h4 class="card_section_title">Výběr podle oblasti</h4>
+  <div class="card_stack mezera_mezi_10 displ_flex" id="cbSelectPobockyCard" data-save-url="<?= h(cb_url('index.php')) ?>">
+    <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10">
+      <h4 class="card_section_title txt_seda">Výběr podle oblasti</h4>
       <?php foreach ($cbAllowedAreaList as $oblast): ?>
         <?php
         $checked = ($cbSelectedMode === 'area' && in_array($oblast, $cbSelectedOblasti, true));
         ?>
-        <label class="card_field">
+        <label class="card_field mezera_mezi_4 displ_flex">
           <span>
             <input type="checkbox" class="cb-pob-area" value="<?= h($oblast) ?>"<?= $checked ? ' checked' : '' ?>>
             <?= h($oblast) ?>
@@ -152,14 +152,14 @@ ob_start();
       <?php endforeach; ?>
     </section>
 
-    <section class="card_section">
-      <h4 class="card_section_title">Výběr jednotlivých poboček</h4>
+    <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10">
+      <h4 class="card_section_title txt_seda">Výběr jednotlivých poboček</h4>
       <?php foreach ($cbAllowedPobocky as $p): ?>
         <?php
         $id = (int)$p['id_pob'];
         $checked = ($cbSelectedMode === 'custom' && in_array($id, $cbSelectedIds, true));
         ?>
-        <label class="card_field">
+        <label class="card_field mezera_mezi_4 displ_flex">
           <span>
             <input type="checkbox" class="cb-pob-branch" value="<?= $id ?>"<?= $checked ? ' checked' : '' ?>>
             <?= h((string)$p['nazev']) ?> (<?= h((string)$p['oblast']) ?>)
@@ -168,11 +168,11 @@ ob_start();
       <?php endforeach; ?>
     </section>
 
-    <p class="card_small_text">
+    <p class="card_small_text radek_vysoky">
       Oblasti a jednotlivé pobočky nelze kombinovat.
     </p>
 
-    <div class="card_actions">
+    <div class="card_actions mezera_mezi_8 displ_flex jc_konec">
       <button type="button" class="btn btn-primary" id="cbPobockySaveBtn">Uložit výběr</button>
     </div>
   </div>

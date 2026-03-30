@@ -6,13 +6,13 @@ $cbNow = new DateTimeImmutable('now');
 $cbLogoDate = $cbNow->format('j.n.Y');
 $cbLogoTime = $cbNow->format('H:i:s');
 ?>
-<div class="head_logo_wrap">
-  <a class="head_logo" href="<?= h(cb_url('')) ?>" aria-label="Comeback">
-    <img class="head_logo_img" src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback">
+<div class="head_logo_wrap mezera_mezi_4 displ_flex flex_sloupec">
+  <a class="head_logo ram_hlavicka bg_bila zaobleni_12 odstup_vnitrni_0 displ_flex jc_stred" href="<?= h(cb_url('')) ?>" aria-label="Comeback">
+    <img class="head_logo_img displ_block sirka100" src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback">
   </a>
-  <div class="head_logo_meta" aria-live="off">
-    <span class="head_logo_date" id="cbHeadLogoDate"><?= h($cbLogoDate) ?></span>
-    <span class="head_logo_time" id="cbHeadLogoTime"><?= h($cbLogoTime) ?></span>
+  <div class="head_logo_meta mezera_mezi_2 displ_flex flex_sloupec" aria-live="off">
+    <span class="head_logo_date txt_seda text_mensi_11 radek_kratky displ_block" id="cbHeadLogoDate"><?= h($cbLogoDate) ?></span>
+    <span class="head_logo_time txt_seda text_mensi_11 radek_kratky displ_block" id="cbHeadLogoTime"><?= h($cbLogoTime) ?></span>
   </div>
 </div>
 <script>

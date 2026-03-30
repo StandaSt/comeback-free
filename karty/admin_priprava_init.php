@@ -75,11 +75,11 @@ try {
 }
 
 if ($initError !== '') {
-    $card_min_html = '<p class="card_text card_text_muted">' . h($initError) . '</p>';
+    $card_min_html = '<p class="card_text txt_seda odstup_vnejsi_0 card_text_muted">' . h($initError) . '</p>';
 } else {
     $card_min_html = ''
-        . '<div class="table-wrap">'
-        . '  <table class="table">'
+        . '<div class="table-wrap ram_normal bg_bila zaobleni_12">'
+        . '  <table class="table ram_normal bg_bila radek_rozvolneny">'
         . '    <tbody>'
         . '      <tr>'
         . '        <td>Potřebné akce pro inicializaci:</td>'
@@ -99,13 +99,13 @@ if ($initError !== '') {
         . '      </tr>'
         . '    </tbody>'
         . '  </table>'
-        . '</div><p class="card_text"><strong>Celkový stav inicializace:</strong> ' . h((string)$celkova_procenta) . ' %</p>';
+        . '</div><p class="card_text txt_seda odstup_vnejsi_0"><strong>Celkový stav inicializace:</strong> ' . h((string)$celkova_procenta) . ' %</p>';
 }
 
 ob_start();
 ?>
 <?php if ($initError !== ''): ?>
-  <p class="card_text card_text_muted"><?= h($initError) ?></p>
+  <p class="card_text txt_seda odstup_vnejsi_0 card_text_muted"><?= h($initError) ?></p>
 <?php else: ?>
 <?php
 $sirkaSloupcu = [
@@ -119,10 +119,10 @@ $sirkaSloupcu = [
     'poznamka' => 'width:55ch;',
 ];
 ?>
-<div class="card_stack">
+<div class="card_stack mezera_mezi_10 displ_flex">
 
-  <div class="table-wrap">
-    <table class="table">
+  <div class="table-wrap ram_normal bg_bila zaobleni_12">
+    <table class="table ram_normal bg_bila radek_rozvolneny">
       <thead>
         <tr>
           <th style="<?= h($sirkaSloupcu['krok']) ?>">Krok</th>
@@ -195,11 +195,11 @@ $sirkaSloupcu = [
               $isHotovo0 = $procenta === 0;
               $procentaClass = 'text_vpravo';
               if ($isHotovo100) {
-                  $procentaClass .= ' text_barva_zelena text_tucny';
+                  $procentaClass .= ' txt_zelena text_tucny';
               }
 
               if ($isHotovo0) {
-                  $procentaClass .= ' text_barva_cervena text_tucny';
+                  $procentaClass .= ' txt_cervena text_tucny';
               }
               ?>
               <tr>

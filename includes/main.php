@@ -9,14 +9,14 @@ declare(strict_types=1);
  * MAIN (obsah) – kostra mezi hlavičkou a patičkou
  *
  * Cíl:
- * - scroll je pouze uvnitř <main class="dash_box">
+ * - scroll je pouze uvnitř <main class="dash_box bg_modra">
  * - uvnitř main se renderuje obsah z aktuální include/page
  * - dashboard už nepoužívá žádný další vnořený obal pro scroll
  */
 ?>
 
 <!-- MAIN START -->
-<main class="dash_box">
+<main class="dash_box bg_modra sirka100">
   <?php
   /*
    * Obsah renderuje zvolená include/page.
@@ -25,7 +25,7 @@ declare(strict_types=1);
   if (isset($file) && is_string($file) && $file !== '' && is_file($file)) {
       require $file;
   } else {
-      echo '<section class="card_box"><p>Obsah stránky nebyl nalezen.</p></section>';
+      echo '<section class="card_box ram_normal bg_bila zaobleni_12 odstup_vnitrni_14"><p>Obsah stránky nebyl nalezen.</p></section>';
   }
   ?>
 </main>

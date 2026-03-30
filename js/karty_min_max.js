@@ -48,7 +48,7 @@
     if (layer) return layer;
 
     layer = document.createElement('div');
-    layer.className = 'dash_maxi_layer';
+    layer.className = 'dash_maxi_layer odstup_vnitrni_10';
     layer.innerHTML = '<div class="dash_maxi_stage"></div>';
     dashBox.appendChild(layer);
     return layer;

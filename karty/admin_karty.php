@@ -355,12 +355,12 @@ foreach ($adminKartyCols as $col) {
 $tableColsHtml .= "            </colgroup>";
 $tableHeadHtml = implode("\n", [
     '            <tr>',
-    '              <th class="admin_karty_col_id">ID</th>',
+    '              <th class="admin_karty_col_id text_stred">ID</th>',
     '              <th class="admin_karty_col_nazev">Nadpis</th>',
     '              <th class="admin_karty_col_soubor">Soubor</th>',
     '              <th class="admin_karty_col_role">Min role</th>',
     '              <th class="admin_karty_col_poradi">Pořadí</th>',
-    '              <th class="admin_karty_col_aktivni">Aktivní</th>',
+    '              <th class="admin_karty_col_aktivni text_stred">Aktivní</th>',
     '              <th class="admin_karty_col_akce">Akce</th>',
     '            </tr>',
 ]);
@@ -369,8 +369,8 @@ $tableHeadHtml = implode("\n", [
 <?php
 ob_start();
 ?>
-<div class="table-wrap">
-  <table class="table">
+<div class="table-wrap ram_normal bg_bila zaobleni_12">
+  <table class="table ram_normal bg_bila radek_rozvolneny">
     <thead>
       <tr>
         <th class="text_vlevo">Karty podle role</th>
@@ -402,21 +402,21 @@ ob_start();
     <form id="karta-add" method="post" action="<?= h($formAction) ?>" autocomplete="off">
       <input type="hidden" name="admin_karty_action" value="add">
     </form>
-    <div class="table-wrap">
-      <table class="table admin_karty_table">
+    <div class="table-wrap ram_normal bg_bila zaobleni_12">
+      <table class="table ram_normal bg_bila radek_rozvolneny admin_karty_table sirka100">
 <?= $tableColsHtml . "\n" ?>
         <tbody>
           <tr>
-            <th colspan="7">Přidání nové karty včetně názvu souboru, pořadí a minimální role.</th>
+            <th class="text_vlevo" colspan="7">Přidání nové karty včetně názvu souboru, pořadí a minimální role.</th>
           </tr>
 <?= $tableHeadHtml . "\n" ?>
           <tr>
-            <td><?= h((string)$nextCardId) ?></td>
+            <td class="text_stred"><?= h((string)$nextCardId) ?></td>
             <td>
-              <input class="card_input" name="nazev" type="text" required maxlength="120" placeholder="např. Správa karet" form="karta-add">
+              <input class="card_input filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="nazev" type="text" required maxlength="120" placeholder="např. Správa karet" form="karta-add">
             </td>
             <td>
-              <select class="card_select" name="soubor" required form="karta-add">
+              <select class="card_select filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="soubor" required form="karta-add">
                 <option value="">Vyber soubor...</option>
                 <?php foreach ($souborOptions as $opt): ?>
                   <option value="<?= h($opt) ?>"><?= h($opt) ?></option>
@@ -424,22 +424,22 @@ ob_start();
               </select>
             </td>
             <td>
-              <select class="card_select" name="min_role" required form="karta-add">
+              <select class="card_select filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="min_role" required form="karta-add">
                 <option value="1">admin</option>
                 <option value="2">manager</option>
                 <option value="3" selected>všichni</option>
               </select>
             </td>
             <td>
-              <input class="card_input" name="poradi" type="number" min="1" max="9999" value="100" required form="karta-add">
+              <input class="card_input filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="poradi" type="number" min="1" max="9999" value="100" required form="karta-add">
             </td>
-            <td>0</td>
+            <td class="text_stred">0</td>
             <td>
-              <button class="admin_karty_btn" type="submit" form="karta-add">Přidat kartu</button>
+              <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28" type="submit" form="karta-add">Přidat kartu</button>
             </td>
           </tr>
           <tr>
-            <th colspan="7">Seznam aktivních karet</th>
+            <th class="text_vlevo" colspan="7">Seznam aktivních karet</th>
           </tr>
 <?= $tableHeadHtml . "\n" ?>
           <?php if (!$activeCards): ?>
@@ -448,34 +448,34 @@ ob_start();
             <?php foreach ($activeCards as $card): ?>
               <?php $formId = 'karta-' . (string)$card['id_karta']; ?>
               <tr>
-                <td><?= h((string)$card['id_karta']) ?></td>
+                <td class="text_stred"><?= h((string)$card['id_karta']) ?></td>
                 <td>
                   <form id="<?= h($formId) ?>" method="post" action="<?= h($formAction) ?>">
                     <input type="hidden" name="id_karta" value="<?= h((string)$card['id_karta']) ?>">
                   </form>
-                  <input type="text" class="card_input" name="nazev" value="<?= h($card['nazev']) ?>" maxlength="120" form="<?= h($formId) ?>">
+                  <input type="text" class="card_input filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="nazev" value="<?= h($card['nazev']) ?>" maxlength="120" form="<?= h($formId) ?>">
                 </td>
-                <td><input type="text" class="card_input" name="soubor" value="<?= h($card['soubor']) ?>" maxlength="80" form="<?= h($formId) ?>"></td>
+                <td><input type="text" class="card_input filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="soubor" value="<?= h($card['soubor']) ?>" maxlength="80" form="<?= h($formId) ?>"></td>
                 <td>
-                  <select class="card_select" name="min_role" form="<?= h($formId) ?>">
+                  <select class="card_select filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="min_role" form="<?= h($formId) ?>">
                     <option value="1"<?= $card['min_role'] === 1 ? ' selected' : '' ?>>admin</option>
                     <option value="2"<?= $card['min_role'] === 2 ? ' selected' : '' ?>>manager</option>
                     <option value="3"<?= $card['min_role'] === 3 ? ' selected' : '' ?>>všichni</option>
                   </select>
                 </td>
-                <td><input type="number" class="card_input" name="poradi" value="<?= h((string)$card['poradi']) ?>" min="1" max="9999" form="<?= h($formId) ?>"></td>
-                <td>ano</td>
+                <td><input type="number" class="card_input filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="poradi" value="<?= h((string)$card['poradi']) ?>" min="1" max="9999" form="<?= h($formId) ?>"></td>
+                <td class="text_stred">ano</td>
                 <td>
-                  <button class="admin_karty_btn admin_karty_btn_icon" type="submit" name="admin_karty_action" value="move_up" form="<?= h($formId) ?>">&uarr;</button>
-                  <button class="admin_karty_btn admin_karty_btn_icon" type="submit" name="admin_karty_action" value="move_down" form="<?= h($formId) ?>">&darr;</button>
-                  <button class="admin_karty_btn" type="submit" name="admin_karty_action" value="save" form="<?= h($formId) ?>">Uložit</button>
-                  <button class="admin_karty_btn admin_karty_btn_danger" type="submit" name="admin_karty_action" value="disable" form="<?= h($formId) ?>">Zakázat</button>
+                  <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 admin_karty_btn_icon odstup_vnitrni_0" type="submit" name="admin_karty_action" value="move_up" form="<?= h($formId) ?>">&uarr;</button>
+                  <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 admin_karty_btn_icon odstup_vnitrni_0" type="submit" name="admin_karty_action" value="move_down" form="<?= h($formId) ?>">&darr;</button>
+                  <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28" type="submit" name="admin_karty_action" value="save" form="<?= h($formId) ?>">Uložit</button>
+                  <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 admin_karty_btn_danger txt_cervena" type="submit" name="admin_karty_action" value="disable" form="<?= h($formId) ?>">Zakázat</button>
                 </td>
               </tr>
             <?php endforeach; ?>
           <?php endif; ?>
           <tr>
-            <th colspan="7">Neaktivní karty</th>
+            <th class="text_vlevo" colspan="7">Neaktivní karty</th>
           </tr>
 <?= $tableHeadHtml . "\n" ?>
           <?php if (!$inactiveCards): ?>
@@ -484,17 +484,17 @@ ob_start();
             <?php foreach ($inactiveCards as $card): ?>
               <?php $formId = 'karta-inactive-' . (string)$card['id_karta']; ?>
               <tr>
-                <td><?= h((string)$card['id_karta']) ?></td>
+                <td class="text_stred"><?= h((string)$card['id_karta']) ?></td>
                 <td><?= h($card['nazev']) ?></td>
                 <td><?= h($card['soubor']) ?></td>
                 <td><?= h((string)$card['min_role']) ?></td>
                 <td><?= h((string)$card['poradi']) ?></td>
-                <td>ne</td>
+                <td class="text_stred">ne</td>
                 <td>
                   <form id="<?= h($formId) ?>" method="post" action="<?= h($formAction) ?>">
                     <input type="hidden" name="id_karta" value="<?= h((string)$card['id_karta']) ?>">
                   </form>
-                  <button class="admin_karty_btn admin_karty_btn_danger" type="submit" name="admin_karty_action" value="enable" form="<?= h($formId) ?>">Povolit</button>
+                  <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 admin_karty_btn_danger txt_cervena" type="submit" name="admin_karty_action" value="enable" form="<?= h($formId) ?>">Povolit</button>
                 </td>
               </tr>
             <?php endforeach; ?>
@@ -502,10 +502,11 @@ ob_start();
         </tbody>
       </table>
     </div>
-    <div class="admin_karty_msg <?= $msgErr ? 'text_barva_cervena' : 'text_barva_zelena' ?>">
+    <div class="admin_karty_msg <?= $msgErr ? 'txt_cervena' : 'txt_zelena' ?>">
       <strong>Poslední akce:</strong> <?= h($msg) ?>
     </div>
 <?php
 $card_max_html = (string)ob_get_clean();
 /* karty/admin_karty.php * Verze: V7 * Aktualizace: 12.03.2026 */
 ?>
+

@@ -2,8 +2,8 @@
 // includes/hlavicka/head_pobocka.php * Verze: V1 * Aktualizace: 07.03.2026
 declare(strict_types=1);
 ?>
-<div class="head_branch" aria-label="Pobočka">
-  <select id="cbPobockaSelect" class="head_branch_select" data-cb-branch-select="1" <?= $cbPobocky ? '' : 'disabled' ?> >
+<div class="head_branch zaobleni_10 displ_flex jc_stred" aria-label="Pobočka">
+  <select id="cbPobockaSelect" class="head_branch_select ram_ovladace txt_seda bg_bila zaobleni_8 text_normalni_12 vyska_24 sirka100" data-cb-branch-select="1" <?= $cbPobocky ? '' : 'disabled' ?> >
     <?php if ($cbPobocky): ?>
       <?php if (!empty($cbPobockaMultiFromCard)): ?>
         <option value="" selected>Vybráno z karty</option>

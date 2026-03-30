@@ -1,35 +1,4 @@
-/* style/1/karty/uzivatele.css * Verze: V1 * Aktualizace: 13.03.2026 */
-
-.uzivatele-table.card_table_max .c-id,
-.uzivatele-table.card_table_max .c-telefon,
-.uzivatele-table.card_table_max .c-reg,
-.uzivatele-table.card_table_max .c-aktivni{
-  white-space:nowrap;
-}
-
-.uzivatele-table.card_table_max .c-email{
-  overflow-wrap:anywhere;
-}
-
-.uzivatele_filter_reset{
-  text-align:left;
-}
-
-.uzivatele-table .row-icons{
-  display:inline-flex;
-  align-items:center;
-  gap:10px;
-  white-space:nowrap;
-}
-
-.uzivatele-table .row-icons img{
-  width:18px;
-  height:18px;
-  display:block;
-  opacity:.92;
-}
-
-.uzivatele-table .row-icons img:hover{
-  opacity:1;
-  transform:translateY(-1px);
-}
+/* style/1/karty/uzivatele.css
+ * Styly jsou presunute do style/1/global.css (sekce KARTA: uzivatele).
+ * Soubor je ponechany kvuli kompatibilite nacteni.
+ */

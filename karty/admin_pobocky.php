@@ -84,7 +84,7 @@ try {
     $msgErr = true;
 }
 
-$card_min_html = '<p class="card_text">Správa poboček</p>';
+$card_min_html = '<p class="card_text txt_seda odstup_vnejsi_0">Správa poboček</p>';
 $startExpanded = $keepExpanded;
 $sirkaSloupcu = [
     'nazev' => 'width:15ch;',
@@ -97,8 +97,8 @@ $sirkaSloupcu = [
 
 ob_start();
 ?>
-  <div class="table-wrap">
-    <table class="table">
+  <div class="table-wrap ram_normal bg_bila zaobleni_12">
+    <table class="table ram_normal bg_bila radek_rozvolneny">
       <thead>
         <tr>
           <th style="<?= h($sirkaSloupcu['nazev']) ?>">Název</th>
@@ -135,7 +135,7 @@ ob_start();
                   <td>
                     <input
                       type="text"
-                      class="card_input"
+                      class="card_input ram_sedy txt_seda vyska_32"
                       name="<?= h($col) ?>"
                       value="<?= h((string)($row[$col] ?? '')) ?>"
                       <?= $maxLenAttr ?><?= $inputStyle ?>
@@ -143,7 +143,7 @@ ob_start();
                   </td>
                 <?php endforeach; ?>
                 <td>
-                  <button type="submit" class="card_btn card_btn_primary">Uložit</button>
+                  <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Uložit</button>
                 </td>
               </form>
             </tr>
@@ -153,7 +153,7 @@ ob_start();
     </table>
   </div>
 
-  <p class="card_text<?= $msgErr ? ' card_text_muted' : '' ?>">
+  <p class="card_text txt_seda odstup_vnejsi_0<?= $msgErr ? ' card_text_muted' : '' ?>">
     <?= h($msg) ?>
   </p>
 <?php

@@ -80,63 +80,63 @@ $usNanoText = ($usNanoKde === 1) ? 'Do gridu' : 'Řádek';
 $usDarkText = ($usDark === 1) ? 'Ano' : 'Ne';
 
 $card_min_html = ''
-    . '<p class="card_text">Sloupce dashboardu: <strong>' . h((string)$usPocetSl) . '</strong></p>'
-    . '<p class="card_text">Nano karty: <strong>' . h($usNanoText) . '</strong></p>'
-    . '<p class="card_text">Velikost textu: <strong>' . h((string)$usPismo) . '</strong> | Dark: <strong>' . h($usDarkText) . '</strong></p>';
+    . '<p class="card_text txt_seda odstup_vnejsi_0">Sloupce dashboardu: <strong>' . h((string)$usPocetSl) . '</strong></p>'
+    . '<p class="card_text txt_seda odstup_vnejsi_0">Nano karty: <strong>' . h($usNanoText) . '</strong></p>'
+    . '<p class="card_text txt_seda odstup_vnejsi_0">Velikost textu: <strong>' . h((string)$usPismo) . '</strong> | Dark: <strong>' . h($usDarkText) . '</strong></p>';
 
 ob_start();
 ?>
 <?php if ($usError !== ''): ?>
-  <p class="card_text card_text_muted"><?= h($usError) ?></p>
+  <p class="card_text txt_seda odstup_vnejsi_0 card_text_muted"><?= h($usError) ?></p>
 <?php else: ?>
   <?php if ($usRedirectUrl !== ''): ?>
     <script>
       window.location.href = <?= json_encode($usRedirectUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     </script>
   <?php endif; ?>
-  <form method="post" action="<?= h($formAction) ?>" class="card_stack" autocomplete="off">
+  <form method="post" action="<?= h($formAction) ?>" class="card_stack mezera_mezi_10 displ_flex" autocomplete="off">
     <input type="hidden" name="us_action" value="save">
 
-    <section class="card_section">
-      <h4 class="card_section_title">Dashboard</h4>
-      <label class="card_field">
+    <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10">
+      <h4 class="card_section_title txt_seda">Dashboard</h4>
+      <label class="card_field mezera_mezi_4 displ_flex">
         <span>Počet sloupců</span>
-        <select class="card_select" name="us_pocet_sl">
+        <select class="card_select ram_sedy txt_seda vyska_32" name="us_pocet_sl">
           <option value="3"<?= $usPocetSl === 3 ? ' selected' : '' ?>>3 sloupce</option>
           <option value="4"<?= $usPocetSl === 4 ? ' selected' : '' ?>>4 sloupce</option>
         </select>
       </label>
 
-      <label class="card_field">
+      <label class="card_field mezera_mezi_4 displ_flex">
         <span>Nano karty</span>
-        <select class="card_select" name="us_nano_kde">
+        <select class="card_select ram_sedy txt_seda vyska_32" name="us_nano_kde">
           <option value="0"<?= $usNanoKde === 0 ? ' selected' : '' ?>>0 = řádek</option>
           <option value="1"<?= $usNanoKde === 1 ? ' selected' : '' ?>>1 = do gridu</option>
         </select>
       </label>
     </section>
 
-    <section class="card_section">
-      <h4 class="card_section_title">Vzhled</h4>
-      <label class="card_field">
+    <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10">
+      <h4 class="card_section_title txt_seda">Vzhled</h4>
+      <label class="card_field mezera_mezi_4 displ_flex">
         <span>Velikost textu</span>
-        <select class="card_select" name="us_pismo">
+        <select class="card_select ram_sedy txt_seda vyska_32" name="us_pismo">
           <option value="1"<?= $usPismo === 1 ? ' selected' : '' ?>>1 = menší</option>
           <option value="2"<?= $usPismo === 2 ? ' selected' : '' ?>>2 = default</option>
           <option value="3"<?= $usPismo === 3 ? ' selected' : '' ?>>3 = větší</option>
         </select>
       </label>
 
-      <label class="card_field">
+      <label class="card_field mezera_mezi_4 displ_flex">
         <span>Dark režim</span>
-        <select class="card_select" name="us_dark">
+        <select class="card_select ram_sedy txt_seda vyska_32" name="us_dark">
           <option value="0"<?= $usDark === 0 ? ' selected' : '' ?>>0 = ne</option>
           <option value="1"<?= $usDark === 1 ? ' selected' : '' ?>>1 = ano</option>
         </select>
       </label>
     </section>
 
-    <div class="card_actions">
+    <div class="card_actions mezera_mezi_8 displ_flex jc_konec">
       <button type="submit" class="btn btn-primary">Uložit nastavení</button>
     </div>
   </form>
