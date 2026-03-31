@@ -217,23 +217,27 @@ try {
     $uzError = 'Načtení uživatelů selhalo.';
 }
 
+$uzQueryDefaults = [
+    'uz_p' => '1',
+    'uz_per' => (string)$tabKonfig['default_per'],
+    'uz_akt' => '1',
+    'uz_sort' => 'id',
+    'uz_dir' => 'DESC',
+];
 $uzBaseParams = [
-    'uz_per=' . rawurlencode((string)$uzPer),
-    'uz_akt=' . rawurlencode($uzAkt),
+    'uz_per' => (string)$uzPer,
+    'uz_akt' => $uzAkt,
 ];
 if ((int)$tabKonfig['enable_sort'] === 1) {
-    $uzBaseParams[] = 'uz_sort=' . rawurlencode($uzSort);
-    $uzBaseParams[] = 'uz_dir=' . rawurlencode($uzDir);
+    $uzBaseParams['uz_sort'] = $uzSort;
+    $uzBaseParams['uz_dir'] = $uzDir;
 }
-if ((int)$tabKonfig['enable_filters'] === 1) {
-    foreach ($uzFilters as $key => $value) {
-        if ($value === '') {
-            continue;
-        }
-        $uzBaseParams[] = 'uz_f[' . rawurlencode($key) . ']=' . rawurlencode($value);
-    }
+if ((int)$tabKonfig['enable_filters'] === 1 && $uzFilters !== []) {
+    $uzBaseParams['uz_f'] = $uzFilters;
 }
-$uzBaseUrl = cb_url('/?' . implode('&', $uzBaseParams));
+$uzBuildUrl = static function (array $extra = []) use ($uzBaseParams, $uzQueryDefaults): string {
+    return cb_url_query('/', array_merge($uzBaseParams, $extra), $uzQueryDefaults);
+};
 ?>
 
 <?php
@@ -244,29 +248,29 @@ ob_start();
 $card_min_html = (string)ob_get_clean();
 $card_min_html = ''
     . '<div class="table-wrap ram_normal bg_bila zaobleni_12">'
-    . '  <table class="table ram_normal bg_bila radek_rozvolneny card_table_min" aria-label="Přehled uživatelů IS Comeback">'
+    . '  <table class="table ram_normal bg_bila radek_1_35 card_table_min" aria-label="Přehled uživatelů IS Comeback">'
     . '    <thead>'
     . '      <tr>'
     . '        <th>Přidělená role</th>'
-    . '        <th class="text_vpravo">počet</th>'
+    . '        <th class="txt_r">počet</th>'
     . '      </tr>'
     . '    </thead>'
     . '    <tbody>'
     . '      <tr>'
     . '        <td>uživatel</td>'
-    . '        <td class="text_vpravo"><strong>' . h((string)$roleStats['uzivatel']) . '</strong></td>'
+    . '        <td class="txt_r"><strong>' . h((string)$roleStats['uzivatel']) . '</strong></td>'
     . '      </tr>'
     . '      <tr>'
     . '        <td>manager</td>'
-    . '        <td class="text_vpravo"><strong>' . h((string)$roleStats['manager']) . '</strong></td>'
+    . '        <td class="txt_r"><strong>' . h((string)$roleStats['manager']) . '</strong></td>'
     . '      </tr>'
     . '      <tr>'
     . '        <td>admin</td>'
-    . '        <td class="text_vpravo"><strong>' . h((string)$roleStats['admin']) . '</strong></td>'
+    . '        <td class="txt_r"><strong>' . h((string)$roleStats['admin']) . '</strong></td>'
     . '      </tr>'
     . '      <tr>'
     . '        <td><strong>Celkem</strong></td>'
-    . '        <td class="text_vpravo"><strong>' . h((string)($roleStats['uzivatel'] + $roleStats['manager'] + $roleStats['admin'])) . '</strong></td>'
+    . '        <td class="txt_r"><strong>' . h((string)($roleStats['uzivatel'] + $roleStats['manager'] + $roleStats['admin'])) . '</strong></td>'
     . '      </tr>'
     . '    </tbody>'
     . '  </table>'
@@ -278,7 +282,7 @@ ob_start();
 <?php if ($uzError !== ''): ?>
       <p class="card_text txt_seda odstup_vnejsi_0 card_text_muted"><?= h($uzError) ?></p>
     <?php else: ?>
-      <form method="get" action="<?= h($formAction) ?>" class="card_stack mezera_mezi_10 displ_flex" autocomplete="off">
+      <form method="get" action="<?= h($formAction) ?>" class="card_stack gap_10 displ_flex" autocomplete="off">
         <input type="hidden" name="uz_p" value="1">
         <?php if ((int)$tabKonfig['enable_sort'] === 1): ?>
           <input type="hidden" name="uz_sort" value="<?= h($uzSort) ?>">
@@ -286,7 +290,7 @@ ob_start();
         <?php endif; ?>
 
         <div class="table-wrap ram_normal bg_bila zaobleni_12">
-          <table class="table ram_normal bg_bila radek_rozvolneny uzivatele-table card_table_max">
+          <table class="table ram_normal bg_bila radek_1_35 uzivatele-table card_table_max">
             <thead>
               <tr class="filter-row">
                 <th class="c-id"></th>
@@ -294,9 +298,9 @@ ob_start();
                 <th class="c-jmeno"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="width:8ch;" type="text" name="uz_f[jmeno]" value="<?= h($uzFilters['jmeno'] ?? '') ?>"></th>
                 <th class="c-telefon"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="width:10ch;" type="text" name="uz_f[telefon]" value="<?= h($uzFilters['telefon'] ?? '') ?>"></th>
                 <th class="c-email"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="width:16ch;" type="text" name="uz_f[email]" value="<?= h($uzFilters['email'] ?? '') ?>"></th>
-                <th class="uzivatele_filter_reset text_vlevo" colspan="3">
-                  <div class="filter-actions mezera_mezi_8 displ_flex">
-                    <a class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 icon-x small zaobleni_6 vyska_24 radek_24 displ_inline_flex" href="<?= h($formAction) ?>">&times;</a>
+                <th class="uzivatele_filter_reset txt_l" colspan="3">
+                  <div class="filter-actions gap_8 displ_flex">
+                    <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 icon-x small zaobleni_6 vyska_24 radek_24 displ_inline_flex" href="<?= h($formAction) ?>">&times;</a>
                   </div>
                 </th>
               </tr>
@@ -311,22 +315,22 @@ ob_start();
                   }
                   ?>
                   <?php $thRight = in_array($key, ['id', 'prijmeni', 'email', 'aktivni'], true); ?>
-                  <th class="c-<?= h($key) ?> th-sort<?= $isActiveSort ? ' active' : '' ?><?= $thRight ? ' text_vpravo' : '' ?>">
+                  <th class="c-<?= h($key) ?> th-sort<?= $isActiveSort ? ' active' : '' ?><?= $thRight ? ' txt_r' : '' ?>">
                     <?php if ((int)$tabKonfig['enable_sort'] === 1 && $isSortable): ?>
                       <?php
                       $nextDir = ($isActiveSort && $uzDir === 'ASC') ? 'DESC' : 'ASC';
-                      $sortParams = $uzBaseParams;
-                      $sortParams[] = 'uz_p=1';
-                      $sortParams[] = 'uz_sort=' . rawurlencode($key);
-                      $sortParams[] = 'uz_dir=' . rawurlencode($nextDir);
-                      $sortUrl = cb_url('/?' . implode('&', $sortParams));
+                      $sortUrl = $uzBuildUrl([
+                          'uz_p' => '1',
+                          'uz_sort' => $key,
+                          'uz_dir' => $nextDir,
+                      ]);
                       ?>
-                      <a class="th-sort-link mezera_mezi_8 jc_mezi sirka100<?= $isActiveSort ? ' active' : '' ?>" href="<?= h($sortUrl) ?>">
+                      <a class="th-sort-link gap_8 jc_mezi sirka100<?= $isActiveSort ? ' active' : '' ?>" href="<?= h($sortUrl) ?>">
                         <span class="th-sort-label"><?= h($cfg['label']) ?></span>
-                        <span class="th-sort-arrow text_vpravo"><?= h($arrow) ?></span>
+                        <span class="th-sort-arrow txt_r"><?= h($arrow) ?></span>
                       </a>
                     <?php else: ?>
-                      <span class="th-sort-link mezera_mezi_8 jc_mezi sirka100"><span class="th-sort-label"><?= h($cfg['label']) ?></span></span>
+                      <span class="th-sort-link gap_8 jc_mezi sirka100"><span class="th-sort-label"><?= h($cfg['label']) ?></span></span>
                     <?php endif; ?>
                   </th>
                 <?php endforeach; ?>
@@ -340,8 +344,8 @@ ob_start();
               <?php else: ?>
                 <?php foreach ($uzRows as $rowUser): ?>
                   <tr>
-                    <td class="c-id text_vpravo"><?= h((string)($rowUser['id_user'] ?? '')) ?></td>
-                    <td class="c-prijmeni text_vpravo"><?= h((string)($rowUser['prijmeni'] ?? '')) ?></td>
+                    <td class="c-id txt_r"><?= h((string)($rowUser['id_user'] ?? '')) ?></td>
+                    <td class="c-prijmeni txt_r"><?= h((string)($rowUser['prijmeni'] ?? '')) ?></td>
                     <td class="c-jmeno"><?= h((string)($rowUser['jmeno'] ?? '')) ?></td>
                     <td class="c-telefon">
                       <?php
@@ -360,11 +364,11 @@ ob_start();
                       ?>
                       <?= h($phoneValue) ?>
                     </td>
-                    <td class="c-email text_vpravo"><?= h((string)($rowUser['email'] ?? '')) ?></td>
+                    <td class="c-email txt_r"><?= h((string)($rowUser['email'] ?? '')) ?></td>
                     <td class="c-reg"><?= h(uz_format_reg_cz((string)($rowUser['reg'] ?? ''))) ?></td>
-                    <td class="c-aktivni text_vpravo"><?= ((string)($rowUser['aktivni'] ?? '') === '1') ? 'Ano' : 'Ne' ?></td>
+                    <td class="c-aktivni txt_r"><?= ((string)($rowUser['aktivni'] ?? '') === '1') ? 'Ano' : 'Ne' ?></td>
                     <td class="c-akce">
-                      <span class="row-icons mezera_mezi_10">
+                      <span class="row-icons gap_10">
                         <img src="<?= h(cb_url('img/icons/search.svg')) ?>" alt="Detail uživatele">
                         <img src="<?= h(cb_url('img/icons/calendar.svg')) ?>" alt="Směny">
                         <img src="<?= h(cb_url('img/icons/clock-3.svg')) ?>" alt="Hodiny">
@@ -382,21 +386,21 @@ ob_start();
         </div>
 
         <?php if ((int)$tabKonfig['enable_pagination'] === 1): ?>
-        <div class="list-bottom mezera_mezi_14 mezera_mezi_10 odstup_vnitrni_0 displ_grid">
-          <div class="per-form mezera_mezi_8 displ_inline_flex">
+        <div class="list-bottom gap_14 gap_10 odstup_vnitrni_0 displ_grid">
+          <div class="per-form gap_8 displ_inline_flex">
             <span>Zobrazuji</span>
-            <select name="uz_per" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 per-select" onchange="this.form.querySelectorAll(&quot;input[name^='uz_f[']&quot;).forEach(function(el){if(el.value===''){el.disabled=true;}});if(this.form.uz_sort&&this.form.uz_sort.value==='id'){this.form.uz_sort.disabled=true;}if(this.form.uz_dir&&this.form.uz_dir.value==='DESC'){this.form.uz_dir.disabled=true;}var uzAktSel=this.form.querySelector(&quot;select[name='uz_akt']&quot;);if(uzAktSel&&uzAktSel.value==='1'){uzAktSel.disabled=true;}if(this.form.uz_per&&this.form.uz_per.value==='20'){this.form.uz_per.disabled=true;}this.form.uz_p.value=1;this.form.submit();">
+            <select name="uz_per" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 per-select" onchange="this.form.uz_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
               <option value="20"<?= $uzPer === 20 ? ' selected' : '' ?>>20 řádků</option>
               <option value="50"<?= $uzPer === 50 ? ' selected' : '' ?>>50 řádků</option>
               <option value="100"<?= $uzPer === 100 ? ' selected' : '' ?>>100 řádků</option>
             </select>
           </div>
 
-          <div class="pagination-icon mezera_mezi_4 displ_inline_flex">
+          <div class="pagination-icon gap_4 displ_inline_flex">
             <?php $prevDisabled = $uzPage <= 1; ?>
             <?php $nextDisabled = $uzPage >= $uzPages; ?>
-            <a class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24<?= $prevDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $prevDisabled ? '#' : h($uzBaseUrl . '&uz_p=1') ?>">«</a>
-            <a class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24<?= $prevDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $prevDisabled ? '#' : h($uzBaseUrl . '&uz_p=' . (string)max(1, $uzPage - 1)) ?>">‹</a>
+            <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24<?= $prevDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $prevDisabled ? '#' : h($uzBuildUrl(['uz_p' => '1'])) ?>">«</a>
+            <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24<?= $prevDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $prevDisabled ? '#' : h($uzBuildUrl(['uz_p' => (string)max(1, $uzPage - 1)])) ?>">‹</a>
 
             <?php
             $pageItems = [];
@@ -414,20 +418,20 @@ ob_start();
             ?>
             <?php foreach ($pageItems as $item): ?>
               <?php if ($item === '…'): ?>
-                <span class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24 disabled displ_inline_flex">…</span>
+                <span class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24 disabled displ_inline_flex">…</span>
               <?php elseif ((int)$item === $uzPage): ?>
-                <span class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24 page-current displ_inline_flex"><?= h((string)$item) ?></span>
+                <span class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24 page-current displ_inline_flex"><?= h((string)$item) ?></span>
               <?php else: ?>
-                <a class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24 displ_inline_flex" href="<?= h($uzBaseUrl . '&uz_p=' . (string)$item) ?>"><?= h((string)$item) ?></a>
+                <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24 displ_inline_flex" href="<?= h($uzBuildUrl(['uz_p' => (string)$item])) ?>"><?= h((string)$item) ?></a>
               <?php endif; ?>
             <?php endforeach; ?>
 
-            <a class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24<?= $nextDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $nextDisabled ? '#' : h($uzBaseUrl . '&uz_p=' . (string)min($uzPages, $uzPage + 1)) ?>">›</a>
-            <a class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24<?= $nextDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $nextDisabled ? '#' : h($uzBaseUrl . '&uz_p=' . (string)$uzPages) ?>">»</a>
+            <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24<?= $nextDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $nextDisabled ? '#' : h($uzBuildUrl(['uz_p' => (string)min($uzPages, $uzPage + 1)])) ?>">›</a>
+            <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24<?= $nextDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $nextDisabled ? '#' : h($uzBuildUrl(['uz_p' => (string)$uzPages])) ?>">»</a>
           </div>
 
-          <div class="per-form mezera_mezi_8 right displ_inline_flex jc_konec">
-            <select name="uz_akt" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 akt-select sirka_min_160" onchange="this.form.querySelectorAll(&quot;input[name^='uz_f[']&quot;).forEach(function(el){if(el.value===''){el.disabled=true;}});if(this.form.uz_sort&&this.form.uz_sort.value==='id'){this.form.uz_sort.disabled=true;}if(this.form.uz_dir&&this.form.uz_dir.value==='DESC'){this.form.uz_dir.disabled=true;}if(this.form.uz_akt&&this.form.uz_akt.value==='1'){this.form.uz_akt.disabled=true;}if(this.form.uz_per&&this.form.uz_per.value==='20'){this.form.uz_per.disabled=true;}this.form.uz_p.value=1;this.form.submit();">
+          <div class="per-form gap_8 right displ_inline_flex jc_konec">
+            <select name="uz_akt" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 akt-select sirka_min_160" onchange="this.form.uz_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
               <option value="1"<?= $uzAkt === '1' ? ' selected' : '' ?>>Aktivní</option>
               <option value="0"<?= $uzAkt === '0' ? ' selected' : '' ?>>Neaktivní</option>
               <option value="all"<?= $uzAkt === 'all' ? ' selected' : '' ?>>Vše</option>

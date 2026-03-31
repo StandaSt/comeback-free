@@ -98,7 +98,7 @@ $sirkaSloupcu = [
 ob_start();
 ?>
   <div class="table-wrap ram_normal bg_bila zaobleni_12">
-    <table class="table ram_normal bg_bila radek_rozvolneny">
+    <table class="table ram_normal bg_bila radek_1_35">
       <thead>
         <tr>
           <th style="<?= h($sirkaSloupcu['nazev']) ?>">Název</th>
@@ -106,7 +106,7 @@ ob_start();
           <th style="<?= h($sirkaSloupcu['mesto']) ?>">Město</th>
           <th style="<?= h($sirkaSloupcu['psc']) ?>">PSČ</th>
           <?php foreach ($endCols as $col): ?>
-            <th class="text_stred" style="<?= h($sirkaSloupcu['end']) ?>"><?= h($col) ?></th>
+            <th class="txt_c" style="<?= h($sirkaSloupcu['end']) ?>"><?= h($col) ?></th>
           <?php endforeach; ?>
           <th style="<?= h($sirkaSloupcu['akce']) ?>">Akce</th>
         </tr>

@@ -338,7 +338,7 @@ ob_start();
 <?php if ($psError !== ''): ?>
   <p class="card_text txt_seda odstup_vnejsi_0 card_text_muted"><?= h($psError) ?></p>
 <?php else: ?>
-  <form method="get" action="<?= h($formAction) ?>" class="card_stack mezera_mezi_10 displ_flex" autocomplete="off">
+  <form method="get" action="<?= h($formAction) ?>" class="card_stack gap_10 displ_flex" autocomplete="off">
     <input type="hidden" name="ps_p" value="1">
     <?php if ((int)$tabKonfig['enable_sort'] === 1): ?>
       <input type="hidden" name="ps_sort" value="<?= h($psSort) ?>">
@@ -346,7 +346,7 @@ ob_start();
     <?php endif; ?>
 
     <div class="table-wrap ram_normal bg_bila zaobleni_12">
-      <table class="table ram_normal bg_bila radek_rozvolneny card_table_max">
+      <table class="table ram_normal bg_bila radek_1_35 card_table_max">
         <thead>
           <tr class="filter-row">
             <th></th>
@@ -375,9 +375,9 @@ ob_start();
             <th></th>
             <th></th>
             <th></th>
-            <th class="text_vpravo">
+            <th class="txt_r">
               <?php if ((int)$tabKonfig['enable_filters'] === 1 && $psErrCount > 0): ?>
-                <label class="displ_inline_flex mezera_mezi_6 cursor_ruka" style="align-items:center; white-space:nowrap;">
+                <label class="displ_inline_flex gap_6 cursor_ruka" style="align-items:center; white-space:nowrap;">
                   <input type="checkbox" name="ps_f[chyba]" value="1"<?= $psFilters['chyba'] === '1' ? ' checked' : '' ?> onchange="this.form.ps_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
                   <span class="txt_cervena text_tucny">Chyby (<?= h((string)$psErrCount) ?>)</span>
                 </label>
@@ -404,12 +404,12 @@ ob_start();
               ?>
               <th class="th-sort<?= $isActiveSort ? ' active' : '' ?>">
                 <?php if ((int)$tabKonfig['enable_sort'] === 1): ?>
-                  <a class="th-sort-link mezera_mezi_8 jc_mezi sirka100<?= $isActiveSort ? ' active' : '' ?>" href="<?= h($sortUrl) ?>">
+                  <a class="th-sort-link gap_8 jc_mezi sirka100<?= $isActiveSort ? ' active' : '' ?>" href="<?= h($sortUrl) ?>">
                     <span class="th-sort-label"><?= h($label) ?></span>
-                    <span class="th-sort-arrow text_vpravo"><?= h($arrow) ?></span>
+                    <span class="th-sort-arrow txt_r"><?= h($arrow) ?></span>
                   </a>
                 <?php else: ?>
-                  <span class="th-sort-link mezera_mezi_8 jc_mezi sirka100">
+                  <span class="th-sort-link gap_8 jc_mezi sirka100">
                     <span class="th-sort-label"><?= h($label) ?></span>
                   </span>
                 <?php endif; ?>
@@ -434,14 +434,14 @@ ob_start();
               ?>
               <tr>
                 <td><?= h(ps_format_cz_date((string)$row['datum'])) ?></td>
-                <td class="text_vpravo"><?= h($pobTxt) ?></td>
-                <td class="text_vpravo"><?= h((string)($row['prijmeni'] ?? '')) ?></td>
+                <td class="txt_r"><?= h($pobTxt) ?></td>
+                <td class="txt_r"><?= h((string)($row['prijmeni'] ?? '')) ?></td>
                 <td><?= h((string)($row['jmeno'] ?? '')) ?></td>
                 <td><?= h($slotTxt) ?></td>
                 <td><?= h(ps_format_hm((string)($row['cas_od'] ?? ''))) ?></td>
                 <td><?= h(ps_format_hm((string)($row['cas_do'] ?? ''))) ?></td>
                 <td><?= h(ps_format_hm((string)($row['pauza'] ?? ''))) ?></td>
-                <td class="text_vpravo"><?= h((string)($row['odpracovano'] ?? '')) ?></td>
+                <td class="txt_r"><?= h((string)($row['odpracovano'] ?? '')) ?></td>
                 <td><?= h($chybaTxt) ?></td>
               </tr>
             <?php endforeach; ?>
@@ -451,8 +451,8 @@ ob_start();
     </div>
 
     <?php if ((int)$tabKonfig['enable_pagination'] === 1): ?>
-    <div class="list-bottom mezera_mezi_14 mezera_mezi_10 odstup_vnitrni_0 displ_grid">
-      <div class="per-form mezera_mezi_8 displ_inline_flex">
+    <div class="list-bottom gap_14 gap_10 odstup_vnitrni_0 displ_grid">
+      <div class="per-form gap_8 displ_inline_flex">
         <span>Zobrazuji</span>
         <select name="ps_per" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 per-select" onchange="this.form.ps_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
           <?php foreach ($perOptions as $optPer): ?>
@@ -461,12 +461,12 @@ ob_start();
         </select>
       </div>
 
-      <div class="pagination-icon mezera_mezi_4 displ_inline_flex">
+      <div class="pagination-icon gap_4 displ_inline_flex">
         <?php $prevDisabled = $psPage <= 1; ?>
         <?php $nextDisabled = $psPage >= $psPages; ?>
 
-        <a class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24<?= $prevDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $prevDisabled ? '#' : h($psBaseUrl . '&ps_p=1') ?>">«</a>
-        <a class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24<?= $prevDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $prevDisabled ? '#' : h($psBaseUrl . '&ps_p=' . (string)max(1, $psPage - 1)) ?>">‹</a>
+        <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24<?= $prevDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $prevDisabled ? '#' : h($psBaseUrl . '&ps_p=1') ?>">«</a>
+        <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24<?= $prevDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $prevDisabled ? '#' : h($psBaseUrl . '&ps_p=' . (string)max(1, $psPage - 1)) ?>">‹</a>
 
         <?php
         $pageItems = [];
@@ -485,19 +485,19 @@ ob_start();
 
         <?php foreach ($pageItems as $item): ?>
           <?php if ($item === '…'): ?>
-            <span class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24 disabled displ_inline_flex">…</span>
+            <span class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24 disabled displ_inline_flex">…</span>
           <?php elseif ((int)$item === $psPage): ?>
-            <span class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24 page-current displ_inline_flex"><?= h((string)$item) ?></span>
+            <span class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24 page-current displ_inline_flex"><?= h((string)$item) ?></span>
           <?php else: ?>
-            <a class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24 displ_inline_flex" href="<?= h($psBaseUrl . '&ps_p=' . (string)$item) ?>"><?= h((string)$item) ?></a>
+            <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24 displ_inline_flex" href="<?= h($psBaseUrl . '&ps_p=' . (string)$item) ?>"><?= h((string)$item) ?></a>
           <?php endif; ?>
         <?php endforeach; ?>
 
-        <a class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24<?= $nextDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $nextDisabled ? '#' : h($psBaseUrl . '&ps_p=' . (string)min($psPages, $psPage + 1)) ?>">›</a>
-        <a class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24<?= $nextDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $nextDisabled ? '#' : h($psBaseUrl . '&ps_p=' . (string)$psPages) ?>">»</a>
+        <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24<?= $nextDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $nextDisabled ? '#' : h($psBaseUrl . '&ps_p=' . (string)min($psPages, $psPage + 1)) ?>">›</a>
+        <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24<?= $nextDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $nextDisabled ? '#' : h($psBaseUrl . '&ps_p=' . (string)$psPages) ?>">»</a>
       </div>
 
-      <div class="per-form mezera_mezi_8 right displ_inline_flex jc_konec">
+      <div class="per-form gap_8 right displ_inline_flex jc_konec">
         <span>Celkem: <strong><?= h((string)$psTotal) ?></strong></span>
       </div>
     </div>

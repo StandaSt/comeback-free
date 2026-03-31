@@ -271,23 +271,27 @@ try {
     $zakError = 'Načtení zákazníků selhalo.';
 }
 
+$zakQueryDefaults = [
+    'zak_p' => '1',
+    'zak_per' => (string)$tabKonfig['default_per'],
+    'zak_blk' => '0',
+    'zak_sort' => 'id',
+    'zak_dir' => 'DESC',
+];
 $zakBaseParams = [
-    'zak_per=' . rawurlencode((string)$zakPer),
-    'zak_blk=' . rawurlencode($zakBlk),
+    'zak_per' => (string)$zakPer,
+    'zak_blk' => $zakBlk,
 ];
 if ((int)$tabKonfig['enable_sort'] === 1) {
-    $zakBaseParams[] = 'zak_sort=' . rawurlencode($zakSort);
-    $zakBaseParams[] = 'zak_dir=' . rawurlencode($zakDir);
+    $zakBaseParams['zak_sort'] = $zakSort;
+    $zakBaseParams['zak_dir'] = $zakDir;
 }
-foreach ($zakFilters as $key => $value) {
-    if ((int)$tabKonfig['enable_filters'] === 1) {
-        if ($value === '') {
-            continue;
-        }
-        $zakBaseParams[] = 'zak_f[' . rawurlencode($key) . ']=' . rawurlencode($value);
-    }
+if ((int)$tabKonfig['enable_filters'] === 1 && $zakFilters !== []) {
+    $zakBaseParams['zak_f'] = $zakFilters;
 }
-$zakBaseUrl = cb_url('/?' . implode('&', $zakBaseParams));
+$zakBuildUrl = static function (array $extra = []) use ($zakBaseParams, $zakQueryDefaults): string {
+    return cb_url_query('/', array_merge($zakBaseParams, $extra), $zakQueryDefaults);
+};
 ?>
 
 <?php
@@ -303,23 +307,23 @@ ob_start();
 $card_min_html = (string)ob_get_clean();
 $card_min_html = ''
     . '<div class="table-wrap ram_normal bg_bila zaobleni_12">'
-    . '  <table class="table ram_normal bg_bila radek_rozvolneny card_table_min" >'
+    . '  <table class="table ram_normal bg_bila radek_1_35 card_table_min" >'
     . '    <tbody>'
     . '      <tr>'
     . '        <td>Zákazníků v DB</td>'
-    . '        <td class="text_vpravo"><strong>' . h((string)$totalZak) . '</strong></td>'
+    . '        <td class="txt_r"><strong>' . h((string)$totalZak) . '</strong></td>'
     . '      </tr>'
     . '      <tr>'
     . '        <td>aktivní/blokovaní</td>'
-    . '        <td class="text_vpravo"><strong>' . h((string)$activeZak) . '/' . h((string)$blockedZak) . '</strong></td>'
+    . '        <td class="txt_r"><strong>' . h((string)$activeZak) . '/' . h((string)$blockedZak) . '</strong></td>'
     . '      </tr>'
     . '      <tr>'
     . '        <td>nejčastější zákazník:</td>'
-    . '        <td class="text_vpravo"><strong>František Skočdopole</strong></td>'
+    . '        <td class="txt_r"><strong>František Skočdopole</strong></td>'
     . '      </tr>'
     . '      <tr>'
     . '        <td>top zákazník:</td>'
-    . '        <td class="text_vpravo"><strong>Emanuel Bacigala</strong></td>'
+    . '        <td class="txt_r"><strong>Emanuel Bacigala</strong></td>'
     . '      </tr>'
     . '    </tbody>'
     . '  </table>'
@@ -331,7 +335,7 @@ ob_start();
 <?php if ($zakError !== ''): ?>
       <p class="card_text txt_seda odstup_vnejsi_0 card_text_muted"><?= h($zakError) ?></p>
     <?php else: ?>
-      <form method="get" action="<?= h($formAction) ?>" class="card_stack mezera_mezi_10 displ_flex" autocomplete="off">
+      <form method="get" action="<?= h($formAction) ?>" class="card_stack gap_10 displ_flex" autocomplete="off">
         <input type="hidden" name="zak_p" value="1">
         <?php if ((int)$tabKonfig['enable_sort'] === 1): ?>
           <input type="hidden" name="zak_sort" value="<?= h($zakSort) ?>">
@@ -339,29 +343,29 @@ ob_start();
         <?php endif; ?>
 
         <div class="table-wrap ram_normal bg_bila zaobleni_12">
-          <table class="table ram_normal bg_bila radek_rozvolneny card_table_max">
+          <table class="table ram_normal bg_bila radek_1_35 card_table_max">
             <thead>
               <tr class="filter-row">
-                <th class="text_vpravo"></th>
-                <th class="text_vpravo"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['prijmeni'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[prijmeni]" value="<?= h($zakFilters['prijmeni'] ?? '') ?>"></th>
-                <th class="text_vlevo"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['jmeno'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[jmeno]" value="<?= h($zakFilters['jmeno'] ?? '') ?>"></th>
-                <th class="text_vlevo"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['telefon'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[telefon]" value="<?= h($zakFilters['telefon'] ?? '') ?>"></th>
-                <th class="text_vpravo"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['email'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[email]" value="<?= h($zakFilters['email'] ?? '') ?>"></th>
-                <th class="text_vpravo"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['ulice'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[ulice]" value="<?= h($zakFilters['ulice'] ?? '') ?>"></th>
-                <th class="text_vpravo"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['mesto'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[mesto]" value="<?= h($zakFilters['mesto'] ?? '') ?>"></th>
-                <th class="text_vlevo"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['pobocka'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[pobocka]" value="<?= h($zakFilters['pobocka'] ?? '') ?>"></th>
-                <th class="text_vpravo"> <a class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 icon-x small zaobleni_6 vyska_24 radek_24 displ_inline_flex" href="<?= h($formAction) ?>">&times;</a></th>
+                <th class="txt_r"></th>
+                <th class="txt_r"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['prijmeni'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[prijmeni]" value="<?= h($zakFilters['prijmeni'] ?? '') ?>"></th>
+                <th class="txt_l"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['jmeno'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[jmeno]" value="<?= h($zakFilters['jmeno'] ?? '') ?>"></th>
+                <th class="txt_l"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['telefon'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[telefon]" value="<?= h($zakFilters['telefon'] ?? '') ?>"></th>
+                <th class="txt_r"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['email'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[email]" value="<?= h($zakFilters['email'] ?? '') ?>"></th>
+                <th class="txt_r"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['ulice'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[ulice]" value="<?= h($zakFilters['ulice'] ?? '') ?>"></th>
+                <th class="txt_r"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['mesto'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[mesto]" value="<?= h($zakFilters['mesto'] ?? '') ?>"></th>
+                <th class="txt_l"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($zakFilterStyle['pobocka'] ?? 'width:10ch;')) ?>" type="text" name="zak_f[pobocka]" value="<?= h($zakFilters['pobocka'] ?? '') ?>"></th>
+                <th class="txt_r"> <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 icon-x small zaobleni_6 vyska_24 radek_24 displ_inline_flex" href="<?= h($formAction) ?>">&times;</a></th>
               </tr>
               <tr>
-                <th class="th-sort text_vpravo">Poř.č.</th>
-                <th class="th-sort text_vpravo">příjmení</th>
-                <th class="th-sort text_vlevo">jméno</th>
-                <th class="th-sort text_vlevo">telefon</th>
-                <th class="th-sort text_vpravo">email</th>
-                <th class="th-sort text_vpravo">ulice</th>
-                <th class="th-sort text_vpravo">město</th>
-                <th class="th-sort text_vlevo">pobočka</th>
-                <th class="th-sort text_vpravo">aktivita</th>
+                <th class="th-sort txt_r">Poř.č.</th>
+                <th class="th-sort txt_r">příjmení</th>
+                <th class="th-sort txt_l">jméno</th>
+                <th class="th-sort txt_l">telefon</th>
+                <th class="th-sort txt_r">email</th>
+                <th class="th-sort txt_r">ulice</th>
+                <th class="th-sort txt_r">město</th>
+                <th class="th-sort txt_l">pobočka</th>
+                <th class="th-sort txt_r">aktivita</th>
               </tr>
             </thead>
             <tbody>
@@ -396,7 +400,7 @@ ob_start();
                       }
                       $colRight = in_array($key, ['id', 'prijmeni', 'email', 'ulice', 'mesto', 'posl_obj'], true);
                       ?>
-                      <td<?= $colRight ? ' class="text_vpravo"' : '' ?>><?= h($value) ?></td>
+                      <td<?= $colRight ? ' class="txt_r"' : '' ?>><?= h($value) ?></td>
                     <?php endforeach; ?>
                   </tr>
                 <?php endforeach; ?>
@@ -406,21 +410,21 @@ ob_start();
         </div>
 
         <?php if ((int)$tabKonfig['enable_pagination'] === 1): ?>
-        <div class="list-bottom mezera_mezi_14 mezera_mezi_10 odstup_vnitrni_0 displ_grid">
-          <div class="per-form mezera_mezi_8 displ_inline_flex">
+        <div class="list-bottom gap_14 gap_10 odstup_vnitrni_0 displ_grid">
+          <div class="per-form gap_8 displ_inline_flex">
             <span>Zobrazuji</span>
-            <select name="zak_per" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 per-select" onchange="this.form.querySelectorAll(&quot;input[name^='zak_f[']&quot;).forEach(function(el){if(el.value===''){el.disabled=true;}});this.form.zak_p.value=1;this.form.submit();">
+            <select name="zak_per" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 per-select" onchange="this.form.zak_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
               <option value="20"<?= $zakPer === 20 ? ' selected' : '' ?>>20 řádků</option>
               <option value="50"<?= $zakPer === 50 ? ' selected' : '' ?>>50 řádků</option>
               <option value="100"<?= $zakPer === 100 ? ' selected' : '' ?>>100 řádků</option>
             </select>
           </div>
 
-          <div class="pagination-icon mezera_mezi_4 displ_inline_flex">
+          <div class="pagination-icon gap_4 displ_inline_flex">
             <?php $prevDisabled = $zakPage <= 1; ?>
             <?php $nextDisabled = $zakPage >= $zakPages; ?>
-            <a class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24<?= $prevDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $prevDisabled ? '#' : h($zakBaseUrl . '&zak_p=1') ?>">«</a>
-            <a class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24<?= $prevDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $prevDisabled ? '#' : h($zakBaseUrl . '&zak_p=' . (string)max(1, $zakPage - 1)) ?>">‹</a>
+            <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24<?= $prevDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $prevDisabled ? '#' : h($zakBuildUrl(['zak_p' => '1'])) ?>">«</a>
+            <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24<?= $prevDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $prevDisabled ? '#' : h($zakBuildUrl(['zak_p' => (string)max(1, $zakPage - 1)])) ?>">‹</a>
 
             <?php
             $pageItems = [];
@@ -438,22 +442,22 @@ ob_start();
             ?>
             <?php foreach ($pageItems as $item): ?>
               <?php if ($item === '…'): ?>
-                <span class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24 disabled displ_inline_flex">…</span>
+                <span class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24 disabled displ_inline_flex">…</span>
               <?php elseif ((int)$item === $zakPage): ?>
-                <span class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24 page-current displ_inline_flex"><?= h((string)$item) ?></span>
+                <span class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24 page-current displ_inline_flex"><?= h((string)$item) ?></span>
               <?php else: ?>
-                <a class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24 displ_inline_flex" href="<?= h($zakBaseUrl . '&zak_p=' . (string)$item) ?>"><?= h((string)$item) ?></a>
+                <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24 displ_inline_flex" href="<?= h($zakBuildUrl(['zak_p' => (string)$item])) ?>"><?= h((string)$item) ?></a>
               <?php endif; ?>
             <?php endforeach; ?>
 
-            <a class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24<?= $nextDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $nextDisabled ? '#' : h($zakBaseUrl . '&zak_p=' . (string)min($zakPages, $zakPage + 1)) ?>">›</a>
-            <a class="icon-btn cursor_ruka ram_normal bg_seda text_titulek_18 w44 vyska_24 radek_24<?= $nextDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $nextDisabled ? '#' : h($zakBaseUrl . '&zak_p=' . (string)$zakPages) ?>">»</a>
+            <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24<?= $nextDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $nextDisabled ? '#' : h($zakBuildUrl(['zak_p' => (string)min($zakPages, $zakPage + 1)])) ?>">›</a>
+            <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24<?= $nextDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $nextDisabled ? '#' : h($zakBuildUrl(['zak_p' => (string)$zakPages])) ?>">»</a>
           </div>
 
-          <div class="per-form mezera_mezi_8 right displ_inline_flex jc_konec">
+          <div class="per-form gap_8 right displ_inline_flex jc_konec">
             <input type="hidden" name="zak_blk" value="0">
-            <label class="displ_inline_flex mezera_mezi_6 cursor_ruka" style="align-items:center; white-space:nowrap;">
-              <input type="checkbox" name="zak_blk" value="1"<?= $zakBlk === '1' ? ' checked' : '' ?> onchange="this.form.querySelectorAll(&quot;input[name^='zak_f[']&quot;).forEach(function(el){if(el.value===''){el.disabled=true;}});this.form.zak_p.value=1;this.form.submit();">
+            <label class="displ_inline_flex gap_6 cursor_ruka" style="align-items:center; white-space:nowrap;">
+              <input type="checkbox" name="zak_blk" value="1"<?= $zakBlk === '1' ? ' checked' : '' ?> onchange="this.form.zak_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
               <span>blokovaní (<?= h((string)$blockedZak) ?>)</span>
             </label>
           </div>

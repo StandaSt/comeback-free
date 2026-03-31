@@ -45,29 +45,29 @@ if ($qReport instanceof mysqli_result) {
 
 $card_min_html = ''
     . '<div class="table-wrap ram_normal bg_bila zaobleni_12">'
-    . '  <table class="table ram_normal bg_bila radek_rozvolneny">'
+    . '  <table class="table ram_normal bg_bila radek_1_35">'
     . '    <thead>'
     . '      <tr>'
-    . '        <th class="text_vlevo">Zdroj</th>'
-    . '        <th class="text_vpravo">záznamů</th>'
-    . '        <th class="text_vpravo">aktualizace</th>'
+    . '        <th class="txt_l">Zdroj</th>'
+    . '        <th class="txt_r">záznamů</th>'
+    . '        <th class="txt_r">aktualizace</th>'
     . '      </tr>'
     . '    </thead>'
     . '    <tbody>'
     . '      <tr>'
     . '        <td>Restia</td>'
-    . '        <td class="text_vpravo"><strong>' . h((string)$cbRestiaCount) . '</strong></td>'
-    . '        <td class="text_vpravo">' . h($cbRestiaDate) . '</td>'
+    . '        <td class="txt_r"><strong>' . h((string)$cbRestiaCount) . '</strong></td>'
+    . '        <td class="txt_r">' . h($cbRestiaDate) . '</td>'
     . '      </tr>'
     . '      <tr>'
     . '        <td>Směny</td>'
-    . '        <td class="text_vpravo"><strong>' . h((string)$cbSmenyCount) . '</strong></td>'
-    . '        <td class="text_vpravo">' . h($cbSmenyDate) . '</td>'
+    . '        <td class="txt_r"><strong>' . h((string)$cbSmenyCount) . '</strong></td>'
+    . '        <td class="txt_r">' . h($cbSmenyDate) . '</td>'
     . '      </tr>'
     . '      <tr>'
     . '        <td>Reporty</td>'
-    . '        <td class="text_vpravo"><strong>' . h((string)$cbReportCount) . '</strong></td>'
-    . '        <td class="text_vpravo">' . h($cbReportDate) . '</td>'
+    . '        <td class="txt_r"><strong>' . h((string)$cbReportCount) . '</strong></td>'
+    . '        <td class="txt_r">' . h($cbReportDate) . '</td>'
     . '      </tr>'
     . '    </tbody>'
     . '  </table>'
@@ -76,12 +76,12 @@ $card_min_html = ''
 ob_start();
 ?>
 <div class="table-wrap ram_normal bg_bila zaobleni_12">
-<table class="table ram_normal bg_bila radek_rozvolneny">
+<table class="table ram_normal bg_bila radek_1_35">
   <thead>
     <tr>
-      <th class="text_vlevo">script</th>
-      <th class="text_vlevo">popis</th>
-      <th class="text_vlevo">akce</th>
+      <th class="txt_l">script</th>
+      <th class="txt_l">popis</th>
+      <th class="txt_l">akce</th>
     </tr>
   </thead>
   <tbody>

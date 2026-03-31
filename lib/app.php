@@ -113,6 +113,67 @@ function cb_url_abs(string $path): string
     return $scheme . '://' . $host . cb_url($path);
 }
 
+if (!function_exists('cb_clean_query_array')) {
+    /**
+     * Odstrani prazdne/default query hodnoty (rekurzivne i pro pole).
+     *
+     * @param array<string,mixed> $params
+     * @param array<string,mixed> $defaults
+     * @return array<string,mixed>
+     */
+    function cb_clean_query_array(array $params, array $defaults = []): array
+    {
+        $out = [];
+        foreach ($params as $key => $value) {
+            if (is_array($value)) {
+                $cleanNested = cb_clean_query_array($value, []);
+                if ($cleanNested !== []) {
+                    $out[(string)$key] = $cleanNested;
+                }
+                continue;
+            }
+
+            if ($value === null) {
+                continue;
+            }
+
+            $v = trim((string)$value);
+            if ($v === '') {
+                continue;
+            }
+
+            if (array_key_exists((string)$key, $defaults)) {
+                $d = trim((string)$defaults[(string)$key]);
+                if ($v === $d) {
+                    continue;
+                }
+            }
+
+            $out[(string)$key] = $v;
+        }
+
+        return $out;
+    }
+}
+
+if (!function_exists('cb_url_query')) {
+    /**
+     * Sestavi URL s kanonickou query (bez prazdnych/default hodnot).
+     *
+     * @param array<string,mixed> $params
+     * @param array<string,mixed> $defaults
+     */
+    function cb_url_query(string $path, array $params, array $defaults = []): string
+    {
+        $base = cb_url($path);
+        $clean = cb_clean_query_array($params, $defaults);
+        if ($clean === []) {
+            return $base;
+        }
+        return $base . '?' . http_build_query($clean, '', '&', PHP_QUERY_RFC3986);
+    }
+}
+
 /**
  * Jedine misto pro "technicke" informace do hlavicky.
  *

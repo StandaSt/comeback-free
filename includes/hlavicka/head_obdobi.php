@@ -1,26 +1,26 @@
 <?php
 // includes/hlavicka/head_obdobi.php * Verze: V4 * Aktualizace: 27.03.2026
 ?>
-<div class="head_interval ram_hlavicka zaobleni_10 mezera_mezi_4 displ_flex flex_sloupec jc_stred" aria-label="Období">
+<div class="head_interval ram_hlavicka zaobleni_10 gap_4 displ_flex flex_sloupec jc_stred" aria-label="Období">
   <div class="head_int_row displ_grid">
-    <label class="head_date text_mensi_11 mezera_mezi_6 displ_flex">
+    <label class="head_date text_11 gap_6 displ_flex">
       <span>Od</span>
-      <input class="text_mensi_11 zaobleni_8 ram_ovladace" type="date" id="cbObdobiOd" value="<?= h($cbObdobiOd) ?>">
+      <input class="text_11 zaobleni_8 ram_ovladace" type="date" id="cbObdobiOd" value="<?= h($cbObdobiOd) ?>">
     </label>
-    <div class="head_quick mezera_mezi_4 displ_flex jc_konec">
-      <button type="button" class="head_pill text_stred cursor_ruka ram_ovladace bg_bila zaobleni_8 text_mensi_11" data-range="vcera">Včera</button>
-      <button type="button" class="head_pill text_stred cursor_ruka ram_ovladace bg_bila zaobleni_8 text_mensi_11" data-range="tyden">Týden</button>
+    <div class="head_quick gap_4 displ_flex jc_konec">
+      <button type="button" class="head_pill txt_c cursor_ruka ram_ovladace bg_bila zaobleni_8 text_11" data-range="vcera">Včera</button>
+      <button type="button" class="head_pill txt_c cursor_ruka ram_ovladace bg_bila zaobleni_8 text_11" data-range="tyden">Týden</button>
     </div>
   </div>
 
   <div class="head_int_row displ_grid">
-    <label class="head_date text_mensi_11 mezera_mezi_6 displ_flex">
+    <label class="head_date text_11 gap_6 displ_flex">
       <span>Do</span>
-      <input class="text_mensi_11 zaobleni_8 ram_ovladace" type="date" id="cbObdobiDo" value="<?= h($cbObdobiDo) ?>">
+      <input class="text_11 zaobleni_8 ram_ovladace" type="date" id="cbObdobiDo" value="<?= h($cbObdobiDo) ?>">
     </label>
-    <div class="head_quick mezera_mezi_4 displ_flex jc_konec">
-      <button type="button" class="head_pill text_stred cursor_ruka ram_ovladace bg_bila zaobleni_8 text_mensi_11" data-range="mesic">Měsíc</button>
-      <button type="button" class="head_pill text_stred cursor_ruka ram_ovladace bg_bila zaobleni_8 text_mensi_11" data-range="rok">Rok</button>
+    <div class="head_quick gap_4 displ_flex jc_konec">
+      <button type="button" class="head_pill txt_c cursor_ruka ram_ovladace bg_bila zaobleni_8 text_11" data-range="mesic">Měsíc</button>
+      <button type="button" class="head_pill txt_c cursor_ruka ram_ovladace bg_bila zaobleni_8 text_11" data-range="rok">Rok</button>
     </div>
   </div>
 </div>

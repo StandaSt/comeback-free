@@ -355,12 +355,12 @@ foreach ($adminKartyCols as $col) {
 $tableColsHtml .= "            </colgroup>";
 $tableHeadHtml = implode("\n", [
     '            <tr>',
-    '              <th class="admin_karty_col_id text_stred">ID</th>',
+    '              <th class="admin_karty_col_id txt_c">ID</th>',
     '              <th class="admin_karty_col_nazev">Nadpis</th>',
     '              <th class="admin_karty_col_soubor">Soubor</th>',
     '              <th class="admin_karty_col_role">Min role</th>',
     '              <th class="admin_karty_col_poradi">Pořadí</th>',
-    '              <th class="admin_karty_col_aktivni text_stred">Aktivní</th>',
+    '              <th class="admin_karty_col_aktivni txt_c">Aktivní</th>',
     '              <th class="admin_karty_col_akce">Akce</th>',
     '            </tr>',
 ]);
@@ -370,25 +370,25 @@ $tableHeadHtml = implode("\n", [
 ob_start();
 ?>
 <div class="table-wrap ram_normal bg_bila zaobleni_12">
-  <table class="table ram_normal bg_bila radek_rozvolneny">
+  <table class="table ram_normal bg_bila radek_1_35">
     <thead>
       <tr>
-        <th class="text_vlevo">Karty podle role</th>
-        <th class="text_vpravo">celkem/on/off</th>
+        <th class="txt_l">Karty podle role</th>
+        <th class="txt_r">celkem/on/off</th>
       </tr>
     </thead>
     <tbody>
       <tr>
         <td>zaměstnanec</td>
-        <td class="text_vpravo"><strong><?= h((string)$sekceStats[3]['all']) ?>/<?= h((string)$sekceStats[3]['on']) ?>/<?= h((string)$sekceStats[3]['off']) ?></strong></td>
+        <td class="txt_r"><strong><?= h((string)$sekceStats[3]['all']) ?>/<?= h((string)$sekceStats[3]['on']) ?>/<?= h((string)$sekceStats[3]['off']) ?></strong></td>
       </tr>
       <tr>
         <td>manager</td>
-        <td class="text_vpravo"><strong><?= h((string)$sekceStats[2]['all']) ?>/<?= h((string)$sekceStats[2]['on']) ?>/<?= h((string)$sekceStats[2]['off']) ?></strong></td>
+        <td class="txt_r"><strong><?= h((string)$sekceStats[2]['all']) ?>/<?= h((string)$sekceStats[2]['on']) ?>/<?= h((string)$sekceStats[2]['off']) ?></strong></td>
       </tr>
       <tr>
         <td>admin</td>
-        <td class="text_vpravo"><strong><?= h((string)$sekceStats[1]['all']) ?>/<?= h((string)$sekceStats[1]['on']) ?>/<?= h((string)$sekceStats[1]['off']) ?></strong></td>
+        <td class="txt_r"><strong><?= h((string)$sekceStats[1]['all']) ?>/<?= h((string)$sekceStats[1]['on']) ?>/<?= h((string)$sekceStats[1]['off']) ?></strong></td>
       </tr>
     </tbody>
   </table>
@@ -403,15 +403,15 @@ ob_start();
       <input type="hidden" name="admin_karty_action" value="add">
     </form>
     <div class="table-wrap ram_normal bg_bila zaobleni_12">
-      <table class="table ram_normal bg_bila radek_rozvolneny admin_karty_table sirka100">
+      <table class="table ram_normal bg_bila radek_1_35 admin_karty_table sirka100">
 <?= $tableColsHtml . "\n" ?>
         <tbody>
           <tr>
-            <th class="text_vlevo" colspan="7">Přidání nové karty včetně názvu souboru, pořadí a minimální role.</th>
+            <th class="txt_l" colspan="7">Přidání nové karty včetně názvu souboru, pořadí a minimální role.</th>
           </tr>
 <?= $tableHeadHtml . "\n" ?>
           <tr>
-            <td class="text_stred"><?= h((string)$nextCardId) ?></td>
+            <td class="txt_c"><?= h((string)$nextCardId) ?></td>
             <td>
               <input class="card_input filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="nazev" type="text" required maxlength="120" placeholder="např. Správa karet" form="karta-add">
             </td>
@@ -433,13 +433,13 @@ ob_start();
             <td>
               <input class="card_input filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="poradi" type="number" min="1" max="9999" value="100" required form="karta-add">
             </td>
-            <td class="text_stred">0</td>
+            <td class="txt_c">0</td>
             <td>
               <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28" type="submit" form="karta-add">Přidat kartu</button>
             </td>
           </tr>
           <tr>
-            <th class="text_vlevo" colspan="7">Seznam aktivních karet</th>
+            <th class="txt_l" colspan="7">Seznam aktivních karet</th>
           </tr>
 <?= $tableHeadHtml . "\n" ?>
           <?php if (!$activeCards): ?>
@@ -448,7 +448,7 @@ ob_start();
             <?php foreach ($activeCards as $card): ?>
               <?php $formId = 'karta-' . (string)$card['id_karta']; ?>
               <tr>
-                <td class="text_stred"><?= h((string)$card['id_karta']) ?></td>
+                <td class="txt_c"><?= h((string)$card['id_karta']) ?></td>
                 <td>
                   <form id="<?= h($formId) ?>" method="post" action="<?= h($formAction) ?>">
                     <input type="hidden" name="id_karta" value="<?= h((string)$card['id_karta']) ?>">
@@ -464,7 +464,7 @@ ob_start();
                   </select>
                 </td>
                 <td><input type="number" class="card_input filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="poradi" value="<?= h((string)$card['poradi']) ?>" min="1" max="9999" form="<?= h($formId) ?>"></td>
-                <td class="text_stred">ano</td>
+                <td class="txt_c">ano</td>
                 <td>
                   <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 admin_karty_btn_icon odstup_vnitrni_0" type="submit" name="admin_karty_action" value="move_up" form="<?= h($formId) ?>">&uarr;</button>
                   <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 admin_karty_btn_icon odstup_vnitrni_0" type="submit" name="admin_karty_action" value="move_down" form="<?= h($formId) ?>">&darr;</button>
@@ -475,7 +475,7 @@ ob_start();
             <?php endforeach; ?>
           <?php endif; ?>
           <tr>
-            <th class="text_vlevo" colspan="7">Neaktivní karty</th>
+            <th class="txt_l" colspan="7">Neaktivní karty</th>
           </tr>
 <?= $tableHeadHtml . "\n" ?>
           <?php if (!$inactiveCards): ?>
@@ -484,12 +484,12 @@ ob_start();
             <?php foreach ($inactiveCards as $card): ?>
               <?php $formId = 'karta-inactive-' . (string)$card['id_karta']; ?>
               <tr>
-                <td class="text_stred"><?= h((string)$card['id_karta']) ?></td>
+                <td class="txt_c"><?= h((string)$card['id_karta']) ?></td>
                 <td><?= h($card['nazev']) ?></td>
                 <td><?= h($card['soubor']) ?></td>
                 <td><?= h((string)$card['min_role']) ?></td>
                 <td><?= h((string)$card['poradi']) ?></td>
-                <td class="text_stred">ne</td>
+                <td class="txt_c">ne</td>
                 <td>
                   <form id="<?= h($formId) ?>" method="post" action="<?= h($formAction) ?>">
                     <input type="hidden" name="id_karta" value="<?= h((string)$card['id_karta']) ?>">

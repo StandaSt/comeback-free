@@ -212,17 +212,17 @@ if ($cbPobocky) {
 }
 ?>
 <header class="head_box bg_modra sirka100">
-  <div class="head_grid mezera_mezi_6 displ_grid sirka100">
+  <div class="head_grid gap_6 displ_grid sirka100">
 
     <?php require __DIR__ . '/hlavicka/head_logo.php'; ?>
 
     <?php if ($cbLoginOk): ?>
-      <div class="head_top mezera_mezi_8 displ_grid" aria-label="Horni radek hlavicky">
+      <div class="head_top gap_8 displ_grid" aria-label="Horni radek hlavicky">
         <?php require __DIR__ . '/hlavicka/head_obdobi.php'; ?>
         <?php require __DIR__ . '/hlavicka/head_kpi.php'; ?>
       </div>
 
-      <nav class="head_bottom mezera_mezi_6 displ_grid" aria-label="Dolni radek hlavicky">
+      <nav class="head_bottom gap_6 displ_grid" aria-label="Dolni radek hlavicky">
         <?php require __DIR__ . '/hlavicka/head_pobocka.php'; ?>
         <?php require __DIR__ . '/hlavicka/head_stav.php'; ?>
       </nav>

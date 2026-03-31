@@ -136,14 +136,14 @@ ob_start();
 <?php elseif ($cbAllowedCount === 1): ?>
   <p class="card_text txt_seda odstup_vnejsi_0">Uživatel má jen jednu povolenou pobočku. Výběr se neprovádí, pobočka je nastavena automaticky.</p>
 <?php else: ?>
-  <div class="card_stack mezera_mezi_10 displ_flex" id="cbSelectPobockyCard" data-save-url="<?= h(cb_url('index.php')) ?>">
+  <div class="card_stack gap_10 displ_flex" id="cbSelectPobockyCard" data-save-url="<?= h(cb_url('index.php')) ?>">
     <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10">
       <h4 class="card_section_title txt_seda">Výběr podle oblasti</h4>
       <?php foreach ($cbAllowedAreaList as $oblast): ?>
         <?php
         $checked = ($cbSelectedMode === 'area' && in_array($oblast, $cbSelectedOblasti, true));
         ?>
-        <label class="card_field mezera_mezi_4 displ_flex">
+        <label class="card_field gap_4 displ_flex">
           <span>
             <input type="checkbox" class="cb-pob-area" value="<?= h($oblast) ?>"<?= $checked ? ' checked' : '' ?>>
             <?= h($oblast) ?>
@@ -159,7 +159,7 @@ ob_start();
         $id = (int)$p['id_pob'];
         $checked = ($cbSelectedMode === 'custom' && in_array($id, $cbSelectedIds, true));
         ?>
-        <label class="card_field mezera_mezi_4 displ_flex">
+        <label class="card_field gap_4 displ_flex">
           <span>
             <input type="checkbox" class="cb-pob-branch" value="<?= $id ?>"<?= $checked ? ' checked' : '' ?>>
             <?= h((string)$p['nazev']) ?> (<?= h((string)$p['oblast']) ?>)
@@ -168,11 +168,11 @@ ob_start();
       <?php endforeach; ?>
     </section>
 
-    <p class="card_small_text radek_vysoky">
+    <p class="card_small_text radek_1_4">
       Oblasti a jednotlivé pobočky nelze kombinovat.
     </p>
 
-    <div class="card_actions mezera_mezi_8 displ_flex jc_konec">
+    <div class="card_actions gap_8 displ_flex jc_konec">
       <button type="button" class="btn btn-primary" id="cbPobockySaveBtn">Uložit výběr</button>
     </div>
   </div>

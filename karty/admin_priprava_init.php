@@ -79,23 +79,23 @@ if ($initError !== '') {
 } else {
     $card_min_html = ''
         . '<div class="table-wrap ram_normal bg_bila zaobleni_12">'
-        . '  <table class="table ram_normal bg_bila radek_rozvolneny">'
+        . '  <table class="table ram_normal bg_bila radek_1_35">'
         . '    <tbody>'
         . '      <tr>'
         . '        <td>Potřebné akce pro inicializaci:</td>'
-        . '        <td class="text_vpravo"><strong>' . h((string)$initTotal) . '</strong></td>'
+        . '        <td class="txt_r"><strong>' . h((string)$initTotal) . '</strong></td>'
         . '      </tr>'
         . '      <tr>'
         . '        <td>Dokončeno:</td>'
-        . '        <td class="text_vpravo"><strong>' . h((string)$initHotovy) . '</strong></td>'
+        . '        <td class="txt_r"><strong>' . h((string)$initHotovy) . '</strong></td>'
         . '      </tr>'
         . '      <tr>'
         . '        <td>Rozpracované soubory:</td>'
-        . '        <td class="text_vpravo"><strong>' . h((string)$initRozpracovany) . '</strong></td>'
+        . '        <td class="txt_r"><strong>' . h((string)$initRozpracovany) . '</strong></td>'
         . '      </tr>'
         . '      <tr>'
         . '        <td>Nemá soubor:</td>'
-        . '        <td class="text_vpravo"><strong>' . h((string)$initNeni) . '</strong></td>'
+        . '        <td class="txt_r"><strong>' . h((string)$initNeni) . '</strong></td>'
         . '      </tr>'
         . '    </tbody>'
         . '  </table>'
@@ -119,10 +119,10 @@ $sirkaSloupcu = [
     'poznamka' => 'width:55ch;',
 ];
 ?>
-<div class="card_stack mezera_mezi_10 displ_flex">
+<div class="card_stack gap_10 displ_flex">
 
   <div class="table-wrap ram_normal bg_bila zaobleni_12">
-    <table class="table ram_normal bg_bila radek_rozvolneny">
+    <table class="table ram_normal bg_bila radek_1_35">
       <thead>
         <tr>
           <th style="<?= h($sirkaSloupcu['krok']) ?>">Krok</th>
@@ -149,7 +149,7 @@ $sirkaSloupcu = [
             }
           ?>
           <tr>
-            <th colspan="8" class="text_vlevo text_tucny" style="background:<?= $areaColor ?>;"><?= h($areaName) ?></th>
+            <th colspan="8" class="txt_l text_tucny" style="background:<?= $areaColor ?>;"><?= h($areaName) ?></th>
           </tr>
 
           <?php if (!$areaRows): ?>
@@ -193,7 +193,7 @@ $sirkaSloupcu = [
 
               $isHotovo100 = $procenta === 100;
               $isHotovo0 = $procenta === 0;
-              $procentaClass = 'text_vpravo';
+              $procentaClass = 'txt_r';
               if ($isHotovo100) {
                   $procentaClass .= ' txt_zelena text_tucny';
               }

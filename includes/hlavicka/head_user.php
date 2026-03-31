@@ -9,19 +9,19 @@ declare(strict_types=1);
      data-logout-url="<?= h(cb_url('index.php?action=logout')) ?>"
      data-touch-url="<?= h(cb_url('index.php')) ?>">
 
-  <div class="head_user_col head_user_col--left text_vlevo mezera_mezi_6 displ_flex flex_sloupec">
-    <div class="head_user_name text_normalni_12"><strong><?= h($cbUserName) ?></strong></div>
-    <div class="head_user_lab text_mensi_11 radek_volnejsi">Poslední přístup:</div>
-    <div class="head_user_lab text_mensi_11 radek_volnejsi">Přihlášení:</div>
-    <div class="head_user_lab text_mensi_11 radek_volnejsi">Seance/zbývá:</div>
+  <div class="head_user_col head_user_col--left txt_l gap_6 displ_flex flex_sloupec">
+    <div class="head_user_name text_12"><strong><?= h($cbUserName) ?></strong></div>
+    <div class="head_user_lab text_11 radek_1_15">Poslední přístup:</div>
+    <div class="head_user_lab text_11 radek_1_15">Přihlášení:</div>
+    <div class="head_user_lab text_11 radek_1_15">Seance/zbývá:</div>
   </div>
 
-  <div class="head_user_col head_user_col--right text_vlevo mezera_mezi_6 displ_flex flex_sloupec">
-    <div class="head_user_role txt_seda text_normalni_12"><?= h($cbUserRole) ?></div>
-    <div class="head_user_val txt_seda text_mensi_11 radek_volnejsi"><?= h($cbLastLoginText) ?></div>
-    <div class="head_user_val txt_seda text_mensi_11 radek_volnejsi"><?= h($cbLoginStatsText) ?></div>
-    <div class="head_user_val txt_seda text_mensi_11 radek_volnejsi cb-session-combo"><?= h($cbSessionComboText) ?></div>
-    <div class="head_user_val txt_seda text_mensi_11 radek_volnejsi cb-session-thermo odstup_vnitrni_0" data-thermo="<?= h((string)$cbThermoPct) ?>" style="--thermo:<?= h((string)$cbThermoPct) ?>%">&nbsp;</div>
+  <div class="head_user_col head_user_col--right txt_l gap_6 displ_flex flex_sloupec">
+    <div class="head_user_role txt_seda text_12"><?= h($cbUserRole) ?></div>
+    <div class="head_user_val txt_seda text_11 radek_1_15"><?= h($cbLastLoginText) ?></div>
+    <div class="head_user_val txt_seda text_11 radek_1_15"><?= h($cbLoginStatsText) ?></div>
+    <div class="head_user_val txt_seda text_11 radek_1_15 cb-session-combo"><?= h($cbSessionComboText) ?></div>
+    <div class="head_user_val txt_seda text_11 radek_1_15 cb-session-thermo odstup_vnitrni_0" data-thermo="<?= h((string)$cbThermoPct) ?>" style="--thermo:<?= h((string)$cbThermoPct) ?>%">&nbsp;</div>
   </div>
 
   <a class="head_user_exit cursor_ruka bg_bila tip_box zaobleni_6 tip_box_head displ_flex jc_stred" data-tip="Odhlásit" href="<?= h(cb_url('index.php?action=logout')) ?>" aria-label="Odhlásit">

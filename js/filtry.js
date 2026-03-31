@@ -33,8 +33,28 @@
   function buildUrlFromForm(form) {
     const action = form.getAttribute('action') || w.location.href;
     const url = new URL(action, w.location.href);
+    const prefix = getCardFilterPrefix(form);
+    const defaults = {};
+    if (prefix) {
+      defaults[prefix + '_p'] = '1';
+      defaults[prefix + '_per'] = '20';
+      defaults[prefix + '_sort'] = 'id';
+      defaults[prefix + '_dir'] = 'DESC';
+      if (prefix === 'uz') defaults.uz_akt = '1';
+      if (prefix === 'zak') defaults.zak_blk = '0';
+    }
+
     const fd = new FormData(form);
-    url.search = new URLSearchParams(fd).toString();
+    const qs = new URLSearchParams();
+    fd.forEach((rawValue, rawName) => {
+      const name = String(rawName || '');
+      const value = String(rawValue ?? '').trim();
+      if (value === '') return;
+      if (Object.prototype.hasOwnProperty.call(defaults, name) && value === defaults[name]) return;
+      qs.append(name, value);
+    });
+
+    url.search = qs.toString();
     return url.toString();
   }
 

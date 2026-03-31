@@ -94,12 +94,12 @@ ob_start();
       window.location.href = <?= json_encode($usRedirectUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     </script>
   <?php endif; ?>
-  <form method="post" action="<?= h($formAction) ?>" class="card_stack mezera_mezi_10 displ_flex" autocomplete="off">
+  <form method="post" action="<?= h($formAction) ?>" class="card_stack gap_10 displ_flex" autocomplete="off">
     <input type="hidden" name="us_action" value="save">
 
     <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10">
       <h4 class="card_section_title txt_seda">Dashboard</h4>
-      <label class="card_field mezera_mezi_4 displ_flex">
+      <label class="card_field gap_4 displ_flex">
         <span>Počet sloupců</span>
         <select class="card_select ram_sedy txt_seda vyska_32" name="us_pocet_sl">
           <option value="3"<?= $usPocetSl === 3 ? ' selected' : '' ?>>3 sloupce</option>
@@ -107,7 +107,7 @@ ob_start();
         </select>
       </label>
 
-      <label class="card_field mezera_mezi_4 displ_flex">
+      <label class="card_field gap_4 displ_flex">
         <span>Nano karty</span>
         <select class="card_select ram_sedy txt_seda vyska_32" name="us_nano_kde">
           <option value="0"<?= $usNanoKde === 0 ? ' selected' : '' ?>>0 = řádek</option>
@@ -118,7 +118,7 @@ ob_start();
 
     <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10">
       <h4 class="card_section_title txt_seda">Vzhled</h4>
-      <label class="card_field mezera_mezi_4 displ_flex">
+      <label class="card_field gap_4 displ_flex">
         <span>Velikost textu</span>
         <select class="card_select ram_sedy txt_seda vyska_32" name="us_pismo">
           <option value="1"<?= $usPismo === 1 ? ' selected' : '' ?>>1 = menší</option>
@@ -127,7 +127,7 @@ ob_start();
         </select>
       </label>
 
-      <label class="card_field mezera_mezi_4 displ_flex">
+      <label class="card_field gap_4 displ_flex">
         <span>Dark režim</span>
         <select class="card_select ram_sedy txt_seda vyska_32" name="us_dark">
           <option value="0"<?= $usDark === 0 ? ' selected' : '' ?>>0 = ne</option>
@@ -136,7 +136,7 @@ ob_start();
       </label>
     </section>
 
-    <div class="card_actions mezera_mezi_8 displ_flex jc_konec">
+    <div class="card_actions gap_8 displ_flex jc_konec">
       <button type="submit" class="btn btn-primary">Uložit nastavení</button>
     </div>
   </form>

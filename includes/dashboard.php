@@ -159,7 +159,7 @@ $renderCard = static function (array $karta, bool $isNano, string $gridStyle = '
     $subtitleMax = (string)($karta['subtitle_max'] ?? '');
     $cardId = (int)($karta['id_karta'] ?? 0);
     $cardMode = $isNano ? 'nano' : 'mini';
-    $cardLineHeightClass = $isNano ? ' radek_normalni' : ' radek_volnejsi';
+    $cardLineHeightClass = $isNano ? ' radek_1_1' : ' radek_1_15';
 
     $minRole = (int)($karta['min_role'] ?? 3);
     $cardTopRoleClass = '';
@@ -193,24 +193,24 @@ $renderCard = static function (array $karta, bool $isNano, string $gridStyle = '
     ?>
     <section class="<?= h($cardClass) ?>" data-cb-dash-card="1"<?= $gridStyle !== '' ? ' style="' . h($gridStyle) . '"' : '' ?>>
       <article class="card_shell<?= h($cardLineHeightClass) ?> odstup_vnitrni_0" data-card-id="<?= h((string)$cardId) ?>" data-card-mode="<?= h($cardMode) ?>"<?= $startExpanded ? ' data-card-start-expanded="1"' : '' ?>>
-        <div class="card_top<?= h($cardTopRoleClass) ?> mezera_mezi_10 odstup_vnitrni_10 displ_flex jc_mezi">
+        <div class="card_top<?= h($cardTopRoleClass) ?> gap_10 odstup_vnitrni_10 displ_flex jc_mezi">
           <div>
-            <h3 class="card_title txt_seda text_titulek_15 odstup_vnejsi_0"><?= h($title) ?></h3>
+            <h3 class="card_title txt_seda text_15 odstup_vnejsi_0"><?= h($title) ?></h3>
             <?php if (!$isNano): ?>
               <p
-                class="card_subtitle text_normalni_12"
+                class="card_subtitle text_12"
                 data-card-subtitle="1"
                 data-subtitle-min="<?= h($subtitleMin) ?>"
                 data-subtitle-max="<?= h($subtitleMax) ?>"
               ><?= h($subtitleMin) ?></p>
             <?php endif; ?>
           </div>
-          <div class="card_tools mezera_mezi_4 displ_flex flex_sloupec">
+          <div class="card_tools gap_4 displ_flex flex_sloupec">
             <?php if ($isNano): ?>
-              <button type="button" class="card_tool_btn cursor_ruka txt_seda bg_bila zaobleni_8 text_velky_14 card_mode_btn odstup_vnitrni_0 displ_inline_flex" data-card-nano-target="mini" title="Prepnout na mini">&#8722;</button>
+              <button type="button" class="card_tool_btn cursor_ruka txt_seda bg_bila zaobleni_8 text_14 card_mode_btn odstup_vnitrni_0 displ_inline_flex" data-card-nano-target="mini" title="Prepnout na mini">&#8722;</button>
             <?php else: ?>
-              <button type="button" class="card_tool_btn cursor_ruka txt_seda bg_bila zaobleni_8 text_velky_14 card_mode_btn odstup_vnitrni_0 displ_inline_flex" data-card-toggle="1" aria-expanded="false" title="Prepnout na maxi/mini">&#10530;</button>
-              <button type="button" class="card_tool_btn cursor_ruka txt_seda bg_bila zaobleni_8 text_velky_14 card_mode_btn odstup_vnitrni_0 displ_inline_flex" data-card-to-nano="1" title="Prepnout na nano">&bull;</button>
+              <button type="button" class="card_tool_btn cursor_ruka txt_seda bg_bila zaobleni_8 text_14 card_mode_btn odstup_vnitrni_0 displ_inline_flex" data-card-toggle="1" aria-expanded="false" title="Prepnout na maxi/mini">&#10530;</button>
+              <button type="button" class="card_tool_btn cursor_ruka txt_seda bg_bila zaobleni_8 text_14 card_mode_btn odstup_vnitrni_0 displ_inline_flex" data-card-to-nano="1" title="Prepnout na nano">&bull;</button>
             <?php endif; ?>
           </div>
         </div>
@@ -230,11 +230,11 @@ $renderCard = static function (array $karta, bool $isNano, string $gridStyle = '
 };
 ?>
 
-<div class="dash_grid mezera_mezi_2 <?= h($dashGridClass) ?> displ_grid sirka100">
+<div class="dash_grid gap_2 <?= h($dashGridClass) ?> displ_grid sirka100">
   <?php if (empty($karty)): ?>
     <section class="dash_card ram_normal bg_bila card_blue zaobleni_12" data-cb-dash-card="1">
       <div class="dash_card_body">
-        <p class="small_note text_normalni_12"><?= h($emptyText) ?></p>
+        <p class="small_note text_12"><?= h($emptyText) ?></p>
       </div>
     </section>
   <?php else: ?>
@@ -246,7 +246,7 @@ $renderCard = static function (array $karta, bool $isNano, string $gridStyle = '
       }
 
       if (($renderItem['kind'] ?? '') === 'nano_group') {
-          echo '<div class="dash_nano_group mezera_mezi_2 displ_flex flex_sloupec">';
+          echo '<div class="dash_nano_group gap_2 displ_flex flex_sloupec">';
           foreach ((array)($renderItem['karty'] ?? []) as $kartaNano) {
               echo $renderCard((array)$kartaNano, true, '');
           }
