@@ -12,78 +12,81 @@
 :root {
   /* globalni barvy projektu */
   --clr_bila: #fff;
-  --clr_cerna: #1f2933;
+  --clr_panel: #f8fbff;
+
+  --clr_ruzova_5: #fff7f7;
+  --clr_ruzova_4: #fef2f2;
+  --clr_ruzova_2: #fee2e2;
+  --clr_ruzova_1: #fecaca;
+
+  --clr_cervena_2: #ef4444;
+  --clr_cervena: #b91c1c;
+
+  --clr_zluta: #facc15;
+  --clr_oranzova: #f59e0b;
+
+  --clr_zelena_3: #f0fdf4;
+  --clr_zelena_2: #22c55e;
+  --clr_zelena: #166534;
+
+  --clr_modra_7: #edf4ff;
+  --clr_modra_1: #e0e7ff;
+  --clr_modra_2: #dbeafe;
+  --clr_modra_6: #4f8df6;
+  --clr_modra_4: #3b82f6;
+  --clr_indigo_1: #6366f1;
+  --clr_modra_5: #2563eb;
+  --clr_modra_3: #1d4ed8;
+  --clr_modra_8: #0f3f91;
+
   --clr_seda_1: #f6f8fb;
   --clr_seda_2: #d9e2ec;
   --clr_seda_3: #52606d;
   --clr_seda_4: #334155;
-  --clr_modra_1: #e0e7ff;
-  --clr_modra_2: #dbeafe;
-  --clr_modra_3: #1d4ed8;
-  --clr_modra_4: #3b82f6;
-  --clr_modra_5: #2563eb;
-  --clr_zelena: #166534;
-  --clr_zelena_2: #22c55e;
-  --clr_zluta: #facc15;
-  --clr_oranzova: #f59e0b;
-  --clr_cervena: #b91c1c;
-  --clr_cervena_2: #ef4444;
-  --clr_panel_1: #f8fbff;
-  --clr_panel_2: #eef2f7;
+  --clr_cerna: #1f2933;
+  --clr_tmava_1: #0f172a;
+
+  /* globalni pruhledne barvy projektu */
+  --clr_pruhledna_bila_92: rgba(255,255,255,.92);
+  --clr_pruhledna_panel_96: rgba(241,245,249,.96);
+  --clr_pruhledna_panel_98: rgba(248,250,252,.98);
 
   --clr_pruhledna_cerna_10: rgba(0,0,0,.10);
-  --clr_pruhledna_cerna_12: rgba(0,0,0,.12);
-  --clr_pruhledna_cerna_16: rgba(0,0,0,.16);
   --clr_pruhledna_cerna_18: rgba(0,0,0,.18);
   --clr_pruhledna_cerna_25: rgba(0,0,0,.25);
-  --clr_pruhledna_cerna_30: rgba(0,0,0,.3);
+  --clr_pruhledna_cerna_3: rgba(0,0,0,.3);
   --clr_pruhledna_cerna_85: rgba(0,0,0,.85);
-  --clr_pruhledna_tmava_03: rgba(15,23,42,.03);
+
   --clr_pruhledna_tmava_04: rgba(15,23,42,.04);
   --clr_pruhledna_tmava_14: rgba(15,23,42,.14);
-  --clr_pruhledna_tmava_18: rgba(15,23,42,.18);
   --clr_pruhledna_tmava_62: rgba(15,23,42,.62);
-  --clr_pruhledna_tmava_75: rgba(15,23,42,.75);
   --clr_pruhledna_tmava_78: rgba(15,23,42,.78);
+
   --clr_pruhledna_seda_18: rgba(148,163,184,.18);
   --clr_pruhledna_seda_30: rgba(148,163,184,.30);
+
   --clr_pruhledna_modra_08: rgba(59,130,246,.08);
-  --clr_pruhledna_modra_12: rgba(59,130,246,.12);
   --clr_pruhledna_modra_15: rgba(59,130,246,.15);
   --clr_pruhledna_modra_18: rgba(219,234,254,0.18);
   --clr_pruhledna_modra_35: rgba(59,130,246,.35);
   --clr_pruhledna_modra_svetla_28: rgba(79,141,246,.28);
   --clr_pruhledna_modra_tmava_18: rgba(37,99,235,.18);
   --clr_pruhledna_modra_tmava_28: rgba(29,78,216,.28);
+
   --clr_pruhledna_cervena_28: rgba(185,28,28,.28);
-  --clr_pruhledna_panel_92: rgba(248,250,252,.92);
-  --clr_pruhledna_panel_96: rgba(241,245,249,.96);
-  --clr_pruhledna_panel_98: rgba(248,250,252,.98);
-  --clr_pruhledna_bila_92: rgba(255,255,255,.92);
-  --clr_pruhledna_bila_94: rgba(255,255,255,.94);
 
   --clr_stin_1: rgba(0,0,0,.04);
   --clr_stin_2: rgba(148,163,184,.10);
-  --clr_stin_3: rgba(15,23,42,0.06);
-  --clr_stin_4: rgba(15,23,42,0.10);
   --clr_stin_5: rgba(15,23,42,0.22);
-  --bg-ram: #fff;  /* hlavicka/paticka/pozadi pod menu/main */
-  --bg-body: #f5f6f8; /* pozadi stranky + container */
-  --tx-base: #1f2933; /* zakladni text */
-  --tx-muted: #52606d; /* tlumeny text */
 
-  /* spolecne barvy UI */
-  --border-strong: #d9e2ec;
-  --border-accent: #1d4ed8;
-
-  --btn: #f6f8fb;
-  --menu-bg: #fff;
-
-  --active-bg: #e0e7ff;
-  --active-bd: #6366f1;
-  --active-tx: #1d4ed8;
-
-  --hover-bg: #eef2f7;
+  /* tokeny velikosti textu */
+  --fs_11: 11px;
+  --fs_12: 12px;
+  --fs_13: 13px;
+  --fs_14: 14px;
+  --fs_15: 15px;
+  --fs_16: 16px;
+  --fs_18: 18px;
 }
 
 /* =========================
@@ -91,9 +94,9 @@
    ========================= */
 
 /* ----- Barva textu ----- */
-.txt_cervena{ color:#b91c1c; }
-.txt_zelena{ color:#166534; }
-.txt_seda{ color:#334155; }
+.txt_cervena{ color:var(--clr_cervena); }
+.txt_zelena{ color:var(--clr_zelena); }
+.txt_seda{ color:var(--clr_seda_4); }
 
 /* ----- Zarovnani textu ----- */
 .txt_l{ text-align:left; }
@@ -103,14 +106,16 @@
 /* ----- Vaha pismena ----- */
 .text_tucny{ font-weight:700; }
 
+
+
 /* ----- Velikost textu ----- */
-.text_11{ font-size:11px; }
-.text_12{ font-size:12px; }
-.text_13{ font-size:13px; }
-.text_14{ font-size:14px; }
-.text_15{ font-size:15px; }
-.text_16{ font-size:16px; }
-.text_18{ font-size:18px; }
+.text_11{ font-size:var(--fs_11); }
+.text_12{ font-size:var(--fs_12); }
+.text_13{ font-size:var(--fs_13); }
+.text_14{ font-size:var(--fs_14); }
+.text_15{ font-size:var(--fs_15); }
+.text_16{ font-size:var(--fs_16); }
+.text_18{ font-size:var(--fs_18); }
 
 /* TODO (utility cleanup): zbyvajici deklarace font-size v aktivnim CSS
    jsou docasne ponechane kvuli bezpecnemu postupnemu prevodu podle problem2.txt. */
@@ -133,13 +138,13 @@
 .zaobleni_10{ border-radius:10px; }
 .zaobleni_12{ border-radius:12px; }
 
-.bg_modra{ background:#dbeafe; }
-.bg_bila{ background:#fff; }
-.bg_seda{ background:#f6f8fb; }
-.ram_normal{ border:1px solid var(--border-strong); }
-.ram_hlavicka{ border:1px solid var(--head-border); }
-.ram_sedy{ border:1px solid #c9d3df; }
-.ram_btn{ border:1px solid var(--clr_pruhledna_tmava_18); }
+.bg_modra{ background:var(--clr_modra_2); }
+.bg_bila{ background:var(--clr_bila); }
+.bg_seda{ background:var(--clr_seda_1); }
+.ram_normal{ border:1px solid var(--clr_seda_2); }
+.ram_hlavicka{ border:1px solid var(--clr_pruhledna_tmava_14); }
+.ram_sedy{ border:1px solid var(--clr_seda_2); }
+.ram_btn{ border:1px solid var(--clr_pruhledna_tmava_14); }
 .ram_ovladace{ border:1px solid var(--clr_pruhledna_cerna_18); }
 
 /* ----- Display ----- */
@@ -176,8 +181,8 @@ html{
 body{
   height:100%;
   font-family:Arial, Helvetica, sans-serif;
-  background:var(--bg-body);
-  color:var(--tx-base);
+  background:var(--clr_seda_1);
+  color:var(--clr_cerna);
   margin:0;
   display:flex;
   flex-direction:column;
@@ -214,11 +219,11 @@ main{
   justify-content:center;
   text-decoration:none;
   border-radius:4px;
-  background:var(--btn);
-  color:var(--tx-base);
+  background:var(--clr_seda_1);
+  color:var(--clr_cerna);
 }
 
-.icon-btn:hover{ background:var(--hover-bg); }
+.icon-btn:hover{ background:var(--clr_panel); }
 
 .icon-btn.disabled{
   opacity:.5;
@@ -244,7 +249,7 @@ main{
   opacity:0;
   visibility:hidden;
   font:12px/1.2 Arial, Helvetica, sans-serif;
-  color:#fff;
+  color:var(--clr_bila);
   background:var(--clr_pruhledna_cerna_85);
   z-index:9999;
   padding:6px 8px;
@@ -312,14 +317,6 @@ main{
  * - vizualne cistsi oddeleni hlavicky od dashboardu
  */
 
-:root{
-  --head-card:#fff;
-  --head-border:var(--clr_pruhledna_tmava_14);
-  --head-text:#0f172a;
-  --head-muted:#5f6b7a;
-  --head-accent:#4f8df6;
-  --head-accent-soft:#edf4ff;
-}
 
 /* ===== Obal ===== */
 .head_box{
@@ -338,7 +335,7 @@ grid-template-columns:70px minmax(0,1fr) 300px;
 .head_kpi,
 .head_sys,
 .head_user{
-  background:var(--head-card);
+  background:var(--clr_bila);
 }
 
 /* ===== Logo ===== */
@@ -416,9 +413,9 @@ grid-template-columns:minmax(0,1fr) 170px 275px;
   right:-10px;
   top:50%;
   transform:translateY(-50%);
-  font-size:14px;
+  font-size:var(--fs_14);
   font-weight:700;
-  color:var(--clr_pruhledna_cerna_30);
+  color:var(--clr_pruhledna_cerna_3);
   z-index:2;
 }
 
@@ -431,7 +428,7 @@ grid-template-columns:minmax(0,1fr) 170px 275px;
 
 .head_date{align-items:center;
   min-width:0;
-  color:#223047;
+  color:var(--clr_cerna);
 }
 
 .head_date span{ min-width:18px; }
@@ -454,12 +451,12 @@ grid-template-columns:minmax(0,1fr) 170px 275px;
   min-width:56px;
 }
 
-.head_pill:hover{ background:#f1f5f9; }
+.head_pill:hover{ background:var(--clr_seda_1); }
 
 .head_pill.is-on{
-  background:var(--head-accent);
-  border-color:var(--head-accent);
-  color:#fff;
+  background:var(--clr_modra_6);
+  border-color:var(--clr_modra_6);
+  color:var(--clr_bila);
   font-weight:700;
 }
 
@@ -474,19 +471,19 @@ grid-template-columns:minmax(0,1fr) 170px 275px;
 .head_kpi_item{
   min-width:0;
   border:1px solid var(--clr_pruhledna_modra_svetla_28);
-  background:var(--head-accent-soft);
+  background:var(--clr_modra_7);
   padding:4px 6px;
 flex-direction:column;
 }
 
 .head_kpi_k{
-  color:var(--head-muted);
+  color:var(--clr_seda_3);
 }
 
 .head_kpi_v{
   margin-top:2px;
   font-weight:800;
-  color:var(--head-text);
+  color:var(--clr_tmava_1);
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
@@ -496,8 +493,8 @@ flex-direction:column;
   margin-top:1px;
 }
 
-.head_delta.is-pos{ color:#0a7a35; }
-.head_delta.is-neg{ color:#b91c1c; }
+.head_delta.is-pos{ color:var(--clr_zelena); }
+.head_delta.is-neg{ color:var(--clr_cervena); }
 
 /* ===== Stav systemu ===== */
 .head_sys{  align-items:center;
@@ -521,7 +518,7 @@ flex-direction:column;
 }
 
 .head_sys_item{align-items:center;
-  color:#1f2937;
+  color:var(--clr_cerna);
   white-space:nowrap;
 }
 
@@ -537,9 +534,9 @@ flex-direction:column;
   border:1px solid var(--clr_pruhledna_cerna_25);
 }
 
-.head_led.is-ok{ background:#22c55e; }
-.head_led.is-warn{ background:#facc15; }
-.head_led.is-bad{ background:#ef4444; }
+.head_led.is-ok{ background:var(--clr_zelena_2); }
+.head_led.is-warn{ background:var(--clr_zluta); }
+.head_led.is-bad{ background:var(--clr_cervena_2); }
 
 .head_tech{
   margin-left:auto;
@@ -582,7 +579,7 @@ align-items:center;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
-  color:var(--head-text);
+  color:var(--clr_tmava_1);
 }
 
 .head_user_role{
@@ -591,7 +588,7 @@ align-items:center;
 }
 
 .head_user_lab{
-  color:#4b5563;
+  color:var(--clr_seda_3);
   white-space:nowrap;
 }
 
@@ -608,7 +605,7 @@ align-items:center;
 align-items:center;
   align-self:stretch;
   justify-self:stretch;
-  border-left:1px solid var(--head-border);
+  border-left:1px solid var(--clr_pruhledna_tmava_14);
   overflow:hidden;
 }
 
@@ -617,8 +614,8 @@ align-items:center;
   height:18px;
 }
 
-.head_user_exit:hover{ background:#fee2e2; }
-.head_user_exit:active{ background:#fecaca; }
+.head_user_exit:hover{ background:var(--clr_ruzova_2); }
+.head_user_exit:active{ background:var(--clr_ruzova_1); }
 
 /* Teplomer seance */
 .head_user_col--right .head_user_val[data-thermo]{
@@ -628,9 +625,9 @@ align-items:center;
   margin-top:2px;
   width:105px;
   max-width:100%;
-  border:1px solid var(--clr_pruhledna_cerna_12);
+  border:1px solid var(--clr_pruhledna_cerna_10);
   border-radius:999px;
-  background:#f6f8fb;
+  background:var(--clr_seda_1);
   overflow:hidden;
 }
 
@@ -643,12 +640,12 @@ align-items:center;
   width:100%;
   background:linear-gradient(
     90deg,
-    #22c55e 0%,
-    #22c55e 50%,
-    #f59e0b 50%,
-    #f59e0b 75%,
-    #ef4444 75%,
-    #ef4444 100%
+    var(--clr_zelena_2) 0%,
+    var(--clr_zelena_2) 50%,
+    var(--clr_oranzova) 50%,
+    var(--clr_oranzova) 75%,
+    var(--clr_cervena_2) 75%,
+    var(--clr_cervena_2) 100%
   );
 }
 
@@ -659,7 +656,7 @@ align-items:center;
   right:0;
   top:0;
   bottom:0;
-  background:#f6f8fb;
+  background:var(--clr_seda_1);
   transition:left .2s ease;
 }
 
@@ -779,8 +776,8 @@ align-items:center;
   padding:6px 12px;
   /* TODO (utility cleanup): hranice bunek tabulky zatim ponechana zde;
      na th/td neni v sablonach jednotna utility class vrstva. */
-  border:1px solid var(--border-strong);
-  font-size:14px;
+  border:1px solid var(--clr_seda_2);
+  font-size:var(--fs_14);
   vertical-align:middle;
 }
 
@@ -790,9 +787,9 @@ align-items:center;
 }
 
 .table thead th{
-  background:#f6f8fb;
-  font-size:13px;
-  color:#374151;
+  background:var(--clr_seda_1);
+  font-size:var(--fs_13);
+  color:var(--clr_seda_4);
   font-weight:700;
   position: sticky;   /* fixni hlavicka tabulky */
   top: 0;
@@ -812,16 +809,16 @@ align-items:center;
 }
 
 .th-sort-link:hover{
-  background:#eef3fb;
+  background:var(--clr_modra_7);
 }
 
 .th-sort-link.active{
-  color:#0f3f91;
+  color:var(--clr_modra_8);
 }
 
 .th-sort-arrow{
   opacity:.65;
-  font-size:12px;
+  font-size:var(--fs_12);
   min-width:12px;
 }
 
@@ -835,11 +832,11 @@ align-items:center;
    ========================= */
 
 .table tbody tr:nth-child(even) td{
-  background:#fafbfc;
+  background:var(--clr_seda_1);
 }
 
 .table tbody tr:hover td{
-  background:#f3f7ff;
+  background:var(--clr_modra_7);
 }
 
 /* =========================
@@ -847,18 +844,18 @@ align-items:center;
    ========================= */
 
 .filter-row th{
-  background:#fff;
+  background:var(--clr_bila);
 }
 
 .filter-input{
   width:100%;
   padding:2px 8px;
-  font-size:12px;
+  font-size:var(--fs_12);
 }
 
 .filter-input:focus{
   outline:none;
-  border-color:#7aa8f5;
+  border-color:var(--clr_modra_6);
   box-shadow:0 0 0 3px var(--clr_pruhledna_modra_15);
 }
 
@@ -890,7 +887,7 @@ align-items:center;
 
 .per-form{align-items:center;
   white-space:nowrap;
-  font-size:12px;
+  font-size:var(--fs_12);
   line-height:1.2;
 }
 
@@ -907,7 +904,7 @@ align-items:center;
 .icon-btn.w44{
   min-width:30px;
   width:auto;
-  font-size:11px;
+  font-size:var(--fs_11);
   padding:0 6px;
 }
 
@@ -915,9 +912,9 @@ align-items:center;
 .icon-btn.page-current{
   pointer-events:none;
   font-weight:700;
-  background:var(--active-bg);
-  border:1px solid var(--active-bd);
-  color:var(--active-tx);
+  background:var(--clr_modra_1);
+  border:1px solid var(--clr_indigo_1);
+  color:var(--clr_modra_3);
 }
 
 /* drzaky mista */
@@ -953,7 +950,7 @@ align-items:center;
 .card_box,
 .card,
 .dash_card{
-  background:#fff;
+  background:var(--clr_bila);
   box-shadow:0 1px 2px var(--clr_stin_1);
   min-width:0;
   overflow:hidden;
@@ -968,26 +965,26 @@ align-items:center;
 /* horni lista karty */
 .card_top{  align-items:center;
   border-bottom:1px solid var(--clr_pruhledna_cerna_10);
-  background:var(--clr_pruhledna_tmava_03);
+  background:var(--clr_pruhledna_tmava_04);
 }
 
 .card_top_role_1{
-  background:#fef2f2;
+  background:var(--clr_ruzova_4);
 }
 
 .card_top_role_2{
-  background:#f0fdf4;
+  background:var(--clr_zelena_3);
 }
 
 .card_title{
-  font-size:15px;
+  font-size:var(--fs_15);
   line-height:1.25;
   font-weight:700;
 }
 
 .card_subtitle{
   margin:3px 0 0 0;
-  font-size:12px;
+  font-size:var(--fs_12);
   line-height:1.3;
   color:var(--clr_pruhledna_tmava_62);
 }
@@ -1001,9 +998,9 @@ align-items:center;
   height:20px;
 align-items:center;
   justify-content:center;
-  border:1px solid var(--clr_pruhledna_cerna_16);
+  border:1px solid var(--clr_pruhledna_cerna_18);
   line-height:1;
-  font-size:14px;
+  font-size:var(--fs_14);
 }
 
 .card_tool_btn:hover{
@@ -1019,7 +1016,7 @@ align-items:center;
 /* vnitrni casti */
 
 .card_text{
-  font-size:14px;
+  font-size:var(--fs_14);
   line-height:1.45;
 }
 
@@ -1048,12 +1045,12 @@ align-items:center;
 
 .card_section_title{
   margin:0 0 8px 0;
-  font-size:14px;
+  font-size:var(--fs_14);
 }
 
 .card_field{flex-direction:column;
-  font-size:12px;
-  color:var(--clr_pruhledna_tmava_75);
+  font-size:var(--fs_12);
+  color:var(--clr_pruhledna_tmava_78);
 }
 
 .card_section .card_field + .card_field{
@@ -1061,7 +1058,7 @@ align-items:center;
 }
 
 .card_small_text{
-  font-size:13px;
+  font-size:var(--fs_13);
   color:var(--clr_pruhledna_tmava_78);
 }
 
@@ -1078,17 +1075,17 @@ align-items:center;
 
 .card_btn:hover,
 .admin_karty_btn:hover{
-  background:#f6f8fb;
+  background:var(--clr_seda_1);
 }
 
 .card_btn_primary{
-  color:#1d4ed8;
-  border-color:var(--clr_pruhledna_modra_tmada_28);
-  background:#eff6ff;
+  color:var(--clr_modra_3);
+  border-color:var(--clr_pruhledna_modra_tmava_28);
+  background:var(--clr_modra_7);
 }
 
 .card_btn_primary:hover{
-  background:#dbeafe;
+  background:var(--clr_modra_2);
 }
 
 .dash_break{
@@ -1103,15 +1100,11 @@ align-items:center;
 }
 
 .dash_card{
-  --accent:#3b82f6;
-  --accent_soft:#eaf2ff;
-  --accent_bd:var(--clr_pruhledna_modra_35);
-
   min-width:0;
-  background:#fff;
-  border:1px solid var(--accent_bd);
+  background:var(--clr_bila);
+  border:1px solid var(--clr_pruhledna_modra_35);
   border-radius:14px;
-  box-shadow:0 8px 22px var(--clr_stin_3);
+  box-shadow:0 8px 22px var(--clr_pruhledna_tmava_04);
   overflow:hidden;
   height:250px;
 }
@@ -1163,10 +1156,8 @@ align-items:center;
 }
 
 .dash_card:hover{
-  box-shadow:0 12px 30px var(--clr_stin_4);
+  box-shadow:0 12px 30px var(--clr_pruhledna_tmava_14);
 }
-
-.card_blue   { --accent:#3b82f6; --accent_soft:#eaf2ff; --accent_bd:var(--clr_pruhledna_modra_35); }
 
 .dash_card_body{
   padding:12px;
@@ -1174,23 +1165,19 @@ align-items:center;
 
 .small_note{
   color:var(--clr_pruhledna_tmava_62);
-  font-size:12px;
+  font-size:var(--fs_12);
 }
 
 /* Maxi rezim: scrolluje pouze obsah tabulky, hlavicka tabulky zustava fixni */
 .dash_maxi_card{
-  --accent:#3b82f6;
-  --accent_soft:#eaf2ff;
-  --accent_bd:var(--clr_pruhledna_modra_35);
-
   display:flex;
   width:fit-content;
   max-width:100%;  flex-direction:column;
   height:auto;
   min-height:0;
   max-height:100%;
-  background:#fff;
-  border:1px solid var(--accent_bd);
+  background:var(--clr_bila);
+  border:1px solid var(--clr_pruhledna_modra_35);
   border-radius:14px;
   box-shadow:0 18px 44px var(--clr_stin_5);
   overflow:hidden;
@@ -1246,7 +1233,7 @@ align-items:center;
 }
 
 .card_shell[data-card-mode="nano"] .card_title{
-  font-size:12px;
+  font-size:var(--fs_12);
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
@@ -1290,10 +1277,10 @@ align-items:center;
   padding:6px 12px;
   /* TODO (utility cleanup): tento colspan header je zatim ponechan
      se selektorovou hranici; vratit se k utility prevodu pozdeji. */
-  border:1px solid var(--border-strong);
-  background:#f6f8fb;
-  font-size:13px;
-  color:#374151;
+  border:1px solid var(--clr_seda_2);
+  background:var(--clr_seda_1);
+  font-size:var(--fs_13);
+  color:var(--clr_seda_4);
   font-weight:700;
 }
 
@@ -1329,11 +1316,11 @@ align-items:center;
 
 .admin_karty_btn_danger{
   border-color:var(--clr_pruhledna_cervena_28);
-  background:#fff7f7;
+  background:var(--clr_ruzova_5);
 }
 
 .admin_karty_btn_danger:hover{
-  background:#feecec;
+  background:var(--clr_ruzova_2);
 }
 
 /* =========================================================
@@ -1438,17 +1425,17 @@ align-items:center;
 .zr_table th,
 .zr_table td{
   padding:5px 6px;
-  font-size:12px;
+  font-size:var(--fs_12);
   vertical-align:middle;
 }
 
 .zr_table th{
   font-weight:600;
-  color:#475569;
+  color:var(--clr_seda_3);
 }
 
 .zr_table td{
-  color:#334155;
+  color:var(--clr_seda_4);
 }
 
 .zr_table td input,
@@ -1463,28 +1450,28 @@ align-items:center;
   height:28px;
   min-height:28px;
   padding:2px 8px;
-  font-size:12px;
-  border:1px solid #cbd5e1;
+  font-size:var(--fs_12);
+  border:1px solid var(--clr_seda_2);
   border-radius:9px;
-  background:#fff;
+  background:var(--clr_bila);
   box-shadow:inset 0 1px 1px var(--clr_pruhledna_tmava_04);
 }
 
 .zr_req_label{
-  color:#334155;
+  color:var(--clr_seda_4);
 }
 
 .zr_form input:focus,
 .zr_form select:focus{
   outline:none;
-  border-color:#3b82f6;
-  box-shadow:0 0 0 3px var(--clr_pruhledna_modra_12);
+  border-color:var(--clr_modra_4);
+  box-shadow:0 0 0 3px var(--clr_pruhledna_modra_15);
 }
 
 .zr_date_display{
   width:160px;
   font-weight:700;
-  color:#334155;
+  color:var(--clr_seda_4);
   background:linear-gradient(180deg, var(--clr_bila), var(--clr_seda_1));
 }
 
@@ -1503,12 +1490,12 @@ align-items:center;
 
 .zr_cash_table th{
   padding-bottom:3px;
-  color:#334155;
+  color:var(--clr_seda_4);
 }
 
 .zr_cash_table thead th,
 .zr_cash_table tbody tr:nth-child(2) th{
-  font-size:11px;
+  font-size:var(--fs_11);
   letter-spacing:.03em;
 }
 
@@ -1517,7 +1504,7 @@ align-items:center;
 }
 
 .zr_cash_table tbody tr:nth-child(even) td{
-  background:var(--clr_pruhledna_panel_92);
+  background:var(--clr_pruhledna_bila_92);
 }
 
 .zr_person_table th,
@@ -1526,9 +1513,9 @@ align-items:center;
 }
 
 .zr_person_table thead th{
-  font-size:11px;
+  font-size:var(--fs_11);
   letter-spacing:.03em;
-  color:#475569;
+  color:var(--clr_seda_3);
 }
 
 .zr_person_table tbody tr{
@@ -1536,7 +1523,7 @@ align-items:center;
 }
 
 .zr_person_table tbody tr:nth-child(odd) td{
-  background:var(--clr_pruhledna_bila_94);
+  background:var(--clr_pruhledna_bila_92);
 }
 
 .zr_person_col_name{
@@ -1562,9 +1549,9 @@ align-items:center;
 .zr_hours_value{
   display:inline-block;
   line-height:28px;
-  font-size:12px;
+  font-size:var(--fs_12);
   font-weight:700;
-  color:#334155;
+  color:var(--clr_seda_4);
 }
 
 .zr_delivery_wrap{
@@ -1604,8 +1591,8 @@ align-items:center;
 }
 
 .zr_kuryr_extra_label{
-  font-size:11px;
-  color:#475569;
+  font-size:var(--fs_11);
+  color:var(--clr_seda_3);
   white-space:nowrap;
 }
 
@@ -1627,10 +1614,10 @@ align-items:center;
 .zr_row_save{
   width:104px;
   height:30px;
-  border:1px solid #1d4ed8;
+  border:1px solid var(--clr_modra_3);
   background:linear-gradient(180deg, var(--clr_modra_4), var(--clr_modra_5));
-  color:#fff;
-  font-size:13px;
+  color:var(--clr_bila);
+  font-size:var(--fs_13);
   font-weight:700;
   box-shadow:0 6px 14px var(--clr_pruhledna_modra_tmava_18);
 }
@@ -1644,7 +1631,7 @@ align-items:center;
   display:inline-block;
   line-height:28px;
   font-weight:600;
-  color:#334155;
+  color:var(--clr_seda_4);
 }
 
 .zr_phm_field.is-hidden{
@@ -1662,21 +1649,21 @@ align-items:center;
 }
 
 .zr_metric_label{
-  font-size:12px;
+  font-size:var(--fs_12);
   letter-spacing:.05em;
-  color:#64748b;
+  color:var(--clr_seda_3);
 }
 
 .zr_metric_value{
   font-size:28px;
   line-height:1.1;
-  color:#334155;
+  color:var(--clr_seda_4);
 }
 
 .zr_restia_table td{
   padding:7px 8px;
   border:1px solid var(--clr_pruhledna_seda_18);
-  background:#fff;
+  background:var(--clr_bila);
 }
 
 .zr_side .zr_restia_table{
@@ -1684,7 +1671,7 @@ align-items:center;
 }
 
 .zr_restia_key{
-  color:#334155;
+  color:var(--clr_seda_4);
 }
 
 .zr_restia_value{
@@ -1697,15 +1684,15 @@ align-items:center;
   width:100%;
   min-height:48px;
   padding:10px 18px;
-  border:1px solid #1d4ed8;
+  border:1px solid var(--clr_modra_3);
   border-radius:14px;
   background:linear-gradient(90deg, var(--clr_modra_5), var(--clr_modra_3));
-  color:#fff;
+  color:var(--clr_bila);
   font-weight:700;
 }
 
 .zr_intro_section{
-  background:linear-gradient(180deg, var(--clr_modra_1), var(--clr_panel_1));
+  background:linear-gradient(180deg, var(--clr_modra_1), var(--clr_panel));
 }
 
 .zr_cash_section,
@@ -1716,7 +1703,7 @@ align-items:center;
 
 .zr_restia_section,
 .zr_ops_section{
-  background:linear-gradient(180deg, var(--clr_seda_1), var(--clr_panel_2));
+  background:linear-gradient(180deg, var(--clr_seda_1), var(--clr_panel));
 }
 
 .zr_restia_section .card_section_title,
@@ -1725,7 +1712,7 @@ align-items:center;
 .zr_kuryr_section .card_section_title,
 .zr_cash_section .card_section_title{
   margin-bottom:10px;
-  font-size:15px;
+  font-size:var(--fs_15);
   font-weight:700;
   letter-spacing:.01em;
 }
