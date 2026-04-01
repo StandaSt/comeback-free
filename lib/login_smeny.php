@@ -1,5 +1,5 @@
 <?php
-// lib/login_smeny.php * Verze: V24 * Aktualizace: 06.03.2026
+// lib/login_smeny.php * Verze: V25 * Aktualizace: 31.03.2026
 declare(strict_types=1);
 
 /*
@@ -205,6 +205,8 @@ try {
     require_once __DIR__ . '/../db/db_user_login.php';
     cb_db_user_login();
 
+    require_once __DIR__ . '/restia_access_exist.php';
+
     $_SESSION['cb_timeout_min'] = (int)$CB_TIMEOUT_MIN;
     $_SESSION['cb_session_start_ts'] = time();
     $_SESSION['cb_last_activity_ts'] = time();
@@ -352,6 +354,6 @@ try {
     exit;
 }
 
-// lib/login_smeny.php * Verze: V24 * Aktualizace: 06.03.2026
-// Počet řádků: 334
+// lib/login_smeny.php * Verze: V25 * Aktualizace: 30.03.2026
+// Počet řádků: 359
 // Konec souboru

@@ -14,7 +14,7 @@ $cbReportDate = 'Ne';
 $cbSmenyPlanMaData = false;
 $cbReportMaData = false;
 
-$qRestia = db()->query('SELECT COALESCE(MAX(id_obj), 0) AS cnt, MAX(`import`) AS dt FROM res_objednavky');
+$qRestia = db()->query('SELECT COALESCE(MAX(id_obj), 0) AS cnt, MAX(`import`) AS dt FROM objednavky_restia');
 if ($qRestia instanceof mysqli_result) {
     $r = $qRestia->fetch_assoc();
     $cbRestiaCount = (int)($r['cnt'] ?? 0);

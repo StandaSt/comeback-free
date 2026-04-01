@@ -1,5 +1,5 @@
 <?php
-// karty/admin_karty.php * Verze: V7 * Aktualizace: 12.03.2026
+// karty/admin_karty.php * Verze: V9 * Aktualizace: 02.04.2026
 declare(strict_types=1);
 
 $user = $_SESSION['cb_user'] ?? [];
@@ -25,6 +25,14 @@ $sekceStats = [
     1 => ['all' => 0, 'on' => 0, 'off' => 0],
 ];
 
+if (isset($_SESSION['admin_karty_flash']) && is_array($_SESSION['admin_karty_flash'])) {
+    $flash = $_SESSION['admin_karty_flash'];
+    $msg = trim((string)($flash['msg'] ?? ''));
+    $msgErr = ((int)($flash['err'] ?? 0) === 1);
+    $keepExpanded = ((int)($flash['expand'] ?? 0) === 1);
+    unset($_SESSION['admin_karty_flash']);
+}
+
 $isName = static function (string $v): bool {
     return (bool)preg_match('~^[a-z0-9_]{2,80}$~', $v);
 };
@@ -44,12 +52,62 @@ $normalizeSoubor = static function (string $v) use ($isName): string {
     return $s;
 };
 
-if ($isAdmin && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['admin_karty_action'])) {
-    $action = trim((string)$_POST['admin_karty_action']);
-    $keepExpanded = true;
+$setFlashAndRedirect = static function (string $text, bool $isError, bool $expand = true) use ($formAction): never {
+    $_SESSION['admin_karty_flash'] = [
+        'msg' => $text,
+        'err' => $isError ? 1 : 0,
+        'expand' => $expand ? 1 : 0,
+    ];
 
+    $redirectUrl = $formAction;
+    echo '<script>window.location.replace(' . json_encode($redirectUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ');</script>';
+    echo '<noscript><meta http-equiv="refresh" content="0;url=' . h($redirectUrl) . '"></noscript>';
+    exit;
+};
+
+$souborExists = static function (mysqli $conn, string $soubor, int $excludeId = 0): bool {
+    if ($excludeId > 0) {
+        $stmt = $conn->prepare('
+            SELECT 1
+            FROM karty
+            WHERE LOWER(soubor) = LOWER(?)
+              AND id_karta <> ?
+            LIMIT 1
+        ');
+        if (!$stmt) {
+            throw new RuntimeException('DB prepare selhal.');
+        }
+        $stmt->bind_param('si', $soubor, $excludeId);
+    } else {
+        $stmt = $conn->prepare('
+            SELECT 1
+            FROM karty
+            WHERE LOWER(soubor) = LOWER(?)
+            LIMIT 1
+        ');
+        if (!$stmt) {
+            throw new RuntimeException('DB prepare selhal.');
+        }
+        $stmt->bind_param('s', $soubor);
+    }
+
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $exists = false;
+
+    if ($res) {
+        $exists = ($res->fetch_assoc() !== null);
+        $res->free();
+    }
+
+    $stmt->close();
+    return $exists;
+};
+
+if ($isAdmin && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['admin_karty_action'])) {
     try {
         $conn = db();
+        $action = trim((string)$_POST['admin_karty_action']);
 
         if ($action === 'add') {
             $nazev = trim((string)($_POST['nazev'] ?? ''));
@@ -59,6 +117,10 @@ if ($isAdmin && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['a
 
             if ($nazev === '' || $soubor === '') {
                 throw new RuntimeException('Neplatna vstupni data.');
+            }
+
+            if ($souborExists($conn, $soubor)) {
+                throw new RuntimeException('Tento script uz je pouzity u jine karty.');
             }
 
             $stmt = $conn->prepare('
@@ -72,7 +134,7 @@ if ($isAdmin && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['a
             $stmt->execute();
             $stmt->close();
 
-            $msg = 'Karta byla pridana.';
+            $setFlashAndRedirect('Karta byla pridana.', false, true);
         } elseif ($action === 'save') {
             $idKarta = (int)($_POST['id_karta'] ?? 0);
             $nazev = trim((string)($_POST['nazev'] ?? ''));
@@ -82,6 +144,10 @@ if ($isAdmin && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['a
 
             if ($idKarta <= 0 || $nazev === '' || $soubor === '') {
                 throw new RuntimeException('Neplatna vstupni data.');
+            }
+
+            if ($souborExists($conn, $soubor, $idKarta)) {
+                throw new RuntimeException('Tento script uz je pouzity u jine karty.');
             }
 
             $stmt = $conn->prepare('
@@ -97,7 +163,7 @@ if ($isAdmin && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['a
             $stmt->execute();
             $stmt->close();
 
-            $msg = 'Zmena byla ulozena.';
+            $setFlashAndRedirect('Zmena byla ulozena.', false, true);
         } elseif ($action === 'disable' || $action === 'enable') {
             $idKarta = (int)($_POST['id_karta'] ?? 0);
             $aktivni = ($action === 'enable') ? 1 : 0;
@@ -119,7 +185,7 @@ if ($isAdmin && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['a
             $stmt->execute();
             $stmt->close();
 
-            $msg = ($aktivni === 1) ? 'Karta byla povolena.' : 'Karta byla zakazana.';
+            $setFlashAndRedirect(($aktivni === 1) ? 'Karta byla povolena.' : 'Karta byla zakazana.', false, true);
         } elseif ($action === 'move_up' || $action === 'move_down') {
             $idKarta = (int)($_POST['id_karta'] ?? 0);
             if ($idKarta <= 0) {
@@ -198,15 +264,16 @@ if ($isAdmin && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['a
                 }
 
                 $conn->commit();
-                $msg = 'Poradi bylo upraveno.';
+                $setFlashAndRedirect('Poradi bylo upraveno.', false, true);
             } catch (Throwable $e) {
                 $conn->rollback();
                 throw $e;
             }
+        } else {
+            throw new RuntimeException('Neznama akce.');
         }
     } catch (Throwable $e) {
-        $msg = $e->getMessage();
-        $msgErr = true;
+        $setFlashAndRedirect($e->getMessage(), true, true);
     }
 }
 
@@ -365,7 +432,6 @@ $tableHeadHtml = implode("\n", [
     '            </tr>',
 ]);
 ?>
-
 <?php
 ob_start();
 ?>
@@ -507,6 +573,7 @@ ob_start();
     </div>
 <?php
 $card_max_html = (string)ob_get_clean();
-/* karty/admin_karty.php * Verze: V7 * Aktualizace: 12.03.2026 */
+/* karty/admin_karty.php * Verze: V9 * Aktualizace: 02.04.2026 */
+// Počet řádků: 579
+// Konec souboru
 ?>
-

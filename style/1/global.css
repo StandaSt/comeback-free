@@ -20,6 +20,7 @@
   --clr_ruzova_1: #fecaca;
 
   --clr_cervena_2: #ef4444;
+  --clr_cervena_3: #dc2626;
   --clr_cervena: #b91c1c;
 
   --clr_zluta: #facc15;
@@ -27,6 +28,7 @@
 
   --clr_zelena_3: #f0fdf4;
   --clr_zelena_2: #22c55e;
+  --clr_zelena_4: #16a34a;
   --clr_zelena: #166534;
 
   --clr_modra_7: #edf4ff;
@@ -137,6 +139,7 @@
 .zaobleni_8{ border-radius:8px; }
 .zaobleni_10{ border-radius:10px; }
 .zaobleni_12{ border-radius:12px; }
+.zaobleni_14{ border-radius:14px; }
 
 .bg_modra{ background:var(--clr_modra_2); }
 .bg_bila{ background:var(--clr_bila); }
@@ -640,12 +643,14 @@ align-items:center;
   width:100%;
   background:linear-gradient(
     90deg,
-    var(--clr_zelena_2) 0%,
-    var(--clr_zelena_2) 50%,
-    var(--clr_oranzova) 50%,
-    var(--clr_oranzova) 75%,
-    var(--clr_cervena_2) 75%,
-    var(--clr_cervena_2) 100%
+    var(--clr_zelena) 0%,
+    var(--clr_zelena_4) 15%,
+    var(--clr_zelena_2) 30%,
+    var(--clr_zluta) 45%,
+    var(--clr_oranzova) 60%,
+    var(--clr_cervena_3) 75%,
+    var(--clr_cervena_2) 88%,
+    var(--clr_cervena) 100%
   );
 }
 
@@ -966,6 +971,7 @@ align-items:center;
 .card_top{  align-items:center;
   border-bottom:1px solid var(--clr_pruhledna_cerna_10);
   background:var(--clr_pruhledna_tmava_04);
+  padding-right:5px;
 }
 
 .card_top_role_1{
@@ -998,6 +1004,7 @@ align-items:center;
   height:20px;
 align-items:center;
   justify-content:center;
+  border-radius:50%;
   border:1px solid var(--clr_pruhledna_cerna_18);
   line-height:1;
   font-size:var(--fs_14);

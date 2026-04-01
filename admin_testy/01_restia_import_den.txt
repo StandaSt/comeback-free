@@ -1,0 +1,59 @@
+START: 2026-04-01 14:25:31
+SCRIPT: 01_restia_import_den.php
+VERSION: V5
+ID_POB: 6
+OD_LOCAL: 2026-03-31 05:00:00
+DO_LOCAL: 2026-04-01 05:00:00
+PAGE 1: http=200 total=38 count=38 ms=360 bytes=110331
+OK order 7e7d5633-f79d-420d-9354-e54cd815a286: ulozeno
+OK order 3812f485-861b-400c-b560-623a4a3f8908: ulozeno
+OK order ccc0c67d-fa56-4f3a-9166-75d65c94cb78: ulozeno
+OK order 22ffdef6-393a-44e3-9812-c1daefa62323: ulozeno
+OK order 715ed8d7-d0d7-454a-977f-1be29503de4d: ulozeno
+OK order f2f6ca1e-0260-44f5-97df-40f27ad41fe3: ulozeno
+OK order 907ba76b-8beb-4fce-9da8-584494545e1c: ulozeno
+OK order 57430b59-c598-4e11-879f-388d56445a2b: ulozeno
+OK order 2a90b61b-91aa-44b3-a7d6-f9c42678c8d5: ulozeno
+OK order df24286e-810d-44b6-8eaa-4a3c9144fbb0: ulozeno
+OK order cb6273fd-0884-410f-a26b-9fdc98a9b344: ulozeno
+OK order 11314c67-c7ee-4610-abf5-b2cefae0f487: ulozeno
+OK order 5325ddc2-a784-4782-9566-2a65d198af52: ulozeno
+OK order a23e59d6-4c9f-446e-8ad4-b3f82fc305dc: ulozeno
+OK order 87fb399c-4f7d-44a0-b89c-4291e6d4f5f6: ulozeno
+OK order a8515391-d59c-4866-8e5b-8eb55e0d8933: ulozeno
+OK order 76bc82d3-afe3-46cc-9f0c-064769679011: ulozeno
+OK order 75bce685-583d-4a10-9a07-5395a1be580c: ulozeno
+OK order 5ac8c922-e573-42ce-9cc0-f7350f6d1708: ulozeno
+OK order 51f23b2a-706d-4647-85a6-45c6f4ddcdf6: ulozeno
+OK order 096112f9-8430-476e-aad0-f7b2b234f385: ulozeno
+OK order 3827e41e-322e-4c3f-af93-080d62023343: ulozeno
+OK order 6dc38848-0d6b-4f2a-bba2-7dc587b2f441: ulozeno
+OK order 4fa1dbf2-d53f-4555-bb57-90bfe3bd7eab: ulozeno
+OK order d7acc8f8-96c3-4516-b35c-76d96bd9b11c: ulozeno
+OK order ac57a0e4-9887-4911-81c0-644069fbcd5b: ulozeno
+OK order 145a745f-f9e3-4021-8692-430b47ad2577: ulozeno
+OK order af34fe4d-ac9c-4832-9a67-e3f4448ea7f1: ulozeno
+OK order 367bdfa6-3284-4569-b25d-6dec39c815cb: ulozeno
+OK order fb79adad-a931-4550-b3d3-2db9e6dd62f9: ulozeno
+OK order bf6467a3-6068-49eb-9582-8e7d5308eac6: ulozeno
+OK order 998b116b-c9be-49bc-bdc3-a54f8bae719f: ulozeno
+OK order 5102972a-0769-4981-95e2-d1360f634e71: ulozeno
+OK order 4be928fd-7caf-432e-bcce-caaf81a1e2aa: ulozeno
+OK order 6df31395-26f3-4d18-afc0-1cb73083c762: ulozeno
+OK order 36b9c27e-87b4-40d9-8a92-70e753123ed3: ulozeno
+OK order 4c163d1a-4d2d-4c51-9e1b-711e40363065: ulozeno
+OK order 748f7bdb-497c-473a-95bb-572739e20a40: ulozeno
+
+SUMMARY:
+  id_import: 1
+  stav: ok
+  pocet_obj: 38
+  pocet_novych: 38
+  pocet_zmenenych: 0
+  pocet_chyb: 0
+  pages: 1
+  poznamka: Import A hotov. id_pob=6 od=2026-03-31 05:00:00 do=2026-04-01 05:00:00 pages=1
+
+TXT:
+  ulozeno: C:\xampp\htdocs\comeback\admin_testy/01_restia_import_den.txt
+END: 2026-04-01 14:25:31
