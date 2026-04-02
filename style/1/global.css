@@ -1379,6 +1379,12 @@ align-items:center;
   padding-bottom:4px;
 }
 
+.card_top_clickable{
+  cursor:pointer;
+  user-select:none;
+  -webkit-user-select:none;
+}
+
 .card_shell[data-card-mode="mini"] .card_subtitle{
   margin-top:0;
 }

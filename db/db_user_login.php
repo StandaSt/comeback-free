@@ -1,5 +1,5 @@
 <?php
-// db/db_user_login.php * Verze: V13 * Aktualizace: 21.2.2026
+// db/db_user_login.php * Verze: V14 * Aktualizace: 02.04.2026
 declare(strict_types=1);
 
 /*
@@ -64,6 +64,9 @@ if (!function_exists('cb_db_user_login')) {
             // A) user (profil)
             cb_db_upsert_user($conn, $profile);
 
+            // A2) user_set (vychozi zaznam po prvnim loginu)
+            cb_db_ensure_user_set($conn, $idUser);
+
             // B) pobočky uživatele (nastav aktuální stav)
             cb_db_set_user_pobocka($conn, $idUser, $working);
 
@@ -110,6 +113,6 @@ if (!function_exists('cb_db_user_login')) {
     }
 }
 
-// db/db_user_login.php * Verze: V13 * Aktualizace: 21.2.2026
-// Počet řádků: 109
+// db/db_user_login.php * Verze: V14 * Aktualizace: 02.04.2026
+// Počet řádků: 117
 // Konec souboru

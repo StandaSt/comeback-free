@@ -109,6 +109,32 @@
     subtitle.textContent = isExpanded ? maxText : minText;
   }
 
+  function makeHeadInteractive(head) {
+    if (!(head instanceof HTMLElement)) return;
+    head.style.cursor = 'pointer';
+    head.style.userSelect = 'none';
+    head.style.webkitUserSelect = 'none';
+    head.style.msUserSelect = 'none';
+    head.setAttribute('draggable', 'false');
+  }
+
+  function clearSelection() {
+    if (typeof w.getSelection !== 'function') return;
+    const selection = w.getSelection();
+    if (selection && typeof selection.removeAllRanges === 'function') {
+      selection.removeAllRanges();
+    }
+  }
+
+  function blockHeadSelection(event) {
+    if (!(event instanceof MouseEvent)) return;
+    if (event.target instanceof Element && event.target.closest(CARD_TOGGLE_SELECTOR)) {
+      return;
+    }
+    event.preventDefault();
+    clearSelection();
+  }
+
   function requestCardMode(cardId, mode) {
     return fetch('index.php', {
       method: 'POST',
@@ -245,6 +271,8 @@
     const overlayToggle = headClone.querySelector(toggleSel);
     const overlayNanoBtn = headClone.querySelector(CARD_TO_NANO_SELECTOR);
 
+    makeHeadInteractive(headClone);
+
     const expandedNextSibling = expanded.nextSibling;
     const handleOverlayClose = () => {
       closeActiveMaxi();
@@ -281,10 +309,12 @@
     }
 
     if (headClone) {
+      headClone.addEventListener('mousedown', blockHeadSelection);
       headClone.addEventListener('dblclick', (event) => {
         if (event.target instanceof Element && event.target.closest(toggleSel)) {
           return;
         }
+        clearSelection();
         handleOverlayClose();
       });
     }
@@ -356,8 +386,11 @@
 
       const nanoHead = getCardHead(root);
       if (nanoHead) {
+        makeHeadInteractive(nanoHead);
+        nanoHead.addEventListener('mousedown', blockHeadSelection);
         nanoHead.addEventListener('dblclick', () => {
           if (!Number.isFinite(cardId) || cardId <= 0) return;
+          clearSelection();
           requestCardMode(cardId, 'maxi').then(() => {
             reloadAfterNanoSwitch(root, 'maxi');
           }).catch(() => {});
@@ -385,6 +418,8 @@
       return;
     }
 
+    makeHeadInteractive(head);
+
     const startExpanded = root.getAttribute('data-card-start-expanded') === '1';
     setExpanded(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR, startExpanded);
 
@@ -403,10 +438,12 @@
       });
     }
 
+    head.addEventListener('mousedown', blockHeadSelection);
     head.addEventListener('dblclick', (event) => {
       if (event.target instanceof Element && event.target.closest(CARD_TOGGLE_SELECTOR)) {
         return;
       }
+      clearSelection();
       const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
       setExpanded(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR, !isExpanded);
     });

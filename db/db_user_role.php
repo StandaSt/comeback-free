@@ -1,5 +1,5 @@
 <?php
-// db/db_user_role.php * Verze: V5 * Aktualizace: 21.2.2026
+// db/db_user_role.php * Verze: V6 * Aktualizace: 02.04.2026
 declare(strict_types=1);
 
 /*
@@ -25,6 +25,7 @@ declare(strict_types=1);
  *   - pouze do $_SESSION['cb_user']:
  *     - $_SESSION['cb_user']['id_role'] = <int>
  *     - $_SESSION['cb_user']['role']    = <string>
+ *     - $_SESSION['cb_user']['sub_role'] = 4|5 (jen kdyz existuje)
  *
  * Pozn.:
  * - nic z API se tady nevolá (bere to jen ze session)
@@ -41,9 +42,10 @@ if (!function_exists('db_user_role_sync')) {
      * - $profile['roles'] ... role ze Směn (pole objektů, typicky s klíčem 'name')
      *
      * Výstup:
-     * - add/del počty + seznamy názvů rolí, které se přidaly/odebraly.
+     * - add/del počty + seznamy názvů rolí, které se přidaly/odebraly
+     * - sub_role = 4 nebo 5 podle rolí ze Směn (když má obě, bere se 4)
      *
-     * @return array{add:int,del:int,add_names:string[],del_names:string[]}
+     * @return array{add:int,del:int,add_names:string[],del_names:string[],sub_role:?int}
      */
     function db_user_role_sync(mysqli $conn, int $idUser, array $profile): array
     {
@@ -65,6 +67,23 @@ if (!function_exists('db_user_role_sync')) {
             $desiredNamesMap[$name] = true;
         }
         $desiredNames = array_keys($desiredNamesMap);
+
+        // 1b) sub_role = jen vedouci pobocky (4) / vedouci smeny (5)
+        //     - bere se primo z id role vraceneho ze Smen
+        //     - kdyz ma obe, ulozi se mensi = 4
+        $subRole = null;
+        foreach ($rolesRaw as $r) {
+            if (!is_array($r)) {
+                continue;
+            }
+            $rawRoleId = (int)($r['id'] ?? 0);
+            if ($rawRoleId !== 4 && $rawRoleId !== 5) {
+                continue;
+            }
+            if ($subRole === null || $rawRoleId < $subRole) {
+                $subRole = $rawRoleId;
+            }
+        }
 
         // 2) desiredIds = id_role z cis_role (mapujeme přes název role)
         //    Struktura:
@@ -115,6 +134,7 @@ if (!function_exists('db_user_role_sync')) {
                     'del' => 0,
                     'add_names' => [],
                     'del_names' => [],
+                    'sub_role' => null,
                 ];
             }
         }
@@ -230,7 +250,42 @@ if (!function_exists('db_user_role_sync')) {
             }
         }
 
-        // 8) log: přidáno/odebráno
+        // 8) sub_role = 4 nebo 5 (vedouci pobocky / vedouci smeny)
+        //    - zapisujeme jen kdyz existuje
+        //    - kdyz neexistuje, vycistime stare hodnoty v DB i session
+        if ($subRole !== null) {
+            $stmtSubRole = $conn->prepare('UPDATE user_role SET sub_role=? WHERE id_user=?');
+            if ($stmtSubRole === false) {
+                throw new RuntimeException('DB: prepare selhal (user_role sub_role update).');
+            }
+            $stmtSubRole->bind_param('ii', $subRole, $idUser);
+            $stmtSubRole->execute();
+            $stmtSubRole->close();
+
+            if (!isset($_SESSION['cb_user']) || !is_array($_SESSION['cb_user'])) {
+                $_SESSION['cb_user'] = [];
+            }
+            $_SESSION['cb_user']['sub_role'] = $subRole;
+
+            cb_login_log_line('db_user_role_sub_role', [
+                'id_user' => (string)$idUser,
+                'sub_role' => (string)$subRole,
+            ]);
+        } else {
+            $stmtSubRoleNull = $conn->prepare('UPDATE user_role SET sub_role=NULL WHERE id_user=?');
+            if ($stmtSubRoleNull === false) {
+                throw new RuntimeException('DB: prepare selhal (user_role sub_role null update).');
+            }
+            $stmtSubRoleNull->bind_param('i', $idUser);
+            $stmtSubRoleNull->execute();
+            $stmtSubRoleNull->close();
+
+            if (isset($_SESSION['cb_user']) && is_array($_SESSION['cb_user'])) {
+                unset($_SESSION['cb_user']['sub_role']);
+            }
+        }
+
+        // 9) log: pridano/odebrano
         if ($addCount > 0) {
             cb_login_log_line('db_user_role_add', [
                 'id_user' => (string)$idUser,
@@ -251,6 +306,7 @@ if (!function_exists('db_user_role_sync')) {
             'del' => $delCount,
             'add_names' => $addNames,
             'del_names' => $delNames,
+            'sub_role' => $subRole,
         ];
     }
 }
@@ -291,6 +347,6 @@ if (!function_exists('db_user_role_effective_id')) {
     }
 }
 
-// db/db_user_role.php * Verze: V5 * Aktualizace: 21.2.2026
-// Počet řádků: 262
+// db/db_user_role.php * Verze: V6 * Aktualizace: 02.04.2026
+// Počet řádků: 353
 // Konec souboru

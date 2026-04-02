@@ -1,5 +1,5 @@
 <?php
-// db/db_user.php * Verze: V3 * Aktualizace: 16.2.2026 * Počet řádků: 124
+// db/db_user.php * Verze: V4 * Aktualizace: 02.04.2026 * Počet řádků: 161
 declare(strict_types=1);
 
 /*
@@ -114,6 +114,40 @@ function cb_db_upsert_user(mysqli $conn, array $p): void
 }
 
 /**
+ * Zajisti vychozi zaznam v user_set pro uzivatele po prvnim loginu.
+ */
+function cb_db_ensure_user_set(mysqli $conn, int $idUser): void
+{
+    if ($idUser <= 0) {
+        throw new RuntimeException('Neplatne id_user pro user_set.');
+    }
+
+    $today = (new DateTimeImmutable('today'))->format('Y-m-d');
+    $yesterday = (new DateTimeImmutable('yesterday'))->format('Y-m-d');
+
+    $pocetSl = 4;
+    $nanoKde = 1;
+    $pismo = 2;
+    $dark = 0;
+
+    $stmt = $conn->prepare(
+        'INSERT INTO user_set (id_user, pocet_sl, nano_kde, pismo, dark, obdobi_od, obdobi_do)
+         SELECT ?, ?, ?, ?, ?, ?, ?
+         FROM DUAL
+         WHERE NOT EXISTS (
+             SELECT 1 FROM user_set WHERE id_user = ?
+         )'
+    );
+    if ($stmt === false) {
+        throw new RuntimeException('Nepodarilo se pripravit insert user_set.');
+    }
+
+    $stmt->bind_param('iiiiissi', $idUser, $pocetSl, $nanoKde, $pismo, $dark, $yesterday, $today, $idUser);
+    $stmt->execute();
+    $stmt->close();
+}
+
+/**
  * Zápis do user_login (akce = 1 přihlášení / 0 odhlášení)
  */
 function cb_db_insert_login_event(mysqli $conn, int $idUser, int $akce): void
@@ -124,5 +158,5 @@ function cb_db_insert_login_event(mysqli $conn, int $idUser, int $akce): void
     $stmt->close();
 }
 
-// db/db_user.php * Verze: V3 * Aktualizace: 16.2.2026 * Počet řádků: 124
+// db/db_user.php * Verze: V4 * Aktualizace: 02.04.2026 * Počet řádků: 161
 // Konec souboru
