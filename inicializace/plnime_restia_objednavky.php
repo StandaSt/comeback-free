@@ -1,12 +1,12 @@
 <?php
-// admin_testy/01_restia_import_den.php * Verze: V8 * Aktualizace: 01.04.2026
+// inicializace/plnime_restia_objednavky.php * Verze: V3  * Aktualizace: 02.04.2026
 declare(strict_types=1);
 
 /*
 CO TENHLE SCRIPT DELA
 
-- po spusteni zobrazi formular pro vyber pobocky a dne
-- zvoleny den bere jako interval predchozi den 05:00 az zvoleny den 05:00 (lokalni cas Praha)
+- po spusteni automaticky projizdi historii od 01.07.2023 do dneska
+- pro kazdy den bere interval 05:00 az nasledujici den 05:00 (lokalni cas Praha)
 - lokalni cas si sam prevede na UTC pro Restii
 - stahne objednavky po strankach pres cb_restia_get()
 - uklada hlavicku objednavky + raw payload + adresu + casy + ceny + kuryra + sluzby + polozky + modifikatory + KDS tagy
@@ -14,7 +14,7 @@ CO TENHLE SCRIPT DELA
 - log volani do api_restia zkusi flushnout az nakonec, ale nesmi shodit TXT log ani import
 
 POZNAMKA
-- je to testovaci import pro overeni mapovani dat z Restie
+- je to bezobsluzny historicky import objednavek z Restie
 - zdroj pravdy je Restia, nic neprepocitavame mimo technicke dopocty cen v souctu
 */
 
@@ -1241,14 +1241,16 @@ if (!function_exists('cb_restia_import_a_try_flush_api')) {
 
 $rowsInfo = [];
 $summary = [
-    'id_import' => 0,
+    'pocet_dni' => 0,
+    'pocet_pob_kontrola' => 0,
+    'pocet_pob_s_obj' => 0,
+    'pocet_import_ok' => 0,
+    'pocet_import_chyba' => 0,
+    'pocet_skip_ok' => 0,
     'pocet_obj' => 0,
     'pocet_novych' => 0,
     'pocet_zmenenych' => 0,
     'pocet_chyb' => 0,
-    'stav' => 'ceka',
-    'poznamka' => '',
-    'page_count' => 0,
     'pocet_polozek' => 0,
     'pocet_modifikatoru' => 0,
     'pocet_kds_tagu' => 0,
@@ -1256,26 +1258,255 @@ $summary = [
     'pocet_sluzeb' => 0,
 ];
 
-$cbFlashKey = 'cb_restia_import_a_flash';
-$cbFlash = null;
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST' && isset($_SESSION[$cbFlashKey]) && is_array($_SESSION[$cbFlashKey])) {
-    $cbFlash = $_SESSION[$cbFlashKey];
-    unset($_SESSION[$cbFlashKey]);
+const CB_RESTIA_IMPORT_HIST_OD = '2023-07-01';
+const CB_RESTIA_IMPORT_HIST_PAUZA_US = 150000;
+const CB_RESTIA_IMPORT_TYP = 'historie';
+
+if (!function_exists('cb_restia_import_a_get_pobocky_all')) {
+    function cb_restia_import_a_get_pobocky_all(mysqli $conn, int $idUser): array
+    {
+        $sql = '
+            SELECT up.id_pob, p.nazev, p.restia_activePosId
+            FROM user_pobocka up
+            JOIN pobocka p ON p.id_pob = up.id_pob
+            WHERE up.id_user = ?
+            ORDER BY up.id_pob ASC
+        ';
+
+        $stmt = $conn->prepare($sql);
+        if ($stmt === false) {
+            throw new RuntimeException('DB prepare selhal: seznam vsech pobocky.');
+        }
+
+        $stmt->bind_param('i', $idUser);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        if ($res === false) {
+            $stmt->close();
+            throw new RuntimeException('DB get_result selhal: seznam vsech pobocky.');
+        }
+
+        $out = [];
+        while ($row = $res->fetch_assoc()) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $out[] = [
+                'id_pob' => (int)($row['id_pob'] ?? 0),
+                'nazev' => (string)($row['nazev'] ?? ''),
+                'active_pos_id' => trim((string)($row['restia_activePosId'] ?? '')),
+            ];
+        }
+        $res->free();
+        $stmt->close();
+
+        return $out;
+    }
 }
 
-$formError = '';
-$formMode = 'form';
-$selectedIdPob = 0;
-$selectedDate = cb_restia_import_a_default_date();
-$selectedRange = null;
-$pob = null;
+if (!function_exists('cb_restia_import_a_history_day_range')) {
+    function cb_restia_import_a_history_day_range(string $datum): array
+    {
+        $dt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $datum . ' 05:00:00', new DateTimeZone('Europe/Prague'));
+        if (!($dt instanceof DateTimeImmutable)) {
+            throw new RuntimeException('Nepodarilo se spocitat historicky rozsah.');
+        }
+
+        return [
+            'datum' => $datum,
+            'od_local' => $dt->format('Y-m-d H:i:s'),
+            'do_local' => $dt->modify('+1 day')->format('Y-m-d H:i:s'),
+        ];
+    }
+}
+
+if (!function_exists('cb_restia_import_a_import_ok_info')) {
+    function cb_restia_import_a_import_ok_info(mysqli $conn, int $idPob, string $odUtc, string $doUtc): ?array
+    {
+        $stmt = $conn->prepare('
+            SELECT id_import, pocet_obj, pocet_novych, pocet_zmenenych
+            FROM obj_import
+            WHERE typ_importu = ?
+              AND id_pob = ?
+              AND datum_od = ?
+              AND datum_do = ?
+              AND stav = "ok"
+            ORDER BY id_import DESC
+            LIMIT 1
+        ');
+        if ($stmt === false) {
+            throw new RuntimeException('DB prepare selhal: obj_import ok info.');
+        }
+
+        $typImportu = CB_RESTIA_IMPORT_TYP;
+        $stmt->bind_param('siss', $typImportu, $idPob, $odUtc, $doUtc);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        if ($res === false) {
+            $stmt->close();
+            throw new RuntimeException('DB get_result selhal: obj_import ok info.');
+        }
+
+        $row = $res->fetch_assoc();
+        $res->free();
+        $stmt->close();
+
+        if (!is_array($row)) {
+            return null;
+        }
+
+        return [
+            'id_import' => (int)($row['id_import'] ?? 0),
+            'pocet_obj' => (int)($row['pocet_obj'] ?? 0),
+            'pocet_novych' => (int)($row['pocet_novych'] ?? 0),
+            'pocet_zmenenych' => (int)($row['pocet_zmenenych'] ?? 0),
+        ];
+    }
+}
+
+if (!function_exists('cb_restia_import_a_insert_import_typ')) {
+    function cb_restia_import_a_insert_import_typ(mysqli $conn, string $typImportu, int $idPob, string $odUtc, string $doUtc): int
+    {
+        $stav = 'bezi';
+
+        $stmt = $conn->prepare('
+            INSERT INTO obj_import (typ_importu, id_pob, datum_od, datum_do, stav, spusteno)
+            VALUES (?, ?, ?, ?, ?, NOW(3))
+        ');
+        if ($stmt === false) {
+            throw new RuntimeException('DB prepare selhal: obj_import insert typ.');
+        }
+
+        $stmt->bind_param('sisss', $typImportu, $idPob, $odUtc, $doUtc, $stav);
+        $stmt->execute();
+        $idImport = (int)$conn->insert_id;
+        $stmt->close();
+
+        return $idImport;
+    }
+}
+
+if (!function_exists('cb_restia_import_a_render_header')) {
+    function cb_restia_import_a_render_header(bool $embedMode): void
+    {
+        if (!$embedMode) {
+            ?>
+            <!doctype html>
+            <html lang="cs">
+            <head>
+              <meta charset="utf-8">
+              <title>Plneni Restia objednavky</title>
+              <meta name="viewport" content="width=device-width, initial-scale=1">
+              <style>
+                body { font-family: Arial, sans-serif; margin: 16px; background: #f5f7fb; color: #1f2933; }
+                .wrap { width: 100%; max-width: none; margin: 0; }
+                .box { background: #fff; border: 1px solid #d9e2ec; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+                table { width: 100%; border-collapse: collapse; }
+                th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e5e7eb; vertical-align: top; white-space: nowrap; }
+                .ok { color: #166534; font-weight: 700; }
+                .err { color: #b91c1c; font-weight: 700; }
+                .muted { color: #52606d; }
+              </style>
+            </head>
+            <body>
+            <div class="wrap">
+            <?php
+        } else {
+            ?>
+            <div class="table-wrap ram_normal bg_bila zaobleni_12 odstup_vnitrni_10">
+            <?php
+        }
+
+        ?>
+        <div class="box">
+          <h2 style="margin:0 0 10px 0;">Plneni Restia objednavky</h2>
+          <p style="margin:0 0 6px 0;">Historie od <strong><?= cb_restia_import_a_h(cb_restia_import_a_format_date_cs(CB_RESTIA_IMPORT_HIST_OD)) ?></strong> do <strong><?= cb_restia_import_a_h(cb_restia_import_a_format_date_cs(cb_restia_import_a_default_date())) ?></strong></p>
+          <p class="muted" style="margin:0;">Prubeh se pripisuje dolu. Cas celkem bezi porad dal.</p>
+        </div>
+        <div class="box">
+          <table>
+            <thead>
+              <tr>
+                <th>Datum</th>
+                <th>Pobocka</th>
+                <th>Pocet obj</th>
+                <th>Cas kroku</th>
+                <th>Cas celkem</th>
+                <th>Stav</th>
+              </tr>
+            </thead>
+            <tbody>
+        <?php
+
+        if (function_exists('ob_implicit_flush')) {
+            ob_implicit_flush(true);
+        }
+        while (ob_get_level() > 0) {
+            @ob_end_flush();
+        }
+        flush();
+    }
+}
+
+if (!function_exists('cb_restia_import_a_render_footer')) {
+    function cb_restia_import_a_render_footer(bool $embedMode, array $summary): void
+    {
+        ?>
+            </tbody>
+          </table>
+        </div>
+        <div class="box">
+          <p style="margin:0 0 6px 0;"><strong>Hotovo.</strong></p>
+          <p style="margin:0 0 4px 0;">Dni: <?= cb_restia_import_a_h((string)$summary['pocet_dni']) ?> | kontroly pob: <?= cb_restia_import_a_h((string)$summary['pocet_pob_kontrola']) ?> | pob s objednavkami: <?= cb_restia_import_a_h((string)$summary['pocet_pob_s_obj']) ?></p>
+          <p style="margin:0 0 4px 0;">Import ok: <?= cb_restia_import_a_h((string)$summary['pocet_import_ok']) ?> | import chyba: <?= cb_restia_import_a_h((string)$summary['pocet_import_chyba']) ?> | skip ok: <?= cb_restia_import_a_h((string)$summary['pocet_skip_ok']) ?></p>
+          <p style="margin:0;">Obj: <?= cb_restia_import_a_h((string)$summary['pocet_obj']) ?> | nove: <?= cb_restia_import_a_h((string)$summary['pocet_novych']) ?> | zmenene: <?= cb_restia_import_a_h((string)$summary['pocet_zmenenych']) ?> | chyby: <?= cb_restia_import_a_h((string)$summary['pocet_chyb']) ?></p>
+        </div>
+        <?php
+        if (!$embedMode) {
+            ?>
+            </div>
+            </body>
+            </html>
+            <?php
+        } else {
+            ?>
+            </div>
+            <?php
+        }
+        flush();
+    }
+}
+
+if (!function_exists('cb_restia_import_a_step_row')) {
+    function cb_restia_import_a_step_row(string $datum, string $pobocka, string $pocetObj, float $stepSec, float $totalSec, string $stav, bool $jeChyba = false): void
+    {
+        $class = $jeChyba ? 'err' : (($stav === 'OK' || $stav === 'SKIP_OK') ? 'ok' : 'muted');
+        ?>
+        <tr>
+          <td><?= cb_restia_import_a_h(cb_restia_import_a_format_date_cs($datum)) ?></td>
+          <td><?= cb_restia_import_a_h($pobocka) ?></td>
+          <td><?= cb_restia_import_a_h($pocetObj) ?></td>
+          <td><?= cb_restia_import_a_h(number_format($stepSec, 2, '.', '')) ?> s</td>
+          <td><?= cb_restia_import_a_h(number_format($totalSec, 2, '.', '')) ?> s</td>
+          <td class="<?= $class ?>"><?= cb_restia_import_a_h($stav) ?></td>
+        </tr>
+        <?php
+        flush();
+    }
+}
+
+ignore_user_abort(true);
+@set_time_limit(0);
+
 $conn = null;
 $auth = null;
+$startRunTs = microtime(true);
 
 try {
     $conn = db();
     $auth = cb_restia_import_a_get_auth();
-    $pobocky = cb_restia_import_a_get_pobocky($conn, (int)$auth['id_user']);
+    $pobocky = cb_restia_import_a_get_pobocky_all($conn, (int)$auth['id_user']);
 } catch (Throwable $e) {
     if (!$cbRestiaEmbedMode) {
         http_response_code(500);
@@ -1284,7 +1515,7 @@ try {
         <html lang="cs">
         <head>
           <meta charset="utf-8">
-          <title>Restia import den - chyba</title>
+          <title>Plneni Restia objednavky - chyba</title>
         </head>
         <body>
           <h1>CHYBA</h1>
@@ -1303,463 +1534,316 @@ try {
     return;
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $akce = cb_restia_import_a_post_string('akce');
+cb_restia_import_a_log_init();
+cb_restia_import_a_log('START: ' . date('Y-m-d H:i:s'));
+cb_restia_import_a_log('SCRIPT: ' . basename(__FILE__));
+cb_restia_import_a_log('VERSION: ' . CB_RESTIA_IMPORT_A_VERZE);
+cb_restia_import_a_log('TYP_IMPORTU: ' . CB_RESTIA_IMPORT_TYP);
+cb_restia_import_a_log('HIST_OD: ' . CB_RESTIA_IMPORT_HIST_OD);
+cb_restia_import_a_log('HIST_DO: ' . cb_restia_import_a_default_date());
 
-    if ($akce === 'zpet') {
-        $selectedIdPob = (int)cb_restia_import_a_post_string('id_pob');
-        $selectedDate = cb_restia_import_a_post_string('datum');
-        if ($selectedDate === '') {
-            $selectedDate = cb_restia_import_a_default_date();
-        }
-        $formMode = 'form';
-    } elseif ($akce === 'potvrdit' || $akce === 'spustit') {
-        try {
-            $selectedIdPob = (int)cb_restia_import_a_post_string('id_pob');
-            $selectedDate = cb_restia_import_a_normalize_date(cb_restia_import_a_post_string('datum'));
-            if ($selectedIdPob <= 0) {
-                throw new RuntimeException('Vyber pobocku.');
-            }
+cb_restia_import_a_render_header($cbRestiaEmbedMode);
 
-            $pob = cb_restia_import_a_get_pobocka($conn, $selectedIdPob);
-            $selectedRange = cb_restia_import_a_selected_day_range($selectedDate);
+try {
+    $odHist = DateTimeImmutable::createFromFormat('Y-m-d', CB_RESTIA_IMPORT_HIST_OD, new DateTimeZone('Europe/Prague'));
+    $doHist = DateTimeImmutable::createFromFormat('Y-m-d', cb_restia_import_a_default_date(), new DateTimeZone('Europe/Prague'));
 
-            if ($akce === 'potvrdit') {
-                $formMode = 'confirm';
-            } else {
-                $formMode = 'run';
-            }
-        } catch (Throwable $e) {
-            $formError = $e->getMessage();
-            $formMode = 'form';
-        }
-    }
-}
-
-if ($cbFlash !== null) {
-    $rowsInfo = (isset($cbFlash['rows_info']) && is_array($cbFlash['rows_info'])) ? $cbFlash['rows_info'] : [];
-    $summary = (isset($cbFlash['summary']) && is_array($cbFlash['summary'])) ? $cbFlash['summary'] : $summary;
-    $pob = (isset($cbFlash['pob']) && is_array($cbFlash['pob'])) ? $cbFlash['pob'] : null;
-    $selectedIdPob = (int)($cbFlash['selected_id_pob'] ?? 0);
-    $selectedDate = (string)($cbFlash['selected_date'] ?? $selectedDate);
-    $odLocal = (string)($cbFlash['od_local'] ?? '');
-    $doLocal = (string)($cbFlash['do_local'] ?? '');
-}
-
-if ($formMode !== 'run' && $cbFlash === null) {
-    ?>
-    <?php if (!$cbRestiaEmbedMode): ?>
-      <!doctype html>
-      <html lang="cs">
-      <head>
-        <meta charset="utf-8">
-        <title>Restia import den</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-      </head>
-      <body>
-    <?php endif; ?>
-    <div class="table-wrap ram_normal bg_bila zaobleni_12 odstup_vnitrni_10">
-        <h2 class="card_title txt_seda text_24 text_tucny odstup_vnejsi_0">Restia import den</h2>
-        <?php if ($formError !== ''): ?>
-          <p class="card_text txt_cervena text_tucny odstup_horni_10"><?= cb_restia_import_a_h($formError) ?></p>
-        <?php endif; ?>
-
-        <?php if ($formMode === 'confirm' && is_array($selectedRange) && is_array($pob)): ?>
-          <h3 class="text_24 txt_seda text_tucny odstup_horni_10 odstup_vnejsi_0">Potvrzeni</h3>
-          <table class="table ram_normal bg_bila radek_1_35 sirka100 odstup_horni_10">
-            <tbody>
-              <tr><td class="text_tucny">Vybrana pobocka</td><td><strong><?= cb_restia_import_a_h((string)$pob['nazev']) ?></strong></td></tr>
-              <tr><td class="text_tucny">Zvolene datum</td><td><strong><?= cb_restia_import_a_h(cb_restia_import_a_format_date_cs($selectedRange['datum'])) ?></strong></td></tr>
-              <tr><td class="text_tucny">Rozsah</td><td><strong><?= cb_restia_import_a_h(cb_restia_import_a_format_datetime_cs_short($selectedRange['od_local'])) ?></strong> az <strong><?= cb_restia_import_a_h(cb_restia_import_a_format_datetime_cs_short($selectedRange['do_local'])) ?></strong></td></tr>
-            </tbody>
-          </table>
-          <div class="card_actions gap_8 displ_flex jc_konec">
-            <form method="post">
-              <input type="hidden" name="akce" value="spustit">
-              <input type="hidden" name="id_pob" value="<?= cb_restia_import_a_h((string)$selectedIdPob) ?>">
-              <input type="hidden" name="datum" value="<?= cb_restia_import_a_h($selectedDate) ?>">
-              <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Provest stazeni</button>
-            </form>
-            <form method="post">
-              <input type="hidden" name="akce" value="zpet">
-              <input type="hidden" name="id_pob" value="<?= cb_restia_import_a_h((string)$selectedIdPob) ?>">
-              <input type="hidden" name="datum" value="<?= cb_restia_import_a_h($selectedDate) ?>">
-              <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Zpet</button>
-            </form>
-          </div>
-        <?php else: ?>
-          <form method="post">
-            <input type="hidden" name="akce" value="potvrdit">
-            <div class="card_stack gap_10 displ_flex flex_sloupec">
-              <div>
-                <label for="id_pob" class="card_text text_12 text_tucny">Pobocka</label>
-                <select class="card_select ram_sedy txt_seda bg_bila zaobleni_8 vyska_32 sirka100" name="id_pob" id="id_pob" required>
-                  <option value="0">Vyber pobocku</option>
-                  <?php foreach ($pobocky as $pobocka): ?>
-                    <option value="<?= cb_restia_import_a_h((string)$pobocka['id_pob']) ?>"<?= ((int)$selectedIdPob === (int)$pobocka['id_pob']) ? ' selected' : '' ?>><?= cb_restia_import_a_h((string)$pobocka['nazev']) ?></option>
-                  <?php endforeach; ?>
-                </select>
-              </div>
-              <div>
-                <label for="datum" class="card_text text_12 text_tucny">Datum</label>
-                <input class="card_input ram_sedy txt_seda bg_bila zaobleni_8 vyska_32 sirka100" type="date" name="datum" id="datum" value="<?= cb_restia_import_a_h($selectedDate) ?>" required>
-                <p class="card_text txt_seda">Vybrany den = predchozi den 05:00 az vybrany den 05:00.</p>
-              </div>
-            </div>
-            <div class="card_actions gap_8 displ_flex jc_konec">
-              <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Pokracovat</button>
-            </div>
-          </form>
-        <?php endif; ?>
-    </div>
-    <?php if (!$cbRestiaEmbedMode): ?>
-      </body>
-      </html>
-    <?php endif; ?>
-    <?php
-    if ($cbRestiaEmbedMode) {
-        return;
-    }
-    exit;
-}
-
-if ($cbFlash === null) {
-    $summary['stav'] = 'bezi';
-    $odLocal = (string)$selectedRange['od_local'];
-    $doLocal = (string)$selectedRange['do_local'];
-
-    cb_restia_import_a_log_init();
-    cb_restia_import_a_log('START: ' . date('Y-m-d H:i:s'));
-    cb_restia_import_a_log('SCRIPT: ' . basename(__FILE__));
-    cb_restia_import_a_log('VERSION: ' . CB_RESTIA_IMPORT_A_VERZE);
-    cb_restia_import_a_log('ID_POB: ' . (string)$selectedIdPob);
-    cb_restia_import_a_log('DATUM: ' . $selectedDate);
-    cb_restia_import_a_log('OD_LOCAL: ' . $odLocal);
-    cb_restia_import_a_log('DO_LOCAL: ' . $doLocal);
-
-    try {
-    $auth = cb_restia_import_a_get_auth();
-    if (!is_array($pob)) {
-        $pob = cb_restia_import_a_get_pobocka($conn, $selectedIdPob);
+    if (!($odHist instanceof DateTimeImmutable) || !($doHist instanceof DateTimeImmutable)) {
+        throw new RuntimeException('Nepodarilo se pripravit rozsah historie.');
     }
 
-    $odUtc = cb_restia_import_a_local_to_utc_z($odLocal);
-    $doUtc = cb_restia_import_a_local_to_utc_z($doLocal);
+    $datum = $odHist;
+    while ($datum <= $doHist) {
+        $datumDen = $datum->format('Y-m-d');
+        $range = cb_restia_import_a_history_day_range($datumDen);
+        $odLocal = $range['od_local'];
+        $doLocal = $range['do_local'];
+        $odUtc = cb_restia_import_a_local_to_utc_z($odLocal);
+        $doUtc = cb_restia_import_a_local_to_utc_z($doLocal);
 
-    cb_restia_import_a_log('POBOCKA: ' . (string)$pob['nazev'] . ' | activePosId=' . (string)$pob['active_pos_id']);
-    cb_restia_import_a_log('OD_UTC: ' . $odUtc);
-    cb_restia_import_a_log('DO_UTC: ' . $doUtc);
+        $summary['pocet_dni']++;
+        cb_restia_import_a_log('');
+        cb_restia_import_a_log('DEN_START: ' . $datumDen . ' | OD_LOCAL=' . $odLocal . ' | DO_LOCAL=' . $doLocal);
+        cb_restia_import_a_log('DEN_UTC: ' . $datumDen . ' | OD_UTC=' . $odUtc . ' | DO_UTC=' . $doUtc);
 
-    $idImport = cb_restia_import_a_insert_import($conn, (int)$pob['id_pob'], $odUtc, $doUtc);
-    $summary['id_import'] = $idImport;
-    cb_restia_import_a_log('ID_IMPORT: ' . (string)$idImport);
+        foreach ($pobocky as $pob) {
+            $stepStartTs = microtime(true);
+            $summary['pocet_pob_kontrola']++;
 
-    $page = 1;
-    $limit = (int)CB_RESTIA_IMPORT_A_LIMIT;
+            $idPob = (int)$pob['id_pob'];
+            $nazevPob = (string)$pob['nazev'];
+            $activePosId = trim((string)$pob['active_pos_id']);
 
-    while (true) {
-        cb_restia_import_a_log('PAGE_START: ' . (string)$page);
-        $res = cb_restia_get(
-            '/api/orders',
-            [
-                'page' => $page,
-                'limit' => $limit,
-                'createdFrom' => $odUtc,
-                'createdTo' => $doUtc,
-                'activePosId' => (string)$pob['active_pos_id'],
-            ],
-            (string)$pob['active_pos_id'],
-            'import den: id_pob=' . (string)$pob['id_pob'] . ' page=' . (string)$page . ' datum=' . $selectedDate
-        );
-
-        if ((int)($res['ok'] ?? 0) !== 1) {
-            throw new RuntimeException((string)($res['chyba'] ?? 'Restia orders vratila chybu.'));
-        }
-
-        $body = (string)($res['body'] ?? '');
-        $decoded = json_decode($body, true);
-        if (!is_array($decoded)) {
-            throw new RuntimeException('Restia nevratila validni JSON.');
-        }
-
-        $orders = cb_restia_import_a_extract_orders($decoded);
-        $countOrders = count($orders);
-
-        cb_restia_import_a_log('PAGE_OK: page=' . $page . ' http=' . (int)($res['http_status'] ?? 0) . ' total=' . (string)($res['total_count'] ?? '') . ' count=' . $countOrders . ' ms=' . (int)($res['ms'] ?? 0) . ' bytes=' . (int)($res['bytes_in'] ?? 0));
-        $rowsInfo[] = [
-            'page' => $page,
-            'http' => (int)($res['http_status'] ?? 0),
-            'total' => (string)($res['total_count'] ?? ''),
-            'count' => $countOrders,
-            'ms' => (int)($res['ms'] ?? 0),
-            'bytes_in' => (int)($res['bytes_in'] ?? 0),
-        ];
-        $summary['page_count']++;
-
-        foreach ($orders as $order) {
-            if (!is_array($order)) {
+            if ($activePosId === '') {
+                $stepSec = microtime(true) - $stepStartTs;
+                $totalSec = microtime(true) - $startRunTs;
+                cb_restia_import_a_step_row($datumDen, $nazevPob, '0', $stepSec, $totalSec, 'BEZ_RESTIA');
+                cb_restia_import_a_log('SKIP bez Restia: datum=' . $datumDen . ' | id_pob=' . $idPob . ' | pob=' . $nazevPob);
                 continue;
             }
 
-            $restiaIdObj = trim((string)($order['id'] ?? ''));
-            if ($restiaIdObj === '') {
-                cb_restia_import_a_log('ERROR order ?: chybi id');
-                $summary['pocet_chyb']++;
+            $existingOk = cb_restia_import_a_import_ok_info($conn, $idPob, $odUtc, $doUtc);
+            if (is_array($existingOk)) {
+                $summary['pocet_skip_ok']++;
+                $summary['pocet_pob_s_obj']++;
+                $summary['pocet_obj'] += (int)$existingOk['pocet_obj'];
+                $summary['pocet_novych'] += (int)$existingOk['pocet_novych'];
+                $summary['pocet_zmenenych'] += (int)$existingOk['pocet_zmenenych'];
+
+                $stepSec = microtime(true) - $stepStartTs;
+                $totalSec = microtime(true) - $startRunTs;
+                cb_restia_import_a_step_row($datumDen, $nazevPob, (string)$existingOk['pocet_obj'], $stepSec, $totalSec, 'SKIP_OK');
+                cb_restia_import_a_log('SKIP ok: datum=' . $datumDen . ' | id_pob=' . $idPob . ' | pocet_obj=' . (string)$existingOk['pocet_obj']);
                 continue;
             }
 
-            $rawJson = cb_restia_import_a_json($order);
-            if ($rawJson === null) {
-                cb_restia_import_a_log('ERROR order ' . $restiaIdObj . ': nepodarilo se vytvorit JSON');
-                $summary['pocet_chyb']++;
-                continue;
-            }
+            $page = 1;
+            $limit = (int)CB_RESTIA_IMPORT_A_LIMIT;
+            $idImport = 0;
+            $createdImport = false;
+            $countOrdersTotal = 0;
+            $countNew = 0;
+            $countChanged = 0;
+            $countErrors = 0;
+            $countPolozky = 0;
+            $countMod = 0;
+            $countKds = 0;
+            $countKuryr = 0;
+            $countSluzby = 0;
 
-            $exists = cb_restia_import_a_order_exists($conn, $restiaIdObj);
-
-            $conn->begin_transaction();
             try {
-                $idObj = cb_restia_import_a_upsert_order($conn, (int)$pob['id_pob'], (string)$pob['active_pos_id'], $order);
-                cb_restia_import_a_insert_raw($conn, $idImport, (int)$pob['id_pob'], $restiaIdObj, $rawJson);
-                $sync = cb_restia_import_a_sync_order_children($conn, $idObj, $order);
-                $conn->commit();
+                while (true) {
+                    cb_restia_import_a_log('PAGE_START: datum=' . $datumDen . ' | id_pob=' . $idPob . ' | page=' . $page);
+                    $res = cb_restia_get(
+                        '/api/orders',
+                        [
+                            'page' => $page,
+                            'limit' => $limit,
+                            'createdFrom' => $odUtc,
+                            'createdTo' => $doUtc,
+                            'activePosId' => $activePosId,
+                        ],
+                        $activePosId,
+                        'historie: id_pob=' . (string)$idPob . ' page=' . (string)$page . ' datum=' . $datumDen
+                    );
+
+                    if ((int)($res['ok'] ?? 0) !== 1) {
+                        if (!$createdImport) {
+                            $idImport = cb_restia_import_a_insert_import_typ($conn, CB_RESTIA_IMPORT_TYP, $idPob, $odUtc, $doUtc);
+                            $createdImport = true;
+                        }
+                        throw new RuntimeException((string)($res['chyba'] ?? 'Restia orders vratila chybu.'));
+                    }
+
+                    $body = (string)($res['body'] ?? '');
+                    $decoded = json_decode($body, true);
+                    if (!is_array($decoded)) {
+                        if (!$createdImport) {
+                            $idImport = cb_restia_import_a_insert_import_typ($conn, CB_RESTIA_IMPORT_TYP, $idPob, $odUtc, $doUtc);
+                            $createdImport = true;
+                        }
+                        throw new RuntimeException('Restia nevratila validni JSON.');
+                    }
+
+                    $orders = cb_restia_import_a_extract_orders($decoded);
+                    $countOrders = count($orders);
+
+                    cb_restia_import_a_log(
+                        'PAGE_OK: datum=' . $datumDen .
+                        ' | id_pob=' . $idPob .
+                        ' | page=' . $page .
+                        ' | http=' . (int)($res['http_status'] ?? 0) .
+                        ' | total=' . (string)($res['total_count'] ?? '') .
+                        ' | count=' . $countOrders .
+                        ' | ms=' . (int)($res['ms'] ?? 0) .
+                        ' | bytes=' . (int)($res['bytes_in'] ?? 0)
+                    );
+
+                    if (!$createdImport && $countOrders > 0) {
+                        $idImport = cb_restia_import_a_insert_import_typ($conn, CB_RESTIA_IMPORT_TYP, $idPob, $odUtc, $doUtc);
+                        $createdImport = true;
+                        cb_restia_import_a_log('ID_IMPORT: ' . (string)$idImport . ' | datum=' . $datumDen . ' | id_pob=' . $idPob);
+                    }
+
+                    if ($countOrders > 0) {
+                        foreach ($orders as $order) {
+                            if (!is_array($order)) {
+                                continue;
+                            }
+
+                            $restiaIdObj = trim((string)($order['id'] ?? ''));
+                            if ($restiaIdObj === '') {
+                                cb_restia_import_a_log('ERROR order ?: chybi id | datum=' . $datumDen . ' | id_pob=' . $idPob);
+                                $countErrors++;
+                                continue;
+                            }
+
+                            $rawJson = cb_restia_import_a_json($order);
+                            if ($rawJson === null) {
+                                cb_restia_import_a_log('ERROR order ' . $restiaIdObj . ': nepodarilo se vytvorit JSON');
+                                $countErrors++;
+                                continue;
+                            }
+
+                            $exists = cb_restia_import_a_order_exists($conn, $restiaIdObj);
+
+                            $conn->begin_transaction();
+                            try {
+                                $idObj = cb_restia_import_a_upsert_order($conn, $idPob, $activePosId, $order);
+                                cb_restia_import_a_insert_raw($conn, $idImport, $idPob, $restiaIdObj, $rawJson);
+                                $sync = cb_restia_import_a_sync_order_children($conn, $idObj, $order);
+                                $conn->commit();
+                            } catch (Throwable $e) {
+                                $conn->rollback();
+                                cb_restia_import_a_log('ERROR order ' . $restiaIdObj . ': ' . $e->getMessage());
+                                $countErrors++;
+                                continue;
+                            }
+
+                            $countOrdersTotal++;
+                            $countPolozky += (int)$sync['polozky'];
+                            $countMod += (int)$sync['modifikatory'];
+                            $countKds += (int)$sync['kds_tagy'];
+                            $countKuryr += (int)$sync['kuryr'];
+                            $countSluzby += (int)$sync['sluzby'];
+
+                            if ($exists) {
+                                $countChanged++;
+                            } else {
+                                $countNew++;
+                            }
+
+                            cb_restia_import_a_log(
+                                'OK order ' . $restiaIdObj .
+                                ': id_obj=' . (string)$idObj .
+                                ' | datum=' . $datumDen .
+                                ' | id_pob=' . $idPob .
+                                ' | polozky=' . (string)$sync['polozky'] .
+                                ' | mod=' . (string)$sync['modifikatory'] .
+                                ' | kds=' . (string)$sync['kds_tagy'] .
+                                ' | kuryr=' . (string)$sync['kuryr'] .
+                                ' | sluzby=' . (string)$sync['sluzby']
+                            );
+                        }
+                    }
+
+                    if ($countOrders < $limit) {
+                        break;
+                    }
+
+                    $totalCount = isset($res['total_count']) ? (int)$res['total_count'] : 0;
+                    if ($totalCount > 0 && ($page * $limit) >= $totalCount) {
+                        break;
+                    }
+
+                    if ($countOrders === 0) {
+                        break;
+                    }
+
+                    $page++;
+                }
+
+                if ($createdImport) {
+                    $stavImportu = ($countErrors > 0) ? 'chyba' : 'ok';
+                    $poznamka = 'Historie den hotov. datum=' . $datumDen . ' id_pob=' . (string)$idPob . ' pages=' . (string)$page . ' obj=' . (string)$countOrdersTotal;
+
+                    cb_restia_import_a_finish_import(
+                        $conn,
+                        $idImport,
+                        $stavImportu,
+                        $countOrdersTotal,
+                        $countNew,
+                        $countChanged,
+                        $countErrors,
+                        $poznamka
+                    );
+
+                    if ($stavImportu === 'ok') {
+                        $summary['pocet_import_ok']++;
+                    } else {
+                        $summary['pocet_import_chyba']++;
+                        $summary['pocet_chyb'] += $countErrors;
+                    }
+
+                    $summary['pocet_pob_s_obj']++;
+                    $summary['pocet_obj'] += $countOrdersTotal;
+                    $summary['pocet_novych'] += $countNew;
+                    $summary['pocet_zmenenych'] += $countChanged;
+                    $summary['pocet_polozek'] += $countPolozky;
+                    $summary['pocet_modifikatoru'] += $countMod;
+                    $summary['pocet_kds_tagu'] += $countKds;
+                    $summary['pocet_kuryru'] += $countKuryr;
+                    $summary['pocet_sluzeb'] += $countSluzby;
+
+                    $stepSec = microtime(true) - $stepStartTs;
+                    $totalSec = microtime(true) - $startRunTs;
+                    cb_restia_import_a_step_row(
+                        $datumDen,
+                        $nazevPob,
+                        (string)$countOrdersTotal,
+                        $stepSec,
+                        $totalSec,
+                        ($stavImportu === 'ok') ? 'OK' : 'CHYBA',
+                        ($stavImportu !== 'ok')
+                    );
+                } else {
+                    $stepSec = microtime(true) - $stepStartTs;
+                    $totalSec = microtime(true) - $startRunTs;
+                    cb_restia_import_a_step_row($datumDen, $nazevPob, '0', $stepSec, $totalSec, '0_OBJ');
+                    cb_restia_import_a_log('ZERO_OBJ: datum=' . $datumDen . ' | id_pob=' . $idPob . ' | pob=' . $nazevPob);
+                }
             } catch (Throwable $e) {
-                $conn->rollback();
-                cb_restia_import_a_log('ERROR order ' . $restiaIdObj . ': ' . $e->getMessage());
+                if ($createdImport && $idImport > 0) {
+                    try {
+                        cb_restia_import_a_finish_import(
+                            $conn,
+                            $idImport,
+                            'chyba',
+                            $countOrdersTotal,
+                            $countNew,
+                            $countChanged,
+                            $countErrors + 1,
+                            'STOP: ' . $e->getMessage()
+                        );
+                    } catch (Throwable $e2) {
+                        cb_restia_import_a_log('FATAL_FINISH_IMPORT: ' . $e2->getMessage());
+                    }
+                }
+
+                $summary['pocet_import_chyba']++;
                 $summary['pocet_chyb']++;
-                continue;
+                $stepSec = microtime(true) - $stepStartTs;
+                $totalSec = microtime(true) - $startRunTs;
+                cb_restia_import_a_step_row($datumDen, $nazevPob, ($countOrdersTotal > 0 ? (string)$countOrdersTotal : 'ERR'), $stepSec, $totalSec, 'CHYBA', true);
+                cb_restia_import_a_log('FATAL_STEP: datum=' . $datumDen . ' | id_pob=' . $idPob . ' | msg=' . $e->getMessage());
             }
-
-            $summary['pocet_obj']++;
-            $summary['pocet_polozek'] += (int)$sync['polozky'];
-            $summary['pocet_modifikatoru'] += (int)$sync['modifikatory'];
-            $summary['pocet_kds_tagu'] += (int)$sync['kds_tagy'];
-            $summary['pocet_kuryru'] += (int)$sync['kuryr'];
-            $summary['pocet_sluzeb'] += (int)$sync['sluzby'];
-
-            if ($exists) {
-                $summary['pocet_zmenenych']++;
-            } else {
-                $summary['pocet_novych']++;
-            }
-
-            cb_restia_import_a_log(
-                'OK order ' . $restiaIdObj .
-                ': id_obj=' . (string)$idObj .
-                ' polozky=' . (string)$sync['polozky'] .
-                ' mod=' . (string)$sync['modifikatory'] .
-                ' kds=' . (string)$sync['kds_tagy'] .
-                ' kuryr=' . (string)$sync['kuryr'] .
-                ' sluzby=' . (string)$sync['sluzby']
-            );
         }
 
-        if ($countOrders < $limit) {
-            break;
+        if ($datum < $doHist) {
+            usleep(CB_RESTIA_IMPORT_HIST_PAUZA_US);
         }
 
-        $totalCount = isset($res['total_count']) ? (int)$res['total_count'] : 0;
-        if ($totalCount > 0 && ($page * $limit) >= $totalCount) {
-            break;
-        }
-
-        if ($countOrders === 0) {
-            break;
-        }
-
-        $page++;
+        $datum = $datum->modify('+1 day');
     }
-
-    $summary['stav'] = ($summary['pocet_chyb'] > 0) ? 'chyba' : 'ok';
-    $summary['poznamka'] =
-        'Import den hotov. id_pob=' . (string)$pob['id_pob'] .
-        ' datum=' . $selectedDate .
-        ' od=' . $odLocal .
-        ' do=' . $doLocal .
-        ' pages=' . (string)$summary['page_count'] .
-        ' polozky=' . (string)$summary['pocet_polozek'];
-
-    cb_restia_import_a_finish_import(
-        $conn,
-        $idImport,
-        $summary['stav'],
-        $summary['pocet_obj'],
-        $summary['pocet_novych'],
-        $summary['pocet_zmenenych'],
-        $summary['pocet_chyb'],
-        $summary['poznamka']
-    );
-
-    cb_restia_import_a_log('');
-    cb_restia_import_a_log('SUMMARY:');
-    cb_restia_import_a_log('  id_import: ' . (string)$summary['id_import']);
-    cb_restia_import_a_log('  stav: ' . (string)$summary['stav']);
-    cb_restia_import_a_log('  pocet_obj: ' . (string)$summary['pocet_obj']);
-    cb_restia_import_a_log('  pocet_novych: ' . (string)$summary['pocet_novych']);
-    cb_restia_import_a_log('  pocet_zmenenych: ' . (string)$summary['pocet_zmenenych']);
-    cb_restia_import_a_log('  pocet_chyb: ' . (string)$summary['pocet_chyb']);
-    cb_restia_import_a_log('  pages: ' . (string)$summary['page_count']);
-    cb_restia_import_a_log('  polozky: ' . (string)$summary['pocet_polozek']);
-    cb_restia_import_a_log('  modifikatory: ' . (string)$summary['pocet_modifikatoru']);
-    cb_restia_import_a_log('  kds_tagy: ' . (string)$summary['pocet_kds_tagu']);
-    cb_restia_import_a_log('  kuryri: ' . (string)$summary['pocet_kuryru']);
-    cb_restia_import_a_log('  sluzby: ' . (string)$summary['pocet_sluzeb']);
-    cb_restia_import_a_log('  poznamka: ' . (string)$summary['poznamka']);
 
     cb_restia_import_a_try_flush_api($conn, $auth);
     cb_restia_import_a_log('TXT: ' . cb_restia_import_a_txt_path());
     cb_restia_import_a_log('END: ' . date('Y-m-d H:i:s'));
-
-    $_SESSION[$cbFlashKey] = [
-        'rows_info' => $rowsInfo,
-        'summary' => $summary,
-        'pob' => $pob,
-        'selected_id_pob' => $selectedIdPob,
-        'selected_date' => $selectedDate,
-        'od_local' => $odLocal,
-        'do_local' => $doLocal,
-    ];
-    if (!headers_sent()) {
-        $cbRedirectUrl = (string)($_SERVER['REQUEST_URI'] ?? '');
-        if ($cbRedirectUrl === '') {
-            $cbRedirectUrl = '/admin_testy/' . basename(__FILE__);
-        }
-        header('Location: ' . $cbRedirectUrl, true, 303);
-        if ($cbRestiaEmbedMode) {
-            return;
-        }
-        exit;
-    }
-
-    } catch (Throwable $e) {
+} catch (Throwable $e) {
     cb_restia_import_a_log('FATAL: ' . $e->getMessage());
-
-    try {
-        if ($conn instanceof mysqli && (int)$summary['id_import'] > 0) {
-            cb_restia_import_a_finish_import(
-                $conn,
-                (int)$summary['id_import'],
-                'chyba',
-                (int)$summary['pocet_obj'],
-                (int)$summary['pocet_novych'],
-                (int)$summary['pocet_zmenenych'],
-                (int)$summary['pocet_chyb'] + 1,
-                'STOP: ' . $e->getMessage()
-            );
-        }
-    } catch (Throwable $e2) {
-        cb_restia_import_a_log('FATAL_FINISH_IMPORT: ' . $e2->getMessage());
-    }
-
     cb_restia_import_a_try_flush_api($conn, $auth);
     cb_restia_import_a_log('END: ' . date('Y-m-d H:i:s'));
 
-    if (!$cbRestiaEmbedMode) {
-        http_response_code(500);
-        ?>
-        <!doctype html>
-        <html lang="cs">
-        <head>
-          <meta charset="utf-8">
-          <title>Restia import den - chyba</title>
-        </head>
-        <body>
-          <h1>CHYBA</h1>
-          <p><?= cb_restia_import_a_h($e->getMessage()) ?></p>
-        </body>
-        </html>
-        <?php
-        exit;
-    }
+    $summary['pocet_chyb']++;
     ?>
-    <div class="ram_normal bg_bila zaobleni_12 odstup_vnitrni_10">
-      <h2>CHYBA</h2>
-      <p><?= cb_restia_import_a_h($e->getMessage()) ?></p>
-    </div>
+    <tr>
+      <td colspan="6" class="err"><?= cb_restia_import_a_h($e->getMessage()) ?></td>
+    </tr>
     <?php
-        return;
-    }
 }
-?>
-<?php if (!$cbRestiaEmbedMode): ?>
-<!doctype html>
-<html lang="cs">
-<head>
-  <meta charset="utf-8">
-  <title>Restia import den</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-</head>
-<body>
-<?php endif; ?>
-<div class="table-wrap ram_normal bg_bila zaobleni_12 odstup_vnitrni_10">
-  <h2 class="card_title txt_seda text_24 text_tucny odstup_vnejsi_0">Restia import den</h2>
-  <p class="card_text text_tucny <?= ((string)$summary['stav'] === 'ok') ? 'txt_zelena' : 'txt_cervena' ?>">Stav: <?= cb_restia_import_a_h((string)$summary['stav']) ?></p>
 
-  <table class="table ram_normal bg_bila radek_1_35 sirka100 odstup_horni_10">
-    <tbody>
-      <tr><td class="text_tucny">Kdy</td><td><?= cb_restia_import_a_h(cb_restia_import_a_format_datetime_cs_short(cb_restia_import_a_now())) ?></td></tr>
-      <tr><td class="text_tucny">Pobocka</td><td><?= cb_restia_import_a_h((string)($pob['nazev'] ?? '')) ?></td></tr>
-      <tr><td class="text_tucny">ID pob</td><td><?= cb_restia_import_a_h((string)$selectedIdPob) ?></td></tr>
-      <tr><td class="text_tucny">Datum</td><td><?= cb_restia_import_a_h(cb_restia_import_a_format_date_cs($selectedDate)) ?></td></tr>
-      <tr><td class="text_tucny">Od lokal</td><td><?= cb_restia_import_a_h(cb_restia_import_a_format_datetime_cs_short($odLocal)) ?></td></tr>
-      <tr><td class="text_tucny">Do lokal</td><td><?= cb_restia_import_a_h(cb_restia_import_a_format_datetime_cs_short($doLocal)) ?></td></tr>
-      <tr><td class="text_tucny">Od UTC</td><td><?= cb_restia_import_a_h(cb_restia_import_a_local_to_utc_z($odLocal)) ?></td></tr>
-      <tr><td class="text_tucny">Do UTC</td><td><?= cb_restia_import_a_h(cb_restia_import_a_local_to_utc_z($doLocal)) ?></td></tr>
-    </tbody>
-  </table>
+cb_restia_import_a_render_footer($cbRestiaEmbedMode, $summary);
+// inicializace/plnime_restia_objednavky.php * Verze: V3 * Aktualizace: 02.04.2026
 
-  <h3 class="text_24 txt_seda text_tucny odstup_horni_10 odstup_vnejsi_0">Shrnuti</h3>
-  <table class="table ram_normal bg_bila radek_1_35 sirka100 odstup_horni_10">
-    <tbody>
-      <tr><th>ID import</th><td><?= cb_restia_import_a_h((string)$summary['id_import']) ?></td></tr>
-      <tr><th>Pocet obj</th><td><?= cb_restia_import_a_h((string)$summary['pocet_obj']) ?></td></tr>
-      <tr><th>Pocet novych</th><td><?= cb_restia_import_a_h((string)$summary['pocet_novych']) ?></td></tr>
-      <tr><th>Pocet zmenenych</th><td><?= cb_restia_import_a_h((string)$summary['pocet_zmenenych']) ?></td></tr>
-      <tr><th>Pocet chyb</th><td><?= cb_restia_import_a_h((string)$summary['pocet_chyb']) ?></td></tr>
-      <tr><th>Pocet polozek</th><td><?= cb_restia_import_a_h((string)$summary['pocet_polozek']) ?></td></tr>
-      <tr><th>Pocet modifikatoru</th><td><?= cb_restia_import_a_h((string)$summary['pocet_modifikatoru']) ?></td></tr>
-      <tr><th>Pocet kds tagu</th><td><?= cb_restia_import_a_h((string)$summary['pocet_kds_tagu']) ?></td></tr>
-      <tr><th>Pocet kuryru</th><td><?= cb_restia_import_a_h((string)$summary['pocet_kuryru']) ?></td></tr>
-      <tr><th>Pocet sluzeb</th><td><?= cb_restia_import_a_h((string)$summary['pocet_sluzeb']) ?></td></tr>
-    </tbody>
-  </table>
-
-  <h3 class="text_24 txt_seda text_tucny odstup_horni_10 odstup_vnejsi_0">Stranky</h3>
-  <table class="table ram_normal bg_bila radek_1_35 sirka100 odstup_horni_10">
-    <thead>
-      <tr>
-        <th>page</th>
-        <th>http</th>
-        <th>total_count</th>
-        <th>pocet</th>
-        <th>ms</th>
-        <th>bytes_in</th>
-      </tr>
-    </thead>
-    <tbody>
-      <?php foreach ($rowsInfo as $row): ?>
-        <tr>
-          <td><?= cb_restia_import_a_h((string)$row['page']) ?></td>
-          <td><?= cb_restia_import_a_h((string)$row['http']) ?></td>
-          <td><?= cb_restia_import_a_h((string)$row['total']) ?></td>
-          <td><?= cb_restia_import_a_h((string)$row['count']) ?></td>
-          <td><?= cb_restia_import_a_h((string)$row['ms']) ?></td>
-          <td><?= cb_restia_import_a_h((string)$row['bytes_in']) ?></td>
-        </tr>
-      <?php endforeach; ?>
-      <?php if ($rowsInfo === []): ?>
-        <tr><td colspan="6">Bez dat.</td></tr>
-      <?php endif; ?>
-    </tbody>
-  </table>
-</div>
-<?php if (!$cbRestiaEmbedMode): ?>
-</body>
-</html>
-<?php endif; ?>
-<?php
-// admin_testy/01_restia_import_den.php * Verze: V8 * Aktualizace: 01.04.2026
-// Pocet radku: 1718
-// Predchozi pocet radku: 1682
 // Konec souboru
 ?>

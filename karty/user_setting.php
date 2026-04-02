@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 $usError = '';
 $usOk = '';
-$usRedirectUrl = '';
 
 $usUser = $_SESSION['cb_user'] ?? null;
 $usUserId = (is_array($usUser) && isset($usUser['id_user'])) ? (int)$usUser['id_user'] : 0;
@@ -47,7 +46,7 @@ if ($usUserId > 0) {
             $stmtUpd->execute();
             $stmtUpd->close();
 
-            $usRedirectUrl = $formAction;
+            $usOk = 'Nastaveni bylo ulozeno.';
         }
 
         $stmtSel = $conn->prepare('SELECT pocet_sl, nano_kde, pismo, dark FROM user_set WHERE id_user = ? LIMIT 1');
@@ -89,10 +88,8 @@ ob_start();
 <?php if ($usError !== ''): ?>
   <p class="card_text txt_seda odstup_vnejsi_0 card_text_muted"><?= h($usError) ?></p>
 <?php else: ?>
-  <?php if ($usRedirectUrl !== ''): ?>
-    <script>
-      window.location.href = <?= json_encode($usRedirectUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-    </script>
+  <?php if ($usOk !== ''): ?>
+    <p class="card_text txt_zelena odstup_vnejsi_0"><?= h($usOk) ?></p>
   <?php endif; ?>
   <form method="post" action="<?= h($formAction) ?>" class="card_stack gap_10 displ_flex" autocomplete="off">
     <input type="hidden" name="us_action" value="save">

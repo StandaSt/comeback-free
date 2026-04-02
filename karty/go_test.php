@@ -168,14 +168,11 @@ if ($gtSelected !== '' && in_array($gtSelected, $gtFiles, true)) {
     $gtInfo = 'Vybraný script: admin_testy/' . $gtSelected;
 }
 
-$startExpanded = ($gtHasSelection || $gtRun);
-
 ob_start();
 ?>
 <div
   id="<?= h($gtRootId) ?>"
   class="table-wrap ram_normal bg_bila zaobleni_12 odstup_vnitrni_10"
-  data-clean-url="<?= h($gtCleanUrl) ?>"
   style="width:100%; box-sizing:border-box;"
 >
   <?php if ($gtFiles === []): ?>
@@ -203,7 +200,7 @@ ob_start();
       </form>
 
       <?php if ($gtHasSelection): ?>
-        <div class="ram_normal bg_bila zaobleni_12 odstup_vnitrni_10 odstup_horni_10" data-go-test-detail="1" style="width:100%; box-sizing:border-box;">
+        <div class="ram_normal bg_bila zaobleni_12 odstup_vnitrni_10 odstup_horni_10" data-go-test-detail="1" style="width:100%; max-width:720px; box-sizing:border-box;">
           <table class="table ram_normal bg_bila radek_1_35" style="width:100%; table-layout:fixed;">
             <tbody>
               <tr>
@@ -243,96 +240,6 @@ ob_start();
 
   <?php endif; ?>
 </div>
-<template id="<?= h($gtTemplateId) ?>">
-  <form method="get" action="<?= h(cb_url('/')) ?>" class="odstup_vnejsi_0" style="width:100%;">
-    <input type="hidden" name="page" value="go_test">
-    <div class="card_stack gap_10 displ_flex" style="width:100%;">
-      <label class="card_field gap_4 displ_flex" style="width:100%;">
-        <span>Testovací script</span>
-        <select class="card_select ram_sedy txt_seda vyska_32" name="gt_script" style="width:100%; max-width:none;">
-          <option value="">Vyber script</option>
-          <?php foreach ($gtFiles as $file): ?>
-            <option value="<?= h($file) ?>"><?= h($file) ?></option>
-          <?php endforeach; ?>
-        </select>
-      </label>
-
-      <div class="card_actions gap_8 displ_flex jc_konec">
-        <button type="submit" class="btn btn-primary">Načíst</button>
-      </div>
-    </div>
-  </form>
-</template>
-<script>
-(function () {
-    var root = document.getElementById(<?= json_encode($gtRootId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
-    var template = document.getElementById(<?= json_encode($gtTemplateId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
-
-    if (!root || !template) {
-        return;
-    }
-
-    var cleanUrl = root.getAttribute('data-clean-url') || '';
-    var wasVisible = isVisible(root);
-
-    function isVisible(node) {
-        if (!node || !node.isConnected) {
-            return false;
-        }
-
-        var style = window.getComputedStyle(node);
-        if (style.display === 'none' || style.visibility === 'hidden') {
-            return false;
-        }
-
-        var rect = node.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0;
-    }
-
-    function hasDirtyState() {
-        var url = new URL(window.location.href);
-        return url.searchParams.get('page') === 'go_test'
-            && (url.searchParams.has('gt_script') || url.searchParams.has('gt_run'));
-    }
-
-    function resetCardDom() {
-        root.innerHTML = template.innerHTML;
-
-        if (cleanUrl !== '' && window.history && typeof window.history.replaceState === 'function') {
-            window.history.replaceState({}, document.title, cleanUrl);
-        }
-    }
-
-    function checkState() {
-        var visible = isVisible(root);
-
-        if (wasVisible && !visible && hasDirtyState()) {
-            resetCardDom();
-        }
-
-        wasVisible = visible;
-    }
-
-    document.addEventListener('click', function () {
-        window.setTimeout(checkState, 50);
-    }, true);
-
-    window.addEventListener('resize', checkState);
-    document.addEventListener('visibilitychange', checkState);
-
-    var observer = new MutationObserver(function () {
-        checkState();
-    });
-
-    observer.observe(document.body, {
-        attributes: true,
-        childList: true,
-        subtree: true
-    });
-
-    window.setInterval(checkState, 400);
-})();
-</script>
 <?php
 $card_max_html = (string)ob_get_clean();
 

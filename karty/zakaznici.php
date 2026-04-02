@@ -31,7 +31,6 @@ $zakBlk = '0';
 $zakFilters = [];
 $zakError = '';
 $formAction = cb_url('/');
-$keepExpanded = isset($_GET['zak_p']) || isset($_GET['zak_per']) || isset($_GET['zak_blk']) || isset($_GET['zak_f']) || isset($_GET['zak_sort']) || isset($_GET['zak_dir']);
 
 $zakCols = [
     'id' => ['label' => 'Poř.č.', 'db' => 'id_zak'],
@@ -142,7 +141,7 @@ try {
             COALESCE(z.prijmeni, "") AS prijmeni,
             COALESCE(z.mesto, "") AS mesto,
             COUNT(o.id_obj) AS obj_count
-        FROM res_objednavky o
+        FROM objednavky_restia o
         INNER JOIN zakaznik z ON z.id_zak = o.id_zak
         ' . $selectedWhere . '
         GROUP BY z.id_zak, z.jmeno, z.prijmeni, z.mesto
@@ -328,7 +327,6 @@ $card_min_html = ''
     . '    </tbody>'
     . '  </table>'
     . '</div>';
-$startExpanded = $keepExpanded;
 
 ob_start();
 ?>

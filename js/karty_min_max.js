@@ -4,6 +4,7 @@
 (function (w) {
   const ICON_MAX = '\u2922';
   const ICON_MIN = '\u2212';
+  const MAXI_STATE_KEY = 'cb_maxi_state_v1';
   let activeMaxi = null;
   const CARD_ROOT_SELECTOR = '.card_shell';
   const CARD_TOGGLE_SELECTOR = '[data-card-toggle]';
@@ -11,6 +12,44 @@
   const CARD_EXPANDED_SELECTOR = '[data-card-expanded]';
   const CARD_TO_NANO_SELECTOR = '[data-card-to-nano]';
   const CARD_NANO_TARGET_SELECTOR = '[data-card-nano-target]';
+
+  function getCurrentLoginId() {
+    const grid = document.querySelector('.dash_grid[data-login-id]');
+    if (!(grid instanceof HTMLElement)) return '0';
+    return String(grid.getAttribute('data-login-id') || '0').trim() || '0';
+  }
+
+  function clearMaxiState() {
+    try { w.sessionStorage.removeItem(MAXI_STATE_KEY); } catch (e) {}
+  }
+
+  function saveMaxiState(cardId, returnMode) {
+    const cid = String(cardId || '').trim();
+    if (cid === '') return;
+    const mode = (returnMode === 'nano') ? 'nano' : 'mini';
+    const payload = {
+      cardId: cid,
+      returnMode: mode,
+      loginId: getCurrentLoginId()
+    };
+    try { w.sessionStorage.setItem(MAXI_STATE_KEY, JSON.stringify(payload)); } catch (e) {}
+  }
+
+  function loadMaxiState() {
+    try {
+      const raw = String(w.sessionStorage.getItem(MAXI_STATE_KEY) || '');
+      if (raw === '') return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return null;
+      const cardId = String(parsed.cardId || '').trim();
+      if (cardId === '') return null;
+      const returnMode = (parsed.returnMode === 'nano') ? 'nano' : 'mini';
+      const loginId = String(parsed.loginId || '0').trim() || '0';
+      return { cardId, returnMode, loginId };
+    } catch (e) {
+      return null;
+    }
+  }
 
   function getDashBox(root) {
     if (!root) return null;
@@ -89,7 +128,7 @@
     if (pendingMode === 'maxi') {
       const cardId = String(root.getAttribute('data-card-id') || '').trim();
       if (cardId !== '') {
-        try { w.sessionStorage.setItem('cb_open_maxi_card_id', cardId); } catch (e) {}
+        saveMaxiState(cardId, 'nano');
       }
     }
     w.setTimeout(() => { w.location.reload(); }, 180);
@@ -150,6 +189,7 @@
     if (layer) layer.classList.remove('is-active');
 
     activeMaxi = null;
+    clearMaxiState();
 
     if (targetReturnMode === 'nano') {
       const cardId = parseInt(String(root.getAttribute('data-card-id') || '0'), 10);
@@ -272,6 +312,7 @@
       handleOverlayNano,
       returnMode: normalizedReturnMode
     };
+    saveMaxiState(String(root.getAttribute('data-card-id') || ''), normalizedReturnMode);
   }
 
   function setExpanded(root, compactSel, expandedSel, toggleSel, on) {
@@ -317,7 +358,6 @@
       if (nanoHead) {
         nanoHead.addEventListener('dblclick', () => {
           if (!Number.isFinite(cardId) || cardId <= 0) return;
-          try { w.sessionStorage.setItem('cb_open_maxi_return_mode', 'nano'); } catch (e) {}
           requestCardMode(cardId, 'maxi').then(() => {
             reloadAfterNanoSwitch(root, 'maxi');
           }).catch(() => {});
@@ -386,17 +426,19 @@
     const roots = getCardRoots();
     roots.forEach(initCard);
 
-    let pendingCardId = '';
-    let pendingReturnMode = '';
-    try { pendingCardId = String(w.sessionStorage.getItem('cb_open_maxi_card_id') || ''); } catch (e) {}
-    try { pendingReturnMode = String(w.sessionStorage.getItem('cb_open_maxi_return_mode') || ''); } catch (e) {}
-    if (pendingCardId !== '') {
-      const root = roots.find((r) => String(r.getAttribute('data-card-id') || '') === pendingCardId && String(r.getAttribute('data-card-mode') || '') !== 'nano');
-      if (root) {
-        openMaxi(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR, pendingReturnMode);
+    const state = loadMaxiState();
+    if (state) {
+      const currentLoginId = getCurrentLoginId();
+      if (state.loginId !== currentLoginId) {
+        clearMaxiState();
+        return;
       }
-      try { w.sessionStorage.removeItem('cb_open_maxi_card_id'); } catch (e) {}
-      try { w.sessionStorage.removeItem('cb_open_maxi_return_mode'); } catch (e) {}
+      const root = roots.find((r) => String(r.getAttribute('data-card-id') || '') === state.cardId && String(r.getAttribute('data-card-mode') || '') !== 'nano');
+      if (root) {
+        openMaxi(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR, state.returnMode);
+      } else {
+        clearMaxiState();
+      }
     }
   }
 

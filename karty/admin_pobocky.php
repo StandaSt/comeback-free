@@ -5,7 +5,6 @@ declare(strict_types=1);
 $formAction = cb_url('/');
 $msg = '';
 $msgErr = false;
-$keepExpanded = false;
 $rows = [];
 $baseCols = ['nazev', 'ulice', 'mesto', 'psc'];
 $endCols = [];
@@ -31,7 +30,6 @@ try {
     if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
         && (string)($_POST['cb_admin_pobocky_action'] ?? '') === 'save_row'
     ) {
-        $keepExpanded = true;
         $idPob = (int)($_POST['id_pob'] ?? 0);
         if ($idPob <= 0) {
             throw new RuntimeException('Neplatné ID pobočky.');
@@ -85,7 +83,6 @@ try {
 }
 
 $card_min_html = '<p class="card_text txt_seda odstup_vnejsi_0">Správa poboček</p>';
-$startExpanded = $keepExpanded;
 $sirkaSloupcu = [
     'nazev' => 'width:15ch;',
     'ulice' => 'width:20ch;',

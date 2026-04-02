@@ -42,7 +42,6 @@ $uzAkt = '1';
 $uzFilters = [];
 $uzError = '';
 $formAction = cb_url('/');
-$keepExpanded = isset($_GET['uz_p']) || isset($_GET['uz_per']) || isset($_GET['uz_akt']) || isset($_GET['uz_f']) || isset($_GET['uz_sort']) || isset($_GET['uz_dir']);
 $roleStats = ['admin' => 0, 'manager' => 0, 'uzivatel' => 0];
 
 $uzCols = [
@@ -275,7 +274,6 @@ $card_min_html = ''
     . '    </tbody>'
     . '  </table>'
     . '</div>';
-$startExpanded = $keepExpanded;
 
 ob_start();
 ?>

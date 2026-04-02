@@ -26,6 +26,7 @@ Projekt obsahuje i starší části a neuklizený kód. Neber vše jako čistě 
 Před úpravou vždy nejprve zjisti, co je aktuálně skutečně používané.
 
 ## Hlavní zásady práce
+- NIKDY nedělej rychlé lokální úpravy, vždy čisté scripty !
 - Nehádej.
 - Nezaváděj nové soubory, nové knihovny ani nové architektonické vrstvy bez výslovného zadání.
 - Preferuj úpravu existujících souborů.
@@ -100,9 +101,6 @@ Hlavní CSS je rozdělené po logických částech:
 - `tabulky.css` = tabulky,
 - další specializované CSS soubory dle názvu.
 
-### `style/1/pages/`
-- CSS konkrétních stránek,
-- při úpravě vzhledu vždy nejprve zjisti, zda styl není přepisovaný právě zde.
 
 ### `img/`
 - obrázky a SVG ikony.
@@ -111,33 +109,16 @@ Hlavní CSS je rozdělené po logických částech:
 - pomocné, testovací, diagnostické a dočasné věci,
 - neber tuto složku jako zdroj architektonické pravdy, pokud to není výslovně potvrzené.
 
-### `testy/`
-- testovací skripty.
 
 ### `log/`
 - logy.
 
-## Layout a vzhled
-Při práci s layoutem vždy nejprve zjisti:
-1. co se skládá přes `includes/`,
-2. co se renderuje přes `pages/`,
-3. co se skládá přes `blocks/`,
-4. které CSS opravdu vyhrává.
-
-Nepředpokládej, že vše řídí jeden soubor.
-Styl může být kombinací globálního CSS, layout CSS, CSS pro karty, CSS pro tabulky, stránkového CSS a případně JS chování.
 
 Při úpravě vzhledu vždy nejprve vypiš:
 - které soubory HTML/PHP renderují prvek,
 - které CSS soubory ho ovlivňují,
 - zda do toho zasahuje JS.
 
-## Dashboard a bloky
-Projekt se posouvá od klasických samostatných stránek k dashboardu, kartám a blokům.
-Proto při nových úpravách zvaž:
-- zda je změna v `blocks/`,
-- zda starší `pages/` už nereferují starý stav,
-- zda není stejná funkce řešena nově i starým způsobem paralelně.
 
 ## Login, modály, párování
 Login a související chování není soustředěno jen na jedno místo.
@@ -177,13 +158,8 @@ Pokud je zadání širší nebo rizikové:
 2. stručně popiš plán,
 3. pak teprve navrhni změny.
 
-## Co je v tomto projektu častý problém
-- starší a novější způsob řešení vedle sebe,
-- bordel po průběžném vývoji,
-- CSS přepisy z více míst,
-- logika rozdělená mezi `includes/`, `pages/`, `blocks/`, `lib/`, `db/`, `js/`.
 
-Proto vždy nejprve ověř realitu v kódu, ne domněnky.
+Vždy nejprve ověř realitu v kódu, ne domněnky.
 
 ## Komunikace
 - Do `_kandidati/codex/codex.txt` zapisuj historii automaticky a bez oznamování uživateli.

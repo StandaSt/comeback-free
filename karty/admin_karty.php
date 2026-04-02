@@ -9,7 +9,6 @@ $formAction = cb_url('/');
 
 $msg = '';
 $msgErr = false;
-$keepExpanded = false;
 $karetCount = 0;
 $lastAddedName = '-';
 $nextCardId = 1;
@@ -24,14 +23,6 @@ $sekceStats = [
     2 => ['all' => 0, 'on' => 0, 'off' => 0],
     1 => ['all' => 0, 'on' => 0, 'off' => 0],
 ];
-
-if (isset($_SESSION['admin_karty_flash']) && is_array($_SESSION['admin_karty_flash'])) {
-    $flash = $_SESSION['admin_karty_flash'];
-    $msg = trim((string)($flash['msg'] ?? ''));
-    $msgErr = ((int)($flash['err'] ?? 0) === 1);
-    $keepExpanded = ((int)($flash['expand'] ?? 0) === 1);
-    unset($_SESSION['admin_karty_flash']);
-}
 
 $isName = static function (string $v): bool {
     return (bool)preg_match('~^[a-z0-9_]{2,80}$~', $v);
@@ -52,17 +43,9 @@ $normalizeSoubor = static function (string $v) use ($isName): string {
     return $s;
 };
 
-$setFlashAndRedirect = static function (string $text, bool $isError, bool $expand = true) use ($formAction): never {
-    $_SESSION['admin_karty_flash'] = [
-        'msg' => $text,
-        'err' => $isError ? 1 : 0,
-        'expand' => $expand ? 1 : 0,
-    ];
-
-    $redirectUrl = $formAction;
-    echo '<script>window.location.replace(' . json_encode($redirectUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ');</script>';
-    echo '<noscript><meta http-equiv="refresh" content="0;url=' . h($redirectUrl) . '"></noscript>';
-    exit;
+$setFeedback = static function (string $text, bool $isError, bool $expand = true) use (&$msg, &$msgErr): void {
+    $msg = trim($text);
+    $msgErr = $isError;
 };
 
 $souborExists = static function (mysqli $conn, string $soubor, int $excludeId = 0): bool {
@@ -134,7 +117,7 @@ if ($isAdmin && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['a
             $stmt->execute();
             $stmt->close();
 
-            $setFlashAndRedirect('Karta byla pridana.', false, true);
+            $setFeedback('Karta byla pridana.', false, true);
         } elseif ($action === 'save') {
             $idKarta = (int)($_POST['id_karta'] ?? 0);
             $nazev = trim((string)($_POST['nazev'] ?? ''));
@@ -163,7 +146,7 @@ if ($isAdmin && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['a
             $stmt->execute();
             $stmt->close();
 
-            $setFlashAndRedirect('Zmena byla ulozena.', false, true);
+            $setFeedback('Zmena byla ulozena.', false, true);
         } elseif ($action === 'disable' || $action === 'enable') {
             $idKarta = (int)($_POST['id_karta'] ?? 0);
             $aktivni = ($action === 'enable') ? 1 : 0;
@@ -185,7 +168,7 @@ if ($isAdmin && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['a
             $stmt->execute();
             $stmt->close();
 
-            $setFlashAndRedirect(($aktivni === 1) ? 'Karta byla povolena.' : 'Karta byla zakazana.', false, true);
+            $setFeedback(($aktivni === 1) ? 'Karta byla povolena.' : 'Karta byla zakazana.', false, true);
         } elseif ($action === 'move_up' || $action === 'move_down') {
             $idKarta = (int)($_POST['id_karta'] ?? 0);
             if ($idKarta <= 0) {
@@ -264,7 +247,7 @@ if ($isAdmin && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['a
                 }
 
                 $conn->commit();
-                $setFlashAndRedirect('Poradi bylo upraveno.', false, true);
+                $setFeedback('Poradi bylo upraveno.', false, true);
             } catch (Throwable $e) {
                 $conn->rollback();
                 throw $e;
@@ -273,7 +256,7 @@ if ($isAdmin && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['a
             throw new RuntimeException('Neznama akce.');
         }
     } catch (Throwable $e) {
-        $setFlashAndRedirect($e->getMessage(), true, true);
+        $setFeedback($e->getMessage(), true, true);
     }
 }
 
@@ -461,7 +444,6 @@ ob_start();
 </div>
 <?php
 $card_min_html = (string)ob_get_clean();
-$startExpanded = $keepExpanded;
 
 ob_start();
 ?>

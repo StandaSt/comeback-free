@@ -1,5 +1,5 @@
 <?php
-// karty/admin_inicializace.php * Verze: V11 * Aktualizace: 29.03.2026
+// karty/admin_inicializace.php * Verze: V12 * Aktualizace: 02.04.2026
 
 declare(strict_types=1);
 
@@ -75,6 +75,7 @@ $card_min_html = ''
 
 ob_start();
 ?>
+
 <div class="table-wrap ram_normal bg_bila zaobleni_12">
 <table class="table ram_normal bg_bila radek_1_35">
   <thead>
@@ -111,12 +112,21 @@ ob_start();
         <?php endif; ?>
       </td>
     </tr>
+    <tr>
+      <td>inicializace/plnime_restia_objednavky.php</td>
+      <td>objednávky z Restie</td>
+      <td>
+        <form method="get" action="<?= h(cb_url('/inicializace/plnime_restia_objednavky.php')) ?>" class="odstup_vnejsi_0">
+          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Spustit</button>
+        </form>
+      </td>
+    </tr>
 </tbody>
 </table>
 </div>
 <?php
 $card_max_html = (string)ob_get_clean();
 
-// karty/admin_inicializace.php * Verze: V11 * Aktualizace: 29.03.2026
-// počet řádků 96
+// karty/admin_inicializace.php * Verze: V12 * Aktualizace: 02.04.2026
+// počet řádků 132
 ?>

@@ -29,7 +29,6 @@ $psError = '';
 $psErrCount = 0;
 
 $formAction = cb_url('/');
-$keepExpanded = isset($_GET['ps_p']) || isset($_GET['ps_per']) || isset($_GET['ps_f']) || isset($_GET['ps_sort']) || isset($_GET['ps_dir']);
 
 // Globální období je nastavené v hlavičce a drží se v session.
 $periodOd = trim((string)($_SESSION['cb_obdobi_od'] ?? ''));
@@ -314,7 +313,6 @@ $card_min_html = ''
     . '<p class="card_text txt_seda odstup_vnejsi_0">Pobočky: <strong>' . h($selectedPobText) . '</strong></p>'
     . '<p class="card_text txt_seda odstup_vnejsi_0">Řádků: <strong>' . h((string)$psTotal) . '</strong>, chyby: <strong>' . h((string)$psErrCount) . '</strong></p>';
 
-$startExpanded = $keepExpanded;
 
 $psBaseParams = [
     'ps_per=' . rawurlencode((string)$psPer),

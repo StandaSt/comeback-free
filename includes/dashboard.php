@@ -118,6 +118,7 @@ foreach ($karty as $kartaRow) {
     }
 }
 $dashGridClass = $dashColsClass . ' dash_nano_kde_' . $nanoKde;
+$cbLoginId = (int)($_SESSION['cb_id_login'] ?? 0);
 
 $renderItems = [];
 if ($nanoKde === 1) {
@@ -230,7 +231,7 @@ $renderCard = static function (array $karta, bool $isNano, string $gridStyle = '
 };
 ?>
 
-<div class="dash_grid gap_2 <?= h($dashGridClass) ?> displ_grid sirka100">
+<div class="dash_grid gap_2 <?= h($dashGridClass) ?> displ_grid sirka100" data-login-id="<?= h((string)$cbLoginId) ?>">
   <?php if (empty($karty)): ?>
     <section class="dash_card ram_normal bg_bila card_blue zaobleni_12" data-cb-dash-card="1">
       <div class="dash_card_body">

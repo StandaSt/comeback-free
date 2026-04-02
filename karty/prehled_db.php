@@ -1,5 +1,5 @@
 <?php
-// karty/prehled_db.php * Verze: V7 * Aktualizace: 02.04.2026
+// karty/prehled_db.php * Verze: V11 * Aktualizace: 02.04.2026
 declare(strict_types=1);
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
@@ -24,6 +24,32 @@ if (!function_exists('cb_prehled_db_scopes')) {
             ],
             'restia' => [
                 'label' => 'Restia',
+                'allow_wipe' => false,
+                'tables' => [
+                    'api_restia',
+                    'cis_doruceni',
+                    'cis_obj_platby',
+                    'cis_obj_platforma',
+                    'cis_obj_stav',
+                    'objednavky_restia',
+                    'obj_adresa',
+                    'obj_casy',
+                    'obj_ceny',
+                    'obj_import',
+                    'obj_kuryr',
+                    'obj_polozka_kds_tag',
+                    'obj_polozka_mod',
+                    'obj_polozky',
+                    'obj_raw',
+                    'obj_sluzba',
+                    'res_alergen',
+                    'res_cena',
+                    'res_kategorie',
+                    'res_polozky',
+                ],
+            ],
+            'restia_obj' => [
+                'label' => 'Restia objednávky',
                 'allow_wipe' => true,
                 'tables' => [
                     'api_restia',
@@ -42,6 +68,12 @@ if (!function_exists('cb_prehled_db_scopes')) {
                     'obj_polozky',
                     'obj_raw',
                     'obj_sluzba',
+                ],
+            ],
+            'restia_menu' => [
+                'label' => 'Restia menu',
+                'allow_wipe' => true,
+                'tables' => [
                     'res_alergen',
                     'res_cena',
                     'res_kategorie',
@@ -109,6 +141,7 @@ if (!function_exists('cb_prehled_db_scopes')) {
         ];
     }
 }
+
 
 if (!function_exists('cb_prehled_db_norm_scope')) {
     function cb_prehled_db_norm_scope(string $scope): string
@@ -371,11 +404,18 @@ if (!function_exists('cb_prehled_db_wipe_tables')) {
 }
 
 $page = cb_prehled_db_page();
-$scope = cb_prehled_db_norm_scope((string)($_REQUEST['db_scope'] ?? 'restia'));
 $scopes = cb_prehled_db_scopes();
+
+$scopeRequest = trim((string)($_REQUEST['db_scope'] ?? ''));
+if ($scopeRequest !== '') {
+    $scope = cb_prehled_db_norm_scope($scopeRequest);
+    $_SESSION['cb_prehled_db_scope'] = $scope;
+} else {
+    $scope = cb_prehled_db_norm_scope((string)($_SESSION['cb_prehled_db_scope'] ?? 'komplet'));
+}
+
 $conn = db();
 
-$postRedirectUrl = '';
 $msgOk = '';
 $msgErr = '';
 $wipeResult = [];
@@ -408,7 +448,6 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && (string)($_POST['db_acti
         cb_prehled_db_set_flash('err', $e->getMessage(), []);
     }
 
-    $postRedirectUrl = cb_url('/') . '?page=' . rawurlencode($page) . '&db_scope=' . rawurlencode($scope);
 }
 
 $flash = cb_prehled_db_get_flash();
@@ -458,7 +497,6 @@ try {
 }
 
 $wipeCode = (string)($_SESSION['cb_prehled_db_kod'][$scope] ?? '');
-$startExpanded = ((string)($_REQUEST['page'] ?? '') === $page) || $postRedirectUrl !== '' || $msgOk !== '' || $msgErr !== '';
 $cardRootId = 'prehled_db_root_' . substr(md5(__FILE__), 0, 8);
 $cleanUrl = cb_url('/');
 
@@ -489,19 +527,17 @@ $card_min_html = (string)ob_get_clean();
 
 ob_start();
 ?>
-<div id="<?= cb_prehled_db_h($cardRootId) ?>" class="table-wrap ram_normal bg_bila zaobleni_12 odstup_vnitrni_10" data-clean-url="<?= cb_prehled_db_h($cleanUrl) ?>" style="width:100%; box-sizing:border-box;">
-  <?php if ($postRedirectUrl !== ''): ?>
-    <script>
-      window.location.replace(<?= json_encode($postRedirectUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
-    </script>
-  <?php endif; ?>
-
+<div id="<?= cb_prehled_db_h($cardRootId) ?>" class="table-wrap ram_normal bg_bila zaobleni_12 odstup_vnitrni_10" style="width:100%; box-sizing:border-box;">
   <form method="get" action="<?= cb_prehled_db_h(cb_url('/')) ?>" class="odstup_vnejsi_0">
     <input type="hidden" name="page" value="<?= cb_prehled_db_h($page) ?>">
 
     <div class="displ_flex gap_8" style="flex-wrap:wrap; align-items:center;">
-      <?php foreach ($scopes as $key => $cfg): ?>
-        <label class="ram_normal bg_bila zaobleni_12 odstup_vnitrni_10" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+      <?php foreach (['komplet', 'restia_obj', 'restia_menu', 'smeny', 'reporty', 'system'] as $key): ?>
+        <?php $cfg = $scopes[$key]; ?>
+        <label
+          class="ram_normal zaobleni_12 odstup_vnitrni_10"
+          style="display:flex; align-items:center; gap:8px; cursor:pointer;"
+        >
           <input
             type="radio"
             name="db_scope"
@@ -509,7 +545,7 @@ ob_start();
             <?= $scope === $key ? 'checked' : '' ?>
             onchange="this.form.submit()"
           >
-          <span><?= cb_prehled_db_h((string)$cfg['label']) ?></span>
+          <span style="<?= $scope === $key ? 'font-weight:700;' : '' ?>"><?= cb_prehled_db_h((string)$cfg['label']) ?></span>
         </label>
       <?php endforeach; ?>
     </div>
@@ -525,15 +561,11 @@ ob_start();
     <div class="ram_normal bg_bila zaobleni_12 odstup_vnitrni_10 odstup_horni_10">
       <p class="card_text txt_zelena odstup_vnejsi_0"><?= cb_prehled_db_h($msgOk) ?></p>
       <?php if ($wipeResult !== []): ?>
-        <p class="card_text txt_seda odstup_vnejsi_0 odstup_horni_10">
-          <?php
-          $parts = [];
-          foreach ($wipeResult as $table => $count) {
-              $parts[] = $table . ': ' . $count;
-          }
-          echo cb_prehled_db_h(implode(' | ', $parts));
-          ?>
-        </p>
+        <div class="card_text txt_seda odstup_vnejsi_0 odstup_horni_10" style="display:flex; flex-wrap:wrap; gap:6px 10px;">
+          <?php foreach ($wipeResult as $table => $count): ?>
+            <span><?= cb_prehled_db_h($table . ': ' . $count) ?></span>
+          <?php endforeach; ?>
+        </div>
       <?php endif; ?>
       <form method="get" action="<?= cb_prehled_db_h(cb_url('/')) ?>" class="odstup_vnejsi_0 odstup_horni_10">
         <input type="hidden" name="page" value="<?= cb_prehled_db_h($page) ?>">
@@ -543,7 +575,7 @@ ob_start();
     </div>
   <?php endif; ?>
 
-  <div class="ram_normal bg_bila zaobleni_12 odstup_vnitrni_10 odstup_horni_10" style="display:inline-block; max-width:100%; box-sizing:border-box;">
+  <div class="ram_normal bg_bila zaobleni_12 odstup_vnitrni_10 odstup_horni_10" style="display:flex; justify-content:center;">
     <table class="table ram_normal bg_bila radek_1_35" style="width:auto; table-layout:auto;">
       <thead>
         <tr>
@@ -583,7 +615,7 @@ ob_start();
         <input type="hidden" name="db_scope" value="<?= cb_prehled_db_h($scope) ?>">
         <input type="hidden" name="db_action" value="wipe">
 
-        <div class="displ_flex gap_8" style="align-items:center; flex-wrap:wrap;">
+        <div class="displ_flex gap_8" style="align-items:center; justify-content:center; flex-wrap:wrap;">
           <span class="card_text txt_seda">Zadej bezpečnostní kód: <strong><?= cb_prehled_db_h($wipeCode) ?></strong></span>
           <input
             type="text"
@@ -599,75 +631,10 @@ ob_start();
     </div>
   <?php endif; ?>
 </div>
-<script>
-(function () {
-    var root = document.getElementById(<?= json_encode($cardRootId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
-    if (!root) {
-        return;
-    }
-
-    var cleanUrl = root.getAttribute('data-clean-url') || '';
-    var wasVisible = isVisible(root);
-
-    function isVisible(node) {
-        if (!node || !node.isConnected) {
-            return false;
-        }
-
-        var style = window.getComputedStyle(node);
-        if (style.display === 'none' || style.visibility === 'hidden') {
-            return false;
-        }
-
-        var rect = node.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0;
-    }
-
-    function hasDirtyState() {
-        var url = new URL(window.location.href);
-        return url.searchParams.get('page') === <?= json_encode($page, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-    }
-
-    function resetUrl() {
-        if (cleanUrl !== '' && window.history && typeof window.history.replaceState === 'function') {
-            window.history.replaceState({}, document.title, cleanUrl);
-        }
-    }
-
-    function checkState() {
-        var visible = isVisible(root);
-
-        if (wasVisible && !visible && hasDirtyState()) {
-            resetUrl();
-        }
-
-        wasVisible = visible;
-    }
-
-    document.addEventListener('click', function () {
-        window.setTimeout(checkState, 50);
-    }, true);
-
-    window.addEventListener('resize', checkState);
-    document.addEventListener('visibilitychange', checkState);
-
-    var observer = new MutationObserver(function () {
-        checkState();
-    });
-
-    observer.observe(document.body, {
-        attributes: true,
-        childList: true,
-        subtree: true
-    });
-
-    window.setInterval(checkState, 400);
-})();
-</script>
 <?php
 $card_max_html = (string)ob_get_clean();
 
-/* karty/prehled_db.php * Verze: V7 * Aktualizace: 02.04.2026 */
-// Počet řádků: 620
-// Předchozí počet řádků: 552
+/* karty/prehled_db.php * Verze: V11 * Aktualizace: 02.04.2026 */
+// Počet řádků: 640
+// Předchozí počet řádků: 640
 ?>
