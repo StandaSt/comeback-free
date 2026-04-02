@@ -1,80 +1,68 @@
-START: 2026-04-02 00:32:51
+START: 2026-04-02 06:01:16
 SCRIPT: 01_restia_import_den.php
 VERSION: V8
-ID_POB: 1
-DATUM: 2026-03-07
-OD_LOCAL: 2026-03-06 05:00:00
-DO_LOCAL: 2026-03-07 05:00:00
-POBOCKA: Malešice | activePosId=
-OD_UTC: 2026-03-06T04:00:00.000Z
-DO_UTC: 2026-03-07T04:00:00.000Z
-ID_IMPORT: 9
+ID_POB: 4
+DATUM: 2026-04-02
+OD_LOCAL: 2026-04-01 05:00:00
+DO_LOCAL: 2026-04-02 05:00:00
+POBOCKA: Prosek | activePosId=3eb8bd65-26d6-4fa9-a20b-19705f856f17
+OD_UTC: 2026-04-01T03:00:00.000Z
+DO_UTC: 2026-04-02T03:00:00.000Z
+ID_IMPORT: 3
 PAGE_START: 1
-PAGE_OK: page=1 http=200 total=49 count=49 ms=518 bytes=138725
-OK order 60d78683-ab51-474a-898c-f8e6153a3974: id_obj=342 polozky=1 mod=0 kds=0 kuryr=1 sluzby=1
-OK order 9975d4ea-e043-4c63-b090-9d4a89a7bab5: id_obj=343 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 71f4941f-e451-468a-aaa8-747112071863: id_obj=344 polozky=4 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 8e0b13d3-1b69-4a07-b0c1-4e41c731d899: id_obj=345 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 4997908a-3ded-43a4-8328-9a003a82db9c: id_obj=346 polozky=2 mod=0 kds=0 kuryr=1 sluzby=1
-OK order cb464350-1905-44ce-9f23-7f5211c05e04: id_obj=347 polozky=5 mod=0 kds=0 kuryr=1 sluzby=0
-OK order 69601573-587c-46d7-bab7-ad9eb1310855: id_obj=348 polozky=3 mod=0 kds=0 kuryr=0 sluzby=0
-OK order b48d3750-f9e1-411d-a5a6-e302f507115a: id_obj=349 polozky=1 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 75a758e2-43fc-4c32-bc85-28726a0139bb: id_obj=350 polozky=1 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 10803da0-74b9-4dd4-949b-f9f3bece7fcd: id_obj=351 polozky=1 mod=0 kds=0 kuryr=0 sluzby=0
-OK order f721c8d6-6567-4907-ab08-e8d7f443ac84: id_obj=352 polozky=3 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 1004ece3-229c-49ab-9596-be89ca22fbfb: id_obj=353 polozky=4 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 59f7e696-8ef3-4d5c-959f-f6e3908f3c81: id_obj=354 polozky=3 mod=0 kds=0 kuryr=1 sluzby=0
-OK order 53932c61-be3e-4935-b549-d4024947787c: id_obj=355 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 39953b53-81c2-4ef4-a8dd-9325ecee83b2: id_obj=356 polozky=5 mod=0 kds=0 kuryr=0 sluzby=0
-OK order e2405a9d-655a-4a36-b4c8-766ea98c24a2: id_obj=357 polozky=4 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 953cb96b-abac-4fe9-ba5d-60c75ad394e3: id_obj=358 polozky=4 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 767007d5-d8f7-42dd-8143-a0e7f6459d33: id_obj=359 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 6c32ee69-cea1-43b1-ac98-2c7c2541426d: id_obj=360 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
-OK order d71ac072-0cb7-4409-9681-e36332c544cf: id_obj=361 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 730d0410-5b36-4d22-b7af-abe6547c7d0e: id_obj=362 polozky=4 mod=0 kds=0 kuryr=0 sluzby=0
-OK order ae6f3df6-4c3c-4266-9a57-7895013c5556: id_obj=363 polozky=1 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 2a2b719f-49fe-47f5-941a-a3eaad6ff5d3: id_obj=364 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 14784cff-a72d-4950-a325-1fad8eda734d: id_obj=365 polozky=5 mod=0 kds=1 kuryr=0 sluzby=0
-OK order da0d314d-c377-45c6-bbcd-e33eea969566: id_obj=366 polozky=4 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 260b6a3b-9339-492e-90fa-0790e3ac932a: id_obj=367 polozky=2 mod=0 kds=0 kuryr=1 sluzby=1
-OK order 4049c351-f4bc-48d8-a411-0ce15b250174: id_obj=368 polozky=3 mod=0 kds=0 kuryr=0 sluzby=0
-OK order b15b4647-6726-4ee4-bd32-09d59cbd8a36: id_obj=369 polozky=3 mod=0 kds=0 kuryr=1 sluzby=1
-OK order 2063e702-739e-439d-a077-e73af06901fd: id_obj=370 polozky=6 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 6481190e-b5aa-48ac-b75b-83f55d47fc5a: id_obj=371 polozky=8 mod=0 kds=0 kuryr=0 sluzby=0
-OK order d4415f9d-667f-4298-b395-245db5f10356: id_obj=372 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
-OK order cfbe0f29-d563-433a-a65e-ba6c67f09a5e: id_obj=373 polozky=1 mod=0 kds=0 kuryr=1 sluzby=1
-OK order f0fb2957-0bfb-43cf-9195-eab165a92d4b: id_obj=374 polozky=1 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 254101d0-6fa2-4dbb-a6e2-9eb2de10434f: id_obj=375 polozky=4 mod=0 kds=0 kuryr=1 sluzby=1
-OK order 64490f6b-d652-44b0-97af-a4d2ac88cc1c: id_obj=376 polozky=1 mod=0 kds=0 kuryr=0 sluzby=0
-OK order a6be1e15-6c74-445f-8ff9-89cae4562e97: id_obj=377 polozky=7 mod=0 kds=1 kuryr=0 sluzby=0
-OK order aaa00ac8-42b0-410f-8485-8396091d585b: id_obj=378 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 056ea218-5d26-4886-bb25-23f885799804: id_obj=379 polozky=1 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 98d7b31a-bc33-4ba7-8d7b-4b192275298c: id_obj=380 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 579b46b7-6fdb-42d4-9ed4-6e82309748e9: id_obj=381 polozky=4 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 53ed6ebb-044e-48d5-929e-27b3f1921d39: id_obj=382 polozky=6 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 8997f92e-71d8-49e8-bee7-9d2a08b3eab1: id_obj=383 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 7586a320-8b54-463f-a7c1-145a0f7cf171: id_obj=384 polozky=5 mod=0 kds=1 kuryr=0 sluzby=0
-OK order 38ab84d8-c533-42a2-834f-da0b469d8d73: id_obj=385 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 9ddeaf22-1ab0-4aae-a9df-5c6ac0a08239: id_obj=386 polozky=10 mod=0 kds=4 kuryr=0 sluzby=0
-OK order 118b3417-2282-43f0-9584-b09fe38e4c5a: id_obj=387 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
-OK order e45fc434-5879-4287-9f9b-6054e7a3159f: id_obj=388 polozky=1 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 1084e7a6-4147-4230-b4b5-4c3b128a1539: id_obj=389 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
-OK order 2a4b7f0b-07f7-45b4-8b31-cb4b002cf572: id_obj=390 polozky=3 mod=0 kds=0 kuryr=0 sluzby=0
+PAGE_OK: page=1 http=200 total=37 count=37 ms=351 bytes=100381
+OK order 74ddfc23-f20e-4c26-b71d-203dd67fc845: id_obj=1 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
+OK order 70d372d9-d0f2-4031-ac67-dc0395627346: id_obj=2 polozky=1 mod=0 kds=0 kuryr=1 sluzby=1
+OK order ab4a8927-ca67-4287-8903-5a08fec19dc6: id_obj=3 polozky=3 mod=0 kds=0 kuryr=0 sluzby=0
+OK order 856e5382-5fe2-46cf-9739-80d8614c5e36: id_obj=4 polozky=3 mod=0 kds=0 kuryr=1 sluzby=1
+OK order 3ee47e31-cd80-41de-93f2-459399071892: id_obj=5 polozky=6 mod=0 kds=2 kuryr=1 sluzby=0
+OK order 544d5d2e-9ec9-4110-a092-62514ea0323b: id_obj=6 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
+OK order 1915951b-74c2-4dee-a037-a289d88ab5db: id_obj=7 polozky=4 mod=0 kds=0 kuryr=0 sluzby=0
+OK order 8a067d37-627d-439e-b89a-3d96881f19fb: id_obj=8 polozky=4 mod=0 kds=1 kuryr=0 sluzby=0
+OK order bea6ec7f-1b23-4f76-8c1e-4f463395eadf: id_obj=9 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
+OK order d9765ea4-7ce5-4b76-9705-11c59531bc1d: id_obj=10 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
+OK order 93e5908a-f215-456b-aa20-8ada76840238: id_obj=11 polozky=4 mod=0 kds=0 kuryr=0 sluzby=0
+OK order a436905a-c6e0-450d-abc2-145adc76d725: id_obj=12 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
+OK order 305e854a-d817-45af-bdfd-db870977c1e7: id_obj=13 polozky=4 mod=0 kds=0 kuryr=0 sluzby=0
+OK order 37b99f62-994d-4397-a002-e554a5ba552f: id_obj=14 polozky=4 mod=0 kds=0 kuryr=0 sluzby=0
+OK order 1685fd35-5213-4d15-96bb-98922de603bf: id_obj=15 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
+OK order 7b2cc92e-32a9-436e-a0e7-c1897222ff14: id_obj=16 polozky=1 mod=0 kds=0 kuryr=1 sluzby=1
+OK order 94d56d5b-16d4-4969-ac05-f11338114e17: id_obj=17 polozky=1 mod=0 kds=0 kuryr=0 sluzby=0
+OK order 7c36a508-3857-4338-876f-64b607a9706f: id_obj=18 polozky=1 mod=0 kds=0 kuryr=0 sluzby=0
+OK order e6507774-9266-457a-8f20-cf5142de52a8: id_obj=19 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
+OK order 4b86a4bd-6349-43a1-a970-def608f0dade: id_obj=20 polozky=3 mod=0 kds=0 kuryr=0 sluzby=0
+OK order 7d512c0c-851f-4246-99c0-1d3c9ad497c5: id_obj=21 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
+OK order 6b055fa3-3c5f-4d5d-9aee-cc174632ce2e: id_obj=22 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
+OK order b2e0c1b8-66de-4e2e-8b43-edf22f45c903: id_obj=23 polozky=2 mod=0 kds=1 kuryr=0 sluzby=0
+OK order 20bb5ef1-6b06-4545-a715-2a1d90b2ae46: id_obj=24 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
+OK order 3a81305f-567c-4b15-871c-1c3423297920: id_obj=25 polozky=3 mod=0 kds=1 kuryr=1 sluzby=1
+OK order 3358879c-1a4e-4d2c-8efc-17eae11d513e: id_obj=26 polozky=1 mod=0 kds=0 kuryr=0 sluzby=0
+OK order a939cc94-3236-4f72-886f-e67e68d7df59: id_obj=27 polozky=6 mod=0 kds=0 kuryr=0 sluzby=0
+OK order 681e121f-f9b4-4275-8330-eb44fe909d53: id_obj=28 polozky=1 mod=0 kds=0 kuryr=0 sluzby=0
+OK order 7bafa4a8-d31c-4c6a-93b7-df1898e2c639: id_obj=29 polozky=1 mod=0 kds=0 kuryr=0 sluzby=0
+OK order 771f7127-acf8-4011-ae09-4efe741612b7: id_obj=30 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
+OK order e13349c1-ed64-427f-b49a-dc0a5deba851: id_obj=31 polozky=1 mod=0 kds=0 kuryr=0 sluzby=0
+OK order 4f75e4c3-0639-4d86-bd5b-60dcad509267: id_obj=32 polozky=2 mod=0 kds=1 kuryr=0 sluzby=0
+OK order 93a4cd16-ce7d-46cd-82c1-03f57fcb23a9: id_obj=33 polozky=4 mod=0 kds=0 kuryr=1 sluzby=1
+OK order ed3bde02-99b8-4261-a035-5fab968c9532: id_obj=34 polozky=1 mod=0 kds=0 kuryr=0 sluzby=0
+OK order 0959696a-a429-4752-a7be-7ab954e36888: id_obj=35 polozky=1 mod=0 kds=0 kuryr=0 sluzby=0
+OK order 139221b8-4e90-43e4-8261-770e0f518bc2: id_obj=36 polozky=2 mod=0 kds=0 kuryr=0 sluzby=0
+OK order ad6782c8-6974-43f6-bf6a-f93cfd1306c3: id_obj=37 polozky=1 mod=0 kds=0 kuryr=0 sluzby=0
 
 SUMMARY:
-  id_import: 9
+  id_import: 3
   stav: ok
-  pocet_obj: 49
-  pocet_novych: 49
-  pocet_zmenenych: 0
+  pocet_obj: 37
+  pocet_novych: 0
+  pocet_zmenenych: 37
   pocet_chyb: 0
   pages: 1
-  polozky: 149
+  polozky: 87
   modifikatory: 0
-  kds_tagy: 7
-  kuryri: 8
-  sluzby: 6
-  poznamka: Import den hotov. id_pob=1 datum=2026-03-07 od=2026-03-06 05:00:00 do=2026-03-07 05:00:00 pages=1 polozky=149
+  kds_tagy: 6
+  kuryri: 6
+  sluzby: 5
+  poznamka: Import den hotov. id_pob=4 datum=2026-04-02 od=2026-04-01 05:00:00 do=2026-04-02 05:00:00 pages=1 polozky=87
 API_RESTIA: flush OK
 TXT: C:\xampp\htdocs\comeback\admin_testy/01_restia_import_den.txt
-END: 2026-04-02 00:32:52
+END: 2026-04-02 06:01:16

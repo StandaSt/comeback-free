@@ -155,6 +155,39 @@ if (!function_exists('get_selected_pobocky')) {
     }
 }
 
+if (!function_exists('cb_pobocky_load_selected_from_db')) {
+    /**
+     * @return int[]
+     */
+    function cb_pobocky_load_selected_from_db(int $idUser): array
+    {
+        if ($idUser <= 0) {
+            return [];
+        }
+
+        $conn = db();
+        $stmt = $conn->prepare('SELECT id_pob FROM user_pobocka_set WHERE id_user = ? ORDER BY id_pob ASC');
+        if ($stmt === false) {
+            throw new RuntimeException('Nepodarilo se pripravit dotaz na user_pobocka_set.');
+        }
+
+        $stmt->bind_param('i', $idUser);
+        $stmt->execute();
+        $res = $stmt->get_result();
+
+        $ids = [];
+        if ($res instanceof mysqli_result) {
+            while ($row = $res->fetch_assoc()) {
+                $ids[] = (int)($row['id_pob'] ?? 0);
+            }
+            $res->close();
+        }
+        $stmt->close();
+
+        return cb_pobocky_sanitize_ids($ids);
+    }
+}
+
 if (!function_exists('cb_pobocky_bootstrap_session')) {
     /**
      * Udrzi session stav vyberu pobocek konzistentni.
@@ -162,7 +195,46 @@ if (!function_exists('cb_pobocky_bootstrap_session')) {
     function cb_pobocky_bootstrap_session(): void
     {
         $selected = get_selected_pobocky();
-        cb_pobocky_set_selected($selected);
+        if ($selected) {
+            cb_pobocky_set_selected($selected);
+            return;
+        }
+
+        $cbUser = $_SESSION['cb_user'] ?? null;
+        $idUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
+        if ($idUser <= 0) {
+            return;
+        }
+
+        try {
+            $allowed = cb_pobocky_get_allowed_for_user($idUser);
+            $allowedIds = cb_pobocky_sanitize_ids($allowed['ids'] ?? []);
+            if (!$allowedIds) {
+                return;
+            }
+
+            $allowedSet = array_fill_keys($allowedIds, true);
+            $saved = cb_pobocky_load_selected_from_db($idUser);
+
+            $valid = [];
+            foreach ($saved as $idPob) {
+                if (isset($allowedSet[$idPob])) {
+                    $valid[] = (int)$idPob;
+                }
+            }
+            $valid = cb_pobocky_sanitize_ids($valid);
+
+            if ($valid) {
+                cb_pobocky_set_selected($valid);
+                cb_pobocky_set_mode(count($valid) === 1 ? 'single' : 'custom', null);
+                return;
+            }
+
+            cb_pobocky_set_selected([(int)$allowedIds[0]]);
+            cb_pobocky_set_mode('single', null);
+        } catch (Throwable $e) {
+            // Tichy fail: hlavicka se vykresli bez predvyberu.
+        }
     }
 }
 

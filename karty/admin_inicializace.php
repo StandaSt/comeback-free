@@ -13,6 +13,23 @@ $cbReportDate = 'Ne';
 
 $cbSmenyPlanMaData = false;
 $cbReportMaData = false;
+$cbRunRestia = (
+    isset($_POST['run_restia_obj']) && (string)$_POST['run_restia_obj'] === '1'
+);
+$cbRunRestiaMenu = (
+    isset($_POST['run_restia_menu']) && (string)$_POST['run_restia_menu'] === '1'
+);
+$cbRestiaState = $_SESSION['cb_restia_hist_v4_state'] ?? null;
+$cbKeepRestiaMax = false;
+if (is_array($cbRestiaState)) {
+    $cbKeepRestiaMax = (
+        (int)($cbRestiaState['finished'] ?? 0) === 0
+        && (
+            (int)($cbRestiaState['auto_next'] ?? 0) === 1
+            || (int)($cbRestiaState['waiting_continue'] ?? 0) === 1
+        )
+    );
+}
 
 $qRestia = db()->query('SELECT COALESCE(MAX(id_obj), 0) AS cnt, MAX(`import`) AS dt FROM objednavky_restia');
 if ($qRestia instanceof mysqli_result) {
@@ -116,7 +133,18 @@ ob_start();
       <td>inicializace/plnime_restia_objednavky.php</td>
       <td>objednávky z Restie</td>
       <td>
-        <form method="get" action="<?= h(cb_url('/inicializace/plnime_restia_objednavky.php')) ?>" class="odstup_vnejsi_0">
+        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0">
+          <input type="hidden" name="run_restia_obj" value="1">
+          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Spustit</button>
+        </form>
+      </td>
+    </tr>
+    <tr>
+      <td>inicializace/plnime_restia_menu.php</td>
+      <td>menu z Restie</td>
+      <td>
+        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0">
+          <input type="hidden" name="run_restia_menu" value="1">
           <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Spustit</button>
         </form>
       </td>
@@ -126,6 +154,20 @@ ob_start();
 </div>
 <?php
 $card_max_html = (string)ob_get_clean();
+
+if ($cbRunRestia || $cbKeepRestiaMax) {
+    $startExpanded = true;
+    ob_start();
+    require __DIR__ . '/../inicializace/plnime_restia_objednavky.php';
+    $card_max_html .= (string)ob_get_clean();
+}
+
+if ($cbRunRestiaMenu) {
+    $startExpanded = true;
+    ob_start();
+    require __DIR__ . '/../inicializace/plnime_restia_menu.php';
+    $card_max_html .= (string)ob_get_clean();
+}
 
 // karty/admin_inicializace.php * Verze: V12 * Aktualizace: 02.04.2026
 // počet řádků 132

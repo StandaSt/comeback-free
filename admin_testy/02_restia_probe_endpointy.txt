@@ -1,0 +1,324 @@
+RESTIA PROBE ENDPOINTY – START
+kdy: 2026-04-02 05:47:00
+verze: V1
+soubor: admin_testy/02_restia_probe_endpointy.php
+------------------------------------------------------------
+id_user: 1
+id_login: 1127
+------------------------------------------------------------
+
+TEST #1
+endpoint: /api/profiles
+query: []
+ok: 1
+http_status: 200
+total_count: 4
+valid_json: 1
+root_type: list
+count: 4
+keys: []
+hits: ["posId","menuId","name","id"]
+BODY PREVIEW:
+[{"id":"ad1a379d-dd5a-440d-979b-1c59a2fe38b6","posId":"3eb8bd65-26d6-4fa9-a20b-19705f856f17","type":"bolt","key":"vGF2BmlrPz","name":"Pizza Comeback Bolevec","isEnabled":true,"createdAt":"2025-07-17T13:23:16.486Z","configData":{},"orderConfirmation":"auto","orderConfirmationOptions":{"isEnabled":true,"forcedConfirmMinutes":15},"internalStatusData":{},"approvedToMenuUpload":true,"menuUploadData":{"status":"completed","updatedAt":"2026-03-18T12:53:22.082Z"},"menuId":"762f8daa-ca39-4d8f-ae4a-d22b4d106e88","lastMenuSync":"2026-03-18T12:53:22.082Z","url":"https://food.bolt.eu/cs-cz/427-plzen/p/159586-pizza-comeback/"},{"id":"5cbd8e05-4cdb-4711-86df-606cbf9e6845","posId":"3eb8bd65-26d6-4fa9-a20b-19705f856f17","type":"damejidlo","key":"bams","name":"Pizza Comeback Bolevec","isEnabled":true,"createdAt":"2025-07-17T13:23:34.739Z","configData":{},"orderConfirmation":"auto","orderConfirmationOptions":{"isEnabled":true,"forcedConfirmMinutes":15},"internalStatusData":{},"approvedToMenuUpload":true,"menuUploadData":{"status":"completed","updatedAt":"2026-03-18T12:53:18.440Z"},"menuId":"762f8daa-ca39-4d8f-ae4a-d22b4d106e88","lastMenuSync":"2026-03-18T12:53:18.440Z","url":""},{"id":"808397a3-7dd5-
+...[zkráceno]...
+------------------------------------------------------------
+
+TEST #2
+endpoint: /api/profile
+query: []
+ok: 0
+http_status: 404
+total_count: null
+valid_json: 0
+root_type: unknown
+count: null
+keys: []
+hits: []
+BODY PREVIEW:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Cannot GET /api/profile</pre>
+</body>
+</html>
+------------------------------------------------------------
+
+TEST #3
+endpoint: /api/pos
+query: []
+ok: 1
+http_status: 200
+total_count: null
+valid_json: 1
+root_type: object
+count: 29
+keys: ["countryPhonePrefix","id","type","jsonData","predefinedIds","dispecinkConfig","additionalConfig","paymentsConfig","cancelsConfig","receiptInfo","reportEmail","phoneNotificationKey","openingHours","lastProductSync","adminId","isDemo","isMaster","name","country","smsSettings","settingsStatus","appDisplaySettings","vendorLocation","vendorPhone","vendorStatus"]
+hits: ["profile","profiles","posId","name","id"]
+BODY PREVIEW:
+{"countryPhonePrefix":"00420","id":"3eb8bd65-26d6-4fa9-a20b-19705f856f17","type":"mefisto","jsonData":{"login":"RESTIA","restId":"6","password":"Api*PizzaComeback-2023","isEnabled":true,"serverUrl":"http://80.211.212.62:8110"},"predefinedIds":{"tip":"SP0001","default":"K0000","packing":"K0000","delivery":"DP0000","discount":"250","serviceFee":"DM0005","surchargeToMin":"DM0001"},"dispecinkConfig":{"isEnabled":true,"transferTakeaway":false},"additionalConfig":{"payments":{"bolt":[{"profileId":"ad1a379d-dd5a-440d-979b-1c59a2fe38b6","deliveryConfig":{"paymentType":"cash","paymentPosId":"4"},"takeawayConfig":{"paymentType":"cash","paymentPosId":"4"}},{"profileId":"ad1a379d-dd5a-440d-979b-1c59a2fe38b6","deliveryConfig":{"paymentType":"card","paymentPosId":"4"},"takeawayConfig":{"paymentType":"card","paymentPosId":"4"}},{"profileId":"ad1a379d-dd5a-440d-979b-1c59a2fe38b6","deliveryConfig":{"paymentType":"online","paymentPosId":"4"},"takeawayConfig":{"paymentType":"online","paymentPosId":"4"}}],"wolt":[{"profileId":"808397a3-7dd5-4c65-b9ba-ab2cfd2776c4","deliveryConfig":{"paymentType":"cash","paymentPosId":"4"},"takeawayConfig":{"paymentType":"cash","paymentPosId":"4"}},{"profileId":"808397
+...[zkráceno]...
+------------------------------------------------------------
+
+TEST #4
+endpoint: /api/positions
+query: []
+ok: 0
+http_status: 404
+total_count: null
+valid_json: 0
+root_type: unknown
+count: null
+keys: []
+hits: []
+BODY PREVIEW:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Cannot GET /api/positions</pre>
+</body>
+</html>
+------------------------------------------------------------
+
+TEST #5
+endpoint: /api/branches
+query: []
+ok: 0
+http_status: 404
+total_count: null
+valid_json: 0
+root_type: unknown
+count: null
+keys: []
+hits: []
+BODY PREVIEW:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Cannot GET /api/branches</pre>
+</body>
+</html>
+------------------------------------------------------------
+
+TEST #6
+endpoint: /api/stores
+query: []
+ok: 0
+http_status: 404
+total_count: null
+valid_json: 0
+root_type: unknown
+count: null
+keys: []
+hits: []
+BODY PREVIEW:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Cannot GET /api/stores</pre>
+</body>
+</html>
+------------------------------------------------------------
+
+TEST #7
+endpoint: /api/shops
+query: []
+ok: 0
+http_status: 404
+total_count: null
+valid_json: 0
+root_type: unknown
+count: null
+keys: []
+hits: []
+BODY PREVIEW:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Cannot GET /api/shops</pre>
+</body>
+</html>
+------------------------------------------------------------
+
+TEST #8
+endpoint: /api/eshops
+query: []
+ok: 0
+http_status: 404
+total_count: null
+valid_json: 0
+root_type: unknown
+count: null
+keys: []
+hits: []
+BODY PREVIEW:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Cannot GET /api/eshops</pre>
+</body>
+</html>
+------------------------------------------------------------
+
+TEST #9
+endpoint: /api/menu
+query: []
+ok: 1
+http_status: 200
+total_count: 1
+valid_json: 1
+root_type: list
+count: 1
+keys: []
+hits: ["name","id"]
+BODY PREVIEW:
+[{"id":"762f8daa-ca39-4d8f-ae4a-d22b4d106e88","name":"Hlavní menu","createdAt":"2025-07-17T08:14:49.225Z","updatedAt":"2026-03-10T20:16:34.658Z"}]
+------------------------------------------------------------
+
+TEST #10
+endpoint: /api/menus
+query: []
+ok: 0
+http_status: 404
+total_count: null
+valid_json: 0
+root_type: unknown
+count: null
+keys: []
+hits: []
+BODY PREVIEW:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Cannot GET /api/menus</pre>
+</body>
+</html>
+------------------------------------------------------------
+
+TEST #11
+endpoint: /api/orders
+query: {"page":1,"limit":20,"createdFrom":"2026-03-03T00:00:00Z","createdTo":"2026-04-02T23:59:59Z"}
+ok: 1
+http_status: 200
+total_count: 1186
+valid_json: 1
+root_type: list
+count: 20
+keys: []
+hits: ["profile","posId","menuId","shop","name","id"]
+BODY PREVIEW:
+[{"id":"74ddfc23-f20e-4c26-b71d-203dd67fc845","orderNumber":"260401006","shortCode":"x260401006x","serialNumber":"037","token":null,"destination":{"zip":null,"city":null,"note":null,"street":null,"latitude":null,"longitude":null},"customerName":"Miloš Vondráček","customerPhone":"+420728385670","customerEmail":"milosvondracek93@gmail.com","customerNote":null,"createdAt":"2026-04-01T21:59:01.000Z","expiresAt":null,"deliveryAt":"2026-04-01T22:19:01.000Z","promisedAt":"2026-04-01T22:19:01.000Z","pickupAt":"2026-04-01T22:19:01.000Z","prepareAt":"2026-04-01T22:05:04.790Z","cookingTimeMinutes":5,"deliveryOnTime":false,"finishedAt":"2026-04-01T22:11:55.981Z","preparedAt":"2026-04-01T22:11:55.981Z","deliveredAt":"2026-04-01T22:19:57.179Z","originalRequiredAt":"2026-04-01T22:19:01.000Z","isPickup":true,"paymentType":"cash","surchargeToMin":"0","deliveryPrice":"0","packingPrice":"0","tipPrice":"0","itemsPrice":"31800","serviceFeePrice":"0","discountPrice":"6400","roundingPrice":"0","discountCode":null,"servicesData":null,"courierData":null,"courierOrder":null,"note":"","info":null,"deliveryZone":null,"isSelfDelivery":false,"isInRestaurant":false,"deliveryType":"pickup","posImportStatus":"succ
+...[zkráceno]...
+------------------------------------------------------------
+
+TEST #12
+endpoint: /api/orders
+query: {"page":1,"limit":20}
+ok: 1
+http_status: 200
+total_count: 75
+valid_json: 1
+root_type: list
+count: 20
+keys: []
+hits: ["profile","posId","menuId","shop","name","id"]
+BODY PREVIEW:
+[{"id":"74ddfc23-f20e-4c26-b71d-203dd67fc845","orderNumber":"260401006","shortCode":"x260401006x","serialNumber":"037","token":null,"destination":{"zip":null,"city":null,"note":null,"street":null,"latitude":null,"longitude":null},"customerName":"Miloš Vondráček","customerPhone":"+420728385670","customerEmail":"milosvondracek93@gmail.com","customerNote":null,"createdAt":"2026-04-01T21:59:01.000Z","expiresAt":null,"deliveryAt":"2026-04-01T22:19:01.000Z","promisedAt":"2026-04-01T22:19:01.000Z","pickupAt":"2026-04-01T22:19:01.000Z","prepareAt":"2026-04-01T22:05:04.790Z","cookingTimeMinutes":5,"deliveryOnTime":false,"finishedAt":"2026-04-01T22:11:55.981Z","preparedAt":"2026-04-01T22:11:55.981Z","deliveredAt":"2026-04-01T22:19:57.179Z","originalRequiredAt":"2026-04-01T22:19:01.000Z","isPickup":true,"paymentType":"cash","surchargeToMin":"0","deliveryPrice":"0","packingPrice":"0","tipPrice":"0","itemsPrice":"31800","serviceFeePrice":"0","discountPrice":"6400","roundingPrice":"0","discountCode":null,"servicesData":null,"courierData":null,"courierOrder":null,"note":"","info":null,"deliveryZone":null,"isSelfDelivery":false,"isInRestaurant":false,"deliveryType":"pickup","posImportStatus":"succ
+...[zkráceno]...
+------------------------------------------------------------
+
+TEST #13
+endpoint: /api/orders
+query: {"page":1,"limit":20,"status":"delivered"}
+ok: 1
+http_status: 200
+total_count: 74
+valid_json: 1
+root_type: list
+count: 20
+keys: []
+hits: ["profile","posId","menuId","shop","name","id"]
+BODY PREVIEW:
+[{"id":"74ddfc23-f20e-4c26-b71d-203dd67fc845","orderNumber":"260401006","shortCode":"x260401006x","serialNumber":"037","token":null,"destination":{"zip":null,"city":null,"note":null,"street":null,"latitude":null,"longitude":null},"customerName":"Miloš Vondráček","customerPhone":"+420728385670","customerEmail":"milosvondracek93@gmail.com","customerNote":null,"createdAt":"2026-04-01T21:59:01.000Z","expiresAt":null,"deliveryAt":"2026-04-01T22:19:01.000Z","promisedAt":"2026-04-01T22:19:01.000Z","pickupAt":"2026-04-01T22:19:01.000Z","prepareAt":"2026-04-01T22:05:04.790Z","cookingTimeMinutes":5,"deliveryOnTime":false,"finishedAt":"2026-04-01T22:11:55.981Z","preparedAt":"2026-04-01T22:11:55.981Z","deliveredAt":"2026-04-01T22:19:57.179Z","originalRequiredAt":"2026-04-01T22:19:01.000Z","isPickup":true,"paymentType":"cash","surchargeToMin":"0","deliveryPrice":"0","packingPrice":"0","tipPrice":"0","itemsPrice":"31800","serviceFeePrice":"0","discountPrice":"6400","roundingPrice":"0","discountCode":null,"servicesData":null,"courierData":null,"courierOrder":null,"note":"","info":null,"deliveryZone":null,"isSelfDelivery":false,"isInRestaurant":false,"deliveryType":"pickup","posImportStatus":"succ
+...[zkráceno]...
+------------------------------------------------------------
+
+TEST #14
+endpoint: /api/orders
+query: {"page":1,"limit":20,"source":"all"}
+ok: 1
+http_status: 200
+total_count: 75
+valid_json: 1
+root_type: list
+count: 20
+keys: []
+hits: ["profile","posId","menuId","shop","name","id"]
+BODY PREVIEW:
+[{"id":"74ddfc23-f20e-4c26-b71d-203dd67fc845","orderNumber":"260401006","shortCode":"x260401006x","serialNumber":"037","token":null,"destination":{"zip":null,"city":null,"note":null,"street":null,"latitude":null,"longitude":null},"customerName":"Miloš Vondráček","customerPhone":"+420728385670","customerEmail":"milosvondracek93@gmail.com","customerNote":null,"createdAt":"2026-04-01T21:59:01.000Z","expiresAt":null,"deliveryAt":"2026-04-01T22:19:01.000Z","promisedAt":"2026-04-01T22:19:01.000Z","pickupAt":"2026-04-01T22:19:01.000Z","prepareAt":"2026-04-01T22:05:04.790Z","cookingTimeMinutes":5,"deliveryOnTime":false,"finishedAt":"2026-04-01T22:11:55.981Z","preparedAt":"2026-04-01T22:11:55.981Z","deliveredAt":"2026-04-01T22:19:57.179Z","originalRequiredAt":"2026-04-01T22:19:01.000Z","isPickup":true,"paymentType":"cash","surchargeToMin":"0","deliveryPrice":"0","packingPrice":"0","tipPrice":"0","itemsPrice":"31800","serviceFeePrice":"0","discountPrice":"6400","roundingPrice":"0","discountCode":null,"servicesData":null,"courierData":null,"courierOrder":null,"note":"","info":null,"deliveryZone":null,"isSelfDelivery":false,"isInRestaurant":false,"deliveryType":"pickup","posImportStatus":"succ
+...[zkráceno]...
+------------------------------------------------------------
+
+TEST #15
+endpoint: /api/orders
+query: {"page":1,"limit":20,"includeProfile":"1"}
+ok: 1
+http_status: 200
+total_count: 75
+valid_json: 1
+root_type: list
+count: 20
+keys: []
+hits: ["profile","posId","menuId","shop","name","id"]
+BODY PREVIEW:
+[{"id":"74ddfc23-f20e-4c26-b71d-203dd67fc845","orderNumber":"260401006","shortCode":"x260401006x","serialNumber":"037","token":null,"destination":{"zip":null,"city":null,"note":null,"street":null,"latitude":null,"longitude":null},"customerName":"Miloš Vondráček","customerPhone":"+420728385670","customerEmail":"milosvondracek93@gmail.com","customerNote":null,"createdAt":"2026-04-01T21:59:01.000Z","expiresAt":null,"deliveryAt":"2026-04-01T22:19:01.000Z","promisedAt":"2026-04-01T22:19:01.000Z","pickupAt":"2026-04-01T22:19:01.000Z","prepareAt":"2026-04-01T22:05:04.790Z","cookingTimeMinutes":5,"deliveryOnTime":false,"finishedAt":"2026-04-01T22:11:55.981Z","preparedAt":"2026-04-01T22:11:55.981Z","deliveredAt":"2026-04-01T22:19:57.179Z","originalRequiredAt":"2026-04-01T22:19:01.000Z","isPickup":true,"paymentType":"cash","surchargeToMin":"0","deliveryPrice":"0","packingPrice":"0","tipPrice":"0","itemsPrice":"31800","serviceFeePrice":"0","discountPrice":"6400","roundingPrice":"0","discountCode":null,"servicesData":null,"courierData":null,"courierOrder":null,"note":"","info":null,"deliveryZone":null,"isSelfDelivery":false,"isInRestaurant":false,"deliveryType":"pickup","posImportStatus":"succ
+...[zkráceno]...
+------------------------------------------------------------
+
+TEST #16
+endpoint: /api/orders
+query: {"page":1,"limit":20,"withProfile":"1"}
+ok: 1
+http_status: 200
+total_count: 75
+valid_json: 1
+root_type: list
+count: 20
+keys: []
+hits: ["profile","posId","menuId","shop","name","id"]
+BODY PREVIEW:
+[{"id":"74ddfc23-f20e-4c26-b71d-203dd67fc845","orderNumber":"260401006","shortCode":"x260401006x","serialNumber":"037","token":null,"destination":{"zip":null,"city":null,"note":null,"street":null,"latitude":null,"longitude":null},"customerName":"Miloš Vondráček","customerPhone":"+420728385670","customerEmail":"milosvondracek93@gmail.com","customerNote":null,"createdAt":"2026-04-01T21:59:01.000Z","expiresAt":null,"deliveryAt":"2026-04-01T22:19:01.000Z","promisedAt":"2026-04-01T22:19:01.000Z","pickupAt":"2026-04-01T22:19:01.000Z","prepareAt":"2026-04-01T22:05:04.790Z","cookingTimeMinutes":5,"deliveryOnTime":false,"finishedAt":"2026-04-01T22:11:55.981Z","preparedAt":"2026-04-01T22:11:55.981Z","deliveredAt":"2026-04-01T22:19:57.179Z","originalRequiredAt":"2026-04-01T22:19:01.000Z","isPickup":true,"paymentType":"cash","surchargeToMin":"0","deliveryPrice":"0","packingPrice":"0","tipPrice":"0","itemsPrice":"31800","serviceFeePrice":"0","discountPrice":"6400","roundingPrice":"0","discountCode":null,"servicesData":null,"courierData":null,"courierOrder":null,"note":"","info":null,"deliveryZone":null,"isSelfDelivery":false,"isInRestaurant":false,"deliveryType":"pickup","posImportStatus":"succ
+...[zkráceno]...
+------------------------------------------------------------
+
+api_restia flush: OK
+
+TXT: C:\xampp\htdocs\comeback\admin_testy/02_restia_probe_endpointy.txt
+END: 2026-04-02 05:47:06

@@ -166,7 +166,7 @@ if ($cbLoginOk) {
         $idUser = (int)($cbUser['id_user'] ?? 0);
         if ($idUser > 0) {
             $sql = '
-                SELECT p.id_pob, p.nazev
+                SELECT p.id_pob, p.nazev, p.oblast
                 FROM user_pobocka up
                 INNER JOIN pobocka p ON p.id_pob = up.id_pob
                 WHERE up.id_user = ?
@@ -181,8 +181,12 @@ if ($cbLoginOk) {
                     while ($r = $res->fetch_assoc()) {
                         $id = (int)($r['id_pob'] ?? 0);
                         $nazev = trim((string)($r['nazev'] ?? ''));
+                        $oblast = trim((string)($r['oblast'] ?? ''));
+                        if ($oblast === '') {
+                            $oblast = 'Nezarazeno';
+                        }
                         if ($id > 0 && $nazev !== '') {
-                            $cbPobocky[] = ['id_pob' => $id, 'nazev' => $nazev];
+                            $cbPobocky[] = ['id_pob' => $id, 'nazev' => $nazev, 'oblast' => $oblast];
                         }
                     }
                     $res->close();
