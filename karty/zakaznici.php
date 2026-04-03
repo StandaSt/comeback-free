@@ -355,15 +355,15 @@ ob_start();
                 <th class="txt_r"> <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 icon-x small zaobleni_6 vyska_24 radek_24 displ_inline_flex" href="<?= h($formAction) ?>">&times;</a></th>
               </tr>
               <tr>
-                <th class="th-sort txt_r">Poř.č.</th>
-                <th class="th-sort txt_r">příjmení</th>
-                <th class="th-sort txt_l">jméno</th>
-                <th class="th-sort txt_l">telefon</th>
-                <th class="th-sort txt_r">email</th>
-                <th class="th-sort txt_r">ulice</th>
-                <th class="th-sort txt_r">město</th>
-                <th class="th-sort txt_l">pobočka</th>
-                <th class="th-sort txt_r">aktivita</th>
+                <th class="th-sort txt_r"><span class="th-sort-link gap_8 jc_mezi sirka100"><span class="th-sort-label">Poř.č.</span></span></th>
+                <th class="th-sort txt_r"><span class="th-sort-link gap_8 jc_mezi sirka100"><span class="th-sort-label">příjmení</span></span></th>
+                <th class="th-sort txt_l"><span class="th-sort-link gap_8 jc_mezi sirka100"><span class="th-sort-label">jméno</span></span></th>
+                <th class="th-sort txt_l"><span class="th-sort-link gap_8 jc_mezi sirka100"><span class="th-sort-label">telefon</span></span></th>
+                <th class="th-sort txt_r"><span class="th-sort-link gap_8 jc_mezi sirka100"><span class="th-sort-label">email</span></span></th>
+                <th class="th-sort txt_r"><span class="th-sort-link gap_8 jc_mezi sirka100"><span class="th-sort-label">ulice</span></span></th>
+                <th class="th-sort txt_r"><span class="th-sort-link gap_8 jc_mezi sirka100"><span class="th-sort-label">město</span></span></th>
+                <th class="th-sort txt_l"><span class="th-sort-link gap_8 jc_mezi sirka100"><span class="th-sort-label">pobočka</span></span></th>
+                <th class="th-sort txt_r"><span class="th-sort-link gap_8 jc_mezi sirka100"><span class="th-sort-label">aktivita</span></span></th>
               </tr>
             </thead>
             <tbody>

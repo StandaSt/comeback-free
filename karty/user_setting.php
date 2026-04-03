@@ -25,7 +25,7 @@ if ($usUserId > 0) {
             $postPismo = (int)($_POST['us_pismo'] ?? 2);
             $postDark = (int)($_POST['us_dark'] ?? 0);
 
-            if (!in_array($postPocetSl, [3, 4], true)) {
+            if (!in_array($postPocetSl, [3, 4, 5], true)) {
                 $postPocetSl = 4;
             }
             if (!in_array($postNanoKde, [0, 1], true)) {
@@ -59,7 +59,7 @@ if ($usUserId > 0) {
         $stmtSel->bind_result($dbPocetSl, $dbNanoKde, $dbPismo, $dbDark);
 
         if ($stmtSel->fetch()) {
-            $usPocetSl = in_array((int)$dbPocetSl, [3, 4], true) ? (int)$dbPocetSl : 4;
+            $usPocetSl = in_array((int)$dbPocetSl, [3, 4, 5], true) ? (int)$dbPocetSl : 4;
             $usNanoKde = in_array((int)$dbNanoKde, [0, 1], true) ? (int)$dbNanoKde : 0;
             $usPismo = in_array((int)$dbPismo, [1, 2, 3], true) ? (int)$dbPismo : 2;
             $usDark = in_array((int)$dbDark, [0, 1], true) ? (int)$dbDark : 0;
@@ -101,6 +101,7 @@ ob_start();
         <select class="card_select ram_sedy txt_seda vyska_32" name="us_pocet_sl">
           <option value="3"<?= $usPocetSl === 3 ? ' selected' : '' ?>>3 sloupce</option>
           <option value="4"<?= $usPocetSl === 4 ? ' selected' : '' ?>>4 sloupce</option>
+          <option value="5"<?= $usPocetSl === 5 ? ' selected' : '' ?>>5 sloupců</option>
         </select>
       </label>
 

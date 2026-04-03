@@ -193,6 +193,7 @@
     const absHref = new URL(href, w.location.href).toString();
     fetchAndSwap(form, prefix, absHref);
   }, true);
+
 })(window);
 
 // js/filtry.js * Verze: V7 * Aktualizace: 27.03.2026

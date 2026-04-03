@@ -30,6 +30,8 @@
   var odInput = document.getElementById('cbObdobiOd');
   var doInput = document.getElementById('cbObdobiDo');
   var quickBtns = document.querySelectorAll('.head_interval .head_pill[data-range]');
+  var odLabel = odInput ? odInput.closest('.head_date') : null;
+  var doLabel = doInput ? doInput.closest('.head_date') : null;
 
   if (!odInput || !doInput || !quickBtns.length) {
     return;
@@ -60,18 +62,36 @@
   function clampToToday(v){
     var dt = parseDate(v);
     if (!dt) return '';
-    var now = new Date();
-    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var today = getToday();
     if (dt.getTime() > today.getTime()) {
       dt = today;
     }
     return fmtDate(dt);
   }
 
+  function getToday(){
+    var now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+
+  function clampDateToToday(dt){
+    if (!(dt instanceof Date)) return null;
+    var today = getToday();
+    if (dt.getTime() > today.getTime()) {
+      return new Date(today);
+    }
+    return dt;
+  }
+
   function setActive(range){
     quickBtns.forEach(function(btn){
       btn.classList.toggle('is-on', btn.getAttribute('data-range') === range);
     });
+  }
+
+  function setManualHighlight(isManual){
+    if (odLabel) odLabel.classList.toggle('is-manual', !!isManual);
+    if (doLabel) doLabel.classList.toggle('is-manual', !!isManual);
   }
 
   function savePeriod(payload){
@@ -97,8 +117,7 @@
     var d = parseDate(ddo);
     if (!o || !d) return '';
 
-    var now = new Date();
-    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var today = getToday();
 
     var yFrom = new Date(today);
     yFrom.setDate(today.getDate() - 1);
@@ -112,12 +131,14 @@
     weekFrom.setDate(today.getDate() + mondayShift);
     var weekTo = new Date(weekFrom);
     weekTo.setDate(weekFrom.getDate() + 6);
+    weekTo = clampDateToToday(weekTo);
     if (fmtDate(o) === fmtDate(weekFrom) && fmtDate(d) === fmtDate(weekTo)) {
       return 'tyden';
     }
 
     var monthFrom = new Date(today.getFullYear(), today.getMonth(), 1);
     var monthTo = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    monthTo = clampDateToToday(monthTo);
     if (fmtDate(o) === fmtDate(monthFrom) && fmtDate(d) === fmtDate(monthTo)) {
       return 'mesic';
     }
@@ -131,8 +152,7 @@
   }
 
   function computeRange(range){
-    var now = new Date();
-    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var today = getToday();
     var from = new Date(today);
     var to = new Date(today);
 
@@ -147,12 +167,14 @@
       from.setDate(today.getDate() + mondayShift);
       to = new Date(from);
       to.setDate(from.getDate() + 6);
+      to = clampDateToToday(to);
       return { od: fmtDate(from), do: fmtDate(to) };
     }
 
     if (range === 'mesic') {
       from = new Date(today.getFullYear(), today.getMonth(), 1);
       to = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      to = clampDateToToday(to);
       return { od: fmtDate(from), do: fmtDate(to) };
     }
 
@@ -169,12 +191,14 @@
 
       if (currOd === val.od && currDo === val.do) {
         setActive(range);
+        setManualHighlight(false);
         return;
       }
 
       odInput.value = val.od;
       doInput.value = val.do;
       setActive(range);
+      setManualHighlight(false);
       savePeriod({ od: val.od, do: val.do });
     });
   });
@@ -184,42 +208,37 @@
   doInput.max = todayStr;
 
   odInput.addEventListener('change', function(){
-    setActive('');
     var od = clampToToday(odInput.value);
     var ddo = clampToToday(doInput.value);
     if (!od || !ddo) return;
     if (od > ddo) {
       od = ddo;
     }
-    var prevOd = clampToToday(odInput.value);
-    var prevDo = clampToToday(doInput.value);
     odInput.value = od;
-    if (prevOd === od && prevDo === ddo) {
-      setActive(getActivePreset(od, ddo));
-      return;
-    }
-    savePeriod({ od: od });
+    doInput.value = ddo;
+    var activePreset = getActivePreset(od, ddo);
+    setActive(activePreset);
+    setManualHighlight(activePreset === '');
+    savePeriod({ od: od, do: ddo });
   });
 
   doInput.addEventListener('change', function(){
-    setActive('');
     var od = clampToToday(odInput.value);
     var ddo = clampToToday(doInput.value);
     if (!od || !ddo) return;
     if (ddo < od) {
       ddo = od;
     }
-    var prevOd = clampToToday(odInput.value);
-    var prevDo = clampToToday(doInput.value);
+    odInput.value = od;
     doInput.value = ddo;
-    if (prevOd === od && prevDo === ddo) {
-      setActive(getActivePreset(od, ddo));
-      return;
-    }
-    savePeriod({ do: ddo });
+    var activePreset = getActivePreset(od, ddo);
+    setActive(activePreset);
+    setManualHighlight(activePreset === '');
+    savePeriod({ od: od, do: ddo });
   });
 
   var initialPreset = getActivePreset(clampToToday(odInput.value), clampToToday(doInput.value));
-  setActive(initialPreset || 'vcera');
+  setActive(initialPreset);
+  setManualHighlight(initialPreset === '');
 })();
 </script>

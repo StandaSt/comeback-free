@@ -240,11 +240,6 @@ $uzBuildUrl = static function (array $extra = []) use ($uzBaseParams, $uzQueryDe
 ?>
 
 <?php
-ob_start();
-?>
-<p class="card_text txt_seda odstup_vnejsi_0">Zde bude přehled uživatelů.</p>
-<?php
-$card_min_html = (string)ob_get_clean();
 $card_min_html = ''
     . '<div class="table-wrap ram_normal bg_bila zaobleni_12">'
     . '  <table class="table ram_normal bg_bila radek_1_35 card_table_min" aria-label="Přehled uživatelů IS Comeback">'

@@ -1,5 +1,5 @@
 <?php
-// includes/dashboard.php * Verze: V9 * Aktualizace: 25.03.2026
+// includes/dashboard.php * Verze: V10 * Aktualizace: 02.04.2026
 declare(strict_types=1);
 
 function cb_dashboard_resolve_file(string $soubor): ?string
@@ -47,8 +47,12 @@ if ($idUser > 0) {
         $stmtCols->bind_param('i', $idUser);
         $stmtCols->execute();
         $stmtCols->bind_result($pocetSl, $nanoKdeDb);
-        if ($stmtCols->fetch() && (int)$pocetSl === 4) {
-            $dashColsClass = 'dash_cols_4';
+        if ($stmtCols->fetch()) {
+            if ((int)$pocetSl === 5) {
+                $dashColsClass = 'dash_cols_5';
+            } elseif ((int)$pocetSl === 4) {
+                $dashColsClass = 'dash_cols_4';
+            }
         }
         $nanoKde = (int)$nanoKdeDb;
         if (!in_array($nanoKde, [0, 1], true)) {

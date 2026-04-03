@@ -14,7 +14,7 @@ require_once __DIR__ . '/../lib/restia_client.php';
 require_once __DIR__ . '/../db/db_api_restia.php';
 
 const CB_RESTIA_HIST_LIMIT = 100;
-const CB_RESTIA_HIST_START_DATE = '2025-08-15';
+const CB_RESTIA_HIST_START_DATE = '2023-07-01';
 const CB_RESTIA_HIST_STEP_DAYS = 20;
 const CB_RESTIA_HIST_PAUSE_MS = 500;
 
@@ -176,34 +176,92 @@ if (!function_exists('cb_restia_hist_get_auth')) {
     }
 }
 
-if (!function_exists('cb_restia_hist_get_single_branch')) {
-    function cb_restia_hist_get_single_branch(mysqli $conn): array
+if (!function_exists('cb_restia_hist_get_branches')) {
+    function cb_restia_hist_get_branches(mysqli $conn): array
     {
         $sql = '
             SELECT id_pob, nazev, restia_activePosId
             FROM pobocka
-            WHERE COALESCE(TRIM(restia_activePosId), "") <> ""
             ORDER BY id_pob ASC
-            LIMIT 1
         ';
 
         $res = $conn->query($sql);
         if (!($res instanceof mysqli_result)) {
-            throw new RuntimeException('DB dotaz na pobocku selhal.');
+            throw new RuntimeException('DB dotaz na pobocky selhal.');
         }
 
-        $row = $res->fetch_assoc();
+        $out = [];
+        while ($row = $res->fetch_assoc()) {
+            $activePosId = trim((string)($row['restia_activePosId'] ?? ''));
+            $out[] = [
+                'id_pob' => (int)($row['id_pob'] ?? 0),
+                'nazev' => trim((string)($row['nazev'] ?? '')),
+                'active_pos_id' => $activePosId,
+                'enabled' => ($activePosId !== ''),
+            ];
+        }
         $res->free();
 
+        return $out;
+    }
+}
+
+if (!function_exists('cb_restia_hist_get_branch_by_id')) {
+    function cb_restia_hist_get_branch_by_id(mysqli $conn, int $idPob): array
+    {
+        if ($idPob <= 0) {
+            throw new RuntimeException('Neplatna pobocka.');
+        }
+
+        $stmt = $conn->prepare('
+            SELECT id_pob, nazev, restia_activePosId
+            FROM pobocka
+            WHERE id_pob = ?
+            LIMIT 1
+        ');
+        if ($stmt === false) {
+            throw new RuntimeException('DB dotaz na pobocku selhal.');
+        }
+        $stmt->bind_param('i', $idPob);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $row = ($res instanceof mysqli_result) ? $res->fetch_assoc() : null;
+        if ($res instanceof mysqli_result) {
+            $res->free();
+        }
+        $stmt->close();
+
         if (!is_array($row)) {
-            throw new RuntimeException('Neni zadna pobocka s vyplnenym restia_activePosId.');
+            throw new RuntimeException('Vybrana pobocka neexistuje.');
+        }
+
+        $activePosId = trim((string)($row['restia_activePosId'] ?? ''));
+        if ($activePosId === '') {
+            throw new RuntimeException('Vybrana pobocka nema vyplnene restia_activePosId.');
         }
 
         return [
             'id_pob' => (int)($row['id_pob'] ?? 0),
             'nazev' => trim((string)($row['nazev'] ?? '')),
-            'active_pos_id' => trim((string)($row['restia_activePosId'] ?? '')),
+            'active_pos_id' => $activePosId,
         ];
+    }
+}
+
+if (!function_exists('cb_restia_hist_pick_default_branch')) {
+    function cb_restia_hist_pick_default_branch(mysqli $conn): array
+    {
+        $branches = cb_restia_hist_get_branches($conn);
+        foreach ($branches as $branch) {
+            if ((bool)($branch['enabled'] ?? false) === true) {
+                return [
+                    'id_pob' => (int)($branch['id_pob'] ?? 0),
+                    'nazev' => (string)($branch['nazev'] ?? ''),
+                    'active_pos_id' => (string)($branch['active_pos_id'] ?? ''),
+                ];
+            }
+        }
+        throw new RuntimeException('Neni zadna pobocka s vyplnenym restia_activePosId.');
     }
 }
 
@@ -712,6 +770,218 @@ if (!function_exists('cb_restia_hist_sync_children')) {
     }
 }
 
+if (!function_exists('cb_restia_hist_enable_zero_autoinc')) {
+    function cb_restia_hist_enable_zero_autoinc(mysqli $conn): void
+    {
+        $sql = "SET SESSION sql_mode = CONCAT_WS(',', @@SESSION.sql_mode, 'NO_AUTO_VALUE_ON_ZERO')";
+        if ($conn->query($sql) === false) {
+            throw new RuntimeException('Nepodarilo se nastavit sql_mode NO_AUTO_VALUE_ON_ZERO.');
+        }
+    }
+}
+
+if (!function_exists('cb_restia_hist_default_pob_id')) {
+    function cb_restia_hist_default_pob_id(mysqli $conn): int
+    {
+        $res = $conn->query('SELECT id_pob FROM pobocka ORDER BY id_pob ASC LIMIT 1');
+        if (!($res instanceof mysqli_result)) {
+            throw new RuntimeException('DB dotaz na vychozi pobocku selhal.');
+        }
+        $row = $res->fetch_assoc();
+        $res->free();
+        $idPob = (int)($row['id_pob'] ?? 0);
+        if ($idPob <= 0) {
+            throw new RuntimeException('V tabulce pobocka neni zadny zaznam.');
+        }
+        return $idPob;
+    }
+}
+
+if (!function_exists('cb_restia_hist_ensure_default_customer')) {
+    function cb_restia_hist_ensure_default_customer(mysqli $conn, int $idPobHint = 0): void
+    {
+        $res = $conn->query('SELECT COUNT(*) AS cnt FROM zakaznik');
+        if (!($res instanceof mysqli_result)) {
+            throw new RuntimeException('DB dotaz na zakaznik selhal.');
+        }
+        $row = $res->fetch_assoc();
+        $res->free();
+        $count = (int)($row['cnt'] ?? 0);
+        if ($count > 0) {
+            return;
+        }
+
+        cb_restia_hist_enable_zero_autoinc($conn);
+
+        $idPob = $idPobHint > 0 ? $idPobHint : cb_restia_hist_default_pob_id($conn);
+        $jmeno = 'anonymni';
+        $prijmeni = 'zakaznik';
+        $telefon = 'nezadano';
+        $email = 'nezadano';
+        $ulice = 'nezadano';
+        $mesto = 'nezadano';
+        $zakMenu = 0;
+        $zakNews = 0;
+        $poznamka = null;
+        $blokovany = 0;
+        $aktivni = 1;
+
+        $stmt = $conn->prepare('
+            INSERT INTO zakaznik (
+                id_zak, jmeno, prijmeni, telefon, email, ulice, mesto,
+                zak_menu, zak_news, posledni_obj, poznamka, blokovany, id_pob, zadano, aktivni
+            ) VALUES (
+                0, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, NOW(), ?
+            )
+        ');
+        if ($stmt === false) {
+            throw new RuntimeException('DB prepare selhal: insert anonymni zakaznik.');
+        }
+        $stmt->bind_param('ssssssiisii', $jmeno, $prijmeni, $telefon, $email, $ulice, $mesto, $zakMenu, $zakNews, $poznamka, $blokovany, $idPob, $aktivni);
+        $stmt->execute();
+        $stmt->close();
+    }
+}
+
+if (!function_exists('cb_restia_hist_norm_phone')) {
+    function cb_restia_hist_norm_phone(?string $phone): string
+    {
+        $raw = trim((string)($phone ?? ''));
+        if ($raw === '') {
+            return '';
+        }
+        $norm = preg_replace('/[^0-9]/', '', $raw);
+        return is_string($norm) ? $norm : '';
+    }
+}
+
+if (!function_exists('cb_restia_hist_split_name')) {
+    function cb_restia_hist_split_name(?string $fullName): array
+    {
+        $name = trim((string)($fullName ?? ''));
+        if ($name === '') {
+            return ['jmeno' => 'anonymni', 'prijmeni' => 'zakaznik'];
+        }
+        $parts = preg_split('/\s+/u', $name) ?: [];
+        if (count($parts) <= 1) {
+            return ['jmeno' => $name, 'prijmeni' => 'zakaznik'];
+        }
+        $jmeno = trim((string)array_shift($parts));
+        $prijmeni = trim(implode(' ', $parts));
+        if ($jmeno === '') {
+            $jmeno = 'anonymni';
+        }
+        if ($prijmeni === '') {
+            $prijmeni = 'zakaznik';
+        }
+        return ['jmeno' => $jmeno, 'prijmeni' => $prijmeni];
+    }
+}
+
+if (!function_exists('cb_restia_hist_upsert_customer')) {
+    function cb_restia_hist_upsert_customer(mysqli $conn, int $idPob, array $order): int
+    {
+        $emailRaw = trim((string)($order['customerEmail'] ?? ''));
+        if ($emailRaw === '' || strtolower($emailRaw) === 'null') {
+            $emailRaw = '';
+        }
+        $phoneRaw = trim((string)($order['customerPhone'] ?? ''));
+        if ($phoneRaw === '' || strtolower($phoneRaw) === 'null') {
+            $phoneRaw = '';
+        }
+        $phoneNorm = cb_restia_hist_norm_phone($phoneRaw);
+
+        if ($emailRaw === '' && $phoneNorm === '') {
+            return 0;
+        }
+
+        $name = cb_restia_hist_split_name((string)($order['customerName'] ?? ''));
+        $jmeno = (string)$name['jmeno'];
+        $prijmeni = (string)$name['prijmeni'];
+        $telefon = $phoneRaw !== '' ? $phoneRaw : 'nezadano';
+        $email = $emailRaw !== '' ? $emailRaw : 'nezadano';
+        $ulice = 'nezadano';
+        $mesto = 'nezadano';
+        $poznamka = trim((string)($order['customerNote'] ?? ''));
+        if ($poznamka === '' || strtolower($poznamka) === 'null') {
+            $poznamka = null;
+        }
+        $blokovany = 0;
+        $aktivni = 1;
+        $zakMenu = 0;
+        $zakNews = 0;
+
+        $idZak = 0;
+        if ($phoneNorm !== '') {
+            $stmt = $conn->prepare('SELECT id_zak FROM zakaznik WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(telefon, ""), " ", ""), "+", ""), "-", ""), "(", ""), ")", ""), "/", "") = ? ORDER BY id_zak ASC LIMIT 1');
+            if ($stmt === false) {
+                throw new RuntimeException('DB prepare selhal: find zakaznik by phone.');
+            }
+            $stmt->bind_param('s', $phoneNorm);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            $row = ($res instanceof mysqli_result) ? $res->fetch_assoc() : null;
+            if ($res instanceof mysqli_result) {
+                $res->free();
+            }
+            $stmt->close();
+            $idZak = (int)($row['id_zak'] ?? 0);
+        }
+
+        if ($idZak <= 0 && $emailRaw !== '') {
+            $emailNorm = strtolower($emailRaw);
+            $stmt = $conn->prepare('SELECT id_zak FROM zakaznik WHERE LOWER(TRIM(COALESCE(email, ""))) = ? ORDER BY id_zak ASC LIMIT 1');
+            if ($stmt === false) {
+                throw new RuntimeException('DB prepare selhal: find zakaznik by email.');
+            }
+            $stmt->bind_param('s', $emailNorm);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            $row = ($res instanceof mysqli_result) ? $res->fetch_assoc() : null;
+            if ($res instanceof mysqli_result) {
+                $res->free();
+            }
+            $stmt->close();
+            $idZak = (int)($row['id_zak'] ?? 0);
+        }
+
+        if ($idZak > 0) {
+            $stmt = $conn->prepare('
+                UPDATE zakaznik
+                SET jmeno = ?, prijmeni = ?, telefon = ?, email = ?, ulice = ?, mesto = ?,
+                    zak_menu = ?, zak_news = ?, posledni_obj = NOW(), poznamka = ?, blokovany = ?, id_pob = ?, aktivni = ?
+                WHERE id_zak = ?
+                LIMIT 1
+            ');
+            if ($stmt === false) {
+                throw new RuntimeException('DB prepare selhal: update zakaznik.');
+            }
+            $stmt->bind_param('ssssssiisiiii', $jmeno, $prijmeni, $telefon, $email, $ulice, $mesto, $zakMenu, $zakNews, $poznamka, $blokovany, $idPob, $aktivni, $idZak);
+            $stmt->execute();
+            $stmt->close();
+            return $idZak;
+        }
+
+        $stmt = $conn->prepare('
+            INSERT INTO zakaznik (
+                jmeno, prijmeni, telefon, email, ulice, mesto,
+                zak_menu, zak_news, posledni_obj, poznamka, blokovany, id_pob, zadano, aktivni
+            ) VALUES (
+                ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, NOW(), ?
+            )
+        ');
+        if ($stmt === false) {
+            throw new RuntimeException('DB prepare selhal: insert zakaznik.');
+        }
+        $stmt->bind_param('ssssssiisiii', $jmeno, $prijmeni, $telefon, $email, $ulice, $mesto, $zakMenu, $zakNews, $poznamka, $blokovany, $idPob, $aktivni);
+        $stmt->execute();
+        $idZak = (int)$conn->insert_id;
+        $stmt->close();
+
+        return $idZak;
+    }
+}
+
 if (!function_exists('cb_restia_hist_format_total_time')) {
     function cb_restia_hist_format_total_time(int $ms): string
     {
@@ -747,6 +1017,7 @@ if (!function_exists('cb_restia_hist_upsert_order')) {
         $idStav = ($status === '') ? null : cb_restia_hist_lookup_id($conn, 'cis_obj_stav', 'nazev', $status, 'id_stav');
         $idPlatba = ($paymentType === '') ? null : cb_restia_hist_lookup_id($conn, 'cis_obj_platby', 'nazev', $paymentType, 'id_platba');
         $idDoruceni = ($deliveryType === '') ? null : cb_restia_hist_lookup_id($conn, 'cis_doruceni', 'nazev', $deliveryType, 'id_doruceni');
+        $idZak = cb_restia_hist_upsert_customer($conn, $idPob, $order);
 
         $restiaOrderNumber = trim((string)($order['orderNumber'] ?? ''));
         $restiaToken = $order['token'] ?? null;
@@ -771,15 +1042,15 @@ if (!function_exists('cb_restia_hist_upsert_order')) {
 
         $sql = '
             INSERT INTO objednavky_restia (
-                id_pob, id_platforma, restia_id_obj, restia_order_number, restia_token,
+                id_pob, id_zak, id_platforma, restia_id_obj, restia_order_number, restia_token,
                 restia_active_pos_id, profil_typ, rest_obj,
                 id_stav, id_platba, id_doruceni,
                 zak_jmeno, zak_telefon, zak_email, zak_poznamka,
                 obj_pozn, raw_hash, raw_json, `import`
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
-                id_pob = VALUES(id_pob), id_platforma = VALUES(id_platforma), restia_order_number = VALUES(restia_order_number),
+                id_pob = VALUES(id_pob), id_zak = VALUES(id_zak), id_platforma = VALUES(id_platforma), restia_order_number = VALUES(restia_order_number),
                 restia_token = VALUES(restia_token), restia_active_pos_id = VALUES(restia_active_pos_id), profil_typ = VALUES(profil_typ),
                 rest_obj = VALUES(rest_obj), id_stav = VALUES(id_stav), id_platba = VALUES(id_platba), id_doruceni = VALUES(id_doruceni),
                 zak_jmeno = VALUES(zak_jmeno), zak_telefon = VALUES(zak_telefon), zak_email = VALUES(zak_email), zak_poznamka = VALUES(zak_poznamka),
@@ -789,7 +1060,7 @@ if (!function_exists('cb_restia_hist_upsert_order')) {
         $stmt = $conn->prepare($sql);
         if ($stmt === false) { throw new RuntimeException('DB prepare selhal: objednavky_restia upsert.'); }
         $restObj = $restiaIdObj;
-        $stmt->bind_param('iissssssiiissssssss', $idPob, $idPlatforma, $restiaIdObj, $restiaOrderNumber, $restiaToken, $activePosId, $profilTyp, $restObj, $idStav, $idPlatba, $idDoruceni, $zakJmeno, $zakTelefon, $zakEmail, $zakPoznamka, $objPoznamka, $rawHash, $rawJson, $importTs);
+        $stmt->bind_param('iiissssssiiissssssss', $idPob, $idZak, $idPlatforma, $restiaIdObj, $restiaOrderNumber, $restiaToken, $activePosId, $profilTyp, $restObj, $idStav, $idPlatba, $idDoruceni, $zakJmeno, $zakTelefon, $zakEmail, $zakPoznamka, $objPoznamka, $rawHash, $rawJson, $importTs);
         $stmt->execute();
         $stmt->close();
 
@@ -818,6 +1089,7 @@ if (!function_exists('cb_restia_hist_default_state')) {
             'requested_days' => 0,
             'auto_next' => 0,
             'branch_name' => '',
+            'branch_id' => 0,
             'run_started_at_ms' => 0,
             'run_row_no' => 0,
             'step_days' => CB_RESTIA_HIST_STEP_DAYS,
@@ -919,6 +1191,7 @@ if (!is_array($rows)) { $rows = []; }
 
 $action = trim((string)($_POST['cb_action'] ?? ''));
 $inputDays = (int)($_POST['cb_days'] ?? 0);
+$inputBranchId = (int)($_POST['cb_id_pob'] ?? 0);
 
 try { $auth = cb_restia_hist_get_auth(); } catch (Throwable $e) { $auth = null; $message = $e->getMessage(); }
 
@@ -927,7 +1200,12 @@ if ($action === 'start' && $auth !== null) {
         $inputDays = CB_RESTIA_HIST_STEP_DAYS;
     }
 
-    $branch = cb_restia_hist_get_single_branch($conn);
+    if ($inputBranchId > 0) {
+        $branch = cb_restia_hist_get_branch_by_id($conn, $inputBranchId);
+    } else {
+        $branch = cb_restia_hist_pick_default_branch($conn);
+    }
+    cb_restia_hist_ensure_default_customer($conn, (int)$branch['id_pob']);
     $resumeDate = cb_restia_hist_resume_date($conn, (int)$branch['id_pob']);
     $today = cb_restia_hist_today();
     if ($resumeDate > $today) { $resumeDate = $today; }
@@ -938,6 +1216,7 @@ if ($action === 'start' && $auth !== null) {
     $state['requested_days'] = $inputDays;
     $state['step_days'] = $inputDays;
     $state['branch_name'] = (string)$branch['nazev'];
+    $state['branch_id'] = (int)$branch['id_pob'];
     $state['run_started_at_ms'] = (int)round(microtime(true) * 1000);
     $state['run_row_no'] = 0;
     $rows = [];
@@ -977,7 +1256,14 @@ if ($action === 'continue_yes') {
 $shouldRunOneDay = ($auth !== null) && ((int)($state['finished'] ?? 0) === 0) && ((int)($state['remaining_days'] ?? 0) > 0) && ($action === 'auto_next');
 
 if ($shouldRunOneDay) {
-    $branch = cb_restia_hist_get_single_branch($conn);
+    $stateBranchId = (int)($state['branch_id'] ?? 0);
+    if ($stateBranchId > 0) {
+        $branch = cb_restia_hist_get_branch_by_id($conn, $stateBranchId);
+    } else {
+        $branch = cb_restia_hist_pick_default_branch($conn);
+    }
+    cb_restia_hist_ensure_default_customer($conn, (int)$branch['id_pob']);
+    $state['branch_id'] = (int)($branch['id_pob'] ?? 0);
     $state['branch_name'] = (string)$branch['nazev'];
 
     $today = cb_restia_hist_today();
@@ -1035,6 +1321,24 @@ if ($shouldRunOneDay) {
 $_SESSION[$cbStateKey] = $state;
 $_SESSION[$cbRowsKey] = $rows;
 $_SESSION[$cbMsgKey] = $message;
+
+$branchOptions = [];
+try {
+    $branchOptions = cb_restia_hist_get_branches($conn);
+} catch (Throwable $e) {
+    if ($message === '') {
+        $message = $e->getMessage();
+    }
+}
+$selectedBranchId = (int)($state['branch_id'] ?? 0);
+if ($selectedBranchId <= 0) {
+    foreach ($branchOptions as $branchOpt) {
+        if ((bool)($branchOpt['enabled'] ?? false) === true) {
+            $selectedBranchId = (int)($branchOpt['id_pob'] ?? 0);
+            break;
+        }
+    }
+}
 ?>
 <?php if (!$cbRestiaEmbedMode): ?>
 <!doctype html>
@@ -1050,6 +1354,20 @@ $_SESSION[$cbMsgKey] = $message;
   <div class="card_actions gap_8 displ_flex">
     <form method="post" class="odstup_vnejsi_0 displ_inline_flex">
       <input type="hidden" name="run_restia_obj" value="1"><input type="hidden" name="cb_action" value="start">
+      <select name="cb_id_pob" class="card_select ram_sedy txt_seda bg_bila zaobleni_8 vyska_32" style="min-width:220px; margin-right:8px;">
+        <?php foreach ($branchOptions as $branchOpt): ?>
+          <?php
+          $idPobOpt = (int)($branchOpt['id_pob'] ?? 0);
+          $nameOpt = (string)($branchOpt['nazev'] ?? '');
+          $enabledOpt = ((bool)($branchOpt['enabled'] ?? false) === true);
+          $labelOpt = $nameOpt !== '' ? $nameOpt : ('Pobocka #' . (string)$idPobOpt);
+          if (!$enabledOpt) {
+              $labelOpt .= ' (chybi restia_activePosId)';
+          }
+          ?>
+          <option value="<?= cb_restia_hist_h((string)$idPobOpt) ?>"<?= $idPobOpt === $selectedBranchId ? ' selected' : '' ?><?= $enabledOpt ? '' : ' disabled style="color:#9ca3af;"' ?>><?= cb_restia_hist_h($labelOpt) ?></option>
+        <?php endforeach; ?>
+      </select>
       <input type="number" name="cb_days" min="1" step="1" value="<?= cb_restia_hist_h((string)(((int)($state['step_days'] ?? 0) > 0) ? (int)$state['step_days'] : CB_RESTIA_HIST_STEP_DAYS)) ?>" class="card_input ram_sedy txt_seda bg_bila zaobleni_8 vyska_32" style="width:120px; margin-right:8px;">
       <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Spustit</button>
     </form>

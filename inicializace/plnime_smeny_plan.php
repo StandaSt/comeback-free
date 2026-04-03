@@ -1,5 +1,5 @@
 <?php
-// inicializace/plnime_smeny_plan.php  * Verze: V6 * Aktualizace: 26.03.2026
+// inicializace/plnime_smeny_plan.php  * Verze: V8 * Aktualizace: 03.04.2026
 
 declare(strict_types=1);
 
@@ -14,6 +14,7 @@ require_once __DIR__ . '/../lib/smeny_graphql.php';
 const GQL_URL = 'https://smeny.pizzacomeback.cz/graphql';
 const MIN_DATE = '2020-10-12';
 const MAX_WEEKS_PER_RUN = 4;
+const TARGET_MAX_SKIP = 1;
 const PROGRESS_LOG_FILE = __DIR__ . '/../_kandidati/tahame_smeny.txt';
 
 @ob_end_flush();
@@ -26,9 +27,9 @@ function out(string $text): void
     flush();
 }
 
-function resetProgressLogIfFirstBatch(int $initialSkip): void
+function resetProgressLogIfFirstBatch(): void
 {
-    if ($initialSkip !== 0) {
+    if (isset($_GET['startDay'])) {
         return;
     }
 
@@ -50,9 +51,30 @@ function currentWeekMonday(): DateTimeImmutable
     return new DateTimeImmutable('monday this week');
 }
 
-function expectedStartDayBySkip(int $skipWeeks): string
+function normalizeMonday(string $date): DateTimeImmutable
 {
-    return currentWeekMonday()->modify(sprintf('%d week', $skipWeeks))->format('Y-m-d');
+    $day = new DateTimeImmutable($date);
+
+    return $day->modify('monday this week');
+}
+
+function targetWeekMonday(): DateTimeImmutable
+{
+    return currentWeekMonday()->modify('+' . TARGET_MAX_SKIP . ' week');
+}
+
+function calculateSkipWeeksByStartDay(string $startDay): int
+{
+    $currentMonday = currentWeekMonday();
+    $weekMonday = normalizeMonday($startDay);
+    $seconds = $weekMonday->getTimestamp() - $currentMonday->getTimestamp();
+    // Korekce -1 týdne pro shodné chování s testovacím skriptem a správný záporný posun:
+    return (int)round($seconds / 604800) - 1;
+}
+
+function nextWeekStartDay(string $startDay): string
+{
+    return normalizeMonday($startDay)->modify('+1 week')->format('Y-m-d');
 }
 
 function getBranches(string $token): array
@@ -97,6 +119,67 @@ GQL;
     );
 
     return $response['branchGetShiftWeek'] ?? null;
+}
+
+function findResumeStartDay(array $branches): string
+{
+    if ($branches === []) {
+        return MIN_DATE;
+    }
+
+    $branchIds = [];
+
+    foreach ($branches as $branch) {
+        $idPob = (int)($branch['id'] ?? 0);
+        if ($idPob > 0) {
+            $branchIds[] = $idPob;
+        }
+    }
+
+    if ($branchIds === []) {
+        return MIN_DATE;
+    }
+
+    $db = db();
+    $in = implode(',', array_map('intval', $branchIds));
+    $requiredCount = count($branchIds);
+
+    $sql = "
+        SELECT MAX(t.start_day) AS start_day
+        FROM (
+            SELECT start_day
+            FROM smeny_aktualizace
+            WHERE stav = 1
+              AND id_pob IN ($in)
+            GROUP BY start_day
+            HAVING COUNT(DISTINCT id_pob) = $requiredCount
+        ) AS t
+    ";
+
+    $result = $db->query($sql);
+    if (!($result instanceof mysqli_result)) {
+        return MIN_DATE;
+    }
+
+    $row = $result->fetch_assoc();
+    $result->free();
+
+    $startDay = trim((string)($row['start_day'] ?? ''));
+    if ($startDay === '') {
+        return MIN_DATE;
+    }
+
+    return normalizeMonday($startDay)->format('Y-m-d');
+}
+
+function requestedStartDay(): ?string
+{
+    $value = trim((string)($_GET['startDay'] ?? ''));
+    if ($value === '') {
+        return null;
+    }
+
+    return normalizeMonday($value)->format('Y-m-d');
 }
 
 function dayOffset(string $day): int
@@ -293,6 +376,7 @@ function saveState(array $state): void
         'INSERT INTO smeny_aktualizace (start_day, skip_weeks, id_pob, stav, datum_od, started_at, finished_at, posledni_ok, pocet_bloku, pocet_hodin, chyba_text)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE
+            skip_weeks = VALUES(skip_weeks),
             stav = VALUES(stav),
             datum_od = VALUES(datum_od),
             started_at = VALUES(started_at),
@@ -346,12 +430,12 @@ function printProgress(int $skipWeeks, int $idPob, string $startDay, int $blocks
     out($line);
 }
 
-function continueUrl(int $nextSkipWeeks): string
+function continueUrl(string $nextStartDay): string
 {
     $base = strtok($_SERVER['REQUEST_URI'] ?? $_SERVER['PHP_SELF'] ?? 'plnime_smeny_plan.php', '?');
     $separator = strpos($base, '?') === false ? '?' : '&';
 
-    return $base . $separator . 'skipWeeks=' . $nextSkipWeeks;
+    return $base . $separator . 'startDay=' . $nextStartDay;
 }
 
 function run(): void
@@ -370,26 +454,76 @@ function run(): void
         return;
     }
 
-    $initialSkip = isset($_GET['skipWeeks']) ? (int)$_GET['skipWeeks'] : 0;
-    if ($initialSkip > 0) {
-        $initialSkip = 0;
+    resetProgressLogIfFirstBatch();
+
+    // TEST: SkipWeeks natvrdo -1 (jen 1 týden pro všechny pobočky)
+    $skipWeeks = -1;
+    out('Testovací běh: skipWeeks = ' . $skipWeeks . ' | jeden týden všech poboček.');
+
+    foreach ($branches as $branch) {
+        $idPob = (int)($branch['id'] ?? 0);
+        if ($idPob <= 0) {
+            continue;
+        }
+
+        $startedAt = nowSql();
+        $startDay = '';
+        $blocks = 0;
+        $hours = 0;
+        $errorText = null;
+        $stav = 1;
+        $posledniOk = null;
+
+        try {
+            $week = getWeek($token, $idPob, $skipWeeks);
+            if ($week === null || !isset($week['startDay'])) {
+                throw new RuntimeException('API nevratilo data tydne.');
+            }
+
+            $startDay = normalizeMonday((string)$week['startDay'])->format('Y-m-d');
+
+            $rows = buildBlocks($week, $idPob);
+            $blocks = saveBlocks($rows, $startDay, $idPob);
+            $hours = countHours($rows);
+            $posledniOk = nowSql();
+
+            printProgress($skipWeeks, $idPob, $startDay, $blocks, null);
+        } catch (Throwable $e) {
+            $stav = 2;
+            $errorText = mb_substr($e->getMessage(), 0, 1000, 'UTF-8');
+            printProgress($skipWeeks, $idPob, $startDay, 0, $errorText);
+        }
+
+        $finishedAt = nowSql();
+
+        saveState([
+            'start_day' => $startDay,
+            'skip_weeks' => $skipWeeks,
+            'id_pob' => $idPob,
+            'stav' => $stav,
+            'datum_od' => MIN_DATE,
+            'started_at' => $startedAt,
+            'finished_at' => $finishedAt,
+            'posledni_ok' => $posledniOk,
+            'pocet_bloku' => $blocks,
+            'pocet_hodin' => $hours,
+            'chyba_text' => $errorText,
+        ]);
     }
-    resetProgressLogIfFirstBatch($initialSkip);
 
-    out('Start skipWeeks=' . $initialSkip . ' | max tydnu v behu=' . MAX_WEEKS_PER_RUN);
+    $totalDuration = microtime(true) - $totalStart;
+    out('Konec testu | celkovy cas: ' . formatDuration($totalDuration));
+}
+        if ($currentStartDay > $targetStartDay) {
+            break;
+        }
 
-    $processedWeeks = 0;
-    $hitMinDate = false;
-    $lastProcessedSkip = $initialSkip;
-
-    while ($processedWeeks < MAX_WEEKS_PER_RUN) {
-        $skipWeeks = $initialSkip - $processedWeeks;
-        $lastProcessedSkip = $skipWeeks;
+        $lastProcessedStartDay = $currentStartDay;
+        $skipWeeks = calculateSkipWeeksByStartDay($currentStartDay);
         $weekStartTime = microtime(true);
+        $weekReturnedStartDay = null;
 
-        out('==== skipWeeks ' . $skipWeeks . ' ====');
-
-        $weekHasProcessableData = false;
+        out('==== startDay ' . $currentStartDay . ' | skipWeeks ' . $skipWeeks . ' ====');
 
         foreach ($branches as $branch) {
             $idPob = (int)($branch['id'] ?? 0);
@@ -398,7 +532,7 @@ function run(): void
             }
 
             $startedAt = nowSql();
-            $startDay = expectedStartDayBySkip($skipWeeks);
+            $startDay = $currentStartDay;
             $blocks = 0;
             $hours = 0;
             $errorText = null;
@@ -411,15 +545,12 @@ function run(): void
                     throw new RuntimeException('API nevratilo data tydne.');
                 }
 
-                $startDay = (string)$week['startDay'];
+                $startDay = normalizeMonday((string)$week['startDay'])->format('Y-m-d');
 
-                if ($startDay < MIN_DATE) {
-                    $hitMinDate = true;
-                    printProgress($skipWeeks, $idPob, $startDay, 0, 'mimo rozsah, konec pod MIN_DATE');
-                    continue;
+                if ($weekReturnedStartDay === null || $startDay > $weekReturnedStartDay) {
+                    $weekReturnedStartDay = $startDay;
                 }
 
-                $weekHasProcessableData = true;
                 $rows = buildBlocks($week, $idPob);
                 $blocks = saveBlocks($rows, $startDay, $idPob);
                 $hours = countHours($rows);
@@ -439,7 +570,7 @@ function run(): void
                 'skip_weeks' => $skipWeeks,
                 'id_pob' => $idPob,
                 'stav' => $stav,
-                'datum_od' => $startDay,
+                'datum_od' => MIN_DATE,
                 'started_at' => $startedAt,
                 'finished_at' => $finishedAt,
                 'posledni_ok' => $posledniOk,
@@ -451,26 +582,37 @@ function run(): void
 
         $processedWeeks++;
 
+        if ($weekReturnedStartDay === null) {
+            $nextStartDay = nextWeekStartDay($currentStartDay);
+        } else {
+            $nextStartDay = nextWeekStartDay($weekReturnedStartDay);
+        }
+
+        if ($nextStartDay <= $currentStartDay) {
+            out('stop | dalsi startDay se neposunul | aktualni=' . $currentStartDay . ' | dalsi=' . $nextStartDay);
+            $hasMoreWeeks = false;
+            break;
+        }
+
+        $currentStartDay = $nextStartDay;
+        $hasMoreWeeks = ($currentStartDay <= $targetStartDay);
+
         $weekDuration = microtime(true) - $weekStartTime;
         $totalDuration = microtime(true) - $totalStart;
 
-        out('cas skipWeeks ' . $skipWeeks . ': ' . formatDuration($weekDuration) . ' | celkem: ' . formatDuration($totalDuration));
-
-        if (!$weekHasProcessableData && $hitMinDate) {
-            break;
-        }
+        out(
+            'cas startDay ' . $lastProcessedStartDay . ': ' . formatDuration($weekDuration)
+            . ' | celkem: ' . formatDuration($totalDuration)
+        );
     }
 
     $totalDuration = microtime(true) - $totalStart;
     out('konec behu | celkovy cas: ' . formatDuration($totalDuration));
 
-    $shouldContinue = !$hitMinDate && $processedWeeks === MAX_WEEKS_PER_RUN;
+    if ($hasMoreWeeks && $lastProcessedStartDay !== null) {
+        $url = continueUrl($currentStartDay);
 
-    if ($shouldContinue) {
-        $nextSkipWeeks = $lastProcessedSkip - 1;
-        $url = continueUrl($nextSkipWeeks);
-
-        out('dalsi davka za 600 ms | skipWeeks=' . $nextSkipWeeks);
+        out('dalsi davka za 600 ms | startDay=' . $currentStartDay);
         echo '<script>setTimeout(function(){window.location.href=' . json_encode($url, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ';},600);</script>';
         flush();
     }
@@ -478,5 +620,6 @@ function run(): void
 
 run();
 
-// inicializace/plnime_smeny_plan.php  * Verze: V6 * Aktualizace: 26.03.2026
-// počet řádků 482
+// inicializace/plnime_smeny_plan.php  * Verze: V8 * Aktualizace: 03.04.2026
+// počet řádků 500
+?>

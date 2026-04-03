@@ -1,5 +1,5 @@
 <?php
-// karty/admin_inicializace.php * Verze: V12 * Aktualizace: 02.04.2026
+// karty/admin_inicializace.php * Verze: V13 * Aktualizace: 03.04.2026
 
 declare(strict_types=1);
 
@@ -21,6 +21,13 @@ $cbRunRestiaMenu = (
 );
 $cbRestiaState = $_SESSION['cb_restia_hist_v4_state'] ?? null;
 $cbKeepRestiaMax = false;
+if ($cbRunRestia || $cbRunRestiaMenu) {
+    $_SESSION['cb_admin_init_open_once'] = 1;
+}
+$cbOpenOnce = ((int)($_SESSION['cb_admin_init_open_once'] ?? 0) === 1);
+if (!$cbRunRestia && !$cbRunRestiaMenu && $cbOpenOnce) {
+    unset($_SESSION['cb_admin_init_open_once']);
+}
 if (is_array($cbRestiaState)) {
     $cbKeepRestiaMax = (
         (int)($cbRestiaState['finished'] ?? 0) === 0
@@ -109,6 +116,9 @@ ob_start();
       <td>
         <?php if ($cbSmenyPlanMaData): ?>
           <span class="txt_cervena text_tucny">DATA!</span>
+          <form method="get" action="<?= h(cb_url('/inicializace/plnime_smeny_plan.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex">
+            <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Aktualizovat</button>
+          </form>
         <?php else: ?>
           <form method="get" action="<?= h(cb_url('/inicializace/plnime_smeny_plan.php')) ?>" class="odstup_vnejsi_0">
             <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Spustit</button>
@@ -122,6 +132,9 @@ ob_start();
       <td>
         <?php if ($cbReportMaData): ?>
           <span class="txt_cervena text_tucny">DATA!</span>
+          <form method="get" action="<?= h(cb_url('/inicializace/google_data.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex">
+            <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Aktualizovat</button>
+          </form>
         <?php else: ?>
           <form method="get" action="<?= h(cb_url('/inicializace/google_data.php')) ?>" class="odstup_vnejsi_0">
             <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Spustit</button>
@@ -159,7 +172,7 @@ if ($cbRunRestia || $cbKeepRestiaMax) {
     $startExpanded = true;
     ob_start();
     require __DIR__ . '/../inicializace/plnime_restia_objednavky.php';
-    $card_max_html .= (string)ob_get_clean();
+    $card_max_html = (string)ob_get_clean();
 }
 
 if ($cbRunRestiaMenu) {
@@ -169,6 +182,10 @@ if ($cbRunRestiaMenu) {
     $card_max_html .= (string)ob_get_clean();
 }
 
-// karty/admin_inicializace.php * Verze: V12 * Aktualizace: 02.04.2026
-// počet řádků 132
+if ($cbOpenOnce) {
+    $startExpanded = true;
+}
+
+// karty/admin_inicializace.php * Verze: V13 * Aktualizace: 03.04.2026
+// počet řádků 180
 ?>

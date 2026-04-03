@@ -527,7 +527,7 @@ $card_min_html = (string)ob_get_clean();
 
 ob_start();
 ?>
-<div id="<?= cb_prehled_db_h($cardRootId) ?>" class="table-wrap ram_normal bg_bila zaobleni_12 odstup_vnitrni_10" style="width:100%; box-sizing:border-box;">
+<div id="<?= cb_prehled_db_h($cardRootId) ?>" class="ram_normal bg_bila zaobleni_12 odstup_vnitrni_10" style="width:100%; box-sizing:border-box;">
   <form method="get" action="<?= cb_prehled_db_h(cb_url('/')) ?>" class="odstup_vnejsi_0">
     <input type="hidden" name="page" value="<?= cb_prehled_db_h($page) ?>">
 
@@ -576,36 +576,38 @@ ob_start();
   <?php endif; ?>
 
   <div class="ram_normal bg_bila zaobleni_12 odstup_vnitrni_10 odstup_horni_10" style="display:flex; justify-content:center;">
-    <table class="table ram_normal bg_bila radek_1_35" style="width:auto; table-layout:auto;">
-      <thead>
-        <tr>
-          <th>Tabulka</th>
-          <th style="text-align:right;">Počet záznamů</th>
-          <th style="text-align:right;">Objem dat</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php foreach ($rows as $row): ?>
+    <div class="table-wrap sirka100" style="max-height:520px;">
+      <table class="table ram_normal bg_bila radek_1_35" style="width:auto; table-layout:auto; margin:0 auto;">
+        <thead>
           <tr>
-            <td><?= cb_prehled_db_h((string)$row['table']) ?></td>
-            <td style="<?= cb_prehled_db_h(cb_prehled_db_count_style((int)$row['count'])) ?>"><?= cb_prehled_db_h(cb_prehled_db_fmt_int((int)$row['count'])) ?></td>
-            <td style="text-align:right;"><?= cb_prehled_db_h(cb_prehled_db_fmt_bytes((int)$row['bytes'])) ?></td>
+            <th>Tabulka</th>
+            <th style="text-align:right;">Počet záznamů</th>
+            <th style="text-align:right;">Objem dat</th>
           </tr>
-        <?php endforeach; ?>
+        </thead>
+        <tbody>
+          <?php foreach ($rows as $row): ?>
+            <tr>
+              <td><?= cb_prehled_db_h((string)$row['table']) ?></td>
+              <td style="<?= cb_prehled_db_h(cb_prehled_db_count_style((int)$row['count'])) ?>"><?= cb_prehled_db_h(cb_prehled_db_fmt_int((int)$row['count'])) ?></td>
+              <td style="text-align:right;"><?= cb_prehled_db_h(cb_prehled_db_fmt_bytes((int)$row['bytes'])) ?></td>
+            </tr>
+          <?php endforeach; ?>
 
-        <?php if ($rows === []): ?>
-          <tr>
-            <td colspan="3">Bez tabulek.</td>
-          </tr>
-        <?php else: ?>
-          <tr>
-            <td><strong>Součet</strong></td>
-            <td style="text-align:right;"><strong><?= cb_prehled_db_h(cb_prehled_db_fmt_int($totalRows)) ?></strong></td>
-            <td style="text-align:right;"><strong><?= cb_prehled_db_h(cb_prehled_db_fmt_bytes($totalBytes)) ?></strong></td>
-          </tr>
-        <?php endif; ?>
-      </tbody>
-    </table>
+          <?php if ($rows === []): ?>
+            <tr>
+              <td colspan="3">Bez tabulek.</td>
+            </tr>
+          <?php else: ?>
+            <tr>
+              <td><strong>Součet</strong></td>
+              <td style="text-align:right;"><strong><?= cb_prehled_db_h(cb_prehled_db_fmt_int($totalRows)) ?></strong></td>
+              <td style="text-align:right;"><strong><?= cb_prehled_db_h(cb_prehled_db_fmt_bytes($totalBytes)) ?></strong></td>
+            </tr>
+          <?php endif; ?>
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <?php if (($scopes[$scope]['allow_wipe'] ?? false) === true): ?>
