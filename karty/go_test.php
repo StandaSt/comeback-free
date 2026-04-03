@@ -149,11 +149,13 @@ $gtInfo = '';
 $gtHasSelection = false;
 $gtRun = ((string)($_GET['gt_run'] ?? '') === '1');
 $gtRootId = 'go_test_root_' . substr(md5(__FILE__), 0, 8);
+$gtRunSrc = '';
 
 if ($gtSelected !== '' && in_array($gtSelected, $gtFiles, true)) {
     $gtSelectedFull = cb_go_test_admin_dir() . '/' . $gtSelected;
     $gtDescription = cb_go_test_extract_description($gtSelectedFull);
     $gtHasSelection = true;
+    $gtRunSrc = cb_url('/admin_testy/' . $gtSelected);
     $gtInfo = 'Vybraný script: admin_testy/' . $gtSelected;
 }
 
@@ -216,7 +218,17 @@ ob_start();
 
     <?php else: ?>
       <div data-go-test-run="1">
-      <?php include cb_go_test_admin_dir() . '/' . $gtSelected; ?>
+      <?php if ($gtHasSelection && $gtRunSrc !== ''): ?>
+        <p class="card_text txt_seda odstup_vnejsi_0"><?= h($gtInfo) ?></p>
+        <iframe
+          src="<?= h($gtRunSrc) ?>"
+          title="Výstup test scriptu"
+          sandbox="allow-scripts allow-same-origin allow-forms"
+          style="width:100%; min-height:520px; border:1px solid var(--clr_seda_2); border-radius:10px; background:#fff;"
+        ></iframe>
+      <?php else: ?>
+        <p class="card_text txt_cervena odstup_vnejsi_0">Není vybraný platný script.</p>
+      <?php endif; ?>
 
       <div class="card_actions gap_8 displ_flex jc_konec odstup_horni_10">
         <form method="get" action="<?= h(cb_url('/')) ?>" class="odstup_vnejsi_0">

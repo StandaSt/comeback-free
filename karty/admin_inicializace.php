@@ -13,6 +13,12 @@ $cbReportDate = 'Ne';
 
 $cbSmenyPlanMaData = false;
 $cbReportMaData = false;
+$cbRunSmenyPlan = (
+    isset($_POST['run_smeny_plan']) && (string)$_POST['run_smeny_plan'] === '1'
+);
+$cbRunGoogleData = (
+    isset($_POST['run_google_data']) && (string)$_POST['run_google_data'] === '1'
+);
 $cbRunRestia = (
     isset($_POST['run_restia_obj']) && (string)$_POST['run_restia_obj'] === '1'
 );
@@ -109,11 +115,13 @@ ob_start();
       <td>
         <?php if ($cbSmenyPlanMaData): ?>
           <span class="txt_cervena text_tucny">DATA!</span>
-          <form method="get" action="<?= h(cb_url('/inicializace/plnime_smeny_plan.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex">
+          <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex">
+            <input type="hidden" name="run_smeny_plan" value="1">
             <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Aktualizovat</button>
           </form>
         <?php else: ?>
-          <form method="get" action="<?= h(cb_url('/inicializace/plnime_smeny_plan.php')) ?>" class="odstup_vnejsi_0">
+          <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0">
+            <input type="hidden" name="run_smeny_plan" value="1">
             <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Spustit</button>
           </form>
         <?php endif; ?>
@@ -125,11 +133,13 @@ ob_start();
       <td>
         <?php if ($cbReportMaData): ?>
           <span class="txt_cervena text_tucny">DATA!</span>
-          <form method="get" action="<?= h(cb_url('/inicializace/google_data.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex">
+          <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex">
+            <input type="hidden" name="run_google_data" value="1">
             <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Aktualizovat</button>
           </form>
         <?php else: ?>
-          <form method="get" action="<?= h(cb_url('/inicializace/google_data.php')) ?>" class="odstup_vnejsi_0">
+          <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0">
+            <input type="hidden" name="run_google_data" value="1">
             <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Spustit</button>
           </form>
         <?php endif; ?>
@@ -160,6 +170,18 @@ ob_start();
 </div>
 <?php
 $card_max_html = (string)ob_get_clean();
+
+if ($cbRunSmenyPlan) {
+    ob_start();
+    require __DIR__ . '/../inicializace/plnime_smeny_plan.php';
+    $card_max_html = (string)ob_get_clean();
+}
+
+if ($cbRunGoogleData) {
+    ob_start();
+    require __DIR__ . '/../inicializace/google_data.php';
+    $card_max_html = (string)ob_get_clean();
+}
 
 if ($cbRunRestia || $cbKeepRestiaMax) {
     ob_start();

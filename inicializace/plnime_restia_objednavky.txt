@@ -289,3 +289,147 @@ PAUSE_MS: 500
 20 / 01.04.2026 / 38 / 844 ms / 0 min 17 sec / OK
 21 / 02.04.2026 / 8 / 493 ms / 0 min 17 sec / OK
 KONEC IMPORTU: 02.04.2026 15:37:15
+-----
+START: 04.04.2026 00:18:56
+SCRIPT: plnime_restia_objednavky.php
+RESUME_FROM: 01.07.2023
+REQUESTED_DAYS: 20
+LIMIT: 100
+STEP_DAYS: 20
+PAUSE_MS: 500
+1 / 01.07.2023 / 0 / 403 ms / 0 min 0 sec / OK
+2 / 02.07.2023 / 0 / 374 ms / 0 min 0 sec / OK
+3 / 03.07.2023 / 0 / 394 ms / 0 min 1 sec / OK
+4 / 04.07.2023 / 0 / 381 ms / 0 min 1 sec / OK
+5 / 05.07.2023 / 0 / 365 ms / 0 min 1 sec / OK
+6 / 06.07.2023 / 0 / 374 ms / 0 min 2 sec / OK
+7 / 07.07.2023 / 0 / 386 ms / 0 min 2 sec / OK
+8 / 08.07.2023 / 0 / 370 ms / 0 min 3 sec / OK
+9 / 09.07.2023 / 0 / 374 ms / 0 min 3 sec / OK
+10 / 10.07.2023 / 0 / 381 ms / 0 min 3 sec / OK
+11 / 11.07.2023 / 0 / 388 ms / 0 min 4 sec / OK
+12 / 12.07.2023 / 0 / 390 ms / 0 min 4 sec / OK
+13 / 13.07.2023 / 0 / 397 ms / 0 min 4 sec / OK
+14 / 14.07.2023 / 0 / 372 ms / 0 min 5 sec / OK
+15 / 15.07.2023 / 0 / 373 ms / 0 min 5 sec / OK
+16 / 16.07.2023 / 0 / 352 ms / 0 min 6 sec / OK
+17 / 17.07.2023 / 0 / 366 ms / 0 min 6 sec / OK
+18 / 18.07.2023 / 0 / 374 ms / 0 min 6 sec / OK
+19 / 19.07.2023 / 0 / 352 ms / 0 min 7 sec / OK
+20 / 20.07.2023 / 0 / 363 ms / 0 min 7 sec / OK
+KONEC CYKLU: 04.04.2026 00:19:03
+NOVY CYKLUS: 20 dni
+21 / 21.07.2023 / 0 / 374 ms / 0 min 34 sec / OK
+22 / 22.07.2023 / 0 / 392 ms / 0 min 35 sec / OK
+23 / 23.07.2023 / 0 / 412 ms / 0 min 35 sec / OK
+24 / 24.07.2023 / 0 / 384 ms / 0 min 35 sec / OK
+25 / 25.07.2023 / 0 / 329 ms / 0 min 36 sec / OK
+26 / 26.07.2023 / 0 / 377 ms / 0 min 36 sec / OK
+27 / 27.07.2023 / 0 / 378 ms / 0 min 37 sec / OK
+28 / 28.07.2023 / 0 / 355 ms / 0 min 37 sec / OK
+29 / 29.07.2023 / 0 / 373 ms / 0 min 37 sec / OK
+30 / 30.07.2023 / 0 / 375 ms / 0 min 38 sec / OK
+31 / 31.07.2023 / 0 / 385 ms / 0 min 38 sec / OK
+32 / 01.08.2023 / 0 / 377 ms / 0 min 38 sec / OK
+33 / 02.08.2023 / 0 / 374 ms / 0 min 39 sec / OK
+34 / 03.08.2023 / 0 / 344 ms / 0 min 39 sec / OK
+35 / 04.08.2023 / 0 / 340 ms / 0 min 39 sec / OK
+36 / 05.08.2023 / 0 / 392 ms / 0 min 40 sec / OK
+37 / 06.08.2023 / 0 / 365 ms / 0 min 40 sec / OK
+38 / 07.08.2023 / 0 / 384 ms / 0 min 41 sec / OK
+39 / 08.08.2023 / 0 / 371 ms / 0 min 41 sec / OK
+40 / 09.08.2023 / 0 / 379 ms / 0 min 41 sec / OK
+KONEC CYKLU: 04.04.2026 00:19:37
+NOVY CYKLUS: 20 dni
+41 / 10.08.2023 / 0 / 386 ms / 0 min 53 sec / OK
+42 / 11.08.2023 / 0 / 324 ms / 0 min 54 sec / OK
+43 / 12.08.2023 / 0 / 376 ms / 0 min 54 sec / OK
+44 / 13.08.2023 / 0 / 390 ms / 0 min 54 sec / OK
+45 / 14.08.2023 / 0 / 389 ms / 0 min 55 sec / OK
+46 / 15.08.2023 / 0 / 389 ms / 0 min 55 sec / OK
+47 / 16.08.2023 / 0 / 385 ms / 0 min 56 sec / OK
+48 / 17.08.2023 / 0 / 358 ms / 0 min 56 sec / OK
+49 / 18.08.2023 / 0 / 361 ms / 0 min 56 sec / OK
+50 / 19.08.2023 / 0 / 342 ms / 0 min 57 sec / OK
+51 / 20.08.2023 / 0 / 369 ms / 0 min 57 sec / OK
+52 / 21.08.2023 / 0 / 368 ms / 0 min 57 sec / OK
+53 / 22.08.2023 / 0 / 366 ms / 0 min 58 sec / OK
+54 / 23.08.2023 / 0 / 376 ms / 0 min 58 sec / OK
+55 / 24.08.2023 / 0 / 367 ms / 0 min 58 sec / OK
+56 / 25.08.2023 / 0 / 342 ms / 0 min 59 sec / OK
+57 / 26.08.2023 / 0 / 339 ms / 0 min 59 sec / OK
+58 / 27.08.2023 / 0 / 364 ms / 1 min 0 sec / OK
+59 / 28.08.2023 / 0 / 342 ms / 1 min 0 sec / OK
+60 / 29.08.2023 / 0 / 368 ms / 1 min 0 sec / OK
+KONEC CYKLU: 04.04.2026 00:19:56
+-----
+START: 04.04.2026 00:32:24
+SCRIPT: plnime_restia_objednavky.php
+RESUME_FROM: 30.08.2023
+REQUESTED_DAYS: 20
+LIMIT: 100
+STEP_DAYS: 20
+PAUSE_MS: 500
+1 / 30.08.2023 / 0 / 411 ms / 0 min 0 sec / OK
+2 / 31.08.2023 / 0 / 393 ms / 0 min 0 sec / OK
+3 / 01.09.2023 / 0 / 393 ms / 0 min 1 sec / OK
+4 / 02.09.2023 / 0 / 365 ms / 0 min 1 sec / OK
+5 / 03.09.2023 / 0 / 354 ms / 0 min 1 sec / OK
+6 / 04.09.2023 / 0 / 379 ms / 0 min 2 sec / OK
+7 / 05.09.2023 / 0 / 366 ms / 0 min 2 sec / OK
+8 / 06.09.2023 / 0 / 322 ms / 0 min 2 sec / OK
+9 / 07.09.2023 / 0 / 387 ms / 0 min 3 sec / OK
+10 / 08.09.2023 / 0 / 371 ms / 0 min 3 sec / OK
+11 / 09.09.2023 / 0 / 365 ms / 0 min 4 sec / OK
+12 / 10.09.2023 / 0 / 373 ms / 0 min 4 sec / OK
+13 / 11.09.2023 / 0 / 390 ms / 0 min 4 sec / OK
+14 / 12.09.2023 / 0 / 357 ms / 0 min 5 sec / OK
+15 / 13.09.2023 / 0 / 387 ms / 0 min 5 sec / OK
+16 / 14.09.2023 / 0 / 343 ms / 0 min 5 sec / OK
+17 / 15.09.2023 / 0 / 380 ms / 0 min 6 sec / OK
+18 / 16.09.2023 / 0 / 376 ms / 0 min 6 sec / OK
+19 / 17.09.2023 / 0 / 380 ms / 0 min 7 sec / OK
+20 / 18.09.2023 / 0 / 377 ms / 0 min 7 sec / OK
+KONEC CYKLU: 04.04.2026 00:32:31
+-----
+START: 04.04.2026 00:34:47
+SCRIPT: plnime_restia_objednavky.php
+RESUME_FROM: 19.09.2023
+REQUESTED_DAYS: 2
+LIMIT: 100
+STEP_DAYS: 2
+PAUSE_MS: 500
+1 / 19.09.2023 / 0 / 399 ms / 0 min 0 sec / OK
+2 / 20.09.2023 / 0 / 413 ms / 0 min 0 sec / OK
+KONEC CYKLU: 04.04.2026 00:34:48
+KONEC IMPORTU: 04.04.2026 00:34:58 | DUVOD: rucne ukonceno
+-----
+START: 04.04.2026 00:41:12
+SCRIPT: plnime_restia_objednavky.php
+RESUME_FROM: 01.11.2025
+REQUESTED_DAYS: 20
+LIMIT: 100
+STEP_DAYS: 20
+PAUSE_MS: 500
+1 / 01.11.2025 / 22 / 691 ms / 0 min 0 sec / OK
+2 / 02.11.2025 / 22 / 637 ms / 0 min 1 sec / OK
+3 / 03.11.2025 / 40 / 807 ms / 0 min 2 sec / OK
+4 / 04.11.2025 / 29 / 758 ms / 0 min 2 sec / OK
+5 / 05.11.2025 / 25 / 647 ms / 0 min 3 sec / OK
+6 / 06.11.2025 / 36 / 849 ms / 0 min 4 sec / OK
+7 / 07.11.2025 / 40 / 810 ms / 0 min 5 sec / OK
+8 / 08.11.2025 / 38 / 864 ms / 0 min 6 sec / OK
+9 / 09.11.2025 / 26 / 714 ms / 0 min 6 sec / OK
+10 / 10.11.2025 / 24 / 668 ms / 0 min 7 sec / OK
+11 / 11.11.2025 / 51 / 975 ms / 0 min 8 sec / OK
+12 / 12.11.2025 / 25 / 719 ms / 0 min 9 sec / OK
+13 / 13.11.2025 / 35 / 797 ms / 0 min 9 sec / OK
+14 / 14.11.2025 / 48 / 1019 ms / 0 min 10 sec / OK
+15 / 15.11.2025 / 42 / 863 ms / 0 min 11 sec / OK
+16 / 16.11.2025 / 42 / 922 ms / 0 min 12 sec / OK
+17 / 17.11.2025 / 30 / 713 ms / 0 min 13 sec / OK
+18 / 18.11.2025 / 43 / 892 ms / 0 min 14 sec / OK
+19 / 19.11.2025 / 44 / 886 ms / 0 min 15 sec / OK
+20 / 20.11.2025 / 37 / 819 ms / 0 min 16 sec / OK
+KONEC CYKLU: 04.04.2026 00:41:28
+KONEC IMPORTU: 04.04.2026 00:41:45 | DUVOD: rucne ukonceno

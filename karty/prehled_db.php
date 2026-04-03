@@ -527,86 +527,91 @@ $card_min_html = (string)ob_get_clean();
 
 ob_start();
 ?>
-<div id="<?= cb_prehled_db_h($cardRootId) ?>" class="ram_normal bg_bila zaobleni_12 odstup_vnitrni_10" style="width:100%; box-sizing:border-box;">
-  <form method="get" action="<?= cb_prehled_db_h(cb_url('/')) ?>" class="odstup_vnejsi_0">
-    <input type="hidden" name="page" value="<?= cb_prehled_db_h($page) ?>">
-
-    <div class="displ_flex gap_8" style="flex-wrap:wrap; align-items:center;">
-      <?php foreach (['komplet', 'restia_obj', 'restia_menu', 'smeny', 'reporty', 'system'] as $key): ?>
-        <?php $cfg = $scopes[$key]; ?>
-        <label
-          class="ram_normal zaobleni_12 odstup_vnitrni_10"
-          style="display:flex; align-items:center; gap:8px; cursor:pointer;"
-        >
-          <input
-            type="radio"
-            name="db_scope"
-            value="<?= cb_prehled_db_h($key) ?>"
-            <?= $scope === $key ? 'checked' : '' ?>
-            onchange="this.form.submit()"
-          >
-          <span style="<?= $scope === $key ? 'font-weight:700;' : '' ?>"><?= cb_prehled_db_h((string)$cfg['label']) ?></span>
-        </label>
-      <?php endforeach; ?>
-    </div>
-  </form>
-
-  <?php if ($msgErr !== ''): ?>
-    <div class="ram_normal bg_bila zaobleni_12 odstup_vnitrni_10 odstup_horni_10">
-      <p class="card_text txt_cervena odstup_vnejsi_0"><?= cb_prehled_db_h($msgErr) ?></p>
-    </div>
-  <?php endif; ?>
-
-  <?php if ($msgOk !== ''): ?>
-    <div class="ram_normal bg_bila zaobleni_12 odstup_vnitrni_10 odstup_horni_10">
-      <p class="card_text txt_zelena odstup_vnejsi_0"><?= cb_prehled_db_h($msgOk) ?></p>
-      <?php if ($wipeResult !== []): ?>
-        <div class="card_text txt_seda odstup_vnejsi_0 odstup_horni_10" style="display:flex; flex-wrap:wrap; gap:6px 10px;">
-          <?php foreach ($wipeResult as $table => $count): ?>
-            <span><?= cb_prehled_db_h($table . ': ' . $count) ?></span>
+<div id="<?= cb_prehled_db_h($cardRootId) ?>" class="ram_normal bg_bila zaobleni_12 odstup_vnitrni_10" style="width:100%; max-height:100%; box-sizing:border-box; overflow:hidden; display:flex; flex-direction:column;">
+  <div style="display:grid; grid-template-columns:220px minmax(0, 1fr); gap:12px; align-items:stretch; flex:1 1 auto; min-height:0; max-height:100%;">
+    <div style="display:flex; flex-direction:column; min-height:0; max-height:100%;">
+      <form method="get" action="<?= cb_prehled_db_h(cb_url('/')) ?>" class="odstup_vnejsi_0">
+        <input type="hidden" name="page" value="<?= cb_prehled_db_h($page) ?>">
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <?php foreach (['komplet', 'restia_obj', 'restia_menu', 'smeny', 'reporty', 'system'] as $key): ?>
+            <?php $cfg = $scopes[$key]; ?>
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+              <input
+                type="radio"
+                name="db_scope"
+                value="<?= cb_prehled_db_h($key) ?>"
+                <?= $scope === $key ? 'checked' : '' ?>
+                onchange="this.form.submit()"
+              >
+              <span style="<?= $scope === $key ? 'font-weight:700;' : '' ?>"><?= cb_prehled_db_h((string)$cfg['label']) ?></span>
+            </label>
           <?php endforeach; ?>
         </div>
-      <?php endif; ?>
-      <form method="get" action="<?= cb_prehled_db_h(cb_url('/')) ?>" class="odstup_vnejsi_0 odstup_horni_10">
-        <input type="hidden" name="page" value="<?= cb_prehled_db_h($page) ?>">
-        <input type="hidden" name="db_scope" value="<?= cb_prehled_db_h($scope) ?>">
-        <button type="submit" class="btn btn-primary">Pokračovat</button>
       </form>
     </div>
-  <?php endif; ?>
 
-  <div class="ram_normal bg_bila zaobleni_12 odstup_vnitrni_10 odstup_horni_10" style="display:flex; justify-content:center;">
-    <div class="table-wrap sirka100" style="max-height:520px;">
-      <table class="table ram_normal bg_bila radek_1_35" style="width:auto; table-layout:auto; margin:0 auto;">
-        <thead>
-          <tr>
-            <th>Tabulka</th>
-            <th style="text-align:right;">Počet záznamů</th>
-            <th style="text-align:right;">Objem dat</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($rows as $row): ?>
-            <tr>
-              <td><?= cb_prehled_db_h((string)$row['table']) ?></td>
-              <td style="<?= cb_prehled_db_h(cb_prehled_db_count_style((int)$row['count'])) ?>"><?= cb_prehled_db_h(cb_prehled_db_fmt_int((int)$row['count'])) ?></td>
-              <td style="text-align:right;"><?= cb_prehled_db_h(cb_prehled_db_fmt_bytes((int)$row['bytes'])) ?></td>
-            </tr>
-          <?php endforeach; ?>
+    <div style="display:flex; flex-direction:column; min-height:0; height:100%;">
+      <?php if ($msgErr !== ''): ?>
+        <div class="ram_normal bg_bila zaobleni_12 odstup_vnitrni_10">
+          <p class="card_text txt_cervena odstup_vnejsi_0"><?= cb_prehled_db_h($msgErr) ?></p>
+        </div>
+      <?php endif; ?>
 
-          <?php if ($rows === []): ?>
-            <tr>
-              <td colspan="3">Bez tabulek.</td>
-            </tr>
-          <?php else: ?>
-            <tr>
-              <td><strong>Součet</strong></td>
-              <td style="text-align:right;"><strong><?= cb_prehled_db_h(cb_prehled_db_fmt_int($totalRows)) ?></strong></td>
-              <td style="text-align:right;"><strong><?= cb_prehled_db_h(cb_prehled_db_fmt_bytes($totalBytes)) ?></strong></td>
-            </tr>
+      <?php if ($msgOk !== ''): ?>
+        <div class="ram_normal bg_bila zaobleni_12 odstup_vnitrni_10<?= $msgErr !== '' ? ' odstup_horni_10' : '' ?>">
+          <p class="card_text txt_zelena odstup_vnejsi_0"><?= cb_prehled_db_h($msgOk) ?></p>
+          <?php if ($wipeResult !== []): ?>
+            <div class="card_text txt_seda odstup_vnejsi_0 odstup_horni_10" style="display:flex; flex-wrap:wrap; gap:6px 10px;">
+              <?php foreach ($wipeResult as $table => $count): ?>
+                <span><?= cb_prehled_db_h($table . ': ' . $count) ?></span>
+              <?php endforeach; ?>
+            </div>
           <?php endif; ?>
-        </tbody>
-      </table>
+          <form method="get" action="<?= cb_prehled_db_h(cb_url('/')) ?>" class="odstup_vnejsi_0 odstup_horni_10">
+            <input type="hidden" name="page" value="<?= cb_prehled_db_h($page) ?>">
+            <input type="hidden" name="db_scope" value="<?= cb_prehled_db_h($scope) ?>">
+            <button type="submit" class="btn btn-primary">Pokračovat</button>
+          </form>
+        </div>
+      <?php endif; ?>
+
+      <div class="table-wrap" style="flex:1 1 auto; min-height:0; max-height:100%; overflow-y:auto; overflow-x:auto; background:var(--clr_bila);">
+        <table class="table ram_normal bg_bila radek_1_35" style="width:100%; table-layout:fixed; margin:0;">
+          <colgroup>
+            <col style="width:42%;">
+            <col style="width:29%;">
+            <col style="width:29%;">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Tabulka</th>
+              <th style="text-align:right;">Počet záznamů</th>
+              <th style="text-align:right;">Objem dat</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($rows as $row): ?>
+              <tr>
+                <td><?= cb_prehled_db_h((string)$row['table']) ?></td>
+                <td style="<?= cb_prehled_db_h(cb_prehled_db_count_style((int)$row['count'])) ?>"><?= cb_prehled_db_h(cb_prehled_db_fmt_int((int)$row['count'])) ?></td>
+                <td style="text-align:right;"><?= cb_prehled_db_h(cb_prehled_db_fmt_bytes((int)$row['bytes'])) ?></td>
+              </tr>
+            <?php endforeach; ?>
+
+            <?php if ($rows === []): ?>
+              <tr>
+                <td colspan="3">Bez tabulek.</td>
+              </tr>
+            <?php else: ?>
+              <tr>
+                <td><strong>Součet</strong></td>
+                <td style="text-align:right;"><strong><?= cb_prehled_db_h(cb_prehled_db_fmt_int($totalRows)) ?></strong></td>
+                <td style="text-align:right;"><strong><?= cb_prehled_db_h(cb_prehled_db_fmt_bytes($totalBytes)) ?></strong></td>
+              </tr>
+            <?php endif; ?>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 

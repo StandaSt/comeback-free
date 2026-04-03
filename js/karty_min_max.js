@@ -51,14 +51,14 @@
     }
   }
 
-  function getDashBox(root) {
-    if (!root) return null;
-    return root.closest('.dash_box') || document.querySelector('.dash_box');
-  }
-
   function getDashCard(root) {
     if (!root) return null;
     return root.closest('[data-cb-dash-card="1"]');
+  }
+
+  function getDashBox(root) {
+    if (!root) return null;
+    return root.closest('.dash_box') || document.querySelector('.dash_box');
   }
 
   function getCardHead(root) {
@@ -78,19 +78,6 @@
 
   function getCardRoots() {
     return Array.from(document.querySelectorAll(CARD_ROOT_SELECTOR)).filter((el) => el instanceof HTMLElement);
-  }
-
-  function getLayer(dashBox) {
-    if (!dashBox) return null;
-
-    let layer = dashBox.querySelector('.dash_maxi_layer');
-    if (layer) return layer;
-
-    layer = document.createElement('div');
-    layer.className = 'dash_maxi_layer odstup_vnitrni_10';
-    layer.innerHTML = '<div class="dash_maxi_stage"></div>';
-    dashBox.appendChild(layer);
-    return layer;
   }
 
   function updateToggle(toggle, isOn) {
@@ -171,33 +158,12 @@
       toggle,
       dashCard,
       dashBox,
-      layer,
-      stage,
-      overlayCard,
-      expandedNextSibling,
-      overlayToggle,
-      overlayNanoBtn,
       returnMode
     } = item;
 
     const targetReturnMode = (returnMode === 'nano') ? 'nano' : 'mini';
 
-    if (overlayToggle) {
-      overlayToggle.removeEventListener('click', item.handleOverlayToggle);
-    }
-    if (overlayNanoBtn) {
-      overlayNanoBtn.removeEventListener('click', item.handleOverlayNano);
-    }
-
-    if (expanded && root) {
-      if (expandedNextSibling && expandedNextSibling.parentNode === root) {
-        root.insertBefore(expanded, expandedNextSibling);
-      } else {
-        root.appendChild(expanded);
-      }
-      expanded.classList.add('is-hidden');
-    }
-
+    if (expanded) expanded.classList.add('is-hidden');
     if (compact) compact.classList.remove('is-hidden');
     if (toggle) updateToggle(toggle, false);
     updateSubtitle(root, false);
@@ -206,13 +172,11 @@
     }
     if (dashCard) {
       dashCard.classList.remove('is-expanded');
-      dashCard.classList.remove('is-maxi-source');
+      dashCard.classList.remove('is-maxi-overlay');
     }
-    if (dashBox) dashBox.classList.remove('has-maxi');
-    if (stage && overlayCard && overlayCard.parentNode === stage) {
-      stage.removeChild(overlayCard);
+    if (dashBox) {
+      dashBox.classList.remove('has-maxi');
     }
-    if (layer) layer.classList.remove('is-active');
 
     activeMaxi = null;
     clearMaxiState();
@@ -242,10 +206,8 @@
     const toggle = root.querySelector(toggleSel);
     const dashCard = getDashCard(root);
     const dashBox = getDashBox(root);
-    const layer = getLayer(dashBox);
-    const stage = layer ? layer.querySelector('.dash_maxi_stage') : null;
 
-    if (!compact || !expanded || !toggle || !dashCard || !dashBox || !layer || !stage) {
+    if (!compact || !expanded || !toggle || !dashCard) {
       return;
     }
 
@@ -254,75 +216,18 @@
       ? preferredReturnMode
       : (sourceMode === 'nano' ? 'nano' : 'mini');
 
-    const accentClasses = Array.from(dashCard.classList).filter((name) => /^card_/.test(name));
-    const overlayCard = document.createElement('section');
-    overlayCard.className = ['dash_maxi_card'].concat(accentClasses).join(' ');
-    const sourceRect = dashCard.getBoundingClientRect();
-    if (sourceRect.width > 0) {
-      overlayCard.style.minWidth = sourceRect.width + 'px';
-    }
-    if (sourceRect.height > 0) {
-      overlayCard.style.minHeight = sourceRect.height + 'px';
-    }
-
     updateSubtitle(root, true);
-    const head = getCardHead(root);
-    const headClone = head ? head.cloneNode(true) : document.createElement('div');
-    const overlayToggle = headClone.querySelector(toggleSel);
-    const overlayNanoBtn = headClone.querySelector(CARD_TO_NANO_SELECTOR);
-
-    makeHeadInteractive(headClone);
-
-    const expandedNextSibling = expanded.nextSibling;
-    const handleOverlayClose = () => {
-      closeActiveMaxi();
-    };
-    const handleOverlayToggle = () => {
-      if (activeMaxi && activeMaxi.root === root) {
-        activeMaxi.returnMode = 'mini';
-      }
-      closeActiveMaxi();
-    };
-    const handleOverlayNano = () => {
-      if (activeMaxi && activeMaxi.root === root) {
-        activeMaxi.returnMode = 'nano';
-      }
-      closeActiveMaxi();
-    };
-
     expanded.classList.remove('is-hidden');
     compact.classList.add('is-hidden');
     dashCard.classList.add('is-expanded');
-    dashCard.classList.add('is-maxi-source');
-    dashBox.classList.add('has-maxi');
+    dashCard.classList.add('is-maxi-overlay');
+    if (dashBox) {
+      dashBox.classList.add('has-maxi');
+    }
     updateToggle(toggle, true);
     if (typeof w.cbSetBranchSelectDisabledForRoot === 'function') {
       w.cbSetBranchSelectDisabledForRoot(root, true);
     }
-
-    if (overlayToggle) {
-      updateToggle(overlayToggle, true);
-      overlayToggle.addEventListener('click', handleOverlayToggle);
-    }
-    if (overlayNanoBtn) {
-      overlayNanoBtn.addEventListener('click', handleOverlayNano);
-    }
-
-    if (headClone) {
-      headClone.addEventListener('mousedown', blockHeadSelection);
-      headClone.addEventListener('dblclick', (event) => {
-        if (event.target instanceof Element && event.target.closest(toggleSel)) {
-          return;
-        }
-        clearSelection();
-        handleOverlayClose();
-      });
-    }
-
-    overlayCard.appendChild(headClone);
-    overlayCard.appendChild(expanded);
-    stage.appendChild(overlayCard);
-    layer.classList.add('is-active');
 
     activeMaxi = {
       root,
@@ -331,15 +236,6 @@
       toggle,
       dashCard,
       dashBox,
-      layer,
-      stage,
-      overlayCard,
-      overlayToggle,
-      overlayNanoBtn,
-      expandedNextSibling,
-      handleOverlayClose,
-      handleOverlayToggle,
-      handleOverlayNano,
       returnMode: normalizedReturnMode
     };
     saveMaxiState(String(root.getAttribute('data-card-id') || ''), normalizedReturnMode);
