@@ -294,16 +294,6 @@ $zakBuildUrl = static function (array $extra = []) use ($zakBaseParams, $zakQuer
 ?>
 
 <?php
-ob_start();
-?>
-<p class="card_text txt_seda odstup_vnejsi_0">Nalezeno zákazníků: <strong><?= h((string)$totalZak) ?></strong></p>
-    <p class="card_text txt_seda odstup_vnejsi_0">Aktivních / blokovaných: <strong><?= h((string)$activeZak) ?></strong> / <strong><?= h((string)$blockedZak) ?></strong></p>
-    <p class="card_text txt_seda odstup_vnejsi_0">Nejaktivnější zákazníci:</p>
-    <p class="card_text txt_seda odstup_vnejsi_0"><?= h($topLines[0]) ?></p>
-    <p class="card_text txt_seda odstup_vnejsi_0"><?= h($topLines[1]) ?></p>
-    <p class="card_text txt_seda odstup_vnejsi_0"><?= h($topLines[2]) ?></p>
-<?php
-$card_min_html = (string)ob_get_clean();
 $card_min_html = ''
     . '<div class="table-wrap ram_normal bg_bila zaobleni_12">'
     . '  <table class="table ram_normal bg_bila radek_1_35 card_table_min" >'

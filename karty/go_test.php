@@ -141,29 +141,18 @@ if (!function_exists('cb_go_test_extract_description')) {
     }
 }
 
-if (!function_exists('cb_go_test_clean_url')) {
-    function cb_go_test_clean_url(): string
-    {
-        return cb_url('/') . '?page=go_test';
-    }
-}
-
 $gtFiles = cb_go_test_scan_files();
 $gtSelected = cb_go_test_norm_name((string)($_GET['gt_script'] ?? ''));
 $gtSelectedFull = '';
 $gtDescription = '';
-$gtRunUrl = '';
 $gtInfo = '';
 $gtHasSelection = false;
 $gtRun = ((string)($_GET['gt_run'] ?? '') === '1');
-$gtCleanUrl = cb_go_test_clean_url();
 $gtRootId = 'go_test_root_' . substr(md5(__FILE__), 0, 8);
-$gtTemplateId = 'go_test_tpl_' . substr(md5(__FILE__), 0, 8);
 
 if ($gtSelected !== '' && in_array($gtSelected, $gtFiles, true)) {
     $gtSelectedFull = cb_go_test_admin_dir() . '/' . $gtSelected;
     $gtDescription = cb_go_test_extract_description($gtSelectedFull);
-    $gtRunUrl = cb_url('/admin_testy/' . $gtSelected);
     $gtHasSelection = true;
     $gtInfo = 'Vybraný script: admin_testy/' . $gtSelected;
 }

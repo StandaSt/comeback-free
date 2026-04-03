@@ -21,13 +21,6 @@ $cbRunRestiaMenu = (
 );
 $cbRestiaState = $_SESSION['cb_restia_hist_v4_state'] ?? null;
 $cbKeepRestiaMax = false;
-if ($cbRunRestia || $cbRunRestiaMenu) {
-    $_SESSION['cb_admin_init_open_once'] = 1;
-}
-$cbOpenOnce = ((int)($_SESSION['cb_admin_init_open_once'] ?? 0) === 1);
-if (!$cbRunRestia && !$cbRunRestiaMenu && $cbOpenOnce) {
-    unset($_SESSION['cb_admin_init_open_once']);
-}
 if (is_array($cbRestiaState)) {
     $cbKeepRestiaMax = (
         (int)($cbRestiaState['finished'] ?? 0) === 0
@@ -169,21 +162,15 @@ ob_start();
 $card_max_html = (string)ob_get_clean();
 
 if ($cbRunRestia || $cbKeepRestiaMax) {
-    $startExpanded = true;
     ob_start();
     require __DIR__ . '/../inicializace/plnime_restia_objednavky.php';
     $card_max_html = (string)ob_get_clean();
 }
 
 if ($cbRunRestiaMenu) {
-    $startExpanded = true;
     ob_start();
     require __DIR__ . '/../inicializace/plnime_restia_menu.php';
     $card_max_html .= (string)ob_get_clean();
-}
-
-if ($cbOpenOnce) {
-    $startExpanded = true;
 }
 
 // karty/admin_inicializace.php * Verze: V13 * Aktualizace: 03.04.2026

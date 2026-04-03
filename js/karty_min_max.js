@@ -420,8 +420,7 @@
 
     makeHeadInteractive(head);
 
-    const startExpanded = root.getAttribute('data-card-start-expanded') === '1';
-    setExpanded(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR, startExpanded);
+    setExpanded(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR, false);
 
     toggle.addEventListener('click', () => {
       const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
