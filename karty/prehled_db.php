@@ -68,6 +68,7 @@ if (!function_exists('cb_prehled_db_scopes')) {
                     'obj_polozky',
                     'obj_raw',
                     'obj_sluzba',
+                    'zakaznik',
                 ],
             ],
             'restia_menu' => [
@@ -135,7 +136,6 @@ if (!function_exists('cb_prehled_db_scopes')) {
                     'user_set',
                     'user_slot',
                     'user_spy',
-                    'zakaznik',
                 ],
             ],
         ];
@@ -285,7 +285,9 @@ if (!function_exists('cb_prehled_db_scope_tables')) {
         $scopes = cb_prehled_db_scopes();
 
         if ($scope === 'komplet') {
-            return cb_prehled_db_all_tables($conn);
+            $all = cb_prehled_db_all_tables($conn);
+            sort($all, SORT_STRING);
+            return $all;
         }
 
         $tables = $scopes[$scope]['tables'] ?? [];
@@ -296,6 +298,7 @@ if (!function_exists('cb_prehled_db_scope_tables')) {
             }
         }
 
+        sort($out, SORT_STRING);
         return $out;
     }
 }

@@ -238,11 +238,11 @@ main{
    TOOLTIP - GLOBALNI
    ========================= */
 
-.tip_box{
+.tooltip_box{
   position:relative;  align-items:center;
 }
 
-.tip_box::after{
+.tooltip_text::after{
   content:attr(data-tip);
   position:absolute;
   right:calc(100% + 10px);
@@ -252,14 +252,14 @@ main{
   pointer-events:none;
   opacity:0;
   visibility:hidden;
-  font:12px/1.2 Arial, Helvetica, sans-serif;
+  font:11px/1.05 Arial, Helvetica, sans-serif;
   color:var(--clr_bila);
   background:var(--clr_pruhledna_cerna_85);
   z-index:9999;
-  padding:6px 8px;
+  padding:4px 6px;
 }
 
-.tip_box::before{
+.tooltip_text::before{
   content:"";
   position:absolute;
   right:calc(100% + 4px);
@@ -268,33 +268,61 @@ main{
   pointer-events:none;
   opacity:0;
   visibility:hidden;
-  border:6px solid transparent;
+  border:5px solid transparent;
   border-left-color:var(--clr_pruhledna_cerna_85);
   z-index:9999;
 }
 
-.tip_box_head::after{
-  left:50% !important;
-  right:auto !important;
-  top:auto !important;
-  bottom:100% !important;
-  transform:translate(-50%, -8px) !important;
-}
-
-.tip_box_head::before{
-  left:50% !important;
-  right:auto !important;
-  top:auto !important;
-  bottom:100% !important;
-  transform:translate(-50%, -2px) !important;
-}
-
-.tip_box:hover::after,
-.tip_box:hover::before,
-.tip_box:focus-visible::after,
-.tip_box:focus-visible::before{
+.tooltip_text:hover::after,
+.tooltip_text:hover::before,
+.tooltip_text:focus-visible::after,
+.tooltip_text:focus-visible::before{
   opacity:1;
   visibility:visible;
+}
+
+.tooltip_table_content{
+  display:none;
+  position:absolute;
+  left:0;
+  top:100%;
+  z-index:9999;
+  margin-top:6px;
+  padding:8px;
+  background:var(--clr_bila);
+  color:var(--clr_cerna);
+  border:2px solid var(--clr_seda_3);
+  border-radius:8px;
+  min-width:300px;
+  box-shadow:0 12px 28px var(--clr_stin_5);
+}
+
+.tooltip_box.tooltip_table:hover .tooltip_table_content,
+.tooltip_box.tooltip_table:focus-within .tooltip_table_content{
+  display:block;
+}
+
+.tooltip_table_data{
+  width:100%;
+  margin:0;
+  border-collapse:collapse;
+  font-size:11px;
+  line-height:1.05;
+  color:var(--clr_cerna);
+}
+
+.tooltip_table_data th,
+.tooltip_table_data td{
+  padding:3px 6px;
+  border:1px solid var(--clr_seda_2);
+  background:var(--clr_bila);
+  color:var(--clr_cerna);
+  font-weight:400;
+}
+
+.tooltip_table_data th{
+  background:var(--clr_seda_1);
+  font-weight:700;
 }
 
 /* =========================

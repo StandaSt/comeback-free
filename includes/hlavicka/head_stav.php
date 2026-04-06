@@ -11,7 +11,7 @@ declare(strict_types=1);
     <span class="head_sys_item text_11 gap_6 displ_flex"><span class="head_sys_lab text_11 radek_1_1">Restia</span><span class="head_led is-<?= h($sysRestia) ?>" aria-hidden="true"></span></span>
   </div>
 
-  <button type="button" class="head_tech cursor_ruka tip_box zaobleni_6 tip_box_head displ_flex jc_stred" data-tip="TECH" aria-label="TECH">
+  <button type="button" class="head_tech cursor_ruka zaobleni_6 displ_flex jc_stred" aria-label="TECH">
     <span aria-hidden="true">&#9881;</span>
   </button>
 </div>

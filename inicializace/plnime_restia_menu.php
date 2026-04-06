@@ -81,33 +81,119 @@ if (!function_exists('cb_restia_menu_get_auth')) {
     }
 }
 
-if (!function_exists('cb_restia_menu_get_single_branch')) {
-    function cb_restia_menu_get_single_branch(mysqli $conn): array
+if (!function_exists('cb_restia_menu_get_branches')) {
+    function cb_restia_menu_get_branches(mysqli $conn): array
     {
         $sql = '
             SELECT id_pob, nazev, restia_activePosId
             FROM pobocka
-            WHERE COALESCE(TRIM(restia_activePosId), "") <> ""
             ORDER BY id_pob ASC
-            LIMIT 1
         ';
 
         $res = $conn->query($sql);
         if (!($res instanceof mysqli_result)) {
+            throw new RuntimeException('DB dotaz na pobocky selhal.');
+        }
+
+        $out = [];
+        while ($row = $res->fetch_assoc()) {
+            $activePosId = trim((string)($row['restia_activePosId'] ?? ''));
+            $out[] = [
+                'id_pob' => (int)($row['id_pob'] ?? 0),
+                'nazev' => trim((string)($row['nazev'] ?? '')),
+                'active_pos_id' => $activePosId,
+                'enabled' => ($activePosId !== ''),
+            ];
+        }
+        $res->free();
+
+        return $out;
+    }
+}
+
+if (!function_exists('cb_restia_menu_get_branch_by_id')) {
+    function cb_restia_menu_get_branch_by_id(mysqli $conn, int $idPob): array
+    {
+        if ($idPob <= 0) {
+            throw new RuntimeException('Neplatna pobocka.');
+        }
+
+        $stmt = $conn->prepare('
+            SELECT id_pob, nazev, restia_activePosId
+            FROM pobocka
+            WHERE id_pob = ?
+            LIMIT 1
+        ');
+        if ($stmt === false) {
             throw new RuntimeException('DB dotaz na pobocku selhal.');
         }
 
-        $row = $res->fetch_assoc();
-        $res->free();
+        $stmt->bind_param('i', $idPob);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $row = ($res instanceof mysqli_result) ? $res->fetch_assoc() : null;
+        if ($res instanceof mysqli_result) {
+            $res->free();
+        }
+        $stmt->close();
+
         if (!is_array($row)) {
-            throw new RuntimeException('Neni zadna pobocka s vyplnenym restia_activePosId.');
+            throw new RuntimeException('Vybrana pobocka neexistuje.');
+        }
+
+        $activePosId = trim((string)($row['restia_activePosId'] ?? ''));
+        if ($activePosId === '') {
+            throw new RuntimeException('Vybrana pobocka nema vyplnene restia_activePosId.');
         }
 
         return [
             'id_pob' => (int)($row['id_pob'] ?? 0),
             'nazev' => trim((string)($row['nazev'] ?? '')),
-            'active_pos_id' => trim((string)($row['restia_activePosId'] ?? '')),
+            'active_pos_id' => $activePosId,
         ];
+    }
+}
+
+if (!function_exists('cb_restia_menu_pick_default_branch')) {
+    function cb_restia_menu_pick_default_branch(mysqli $conn): array
+    {
+        $branches = cb_restia_menu_get_branches($conn);
+        foreach ($branches as $branch) {
+            if ((bool)($branch['enabled'] ?? false) === true) {
+                return [
+                    'id_pob' => (int)($branch['id_pob'] ?? 0),
+                    'nazev' => (string)($branch['nazev'] ?? ''),
+                    'active_pos_id' => (string)($branch['active_pos_id'] ?? ''),
+                ];
+            }
+        }
+        throw new RuntimeException('Neni zadna pobocka s vyplnenym restia_activePosId.');
+    }
+}
+
+if (!function_exists('cb_restia_menu_status_map')) {
+    function cb_restia_menu_status_map(mysqli $conn): array
+    {
+        $sql = '
+            SELECT id_pob, COUNT(*) AS cnt
+            FROM res_kategorie
+            GROUP BY id_pob
+        ';
+        $res = $conn->query($sql);
+        if (!($res instanceof mysqli_result)) {
+            return [];
+        }
+
+        $out = [];
+        while ($row = $res->fetch_assoc()) {
+            $idPob = (int)($row['id_pob'] ?? 0);
+            if ($idPob <= 0) {
+                continue;
+            }
+            $out[$idPob] = ((int)($row['cnt'] ?? 0) > 0);
+        }
+        $res->free();
+        return $out;
     }
 }
 
@@ -635,33 +721,52 @@ $conn = db();
 $message = '';
 $ok = 0;
 $branchName = '';
-$menuIdInput = trim((string)($_POST['cb_menu_id'] ?? ''));
+$branchActivePosId = '';
+$menuIdInput = '';
+$branchOptions = [];
+$statusMap = [];
+$selectedBranchId = (int)($_POST['cb_id_pob'] ?? 0);
 
 try {
-    $branch = cb_restia_menu_get_single_branch($conn);
-    $branchName = (string)$branch['nazev'];
-    $menuIdAuto = cb_restia_menu_find_menu_id($conn, (int)$branch['id_pob']);
-    if ($menuIdInput === '') {
-        $menuIdInput = $menuIdAuto;
+    $branchOptions = cb_restia_menu_get_branches($conn);
+    $statusMap = cb_restia_menu_status_map($conn);
+
+    if ($selectedBranchId <= 0) {
+        foreach ($branchOptions as $branchOpt) {
+            if ((bool)($branchOpt['enabled'] ?? false) === true) {
+                $selectedBranchId = (int)($branchOpt['id_pob'] ?? 0);
+                break;
+            }
+        }
+    }
+    if ($selectedBranchId > 0) {
+        $branch = cb_restia_menu_get_branch_by_id($conn, $selectedBranchId);
+        $branchName = (string)$branch['nazev'];
+        $branchActivePosId = (string)($branch['active_pos_id'] ?? '');
+        $menuIdInput = cb_restia_menu_find_menu_id($conn, (int)$branch['id_pob']);
     }
 } catch (Throwable $e) {
-    $menuIdAuto = CB_RESTIA_MENU_DEFAULT_ID;
-    if ($menuIdInput === '') {
-        $menuIdInput = $menuIdAuto;
-    }
+    $menuIdInput = CB_RESTIA_MENU_DEFAULT_ID;
 }
 
-$run = isset($_POST['run_restia_menu']) && (string)$_POST['run_restia_menu'] === '1';
+$action = trim((string)($_POST['cb_action'] ?? 'start'));
+$run = (
+    isset($_POST['run_restia_menu'])
+    && (string)$_POST['run_restia_menu'] === '1'
+    && $action === 'start'
+);
 
 if ($run) {
     try {
         $auth = cb_restia_menu_get_auth();
-        $branch = cb_restia_menu_get_single_branch($conn);
-        $branchName = (string)$branch['nazev'];
-        $menuId = trim($menuIdInput);
-        if ($menuId === '') {
-            $menuId = cb_restia_menu_find_menu_id($conn, (int)$branch['id_pob']);
+        if ($selectedBranchId > 0) {
+            $branch = cb_restia_menu_get_branch_by_id($conn, $selectedBranchId);
+        } else {
+            $branch = cb_restia_menu_pick_default_branch($conn);
         }
+        $branchName = (string)$branch['nazev'];
+        $branchActivePosId = (string)($branch['active_pos_id'] ?? '');
+        $menuId = cb_restia_menu_find_menu_id($conn, (int)$branch['id_pob']);
         if ($menuId === '') {
             $menuId = CB_RESTIA_MENU_DEFAULT_ID;
         }
@@ -697,17 +802,39 @@ if ($run) {
 <?php endif; ?>
 <div class="table-wrap ram_normal bg_bila zaobleni_12 odstup_vnitrni_10">
   <h2 class="card_title txt_seda text_24 text_tucny odstup_vnejsi_0">Restia import menu</h2>
-  <p class="card_text txt_seda">Pobocka: <?= cb_restia_menu_h($branchName) ?></p>
-  <p class="card_text txt_seda">Menu ID (auto z objednavek, lze upravit):</p>
+  <p class="card_text txt_seda">Pobočka: <?= cb_restia_menu_h($branchName) ?> | restia_activePosId: <?= cb_restia_menu_h($branchActivePosId) ?></p>
+  <p class="card_text txt_seda">Výběr pobočky (stav menu podle DB):</p>
   <div class="card_actions gap_8 displ_flex">
     <form method="post" class="odstup_vnejsi_0 displ_inline_flex">
       <input type="hidden" name="run_restia_menu" value="1">
-      <input type="text" name="cb_menu_id" value="<?= cb_restia_menu_h($menuIdInput) ?>" class="card_input ram_sedy txt_seda bg_bila zaobleni_8 vyska_32" style="width:360px; margin-right:8px;">
-      <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Spustit</button>
+      <input type="hidden" name="cb_action" value="start" id="cb_restia_menu_action">
+      <select name="cb_id_pob" class="card_select ram_sedy txt_seda bg_bila zaobleni_8 vyska_32" style="min-width:320px; margin-right:8px;" onchange="var a=document.getElementById('cb_restia_menu_action');if(a){a.value='select_branch';}this.form.submit();">
+        <?php foreach ($branchOptions as $branchOpt): ?>
+          <?php
+          $idPobOpt = (int)($branchOpt['id_pob'] ?? 0);
+          $nameOpt = (string)($branchOpt['nazev'] ?? '');
+          $enabledOpt = ((bool)($branchOpt['enabled'] ?? false) === true);
+          $menuOkOpt = (bool)($statusMap[$idPobOpt] ?? false);
+          $labelOpt = $nameOpt !== '' ? $nameOpt : ('Pobočka #' . (string)$idPobOpt);
+          $labelOpt .= $menuOkOpt ? ' | menu OK' : ' | bez menu';
+          if (!$enabledOpt) {
+              $labelOpt .= ' (chybí restia_activePosId)';
+          }
+          ?>
+          <option value="<?= cb_restia_menu_h((string)$idPobOpt) ?>"<?= $idPobOpt === $selectedBranchId ? ' selected' : '' ?><?= $enabledOpt ? '' : ' disabled style="color:#9ca3af;"' ?>><?= cb_restia_menu_h($labelOpt) ?></option>
+        <?php endforeach; ?>
+      </select>
+      <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Spustit import</button>
     </form>
   </div>
   <?php if ($message !== ''): ?>
     <p class="card_text <?= $ok === 1 ? 'txt_zelena' : 'txt_cervena' ?> text_tucny odstup_horni_10"><?= cb_restia_menu_h($message) ?></p>
   <?php endif; ?>
+  <div style="margin-top:16px; text-align:right;">
+    <form method="post" action="<?= cb_restia_menu_h((string)cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex">
+      <input type="hidden" name="back_admin_init" value="1">
+      <button type="submit" class="card_btn cursor_ruka ram_btn zaobleni_6 vyska_28 displ_inline_flex" style="background:var(--clr_ruzova_4); border-color:var(--clr_ruzova_1); color:var(--clr_cervena);">Zpět</button>
+    </form>
+  </div>
 </div>
 <?php if (!$cbRestiaMenuEmbedMode): ?></body></html><?php endif; ?>

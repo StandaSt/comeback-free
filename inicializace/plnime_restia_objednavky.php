@@ -54,6 +54,30 @@ if (!function_exists('cb_restia_hist_log')) {
     }
 }
 
+if (!function_exists('cb_restia_hist_error_txt_path')) {
+    function cb_restia_hist_error_txt_path(): string
+    {
+        return __DIR__ . '/' . pathinfo(__FILE__, PATHINFO_FILENAME) . '_error.txt';
+    }
+}
+
+if (!function_exists('cb_restia_hist_error_log_init')) {
+    function cb_restia_hist_error_log_init(): void
+    {
+        $path = cb_restia_hist_error_txt_path();
+        if (!is_file($path)) {
+            @file_put_contents($path, '', FILE_APPEND | LOCK_EX);
+        }
+    }
+}
+
+if (!function_exists('cb_restia_hist_error_log')) {
+    function cb_restia_hist_error_log(string $line): void
+    {
+        @file_put_contents(cb_restia_hist_error_txt_path(), $line . "\n", FILE_APPEND | LOCK_EX);
+    }
+}
+
 if (!function_exists('cb_restia_hist_now')) {
     function cb_restia_hist_now(): string
     {
@@ -118,6 +142,22 @@ if (!function_exists('cb_restia_hist_parse_start_date')) {
         }
 
         return CB_RESTIA_HIST_START_DATE;
+    }
+}
+
+if (!function_exists('cb_restia_hist_normalize_ymd')) {
+    function cb_restia_hist_normalize_ymd(string $raw, string $fallback): string
+    {
+        $raw = trim($raw);
+        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $raw, $m) === 1) {
+            $y = (int)$m[1];
+            $mo = (int)$m[2];
+            $d = (int)$m[3];
+            if (checkdate($mo, $d, $y)) {
+                return sprintf('%04d-%02d-%02d', $y, $mo, $d);
+            }
+        }
+        return $fallback;
     }
 }
 
@@ -222,7 +262,7 @@ if (!function_exists('cb_restia_hist_get_branches')) {
     function cb_restia_hist_get_branches(mysqli $conn): array
     {
         $sql = '
-            SELECT id_pob, nazev, restia_activePosId
+            SELECT id_pob, nazev, restia_activePosId, prvni_obj
             FROM pobocka
             ORDER BY id_pob ASC
         ';
@@ -239,6 +279,7 @@ if (!function_exists('cb_restia_hist_get_branches')) {
                 'id_pob' => (int)($row['id_pob'] ?? 0),
                 'nazev' => trim((string)($row['nazev'] ?? '')),
                 'active_pos_id' => $activePosId,
+                'prvni_obj' => trim((string)($row['prvni_obj'] ?? '')),
                 'enabled' => ($activePosId !== ''),
             ];
         }
@@ -256,7 +297,7 @@ if (!function_exists('cb_restia_hist_get_branch_by_id')) {
         }
 
         $stmt = $conn->prepare('
-            SELECT id_pob, nazev, restia_activePosId
+            SELECT id_pob, nazev, restia_activePosId, prvni_obj
             FROM pobocka
             WHERE id_pob = ?
             LIMIT 1
@@ -286,6 +327,7 @@ if (!function_exists('cb_restia_hist_get_branch_by_id')) {
             'id_pob' => (int)($row['id_pob'] ?? 0),
             'nazev' => trim((string)($row['nazev'] ?? '')),
             'active_pos_id' => $activePosId,
+            'prvni_obj' => trim((string)($row['prvni_obj'] ?? '')),
         ];
     }
 }
@@ -300,6 +342,7 @@ if (!function_exists('cb_restia_hist_pick_default_branch')) {
                     'id_pob' => (int)($branch['id_pob'] ?? 0),
                     'nazev' => (string)($branch['nazev'] ?? ''),
                     'active_pos_id' => (string)($branch['active_pos_id'] ?? ''),
+                    'prvni_obj' => (string)($branch['prvni_obj'] ?? ''),
                 ];
             }
         }
@@ -307,19 +350,27 @@ if (!function_exists('cb_restia_hist_pick_default_branch')) {
     }
 }
 
-if (!function_exists('cb_restia_hist_resume_date')) {
-    function cb_restia_hist_resume_date(mysqli $conn, int $idPob): string
+if (!function_exists('cb_restia_hist_branch_start_date')) {
+    function cb_restia_hist_branch_start_date(array $branch): string
+    {
+        return cb_restia_hist_normalize_ymd((string)($branch['prvni_obj'] ?? ''), CB_RESTIA_HIST_START_DATE);
+    }
+}
+
+if (!function_exists('cb_restia_hist_last_ok_date')) {
+    function cb_restia_hist_last_ok_date(mysqli $conn, int $idPob): string
     {
         $stmt = $conn->prepare('
             SELECT poznamka
             FROM obj_import
             WHERE typ_importu = "historie"
               AND id_pob = ?
+              AND stav = "ok"
             ORDER BY id_import DESC
-            LIMIT 30
+            LIMIT 100
         ');
         if ($stmt === false) {
-            return CB_RESTIA_HIST_START_DATE;
+            return '';
         }
 
         $stmt->bind_param('i', $idPob);
@@ -339,14 +390,94 @@ if (!function_exists('cb_restia_hist_resume_date')) {
         }
         $stmt->close();
 
-        if ($lastDate === '') {
-            return CB_RESTIA_HIST_START_DATE;
+        return $lastDate;
+    }
+}
+
+if (!function_exists('cb_restia_hist_resume_info')) {
+    function cb_restia_hist_resume_info(mysqli $conn, array $branch): array
+    {
+        $idPob = (int)($branch['id_pob'] ?? 0);
+        $startDate = cb_restia_hist_branch_start_date($branch);
+        $lastOkDate = ($idPob > 0) ? cb_restia_hist_last_ok_date($conn, $idPob) : '';
+        $nextDate = $startDate;
+
+        if ($lastOkDate !== '') {
+            $nextDate = $startDate;
+            try {
+                $nextDate = cb_restia_hist_next_date($lastOkDate);
+            } catch (Throwable $e) {
+                $nextDate = $startDate;
+            }
+            if ($nextDate < $startDate) {
+                $nextDate = $startDate;
+            }
         }
 
+        return [
+            'start_date' => $startDate,
+            'last_ok_date' => $lastOkDate,
+            'next_date' => $nextDate,
+        ];
+    }
+}
+
+if (!function_exists('cb_restia_hist_day_lock_name')) {
+    function cb_restia_hist_day_lock_name(int $idPob, string $date): string
+    {
+        return 'cb_restia_hist_' . $idPob . '_' . $date;
+    }
+}
+
+if (!function_exists('cb_restia_hist_day_lock_acquire')) {
+    function cb_restia_hist_day_lock_acquire(mysqli $conn, int $idPob, string $date, int $timeoutSec = 10): string
+    {
+        $lockName = cb_restia_hist_day_lock_name($idPob, $date);
+        $stmt = $conn->prepare('SELECT GET_LOCK(?, ?) AS got_lock');
+        if ($stmt === false) {
+            throw new RuntimeException('DB prepare selhal: day lock acquire.');
+        }
+        $stmt->bind_param('si', $lockName, $timeoutSec);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $row = ($res instanceof mysqli_result) ? $res->fetch_assoc() : null;
+        if ($res instanceof mysqli_result) {
+            $res->free();
+        }
+        $stmt->close();
+
+        if ((int)($row['got_lock'] ?? 0) !== 1) {
+            throw new RuntimeException('Nepodarilo se ziskat zamek pro denni import.');
+        }
+
+        return $lockName;
+    }
+}
+
+if (!function_exists('cb_restia_hist_day_lock_release')) {
+    function cb_restia_hist_day_lock_release(mysqli $conn, string $lockName): void
+    {
+        if ($lockName === '') {
+            return;
+        }
+        $stmt = $conn->prepare('SELECT RELEASE_LOCK(?)');
+        if ($stmt === false) {
+            return;
+        }
+        $stmt->bind_param('s', $lockName);
+        $stmt->execute();
+        $stmt->close();
+    }
+}
+
+if (!function_exists('cb_restia_hist_resume_date')) {
+    function cb_restia_hist_resume_date(mysqli $conn, array $branch): string
+    {
+        $info = cb_restia_hist_resume_info($conn, $branch);
         try {
-            return cb_restia_hist_next_date($lastDate);
+            return cb_restia_hist_normalize_ymd((string)($info['next_date'] ?? ''), CB_RESTIA_HIST_START_DATE);
         } catch (Throwable $e) {
-            return CB_RESTIA_HIST_START_DATE;
+            return cb_restia_hist_branch_start_date($branch);
         }
     }
 }
@@ -527,10 +658,54 @@ if (!function_exists('cb_restia_hist_obj_import_finish')) {
     }
 }
 
-if (!function_exists('cb_restia_hist_insert_raw')) {
-    function cb_restia_hist_insert_raw(mysqli $conn, int $idImport, int $idPob, string $restiaIdObj, string $payloadJson): void
+if (!function_exists('cb_restia_hist_raw_exists')) {
+    function cb_restia_hist_raw_exists(mysqli $conn, int $idPob, string $restiaIdObj): bool
+    {
+        $stmt = $conn->prepare('
+            SELECT 1
+            FROM obj_raw
+            WHERE id_pob = ?
+              AND restia_id_obj = ?
+            LIMIT 1
+        ');
+        if ($stmt === false) {
+            throw new RuntimeException('DB prepare selhal: obj_raw exists.');
+        }
+        $stmt->bind_param('is', $idPob, $restiaIdObj);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $row = ($res instanceof mysqli_result) ? $res->fetch_assoc() : null;
+        if ($res instanceof mysqli_result) {
+            $res->free();
+        }
+        $stmt->close();
+        return is_array($row);
+    }
+}
+
+if (!function_exists('cb_restia_hist_upsert_raw')) {
+    function cb_restia_hist_upsert_raw(mysqli $conn, int $idImport, int $idPob, string $restiaIdObj, string $payloadJson): void
     {
         $hash = cb_restia_hist_hash32($payloadJson);
+
+        if (cb_restia_hist_raw_exists($conn, $idPob, $restiaIdObj)) {
+            $stmt = $conn->prepare('
+                UPDATE obj_raw
+                SET id_import = ?,
+                    payload_hash = ?,
+                    payload_json = ?,
+                    vytvoreno = NOW(3)
+                WHERE id_pob = ?
+                  AND restia_id_obj = ?
+            ');
+            if ($stmt === false) {
+                throw new RuntimeException('DB prepare selhal: obj_raw update.');
+            }
+            $stmt->bind_param('issis', $idImport, $hash, $payloadJson, $idPob, $restiaIdObj);
+            $stmt->execute();
+            $stmt->close();
+            return;
+        }
 
         $stmt = $conn->prepare('
             INSERT INTO obj_raw (id_import, id_pob, restia_id_obj, payload_hash, payload_json, vytvoreno)
@@ -933,8 +1108,8 @@ if (!function_exists('cb_restia_hist_upsert_customer')) {
         }
         $phoneNorm = cb_restia_hist_norm_phone($phoneRaw);
 
-        if ($emailRaw === '' && $phoneNorm === '') {
-            return 0;
+        if ($phoneNorm === '') {
+            throw new RuntimeException('Objednávka nemá telefon zákazníka.');
         }
 
         $name = cb_restia_hist_split_name((string)($order['customerName'] ?? ''));
@@ -954,38 +1129,19 @@ if (!function_exists('cb_restia_hist_upsert_customer')) {
         $zakNews = 0;
 
         $idZak = 0;
-        if ($phoneNorm !== '') {
-            $stmt = $conn->prepare('SELECT id_zak FROM zakaznik WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(telefon, ""), " ", ""), "+", ""), "-", ""), "(", ""), ")", ""), "/", "") = ? ORDER BY id_zak ASC LIMIT 1');
-            if ($stmt === false) {
-                throw new RuntimeException('DB prepare selhal: find zakaznik by phone.');
-            }
-            $stmt->bind_param('s', $phoneNorm);
-            $stmt->execute();
-            $res = $stmt->get_result();
-            $row = ($res instanceof mysqli_result) ? $res->fetch_assoc() : null;
-            if ($res instanceof mysqli_result) {
-                $res->free();
-            }
-            $stmt->close();
-            $idZak = (int)($row['id_zak'] ?? 0);
+        $stmt = $conn->prepare('SELECT id_zak FROM zakaznik WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(telefon, ""), " ", ""), "+", ""), "-", ""), "(", ""), ")", ""), "/", "") = ? ORDER BY id_zak ASC LIMIT 1');
+        if ($stmt === false) {
+            throw new RuntimeException('DB prepare selhal: find zakaznik by phone.');
         }
-
-        if ($idZak <= 0 && $emailRaw !== '') {
-            $emailNorm = strtolower($emailRaw);
-            $stmt = $conn->prepare('SELECT id_zak FROM zakaznik WHERE LOWER(TRIM(COALESCE(email, ""))) = ? ORDER BY id_zak ASC LIMIT 1');
-            if ($stmt === false) {
-                throw new RuntimeException('DB prepare selhal: find zakaznik by email.');
-            }
-            $stmt->bind_param('s', $emailNorm);
-            $stmt->execute();
-            $res = $stmt->get_result();
-            $row = ($res instanceof mysqli_result) ? $res->fetch_assoc() : null;
-            if ($res instanceof mysqli_result) {
-                $res->free();
-            }
-            $stmt->close();
-            $idZak = (int)($row['id_zak'] ?? 0);
+        $stmt->bind_param('s', $phoneNorm);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $row = ($res instanceof mysqli_result) ? $res->fetch_assoc() : null;
+        if ($res instanceof mysqli_result) {
+            $res->free();
         }
+        $stmt->close();
+        $idZak = (int)($row['id_zak'] ?? 0);
 
         if ($idZak > 0) {
             $stmt = $conn->prepare('
@@ -1138,6 +1294,8 @@ if (!function_exists('cb_restia_hist_default_state')) {
     {
         return [
             'next_date' => CB_RESTIA_HIST_START_DATE,
+            'start_date' => CB_RESTIA_HIST_START_DATE,
+            'last_ok_date' => '',
             'remaining_days' => 0,
             'days_total' => 0,
             'waiting_continue' => 0,
@@ -1148,6 +1306,7 @@ if (!function_exists('cb_restia_hist_default_state')) {
             'branch_id' => 0,
             'run_started_at_ms' => 0,
             'run_row_no' => 0,
+            'found_total' => 0,
             'step_days' => CB_RESTIA_HIST_STEP_DAYS,
         ];
     }
@@ -1162,11 +1321,15 @@ if (!function_exists('cb_restia_hist_import_day')) {
         $nazev = (string)$branch['nazev'];
         $activePosId = (string)$branch['active_pos_id'];
 
-        $idImport = cb_restia_hist_obj_import_begin($conn, $idPob, $range['from_db'], $range['to_db']);
+        $idImport = 0;
+        $lockName = '';
 
         $pocetObj = 0; $pocetNovych = 0; $pocetZmenenych = 0; $pocetChyb = 0;
 
         try {
+            $lockName = cb_restia_hist_day_lock_acquire($conn, $idPob, $date, 10);
+            $idImport = cb_restia_hist_obj_import_begin($conn, $idPob, $range['from_db'], $range['to_db']);
+
             $page = 1;
             while (true) {
                 $res = cb_restia_get('/api/orders', [
@@ -1202,12 +1365,19 @@ if (!function_exists('cb_restia_hist_import_day')) {
                     $conn->begin_transaction();
                     try {
                         $idObj = cb_restia_hist_upsert_order($conn, $idPob, $activePosId, $order);
-                        cb_restia_hist_insert_raw($conn, $idImport, $idPob, $restiaIdObj, $rawJson);
+                        cb_restia_hist_upsert_raw($conn, $idImport, $idPob, $restiaIdObj, $rawJson);
                         cb_restia_hist_sync_children($conn, $idObj, $order);
                         $conn->commit();
                     } catch (Throwable $e) {
                         $conn->rollback();
                         $pocetChyb++;
+                        cb_restia_hist_error_log(
+                            'ORDER_ERR: datum=' . $date
+                            . ' | id_pob=' . $idPob
+                            . ' | page=' . $page
+                            . ' | restia_id_obj=' . $restiaIdObj
+                            . ' | msg=' . $e->getMessage()
+                        );
                         continue;
                     }
 
@@ -1229,11 +1399,20 @@ if (!function_exists('cb_restia_hist_import_day')) {
             $dayMs = (int)round(microtime(true) * 1000) - $dayStartMs;
             return ['date' => $date, 'branch' => $nazev, 'count' => $pocetObj, 'error' => '', 'day_ms' => $dayMs, 'ok' => 1];
         } catch (Throwable $e) {
-            cb_restia_hist_obj_import_finish($conn, $idImport, $pocetObj, $pocetNovych, $pocetZmenenych, $pocetChyb + 1, 'den=' . $date . ' id_pob=' . $idPob . ' ERROR=' . $e->getMessage());
+            if ($idImport > 0) {
+                cb_restia_hist_obj_import_finish($conn, $idImport, $pocetObj, $pocetNovych, $pocetZmenenych, $pocetChyb + 1, 'den=' . $date . ' id_pob=' . $idPob . ' ERROR=' . $e->getMessage());
+            }
             cb_restia_hist_try_flush_api($conn, $auth);
             cb_restia_hist_log('FATAL_STEP: datum=' . $date . ' | id_pob=' . $idPob . ' | msg=' . $e->getMessage());
+            cb_restia_hist_error_log(
+                'FATAL_STEP: datum=' . $date
+                . ' | id_pob=' . $idPob
+                . ' | msg=' . $e->getMessage()
+            );
             $dayMs = (int)round(microtime(true) * 1000) - $dayStartMs;
             return ['date' => $date, 'branch' => $nazev, 'count' => $pocetObj, 'error' => $e->getMessage(), 'day_ms' => $dayMs, 'ok' => 0];
+        } finally {
+            cb_restia_hist_day_lock_release($conn, $lockName);
         }
     }
 }
@@ -1248,9 +1427,27 @@ if (!is_array($rows)) { $rows = []; }
 $action = trim((string)($_POST['cb_action'] ?? ''));
 $inputDays = (int)($_POST['cb_days'] ?? 0);
 $inputBranchId = (int)($_POST['cb_id_pob'] ?? 0);
-$inputStartDateRaw = trim((string)($_POST['cb_start_date'] ?? ''));
 
 try { $auth = cb_restia_hist_get_auth(); } catch (Throwable $e) { $auth = null; $message = $e->getMessage(); }
+
+if ($action === 'select_branch') {
+    if ($inputBranchId > 0) {
+        try {
+            $branchSel = cb_restia_hist_get_branch_by_id($conn, $inputBranchId);
+            $resumeSel = cb_restia_hist_resume_info($conn, $branchSel);
+            $state['branch_id'] = (int)$branchSel['id_pob'];
+            $state['branch_name'] = (string)$branchSel['nazev'];
+            $state['start_date'] = (string)$resumeSel['start_date'];
+            $state['next_date'] = (string)$resumeSel['next_date'];
+            $state['last_ok_date'] = (string)$resumeSel['last_ok_date'];
+        } catch (Throwable $e) {
+            if ($message === '') {
+                $message = $e->getMessage();
+            }
+        }
+    }
+    $action = '';
+}
 
 if ($action === 'start' && $auth !== null) {
     if ($inputDays <= 0) {
@@ -1263,7 +1460,8 @@ if ($action === 'start' && $auth !== null) {
         $branch = cb_restia_hist_pick_default_branch($conn);
     }
     cb_restia_hist_ensure_default_customer($conn, (int)$branch['id_pob']);
-    $resumeDate = cb_restia_hist_parse_start_date($inputStartDateRaw);
+    $resumeInfo = cb_restia_hist_resume_info($conn, $branch);
+    $resumeDate = (string)$resumeInfo['next_date'];
     $today = cb_restia_hist_today();
     if ($resumeDate > $today) { $resumeDate = $today; }
 
@@ -1274,16 +1472,21 @@ if ($action === 'start' && $auth !== null) {
     $state['step_days'] = $inputDays;
     $state['branch_name'] = (string)$branch['nazev'];
     $state['branch_id'] = (int)$branch['id_pob'];
-    $state['start_date'] = $resumeDate;
+    $state['start_date'] = (string)$resumeInfo['start_date'];
+    $state['last_ok_date'] = (string)$resumeInfo['last_ok_date'];
     $state['run_started_at_ms'] = (int)round(microtime(true) * 1000);
     $state['run_row_no'] = 0;
+    $state['found_total'] = 0;
     $rows = [];
     $message = '';
 
     cb_restia_hist_log_init();
+    cb_restia_hist_error_log_init();
     cb_restia_hist_log('-----');
     cb_restia_hist_log('START: ' . cb_restia_hist_format_datetime_cs(cb_restia_hist_now()));
     cb_restia_hist_log('SCRIPT: ' . basename(__FILE__));
+    cb_restia_hist_log('START_BASE: ' . cb_restia_hist_format_date_cs((string)$resumeInfo['start_date']));
+    cb_restia_hist_log('LAST_OK_DAY: ' . ($resumeInfo['last_ok_date'] !== '' ? cb_restia_hist_format_date_cs((string)$resumeInfo['last_ok_date']) : 'neni'));
     cb_restia_hist_log('RESUME_FROM: ' . cb_restia_hist_format_date_cs($resumeDate));
     cb_restia_hist_log('REQUESTED_DAYS: ' . (string)$inputDays);
     cb_restia_hist_log('LIMIT: ' . (string)CB_RESTIA_HIST_LIMIT);
@@ -1295,7 +1498,7 @@ if ($action === 'start' && $auth !== null) {
 
 if ($action === 'continue_no') {
     $state['waiting_continue'] = 0; $state['auto_next'] = 0; $state['finished'] = 1;
-    $message = 'Import ukoncen uzivatelem.';
+    $message = 'Import ukončen uživatelem.';
     cb_restia_hist_log('KONEC IMPORTU: ' . cb_restia_hist_format_datetime_cs(cb_restia_hist_now()) . ' | DUVOD: rucne ukonceno');
 }
 if ($action === 'continue_yes') {
@@ -1337,8 +1540,8 @@ if ($shouldRunOneDay) {
             $state['auto_next'] = 0;
             $state['waiting_continue'] = 0;
             $state['remaining_days'] = 0;
-            $totalFound = cb_restia_hist_sum_orders($rows);
-            $message = 'Akce skoncila. Dosli jsme do aktualniho dne. Pro vybranou pobocku bylo nalezeno ' . (string)$totalFound . ' objednavek.';
+            $totalFound = (int)($state['found_total'] ?? 0);
+            $message = 'Akce skončila. Došli jsme do aktuálního dne. Pro vybranou pobočku bylo nalezeno ' . (string)$totalFound . ' objednávek.';
             cb_restia_hist_log('KONEC IMPORTU: ' . cb_restia_hist_format_datetime_cs(cb_restia_hist_now()));
             break;
         }
@@ -1348,6 +1551,9 @@ if ($shouldRunOneDay) {
         $nowMs = (int)round(microtime(true) * 1000);
         $day['total_ms'] = ($startedAtMs > 0) ? max(0, $nowMs - $startedAtMs) : 0;
         $rows[] = $day;
+        if (count($rows) > 200) {
+            array_shift($rows);
+        }
         $state['run_row_no'] = (int)($state['run_row_no'] ?? 0) + 1;
         $rowNo = (int)$state['run_row_no'];
         $isOk = ((int)($day['ok'] ?? 0) === 1 && trim((string)($day['error'] ?? '')) === '');
@@ -1364,6 +1570,8 @@ if ($shouldRunOneDay) {
         $state['days_total'] = (int)$state['days_total'] + 1;
         $state['remaining_days'] = (int)$state['remaining_days'] - 1;
         $state['next_date'] = cb_restia_hist_next_date($date);
+        $state['last_ok_date'] = ((int)($day['ok'] ?? 0) === 1) ? $date : (string)($state['last_ok_date'] ?? '');
+        $state['found_total'] = (int)($state['found_total'] ?? 0) + max(0, (int)($day['count'] ?? 0));
         $foundNow += max(0, (int)($day['count'] ?? 0));
         $processedNow++;
     }
@@ -1371,11 +1579,11 @@ if ($shouldRunOneDay) {
     if ((int)$state['finished'] === 0 && (int)$state['remaining_days'] <= 0) {
         $state['auto_next'] = 0;
         $state['waiting_continue'] = 1;
-        $message = 'Akce skoncila pro tento cyklus. Zpracovano ' . (string)((int)($state['requested_days'] ?? $stepDays)) . ' dni. Pro vybranou pobocku bylo nalezeno ' . (string)$foundNow . ' objednavek. Pokracovat?';
+        $message = 'Akce skončila pro tento cyklus. Zpracováno ' . (string)((int)($state['requested_days'] ?? $stepDays)) . ' dní. Pro vybranou pobočku bylo nalezeno ' . (string)$foundNow . ' objednávek. Pokračovat?';
         cb_restia_hist_log('KONEC CYKLU: ' . cb_restia_hist_format_datetime_cs(cb_restia_hist_now()));
     } elseif ((int)$state['finished'] === 0) {
         $state['auto_next'] = 1; $state['waiting_continue'] = 0;
-        $message = 'Bezi import, dalsi krok za ' . (string)CB_RESTIA_HIST_PAUSE_MS . ' ms...';
+        $message = 'Běží import, další krok za ' . (string)CB_RESTIA_HIST_PAUSE_MS . ' ms...';
     }
 }
 
@@ -1384,8 +1592,16 @@ $_SESSION[$cbRowsKey] = $rows;
 $_SESSION[$cbMsgKey] = $message;
 
 $branchOptions = [];
+$branchResumeMap = [];
 try {
     $branchOptions = cb_restia_hist_get_branches($conn);
+    foreach ($branchOptions as $branchOpt) {
+        $idPobOpt = (int)($branchOpt['id_pob'] ?? 0);
+        if ($idPobOpt <= 0) {
+            continue;
+        }
+        $branchResumeMap[$idPobOpt] = cb_restia_hist_resume_info($conn, $branchOpt);
+    }
 } catch (Throwable $e) {
     if ($message === '') {
         $message = $e->getMessage();
@@ -1400,56 +1616,93 @@ if ($selectedBranchId <= 0) {
         }
     }
 }
-$startDateInput = trim((string)($inputStartDateRaw !== '' ? $inputStartDateRaw : ($state['start_date'] ?? '')));
-if ($startDateInput === '') {
-    $startDateInput = cb_restia_hist_format_date_input_cs(CB_RESTIA_HIST_START_DATE);
-} else {
-    $startDateInput = cb_restia_hist_format_date_input_cs(cb_restia_hist_parse_start_date($startDateInput));
+if ((int)($state['branch_id'] ?? 0) !== $selectedBranchId) {
+    foreach ($branchOptions as $branchOpt) {
+        if ((int)($branchOpt['id_pob'] ?? 0) === $selectedBranchId) {
+            $state['branch_id'] = $selectedBranchId;
+            $state['branch_name'] = (string)($branchOpt['nazev'] ?? '');
+            break;
+        }
+    }
+}
+$selectedResume = $branchResumeMap[$selectedBranchId] ?? [
+    'start_date' => CB_RESTIA_HIST_START_DATE,
+    'last_ok_date' => '',
+    'next_date' => CB_RESTIA_HIST_START_DATE,
+];
+$startBaseDate = cb_restia_hist_normalize_ymd((string)($selectedResume['start_date'] ?? ''), CB_RESTIA_HIST_START_DATE);
+$resumeDate = cb_restia_hist_normalize_ymd((string)($selectedResume['next_date'] ?? ''), $startBaseDate);
+$lastOkDate = cb_restia_hist_normalize_ymd((string)($selectedResume['last_ok_date'] ?? ''), '');
+
+if ((int)($state['branch_id'] ?? 0) === $selectedBranchId && (int)($state['days_total'] ?? 0) === 0 && (int)($state['remaining_days'] ?? 0) === 0) {
+    $state['start_date'] = $startBaseDate;
+    $state['next_date'] = $resumeDate;
+    $state['last_ok_date'] = $lastOkDate;
+}
+
+$startDateInput = cb_restia_hist_format_date_input_cs($resumeDate);
+$lastOkText = ($lastOkDate !== '') ? cb_restia_hist_format_date_cs($lastOkDate) : 'bez importu';
+if ((int)($state['days_total'] ?? 0) > 0 || (int)($state['remaining_days'] ?? 0) > 0) {
+    $lastOkState = trim((string)($state['last_ok_date'] ?? ''));
+    if ($lastOkState !== '') {
+        $lastOkText = cb_restia_hist_format_date_cs($lastOkState);
+    }
 }
 ?>
 <?php if (!$cbRestiaEmbedMode): ?>
 <!doctype html>
-<html lang="cs"><head><meta charset="utf-8"><title>Restia import objednavek</title><meta name="viewport" content="width=device-width, initial-scale=1"></head><body>
+<html lang="cs"><head><meta charset="utf-8"><title>Restia import objednávek</title><meta name="viewport" content="width=device-width, initial-scale=1"></head><body>
 <?php endif; ?>
 <div class="table-wrap ram_normal bg_bila zaobleni_12 odstup_vnitrni_10">
-  <h2 class="card_title txt_seda text_24 text_tucny odstup_vnejsi_0">Restia import objednavek</h2>
-  <p class="card_text txt_seda">Start: <?= cb_restia_hist_h(CB_RESTIA_HIST_START_DATE) ?> | Konec: <?= cb_restia_hist_h(cb_restia_hist_today()) ?></p>
-  <p class="card_text txt_seda">Limit: <?= cb_restia_hist_h((string)CB_RESTIA_HIST_LIMIT) ?> | Krok: <?= cb_restia_hist_h((string)((int)($state['step_days'] ?? CB_RESTIA_HIST_STEP_DAYS))) ?> dni | Pauza: <?= cb_restia_hist_h((string)CB_RESTIA_HIST_PAUSE_MS) ?> ms</p>
-  <p class="card_text txt_seda">Pobocka: <?= cb_restia_hist_h((string)($state['branch_name'] ?? '')) ?></p>
+  <h2 class="card_title txt_seda text_24 text_tucny odstup_vnejsi_0">Restia import objednávek</h2>
+  <p class="card_text txt_seda">Start: <?= cb_restia_hist_h(cb_restia_hist_format_date_cs(CB_RESTIA_HIST_START_DATE)) ?> | Konec: <?= cb_restia_hist_h(cb_restia_hist_format_date_cs(cb_restia_hist_today())) ?></p>
+  <p class="card_text txt_seda">Limit: <?= cb_restia_hist_h((string)CB_RESTIA_HIST_LIMIT) ?> | Krok: <?= cb_restia_hist_h((string)((int)($state['step_days'] ?? CB_RESTIA_HIST_STEP_DAYS))) ?> dní | Pauza: <?= cb_restia_hist_h((string)CB_RESTIA_HIST_PAUSE_MS) ?> ms</p>
+  <p class="card_text txt_seda">Pobočka: <?= cb_restia_hist_h((string)($state['branch_name'] ?? '')) ?></p>
+  <p class="card_text txt_seda">Start od začátku: <?= cb_restia_hist_h(cb_restia_hist_format_date_cs($startBaseDate)) ?> | Pokračování od: <?= cb_restia_hist_h(cb_restia_hist_format_date_cs($resumeDate)) ?> | Uloženo do: <?= cb_restia_hist_h($lastOkText) ?></p>
   <?php if ($message !== ''): ?><p class="card_text text_tucny txt_seda"><?= cb_restia_hist_h($message) ?></p><?php endif; ?>
 
   <div class="card_actions gap_8 displ_flex">
     <form method="post" action="<?= cb_restia_hist_h((string)cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex">
-      <input type="hidden" name="run_restia_obj" value="1"><input type="hidden" name="cb_action" value="start">
-      <select name="cb_id_pob" class="card_select ram_sedy txt_seda bg_bila zaobleni_8 vyska_32" style="min-width:220px; margin-right:8px;">
+      <input type="hidden" name="run_restia_obj" value="1"><input type="hidden" name="cb_action" value="start" id="cb_action_field">
+      <select name="cb_id_pob" class="card_select ram_sedy txt_seda bg_bila zaobleni_8 vyska_32" style="min-width:220px; margin-right:8px;" onchange="var a=document.getElementById('cb_action_field');if(a){a.value='select_branch';}this.form.submit();">
         <?php foreach ($branchOptions as $branchOpt): ?>
           <?php
           $idPobOpt = (int)($branchOpt['id_pob'] ?? 0);
           $nameOpt = (string)($branchOpt['nazev'] ?? '');
           $enabledOpt = ((bool)($branchOpt['enabled'] ?? false) === true);
-          $labelOpt = $nameOpt !== '' ? $nameOpt : ('Pobocka #' . (string)$idPobOpt);
+          $labelOpt = $nameOpt !== '' ? $nameOpt : ('Pobočka #' . (string)$idPobOpt);
+          $resumeOpt = $branchResumeMap[$idPobOpt] ?? ['last_ok_date' => ''];
+          $lastOkOpt = cb_restia_hist_normalize_ymd((string)($resumeOpt['last_ok_date'] ?? ''), '');
+          $statusOpt = ($lastOkOpt !== '') ? ('do ' . cb_restia_hist_format_date_cs($lastOkOpt) . ' OK') : 'bez importu';
+          $labelOpt .= ' | ' . $statusOpt;
           if (!$enabledOpt) {
-              $labelOpt .= ' (chybi restia_activePosId)';
+              $labelOpt .= ' (chybí restia_activePosId)';
           }
           ?>
           <option value="<?= cb_restia_hist_h((string)$idPobOpt) ?>"<?= $idPobOpt === $selectedBranchId ? ' selected' : '' ?><?= $enabledOpt ? '' : ' disabled style="color:#9ca3af;"' ?>><?= cb_restia_hist_h($labelOpt) ?></option>
         <?php endforeach; ?>
       </select>
-      <input type="text" name="cb_start_date" value="<?= cb_restia_hist_h($startDateInput) ?>" class="card_input ram_sedy txt_seda bg_bila zaobleni_8 vyska_32" style="width:120px; margin-right:8px;" placeholder="1.7.2023">
+      <input type="text" name="cb_start_date" value="<?= cb_restia_hist_h($startDateInput) ?>" class="card_input ram_sedy txt_seda bg_bila zaobleni_8 vyska_32" style="width:120px; margin-right:8px;" placeholder="1.7.2023" readonly>
       <input type="number" name="cb_days" min="1" step="1" value="<?= cb_restia_hist_h((string)(((int)($state['step_days'] ?? 0) > 0) ? (int)$state['step_days'] : CB_RESTIA_HIST_STEP_DAYS)) ?>" class="card_input ram_sedy txt_seda bg_bila zaobleni_8 vyska_32" style="width:120px; margin-right:8px;">
-      <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Spustit</button>
+      <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Spustit import</button>
     </form>
     <?php if ((int)($state['waiting_continue'] ?? 0) === 1 && (int)($state['finished'] ?? 0) === 0): ?>
-      <form method="post" action="<?= cb_restia_hist_h((string)cb_url('/index.php')) ?>" class="odstup_vnejsi_0"><input type="hidden" name="run_restia_obj" value="1"><input type="hidden" name="cb_action" value="continue_yes"><button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Pokracovat</button></form>
-      <form method="post" action="<?= cb_restia_hist_h((string)cb_url('/index.php')) ?>" class="odstup_vnejsi_0"><input type="hidden" name="run_restia_obj" value="1"><input type="hidden" name="cb_action" value="continue_no"><button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Skoncit</button></form>
+      <form method="post" action="<?= cb_restia_hist_h((string)cb_url('/index.php')) ?>" class="odstup_vnejsi_0"><input type="hidden" name="run_restia_obj" value="1"><input type="hidden" name="cb_action" value="continue_yes"><button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Pokračovat</button></form>
+      <form method="post" action="<?= cb_restia_hist_h((string)cb_url('/index.php')) ?>" class="odstup_vnejsi_0"><input type="hidden" name="run_restia_obj" value="1"><input type="hidden" name="cb_action" value="continue_no"><button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Skončit</button></form>
     <?php endif; ?>
   </div>
 
-  <p class="card_text txt_seda odstup_horni_10">Zpracovano dnu: <?= cb_restia_hist_h((string)($state['days_total'] ?? 0)) ?> | Zbyva: <?= cb_restia_hist_h((string)($state['remaining_days'] ?? 0)) ?></p>
+  <p class="card_text txt_seda odstup_horni_10">Zpracováno dnů: <?= cb_restia_hist_h((string)($state['days_total'] ?? 0)) ?> | Zbývá: <?= cb_restia_hist_h((string)($state['remaining_days'] ?? 0)) ?></p>
 
   <?php if ((int)($state['auto_next'] ?? 0) === 1 && (int)($state['waiting_continue'] ?? 0) === 0 && (int)($state['finished'] ?? 0) === 0): ?>
     <form id="cb_restia_auto_next" method="post" action="<?= cb_restia_hist_h((string)cb_url('/index.php')) ?>" class="odstup_vnejsi_0"><input type="hidden" name="run_restia_obj" value="1"><input type="hidden" name="cb_action" value="auto_next"></form>
     <script>setTimeout(function(){var f=document.getElementById('cb_restia_auto_next');if(f){f.submit();}}, <?= (int)CB_RESTIA_HIST_PAUSE_MS ?>);</script>
   <?php endif; ?>
+  <div style="margin-top:16px; text-align:right;">
+    <form method="post" action="<?= cb_restia_hist_h((string)cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex">
+      <input type="hidden" name="back_admin_init" value="1">
+      <button type="submit" class="card_btn cursor_ruka ram_btn zaobleni_6 vyska_28 displ_inline_flex" style="background:var(--clr_ruzova_4); border-color:var(--clr_ruzova_1); color:var(--clr_cervena);">Zpět</button>
+    </form>
+  </div>
 </div>
 <?php if (!$cbRestiaEmbedMode): ?></body></html><?php endif; ?>

@@ -68,7 +68,7 @@ function calculateSkipWeeksByStartDay(string $startDay): int
     $currentMonday = currentWeekMonday();
     $weekMonday = normalizeMonday($startDay);
     $seconds = $weekMonday->getTimestamp() - $currentMonday->getTimestamp();
-    // Korekce -1 týdne pro shodné chování s testovacím skriptem a správný záporný posun:
+    // Korekce -1 tÄ‚Ëťdne pro shodnÄ‚Â© chovÄ‚Ë‡nÄ‚Â­ s testovacÄ‚Â­m skriptem a sprÄ‚Ë‡vnÄ‚Ëť zÄ‚Ë‡pornÄ‚Ëť posun:
     return (int)round($seconds / 604800) - 1;
 }
 
@@ -456,9 +456,9 @@ function run(): void
 
     resetProgressLogIfFirstBatch();
 
-    // TEST: SkipWeeks natvrdo -1 (jen 1 týden pro všechny pobočky)
+    // TEST: SkipWeeks natvrdo -1 (jen 1 tÄ‚Ëťden pro vÄąË‡echny poboĂ„Ĺ¤ky)
     $skipWeeks = -1;
-    out('Testovací běh: skipWeeks = ' . $skipWeeks . ' | jeden týden všech poboček.');
+    out('TestovacÄ‚Â­ bĂ„â€şh: skipWeeks = ' . $skipWeeks . ' | jeden tÄ‚Ëťden vÄąË‡ech poboĂ„Ĺ¤ek.');
 
     foreach ($branches as $branch) {
         $idPob = (int)($branch['id'] ?? 0);
@@ -514,7 +514,60 @@ function run(): void
     $totalDuration = microtime(true) - $totalStart;
     out('Konec testu | celkovy cas: ' . formatDuration($totalDuration));
 }
-run();
+if (
+    isset($_POST['run_smeny_plan'])
+    && (string)$_POST['run_smeny_plan'] === '1'
+) {
+    run();
+} else {
+    $db = db();
+    $lastImportedDay = '';
+    $q = $db->query("SELECT MAX(start_day) AS dt FROM smeny_aktualizace WHERE stav = 1");
+    if ($q instanceof mysqli_result) {
+        $r = $q->fetch_assoc();
+        $lastImportedDay = trim((string)($r['dt'] ?? ''));
+        $q->free();
+    }
+    $formatDateCs = static function (string $ymd): string {
+        $dt = DateTimeImmutable::createFromFormat('Y-m-d', $ymd);
+        if (!($dt instanceof DateTimeImmutable)) {
+            return $ymd;
+        }
+        return $dt->format('d.m.Y');
+    };
+    $hasData = ($lastImportedDay !== '');
+    $infoText = $hasData
+        ? ('Data jsou stažena do ' . $formatDateCs($lastImportedDay) . '.')
+        : ('V DB nejsou data, začneme stahovat od ' . $formatDateCs(MIN_DATE) . '.');
+    $runBtnText = $hasData ? 'Pokračovat v importu' : 'Spustit import';
+    ?>
+    <div class="table-wrap ram_normal bg_bila zaobleni_12 odstup_vnitrni_10">
+      <h2 class="card_title txt_seda text_24 text_tucny odstup_vnejsi_0">Inicializace směny plán</h2>
+      <p class="card_text txt_seda">Script stáhne směny plán z API smeny.pizzacomeback.cz do DB.</p>
+      <?php if ($hasData): ?>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:10px;">
+          <p class="card_text txt_seda odstup_vnejsi_0"><?= h($infoText) ?></p>
+          <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0">
+            <input type="hidden" name="run_smeny_plan" value="1">
+            <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex"><?= h($runBtnText) ?></button>
+          </form>
+        </div>
+      <?php else: ?>
+        <p class="card_text txt_seda"><?= h($infoText) ?></p>
+        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0 odstup_horni_10">
+          <input type="hidden" name="run_smeny_plan" value="1">
+          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex"><?= h($runBtnText) ?></button>
+        </form>
+      <?php endif; ?>
+      <div style="margin-top:16px; text-align:right;">
+        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex">
+          <input type="hidden" name="back_admin_init" value="1">
+          <button type="submit" class="card_btn cursor_ruka ram_btn zaobleni_6 vyska_28 displ_inline_flex" style="background:var(--clr_ruzova_4); border-color:var(--clr_ruzova_1); color:var(--clr_cervena);">Zpět</button>
+        </form>
+      </div>
+    </div>
+    <?php
+}
 
 // inicializace/plnime_smeny_plan.php  * Verze: V8 * Aktualizace: 03.04.2026
 // počet řádků 500

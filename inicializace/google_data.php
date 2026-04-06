@@ -9,7 +9,7 @@ set_time_limit(0);
 
 require_once __DIR__ . '/../db/db_connect.php';
 
-const BASE_DIR = __DIR__ . '/../admin_testy/google_data/Pobočky';
+const BASE_DIR = __DIR__ . '/../admin_testy/google_data/Pobocky';
 const MONTHS_EN = [
     'January',
     'February',
@@ -47,7 +47,193 @@ const POBOCKY_MAP = [
     'Bolevec' => 6,
 ];
 
-main();
+if (
+    isset($_POST['run_google_data'])
+    && (string)$_POST['run_google_data'] === '1'
+) {
+    main();
+} else {
+    renderGoogleDataPreview();
+}
+
+function renderGoogleDataPreview(): void
+{
+    $branches = getBranchFolders(BASE_DIR);
+    $statusByBranch = getGoogleImportStatusByBranch();
+    $orderedBranches = orderBranchesForPreview($branches);
+    $today = (new DateTimeImmutable('today'))->format('d.m.Y');
+    $resumeFrom = getGoogleResumeFromDate($statusByBranch);
+    $actionUrl = function_exists('cb_url')
+        ? (string)cb_url('/index.php')
+        : '/index.php';
+    ?>
+    <div class="table-wrap ram_normal bg_bila zaobleni_12 odstup_vnitrni_10">
+      <h2 class="card_title txt_seda text_24 text_tucny odstup_vnejsi_0">Inicializace směny Google</h2>
+      <p class="card_text txt_seda">Script načte historická data směn z Google souborů a zapíše je do DB.</p>
+
+      <?php if ($orderedBranches === []): ?>
+        <p class="card_text txt_seda">Nenalezeny dostupné zdroje ve složce Google dat.</p>
+      <?php else: ?>
+        <?php foreach ($orderedBranches as $branchName => $branchPath): ?>
+          <?php
+            $idPob = getBranchSortId($branchName);
+            $status = $statusByBranch[$idPob] ?? ['count' => 0, 'last' => null];
+            $workbooks = findWorkbooksForBranch($branchPath, $branchName);
+          ?>
+          <p class="card_text txt_seda text_tucny odstup_vnejsi_0">
+            <?= htmlspecialchars($branchName, ENT_QUOTES, 'UTF-8') ?>
+            | staženo (<?= number_format((int)$status['count'], 0, ',', ' ') ?> záznamů), poslední zápis:
+            <?= $status['last'] !== null ? htmlspecialchars((string)$status['last'], ENT_QUOTES, 'UTF-8') : 'bez importu' ?>
+          </p>
+          <?php if ($workbooks === []): ?>
+            <p class="card_text txt_seda odstup_vnejsi_0">- bez dostupných sešitů</p>
+          <?php else: ?>
+            <?php foreach ($workbooks as $workbook): ?>
+              <?php
+                $workbookName = basename($workbook);
+                $sheets = array_keys(getWorkbookSheetTargets($workbook));
+              ?>
+              <p class="card_text txt_seda odstup_vnejsi_0">- <?= htmlspecialchars($workbookName, ENT_QUOTES, 'UTF-8') ?></p>
+              <?php if ($sheets === []): ?>
+                <p class="card_text txt_seda odstup_vnejsi_0" style="padding-left:18px;">bez listů</p>
+              <?php else: ?>
+                <p class="card_text txt_seda odstup_vnejsi_0" style="padding-left:18px;">
+                  <?= htmlspecialchars(implode(', ', $sheets), ENT_QUOTES, 'UTF-8') ?>
+                </p>
+              <?php endif; ?>
+            <?php endforeach; ?>
+          <?php endif; ?>
+          <div style="height:12px;"></div>
+        <?php endforeach; ?>
+      <?php endif; ?>
+
+      <div style="height:26px;"></div>
+
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+        <p class="card_text txt_seda odstup_vnejsi_0">
+          stáhnout chybějící záznamy od <?= htmlspecialchars($resumeFrom, ENT_QUOTES, 'UTF-8') ?> do <?= htmlspecialchars($today, ENT_QUOTES, 'UTF-8') ?>
+        </p>
+        <form method="post" action="<?= htmlspecialchars($actionUrl, ENT_QUOTES, 'UTF-8') ?>" class="odstup_vnejsi_0">
+          <input type="hidden" name="run_google_data" value="1">
+          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Pokračovat v importu</button>
+        </form>
+      </div>
+
+      <div style="margin-top:16px; text-align:right;">
+        <form method="post" action="<?= htmlspecialchars($actionUrl, ENT_QUOTES, 'UTF-8') ?>" class="odstup_vnejsi_0 displ_inline_flex">
+          <input type="hidden" name="back_admin_init" value="1">
+          <button type="submit" class="card_btn cursor_ruka ram_btn zaobleni_6 vyska_28 displ_inline_flex" style="background:var(--clr_ruzova_4); border-color:var(--clr_ruzova_1); color:var(--clr_cervena);">Zpět</button>
+        </form>
+      </div>
+    </div>
+    <?php
+}
+
+function getGoogleImportStatusByBranch(): array
+{
+    $map = [0 => ['count' => 0, 'last' => null]];
+    foreach (POBOCKY_MAP as $branchName => $idPob) {
+        $map[(int)$idPob] = ['count' => 0, 'last' => null];
+    }
+
+    $db = db_connect();
+    $result = $db->query("
+        SELECT id_pob, COUNT(*) AS cnt, MAX(datum) AS last_datum
+        FROM smeny_report
+        WHERE zdroj = 1
+        GROUP BY id_pob
+    ");
+
+    if ($result instanceof mysqli_result) {
+        while ($row = $result->fetch_assoc()) {
+            $idPob = (int)($row['id_pob'] ?? 0);
+            $count = (int)($row['cnt'] ?? 0);
+            $lastRaw = trim((string)($row['last_datum'] ?? ''));
+            $last = null;
+            if ($lastRaw !== '') {
+                $dt = DateTimeImmutable::createFromFormat('Y-m-d', $lastRaw);
+                $last = $dt instanceof DateTimeImmutable ? $dt->format('d.m.Y') : $lastRaw;
+            }
+            $map[$idPob] = ['count' => $count, 'last' => $last];
+        }
+        $result->free();
+    }
+
+    return $map;
+}
+
+function getGoogleResumeFromDate(array $statusByBranch): string
+{
+    $lastMax = '';
+    foreach ($statusByBranch as $status) {
+        if (!is_array($status)) {
+            continue;
+        }
+        $last = trim((string)($status['last'] ?? ''));
+        if ($last === '') {
+            continue;
+        }
+        $dt = DateTimeImmutable::createFromFormat('d.m.Y', $last);
+        if (!($dt instanceof DateTimeImmutable)) {
+            continue;
+        }
+        $ymd = $dt->format('Y-m-d');
+        if ($ymd > $lastMax) {
+            $lastMax = $ymd;
+        }
+    }
+
+    if ($lastMax === '') {
+        return 'od začátku zdrojů';
+    }
+
+    $next = DateTimeImmutable::createFromFormat('Y-m-d', $lastMax);
+    if (!($next instanceof DateTimeImmutable)) {
+        return 'od začátku zdrojů';
+    }
+
+    return $next->modify('+1 day')->format('d.m.Y');
+}
+
+function orderBranchesForPreview(array $branches): array
+{
+    $pairs = [];
+    foreach ($branches as $name => $path) {
+        if (!is_string($name) || !is_string($path)) {
+            continue;
+        }
+        $pairs[] = ['name' => $name, 'path' => $path, 'id' => getBranchSortId($name)];
+    }
+
+    usort(
+        $pairs,
+        static function (array $a, array $b): int {
+            if ($a['id'] === $b['id']) {
+                return strcmp((string)$a['name'], (string)$b['name']);
+            }
+            return (int)$a['id'] <=> (int)$b['id'];
+        }
+    );
+
+    $ordered = [];
+    foreach ($pairs as $pair) {
+        $ordered[(string)$pair['name']] = (string)$pair['path'];
+    }
+    return $ordered;
+}
+
+function getBranchSortId(string $branchName): int
+{
+    if ($branchName === 'Výroba') {
+        return 999;
+    }
+
+    if (isset(POBOCKY_MAP[$branchName])) {
+        return (int)POBOCKY_MAP[$branchName];
+    }
+
+    return 998;
+}
 
 function main(): void
 {
