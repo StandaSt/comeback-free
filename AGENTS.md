@@ -184,3 +184,8 @@ Vždy nejprve ověř realitu v kódu, ne domněnky.
 
 ## Kódování
 - Kódování všech upravovaných souborů: UTF-8 bez BOM (bez výjimky).
+
+## PowerShell bezpečnost při úpravách
+- Pro editaci souborů vždy preferuj `apply_patch`.
+- PowerShell používej pro změny v souborech jen výjimečně a pouze pro jednoduché, přehledné příkazy bez složitých regex řetězců a bez vnořeného escapování uvozovek.
+- Po každé úpravě PHP souboru vždy ověř syntaxi (`php -l`) a potvrď, že soubor zůstal v UTF-8 bez BOM.
