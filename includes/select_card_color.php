@@ -9,6 +9,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 require_once __DIR__ . '/../db/db_connect.php';
 
 $idUser = (int)(($_SESSION['cb_user']['id_user'] ?? 0));
+$idRole = (int)(($_SESSION['cb_user']['id_role'] ?? 3));
 $idKarta = (int)($_REQUEST['id_karta'] ?? 0);
 $selectedColor = trim((string)($_REQUEST['color'] ?? ''));
 $msg = '';
@@ -65,6 +66,75 @@ if (
     }
 }
 
+$usedColors = [];
+if ($idUser > 0) {
+    $conn = db_connect();
+    $stmt = $conn->prepare(
+        'SELECT DISTINCT color
+         FROM user_card_set
+         WHERE id_user = ?
+           AND color IS NOT NULL
+           AND color <> ""
+         ORDER BY color ASC'
+    );
+    if ($stmt instanceof mysqli_stmt) {
+        $stmt->bind_param('i', $idUser);
+        if ($stmt->execute()) {
+            $stmt->bind_result($dbColor);
+            while ($stmt->fetch()) {
+                $c = trim((string)$dbColor);
+                if ($c !== '') {
+                    $usedColors[] = $c;
+                }
+            }
+        }
+        $stmt->close();
+    }
+}
+
+if (!in_array($idRole, [1, 2, 3], true)) {
+    $idRole = 3;
+}
+
+$baseRoleColors = [
+    1 => '#fef2f2', // role 1
+    2 => '#f0fdf4', // role 2
+    3 => '#f6f8fb', // role 3
+];
+
+$visibleRoleColors = [];
+if ($idRole === 1) {
+    $visibleRoleColors = [$baseRoleColors[1], $baseRoleColors[2], $baseRoleColors[3]];
+} elseif ($idRole === 2) {
+    $visibleRoleColors = [$baseRoleColors[2], $baseRoleColors[3]];
+} else {
+    $visibleRoleColors = [$baseRoleColors[3]];
+}
+
+$finalUsedColors = [];
+$seenColors = [];
+$pushColor = static function (string $color) use (&$finalUsedColors, &$seenColors): void {
+    $c = trim($color);
+    if ($c === '') {
+        return;
+    }
+    $key = strtolower($c);
+    if (isset($seenColors[$key])) {
+        return;
+    }
+    $seenColors[$key] = true;
+    $finalUsedColors[] = $c;
+};
+
+foreach ($usedColors as $uc) {
+    $pushColor((string)$uc);
+}
+foreach ($visibleRoleColors as $rc) {
+    $pushColor((string)$rc);
+}
+
+$usedColors = $finalUsedColors;
+
 function h(string $value): string
 {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
@@ -73,7 +143,7 @@ function h(string $value): string
 function cb_make_palette(): array
 {
     $rows = 8;
-    $cols = 21;
+    $cols = 18;
     $palette = [];
     $lightnessSteps = [98, 93, 86, 78, 68, 58, 48, 40];
 
@@ -148,12 +218,21 @@ $palette = cb_make_palette();
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body{margin:0;padding:6px;font-family:Arial,sans-serif;background:#fff;color:#334155;}
-    .grid{display:grid;grid-template-columns:repeat(21,14px);gap:0;}
+    .picker-wrap{width:max-content;}
+    .grid{display:grid;grid-template-columns:repeat(18,14px);gap:0;}
+    .used-grid{display:grid;grid-template-columns:repeat(9,28px);gap:0;}
     .swatch{width:14px;height:14px;border:0;display:block;cursor:pointer;padding:0;margin:0;}
+    .swatch.used{width:28px;height:28px;}
     .swatch.is-active{outline:2px solid #0f172a;outline-offset:-2px;}
+    .swatch:hover{outline:1px solid #334155;outline-offset:-1px;}
     .title{font-size:12px;color:#475569;margin:0 0 8px 0;}
-    .bar{display:flex;align-items:center;justify-content:flex-end;margin-top:8px;gap:8px;}
+    .bar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin-top:8px;column-gap:8px;}
+    .bar-left{text-align:left;}
+    .bar-center{text-align:center;}
+    .bar-right{text-align:right;}
     .btn{height:18px;line-height:16px;padding:0 8px;border:1px solid #94a3b8;border-radius:6px;background:#f8fafc;cursor:pointer;font-size:12px;}
+    .is-hidden{display:none;}
+    .used-empty{font-size:12px;color:#64748b;margin-top:6px;}
     .ok{font-size:12px;color:#15803d;margin-top:6px;}
     .err{font-size:12px;color:#b91c1c;margin-top:6px;}
   </style>
@@ -167,24 +246,49 @@ $palette = cb_make_palette();
 
   <p class="title">Vyber barvu pro tuto kartu:</p>
 
-  <div class="grid">
-    <?php foreach ($palette as $row): ?>
-      <?php foreach ($row as $color): ?>
+  <div class="picker-wrap">
+    <div class="grid" id="cardColorPaletteGrid">
+      <?php foreach ($palette as $row): ?>
+        <?php foreach ($row as $color): ?>
+          <?php $active = ($selectedColor !== '' && $selectedColor === $color); ?>
+          <button
+            type="button"
+            class="swatch<?= $active ? ' is-active' : '' ?>"
+            style="background:<?= h($color) ?>"
+            data-color="<?= h($color) ?>"
+            title="<?= h($color) ?>"
+          ></button>
+        <?php endforeach; ?>
+      <?php endforeach; ?>
+    </div>
+
+    <div class="used-grid is-hidden" id="cardColorUsedGrid">
+      <?php foreach ($usedColors as $color): ?>
         <?php $active = ($selectedColor !== '' && $selectedColor === $color); ?>
         <button
           type="button"
-          class="swatch<?= $active ? ' is-active' : '' ?>"
+          class="swatch used<?= $active ? ' is-active' : '' ?>"
           style="background:<?= h($color) ?>"
           data-color="<?= h($color) ?>"
           title="<?= h($color) ?>"
         ></button>
       <?php endforeach; ?>
-    <?php endforeach; ?>
-  </div>
+    </div>
+    <?php if (count($usedColors) === 0): ?>
+      <div class="used-empty is-hidden" id="cardColorUsedEmpty">Zatím nemáš žádné použité barvy.</div>
+    <?php endif; ?>
 
-  <div class="bar">
-    <button type="submit" class="btn" id="cardColorReset">Reset</button>
-    <button type="submit" class="btn">Uložit</button>
+    <div class="bar">
+      <div class="bar-left">
+        <button type="button" class="btn" id="cardColorToggle">Použité barvy</button>
+      </div>
+      <div class="bar-center">
+        <button type="submit" class="btn" id="cardColorReset">Reset</button>
+      </div>
+      <div class="bar-right">
+        <button type="submit" class="btn">Uložit</button>
+      </div>
+    </div>
   </div>
 
   <?php if ($msg !== ''): ?>
@@ -198,8 +302,13 @@ $palette = cb_make_palette();
   var actionInput = document.getElementById('cardColorAction');
   var colorInput = document.getElementById('cardColorValue');
   var resetBtn = document.getElementById('cardColorReset');
+  var toggleBtn = document.getElementById('cardColorToggle');
+  var paletteGrid = document.getElementById('cardColorPaletteGrid');
+  var usedGrid = document.getElementById('cardColorUsedGrid');
+  var usedEmpty = document.getElementById('cardColorUsedEmpty');
+  var showingUsed = false;
   var cardId = <?= (int)$idKarta ?>;
-  if (!form || !actionInput || !colorInput || !resetBtn || cardId <= 0) return;
+  if (!form || !actionInput || !colorInput || !resetBtn || !toggleBtn || !paletteGrid || !usedGrid || cardId <= 0) return;
 
   function paintInParent(color) {
     try {
@@ -227,19 +336,35 @@ $palette = cb_make_palette();
     });
   }
 
-  document.querySelectorAll('.swatch').forEach(function (el) {
-    el.addEventListener('click', function () {
-      var c = String(el.getAttribute('data-color') || '').trim();
-      if (c === '') return;
-      colorInput.value = c;
-      actionInput.value = 'save';
-      setActiveSwatch(c);
-      paintInParent(c);
-    });
+  form.addEventListener('click', function (ev) {
+    var target = ev.target instanceof Element ? ev.target.closest('.swatch') : null;
+    if (!(target instanceof HTMLElement)) return;
+    ev.preventDefault();
+    var c = String(target.getAttribute('data-color') || '').trim();
+    if (c === '') return;
+    colorInput.value = c;
+    actionInput.value = 'save';
+    setActiveSwatch(c);
+    paintInParent(c);
   });
 
   resetBtn.addEventListener('click', function () {
     actionInput.value = 'reset';
+  });
+
+  toggleBtn.addEventListener('click', function () {
+    showingUsed = !showingUsed;
+    if (showingUsed) {
+      paletteGrid.classList.add('is-hidden');
+      usedGrid.classList.remove('is-hidden');
+      if (usedEmpty) usedEmpty.classList.remove('is-hidden');
+      toggleBtn.textContent = 'Ukaž paletu';
+    } else {
+      usedGrid.classList.add('is-hidden');
+      if (usedEmpty) usedEmpty.classList.add('is-hidden');
+      paletteGrid.classList.remove('is-hidden');
+      toggleBtn.textContent = 'Použité barvy';
+    }
   });
 
 }());

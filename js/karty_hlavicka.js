@@ -2,6 +2,9 @@
 'use strict';
 
 (function (w) {
+  const MOVE_DEFAULT_TEXT = 'Přesunout na pozici';
+  const MOVE_HINT_TEXT = 'Klikni na nové umístění karty';
+
   function findCardToggle(cardId) {
     const cid = String(cardId || '').trim();
     if (cid === '') return null;
@@ -79,6 +82,174 @@
   }
 
   function initKartyHlavicka() {
+    let moveSource = null;
+
+    function getCardModeConfirmModal() {
+      const root = document.getElementById('cbCardModeModal');
+      if (!(root instanceof HTMLElement)) return null;
+      const msg = root.querySelector('[data-cb-cardmode-msg]');
+      const cancelBtn = root.querySelector('[data-cb-cardmode-close]');
+      const confirmBtn = root.querySelector('[data-cb-cardmode-confirm]');
+      if (!(msg instanceof HTMLElement) || !(cancelBtn instanceof HTMLElement) || !(confirmBtn instanceof HTMLElement)) {
+        return null;
+      }
+      return { root, msg, cancelBtn, confirmBtn };
+    }
+
+    function closeCardModeConfirmModal() {
+      const modal = getCardModeConfirmModal();
+      if (!modal) return false;
+      modal.root.classList.add('is-hidden');
+      modal.root.setAttribute('aria-hidden', 'true');
+      modal.msg.textContent = '';
+      modal.cancelBtn.textContent = 'Rozumím';
+      modal.confirmBtn.textContent = 'Potvrdit';
+      modal.confirmBtn.classList.add('is-hidden');
+      return true;
+    }
+
+    function openMoveUnlockConfirm(onYes, onNo) {
+      const modal = getCardModeConfirmModal();
+      if (!modal) return false;
+
+      modal.msg.innerHTML = 'Cílová pozice je obsazena dříve umístěnou kartou.<br><br>Pokud trváš na přesunu karty,<br>bude karta na cílové pozici uvolněna z pozice.';
+      modal.cancelBtn.textContent = 'Jéminkote, netrvám na tom';
+      modal.confirmBtn.textContent = 'Trvám na přesunu';
+      modal.confirmBtn.classList.remove('is-hidden');
+      modal.root.classList.remove('is-hidden');
+      modal.root.setAttribute('aria-hidden', 'false');
+      modal.confirmBtn.focus();
+
+      const handleYes = function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        closeCardModeConfirmModal();
+        if (typeof onYes === 'function') {
+          onYes();
+        }
+      };
+      const handleNo = function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        closeCardModeConfirmModal();
+        if (typeof onNo === 'function') {
+          onNo();
+        }
+      };
+
+      modal.confirmBtn.addEventListener('click', handleYes, { once: true });
+      modal.cancelBtn.addEventListener('click', handleNo, { once: true });
+      return true;
+    }
+
+    function setMoveButtonState(btn, isHint) {
+      if (!(btn instanceof HTMLElement)) return;
+      if (isHint) {
+        btn.textContent = MOVE_HINT_TEXT;
+        btn.classList.add('card_pref_item_move_hint');
+      } else {
+        btn.textContent = MOVE_DEFAULT_TEXT;
+        btn.classList.remove('card_pref_item_move_hint');
+      }
+    }
+
+    function clearMoveSource() {
+      if (moveSource && moveSource.root instanceof HTMLElement) {
+        moveSource.root.removeAttribute('data-card-move-source');
+      }
+      if (moveSource && moveSource.btn instanceof HTMLElement) {
+        setMoveButtonState(moveSource.btn, false);
+      }
+      moveSource = null;
+      if (document.body) {
+        document.body.removeAttribute('data-card-move-active');
+      }
+    }
+
+    function startMoveSource(fromBtn) {
+      const wrap = fromBtn.closest('[data-card-pref-wrap]');
+      const root = wrap ? wrap.closest('.card_shell') : null;
+      if (!(root instanceof HTMLElement)) return false;
+      const id = parseInt(String(root.getAttribute('data-card-id') || '0'), 10);
+      const col = parseInt(String(root.getAttribute('data-card-col') || '0'), 10);
+      const line = parseInt(String(root.getAttribute('data-card-line') || '0'), 10);
+      const title = String(root.getAttribute('data-card-title') || '').trim();
+      if (!Number.isFinite(id) || id <= 0 || !Number.isFinite(col) || col <= 0 || !Number.isFinite(line) || line <= 0) {
+        return false;
+      }
+
+      clearMoveSource();
+      moveSource = { id, col, line, title, root, btn: fromBtn };
+      root.setAttribute('data-card-move-source', '1');
+      setMoveButtonState(fromBtn, true);
+      if (document.body) {
+        document.body.setAttribute('data-card-move-active', '1');
+      }
+      return true;
+    }
+
+    function doMoveToTarget(targetRoot, forceUnlock) {
+      if (!(moveSource && moveSource.root instanceof HTMLElement)) return;
+      const targetId = parseInt(String(targetRoot.getAttribute('data-card-id') || '0'), 10);
+      const targetCol = parseInt(String(targetRoot.getAttribute('data-card-col') || '0'), 10);
+      const targetLine = parseInt(String(targetRoot.getAttribute('data-card-line') || '0'), 10);
+      const targetLocked = String(targetRoot.getAttribute('data-card-pos-locked') || '0') === '1';
+      if (!Number.isFinite(targetId) || targetId <= 0 || !Number.isFinite(targetCol) || targetCol <= 0 || !Number.isFinite(targetLine) || targetLine <= 0) {
+        clearMoveSource();
+        return;
+      }
+      if (targetId === moveSource.id) {
+        clearMoveSource();
+        return;
+      }
+
+      fetch('index.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Comeback-Set-Card-Position': '1'
+        },
+        body: JSON.stringify({
+          src_id: moveSource.id,
+          src_col: moveSource.col,
+          src_line: moveSource.line,
+          tgt_id: targetId,
+          tgt_col: targetCol,
+          tgt_line: targetLine,
+          target_locked: targetLocked ? 1 : 0,
+          force_unlock: forceUnlock ? 1 : 0
+        })
+      }).then((r) => r.json().catch(() => ({}))).then((data) => {
+        if (data && data.ok) {
+          clearMoveSource();
+          window.location.reload();
+          return;
+        }
+
+        if (data && data.needs_confirm) {
+          if (!openMoveUnlockConfirm(function () {
+            doMoveToTarget(targetRoot, true);
+          }, function () {
+            clearMoveSource();
+          })) {
+            if (window.confirm('Cílová pozice je obsazena zamčenou kartou. Pokud trváš na přesunu, bude karta uvolněna z pozice.')) {
+              doMoveToTarget(targetRoot, true);
+            } else {
+              clearMoveSource();
+            }
+          }
+          return;
+        }
+
+        const err = String((data && data.err) ? data.err : 'Přesun karty selhal.');
+        window.alert(err);
+        clearMoveSource();
+      }).catch(() => {
+        window.alert('Přesun karty selhal.');
+        clearMoveSource();
+      });
+    }
+
     const branchSelect = getBranchSelect();
     if (branchSelect && branchSelect.getAttribute('data-zr-title-bound') !== '1') {
       branchSelect.setAttribute('data-zr-title-bound', '1');
@@ -118,6 +289,16 @@
         const target = e.target instanceof Element ? e.target : null;
         if (!target) return;
 
+        if (moveSource && !(target.closest('[data-card-pref-wrap]'))) {
+          const targetRoot = target.closest('.card_shell');
+          if (targetRoot instanceof HTMLElement) {
+            e.preventDefault();
+            e.stopPropagation();
+            doMoveToTarget(targetRoot, false);
+            return;
+          }
+        }
+
         const openBtn = target.closest('[data-card-pref-open]');
         if (openBtn) {
           const wrap = openBtn.closest('[data-card-pref-wrap]');
@@ -130,6 +311,53 @@
             frame.setAttribute('src', url);
             frame.classList.remove('is-hidden');
           }
+          return;
+        }
+
+        const moveBtn = target.closest('[data-card-pref-move]');
+        if (moveBtn) {
+          const ok = startMoveSource(moveBtn);
+          const wrap = moveBtn.closest('[data-card-pref-wrap]');
+          const menu = wrap ? wrap.querySelector('[data-card-pref-menu]') : null;
+          const frame = menu ? menu.querySelector('[data-card-pref-frame]') : null;
+          if (menu instanceof HTMLElement) {
+            menu.classList.remove('is-hidden');
+            menu.classList.remove('card_pref_menu_frame');
+          }
+          if (frame instanceof HTMLIFrameElement) {
+            frame.classList.add('is-hidden');
+            frame.removeAttribute('src');
+          }
+          const toggle = wrap ? wrap.querySelector('[data-card-pref-toggle]') : null;
+          if (toggle instanceof HTMLElement) {
+            toggle.setAttribute('aria-expanded', 'true');
+          }
+          if (!ok) {
+            clearMoveSource();
+          }
+          return;
+        }
+
+        const unlockAllBtn = target.closest('[data-card-pref-unlock-all]');
+        if (unlockAllBtn) {
+          fetch('index.php', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Comeback-Unlock-All-Card-Pos': '1'
+            },
+            body: JSON.stringify({})
+          }).then((r) => r.json().catch(() => ({}))).then((data) => {
+            if (data && data.ok) {
+              clearMoveSource();
+              window.location.reload();
+              return;
+            }
+            const err = String((data && data.err) ? data.err : 'Odemknutí pozic karet selhalo.');
+            window.alert(err);
+          }).catch(() => {
+            window.alert('Odemknutí pozic karet selhalo.');
+          });
           return;
         }
 
@@ -194,6 +422,10 @@
 
       document.addEventListener('keydown', function (e) {
         if (e.key !== 'Escape') return;
+        if (moveSource) {
+          clearMoveSource();
+          return;
+        }
         document.querySelectorAll('[data-card-pref-menu]').forEach(function (m) {
           if (!(m instanceof HTMLElement)) return;
           restoreUnsavedPreviewByMenu(m);

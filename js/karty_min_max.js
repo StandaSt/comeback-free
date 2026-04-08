@@ -12,6 +12,7 @@
   const CARD_EXPANDED_SELECTOR = '[data-card-expanded]';
   const CARD_TO_NANO_SELECTOR = '[data-card-to-nano]';
   const CARD_NANO_TARGET_SELECTOR = '[data-card-nano-target]';
+  const MAX_NANO_CARDS = 9;
 
   function getCurrentLoginId() {
     const grid = document.querySelector('.dash_grid[data-login-id]');
@@ -84,6 +85,7 @@
     if (!toggle) return;
     toggle.textContent = isOn ? ICON_MIN : ICON_MAX;
     toggle.setAttribute('aria-expanded', isOn ? 'true' : 'false');
+    toggle.setAttribute('title', isOn ? 'Přepnout do mini' : 'Přepnout do max');
   }
 
   function updateSubtitle(root, isExpanded) {
@@ -130,7 +132,88 @@
         'X-Comeback-Set-Card-Mode': '1'
       },
       body: JSON.stringify({ id_karta: cardId, mode: mode })
-    }).then((r) => r.json().catch(() => ({})));
+    }).then((r) => r.json().catch(() => ({})).then((data) => {
+      if (r.ok && data && data.ok) {
+        return data;
+      }
+      const err = String((data && data.err) ? data.err : 'Uložení režimu karty selhalo').trim();
+      throw new Error(err !== '' ? err : 'Uložení režimu karty selhalo');
+    }));
+  }
+
+  function getNanoCardCount() {
+    return document.querySelectorAll('.card_shell[data-card-mode="nano"]').length;
+  }
+
+  function canSwitchToNano(cardId) {
+    const cid = parseInt(String(cardId || '0'), 10);
+    if (!Number.isFinite(cid) || cid <= 0) return false;
+    const alreadyNano = document.querySelector('.card_shell[data-card-id="' + String(cid) + '"][data-card-mode="nano"]');
+    if (alreadyNano) return true;
+    return getNanoCardCount() < MAX_NANO_CARDS;
+  }
+
+  function getCardModeModal() {
+    const root = document.getElementById('cbCardModeModal');
+    if (!(root instanceof HTMLElement)) return null;
+    const msg = root.querySelector('[data-cb-cardmode-msg]');
+    const closeBtn = root.querySelector('[data-cb-cardmode-close]');
+    const confirmBtn = root.querySelector('[data-cb-cardmode-confirm]');
+    if (!(msg instanceof HTMLElement) || !(closeBtn instanceof HTMLElement)) return null;
+    return {
+      root,
+      msg,
+      closeBtn,
+      confirmBtn: (confirmBtn instanceof HTMLElement) ? confirmBtn : null
+    };
+  }
+
+  function closeCardModeModal() {
+    const modal = getCardModeModal();
+    if (!modal) return false;
+    modal.root.classList.add('is-hidden');
+    modal.root.setAttribute('aria-hidden', 'true');
+    modal.msg.textContent = '';
+    modal.closeBtn.textContent = 'Rozumím';
+    if (modal.confirmBtn) {
+      modal.confirmBtn.classList.add('is-hidden');
+      modal.confirmBtn.textContent = 'Potvrdit';
+    }
+    return true;
+  }
+
+  function openCardModeModal(message) {
+    const text = String(message || '').trim();
+    if (text === '') return false;
+    const modal = getCardModeModal();
+    if (!modal) return false;
+    modal.msg.textContent = text;
+    modal.closeBtn.textContent = 'Rozumím';
+    if (modal.confirmBtn) {
+      modal.confirmBtn.classList.add('is-hidden');
+      modal.confirmBtn.textContent = 'Potvrdit';
+    }
+    modal.root.classList.remove('is-hidden');
+    modal.root.setAttribute('aria-hidden', 'false');
+    modal.closeBtn.focus();
+    return true;
+  }
+
+  function showNanoLimitAlert() {
+    // TODO: Tuto akci (pokus o 10. nano kartu) budeme logovat v logování akcí uživatele.
+    const msg = 'Nano režim je omezen na 9 karet.\nDesátou kartu nelze přidat.';
+    if (!openCardModeModal(msg)) {
+      w.alert(msg);
+    }
+  }
+
+  function showCardModeError(err) {
+    const msg = (err && typeof err.message === 'string') ? err.message.trim() : '';
+    if (msg !== '') {
+      if (!openCardModeModal(msg)) {
+        w.alert(msg);
+      }
+    }
   }
 
   function reloadAfterNanoSwitch(root, pendingMode) {
@@ -147,8 +230,10 @@
     w.setTimeout(() => { w.location.reload(); }, 180);
   }
 
-  function closeActiveMaxi() {
+  function closeActiveMaxi(opts) {
     if (!activeMaxi) return;
+    const options = (opts && typeof opts === 'object') ? opts : {};
+    const forceMini = !!options.forceMini;
 
     const item = activeMaxi;
     const {
@@ -161,7 +246,7 @@
       returnMode
     } = item;
 
-    const targetReturnMode = (returnMode === 'nano') ? 'nano' : 'mini';
+    const targetReturnMode = forceMini ? 'mini' : ((returnMode === 'nano') ? 'nano' : 'mini');
 
     if (expanded) expanded.classList.add('is-hidden');
     if (compact) compact.classList.remove('is-hidden');
@@ -184,9 +269,15 @@
     if (targetReturnMode === 'nano') {
       const cardId = parseInt(String(root.getAttribute('data-card-id') || '0'), 10);
       if (cardId > 0) {
+        if (!canSwitchToNano(cardId)) {
+          showNanoLimitAlert();
+          return;
+        }
         requestCardMode(cardId, 'nano').then(() => {
           reloadAfterNanoSwitch(root, 'mini');
-        }).catch(() => {});
+        }).catch((err) => {
+          showCardModeError(err);
+        });
       }
     }
   }
@@ -320,6 +411,10 @@
 
     toggle.addEventListener('click', () => {
       const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+      if (isExpanded && activeMaxi && activeMaxi.root === root) {
+        closeActiveMaxi({ forceMini: true });
+        return;
+      }
       setExpanded(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR, !isExpanded);
     });
 
@@ -327,9 +422,15 @@
     if (nanoBtn) {
       nanoBtn.addEventListener('click', () => {
         if (!Number.isFinite(cardId) || cardId <= 0) return;
+        if (!canSwitchToNano(cardId)) {
+          showNanoLimitAlert();
+          return;
+        }
         requestCardMode(cardId, 'nano').then(() => {
           reloadAfterNanoSwitch(root, 'mini');
-        }).catch(() => {});
+        }).catch((err) => {
+          showCardModeError(err);
+        });
       });
     }
 
@@ -341,6 +442,18 @@
       clearSelection();
       const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
       setExpanded(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR, !isExpanded);
+    });
+
+    const forms = root.querySelectorAll('form');
+    forms.forEach((formEl) => {
+      if (!(formEl instanceof HTMLFormElement)) return;
+      formEl.addEventListener('submit', () => {
+        if (activeMaxi && activeMaxi.root === root) {
+          closeActiveMaxi({ forceMini: true });
+        } else {
+          clearMaxiState();
+        }
+      });
     });
   }
 
@@ -378,12 +491,24 @@
     if (w.__CB_KARTY_MINMAX_WIRED__) return;
     w.__CB_KARTY_MINMAX_WIRED__ = true;
 
+    document.addEventListener('click', (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) return;
+      if (target.closest('[data-cb-cardmode-close]')) {
+        closeCardModeModal();
+      }
+    });
+
     document.addEventListener('cb:main-swapped', () => {
       closeActiveMaxi();
       initKartyMinMax();
     });
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
+        const modal = getCardModeModal();
+        if (modal && !modal.root.classList.contains('is-hidden')) {
+          return;
+        }
         closeActiveMaxi();
       }
     });
@@ -399,3 +524,5 @@
 
 // js/karty_min_max.js * Verze: V2 * Aktualizace: 25.03.2026
 // Konec souboru
+
+

@@ -1167,7 +1167,18 @@ align-items:center;
   position:relative;
   flex:0 0 25px;
   width:25px;
-  height:25px;
+  height:36px;
+}
+
+.card_pref_wrap_pos_locked{
+}
+
+.card_pref_wrap_pos_locked .card_pref_toggle{
+  border-color:var(--clr_cervena);
+}
+
+.card_pref_wrap_pos_locked .card_pref_toggle:hover{
+  border-color:var(--clr_cervena);
 }
 
 .card_pref_toggle{
@@ -1224,6 +1235,32 @@ align-items:center;
   object-fit:contain;
 }
 
+.card_pref_kid{
+  position:absolute;
+  top:27px;
+  left:50%;
+  transform:translateX(-50%);
+  font-size:9px;
+  line-height:1;
+  color:var(--clr_seda_4);
+  white-space:nowrap;
+  pointer-events:none;
+}
+
+.card_shell[data-card-mode="nano"] .card_pref_kid{
+  display:none;
+}
+
+.card_shell[data-card-mode="nano"] .card_head_left{
+  align-items:center;
+}
+
+.card_shell[data-card-mode="nano"] .card_pref_wrap{
+  height:25px;
+  display:flex;
+  align-items:center;
+}
+
 .card_pref_menu{
   position:absolute;
   top:100%;
@@ -1253,6 +1290,11 @@ align-items:center;
   background:var(--clr_seda_1);
 }
 
+.card_pref_item_move_hint{
+  color:var(--clr_cervena);
+  font-weight:700;
+}
+
 .card_pref_item_placeholder{
   opacity:.6;
 }
@@ -1269,7 +1311,7 @@ align-items:center;
 .card_pref_menu.card_pref_menu_frame{
   top:100%;
   margin-top:12px;
-  width:320px;
+  width:280px;
   padding:4px;
 }
 
@@ -1449,6 +1491,7 @@ align-items:center;
   transform:translateX(-50%);
   width:fit-content;
   min-width:350px;
+  min-height:250px;
   max-width:calc(100% - 24px);
   max-height:100%;
   height:auto;
@@ -2026,6 +2069,95 @@ align-items:center;
 .zr_ops_section .zr_restia_table td,
 .zr_restia_section .zr_restia_table td{
   background:var(--clr_pruhledna_bila_92);
+}
+
+.cb_cardmode_modal{
+  position:fixed;
+  inset:0;
+  z-index:12000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+  background:var(--clr_pruhledna_tmava_62);
+}
+
+.cb_cardmode_modal.is-hidden{
+  display:none;
+}
+
+.cb_cardmode_dialog{
+  width:min(420px, 96vw);
+  background:var(--clr_bila);
+  border:1px solid var(--clr_seda_2);
+  border-radius:14px;
+  box-shadow:0 12px 28px var(--clr_stin_5);
+  padding:14px 14px 12px;
+}
+
+.cb_cardmode_head{
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+}
+
+.cb_cardmode_logo_wrap{
+  display:flex;
+  justify-content:flex-start;
+}
+
+.cb_cardmode_logo{
+  width:72px;
+  height:72px;
+  object-fit:contain;
+}
+
+.cb_cardmode_head_text{
+  flex:1 1 auto;
+  padding-top:2px;
+}
+
+.cb_cardmode_title{
+  margin:0 0 6px;
+  text-align:left;
+  color:var(--clr_cervena);
+  font-size:var(--fs_15);
+  font-weight:700;
+}
+
+.cb_cardmode_text{
+  margin:0;
+  text-align:left;
+  color:var(--clr_cerna);
+  font-size:var(--fs_13);
+  line-height:1.35;
+  white-space:pre-line;
+  min-height:42px;
+}
+
+.cb_cardmode_actions{
+  margin-top:14px;
+  display:flex;
+  gap:10px;
+  justify-content:center;
+}
+
+.cb_cardmode_btn{
+  min-width:130px;
+  min-height:34px;
+  border:1px solid var(--clr_modra_6);
+  border-radius:9px;
+  background:var(--clr_modra_7);
+  color:var(--clr_modra_5);
+  font-weight:600;
+}
+
+.cb_cardmode_btn:hover{
+  background:var(--clr_modra_2);
+}
+
+.cb_cardmode_btn:active{
+  background:var(--clr_modra_1);
 }
 
 @media (max-width: 760px){

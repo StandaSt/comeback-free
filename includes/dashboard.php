@@ -38,10 +38,20 @@ if (!in_array($roleFilter, [1, 2, 3], true)) {
 
 $idUser = (int)(($_SESSION['cb_user']['id_user'] ?? 0));
 $dashColsClass = 'dash_cols_3';
+$dashGridCols = 3;
 $nanoKde = 0;
 $nanoCardIds = [];
 $userCardHeaderColorById = [];
 $userCardIconFileById = [];
+$userCardPosById = [];
+$dashColsPostOverride = null;
+
+if ((string)($_POST['us_action'] ?? '') === 'save') {
+    $postColsRaw = (int)($_POST['us_pocet_sl'] ?? 0);
+    if (in_array($postColsRaw, [3, 4, 5], true)) {
+        $dashColsPostOverride = $postColsRaw;
+    }
+}
 
 if ($idUser > 0) {
     $stmtCols = db()->prepare('SELECT pocet_sl, nano_kde FROM `user_set` WHERE id_user = ? LIMIT 1');
@@ -50,10 +60,13 @@ if ($idUser > 0) {
         $stmtCols->execute();
         $stmtCols->bind_result($pocetSl, $nanoKdeDb);
         if ($stmtCols->fetch()) {
-            if ((int)$pocetSl === 5) {
+            $effectivePocetSl = ($dashColsPostOverride !== null) ? (int)$dashColsPostOverride : (int)$pocetSl;
+            if ($effectivePocetSl === 5) {
                 $dashColsClass = 'dash_cols_5';
-            } elseif ((int)$pocetSl === 4) {
+                $dashGridCols = 5;
+            } elseif ($effectivePocetSl === 4) {
                 $dashColsClass = 'dash_cols_4';
+                $dashGridCols = 4;
             }
         }
         $nanoKde = (int)$nanoKdeDb;
@@ -111,6 +124,25 @@ if ($idUser > 0) {
         }
         $stmtCardIcon->close();
     }
+
+    $stmtCardPos = db()->prepare('SELECT id_karta, col, line FROM user_card_set WHERE id_user = ?');
+    if ($stmtCardPos) {
+        $stmtCardPos->bind_param('i', $idUser);
+        $stmtCardPos->execute();
+        $stmtCardPos->bind_result($posCardId, $posCol, $posLine);
+        while ($stmtCardPos->fetch()) {
+            $cid = (int)$posCardId;
+            $cc = ($posCol === null) ? null : (int)$posCol;
+            $ll = ($posLine === null) ? null : (int)$posLine;
+            if ($cid > 0) {
+                $userCardPosById[$cid] = [
+                    'col' => ($cc !== null && $cc > 0) ? $cc : null,
+                    'line' => ($ll !== null && $ll > 0) ? $ll : null,
+                ];
+            }
+        }
+        $stmtCardPos->close();
+    }
 }
 
 $karty = [];
@@ -158,6 +190,73 @@ foreach ($karty as $kartaRow) {
         $kartyMini[] = $kartaRow;
     }
 }
+
+$sortByFallback = static function (array &$list): void {
+    usort($list, static function (array $a, array $b): int {
+        $idA = (int)($a['id_karta'] ?? 0);
+        $idB = (int)($b['id_karta'] ?? 0);
+        $poradiA = (int)($a['poradi'] ?? 0);
+        $poradiB = (int)($b['poradi'] ?? 0);
+        if ($poradiA !== $poradiB) {
+            return $poradiA <=> $poradiB;
+        }
+        return $idA <=> $idB;
+    });
+};
+
+$applyUserSlots = static function (array $list) use ($userCardPosById, $dashGridCols, $sortByFallback): array {
+    if (count($list) <= 1) {
+        return $list;
+    }
+
+    $cols = ($dashGridCols > 0) ? $dashGridCols : 3;
+    $lockedBySlot = [];
+    $unlocked = [];
+
+    foreach ($list as $card) {
+        $idK = (int)($card['id_karta'] ?? 0);
+        $pos = ($idK > 0 && isset($userCardPosById[$idK])) ? (array)$userCardPosById[$idK] : ['col' => null, 'line' => null];
+        $col = ($pos['col'] ?? null);
+        $line = ($pos['line'] ?? null);
+        $hasLock = ($col !== null && $line !== null && (int)$col > 0 && (int)$line > 0 && (int)$col <= $cols);
+        if ($hasLock) {
+            $slot = (((int)$line - 1) * $cols) + (int)$col;
+            if (!isset($lockedBySlot[$slot])) {
+                $lockedBySlot[$slot] = $card;
+                continue;
+            }
+        }
+        $unlocked[] = $card;
+    }
+
+    if (!empty($unlocked)) {
+        $sortByFallback($unlocked);
+    }
+
+    $result = [];
+    $unlockIdx = 0;
+    $total = count($list);
+    for ($slot = 1; $slot <= $total; $slot++) {
+        if (isset($lockedBySlot[$slot])) {
+            $result[] = $lockedBySlot[$slot];
+            continue;
+        }
+        if (isset($unlocked[$unlockIdx])) {
+            $result[] = $unlocked[$unlockIdx];
+            $unlockIdx++;
+        }
+    }
+
+    while (isset($unlocked[$unlockIdx])) {
+        $result[] = $unlocked[$unlockIdx];
+        $unlockIdx++;
+    }
+
+    return $result;
+};
+
+$kartyNano = $applyUserSlots($kartyNano);
+$kartyMini = $applyUserSlots($kartyMini);
 $dashGridClass = $dashColsClass . ' dash_nano_kde_' . $nanoKde;
 $cbLoginId = (int)($_SESSION['cb_id_login'] ?? 0);
 
@@ -193,14 +292,43 @@ foreach ($kartyMini as $kartaMini) {
         'grid_style' => '',
     ];
 }
+$renderPosCounter = 0;
+foreach ($renderItems as &$renderItemPos) {
+    if (($renderItemPos['kind'] ?? '') === 'nano_group') {
+        $klist = (array)($renderItemPos['karty'] ?? []);
+        foreach ($klist as $idxPos => $kartaPos) {
+            $renderPosCounter++;
+            $kartaPos['__render_pos'] = $renderPosCounter;
+            $klist[$idxPos] = $kartaPos;
+        }
+        $renderItemPos['karty'] = $klist;
+        continue;
+    }
+    if (($renderItemPos['kind'] ?? '') === 'card') {
+        $renderPosCounter++;
+        $k = (array)($renderItemPos['karta'] ?? []);
+        $k['__render_pos'] = $renderPosCounter;
+        $renderItemPos['karta'] = $k;
+    }
+}
+unset($renderItemPos);
 
-$renderCard = static function (array $karta, bool $isNano, string $gridStyle = '') use ($userCardHeaderColorById, $userCardIconFileById): string {
+$renderCard = static function (array $karta, bool $isNano, string $gridStyle = '') use ($userCardHeaderColorById, $userCardIconFileById, $userCardPosById, $dashGridCols): string {
     $fullPath = cb_dashboard_resolve_file((string)($karta['soubor'] ?? ''));
     $title = (string)($karta['nazev'] ?? '');
     $subtitleMin = (string)($karta['subtitle_min'] ?? '');
     $subtitleMax = (string)($karta['subtitle_max'] ?? '');
     $cardId = (int)($karta['id_karta'] ?? 0);
     $cardMode = $isNano ? 'nano' : 'mini';
+    $cardPoradi = (int)($karta['poradi'] ?? 0);
+    $renderPos = (int)($karta['__render_pos'] ?? 0);
+    $renderCol = 0;
+    $renderLine = 0;
+    if ($renderPos > 0) {
+        $cols = ($dashGridCols > 0) ? $dashGridCols : 3;
+        $renderCol = (($renderPos - 1) % $cols) + 1;
+        $renderLine = (int)floor(($renderPos - 1) / $cols) + 1;
+    }
     $cardLineHeightClass = $isNano ? ' radek_1_1' : ' radek_1_15';
     $cardTopStyle = '';
     if ($cardId > 0 && isset($userCardHeaderColorById[$cardId])) {
@@ -211,6 +339,8 @@ $renderCard = static function (array $karta, bool $isNano, string $gridStyle = '
     $cardIconSrc = $hasCardIcon ? cb_url('/img/card_icons/' . ltrim($cardIconFile, '/')) : '';
     $cardColorUrl = cb_url('/includes/select_card_color.php?id_karta=' . (string)$cardId);
     $cardIconUrl = cb_url('/includes/select_card_ikon.php?id_karta=' . (string)$cardId);
+    $storedPos = ($cardId > 0 && isset($userCardPosById[$cardId])) ? (array)$userCardPosById[$cardId] : ['col' => null, 'line' => null];
+    $isPosLocked = (($storedPos['col'] ?? null) !== null && ($storedPos['line'] ?? null) !== null);
 
     $minRole = (int)($karta['min_role'] ?? 3);
     $cardTopRoleClass = '';
@@ -243,10 +373,17 @@ $renderCard = static function (array $karta, bool $isNano, string $gridStyle = '
     ob_start();
     ?>
     <section class="<?= h($cardClass) ?>" data-cb-dash-card="1"<?= $gridStyle !== '' ? ' style="' . h($gridStyle) . '"' : '' ?>>
-      <article class="card_shell<?= h($cardLineHeightClass) ?> odstup_vnitrni_0" data-card-id="<?= h((string)$cardId) ?>" data-card-mode="<?= h($cardMode) ?>"<?= $startExpanded ? ' data-card-start-expanded="1"' : '' ?>>
+      <article class="card_shell<?= h($cardLineHeightClass) ?> odstup_vnitrni_0"
+        data-card-id="<?= h((string)$cardId) ?>"
+        data-card-mode="<?= h($cardMode) ?>"
+        data-card-title="<?= h($title) ?>"
+        data-card-col="<?= h((string)$renderCol) ?>"
+        data-card-line="<?= h((string)$renderLine) ?>"
+        data-card-pos-locked="<?= $isPosLocked ? '1' : '0' ?>"
+        <?= $startExpanded ? ' data-card-start-expanded="1"' : '' ?>>
         <div class="card_top<?= h($cardTopRoleClass) ?> gap_10 odstup_vnitrni_10 displ_flex jc_mezi"<?= $cardTopStyle !== '' ? ' style="' . h($cardTopStyle) . '"' : '' ?>>
           <div class="card_head_left displ_flex">
-            <div class="card_pref_wrap" data-card-pref-wrap="1">
+            <div class="card_pref_wrap<?= $isPosLocked ? ' card_pref_wrap_pos_locked' : '' ?>" data-card-pref-wrap="1">
               <button type="button" class="card_pref_toggle cursor_ruka bg_bila" data-card-pref-toggle="1" aria-haspopup="true" aria-expanded="false" title="Nastavení karty">
                 <?php if ($hasCardIcon): ?>
                   <span class="card_pref_icon"><img src="<?= h((string)$cardIconSrc) ?>" class="card_pref_icon_img" alt=""></span>
@@ -255,12 +392,14 @@ $renderCard = static function (array $karta, bool $isNano, string $gridStyle = '
                 <?php else: ?>
                   <span class="card_pref_dots txt_seda">&#8942;</span>
                 <?php endif; ?>
+                <span class="card_pref_kid">K<?= h((string)$cardId) ?>/<?= h((string)$cardPoradi) ?></span>
               </button>
               <div class="card_pref_menu is-hidden" data-card-pref-menu="1">
                 <div class="card_pref_list" data-card-pref-list="1">
                   <button type="button" class="card_pref_item cursor_ruka" data-card-pref-open="color" data-card-pref-url="<?= h($cardColorUrl) ?>">Barva karty</button>
                   <button type="button" class="card_pref_item cursor_ruka" data-card-pref-open="ikon" data-card-pref-url="<?= h($cardIconUrl) ?>">Ikona karty</button>
-                  <div class="card_pref_item card_pref_item_placeholder">rezerva</div>
+                  <button type="button" class="card_pref_item cursor_ruka" data-card-pref-move="1">Přesunout na pozici</button>
+                  <button type="button" class="card_pref_item cursor_ruka" data-card-pref-unlock-all="1">Odemkni vše</button>
                 </div>
                 <iframe class="card_pref_frame is-hidden" data-card-pref-frame="1" title="Nastavení karty"></iframe>
               </div>
@@ -329,6 +468,24 @@ $renderCard = static function (array $karta, bool $isNano, string $gridStyle = '
       ?>
     <?php endforeach; ?>
   <?php endif; ?>
+</div>
+
+<div id="cbCardModeModal" class="cb_cardmode_modal is-hidden" data-cb-cardmode-overlay="1" aria-hidden="true">
+  <div class="cb_cardmode_dialog">
+    <div class="cb_cardmode_head">
+      <div class="cb_cardmode_logo_wrap">
+        <img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback" class="cb_cardmode_logo">
+      </div>
+      <div class="cb_cardmode_head_text">
+        <h4 class="cb_cardmode_title">Upozornění systému</h4>
+        <p class="cb_cardmode_text" data-cb-cardmode-msg=""></p>
+      </div>
+    </div>
+    <div class="cb_cardmode_actions">
+      <button type="button" class="btn cb_cardmode_btn is-hidden" data-cb-cardmode-confirm>Potvrdit</button>
+      <button type="button" class="btn cb_cardmode_btn" data-cb-cardmode-close>Rozumím</button>
+    </div>
+  </div>
 </div>
 
 <?php

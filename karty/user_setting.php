@@ -19,11 +19,12 @@ if ($usUserId > 0) {
     try {
         $conn = db();
 
-        if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['us_action'] ?? '') === 'save') {
+        if ((string)($_POST['us_action'] ?? '') === 'save') {
             $postPocetSl = (int)($_POST['us_pocet_sl'] ?? 4);
             $postNanoKde = (int)($_POST['us_nano_kde'] ?? 0);
             $postPismo = (int)($_POST['us_pismo'] ?? 2);
             $postDark = (int)($_POST['us_dark'] ?? 0);
+            $prevPocetSl = null;
 
             if (!in_array($postPocetSl, [3, 4, 5], true)) {
                 $postPocetSl = 4;
@@ -38,6 +39,18 @@ if ($usUserId > 0) {
                 $postDark = 0;
             }
 
+
+            $stmtPrev = $conn->prepare('SELECT pocet_sl FROM user_set WHERE id_user = ? LIMIT 1');
+            if ($stmtPrev !== false) {
+                $stmtPrev->bind_param('i', $usUserId);
+                $stmtPrev->execute();
+                $stmtPrev->bind_result($dbPrevPocetSl);
+                if ($stmtPrev->fetch()) {
+                    $prevPocetSl = (int)$dbPrevPocetSl;
+                }
+                $stmtPrev->close();
+            }
+
             $stmtUpd = $conn->prepare('UPDATE user_set SET pocet_sl = ?, nano_kde = ?, pismo = ?, dark = ? WHERE id_user = ?');
             if ($stmtUpd === false) {
                 throw new RuntimeException('Nepodařilo se připravit update user_set.');
@@ -45,6 +58,16 @@ if ($usUserId > 0) {
             $stmtUpd->bind_param('iiiii', $postPocetSl, $postNanoKde, $postPismo, $postDark, $usUserId);
             $stmtUpd->execute();
             $stmtUpd->close();
+
+            if ($prevPocetSl !== null && $prevPocetSl !== $postPocetSl) {
+                $stmtUnlock = $conn->prepare('UPDATE user_card_set SET col = NULL, line = NULL WHERE id_user = ?');
+                if ($stmtUnlock !== false) {
+                    $stmtUnlock->bind_param('i', $usUserId);
+                    $stmtUnlock->execute();
+                    $stmtUnlock->close();
+                }
+            }
+
 
             $usOk = 'Nastaveni bylo ulozeno.';
         }
