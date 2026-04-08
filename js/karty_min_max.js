@@ -258,6 +258,7 @@
     if (dashCard) {
       dashCard.classList.remove('is-expanded');
       dashCard.classList.remove('is-maxi-overlay');
+      dashCard.style.top = '';
     }
     if (dashBox) {
       dashBox.classList.remove('has-maxi');
@@ -306,12 +307,14 @@
     const normalizedReturnMode = (preferredReturnMode === 'nano' || preferredReturnMode === 'mini')
       ? preferredReturnMode
       : (sourceMode === 'nano' ? 'nano' : 'mini');
+    const overlayTop = (dashBox instanceof HTMLElement) ? dashBox.scrollTop : 0;
 
     updateSubtitle(root, true);
     expanded.classList.remove('is-hidden');
     compact.classList.add('is-hidden');
     dashCard.classList.add('is-expanded');
     dashCard.classList.add('is-maxi-overlay');
+    dashCard.style.top = String(overlayTop) + 'px';
     if (dashBox) {
       dashBox.classList.add('has-maxi');
     }
