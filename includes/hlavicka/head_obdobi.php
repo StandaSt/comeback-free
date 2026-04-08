@@ -36,6 +36,7 @@
   if (!odInput || !doInput || !quickBtns.length) {
     return;
   }
+  var isSaving = false;
 
   function fmtDate(dt){
     var y = dt.getFullYear();
@@ -95,6 +96,10 @@
   }
 
   function savePeriod(payload){
+    if (isSaving) {
+      return Promise.resolve();
+    }
+    isSaving = true;
     return fetch('<?= h(cb_url('index.php')) ?>', {
       method: 'POST',
       headers: {
@@ -106,10 +111,13 @@
     .then(function(r){ return r.json().catch(function(){ return {}; }); })
     .then(function(json){
       if (json && json.ok === true) {
-        window.location.reload();
+        if (window.CB_AJAX && typeof window.CB_AJAX.refreshDashboard === 'function') {
+          return window.CB_AJAX.refreshDashboard();
+        }
       }
     })
-    .catch(function(){});
+    .catch(function(){})
+    .finally(function(){ isSaving = false; });
   }
 
   function getActivePreset(od, ddo){

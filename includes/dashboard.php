@@ -252,6 +252,22 @@ $applyUserSlots = static function (array $list) use ($userCardPosById, $dashGrid
         $unlockIdx++;
     }
 
+    if (!empty($lockedBySlot)) {
+        $lockedSlots = array_keys($lockedBySlot);
+        sort($lockedSlots, SORT_NUMERIC);
+        foreach ($lockedSlots as $slot) {
+            $slotNum = (int)$slot;
+            if ($slotNum <= $total) {
+                continue;
+            }
+            if (isset($lockedBySlot[$slotNum])) {
+                $result[] = $lockedBySlot[$slotNum];
+            } elseif (isset($lockedBySlot[$slot])) {
+                $result[] = $lockedBySlot[$slot];
+            }
+        }
+    }
+
     return $result;
 };
 

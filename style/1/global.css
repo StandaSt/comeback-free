@@ -374,15 +374,16 @@ grid-template-columns:70px minmax(0,1fr) 300px;
 .head_logo_wrap{
   grid-column:1;
   grid-row:1 / span 2;
-  align-items:center;
+  align-items:flex-start;
   justify-content:flex-start;
+  gap:2px;
   min-height:100%;
   width:70px;
 }
 
 .head_logo{
   width:70px;
-  height:70px;
+  height:64px;
   aspect-ratio:1 / 1;
 align-items:center;
   overflow:hidden;
@@ -396,6 +397,9 @@ object-fit:contain;
 
 .head_logo_meta{
   align-items:center;
+  gap:1px;
+  width:100%;
+  text-align:center;
 }
 
 .head_logo_date,
@@ -417,9 +421,9 @@ object-fit:contain;
   grid-column:2;
   grid-row:2;
 grid-template-columns:280px minmax(0,1fr) 275px;
-  align-items:stretch;
+  align-items:start;
   min-width:0;
-  margin-top:-6px;
+  margin-top:-5px;
   padding-left:0;
 }
 
@@ -439,18 +443,6 @@ grid-template-columns:280px minmax(0,1fr) 275px;
 }
 
 .head_top .head_interval{ margin-right:10px; }
-
-.head_interval::after{
-  content:"->";
-  position:absolute;
-  right:-10px;
-  top:50%;
-  transform:translateY(-50%);
-  font-size:var(--fs_14);
-  font-weight:700;
-  color:var(--clr_pruhledna_cerna_3);
-  z-index:2;
-}
 
 .head_int_row{grid-template-columns:auto auto;
   align-items:center;
@@ -536,12 +528,15 @@ flex-direction:column;
 
 /* ===== Stav systemu ===== */
 .head_sys{  align-items:center;
-  padding:4px 8px;
+  padding:0 8px;
+  height:24px;
+  min-height:24px;
   min-width:0;
   overflow:hidden;
   width:275px;
   grid-column:3;
   justify-self:end;
+  align-self:start;
 }
 
 .head_sys_title{
@@ -591,8 +586,8 @@ align-items:center;
 /* ===== Vyber pobocky ===== */
 .head_branch_wrap{
   position:relative;
-  align-items:center;
-  padding:3px 0;
+  align-items:stretch;
+  padding:0;
   border:0;
   background:transparent;
   width:280px;
@@ -603,6 +598,7 @@ align-items:center;
   justify-self:start;
   justify-content:flex-start;
   margin-left:0;
+  align-self:start;
 }
 
 .head_branch_btn{
@@ -612,8 +608,8 @@ align-items:center;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
-  height:28px;
-  line-height:26px;
+  height:24px;
+  line-height:22px;
 }
 
 .head_branch_btn_static{
@@ -625,8 +621,8 @@ align-items:center;
   text-overflow:ellipsis;
   display:flex;
   align-items:center;
-  height:28px;
-  line-height:26px;
+  height:24px;
+  line-height:22px;
 }
 
 .head_branch_panel{
@@ -722,12 +718,15 @@ align-items:center;
 .head_user{  grid-template-columns:36% 1fr 26px;
   align-items:stretch;
   overflow:hidden;
+  align-self:start;
+  height:calc(100% - 0px);
 }
 
 .head_user_col{
   min-width:0;
-  padding:8px 10px;
+  padding:4px 10px;
   justify-content:flex-start;
+  gap:4px;
 }
 
 .head_user_name{
@@ -735,20 +734,24 @@ align-items:center;
   overflow:hidden;
   text-overflow:ellipsis;
   color:var(--clr_tmava_1);
+  line-height:1.05;
 }
 
 .head_user_role{
   font-weight:500;
   white-space:nowrap;
+  line-height:1.05;
 }
 
 .head_user_lab{
   color:var(--clr_seda_3);
   white-space:nowrap;
+  line-height:1.05;
 }
 
 .head_user_val{
   white-space:nowrap;
+  line-height:1.05;
 }
 
 .head_user_exit{
@@ -777,7 +780,7 @@ align-items:center;
   position:relative;
   height:10px;
   line-height:10px;
-  margin-top:2px;
+  margin-top:1px;
   width:105px;
   max-width:100%;
   border:1px solid var(--clr_pruhledna_cerna_10);
@@ -881,6 +884,51 @@ align-items:center;
   overflow-x:hidden;
   padding:0 12px;
   background-clip:content-box;
+}
+
+.dash_loader{
+  position:absolute;
+  inset:0;
+  z-index:11000;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  background:var(--clr_pruhledna_panel_96);
+}
+
+.dash_loader_inner{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+}
+
+.dash_loader_logo{
+  width:84px;
+  height:84px;
+  object-fit:contain;
+  animation:dash_loader_pulse 1.2s ease-in-out infinite;
+}
+
+.dash_loader_text{
+  margin:0;
+  color:var(--clr_seda_4);
+  font-size:var(--fs_14);
+  font-weight:600;
+}
+
+.dash_box.is-dashboard-loading [data-cb-dash-content="1"]{
+  pointer-events:none;
+}
+
+.dash_box.is-dashboard-loading .dash_loader{
+  display:flex;
+}
+
+@keyframes dash_loader_pulse{
+  0%{ transform:scale(1); opacity:.85; }
+  50%{ transform:scale(1.08); opacity:1; }
+  100%{ transform:scale(1); opacity:.85; }
 }
 
 .dash_grid{align-items:start;
@@ -1311,7 +1359,7 @@ align-items:center;
 .card_pref_menu.card_pref_menu_frame{
   top:100%;
   margin-top:12px;
-  width:280px;
+  width:370px;
   padding:4px;
 }
 
@@ -2160,6 +2208,8 @@ align-items:center;
   background:var(--clr_modra_1);
 }
 
+/* media vyresime az bude system funkcni :-) */
+/*
 @media (max-width: 760px){
   .head_grid{
     grid-template-columns:70px 1fr;
@@ -2185,10 +2235,10 @@ align-items:center;
     grid-row:3;
   }
 
-  .head_interval::after{ display:none; }
   .head_branch_wrap{ width:240px; min-width:240px; max-width:240px; }
   .head_sys{ width:235px; }
 }
+*/
 
 @media (max-width: 720px){
   .footer_box{

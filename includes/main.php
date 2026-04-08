@@ -17,17 +17,26 @@ declare(strict_types=1);
 
 <!-- MAIN START -->
 <main class="dash_box bg_modra sirka100">
-  <?php
-  /*
-   * Obsah renderuje zvolená include/page.
-   * Rozložení dashboard karet řeší dashboard.php přes .dash_grid.
-   */
-  if (isset($file) && is_string($file) && $file !== '' && is_file($file)) {
-      require $file;
-  } else {
-      echo '<section class="card_box ram_normal bg_bila zaobleni_12 odstup_vnitrni_14"><p>Obsah stránky nebyl nalezen.</p></section>';
-  }
-  ?>
+  <div class="dash_loader is-hidden" data-cb-dash-loader="1" aria-hidden="true">
+    <div class="dash_loader_inner">
+      <img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback" class="dash_loader_logo">
+      <p class="dash_loader_text">Aktualizuji obsah karet ...</p>
+    </div>
+  </div>
+
+  <div data-cb-dash-content="1">
+    <?php
+    /*
+     * Obsah renderuje zvolená include/page.
+     * Rozložení dashboard karet řeší dashboard.php přes .dash_grid.
+     */
+    if (isset($file) && is_string($file) && $file !== '' && is_file($file)) {
+        require $file;
+    } else {
+        echo '<section class="card_box ram_normal bg_bila zaobleni_12 odstup_vnitrni_14"><p>Obsah stránky nebyl nalezen.</p></section>';
+    }
+    ?>
+  </div>
 </main>
 <!-- MAIN END -->
 

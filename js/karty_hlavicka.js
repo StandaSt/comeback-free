@@ -3,7 +3,7 @@
 
 (function (w) {
   const MOVE_DEFAULT_TEXT = 'Přesunout na pozici';
-  const MOVE_HINT_TEXT = 'Klikni na nové umístění karty';
+  const MOVE_HINT_TEXT = 'Zvol novou pozici pro tuto kartu';
 
   function findCardToggle(cardId) {
     const cid = String(cardId || '').trim();

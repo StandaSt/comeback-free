@@ -150,7 +150,14 @@ if ($cbAllSelected) {
             ?>
             <label class="head_branch_field text_11 gap_4 displ_flex">
               <span>
-                <input type="checkbox" class="cb-pob-branch" value="<?= $id ?>"<?= $checked ? ' checked' : '' ?>>
+                <input
+                  type="checkbox"
+                  class="cb-pob-branch"
+                  value="<?= $id ?>"
+                  data-cb-name="<?= h((string)$cbAllowedById[$id]['nazev']) ?>"
+                  data-cb-oblast="<?= h((string)$cbAllowedById[$id]['oblast']) ?>"
+                  <?= $checked ? ' checked' : '' ?>
+                >
                 <?= h((string)$cbAllowedById[$id]['nazev']) ?> (<?= h((string)$cbAllowedById[$id]['oblast']) ?>)
               </span>
             </label>

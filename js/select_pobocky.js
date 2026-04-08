@@ -19,6 +19,61 @@
     if (saveUrl === '') {
       saveUrl = 'index.php';
     }
+    var branchToggleBtn = root.querySelector('[data-cb-pob-toggle="1"]');
+
+    function updateBranchButtonLabel(payloadMode, payloadSelectedAreas) {
+      if (!branchToggleBtn) return;
+
+      var names = [];
+      var allBranchNames = branchInputs.map(function (el) {
+        return String(el.getAttribute('data-cb-name') || '').trim();
+      }).filter(function (n) { return n !== ''; });
+
+      if (payloadMode === 'area') {
+        var selectedAreas = Array.isArray(payloadSelectedAreas) ? payloadSelectedAreas : [];
+        names = branchInputs
+          .filter(function (el) {
+            var oblast = String(el.getAttribute('data-cb-oblast') || '').trim();
+            return selectedAreas.indexOf(oblast) !== -1;
+          })
+          .map(function (el) { return String(el.getAttribute('data-cb-name') || '').trim(); })
+          .filter(function (n) { return n !== ''; });
+      } else {
+        names = branchInputs
+          .filter(function (el) { return !!el.checked; })
+          .map(function (el) { return String(el.getAttribute('data-cb-name') || '').trim(); })
+          .filter(function (n) { return n !== ''; });
+      }
+
+      var full = names.join(', ');
+      var label = '';
+      var title = full;
+      var allSelected = (allBranchNames.length > 1 && names.length === allBranchNames.length);
+
+      if (allSelected) {
+        label = 'Pobočky: zvoleny všechny';
+      } else if (names.length === 1) {
+        label = names[0];
+      } else if (names.length > 1) {
+        label = full;
+        if (full.length > 68) {
+          var keep = names.slice(0, 3);
+          var moreCount = Math.max(0, names.length - keep.length);
+          label = keep.join(', ') + ' + ' + String(moreCount) + ' dalsi';
+          title = full;
+        }
+      } else {
+        label = String(branchToggleBtn.textContent || '').trim();
+      }
+
+      if (label !== '') {
+        branchToggleBtn.textContent = label;
+      }
+      if (title !== '') {
+        branchToggleBtn.setAttribute('title', title);
+        branchToggleBtn.setAttribute('aria-label', title);
+      }
+    }
 
     function syncState(sourceType) {
       var checkedAreas = areaInputs.filter(function (el) { return el.checked; });
@@ -137,10 +192,12 @@
               if (toggle) {
                 toggle.setAttribute('aria-expanded', 'true');
               }
-              saveBtn.disabled = false;
               return;
             }
-            w.location.reload();
+            if (w.CB_AJAX && typeof w.CB_AJAX.refreshDashboard === 'function') {
+              updateBranchButtonLabel(String(payload.mode || ''), payload.selected_oblasti || []);
+              return w.CB_AJAX.refreshDashboard();
+            }
           })
           .catch(function () {
             alert('Uložení výběru selhalo.');
@@ -150,6 +207,8 @@
             if (toggle) {
               toggle.setAttribute('aria-expanded', 'true');
             }
+          })
+          .finally(function () {
             saveBtn.disabled = false;
           });
       });
