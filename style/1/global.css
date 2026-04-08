@@ -357,7 +357,7 @@ main{
 }
 
 .head_grid{
-grid-template-columns:70px minmax(0,1fr) 300px;
+grid-template-columns:70px 280px minmax(0,1fr) 300px;
   grid-template-rows:auto auto;
   align-items:start;
 }
@@ -410,7 +410,7 @@ object-fit:contain;
 
 /* ===== Rozmisteni ===== */
 .head_top{
-  grid-column:2;
+  grid-column:2 / span 2;
   grid-row:1;  grid-template-columns:280px minmax(0,1fr);
   grid-template-rows:64px;
   align-items:stretch;
@@ -418,9 +418,9 @@ object-fit:contain;
 }
 
 .head_bottom{
-  grid-column:2;
+  grid-column:2 / span 2;
   grid-row:2;
-grid-template-columns:280px minmax(0,1fr) 275px;
+grid-template-columns:280px minmax(0,1fr);
   align-items:start;
   min-width:0;
   margin-top:-5px;
@@ -428,7 +428,7 @@ grid-template-columns:280px minmax(0,1fr) 275px;
 }
 
 .head_user{
-  grid-column:3;
+  grid-column:4;
   grid-row:1 / span 2;
 }
 
@@ -534,7 +534,6 @@ flex-direction:column;
   min-width:0;
   overflow:hidden;
   width:275px;
-  grid-column:3;
   justify-self:end;
   align-self:start;
 }
@@ -719,7 +718,7 @@ align-items:center;
   align-items:stretch;
   overflow:hidden;
   align-self:start;
-  height:calc(100% - 0px);
+  height:100%;
 }
 
 .head_user_col{
@@ -1277,8 +1276,8 @@ align-items:center;
 }
 
 .card_pref_icon_img{
-  width:24px;
-  height:24px;
+  width:32px;
+  height:32px;
   display:block;
   object-fit:contain;
 }
