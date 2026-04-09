@@ -257,8 +257,6 @@ if (
             $stmtUnlock->bind_param('ii', $idUser, $idKarta);
             $stmtUnlock->execute();
             $stmtUnlock->close();
-            require_once __DIR__ . '/lib/synchro_pozice_karet.php';
-            synchronize_card_positions($idUser);
         } else {
             $stmt = $conn->prepare('DELETE FROM user_nano WHERE id_user = ? AND id_nano = ?');
             if (!$stmt) {
@@ -267,8 +265,6 @@ if (
             $stmt->bind_param('ii', $idUser, $idKarta);
             $stmt->execute();
             $stmt->close();
-            require_once __DIR__ . '/lib/synchro_pozice_karet.php';
-            synchronize_card_positions($idUser);
         }
 
         echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
@@ -360,6 +356,11 @@ if (
         echo json_encode(['ok' => false, 'err' => 'Neplatna pozice'], JSON_UNESCAPED_UNICODE);
         exit;
     }
+    if ($tgtCol === 1 && $tgtLine === 1) {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'err' => 'Pozice 1-1 je určena pro nano karty.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 
     try {
         $conn = db();
@@ -402,39 +403,21 @@ if (
             $stmtUpsert->execute();
             $stmtUpsert->close();
 
-            if ($targetLocked && $forceUnlock) {
-                $stmtClr = $conn->prepare('UPDATE user_card_set SET col = NULL, line = NULL WHERE id_user = ? AND id_karta = ?');
-                if (!$stmtClr) {
-                    throw new RuntimeException('prepare clear target position failed');
-                }
-                $stmtClr->bind_param('ii', $idUser, $tgtId);
-                $stmtClr->execute();
-                $stmtClr->close();
-
-                $stmtSrc = $conn->prepare('UPDATE user_card_set SET col = ?, line = ? WHERE id_user = ? AND id_karta = ?');
-                if (!$stmtSrc) {
-                    throw new RuntimeException('prepare set source position failed');
-                }
-                $stmtSrc->bind_param('iiii', $tgtCol, $tgtLine, $idUser, $srcId);
-                $stmtSrc->execute();
-                $stmtSrc->close();
-            } else {
-                $stmtSrc = $conn->prepare('UPDATE user_card_set SET col = ?, line = ? WHERE id_user = ? AND id_karta = ?');
-                if (!$stmtSrc) {
-                    throw new RuntimeException('prepare set source position failed');
-                }
-                $stmtSrc->bind_param('iiii', $tgtCol, $tgtLine, $idUser, $srcId);
-                $stmtSrc->execute();
-                $stmtSrc->close();
-
-                $stmtTgt = $conn->prepare('UPDATE user_card_set SET col = NULL, line = NULL WHERE id_user = ? AND id_karta = ?');
-                if (!$stmtTgt) {
-                    throw new RuntimeException('prepare clear target position failed');
-                }
-                $stmtTgt->bind_param('ii', $idUser, $tgtId);
-                $stmtTgt->execute();
-                $stmtTgt->close();
+            $stmtSrc = $conn->prepare('UPDATE user_card_set SET col = ?, line = ? WHERE id_user = ? AND id_karta = ?');
+            if (!$stmtSrc) {
+                throw new RuntimeException('prepare set source position failed');
             }
+            $stmtSrc->bind_param('iiii', $tgtCol, $tgtLine, $idUser, $srcId);
+            $stmtSrc->execute();
+            $stmtSrc->close();
+
+            $stmtTgt = $conn->prepare('UPDATE user_card_set SET col = NULL, line = NULL WHERE id_user = ? AND id_karta = ?');
+            if (!$stmtTgt) {
+                throw new RuntimeException('prepare clear target position failed');
+            }
+            $stmtTgt->bind_param('ii', $idUser, $tgtId);
+            $stmtTgt->execute();
+            $stmtTgt->close();
 
             $conn->commit();
         } catch (Throwable $e) {

@@ -204,28 +204,53 @@ $sortByFallback = static function (array &$list): void {
     });
 };
 
-$applyUserSlots = static function (array $list) use ($userCardPosById, $dashGridCols, $sortByFallback): array {
+$applyUserSlots = static function (array $list, int $startSlot = 1) use ($userCardPosById, $dashGridCols, $sortByFallback): array {
     if (count($list) <= 1) {
+        foreach ($list as &$singleCard) {
+            if (!is_array($singleCard)) {
+                continue;
+            }
+            $idK = (int)($singleCard['id_karta'] ?? 0);
+            $pos = ($idK > 0 && isset($userCardPosById[$idK])) ? (array)$userCardPosById[$idK] : ['col' => null, 'line' => null];
+            $storedCol = (int)($pos['col'] ?? 0);
+            $storedLine = (int)($pos['line'] ?? 0);
+            if ($storedCol > 0 && $storedLine > 0) {
+                $singleCard['__render_pos'] = (((max($storedLine, 1) - 1) * (($dashGridCols > 0) ? $dashGridCols : 3)) + $storedCol);
+            } else {
+                $singleCard['__render_pos'] = ($startSlot > 0) ? $startSlot : 1;
+            }
+        }
+        unset($singleCard);
         return $list;
     }
 
     $cols = ($dashGridCols > 0) ? $dashGridCols : 3;
+
     $lockedBySlot = [];
     $unlocked = [];
+    $lowestLockedSlot = null;
 
     foreach ($list as $card) {
         $idK = (int)($card['id_karta'] ?? 0);
         $pos = ($idK > 0 && isset($userCardPosById[$idK])) ? (array)$userCardPosById[$idK] : ['col' => null, 'line' => null];
+
         $col = ($pos['col'] ?? null);
         $line = ($pos['line'] ?? null);
+
         $hasLock = ($col !== null && $line !== null && (int)$col > 0 && (int)$line > 0 && (int)$col <= $cols);
+
         if ($hasLock) {
             $slot = (((int)$line - 1) * $cols) + (int)$col;
+
             if (!isset($lockedBySlot[$slot])) {
                 $lockedBySlot[$slot] = $card;
+                if ($lowestLockedSlot === null || $slot < $lowestLockedSlot) {
+                    $lowestLockedSlot = $slot;
+                }
                 continue;
             }
         }
+
         $unlocked[] = $card;
     }
 
@@ -235,44 +260,45 @@ $applyUserSlots = static function (array $list) use ($userCardPosById, $dashGrid
 
     $result = [];
     $unlockIdx = 0;
+
+    $slot = ($startSlot > 0) ? $startSlot : 1;
+    if ($lowestLockedSlot !== null && $lowestLockedSlot > 0 && $lowestLockedSlot < $slot) {
+        $slot = $lowestLockedSlot;
+    }
+    $placed = 0;
     $total = count($list);
-    for ($slot = 1; $slot <= $total; $slot++) {
+
+    while ($placed < $total) {
+
         if (isset($lockedBySlot[$slot])) {
-            $result[] = $lockedBySlot[$slot];
+            $card = $lockedBySlot[$slot];
+            if (is_array($card)) {
+                $card['__render_pos'] = $slot;
+            }
+            $result[] = $card;
+            $placed++;
+            $slot++;
             continue;
         }
+
         if (isset($unlocked[$unlockIdx])) {
-            $result[] = $unlocked[$unlockIdx];
+            $card = $unlocked[$unlockIdx];
+            if (is_array($card)) {
+                $card['__render_pos'] = $slot;
+            }
+            $result[] = $card;
             $unlockIdx++;
+            $placed++;
+            $slot++;
+            continue;
         }
-    }
 
-    while (isset($unlocked[$unlockIdx])) {
-        $result[] = $unlocked[$unlockIdx];
-        $unlockIdx++;
-    }
-
-    if (!empty($lockedBySlot)) {
-        $lockedSlots = array_keys($lockedBySlot);
-        sort($lockedSlots, SORT_NUMERIC);
-        foreach ($lockedSlots as $slot) {
-            $slotNum = (int)$slot;
-            if ($slotNum <= $total) {
-                continue;
-            }
-            if (isset($lockedBySlot[$slotNum])) {
-                $result[] = $lockedBySlot[$slotNum];
-            } elseif (isset($lockedBySlot[$slot])) {
-                $result[] = $lockedBySlot[$slot];
-            }
-        }
+        $slot++;
     }
 
     return $result;
 };
 
-$kartyNano = $applyUserSlots($kartyNano);
-$kartyMini = $applyUserSlots($kartyMini);
 $dashGridClass = $dashColsClass . ' dash_nano_kde_' . $nanoKde;
 $cbLoginId = (int)($_SESSION['cb_id_login'] ?? 0);
 
@@ -296,6 +322,11 @@ if ($nanoKde === 1) {
     }
 }
 
+$miniStartSlot = ($nanoKde === 1 && !empty($kartyNano))
+    ? 2
+    : (count($kartyNano) + 1);
+$kartyMini = $applyUserSlots($kartyMini, $miniStartSlot);
+
 if ($nanoKde === 0 && !empty($kartyNano) && !empty($kartyMini)) {
     $renderItems[] = ['kind' => 'break'];
 }
@@ -308,26 +339,6 @@ foreach ($kartyMini as $kartaMini) {
         'grid_style' => '',
     ];
 }
-$renderPosCounter = 0;
-foreach ($renderItems as &$renderItemPos) {
-    if (($renderItemPos['kind'] ?? '') === 'nano_group') {
-        $klist = (array)($renderItemPos['karty'] ?? []);
-        foreach ($klist as $idxPos => $kartaPos) {
-            $renderPosCounter++;
-            $kartaPos['__render_pos'] = $renderPosCounter;
-            $klist[$idxPos] = $kartaPos;
-        }
-        $renderItemPos['karty'] = $klist;
-        continue;
-    }
-    if (($renderItemPos['kind'] ?? '') === 'card') {
-        $renderPosCounter++;
-        $k = (array)($renderItemPos['karta'] ?? []);
-        $k['__render_pos'] = $renderPosCounter;
-        $renderItemPos['karta'] = $k;
-    }
-}
-unset($renderItemPos);
 
 $renderCard = static function (array $karta, bool $isNano, string $gridStyle = '') use ($userCardHeaderColorById, $userCardIconFileById, $userCardPosById, $dashGridCols): string {
     $fullPath = cb_dashboard_resolve_file((string)($karta['soubor'] ?? ''));
@@ -337,10 +348,10 @@ $renderCard = static function (array $karta, bool $isNano, string $gridStyle = '
     $cardId = (int)($karta['id_karta'] ?? 0);
     $cardMode = $isNano ? 'nano' : 'mini';
     $cardPoradi = (int)($karta['poradi'] ?? 0);
-    $renderPos = (int)($karta['__render_pos'] ?? 0);
+    $renderPos = $isNano ? 0 : (int)($karta['__render_pos'] ?? 0);
     $renderCol = 0;
     $renderLine = 0;
-    if ($renderPos > 0) {
+    if (!$isNano && $renderPos > 0) {
         $cols = ($dashGridCols > 0) ? $dashGridCols : 3;
         $renderCol = (($renderPos - 1) % $cols) + 1;
         $renderLine = (int)floor(($renderPos - 1) / $cols) + 1;
@@ -356,7 +367,19 @@ $renderCard = static function (array $karta, bool $isNano, string $gridStyle = '
     $cardColorUrl = cb_url('/includes/select_card_color.php?id_karta=' . (string)$cardId);
     $cardIconUrl = cb_url('/includes/select_card_ikon.php?id_karta=' . (string)$cardId);
     $storedPos = ($cardId > 0 && isset($userCardPosById[$cardId])) ? (array)$userCardPosById[$cardId] : ['col' => null, 'line' => null];
-    $isPosLocked = (($storedPos['col'] ?? null) !== null && ($storedPos['line'] ?? null) !== null);
+    $isPosLocked = (!$isNano && ($storedPos['col'] ?? null) !== null && ($storedPos['line'] ?? null) !== null);
+    if ($isPosLocked) {
+        $storedCol = (int)($storedPos['col'] ?? 0);
+        $storedLine = (int)($storedPos['line'] ?? 0);
+        if ($storedCol > 0 && $storedLine > 0) {
+            $renderCol = $storedCol;
+            $renderLine = $storedLine;
+        }
+    }
+    $gridStyle = '';
+    if ($renderCol > 0 && $renderLine > 0) {
+        $gridStyle = 'grid-column:' . $renderCol . ';grid-row:' . $renderLine . ';';
+    }
 
     $minRole = (int)($karta['min_role'] ?? 3);
     $cardTopRoleClass = '';
@@ -473,7 +496,7 @@ $renderCard = static function (array $karta, bool $isNano, string $gridStyle = '
       }
 
       if (($renderItem['kind'] ?? '') === 'nano_group') {
-          echo '<div class="dash_nano_group gap_2 displ_flex flex_sloupec">';
+          echo '<div class="dash_nano_group">';
           foreach ((array)($renderItem['karty'] ?? []) as $kartaNano) {
               echo $renderCard((array)$kartaNano, true, '');
           }

@@ -1,6 +1,6 @@
 -----
 RESTIA TEST OBJEDNAVEK | V1
-Spusteno: 09.04.2026 11:11:02
+Spusteno: 09.04.2026 14:51:25
 Pobocka: Prosek
 id_pob: 4
 activePosId: a125bd4f-01ee-46cb-b833-9270c9a50514
@@ -19,27 +19,26 @@ Query parametry bez tokenu:
   createdTo=2026-04-03T21:59:59.999Z
   activePosId=a125bd4f-01ee-46cb-b833-9270c9a50514
 
-HTTP status: 403
-Doba volani: 467 ms
-X-Total-Count: neznamy
+HTTP status: 200
+Doba volani: 423 ms
+X-Total-Count: 226
 Response headery:
-  Thu, 09 Apr 2026 09:11:02 GMT
+  Thu, 09 Apr 2026 12:51:26 GMT
   Apache
   Express
   Origin
   true
   X-Total-Count,X-Cached-Response
-  1a4cdb55-7db7-471c-bb5f-c59919cf37c9
-  1a4cdb55-7db7-471c-bb5f-c59919cf37c9
+  d5fe0993-334f-471e-9ccd-6168a5d3b527
+  d5fe0993-334f-471e-9ccd-6168a5d3b527
+  226
   application/json; charset=utf-8
-  187
-  W/"bb-2QdKU83nmlCjkrX1HgsxT8iSTf0"
+  33726
+  W/"83be-+JJBGk8XE3T5iR5RJ5Qfcjr7LnA"
   1; mode=block
-Pocet objednavek v tele odpovedi: 0
-API chyba kod: NO_PERMISSION
-API chyba zprava: User apiis@pizzacomeback.cz is not authorized to this pos a125bd4f-01ee-46cb-b833-9270c9a50514-Pizza Comeback Prosek
+Pocet objednavek v tele odpovedi: 10
 Ukazka JSON odpovedi:
-{"error":{"name":"ForbiddenError","message":"User apiis@pizzacomeback.cz is not authorized to this pos a125bd4f-01ee-46cb-b833-9270c9a50514-Pizza Comeback Prosek","code":"NO_PERMISSION"}}
+[{"id":"8f5a9d41-cfc8-4cf5-a106-2d45ddce1f2e","orderNumber":"298085552","shortCode":"KG8HF","serialNumber":"70","token":null,"destination":{},"customerName":"Kamil K.","customerPhone":"+420736515689","customerEmail":null,"customerNote":null,"createdAt":"2026-04-03T21:43:33.000Z","expiresAt":"2026-04-03T21:51:34.735Z","deliveryAt":"2026-04-03T21:58:34.758Z","promisedAt":"2026-04-03T21:58:34.758Z","pickupAt":"2026-04-03T21:58:34.758Z","prepareAt":"2026-04-03T21:58:34.758Z","cookingTimeMinutes":15,"deliveryOnTime":false,"finishedAt":"2026-04-03T21:51:00.411Z","preparedAt":"2026-04-03T21:51:00.411Z","deliveredAt":null,"originalRequiredAt":"2026-04-03T21:54:36.000Z","isPickup":true,"paymentType":"online","surchargeToMin":"0","deliveryPrice":"0","packingPrice":"0","tipPrice":"0","itemsPrice":"36400","serviceFeePrice":"0","discountPrice":"0","roundingPrice":"0","discountCode":null,"servicesData":null,"courierData":{"name":"Taras","phone":"+420774874901","expectedArrival":"2026-04-03T21:57:49.000Z"},"courierOrder":null,"note":"","info":null,"deliveryZone":null,"isSelfDelivery":false,"isInRestaurant":false,"deliveryType":"external-delivery","posImportStatus":"success","posImportScheduledAt":null,"posImportedAt":"2026-04-03T21:43:35.757Z","posPaymentData":null,"posData":{"id":"2695421","receiptNumber":"2695421"},"status":"delivered","statusUpdatedAt":"2026-04-03T22:00:29.889Z","statusCanceledInfo":null,"closedAt":"2026-04-03T22:00:29.889Z","parentOrderId":null,"forwardedToOrderId":null,"isEdited":false,"statusUpdateWebhookUrl":null,"items":[{"id":"P106","note":"","count":1,"label":"Česnekový dip","posId":"P106","price":2000,"isExtra":false},{"id":"K0000","note":"","count":1,"label":"Balné","posId":"K0000","price":1500,"isExtra":true},{"id":"106","note":"","count":1,"label":"BBQ Meteor 40cm","posId":"106","price":30900,"isExtra":false},{"id":"K0000","note":"","count":1,"label":"Balné","posId":"K0000","price":2000,"isExtra":true},{"id":"ZBR40","note":"","count":1,"label":"Rajča
 
-Shrnuti: ERR
-Restia vratila chybu kodu NO_PERMISSION.
+Shrnuti: OK
+Restia vratila objednavky. Problem neni v autorizaci teto pobocky.

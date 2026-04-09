@@ -1,6 +1,6 @@
 -----
 RESTIA TEST OBJEDNAVEK | V1
-Spusteno: 09.04.2026 11:11:03
+Spusteno: 09.04.2026 14:51:27
 Pobocka: Malešice
 id_pob: 1
 activePosId: 38da0b11-20d1-4d08-87d9-0de80d375703
@@ -19,27 +19,26 @@ Query parametry bez tokenu:
   createdTo=2026-04-03T21:59:59.999Z
   activePosId=38da0b11-20d1-4d08-87d9-0de80d375703
 
-HTTP status: 403
-Doba volani: 465 ms
-X-Total-Count: neznamy
+HTTP status: 200
+Doba volani: 452 ms
+X-Total-Count: 358
 Response headery:
-  Thu, 09 Apr 2026 09:11:04 GMT
+  Thu, 09 Apr 2026 12:51:27 GMT
   Apache
   Express
   Origin
   true
   X-Total-Count,X-Cached-Response
-  0b806ef1-292e-415f-a283-f3a1eaafc99e
-  0b806ef1-292e-415f-a283-f3a1eaafc99e
+  ebc76e39-aead-450e-a41e-03baf6405a1c
+  ebc76e39-aead-450e-a41e-03baf6405a1c
+  358
   application/json; charset=utf-8
-  190
-  W/"be-EDKqcw0zPNDF/TXCcd58TQW+P0g"
+  31031
+  W/"7937-kwNfPs6eRI+tMHqo2XiILSa/o3I"
   1; mode=block
-Pocet objednavek v tele odpovedi: 0
-API chyba kod: NO_PERMISSION
-API chyba zprava: User apiis@pizzacomeback.cz is not authorized to this pos 38da0b11-20d1-4d08-87d9-0de80d375703-Pizza Comeback Malešice
+Pocet objednavek v tele odpovedi: 10
 Ukazka JSON odpovedi:
-{"error":{"name":"ForbiddenError","message":"User apiis@pizzacomeback.cz is not authorized to this pos 38da0b11-20d1-4d08-87d9-0de80d375703-Pizza Comeback Malešice","code":"NO_PERMISSION"}}
+[{"id":"40d15242-214c-420b-89fd-d5d87e8eb72d","orderNumber":"69d03435f3951957c329d8ee","shortCode":"301","serialNumber":"03","token":null,"destination":{},"customerName":"Vladislava  R","customerPhone":"+420774908038","customerEmail":null,"customerNote":null,"createdAt":"2026-04-03T21:42:13.638Z","expiresAt":"2026-04-03T21:45:47.065Z","deliveryAt":"2026-04-03T21:57:47.078Z","promisedAt":"2026-04-03T21:57:47.078Z","pickupAt":"2026-04-03T21:57:47.078Z","prepareAt":"2026-04-03T21:57:47.078Z","cookingTimeMinutes":15,"deliveryOnTime":false,"finishedAt":"2026-04-03T21:52:33.551Z","preparedAt":"2026-04-03T21:52:33.551Z","deliveredAt":null,"originalRequiredAt":"2026-04-03T21:47:11.842Z","isPickup":true,"paymentType":"online","surchargeToMin":"0","deliveryPrice":"0","packingPrice":"0","tipPrice":"0","itemsPrice":"28900","serviceFeePrice":"0","discountPrice":"0","roundingPrice":"0","discountCode":null,"servicesData":null,"courierData":{"name":"Wolt Kurýr","phone":"","expectedArrival":"2026-04-03T21:54:52.000Z"},"courierOrder":null,"note":null,"info":null,"deliveryZone":null,"isSelfDelivery":false,"isInRestaurant":false,"deliveryType":"external-delivery","posImportStatus":"success","posImportScheduledAt":null,"posImportedAt":"2026-04-03T21:42:47.880Z","posPaymentData":null,"posData":{"id":"2695415","receiptNumber":"2695415"},"status":"delivered","statusUpdatedAt":"2026-04-03T22:10:32.940Z","statusCanceledInfo":null,"closedAt":"2026-04-03T22:00:50.759Z","parentOrderId":null,"forwardedToOrderId":null,"isEdited":false,"statusUpdateWebhookUrl":null,"items":[{"id":"6942755309e364dceebaa2a6","count":1,"label":"Hawai 32cm","posId":"114","price":24900,"isExtra":false},{"id":"6548d5dc06a4d1429ce18774","count":1,"label":"Balné","posId":"K0000","price":1500,"isExtra":true},{"id":"69cae153e36f04c4d3cc0660","count":1,"label":"bez plněných okrajů","posId":"X1000","price":0,"isExtra":true},{"id":"684ae9617273267d3d05ba38","count":1,"label":"Bez ananasu","posId":"X100","price":0,"KDSTags":["r
 
-Shrnuti: ERR
-Restia vratila chybu kodu NO_PERMISSION.
+Shrnuti: OK
+Restia vratila objednavky. Problem neni v autorizaci teto pobocky.

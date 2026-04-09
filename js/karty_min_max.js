@@ -145,6 +145,12 @@
     return document.querySelectorAll('.card_shell[data-card-mode="nano"]').length;
   }
 
+  function setDashboardLoading(on) {
+    if (w.CB_AJAX && typeof w.CB_AJAX.setDashboardLoading === 'function') {
+      w.CB_AJAX.setDashboardLoading(!!on);
+    }
+  }
+
   function canSwitchToNano(cardId) {
     const cid = parseInt(String(cardId || '0'), 10);
     if (!Number.isFinite(cid) || cid <= 0) return false;
@@ -227,7 +233,12 @@
         saveMaxiState(cardId, 'nano');
       }
     }
-    w.setTimeout(() => { w.location.reload(); }, 180);
+    setDashboardLoading(true);
+    if (w.CB_AJAX && typeof w.CB_AJAX.refreshDashboard === 'function') {
+      w.CB_AJAX.refreshDashboard({ force: true }).catch(() => {
+        window.alert('Obnovení dashboardu po přepnutí nano režimu selhalo.');
+      });
+    }
   }
 
   function closeActiveMaxi(opts) {
@@ -277,9 +288,11 @@
           showNanoLimitAlert();
           return;
         }
+        setDashboardLoading(true);
         requestCardMode(cardId, 'nano').then(() => {
           reloadAfterNanoSwitch(root, 'mini');
         }).catch((err) => {
+          setDashboardLoading(false);
           showCardModeError(err);
         });
       }
@@ -384,9 +397,12 @@
         nanoHead.addEventListener('dblclick', () => {
           if (!Number.isFinite(cardId) || cardId <= 0) return;
           clearSelection();
+          setDashboardLoading(true);
           requestCardMode(cardId, 'maxi').then(() => {
             reloadAfterNanoSwitch(root, 'maxi');
-          }).catch(() => {});
+          }).catch(() => {
+            setDashboardLoading(false);
+          });
         });
       }
 
@@ -396,9 +412,12 @@
           if (!Number.isFinite(cardId) || cardId <= 0) return;
           const target = String(btn.getAttribute('data-card-nano-target') || 'mini').trim();
           if (!['mini', 'maxi'].includes(target)) return;
+          setDashboardLoading(true);
           requestCardMode(cardId, target).then(() => {
             reloadAfterNanoSwitch(root, target);
-          }).catch(() => {});
+          }).catch(() => {
+            setDashboardLoading(false);
+          });
         });
       });
       return;
@@ -432,9 +451,11 @@
           showNanoLimitAlert();
           return;
         }
+        setDashboardLoading(true);
         requestCardMode(cardId, 'nano').then(() => {
           reloadAfterNanoSwitch(root, 'mini');
         }).catch((err) => {
+          setDashboardLoading(false);
           showCardModeError(err);
         });
       });
@@ -528,5 +549,3 @@
 
 // js/karty_min_max.js * Verze: V2 * Aktualizace: 25.03.2026
 // Konec souboru
-
-

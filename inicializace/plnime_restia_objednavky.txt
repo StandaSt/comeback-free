@@ -61,3 +61,339 @@ FATAL_STEP: datum=2023-12-24 | id_pob=2 | msg=Restia chyba HTTP=403 body={"error
 FATAL_STEP: datum=2023-12-25 | id_pob=2 | msg=Restia chyba HTTP=403 body={"error":{"name":"ForbiddenError","message":"User apiis@pizzacomeback.cz is not authorized to this pos 6ad27616-41f7-4bd5-9eb5-3eae9fc7833e-Pizza Comeback Chodov","code":"NO_PERMISSION"}}
 5 / 25.12.2023 / 0 / 522 ms / 0 min 2 sec / ERR
 KONEC CYKLU: 09.04.2026 00:34:16
+-----
+START: 09.04.2026 14:55:54
+SCRIPT: plnime_restia_objednavky.php
+START_BASE: 02.11.2023
+LAST_OK_DAY: neni
+RESUME_FROM: 02.11.2023
+REQUESTED_DAYS: 20
+LIMIT: 100
+STEP_DAYS: 20
+PAUSE_MS: 500
+1 / 02.11.2023 / 32 / 752 ms / 0 min 0 sec / OK
+2 / 03.11.2023 / 55 / 1060 ms / 0 min 1 sec / OK
+3 / 04.11.2023 / 49 / 956 ms / 0 min 2 sec / OK
+4 / 05.11.2023 / 42 / 895 ms / 0 min 3 sec / OK
+5 / 06.11.2023 / 60 / 1237 ms / 0 min 4 sec / OK
+6 / 07.11.2023 / 67 / 1419 ms / 0 min 6 sec / OK
+7 / 08.11.2023 / 55 / 1222 ms / 0 min 7 sec / OK
+8 / 09.11.2023 / 63 / 2089 ms / 0 min 9 sec / OK
+9 / 10.11.2023 / 83 / 2580 ms / 0 min 12 sec / OK
+10 / 11.11.2023 / 93 / 2650 ms / 0 min 14 sec / OK
+11 / 12.11.2023 / 97 / 2846 ms / 0 min 17 sec / OK
+12 / 13.11.2023 / 61 / 2251 ms / 0 min 19 sec / OK
+13 / 14.11.2023 / 57 / 2035 ms / 0 min 22 sec / OK
+14 / 15.11.2023 / 47 / 2075 ms / 0 min 24 sec / OK
+15 / 16.11.2023 / 78 / 2590 ms / 0 min 26 sec / OK
+16 / 17.11.2023 / 89 / 2713 ms / 0 min 29 sec / OK
+17 / 18.11.2023 / 67 / 2511 ms / 0 min 31 sec / OK
+18 / 19.11.2023 / 78 / 2806 ms / 0 min 34 sec / OK
+19 / 20.11.2023 / 43 / 1421 ms / 0 min 36 sec / OK
+20 / 21.11.2023 / 45 / 1495 ms / 0 min 37 sec / OK
+KONEC CYKLU: 09.04.2026 14:56:32
+NOVY CYKLUS: 20 dni
+21 / 22.11.2023 / 52 / 2058 ms / 2 min 4 sec / OK
+22 / 23.11.2023 / 55 / 2583 ms / 2 min 7 sec / OK
+23 / 24.11.2023 / 60 / 2388 ms / 2 min 9 sec / OK
+24 / 25.11.2023 / 74 / 2882 ms / 2 min 12 sec / OK
+25 / 26.11.2023 / 67 / 2294 ms / 2 min 14 sec / OK
+26 / 27.11.2023 / 37 / 1519 ms / 2 min 16 sec / OK
+27 / 28.11.2023 / 51 / 2092 ms / 2 min 18 sec / OK
+28 / 29.11.2023 / 44 / 1783 ms / 2 min 20 sec / OK
+29 / 30.11.2023 / 46 / 1984 ms / 2 min 22 sec / OK
+30 / 01.12.2023 / 56 / 2209 ms / 2 min 24 sec / OK
+31 / 02.12.2023 / 55 / 2218 ms / 2 min 26 sec / OK
+32 / 03.12.2023 / 57 / 2163 ms / 2 min 28 sec / OK
+33 / 04.12.2023 / 30 / 1310 ms / 2 min 30 sec / OK
+34 / 05.12.2023 / 30 / 1773 ms / 2 min 31 sec / OK
+35 / 06.12.2023 / 40 / 2048 ms / 2 min 34 sec / OK
+36 / 07.12.2023 / 39 / 2099 ms / 2 min 36 sec / OK
+37 / 08.12.2023 / 54 / 2476 ms / 2 min 38 sec / OK
+38 / 09.12.2023 / 65 / 2615 ms / 2 min 41 sec / OK
+39 / 10.12.2023 / 52 / 3011 ms / 2 min 44 sec / OK
+40 / 11.12.2023 / 36 / 1972 ms / 2 min 46 sec / OK
+KONEC CYKLU: 09.04.2026 14:58:40
+NOVY CYKLUS: 20 dni
+41 / 12.12.2023 / 27 / 1979 ms / 3 min 42 sec / OK
+42 / 13.12.2023 / 44 / 2205 ms / 3 min 44 sec / OK
+43 / 14.12.2023 / 42 / 2188 ms / 3 min 46 sec / OK
+44 / 15.12.2023 / 60 / 2646 ms / 3 min 49 sec / OK
+45 / 16.12.2023 / 59 / 2644 ms / 3 min 51 sec / OK
+46 / 17.12.2023 / 72 / 2842 ms / 3 min 54 sec / OK
+47 / 18.12.2023 / 29 / 1404 ms / 3 min 56 sec / OK
+48 / 19.12.2023 / 32 / 2000 ms / 3 min 58 sec / OK
+49 / 20.12.2023 / 32 / 1905 ms / 4 min 0 sec / OK
+50 / 21.12.2023 / 40 / 2216 ms / 4 min 2 sec / OK
+51 / 22.12.2023 / 39 / 2139 ms / 4 min 4 sec / OK
+52 / 23.12.2023 / 6 / 565 ms / 4 min 4 sec / OK
+53 / 24.12.2023 / 0 / 469 ms / 4 min 5 sec / OK
+54 / 25.12.2023 / 0 / 381 ms / 4 min 5 sec / OK
+55 / 26.12.2023 / 45 / 2235 ms / 4 min 8 sec / OK
+56 / 27.12.2023 / 39 / 1965 ms / 4 min 10 sec / OK
+57 / 28.12.2023 / 47 / 2942 ms / 4 min 12 sec / OK
+58 / 29.12.2023 / 49 / 2595 ms / 4 min 15 sec / OK
+59 / 30.12.2023 / 36 / 2016 ms / 4 min 17 sec / OK
+60 / 31.12.2023 / 40 / 2216 ms / 4 min 19 sec / OK
+KONEC CYKLU: 09.04.2026 15:00:14
+NOVY CYKLUS: 20 dni
+61 / 01.01.2024 / 49 / 2675 ms / 5 min 13 sec / OK
+62 / 02.01.2024 / 37 / 1280 ms / 5 min 14 sec / OK
+63 / 03.01.2024 / 27 / 1681 ms / 5 min 16 sec / OK
+64 / 04.01.2024 / 40 / 1876 ms / 5 min 17 sec / OK
+65 / 05.01.2024 / 26 / 1888 ms / 5 min 19 sec / OK
+66 / 06.01.2024 / 48 / 2653 ms / 5 min 22 sec / OK
+67 / 07.01.2024 / 47 / 2071 ms / 5 min 24 sec / OK
+68 / 08.01.2024 / 37 / 1837 ms / 5 min 26 sec / OK
+69 / 09.01.2024 / 30 / 1884 ms / 5 min 28 sec / OK
+70 / 10.01.2024 / 41 / 2037 ms / 5 min 30 sec / OK
+71 / 11.01.2024 / 39 / 1977 ms / 5 min 32 sec / OK
+72 / 12.01.2024 / 48 / 2262 ms / 5 min 34 sec / OK
+73 / 13.01.2024 / 61 / 2560 ms / 5 min 37 sec / OK
+74 / 14.01.2024 / 57 / 2491 ms / 5 min 39 sec / OK
+75 / 15.01.2024 / 36 / 1917 ms / 5 min 41 sec / OK
+76 / 16.01.2024 / 33 / 1808 ms / 5 min 43 sec / OK
+77 / 17.01.2024 / 32 / 1622 ms / 5 min 44 sec / OK
+78 / 18.01.2024 / 40 / 1990 ms / 5 min 46 sec / OK
+79 / 19.01.2024 / 47 / 2532 ms / 5 min 49 sec / OK
+80 / 20.01.2024 / 62 / 2650 ms / 5 min 52 sec / OK
+KONEC CYKLU: 09.04.2026 15:01:46
+-----
+START: 09.04.2026 15:02:40
+SCRIPT: plnime_restia_objednavky.php
+START_BASE: 21.12.2023
+LAST_OK_DAY: neni
+RESUME_FROM: 21.12.2023
+REQUESTED_DAYS: 20
+LIMIT: 100
+STEP_DAYS: 20
+PAUSE_MS: 500
+1 / 21.12.2023 / 98 / 2644 ms / 0 min 2 sec / OK
+2 / 22.12.2023 / 142 / 3260 ms / 0 min 5 sec / OK
+3 / 23.12.2023 / 11 / 536 ms / 0 min 6 sec / OK
+4 / 24.12.2023 / 0 / 339 ms / 0 min 6 sec / OK
+5 / 25.12.2023 / 0 / 315 ms / 0 min 7 sec / OK
+6 / 26.12.2023 / 117 / 3046 ms / 0 min 10 sec / OK
+7 / 27.12.2023 / 89 / 2619 ms / 0 min 12 sec / OK
+8 / 28.12.2023 / 90 / 2659 ms / 0 min 15 sec / OK
+9 / 29.12.2023 / 67 / 2279 ms / 0 min 17 sec / OK
+10 / 30.12.2023 / 81 / 2778 ms / 0 min 20 sec / OK
+11 / 31.12.2023 / 76 / 2305 ms / 0 min 22 sec / OK
+12 / 01.01.2024 / 102 / 3711 ms / 0 min 26 sec / OK
+13 / 02.01.2024 / 64 / 2187 ms / 0 min 28 sec / OK
+14 / 03.01.2024 / 67 / 2452 ms / 0 min 31 sec / OK
+15 / 04.01.2024 / 59 / 3107 ms / 0 min 34 sec / OK
+16 / 05.01.2024 / 86 / 2691 ms / 0 min 36 sec / OK
+17 / 06.01.2024 / 93 / 2861 ms / 0 min 39 sec / OK
+18 / 07.01.2024 / 72 / 2465 ms / 0 min 42 sec / OK
+19 / 08.01.2024 / 46 / 2030 ms / 0 min 44 sec / OK
+20 / 09.01.2024 / 55 / 2106 ms / 0 min 46 sec / OK
+KONEC CYKLU: 09.04.2026 15:03:26
+NOVY CYKLUS: 20 dni
+21 / 10.01.2024 / 59 / 2767 ms / 1 min 39 sec / OK
+22 / 11.01.2024 / 73 / 2604 ms / 1 min 41 sec / OK
+23 / 12.01.2024 / 92 / 3119 ms / 1 min 44 sec / OK
+24 / 13.01.2024 / 88 / 3333 ms / 1 min 48 sec / OK
+25 / 14.01.2024 / 64 / 2624 ms / 1 min 50 sec / OK
+26 / 15.01.2024 / 47 / 2346 ms / 1 min 53 sec / OK
+27 / 16.01.2024 / 59 / 2484 ms / 1 min 55 sec / OK
+28 / 17.01.2024 / 55 / 2323 ms / 1 min 58 sec / OK
+29 / 18.01.2024 / 59 / 2429 ms / 2 min 0 sec / OK
+30 / 19.01.2024 / 58 / 2590 ms / 2 min 3 sec / OK
+31 / 20.01.2024 / 86 / 3323 ms / 2 min 6 sec / OK
+32 / 21.01.2024 / 48 / 2529 ms / 2 min 8 sec / OK
+33 / 22.01.2024 / 32 / 2060 ms / 2 min 11 sec / OK
+34 / 23.01.2024 / 44 / 2546 ms / 2 min 13 sec / OK
+35 / 24.01.2024 / 49 / 2243 ms / 2 min 15 sec / OK
+36 / 25.01.2024 / 39 / 2206 ms / 2 min 18 sec / OK
+37 / 26.01.2024 / 60 / 2670 ms / 2 min 20 sec / OK
+38 / 27.01.2024 / 64 / 2812 ms / 2 min 23 sec / OK
+39 / 28.01.2024 / 53 / 2510 ms / 2 min 26 sec / OK
+40 / 29.01.2024 / 26 / 1266 ms / 2 min 27 sec / OK
+KONEC CYKLU: 09.04.2026 15:05:07
+NOVY CYKLUS: 20 dni
+41 / 30.01.2024 / 41 / 2018 ms / 4 min 20 sec / OK
+42 / 31.01.2024 / 50 / 2763 ms / 4 min 23 sec / OK
+43 / 01.02.2024 / 47 / 2396 ms / 4 min 25 sec / OK
+44 / 02.02.2024 / 62 / 3096 ms / 4 min 29 sec / OK
+45 / 03.02.2024 / 53 / 2715 ms / 4 min 31 sec / OK
+46 / 04.02.2024 / 54 / 3163 ms / 4 min 34 sec / OK
+47 / 05.02.2024 / 27 / 1867 ms / 4 min 36 sec / OK
+48 / 06.02.2024 / 35 / 2451 ms / 4 min 39 sec / OK
+49 / 07.02.2024 / 46 / 2975 ms / 4 min 42 sec / OK
+50 / 08.02.2024 / 47 / 2936 ms / 4 min 45 sec / OK
+51 / 09.02.2024 / 51 / 3533 ms / 4 min 48 sec / OK
+52 / 10.02.2024 / 59 / 3220 ms / 4 min 51 sec / OK
+53 / 11.02.2024 / 36 / 2608 ms / 4 min 54 sec / OK
+54 / 12.02.2024 / 28 / 1739 ms / 4 min 56 sec / OK
+55 / 13.02.2024 / 27 / 2391 ms / 4 min 58 sec / OK
+56 / 14.02.2024 / 53 / 3067 ms / 5 min 1 sec / OK
+57 / 15.02.2024 / 33 / 2814 ms / 5 min 4 sec / OK
+58 / 16.02.2024 / 49 / 3112 ms / 5 min 7 sec / OK
+59 / 17.02.2024 / 49 / 3592 ms / 5 min 11 sec / OK
+60 / 18.02.2024 / 37 / 2759 ms / 5 min 13 sec / OK
+KONEC CYKLU: 09.04.2026 15:07:54
+NOVY CYKLUS: 20 dni
+61 / 01.07.2023 / 2 / 451 ms / 5 min 33 sec / OK
+62 / 02.07.2023 / 0 / 375 ms / 5 min 34 sec / OK
+63 / 03.07.2023 / 20 / 889 ms / 5 min 35 sec / OK
+64 / 04.07.2023 / 31 / 1111 ms / 5 min 36 sec / OK
+65 / 05.07.2023 / 40 / 1363 ms / 5 min 37 sec / OK
+66 / 06.07.2023 / 35 / 1273 ms / 5 min 38 sec / OK
+67 / 07.07.2023 / 26 / 991 ms / 5 min 39 sec / OK
+68 / 08.07.2023 / 30 / 1077 ms / 5 min 40 sec / OK
+69 / 09.07.2023 / 31 / 1245 ms / 5 min 42 sec / OK
+70 / 10.07.2023 / 26 / 1068 ms / 5 min 43 sec / OK
+71 / 11.07.2023 / 17 / 930 ms / 5 min 44 sec / OK
+72 / 12.07.2023 / 26 / 1118 ms / 5 min 45 sec / OK
+73 / 13.07.2023 / 22 / 969 ms / 5 min 46 sec / OK
+74 / 14.07.2023 / 23 / 1103 ms / 5 min 47 sec / OK
+75 / 15.07.2023 / 26 / 1148 ms / 5 min 48 sec / OK
+76 / 16.07.2023 / 26 / 1215 ms / 5 min 49 sec / OK
+77 / 17.07.2023 / 28 / 1154 ms / 5 min 50 sec / OK
+78 / 18.07.2023 / 21 / 1156 ms / 5 min 52 sec / OK
+79 / 19.07.2023 / 18 / 1176 ms / 5 min 53 sec / OK
+80 / 20.07.2023 / 27 / 1448 ms / 5 min 54 sec / OK
+KONEC CYKLU: 09.04.2026 15:08:34
+NOVY CYKLUS: 20 dni
+81 / 21.07.2023 / 20 / 919 ms / 6 min 40 sec / OK
+82 / 22.07.2023 / 18 / 848 ms / 6 min 41 sec / OK
+83 / 23.07.2023 / 9 / 784 ms / 6 min 42 sec / OK
+84 / 24.07.2023 / 20 / 964 ms / 6 min 43 sec / OK
+85 / 25.07.2023 / 26 / 1036 ms / 6 min 44 sec / OK
+86 / 26.07.2023 / 20 / 1237 ms / 6 min 45 sec / OK
+87 / 27.07.2023 / 13 / 683 ms / 6 min 46 sec / OK
+88 / 28.07.2023 / 21 / 916 ms / 6 min 47 sec / OK
+89 / 29.07.2023 / 23 / 1071 ms / 6 min 48 sec / OK
+90 / 30.07.2023 / 21 / 1058 ms / 6 min 49 sec / OK
+91 / 31.07.2023 / 18 / 848 ms / 6 min 50 sec / OK
+92 / 01.08.2023 / 18 / 943 ms / 6 min 51 sec / OK
+93 / 02.08.2023 / 17 / 924 ms / 6 min 52 sec / OK
+94 / 03.08.2023 / 14 / 849 ms / 6 min 52 sec / OK
+95 / 04.08.2023 / 25 / 1530 ms / 6 min 54 sec / OK
+96 / 05.08.2023 / 18 / 1120 ms / 6 min 55 sec / OK
+97 / 06.08.2023 / 17 / 1834 ms / 6 min 57 sec / OK
+98 / 07.08.2023 / 17 / 1113 ms / 6 min 58 sec / OK
+99 / 08.08.2023 / 16 / 847 ms / 6 min 59 sec / OK
+100 / 09.08.2023 / 16 / 987 ms / 7 min 0 sec / OK
+KONEC CYKLU: 09.04.2026 15:09:40
+NOVY CYKLUS: 20 dni
+101 / 10.08.2023 / 19 / 1052 ms / 7 min 23 sec / OK
+102 / 11.08.2023 / 21 / 1119 ms / 7 min 24 sec / OK
+103 / 12.08.2023 / 16 / 1045 ms / 7 min 25 sec / OK
+104 / 13.08.2023 / 25 / 1194 ms / 7 min 26 sec / OK
+105 / 14.08.2023 / 13 / 897 ms / 7 min 27 sec / OK
+106 / 15.08.2023 / 13 / 843 ms / 7 min 28 sec / OK
+107 / 16.08.2023 / 18 / 972 ms / 7 min 29 sec / OK
+108 / 17.08.2023 / 16 / 1095 ms / 7 min 30 sec / OK
+109 / 18.08.2023 / 12 / 958 ms / 7 min 31 sec / OK
+110 / 19.08.2023 / 17 / 855 ms / 7 min 32 sec / OK
+111 / 20.08.2023 / 16 / 934 ms / 7 min 32 sec / OK
+112 / 21.08.2023 / 9 / 960 ms / 7 min 33 sec / OK
+113 / 22.08.2023 / 10 / 801 ms / 7 min 34 sec / OK
+114 / 23.08.2023 / 15 / 1066 ms / 7 min 35 sec / OK
+115 / 24.08.2023 / 11 / 972 ms / 7 min 36 sec / OK
+116 / 25.08.2023 / 24 / 1342 ms / 7 min 38 sec / OK
+117 / 26.08.2023 / 12 / 868 ms / 7 min 38 sec / OK
+118 / 27.08.2023 / 17 / 1087 ms / 7 min 40 sec / OK
+119 / 28.08.2023 / 13 / 873 ms / 7 min 40 sec / OK
+120 / 29.08.2023 / 12 / 889 ms / 7 min 41 sec / OK
+KONEC CYKLU: 09.04.2026 15:10:22
+-----
+START: 09.04.2026 15:10:43
+SCRIPT: plnime_restia_objednavky.php
+START_BASE: 01.04.2024
+LAST_OK_DAY: neni
+RESUME_FROM: 01.04.2024
+REQUESTED_DAYS: 20
+LIMIT: 100
+STEP_DAYS: 20
+PAUSE_MS: 500
+1 / 01.04.2024 / 43 / 2008 ms / 0 min 2 sec / OK
+2 / 02.04.2024 / 24 / 1023 ms / 0 min 3 sec / OK
+3 / 03.04.2024 / 23 / 1027 ms / 0 min 4 sec / OK
+4 / 04.04.2024 / 26 / 1028 ms / 0 min 5 sec / OK
+5 / 05.04.2024 / 40 / 1309 ms / 0 min 6 sec / OK
+6 / 06.04.2024 / 27 / 1080 ms / 0 min 7 sec / OK
+7 / 07.04.2024 / 24 / 1008 ms / 0 min 8 sec / OK
+8 / 08.04.2024 / 26 / 959 ms / 0 min 9 sec / OK
+9 / 09.04.2024 / 14 / 914 ms / 0 min 10 sec / OK
+10 / 10.04.2024 / 18 / 934 ms / 0 min 11 sec / OK
+11 / 11.04.2024 / 12 / 752 ms / 0 min 12 sec / OK
+12 / 12.04.2024 / 19 / 940 ms / 0 min 12 sec / OK
+13 / 13.04.2024 / 18 / 968 ms / 0 min 13 sec / OK
+14 / 14.04.2024 / 16 / 911 ms / 0 min 14 sec / OK
+15 / 15.04.2024 / 13 / 748 ms / 0 min 15 sec / OK
+16 / 16.04.2024 / 17 / 891 ms / 0 min 16 sec / OK
+17 / 17.04.2024 / 14 / 898 ms / 0 min 17 sec / OK
+18 / 18.04.2024 / 11 / 758 ms / 0 min 18 sec / OK
+19 / 19.04.2024 / 20 / 928 ms / 0 min 19 sec / OK
+20 / 20.04.2024 / 22 / 1093 ms / 0 min 20 sec / OK
+KONEC CYKLU: 09.04.2026 15:11:03
+NOVY CYKLUS: 20 dni
+21 / 21.04.2024 / 19 / 948 ms / 1 min 13 sec / OK
+22 / 22.04.2024 / 21 / 916 ms / 1 min 14 sec / OK
+23 / 23.04.2024 / 28 / 1054 ms / 1 min 15 sec / OK
+24 / 24.04.2024 / 12 / 723 ms / 1 min 16 sec / OK
+25 / 25.04.2024 / 17 / 828 ms / 1 min 17 sec / OK
+26 / 26.04.2024 / 14 / 907 ms / 1 min 18 sec / OK
+27 / 27.04.2024 / 26 / 1070 ms / 1 min 19 sec / OK
+28 / 28.04.2024 / 16 / 930 ms / 1 min 20 sec / OK
+29 / 29.04.2024 / 11 / 708 ms / 1 min 20 sec / OK
+30 / 30.04.2024 / 10 / 710 ms / 1 min 21 sec / OK
+31 / 01.05.2024 / 19 / 1039 ms / 1 min 22 sec / OK
+32 / 02.05.2024 / 16 / 907 ms / 1 min 23 sec / OK
+33 / 03.05.2024 / 17 / 936 ms / 1 min 24 sec / OK
+34 / 04.05.2024 / 17 / 968 ms / 1 min 25 sec / OK
+35 / 05.05.2024 / 21 / 944 ms / 1 min 26 sec / OK
+36 / 06.05.2024 / 12 / 856 ms / 1 min 27 sec / OK
+37 / 07.05.2024 / 6 / 718 ms / 1 min 27 sec / OK
+38 / 08.05.2024 / 15 / 954 ms / 1 min 28 sec / OK
+39 / 09.05.2024 / 14 / 1111 ms / 1 min 29 sec / OK
+40 / 10.05.2024 / 20 / 986 ms / 1 min 30 sec / OK
+KONEC CYKLU: 09.04.2026 15:12:14
+NOVY CYKLUS: 20 dni
+41 / 11.05.2024 / 25 / 1228 ms / 2 min 54 sec / OK
+42 / 12.05.2024 / 21 / 1199 ms / 2 min 55 sec / OK
+43 / 13.05.2024 / 15 / 933 ms / 2 min 56 sec / OK
+44 / 14.05.2024 / 16 / 837 ms / 2 min 57 sec / OK
+45 / 15.05.2024 / 11 / 835 ms / 2 min 58 sec / OK
+46 / 16.05.2024 / 8 / 779 ms / 2 min 58 sec / OK
+47 / 17.05.2024 / 15 / 972 ms / 2 min 59 sec / OK
+48 / 18.05.2024 / 18 / 1089 ms / 3 min 1 sec / OK
+49 / 19.05.2024 / 17 / 1493 ms / 3 min 2 sec / OK
+50 / 20.05.2024 / 18 / 1034 ms / 3 min 3 sec / OK
+51 / 21.05.2024 / 11 / 774 ms / 3 min 4 sec / OK
+52 / 22.05.2024 / 16 / 890 ms / 3 min 5 sec / OK
+53 / 23.05.2024 / 14 / 1039 ms / 3 min 6 sec / OK
+54 / 24.05.2024 / 23 / 1091 ms / 3 min 7 sec / OK
+55 / 25.05.2024 / 20 / 1199 ms / 3 min 8 sec / OK
+56 / 26.05.2024 / 22 / 1419 ms / 3 min 9 sec / OK
+57 / 27.05.2024 / 11 / 737 ms / 3 min 10 sec / OK
+58 / 28.05.2024 / 16 / 902 ms / 3 min 11 sec / OK
+59 / 29.05.2024 / 11 / 914 ms / 3 min 12 sec / OK
+60 / 30.05.2024 / 16 / 941 ms / 3 min 13 sec / OK
+KONEC CYKLU: 09.04.2026 15:13:56
+NOVY CYKLUS: 20 dni
+61 / 31.05.2024 / 13 / 910 ms / 4 min 1 sec / OK
+62 / 01.06.2024 / 21 / 1268 ms / 4 min 2 sec / OK
+63 / 02.06.2024 / 14 / 871 ms / 4 min 3 sec / OK
+64 / 03.06.2024 / 6 / 654 ms / 4 min 4 sec / OK
+65 / 04.06.2024 / 15 / 850 ms / 4 min 4 sec / OK
+66 / 05.06.2024 / 12 / 827 ms / 4 min 5 sec / OK
+67 / 06.06.2024 / 12 / 934 ms / 4 min 6 sec / OK
+68 / 07.06.2024 / 14 / 990 ms / 4 min 7 sec / OK
+69 / 08.06.2024 / 21 / 1217 ms / 4 min 8 sec / OK
+70 / 09.06.2024 / 17 / 1021 ms / 4 min 9 sec / OK
+71 / 10.06.2024 / 10 / 797 ms / 4 min 10 sec / OK
+72 / 11.06.2024 / 13 / 807 ms / 4 min 11 sec / OK
+73 / 12.06.2024 / 14 / 1001 ms / 4 min 12 sec / OK
+74 / 13.06.2024 / 13 / 868 ms / 4 min 13 sec / OK
+75 / 14.06.2024 / 21 / 1043 ms / 4 min 14 sec / OK
+76 / 15.06.2024 / 24 / 1129 ms / 4 min 15 sec / OK
+77 / 16.06.2024 / 19 / 1198 ms / 4 min 16 sec / OK
+78 / 17.06.2024 / 13 / 858 ms / 4 min 17 sec / OK
+79 / 18.06.2024 / 15 / 1006 ms / 4 min 18 sec / OK
+80 / 19.06.2024 / 9 / 778 ms / 4 min 19 sec / OK
+KONEC CYKLU: 09.04.2026 15:15:02
+KONEC IMPORTU: 09.04.2026 15:15:48 | DUVOD: rucne ukonceno

@@ -1,6 +1,6 @@
 -----
 RESTIA TEST OBJEDNAVEK | V1
-Spusteno: 09.04.2026 11:11:02
+Spusteno: 09.04.2026 14:51:26
 Pobocka: Zličín
 id_pob: 3
 activePosId: befaa399-bbe8-4dd2-9e8b-991d6715ce55
@@ -19,27 +19,26 @@ Query parametry bez tokenu:
   createdTo=2026-04-03T21:59:59.999Z
   activePosId=befaa399-bbe8-4dd2-9e8b-991d6715ce55
 
-HTTP status: 403
-Doba volani: 452 ms
-X-Total-Count: neznamy
+HTTP status: 200
+Doba volani: 458 ms
+X-Total-Count: 453
 Response headery:
-  Thu, 09 Apr 2026 09:11:03 GMT
+  Thu, 09 Apr 2026 12:51:26 GMT
   Apache
   Express
   Origin
   true
   X-Total-Count,X-Cached-Response
-  b902a5da-fe5b-42e3-8ce4-1efcee88531e
-  b902a5da-fe5b-42e3-8ce4-1efcee88531e
+  1820ada2-abec-42b9-bf38-64e65fb0d732
+  1820ada2-abec-42b9-bf38-64e65fb0d732
+  453
   application/json; charset=utf-8
-  189
-  W/"bd-6G9LrZ+sQsfsFdQWqnq9Ptuy7yw"
+  30081
+  W/"7581-a8eZf6cp01/otKyo+OEzZ7VQh3E"
   1; mode=block
-Pocet objednavek v tele odpovedi: 0
-API chyba kod: NO_PERMISSION
-API chyba zprava: User apiis@pizzacomeback.cz is not authorized to this pos befaa399-bbe8-4dd2-9e8b-991d6715ce55-Pizza Comeback Zličín
+Pocet objednavek v tele odpovedi: 10
 Ukazka JSON odpovedi:
-{"error":{"name":"ForbiddenError","message":"User apiis@pizzacomeback.cz is not authorized to this pos befaa399-bbe8-4dd2-9e8b-991d6715ce55-Pizza Comeback Zličín","code":"NO_PERMISSION"}}
+[{"id":"df386907-658e-4767-855e-6268e0d25f16","orderNumber":"e2ue-2614-5vrq","shortCode":"2509","serialNumber":"51","token":"142515-_-oma_8911ebb9-30a8-53b9-90b8-ca3b536e29ac-_-eu","destination":{"note":""},"customerName":"Veru Lhotková?","customerPhone":"+420725901855","customerEmail":null,"customerNote":null,"createdAt":"2026-04-03T21:07:59.195Z","expiresAt":"2026-04-03T21:12:59.030Z","deliveryAt":"2026-04-03T21:22:59.226Z","promisedAt":"2026-04-03T21:22:59.226Z","pickupAt":"2026-04-03T21:22:59.226Z","prepareAt":"2026-04-03T21:22:59.226Z","cookingTimeMinutes":15,"deliveryOnTime":false,"finishedAt":"2026-04-03T21:16:10.774Z","preparedAt":"2026-04-03T21:16:10.774Z","deliveredAt":null,"originalRequiredAt":"2026-04-03T21:17:21.593Z","isPickup":true,"paymentType":"online","surchargeToMin":"0","deliveryPrice":"0","packingPrice":"0","tipPrice":"0","itemsPrice":"30900","serviceFeePrice":"0","discountPrice":"0","roundingPrice":"0","discountCode":null,"servicesData":null,"courierData":null,"courierOrder":null,"note":"#upstairs# Výnos do patra - vyneste objednávku zákazníkovi do patra.","info":null,"deliveryZone":null,"isSelfDelivery":false,"isInRestaurant":false,"deliveryType":"external-delivery","posImportStatus":"success","posImportScheduledAt":null,"posImportedAt":"2026-04-03T21:08:00.199Z","posPaymentData":null,"posData":{"id":"2695290","receiptNumber":"2695290"},"status":"ready_pickup","statusUpdatedAt":"2026-04-03T21:16:10.774Z","statusCanceledInfo":null,"closedAt":"2026-04-03T23:16:10.779Z","parentOrderId":null,"forwardedToOrderId":null,"isEdited":false,"statusUpdateWebhookUrl":null,"items":[{"id":"59610938","note":"","size":"Pepperoni 32cm 🌶️🌶️","count":1,"label":"Pepperoni 32cm 🌶️🌶️","posId":"120","price":24900,"isExtra":false},{"id":"54414789","note":"","count":1,"label":"Balné","posId":"K0000","price":1500,"isExtra":true},{"id":"59610946","note":"","count":1,"label":"USA těsto","posId":"17","price":1000,"isExtra":true},{"id":"57278742","note":"","count":1,"label"
 
-Shrnuti: ERR
-Restia vratila chybu kodu NO_PERMISSION.
+Shrnuti: OK
+Restia vratila objednavky. Problem neni v autorizaci teto pobocky.

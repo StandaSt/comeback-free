@@ -96,6 +96,28 @@
       return { root, msg, cancelBtn, confirmBtn };
     }
 
+    function openSystemAlert(message) {
+      const modal = getCardModeConfirmModal();
+      const text = String(message || '').trim();
+      if (text === '') return false;
+      if (!modal) return false;
+
+      modal.msg.textContent = text;
+      modal.cancelBtn.textContent = 'Rozumím';
+      modal.confirmBtn.textContent = 'Potvrdit';
+      modal.confirmBtn.classList.add('is-hidden');
+      modal.root.classList.remove('is-hidden');
+      modal.root.setAttribute('aria-hidden', 'false');
+      modal.cancelBtn.focus();
+      return true;
+    }
+
+    function setDashboardLoading(on) {
+      if (w.CB_AJAX && typeof w.CB_AJAX.setDashboardLoading === 'function') {
+        w.CB_AJAX.setDashboardLoading(!!on);
+      }
+    }
+
     function closeCardModeConfirmModal() {
       const modal = getCardModeConfirmModal();
       if (!modal) return false;
@@ -190,9 +212,24 @@
 
     function doMoveToTarget(targetRoot, forceUnlock) {
       if (!(moveSource && moveSource.root instanceof HTMLElement)) return;
-      const targetId = parseInt(String(targetRoot.getAttribute('data-card-id') || '0'), 10);
+      const targetMode = String(targetRoot.getAttribute('data-card-mode') || '').trim();
       const targetCol = parseInt(String(targetRoot.getAttribute('data-card-col') || '0'), 10);
       const targetLine = parseInt(String(targetRoot.getAttribute('data-card-line') || '0'), 10);
+      if (targetMode === 'nano') {
+        if (!openSystemAlert('Pozice 1-1 je určena pro nano karty.')) {
+          window.alert('Pozice 1-1 je určena pro nano karty.');
+        }
+        clearMoveSource();
+        return;
+      }
+      if (targetCol === 1 && targetLine === 1) {
+        if (!openSystemAlert('Pozice 1-1 je určena pro nano karty.')) {
+          window.alert('Pozice 1-1 je určena pro nano karty.');
+        }
+        clearMoveSource();
+        return;
+      }
+      const targetId = parseInt(String(targetRoot.getAttribute('data-card-id') || '0'), 10);
       const targetLocked = String(targetRoot.getAttribute('data-card-pos-locked') || '0') === '1';
       if (!Number.isFinite(targetId) || targetId <= 0 || !Number.isFinite(targetCol) || targetCol <= 0 || !Number.isFinite(targetLine) || targetLine <= 0) {
         clearMoveSource();
@@ -203,6 +240,7 @@
         return;
       }
 
+      setDashboardLoading(true);
       fetch('index.php', {
         method: 'POST',
         headers: {
@@ -222,11 +260,17 @@
       }).then((r) => r.json().catch(() => ({}))).then((data) => {
         if (data && data.ok) {
           clearMoveSource();
-          window.location.reload();
+          if (w.CB_AJAX && typeof w.CB_AJAX.refreshDashboard === 'function') {
+            w.CB_AJAX.refreshDashboard({ force: true }).catch((err) => {
+              const msg = String((err && err.message) ? err.message : 'Obnovení dashboardu po přesunu karty selhalo.');
+              window.alert(msg);
+            });
+          }
           return;
         }
 
         if (data && data.needs_confirm) {
+          setDashboardLoading(false);
           if (!openMoveUnlockConfirm(function () {
             doMoveToTarget(targetRoot, true);
           }, function () {
@@ -241,10 +285,18 @@
           return;
         }
 
+        setDashboardLoading(false);
         const err = String((data && data.err) ? data.err : 'Přesun karty selhal.');
-        window.alert(err);
+        if (err === 'Pozice 1-1 je určena pro nano karty.') {
+          if (!openSystemAlert(err)) {
+            window.alert(err);
+          }
+        } else {
+          window.alert(err);
+        }
         clearMoveSource();
       }).catch(() => {
+        setDashboardLoading(false);
         window.alert('Přesun karty selhal.');
         clearMoveSource();
       });
@@ -320,6 +372,10 @@
           const wrap = moveBtn.closest('[data-card-pref-wrap]');
           const menu = wrap ? wrap.querySelector('[data-card-pref-menu]') : null;
           const frame = menu ? menu.querySelector('[data-card-pref-frame]') : null;
+          if (!ok) {
+            clearMoveSource();
+            return;
+          }
           if (menu instanceof HTMLElement) {
             menu.classList.remove('is-hidden');
             menu.classList.remove('card_pref_menu_frame');
@@ -331,9 +387,6 @@
           const toggle = wrap ? wrap.querySelector('[data-card-pref-toggle]') : null;
           if (toggle instanceof HTMLElement) {
             toggle.setAttribute('aria-expanded', 'true');
-          }
-          if (!ok) {
-            clearMoveSource();
           }
           return;
         }
@@ -350,7 +403,12 @@
           }).then((r) => r.json().catch(() => ({}))).then((data) => {
             if (data && data.ok) {
               clearMoveSource();
-              window.location.reload();
+              if (w.CB_AJAX && typeof w.CB_AJAX.refreshDashboard === 'function') {
+                w.CB_AJAX.refreshDashboard().catch((err) => {
+                  const msg = String((err && err.message) ? err.message : 'Obnovení dashboardu po odemknutí pozic karet selhalo.');
+                  window.alert(msg);
+                });
+              }
               return;
             }
             const err = String((data && data.err) ? data.err : 'Odemknutí pozic karet selhalo.');
