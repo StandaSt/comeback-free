@@ -385,21 +385,18 @@ if (!function_exists('cb_prehled_db_wipe_tables')) {
         $tables = cb_prehled_db_scope_tables($conn, $scope);
         $deleted = [];
 
-        $conn->begin_transaction();
         try {
             $conn->query('SET FOREIGN_KEY_CHECKS = 0');
 
             foreach ($tables as $table) {
                 $deleted[$table] = cb_prehled_db_delete_table($conn, $table);
-                cb_prehled_db_reset_ai($conn, $table);
             }
 
+            foreach ($tables as $table) {
+                cb_prehled_db_reset_ai($conn, $table);
+            }
+        } finally {
             $conn->query('SET FOREIGN_KEY_CHECKS = 1');
-            $conn->commit();
-        } catch (Throwable $e) {
-            $conn->query('SET FOREIGN_KEY_CHECKS = 1');
-            $conn->rollback();
-            throw $e;
         }
 
         return $deleted;
@@ -645,6 +642,6 @@ ob_start();
 $card_max_html = (string)ob_get_clean();
 
 /* karty/prehled_db.php * Verze: V11 * Aktualizace: 02.04.2026 */
-// Počet řádků: 640
+// Počet řádků: 647
 // Předchozí počet řádků: 640
 ?>

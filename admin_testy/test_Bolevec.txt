@@ -1,0 +1,44 @@
+-----
+RESTIA TEST OBJEDNAVEK | V1
+Spusteno: 09.04.2026 11:11:01
+Pobocka: Bolevec
+id_pob: 6
+activePosId: 3eb8bd65-26d6-4fa9-a20b-19705f856f17
+Rozsah lokalni cas Praha od: 2026-04-01 00:00:00.000
+Rozsah lokalni cas Praha do: 2026-04-03 23:59:59.999
+Rozsah UTC od: 2026-03-31T22:00:00.000Z
+Rozsah UTC do: 2026-04-03T21:59:59.999Z
+Limit: 10
+Cil: zjistit, jestli Restia vrati objednavky nebo proc je nevrati.
+
+Dotaz: GET /api/orders
+Query parametry bez tokenu:
+  page=1
+  limit=10
+  createdFrom=2026-03-31T22:00:00.000Z
+  createdTo=2026-04-03T21:59:59.999Z
+  activePosId=3eb8bd65-26d6-4fa9-a20b-19705f856f17
+
+HTTP status: 200
+Doba volani: 456 ms
+X-Total-Count: 108
+Response headery:
+  Thu, 09 Apr 2026 09:11:01 GMT
+  Apache
+  Express
+  Origin
+  true
+  X-Total-Count,X-Cached-Response
+  1791aae0-87df-4cf2-abb6-d15981c29426
+  1791aae0-87df-4cf2-abb6-d15981c29426
+  108
+  application/json; charset=utf-8
+  27508
+  W/"6b74-X5egZWyIqoXSnzrvofXquNBD6+0"
+  1; mode=block
+Pocet objednavek v tele odpovedi: 10
+Ukazka JSON odpovedi:
+[{"id":"814627d4-1c8e-4033-9b59-21db8c72bc89","orderNumber":"bams-2614-b8fu","shortCode":"2151","serialNumber":"028","token":"REpfQ1otYmFtcw-_-oma_e0a511c0-e7b0-5526-9849-ad8d0ed65bdb-_-eu","destination":{"note":""},"customerName":"Adam Jaroš","customerPhone":"+420775519392","customerEmail":null,"customerNote":null,"createdAt":"2026-04-03T21:23:48.040Z","expiresAt":"2026-04-03T21:28:47.924Z","deliveryAt":"2026-04-03T21:38:48.069Z","promisedAt":"2026-04-03T21:38:48.069Z","pickupAt":"2026-04-03T21:38:48.069Z","prepareAt":"2026-04-03T21:38:48.069Z","cookingTimeMinutes":15,"deliveryOnTime":false,"finishedAt":"2026-04-03T21:28:59.550Z","preparedAt":"2026-04-03T21:28:59.550Z","deliveredAt":null,"originalRequiredAt":"2026-04-03T21:31:51.652Z","isPickup":true,"paymentType":"online","surchargeToMin":"0","deliveryPrice":"0","packingPrice":"0","tipPrice":"0","itemsPrice":"27400","serviceFeePrice":"0","discountPrice":"0","roundingPrice":"0","discountCode":null,"servicesData":null,"courierData":null,"courierOrder":null,"note":"","info":null,"deliveryZone":null,"isSelfDelivery":false,"isInRestaurant":false,"deliveryType":"external-delivery","posImportStatus":"success","posImportScheduledAt":null,"posImportedAt":"2026-04-03T21:23:48.941Z","posPaymentData":null,"posData":{"id":"2695347","receiptNumber":"2695347"},"status":"delivered","statusUpdatedAt":"2026-04-03T21:30:50.622Z","statusCanceledInfo":null,"closedAt":"2026-04-03T21:30:50.620Z","parentOrderId":null,"forwardedToOrderId":null,"isEdited":false,"statusUpdateWebhookUrl":null,"items":[{"id":"62240207","note":"","size":"Hawai 32cm","count":1,"label":"Hawai 32cm","posId":"114","price":25900,"isExtra":false},{"id":"62240274","note":"","count":1,"label":"Balné","posId":"K0000","price":1500,"isExtra":true},{"id":"62240392","note":"","count":1,"label":"Smetanový základ","posId":"ZRS32","price":0,"isExtra":true}],"importedAt":"2026-04-03T21:23:48.040Z","profileId":"5cbd8e05-4cdb-4711-86df-606cbf9e6845","profile":{"id":"5cbd8e05-4cd
+
+Shrnuti: OK
+Restia vratila objednavky. Problem neni v autorizaci teto pobocky.

@@ -1,0 +1,45 @@
+-----
+RESTIA TEST OBJEDNAVEK | V1
+Spusteno: 09.04.2026 11:11:03
+Pobocka: Malešice
+id_pob: 1
+activePosId: 38da0b11-20d1-4d08-87d9-0de80d375703
+Rozsah lokalni cas Praha od: 2026-04-01 00:00:00.000
+Rozsah lokalni cas Praha do: 2026-04-03 23:59:59.999
+Rozsah UTC od: 2026-03-31T22:00:00.000Z
+Rozsah UTC do: 2026-04-03T21:59:59.999Z
+Limit: 10
+Cil: zjistit, jestli Restia vrati objednavky nebo proc je nevrati.
+
+Dotaz: GET /api/orders
+Query parametry bez tokenu:
+  page=1
+  limit=10
+  createdFrom=2026-03-31T22:00:00.000Z
+  createdTo=2026-04-03T21:59:59.999Z
+  activePosId=38da0b11-20d1-4d08-87d9-0de80d375703
+
+HTTP status: 403
+Doba volani: 465 ms
+X-Total-Count: neznamy
+Response headery:
+  Thu, 09 Apr 2026 09:11:04 GMT
+  Apache
+  Express
+  Origin
+  true
+  X-Total-Count,X-Cached-Response
+  0b806ef1-292e-415f-a283-f3a1eaafc99e
+  0b806ef1-292e-415f-a283-f3a1eaafc99e
+  application/json; charset=utf-8
+  190
+  W/"be-EDKqcw0zPNDF/TXCcd58TQW+P0g"
+  1; mode=block
+Pocet objednavek v tele odpovedi: 0
+API chyba kod: NO_PERMISSION
+API chyba zprava: User apiis@pizzacomeback.cz is not authorized to this pos 38da0b11-20d1-4d08-87d9-0de80d375703-Pizza Comeback Malešice
+Ukazka JSON odpovedi:
+{"error":{"name":"ForbiddenError","message":"User apiis@pizzacomeback.cz is not authorized to this pos 38da0b11-20d1-4d08-87d9-0de80d375703-Pizza Comeback Malešice","code":"NO_PERMISSION"}}
+
+Shrnuti: ERR
+Restia vratila chybu kodu NO_PERMISSION.

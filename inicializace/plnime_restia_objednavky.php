@@ -1054,7 +1054,7 @@ if (!function_exists('cb_restia_hist_ensure_default_customer')) {
         if ($stmt === false) {
             throw new RuntimeException('DB prepare selhal: insert anonymni zakaznik.');
         }
-        $stmt->bind_param('ssssssiisii', $jmeno, $prijmeni, $telefon, $email, $ulice, $mesto, $zakMenu, $zakNews, $poznamka, $blokovany, $idPob, $aktivni);
+        $stmt->bind_param('ssssssiisiii', $jmeno, $prijmeni, $telefon, $email, $ulice, $mesto, $zakMenu, $zakNews, $poznamka, $blokovany, $idPob, $aktivni);
         $stmt->execute();
         $stmt->close();
     }
@@ -1154,7 +1154,7 @@ if (!function_exists('cb_restia_hist_upsert_customer')) {
             if ($stmt === false) {
                 throw new RuntimeException('DB prepare selhal: update zakaznik.');
             }
-            $stmt->bind_param('ssssssiisiiii', $jmeno, $prijmeni, $telefon, $email, $ulice, $mesto, $zakMenu, $zakNews, $poznamka, $blokovany, $idPob, $aktivni, $idZak);
+           $stmt->bind_param('ssssssiisiii', $jmeno, $prijmeni, $telefon, $email, $ulice, $mesto, $zakMenu, $zakNews, $poznamka, $blokovany, $idPob, $aktivni, $idZak);
             $stmt->execute();
             $stmt->close();
             return $idZak;

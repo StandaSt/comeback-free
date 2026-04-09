@@ -257,6 +257,8 @@ if (
             $stmtUnlock->bind_param('ii', $idUser, $idKarta);
             $stmtUnlock->execute();
             $stmtUnlock->close();
+            require_once __DIR__ . '/lib/synchro_pozice_karet.php';
+            synchronize_card_positions($idUser);
         } else {
             $stmt = $conn->prepare('DELETE FROM user_nano WHERE id_user = ? AND id_nano = ?');
             if (!$stmt) {
@@ -265,6 +267,8 @@ if (
             $stmt->bind_param('ii', $idUser, $idKarta);
             $stmt->execute();
             $stmt->close();
+            require_once __DIR__ . '/lib/synchro_pozice_karet.php';
+            synchronize_card_positions($idUser);
         }
 
         echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);

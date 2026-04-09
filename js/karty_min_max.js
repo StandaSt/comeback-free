@@ -234,6 +234,7 @@
     if (!activeMaxi) return;
     const options = (opts && typeof opts === 'object') ? opts : {};
     const forceMini = !!options.forceMini;
+    const preserveState = !!options.preserveState;
 
     const item = activeMaxi;
     const {
@@ -265,7 +266,9 @@
     }
 
     activeMaxi = null;
-    clearMaxiState();
+    if (!preserveState) {
+      clearMaxiState();
+    }
 
     if (targetReturnMode === 'nano') {
       const cardId = parseInt(String(root.getAttribute('data-card-id') || '0'), 10);
@@ -452,9 +455,7 @@
       if (!(formEl instanceof HTMLFormElement)) return;
       formEl.addEventListener('submit', () => {
         if (activeMaxi && activeMaxi.root === root) {
-          closeActiveMaxi({ forceMini: true });
-        } else {
-          clearMaxiState();
+          closeActiveMaxi({ preserveState: true });
         }
       });
     });
@@ -503,7 +504,7 @@
     });
 
     document.addEventListener('cb:main-swapped', () => {
-      closeActiveMaxi();
+      closeActiveMaxi({ preserveState: true });
       initKartyMinMax();
     });
     document.addEventListener('keydown', (event) => {
