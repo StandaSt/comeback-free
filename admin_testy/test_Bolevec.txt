@@ -1,6 +1,6 @@
 -----
 RESTIA TEST OBJEDNAVEK | V1
-Spusteno: 09.04.2026 14:51:24
+Spusteno: 10.04.2026 03:37:40
 Pobocka: Bolevec
 id_pob: 6
 activePosId: 3eb8bd65-26d6-4fa9-a20b-19705f856f17
@@ -20,17 +20,17 @@ Query parametry bez tokenu:
   activePosId=3eb8bd65-26d6-4fa9-a20b-19705f856f17
 
 HTTP status: 200
-Doba volani: 445 ms
+Doba volani: 497 ms
 X-Total-Count: 108
 Response headery:
-  Thu, 09 Apr 2026 12:51:25 GMT
+  Fri, 10 Apr 2026 01:37:42 GMT
   Apache
   Express
   Origin
   true
   X-Total-Count,X-Cached-Response
-  e8dee406-5801-4453-838c-26ee2929a775
-  e8dee406-5801-4453-838c-26ee2929a775
+  34813d32-798c-4c9b-96c0-1a0440a8dcf8
+  34813d32-798c-4c9b-96c0-1a0440a8dcf8
   108
   application/json; charset=utf-8
   27508

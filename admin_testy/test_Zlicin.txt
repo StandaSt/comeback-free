@@ -1,6 +1,6 @@
 -----
 RESTIA TEST OBJEDNAVEK | V1
-Spusteno: 09.04.2026 14:51:26
+Spusteno: 10.04.2026 03:37:42
 Pobocka: Zličín
 id_pob: 3
 activePosId: befaa399-bbe8-4dd2-9e8b-991d6715ce55
@@ -20,21 +20,21 @@ Query parametry bez tokenu:
   activePosId=befaa399-bbe8-4dd2-9e8b-991d6715ce55
 
 HTTP status: 200
-Doba volani: 458 ms
+Doba volani: 432 ms
 X-Total-Count: 453
 Response headery:
-  Thu, 09 Apr 2026 12:51:26 GMT
+  Fri, 10 Apr 2026 01:37:43 GMT
   Apache
   Express
   Origin
   true
   X-Total-Count,X-Cached-Response
-  1820ada2-abec-42b9-bf38-64e65fb0d732
-  1820ada2-abec-42b9-bf38-64e65fb0d732
+  c272a817-deca-4d48-946e-9953ef4d19cf
+  c272a817-deca-4d48-946e-9953ef4d19cf
   453
   application/json; charset=utf-8
-  30081
-  W/"7581-a8eZf6cp01/otKyo+OEzZ7VQh3E"
+  30216
+  W/"7608-xx5wAkCvisKP2gHuEIctTOjcOhA"
   1; mode=block
 Pocet objednavek v tele odpovedi: 10
 Ukazka JSON odpovedi:

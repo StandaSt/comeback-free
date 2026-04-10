@@ -87,7 +87,7 @@ $souborExists = static function (mysqli $conn, string $soubor, int $excludeId = 
     return $exists;
 };
 
-if ($isAdmin && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['admin_karty_action'])) {
+if ($isAdmin && isset($_POST['admin_karty_action'])) {
     try {
         $conn = db();
         $action = trim((string)$_POST['admin_karty_action']);

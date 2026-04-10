@@ -926,6 +926,15 @@ align-items:center;
   letter-spacing:.02em;
 }
 
+.dash_loader_step{
+  margin-top:0;
+  color:var(--clr_seda_4);
+  font-size:var(--fs_15);
+  font-weight:700;
+  font-variant-numeric:tabular-nums;
+  letter-spacing:.01em;
+}
+
 .dash_box.is-dashboard-loading [data-cb-dash-content="1"]{
   pointer-events:none;
 }

@@ -22,6 +22,7 @@ declare(strict_types=1);
       <img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback" class="dash_loader_logo">
       <p class="dash_loader_text">Aktualizuji obsah karet ...</p>
       <div class="dash_loader_time" data-cb-dash-loader-time>0.00 s</div>
+      <div class="dash_loader_step" data-cb-dash-loader-step>0 / 0 uloženo: 0</div>
     </div>
   </div>
 

@@ -64,7 +64,7 @@ $json = json_decode($body, true);
 $access = $json['accessToken'] ?? null;
 $expIso = $json['accessTokenExpires'] ?? null;
 
-if ($http !== 200 || !is_string($access) || !is_string($expIso)) {
+if (!in_array($http, [200, 202], true) || !is_string($access) || !is_string($expIso)) {
     return;
 }
 

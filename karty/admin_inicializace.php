@@ -48,6 +48,10 @@ if (is_array($cbRestiaState)) {
         )
     );
 }
+$cbRestiaHasImport = false;
+if ($qRestia instanceof mysqli_result) {
+    $cbRestiaHasImport = ((int)$cbRestiaCount > 0);
+}
 if ($cbBackAdminInit) {
     unset($_SESSION['cb_restia_hist_v4_state'], $_SESSION['cb_restia_hist_v4_rows'], $_SESSION['cb_restia_hist_v4_msg']);
     $cbRunSmenyPlan = false;
@@ -65,7 +69,7 @@ if ($qRestia instanceof mysqli_result) {
     $r = $qRestia->fetch_assoc();
     $cbRestiaCount = (int)($r['cnt'] ?? 0);
     $dt = trim((string)($r['dt'] ?? ''));
-    $cbRestiaDate = ($dt !== '') ? $dt : 'Ne';
+    $cbRestiaDate = ($dt !== '') ? date('j.n.y H:i', strtotime($dt)) : 'Ne';
     $qRestia->free();
 }
 
@@ -74,7 +78,7 @@ if ($qSmeny instanceof mysqli_result) {
     $r = $qSmeny->fetch_assoc();
     $cbSmenyCount = (int)($r['cnt'] ?? 0);
     $dt = trim((string)($r['dt'] ?? ''));
-    $cbSmenyDate = ($dt !== '') ? $dt : 'Ne';
+    $cbSmenyDate = ($dt !== '') ? date('j.n.y H:i', strtotime($dt)) : 'Ne';
     $cbSmenyPlanMaData = ($cbSmenyCount > 0);
     $qSmeny->free();
 }
@@ -84,7 +88,7 @@ if ($qReport instanceof mysqli_result) {
     $r = $qReport->fetch_assoc();
     $cbReportCount = (int)($r['cnt'] ?? 0);
     $dt = trim((string)($r['dt'] ?? ''));
-    $cbReportDate = ($dt !== '') ? $dt : 'Ne';
+    $cbReportDate = ($dt !== '') ? date('j.n.y H:i', strtotime($dt)) : 'Ne';
     $cbReportMaData = ($cbReportCount > 0);
     $qReport->free();
 }
@@ -312,7 +316,7 @@ if ($cbRunGoogleData || $cbOpenGoogleData) {
     $card_max_html = (string)ob_get_clean();
 }
 
-if ($cbRunRestia || $cbKeepRestiaMax) {
+if ($cbRunRestia || $cbKeepRestiaMax || $cbRestiaHasImport) {
     ob_start();
     require __DIR__ . '/../inicializace/plnime_restia_objednavky.php';
     $card_max_html = (string)ob_get_clean();

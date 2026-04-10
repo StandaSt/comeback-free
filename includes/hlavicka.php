@@ -31,7 +31,51 @@ if ($cbUserRole !== '-' && $cbUserRoleId > 0) {
 // Stavove semafory (zatim staticky, pozdeji se napoji na realna data).
 $sysDb = 'ok';
 $sysSmeny = 'ok';
-$sysRestia = 'var';
+if (!function_exists('cb_head_restia_token_is_valid')) {
+    function cb_head_restia_token_is_valid(mysqli $conn): bool
+    {
+        $stmtRestia = $conn->prepare('
+            SELECT expires_at
+            FROM restia_token
+            WHERE id_restia_token = 1
+            LIMIT 1
+        ');
+        if (!$stmtRestia) {
+            return false;
+        }
+
+        $stmtRestia->execute();
+        $stmtRestia->bind_result($restiaExpiresAt);
+        $isValid = false;
+        if ($stmtRestia->fetch()) {
+            $restiaExpiresAt = trim((string)($restiaExpiresAt ?? ''));
+            if ($restiaExpiresAt !== '') {
+                try {
+                    $restiaExp = new DateTimeImmutable($restiaExpiresAt, new DateTimeZone('UTC'));
+                    $restiaNow = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+                    $isValid = ($restiaExp > $restiaNow->modify('+60 seconds'));
+                } catch (Throwable $e) {
+                    $isValid = false;
+                }
+            }
+        }
+        $stmtRestia->close();
+        return $isValid;
+    }
+}
+
+$sysRestia = 'bad';
+try {
+    $connRestia = db();
+    if (cb_head_restia_token_is_valid($connRestia)) {
+        $sysRestia = 'ok';
+    } else {
+        require_once __DIR__ . '/../lib/restia_ziskej_access.php';
+        $sysRestia = cb_head_restia_token_is_valid($connRestia) ? 'ok' : 'bad';
+    }
+} catch (Throwable $e) {
+    $sysRestia = 'bad';
+}
 
 // Vychozi obdobi: od vcera do dneska.
 $today = (new DateTimeImmutable('today'))->format('Y-m-d');

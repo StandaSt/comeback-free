@@ -20,6 +20,8 @@
   let dashboardLoading = false;
   let dashboardLoadingTimer = null;
   let dashboardLoadingStartedAt = 0;
+  let restiaProgressPollTimer = null;
+  let restiaProgressPollUrl = '';
 
   CB_AJAX.fetchText = function fetchText(url, headers, signal) {
     const u = String(url || '');
@@ -42,11 +44,13 @@
     if (!(content instanceof HTMLElement)) return null;
     const loader = box.querySelector('[data-cb-dash-loader="1"]');
     const timer = box.querySelector('[data-cb-dash-loader-time]');
+    const step = box.querySelector('[data-cb-dash-loader-step]');
     return {
       box: box,
       content: content,
       loader: (loader instanceof HTMLElement) ? loader : null,
-      timer: (timer instanceof HTMLElement) ? timer : null
+      timer: (timer instanceof HTMLElement) ? timer : null,
+      step: (step instanceof HTMLElement) ? step : null
     };
   }
 
@@ -92,6 +96,9 @@
         startDashboardLoadingTimer(parts);
       }
       dashboardLoading = true;
+      if (restiaProgressPollTimer === null) {
+        setLoaderStepText(0, 0, 0);
+      }
       parts.box.classList.add('is-dashboard-loading');
       parts.box.setAttribute('aria-busy', 'true');
       if (parts.loader) {
@@ -110,8 +117,82 @@
     dashboardLoading = false;
   }
 
+  function setLoaderStepText(done, total, saved) {
+    const parts = getDashParts();
+    if (!parts || !parts.step) return;
+    const doneNum = Math.max(0, parseInt(String(done || 0), 10) || 0);
+    const totalNum = Math.max(0, parseInt(String(total || 0), 10) || 0);
+    const savedNum = Math.max(0, parseInt(String(saved || 0), 10) || 0);
+    parts.step.textContent = String(doneNum) + ' / ' + String(totalNum) + ' uloženo: ' + String(savedNum);
+  }
+
+  function stopRestiaProgressPolling() {
+    if (restiaProgressPollTimer !== null) {
+      w.clearInterval(restiaProgressPollTimer);
+      restiaProgressPollTimer = null;
+    }
+    restiaProgressPollUrl = '';
+  }
+
+  function readRestiaProgress(url) {
+    const reqUrl = String(url || '').trim();
+    if (reqUrl === '') {
+      return Promise.resolve(null);
+    }
+    return fetch(reqUrl, {
+      method: 'GET',
+      cache: 'no-store',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    }).then((res) => {
+      if (!res.ok) {
+        throw new Error('HTTP ' + res.status);
+      }
+      return res.json();
+    }).catch(() => null);
+  }
+
   CB_AJAX.setDashboardLoading = function setDashboardLoadingPublic(on) {
     setDashboardLoading(!!on);
+  };
+
+  CB_AJAX.setLoaderStepText = function setLoaderStepTextPublic(done, total, saved) {
+    setLoaderStepText(done, total, saved);
+  };
+
+  CB_AJAX.stopRestiaProgressPolling = function stopRestiaProgressPollingPublic() {
+    stopRestiaProgressPolling();
+  };
+
+  CB_AJAX.startRestiaProgressPolling = function startRestiaProgressPollingPublic(url, initialSaved, initialDone, initialTotal) {
+    const reqUrl = String(url || '').trim();
+    if (reqUrl === '') {
+      stopRestiaProgressPolling();
+      return;
+    }
+    stopRestiaProgressPolling();
+    restiaProgressPollUrl = reqUrl;
+    setLoaderStepText(initialDone, initialTotal, initialSaved);
+    const tick = function () {
+      if (restiaProgressPollUrl === '') {
+        return;
+      }
+      readRestiaProgress(restiaProgressPollUrl).then((data) => {
+        if (!data || typeof data !== 'object') {
+          return;
+        }
+        if (Object.prototype.hasOwnProperty.call(data, 'saved_step')) {
+          const requested = parseInt(String(data.requested_days || 0), 10) || 0;
+          const remaining = parseInt(String(data.remaining_days || 0), 10) || 0;
+          const done = Math.max(0, requested - remaining);
+          setLoaderStepText(done, requested, data.saved_step);
+        }
+        if (parseInt(String(data.active || 0), 10) === 0) {
+          stopRestiaProgressPolling();
+        }
+      });
+    };
+    tick();
+    restiaProgressPollTimer = w.setInterval(tick, 3000);
   };
 
   CB_AJAX.runAfterDashboardLoading = function runAfterDashboardLoading(action, minVisibleMs) {
