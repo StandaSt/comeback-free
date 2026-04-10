@@ -432,7 +432,7 @@ if (($scopes[$scope]['allow_wipe'] ?? false) === true && !isset($_SESSION['cb_pr
     $_SESSION['cb_prehled_db_kod'][$scope] = cb_prehled_db_random_code();
 }
 
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && (string)($_POST['db_action'] ?? '') === 'wipe') {
+if (isset($_POST['db_action']) && (string)($_POST['db_action'] ?? '') === 'wipe') {
     try {
         $confirm = trim((string)($_POST['db_confirm'] ?? ''));
         $expected = (string)($_SESSION['cb_prehled_db_kod'][$scope] ?? '');

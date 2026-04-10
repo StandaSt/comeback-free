@@ -1,314 +1,95 @@
 -----
-START: 10.04.2026 01:57:29
+START: 10.04.2026 12:57:05
 SCRIPT: plnime_restia_objednavky.php
+BRANCH: id_pob=1 | nazev=Malešice
 START_BASE: 02.11.2023
 LAST_OK_DAY: neni
 RESUME_FROM: 02.11.2023
-REQUESTED_DAYS: 10
+REQUESTED_DAYS: 5
 LIMIT: 100
-STEP_DAYS: 10
+STEP_DAYS: 5
 PAUSE_MS: 500
-FATAL_STEP: datum=2023-11-02 | id_pob=1 | msg=Restia chyba HTTP=0 body=
-1 / 02.11.2023 / 0 / 8 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2023-11-03 | id_pob=1 | msg=Restia chyba HTTP=0 body=
-2 / 03.11.2023 / 0 / 6 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2023-11-04 | id_pob=1 | msg=Restia chyba HTTP=0 body=
-3 / 04.11.2023 / 0 / 6 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2023-11-05 | id_pob=1 | msg=Restia chyba HTTP=0 body=
-4 / 05.11.2023 / 0 / 6 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2023-11-06 | id_pob=1 | msg=Restia chyba HTTP=0 body=
-5 / 06.11.2023 / 0 / 5 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2023-11-07 | id_pob=1 | msg=Restia chyba HTTP=0 body=
-6 / 07.11.2023 / 0 / 5 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2023-11-08 | id_pob=1 | msg=Restia chyba HTTP=0 body=
-7 / 08.11.2023 / 0 / 6 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2023-11-09 | id_pob=1 | msg=Restia chyba HTTP=0 body=
-8 / 09.11.2023 / 0 / 5 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2023-11-10 | id_pob=1 | msg=Restia chyba HTTP=0 body=
-9 / 10.11.2023 / 0 / 5 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2023-11-11 | id_pob=1 | msg=Restia chyba HTTP=0 body=
-10 / 11.11.2023 / 0 / 5 ms / 0 min 0 sec / ERR
-KONEC CYKLU: 10.04.2026 01:57:29
------
-START: 10.04.2026 02:03:21
-SCRIPT: plnime_restia_objednavky.php
-START_BASE: 19.08.2025
-LAST_OK_DAY: neni
-RESUME_FROM: 19.08.2025
-REQUESTED_DAYS: 10
-LIMIT: 100
-STEP_DAYS: 10
-PAUSE_MS: 500
-FATAL_STEP: datum=2025-08-19 | id_pob=6 | msg=Restia chyba HTTP=0 body=
-1 / 19.08.2025 / 0 / 9 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2025-08-20 | id_pob=6 | msg=Restia chyba HTTP=0 body=
-2 / 20.08.2025 / 0 / 8 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2025-08-21 | id_pob=6 | msg=Restia chyba HTTP=0 body=
-3 / 21.08.2025 / 0 / 4 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2025-08-22 | id_pob=6 | msg=Restia chyba HTTP=0 body=
-4 / 22.08.2025 / 0 / 4 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2025-08-23 | id_pob=6 | msg=Restia chyba HTTP=0 body=
-5 / 23.08.2025 / 0 / 5 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2025-08-24 | id_pob=6 | msg=Restia chyba HTTP=0 body=
-6 / 24.08.2025 / 0 / 4 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2025-08-25 | id_pob=6 | msg=Restia chyba HTTP=0 body=
-7 / 25.08.2025 / 0 / 4 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2025-08-26 | id_pob=6 | msg=Restia chyba HTTP=0 body=
-8 / 26.08.2025 / 0 / 5 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2025-08-27 | id_pob=6 | msg=Restia chyba HTTP=0 body=
-9 / 27.08.2025 / 0 / 4 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2025-08-28 | id_pob=6 | msg=Restia chyba HTTP=0 body=
-10 / 28.08.2025 / 0 / 4 ms / 0 min 0 sec / ERR
-KONEC CYKLU: 10.04.2026 02:03:21
-NOVY CYKLUS: 10 dni
-FATAL_STEP: datum=2024-04-01 | id_pob=4 | msg=Restia chyba HTTP=0 body=
-11 / 01.04.2024 / 0 / 8 ms / 0 min 25 sec / ERR
-FATAL_STEP: datum=2024-04-02 | id_pob=4 | msg=Restia chyba HTTP=0 body=
-12 / 02.04.2024 / 0 / 6 ms / 0 min 25 sec / ERR
-FATAL_STEP: datum=2024-04-03 | id_pob=4 | msg=Restia chyba HTTP=0 body=
-13 / 03.04.2024 / 0 / 4 ms / 0 min 25 sec / ERR
-FATAL_STEP: datum=2024-04-04 | id_pob=4 | msg=Restia chyba HTTP=0 body=
-14 / 04.04.2024 / 0 / 6 ms / 0 min 25 sec / ERR
-FATAL_STEP: datum=2024-04-05 | id_pob=4 | msg=Restia chyba HTTP=0 body=
-15 / 05.04.2024 / 0 / 6 ms / 0 min 25 sec / ERR
-FATAL_STEP: datum=2024-04-06 | id_pob=4 | msg=Restia chyba HTTP=0 body=
-16 / 06.04.2024 / 0 / 5 ms / 0 min 25 sec / ERR
-FATAL_STEP: datum=2024-04-07 | id_pob=4 | msg=Restia chyba HTTP=0 body=
-17 / 07.04.2024 / 0 / 10 ms / 0 min 25 sec / ERR
-FATAL_STEP: datum=2024-04-08 | id_pob=4 | msg=Restia chyba HTTP=0 body=
-18 / 08.04.2024 / 0 / 5 ms / 0 min 25 sec / ERR
-FATAL_STEP: datum=2024-04-09 | id_pob=4 | msg=Restia chyba HTTP=0 body=
-19 / 09.04.2024 / 0 / 4 ms / 0 min 25 sec / ERR
-FATAL_STEP: datum=2024-04-10 | id_pob=4 | msg=Restia chyba HTTP=0 body=
-20 / 10.04.2024 / 0 / 5 ms / 0 min 25 sec / ERR
-KONEC CYKLU: 10.04.2026 02:03:47
-NOVY CYKLUS: 10 dni
-FATAL_STEP: datum=2024-12-13 | id_pob=5 | nazev=Libuš | msg=Restia chyba HTTP=0 body= | api=Token je expirovaný nebo na hraně expirace.
-1 / 13.12.2024 / 0 / 29 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2024-12-14 | id_pob=5 | nazev=Libuš | msg=Restia chyba HTTP=0 body= | api=Token je expirovaný nebo na hraně expirace.
-2 / 14.12.2024 / 0 / 5 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2024-12-15 | id_pob=5 | nazev=Libuš | msg=Restia chyba HTTP=0 body= | api=Token je expirovaný nebo na hraně expirace.
-3 / 15.12.2024 / 0 / 7 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2024-12-16 | id_pob=5 | nazev=Libuš | msg=Restia chyba HTTP=0 body= | api=Token je expirovaný nebo na hraně expirace.
-4 / 16.12.2024 / 0 / 5 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2024-12-17 | id_pob=5 | nazev=Libuš | msg=Restia chyba HTTP=0 body= | api=Token je expirovaný nebo na hraně expirace.
-5 / 17.12.2024 / 0 / 6 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2024-12-18 | id_pob=5 | nazev=Libuš | msg=Restia chyba HTTP=0 body= | api=Token je expirovaný nebo na hraně expirace.
-6 / 18.12.2024 / 0 / 5 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2024-12-19 | id_pob=5 | nazev=Libuš | msg=Restia chyba HTTP=0 body= | api=Token je expirovaný nebo na hraně expirace.
-7 / 19.12.2024 / 0 / 4 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2024-12-20 | id_pob=5 | nazev=Libuš | msg=Restia chyba HTTP=0 body= | api=Token je expirovaný nebo na hraně expirace.
-8 / 20.12.2024 / 0 / 4 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2024-12-21 | id_pob=5 | nazev=Libuš | msg=Restia chyba HTTP=0 body= | api=Token je expirovaný nebo na hraně expirace.
-9 / 21.12.2024 / 0 / 4 ms / 0 min 0 sec / ERR
-FATAL_STEP: datum=2024-12-22 | id_pob=5 | nazev=Libuš | msg=Restia chyba HTTP=0 body= | api=Token je expirovaný nebo na hraně expirace.
-10 / 22.12.2024 / 0 / 4 ms / 0 min 0 sec / ERR
-KONEC CYKLU: 10.04.2026 02:40:21
-NOVY CYKLUS: 20 dni
-1 / 01.07.2023 / 0 / 377 ms / 0 min 0 sec / OK
-2 / 02.07.2023 / 0 / 380 ms / 0 min 0 sec / OK
-3 / 03.07.2023 / 0 / 370 ms / 0 min 0 sec / OK
-4 / 04.07.2023 / 0 / 374 ms / 0 min 0 sec / OK
-5 / 05.07.2023 / 0 / 369 ms / 0 min 0 sec / OK
-6 / 06.07.2023 / 0 / 390 ms / 0 min 0 sec / OK
-7 / 07.07.2023 / 0 / 342 ms / 0 min 0 sec / OK
-8 / 08.07.2023 / 0 / 380 ms / 0 min 0 sec / OK
-9 / 09.07.2023 / 0 / 357 ms / 0 min 0 sec / OK
-10 / 10.07.2023 / 0 / 374 ms / 0 min 0 sec / OK
-11 / 11.07.2023 / 0 / 369 ms / 0 min 0 sec / OK
-12 / 12.07.2023 / 0 / 386 ms / 0 min 0 sec / OK
-13 / 13.07.2023 / 0 / 361 ms / 0 min 0 sec / OK
-14 / 14.07.2023 / 0 / 379 ms / 0 min 0 sec / OK
-15 / 15.07.2023 / 0 / 403 ms / 0 min 0 sec / OK
-16 / 16.07.2023 / 0 / 321 ms / 0 min 0 sec / OK
-17 / 17.07.2023 / 0 / 375 ms / 0 min 0 sec / OK
-18 / 18.07.2023 / 0 / 371 ms / 0 min 0 sec / OK
-19 / 19.07.2023 / 0 / 383 ms / 0 min 0 sec / OK
-20 / 20.07.2023 / 0 / 381 ms / 0 min 0 sec / OK
-KONEC CYKLU: 10.04.2026 03:37:11
-NOVY CYKLUS: 20 dni
-21 / 21.07.2023 / 0 / 421 ms / 0 min 0 sec / OK
-22 / 22.07.2023 / 0 / 392 ms / 0 min 0 sec / OK
-23 / 23.07.2023 / 0 / 388 ms / 0 min 0 sec / OK
-24 / 24.07.2023 / 0 / 378 ms / 0 min 0 sec / OK
-25 / 25.07.2023 / 0 / 372 ms / 0 min 0 sec / OK
-26 / 26.07.2023 / 0 / 381 ms / 0 min 0 sec / OK
-27 / 27.07.2023 / 0 / 384 ms / 0 min 0 sec / OK
-28 / 28.07.2023 / 0 / 383 ms / 0 min 0 sec / OK
-29 / 29.07.2023 / 0 / 370 ms / 0 min 0 sec / OK
-30 / 30.07.2023 / 0 / 374 ms / 0 min 0 sec / OK
-31 / 31.07.2023 / 0 / 367 ms / 0 min 0 sec / OK
-32 / 01.08.2023 / 0 / 370 ms / 0 min 0 sec / OK
-33 / 02.08.2023 / 0 / 381 ms / 0 min 0 sec / OK
-34 / 03.08.2023 / 0 / 368 ms / 0 min 0 sec / OK
-35 / 04.08.2023 / 0 / 379 ms / 0 min 0 sec / OK
-36 / 05.08.2023 / 0 / 386 ms / 0 min 0 sec / OK
-37 / 06.08.2023 / 0 / 341 ms / 0 min 0 sec / OK
-38 / 07.08.2023 / 0 / 370 ms / 0 min 0 sec / OK
-39 / 08.08.2023 / 0 / 373 ms / 0 min 0 sec / OK
-40 / 09.08.2023 / 0 / 365 ms / 0 min 0 sec / OK
-KONEC CYKLU: 10.04.2026 03:39:17
-NOVY CYKLUS: 20 dni
-1 / 19.08.2025 / 53 / 1133 ms / 0 min 0 sec / OK
-2 / 20.08.2025 / 25 / 684 ms / 0 min 0 sec / OK
-3 / 21.08.2025 / 42 / 928 ms / 0 min 0 sec / OK
-4 / 22.08.2025 / 39 / 901 ms / 0 min 0 sec / OK
-5 / 23.08.2025 / 35 / 818 ms / 0 min 0 sec / OK
-6 / 24.08.2025 / 46 / 1049 ms / 0 min 0 sec / OK
-7 / 25.08.2025 / 47 / 991 ms / 0 min 0 sec / OK
-8 / 26.08.2025 / 42 / 939 ms / 0 min 0 sec / OK
-9 / 27.08.2025 / 55 / 1118 ms / 0 min 0 sec / OK
-10 / 28.08.2025 / 71 / 1410 ms / 0 min 0 sec / OK
-11 / 29.08.2025 / 48 / 1059 ms / 0 min 0 sec / OK
-12 / 30.08.2025 / 57 / 1213 ms / 0 min 0 sec / OK
-13 / 31.08.2025 / 56 / 1201 ms / 0 min 0 sec / OK
-14 / 01.09.2025 / 46 / 1016 ms / 0 min 0 sec / OK
-15 / 02.09.2025 / 36 / 812 ms / 0 min 0 sec / OK
-16 / 03.09.2025 / 44 / 971 ms / 0 min 0 sec / OK
-17 / 04.09.2025 / 42 / 925 ms / 0 min 0 sec / OK
-18 / 05.09.2025 / 48 / 1131 ms / 0 min 0 sec / OK
-19 / 06.09.2025 / 46 / 1022 ms / 0 min 0 sec / OK
-20 / 07.09.2025 / 44 / 1022 ms / 0 min 0 sec / OK
-KONEC CYKLU: 10.04.2026 03:39:46
------
-START: 10.04.2026 03:41:54
-SCRIPT: plnime_restia_objednavky.php
-BRANCH: id_pob=6 | nazev=Bolevec
-START_BASE: 19.08.2025
-LAST_OK_DAY: neni
-RESUME_FROM: 19.08.2025
-REQUESTED_DAYS: 20
-LIMIT: 100
-STEP_DAYS: 20
-PAUSE_MS: 500
-1 / 19.08.2025 / 53 / 1926 ms / 0 min 1 sec / OK
-2 / 20.08.2025 / 25 / 712 ms / 0 min 2 sec / OK
-3 / 21.08.2025 / 42 / 913 ms / 0 min 3 sec / OK
-4 / 22.08.2025 / 39 / 898 ms / 0 min 4 sec / OK
-5 / 23.08.2025 / 35 / 823 ms / 0 min 5 sec / OK
-6 / 24.08.2025 / 46 / 1067 ms / 0 min 6 sec / OK
-7 / 25.08.2025 / 47 / 973 ms / 0 min 7 sec / OK
-8 / 26.08.2025 / 42 / 921 ms / 0 min 8 sec / OK
-9 / 27.08.2025 / 55 / 1153 ms / 0 min 9 sec / OK
-10 / 28.08.2025 / 71 / 1345 ms / 0 min 10 sec / OK
-11 / 29.08.2025 / 48 / 1034 ms / 0 min 11 sec / OK
-12 / 30.08.2025 / 57 / 1193 ms / 0 min 12 sec / OK
-13 / 31.08.2025 / 56 / 1186 ms / 0 min 14 sec / OK
-14 / 01.09.2025 / 46 / 955 ms / 0 min 15 sec / OK
-15 / 02.09.2025 / 36 / 792 ms / 0 min 15 sec / OK
-16 / 03.09.2025 / 44 / 912 ms / 0 min 16 sec / OK
-17 / 04.09.2025 / 42 / 851 ms / 0 min 17 sec / OK
-18 / 05.09.2025 / 48 / 1063 ms / 0 min 18 sec / OK
-19 / 06.09.2025 / 46 / 977 ms / 0 min 19 sec / OK
-20 / 07.09.2025 / 44 / 1072 ms / 0 min 20 sec / OK
-KONEC CYKLU: 10.04.2026 03:42:15
-NOVY CYKLUS: 20 dni
-1 / 13.12.2024 / 85 / 1761 ms / 0 min 0 sec / OK
-2 / 14.12.2024 / 126 / 4623 ms / 0 min 0 sec / OK
-3 / 15.12.2024 / 98 / 5971 ms / 0 min 0 sec / OK
-4 / 16.12.2024 / 53 / 1299 ms / 0 min 0 sec / OK
-5 / 17.12.2024 / 75 / 1679 ms / 0 min 0 sec / OK
-6 / 18.12.2024 / 77 / 1768 ms / 0 min 0 sec / OK
-7 / 19.12.2024 / 50 / 1306 ms / 0 min 0 sec / OK
-8 / 20.12.2024 / 76 / 1654 ms / 0 min 0 sec / OK
-9 / 21.12.2024 / 86 / 1863 ms / 0 min 0 sec / OK
-10 / 22.12.2024 / 73 / 1930 ms / 0 min 0 sec / OK
-11 / 23.12.2024 / 0 / 380 ms / 0 min 0 sec / OK
-12 / 24.12.2024 / 2 / 391 ms / 0 min 0 sec / OK
-13 / 25.12.2024 / 0 / 359 ms / 0 min 0 sec / OK
-14 / 26.12.2024 / 120 / 2859 ms / 0 min 0 sec / OK
-15 / 27.12.2024 / 69 / 1689 ms / 0 min 0 sec / OK
-16 / 28.12.2024 / 78 / 1755 ms / 0 min 0 sec / OK
-17 / 29.12.2024 / 86 / 1912 ms / 0 min 0 sec / OK
-18 / 30.12.2024 / 69 / 1724 ms / 0 min 0 sec / OK
-19 / 31.12.2024 / 69 / 1694 ms / 0 min 0 sec / OK
-20 / 01.01.2025 / 114 / 2942 ms / 0 min 0 sec / OK
-KONEC CYKLU: 10.04.2026 03:43:09
-NOVY CYKLUS: 20 dni
-1 / 01.04.2024 / 55 / 1461 ms / 0 min 0 sec / OK
-2 / 02.04.2024 / 28 / 941 ms / 0 min 0 sec / OK
-3 / 03.04.2024 / 27 / 947 ms / 0 min 0 sec / OK
-4 / 04.04.2024 / 35 / 1079 ms / 0 min 0 sec / OK
-5 / 05.04.2024 / 48 / 1387 ms / 0 min 0 sec / OK
-6 / 06.04.2024 / 42 / 1192 ms / 0 min 0 sec / OK
-7 / 07.04.2024 / 37 / 1254 ms / 0 min 0 sec / OK
-8 / 08.04.2024 / 31 / 1038 ms / 0 min 0 sec / OK
-9 / 09.04.2024 / 38 / 936 ms / 0 min 0 sec / OK
-10 / 10.04.2024 / 38 / 1033 ms / 0 min 0 sec / OK
-11 / 11.04.2024 / 27 / 951 ms / 0 min 0 sec / OK
-12 / 12.04.2024 / 36 / 980 ms / 0 min 0 sec / OK
-13 / 13.04.2024 / 50 / 1103 ms / 0 min 0 sec / OK
-14 / 14.04.2024 / 42 / 1087 ms / 0 min 0 sec / OK
-15 / 15.04.2024 / 30 / 829 ms / 0 min 0 sec / OK
-16 / 16.04.2024 / 35 / 965 ms / 0 min 0 sec / OK
-17 / 17.04.2024 / 39 / 1027 ms / 0 min 0 sec / OK
-18 / 18.04.2024 / 37 / 1098 ms / 0 min 0 sec / OK
-19 / 19.04.2024 / 34 / 962 ms / 0 min 0 sec / OK
-20 / 20.04.2024 / 63 / 1224 ms / 0 min 0 sec / OK
-KONEC CYKLU: 10.04.2026 03:43:41
-NOVY CYKLUS: 20 dni
-1 / 01.07.2023 / 2 / 426 ms / 0 min 0 sec / OK
-2 / 02.07.2023 / 0 / 359 ms / 0 min 0 sec / OK
-3 / 03.07.2023 / 20 / 749 ms / 0 min 0 sec / OK
-4 / 04.07.2023 / 33 / 998 ms / 0 min 0 sec / OK
-5 / 05.07.2023 / 45 / 1296 ms / 0 min 0 sec / OK
-6 / 06.07.2023 / 40 / 1154 ms / 0 min 0 sec / OK
-7 / 07.07.2023 / 30 / 895 ms / 0 min 0 sec / OK
-8 / 08.07.2023 / 33 / 916 ms / 0 min 0 sec / OK
-9 / 09.07.2023 / 39 / 1010 ms / 0 min 0 sec / OK
-10 / 10.07.2023 / 32 / 880 ms / 0 min 0 sec / OK
-11 / 11.07.2023 / 25 / 767 ms / 0 min 0 sec / OK
-12 / 12.07.2023 / 33 / 919 ms / 0 min 0 sec / OK
-13 / 13.07.2023 / 27 / 782 ms / 0 min 0 sec / OK
-14 / 14.07.2023 / 36 / 938 ms / 0 min 0 sec / OK
-15 / 15.07.2023 / 41 / 1021 ms / 0 min 0 sec / OK
-16 / 16.07.2023 / 42 / 1054 ms / 0 min 0 sec / OK
-17 / 17.07.2023 / 35 / 979 ms / 0 min 0 sec / OK
-18 / 18.07.2023 / 39 / 1016 ms / 0 min 0 sec / OK
-19 / 19.07.2023 / 28 / 796 ms / 0 min 0 sec / OK
-20 / 20.07.2023 / 49 / 1141 ms / 0 min 0 sec / OK
-KONEC CYKLU: 10.04.2026 03:44:09
-NOVY CYKLUS: 20 dni
-1 / 21.11.2023 / 35 / 947 ms / 0 min 0 sec / OK
-2 / 22.11.2023 / 38 / 1048 ms / 0 min 0 sec / OK
-3 / 23.11.2023 / 45 / 1186 ms / 0 min 0 sec / OK
-4 / 24.11.2023 / 72 / 1716 ms / 0 min 0 sec / OK
-5 / 25.11.2023 / 67 / 1555 ms / 0 min 0 sec / OK
-6 / 26.11.2023 / 51 / 1288 ms / 0 min 0 sec / OK
-7 / 27.11.2023 / 104 / 2443 ms / 0 min 0 sec / OK
-8 / 28.11.2023 / 133 / 2971 ms / 0 min 0 sec / OK
-9 / 29.11.2023 / 118 / 2919 ms / 0 min 0 sec / OK
-10 / 30.11.2023 / 138 / 2765 ms / 0 min 0 sec / OK
-11 / 01.12.2023 / 179 / 3436 ms / 0 min 0 sec / OK
-12 / 02.12.2023 / 176 / 3655 ms / 0 min 0 sec / OK
-13 / 03.12.2023 / 149 / 2965 ms / 0 min 0 sec / OK
-14 / 04.12.2023 / 98 / 2088 ms / 0 min 0 sec / OK
-15 / 05.12.2023 / 131 / 2925 ms / 0 min 0 sec / OK
-16 / 06.12.2023 / 131 / 3070 ms / 0 min 0 sec / OK
-17 / 07.12.2023 / 132 / 2898 ms / 0 min 0 sec / OK
-18 / 08.12.2023 / 195 / 4157 ms / 0 min 0 sec / OK
-19 / 09.12.2023 / 238 / 5550 ms / 0 min 0 sec / OK
-20 / 10.12.2023 / 180 / 3827 ms / 0 min 0 sec / OK
-KONEC CYKLU: 10.04.2026 03:45:30
-NOVY CYKLUS: 20 dni
-1 / 02.11.2023 / 32 / 1021 ms / 0 min 0 sec / OK
-2 / 03.11.2023 / 57 / 1471 ms / 0 min 0 sec / OK
-3 / 04.11.2023 / 53 / 1460 ms / 0 min 0 sec / OK
-4 / 05.11.2023 / 48 / 1283 ms / 0 min 0 sec / OK
-5 / 06.11.2023 / 82 / 1902 ms / 0 min 0 sec / OK
-6 / 07.11.2023 / 99 / 2247 ms / 0 min 0 sec / OK
-7 / 08.11.2023 / 88 / 2092 ms / 0 min 0 sec / OK
-8 / 09.11.2023 / 125 / 3019 ms / 0 min 0 sec / OK
-9 / 10.11.2023 / 136 / 3351 ms / 0 min 0 sec / OK
-10 / 11.11.2023 / 149 / 3499 ms / 0 min 0 sec / OK
-11 / 12.11.2023 / 166 / 4764 ms / 0 min 0 sec / OK
-12 / 13.11.2023 / 107 / 2823 ms / 0 min 0 sec / OK
-13 / 14.11.2023 / 112 / 2913 ms / 0 min 0 sec / OK
-14 / 15.11.2023 / 117 / 2942 ms / 0 min 0 sec / OK
-15 / 16.11.2023 / 146 / 3637 ms / 0 min 0 sec / OK
-16 / 17.11.2023 / 166 / 4043 ms / 0 min 0 sec / OK
-17 / 18.11.2023 / 146 / 3558 ms / 0 min 0 sec / OK
-18 / 19.11.2023 / 172 / 3846 ms / 0 min 0 sec / OK
-19 / 20.11.2023 / 87 / 2174 ms / 0 min 0 sec / OK
-20 / 21.11.2023 / 99 / 2289 ms / 0 min 0 sec / OK
-KONEC CYKLU: 10.04.2026 03:47:30
+1 / 02.11.2023 / 32 - 32 / 0 min 0 sec / OK
+2 / 03.11.2023 / 57 - 89 / 0 min 2 sec / OK
+3 / 04.11.2023 / 53 - 142 / 0 min 3 sec / OK
+4 / 05.11.2023 / 48 - 190 / 0 min 5 sec / OK
+5 / 06.11.2023 / 82 - 272 / 0 min 6 sec / OK
+KONEC CYKLU: 10.04.2026 12:57:12
+NOVY CYKLUS: 5 dni
+1 / 07.11.2023 / 99 - 371 / 0 min 1 sec / OK
+2 / 08.11.2023 / 88 - 459 / 0 min 3 sec / OK
+3 / 09.11.2023 / 125 - 584 / 0 min 6 sec / OK
+4 / 10.11.2023 / 136 - 720 / 0 min 8 sec / OK
+5 / 11.11.2023 / 149 - 869 / 0 min 12 sec / OK
+KONEC CYKLU: 10.04.2026 12:57:44
+NOVY CYKLUS: 30 dni
+1 / 12.11.2023 / 166 - 1035 / 0 min 3 sec / OK
+2 / 13.11.2023 / 107 - 1142 / 0 min 6 sec / OK
+3 / 14.11.2023 / 112 - 1254 / 0 min 8 sec / OK
+4 / 15.11.2023 / 117 - 1371 / 0 min 11 sec / OK
+5 / 16.11.2023 / 146 - 1517 / 0 min 14 sec / OK
+6 / 17.11.2023 / 166 - 1683 / 0 min 17 sec / OK
+7 / 18.11.2023 / 146 - 1829 / 0 min 21 sec / OK
+8 / 19.11.2023 / 172 - 2001 / 0 min 24 sec / OK
+9 / 20.11.2023 / 87 - 2088 / 0 min 26 sec / OK
+10 / 21.11.2023 / 99 - 2187 / 0 min 30 sec / OK
+11 / 22.11.2023 / 121 - 2308 / 0 min 34 sec / OK
+12 / 23.11.2023 / 122 - 2430 / 0 min 39 sec / OK
+13 / 24.11.2023 / 133 - 2563 / 0 min 43 sec / OK
+14 / 25.11.2023 / 180 - 2743 / 0 min 46 sec / OK
+15 / 26.11.2023 / 152 - 2895 / 0 min 49 sec / OK
+16 / 27.11.2023 / 105 - 3000 / 0 min 52 sec / OK
+17 / 28.11.2023 / 140 - 3140 / 0 min 55 sec / OK
+18 / 29.11.2023 / 130 - 3270 / 1 min 3 sec / OK
+19 / 30.11.2023 / 131 - 3401 / 1 min 8 sec / OK
+20 / 01.12.2023 / 130 - 3531 / 1 min 12 sec / OK
+21 / 02.12.2023 / 158 - 3689 / 1 min 15 sec / OK
+22 / 03.12.2023 / 157 - 3846 / 1 min 18 sec / OK
+23 / 04.12.2023 / 94 - 3940 / 1 min 20 sec / OK
+24 / 05.12.2023 / 102 - 4042 / 1 min 23 sec / OK
+25 / 06.12.2023 / 134 - 4176 / 1 min 26 sec / OK
+26 / 07.12.2023 / 138 - 4314 / 1 min 29 sec / OK
+27 / 08.12.2023 / 164 - 4478 / 1 min 32 sec / OK
+28 / 09.12.2023 / 178 - 4656 / 1 min 36 sec / OK
+29 / 10.12.2023 / 221 - 4877 / 1 min 40 sec / OK
+30 / 11.12.2023 / 106 - 4983 / 1 min 43 sec / OK
+KONEC CYKLU: 10.04.2026 12:59:49
+NOVY CYKLUS: 30 dni
+1 / 12.12.2023 / 106 - 5089 / 0 min 2 sec / OK
+2 / 13.12.2023 / 144 - 5233 / 0 min 6 sec / OK
+3 / 14.12.2023 / 117 - 5350 / 0 min 8 sec / OK
+4 / 15.12.2023 / 177 - 5527 / 0 min 12 sec / OK
+5 / 16.12.2023 / 175 - 5702 / 0 min 16 sec / OK
+6 / 17.12.2023 / 179 - 5881 / 0 min 20 sec / OK
+7 / 18.12.2023 / 99 - 5980 / 0 min 22 sec / OK
+8 / 19.12.2023 / 119 - 6099 / 0 min 27 sec / OK
+9 / 20.12.2023 / 106 - 6205 / 0 min 29 sec / OK
+10 / 21.12.2023 / 136 - 6341 / 0 min 33 sec / OK
+11 / 22.12.2023 / 117 - 6458 / 0 min 36 sec / OK
+12 / 23.12.2023 / 17 - 6475 / 0 min 36 sec / OK
+13 / 24.12.2023 / 0 - 6475 / 0 min 37 sec / OK
+14 / 25.12.2023 / 0 - 6475 / 0 min 37 sec / OK
+15 / 26.12.2023 / 128 - 6603 / 0 min 40 sec / OK
+16 / 27.12.2023 / 120 - 6723 / 0 min 44 sec / OK
+17 / 28.12.2023 / 143 - 6866 / 0 min 47 sec / OK
+18 / 29.12.2023 / 143 - 7009 / 0 min 51 sec / OK
+19 / 30.12.2023 / 116 - 7125 / 0 min 54 sec / OK
+20 / 31.12.2023 / 134 - 7259 / 0 min 57 sec / OK
+21 / 01.01.2024 / 173 - 7432 / 1 min 1 sec / OK
+22 / 02.01.2024 / 100 - 7532 / 1 min 3 sec / OK
+23 / 03.01.2024 / 109 - 7641 / 1 min 6 sec / OK
+24 / 04.01.2024 / 126 - 7767 / 1 min 9 sec / OK
+25 / 05.01.2024 / 140 - 7907 / 1 min 12 sec / OK
+26 / 06.01.2024 / 162 - 8069 / 1 min 15 sec / OK
+27 / 07.01.2024 / 138 - 8207 / 1 min 18 sec / OK
+28 / 08.01.2024 / 114 - 8321 / 1 min 21 sec / OK
+29 / 09.01.2024 / 122 - 8443 / 1 min 24 sec / OK
+30 / 10.01.2024 / 131 - 8574 / 1 min 27 sec / OK
+KONEC CYKLU: 10.04.2026 13:03:17
+NOVY CYKLUS: 5 dni
+1 / 21.11.2023 / 35 - 35 / 0 min 0 sec / OK
+2 / 22.11.2023 / 38 - 73 / 0 min 1 sec / OK
+3 / 23.11.2023 / 45 - 118 / 0 min 2 sec / OK
+4 / 24.11.2023 / 72 - 190 / 0 min 4 sec / OK
+5 / 25.11.2023 / 67 - 257 / 0 min 5 sec / OK
+KONEC CYKLU: 10.04.2026 13:07:49

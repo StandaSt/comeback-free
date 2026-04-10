@@ -14,7 +14,6 @@ require_once __DIR__ . '/../lib/restia_client.php';
 require_once __DIR__ . '/../db/db_api_restia.php';
 
 const CB_RESTIA_HIST_LIMIT = 100;
-const CB_RESTIA_HIST_START_DATE = '2023-07-01';
 const CB_RESTIA_HIST_STEP_DAYS = 20;
 const CB_RESTIA_HIST_PAUSE_MS = 500;
 
@@ -22,6 +21,7 @@ $cbRestiaEmbedMode = (basename((string)($_SERVER['SCRIPT_NAME'] ?? '')) === 'ind
 $cbStateKey = 'cb_restia_hist_v4_state';
 $cbRowsKey = 'cb_restia_hist_v4_rows';
 $cbMsgKey = 'cb_restia_hist_v4_msg';
+$cbRestiaHistLogBranchId = 0;
 
 if (!function_exists('cb_restia_hist_h')) {
     function cb_restia_hist_h(string $value): string
@@ -31,18 +31,36 @@ if (!function_exists('cb_restia_hist_h')) {
 }
 
 if (!function_exists('cb_restia_hist_txt_path')) {
-    function cb_restia_hist_txt_path(): string
+    function cb_restia_hist_txt_path(?int $idPob = null): string
     {
-        return __DIR__ . '/' . pathinfo(__FILE__, PATHINFO_FILENAME) . '.txt';
+        global $cbRestiaHistLogBranchId;
+
+        $branchId = ($idPob !== null) ? $idPob : (int)$cbRestiaHistLogBranchId;
+        $branchId = max(0, $branchId);
+
+        return __DIR__ . '/../log/' . pathinfo(__FILE__, PATHINFO_FILENAME) . '_' . $branchId . '.txt';
+    }
+}
+
+if (!function_exists('cb_restia_hist_set_log_branch_id')) {
+    function cb_restia_hist_set_log_branch_id(int $idPob): void
+    {
+        global $cbRestiaHistLogBranchId;
+
+        $cbRestiaHistLogBranchId = max(0, $idPob);
     }
 }
 
 if (!function_exists('cb_restia_hist_log_init')) {
-    function cb_restia_hist_log_init(): void
+    function cb_restia_hist_log_init(array $initialLines = []): void
     {
         $path = cb_restia_hist_txt_path();
         if (!is_file($path)) {
             @file_put_contents($path, '', FILE_APPEND | LOCK_EX);
+        }
+        if ($initialLines !== []) {
+            $content = implode("\n", array_map(static fn (string $line): string => rtrim($line, "\r\n"), $initialLines)) . "\n";
+            @file_put_contents($path, $content, FILE_APPEND | LOCK_EX);
         }
     }
 }
@@ -78,21 +96,11 @@ if (!function_exists('cb_restia_hist_error_log')) {
     }
 }
 
-if (!function_exists('cb_restia_hist_status_path')) {
-    function cb_restia_hist_status_path(): string
-    {
-        return __DIR__ . '/' . pathinfo(__FILE__, PATHINFO_FILENAME) . '_status.json';
-    }
-}
-
 if (!function_exists('cb_restia_hist_status_write')) {
     function cb_restia_hist_status_write(array $payload): void
     {
-        $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR);
-        if (!is_string($json) || $json === '') {
-            $json = '{"ok":false}';
-        }
-        @file_put_contents(cb_restia_hist_status_path(), $json, LOCK_EX);
+        // Loader progress byl odstraněn z UI, proto už se tu nic neukládá.
+        return;
     }
 }
 
@@ -151,7 +159,7 @@ if (!function_exists('cb_restia_hist_format_date_input_cs')) {
     {
         $dt = DateTimeImmutable::createFromFormat('Y-m-d', $date, new DateTimeZone('Europe/Prague'));
         if (!($dt instanceof DateTimeImmutable)) {
-            return '1.7.2023';
+            return '';
         }
         return $dt->format('j.n.Y');
     }
@@ -162,7 +170,7 @@ if (!function_exists('cb_restia_hist_parse_start_date')) {
     {
         $raw = trim($raw);
         if ($raw === '') {
-            return CB_RESTIA_HIST_START_DATE;
+            return '';
         }
 
         if (preg_match('/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/', $raw, $m) === 1) {
@@ -172,7 +180,7 @@ if (!function_exists('cb_restia_hist_parse_start_date')) {
             if (checkdate($mo, $d, $y)) {
                 return sprintf('%04d-%02d-%02d', $y, $mo, $d);
             }
-            return CB_RESTIA_HIST_START_DATE;
+            return '';
         }
 
         if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $raw, $m) === 1) {
@@ -184,7 +192,7 @@ if (!function_exists('cb_restia_hist_parse_start_date')) {
             }
         }
 
-        return CB_RESTIA_HIST_START_DATE;
+        return '';
     }
 }
 
@@ -415,7 +423,7 @@ if (!function_exists('cb_restia_hist_pick_default_branch')) {
 if (!function_exists('cb_restia_hist_branch_start_date')) {
     function cb_restia_hist_branch_start_date(array $branch): string
     {
-        return cb_restia_hist_normalize_ymd((string)($branch['prvni_obj'] ?? ''), CB_RESTIA_HIST_START_DATE);
+        return cb_restia_hist_normalize_ymd((string)($branch['prvni_obj'] ?? ''), '');
     }
 }
 
@@ -423,13 +431,11 @@ if (!function_exists('cb_restia_hist_last_ok_date')) {
     function cb_restia_hist_last_ok_date(mysqli $conn, int $idPob): string
     {
         $stmt = $conn->prepare('
-            SELECT poznamka
+            SELECT datum_do
             FROM obj_import
-            WHERE typ_importu = "historie"
-              AND id_pob = ?
-              AND stav = "ok"
-            ORDER BY id_import DESC
-            LIMIT 100
+            WHERE id_pob = ?
+            ORDER BY datum_do DESC, id_import DESC
+            LIMIT 1
         ');
         if ($stmt === false) {
             return '';
@@ -442,9 +448,9 @@ if (!function_exists('cb_restia_hist_last_ok_date')) {
         $lastDate = '';
         if ($res instanceof mysqli_result) {
             while ($row = $res->fetch_assoc()) {
-                $poznamka = (string)($row['poznamka'] ?? '');
-                if (preg_match('/den=(\d{4}-\d{2}-\d{2})/', $poznamka, $m) === 1) {
-                    $lastDate = (string)$m[1];
+                $datumDo = trim((string)($row['datum_do'] ?? ''));
+                if ($datumDo !== '') {
+                    $lastDate = $datumDo;
                     break;
                 }
             }
@@ -465,13 +471,11 @@ if (!function_exists('cb_restia_hist_resume_info')) {
         $nextDate = $startDate;
 
         if ($lastOkDate !== '') {
-            $nextDate = $startDate;
             try {
-                $nextDate = cb_restia_hist_next_date($lastOkDate);
+                $lastOkDay = substr($lastOkDate, 0, 10);
+                $startDate = cb_restia_hist_normalize_ymd($lastOkDay, $startDate);
+                $nextDate = cb_restia_hist_next_date($lastOkDay);
             } catch (Throwable $e) {
-                $nextDate = $startDate;
-            }
-            if ($nextDate < $startDate) {
                 $nextDate = $startDate;
             }
         }
@@ -481,6 +485,37 @@ if (!function_exists('cb_restia_hist_resume_info')) {
             'last_ok_date' => $lastOkDate,
             'next_date' => $nextDate,
         ];
+    }
+}
+
+if (!function_exists('cb_restia_hist_branch_db_count')) {
+    function cb_restia_hist_branch_db_count(mysqli $conn, int $idPob): int
+    {
+        if ($idPob <= 0) {
+            return 0;
+        }
+
+        $stmt = $conn->prepare('
+            SELECT COUNT(*) AS cnt
+            FROM objednavky_restia
+            WHERE id_pob = ?
+        ');
+        if ($stmt === false) {
+            throw new RuntimeException('DB prepare selhal: objednavky_restia count.');
+        }
+
+        $stmt->bind_param('i', $idPob);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $count = 0;
+        if ($res instanceof mysqli_result) {
+            $row = $res->fetch_assoc();
+            $count = (int)($row['cnt'] ?? 0);
+            $res->free();
+        }
+        $stmt->close();
+
+        return $count;
     }
 }
 
@@ -568,7 +603,7 @@ if (!function_exists('cb_restia_hist_resume_date')) {
     {
         $info = cb_restia_hist_resume_info($conn, $branch);
         try {
-            return cb_restia_hist_normalize_ymd((string)($info['next_date'] ?? ''), CB_RESTIA_HIST_START_DATE);
+            return cb_restia_hist_normalize_ymd((string)($info['next_date'] ?? ''), '');
         } catch (Throwable $e) {
             return cb_restia_hist_branch_start_date($branch);
         }
@@ -1369,8 +1404,8 @@ if (!function_exists('cb_restia_hist_default_state')) {
     function cb_restia_hist_default_state(): array
     {
         return [
-            'next_date' => CB_RESTIA_HIST_START_DATE,
-            'start_date' => CB_RESTIA_HIST_START_DATE,
+            'next_date' => '',
+            'start_date' => '',
             'last_ok_date' => '',
             'remaining_days' => 0,
             'days_total' => 0,
@@ -1380,7 +1415,9 @@ if (!function_exists('cb_restia_hist_default_state')) {
             'auto_next' => 0,
             'branch_name' => '',
             'branch_id' => 0,
+            'branch_db_count' => 0,
             'run_started_at_ms' => 0,
+            'run_total_ms' => 0,
             'run_row_no' => 0,
             'found_total' => 0,
             'saved_step' => 0,
@@ -1533,6 +1570,7 @@ if ($action === 'select_branch') {
         try {
             $branchSel = cb_restia_hist_get_branch_by_id($conn, $inputBranchId);
             $resumeSel = cb_restia_hist_resume_info($conn, $branchSel);
+            cb_restia_hist_set_log_branch_id((int)$branchSel['id_pob']);
             $state['branch_id'] = (int)$branchSel['id_pob'];
             $state['branch_name'] = (string)$branchSel['nazev'];
             $state['start_date'] = (string)$resumeSel['start_date'];
@@ -1542,6 +1580,7 @@ if ($action === 'select_branch') {
             $state['auto_next'] = 0;
             $state['finished'] = 0;
             $state['run_started_at_ms'] = 0;
+            $state['run_total_ms'] = 0;
             $state['run_row_no'] = 0;
             $message = '';
         } catch (Throwable $e) {
@@ -1563,6 +1602,7 @@ if ($action === 'start' && $auth !== null) {
     } else {
         $branch = cb_restia_hist_pick_default_branch($conn);
     }
+    cb_restia_hist_set_log_branch_id((int)$branch['id_pob']);
     $resumeInfo = cb_restia_hist_resume_info($conn, $branch);
     $resumeDate = (string)$resumeInfo['next_date'];
     $today = cb_restia_hist_today();
@@ -1582,23 +1622,25 @@ if ($action === 'start' && $auth !== null) {
     $state['found_total'] = 0;
     $state['saved_step'] = 0;
     $state['saved_total'] = 0;
+    $state['run_total_ms'] = 0;
     $rows = [];
     $message = '';
-
-    cb_restia_hist_log_init();
-    cb_restia_hist_error_log_init();
     $branchLabel = cb_restia_hist_branch_label($branch);
-    cb_restia_hist_log('-----');
-    cb_restia_hist_log('START: ' . cb_restia_hist_format_datetime_cs(cb_restia_hist_now()));
-    cb_restia_hist_log('SCRIPT: ' . basename(__FILE__));
-    cb_restia_hist_log('BRANCH: ' . $branchLabel);
-    cb_restia_hist_log('START_BASE: ' . cb_restia_hist_format_date_cs((string)$resumeInfo['start_date']));
-    cb_restia_hist_log('LAST_OK_DAY: ' . ($resumeInfo['last_ok_date'] !== '' ? cb_restia_hist_format_date_cs((string)$resumeInfo['last_ok_date']) : 'neni'));
-    cb_restia_hist_log('RESUME_FROM: ' . cb_restia_hist_format_date_cs($resumeDate));
-    cb_restia_hist_log('REQUESTED_DAYS: ' . (string)$inputDays);
-    cb_restia_hist_log('LIMIT: ' . (string)CB_RESTIA_HIST_LIMIT);
-    cb_restia_hist_log('STEP_DAYS: ' . (string)$inputDays);
-    cb_restia_hist_log('PAUSE_MS: ' . (string)CB_RESTIA_HIST_PAUSE_MS);
+
+    cb_restia_hist_log_init([
+        '-----',
+        'START: ' . cb_restia_hist_format_datetime_cs(cb_restia_hist_now()),
+        'SCRIPT: ' . basename(__FILE__),
+        'BRANCH: ' . $branchLabel,
+        'START_BASE: ' . cb_restia_hist_format_date_cs((string)$resumeInfo['start_date']),
+        'LAST_OK_DAY: ' . ($resumeInfo['last_ok_date'] !== '' ? cb_restia_hist_format_date_cs((string)$resumeInfo['last_ok_date']) : 'neni'),
+        'RESUME_FROM: ' . cb_restia_hist_format_date_cs($resumeDate),
+        'REQUESTED_DAYS: ' . (string)$inputDays,
+        'LIMIT: ' . (string)CB_RESTIA_HIST_LIMIT,
+        'STEP_DAYS: ' . (string)$inputDays,
+        'PAUSE_MS: ' . (string)CB_RESTIA_HIST_PAUSE_MS,
+    ]);
+    cb_restia_hist_error_log_init();
     cb_restia_hist_status_sync($state, 0, 0, 1, 'Spusteno');
 
     $action = 'auto_next';
@@ -1611,15 +1653,72 @@ if ($action === 'continue_no') {
     cb_restia_hist_status_sync($state, (int)($state['saved_step'] ?? 0), (int)($state['saved_total'] ?? 0), 0, $message);
 }
 if ($action === 'continue_yes') {
+    if ((int)($state['waiting_continue'] ?? 0) === 0 && (int)($state['auto_next'] ?? 0) === 1 && (int)($state['remaining_days'] ?? 0) > 0) {
+        $action = '';
+    }
+}
+
+if ($action === 'continue_yes') {
     $nextCycleDays = ($inputDays > 0) ? $inputDays : (int)($state['step_days'] ?? CB_RESTIA_HIST_STEP_DAYS);
+    $resumeBranchId = 0;
+    $resumeBranch = null;
+    if ($inputBranchId > 0) {
+        $resumeBranch = cb_restia_hist_get_branch_by_id($conn, $inputBranchId);
+        $resumeBranchId = (int)($resumeBranch['id_pob'] ?? 0);
+    } else {
+        $resumeBranchId = (int)($state['branch_id'] ?? 0);
+        if ($resumeBranchId > 0) {
+            $resumeBranch = cb_restia_hist_get_branch_by_id($conn, $resumeBranchId);
+        }
+    }
+    if (!is_array($resumeBranch)) {
+        $resumeBranch = cb_restia_hist_pick_default_branch($conn);
+        $resumeBranchId = (int)($resumeBranch['id_pob'] ?? 0);
+    }
+    if ($resumeBranchId > 0) {
+        $state['branch_id'] = $resumeBranchId;
+        $state['branch_name'] = (string)($resumeBranch['nazev'] ?? '');
+    }
+    if ($resumeBranchId > 0) {
+        cb_restia_hist_set_log_branch_id($resumeBranchId);
+    }
+    $resumeBranchDbCount = 0;
+    if ($resumeBranchId > 0) {
+        $stmtResumeCnt = $conn->prepare('
+            SELECT COUNT(*) AS cnt
+            FROM objednavky_restia
+            WHERE id_pob = ?
+        ');
+        if ($stmtResumeCnt instanceof mysqli_stmt) {
+            $stmtResumeCnt->bind_param('i', $resumeBranchId);
+            $stmtResumeCnt->execute();
+            $resResumeCnt = $stmtResumeCnt->get_result();
+            if ($resResumeCnt instanceof mysqli_result) {
+                $rowResumeCnt = $resResumeCnt->fetch_assoc();
+                $resumeBranchDbCount = (int)($rowResumeCnt['cnt'] ?? 0);
+                $resResumeCnt->free();
+            }
+            $stmtResumeCnt->close();
+        }
+    }
     $state['waiting_continue'] = 0;
     $state['auto_next'] = 1;
     $state['finished'] = 0;
     $state['remaining_days'] = $nextCycleDays;
     $state['requested_days'] = $nextCycleDays;
     $state['step_days'] = $nextCycleDays;
+    $state['branch_db_count'] = $resumeBranchDbCount;
+    $state['run_total_ms'] = 0;
+    $state['run_row_no'] = 0;
+    $state['saved_step'] = 0;
+    $state['saved_total'] = 0;
     $message = '';
-    cb_restia_hist_log('NOVY CYKLUS: ' . (string)$nextCycleDays . ' dni');
+    $branchName = trim((string)($state['branch_name'] ?? ''));
+    cb_restia_hist_log(
+        'NOVY CYKLUS: ' . (string)$nextCycleDays
+        . ' dni / START ' . cb_restia_hist_format_datetime_cs(cb_restia_hist_now())
+        . ' / ' . ($branchName !== '' ? $branchName : 'neznamá')
+    );
     cb_restia_hist_status_sync($state, 0, (int)($state['found_total'] ?? 0), 1, 'Pokračování');
     $action = 'auto_next';
 }
@@ -1633,6 +1732,7 @@ if ($shouldRunOneDay) {
     } else {
         $branch = cb_restia_hist_pick_default_branch($conn);
     }
+    cb_restia_hist_set_log_branch_id((int)$branch['id_pob']);
     $state['branch_id'] = (int)($branch['id_pob'] ?? 0);
     $state['branch_name'] = (string)$branch['nazev'];
 
@@ -1641,6 +1741,7 @@ if ($shouldRunOneDay) {
     $maxDaysNow = min((int)($state['remaining_days'] ?? 0), $stepDays);
     $processedNow = 0;
     $foundNow = 0;
+    $state['branch_db_count'] = (int)($state['branch_db_count'] ?? 0);
 
     while ($processedNow < $maxDaysNow) {
         $date = (string)$state['next_date'];
@@ -1656,9 +1757,8 @@ if ($shouldRunOneDay) {
         }
 
         $day = cb_restia_hist_import_day($conn, $auth, $branch, $date);
-        $startedAtMs = (int)($state['run_started_at_ms'] ?? 0);
-        $nowMs = (int)round(microtime(true) * 1000);
-        $day['total_ms'] = ($startedAtMs > 0) ? max(0, $nowMs - $startedAtMs) : 0;
+        $state['run_total_ms'] = (int)($state['run_total_ms'] ?? 0) + max(0, (int)($day['day_ms'] ?? 0));
+        $day['total_ms'] = (int)($state['run_total_ms'] ?? 0);
         $rows[] = $day;
         if (count($rows) > 200) {
             array_shift($rows);
@@ -1667,11 +1767,12 @@ if ($shouldRunOneDay) {
         $rowNo = (int)$state['run_row_no'];
         $isOk = ((int)($day['ok'] ?? 0) === 1 && trim((string)($day['error'] ?? '')) === '');
         $status = $isOk ? 'OK' : 'ERR';
+        $state['branch_db_count'] = (int)($state['branch_db_count'] ?? 0) + max(0, (int)($day['count'] ?? 0));
+        $branchOrderCount = (int)($state['branch_db_count'] ?? 0);
         cb_restia_hist_log(
             (string)$rowNo
             . ' / ' . cb_restia_hist_format_date_cs((string)($day['date'] ?? $date))
-            . ' / ' . (string)((int)($day['count'] ?? 0))
-            . ' / ' . (string)((int)($day['day_ms'] ?? 0)) . ' ms'
+            . ' / ' . (string)((int)($day['count'] ?? 0)) . ' - ' . (string)$branchOrderCount
             . ' / ' . cb_restia_hist_format_total_time((int)($day['total_ms'] ?? 0))
             . ' / ' . $status
         );
@@ -1705,13 +1806,23 @@ if ($shouldRunOneDay) {
     }
 }
 
-cb_restia_hist_status_sync($state, (int)($state['saved_step'] ?? 0), (int)($state['saved_total'] ?? 0), ((int)($state['finished'] ?? 0) === 0) ? 1 : 0, $message);
+        cb_restia_hist_status_sync(
+            $state,
+            (int)($state['saved_step'] ?? 0),
+            (int)($state['saved_total'] ?? 0),
+            ((int)($state['finished'] ?? 0) === 0 && (int)($state['waiting_continue'] ?? 0) === 0) ? 1 : 0,
+            $message
+        );
 $_SESSION[$cbStateKey] = $state;
 $_SESSION[$cbRowsKey] = $rows;
 $_SESSION[$cbMsgKey] = $message;
+if ((int)($state['finished'] ?? 0) === 1 || (int)($state['waiting_continue'] ?? 0) === 1) {
+    unset($_SESSION[$cbStateKey], $_SESSION[$cbRowsKey], $_SESSION[$cbMsgKey]);
+}
 
 $branchOptions = [];
 $branchResumeMap = [];
+$branchDbCountMap = [];
 try {
     $branchOptions = cb_restia_hist_get_branches($conn);
     foreach ($branchOptions as $branchOpt) {
@@ -1720,6 +1831,7 @@ try {
             continue;
         }
         $branchResumeMap[$idPobOpt] = cb_restia_hist_resume_info($conn, $branchOpt);
+        $branchDbCountMap[$idPobOpt] = cb_restia_hist_branch_db_count($conn, $idPobOpt);
     }
 } catch (Throwable $e) {
     if ($message === '') {
@@ -1744,14 +1856,15 @@ if ((int)($state['branch_id'] ?? 0) !== $selectedBranchId) {
         }
     }
 }
+$selectedBranchDbCount = (int)($branchDbCountMap[$selectedBranchId] ?? 0);
+$state['branch_db_count'] = $selectedBranchDbCount;
 $selectedResume = $branchResumeMap[$selectedBranchId] ?? [
-    'start_date' => CB_RESTIA_HIST_START_DATE,
+    'start_date' => '',
     'last_ok_date' => '',
-    'next_date' => CB_RESTIA_HIST_START_DATE,
+    'next_date' => '',
 ];
-$startBaseDate = cb_restia_hist_normalize_ymd((string)($selectedResume['start_date'] ?? ''), CB_RESTIA_HIST_START_DATE);
+$startBaseDate = cb_restia_hist_normalize_ymd((string)($selectedResume['start_date'] ?? ''), '');
 $resumeDate = cb_restia_hist_normalize_ymd((string)($selectedResume['next_date'] ?? ''), $startBaseDate);
-$lastOkDate = cb_restia_hist_normalize_ymd((string)($selectedResume['last_ok_date'] ?? ''), '');
 $hasImportHistory = false;
 try {
     $hasImportHistory = cb_restia_hist_has_import($conn, $selectedBranchId);
@@ -1763,12 +1876,6 @@ try {
 
 $stateMatchesSelectedBranch = ((int)($state['branch_id'] ?? 0) === $selectedBranchId);
 $displayResumeDate = $resumeDate;
-if ($stateMatchesSelectedBranch && ((int)($state['days_total'] ?? 0) > 0 || (int)($state['remaining_days'] ?? 0) > 0)) {
-    $stateResumeDate = cb_restia_hist_normalize_ymd((string)($state['next_date'] ?? ''), $resumeDate);
-    if ($stateResumeDate !== '') {
-        $displayResumeDate = $stateResumeDate;
-    }
-}
 
 $hasRestiaProgress = $hasImportHistory
     || ($stateMatchesSelectedBranch && (
@@ -1781,26 +1888,16 @@ $hasRestiaProgress = $hasImportHistory
 if ($stateMatchesSelectedBranch && (int)($state['days_total'] ?? 0) === 0 && (int)($state['remaining_days'] ?? 0) === 0) {
     $state['start_date'] = $startBaseDate;
     $state['next_date'] = $resumeDate;
-    $state['last_ok_date'] = $lastOkDate;
+    $state['last_ok_date'] = (string)($selectedResume['last_ok_date'] ?? '');
 }
 
 $startDateInput = cb_restia_hist_format_date_input_cs($displayResumeDate);
-$lastOkText = ($lastOkDate !== '') ? cb_restia_hist_format_date_cs($lastOkDate) : 'bez importu';
-if ($stateMatchesSelectedBranch && ((int)($state['days_total'] ?? 0) > 0 || (int)($state['remaining_days'] ?? 0) > 0)) {
-    $lastOkState = trim((string)($state['last_ok_date'] ?? ''));
-    if ($lastOkState !== '') {
-        $lastOkText = cb_restia_hist_format_date_cs($lastOkState);
-    }
+$lastOkRaw = trim((string)($selectedResume['last_ok_date'] ?? ''));
+if ($selectedBranchDbCount > 0 && $lastOkRaw !== '') {
+    $lastOkText = cb_restia_hist_format_date_cs(substr($lastOkRaw, 0, 10));
+} else {
+    $lastOkText = 'zatím ne';
 }
-$restiaLoaderActive = ((int)($state['finished'] ?? 0) === 0) && (
-    (int)($state['run_started_at_ms'] ?? 0) > 0
-    || (int)($state['auto_next'] ?? 0) === 1
-    || (int)($state['waiting_continue'] ?? 0) === 1
-);
-$restiaLoaderStatusUrl = cb_url('/lib/plnime_restia_objednavky_status.php');
-$restiaLoaderSaved = (int)($state['saved_step'] ?? 0);
-$restiaLoaderStepTotal = max(0, (int)($state['requested_days'] ?? 0));
-$restiaLoaderStepDone = max(0, $restiaLoaderStepTotal - (int)($state['remaining_days'] ?? 0));
 ?>
 <?php if (!$cbRestiaEmbedMode): ?>
 <!doctype html>
@@ -1808,16 +1905,15 @@ $restiaLoaderStepDone = max(0, $restiaLoaderStepTotal - (int)($state['remaining_
 <?php endif; ?>
 <div class="table-wrap ram_normal bg_bila zaobleni_12 odstup_vnitrni_10">
   <h2 class="card_title txt_seda text_24 text_tucny odstup_vnejsi_0">Restia import objednávek</h2>
-  <p class="card_text txt_seda">Start: <?= cb_restia_hist_h(cb_restia_hist_format_date_cs(CB_RESTIA_HIST_START_DATE)) ?> | Konec: <?= cb_restia_hist_h(cb_restia_hist_format_date_cs(cb_restia_hist_today())) ?></p>
   <p class="card_text txt_seda">Limit: <?= cb_restia_hist_h((string)CB_RESTIA_HIST_LIMIT) ?> | Krok: <?= cb_restia_hist_h((string)((int)($state['step_days'] ?? CB_RESTIA_HIST_STEP_DAYS))) ?> dní | Pauza: <?= cb_restia_hist_h((string)CB_RESTIA_HIST_PAUSE_MS) ?> ms</p>
-  <p class="card_text txt_seda">Pobočka: <?= cb_restia_hist_h((string)($state['branch_name'] ?? '')) ?></p>
-  <p class="card_text txt_seda">Start od začátku: <?= cb_restia_hist_h(cb_restia_hist_format_date_cs($startBaseDate)) ?> | Pokračování od: <?= cb_restia_hist_h(cb_restia_hist_format_date_cs($displayResumeDate)) ?> | Uloženo do: <?= cb_restia_hist_h($lastOkText) ?></p>
+  <p class="card_text txt_seda">Pobočka: <?= cb_restia_hist_h((string)($state['branch_name'] ?? '')) ?>, v DB existuje <?= cb_restia_hist_h((string)$selectedBranchDbCount) ?> objednávek</p>
+  <p class="card_text txt_seda">První obj.: <?= cb_restia_hist_h(cb_restia_hist_format_date_cs($startBaseDate)) ?> | Uloženo do: <?= cb_restia_hist_h($lastOkText) ?> | Pokračování od: <?= cb_restia_hist_h(cb_restia_hist_format_date_cs($displayResumeDate)) ?></p>
   <?php if ($message !== ''): ?><p class="card_text text_tucny txt_seda"><?= cb_restia_hist_h($message) ?></p><?php endif; ?>
 
   <div class="card_actions gap_8 displ_flex">
-    <form id="cb_restia_import_form" method="post" action="<?= cb_restia_hist_h((string)cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex">
-      <input type="hidden" name="run_restia_obj" value="1">
-      <input type="hidden" name="cb_action" value="<?= $hasRestiaProgress ? 'continue_yes' : 'start' ?>" id="cb_action_field">
+    <form id="cb_restia_import_form" method="post" action="<?= cb_restia_hist_h((string)cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-restia-loader="1" data-restia-pause-ms="<?= (int)CB_RESTIA_HIST_PAUSE_MS ?>">
+        <input type="hidden" name="run_restia_obj" value="1">
+        <input type="hidden" name="cb_action" value="<?= $hasRestiaProgress ? 'continue_yes' : 'start' ?>" id="cb_action_field">
       <select name="cb_id_pob" class="card_select ram_sedy txt_seda bg_bila zaobleni_8 vyska_32" style="min-width:220px; margin-right:8px;" onchange="var a=document.getElementById('cb_action_field');if(a){a.value='select_branch';}this.form.submit();">
         <?php foreach ($branchOptions as $branchOpt): ?>
           <?php
@@ -1826,8 +1922,8 @@ $restiaLoaderStepDone = max(0, $restiaLoaderStepTotal - (int)($state['remaining_
           $enabledOpt = ((bool)($branchOpt['enabled'] ?? false) === true);
           $labelOpt = $nameOpt !== '' ? $nameOpt : ('Pobočka #' . (string)$idPobOpt);
           $resumeOpt = $branchResumeMap[$idPobOpt] ?? ['last_ok_date' => ''];
-          $lastOkOpt = cb_restia_hist_normalize_ymd((string)($resumeOpt['last_ok_date'] ?? ''), '');
-          $statusOpt = ($lastOkOpt !== '') ? ('do ' . cb_restia_hist_format_date_cs($lastOkOpt) . ' OK') : 'bez importu';
+          $dbCountOpt = (int)($branchDbCountMap[$idPobOpt] ?? 0);
+          $statusOpt = ($dbCountOpt > 0) ? ('v DB ' . (string)$dbCountOpt . ' objednávek') : 'bez importu';
           $labelOpt .= ' | ' . $statusOpt;
           if (!$enabledOpt) {
               $labelOpt .= ' (chybí restia_activePosId)';
@@ -1836,67 +1932,12 @@ $restiaLoaderStepDone = max(0, $restiaLoaderStepTotal - (int)($state['remaining_
           <option value="<?= cb_restia_hist_h((string)$idPobOpt) ?>"<?= $idPobOpt === $selectedBranchId ? ' selected' : '' ?><?= $enabledOpt ? '' : ' disabled style="color:#9ca3af;"' ?>><?= cb_restia_hist_h($labelOpt) ?></option>
         <?php endforeach; ?>
       </select>
-      <input type="text" name="cb_start_date" value="<?= cb_restia_hist_h($startDateInput) ?>" class="card_input ram_sedy txt_seda bg_bila zaobleni_8 vyska_32" style="width:120px; margin-right:8px;" placeholder="1.7.2023" readonly>
+      <input type="text" name="cb_start_date" value="<?= cb_restia_hist_h($startDateInput) ?>" class="card_input ram_sedy txt_seda bg_bila zaobleni_8 vyska_32" style="width:120px; margin-right:8px;" placeholder="dd.mm.rrrr" readonly>
       <input type="number" name="cb_days" min="1" step="1" value="<?= cb_restia_hist_h((string)(((int)($state['step_days'] ?? 0) > 0) ? (int)$state['step_days'] : CB_RESTIA_HIST_STEP_DAYS)) ?>" class="card_input ram_sedy txt_seda bg_bila zaobleni_8 vyska_32" style="width:120px; margin-right:8px;">
       <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex"><?= $hasRestiaProgress ? 'Pokračovat' : 'Spustit import' ?></button>
     </form>
   </div>
 
-  <p class="card_text txt_seda odstup_horni_10">Zpracováno dnů: <?= cb_restia_hist_h((string)($state['days_total'] ?? 0)) ?> | Zbývá: <?= cb_restia_hist_h((string)($state['remaining_days'] ?? 0)) ?></p>
-
-  <?php if ((int)($state['auto_next'] ?? 0) === 1 && (int)($state['waiting_continue'] ?? 0) === 0 && (int)($state['finished'] ?? 0) === 0): ?>
-    <form id="cb_restia_auto_next" method="post" action="<?= cb_restia_hist_h((string)cb_url('/index.php')) ?>" class="odstup_vnejsi_0"><input type="hidden" name="run_restia_obj" value="1"><input type="hidden" name="cb_action" value="auto_next"></form>
-    <script>setTimeout(function(){var f=document.getElementById('cb_restia_auto_next');if(f){f.submit();}}, <?= (int)CB_RESTIA_HIST_PAUSE_MS ?>);</script>
-  <?php endif; ?>
-  <script>
-  (function () {
-    var isActive = <?= $restiaLoaderActive ? 'true' : 'false' ?>;
-    var statusUrl = <?= json_encode($restiaLoaderStatusUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-    var saved = <?= (int)$restiaLoaderSaved ?>;
-    var form = document.getElementById('cb_restia_import_form');
-    var actionField = document.getElementById('cb_action_field');
-
-    function showLoader() {
-      if (window.CB_AJAX && typeof window.CB_AJAX.setDashboardLoading === 'function') {
-        window.CB_AJAX.setDashboardLoading(true);
-      }
-    }
-
-    function startPolling() {
-      if (window.CB_AJAX && typeof window.CB_AJAX.startRestiaProgressPolling === 'function') {
-        window.CB_AJAX.startRestiaProgressPolling(statusUrl, saved, <?= (int)$restiaLoaderStepDone ?>, <?= (int)$restiaLoaderStepTotal ?>);
-      } else if (window.CB_AJAX && typeof window.CB_AJAX.setLoaderStepText === 'function') {
-        window.CB_AJAX.setLoaderStepText(<?= (int)$restiaLoaderStepDone ?>, <?= (int)$restiaLoaderStepTotal ?>, saved);
-      }
-    }
-
-    if (form) {
-      form.addEventListener('submit', function () {
-        if (!actionField) {
-          showLoader();
-          return;
-        }
-        var action = String(actionField.value || '');
-        if (action === 'start' || action === 'continue_yes' || action === 'auto_next') {
-          if (action === 'start') {
-            saved = 0;
-            if (window.CB_AJAX && typeof window.CB_AJAX.setLoaderStepText === 'function') {
-              window.CB_AJAX.setLoaderStepText(0, <?= (int)$restiaLoaderStepTotal ?>, 0);
-            }
-          }
-          showLoader();
-        }
-      }, { capture: true });
-    }
-
-    if (isActive) {
-      showLoader();
-      startPolling();
-    } else if (window.CB_AJAX && typeof window.CB_AJAX.setLoaderStepText === 'function') {
-      window.CB_AJAX.setLoaderStepText(<?= (int)$restiaLoaderStepDone ?>, <?= (int)$restiaLoaderStepTotal ?>, saved);
-    }
-  })();
-  </script>
   <div style="margin-top:16px; text-align:right;">
     <form method="post" action="<?= cb_restia_hist_h((string)cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex">
       <input type="hidden" name="back_admin_init" value="1">

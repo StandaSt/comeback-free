@@ -147,7 +147,13 @@
 
   function setDashboardLoading(on) {
     if (w.CB_AJAX && typeof w.CB_AJAX.setDashboardLoading === 'function') {
-      w.CB_AJAX.setDashboardLoading(!!on);
+        w.CB_AJAX.setDashboardLoading(!!on, 'cards');
+    }
+  }
+
+  function traceAjax(event, data) {
+    if (w.CB_AJAX && typeof w.CB_AJAX.trace === 'function') {
+      w.CB_AJAX.trace(event, data);
     }
   }
 
@@ -227,6 +233,11 @@
     if (dashCard) {
       dashCard.classList.add('is-nano-switching');
     }
+    traceAjax('nano_switch_reload', {
+      card_id: String(root.getAttribute('data-card-id') || ''),
+      pendingMode: String(pendingMode || ''),
+      sourceMode: String(root.getAttribute('data-card-mode') || '')
+    });
     if (pendingMode === 'maxi') {
       const cardId = String(root.getAttribute('data-card-id') || '').trim();
       if (cardId !== '') {
@@ -235,7 +246,7 @@
     }
     setDashboardLoading(true);
     if (w.CB_AJAX && typeof w.CB_AJAX.refreshDashboard === 'function') {
-      w.CB_AJAX.refreshDashboard({ force: true }).catch(() => {
+      w.CB_AJAX.refreshDashboard({ force: true, loaderMode: 'cards' }).catch(() => {
         window.alert('Obnovení dashboardu po přepnutí nano režimu selhalo.');
       });
     }
@@ -397,10 +408,19 @@
         nanoHead.addEventListener('dblclick', () => {
           if (!Number.isFinite(cardId) || cardId <= 0) return;
           clearSelection();
+          traceAjax('nano_to_maxi_click', {
+            card_id: cardId
+          });
           setDashboardLoading(true);
           requestCardMode(cardId, 'maxi').then(() => {
+            traceAjax('nano_to_maxi_ok', {
+              card_id: cardId
+            });
             reloadAfterNanoSwitch(root, 'maxi');
           }).catch(() => {
+            traceAjax('nano_to_maxi_error', {
+              card_id: cardId
+            });
             setDashboardLoading(false);
           });
         });
@@ -412,10 +432,22 @@
           if (!Number.isFinite(cardId) || cardId <= 0) return;
           const target = String(btn.getAttribute('data-card-nano-target') || 'mini').trim();
           if (!['mini', 'maxi'].includes(target)) return;
+          traceAjax('nano_target_click', {
+            card_id: cardId,
+            target: target
+          });
           setDashboardLoading(true);
           requestCardMode(cardId, target).then(() => {
+            traceAjax('nano_target_ok', {
+              card_id: cardId,
+              target: target
+            });
             reloadAfterNanoSwitch(root, target);
           }).catch(() => {
+            traceAjax('nano_target_error', {
+              card_id: cardId,
+              target: target
+            });
             setDashboardLoading(false);
           });
         });
@@ -451,10 +483,20 @@
           showNanoLimitAlert();
           return;
         }
+        traceAjax('mini_to_nano_click', {
+          card_id: cardId
+        });
         setDashboardLoading(true);
         requestCardMode(cardId, 'nano').then(() => {
+          traceAjax('mini_to_nano_ok', {
+            card_id: cardId
+          });
           reloadAfterNanoSwitch(root, 'mini');
         }).catch((err) => {
+          traceAjax('mini_to_nano_error', {
+            card_id: cardId,
+            message: String((err && err.message) ? err.message : '')
+          });
           setDashboardLoading(false);
           showCardModeError(err);
         });

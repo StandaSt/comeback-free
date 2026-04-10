@@ -940,6 +940,10 @@ align-items:center;
 }
 
 .dash_box.is-dashboard-loading .dash_loader{
+  display:none;
+}
+
+.dash_box.is-dashboard-loading .dash_loader[data-cb-loader-visible="1"]{
   display:flex;
 }
 

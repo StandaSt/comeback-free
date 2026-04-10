@@ -114,7 +114,13 @@
 
     function setDashboardLoading(on) {
       if (w.CB_AJAX && typeof w.CB_AJAX.setDashboardLoading === 'function') {
-        w.CB_AJAX.setDashboardLoading(!!on);
+        w.CB_AJAX.setDashboardLoading(!!on, 'cards');
+      }
+    }
+
+    function traceAjax(event, data) {
+      if (w.CB_AJAX && typeof w.CB_AJAX.trace === 'function') {
+        w.CB_AJAX.trace(event, data);
       }
     }
 
@@ -202,6 +208,12 @@
 
       clearMoveSource();
       moveSource = { id, col, line, title, root, btn: fromBtn };
+      traceAjax('card_move_start', {
+        id: id,
+        col: col,
+        line: line,
+        title: title
+      });
       root.setAttribute('data-card-move-source', '1');
       setMoveButtonState(fromBtn, true);
       if (document.body) {
@@ -236,10 +248,24 @@
         return;
       }
       if (targetId === moveSource.id) {
+        traceAjax('card_move_same_target', {
+          id: moveSource.id,
+          targetId: targetId
+        });
         clearMoveSource();
         return;
       }
 
+      traceAjax('card_move_submit', {
+        src_id: moveSource.id,
+        src_col: moveSource.col,
+        src_line: moveSource.line,
+        tgt_id: targetId,
+        tgt_col: targetCol,
+        tgt_line: targetLine,
+        target_locked: targetLocked ? 1 : 0,
+        force_unlock: forceUnlock ? 1 : 0
+      });
       setDashboardLoading(true);
       fetch('index.php', {
         method: 'POST',
@@ -259,9 +285,14 @@
         })
       }).then((r) => r.json().catch(() => ({}))).then((data) => {
         if (data && data.ok) {
+          traceAjax('card_move_ok', {
+            src_id: moveSource.id,
+            tgt_id: targetId,
+            force_unlock: forceUnlock ? 1 : 0
+          });
           clearMoveSource();
           if (w.CB_AJAX && typeof w.CB_AJAX.refreshDashboard === 'function') {
-            w.CB_AJAX.refreshDashboard({ force: true }).catch((err) => {
+            w.CB_AJAX.refreshDashboard({ force: true, loaderMode: 'cards' }).catch((err) => {
               const msg = String((err && err.message) ? err.message : 'Obnovení dashboardu po přesunu karty selhalo.');
               window.alert(msg);
             });
@@ -270,6 +301,10 @@
         }
 
         if (data && data.needs_confirm) {
+          traceAjax('card_move_needs_confirm', {
+            src_id: moveSource.id,
+            tgt_id: targetId
+          });
           setDashboardLoading(false);
           if (!openMoveUnlockConfirm(function () {
             doMoveToTarget(targetRoot, true);
@@ -287,6 +322,11 @@
 
         setDashboardLoading(false);
         const err = String((data && data.err) ? data.err : 'Přesun karty selhal.');
+        traceAjax('card_move_error', {
+          src_id: moveSource.id,
+          tgt_id: targetId,
+          message: err
+        });
         if (err === 'Pozice 1-1 je určena pro nano karty.') {
           if (!openSystemAlert(err)) {
             window.alert(err);
@@ -297,6 +337,9 @@
         clearMoveSource();
       }).catch(() => {
         setDashboardLoading(false);
+        traceAjax('card_move_fetch_error', {
+          src_id: moveSource ? moveSource.id : 0
+        });
         window.alert('Přesun karty selhal.');
         clearMoveSource();
       });
@@ -393,6 +436,7 @@
 
         const unlockAllBtn = target.closest('[data-card-pref-unlock-all]');
         if (unlockAllBtn) {
+          traceAjax('card_unlock_all_click', {});
           fetch('index.php', {
             method: 'POST',
             headers: {
@@ -402,9 +446,10 @@
             body: JSON.stringify({})
           }).then((r) => r.json().catch(() => ({}))).then((data) => {
             if (data && data.ok) {
+              traceAjax('card_unlock_all_ok', {});
               clearMoveSource();
               if (w.CB_AJAX && typeof w.CB_AJAX.refreshDashboard === 'function') {
-                w.CB_AJAX.refreshDashboard().catch((err) => {
+                w.CB_AJAX.refreshDashboard({ loaderMode: 'cards' }).catch((err) => {
                   const msg = String((err && err.message) ? err.message : 'Obnovení dashboardu po odemknutí pozic karet selhalo.');
                   window.alert(msg);
                 });
@@ -412,8 +457,10 @@
               return;
             }
             const err = String((data && data.err) ? data.err : 'Odemknutí pozic karet selhalo.');
+            traceAjax('card_unlock_all_error', { message: err });
             window.alert(err);
           }).catch(() => {
+            traceAjax('card_unlock_all_fetch_error', {});
             window.alert('Odemknutí pozic karet selhalo.');
           });
           return;

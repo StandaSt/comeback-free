@@ -38,20 +38,17 @@ $cbBackAdminInit = (
     isset($_POST['back_admin_init']) && (string)$_POST['back_admin_init'] === '1'
 );
 $cbRestiaState = $_SESSION['cb_restia_hist_v4_state'] ?? null;
-$cbKeepRestiaMax = false;
-if (is_array($cbRestiaState)) {
-    $cbKeepRestiaMax = (
-        (int)($cbRestiaState['finished'] ?? 0) === 0
-        && (
-            (int)($cbRestiaState['auto_next'] ?? 0) === 1
-            || (int)($cbRestiaState['waiting_continue'] ?? 0) === 1
-        )
-    );
-}
-$cbRestiaHasImport = false;
-if ($qRestia instanceof mysqli_result) {
-    $cbRestiaHasImport = ((int)$cbRestiaCount > 0);
-}
+$cbRestiaStateKeepMax = (
+    is_array($cbRestiaState)
+    && (
+        (int)($cbRestiaState['days_total'] ?? 0) > 0
+        || (int)($cbRestiaState['remaining_days'] ?? 0) > 0
+        || (int)($cbRestiaState['waiting_continue'] ?? 0) === 1
+        || (int)($cbRestiaState['auto_next'] ?? 0) === 1
+    )
+    && (int)($cbRestiaState['finished'] ?? 0) === 0
+);
+$cbKeepRestiaMax = $cbRunRestia || $cbRestiaStateKeepMax;
 if ($cbBackAdminInit) {
     unset($_SESSION['cb_restia_hist_v4_state'], $_SESSION['cb_restia_hist_v4_rows'], $_SESSION['cb_restia_hist_v4_msg']);
     $cbRunSmenyPlan = false;
@@ -316,7 +313,7 @@ if ($cbRunGoogleData || $cbOpenGoogleData) {
     $card_max_html = (string)ob_get_clean();
 }
 
-if ($cbRunRestia || $cbKeepRestiaMax || $cbRestiaHasImport) {
+if ($cbRunRestia || $cbKeepRestiaMax) {
     ob_start();
     require __DIR__ . '/../inicializace/plnime_restia_objednavky.php';
     $card_max_html = (string)ob_get_clean();
