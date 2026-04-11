@@ -51,7 +51,10 @@ if (!function_exists('cb_restia_hist_log_init')) {
 if (!function_exists('cb_restia_hist_log')) {
     function cb_restia_hist_log(int $idPob, string $line): void
     {
-        @file_put_contents(cb_restia_hist_txt_path($idPob), $line . "\n", FILE_APPEND | LOCK_EX);
+        $path = cb_restia_hist_txt_path($idPob);
+        $newLine = $line . "\n";
+        $current = is_file($path) ? (string)@file_get_contents($path) : '';
+        @file_put_contents($path, $newLine . $current, LOCK_EX);
     }
 }
 
@@ -66,10 +69,6 @@ if (!function_exists('cb_restia_hist_error_txt_path')) {
 if (!function_exists('cb_restia_hist_error_log_init')) {
     function cb_restia_hist_error_log_init(int $idPob): void
     {
-        $path = cb_restia_hist_error_txt_path($idPob);
-        if (!is_file($path)) {
-            @file_put_contents($path, '', FILE_APPEND | LOCK_EX);
-        }
     }
 }
 
