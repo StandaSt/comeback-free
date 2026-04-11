@@ -14,9 +14,8 @@ require_once __DIR__ . '/../lib/restia_client.php';
 require_once __DIR__ . '/../db/db_api_restia.php';
 
 const CB_RESTIA_HIST_LIMIT = 200;
-const CB_RESTIA_HIST_START_DATE = '2023-07-01';
-const CB_RESTIA_HIST_STEP_DAYS = 20;
-const CB_RESTIA_HIST_PAUSE_MS = 100;
+const CB_RESTIA_HIST_STEP_DAYS = 40;
+const CB_RESTIA_HIST_PAUSE_MS = 1000;
 
 $cbRestiaEmbedMode = (basename((string)($_SERVER['SCRIPT_NAME'] ?? '')) === 'index.php');
 $cbStateKey = 'cb_restia_hist_v4_state';
@@ -96,9 +95,13 @@ if (!function_exists('cb_restia_hist_today')) {
 if (!function_exists('cb_restia_hist_format_date_cs')) {
     function cb_restia_hist_format_date_cs(string $date): string
     {
+        $date = trim($date);
+        if ($date === '') {
+            return '';
+        }
         $dt = DateTimeImmutable::createFromFormat('Y-m-d', $date, new DateTimeZone('Europe/Prague'));
         if (!($dt instanceof DateTimeImmutable)) {
-            return $date;
+            throw new RuntimeException('Neplatne datum pro formatovani: ' . $date);
         }
         return $dt->format('d.m.Y');
     }
@@ -107,49 +110,55 @@ if (!function_exists('cb_restia_hist_format_date_cs')) {
 if (!function_exists('cb_restia_hist_format_date_input_cs')) {
     function cb_restia_hist_format_date_input_cs(string $date): string
     {
+        $date = trim($date);
+        if ($date === '') {
+            return '';
+        }
         $dt = DateTimeImmutable::createFromFormat('Y-m-d', $date, new DateTimeZone('Europe/Prague'));
         if (!($dt instanceof DateTimeImmutable)) {
-            return '1.7.2023';
+            throw new RuntimeException('Neplatne datum pro vstup: ' . $date);
         }
         return $dt->format('j.n.Y');
     }
 }
 
-if (!function_exists('cb_restia_hist_parse_start_date')) {
-    function cb_restia_hist_parse_start_date(string $raw): string
+if (!function_exists('cb_restia_hist_format_month_year_cs')) {
+    function cb_restia_hist_format_month_year_cs(string $date): string
     {
-        $raw = trim($raw);
-        if ($raw === '') {
-            return CB_RESTIA_HIST_START_DATE;
+        $date = trim($date);
+        if ($date === '') {
+            return '';
         }
-
-        if (preg_match('/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/', $raw, $m) === 1) {
-            $d = (int)$m[1];
-            $mo = (int)$m[2];
-            $y = (int)$m[3];
-            if (checkdate($mo, $d, $y)) {
-                return sprintf('%04d-%02d-%02d', $y, $mo, $d);
-            }
-            return CB_RESTIA_HIST_START_DATE;
+        $dt = DateTimeImmutable::createFromFormat('Y-m-d', $date, new DateTimeZone('Europe/Prague'));
+        if (!($dt instanceof DateTimeImmutable)) {
+            throw new RuntimeException('Neplatne datum pro mesic: ' . $date);
         }
-
-        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $raw, $m) === 1) {
-            $y = (int)$m[1];
-            $mo = (int)$m[2];
-            $d = (int)$m[3];
-            if (checkdate($mo, $d, $y)) {
-                return sprintf('%04d-%02d-%02d', $y, $mo, $d);
-            }
-        }
-
-        return CB_RESTIA_HIST_START_DATE;
+        static $months = [
+            1 => 'leden',
+            2 => 'únor',
+            3 => 'březen',
+            4 => 'duben',
+            5 => 'květen',
+            6 => 'červen',
+            7 => 'červenec',
+            8 => 'srpen',
+            9 => 'září',
+            10 => 'říjen',
+            11 => 'listopad',
+            12 => 'prosinec',
+        ];
+        $month = (int)$dt->format('n');
+        return (($months[$month] ?? '') . ' ' . $dt->format('Y'));
     }
 }
 
 if (!function_exists('cb_restia_hist_normalize_ymd')) {
-    function cb_restia_hist_normalize_ymd(string $raw, string $fallback): string
+    function cb_restia_hist_normalize_ymd(string $raw): string
     {
         $raw = trim($raw);
+        if ($raw === '') {
+            return '';
+        }
         if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $raw, $m) === 1) {
             $y = (int)$m[1];
             $mo = (int)$m[2];
@@ -158,7 +167,7 @@ if (!function_exists('cb_restia_hist_normalize_ymd')) {
                 return sprintf('%04d-%02d-%02d', $y, $mo, $d);
             }
         }
-        return $fallback;
+        throw new RuntimeException('Neplatne datum Y-m-d: ' . $raw);
     }
 }
 
@@ -450,6 +459,14 @@ if (!function_exists('cb_restia_hist_run_batch')) {
                 . ' / ' . $status
             );
 
+            $currentMonth = substr((string)$date, 0, 7);
+            $nextMonth = substr((string)($state['next_date'] ?? ''), 0, 7);
+            if ($currentMonth !== '' && $nextMonth !== '' && $nextMonth !== $currentMonth) {
+                $state['auto_next'] = 0;
+                $state['remaining_days'] = 0;
+                break;
+            }
+
             $processedNow++;
         }
 
@@ -458,7 +475,8 @@ if (!function_exists('cb_restia_hist_run_batch')) {
             $state['finished'] = 1;
             $branchName = (string)($branch['nazev'] ?? '');
             $pocetChybCyklus = (int)($state['cycle_errors'] ?? 0);
-            $message = 'Cyklus zpracoval ' . (string)$stepDays . ' dní. Pro "' . $branchName . '" bylo uloženo ' . (string)$foundNow . ' objednávek. Počet chyb: ' . (string)$pocetChybCyklus;
+            $cycleMonth = cb_restia_hist_format_month_year_cs((string)($day['date'] ?? $date));
+            $message = 'Import ' . $cycleMonth . ' pro pobočku "' . $branchName . '", uloženo ' . (string)$foundNow . ' objednávek. Počet chyb: ' . (string)$pocetChybCyklus;
             cb_restia_hist_log((int)($branch['id_pob'] ?? 0), 'KONEC CYKLU: ' . cb_restia_hist_format_datetime_cs(cb_restia_hist_now()));
         } elseif ((int)($state['finished'] ?? 0) === 0) {
             $state['auto_next'] = 1;
@@ -471,7 +489,11 @@ if (!function_exists('cb_restia_hist_run_batch')) {
 if (!function_exists('cb_restia_hist_branch_start_date')) {
     function cb_restia_hist_branch_start_date(array $branch): string
     {
-        return cb_restia_hist_normalize_ymd((string)($branch['prvni_obj'] ?? ''), CB_RESTIA_HIST_START_DATE);
+        $startDate = cb_restia_hist_normalize_ymd((string)($branch['prvni_obj'] ?? ''));
+        if ($startDate === '') {
+            throw new RuntimeException('Chybi prvni_obj pro pobocku id=' . (string)($branch['id_pob'] ?? 0));
+        }
+        return $startDate;
     }
 }
 
@@ -516,14 +538,9 @@ if (!function_exists('cb_restia_hist_resume_info')) {
         $nextDate = $startDate;
 
         if ($lastOkDate !== '') {
-            $nextDate = $startDate;
-            try {
-                $nextDate = cb_restia_hist_next_date($lastOkDate);
-            } catch (Throwable $e) {
-                $nextDate = $startDate;
-            }
+            $nextDate = cb_restia_hist_next_date($lastOkDate);
             if ($nextDate < $startDate) {
-                $nextDate = $startDate;
+                throw new RuntimeException('Neposledni datum importu je mensi nez start historie pro pobocku id=' . (string)$idPob);
             }
         }
 
@@ -587,11 +604,7 @@ if (!function_exists('cb_restia_hist_resume_date')) {
     function cb_restia_hist_resume_date(mysqli $conn, array $branch): string
     {
         $info = cb_restia_hist_resume_info($conn, $branch);
-        try {
-            return cb_restia_hist_normalize_ymd((string)($info['next_date'] ?? ''), CB_RESTIA_HIST_START_DATE);
-        } catch (Throwable $e) {
-            return cb_restia_hist_branch_start_date($branch);
-        }
+        return cb_restia_hist_normalize_ymd((string)($info['next_date'] ?? ''));
     }
 }
 
@@ -1407,8 +1420,8 @@ if (!function_exists('cb_restia_hist_default_state')) {
     function cb_restia_hist_default_state(): array
     {
         return [
-            'next_date' => CB_RESTIA_HIST_START_DATE,
-            'start_date' => CB_RESTIA_HIST_START_DATE,
+            'next_date' => '',
+            'start_date' => '',
             'last_ok_date' => '',
             'remaining_days' => 0,
             'days_total' => 0,
@@ -1676,14 +1689,13 @@ if ((int)($state['branch_id'] ?? 0) !== $selectedBranchId) {
         }
     }
 }
-$selectedResume = $branchResumeMap[$selectedBranchId] ?? [
-    'start_date' => CB_RESTIA_HIST_START_DATE,
-    'last_ok_date' => '',
-    'next_date' => CB_RESTIA_HIST_START_DATE,
-];
-$startBaseDate = cb_restia_hist_normalize_ymd((string)($selectedResume['start_date'] ?? ''), CB_RESTIA_HIST_START_DATE);
-$resumeDate = cb_restia_hist_normalize_ymd((string)($selectedResume['next_date'] ?? ''), $startBaseDate);
-$lastOkDate = cb_restia_hist_normalize_ymd((string)($selectedResume['last_ok_date'] ?? ''), '');
+if (!isset($branchResumeMap[$selectedBranchId])) {
+    throw new RuntimeException('Chybi data pro vybranou pobočku id=' . (string)$selectedBranchId);
+}
+$selectedResume = $branchResumeMap[$selectedBranchId];
+$startBaseDate = cb_restia_hist_normalize_ymd((string)($selectedResume['start_date'] ?? ''));
+$resumeDate = cb_restia_hist_normalize_ymd((string)($selectedResume['next_date'] ?? ''));
+$lastOkDate = cb_restia_hist_normalize_ymd((string)($selectedResume['last_ok_date'] ?? ''));
 
 if ((int)($state['branch_id'] ?? 0) === $selectedBranchId && (int)($state['days_total'] ?? 0) === 0 && (int)($state['remaining_days'] ?? 0) === 0) {
     $state['start_date'] = $startBaseDate;
@@ -1723,12 +1735,14 @@ $lastOkText = (string)$countObj . ' objednávek';
 <html lang="cs"><head><meta charset="utf-8"><title>Restia import objednávek</title><meta name="viewport" content="width=device-width, initial-scale=1"></head><body>
 <?php endif; ?>
 <div class="table-wrap ram_normal bg_bila zaobleni_12 odstup_vnitrni_10">
-  <h2 class="card_title txt_seda text_24 text_tucny odstup_vnejsi_0">Restia import objednávek</h2>
-  <p class="card_text txt_seda text_14">Nastavení scriptu: Limit: <?= cb_restia_hist_h((string)CB_RESTIA_HIST_LIMIT) ?> | Délka cyklu: <?= cb_restia_hist_h((string)((int)($state['step_days'] ?? CB_RESTIA_HIST_STEP_DAYS))) ?> dnů | Pauza na prd: <?= cb_restia_hist_h((string)CB_RESTIA_HIST_PAUSE_MS) ?> ms</p>
-  <p class="card_text txt_seda text_14">Pobočka: <?= cb_restia_hist_h((string)($state['branch_name'] ?? '')) ?> (<?= cb_restia_hist_h((string)$selectedBranchId) ?>)</p>
-  <p class="card_text txt_seda text_14">První objednávka: <?= cb_restia_hist_h(cb_restia_hist_format_date_input_cs($startBaseDate)) ?> | Další import od: <?= cb_restia_hist_h(cb_restia_hist_format_date_input_cs($resumeDate)) ?> | Uloženo: <?= cb_restia_hist_h($lastOkText) ?></p>
+  <p class="card_title txt_seda text_18 text_tucny odstup_vnejsi_0">Restia import objednávek</p>
+  <br>
+  <span class="card_text txt_cervena text_11">Admin info:</span> <span class="card_text txt_seda text_12">Limit <?= cb_restia_hist_h((string)CB_RESTIA_HIST_LIMIT) ?> obj. na stránku </span>
+  <p class="card_text txt_seda text_12">Pobočka: <?= cb_restia_hist_h((string)($state['branch_name'] ?? '')) ?> (<?= cb_restia_hist_h((string)$selectedBranchId) ?>)</p>
+  <p class="card_text txt_seda text_12">První objednávka pobočky: <?= cb_restia_hist_h(cb_restia_hist_format_date_input_cs($startBaseDate)) ?> | V DB je <?= cb_restia_hist_h($lastOkText) ?></p>
   <?php if ($message !== ''): ?><p class="card_text text_tucny txt_seda"><?= cb_restia_hist_h($message) ?></p><?php endif; ?>
-
+    <br><br>
+ <span class="card_text txt_cervena text_11">Výběr pobočky</span>
   <div class="card_actions gap_8 displ_flex">
     <form method="post" action="<?= cb_restia_hist_h((string)cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex">
       <input type="hidden" name="run_restia_obj" value="1"><input type="hidden" name="cb_action" value="start" id="cb_action_field">
@@ -1740,7 +1754,7 @@ $lastOkText = (string)$countObj . ' objednávek';
           $enabledOpt = ((bool)($branchOpt['enabled'] ?? false) === true);
           $labelOpt = $nameOpt !== '' ? $nameOpt : ('Pobočka #' . (string)$idPobOpt);
           $resumeOpt = $branchResumeMap[$idPobOpt] ?? ['last_ok_date' => ''];
-          $lastOkOpt = cb_restia_hist_normalize_ymd((string)($resumeOpt['last_ok_date'] ?? ''), '');
+          $lastOkOpt = cb_restia_hist_normalize_ymd((string)($resumeOpt['last_ok_date'] ?? ''));
           $statusOpt = ($lastOkOpt !== '') ? ('do ' . cb_restia_hist_format_date_cs($lastOkOpt) . ' OK') : 'bez importu';
           $labelOpt .= ' | ' . $statusOpt;
           if (!$enabledOpt) {
@@ -1750,8 +1764,7 @@ $lastOkText = (string)$countObj . ' objednávek';
           <option value="<?= cb_restia_hist_h((string)$idPobOpt) ?>"<?= $idPobOpt === $selectedBranchId ? ' selected' : '' ?><?= $enabledOpt ? '' : ' disabled style="color:#9ca3af;"' ?>><?= cb_restia_hist_h($labelOpt) ?></option>
         <?php endforeach; ?>
       </select>
-      <input type="text" name="cb_start_date" value="<?= cb_restia_hist_h($startDateInput) ?>" class="card_input ram_sedy txt_seda bg_bila zaobleni_8" style="width:120px; height:22px; margin-right:8px;" placeholder="1.7.2023" readonly>
-      <input type="number" name="cb_days" min="1" step="1" value="<?= cb_restia_hist_h((string)(((int)($state['step_days'] ?? 0) > 0) ? (int)$state['step_days'] : CB_RESTIA_HIST_STEP_DAYS)) ?>" class="card_input ram_sedy txt_seda bg_bila zaobleni_8" style="width:120px; height:22px; margin-right:8px;">
+      <span class="card_text txt_seda text_14" style="margin-right:8px; line-height:22px;"><?= cb_restia_hist_h(cb_restia_hist_format_month_year_cs($resumeDate)) ?></span>
       <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" style="align-self:center;">• Spustit import</button>
     </form>
   </div>
@@ -1759,7 +1772,7 @@ $lastOkText = (string)$countObj . ' objednávek';
 
   <?php
   $historyTz = new DateTimeZone('Europe/Prague');
-  $historyTodayDt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', cb_restia_hist_today() . ' 00:00:00', $historyTz);
+$historyTodayDt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', cb_restia_hist_today() . ' 00:00:00', $historyTz);
   $historyTableRows = [];
   $historyTableTotals = [
       'downloaded' => 0,
@@ -1767,18 +1780,18 @@ $lastOkText = (string)$countObj . ' objednávek';
       'total' => 0,
   ];
   foreach ($branchOptions as $branchOptHistory) {
-      $branchIdHistory = (int)($branchOptHistory['id_pob'] ?? 0);
-      if ($branchIdHistory <= 0) {
-          continue;
-      }
+    $branchIdHistory = (int)($branchOptHistory['id_pob'] ?? 0);
+    if ($branchIdHistory <= 0) {
+        continue;
+    }
 
-      $branchNameHistory = trim((string)($branchOptHistory['nazev'] ?? ''));
-      $branchResumeHistory = $branchResumeMap[$branchIdHistory] ?? [
-          'start_date' => CB_RESTIA_HIST_START_DATE,
-          'next_date' => CB_RESTIA_HIST_START_DATE,
-      ];
-      $branchStartHistory = cb_restia_hist_normalize_ymd((string)($branchResumeHistory['start_date'] ?? ''), CB_RESTIA_HIST_START_DATE);
-      $branchNextHistory = cb_restia_hist_normalize_ymd((string)($branchResumeHistory['next_date'] ?? ''), $branchStartHistory);
+    $branchNameHistory = trim((string)($branchOptHistory['nazev'] ?? ''));
+    if (!isset($branchResumeMap[$branchIdHistory])) {
+        throw new RuntimeException('Chybi data historie pro pobočku id=' . (string)$branchIdHistory);
+    }
+    $branchResumeHistory = $branchResumeMap[$branchIdHistory];
+    $branchStartHistory = cb_restia_hist_normalize_ymd((string)($branchResumeHistory['start_date'] ?? ''));
+    $branchNextHistory = cb_restia_hist_normalize_ymd((string)($branchResumeHistory['next_date'] ?? ''));
       $branchStartDtHistory = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $branchStartHistory . ' 00:00:00', $historyTz);
       $branchNextDtHistory = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $branchNextHistory . ' 00:00:00', $historyTz);
 
@@ -1803,6 +1816,8 @@ $lastOkText = (string)$countObj . ' objednávek';
       $historyTableTotals['total'] += $totalDaysHistory;
   }
   ?>
+  <br><br>
+   <p class="card_title txt_zelena text_18 text_tucny odstup_vnejsi_0">Aktuální stav importu</p>
   <div class="table-wrap ram_normal bg_bila zaobleni_8 odstup_vnejsi_10" style="overflow:auto; margin-top:12px;">
     <table class="table" style="width:100%; font-size:12px; line-height:1.1;">
       <thead>
