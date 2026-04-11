@@ -1,40 +1,39 @@
-FATAL_STEP: datum=2023-11-02 | id_pob=1 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2023-11-03 | id_pob=1 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2023-11-04 | id_pob=1 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2023-11-05 | id_pob=1 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2023-11-06 | id_pob=1 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2023-11-07 | id_pob=1 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2023-11-08 | id_pob=1 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2023-11-09 | id_pob=1 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2023-11-10 | id_pob=1 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2023-11-11 | id_pob=1 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2025-08-19 | id_pob=6 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2025-08-20 | id_pob=6 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2025-08-21 | id_pob=6 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2025-08-22 | id_pob=6 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2025-08-23 | id_pob=6 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2025-08-24 | id_pob=6 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2025-08-25 | id_pob=6 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2025-08-26 | id_pob=6 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2025-08-27 | id_pob=6 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2025-08-28 | id_pob=6 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2024-04-01 | id_pob=4 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2024-04-02 | id_pob=4 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2024-04-03 | id_pob=4 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2024-04-04 | id_pob=4 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2024-04-05 | id_pob=4 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2024-04-06 | id_pob=4 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2024-04-07 | id_pob=4 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2024-04-08 | id_pob=4 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2024-04-09 | id_pob=4 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2024-04-10 | id_pob=4 | msg=Restia chyba HTTP=0 body=
-FATAL_STEP: datum=2024-12-13 | id_pob=5 | nazev=Libuš | msg=Restia chyba HTTP=0 body= | api=Token je expirovaný nebo na hraně expirace.
-FATAL_STEP: datum=2024-12-14 | id_pob=5 | nazev=Libuš | msg=Restia chyba HTTP=0 body= | api=Token je expirovaný nebo na hraně expirace.
-FATAL_STEP: datum=2024-12-15 | id_pob=5 | nazev=Libuš | msg=Restia chyba HTTP=0 body= | api=Token je expirovaný nebo na hraně expirace.
-FATAL_STEP: datum=2024-12-16 | id_pob=5 | nazev=Libuš | msg=Restia chyba HTTP=0 body= | api=Token je expirovaný nebo na hraně expirace.
-FATAL_STEP: datum=2024-12-17 | id_pob=5 | nazev=Libuš | msg=Restia chyba HTTP=0 body= | api=Token je expirovaný nebo na hraně expirace.
-FATAL_STEP: datum=2024-12-18 | id_pob=5 | nazev=Libuš | msg=Restia chyba HTTP=0 body= | api=Token je expirovaný nebo na hraně expirace.
-FATAL_STEP: datum=2024-12-19 | id_pob=5 | nazev=Libuš | msg=Restia chyba HTTP=0 body= | api=Token je expirovaný nebo na hraně expirace.
-FATAL_STEP: datum=2024-12-20 | id_pob=5 | nazev=Libuš | msg=Restia chyba HTTP=0 body= | api=Token je expirovaný nebo na hraně expirace.
-FATAL_STEP: datum=2024-12-21 | id_pob=5 | nazev=Libuš | msg=Restia chyba HTTP=0 body= | api=Token je expirovaný nebo na hraně expirace.
-FATAL_STEP: datum=2024-12-22 | id_pob=5 | nazev=Libuš | msg=Restia chyba HTTP=0 body= | api=Token je expirovaný nebo na hraně expirace.
+ORDER_ERR: datum=2025-08-19 | id_pob=6 | page=1 | restia_id_obj=896ded41-6bd6-4efb-a4c9-b6526bbafba7 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-08-21 | id_pob=6 | page=1 | restia_id_obj=7b8c318d-d168-4826-8b43-46c5b709f4d0 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-08-21 | id_pob=6 | page=1 | restia_id_obj=5fe5aac5-dd52-4b1f-bc1c-8fb06d043339 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-08-23 | id_pob=6 | page=1 | restia_id_obj=b420a39a-d99d-445a-ac62-8bdbd9839140 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-08-25 | id_pob=6 | page=1 | restia_id_obj=207fb7c0-e4de-4796-8670-ed7d440f37c5 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-08-25 | id_pob=6 | page=1 | restia_id_obj=27816399-b69f-4a62-86bb-dfdc42542296 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-08-26 | id_pob=6 | page=1 | restia_id_obj=0b0af853-536f-464a-8049-f554cfbf70a0 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-08-27 | id_pob=6 | page=1 | restia_id_obj=c61bec25-a957-4dd8-86d3-b5c75cb6e8d9 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-08-28 | id_pob=6 | page=1 | restia_id_obj=f8d1b94a-d718-4e71-8b30-f8454d2823b6 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-08-28 | id_pob=6 | page=1 | restia_id_obj=5459dd47-467c-4224-bf91-c2710fd37410 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-08-28 | id_pob=6 | page=1 | restia_id_obj=74ba248a-a250-41e1-8378-dbbacfc77638 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-08-29 | id_pob=6 | page=1 | restia_id_obj=808dc333-f7cf-4507-b0dc-9598bdfa5716 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-08-30 | id_pob=6 | page=1 | restia_id_obj=52385d00-1a8c-4ff3-87b7-1eda54cc64f3 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-08-30 | id_pob=6 | page=1 | restia_id_obj=9289eaaa-3f09-4f1e-888f-8f853f420c40 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-08-30 | id_pob=6 | page=1 | restia_id_obj=dc00aa66-1740-4a97-9945-eb8622f6189f | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-08-31 | id_pob=6 | page=1 | restia_id_obj=74278185-c4cc-4369-a6d2-a776e8b68f10 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-08-31 | id_pob=6 | page=1 | restia_id_obj=6bd9b3c2-b210-433f-994d-d14e78f3b3f7 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-09-01 | id_pob=6 | page=1 | restia_id_obj=2c437a5e-ad6c-43de-8125-d135c06942cb | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-09-01 | id_pob=6 | page=1 | restia_id_obj=70757519-db2c-4390-8222-ccb2a40cb0b3 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-09-02 | id_pob=6 | page=1 | restia_id_obj=97aed534-3b93-419b-b588-e5b49dc06203 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-09-02 | id_pob=6 | page=1 | restia_id_obj=fd680979-2006-4b0d-9777-75ee37a42403 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-09-02 | id_pob=6 | page=1 | restia_id_obj=fa8f33e5-d524-4a6c-89ab-e70a4dab535d | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-09-02 | id_pob=6 | page=1 | restia_id_obj=ddf9e8c4-c35a-4a31-a089-a4255c6f3491 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-09-02 | id_pob=6 | page=1 | restia_id_obj=695615e9-f796-4747-8010-d38b09cd9f66 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-09-02 | id_pob=6 | page=1 | restia_id_obj=79e9ae4e-0c92-4725-aa88-da0ea7fd7e97 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-09-03 | id_pob=6 | page=1 | restia_id_obj=fdf43723-ce95-4636-a7ca-7f43c18f5d39 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-09-04 | id_pob=6 | page=1 | restia_id_obj=4b156660-38d6-4614-9308-d3bf9c9f6b67 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-09-04 | id_pob=6 | page=1 | restia_id_obj=6d0718cf-ba8e-4af2-973a-a1baf6780152 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-09-05 | id_pob=6 | page=1 | restia_id_obj=921c3de0-b4ea-4047-b7cf-e1642f37a6af | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-09-06 | id_pob=6 | page=1 | restia_id_obj=e0bd12cb-61b5-4256-86c8-3baef7f1c839 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-09-06 | id_pob=6 | page=1 | restia_id_obj=0a4f9a7f-c856-48f9-8c99-4f11c90f370a | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-09-07 | id_pob=6 | page=1 | restia_id_obj=41a3fe92-c4a7-48f9-94ed-fe0634c42b5b | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-09-07 | id_pob=6 | page=1 | restia_id_obj=027dc41c-214b-4c05-bb48-45dd971087e6 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-09-07 | id_pob=6 | page=1 | restia_id_obj=5ba05b21-466c-4842-ad49-986b5eb704fa | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-09-07 | id_pob=6 | page=1 | restia_id_obj=4016685d-d2fd-4a8e-ac64-a620eebf4eab | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-09-09 | id_pob=6 | page=1 | restia_id_obj=497eaeab-de7a-4243-91c1-f07c649abf29 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-09-09 | id_pob=6 | page=1 | restia_id_obj=ec08ca37-cd2f-4589-9516-35247f1b7e73 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-09-10 | id_pob=6 | page=1 | restia_id_obj=ed30475d-6ee5-47a2-a7ba-d3c6310d2f49 | msg=Objednávka nemá telefon zákazníka.
+ORDER_ERR: datum=2025-09-10 | id_pob=6 | page=1 | restia_id_obj=2005f6f6-b9d3-4810-b627-888893d57dc0 | msg=Objednávka nemá telefon zákazníka.
