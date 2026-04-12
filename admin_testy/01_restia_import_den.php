@@ -28,6 +28,7 @@ require_once __DIR__ . '/../config/secrets.php';
 require_once __DIR__ . '/../lib/restia_access_exist.php';
 require_once __DIR__ . '/../lib/restia_client.php';
 require_once __DIR__ . '/../db/db_api_restia.php';
+require_once __DIR__ . '/../db/zapis_log_chyby.php';
 
 const CB_RESTIA_IMPORT_A_LIMIT = 100;
 const CB_RESTIA_IMPORT_A_VERZE = 'V8';
@@ -333,25 +334,6 @@ if (!function_exists('cb_restia_import_a_extract_orders')) {
     }
 }
 
-if (!function_exists('cb_restia_import_a_json')) {
-    function cb_restia_import_a_json(mixed $value): ?string
-    {
-        $json = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        if (!is_string($json) || $json === '') {
-            return null;
-        }
-        return $json;
-    }
-}
-
-if (!function_exists('cb_restia_import_a_hash32')) {
-    function cb_restia_import_a_hash32(string $value): string
-    {
-        $bin = hash('sha256', $value, true);
-        return is_string($bin) ? $bin : str_repeat("\0", 32);
-    }
-}
-
 if (!function_exists('cb_restia_import_a_lookup_id')) {
     function cb_restia_import_a_lookup_id(mysqli $conn, string $table, string $col, string $value, string $idCol): int
     {
@@ -393,6 +375,37 @@ if (!function_exists('cb_restia_import_a_lookup_id')) {
         $stmtIns->close();
 
         return $id;
+    }
+}
+if (!function_exists('cb_restia_import_a_lookup_res_polozka_id')) {
+    function cb_restia_import_a_lookup_res_polozka_id(mysqli $conn, int $idPob, string $restiaItemId): int
+    {
+        $restiaItemId = trim($restiaItemId);
+        if ($idPob <= 0 || $restiaItemId === '') {
+            return 0;
+        }
+
+        $stmtSel = $conn->prepare('
+            SELECT id_res_polozka AS id
+            FROM res_polozky
+            WHERE id_pob = ? AND pos_code = ?
+            ORDER BY id_res_polozka DESC
+            LIMIT 1
+        ');
+        if ($stmtSel === false) {
+            throw new RuntimeException('DB prepare selhal: res_polozky lookup.');
+        }
+
+        $stmtSel->bind_param('is', $idPob, $restiaItemId);
+        $stmtSel->execute();
+        $resSel = $stmtSel->get_result();
+        $row = ($resSel instanceof mysqli_result) ? $resSel->fetch_assoc() : null;
+        if ($resSel instanceof mysqli_result) {
+            $resSel->free();
+        }
+        $stmtSel->close();
+
+        return (int)($row['id'] ?? 0);
     }
 }
 
@@ -458,6 +471,7 @@ if (!function_exists('cb_restia_import_a_finish_import')) {
         int $pocetChyb,
         string $poznamka
     ): void {
+        $stav = 'ok';
         $stmt = $conn->prepare('
             UPDATE obj_import
             SET stav = ?,
@@ -609,43 +623,29 @@ if (!function_exists('cb_restia_import_a_upsert_order')) {
         $shortCode = ($shortCode === null || $shortCode === '') ? null : (string)$shortCode;
         $serioveCislo = ($order['serialNumber'] ?? null);
         $serioveCislo = ($serioveCislo === null || $serioveCislo === '') ? null : (string)$serioveCislo;
-        $zakJmeno = ($order['customerName'] ?? null);
-        $zakJmeno = ($zakJmeno === null || $zakJmeno === '') ? null : (string)$zakJmeno;
-        $zakTelefon = ($order['customerPhone'] ?? null);
-        $zakTelefon = ($zakTelefon === null || $zakTelefon === '') ? null : (string)$zakTelefon;
-        $zakEmail = ($order['customerEmail'] ?? null);
-        $zakEmail = ($zakEmail === null || $zakEmail === '') ? null : (string)$zakEmail;
-        $zakPoznamka = ($order['customerNote'] ?? null);
-        $zakPoznamka = ($zakPoznamka === null || $zakPoznamka === '') ? null : (string)$zakPoznamka;
         $zpozdeniMin = isset($order['cookingTimeMinutes']) ? (int)$order['cookingTimeMinutes'] : null;
         $objPozn = ($order['note'] ?? null);
         $objPozn = ($objPozn === null || $objPozn === '') ? null : (string)$objPozn;
-        $rawJson = cb_restia_import_a_json($order);
-        if ($rawJson === null) {
-            throw new RuntimeException('Nepodarilo se prevest objednavku na JSON.');
-        }
-        $rawHash = cb_restia_import_a_hash32($rawJson);
-
+        $importTs = cb_restia_import_a_now();
         $sql = '
             INSERT INTO objednavky_restia (
-                id_pob, id_platforma, restia_id_obj, restia_order_number, restia_token, restia_active_pos_id,
+                id_pob, id_platforma, restia_id_obj, restia_order_number, restia_token,
                 profil_typ, profil_klic, profil_nazev, profil_menu_id, profil_pos_id, profil_url,
                 je_vyzvednuti, je_v_restauraci, je_vlastni_rozvoz, kuryr_poradi, pos_import_stav,
                 rest_obj, short_code, seriove_cislo, id_stav, id_platba, id_doruceni,
-                zak_jmeno, zak_telefon, zak_email, zak_poznamka, zpozdeni_min, obj_pozn, raw_hash, raw_json
+                zpozdeni_min, obj_pozn, restia_imported_at
             ) VALUES (
-                ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?, ?, ?, ?
+                ?, ?, ?
             )
             ON DUPLICATE KEY UPDATE
                 id_pob = VALUES(id_pob),
                 id_platforma = VALUES(id_platforma),
                 restia_order_number = VALUES(restia_order_number),
                 restia_token = VALUES(restia_token),
-                restia_active_pos_id = VALUES(restia_active_pos_id),
                 profil_typ = VALUES(profil_typ),
                 profil_klic = VALUES(profil_klic),
                 profil_nazev = VALUES(profil_nazev),
@@ -663,14 +663,9 @@ if (!function_exists('cb_restia_import_a_upsert_order')) {
                 id_stav = VALUES(id_stav),
                 id_platba = VALUES(id_platba),
                 id_doruceni = VALUES(id_doruceni),
-                zak_jmeno = VALUES(zak_jmeno),
-                zak_telefon = VALUES(zak_telefon),
-                zak_email = VALUES(zak_email),
-                zak_poznamka = VALUES(zak_poznamka),
                 zpozdeni_min = VALUES(zpozdeni_min),
                 obj_pozn = VALUES(obj_pozn),
-                raw_hash = VALUES(raw_hash),
-                raw_json = VALUES(raw_json)
+                restia_imported_at = VALUES(restia_imported_at)
         ';
 
         $stmt = $conn->prepare($sql);
@@ -679,13 +674,12 @@ if (!function_exists('cb_restia_import_a_upsert_order')) {
         }
 
         $stmt->bind_param(
-            'iissssssssssiiiissssiiissssisss',
+            'iisssssssssiiiissssiiiiss',
             $idPob,
             $idPlatforma,
             $restiaIdObj,
             $restiaOrderNumber,
             $restiaToken,
-            $activePosId,
             $profilTyp,
             $profilKlic,
             $profilNazev,
@@ -703,39 +697,15 @@ if (!function_exists('cb_restia_import_a_upsert_order')) {
             $idStav,
             $idPlatba,
             $idDoruceni,
-            $zakJmeno,
-            $zakTelefon,
-            $zakEmail,
-            $zakPoznamka,
             $zpozdeniMin,
             $objPozn,
-            $rawHash,
-            $rawJson
+            $importTs
         );
 
         $stmt->execute();
         $stmt->close();
 
         return cb_restia_import_a_get_obj_id($conn, $restiaIdObj);
-    }
-}
-
-if (!function_exists('cb_restia_import_a_insert_raw')) {
-    function cb_restia_import_a_insert_raw(mysqli $conn, int $idImport, int $idPob, string $restiaIdObj, string $rawJson): void
-    {
-        $payloadHash = cb_restia_import_a_hash32($rawJson);
-
-        $stmt = $conn->prepare('
-            INSERT INTO obj_raw (id_import, id_pob, restia_id_obj, payload_hash, payload_json, vytvoreno)
-            VALUES (?, ?, ?, ?, ?, NOW(3))
-        ');
-        if ($stmt === false) {
-            throw new RuntimeException('DB prepare selhal: obj_raw insert.');
-        }
-
-        $stmt->bind_param('iisss', $idImport, $idPob, $restiaIdObj, $payloadHash, $rawJson);
-        $stmt->execute();
-        $stmt->close();
     }
 }
 
@@ -760,14 +730,11 @@ if (!function_exists('cb_restia_import_a_upsert_adresa')) {
         $lng = isset($destination['longitude']) && $destination['longitude'] !== null && $destination['longitude'] !== '' ? (float)$destination['longitude'] : null;
         $distance = isset($deliveryData['distanceMeters']) && $deliveryData['distanceMeters'] !== null ? (int)round((float)$deliveryData['distanceMeters']) : null;
         $duration = isset($deliveryData['durationSeconds']) && $deliveryData['durationSeconds'] !== null ? (int)round((float)$deliveryData['durationSeconds']) : null;
-        $rawTyp = array_is_list($destination) ? 'array' : 'object';
-        $rawJson = cb_restia_import_a_json($destination);
-
         $stmt = $conn->prepare('
             INSERT INTO obj_adresa (
-                id_obj, ulice, cislo_domovni, mesto, psc, stat, lat, lng, raw_typ, vzdalenost_m, cas_jizdy_s, raw_json, vytvoreno, zmeneno
+                id_obj, ulice, cislo_domovni, mesto, psc, stat, lat, lng, vzdalenost_m, cas_jizdy_s, vytvoreno, zmeneno
             ) VALUES (
-                ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3)
+                ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3)
             )
             ON DUPLICATE KEY UPDATE
                 ulice = VALUES(ulice),
@@ -776,17 +743,15 @@ if (!function_exists('cb_restia_import_a_upsert_adresa')) {
                 stat = VALUES(stat),
                 lat = VALUES(lat),
                 lng = VALUES(lng),
-                raw_typ = VALUES(raw_typ),
                 vzdalenost_m = VALUES(vzdalenost_m),
                 cas_jizdy_s = VALUES(cas_jizdy_s),
-                raw_json = VALUES(raw_json),
                 zmeneno = NOW(3)
         ');
         if ($stmt === false) {
             throw new RuntimeException('DB prepare selhal: obj_adresa upsert.');
         }
 
-        $stmt->bind_param('issssddsiss', $idObj, $street, $city, $zip, $country, $lat, $lng, $rawTyp, $distance, $duration, $rawJson);
+        $stmt->bind_param('issssddii', $idObj, $street, $city, $zip, $country, $lat, $lng, $distance, $duration);
         $stmt->execute();
         $stmt->close();
     }
@@ -945,24 +910,18 @@ if (!function_exists('cb_restia_import_a_insert_kuryr')) {
         $jmeno = ($jmeno === null || $jmeno === '') ? null : (string)$jmeno;
         $telefon = ($courier['phone'] ?? null);
         $telefon = ($telefon === null || $telefon === '') ? null : (string)$telefon;
-        $rawJson = cb_restia_import_a_json($courier);
-        $dataJson = cb_restia_import_a_json([
-            'routeId' => $courier['routeId'] ?? null,
-            'orderAssignedAt' => $courier['orderAssignedAt'] ?? null,
-        ]);
-
         $stmt = $conn->prepare('
             INSERT INTO obj_kuryr (
-                id_obj, provider, externi_id, poradi, jmeno, telefon, raw_json, data_json, vytvoreno, zmeneno
+                id_obj, provider, externi_id, poradi, jmeno, telefon, vytvoreno, zmeneno
             ) VALUES (
-                ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3)
+                ?, ?, ?, ?, ?, ?, NOW(3), NOW(3)
             )
         ');
         if ($stmt === false) {
             throw new RuntimeException('DB prepare selhal: obj_kuryr insert.');
         }
 
-        $stmt->bind_param('ississss', $idObj, $provider, $externiId, $poradi, $jmeno, $telefon, $rawJson, $dataJson);
+        $stmt->bind_param('ississ', $idObj, $provider, $externiId, $poradi, $jmeno, $telefon);
         $stmt->execute();
         $stmt->close();
 
@@ -992,26 +951,18 @@ if (!function_exists('cb_restia_import_a_insert_sluzby')) {
             $externiId = ($externiId === null || $externiId === '') ? null : (string)$externiId;
             $stav = ($service['importStatus'] ?? ($service['status'] ?? null));
             $stav = ($stav === null || $stav === '') ? null : (string)$stav;
-            $rawJson = cb_restia_import_a_json($service);
-            $dataJson = cb_restia_import_a_json([
-                'type' => $service['type'] ?? null,
-                'importedAt' => $service['importedAt'] ?? null,
-                'statusUpdatedAt' => $service['statusUpdatedAt'] ?? null,
-                'requiredCourierId' => $service['requiredCourierId'] ?? null,
-            ]);
-
             $stmt = $conn->prepare('
                 INSERT INTO obj_sluzba (
-                    id_obj, provider, externi_id, stav, raw_json, data_json, vytvoreno, zmeneno
+                    id_obj, provider, externi_id, stav, vytvoreno, zmeneno
                 ) VALUES (
-                    ?, ?, ?, ?, ?, ?, NOW(3), NOW(3)
+                    ?, ?, ?, ?, NOW(3), NOW(3)
                 )
             ');
             if ($stmt === false) {
                 throw new RuntimeException('DB prepare selhal: obj_sluzba insert.');
             }
 
-            $stmt->bind_param('isssss', $idObj, $providerStr, $externiId, $stav, $rawJson, $dataJson);
+            $stmt->bind_param('isss', $idObj, $providerStr, $externiId, $stav);
             $stmt->execute();
             $stmt->close();
             $pocet++;
@@ -1040,8 +991,6 @@ if (!function_exists('cb_restia_import_a_insert_item_mods')) {
                 $mnozstvi = 1.0;
                 $cenaKs = 0.00;
                 $cenaCelk = 0.00;
-                $rawJson = null;
-
                 if (is_array($mod)) {
                     $restiaModId = isset($mod['id']) && $mod['id'] !== '' ? (string)$mod['id'] : null;
                     $typ = isset($mod['type']) && $mod['type'] !== '' ? (string)$mod['type'] : $klic;
@@ -1053,27 +1002,25 @@ if (!function_exists('cb_restia_import_a_insert_item_mods')) {
                     $mnozstvi = isset($mod['count']) ? (float)$mod['count'] : (isset($mod['quantity']) ? (float)$mod['quantity'] : 1.0);
                     $cenaKs = (float)cb_restia_import_a_money($mod['price'] ?? 0);
                     $cenaCelk = (float)cb_restia_import_a_money($mod['totalPrice'] ?? (($cenaKs * $mnozstvi) * 100));
-                    $rawJson = cb_restia_import_a_json($mod);
                 } else {
                     $nazev = (string)$mod;
                     if ($nazev === '') {
                         $nazev = $klic;
                     }
-                    $rawJson = cb_restia_import_a_json($mod);
                 }
 
                 $stmt = $conn->prepare('
                     INSERT INTO obj_polozka_mod (
-                        id_obj_polozka, restia_mod_id, typ, pos_id, nazev, mnozstvi, cena_ks, cena_celk, raw_json, zadano
+                        id_obj_polozka, restia_mod_id, typ, pos_id, nazev, mnozstvi, cena_ks, cena_celk, zadano
                     ) VALUES (
-                        ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3)
+                        ?, ?, ?, ?, ?, ?, ?, ?, NOW(3)
                     )
                 ');
                 if ($stmt === false) {
                     throw new RuntimeException('DB prepare selhal: obj_polozka_mod insert.');
                 }
 
-                $stmt->bind_param('issssddds', $idObjPolozka, $restiaModId, $typ, $posId, $nazev, $mnozstvi, $cenaKs, $cenaCelk, $rawJson);
+                $stmt->bind_param('issssddd', $idObjPolozka, $restiaModId, $typ, $posId, $nazev, $mnozstvi, $cenaKs, $cenaCelk);
                 $stmt->execute();
                 $stmt->close();
                 $pocet++;
@@ -1118,7 +1065,7 @@ if (!function_exists('cb_restia_import_a_insert_item_tags')) {
 }
 
 if (!function_exists('cb_restia_import_a_insert_polozky')) {
-    function cb_restia_import_a_insert_polozky(mysqli $conn, int $idObj, array $order): array
+    function cb_restia_import_a_insert_polozky(mysqli $conn, int $idObj, int $idPob, array $order): array
     {
         $items = $order['items'] ?? null;
         if (!is_array($items)) {
@@ -1135,19 +1082,6 @@ if (!function_exists('cb_restia_import_a_insert_polozky')) {
                 continue;
             }
 
-            $restiaItemId = isset($item['id']) && $item['id'] !== '' ? (string)$item['id'] : null;
-            $posId = trim((string)($item['posId'] ?? ''));
-            if ($posId === '') {
-                $posId = 'NEZNAME_POS_ID';
-            }
-            $nazev = trim((string)($item['label'] ?? ''));
-            if ($nazev === '') {
-                $nazev = 'Neznama polozka';
-            }
-            $actualLabel = isset($item['actualLabel']) && $item['actualLabel'] !== '' ? (string)$item['actualLabel'] : null;
-            $creatorId = isset($item['creatorId']) && $item['creatorId'] !== '' ? (string)$item['creatorId'] : null;
-            $isPackaging = !empty($item['isPackging']) || !empty($item['isPackaging']) ? 1 : 0;
-            $mainItemId = isset($item['mainItemId']) && $item['mainItemId'] !== '' ? (string)$item['mainItemId'] : null;
             $poznamka = isset($item['note']) && $item['note'] !== '' ? (string)$item['note'] : null;
             $mnozstvi = isset($item['count']) ? (int)$item['count'] : 1;
             if ($mnozstvi <= 0) {
@@ -1156,14 +1090,19 @@ if (!function_exists('cb_restia_import_a_insert_polozky')) {
             $cenaKs = (float)cb_restia_import_a_money($item['price'] ?? 0);
             $cenaCelk = $cenaKs * $mnozstvi;
             $jeExtra = !empty($item['isExtra']) ? 1 : 0;
-            $rawJson = cb_restia_import_a_json($item);
+            $restiaItemId = isset($item['posId']) && $item['posId'] !== ''
+                ? (string)$item['posId']
+                : (isset($item['id']) && $item['id'] !== '' ? (string)$item['id'] : '');
+            $idResPolozka = cb_restia_import_a_lookup_res_polozka_id($conn, $idPob, $restiaItemId);
+            if ($idResPolozka <= 0) {
+                throw new RuntimeException('Chybi res_polozky mapovani pro restia item ' . $restiaItemId . ' id_pob=' . (string)$idPob);
+            }
 
             $stmt = $conn->prepare('
                 INSERT INTO obj_polozky (
-                    id_obj, restia_item_id, pos_id, nazev, actual_label, creator_id, is_packaging, main_item_id,
-                    poznamka, poradi, mnozstvi, cena_ks, cena_celk, je_extra, raw_json, zadano
+                    id_obj, id_res_polozka, poznamka, poradi, mnozstvi, cena_ks, cena_celk, je_extra, zadano
                 ) VALUES (
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW()
+                    ?, ?, ?, ?, ?, ?, ?, ?, NOW()
                 )
             ');
             if ($stmt === false) {
@@ -1171,22 +1110,15 @@ if (!function_exists('cb_restia_import_a_insert_polozky')) {
             }
 
             $stmt->bind_param(
-                'isssssissiiddds',
+                'iisiiddi',
                 $idObj,
-                $restiaItemId,
-                $posId,
-                $nazev,
-                $actualLabel,
-                $creatorId,
-                $isPackaging,
-                $mainItemId,
+                $idResPolozka,
                 $poznamka,
                 $poradi,
                 $mnozstvi,
                 $cenaKs,
                 $cenaCelk,
-                $jeExtra,
-                $rawJson
+                $jeExtra
             );
             $stmt->execute();
             $idObjPolozka = (int)$conn->insert_id;
@@ -1203,7 +1135,7 @@ if (!function_exists('cb_restia_import_a_insert_polozky')) {
 }
 
 if (!function_exists('cb_restia_import_a_sync_order_children')) {
-    function cb_restia_import_a_sync_order_children(mysqli $conn, int $idObj, array $order): array
+    function cb_restia_import_a_sync_order_children(mysqli $conn, int $idObj, int $idPob, array $order): array
     {
         cb_restia_import_a_upsert_adresa($conn, $idObj, $order);
         cb_restia_import_a_upsert_casy($conn, $idObj, $order);
@@ -1211,7 +1143,7 @@ if (!function_exists('cb_restia_import_a_sync_order_children')) {
         cb_restia_import_a_delete_children($conn, $idObj);
         $kuryr = cb_restia_import_a_insert_kuryr($conn, $idObj, $order);
         $sluzby = cb_restia_import_a_insert_sluzby($conn, $idObj, $order);
-        $polozkyInfo = cb_restia_import_a_insert_polozky($conn, $idObj, $order);
+        $polozkyInfo = cb_restia_import_a_insert_polozky($conn, $idObj, $idPob, $order);
 
         return [
             'kuryr' => $kuryr,
@@ -1503,14 +1435,6 @@ if ($cbFlash === null) {
 
             $restiaIdObj = trim((string)($order['id'] ?? ''));
             if ($restiaIdObj === '') {
-                cb_restia_import_a_log('ERROR order ?: chybi id');
-                $summary['pocet_chyb']++;
-                continue;
-            }
-
-            $rawJson = cb_restia_import_a_json($order);
-            if ($rawJson === null) {
-                cb_restia_import_a_log('ERROR order ' . $restiaIdObj . ': nepodarilo se vytvorit JSON');
                 $summary['pocet_chyb']++;
                 continue;
             }
@@ -1520,12 +1444,10 @@ if ($cbFlash === null) {
             $conn->begin_transaction();
             try {
                 $idObj = cb_restia_import_a_upsert_order($conn, (int)$pob['id_pob'], (string)$pob['active_pos_id'], $order);
-                cb_restia_import_a_insert_raw($conn, $idImport, (int)$pob['id_pob'], $restiaIdObj, $rawJson);
-                $sync = cb_restia_import_a_sync_order_children($conn, $idObj, $order);
+                $sync = cb_restia_import_a_sync_order_children($conn, $idObj, (int)$pob['id_pob'], $order);
                 $conn->commit();
             } catch (Throwable $e) {
                 $conn->rollback();
-                cb_restia_import_a_log('ERROR order ' . $restiaIdObj . ': ' . $e->getMessage());
                 $summary['pocet_chyb']++;
                 continue;
             }
@@ -1633,20 +1555,29 @@ if ($cbFlash === null) {
 
     } catch (Throwable $e) {
     cb_restia_import_a_log('FATAL: ' . $e->getMessage());
+    if ($conn instanceof mysqli) {
+        try {
+            db_zapis_log_chyby(
+                $conn,
+                null,
+                'RESTIA',
+                'IMPORT_DN',
+                'FATAL_STEP',
+                $e->getMessage(),
+                'FATAL: ' . $e->getMessage(),
+                __FILE__,
+                __LINE__,
+                null,
+                null,
+                0,
+                'id_import=' . (string)($summary['id_import'] ?? 0)
+            );
+        } catch (Throwable $logErr) {
+            cb_restia_import_a_log('WARN: log_chyby insert selhal: ' . $logErr->getMessage());
+        }
+    }
 
     try {
-        if ($conn instanceof mysqli && (int)$summary['id_import'] > 0) {
-            cb_restia_import_a_finish_import(
-                $conn,
-                (int)$summary['id_import'],
-                'chyba',
-                (int)$summary['pocet_obj'],
-                (int)$summary['pocet_novych'],
-                (int)$summary['pocet_zmenenych'],
-                (int)$summary['pocet_chyb'] + 1,
-                'STOP: ' . $e->getMessage()
-            );
-        }
     } catch (Throwable $e2) {
         cb_restia_import_a_log('FATAL_FINISH_IMPORT: ' . $e2->getMessage());
     }

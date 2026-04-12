@@ -176,7 +176,7 @@ if (!function_exists('cb_restia_menu_status_map')) {
     {
         $sql = '
             SELECT id_pob, COUNT(*) AS cnt
-            FROM res_kategorie
+            FROM res_polozky
             GROUP BY id_pob
         ';
         $res = $conn->query($sql);
@@ -197,43 +197,58 @@ if (!function_exists('cb_restia_menu_status_map')) {
     }
 }
 
-if (!function_exists('cb_restia_menu_find_menu_id')) {
-    function cb_restia_menu_find_menu_id(mysqli $conn, int $idPob): string
+if (!function_exists('cb_restia_menu_set_branch_done')) {
+    function cb_restia_menu_set_branch_done(array &$statusMap, int $idPob): void
     {
-        $stmt = $conn->prepare('
-            SELECT raw_json
-            FROM objednavky_restia
-            WHERE id_pob = ?
-              AND COALESCE(raw_json, "") <> ""
-            ORDER BY id_obj DESC
-            LIMIT 400
-        ');
-        if ($stmt !== false) {
-            $stmt->bind_param('i', $idPob);
-            $stmt->execute();
-            $res = $stmt->get_result();
-            if ($res instanceof mysqli_result) {
-                while ($row = $res->fetch_assoc()) {
-                    $raw = (string)($row['raw_json'] ?? '');
-                    if ($raw === '') {
-                        continue;
-                    }
-                    $json = json_decode($raw, true);
-                    if (!is_array($json)) {
-                        continue;
-                    }
-                    $menuId = trim((string)($json['profile']['menuId'] ?? ''));
-                    if ($menuId !== '') {
-                        $res->free();
-                        $stmt->close();
-                        return $menuId;
-                    }
-                }
-                $res->free();
-            }
-            $stmt->close();
+        if ($idPob <= 0) {
+            return;
         }
-        return CB_RESTIA_MENU_DEFAULT_ID;
+        $statusMap[$idPob] = true;
+    }
+}
+
+if (!function_exists('cb_restia_menu_find_menu_id')) {
+    function cb_restia_menu_find_menu_id(mysqli $conn, array $branch): string
+    {
+        $activePosId = trim((string)($branch['active_pos_id'] ?? ''));
+        if ($activePosId === '') {
+            throw new RuntimeException('Vybrana pobocka nema vyplnene restia_activePosId.');
+        }
+
+        $res = cb_restia_get(
+            '/api/menu',
+            ['activePosId' => $activePosId],
+            $activePosId,
+            'menu lookup id_pob=' . (string)($branch['id_pob'] ?? 0)
+        );
+        if ((int)($res['ok'] ?? 0) !== 1) {
+            $msg = trim((string)($res['chyba'] ?? ''));
+            if ($msg === '') {
+                $msg = 'Nelze nacist menu seznam z RESTIA.';
+            }
+            throw new RuntimeException($msg);
+        }
+
+        $decoded = json_decode((string)($res['body'] ?? ''), true);
+        if (!is_array($decoded)) {
+            throw new RuntimeException('RESTIA menu vratila neplatny JSON.');
+        }
+
+        $list = array_is_list($decoded)
+            ? $decoded
+            : (isset($decoded['data']) && is_array($decoded['data']) && array_is_list($decoded['data']) ? $decoded['data'] : []);
+
+        foreach ($list as $menu) {
+            if (!is_array($menu)) {
+                continue;
+            }
+            $menuId = trim((string)($menu['id'] ?? ''));
+            if ($menuId !== '') {
+                return $menuId;
+            }
+        }
+
+        throw new RuntimeException('RESTIA nevratila zadne menu pro activePosId=' . $activePosId);
     }
 }
 
@@ -302,7 +317,6 @@ if (!function_exists('cb_restia_menu_collect_price_rows')) {
                         'balne_hl' => max(0, $packing),
                         'vat' => isset($node['vat']) ? (string)$node['vat'] : null,
                         'vat_v_restauraci' => isset($node['vatInRestaurant']) ? (string)$node['vatInRestaurant'] : null,
-                        'raw_json' => cb_restia_menu_json($size),
                     ];
                 }
             } elseif (isset($node['price'])) {
@@ -315,7 +329,6 @@ if (!function_exists('cb_restia_menu_collect_price_rows')) {
                     'balne_hl' => max(0, (int)($node['packing'] ?? 0)),
                     'vat' => isset($node['vat']) ? (string)$node['vat'] : null,
                     'vat_v_restauraci' => isset($node['vatInRestaurant']) ? (string)$node['vatInRestaurant'] : null,
-                    'raw_json' => cb_restia_menu_json($node),
                 ];
             }
         }
@@ -357,93 +370,56 @@ if (!function_exists('cb_restia_menu_collect_allergens')) {
 }
 
 if (!function_exists('cb_restia_menu_upsert_kategorie')) {
-    function cb_restia_menu_upsert_kategorie(mysqli $conn, int $idPob, string $activePosId, string $menuId, string $restiaCatId, string $nazev, int $poradi, int $skryta): int
+    function cb_restia_menu_upsert_kategorie(mysqli $conn, int $idPob, string $menuId, string $restiaCatId, string $nazev, int $poradi, int $skryta): int
     {
         $sql = '
             INSERT INTO res_kategorie (
-                id_pob, restia_active_pos_id, restia_menu_id, restia_kategorie_id, nazev, poradi, skryta, aktivni, vytvoreno, zmeneno
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW(3), NOW(3))
-            ON DUPLICATE KEY UPDATE
-                id_res_kategorie = LAST_INSERT_ID(id_res_kategorie),
-                restia_active_pos_id = VALUES(restia_active_pos_id),
-                nazev = VALUES(nazev),
-                poradi = VALUES(poradi),
-                skryta = VALUES(skryta),
-                aktivni = 1,
-                zmeneno = NOW(3)
+                id_pob, id_restia_menu, id_restia_kategorie, nazev_kategorie, poradi_kategorie, skryta, aktivni, vytvoreno, zmeneno
+            ) VALUES (?, ?, ?, ?, ?, ?, 1, NOW(3), NOW(3))
         ';
         $stmt = $conn->prepare($sql);
         if ($stmt === false) {
             throw new RuntimeException('DB prepare selhal: res_kategorie.');
         }
-        $stmt->bind_param('issssii', $idPob, $activePosId, $menuId, $restiaCatId, $nazev, $poradi, $skryta);
+        $stmt->bind_param('isssii', $idPob, $menuId, $restiaCatId, $nazev, $poradi, $skryta);
         $stmt->execute();
+        $insertId = (int)$conn->insert_id;
         $stmt->close();
-        return (int)$conn->insert_id;
+        return $insertId;
     }
 }
 
 if (!function_exists('cb_restia_menu_upsert_polozka')) {
-    function cb_restia_menu_upsert_polozka(mysqli $conn, int $idResKat, string $restiaPolozkaId, string $nazev, ?string $nazevEn, ?string $popis, ?string $popisEn, ?string $posCode, ?string $imageUrl, ?string $rawJson, int $skryta): int
+    function cb_restia_menu_upsert_polozka(mysqli $conn, int $idPob, int $idResKat, string $restiaPolozkaId, string $nazev, ?string $nazevEn, ?string $popis, ?string $popisEn, ?string $posCode, ?string $imageUrl, int $skryta): int
     {
         $sql = '
             INSERT INTO res_polozky (
-                id_res_kategorie, restia_polozka_id, nazev, nazev_en, popis, popis_en, pos_code, image_url, raw_json, skryta, aktivni, vytvoreno, zmeneno
+                id_pob, id_res_kategorie, restia_polozka_id, nazev, nazev_en, popis, popis_en, pos_code, image_url, skryta, aktivni, vytvoreno, zmeneno
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(3), NOW(3))
-            ON DUPLICATE KEY UPDATE
-                id_res_polozka = LAST_INSERT_ID(id_res_polozka),
-                nazev = VALUES(nazev),
-                nazev_en = VALUES(nazev_en),
-                popis = VALUES(popis),
-                popis_en = VALUES(popis_en),
-                pos_code = VALUES(pos_code),
-                image_url = VALUES(image_url),
-                raw_json = VALUES(raw_json),
-                skryta = VALUES(skryta),
-                aktivni = 1,
-                zmeneno = NOW(3)
         ';
         $stmt = $conn->prepare($sql);
         if ($stmt === false) {
             throw new RuntimeException('DB prepare selhal: res_polozky.');
         }
-        $stmt->bind_param('issssssssi', $idResKat, $restiaPolozkaId, $nazev, $nazevEn, $popis, $popisEn, $posCode, $imageUrl, $rawJson, $skryta);
+        $stmt->bind_param('iisssssssi', $idPob, $idResKat, $restiaPolozkaId, $nazev, $nazevEn, $popis, $popisEn, $posCode, $imageUrl, $skryta);
         $stmt->execute();
+        $insertId = (int)$conn->insert_id;
         $stmt->close();
-        return (int)$conn->insert_id;
+        return $insertId;
     }
 }
 
 if (!function_exists('cb_restia_menu_sync_prices')) {
     function cb_restia_menu_sync_prices(mysqli $conn, int $idResPolozka, array $prices): int
     {
-        $deactivate = $conn->prepare('UPDATE res_cena SET aktivni = 0, zmeneno = NOW(3) WHERE id_res_polozka = ?');
-        if ($deactivate === false) {
-            throw new RuntimeException('DB prepare selhal: res_cena deactivate.');
-        }
-        $deactivate->bind_param('i', $idResPolozka);
-        $deactivate->execute();
-        $deactivate->close();
-
         $sql = '
             INSERT INTO res_cena (
-                id_res_polozka, kanal, size_id, size_popis, pos_code, cena_hl, balne_hl, vat, vat_v_restauraci, mena, raw_json, aktivni, vytvoreno, zmeneno
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "CZK", ?, 1, NOW(3), NOW(3))
-            ON DUPLICATE KEY UPDATE
-                size_popis = VALUES(size_popis),
-                pos_code = VALUES(pos_code),
-                cena_hl = VALUES(cena_hl),
-                balne_hl = VALUES(balne_hl),
-                vat = VALUES(vat),
-                vat_v_restauraci = VALUES(vat_v_restauraci),
-                mena = VALUES(mena),
-                raw_json = VALUES(raw_json),
-                aktivni = 1,
-                zmeneno = NOW(3)
+                id_res_polozka, kanal, size_id, size_popis, pos_code, cena_hl, balne_hl, vat, vat_v_restauraci, mena, aktivni, vytvoreno, zmeneno
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "CZK", 1, NOW(3), NOW(3))
         ';
         $stmt = $conn->prepare($sql);
         if ($stmt === false) {
-            throw new RuntimeException('DB prepare selhal: res_cena upsert.');
+            throw new RuntimeException('DB prepare selhal: res_cena insert.');
         }
 
         $count = 0;
@@ -461,9 +437,7 @@ if (!function_exists('cb_restia_menu_sync_prices')) {
             $vat = ($vat === '') ? null : $vat;
             $vatRest = (string)($p['vat_v_restauraci'] ?? '');
             $vatRest = ($vatRest === '') ? null : $vatRest;
-            $rawJson = (string)($p['raw_json'] ?? '');
-            $rawJson = ($rawJson === '') ? null : $rawJson;
-            $stmt->bind_param('issssiisss', $idResPolozka, $kanal, $sizeId, $sizePopis, $posCode, $cenaHl, $balneHl, $vat, $vatRest, $rawJson);
+            $stmt->bind_param('issssiiss', $idResPolozka, $kanal, $sizeId, $sizePopis, $posCode, $cenaHl, $balneHl, $vat, $vatRest);
             $stmt->execute();
             $count++;
         }
@@ -475,14 +449,6 @@ if (!function_exists('cb_restia_menu_sync_prices')) {
 if (!function_exists('cb_restia_menu_sync_allergens')) {
     function cb_restia_menu_sync_allergens(mysqli $conn, int $idResPolozka, array $allergens): int
     {
-        $del = $conn->prepare('DELETE FROM res_alergen WHERE id_res_polozka = ?');
-        if ($del === false) {
-            throw new RuntimeException('DB prepare selhal: res_alergen delete.');
-        }
-        $del->bind_param('i', $idResPolozka);
-        $del->execute();
-        $del->close();
-
         $ins = $conn->prepare('INSERT INTO res_alergen (id_res_polozka, alergen, vytvoreno) VALUES (?, ?, NOW(3))');
         if ($ins === false) {
             throw new RuntimeException('DB prepare selhal: res_alergen insert.');
@@ -502,75 +468,8 @@ if (!function_exists('cb_restia_menu_sync_allergens')) {
     }
 }
 
-if (!function_exists('cb_restia_menu_deactivate_missing')) {
-    function cb_restia_menu_deactivate_missing(mysqli $conn, int $idPob, string $menuId, array $seenCats, array $seenItemsByCat): void
-    {
-        if ($seenCats === []) {
-            $stmt = $conn->prepare('UPDATE res_kategorie SET aktivni = 0, zmeneno = NOW(3) WHERE id_pob = ? AND restia_menu_id = ?');
-            if ($stmt === false) {
-                throw new RuntimeException('DB prepare selhal: deactivate all categories.');
-            }
-            $stmt->bind_param('is', $idPob, $menuId);
-            $stmt->execute();
-            $stmt->close();
-            return;
-        }
-
-        $catIds = array_map('intval', array_values($seenCats));
-        $catList = implode(',', $catIds);
-        $sqlCat = 'UPDATE res_kategorie SET aktivni = 0, zmeneno = NOW(3) WHERE id_pob = ? AND restia_menu_id = ? AND id_res_kategorie NOT IN (' . $catList . ')';
-        $stmtCat = $conn->prepare($sqlCat);
-        if ($stmtCat === false) {
-            throw new RuntimeException('DB prepare selhal: deactivate missing categories.');
-        }
-        $stmtCat->bind_param('is', $idPob, $menuId);
-        $stmtCat->execute();
-        $stmtCat->close();
-
-        foreach ($catIds as $catId) {
-            $seenItems = $seenItemsByCat[$catId] ?? [];
-            if ($seenItems === []) {
-                $stmt = $conn->prepare('UPDATE res_polozky SET aktivni = 0, zmeneno = NOW(3) WHERE id_res_kategorie = ?');
-                if ($stmt === false) {
-                    throw new RuntimeException('DB prepare selhal: deactivate category items.');
-                }
-                $stmt->bind_param('i', $catId);
-                $stmt->execute();
-                $stmt->close();
-                continue;
-            }
-            $itemIds = array_map('intval', array_values($seenItems));
-            $itemList = implode(',', $itemIds);
-            $sql = 'UPDATE res_polozky SET aktivni = 0, zmeneno = NOW(3) WHERE id_res_kategorie = ? AND id_res_polozka NOT IN (' . $itemList . ')';
-            $stmt = $conn->prepare($sql);
-            if ($stmt === false) {
-                throw new RuntimeException('DB prepare selhal: deactivate missing items.');
-            }
-            $stmt->bind_param('i', $catId);
-            $stmt->execute();
-            $stmt->close();
-        }
-
-        $stmtPrice = $conn->prepare('
-            UPDATE res_cena c
-            JOIN res_polozky p ON p.id_res_polozka = c.id_res_polozka
-            JOIN res_kategorie k ON k.id_res_kategorie = p.id_res_kategorie
-            SET c.aktivni = 0, c.zmeneno = NOW(3)
-            WHERE k.id_pob = ?
-              AND k.restia_menu_id = ?
-              AND p.aktivni = 0
-        ');
-        if ($stmtPrice === false) {
-            throw new RuntimeException('DB prepare selhal: deactivate prices for inactive items.');
-        }
-        $stmtPrice->bind_param('is', $idPob, $menuId);
-        $stmtPrice->execute();
-        $stmtPrice->close();
-    }
-}
-
 if (!function_exists('cb_restia_menu_import_once')) {
-    function cb_restia_menu_import_once(mysqli $conn, array $auth, array $branch, string $menuId): array
+    function cb_restia_menu_import_once(mysqli $conn, array $auth, array $branch, string $menuId, array &$statusMap): array
     {
         $t0 = (int)round(microtime(true) * 1000);
         $idPob = (int)$branch['id_pob'];
@@ -604,8 +503,6 @@ if (!function_exists('cb_restia_menu_import_once')) {
         $countPol = 0;
         $countCen = 0;
         $countAlerg = 0;
-        $seenCats = [];
-        $seenItemsByCat = [];
 
         $conn->begin_transaction();
         try {
@@ -619,7 +516,13 @@ if (!function_exists('cb_restia_menu_import_once')) {
                 if ($restiaCatId === '') {
                     continue;
                 }
-                $catName = cb_restia_menu_first_text($cat, ['label', 'name', 'title']);
+                $catName = '';
+                if (isset($cat['_general']) && is_array($cat['_general'])) {
+                    $catName = cb_restia_menu_first_text($cat['_general'], ['name', 'label', 'title']);
+                }
+                if ($catName === '') {
+                    $catName = cb_restia_menu_first_text($cat, ['label', 'name', 'title']);
+                }
                 if ($catName === '') {
                     $catName = 'Kategorie ' . $catOrder;
                 }
@@ -628,12 +531,10 @@ if (!function_exists('cb_restia_menu_import_once')) {
                     $catHidden = 1;
                 }
 
-                $idResKat = cb_restia_menu_upsert_kategorie($conn, $idPob, $activePosId, $menuId, $restiaCatId, $catName, $catOrder, $catHidden);
+                $idResKat = cb_restia_menu_upsert_kategorie($conn, $idPob, $menuId, $restiaCatId, $catName, $catOrder, $catHidden);
                 if ($idResKat <= 0) {
                     throw new RuntimeException('Nelze ziskat id_res_kategorie pro ' . $restiaCatId . '.');
                 }
-                $seenCats[$idResKat] = $idResKat;
-                $seenItemsByCat[$idResKat] = [];
                 $countKat++;
 
                 $dishes = $cat['dishes'] ?? [];
@@ -648,45 +549,64 @@ if (!function_exists('cb_restia_menu_import_once')) {
                     if ($restiaDishId === '') {
                         continue;
                     }
-                    $name = cb_restia_menu_first_text($dish, ['label', 'name', 'title']);
+                    $name = '';
+                    if (isset($dish['_general']) && is_array($dish['_general'])) {
+                        $name = cb_restia_menu_first_text($dish['_general'], ['name', 'label', 'title']);
+                    }
+                    if ($name === '') {
+                        $name = cb_restia_menu_first_text($dish, ['label', 'name', 'title']);
+                    }
                     if ($name === '') {
                         $name = 'Polozka ' . $restiaDishId;
                     }
-                    $nameEn = cb_restia_menu_first_text($dish, ['labelEn', 'nameEn', 'titleEn']);
+                    $nameEn = '';
+                    if (isset($dish['_general']) && is_array($dish['_general'])) {
+                        $nameEn = cb_restia_menu_first_text($dish['_general'], ['nameEN', 'labelEn', 'nameEn', 'titleEn']);
+                    }
+                    if ($nameEn === '') {
+                        $nameEn = cb_restia_menu_first_text($dish, ['labelEn', 'nameEn', 'titleEn']);
+                    }
                     $desc = '';
                     $descEn = '';
-                    if (isset($dish['generic']) && is_array($dish['generic'])) {
+                    if (isset($dish['_general']) && is_array($dish['_general'])) {
+                        $desc = cb_restia_menu_first_text($dish['_general'], ['description', 'desc']);
+                        $descEn = cb_restia_menu_first_text($dish['_general'], ['descriptionEN', 'descriptionEn', 'descEn']);
+                    }
+                    if ($desc === '' && isset($dish['generic']) && is_array($dish['generic'])) {
                         $desc = cb_restia_menu_first_text($dish['generic'], ['description', 'desc']);
-                        $descEn = cb_restia_menu_first_text($dish['generic'], ['descriptionEn', 'descEn']);
+                    }
+                    if ($descEn === '' && isset($dish['generic']) && is_array($dish['generic'])) {
+                        $descEn = cb_restia_menu_first_text($dish['generic'], ['descriptionEN', 'descriptionEn', 'descEn']);
                     }
                     $posCode = '';
-                    if (isset($dish['generic']) && is_array($dish['generic'])) {
+                    if (isset($dish['_general']) && is_array($dish['_general'])) {
+                        $posCode = cb_restia_menu_first_text($dish['_general'], ['posCode']);
+                    }
+                    if ($posCode === '' && isset($dish['generic']) && is_array($dish['generic'])) {
                         $posCode = cb_restia_menu_first_text($dish['generic'], ['posCode']);
                     }
                     if ($posCode === '') {
                         $posCode = cb_restia_menu_first_text($dish, ['posCode']);
                     }
                     $img = cb_restia_menu_first_text($dish, ['imageUrl', 'image']);
-                    $rawDish = cb_restia_menu_json($dish);
                     $hiddenDish = cb_restia_menu_channel_hidden($dish);
 
-                    $idResPol = cb_restia_menu_upsert_polozka(
-                        $conn,
-                        $idResKat,
-                        $restiaDishId,
-                        $name,
+                $idResPol = cb_restia_menu_upsert_polozka(
+                    $conn,
+                    $idPob,
+                    $idResKat,
+                    $restiaDishId,
+                    $name,
                         ($nameEn === '' ? null : $nameEn),
                         ($desc === '' ? null : $desc),
                         ($descEn === '' ? null : $descEn),
                         ($posCode === '' ? null : $posCode),
                         ($img === '' ? null : $img),
-                        $rawDish,
                         $hiddenDish
                     );
                     if ($idResPol <= 0) {
                         throw new RuntimeException('Nelze ziskat id_res_polozka pro ' . $restiaDishId . '.');
                     }
-                    $seenItemsByCat[$idResKat][$idResPol] = $idResPol;
                     $countPol++;
 
                     $prices = cb_restia_menu_collect_price_rows($dish, $posCode);
@@ -696,8 +616,6 @@ if (!function_exists('cb_restia_menu_import_once')) {
                     $countAlerg += cb_restia_menu_sync_allergens($conn, $idResPol, $allergens);
                 }
             }
-
-            cb_restia_menu_deactivate_missing($conn, $idPob, $menuId, $seenCats, $seenItemsByCat);
             $conn->commit();
         } catch (Throwable $e) {
             $conn->rollback();
@@ -705,6 +623,7 @@ if (!function_exists('cb_restia_menu_import_once')) {
         }
 
         db_api_restia_flush($conn, (int)$auth['id_user'], (int)$auth['id_login']);
+        cb_restia_menu_set_branch_done($statusMap, $idPob);
 
         $ms = (int)round(microtime(true) * 1000) - $t0;
         return [
@@ -731,10 +650,26 @@ try {
     $branchOptions = cb_restia_menu_get_branches($conn);
     $statusMap = cb_restia_menu_status_map($conn);
 
-    if ($selectedBranchId <= 0) {
+    $selectedBranchIsDone = ($selectedBranchId > 0 && (bool)($statusMap[$selectedBranchId] ?? false) === true);
+    if ($selectedBranchId <= 0 || $selectedBranchIsDone) {
+        $selectedBranchId = 0;
         foreach ($branchOptions as $branchOpt) {
-            if ((bool)($branchOpt['enabled'] ?? false) === true) {
-                $selectedBranchId = (int)($branchOpt['id_pob'] ?? 0);
+            $idPobOpt = (int)($branchOpt['id_pob'] ?? 0);
+            $enabledOpt = ((bool)($branchOpt['enabled'] ?? false) === true);
+            $menuOkOpt = (bool)($statusMap[$idPobOpt] ?? false);
+            if ($enabledOpt && !$menuOkOpt) {
+                $selectedBranchId = $idPobOpt;
+                break;
+            }
+        }
+    }
+    if ($selectedBranchId <= 0 && $branchOptions !== []) {
+        foreach ($branchOptions as $branchOpt) {
+            $idPobOpt = (int)($branchOpt['id_pob'] ?? 0);
+            $enabledOpt = ((bool)($branchOpt['enabled'] ?? false) === true);
+            $menuOkOpt = (bool)($statusMap[$idPobOpt] ?? false);
+            if ($enabledOpt && !$menuOkOpt) {
+                $selectedBranchId = $idPobOpt;
                 break;
             }
         }
@@ -743,10 +678,10 @@ try {
         $branch = cb_restia_menu_get_branch_by_id($conn, $selectedBranchId);
         $branchName = (string)$branch['nazev'];
         $branchActivePosId = (string)($branch['active_pos_id'] ?? '');
-        $menuIdInput = cb_restia_menu_find_menu_id($conn, (int)$branch['id_pob']);
+        $menuIdInput = cb_restia_menu_find_menu_id($conn, $branch);
     }
 } catch (Throwable $e) {
-    $menuIdInput = CB_RESTIA_MENU_DEFAULT_ID;
+    throw $e;
 }
 
 $action = trim((string)($_POST['cb_action'] ?? 'start'));
@@ -766,10 +701,7 @@ if ($run) {
         }
         $branchName = (string)$branch['nazev'];
         $branchActivePosId = (string)($branch['active_pos_id'] ?? '');
-        $menuId = cb_restia_menu_find_menu_id($conn, (int)$branch['id_pob']);
-        if ($menuId === '') {
-            $menuId = CB_RESTIA_MENU_DEFAULT_ID;
-        }
+        $menuId = cb_restia_menu_find_menu_id($conn, $branch);
 
         cb_restia_menu_log('-----');
         cb_restia_menu_log('START MENU IMPORT: ' . cb_restia_menu_now_cs());
@@ -777,7 +709,7 @@ if ($run) {
         cb_restia_menu_log('ACTIVE_POS_ID: ' . (string)$branch['active_pos_id']);
         cb_restia_menu_log('MENU_ID: ' . $menuId);
 
-        $res = cb_restia_menu_import_once($conn, $auth, $branch, $menuId);
+        $res = cb_restia_menu_import_once($conn, $auth, $branch, $menuId, $statusMap);
         $ok = 1;
         $message = 'Menu import OK.';
         cb_restia_menu_log(
@@ -821,7 +753,7 @@ if ($run) {
               $labelOpt .= ' (chybí restia_activePosId)';
           }
           ?>
-          <option value="<?= cb_restia_menu_h((string)$idPobOpt) ?>"<?= $idPobOpt === $selectedBranchId ? ' selected' : '' ?><?= $enabledOpt ? '' : ' disabled style="color:#9ca3af;"' ?>><?= cb_restia_menu_h($labelOpt) ?></option>
+          <option value="<?= cb_restia_menu_h((string)$idPobOpt) ?>"<?= $idPobOpt === $selectedBranchId ? ' selected' : '' ?><?= ($enabledOpt && !$menuOkOpt) ? '' : ' disabled style="color:#9ca3af;"' ?>><?= cb_restia_menu_h($labelOpt) ?></option>
         <?php endforeach; ?>
       </select>
       <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Spustit import</button>

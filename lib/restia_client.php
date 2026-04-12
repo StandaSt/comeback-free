@@ -165,6 +165,7 @@ if (!function_exists('cb_restia_get')) {
             CURLOPT_HEADERFUNCTION  => $headersFn,
             CURLOPT_HTTPHEADER      => [
                 'Accept: application/json',
+                'Content-Type: application/json',
                 'Authorization: Bearer ' . (string)$tok['access_token'],
             ],
             CURLOPT_TIMEOUT         => 30,
