@@ -1,5 +1,5 @@
 <?php
-// karty/prehled_objednavek.php * Verze: V5 * Aktualizace: 09.04.2026
+// karty/prehled_objednavek.php * Verze: V6 * Aktualizace: 14.04.2026
 declare(strict_types=1);
 
 /*
@@ -42,11 +42,11 @@ if ($periodOd === '' || $periodDo === '') {
 }
 
 $selectedPob = function_exists('get_selected_pobocky') ? get_selected_pobocky() : [];
-$selectedPob = array_values(array_filter(array_map('intval', $selectedPob), static fn(int $v): bool => $v >= 0));
+$selectedPob = array_values(array_filter(array_map('intval', $selectedPob), static fn(int $v): bool => $v > 0));
 
 if ($selectedPob === []) {
     $fallbackPob = (int)($_SESSION['cb_pobocka_id'] ?? 0);
-    if ($fallbackPob >= 0) {
+    if ($fallbackPob > 0) {
         $selectedPob = [$fallbackPob];
     }
 }
@@ -107,11 +107,11 @@ $objFilterStyle = [
 $objSortMap = [
     'cislo_obj' => 'COALESCE(o.restia_order_number, "")',
     'stav' => 'COALESCE(s.nazev, "")',
-    'cena' => 'COALESCE(c.cena_celk, "")',
+    'cena' => 'COALESCE(c.cena_celk, 0)',
     'typ' => 'COALESCE(d.nazev, "")',
     'platba' => 'COALESCE(p.nazev, "")',
-    'zakaznik' => 'COALESCE(o.zak_jmeno, "")',
-    'vytvoreno' => 'COALESCE(ca.cas_vytvor, o.`import`)',
+    'zakaznik' => 'TRIM(CONCAT(COALESCE(z.jmeno, ""), " ", COALESCE(z.prijmeni, "")))',
+    'vytvoreno' => 'COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at)',
 ];
 
 $objSortRaw = trim((string)($_GET['obj_sort'] ?? (string)$tabKonfig['default_sort']));
@@ -157,8 +157,8 @@ try {
 
     $where = [];
 
-    $where[] = "COALESCE(ca.report, DATE(COALESCE(ca.cas_vytvor, o.`import`))) >= '" . $conn->real_escape_string($periodOd) . "'";
-    $where[] = "COALESCE(ca.report, DATE(COALESCE(ca.cas_vytvor, o.`import`))) <= '" . $conn->real_escape_string($periodDo) . "'";
+    $where[] = "COALESCE(ca.report, DATE(COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at))) >= '" . $conn->real_escape_string($periodOd) . "'";
+    $where[] = "COALESCE(ca.report, DATE(COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at))) <= '" . $conn->real_escape_string($periodDo) . "'";
 
     if ($selectedPob !== []) {
         $inIds = [];
@@ -185,7 +185,7 @@ try {
             } elseif ($key === 'platba') {
                 $where[] = "COALESCE(p.nazev, '') LIKE '%" . $safe . "%'";
             } elseif ($key === 'zakaznik') {
-                $where[] = "COALESCE(o.zak_jmeno, '') LIKE '%" . $safe . "%'";
+                $where[] = "TRIM(CONCAT(COALESCE(z.jmeno, ''), ' ', COALESCE(z.prijmeni, ''))) LIKE '%" . $safe . "%'";
             }
         }
     }
@@ -200,6 +200,7 @@ try {
         LEFT JOIN cis_obj_platby p ON p.id_platba = o.id_platba
         LEFT JOIN obj_ceny c ON c.id_obj = o.id_obj
         LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
+        LEFT JOIN zakaznik z ON z.id_zak = o.id_zak
     ' . $whereSql;
 
 
@@ -250,7 +251,7 @@ try {
         $offset = 0;
     }
 
-    $orderSql = 'COALESCE(ca.cas_vytvor, o.`import`) DESC, o.id_obj DESC';
+    $orderSql = 'COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at) DESC, o.id_obj DESC';
     if ((int)$tabKonfig['enable_sort'] === 1) {
         $orderSql = $objSortMap[$objSort] . ' ' . $objDir . ', o.id_obj DESC';
     }
@@ -262,14 +263,16 @@ try {
             COALESCE(c.cena_celk, "") AS cena,
             COALESCE(d.nazev, "") AS typ,
             COALESCE(p.nazev, "") AS platba,
-            COALESCE(o.zak_jmeno, "") AS zakaznik,
-            COALESCE(ca.cas_vytvor, o.`import`) AS vytvoreno
+            TRIM(CONCAT(COALESCE(z.jmeno, ""), " ", COALESCE(z.prijmeni, ""))) AS zakaznik,
+            COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at) AS vytvoreno
         FROM objednavky_restia o
         LEFT JOIN cis_obj_stav s ON s.id_stav = o.id_stav
         LEFT JOIN cis_doruceni d ON d.id_doruceni = o.id_doruceni
         LEFT JOIN cis_obj_platby p ON p.id_platba = o.id_platba
         LEFT JOIN obj_ceny c ON c.id_obj = o.id_obj
         LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
+        LEFT JOIN zakaznik z ON z.id_zak = o.id_zak
+        LEFT JOIN zakaznik z ON z.id_zak = o.id_zak
     ' . $whereSql . '
         ORDER BY ' . $orderSql . '
         LIMIT ' . (int)$objPer . ' OFFSET ' . (int)$offset;
@@ -302,7 +305,7 @@ try {
             'cena' => $cena,
             'typ' => (string)($row['typ'] ?? ''),
             'platba' => (string)($row['platba'] ?? ''),
-            'zakaznik' => (string)($row['zakaznik'] ?? ''),
+            'zakaznik' => trim((string)($row['zakaznik'] ?? '')) !== '' ? trim((string)($row['zakaznik'] ?? '')) : '-',
             'vytvoreno' => $vytvoreno,
         ];
     }
@@ -492,7 +495,7 @@ ob_start();
 <?php
 $card_max_html = (string)ob_get_clean();
 
-/* karty/prehled_objednavek.php * Verze: V5 * Aktualizace: 09.04.2026 */
-// Počet řádků: 498
-// Předchozí počet řádků: 422
+/* karty/prehled_objednavek.php * Verze: V6 * Aktualizace: 14.04.2026 */
+// Počet řádků: 501
+// Předchozí počet řádků: 498
 ?>

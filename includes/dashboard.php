@@ -1,5 +1,5 @@
 <?php
-// includes/dashboard.php * Verze: V10 * Aktualizace: 02.04.2026
+// includes/dashboard.php * Verze: V11 * Aktualizace: 14.04.2026
 declare(strict_types=1);
 
 function cb_dashboard_resolve_file(string $soubor): ?string
@@ -394,7 +394,7 @@ $renderCard = static function (array $karta, bool $isNano, string $gridStyle = '
     $legacy_html = '';
     $startExpanded = false;
 
-    if ($fullPath !== null) {
+    if (!$isNano && $fullPath !== null) {
         ob_start();
         require $fullPath;
         $legacy_html = (string)ob_get_clean();
@@ -528,5 +528,5 @@ $renderCard = static function (array $karta, bool $isNano, string $gridStyle = '
 </div>
 
 <?php
-/* includes/dashboard.php * Verze: V9 * Aktualizace: 25.03.2026 */
+/* includes/dashboard.php * Verze: V11 * Aktualizace: 14.04.2026 */
 // Konec souboru
