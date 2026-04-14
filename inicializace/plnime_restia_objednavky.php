@@ -482,6 +482,22 @@ if (!function_exists('cb_restia_hist_run_batch')) {
                 . ' / ' . cb_restia_hist_format_total_time((int)($day['total_ms'] ?? 0))
             );
 
+            // STOPKA NA ČAS – max 1:45 (105000 ms)
+            $startedAtMs = (int)($state['run_started_at_ms'] ?? 0);
+            $nowMsCheck = (int)round(microtime(true) * 1000);
+            if ($startedAtMs > 0 && ($nowMsCheck - $startedAtMs) >= 105000) {
+                $state['finished'] = 1;
+                if ($message === '') {
+                    $message = 'Import dočasně ukončen kvůli časovému limitu, spusť znovu.';
+                }
+                cb_restia_hist_log(
+                    (int)($branch['id_pob'] ?? 0),
+                    'STOPKA LIMIT: ' . cb_restia_hist_format_datetime_cs(cb_restia_hist_now())
+                );
+                break;
+            }
+
+
             $currentMonth = substr((string)$date, 0, 7);
             $nextMonth = substr((string)($state['next_date'] ?? ''), 0, 7);
             if ($currentMonth !== '' && $nextMonth !== '' && $nextMonth !== $currentMonth) {
@@ -945,16 +961,15 @@ if (!function_exists('cb_restia_hist_sync_children')) {
         $stmtCasy->execute();
         $stmtCasy->close();
 
-        $cenaPol = cb_restia_hist_money($order['itemsPrice'] ?? null);
-        $cenaBalne = cb_restia_hist_money($order['packingPrice'] ?? null);
-        $cenaDopr = cb_restia_hist_money($order['deliveryPrice'] ?? null);
-        $dyska = cb_restia_hist_money($order['tipPrice'] ?? null);
-        $cenaDoMin = cb_restia_hist_money($order['surchargeToMin'] ?? null);
-        $cenaServis = cb_restia_hist_money($order['serviceFeePrice'] ?? null);
-        $sleva = cb_restia_hist_money($order['discountPrice'] ?? null);
-        $zaokrouhleni = cb_restia_hist_money($order['roundingPrice'] ?? null);
-        $sum = (float)$cenaPol + (float)$cenaBalne + (float)$cenaDopr + (float)$dyska + (float)$cenaDoMin + (float)$cenaServis + (float)$zaokrouhleni - (float)$sleva;
-        $cenaCelk = number_format($sum, 2, '.', '');
+        $cenaPol = (float)cb_restia_hist_money($order['itemsPrice'] ?? null);
+        $cenaBalne = (float)cb_restia_hist_money($order['packingPrice'] ?? null);
+        $cenaDopr = (float)cb_restia_hist_money($order['deliveryPrice'] ?? null);
+        $dyska = (float)cb_restia_hist_money($order['tipPrice'] ?? null);
+        $cenaDoMin = (float)cb_restia_hist_money($order['surchargeToMin'] ?? null);
+        $cenaServis = (float)cb_restia_hist_money($order['serviceFeePrice'] ?? null);
+        $sleva = (float)cb_restia_hist_money($order['discountPrice'] ?? null);
+        $zaokrouhleni = (float)cb_restia_hist_money($order['roundingPrice'] ?? null);
+        $cenaCelk = $cenaPol + $cenaBalne + $cenaDopr + $dyska + $cenaDoMin + $cenaServis + $zaokrouhleni - $sleva;
 
         $stmtCeny = $conn->prepare('
             INSERT INTO obj_ceny (
@@ -967,7 +982,7 @@ if (!function_exists('cb_restia_hist_sync_children')) {
         if ($stmtCeny === false) {
             throw new RuntimeException('DB prepare selhal: obj_ceny.');
         }
-        $stmtCeny->bind_param('isssssssss', $idObj, $cenaCelk, $cenaPol, $cenaBalne, $cenaDopr, $dyska, $cenaDoMin, $cenaServis, $sleva, $zaokrouhleni);
+        $stmtCeny->bind_param('iddddddddd', $idObj, $cenaCelk, $cenaPol, $cenaBalne, $cenaDopr, $dyska, $cenaDoMin, $cenaServis, $sleva, $zaokrouhleni);
         $stmtCeny->execute();
         $stmtCeny->close();
 
@@ -1027,11 +1042,11 @@ if (!function_exists('cb_restia_hist_sync_children')) {
             $jeExtra = !empty($item['isExtra']) ? 1 : 0;
             $idResPolozka = cb_restia_hist_lookup_res_polozka_id($conn, $idPob, $restiaItemId);
             if ($idResPolozka <= 0) {
-                throw new RuntimeException('Chybi res_polozky mapovani pro restia item ' . $restiaItemId . ' id_pob=' . (string)$idPob);
+                 $idResPolozka = null;
             }
-            $stmtItem = $conn->prepare('INSERT INTO obj_polozky (id_obj, id_res_polozka, poznamka, poradi, mnozstvi, cena_ks, cena_celk, je_extra, zadano) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(3))');
+           $stmtItem = $conn->prepare('INSERT INTO obj_polozky (id_obj, id_res_polozka, res_item, poznamka, poradi, mnozstvi, cena_ks, cena_celk, je_extra, zadano) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3))');
             if ($stmtItem === false) { throw new RuntimeException('DB prepare selhal: obj_polozky.'); }
-            $stmtItem->bind_param('iisiiddi', $idObj, $idResPolozka, $poznamka, $poradi, $mnozstvi, $cenaKs, $cenaCelk, $jeExtra);
+           $stmtItem->bind_param('iissiiddi', $idObj, $idResPolozka, $restiaItemId, $poznamka, $poradi, $mnozstvi, $cenaKs, $cenaCelk, $jeExtra);
             $stmtItem->execute();
             $idObjPolozka = (int)$conn->insert_id;
             $stmtItem->close();
@@ -1325,20 +1340,21 @@ if (!function_exists('cb_restia_hist_upsert_order')) {
         $restiaOrderNumber = trim((string)($order['orderNumber'] ?? ''));
         $restiaToken = $order['token'] ?? null;
         $restiaToken = ($restiaToken === null || $restiaToken === '') ? null : (string)$restiaToken;
+        $restiaCreatedAt = cb_restia_hist_restia_to_local_nullable($order['createdAt'] ?? null);
         $objPoznamka = $order['note'] ?? null;
         $objPoznamka = ($objPoznamka === null || $objPoznamka === '') ? null : (string)$objPoznamka;
         $importTs = cb_restia_hist_now();
 
         $sql = '
             INSERT INTO objednavky_restia (
-                id_pob, id_zak, id_platforma, restia_id_obj, restia_order_number, restia_token,
+                id_pob, id_zak, id_platforma, restia_id_obj, restia_created_at, restia_order_number, restia_token,
                 profil_typ, rest_obj,
                 id_stav, id_platba, id_doruceni,
                 obj_pozn, restia_imported_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
-                id_pob = VALUES(id_pob), id_zak = VALUES(id_zak), id_platforma = VALUES(id_platforma), restia_order_number = VALUES(restia_order_number),
+                id_pob = VALUES(id_pob), id_zak = VALUES(id_zak), id_platforma = VALUES(id_platforma), restia_created_at = VALUES(restia_created_at), restia_order_number = VALUES(restia_order_number),
                 restia_token = VALUES(restia_token), profil_typ = VALUES(profil_typ),
                 rest_obj = VALUES(rest_obj), id_stav = VALUES(id_stav), id_platba = VALUES(id_platba), id_doruceni = VALUES(id_doruceni),
                 obj_pozn = VALUES(obj_pozn), restia_imported_at = VALUES(restia_imported_at)
@@ -1347,7 +1363,7 @@ if (!function_exists('cb_restia_hist_upsert_order')) {
         $stmt = $conn->prepare($sql);
         if ($stmt === false) { throw new RuntimeException('DB prepare selhal: objednavky_restia upsert.'); }
         $restObj = $restiaIdObj;
-        $stmt->bind_param('iiisssssiisss', $idPob, $idZak, $idPlatforma, $restiaIdObj, $restiaOrderNumber, $restiaToken, $profilTyp, $restObj, $idStav, $idPlatba, $idDoruceni, $objPoznamka, $importTs);
+        $stmt->bind_param('iiissssssiisss', $idPob, $idZak, $idPlatforma, $restiaIdObj, $restiaCreatedAt, $restiaOrderNumber, $restiaToken, $profilTyp, $restObj, $idStav, $idPlatba, $idDoruceni, $objPoznamka, $importTs);
         $stmt->execute();
         $stmt->close();
 

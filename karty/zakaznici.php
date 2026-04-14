@@ -21,7 +21,6 @@ $tabKonfig = [
 $totalZak = 0;
 $activeZak = 0;
 $blockedZak = 0;
-$topLines = ['-', '-', '-'];
 $zakRows = [];
 $zakTotal = 0;
 $zakPages = 1;
@@ -135,47 +134,6 @@ try {
         $resCount->free();
     }
 
-    $sqlTop = '
-        SELECT
-            COALESCE(z.jmeno, "") AS jmeno,
-            COALESCE(z.prijmeni, "") AS prijmeni,
-            COALESCE(z.mesto, "") AS mesto,
-            COUNT(o.id_obj) AS obj_count
-        FROM objednavky_restia o
-        INNER JOIN zakaznik z ON z.id_zak = o.id_zak
-        ' . $selectedWhere . '
-        GROUP BY z.id_zak, z.jmeno, z.prijmeni, z.mesto
-        ORDER BY obj_count DESC, z.id_zak DESC
-        LIMIT 3
-    ';
-    $resTop = $conn->query($sqlTop);
-    if ($resTop) {
-        $tmp = [];
-        while ($r = $resTop->fetch_assoc()) {
-            $jmeno = trim((string)($r['jmeno'] ?? ''));
-            $prijmeni = trim((string)($r['prijmeni'] ?? ''));
-            $mesto = trim((string)($r['mesto'] ?? ''));
-            $obj = (int)($r['obj_count'] ?? 0);
-
-            $fullName = trim($jmeno . ' ' . $prijmeni);
-            if ($fullName === '') {
-                $fullName = 'Neznámý zákazník';
-            }
-            if ($mesto === '') {
-                $mesto = '-';
-            }
-
-            $tmp[] = $fullName . ' ' . $mesto . ' ' . $obj . ' obj.';
-        }
-        $resTop->free();
-
-        for ($i = 0; $i < 3; $i++) {
-            if (isset($tmp[$i])) {
-                $topLines[$i] = $tmp[$i];
-            }
-        }
-    }
-
     $where = [];
     if ($selectedPobocky) {
         $where[] = 'z.id_pob IN (' . implode(',', $selectedPobocky) . ')';
@@ -262,8 +220,7 @@ try {
     $totalZak = 0;
     $activeZak = 0;
     $blockedZak = 0;
-    $topLines = ['-', '-', '-'];
-    $zakRows = [];
+        $zakRows = [];
     $zakTotal = 0;
     $zakPages = 1;
     $zakPage = 1;
@@ -301,18 +258,6 @@ $card_min_html = ''
     . '      <tr>'
     . '        <td>Zákazníků v DB</td>'
     . '        <td class="txt_r"><strong>' . h((string)$totalZak) . '</strong></td>'
-    . '      </tr>'
-    . '      <tr>'
-    . '        <td>aktivní/blokovaní</td>'
-    . '        <td class="txt_r"><strong>' . h((string)$activeZak) . '/' . h((string)$blockedZak) . '</strong></td>'
-    . '      </tr>'
-    . '      <tr>'
-    . '        <td>nejčastější zákazník:</td>'
-    . '        <td class="txt_r"><strong>František Skočdopole</strong></td>'
-    . '      </tr>'
-    . '      <tr>'
-    . '        <td>top zákazník:</td>'
-    . '        <td class="txt_r"><strong>Emanuel Bacigala</strong></td>'
     . '      </tr>'
     . '    </tbody>'
     . '  </table>'
