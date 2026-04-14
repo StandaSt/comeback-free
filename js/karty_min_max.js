@@ -1,4 +1,4 @@
-// js/karty_min_max.js * Verze: V2 * Aktualizace: 25.03.2026
+// js/karty_min_max.js * Verze: V3 * Aktualizace: 14.04.2026
 'use strict';
 
 (function (w) {
@@ -230,6 +230,7 @@
 
   function reloadAfterNanoSwitch(root, pendingMode) {
     const dashCard = getDashCard(root);
+    const cardId = parseInt(String(root.getAttribute('data-card-id') || '0'), 10);
     if (dashCard) {
       dashCard.classList.add('is-nano-switching');
     }
@@ -239,12 +240,18 @@
       sourceMode: String(root.getAttribute('data-card-mode') || '')
     });
     if (pendingMode === 'maxi') {
-      const cardId = String(root.getAttribute('data-card-id') || '').trim();
-      if (cardId !== '') {
-        saveMaxiState(cardId, 'nano');
+      const maxiCardId = String(root.getAttribute('data-card-id') || '').trim();
+      if (maxiCardId !== '') {
+        saveMaxiState(maxiCardId, 'nano');
       }
     }
     setDashboardLoading(true);
+    if (Number.isFinite(cardId) && cardId > 0 && w.CB_AJAX && typeof w.CB_AJAX.refreshCard === 'function') {
+      w.CB_AJAX.refreshCard(cardId, { force: true, loaderMode: 'cards' }).catch(() => {
+        window.alert('Obnovení karty po přepnutí nano režimu selhalo.');
+      });
+      return;
+    }
     if (w.CB_AJAX && typeof w.CB_AJAX.refreshDashboard === 'function') {
       w.CB_AJAX.refreshDashboard({ force: true, loaderMode: 'cards' }).catch(() => {
         window.alert('Obnovení dashboardu po přepnutí nano režimu selhalo.');
@@ -589,5 +596,5 @@
   }
 })(window);
 
-// js/karty_min_max.js * Verze: V2 * Aktualizace: 25.03.2026
+// js/karty_min_max.js * Verze: V3 * Aktualizace: 14.04.2026
 // Konec souboru

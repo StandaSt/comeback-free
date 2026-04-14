@@ -13,6 +13,19 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/../config/verze.php';
+
+$cbVerzeText = '';
+if (isset($CB_VERZE)) {
+    $cbVerzeText = trim((string)$CB_VERZE);
+}
+if ($cbVerzeText === '' && defined('CB_VERZE')) {
+    $cbVerzeText = trim((string)CB_VERZE);
+}
+if ($cbVerzeText === '') {
+    $cbVerzeText = '0.0';
+}
+
 ?>
 
 <footer class="footer bg_modra sirka100">
@@ -26,7 +39,7 @@ declare(strict_types=1);
         </div>
 
         <div class="foot_right txt_r">
-            <strong>verze 0.8</strong> 
+            <strong>verze <?= h($cbVerzeText) ?></strong> 
         </div>
     </div>
 </footer>

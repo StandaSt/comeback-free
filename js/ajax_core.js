@@ -1,4 +1,4 @@
-// js/ajax_core.js * Verze: V2 * Aktualizace: 10.04.2026
+// js/ajax_core.js * Verze: V4 * Aktualizace: 14.04.2026
 'use strict';
 
 /*
@@ -403,13 +403,99 @@
       });
   };
 
+  CB_AJAX.refreshCard = function refreshCard(cardId, options) {
+    const id = parseInt(String(cardId || '0'), 10);
+    const opts = (options && typeof options === 'object') ? options : {};
+    const force = !!opts.force;
+    const keepLoading = !!opts.keepLoading;
+    const loaderMode = normalizeLoaderMode(opts.loaderMode || 'cards');
+
+    if (!Number.isFinite(id) || id <= 0) {
+      return Promise.reject(new Error('ID karty nebylo nalezeno.'));
+    }
+
+    if (getLoaderState(loaderMode).loading && !force) {
+      return Promise.resolve({ ok: false, busy: true });
+    }
+
+    const dashCard = document.querySelector('[data-cb-dash-card="1"] .card_shell[data-card-id="' + String(id) + '"]');
+    const currentShell = dashCard instanceof HTMLElement ? dashCard : null;
+    const currentCard = currentShell ? currentShell.closest('[data-cb-dash-card="1"]') : null;
+
+    if (!(currentCard instanceof HTMLElement)) {
+      traceAjax('refresh_card_missing', {
+        mode: loaderMode,
+        card_id: id
+      });
+      return Promise.reject(new Error('Karta nebyla nalezena.'));
+    }
+
+    if (!force) {
+      setLoaderLoading(loaderMode, true);
+    }
+
+    currentCard.classList.add('is-card-refreshing');
+    currentCard.setAttribute('aria-busy', 'true');
+
+    const reqUrl = 'index.php?cb_card_id=' + encodeURIComponent(String(id));
+    traceAjax('refresh_card_start', {
+      mode: loaderMode,
+      force: force ? 1 : 0,
+      keepLoading: keepLoading ? 1 : 0,
+      card_id: id,
+      url: reqUrl
+    });
+
+    return CB_AJAX.fetchText(reqUrl, { 'X-Comeback-Partial-Card': '1' })
+      .then((html) => {
+        const wrap = document.createElement('div');
+        wrap.innerHTML = String(html || '').trim();
+        const nextCard = wrap.firstElementChild;
+
+        if (!(nextCard instanceof HTMLElement)) {
+          throw new Error('Nova karta ma neplatny obsah.');
+        }
+
+        currentCard.replaceWith(nextCard);
+        document.dispatchEvent(new CustomEvent('cb:card-swapped', {
+          detail: {
+            cardId: id,
+            card: nextCard
+          }
+        }));
+        traceAjax('refresh_card_done', {
+          mode: loaderMode,
+          card_id: id
+        });
+        return { ok: true, cardId: id };
+      }).catch((err) => {
+        traceAjax('refresh_card_error', {
+          mode: loaderMode,
+          card_id: id,
+          message: String((err && err.message) ? err.message : 'refresh card selhal')
+        });
+        throw err;
+      }).finally(() => {
+        currentCard.classList.remove('is-card-refreshing');
+        currentCard.removeAttribute('aria-busy');
+        if (!keepLoading) {
+          setLoaderLoading(loaderMode, false);
+        }
+      });
+  };
+
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initRestiaImportLoader, { once: true });
+    document.addEventListener('DOMContentLoaded', function () {
+      initRestiaImportLoader();
+    }, { once: true });
   } else {
     initRestiaImportLoader();
   }
 
-  document.addEventListener('cb:main-swapped', initRestiaImportLoader);
+  document.addEventListener('cb:main-swapped', function () {
+    initRestiaImportLoader();
+  });
 
 })(window);
-// js/ajax_core.js * Verze: V2 * Aktualizace: 10.04.2026 * Konec souboru
+// js/ajax_core.js * Verze: V4 * Aktualizace: 14.04.2026 * Konec souboru

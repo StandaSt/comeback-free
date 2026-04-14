@@ -1,5 +1,5 @@
 <?php
-// includes/dashboard.php * Verze: V11 * Aktualizace: 14.04.2026
+// includes/dashboard.php * Verze: V12 * Aktualizace: 14.04.2026
 declare(strict_types=1);
 
 function cb_dashboard_resolve_file(string $soubor): ?string
@@ -45,6 +45,7 @@ $userCardHeaderColorById = [];
 $userCardIconFileById = [];
 $userCardPosById = [];
 $dashColsPostOverride = null;
+$singleCardId = (int)($GLOBALS['cb_dashboard_single_card_id'] ?? 0);
 
 if ((string)($_POST['us_action'] ?? '') === 'save') {
     $postColsRaw = (int)($_POST['us_pocet_sl'] ?? 0);
@@ -147,7 +148,7 @@ if ($idUser > 0) {
 
 $karty = [];
 $stmt = db()->prepare('
-    SELECT id_karta, nazev, subtitle_min, subtitle_max, soubor, min_role, aktivni, poradi
+    SELECT id_karta, nazev, subtitle_min, subtitle_max, soubor, min_role, aktivni, poradi, refresh_op
     FROM karty
     WHERE aktivni = 1
       AND min_role >= ?
@@ -157,9 +158,9 @@ $stmt = db()->prepare('
 if ($stmt) {
     $stmt->bind_param('i', $roleFilter);
     $stmt->execute();
-    $stmt->bind_result($idKarta, $nazev, $subtitleMin, $subtitleMax, $soubor, $minRole, $aktivni, $poradi);
+    $stmt->bind_result($idKarta, $nazev, $subtitleMin, $subtitleMax, $soubor, $minRole, $aktivni, $poradi, $refreshOp);
     while ($stmt->fetch()) {
-        $karty[] = [
+        $cardRow = [
             'id_karta' => (int)$idKarta,
             'nazev' => (string)$nazev,
             'subtitle_min' => (string)$subtitleMin,
@@ -168,7 +169,14 @@ if ($stmt) {
             'min_role' => (int)$minRole,
             'aktivni' => (int)$aktivni,
             'poradi' => (int)$poradi,
+            'refresh_op' => (int)$refreshOp,
         ];
+
+        if ($singleCardId > 0 && (int)$cardRow['id_karta'] !== $singleCardId) {
+            continue;
+        }
+
+        $karty[] = $cardRow;
     }
     $stmt->close();
 }
@@ -269,7 +277,6 @@ $applyUserSlots = static function (array $list, int $startSlot = 1) use ($userCa
     $total = count($list);
 
     while ($placed < $total) {
-
         if (isset($lockedBySlot[$slot])) {
             $card = $lockedBySlot[$slot];
             if (is_array($card)) {
@@ -304,7 +311,6 @@ $cbLoginId = (int)($_SESSION['cb_id_login'] ?? 0);
 
 $renderItems = [];
 if ($nanoKde === 1) {
-    // zde se nastavuje počet karet v gridu pro nano karty
     foreach (array_chunk($kartyNano, 9) as $nanoSkupina) {
         $renderItems[] = [
             'kind' => 'nano_group',
@@ -339,6 +345,8 @@ foreach ($kartyMini as $kartaMini) {
         'grid_style' => '',
     ];
 }
+
+$cbSingleCardId = (int)($GLOBALS['cb_render_single_card_id'] ?? 0);
 
 $renderCard = static function (array $karta, bool $isNano, string $gridStyle = '') use ($userCardHeaderColorById, $userCardIconFileById, $userCardPosById, $dashGridCols): string {
     $fullPath = cb_dashboard_resolve_file((string)($karta['soubor'] ?? ''));
@@ -478,8 +486,70 @@ $renderCard = static function (array $karta, bool $isNano, string $gridStyle = '
     <?php
     return (string)ob_get_clean();
 };
+
+if ($singleCardId > 0) {
+    $singleCard = null;
+
+    if (!empty($kartyNano)) {
+        foreach ($kartyNano as $nanoCard) {
+            if ((int)($nanoCard['id_karta'] ?? 0) === $singleCardId) {
+                $singleCard = ['karta' => $nanoCard, 'is_nano' => true];
+                break;
+            }
+        }
+    }
+
+    if ($singleCard === null && !empty($kartyMini)) {
+        foreach ($kartyMini as $miniCard) {
+            if ((int)($miniCard['id_karta'] ?? 0) === $singleCardId) {
+                $singleCard = ['karta' => $miniCard, 'is_nano' => false];
+                break;
+            }
+        }
+    }
+
+    if ($singleCard === null) {
+        http_response_code(404);
+        echo '<section class="card odstup_vnitrni_14"><p>Pozadovana karta neexistuje.</p></section>';
+        return;
+    }
+
+    echo $renderCard((array)$singleCard['karta'], (bool)$singleCard['is_nano'], '');
+    return;
+}
 ?>
 
+<?php if ($cbSingleCardId > 0): ?>
+  <?php
+  $cbSingleHtml = '';
+  foreach ($renderItems as $renderItem) {
+      if (($renderItem['kind'] ?? '') === 'card') {
+          $singleKarta = (array)($renderItem['karta'] ?? []);
+          if ((int)($singleKarta['id_karta'] ?? 0) === $cbSingleCardId) {
+              $cbSingleHtml = $renderCard($singleKarta, (bool)($renderItem['is_nano'] ?? false), trim((string)($renderItem['grid_style'] ?? '')));
+              break;
+          }
+      }
+
+      if (($renderItem['kind'] ?? '') === 'nano_group') {
+          foreach ((array)($renderItem['karty'] ?? []) as $singleNanoKarta) {
+              $singleKarta = (array)$singleNanoKarta;
+              if ((int)($singleKarta['id_karta'] ?? 0) === $cbSingleCardId) {
+                  $cbSingleHtml = $renderCard($singleKarta, true, '');
+                  break 2;
+              }
+          }
+      }
+  }
+
+  if ($cbSingleHtml === '') {
+      http_response_code(404);
+      echo '<section class="card odstup_vnitrni_14"><p>Karta nebyla nalezena.</p></section>';
+  } else {
+      echo $cbSingleHtml;
+  }
+  ?>
+<?php else: ?>
 <div class="dash_grid gap_2 <?= h($dashGridClass) ?> displ_grid sirka100" data-login-id="<?= h((string)$cbLoginId) ?>">
   <?php if (empty($karty)): ?>
     <section class="dash_card ram_normal bg_bila card_blue zaobleni_12" data-cb-dash-card="1">
@@ -508,6 +578,7 @@ $renderCard = static function (array $karta, bool $isNano, string $gridStyle = '
     <?php endforeach; ?>
   <?php endif; ?>
 </div>
+<?php endif; ?>
 
 <div id="cbCardModeModal" class="cb_cardmode_modal is-hidden" data-cb-cardmode-overlay="1" aria-hidden="true">
   <div class="cb_cardmode_dialog">
@@ -528,5 +599,5 @@ $renderCard = static function (array $karta, bool $isNano, string $gridStyle = '
 </div>
 
 <?php
-/* includes/dashboard.php * Verze: V11 * Aktualizace: 14.04.2026 */
+/* includes/dashboard.php * Verze: V12 * Aktualizace: 14.04.2026 */
 // Konec souboru

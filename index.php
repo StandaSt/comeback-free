@@ -1,20 +1,5 @@
 <?php
-// index.php * Verze: V22 * Aktualizace: 06.03.2026
-
-/*
- * FRONT CONTROLLER (centralni vstup aplikace)
- *
- * Co dela:
- * - startuje session + nacita app/system/secrets
- * - FULL load: zobrazi vychozi stranku podle prihlaseni
- * - AJAX (partial): vraci jen obsah do <main>
- * - 404: vrati hlasku a zapise zaznam do DB tabulky chyba
- *
- * Zavislosti:
- * - lib/app.php, lib/system.php, config/secrets.php
- * - lib/nacti_styly.php
- * - includes/hlavicka.php, includes/main.php, includes/paticka.php, includes/dashboard.php
- */
+// index.php * Verze: V23 * Aktualizace: 14.04.2026
 
 declare(strict_types=1);
 
@@ -30,16 +15,10 @@ require_once __DIR__ . '/lib/pobocky_vyber.php';
 cb_pobocky_bootstrap_session();
 
 require_once __DIR__ . '/lib/detektuj_neplatnou_url.php';
-
 require_once __DIR__ . '/lib/logout_handler.php';
-
 require_once __DIR__ . '/lib/json_registrace.php';
-
 require_once __DIR__ . '/lib/post_akce.php';
 
-/* =========================
-   0d) Nastaveni obdobi (POST)
-   ========================= */
 if (
     ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
     && isset($_SERVER['HTTP_X_COMEBACK_SET_PERIOD'])
@@ -189,9 +168,6 @@ if (
     }
 }
 
-/* =========================
-   0e) Nastaveni rezimu karty (nano/mini/maxi)
-   ========================= */
 if (
     ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
     && isset($_SERVER['HTTP_X_COMEBACK_SET_CARD_MODE'])
@@ -276,9 +252,6 @@ if (
     }
 }
 
-/* =========================
-   0eb) Odemknuti vsech pozic karet
-   ========================= */
 if (
     ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
     && isset($_SERVER['HTTP_X_COMEBACK_UNLOCK_ALL_CARD_POS'])
@@ -312,9 +285,6 @@ if (
     }
 }
 
-/* =========================
-   0ea) Presun karty na pozici (swap)
-   ========================= */
 if (
     ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
     && isset($_SERVER['HTTP_X_COMEBACK_SET_CARD_POSITION'])
@@ -434,9 +404,6 @@ if (
     }
 }
 
-/* =========================
-   0f) Globalni PRG (POST -> Redirect -> GET)
-   ========================= */
 $cbPrgKey = 'cb_prg_post_payload_v1';
 $cbRequestUri = (string)($_SERVER['REQUEST_URI'] ?? '/index.php');
 $cbRequestMethod = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
@@ -478,28 +445,45 @@ if ($cbRequestMethod === 'POST') {
     }
 }
 
-/* =========================
-   1) AJAX (partial) rezim
-   ========================= */
 $cbIsPartial = false;
 if (isset($_SERVER['HTTP_X_COMEBACK_PARTIAL'])) {
     $cbIsPartial = ((string)($_SERVER['HTTP_X_COMEBACK_PARTIAL']) === '1');
 }
 
-/* =========================
-   2) Dashboard (bez sekci)
-   ========================= */
+$cbIsCardPartial = false;
+if (isset($_SERVER['HTTP_X_COMEBACK_CARD'])) {
+    $cbIsCardPartial = ((string)($_SERVER['HTTP_X_COMEBACK_CARD']) === '1');
+}
+
 $pageKey = 'dashboard';
 $file = __DIR__ . '/includes/dashboard.php';
 
-/* =========================
-   3) Render / 404 + log
-   ========================= */
 require_once __DIR__ . '/includes/log_a_404.php';
 
-/* =========================
-   4) AJAX (partial): jen obsah stranky
-   ========================= */
+if ($cbIsCardPartial) {
+    if (empty($_SESSION['login_ok'])) {
+        http_response_code(401);
+        echo '<section class="card odstup_vnitrni_14"><p>Nutne prihlaseni.</p></section>';
+        exit;
+    }
+
+    $cbCardId = (int)($_GET['cb_card_id'] ?? 0);
+    if ($cbCardId <= 0) {
+        http_response_code(422);
+        echo '<section class="card odstup_vnitrni_14"><p>Neplatna karta.</p></section>';
+        exit;
+    }
+
+    $GLOBALS['cb_dashboard_single_card_id'] = $cbCardId;
+
+    if ($cbPageExists) {
+        require $file;
+    } else {
+        echo '<section class="card odstup_vnitrni_14"><p>Pozadovana karta neexistuje.</p></section>';
+    }
+    exit;
+}
+
 if ($cbIsPartial) {
     if (empty($_SESSION['login_ok'])) {
         http_response_code(401);
@@ -515,10 +499,6 @@ if ($cbIsPartial) {
     }
     exit;
 }
-
-/* =========================
-   5) FULL render: layout + stranka
-   ========================= */
 ?>
 <!doctype html>
 <html lang="cs">
@@ -535,24 +515,13 @@ if ($cbIsPartial) {
 <?php
 
 require_once __DIR__ . '/includes/hlavicka.php';
-
-/*
- * Neprihlaseny stav:
- * - login modal
- * - nebo cekani na 2FA po zadani hesla
- */
 require_once __DIR__ . '/modaly/modal_overeni.php';
-
-/*
- * Prihlaseny bez sparovaneho mobilu uvidi modal parovani.
- */
 require_once __DIR__ . '/lib/kontrola_registrace.php';
 
 $cb_page_exists = $cbPageExists;
 $cb_page_file = $file;
 
 require_once __DIR__ . '/includes/main.php';
-
 require_once __DIR__ . '/includes/paticka.php';
 
 if (!function_exists('cb_asset_url')) {
@@ -579,8 +548,6 @@ if (!function_exists('cb_asset_url')) {
 <script src="<?= h(cb_asset_url('js/filtry.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/casovac_odhlaseni.js')) ?>"></script>
 
-
-
 <?php
 if (!empty($cbInvalidUrl)) {
     $cbUserForAlert = $_SESSION['cb_user'] ?? [];
@@ -591,11 +558,11 @@ if (!empty($cbInvalidUrl)) {
         $cbAlertUserName = 'Neznámý uživatel';
     }
 
-$fullRequestUrl =
-    ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http')
-    . '://'
-    . (string)($_SERVER['HTTP_HOST'] ?? 'localhost')
-    . (string)($_SERVER['REQUEST_URI'] ?? '/');
+    $fullRequestUrl =
+        ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http')
+        . '://'
+        . (string)($_SERVER['HTTP_HOST'] ?? 'localhost')
+        . (string)($_SERVER['REQUEST_URI'] ?? '/');
 
     $cbAlertInvalidUrl = $fullRequestUrl;
 
@@ -605,5 +572,5 @@ $fullRequestUrl =
 </body>
 </html>
 <?php
-/* index.php * Verze: V22 * Aktualizace: 06.03.2026 */
+/* index.php * Verze: V23 * Aktualizace: 14.04.2026 */
 // Konec souboru
