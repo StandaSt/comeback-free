@@ -412,10 +412,7 @@
       if (nanoHead) {
         makeHeadInteractive(nanoHead);
         nanoHead.addEventListener('mousedown', blockHeadSelection);
-        nanoHead.addEventListener('dblclick', () => {
-          if (!Number.isFinite(cardId) || cardId <= 0) return;
-          clearSelection();
-          traceAjax('nano_to_maxi_click', {
+                  traceAjax('nano_to_maxi_click', {
             card_id: cardId
           });
           setDashboardLoading(true);
