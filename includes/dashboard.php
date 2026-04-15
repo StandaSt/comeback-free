@@ -1,5 +1,5 @@
 <?php
-// includes/dashboard.php * Verze: V15 * Aktualizace: 15.04.2026
+// includes/dashboard.php * Verze: V16 * Aktualizace: 15.04.2026
 declare(strict_types=1);
 
 function cb_dashboard_resolve_file(string $soubor): ?string
@@ -51,8 +51,6 @@ $userCardIconFileById = [];
 $userCardPosById = [];
 $dashColsPostOverride = null;
 $singleCardId = (int)($GLOBALS['cb_dashboard_single_card_id'] ?? 0);
-
-// --- DASHBOARD PRIPRAVA DAT ---
 
 if ((string)($_POST['us_action'] ?? '') === 'save') {
     $postColsRaw = (int)($_POST['us_pocet_sl'] ?? 0);
@@ -195,87 +193,209 @@ $emptyMap = [
 ];
 $emptyText = (string)($emptyMap[$roleFilter] ?? $emptyMap[3]);
 
-// --- ROZDELENI KARET NA NANO/MINI A PRIPRAVA DAT ---
-$kartyNanoPripravene = [];
-$kartyMiniPripravene = [];
-
-// Rozdělení do skupin a pořadí (nano, mini)
-// NANO: vždy pouze podle user_nano, max 9 a bez duplicit
-$kartyNanoPripravene = [];
-$nanoAdded = [];
-$countNano = 0;
+$kartyNano = [];
+$kartyMini = [];
 foreach ($karty as $kartaRow) {
     $idK = (int)($kartaRow['id_karta'] ?? 0);
-    if ($idK > 0 && isset($nanoCardIds[$idK]) && !isset($nanoAdded[$idK]) && $countNano < 9) {
-        $kartyNanoPripravene[] = cb_priprav_kartu_nano($kartaRow, $userCardHeaderColorById, $userCardIconFileById, $userCardPosById, $dashGridCols);
-        $nanoAdded[$idK] = true;
-        $countNano++;
+    if ($idK > 0 && isset($nanoCardIds[$idK])) {
+        $kartyNano[] = $kartaRow;
+    } else {
+        $kartyMini[] = $kartaRow;
     }
 }
-// MINI: všechny ostatní
-$kartyMiniPripravene = [];
-foreach ($karty as $kartaRow) {
-    $idK = (int)($kartaRow['id_karta'] ?? 0);
-    if (!$idK || isset($nanoAdded[$idK])) continue;
-    $kartyMiniPripravene[] = cb_priprav_kartu_mini($kartaRow, $userCardHeaderColorById, $userCardIconFileById, $userCardPosById, $dashGridCols);
-}
+
+$sortByFallback = static function (array &$list): void {
+    usort($list, static function (array $a, array $b): int {
+        $idA = (int)($a['id_karta'] ?? 0);
+        $idB = (int)($b['id_karta'] ?? 0);
+        $poradiA = (int)($a['poradi'] ?? 0);
+        $poradiB = (int)($b['poradi'] ?? 0);
+        if ($poradiA !== $poradiB) {
+            return $poradiA <=> $poradiB;
+        }
+        return $idA <=> $idB;
+    });
+};
+
+$applyUserSlots = static function (array $list, int $startSlot = 1) use ($userCardPosById, $dashGridCols, $sortByFallback): array {
+    if (count($list) <= 1) {
+        foreach ($list as &$singleCard) {
+            if (!is_array($singleCard)) {
+                continue;
+            }
+            $idK = (int)($singleCard['id_karta'] ?? 0);
+            $pos = ($idK > 0 && isset($userCardPosById[$idK])) ? (array)$userCardPosById[$idK] : ['col' => null, 'line' => null];
+            $storedCol = (int)($pos['col'] ?? 0);
+            $storedLine = (int)($pos['line'] ?? 0);
+            if ($storedCol > 0 && $storedLine > 0) {
+                $singleCard['__render_pos'] = (((max($storedLine, 1) - 1) * (($dashGridCols > 0) ? $dashGridCols : 3)) + $storedCol);
+            } else {
+                $singleCard['__render_pos'] = ($startSlot > 0) ? $startSlot : 1;
+            }
+        }
+        unset($singleCard);
+        return $list;
+    }
+
+    $cols = ($dashGridCols > 0) ? $dashGridCols : 3;
+
+    $lockedBySlot = [];
+    $unlocked = [];
+    $lowestLockedSlot = null;
+
+    foreach ($list as $card) {
+        $idK = (int)($card['id_karta'] ?? 0);
+        $pos = ($idK > 0 && isset($userCardPosById[$idK])) ? (array)$userCardPosById[$idK] : ['col' => null, 'line' => null];
+
+        $col = ($pos['col'] ?? null);
+        $line = ($pos['line'] ?? null);
+
+        $hasLock = ($col !== null && $line !== null && (int)$col > 0 && (int)$line > 0 && (int)$col <= $cols);
+
+        if ($hasLock) {
+            $slot = (((int)$line - 1) * $cols) + (int)$col;
+
+            if (!isset($lockedBySlot[$slot])) {
+                $lockedBySlot[$slot] = $card;
+                if ($lowestLockedSlot === null || $slot < $lowestLockedSlot) {
+                    $lowestLockedSlot = $slot;
+                }
+                continue;
+            }
+        }
+
+        $unlocked[] = $card;
+    }
+
+    if (!empty($unlocked)) {
+        $sortByFallback($unlocked);
+    }
+
+    $result = [];
+    $unlockIdx = 0;
+
+    $slot = ($startSlot > 0) ? $startSlot : 1;
+    if ($lowestLockedSlot !== null && $lowestLockedSlot > 0 && $lowestLockedSlot < $slot) {
+        $slot = $lowestLockedSlot;
+    }
+    $placed = 0;
+    $total = count($list);
+
+    while ($placed < $total) {
+        if (isset($lockedBySlot[$slot])) {
+            $card = $lockedBySlot[$slot];
+            if (is_array($card)) {
+                $card['__render_pos'] = $slot;
+            }
+            $result[] = $card;
+            $placed++;
+            $slot++;
+            continue;
+        }
+
+        if (isset($unlocked[$unlockIdx])) {
+            $card = $unlocked[$unlockIdx];
+            if (is_array($card)) {
+                $card['__render_pos'] = $slot;
+            }
+            $result[] = $card;
+            $unlockIdx++;
+            $placed++;
+            $slot++;
+            continue;
+        }
+
+        $slot++;
+    }
+
+    return $result;
+};
 
 $dashGridClass = $dashColsClass . ' dash_nano_kde_' . $nanoKde;
 $cbLoginId = (int)($_SESSION['cb_id_login'] ?? 0);
-$cbSingleCardId = (int)($GLOBALS['cb_render_single_card_id'] ?? 0);
 
-// --- RENDER JEDNÉ KARTY PŘÍMO ---
-if ($singleCardId > 0) {
-    $singleCard = null;
-    foreach ($kartyNanoPripravene as $nanoCard) {
-        if ((int)($nanoCard['cardId'] ?? 0) === $singleCardId) {
-            $singleCard = $nanoCard;
-            break;
+$renderItems = [];
+if ($nanoKde === 1) {
+    foreach (array_chunk($kartyNano, 9) as $nanoSkupinaRaw) {
+        $nanoSkupinaPrepared = [];
+        foreach ($nanoSkupinaRaw as $kartaNanoRaw) {
+            $nanoSkupinaPrepared[] = cb_priprav_kartu_nano(
+                $kartaNanoRaw,
+                $userCardHeaderColorById,
+                $userCardIconFileById,
+                $userCardPosById,
+                $dashGridCols
+            );
         }
+        $renderItems[] = [
+            'kind' => 'nano_group',
+            'karty' => $nanoSkupinaPrepared,
+        ];
     }
-    if ($singleCard === null) {
-        foreach ($kartyMiniPripravene as $miniCard) {
-            if ((int)($miniCard['cardId'] ?? 0) === $singleCardId) {
-                $singleCard = $miniCard;
-                break;
+} else {
+    foreach ($kartyNano as $kartaNanoRaw) {
+        $renderItems[] = [
+            'kind' => 'card',
+            'karta' => cb_priprav_kartu_nano(
+                $kartaNanoRaw,
+                $userCardHeaderColorById,
+                $userCardIconFileById,
+                $userCardPosById,
+                $dashGridCols
+            ),
+        ];
+    }
+}
+
+$miniStartSlot = ($nanoKde === 1 && !empty($kartyNano))
+    ? 2
+    : (count($kartyNano) + 1);
+$kartyMini = $applyUserSlots($kartyMini, $miniStartSlot);
+
+if ($nanoKde === 0 && !empty($kartyNano) && !empty($kartyMini)) {
+    $renderItems[] = ['kind' => 'break'];
+}
+
+foreach ($kartyMini as $kartaMiniRaw) {
+    $renderItems[] = [
+        'kind' => 'card',
+        'karta' => cb_priprav_kartu_mini(
+            $kartaMiniRaw,
+            $userCardHeaderColorById,
+            $userCardIconFileById,
+            $userCardPosById,
+            $dashGridCols
+        ),
+    ];
+}
+
+if ($singleCardId > 0) {
+    foreach ($renderItems as $renderItem) {
+        if (($renderItem['kind'] ?? '') === 'nano_group') {
+            foreach ((array)($renderItem['karty'] ?? []) as $nanoCardPrepared) {
+                if ((int)($nanoCardPrepared['cardId'] ?? 0) === $singleCardId) {
+                    echo cb_zobraz_kartu($nanoCardPrepared);
+                    return;
+                }
+            }
+            continue;
+        }
+
+        if (($renderItem['kind'] ?? '') === 'card') {
+            $singleCard = (array)($renderItem['karta'] ?? []);
+            if ((int)($singleCard['cardId'] ?? 0) === $singleCardId) {
+                echo cb_zobraz_kartu($singleCard);
+                return;
             }
         }
     }
-    if ($singleCard === null) {
-        http_response_code(404);
-        echo '<section class="card odstup_vnitrni_14"><p>Pozadovana karta neexistuje.</p></section>';
-        return;
-    }
-    echo cb_zobraz_kartu($singleCard);
+
+    http_response_code(404);
+    echo '<section class="card odstup_vnitrni_14"><p>Pozadovana karta neexistuje.</p></section>';
     return;
 }
 ?>
 
-<?php if ($cbSingleCardId > 0): ?>
-  <?php
-  $cbSingleHtml = '';
-  foreach ($kartyNanoPripravene as $nanoCard) {
-      if ((int)($nanoCard['cardId'] ?? 0) === $cbSingleCardId) {
-          $cbSingleHtml = cb_zobraz_kartu($nanoCard);
-          break;
-      }
-  }
-  if ($cbSingleHtml === '') {
-      foreach ($kartyMiniPripravene as $miniCard) {
-          if ((int)($miniCard['cardId'] ?? 0) === $cbSingleCardId) {
-              $cbSingleHtml = cb_zobraz_kartu($miniCard);
-              break;
-          }
-      }
-  }
-  if ($cbSingleHtml === '') {
-      http_response_code(404);
-      echo '<section class="card odstup_vnitrni_14"><p>Karta nebyla nalezena.</p></section>';
-  } else {
-      echo $cbSingleHtml;
-  }
-  ?>
-<?php else: ?>
 <div class="dash_grid gap_2 <?= h($dashGridClass) ?> displ_grid sirka100" data-login-id="<?= h((string)$cbLoginId) ?>">
   <?php if (empty($karty)): ?>
     <section class="dash_card ram_normal bg_bila card_blue zaobleni_12" data-cb-dash-card="1">
@@ -284,23 +404,27 @@ if ($singleCardId > 0) {
       </div>
     </section>
   <?php else: ?>
-    <?php
-      // Všechny nano vždy pod sebou (pozice 1/1 atd.)
-      $nanoIndex = 1;
-      foreach ($kartyNanoPripravene as $nanoCardP) {
-          // Dodáme hardcode col=1, line=n pro nano
-          $nanoCardP['col'] = 1;
-          $nanoCardP['line'] = $nanoIndex;
-          echo cb_zobraz_kartu($nanoCardP);
-          $nanoIndex++;
+    <?php foreach ($renderItems as $renderItem): ?>
+      <?php
+      if (($renderItem['kind'] ?? '') === 'break') {
+          echo '<div class="dash_break odstup_vnejsi_0 odstup_vnitrni_0" aria-hidden="true"></div>';
+          continue;
       }
-      foreach ($kartyMiniPripravene as $miniCardP) {
-          echo cb_zobraz_kartu($miniCardP);
+
+      if (($renderItem['kind'] ?? '') === 'nano_group') {
+          echo '<div class="dash_nano_group">';
+          foreach ((array)($renderItem['karty'] ?? []) as $kartaNanoPrepared) {
+              echo cb_zobraz_kartu((array)$kartaNanoPrepared);
+          }
+          echo '</div>';
+          continue;
       }
-    ?>
+
+      echo cb_zobraz_kartu((array)($renderItem['karta'] ?? []));
+      ?>
+    <?php endforeach; ?>
   <?php endif; ?>
 </div>
-<?php endif; ?>
 
 <div id="cbCardModeModal" class="cb_cardmode_modal is-hidden" data-cb-cardmode-overlay="1" aria-hidden="true">
   <div class="cb_cardmode_dialog">

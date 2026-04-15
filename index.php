@@ -539,6 +539,7 @@ if (!function_exists('cb_asset_url')) {
 
 <script src="<?= h(cb_asset_url('js/ajax_core.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_min_max.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/karty_min_nano.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_hlavicka.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_report_restia.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_report_form.js')) ?>"></script>
