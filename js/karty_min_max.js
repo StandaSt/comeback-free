@@ -83,6 +83,14 @@
     toggle.setAttribute('title', isOn ? 'Přepnout do mini' : 'Přepnout do max');
   }
 
+
+  function toggleNanoBtn(root, show) {
+    if (!(root instanceof HTMLElement)) return;
+    const btn = root.querySelector('[data-card-to-nano]');
+    if (!(btn instanceof HTMLElement)) return;
+    btn.style.display = show ? '' : 'none';
+  }
+
   function updateSubtitle(root, isExpanded) {
     if (!(root instanceof HTMLElement)) return;
     const subtitle = root.querySelector('[data-card-subtitle]');
@@ -139,6 +147,8 @@
     if (compact) compact.classList.remove('is-hidden');
     if (toggle) updateToggle(toggle, false);
     updateSubtitle(root, false);
+    toggleNanoBtn(root, true);
+    toggleNanoBtn(root, true);
 
     if (typeof w.cbSetBranchSelectDisabledForRoot === 'function') {
       w.cbSetBranchSelectDisabledForRoot(root, false);
@@ -184,6 +194,7 @@
     const overlayTop = (dashBox instanceof HTMLElement) ? dashBox.scrollTop : 0;
 
     updateSubtitle(root, true);
+    toggleNanoBtn(root, false);
     expanded.classList.remove('is-hidden');
     compact.classList.add('is-hidden');
     dashCard.classList.add('is-expanded');
