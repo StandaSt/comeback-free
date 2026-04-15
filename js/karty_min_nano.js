@@ -1,4 +1,4 @@
-// js/karty_min_nano.js * Verze: V2 * Aktualizace: 15.04.2026
+// js/karty_min_nano.js * Verze: V3 * Aktualizace: 15.04.2026
 'use strict';
 
 (function (w) {
@@ -11,6 +11,11 @@
 
   function getCardRoots() {
     return Array.from(document.querySelectorAll(CARD_ROOT_SELECTOR)).filter((el) => el instanceof HTMLElement);
+  }
+
+  function getDashGrid() {
+    const grid = document.querySelector('.dash_grid[data-login-id]');
+    return grid instanceof HTMLElement ? grid : null;
   }
 
   function requestCardMode(cardId, mode) {
@@ -129,17 +134,172 @@
     }
   }
 
-  function reloadAfterModeSwitch() {
-    setDashboardLoading(true);
+  function createBreakNode() {
+    const el = document.createElement('div');
+    el.className = 'dash_break odstup_vnejsi_0 odstup_vnitrni_0';
+    el.setAttribute('aria-hidden', 'true');
+    return el;
+  }
 
-    if (w.CB_AJAX && typeof w.CB_AJAX.refreshDashboard === 'function') {
-      w.CB_AJAX.refreshDashboard({ force: true, loaderMode: 'cards' }).catch(() => {
-        w.alert('Obnovení dashboardu po přepnutí režimu selhalo.');
+  function collectCardsForMode1(grid) {
+    const nanoCards = [];
+    const miniCards = [];
+
+    Array.from(grid.children).forEach((child) => {
+      if (!(child instanceof HTMLElement)) return;
+
+      if (child.classList.contains('dash_nano_group')) {
+        Array.from(child.children).forEach((card) => {
+          if (card instanceof HTMLElement && card.matches('[data-cb-dash-card="1"]')) {
+            nanoCards.push(card);
+          }
+        });
+        return;
+      }
+
+      if (!child.matches('[data-cb-dash-card="1"]')) {
+        return;
+      }
+
+      const shell = child.querySelector('.card_shell');
+      if (!(shell instanceof HTMLElement)) return;
+
+      if (String(shell.getAttribute('data-card-mode') || '').trim() === 'nano') {
+        nanoCards.push(child);
+      } else {
+        miniCards.push(child);
+      }
+    });
+
+    return { nanoCards, miniCards };
+  }
+
+  function collectCardsForMode0(grid) {
+    const nanoCards = [];
+    const miniCards = [];
+
+    Array.from(grid.children).forEach((child) => {
+      if (!(child instanceof HTMLElement)) return;
+
+      if (child.classList.contains('dash_nano_group')) {
+        Array.from(child.children).forEach((card) => {
+          if (card instanceof HTMLElement && card.matches('[data-cb-dash-card="1"]')) {
+            const shell = card.querySelector('.card_shell');
+            if (shell instanceof HTMLElement && String(shell.getAttribute('data-card-mode') || '').trim() === 'nano') {
+              nanoCards.push(card);
+            } else {
+              miniCards.push(card);
+            }
+          }
+        });
+        return;
+      }
+
+      if (child.classList.contains('dash_break')) {
+        return;
+      }
+
+      if (!child.matches('[data-cb-dash-card="1"]')) {
+        return;
+      }
+
+      const shell = child.querySelector('.card_shell');
+      if (!(shell instanceof HTMLElement)) return;
+
+      if (String(shell.getAttribute('data-card-mode') || '').trim() === 'nano') {
+        nanoCards.push(child);
+      } else {
+        miniCards.push(child);
+      }
+    });
+
+    return { nanoCards, miniCards };
+  }
+
+  function rebuildGridAfterModeSwitch() {
+    const grid = getDashGrid();
+    if (!(grid instanceof HTMLElement)) return;
+
+    if (grid.classList.contains('dash_nano_kde_1')) {
+      const cards = collectCardsForMode1(grid);
+      const nodes = [];
+
+      if (cards.nanoCards.length > 0) {
+        const group = document.createElement('div');
+        group.className = 'dash_nano_group';
+        cards.nanoCards.forEach((card) => {
+          group.appendChild(card);
+        });
+        nodes.push(group);
+      }
+
+      cards.miniCards.forEach((card) => {
+        nodes.push(card);
       });
+
+      grid.replaceChildren(...nodes);
       return;
     }
 
-    w.location.reload();
+    const cards = collectCardsForMode0(grid);
+    const nodes = [];
+
+    cards.nanoCards.forEach((card) => {
+      nodes.push(card);
+    });
+
+    if (cards.nanoCards.length > 0 && cards.miniCards.length > 0) {
+      nodes.push(createBreakNode());
+    }
+
+    cards.miniCards.forEach((card) => {
+      nodes.push(card);
+    });
+
+    grid.replaceChildren(...nodes);
+  }
+
+  function refreshOnlyCurrentCard(cardId) {
+    if (!(w.CB_AJAX && typeof w.CB_AJAX.refreshCard === 'function')) {
+      return Promise.reject(new Error('Obnovení jedné karty není dostupné.'));
+    }
+
+    return w.CB_AJAX.refreshCard(cardId, {
+      force: true,
+      keepLoading: true,
+      loaderMode: 'cards'
+    }).then((result) => {
+      rebuildGridAfterModeSwitch();
+      document.dispatchEvent(new CustomEvent('cb:main-swapped'));
+      return result;
+    });
+  }
+
+  function finishModeSwitch() {
+    setDashboardLoading(false);
+  }
+
+  function handleModeSwitch(cardId, targetMode, tracePrefix) {
+    setDashboardLoading(true);
+
+    requestCardMode(cardId, targetMode).then(() => {
+      traceAjax(tracePrefix + '_mode_saved', {
+        card_id: cardId
+      });
+      return refreshOnlyCurrentCard(cardId);
+    }).then(() => {
+      traceAjax(tracePrefix + '_ok', {
+        card_id: cardId
+      });
+      finishModeSwitch();
+    }).catch((err) => {
+      traceAjax(tracePrefix + '_error', {
+        card_id: cardId,
+        message: String((err && err.message) ? err.message : '')
+      });
+      finishModeSwitch();
+      showCardModeError(err);
+    });
   }
 
   function initMiniCard(root) {
@@ -167,21 +327,7 @@
         card_id: cardId
       });
 
-      setDashboardLoading(true);
-
-      requestCardMode(cardId, 'nano').then(() => {
-        traceAjax('mini_to_nano_ok', {
-          card_id: cardId
-        });
-        reloadAfterModeSwitch();
-      }).catch((err) => {
-        traceAjax('mini_to_nano_error', {
-          card_id: cardId,
-          message: String((err && err.message) ? err.message : '')
-        });
-        setDashboardLoading(false);
-        showCardModeError(err);
-      });
+      handleModeSwitch(cardId, 'nano', 'mini_to_nano');
     });
   }
 
@@ -211,21 +357,7 @@
           card_id: cardId
         });
 
-        setDashboardLoading(true);
-
-        requestCardMode(cardId, 'mini').then(() => {
-          traceAjax('nano_to_mini_ok', {
-            card_id: cardId
-          });
-          reloadAfterModeSwitch();
-        }).catch((err) => {
-          traceAjax('nano_to_mini_error', {
-            card_id: cardId,
-            message: String((err && err.message) ? err.message : '')
-          });
-          setDashboardLoading(false);
-          showCardModeError(err);
-        });
+        handleModeSwitch(cardId, 'mini', 'nano_to_mini');
       });
     });
   }
@@ -268,5 +400,5 @@
   }
 })(window);
 
-// js/karty_min_nano.js * Verze: V2 * Aktualizace: 15.04.2026
+// js/karty_min_nano.js * Verze: V3 * Aktualizace: 15.04.2026
 // Konec souboru

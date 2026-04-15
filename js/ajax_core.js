@@ -1,4 +1,4 @@
-// js/ajax_core.js * Verze: V4 * Aktualizace: 14.04.2026
+// js/ajax_core.js * Verze: V5 * Aktualizace: 15.04.2026
 'use strict';
 
 /*
@@ -446,7 +446,7 @@
       url: reqUrl
     });
 
-    return CB_AJAX.fetchText(reqUrl, { 'X-Comeback-Partial-Card': '1' })
+    return CB_AJAX.fetchText(reqUrl, { 'X-Comeback-Card': '1' })
       .then((html) => {
         const wrap = document.createElement('div');
         wrap.innerHTML = String(html || '').trim();
@@ -467,7 +467,7 @@
           mode: loaderMode,
           card_id: id
         });
-        return { ok: true, cardId: id };
+        return { ok: true, cardId: id, card: nextCard };
       }).catch((err) => {
         traceAjax('refresh_card_error', {
           mode: loaderMode,
@@ -498,4 +498,4 @@
   });
 
 })(window);
-// js/ajax_core.js * Verze: V4 * Aktualizace: 14.04.2026 * Konec souboru
+// js/ajax_core.js * Verze: V5 * Aktualizace: 15.04.2026 * Konec souboru
