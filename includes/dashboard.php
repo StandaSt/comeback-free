@@ -1,5 +1,5 @@
 <?php
-// includes/dashboard.php * Verze: V17 * Aktualizace: 15.04.2026
+// includes/dashboard.php * Verze: V18 * Aktualizace: 15.04.2026
 declare(strict_types=1);
 
 function cb_dashboard_resolve_file(string $soubor): ?string
@@ -36,6 +36,66 @@ require_once __DIR__ . '/priprav_kartu_mini.php';
 require_once __DIR__ . '/priprav_kartu_max.php';
 require_once __DIR__ . '/../funkce/zobraz_kartu.php';
 
+$cbDashTimingStart = microtime(true);
+$cbDashTimingLast = $cbDashTimingStart;
+$cbDashTimingUri = (string)($_SERVER['REQUEST_URI'] ?? '');
+$cbDashTimingPath = (string)(parse_url($cbDashTimingUri, PHP_URL_PATH) ?? '');
+$cbDashBasePath = trim(str_replace('\\', '/', (string)($GLOBALS['BASE_PATH'] ?? '')));
+if ($cbDashBasePath !== '' && $cbDashBasePath !== '/') {
+    $cbDashBasePath = '/' . trim($cbDashBasePath, '/');
+} else {
+    $cbDashBasePath = '';
+}
+$cbDashTimingAllowed = (
+    isset($_SERVER['HTTP_X_COMEBACK_PARTIAL'])
+    || isset($_SERVER['HTTP_X_COMEBACK_CARD'])
+    || $cbDashTimingPath === '/'
+    || $cbDashTimingPath === '/index.php'
+    || (
+        $cbDashBasePath !== ''
+        && (
+            $cbDashTimingPath === $cbDashBasePath
+            || $cbDashTimingPath === $cbDashBasePath . '/'
+            || $cbDashTimingPath === $cbDashBasePath . '/index.php'
+        )
+    )
+);
+$GLOBALS['cbDashTimingAllowed'] = $cbDashTimingAllowed;
+
+if (!function_exists('cb_dashboard_timing_log')) {
+    function cb_dashboard_timing_log(string $label, float $startTs, float &$lastTs): void
+    {
+        if (empty($GLOBALS['cbDashTimingAllowed'])) {
+            return;
+        }
+
+        $now = microtime(true);
+        $stepMs = (int)round(($now - $lastTs) * 1000);
+        $totalMs = (int)round(($now - $startTs) * 1000);
+        $lastTs = $now;
+
+        $dir = __DIR__ . '/../log';
+        $file = $dir . '/merime_casy.txt';
+        @mkdir($dir, 0775, true);
+        $line = sprintf(
+            "%s | dashboard | %s | step_ms=%d | total_ms=%d | uri=%s | partial=%s | card=%s | card_id=%s%s",
+            date('Y-m-d H:i:s'),
+            $label,
+            $stepMs,
+            $totalMs,
+            (string)($_SERVER['REQUEST_URI'] ?? ''),
+            isset($_SERVER['HTTP_X_COMEBACK_PARTIAL']) ? '1' : '0',
+            isset($_SERVER['HTTP_X_COMEBACK_CARD']) ? '1' : '0',
+            (string)($GLOBALS['cb_dashboard_single_card_id'] ?? 0),
+            PHP_EOL
+        );
+
+        @file_put_contents($file, $line, FILE_APPEND);
+    }
+}
+
+cb_dashboard_timing_log('start', $cbDashTimingStart, $cbDashTimingLast);
+
 $roleFilter = (int)(($_SESSION['cb_user']['id_role'] ?? 3));
 if (!in_array($roleFilter, [1, 2, 3], true)) {
     $roleFilter = 3;
@@ -51,6 +111,7 @@ $userCardIconFileById = [];
 $userCardPosById = [];
 $dashColsPostOverride = null;
 $singleCardId = (int)($GLOBALS['cb_dashboard_single_card_id'] ?? 0);
+$singleCardLoadMax = (((int)($_GET['cb_load_max'] ?? 0)) === 1);
 
 if ((string)($_POST['us_action'] ?? '') === 'save') {
     $postColsRaw = (int)($_POST['us_pocet_sl'] ?? 0);
@@ -81,6 +142,7 @@ if ($idUser > 0) {
         }
         $stmtCols->close();
     }
+    cb_dashboard_timing_log('after_user_set', $cbDashTimingStart, $cbDashTimingLast);
 
     $stmtNano = db()->prepare('SELECT id_nano FROM user_nano WHERE id_user = ?');
     if ($stmtNano) {
@@ -95,6 +157,7 @@ if ($idUser > 0) {
         }
         $stmtNano->close();
     }
+    cb_dashboard_timing_log('after_nano_ids', $cbDashTimingStart, $cbDashTimingLast);
 
     $stmtCardColor = db()->prepare('SELECT id_karta, color FROM user_card_set WHERE id_user = ?');
     if ($stmtCardColor) {
@@ -110,6 +173,7 @@ if ($idUser > 0) {
         }
         $stmtCardColor->close();
     }
+    cb_dashboard_timing_log('after_card_colors', $cbDashTimingStart, $cbDashTimingLast);
 
     $stmtCardIcon = db()->prepare('
         SELECT ucs.id_karta, ci.soubor
@@ -130,6 +194,7 @@ if ($idUser > 0) {
         }
         $stmtCardIcon->close();
     }
+    cb_dashboard_timing_log('after_card_icons', $cbDashTimingStart, $cbDashTimingLast);
 
     $stmtCardPos = db()->prepare('SELECT id_karta, col, line FROM user_card_set WHERE id_user = ?');
     if ($stmtCardPos) {
@@ -149,6 +214,7 @@ if ($idUser > 0) {
         }
         $stmtCardPos->close();
     }
+    cb_dashboard_timing_log('after_card_positions', $cbDashTimingStart, $cbDashTimingLast);
 }
 
 $karty = [];
@@ -179,6 +245,7 @@ if ($stmt) {
     }
     $stmt->close();
 }
+cb_dashboard_timing_log('after_cards_query', $cbDashTimingStart, $cbDashTimingLast);
 
 $emptyMap = [
     3 => 'Zadna karta k zobrazeni',
@@ -197,6 +264,7 @@ foreach ($karty as $kartaRow) {
         $kartyMini[] = $kartaRow;
     }
 }
+cb_dashboard_timing_log('after_split_cards', $cbDashTimingStart, $cbDashTimingLast);
 
 $sortByFallback = static function (array &$list): void {
     usort($list, static function (array $a, array $b): int {
@@ -312,6 +380,7 @@ $miniStartSlot = ($nanoKde === 1 && !empty($kartyNano))
     ? 2
     : (count($kartyNano) + 1);
 $kartyMini = $applyUserSlots($kartyMini, $miniStartSlot);
+cb_dashboard_timing_log('after_apply_slots', $cbDashTimingStart, $cbDashTimingLast);
 
 if ($singleCardId > 0) {
     foreach ($kartyNano as $kartaNanoRaw) {
@@ -326,6 +395,7 @@ if ($singleCardId > 0) {
             $userCardPosById,
             $dashGridCols
         ));
+        cb_dashboard_timing_log('single_card_nano_render', $cbDashTimingStart, $cbDashTimingLast);
         return;
     }
 
@@ -334,13 +404,22 @@ if ($singleCardId > 0) {
             continue;
         }
 
-        echo cb_zobraz_kartu(cb_priprav_kartu_mini(
+        $pripravenaMini = cb_priprav_kartu_mini(
             $kartaMiniRaw,
             $userCardHeaderColorById,
             $userCardIconFileById,
             $userCardPosById,
             $dashGridCols
-        ));
+        );
+        cb_dashboard_timing_log('single_card_mini_prepare', $cbDashTimingStart, $cbDashTimingLast);
+
+        if ($singleCardLoadMax) {
+            $pripravenaMini['maxHtml'] = cb_priprav_kartu_max($kartaMiniRaw);
+            cb_dashboard_timing_log('single_card_max_prepare', $cbDashTimingStart, $cbDashTimingLast);
+        }
+
+        echo cb_zobraz_kartu($pripravenaMini);
+        cb_dashboard_timing_log('single_card_render', $cbDashTimingStart, $cbDashTimingLast);
         return;
     }
 
@@ -361,11 +440,13 @@ if ($nanoKde === 1) {
                 $userCardPosById,
                 $dashGridCols
             );
+            cb_dashboard_timing_log('nano_prepare_card_' . (string)($kartaNanoRaw['id_karta'] ?? 0), $cbDashTimingStart, $cbDashTimingLast);
         }
         $renderItems[] = [
             'kind' => 'nano_group',
             'karty' => $nanoSkupinaPrepared,
         ];
+        cb_dashboard_timing_log('nano_group_ready', $cbDashTimingStart, $cbDashTimingLast);
     }
 } else {
     foreach ($kartyNano as $kartaNanoRaw) {
@@ -379,8 +460,10 @@ if ($nanoKde === 1) {
                 $dashGridCols
             ),
         ];
+        cb_dashboard_timing_log('nano_prepare_card_' . (string)($kartaNanoRaw['id_karta'] ?? 0), $cbDashTimingStart, $cbDashTimingLast);
     }
 }
+cb_dashboard_timing_log('after_nano_render_items', $cbDashTimingStart, $cbDashTimingLast);
 
 if ($nanoKde === 0 && !empty($kartyNano) && !empty($kartyMini)) {
     $renderItems[] = ['kind' => 'break'];
@@ -397,7 +480,9 @@ foreach ($kartyMini as $kartaMiniRaw) {
             $dashGridCols
         ),
     ];
+    cb_dashboard_timing_log('mini_prepare_card_' . (string)($kartaMiniRaw['id_karta'] ?? 0), $cbDashTimingStart, $cbDashTimingLast);
 }
+cb_dashboard_timing_log('after_mini_render_items', $cbDashTimingStart, $cbDashTimingLast);
 ?>
 
 <div class="dash_grid gap_2 <?= h($dashGridClass) ?> displ_grid sirka100" data-login-id="<?= h((string)$cbLoginId) ?>">
@@ -429,6 +514,7 @@ foreach ($kartyMini as $kartaMiniRaw) {
     <?php endforeach; ?>
   <?php endif; ?>
 </div>
+<?php cb_dashboard_timing_log('after_html_output', $cbDashTimingStart, $cbDashTimingLast); ?>
 
 <div id="cbCardModeModal" class="cb_cardmode_modal is-hidden" data-cb-cardmode-overlay="1" aria-hidden="true">
   <div class="cb_cardmode_dialog">
@@ -450,3 +536,4 @@ foreach ($kartyMini as $kartaMiniRaw) {
 
 <?php
 // Konec souboru
+cb_dashboard_timing_log('total_end', $cbDashTimingStart, $cbDashTimingLast);

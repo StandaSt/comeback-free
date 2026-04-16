@@ -1,5 +1,5 @@
 <?php
-// priprav_kartu_mini.php * Verze: V5 * Aktualizace: 15.04.2026
+// priprav_kartu_mini.php * Verze: V6 * Aktualizace: 15.04.2026
 declare(strict_types=1);
 
 function cb_priprav_kartu_mini(
@@ -67,7 +67,7 @@ function cb_priprav_kartu_mini(
         'line' => $renderLine,
         'isPosLocked' => $isPosLocked ? 1 : 0,
         'minHtml' => $card_min_html,
-        'maxHtml' => cb_priprav_kartu_max($card_max_html),
+        'maxHtml' => '',
         'startExpanded' => $startExpanded ? 1 : 0,
         'cardColorUrl' => cb_url('/includes/select_card_color.php?id_karta=' . (string)$cardId),
         'cardIconUrl' => cb_url('/includes/select_card_ikon.php?id_karta=' . (string)$cardId),

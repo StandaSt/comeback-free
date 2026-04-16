@@ -1,5 +1,5 @@
 <?php
-// karty/admin_karty.php * Verze: V10 * Aktualizace: 14.04.2026
+// karty/admin_karty.php * Verze: V11 * Aktualizace: 15.04.2026
 declare(strict_types=1);
 
 $user = $_SESSION['cb_user'] ?? [];
@@ -452,7 +452,7 @@ $card_min_html = (string)ob_get_clean();
 
 ob_start();
 ?>
-    <form id="karta-add" method="post" action="<?= h($formAction) ?>" autocomplete="off">
+    <form id="karta-add" method="post" action="<?= h($formAction) ?>" autocomplete="off" data-cb-ajax-dashboard="1">
       <input type="hidden" name="admin_karty_action" value="add">
     </form>
     <div class="table-wrap ram_normal bg_bila zaobleni_12">
@@ -484,7 +484,7 @@ ob_start();
               </select>
             </td>
             <td>
-              <input class="card_input filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="width:50%;" name="poradi" type="number" min="1" max="9999" value="100" required form="karta-add">
+              <input class="card_input filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="width:70%;" name="poradi" type="number" min="1" max="9999" value="100" required form="karta-add">
             </td>
             <td class="txt_c">
               <label class="displ_inline_flex gap_6 cursor_ruka" style="align-items:center;justify-content:center;">
@@ -509,7 +509,7 @@ ob_start();
               <tr>
                 <td class="txt_c"><?= h((string)$card['id_karta']) ?></td>
                 <td>
-                  <form id="<?= h($formId) ?>" method="post" action="<?= h($formAction) ?>">
+                  <form id="<?= h($formId) ?>" method="post" action="<?= h($formAction) ?>" data-cb-ajax-dashboard="1">
                     <input type="hidden" name="id_karta" value="<?= h((string)$card['id_karta']) ?>">
                   </form>
                   <input type="text" class="card_input filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="nazev" value="<?= h($card['nazev']) ?>" maxlength="120" form="<?= h($formId) ?>">
@@ -522,7 +522,7 @@ ob_start();
                     <option value="3"<?= $card['min_role'] === 3 ? ' selected' : '' ?>>všichni</option>
                   </select>
                 </td>
-                <td><input type="number" class="card_input filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="width:50%;" name="poradi" value="<?= h((string)$card['poradi']) ?>" min="1" max="9999" form="<?= h($formId) ?>"></td>
+                <td><input type="number" class="card_input filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="width:70%;" name="poradi" value="<?= h((string)$card['poradi']) ?>" min="1" max="9999" form="<?= h($formId) ?>"></td>
                 <td class="txt_c">
                   <label class="displ_inline_flex gap_6 cursor_ruka" style="align-items:center;justify-content:center;">
                     <input type="checkbox" name="refresh_op" value="1"<?= ((int)($card['refresh_op'] ?? 0) === 1) ? ' checked' : '' ?> form="<?= h($formId) ?>" onchange="this.nextElementSibling.className=this.checked?'txt_cervena':'txt_seda';">
@@ -557,7 +557,7 @@ ob_start();
                 <td class="txt_c"><?= ((int)($card['refresh_op'] ?? 0) === 1) ? '<span class="txt_cervena">Ano</span>' : '<span class="txt_seda">Ano</span>' ?></td>
                 <td class="txt_c">ne</td>
                 <td>
-                  <form id="<?= h($formId) ?>" method="post" action="<?= h($formAction) ?>">
+                  <form id="<?= h($formId) ?>" method="post" action="<?= h($formAction) ?>" data-cb-ajax-dashboard="1">
                     <input type="hidden" name="id_karta" value="<?= h((string)$card['id_karta']) ?>">
                   </form>
                   <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 admin_karty_btn_danger txt_cervena" type="submit" name="admin_karty_action" value="enable" form="<?= h($formId) ?>">Povolit</button>
@@ -573,7 +573,7 @@ ob_start();
     </div>
 <?php
 $card_max_html = (string)ob_get_clean();
-/* karty/admin_karty.php * Verze: V10 * Aktualizace: 14.04.2026 */
+/* karty/admin_karty.php * Verze: V11 * Aktualizace: 15.04.2026 */
 // Počet řádků: 579
 // Konec souboru
 ?>

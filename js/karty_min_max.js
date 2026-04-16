@@ -1,4 +1,4 @@
-// js/karty_min_max.js * Verze: V4 * Aktualizace: 15.04.2026
+// js/karty_min_max.js * Verze: V5 * Aktualizace: 15.04.2026
 'use strict';
 
 (function (w) {
@@ -83,14 +83,6 @@
     toggle.setAttribute('title', isOn ? 'Přepnout do mini' : 'Přepnout do max');
   }
 
-
-  function toggleNanoBtn(root, show) {
-    if (!(root instanceof HTMLElement)) return;
-    const btn = root.querySelector('[data-card-to-nano]');
-    if (!(btn instanceof HTMLElement)) return;
-    btn.style.display = show ? '' : 'none';
-  }
-
   function updateSubtitle(root, isExpanded) {
     if (!(root instanceof HTMLElement)) return;
     const subtitle = root.querySelector('[data-card-subtitle]');
@@ -99,6 +91,13 @@
     const minText = String(subtitle.getAttribute('data-subtitle-min') || '');
     const maxText = String(subtitle.getAttribute('data-subtitle-max') || '');
     subtitle.textContent = isExpanded ? maxText : minText;
+  }
+
+  function toggleNanoBtn(root, show) {
+    if (!(root instanceof HTMLElement)) return;
+    const btn = root.querySelector('[data-card-to-nano]');
+    if (!(btn instanceof HTMLElement)) return;
+    btn.style.display = show ? '' : 'none';
   }
 
   function makeHeadInteractive(head) {
@@ -127,6 +126,54 @@
     clearSelection();
   }
 
+  function hasLoadedMax(root) {
+    if (!(root instanceof HTMLElement)) return false;
+    return String(root.getAttribute('data-card-max-loaded') || '0') === '1';
+  }
+
+  function loadMaxContent(root) {
+    const cardId = String(root.getAttribute('data-card-id') || '').trim();
+    if (cardId === '') {
+      return Promise.reject(new Error('ID karty nebylo nalezeno.'));
+    }
+
+    if (!(w.CB_AJAX && typeof w.CB_AJAX.fetchText === 'function')) {
+      return Promise.reject(new Error('Nacteni karty neni dostupne.'));
+    }
+
+    const reqUrl = 'index.php?cb_card_id=' + encodeURIComponent(cardId) + '&cb_load_max=1';
+
+    return w.CB_AJAX.fetchText(reqUrl, { 'X-Comeback-Card': '1' }).then((html) => {
+      const currentCard = getDashCard(root);
+      if (!(currentCard instanceof HTMLElement)) {
+        throw new Error('Karta nebyla nalezena.');
+      }
+
+      const wrap = document.createElement('div');
+      wrap.innerHTML = String(html || '').trim();
+      const nextCard = wrap.firstElementChild;
+      if (!(nextCard instanceof HTMLElement)) {
+        throw new Error('Nova karta ma neplatny obsah.');
+      }
+
+      currentCard.replaceWith(nextCard);
+
+      const nextRoot = nextCard.querySelector(CARD_ROOT_SELECTOR);
+      if (!(nextRoot instanceof HTMLElement)) {
+        throw new Error('Nova karta nema shell.');
+      }
+
+      document.dispatchEvent(new CustomEvent('cb:card-swapped', {
+        detail: {
+          cardId: parseInt(cardId, 10) || 0,
+          card: nextCard
+        }
+      }));
+
+      return nextRoot;
+    });
+  }
+
   function closeActiveMaxi(opts) {
     if (!activeMaxi) return;
 
@@ -147,7 +194,6 @@
     if (compact) compact.classList.remove('is-hidden');
     if (toggle) updateToggle(toggle, false);
     updateSubtitle(root, false);
-    toggleNanoBtn(root, true);
     toggleNanoBtn(root, true);
 
     if (typeof w.cbSetBranchSelectDisabledForRoot === 'function') {
@@ -171,16 +217,7 @@
     }
   }
 
-  function openMaxi(root, compactSel, expandedSel, toggleSel) {
-    if (!(root instanceof HTMLElement)) return;
-
-    if (activeMaxi && activeMaxi.root === root) {
-      closeActiveMaxi();
-      return;
-    }
-
-    closeActiveMaxi();
-
+  function finishOpenMaxi(root, compactSel, expandedSel, toggleSel) {
     const compact = root.querySelector(compactSel);
     const expanded = root.querySelector(expandedSel);
     const toggle = root.querySelector(toggleSel);
@@ -223,6 +260,39 @@
     saveMaxiState(String(root.getAttribute('data-card-id') || ''));
   }
 
+  function openMaxi(root, compactSel, expandedSel, toggleSel) {
+    if (!(root instanceof HTMLElement)) return;
+
+    if (activeMaxi && activeMaxi.root === root) {
+      closeActiveMaxi();
+      return;
+    }
+
+    closeActiveMaxi();
+
+    if (hasLoadedMax(root)) {
+      finishOpenMaxi(root, compactSel, expandedSel, toggleSel);
+      return;
+    }
+
+    if (w.CB_AJAX && typeof w.CB_AJAX.setDashboardLoading === 'function') {
+      w.CB_AJAX.setDashboardLoading(true, 'cards');
+    }
+
+    loadMaxContent(root).then((nextRoot) => {
+      initCard(nextRoot);
+      finishOpenMaxi(nextRoot, compactSel, expandedSel, toggleSel);
+    }).catch(() => {
+      if (w.alert) {
+        w.alert('Otevreni max karty selhalo.');
+      }
+    }).finally(() => {
+      if (w.CB_AJAX && typeof w.CB_AJAX.setDashboardLoading === 'function') {
+        w.CB_AJAX.setDashboardLoading(false, 'cards');
+      }
+    });
+  }
+
   function setExpanded(root, compactSel, expandedSel, toggleSel, on) {
     if (!(root instanceof HTMLElement)) return;
 
@@ -244,9 +314,14 @@
 
     if (compact instanceof HTMLElement) compact.classList.remove('is-hidden');
     if (expanded instanceof HTMLElement) expanded.classList.add('is-hidden');
-    if (dashCard instanceof HTMLElement) dashCard.classList.remove('is-expanded');
+    if (dashCard instanceof HTMLElement) {
+      dashCard.classList.remove('is-expanded');
+      dashCard.classList.remove('is-maxi-overlay');
+      dashCard.style.top = '';
+    }
     updateToggle(toggle, false);
     updateSubtitle(root, false);
+    toggleNanoBtn(root, true);
   }
 
   function initCard(root) {
@@ -340,5 +415,5 @@
   }
 })(window);
 
-// js/karty_min_max.js * Verze: V4 * Aktualizace: 15.04.2026
+// js/karty_min_max.js * Verze: V5 * Aktualizace: 15.04.2026
 // Konec souboru

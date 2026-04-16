@@ -64,6 +64,196 @@
     } catch (e) {}
   }
 
+  function getNavigationEntry() {
+    const perf = w.performance || null;
+    if (!perf || typeof perf.getEntriesByType !== 'function') {
+      return null;
+    }
+    const navEntries = perf.getEntriesByType('navigation');
+    return Array.isArray(navEntries) && navEntries.length > 0 ? navEntries[0] : null;
+  }
+
+  function getNavigationSummary(stage) {
+    const perf = w.performance || null;
+    const nav = getNavigationEntry();
+    const legacy = perf && perf.timing ? perf.timing : null;
+    const navType = nav ? String(nav.type || '') : '';
+    const legacyNavType = perf && perf.navigation ? Number(perf.navigation.type || 0) : 0;
+    const isReload = navType === 'reload' || legacyNavType === 1;
+
+    return {
+      stage: String(stage || ''),
+      nav_type: navType || (legacyNavType === 1 ? 'reload' : ''),
+      is_reload: isReload ? 1 : 0,
+      dom_content_loaded_ms: nav && typeof nav.domContentLoadedEventEnd === 'number'
+        ? Math.max(0, Math.round(nav.domContentLoadedEventEnd))
+        : (legacy ? Math.max(0, Math.round(legacy.domContentLoadedEventEnd - legacy.navigationStart)) : 0),
+      load_event_ms: nav && typeof nav.loadEventEnd === 'number'
+        ? Math.max(0, Math.round(nav.loadEventEnd))
+        : (legacy ? Math.max(0, Math.round(legacy.loadEventEnd - legacy.navigationStart)) : 0),
+      dom_complete_ms: nav && typeof nav.domComplete === 'number'
+        ? Math.max(0, Math.round(nav.domComplete))
+        : (legacy ? Math.max(0, Math.round(legacy.domComplete - legacy.navigationStart)) : 0),
+      response_end_ms: nav && typeof nav.responseEnd === 'number'
+        ? Math.max(0, Math.round(nav.responseEnd))
+        : (legacy ? Math.max(0, Math.round(legacy.responseEnd - legacy.navigationStart)) : 0),
+      transfer_size: nav && typeof nav.transferSize === 'number' ? Math.max(0, Math.round(nav.transferSize)) : 0,
+      encoded_body_size: nav && typeof nav.encodedBodySize === 'number' ? Math.max(0, Math.round(nav.encodedBodySize)) : 0,
+      decoded_body_size: nav && typeof nav.decodedBodySize === 'number' ? Math.max(0, Math.round(nav.decodedBodySize)) : 0,
+      url: String(w.location.href || '')
+    };
+  }
+
+  function getSlowResources(limit) {
+    try {
+      const perf = w.performance || null;
+      if (!perf || typeof perf.getEntriesByType !== 'function') {
+        return [];
+      }
+      const entries = perf.getEntriesByType('resource');
+      if (!Array.isArray(entries) || entries.length === 0) {
+        return [];
+      }
+
+      const sorted = entries
+        .filter((entry) => entry && typeof entry === 'object')
+        .map((entry) => ({
+          name: String(entry.name || ''),
+          initiatorType: String(entry.initiatorType || ''),
+          duration_ms: Math.max(0, Math.round(Number(entry.duration || 0))),
+          start_ms: Math.max(0, Math.round(Number(entry.startTime || 0))),
+          end_ms: Math.max(0, Math.round(Number(entry.responseEnd || 0))),
+          transfer_size: Math.max(0, Math.round(Number(entry.transferSize || 0)))
+        }))
+        .sort((a, b) => b.duration_ms - a.duration_ms)
+        .slice(0, Math.max(0, Number(limit) || 10));
+
+      return sorted;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function traceLifecycle(stage) {
+    try {
+      if (w.__cbLifecycleTraceDone === true) {
+        return;
+      }
+      traceAjax('measure_lifecycle_' + String(stage || 'unknown'), {
+        nav: getNavigationSummary(stage),
+        slow_resources: getSlowResources(12),
+        ready_state: String(document.readyState || ''),
+        visibility_state: String(document.visibilityState || '')
+      });
+    } catch (e) {}
+  }
+
+  function markLifecycleDone() {
+    w.__cbLifecycleTraceDone = true;
+  }
+
+  function logFullPageReloadTiming() {
+    try {
+      if (w.__cbFullPageReloadTimingSent === true) {
+        return;
+      }
+
+      const nav = getNavigationEntry();
+      const perf = w.performance || null;
+      const navType = nav ? String(nav.type || '') : '';
+      const legacyNavType = perf && perf.navigation ? Number(perf.navigation.type || 0) : 0;
+      const isReload = navType === 'reload' || legacyNavType === 1;
+      if (!isReload) {
+        return;
+      }
+
+      const totalMs = Math.max(
+        0,
+        Math.round(
+          Number(
+            (nav && typeof nav.duration === 'number' ? nav.duration : 0)
+            || (nav && typeof nav.loadEventEnd === 'number' ? nav.loadEventEnd : 0)
+            || (nav && typeof nav.domComplete === 'number' ? nav.domComplete : 0)
+            || 0
+          )
+        )
+      );
+
+      w.__cbFullPageReloadTimingSent = true;
+      traceAjax('measure_full_page_reload', {
+        nav_type: navType || (legacyNavType === 1 ? 'reload' : ''),
+        total_ms: totalMs,
+        nav: getNavigationSummary('load'),
+        slow_resources: getSlowResources(20),
+        url: String(w.location.href || '')
+      });
+    } catch (e) {}
+  }
+
+  function traceDomReady(stage) {
+    try {
+      traceAjax('measure_dom_' + stage, {
+        nav: getNavigationSummary(stage),
+        slow_resources: getSlowResources(12),
+        ready_state: String(document.readyState || ''),
+        visibility_state: String(document.visibilityState || '')
+      });
+    } catch (e) {}
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('readystatechange', function () {
+      traceAjax('measure_readystatechange', {
+        state: String(document.readyState || ''),
+        nav: getNavigationSummary('readystatechange'),
+        slow_resources: getSlowResources(8)
+      });
+    });
+    document.addEventListener('DOMContentLoaded', function () {
+      traceDomReady('contentloaded');
+    }, { once: true });
+  } else {
+    traceDomReady('already_ready');
+  }
+
+  if (document.readyState === 'complete') {
+    traceDomReady('load_already_complete');
+    w.setTimeout(logFullPageReloadTiming, 0);
+  } else {
+    w.addEventListener('load', function () {
+      traceDomReady('load');
+      w.setTimeout(logFullPageReloadTiming, 0);
+    }, { once: true });
+  }
+
+  w.addEventListener('pageshow', function (event) {
+    traceAjax('measure_pageshow', {
+      persisted: event && event.persisted ? 1 : 0,
+      nav: getNavigationSummary('pageshow'),
+      slow_resources: getSlowResources(10)
+    });
+  });
+
+  w.addEventListener('pagehide', function (event) {
+    traceAjax('measure_pagehide', {
+      persisted: event && event.persisted ? 1 : 0,
+      nav: getNavigationSummary('pagehide')
+    });
+  });
+
+  w.addEventListener('beforeunload', function () {
+    traceAjax('measure_beforeunload', {
+      nav: getNavigationSummary('beforeunload')
+    });
+  });
+
+  document.addEventListener('visibilitychange', function () {
+    traceAjax('measure_visibilitychange', {
+      state: String(document.visibilityState || ''),
+      nav: getNavigationSummary('visibilitychange')
+    });
+  });
+
   function getLoaderParts(mode) {
     const loaderMode = normalizeLoaderMode(mode);
     const loader = document.querySelector('.dash_loader[data-cb-loader-mode="' + loaderMode + '"]');
@@ -358,6 +548,7 @@
     const force = !!opts.force;
     const keepLoading = !!opts.keepLoading;
     const loaderMode = normalizeLoaderMode(opts.loaderMode || 'dashboard');
+    const refreshStartedAt = (w.performance && typeof w.performance.now === 'function') ? w.performance.now() : Date.now();
 
     if (getLoaderState(loaderMode).loading && !force) {
       return Promise.resolve({ ok: false, busy: true });
@@ -381,6 +572,12 @@
       keepLoading: keepLoading ? 1 : 0,
       url: reqUrl
     });
+    traceAjax('measure_refresh_start', {
+      mode: loaderMode,
+      force: force ? 1 : 0,
+      keepLoading: keepLoading ? 1 : 0,
+      url: reqUrl
+    });
     return CB_AJAX.fetchText(reqUrl, { 'X-Comeback-Partial': '1' })
       .then((html) => {
         parts.box.querySelector('[data-cb-dash-content="1"]').innerHTML = String(html || '');
@@ -388,11 +585,22 @@
         traceAjax('refresh_done', {
           mode: loaderMode
         });
+        traceAjax('measure_refresh_done', {
+          mode: loaderMode,
+          total_ms: Math.max(0, Math.round(((w.performance && typeof w.performance.now === 'function') ? w.performance.now() : Date.now()) - refreshStartedAt)),
+          url: reqUrl
+        });
         return { ok: true };
       }).catch((err) => {
         traceAjax('refresh_error', {
           mode: loaderMode,
           message: String((err && err.message) ? err.message : 'refresh selhal')
+        });
+        traceAjax('measure_refresh_error', {
+          mode: loaderMode,
+          total_ms: Math.max(0, Math.round(((w.performance && typeof w.performance.now === 'function') ? w.performance.now() : Date.now()) - refreshStartedAt)),
+          message: String((err && err.message) ? err.message : 'refresh selhal'),
+          url: reqUrl
         });
         throw err;
       })

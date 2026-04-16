@@ -1,5 +1,5 @@
 <?php
-// index.php * Verze: V23 * Aktualizace: 14.04.2026
+// index.php * Verze: V24 * Aktualizace: 15.04.2026
 
 declare(strict_types=1);
 
@@ -538,6 +538,7 @@ if (!function_exists('cb_asset_url')) {
 
 
 <script src="<?= h(cb_asset_url('js/ajax_core.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/ajax_karta_max.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_min_max.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_min_nano.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_hlavicka.js')) ?>"></script>
@@ -545,7 +546,6 @@ if (!function_exists('cb_asset_url')) {
 <script src="<?= h(cb_asset_url('js/karty_report_form.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_report_person.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/select_pobocky.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/admin_karty.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/filtry.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/casovac_odhlaseni.js')) ?>"></script>
 
@@ -573,5 +573,5 @@ if (!empty($cbInvalidUrl)) {
 </body>
 </html>
 <?php
-/* index.php * Verze: V23 * Aktualizace: 14.04.2026 */
+/* index.php * Verze: V24 * Aktualizace: 15.04.2026 */
 // Konec souboru

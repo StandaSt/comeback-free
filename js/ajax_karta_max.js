@@ -1,0 +1,111 @@
+// js/ajax_karta_max.js * Verze: V2 * Aktualizace: 15.04.2026
+'use strict';
+
+(function (w) {
+  function isTargetForm(form) {
+    if (!(form instanceof HTMLFormElement)) return false;
+    if (form.getAttribute('data-cb-ajax-dashboard') === '1') return true;
+    return !!form.querySelector('input[name="admin_karty_action"]');
+  }
+
+  function isTargetSubmitter(el) {
+    if (!(el instanceof HTMLElement)) return false;
+    const tag = el.tagName.toUpperCase();
+    if (tag !== 'BUTTON' && !(tag === 'INPUT' && String(el.getAttribute('type') || '').toLowerCase() === 'submit')) {
+      return false;
+    }
+    if (el.getAttribute('form')) return true;
+    return !!el.closest('form[data-cb-ajax-dashboard="1"], form:has(input[name="admin_karty_action"])');
+  }
+
+  function resolveFormFromSubmitter(submitter) {
+    if (!(submitter instanceof HTMLElement)) return null;
+    const formAttr = String(submitter.getAttribute('form') || '').trim();
+    if (formAttr !== '') {
+      const direct = document.getElementById(formAttr);
+      if (direct instanceof HTMLFormElement) return direct;
+    }
+    const parent = submitter.closest('form');
+    return parent instanceof HTMLFormElement ? parent : null;
+  }
+
+  function submitAjax(form, submitter) {
+    if (!(form instanceof HTMLFormElement)) return;
+    if (!(w.CB_AJAX && typeof w.CB_AJAX.submitFormAndRefresh === 'function')) {
+      form.submit();
+      return;
+    }
+
+    if (submitter instanceof HTMLElement && submitter.hasAttribute('name')) {
+      let hidden = form.querySelector('input[data-cb-temp-submitter="1"]');
+      if (!(hidden instanceof HTMLInputElement)) {
+        hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.setAttribute('data-cb-temp-submitter', '1');
+        form.appendChild(hidden);
+      }
+      hidden.name = String(submitter.getAttribute('name') || '');
+      hidden.value = ('value' in submitter) ? String(submitter.value || '') : String(submitter.getAttribute('value') || '');
+    }
+
+    if (submitter instanceof HTMLElement) {
+      submitter.setAttribute('disabled', 'disabled');
+    }
+
+    w.CB_AJAX.submitFormAndRefresh(form, {
+      loaderMode: 'dashboard',
+      refreshMode: 'dashboard',
+      keepLoading: false
+    }).catch(function (err) {
+      const msg = (err && typeof err.message === 'string' && err.message.trim() !== '')
+        ? err.message.trim()
+        : 'Odeslani formulare selhalo.';
+      if (w.alert) {
+        w.alert(msg);
+      }
+    }).finally(function () {
+      const hidden = form.querySelector('input[data-cb-temp-submitter="1"]');
+      if (hidden instanceof HTMLInputElement) {
+        hidden.remove();
+      }
+      if (submitter instanceof HTMLElement) {
+        submitter.removeAttribute('disabled');
+      }
+    });
+  }
+
+  function handleClick(event) {
+    const target = event.target instanceof Element ? event.target.closest('button, input[type="submit"]') : null;
+    if (!(target instanceof HTMLElement)) return;
+    const form = resolveFormFromSubmitter(target);
+    if (!(form instanceof HTMLFormElement)) return;
+    if (!isTargetForm(form)) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    submitAjax(form, target);
+  }
+
+  function handleSubmit(event) {
+    const form = event.target instanceof HTMLFormElement ? event.target : null;
+    if (!(form instanceof HTMLFormElement)) return;
+    if (!isTargetForm(form)) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    submitAjax(form, event.submitter instanceof HTMLElement ? event.submitter : null);
+  }
+
+  function wireOnce() {
+    if (w.__CB_AJAX_KARTA_MAX_WIRED__) return;
+    w.__CB_AJAX_KARTA_MAX_WIRED__ = true;
+
+    document.addEventListener('click', handleClick, true);
+    document.addEventListener('submit', handleSubmit, true);
+  }
+
+  wireOnce();
+})(window);
+
+// js/ajax_karta_max.js * Verze: V2 * Aktualizace: 15.04.2026
+// Konec souboru

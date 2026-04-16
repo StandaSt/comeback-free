@@ -13,7 +13,7 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../config/verze.php';
+require_once __DIR__ . '/../config/zaklad_config.php';
 
 $cbVerzeText = '';
 if (isset($CB_VERZE)) {

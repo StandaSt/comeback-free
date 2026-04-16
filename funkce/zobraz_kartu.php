@@ -1,5 +1,5 @@
 <?php
-// funkce/zobraz_kartu.php * Verze: V2 * Aktualizace: 15.04.2026
+// funkce/zobraz_kartu.php * Verze: V3 * Aktualizace: 15.04.2026
 declare(strict_types=1);
 
 function cb_zobraz_kartu(array $pripravenaKarta): string
@@ -31,6 +31,7 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
     $cardColorUrl = (string)($pripravenaKarta['cardColorUrl'] ?? '');
     $cardIconUrl = (string)($pripravenaKarta['cardIconUrl'] ?? '');
     $startExpanded = ((int)($pripravenaKarta['startExpanded'] ?? 0) === 1);
+    $hasMaxLoaded = (!$isNano && trim($maxHtml) !== '');
 
     $hasCardIcon = ($iconFile !== '');
     $cardIconSrc = $hasCardIcon ? cb_url('/img/card_icons/' . ltrim($iconFile, '/')) : '';
@@ -54,6 +55,7 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
     data-card-col="<?= h((string)$col) ?>"
     data-card-line="<?= h((string)$line) ?>"
     data-card-pos-locked="<?= $isPosLocked ? '1' : '0' ?>"
+    data-card-max-loaded="<?= $hasMaxLoaded ? '1' : '0' ?>"
     <?= $startExpanded ? ' data-card-start-expanded="1"' : '' ?>>
     <div class="card_top<?= h($cardTopRoleClass) ?> gap_10 odstup_vnitrni_10 displ_flex jc_mezi"<?= $cardTopStyle !== '' ? ' style="' . h($cardTopStyle) . '"' : '' ?>>
       <div class="card_head_left displ_flex">
@@ -95,9 +97,7 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
           <button type="button" class="card_tool_btn cursor_ruka txt_seda bg_bila zaobleni_8 text_14 card_mode_btn odstup_vnitrni_0 displ_inline_flex" data-card-nano-target="mini" title="Prepnout na mini">&#8722;</button>
         <?php else: ?>
           <button type="button" class="card_tool_btn cursor_ruka txt_seda bg_bila zaobleni_8 text_14 card_mode_btn odstup_vnitrni_0 displ_inline_flex" data-card-toggle="1" aria-expanded="false" title="Prepnout na maxi/mini">&#10530;</button>
-          <?php if (!$startExpanded): ?>
-            <button type="button" class="card_tool_btn only-mini cursor_ruka txt_seda bg_bila zaobleni_8 text_14 card_mode_btn odstup_vnitrni_0 displ_inline_flex" data-card-to-nano="1" title="Prepnout na nano">&bull;</button>
-          <?php endif; ?>
+          <button type="button" class="card_tool_btn only-mini cursor_ruka txt_seda bg_bila zaobleni_8 text_14 card_mode_btn odstup_vnitrni_0 displ_inline_flex" data-card-to-nano="1" title="Prepnout na nano">&bull;</button>
         <?php endif; ?>
       </div>
     </div>

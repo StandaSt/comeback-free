@@ -55,4 +55,24 @@ $line = [
 
 @file_put_contents($logPath, implode(' | ', $line) . "\n", FILE_APPEND | LOCK_EX);
 
+if (str_starts_with($event, 'measure_')) {
+    $measurePath = __DIR__ . '/../log/merime_casy.txt';
+    if (!is_dir(dirname($measurePath))) {
+        @mkdir(dirname($measurePath), 0777, true);
+    }
+
+    $measureLine = [
+        $ts,
+        'source=client',
+        'event=' . $event,
+        'sid=' . $sid,
+        'uid=' . $user,
+        'href=' . (string)($data['href'] ?? ''),
+        'path=' . (string)($data['path'] ?? ''),
+        'data=' . json_encode($data['data'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR),
+    ];
+
+    @file_put_contents($measurePath, implode(' | ', $measureLine) . "\n", FILE_APPEND | LOCK_EX);
+}
+
 http_response_code(204);
