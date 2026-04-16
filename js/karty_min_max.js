@@ -76,6 +76,254 @@
     return Array.from(document.querySelectorAll(CARD_ROOT_SELECTOR)).filter((el) => el instanceof HTMLElement);
   }
 
+  function getPorovnaniPayload(root) {
+    const node = document.querySelector('[data-cb-porovnani-data]');
+    if (!(node instanceof HTMLElement)) return null;
+    const raw = String(node.textContent || '').trim();
+    if (raw === '') return null;
+    try {
+      const parsed = JSON.parse(raw);
+      return (parsed && typeof parsed === 'object') ? parsed : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function getPorovnaniChartNode(root, chartId) {
+    if (!(root instanceof HTMLElement)) return null;
+    const id = String(chartId || '').trim();
+    if (id === '') return null;
+    const node = root.querySelector('[data-cb-chart-id="' + id.replace(/"/g, '') + '"]');
+    return node instanceof HTMLElement ? node : null;
+  }
+
+  function wireEchartsResize() {
+    if (w.__CB_ECHARTS_RESIZE_WIRED__) return;
+    w.__CB_ECHARTS_RESIZE_WIRED__ = true;
+
+    w.addEventListener('resize', () => {
+      const echarts = w.echarts;
+      if (!echarts || typeof echarts.getInstanceByDom !== 'function') return;
+      document.querySelectorAll('[data-cb-chart-id]').forEach((node) => {
+        if (!(node instanceof HTMLElement)) return;
+        const inst = echarts.getInstanceByDom(node);
+        if (inst) {
+          inst.resize();
+        }
+      });
+    });
+  }
+
+  function buildEchartsOption(def) {
+    if (!def || typeof def !== 'object') return null;
+
+    const kind = String(def.kind || '').trim();
+    const labels = Array.isArray(def.labels) ? def.labels.map((item) => String(item)) : [];
+    const series = Array.isArray(def.series) ? def.series : [];
+
+    if (kind === 'bar') {
+      const s = series[0] || {};
+      const values = Array.isArray(s.data) ? s.data : [];
+      const colors = Array.isArray(s.colors) ? s.colors : [];
+
+      return {
+        grid: { left: 36, right: 18, top: 20, bottom: 42, containLabel: true },
+        tooltip: { trigger: 'axis' },
+        xAxis: {
+          type: 'category',
+          data: labels,
+          axisLabel: { interval: 0, rotate: labels.length > 6 ? 20 : 0 }
+        },
+        yAxis: { type: 'value' },
+        series: [{
+          type: 'bar',
+          name: String(s.name || ''),
+          barMaxWidth: 42,
+          data: values.map((value, index) => ({
+            value: value,
+            itemStyle: {
+              color: colors[index] || s.color || '#60a5fa'
+            }
+          }))
+        }]
+      };
+    }
+
+    if (kind === 'line') {
+      const s = series[0] || {};
+      const values = Array.isArray(s.data) ? s.data : [];
+
+      return {
+        grid: { left: 36, right: 18, top: 20, bottom: 42, containLabel: true },
+        tooltip: { trigger: 'axis' },
+        xAxis: {
+          type: 'category',
+          data: labels,
+          axisLabel: { interval: 0, rotate: labels.length > 6 ? 20 : 0 }
+        },
+        yAxis: { type: 'value' },
+        series: [{
+          type: 'line',
+          smooth: true,
+          name: String(s.name || ''),
+          data: values,
+          lineStyle: { color: s.color || '#60a5fa' },
+          itemStyle: { color: s.color || '#60a5fa' },
+          areaStyle: { color: s.color ? 'rgba(96,165,250,0.18)' : 'rgba(96,165,250,0.18)' }
+        }]
+      };
+    }
+
+    if (kind === 'radar') {
+      const s = series[0] || {};
+      const values = Array.isArray(s.data) ? s.data : [];
+      const maxValue = Math.max(1, ...values.map((value) => Number(value) || 0));
+      const indicator = labels.map((label) => ({
+        name: label,
+        max: Math.ceil(maxValue * 1.2)
+      }));
+
+      return {
+        tooltip: {},
+        radar: {
+          indicator: indicator
+        },
+        series: [{
+          type: 'radar',
+          data: [{
+            value: values,
+            name: String(s.name || ''),
+            itemStyle: { color: s.color || '#f472b6' },
+            areaStyle: { color: 'rgba(244,114,182,0.20)' }
+          }]
+        }]
+      };
+    }
+
+    if (kind === 'pie') {
+      const values = Array.isArray(def.values) ? def.values : [];
+      const colors = Array.isArray(def.colors) ? def.colors : [];
+
+      return {
+        tooltip: { trigger: 'item' },
+        legend: { bottom: 0, type: 'scroll' },
+        series: [{
+          type: 'pie',
+          radius: ['38%', '72%'],
+          data: labels.map((label, index) => ({
+            name: label,
+            value: values[index] || 0,
+            itemStyle: { color: colors[index] || undefined }
+          }))
+        }]
+      };
+    }
+
+    if (kind === 'scatter') {
+      const s = series[0] || {};
+      const data = Array.isArray(s.data) ? s.data : [];
+
+      return {
+        grid: { left: 42, right: 18, top: 20, bottom: 42, containLabel: true },
+        tooltip: {
+          trigger: 'item',
+          formatter: (params) => {
+            const value = Array.isArray(params.value) ? params.value : [];
+            const name = String(params.name || '');
+            return name + ': objednavky ' + (value[0] ?? 0) + ', doruceni ' + (value[1] ?? 0) + ' min';
+          }
+        },
+        xAxis: {
+          type: 'value',
+          name: 'Objednavky'
+        },
+        yAxis: {
+          type: 'value',
+          name: 'Prumer doruceni (min)'
+        },
+        series: [{
+          type: 'scatter',
+          name: String(s.name || ''),
+          symbolSize: 12,
+          data: data.map((point) => ({
+            name: String(point.name || ''),
+            value: Array.isArray(point.value) ? point.value : [0, 0],
+            itemStyle: { color: point.color || '#60a5fa' }
+          }))
+        }]
+      };
+    }
+
+    return null;
+  }
+
+  function schedulePorovnaniCharts(root, attempt) {
+    if (!(root instanceof HTMLElement)) return;
+
+    const currentAttempt = Number.isFinite(attempt) ? attempt : 0;
+    const maxAttempts = 12;
+    const delay = currentAttempt === 0 ? 0 : 120;
+
+    w.setTimeout(() => {
+      const payload = getPorovnaniPayload(root);
+      if (!payload || typeof payload !== 'object') return;
+
+      const echarts = w.echarts;
+      if (!echarts || typeof echarts.init !== 'function') {
+        if (currentAttempt < maxAttempts) {
+          schedulePorovnaniCharts(root, currentAttempt + 1);
+        }
+        return;
+      }
+
+      const mode = String(payload.mode || 'mini');
+      const chartDefs = [];
+      if (mode === 'mini' && payload.mini) {
+        chartDefs.push(payload.mini);
+      } else if (payload.charts && typeof payload.charts === 'object') {
+        Object.keys(payload.charts).forEach((key) => {
+          const def = payload.charts[key];
+          if (def && typeof def === 'object') {
+            chartDefs.push(Object.assign({ id: key }, def));
+          }
+        });
+      }
+
+      let rendered = 0;
+      chartDefs.forEach((def) => {
+        const node = getPorovnaniChartNode(root, def.id);
+        if (!(node instanceof HTMLElement)) return;
+
+        const rect = node.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return;
+
+        const option = buildEchartsOption(def);
+        if (!option) return;
+
+        const existing = typeof echarts.getInstanceByDom === 'function' ? echarts.getInstanceByDom(node) : null;
+        if (existing) {
+          existing.dispose();
+        }
+
+        const chart = echarts.init(node);
+        chart.setOption(option, true);
+        rendered += 1;
+      });
+
+      if (rendered === 0 && currentAttempt < maxAttempts) {
+        schedulePorovnaniCharts(root, currentAttempt + 1);
+      }
+    }, delay);
+  }
+
+  function renderPorovnaniCharts(root) {
+    if (!(root instanceof HTMLElement)) return;
+    if (String(root.getAttribute('data-card-mode') || 'mini').trim() === 'nano') return;
+    if (!w.echarts || typeof w.echarts.init !== 'function') return;
+    wireEchartsResize();
+    schedulePorovnaniCharts(root, 0);
+  }
+
   function updateToggle(toggle, isOn) {
     if (!(toggle instanceof HTMLElement)) return;
     toggle.textContent = isOn ? ICON_MIN : ICON_MAX;
@@ -257,6 +505,8 @@
       dashBox
     };
 
+    renderPorovnaniCharts(root);
+
     saveMaxiState(String(root.getAttribute('data-card-id') || ''));
   }
 
@@ -366,6 +616,8 @@
         }
       });
     });
+
+    renderPorovnaniCharts(root);
   }
 
   function initKartyMinMax() {

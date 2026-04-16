@@ -537,6 +537,8 @@ if (!function_exists('cb_asset_url')) {
 </div>
 
 
+<script src="<?= h(cb_asset_url('js/echarts.min.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/chart.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/ajax_core.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/ajax_karta_max.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_min_max.js')) ?>"></script>
