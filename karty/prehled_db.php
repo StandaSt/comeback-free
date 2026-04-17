@@ -1,5 +1,5 @@
 <?php
-// karty/prehled_db.php * Verze: V11 * Aktualizace: 02.04.2026
+// karty/prehled_db.php * Verze: V12 * Aktualizace: 17.04.2026
 declare(strict_types=1);
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
@@ -156,13 +156,6 @@ if (!function_exists('cb_prehled_db_h')) {
     }
 }
 
-if (!function_exists('cb_prehled_db_fmt_int')) {
-    function cb_prehled_db_fmt_int(int $value): string
-    {
-        return number_format($value, 0, ',', ' ');
-    }
-}
-
 if (!function_exists('cb_prehled_db_fmt_bytes')) {
     function cb_prehled_db_fmt_bytes(int $bytes): string
     {
@@ -190,6 +183,13 @@ if (!function_exists('cb_prehled_db_count_style')) {
     function cb_prehled_db_count_style(int $value): string
     {
         return $value === 0 ? 'text-align:right; color:#b91c1c; font-weight:700;' : 'text-align:right;';
+    }
+}
+
+if (!function_exists('cb_prehled_db_fmt_rows_approx')) {
+    function cb_prehled_db_fmt_rows_approx(int $value): string
+    {
+        return '~ ' . number_format($value, 0, ',', ' ');
     }
 }
 
@@ -221,113 +221,26 @@ if (!function_exists('cb_prehled_db_get_flash')) {
     }
 }
 
-if (!function_exists('cb_prehled_db_table_exists')) {
-    function cb_prehled_db_table_exists(mysqli $conn, string $table): bool
+if (!function_exists('cb_prehled_db_table_meta')) {
+    function cb_prehled_db_table_meta(mysqli $conn): array
     {
+        static $cache = [];
+        $cacheKey = spl_object_hash($conn);
+        if (isset($cache[$cacheKey])) {
+            return $cache[$cacheKey];
+        }
+
         $sql = '
-            SELECT 1
-            FROM information_schema.tables
-            WHERE table_schema = DATABASE()
-              AND table_name = ?
-            LIMIT 1
-        ';
-        $stmt = $conn->prepare($sql);
-        if ($stmt === false) {
-            throw new RuntimeException('Nepodařilo se připravit kontrolu tabulky.');
-        }
-
-        $stmt->bind_param('s', $table);
-        $stmt->execute();
-        $res = $stmt->get_result();
-        $exists = ($res instanceof mysqli_result) ? ($res->fetch_row() !== null) : false;
-
-        if ($res instanceof mysqli_result) {
-            $res->free();
-        }
-        $stmt->close();
-
-        return $exists;
-    }
-}
-
-if (!function_exists('cb_prehled_db_all_tables')) {
-    function cb_prehled_db_all_tables(mysqli $conn): array
-    {
-        $sql = '
-            SELECT table_name
-            FROM information_schema.tables
-            WHERE table_schema = DATABASE()
-            ORDER BY table_name
-        ';
-        $res = $conn->query($sql);
-        if (!$res instanceof mysqli_result) {
-            throw new RuntimeException('Nepodařilo se načíst seznam tabulek.');
-        }
-
-        $tables = [];
-        while ($row = $res->fetch_assoc()) {
-            $name = (string)($row['table_name'] ?? '');
-            if ($name !== '') {
-                $tables[] = $name;
-            }
-        }
-        $res->free();
-
-        return $tables;
-    }
-}
-
-if (!function_exists('cb_prehled_db_scope_tables')) {
-    function cb_prehled_db_scope_tables(mysqli $conn, string $scope): array
-    {
-        $scopes = cb_prehled_db_scopes();
-
-        if ($scope === 'komplet') {
-            $all = cb_prehled_db_all_tables($conn);
-            sort($all, SORT_STRING);
-            return $all;
-        }
-
-        $tables = $scopes[$scope]['tables'] ?? [];
-        $out = [];
-        foreach ($tables as $table) {
-            if (cb_prehled_db_table_exists($conn, (string)$table)) {
-                $out[] = (string)$table;
-            }
-        }
-
-        sort($out, SORT_STRING);
-        return $out;
-    }
-}
-
-if (!function_exists('cb_prehled_db_count_rows')) {
-    function cb_prehled_db_count_rows(mysqli $conn, string $table): int
-    {
-        $sql = 'SELECT COUNT(*) AS cnt FROM `' . str_replace('`', '``', $table) . '`';
-        $res = $conn->query($sql);
-        if (!$res instanceof mysqli_result) {
-            throw new RuntimeException('Nepodařilo se spočítat řádky tabulky ' . $table . '.');
-        }
-
-        $row = $res->fetch_assoc();
-        $res->free();
-
-        return (int)($row['cnt'] ?? 0);
-    }
-}
-
-if (!function_exists('cb_prehled_db_sizes')) {
-    function cb_prehled_db_sizes(mysqli $conn): array
-    {
-        $sql = '
-            SELECT table_name, COALESCE(data_length, 0) + COALESCE(index_length, 0) AS size_bytes
+            SELECT
+                table_name,
+                COALESCE(table_rows, 0) AS row_count,
+                COALESCE(data_length, 0) + COALESCE(index_length, 0) AS size_bytes
             FROM information_schema.tables
             WHERE table_schema = DATABASE()
         ';
         $res = $conn->query($sql);
         if (!$res instanceof mysqli_result) {
-            throw new RuntimeException('Nepodařilo se načíst objemy tabulek.');
+            throw new RuntimeException('NepodaĹ™ilo se naÄŤĂ­st metadata tabulek.');
         }
 
         $out = [];
@@ -336,26 +249,47 @@ if (!function_exists('cb_prehled_db_sizes')) {
             if ($name === '') {
                 continue;
             }
-            $out[$name] = (int)($row['size_bytes'] ?? 0);
+
+            $out[$name] = [
+                'count' => (int)($row['row_count'] ?? 0),
+                'bytes' => (int)($row['size_bytes'] ?? 0),
+            ];
         }
         $res->free();
+
+        $cache[$cacheKey] = $out;
 
         return $out;
     }
 }
 
-if (!function_exists('cb_prehled_db_delete_table')) {
-    function cb_prehled_db_delete_table(mysqli $conn, string $table): int
+
+if (!function_exists('cb_prehled_db_scope_tables')) {
+    function cb_prehled_db_scope_tables(mysqli $conn, string $scope): array
     {
-        $sql = 'DELETE FROM `' . str_replace('`', '``', $table) . '`';
-        $ok = $conn->query($sql);
-        if ($ok === false) {
-            throw new RuntimeException('Mazání selhalo pro tabulku ' . $table . ': ' . $conn->error);
+        $scopes = cb_prehled_db_scopes();
+        $meta = cb_prehled_db_table_meta($conn);
+
+        if ($scope === 'komplet') {
+            $all = array_keys($meta);
+            sort($all, SORT_STRING);
+            return $all;
         }
 
-        return (int)$conn->affected_rows;
+        $tables = $scopes[$scope]['tables'] ?? [];
+        $out = [];
+        foreach ($tables as $table) {
+            $table = (string)$table;
+            if (isset($meta[$table])) {
+                $out[] = $table;
+            }
+        }
+
+        sort($out, SORT_STRING);
+        return $out;
     }
 }
+
 
 if (!function_exists('cb_prehled_db_reset_ai')) {
     function cb_prehled_db_reset_ai(mysqli $conn, string $table): void
@@ -457,12 +391,12 @@ if (($flash['type'] ?? '') === 'ok') {
 }
 
 try {
-    $sizes = cb_prehled_db_sizes($conn);
+    $tableMeta = cb_prehled_db_table_meta($conn);
     $tables = cb_prehled_db_scope_tables($conn, $scope);
 
     foreach ($tables as $table) {
-        $count = cb_prehled_db_count_rows($conn, $table);
-        $bytes = (int)($sizes[$table] ?? 0);
+        $count = (int)($tableMeta[$table]['count'] ?? 0);
+        $bytes = (int)($tableMeta[$table]['bytes'] ?? 0);
 
         $rows[] = [
             'table' => $table,
@@ -480,8 +414,8 @@ try {
         $summaryBytes = 0;
 
         foreach ($summaryTables as $summaryTable) {
-            $summaryRows += cb_prehled_db_count_rows($conn, $summaryTable);
-            $summaryBytes += (int)($sizes[$summaryTable] ?? 0);
+            $summaryRows += (int)($tableMeta[$summaryTable]['count'] ?? 0);
+            $summaryBytes += (int)($tableMeta[$summaryTable]['bytes'] ?? 0);
         }
 
         $minSummary[] = [
@@ -513,7 +447,7 @@ ob_start();
       <?php foreach ($minSummary as $item): ?>
         <tr>
           <td><?= cb_prehled_db_h((string)$item['label']) ?></td>
-          <td style="<?= cb_prehled_db_h(cb_prehled_db_count_style((int)$item['count'])) ?>"><?= cb_prehled_db_h(cb_prehled_db_fmt_int((int)$item['count'])) ?></td>
+          <td style="<?= cb_prehled_db_h(cb_prehled_db_count_style((int)$item['count'])) ?>"><?= cb_prehled_db_h(cb_prehled_db_fmt_rows_approx((int)$item['count'])) ?></td>
           <td style="text-align:right;"><?= cb_prehled_db_h(cb_prehled_db_fmt_bytes((int)$item['bytes'])) ?></td>
         </tr>
       <?php endforeach; ?>
@@ -591,7 +525,7 @@ ob_start();
             <?php foreach ($rows as $row): ?>
               <tr>
                 <td><?= cb_prehled_db_h((string)$row['table']) ?></td>
-                <td style="<?= cb_prehled_db_h(cb_prehled_db_count_style((int)$row['count'])) ?>"><?= cb_prehled_db_h(cb_prehled_db_fmt_int((int)$row['count'])) ?></td>
+                <td style="<?= cb_prehled_db_h(cb_prehled_db_count_style((int)$row['count'])) ?>"><?= cb_prehled_db_h(cb_prehled_db_fmt_rows_approx((int)$row['count'])) ?></td>
                 <td style="text-align:right;"><?= cb_prehled_db_h(cb_prehled_db_fmt_bytes((int)$row['bytes'])) ?></td>
               </tr>
             <?php endforeach; ?>
@@ -603,7 +537,7 @@ ob_start();
             <?php else: ?>
               <tr>
                 <td><strong>Součet</strong></td>
-                <td style="text-align:right;"><strong><?= cb_prehled_db_h(cb_prehled_db_fmt_int($totalRows)) ?></strong></td>
+                <td style="text-align:right;"><strong><?= cb_prehled_db_h(cb_prehled_db_fmt_rows_approx($totalRows)) ?></strong></td>
                 <td style="text-align:right;"><strong><?= cb_prehled_db_h(cb_prehled_db_fmt_bytes($totalBytes)) ?></strong></td>
               </tr>
             <?php endif; ?>

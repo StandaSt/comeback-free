@@ -460,6 +460,17 @@
 
     activeMaxi = null;
 
+    if (!preserveState && root instanceof HTMLElement && root.getAttribute('data-card-refresh-on-close') === '1') {
+      root.removeAttribute('data-card-refresh-on-close');
+      if (w.CB_AJAX && typeof w.CB_AJAX.refreshDashboard === 'function') {
+        w.CB_AJAX.refreshDashboard({ force: true, loaderMode: 'dashboard' }).catch(() => {
+          if (w.alert) {
+            w.alert('Obnoveni dashboardu po zavreni karty selhalo.');
+          }
+        });
+      }
+    }
+
     if (!preserveState) {
       clearMaxiState();
     }
@@ -611,6 +622,9 @@
     forms.forEach((formEl) => {
       if (!(formEl instanceof HTMLFormElement)) return;
       formEl.addEventListener('submit', () => {
+        if (formEl.querySelector('input[name="admin_karty_action"]')) {
+          return;
+        }
         if (activeMaxi && activeMaxi.root === root) {
           closeActiveMaxi({ preserveState: true });
         }
@@ -623,23 +637,6 @@
   function initKartyMinMax() {
     const roots = getCardRoots();
     roots.forEach(initCard);
-
-    const state = loadMaxiState();
-    if (!state) return;
-
-    const currentLoginId = getCurrentLoginId();
-    if (state.loginId !== currentLoginId) {
-      clearMaxiState();
-      return;
-    }
-
-    const root = roots.find((r) => String(r.getAttribute('data-card-id') || '') === state.cardId && String(r.getAttribute('data-card-mode') || '') !== 'nano');
-    if (!root) {
-      clearMaxiState();
-      return;
-    }
-
-    openMaxi(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR);
   }
 
   function wireOnce() {

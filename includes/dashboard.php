@@ -69,28 +69,50 @@ if (!function_exists('cb_dashboard_timing_log')) {
             return;
         }
 
+        $idUser = (int)(($_SESSION['cb_user']['id_user'] ?? 0));
+        if ($idUser !== 1) {
+            return;
+        }
+
         $now = microtime(true);
         $stepMs = (int)round(($now - $lastTs) * 1000);
         $totalMs = (int)round(($now - $startTs) * 1000);
         $lastTs = $now;
 
         $dir = __DIR__ . '/../log';
-        $file = $dir . '/merime_casy.txt';
+        $fileAi = $dir . '/merime_casy_AI.txt';
+        $fileUser = $dir . '/merime_casy_user.txt';
         @mkdir($dir, 0775, true);
-        $line = sprintf(
-            "%s | dashboard | %s | step_ms=%d | total_ms=%d | uri=%s | partial=%s | card=%s | card_id=%s%s",
+
+        $lineUser = sprintf(
+            "%s | dashboard | %s / total_ms=%d\n",
             date('Y-m-d H:i:s'),
             $label,
-            $stepMs,
+            $totalMs
+        );
+
+        $lineAi = sprintf(
+            "%s | dashboard | %s / total_ms=%d%s  step_ms=%d%s  uri=%s%s  partial=%s%s  card=%s%s  card_id=%s%s%s",
+            date('Y-m-d H:i:s'),
+            $label,
             $totalMs,
+            PHP_EOL,
+            $stepMs,
+            PHP_EOL,
             (string)($_SERVER['REQUEST_URI'] ?? ''),
+            PHP_EOL,
             isset($_SERVER['HTTP_X_COMEBACK_PARTIAL']) ? '1' : '0',
+            PHP_EOL,
             isset($_SERVER['HTTP_X_COMEBACK_CARD']) ? '1' : '0',
+            PHP_EOL,
             (string)($GLOBALS['cb_dashboard_single_card_id'] ?? 0),
+            PHP_EOL,
+            PHP_EOL,
             PHP_EOL
         );
 
-        @file_put_contents($file, $line, FILE_APPEND);
+        @file_put_contents($fileUser, $lineUser, FILE_APPEND | LOCK_EX);
+        @file_put_contents($fileAi, $lineAi, FILE_APPEND | LOCK_EX);
     }
 }
 

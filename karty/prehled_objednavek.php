@@ -151,6 +151,79 @@ if ((int)$tabKonfig['enable_filters'] === 1 && is_array($objFiltersRaw)) {
     }
 }
 
+if (($cbDashboardRenderMode ?? '') === 'mini') {
+    $cbDbMini = db();
+    $cbDbMini->set_charset('utf8mb4');
+
+    $pocetObjMini = 0;
+    $qMini = $cbDbMini->query("
+        SELECT COALESCE(table_rows, 0) AS cnt
+        FROM information_schema.tables
+        WHERE table_schema = DATABASE()
+          AND table_name = 'objednavky_restia'
+        LIMIT 1
+    ");
+    if ($qMini instanceof mysqli_result) {
+        $rMini = $qMini->fetch_assoc() ?: [];
+        $pocetObjMini = (int)($rMini['cnt'] ?? 0);
+        $qMini->free();
+    }
+
+    if ($selectedPob !== []) {
+        $sqlPobNames = 'SELECT id_pob, nazev FROM pobocka WHERE id_pob IN (' . implode(',', array_map('intval', $selectedPob)) . ')';
+        $resPobNames = $cbDbMini->query($sqlPobNames);
+        if ($resPobNames instanceof mysqli_result) {
+            $pobMap = [];
+            while ($rowPob = $resPobNames->fetch_assoc()) {
+                $idPobMap = (int)($rowPob['id_pob'] ?? 0);
+                $nazevPobMap = trim((string)($rowPob['nazev'] ?? ''));
+                if ($idPobMap >= 0 && $nazevPobMap !== '') {
+                    $pobMap[$idPobMap] = $nazevPobMap;
+                }
+            }
+            $resPobNames->free();
+
+            foreach ($selectedPob as $idPobSel) {
+                if (isset($pobMap[(int)$idPobSel])) {
+                    $selectedPobNames[] = $pobMap[(int)$idPobSel];
+                } else {
+                    $selectedPobNames[] = (string)$idPobSel;
+                }
+            }
+        }
+    }
+
+    if ($selectedPobNames !== []) {
+        $pobLabel = count($selectedPobNames) === 1 ? 'Pobočka' : 'Pobočky';
+        $pobText = implode(', ', $selectedPobNames);
+    } elseif ($selectedPob !== []) {
+        $pobLabel = count($selectedPob) === 1 ? 'Pobočka' : 'Pobočky';
+        $pobText = implode(', ', array_map(static fn(int $v): string => (string)$v, $selectedPob));
+    }
+
+    $card_min_html = ''
+        . '<div class="table-wrap ram_normal bg_bila zaobleni_12">'
+        . '  <table class="table ram_normal bg_bila radek_1_35 card_table_min">'
+        . '    <tbody>'
+        . '      <tr>'
+        . '        <td>Období</td>'
+        . '        <td class="txt_r"><strong>' . h($periodOdText) . ' - ' . h($periodDoText) . '</strong></td>'
+        . '      </tr>'
+        . '      <tr>'
+        . '        <td>' . h($pobLabel) . '</td>'
+        . '        <td class="txt_r"><strong>' . h($pobText) . '</strong></td>'
+        . '      </tr>'
+        . '      <tr>'
+        . '        <td>Celkem</td>'
+        . '        <td class="txt_r"><strong>~ ' . h(number_format($pocetObjMini, 0, ',', ' ')) . '</strong> ' . h(obj_sklonuj_objednavka($pocetObjMini)) . '</td>'
+        . '      </tr>'
+        . '    </tbody>'
+        . '  </table>'
+        . '</div>';
+
+    return;
+}
+
 try {
     $conn = db();
     $conn->set_charset('utf8mb4');
@@ -198,7 +271,6 @@ try {
         LEFT JOIN cis_obj_stav s ON s.id_stav = o.id_stav
         LEFT JOIN cis_doruceni d ON d.id_doruceni = o.id_doruceni
         LEFT JOIN cis_obj_platby p ON p.id_platba = o.id_platba
-        LEFT JOIN obj_ceny c ON c.id_obj = o.id_obj
         LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
         LEFT JOIN zakaznik z ON z.id_zak = o.id_zak
     ' . $whereSql;
@@ -271,7 +343,6 @@ try {
         LEFT JOIN cis_obj_platby p ON p.id_platba = o.id_platba
         LEFT JOIN obj_ceny c ON c.id_obj = o.id_obj
         LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
-        LEFT JOIN zakaznik z ON z.id_zak = o.id_zak
         LEFT JOIN zakaznik z ON z.id_zak = o.id_zak
     ' . $whereSql . '
         ORDER BY ' . $orderSql . '

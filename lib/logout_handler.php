@@ -4,6 +4,7 @@
    ========================= */
 if (isset($_GET['action']) && (string)$_GET['action'] === 'logout') {
     $cbUser = $_SESSION['cb_user'] ?? null;
+    $idUser = 0;
     if (is_array($cbUser) && !empty($cbUser['id_user'])) {
         $idUser = (int)$cbUser['id_user'];
         try {
@@ -15,6 +16,17 @@ if (isset($_GET['action']) && (string)$_GET['action'] === 'logout') {
             }
         } catch (Throwable $e) {
             // tichy fail - logout musi pokracovat i kdyz log selze
+        }
+    }
+
+    if ($idUser === 1) {
+        $logDir = __DIR__ . '/../log';
+        $logFiles = [
+            $logDir . '/merime_casy_AI.txt',
+            $logDir . '/merime_casy_user.txt',
+        ];
+        foreach ($logFiles as $logFile) {
+            @file_put_contents($logFile, '', LOCK_EX);
         }
     }
 

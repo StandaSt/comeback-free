@@ -61,6 +61,95 @@ if ($cbBackAdminInit) {
     $cbKeepRestiaMax = false;
 }
 
+if (($cbDashboardRenderMode ?? '') === 'mini') {
+    $cbDb = db();
+    $cbDb->set_charset('utf8mb4');
+
+    $cbApproxRows = [
+        'objednavky_restia' => 0,
+        'smeny_plan' => 0,
+        'smeny_report' => 0,
+    ];
+
+    $cbSqlApprox = "
+        SELECT table_name, COALESCE(table_rows, 0) AS cnt
+        FROM information_schema.tables
+        WHERE table_schema = DATABASE()
+          AND table_name IN ('objednavky_restia', 'smeny_plan', 'smeny_report')
+    ";
+    $cbResApprox = $cbDb->query($cbSqlApprox);
+    if ($cbResApprox instanceof mysqli_result) {
+        while ($cbRow = $cbResApprox->fetch_assoc()) {
+            $cbTable = (string)($cbRow['table_name'] ?? '');
+            if (isset($cbApproxRows[$cbTable])) {
+                $cbApproxRows[$cbTable] = (int)($cbRow['cnt'] ?? 0);
+            }
+        }
+        $cbResApprox->free();
+    }
+
+    $qRestia = $cbDb->query('SELECT MAX(`restia_imported_at`) AS dt FROM objednavky_restia');
+    if ($qRestia instanceof mysqli_result) {
+        $r = $qRestia->fetch_assoc();
+        $cbRestiaCount = (int)($cbApproxRows['objednavky_restia'] ?? 0);
+        $dt = trim((string)($r['dt'] ?? ''));
+        $cbRestiaDate = ($dt !== '') ? date('j.n.y H:i', strtotime($dt)) : 'Ne';
+        $qRestia->free();
+    }
+
+    $qSmeny = $cbDb->query('SELECT MAX(created_at) AS dt FROM smeny_plan');
+    if ($qSmeny instanceof mysqli_result) {
+        $r = $qSmeny->fetch_assoc();
+        $cbSmenyCount = (int)($cbApproxRows['smeny_plan'] ?? 0);
+        $dt = trim((string)($r['dt'] ?? ''));
+        $cbSmenyDate = ($dt !== '') ? date('j.n.y H:i', strtotime($dt)) : 'Ne';
+        $cbSmenyPlanMaData = ($cbSmenyCount > 0);
+        $qSmeny->free();
+    }
+
+    $qReport = $cbDb->query('SELECT MAX(created_at) AS dt FROM smeny_report');
+    if ($qReport instanceof mysqli_result) {
+        $r = $qReport->fetch_assoc();
+        $cbReportCount = (int)($cbApproxRows['smeny_report'] ?? 0);
+        $dt = trim((string)($r['dt'] ?? ''));
+        $cbReportDate = ($dt !== '') ? date('j.n.y H:i', strtotime($dt)) : 'Ne';
+        $cbReportMaData = ($cbReportCount > 0);
+        $qReport->free();
+    }
+
+    $card_min_html = ''
+        . '<div class="table-wrap ram_normal bg_bila zaobleni_12">'
+        . '  <table class="table ram_normal bg_bila radek_1_35">'
+        . '    <thead>'
+        . '      <tr>'
+        . '        <th class="txt_l">Zdroj</th>'
+        . '        <th class="txt_r">přibl. záznamů</th>'
+        . '        <th class="txt_r">aktualizace</th>'
+        . '      </tr>'
+        . '    </thead>'
+        . '    <tbody>'
+        . '      <tr>'
+        . '        <td>Restia</td>'
+        . '        <td class="txt_r"><strong>~ ' . h(number_format($cbRestiaCount, 0, ',', ' ')) . '</strong></td>'
+        . '        <td class="txt_r">' . h($cbRestiaDate) . '</td>'
+        . '      </tr>'
+        . '      <tr>'
+        . '        <td>Směny</td>'
+        . '        <td class="txt_r"><strong>~ ' . h(number_format($cbSmenyCount, 0, ',', ' ')) . '</strong></td>'
+        . '        <td class="txt_r">' . h($cbSmenyDate) . '</td>'
+        . '      </tr>'
+        . '      <tr>'
+        . '        <td>Reporty</td>'
+        . '        <td class="txt_r"><strong>~ ' . h(number_format($cbReportCount, 0, ',', ' ')) . '</strong></td>'
+        . '        <td class="txt_r">' . h($cbReportDate) . '</td>'
+        . '      </tr>'
+        . '    </tbody>'
+        . '  </table>'
+        . '</div>';
+
+    return;
+}
+
 $qRestia = db()->query('SELECT COALESCE(MAX(id_obj), 0) AS cnt, MAX(`restia_imported_at`) AS dt FROM objednavky_restia');
 if ($qRestia instanceof mysqli_result) {
     $r = $qRestia->fetch_assoc();

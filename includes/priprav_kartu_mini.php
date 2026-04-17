@@ -44,9 +44,11 @@ function cb_priprav_kartu_mini(
     $soubor = (string)($karta['soubor'] ?? '');
     $fullPath = cb_dashboard_resolve_file($soubor);
     if ($fullPath !== null) {
+        $cbDashboardRenderMode = 'mini';
         ob_start();
         require $fullPath;
         $legacy_html = (string)ob_get_clean();
+        unset($cbDashboardRenderMode);
     }
 
     if ($card_min_html === '' && $card_max_html === '' && $legacy_html !== '') {

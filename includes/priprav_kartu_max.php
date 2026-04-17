@@ -15,9 +15,11 @@ if (!function_exists('cb_priprav_kartu_max')) {
             return '';
         }
 
+        $cbDashboardRenderMode = 'max';
         ob_start();
         require $fullPath;
         $legacy_html = (string)ob_get_clean();
+        unset($cbDashboardRenderMode);
 
         if ($card_max_html !== '') {
             return (string)$card_max_html;

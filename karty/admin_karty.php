@@ -18,6 +18,8 @@ $activeCards = [];
 $inactiveCards = [];
 $tableColsHtml = '';
 $tableHeadHtml = '';
+$adminAjaxRequest = ($isAdmin && isset($_SERVER['HTTP_X_COMEBACK_ADMIN_KARTY']));
+$adminAjaxResponse = null;
 $sekceStats = [
     3 => ['all' => 0, 'on' => 0, 'off' => 0],
     2 => ['all' => 0, 'on' => 0, 'off' => 0],
@@ -257,9 +259,28 @@ if ($isAdmin && isset($_POST['admin_karty_action'])) {
         } else {
             throw new RuntimeException('Neznama akce.');
         }
+
+        if ($adminAjaxRequest) {
+            $adminAjaxResponse = [
+                'ok' => true,
+                'action' => $action,
+            ];
+        }
     } catch (Throwable $e) {
         $setFeedback($e->getMessage(), true, true);
+        if ($adminAjaxRequest) {
+            $adminAjaxResponse = [
+                'ok' => false,
+                'err' => $e->getMessage(),
+            ];
+        }
     }
+}
+
+if ($adminAjaxRequest && is_array($adminAjaxResponse)) {
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($adminAjaxResponse, JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
 try {
@@ -525,7 +546,7 @@ ob_start();
                 <td><input type="number" class="card_input filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="width:70%;" name="poradi" value="<?= h((string)$card['poradi']) ?>" min="1" max="9999" form="<?= h($formId) ?>"></td>
                 <td class="txt_c">
                   <label class="displ_inline_flex gap_6 cursor_ruka" style="align-items:center;justify-content:center;">
-                    <input type="checkbox" name="refresh_op" value="1"<?= ((int)($card['refresh_op'] ?? 0) === 1) ? ' checked' : '' ?> form="<?= h($formId) ?>" onchange="this.nextElementSibling.className=this.checked?'txt_cervena':'txt_seda';">
+                    <input type="checkbox" name="refresh_op" value="1"<?= ((int)($card['refresh_op'] ?? 0) === 1) ? ' checked' : '' ?> form="<?= h($formId) ?>" data-cb-refresh-op="1" onchange="this.nextElementSibling.className=this.checked?'txt_cervena':'txt_seda';">
                     <span class="<?= ((int)($card['refresh_op'] ?? 0) === 1) ? 'txt_cervena' : 'txt_seda' ?>">Ano</span>
                   </label>
                 </td>
