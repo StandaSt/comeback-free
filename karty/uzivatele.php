@@ -1,4 +1,5 @@
 <?php
+// K8
 // karty/uzivatele.php * Verze: V17 * Aktualizace: 27.03.2026
 declare(strict_types=1);
 

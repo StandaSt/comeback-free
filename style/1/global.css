@@ -469,6 +469,12 @@ grid-template-columns:280px minmax(0,1fr);
   width:118px;
 }
 
+.head_date input.is-manual{
+  background:var(--clr_modra_1);
+  border-color:var(--clr_modra_6);
+  box-shadow:inset 0 0 0 1px rgba(79,141,246,.18);
+}
+
 .head_quick{width:auto;
   min-width:fit-content;
 }
@@ -1552,16 +1558,17 @@ align-items:center;
 
 .dash_card.is-maxi-overlay{
   position:absolute;
-  top:0;
-  bottom:auto;
-  left:50%;
-  transform:translateX(-50%);
-  width:fit-content;
-  min-width:350px;
-  min-height:250px;
-  max-width:calc(100% - 24px);
-  max-height:100%;
-  height:auto;
+  top:12px;
+  bottom:12px;
+  left:12px;
+  right:12px;
+  transform:none;
+  width:auto;
+  min-width:0;
+  min-height:0;
+  max-width:none;
+  max-height:none;
+  height:calc(100% - 24px);
   z-index:50;
   display:flex;
   flex-direction:column;

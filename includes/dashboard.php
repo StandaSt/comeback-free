@@ -63,6 +63,24 @@ $cbDashTimingAllowed = (
 $GLOBALS['cbDashTimingAllowed'] = $cbDashTimingAllowed;
 
 if (!function_exists('cb_dashboard_timing_log')) {
+    function cb_dashboard_measure_filter_text(): string
+    {
+        $od = trim((string)($_SESSION['cb_obdobi_od'] ?? ''));
+        $do = trim((string)($_SESSION['cb_obdobi_do'] ?? ''));
+        $pob = [];
+        if (function_exists('get_selected_pobocky')) {
+            $pob = get_selected_pobocky();
+        } elseif (isset($_SESSION['selected_pobocky']) && is_array($_SESSION['selected_pobocky'])) {
+            $pob = $_SESSION['selected_pobocky'];
+        } elseif (isset($_SESSION['cb_pobocka_id'])) {
+            $pob = [(int)$_SESSION['cb_pobocka_id']];
+        }
+        $pob = array_values(array_filter(array_map('intval', $pob), static fn (int $v): bool => $v > 0));
+        $mode = trim((string)($_SESSION['selected_pobocky_mode'] ?? ''));
+
+        return 'filter_od=' . $od . ' | filter_do=' . $do . ' | filter_pob=' . implode(',', $pob) . ' | filter_mode=' . $mode;
+    }
+
     function cb_dashboard_timing_log(string $label, float $startTs, float &$lastTs): void
     {
         if (empty($GLOBALS['cbDashTimingAllowed'])) {
@@ -107,6 +125,8 @@ if (!function_exists('cb_dashboard_timing_log')) {
             PHP_EOL,
             (string)($GLOBALS['cb_dashboard_single_card_id'] ?? 0),
             PHP_EOL,
+            PHP_EOL,
+            cb_dashboard_measure_filter_text(),
             PHP_EOL,
             PHP_EOL
         );

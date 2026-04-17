@@ -12,6 +12,10 @@ require_once __DIR__ . '/lib/system.php';
 require_once __DIR__ . '/config/secrets.php';
 require_once __DIR__ . '/lib/pobocky_vyber.php';
 
+
+$cbTitle = 'Comeback - IS';
+$cbFavicon = cb_url('img/favicon_comeback.png');
+
 cb_pobocky_bootstrap_session();
 
 require_once __DIR__ . '/lib/detektuj_neplatnou_url.php';
@@ -533,7 +537,8 @@ if ($cbIsPartial) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Comeback</title>
+    <title><?= h($cbTitle) ?></title>
+    <link rel="icon" type="image/png" href="<?= h($cbFavicon) ?>">
 
     <?php require_once __DIR__ . '/lib/nacti_styly.php'; ?>
 </head>
@@ -577,6 +582,7 @@ if (!function_exists('cb_asset_url')) {
 <script src="<?= h(cb_asset_url('js/ajax_core.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/ajax_karta_max.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_min_max.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/karty_grafy.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_min_nano.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_hlavicka.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_report_restia.js')) ?>"></script>

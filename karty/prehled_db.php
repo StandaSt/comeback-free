@@ -1,4 +1,5 @@
 <?php
+// K5
 // karty/prehled_db.php * Verze: V12 * Aktualizace: 17.04.2026
 declare(strict_types=1);
 
@@ -224,42 +225,7 @@ if (!function_exists('cb_prehled_db_get_flash')) {
 if (!function_exists('cb_prehled_db_table_meta')) {
     function cb_prehled_db_table_meta(mysqli $conn): array
     {
-        static $cache = [];
-        $cacheKey = spl_object_hash($conn);
-        if (isset($cache[$cacheKey])) {
-            return $cache[$cacheKey];
-        }
-
-        $sql = '
-            SELECT
-                table_name,
-                COALESCE(table_rows, 0) AS row_count,
-                COALESCE(data_length, 0) + COALESCE(index_length, 0) AS size_bytes
-            FROM information_schema.tables
-            WHERE table_schema = DATABASE()
-        ';
-        $res = $conn->query($sql);
-        if (!$res instanceof mysqli_result) {
-            throw new RuntimeException('NepodaĹ™ilo se naÄŤĂ­st metadata tabulek.');
-        }
-
-        $out = [];
-        while ($row = $res->fetch_assoc()) {
-            $name = (string)($row['table_name'] ?? '');
-            if ($name === '') {
-                continue;
-            }
-
-            $out[$name] = [
-                'count' => (int)($row['row_count'] ?? 0),
-                'bytes' => (int)($row['size_bytes'] ?? 0),
-            ];
-        }
-        $res->free();
-
-        $cache[$cacheKey] = $out;
-
-        return $out;
+        return cb_db_table_meta($conn);
     }
 }
 

@@ -1,4 +1,5 @@
 <?php
+// K13
 // karty/kontrola_trzeb.php * Verze: V1 * Aktualizace: 25.03.2026
 declare(strict_types=1);
 

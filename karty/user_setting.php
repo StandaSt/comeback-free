@@ -1,4 +1,5 @@
 <?php
+// K7
 // karty/user_setting.php * Verze: V2 * Aktualizace: 27.03.2026
 declare(strict_types=1);
 

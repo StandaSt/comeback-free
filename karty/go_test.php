@@ -1,4 +1,5 @@
 <?php
+// K4
 // karty/go_test.php * Verze: V8 * Aktualizace: 02.04.2026
 declare(strict_types=1);
 

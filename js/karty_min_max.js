@@ -89,6 +89,25 @@
     }
   }
 
+  function restoreActiveMaxi() {
+    const state = loadMaxiState();
+    if (!state) return;
+
+    const currentLoginId = getCurrentLoginId();
+    if (String(state.loginId || '0').trim() !== currentLoginId) {
+      clearMaxiState();
+      return;
+    }
+
+    const cardId = String(state.cardId || '').trim();
+    if (cardId === '') return;
+
+    const root = document.querySelector('.card_shell[data-card-id="' + cardId.replace(/"/g, '') + '"]');
+    if (!(root instanceof HTMLElement)) return;
+
+    openMaxi(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR);
+  }
+
   function getPorovnaniChartNode(root, chartId) {
     if (!(root instanceof HTMLElement)) return null;
     const id = String(chartId || '').trim();
@@ -633,6 +652,7 @@
     document.addEventListener('cb:main-swapped', () => {
       closeActiveMaxi({ preserveState: true });
       initKartyMinMax();
+      w.setTimeout(restoreActiveMaxi, 0);
     });
 
     document.addEventListener('cb:card-swapped', (event) => {

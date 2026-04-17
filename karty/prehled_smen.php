@@ -1,4 +1,5 @@
 <?php
+// K11
 // karty/prehled_smen.php * Verze: V7 * Aktualizace: 27.03.2026
 declare(strict_types=1);
 

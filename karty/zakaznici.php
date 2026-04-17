@@ -1,4 +1,5 @@
 <?php
+// K9
 // karty/zakaznici.php * Verze: V11 * Aktualizace: 27.03.2026
 declare(strict_types=1);
 

@@ -43,6 +43,22 @@ if (session_status() === PHP_SESSION_ACTIVE && isset($_SESSION['cb_user']) && is
     $user = (string)($_SESSION['cb_user']['id_user'] ?? '');
 }
 
+$filterOd = '';
+$filterDo = '';
+$filterPob = [];
+$filterMode = '';
+if (session_status() === PHP_SESSION_ACTIVE) {
+    $filterOd = trim((string)($_SESSION['cb_obdobi_od'] ?? ''));
+    $filterDo = trim((string)($_SESSION['cb_obdobi_do'] ?? ''));
+    if (isset($_SESSION['selected_pobocky']) && is_array($_SESSION['selected_pobocky'])) {
+        $filterPob = $_SESSION['selected_pobocky'];
+    } elseif (isset($_SESSION['cb_pobocka_id'])) {
+        $filterPob = [(int)$_SESSION['cb_pobocka_id']];
+    }
+    $filterPob = array_values(array_filter(array_map('intval', $filterPob), static fn (int $v): bool => $v > 0));
+    $filterMode = trim((string)($_SESSION['selected_pobocky_mode'] ?? ''));
+}
+
 if ((int)$user !== 1) {
     http_response_code(204);
     exit;
@@ -83,6 +99,7 @@ if (str_starts_with($event, 'measure_')) {
     $measureLines[] = $ts . ' | client | ' . $event . ($measureTotal !== '' ? ' / total_ms=' . $measureTotal : '');
     $measureLines[] = '  sid=' . $sid . ' | uid=' . $user . ' | path=' . (string)($data['path'] ?? '');
     $measureLines[] = '  href=' . (string)($data['href'] ?? '');
+    $measureLines[] = '  filter_od=' . $filterOd . ' | filter_do=' . $filterDo . ' | filter_pob=' . implode(',', $filterPob) . ' | filter_mode=' . $filterMode;
 
     if ($measureNav !== []) {
         $navStage = (string)($measureNav['stage'] ?? '');

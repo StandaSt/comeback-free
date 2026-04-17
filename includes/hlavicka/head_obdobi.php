@@ -93,6 +93,8 @@
   function setManualHighlight(isManual){
     if (odLabel) odLabel.classList.toggle('is-manual', !!isManual);
     if (doLabel) doLabel.classList.toggle('is-manual', !!isManual);
+    if (odInput) odInput.classList.toggle('is-manual', !!isManual);
+    if (doInput) doInput.classList.toggle('is-manual', !!isManual);
   }
 
   function savePeriod(payload){

@@ -1,4 +1,5 @@
 <?php
+// K1
 // karty/admin_karty.php * Verze: V11 * Aktualizace: 15.04.2026
 declare(strict_types=1);
 

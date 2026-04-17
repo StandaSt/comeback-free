@@ -141,17 +141,19 @@ function h(string $value): string
     *{box-sizing:border-box;}
     body{margin:0;padding:8px;font-family:Arial,sans-serif;background:#fff;color:#334155;}
     .title{font-size:12px;color:#475569;margin:0 0 8px 0;}
-    .tabs{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 8px 0;}
+    .tabs{display:grid;grid-template-columns:repeat(5, max-content);gap:4px;margin:0 0 8px 0;justify-content:start;}
     .tab{height:18px;line-height:16px;padding:0 6px;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;cursor:pointer;font-size:11px;white-space:nowrap;}
-    .tab:nth-child(6){margin-right:auto;}
     .tab.is-active{border-color:#64748b;background:#e2e8f0;}
-    .grid{display:grid;grid-template-columns:repeat(8, 30px);gap:4px;}
+    .grid{display:grid;grid-template-columns:repeat(10, 30px);gap:4px;}
     .icon-btn{width:30px;height:30px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;}
     .icon-btn:hover{background:#f1f5f9;}
     .icon-btn.is-active{border-color:#0f172a;outline:1px solid #0f172a;}
-    .icon-btn img{width:20px;height:20px;object-fit:contain;display:block;}
-    .bar{display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:8px;margin-top:8px;}
+    .icon-btn img{width:32px;height:32px;object-fit:contain;display:block;}
+    .bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:8px;}
     .btn{height:18px;line-height:16px;padding:0 8px;border:1px solid #94a3b8;border-radius:6px;background:#f8fafc;cursor:pointer;font-size:12px;}
+    .btn-reset{border-color:#ef4444;background:linear-gradient(180deg, #fff1f2, #fecaca);color:#991b1b;}
+    .btn-save{width:240px;height:18px;line-height:16px;padding:0 16px;border-color:var(--clr_modra_3);background:linear-gradient(180deg, var(--clr_modra_4), var(--clr_modra_5));color:var(--clr_bila);font-size:12px;font-weight:700;margin-left:auto;display:inline-flex;align-items:center;justify-content:center;}
+    .btn-save:hover{background:linear-gradient(180deg, var(--clr_modra_6), var(--clr_modra_3));}
     .ok{font-size:12px;color:#15803d;margin-top:6px;}
     .err{font-size:12px;color:#b91c1c;margin-top:6px;}
   </style>
@@ -196,8 +198,8 @@ function h(string $value): string
   <?php endforeach; ?>
 
   <div class="bar">
-    <button type="submit" class="btn" id="cardIconReset">Reset</button>
-    <button type="submit" class="btn">Uložit</button>
+    <button type="submit" class="btn btn-reset" id="cardIconReset">Reset</button>
+    <button type="submit" class="btn btn-save">Uložit</button>
   </div>
 
   <?php if ($msg !== ''): ?>

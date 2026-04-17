@@ -1,4 +1,5 @@
 <?php
+// K10
 // karty/zadani_reportu.php * Verze: V2 * Aktualizace: 09.03.2026
 declare(strict_types=1);
 

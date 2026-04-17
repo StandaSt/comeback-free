@@ -1,4 +1,5 @@
 <?php
+// K14
 // karty/prehled_objednavek.php * Verze: V6 * Aktualizace: 14.04.2026
 declare(strict_types=1);
 
@@ -156,16 +157,68 @@ if (($cbDashboardRenderMode ?? '') === 'mini') {
     $cbDbMini->set_charset('utf8mb4');
 
     $pocetObjMini = 0;
-    $qMini = $cbDbMini->query("
-        SELECT COALESCE(table_rows, 0) AS cnt
-        FROM information_schema.tables
-        WHERE table_schema = DATABASE()
-          AND table_name = 'objednavky_restia'
-        LIMIT 1
-    ");
+    $periodOdDt = DateTimeImmutable::createFromFormat('Y-m-d', $periodOd) ?: new DateTimeImmutable($periodOd);
+    $periodDoDt = DateTimeImmutable::createFromFormat('Y-m-d', $periodDo) ?: new DateTimeImmutable($periodDo);
+    $periodOdSql = $periodOdDt->format('Y-m-d 00:00:00');
+    $periodDoNextSql = $periodDoDt->modify('+1 day')->format('Y-m-d 00:00:00');
+
+    $pobWhereMini = '';
+    if ($selectedPob !== []) {
+        $inIdsMini = [];
+        foreach ($selectedPob as $idPobMini) {
+            $inIdsMini[] = (string)(int)$idPobMini;
+        }
+        $pobWhereMini = ' AND o.id_pob IN (' . implode(',', $inIdsMini) . ')';
+    }
+
+    $qMini = $cbDbMini->query('
+        SELECT COUNT(*) AS cnt
+        FROM (
+            SELECT o.id_obj
+            FROM obj_casy ca
+            INNER JOIN objednavky_restia o ON o.id_obj = ca.id_obj
+            WHERE ca.report >= ' . "'" . $cbDbMini->real_escape_string($periodOd) . "'" . '
+              AND ca.report <= ' . "'" . $cbDbMini->real_escape_string($periodDo) . "'" . '
+              ' . $pobWhereMini . '
+
+            UNION ALL
+
+            SELECT o.id_obj
+            FROM obj_casy ca
+            INNER JOIN objednavky_restia o ON o.id_obj = ca.id_obj
+            WHERE ca.report IS NULL
+              AND ca.cas_vytvor >= ' . "'" . $cbDbMini->real_escape_string($periodOdSql) . "'" . '
+              AND ca.cas_vytvor < ' . "'" . $cbDbMini->real_escape_string($periodDoNextSql) . "'" . '
+              ' . $pobWhereMini . '
+
+            UNION ALL
+
+            SELECT o.id_obj
+            FROM objednavky_restia o
+            LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
+            WHERE ca.report IS NULL
+              AND ca.cas_vytvor IS NULL
+              AND o.restia_created_at >= ' . "'" . $cbDbMini->real_escape_string($periodOdSql) . "'" . '
+              AND o.restia_created_at < ' . "'" . $cbDbMini->real_escape_string($periodDoNextSql) . "'" . '
+              ' . $pobWhereMini . '
+
+            UNION ALL
+
+            SELECT o.id_obj
+            FROM objednavky_restia o
+            LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
+            WHERE ca.report IS NULL
+              AND ca.cas_vytvor IS NULL
+              AND o.restia_created_at IS NULL
+              AND o.restia_imported_at >= ' . "'" . $cbDbMini->real_escape_string($periodOdSql) . "'" . '
+              AND o.restia_imported_at < ' . "'" . $cbDbMini->real_escape_string($periodDoNextSql) . "'" . '
+              ' . $pobWhereMini . '
+        ) AS mini_objednavky
+    ');
     if ($qMini instanceof mysqli_result) {
-        $rMini = $qMini->fetch_assoc() ?: [];
-        $pocetObjMini = (int)($rMini['cnt'] ?? 0);
+        if ($rMini = $qMini->fetch_assoc()) {
+            $pocetObjMini = (int)($rMini['cnt'] ?? 0);
+        }
         $qMini->free();
     }
 
