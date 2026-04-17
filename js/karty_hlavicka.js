@@ -112,9 +112,9 @@
       return true;
     }
 
-    function setDashboardLoading(on) {
+    function setDashboardLoading(on, text) {
       if (w.CB_AJAX && typeof w.CB_AJAX.setDashboardLoading === 'function') {
-        w.CB_AJAX.setDashboardLoading(!!on, 'cards');
+        w.CB_AJAX.setDashboardLoading(!!on, 'cards', text);
       }
     }
 
@@ -266,7 +266,7 @@
         target_locked: targetLocked ? 1 : 0,
         force_unlock: forceUnlock ? 1 : 0
       });
-      setDashboardLoading(true);
+      setDashboardLoading(true, 'Přesouvám kartu ...');
       fetch('index.php', {
         method: 'POST',
         headers: {

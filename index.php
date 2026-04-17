@@ -457,6 +457,34 @@ if (isset($_SERVER['HTTP_X_COMEBACK_CARD'])) {
 
 $pageKey = 'dashboard';
 $file = __DIR__ . '/includes/dashboard.php';
+$cbStartupLoaderText = trim((string)($_SESSION['cb_initial_loader_text'] ?? ''));
+if ($cbStartupLoaderText !== '') {
+    unset($_SESSION['cb_initial_loader_text']);
+}
+
+$cbStartupLoaderHtml = '';
+$cbShowStartupLoader = !empty($_SESSION['login_ok']);
+if ($cbShowStartupLoader) {
+    ob_start();
+    require __DIR__ . '/includes/loaders/dashboard.php';
+    $cbStartupLoaderHtml = trim((string)ob_get_clean());
+    if ($cbStartupLoaderHtml !== '') {
+        $cbStartupLoaderHtml = preg_replace(
+            '~<div class="dash_loader is-hidden" data-cb-loader-mode="dashboard" aria-hidden="true">~',
+            '<div class="dash_loader" data-cb-loader-mode="dashboard" aria-hidden="false" data-cb-loader-visible="1">',
+            $cbStartupLoaderHtml,
+            1
+        ) ?? $cbStartupLoaderHtml;
+        if ($cbStartupLoaderText !== '') {
+            $cbStartupLoaderHtml = preg_replace(
+                '~<p class="dash_loader_text">.*?</p>~s',
+                '<p class="dash_loader_text">' . h($cbStartupLoaderText) . '</p>',
+                $cbStartupLoaderHtml,
+                1
+            ) ?? $cbStartupLoaderHtml;
+        }
+    }
+}
 
 require_once __DIR__ . '/includes/log_a_404.php';
 
@@ -511,7 +539,14 @@ if ($cbIsPartial) {
 </head>
 <body>
 
-  <div class="container bg_modra displ_flex sirka100">
+<?php if ($cbShowStartupLoader && $cbStartupLoaderHtml !== ''): ?>
+<div id="cb-startup-loader" class="dash_box bg_modra sirka100 is-dashboard-loading" data-cb-startup-text="<?= h($cbStartupLoaderText) ?>" style="position:fixed;left:0;top:0;right:0;bottom:0;z-index:12000;padding:0 12px;background-clip:content-box;overflow:hidden;">
+  <?= $cbStartupLoaderHtml ?>
+</div>
+<script src="<?= h(cb_url('js/loader_show.js')) ?>"></script>
+<script src="<?= h(cb_url('js/loader_timer.js')) ?>"></script>
+<?php endif; ?>
+<div class="container bg_modra displ_flex sirka100">
 <?php
 
 require_once __DIR__ . '/includes/hlavicka.php';

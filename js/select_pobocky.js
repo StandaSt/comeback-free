@@ -196,7 +196,7 @@
             }
             if (w.CB_AJAX && typeof w.CB_AJAX.refreshDashboard === 'function') {
               updateBranchButtonLabel(String(payload.mode || ''), payload.selected_oblasti || []);
-              return w.CB_AJAX.refreshDashboard();
+              return w.CB_AJAX.refreshDashboard({ loaderText: 'Změna volby poboček, aktualizuji ...' });
             }
           })
           .catch(function () {

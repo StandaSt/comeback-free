@@ -128,6 +128,7 @@ try {
         // login_ok vzniká až tady
         $_SESSION['login_ok'] = 1;
         unset($_SESSION['cb_2fa_token']);
+        $_SESSION['cb_initial_loader_text'] = 'Inicializace systému ...';
 
         $_SESSION['cb_flash'] = 'Přihlášení OK';
 

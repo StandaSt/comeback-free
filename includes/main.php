@@ -16,6 +16,8 @@ declare(strict_types=1);
 ?>
 
 <!-- MAIN START -->
+<?php
+?>
 <main class="dash_box bg_modra sirka100">
   <?php require __DIR__ . '/loaders/dashboard.php'; ?>
   <?php require __DIR__ . '/loaders/cards.php'; ?>

@@ -1,21 +1,9 @@
-// js/ajax_karta_max.js * Verze: V2 * Aktualizace: 15.04.2026
+// js/ajax_karta_max.js * Verze: V3 * Aktualizace: 17.04.2026
 'use strict';
 
 (function (w) {
   function isTargetForm(form) {
-    if (!(form instanceof HTMLFormElement)) return false;
-    if (form.getAttribute('data-cb-ajax-dashboard') === '1') return true;
-    return !!form.querySelector('input[name="admin_karty_action"]');
-  }
-
-  function isTargetSubmitter(el) {
-    if (!(el instanceof HTMLElement)) return false;
-    const tag = el.tagName.toUpperCase();
-    if (tag !== 'BUTTON' && !(tag === 'INPUT' && String(el.getAttribute('type') || '').toLowerCase() === 'submit')) {
-      return false;
-    }
-    if (el.getAttribute('form')) return true;
-    return !!el.closest('form[data-cb-ajax-dashboard="1"], form:has(input[name="admin_karty_action"])');
+    return form instanceof HTMLFormElement && form.getAttribute('data-cb-ajax-dashboard') === '1';
   }
 
   function resolveFormFromSubmitter(submitter) {
@@ -29,11 +17,6 @@
     return parent instanceof HTMLFormElement ? parent : null;
   }
 
-  function isAdminKartyForm(form) {
-    if (!(form instanceof HTMLFormElement)) return false;
-    return !!form.querySelector('input[name="admin_karty_action"]');
-  }
-
   function markCardRefreshOnClose(form) {
     if (!(form instanceof HTMLFormElement)) return;
     const root = form.closest('.card_shell');
@@ -41,100 +24,128 @@
     root.setAttribute('data-card-refresh-on-close', '1');
   }
 
-  function submitAjax(form, submitter) {
+  function getCardIdFromForm(form) {
+    if (!(form instanceof HTMLFormElement)) return 0;
+    const root = form.closest('.card_shell');
+    if (!(root instanceof HTMLElement)) return 0;
+    const id = parseInt(String(root.getAttribute('data-card-id') || '0'), 10);
+    return Number.isFinite(id) && id > 0 ? id : 0;
+  }
+
+  function setLoading(on) {
+    if (w.CB_AJAX && typeof w.CB_AJAX.setDashboardLoading === 'function') {
+      w.CB_AJAX.setDashboardLoading(!!on, 'cards');
+    }
+  }
+
+  function addTempHiddenInput(form, name, value) {
+    if (!(form instanceof HTMLFormElement)) return null;
+    const hidden = document.createElement('input');
+    hidden.type = 'hidden';
+    hidden.setAttribute('data-cb-temp-submitter', '1');
+    hidden.name = String(name || '');
+    hidden.value = String(value || '');
+    form.appendChild(hidden);
+    return hidden;
+  }
+
+  function submitAjax(form, submitter, options) {
     if (!(form instanceof HTMLFormElement)) return;
-    if (!(w.CB_AJAX && typeof w.CB_AJAX.submitFormAndRefresh === 'function')) {
-      form.submit();
-      return;
-    }
+    const opts = (options && typeof options === 'object') ? options : {};
+    const skipSubmitterName = !!opts.skipSubmitterName;
 
-    if (submitter instanceof HTMLElement && submitter.hasAttribute('name')) {
-      let hidden = form.querySelector('input[data-cb-temp-submitter="1"]');
-      if (!(hidden instanceof HTMLInputElement)) {
-        hidden = document.createElement('input');
-        hidden.type = 'hidden';
-        hidden.setAttribute('data-cb-temp-submitter', '1');
-        form.appendChild(hidden);
+    const reqUrl = String(form.action || w.location.href || 'index.php');
+    const method = String(form.method || 'POST').toUpperCase();
+    const tempNodes = [];
+
+    if (submitter instanceof HTMLElement && !skipSubmitterName) {
+      const submitName = String(submitter.getAttribute('name') || submitter.getAttribute('data-cb-submit-name') || '').trim();
+      const submitValue = String(submitter.getAttribute('value') || submitter.getAttribute('data-cb-submit-value') || '').trim();
+      if (submitName !== '') {
+        const hidden = addTempHiddenInput(form, submitName, submitValue);
+        if (hidden instanceof HTMLInputElement) {
+          tempNodes.push(hidden);
+        }
       }
-      hidden.name = String(submitter.getAttribute('name') || '');
-      hidden.value = ('value' in submitter) ? String(submitter.value || '') : String(submitter.getAttribute('value') || '');
-    }
-
-    if (submitter instanceof HTMLElement) {
       submitter.setAttribute('disabled', 'disabled');
     }
 
-    if (isAdminKartyForm(form)) {
-      const reqUrl = String(form.action || w.location.href || 'index.php');
-      const method = String(form.method || 'POST').toUpperCase();
+    setLoading(true);
 
-      fetch(reqUrl, {
-        method: method,
-        body: new FormData(form),
-        credentials: 'same-origin',
-        redirect: 'follow',
-        headers: {
-          'X-Comeback-Admin-Karty': '1'
-        }
-      }).then((res) => {
+    fetch(reqUrl, {
+      method: method,
+      body: new FormData(form),
+      credentials: 'same-origin',
+      redirect: 'follow',
+      headers: {
+        'X-Comeback-Max-Form': '1'
+      }
+    }).then((res) => {
+      const contentType = String(res.headers.get('content-type') || '').toLowerCase();
+      if (!res.ok) {
         return res.text().then((text) => {
-          let data = null;
+          let errMsg = 'Odeslani formulare selhalo.';
           const raw = String(text || '').trim();
-          if (raw !== '') {
+          if (raw !== '' && contentType.includes('application/json')) {
             try {
-              data = JSON.parse(raw);
-            } catch (e) {
-              data = null;
-            }
+              const data = JSON.parse(raw);
+              if (data && typeof data.err === 'string' && data.err.trim() !== '') {
+                errMsg = data.err.trim();
+              }
+            } catch (e) {}
           }
-
-          if (!res.ok || (data && data.ok === false)) {
-            const errMsg = data && typeof data.err === 'string' && data.err.trim() !== ''
-              ? data.err.trim()
-              : ('HTTP ' + res.status);
-            throw new Error(errMsg);
-          }
-
-          markCardRefreshOnClose(form);
+          throw new Error(errMsg + ' HTTP ' + res.status);
         });
-      }).catch(function (err) {
-        const msg = (err && typeof err.message === 'string' && err.message.trim() !== '')
-          ? err.message.trim()
-          : 'Odeslani formulare selhalo.';
-        if (w.alert) {
-          w.alert(msg);
-        }
-      }).finally(function () {
-        const hidden = form.querySelector('input[data-cb-temp-submitter="1"]');
-        if (hidden instanceof HTMLInputElement) {
-          hidden.remove();
-        }
-        if (submitter instanceof HTMLElement) {
-          submitter.removeAttribute('disabled');
-        }
-      });
-      return;
-    }
+      }
 
-    w.CB_AJAX.submitFormAndRefresh(form, {
-      loaderMode: 'dashboard',
-      refreshMode: 'dashboard',
-      keepLoading: false
-    }).catch(function (err) {
+      if (contentType.includes('application/json')) {
+        return res.json().then((data) => {
+          if (data && data.ok === false) {
+            throw new Error(String(data.err || 'Odeslani formulare selhalo.'));
+          }
+        }).then(() => {
+          const cardId = getCardIdFromForm(form);
+          if (cardId > 0 && w.CB_AJAX && typeof w.CB_AJAX.refreshCard === 'function') {
+            return w.CB_AJAX.refreshCard(cardId, {
+              force: true,
+              keepLoading: true,
+              loaderMode: 'cards',
+              loadMax: true
+            });
+          }
+          return null;
+        });
+      }
+
+      return res.text().then(() => {
+        const cardId = getCardIdFromForm(form);
+        if (cardId > 0 && w.CB_AJAX && typeof w.CB_AJAX.refreshCard === 'function') {
+          return w.CB_AJAX.refreshCard(cardId, {
+            force: true,
+            keepLoading: true,
+            loaderMode: 'cards',
+            loadMax: true
+          });
+        }
+        return null;
+      });
+    }).catch((err) => {
       const msg = (err && typeof err.message === 'string' && err.message.trim() !== '')
         ? err.message.trim()
         : 'Odeslani formulare selhalo.';
       if (w.alert) {
         w.alert(msg);
       }
-    }).finally(function () {
-      const hidden = form.querySelector('input[data-cb-temp-submitter="1"]');
-      if (hidden instanceof HTMLInputElement) {
-        hidden.remove();
-      }
+    }).finally(() => {
+      tempNodes.forEach((node) => {
+        if (node instanceof HTMLInputElement) {
+          node.remove();
+        }
+      });
       if (submitter instanceof HTMLElement) {
         submitter.removeAttribute('disabled');
       }
+      setLoading(false);
     });
   }
 
@@ -163,8 +174,7 @@
   function handleChange(event) {
     const target = event.target instanceof HTMLElement ? event.target : null;
     if (!(target instanceof HTMLInputElement)) return;
-    if (String(target.type || '').toLowerCase() !== 'checkbox') return;
-    if (String(target.getAttribute('data-cb-refresh-op') || '') !== '1') return;
+    if (String(target.getAttribute('data-cb-submit-on-change') || '') !== '1') return;
 
     const form = target.form;
     if (!(form instanceof HTMLFormElement)) return;
@@ -172,7 +182,19 @@
 
     event.preventDefault();
     event.stopPropagation();
-    submitAjax(form, null);
+
+    let hidden = form.querySelector('input[data-cb-temp-action="1"]');
+    if (!(hidden instanceof HTMLInputElement)) {
+      hidden = addTempHiddenInput(form, 'admin_karty_action', 'save');
+      if (hidden instanceof HTMLInputElement) {
+        hidden.setAttribute('data-cb-temp-action', '1');
+      }
+    } else {
+      hidden.name = 'admin_karty_action';
+      hidden.value = 'save';
+    }
+
+    submitAjax(form, target, { skipSubmitterName: true });
   }
 
   function wireOnce() {
@@ -187,5 +209,5 @@
   wireOnce();
 })(window);
 
-// js/ajax_karta_max.js * Verze: V2 * Aktualizace: 15.04.2026
+// js/ajax_karta_max.js * Verze: V3 * Aktualizace: 17.04.2026
 // Konec souboru

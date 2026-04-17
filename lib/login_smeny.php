@@ -215,6 +215,8 @@ try {
     // LOCAL: bez 2FA (notifikace z LOCAL nechodí) => rovnou přihlásit
     if ((string)($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL') {
         $_SESSION['login_ok'] = 1;
+        $_SESSION['cb_initial_loader_text'] = 'Inicializace systému ...';
+
         unset($_SESSION['cb_auth_ok']);
         unset($_SESSION['cb_2fa_token']);
 

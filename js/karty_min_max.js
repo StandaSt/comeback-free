@@ -618,19 +618,6 @@
       setExpanded(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR, !isExpanded);
     });
 
-    const forms = root.querySelectorAll('form');
-    forms.forEach((formEl) => {
-      if (!(formEl instanceof HTMLFormElement)) return;
-      formEl.addEventListener('submit', () => {
-        if (formEl.querySelector('input[name="admin_karty_action"]')) {
-          return;
-        }
-        if (activeMaxi && activeMaxi.root === root) {
-          closeActiveMaxi({ preserveState: true });
-        }
-      });
-    });
-
     renderPorovnaniCharts(root);
   }
 
@@ -646,6 +633,26 @@
     document.addEventListener('cb:main-swapped', () => {
       closeActiveMaxi({ preserveState: true });
       initKartyMinMax();
+    });
+
+    document.addEventListener('cb:card-swapped', (event) => {
+      const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : null;
+      const cardId = detail ? String(detail.cardId || '').trim() : '';
+      const card = detail && detail.card instanceof HTMLElement ? detail.card : null;
+      if (cardId === '' || !(card instanceof HTMLElement)) {
+        return;
+      }
+
+      const nextRoot = card.querySelector(CARD_ROOT_SELECTOR);
+      if (!(nextRoot instanceof HTMLElement)) {
+        return;
+      }
+
+      initCard(nextRoot);
+
+      if (activeMaxi && String(activeMaxi.root.getAttribute('data-card-id') || '').trim() === cardId) {
+        openMaxi(nextRoot, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR);
+      }
     });
 
     document.addEventListener('keydown', (event) => {

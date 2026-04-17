@@ -112,7 +112,7 @@
     .then(function(json){
       if (json && json.ok === true) {
         if (window.CB_AJAX && typeof window.CB_AJAX.refreshDashboard === 'function') {
-          return window.CB_AJAX.refreshDashboard();
+          return window.CB_AJAX.refreshDashboard({ loaderText: 'Změna období. aktualizuji ...' });
         }
       }
     })
@@ -246,6 +246,9 @@
   });
 
   var initialPreset = getActivePreset(clampToToday(odInput.value), clampToToday(doInput.value));
+  if (!initialPreset) {
+    initialPreset = 'vcera';
+  }
   setActive(initialPreset);
   setManualHighlight(initialPreset === '');
 })();

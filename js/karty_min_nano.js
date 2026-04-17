@@ -100,9 +100,9 @@
     return document.querySelectorAll('.card_shell[data-card-mode="nano"]').length;
   }
 
-  function setDashboardLoading(on) {
+  function setDashboardLoading(on, text) {
     if (w.CB_AJAX && typeof w.CB_AJAX.setDashboardLoading === 'function') {
-      w.CB_AJAX.setDashboardLoading(!!on, 'cards');
+      w.CB_AJAX.setDashboardLoading(!!on, 'cards', text);
     }
   }
 
@@ -369,7 +369,7 @@
   }
 
   function handleModeSwitch(cardId, targetMode, tracePrefix) {
-    setDashboardLoading(true);
+    setDashboardLoading(true, 'Přesouvám kartu ...');
 
     requestCardMode(cardId, targetMode).then(() => {
       traceAjax(tracePrefix + '_mode_saved', {
