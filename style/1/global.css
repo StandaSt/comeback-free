@@ -1558,17 +1558,16 @@ align-items:center;
 
 .dash_card.is-maxi-overlay{
   position:absolute;
-  top:12px;
-  bottom:12px;
-  left:12px;
-  right:12px;
-  transform:none;
-  width:auto;
+  top:0;
+  bottom:auto;
+  left:50%;
+  transform:translateX(-50%);
+  width:fit-content;
   min-width:0;
-  min-height:0;
-  max-width:none;
-  max-height:none;
-  height:calc(100% - 24px);
+  min-height:250px;
+  max-width:calc(100% - 24px);
+  max-height:100%;
+  height:auto;
   z-index:50;
   display:flex;
   flex-direction:column;
@@ -1580,23 +1579,52 @@ align-items:center;
   display:flex;
   flex-direction:column;
   flex:1 1 auto;
-  height:100%;
+  height:auto;
+  width:auto;
   min-height:0;
-  max-height:100%;
 }
 
 .dash_card.is-maxi-overlay .card_body{
   display:flex;
   flex-direction:column;
   flex:1 1 auto;
+  width:auto;
   min-height:0;
+  overflow:hidden;
 }
 
 .dash_card.is-maxi-overlay .card_expanded{
-  max-height:100%;
+  display:flex;
+  flex-direction:column;
   flex:1 1 auto;
   min-height:0;
+  width:auto;
+  overflow:hidden;
+}
+
+.dash_card.is-maxi-overlay .card_expanded > form,
+.dash_card.is-maxi-overlay .card_expanded > .card_stack,
+.dash_card.is-maxi-overlay .card_expanded > .card_form,
+.dash_card.is-maxi-overlay .card_expanded > .card_table_layout{
+  display:flex;
+  flex-direction:column;
+  flex:1 1 auto;
+  min-width:0;
+  min-height:0;
+  width:100%;
+}
+
+.dash_card.is-maxi-overlay .card_expanded .table-wrap{
+  flex:1 1 auto;
+  min-width:0;
+  min-height:0;
+  width:100%;
   overflow:auto;
+}
+
+.dash_card.is-maxi-overlay .card_expanded .list-bottom{
+  flex:0 0 auto;
+  width:100%;
 }
 
 .dash_card.is-maxi-overlay:hover{

@@ -315,7 +315,7 @@ ob_start();
       <td>Restia objednávky</td>
       <td class="txt_c"><span class="txt_zelena text_tucny">OK</span></td>
       <td>
-        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0">
+        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-ajax-dashboard="1">
           <input type="hidden" name="run_restia_obj" value="1">
           <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Importovat</button>
         </form>
@@ -327,7 +327,7 @@ ob_start();
       <td>Restia menu</td>
       <td class="txt_c"><span class="txt_cervena text_tucny" style="font-size:150%; line-height:1;">x</span></td>
       <td>
-        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0">
+        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-ajax-dashboard="1">
           <input type="hidden" name="open_restia_menu" value="1">
           <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">další test</button>
         </form>
@@ -339,7 +339,7 @@ ob_start();
       <td>směny plán</td>
       <td class="txt_c"><span class="txt_cervena text_tucny" style="font-size:150%; line-height:1;">x</span></td>
       <td>
-        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0">
+        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-ajax-dashboard="1">
           <input type="hidden" name="open_smeny_plan" value="1">
           <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">další test</button>
         </form>
@@ -351,7 +351,7 @@ ob_start();
       <td>směny Google</td>
       <td class="txt_c"><span class="txt_cervena text_tucny" style="font-size:150%; line-height:1;">x</span></td>
       <td>
-        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0">
+        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-ajax-dashboard="1">
           <input type="hidden" name="open_google_data" value="1">
           <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">další test</button>
         </form>

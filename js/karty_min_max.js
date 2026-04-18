@@ -471,6 +471,14 @@
       dashCard.classList.remove('is-expanded');
       dashCard.classList.remove('is-maxi-overlay');
       dashCard.style.top = '';
+      dashCard.style.right = '';
+      dashCard.style.bottom = '';
+      dashCard.style.left = '';
+      dashCard.style.transform = '';
+      dashCard.style.width = '';
+      dashCard.style.height = '';
+      dashCard.style.maxWidth = '';
+      dashCard.style.maxHeight = '';
     }
 
     if (dashBox) {
@@ -493,6 +501,18 @@
     if (!preserveState) {
       clearMaxiState();
     }
+
+    const closedCard = item.dashCard instanceof HTMLElement ? item.dashCard : null;
+    if (closedCard instanceof HTMLElement) {
+      w.setTimeout(() => {
+        document.dispatchEvent(new CustomEvent('cb:card-swapped', {
+          detail: {
+            cardId: parseInt(String(root.getAttribute('data-card-id') || '0'), 10) || 0,
+            card: closedCard
+          }
+        }));
+      }, 0);
+    }
   }
 
   function finishOpenMaxi(root, compactSel, expandedSel, toggleSel) {
@@ -507,6 +527,7 @@
     }
 
     const overlayTop = (dashBox instanceof HTMLElement) ? dashBox.scrollTop : 0;
+    const forceFill = root.getAttribute('data-card-max-fill') === '1';
 
     updateSubtitle(root, true);
     toggleNanoBtn(root, false);
@@ -514,7 +535,19 @@
     compact.classList.add('is-hidden');
     dashCard.classList.add('is-expanded');
     dashCard.classList.add('is-maxi-overlay');
-    dashCard.style.top = String(overlayTop) + 'px';
+    if (forceFill) {
+      dashCard.style.left = '0';
+      dashCard.style.right = '0';
+      dashCard.style.top = String(overlayTop) + 'px';
+      dashCard.style.bottom = '0';
+      dashCard.style.transform = 'none';
+      dashCard.style.width = 'auto';
+      dashCard.style.height = 'auto';
+      dashCard.style.maxWidth = 'none';
+      dashCard.style.maxHeight = 'none';
+    } else {
+      dashCard.style.top = String(overlayTop) + 'px';
+    }
 
     if (dashBox) {
       dashBox.classList.add('has-maxi');
@@ -532,7 +565,8 @@
       expanded,
       toggle,
       dashCard,
-      dashBox
+      dashBox,
+      forceFill
     };
 
     renderPorovnaniCharts(root);

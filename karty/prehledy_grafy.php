@@ -37,6 +37,19 @@ if ($periodOd === '' || $periodDo === '') {
 
 $safeOd = $pdo->real_escape_string($periodOd);
 $safeDo = $pdo->real_escape_string($periodDo);
+$titleOd = (new DateTimeImmutable($periodOd))->format('d.m.Y');
+$titleDo = (new DateTimeImmutable($periodDo))->format('d.m.Y');
+$trendStart = (new DateTimeImmutable($periodDo))->modify('first day of this month')->modify('-11 months')->setTime(0, 0, 0);
+$trendEndExclusive = (new DateTimeImmutable($periodDo))->modify('first day of next month')->setTime(0, 0, 0);
+$trendMonthLabels = [];
+$trendMonthKeys = [];
+for ($i = 0; $i < 12; $i++) {
+    $trendMonth = $trendStart->modify('+' . $i . ' months');
+    $trendMonthLabels[] = $trendMonth->format('m/Y');
+    $trendMonthKeys[] = $trendMonth->format('Y-m-01');
+}
+$trendStartSql = $trendStart->format('Y-m-d H:i:s');
+$trendEndSql = $trendEndExclusive->format('Y-m-d H:i:s');
 $pobWhere = '';
 if ($selectedPob !== []) {
     $pobWhere = 'WHERE p.id_pob IN (' . implode(',', array_map('intval', $selectedPob)) . ')';
@@ -89,8 +102,52 @@ if ($stmt instanceof mysqli_result) {
     $stmt->free();
 }
 
+$trendDataByPob = [];
+foreach ($grafPolozky as $item) {
+    $idPob = (int)($item['id_pob'] ?? 0);
+    if ($idPob > 0) {
+        $trendDataByPob[$idPob] = array_fill(0, 12, 0);
+    }
+}
+
+$trendMonthIndex = array_flip($trendMonthKeys);
+$trendWhereParts = [
+    'o.restia_created_at >= "' . $trendStartSql . '"',
+    'o.restia_created_at < "' . $trendEndSql . '"',
+];
+if ($selectedPob !== []) {
+    $trendWhereParts[] = 'o.id_pob IN (' . implode(',', array_map('intval', $selectedPob)) . ')';
+}
+
+$trendSql = '
+    SELECT
+        o.id_pob,
+        DATE_FORMAT(o.restia_created_at, "%Y-%m-01") AS mesic,
+        COUNT(*) AS cnt
+    FROM objednavky_restia o
+    WHERE ' . implode('
+      AND ', $trendWhereParts) . '
+    GROUP BY o.id_pob, mesic
+    ORDER BY o.id_pob, mesic
+';
+
+$stmtTrend = $pdo->query($trendSql);
+if ($stmtTrend instanceof mysqli_result) {
+    while ($radek = $stmtTrend->fetch_assoc()) {
+        $idPob = (int)($radek['id_pob'] ?? 0);
+        $mesic = (string)($radek['mesic'] ?? '');
+        $cnt = (int)($radek['cnt'] ?? 0);
+        if ($idPob <= 0 || $mesic === '' || !isset($trendDataByPob[$idPob], $trendMonthIndex[$mesic])) {
+            continue;
+        }
+        $trendDataByPob[$idPob][(int)$trendMonthIndex[$mesic]] = $cnt;
+    }
+    $stmtTrend->free();
+}
+
 $grafPayload = [
     'kind' => 'bar',
+    'title' => 'Počet objednávek, ' . $titleOd . ' - ' . $titleDo,
     'labels' => $nazvy_pobocek,
     'values' => $hodnoty_pobocek,
     'colors' => array_map(static fn(array $item): string => (string)$item['barva'], $grafPolozky),
@@ -109,14 +166,114 @@ if (!is_string($grafJson) || $grafJson === '') {
     throw new RuntimeException('Nepodarilo se pripravit data pro graf.');
 }
 
-$renderGrafTile = static function (string $title, string $chartId) use ($grafJson): string {
+$trendPayload = [
+    'kind' => 'line',
+    'labels' => $trendMonthLabels,
+    'series' => [],
+];
+foreach ($grafPolozky as $item) {
+    $idPob = (int)($item['id_pob'] ?? 0);
+    if ($idPob <= 0 || !isset($trendDataByPob[$idPob])) {
+        continue;
+    }
+    $trendPayload['series'][] = [
+        'name' => (string)($item['nazev'] ?? ''),
+        'color' => (string)($item['barva'] ?? ''),
+        'data' => $trendDataByPob[$idPob],
+    ];
+}
+
+$trendJson = json_encode(
+    $trendPayload,
+    JSON_UNESCAPED_UNICODE
+    | JSON_UNESCAPED_SLASHES
+    | JSON_HEX_TAG
+    | JSON_HEX_AMP
+    | JSON_HEX_APOS
+    | JSON_HEX_QUOT
+);
+if (!is_string($trendJson) || $trendJson === '') {
+    throw new RuntimeException('Nepodarilo se pripravit data pro trendovy graf.');
+}
+
+$salesDataByPob = [];
+foreach ($grafPolozky as $item) {
+    $idPob = (int)($item['id_pob'] ?? 0);
+    if ($idPob > 0) {
+        $salesDataByPob[$idPob] = array_fill(0, 12, 0);
+    }
+}
+
+$salesSql = '
+    SELECT
+        o.id_pob,
+        DATE_FORMAT(o.restia_created_at, "%Y-%m-01") AS mesic,
+        SUM(COALESCE(c.cena_celk, 0)) AS suma
+    FROM objednavky_restia o
+    LEFT JOIN obj_ceny c ON c.id_obj = o.id_obj
+    WHERE ' . implode('
+      AND ', $trendWhereParts) . '
+    GROUP BY o.id_pob, mesic
+    ORDER BY o.id_pob, mesic
+';
+
+$stmtSales = $pdo->query($salesSql);
+if ($stmtSales instanceof mysqli_result) {
+    while ($radek = $stmtSales->fetch_assoc()) {
+        $idPob = (int)($radek['id_pob'] ?? 0);
+        $mesic = (string)($radek['mesic'] ?? '');
+        $suma = (float)($radek['suma'] ?? 0);
+        if ($idPob <= 0 || $mesic === '' || !isset($salesDataByPob[$idPob], $trendMonthIndex[$mesic])) {
+            continue;
+        }
+        $salesDataByPob[$idPob][(int)$trendMonthIndex[$mesic]] = $suma;
+    }
+    $stmtSales->free();
+}
+
+$salesPayload = [
+    'kind' => 'line',
+    'labels' => $trendMonthLabels,
+    'series' => [],
+];
+foreach ($grafPolozky as $item) {
+    $idPob = (int)($item['id_pob'] ?? 0);
+    if ($idPob <= 0 || !isset($salesDataByPob[$idPob])) {
+        continue;
+    }
+    $salesPayload['series'][] = [
+        'name' => (string)($item['nazev'] ?? ''),
+        'color' => (string)($item['barva'] ?? ''),
+        'data' => $salesDataByPob[$idPob],
+    ];
+}
+
+$salesJson = json_encode(
+    $salesPayload,
+    JSON_UNESCAPED_UNICODE
+    | JSON_UNESCAPED_SLASHES
+    | JSON_HEX_TAG
+    | JSON_HEX_AMP
+    | JSON_HEX_APOS
+    | JSON_HEX_QUOT
+);
+if (!is_string($salesJson) || $salesJson === '') {
+    throw new RuntimeException('Nepodarilo se pripravit data pro trzni graf.');
+}
+
+$renderGrafTile = static function (string $title, string $chartId, string $chartJson = '', bool $centerTitle = false) use ($grafJson): string {
     $titleEsc = h($title);
     $idEsc = h($chartId);
+    $payloadAttr = '';
+    if ($chartJson !== '') {
+        $payloadAttr = ' data-cb-prehledy-grafy-chart-data="' . h($chartJson) . '"';
+    }
+    $titleStyle = $centerTitle ? ' style="text-align:center;"' : '';
 
     return ''
-        . '<section class="card_text ram_sedy zaobleni_8 bg_bila odstup_vnitrni_8" style="display:flex; flex-direction:column; min-width:0; min-height:0; height:100%;">'
-        . '<div class="card_text txt_tucne odstup_spod_4">' . $titleEsc . '</div>'
-        . '<div id="' . $idEsc . '" data-cb-prehledy-grafy-chart="1" style="width:100%; flex:1 1 auto; min-height:0;"></div>'
+        . '<section class="card_text ram_sedy zaobleni_8 bg_bila odstup_vnitrni_8" style="display:flex; flex-direction:column; min-width:0; min-height:220px; height:100%; overflow:hidden;">'
+        . '<div class="card_text txt_tucne odstup_spod_4"' . $titleStyle . '>' . $titleEsc . '</div>'
+        . '<div id="' . $idEsc . '" data-cb-prehledy-grafy-chart="1"' . $payloadAttr . ' style="width:100%; flex:1 1 auto; min-height:180px; height:100%;"></div>'
         . '</section>';
 };
 
@@ -129,16 +286,24 @@ $renderGrafRoot = static function (string $bodyHtml) use ($grafJson): string {
 };
 
 $card_min_html = $renderGrafRoot(
-    '<div style="width:100%;"><div id="mini_graf" data-cb-prehledy-grafy-chart="1" style="width:100%; height:200px;"></div></div>'
+    '<div style="width:100%; display:flex; flex-direction:column; gap:6px;">'
+    . '<div class="txt_tucne text_14" style="text-align:center;">Počet objednávek, ' . h($titleOd) . ' - ' . h($titleDo) . '</div>'
+    . '<div id="mini_graf" data-cb-prehledy-grafy-chart="1" style="width:100%; height:200px;"></div>'
+    . '</div>'
 );
 
 $maxTiles = '';
-for ($i = 1; $i <= 6; $i++) {
+$maxTiles .= $renderGrafTile('Trend objednávek, ' . $titleOd . ' - ' . $titleDo, 'graf_max_1', $trendJson, true);
+for ($i = 2; $i <= 6; $i++) {
+    if ($i === 4) {
+        $maxTiles .= $renderGrafTile('Přehled tržeb posledních 12 měsíců', 'graf_max_4', $salesJson, true);
+        continue;
+    }
     $maxTiles .= $renderGrafTile('Graf ' . $i, 'graf_max_' . $i);
 }
 
 $card_max_html = $renderGrafRoot(
-    '<div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); grid-template-rows:repeat(2, minmax(0, 1fr)); gap:10px; width:100%; height:100%; min-height:0; flex:1 1 auto;">'
+    '<div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); grid-template-rows:repeat(2, minmax(0, 1fr)); gap:10px; width:100%; height:100%; min-height:0; flex:1 1 auto; align-content:stretch;">'
     . $maxTiles
     . '</div>'
 );

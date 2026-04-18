@@ -71,6 +71,7 @@ function cb_priprav_kartu_mini(
         'minHtml' => $card_min_html,
         'maxHtml' => '',
         'startExpanded' => $startExpanded ? 1 : 0,
+        'maxFill' => ($cardId === 12) ? 1 : 0,
         'cardColorUrl' => cb_url('/includes/select_card_color.php?id_karta=' . (string)$cardId),
         'cardIconUrl' => cb_url('/includes/select_card_ikon.php?id_karta=' . (string)$cardId),
     ];

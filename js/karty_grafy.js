@@ -5,6 +5,7 @@
   const WRAPPER_SELECTOR = '[data-cb-prehledy-grafy="1"]';
   const CHART_SELECTOR = '[data-cb-prehledy-grafy-chart="1"]';
   const DATA_SELECTOR = '[data-cb-prehledy-grafy-data]';
+  const CHART_DATA_SELECTOR = '[data-cb-prehledy-grafy-chart-data]';
 
   function getWrappers(root) {
     const scope = root instanceof HTMLElement ? root : document;
@@ -30,58 +31,157 @@
     return Array.from(root.querySelectorAll(CHART_SELECTOR)).filter((node) => node instanceof HTMLElement);
   }
 
+  function parseChartPayload(node) {
+    if (!(node instanceof HTMLElement)) return null;
+    const rawAttr = String(node.getAttribute('data-cb-prehledy-grafy-chart-data') || '').trim();
+    if (rawAttr !== '') {
+      try {
+        const parsed = JSON.parse(rawAttr);
+        return parsed && typeof parsed === 'object' ? parsed : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    const dataNode = node.querySelector(CHART_DATA_SELECTOR);
+    if (!(dataNode instanceof HTMLElement)) return null;
+    const raw = String(dataNode.textContent || '').trim();
+    if (raw === '') return null;
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   function buildOption(payload) {
     if (!payload || typeof payload !== 'object') return null;
     const kind = String(payload.kind || 'bar').trim();
-    if (kind !== 'bar') return null;
+    const title = String(payload.title || '').trim();
+    if (kind === 'bar') {
+      const labels = Array.isArray(payload.labels) ? payload.labels.map((item) => String(item)) : [];
+      const values = Array.isArray(payload.values) ? payload.values.map((item) => Number(item) || 0) : [];
+      const colors = Array.isArray(payload.colors) ? payload.colors.map((item) => String(item || '')) : [];
 
-    const labels = Array.isArray(payload.labels) ? payload.labels.map((item) => String(item)) : [];
-    const values = Array.isArray(payload.values) ? payload.values.map((item) => Number(item) || 0) : [];
-    const colors = Array.isArray(payload.colors) ? payload.colors.map((item) => String(item || '')) : [];
+      if (colors.length !== labels.length) {
+        console.error('karty_grafy: Chybi barvy pro graf pobocek:', { labels: labels.length, colors: colors.length });
+        throw new Error('Chybi barvy pro graf pobocek: labels=' + labels.length + ', colors=' + colors.length + '.');
+      }
+      if (colors.some((color) => color.trim() === '')) {
+        console.error('karty_grafy: Chybi barva pro jednu nebo vice pobocek v grafu.');
+        throw new Error('Chybi barva pro jednu nebo vice pobocek v grafu.');
+      }
 
-    if (colors.length !== labels.length) {
-      console.error('karty_grafy: Chybi barvy pro graf pobocek:', { labels: labels.length, colors: colors.length });
-      throw new Error('Chybi barvy pro graf pobocek: labels=' + labels.length + ', colors=' + colors.length + '.');
-    }
-    if (colors.some((color) => color.trim() === '')) {
-      console.error('karty_grafy: Chybi barva pro jednu nebo vice pobocek v grafu.');
-      throw new Error('Chybi barva pro jednu nebo vice pobocek v grafu.');
-    }
-
-    return {
-      grid: {
-        left: 10,
-        right: 10,
-        top: 10,
-        bottom: 40,
-        containLabel: true
-      },
-      tooltip: {
-        trigger: 'axis',
-        axisPointer: { type: 'shadow' }
-      },
-      xAxis: {
-        type: 'category',
-        data: labels,
-        axisLabel: {
-          interval: 0,
-          rotate: labels.length > 6 ? 20 : 0
-        }
-      },
-      yAxis: {
-        type: 'value'
-      },
-      series: [{
-        type: 'bar',
-        barMaxWidth: 44,
-        data: labels.map((label, index) => ({
-          value: values[index] ?? 0,
-          itemStyle: {
-            color: colors[index]
+      return {
+        grid: {
+          left: 10,
+          right: 10,
+          top: 10,
+          bottom: 40,
+          containLabel: true
+        },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'shadow' }
+        },
+        xAxis: {
+          type: 'category',
+          data: labels,
+          axisLabel: {
+            interval: 0,
+            rotate: labels.length > 6 ? 20 : 0
           }
+        },
+        yAxis: {
+          type: 'value',
+          axisLabel: {
+            show: false
+          },
+          axisTick: {
+            show: false
+          },
+          splitLine: {
+            show: false
+          }
+        },
+        series: [{
+          type: 'bar',
+          barMaxWidth: 44,
+          label: {
+            show: true,
+            position: 'top',
+            fontSize: 10,
+            formatter: (params) => String((params && typeof params.value !== 'undefined') ? params.value : '')
+          },
+          data: labels.map((label, index) => ({
+            value: values[index] ?? 0,
+            itemStyle: {
+              color: colors[index]
+            }
+          }))
+        }]
+      };
+    }
+
+    if (kind === 'line') {
+      const labels = Array.isArray(payload.labels) ? payload.labels.map((item) => String(item)) : [];
+      const series = Array.isArray(payload.series) ? payload.series : [];
+
+      if (series.length === 0) return null;
+
+      const normalizedSeries = series.map((item) => {
+        const data = item && Array.isArray(item.data) ? item.data.map((value) => Number(value) || 0) : [];
+        const name = String(item && item.name ? item.name : '').trim();
+        const color = String(item && item.color ? item.color : '').trim();
+        return {
+          name: name,
+          color: color,
+          data: data
+        };
+      }).filter((item) => item.name !== '');
+
+      if (normalizedSeries.length === 0) return null;
+
+      return {
+        grid: {
+          left: 10,
+          right: 10,
+          top: 10,
+          bottom: 24,
+          containLabel: true
+        },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'line' }
+        },
+        xAxis: {
+          type: 'category',
+          boundaryGap: false,
+          data: labels
+        },
+        yAxis: {
+          type: 'value'
+        },
+        series: normalizedSeries.map((item) => ({
+          type: 'line',
+          name: item.name,
+          smooth: true,
+          showSymbol: true,
+          symbolSize: 6,
+          lineStyle: {
+            width: 2,
+            color: item.color || undefined
+          },
+          itemStyle: {
+            color: item.color || undefined
+          },
+          data: item.data
         }))
-      }]
-    };
+      };
+    }
+
+    return null;
   }
 
   function renderOne(root, attempt) {
@@ -110,6 +210,12 @@
       chartNodes.forEach((chartNode) => {
         const rect = chartNode.getBoundingClientRect();
         if (rect.width <= 0 || rect.height <= 0) {
+          return;
+        }
+
+        const payloadNode = parseChartPayload(chartNode);
+        const option = buildOption(payloadNode || payload);
+        if (!option) {
           return;
         }
 
