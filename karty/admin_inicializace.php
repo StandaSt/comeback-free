@@ -50,6 +50,7 @@ $cbRestiaStateKeepMax = (
     && (int)($cbRestiaState['finished'] ?? 0) === 0
 );
 $cbKeepRestiaMax = $cbRunRestia || $cbRestiaStateKeepMax;
+$cbTraceK3Branch = 'default';
 if ($cbBackAdminInit) {
     unset($_SESSION['cb_restia_hist_v4_state'], $_SESSION['cb_restia_hist_v4_rows'], $_SESSION['cb_restia_hist_v4_msg']);
     $cbRunSmenyPlan = false;
@@ -315,9 +316,9 @@ ob_start();
       <td>Restia objednávky</td>
       <td class="txt_c"><span class="txt_zelena text_tucny">OK</span></td>
       <td>
-        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-ajax-dashboard="1">
+        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
           <input type="hidden" name="run_restia_obj" value="1">
-          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Importovat</button>
+          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Připravuji import objednávek">Připrav import</button>
         </form>
       </td>
     </tr>
@@ -325,11 +326,11 @@ ob_start();
       <td>plnime_restia_menu.php</td>
       <td><?= cb_admin_init_status_html('plnime_restia_menu.php', $cbScriptStats) ?></td>
       <td>Restia menu</td>
-      <td class="txt_c"><span class="txt_cervena text_tucny" style="font-size:150%; line-height:1;">x</span></td>
+      <td class="txt_c"><span class="txt_zelena text_tucny">OK</span></td>
       <td>
-        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-ajax-dashboard="1">
+        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
           <input type="hidden" name="open_restia_menu" value="1">
-          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">další test</button>
+          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Připravuji import menu">Připrav import</button>
         </form>
       </td>
     </tr>
@@ -337,11 +338,11 @@ ob_start();
       <td>plnime_smeny_plan.php</td>
       <td><?= cb_admin_init_status_html('plnime_smeny_plan.php', $cbScriptStats) ?></td>
       <td>směny plán</td>
-      <td class="txt_c"><span class="txt_cervena text_tucny" style="font-size:150%; line-height:1;">x</span></td>
+      <td class="txt_c"><span class="txt_zelena text_tucny">OK</span></td>
       <td>
-        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-ajax-dashboard="1">
+        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
           <input type="hidden" name="open_smeny_plan" value="1">
-          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">další test</button>
+          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Připravuji import plánovaných směn">Připrav import</button>
         </form>
       </td>
     </tr>
@@ -349,11 +350,11 @@ ob_start();
       <td>google_data.php</td>
       <td><?= cb_admin_init_status_html('google_data.php', $cbScriptStats) ?></td>
       <td>směny Google</td>
-      <td class="txt_c"><span class="txt_cervena text_tucny" style="font-size:150%; line-height:1;">x</span></td>
+      <td class="txt_c"><span class="txt_zelena text_tucny">OK</span></td>
       <td>
-        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-ajax-dashboard="1">
+        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
           <input type="hidden" name="open_google_data" value="1">
-          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">další test</button>
+          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Připravuji import reportů">Připrav import</button>
         </form>
       </td>
     </tr>
@@ -370,28 +371,105 @@ ob_start();
 <?php
 $card_max_html = (string)ob_get_clean();
 
+if (!function_exists('cb_admin_init_capture_max_include')) {
+    function cb_admin_init_capture_max_include(string $path, string $expectedLabel, string $sourceLabel, string $actionLabel): string
+    {
+        $traceEnabled = (
+            isset($_GET['cb_trace_k3'])
+            || isset($_SERVER['HTTP_X_COMEBACK_TRACE_K3'])
+        );
+        $traceFile = __DIR__ . '/../_kandidati/codex/k3_runtime.log';
+        $trace = static function (string $line) use ($traceEnabled, $traceFile): void {
+            if (!$traceEnabled) {
+                return;
+            }
+            @file_put_contents($traceFile, $line . "\n", FILE_APPEND | LOCK_EX);
+        };
+
+        $html = '';
+        $requireError = '';
+        $trace('admin_init capture start action=' . $actionLabel . ' include=' . $expectedLabel);
+
+        ob_start();
+        try {
+            require $path;
+            $html = trim((string)ob_get_clean());
+            $trace('admin_init capture html_len=' . strlen($html));
+        } catch (Throwable $e) {
+            $requireError = $e->getMessage();
+            $html = '';
+            ob_end_clean();
+            $trace('admin_init capture require_error=' . $requireError);
+        }
+
+        if ($html !== '') {
+            $trace('admin_init capture return=html');
+            return $html;
+        }
+
+        if ($requireError === '') {
+            $trace('admin_init capture return=empty');
+            return '';
+        }
+
+        $details = [
+            'Soubor' => $sourceLabel,
+            'Akce' => $actionLabel,
+            'Očekávaný soubor' => $expectedLabel,
+            'Očekávaný obsah' => 'HTML výstup z include',
+            'Selhání' => $requireError !== '' ? $requireError : 'prázdný výstup z include',
+        ];
+
+        if (function_exists('cb_dashboard_render_card_error')) {
+            return cb_dashboard_render_card_error(
+                'Chyba karty',
+                'Max obsah se nepodařilo načíst.',
+                $details
+            );
+        }
+
+        return '<div class="odstup_vnitrni_0"><p class="card_text txt_cervena text_tucny odstup_vnejsi_0">Chyba karty</p><p class="card_text txt_cervena odstup_vnejsi_0">Max obsah se nepodařilo načíst.</p><p class="card_text txt_seda odstup_vnejsi_0">Soubor: ' . h($sourceLabel) . '</p><p class="card_text txt_seda odstup_vnejsi_0">Akce: ' . h($actionLabel) . '</p><p class="card_text txt_seda odstup_vnejsi_0">Očekávaný soubor: ' . h($expectedLabel) . '</p><p class="card_text txt_seda odstup_vnejsi_0">Očekávaný obsah: HTML výstup z include</p><p class="card_text txt_seda odstup_vnejsi_0">Selhání: ' . h($requireError !== '' ? $requireError : 'prázdný výstup z include') . '</p></div>';
+    }
+}
+
 if ($cbRunSmenyPlan || $cbOpenSmenyPlan) {
-    ob_start();
-    require __DIR__ . '/../inicializace/plnime_smeny_plan.php';
-    $card_max_html = (string)ob_get_clean();
+    $cbTraceK3Branch = $cbRunSmenyPlan ? 'run_smeny_plan' : 'open_smeny_plan';
+    $card_max_html = cb_admin_init_capture_max_include(
+        __DIR__ . '/../inicializace/plnime_smeny_plan.php',
+        'inicializace/plnime_smeny_plan.php',
+        'admin_inicializace',
+        $cbTraceK3Branch
+    );
 }
 
 if ($cbRunGoogleData || $cbOpenGoogleData) {
-    ob_start();
-    require __DIR__ . '/../inicializace/google_data.php';
-    $card_max_html = (string)ob_get_clean();
+    $cbTraceK3Branch = $cbRunGoogleData ? 'run_google_data' : 'open_google_data';
+    $card_max_html = cb_admin_init_capture_max_include(
+        __DIR__ . '/../inicializace/google_data.php',
+        'inicializace/google_data.php',
+        'admin_inicializace',
+        $cbTraceK3Branch
+    );
 }
 
 if ($cbRunRestia || $cbKeepRestiaMax) {
-    ob_start();
-    require __DIR__ . '/../inicializace/plnime_restia_objednavky.php';
-    $card_max_html = (string)ob_get_clean();
+    $cbTraceK3Branch = $cbRunRestia ? 'run_restia_obj' : 'keep_restia_max';
+    $card_max_html = cb_admin_init_capture_max_include(
+        __DIR__ . '/../inicializace/plnime_restia_objednavky.php',
+        'inicializace/plnime_restia_objednavky.php',
+        'admin_inicializace',
+        $cbTraceK3Branch
+    );
 }
 
 if ($cbRunRestiaMenu || $cbOpenRestiaMenu) {
-    ob_start();
-    require __DIR__ . '/../inicializace/plnime_restia_menu.php';
-    $card_max_html = (string)ob_get_clean();
+    $cbTraceK3Branch = $cbRunRestiaMenu ? 'run_restia_menu' : 'open_restia_menu';
+    $card_max_html = cb_admin_init_capture_max_include(
+        __DIR__ . '/../inicializace/plnime_restia_menu.php',
+        'inicializace/plnime_restia_menu.php',
+        'admin_inicializace',
+        $cbTraceK3Branch
+    );
 }
 
 // karty/admin_inicializace.php * Verze: V13 * Aktualizace: 03.04.2026

@@ -3,7 +3,15 @@
 
 (function (w) {
   function isTargetForm(form) {
-    return form instanceof HTMLFormElement && form.getAttribute('data-cb-ajax-dashboard') === '1';
+    if (!(form instanceof HTMLFormElement)) return false;
+    if (form.getAttribute('data-cb-max-form') === '1') return true;
+
+    const shell = form.closest('.card_shell');
+    if (!(shell instanceof HTMLElement)) return false;
+    if (shell.getAttribute('data-card-max-loaded') !== '1') return false;
+
+    const expanded = form.closest('[data-card-expanded]');
+    return expanded instanceof HTMLElement;
   }
 
   function resolveFormFromSubmitter(submitter) {
@@ -32,9 +40,77 @@
     return Number.isFinite(id) && id > 0 ? id : 0;
   }
 
-  function setLoading(on) {
+  function findCardWrapperFromHtml(html, cardId) {
+    const id = parseInt(String(cardId || '0'), 10);
+    if (!Number.isFinite(id) || id <= 0) return null;
+
+    const wrap = document.createElement('div');
+    wrap.innerHTML = String(html || '').trim();
+
+    const shellSelector = '[data-cb-dash-card="1"] .card_shell[data-card-id="' + String(id).replace(/"/g, '') + '"]';
+    const shell = wrap.querySelector(shellSelector);
+    if (!(shell instanceof HTMLElement)) return null;
+
+    const card = shell.closest('[data-cb-dash-card="1"]');
+    return card instanceof HTMLElement ? card : null;
+  }
+
+  function swapCardFromHtml(cardId, html) {
+    const id = parseInt(String(cardId || '0'), 10);
+    if (!Number.isFinite(id) || id <= 0) return false;
+
+    const currentShell = document.querySelector('[data-cb-dash-card="1"] .card_shell[data-card-id="' + String(id).replace(/"/g, '') + '"]');
+    if (!(currentShell instanceof HTMLElement)) return false;
+
+    const currentCard = currentShell.closest('[data-cb-dash-card="1"]');
+    if (!(currentCard instanceof HTMLElement)) return false;
+
+    const nextCard = findCardWrapperFromHtml(html, id);
+    if (!(nextCard instanceof HTMLElement)) return false;
+
+    currentCard.replaceWith(nextCard);
+    document.dispatchEvent(new CustomEvent('cb:card-swapped', {
+      detail: {
+        cardId: id,
+        card: nextCard
+      }
+    }));
+    return true;
+  }
+
+  function swapCardExpandedFromHtml(cardId, html) {
+    const id = parseInt(String(cardId || '0'), 10);
+    if (!Number.isFinite(id) || id <= 0) return false;
+
+    const currentShell = document.querySelector('[data-cb-dash-card="1"] .card_shell[data-card-id="' + String(id).replace(/"/g, '') + '"]');
+    if (!(currentShell instanceof HTMLElement)) return false;
+
+    const currentCard = currentShell.closest('[data-cb-dash-card="1"]');
+    if (!(currentCard instanceof HTMLElement)) return false;
+
+    const currentExpanded = currentCard.querySelector('[data-card-expanded]');
+    if (!(currentExpanded instanceof HTMLElement)) return false;
+
+    const wrap = document.createElement('div');
+    wrap.innerHTML = String(html || '').trim();
+
+    const nextExpanded = wrap.querySelector('[data-card-expanded]');
+    const nextContent = nextExpanded instanceof HTMLElement ? nextExpanded.innerHTML : String(html || '').trim();
+    if (nextContent === '') return false;
+
+    currentExpanded.innerHTML = nextContent;
+    document.dispatchEvent(new CustomEvent('cb:card-swapped', {
+      detail: {
+        cardId: id,
+        card: currentCard
+      }
+    }));
+    return true;
+  }
+
+  function setLoading(on, text) {
     if (w.CB_AJAX && typeof w.CB_AJAX.setDashboardLoading === 'function') {
-      w.CB_AJAX.setDashboardLoading(!!on, 'cards');
+      w.CB_AJAX.setDashboardLoading(!!on, 'cards', text);
     }
   }
 
@@ -49,6 +125,20 @@
     return hidden;
   }
 
+  function getLoaderTextFromSubmitter(submitter, form) {
+    if (!(submitter instanceof HTMLElement)) return '';
+    const submitterText = String(submitter.getAttribute('data-cb-loader-text') || '').trim();
+    if (submitterText !== '') {
+      return submitterText;
+    }
+
+    if (form instanceof HTMLFormElement) {
+      return String(form.getAttribute('data-cb-loader-text') || '').trim();
+    }
+
+    return '';
+  }
+
   function submitAjax(form, submitter, options) {
     if (!(form instanceof HTMLFormElement)) return;
     const opts = (options && typeof options === 'object') ? options : {};
@@ -57,6 +147,7 @@
     const reqUrl = String(form.action || w.location.href || 'index.php');
     const method = String(form.method || 'POST').toUpperCase();
     const tempNodes = [];
+    const cardId = getCardIdFromForm(form);
 
     if (submitter instanceof HTMLElement && !skipSubmitterName) {
       const submitName = String(submitter.getAttribute('name') || submitter.getAttribute('data-cb-submit-name') || '').trim();
@@ -70,7 +161,15 @@
       submitter.setAttribute('disabled', 'disabled');
     }
 
-    setLoading(true);
+    if (cardId > 0) {
+      const hiddenCardId = addTempHiddenInput(form, 'cb_card_id', String(cardId));
+      if (hiddenCardId instanceof HTMLInputElement) {
+        tempNodes.push(hiddenCardId);
+      }
+    }
+
+    const loaderText = getLoaderTextFromSubmitter(submitter, form);
+    setLoading(true, loaderText);
 
     fetch(reqUrl, {
       method: method,
@@ -81,53 +180,31 @@
         'X-Comeback-Max-Form': '1'
       }
     }).then((res) => {
-      const contentType = String(res.headers.get('content-type') || '').toLowerCase();
-      if (!res.ok) {
-        return res.text().then((text) => {
-          let errMsg = 'Odeslani formulare selhalo.';
-          const raw = String(text || '').trim();
-          if (raw !== '' && contentType.includes('application/json')) {
-            try {
-              const data = JSON.parse(raw);
-              if (data && typeof data.err === 'string' && data.err.trim() !== '') {
-                errMsg = data.err.trim();
-              }
-            } catch (e) {}
+      return res.text().then((text) => {
+        const raw = String(text || '').trim();
+        let data = null;
+        if (raw !== '') {
+          try {
+            data = JSON.parse(raw);
+          } catch (e) {
+            data = null;
           }
-          throw new Error(errMsg + ' HTTP ' + res.status);
-        });
-      }
-
-      if (contentType.includes('application/json')) {
-        return res.json().then((data) => {
-          if (data && data.ok === false) {
-            throw new Error(String(data.err || 'Odeslani formulare selhalo.'));
-          }
-        }).then(() => {
-          const cardId = getCardIdFromForm(form);
-          if (cardId > 0 && w.CB_AJAX && typeof w.CB_AJAX.refreshCard === 'function') {
-            return w.CB_AJAX.refreshCard(cardId, {
-              force: true,
-              keepLoading: true,
-              loaderMode: 'cards',
-              loadMax: true
-            });
-          }
-          return null;
-        });
-      }
-
-      return res.text().then(() => {
-        const cardId = getCardIdFromForm(form);
-        if (cardId > 0 && w.CB_AJAX && typeof w.CB_AJAX.refreshCard === 'function') {
-          return w.CB_AJAX.refreshCard(cardId, {
-            force: true,
-            keepLoading: true,
-            loaderMode: 'cards',
-            loadMax: true
-          });
         }
-        return null;
+
+        if (!res.ok) {
+          const errMsg = String((data && data.err) ? data.err : 'Odeslani formulare selhalo.').trim();
+          throw new Error(errMsg + ' HTTP ' + res.status);
+        }
+
+        if (!data || typeof data !== 'object' || data.ok !== true || typeof data.cardHtml !== 'string') {
+          throw new Error(String((data && data.err) ? data.err : 'Max karta vrátila neplatný JSON obsah.'));
+        }
+
+        if (cardId > 0 && swapCardFromHtml(cardId, data.cardHtml)) {
+          return { ok: true, cardId: cardId };
+        }
+
+        throw new Error('Max karta vrátila neplatný HTML obsah.');
       });
     }).catch((err) => {
       const msg = (err && typeof err.message === 'string' && err.message.trim() !== '')

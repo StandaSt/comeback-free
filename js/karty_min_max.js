@@ -404,38 +404,25 @@
       return Promise.reject(new Error('ID karty nebylo nalezeno.'));
     }
 
-    if (!(w.CB_AJAX && typeof w.CB_AJAX.fetchText === 'function')) {
+    if (!(w.CB_AJAX && typeof w.CB_AJAX.refreshCard === 'function')) {
       return Promise.reject(new Error('Nacteni karty neni dostupne.'));
     }
 
-    const reqUrl = 'index.php?cb_card_id=' + encodeURIComponent(cardId) + '&cb_load_max=1';
-
-    return w.CB_AJAX.fetchText(reqUrl, { 'X-Comeback-Card': '1' }).then((html) => {
-      const currentCard = getDashCard(root);
-      if (!(currentCard instanceof HTMLElement)) {
-        throw new Error('Karta nebyla nalezena.');
-      }
-
-      const wrap = document.createElement('div');
-      wrap.innerHTML = String(html || '').trim();
-      const nextCard = wrap.firstElementChild;
+    return w.CB_AJAX.refreshCard(cardId, {
+      force: true,
+      keepLoading: true,
+      loaderMode: 'cards',
+      loadMax: true
+    }).then((result) => {
+      const nextCard = result && result.card instanceof HTMLElement ? result.card : null;
       if (!(nextCard instanceof HTMLElement)) {
-        throw new Error('Nova karta ma neplatny obsah.');
+        throw new Error('Nova karta nema shell.');
       }
-
-      currentCard.replaceWith(nextCard);
 
       const nextRoot = nextCard.querySelector(CARD_ROOT_SELECTOR);
       if (!(nextRoot instanceof HTMLElement)) {
         throw new Error('Nova karta nema shell.');
       }
-
-      document.dispatchEvent(new CustomEvent('cb:card-swapped', {
-        detail: {
-          cardId: parseInt(cardId, 10) || 0,
-          card: nextCard
-        }
-      }));
 
       return nextRoot;
     });
@@ -486,17 +473,6 @@
     }
 
     activeMaxi = null;
-
-    if (!preserveState && root instanceof HTMLElement && root.getAttribute('data-card-refresh-on-close') === '1') {
-      root.removeAttribute('data-card-refresh-on-close');
-      if (w.CB_AJAX && typeof w.CB_AJAX.refreshDashboard === 'function') {
-        w.CB_AJAX.refreshDashboard({ force: true, loaderMode: 'dashboard' }).catch(() => {
-          if (w.alert) {
-            w.alert('Obnoveni dashboardu po zavreni karty selhalo.');
-          }
-        });
-      }
-    }
 
     if (!preserveState) {
       clearMaxiState();
@@ -689,6 +665,13 @@
       w.setTimeout(restoreActiveMaxi, 0);
     });
 
+    document.addEventListener('cb:dashboard-layout-changed', () => {
+      initKartyMinMax();
+      if (activeMaxi && activeMaxi.root instanceof HTMLElement) {
+        finishOpenMaxi(activeMaxi.root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR);
+      }
+    });
+
     document.addEventListener('cb:card-swapped', (event) => {
       const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : null;
       const cardId = detail ? String(detail.cardId || '').trim() : '';
@@ -705,7 +688,8 @@
       initCard(nextRoot);
 
       if (activeMaxi && String(activeMaxi.root.getAttribute('data-card-id') || '').trim() === cardId) {
-        openMaxi(nextRoot, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR);
+        activeMaxi = null;
+        finishOpenMaxi(nextRoot, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR);
       }
     });
 

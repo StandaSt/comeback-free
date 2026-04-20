@@ -194,6 +194,56 @@
       }
     }
 
+    function closeAllCardPrefMenus() {
+      document.querySelectorAll('[data-card-pref-menu]').forEach(function (m) {
+        if (!(m instanceof HTMLElement)) return;
+        restoreUnsavedPreviewByMenu(m);
+        m.classList.add('is-hidden');
+        m.classList.remove('card_pref_menu_frame');
+        const frame = m.querySelector('[data-card-pref-frame]');
+        if (frame instanceof HTMLIFrameElement) {
+          frame.classList.add('is-hidden');
+          frame.removeAttribute('src');
+        }
+      });
+
+      document.querySelectorAll('[data-card-pref-toggle]').forEach(function (btn) {
+        if (btn instanceof HTMLElement) {
+          btn.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
+
+    function setCardPlacement(root, col, line, isLocked) {
+      if (!(root instanceof HTMLElement)) return;
+      const section = root.closest('[data-cb-dash-card="1"]');
+      const safeCol = (Number.isFinite(col) && col > 0) ? Math.trunc(col) : 0;
+      const safeLine = (Number.isFinite(line) && line > 0) ? Math.trunc(line) : 0;
+
+      root.setAttribute('data-card-col', String(safeCol));
+      root.setAttribute('data-card-line', String(safeLine));
+      if (typeof isLocked === 'boolean') {
+        root.setAttribute('data-card-pos-locked', isLocked ? '1' : '0');
+      }
+
+      if (section instanceof HTMLElement) {
+        if (safeCol > 0 && safeLine > 0) {
+          section.style.gridColumn = String(safeCol);
+          section.style.gridRow = String(safeLine);
+        } else {
+          section.style.gridColumn = '';
+          section.style.gridRow = '';
+        }
+      }
+    }
+
+    function clearAllCardPlacements() {
+      document.querySelectorAll('.card_shell').forEach(function (root) {
+        if (!(root instanceof HTMLElement)) return;
+        setCardPlacement(root, 0, 0, false);
+      });
+    }
+
     function startMoveSource(fromBtn) {
       const wrap = fromBtn.closest('[data-card-pref-wrap]');
       const root = wrap ? wrap.closest('.card_shell') : null;
@@ -290,12 +340,16 @@
             tgt_id: targetId,
             force_unlock: forceUnlock ? 1 : 0
           });
+          setCardPlacement(moveSource.root, targetCol, targetLine, true);
+          setCardPlacement(targetRoot, 0, 0, false);
           clearMoveSource();
-          if (w.CB_AJAX && typeof w.CB_AJAX.refreshDashboard === 'function') {
-            w.CB_AJAX.refreshDashboard({ force: true, loaderMode: 'cards' }).catch((err) => {
-              const msg = String((err && err.message) ? err.message : 'Obnovení dashboardu po přesunu karty selhalo.');
-              window.alert(msg);
-            });
+          closeAllCardPrefMenus();
+          try {
+            if (w.CB_AJAX && typeof w.CB_AJAX.relayoutDashboard === 'function') {
+              w.CB_AJAX.relayoutDashboard();
+            }
+          } finally {
+            setDashboardLoading(false);
           }
           return;
         }
@@ -445,17 +499,20 @@
             },
             body: JSON.stringify({})
           }).then((r) => r.json().catch(() => ({}))).then((data) => {
-            if (data && data.ok) {
-              traceAjax('card_unlock_all_ok', {});
-              clearMoveSource();
-              if (w.CB_AJAX && typeof w.CB_AJAX.refreshDashboard === 'function') {
-                w.CB_AJAX.refreshDashboard({ loaderMode: 'cards' }).catch((err) => {
-                  const msg = String((err && err.message) ? err.message : 'Obnovení dashboardu po odemknutí pozic karet selhalo.');
-                  window.alert(msg);
-                });
+          if (data && data.ok) {
+            traceAjax('card_unlock_all_ok', {});
+            clearAllCardPlacements();
+            clearMoveSource();
+            closeAllCardPrefMenus();
+            try {
+              if (w.CB_AJAX && typeof w.CB_AJAX.relayoutDashboard === 'function') {
+                w.CB_AJAX.relayoutDashboard();
               }
-              return;
+            } finally {
+              setDashboardLoading(false);
             }
+            return;
+          }
             const err = String((data && data.err) ? data.err : 'Odemknutí pozic karet selhalo.');
             traceAjax('card_unlock_all_error', { message: err });
             window.alert(err);
@@ -472,20 +529,7 @@
           const menu = wrap ? wrap.querySelector('[data-card-pref-menu]') : null;
           if (!menu) return;
           const openNow = menu.classList.contains('is-hidden');
-
-          document.querySelectorAll('[data-card-pref-menu]').forEach(function (m) {
-            if (!(m instanceof HTMLElement)) return;
-            if (m !== menu) {
-              restoreUnsavedPreviewByMenu(m);
-              m.classList.add('is-hidden');
-              m.classList.remove('card_pref_menu_frame');
-              const f = m.querySelector('[data-card-pref-frame]');
-              if (f instanceof HTMLIFrameElement) {
-                f.classList.add('is-hidden');
-                f.removeAttribute('src');
-              }
-            }
-          });
+          closeAllCardPrefMenus();
 
           if (openNow) {
             menu.classList.remove('is-hidden');
@@ -506,22 +550,7 @@
         }
 
         if (!target.closest('[data-card-pref-wrap]')) {
-          document.querySelectorAll('[data-card-pref-menu]').forEach(function (m) {
-            if (!(m instanceof HTMLElement)) return;
-            restoreUnsavedPreviewByMenu(m);
-            m.classList.add('is-hidden');
-            m.classList.remove('card_pref_menu_frame');
-            const frame = m.querySelector('[data-card-pref-frame]');
-            if (frame instanceof HTMLIFrameElement) {
-                frame.classList.add('is-hidden');
-              frame.removeAttribute('src');
-            }
-          });
-          document.querySelectorAll('[data-card-pref-toggle]').forEach(function (btn) {
-            if (btn instanceof HTMLElement) {
-              btn.setAttribute('aria-expanded', 'false');
-            }
-          });
+          closeAllCardPrefMenus();
         }
       });
 
@@ -531,22 +560,7 @@
           clearMoveSource();
           return;
         }
-        document.querySelectorAll('[data-card-pref-menu]').forEach(function (m) {
-          if (!(m instanceof HTMLElement)) return;
-          restoreUnsavedPreviewByMenu(m);
-          m.classList.add('is-hidden');
-          m.classList.remove('card_pref_menu_frame');
-          const frame = m.querySelector('[data-card-pref-frame]');
-          if (frame instanceof HTMLIFrameElement) {
-            frame.classList.add('is-hidden');
-            frame.removeAttribute('src');
-          }
-        });
-        document.querySelectorAll('[data-card-pref-toggle]').forEach(function (btn) {
-          if (btn instanceof HTMLElement) {
-            btn.setAttribute('aria-expanded', 'false');
-          }
-        });
+        closeAllCardPrefMenus();
       });
     }
 

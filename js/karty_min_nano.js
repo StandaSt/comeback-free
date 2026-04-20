@@ -358,10 +358,20 @@
       keepLoading: true,
       loaderMode: 'cards'
     }).then((result) => {
-      rebuildGridAfterModeSwitch();
-      document.dispatchEvent(new CustomEvent('cb:main-swapped'));
+      if (w.CB_AJAX && typeof w.CB_AJAX.relayoutDashboard === 'function') {
+        w.CB_AJAX.relayoutDashboard();
+      } else {
+        rebuildGridAfterModeSwitch();
+        document.dispatchEvent(new CustomEvent('cb:dashboard-layout-changed'));
+      }
       return result;
     });
+  }
+
+  function relayoutDashboard() {
+    rebuildGridAfterModeSwitch();
+    document.dispatchEvent(new CustomEvent('cb:dashboard-layout-changed'));
+    return { ok: true };
   }
 
   function finishModeSwitch() {
@@ -454,12 +464,17 @@
   function initKartyMinNano() {
     const roots = getCardRoots();
     roots.forEach((root) => {
-      if (String(root.getAttribute('data-card-mode') || 'mini').trim() === 'nano') {
-        initNanoCard(root);
-      } else {
-        initMiniCard(root);
-      }
+      initCardRoot(root);
     });
+  }
+
+  function initCardRoot(root) {
+    if (!(root instanceof HTMLElement)) return;
+    if (String(root.getAttribute('data-card-mode') || 'mini').trim() === 'nano') {
+      initNanoCard(root);
+      return;
+    }
+    initMiniCard(root);
   }
 
   function wireOnce() {
@@ -478,9 +493,23 @@
     document.addEventListener('cb:main-swapped', () => {
       initKartyMinNano();
     });
+
+    document.addEventListener('cb:card-swapped', (event) => {
+      const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : null;
+      const card = detail && detail.card instanceof HTMLElement ? detail.card : null;
+      if (!card) return;
+      const root = card.querySelector(CARD_ROOT_SELECTOR);
+      if (root instanceof HTMLElement) {
+        initCardRoot(root);
+      }
+    });
   }
 
   wireOnce();
+
+  if (w.CB_AJAX) {
+    w.CB_AJAX.relayoutDashboard = relayoutDashboard;
+  }
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initKartyMinNano, { once: true });

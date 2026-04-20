@@ -27,7 +27,7 @@ if (!function_exists('cb_restia_menu_h')) {
 if (!function_exists('cb_restia_menu_txt_path')) {
     function cb_restia_menu_txt_path(): string
     {
-        return __DIR__ . '/' . pathinfo(__FILE__, PATHINFO_FILENAME) . '.txt';
+        return __DIR__ . '/../log/' . pathinfo(__FILE__, PATHINFO_FILENAME) . '.txt';
     }
 }
 
@@ -737,10 +737,10 @@ if ($run) {
   <p class="card_text txt_seda">Pobočka: <?= cb_restia_menu_h($branchName) ?> | restia_activePosId: <?= cb_restia_menu_h($branchActivePosId) ?></p>
   <p class="card_text txt_seda">Výběr pobočky (stav menu podle DB):</p>
   <div class="card_actions gap_8 displ_flex">
-    <form method="post" class="odstup_vnejsi_0 displ_inline_flex">
+    <form method="post" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
       <input type="hidden" name="run_restia_menu" value="1">
       <input type="hidden" name="cb_action" value="start" id="cb_restia_menu_action">
-      <select name="cb_id_pob" class="card_select ram_sedy txt_seda bg_bila zaobleni_8 vyska_32" style="min-width:320px; margin-right:8px;" onchange="var a=document.getElementById('cb_restia_menu_action');if(a){a.value='select_branch';}this.form.submit();">
+      <select name="cb_id_pob" class="card_select ram_sedy txt_seda bg_bila zaobleni_8 vyska_32" style="min-width:320px; margin-right:8px;" onchange="var a=document.getElementById('cb_restia_menu_action');if(a){a.value='select_branch';}var f=this.form;if(f&&f.requestSubmit){f.requestSubmit();}else if(f){f.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));}">
         <?php foreach ($branchOptions as $branchOpt): ?>
           <?php
           $idPobOpt = (int)($branchOpt['id_pob'] ?? 0);

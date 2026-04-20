@@ -77,7 +77,7 @@
         grid: {
           left: 10,
           right: 10,
-          top: 10,
+          top: 20,
           bottom: 40,
           containLabel: true
         },
@@ -269,6 +269,20 @@
   w.__CB_PREHLEDY_GRAFY_INITED__ = true;
 
   document.addEventListener('cb:main-swapped', () => {
+    renderAll(document);
+  });
+
+  document.addEventListener('cb:dashboard-mini-swapped', (event) => {
+    const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : null;
+    const cards = detail && Array.isArray(detail.cards) ? detail.cards : [];
+    if (cards.length > 0) {
+      cards.forEach((card) => {
+        if (card instanceof HTMLElement) {
+          renderAll(card);
+        }
+      });
+      return;
+    }
     renderAll(document);
   });
 

@@ -12,9 +12,6 @@
     var saveBtn = root.querySelector('[data-cb-pob-save="1"]');
     var panel = root.querySelector('[data-cb-pob-panel="1"]');
     var toggle = root.querySelector('[data-cb-pob-toggle="1"]');
-    if (!saveBtn && root.id === 'cbSelectPobockyCard') {
-      saveBtn = document.getElementById('cbPobockySaveBtn');
-    }
     var saveUrl = String(root.getAttribute('data-save-url') || '');
     if (saveUrl === '') {
       saveUrl = 'index.php';
@@ -184,6 +181,7 @@
         })
           .then(function (r) { return r.json().catch(function () { return {}; }); })
           .then(function (json) {
+            console.log(json);
             if (!json || json.ok !== true) {
               alert((json && json.err) ? json.err : 'Uložení výběru selhalo.');
               if (panel) {

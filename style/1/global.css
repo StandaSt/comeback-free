@@ -1816,9 +1816,19 @@ align-items:center;
    KARTA: zadani_reportu
    ========================= */
 
-.cb-zadani-reportu .card_expanded{
+.dash_card:has([data-cb-prehledy-grafy="1"]) .card_expanded{
   background:
     linear-gradient(180deg, var(--clr_pruhledna_panel_98), var(--clr_pruhledna_panel_96));
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  height:100%;
+}
+
+.dash_card:has([data-cb-prehledy-grafy="1"]) .card_expanded > [data-cb-prehledy-grafy="1"]{
+  flex:1 1 auto;
+  min-height:0;
+  height:100%;
 }
 
 .zr_form{

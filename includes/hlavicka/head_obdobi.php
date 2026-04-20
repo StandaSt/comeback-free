@@ -248,9 +248,6 @@
   });
 
   var initialPreset = getActivePreset(clampToToday(odInput.value), clampToToday(doInput.value));
-  if (!initialPreset) {
-    initialPreset = 'vcera';
-  }
   setActive(initialPreset);
   setManualHighlight(initialPreset === '');
 })();

@@ -1,5 +1,5 @@
 <?php
-// inicializace/plnime_smeny_plan.php  * Verze: V8 * Aktualizace: 03.04.2026
+// inicializace/plnime_smeny_plan.php  * Verze: V13 * Aktualizace: 18.04.2026
 
 declare(strict_types=1);
 
@@ -12,28 +12,15 @@ require_once __DIR__ . '/../config/secrets.php';
 require_once __DIR__ . '/../lib/smeny_graphql.php';
 
 const GQL_URL = 'https://smeny.pizzacomeback.cz/graphql';
-const MIN_DATE = '2020-10-12';
-const MAX_WEEKS_PER_RUN = 4;
-const TARGET_MAX_SKIP = 1;
-const PROGRESS_LOG_FILE = __DIR__ . '/../_kandidati/tahame_smeny.txt';
-
-@ob_end_flush();
-@ob_implicit_flush(true);
+const MIN_DATE = '2020-10-26';
+const REQUEST_TIMEOUT_SEC = 60;
+const SLEEP_BETWEEN_WEEKS_US = 500000;
+const TXT_LOG_FILE = __DIR__ . '/../log/historie_smeny_2026.txt';
+const STATE_FILE = __DIR__ . '/../log/smeny_week_state.txt';
 
 function out(string $text): void
 {
-    file_put_contents(PROGRESS_LOG_FILE, strip_tags($text) . PHP_EOL, FILE_APPEND);
-    echo $text . "<br>\n";
-    flush();
-}
-
-function resetProgressLogIfFirstBatch(): void
-{
-    if (isset($_GET['startDay'])) {
-        return;
-    }
-
-    file_put_contents(PROGRESS_LOG_FILE, '');
+    // tichy beh, zapis jen do TXT logu
 }
 
 function nowSql(): string
@@ -53,14 +40,7 @@ function currentWeekMonday(): DateTimeImmutable
 
 function normalizeMonday(string $date): DateTimeImmutable
 {
-    $day = new DateTimeImmutable($date);
-
-    return $day->modify('monday this week');
-}
-
-function targetWeekMonday(): DateTimeImmutable
-{
-    return currentWeekMonday()->modify('+' . TARGET_MAX_SKIP . ' week');
+    return (new DateTimeImmutable($date))->modify('monday this week');
 }
 
 function calculateSkipWeeksByStartDay(string $startDay): int
@@ -68,28 +48,130 @@ function calculateSkipWeeksByStartDay(string $startDay): int
     $currentMonday = currentWeekMonday();
     $weekMonday = normalizeMonday($startDay);
     $seconds = $weekMonday->getTimestamp() - $currentMonday->getTimestamp();
-    // Korekce -1 tÄ‚Ëťdne pro shodnÄ‚Â© chovÄ‚Ë‡nÄ‚Â­ s testovacÄ‚Â­m skriptem a sprÄ‚Ë‡vnÄ‚Ëť zÄ‚Ë‡pornÄ‚Ëť posun:
-    return (int)round($seconds / 604800) - 1;
+
+    return (int)round($seconds / 604800);
 }
 
-function nextWeekStartDay(string $startDay): string
+function oldestSkipWeeks(): int
 {
-    return normalizeMonday($startDay)->modify('+1 week')->format('Y-m-d');
+    return calculateSkipWeeksByStartDay(MIN_DATE);
+}
+
+function startDayBySkipWeeks(int $skipWeeks): string
+{
+    return currentWeekMonday()->modify(($skipWeeks >= 0 ? '+' : '') . $skipWeeks . ' week')->format('Y-m-d');
+}
+
+function readTxtLogLines(): array
+{
+    if (!is_file(TXT_LOG_FILE)) {
+        return [];
+    }
+
+    $lines = file(TXT_LOG_FILE, FILE_IGNORE_NEW_LINES);
+    if (!is_array($lines)) {
+        return [];
+    }
+
+    $clean = [];
+
+    foreach ($lines as $line) {
+        $line = trim((string)$line);
+        if ($line === '') {
+            continue;
+        }
+
+        $line = preg_replace('/^\d+\)\s*/', '', $line);
+        if (!is_string($line) || $line === '') {
+            continue;
+        }
+
+        $clean[] = $line;
+    }
+
+    return $clean;
+}
+
+function writeTxtLogLines(array $lines): void
+{
+    $numbered = [];
+    $i = 1;
+
+    foreach ($lines as $line) {
+        $line = trim((string)$line);
+        if ($line === '') {
+            continue;
+        }
+
+        $numbered[] = $i . ') ' . $line;
+        $i++;
+    }
+
+    $content = $numbered === [] ? '' : implode(PHP_EOL, $numbered) . PHP_EOL;
+    file_put_contents(TXT_LOG_FILE, $content, LOCK_EX);
+}
+
+function prependTxtLog(string $text): void
+{
+    $lines = readTxtLogLines();
+    array_unshift($lines, trim($text));
+    writeTxtLogLines($lines);
+}
+
+function readWeekState(): array
+{
+    if (!is_file(STATE_FILE)) {
+        return [];
+    }
+
+    $raw = (string)file_get_contents(STATE_FILE);
+    $json = json_decode($raw, true);
+
+    return is_array($json) ? $json : [];
+}
+
+function writeWeekState(int $nextSkip): void
+{
+    $payload = json_encode(['next_skip' => $nextSkip], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($payload === false) {
+        throw new RuntimeException('Nepodarilo se vytvorit state soubor.');
+    }
+
+    file_put_contents(STATE_FILE, $payload, LOCK_EX);
+}
+
+function ensureWeekStateFileOnStart(): int
+{
+    if (!is_file(STATE_FILE)) {
+        $startSkip = oldestSkipWeeks();
+        writeWeekState($startSkip);
+
+        return $startSkip;
+    }
+
+    $state = readWeekState();
+
+    if (isset($state['next_skip']) && is_numeric($state['next_skip'])) {
+        return (int)$state['next_skip'];
+    }
+
+    throw new RuntimeException('State soubor existuje, ale nema platny next_skip.');
 }
 
 function getBranches(string $token): array
 {
     $query = 'query{ branchFindAll{ id name } }';
-    $response = cb_smeny_graphql(GQL_URL, $query, [], $token);
+    $response = cb_smeny_graphql(GQL_URL, $query, [], $token, REQUEST_TIMEOUT_SEC);
+    $branches = $response['branchFindAll'] ?? [];
 
-    return $response['branchFindAll'] ?? [];
+    return is_array($branches) ? $branches : [];
 }
 
-function getWeek(string $token, int $branchId, int $skipWeeks): ?array
+function getWeekRaw(string $token, int $branchId, int $skipWeeks): ?array
 {
     $query = <<<'GQL'
-query($skipWeeks:Int!, $branchId:Int!){
-  branchGetShiftWeek(skipWeeks:$skipWeeks, branchId:$branchId){
+query($branchId:Int!, $skipWeeks:Int!){
+  branchGetShiftWeek(branchId:$branchId, skipWeeks:$skipWeeks){
     id
     startDay
     shiftDays{
@@ -112,74 +194,16 @@ GQL;
         GQL_URL,
         $query,
         [
-            'skipWeeks' => $skipWeeks,
             'branchId' => $branchId,
+            'skipWeeks' => $skipWeeks,
         ],
-        $token
+        $token,
+        REQUEST_TIMEOUT_SEC
     );
 
-    return $response['branchGetShiftWeek'] ?? null;
-}
+    $week = $response['branchGetShiftWeek'] ?? null;
 
-function findResumeStartDay(array $branches): string
-{
-    if ($branches === []) {
-        return MIN_DATE;
-    }
-
-    $branchIds = [];
-
-    foreach ($branches as $branch) {
-        $idPob = (int)($branch['id'] ?? 0);
-        if ($idPob > 0) {
-            $branchIds[] = $idPob;
-        }
-    }
-
-    if ($branchIds === []) {
-        return MIN_DATE;
-    }
-
-    $db = db();
-    $in = implode(',', array_map('intval', $branchIds));
-    $requiredCount = count($branchIds);
-
-    $sql = "
-        SELECT MAX(t.start_day) AS start_day
-        FROM (
-            SELECT start_day
-            FROM smeny_aktualizace
-            WHERE stav = 1
-              AND id_pob IN ($in)
-            GROUP BY start_day
-            HAVING COUNT(DISTINCT id_pob) = $requiredCount
-        ) AS t
-    ";
-
-    $result = $db->query($sql);
-    if (!($result instanceof mysqli_result)) {
-        return MIN_DATE;
-    }
-
-    $row = $result->fetch_assoc();
-    $result->free();
-
-    $startDay = trim((string)($row['start_day'] ?? ''));
-    if ($startDay === '') {
-        return MIN_DATE;
-    }
-
-    return normalizeMonday($startDay)->format('Y-m-d');
-}
-
-function requestedStartDay(): ?string
-{
-    $value = trim((string)($_GET['startDay'] ?? ''));
-    if ($value === '') {
-        return null;
-    }
-
-    return normalizeMonday($value)->format('Y-m-d');
+    return is_array($week) ? $week : null;
 }
 
 function dayOffset(string $day): int
@@ -196,19 +220,34 @@ function dayOffset(string $day): int
     };
 }
 
+function makeRowFromTimestamps(int $idPob, array $block): array
+{
+    $start = (new DateTimeImmutable())->setTimestamp((int)$block['start_ts']);
+    $end = (new DateTimeImmutable())->setTimestamp((int)$block['end_ts']);
+
+    return [
+        'datum' => $start->format('Y-m-d'),
+        'id_pob' => $idPob,
+        'id_user' => (int)$block['user'],
+        'id_slot' => (int)$block['slot'],
+        'cas_od' => $start->format('H:i:s'),
+        'cas_do' => $end->format('H:i:s'),
+    ];
+}
+
 function buildBlocks(array $week, int $idPob): array
 {
-    $startDay = $week['startDay'] ?? null;
+    $startDay = (string)($week['startDay'] ?? '');
     $shiftDays = $week['shiftDays'] ?? [];
 
-    if (!$startDay || !is_array($shiftDays)) {
+    if ($startDay === '' || !is_array($shiftDays)) {
         return [];
     }
 
     $timeline = [];
 
     foreach ($shiftDays as $day) {
-        if (!isset($day['day'], $day['shiftRoles']) || !is_array($day['shiftRoles'])) {
+        if (!is_array($day) || !isset($day['day']) || !isset($day['shiftRoles']) || !is_array($day['shiftRoles'])) {
             continue;
         }
 
@@ -217,12 +256,22 @@ function buildBlocks(array $week, int $idPob): array
             ->format('Y-m-d');
 
         foreach ($day['shiftRoles'] as $role) {
-            $slotId = (int)($role['type']['id'] ?? 0);
-            if ($slotId <= 0 || !isset($role['shiftHours']) || !is_array($role['shiftHours'])) {
+            if (!is_array($role)) {
                 continue;
             }
 
-            foreach ($role['shiftHours'] as $hour) {
+            $slotId = (int)($role['type']['id'] ?? 0);
+            $shiftHours = $role['shiftHours'] ?? [];
+
+            if ($slotId <= 0 || !is_array($shiftHours)) {
+                continue;
+            }
+
+            foreach ($shiftHours as $hour) {
+                if (!is_array($hour)) {
+                    continue;
+                }
+
                 $userId = (int)($hour['employee']['id'] ?? 0);
                 $startHour = (int)($hour['startHour'] ?? -1);
 
@@ -284,21 +333,6 @@ function buildBlocks(array $week, int $idPob): array
     return $rows;
 }
 
-function makeRowFromTimestamps(int $idPob, array $block): array
-{
-    $start = (new DateTimeImmutable())->setTimestamp((int)$block['start_ts']);
-    $end = (new DateTimeImmutable())->setTimestamp((int)$block['end_ts']);
-
-    return [
-        'datum' => $start->format('Y-m-d'),
-        'id_pob' => $idPob,
-        'id_user' => (int)$block['user'],
-        'id_slot' => (int)$block['slot'],
-        'cas_od' => $start->format('H:i:s'),
-        'cas_do' => $end->format('H:i:s'),
-    ];
-}
-
 function countHours(array $rows): int
 {
     $hours = 0;
@@ -324,16 +358,22 @@ function countHours(array $rows): int
     return $hours;
 }
 
-function saveBlocks(array $rows, string $startDay, int $idPob): int
+function deletePlanRows(string $startDay, int $idPob): void
 {
     $db = db();
+    $sql = "DELETE FROM smeny_plan WHERE start_day='" . $db->real_escape_string($startDay) . "' AND id_pob=" . (int)$idPob;
+    $db->query($sql);
+}
 
-    $db->query("DELETE FROM smeny_plan WHERE start_day='" . $db->real_escape_string($startDay) . "' AND id_pob=" . (int)$idPob);
+function saveBlocks(string $startDay, int $idPob, array $rows): int
+{
+    deletePlanRows($startDay, $idPob);
 
     if ($rows === []) {
         return 0;
     }
 
+    $db = db();
     $stmt = $db->prepare(
         'INSERT INTO smeny_plan (start_day, datum, id_pob, id_user, id_slot, cas_od, cas_do, zdroj) VALUES (?, ?, ?, ?, ?, ?, ?, 1)'
     );
@@ -357,7 +397,9 @@ function saveBlocks(array $rows, string $startDay, int $idPob): int
         );
 
         if (!$stmt->execute()) {
-            throw new RuntimeException('INSERT smeny_plan selhal: ' . $stmt->error);
+            $msg = $stmt->error;
+            $stmt->close();
+            throw new RuntimeException('INSERT smeny_plan selhal: ' . $msg);
         }
 
         $saved++;
@@ -368,7 +410,7 @@ function saveBlocks(array $rows, string $startDay, int $idPob): int
     return $saved;
 }
 
-function saveState(array $state): void
+function saveStateRow(array $state): void
 {
     $db = db();
 
@@ -407,42 +449,196 @@ function saveState(array $state): void
     );
 
     if (!$stmt->execute()) {
-        throw new RuntimeException('UPSERT smeny_aktualizace selhal: ' . $stmt->error);
+        $msg = $stmt->error;
+        $stmt->close();
+        throw new RuntimeException('UPSERT smeny_aktualizace selhal: ' . $msg);
     }
 
     $stmt->close();
 }
 
-function printProgress(int $skipWeeks, int $idPob, string $startDay, int $blocks, ?string $error = null): void
+function markBranchAsOk(int $skipWeeks, int $idPob, string $startDay, int $blocks, int $hours, ?string $note): void
+{
+    $now = nowSql();
+
+    saveStateRow([
+        'start_day' => $startDay,
+        'skip_weeks' => $skipWeeks,
+        'id_pob' => $idPob,
+        'stav' => 1,
+        'datum_od' => MIN_DATE,
+        'started_at' => $now,
+        'finished_at' => $now,
+        'posledni_ok' => $now,
+        'pocet_bloku' => $blocks,
+        'pocet_hodin' => $hours,
+        'chyba_text' => $note,
+    ]);
+}
+
+function markBranchAsError(int $skipWeeks, int $idPob, string $startDay, string $message): void
+{
+    $now = nowSql();
+
+    saveStateRow([
+        'start_day' => $startDay,
+        'skip_weeks' => $skipWeeks,
+        'id_pob' => $idPob,
+        'stav' => 2,
+        'datum_od' => MIN_DATE,
+        'started_at' => $now,
+        'finished_at' => $now,
+        'posledni_ok' => null,
+        'pocet_bloku' => 0,
+        'pocet_hodin' => 0,
+        'chyba_text' => $message,
+    ]);
+}
+
+function printBranchProgress(int $skipWeeks, int $idPob, string $startDay, int $blocks, int $hours, string $status, ?string $note): void
 {
     $line = sprintf(
-        'skipWeeks=%d | id_pob=%d | startDay=%s | pocet_bloku=%d',
+        'skipWeeks=%d | id_pob=%d | startDay=%s | pocet_bloku=%d | pocet_hodin=%d | stav=%s',
         $skipWeeks,
         $idPob,
         $startDay,
-        $blocks
+        $blocks,
+        $hours,
+        $status
     );
 
-    if ($error !== null && $error !== '') {
-        $line .= ' | chyba=' . htmlspecialchars($error, ENT_QUOTES, 'UTF-8');
+    if ($note !== null && $note !== '') {
+        $line .= ' | poznamka=' . htmlspecialchars($note, ENT_QUOTES, 'UTF-8');
     }
 
     out($line);
 }
 
-function continueUrl(string $nextStartDay): string
+function processBranch(string $token, int $skipWeeks, int $idPob): array
 {
-    $base = strtok($_SERVER['REQUEST_URI'] ?? $_SERVER['PHP_SELF'] ?? 'plnime_smeny_plan.php', '?');
-    $separator = strpos($base, '?') === false ? '?' : '&';
+    $defaultStartDay = startDayBySkipWeeks($skipWeeks);
 
-    return $base . $separator . 'startDay=' . $nextStartDay;
+    try {
+        $week = getWeekRaw($token, $idPob, $skipWeeks);
+        if ($week === null) {
+            deletePlanRows($defaultStartDay, $idPob);
+            markBranchAsOk($skipWeeks, $idPob, $defaultStartDay, 0, 0, 'API vratilo prazdny tyden');
+
+            return [
+                'start_day' => $defaultStartDay,
+                'blocks' => 0,
+                'hours' => 0,
+                'status' => 'OK',
+                'note' => 'API vratilo prazdny tyden',
+            ];
+        }
+
+        $startDay = normalizeMonday((string)($week['startDay'] ?? $defaultStartDay))->format('Y-m-d');
+        $rows = buildBlocks($week, $idPob);
+        $blocks = saveBlocks($startDay, $idPob, $rows);
+        $hours = countHours($rows);
+        markBranchAsOk($skipWeeks, $idPob, $startDay, $blocks, $hours, null);
+
+        return [
+            'start_day' => $startDay,
+            'blocks' => $blocks,
+            'hours' => $hours,
+            'status' => 'OK',
+            'note' => null,
+        ];
+    } catch (Throwable $e) {
+        $message = mb_substr($e->getMessage(), 0, 1000, 'UTF-8');
+        markBranchAsError($skipWeeks, $idPob, $defaultStartDay, $message);
+
+        return [
+            'start_day' => $defaultStartDay,
+            'blocks' => 0,
+            'hours' => 0,
+            'status' => 'CHYBA',
+            'note' => $message,
+        ];
+    }
+}
+
+function processSingleWeek(string $token, int $skipWeeks, array $branches): bool
+{
+    $weekStartDay = startDayBySkipWeeks($skipWeeks);
+    $weekBlocks = 0;
+    $weekHours = 0;
+    $processedBranches = 0;
+    $weekHasError = false;
+    $weekLines = [];
+
+    foreach ($branches as $branch) {
+        $idPob = (int)($branch['id'] ?? 0);
+        if ($idPob <= 0) {
+            continue;
+        }
+
+        $nazevPob = trim((string)($branch['name'] ?? ''));
+        $result = processBranch($token, $skipWeeks, $idPob);
+        $weekStartDay = $result['start_day'];
+        $processedBranches++;
+
+        if ($result['status'] === 'OK') {
+            $weekBlocks += $result['blocks'];
+            $weekHours += $result['hours'];
+        } else {
+            $weekHasError = true;
+        }
+
+        $line = sprintf(
+            'skipweek %d | start_day %s | id_pob %d',
+            $skipWeeks,
+            $result['start_day'],
+            $idPob
+        );
+
+        if ($nazevPob !== '') {
+            $line .= ' | nazev ' . $nazevPob;
+        }
+
+        $line .= sprintf(
+            ' | stav %s | pocet_zaznamu %d | pocet_hodin %d',
+            $result['status'],
+            $result['blocks'],
+            $result['hours']
+        );
+
+        if ($result['note'] !== null && $result['note'] !== '') {
+            $line .= ' | poznamka ' . $result['note'];
+        }
+
+        $weekLines[] = $line;
+    }
+
+    $summary = sprintf(
+        'souhrn skipweek %d | start_day %s | pobocky %d | pocet_zaznamu %d | pocet_hodin %d | stav %s',
+        $skipWeeks,
+        $weekStartDay,
+        $processedBranches,
+        $weekBlocks,
+        $weekHours,
+        $weekHasError ? 'CHYBA' : 'OK'
+    );
+
+    array_unshift($weekLines, $summary);
+    array_unshift($weekLines, '');
+
+    foreach (array_reverse($weekLines) as $line) {
+        prependTxtLog($line);
+    }
+
+    return !$weekHasError;
 }
 
 function run(): void
 {
-    $totalStart = microtime(true);
+    set_time_limit(0);
 
+    $totalStart = microtime(true);
     $token = (string)($_SESSION['cb_token'] ?? '');
+
     if ($token === '') {
         out('Chybi token v session (cb_token).');
         return;
@@ -454,121 +650,75 @@ function run(): void
         return;
     }
 
-    resetProgressLogIfFirstBatch();
+    $startSkip = ensureWeekStateFileOnStart();
 
-    // TEST: SkipWeeks natvrdo -1 (jen 1 tÄ‚Ëťden pro vÄąË‡echny poboĂ„Ĺ¤ky)
-    $skipWeeks = -1;
-    out('TestovacÄ‚Â­ bĂ„â€şh: skipWeeks = ' . $skipWeeks . ' | jeden tÄ‚Ëťden vÄąË‡ech poboĂ„Ĺ¤ek.');
+    $startLine = sprintf(
+        'Start tahu historie | %s | pobocky=%d | od skipWeeks=%d | do skipWeeks=0 | min_date=%s',
+        nowSql(),
+        count($branches),
+        $startSkip,
+        MIN_DATE
+    );
 
-    foreach ($branches as $branch) {
-        $idPob = (int)($branch['id'] ?? 0);
-        if ($idPob <= 0) {
-            continue;
+    prependTxtLog($startLine);
+    out($startLine);
+
+    while (true) {
+        if (!is_file(STATE_FILE)) {
+            out('State soubor byl za behu smazan. Import ukoncen.');
+            break;
         }
 
-        $startedAt = nowSql();
-        $startDay = '';
-        $blocks = 0;
-        $hours = 0;
-        $errorText = null;
-        $stav = 1;
-        $posledniOk = null;
-
-        try {
-            $week = getWeek($token, $idPob, $skipWeeks);
-            if ($week === null || !isset($week['startDay'])) {
-                throw new RuntimeException('API nevratilo data tydne.');
-            }
-
-            $startDay = normalizeMonday((string)$week['startDay'])->format('Y-m-d');
-
-            $rows = buildBlocks($week, $idPob);
-            $blocks = saveBlocks($rows, $startDay, $idPob);
-            $hours = countHours($rows);
-            $posledniOk = nowSql();
-
-            printProgress($skipWeeks, $idPob, $startDay, $blocks, null);
-        } catch (Throwable $e) {
-            $stav = 2;
-            $errorText = mb_substr($e->getMessage(), 0, 1000, 'UTF-8');
-            printProgress($skipWeeks, $idPob, $startDay, 0, $errorText);
+        $state = readWeekState();
+        if (!isset($state['next_skip']) || !is_numeric($state['next_skip'])) {
+            out('State soubor nema platny next_skip. Import ukoncen.');
+            break;
         }
 
-        $finishedAt = nowSql();
+        $skipWeeks = (int)$state['next_skip'];
 
-        saveState([
-            'start_day' => $startDay,
-            'skip_weeks' => $skipWeeks,
-            'id_pob' => $idPob,
-            'stav' => $stav,
-            'datum_od' => MIN_DATE,
-            'started_at' => $startedAt,
-            'finished_at' => $finishedAt,
-            'posledni_ok' => $posledniOk,
-            'pocet_bloku' => $blocks,
-            'pocet_hodin' => $hours,
-            'chyba_text' => $errorText,
-        ]);
+        if ($skipWeeks > 0) {
+            break;
+        }
+
+        $weekOk = processSingleWeek($token, $skipWeeks, $branches);
+
+        if (!is_file(STATE_FILE)) {
+            out('State soubor byl za behu smazan. Import ukoncen.');
+            break;
+        }
+
+        if (!$weekOk) {
+            prependTxtLog('tyden ukoncen s chybou, state zustava na skipweek ' . $skipWeeks);
+            break;
+        }
+
+        writeWeekState($skipWeeks + 1);
+        usleep(SLEEP_BETWEEN_WEEKS_US);
     }
 
-    $totalDuration = microtime(true) - $totalStart;
-    out('Konec testu | celkovy cas: ' . formatDuration($totalDuration));
+    out('Konec tahu historie | celkovy cas: ' . formatDuration(microtime(true) - $totalStart));
 }
-if (
-    isset($_POST['run_smeny_plan'])
-    && (string)$_POST['run_smeny_plan'] === '1'
-) {
+
+if (isset($_POST['run_smeny_plan']) && (string)$_POST['run_smeny_plan'] === '1') {
     run();
 } else {
-    $db = db();
-    $lastImportedDay = '';
-    $q = $db->query("SELECT MAX(start_day) AS dt FROM smeny_aktualizace WHERE stav = 1");
-    if ($q instanceof mysqli_result) {
-        $r = $q->fetch_assoc();
-        $lastImportedDay = trim((string)($r['dt'] ?? ''));
-        $q->free();
-    }
-    $formatDateCs = static function (string $ymd): string {
-        $dt = DateTimeImmutable::createFromFormat('Y-m-d', $ymd);
-        if (!($dt instanceof DateTimeImmutable)) {
-            return $ymd;
-        }
-        return $dt->format('d.m.Y');
-    };
-    $hasData = ($lastImportedDay !== '');
-    $infoText = $hasData
-        ? ('Data jsou stažena do ' . $formatDateCs($lastImportedDay) . '.')
-        : ('V DB nejsou data, začneme stahovat od ' . $formatDateCs(MIN_DATE) . '.');
-    $runBtnText = $hasData ? 'Pokračovat v importu' : 'Spustit import';
+    $state = readWeekState();
+    $nextSkip = isset($state['next_skip']) && is_numeric($state['next_skip'])
+        ? (int)$state['next_skip']
+        : oldestSkipWeeks();
+    $stateText = is_file(STATE_FILE)
+        ? ('Navazani ze state souboru: next_skip=' . $nextSkip . '.')
+        : ('State soubor neexistuje, zacneme od vypocteneho skipWeeks=' . $nextSkip . '.');
     ?>
     <div class="table-wrap ram_normal bg_bila zaobleni_12 odstup_vnitrni_10">
       <h2 class="card_title txt_seda text_24 text_tucny odstup_vnejsi_0">Inicializace směny plán</h2>
       <p class="card_text txt_seda">Script stáhne směny plán z API smeny.pizzacomeback.cz do DB.</p>
-      <?php if ($hasData): ?>
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:10px;">
-          <p class="card_text txt_seda odstup_vnejsi_0"><?= h($infoText) ?></p>
-          <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0">
-            <input type="hidden" name="run_smeny_plan" value="1">
-            <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex"><?= h($runBtnText) ?></button>
-          </form>
-        </div>
-      <?php else: ?>
-        <p class="card_text txt_seda"><?= h($infoText) ?></p>
-        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0 odstup_horni_10">
-          <input type="hidden" name="run_smeny_plan" value="1">
-          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex"><?= h($runBtnText) ?></button>
-        </form>
-      <?php endif; ?>
-      <div style="margin-top:16px; text-align:right;">
-        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex">
-          <input type="hidden" name="back_admin_init" value="1">
-          <button type="submit" class="card_btn cursor_ruka ram_btn zaobleni_6 vyska_28 displ_inline_flex" style="background:var(--clr_ruzova_4); border-color:var(--clr_ruzova_1); color:var(--clr_cervena);">Zpět</button>
-        </form>
-      </div>
+      <p class="card_text txt_seda"><?= h($stateText) ?></p>
+      <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0 odstup_horni_10">
+        <input type="hidden" name="run_smeny_plan" value="1">
+        <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Spustit import</button>
+      </form>
     </div>
     <?php
 }
-
-// inicializace/plnime_smeny_plan.php  * Verze: V8 * Aktualizace: 03.04.2026
-// počet řádků 500
-?>

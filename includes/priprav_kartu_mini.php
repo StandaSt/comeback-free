@@ -39,6 +39,7 @@ function cb_priprav_kartu_mini(
     $card_min_html = '';
     $card_max_html = '';
     $legacy_html = '';
+    $renderErrorHtml = '';
     $startExpanded = false;
 
     $soubor = (string)($karta['soubor'] ?? '');
@@ -46,13 +47,51 @@ function cb_priprav_kartu_mini(
     if ($fullPath !== null) {
         $cbDashboardRenderMode = 'mini';
         ob_start();
-        require $fullPath;
-        $legacy_html = (string)ob_get_clean();
+        $requireOk = true;
+        try {
+            require $fullPath;
+        } catch (Throwable $e) {
+            $requireOk = false;
+            $legacy_html = '';
+            $requireError = $e->getMessage();
+        }
+        if ($requireOk) {
+            $legacy_html = (string)ob_get_clean();
+        } else {
+            ob_end_clean();
+        }
         unset($cbDashboardRenderMode);
+    } else {
+        $card_min_html = cb_dashboard_render_card_error(
+            'Chyba karty',
+            'File not found: ' . $soubor,
+            [
+                'Očekávaná cesta' => cb_dashboard_card_source_path($soubor),
+                'Očekávaná data' => 'card_min_html nebo legacy HTML output',
+            ]
+        );
+        $card_max_html = $card_min_html;
+        $renderErrorHtml = $card_min_html;
     }
 
-    if ($card_min_html === '' && $card_max_html === '' && $legacy_html !== '') {
+    if ($card_min_html === '' && $card_max_html === '' && trim($legacy_html) !== '') {
         $card_min_html = $legacy_html;
+    }
+
+    if ($card_min_html === '' && $card_max_html === '' && trim($legacy_html) === '') {
+        $card_min_html = cb_dashboard_render_card_error(
+            'Chyba karty',
+            'Mini obsah se nepodařilo načíst.',
+            [
+                'Soubor' => $soubor,
+                'Cesta' => ($fullPath !== null) ? $fullPath : cb_dashboard_card_source_path($soubor),
+                'Očekávaná data' => 'card_min_html nebo legacy HTML output',
+                'Chybějící data' => 'žádný HTML výstup z include',
+                'Include chyba' => isset($requireError) ? $requireError : '',
+            ]
+        );
+        $card_max_html = $card_min_html;
+        $renderErrorHtml = $card_min_html;
     }
 
     return [
@@ -60,6 +99,7 @@ function cb_priprav_kartu_mini(
         'cardId' => $cardId,
         'cardPoradi' => (int)($karta['poradi'] ?? 0),
         'title' => (string)($karta['nazev'] ?? ''),
+        'soubor' => $soubor,
         'subtitleMin' => $subtitleMin,
         'subtitleMax' => $subtitleMax,
         'color' => ($cardId > 0 && isset($userCardHeaderColorById[$cardId])) ? (string)$userCardHeaderColorById[$cardId] : '',
@@ -70,6 +110,7 @@ function cb_priprav_kartu_mini(
         'isPosLocked' => $isPosLocked ? 1 : 0,
         'minHtml' => $card_min_html,
         'maxHtml' => '',
+        'renderErrorHtml' => $renderErrorHtml,
         'startExpanded' => $startExpanded ? 1 : 0,
         'maxFill' => ($cardId === 12) ? 1 : 0,
         'cardColorUrl' => cb_url('/includes/select_card_color.php?id_karta=' . (string)$cardId),

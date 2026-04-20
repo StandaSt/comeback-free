@@ -8,28 +8,57 @@ if (!function_exists('cb_priprav_kartu_max')) {
         $card_max_html = '';
         $card_min_html = '';
         $legacy_html = '';
+        $requireError = '';
 
         $soubor = (string)($karta['soubor'] ?? '');
         $fullPath = cb_dashboard_resolve_file($soubor);
         if ($fullPath === null) {
-            return '';
+            return cb_dashboard_render_card_error(
+                'Chyba karty',
+                'File not found: ' . $soubor,
+                [
+                    'Očekávaná cesta' => cb_dashboard_card_source_path($soubor),
+                    'Očekávaná data' => 'card_max_html nebo legacy HTML output',
+                ]
+            );
         }
 
         $cbDashboardRenderMode = 'max';
         ob_start();
-        require $fullPath;
-        $legacy_html = (string)ob_get_clean();
+        $requireOk = true;
+        try {
+            require $fullPath;
+        } catch (Throwable $e) {
+            $requireOk = false;
+            $legacy_html = '';
+            $requireError = $e->getMessage();
+        }
+        if ($requireOk) {
+            $legacy_html = (string)ob_get_clean();
+        } else {
+            ob_end_clean();
+        }
         unset($cbDashboardRenderMode);
 
-        if ($card_max_html !== '') {
+        if (trim($card_max_html) !== '') {
             return (string)$card_max_html;
         }
 
-        if ($legacy_html !== '') {
+        if (trim($legacy_html) !== '') {
             return (string)$legacy_html;
         }
 
-        return '';
+        return cb_dashboard_render_card_error(
+            'Chyba karty',
+            'Max obsah se nepodařilo načíst.',
+            [
+                'Soubor' => $soubor,
+                'Cesta' => $fullPath,
+                'Očekávaná data' => 'card_max_html nebo legacy HTML output',
+                'Chybějící data' => 'žádný HTML výstup z include',
+                'Include chyba' => isset($requireError) ? $requireError : '',
+            ]
+        );
     }
 }
 

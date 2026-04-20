@@ -474,7 +474,7 @@ $card_min_html = (string)ob_get_clean();
 
 ob_start();
 ?>
-    <form id="karta-add" method="post" action="<?= h($formAction) ?>" autocomplete="off" data-cb-ajax-dashboard="1">
+    <form id="karta-add" method="post" action="<?= h($formAction) ?>" autocomplete="off" data-cb-max-form="1">
       <input type="hidden" name="admin_karty_action" value="add">
     </form>
     <div class="table-wrap ram_normal bg_bila zaobleni_12">
@@ -531,7 +531,7 @@ ob_start();
               <tr>
                 <td class="txt_c"><?= h((string)$card['id_karta']) ?></td>
                 <td>
-                  <form id="<?= h($formId) ?>" method="post" action="<?= h($formAction) ?>" data-cb-ajax-dashboard="1">
+                  <form id="<?= h($formId) ?>" method="post" action="<?= h($formAction) ?>" data-cb-max-form="1">
                     <input type="hidden" name="id_karta" value="<?= h((string)$card['id_karta']) ?>">
                   </form>
                   <input type="text" class="card_input filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="nazev" value="<?= h($card['nazev']) ?>" maxlength="120" form="<?= h($formId) ?>">
@@ -579,7 +579,7 @@ ob_start();
                 <td class="txt_c"><?= ((int)($card['refresh_op'] ?? 0) === 1) ? '<span class="txt_cervena">Ano</span>' : '<span class="txt_seda">Ano</span>' ?></td>
                 <td class="txt_c">ne</td>
                 <td>
-                  <form id="<?= h($formId) ?>" method="post" action="<?= h($formAction) ?>" data-cb-ajax-dashboard="1">
+                  <form id="<?= h($formId) ?>" method="post" action="<?= h($formAction) ?>" data-cb-max-form="1">
                     <input type="hidden" name="id_karta" value="<?= h((string)$card['id_karta']) ?>">
                   </form>
                   <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 admin_karty_btn_danger txt_cervena" type="submit" name="admin_karty_action" value="enable" form="<?= h($formId) ?>">Povolit</button>

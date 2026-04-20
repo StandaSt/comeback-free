@@ -286,9 +286,10 @@ $renderGrafRoot = static function (string $bodyHtml) use ($grafJson): string {
 };
 
 $card_min_html = $renderGrafRoot(
-    '<div style="width:100%; display:flex; flex-direction:column; gap:6px;">'
+    '<div style="width:100%; height:100%; min-height:0; display:flex; flex-direction:column; gap:6px;">'
     . '<div class="txt_tucne text_14" style="text-align:center;">Počet objednávek, ' . h($titleOd) . ' - ' . h($titleDo) . '</div>'
-    . '<div id="mini_graf" data-cb-prehledy-grafy-chart="1" style="width:100%; height:200px;"></div>'
+    . '<div style="flex:1 1 auto; min-height:0;"></div>'
+    . '<div id="mini_graf" data-cb-prehledy-grafy-chart="1" style="width:100%; height:190px;"></div>'
     . '</div>'
 );
 

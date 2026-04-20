@@ -332,6 +332,27 @@
     }
   }
 
+  function setLoaderText(mode, text) {
+    const loaderMode = normalizeLoaderMode(mode);
+    const parts = getLoaderParts(loaderMode);
+    if (!parts || !parts.loader) return;
+
+    const textNode = parts.loader.querySelector('.dash_loader_text');
+    if (!(textNode instanceof HTMLElement)) return;
+
+    if (!parts.loader.hasAttribute('data-cb-loader-default-text')) {
+      parts.loader.setAttribute('data-cb-loader-default-text', String(textNode.textContent || ''));
+    }
+
+    if (typeof text === 'string' && text.trim() !== '') {
+      textNode.textContent = text.trim();
+      return;
+    }
+
+    const defaultText = String(parts.loader.getAttribute('data-cb-loader-default-text') || '');
+    textNode.textContent = defaultText;
+  }
+
   function startLoaderTimer(mode) {
     const loaderMode = normalizeLoaderMode(mode);
     const state = getLoaderState(loaderMode);
@@ -354,7 +375,7 @@
     return Math.max(0, now - state.startedAt);
   }
 
-  function setLoaderLoading(mode, on) {
+  function setLoaderLoading(mode, on, text) {
     const loaderMode = normalizeLoaderMode(mode);
     const state = getLoaderState(loaderMode);
     const nextOn = !!on;
@@ -369,6 +390,7 @@
         startLoaderTimer(loaderMode);
       }
       state.loading = true;
+      setLoaderText(loaderMode, typeof text === 'string' ? text : '');
       setLoaderVisibility(loaderMode, true);
       syncDashBoxLoadingState();
       return;
@@ -376,6 +398,7 @@
 
     state.loading = false;
     stopLoaderTimer(loaderMode);
+    setLoaderText(loaderMode, '');
     setLoaderVisibility(loaderMode, false);
     syncDashBoxLoadingState();
   }
@@ -431,7 +454,7 @@
       CB_AJAX.submitFormAndRefresh(targetForm, {
         showLoading: false,
         loaderMode: 'restia',
-        refreshMode: 'dashboard'
+        refreshMode: 'mini'
       }).catch((err) => {
         traceAjax('restia_submit_error', {
           message: String((err && err.message) ? err.message : 'Import selhal.')
@@ -469,8 +492,8 @@
     });
   };
 
-  CB_AJAX.setDashboardLoading = function setDashboardLoadingPublic(on, mode) {
-    setLoaderLoading(mode || 'dashboard', !!on);
+  CB_AJAX.setDashboardLoading = function setDashboardLoadingPublic(on, mode, text) {
+    setLoaderLoading(mode || 'dashboard', !!on, text);
   };
 
   CB_AJAX.trace = function tracePublic(event, data) {
@@ -485,7 +508,7 @@
 
     const opts = (options && typeof options === 'object') ? options : {};
     const loaderMode = normalizeLoaderMode(opts.loaderMode || 'dashboard');
-    const refreshMode = normalizeLoaderMode(opts.refreshMode || 'dashboard');
+    const refreshMode = String(opts.refreshMode || 'dashboard').trim() || 'dashboard';
     const keepLoading = !!opts.keepLoading;
     const body = new FormData(targetForm);
     const reqUrl = String(targetForm.action || w.location.href || 'index.php');
@@ -512,11 +535,21 @@
         throw new Error('HTTP ' + res.status);
       }
       return res.text();
-    }).then(() => CB_AJAX.refreshDashboard({
-      force: true,
-      keepLoading: keepLoading,
-      loaderMode: refreshMode
-    })).then(() => {
+    }).then(() => {
+      if (refreshMode === 'mini') {
+        return CB_AJAX.refreshDashboardMini({
+          force: true,
+          keepLoading: keepLoading,
+          loaderMode: loaderMode
+        });
+      }
+
+      return CB_AJAX.refreshDashboard({
+        force: true,
+        keepLoading: keepLoading,
+        loaderMode: refreshMode
+      });
+    }).then(() => {
       traceAjax('submit_done', {
         mode: loaderMode,
         refreshMode: refreshMode
@@ -611,11 +644,136 @@
       });
   };
 
+  CB_AJAX.refreshDashboardMini = function refreshDashboardMini(options) {
+    const opts = (options && typeof options === 'object') ? options : {};
+    const force = !!opts.force;
+    const keepLoading = !!opts.keepLoading;
+    const loaderMode = normalizeLoaderMode(opts.loaderMode || 'dashboard');
+    const refreshStartedAt = (w.performance && typeof w.performance.now === 'function') ? w.performance.now() : Date.now();
+
+    if (getLoaderState(loaderMode).loading && !force) {
+      return Promise.resolve({ ok: false, busy: true });
+    }
+
+    const parts = getLoaderParts(loaderMode);
+    if (!parts) {
+      traceAjax('refresh_mini_missing_parts', {
+        mode: loaderMode
+      });
+      return Promise.reject(new Error('Dashboard container nebyl nalezen.'));
+    }
+    if (!force) {
+      setLoaderLoading(loaderMode, true);
+    }
+
+    const reqUrl = String(w.location.href || 'index.php');
+    traceAjax('refresh_mini_start', {
+      mode: loaderMode,
+      force: force ? 1 : 0,
+      keepLoading: keepLoading ? 1 : 0,
+      url: reqUrl
+    });
+    traceAjax('measure_refresh_mini_start', {
+      mode: loaderMode,
+      force: force ? 1 : 0,
+      keepLoading: keepLoading ? 1 : 0,
+      url: reqUrl
+    });
+
+    return CB_AJAX.fetchText(reqUrl, { 'X-Comeback-Partial': '1' })
+      .then((html) => {
+        const responseWrap = document.createElement('div');
+        responseWrap.innerHTML = String(html || '').trim();
+
+        const currentContent = parts.box.querySelector('[data-cb-dash-content="1"]');
+        const nextContent = responseWrap.querySelector('[data-cb-dash-content="1"]');
+        if (!(currentContent instanceof HTMLElement) || !(nextContent instanceof HTMLElement)) {
+          throw new Error('Dashboard obsah nebyl nalezen.');
+        }
+
+        const currentGrid = currentContent.querySelector('.dash_grid[data-login-id]');
+        const nextGrid = nextContent.querySelector('.dash_grid[data-login-id]');
+        if (!(currentGrid instanceof HTMLElement) || !(nextGrid instanceof HTMLElement)) {
+          throw new Error('Dashboard grid nebyl nalezen.');
+        }
+
+        const updatedCards = [];
+        const currentCards = Array.from(currentGrid.querySelectorAll('[data-cb-dash-card="1"]')).filter((el) => el instanceof HTMLElement);
+
+        currentCards.forEach((currentCard) => {
+          const currentShell = currentCard.querySelector('.card_shell[data-card-id]');
+          if (!(currentShell instanceof HTMLElement)) {
+            return;
+          }
+
+          const cardId = parseInt(String(currentShell.getAttribute('data-card-id') || '0'), 10);
+          if (!Number.isFinite(cardId) || cardId <= 0) {
+            return;
+          }
+
+          const nextShell = nextGrid.querySelector('.card_shell[data-card-id="' + String(cardId).replace(/"/g, '') + '"]');
+          if (!(nextShell instanceof HTMLElement)) {
+            return;
+          }
+
+          const currentCompact = currentCard.querySelector('[data-card-compact]');
+          const nextCompact = nextShell.closest('[data-cb-dash-card="1"]');
+          const nextCompactNode = nextCompact ? nextCompact.querySelector('[data-card-compact]') : null;
+          if (currentCompact instanceof HTMLElement && nextCompactNode instanceof HTMLElement) {
+            currentCompact.innerHTML = String(nextCompactNode.innerHTML || '');
+          }
+
+          updatedCards.push(currentCard);
+        });
+
+        if (updatedCards.length === 0) {
+          throw new Error('Zadny obsah k aktualizaci nebyl nalezen.');
+        }
+
+        document.dispatchEvent(new CustomEvent('cb:dashboard-mini-swapped', {
+          detail: {
+            cards: updatedCards,
+            url: reqUrl
+          }
+        }));
+
+        traceAjax('refresh_mini_done', {
+          mode: loaderMode,
+          cards: updatedCards.length
+        });
+        traceAjax('measure_refresh_mini_done', {
+          mode: loaderMode,
+          cards: updatedCards.length,
+          total_ms: Math.max(0, Math.round(((w.performance && typeof w.performance.now === 'function') ? w.performance.now() : Date.now()) - refreshStartedAt)),
+          url: reqUrl
+        });
+        return { ok: true, cards: updatedCards.length };
+      }).catch((err) => {
+        traceAjax('refresh_mini_error', {
+          mode: loaderMode,
+          message: String((err && err.message) ? err.message : 'refresh mini selhal')
+        });
+        traceAjax('measure_refresh_mini_error', {
+          mode: loaderMode,
+          total_ms: Math.max(0, Math.round(((w.performance && typeof w.performance.now === 'function') ? w.performance.now() : Date.now()) - refreshStartedAt)),
+          message: String((err && err.message) ? err.message : 'refresh mini selhal'),
+          url: reqUrl
+        });
+        throw err;
+      })
+      .finally(() => {
+        if (!keepLoading) {
+          setLoaderLoading(loaderMode, false);
+        }
+      });
+  };
+
   CB_AJAX.refreshCard = function refreshCard(cardId, options) {
     const id = parseInt(String(cardId || '0'), 10);
     const opts = (options && typeof options === 'object') ? options : {};
     const force = !!opts.force;
     const keepLoading = !!opts.keepLoading;
+    const loadMax = !!opts.loadMax;
     const loaderMode = normalizeLoaderMode(opts.loaderMode || 'cards');
 
     if (!Number.isFinite(id) || id <= 0) {
@@ -645,19 +803,44 @@
     currentCard.classList.add('is-card-refreshing');
     currentCard.setAttribute('aria-busy', 'true');
 
-    const reqUrl = 'index.php?cb_card_id=' + encodeURIComponent(String(id));
+    const reqUrl = 'index.php?cb_card_id=' + encodeURIComponent(String(id)) + (loadMax ? '&cb_load_max=1' : '');
     traceAjax('refresh_card_start', {
       mode: loaderMode,
       force: force ? 1 : 0,
       keepLoading: keepLoading ? 1 : 0,
+      loadMax: loadMax ? 1 : 0,
       card_id: id,
       url: reqUrl
     });
 
-    return CB_AJAX.fetchText(reqUrl, { 'X-Comeback-Card': '1' })
-      .then((html) => {
+    return fetch(reqUrl, {
+      method: 'GET',
+      headers: {
+        'X-Comeback-Card': '1',
+        'Accept': 'application/json'
+      },
+      credentials: 'same-origin'
+    }).then((res) => {
+      return res.text().then((text) => {
+        const raw = String(text || '').trim();
+        let data = null;
+        if (raw !== '') {
+          try {
+            data = JSON.parse(raw);
+          } catch (e) {
+            data = null;
+          }
+        }
+
+        if (!res.ok) {
+          throw new Error(String((data && data.err) ? data.err : 'refresh card selhal'));
+        }
+        if (!data || typeof data !== 'object' || typeof data.cardHtml !== 'string') {
+          throw new Error('Nova karta ma neplatny obsah.');
+        }
+
         const wrap = document.createElement('div');
-        wrap.innerHTML = String(html || '').trim();
+        wrap.innerHTML = String(data.cardHtml || '').trim();
         const nextCard = wrap.firstElementChild;
 
         if (!(nextCard instanceof HTMLElement)) {
@@ -673,12 +856,15 @@
         }));
         traceAjax('refresh_card_done', {
           mode: loaderMode,
+          loadMax: loadMax ? 1 : 0,
           card_id: id
         });
         return { ok: true, cardId: id, card: nextCard };
-      }).catch((err) => {
+      });
+    }).catch((err) => {
         traceAjax('refresh_card_error', {
           mode: loaderMode,
+          loadMax: loadMax ? 1 : 0,
           card_id: id,
           message: String((err && err.message) ? err.message : 'refresh card selhal')
         });

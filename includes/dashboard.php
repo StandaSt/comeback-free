@@ -31,6 +31,47 @@ function cb_dashboard_resolve_file(string $soubor): ?string
     return $full;
 }
 
+if (!function_exists('cb_dashboard_card_source_path')) {
+    function cb_dashboard_card_source_path(string $soubor): string
+    {
+        $raw = trim(str_replace('\\', '/', $soubor));
+        $name = basename($raw);
+        $name = preg_replace('~\.php$~i', '', $name) ?: '';
+        $base = realpath(__DIR__ . '/..');
+
+        if ($base === false) {
+            return __DIR__ . '/../karty/' . $name . '.php';
+        }
+
+        return $base . '/karty/' . $name . '.php';
+    }
+}
+
+if (!function_exists('cb_dashboard_render_card_error')) {
+    function cb_dashboard_render_card_error(string $title, string $message, array $details = []): string
+    {
+        $escape = static function (string $value): string {
+            return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        };
+
+        $html = '<div class="odstup_vnitrni_0">';
+        $html .= '<p class="card_text txt_cervena text_tucny odstup_vnejsi_0">' . $escape($title) . '</p>';
+        $html .= '<p class="card_text txt_cervena odstup_vnejsi_0">' . $escape($message) . '</p>';
+
+        foreach ($details as $label => $value) {
+            $text = trim((string)$value);
+            if ($text === '') {
+                continue;
+            }
+            $html .= '<p class="card_text txt_seda odstup_vnejsi_0">' . $escape((string)$label . ': ' . $text) . '</p>';
+        }
+
+        $html .= '</div>';
+
+        return $html;
+    }
+}
+
 require_once __DIR__ . '/priprav_kartu_nano.php';
 require_once __DIR__ . '/priprav_kartu_mini.php';
 require_once __DIR__ . '/priprav_kartu_max.php';

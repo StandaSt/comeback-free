@@ -4,6 +4,46 @@ declare(strict_types=1);
 
 function cb_zobraz_kartu(array $pripravenaKarta): string
 {
+    $makeDiagnosticHtml = static function (string $soubor, string $mode, string $reason, array $details = []): string {
+        $title = 'Chyba karty';
+        $message = 'Max obsah se nepodařilo načíst.';
+        if ($mode === 'nano') {
+            $message = 'Obsah karty se nepodařilo načíst.';
+        }
+
+        $extra = [
+            'Soubor' => $soubor !== '' ? $soubor : 'neznámý',
+            'Očekávané' => 'card_max_html nebo legacy HTML output',
+            'Selhání' => $reason,
+        ];
+
+        foreach ($details as $key => $value) {
+            $text = trim((string)$value);
+            if ($text === '') {
+                continue;
+            }
+            $extra[(string)$key] = $text;
+        }
+
+        if (function_exists('cb_dashboard_render_card_error')) {
+            return cb_dashboard_render_card_error($title, $message, $extra);
+        }
+
+        $escape = static function (string $value): string {
+            return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        };
+
+        $html = '<div class="odstup_vnitrni_0">';
+        $html .= '<p class="card_text txt_cervena text_tucny odstup_vnejsi_0">' . $escape($title) . '</p>';
+        $html .= '<p class="card_text txt_cervena odstup_vnejsi_0">' . $escape($message) . '</p>';
+        foreach ($extra as $label => $value) {
+            $html .= '<p class="card_text txt_seda odstup_vnejsi_0">' . $escape((string)$label . ': ' . (string)$value) . '</p>';
+        }
+        $html .= '</div>';
+
+        return $html;
+    };
+
     $mode = trim((string)($pripravenaKarta['mode'] ?? ''));
     if (!in_array($mode, ['mini', 'nano'], true)) {
         $mode = (isset($pripravenaKarta['col'], $pripravenaKarta['line'])
@@ -23,8 +63,10 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
     $iconFile = (string)($pripravenaKarta['iconFile'] ?? '');
     $subtitleMin = !$isNano ? (string)($pripravenaKarta['subtitleMin'] ?? '') : '';
     $subtitleMax = !$isNano ? (string)($pripravenaKarta['subtitleMax'] ?? '') : '';
-    $minHtml = !$isNano ? (string)($pripravenaKarta['minHtml'] ?? '') : '';
-    $maxHtml = !$isNano ? (string)($pripravenaKarta['maxHtml'] ?? '') : '';
+    $minHtml = (string)($pripravenaKarta['minHtml'] ?? '');
+    $maxHtml = (string)($pripravenaKarta['maxHtml'] ?? '');
+    $renderErrorHtml = (string)($pripravenaKarta['renderErrorHtml'] ?? '');
+    $soubor = (string)($pripravenaKarta['soubor'] ?? '');
     $col = isset($pripravenaKarta['col']) ? (int)$pripravenaKarta['col'] : 0;
     $line = isset($pripravenaKarta['line']) ? (int)$pripravenaKarta['line'] : 0;
     $isPosLocked = !$isNano && ((int)($pripravenaKarta['isPosLocked'] ?? 0) === 1);
@@ -40,6 +82,27 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
     $cardTopRoleClass = ($role === 1) ? ' card_top_role_1' : (($role === 2) ? ' card_top_role_2' : '');
     $cardClass = 'dash_card bg_bila card_blue zaobleni_12' . ($isNano ? ' card_mode_nano' : '');
     $cardLineHeightClass = $isNano ? ' radek_1_1' : ' radek_1_15';
+
+    if ($renderErrorHtml !== '') {
+        if ($isNano && trim($minHtml) === '') {
+            $minHtml = $renderErrorHtml;
+        } elseif (!$isNano && trim($maxHtml) === '') {
+            $maxHtml = $renderErrorHtml;
+        }
+    }
+
+    if (!$isNano && trim($maxHtml) === '') {
+        $reason = (trim($renderErrorHtml) !== '') ? 'prázdný max obsah po načtení' : 'prázdný výstup z render pipeline';
+        $maxHtml = $makeDiagnosticHtml(
+            $soubor,
+            $mode,
+            $reason,
+            [
+                'Požadovaný obsah' => 'max',
+                'Chybějící data' => 'žádný HTML výstup',
+            ]
+        );
+    }
 
     $gridStyle = '';
     if ($col > 0 && $line > 0) {

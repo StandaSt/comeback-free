@@ -23,6 +23,83 @@ require_once __DIR__ . '/lib/logout_handler.php';
 require_once __DIR__ . '/lib/json_registrace.php';
 require_once __DIR__ . '/lib/post_akce.php';
 
+if (!function_exists('cb_emit_card_json_response')) {
+    function cb_emit_card_json_response(int $cardId, bool $loadMax, string $reqLabel): void
+    {
+        global $file, $cbPageExists;
+
+        header('Content-Type: application/json; charset=utf-8');
+
+        $cbUser = $_SESSION['cb_user'] ?? null;
+        $idUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
+        if ($idUser <= 0) {
+            http_response_code(401);
+            echo json_encode(['ok' => false, 'err' => 'Nutne prihlaseni'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        if ($cardId <= 0) {
+            http_response_code(422);
+            echo json_encode(['ok' => false, 'err' => 'Neplatna karta'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        if (!$cbPageExists) {
+            http_response_code(404);
+            echo json_encode(['ok' => false, 'err' => 'Pozadovana karta neexistuje'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $prevGet = $_GET;
+        $prevSingleCardId = $GLOBALS['cb_dashboard_single_card_id'] ?? null;
+
+        $_GET['cb_card_id'] = (string)$cardId;
+        if ($loadMax) {
+            $_GET['cb_load_max'] = '1';
+        } else {
+            unset($_GET['cb_load_max']);
+        }
+        $GLOBALS['cb_dashboard_single_card_id'] = $cardId;
+
+        $html = '';
+        ob_start();
+        try {
+            require $file;
+            $html = trim((string)ob_get_clean());
+        } catch (Throwable $e) {
+            $html = '';
+            if (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+        }
+
+        $_GET = $prevGet;
+        if ($prevSingleCardId === null) {
+            unset($GLOBALS['cb_dashboard_single_card_id']);
+        } else {
+            $GLOBALS['cb_dashboard_single_card_id'] = $prevSingleCardId;
+        }
+
+        if ($html === '') {
+            http_response_code(500);
+            echo json_encode([
+                'ok' => false,
+                'err' => 'Max karta se nepodarila vyrenderovat',
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        echo json_encode([
+            'ok' => true,
+            'cardId' => $cardId,
+            'cardHtml' => $html,
+            'loadMax' => $loadMax ? 1 : 0,
+            'request' => $reqLabel,
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+}
+
 if (
     ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
     && isset($_SERVER['HTTP_X_COMEBACK_SET_PERIOD'])
@@ -493,27 +570,16 @@ if ($cbShowStartupLoader) {
 require_once __DIR__ . '/includes/log_a_404.php';
 
 if ($cbIsCardPartial) {
-    if (empty($_SESSION['login_ok'])) {
-        http_response_code(401);
-        echo '<section class="card odstup_vnitrni_14"><p>Nutne prihlaseni.</p></section>';
-        exit;
-    }
-
     $cbCardId = (int)($_GET['cb_card_id'] ?? 0);
-    if ($cbCardId <= 0) {
-        http_response_code(422);
-        echo '<section class="card odstup_vnitrni_14"><p>Neplatna karta.</p></section>';
-        exit;
-    }
+    cb_emit_card_json_response($cbCardId, ((int)($_GET['cb_load_max'] ?? 0) === 1), 'card_partial');
+}
 
-    $GLOBALS['cb_dashboard_single_card_id'] = $cbCardId;
-
-    if ($cbPageExists) {
-        require $file;
-    } else {
-        echo '<section class="card odstup_vnitrni_14"><p>Pozadovana karta neexistuje.</p></section>';
-    }
-    exit;
+if (
+    ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
+    && isset($_SERVER['HTTP_X_COMEBACK_MAX_FORM'])
+) {
+    $cbCardId = (int)($_POST['cb_card_id'] ?? 0);
+    cb_emit_card_json_response($cbCardId, true, 'max_form');
 }
 
 if ($cbIsPartial) {

@@ -1667,9 +1667,9 @@ $lastOkText = (string)$countObj . ' objednávek';
     <br><br>
  <span class="card_text txt_cervena text_11">Výběr pobočky</span>
   <div class="card_actions gap_8 displ_flex">
-    <form method="post" action="<?= cb_restia_hist_h((string)cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex">
+    <form method="post" action="<?= cb_restia_hist_h((string)cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
       <input type="hidden" name="run_restia_obj" value="1"><input type="hidden" name="cb_action" value="start" id="cb_action_field">
-      <select name="cb_id_pob" class="card_select ram_sedy txt_seda bg_bila zaobleni_8" style="min-width:220px; height:22px; margin-right:8px;" onchange="var a=document.getElementById('cb_action_field');if(a){a.value='select_branch';}this.form.submit();">
+      <select name="cb_id_pob" class="card_select ram_sedy txt_seda bg_bila zaobleni_8" style="min-width:220px; height:22px; margin-right:8px;" onchange="var a=document.getElementById('cb_action_field');if(a){a.value='select_branch';}var f=this.form;if(f){var o=this.options[this.selectedIndex];var t=o?String(o.textContent||o.innerText||'').trim():'';var p=t.indexOf(' | ');if(p>=0){t=t.substring(0,p);}f.setAttribute('data-cb-loader-text','Připravuji stahování pobočky '+t);if(f.requestSubmit){f.requestSubmit();}else{f.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));}}">
         <?php foreach ($branchOptions as $branchOpt): ?>
           <?php
           $idPobOpt = (int)($branchOpt['id_pob'] ?? 0);
@@ -1688,7 +1688,7 @@ $lastOkText = (string)$countObj . ' objednávek';
         <?php endforeach; ?>
       </select>
       <span class="card_text txt_seda text_14" style="margin-right:8px; line-height:22px;"><?= cb_restia_hist_h(cb_restia_hist_format_month_year_cs($resumeDate)) ?></span>
-      <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" style="align-self:center;">• Spustit import</button>
+      <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" style="align-self:center;" data-cb-loader-text="API - stahuji objednávky">• Spustit import</button>
     </form>
   </div>
 
