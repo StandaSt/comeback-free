@@ -1,5 +1,5 @@
 <?php
-// inicializace/plnime_smeny_plan.php  * Verze: V13 * Aktualizace: 18.04.2026
+// inicializace/plnime_smeny_plan.php  * Verze: V14 * Aktualizace: 21.04.2026
 
 declare(strict_types=1);
 
@@ -15,8 +15,8 @@ const GQL_URL = 'https://smeny.pizzacomeback.cz/graphql';
 const MIN_DATE = '2020-10-26';
 const REQUEST_TIMEOUT_SEC = 60;
 const SLEEP_BETWEEN_WEEKS_US = 500000;
-const TXT_LOG_FILE = __DIR__ . '/../log/historie_smeny_2026.txt';
-const STATE_FILE = __DIR__ . '/../log/smeny_week_state.txt';
+const LOG_DIR = __DIR__ . '/../log/smeny';
+const SKIPWEEK_FILE = LOG_DIR . '/skipweek.txt';
 
 function out(string $text): void
 {
@@ -62,100 +62,61 @@ function startDayBySkipWeeks(int $skipWeeks): string
     return currentWeekMonday()->modify(($skipWeeks >= 0 ? '+' : '') . $skipWeeks . ' week')->format('Y-m-d');
 }
 
-function readTxtLogLines(): array
+function ensureLogDir(): void
 {
-    if (!is_file(TXT_LOG_FILE)) {
-        return [];
+    if (!is_dir(LOG_DIR)) {
+        mkdir(LOG_DIR, 0777, true);
     }
-
-    $lines = file(TXT_LOG_FILE, FILE_IGNORE_NEW_LINES);
-    if (!is_array($lines)) {
-        return [];
-    }
-
-    $clean = [];
-
-    foreach ($lines as $line) {
-        $line = trim((string)$line);
-        if ($line === '') {
-            continue;
-        }
-
-        $line = preg_replace('/^\d+\)\s*/', '', $line);
-        if (!is_string($line) || $line === '') {
-            continue;
-        }
-
-        $clean[] = $line;
-    }
-
-    return $clean;
 }
 
-function writeTxtLogLines(array $lines): void
+function currentLogFilePath(): string
 {
-    $numbered = [];
-    $i = 1;
+    static $path = null;
 
-    foreach ($lines as $line) {
-        $line = trim((string)$line);
-        if ($line === '') {
-            continue;
-        }
-
-        $numbered[] = $i . ') ' . $line;
-        $i++;
+    if (is_string($path) && $path !== '') {
+        return $path;
     }
 
-    $content = $numbered === [] ? '' : implode(PHP_EOL, $numbered) . PHP_EOL;
-    file_put_contents(TXT_LOG_FILE, $content, LOCK_EX);
+    ensureLogDir();
+    $path = LOG_DIR . '/historie_' . (new DateTimeImmutable())->format('Y_m_d_H_i') . '.txt';
+
+    return $path;
 }
 
-function prependTxtLog(string $text): void
+function appendTxtLog(string $text): void
 {
-    $lines = readTxtLogLines();
-    array_unshift($lines, trim($text));
-    writeTxtLogLines($lines);
+    file_put_contents(currentLogFilePath(), trim($text) . PHP_EOL, FILE_APPEND | LOCK_EX);
 }
 
-function readWeekState(): array
+function readSkipweekFile(): ?int
 {
-    if (!is_file(STATE_FILE)) {
-        return [];
+    if (!is_file(SKIPWEEK_FILE)) {
+        return null;
     }
 
-    $raw = (string)file_get_contents(STATE_FILE);
-    $json = json_decode($raw, true);
+    $raw = trim((string)file_get_contents(SKIPWEEK_FILE));
+    if ($raw === '' || !preg_match('/^-?[0-9]+$/', $raw)) {
+        throw new RuntimeException('Soubor log/smeny/skipweek.txt nema platne cele cislo.');
+    }
 
-    return is_array($json) ? $json : [];
+    return (int)$raw;
 }
 
-function writeWeekState(int $nextSkip): void
+function writeSkipweekFile(int $nextSkip): void
 {
-    $payload = json_encode(['next_skip' => $nextSkip], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    if ($payload === false) {
-        throw new RuntimeException('Nepodarilo se vytvorit state soubor.');
-    }
-
-    file_put_contents(STATE_FILE, $payload, LOCK_EX);
+    ensureLogDir();
+    file_put_contents(SKIPWEEK_FILE, (string)$nextSkip . PHP_EOL, LOCK_EX);
 }
 
-function ensureWeekStateFileOnStart(): int
+function ensureSkipweekFileOnStart(): int
 {
-    if (!is_file(STATE_FILE)) {
-        $startSkip = oldestSkipWeeks();
-        writeWeekState($startSkip);
+    $skip = readSkipweekFile();
 
-        return $startSkip;
+    if ($skip === null) {
+        throw new RuntimeException('Chybi soubor log/smeny/skipweek.txt.');
     }
 
-    $state = readWeekState();
-
-    if (isset($state['next_skip']) && is_numeric($state['next_skip'])) {
-        return (int)$state['next_skip'];
-    }
-
-    throw new RuntimeException('State soubor existuje, ale nema platny next_skip.');
+    return $skip;
 }
 
 function getBranches(string $token): array
@@ -279,7 +240,11 @@ function buildBlocks(array $week, int $idPob): array
                     continue;
                 }
 
-                $startTs = strtotime(sprintf('%s %02d:00:00', $dayDate, $startHour));
+                $actualDayDate = $startHour < 6
+                    ? (new DateTimeImmutable($dayDate))->modify('+1 day')->format('Y-m-d')
+                    : $dayDate;
+
+                $startTs = strtotime(sprintf('%s %02d:00:00', $actualDayDate, $startHour));
                 if ($startTs === false) {
                     continue;
                 }
@@ -332,6 +297,7 @@ function buildBlocks(array $week, int $idPob): array
 
     return $rows;
 }
+
 
 function countHours(array $rows): int
 {
@@ -514,7 +480,80 @@ function printBranchProgress(int $skipWeeks, int $idPob, string $startDay, int $
     out($line);
 }
 
-function processBranch(string $token, int $skipWeeks, int $idPob): array
+function saveAcceptedShifts(array $week, int $idPob): void
+{
+    // Funkce na základě admin_testy/smeny_testy/plnime_smeny_akceptovane.php
+    if (!isset($week['id'], $week['startDay'], $week['shiftDays']) || !is_array($week['shiftDays'])) {
+        return;
+    }
+
+    $smenyWeekId = (int)$week['id'];
+    $startDayApi = (string)$week['startDay'];
+    $rows = [];
+
+    foreach ($week['shiftDays'] as $shiftDay) {
+        if (!is_array($shiftDay)) continue;
+        $smenyDayId = (int)($shiftDay['id'] ?? 0);
+        $den = (string)($shiftDay['day'] ?? '');
+        $datum = (new DateTimeImmutable($startDayApi))->modify('+' . dayOffset($den) . ' day')->format('Y-m-d');
+
+        foreach (($shiftDay['shiftRoles'] ?? []) as $shiftRole) {
+            if (!is_array($shiftRole)) continue;
+            $smenyRoleId = (int)($shiftRole['id'] ?? 0);
+            $idSlot = (int)($shiftRole['type']['id'] ?? 0);
+
+            foreach (($shiftRole['shiftHours'] ?? []) as $shiftHour) {
+                if (!is_array($shiftHour)) continue;
+                if (!isset($shiftHour['employee']['id'])) continue;
+
+                $rows[] = [
+                    'smeny_week_id' => $smenyWeekId,
+                    'smeny_day_id' => $smenyDayId,
+                    'smeny_role_id' => $smenyRoleId,
+                    'shift_hour_id' => (int)($shiftHour['id'] ?? 0),
+                    'datum' => $datum,
+                    'den' => $den,
+                    'id_pob' => $idPob,
+                    'id_slot' => $idSlot,
+                    'start_hour' => (int)($shiftHour['startHour'] ?? 0),
+                    'confirmed' => isset($shiftHour['confirmed']) && $shiftHour['confirmed'] ? 1 : 0,
+                    'is_first' => isset($shiftHour['isFirst']) && $shiftHour['isFirst'] ? 1 : 0,
+                    'id_user' => (int)$shiftHour['employee']['id'],
+                ];
+            }
+        }
+    }
+
+    if (count($rows) > 0) {
+        $db = db();
+        $values = [];
+        foreach ($rows as $row) {
+            $values[] = '('.
+                (int)$row['smeny_week_id'] . ',' .
+                (int)$row['smeny_day_id'] . ',' .
+                (int)$row['smeny_role_id'] . ',' .
+                (int)$row['shift_hour_id'] . ", '" .
+                $db->real_escape_string($row['datum']) . "', '" .
+                $db->real_escape_string($row['den']) . "'," .
+                (int)$row['id_pob'] . ',' .
+                (int)$row['id_slot'] . ',' .
+                (int)$row['start_hour'] . ',' .
+                (int)$row['confirmed'] . ',' .
+                (int)$row['is_first'] . ',' .
+                (int)$row['id_user'] .
+                ')';
+        }
+
+        $sql = 'INSERT INTO smeny_akceptovane (
+            smeny_week_id, smeny_day_id, smeny_role_id, shift_hour_id,
+            datum, den, id_pob, id_slot, start_hour, confirmed, is_first, id_user
+        ) VALUES ' . implode(",\n", $values);
+        $db->query($sql);
+        // Chybová obsluha minimalni (převzato ze vzoru): nemění nic
+    }
+}
+
+function processBranch(string $token, int $skipWeeks, int $idPob, string $nazevPob = ''): array
 {
     $defaultStartDay = startDayBySkipWeeks($skipWeeks);
 
@@ -537,6 +576,10 @@ function processBranch(string $token, int $skipWeeks, int $idPob): array
         $rows = buildBlocks($week, $idPob);
         $blocks = saveBlocks($startDay, $idPob, $rows);
         $hours = countHours($rows);
+        
+        // Zápis do smeny_akceptovane podle vzoru
+        saveAcceptedShifts($week, $idPob);
+        
         markBranchAsOk($skipWeeks, $idPob, $startDay, $blocks, $hours, null);
 
         return [
@@ -576,7 +619,7 @@ function processSingleWeek(string $token, int $skipWeeks, array $branches): bool
         }
 
         $nazevPob = trim((string)($branch['name'] ?? ''));
-        $result = processBranch($token, $skipWeeks, $idPob);
+        $result = processBranch($token, $skipWeeks, $idPob, $nazevPob);
         $weekStartDay = $result['start_day'];
         $processedBranches++;
 
@@ -623,10 +666,10 @@ function processSingleWeek(string $token, int $skipWeeks, array $branches): bool
     );
 
     array_unshift($weekLines, $summary);
-    array_unshift($weekLines, '');
+    appendTxtLog('');
 
-    foreach (array_reverse($weekLines) as $line) {
-        prependTxtLog($line);
+    foreach ($weekLines as $line) {
+        appendTxtLog($line);
     }
 
     return !$weekHasError;
@@ -650,7 +693,7 @@ function run(): void
         return;
     }
 
-    $startSkip = ensureWeekStateFileOnStart();
+    $startSkip = ensureSkipweekFileOnStart();
 
     $startLine = sprintf(
         'Start tahu historie | %s | pobocky=%d | od skipWeeks=%d | do skipWeeks=0 | min_date=%s',
@@ -660,22 +703,15 @@ function run(): void
         MIN_DATE
     );
 
-    prependTxtLog($startLine);
+    appendTxtLog($startLine);
     out($startLine);
 
     while (true) {
-        if (!is_file(STATE_FILE)) {
-            out('State soubor byl za behu smazan. Import ukoncen.');
+        $skipWeeks = readSkipweekFile();
+        if ($skipWeeks === null) {
+            appendTxtLog('Soubor log/smeny/skipweek.txt nebyl nalezen. Import korektne ukoncen.');
             break;
         }
-
-        $state = readWeekState();
-        if (!isset($state['next_skip']) || !is_numeric($state['next_skip'])) {
-            out('State soubor nema platny next_skip. Import ukoncen.');
-            break;
-        }
-
-        $skipWeeks = (int)$state['next_skip'];
 
         if ($skipWeeks > 0) {
             break;
@@ -683,17 +719,12 @@ function run(): void
 
         $weekOk = processSingleWeek($token, $skipWeeks, $branches);
 
-        if (!is_file(STATE_FILE)) {
-            out('State soubor byl za behu smazan. Import ukoncen.');
-            break;
-        }
-
         if (!$weekOk) {
-            prependTxtLog('tyden ukoncen s chybou, state zustava na skipweek ' . $skipWeeks);
+            appendTxtLog('Tyden ukoncen s chybou, skipweek.txt zustava na hodnote ' . $skipWeeks . '.');
             break;
         }
 
-        writeWeekState($skipWeeks + 1);
+        writeSkipweekFile($skipWeeks + 1);
         usleep(SLEEP_BETWEEN_WEEKS_US);
     }
 
@@ -703,13 +734,17 @@ function run(): void
 if (isset($_POST['run_smeny_plan']) && (string)$_POST['run_smeny_plan'] === '1') {
     run();
 } else {
-    $state = readWeekState();
-    $nextSkip = isset($state['next_skip']) && is_numeric($state['next_skip'])
-        ? (int)$state['next_skip']
-        : oldestSkipWeeks();
-    $stateText = is_file(STATE_FILE)
-        ? ('Navazani ze state souboru: next_skip=' . $nextSkip . '.')
-        : ('State soubor neexistuje, zacneme od vypocteneho skipWeeks=' . $nextSkip . '.');
+    $nextSkip = null;
+    $stateText = 'Chybi soubor log/smeny/skipweek.txt.';
+
+    try {
+        $nextSkip = readSkipweekFile();
+        if ($nextSkip !== null) {
+            $stateText = 'Navazani ze souboru skipweek.txt: skipweek=' . $nextSkip . '.';
+        }
+    } catch (Throwable $e) {
+        $stateText = $e->getMessage();
+    }
     ?>
     <div class="table-wrap ram_normal bg_bila zaobleni_12 odstup_vnitrni_10">
       <h2 class="card_title txt_seda text_24 text_tucny odstup_vnejsi_0">Inicializace směny plán</h2>
