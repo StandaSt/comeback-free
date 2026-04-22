@@ -1526,6 +1526,9 @@ align-items:center;
 }
 
 .dash_nano_group{
+  display:flex;
+  flex-direction:column;
+  gap:1px;
   min-width:0;
 }
 
@@ -1536,7 +1539,7 @@ align-items:center;
   border-radius:14px;
   box-shadow:0 8px 22px var(--clr_pruhledna_tmava_04);
   overflow:hidden;
-  height:250px;
+  height:242px;
 }
 
 .dash_card.is-expanded{

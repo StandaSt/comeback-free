@@ -133,7 +133,6 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
             <?php else: ?>
               <span class="card_pref_dots txt_seda">&#8942;</span>
             <?php endif; ?>
-            <span class="card_pref_kid">K<?= h((string)$cardId) ?>/<?= h((string)$cardPoradi) ?></span>
           </button>
           <div class="card_pref_menu is-hidden" data-card-pref-menu="1">
             <div class="card_pref_list" data-card-pref-list="1">

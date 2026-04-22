@@ -1,5 +1,5 @@
 <?php
-// inicializace/plnime_smeny_plan.php  * Verze: V14 * Aktualizace: 21.04.2026
+// inicializace/plnime_smeny_plan.php * Verze: V16 * Aktualizace: 21.04.2026
 
 declare(strict_types=1);
 
@@ -20,7 +20,7 @@ const SKIPWEEK_FILE = LOG_DIR . '/skipweek.txt';
 
 function out(string $text): void
 {
-    // tichy beh, zapis jen do TXT logu
+    // Tichy beh, zapis jen do TXT logu.
 }
 
 function nowSql(): string
@@ -88,44 +88,112 @@ function appendTxtLog(string $text): void
     file_put_contents(currentLogFilePath(), trim($text) . PHP_EOL, FILE_APPEND | LOCK_EX);
 }
 
-function readSkipweekFile(): ?int
+function skipweekBrakeExists(): bool
 {
-    if (!is_file(SKIPWEEK_FILE)) {
-        return null;
-    }
-
-    $raw = trim((string)file_get_contents(SKIPWEEK_FILE));
-    if ($raw === '' || !preg_match('/^-?[0-9]+$/', $raw)) {
-        throw new RuntimeException('Soubor log/smeny/skipweek.txt nema platne cele cislo.');
-    }
-
-    return (int)$raw;
+    return is_file(SKIPWEEK_FILE);
 }
 
-function writeSkipweekFile(int $nextSkip): void
+function smenyPlanSelectedBranchId(): int
 {
-    ensureLogDir();
-    file_put_contents(SKIPWEEK_FILE, (string)$nextSkip . PHP_EOL, LOCK_EX);
+    return (int)($_SESSION['cb_smeny_plan_id_pob'] ?? 0);
 }
 
-function ensureSkipweekFileOnStart(): int
+function smenyPlanSetSelectedBranchId(int $idPob): void
 {
-    $skip = readSkipweekFile();
+    if ($idPob > 0) {
+        $_SESSION['cb_smeny_plan_id_pob'] = $idPob;
+    } else {
+        unset($_SESSION['cb_smeny_plan_id_pob']);
+    }
+}
 
-    if ($skip === null) {
-        throw new RuntimeException('Chybi soubor log/smeny/skipweek.txt.');
+function smenyPlanFindBranchById(array $branches, int $idPob): ?array
+{
+    foreach ($branches as $branch) {
+        if ((int)($branch['id_pob'] ?? 0) === $idPob) {
+            return $branch;
+        }
     }
 
-    return $skip;
+    return null;
 }
 
-function getBranches(string $token): array
+function smenyPlanBranchLastImportLabel(array $branch): string
 {
-    $query = 'query{ branchFindAll{ id name } }';
-    $response = cb_smeny_graphql(GQL_URL, $query, [], $token, REQUEST_TIMEOUT_SEC);
-    $branches = $response['branchFindAll'] ?? [];
+    $lastImportDay = trim((string)($branch['last_import_day'] ?? ''));
 
-    return is_array($branches) ? $branches : [];
+    if ($lastImportDay === '') {
+        return 'bez importu';
+    }
+
+    return 'do ' . $lastImportDay;
+}
+
+function getBranches(string $token = ''): array
+{
+    $db = db();
+    $sql = "
+        SELECT
+            p.id_pob,
+            p.nazev,
+            p.start_smeny,
+            hist.last_import_day,
+            hist.last_import_skip_weeks
+        FROM pobocka p
+        LEFT JOIN (
+            SELECT sa.id_pob, sa.start_day AS last_import_day, sa.skip_weeks AS last_import_skip_weeks
+            FROM smeny_aktualizace sa
+            INNER JOIN (
+                SELECT id_pob, MAX(start_day) AS max_start_day
+                FROM smeny_aktualizace
+                WHERE stav = 1
+                GROUP BY id_pob
+            ) last_ok
+                ON last_ok.id_pob = sa.id_pob
+               AND last_ok.max_start_day = sa.start_day
+            WHERE sa.stav = 1
+        ) hist ON hist.id_pob = p.id_pob
+        WHERE p.aktivni = 1
+          AND p.start_smeny IS NOT NULL
+          AND p.start_smeny <> ''
+          AND p.start_smeny <> '0000-00-00'
+        ORDER BY p.start_smeny ASC, p.id_pob ASC
+    ";
+    $res = $db->query($sql);
+
+    if (!$res instanceof mysqli_result) {
+        throw new RuntimeException('Nepodarilo se nacist pobocky se start_smeny: ' . $db->error);
+    }
+
+    $rows = [];
+    while ($row = $res->fetch_assoc()) {
+        if (is_array($row)) {
+            $rows[] = $row;
+        }
+    }
+    $res->free();
+
+    return $rows;
+}
+
+function branchStartDay(array $branch): string
+{
+    $startSmeny = trim((string)($branch['start_smeny'] ?? ''));
+    if ($startSmeny === '') {
+        throw new RuntimeException('Pobocka nema start_smeny.');
+    }
+
+    return normalizeMonday($startSmeny)->format('Y-m-d');
+}
+
+function branchSkipWeeks(array $branch): int
+{
+    $startSmeny = trim((string)($branch['start_smeny'] ?? ''));
+    if ($startSmeny === '') {
+        throw new RuntimeException('Pobocka nema start_smeny.');
+    }
+
+    return calculateSkipWeeksByStartDay($startSmeny);
 }
 
 function getWeekRaw(string $token, int $branchId, int $skipWeeks): ?array
@@ -298,7 +366,6 @@ function buildBlocks(array $week, int $idPob): array
     return $rows;
 }
 
-
 function countHours(array $rows): int
 {
     $hours = 0;
@@ -432,7 +499,7 @@ function markBranchAsOk(int $skipWeeks, int $idPob, string $startDay, int $block
         'skip_weeks' => $skipWeeks,
         'id_pob' => $idPob,
         'stav' => 1,
-        'datum_od' => MIN_DATE,
+        'datum_od' => $startDay,
         'started_at' => $now,
         'finished_at' => $now,
         'posledni_ok' => $now,
@@ -451,7 +518,7 @@ function markBranchAsError(int $skipWeeks, int $idPob, string $startDay, string 
         'skip_weeks' => $skipWeeks,
         'id_pob' => $idPob,
         'stav' => 2,
-        'datum_od' => MIN_DATE,
+        'datum_od' => $startDay,
         'started_at' => $now,
         'finished_at' => $now,
         'posledni_ok' => null,
@@ -474,15 +541,15 @@ function printBranchProgress(int $skipWeeks, int $idPob, string $startDay, int $
     );
 
     if ($note !== null && $note !== '') {
-        $line .= ' | poznamka=' . htmlspecialchars($note, ENT_QUOTES, 'UTF-8');
+        $line .= ' | poznamka=' . $note;
     }
 
+    appendTxtLog($line);
     out($line);
 }
 
 function saveAcceptedShifts(array $week, int $idPob): void
 {
-    // Funkce na základě admin_testy/smeny_testy/plnime_smeny_akceptovane.php
     if (!isset($week['id'], $week['startDay'], $week['shiftDays']) || !is_array($week['shiftDays'])) {
         return;
     }
@@ -492,19 +559,26 @@ function saveAcceptedShifts(array $week, int $idPob): void
     $rows = [];
 
     foreach ($week['shiftDays'] as $shiftDay) {
-        if (!is_array($shiftDay)) continue;
+        if (!is_array($shiftDay)) {
+            continue;
+        }
+
         $smenyDayId = (int)($shiftDay['id'] ?? 0);
         $den = (string)($shiftDay['day'] ?? '');
         $datum = (new DateTimeImmutable($startDayApi))->modify('+' . dayOffset($den) . ' day')->format('Y-m-d');
 
         foreach (($shiftDay['shiftRoles'] ?? []) as $shiftRole) {
-            if (!is_array($shiftRole)) continue;
+            if (!is_array($shiftRole)) {
+                continue;
+            }
+
             $smenyRoleId = (int)($shiftRole['id'] ?? 0);
             $idSlot = (int)($shiftRole['type']['id'] ?? 0);
 
             foreach (($shiftRole['shiftHours'] ?? []) as $shiftHour) {
-                if (!is_array($shiftHour)) continue;
-                if (!isset($shiftHour['employee']['id'])) continue;
+                if (!is_array($shiftHour) || !isset($shiftHour['employee']['id'])) {
+                    continue;
+                }
 
                 $rows[] = [
                     'smeny_week_id' => $smenyWeekId,
@@ -524,33 +598,35 @@ function saveAcceptedShifts(array $week, int $idPob): void
         }
     }
 
-    if (count($rows) > 0) {
-        $db = db();
-        $values = [];
-        foreach ($rows as $row) {
-            $values[] = '('.
-                (int)$row['smeny_week_id'] . ',' .
-                (int)$row['smeny_day_id'] . ',' .
-                (int)$row['smeny_role_id'] . ',' .
-                (int)$row['shift_hour_id'] . ", '" .
-                $db->real_escape_string($row['datum']) . "', '" .
-                $db->real_escape_string($row['den']) . "'," .
-                (int)$row['id_pob'] . ',' .
-                (int)$row['id_slot'] . ',' .
-                (int)$row['start_hour'] . ',' .
-                (int)$row['confirmed'] . ',' .
-                (int)$row['is_first'] . ',' .
-                (int)$row['id_user'] .
-                ')';
-        }
-
-        $sql = 'INSERT INTO smeny_akceptovane (
-            smeny_week_id, smeny_day_id, smeny_role_id, shift_hour_id,
-            datum, den, id_pob, id_slot, start_hour, confirmed, is_first, id_user
-        ) VALUES ' . implode(",\n", $values);
-        $db->query($sql);
-        // Chybová obsluha minimalni (převzato ze vzoru): nemění nic
+    if (count($rows) === 0) {
+        return;
     }
+
+    $db = db();
+    $values = [];
+
+    foreach ($rows as $row) {
+        $values[] = '(' .
+            (int)$row['smeny_week_id'] . ',' .
+            (int)$row['smeny_day_id'] . ',' .
+            (int)$row['smeny_role_id'] . ',' .
+            (int)$row['shift_hour_id'] . ", '" .
+            $db->real_escape_string($row['datum']) . "', '" .
+            $db->real_escape_string($row['den']) . "'," .
+            (int)$row['id_pob'] . ',' .
+            (int)$row['id_slot'] . ',' .
+            (int)$row['start_hour'] . ',' .
+            (int)$row['confirmed'] . ',' .
+            (int)$row['is_first'] . ',' .
+            (int)$row['id_user'] .
+            ')';
+    }
+
+    $sql = 'INSERT INTO smeny_akceptovane (
+        smeny_week_id, smeny_day_id, smeny_role_id, shift_hour_id,
+        datum, den, id_pob, id_slot, start_hour, confirmed, is_first, id_user
+    ) VALUES ' . implode(",\n", $values);
+    $db->query($sql);
 }
 
 function processBranch(string $token, int $skipWeeks, int $idPob, string $nazevPob = ''): array
@@ -576,10 +652,7 @@ function processBranch(string $token, int $skipWeeks, int $idPob, string $nazevP
         $rows = buildBlocks($week, $idPob);
         $blocks = saveBlocks($startDay, $idPob, $rows);
         $hours = countHours($rows);
-        
-        // Zápis do smeny_akceptovane podle vzoru
         saveAcceptedShifts($week, $idPob);
-        
         markBranchAsOk($skipWeeks, $idPob, $startDay, $blocks, $hours, null);
 
         return [
@@ -603,157 +676,299 @@ function processBranch(string $token, int $skipWeeks, int $idPob, string $nazevP
     }
 }
 
-function processSingleWeek(string $token, int $skipWeeks, array $branches): bool
+function renderSmenyPlanScreen(array $info, string $mode = 'pick'): void
 {
-    $weekStartDay = startDayBySkipWeeks($skipWeeks);
-    $weekBlocks = 0;
-    $weekHours = 0;
-    $processedBranches = 0;
-    $weekHasError = false;
-    $weekLines = [];
+    $branches = $info['branches_list'] ?? [];
+    $selectedBranch = $info['selected_branch'] ?? null;
+    $selectedBranchId = (int)($info['selected_branch_id'] ?? 0);
+    $title = 'Inicializace směn plán';
+    $headline = match ($mode) {
+        'confirm' => 'Vybraná pobočka je připravená ke spuštění.',
+        'run' => 'Import probíhá nebo právě doběhl.',
+        default => 'Vyber pobočku, kterou chceš importovat.',
+    };
+    $message = (string)($info['message'] ?? '');
+    $selectedStartDay = (string)($info['start_day'] ?? '');
+    $selectedSkipWeeks = (int)($info['skip_weeks'] ?? 0);
+    $brakeExists = !empty($info['brake_exists']);
+    $branchesCount = count($branches);
+    $blocks = (int)($info['blocks'] ?? 0);
+    $hours = (int)($info['hours'] ?? 0);
+    $status = strtoupper((string)($info['status'] ?? ''));
+    $messageClass = $mode === 'run'
+        ? ($status === 'OK' ? 'txt_zelena' : 'txt_cervena')
+        : 'txt_seda';
+    ?>
+    <div class="table-wrap ram_normal bg_bila zaobleni_12 odstup_vnitrni_10">
+      <h2 class="card_title txt_seda text_24 text_tucny odstup_vnejsi_0"><?= h($title) ?></h2>
+      <p class="card_text txt_seda"><?= h($headline) ?></p>
+      <p class="card_text txt_seda">Směny se počítají po pobočkách podle start_smeny v tabulce pobocka.</p>
+      <p class="card_text txt_seda">Počet poboček: <?= h((string)$branchesCount) ?>.</p>
+      <p class="card_text txt_seda">Nouzová brzda skipweek.txt: <?= $brakeExists ? 'soubor existuje' : 'soubor chybí' ?>.</p>
+      <?php if ($selectedBranchId > 0 && is_array($selectedBranch)): ?>
+        <?php $selectedImportLabel = smenyPlanBranchLastImportLabel($selectedBranch); ?>
+        <p class="card_text txt_seda">Pobočka: <?= h((string)($selectedBranch['nazev'] ?? '')) ?> (<?= h((string)$selectedBranchId) ?>)</p>
+        <p class="card_text txt_seda">Start historie pobočky: <?= h((string)($selectedBranch['start_smeny'] ?? '')) ?> | v DB je <?= h($selectedImportLabel) ?></p>
+        <p class="card_text txt_seda">První týden importu: <?= h($selectedStartDay !== '' ? $selectedStartDay : 'neznámý') ?> | skipWeeks=<?= h((string)$selectedSkipWeeks) ?>.</p>
+      <?php endif; ?>
+      <?php if ($message !== ''): ?>
+        <p class="card_text <?= h($messageClass) ?> text_tucny"><?= h($message) ?></p>
+      <?php endif; ?>
+      <?php if ($mode === 'run'): ?>
+        <p class="card_text txt_seda">Poboček: <?= h((string)$branchesCount) ?> | bloků: <?= h((string)$blocks) ?> | hodin: <?= h((string)$hours) ?>.</p>
+      <?php endif; ?>
 
-    foreach ($branches as $branch) {
-        $idPob = (int)($branch['id'] ?? 0);
-        if ($idPob <= 0) {
-            continue;
-        }
-
-        $nazevPob = trim((string)($branch['name'] ?? ''));
-        $result = processBranch($token, $skipWeeks, $idPob, $nazevPob);
-        $weekStartDay = $result['start_day'];
-        $processedBranches++;
-
-        if ($result['status'] === 'OK') {
-            $weekBlocks += $result['blocks'];
-            $weekHours += $result['hours'];
-        } else {
-            $weekHasError = true;
-        }
-
-        $line = sprintf(
-            'skipweek %d | start_day %s | id_pob %d',
-            $skipWeeks,
-            $result['start_day'],
-            $idPob
-        );
-
-        if ($nazevPob !== '') {
-            $line .= ' | nazev ' . $nazevPob;
-        }
-
-        $line .= sprintf(
-            ' | stav %s | pocet_zaznamu %d | pocet_hodin %d',
-            $result['status'],
-            $result['blocks'],
-            $result['hours']
-        );
-
-        if ($result['note'] !== null && $result['note'] !== '') {
-            $line .= ' | poznamka ' . $result['note'];
-        }
-
-        $weekLines[] = $line;
-    }
-
-    $summary = sprintf(
-        'souhrn skipweek %d | start_day %s | pobocky %d | pocet_zaznamu %d | pocet_hodin %d | stav %s',
-        $skipWeeks,
-        $weekStartDay,
-        $processedBranches,
-        $weekBlocks,
-        $weekHours,
-        $weekHasError ? 'CHYBA' : 'OK'
-    );
-
-    array_unshift($weekLines, $summary);
-    appendTxtLog('');
-
-    foreach ($weekLines as $line) {
-        appendTxtLog($line);
-    }
-
-    return !$weekHasError;
+      <?php if ($mode === 'pick'): ?>
+        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
+          <input type="hidden" name="run_smeny_plan" value="1">
+          <input type="hidden" name="cb_action" value="start" id="cb_action_field">
+          <div class="displ_flex gap_8 align_items_center flex_wrap">
+            <select name="cb_id_pob" class="card_select ram_sedy txt_seda bg_bila zaobleni_8" style="min-width:260px; height:28px; margin-right:8px;" onchange="var a=document.getElementById('cb_action_field');if(a){a.value='select_branch';}var f=this.form;if(f){var o=this.options[this.selectedIndex];var t=o?String(o.textContent||o.innerText||'').trim():'';var p=t.indexOf(' | ');if(p>=0){t=t.substring(0,p);}f.setAttribute('data-cb-loader-text','Připravuji směny pobočky '+t);if(f.requestSubmit){f.requestSubmit();}else{f.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));}}">
+              <option value="0">Vyber pobočku</option>
+              <?php foreach ($branches as $branch): ?>
+                <?php
+                    $branchId = (int)($branch['id_pob'] ?? 0);
+                    $branchName = trim((string)($branch['nazev'] ?? ''));
+                    $label = $branchName !== '' ? $branchName : ('Pobočka ' . $branchId);
+                    $label .= ' | ' . smenyPlanBranchLastImportLabel($branch);
+                ?>
+                <option value="<?= h((string)$branchId) ?>"<?= $branchId === $selectedBranchId ? ' selected' : '' ?>><?= h($label) ?></option>
+              <?php endforeach; ?>
+            </select>
+            <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Načíst</button>
+            <button type="submit" name="back_admin_init" value="1" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 displ_inline_flex" style="align-self:center;">Konec</button>
+          </div>
+        </form>
+      <?php elseif ($mode === 'confirm'): ?>
+        <div class="card_actions gap_8 displ_flex odstup_horni_10">
+          <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1" data-cb-loader-text="Probíhá import směn">
+            <input type="hidden" name="run_smeny_plan" value="1">
+            <input type="hidden" name="cb_action" value="start">
+            <input type="hidden" name="cb_id_pob" value="<?= h((string)$selectedBranchId) ?>">
+            <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Probíhá import směn">Spustit import</button>
+          </form>
+          <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
+            <input type="hidden" name="cb_action" value="back">
+            <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 displ_inline_flex">Zpět</button>
+          </form>
+          <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
+            <input type="hidden" name="back_admin_init" value="1">
+            <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 displ_inline_flex">Konec</button>
+          </form>
+        </div>
+      <?php else: ?>
+        <div class="card_actions gap_8 displ_flex odstup_horni_10">
+          <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
+            <input type="hidden" name="cb_action" value="back">
+            <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 displ_inline_flex">Zpět</button>
+          </form>
+        </div>
+      <?php endif; ?>
+    </div>
+    <?php
 }
 
-function run(): void
+function run(array $branch): array
 {
     set_time_limit(0);
 
     $totalStart = microtime(true);
     $token = (string)($_SESSION['cb_token'] ?? '');
+    $idPob = (int)($branch['id_pob'] ?? 0);
+    $nazevPob = trim((string)($branch['nazev'] ?? ''));
+    $startSmeny = trim((string)($branch['start_smeny'] ?? ''));
 
     if ($token === '') {
-        out('Chybi token v session (cb_token).');
-        return;
+        return [
+            'status' => 'CHYBA',
+            'message' => 'Chybí token v session (cb_token).',
+            'start_day' => '',
+            'skip_weeks' => 0,
+            'branches_list' => [],
+            'selected_branch' => null,
+            'selected_branch_id' => 0,
+            'blocks' => 0,
+            'hours' => 0,
+            'brake_exists' => skipweekBrakeExists(),
+        ];
     }
 
-    $branches = getBranches($token);
-    if ($branches === []) {
-        out('Nenalezeny pobocky (branchFindAll).');
-        return;
+    if ($idPob <= 0 || $startSmeny === '') {
+        return [
+            'status' => 'CHYBA',
+            'message' => 'Neplatná pobočka nebo chybí start_smeny.',
+            'start_day' => '',
+            'skip_weeks' => 0,
+            'branches_list' => [],
+            'selected_branch' => $branch,
+            'selected_branch_id' => $idPob,
+            'blocks' => 0,
+            'hours' => 0,
+            'brake_exists' => skipweekBrakeExists(),
+        ];
     }
 
-    $startSkip = ensureSkipweekFileOnStart();
+    $totalBlocks = 0;
+    $totalHours = 0;
+    $status = 'OK';
+    $stopMessage = '';
+    $branchStartDay = branchStartDay($branch);
+    $skipWeeks = branchSkipWeeks($branch);
+    $weeksSincePause = 0;
 
     $startLine = sprintf(
-        'Start tahu historie | %s | pobocky=%d | od skipWeeks=%d | do skipWeeks=0 | min_date=%s',
+        'Start importu směn | %s | pobočka=%d | %s | start_smeny=%s | pondělí=%s | od skipWeeks=%d | do skipWeeks=0',
         nowSql(),
-        count($branches),
-        $startSkip,
-        MIN_DATE
+        $idPob,
+        $nazevPob !== '' ? $nazevPob : 'bez názvu',
+        $startSmeny,
+        $branchStartDay,
+        $skipWeeks
     );
-
     appendTxtLog($startLine);
     out($startLine);
 
-    while (true) {
-        $skipWeeks = readSkipweekFile();
-        if ($skipWeeks === null) {
-            appendTxtLog('Soubor log/smeny/skipweek.txt nebyl nalezen. Import korektne ukoncen.');
+    while ($skipWeeks <= 0) {
+        if (!skipweekBrakeExists()) {
+            $status = 'STOP';
+            $stopMessage = 'Import korektně ukončen, protože chybí nouzová brzda skipweek.txt.';
+            appendTxtLog($stopMessage);
             break;
         }
 
-        if ($skipWeeks > 0) {
+        $weekResult = processBranch($token, $skipWeeks, $idPob, $nazevPob);
+
+        printBranchProgress(
+            $skipWeeks,
+            $idPob,
+            (string)$weekResult['start_day'],
+            (int)$weekResult['blocks'],
+            (int)$weekResult['hours'],
+            (string)$weekResult['status'],
+            $weekResult['note'] ?? null
+        );
+
+        if ((string)$weekResult['status'] !== 'OK') {
+            $status = 'CHYBA';
+            $stopMessage = 'Pobočka ' . $idPob . ' skončila chybou na skipWeek ' . $skipWeeks . '.';
+            appendTxtLog($stopMessage);
             break;
         }
 
-        $weekOk = processSingleWeek($token, $skipWeeks, $branches);
+        $totalBlocks += (int)$weekResult['blocks'];
+        $totalHours += (int)$weekResult['hours'];
 
-        if (!$weekOk) {
-            appendTxtLog('Tyden ukoncen s chybou, skipweek.txt zustava na hodnote ' . $skipWeeks . '.');
-            break;
+        $skipWeeks++;
+        $weeksSincePause++;
+        if ($weeksSincePause >= 50) {
+            usleep(SLEEP_BETWEEN_WEEKS_US);
+            $weeksSincePause = 0;
         }
-
-        writeSkipweekFile($skipWeeks + 1);
-        usleep(SLEEP_BETWEEN_WEEKS_US);
     }
 
-    out('Konec tahu historie | celkovy cas: ' . formatDuration(microtime(true) - $totalStart));
-}
-
-if (isset($_POST['run_smeny_plan']) && (string)$_POST['run_smeny_plan'] === '1') {
-    run();
-} else {
-    $nextSkip = null;
-    $stateText = 'Chybi soubor log/smeny/skipweek.txt.';
-
-    try {
-        $nextSkip = readSkipweekFile();
-        if ($nextSkip !== null) {
-            $stateText = 'Navazani ze souboru skipweek.txt: skipweek=' . $nextSkip . '.';
-        }
-    } catch (Throwable $e) {
-        $stateText = $e->getMessage();
+    if ($stopMessage === '') {
+        $stopMessage = 'Import doběhl až do konce historie.';
     }
-    ?>
-    <div class="table-wrap ram_normal bg_bila zaobleni_12 odstup_vnitrni_10">
-      <h2 class="card_title txt_seda text_24 text_tucny odstup_vnejsi_0">Inicializace směny plán</h2>
-      <p class="card_text txt_seda">Script stáhne směny plán z API smeny.pizzacomeback.cz do DB.</p>
-      <p class="card_text txt_seda"><?= h($stateText) ?></p>
-      <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0 odstup_horni_10">
-        <input type="hidden" name="run_smeny_plan" value="1">
-        <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Spustit import</button>
-      </form>
-    </div>
-    <?php
+
+    $stopMessage .= ' Celkový čas: ' . formatDuration(microtime(true) - $totalStart) . '.';
+
+    return [
+        'status' => $status,
+        'message' => $stopMessage,
+        'start_day' => $branchStartDay,
+        'skip_weeks' => branchSkipWeeks($branch),
+        'branches_list' => [],
+        'selected_branch' => $branch,
+        'selected_branch_id' => $idPob,
+        'blocks' => $totalBlocks,
+        'hours' => $totalHours,
+        'brake_exists' => skipweekBrakeExists(),
+    ];
 }
+
+$token = (string)($_SESSION['cb_token'] ?? '');
+$branches = [];
+if ($token !== '') {
+    $branches = getBranches($token);
+}
+
+$selectedBranchId = smenyPlanSelectedBranchId();
+$selectedBranch = $selectedBranchId > 0 ? smenyPlanFindBranchById($branches, $selectedBranchId) : null;
+$action = (string)($_POST['cb_action'] ?? '');
+$inputBranchId = (int)($_POST['cb_id_pob'] ?? 0);
+
+if ($action === 'back') {
+    smenyPlanSetSelectedBranchId(0);
+    $selectedBranchId = 0;
+    $selectedBranch = null;
+}
+
+if ($action === 'select_branch') {
+    if ($inputBranchId > 0) {
+        smenyPlanSetSelectedBranchId($inputBranchId);
+        $selectedBranchId = $inputBranchId;
+        $selectedBranch = smenyPlanFindBranchById($branches, $selectedBranchId);
+    }
+}
+
+if ($selectedBranch === null && $selectedBranchId > 0) {
+    $selectedBranch = smenyPlanFindBranchById($branches, $selectedBranchId);
+    if ($selectedBranch === null) {
+        smenyPlanSetSelectedBranchId(0);
+        $selectedBranchId = 0;
+    }
+}
+
+if ($action === 'start' && $selectedBranch !== null) {
+    $runInfo = run($selectedBranch);
+    $runInfo['branches_list'] = $branches;
+    renderSmenyPlanScreen($runInfo, 'run');
+    return;
+}
+
+if ($selectedBranch !== null && $action !== '') {
+    renderSmenyPlanScreen([
+        'status' => 'OK',
+        'message' => 'Pobočka je připravená ke spuštění importu.',
+        'branches_list' => $branches,
+        'selected_branch' => $selectedBranch,
+        'selected_branch_id' => $selectedBranchId,
+        'start_day' => branchStartDay($selectedBranch),
+        'skip_weeks' => branchSkipWeeks($selectedBranch),
+        'blocks' => 0,
+        'hours' => 0,
+        'brake_exists' => skipweekBrakeExists(),
+    ], 'confirm');
+    return;
+}
+
+if ($selectedBranch !== null && $action === '') {
+    renderSmenyPlanScreen([
+        'status' => 'OK',
+        'message' => 'Pobočka je připravená ke spuštění importu.',
+        'branches_list' => $branches,
+        'selected_branch' => $selectedBranch,
+        'selected_branch_id' => $selectedBranchId,
+        'start_day' => branchStartDay($selectedBranch),
+        'skip_weeks' => branchSkipWeeks($selectedBranch),
+        'blocks' => 0,
+        'hours' => 0,
+        'brake_exists' => skipweekBrakeExists(),
+    ], 'confirm');
+    return;
+}
+
+renderSmenyPlanScreen([
+    'status' => 'OK',
+    'message' => $token === ''
+        ? 'Chybí token v session (cb_token).'
+        : 'Script stáhne směny plán z API smeny.pizzacomeback.cz do DB.',
+    'branches_list' => $branches,
+    'selected_branch' => null,
+    'selected_branch_id' => 0,
+    'start_day' => '',
+    'skip_weeks' => 0,
+    'blocks' => 0,
+    'hours' => 0,
+    'brake_exists' => skipweekBrakeExists(),
+], 'pick');

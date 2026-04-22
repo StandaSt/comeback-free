@@ -5,10 +5,12 @@
 declare(strict_types=1);
 
 $cbRestiaCount = 0;
+$cbObjednavkyCount = 0;
 $cbSmenyCount = 0;
 $cbReportCount = 0;
 
 $cbRestiaDate = 'Ne';
+$cbObjednavkyDate = 'Ne';
 $cbSmenyDate = 'Ne';
 $cbReportDate = 'Ne';
 
@@ -53,6 +55,7 @@ $cbKeepRestiaMax = $cbRunRestia || $cbRestiaStateKeepMax;
 $cbTraceK3Branch = 'default';
 if ($cbBackAdminInit) {
     unset($_SESSION['cb_restia_hist_v4_state'], $_SESSION['cb_restia_hist_v4_rows'], $_SESSION['cb_restia_hist_v4_msg']);
+    unset($_SESSION['cb_smeny_plan_id_pob']);
     $cbRunSmenyPlan = false;
     $cbOpenSmenyPlan = false;
     $cbRunGoogleData = false;
@@ -61,6 +64,46 @@ if ($cbBackAdminInit) {
     $cbRunRestiaMenu = false;
     $cbOpenRestiaMenu = false;
     $cbKeepRestiaMax = false;
+}
+
+if (!function_exists('cb_admin_init_exact_max_id_sum')) {
+    function cb_admin_init_exact_max_id_sum(mysqli $conn, array $tables): int
+    {
+        $sum = 0;
+
+        foreach ($tables as $tableDef) {
+            if (!is_array($tableDef)) {
+                continue;
+            }
+
+            $table = (string)($tableDef['table'] ?? '');
+            $column = (string)($tableDef['column'] ?? '');
+            $multiplier = (int)($tableDef['multiplier'] ?? 1);
+            if ($table === '' || $column === '') {
+                continue;
+            }
+            if ($multiplier <= 0) {
+                $multiplier = 1;
+            }
+
+            $sql = 'SELECT COALESCE(MAX(`' . str_replace('`', '``', $column) . '`), 0) AS cnt FROM `' . str_replace('`', '``', $table) . '`';
+            $res = $conn->query($sql);
+            if ($res instanceof mysqli_result) {
+                $row = $res->fetch_assoc();
+                $sum += ((int)($row['cnt'] ?? 0)) * $multiplier;
+                $res->free();
+            }
+        }
+
+        return $sum;
+    }
+}
+
+if (!function_exists('cb_admin_init_count_fmt')) {
+    function cb_admin_init_count_fmt(int $value): string
+    {
+        return number_format($value, 0, ',', ' ');
+    }
 }
 
 if (($cbDashboardRenderMode ?? '') === 'mini') {
@@ -77,6 +120,21 @@ if (($cbDashboardRenderMode ?? '') === 'mini') {
         $qRestia->free();
     }
 
+    $qObjednavky = $cbDb->query('SELECT COALESCE(MAX(id_obj), 0) AS cnt FROM objednavky_restia');
+    if ($qObjednavky instanceof mysqli_result) {
+        $r = $qObjednavky->fetch_assoc();
+        $cbObjednavkyCount = (int)($r['cnt'] ?? 0);
+        $qObjednavky->free();
+    }
+
+    $qObjednavkyDate = $cbDb->query('SELECT restia_imported_at AS dt FROM objednavky_restia ORDER BY id_obj DESC LIMIT 1');
+    if ($qObjednavkyDate instanceof mysqli_result) {
+        $r = $qObjednavkyDate->fetch_assoc();
+        $dt = trim((string)($r['dt'] ?? ''));
+        $cbObjednavkyDate = ($dt !== '') ? date('j.n.y H:i', strtotime($dt)) : 'Ne';
+        $qObjednavkyDate->free();
+    }
+
     $qSmeny = $cbDb->query('SELECT MAX(created_at) AS dt FROM smeny_plan');
     if ($qSmeny instanceof mysqli_result) {
         $r = $qSmeny->fetch_assoc();
@@ -85,17 +143,28 @@ if (($cbDashboardRenderMode ?? '') === 'mini') {
         $qSmeny->free();
     }
 
-    $qReport = $cbDb->query('SELECT MAX(created_at) AS dt FROM smeny_report');
+    $qReport = $cbDb->query('SELECT id_smeny_report AS cnt, created_at AS dt FROM smeny_report ORDER BY id_smeny_report DESC LIMIT 1');
     if ($qReport instanceof mysqli_result) {
         $r = $qReport->fetch_assoc();
+        $cbReportCount = (int)($r['cnt'] ?? 0);
         $dt = trim((string)($r['dt'] ?? ''));
         $cbReportDate = ($dt !== '') ? date('j.n.y H:i', strtotime($dt)) : 'Ne';
         $qReport->free();
     }
 
-    $cbRestiaCount = (int)($cbSummary['restia']['count'] ?? 0);
-    $cbSmenyCount = (int)($cbSummary['smeny']['count'] ?? 0);
-    $cbReportCount = (int)($cbSummary['reporty']['count'] ?? 0);
+    $cbRestiaCount = cb_admin_init_exact_max_id_sum($cbDb, [
+        ['table' => 'objednavky_restia', 'column' => 'id_obj', 'multiplier' => 4],
+        ['table' => 'obj_kuryr', 'column' => 'id_obj_kuryr'],
+        ['table' => 'obj_polozka_kds_tag', 'column' => 'id_obj_polozka_kds_tag'],
+        ['table' => 'obj_polozky', 'column' => 'id_obj_polozka'],
+        ['table' => 'obj_sluzba', 'column' => 'id_obj_sluzba'],
+        ['table' => 'zakaznik', 'column' => 'id_zak'],
+    ]);
+    $cbSmenyCount = cb_admin_init_exact_max_id_sum($cbDb, [
+        ['table' => 'smeny_akceptovane', 'column' => 'id'],
+        ['table' => 'smeny_aktualizace', 'column' => 'id_smeny_aktualizace'],
+        ['table' => 'smeny_plan', 'column' => 'id_smeny_plan'],
+    ]);
     $cbSmenyPlanMaData = ($cbSmenyCount > 0);
     $cbReportMaData = ($cbReportCount > 0);
 
@@ -112,17 +181,22 @@ if (($cbDashboardRenderMode ?? '') === 'mini') {
         . '    <tbody>'
         . '      <tr>'
         . '        <td>Restia</td>'
-        . '        <td class="txt_r"><strong>' . h(cb_db_fmt_rows_approx($cbRestiaCount)) . '</strong></td>'
+        . '        <td class="txt_r"><strong>' . h(cb_admin_init_count_fmt($cbRestiaCount)) . '</strong></td>'
         . '        <td class="txt_r">' . h($cbRestiaDate) . '</td>'
         . '      </tr>'
         . '      <tr>'
+        . '        <td>Objednávky</td>'
+        . '        <td class="txt_r"><strong>' . h(cb_admin_init_count_fmt($cbObjednavkyCount)) . '</strong></td>'
+        . '        <td class="txt_r">' . h($cbObjednavkyDate) . '</td>'
+        . '      </tr>'
+        . '      <tr>'
         . '        <td>Směny</td>'
-        . '        <td class="txt_r"><strong>' . h(cb_db_fmt_rows_approx($cbSmenyCount)) . '</strong></td>'
+        . '        <td class="txt_r"><strong>' . h(cb_admin_init_count_fmt($cbSmenyCount)) . '</strong></td>'
         . '        <td class="txt_r">' . h($cbSmenyDate) . '</td>'
         . '      </tr>'
         . '      <tr>'
         . '        <td>Reporty</td>'
-        . '        <td class="txt_r"><strong>' . h(cb_db_fmt_rows_approx($cbReportCount)) . '</strong></td>'
+        . '        <td class="txt_r"><strong>' . h(cb_admin_init_count_fmt($cbReportCount)) . '</strong></td>'
         . '        <td class="txt_r">' . h($cbReportDate) . '</td>'
         . '      </tr>'
         . '    </tbody>'
@@ -141,6 +215,21 @@ if ($qRestia instanceof mysqli_result) {
     $qRestia->free();
 }
 
+$qObjednavky = db()->query('SELECT COALESCE(MAX(id_obj), 0) AS cnt FROM objednavky_restia');
+if ($qObjednavky instanceof mysqli_result) {
+    $r = $qObjednavky->fetch_assoc();
+    $cbObjednavkyCount = (int)($r['cnt'] ?? 0);
+    $qObjednavky->free();
+}
+
+$qObjednavkyDate = db()->query('SELECT restia_imported_at AS dt FROM objednavky_restia ORDER BY id_obj DESC LIMIT 1');
+if ($qObjednavkyDate instanceof mysqli_result) {
+    $r = $qObjednavkyDate->fetch_assoc();
+    $dt = trim((string)($r['dt'] ?? ''));
+    $cbObjednavkyDate = ($dt !== '') ? date('j.n.y H:i', strtotime($dt)) : 'Ne';
+    $qObjednavkyDate->free();
+}
+
 $qSmeny = db()->query('SELECT COUNT(*) AS cnt, MAX(created_at) AS dt FROM smeny_plan');
 if ($qSmeny instanceof mysqli_result) {
     $r = $qSmeny->fetch_assoc();
@@ -151,7 +240,7 @@ if ($qSmeny instanceof mysqli_result) {
     $qSmeny->free();
 }
 
-$qReport = db()->query('SELECT COUNT(*) AS cnt, MAX(created_at) AS dt FROM smeny_report');
+$qReport = db()->query('SELECT id_smeny_report AS cnt, created_at AS dt FROM smeny_report ORDER BY id_smeny_report DESC LIMIT 1');
 if ($qReport instanceof mysqli_result) {
     $r = $qReport->fetch_assoc();
     $cbReportCount = (int)($r['cnt'] ?? 0);
@@ -279,17 +368,22 @@ $card_min_html = ''
     . '    <tbody>'
     . '      <tr>'
     . '        <td>Restia</td>'
-    . '        <td class="txt_r"><strong>' . h((string)$cbRestiaCount) . '</strong></td>'
+    . '        <td class="txt_r"><strong>' . h(cb_admin_init_count_fmt($cbRestiaCount)) . '</strong></td>'
     . '        <td class="txt_r">' . h($cbRestiaDate) . '</td>'
     . '      </tr>'
     . '      <tr>'
+    . '        <td>Objednávky</td>'
+    . '        <td class="txt_r"><strong>' . h(cb_admin_init_count_fmt($cbObjednavkyCount)) . '</strong></td>'
+    . '        <td class="txt_r">' . h($cbObjednavkyDate) . '</td>'
+    . '      </tr>'
+    . '      <tr>'
     . '        <td>Směny</td>'
-    . '        <td class="txt_r"><strong>' . h((string)$cbSmenyCount) . '</strong></td>'
+    . '        <td class="txt_r"><strong>' . h(cb_admin_init_count_fmt($cbSmenyCount)) . '</strong></td>'
     . '        <td class="txt_r">' . h($cbSmenyDate) . '</td>'
     . '      </tr>'
     . '      <tr>'
     . '        <td>Reporty</td>'
-    . '        <td class="txt_r"><strong>' . h((string)$cbReportCount) . '</strong></td>'
+    . '        <td class="txt_r"><strong>' . h(cb_admin_init_count_fmt($cbReportCount)) . '</strong></td>'
     . '        <td class="txt_r">' . h($cbReportDate) . '</td>'
     . '      </tr>'
     . '    </tbody>'

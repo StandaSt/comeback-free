@@ -78,6 +78,8 @@ if (!function_exists('ps_format_hm')) {
 $periodOdCz = ps_format_cz_date($periodOd);
 $periodDoCz = ps_format_cz_date($periodDo);
 
+$psRequest = array_replace_recursive($_GET, $_POST);
+
 $selectedMode = trim((string)($_SESSION['selected_pobocky_mode'] ?? ''));
 $selectedOblasti = $_SESSION['selected_oblasti'] ?? [];
 if (!is_array($selectedOblasti)) {
@@ -155,8 +157,8 @@ $psFilters = [
 ];
 
 // Whitelist sloupců pro ORDER BY - ochrana proti neplatným vstupům.
-$psSortRaw = trim((string)($_GET['ps_sort'] ?? (string)$tabKonfig['default_sort']));
-$psDirRaw = strtoupper(trim((string)($_GET['ps_dir'] ?? (string)$tabKonfig['default_dir'])));
+$psSortRaw = trim((string)($psRequest['ps_sort'] ?? (string)$tabKonfig['default_sort']));
+$psDirRaw = strtoupper(trim((string)($psRequest['ps_dir'] ?? (string)$tabKonfig['default_dir'])));
 $psSort = (string)$tabKonfig['default_sort'];
 $psDir = (string)$tabKonfig['default_dir'];
 
@@ -184,17 +186,17 @@ $perOptions = array_values(array_filter(array_map('intval', (array)$tabKonfig['p
 if ($perOptions === []) {
     $perOptions = [20, 50, 100];
 }
-$psPerRaw = (int)($_GET['ps_per'] ?? (int)$tabKonfig['default_per']);
+$psPerRaw = (int)($psRequest['ps_per'] ?? (int)$tabKonfig['default_per']);
 if ((int)$tabKonfig['enable_pagination'] === 1 && in_array($psPerRaw, $perOptions, true)) {
     $psPer = $psPerRaw;
 }
 
-$psPageRaw = (int)($_GET['ps_p'] ?? 1);
+$psPageRaw = (int)($psRequest['ps_p'] ?? 1);
 if ((int)$tabKonfig['enable_pagination'] === 1 && $psPageRaw > 1) {
     $psPage = $psPageRaw;
 }
 
-$psFiltersRaw = $_GET['ps_f'] ?? [];
+$psFiltersRaw = $psRequest['ps_f'] ?? [];
 if ((int)$tabKonfig['enable_filters'] === 1 && is_array($psFiltersRaw)) {
     $psFilters['prijmeni'] = trim((string)($psFiltersRaw['prijmeni'] ?? ''));
     $psFilters['jmeno'] = trim((string)($psFiltersRaw['jmeno'] ?? ''));
@@ -337,7 +339,7 @@ ob_start();
 <?php if ($psError !== ''): ?>
   <p class="card_text txt_seda odstup_vnejsi_0 card_text_muted"><?= h($psError) ?></p>
 <?php else: ?>
-  <form method="get" action="<?= h($formAction) ?>" class="card_stack gap_10 displ_flex" autocomplete="off">
+  <form method="post" action="<?= h($formAction) ?>" class="card_stack gap_10 displ_flex" autocomplete="off" data-cb-max-form="1">
     <input type="hidden" name="ps_p" value="1">
     <?php if ((int)$tabKonfig['enable_sort'] === 1): ?>
       <input type="hidden" name="ps_sort" value="<?= h($psSort) ?>">
@@ -352,12 +354,12 @@ ob_start();
             <th></th>
             <th>
               <?php if ((int)$tabKonfig['enable_filters'] === 1): ?>
-                <input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="width:10ch;" type="text" name="ps_f[prijmeni]" value="<?= h($psFilters['prijmeni']) ?>">
+                <input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="width:10ch;" type="text" name="ps_f[prijmeni]" value="<?= h($psFilters['prijmeni']) ?>" onchange="this.form.ps_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
               <?php endif; ?>
             </th>
             <th>
               <?php if ((int)$tabKonfig['enable_filters'] === 1): ?>
-                <input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="width:10ch;" type="text" name="ps_f[jmeno]" value="<?= h($psFilters['jmeno']) ?>">
+                <input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="width:10ch;" type="text" name="ps_f[jmeno]" value="<?= h($psFilters['jmeno']) ?>" onchange="this.form.ps_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
               <?php endif; ?>
             </th>
             <th>
@@ -402,11 +404,15 @@ ob_start();
               }
               ?>
               <th class="th-sort<?= $isActiveSort ? ' active' : '' ?>">
-                <?php if ((int)$tabKonfig['enable_sort'] === 1): ?>
-                  <a class="th-sort-link gap_8 jc_mezi sirka100<?= $isActiveSort ? ' active' : '' ?>" href="<?= h($sortUrl) ?>">
+              <?php if ((int)$tabKonfig['enable_sort'] === 1): ?>
+                  <button
+                    type="submit"
+                    class="th-sort-link gap_8 jc_mezi sirka100<?= $isActiveSort ? ' active' : '' ?>"
+                    onclick="this.form.ps_p.value=1; this.form.ps_sort.value='<?= h($key) ?>'; this.form.ps_dir.value='<?= h($nextDir) ?>';"
+                  >
                     <span class="th-sort-label"><?= h($label) ?></span>
                     <span class="th-sort-arrow txt_r"><?= h($arrow) ?></span>
-                  </a>
+                  </button>
                 <?php else: ?>
                   <span class="th-sort-link gap_8 jc_mezi sirka100">
                     <span class="th-sort-label"><?= h($label) ?></span>
@@ -464,8 +470,8 @@ ob_start();
         <?php $prevDisabled = $psPage <= 1; ?>
         <?php $nextDisabled = $psPage >= $psPages; ?>
 
-        <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24<?= $prevDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $prevDisabled ? '#' : h($psBaseUrl . '&ps_p=1') ?>">«</a>
-        <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24<?= $prevDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $prevDisabled ? '#' : h($psBaseUrl . '&ps_p=' . (string)max(1, $psPage - 1)) ?>">‹</a>
+        <button type="submit" class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24<?= $prevDisabled ? ' disabled' : '' ?> displ_inline_flex"<?= $prevDisabled ? ' disabled' : '' ?> onclick="this.form.ps_p.value=1;">«</button>
+        <button type="submit" class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24<?= $prevDisabled ? ' disabled' : '' ?> displ_inline_flex"<?= $prevDisabled ? ' disabled' : '' ?> onclick="this.form.ps_p.value=<?= h((string)max(1, $psPage - 1)) ?>;">‹</button>
 
         <?php
         $pageItems = [];
@@ -488,12 +494,12 @@ ob_start();
           <?php elseif ((int)$item === $psPage): ?>
             <span class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24 page-current displ_inline_flex"><?= h((string)$item) ?></span>
           <?php else: ?>
-            <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24 displ_inline_flex" href="<?= h($psBaseUrl . '&ps_p=' . (string)$item) ?>"><?= h((string)$item) ?></a>
+            <button type="submit" class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24 displ_inline_flex" onclick="this.form.ps_p.value=<?= h((string)$item) ?>;"><?= h((string)$item) ?></button>
           <?php endif; ?>
         <?php endforeach; ?>
 
-        <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24<?= $nextDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $nextDisabled ? '#' : h($psBaseUrl . '&ps_p=' . (string)min($psPages, $psPage + 1)) ?>">›</a>
-        <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24<?= $nextDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $nextDisabled ? '#' : h($psBaseUrl . '&ps_p=' . (string)$psPages) ?>">»</a>
+        <button type="submit" class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24<?= $nextDisabled ? ' disabled' : '' ?> displ_inline_flex"<?= $nextDisabled ? ' disabled' : '' ?> onclick="this.form.ps_p.value=<?= h((string)min($psPages, $psPage + 1)) ?>;">›</button>
+        <button type="submit" class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24<?= $nextDisabled ? ' disabled' : '' ?> displ_inline_flex"<?= $nextDisabled ? ' disabled' : '' ?> onclick="this.form.ps_p.value=<?= h((string)$psPages) ?>;">»</button>
       </div>
 
       <div class="per-form gap_8 right displ_inline_flex jc_konec">

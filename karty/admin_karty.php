@@ -13,14 +13,13 @@ $msgErr = false;
 $karetCount = 0;
 $lastAddedName = '-';
 $nextCardId = 1;
+$nextCardPoradi = 1;
 $souborOptions = [];
 $usedSouborMap = [];
 $activeCards = [];
 $inactiveCards = [];
 $tableColsHtml = '';
 $tableHeadHtml = '';
-$maxFormAjaxRequest = ($isAdmin && isset($_SERVER['HTTP_X_COMEBACK_MAX_FORM']));
-$maxFormAjaxResponse = null;
 $sekceStats = [
     3 => ['all' => 0, 'on' => 0, 'off' => 0],
     2 => ['all' => 0, 'on' => 0, 'off' => 0],
@@ -99,7 +98,6 @@ if ($isAdmin && isset($_POST['admin_karty_action'])) {
             $nazev = trim((string)($_POST['nazev'] ?? ''));
             $soubor = $normalizeSoubor((string)($_POST['soubor'] ?? ''));
             $minRole = (int)($_POST['min_role'] ?? 3);
-            $poradi = (int)($_POST['poradi'] ?? 100);
             $refreshOp = isset($_POST['refresh_op']) ? 1 : 0;
 
             if ($nazev === '' || $soubor === '') {
@@ -110,6 +108,13 @@ if ($isAdmin && isset($_POST['admin_karty_action'])) {
                 throw new RuntimeException('Tento script uz je pouzity u jine karty.');
             }
 
+            $resNewOrder = $conn->query('SELECT COALESCE(MAX(poradi), 0) + 1 AS next_poradi FROM karty');
+            if ($resNewOrder) {
+                $rowNewOrder = $resNewOrder->fetch_assoc();
+                $nextCardPoradi = max(1, (int)($rowNewOrder['next_poradi'] ?? 1));
+                $resNewOrder->free();
+            }
+
             $stmt = $conn->prepare('
                 INSERT INTO karty (nazev, soubor, min_role, poradi, refresh_op, aktivni, zalozeno, upraveno)
                 VALUES (?, ?, ?, ?, ?, 1, NOW(), NOW())
@@ -117,7 +122,7 @@ if ($isAdmin && isset($_POST['admin_karty_action'])) {
             if (!$stmt) {
                 throw new RuntimeException('DB prepare selhal.');
             }
-            $stmt->bind_param('ssiii', $nazev, $soubor, $minRole, $poradi, $refreshOp);
+            $stmt->bind_param('ssiii', $nazev, $soubor, $minRole, $nextCardPoradi, $refreshOp);
             $stmt->execute();
             $stmt->close();
 
@@ -127,7 +132,6 @@ if ($isAdmin && isset($_POST['admin_karty_action'])) {
             $nazev = trim((string)($_POST['nazev'] ?? ''));
             $soubor = $normalizeSoubor((string)($_POST['soubor'] ?? ''));
             $minRole = (int)($_POST['min_role'] ?? 3);
-            $poradi = (int)($_POST['poradi'] ?? 100);
             $refreshOp = isset($_POST['refresh_op']) ? 1 : 0;
 
             if ($idKarta <= 0 || $nazev === '' || $soubor === '') {
@@ -140,14 +144,14 @@ if ($isAdmin && isset($_POST['admin_karty_action'])) {
 
             $stmt = $conn->prepare('
                 UPDATE karty
-                SET nazev=?, soubor=?, min_role=?, poradi=?, refresh_op=?, upraveno=NOW()
+                SET nazev=?, soubor=?, min_role=?, refresh_op=?, upraveno=NOW()
                 WHERE id_karta=?
                 LIMIT 1
             ');
             if (!$stmt) {
                 throw new RuntimeException('DB prepare selhal.');
             }
-            $stmt->bind_param('ssiiii', $nazev, $soubor, $minRole, $poradi, $refreshOp, $idKarta);
+            $stmt->bind_param('ssiii', $nazev, $soubor, $minRole, $refreshOp, $idKarta);
             $stmt->execute();
             $stmt->close();
 
@@ -186,7 +190,7 @@ if ($isAdmin && isset($_POST['admin_karty_action'])) {
                 $stmtCur = $conn->prepare('
                     SELECT id_karta, poradi
                     FROM karty
-                    WHERE id_karta=? AND aktivni=1
+                    WHERE id_karta=?
                     LIMIT 1
                     FOR UPDATE
                 ');
@@ -206,8 +210,7 @@ if ($isAdmin && isset($_POST['admin_karty_action'])) {
                     $stmtNbr = $conn->prepare('
                         SELECT id_karta, poradi
                         FROM karty
-                        WHERE aktivni=1
-                          AND ((poradi < ?) OR (poradi = ? AND id_karta < ?))
+                        WHERE ((poradi < ?) OR (poradi = ? AND id_karta < ?))
                         ORDER BY poradi DESC, id_karta DESC
                         LIMIT 1
                         FOR UPDATE
@@ -216,8 +219,7 @@ if ($isAdmin && isset($_POST['admin_karty_action'])) {
                     $stmtNbr = $conn->prepare('
                         SELECT id_karta, poradi
                         FROM karty
-                        WHERE aktivni=1
-                          AND ((poradi > ?) OR (poradi = ? AND id_karta > ?))
+                        WHERE ((poradi > ?) OR (poradi = ? AND id_karta > ?))
                         ORDER BY poradi ASC, id_karta ASC
                         LIMIT 1
                         FOR UPDATE
@@ -233,22 +235,40 @@ if ($isAdmin && isset($_POST['admin_karty_action'])) {
                 $stmtNbr->close();
 
                 if ($hasNbr) {
-                    $stmtSwap = $conn->prepare('
+                    if ($action === 'move_up') {
+                        $stmtShift = $conn->prepare('
+                            UPDATE karty
+                            SET poradi = poradi + 1, upraveno=NOW()
+                            WHERE poradi >= ?
+                              AND poradi < ?
+                        ');
+                    } else {
+                        $stmtShift = $conn->prepare('
+                            UPDATE karty
+                            SET poradi = poradi - 1, upraveno=NOW()
+                            WHERE poradi > ?
+                              AND poradi <= ?
+                        ');
+                    }
+                    if (!$stmtShift) {
+                        throw new RuntimeException('DB prepare selhal.');
+                    }
+                    $stmtShift->bind_param('ii', $nbrPoradi, $curPoradi);
+                    $stmtShift->execute();
+                    $stmtShift->close();
+
+                    $stmtMove = $conn->prepare('
                         UPDATE karty
                         SET poradi=?, upraveno=NOW()
                         WHERE id_karta=?
                         LIMIT 1
                     ');
-                    if (!$stmtSwap) {
+                    if (!$stmtMove) {
                         throw new RuntimeException('DB prepare selhal.');
                     }
-
-                    $stmtSwap->bind_param('ii', $nbrPoradi, $curId);
-                    $stmtSwap->execute();
-
-                    $stmtSwap->bind_param('ii', $curPoradi, $nbrId);
-                    $stmtSwap->execute();
-                    $stmtSwap->close();
+                    $stmtMove->bind_param('ii', $nbrPoradi, $curId);
+                    $stmtMove->execute();
+                    $stmtMove->close();
                 }
 
                 $conn->commit();
@@ -261,27 +281,9 @@ if ($isAdmin && isset($_POST['admin_karty_action'])) {
             throw new RuntimeException('Neznama akce.');
         }
 
-        if ($maxFormAjaxRequest) {
-            $maxFormAjaxResponse = [
-                'ok' => true,
-                'action' => $action,
-            ];
-        }
     } catch (Throwable $e) {
         $setFeedback($e->getMessage(), true, true);
-        if ($maxFormAjaxRequest) {
-            $maxFormAjaxResponse = [
-                'ok' => false,
-                'err' => $e->getMessage(),
-            ];
-        }
     }
-}
-
-if ($maxFormAjaxRequest && is_array($maxFormAjaxResponse)) {
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode($maxFormAjaxResponse, JSON_UNESCAPED_UNICODE);
-    exit;
 }
 
 try {
@@ -418,7 +420,6 @@ $adminKartyCols = [
     ['class' => 'admin_karty_col_nazev'],
     ['class' => 'admin_karty_col_soubor'],
     ['class' => 'admin_karty_col_role'],
-    ['class' => 'admin_karty_col_poradi'],
     ['class' => 'admin_karty_col_refresh_op'],
     ['class' => 'admin_karty_col_aktivni'],
     ['class' => 'admin_karty_col_akce'],
@@ -435,7 +436,6 @@ $tableHeadHtml = implode("\n", [
     '              <th class="admin_karty_col_nazev">Nadpis</th>',
     '              <th class="admin_karty_col_soubor">Soubor</th>',
     '              <th class="admin_karty_col_role">Min role</th>',
-    '              <th class="admin_karty_col_poradi">Pořadí</th>',
     '              <th class="admin_karty_col_refresh_op txt_c">Refresh OP</th>',
     '              <th class="admin_karty_col_aktivni txt_c">Aktivní</th>',
     '              <th class="admin_karty_col_akce">Akce</th>',
@@ -482,7 +482,7 @@ ob_start();
 <?= $tableColsHtml . "\n" ?>
         <tbody>
           <tr>
-            <th class="txt_l" colspan="8">Přidání nové karty včetně názvu souboru, pořadí a minimální role.</th>
+            <th class="txt_l" colspan="7">Přidání nové karty včetně názvu souboru a minimální role.</th>
           </tr>
 <?= $tableHeadHtml . "\n" ?>
           <tr>
@@ -505,9 +505,6 @@ ob_start();
                 <option value="3" selected>všichni</option>
               </select>
             </td>
-            <td>
-              <input class="card_input filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="width:70%;" name="poradi" type="number" min="1" max="9999" value="100" required form="karta-add">
-            </td>
             <td class="txt_c">
               <label class="displ_inline_flex gap_6 cursor_ruka" style="align-items:center;justify-content:center;">
                 <input type="checkbox" name="refresh_op" value="1" form="karta-add" onchange="this.nextElementSibling.className=this.checked?'txt_cervena':'txt_seda';">
@@ -520,11 +517,11 @@ ob_start();
             </td>
           </tr>
           <tr>
-            <th class="txt_l" colspan="8">Seznam aktivních karet</th>
+            <th class="txt_l" colspan="7">Seznam aktivních karet</th>
           </tr>
 <?= $tableHeadHtml . "\n" ?>
           <?php if (!$activeCards): ?>
-            <tr><td colspan="8">Zatim nejsou zadne aktivni karty.</td></tr>
+            <tr><td colspan="7">Zatim nejsou zadne aktivni karty.</td></tr>
           <?php else: ?>
             <?php foreach ($activeCards as $card): ?>
               <?php $formId = 'karta-' . (string)$card['id_karta']; ?>
@@ -544,7 +541,6 @@ ob_start();
                     <option value="3"<?= $card['min_role'] === 3 ? ' selected' : '' ?>>všichni</option>
                   </select>
                 </td>
-                <td><input type="number" class="card_input filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="width:70%;" name="poradi" value="<?= h((string)$card['poradi']) ?>" min="1" max="9999" form="<?= h($formId) ?>"></td>
                 <td class="txt_c">
                   <label class="displ_inline_flex gap_6 cursor_ruka" style="align-items:center;justify-content:center;">
                     <input type="checkbox" name="refresh_op" value="1"<?= ((int)($card['refresh_op'] ?? 0) === 1) ? ' checked' : '' ?> form="<?= h($formId) ?>" data-cb-submit-on-change="1" data-cb-submit-name="admin_karty_action" data-cb-submit-value="save" onchange="this.nextElementSibling.className=this.checked?'txt_cervena':'txt_seda';">
@@ -562,11 +558,11 @@ ob_start();
             <?php endforeach; ?>
           <?php endif; ?>
           <tr>
-            <th class="txt_l" colspan="8">Neaktivní karty</th>
+            <th class="txt_l" colspan="7">Neaktivní karty</th>
           </tr>
 <?= $tableHeadHtml . "\n" ?>
           <?php if (!$inactiveCards): ?>
-            <tr><td colspan="8">Nejsou žádné neaktivní karty</td></tr>
+            <tr><td colspan="7">Nejsou žádné neaktivní karty</td></tr>
           <?php else: ?>
             <?php foreach ($inactiveCards as $card): ?>
               <?php $formId = 'karta-inactive-' . (string)$card['id_karta']; ?>
@@ -575,7 +571,6 @@ ob_start();
                 <td><?= h($card['nazev']) ?></td>
                 <td><?= h($card['soubor']) ?></td>
                 <td><?= h((string)$card['min_role']) ?></td>
-                <td><?= h((string)$card['poradi']) ?></td>
                 <td class="txt_c"><?= ((int)($card['refresh_op'] ?? 0) === 1) ? '<span class="txt_cervena">Ano</span>' : '<span class="txt_seda">Ano</span>' ?></td>
                 <td class="txt_c">ne</td>
                 <td>

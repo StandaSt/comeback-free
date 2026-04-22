@@ -9,7 +9,7 @@ set_time_limit(0);
 
 require_once __DIR__ . '/../db/db_connect.php';
 
-const BASE_DIR = __DIR__ . '/../admin_testy/google_data/Pobocky';
+const BASE_DIR = __DIR__ . '/../admin_testy/reporty_google_testy/google_data/Pobocky';
 const MONTHS_EN = [
     'January',
     'February',

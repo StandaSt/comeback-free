@@ -268,7 +268,7 @@ if (($cbDashboardRenderMode ?? '') === 'mini') {
         . '      </tr>'
         . '      <tr>'
         . '        <td>Celkem</td>'
-        . '        <td class="txt_r"><strong>~ ' . h(number_format($pocetObjMini, 0, ',', ' ')) . '</strong> ' . h(obj_sklonuj_objednavka($pocetObjMini)) . '</td>'
+        . '        <td class="txt_r"><strong>' . h(number_format($pocetObjMini, 0, ',', ' ')) . '</strong> ' . h(obj_sklonuj_objednavka($pocetObjMini)) . '</td>'
         . '      </tr>'
         . '    </tbody>'
         . '  </table>'
