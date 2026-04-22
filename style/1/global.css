@@ -1533,6 +1533,8 @@ align-items:center;
 }
 
 .dash_card{
+  position:relative;
+  isolation:isolate;
   min-width:0;
   background:var(--clr_bila);
   border:1px solid var(--clr_pruhledna_modra_35);
@@ -1540,6 +1542,41 @@ align-items:center;
   box-shadow:0 8px 22px var(--clr_pruhledna_tmava_04);
   overflow:hidden;
   height:242px;
+}
+
+.dash_card.is-card-refreshing{
+  pointer-events:none;
+}
+
+.dash_card_loader{
+  inset:0;
+  z-index:10;
+  background:rgba(248,250,252,.88);
+  backdrop-filter:blur(1px);
+}
+
+.dash_card_loader[data-cb-loader-visible="1"]{
+  display:flex;
+}
+
+.dash_card_loader .dash_loader_inner{
+  gap:6px;
+}
+
+.dash_card_loader .dash_loader_logo{
+  width:54px;
+  height:54px;
+  border-radius:12px;
+  box-shadow:0 4px 12px rgba(15,23,42,.10);
+}
+
+.dash_card_loader .dash_loader_text{
+  font-size:var(--fs_13);
+}
+
+.dash_card_loader .dash_loader_time{
+  margin-top:0;
+  font-size:var(--fs_11);
 }
 
 .dash_card.is-expanded{

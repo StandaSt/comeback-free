@@ -31,6 +31,8 @@ Před úpravou vždy nejprve zjisti, co je aktuálně skutečně používané.
 - Nezaváděj nové soubory, nové knihovny ani nové architektonické vrstvy bez výslovného zadání.
 - Preferuj úpravu existujících souborů.
 - Nejprve analyzuj, potom navrhni, teprve potom měň.
+- NIKDY nepouzivej docasne zaplaty misto ciste a trvale opravy.
+- NIKDY nenechavej v kodu docasne lokalni reseni, pokud ma existovat systemova uprava.
 - Při nejasnosti nejdřív vypiš, které soubory se tématu týkají a co v nich chceš změnit.
 - U změn s dopadem na více souborů vždy nejprve najdi všechny reference.
 - U přejmenování souborů vždy:
@@ -174,6 +176,7 @@ Vždy nejprve ověř realitu v kódu, ne domněnky.
 - Nikdy neprováděj změny navíc mimo přesné zadání.
 - Pokud najdeš další problém mimo zadání, předem ho pouze oznam a navrhni řešení.
 - Jakoukoliv takovou změnu proveď až po explicitním schválení od uživatele.
+- NIKDY neoznacuj docasnou zaplatu za finalni reseni.
 - Pred kazdou upravou vzdy nejprve vypis dotcene soubory.
 - U kazdeho dotceneho souboru strucne napis, jak se ho zmena dotkne.
 - Po tomto vypisu vzdy pockej na schvaleni od uzivatele a teprve potom proved zmenu.

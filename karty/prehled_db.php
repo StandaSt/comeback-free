@@ -428,7 +428,7 @@ ob_start();
 <div id="<?= cb_prehled_db_h($cardRootId) ?>" class="ram_normal bg_bila zaobleni_12 odstup_vnitrni_10" style="width:100%; max-height:100%; box-sizing:border-box; overflow:hidden; display:flex; flex-direction:column;">
   <div style="display:grid; grid-template-columns:220px minmax(0, 1fr); gap:12px; align-items:stretch; flex:1 1 auto; min-height:0; max-height:100%;">
     <div style="display:flex; flex-direction:column; min-height:0; max-height:100%;">
-      <form method="get" action="<?= cb_prehled_db_h(cb_url('/')) ?>" class="odstup_vnejsi_0">
+      <form method="post" action="<?= cb_prehled_db_h(cb_url('/')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
         <input type="hidden" name="page" value="<?= cb_prehled_db_h($page) ?>">
         <div style="display:flex; flex-direction:column; gap:8px;">
           <?php foreach (['komplet', 'restia_obj', 'restia_menu', 'smeny', 'reporty', 'system'] as $key): ?>
@@ -439,7 +439,7 @@ ob_start();
                 name="db_scope"
                 value="<?= cb_prehled_db_h($key) ?>"
                 <?= $scope === $key ? 'checked' : '' ?>
-                onchange="this.form.submit()"
+                data-cb-submit-on-change="1"
               >
               <span style="<?= $scope === $key ? 'font-weight:700;' : '' ?>"><?= cb_prehled_db_h((string)$cfg['label']) ?></span>
             </label>

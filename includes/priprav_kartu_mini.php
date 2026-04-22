@@ -100,6 +100,7 @@ function cb_priprav_kartu_mini(
         'cardPoradi' => (int)($karta['poradi'] ?? 0),
         'title' => (string)($karta['nazev'] ?? ''),
         'soubor' => $soubor,
+        'refreshOp' => (int)($karta['refresh_op'] ?? 0),
         'subtitleMin' => $subtitleMin,
         'subtitleMax' => $subtitleMax,
         'color' => ($cardId > 0 && isset($userCardHeaderColorById[$cardId])) ? (string)$userCardHeaderColorById[$cardId] : '',

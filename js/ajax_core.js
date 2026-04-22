@@ -269,6 +269,82 @@
     };
   }
 
+  function getCardLoaderParts(card) {
+    if (!(card instanceof HTMLElement)) return null;
+    const loader = card.querySelector('.dash_card_loader[data-card-loader="1"]');
+    if (!(loader instanceof HTMLElement)) return null;
+    const timer = loader.querySelector('[data-cb-loader-time]');
+    const textNode = loader.querySelector('.dash_loader_text');
+    return {
+      card,
+      loader,
+      timer: (timer instanceof HTMLElement) ? timer : null,
+      textNode: (textNode instanceof HTMLElement) ? textNode : null
+    };
+  }
+
+  function stopCardLoaderTimer(loader) {
+    if (!(loader instanceof HTMLElement)) return;
+    const timerId = Number(loader.__cbCardLoaderTimerId || 0);
+    if (timerId) {
+      w.clearInterval(timerId);
+    }
+    loader.__cbCardLoaderTimerId = 0;
+    loader.__cbCardLoaderStartedAt = 0;
+    const parts = getCardLoaderParts(loader.closest('.dash_card'));
+    if (parts && parts.timer) {
+      parts.timer.textContent = '0.00 s';
+    }
+  }
+
+  function startCardLoaderTimer(loader) {
+    if (!(loader instanceof HTMLElement)) return;
+    stopCardLoaderTimer(loader);
+    loader.__cbCardLoaderStartedAt = (w.performance && typeof w.performance.now === 'function')
+      ? w.performance.now()
+      : Date.now();
+    const tick = () => {
+      const startedAt = Number(loader.__cbCardLoaderStartedAt || 0);
+      const parts = getCardLoaderParts(loader.closest('.dash_card'));
+      if (!startedAt || !parts || !parts.timer || !loader.isConnected) {
+        stopCardLoaderTimer(loader);
+        return;
+      }
+      const now = (w.performance && typeof w.performance.now === 'function') ? w.performance.now() : Date.now();
+      parts.timer.textContent = formatLoadingTime(now - startedAt);
+    };
+    tick();
+    loader.__cbCardLoaderTimerId = w.setInterval(tick, 50);
+  }
+
+  function setCardLoaderLoading(card, visible, text) {
+    const parts = getCardLoaderParts(card);
+    if (!parts) return;
+
+    if (!parts.loader.hasAttribute('data-card-loader-default-text')) {
+      parts.loader.setAttribute('data-card-loader-default-text', String(parts.textNode ? parts.textNode.textContent || '' : ''));
+    }
+
+    if (visible) {
+      const nextText = typeof text === 'string' && text.trim() !== ''
+        ? text.trim()
+        : String(parts.loader.getAttribute('data-card-loader-default-text') || 'Obnovuji data ...');
+      if (parts.textNode) {
+        parts.textNode.textContent = nextText;
+      }
+      parts.loader.classList.remove('is-hidden');
+      parts.loader.setAttribute('aria-hidden', 'false');
+      parts.loader.setAttribute('data-cb-loader-visible', '1');
+      startCardLoaderTimer(parts.loader);
+      return;
+    }
+
+    stopCardLoaderTimer(parts.loader);
+    parts.loader.classList.add('is-hidden');
+    parts.loader.setAttribute('aria-hidden', 'true');
+    parts.loader.removeAttribute('data-cb-loader-visible');
+  }
+
   function anyLoaderActive() {
     return LOADER_MODES.some((mode) => getLoaderState(mode).loading);
   }
@@ -768,13 +844,129 @@
       });
   };
 
+  CB_AJAX.refreshDashboardRefreshOpCards = function refreshDashboardRefreshOpCards(options) {
+    const opts = (options && typeof options === 'object') ? options : {};
+    const force = !!opts.force;
+    const loaderMode = normalizeLoaderMode(opts.loaderMode || 'cards');
+    const refreshStartedAt = (w.performance && typeof w.performance.now === 'function') ? w.performance.now() : Date.now();
+    const parts = getLoaderParts('dashboard') || getLoaderParts('cards') || getLoaderParts('restia');
+
+    if (!parts) {
+      traceAjax('refresh_refresh_op_missing_parts', {
+        mode: loaderMode
+      });
+      return Promise.reject(new Error('Dashboard container nebyl nalezen.'));
+    }
+
+    const currentContent = parts.box.querySelector('[data-cb-dash-content="1"]');
+    const currentGrid = currentContent instanceof HTMLElement ? currentContent.querySelector('.dash_grid[data-login-id]') : null;
+    if (!(currentGrid instanceof HTMLElement)) {
+      traceAjax('refresh_refresh_op_missing_grid', {
+        mode: loaderMode
+      });
+      return Promise.reject(new Error('Dashboard grid nebyl nalezen.'));
+    }
+
+    const cards = Array.from(
+      currentGrid.querySelectorAll('[data-cb-dash-card="1"][data-card-refresh-op="1"]')
+    ).filter((el) => el instanceof HTMLElement);
+
+    if (cards.length === 0) {
+      traceAjax('refresh_refresh_op_done', {
+        mode: loaderMode,
+        cards: 0
+      });
+      traceAjax('measure_refresh_refresh_op_done', {
+        mode: loaderMode,
+        cards: 0,
+        total_ms: 0,
+        url: String(w.location.href || '')
+      });
+      return Promise.resolve({ ok: true, cards: 0 });
+    }
+
+    traceAjax('refresh_refresh_op_start', {
+      mode: loaderMode,
+      force: force ? 1 : 0,
+      cards: cards.length,
+      url: String(w.location.href || '')
+    });
+
+    const jobs = cards.map((currentCard) => {
+      const currentShell = currentCard.querySelector('.card_shell[data-card-id]');
+      if (!(currentShell instanceof HTMLElement)) {
+        return Promise.resolve({ ok: false, skipped: true });
+      }
+
+      const cardId = parseInt(String(currentShell.getAttribute('data-card-id') || '0'), 10);
+      if (!Number.isFinite(cardId) || cardId <= 0) {
+        return Promise.resolve({ ok: false, skipped: true });
+      }
+
+      const loadMax = currentCard.classList.contains('is-expanded');
+      return CB_AJAX.refreshCard(cardId, {
+        force: true,
+        keepLoading: false,
+        loaderMode: loaderMode,
+        loaderText: 'Obnovuji data ...',
+        loadMax: loadMax
+      });
+    });
+
+    return Promise.allSettled(jobs).then((results) => {
+      const errors = [];
+      let count = 0;
+      results.forEach((result) => {
+        if (result && result.status === 'fulfilled' && result.value && result.value.ok !== false) {
+          count += 1;
+          return;
+        }
+        if (result && result.status === 'rejected') {
+          errors.push(result.reason);
+        }
+      });
+
+      if (errors.length > 0) {
+        const err = errors[0];
+        const msg = String((err && err.message) ? err.message : 'Přenačtení karet selhalo.');
+        traceAjax('refresh_refresh_op_error', {
+          mode: loaderMode,
+          cards: count,
+          message: msg
+        });
+        traceAjax('measure_refresh_refresh_op_error', {
+          mode: loaderMode,
+          cards: count,
+          total_ms: Math.max(0, Math.round(((w.performance && typeof w.performance.now === 'function') ? w.performance.now() : Date.now()) - refreshStartedAt)),
+          message: msg,
+          url: String(w.location.href || '')
+        });
+        throw err instanceof Error ? err : new Error(msg);
+      }
+
+      traceAjax('refresh_refresh_op_done', {
+        mode: loaderMode,
+        cards: count
+      });
+      traceAjax('measure_refresh_refresh_op_done', {
+        mode: loaderMode,
+        cards: count,
+        total_ms: Math.max(0, Math.round(((w.performance && typeof w.performance.now === 'function') ? w.performance.now() : Date.now()) - refreshStartedAt)),
+        url: String(w.location.href || '')
+      });
+      return { ok: true, cards: count };
+    });
+  };
+
   CB_AJAX.refreshCard = function refreshCard(cardId, options) {
     const id = parseInt(String(cardId || '0'), 10);
     const opts = (options && typeof options === 'object') ? options : {};
     const force = !!opts.force;
     const keepLoading = !!opts.keepLoading;
+    const showLoading = opts.showLoading !== false;
     const loadMax = !!opts.loadMax;
     const loaderMode = normalizeLoaderMode(opts.loaderMode || 'cards');
+    const loaderText = typeof opts.loaderText === 'string' ? opts.loaderText : 'Obnovuji data ...';
 
     if (!Number.isFinite(id) || id <= 0) {
       return Promise.reject(new Error('ID karty nebylo nalezeno.'));
@@ -796,10 +988,9 @@
       return Promise.reject(new Error('Karta nebyla nalezena.'));
     }
 
-    if (!force) {
-      setLoaderLoading(loaderMode, true);
+    if (showLoading) {
+      setCardLoaderLoading(currentCard, true, loaderText);
     }
-
     currentCard.classList.add('is-card-refreshing');
     currentCard.setAttribute('aria-busy', 'true');
 
@@ -872,8 +1063,8 @@
       }).finally(() => {
         currentCard.classList.remove('is-card-refreshing');
         currentCard.removeAttribute('aria-busy');
-        if (!keepLoading) {
-          setLoaderLoading(loaderMode, false);
+        if (showLoading) {
+          setCardLoaderLoading(currentCard, false);
         }
       });
   };

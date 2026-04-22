@@ -6,6 +6,7 @@
   const ICON_MIN = '\u2212';
   const MAXI_STATE_KEY = 'cb_maxi_state_v1';
   let activeMaxi = null;
+  let suppressNextRestore = false;
 
   const CARD_ROOT_SELECTOR = '.card_shell';
   const CARD_TOGGLE_SELECTOR = '[data-card-toggle]';
@@ -90,6 +91,12 @@
   }
 
   function restoreActiveMaxi() {
+    if (suppressNextRestore) {
+      suppressNextRestore = false;
+      clearMaxiState();
+      return;
+    }
+
     const state = loadMaxiState();
     if (!state) return;
 
@@ -659,10 +666,24 @@
     if (w.__CB_KARTY_MINMAX_WIRED__) return;
     w.__CB_KARTY_MINMAX_WIRED__ = true;
 
+    document.addEventListener('cb:maxi-close-request', () => {
+      suppressNextRestore = true;
+      clearMaxiState();
+      closeActiveMaxi({ preserveState: false });
+    });
+
     document.addEventListener('cb:main-swapped', () => {
-      closeActiveMaxi({ preserveState: true });
+      if (suppressNextRestore) {
+        closeActiveMaxi({ preserveState: false });
+      } else {
+        closeActiveMaxi({ preserveState: true });
+      }
       initKartyMinMax();
-      w.setTimeout(restoreActiveMaxi, 0);
+      if (suppressNextRestore) {
+        suppressNextRestore = false;
+      } else {
+        w.setTimeout(restoreActiveMaxi, 0);
+      }
     });
 
     document.addEventListener('cb:dashboard-layout-changed', () => {

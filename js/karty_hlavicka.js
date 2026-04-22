@@ -340,17 +340,15 @@
             tgt_id: targetId,
             force_unlock: forceUnlock ? 1 : 0
           });
-          setCardPlacement(moveSource.root, targetCol, targetLine, true);
-          setCardPlacement(targetRoot, 0, 0, false);
           clearMoveSource();
           closeAllCardPrefMenus();
-          try {
-            if (w.CB_AJAX && typeof w.CB_AJAX.relayoutDashboard === 'function') {
-              w.CB_AJAX.relayoutDashboard();
-            }
-          } finally {
-            setDashboardLoading(false);
+          if (w.CB_AJAX && typeof w.CB_AJAX.refreshDashboard === 'function') {
+            return w.CB_AJAX.refreshDashboard({
+              force: true,
+              loaderMode: 'cards'
+            });
           }
+          setDashboardLoading(false);
           return;
         }
 
@@ -504,13 +502,17 @@
             clearAllCardPlacements();
             clearMoveSource();
             closeAllCardPrefMenus();
-            try {
-              if (w.CB_AJAX && typeof w.CB_AJAX.relayoutDashboard === 'function') {
-                w.CB_AJAX.relayoutDashboard();
-              }
-            } finally {
-              setDashboardLoading(false);
+            if (w.CB_AJAX && typeof w.CB_AJAX.refreshDashboard === 'function') {
+              return Promise.resolve(
+                w.CB_AJAX.refreshDashboard({
+                  force: true,
+                  loaderMode: 'dashboard'
+                })
+              ).finally(() => {
+                setDashboardLoading(false);
+              });
             }
+            setDashboardLoading(false);
             return;
           }
             const err = String((data && data.err) ? data.err : 'Odemknutí pozic karet selhalo.');

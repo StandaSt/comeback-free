@@ -108,9 +108,9 @@
     return true;
   }
 
-  function setLoading(on, text) {
+  function setLoading(on, text, mode) {
     if (w.CB_AJAX && typeof w.CB_AJAX.setDashboardLoading === 'function') {
-      w.CB_AJAX.setDashboardLoading(!!on, 'cards', text);
+      w.CB_AJAX.setDashboardLoading(!!on, String(mode || 'cards'), text);
     }
   }
 
@@ -139,10 +139,61 @@
     return '';
   }
 
+  function isDashboardRefreshForm(form) {
+    return form instanceof HTMLFormElement
+      && String(form.getAttribute('data-cb-refresh-dashboard-on-save') || '') === '1';
+  }
+
+  function getUserSettingValue(form, name) {
+    if (!(form instanceof HTMLFormElement)) return '';
+    const selector = 'select[name="' + String(name || '').replace(/"/g, '') + '"]';
+    const field = form.querySelector(selector);
+    if (!(field instanceof HTMLSelectElement)) return '';
+    return String(field.value || '');
+  }
+
+  function syncUserSettingForm(form) {
+    if (!(form instanceof HTMLFormElement)) return;
+    if (String(form.getAttribute('data-cb-user-setting-form') || '') !== '1') return;
+
+    const saveBtn = form.querySelector('[data-cb-user-setting-save="1"]');
+    if (!(saveBtn instanceof HTMLButtonElement)) return;
+
+    const initialCols = String(form.getAttribute('data-cb-user-setting-initial-pocet-sl') || '');
+    const initialNano = String(form.getAttribute('data-cb-user-setting-initial-nano-kde') || '');
+    const initialPismo = String(form.getAttribute('data-cb-user-setting-initial-pismo') || '');
+    const initialDark = String(form.getAttribute('data-cb-user-setting-initial-dark') || '');
+
+    const currentCols = getUserSettingValue(form, 'us_pocet_sl');
+    const currentNano = getUserSettingValue(form, 'us_nano_kde');
+    const currentPismo = getUserSettingValue(form, 'us_pismo');
+    const currentDark = getUserSettingValue(form, 'us_dark');
+
+    const isDirty = (
+      currentCols !== initialCols
+      || currentNano !== initialNano
+      || currentPismo !== initialPismo
+      || currentDark !== initialDark
+    );
+
+    saveBtn.disabled = !isDirty;
+    saveBtn.setAttribute('aria-disabled', isDirty ? 'false' : 'true');
+    form.setAttribute('data-cb-user-setting-dirty', isDirty ? '1' : '0');
+  }
+
+  function initUserSettingForms() {
+    document.querySelectorAll('form[data-cb-user-setting-form="1"]').forEach((form) => {
+      if (!(form instanceof HTMLFormElement)) return;
+      syncUserSettingForm(form);
+    });
+  }
+
   function submitAjax(form, submitter, options) {
     if (!(form instanceof HTMLFormElement)) return;
     const opts = (options && typeof options === 'object') ? options : {};
     const skipSubmitterName = !!opts.skipSubmitterName;
+    const refreshDashboardOnSave = isDashboardRefreshForm(form);
+    const useGlobalLoader = refreshDashboardOnSave;
 
     const reqUrl = String(form.action || w.location.href || 'index.php');
     const method = String(form.method || 'POST').toUpperCase();
@@ -169,7 +220,9 @@
     }
 
     const loaderText = getLoaderTextFromSubmitter(submitter, form);
-    setLoading(true, loaderText);
+    if (useGlobalLoader) {
+      setLoading(true, loaderText, 'dashboard');
+    }
 
     fetch(reqUrl, {
       method: method,
@@ -200,6 +253,18 @@
           throw new Error(String((data && data.err) ? data.err : 'Max karta vrátila neplatný JSON obsah.'));
         }
 
+        if (refreshDashboardOnSave && w.CB_AJAX && typeof w.CB_AJAX.refreshDashboard === 'function') {
+          document.dispatchEvent(new CustomEvent('cb:maxi-close-request'));
+          return w.CB_AJAX.refreshDashboard({
+            force: true,
+            loaderMode: 'dashboard'
+          });
+        }
+
+        if (cardId > 0 && swapCardExpandedFromHtml(cardId, data.cardHtml)) {
+          return { ok: true, cardId: cardId };
+        }
+
         if (cardId > 0 && swapCardFromHtml(cardId, data.cardHtml)) {
           return { ok: true, cardId: cardId };
         }
@@ -222,7 +287,9 @@
       if (submitter instanceof HTMLElement) {
         submitter.removeAttribute('disabled');
       }
-      setLoading(false);
+      if (useGlobalLoader) {
+        setLoading(false);
+      }
     });
   }
 
@@ -249,7 +316,14 @@
   }
 
   function handleChange(event) {
-    const target = event.target instanceof HTMLElement ? event.target : null;
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target) return;
+
+    const settingForm = target.closest('form[data-cb-user-setting-form="1"]');
+    if (settingForm instanceof HTMLFormElement && target instanceof HTMLSelectElement) {
+      syncUserSettingForm(settingForm);
+      return;
+    }
     if (!(target instanceof HTMLInputElement)) return;
     if (String(target.getAttribute('data-cb-submit-on-change') || '') !== '1') return;
 
@@ -281,9 +355,13 @@
     document.addEventListener('click', handleClick, true);
     document.addEventListener('submit', handleSubmit, true);
     document.addEventListener('change', handleChange, true);
+    document.addEventListener('cb:main-swapped', initUserSettingForms);
+    document.addEventListener('cb:card-swapped', initUserSettingForms);
   }
 
   wireOnce();
+
+  initUserSettingForms();
 })(window);
 
 // js/ajax_karta_max.js * Verze: V3 * Aktualizace: 17.04.2026

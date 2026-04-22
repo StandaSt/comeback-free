@@ -112,6 +112,15 @@ ob_start();
   </div>
   <div class="karta-tablewrap">
     <table class="karta-table">
+      <colgroup>
+        <col style="width:7%;">
+        <col style="width:18%;">
+        <col style="width:10%;">
+        <col style="width:14%;">
+        <col style="width:14%;">
+        <col style="width:8%;">
+        <col>
+      </colgroup>
       <thead class="karta-thead-sticky">
         <tr>
           <th>Krok</th>
@@ -120,7 +129,6 @@ ob_start();
           <th>Soubor</th>
           <th>DB tabulky</th>
           <th>Hotovo %</th>
-          <th>Spouští</th>
           <th>Poznámka</th>
         </tr>
       </thead>
@@ -153,7 +161,6 @@ ob_start();
               $soubor = trim((string)($row['soubor'] ?? ''));
               $dbTabulky = trim((string)($row['db_tabulky'] ?? ''));
               $procenta = (int)($row['procenta'] ?? 0);
-              $spousti = trim((string)($row['spousti'] ?? ''));
               $poznamka = trim((string)($row['poznamka'] ?? ''));
 
               if ($krok === '') {
@@ -170,9 +177,6 @@ ob_start();
               }
               if ($dbTabulky === '') {
                   $dbTabulky = '-';
-              }
-              if ($spousti === '') {
-                  $spousti = '-';
               }
               if ($poznamka === '') {
                   $poznamka = '-';
@@ -199,7 +203,6 @@ ob_start();
                 <td<?= $souborStyle ?>><?= h($soubor) ?></td>
                 <td><?= h($dbTabulky) ?></td>
                 <td class="<?= h($procentaClass) ?>"><?= h((string)$procenta) ?> %</td>
-                <td><?= h($spousti) ?></td>
                 <td style="white-space:pre-wrap;"><?= h($poznamka) ?></td>
               </tr>
             <?php endforeach; ?>
@@ -211,42 +214,59 @@ ob_start();
 </div>
 <style>
 .karta-max {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
+  height: auto;
+  max-height: 100%;
+  overflow: auto;
   border-radius: 7px;
   border: 1px solid #e0e0e0;
-  padding:0;
+  padding: 0;
   margin-bottom: 16px;
-  background:#fff;
+  background: #fff;
   box-shadow: 0 2px 8px 0 #e0e0e01c;
+  box-sizing: border-box;
 }
 .karta-header {
-  position: relative;
   padding: 16px 18px 6px 18px;
   background: #f8f8fa;
   border-bottom: 1px solid #e0e0e0;
-  z-index: 2;
 }
 .karta-tablewrap {
-  flex: 1 1 0;
-  min-height: 160px;
-  overflow: auto;
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
   background: #fff;
   border-radius: 0 0 7px 7px;
+  overflow: auto;
 }
 .karta-table {
-  width: 100%;
+  width: max-content;
+  min-width: 0;
   border-collapse: separate;
   border-spacing: 0;
-  font-size:1em;
-  min-width: 820px;
+  table-layout: auto;
+  font-size: 1em;
 }
 .karta-table th, .karta-table td {
   padding: 6px 9px;
   border-bottom: 1px solid #ececec;
   text-align:left;
   background: #fff;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.karta-table th:nth-child(2),
+.karta-table td:nth-child(2),
+.karta-table th:nth-child(4),
+.karta-table td:nth-child(4),
+.karta-table th:nth-child(5),
+.karta-table td:nth-child(5),
+.karta-table th:nth-child(8),
+.karta-table td:nth-child(8) {
+  max-width: 24ch;
 }
 .karta-thead-sticky th {
   position: sticky;

@@ -113,8 +113,8 @@
     .then(function(r){ return r.json().catch(function(){ return {}; }); })
     .then(function(json){
       if (json && json.ok === true) {
-        if (window.CB_AJAX && typeof window.CB_AJAX.refreshDashboard === 'function') {
-          return window.CB_AJAX.refreshDashboard({ loaderText: 'Změna období. aktualizuji ...' });
+        if (window.CB_AJAX && typeof window.CB_AJAX.refreshDashboardRefreshOpCards === 'function') {
+          return window.CB_AJAX.refreshDashboardRefreshOpCards();
         }
       }
     })

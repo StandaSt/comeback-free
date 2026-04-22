@@ -57,6 +57,7 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
     $isNano = ($mode === 'nano');
     $cardId = (int)($pripravenaKarta['cardId'] ?? 0);
     $cardPoradi = (int)($pripravenaKarta['cardPoradi'] ?? 0);
+    $refreshOp = (int)($pripravenaKarta['refreshOp'] ?? 0);
     $title = (string)($pripravenaKarta['title'] ?? '');
     $role = (int)($pripravenaKarta['role'] ?? 3);
     $color = (string)($pripravenaKarta['color'] ?? '');
@@ -111,7 +112,7 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
 
     ob_start();
 ?>
-<section class="<?= h($cardClass) ?>" data-cb-dash-card="1"<?= $gridStyle !== '' ? ' style="' . h($gridStyle) . '"' : '' ?>>
+<section class="<?= h($cardClass) ?>" data-cb-dash-card="1" data-card-refresh-op="<?= $refreshOp === 1 ? '1' : '0' ?>"<?= $gridStyle !== '' ? ' style="' . h($gridStyle) . '"' : '' ?>>
   <article class="card_shell<?= h($cardLineHeightClass) ?> odstup_vnitrni_0"
     data-card-id="<?= h((string)$cardId) ?>"
     data-card-title="<?= h($title) ?>"
@@ -176,6 +177,13 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
       <?php endif; ?>
     </div>
   </article>
+  <div class="dash_loader dash_card_loader is-hidden" data-card-loader="1" aria-hidden="true">
+    <div class="dash_loader_inner">
+      <img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback" class="dash_loader_logo">
+      <p class="dash_loader_text">Obnovuji data ...</p>
+      <div class="dash_loader_time" data-cb-loader-time>0.00 s</div>
+    </div>
+  </div>
 </section>
 <?php
     return (string)ob_get_clean();

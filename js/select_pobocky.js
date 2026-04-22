@@ -192,9 +192,9 @@
               }
               return;
             }
-            if (w.CB_AJAX && typeof w.CB_AJAX.refreshDashboard === 'function') {
+            if (w.CB_AJAX && typeof w.CB_AJAX.refreshDashboardRefreshOpCards === 'function') {
               updateBranchButtonLabel(String(payload.mode || ''), payload.selected_oblasti || []);
-              return w.CB_AJAX.refreshDashboard({ loaderText: 'Změna volby poboček, aktualizuji ...' });
+              return w.CB_AJAX.refreshDashboardRefreshOpCards();
             }
           })
           .catch(function () {
