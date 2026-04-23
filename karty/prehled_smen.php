@@ -354,12 +354,12 @@ ob_start();
             <th></th>
             <th>
               <?php if ((int)$tabKonfig['enable_filters'] === 1): ?>
-                <input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="width:10ch;" type="text" name="ps_f[prijmeni]" value="<?= h($psFilters['prijmeni']) ?>" onchange="this.form.ps_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
+ <input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" type="text" name="ps_f[prijmeni]" value="<?= h($psFilters['prijmeni']) ?>" onchange="this.form.ps_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
               <?php endif; ?>
             </th>
             <th>
               <?php if ((int)$tabKonfig['enable_filters'] === 1): ?>
-                <input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="width:10ch;" type="text" name="ps_f[jmeno]" value="<?= h($psFilters['jmeno']) ?>" onchange="this.form.ps_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
+ <input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" type="text" name="ps_f[jmeno]" value="<?= h($psFilters['jmeno']) ?>" onchange="this.form.ps_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
               <?php endif; ?>
             </th>
             <th>

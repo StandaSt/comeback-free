@@ -274,20 +274,20 @@ ob_start();
 <div
   id="<?= h($gtRootId) ?>"
   class="table-wrap ram_normal bg_bila zaobleni_12 odstup_vnitrni_10"
-  style="width:100%; box-sizing:border-box;"
+  style="box-sizing:border-box;"
 >
   <?php if ($gtFiles === []): ?>
     <p class="card_text txt_cervena odstup_vnejsi_0">Ve složce admin_testy/ a jejich podsložkách nejsou žádné PHP soubory.</p>
   <?php else: ?>
 
     <?php if ($gtStep === 'pick'): ?>
-      <form method="post" action="<?= h(cb_url('/')) ?>" class="odstup_vnejsi_0" style="width:100%;" data-cb-max-form="1">
+      <form method="post" action="<?= h(cb_url('/')) ?>" class="odstup_vnejsi_0 sirka100" data-cb-max-form="1">
         <input type="hidden" name="page" value="go_test">
         <input type="hidden" name="gt_action" value="select">
-        <div class="card_stack gap_10 displ_flex" style="width:100%;">
-          <label class="card_field gap_4 displ_flex" style="width:100%;">
+        <div class="card_stack gap_10 displ_flex sirka100">
+          <label class="card_field gap_4 displ_flex sirka100">
             <span>Testovací script</span>
-            <select class="card_select ram_sedy txt_seda vyska_32" name="gt_script" style="width:100%; max-width:none;">
+            <select class="card_select ram_sedy txt_seda vyska_32 sirka100" name="gt_script" style="max-width:none;">
               <option value="">Vyber script</option>
               <?php foreach ($gtFiles as $file): ?>
                 <option value="<?= h($file) ?>"<?= $gtSelected === $file ? ' selected' : '' ?>><?= h($file) ?></option>
@@ -302,9 +302,9 @@ ob_start();
       </form>
 
     <?php elseif ($gtStep === 'confirm'): ?>
-      <div class="ram_normal bg_bila zaobleni_12 odstup_vnitrni_10" data-go-test-detail="1" style="width:100%; max-width:720px; box-sizing:border-box;">
+      <div class="ram_normal bg_bila zaobleni_12 odstup_vnitrni_10 sirka100" data-go-test-detail="1" style="max-width:720px; box-sizing:border-box;">
         <?php if ($gtHasSelection): ?>
-          <table class="table ram_normal bg_bila radek_1_35" style="width:100%; table-layout:fixed;">
+          <table class="table ram_normal bg_bila radek_1_35 sirka100" style="table-layout:fixed;">
             <tbody>
               <tr>
                 <td class="text_tucny" style="width:180px;">Soubor</td>
@@ -345,7 +345,8 @@ ob_start();
             src="<?= h($gtRunSrc) ?>"
             title="Výstup test scriptu"
             sandbox="allow-scripts allow-same-origin allow-forms"
-            style="width:100%; min-height:520px; border:1px solid var(--clr_seda_2); border-radius:10px; background:#fff;"
+            class="sirka100"
+            style="min-height:520px; border:1px solid var(--clr_seda_2); border-radius:10px; background:#fff;"
           ></iframe>
         <?php else: ?>
           <p class="card_text txt_cervena odstup_vnejsi_0">Není vybraný platný script.</p>

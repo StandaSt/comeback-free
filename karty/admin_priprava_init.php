@@ -19,40 +19,37 @@ try {
 if ($initError !== '') {
     $card_min_html = '<p class="card_text txt_seda odstup_vnejsi_0 card_text_muted">' . h($initError) . '</p>';
 } else {
-    $card_min_html = ''
-        . '<div class="table-wrap ram_normal bg_bila zaobleni_12">'
-        . '  <table class="table ram_normal bg_bila radek_1_35">'
-        . '    <thead>'
-        . '      <tr>'
-        . '        <th class="txt_l">Skupina</th>'
-        . '        <th class="txt_r">Záznamů</th>'
-        . '        <th class="txt_r">Objem</th>'
-        . '      </tr>'
-        . '    </thead>'
-        . '    <tbody>';
-
-    foreach ($summaryKeys as $key) {
-        if (!isset($summary[$key])) {
-            continue;
-        }
-
-        $item = $summary[$key];
-        $label = (string)($item['label'] ?? $key);
-        $count = (int)($item['count'] ?? 0);
-        $bytes = (int)($item['bytes'] ?? 0);
-
-        $card_min_html .= ''
-            . '      <tr>'
-            . '        <td>' . h($label) . '</td>'
-            . '        <td class="txt_r" style="' . h(cb_db_count_style($count)) . '"><strong>' . h(cb_db_fmt_rows_approx($count)) . '</strong></td>'
-            . '        <td class="txt_r"><strong>' . h(cb_db_fmt_bytes($bytes)) . '</strong></td>'
-            . '      </tr>';
-    }
-
-    $card_min_html .= ''
-        . '    </tbody>'
-        . '  </table>'
-        . '</div>';
+    ob_start();
+    ?>
+    <div class="displ_flex jc_stred">
+      <table class="table ram_normal bg_bila radek_1_35 sirka100">
+        <thead>
+          <tr>
+            <th class="txt_l">Skupina</th>
+            <th class="txt_r">Záznamů</th>
+            <th class="txt_r">Objem</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($summaryKeys as $key): ?>
+            <?php if (!isset($summary[$key])) continue; ?>
+            <?php
+              $item = $summary[$key];
+              $label = (string)($item['label'] ?? $key);
+              $count = (int)($item['count'] ?? 0);
+              $bytes = (int)($item['bytes'] ?? 0);
+            ?>
+            <tr>
+              <td><?= h($label) ?></td>
+              <td class="<?= $count === 0 ? 'txt_r txt_cervena text_tucny' : 'txt_r' ?>"><strong><?= h(cb_db_fmt_rows_approx($count)) ?></strong></td>
+              <td class="txt_r"><strong><?= h(cb_db_fmt_bytes($bytes)) ?></strong></td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+    <?php
+    $card_min_html = (string)ob_get_clean();
 }
 
 $initRowsByArea = [
@@ -105,23 +102,14 @@ ob_start();
 <?php if ($initError !== ''): ?>
   <p class="card_text txt_seda odstup_vnejsi_0 card_text_muted"><?= h($initError) ?></p>
 <?php else: ?>
-<div class="karta-max">
-  <div class="karta-header">
-    <h4 style="margin:0; font-size:1.13rem; font-weight:700;">Příprava inicializace - detailní stav</h4>
-    <div style="font-size:0.97em;color:#555; margin-bottom: 8px;">Souhrnný přehled aktivních přípravných skriptů pro Restia, Směny, Google Sheets.</div>
+<div class="card_stack gap_8">
+  <div>
+    <h4 class="text_18 text_tucny odstup_vnejsi_0">Příprava inicializace - detailní stav</h4>
+    <p class="card_text txt_seda odstup_vnejsi_0">Souhrnný přehled aktivních přípravných skriptů pro Restia, Směny, Google Sheets.</p>
   </div>
-  <div class="karta-tablewrap">
-    <table class="karta-table">
-      <colgroup>
-        <col style="width:7%;">
-        <col style="width:18%;">
-        <col style="width:10%;">
-        <col style="width:14%;">
-        <col style="width:14%;">
-        <col style="width:8%;">
-        <col>
-      </colgroup>
-      <thead class="karta-thead-sticky">
+  <div class="table-wrap ram_normal bg_bila">
+    <table class="table ram_normal bg_bila radek_1_35 sirka100">
+      <thead>
         <tr>
           <th>Krok</th>
           <th>Název skriptu</th>
@@ -191,19 +179,19 @@ ob_start();
               if ($isHotovo0) {
                   $procentaClass .= ' txt_cervena text_tucny';
               }
-              $souborStyle = '';
+              $souborClass = '';
               if (preg_match('~^nen(i|\x{ED})$~ui', $soubor) === 1) {
-                  $souborStyle = ' style="color:#b00020; font-weight:700;"';
+                  $souborClass = 'txt_cervena text_tucny';
               }
               ?>
               <tr>
                 <td><?= h($krok) ?></td>
                 <td><?= h($nazev) ?></td>
                 <td><?= h($zdrojDat) ?></td>
-                <td<?= $souborStyle ?>><?= h($soubor) ?></td>
+                <td class="<?= h($souborClass) ?>"><?= h($soubor) ?></td>
                 <td><?= h($dbTabulky) ?></td>
                 <td class="<?= h($procentaClass) ?>"><?= h((string)$procenta) ?> %</td>
-                <td style="white-space:pre-wrap;"><?= h($poznamka) ?></td>
+                <td><?= h($poznamka) ?></td>
               </tr>
             <?php endforeach; ?>
           <?php endif; ?>
@@ -212,75 +200,6 @@ ob_start();
     </table>
   </div>
 </div>
-<style>
-.karta-max {
-  display: inline-block;
-  width: fit-content;
-  max-width: 100%;
-  height: auto;
-  max-height: 100%;
-  overflow: auto;
-  border-radius: 7px;
-  border: 1px solid #e0e0e0;
-  padding: 0;
-  margin-bottom: 16px;
-  background: #fff;
-  box-shadow: 0 2px 8px 0 #e0e0e01c;
-  box-sizing: border-box;
-}
-.karta-header {
-  padding: 16px 18px 6px 18px;
-  background: #f8f8fa;
-  border-bottom: 1px solid #e0e0e0;
-}
-.karta-tablewrap {
-  display: inline-block;
-  width: fit-content;
-  max-width: 100%;
-  background: #fff;
-  border-radius: 0 0 7px 7px;
-  overflow: auto;
-}
-.karta-table {
-  width: max-content;
-  min-width: 0;
-  border-collapse: separate;
-  border-spacing: 0;
-  table-layout: auto;
-  font-size: 1em;
-}
-.karta-table th, .karta-table td {
-  padding: 6px 9px;
-  border-bottom: 1px solid #ececec;
-  text-align:left;
-  background: #fff;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-.karta-table th:nth-child(2),
-.karta-table td:nth-child(2),
-.karta-table th:nth-child(4),
-.karta-table td:nth-child(4),
-.karta-table th:nth-child(5),
-.karta-table td:nth-child(5),
-.karta-table th:nth-child(8),
-.karta-table td:nth-child(8) {
-  max-width: 24ch;
-}
-.karta-thead-sticky th {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  background: #f4f4f7;
-  border-bottom: 2px solid #c7d2ff;
-  box-shadow: 0 2px 4px #0001;
-  font-weight: 700;
-}
-.karta-table tr:last-child td {
-  border-bottom: none;
-}
-</style>
 <?php endif; ?>
 <?php
 $card_max_html = (string)ob_get_clean();

@@ -241,35 +241,38 @@ $uzBuildUrl = static function (array $extra = []) use ($uzBaseParams, $uzQueryDe
 ?>
 
 <?php
-$card_min_html = ''
-    . '<div class="table-wrap ram_normal bg_bila zaobleni_12">'
-    . '  <table class="table ram_normal bg_bila radek_1_35 card_table_min" aria-label="Přehled uživatelů IS Comeback">'
-    . '    <thead>'
-    . '      <tr>'
-    . '        <th>Přidělená role</th>'
-    . '        <th class="txt_r">počet</th>'
-    . '      </tr>'
-    . '    </thead>'
-    . '    <tbody>'
-    . '      <tr>'
-    . '        <td>uživatel</td>'
-    . '        <td class="txt_r"><strong>' . h((string)$roleStats['uzivatel']) . '</strong></td>'
-    . '      </tr>'
-    . '      <tr>'
-    . '        <td>manager</td>'
-    . '        <td class="txt_r"><strong>' . h((string)$roleStats['manager']) . '</strong></td>'
-    . '      </tr>'
-    . '      <tr>'
-    . '        <td>admin</td>'
-    . '        <td class="txt_r"><strong>' . h((string)$roleStats['admin']) . '</strong></td>'
-    . '      </tr>'
-    . '      <tr>'
-    . '        <td><strong>Celkem</strong></td>'
-    . '        <td class="txt_r"><strong>' . h((string)($roleStats['uzivatel'] + $roleStats['manager'] + $roleStats['admin'])) . '</strong></td>'
-    . '      </tr>'
-    . '    </tbody>'
-    . '  </table>'
-    . '</div>';
+ob_start();
+?>
+<div class="displ_flex jc_stred">
+  <table class="table ram_normal bg_bila radek_1_35 card_table_min sirka100" aria-label="Přehled uživatelů IS Comeback">
+    <thead>
+      <tr>
+        <th>Přidělená role</th>
+        <th class="txt_r">počet</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>uživatel</td>
+        <td class="txt_r"><strong><?= h((string)$roleStats['uzivatel']) ?></strong></td>
+      </tr>
+      <tr>
+        <td>manager</td>
+        <td class="txt_r"><strong><?= h((string)$roleStats['manager']) ?></strong></td>
+      </tr>
+      <tr>
+        <td>admin</td>
+        <td class="txt_r"><strong><?= h((string)$roleStats['admin']) ?></strong></td>
+      </tr>
+      <tr>
+        <td><strong>Celkem</strong></td>
+        <td class="txt_r"><strong><?= h((string)($roleStats['uzivatel'] + $roleStats['manager'] + $roleStats['admin'])) ?></strong></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<?php
+$card_min_html = (string)ob_get_clean();
 
 ob_start();
 ?>
@@ -288,10 +291,10 @@ ob_start();
             <thead>
               <tr class="filter-row">
                 <th class="c-id"></th>
-                <th class="c-prijmeni"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="width:10ch;" type="text" name="uz_f[prijmeni]" value="<?= h($uzFilters['prijmeni'] ?? '') ?>"></th>
-                <th class="c-jmeno"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="width:8ch;" type="text" name="uz_f[jmeno]" value="<?= h($uzFilters['jmeno'] ?? '') ?>"></th>
-                <th class="c-telefon"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="width:10ch;" type="text" name="uz_f[telefon]" value="<?= h($uzFilters['telefon'] ?? '') ?>"></th>
-                <th class="c-email"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="width:16ch;" type="text" name="uz_f[email]" value="<?= h($uzFilters['email'] ?? '') ?>"></th>
+                <th class="c-prijmeni"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" type="text" name="uz_f[prijmeni]" value="<?= h($uzFilters['prijmeni'] ?? '') ?>"></th>
+                <th class="c-jmeno"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" type="text" name="uz_f[jmeno]" value="<?= h($uzFilters['jmeno'] ?? '') ?>"></th>
+                <th class="c-telefon"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" type="text" name="uz_f[telefon]" value="<?= h($uzFilters['telefon'] ?? '') ?>"></th>
+                <th class="c-email"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" type="text" name="uz_f[email]" value="<?= h($uzFilters['email'] ?? '') ?>"></th>
                 <th class="uzivatele_filter_reset txt_l" colspan="3">
                   <div class="filter-actions gap_8 displ_flex">
                     <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 icon-x small zaobleni_6 vyska_24 radek_24 displ_inline_flex" href="<?= h($formAction) ?>">&times;</a>

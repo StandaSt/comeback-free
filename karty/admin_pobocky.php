@@ -99,14 +99,14 @@ ob_start();
     <table class="table ram_normal bg_bila radek_1_35">
       <thead>
         <tr>
-          <th style="<?= h($sirkaSloupcu['nazev']) ?>">Název</th>
-          <th style="<?= h($sirkaSloupcu['ulice']) ?>">Ulice</th>
-          <th style="<?= h($sirkaSloupcu['mesto']) ?>">Město</th>
-          <th style="<?= h($sirkaSloupcu['psc']) ?>">PSČ</th>
+          <th class="txt_r" style="<?= h($sirkaSloupcu['nazev']) ?>">Název</th>
+          <th class="txt_r" style="<?= h($sirkaSloupcu['ulice']) ?>">Ulice</th>
+          <th class="txt_r" style="<?= h($sirkaSloupcu['mesto']) ?>">Město</th>
+          <th class="txt_r" style="<?= h($sirkaSloupcu['psc']) ?>">PSČ</th>
           <?php foreach ($endCols as $col): ?>
-            <th class="txt_c" style="<?= h($sirkaSloupcu['end']) ?>"><?= h($col) ?></th>
+            <th class="txt_r" style="<?= h($sirkaSloupcu['end']) ?>"><?= h($col) ?></th>
           <?php endforeach; ?>
-          <th style="<?= h($sirkaSloupcu['akce']) ?>">Akce</th>
+          <th class="txt_r" style="<?= h($sirkaSloupcu['akce']) ?>">Akce</th>
         </tr>
       </thead>
       <tbody>
@@ -116,39 +116,44 @@ ob_start();
           </tr>
         <?php else: ?>
           <?php foreach ($rows as $row): ?>
+            <?php $formId = 'cb-admin-pobocky-' . (int)($row['id_pob'] ?? 0); ?>
             <tr>
-              <form method="post" action="<?= h($formAction) ?>">
-                <input type="hidden" name="cb_admin_pobocky_action" value="save_row">
-                <input type="hidden" name="id_pob" value="<?= h((string)($row['id_pob'] ?? '0')) ?>">
-
-                <?php foreach ($editCols as $col): ?>
-                  <?php $maxLenAttr = str_starts_with($col, 'end_') ? ' maxlength="3"' : ''; ?>
-                  <?php
-                    $inputStyle = match (true) {
-                        str_starts_with($col, 'end_') => ' style="' . $sirkaSloupcu['end'] . '"',
-                        isset($sirkaSloupcu[$col]) => ' style="' . $sirkaSloupcu[$col] . '"',
-                        default => '',
-                    };
-                  ?>
-                  <td>
-                    <input
-                      type="text"
-                      class="card_input ram_sedy txt_seda vyska_32"
-                      name="<?= h($col) ?>"
-                      value="<?= h((string)($row[$col] ?? '')) ?>"
-                      <?= $maxLenAttr ?><?= $inputStyle ?>
-                    >
-                  </td>
-                <?php endforeach; ?>
-                <td>
-                  <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Uložit</button>
+              <?php foreach ($editCols as $col): ?>
+                <?php $maxLenAttr = str_starts_with($col, 'end_') ? ' maxlength="3"' : ''; ?>
+                <?php
+                  $inputStyle = match (true) {
+                      str_starts_with($col, 'end_') => ' style="' . $sirkaSloupcu['end'] . '"',
+                      isset($sirkaSloupcu[$col]) => ' style="' . $sirkaSloupcu[$col] . '"',
+                      default => '',
+                  };
+                ?>
+                <td class="txt_r">
+                  <?php if ($col === $editCols[0]): ?>
+                    <input type="hidden" form="<?= h($formId) ?>" name="cb_admin_pobocky_action" value="save_row">
+                    <input type="hidden" form="<?= h($formId) ?>" name="id_pob" value="<?= h((string)($row['id_pob'] ?? '0')) ?>">
+                  <?php endif; ?>
+                  <input
+                    type="text"
+                    class="card_input ram_sedy txt_seda vyska_32 txt_r"
+                    form="<?= h($formId) ?>"
+                    name="<?= h($col) ?>"
+                    value="<?= h((string)($row[$col] ?? '')) ?>"
+                    <?= $maxLenAttr ?><?= $inputStyle ?>
+                  >
                 </td>
-              </form>
+              <?php endforeach; ?>
+              <td class="txt_r">
+                <button type="submit" form="<?= h($formId) ?>" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Uložit</button>
+              </td>
             </tr>
           <?php endforeach; ?>
         <?php endif; ?>
       </tbody>
     </table>
+    <?php foreach ($rows as $row): ?>
+      <?php $formId = 'cb-admin-pobocky-' . (int)($row['id_pob'] ?? 0); ?>
+      <form id="<?= h($formId) ?>" method="post" action="<?= h($formAction) ?>"></form>
+    <?php endforeach; ?>
   </div>
 
   <p class="card_text txt_seda odstup_vnejsi_0<?= $msgErr ? ' card_text_muted' : '' ?>">

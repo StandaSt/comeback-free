@@ -445,8 +445,8 @@ $tableHeadHtml = implode("\n", [
 <?php
 ob_start();
 ?>
-<div class="table-wrap ram_normal bg_bila zaobleni_12">
-  <table class="table ram_normal bg_bila radek_1_35">
+<div class="displ_flex jc_stred">
+  <table class="table ram_normal bg_bila radek_1_35 sirka100">
     <thead>
       <tr>
         <th class="txt_l">Karty podle role</th>
@@ -506,7 +506,7 @@ ob_start();
               </select>
             </td>
             <td class="txt_c">
-              <label class="displ_inline_flex gap_6 cursor_ruka" style="align-items:center;justify-content:center;">
+              <label class="filter-actions displ_inline_flex gap_6 cursor_ruka jc_stred">
                 <input type="checkbox" name="refresh_op" value="1" form="karta-add" onchange="this.nextElementSibling.className=this.checked?'txt_cervena':'txt_seda';">
                 <span class="txt_seda">Ano</span>
               </label>
@@ -542,7 +542,7 @@ ob_start();
                   </select>
                 </td>
                 <td class="txt_c">
-                  <label class="displ_inline_flex gap_6 cursor_ruka" style="align-items:center;justify-content:center;">
+                  <label class="filter-actions displ_inline_flex gap_6 cursor_ruka jc_stred">
                     <input type="checkbox" name="refresh_op" value="1"<?= ((int)($card['refresh_op'] ?? 0) === 1) ? ' checked' : '' ?> form="<?= h($formId) ?>" data-cb-submit-on-change="1" data-cb-submit-name="admin_karty_action" data-cb-submit-value="save" onchange="this.nextElementSibling.className=this.checked?'txt_cervena':'txt_seda';">
                     <span class="<?= ((int)($card['refresh_op'] ?? 0) === 1) ? 'txt_cervena' : 'txt_seda' ?>">Ano</span>
                   </label>

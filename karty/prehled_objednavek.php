@@ -254,25 +254,28 @@ if (($cbDashboardRenderMode ?? '') === 'mini') {
         $pobText = implode(', ', array_map(static fn(int $v): string => (string)$v, $selectedPob));
     }
 
-    $card_min_html = ''
-        . '<div class="table-wrap ram_normal bg_bila zaobleni_12">'
-        . '  <table class="table ram_normal bg_bila radek_1_35 card_table_min">'
-        . '    <tbody>'
-        . '      <tr>'
-        . '        <td>Období</td>'
-        . '        <td class="txt_r"><strong>' . h($periodOdText) . ' - ' . h($periodDoText) . '</strong></td>'
-        . '      </tr>'
-        . '      <tr>'
-        . '        <td>' . h($pobLabel) . '</td>'
-        . '        <td class="txt_r"><strong>' . h($pobText) . '</strong></td>'
-        . '      </tr>'
-        . '      <tr>'
-        . '        <td>Celkem</td>'
-        . '        <td class="txt_r"><strong>' . h(number_format($pocetObjMini, 0, ',', ' ')) . '</strong> ' . h(obj_sklonuj_objednavka($pocetObjMini)) . '</td>'
-        . '      </tr>'
-        . '    </tbody>'
-        . '  </table>'
-        . '</div>';
+    ob_start();
+    ?>
+    <div class="displ_flex jc_stred">
+      <table class="table ram_normal bg_bila radek_1_35 card_table_min sirka100">
+        <tbody>
+          <tr>
+            <td>Období</td>
+            <td class="txt_r"><strong><?= h($periodOdText) ?> - <?= h($periodDoText) ?></strong></td>
+          </tr>
+          <tr>
+            <td><?= h($pobLabel) ?></td>
+            <td class="txt_r"><strong><?= h($pobText) ?></strong></td>
+          </tr>
+          <tr>
+            <td>Celkem</td>
+            <td class="txt_r"><strong><?= h(number_format($pocetObjMini, 0, ',', ' ')) ?></strong> <?= h(obj_sklonuj_objednavka($pocetObjMini)) ?></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <?php
+    $card_min_html = (string)ob_get_clean();
 
     return;
 }

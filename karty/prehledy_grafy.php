@@ -268,28 +268,28 @@ $renderGrafTile = static function (string $title, string $chartId, string $chart
     if ($chartJson !== '') {
         $payloadAttr = ' data-cb-prehledy-grafy-chart-data="' . h($chartJson) . '"';
     }
-    $titleStyle = $centerTitle ? ' style="text-align:center;"' : '';
+    $titleClass = $centerTitle ? 'txt_c' : '';
 
     return ''
-        . '<section class="card_text ram_sedy zaobleni_8 bg_bila odstup_vnitrni_8" style="display:flex; flex-direction:column; min-width:0; min-height:220px; height:100%; overflow:hidden;">'
-        . '<div class="card_text txt_tucne odstup_spod_4"' . $titleStyle . '>' . $titleEsc . '</div>'
-        . '<div id="' . $idEsc . '" data-cb-prehledy-grafy-chart="1"' . $payloadAttr . ' style="width:100%; flex:1 1 auto; min-height:180px; height:100%;"></div>'
+        . '<section class="card_text ram_sedy zaobleni_8 bg_bila odstup_vnitrni_8 displ_flex flex_sloupec" style="min-width:0; min-height:220px; height:100%; overflow:hidden;">'
+        . '<div class="card_text txt_tucne odstup_spod_4 ' . $titleClass . '">' . $titleEsc . '</div>'
+        . '<div id="' . $idEsc . '" data-cb-prehledy-grafy-chart="1"' . $payloadAttr . ' class="sirka100" style="flex:1 1 auto; min-height:180px; height:100%;"></div>'
         . '</section>';
 };
 
 $renderGrafRoot = static function (string $bodyHtml) use ($grafJson): string {
     return ''
-        . '<div style="width:100%; height:100%; min-height:0; display:flex; flex-direction:column;" data-cb-prehledy-grafy="1">'
+        . '<div class="sirka100 displ_flex flex_sloupec" style="height:100%; min-height:0;" data-cb-prehledy-grafy="1">'
         . '<script type="application/json" data-cb-prehledy-grafy-data>' . $grafJson . '</script>'
         . $bodyHtml
         . '</div>';
 };
 
 $card_min_html = $renderGrafRoot(
-    '<div style="width:100%; height:100%; min-height:0; display:flex; flex-direction:column; gap:6px;">'
-    . '<div class="txt_tucne text_14" style="text-align:center;">Počet objednávek, ' . h($titleOd) . ' - ' . h($titleDo) . '</div>'
+    '<div class="sirka100 displ_flex flex_sloupec gap_6" style="height:100%; min-height:0;">'
+    . '<div class="txt_tucne text_14 txt_c">Počet objednávek, ' . h($titleOd) . ' - ' . h($titleDo) . '</div>'
     . '<div style="flex:1 1 auto; min-height:0;"></div>'
-    . '<div id="mini_graf" data-cb-prehledy-grafy-chart="1" style="width:100%; height:190px;"></div>'
+    . '<div id="mini_graf" data-cb-prehledy-grafy-chart="1" class="sirka100" style="height:190px;"></div>'
     . '</div>'
 );
 
@@ -304,7 +304,7 @@ for ($i = 2; $i <= 6; $i++) {
 }
 
 $card_max_html = $renderGrafRoot(
-    '<div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); grid-template-rows:repeat(2, minmax(0, 1fr)); gap:10px; width:100%; height:100%; min-height:0; flex:1 1 auto; align-content:stretch;">'
+    '<div class="sirka100" style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); grid-template-rows:repeat(2, minmax(0, 1fr)); gap:10px; height:100%; min-height:0; flex:1 1 auto; align-content:stretch;">'
     . $maxTiles
     . '</div>'
 );

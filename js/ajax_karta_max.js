@@ -195,10 +195,19 @@
     const refreshDashboardOnSave = isDashboardRefreshForm(form);
     const useGlobalLoader = refreshDashboardOnSave;
 
-    const reqUrl = String(form.action || w.location.href || 'index.php');
     const method = String(form.method || 'POST').toUpperCase();
+    const reqUrl = String(form.action || w.location.href || 'index.php');
     const tempNodes = [];
     const cardId = getCardIdFromForm(form);
+    let fetchUrl = reqUrl;
+    const requestInit = {
+      method: method,
+      credentials: 'same-origin',
+      redirect: 'follow',
+      headers: {
+        'X-Comeback-Max-Form': '1'
+      }
+    };
 
     if (submitter instanceof HTMLElement && !skipSubmitterName) {
       const submitName = String(submitter.getAttribute('name') || submitter.getAttribute('data-cb-submit-name') || '').trim();
@@ -219,20 +228,23 @@
       }
     }
 
+    const formData = new FormData(form);
+
     const loaderText = getLoaderTextFromSubmitter(submitter, form);
     if (useGlobalLoader) {
       setLoading(true, loaderText, 'dashboard');
     }
 
-    fetch(reqUrl, {
-      method: method,
-      body: new FormData(form),
-      credentials: 'same-origin',
-      redirect: 'follow',
-      headers: {
-        'X-Comeback-Max-Form': '1'
-      }
-    }).then((res) => {
+    if (method === 'GET') {
+      requestInit.headers['X-Comeback-Card'] = '1';
+      const url = new URL(reqUrl, w.location.href);
+      url.search = new URLSearchParams(formData).toString();
+      fetchUrl = url.toString();
+    } else {
+      requestInit.body = formData;
+    }
+
+    fetch(fetchUrl, requestInit).then((res) => {
       return res.text().then((text) => {
         const raw = String(text || '').trim();
         let data = null;

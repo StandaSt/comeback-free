@@ -252,17 +252,20 @@ $zakBuildUrl = static function (array $extra = []) use ($zakBaseParams, $zakQuer
 ?>
 
 <?php
-$card_min_html = ''
-    . '<div class="table-wrap ram_normal bg_bila zaobleni_12">'
-    . '  <table class="table ram_normal bg_bila radek_1_35 card_table_min" >'
-    . '    <tbody>'
-    . '      <tr>'
-    . '        <td>Zákazníků v DB</td>'
-    . '        <td class="txt_r"><strong>' . h((string)$totalZak) . '</strong></td>'
-    . '      </tr>'
-    . '    </tbody>'
-    . '  </table>'
-    . '</div>';
+ob_start();
+?>
+<div class="displ_flex jc_stred">
+  <table class="table ram_normal bg_bila radek_1_35 card_table_min sirka100">
+    <tbody>
+      <tr>
+        <td>Zákazníků v DB</td>
+        <td class="txt_r"><strong><?= h((string)$totalZak) ?></strong></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<?php
+$card_min_html = (string)ob_get_clean();
 
 ob_start();
 ?>

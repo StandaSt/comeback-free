@@ -4,6 +4,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/../lib/vypocet_prehled_db.php';
+
 $cbRestiaCount = 0;
 $cbObjednavkyCount = 0;
 $cbSmenyCount = 0;
@@ -110,98 +112,34 @@ if (($cbDashboardRenderMode ?? '') === 'mini') {
     $cbDb = db();
     $cbDb->set_charset('utf8mb4');
 
-    $cbSummary = cb_db_scope_summary($cbDb, ['restia', 'smeny', 'reporty']);
-
-    $qRestia = $cbDb->query('SELECT MAX(`restia_imported_at`) AS dt FROM objednavky_restia');
-    if ($qRestia instanceof mysqli_result) {
-        $r = $qRestia->fetch_assoc();
-        $dt = trim((string)($r['dt'] ?? ''));
-        $cbRestiaDate = ($dt !== '') ? date('j.n.y H:i', strtotime($dt)) : 'Ne';
-        $qRestia->free();
-    }
-
-    $qObjednavky = $cbDb->query('SELECT COALESCE(MAX(id_obj), 0) AS cnt FROM objednavky_restia');
-    if ($qObjednavky instanceof mysqli_result) {
-        $r = $qObjednavky->fetch_assoc();
-        $cbObjednavkyCount = (int)($r['cnt'] ?? 0);
-        $qObjednavky->free();
-    }
-
-    $qObjednavkyDate = $cbDb->query('SELECT restia_imported_at AS dt FROM objednavky_restia ORDER BY id_obj DESC LIMIT 1');
-    if ($qObjednavkyDate instanceof mysqli_result) {
-        $r = $qObjednavkyDate->fetch_assoc();
-        $dt = trim((string)($r['dt'] ?? ''));
-        $cbObjednavkyDate = ($dt !== '') ? date('j.n.y H:i', strtotime($dt)) : 'Ne';
-        $qObjednavkyDate->free();
-    }
-
-    $qSmeny = $cbDb->query('SELECT MAX(created_at) AS dt FROM smeny_plan');
-    if ($qSmeny instanceof mysqli_result) {
-        $r = $qSmeny->fetch_assoc();
-        $dt = trim((string)($r['dt'] ?? ''));
-        $cbSmenyDate = ($dt !== '') ? date('j.n.y H:i', strtotime($dt)) : 'Ne';
-        $qSmeny->free();
-    }
-
-    $qReport = $cbDb->query('SELECT id_smeny_report AS cnt, created_at AS dt FROM smeny_report ORDER BY id_smeny_report DESC LIMIT 1');
-    if ($qReport instanceof mysqli_result) {
-        $r = $qReport->fetch_assoc();
-        $cbReportCount = (int)($r['cnt'] ?? 0);
-        $dt = trim((string)($r['dt'] ?? ''));
-        $cbReportDate = ($dt !== '') ? date('j.n.y H:i', strtotime($dt)) : 'Ne';
-        $qReport->free();
-    }
-
-    $cbRestiaCount = cb_admin_init_exact_max_id_sum($cbDb, [
-        ['table' => 'objednavky_restia', 'column' => 'id_obj', 'multiplier' => 4],
-        ['table' => 'obj_kuryr', 'column' => 'id_obj_kuryr'],
-        ['table' => 'obj_polozka_kds_tag', 'column' => 'id_obj_polozka_kds_tag'],
-        ['table' => 'obj_polozky', 'column' => 'id_obj_polozka'],
-        ['table' => 'obj_sluzba', 'column' => 'id_obj_sluzba'],
-        ['table' => 'zakaznik', 'column' => 'id_zak'],
-    ]);
-    $cbSmenyCount = cb_admin_init_exact_max_id_sum($cbDb, [
-        ['table' => 'smeny_akceptovane', 'column' => 'id'],
-        ['table' => 'smeny_aktualizace', 'column' => 'id_smeny_aktualizace'],
-        ['table' => 'smeny_plan', 'column' => 'id_smeny_plan'],
-    ]);
-    $cbSmenyPlanMaData = ($cbSmenyCount > 0);
-    $cbReportMaData = ($cbReportCount > 0);
-
-    $card_min_html = ''
-        . '<div class="table-wrap ram_normal bg_bila zaobleni_12">'
-        . '  <table class="table ram_normal bg_bila radek_1_35">'
-        . '    <thead>'
-        . '      <tr>'
-        . '        <th class="txt_l">Zdroj</th>'
-        . '        <th class="txt_r">záznamů v DB</th>'
-        . '        <th class="txt_r">aktualizace</th>'
-        . '      </tr>'
-        . '    </thead>'
-        . '    <tbody>'
-        . '      <tr>'
-        . '        <td>Restia</td>'
-        . '        <td class="txt_r"><strong>' . h(cb_admin_init_count_fmt($cbRestiaCount)) . '</strong></td>'
-        . '        <td class="txt_r">' . h($cbRestiaDate) . '</td>'
-        . '      </tr>'
-        . '      <tr>'
-        . '        <td>Objednávky</td>'
-        . '        <td class="txt_r"><strong>' . h(cb_admin_init_count_fmt($cbObjednavkyCount)) . '</strong></td>'
-        . '        <td class="txt_r">' . h($cbObjednavkyDate) . '</td>'
-        . '      </tr>'
-        . '      <tr>'
-        . '        <td>Směny</td>'
-        . '        <td class="txt_r"><strong>' . h(cb_admin_init_count_fmt($cbSmenyCount)) . '</strong></td>'
-        . '        <td class="txt_r">' . h($cbSmenyDate) . '</td>'
-        . '      </tr>'
-        . '      <tr>'
-        . '        <td>Reporty</td>'
-        . '        <td class="txt_r"><strong>' . h(cb_admin_init_count_fmt($cbReportCount)) . '</strong></td>'
-        . '        <td class="txt_r">' . h($cbReportDate) . '</td>'
-        . '      </tr>'
-        . '    </tbody>'
-        . '  </table>'
-        . '</div>';
+    $summary = cb_vypocet_prehled_db($cbDb);
+    $rows = (array)($summary['rows'] ?? []);
+    ob_start();
+    ?>
+    <div class="displ_flex jc_stred">
+      <table class="table ram_normal bg_bila radek_1_35 sirka100">
+        <thead>
+          <tr>
+            <th class="txt_l">Zdroj</th>
+            <th class="txt_r">záznamů</th>
+            <th class="txt_r">objem</th>
+            <th class="txt_r">aktualizace</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($rows as $row): ?>
+            <tr>
+              <td><?= h((string)$row['source']) ?></td>
+              <td class="<?= ((int)$row['count'] === 0) ? 'txt_r txt_cervena text_tucny' : 'txt_r' ?>"><strong><?= h(number_format((int)$row['count'], 0, ',', ' ')) ?></strong></td>
+              <td><?= h(cb_db_fmt_bytes((int)$row['bytes'])) ?></td>
+              <td><?= h((string)($row['updated_at'] ?? 'Ne')) ?></td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+    <?php
+    $card_min_html = (string)ob_get_clean();
 
     return;
 }
@@ -333,8 +271,8 @@ if (!function_exists('cb_admin_init_status_html')) {
         $countTables = count($rows);
         $word = cb_admin_init_tabulky_word($countTables);
 
-        $html = '<span style="display:inline-flex;align-items:center;gap:6px;">';
-        $html .= '<span class="tooltip_box tooltip_table" style="display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:999px;background:var(--clr_modra_5);color:var(--clr_bila);font-size:11px;font-weight:700;line-height:1;cursor:default;" aria-label="Informace o tabulkách">i';
+        $html = '<span class="tooltip_box tooltip_table displ_inline_flex gap_6">';
+        $html .= '<span class="tooltip_box tooltip_table displ_inline_flex jc_stred" style="width:17px;height:17px;border-radius:999px;background:var(--clr_modra_5);color:var(--clr_bila);" aria-label="Informace o tabulkách">i';
         $html .= '<span class="tooltip_table_content">';
         $html .= '<table class="tooltip_table_data">';
         $html .= '<thead><tr><th class="txt_l">tabulka</th><th class="txt_r">počet záznamů</th></tr></thead><tbody>';
@@ -392,8 +330,8 @@ $card_min_html = ''
 
 ob_start();
 ?>
-<div class="table-wrap ram_normal bg_bila zaobleni_12">
-<table class="table ram_normal bg_bila radek_1_35">
+<div class="table-wrap ram_normal bg_bila">
+<table class="table ram_normal bg_bila radek_1_35 sirka100">
   <thead>
     <tr>
       <th class="txt_l">script v inicializace/</th>
