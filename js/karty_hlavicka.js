@@ -342,10 +342,9 @@
           });
           clearMoveSource();
           closeAllCardPrefMenus();
-          if (w.CB_AJAX && typeof w.CB_AJAX.refreshDashboard === 'function') {
-            return w.CB_AJAX.refreshDashboard({
-              force: true,
-              loaderMode: 'cards'
+          if (w.CB_AJAX && typeof w.CB_AJAX.relayoutDashboard === 'function') {
+            return Promise.resolve(w.CB_AJAX.relayoutDashboard()).finally(() => {
+              setDashboardLoading(false);
             });
           }
           setDashboardLoading(false);

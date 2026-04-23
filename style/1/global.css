@@ -1400,6 +1400,22 @@ align-items:center;
   height:175px;
 }
 
+.card_pref_menu_variant{
+  display:block;
+}
+
+.card_pref_menu_max{
+  display:none;
+}
+
+.dash_card.is-maxi-overlay .card_pref_menu_mini{
+  display:none;
+}
+
+.dash_card.is-maxi-overlay .card_pref_menu_max{
+  display:block;
+}
+
 .card_top_role_1{
   background:var(--clr_ruzova_4);
 }

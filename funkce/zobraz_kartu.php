@@ -135,15 +135,12 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
               <span class="card_pref_dots txt_seda">&#8942;</span>
             <?php endif; ?>
           </button>
-          <div class="card_pref_menu is-hidden" data-card-pref-menu="1">
-            <div class="card_pref_list" data-card-pref-list="1">
-              <button type="button" class="card_pref_item cursor_ruka" data-card-pref-open="color" data-card-pref-url="<?= h($cardColorUrl) ?>">Barva karty</button>
-              <button type="button" class="card_pref_item cursor_ruka" data-card-pref-open="ikon" data-card-pref-url="<?= h($cardIconUrl) ?>">Ikona karty</button>
-              <button type="button" class="card_pref_item cursor_ruka" data-card-pref-move="1">Přesunout na pozici</button>
-              <button type="button" class="card_pref_item cursor_ruka" data-card-pref-unlock-all="1">Odemkni vše</button>
+          <?php if (!$isNano): ?>
+            <div class="card_pref_menu is-hidden" data-card-pref-menu="1">
+              <?php require __DIR__ . '/../includes/card_menu_mini.php'; ?>
+              <?php require __DIR__ . '/../includes/card_menu_max.php'; ?>
             </div>
-            <iframe class="card_pref_frame is-hidden" data-card-pref-frame="1" title="Nastavení karty"></iframe>
-          </div>
+          <?php endif; ?>
         </div>
         <div class="card_head_text">
           <h3 class="card_title txt_seda text_15 odstup_vnejsi_0"><?= h($title) ?></h3>
