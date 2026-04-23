@@ -1848,15 +1848,17 @@ align-items:center;
    KARTA: uzivatele
    ========================= */
 
+.uzivatele-table.card_table_max th,
+.uzivatele-table.card_table_max td{
+  width:auto;
+}
+
 .uzivatele-table.card_table_max .c-id,
 .uzivatele-table.card_table_max .c-telefon,
 .uzivatele-table.card_table_max .c-reg,
-.uzivatele-table.card_table_max .c-aktivni{
-  white-space:nowrap;
-}
-
+.uzivatele-table.card_table_max .c-aktivni,
 .uzivatele-table.card_table_max .c-email{
-  overflow-wrap:anywhere;
+  white-space:nowrap;
 }
 
 .uzivatele-table .row-icons{

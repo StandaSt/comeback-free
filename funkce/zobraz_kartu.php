@@ -115,6 +115,7 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
 <section class="<?= h($cardClass) ?>" data-cb-dash-card="1" data-card-refresh-op="<?= $refreshOp === 1 ? '1' : '0' ?>"<?= $gridStyle !== '' ? ' style="' . h($gridStyle) . '"' : '' ?>>
   <article class="card_shell<?= h($cardLineHeightClass) ?> odstup_vnitrni_0"
     data-card-id="<?= h((string)$cardId) ?>"
+    data-card-poradi="<?= h((string)$cardPoradi) ?>"
     data-card-title="<?= h($title) ?>"
     data-card-mode="<?= h($mode) ?>"
     data-card-col="<?= h((string)$col) ?>"

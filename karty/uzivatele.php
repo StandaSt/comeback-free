@@ -225,6 +225,7 @@ $uzQueryDefaults = [
     'uz_dir' => 'DESC',
 ];
 $uzBaseParams = [
+    'cb_load_max' => '1',
     'uz_per' => (string)$uzPer,
     'uz_akt' => $uzAkt,
 ];
@@ -238,6 +239,7 @@ if ((int)$tabKonfig['enable_filters'] === 1 && $uzFilters !== []) {
 $uzBuildUrl = static function (array $extra = []) use ($uzBaseParams, $uzQueryDefaults): string {
     return cb_url_query('/', array_merge($uzBaseParams, $extra), $uzQueryDefaults);
 };
+$uzResetUrl = cb_url_query('/', ['cb_load_max' => '1'], $uzQueryDefaults);
 ?>
 
 <?php
@@ -276,10 +278,12 @@ $card_min_html = (string)ob_get_clean();
 
 ob_start();
 ?>
+<?php $uzDebounceJs = "clearTimeout(this._cbDebounce);this._cbDebounce=setTimeout(function(field){field.form.uz_p.value=1;if(field.form.requestSubmit){field.form.requestSubmit();}else{field.form.submit();}},350,this);"; ?>
 <?php if ($uzError !== ''): ?>
       <p class="card_text txt_seda odstup_vnejsi_0 card_text_muted"><?= h($uzError) ?></p>
     <?php else: ?>
-      <form method="get" action="<?= h($formAction) ?>" class="card_stack gap_10 displ_flex" autocomplete="off">
+      <form method="get" action="<?= h($formAction) ?>" class="card_stack gap_10 displ_flex" autocomplete="off" data-cb-max-form="1">
+        <input type="hidden" name="cb_load_max" value="1">
         <input type="hidden" name="uz_p" value="1">
         <?php if ((int)$tabKonfig['enable_sort'] === 1): ?>
           <input type="hidden" name="uz_sort" value="<?= h($uzSort) ?>">
@@ -291,13 +295,13 @@ ob_start();
             <thead>
               <tr class="filter-row">
                 <th class="c-id"></th>
-                <th class="c-prijmeni"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" type="text" name="uz_f[prijmeni]" value="<?= h($uzFilters['prijmeni'] ?? '') ?>"></th>
-                <th class="c-jmeno"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" type="text" name="uz_f[jmeno]" value="<?= h($uzFilters['jmeno'] ?? '') ?>"></th>
-                <th class="c-telefon"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" type="text" name="uz_f[telefon]" value="<?= h($uzFilters['telefon'] ?? '') ?>"></th>
-                <th class="c-email"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" type="text" name="uz_f[email]" value="<?= h($uzFilters['email'] ?? '') ?>"></th>
+                <th class="c-prijmeni"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" type="text" name="uz_f[prijmeni]" value="<?= h($uzFilters['prijmeni'] ?? '') ?>" oninput="<?= h($uzDebounceJs) ?>"></th>
+                <th class="c-jmeno"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" type="text" name="uz_f[jmeno]" value="<?= h($uzFilters['jmeno'] ?? '') ?>" oninput="<?= h($uzDebounceJs) ?>"></th>
+                <th class="c-telefon"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" type="text" name="uz_f[telefon]" value="<?= h($uzFilters['telefon'] ?? '') ?>" oninput="<?= h($uzDebounceJs) ?>"></th>
+                <th class="c-email"><input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" type="text" name="uz_f[email]" value="<?= h($uzFilters['email'] ?? '') ?>" oninput="<?= h($uzDebounceJs) ?>"></th>
                 <th class="uzivatele_filter_reset txt_l" colspan="3">
                   <div class="filter-actions gap_8 displ_flex">
-                    <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 icon-x small zaobleni_6 vyska_24 radek_24 displ_inline_flex" href="<?= h($formAction) ?>">&times;</a>
+                    <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 icon-x small zaobleni_6 vyska_24 radek_24 displ_inline_flex" href="<?= h($uzResetUrl) ?>">&times;</a>
                   </div>
                 </th>
               </tr>

@@ -217,6 +217,7 @@
     function setCardPlacement(root, col, line, isLocked) {
       if (!(root instanceof HTMLElement)) return;
       const section = root.closest('[data-cb-dash-card="1"]');
+      const prefWrap = root.querySelector('[data-card-pref-wrap]');
       const safeCol = (Number.isFinite(col) && col > 0) ? Math.trunc(col) : 0;
       const safeLine = (Number.isFinite(line) && line > 0) ? Math.trunc(line) : 0;
 
@@ -224,6 +225,9 @@
       root.setAttribute('data-card-line', String(safeLine));
       if (typeof isLocked === 'boolean') {
         root.setAttribute('data-card-pos-locked', isLocked ? '1' : '0');
+        if (prefWrap instanceof HTMLElement) {
+          prefWrap.classList.toggle('card_pref_wrap_pos_locked', isLocked);
+        }
       }
 
       if (section instanceof HTMLElement) {
@@ -241,6 +245,85 @@
       document.querySelectorAll('.card_shell').forEach(function (root) {
         if (!(root instanceof HTMLElement)) return;
         setCardPlacement(root, 0, 0, false);
+      });
+    }
+
+    function reorderMiniCardsByPoradi() {
+      const grid = document.querySelector('.dash_grid[data-login-id]');
+      if (!(grid instanceof HTMLElement)) return;
+
+      const groups = Array.from(grid.querySelectorAll(':scope > .dash_nano_group'));
+      groups.forEach(function (group) {
+        if (group instanceof HTMLElement) {
+          group.remove();
+        }
+      });
+
+      const breaks = Array.from(grid.querySelectorAll(':scope > .dash_break'));
+      breaks.forEach(function (node) {
+        if (node instanceof HTMLElement) {
+          node.remove();
+        }
+      });
+
+      const sections = Array.from(grid.querySelectorAll(':scope > [data-cb-dash-card="1"]'))
+        .filter(function (section) { return section instanceof HTMLElement; });
+
+      const nanoSections = [];
+      const miniSections = [];
+
+      sections.forEach(function (section) {
+        const root = section.querySelector('.card_shell');
+        if (!(root instanceof HTMLElement)) return;
+        const mode = String(root.getAttribute('data-card-mode') || 'mini').trim();
+        if (mode === 'nano') {
+          nanoSections.push(section);
+          return;
+        }
+        miniSections.push(section);
+      });
+
+      miniSections.sort(function (a, b) {
+        const rootA = a.querySelector('.card_shell');
+        const rootB = b.querySelector('.card_shell');
+        const poradiA = rootA instanceof HTMLElement ? parseInt(String(rootA.getAttribute('data-card-poradi') || '0'), 10) : 0;
+        const poradiB = rootB instanceof HTMLElement ? parseInt(String(rootB.getAttribute('data-card-poradi') || '0'), 10) : 0;
+        const safeA = Number.isFinite(poradiA) && poradiA > 0 ? poradiA : 999999;
+        const safeB = Number.isFinite(poradiB) && poradiB > 0 ? poradiB : 999999;
+        if (safeA !== safeB) {
+          return safeA - safeB;
+        }
+
+        const idA = rootA instanceof HTMLElement ? parseInt(String(rootA.getAttribute('data-card-id') || '0'), 10) : 0;
+        const idB = rootB instanceof HTMLElement ? parseInt(String(rootB.getAttribute('data-card-id') || '0'), 10) : 0;
+        return idA - idB;
+      });
+
+      const orderedSections = nanoSections.concat(miniSections);
+      orderedSections.forEach(function (section) {
+        grid.appendChild(section);
+      });
+    }
+
+    function applyLockedPlacementsFromData(lockedPositions) {
+      const rows = Array.isArray(lockedPositions) ? lockedPositions : [];
+
+      document.querySelectorAll('.card_shell').forEach(function (root) {
+        if (!(root instanceof HTMLElement)) return;
+        root.setAttribute('data-card-pos-locked', '0');
+      });
+
+      rows.forEach(function (row) {
+        if (!row || typeof row !== 'object') return;
+        const cardId = parseInt(String(row.id_karta || '0'), 10);
+        const col = parseInt(String(row.col || '0'), 10);
+        const line = parseInt(String(row.line || '0'), 10);
+        if (!Number.isFinite(cardId) || cardId <= 0 || !Number.isFinite(col) || col <= 0 || !Number.isFinite(line) || line <= 0) {
+          return;
+        }
+        const root = document.querySelector('.card_shell[data-card-id="' + String(cardId) + '"]');
+        if (!(root instanceof HTMLElement)) return;
+        setCardPlacement(root, col, line, true);
       });
     }
 
@@ -342,6 +425,7 @@
           });
           clearMoveSource();
           closeAllCardPrefMenus();
+          applyLockedPlacementsFromData(data.locked_positions);
           if (w.CB_AJAX && typeof w.CB_AJAX.relayoutDashboard === 'function') {
             return Promise.resolve(w.CB_AJAX.relayoutDashboard()).finally(() => {
               setDashboardLoading(false);
@@ -499,17 +583,11 @@
           if (data && data.ok) {
             traceAjax('card_unlock_all_ok', {});
             clearAllCardPlacements();
+            reorderMiniCardsByPoradi();
             clearMoveSource();
             closeAllCardPrefMenus();
-            if (w.CB_AJAX && typeof w.CB_AJAX.refreshDashboard === 'function') {
-              return Promise.resolve(
-                w.CB_AJAX.refreshDashboard({
-                  force: true,
-                  loaderMode: 'dashboard'
-                })
-              ).finally(() => {
-                setDashboardLoading(false);
-              });
+            if (w.CB_AJAX && typeof w.CB_AJAX.relayoutDashboard === 'function') {
+              w.CB_AJAX.relayoutDashboard();
             }
             setDashboardLoading(false);
             return;
