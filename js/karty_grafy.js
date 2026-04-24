@@ -181,6 +181,89 @@
       };
     }
 
+    if (kind === 'pie') {
+      const labels = Array.isArray(payload.labels) ? payload.labels.map((item) => String(item)) : [];
+      const values = Array.isArray(payload.values) ? payload.values.map((item) => Number(item) || 0) : [];
+      const colors = Array.isArray(payload.colors) ? payload.colors.map((item) => String(item || '')) : [];
+      const total = Number(payload.total || 0) || values.reduce((sum, value) => sum + value, 0);
+
+      if (labels.length === 0 || values.length !== labels.length) return null;
+
+      const graphic = [];
+      const legendOrder = [
+        { label: 'Registrovany', index: labels.indexOf('Registrovany zakaznik') },
+        { label: 'V restauraci', index: labels.indexOf('V restauraci') },
+        { label: 'Anonymni', index: labels.indexOf('Anonymni') }
+      ].filter((item) => item.index >= 0);
+
+      legendOrder.forEach((item, orderIndex) => {
+        const color = colors[item.index] || '#94a3b8';
+        const value = values[item.index] ?? 0;
+        const top = 52 + (orderIndex * 28);
+
+        graphic.push({
+          type: 'circle',
+          left: 18,
+          top: top + 6,
+          shape: { cx: 0, cy: 0, r: 5 },
+          style: { fill: color }
+        });
+        graphic.push({
+          type: 'text',
+          left: 30,
+          top: top,
+          style: {
+            text: item.label + ': ' + value,
+            fill: '#334155',
+            font: '13px Arial, Helvetica, sans-serif'
+          }
+        });
+      });
+
+      graphic.push({
+        type: 'text',
+        left: '70%',
+        top: '39%',
+        style: {
+          text: 'Celkem:\n' + total,
+          textAlign: 'center',
+          textVerticalAlign: 'middle',
+          fill: '#0f172a',
+          font: '700 16px Arial, Helvetica, sans-serif'
+        }
+      });
+
+      return {
+        tooltip: {
+          trigger: 'item',
+          formatter: (params) => {
+            const name = String(params && params.name ? params.name : '');
+            const value = Number(params && typeof params.value !== 'undefined' ? params.value : 0) || 0;
+            const percent = Number(params && typeof params.percent !== 'undefined' ? params.percent : 0) || 0;
+            return name + ': ' + value + ' (' + percent.toFixed(1) + ' %)';
+          }
+        },
+        graphic: graphic,
+        series: [{
+          type: 'pie',
+          radius: ['40%', '72%'],
+          center: ['72%', '44%'],
+          avoidLabelOverlap: true,
+          label: {
+            show: true,
+            formatter: (params) => String(params && params.percent ? Math.round(params.percent) : 0) + ' %'
+          },
+          data: labels.map((label, index) => ({
+            name: label,
+            value: values[index] ?? 0,
+            itemStyle: {
+              color: colors[index] || undefined
+            }
+          }))
+        }]
+      };
+    }
+
     return null;
   }
 

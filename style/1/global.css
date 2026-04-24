@@ -2405,3 +2405,164 @@ align-items:center;
     grid-template-columns:1fr;
   }
 }
+
+
+/* =========================================================
+   MAX TABULKY – CILOVY STAV (NOVA VRSTVA)
+   ---------------------------------------------------------
+   Tato sekce ma byt novy jednotny zaklad pro vsechny tabulky
+   v max rezimu karet.
+
+   Cil:
+   - sjednotit vzhled max tabulek
+   - sjednotit vzhled filtrovacich poli
+   - sjednotit spodni listu se strankovanim
+   - nemichat sem sirky sloupcu
+
+   Dulezite pravidlo:
+   - sirky sloupcu budou nastavene inline primo v PHP souboru
+   - tady je jen vzhled, ne individualni rozmery sloupcu
+
+   Nazvoslovi:
+   - .card-max-table      = cela tabulka v max karte
+   - .card-max-filter     = radek filtru v hlavicce tabulky
+   - .card-max-pagination = spodni lista pod tabulkou
+   ========================================================= */
+
+
+/* =========================
+   MAX TABULKA – ZAKLAD
+   ========================= */
+
+/* Hlavni trida cele tabulky v max karte. */
+.card-max-table{
+  width:max-content;          /* tabulka podle obsahu, nesmrskava sloupce */
+  border-collapse:collapse;   /* sousedni ramecky bunek se spoji do jedne cary */
+}
+
+/* Spolecny vzhled hlavickovych i datovych bunek. */
+.card-max-table th,
+.card-max-table td{
+  padding:6px 12px;                         /* vnitrni mezera v bunce: nahore/dole 6px, vlevo/vpravo 12px */
+  border:1px solid var(--clr_seda_2);       /* jednotny sedy ramecek bunek */
+  font-size:var(--fs_14);                   /* bezna velikost textu v tabulce */
+  vertical-align:middle;                    /* obsah bunky bude vyskově uprostred */
+}
+
+/* Hlavicka tabulky – nazvy sloupcu. */
+.card-max-table thead th{
+  background:var(--clr_seda_1);             /* svetle sede pozadi hlavicky */
+  font-size:var(--fs_13);                   /* hlavicka je o trochu mensi nez obsah */
+  color:var(--clr_seda_4);                  /* tmavsi seda barva textu */
+  font-weight:700;                          /* tucny text hlavicky */
+  position:sticky;                          /* hlavicka zustane prilepena pri scrollovani */
+  top:0;                                    /* prilepeni k hornimu okraji scroll prostoru */
+  z-index:2;                                /* hlavicka bude nad radky tabulky */
+}
+
+/* Zebra efekt – kazdy sudy radek ma jemne sede pozadi. */
+.card-max-table tbody tr:nth-child(even) td{
+  background:var(--clr_seda_1);
+}
+
+/* Hover efekt – radek pod mysi se podbarvi modre. */
+.card-max-table tbody tr:hover td{
+  background:var(--clr_modra_7);
+}
+
+
+/* =========================
+   MAX TABULKA – FILTRY
+   ========================= */
+
+/*
+   Trida pro radek filtru.
+   Pouziti typicky na <tr class="card-max-filter">.
+*/
+.card-max-filter th{
+  background:var(--clr_bila);               /* filtracni radek ma bile pozadi */
+  padding:4px 8px;                          /* mensi vnitrni mezera nez bezne bunky */
+  height:34px;                              /* jednotna vyska celeho filtracniho radku */
+  vertical-align:middle;                    /* filtracni pole bude vyskově uprostred */
+  box-shadow:inset 0 -1px 0 var(--clr_seda_2); /* jemna vnitrni spodni cara */
+}
+
+/*
+   Vsechna pole uvnitr filtracniho radku.
+   Plati pro textove inputy i selecty.
+*/
+.card-max-filter input,
+.card-max-filter select{
+  width:100%;                               /* pole vyplni celou sirku bunky */
+  min-width:0;                              /* dovoli poli zmensit se v uzke bunce */
+  height:24px;                              /* jednotna vyska filtrovaciho pole */
+
+  padding:2px 8px;                          /* vnitrni mezera uvnitr pole */
+  font-size:var(--fs_12);                   /* mensi text vhodny do filtru */
+  color:var(--clr_seda_4);                  /* barva textu ve filtru */
+
+  background:var(--clr_bila);               /* bile pozadi pole */
+  border:1px solid var(--clr_seda_2);       /* sedy ramecek pole */
+  border-radius:8px;                        /* zaoblene rohy pole */
+
+  box-sizing:border-box;                    /* sirka 100 % obsahuje i padding a border */
+}
+
+/* Stav pole pri kliknuti / psani. */
+.card-max-filter input:focus,
+.card-max-filter select:focus{
+  outline:none;                             /* vypne vychozi ramecek prohlizece */
+  border-color:var(--clr_modra_6);          /* ramecek aktivniho pole bude modry */
+  box-shadow:0 0 0 3px var(--clr_pruhledna_modra_15); /* jemne modre zvyrazneni kolem pole */
+}
+
+
+/* =========================
+   MAX TABULKA – SPODNI LISTA
+   ========================= */
+
+/*
+   Spodni lista pod tabulkou.
+   Typicky obsahuje:
+   - vlevo pocet zaznamu / radku
+   - uprostred strankovani
+   - vpravo vyber poctu radku na stranku
+*/
+.card-max-pagination{
+  margin-top:14px;                          /* mezera mezi tabulkou a spodni listou */
+
+  display:grid;                             /* rozlozeni do mrizky */
+  grid-template-columns:auto 1fr auto;      /* vlevo auto, stred vyplni prostor, vpravo auto */
+  align-items:center;                       /* svisle zarovnani prvku na stred */
+}
+
+/* Textove bloky ve spodni liste. */
+.card-max-pagination .per-form{
+  font-size:var(--fs_12);                   /* mensi text ve spodni liste */
+  line-height:1.2;                          /* kompaktni vyska radku */
+  white-space:nowrap;                       /* text se nebude zalamovat */
+}
+
+/* Stredni cast se strankovanim. */
+.card-max-pagination .pagination-icon{
+  justify-self:center;                      /* strankovani bude uprostred listy */
+  display:flex;                             /* tlacitka budou vedle sebe */
+  align-items:center;                       /* svisle zarovnani tlacitek */
+}
+
+/* Tlacitka strankovani. */
+.card-max-pagination .icon-btn{
+  min-width:30px;                           /* minimalni sirka tlacitka */
+  width:auto;                               /* sirka se prizpusobi obsahu */
+  font-size:var(--fs_11);                   /* mensi text v tlacitku */
+  padding:0 6px;                            /* vodorovna mezera uvnitr tlacitka */
+}
+
+/* Aktualni stranka ve strankovani. */
+.card-max-pagination .page-current{
+  pointer-events:none;                      /* na aktualni stranku nejde kliknout */
+  font-weight:700;                          /* tucne cislo aktualni stranky */
+  background:var(--clr_modra_1);            /* modre pozadi aktualni stranky */
+  border:1px solid var(--clr_indigo_1);     /* modry ramecek aktualni stranky */
+  color:var(--clr_modra_3);                 /* modry text aktualni stranky */
+}

@@ -350,7 +350,7 @@ ob_start();
       <td>
         <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
           <input type="hidden" name="run_restia_obj" value="1">
-          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Připravuji import objednávek">Připrav import</button>
+          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Připravuji historii">Připrav import</button>
         </form>
       </td>
     </tr>

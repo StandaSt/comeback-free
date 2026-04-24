@@ -20,6 +20,7 @@ $cbRestiaEmbedMode = (basename((string)($_SERVER['SCRIPT_NAME'] ?? '')) === 'ind
 $cbStateKey = 'cb_restia_hist_v4_state';
 $cbRowsKey = 'cb_restia_hist_v4_rows';
 $cbMsgKey = 'cb_restia_hist_v4_msg';
+$cbSelectedBranchKey = 'cb_restia_hist_v4_selected_branch';
 
 if (!function_exists('cb_restia_hist_h')) {
     function cb_restia_hist_h(string $value): string
@@ -563,12 +564,42 @@ if (!function_exists('cb_restia_hist_last_date')) {
     }
 }
 
+if (!function_exists('cb_restia_hist_last_data_at')) {
+    function cb_restia_hist_last_data_at(mysqli $conn, int $idPob): string
+    {
+        if ($idPob <= 0) {
+            return '';
+        }
+
+        $stmt = $conn->prepare('
+            SELECT MAX(restia_created_at) AS last_dt
+            FROM objednavky_restia
+            WHERE id_pob = ?
+        ');
+        if ($stmt === false) {
+            return '';
+        }
+
+        $stmt->bind_param('i', $idPob);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $row = ($res instanceof mysqli_result) ? $res->fetch_assoc() : null;
+        if ($res instanceof mysqli_result) {
+            $res->free();
+        }
+        $stmt->close();
+
+        return trim((string)($row['last_dt'] ?? ''));
+    }
+}
+
 if (!function_exists('cb_restia_hist_resume_info')) {
     function cb_restia_hist_resume_info(mysqli $conn, array $branch): array
     {
         $idPob = (int)($branch['id_pob'] ?? 0);
         $startDate = cb_restia_hist_branch_start_date($branch);
         $lastOkDate = ($idPob > 0) ? cb_restia_hist_last_date($conn, $idPob) : '';
+        $lastDataAt = ($idPob > 0) ? cb_restia_hist_last_data_at($conn, $idPob) : '';
         $nextDate = $startDate;
 
         if ($lastOkDate !== '') {
@@ -581,6 +612,7 @@ if (!function_exists('cb_restia_hist_resume_info')) {
         return [
             'start_date' => $startDate,
             'last_date' => $lastOkDate,
+            'last_data_at' => $lastDataAt,
             'next_date' => $nextDate,
         ];
     }
@@ -1523,11 +1555,17 @@ if (!is_array($state)) { $state = cb_restia_hist_default_state(); }
 if (!is_array($rows)) { $rows = []; }
 $action = trim((string)($_POST['cb_action'] ?? ''));
 $inputBranchId = (int)($_POST['cb_id_pob'] ?? 0);
+$openedFromAdminCard = isset($_POST['run_restia_obj']) && $action === '' && !isset($_POST['cb_id_pob']);
+
+if ($openedFromAdminCard) {
+    unset($_SESSION[$cbSelectedBranchKey]);
+}
 
 $auth = cb_restia_hist_get_auth();
 
 if ($action === 'select_branch') {
     if ($inputBranchId > 0) {
+        $_SESSION[$cbSelectedBranchKey] = $inputBranchId;
         $_SESSION['cb_pobocka_id'] = $inputBranchId;
         $_SESSION['selected_pobocky'] = [$inputBranchId];
         $branchSel = cb_restia_hist_get_branch_by_id($conn, $inputBranchId);
@@ -1543,6 +1581,7 @@ if ($action === 'select_branch') {
 
 if ($action === 'start' && $auth !== null) {
     if ($inputBranchId > 0) {
+        $_SESSION[$cbSelectedBranchKey] = $inputBranchId;
         $branch = cb_restia_hist_get_branch_by_id($conn, $inputBranchId);
     } else {
         $legacyBranchId = (int)($_SESSION['cb_pobocka_id'] ?? 0);
@@ -1585,6 +1624,7 @@ if ($action === 'start' && $auth !== null) {
     cb_restia_hist_log((int)$branch['id_pob'], 'LIMIT: ' . (string)CB_RESTIA_HIST_LIMIT);
 
     cb_restia_hist_run_batch($conn, $auth, $branch, $state, $rows, $message);
+    unset($_SESSION[$cbSelectedBranchKey]);
     $action = '';
 }
 
@@ -1609,49 +1649,65 @@ try {
 } catch (Throwable $e) {
     throw $e;
 }
-$selectedBranchId = (int)($_SESSION['cb_pobocka_id'] ?? 0);
-if ($selectedBranchId <= 0) {
+$selectedBranchId = (int)($_SESSION[$cbSelectedBranchKey] ?? 0);
+$selectedBranchName = '';
+$selectedBranchEnabled = false;
+$startBaseDate = '';
+$resumeDate = '';
+$lastOkDate = '';
+$countObj = 0;
+$lastOkText = '-';
+
+if ($selectedBranchId > 0) {
     foreach ($branchOptions as $branchOpt) {
-        if ((bool)($branchOpt['enabled'] ?? false) === true) {
-            $selectedBranchId = (int)($branchOpt['id_pob'] ?? 0);
-            break;
+        if ((int)($branchOpt['id_pob'] ?? 0) !== $selectedBranchId) {
+            continue;
         }
+        $selectedBranchName = (string)($branchOpt['nazev'] ?? '');
+        $selectedBranchEnabled = ((bool)($branchOpt['enabled'] ?? false) === true);
+        break;
     }
-}
-if ((int)($state['branch_id'] ?? 0) !== $selectedBranchId) {
-    foreach ($branchOptions as $branchOpt) {
-        if ((int)($branchOpt['id_pob'] ?? 0) === $selectedBranchId) {
-            $state['branch_id'] = $selectedBranchId;
-            $state['branch_name'] = (string)($branchOpt['nazev'] ?? '');
-            break;
-        }
+
+    if (!isset($branchResumeMap[$selectedBranchId])) {
+        throw new RuntimeException('Chybí data pro vybranou pobočku id=' . (string)$selectedBranchId);
     }
-}
-if (!isset($branchResumeMap[$selectedBranchId])) {
-    throw new RuntimeException('Chybi data pro vybranou pobočku id=' . (string)$selectedBranchId);
-}
-$selectedResume = $branchResumeMap[$selectedBranchId];
-$startBaseDate = cb_restia_hist_normalize_ymd((string)($selectedResume['start_date'] ?? ''));
-$resumeDate = cb_restia_hist_normalize_ymd((string)($selectedResume['next_date'] ?? ''));
-$lastOkDate = cb_restia_hist_normalize_ymd((string)($selectedResume['last_date'] ?? ''));
 
-if ((int)($state['branch_id'] ?? 0) === $selectedBranchId && (int)($state['run_started_at_ms'] ?? 0) === 0) {
-    $state['start_date'] = $startBaseDate;
-    $state['next_date'] = $resumeDate;
-    $state['last_date'] = $lastOkDate;
+    $selectedResume = $branchResumeMap[$selectedBranchId];
+    $startBaseDate = cb_restia_hist_normalize_ymd((string)($selectedResume['start_date'] ?? ''));
+    $resumeDate = cb_restia_hist_normalize_ymd((string)($selectedResume['next_date'] ?? ''));
+    $lastOkDate = cb_restia_hist_normalize_ymd((string)($selectedResume['last_date'] ?? ''));
+
+    if ((int)($state['branch_id'] ?? 0) !== $selectedBranchId) {
+        $state['branch_id'] = $selectedBranchId;
+        $state['branch_name'] = $selectedBranchName;
+    }
+
+    if ((int)($state['branch_id'] ?? 0) === $selectedBranchId && (int)($state['run_started_at_ms'] ?? 0) === 0) {
+        $state['start_date'] = $startBaseDate;
+        $state['next_date'] = $resumeDate;
+        $state['last_date'] = $lastOkDate;
+    }
+
+    $stmtCnt = $conn->prepare('SELECT COUNT(*) AS cnt FROM objednavky_restia WHERE id_pob = ?');
+    $stmtCnt->bind_param('i', $selectedBranchId);
+    $stmtCnt->execute();
+    $resCnt = $stmtCnt->get_result();
+    $rowCnt = ($resCnt instanceof mysqli_result) ? $resCnt->fetch_assoc() : null;
+    $countObj = (int)($rowCnt['cnt'] ?? 0);
+    if ($resCnt instanceof mysqli_result) { $resCnt->free(); }
+    $stmtCnt->close();
+
+    $lastOkText = (string)$countObj . ' objednávek';
 }
 
-$startDateInput = cb_restia_hist_format_date_input_cs($resumeDate);
-$stmtCnt = $conn->prepare('SELECT COUNT(*) AS cnt FROM objednavky_restia WHERE id_pob = ?');
-$stmtCnt->bind_param('i', $selectedBranchId);
-$stmtCnt->execute();
-$resCnt = $stmtCnt->get_result();
-$rowCnt = ($resCnt instanceof mysqli_result) ? $resCnt->fetch_assoc() : null;
-$countObj = (int)($rowCnt['cnt'] ?? 0);
-if ($resCnt instanceof mysqli_result) { $resCnt->free(); }
-$stmtCnt->close();
-
-$lastOkText = (string)$countObj . ' objednávek';
+$canStartImport = ($selectedBranchId > 0 && $selectedBranchEnabled);
+$branchInfoName = $selectedBranchId > 0 ? $selectedBranchName : 'není vybrána';
+$branchInfoId = $selectedBranchId > 0 ? (string)$selectedBranchId : '-';
+$branchInfoStart = $startBaseDate !== '' ? cb_restia_hist_format_date_input_cs($startBaseDate) : '-';
+$startButtonStyle = 'align-self:center;';
+if (!$canStartImport) {
+    $startButtonStyle .= ' opacity:.45; cursor:not-allowed; pointer-events:none;';
+}
 ?>
 <?php if (!$cbRestiaEmbedMode): ?>
 <!doctype html>
@@ -1661,24 +1717,26 @@ $lastOkText = (string)$countObj . ' objednávek';
   <p class="card_title txt_seda text_18 text_tucny odstup_vnejsi_0">Restia import objednávek</p>
   <br>
   <span class="card_text txt_cervena text_11">Admin info:</span> <span class="card_text txt_seda text_12">Limit <?= cb_restia_hist_h((string)CB_RESTIA_HIST_LIMIT) ?> obj. na stránku </span>
-  <p class="card_text txt_seda text_12">Pobočka: <?= cb_restia_hist_h((string)($state['branch_name'] ?? '')) ?> (<?= cb_restia_hist_h((string)$selectedBranchId) ?>)</p>
-  <p class="card_text txt_seda text_12">První objednávka pobočky: <?= cb_restia_hist_h(cb_restia_hist_format_date_input_cs($startBaseDate)) ?> | V DB je <?= cb_restia_hist_h($lastOkText) ?></p>
+  <p class="card_text txt_seda text_12">Pobočka: <?= cb_restia_hist_h($branchInfoName) ?> (<?= cb_restia_hist_h($branchInfoId) ?>)</p>
+  <p class="card_text txt_seda text_12">První objednávka pobočky: <?= cb_restia_hist_h($branchInfoStart) ?> | V DB je <?= cb_restia_hist_h($lastOkText) ?></p>
   <?php if ($message !== ''): ?><p class="card_text text_tucny txt_seda"><?= cb_restia_hist_h($message) ?></p><?php endif; ?>
     <br><br>
  <span class="card_text txt_cervena text_11">Výběr pobočky</span>
   <div class="card_actions gap_8 displ_flex">
     <form method="post" action="<?= cb_restia_hist_h((string)cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
       <input type="hidden" name="run_restia_obj" value="1"><input type="hidden" name="cb_action" value="start" id="cb_action_field">
-      <select name="cb_id_pob" class="card_select ram_sedy txt_seda bg_bila zaobleni_8" style="min-width:220px; height:22px; margin-right:8px;" onchange="var a=document.getElementById('cb_action_field');if(a){a.value='select_branch';}var f=this.form;if(f){var o=this.options[this.selectedIndex];var t=o?String(o.textContent||o.innerText||'').trim():'';var p=t.indexOf(' | ');if(p>=0){t=t.substring(0,p);}f.setAttribute('data-cb-loader-text','Připravuji stahování pobočky '+t);if(f.requestSubmit){f.requestSubmit();}else{f.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));}}">
+      <select name="cb_id_pob" class="card_select ram_sedy txt_seda bg_bila zaobleni_8" style="min-width:220px; height:22px; margin-right:8px;" onchange="if(!this.value||this.value==='0'){return;}var a=document.getElementById('cb_action_field');if(a){a.value='select_branch';}var f=this.form;var b=document.getElementById('cb_start_import_btn');if(b){b.disabled=true;b.setAttribute('aria-disabled','true');b.textContent='Pracuji...';b.style.background='var(--clr_zelena_2)';b.style.borderColor='var(--clr_zelena_1)';b.style.color='#fff';b.style.opacity='1';b.style.cursor='wait';b.style.pointerEvents='none';}if(f){var o=this.options[this.selectedIndex];var t=o?String(o.textContent||o.innerText||'').trim():'';var p=t.indexOf(' | ');if(p>=0){t=t.substring(0,p);}f.setAttribute('data-cb-loader-text','Připravuji import '+t);if(f.requestSubmit){f.requestSubmit();}else{f.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));}}">
+        <option value="0"<?= $selectedBranchId <= 0 ? ' selected' : '' ?>>Vyber pobočku pro import</option>
         <?php foreach ($branchOptions as $branchOpt): ?>
           <?php
           $idPobOpt = (int)($branchOpt['id_pob'] ?? 0);
           $nameOpt = (string)($branchOpt['nazev'] ?? '');
           $enabledOpt = ((bool)($branchOpt['enabled'] ?? false) === true);
           $labelOpt = $nameOpt !== '' ? $nameOpt : ('Pobočka #' . (string)$idPobOpt);
-          $resumeOpt = $branchResumeMap[$idPobOpt] ?? ['last_date' => ''];
+          $resumeOpt = $branchResumeMap[$idPobOpt] ?? ['last_date' => '', 'last_data_at' => ''];
           $lastOkOpt = cb_restia_hist_normalize_ymd((string)($resumeOpt['last_date'] ?? ''));
-          $statusOpt = ($lastOkOpt !== '') ? ('do ' . cb_restia_hist_format_date_cs($lastOkOpt) . ' OK') : 'bez importu';
+          $lastDataAtOpt = trim((string)($resumeOpt['last_data_at'] ?? ''));
+          $statusOpt = ($lastOkOpt !== '') ? ('do ' . cb_restia_hist_format_date_cs($lastOkOpt) . ($lastDataAtOpt !== '' ? ' ' . substr($lastDataAtOpt, 11, 8) : '') . ' OK') : 'bez importu';
           $labelOpt .= ' | ' . $statusOpt;
           if (!$enabledOpt) {
               $labelOpt .= ' (chybí restia_activePosId)';
@@ -1687,8 +1745,8 @@ $lastOkText = (string)$countObj . ' objednávek';
           <option value="<?= cb_restia_hist_h((string)$idPobOpt) ?>"<?= $idPobOpt === $selectedBranchId ? ' selected' : '' ?><?= $enabledOpt ? '' : ' disabled style="color:#9ca3af;"' ?>><?= cb_restia_hist_h($labelOpt) ?></option>
         <?php endforeach; ?>
       </select>
-      <span class="card_text txt_seda text_14" style="margin-right:8px; line-height:22px;"><?= cb_restia_hist_h(cb_restia_hist_format_month_year_cs($resumeDate)) ?></span>
-      <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" style="align-self:center;" data-cb-loader-text="API - stahuji objednávky">• Spustit import</button>
+      <span class="card_text txt_seda text_14" style="margin-right:8px; line-height:22px;"><?= $resumeDate !== '' ? cb_restia_hist_h(cb_restia_hist_format_month_year_cs($resumeDate)) : '' ?></span>
+      <button type="submit" id="cb_start_import_btn" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" style="<?= cb_restia_hist_h($startButtonStyle) ?>" data-cb-loader-text="API - stahuji objednávky" aria-disabled="<?= $canStartImport ? 'false' : 'true' ?>"<?= $canStartImport ? '' : ' disabled' ?>>Spustit import</button>
     </form>
   </div>
 
