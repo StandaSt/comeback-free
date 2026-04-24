@@ -261,6 +261,93 @@ if (!is_string($salesJson) || $salesJson === '') {
     throw new RuntimeException('Nepodarilo se pripravit data pro trzni graf.');
 }
 
+
+$hourLabels = ['11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '00', '01', '02', '03'];
+$hourKeys = ['11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '00', '01', '02', '03'];
+$hourDataByPob = [];
+foreach ($grafPolozky as $item) {
+    $idPob = (int)($item['id_pob'] ?? 0);
+    if ($idPob > 0) {
+        $hourDataByPob[$idPob] = array_fill(0, count($hourKeys), 0);
+    }
+}
+
+$hourIndex = array_flip($hourKeys);
+$hourWhereParts = [
+    'ca.report >= "' . $safeOd . '"',
+    'ca.report <= "' . $safeDo . '"',
+    'COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at) IS NOT NULL',
+    'HOUR(COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at)) IN (11,12,13,14,15,16,17,18,19,20,21,22,23,0,1,2,3)',
+];
+if ($selectedPob !== []) {
+    $hourWhereParts[] = 'o.id_pob IN (' . implode(',', array_map('intval', $selectedPob)) . ')';
+}
+
+$hourSql = '
+    SELECT
+        o.id_pob,
+        LPAD(HOUR(COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at)), 2, "0") AS hodina,
+        COUNT(*) AS cnt
+    FROM objednavky_restia o
+    LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
+    WHERE ' . implode('
+      AND ', $hourWhereParts) . '
+    GROUP BY o.id_pob, hodina
+    ORDER BY o.id_pob, FIELD(hodina, "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "00", "01", "02", "03")
+';
+
+$stmtHour = $pdo->query($hourSql);
+if ($stmtHour instanceof mysqli_result) {
+    while ($radek = $stmtHour->fetch_assoc()) {
+        $idPob = (int)($radek['id_pob'] ?? 0);
+        $hodina = (string)($radek['hodina'] ?? '');
+        $cnt = (int)($radek['cnt'] ?? 0);
+        if ($idPob <= 0 || $hodina === '' || !isset($hourDataByPob[$idPob], $hourIndex[$hodina])) {
+            continue;
+        }
+        $hourDataByPob[$idPob][(int)$hourIndex[$hodina]] = $cnt;
+    }
+    $stmtHour->free();
+}
+
+$hourPayload = [
+    'kind' => 'line',
+    'labels' => $hourLabels,
+    'series' => [],
+];
+foreach ($grafPolozky as $item) {
+    $idPob = (int)($item['id_pob'] ?? 0);
+    if ($idPob <= 0 || !isset($hourDataByPob[$idPob])) {
+        continue;
+    }
+
+    $rawData = $hourDataByPob[$idPob];
+    $maxValue = max($rawData);
+    $normalizedData = [];
+    foreach ($rawData as $value) {
+        $normalizedData[] = $maxValue > 0 ? round(($value / $maxValue) * 100, 1) : 0;
+    }
+
+    $hourPayload['series'][] = [
+        'name' => (string)($item['nazev'] ?? ''),
+        'color' => (string)($item['barva'] ?? ''),
+        'data' => $normalizedData,
+    ];
+}
+
+$hourJson = json_encode(
+    $hourPayload,
+    JSON_UNESCAPED_UNICODE
+    | JSON_UNESCAPED_SLASHES
+    | JSON_HEX_TAG
+    | JSON_HEX_AMP
+    | JSON_HEX_APOS
+    | JSON_HEX_QUOT
+);
+if (!is_string($hourJson) || $hourJson === '') {
+    throw new RuntimeException('Nepodarilo se pripravit data pro hodinovy graf.');
+}
+
 $renderGrafTile = static function (string $title, string $chartId, string $chartJson = '', bool $centerTitle = false) use ($grafJson): string {
     $titleEsc = h($title);
     $idEsc = h($chartId);
@@ -296,6 +383,10 @@ $card_min_html = $renderGrafRoot(
 $maxTiles = '';
 $maxTiles .= $renderGrafTile('Trend objednávek, ' . $titleOd . ' - ' . $titleDo, 'graf_max_1', $trendJson, true);
 for ($i = 2; $i <= 6; $i++) {
+    if ($i === 2) {
+        $maxTiles .= $renderGrafTile('Vytíženost poboček během dne (11-03)', 'graf_max_2', $hourJson, true);
+        continue;
+    }
     if ($i === 4) {
         $maxTiles .= $renderGrafTile('Přehled tržeb posledních 12 měsíců', 'graf_max_4', $salesJson, true);
         continue;

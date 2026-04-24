@@ -279,7 +279,7 @@ ob_start();
           <input type="hidden" name="zak_dir" value="<?= h($zakDir) ?>">
         <?php endif; ?>
 
-        <div class="table-wrap ram_normal bg_bila zaobleni_12">
+        <div class="table-wrap ram_normal bg_bila">
           <table class="table ram_normal bg_bila radek_1_35 card_table_max">
             <thead>
               <tr class="filter-row">
@@ -297,7 +297,7 @@ ob_start();
                 <th class="th-sort txt_r"><span class="th-sort-link gap_8 jc_mezi sirka100"><span class="th-sort-label">Poř.č.</span></span></th>
                 <th class="th-sort txt_r"><span class="th-sort-link gap_8 jc_mezi sirka100"><span class="th-sort-label">příjmení</span></span></th>
                 <th class="th-sort txt_l"><span class="th-sort-link gap_8 jc_mezi sirka100"><span class="th-sort-label">jméno</span></span></th>
-                <th class="th-sort txt_l"><span class="th-sort-link gap_8 jc_mezi sirka100"><span class="th-sort-label">telefon</span></span></th>
+                <th class="th-sort txt_l"><span class="th-sort-link gap_8 jc_mezi"><span class="th-sort-label">telefon</span></span></th>
                 <th class="th-sort txt_r"><span class="th-sort-link gap_8 jc_mezi sirka100"><span class="th-sort-label">email</span></span></th>
                 <th class="th-sort txt_r"><span class="th-sort-link gap_8 jc_mezi sirka100"><span class="th-sort-label">ulice</span></span></th>
                 <th class="th-sort txt_r"><span class="th-sort-link gap_8 jc_mezi sirka100"><span class="th-sort-label">město</span></span></th>
