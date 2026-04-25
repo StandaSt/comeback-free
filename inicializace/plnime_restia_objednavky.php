@@ -21,6 +21,7 @@ $cbStateKey = 'cb_restia_hist_v4_state';
 $cbRowsKey = 'cb_restia_hist_v4_rows';
 $cbMsgKey = 'cb_restia_hist_v4_msg';
 $cbSelectedBranchKey = 'cb_restia_hist_v4_selected_branch';
+$cbImportEndKey = 'cb_restia_konec_import';
 
 if (!function_exists('cb_restia_hist_h')) {
     function cb_restia_hist_h(string $value): string
@@ -89,6 +90,21 @@ if (!function_exists('cb_restia_hist_today')) {
     function cb_restia_hist_today(): string
     {
         return (new DateTimeImmutable('today', new DateTimeZone('Europe/Prague')))->format('Y-m-d');
+    }
+}
+
+if (!function_exists('cb_restia_hist_import_end_date')) {
+    function cb_restia_hist_import_end_date(): string
+    {
+        $tz = new DateTimeZone('Europe/Prague');
+        $now = new DateTimeImmutable('now', $tz);
+        $todayStart = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $now->format('Y-m-d') . ' 08:00:00', $tz);
+        if (!($todayStart instanceof DateTimeImmutable)) {
+            throw new RuntimeException('Nepodarilo se urcit konec importu.');
+        }
+
+        $currentWorkdayStart = ($now < $todayStart) ? $todayStart->modify('-1 day') : $todayStart;
+        return $currentWorkdayStart->modify('-1 day')->format('Y-m-d');
     }
 }
 
@@ -227,8 +243,9 @@ if (!function_exists('cb_restia_hist_day_range_utc')) {
     function cb_restia_hist_day_range_utc(string $date): array
     {
         $tz = new DateTimeZone('Europe/Prague');
-        $fromLocal = DateTimeImmutable::createFromFormat('Y-m-d H:i:s.u', $date . ' 00:00:00.000000', $tz);
-        $toLocal = DateTimeImmutable::createFromFormat('Y-m-d H:i:s.u', $date . ' 23:59:59.999000', $tz);
+        $fromLocal = DateTimeImmutable::createFromFormat('Y-m-d H:i:s.u', $date . ' 08:00:00.000000', $tz);
+        $nextDate = cb_restia_hist_next_date($date);
+        $toLocal = DateTimeImmutable::createFromFormat('Y-m-d H:i:s.u', $nextDate . ' 07:59:59.999000', $tz);
 
         if (!($fromLocal instanceof DateTimeImmutable) || !($toLocal instanceof DateTimeImmutable)) {
             throw new RuntimeException('Neplatny den pro interval.');
@@ -421,13 +438,13 @@ if (!function_exists('cb_restia_hist_branch_db_count')) {
 }
 
 if (!function_exists('cb_restia_hist_run_batch')) {
-    function cb_restia_hist_run_batch(mysqli $conn, array $auth, array $branch, array &$state, array &$rows, string &$message): void
+    function cb_restia_hist_run_batch(mysqli $conn, array $auth, array $branch, array &$state, array &$rows, string &$message, string $importEndDate): void
     {
         if ((int)($state['finished'] ?? 0) !== 0) {
             return;
         }
 
-        $today = cb_restia_hist_today();
+        $importEndDate = cb_restia_hist_normalize_ymd($importEndDate);
         $foundNow = 0;
         $cycleMonth = '';
 
@@ -441,9 +458,9 @@ if (!function_exists('cb_restia_hist_run_batch')) {
                 $state['last_date'] = (string)($resume['last_date'] ?? '');
             }
 
-            if ($date > $today) {
+            if ($date > $importEndDate) {
                 $state['finished'] = 1;
-                $message = 'Akce skončila. Došli jsme do aktuálního dne.';
+                $message = 'Akce skončila. Došli jsme do konce importu.';
                 cb_restia_hist_log((int)($branch['id_pob'] ?? 0), 'KONEC IMPORTU: ' . cb_restia_hist_format_datetime_cs(cb_restia_hist_now()));
                 break;
             }
@@ -1559,7 +1576,14 @@ $openedFromAdminCard = isset($_POST['run_restia_obj']) && $action === '' && !iss
 
 if ($openedFromAdminCard) {
     unset($_SESSION[$cbSelectedBranchKey]);
+    $_SESSION[$cbImportEndKey] = cb_restia_hist_import_end_date();
 }
+
+if (!isset($_SESSION[$cbImportEndKey]) || !is_string($_SESSION[$cbImportEndKey]) || trim((string)$_SESSION[$cbImportEndKey]) === '') {
+    $_SESSION[$cbImportEndKey] = cb_restia_hist_import_end_date();
+}
+
+$importEndDate = cb_restia_hist_normalize_ymd((string)$_SESSION[$cbImportEndKey]);
 
 $auth = cb_restia_hist_get_auth();
 
@@ -1594,8 +1618,6 @@ if ($action === 'start' && $auth !== null) {
     cb_restia_hist_ensure_default_customer($conn, (int)$branch['id_pob']);
     $resumeInfo = cb_restia_hist_resume_info($conn, $branch);
     $resumeDate = (string)$resumeInfo['next_date'];
-    $today = cb_restia_hist_today();
-    if ($resumeDate > $today) { $resumeDate = $today; }
 
     $_SESSION['cb_pobocka_id'] = (int)$branch['id_pob'];
     $_SESSION['selected_pobocky'] = [(int)$branch['id_pob']];
@@ -1621,9 +1643,10 @@ if ($action === 'start' && $auth !== null) {
     cb_restia_hist_log((int)$branch['id_pob'], 'START_BASE: ' . cb_restia_hist_format_date_cs((string)$resumeInfo['start_date']));
 
     cb_restia_hist_log((int)$branch['id_pob'], 'RESUME_FROM: ' . cb_restia_hist_format_date_cs($resumeDate));
+    cb_restia_hist_log((int)$branch['id_pob'], 'IMPORT_TO: ' . cb_restia_hist_format_date_cs($importEndDate));
     cb_restia_hist_log((int)$branch['id_pob'], 'LIMIT: ' . (string)CB_RESTIA_HIST_LIMIT);
 
-    cb_restia_hist_run_batch($conn, $auth, $branch, $state, $rows, $message);
+    cb_restia_hist_run_batch($conn, $auth, $branch, $state, $rows, $message, $importEndDate);
     unset($_SESSION[$cbSelectedBranchKey]);
     $action = '';
 }
