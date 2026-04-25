@@ -226,6 +226,26 @@ if (!function_exists('cb_restia_hist_format_datetime_cs')) {
     }
 }
 
+if (!function_exists('cb_restia_hist_format_range_cs')) {
+    function cb_restia_hist_format_range_cs(string $fromDate, string $toDate): string
+    {
+        $fromDate = cb_restia_hist_normalize_ymd($fromDate);
+        $toDate = cb_restia_hist_normalize_ymd($toDate);
+        if ($fromDate === '' || $toDate === '' || $fromDate > $toDate) {
+            return '';
+        }
+
+        $tz = new DateTimeZone('Europe/Prague');
+        $fromDt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $fromDate . ' 08:00:00', $tz);
+        $toDt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', cb_restia_hist_next_date($toDate) . ' 08:00:00', $tz);
+        if (!($fromDt instanceof DateTimeImmutable) || !($toDt instanceof DateTimeImmutable)) {
+            return '';
+        }
+
+        return $fromDt->format('d.m.Y H:i:s') . ' - ' . $toDt->format('d.m.Y H:i:s');
+    }
+}
+
 if (!function_exists('cb_restia_hist_next_date')) {
     function cb_restia_hist_next_date(string $date): string
     {
@@ -254,8 +274,8 @@ if (!function_exists('cb_restia_hist_day_range_utc')) {
         return [
             'from_z' => $fromLocal->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.v\Z'),
             'to_z' => $toLocal->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.v\Z'),
-            'from_db' => $fromLocal->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
-            'to_db' => $toLocal->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
+            'from_db' => $fromLocal->format('Y-m-d H:i:s'),
+            'to_db' => $toLocal->format('Y-m-d H:i:s'),
         ];
     }
 }
@@ -460,8 +480,21 @@ if (!function_exists('cb_restia_hist_run_batch')) {
 
             if ($date > $importEndDate) {
                 $state['finished'] = 1;
-                $message = 'Akce skončila. Došli jsme do konce importu.';
-                cb_restia_hist_log((int)($branch['id_pob'] ?? 0), 'KONEC IMPORTU: ' . cb_restia_hist_format_datetime_cs(cb_restia_hist_now()));
+                $branchName = trim((string)($branch['nazev'] ?? ''));
+                $runFromDate = cb_restia_hist_normalize_ymd((string)($state['run_from_date'] ?? ''));
+                $rangeText = cb_restia_hist_format_range_cs($runFromDate, $importEndDate);
+                if ($branchName !== '' && $rangeText !== '') {
+                    $message = 'Import ' . $branchName . ' období ' . $rangeText . ' skončil. OK';
+                } else {
+                    $message = 'Akce skončila. Došli jsme do konce importu.';
+                }
+                cb_restia_hist_log(
+                    (int)($branch['id_pob'] ?? 0),
+                    'KONEC IMPORTU: '
+                    . cb_restia_hist_format_datetime_cs(cb_restia_hist_now())
+                    . ' | pobočka=' . ($branchName !== '' ? $branchName : '-')
+                    . ' | součet_cyklus=' . (string)$foundNow
+                );
                 break;
             }
 
@@ -533,7 +566,13 @@ if (!function_exists('cb_restia_hist_run_batch')) {
                 $cycleMonth = cb_restia_hist_format_month_year_cs((string)($day['date'] ?? $date));
             }
             $message = 'Import ' . $cycleMonth . ' pro pobočku "' . $branchName . '", uloženo ' . (string)$foundNow . ' objednávek.';
-            cb_restia_hist_log((int)($branch['id_pob'] ?? 0), 'KONEC CYKLU: ' . cb_restia_hist_format_datetime_cs(cb_restia_hist_now()));
+            cb_restia_hist_log(
+                (int)($branch['id_pob'] ?? 0),
+                'KONEC CYKLU: '
+                . cb_restia_hist_format_datetime_cs(cb_restia_hist_now())
+                . ' | pobočka=' . ($branchName !== '' ? $branchName : '-')
+                . ' | součet_cyklus=' . (string)$foundNow
+            );
         }
     }
 }
@@ -554,13 +593,16 @@ if (!function_exists('cb_restia_hist_last_date')) {
     function cb_restia_hist_last_date(mysqli $conn, int $idPob): string
     {
         $stmt = $conn->prepare('
-            SELECT MAX(datum_do) AS last_dt
+            SELECT datum_od, datum_do
             FROM obj_import
             WHERE typ_importu = "historie"
-              AND id_pob = ?              
+              AND stav = "ok"
+              AND id_pob = ?
+            ORDER BY datum_do DESC, id_import DESC
+            LIMIT 1
         ');
         if ($stmt === false) {
-            return '';
+            throw new RuntimeException('DB prepare selhal: obj_import last date.');
         }
 
         $stmt->bind_param('i', $idPob);
@@ -572,12 +614,51 @@ if (!function_exists('cb_restia_hist_last_date')) {
         }
         $stmt->close();
 
-        $dt = (string)($row['last_dt'] ?? '');
-        if ($dt === '') {
+        if (!is_array($row)) {
             return '';
         }
 
-        return substr($dt, 0, 10);
+        $datumOd = trim((string)($row['datum_od'] ?? ''));
+        $datumDo = trim((string)($row['datum_do'] ?? ''));
+        if ($datumOd === '' || $datumDo === '') {
+            throw new RuntimeException('Posledni import historie ma prazdny interval pro pobocku id=' . (string)$idPob);
+        }
+
+        $tz = new DateTimeZone('Europe/Prague');
+        $utc = new DateTimeZone('UTC');
+
+        $fromLocal = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $datumOd, $tz);
+        $toLocal = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $datumDo, $tz);
+        if (($fromLocal instanceof DateTimeImmutable) && ($toLocal instanceof DateTimeImmutable)) {
+            $fromTime = $fromLocal->format('H:i:s');
+            $toTime = $toLocal->format('H:i:s');
+            if ($fromTime === '08:00:00' && $toTime === '07:59:59' && $toLocal->format('Y-m-d') === $fromLocal->modify('+1 day')->format('Y-m-d')) {
+                return $fromLocal->format('Y-m-d');
+            }
+            if ($fromTime === '00:00:00' && $toTime === '23:59:59' && $toLocal->format('Y-m-d') === $fromLocal->format('Y-m-d')) {
+                return $fromLocal->modify('-1 day')->format('Y-m-d');
+            }
+        }
+
+        $fromUtc = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $datumOd, $utc);
+        $toUtc = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $datumDo, $utc);
+        if (($fromUtc instanceof DateTimeImmutable) && ($toUtc instanceof DateTimeImmutable)) {
+            $fromUtcLocal = $fromUtc->setTimezone($tz);
+            $toUtcLocal = $toUtc->setTimezone($tz);
+            $fromTime = $fromUtcLocal->format('H:i:s');
+            $toTime = $toUtcLocal->format('H:i:s');
+            if ($fromTime === '08:00:00' && $toTime === '07:59:59' && $toUtcLocal->format('Y-m-d') === $fromUtcLocal->modify('+1 day')->format('Y-m-d')) {
+                return $fromUtcLocal->format('Y-m-d');
+            }
+            if ($fromTime === '00:00:00' && $toTime === '23:59:59' && $toUtcLocal->format('Y-m-d') === $fromUtcLocal->format('Y-m-d')) {
+                return $fromUtcLocal->modify('-1 day')->format('Y-m-d');
+            }
+        }
+
+        throw new RuntimeException(
+            'Neznamy interval posledniho importu historie pro pobocku id=' . (string)$idPob
+            . ' (' . $datumOd . ' - ' . $datumDo . ').'
+        );
     }
 }
 
@@ -685,10 +766,20 @@ if (!function_exists('cb_restia_hist_day_lock_release')) {
 
 if (!function_exists('cb_restia_hist_lookup_id')) {
     function cb_restia_hist_lookup_id(mysqli $conn, string $table, string $valueCol, string $value, string $idCol): int
-    {
-        $value = trim($value);
-        if ($value === '') {
-            return 0;
+{
+    static $cache = [];
+
+    $value = trim($value);
+    if ($value === '') {
+        return 0;
+    }
+
+    $key = $table . '|' . $value;
+
+    if (in_array($table, ['cis_obj_platforma','cis_obj_stav','cis_obj_platby','cis_doruceni'], true)) {
+
+        if (isset($cache[$key])) {
+            return $cache[$key];
         }
 
         $sqlSel = 'SELECT `' . $idCol . '` AS id FROM `' . $table . '` WHERE `' . $valueCol . '` = ? LIMIT 1';
@@ -696,15 +787,19 @@ if (!function_exists('cb_restia_hist_lookup_id')) {
         if ($stmtSel === false) {
             throw new RuntimeException('DB prepare selhal: ' . $table . ' select.');
         }
+
         $stmtSel->bind_param('s', $value);
         $stmtSel->execute();
         $resSel = $stmtSel->get_result();
+
         if ($resSel && ($row = $resSel->fetch_assoc())) {
             $id = (int)($row['id'] ?? 0);
             $resSel->free();
             $stmtSel->close();
+            $cache[$key] = $id;
             return $id;
         }
+
         if ($resSel) {
             $resSel->free();
         }
@@ -715,13 +810,50 @@ if (!function_exists('cb_restia_hist_lookup_id')) {
         if ($stmtIns === false) {
             throw new RuntimeException('DB prepare selhal: ' . $table . ' insert.');
         }
+
         $stmtIns->bind_param('s', $value);
         $stmtIns->execute();
         $id = (int)$conn->insert_id;
         $stmtIns->close();
 
+        $cache[$key] = $id;
+
         return $id;
     }
+
+    $sqlSel = 'SELECT `' . $idCol . '` AS id FROM `' . $table . '` WHERE `' . $valueCol . '` = ? LIMIT 1';
+    $stmtSel = $conn->prepare($sqlSel);
+    if ($stmtSel === false) {
+        throw new RuntimeException('DB prepare selhal: ' . $table . ' select.');
+    }
+
+    $stmtSel->bind_param('s', $value);
+    $stmtSel->execute();
+    $resSel = $stmtSel->get_result();
+    if ($resSel && ($row = $resSel->fetch_assoc())) {
+        $id = (int)($row['id'] ?? 0);
+        $resSel->free();
+        $stmtSel->close();
+        return $id;
+    }
+    if ($resSel) {
+        $resSel->free();
+    }
+    $stmtSel->close();
+
+    $sqlIns = 'INSERT INTO `' . $table . '` (`' . $valueCol . '`, `aktivni`) VALUES (?, 1)';
+    $stmtIns = $conn->prepare($sqlIns);
+    if ($stmtIns === false) {
+        throw new RuntimeException('DB prepare selhal: ' . $table . ' insert.');
+    }
+
+    $stmtIns->bind_param('s', $value);
+    $stmtIns->execute();
+    $id = (int)$conn->insert_id;
+    $stmtIns->close();
+
+    return $id;
+}
 }
 if (!function_exists('cb_restia_hist_lookup_res_polozka_id')) {
     function cb_restia_hist_lookup_res_polozka_id(mysqli $conn, int $idPob, string $restiaItemId): int
@@ -1434,6 +1566,7 @@ if (!function_exists('cb_restia_hist_default_state')) {
             'next_date' => '',
             'start_date' => '',
             'last_date' => '',
+            'run_from_date' => '',
             'finished' => 0,
             'branch_name' => '',
             'branch_id' => 0,
@@ -1628,6 +1761,7 @@ if ($action === 'start' && $auth !== null) {
     $state['branch_id'] = (int)$branch['id_pob'];
     $state['start_date'] = (string)$resumeInfo['start_date'];
     $state['last_date'] = (string)$resumeInfo['last_date'];
+    $state['run_from_date'] = $resumeDate;
     $state['run_started_at_ms'] = (int)round(microtime(true) * 1000);
     $state['run_row_no'] = 0;
     $state['found_total'] = 0;
@@ -1639,6 +1773,7 @@ if ($action === 'start' && $auth !== null) {
     cb_restia_hist_error_log_init((int)$branch['id_pob']);
     cb_restia_hist_log((int)$branch['id_pob'], '-----');
     cb_restia_hist_log((int)$branch['id_pob'], 'START: ' . cb_restia_hist_format_datetime_cs(cb_restia_hist_now()));
+    cb_restia_hist_log((int)$branch['id_pob'], 'POBOČKA: ' . (string)$branch['nazev'] . ' (' . (string)$branch['id_pob'] . ')');
     cb_restia_hist_log((int)$branch['id_pob'], 'SCRIPT: ' . basename(__FILE__));
     cb_restia_hist_log((int)$branch['id_pob'], 'START_BASE: ' . cb_restia_hist_format_date_cs((string)$resumeInfo['start_date']));
 
@@ -1675,6 +1810,7 @@ try {
 $selectedBranchId = (int)($_SESSION[$cbSelectedBranchKey] ?? 0);
 $selectedBranchName = '';
 $selectedBranchEnabled = false;
+$selectedBranchHasWork = false;
 $startBaseDate = '';
 $resumeDate = '';
 $lastOkDate = '';
@@ -1699,6 +1835,7 @@ if ($selectedBranchId > 0) {
     $startBaseDate = cb_restia_hist_normalize_ymd((string)($selectedResume['start_date'] ?? ''));
     $resumeDate = cb_restia_hist_normalize_ymd((string)($selectedResume['next_date'] ?? ''));
     $lastOkDate = cb_restia_hist_normalize_ymd((string)($selectedResume['last_date'] ?? ''));
+    $selectedBranchHasWork = ($resumeDate !== '' && $resumeDate <= $importEndDate);
 
     if ((int)($state['branch_id'] ?? 0) !== $selectedBranchId) {
         $state['branch_id'] = $selectedBranchId;
@@ -1723,7 +1860,7 @@ if ($selectedBranchId > 0) {
     $lastOkText = (string)$countObj . ' objednávek';
 }
 
-$canStartImport = ($selectedBranchId > 0 && $selectedBranchEnabled);
+$canStartImport = ($selectedBranchId > 0 && $selectedBranchEnabled && $selectedBranchHasWork);
 $branchInfoName = $selectedBranchId > 0 ? $selectedBranchName : 'není vybrána';
 $branchInfoId = $selectedBranchId > 0 ? (string)$selectedBranchId : '-';
 $branchInfoStart = $startBaseDate !== '' ? cb_restia_hist_format_date_input_cs($startBaseDate) : '-';
@@ -1756,16 +1893,19 @@ if (!$canStartImport) {
           $nameOpt = (string)($branchOpt['nazev'] ?? '');
           $enabledOpt = ((bool)($branchOpt['enabled'] ?? false) === true);
           $labelOpt = $nameOpt !== '' ? $nameOpt : ('Pobočka #' . (string)$idPobOpt);
-          $resumeOpt = $branchResumeMap[$idPobOpt] ?? ['last_date' => '', 'last_data_at' => ''];
-          $lastOkOpt = cb_restia_hist_normalize_ymd((string)($resumeOpt['last_date'] ?? ''));
+          $resumeOpt = $branchResumeMap[$idPobOpt] ?? ['last_data_at' => ''];
+          $nextDateOpt = cb_restia_hist_normalize_ymd((string)($resumeOpt['next_date'] ?? ''));
           $lastDataAtOpt = trim((string)($resumeOpt['last_data_at'] ?? ''));
-          $statusOpt = ($lastOkOpt !== '') ? ('do ' . cb_restia_hist_format_date_cs($lastOkOpt) . ($lastDataAtOpt !== '' ? ' ' . substr($lastDataAtOpt, 11, 8) : '') . ' OK') : 'bez importu';
+          $statusOpt = ($lastDataAtOpt !== '') ? ('do ' . cb_restia_hist_format_datetime_cs($lastDataAtOpt) . ' OK') : 'bez importu';
           $labelOpt .= ' | ' . $statusOpt;
+          $canImportOpt = ($enabledOpt && $nextDateOpt !== '' && $nextDateOpt <= $importEndDate);
           if (!$enabledOpt) {
               $labelOpt .= ' (chybí restia_activePosId)';
+          } elseif (!$canImportOpt) {
+              $labelOpt .= ' (hotovo)';
           }
           ?>
-          <option value="<?= cb_restia_hist_h((string)$idPobOpt) ?>"<?= $idPobOpt === $selectedBranchId ? ' selected' : '' ?><?= $enabledOpt ? '' : ' disabled style="color:#9ca3af;"' ?>><?= cb_restia_hist_h($labelOpt) ?></option>
+          <option value="<?= cb_restia_hist_h((string)$idPobOpt) ?>"<?= $idPobOpt === $selectedBranchId ? ' selected' : '' ?><?= $canImportOpt ? '' : ' disabled style="color:#9ca3af;"' ?>><?= cb_restia_hist_h($labelOpt) ?></option>
         <?php endforeach; ?>
       </select>
       <span class="card_text txt_seda text_14" style="margin-right:8px; line-height:22px;"><?= $resumeDate !== '' ? cb_restia_hist_h(cb_restia_hist_format_month_year_cs($resumeDate)) : '' ?></span>
@@ -1776,7 +1916,7 @@ if (!$canStartImport) {
 
   <?php
   $historyTz = new DateTimeZone('Europe/Prague');
-$historyTodayDt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', cb_restia_hist_today() . ' 00:00:00', $historyTz);
+  $historyImportEndDt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $importEndDate . ' 00:00:00', $historyTz);
   $historyTableRows = [];
   $historyTableTotals = [
       'downloaded' => 0,
@@ -1801,40 +1941,23 @@ $historyTodayDt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', cb_restia_h
 
     $downloadedDaysHistory = 0;
     $totalDaysHistory = 0;
-    $downloadedMonthsHistory = 0;
-    $missingMonthsHistory = 0;
-    $totalMonthsHistory = 0;
-    if ($branchStartDtHistory instanceof DateTimeImmutable && $historyTodayDt instanceof DateTimeImmutable) {
-        $totalDaysHistory = max(0, (int)$branchStartDtHistory->diff($historyTodayDt)->days + 1);
-        $totalMonthsHistory = cb_restia_hist_count_months_between($branchStartHistory, $historyTodayDt->format('Y-m-d'));
+    if ($branchStartDtHistory instanceof DateTimeImmutable && $historyImportEndDt instanceof DateTimeImmutable) {
+        $totalDaysHistory = max(0, (int)$branchStartDtHistory->diff($historyImportEndDt)->days + 1);
     }
     if ($branchStartDtHistory instanceof DateTimeImmutable && $branchNextDtHistory instanceof DateTimeImmutable && $branchNextDtHistory >= $branchStartDtHistory) {
         $downloadedDaysHistory = max(0, (int)$branchStartDtHistory->diff($branchNextDtHistory)->days);
-        $downloadEndDtHistory = $branchNextDtHistory->modify('-1 day');
-        if ($downloadEndDtHistory >= $branchStartDtHistory) {
-            $downloadedMonthsHistory = cb_restia_hist_count_months_between($branchStartHistory, $downloadEndDtHistory->format('Y-m-d'));
-        }
     }
     $missingDaysHistory = max(0, $totalDaysHistory - $downloadedDaysHistory);
-    if ($branchNextDtHistory instanceof DateTimeImmutable && $historyTodayDt instanceof DateTimeImmutable && $branchNextDtHistory <= $historyTodayDt) {
-        $missingMonthsHistory = cb_restia_hist_count_months_between($branchNextHistory, $historyTodayDt->format('Y-m-d'));
-    }
 
     $historyTableRows[] = [
         'name' => $branchNameHistory !== '' ? $branchNameHistory : ('Pobočka #' . (string)$branchIdHistory),
         'downloaded' => $downloadedDaysHistory,
         'missing' => $missingDaysHistory,
         'total' => $totalDaysHistory,
-        'downloaded_months' => $downloadedMonthsHistory,
-        'missing_months' => $missingMonthsHistory,
-        'total_months' => $totalMonthsHistory,
     ];
     $historyTableTotals['downloaded'] += $downloadedDaysHistory;
     $historyTableTotals['missing'] += $missingDaysHistory;
     $historyTableTotals['total'] += $totalDaysHistory;
-    $historyTableTotals['downloaded_months'] = (int)($historyTableTotals['downloaded_months'] ?? 0) + $downloadedMonthsHistory;
-    $historyTableTotals['missing_months'] = (int)($historyTableTotals['missing_months'] ?? 0) + $missingMonthsHistory;
-    $historyTableTotals['total_months'] = (int)($historyTableTotals['total_months'] ?? 0) + $totalMonthsHistory;
   }
   ?>
   <br><br>
@@ -1843,26 +1966,26 @@ $historyTodayDt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', cb_restia_h
     <table class="table" style="width:100%; font-size:12px; line-height:1.1;">
       <thead>
         <tr>
-          <th style="padding:4px 8px; text-align:left;">Pobočka</th>
-          <th style="padding:4px 8px; text-align:right;">Stáhnuto</th>
-          <th style="padding:4px 8px; text-align:right;">Ještě chybí</th>
-          <th style="padding:4px 8px; text-align:right;">Historie</th>
+          <th style="padding:4px 8px; text-align:left; width:100px;">Pobočka</th>
+          <th style="padding:4px 8px; text-align:right; width:110px;">Stáhnuto</th>
+          <th style="padding:4px 8px; text-align:right; width:170px;">Ještě chybí</th>
+          <th style="padding:4px 8px; text-align:right; width:110px;">Historie</th>
         </tr>
       </thead>
       <tbody>
         <?php foreach ($historyTableRows as $historyRow): ?>
           <tr>
             <td style="padding:4px 8px; white-space:nowrap;"><?= cb_restia_hist_h((string)($historyRow['name'] ?? '')) ?></td>
-            <td style="padding:4px 8px; text-align:right; white-space:nowrap;"><?= cb_restia_hist_format_days_months((int)($historyRow['downloaded'] ?? 0), (int)($historyRow['downloaded_months'] ?? 0)) ?></td>
-            <td style="padding:4px 8px; text-align:right; white-space:nowrap;"><?= cb_restia_hist_format_days_months((int)($historyRow['missing'] ?? 0), (int)($historyRow['missing_months'] ?? 0)) ?></td>
-            <td style="padding:4px 8px; text-align:right; white-space:nowrap;"><?= cb_restia_hist_format_days_months((int)($historyRow['total'] ?? 0), (int)($historyRow['total_months'] ?? 0)) ?></td>
+            <td style="padding:4px 8px; text-align:right; white-space:nowrap;"><?= cb_restia_hist_h((string)max(0, (int)($historyRow['downloaded'] ?? 0))) ?> dnů</td>
+            <td style="padding:4px 8px; text-align:right; white-space:nowrap;"><?= (int)($historyRow['missing'] ?? 0) === 0 ? 'Data kompletní' : (cb_restia_hist_h((string)(int)($historyRow['missing'] ?? 0)) . ' dnů') ?></td>
+            <td style="padding:4px 8px; text-align:right; white-space:nowrap;"><?= cb_restia_hist_h((string)max(0, (int)($historyRow['total'] ?? 0))) ?> dnů</td>
           </tr>
         <?php endforeach; ?>
         <tr>
           <td style="padding:4px 8px; white-space:nowrap; font-weight:700;">Celkem</td>
-          <td style="padding:4px 8px; text-align:right; white-space:nowrap; font-weight:700;"><?= cb_restia_hist_format_days_months((int)$historyTableTotals['downloaded'], (int)($historyTableTotals['downloaded_months'] ?? 0)) ?></td>
-          <td style="padding:4px 8px; text-align:right; white-space:nowrap; font-weight:700;"><?= cb_restia_hist_format_days_months((int)$historyTableTotals['missing'], (int)($historyTableTotals['missing_months'] ?? 0)) ?></td>
-          <td style="padding:4px 8px; text-align:right; white-space:nowrap; font-weight:700;"><?= cb_restia_hist_format_days_months((int)$historyTableTotals['total'], (int)($historyTableTotals['total_months'] ?? 0)) ?></td>
+          <td style="padding:4px 8px; text-align:right; white-space:nowrap; font-weight:700;"><?= cb_restia_hist_h((string)(int)$historyTableTotals['downloaded']) ?> dnů</td>
+          <td style="padding:4px 8px; text-align:right; white-space:nowrap; font-weight:700;"><?= (int)$historyTableTotals['missing'] === 0 ? 'Data kompletní' : (cb_restia_hist_h((string)(int)$historyTableTotals['missing']) . ' dnů') ?></td>
+          <td style="padding:4px 8px; text-align:right; white-space:nowrap; font-weight:700;"><?= cb_restia_hist_h((string)(int)$historyTableTotals['total']) ?> dnů</td>
         </tr>
       </tbody>
     </table>

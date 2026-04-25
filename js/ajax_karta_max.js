@@ -218,6 +218,16 @@
           tempNodes.push(hidden);
         }
       }
+      if (submitter.id === 'cb_start_import_btn') {
+        submitter.textContent = 'Importuji';
+        submitter.style.background = 'var(--clr_zelena_2)';
+        submitter.style.borderColor = 'var(--clr_zelena_1)';
+        submitter.style.color = '#fff';
+        submitter.style.opacity = '1';
+        submitter.style.cursor = 'wait';
+        submitter.style.pointerEvents = 'none';
+        submitter.setAttribute('aria-disabled', 'true');
+      }
       submitter.setAttribute('disabled', 'disabled');
     }
 

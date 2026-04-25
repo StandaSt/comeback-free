@@ -192,7 +192,7 @@ if (!function_exists('cb_prehled_db_count_style')) {
 if (!function_exists('cb_prehled_db_fmt_rows_approx')) {
     function cb_prehled_db_fmt_rows_approx(int $value): string
     {
-        return '~ ' . number_format($value, 0, ',', ' ');
+        return number_format($value, 0, ',', ' ');
     }
 }
 
@@ -267,6 +267,20 @@ if (!function_exists('cb_prehled_db_reset_ai')) {
         if ($ok === false) {
             throw new RuntimeException('Reset AUTO_INCREMENT selhal pro tabulku ' . $table . ': ' . $conn->error);
         }
+    }
+}
+
+if (!function_exists('cb_prehled_db_delete_table')) {
+    function cb_prehled_db_delete_table(mysqli $conn, string $table): int
+    {
+        $tableSql = '`' . str_replace('`', '``', $table) . '`';
+        $sql = 'TRUNCATE TABLE ' . $tableSql;
+        $ok = $conn->query($sql);
+        if ($ok === false) {
+            throw new RuntimeException('Mazání selhalo pro tabulku ' . $table . ': ' . $conn->error);
+        }
+
+        return 0;
     }
 }
 
@@ -363,7 +377,7 @@ try {
     $tables = cb_prehled_db_scope_tables($conn, $scope);
 
     foreach ($tables as $table) {
-        $count = (int)($tableMeta[$table]['count'] ?? 0);
+        $count = cb_vypocet_prehled_db_table_count($conn, $table);
         $bytes = (int)($tableMeta[$table]['bytes'] ?? 0);
 
         $rows[] = [
