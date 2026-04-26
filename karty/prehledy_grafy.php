@@ -166,6 +166,27 @@ if (!is_string($grafJson) || $grafJson === '') {
     throw new RuntimeException('Nepodarilo se pripravit data pro graf.');
 }
 
+$renderGrafRoot = static function (string $bodyHtml, string $rootJson): string {
+    return ''
+        . '<div class="sirka100 displ_flex flex_sloupec" style="height:100%; min-height:0;" data-cb-prehledy-grafy="1">'
+        . '<script type="application/json" data-cb-prehledy-grafy-data>' . $rootJson . '</script>'
+        . $bodyHtml
+        . '</div>';
+};
+
+if (($cbDashboardRenderMode ?? '') === 'mini') {
+    $card_min_html = $renderGrafRoot(
+        '<div class="sirka100 displ_flex flex_sloupec gap_6" style="height:100%; min-height:0;">'
+        . '<div class="txt_c"><div class="txt_tucne text_14">Počet objednávek podle pobočky</div><div class="card_text txt_seda text_12">' . h($titleOd) . ' - ' . h($titleDo) . '</div></div>'
+        . '<div style="flex:1 1 auto; min-height:0;"></div>'
+        . '<div id="mini_graf" data-cb-prehledy-grafy-chart="1" class="sirka100" style="height:190px;"></div>'
+        . '</div>',
+        $grafJson
+    );
+
+    return;
+}
+
 $zakOrderWhereParts = [
     'COALESCE(ca.report, DATE(COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at))) >= "' . $safeOd . '"',
     'COALESCE(ca.report, DATE(COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at))) <= "' . $safeDo . '"',
@@ -434,22 +455,6 @@ $renderGrafTile = static function (string $code, string $title, string $periodTe
         . '</section>';
 };
 
-$renderGrafRoot = static function (string $bodyHtml) use ($grafJson): string {
-    return ''
-        . '<div class="sirka100 displ_flex flex_sloupec" style="height:100%; min-height:0;" data-cb-prehledy-grafy="1">'
-        . '<script type="application/json" data-cb-prehledy-grafy-data>' . $grafJson . '</script>'
-        . $bodyHtml
-        . '</div>';
-};
-
-$card_min_html = $renderGrafRoot(
-    '<div class="sirka100 displ_flex flex_sloupec gap_6" style="height:100%; min-height:0;">'
-    . '<div class="txt_c"><div class="txt_tucne text_14">Počet objednávek podle pobočky</div><div class="card_text txt_seda text_12">' . h($titleOd) . ' - ' . h($titleDo) . '</div></div>'
-    . '<div style="flex:1 1 auto; min-height:0;"></div>'
-    . '<div id="mini_graf" data-cb-prehledy-grafy-chart="1" class="sirka100" style="height:190px;"></div>'
-    . '</div>'
-);
-
 $periodLabel = $titleOd . ' - ' . $titleDo;
 $maxTiles = '';
 $maxTiles .= $renderGrafTile('G1', 'Trend objednávek podle měsíce', $periodLabel, 'graf_max_1', $trendJson, true);
@@ -472,7 +477,8 @@ for ($i = 2; $i <= 6; $i++) {
 $card_max_html = $renderGrafRoot(
     '<div class="sirka100" style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); grid-template-rows:repeat(2, minmax(0, 1fr)); gap:10px; height:100%; min-height:0; flex:1 1 auto; align-content:stretch;">'
     . $maxTiles
-    . '</div>'
+    . '</div>',
+    $grafJson
 );
 
 /* karty/prehledy_grafy.php * Verze: V2 * Aktualizace: 17.04.2026 */

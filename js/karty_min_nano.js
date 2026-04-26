@@ -43,6 +43,20 @@
     return String(root.getAttribute('data-card-mode') || 'mini').trim() || 'mini';
   }
 
+  function getCardOrderFromSection(section) {
+    const root = getCardRootFromSection(section);
+    if (!(root instanceof HTMLElement)) return 999999;
+    const value = parseInt(String(root.getAttribute('data-card-poradi') || '0'), 10);
+    return Number.isFinite(value) && value > 0 ? value : 999999;
+  }
+
+  function getCardIdFromSection(section) {
+    const root = getCardRootFromSection(section);
+    if (!(root instanceof HTMLElement)) return 0;
+    const value = parseInt(String(root.getAttribute('data-card-id') || '0'), 10);
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  }
+
   function readPositiveIntAttr(el, name) {
     if (!(el instanceof HTMLElement)) return 0;
     const value = parseInt(String(el.getAttribute(name) || '0'), 10);
@@ -239,21 +253,18 @@
 
       unlocked.push({
         section,
-        slot,
-        index
+        index,
+        poradi: getCardOrderFromSection(section),
+        cardId: getCardIdFromSection(section)
       });
     });
 
     unlocked.sort((a, b) => {
-      const aHas = a.slot > 0 ? 1 : 0;
-      const bHas = b.slot > 0 ? 1 : 0;
-      if (aHas !== bHas) {
-        return bHas - aHas;
+      if (a.poradi !== b.poradi) {
+        return a.poradi - b.poradi;
       }
-      if (a.slot !== b.slot) {
-        if (a.slot === 0) return 1;
-        if (b.slot === 0) return -1;
-        return a.slot - b.slot;
+      if (a.cardId !== b.cardId) {
+        return a.cardId - b.cardId;
       }
       return a.index - b.index;
     });

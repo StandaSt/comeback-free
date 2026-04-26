@@ -244,64 +244,8 @@
     function clearAllCardPlacements() {
       document.querySelectorAll('.card_shell').forEach(function (root) {
         if (!(root instanceof HTMLElement)) return;
+        if (String(root.getAttribute('data-card-mode') || 'mini').trim() === 'nano') return;
         setCardPlacement(root, 0, 0, false);
-      });
-    }
-
-    function reorderMiniCardsByPoradi() {
-      const grid = document.querySelector('.dash_grid[data-login-id]');
-      if (!(grid instanceof HTMLElement)) return;
-
-      const groups = Array.from(grid.querySelectorAll(':scope > .dash_nano_group'));
-      groups.forEach(function (group) {
-        if (group instanceof HTMLElement) {
-          group.remove();
-        }
-      });
-
-      const breaks = Array.from(grid.querySelectorAll(':scope > .dash_break'));
-      breaks.forEach(function (node) {
-        if (node instanceof HTMLElement) {
-          node.remove();
-        }
-      });
-
-      const sections = Array.from(grid.querySelectorAll(':scope > [data-cb-dash-card="1"]'))
-        .filter(function (section) { return section instanceof HTMLElement; });
-
-      const nanoSections = [];
-      const miniSections = [];
-
-      sections.forEach(function (section) {
-        const root = section.querySelector('.card_shell');
-        if (!(root instanceof HTMLElement)) return;
-        const mode = String(root.getAttribute('data-card-mode') || 'mini').trim();
-        if (mode === 'nano') {
-          nanoSections.push(section);
-          return;
-        }
-        miniSections.push(section);
-      });
-
-      miniSections.sort(function (a, b) {
-        const rootA = a.querySelector('.card_shell');
-        const rootB = b.querySelector('.card_shell');
-        const poradiA = rootA instanceof HTMLElement ? parseInt(String(rootA.getAttribute('data-card-poradi') || '0'), 10) : 0;
-        const poradiB = rootB instanceof HTMLElement ? parseInt(String(rootB.getAttribute('data-card-poradi') || '0'), 10) : 0;
-        const safeA = Number.isFinite(poradiA) && poradiA > 0 ? poradiA : 999999;
-        const safeB = Number.isFinite(poradiB) && poradiB > 0 ? poradiB : 999999;
-        if (safeA !== safeB) {
-          return safeA - safeB;
-        }
-
-        const idA = rootA instanceof HTMLElement ? parseInt(String(rootA.getAttribute('data-card-id') || '0'), 10) : 0;
-        const idB = rootB instanceof HTMLElement ? parseInt(String(rootB.getAttribute('data-card-id') || '0'), 10) : 0;
-        return idA - idB;
-      });
-
-      const orderedSections = nanoSections.concat(miniSections);
-      orderedSections.forEach(function (section) {
-        grid.appendChild(section);
       });
     }
 
@@ -423,9 +367,10 @@
             tgt_id: targetId,
             force_unlock: forceUnlock ? 1 : 0
           });
+          setCardPlacement(moveSource.root, targetCol, targetLine, true);
+          setCardPlacement(targetRoot, 0, 0, false);
           clearMoveSource();
           closeAllCardPrefMenus();
-          applyLockedPlacementsFromData(data.locked_positions);
           if (w.CB_AJAX && typeof w.CB_AJAX.relayoutDashboard === 'function') {
             return Promise.resolve(w.CB_AJAX.relayoutDashboard()).finally(() => {
               setDashboardLoading(false);
@@ -583,7 +528,6 @@
           if (data && data.ok) {
             traceAjax('card_unlock_all_ok', {});
             clearAllCardPlacements();
-            reorderMiniCardsByPoradi();
             clearMoveSource();
             closeAllCardPrefMenus();
             if (w.CB_AJAX && typeof w.CB_AJAX.relayoutDashboard === 'function') {

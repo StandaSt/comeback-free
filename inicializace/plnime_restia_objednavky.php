@@ -52,9 +52,7 @@ if (!function_exists('cb_restia_hist_log')) {
     function cb_restia_hist_log(int $idPob, string $line): void
     {
         $path = cb_restia_hist_txt_path($idPob);
-        $newLine = $line . "\n";
-        $current = is_file($path) ? (string)@file_get_contents($path) : '';
-        @file_put_contents($path, $newLine . $current, LOCK_EX);
+        @file_put_contents($path, $line . "\n", FILE_APPEND | LOCK_EX);
     }
 }
 
@@ -541,9 +539,13 @@ if (!function_exists('cb_restia_hist_run_batch')) {
                 if ($message === '') {
                     $message = 'Import dočasně ukončen kvůli časovému limitu, spusť znovu.';
                 }
+                $branchName = (string)($branch['nazev'] ?? '');
                 cb_restia_hist_log(
                     (int)($branch['id_pob'] ?? 0),
-                    'STOPKA LIMIT: ' . cb_restia_hist_format_datetime_cs(cb_restia_hist_now())
+                    'STOPKA LIMIT: '
+                    . cb_restia_hist_format_datetime_cs(cb_restia_hist_now())
+                    . ' | pobočka=' . ($branchName !== '' ? $branchName : '-')
+                    . ' | součet_průběžně=' . (string)$foundNow
                 );
                 break;
             }
@@ -933,6 +935,71 @@ if (!function_exists('cb_restia_hist_get_obj_id')) {
     }
 }
 
+if (!function_exists('cb_restia_hist_existing_order_map')) {
+    function cb_restia_hist_existing_order_map(mysqli $conn, array $restiaIds): array
+    {
+        $ids = [];
+        foreach ($restiaIds as $restiaId) {
+            $restiaId = trim((string)$restiaId);
+            if ($restiaId !== '') {
+                $ids[$restiaId] = true;
+            }
+        }
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $quoted = [];
+        foreach (array_keys($ids) as $restiaId) {
+            $quoted[] = "'" . $conn->real_escape_string($restiaId) . "'";
+        }
+
+        $sql = '
+            SELECT restia_id_obj, id_obj
+            FROM objednavky_restia
+            WHERE restia_id_obj IN (' . implode(',', $quoted) . ')
+        ';
+        $res = $conn->query($sql);
+        if (!($res instanceof mysqli_result)) {
+            throw new RuntimeException('DB dotaz na existujici objednavky selhal.');
+        }
+
+        $map = [];
+        while ($row = $res->fetch_assoc()) {
+            $restiaId = trim((string)($row['restia_id_obj'] ?? ''));
+            $idObj = (int)($row['id_obj'] ?? 0);
+            if ($restiaId !== '' && $idObj > 0) {
+                $map[$restiaId] = $idObj;
+            }
+        }
+        $res->free();
+
+        return $map;
+    }
+}
+
+if (!function_exists('cb_restia_hist_stmt')) {
+    function cb_restia_hist_stmt(mysqli $conn, string $key, string $sql, string $label): mysqli_stmt
+    {
+        static $cache = [];
+
+        $cacheKey = spl_object_hash($conn) . '|' . $key;
+        if (isset($cache[$cacheKey]) && $cache[$cacheKey] instanceof mysqli_stmt) {
+            return $cache[$cacheKey];
+        }
+
+        $stmt = $conn->prepare($sql);
+        if ($stmt === false) {
+            throw new RuntimeException('DB prepare selhal: ' . $label . '.');
+        }
+
+        $cache[$cacheKey] = $stmt;
+
+        return $stmt;
+    }
+}
+
 if (!function_exists('cb_restia_hist_obj_import_find')) {
     function cb_restia_hist_obj_import_find(mysqli $conn, int $idPob, string $fromUtcDb, string $toUtcDb): int
     {
@@ -1080,7 +1147,7 @@ if (!function_exists('cb_restia_hist_money')) {
     }
 }
 if (!function_exists('cb_restia_hist_sync_children')) {
-    function cb_restia_hist_sync_children(mysqli $conn, int $idObj, int $idPob, array $order): void
+    function cb_restia_hist_sync_children(mysqli $conn, int $idObj, int $idPob, array $order, bool $isNewOrder = false): void
     {
         $destination = (isset($order['destination']) && is_array($order['destination'])) ? $order['destination'] : [];
         $street = (string)($destination['street'] ?? ($destination['address'] ?? ''));
@@ -1093,7 +1160,7 @@ if (!function_exists('cb_restia_hist_sync_children')) {
         $distance = isset($destination['distance']) ? (int)$destination['distance'] : null;
         $driveTime = isset($destination['time']) ? (int)$destination['time'] : null;
 
-        $stmtAddr = $conn->prepare('
+        $stmtAddr = cb_restia_hist_stmt($conn, 'obj_adresa_upsert', '
             INSERT INTO obj_adresa (
                 id_obj, ulice, cislo_domovni, mesto, psc, stat, lat, lng, vzdalenost_m, cas_jizdy_s, vytvoreno, zmeneno
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
@@ -1101,13 +1168,9 @@ if (!function_exists('cb_restia_hist_sync_children')) {
                 ulice = VALUES(ulice), cislo_domovni = VALUES(cislo_domovni), mesto = VALUES(mesto), psc = VALUES(psc), stat = VALUES(stat),
                 lat = VALUES(lat), lng = VALUES(lng), vzdalenost_m = VALUES(vzdalenost_m), cas_jizdy_s = VALUES(cas_jizdy_s),
                 zmeneno = NOW(3)
-        ');
-        if ($stmtAddr === false) {
-            throw new RuntimeException('DB prepare selhal: obj_adresa.');
-        }
+        ', 'obj_adresa');
         $stmtAddr->bind_param('isssssddii', $idObj, $street, $house, $city, $zip, $country, $lat, $lng, $distance, $driveTime);
         $stmtAddr->execute();
-        $stmtAddr->close();
 
         $casVytvor = cb_restia_hist_restia_to_local_nullable($order['createdAt'] ?? null);
         $casExp = cb_restia_hist_restia_to_local_nullable($order['expiresAt'] ?? null);
@@ -1124,7 +1187,7 @@ if (!function_exists('cb_restia_hist_sync_children')) {
         $casDisp = cb_restia_hist_restia_to_local_nullable($order['deliveryAt'] ?? null);
         $report = cb_restia_hist_report_date($casVytvor ?? cb_restia_hist_now());
 
-        $stmtCasy = $conn->prepare('
+        $stmtCasy = cb_restia_hist_stmt($conn, 'obj_casy_upsert', '
             INSERT INTO obj_casy (
                 id_obj, report, cas_vytvor, cas_expirace, cas_slib, cas_pripr_do, cas_pripr_v, cas_dokonc, cas_doruc,
                 cas_status_zmena, cas_uzavreni, cas_import_restia, cas_import_pos, cas_vyzv, cas_disp
@@ -1134,13 +1197,9 @@ if (!function_exists('cb_restia_hist_sync_children')) {
                 cas_pripr_do = VALUES(cas_pripr_do), cas_pripr_v = VALUES(cas_pripr_v), cas_dokonc = VALUES(cas_dokonc), cas_doruc = VALUES(cas_doruc),
                 cas_status_zmena = VALUES(cas_status_zmena), cas_uzavreni = VALUES(cas_uzavreni), cas_import_restia = VALUES(cas_import_restia),
                 cas_import_pos = VALUES(cas_import_pos), cas_vyzv = VALUES(cas_vyzv), cas_disp = VALUES(cas_disp)
-        ');
-        if ($stmtCasy === false) {
-            throw new RuntimeException('DB prepare selhal: obj_casy.');
-        }
+        ', 'obj_casy');
         $stmtCasy->bind_param('issssssssssssss', $idObj, $report, $casVytvor, $casExp, $casSlib, $casPriprDo, $casPriprV, $casDokonc, $casDoruc, $casStatus, $casUzavreni, $casImportRestia, $casImportPos, $casVyzv, $casDisp);
         $stmtCasy->execute();
-        $stmtCasy->close();
 
         $cenaPol = (float)cb_restia_hist_money($order['itemsPrice'] ?? null);
         $cenaBalne = (float)cb_restia_hist_money($order['packingPrice'] ?? null);
@@ -1152,32 +1211,27 @@ if (!function_exists('cb_restia_hist_sync_children')) {
         $zaokrouhleni = (float)cb_restia_hist_money($order['roundingPrice'] ?? null);
         $cenaCelk = $cenaPol + $cenaBalne + $cenaDopr + $dyska + $cenaDoMin + $cenaServis + $zaokrouhleni - $sleva;
 
-        $stmtCeny = $conn->prepare('
+        $stmtCeny = cb_restia_hist_stmt($conn, 'obj_ceny_upsert', '
             INSERT INTO obj_ceny (
                 id_obj, cena_celk, cena_pol, cena_balne, cena_dopr, dyska, cena_do_min, cena_servis, sleva, zaokrouhleni, mena
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "CZK")
             ON DUPLICATE KEY UPDATE
                 cena_celk = VALUES(cena_celk), cena_pol = VALUES(cena_pol), cena_balne = VALUES(cena_balne), cena_dopr = VALUES(cena_dopr),
                 dyska = VALUES(dyska), cena_do_min = VALUES(cena_do_min), cena_servis = VALUES(cena_servis), sleva = VALUES(sleva), zaokrouhleni = VALUES(zaokrouhleni), mena = VALUES(mena)
-        ');
-        if ($stmtCeny === false) {
-            throw new RuntimeException('DB prepare selhal: obj_ceny.');
-        }
+        ', 'obj_ceny');
         $stmtCeny->bind_param('iddddddddd', $idObj, $cenaCelk, $cenaPol, $cenaBalne, $cenaDopr, $dyska, $cenaDoMin, $cenaServis, $sleva, $zaokrouhleni);
         $stmtCeny->execute();
-        $stmtCeny->close();
 
-        $stmtDelKuryr = $conn->prepare('DELETE FROM obj_kuryr WHERE id_obj = ?');
-        $stmtDelSluzba = $conn->prepare('DELETE FROM obj_sluzba WHERE id_obj = ?');
-        $stmtDelTags = $conn->prepare('DELETE t FROM obj_polozka_kds_tag t JOIN obj_polozky p ON p.id_obj_polozka = t.id_obj_polozka WHERE p.id_obj = ?');
-        $stmtDelPolozky = $conn->prepare('DELETE FROM obj_polozky WHERE id_obj = ?');
-        if ($stmtDelKuryr === false || $stmtDelSluzba === false || $stmtDelTags === false || $stmtDelPolozky === false) {
-            throw new RuntimeException('DB prepare selhal: delete children.');
+        if (!$isNewOrder) {
+            $stmtDelKuryr = cb_restia_hist_stmt($conn, 'obj_kuryr_delete', 'DELETE FROM obj_kuryr WHERE id_obj = ?', 'delete obj_kuryr');
+            $stmtDelSluzba = cb_restia_hist_stmt($conn, 'obj_sluzba_delete', 'DELETE FROM obj_sluzba WHERE id_obj = ?', 'delete obj_sluzba');
+            $stmtDelTags = cb_restia_hist_stmt($conn, 'obj_polozka_kds_tag_delete', 'DELETE t FROM obj_polozka_kds_tag t JOIN obj_polozky p ON p.id_obj_polozka = t.id_obj_polozka WHERE p.id_obj = ?', 'delete obj_polozka_kds_tag');
+            $stmtDelPolozky = cb_restia_hist_stmt($conn, 'obj_polozky_delete', 'DELETE FROM obj_polozky WHERE id_obj = ?', 'delete obj_polozky');
+            $stmtDelKuryr->bind_param('i', $idObj); $stmtDelKuryr->execute();
+            $stmtDelSluzba->bind_param('i', $idObj); $stmtDelSluzba->execute();
+            $stmtDelTags->bind_param('i', $idObj); $stmtDelTags->execute();
+            $stmtDelPolozky->bind_param('i', $idObj); $stmtDelPolozky->execute();
         }
-        $stmtDelKuryr->bind_param('i', $idObj); $stmtDelKuryr->execute(); $stmtDelKuryr->close();
-        $stmtDelSluzba->bind_param('i', $idObj); $stmtDelSluzba->execute(); $stmtDelSluzba->close();
-        $stmtDelTags->bind_param('i', $idObj); $stmtDelTags->execute(); $stmtDelTags->close();
-        $stmtDelPolozky->bind_param('i', $idObj); $stmtDelPolozky->execute(); $stmtDelPolozky->close();
 
         $courier = (isset($order['courierData']) && is_array($order['courierData'])) ? $order['courierData'] : null;
         if (is_array($courier)) {
@@ -1186,12 +1240,10 @@ if (!function_exists('cb_restia_hist_sync_children')) {
             $poradi = isset($order['courierOrder']) ? (int)$order['courierOrder'] : null;
             $jmeno = (string)($courier['name'] ?? '');
             $telefon = (string)($courier['phone'] ?? '');
-        $stmtKuryr = $conn->prepare('INSERT INTO obj_kuryr (id_obj, provider, externi_id, poradi, jmeno, telefon, vytvoreno, zmeneno) VALUES (?, ?, ?, ?, ?, ?, NOW(3), NOW(3))');
-        if ($stmtKuryr === false) { throw new RuntimeException('DB prepare selhal: obj_kuryr.'); }
-        $stmtKuryr->bind_param('ississ', $idObj, $provider, $externiId, $poradi, $jmeno, $telefon);
-        $stmtKuryr->execute();
-        $stmtKuryr->close();
-    }
+            $stmtKuryr = cb_restia_hist_stmt($conn, 'obj_kuryr_insert', 'INSERT INTO obj_kuryr (id_obj, provider, externi_id, poradi, jmeno, telefon, vytvoreno, zmeneno) VALUES (?, ?, ?, ?, ?, ?, NOW(3), NOW(3))', 'obj_kuryr');
+            $stmtKuryr->bind_param('ississ', $idObj, $provider, $externiId, $poradi, $jmeno, $telefon);
+            $stmtKuryr->execute();
+        }
         $servicesData = $order['servicesData'] ?? null;
         $services = [];
         if (is_array($servicesData) && array_is_list($servicesData)) { $services = $servicesData; }
@@ -1201,11 +1253,9 @@ if (!function_exists('cb_restia_hist_sync_children')) {
             $provider = (string)($service['provider'] ?? '');
             $externiId = (string)($service['externalId'] ?? ($service['id'] ?? ''));
             $stav = (string)($service['status'] ?? '');
-            $stmtService = $conn->prepare('INSERT INTO obj_sluzba (id_obj, provider, externi_id, stav, vytvoreno, zmeneno) VALUES (?, ?, ?, ?, NOW(3), NOW(3))');
-            if ($stmtService === false) { throw new RuntimeException('DB prepare selhal: obj_sluzba.'); }
+            $stmtService = cb_restia_hist_stmt($conn, 'obj_sluzba_insert', 'INSERT INTO obj_sluzba (id_obj, provider, externi_id, stav, vytvoreno, zmeneno) VALUES (?, ?, ?, ?, NOW(3), NOW(3))', 'obj_sluzba');
             $stmtService->bind_param('isss', $idObj, $provider, $externiId, $stav);
             $stmtService->execute();
-            $stmtService->close();
         }
 
         $items = (isset($order['items']) && is_array($order['items'])) ? $order['items'] : [];
@@ -1225,12 +1275,10 @@ if (!function_exists('cb_restia_hist_sync_children')) {
             if ($idResPolozka <= 0) {
                  $idResPolozka = null;
             }
-           $stmtItem = $conn->prepare('INSERT INTO obj_polozky (id_obj, id_res_polozka, res_item, poznamka, poradi, mnozstvi, cena_ks, cena_celk, je_extra, zadano) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3))');
-            if ($stmtItem === false) { throw new RuntimeException('DB prepare selhal: obj_polozky.'); }
-           $stmtItem->bind_param('iissiiddi', $idObj, $idResPolozka, $restiaItemId, $poznamka, $poradi, $mnozstvi, $cenaKs, $cenaCelk, $jeExtra);
+            $stmtItem = cb_restia_hist_stmt($conn, 'obj_polozky_insert', 'INSERT INTO obj_polozky (id_obj, id_res_polozka, res_item, poznamka, poradi, mnozstvi, cena_ks, cena_celk, je_extra, zadano) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3))', 'obj_polozky');
+            $stmtItem->bind_param('iissiiddi', $idObj, $idResPolozka, $restiaItemId, $poznamka, $poradi, $mnozstvi, $cenaKs, $cenaCelk, $jeExtra);
             $stmtItem->execute();
             $idObjPolozka = (int)$conn->insert_id;
-            $stmtItem->close();
 
             $modLists = [];
             foreach (['modifiers', 'mods', 'options', 'extras'] as $key) {
@@ -1249,11 +1297,9 @@ if (!function_exists('cb_restia_hist_sync_children')) {
                     if ($modMnoz <= 0) { $modMnoz = 1.0; }
                     $modCenaKs = (float)cb_restia_hist_money($mod['price'] ?? 0);
                     $modCenaCelk = isset($mod['totalPrice']) ? (float)cb_restia_hist_money($mod['totalPrice']) : ($modCenaKs * $modMnoz);
-                    $stmtMod = $conn->prepare('INSERT INTO obj_polozka_mod (id_obj_polozka, restia_mod_id, typ, pos_id, nazev, mnozstvi, cena_ks, cena_celk, zadano) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(3))');
-                    if ($stmtMod === false) { throw new RuntimeException('DB prepare selhal: obj_polozka_mod.'); }
+                    $stmtMod = cb_restia_hist_stmt($conn, 'obj_polozka_mod_insert', 'INSERT INTO obj_polozka_mod (id_obj_polozka, restia_mod_id, typ, pos_id, nazev, mnozstvi, cena_ks, cena_celk, zadano) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(3))', 'obj_polozka_mod');
                     $stmtMod->bind_param('issssddd', $idObjPolozka, $restiaModId, $typ, $modPosId, $modNazev, $modMnoz, $modCenaKs, $modCenaCelk);
                     $stmtMod->execute();
-                    $stmtMod->close();
                 }
             }
 
@@ -1263,11 +1309,9 @@ if (!function_exists('cb_restia_hist_sync_children')) {
             foreach ($kdsTags as $tag) {
                 $tag = trim((string)$tag);
                 if ($tag === '') { continue; }
-                $stmtTag = $conn->prepare('INSERT INTO obj_polozka_kds_tag (id_obj_polozka, tag) VALUES (?, ?)');
-                if ($stmtTag === false) { throw new RuntimeException('DB prepare selhal: obj_polozka_kds_tag.'); }
+                $stmtTag = cb_restia_hist_stmt($conn, 'obj_polozka_kds_tag_insert', 'INSERT INTO obj_polozka_kds_tag (id_obj_polozka, tag) VALUES (?, ?)', 'obj_polozka_kds_tag');
                 $stmtTag->bind_param('is', $idObjPolozka, $tag);
                 $stmtTag->execute();
-                $stmtTag->close();
             }
         }
     }
@@ -1415,10 +1459,7 @@ if (!function_exists('cb_restia_hist_upsert_customer')) {
         $zakNews = 0;
 
         $idZak = 0;
-        $stmt = $conn->prepare('SELECT id_zak FROM zakaznik WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(telefon, ""), " ", ""), "+", ""), "-", ""), "(", ""), ")", ""), "/", "") = ? ORDER BY id_zak ASC LIMIT 1');
-        if ($stmt === false) {
-            throw new RuntimeException('DB prepare selhal: find zakaznik by phone.');
-        }
+        $stmt = cb_restia_hist_stmt($conn, 'zakaznik_find_by_phone', 'SELECT id_zak FROM zakaznik WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(telefon, ""), " ", ""), "+", ""), "-", ""), "(", ""), ")", ""), "/", "") = ? ORDER BY id_zak ASC LIMIT 1', 'find zakaznik by phone');
         $stmt->bind_param('s', $phoneNorm);
         $stmt->execute();
         $res = $stmt->get_result();
@@ -1426,41 +1467,32 @@ if (!function_exists('cb_restia_hist_upsert_customer')) {
         if ($res instanceof mysqli_result) {
             $res->free();
         }
-        $stmt->close();
         $idZak = (int)($row['id_zak'] ?? 0);
 
         if ($idZak > 0) {
-            $stmt = $conn->prepare('
+            $stmt = cb_restia_hist_stmt($conn, 'zakaznik_update', '
                 UPDATE zakaznik
                 SET jmeno = ?, prijmeni = ?, telefon = ?, email = ?, ulice = ?, mesto = ?,
                     zak_menu = ?, zak_news = ?, posledni_obj = NOW(), poznamka = ?, blokovany = ?, id_pob = ?, aktivni = ?
                 WHERE id_zak = ?
                 LIMIT 1
-            ');
-            if ($stmt === false) {
-                throw new RuntimeException('DB prepare selhal: update zakaznik.');
-            }
+            ', 'update zakaznik');
            $stmt->bind_param('ssssssiisiiii', $jmeno, $prijmeni, $telefon, $email, $ulice, $mesto, $zakMenu, $zakNews, $poznamka, $blokovany, $idPob, $aktivni, $idZak);
             $stmt->execute();
-            $stmt->close();
             return $idZak;
         }
 
-        $stmt = $conn->prepare('
+        $stmt = cb_restia_hist_stmt($conn, 'zakaznik_insert', '
             INSERT INTO zakaznik (
                 jmeno, prijmeni, telefon, email, ulice, mesto,
                 zak_menu, zak_news, posledni_obj, poznamka, blokovany, id_pob, zadano, aktivni
             ) VALUES (
                 ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, NOW(), ?
             )
-        ');
-        if ($stmt === false) {
-            throw new RuntimeException('DB prepare selhal: insert zakaznik.');
-        }
+        ', 'insert zakaznik');
         $stmt->bind_param('ssssssiisiii', $jmeno, $prijmeni, $telefon, $email, $ulice, $mesto, $zakMenu, $zakNews, $poznamka, $blokovany, $idPob, $aktivni);
         $stmt->execute();
         $idZak = (int)$conn->insert_id;
-        $stmt->close();
 
         return $idZak;
     }
@@ -1494,7 +1526,7 @@ if (!function_exists('cb_restia_hist_sum_orders')) {
 }
 
 if (!function_exists('cb_restia_hist_upsert_order')) {
-    function cb_restia_hist_upsert_order(mysqli $conn, int $idPob, string $activePosId, array $order): int
+    function cb_restia_hist_upsert_order(mysqli $conn, int $idPob, string $activePosId, array $order, int $existingIdObj = 0): array
     {
         $restiaIdObj = trim((string)($order['id'] ?? ''));
         if ($restiaIdObj === '') {
@@ -1535,20 +1567,29 @@ if (!function_exists('cb_restia_hist_upsert_order')) {
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
+                id_obj = LAST_INSERT_ID(id_obj),
                 id_pob = VALUES(id_pob), id_zak = VALUES(id_zak), id_platforma = VALUES(id_platforma), restia_created_at = VALUES(restia_created_at), restia_order_number = VALUES(restia_order_number),
                 restia_token = VALUES(restia_token), profil_typ = VALUES(profil_typ),
                 rest_obj = VALUES(rest_obj), id_stav = VALUES(id_stav), id_platba = VALUES(id_platba), id_doruceni = VALUES(id_doruceni),
                 obj_pozn = VALUES(obj_pozn), restia_imported_at = VALUES(restia_imported_at)
         ';
 
-        $stmt = $conn->prepare($sql);
-        if ($stmt === false) { throw new RuntimeException('DB prepare selhal: objednavky_restia upsert.'); }
+        $stmt = cb_restia_hist_stmt($conn, 'objednavky_restia_upsert', $sql, 'objednavky_restia upsert');
         $restObj = $restiaIdObj;
         $stmt->bind_param('iiissssssiisss', $idPob, $idZak, $idPlatforma, $restiaIdObj, $restiaCreatedAt, $restiaOrderNumber, $restiaToken, $profilTyp, $restObj, $idStav, $idPlatba, $idDoruceni, $objPoznamka, $importTs);
         $stmt->execute();
-        $stmt->close();
+        $idObj = (int)$conn->insert_id;
+        if ($idObj <= 0 && $existingIdObj > 0) {
+            $idObj = $existingIdObj;
+        }
+        if ($idObj <= 0) {
+            throw new RuntimeException('Nepodarilo se dohledat id_obj po upsertu objednavky.');
+        }
 
-        return cb_restia_hist_get_obj_id($conn, $restiaIdObj);
+        return [
+            'id_obj' => $idObj,
+            'is_new' => ($existingIdObj <= 0),
+        ];
     }
 }
 if (!function_exists('cb_restia_hist_try_flush_api')) {
@@ -1619,6 +1660,7 @@ if (!function_exists('cb_restia_hist_import_day')) {
                 $orders = cb_restia_hist_extract_orders($decoded);
                 $countOrders = count($orders);
 
+                $pageRestiaIds = [];
                 foreach ($orders as $order) {
                     if (!is_array($order)) {
                         throw new RuntimeException('Restia vratila neplatnou objednavku.');
@@ -1627,31 +1669,62 @@ if (!function_exists('cb_restia_hist_import_day')) {
                     if ($restiaIdObj === '') {
                         throw new RuntimeException('Objednavka nema id.');
                     }
+                    $pageRestiaIds[] = $restiaIdObj;
+                }
 
-                    $exists = cb_restia_hist_order_exists($conn, $restiaIdObj);
+                $existingMap = cb_restia_hist_existing_order_map($conn, $pageRestiaIds);
+                $pagePocetObj = 0;
+                $pagePocetNovych = 0;
+                $pagePocetZmenenych = 0;
+                $pagePocetChyb = 0;
 
-                    $conn->begin_transaction();
-                    try {
-                        $idObj = cb_restia_hist_upsert_order($conn, $idPob, $activePosId, $order);
-                        cb_restia_hist_sync_children($conn, $idObj, $idPob, $order);
-                        $conn->commit();
-                    } catch (Throwable $e) {
-                        $conn->rollback();
-                        cb_restia_hist_error_log(
-                            $idPob,
-                            'ORDER_ERR: datum=' . $date
-                            . ' | id_pob=' . $idPob
-                            . ' | page=' . $page
-                            . ' | restia_id_obj=' . $restiaIdObj
-                            . ' | msg=' . $e->getMessage()
-                        );
-                        $pocetChyb++;
-                        continue;
+                $conn->begin_transaction();
+                try {
+                    foreach ($orders as $orderIndex => $order) {
+                        $restiaIdObj = $pageRestiaIds[$orderIndex] ?? '';
+                        $existingIdObj = (int)($existingMap[$restiaIdObj] ?? 0);
+                        $savepoint = 'restia_' . $page . '_' . ($orderIndex + 1);
+                        if ($conn->query('SAVEPOINT ' . $savepoint) === false) {
+                            throw new RuntimeException('Nepodarilo se zalozit savepoint pro objednavku.');
+                        }
+
+                        try {
+                            $upsert = cb_restia_hist_upsert_order($conn, $idPob, $activePosId, $order, $existingIdObj);
+                            cb_restia_hist_sync_children($conn, (int)$upsert['id_obj'], $idPob, $order, (bool)$upsert['is_new']);
+                            $conn->query('RELEASE SAVEPOINT ' . $savepoint);
+                        } catch (Throwable $e) {
+                            $conn->query('ROLLBACK TO SAVEPOINT ' . $savepoint);
+                            $conn->query('RELEASE SAVEPOINT ' . $savepoint);
+                            cb_restia_hist_error_log(
+                                $idPob,
+                                'ORDER_ERR: datum=' . $date
+                                . ' | id_pob=' . $idPob
+                                . ' | page=' . $page
+                                . ' | restia_id_obj=' . $restiaIdObj
+                                . ' | msg=' . $e->getMessage()
+                            );
+                            $pagePocetChyb++;
+                            continue;
+                        }
+
+                        $pagePocetObj++;
+                        if ((bool)($upsert['is_new'] ?? false)) {
+                            $pagePocetNovych++;
+                        } else {
+                            $pagePocetZmenenych++;
+                        }
                     }
 
-                    $pocetObj++;
-                    if ($exists) { $pocetZmenenych++; } else { $pocetNovych++; }
+                    $conn->commit();
+                } catch (Throwable $e) {
+                    $conn->rollback();
+                    throw $e;
                 }
+
+                $pocetObj += $pagePocetObj;
+                $pocetNovych += $pagePocetNovych;
+                $pocetZmenenych += $pagePocetZmenenych;
+                $pocetChyb += $pagePocetChyb;
 
                 if ($countOrders < CB_RESTIA_HIST_LIMIT) { break; }
                 $totalCount = isset($res['total_count']) ? (int)$res['total_count'] : 0;
@@ -1782,7 +1855,6 @@ if ($action === 'start' && $auth !== null) {
     cb_restia_hist_log((int)$branch['id_pob'], 'LIMIT: ' . (string)CB_RESTIA_HIST_LIMIT);
 
     cb_restia_hist_run_batch($conn, $auth, $branch, $state, $rows, $message, $importEndDate);
-    unset($_SESSION[$cbSelectedBranchKey]);
     $action = '';
 }
 
