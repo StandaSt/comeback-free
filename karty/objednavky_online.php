@@ -150,9 +150,9 @@ try {
       <div class="displ_flex jc_mezi text_11 txt_seda gap_8" style="align-items:flex-start; flex-wrap:wrap; line-height:1.15;">
         <span><?= h((string)$range['label']) ?></span>
         <span class="displ_flex gap_8" style="flex-wrap:wrap; justify-content:flex-end;">
-          <span><strong style="color:#16a34a;"><?= h((string)$sumDokonceno) ?></strong> dokonceno</span>
-          <span><strong style="color:#f59e0b;"><?= h((string)$sumNaCeste) ?></strong> na ceste</span>
-          <span><strong style="color:#dc2626;"><?= h((string)$sumVyrabiSe) ?></strong> vyrabi se</span>
+          <span><strong style="color:#16a34a;"><?= h((string)$sumDokonceno) ?></strong> dokončeno</span>
+          <span><strong style="color:#f59e0b;"><?= h((string)$sumNaCeste) ?></strong> na cestě</span>
+          <span><strong style="color:#dc2626;"><?= h((string)$sumVyrabiSe) ?></strong> vyrábí se</span>
         </span>
       </div>
 
@@ -215,7 +215,7 @@ try {
             },
             series: [
               {
-                name: 'Dokonceno',
+                name: 'Dokončeno',
                 type: 'bar',
                 stack: 'online',
                 barMaxWidth: 36,
@@ -223,7 +223,7 @@ try {
                 data: dokonceno
               },
               {
-                name: 'Na ceste',
+                name: 'Na cestě',
                 type: 'bar',
                 stack: 'online',
                 barMaxWidth: 36,
@@ -231,7 +231,7 @@ try {
                 data: naCeste
               },
               {
-                name: 'Vyrabi se',
+                name: 'Vyrábí se',
                 type: 'bar',
                 stack: 'online',
                 barMaxWidth: 36,
