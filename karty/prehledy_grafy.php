@@ -176,10 +176,9 @@ $renderGrafRoot = static function (string $bodyHtml, string $rootJson): string {
 
 if (($cbDashboardRenderMode ?? '') === 'mini') {
     $card_min_html = $renderGrafRoot(
-        '<div class="sirka100 displ_flex flex_sloupec gap_6" style="height:100%; min-height:0;">'
+        '<div class="sirka100 displ_flex flex_sloupec gap_4" style="height:100%; min-height:0;">'
         . '<div class="txt_c"><div class="txt_tucne text_14">Počet objednávek podle pobočky</div><div class="card_text txt_seda text_12">' . h($titleOd) . ' - ' . h($titleDo) . '</div></div>'
-        . '<div style="flex:1 1 auto; min-height:0;"></div>'
-        . '<div id="mini_graf" data-cb-prehledy-grafy-chart="1" class="sirka100" style="height:190px;"></div>'
+        . '<div id="mini_graf" data-cb-prehledy-grafy-chart="1" class="sirka100" style="flex:1 1 auto; min-height:0; height:100%;"></div>'
         . '</div>',
         $grafJson
     );

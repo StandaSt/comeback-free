@@ -64,14 +64,35 @@ if (!function_exists('cb_head_restia_token_is_valid')) {
     }
 }
 
+if (!function_exists('cb_head_restia_online_is_running')) {
+    function cb_head_restia_online_is_running(mysqli $conn): bool
+    {
+        $q = $conn->query('SELECT id_akce FROM online_restia WHERE aktivni = 1 LIMIT 1');
+        if (!($q instanceof mysqli_result)) {
+            return false;
+        }
+
+        $isRunning = ($q->num_rows > 0);
+        $q->free();
+
+        return $isRunning;
+    }
+}
+
 $sysRestia = 'bad';
 try {
     $connRestia = db();
-    if (cb_head_restia_token_is_valid($connRestia)) {
+    if (cb_head_restia_online_is_running($connRestia)) {
+        $sysRestia = 'bad';
+    } elseif (cb_head_restia_token_is_valid($connRestia)) {
         $sysRestia = 'ok';
     } else {
         require_once __DIR__ . '/../lib/restia_ziskej_access.php';
-        $sysRestia = cb_head_restia_token_is_valid($connRestia) ? 'ok' : 'bad';
+        if (cb_head_restia_online_is_running($connRestia)) {
+            $sysRestia = 'bad';
+        } else {
+            $sysRestia = cb_head_restia_token_is_valid($connRestia) ? 'ok' : 'bad';
+        }
     }
 } catch (Throwable $e) {
     $sysRestia = 'bad';

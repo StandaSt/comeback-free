@@ -89,6 +89,7 @@ require_once __DIR__ . '/lib/request_dispatch.php';
 require_once __DIR__ . '/includes/hlavicka.php';
 require_once __DIR__ . '/modaly/modal_overeni.php';
 require_once __DIR__ . '/lib/kontrola_registrace.php';
+require_once __DIR__ . '/lib/restia_online_kontrola.php';
 
 $cb_page_exists = $cbPageExists;
 $cb_page_file = $file;
