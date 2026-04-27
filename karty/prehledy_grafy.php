@@ -178,7 +178,7 @@ if (($cbDashboardRenderMode ?? '') === 'mini') {
     $card_min_html = $renderGrafRoot(
         '<div class="sirka100 displ_flex flex_sloupec gap_4" style="height:100%; min-height:0;">'
         . '<div class="txt_c"><div class="txt_tucne text_14">Počet objednávek podle pobočky</div><div class="card_text txt_seda text_12">' . h($titleOd) . ' - ' . h($titleDo) . '</div></div>'
-        . '<div id="mini_graf" data-cb-prehledy-grafy-chart="1" class="sirka100" style="flex:1 1 auto; min-height:0; height:100%;"></div>'
+        . '<div id="mini_graf" data-cb-prehledy-grafy-chart="1" class="sirka100" style="flex:1 1 auto; min-height:210px; overflow:hidden; height:100%;"></div>'
         . '</div>',
         $grafJson
     );
@@ -444,7 +444,7 @@ $renderGrafTile = static function (string $code, string $title, string $periodTe
     $titleClass = $centerTitle ? 'txt_c' : '';
 
     return ''
-        . '<section class="card_text ram_sedy zaobleni_8 bg_bila odstup_vnitrni_8 displ_flex flex_sloupec" style="min-width:0; min-height:220px; height:100%; overflow:hidden;">'
+        . '<section class="card_text ram_sedy zaobleni_8 bg_bila odstup_vnitrni_8 displ_flex flex_sloupec" style="min-width:0; min-height:220px; flex:1 1 auto; display:flex; flex-direction:column; overflow:hidden;">'
         . '<div class="odstup_spod_4 ' . $titleClass . '">'
         . '<div class="card_text txt_seda text_12">' . $codeEsc . '</div>'
         . '<div class="card_text txt_tucne">' . $titleEsc . '</div>'
@@ -474,7 +474,7 @@ for ($i = 2; $i <= 6; $i++) {
 }
 
 $card_max_html = $renderGrafRoot(
-    '<div class="sirka100" style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); grid-template-rows:repeat(2, minmax(0, 1fr)); gap:10px; height:100%; min-height:0; flex:1 1 auto; align-content:stretch;">'
+    '<div class="sirka100" style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); grid-template-rows:repeat(2, minmax(0, 1fr)); gap:10px; min-height:0; flex:1 1 auto; align-content:stretch;">'
     . $maxTiles
     . '</div>',
     $grafJson
