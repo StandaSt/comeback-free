@@ -1,4 +1,4 @@
-// js/karty_grafy.js * Verze: V1 * Aktualizace: 17.04.2026
+// js/karty_grafy.js * Verze: V2 * Aktualizace: 27.04.2026
 'use strict';
 
 (function (w) {
@@ -59,6 +59,56 @@
     if (!payload || typeof payload !== 'object') return null;
     const kind = String(payload.kind || 'bar').trim();
     const title = String(payload.title || '').trim();
+    if (kind === 'online_stavy') {
+      const labels = Array.isArray(payload.labels) ? payload.labels.map((item) => String(item)) : [];
+      const dokonceno = Array.isArray(payload.dokonceno) ? payload.dokonceno.map((item) => Number(item) || 0) : [];
+      const naCeste = Array.isArray(payload.na_ceste) ? payload.na_ceste.map((item) => Number(item) || 0) : [];
+      const vyrabiSe = Array.isArray(payload.vyrabi_se) ? payload.vyrabi_se.map((item) => Number(item) || 0) : [];
+
+      return {
+        grid: { left: 16, right: 8, top: 8, bottom: 58, containLabel: true },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        legend: { show: false },
+        xAxis: {
+          type: 'category',
+          data: labels,
+          axisTick: { show: false },
+          axisLabel: { interval: 0, rotate: labels.length > 4 ? 32 : 0, fontSize: 10, lineHeight: 11 }
+        },
+        yAxis: {
+          type: 'value',
+          minInterval: 1,
+          splitNumber: 4
+        },
+        series: [
+          {
+            name: 'Dokončeno',
+            type: 'bar',
+            stack: 'online',
+            barMaxWidth: 36,
+            itemStyle: { color: '#16a34a' },
+            data: dokonceno
+          },
+          {
+            name: 'Na cestě',
+            type: 'bar',
+            stack: 'online',
+            barMaxWidth: 36,
+            itemStyle: { color: '#f59e0b' },
+            data: naCeste
+          },
+          {
+            name: 'Vyrábí se',
+            type: 'bar',
+            stack: 'online',
+            barMaxWidth: 36,
+            itemStyle: { color: '#dc2626' },
+            data: vyrabiSe
+          }
+        ]
+      };
+    }
+
     if (kind === 'bar') {
       const labels = Array.isArray(payload.labels) ? payload.labels.map((item) => String(item)) : [];
       const values = Array.isArray(payload.values) ? payload.values.map((item) => Number(item) || 0) : [];
@@ -384,5 +434,5 @@
   }
 })(window);
 
-// js/karty_grafy.js * Verze: V1 * Aktualizace: 17.04.2026
+// js/karty_grafy.js * Verze: V2 * Aktualizace: 27.04.2026
 // Konec souboru

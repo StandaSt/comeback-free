@@ -1,6 +1,6 @@
 <?php
 // K19
-// karty/objednavky_online.php * Verze: V2 * Aktualizace: 27.04.2026
+// karty/objednavky_online.php * Verze: V3 * Aktualizace: 27.04.2026
 declare(strict_types=1);
 
 $card_min_html = '<p class="card_text txt_seda odstup_vnejsi_0">Data online objednavek nejsou k dispozici.</p>';
@@ -126,6 +126,7 @@ try {
 
     $chartId = 'k19-online-chart';
     $payload = [
+        'kind' => 'online_stavy',
         'labels' => $labels,
         'dokonceno' => $dokoncenoData,
         'na_ceste' => $naCesteData,
@@ -146,7 +147,9 @@ try {
 
     ob_start();
     ?>
-    <div class="sirka100 displ_flex flex_sloupec gap_4" style="height:100%; min-height:0;">
+    <div class="sirka100 displ_flex flex_sloupec gap_4" style="height:100%; min-height:0;" data-cb-prehledy-grafy="1">
+      <script type="application/json" data-cb-prehledy-grafy-data><?= $payloadJson ?></script>
+
       <div class="displ_flex jc_mezi text_11 txt_seda gap_8" style="align-items:flex-start; flex-wrap:wrap; line-height:1.15;">
         <span><?= h((string)$range['label']) ?></span>
         <span class="displ_flex gap_8" style="flex-wrap:wrap; justify-content:flex-end;">
@@ -156,105 +159,7 @@ try {
         </span>
       </div>
 
-      <div id="<?= h($chartId) ?>" class="sirka100" style="flex:1 1 auto; min-height:210px; height:100%;"></div>
-      <script type="application/json" id="<?= h($chartId) ?>-data"><?= $payloadJson ?></script>
-      <script>
-      (function () {
-        const chartId = <?= json_encode($chartId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-        const dataId = chartId + '-data';
-
-        function initK19OnlineChart(attempt) {
-          const node = document.getElementById(chartId);
-          const dataNode = document.getElementById(dataId);
-          const echarts = window.echarts;
-
-          if (!(node instanceof HTMLElement) || !(dataNode instanceof HTMLElement) || !echarts || typeof echarts.init !== 'function') {
-            if ((attempt || 0) < 30) {
-              window.setTimeout(function () {
-                initK19OnlineChart((attempt || 0) + 1);
-              }, 120);
-            }
-            return;
-          }
-
-          let payload = null;
-          try {
-            payload = JSON.parse(String(dataNode.textContent || '').trim());
-          } catch (e) {
-            payload = null;
-          }
-          if (!payload || typeof payload !== 'object') {
-            return;
-          }
-
-          const labels = Array.isArray(payload.labels) ? payload.labels : [];
-          const dokonceno = Array.isArray(payload.dokonceno) ? payload.dokonceno : [];
-          const naCeste = Array.isArray(payload.na_ceste) ? payload.na_ceste : [];
-          const vyrabiSe = Array.isArray(payload.vyrabi_se) ? payload.vyrabi_se : [];
-
-          const existing = typeof echarts.getInstanceByDom === 'function' ? echarts.getInstanceByDom(node) : null;
-          if (existing) {
-            existing.dispose();
-          }
-
-          const chart = echarts.init(node);
-          chart.setOption({
-            grid: { left: 16, right: 8, top: 8, bottom: 58, containLabel: true },
-            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-            legend: { show: false },
-            xAxis: {
-              type: 'category',
-              data: labels,
-              axisTick: { show: false },
-              axisLabel: { interval: 0, rotate: labels.length > 4 ? 32 : 0, fontSize: 10, lineHeight: 11 }
-            },
-            yAxis: {
-              type: 'value',
-              minInterval: 1,
-              splitNumber: 4
-            },
-            series: [
-              {
-                name: 'Dokončeno',
-                type: 'bar',
-                stack: 'online',
-                barMaxWidth: 36,
-                itemStyle: { color: '#16a34a' },
-                data: dokonceno
-              },
-              {
-                name: 'Na cestě',
-                type: 'bar',
-                stack: 'online',
-                barMaxWidth: 36,
-                itemStyle: { color: '#f59e0b' },
-                data: naCeste
-              },
-              {
-                name: 'Vyrábí se',
-                type: 'bar',
-                stack: 'online',
-                barMaxWidth: 36,
-                itemStyle: { color: '#dc2626' },
-                data: vyrabiSe
-              }
-            ]
-          }, true);
-
-          window.addEventListener('resize', function () {
-            chart.resize();
-          });
-        }
-
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', function () {
-            initK19OnlineChart(0);
-          }, { once: true });
-        } else {
-          initK19OnlineChart(0);
-        }
-      })();
-      </script>
+      <div id="<?= h($chartId) ?>" data-cb-prehledy-grafy-chart="1" class="sirka100" style="flex:1 1 auto; min-height:210px; height:100%;"></div>
     </div>
     <?php
     $card_min_html = (string)ob_get_clean();
@@ -268,5 +173,5 @@ ob_start();
 <?php
 $card_max_html = (string)ob_get_clean();
 
-/* karty/objednavky_online.php * Verze: V2 * Aktualizace: 27.04.2026 */
+/* karty/objednavky_online.php * Verze: V3 * Aktualizace: 27.04.2026 */
 ?>
