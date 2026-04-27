@@ -1250,11 +1250,12 @@ align-items:center;
 }
 
 .card_pref_wrap_pos_locked .card_pref_toggle{
-  border-color:var(--clr_cervena);
+  border-color:transparent;
+  position:relative;
 }
 
 .card_pref_wrap_pos_locked .card_pref_toggle:hover{
-  border-color:var(--clr_cervena);
+  border-color:transparent;
 }
 
 .card_pref_toggle{
@@ -2565,4 +2566,9 @@ align-items:center;
   background:var(--clr_modra_1);            /* modre pozadi aktualni stranky */
   border:1px solid var(--clr_indigo_1);     /* modry ramecek aktualni stranky */
   color:var(--clr_modra_3);                 /* modry text aktualni stranky */
+}
+
+/* Zamčeno – pouze tečka (nano tlačítko) */
+.card_shell[data-card-pos-locked="1"] .nano_dot{
+  color:var(--clr_cervena);
 }

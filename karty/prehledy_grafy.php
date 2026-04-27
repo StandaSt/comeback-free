@@ -485,5 +485,5 @@ $card_max_html = $renderGrafRoot(
     $grafJson
 );
 
-/* karty/prehledy_grafy.php * Verze: V2 * Aktualizace: 17.04.2026 */
+/* karty/prehledy_grafy.php * Verze: V4 * Aktualizace: 17.04.2026 */
 ?>

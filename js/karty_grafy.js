@@ -1,4 +1,4 @@
-// js/karty_grafy.js * Verze: V2 * Aktualizace: 27.04.2026
+// js/karty_grafy.js * Verze: V4 * Aktualizace: 27.04.2026
 'use strict';
 
 (function (w) {
@@ -6,6 +6,15 @@
   const CHART_SELECTOR = '[data-cb-prehledy-grafy-chart="1"]';
   const DATA_SELECTOR = '[data-cb-prehledy-grafy-data]';
   const CHART_DATA_SELECTOR = '[data-cb-prehledy-grafy-chart-data]';
+  const MINI_SLOUPEC_GRID = {
+    left: 10,
+    right: 10,
+    top: 20,
+    bottom: 25,
+    containLabel: true
+  };
+  const MINI_SLOUPEC_BAR_MAX_WIDTH = 44;
+
 
   function getWrappers(root) {
     const scope = root instanceof HTMLElement ? root : document;
@@ -64,36 +73,50 @@
       const dokonceno = Array.isArray(payload.dokonceno) ? payload.dokonceno.map((item) => Number(item) || 0) : [];
       const naCeste = Array.isArray(payload.na_ceste) ? payload.na_ceste.map((item) => Number(item) || 0) : [];
       const vyrabiSe = Array.isArray(payload.vyrabi_se) ? payload.vyrabi_se.map((item) => Number(item) || 0) : [];
+      const colors = Array.isArray(payload.colors) ? payload.colors.map((item) => String(item || '')) : [];
 
       return {
-        grid: { left: 16, right: 8, top: 8, bottom: 58, containLabel: true },
+        grid: MINI_SLOUPEC_GRID,
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
         legend: { show: false },
         xAxis: {
           type: 'category',
           data: labels,
-          axisTick: { show: false },
-          axisLabel: { interval: 0, rotate: labels.length > 4 ? 32 : 0, fontSize: 10, lineHeight: 11 }
+          axisLabel: {
+            interval: 0,
+            rotate: labels.length > 6 ? 20 : 0
+          }
         },
         yAxis: {
           type: 'value',
-          minInterval: 1,
-          splitNumber: 4
+          axisLabel: {
+            show: false
+          },
+          axisTick: {
+            show: false
+          },
+          splitLine: {
+            show: false
+          }
         },
         series: [
           {
             name: 'Dokončeno',
             type: 'bar',
             stack: 'online',
-            barMaxWidth: 36,
-            itemStyle: { color: '#16a34a' },
-            data: dokonceno
+            barMaxWidth: MINI_SLOUPEC_BAR_MAX_WIDTH,
+            data: labels.map((label, index) => ({
+              value: dokonceno[index] ?? 0,
+              itemStyle: {
+                color: colors[index] || '#16a34a'
+              }
+            }))
           },
           {
             name: 'Na cestě',
             type: 'bar',
             stack: 'online',
-            barMaxWidth: 36,
+            barMaxWidth: MINI_SLOUPEC_BAR_MAX_WIDTH,
             itemStyle: { color: '#f59e0b' },
             data: naCeste
           },
@@ -101,7 +124,7 @@
             name: 'Vyrábí se',
             type: 'bar',
             stack: 'online',
-            barMaxWidth: 36,
+            barMaxWidth: MINI_SLOUPEC_BAR_MAX_WIDTH,
             itemStyle: { color: '#dc2626' },
             data: vyrabiSe
           }
@@ -124,13 +147,7 @@
       }
 
       return {
-        grid: {
-          left: 10,
-          right: 10,
-          top: 20,
-          bottom: 40,
-          containLabel: true
-        },
+        grid: MINI_SLOUPEC_GRID,
         tooltip: {
           trigger: 'axis',
           axisPointer: { type: 'shadow' }
@@ -157,7 +174,7 @@
         },
         series: [{
           type: 'bar',
-          barMaxWidth: 44,
+          barMaxWidth: MINI_SLOUPEC_BAR_MAX_WIDTH,
           label: {
             show: true,
             position: 'top',
@@ -198,7 +215,7 @@
           left: 10,
           right: 10,
           top: 10,
-          bottom: 24,
+          bottom: 10,
           containLabel: true
         },
         tooltip: {
@@ -434,5 +451,5 @@
   }
 })(window);
 
-// js/karty_grafy.js * Verze: V2 * Aktualizace: 27.04.2026
+// js/karty_grafy.js * Verze: V4 * Aktualizace: 27.04.2026
 // Konec souboru

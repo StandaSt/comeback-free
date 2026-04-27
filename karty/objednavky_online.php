@@ -1,6 +1,6 @@
 <?php
 // K19
-// karty/objednavky_online.php * Verze: V3 * Aktualizace: 27.04.2026
+// karty/objednavky_online.php * Verze: V4 * Aktualizace: 27.04.2026
 declare(strict_types=1);
 
 $card_min_html = '<p class="card_text txt_seda odstup_vnejsi_0">Data online objednavek nejsou k dispozici.</p>';
@@ -43,7 +43,7 @@ try {
 
     $branches = [];
     $branchSql = '
-        SELECT p.id_pob, p.nazev
+        SELECT p.id_pob, p.nazev, p.pob_color
         FROM pobocka p
         ' . $branchWhere . '
         ORDER BY p.id_pob ASC
@@ -53,10 +53,12 @@ try {
         while ($row = $branchRes->fetch_assoc()) {
             $idPob = (int)($row['id_pob'] ?? 0);
             $nazev = trim((string)($row['nazev'] ?? ''));
+            $barva = trim((string)($row['pob_color'] ?? ''));
             if ($idPob > 0 && $nazev !== '') {
                 $branches[$idPob] = [
                     'id_pob' => $idPob,
                     'nazev' => $nazev,
+                    'barva' => $barva,
                     'dokonceno' => 0,
                     'na_ceste' => 0,
                     'vyrabi_se' => 0,
@@ -105,12 +107,14 @@ try {
     $dokoncenoData = [];
     $naCesteData = [];
     $vyrabiSeData = [];
+    $barvyPobocek = [];
     $sumDokonceno = 0;
     $sumNaCeste = 0;
     $sumVyrabiSe = 0;
 
     foreach ($branches as $branch) {
         $labels[] = (string)$branch['nazev'];
+        $barvyPobocek[] = (string)$branch['barva'];
         $dokonceno = (int)$branch['dokonceno'];
         $naCeste = (int)$branch['na_ceste'];
         $vyrabiSe = (int)$branch['vyrabi_se'];
@@ -131,6 +135,7 @@ try {
         'dokonceno' => $dokoncenoData,
         'na_ceste' => $naCesteData,
         'vyrabi_se' => $vyrabiSeData,
+        'colors' => $barvyPobocek,
     ];
     $payloadJson = json_encode(
         $payload,
@@ -159,7 +164,7 @@ try {
         </span>
       </div>
 
-      <div id="<?= h($chartId) ?>" data-cb-prehledy-grafy-chart="1" class="sirka100" style="flex:1 1 auto; min-height:210px; height:100%;"></div>
+      <div id="<?= h($chartId) ?>" data-cb-prehledy-grafy-chart="1" class="sirka100" style="height:180px;"></div>
     </div>
     <?php
     $card_min_html = (string)ob_get_clean();
@@ -173,5 +178,5 @@ ob_start();
 <?php
 $card_max_html = (string)ob_get_clean();
 
-/* karty/objednavky_online.php * Verze: V3 * Aktualizace: 27.04.2026 */
+/* karty/objednavky_online.php * Verze: V4 * Aktualizace: 27.04.2026 */
 ?>
