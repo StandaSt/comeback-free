@@ -1,5 +1,5 @@
 <?php
-// lib/restia_online.php * Verze: V2 * Aktualizace: 27.04.2026
+// lib/restia_online.php * Verze: V5 * Aktualizace: 28.04.2026
 declare(strict_types=1);
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
@@ -1554,6 +1554,56 @@ if (!function_exists('cb_restia_online_upsert_order')) {
         $objPoznamka = ($objPoznamka === null || $objPoznamka === '') ? null : (string)$objPoznamka;
         $importTs = cb_restia_online_now();
 
+        $restObj = $restiaIdObj;
+
+        if ($existingIdObj > 0) {
+            $sql = '
+                UPDATE objednavky_restia
+                SET id_pob = ?,
+                    id_zak = ?,
+                    id_platforma = ?,
+                    restia_created_at = ?,
+                    restia_order_number = ?,
+                    restia_token = ?,
+                    profil_typ = ?,
+                    rest_obj = ?,
+                    id_stav = ?,
+                    id_platba = ?,
+                    id_doruceni = ?,
+                    obj_pozn = ?,
+                    restia_imported_at = ?
+                WHERE id_obj = ?
+                  AND restia_id_obj = ?
+                LIMIT 1
+            ';
+
+            $stmt = cb_restia_online_stmt($conn, 'objednavky_restia_update_by_restia_id', $sql, 'objednavky_restia update by restia_id_obj');
+            $stmt->bind_param(
+                'iiisssssiiissis',
+                $idPob,
+                $idZak,
+                $idPlatforma,
+                $restiaCreatedAt,
+                $restiaOrderNumber,
+                $restiaToken,
+                $profilTyp,
+                $restObj,
+                $idStav,
+                $idPlatba,
+                $idDoruceni,
+                $objPoznamka,
+                $importTs,
+                $existingIdObj,
+                $restiaIdObj
+            );
+            $stmt->execute();
+
+            return [
+                'id_obj' => $existingIdObj,
+                'is_new' => false,
+            ];
+        }
+
         $sql = '
             INSERT INTO objednavky_restia (
                 id_pob, id_zak, id_platforma, restia_id_obj, restia_created_at, restia_order_number, restia_token,
@@ -1562,29 +1612,19 @@ if (!function_exists('cb_restia_online_upsert_order')) {
                 obj_pozn, restia_imported_at
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-                id_obj = LAST_INSERT_ID(id_obj),
-                id_pob = VALUES(id_pob), id_zak = VALUES(id_zak), id_platforma = VALUES(id_platforma), restia_created_at = VALUES(restia_created_at), restia_order_number = VALUES(restia_order_number),
-                restia_token = VALUES(restia_token), profil_typ = VALUES(profil_typ),
-                rest_obj = VALUES(rest_obj), id_stav = VALUES(id_stav), id_platba = VALUES(id_platba), id_doruceni = VALUES(id_doruceni),
-                obj_pozn = VALUES(obj_pozn), restia_imported_at = VALUES(restia_imported_at)
         ';
 
-        $stmt = cb_restia_online_stmt($conn, 'objednavky_restia_upsert', $sql, 'objednavky_restia upsert');
-        $restObj = $restiaIdObj;
+        $stmt = cb_restia_online_stmt($conn, 'objednavky_restia_insert', $sql, 'objednavky_restia insert');
         $stmt->bind_param('iiissssssiisss', $idPob, $idZak, $idPlatforma, $restiaIdObj, $restiaCreatedAt, $restiaOrderNumber, $restiaToken, $profilTyp, $restObj, $idStav, $idPlatba, $idDoruceni, $objPoznamka, $importTs);
         $stmt->execute();
         $idObj = (int)$conn->insert_id;
-        if ($idObj <= 0 && $existingIdObj > 0) {
-            $idObj = $existingIdObj;
-        }
         if ($idObj <= 0) {
-            throw new RuntimeException('Nepodarilo se dohledat id_obj po upsertu objednavky.');
+            throw new RuntimeException('Nepodarilo se zapsat novou objednavku.');
         }
 
         return [
             'id_obj' => $idObj,
-            'is_new' => ($existingIdObj <= 0),
+            'is_new' => true,
         ];
     }
 }
@@ -1855,10 +1895,22 @@ if (!function_exists('cb_restia_online_active_branches')) {
     }
 }
 
+
 if (!function_exists('cb_restia_online_run')) {
     function cb_restia_online_run(): array
     {
         $conn = db();
+        $resSet = $conn->query('SELECT restia_online FROM set_system WHERE id_set = 1');
+        $rowSet = $resSet->fetch_assoc();
+        $resSet->free();
+        if ((int)$rowSet['restia_online'] !== 1) {
+            return [
+                'zapisy' => 0,
+                'aktualizace' => 0,
+                'chyba' => '',
+            ];
+        }
+
         $zapisy = 0;
         $aktualizace = 0;
         $chyba = '';

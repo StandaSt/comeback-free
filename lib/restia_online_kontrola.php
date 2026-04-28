@@ -2,6 +2,13 @@
 // lib/restia_online_kontrola.php
 // Verze: V3
 // Aktualizace: 27.04.2026
+// vypínač
+$db = db(); // správné DB připojení
+$q = $db->query("SELECT restia_online FROM set_system WHERE id_set = 1");
+$row = $q->fetch_assoc();
+if ((int)$row['restia_online'] === 0) {
+    return;
+}
 
 function cb_restia_online_kontrola()
 {
