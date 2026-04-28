@@ -1249,15 +1249,6 @@ align-items:center;
   height:36px;
 }
 
-.card_pref_wrap_pos_locked .card_pref_toggle{
-  border-color:transparent;
-  position:relative;
-}
-
-.card_pref_wrap_pos_locked .card_pref_toggle:hover{
-  border-color:transparent;
-}
-
 .card_pref_toggle{
   width:25px;
   height:25px;
@@ -2407,6 +2398,7 @@ align-items:center;
   }
 }
 
+
 /* =========================================================
    MAX TABULKY – CILOVY STAV (NOVA VRSTVA)
    ---------------------------------------------------------
@@ -2568,6 +2560,11 @@ align-items:center;
 }
 
 /* Zamčeno – pouze tečka (nano tlačítko) */
+.nano_dot{
+  font-size:18px;
+  line-height:1;
+}
+
 .card_shell[data-card-pos-locked="1"] .nano_dot{
-  color:var(--clr_cervena);
+  color:var(--clr_cervena_2);
 }

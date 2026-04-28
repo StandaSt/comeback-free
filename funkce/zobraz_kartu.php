@@ -1,5 +1,5 @@
 <?php
-// funkce/zobraz_kartu.php * Verze: V3 * Aktualizace: 15.04.2026
+// funkce/zobraz_kartu.php * Verze: V4 * Aktualizace: 27.04.2026
 declare(strict_types=1);
 
 function cb_zobraz_kartu(array $pripravenaKarta): string
@@ -64,6 +64,29 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
     $iconFile = (string)($pripravenaKarta['iconFile'] ?? '');
     $subtitleMin = !$isNano ? (string)($pripravenaKarta['subtitleMin'] ?? '') : '';
     $subtitleMax = !$isNano ? (string)($pripravenaKarta['subtitleMax'] ?? '') : '';
+
+    if (!$isNano && $cardId === 19) {
+        $subtitleMin = 'Aktualizace:';
+
+        try {
+            $conn = db();
+            $resAktualizace = $conn->query('SELECT MAX(start) AS posledni_start FROM online_restia');
+            if ($resAktualizace instanceof mysqli_result) {
+                $rowAktualizace = $resAktualizace->fetch_assoc();
+                $posledniStart = trim((string)($rowAktualizace['posledni_start'] ?? ''));
+                $resAktualizace->free();
+
+                if ($posledniStart !== '') {
+                    $casAktualizace = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $posledniStart);
+                    if ($casAktualizace instanceof DateTimeImmutable) {
+                        $subtitleMin = 'Aktualizace: ' . $casAktualizace->format('H:i');
+                    }
+                }
+            }
+        } catch (Throwable $e) {
+            $subtitleMin = 'Aktualizace:';
+        }
+    }
     $minHtml = (string)($pripravenaKarta['minHtml'] ?? '');
     $maxHtml = (string)($pripravenaKarta['maxHtml'] ?? '');
     $renderErrorHtml = (string)($pripravenaKarta['renderErrorHtml'] ?? '');

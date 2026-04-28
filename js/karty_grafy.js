@@ -270,14 +270,14 @@
 
         graphic.push({
           type: 'circle',
-          left: 18,
+          left: 20,
           top: top + 6,
           shape: { cx: 0, cy: 0, r: 5 },
           style: { fill: color }
         });
         graphic.push({
           type: 'text',
-          left: 30,
+          left: 32,
           top: top,
           style: {
             text: item.label + ': ' + value,
@@ -289,8 +289,8 @@
 
       graphic.push({
         type: 'text',
-        left: '70%',
-        top: '39%',
+        left: '64%',
+        top: '56%',
         style: {
           text: 'Celkem:\n' + total,
           textAlign: 'center',
@@ -314,7 +314,7 @@
         series: [{
           type: 'pie',
           radius: ['40%', '72%'],
-          center: ['72%', '44%'],
+          center: ['64%', '56%'],
           avoidLabelOverlap: true,
           label: {
             show: true,

@@ -1,5 +1,5 @@
 <?php
-// lib/handle_set_period.php * Verze: V1 * Aktualizace: 23.04.2026
+// lib/handle_set_period.php * Verze: V2 * Aktualizace: 27.04.2026
 declare(strict_types=1);
 
 if (
@@ -40,7 +40,19 @@ if (
         return checkdate($m, $d, $y);
     };
 
-    $today = (new DateTimeImmutable('today'))->format('Y-m-d');
+    $cbNowPeriod = new DateTimeImmutable('now');
+    $cbWorkingTodayDate = $cbNowPeriod;
+    if ((int)$cbNowPeriod->format('G') < 8) {
+        $cbWorkingTodayDate = $cbWorkingTodayDate->modify('-1 day');
+    }
+    $today = $cbWorkingTodayDate->format('Y-m-d');
+    $maxDo = $cbWorkingTodayDate->modify('+1 day')->format('Y-m-d');
+
+    $allowedModes = ['dnes', 'tyden', 'mesic', 'rok', 'manual'];
+    $newMode = trim((string)($data['mode'] ?? 'manual'));
+    if (!in_array($newMode, $allowedModes, true)) {
+        $newMode = 'manual';
+    }
 
     try {
         $conn = db();
@@ -73,7 +85,7 @@ if (
             $currentOd = $today;
         }
         if (!$isDate($currentDo)) {
-            $currentDo = $today;
+            $currentDo = $maxDo;
         }
 
         $newOd = $currentOd;
@@ -98,8 +110,8 @@ if (
                 echo json_encode(['ok' => false, 'err' => 'Neplatne do'], JSON_UNESCAPED_UNICODE);
                 exit;
             }
-            if ($newDo > $today) {
-                $newDo = $today;
+            if ($newDo > $maxDo) {
+                $newDo = $maxDo;
             }
         }
 
@@ -137,11 +149,13 @@ if (
 
         $_SESSION['cb_obdobi_od'] = $newOd;
         $_SESSION['cb_obdobi_do'] = $newDo;
+        $_SESSION['cb_obdobi_mode'] = $newMode;
 
         echo json_encode([
             'ok' => true,
             'od' => $newOd,
             'do' => $newDo,
+            'mode' => $newMode,
         ], JSON_UNESCAPED_UNICODE);
         exit;
     } catch (Throwable $e) {

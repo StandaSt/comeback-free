@@ -1,5 +1,5 @@
 <?php
-// includes/hlavicka.php * Verze: V44 * Aktualizace: 07.03.2026
+// includes/hlavicka.php * Verze: V45 * Aktualizace: 27.04.2026
 declare(strict_types=1);
 require_once __DIR__ . '/../db/db_user_role.php';
 
@@ -98,9 +98,16 @@ try {
     $sysRestia = 'bad';
 }
 
-// Vychozi obdobi: od vcera do dneska.
-$today = (new DateTimeImmutable('today'))->format('Y-m-d');
-$yesterday = (new DateTimeImmutable('yesterday'))->format('Y-m-d');
+// Vychozi obdobi: dnesni pracovni den 08:00-08:00.
+$cbNowPeriod = new DateTimeImmutable('now');
+$cbWorkingTodayDate = $cbNowPeriod;
+if ((int)$cbNowPeriod->format('G') < 8) {
+    $cbWorkingTodayDate = $cbWorkingTodayDate->modify('-1 day');
+}
+$cbWorkingToday = $cbWorkingTodayDate->format('Y-m-d');
+$cbWorkingEnd = $cbWorkingTodayDate->modify('+1 day')->format('Y-m-d');
+$today = $cbWorkingToday;
+$tomorrow = $cbWorkingEnd;
 
 // Jednoducha validace formatu datumu YYYY-MM-DD.
 $isDate = static function (string $v): bool {
@@ -112,8 +119,12 @@ $isDate = static function (string $v): bool {
 };
 
 // Globalni filtr obdobi (bude platit pro KPI i karty dashboardu).
-$cbObdobiOd = $yesterday;
-$cbObdobiDo = $today;
+$cbObdobiOd = $cbWorkingToday;
+$cbObdobiDo = $cbWorkingEnd;
+$cbObdobiMode = trim((string)($_SESSION['cb_obdobi_mode'] ?? 'manual'));
+if (!in_array($cbObdobiMode, ['dnes', 'tyden', 'mesic', 'rok', 'manual'], true)) {
+    $cbObdobiMode = 'manual';
+}
 $cbNeedInitUserSetPeriod = false;
 $cbUserIdForPeriod = (int)($cbUser['id_user'] ?? 0);
 
@@ -133,8 +144,8 @@ if ($cbLoginOk && $cbUserIdForPeriod > 0) {
                 if (
                     $isDate($tmpOd)
                     && $isDate($tmpDo)
-                    && $tmpOd <= $today
-                    && $tmpDo <= $today
+                    && $tmpOd <= $cbWorkingToday
+                    && $tmpDo <= $cbWorkingEnd
                     && $tmpOd <= $tmpDo
                 ) {
                     $cbObdobiOd = $tmpOd;
@@ -146,6 +157,7 @@ if ($cbLoginOk && $cbUserIdForPeriod > 0) {
 
             if (!$hasPeriod) {
                 $cbNeedInitUserSetPeriod = true;
+                $cbObdobiMode = 'dnes';
             }
         }
 
@@ -158,8 +170,9 @@ if ($cbLoginOk && $cbUserIdForPeriod > 0) {
             }
         }
     } catch (Throwable $e) {
-        $cbObdobiOd = $yesterday;
-        $cbObdobiDo = $today;
+        $cbObdobiOd = $cbWorkingToday;
+        $cbObdobiDo = $cbWorkingEnd;
+        $cbObdobiMode = 'dnes';
     }
 } else {
     $sessionOd = trim((string)($_SESSION['cb_obdobi_od'] ?? ''));
@@ -167,11 +180,16 @@ if ($cbLoginOk && $cbUserIdForPeriod > 0) {
     if ($isDate($sessionOd) && $isDate($sessionDo) && $sessionOd <= $sessionDo) {
         $cbObdobiOd = $sessionOd;
         $cbObdobiDo = $sessionDo;
+        $sessionMode = trim((string)($_SESSION['cb_obdobi_mode'] ?? 'manual'));
+        if (in_array($sessionMode, ['dnes', 'tyden', 'mesic', 'rok', 'manual'], true)) {
+            $cbObdobiMode = $sessionMode;
+        }
     }
 }
 
 $_SESSION['cb_obdobi_od'] = $cbObdobiOd;
 $_SESSION['cb_obdobi_do'] = $cbObdobiDo;
+$_SESSION['cb_obdobi_mode'] = $cbObdobiMode;
 
 // Data do user bloku.
 $cbLoginInfo = (is_array($_SESSION['cb_login_info'] ?? null)) ? $_SESSION['cb_login_info'] : [];

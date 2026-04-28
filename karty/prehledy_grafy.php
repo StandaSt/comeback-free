@@ -437,7 +437,9 @@ if (!is_string($hourJson) || $hourJson === '') {
     throw new RuntimeException('Nepodařilo se připravit data pro hodinový graf.');
 }
 
-$renderGrafTile = static function (string $code, string $title, string $periodText, string $chartId, string $chartJson = '', bool $centerTitle = false) use ($grafJson): string {
+$maxGrafVyska = 460;
+
+$renderGrafTile = static function (string $code, string $title, string $periodText, string $chartId, string $chartJson = '', string $chartStyleExtra = '') use ($grafJson, $maxGrafVyska): string {
     $codeEsc = h($code);
     $titleEsc = h($title);
     $periodEsc = h($periodText);
@@ -446,33 +448,35 @@ $renderGrafTile = static function (string $code, string $title, string $periodTe
     if ($chartJson !== '') {
         $payloadAttr = ' data-cb-prehledy-grafy-chart-data="' . h($chartJson) . '"';
     }
-    $titleClass = $centerTitle ? 'txt_c' : '';
+    $chartStyleExtraEsc = trim($chartStyleExtra);
 
     return ''
         . '<div class="card_text ram_sedy zaobleni_8 bg_bila odstup_vnitrni_8 displ_flex flex_sloupec gap_4" style="height:100%; min-height:0; overflow:hidden;">'
-        . '<div class="odstup_spod_4 ' . $titleClass . '">'
-        . '<div class="card_text txt_seda text_12">' . $codeEsc . '</div>'
-        . '<div class="card_text txt_tucne">' . $titleEsc . '</div>'
-        . '<div class="card_text txt_seda text_12">' . $periodEsc . '</div>'
+        . '<div class="odstup_spod_4">'
+        . '<div style="display:grid; grid-template-columns:36px minmax(0, 1fr) 36px; align-items:start; column-gap:8px; line-height:1.15;">'
+        . '<div class="card_text text_12" style="color:var(--clr_seda_3);">' . $codeEsc . '</div>'
+        . '<div class="card_text txt_c"><strong>' . $titleEsc . '</strong></div>'
+        . '<div></div>'
         . '</div>'
-        . '<div id="' . $idEsc . '" data-cb-prehledy-grafy-chart="1"' . $payloadAttr . ' class="sirka100" style="height:180px;"></div>'
+        . '<div class="card_text txt_seda text_12 txt_c" style="line-height:1.15;">' . $periodEsc . '</div>'
+        . '</div>'
+        . '<div id="' . $idEsc . '" data-cb-prehledy-grafy-chart="1"' . $payloadAttr . ' class="sirka100" style="height:' . (int)$maxGrafVyska . 'px;' . h($chartStyleExtraEsc) . '"></div>'
         . '</div>';
 };
-
 $periodLabel = $titleOd . ' - ' . $titleDo;
 $maxTiles = '';
-$maxTiles .= $renderGrafTile('G1', 'Trend objednávek podle měsíce', $periodLabel, 'graf_max_1', $trendJson, true);
+$maxTiles .= $renderGrafTile('G1', 'Trend objednávek podle měsíce', $periodLabel, 'graf_max_1', $trendJson);
 for ($i = 2; $i <= 6; $i++) {
     if ($i === 2) {
-        $maxTiles .= $renderGrafTile('G2', 'Vytíženost poboček během dne', $periodLabel, 'graf_max_2', $hourJson, true);
+        $maxTiles .= $renderGrafTile('G2', 'Vytíženost poboček během dne', $periodLabel, 'graf_max_2', $hourJson);
         continue;
     }
     if ($i === 4) {
-        $maxTiles .= $renderGrafTile('G4', 'Přehled tržeb podle měsíce', $periodLabel, 'graf_max_4', $salesJson, true);
+        $maxTiles .= $renderGrafTile('G4', 'Přehled tržeb podle měsíce', $periodLabel, 'graf_max_4', $salesJson);
         continue;
     }
     if ($i === 3) {
-        $maxTiles .= $renderGrafTile('G3', 'Typ zákazníka v objednávkách', $periodLabel, 'graf_max_3', $zakOrderPieJson, true);
+        $maxTiles .= $renderGrafTile('G3', 'Typ zákazníka v objednávkách', $periodLabel, 'graf_max_3', $zakOrderPieJson, ' transform:translateX(-35px); width:calc(100% + 35px);');
         continue;
     }
     $maxTiles .= $renderGrafTile('G' . $i, 'Graf ' . $i, $periodLabel, 'graf_max_' . $i);
