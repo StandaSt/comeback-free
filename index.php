@@ -1,12 +1,12 @@
 <?php
-// index.php * Verze: V24 * Aktualizace: 15.04.2026
+// index.php * Verze: V25 * Aktualizace: 28.04.2026
 
 declare(strict_types=1);
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
-
+$time_count = 1;
 require_once __DIR__ . '/lib/app.php';
 require_once __DIR__ . '/lib/system.php';
 require_once __DIR__ . '/config/secrets.php';
@@ -23,6 +23,8 @@ $cbTitle = 'Comeback - IS';
 $cbFavicon = cb_url('img/favicon_comeback.png');
 
 cb_pobocky_bootstrap_session();
+
+$cbLoginOk = !empty($_SESSION['login_ok']);
 
 require_once __DIR__ . '/lib/detektuj_neplatnou_url.php';
 require_once __DIR__ . '/lib/logout_handler.php';
@@ -86,21 +88,26 @@ require_once __DIR__ . '/lib/request_dispatch.php';
 <div class="container bg_modra displ_flex sirka100">
 <?php
 
-require_once __DIR__ . '/includes/hlavicka.php';
-require_once __DIR__ . '/modaly/modal_overeni.php';
-require_once __DIR__ . '/lib/kontrola_registrace.php';
-require_once __DIR__ . '/lib/restia_online_kontrola.php';
+if ($cbLoginOk) {
+    require_once __DIR__ . '/includes/hlavicka.php';
+    require_once __DIR__ . '/modaly/modal_overeni.php';
+    require_once __DIR__ . '/lib/kontrola_registrace.php';
+    require_once __DIR__ . '/lib/restia_online_kontrola.php';
 
-$cb_page_exists = $cbPageExists;
-$cb_page_file = $file;
+    $cb_page_exists = $cbPageExists;
+    $cb_page_file = $file;
 
-require_once __DIR__ . '/includes/main.php';
-require_once __DIR__ . '/includes/paticka.php';
+    require_once __DIR__ . '/includes/main.php';
+    require_once __DIR__ . '/includes/paticka.php';
+} else {
+    require_once __DIR__ . '/modaly/modal_login.php';
+}
 
 ?>
 </div>
 
 
+<?php if ($cbLoginOk): ?>
 <script src="<?= h(cb_asset_url('js/echarts.min.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/chart.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/ajax_core.js')) ?>"></script>
@@ -115,6 +122,7 @@ require_once __DIR__ . '/includes/paticka.php';
 <script src="<?= h(cb_asset_url('js/select_pobocky.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/filtry.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/casovac_odhlaseni.js')) ?>"></script>
+<?php endif; ?>
 
 <?php
 if (!empty($cbInvalidUrl)) {
@@ -140,5 +148,5 @@ if (!empty($cbInvalidUrl)) {
 </body>
 </html>
 <?php
-/* index.php * Verze: V24 * Aktualizace: 15.04.2026 */
+/* index.php * Verze: V25 * Aktualizace: 28.04.2026 */
 // Konec souboru
