@@ -1,4 +1,4 @@
-// js/casovac_odhlaseni.js * Verze: V9 * Aktualizace: 08.03.2026
+// js/casovac_odhlaseni.js * Verze: V10 * Aktualizace: 28.04.2026
 'use strict';
 
 /*
@@ -9,6 +9,10 @@
  * - pri aktivite uzivatele resetuje neaktivitu na plny timeout
  * - prubezne updatuje teplomer neaktivity (odkryva barevny pas)
  * - periodicky posila "touch" na server
+ *
+ * Zmena V10:
+ * - odhlaseni se spousti podle zobrazene zbyvajici minuty
+ * - jakmile Seance/zbyva ukaze 0 min, provede se logout
  */
 
 (function (w, d) {
@@ -77,8 +81,6 @@
     if (idleSec < 0) idleSec = 0;
 
     const timeoutSec = timeoutMin * 60;
-    let remainSec = timeoutSec - idleSec;
-    if (remainSec < 0) remainSec = 0;
 
     // Minuty nechavame po celych minutach jako dosud.
     let idleMin = Math.floor(idleSec / 60);
@@ -95,7 +97,8 @@
 
     thermoEl.setAttribute('data-thermo', String(thermoPct));
     thermoEl.style.setProperty('--thermo', String(thermoPct) + '%');
-    if (remainSec <= 0 && logoutUrl) {
+
+    if (remainMin <= 0 && logoutUrl) {
       w.location.href = logoutUrl;
     }
   }
@@ -116,4 +119,4 @@
   w.setInterval(render, 1000);
 })(window, document);
 
-// js/casovac_odhlaseni.js * Verze: V9 * Aktualizace: 08.03.2026
+// js/casovac_odhlaseni.js * Verze: V10 * Aktualizace: 28.04.2026
