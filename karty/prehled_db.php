@@ -51,7 +51,7 @@ if (!function_exists('cb_prehled_db_scopes')) {
                 ],
             ],
             'restia_obj' => [
-                'label' => 'Restia objednĂˇvky',
+                'label' => 'Restia objednávky',
                 'allow_wipe' => true,
                 'tables' => [
                     'api_restia',
@@ -83,7 +83,7 @@ if (!function_exists('cb_prehled_db_scopes')) {
                 ],
             ],
             'smeny' => [
-                'label' => 'SmÄ›ny',
+                'label' => 'Směny',
                 'allow_wipe' => true,
                 'tables' => [
                     'api_smeny',
@@ -102,7 +102,7 @@ if (!function_exists('cb_prehled_db_scopes')) {
                 ],
             ],
             'system' => [
-                'label' => 'SystĂ©m',
+                'label' => 'Systém',
                 'allow_wipe' => false,
                 'tables' => [
                     'cis_chyby',
@@ -277,7 +277,7 @@ if (!function_exists('cb_prehled_db_delete_table')) {
         $sql = 'TRUNCATE TABLE ' . $tableSql;
         $ok = $conn->query($sql);
         if ($ok === false) {
-            throw new RuntimeException('MazĂˇnĂ­ selhalo pro tabulku ' . $table . ': ' . $conn->error);
+            throw new RuntimeException('Mazání selhalo pro tabulku ' . $table . ': ' . $conn->error);
         }
 
         return 0;
@@ -289,11 +289,11 @@ if (!function_exists('cb_prehled_db_wipe_tables')) {
     {
         $scopes = cb_prehled_db_scopes();
         if (!isset($scopes[$scope])) {
-            throw new RuntimeException('NeplatnĂˇ oblast.');
+            throw new RuntimeException('Neplatná oblast.');
         }
 
         if (($scopes[$scope]['allow_wipe'] ?? false) !== true) {
-            throw new RuntimeException('Tuto oblast nelze vyprĂˇzdnit.');
+            throw new RuntimeException('Tuto oblast nelze vyprázdnit.');
         }
 
         $tables = cb_prehled_db_scope_tables($conn, $scope);
@@ -352,12 +352,12 @@ if (isset($_POST['db_action']) && (string)($_POST['db_action'] ?? '') === 'wipe'
         $expected = (string)($_SESSION['cb_prehled_db_kod'][$scope] ?? '');
 
         if ($expected === '' || $confirm !== $expected) {
-            throw new RuntimeException('BezpeÄŤnostnĂ­ kĂłd nesouhlasĂ­.');
+            throw new RuntimeException('Bezpečnostní kód nesouhlasí.');
         }
 
         $wipeResult = cb_prehled_db_wipe_tables($conn, $scope);
         $_SESSION['cb_prehled_db_kod'][$scope] = cb_prehled_db_random_code();
-        cb_prehled_db_set_flash('ok', 'VybranĂ© tabulky byly vyprĂˇzdnÄ›ny.', $wipeResult);
+        cb_prehled_db_set_flash('ok', 'Vybrané tabulky byly vyprázdněny.', $wipeResult);
     } catch (Throwable $e) {
         cb_prehled_db_set_flash('err', $e->getMessage(), []);
     }
@@ -442,7 +442,7 @@ ob_start();
     <thead>
       <tr>
         <th class="txt_l">Zdroj</th>
-        <th class="txt_r">zĂˇznamĹŻ</th>
+        <th class="txt_r">záznamů</th>
         <th class="txt_r">objem</th>
         <th class="txt_r">aktualizace</th>
       </tr>
@@ -507,7 +507,7 @@ ob_start();
           <form method="get" action="<?= cb_prehled_db_h(cb_url('/')) ?>" class="odstup_vnejsi_0 odstup_horni_10">
             <input type="hidden" name="page" value="<?= cb_prehled_db_h($page) ?>">
             <input type="hidden" name="db_scope" value="<?= cb_prehled_db_h($scope) ?>">
-            <button type="submit" class="btn btn-primary">PokraÄŤovat</button>
+            <button type="submit" class="btn btn-primary">Pokračovat</button>
           </form>
         </div>
       <?php endif; ?>
@@ -522,7 +522,7 @@ ob_start();
           <thead>
             <tr>
               <th>Tabulka</th>
-              <th class="txt_r">PoÄŤet zĂˇznamĹŻ</th>
+              <th class="txt_r">Počet záznamů</th>
               <th class="txt_r">Objem dat</th>
             </tr>
           </thead>
@@ -541,7 +541,7 @@ ob_start();
               </tr>
             <?php else: ?>
               <tr>
-                <td><strong>SouÄŤet</strong></td>
+                <td><strong>Součet</strong></td>
                 <td class="txt_r"><strong><?= cb_prehled_db_h(cb_prehled_db_fmt_rows_approx($totalRows)) ?></strong></td>
                 <td class="txt_r"><strong><?= cb_prehled_db_h(cb_prehled_db_fmt_bytes($totalBytes)) ?></strong></td>
               </tr>
@@ -560,7 +560,7 @@ ob_start();
         <input type="hidden" name="db_action" value="wipe">
 
         <div class="displ_flex gap_8 jc_stred filter-actions">
-          <span class="card_text txt_seda">Zadej bezpeÄŤnostnĂ­ kĂłd: <strong><?= cb_prehled_db_h($wipeCode) ?></strong></span>
+          <span class="card_text txt_seda">Zadej bezpečnostní kód: <strong><?= cb_prehled_db_h($wipeCode) ?></strong></span>
           <input
             type="text"
             name="db_confirm"
@@ -569,7 +569,7 @@ ob_start();
             style="max-width:120px;"
             autocomplete="off"
           >
-          <button type="submit" class="btn btn-primary">VyprĂˇzdnit</button>
+          <button type="submit" class="btn btn-primary">Vyprázdnit</button>
         </div>
       </form>
     </div>
@@ -579,6 +579,6 @@ ob_start();
 $card_max_html = (string)ob_get_clean();
 
 /* karty/prehled_db.php * Verze: V11 * Aktualizace: 02.04.2026 */
-// PoÄŤet Ĺ™ĂˇdkĹŻ: 647
-// PĹ™edchozĂ­ poÄŤet Ĺ™ĂˇdkĹŻ: 640
+// Počet řádků: 647
+// Předchozí počet řádků: 640
 ?>

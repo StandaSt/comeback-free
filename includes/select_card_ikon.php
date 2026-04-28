@@ -166,7 +166,6 @@ function h(string $value): string
   <input type="hidden" name="ikon" id="cardIconValue" value="<?= h((string)$selectedIkon) ?>">
   <input type="hidden" name="tab" id="cardIconTab" value="<?= h($selectedTab) ?>">
 
-  <p class="title">Vyber ikonu pro tuto kartu:</p>
 
   <div class="tabs">
     <?php foreach ($tabNames as $tabName): ?>

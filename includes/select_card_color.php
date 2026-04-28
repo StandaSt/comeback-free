@@ -217,8 +217,9 @@ $palette = cb_make_palette();
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
+    html,body{height:auto;}
     body{margin:0;padding:6px;font-family:Arial,sans-serif;background:#fff;color:#334155;}
-    .picker-wrap{width:max-content;}
+    .picker-wrap{display:flex;align-items:flex-start;gap:8px;width:max-content;}
     .grid{display:grid;grid-template-columns:repeat(18,14px);gap:0;}
     .used-grid{display:grid;grid-template-columns:repeat(9,28px);gap:0;}
     .swatch{width:14px;height:14px;border:0;display:block;cursor:pointer;padding:0;margin:0;}
@@ -226,11 +227,11 @@ $palette = cb_make_palette();
     .swatch.is-active{outline:2px solid #0f172a;outline-offset:-2px;}
     .swatch:hover{outline:1px solid #334155;outline-offset:-1px;}
     .title{font-size:12px;color:#475569;margin:0 0 8px 0;}
-    .bar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin-top:8px;column-gap:8px;}
+    .bar{display:flex;flex-direction:column;gap:25px;}
     .bar-left{text-align:left;}
-    .bar-center{text-align:center;}
-    .bar-right{text-align:right;}
-    .btn{height:18px;line-height:16px;padding:0 8px;border:1px solid #94a3b8;border-radius:6px;background:#f8fafc;cursor:pointer;font-size:12px;}
+    .bar-center{text-align:left;}
+    .bar-right{text-align:left;}
+    .btn{height:18px;line-height:16px;padding:0 8px;border:1px solid #94a3b8;border-radius:6px;background:#f8fafc;cursor:pointer;font-size:12px;width:92px;}
     .is-hidden{display:none;}
     .used-empty{font-size:12px;color:#64748b;margin-top:6px;}
     .ok{font-size:12px;color:#15803d;margin-top:6px;}
