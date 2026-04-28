@@ -15,6 +15,11 @@
   };
   const MINI_SLOUPEC_BAR_MAX_WIDTH = 44;
 
+  function formatInt(value) {
+    const intValue = Math.round(Number(value) || 0);
+    return String(intValue).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  }
+
 
   function getWrappers(root) {
     const scope = root instanceof HTMLElement ? root : document;
@@ -258,9 +263,9 @@
 
       const graphic = [];
       const legendOrder = [
-        { label: 'Registrovany', index: labels.indexOf('Registrovany zakaznik') },
+        { label: 'Telefonem', index: labels.indexOf('Telefonem') },
         { label: 'V restauraci', index: labels.indexOf('V restauraci') },
-        { label: 'Anonymni', index: labels.indexOf('Anonymni') }
+        { label: 'Anonymní', index: labels.indexOf('Anonymní') }
       ].filter((item) => item.index >= 0);
 
       legendOrder.forEach((item, orderIndex) => {
@@ -270,17 +275,17 @@
 
         graphic.push({
           type: 'circle',
-          left: 20,
+          left: 50,
           top: top + 6,
           shape: { cx: 0, cy: 0, r: 5 },
           style: { fill: color }
         });
         graphic.push({
           type: 'text',
-          left: 32,
+          left: 62,
           top: top,
           style: {
-            text: item.label + ': ' + value,
+            text: item.label + ': ' + formatInt(value),
             fill: '#334155',
             font: '13px Arial, Helvetica, sans-serif'
           }
@@ -289,10 +294,10 @@
 
       graphic.push({
         type: 'text',
-        left: '64%',
+        left: '61%',
         top: '56%',
         style: {
-          text: 'Celkem:\n' + total,
+          text: 'Celkem: ' + formatInt(total),
           textAlign: 'center',
           textVerticalAlign: 'middle',
           fill: '#0f172a',
@@ -307,7 +312,7 @@
             const name = String(params && params.name ? params.name : '');
             const value = Number(params && typeof params.value !== 'undefined' ? params.value : 0) || 0;
             const percent = Number(params && typeof params.percent !== 'undefined' ? params.percent : 0) || 0;
-            return name + ': ' + value + ' (' + percent.toFixed(1) + ' %)';
+            return name + ': ' + formatInt(value) + ' (' + percent.toFixed(1) + ' %)';
           }
         },
         graphic: graphic,

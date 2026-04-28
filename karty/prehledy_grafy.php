@@ -9,10 +9,6 @@ require_once __DIR__ . '/../db/db_connect.php';
 $card_min_html = '';
 $card_max_html = '';
 
-$grafPolozky = [];
-$nazvy_pobocek = [];
-$hodnoty_pobocek = [];
-
 $pdo = db_connect();
 if (method_exists($pdo, 'set_charset')) {
     $pdo->set_charset('utf8mb4');
@@ -35,12 +31,59 @@ if ($periodOd === '' || $periodDo === '') {
     $periodDo = $periodDo !== '' ? $periodDo : $today;
 }
 
-$safeOd = $pdo->real_escape_string($periodOd);
-$safeDo = $pdo->real_escape_string($periodDo);
 $periodOdDate = new DateTimeImmutable($periodOd);
 $periodDoDate = new DateTimeImmutable($periodDo);
+$periodDoExclusive = $periodDoDate->modify('+1 day')->setTime(0, 0, 0);
 $titleOd = $periodOdDate->format('d.m.Y');
 $titleDo = $periodDoDate->format('d.m.Y');
+$periodLabel = $titleOd . ' - ' . $titleDo;
+
+$safeOd = $pdo->real_escape_string($periodOd);
+$safeDo = $pdo->real_escape_string($periodDo);
+$safeOdTs = $pdo->real_escape_string($periodOdDate->setTime(0, 0, 0)->format('Y-m-d H:i:s'));
+$safeDoTsExclusive = $pdo->real_escape_string($periodDoExclusive->format('Y-m-d H:i:s'));
+$selectedPobSql = $selectedPob !== [] ? implode(',', array_map('intval', $selectedPob)) : '';
+
+$pobWhere = '';
+if ($selectedPob !== []) {
+    $pobWhere = 'WHERE p.id_pob IN (' . implode(',', array_map('intval', $selectedPob)) . ')';
+}
+
+$branchesSql = '
+    SELECT p.id_pob, p.nazev, p.pob_color
+    FROM pobocka p
+    ' . $pobWhere . '
+    ORDER BY p.id_pob
+';
+
+$grafPolozky = [];
+$branchOrder = [];
+$stmtBranches = $pdo->query($branchesSql);
+if ($stmtBranches instanceof mysqli_result) {
+    while ($row = $stmtBranches->fetch_assoc()) {
+        $idPob = (int)($row['id_pob'] ?? 0);
+        $nazev = trim((string)($row['nazev'] ?? ''));
+        $barva = trim((string)($row['pob_color'] ?? ''));
+        if ($idPob <= 0) {
+            continue;
+        }
+        if ($nazev === '') {
+            $nazev = (string)$idPob;
+        }
+        if ($barva === '') {
+            throw new RuntimeException('Chybí barva pro pobočku s id_pob=' . $idPob . '.');
+        }
+
+        $grafPolozky[$idPob] = [
+            'id_pob' => $idPob,
+            'nazev' => $nazev,
+            'barva' => $barva,
+        ];
+        $branchOrder[] = $idPob;
+    }
+    $stmtBranches->free();
+}
+
 $trendStart = $periodOdDate->modify('first day of this month')->setTime(0, 0, 0);
 $trendEndExclusive = $periodDoDate->modify('first day of next month')->setTime(0, 0, 0);
 $trendMonthLabels = [];
@@ -49,122 +92,10 @@ for ($trendMonth = $trendStart; $trendMonth < $trendEndExclusive; $trendMonth = 
     $trendMonthLabels[] = $trendMonth->format('m/Y');
     $trendMonthKeys[] = $trendMonth->format('Y-m-01');
 }
-$pobWhere = '';
-if ($selectedPob !== []) {
-    $pobWhere = 'WHERE p.id_pob IN (' . implode(',', array_map('intval', $selectedPob)) . ')';
-}
-
-$sql = '
-    SELECT
-        p.id_pob,
-        p.nazev,
-        p.pob_color,
-        COALESCE(x.cnt, 0) AS cnt
-    FROM pobocka p
-    LEFT JOIN (
-        SELECT
-            o.id_pob,
-            COUNT(*) AS cnt
-        FROM objednavky_restia o
-        LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
-        WHERE COALESCE(ca.report, DATE(COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at))) >= "' . $safeOd . '"
-          AND COALESCE(ca.report, DATE(COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at))) <= "' . $safeDo . '"
-        GROUP BY o.id_pob
-    ) x ON x.id_pob = p.id_pob
-    ' . $pobWhere . '
-    ORDER BY p.id_pob
-';
-
-$stmt = $pdo->query($sql);
-if ($stmt instanceof mysqli_result) {
-    while ($radek = $stmt->fetch_assoc()) {
-        $idPob = (int)($radek['id_pob'] ?? 0);
-        $nazev = trim((string)($radek['nazev'] ?? ''));
-        $barva = trim((string)($radek['pob_color'] ?? ''));
-        $cnt = (int)($radek['cnt'] ?? 0);
-        if ($nazev === '') {
-            $nazev = (string)$idPob;
-        }
-        if ($barva === '') {
-            throw new RuntimeException('Chybí barva pro pobočku s id_pob=' . $idPob . '.');
-        }
-
-        $grafPolozky[] = [
-            'id_pob' => $idPob,
-            'nazev' => $nazev,
-            'hodnota' => $cnt,
-            'barva' => $barva,
-        ];
-        $nazvy_pobocek[] = $nazev;
-        $hodnoty_pobocek[] = $cnt;
-    }
-    $stmt->free();
-}
-
-$trendDataByPob = [];
-foreach ($grafPolozky as $item) {
-    $idPob = (int)($item['id_pob'] ?? 0);
-    if ($idPob > 0) {
-        $trendDataByPob[$idPob] = array_fill(0, count($trendMonthKeys), 0);
-    }
-}
-
 $trendMonthIndex = array_flip($trendMonthKeys);
-$trendWhereParts = [
-    'COALESCE(ca.report, DATE(COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at))) >= "' . $safeOd . '"',
-    'COALESCE(ca.report, DATE(COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at))) <= "' . $safeDo . '"',
-];
-if ($selectedPob !== []) {
-    $trendWhereParts[] = 'o.id_pob IN (' . implode(',', array_map('intval', $selectedPob)) . ')';
-}
 
-$trendSql = '
-    SELECT
-        o.id_pob,
-        DATE_FORMAT(COALESCE(ca.report, DATE(COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at))), "%Y-%m-01") AS mesic,
-        COUNT(*) AS cnt
-    FROM objednavky_restia o
-    LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
-    WHERE ' . implode('
-      AND ', $trendWhereParts) . '
-    GROUP BY o.id_pob, mesic
-    ORDER BY o.id_pob, mesic
-';
-
-$stmtTrend = $pdo->query($trendSql);
-if ($stmtTrend instanceof mysqli_result) {
-    while ($radek = $stmtTrend->fetch_assoc()) {
-        $idPob = (int)($radek['id_pob'] ?? 0);
-        $mesic = (string)($radek['mesic'] ?? '');
-        $cnt = (int)($radek['cnt'] ?? 0);
-        if ($idPob <= 0 || $mesic === '' || !isset($trendDataByPob[$idPob], $trendMonthIndex[$mesic])) {
-            continue;
-        }
-        $trendDataByPob[$idPob][(int)$trendMonthIndex[$mesic]] = $cnt;
-    }
-    $stmtTrend->free();
-}
-
-$grafPayload = [
-    'kind' => 'bar',
-    'title' => 'Počet objednávek, ' . $titleOd . ' - ' . $titleDo,
-    'labels' => $nazvy_pobocek,
-    'values' => $hodnoty_pobocek,
-    'colors' => array_map(static fn(array $item): string => (string)$item['barva'], $grafPolozky),
-];
-
-$grafJson = json_encode(
-    $grafPayload,
-    JSON_UNESCAPED_UNICODE
-    | JSON_UNESCAPED_SLASHES
-    | JSON_HEX_TAG
-    | JSON_HEX_AMP
-    | JSON_HEX_APOS
-    | JSON_HEX_QUOT
-);
-if (!is_string($grafJson) || $grafJson === '') {
-    throw new RuntimeException('Nepodarilo se pripravit data pro graf.');
-}
+$hourLabels = ['11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '00', '01', '02', '03'];
+$hourIndex = array_flip($hourLabels);
 
 $renderGrafRoot = static function (string $bodyHtml, string $rootJson): string {
     return ''
@@ -174,13 +105,176 @@ $renderGrafRoot = static function (string $bodyHtml, string $rootJson): string {
         . '</div>';
 };
 
+$renderGrafTile = static function (string $code, string $title, string $periodText, string $chartId, string $chartJson = '', string $chartStyleExtra = ''): string {
+    $payloadAttr = '';
+    if ($chartJson !== '') {
+        $payloadAttr = ' data-cb-prehledy-grafy-chart-data="' . h($chartJson) . '"';
+    }
+
+    return ''
+        . '<div class="card_text ram_sedy zaobleni_8 bg_bila odstup_vnitrni_8 displ_flex flex_sloupec gap_4" style="height:100%; min-height:0; overflow:hidden;">'
+        . '<div class="odstup_spod_4">'
+        . '<div style="display:grid; grid-template-columns:36px minmax(0, 1fr) 36px; align-items:start; column-gap:8px; line-height:1.15;">'
+        . '<div class="card_text text_12" style="color:var(--clr_seda_3);">' . h($code) . '</div>'
+        . '<div class="card_text txt_c"><strong>' . h($title) . '</strong></div>'
+        . '<div></div>'
+        . '</div>'
+        . '<div class="card_text txt_seda text_12 txt_c" style="line-height:1.15;">' . h($periodText) . '</div>'
+        . '</div>'
+        . '<div id="' . h($chartId) . '" data-cb-prehledy-grafy-chart="1"' . $payloadAttr . ' class="sirka100" style="height:460px;' . h(trim($chartStyleExtra)) . '"></div>'
+        . '</div>';
+};
+
+$jsonEncode = static function (array $payload, string $errorMessage): string {
+    $json = json_encode(
+        $payload,
+        JSON_UNESCAPED_UNICODE
+        | JSON_UNESCAPED_SLASHES
+        | JSON_HEX_TAG
+        | JSON_HEX_AMP
+        | JSON_HEX_APOS
+        | JSON_HEX_QUOT
+    );
+    if (!is_string($json) || $json === '') {
+        throw new RuntimeException($errorMessage);
+    }
+
+    return $json;
+};
+
+$baseUnionParts = [];
+
+$baseUnionParts[] = '
+    SELECT
+        o.id_pob,
+        o.id_zak,
+        COALESCE(z.jmeno, "") AS zak_jmeno,
+        COALESCE(z.prijmeni, "") AS zak_prijmeni,
+        ca.report AS report_date,
+        COALESCE(c.cena_celk, 0) AS cena_celk,
+        COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at) AS event_dt
+    FROM objednavky_restia o
+    LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
+    LEFT JOIN obj_ceny c ON c.id_obj = o.id_obj
+    LEFT JOIN zakaznik z ON z.id_zak = o.id_zak
+    WHERE ca.report >= "' . $safeOd . '"
+      AND ca.report <= "' . $safeDo . '"'
+    . ($selectedPob !== [] ? '
+      AND o.id_pob IN (' . $selectedPobSql . ')' : '');
+
+$baseUnionParts[] = '
+    SELECT
+        o.id_pob,
+        o.id_zak,
+        COALESCE(z.jmeno, "") AS zak_jmeno,
+        COALESCE(z.prijmeni, "") AS zak_prijmeni,
+        DATE(ca.cas_vytvor) AS report_date,
+        COALESCE(c.cena_celk, 0) AS cena_celk,
+        ca.cas_vytvor AS event_dt
+    FROM objednavky_restia o
+    LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
+    LEFT JOIN obj_ceny c ON c.id_obj = o.id_obj
+    LEFT JOIN zakaznik z ON z.id_zak = o.id_zak
+    WHERE ca.report IS NULL
+      AND ca.cas_vytvor >= "' . $safeOdTs . '"
+      AND ca.cas_vytvor < "' . $safeDoTsExclusive . '"'
+    . ($selectedPob !== [] ? '
+      AND o.id_pob IN (' . $selectedPobSql . ')' : '');
+
+$baseUnionParts[] = '
+    SELECT
+        o.id_pob,
+        o.id_zak,
+        COALESCE(z.jmeno, "") AS zak_jmeno,
+        COALESCE(z.prijmeni, "") AS zak_prijmeni,
+        DATE(o.restia_created_at) AS report_date,
+        COALESCE(c.cena_celk, 0) AS cena_celk,
+        o.restia_created_at AS event_dt
+    FROM objednavky_restia o
+    LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
+    LEFT JOIN obj_ceny c ON c.id_obj = o.id_obj
+    LEFT JOIN zakaznik z ON z.id_zak = o.id_zak
+    WHERE ca.report IS NULL
+      AND ca.cas_vytvor IS NULL
+      AND o.restia_created_at >= "' . $safeOdTs . '"
+      AND o.restia_created_at < "' . $safeDoTsExclusive . '"'
+    . ($selectedPob !== [] ? '
+      AND o.id_pob IN (' . $selectedPobSql . ')' : '');
+
+$baseUnionParts[] = '
+    SELECT
+        o.id_pob,
+        o.id_zak,
+        COALESCE(z.jmeno, "") AS zak_jmeno,
+        COALESCE(z.prijmeni, "") AS zak_prijmeni,
+        DATE(o.restia_imported_at) AS report_date,
+        COALESCE(c.cena_celk, 0) AS cena_celk,
+        o.restia_imported_at AS event_dt
+    FROM objednavky_restia o
+    LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
+    LEFT JOIN obj_ceny c ON c.id_obj = o.id_obj
+    LEFT JOIN zakaznik z ON z.id_zak = o.id_zak
+    WHERE ca.report IS NULL
+      AND ca.cas_vytvor IS NULL
+      AND o.restia_created_at IS NULL
+      AND o.restia_imported_at >= "' . $safeOdTs . '"
+      AND o.restia_imported_at < "' . $safeDoTsExclusive . '"'
+    . ($selectedPob !== [] ? '
+      AND o.id_pob IN (' . $selectedPobSql . ')' : '');
+
+$baseUnionSql = implode("\nUNION ALL\n", $baseUnionParts);
+
+$loadMiniCounts = static function (mysqli $pdo, string $baseUnionSql): array {
+    $sql = '
+        SELECT src.id_pob, COUNT(*) AS cnt
+        FROM (' . $baseUnionSql . ') src
+        GROUP BY src.id_pob
+        ORDER BY src.id_pob
+    ';
+
+    $counts = [];
+    $stmt = $pdo->query($sql);
+    if ($stmt instanceof mysqli_result) {
+        while ($row = $stmt->fetch_assoc()) {
+            $counts[(int)($row['id_pob'] ?? 0)] = (int)($row['cnt'] ?? 0);
+        }
+        $stmt->free();
+    }
+
+    return $counts;
+};
+
+$miniCountsByPob = $loadMiniCounts($pdo, $baseUnionSql);
+
+$nazvyPobocek = [];
+$hodnotyPobocek = [];
+$barvyPobocek = [];
+foreach ($branchOrder as $idPob) {
+    $branch = $grafPolozky[$idPob] ?? null;
+    if ($branch === null) {
+        continue;
+    }
+    $nazvyPobocek[] = (string)$branch['nazev'];
+    $hodnotyPobocek[] = (int)($miniCountsByPob[$idPob] ?? 0);
+    $barvyPobocek[] = (string)$branch['barva'];
+}
+
+$grafPayload = [
+    'kind' => 'bar',
+    'title' => 'Počet objednávek, ' . $periodLabel,
+    'labels' => $nazvyPobocek,
+    'values' => $hodnotyPobocek,
+    'colors' => $barvyPobocek,
+];
+$grafJson = $jsonEncode($grafPayload, 'Nepodařilo se připravit data pro graf.');
+
 if (($cbDashboardRenderMode ?? '') === 'mini') {
     $card_min_html = $renderGrafRoot(
         '<div class="sirka100 displ_flex flex_sloupec gap_4" style="height:100%; min-height:0;">'
         . '<div class="displ_flex jc_mezi text_11 txt_seda gap_8" style="align-items:flex-start; flex-wrap:wrap; line-height:1.15;">'
-        . '<span>' . h($titleOd) . ' - ' . h($titleDo) . '</span>'
+        . '<span>' . h($periodLabel) . '</span>'
         . '<span class="displ_flex gap_8" style="flex-wrap:wrap; justify-content:flex-end;">'
-        . '<span><strong>' . h((string)array_sum($hodnoty_pobocek)) . '</strong> objednávek</span>'
+        . '<span><strong>' . h((string)array_sum($hodnotyPobocek)) . '</strong> objednávek</span>'
         . '</span>'
         . '</div>'
         . '<div id="mini_graf" data-cb-prehledy-grafy-chart="1" class="sirka100" style="height:180px;"></div>'
@@ -191,67 +285,64 @@ if (($cbDashboardRenderMode ?? '') === 'mini') {
     return;
 }
 
-$zakOrderWhereParts = [
-    'COALESCE(ca.report, DATE(COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at))) >= "' . $safeOd . '"',
-    'COALESCE(ca.report, DATE(COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at))) <= "' . $safeDo . '"',
-];
-if ($selectedPob !== []) {
-    $zakOrderWhereParts[] = 'o.id_pob IN (' . implode(',', array_map('intval', $selectedPob)) . ')';
+$trendDataByPob = [];
+$salesDataByPob = [];
+$hourDataByPob = [];
+foreach ($branchOrder as $idPob) {
+    $trendDataByPob[$idPob] = array_fill(0, count($trendMonthKeys), 0);
+    $salesDataByPob[$idPob] = array_fill(0, count($trendMonthKeys), 0.0);
+    $hourDataByPob[$idPob] = array_fill(0, count($hourLabels), 0);
 }
-
-$zakOrderPieSql = '
-    SELECT
-        SUM(CASE WHEN o.id_zak IS NULL THEN 1 ELSE 0 END) AS anonymni_cnt,
-        SUM(CASE WHEN o.id_zak = 1 THEN 1 ELSE 0 END) AS v_restauraci_cnt,
-        SUM(CASE WHEN o.id_zak > 1 THEN 1 ELSE 0 END) AS registrovani_cnt
-    FROM objednavky_restia o
-    LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
-    WHERE ' . implode('
-      AND ', $zakOrderWhereParts) . '
-';
 
 $zakOrderPieCounts = [
     'anonymni' => 0,
     'v_restauraci' => 0,
-    'registrovani' => 0,
-];
-$stmtZakOrderPie = $pdo->query($zakOrderPieSql);
-if ($stmtZakOrderPie instanceof mysqli_result) {
-    $rowZakOrderPie = $stmtZakOrderPie->fetch_assoc() ?: [];
-    $zakOrderPieCounts['anonymni'] = (int)($rowZakOrderPie['anonymni_cnt'] ?? 0);
-    $zakOrderPieCounts['v_restauraci'] = (int)($rowZakOrderPie['v_restauraci_cnt'] ?? 0);
-    $zakOrderPieCounts['registrovani'] = (int)($rowZakOrderPie['registrovani_cnt'] ?? 0);
-    $stmtZakOrderPie->free();
-}
-
-$zakOrderPiePayload = [
-    'kind' => 'pie',
-    'title' => 'Typ zakaznika v objednavkach, ' . $titleOd . ' - ' . $titleDo,
-    'labels' => ['Anonymni', 'V restauraci', 'Registrovany zakaznik'],
-    'values' => [
-        $zakOrderPieCounts['anonymni'],
-        $zakOrderPieCounts['v_restauraci'],
-        $zakOrderPieCounts['registrovani'],
-    ],
-    'total' => (
-        $zakOrderPieCounts['anonymni']
-        + $zakOrderPieCounts['v_restauraci']
-        + $zakOrderPieCounts['registrovani']
-    ),
-    'colors' => ['#94a3b8', '#f59e0b', '#2563eb'],
+    'telefonem' => 0,
 ];
 
-$zakOrderPieJson = json_encode(
-    $zakOrderPiePayload,
-    JSON_UNESCAPED_UNICODE
-    | JSON_UNESCAPED_SLASHES
-    | JSON_HEX_TAG
-    | JSON_HEX_AMP
-    | JSON_HEX_APOS
-    | JSON_HEX_QUOT
-);
-if (!is_string($zakOrderPieJson) || $zakOrderPieJson === '') {
-    throw new RuntimeException('Nepodařilo se připravit data pro koláčový graf zákazníků.');
+$maxAggSql = '
+    SELECT
+        src.id_pob,
+        DATE_FORMAT(src.report_date, "%Y-%m-01") AS mesic,
+        LPAD(HOUR(src.event_dt), 2, "0") AS hodina,
+        CASE
+            WHEN src.id_zak IS NULL THEN "anonymni"
+            WHEN LOWER(TRIM(src.zak_jmeno)) = "anonymni" AND LOWER(TRIM(src.zak_prijmeni)) = "zakaznik" THEN "anonymni"
+            WHEN src.id_zak = 1 THEN "v_restauraci"
+            ELSE "telefonem"
+        END AS zak_typ,
+        COUNT(*) AS cnt,
+        SUM(src.cena_celk) AS suma
+    FROM (' . $baseUnionSql . ') src
+    GROUP BY src.id_pob, mesic, hodina, zak_typ
+    ORDER BY src.id_pob, mesic, hodina, zak_typ
+';
+
+$stmtMaxAgg = $pdo->query($maxAggSql);
+if ($stmtMaxAgg instanceof mysqli_result) {
+    while ($row = $stmtMaxAgg->fetch_assoc()) {
+        $idPob = (int)($row['id_pob'] ?? 0);
+        $mesic = (string)($row['mesic'] ?? '');
+        $hodina = (string)($row['hodina'] ?? '');
+        $zakTyp = (string)($row['zak_typ'] ?? '');
+        $cnt = (int)($row['cnt'] ?? 0);
+        $suma = (float)($row['suma'] ?? 0);
+
+        if (isset($trendMonthIndex[$mesic], $trendDataByPob[$idPob])) {
+            $monthIndex = (int)$trendMonthIndex[$mesic];
+            $trendDataByPob[$idPob][$monthIndex] += $cnt;
+            $salesDataByPob[$idPob][$monthIndex] += $suma;
+        }
+
+        if (isset($hourIndex[$hodina], $hourDataByPob[$idPob])) {
+            $hourDataByPob[$idPob][(int)$hourIndex[$hodina]] += $cnt;
+        }
+
+        if (isset($zakOrderPieCounts[$zakTyp])) {
+            $zakOrderPieCounts[$zakTyp] += $cnt;
+        }
+    }
+    $stmtMaxAgg->free();
 }
 
 $trendPayload = [
@@ -259,228 +350,73 @@ $trendPayload = [
     'labels' => $trendMonthLabels,
     'series' => [],
 ];
-foreach ($grafPolozky as $item) {
-    $idPob = (int)($item['id_pob'] ?? 0);
-    if ($idPob <= 0 || !isset($trendDataByPob[$idPob])) {
-        continue;
-    }
-    $trendPayload['series'][] = [
-        'name' => (string)($item['nazev'] ?? ''),
-        'color' => (string)($item['barva'] ?? ''),
-        'data' => $trendDataByPob[$idPob],
-    ];
-}
-
-$trendJson = json_encode(
-    $trendPayload,
-    JSON_UNESCAPED_UNICODE
-    | JSON_UNESCAPED_SLASHES
-    | JSON_HEX_TAG
-    | JSON_HEX_AMP
-    | JSON_HEX_APOS
-    | JSON_HEX_QUOT
-);
-if (!is_string($trendJson) || $trendJson === '') {
-    throw new RuntimeException('Nepodařilo se připravit data pro trendový graf.');
-}
-
-$salesDataByPob = [];
-foreach ($grafPolozky as $item) {
-    $idPob = (int)($item['id_pob'] ?? 0);
-    if ($idPob > 0) {
-        $salesDataByPob[$idPob] = array_fill(0, count($trendMonthKeys), 0);
-    }
-}
-
-$salesSql = '
-    SELECT
-        o.id_pob,
-        DATE_FORMAT(COALESCE(ca.report, DATE(COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at))), "%Y-%m-01") AS mesic,
-        SUM(COALESCE(c.cena_celk, 0)) AS suma
-    FROM objednavky_restia o
-    LEFT JOIN obj_ceny c ON c.id_obj = o.id_obj
-    LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
-    WHERE ' . implode('
-      AND ', $trendWhereParts) . '
-    GROUP BY o.id_pob, mesic
-    ORDER BY o.id_pob, mesic
-';
-
-$stmtSales = $pdo->query($salesSql);
-if ($stmtSales instanceof mysqli_result) {
-    while ($radek = $stmtSales->fetch_assoc()) {
-        $idPob = (int)($radek['id_pob'] ?? 0);
-        $mesic = (string)($radek['mesic'] ?? '');
-        $suma = (float)($radek['suma'] ?? 0);
-        if ($idPob <= 0 || $mesic === '' || !isset($salesDataByPob[$idPob], $trendMonthIndex[$mesic])) {
-            continue;
-        }
-        $salesDataByPob[$idPob][(int)$trendMonthIndex[$mesic]] = $suma;
-    }
-    $stmtSales->free();
-}
-
 $salesPayload = [
     'kind' => 'line',
     'labels' => $trendMonthLabels,
     'series' => [],
 ];
-foreach ($grafPolozky as $item) {
-    $idPob = (int)($item['id_pob'] ?? 0);
-    if ($idPob <= 0 || !isset($salesDataByPob[$idPob])) {
-        continue;
-    }
-    $salesPayload['series'][] = [
-        'name' => (string)($item['nazev'] ?? ''),
-        'color' => (string)($item['barva'] ?? ''),
-        'data' => $salesDataByPob[$idPob],
-    ];
-}
-
-$salesJson = json_encode(
-    $salesPayload,
-    JSON_UNESCAPED_UNICODE
-    | JSON_UNESCAPED_SLASHES
-    | JSON_HEX_TAG
-    | JSON_HEX_AMP
-    | JSON_HEX_APOS
-    | JSON_HEX_QUOT
-);
-if (!is_string($salesJson) || $salesJson === '') {
-    throw new RuntimeException('Nepodařilo se připravit data pro tržní graf.');
-}
-
-
-$hourLabels = ['11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '00', '01', '02', '03'];
-$hourKeys = ['11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '00', '01', '02', '03'];
-$hourDataByPob = [];
-foreach ($grafPolozky as $item) {
-    $idPob = (int)($item['id_pob'] ?? 0);
-    if ($idPob > 0) {
-        $hourDataByPob[$idPob] = array_fill(0, count($hourKeys), 0);
-    }
-}
-
-$hourIndex = array_flip($hourKeys);
-$hourWhereParts = [
-    'ca.report >= "' . $safeOd . '"',
-    'ca.report <= "' . $safeDo . '"',
-    'COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at) IS NOT NULL',
-    'HOUR(COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at)) IN (11,12,13,14,15,16,17,18,19,20,21,22,23,0,1,2,3)',
-];
-if ($selectedPob !== []) {
-    $hourWhereParts[] = 'o.id_pob IN (' . implode(',', array_map('intval', $selectedPob)) . ')';
-}
-
-$hourSql = '
-    SELECT
-        o.id_pob,
-        LPAD(HOUR(COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at)), 2, "0") AS hodina,
-        COUNT(*) AS cnt
-    FROM objednavky_restia o
-    LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
-    WHERE ' . implode('
-      AND ', $hourWhereParts) . '
-    GROUP BY o.id_pob, hodina
-    ORDER BY o.id_pob, FIELD(hodina, "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "00", "01", "02", "03")
-';
-
-$stmtHour = $pdo->query($hourSql);
-if ($stmtHour instanceof mysqli_result) {
-    while ($radek = $stmtHour->fetch_assoc()) {
-        $idPob = (int)($radek['id_pob'] ?? 0);
-        $hodina = (string)($radek['hodina'] ?? '');
-        $cnt = (int)($radek['cnt'] ?? 0);
-        if ($idPob <= 0 || $hodina === '' || !isset($hourDataByPob[$idPob], $hourIndex[$hodina])) {
-            continue;
-        }
-        $hourDataByPob[$idPob][(int)$hourIndex[$hodina]] = $cnt;
-    }
-    $stmtHour->free();
-}
-
 $hourPayload = [
     'kind' => 'line',
     'labels' => $hourLabels,
     'series' => [],
 ];
-foreach ($grafPolozky as $item) {
-    $idPob = (int)($item['id_pob'] ?? 0);
-    if ($idPob <= 0 || !isset($hourDataByPob[$idPob])) {
+
+foreach ($branchOrder as $idPob) {
+    $branch = $grafPolozky[$idPob] ?? null;
+    if ($branch === null) {
         continue;
     }
 
-    $rawData = $hourDataByPob[$idPob];
-    $maxValue = max($rawData);
-    $normalizedData = [];
-    foreach ($rawData as $value) {
-        $normalizedData[] = $maxValue > 0 ? round(($value / $maxValue) * 100, 1) : 0;
+    $trendPayload['series'][] = [
+        'name' => (string)$branch['nazev'],
+        'color' => (string)$branch['barva'],
+        'data' => $trendDataByPob[$idPob] ?? [],
+    ];
+    $salesPayload['series'][] = [
+        'name' => (string)$branch['nazev'],
+        'color' => (string)$branch['barva'],
+        'data' => $salesDataByPob[$idPob] ?? [],
+    ];
+
+    $rawHourData = $hourDataByPob[$idPob] ?? [];
+    $maxValue = $rawHourData === [] ? 0 : max($rawHourData);
+    $normalizedHourData = [];
+    foreach ($rawHourData as $value) {
+        $normalizedHourData[] = $maxValue > 0 ? round(($value / $maxValue) * 100, 1) : 0;
     }
 
     $hourPayload['series'][] = [
-        'name' => (string)($item['nazev'] ?? ''),
-        'color' => (string)($item['barva'] ?? ''),
-        'data' => $normalizedData,
+        'name' => (string)$branch['nazev'],
+        'color' => (string)$branch['barva'],
+        'data' => $normalizedHourData,
     ];
 }
 
-$hourJson = json_encode(
-    $hourPayload,
-    JSON_UNESCAPED_UNICODE
-    | JSON_UNESCAPED_SLASHES
-    | JSON_HEX_TAG
-    | JSON_HEX_AMP
-    | JSON_HEX_APOS
-    | JSON_HEX_QUOT
-);
-if (!is_string($hourJson) || $hourJson === '') {
-    throw new RuntimeException('Nepodařilo se připravit data pro hodinový graf.');
-}
+$zakOrderPiePayload = [
+    'kind' => 'pie',
+    'title' => 'Typ zákazníka v objednávkách, ' . $periodLabel,
+    'labels' => ['Anonymní', 'V restauraci', 'Telefonem'],
+    'values' => [
+        $zakOrderPieCounts['anonymni'],
+        $zakOrderPieCounts['v_restauraci'],
+        $zakOrderPieCounts['telefonem'],
+    ],
+    'total' => $zakOrderPieCounts['anonymni'] + $zakOrderPieCounts['v_restauraci'] + $zakOrderPieCounts['telefonem'],
+    'colors' => ['#94a3b8', '#f59e0b', '#2563eb'],
+];
 
-$maxGrafVyska = 460;
+$trendJson = $jsonEncode($trendPayload, 'Nepodařilo se připravit data pro trendový graf.');
+$salesJson = $jsonEncode($salesPayload, 'Nepodařilo se připravit data pro tržní graf.');
+$hourJson = $jsonEncode($hourPayload, 'Nepodařilo se připravit data pro hodinový graf.');
+$zakOrderPieJson = $jsonEncode($zakOrderPiePayload, 'Nepodařilo se připravit data pro koláčový graf zákazníků.');
 
-$renderGrafTile = static function (string $code, string $title, string $periodText, string $chartId, string $chartJson = '', string $chartStyleExtra = '') use ($grafJson, $maxGrafVyska): string {
-    $codeEsc = h($code);
-    $titleEsc = h($title);
-    $periodEsc = h($periodText);
-    $idEsc = h($chartId);
-    $payloadAttr = '';
-    if ($chartJson !== '') {
-        $payloadAttr = ' data-cb-prehledy-grafy-chart-data="' . h($chartJson) . '"';
-    }
-    $chartStyleExtraEsc = trim($chartStyleExtra);
-
-    return ''
-        . '<div class="card_text ram_sedy zaobleni_8 bg_bila odstup_vnitrni_8 displ_flex flex_sloupec gap_4" style="height:100%; min-height:0; overflow:hidden;">'
-        . '<div class="odstup_spod_4">'
-        . '<div style="display:grid; grid-template-columns:36px minmax(0, 1fr) 36px; align-items:start; column-gap:8px; line-height:1.15;">'
-        . '<div class="card_text text_12" style="color:var(--clr_seda_3);">' . $codeEsc . '</div>'
-        . '<div class="card_text txt_c"><strong>' . $titleEsc . '</strong></div>'
-        . '<div></div>'
-        . '</div>'
-        . '<div class="card_text txt_seda text_12 txt_c" style="line-height:1.15;">' . $periodEsc . '</div>'
-        . '</div>'
-        . '<div id="' . $idEsc . '" data-cb-prehledy-grafy-chart="1"' . $payloadAttr . ' class="sirka100" style="height:' . (int)$maxGrafVyska . 'px;' . h($chartStyleExtraEsc) . '"></div>'
-        . '</div>';
-};
-$periodLabel = $titleOd . ' - ' . $titleDo;
 $maxTiles = '';
 $maxTiles .= $renderGrafTile('G1', 'Trend objednávek podle měsíce', $periodLabel, 'graf_max_1', $trendJson);
-for ($i = 2; $i <= 6; $i++) {
-    if ($i === 2) {
-        $maxTiles .= $renderGrafTile('G2', 'Vytíženost poboček během dne', $periodLabel, 'graf_max_2', $hourJson);
-        continue;
-    }
-    if ($i === 4) {
-        $maxTiles .= $renderGrafTile('G4', 'Přehled tržeb podle měsíce', $periodLabel, 'graf_max_4', $salesJson);
-        continue;
-    }
-    if ($i === 3) {
-        $maxTiles .= $renderGrafTile('G3', 'Typ zákazníka v objednávkách', $periodLabel, 'graf_max_3', $zakOrderPieJson, ' transform:translateX(-35px); width:calc(100% + 35px);');
-        continue;
-    }
-    $maxTiles .= $renderGrafTile('G' . $i, 'Graf ' . $i, $periodLabel, 'graf_max_' . $i);
-}
+$maxTiles .= $renderGrafTile('G2', 'Vytíženost poboček během dne', $periodLabel, 'graf_max_2', $hourJson);
+$maxTiles .= $renderGrafTile('G3', 'Typ zákazníka v objednávkách', $periodLabel, 'graf_max_3', $zakOrderPieJson, ' transform:translateX(-35px); width:calc(100% + 35px);');
+$maxTiles .= $renderGrafTile('G4', 'Přehled tržeb podle měsíce', $periodLabel, 'graf_max_4', $salesJson);
+$maxTiles .= $renderGrafTile('G5', 'Graf 5', $periodLabel, 'graf_max_5');
+$maxTiles .= $renderGrafTile('G6', 'Graf 6', $periodLabel, 'graf_max_6');
 
 $card_max_html = $renderGrafRoot(
     '<div class="sirka100" style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); grid-template-rows:repeat(2, minmax(0, 1fr)); gap:10px; height:100%; min-height:0; flex:1 1 auto; align-content:stretch;">'
@@ -488,6 +424,3 @@ $card_max_html = $renderGrafRoot(
     . '</div>',
     $grafJson
 );
-
-/* karty/prehledy_grafy.php * Verze: V4 * Aktualizace: 17.04.2026 */
-?>

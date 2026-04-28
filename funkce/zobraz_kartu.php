@@ -4,17 +4,19 @@ declare(strict_types=1);
 
 function cb_zobraz_kartu(array $pripravenaKarta): string
 {
+    // DOCASNE MERENI CASU KARET
+    $cbTmpMeasureStart = microtime(true);
     $makeDiagnosticHtml = static function (string $soubor, string $mode, string $reason, array $details = []): string {
         $title = 'Chyba karty';
-        $message = 'Max obsah se nepodařilo načíst.';
+        $message = 'Max obsah se nepodaĹ™ilo naÄŤĂ­st.';
         if ($mode === 'nano') {
-            $message = 'Obsah karty se nepodařilo načíst.';
+            $message = 'Obsah karty se nepodaĹ™ilo naÄŤĂ­st.';
         }
 
         $extra = [
-            'Soubor' => $soubor !== '' ? $soubor : 'neznámý',
-            'Očekávané' => 'card_max_html nebo legacy HTML output',
-            'Selhání' => $reason,
+            'Soubor' => $soubor !== '' ? $soubor : 'neznĂˇmĂ˝',
+            'OÄŤekĂˇvanĂ©' => 'card_max_html nebo legacy HTML output',
+            'SelhĂˇnĂ­' => $reason,
         ];
 
         foreach ($details as $key => $value) {
@@ -116,14 +118,14 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
     }
 
     if (!$isNano && trim($maxHtml) === '') {
-        $reason = (trim($renderErrorHtml) !== '') ? 'prázdný max obsah po načtení' : 'prázdný výstup z render pipeline';
+        $reason = (trim($renderErrorHtml) !== '') ? 'prĂˇzdnĂ˝ max obsah po naÄŤtenĂ­' : 'prĂˇzdnĂ˝ vĂ˝stup z render pipeline';
         $maxHtml = $makeDiagnosticHtml(
             $soubor,
             $mode,
             $reason,
             [
-                'Požadovaný obsah' => 'max',
-                'Chybějící data' => 'žádný HTML výstup',
+                'PoĹľadovanĂ˝ obsah' => 'max',
+                'ChybÄ›jĂ­cĂ­ data' => 'ĹľĂˇdnĂ˝ HTML vĂ˝stup',
             ]
         );
     }
@@ -150,7 +152,7 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
     <div class="card_top<?= h($cardTopRoleClass) ?> gap_10 odstup_vnitrni_10 displ_flex jc_mezi"<?= $cardTopStyle !== '' ? ' style="' . h($cardTopStyle) . '"' : '' ?>>
       <div class="card_head_left displ_flex">
         <div class="card_pref_wrap<?= $isPosLocked ? ' card_pref_wrap_pos_locked' : '' ?>" data-card-pref-wrap="1">
-          <button type="button" class="card_pref_toggle cursor_ruka bg_bila" data-card-pref-toggle="1" aria-haspopup="true" aria-expanded="false" title="Nastavení karty">
+          <button type="button" class="card_pref_toggle cursor_ruka bg_bila" data-card-pref-toggle="1" aria-haspopup="true" aria-expanded="false" title="NastavenĂ­ karty">
             <?php if ($hasCardIcon): ?>
               <span class="card_pref_icon"><img src="<?= h((string)$cardIconSrc) ?>" class="card_pref_icon_img" alt=""></span>
             <?php elseif ($isNano): ?>
@@ -207,5 +209,12 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
   </div>
 </section>
 <?php
-    return (string)ob_get_clean();
+    $result = (string)ob_get_clean();
+
+    // DOCASNE MERENI CASU KARET
+    if (function_exists('cb_tmp_measure_card_time_log')) {
+        cb_tmp_measure_card_time_log($cardId, $title, $mode, 'zobrazeni', $cbTmpMeasureStart);
+    }
+
+    return $result;
 }

@@ -72,6 +72,41 @@ if (!function_exists('cb_dashboard_render_card_error')) {
     }
 }
 
+// DOCASNE MERENI CASU KARET
+if (!function_exists('cb_tmp_measure_card_time_log')) {
+    function cb_tmp_measure_card_time_log(int $cardId, string $cardTitle, string $mode, string $usek, float $startTs): void
+    {
+        if (!function_exists('cb_tmp_time_count_enabled') || !cb_tmp_time_count_enabled()) {
+            return;
+        }
+
+        if ($cardId > 0 || trim($cardTitle) !== '') {
+            cb_tmp_measure_card_register($cardId, $cardTitle, $mode);
+        }
+
+        $filters = function_exists('cb_tmp_measure_filters')
+            ? cb_tmp_measure_filters()
+            : ['od' => '', 'do' => '', 'pobocky' => '', 'pobocky_mode' => ''];
+
+        $line = sprintf(
+            "%s | karta=%d:%s | mode=%s | usek=%s | ms=%s | obdobi_od=%s | obdobi_do=%s | pobocky=%s | pobocky_mode=%s%s",
+            date('Y-m-d H:i:s'),
+            $cardId,
+            trim($cardTitle) !== '' ? trim($cardTitle) : '-',
+            $mode !== '' ? $mode : '-',
+            $usek !== '' ? $usek : '-',
+            number_format((microtime(true) - $startTs) * 1000, 3, '.', ''),
+            (string)$filters['od'],
+            (string)$filters['do'],
+            (string)$filters['pobocky'],
+            (string)$filters['pobocky_mode'],
+            PHP_EOL
+        );
+
+        cb_tmp_measure_log_write('card_time.txt', $line);
+    }
+}
+
 require_once __DIR__ . '/priprav_kartu_nano.php';
 require_once __DIR__ . '/priprav_kartu_mini.php';
 require_once __DIR__ . '/priprav_kartu_max.php';

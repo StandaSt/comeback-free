@@ -4,6 +4,26 @@
 declare(strict_types=1);
 
 $card_min_html = '<p class="card_text txt_seda odstup_vnejsi_0">Data online objednavek nejsou k dispozici.</p>';
+$card_max_html = '';
+
+if (!function_exists('cb_k19_render_max_tile')) {
+    function cb_k19_render_max_tile(string $code): string
+    {
+        return ''
+            . '<div class="card_text ram_sedy zaobleni_8 bg_bila odstup_vnitrni_8 displ_flex flex_sloupec gap_4" style="height:100%; min-height:0; overflow:hidden;">'
+            . '<div class="odstup_spod_4">'
+            . '<div style="display:grid; grid-template-columns:36px minmax(0, 1fr) 36px; align-items:start; column-gap:8px; line-height:1.15;">'
+            . '<div class="card_text text_12" style="color:var(--clr_seda_3);">' . h($code) . '</div>'
+            . '<div class="card_text txt_c"><strong>Graf se připravuje</strong></div>'
+            . '<div></div>'
+            . '</div>'
+            . '</div>'
+            . '<div class="displ_flex ai_stred jc_stred sirka100" style="height:460px; min-height:0;">'
+            . '<p class="card_text txt_seda txt_c odstup_vnejsi_0">Graf se připravuje</p>'
+            . '</div>'
+            . '</div>';
+    }
+}
 
 if (!function_exists('cb_k19_online_workday_range')) {
     function cb_k19_online_workday_range(): array
@@ -34,11 +54,16 @@ try {
     $selectedPob = array_values(array_filter(array_map('intval', $selectedPob), static fn(int $v): bool => $v > 0));
 
     $branchWhere = ' WHERE p.restia_activePosId IS NOT NULL AND p.restia_activePosId <> ""';
-    $ordersWhere = ' WHERE COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at) >= ? AND COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at) <= ?';
+    $ordersWhereCa = ' WHERE ca.cas_vytvor >= ? AND ca.cas_vytvor <= ?';
+    $ordersWhereCreated = ' WHERE ca.cas_vytvor IS NULL AND o.restia_created_at >= ? AND o.restia_created_at <= ?';
+    $ordersWhereImported = ' WHERE ca.cas_vytvor IS NULL AND o.restia_created_at IS NULL AND o.restia_imported_at >= ? AND o.restia_imported_at <= ?';
 
     if ($selectedPob !== []) {
         $branchWhere .= ' AND p.id_pob IN (' . implode(',', array_map('intval', $selectedPob)) . ')';
-        $ordersWhere .= ' AND o.id_pob IN (' . implode(',', array_map('intval', $selectedPob)) . ')';
+        $branchFilter = ' AND o.id_pob IN (' . implode(',', array_map('intval', $selectedPob)) . ')';
+        $ordersWhereCa .= $branchFilter;
+        $ordersWhereCreated .= $branchFilter;
+        $ordersWhereImported .= $branchFilter;
     }
 
     $branches = [];
@@ -70,14 +95,43 @@ try {
 
     $countsSql = '
         SELECT
-            o.id_pob,
-            SUM(CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NOT NULL THEN 1 ELSE 0 END) AS dokonceno,
-            SUM(CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL THEN 1 ELSE 0 END) AS na_ceste,
-            SUM(CASE WHEN ca.cas_dokonc IS NULL THEN 1 ELSE 0 END) AS vyrabi_se
-        FROM objednavky_restia o
-        LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
-        ' . $ordersWhere . '
-        GROUP BY o.id_pob
+            zdroj.id_pob,
+            SUM(zdroj.dokonceno) AS dokonceno,
+            SUM(zdroj.na_ceste) AS na_ceste,
+            SUM(zdroj.vyrabi_se) AS vyrabi_se
+        FROM (
+            SELECT
+                o.id_pob,
+                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NOT NULL THEN 1 ELSE 0 END AS dokonceno,
+                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL THEN 1 ELSE 0 END AS na_ceste,
+                CASE WHEN ca.cas_dokonc IS NULL THEN 1 ELSE 0 END AS vyrabi_se
+            FROM objednavky_restia o
+            INNER JOIN obj_casy ca ON ca.id_obj = o.id_obj
+            ' . $ordersWhereCa . '
+
+            UNION ALL
+
+            SELECT
+                o.id_pob,
+                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NOT NULL THEN 1 ELSE 0 END AS dokonceno,
+                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL THEN 1 ELSE 0 END AS na_ceste,
+                CASE WHEN ca.cas_dokonc IS NULL THEN 1 ELSE 0 END AS vyrabi_se
+            FROM objednavky_restia o
+            INNER JOIN obj_casy ca ON ca.id_obj = o.id_obj
+            ' . $ordersWhereCreated . '
+
+            UNION ALL
+
+            SELECT
+                o.id_pob,
+                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NOT NULL THEN 1 ELSE 0 END AS dokonceno,
+                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL THEN 1 ELSE 0 END AS na_ceste,
+                CASE WHEN ca.cas_dokonc IS NULL THEN 1 ELSE 0 END AS vyrabi_se
+            FROM objednavky_restia o
+            LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
+            ' . $ordersWhereImported . '
+        ) AS zdroj
+        GROUP BY zdroj.id_pob
     ';
 
     $stmtCounts = $conn->prepare($countsSql);
@@ -86,7 +140,7 @@ try {
     }
     $fromTs = (string)$range['from'];
     $toTs = (string)$range['to'];
-    $stmtCounts->bind_param('ss', $fromTs, $toTs);
+    $stmtCounts->bind_param('ssssss', $fromTs, $toTs, $fromTs, $toTs, $fromTs, $toTs);
     $stmtCounts->execute();
     $resCounts = $stmtCounts->get_result();
     if ($resCounts instanceof mysqli_result) {
@@ -168,13 +222,28 @@ try {
     </div>
     <?php
     $card_min_html = (string)ob_get_clean();
+
+    if (($cbDashboardRenderMode ?? '') === 'mini') {
+        return;
+    }
 } catch (Throwable $e) {
     $card_min_html = '<p class="card_text txt_seda odstup_vnejsi_0">Online objednavky se nepodarilo nacist.</p>';
+
+    if (($cbDashboardRenderMode ?? '') === 'mini') {
+        return;
+    }
 }
 
 ob_start();
 ?>
-<p class="card_text txt_seda odstup_vnejsi_0">Zde bude max obsah</p>
+<div class="sirka100" style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); grid-template-rows:repeat(2, minmax(0, 1fr)); gap:10px; height:100%; min-height:0; flex:1 1 auto; align-content:stretch;">
+  <?= cb_k19_render_max_tile('G1') ?>
+  <?= cb_k19_render_max_tile('G2') ?>
+  <?= cb_k19_render_max_tile('G3') ?>
+  <?= cb_k19_render_max_tile('G4') ?>
+  <?= cb_k19_render_max_tile('G5') ?>
+  <?= cb_k19_render_max_tile('G6') ?>
+</div>
 <?php
 $card_max_html = (string)ob_get_clean();
 

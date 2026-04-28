@@ -9,7 +9,10 @@ function cb_priprav_kartu_mini(
     array $userCardPosById,
     int $dashGridCols
 ): array {
+    // DOCASNE MERENI CASU KARET
+    $cbTmpMeasureStart = microtime(true);
     $cardId = (int)($karta['id_karta'] ?? 0);
+    $title = (string)($karta['nazev'] ?? '');
     $subtitleMin = (string)($karta['subtitle_min'] ?? '');
     $subtitleMax = (string)($karta['subtitle_max'] ?? '');
     $cols = ($dashGridCols > 0) ? $dashGridCols : 3;
@@ -94,11 +97,11 @@ function cb_priprav_kartu_mini(
         $renderErrorHtml = $card_min_html;
     }
 
-    return [
+    $result = [
         'mode' => 'mini',
         'cardId' => $cardId,
         'cardPoradi' => (int)($karta['poradi'] ?? 0),
-        'title' => (string)($karta['nazev'] ?? ''),
+        'title' => $title,
         'soubor' => $soubor,
         'refreshOp' => (int)($karta['refresh_op'] ?? 0),
         'subtitleMin' => $subtitleMin,
@@ -117,4 +120,11 @@ function cb_priprav_kartu_mini(
         'cardColorUrl' => cb_url('/includes/select_card_color.php?id_karta=' . (string)$cardId),
         'cardIconUrl' => cb_url('/includes/select_card_ikon.php?id_karta=' . (string)$cardId),
     ];
+
+    // DOCASNE MERENI CASU KARET
+    if (function_exists('cb_tmp_measure_card_time_log')) {
+        cb_tmp_measure_card_time_log($cardId, $title, 'mini', 'priprava', $cbTmpMeasureStart);
+    }
+
+    return $result;
 }

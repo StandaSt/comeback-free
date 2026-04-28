@@ -9,6 +9,8 @@ function cb_priprav_kartu_nano(
     array $userCardPosById,
     int $dashGridCols
 ): array {
+    // DOCASNE MERENI CASU KARET
+    $cbTmpMeasureStart = microtime(true);
     $cardId = (int)($karta['id_karta'] ?? 0);
     $title = trim((string)($karta['nazev'] ?? ''));
 
@@ -22,7 +24,7 @@ function cb_priprav_kartu_nano(
             ]
         );
 
-        return [
+        $result = [
             'mode' => 'nano',
             'cardId' => $cardId,
             'cardPoradi' => (int)($karta['poradi'] ?? 0),
@@ -40,9 +42,16 @@ function cb_priprav_kartu_nano(
             'cardColorUrl' => cb_url('/includes/select_card_color.php?id_karta=' . (string)$cardId),
             'cardIconUrl' => cb_url('/includes/select_card_ikon.php?id_karta=' . (string)$cardId),
         ];
+
+        // DOCASNE MERENI CASU KARET
+        if (function_exists('cb_tmp_measure_card_time_log')) {
+            cb_tmp_measure_card_time_log($cardId, $title, 'nano', 'priprava', $cbTmpMeasureStart);
+        }
+
+        return $result;
     }
 
-    return [
+    $result = [
         'mode' => 'nano',
         'cardId' => $cardId,
         'cardPoradi' => (int)($karta['poradi'] ?? 0),
@@ -59,4 +68,11 @@ function cb_priprav_kartu_nano(
         'cardColorUrl' => cb_url('/includes/select_card_color.php?id_karta=' . (string)$cardId),
         'cardIconUrl' => cb_url('/includes/select_card_ikon.php?id_karta=' . (string)$cardId),
     ];
+
+    // DOCASNE MERENI CASU KARET
+    if (function_exists('cb_tmp_measure_card_time_log')) {
+        cb_tmp_measure_card_time_log($cardId, $title, 'nano', 'priprava', $cbTmpMeasureStart);
+    }
+
+    return $result;
 }
