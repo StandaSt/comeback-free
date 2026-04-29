@@ -188,6 +188,37 @@
     });
   }
 
+  function initRestiaAutoResume(scope) {
+    const root = scope instanceof HTMLElement || scope instanceof Document ? scope : document;
+    const marker = root.querySelector('#cb_restia_auto_resume[data-cb-restia-auto-resume="1"]');
+    if (!(marker instanceof HTMLElement)) return;
+    if (marker.getAttribute('data-cb-restia-auto-resume-armed') === '1') return;
+    marker.setAttribute('data-cb-restia-auto-resume-armed', '1');
+
+    const delayMs = parseInt(String(marker.getAttribute('data-cb-restia-auto-resume-delay') || '2000'), 10);
+    const waitMs = Number.isFinite(delayMs) && delayMs >= 0 ? delayMs : 2000;
+    const branchId = String(marker.getAttribute('data-cb-restia-auto-resume-branch') || '').trim();
+
+    w.setTimeout(() => {
+      if (!document.body.contains(marker)) return;
+      const form = document.querySelector('form[data-cb-max-form="1"]');
+      if (!(form instanceof HTMLFormElement)) return;
+
+      const branchSelect = form.querySelector('select[name="cb_id_pob"]');
+      if (branchSelect instanceof HTMLSelectElement && branchId !== '') {
+        branchSelect.value = branchId;
+      }
+
+      const actionField = form.querySelector('#cb_action_field');
+      if (actionField instanceof HTMLInputElement) {
+        actionField.value = 'start';
+      }
+
+      const submitter = form.querySelector('#cb_start_import_btn');
+      submitAjax(form, submitter instanceof HTMLElement ? submitter : null);
+    }, waitMs);
+  }
+
   function submitAjax(form, submitter, options) {
     if (!(form instanceof HTMLFormElement)) return;
     const opts = (options && typeof options === 'object') ? options : {};
@@ -379,11 +410,17 @@
     document.addEventListener('change', handleChange, true);
     document.addEventListener('cb:main-swapped', initUserSettingForms);
     document.addEventListener('cb:card-swapped', initUserSettingForms);
+    document.addEventListener('cb:main-swapped', () => initRestiaAutoResume(document));
+    document.addEventListener('cb:card-swapped', (event) => {
+      const card = event && event.detail ? event.detail.card : null;
+      initRestiaAutoResume(card instanceof HTMLElement ? card : document);
+    });
   }
 
   wireOnce();
 
   initUserSettingForms();
+  initRestiaAutoResume(document);
 })(window);
 
 // js/ajax_karta_max.js * Verze: V3 * Aktualizace: 17.04.2026
