@@ -64,6 +64,8 @@ if (!function_exists('cb_k19_online_workday_range')) {
 }
 $k19G1MaxTileHtml = cb_k19_render_max_tile('G1');
 $k19G2MaxTileHtml = cb_k19_render_max_tile('G2');
+$k19G5MaxTileHtml = cb_k19_render_max_tile('G5');
+$k19G6MaxTileHtml = cb_k19_render_max_tile('G6');
 
 try {
     $conn = db();
@@ -272,6 +274,111 @@ try {
     }
     $stmtG2->close();
 
+    $g5Now = new DateTimeImmutable((string)$range['to'], new DateTimeZone('Europe/Prague'));
+    $g5CurrentWeekMonday = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $g5Now->modify('monday this week')->format('Y-m-d') . ' 08:00:00', new DateTimeZone('Europe/Prague'));
+    if (!($g5CurrentWeekMonday instanceof DateTimeImmutable)) {
+        throw new RuntimeException('Nepodarilo se pripravit aktualni tyden pro graf G5.');
+    }
+    $g5PreviousWeekMonday = $g5CurrentWeekMonday->modify('-7 days');
+    $g5CurrentToTsExclusive = $g5Now->modify('+1 second')->format('Y-m-d H:i:s');
+    $g5PreviousToTsExclusive = $g5Now->modify('-7 days')->modify('+1 second')->format('Y-m-d H:i:s');
+
+    $stmtG5Current = $conn->prepare($g2Sql);
+    if ($stmtG5Current === false) {
+        throw new RuntimeException('Nepodarilo se pripravit aktualni data grafu G5 pro K19.');
+    }
+    $g5CurrentFromTs = $g5CurrentWeekMonday->format('Y-m-d H:i:s');
+    $stmtG5Current->bind_param('ss', $g5CurrentFromTs, $g5CurrentToTsExclusive);
+    $stmtG5Current->execute();
+    $resG5Current = $stmtG5Current->get_result();
+    $g5CurrentWeekCountsByPob = [];
+    $g5CurrentWeekSalesByPob = [];
+    if ($resG5Current instanceof mysqli_result) {
+        while ($row = $resG5Current->fetch_assoc()) {
+            $g5CurrentWeekCountsByPob[(int)($row['id_pob'] ?? 0)] = (int)($row['objednavky'] ?? 0);
+            $g5CurrentWeekSalesByPob[(int)($row['id_pob'] ?? 0)] = (float)($row['trzba'] ?? 0);
+        }
+        $resG5Current->free();
+    }
+    $stmtG5Current->close();
+
+    $stmtG5Previous = $conn->prepare($g2Sql);
+    if ($stmtG5Previous === false) {
+        throw new RuntimeException('Nepodarilo se pripravit predchozi data grafu G5 pro K19.');
+    }
+    $g5PreviousFromTs = $g5PreviousWeekMonday->format('Y-m-d H:i:s');
+    $stmtG5Previous->bind_param('ss', $g5PreviousFromTs, $g5PreviousToTsExclusive);
+    $stmtG5Previous->execute();
+    $resG5Previous = $stmtG5Previous->get_result();
+    $g5PreviousWeekCountsByPob = [];
+    $g5PreviousWeekSalesByPob = [];
+    if ($resG5Previous instanceof mysqli_result) {
+        while ($row = $resG5Previous->fetch_assoc()) {
+            $g5PreviousWeekCountsByPob[(int)($row['id_pob'] ?? 0)] = (int)($row['objednavky'] ?? 0);
+            $g5PreviousWeekSalesByPob[(int)($row['id_pob'] ?? 0)] = (float)($row['trzba'] ?? 0);
+        }
+        $resG5Previous->free();
+    }
+    $stmtG5Previous->close();
+
+    $g6Now = new DateTimeImmutable((string)$range['to'], new DateTimeZone('Europe/Prague'));
+    $g6CurrentMonthStart = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $g6Now->format('Y-m-01') . ' 08:00:00', new DateTimeZone('Europe/Prague'));
+    if (!($g6CurrentMonthStart instanceof DateTimeImmutable)) {
+        throw new RuntimeException('Nepodarilo se pripravit aktualni mesic pro graf G6.');
+    }
+    $g6PreviousMonthStart = $g6CurrentMonthStart->modify('first day of previous month');
+    $g6CurrentToTsExclusive = $g6Now->modify('+1 second')->format('Y-m-d H:i:s');
+    $g6CurrentDay = (int)$g6Now->format('j');
+    $g6PreviousMonthLastDay = (int)$g6PreviousMonthStart->format('t');
+    $g6PreviousEndDay = min($g6CurrentDay, $g6PreviousMonthLastDay);
+    $g6PreviousPeriodEnd = DateTimeImmutable::createFromFormat(
+        'Y-m-d H:i:s',
+        $g6PreviousMonthStart->format('Y-m-') . str_pad((string)$g6PreviousEndDay, 2, '0', STR_PAD_LEFT) . ' ' . $g6Now->format('H:i:s'),
+        new DateTimeZone('Europe/Prague')
+    );
+    if (!($g6PreviousPeriodEnd instanceof DateTimeImmutable)) {
+        throw new RuntimeException('Nepodarilo se pripravit predchozi mesic pro graf G6.');
+    }
+    $g6PreviousToTsExclusive = $g6PreviousPeriodEnd->modify('+1 second')->format('Y-m-d H:i:s');
+
+    $stmtG6Current = $conn->prepare($g2Sql);
+    if ($stmtG6Current === false) {
+        throw new RuntimeException('Nepodarilo se pripravit aktualni data grafu G6 pro K19.');
+    }
+    $g6CurrentFromTs = $g6CurrentMonthStart->format('Y-m-d H:i:s');
+    $stmtG6Current->bind_param('ss', $g6CurrentFromTs, $g6CurrentToTsExclusive);
+    $stmtG6Current->execute();
+    $resG6Current = $stmtG6Current->get_result();
+    $g6CurrentMonthCountsByPob = [];
+    $g6CurrentMonthSalesByPob = [];
+    if ($resG6Current instanceof mysqli_result) {
+        while ($row = $resG6Current->fetch_assoc()) {
+            $g6CurrentMonthCountsByPob[(int)($row['id_pob'] ?? 0)] = (int)($row['objednavky'] ?? 0);
+            $g6CurrentMonthSalesByPob[(int)($row['id_pob'] ?? 0)] = (float)($row['trzba'] ?? 0);
+        }
+        $resG6Current->free();
+    }
+    $stmtG6Current->close();
+
+    $stmtG6Previous = $conn->prepare($g2Sql);
+    if ($stmtG6Previous === false) {
+        throw new RuntimeException('Nepodarilo se pripravit predchozi data grafu G6 pro K19.');
+    }
+    $g6PreviousFromTs = $g6PreviousMonthStart->format('Y-m-d H:i:s');
+    $stmtG6Previous->bind_param('ss', $g6PreviousFromTs, $g6PreviousToTsExclusive);
+    $stmtG6Previous->execute();
+    $resG6Previous = $stmtG6Previous->get_result();
+    $g6PreviousMonthCountsByPob = [];
+    $g6PreviousMonthSalesByPob = [];
+    if ($resG6Previous instanceof mysqli_result) {
+        while ($row = $resG6Previous->fetch_assoc()) {
+            $g6PreviousMonthCountsByPob[(int)($row['id_pob'] ?? 0)] = (int)($row['objednavky'] ?? 0);
+            $g6PreviousMonthSalesByPob[(int)($row['id_pob'] ?? 0)] = (float)($row['trzba'] ?? 0);
+        }
+        $resG6Previous->free();
+    }
+    $stmtG6Previous->close();
+
     $labels = [];
     $dokoncenoData = [];
     $naCesteData = [];
@@ -282,6 +389,10 @@ try {
     $prumerCenaData = [];
     $rozdilData = [];
     $rozdilTrzbaData = [];
+    $g5RozdilData = [];
+    $g5RozdilTrzbaData = [];
+    $g6RozdilData = [];
+    $g6RozdilTrzbaData = [];
     $sumObjednavky = 0;
     $sumTrzba = 0.0;
     $sumDokonceno = 0;
@@ -299,12 +410,24 @@ try {
         $prumerCena = ($objednavky > 0) ? ($trzba / $objednavky) : 0.0;
         $rozdilObjednavek = $objednavky - (int)($prevWeekCountsByPob[(int)($branch['id_pob'] ?? 0)] ?? 0);
         $rozdilTrzby = $trzba - (float)($prevWeekSalesByPob[(int)($branch['id_pob'] ?? 0)] ?? 0.0);
+        $g5CurrentObjednavky = (int)($g5CurrentWeekCountsByPob[(int)($branch['id_pob'] ?? 0)] ?? 0);
+        $g5CurrentTrzba = (float)($g5CurrentWeekSalesByPob[(int)($branch['id_pob'] ?? 0)] ?? 0.0);
+        $g5PreviousObjednavky = (int)($g5PreviousWeekCountsByPob[(int)($branch['id_pob'] ?? 0)] ?? 0);
+        $g5PreviousTrzba = (float)($g5PreviousWeekSalesByPob[(int)($branch['id_pob'] ?? 0)] ?? 0.0);
+        $g6CurrentObjednavky = (int)($g6CurrentMonthCountsByPob[(int)($branch['id_pob'] ?? 0)] ?? 0);
+        $g6CurrentTrzba = (float)($g6CurrentMonthSalesByPob[(int)($branch['id_pob'] ?? 0)] ?? 0.0);
+        $g6PreviousObjednavky = (int)($g6PreviousMonthCountsByPob[(int)($branch['id_pob'] ?? 0)] ?? 0);
+        $g6PreviousTrzba = (float)($g6PreviousMonthSalesByPob[(int)($branch['id_pob'] ?? 0)] ?? 0.0);
 
         $objednavkyData[] = $objednavky;
         $trzbaData[] = $trzba;
         $prumerCenaData[] = $prumerCena;
         $rozdilData[] = $rozdilObjednavek;
         $rozdilTrzbaData[] = $rozdilTrzby;
+        $g5RozdilData[] = $g5CurrentObjednavky - $g5PreviousObjednavky;
+        $g5RozdilTrzbaData[] = $g5CurrentTrzba - $g5PreviousTrzba;
+        $g6RozdilData[] = $g6CurrentObjednavky - $g6PreviousObjednavky;
+        $g6RozdilTrzbaData[] = $g6CurrentTrzba - $g6PreviousTrzba;
         $dokoncenoData[] = $dokonceno;
         $naCesteData[] = $naCeste;
         $vyrabiSeData[] = $vyrabiSe;
@@ -364,7 +487,7 @@ try {
     $k19G1MaxTileHtml = cb_k19_render_max_chart_tile('G1', 'Objednávky a tržba dnes', (string)$range['label'], 'k19-max-g1-chart', $g1PayloadJson);
 
     $g2Payload = [
-        'kind' => 'bar_dual', // přesně jako u G1, aby JS zpracoval graf správně
+        'kind' => 'bar_dual_diff_centered',
         'labels' => $labels,
         'orders' => $rozdilData,     // pouze rozdílová data, klíče zachovány
         'sales' => $rozdilTrzbaData,
@@ -392,6 +515,96 @@ try {
         $g2PeriodText,
         'k19-max-g2-chart',
         $g2PayloadJson
+    );
+
+    $g5Payload = [
+        'kind' => 'bar_dual_diff_centered',
+        'labels' => $labels,
+        'orders' => $g5RozdilData,
+        'sales' => $g5RozdilTrzbaData,
+        'colors' => $barvyPobocek,
+        'legend_orders' => 'Objednávky',
+        'legend_sales' => 'Tržba',
+    ];
+    $g5PayloadJson = json_encode(
+        $g5Payload,
+        JSON_UNESCAPED_UNICODE
+        | JSON_UNESCAPED_SLASHES
+        | JSON_HEX_TAG
+        | JSON_HEX_AMP
+        | JSON_HEX_APOS
+        | JSON_HEX_QUOT
+    );
+    if (!is_string($g5PayloadJson) || $g5PayloadJson === '') {
+        throw new RuntimeException('Nepodarilo se pripravit graf G5 pro K19.');
+    }
+
+    $g5Now = new DateTimeImmutable((string)$range['to'], new DateTimeZone('Europe/Prague'));
+    $g5CurrentWeekMonday = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $g5Now->modify('monday this week')->format('Y-m-d') . ' 08:00:00', new DateTimeZone('Europe/Prague'));
+    $g5PreviousWeekMonday = $g5CurrentWeekMonday instanceof DateTimeImmutable
+        ? $g5CurrentWeekMonday->modify('-7 days')
+        : null;
+    $g5PreviousWeekToday = $g5Now->modify('-7 days');
+    $g5PeriodText = 'Období '
+        . (($g5PreviousWeekMonday instanceof DateTimeImmutable) ? $g5PreviousWeekMonday->format('j.n.Y') : '')
+        . ' 8:00 až '
+        . $g5PreviousWeekToday->format('j.n.Y')
+        . ' '
+        . $aktualizaceDoText
+        . ' vs '
+        . (($g5CurrentWeekMonday instanceof DateTimeImmutable) ? $g5CurrentWeekMonday->format('j.n.Y') : '')
+        . ' 8:00 až '
+        . $g5Now->format('j.n.Y')
+        . ' '
+        . $aktualizaceDoText;
+    $k19G5MaxTileHtml = cb_k19_render_max_chart_tile(
+        'G5',
+        'Porovnání tento týden vs předchozí týden',
+        $g5PeriodText,
+        'k19-max-g5-chart',
+        $g5PayloadJson
+    );
+
+    $g6Payload = [
+        'kind' => 'bar_dual_diff_centered',
+        'labels' => $labels,
+        'orders' => $g6RozdilData,
+        'sales' => $g6RozdilTrzbaData,
+        'colors' => $barvyPobocek,
+        'legend_orders' => 'Objednávky',
+        'legend_sales' => 'Tržba',
+    ];
+    $g6PayloadJson = json_encode(
+        $g6Payload,
+        JSON_UNESCAPED_UNICODE
+        | JSON_UNESCAPED_SLASHES
+        | JSON_HEX_TAG
+        | JSON_HEX_AMP
+        | JSON_HEX_APOS
+        | JSON_HEX_QUOT
+    );
+    if (!is_string($g6PayloadJson) || $g6PayloadJson === '') {
+        throw new RuntimeException('Nepodarilo se pripravit graf G6 pro K19.');
+    }
+
+    $g6PeriodText = 'Období '
+        . $g6PreviousMonthStart->format('j.n.Y')
+        . ' 8:00 až '
+        . $g6PreviousPeriodEnd->format('j.n.Y')
+        . ' '
+        . $aktualizaceDoText
+        . ' vs '
+        . $g6CurrentMonthStart->format('j.n.Y')
+        . ' 8:00 až '
+        . $g6Now->format('j.n.Y')
+        . ' '
+        . $aktualizaceDoText;
+    $k19G6MaxTileHtml = cb_k19_render_max_chart_tile(
+        'G6',
+        'Porovnání tento měsíc vs předchozí měsíc',
+        $g6PeriodText,
+        'k19-max-g6-chart',
+        $g6PayloadJson
     );
 
     ob_start();
@@ -431,11 +644,11 @@ ob_start();
   <script type="application/json" data-cb-prehledy-grafy-data><?= $payloadJson ?? '{}' ?></script>
   <div class="sirka100" style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); grid-template-rows:repeat(2, minmax(0, 1fr)); gap:10px; height:100%; min-height:0; flex:1 1 auto; align-content:stretch;">
     <?= $k19G1MaxTileHtml ?>
-    <?= $k19G2MaxTileHtml ?>
-    <?= cb_k19_render_max_tile('G3') ?>
     <?= cb_k19_render_max_tile('G4') ?>
-    <?= cb_k19_render_max_tile('G5') ?>
-    <?= cb_k19_render_max_tile('G6') ?>
+    <?= cb_k19_render_max_tile('G3') ?>
+    <?= $k19G2MaxTileHtml ?>
+    <?= $k19G5MaxTileHtml ?>
+    <?= $k19G6MaxTileHtml ?>
   </div>
 </div>
 <?php

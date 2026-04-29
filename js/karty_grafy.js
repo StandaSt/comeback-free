@@ -36,6 +36,51 @@
     return '#' + mix(0) + mix(2) + mix(4);
   }
 
+  function getAxisAbsMax(values, fallback) {
+    const maxAbs = (Array.isArray(values) ? values : []).reduce((result, value) => {
+      const next = Math.abs(Number(value) || 0);
+      return next > result ? next : result;
+    }, 0);
+    if (maxAbs <= 0) {
+      return Number(fallback) > 0 ? Number(fallback) : 1;
+    }
+    return Math.max(1, Math.ceil(maxAbs * 1.18));
+  }
+
+  function shouldShowVerticalBarText(value, axisAbsMax, text) {
+    const safeMax = Number(axisAbsMax) || 0;
+    const safeValue = Math.abs(Number(value) || 0);
+    const safeText = String(text || '').trim();
+    if (safeMax <= 0 || safeValue <= 0 || safeText === '') return false;
+
+    const halfPlotHeight = 170;
+    const estimatedBarHeight = (safeValue / safeMax) * halfPlotHeight;
+    const minRequiredHeight = Math.max(48, Math.min(86, (safeText.length * 6) + 10));
+    return estimatedBarHeight >= minRequiredHeight;
+  }
+
+  function buildOutsideValueMarkPoints(labels, values, suffix) {
+    return labels.map((label, index) => {
+      const value = Number(values[index] || 0) || 0;
+      const textSuffix = String(suffix || '');
+      return {
+        coord: [label, value],
+        value: value,
+        symbolSize: 1,
+        silent: true,
+        itemStyle: { color: 'transparent' },
+        label: {
+          show: true,
+          color: '#334155',
+          fontSize: 10,
+          distance: 4,
+          position: value >= 0 ? 'top' : 'bottom',
+          formatter: () => formatInt(value) + textSuffix
+        }
+      };
+    });
+  }
+
   function buildValueMarks(labels, values, formatter) {
     return labels.map((label, index) => {
       const value = Number(values[index] || 0) || 0;
@@ -268,6 +313,149 @@
               fontSize: 10,
               formatter: (params) => formatInt(params && typeof params.value !== 'undefined' ? params.value : 0)
             }
+          }
+        ]
+      };
+    }
+
+    if (kind === 'bar_dual_diff_centered') {
+      const labels = Array.isArray(payload.labels) ? payload.labels.map((item) => String(item)) : [];
+      const orders = Array.isArray(payload.orders) ? payload.orders.map((item) => Number(item) || 0) : [];
+      const sales = Array.isArray(payload.sales) ? payload.sales.map((item) => Number(item) || 0) : [];
+      const colors = Array.isArray(payload.colors) ? payload.colors.map((item) => String(item || '')) : [];
+      const ordersLegend = String(payload.legend_orders || 'Objednávky').trim() || 'Objednávky';
+      const salesLegend = String(payload.legend_sales || 'Tržba').trim() || 'Tržba';
+      const ordersAxisMax = getAxisAbsMax(orders, 1);
+      const salesAxisMax = getAxisAbsMax(sales, 1000);
+
+      return {
+        grid: {
+          left: 10,
+          right: 10,
+          top: 32,
+          bottom: 25,
+          containLabel: true
+        },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'shadow' },
+          formatter: (params) => {
+            const items = Array.isArray(params) ? params : [];
+            const name = items.length > 0 ? String(items[0].axisValue || '') : '';
+            const lines = [name];
+            items.forEach((item) => {
+              const seriesName = String(item.seriesName || '');
+              const value = Number(item.value || 0) || 0;
+              if (seriesName === salesLegend) {
+                lines.push(seriesName + ': ' + formatInt(value) + ' Kč');
+                return;
+              }
+              lines.push(seriesName + ': ' + formatInt(value));
+            });
+            return lines.join('<br>');
+          }
+        },
+        legend: { show: false },
+        xAxis: {
+          type: 'category',
+          data: labels,
+          axisTick: { show: false },
+          axisLine: {
+            show: true,
+            onZero: true,
+            lineStyle: {
+              color: '#94a3b8',
+              width: 1
+            }
+          },
+          axisLabel: {
+            interval: 0,
+            rotate: 0,
+            lineHeight: 16,
+            formatter: (value) => String(value)
+          }
+        },
+        yAxis: [
+          {
+            type: 'value',
+            min: -ordersAxisMax,
+            max: ordersAxisMax,
+            axisLabel: { show: false },
+            axisTick: { show: false },
+            axisLine: { show: false },
+            splitLine: { show: false }
+          },
+          {
+            type: 'value',
+            min: -salesAxisMax,
+            max: salesAxisMax,
+            axisLabel: { show: false },
+            axisTick: { show: false },
+            axisLine: { show: false },
+            splitLine: { show: false }
+          }
+        ],
+        series: [
+          {
+            name: ordersLegend,
+            type: 'bar',
+            yAxisIndex: 0,
+            barGap: '15%',
+            barMaxWidth: 34,
+            markPoint: {
+              symbol: 'circle',
+              symbolSize: 1,
+              data: buildOutsideValueMarkPoints(labels, orders, '')
+            },
+            data: labels.map((label, index) => {
+              const value = orders[index] ?? 0;
+              const color = colors[index] || '#64748b';
+              return {
+                value: value,
+                itemStyle: {
+                  color: color
+                },
+                label: {
+                  show: shouldShowVerticalBarText(value, ordersAxisMax, ordersLegend),
+                  position: 'inside',
+                  rotate: 90,
+                  color: '#ffffff',
+                  fontSize: 10,
+                  formatter: () => ordersLegend
+                }
+              };
+            })
+          },
+          {
+            name: salesLegend,
+            type: 'bar',
+            yAxisIndex: 1,
+            barMaxWidth: 34,
+            markPoint: {
+              symbol: 'circle',
+              symbolSize: 1,
+              data: buildOutsideValueMarkPoints(labels, sales, '')
+            },
+            data: labels.map((label, index) => {
+              const value = sales[index] ?? 0;
+              const color = colors[index] || '#16a34a';
+              return {
+                value: value,
+                itemStyle: {
+                  color: lightenColor(color, 0.45),
+                  borderColor: color,
+                  borderWidth: 1
+                },
+                label: {
+                  show: shouldShowVerticalBarText(value, salesAxisMax, salesLegend),
+                  position: 'inside',
+                  rotate: 90,
+                  color: '#334155',
+                  fontSize: 10,
+                  formatter: () => salesLegend
+                }
+              };
+            })
           }
         ]
       };
