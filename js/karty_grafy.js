@@ -1,4 +1,4 @@
-// js/karty_grafy.js * Verze: V4 * Aktualizace: 27.04.2026
+// js/karty_grafy.js * Verze: V5 * Aktualizace: 29.04.2026
 'use strict';
 
 (function (w) {
@@ -20,6 +20,40 @@
     return String(intValue).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   }
 
+  function lightenColor(color, amount) {
+    const raw = String(color || '').trim();
+    const match = raw.match(/^#([0-9a-f]{6})$/i);
+    if (!match) return '#cbd5e1';
+
+    const hex = match[1];
+    const ratio = Math.max(0, Math.min(1, Number(amount) || 0));
+    const mix = (offset) => {
+      const base = parseInt(hex.slice(offset, offset + 2), 16);
+      const next = Math.round(base + ((255 - base) * ratio));
+      return String(next.toString(16)).padStart(2, '0');
+    };
+
+    return '#' + mix(0) + mix(2) + mix(4);
+  }
+
+  function buildValueMarks(labels, values, formatter) {
+    return labels.map((label, index) => {
+      const value = Number(values[index] || 0) || 0;
+      return {
+        coord: [label, value],
+        value: value,
+        symbolSize: 1,
+        itemStyle: { color: 'transparent' },
+        label: {
+          show: true,
+          color: '#334155',
+          fontSize: 10,
+          position: value >= 0 ? 'top' : 'bottom',
+          formatter: () => formatter(value)
+        }
+      };
+    });
+  }
 
   function getWrappers(root) {
     const scope = root instanceof HTMLElement ? root : document;
@@ -94,15 +128,9 @@
         },
         yAxis: {
           type: 'value',
-          axisLabel: {
-            show: false
-          },
-          axisTick: {
-            show: false
-          },
-          splitLine: {
-            show: false
-          }
+          axisLabel: { show: false },
+          axisTick: { show: false },
+          splitLine: { show: false }
         },
         series: [
           {
@@ -112,9 +140,7 @@
             barMaxWidth: MINI_SLOUPEC_BAR_MAX_WIDTH,
             data: labels.map((label, index) => ({
               value: dokonceno[index] ?? 0,
-              itemStyle: {
-                color: colors[index] || '#16a34a'
-              }
+              itemStyle: { color: colors[index] || '#16a34a' }
             }))
           },
           {
@@ -134,6 +160,187 @@
             data: vyrabiSe
           }
         ]
+      };
+    }
+
+    if (kind === 'bar_dual') {
+      const labels = Array.isArray(payload.labels) ? payload.labels.map((item) => String(item)) : [];
+      const orders = Array.isArray(payload.orders) ? payload.orders.map((item) => Number(item) || 0) : [];
+      const sales = Array.isArray(payload.sales) ? payload.sales.map((item) => Number(item) || 0) : [];
+      const avgPrice = Array.isArray(payload.avg_price) ? payload.avg_price.map((item) => Number(item) || 0) : [];
+      const colors = Array.isArray(payload.colors) ? payload.colors.map((item) => String(item || '')) : [];
+
+      return {
+        grid: {
+          left: 10,
+          right: 10,
+          top: 32,
+          bottom: 25,
+          containLabel: true
+        },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'shadow' },
+          formatter: (params) => {
+            const items = Array.isArray(params) ? params : [];
+            const name = items.length > 0 ? String(items[0].axisValue || '') : '';
+            const lines = [name];
+            items.forEach((item) => {
+              const seriesName = String(item.seriesName || '');
+              const value = Number(item.value || 0) || 0;
+              if (seriesName === 'Tržba') {
+                lines.push(seriesName + ': ' + formatInt(value) + ' Kč');
+                return;
+              }
+              lines.push(seriesName + ': ' + formatInt(value));
+            });
+            return lines.join('<br>');
+          }
+        },
+        legend: { show: false },
+        xAxis: {
+          type: 'category',
+          data: labels,
+          axisTick: { show: false },
+          axisLine: { show: false },
+          axisLabel: {
+            interval: 0,
+            rotate: 0,
+            lineHeight: 16,
+            formatter: (value, index) => {
+              const avg = avgPrice[index] ?? 0;
+              return String(value) + '\nø ' + formatInt(avg) + ' Kč';
+            }
+          }
+        },
+        yAxis: [
+          {
+            type: 'value',
+            axisLabel: { show: false },
+            axisTick: { show: false },
+            axisLine: { show: false },
+            splitLine: { show: false }
+          },
+          {
+            type: 'value',
+            axisLabel: { show: false },
+            axisTick: { show: false },
+            axisLine: { show: false },
+            splitLine: { show: false }
+          }
+        ],
+        series: [
+          {
+            name: 'Objednávky',
+            type: 'bar',
+            yAxisIndex: 0,
+            barGap: '15%',
+            barMaxWidth: 34,
+            data: labels.map((label, index) => ({
+              value: orders[index] ?? 0,
+              itemStyle: {
+                color: colors[index] || '#64748b'
+              }
+            })),
+            label: {
+              show: true,
+              position: 'top',
+              fontSize: 10,
+              formatter: (params) => formatInt(params && typeof params.value !== 'undefined' ? params.value : 0)
+            }
+          },
+          {
+            name: 'Tržba',
+            type: 'bar',
+            yAxisIndex: 1,
+            barMaxWidth: 34,
+            data: labels.map((label, index) => ({
+              value: sales[index] ?? 0,
+              itemStyle: {
+                color: lightenColor(colors[index] || '#16a34a', 0.45),
+                borderColor: colors[index] || '#16a34a',
+                borderWidth: 1
+              }
+            })),
+            label: {
+              show: true,
+              position: 'top',
+              fontSize: 10,
+              formatter: (params) => formatInt(params && typeof params.value !== 'undefined' ? params.value : 0)
+            }
+          }
+        ]
+      };
+    }
+
+    if (kind === 'bar_diff') {
+      const labels = Array.isArray(payload.labels) ? payload.labels.map((item) => String(item)) : [];
+      const values = Array.isArray(payload.values) ? payload.values.map((item) => Number(item) || 0) : [];
+      const colors = Array.isArray(payload.colors) ? payload.colors.map((item) => String(item || '')) : [];
+
+      return {
+        grid: {
+          left: 10,
+          right: 10,
+          top: 20,
+          bottom: 25,
+          containLabel: true
+        },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'shadow' },
+          formatter: (params) => {
+            const item = Array.isArray(params) && params.length > 0 ? params[0] : null;
+            if (!item) return '';
+            const value = Number(item.value || 0) || 0;
+            return String(item.axisValue || '') + '<br>Rozdíl: ' + (value > 0 ? '+' : '') + formatInt(value);
+          }
+        },
+        xAxis: {
+          type: 'category',
+          data: labels,
+          axisTick: { show: false },
+          axisLabel: {
+            interval: 0,
+            rotate: labels.length > 6 ? 20 : 0
+          },
+          axisLine: {
+            show: true,
+            onZero: true
+          }
+        },
+        yAxis: {
+          type: 'value',
+          axisLabel: { show: false },
+          axisTick: { show: false },
+          splitLine: { show: false }
+        },
+        series: [{
+          name: 'Rozdíl',
+          type: 'bar',
+          barMaxWidth: 42,
+          data: labels.map((label, index) => {
+            const value = values[index] ?? 0;
+            const color = colors[index] || '#64748b';
+            return {
+              value: value,
+              itemStyle: {
+                color: value >= 0 ? color : lightenColor(color, 0.45),
+                borderColor: color,
+                borderWidth: 1
+              }
+            };
+          }),
+          label: {
+            show: true,
+            position: (params) => ((Number(params && params.value) || 0) >= 0 ? 'top' : 'bottom'),
+            fontSize: 10,
+            formatter: (params) => {
+              const value = Number(params && typeof params.value !== 'undefined' ? params.value : 0) || 0;
+              return (value > 0 ? '+' : '') + formatInt(value);
+            }
+          }
+        }]
       };
     }
 
@@ -167,15 +374,9 @@
         },
         yAxis: {
           type: 'value',
-          axisLabel: {
-            show: false
-          },
-          axisTick: {
-            show: false
-          },
-          splitLine: {
-            show: false
-          }
+          axisLabel: { show: false },
+          axisTick: { show: false },
+          splitLine: { show: false }
         },
         series: [{
           type: 'bar',
@@ -188,9 +389,7 @@
           },
           data: labels.map((label, index) => ({
             value: values[index] ?? 0,
-            itemStyle: {
-              color: colors[index]
-            }
+            itemStyle: { color: colors[index] }
           }))
         }]
       };
@@ -206,11 +405,7 @@
         const data = item && Array.isArray(item.data) ? item.data.map((value) => Number(value) || 0) : [];
         const name = String(item && item.name ? item.name : '').trim();
         const color = String(item && item.color ? item.color : '').trim();
-        return {
-          name: name,
-          color: color,
-          data: data
-        };
+        return { name: name, color: color, data: data };
       }).filter((item) => item.name !== '');
 
       if (normalizedSeries.length === 0) return null;
@@ -232,22 +427,15 @@
           boundaryGap: false,
           data: labels
         },
-        yAxis: {
-          type: 'value'
-        },
+        yAxis: { type: 'value' },
         series: normalizedSeries.map((item) => ({
           type: 'line',
           name: item.name,
           smooth: true,
           showSymbol: true,
           symbolSize: 6,
-          lineStyle: {
-            width: 2,
-            color: item.color || undefined
-          },
-          itemStyle: {
-            color: item.color || undefined
-          },
+          lineStyle: { width: 2, color: item.color || undefined },
+          itemStyle: { color: item.color || undefined },
           data: item.data
         }))
       };
@@ -328,9 +516,7 @@
           data: labels.map((label, index) => ({
             name: label,
             value: values[index] ?? 0,
-            itemStyle: {
-              color: colors[index] || undefined
-            }
+            itemStyle: { color: colors[index] || undefined }
           }))
         }]
       };
@@ -456,5 +642,5 @@
   }
 })(window);
 
-// js/karty_grafy.js * Verze: V4 * Aktualizace: 27.04.2026
+// js/karty_grafy.js * Verze: V5 * Aktualizace: 29.04.2026
 // Konec souboru

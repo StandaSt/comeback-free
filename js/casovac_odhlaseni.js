@@ -109,6 +109,10 @@
     touchServer(false);
   }
 
+  w.cbResetIdleLogout = function () {
+    activity();
+  };
+
   d.addEventListener('click', activity, true);
   d.addEventListener('keydown', activity, true);
   d.addEventListener('scroll', activity, true);

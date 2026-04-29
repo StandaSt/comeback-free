@@ -204,6 +204,10 @@
       const form = document.querySelector('form[data-cb-max-form="1"]');
       if (!(form instanceof HTMLFormElement)) return;
 
+      if (typeof w.cbResetIdleLogout === 'function') {
+        w.cbResetIdleLogout();
+      }
+
       const branchSelect = form.querySelector('select[name="cb_id_pob"]');
       if (branchSelect instanceof HTMLSelectElement && branchId !== '') {
         branchSelect.value = branchId;

@@ -466,6 +466,7 @@ if (!function_exists('cb_restia_hist_run_batch')) {
         $foundNow = 0;
         $cycleMonth = '';
         $state['auto_resume'] = 0;
+        $state['auto_next_month'] = 0;
 
         while (true) {
             $date = (string)($state['next_date'] ?? '');
@@ -556,6 +557,9 @@ if (!function_exists('cb_restia_hist_run_batch')) {
             $nextMonth = substr((string)($state['next_date'] ?? ''), 0, 7);
             if ($currentMonth !== '' && $nextMonth !== '' && $nextMonth !== $currentMonth) {
                 $cycleMonth = cb_restia_hist_format_month_year_cs((string)$date);
+                if ((string)($state['next_date'] ?? '') !== '' && (string)($state['next_date'] ?? '') <= $importEndDate) {
+                    $state['auto_next_month'] = 1;
+                }
                 $state['finished'] = 1;
                 break;
             }
@@ -1637,6 +1641,7 @@ if (!function_exists('cb_restia_hist_default_state')) {
             'run_from_date' => '',
             'finished' => 0,
             'auto_resume' => 0,
+            'auto_next_month' => 0,
             'branch_name' => '',
             'branch_id' => 0,
             'run_started_at_ms' => 0,
@@ -1971,7 +1976,7 @@ if ($selectedBranchId > 0) {
 }
 $cycleCheckText = (string)($state['cycle_check_text'] ?? '');
 $cycleCheckOk = ((int)($state['cycle_check_ok'] ?? 0) === 1);
-$autoResume = ((int)($state['auto_resume'] ?? 0) === 1 && $selectedBranchId > 0);
+$autoResume = ((((int)($state['auto_resume'] ?? 0) === 1) || ((int)($state['auto_next_month'] ?? 0) === 1)) && $selectedBranchId > 0);
 
 $canStartImport = ($selectedBranchId > 0 && $selectedBranchEnabled && $selectedBranchHasWork);
 $branchInfoName = $selectedBranchId > 0 ? $selectedBranchName : 'není vybrána';

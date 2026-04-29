@@ -25,10 +25,16 @@ $cbFavicon = cb_url('img/favicon_comeback.png');
 cb_pobocky_bootstrap_session();
 
 $cbLoginOk = !empty($_SESSION['login_ok']);
+$cbIsPartialRequest = isset($_SERVER['HTTP_X_COMEBACK_PARTIAL']);
+$cbIsCardRequest = isset($_SERVER['HTTP_X_COMEBACK_CARD']);
+$cbIsMaxFormRequest = isset($_SERVER['HTTP_X_COMEBACK_MAX_FORM']);
 
 require_once __DIR__ . '/lib/detektuj_neplatnou_url.php';
 require_once __DIR__ . '/lib/logout_handler.php';
 require_once __DIR__ . '/lib/json_registrace.php';
+if ($cbLoginOk && !$cbIsPartialRequest && !$cbIsCardRequest && !$cbIsMaxFormRequest) {
+    require_once __DIR__ . '/lib/restia_online_kontrola.php';
+}
 require_once __DIR__ . '/lib/post_akce.php';
 
 $pageKey = 'dashboard';
@@ -92,7 +98,6 @@ if ($cbLoginOk) {
     require_once __DIR__ . '/includes/hlavicka.php';
     require_once __DIR__ . '/modaly/modal_overeni.php';
     require_once __DIR__ . '/lib/kontrola_registrace.php';
-    require_once __DIR__ . '/lib/restia_online_kontrola.php';
 
     $cb_page_exists = $cbPageExists;
     $cb_page_file = $file;

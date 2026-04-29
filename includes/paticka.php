@@ -21,7 +21,7 @@ if ($cbVerzeText === '' && defined('CB_VERZE')) {
     $cbVerzeText = trim((string)CB_VERZE);
 }
 if ($cbVerzeText === '') {
-    $cbVerzeText = '0.0';
+    $cbVerzeText = '0.86';
 }
 
 ?>

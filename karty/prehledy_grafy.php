@@ -33,14 +33,15 @@ if ($periodOd === '' || $periodDo === '') {
 
 $periodOdDate = new DateTimeImmutable($periodOd);
 $periodDoDate = new DateTimeImmutable($periodDo);
-$periodDoExclusive = $periodDoDate->modify('+1 day')->setTime(0, 0, 0);
+$periodOdTs = $periodOdDate->setTime(8, 0, 0);
+$periodDoExclusive = $periodDoDate->setTime(8, 0, 0);
 $titleOd = $periodOdDate->format('d.m.Y');
 $titleDo = $periodDoDate->format('d.m.Y');
 $periodLabel = $titleOd . ' - ' . $titleDo;
 
 $safeOd = $pdo->real_escape_string($periodOd);
 $safeDo = $pdo->real_escape_string($periodDo);
-$safeOdTs = $pdo->real_escape_string($periodOdDate->setTime(0, 0, 0)->format('Y-m-d H:i:s'));
+$safeOdTs = $pdo->real_escape_string($periodOdTs->format('Y-m-d H:i:s'));
 $safeDoTsExclusive = $pdo->real_escape_string($periodDoExclusive->format('Y-m-d H:i:s'));
 $selectedPobSql = $selectedPob !== [] ? implode(',', array_map('intval', $selectedPob)) : '';
 
@@ -142,46 +143,7 @@ $jsonEncode = static function (array $payload, string $errorMessage): string {
     return $json;
 };
 
-$baseUnionParts = [];
-
-$baseUnionParts[] = '
-    SELECT
-        o.id_pob,
-        o.id_zak,
-        COALESCE(z.jmeno, "") AS zak_jmeno,
-        COALESCE(z.prijmeni, "") AS zak_prijmeni,
-        ca.report AS report_date,
-        COALESCE(c.cena_celk, 0) AS cena_celk,
-        COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at) AS event_dt
-    FROM objednavky_restia o
-    LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
-    LEFT JOIN obj_ceny c ON c.id_obj = o.id_obj
-    LEFT JOIN zakaznik z ON z.id_zak = o.id_zak
-    WHERE ca.report >= "' . $safeOd . '"
-      AND ca.report <= "' . $safeDo . '"'
-    . ($selectedPob !== [] ? '
-      AND o.id_pob IN (' . $selectedPobSql . ')' : '');
-
-$baseUnionParts[] = '
-    SELECT
-        o.id_pob,
-        o.id_zak,
-        COALESCE(z.jmeno, "") AS zak_jmeno,
-        COALESCE(z.prijmeni, "") AS zak_prijmeni,
-        DATE(ca.cas_vytvor) AS report_date,
-        COALESCE(c.cena_celk, 0) AS cena_celk,
-        ca.cas_vytvor AS event_dt
-    FROM objednavky_restia o
-    LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
-    LEFT JOIN obj_ceny c ON c.id_obj = o.id_obj
-    LEFT JOIN zakaznik z ON z.id_zak = o.id_zak
-    WHERE ca.report IS NULL
-      AND ca.cas_vytvor >= "' . $safeOdTs . '"
-      AND ca.cas_vytvor < "' . $safeDoTsExclusive . '"'
-    . ($selectedPob !== [] ? '
-      AND o.id_pob IN (' . $selectedPobSql . ')' : '');
-
-$baseUnionParts[] = '
+$baseUnionSql = '
     SELECT
         o.id_pob,
         o.id_zak,
@@ -191,38 +153,13 @@ $baseUnionParts[] = '
         COALESCE(c.cena_celk, 0) AS cena_celk,
         o.restia_created_at AS event_dt
     FROM objednavky_restia o
-    LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
     LEFT JOIN obj_ceny c ON c.id_obj = o.id_obj
     LEFT JOIN zakaznik z ON z.id_zak = o.id_zak
-    WHERE ca.report IS NULL
-      AND ca.cas_vytvor IS NULL
+    WHERE o.restia_created_at IS NOT NULL
       AND o.restia_created_at >= "' . $safeOdTs . '"
       AND o.restia_created_at < "' . $safeDoTsExclusive . '"'
     . ($selectedPob !== [] ? '
       AND o.id_pob IN (' . $selectedPobSql . ')' : '');
-
-$baseUnionParts[] = '
-    SELECT
-        o.id_pob,
-        o.id_zak,
-        COALESCE(z.jmeno, "") AS zak_jmeno,
-        COALESCE(z.prijmeni, "") AS zak_prijmeni,
-        DATE(o.restia_imported_at) AS report_date,
-        COALESCE(c.cena_celk, 0) AS cena_celk,
-        o.restia_imported_at AS event_dt
-    FROM objednavky_restia o
-    LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
-    LEFT JOIN obj_ceny c ON c.id_obj = o.id_obj
-    LEFT JOIN zakaznik z ON z.id_zak = o.id_zak
-    WHERE ca.report IS NULL
-      AND ca.cas_vytvor IS NULL
-      AND o.restia_created_at IS NULL
-      AND o.restia_imported_at >= "' . $safeOdTs . '"
-      AND o.restia_imported_at < "' . $safeDoTsExclusive . '"'
-    . ($selectedPob !== [] ? '
-      AND o.id_pob IN (' . $selectedPobSql . ')' : '');
-
-$baseUnionSql = implode("\nUNION ALL\n", $baseUnionParts);
 
 $loadMiniCounts = static function (mysqli $pdo, string $baseUnionSql): array {
     $sql = '
