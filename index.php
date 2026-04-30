@@ -25,6 +25,8 @@ $cbFavicon = cb_url('img/favicon_comeback.png');
 cb_pobocky_bootstrap_session();
 
 $cbLoginOk = !empty($_SESSION['login_ok']);
+$cbAuthOk = !empty($_SESSION['cb_auth_ok']);
+$cbHasLoginFlowAccess = ($cbLoginOk || $cbAuthOk);
 $cbIsPartialRequest = isset($_SERVER['HTTP_X_COMEBACK_PARTIAL']);
 $cbIsCardRequest = isset($_SERVER['HTTP_X_COMEBACK_CARD']);
 $cbIsMaxFormRequest = isset($_SERVER['HTTP_X_COMEBACK_MAX_FORM']);
@@ -32,7 +34,7 @@ $cbIsMaxFormRequest = isset($_SERVER['HTTP_X_COMEBACK_MAX_FORM']);
 require_once __DIR__ . '/lib/detektuj_neplatnou_url.php';
 require_once __DIR__ . '/lib/logout_handler.php';
 require_once __DIR__ . '/lib/json_registrace.php';
-if ($cbLoginOk && !$cbIsPartialRequest && !$cbIsCardRequest && !$cbIsMaxFormRequest) {
+if ($cbHasLoginFlowAccess && !$cbIsPartialRequest && !$cbIsCardRequest && !$cbIsMaxFormRequest) {
     require_once __DIR__ . '/lib/restia_online_kontrola.php';
 }
 require_once __DIR__ . '/lib/post_akce.php';
@@ -94,7 +96,7 @@ require_once __DIR__ . '/lib/request_dispatch.php';
 <div class="container bg_modra displ_flex sirka100">
 <?php
 
-if ($cbLoginOk) {
+if ($cbHasLoginFlowAccess) {
     require_once __DIR__ . '/includes/hlavicka.php';
     require_once __DIR__ . '/modaly/modal_overeni.php';
     require_once __DIR__ . '/lib/kontrola_registrace.php';
@@ -112,7 +114,7 @@ if ($cbLoginOk) {
 </div>
 
 
-<?php if ($cbLoginOk): ?>
+<?php if ($cbHasLoginFlowAccess): ?>
 <script src="<?= h(cb_asset_url('js/echarts.min.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/ajax_core.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/ajax_karta_max.js')) ?>"></script>

@@ -17,7 +17,7 @@ declare(strict_types=1);
  *
  * Důležité:
  * - login_ok se nastaví AŽ po schválení 2FA (mobil), nebo hned při LOCAL / prvním loginu bez zařízení
- * - LOCAL: 2FA se nepoužívá (notifikace z LOCAL nechodí) – po ověření ve Směnách se nastaví login_ok hned
+ * - LOCAL: 2FA lze vypnout přes set_system.on_2fa (notifikace z LOCAL nechodí)
  */
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
@@ -212,8 +212,13 @@ try {
     $_SESSION['cb_last_activity_ts'] = time();
     $_SESSION['cb_auth_ok'] = 1;
 
-    // LOCAL: bez 2FA (notifikace z LOCAL nechodí) => rovnou přihlásit
-    if ((string)($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL') {
+    // LOCAL: 2FA se přeskočí jen když je vypnuto v set_system.on_2fa
+    $q2fa = db()->query('SELECT on_2fa FROM set_system WHERE id_set = 1 LIMIT 1');
+    $row2fa = $q2fa->fetch_assoc();
+    $on2fa = (int)$row2fa['on_2fa'];
+    $q2fa->free();
+
+    if ((string)($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL' && $on2fa === 0) {
         $_SESSION['login_ok'] = 1;
         $_SESSION['cb_initial_loader_text'] = 'Inicializace systému ...';
 

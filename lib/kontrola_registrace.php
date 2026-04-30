@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /*
  * Kontrola spárovaného mobilu po přihlášení
- * - LOCAL: párování se nevynucuje
+ * - LOCAL: párování se nevynucuje jen při vypnutém set_system.on_2fa
  * - ostatní prostředí: bez aktivního zařízení zobrazí modal_registrace.php
  *
  * Vstup z index.php:
@@ -21,7 +21,12 @@ $idUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_us
 $maMobil = false;
 
 $prostredi = (string)($GLOBALS['PROSTREDI'] ?? '');
-if ($prostredi === 'LOCAL') {
+$q2fa = db()->query('SELECT on_2fa FROM set_system WHERE id_set = 1 LIMIT 1');
+$row2fa = $q2fa->fetch_assoc();
+$on2fa = (int)$row2fa['on_2fa'];
+$q2fa->free();
+
+if ($prostredi === 'LOCAL' && $on2fa === 0) {
     $maMobil = true;
 } else {
     if ($idUser > 0) {
