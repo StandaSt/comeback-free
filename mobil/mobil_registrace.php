@@ -325,7 +325,11 @@ $tokenOk = is_array($pair);
       return;
     }
 
-    navigator.serviceWorker.ready.then(function(reg){
+    navigator.serviceWorker.register(<?php echo json_encode(cb_url('sw.js'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>)
+      .then(function(){
+        return navigator.serviceWorker.ready;
+      })
+      .then(function(reg){
       return reg.pushManager.getSubscription().then(function(sub){
         if (sub) {
           return sub;
