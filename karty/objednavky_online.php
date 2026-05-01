@@ -48,7 +48,7 @@ if (!function_exists('cb_k19_online_workday_range')) {
     {
         $tz = new DateTimeZone('Europe/Prague');
         $now = new DateTimeImmutable('now', $tz);
-        $todayStart = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $now->format('Y-m-d') . ' 08:00:00', $tz);
+        $todayStart = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $now->format('Y-m-d') . ' 06:00:00', $tz);
         if (!($todayStart instanceof DateTimeImmutable)) {
             throw new RuntimeException('Nepodarilo se urcit pracovni den pro K19.');
         }
@@ -145,7 +145,7 @@ try {
                 o.id_pob,
                 CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NOT NULL THEN 1 ELSE 0 END AS dokonceno,
                 CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL THEN 1 ELSE 0 END AS na_ceste,
-                CASE WHEN ca.cas_dokonc IS NULL THEN 1 ELSE 0 END AS vyrabi_se
+                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NULL THEN 1 ELSE 0 END AS vyrabi_se
             FROM objednavky_restia o
             INNER JOIN obj_casy ca ON ca.id_obj = o.id_obj
             ' . $ordersWhereCa . '
@@ -156,7 +156,7 @@ try {
                 o.id_pob,
                 CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NOT NULL THEN 1 ELSE 0 END AS dokonceno,
                 CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL THEN 1 ELSE 0 END AS na_ceste,
-                CASE WHEN ca.cas_dokonc IS NULL THEN 1 ELSE 0 END AS vyrabi_se
+                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NULL THEN 1 ELSE 0 END AS vyrabi_se
             FROM objednavky_restia o
             INNER JOIN obj_casy ca ON ca.id_obj = o.id_obj
             ' . $ordersWhereCreated . '
@@ -167,7 +167,7 @@ try {
                 o.id_pob,
                 CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NOT NULL THEN 1 ELSE 0 END AS dokonceno,
                 CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL THEN 1 ELSE 0 END AS na_ceste,
-                CASE WHEN ca.cas_dokonc IS NULL THEN 1 ELSE 0 END AS vyrabi_se
+                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NULL THEN 1 ELSE 0 END AS vyrabi_se
             FROM objednavky_restia o
             LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
             ' . $ordersWhereImported . '
@@ -275,7 +275,7 @@ try {
     $stmtG2->close();
 
     $g5Now = new DateTimeImmutable((string)$range['to'], new DateTimeZone('Europe/Prague'));
-    $g5CurrentWeekMonday = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $g5Now->modify('monday this week')->format('Y-m-d') . ' 08:00:00', new DateTimeZone('Europe/Prague'));
+    $g5CurrentWeekMonday = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $g5Now->modify('monday this week')->format('Y-m-d') . ' 06:00:00', new DateTimeZone('Europe/Prague'));
     if (!($g5CurrentWeekMonday instanceof DateTimeImmutable)) {
         throw new RuntimeException('Nepodarilo se pripravit aktualni tyden pro graf G5.');
     }
@@ -322,7 +322,7 @@ try {
     $stmtG5Previous->close();
 
     $g6Now = new DateTimeImmutable((string)$range['to'], new DateTimeZone('Europe/Prague'));
-    $g6CurrentMonthStart = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $g6Now->format('Y-m-01') . ' 08:00:00', new DateTimeZone('Europe/Prague'));
+    $g6CurrentMonthStart = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $g6Now->format('Y-m-01') . ' 06:00:00', new DateTimeZone('Europe/Prague'));
     if (!($g6CurrentMonthStart instanceof DateTimeImmutable)) {
         throw new RuntimeException('Nepodarilo se pripravit aktualni mesic pro graf G6.');
     }
@@ -508,7 +508,7 @@ try {
         throw new RuntimeException('Nepodarilo se pripravit graf G2 pro K19.');
     }
 
-    $g2PeriodText = 'Časový interval 8:00 až ' . $aktualizaceDoText;
+    $g2PeriodText = 'Časový interval 6:00 až ' . $aktualizaceDoText;
     $k19G2MaxTileHtml = cb_k19_render_max_chart_tile(
         'G2',
         'Porovnání dnešek vs minulý týden',
@@ -540,20 +540,20 @@ try {
     }
 
     $g5Now = new DateTimeImmutable((string)$range['to'], new DateTimeZone('Europe/Prague'));
-    $g5CurrentWeekMonday = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $g5Now->modify('monday this week')->format('Y-m-d') . ' 08:00:00', new DateTimeZone('Europe/Prague'));
+    $g5CurrentWeekMonday = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $g5Now->modify('monday this week')->format('Y-m-d') . ' 06:00:00', new DateTimeZone('Europe/Prague'));
     $g5PreviousWeekMonday = $g5CurrentWeekMonday instanceof DateTimeImmutable
         ? $g5CurrentWeekMonday->modify('-7 days')
         : null;
     $g5PreviousWeekToday = $g5Now->modify('-7 days');
     $g5PeriodText = 'Období '
         . (($g5PreviousWeekMonday instanceof DateTimeImmutable) ? $g5PreviousWeekMonday->format('j.n.Y') : '')
-        . ' 8:00 až '
+        . ' 6:00 až '
         . $g5PreviousWeekToday->format('j.n.Y')
         . ' '
         . $aktualizaceDoText
         . ' vs '
         . (($g5CurrentWeekMonday instanceof DateTimeImmutable) ? $g5CurrentWeekMonday->format('j.n.Y') : '')
-        . ' 8:00 až '
+        . ' 6:00 až '
         . $g5Now->format('j.n.Y')
         . ' '
         . $aktualizaceDoText;
@@ -589,13 +589,13 @@ try {
 
     $g6PeriodText = 'Období '
         . $g6PreviousMonthStart->format('j.n.Y')
-        . ' 8:00 až '
+        . ' 6:00 až '
         . $g6PreviousPeriodEnd->format('j.n.Y')
         . ' '
         . $aktualizaceDoText
         . ' vs '
         . $g6CurrentMonthStart->format('j.n.Y')
-        . ' 8:00 až '
+        . ' 6:00 až '
         . $g6Now->format('j.n.Y')
         . ' '
         . $aktualizaceDoText;

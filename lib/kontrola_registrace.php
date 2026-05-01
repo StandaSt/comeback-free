@@ -51,8 +51,19 @@ if ($prostredi === 'LOCAL' && $on2fa === 0) {
 
 if ($maMobil) {
     if (empty($_SESSION['login_ok']) && !empty($_SESSION['cb_auth_ok'])) {
+        $loginToken = (string)($_SESSION['cb_token'] ?? '');
         $_SESSION['login_ok'] = 1;
         unset($_SESSION['cb_auth_ok']);
+        if ($loginToken !== '') {
+            require_once __DIR__ . '/smeny_graphql.php';
+            try {
+                cb_login_finalize_after_ok($loginToken, 20);
+            } catch (Throwable $e) {
+                unset($_SESSION['login_ok']);
+                $_SESSION['cb_auth_ok'] = 1;
+                throw $e;
+            }
+        }
     }
     return;
 }

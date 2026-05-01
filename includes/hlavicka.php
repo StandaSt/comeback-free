@@ -98,31 +98,53 @@ try {
     $sysRestia = 'bad';
 }
 
-// Vychozi obdobi: dnesni pracovni den 08:00-08:00.
+// Vychozi obdobi: vcerejsi kompletni pracovni den 06:00-06:00.
 $cbNowPeriod = new DateTimeImmutable('now');
-$cbWorkingTodayDate = $cbNowPeriod;
-if ((int)$cbNowPeriod->format('G') < 8) {
-    $cbWorkingTodayDate = $cbWorkingTodayDate->modify('-1 day');
+$cbCurrentWorkdayDate = $cbNowPeriod;
+if ((int)$cbNowPeriod->format('G') < 6) {
+    $cbCurrentWorkdayDate = $cbCurrentWorkdayDate->modify('-1 day');
 }
-$cbWorkingToday = $cbWorkingTodayDate->format('Y-m-d');
-$cbWorkingEnd = $cbWorkingTodayDate->modify('+1 day')->format('Y-m-d');
-$today = $cbWorkingToday;
-$tomorrow = $cbWorkingEnd;
+$cbWorkingYesterdayDate = $cbCurrentWorkdayDate->modify('-1 day');
+$cbWorkingYesterday = $cbWorkingYesterdayDate->setTime(6, 0, 0)->format('Y-m-d H:i:s');
+$cbWorkingEnd = $cbCurrentWorkdayDate->setTime(6, 0, 0)->format('Y-m-d H:i:s');
+$cbObdobiMax = $cbNowPeriod->format('Y-m-d H:i:s');
+$today = substr($cbWorkingYesterday, 0, 10);
+$tomorrow = substr($cbWorkingEnd, 0, 10);
 
-// Jednoducha validace formatu datumu YYYY-MM-DD.
-$isDate = static function (string $v): bool {
-    if (!preg_match('~^\d{4}-\d{2}-\d{2}$~', $v)) {
-        return false;
+// Normalizace obdobi: prijima stare datum YYYY-MM-DD i nove datum+cas.
+$normalizePeriodDateTime = static function (string $v): string {
+    $v = trim(str_replace('T', ' ', $v));
+    if ($v === '') {
+        return '';
     }
-    [$y, $m, $d] = array_map('intval', explode('-', $v));
-    return checkdate($m, $d, $y);
+    if (preg_match('~^(\d{4})-(\d{2})-(\d{2})$~', $v, $m) === 1) {
+        $v = $m[1] . '-' . $m[2] . '-' . $m[3] . ' 06:00:00';
+    } elseif (preg_match('~^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$~', $v, $m) === 1) {
+        $v .= ':00';
+    }
+    if (preg_match('~^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$~', $v, $m) !== 1) {
+        return '';
+    }
+    $y = (int)$m[1];
+    $mo = (int)$m[2];
+    $d = (int)$m[3];
+    $h = (int)$m[4];
+    $mi = (int)$m[5];
+    $s = (int)$m[6];
+    if (!checkdate($mo, $d, $y) || $h > 23 || $mi > 59 || $s > 59) {
+        return '';
+    }
+    return sprintf('%04d-%02d-%02d %02d:%02d:%02d', $y, $mo, $d, $h, $mi, $s);
 };
 
 // Globalni filtr obdobi (bude platit pro KPI i karty dashboardu).
-$cbObdobiOd = $cbWorkingToday;
+$cbObdobiOd = $cbWorkingYesterday;
 $cbObdobiDo = $cbWorkingEnd;
 $cbObdobiMode = trim((string)($_SESSION['cb_obdobi_mode'] ?? 'manual'));
-if (!in_array($cbObdobiMode, ['dnes', 'tyden', 'mesic', 'rok', 'manual'], true)) {
+if ($cbObdobiMode === 'dnes') {
+    $cbObdobiMode = 'vcera';
+}
+if (!in_array($cbObdobiMode, ['vcera', 'tyden', 'mesic', 'rok', 'manual'], true)) {
     $cbObdobiMode = 'manual';
 }
 $cbNeedInitUserSetPeriod = false;
@@ -131,25 +153,32 @@ $cbUserIdForPeriod = (int)($cbUser['id_user'] ?? 0);
 if ($cbLoginOk && $cbUserIdForPeriod > 0) {
     try {
         $conn = db();
-        $stmtPeriod = $conn->prepare('SELECT obdobi_od, obdobi_do FROM user_set WHERE id_user = ? LIMIT 1');
+        $stmtPeriod = $conn->prepare('SELECT obdobi_od, obdobi_do, obdobi_mode FROM user_set WHERE id_user = ? LIMIT 1');
         if ($stmtPeriod) {
             $stmtPeriod->bind_param('i', $cbUserIdForPeriod);
             $stmtPeriod->execute();
-            $stmtPeriod->bind_result($dbObdobiOd, $dbObdobiDo);
+            $stmtPeriod->bind_result($dbObdobiOd, $dbObdobiDo, $dbObdobiMode);
 
             $hasPeriod = false;
             if ($stmtPeriod->fetch()) {
-                $tmpOd = trim((string)($dbObdobiOd ?? ''));
-                $tmpDo = trim((string)($dbObdobiDo ?? ''));
+                $tmpOd = $normalizePeriodDateTime((string)($dbObdobiOd ?? ''));
+                $tmpDo = $normalizePeriodDateTime((string)($dbObdobiDo ?? ''));
                 if (
-                    $isDate($tmpOd)
-                    && $isDate($tmpDo)
-                    && $tmpOd <= $cbWorkingToday
-                    && $tmpDo <= $cbWorkingEnd
+                    $tmpOd !== ''
+                    && $tmpDo !== ''
+                    && $tmpOd <= $cbObdobiMax
+                    && $tmpDo <= $cbObdobiMax
                     && $tmpOd <= $tmpDo
                 ) {
                     $cbObdobiOd = $tmpOd;
                     $cbObdobiDo = $tmpDo;
+                    $tmpMode = trim((string)($dbObdobiMode ?? 'manual'));
+                    if ($tmpMode === 'dnes') {
+                        $tmpMode = 'vcera';
+                    }
+                    if (in_array($tmpMode, ['vcera', 'tyden', 'mesic', 'rok', 'manual'], true)) {
+                        $cbObdobiMode = $tmpMode;
+                    }
                     $hasPeriod = true;
                 }
             }
@@ -157,31 +186,34 @@ if ($cbLoginOk && $cbUserIdForPeriod > 0) {
 
             if (!$hasPeriod) {
                 $cbNeedInitUserSetPeriod = true;
-                $cbObdobiMode = 'dnes';
+                $cbObdobiMode = 'vcera';
             }
         }
 
         if ($cbNeedInitUserSetPeriod) {
-            $stmtInitPeriod = $conn->prepare('UPDATE user_set SET obdobi_od = ?, obdobi_do = ? WHERE id_user = ?');
+            $stmtInitPeriod = $conn->prepare('UPDATE user_set SET obdobi_od = ?, obdobi_do = ?, obdobi_mode = ? WHERE id_user = ?');
             if ($stmtInitPeriod) {
-                $stmtInitPeriod->bind_param('ssi', $cbObdobiOd, $cbObdobiDo, $cbUserIdForPeriod);
+                $stmtInitPeriod->bind_param('sssi', $cbObdobiOd, $cbObdobiDo, $cbObdobiMode, $cbUserIdForPeriod);
                 $stmtInitPeriod->execute();
                 $stmtInitPeriod->close();
             }
         }
     } catch (Throwable $e) {
-        $cbObdobiOd = $cbWorkingToday;
+        $cbObdobiOd = $cbWorkingYesterday;
         $cbObdobiDo = $cbWorkingEnd;
-        $cbObdobiMode = 'dnes';
+        $cbObdobiMode = 'vcera';
     }
 } else {
-    $sessionOd = trim((string)($_SESSION['cb_obdobi_od'] ?? ''));
-    $sessionDo = trim((string)($_SESSION['cb_obdobi_do'] ?? ''));
-    if ($isDate($sessionOd) && $isDate($sessionDo) && $sessionOd <= $sessionDo) {
+    $sessionOd = $normalizePeriodDateTime((string)($_SESSION['cb_obdobi_od'] ?? ''));
+    $sessionDo = $normalizePeriodDateTime((string)($_SESSION['cb_obdobi_do'] ?? ''));
+    if ($sessionOd !== '' && $sessionDo !== '' && $sessionOd <= $cbObdobiMax && $sessionOd <= $sessionDo && $sessionDo <= $cbObdobiMax) {
         $cbObdobiOd = $sessionOd;
         $cbObdobiDo = $sessionDo;
         $sessionMode = trim((string)($_SESSION['cb_obdobi_mode'] ?? 'manual'));
-        if (in_array($sessionMode, ['dnes', 'tyden', 'mesic', 'rok', 'manual'], true)) {
+        if ($sessionMode === 'dnes') {
+            $sessionMode = 'vcera';
+        }
+        if (in_array($sessionMode, ['vcera', 'tyden', 'mesic', 'rok', 'manual'], true)) {
             $cbObdobiMode = $sessionMode;
         }
     }

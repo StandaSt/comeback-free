@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Pomocník pro volání Směny (GraphQL)
  *
  * V3:
- * - nic nezapisuje do DB
+ * - samotné volání cb_smeny_graphql nic nezapisuje do DB
  * - jen sbírá metriky do session bufferu (lib/api_smeny_log.php)
  */
 
@@ -90,6 +90,113 @@ function cb_smeny_graphql(string $url, string $query, array $vars = [], ?string 
 
         curl_close($ch);
     }
+}
+
+function cb_login_finalize_after_ok(string $token, int $timeoutMin = 20): void
+{
+    if ($token === '') {
+        throw new RuntimeException('Chybí token pro dokončení přihlášení.');
+    }
+
+    $gqlUrl = 'https://smeny.pizzacomeback.cz/graphql';
+
+    $me = cb_smeny_graphql(
+        $gqlUrl,
+        'query{
+            userGetLogged{
+                id
+                name
+                surname
+                email
+                phoneNumber
+                active
+                approved
+                createTime
+                lastLoginTime
+                roles{ id name }
+                shiftRoleTypeNames
+            }
+        }',
+        [],
+        $token
+    );
+
+    $u = $me['userGetLogged'] ?? null;
+    if (!is_array($u) || empty($u['id']) || empty($u['email'])) {
+        throw new RuntimeException('Nepodařilo se dokončit načtení profilu uživatele.');
+    }
+
+    $idUser = (int)$u['id'];
+
+    $roles = $u['roles'] ?? [];
+    if (!is_array($roles)) {
+        $roles = [];
+    }
+
+    $sloty = $u['shiftRoleTypeNames'] ?? [];
+    if (!is_array($sloty)) {
+        $sloty = [];
+    }
+
+    $br = cb_smeny_graphql(
+        $gqlUrl,
+        'query{
+            userGetLogged{
+                workingBranchNames
+                mainBranchName
+            }
+        }',
+        [],
+        $token
+    );
+
+    $brUser = $br['userGetLogged'] ?? null;
+    if (!is_array($brUser)) {
+        throw new RuntimeException('Nepodařilo se dokončit načtení poboček uživatele.');
+    }
+
+    $working = $brUser['workingBranchNames'] ?? [];
+    if (!is_array($working)) {
+        $working = [];
+    }
+
+    $mainBranchName = trim((string)($brUser['mainBranchName'] ?? ''));
+    if ($mainBranchName === '') {
+        $mainBranchName = null;
+    }
+
+    $_SESSION['cb_user'] = [
+        'id_user'   => $idUser,
+        'name'      => (string)($u['name'] ?? ''),
+        'surname'   => (string)($u['surname'] ?? ''),
+        'email'     => (string)($u['email'] ?? ''),
+        'telefon'   => (string)($u['phoneNumber'] ?? ''),
+        'active'    => (bool)($u['active'] ?? false),
+        'approved'  => (bool)($u['approved'] ?? false),
+        'roles'     => $roles,
+        'sloty'     => $sloty,
+    ];
+
+    $_SESSION['cb_user_profile'] = $u;
+    $_SESSION['cb_user_branches'] = [
+        'workingBranchNames' => $working,
+        'mainBranchName' => $mainBranchName,
+    ];
+
+    require_once __DIR__ . '/zapis_dat_txt.php';
+
+    require_once __DIR__ . '/../db/db_user_login.php';
+    cb_db_user_login();
+
+    require_once __DIR__ . '/restia_access_exist.php';
+
+    if ($timeoutMin <= 0) {
+        $timeoutMin = 20;
+    }
+
+    $_SESSION['cb_timeout_min'] = $timeoutMin;
+    $_SESSION['cb_session_start_ts'] = time();
+    $_SESSION['cb_last_activity_ts'] = time();
 }
 
 // lib/smeny_graphql.php * Verze: V3 * Aktualizace: 21.2.2026

@@ -80,6 +80,21 @@ if (($loginOk || $cbAuthOk) && $idUser > 0) {
     }
   }
 
+  function debugTxt(j){
+    var d = j && j.debug ? j.debug : null;
+    if (!d) {
+      return '';
+    }
+
+    return ' [user=' + (d.id_user || 0)
+      + ', zarizeni=' + (d.device_id || 0)
+      + ', login=' + (d.login_ok ? '1' : '0')
+      + ', auth=' + (d.cb_auth_ok ? '1' : '0')
+      + ', posun=' + (d.login_promoted ? '1' : '0')
+      + (d.reason ? ', ' + d.reason : '')
+      + ']';
+  }
+
   function doAbort(){
     fetch('<?= h(cb_url('?action=registrace_abort')) ?>', { cache: 'no-store' })
       .then(function(){ window.location.href = '<?= h(cb_url('')) ?>'; })
@@ -96,7 +111,7 @@ if (($loginOk || $cbAuthOk) && $idUser > 0) {
           return;
         }
         if (j.paired === true) {
-          setTxt('Zařízení je spárováno. Načítám IS…');
+          setTxt('Zařízení je spárováno. Načítám IS…' + debugTxt(j));
           window.location.href = '<?= h(cb_url('')) ?>';
           return;
         }
@@ -104,7 +119,7 @@ if (($loginOk || $cbAuthOk) && $idUser > 0) {
         var h = String(now.getHours()).padStart(2, '0');
         var m = String(now.getMinutes()).padStart(2, '0');
         var s = String(now.getSeconds()).padStart(2, '0');
-        setTxt('Zařízení zatím není spárováno. Zkontrolováno v ' + h + ':' + m + ':' + s + '.');
+        setTxt('Zařízení zatím není spárováno. Zkontrolováno v ' + h + ':' + m + ':' + s + '.' + debugTxt(j));
       })
       .catch(function(){
         setTxt('Chyba kontroly. Zkuste to znovu.');

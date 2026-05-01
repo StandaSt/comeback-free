@@ -11,11 +11,21 @@ if (isset($_GET['action']) && (string)$_GET['action'] === 'registrace_check') {
     $idUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
 
     if ((!$loginOk && !$cbAuthOk) || $idUser <= 0) {
-        echo json_encode(['ok' => true, 'paired' => false], JSON_UNESCAPED_UNICODE);
+        echo json_encode([
+            'ok' => true,
+            'paired' => false,
+            'debug' => [
+                'login_ok' => $loginOk,
+                'cb_auth_ok' => $cbAuthOk,
+                'id_user' => $idUser,
+                'reason' => 'missing_login_flow_session',
+            ],
+        ], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
     $paired = false;
+    $deviceId = 0;
     $stmt = db()->prepare('
         SELECT id
         FROM push_zarizeni
@@ -27,41 +37,53 @@ if (isset($_GET['action']) && (string)$_GET['action'] === 'registrace_check') {
         $stmt->execute();
         $stmt->store_result();
         $paired = ($stmt->num_rows > 0);
+        $stmt->bind_result($deviceId);
+        if ($paired) {
+            $stmt->fetch();
+            $deviceId = (int)$deviceId;
+        }
         $stmt->close();
     }
 
+    $loginPromoted = false;
     if ($paired && !$loginOk && $cbAuthOk) {
+        $loginToken = (string)($_SESSION['cb_token'] ?? '');
+        if ($loginToken === '') {
+            echo json_encode([
+                'ok' => false,
+                'err' => 'Chybí token pro dokončení přihlášení.',
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
         $_SESSION['login_ok'] = 1;
         unset($_SESSION['cb_auth_ok']);
-
+        require_once __DIR__ . '/smeny_graphql.php';
         try {
-            $today = (new DateTimeImmutable('today'))->format('Y-m-d');
-            $yesterday = (new DateTimeImmutable('yesterday'))->format('Y-m-d');
-
-            $stmtInitUserSet = db()->prepare('
-                INSERT INTO user_set (id_user, pocet_sl, obdobi_od, obdobi_do)
-                SELECT ?, 3, ?, ?
-                FROM DUAL
-                WHERE NOT EXISTS (
-                    SELECT 1 FROM user_set WHERE id_user = ?
-                )
-            ');
-            if ($stmtInitUserSet) {
-                $stmtInitUserSet->bind_param('issi', $idUser, $yesterday, $today, $idUser);
-                $stmtInitUserSet->execute();
-                $inserted = ($stmtInitUserSet->affected_rows > 0);
-                $stmtInitUserSet->close();
-                if ($inserted) {
-                    $_SESSION['cb_obdobi_od'] = $yesterday;
-                    $_SESSION['cb_obdobi_do'] = $today;
-                }
-            }
+            cb_login_finalize_after_ok($loginToken, 20);
         } catch (Throwable $e) {
-            // Pri chybe nezastavuj registraci.
+            unset($_SESSION['login_ok']);
+            $_SESSION['cb_auth_ok'] = 1;
+            echo json_encode([
+                'ok' => false,
+                'err' => $e->getMessage(),
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
         }
+        $loginPromoted = true;
     }
 
-    echo json_encode(['ok' => true, 'paired' => $paired], JSON_UNESCAPED_UNICODE);
+    echo json_encode([
+        'ok' => true,
+        'paired' => $paired,
+        'debug' => [
+            'login_ok' => !empty($_SESSION['login_ok']),
+            'cb_auth_ok' => !empty($_SESSION['cb_auth_ok']),
+            'id_user' => $idUser,
+            'device_id' => $deviceId,
+            'login_promoted' => $loginPromoted,
+        ],
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 

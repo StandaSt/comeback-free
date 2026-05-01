@@ -10,34 +10,39 @@ $time_count = 1;
 require_once __DIR__ . '/lib/app.php';
 require_once __DIR__ . '/lib/system.php';
 require_once __DIR__ . '/config/secrets.php';
-require_once __DIR__ . '/lib/pobocky_vyber.php';
-require_once __DIR__ . '/lib/card_json_response.php';
-require_once __DIR__ . '/lib/handle_set_period.php';
-require_once __DIR__ . '/lib/handle_set_card_mode.php';
-require_once __DIR__ . '/lib/handle_unlock_all_card_pos.php';
-require_once __DIR__ . '/lib/handle_set_card_position.php';
 require_once __DIR__ . '/lib/post_prg_redirect.php';
 require_once __DIR__ . '/lib/asset_url.php';
 
 $cbTitle = 'Comeback - IS';
 $cbFavicon = cb_url('img/favicon_comeback.png');
 
-cb_pobocky_bootstrap_session();
-
 $cbLoginOk = !empty($_SESSION['login_ok']);
 $cbAuthOk = !empty($_SESSION['cb_auth_ok']);
-$cbHasLoginFlowAccess = ($cbLoginOk || $cbAuthOk);
+$cb2faPending = !empty($_SESSION['cb_2fa_token']);
 $cbIsPartialRequest = isset($_SERVER['HTTP_X_COMEBACK_PARTIAL']);
 $cbIsCardRequest = isset($_SERVER['HTTP_X_COMEBACK_CARD']);
 $cbIsMaxFormRequest = isset($_SERVER['HTTP_X_COMEBACK_MAX_FORM']);
 
+if ($cbLoginOk) {
+    require_once __DIR__ . '/lib/pobocky_vyber.php';
+    require_once __DIR__ . '/lib/card_json_response.php';
+    require_once __DIR__ . '/lib/handle_set_period.php';
+    require_once __DIR__ . '/lib/handle_set_card_mode.php';
+    require_once __DIR__ . '/lib/handle_unlock_all_card_pos.php';
+    require_once __DIR__ . '/lib/handle_set_card_position.php';
+
+    cb_pobocky_bootstrap_session();
+}
+
 require_once __DIR__ . '/lib/detektuj_neplatnou_url.php';
 require_once __DIR__ . '/lib/logout_handler.php';
 require_once __DIR__ . '/lib/json_registrace.php';
-if ($cbHasLoginFlowAccess && !$cbIsPartialRequest && !$cbIsCardRequest && !$cbIsMaxFormRequest) {
+if ($cbLoginOk && !$cbIsPartialRequest && !$cbIsCardRequest && !$cbIsMaxFormRequest) {
     require_once __DIR__ . '/lib/restia_online_kontrola.php';
 }
-require_once __DIR__ . '/lib/post_akce.php';
+if ($cbLoginOk) {
+    require_once __DIR__ . '/lib/post_akce.php';
+}
 
 $pageKey = 'dashboard';
 $file = __DIR__ . '/includes/dashboard.php';
@@ -72,7 +77,12 @@ if ($cbShowStartupLoader) {
 
 require_once __DIR__ . '/includes/log_a_404.php';
 
-require_once __DIR__ . '/lib/request_dispatch.php';
+if ($cbLoginOk) {
+    require_once __DIR__ . '/lib/request_dispatch.php';
+} elseif ($cbIsPartialRequest || $cbIsCardRequest || $cbIsMaxFormRequest) {
+    http_response_code(401);
+    exit;
+}
 ?>
 <!doctype html>
 <html lang="cs">
@@ -96,7 +106,7 @@ require_once __DIR__ . '/lib/request_dispatch.php';
 <div class="container bg_modra displ_flex sirka100">
 <?php
 
-if ($cbHasLoginFlowAccess) {
+if ($cbLoginOk) {
     require_once __DIR__ . '/includes/hlavicka.php';
     require_once __DIR__ . '/modaly/modal_overeni.php';
     require_once __DIR__ . '/lib/kontrola_registrace.php';
@@ -106,6 +116,10 @@ if ($cbHasLoginFlowAccess) {
 
     require_once __DIR__ . '/includes/main.php';
     require_once __DIR__ . '/includes/paticka.php';
+} elseif ($cb2faPending) {
+    require_once __DIR__ . '/modaly/modal_overeni.php';
+} elseif ($cbAuthOk) {
+    require_once __DIR__ . '/lib/kontrola_registrace.php';
 } else {
     require_once __DIR__ . '/modaly/modal_login.php';
 }
@@ -114,7 +128,7 @@ if ($cbHasLoginFlowAccess) {
 </div>
 
 
-<?php if ($cbHasLoginFlowAccess): ?>
+<?php if ($cbLoginOk): ?>
 <script src="<?= h(cb_asset_url('js/echarts.min.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/ajax_core.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/ajax_karta_max.js')) ?>"></script>

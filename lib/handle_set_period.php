@@ -32,24 +32,45 @@ if (
         exit;
     }
 
-    $isDate = static function (string $v): bool {
-        if (!preg_match('~^\d{4}-\d{2}-\d{2}$~', $v)) {
-            return false;
+    $normalizePeriodDateTime = static function (string $v): string {
+        $v = trim(str_replace('T', ' ', $v));
+        if ($v === '') {
+            return '';
         }
-        [$y, $m, $d] = array_map('intval', explode('-', $v));
-        return checkdate($m, $d, $y);
+        if (preg_match('~^(\d{4})-(\d{2})-(\d{2})$~', $v, $m) === 1) {
+            $v = $m[1] . '-' . $m[2] . '-' . $m[3] . ' 06:00:00';
+        } elseif (preg_match('~^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$~', $v) === 1) {
+            $v .= ':00';
+        }
+        if (preg_match('~^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$~', $v, $m) !== 1) {
+            return '';
+        }
+        $y = (int)$m[1];
+        $mo = (int)$m[2];
+        $d = (int)$m[3];
+        $h = (int)$m[4];
+        $mi = (int)$m[5];
+        $s = (int)$m[6];
+        if (!checkdate($mo, $d, $y) || $h > 23 || $mi > 59 || $s > 59) {
+            return '';
+        }
+        return sprintf('%04d-%02d-%02d %02d:%02d:%02d', $y, $mo, $d, $h, $mi, $s);
     };
 
     $cbNowPeriod = new DateTimeImmutable('now');
-    $cbWorkingTodayDate = $cbNowPeriod;
-    if ((int)$cbNowPeriod->format('G') < 8) {
-        $cbWorkingTodayDate = $cbWorkingTodayDate->modify('-1 day');
+    $cbCurrentWorkdayDate = $cbNowPeriod;
+    if ((int)$cbNowPeriod->format('G') < 6) {
+        $cbCurrentWorkdayDate = $cbCurrentWorkdayDate->modify('-1 day');
     }
-    $today = $cbWorkingTodayDate->format('Y-m-d');
-    $maxDo = $cbWorkingTodayDate->modify('+1 day')->format('Y-m-d');
+    $today = $cbCurrentWorkdayDate->modify('-1 day')->setTime(6, 0, 0)->format('Y-m-d H:i:s');
+    $defaultDo = $cbCurrentWorkdayDate->setTime(6, 0, 0)->format('Y-m-d H:i:s');
+    $maxDo = $cbNowPeriod->format('Y-m-d H:i:s');
 
-    $allowedModes = ['dnes', 'tyden', 'mesic', 'rok', 'manual'];
+    $allowedModes = ['vcera', 'tyden', 'mesic', 'rok', 'manual'];
     $newMode = trim((string)($data['mode'] ?? 'manual'));
+    if ($newMode === 'dnes') {
+        $newMode = 'vcera';
+    }
     if (!in_array($newMode, $allowedModes, true)) {
         $newMode = 'manual';
     }
@@ -72,19 +93,25 @@ if (
             exit;
         }
 
-        $currentOd = trim((string)($dbOd ?? ''));
-        $currentDo = trim((string)($dbDo ?? ''));
+        $currentOd = $normalizePeriodDateTime((string)($dbOd ?? ''));
+        $currentDo = $normalizePeriodDateTime((string)($dbDo ?? ''));
 
-        if (!$isDate($currentOd)) {
-            $currentOd = (string)($_SESSION['cb_obdobi_od'] ?? '');
+        if ($currentOd === '') {
+            $currentOd = $normalizePeriodDateTime((string)($_SESSION['cb_obdobi_od'] ?? ''));
         }
-        if (!$isDate($currentDo)) {
-            $currentDo = (string)($_SESSION['cb_obdobi_do'] ?? '');
+        if ($currentDo === '') {
+            $currentDo = $normalizePeriodDateTime((string)($_SESSION['cb_obdobi_do'] ?? ''));
         }
-        if (!$isDate($currentOd)) {
+        if ($currentOd === '') {
             $currentOd = $today;
         }
-        if (!$isDate($currentDo)) {
+        if ($currentDo === '') {
+            $currentDo = $defaultDo;
+        }
+        if ($currentOd > $maxDo) {
+            $currentOd = $maxDo;
+        }
+        if ($currentDo > $maxDo) {
             $currentDo = $maxDo;
         }
 
@@ -92,20 +119,20 @@ if (
         $newDo = $currentDo;
 
         if ($hasOd) {
-            $newOd = trim((string)($data['od'] ?? ''));
-            if (!$isDate($newOd)) {
+            $newOd = $normalizePeriodDateTime((string)($data['od'] ?? ''));
+            if ($newOd === '') {
                 http_response_code(422);
                 echo json_encode(['ok' => false, 'err' => 'Neplatne od'], JSON_UNESCAPED_UNICODE);
                 exit;
             }
-            if ($newOd > $today) {
-                $newOd = $today;
+            if ($newOd > $maxDo) {
+                $newOd = $maxDo;
             }
         }
 
         if ($hasDo) {
-            $newDo = trim((string)($data['do'] ?? ''));
-            if (!$isDate($newDo)) {
+            $newDo = $normalizePeriodDateTime((string)($data['do'] ?? ''));
+            if ($newDo === '') {
                 http_response_code(422);
                 echo json_encode(['ok' => false, 'err' => 'Neplatne do'], JSON_UNESCAPED_UNICODE);
                 exit;
@@ -122,27 +149,27 @@ if (
         }
 
         if ($hasOd && $hasDo) {
-            $stmtUpd = $conn->prepare('UPDATE user_set SET obdobi_od = ?, obdobi_do = ? WHERE id_user = ?');
+            $stmtUpd = $conn->prepare('UPDATE user_set SET obdobi_od = ?, obdobi_do = ?, obdobi_mode = ? WHERE id_user = ?');
             if (!$stmtUpd) {
                 throw new RuntimeException('prepare update failed');
             }
-            $stmtUpd->bind_param('ssi', $newOd, $newDo, $idUser);
+            $stmtUpd->bind_param('sssi', $newOd, $newDo, $newMode, $idUser);
             $stmtUpd->execute();
             $stmtUpd->close();
         } elseif ($hasOd) {
-            $stmtUpd = $conn->prepare('UPDATE user_set SET obdobi_od = ? WHERE id_user = ?');
+            $stmtUpd = $conn->prepare('UPDATE user_set SET obdobi_od = ?, obdobi_mode = ? WHERE id_user = ?');
             if (!$stmtUpd) {
                 throw new RuntimeException('prepare update od failed');
             }
-            $stmtUpd->bind_param('si', $newOd, $idUser);
+            $stmtUpd->bind_param('ssi', $newOd, $newMode, $idUser);
             $stmtUpd->execute();
             $stmtUpd->close();
         } else {
-            $stmtUpd = $conn->prepare('UPDATE user_set SET obdobi_do = ? WHERE id_user = ?');
+            $stmtUpd = $conn->prepare('UPDATE user_set SET obdobi_do = ?, obdobi_mode = ? WHERE id_user = ?');
             if (!$stmtUpd) {
                 throw new RuntimeException('prepare update do failed');
             }
-            $stmtUpd->bind_param('si', $newDo, $idUser);
+            $stmtUpd->bind_param('ssi', $newDo, $newMode, $idUser);
             $stmtUpd->execute();
             $stmtUpd->close();
         }

@@ -11,7 +11,7 @@ if (!function_exists('cb_emit_card_json_response')) {
 
         $cbUser = $_SESSION['cb_user'] ?? null;
         $idUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
-        if ($idUser <= 0) {
+        if ($idUser <= 0 || empty($_SESSION['login_ok'])) {
             http_response_code(401);
             echo json_encode(['ok' => false, 'err' => 'Nutne prihlaseni'], JSON_UNESCAPED_UNICODE);
             exit;

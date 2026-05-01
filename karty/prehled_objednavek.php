@@ -37,10 +37,17 @@ $periodOd = trim((string)($_SESSION['cb_obdobi_od'] ?? ''));
 $periodDo = trim((string)($_SESSION['cb_obdobi_do'] ?? ''));
 
 if ($periodOd === '' || $periodDo === '') {
-    $today = (new DateTimeImmutable('today'))->format('Y-m-d');
+    $today = (new DateTimeImmutable('today'))->setTime(6, 0, 0)->format('Y-m-d H:i:s');
     $periodOd = $periodOd !== '' ? $periodOd : $today;
     $periodDo = $periodDo !== '' ? $periodDo : $today;
 }
+
+$periodOdDt = new DateTimeImmutable($periodOd);
+$periodDoDt = new DateTimeImmutable($periodDo);
+$periodOdSql = $periodOdDt->format('Y-m-d H:i:s');
+$periodDoSql = $periodDoDt->format('Y-m-d H:i:s');
+$periodReportOd = $periodOdDt->format('Y-m-d');
+$periodReportDo = $periodDoDt->modify('-1 second')->format('Y-m-d');
 
 $selectedPob = function_exists('get_selected_pobocky') ? get_selected_pobocky() : [];
 $selectedPob = array_values(array_filter(array_map('intval', $selectedPob), static fn(int $v): bool => $v > 0));
@@ -55,11 +62,12 @@ if ($selectedPob === []) {
 if (!function_exists('obj_format_cz_date')) {
     function obj_format_cz_date(string $ymd): string
     {
-        $dt = DateTimeImmutable::createFromFormat('Y-m-d', $ymd);
-        if (!$dt) {
+        try {
+            $dt = new DateTimeImmutable($ymd);
+        } catch (Throwable $e) {
             return $ymd;
         }
-        return $dt->format('j.n.Y');
+        return $dt->format('j.n.Y H:i');
     }
 }
 
@@ -157,10 +165,6 @@ if (($cbDashboardRenderMode ?? '') === 'mini') {
     $cbDbMini->set_charset('utf8mb4');
 
     $pocetObjMini = 0;
-    $periodOdDt = DateTimeImmutable::createFromFormat('Y-m-d', $periodOd) ?: new DateTimeImmutable($periodOd);
-    $periodDoDt = DateTimeImmutable::createFromFormat('Y-m-d', $periodDo) ?: new DateTimeImmutable($periodDo);
-    $periodOdSql = $periodOdDt->format('Y-m-d 00:00:00');
-    $periodDoNextSql = $periodDoDt->modify('+1 day')->format('Y-m-d 00:00:00');
 
     $pobWhereMini = '';
     if ($selectedPob !== []) {
@@ -177,8 +181,31 @@ if (($cbDashboardRenderMode ?? '') === 'mini') {
             SELECT o.id_obj
             FROM obj_casy ca
             INNER JOIN objednavky_restia o ON o.id_obj = ca.id_obj
-            WHERE ca.report >= ' . "'" . $cbDbMini->real_escape_string($periodOd) . "'" . '
-              AND ca.report <= ' . "'" . $cbDbMini->real_escape_string($periodDo) . "'" . '
+            WHERE ca.cas_vytvor IS NOT NULL
+              AND ca.cas_vytvor >= ' . "'" . $cbDbMini->real_escape_string($periodOdSql) . "'" . '
+              AND ca.cas_vytvor < ' . "'" . $cbDbMini->real_escape_string($periodDoSql) . "'" . '
+              ' . $pobWhereMini . '
+
+            UNION ALL
+
+            SELECT o.id_obj
+            FROM objednavky_restia o
+            LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
+            WHERE ca.cas_vytvor IS NULL
+              AND o.restia_created_at IS NOT NULL
+              AND o.restia_created_at >= ' . "'" . $cbDbMini->real_escape_string($periodOdSql) . "'" . '
+              AND o.restia_created_at < ' . "'" . $cbDbMini->real_escape_string($periodDoSql) . "'" . '
+              ' . $pobWhereMini . '
+
+            UNION ALL
+
+            SELECT o.id_obj
+            FROM objednavky_restia o
+            LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
+            WHERE ca.cas_vytvor IS NULL
+              AND o.restia_created_at IS NULL
+              AND o.restia_imported_at >= ' . "'" . $cbDbMini->real_escape_string($periodOdSql) . "'" . '
+              AND o.restia_imported_at < ' . "'" . $cbDbMini->real_escape_string($periodDoSql) . "'" . '
               ' . $pobWhereMini . '
 
             UNION ALL
@@ -186,32 +213,12 @@ if (($cbDashboardRenderMode ?? '') === 'mini') {
             SELECT o.id_obj
             FROM obj_casy ca
             INNER JOIN objednavky_restia o ON o.id_obj = ca.id_obj
-            WHERE ca.report IS NULL
-              AND ca.cas_vytvor >= ' . "'" . $cbDbMini->real_escape_string($periodOdSql) . "'" . '
-              AND ca.cas_vytvor < ' . "'" . $cbDbMini->real_escape_string($periodDoNextSql) . "'" . '
-              ' . $pobWhereMini . '
-
-            UNION ALL
-
-            SELECT o.id_obj
-            FROM objednavky_restia o
-            LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
-            WHERE ca.report IS NULL
-              AND ca.cas_vytvor IS NULL
-              AND o.restia_created_at >= ' . "'" . $cbDbMini->real_escape_string($periodOdSql) . "'" . '
-              AND o.restia_created_at < ' . "'" . $cbDbMini->real_escape_string($periodDoNextSql) . "'" . '
-              ' . $pobWhereMini . '
-
-            UNION ALL
-
-            SELECT o.id_obj
-            FROM objednavky_restia o
-            LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
-            WHERE ca.report IS NULL
-              AND ca.cas_vytvor IS NULL
+            WHERE ca.cas_vytvor IS NULL
               AND o.restia_created_at IS NULL
-              AND o.restia_imported_at >= ' . "'" . $cbDbMini->real_escape_string($periodOdSql) . "'" . '
-              AND o.restia_imported_at < ' . "'" . $cbDbMini->real_escape_string($periodDoNextSql) . "'" . '
+              AND o.restia_imported_at IS NULL
+              AND ca.report IS NOT NULL
+              AND ca.report >= ' . "'" . $cbDbMini->real_escape_string($periodReportOd) . "'" . '
+              AND ca.report <= ' . "'" . $cbDbMini->real_escape_string($periodReportDo) . "'" . '
               ' . $pobWhereMini . '
         ) AS mini_objednavky
     ');
@@ -285,9 +292,55 @@ try {
     $conn->set_charset('utf8mb4');
 
     $where = [];
+    $safePeriodOdSql = $conn->real_escape_string($periodOdSql);
+    $safePeriodDoSql = $conn->real_escape_string($periodDoSql);
+    $safePeriodReportOd = $conn->real_escape_string($periodReportOd);
+    $safePeriodReportDo = $conn->real_escape_string($periodReportDo);
+    $periodIdsSql = '
+        SELECT ca.id_obj
+        FROM obj_casy ca
+        WHERE ca.cas_vytvor IS NOT NULL
+          AND ca.cas_vytvor >= "' . $safePeriodOdSql . '"
+          AND ca.cas_vytvor < "' . $safePeriodDoSql . '"
 
-    $where[] = "COALESCE(ca.report, DATE(COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at))) >= '" . $conn->real_escape_string($periodOd) . "'";
-    $where[] = "COALESCE(ca.report, DATE(COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at))) <= '" . $conn->real_escape_string($periodDo) . "'";
+        UNION ALL
+
+        SELECT o2.id_obj
+        FROM objednavky_restia o2
+        LEFT JOIN obj_casy ca2 ON ca2.id_obj = o2.id_obj
+        WHERE ca2.cas_vytvor IS NULL
+          AND o2.restia_created_at IS NOT NULL
+          AND o2.restia_created_at >= "' . $safePeriodOdSql . '"
+          AND o2.restia_created_at < "' . $safePeriodDoSql . '"
+
+        UNION ALL
+
+        SELECT o3.id_obj
+        FROM objednavky_restia o3
+        LEFT JOIN obj_casy ca3 ON ca3.id_obj = o3.id_obj
+        WHERE ca3.cas_vytvor IS NULL
+          AND o3.restia_created_at IS NULL
+          AND o3.restia_imported_at >= "' . $safePeriodOdSql . '"
+          AND o3.restia_imported_at < "' . $safePeriodDoSql . '"
+
+        UNION ALL
+
+        SELECT ca4.id_obj
+        FROM obj_casy ca4
+        INNER JOIN objednavky_restia o4 ON o4.id_obj = ca4.id_obj
+        WHERE ca4.cas_vytvor IS NULL
+          AND o4.restia_created_at IS NULL
+          AND o4.restia_imported_at IS NULL
+          AND ca4.report IS NOT NULL
+          AND ca4.report >= "' . $safePeriodReportOd . '"
+          AND ca4.report <= "' . $safePeriodReportDo . '"
+    ';
+    $periodJoinSql = '
+        INNER JOIN (
+            SELECT DISTINCT period_raw.id_obj
+            FROM (' . $periodIdsSql . ') period_raw
+        ) period_ids ON period_ids.id_obj = o.id_obj
+    ';
 
     if ($selectedPob !== []) {
         $inIds = [];
@@ -324,6 +377,7 @@ try {
     $countSql = '
         SELECT COUNT(*) AS cnt
         FROM objednavky_restia o
+        ' . $periodJoinSql . '
         LEFT JOIN cis_obj_stav s ON s.id_stav = o.id_stav
         LEFT JOIN cis_doruceni d ON d.id_doruceni = o.id_doruceni
         LEFT JOIN cis_obj_platby p ON p.id_platba = o.id_platba
@@ -394,6 +448,7 @@ try {
             TRIM(CONCAT(COALESCE(z.jmeno, ""), " ", COALESCE(z.prijmeni, ""))) AS zakaznik,
             COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at) AS vytvoreno
         FROM objednavky_restia o
+        ' . $periodJoinSql . '
         LEFT JOIN cis_obj_stav s ON s.id_stav = o.id_stav
         LEFT JOIN cis_doruceni d ON d.id_doruceni = o.id_doruceni
         LEFT JOIN cis_obj_platby p ON p.id_platba = o.id_platba

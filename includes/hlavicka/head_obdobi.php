@@ -1,14 +1,26 @@
 <?php
 // includes/hlavicka/head_obdobi.php * Verze: V5 * Aktualizace: 27.04.2026
+$cbObdobiOdInput = '';
+$cbObdobiDoInput = '';
+try {
+    $cbObdobiOdInput = (new DateTimeImmutable((string)$cbObdobiOd))->format('Y-m-d\TH:i');
+} catch (Throwable $e) {
+    $cbObdobiOdInput = '';
+}
+try {
+    $cbObdobiDoInput = (new DateTimeImmutable((string)$cbObdobiDo))->format('Y-m-d\TH:i');
+} catch (Throwable $e) {
+    $cbObdobiDoInput = '';
+}
 ?>
 <div class="head_interval ram_hlavicka zaobleni_10 gap_4 displ_flex flex_sloupec jc_stred" aria-label="Období">
   <div class="head_int_row displ_grid">
     <label class="head_date text_11 gap_6 displ_flex">
       <span>Od</span>
-      <input class="text_11 zaobleni_8 ram_ovladace" type="date" id="cbObdobiOd" value="<?= h($cbObdobiOd) ?>">
+      <input class="text_11 zaobleni_8 ram_ovladace" type="datetime-local" id="cbObdobiOd" value="<?= h($cbObdobiOdInput) ?>">
     </label>
     <div class="head_quick gap_4 displ_flex jc_konec">
-      <button type="button" class="head_pill txt_c cursor_ruka ram_ovladace bg_bila zaobleni_8 text_11" data-range="dnes">Dnes</button>
+      <button type="button" class="head_pill txt_c cursor_ruka ram_ovladace bg_bila zaobleni_8 text_11" data-range="vcera">Včera</button>
       <button type="button" class="head_pill txt_c cursor_ruka ram_ovladace bg_bila zaobleni_8 text_11" data-range="tyden">Týden</button>
     </div>
   </div>
@@ -16,7 +28,7 @@
   <div class="head_int_row displ_grid">
     <label class="head_date text_11 gap_6 displ_flex">
       <span>Do</span>
-      <input class="text_11 zaobleni_8 ram_ovladace" type="date" id="cbObdobiDo" value="<?= h($cbObdobiDo) ?>">
+      <input class="text_11 zaobleni_8 ram_ovladace" type="datetime-local" id="cbObdobiDo" value="<?= h($cbObdobiDoInput) ?>">
     </label>
     <div class="head_quick gap_4 displ_flex jc_konec">
       <button type="button" class="head_pill txt_c cursor_ruka ram_ovladace bg_bila zaobleni_8 text_11" data-range="mesic">Měsíc</button>
@@ -38,56 +50,81 @@
     return;
   }
   var isSaving = false;
-  var allowedModes = ['dnes', 'tyden', 'mesic', 'rok', 'manual'];
+  var allowedModes = ['vcera', 'tyden', 'mesic', 'rok', 'manual'];
+  if (activeMode === 'dnes') {
+    activeMode = 'vcera';
+  }
 
   if (allowedModes.indexOf(activeMode) === -1) {
     activeMode = 'manual';
   }
 
-  function fmtDate(dt){
+  function fmtDateTime(dt){
     var y = dt.getFullYear();
     var m = String(dt.getMonth() + 1).padStart(2, '0');
     var d = String(dt.getDate()).padStart(2, '0');
-    return y + '-' + m + '-' + d;
+    var h = String(dt.getHours()).padStart(2, '0');
+    var mi = String(dt.getMinutes()).padStart(2, '0');
+    return y + '-' + m + '-' + d + 'T' + h + ':' + mi;
   }
 
-  function parseDate(v){
+  function parseDateTime(v){
     var s = String(v || '').trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
-    var parts = s.split('-');
-    var y = Number(parts[0]);
-    var m = Number(parts[1]);
-    var d = Number(parts[2]);
-    var dt = new Date(y, m - 1, d);
-    if (dt.getFullYear() !== y || (dt.getMonth() + 1) !== m || dt.getDate() !== d) {
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(s)) return null;
+    var parts = s.split('T');
+    var dateParts = parts[0].split('-');
+    var timeParts = parts[1].split(':');
+    var y = Number(dateParts[0]);
+    var m = Number(dateParts[1]);
+    var d = Number(dateParts[2]);
+    var h = Number(timeParts[0]);
+    var mi = Number(timeParts[1]);
+    var dt = new Date(y, m - 1, d, h, mi, 0, 0);
+    if (
+      dt.getFullYear() !== y
+      || (dt.getMonth() + 1) !== m
+      || dt.getDate() !== d
+      || dt.getHours() !== h
+      || dt.getMinutes() !== mi
+    ) {
       return null;
     }
-    dt.setHours(0, 0, 0, 0);
     return dt;
   }
 
-  function getWorkingToday(){
+  function getCurrentWorkingDayStart(){
     var now = new Date();
-    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    if (now.getHours() < 8) {
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 6, 0, 0, 0);
+    if (now.getHours() < 6) {
       today.setDate(today.getDate() - 1);
     }
     return today;
   }
 
-  function getWorkingEnd(){
-    var end = new Date(getWorkingToday());
-    end.setDate(end.getDate() + 1);
+  function getFinishedWorkingDayStart(){
+    var start = new Date(getCurrentWorkingDayStart());
+    start.setDate(start.getDate() - 1);
+    return start;
+  }
+
+  function getFinishedWorkingDayEnd(){
+    var end = new Date(getCurrentWorkingDayStart());
     return end;
   }
 
+  function getNowMax(){
+    var now = new Date();
+    now.setSeconds(0, 0);
+    return now;
+  }
+
   function clampToMax(v, maxDate){
-    var dt = parseDate(v);
+    var dt = parseDateTime(v);
     if (!dt) return '';
     if (dt.getTime() > maxDate.getTime()) {
       dt = new Date(maxDate);
     }
-    return fmtDate(dt);
+    return fmtDateTime(dt);
   }
 
   function setActive(mode){
@@ -130,33 +167,35 @@
   }
 
   function computeRange(range){
-    var workingToday = getWorkingToday();
-    var from = new Date(workingToday);
-    var to = getWorkingEnd();
+    var finishedDayStart = getFinishedWorkingDayStart();
+    var finishedDayEnd = getFinishedWorkingDayEnd();
+    var from = new Date(finishedDayStart);
+    var to = new Date(finishedDayEnd);
 
-    if (range === 'dnes') {
-      return { od: fmtDate(from), do: fmtDate(to) };
+    if (range === 'vcera') {
+      return { od: fmtDateTime(from), do: fmtDateTime(to) };
     }
 
     if (range === 'tyden') {
-      var day = workingToday.getDay();
+      var day = finishedDayStart.getDay();
       var mondayShift = (day === 0 ? -6 : 1 - day);
-      from.setDate(workingToday.getDate() + mondayShift);
-      return { od: fmtDate(from), do: fmtDate(to) };
+      from.setDate(finishedDayStart.getDate() + mondayShift);
+      from.setHours(6, 0, 0, 0);
+      return { od: fmtDateTime(from), do: fmtDateTime(to) };
     }
 
     if (range === 'mesic') {
-      from = new Date(workingToday.getFullYear(), workingToday.getMonth(), 1);
-      return { od: fmtDate(from), do: fmtDate(to) };
+      from = new Date(finishedDayStart.getFullYear(), finishedDayStart.getMonth(), 1, 6, 0, 0, 0);
+      return { od: fmtDateTime(from), do: fmtDateTime(to) };
     }
 
-    from = new Date(workingToday.getFullYear(), 0, 1);
-    return { od: fmtDate(from), do: fmtDate(to) };
+    from = new Date(finishedDayStart.getFullYear(), 0, 1, 6, 0, 0, 0);
+    return { od: fmtDateTime(from), do: fmtDateTime(to) };
   }
 
   quickBtns.forEach(function(btn){
     btn.addEventListener('click', function(){
-      var range = btn.getAttribute('data-range') || 'dnes';
+      var range = btn.getAttribute('data-range') || 'vcera';
       var val = computeRange(range);
 
       odInput.value = val.od;
@@ -167,12 +206,13 @@
     });
   });
 
-  odInput.max = fmtDate(getWorkingToday());
-  doInput.max = fmtDate(getWorkingEnd());
+  odInput.max = fmtDateTime(getNowMax());
+  doInput.max = fmtDateTime(getNowMax());
 
   odInput.addEventListener('change', function(){
-    var od = clampToMax(odInput.value, getWorkingToday());
-    var ddo = clampToMax(doInput.value, getWorkingEnd());
+    var maxDate = getNowMax();
+    var od = clampToMax(odInput.value, maxDate);
+    var ddo = clampToMax(doInput.value, maxDate);
     if (!od || !ddo) return;
     if (od > ddo) {
       od = ddo;
@@ -185,8 +225,9 @@
   });
 
   doInput.addEventListener('change', function(){
-    var od = clampToMax(odInput.value, getWorkingToday());
-    var ddo = clampToMax(doInput.value, getWorkingEnd());
+    var maxDate = getNowMax();
+    var od = clampToMax(odInput.value, maxDate);
+    var ddo = clampToMax(doInput.value, maxDate);
     if (!od || !ddo) return;
     if (ddo < od) {
       ddo = od;

@@ -21,6 +21,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 require_once __DIR__ . '/app.php';
 require_once __DIR__ . '/system.php';
 require_once __DIR__ . '/../config/secrets.php';
+require_once __DIR__ . '/smeny_graphql.php';
 header('Content-Type: application/json; charset=utf-8');
 
 function cb_2fa_cleanup_session(): void
@@ -125,9 +126,22 @@ try {
     }
 
     if ($stav === 'ok') {
+        $loginToken = (string)($_SESSION['cb_token'] ?? '');
+        if ($loginToken === '') {
+            cb_2fa_cleanup_session();
+            echo json_encode(['ok' => true, 'stav' => 'exp'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
         // login_ok vzniká až tady
         $_SESSION['login_ok'] = 1;
         unset($_SESSION['cb_2fa_token']);
+        try {
+            cb_login_finalize_after_ok($loginToken, 20);
+        } catch (Throwable $e) {
+            cb_2fa_cleanup_session();
+            throw $e;
+        }
         $_SESSION['cb_initial_loader_text'] = 'Inicializace systému ...';
 
         $_SESSION['cb_flash'] = 'Přihlášení OK';

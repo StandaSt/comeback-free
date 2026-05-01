@@ -122,8 +122,13 @@ function cb_db_ensure_user_set(mysqli $conn, int $idUser): void
         throw new RuntimeException('Neplatne id_user pro user_set.');
     }
 
-    $today = (new DateTimeImmutable('today'))->format('Y-m-d');
-    $yesterday = (new DateTimeImmutable('yesterday'))->format('Y-m-d');
+    $now = new DateTimeImmutable('now');
+    $currentWorkdayDate = $now;
+    if ((int)$now->format('G') < 6) {
+        $currentWorkdayDate = $currentWorkdayDate->modify('-1 day');
+    }
+    $today = $currentWorkdayDate->setTime(6, 0, 0)->format('Y-m-d H:i:s');
+    $yesterday = $currentWorkdayDate->modify('-1 day')->setTime(6, 0, 0)->format('Y-m-d H:i:s');
 
     $pocetSl = 4;
     $nanoKde = 1;
@@ -131,8 +136,8 @@ function cb_db_ensure_user_set(mysqli $conn, int $idUser): void
     $dark = 0;
 
     $stmt = $conn->prepare(
-        'INSERT INTO user_set (id_user, pocet_sl, nano_kde, pismo, dark, obdobi_od, obdobi_do)
-         SELECT ?, ?, ?, ?, ?, ?, ?
+        'INSERT INTO user_set (id_user, pocet_sl, nano_kde, pismo, dark, obdobi_od, obdobi_do, obdobi_mode)
+         SELECT ?, ?, ?, ?, ?, ?, ?, ?
          FROM DUAL
          WHERE NOT EXISTS (
              SELECT 1 FROM user_set WHERE id_user = ?
@@ -142,7 +147,8 @@ function cb_db_ensure_user_set(mysqli $conn, int $idUser): void
         throw new RuntimeException('Nepodarilo se pripravit insert user_set.');
     }
 
-    $stmt->bind_param('iiiiissi', $idUser, $pocetSl, $nanoKde, $pismo, $dark, $yesterday, $today, $idUser);
+    $obdobiMode = 'vcera';
+    $stmt->bind_param('iiiiisssi', $idUser, $pocetSl, $nanoKde, $pismo, $dark, $yesterday, $today, $obdobiMode, $idUser);
     $stmt->execute();
     $stmt->close();
 }

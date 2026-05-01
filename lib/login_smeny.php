@@ -7,10 +7,8 @@ declare(strict_types=1);
  *
  * Co to dělá:
  * - ověří email/heslo přes Směny (GraphQL)
- * - načte profil + role/sloty (1 dotaz)
- * - načte pobočky (workingBranchNames) přes userGetLogged (2. dotaz)
- * - uloží data do session (bez login_ok)
- * - zavolá DB sync (db/db_user_login.php)
+ * - načte jen základní profil pro modál registrace / 2FA
+ * - uloží minimální data do session (bez login_ok)
  * - při prvním loginu bez aktivního zařízení přeskočí 2FA a pustí uživatele do párování mobilu
  * - při dalším loginu připraví 2FA výzvu do DB (push_login_2fa) a odešle notifikaci na spárované zařízení (push_zarizeni)
  * - redirect na úvod (index.php zobrazí čekací modál nebo modál párování)
@@ -95,8 +93,7 @@ try {
         'token_len' => (string)strlen($token),
     ]);
 
-    // 1) Sloučeno: profil + role + sloty
-    cb_login_log_line('gql_me_rs_request', ['email' => $email]);
+    cb_login_log_line('gql_me_request', ['email' => $email]);
 
     $me = cb_smeny_graphql(
         $GQL_URL,
@@ -109,10 +106,6 @@ try {
                 phoneNumber
                 active
                 approved
-                createTime
-                lastLoginTime
-                roles{ id name }
-                shiftRoleTypeNames
             }
         }',
         [],
@@ -127,56 +120,8 @@ try {
 
     $idUser = (int)$u['id'];
 
-    $roles = $u['roles'] ?? [];
-    if (!is_array($roles)) {
-        $roles = [];
-    }
-
-    $sloty = $u['shiftRoleTypeNames'] ?? [];
-    if (!is_array($sloty)) {
-        $sloty = [];
-    }
-
-    cb_login_log_line('gql_me_rs_ok', [
+    cb_login_log_line('gql_me_ok', [
         'id_user' => (string)$idUser,
-        'roles_count' => (string)count($roles),
-        'sloty_count' => (string)count($sloty),
-    ]);
-
-    // 2) Pobočky: workingBranchNames + mainBranchName
-    cb_login_log_line('gql_branches_request', ['id_user' => (string)$idUser]);
-
-    $br = cb_smeny_graphql(
-        $GQL_URL,
-        'query{
-            userGetLogged{
-                workingBranchNames
-                mainBranchName
-            }
-        }',
-        [],
-        $token
-    );
-
-    $brUser = $br['userGetLogged'] ?? null;
-    if (!is_array($brUser)) {
-        cb_login_log_line('branches_invalid', ['id_user' => (string)$idUser]);
-        throw new RuntimeException('Nepodařilo se načíst pobočky uživatele.');
-    }
-
-    $working = $brUser['workingBranchNames'] ?? [];
-    if (!is_array($working)) {
-        $working = [];
-    }
-    $mainBranchName = trim((string)($brUser['mainBranchName'] ?? ''));
-    if ($mainBranchName === '') {
-        $mainBranchName = null;
-    }
-
-    cb_login_log_line('gql_branches_ok', [
-        'id_user' => (string)$idUser,
-        'working_count' => (string)count($working),
-        'main_branch' => (string)($mainBranchName ?? ''),
     ]);
 
     $_SESSION['cb_token'] = $token;
@@ -189,27 +134,10 @@ try {
         'telefon'   => (string)($u['phoneNumber'] ?? ''),
         'active'    => (bool)($u['active'] ?? false),
         'approved'  => (bool)($u['approved'] ?? false),
-        'roles'     => $roles,
-        'sloty'     => $sloty,
+        'roles'     => [],
+        'sloty'     => [],
     ];
 
-    $_SESSION['cb_user_profile'] = $u;
-
-    $_SESSION['cb_user_branches'] = [
-        'workingBranchNames' => $working,
-        'mainBranchName' => $mainBranchName,
-    ];
-
-    require_once __DIR__ . '/zapis_dat_txt.php';
-
-    require_once __DIR__ . '/../db/db_user_login.php';
-    cb_db_user_login();
-
-    require_once __DIR__ . '/restia_access_exist.php';
-
-    $_SESSION['cb_timeout_min'] = (int)$CB_TIMEOUT_MIN;
-    $_SESSION['cb_session_start_ts'] = time();
-    $_SESSION['cb_last_activity_ts'] = time();
     $_SESSION['cb_auth_ok'] = 1;
 
     // LOCAL: 2FA se přeskočí jen když je vypnuto v set_system.on_2fa
@@ -220,10 +148,11 @@ try {
 
     if ((string)($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL' && $on2fa === 0) {
         $_SESSION['login_ok'] = 1;
-        $_SESSION['cb_initial_loader_text'] = 'Inicializace systému ...';
-
         unset($_SESSION['cb_auth_ok']);
         unset($_SESSION['cb_2fa_token']);
+
+        cb_login_finalize_after_ok($token, (int)$CB_TIMEOUT_MIN);
+        $_SESSION['cb_initial_loader_text'] = 'Inicializace systému ...';
 
         header('Location: ' . cb_url(''));
         exit;

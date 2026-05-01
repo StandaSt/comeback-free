@@ -26,21 +26,19 @@ if ($selectedPob === []) {
 $periodOd = trim((string)($_SESSION['cb_obdobi_od'] ?? ''));
 $periodDo = trim((string)($_SESSION['cb_obdobi_do'] ?? ''));
 if ($periodOd === '' || $periodDo === '') {
-    $today = (new DateTimeImmutable('today'))->format('Y-m-d');
+    $today = (new DateTimeImmutable('today'))->setTime(6, 0, 0)->format('Y-m-d H:i:s');
     $periodOd = $periodOd !== '' ? $periodOd : $today;
     $periodDo = $periodDo !== '' ? $periodDo : $today;
 }
 
 $periodOdDate = new DateTimeImmutable($periodOd);
 $periodDoDate = new DateTimeImmutable($periodDo);
-$periodOdTs = $periodOdDate->setTime(8, 0, 0);
-$periodDoExclusive = $periodDoDate->setTime(8, 0, 0);
-$titleOd = $periodOdDate->format('d.m.Y');
-$titleDo = $periodDoDate->format('d.m.Y');
+$periodOdTs = $periodOdDate;
+$periodDoExclusive = $periodDoDate;
+$titleOd = $periodOdDate->format('d.m.Y H:i');
+$titleDo = $periodDoDate->format('d.m.Y H:i');
 $periodLabel = $titleOd . ' - ' . $titleDo;
 
-$safeOd = $pdo->real_escape_string($periodOd);
-$safeDo = $pdo->real_escape_string($periodDo);
 $safeOdTs = $pdo->real_escape_string($periodOdTs->format('Y-m-d H:i:s'));
 $safeDoTsExclusive = $pdo->real_escape_string($periodDoExclusive->format('Y-m-d H:i:s'));
 $selectedPobSql = $selectedPob !== [] ? implode(',', array_map('intval', $selectedPob)) : '';
