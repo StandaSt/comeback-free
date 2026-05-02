@@ -9,7 +9,8 @@ set_time_limit(0);
 
 require_once __DIR__ . '/../db/db_connect.php';
 
-const BASE_DIR = __DIR__ . '/../admin_testy/reporty_google_testy/google_data/Pobocky';
+const BASE_DIR = __DIR__ . '/../admin_testy/reporty_google_testy/google_data/Pobočky';
+const REPORT_LOG_FILE = __DIR__ . '/../log/smeny_report.txt';
 const MONTHS_EN = [
     'January',
     'February',
@@ -38,7 +39,7 @@ const MONTHS_LOOKUP = [
     'november' => true,
     'december' => true,
 ];
-const POBOCKY_MAP = [
+const GOOGLE_BRANCH_MAP = [
     'Malešice' => 1,
     'Chodov' => 2,
     'Zličín' => 3,
@@ -91,7 +92,8 @@ function renderGoogleDataPreview(): void
             <?php foreach ($workbooks as $workbook): ?>
               <?php
                 $workbookName = basename($workbook);
-                $sheets = array_keys(getWorkbookSheetTargets($workbook));
+                $rok = extractYearFromWorkbookName($workbookName, $branchName);
+                $sheets = $rok === null ? [] : getRelevantWorkbookSheets($workbook, $rok);
               ?>
               <p class="card_text txt_seda odstup_vnejsi_0">- <?= htmlspecialchars($workbookName, ENT_QUOTES, 'UTF-8') ?></p>
               <?php if ($sheets === []): ?>
@@ -132,7 +134,7 @@ function renderGoogleDataPreview(): void
 function getGoogleImportStatusByBranch(): array
 {
     $map = [0 => ['count' => 0, 'last' => null]];
-    foreach (POBOCKY_MAP as $branchName => $idPob) {
+    foreach (GOOGLE_BRANCH_MAP as $branchName => $idPob) {
         $map[(int)$idPob] = ['count' => 0, 'last' => null];
     }
 
@@ -228,8 +230,8 @@ function getBranchSortId(string $branchName): int
         return 999;
     }
 
-    if (isset(POBOCKY_MAP[$branchName])) {
-        return (int)POBOCKY_MAP[$branchName];
+    if (isset(GOOGLE_BRANCH_MAP[$branchName])) {
+        return (int)GOOGLE_BRANCH_MAP[$branchName];
     }
 
     return 998;
@@ -244,12 +246,16 @@ function main(): void
     }
 
     logLine('cas behu: 00:00');
+    initReportLog();
 
     $db = db_connect();
+    $today = (new DateTimeImmutable('today'))->format('Y-m-d');
 
     $pocetZpracovanychRadku = 0;
     $pocetUlozenychZaznamu = 0;
     $pocetChyb = 0;
+    $reportLogNeedsBlank = false;
+    $importSummary = [];
 
     $pobocky = getBranchFolders(BASE_DIR);
 
@@ -259,6 +265,10 @@ function main(): void
         logLine('========================================');
 
         if ($nazevPob === 'Výroba') {
+            $idPob = 0;
+            $nextImportDate = getNextGoogleImportDate($db, $idPob);
+            logLine('import od: ' . ($nextImportDate !== '' ? $nextImportDate : 'zacatek zdroju'));
+
             $sesity = findWorkbooksForBranch($cestaPob, 'Výroba');
             foreach ($sesity as $sesit) {
                 $nazevSouboru = basename($sesit);
@@ -270,6 +280,7 @@ function main(): void
                 }
 
                 $sheetTargets = getWorkbookSheetTargets($sesit);
+                $reportLogHeaderWritten = false;
                 foreach ($sheetTargets as $sheetName => $sheetPath) {
                     if (!isMonthlySheetNameForYear($sheetName, $rok)) {
                         continue;
@@ -278,6 +289,7 @@ function main(): void
                     logLine('- list: ' . $sheetName);
 
                     $rows = getSheetRows($sesit, $sheetPath);
+                    $ulozenoMesic = 0;
                     foreach ($rows as $rowNo => $row) {
                         if ($rowNo < 2) {
                             continue;
@@ -299,12 +311,22 @@ function main(): void
                             continue;
                         }
 
+                        if (!isDateInImportRange($zaznam['datum'], $nextImportDate, $today)) {
+                            continue;
+                        }
+
                         if (insertReportRow($db, $zaznam)) {
                             $pocetUlozenychZaznamu++;
+                            $ulozenoMesic++;
+                            addImportSummary($importSummary, $nazevPob, $rok);
                             if ($zaznam['chyba'] === 1) {
                                 $pocetChyb++;
                             }
                         }
+                    }
+
+                    if ($ulozenoMesic > 0) {
+                        writeReportMonth($nazevPob, $rok, $sheetName, $reportLogNeedsBlank, $reportLogHeaderWritten);
                     }
                 }
 
@@ -315,13 +337,16 @@ function main(): void
             continue;
         }
 
-        if (!isset(POBOCKY_MAP[$nazevPob])) {
+        if (!isset(GOOGLE_BRANCH_MAP[$nazevPob])) {
             logLine('neznamy id_pob pro slozku: ' . $nazevPob);
             logLine('');
             continue;
         }
 
-        $idPob = POBOCKY_MAP[$nazevPob];
+        $idPob = GOOGLE_BRANCH_MAP[$nazevPob];
+        $nextImportDate = getNextGoogleImportDate($db, $idPob);
+        logLine('import od: ' . ($nextImportDate !== '' ? $nextImportDate : 'zacatek zdroju'));
+
         $sesity = findWorkbooksForBranch($cestaPob, $nazevPob);
 
         foreach ($sesity as $sesit) {
@@ -334,6 +359,7 @@ function main(): void
             }
 
             $sheetTargets = getWorkbookSheetTargets($sesit);
+            $reportLogHeaderWritten = false;
 
             foreach ($sheetTargets as $sheetName => $sheetPath) {
                 if (!isMonthlySheetNameForYear($sheetName, $rok)) {
@@ -343,6 +369,7 @@ function main(): void
                 logLine('- list: ' . $sheetName);
 
                 $rows = getSheetRows($sesit, $sheetPath);
+                $ulozenoMesic = 0;
 
                 foreach ($rows as $rowNo => $row) {
                     if ($rowNo < 2) {
@@ -352,6 +379,10 @@ function main(): void
                     $pocetZpracovanychRadku++;
 
                     $datum = normalizeDate($row['A'] ?? '');
+
+                    if (!isDateInImportRange($datum, $nextImportDate, $today)) {
+                        continue;
+                    }
 
                     $zaznamInstor = createRecord(
                         $datum,
@@ -366,6 +397,8 @@ function main(): void
                     if ($zaznamInstor !== null) {
                         if (insertReportRow($db, $zaznamInstor)) {
                             $pocetUlozenychZaznamu++;
+                            $ulozenoMesic++;
+                            addImportSummary($importSummary, $nazevPob, $rok);
                             if ($zaznamInstor['chyba'] === 1) {
                                 $pocetChyb++;
                             }
@@ -385,11 +418,17 @@ function main(): void
                     if ($zaznamKuryr !== null) {
                         if (insertReportRow($db, $zaznamKuryr)) {
                             $pocetUlozenychZaznamu++;
+                            $ulozenoMesic++;
+                            addImportSummary($importSummary, $nazevPob, $rok);
                             if ($zaznamKuryr['chyba'] === 1) {
                                 $pocetChyb++;
                             }
                         }
                     }
+                }
+
+                if ($ulozenoMesic > 0) {
+                    writeReportMonth($nazevPob, $rok, $sheetName, $reportLogNeedsBlank, $reportLogHeaderWritten);
                 }
             }
 
@@ -404,7 +443,157 @@ function main(): void
     logLine('pocet chyb: ' . $pocetChyb);
     logLine('celkova doba behu: ' . formatElapsedRuntime($scriptStart));
 
-    echo 'Hotovo.';
+    logLine('');
+    renderImportSummary($importSummary);
+    renderBackButton();
+}
+
+function addImportSummary(array &$summary, string $branchName, int $year): void
+{
+    $branchName = trim($branchName);
+    if ($branchName === '') {
+        return;
+    }
+
+    if (!isset($summary[$branchName])) {
+        $summary[$branchName] = [];
+    }
+
+    if (!isset($summary[$branchName][$year])) {
+        $summary[$branchName][$year] = 0;
+    }
+
+    $summary[$branchName][$year]++;
+}
+
+function renderImportSummary(array $summary): void
+{
+    if ($summary === []) {
+        logLine('Souhrn: 0 ulozenych zaznamu.');
+        logLine('Celkem ulozeno: 0');
+        return;
+    }
+
+    logLine('');
+    logLine('Souhrn ulozenych zaznamu:');
+
+    $total = 0;
+    foreach ($summary as $branchName => $years) {
+        if (!is_array($years)) {
+            continue;
+        }
+
+        ksort($years, SORT_NUMERIC);
+        foreach ($years as $year => $count) {
+            $countInt = (int)$count;
+            $total += $countInt;
+            logLine((string)$branchName . ' ' . (string)$year . ': ' . number_format($countInt, 0, ',', ' '));
+        }
+    }
+
+    logLine('');
+    logLine('Celkem ulozeno: ' . number_format($total, 0, ',', ' '));
+}
+
+function renderBackButton(): void
+{
+    $actionUrl = function_exists('cb_url')
+        ? (string)cb_url('/index.php')
+        : '/index.php';
+    ?>
+    <div style="margin-top:16px; text-align:right;">
+      <form method="post" action="<?= htmlspecialchars($actionUrl, ENT_QUOTES, 'UTF-8') ?>" class="odstup_vnejsi_0 displ_inline_flex">
+        <input type="hidden" name="back_admin_init" value="1">
+        <button type="submit" class="card_btn cursor_ruka ram_btn zaobleni_6 vyska_28 displ_inline_flex" style="background:var(--clr_ruzova_4); border-color:var(--clr_ruzova_1); color:var(--clr_cervena);">Zpět</button>
+      </form>
+    </div>
+    <?php
+}
+
+function getNextGoogleImportDate(mysqli $db, int $idPob): string
+{
+    $stmt = $db->prepare('
+        SELECT MAX(datum) AS last_datum
+        FROM smeny_report
+        WHERE zdroj = 1 AND id_pob = ?
+    ');
+
+    if ($stmt === false) {
+        return '';
+    }
+
+    $stmt->bind_param('i', $idPob);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = ($result instanceof mysqli_result) ? $result->fetch_assoc() : null;
+    if ($result instanceof mysqli_result) {
+        $result->free();
+    }
+    $stmt->close();
+
+    $last = trim((string)($row['last_datum'] ?? ''));
+    if ($last === '') {
+        return '';
+    }
+
+    $dt = DateTimeImmutable::createFromFormat('Y-m-d', $last);
+    if (!($dt instanceof DateTimeImmutable)) {
+        return '';
+    }
+
+    return $dt->modify('+1 day')->format('Y-m-d');
+}
+
+function isDateInImportRange(?string $datum, string $nextImportDate, string $today): bool
+{
+    if ($datum === null || $datum === '') {
+        return false;
+    }
+
+    if ($datum > $today) {
+        return false;
+    }
+
+    return $nextImportDate === '' || $datum >= $nextImportDate;
+}
+
+function initReportLog(): void
+{
+    @file_put_contents(REPORT_LOG_FILE, '', LOCK_EX);
+}
+
+function writeReportMonth(string $branchName, int $year, string $sheetName, bool &$needsBlank, bool &$headerWritten): void
+{
+    $month = getMonthNameFromSheet($sheetName);
+    if ($month === '') {
+        return;
+    }
+
+    if (!$headerWritten) {
+        if ($needsBlank) {
+            reportLogLine('');
+        }
+        reportLogLine($branchName . ' ' . (string)$year);
+        $headerWritten = true;
+        $needsBlank = true;
+    }
+
+    reportLogLine($month);
+}
+
+function getMonthNameFromSheet(string $sheetName): string
+{
+    $parts = preg_split('/\s+/', trim($sheetName));
+    if (!is_array($parts) || $parts === []) {
+        return '';
+    }
+
+    return (string)$parts[0];
+}
+
+function reportLogLine(string $line): void
+{
+    @file_put_contents(REPORT_LOG_FILE, $line . "\n", FILE_APPEND | LOCK_EX);
 }
 
 function createRecord(?string $datum, string $fullName, ?string $casOd, ?string $casDo, ?string $pauza, int $idSlot, int $idPob): ?array
@@ -657,6 +846,11 @@ function normalizePauseTime(string $value): ?string
 function getBranchFolders(string $baseDir): array
 {
     $out = [];
+
+    if (!is_dir($baseDir)) {
+        return [];
+    }
+
     $items = scandir($baseDir);
 
     if ($items === false) {
@@ -683,6 +877,10 @@ function getBranchFolders(string $baseDir): array
 
 function findWorkbooksForBranch(string $branchDir, string $branchName): array
 {
+    if (!is_dir($branchDir)) {
+        return [];
+    }
+
     $items = scandir($branchDir);
     if ($items === false) {
         return [];
@@ -727,6 +925,21 @@ function extractYearFromWorkbookName(string $fileName, string $branchName): ?int
     }
 
     return (int)$m[1];
+}
+
+function getRelevantWorkbookSheets(string $filePath, int $year): array
+{
+    $out = [];
+
+    foreach (array_keys(getWorkbookSheetTargets($filePath)) as $sheetName) {
+        if (!isMonthlySheetNameForYear((string)$sheetName, $year)) {
+            continue;
+        }
+
+        $out[] = (string)$sheetName;
+    }
+
+    return $out;
 }
 
 function getWorkbookSheetTargets(string $filePath): array

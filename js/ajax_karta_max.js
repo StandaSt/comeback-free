@@ -228,7 +228,6 @@
     const opts = (options && typeof options === 'object') ? options : {};
     const skipSubmitterName = !!opts.skipSubmitterName;
     const refreshDashboardOnSave = isDashboardRefreshForm(form);
-    const useGlobalLoader = refreshDashboardOnSave;
 
     const method = String(form.method || 'POST').toUpperCase();
     const reqUrl = String(form.action || w.location.href || 'index.php');
@@ -276,6 +275,7 @@
     const formData = new FormData(form);
 
     const loaderText = getLoaderTextFromSubmitter(submitter, form);
+    const useGlobalLoader = refreshDashboardOnSave || loaderText !== '';
     if (useGlobalLoader) {
       setLoading(true, loaderText, 'dashboard');
     }
@@ -345,7 +345,7 @@
         submitter.removeAttribute('disabled');
       }
       if (useGlobalLoader) {
-        setLoading(false);
+        setLoading(false, '', 'dashboard');
       }
     });
   }

@@ -1,7 +1,16 @@
-# .htaccess * Verze: V3 * Aktualizace: 14.2.2026 * Počet řádků: 28
+# .htaccess * Verze: V4 * Aktualizace: 1.5.2026 * Počet řádků: 37
 
 RewriteEngine On
-RewriteBase /comeback/
+RewriteBase /
+
+# Bezpečnostní hlavičky bez vynucení HTTPS.
+# HTTPS redirect a HSTS zapnout až po ověření správného HTTPS vhostu.
+<IfModule mod_headers.c>
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+</IfModule>
 
 # Nezasahovat do existujících souborů/složek (CSS/JS/IMG atd.)
 RewriteCond %{REQUEST_FILENAME} -f [OR]
@@ -18,5 +27,5 @@ RewriteRule ^$ index.php [L,QSA]
 # Díky tomu index.php vidí původní REQUEST_URI a může ji zalogovat.
 RewriteRule ^.*$ index.php [L,QSA]
 
-# .htaccess * Verze: V3 * Aktualizace: 14.2.2026 * Počet řádků: 28
+# .htaccess * Verze: V4 * Aktualizace: 1.5.2026 * Počet řádků: 37
 # Konec souboru

@@ -418,6 +418,7 @@
     return w.CB_AJAX.refreshCard(cardId, {
       force: true,
       keepLoading: true,
+      showLoading: false,
       loaderMode: 'cards',
       loadMax: true
     }).then((result) => {
