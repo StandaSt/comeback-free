@@ -554,7 +554,14 @@ function cb_url(string $path): string
 
 function cb_url_abs(string $path): string
 {
-    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $forwardedProto = strtolower(trim((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')));
+    $forwardedSsl = strtolower(trim((string)($_SERVER['HTTP_X_FORWARDED_SSL'] ?? '')));
+    $isHttps =
+        (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+        $forwardedProto === 'https' ||
+        $forwardedSsl === 'on';
+
+    $scheme = $isHttps ? 'https' : 'http';
     $host   = (string)($_SERVER['HTTP_HOST'] ?? 'localhost');
 
     return $scheme . '://' . $host . cb_url($path);

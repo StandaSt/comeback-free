@@ -121,6 +121,38 @@ if ($cbLoginOk) {
 } elseif ($cbAuthOk) {
     require_once __DIR__ . '/lib/kontrola_registrace.php';
 } else {
+    $cbLoginDbOk = false;
+    $cbLoginDbName = '---';
+
+    if (isset($SECRETS['db']) && is_array($SECRETS['db'])) {
+        $cbLoginDbCfg = ($PROSTREDI === 'LOCAL')
+            ? ($SECRETS['db']['local'] ?? null)
+            : ($SECRETS['db']['server'] ?? null);
+
+        if (is_array($cbLoginDbCfg)) {
+            $cbLoginDbName = trim((string)($cbLoginDbCfg['name'] ?? ''));
+            if ($cbLoginDbName === '') {
+                $cbLoginDbName = '---';
+            }
+        }
+    }
+
+    try {
+        $cbLoginDbConn = db();
+        $cbLoginDbResult = $cbLoginDbConn->query('SELECT DATABASE() AS db_name');
+        if ($cbLoginDbResult instanceof mysqli_result) {
+            $cbLoginDbRow = $cbLoginDbResult->fetch_assoc();
+            $cbLoginDbResult->free();
+            $cbLoginDbRealName = trim((string)($cbLoginDbRow['db_name'] ?? ''));
+            if ($cbLoginDbRealName !== '') {
+                $cbLoginDbName = $cbLoginDbRealName;
+            }
+        }
+        $cbLoginDbOk = true;
+    } catch (Throwable $e) {
+        $cbLoginDbOk = false;
+    }
+
     require_once __DIR__ . '/modaly/modal_login.php';
 }
 
