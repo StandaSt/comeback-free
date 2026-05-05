@@ -88,7 +88,7 @@ if (!function_exists('cb_restia_online_import_end_date')) {
     {
         $tz = new DateTimeZone('Europe/Prague');
         $now = new DateTimeImmutable('now', $tz);
-        $todayStart = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $now->format('Y-m-d') . ' 08:00:00', $tz);
+        $todayStart = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $now->format('Y-m-d') . ' 06:00:00', $tz);
         if (!($todayStart instanceof DateTimeImmutable)) {
             throw new RuntimeException('Nepodarilo se urcit konec importu.');
         }
@@ -226,8 +226,8 @@ if (!function_exists('cb_restia_online_format_range_cs')) {
         }
 
         $tz = new DateTimeZone('Europe/Prague');
-        $fromDt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $fromDate . ' 08:00:00', $tz);
-        $toDt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', cb_restia_online_next_date($toDate) . ' 08:00:00', $tz);
+        $fromDt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $fromDate . ' 06:00:00', $tz);
+        $toDt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', cb_restia_online_next_date($toDate) . ' 06:00:00', $tz);
         if (!($fromDt instanceof DateTimeImmutable) || !($toDt instanceof DateTimeImmutable)) {
             return '';
         }
@@ -253,9 +253,9 @@ if (!function_exists('cb_restia_online_day_range_utc')) {
     function cb_restia_online_day_range_utc(string $date): array
     {
         $tz = new DateTimeZone('Europe/Prague');
-        $fromLocal = DateTimeImmutable::createFromFormat('Y-m-d H:i:s.u', $date . ' 08:00:00.000000', $tz);
+        $fromLocal = DateTimeImmutable::createFromFormat('Y-m-d H:i:s.u', $date . ' 06:00:00.000000', $tz);
         $nextDate = cb_restia_online_next_date($date);
-        $toLocal = DateTimeImmutable::createFromFormat('Y-m-d H:i:s.u', $nextDate . ' 07:59:59.999000', $tz);
+        $toLocal = DateTimeImmutable::createFromFormat('Y-m-d H:i:s.u', $nextDate . ' 05:59:59.999000', $tz);
 
         if (!($fromLocal instanceof DateTimeImmutable) || !($toLocal instanceof DateTimeImmutable)) {
             throw new RuntimeException('Neplatny den pro interval.');
@@ -626,7 +626,7 @@ if (!function_exists('cb_restia_online_last_date')) {
         if (($fromLocal instanceof DateTimeImmutable) && ($toLocal instanceof DateTimeImmutable)) {
             $fromTime = $fromLocal->format('H:i:s');
             $toTime = $toLocal->format('H:i:s');
-            if ($fromTime === '08:00:00' && $toTime === '07:59:59' && $toLocal->format('Y-m-d') === $fromLocal->modify('+1 day')->format('Y-m-d')) {
+            if ($fromTime === '06:00:00' && $toTime === '05:59:59' && $toLocal->format('Y-m-d') === $fromLocal->modify('+1 day')->format('Y-m-d')) {
                 return $fromLocal->format('Y-m-d');
             }
             if ($fromTime === '00:00:00' && $toTime === '23:59:59' && $toLocal->format('Y-m-d') === $fromLocal->format('Y-m-d')) {
@@ -641,7 +641,7 @@ if (!function_exists('cb_restia_online_last_date')) {
             $toUtcLocal = $toUtc->setTimezone($tz);
             $fromTime = $fromUtcLocal->format('H:i:s');
             $toTime = $toUtcLocal->format('H:i:s');
-            if ($fromTime === '08:00:00' && $toTime === '07:59:59' && $toUtcLocal->format('Y-m-d') === $fromUtcLocal->modify('+1 day')->format('Y-m-d')) {
+            if ($fromTime === '06:00:00' && $toTime === '05:59:59' && $toUtcLocal->format('Y-m-d') === $fromUtcLocal->modify('+1 day')->format('Y-m-d')) {
                 return $fromUtcLocal->format('Y-m-d');
             }
             if ($fromTime === '00:00:00' && $toTime === '23:59:59' && $toUtcLocal->format('Y-m-d') === $fromUtcLocal->format('Y-m-d')) {
@@ -1864,7 +1864,7 @@ if (!function_exists('cb_restia_online_current_workday_date')) {
     {
         $tz = new DateTimeZone('Europe/Prague');
         $now = new DateTimeImmutable('now', $tz);
-        $todayStart = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $now->format('Y-m-d') . ' 08:00:00', $tz);
+        $todayStart = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $now->format('Y-m-d') . ' 06:00:00', $tz);
         if (!($todayStart instanceof DateTimeImmutable)) {
             throw new RuntimeException('Nepodarilo se urcit aktualni pracovni den.');
         }

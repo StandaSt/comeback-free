@@ -397,8 +397,8 @@ if (($cbDashboardRenderMode ?? '') === 'mini') {
             <tr>
               <td><?= cb_prehled_db_h((string)$item['source']) ?></td>
               <td class="<?= cb_prehled_db_h(cb_prehled_db_count_style((int)$item['count'])) ?>"><strong><?= cb_prehled_db_h(number_format((int)$item['count'], 0, ',', ' ')) ?></strong></td>
-              <td><?= cb_prehled_db_h(cb_prehled_db_fmt_bytes((int)$item['bytes'])) ?></td>
-              <td><?= cb_prehled_db_h((string)($item['updated_at'] ?? 'Ne')) ?></td>
+              <td class="txt_r"><?= cb_prehled_db_h(cb_prehled_db_fmt_bytes((int)$item['bytes'])) ?></td>
+              <td class="txt_r"><?= cb_prehled_db_h((string)($item['updated_at'] ?? 'Ne')) ?></td>
             </tr>
           <?php endforeach; ?>
         </tbody>

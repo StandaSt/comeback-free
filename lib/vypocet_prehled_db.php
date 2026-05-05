@@ -67,7 +67,7 @@ if (!function_exists('cb_vypocet_prehled_db_updated_at')) {
                 if ($raw !== '') {
                     $ts = strtotime($raw);
                     if ($ts !== false) {
-                        $dt = date('j.n.y H:i', $ts);
+                        $dt = date('j.n.Y G:i', $ts);
                     }
                 }
                 $res->free();

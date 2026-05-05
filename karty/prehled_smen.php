@@ -53,6 +53,19 @@ if ($selectedPob === []) {
 if (!function_exists('ps_format_cz_date')) {
     function ps_format_cz_date(string $ymd): string
     {
+        $value = trim($ymd);
+        if ($value === '') {
+            return '';
+        }
+        try {
+            $dt = new DateTimeImmutable($value);
+            if (preg_match('/\d{1,2}:\d{2}/', $value) === 1) {
+                return $dt->format('j.n.Y G:i');
+            }
+            return $dt->format('j.n.Y');
+        } catch (Throwable $e) {
+        }
+
         $dt = DateTimeImmutable::createFromFormat('Y-m-d', $ymd);
         if (!$dt) {
             return $ymd;
@@ -69,7 +82,7 @@ if (!function_exists('ps_format_hm')) {
             return '';
         }
         if (preg_match('/^(\d{2}):(\d{2})(:\d{2})?$/', $t, $m) === 1) {
-            return $m[1] . ':' . $m[2];
+            return (string)(int)$m[1] . ':' . $m[2];
         }
         return $t;
     }

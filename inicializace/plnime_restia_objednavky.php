@@ -736,6 +736,71 @@ if (!function_exists('cb_restia_hist_resume_info')) {
     }
 }
 
+if (!function_exists('cb_restia_hist_missing_days')) {
+    function cb_restia_hist_missing_days(array $resumeInfo, string $importEndDate): int
+    {
+        $tz = new DateTimeZone('Europe/Prague');
+        $importEndDate = cb_restia_hist_normalize_ymd($importEndDate);
+        $startDate = cb_restia_hist_normalize_ymd((string)($resumeInfo['start_date'] ?? ''));
+        $nextDate = cb_restia_hist_normalize_ymd((string)($resumeInfo['next_date'] ?? ''));
+
+        $startDt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $startDate . ' 00:00:00', $tz);
+        $nextDt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $nextDate . ' 00:00:00', $tz);
+        $endDt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $importEndDate . ' 00:00:00', $tz);
+        if (!($startDt instanceof DateTimeImmutable) || !($nextDt instanceof DateTimeImmutable) || !($endDt instanceof DateTimeImmutable)) {
+            return 1;
+        }
+
+        $totalDays = max(0, (int)$startDt->diff($endDt)->days + 1);
+        $downloadedDays = ($nextDt >= $startDt) ? max(0, (int)$startDt->diff($nextDt)->days) : 0;
+
+        return max(0, $totalDays - $downloadedDays);
+    }
+}
+
+if (!function_exists('cb_restia_hist_all_enabled_complete')) {
+    function cb_restia_hist_all_enabled_complete(array $branchOptions, array $branchResumeMap, string $importEndDate): bool
+    {
+        $checked = 0;
+        foreach ($branchOptions as $branchOpt) {
+            $idPob = (int)($branchOpt['id_pob'] ?? 0);
+            if ($idPob <= 0 || ((bool)($branchOpt['enabled'] ?? false) !== true)) {
+                continue;
+            }
+            if (!isset($branchResumeMap[$idPob])) {
+                return false;
+            }
+            $checked++;
+            if (cb_restia_hist_missing_days((array)$branchResumeMap[$idPob], $importEndDate) > 0) {
+                return false;
+            }
+        }
+
+        return $checked > 0;
+    }
+}
+
+if (!function_exists('cb_restia_hist_online_enabled')) {
+    function cb_restia_hist_online_enabled(mysqli $conn): bool
+    {
+        $res = $conn->query('SELECT restia_online FROM set_system WHERE id_set = 1 LIMIT 1');
+        if (!($res instanceof mysqli_result)) {
+            return false;
+        }
+        $row = $res->fetch_assoc();
+        $res->free();
+
+        return ((int)($row['restia_online'] ?? 0) === 1);
+    }
+}
+
+if (!function_exists('cb_restia_hist_enable_online')) {
+    function cb_restia_hist_enable_online(mysqli $conn): void
+    {
+        $conn->query('UPDATE set_system SET restia_online = 1 WHERE id_set = 1');
+    }
+}
+
 if (!function_exists('cb_restia_hist_day_lock_name')) {
     function cb_restia_hist_day_lock_name(int $idPob, string $date): string
     {
@@ -1922,6 +1987,28 @@ try {
 } catch (Throwable $e) {
     throw $e;
 }
+
+$restiaOnlineEnabled = cb_restia_hist_online_enabled($conn);
+$historyComplete = cb_restia_hist_all_enabled_complete($branchOptions, $branchResumeMap, $importEndDate);
+if (!$restiaOnlineEnabled && $historyComplete) {
+    cb_restia_hist_enable_online($conn);
+    $restiaOnlineEnabled = true;
+}
+
+if ($restiaOnlineEnabled && $historyComplete) {
+    unset(
+        $_SESSION[$cbStateKey],
+        $_SESSION[$cbRowsKey],
+        $_SESSION[$cbMsgKey],
+        $_SESSION[$cbSelectedBranchKey],
+        $_SESSION[$cbImportEndKey]
+    );
+    if ($cbRestiaEmbedMode) {
+        $GLOBALS['cb_admin_init_restia_done'] = true;
+        return;
+    }
+}
+
 $selectedBranchId = (int)($_SESSION[$cbSelectedBranchKey] ?? 0);
 $selectedBranchName = '';
 $selectedBranchEnabled = false;

@@ -67,7 +67,7 @@ if (!function_exists('obj_format_cz_date')) {
         } catch (Throwable $e) {
             return $ymd;
         }
-        return $dt->format('j.n.Y H:i');
+        return $dt->format('j.n.Y G:i');
     }
 }
 
@@ -469,7 +469,7 @@ try {
         if ($vytvoreno !== '' && $vytvoreno !== '0000-00-00 00:00:00') {
             $ts = strtotime($vytvoreno);
             if ($ts !== false) {
-                $vytvoreno = date('j.n.Y H:i', $ts);
+                $vytvoreno = date('j.n.Y G:i', $ts);
             }
         } else {
             $vytvoreno = '';

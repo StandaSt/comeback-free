@@ -68,25 +68,16 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
     $subtitleMax = !$isNano ? (string)($pripravenaKarta['subtitleMax'] ?? '') : '';
 
     if (!$isNano && $cardId === 19) {
-        $subtitleMin = 'Aktualizace:';
-
         try {
-            $conn = db();
-            $resAktualizace = $conn->query('SELECT MAX(start) AS posledni_start FROM online_restia');
-            if ($resAktualizace instanceof mysqli_result) {
-                $rowAktualizace = $resAktualizace->fetch_assoc();
-                $posledniStart = trim((string)($rowAktualizace['posledni_start'] ?? ''));
-                $resAktualizace->free();
-
-                if ($posledniStart !== '') {
-                    $casAktualizace = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $posledniStart);
-                    if ($casAktualizace instanceof DateTimeImmutable) {
-                        $subtitleMin = 'Aktualizace: ' . $casAktualizace->format('H:i');
-                    }
-                }
+            $tz = new DateTimeZone('Europe/Prague');
+            $now = new DateTimeImmutable('now', $tz);
+            $todayStart = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $now->format('Y-m-d') . ' 06:00:00', $tz);
+            if ($todayStart instanceof DateTimeImmutable) {
+                $workdayStart = ($now < $todayStart) ? $todayStart->modify('-1 day') : $todayStart;
+                $subtitleMin = $workdayStart->format('j.n.Y G:i') . ' - ' . $now->format('G:i');
             }
         } catch (Throwable $e) {
-            $subtitleMin = 'Aktualizace:';
+            $subtitleMin = '';
         }
     }
     $minHtml = (string)($pripravenaKarta['minHtml'] ?? '');

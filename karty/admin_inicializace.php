@@ -108,6 +108,20 @@ if (!function_exists('cb_admin_init_count_fmt')) {
     }
 }
 
+if (!function_exists('cb_admin_init_restia_online_enabled')) {
+    function cb_admin_init_restia_online_enabled(mysqli $conn): bool
+    {
+        $res = $conn->query('SELECT restia_online FROM set_system WHERE id_set = 1 LIMIT 1');
+        if (!($res instanceof mysqli_result)) {
+            return false;
+        }
+        $row = $res->fetch_assoc();
+        $res->free();
+
+        return ((int)($row['restia_online'] ?? 0) === 1);
+    }
+}
+
 if (($cbDashboardRenderMode ?? '') === 'mini') {
     $cbDb = db();
     $cbDb->set_charset('utf8mb4');
@@ -131,8 +145,8 @@ if (($cbDashboardRenderMode ?? '') === 'mini') {
             <tr>
               <td><?= h((string)$row['source']) ?></td>
               <td class="<?= ((int)$row['count'] === 0) ? 'txt_r txt_cervena text_tucny' : 'txt_r' ?>"><strong><?= h(number_format((int)$row['count'], 0, ',', ' ')) ?></strong></td>
-              <td><?= h(cb_db_fmt_bytes((int)$row['bytes'])) ?></td>
-              <td><?= h((string)($row['updated_at'] ?? 'Ne')) ?></td>
+              <td class="txt_r"><?= h(cb_db_fmt_bytes((int)$row['bytes'])) ?></td>
+              <td class="txt_r"><?= h((string)($row['updated_at'] ?? 'Ne')) ?></td>
             </tr>
           <?php endforeach; ?>
         </tbody>
@@ -149,7 +163,7 @@ if ($qRestia instanceof mysqli_result) {
     $r = $qRestia->fetch_assoc();
     $cbRestiaCount = (int)($r['cnt'] ?? 0);
     $dt = trim((string)($r['dt'] ?? ''));
-    $cbRestiaDate = ($dt !== '') ? date('j.n.y H:i', strtotime($dt)) : 'Ne';
+    $cbRestiaDate = ($dt !== '') ? date('j.n.Y G:i', strtotime($dt)) : 'Ne';
     $qRestia->free();
 }
 
@@ -164,7 +178,7 @@ $qObjednavkyDate = db()->query('SELECT restia_imported_at AS dt FROM objednavky_
 if ($qObjednavkyDate instanceof mysqli_result) {
     $r = $qObjednavkyDate->fetch_assoc();
     $dt = trim((string)($r['dt'] ?? ''));
-    $cbObjednavkyDate = ($dt !== '') ? date('j.n.y H:i', strtotime($dt)) : 'Ne';
+    $cbObjednavkyDate = ($dt !== '') ? date('j.n.Y G:i', strtotime($dt)) : 'Ne';
     $qObjednavkyDate->free();
 }
 
@@ -173,7 +187,7 @@ if ($qSmeny instanceof mysqli_result) {
     $r = $qSmeny->fetch_assoc();
     $cbSmenyCount = (int)($r['cnt'] ?? 0);
     $dt = trim((string)($r['dt'] ?? ''));
-    $cbSmenyDate = ($dt !== '') ? date('j.n.y H:i', strtotime($dt)) : 'Ne';
+    $cbSmenyDate = ($dt !== '') ? date('j.n.Y G:i', strtotime($dt)) : 'Ne';
     $cbSmenyPlanMaData = ($cbSmenyCount > 0);
     $qSmeny->free();
 }
@@ -183,7 +197,7 @@ if ($qReport instanceof mysqli_result) {
     $r = $qReport->fetch_assoc();
     $cbReportCount = (int)($r['cnt'] ?? 0);
     $dt = trim((string)($r['dt'] ?? ''));
-    $cbReportDate = ($dt !== '') ? date('j.n.y H:i', strtotime($dt)) : 'Ne';
+    $cbReportDate = ($dt !== '') ? date('j.n.Y G:i', strtotime($dt)) : 'Ne';
     $cbReportMaData = ($cbReportCount > 0);
     $qReport->free();
 }
@@ -224,6 +238,13 @@ $cbScriptTables = [
 ];
 
 $cbDb = db();
+$cbRestiaOnlineEnabled = cb_admin_init_restia_online_enabled($cbDb);
+if ($cbRestiaOnlineEnabled) {
+    unset($_SESSION['cb_restia_hist_v4_state'], $_SESSION['cb_restia_hist_v4_rows'], $_SESSION['cb_restia_hist_v4_msg']);
+    $cbRunRestia = false;
+    $cbKeepRestiaMax = false;
+}
+
 $cbScriptStats = [];
 foreach ($cbScriptTables as $cbScriptName => $cbTables) {
     $cbRows = [];
@@ -293,6 +314,13 @@ if (!function_exists('cb_admin_init_status_html')) {
     }
 }
 
+$cbRestiaImportActionHtml = ''
+    . '<form method="post" action="' . h(cb_url('/index.php')) . '" class="odstup_vnejsi_0" data-cb-max-form="1">'
+    . '<input type="hidden" name="run_restia_obj" value="1">'
+    . '<button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Připravuji historii">Připrav import</button>'
+    . '</form>';
+$cbRestiaOnlineActionHtml = '<button type="button" class="card_btn ram_btn bg_bila zaobleni_6 vyska_28 displ_inline_flex" style="opacity:.45; cursor:not-allowed; pointer-events:none;" disabled>Aktualizace aktivní</button>';
+
 $card_min_html = ''
     . '<div class="table-wrap ram_normal bg_bila zaobleni_12">'
     . '  <table class="table ram_normal bg_bila radek_1_35">'
@@ -348,10 +376,7 @@ ob_start();
       <td>Restia objednávky</td>
       <td class="txt_c"><span class="txt_zelena text_tucny">OK</span></td>
       <td>
-        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
-          <input type="hidden" name="run_restia_obj" value="1">
-          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Připravuji historii">Připrav import</button>
-        </form>
+        <?= $cbRestiaOnlineEnabled ? $cbRestiaOnlineActionHtml : $cbRestiaImportActionHtml ?>
       </td>
     </tr>
     <tr>
@@ -486,12 +511,17 @@ if ($cbRunGoogleData || $cbOpenGoogleData) {
 
 if ($cbRunRestia || $cbKeepRestiaMax) {
     $cbTraceK3Branch = $cbRunRestia ? 'run_restia_obj' : 'keep_restia_max';
-    $card_max_html = cb_admin_init_capture_max_include(
+    $cbRestiaMaxHtml = cb_admin_init_capture_max_include(
         __DIR__ . '/../inicializace/plnime_restia_objednavky.php',
         'inicializace/plnime_restia_objednavky.php',
         'admin_inicializace',
         $cbTraceK3Branch
     );
+    if (!isset($GLOBALS['cb_admin_init_restia_done']) || $GLOBALS['cb_admin_init_restia_done'] !== true) {
+        $card_max_html = $cbRestiaMaxHtml;
+    } else {
+        $card_max_html = str_replace($cbRestiaImportActionHtml, $cbRestiaOnlineActionHtml, $card_max_html);
+    }
 }
 
 if ($cbRunRestiaMenu || $cbOpenRestiaMenu) {

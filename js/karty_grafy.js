@@ -156,11 +156,13 @@
       const labels = Array.isArray(payload.labels) ? payload.labels.map((item) => String(item)) : [];
       const dokonceno = Array.isArray(payload.dokonceno) ? payload.dokonceno.map((item) => Number(item) || 0) : [];
       const naCeste = Array.isArray(payload.na_ceste) ? payload.na_ceste.map((item) => Number(item) || 0) : [];
+      const osobniOdber = Array.isArray(payload.osobni_odber) ? payload.osobni_odber.map((item) => Number(item) || 0) : [];
       const vyrabiSe = Array.isArray(payload.vyrabi_se) ? payload.vyrabi_se.map((item) => Number(item) || 0) : [];
+      const objednavky = Array.isArray(payload.objednavky) ? payload.objednavky.map((item) => Number(item) || 0) : [];
       const colors = Array.isArray(payload.colors) ? payload.colors.map((item) => String(item || '')) : [];
 
       return {
-        grid: MINI_SLOUPEC_GRID,
+        grid: Object.assign({}, MINI_SLOUPEC_GRID, { top: 30 }),
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
         legend: { show: false },
         xAxis: {
@@ -197,12 +199,39 @@
             data: naCeste
           },
           {
+            name: 'Osobní odběr',
+            type: 'bar',
+            stack: 'online',
+            barMaxWidth: MINI_SLOUPEC_BAR_MAX_WIDTH,
+            itemStyle: { color: '#0ea5e9' },
+            data: osobniOdber
+          },
+          {
             name: 'Vyrábí se',
             type: 'bar',
             stack: 'online',
             barMaxWidth: MINI_SLOUPEC_BAR_MAX_WIDTH,
             itemStyle: { color: '#dc2626' },
             data: vyrabiSe
+          },
+          {
+            name: 'Objednávky',
+            type: 'bar',
+            stack: 'online',
+            barMaxWidth: MINI_SLOUPEC_BAR_MAX_WIDTH,
+            silent: true,
+            tooltip: { show: false },
+            itemStyle: { color: 'transparent' },
+            emphasis: { disabled: true },
+            label: {
+              show: true,
+              position: 'top',
+              color: '#475569',
+              fontSize: 11,
+              fontWeight: 600,
+              formatter: (params) => formatInt(objednavky[params.dataIndex] ?? 0)
+            },
+            data: labels.map(() => 0)
           }
         ]
       };

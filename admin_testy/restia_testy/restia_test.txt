@@ -1,30 +1,252 @@
-RESTIA TEST – START
-kdy_utc: 2026-02-22 18:08:51
-soubor: lib/restia_orders_test.php
-id_pob: 6
-createdFrom: 2026-02-21T00:00:00Z
-createdTo: 2026-02-22T00:00:00Z
-page: 1  limit: 10
-----------------------------------------
-[2026-02-22 18:08:51 UTC] krůček 1: start skriptu
-[2026-02-22 18:08:51 UTC] krůček 2: kontrola přihlášení (session cb_user + cb_id_login)
-[2026-02-22 18:08:51 UTC] krůček 3: přihlášen OK (id_user=593, id_login=111)
-[2026-02-22 18:08:51 UTC] krůček 4: db()
-[2026-02-22 18:08:51 UTC] krůček 5: db() OK
-[2026-02-22 18:08:51 UTC] krůček 6: načtu restia_activePosId z pobocka (id_pob=6)
-[2026-02-22 18:08:51 UTC] krůček 7: restia_activePosId OK: 3eb8bd65-26d6-4fa9-a20b-19705f856f17
-[2026-02-22 18:08:51 UTC] krůček 8: volám Restii (GET /api/orders, createdFrom=2026-02-21T00:00:00Z, createdTo=2026-02-22T00:00:00Z, page=1, limit=10)
-[2026-02-22 18:08:51 UTC] krůček 9: Restia volání hotovo
-[2026-02-22 18:08:51 UTC] krůček 10: http_status=200
-[2026-02-22 18:08:51 UTC] krůček 11: X-Total-Count=42
-[2026-02-22 18:08:51 UTC] krůček 12: uložím BODY (JSON) do souboru
+RESTIA UPDATED FILTER PROBE - START
+verze: V1
+spusteno: 2026-05-05 00:58:47
+soubor: admin_testy/restia_testy/07_restia_probe_updated_filtry.php
+vystup: C:\xampp\htdocs\comeback\admin_testy\restia_testy/restia_test.txt
+poznamka: diagnostika nic neimportuje a neuklada objednavky do DB
+--------------------------------------------------------------------------------
+pracovni den Praha od: 2026-05-04 06:00:00
+pracovni den Praha do: 2026-05-05 00:58:47
+test status zmen Praha od: 2026-05-04 18:00:00
+UTC od: 2026-05-04T04:00:00.000Z
+UTC do: 2026-05-04T22:58:47.942Z
+UTC test status zmen od: 2026-05-04T16:00:00.000Z
+limit na dotaz: 20
+pobocky nalezeno: 2
+--------------------------------------------------------------------------------
 
-=== BODY ===
-[{"id":"4de905d8-860b-4fea-889f-e14c03d2384e","orderNumber":"bams-2608-1ifp","shortCode":"1619","serialNumber":"041","token":"REpfQ1otYmFtcw-_-oma_cfa2ae8c-f94e-5c55-904d-41be8f2b3ec8-_-eu","destination":{"note":""},"customerName":"Jiří Otevřel","customerPhone":"+420722923991","customerEmail":null,"customerNote":null,"createdAt":"2026-02-21T23:06:57.113Z","expiresAt":"2026-02-21T23:11:56.993Z","deliveryAt":"2026-02-21T23:21:57.125Z","promisedAt":"2026-02-21T23:21:57.125Z","pickupAt":"2026-02-21T23:21:57.125Z","prepareAt":"2026-02-21T23:21:57.125Z","cookingTimeMinutes":15,"deliveryOnTime":false,"finishedAt":"2026-02-21T23:13:57.170Z","preparedAt":"2026-02-21T23:13:57.170Z","deliveredAt":null,"originalRequiredAt":"2026-02-21T23:14:56.539Z","isPickup":true,"paymentType":"online","surchargeToMin":"0","deliveryPrice":"0","packingPrice":"0","tipPrice":"0","itemsPrice":"34900","serviceFeePrice":"0","discountPrice":"6500","roundingPrice":"0","discountCode":null,"servicesData":null,"courierData":null,"courierOrder":null,"note":"","info":null,"deliveryZone":null,"isSelfDelivery":false,"isInRestaurant":false,"deliveryType":"external-delivery","posImportStatus":"success","posImportScheduledAt":null,"posImportedAt":"2026-02-21T23:06:57.754Z","posPaymentData":null,"posData":{"id":"2568812","receiptNumber":"2568812"},"status":"delivered","statusUpdatedAt":"2026-02-21T23:20:53.552Z","statusCanceledInfo":null,"closedAt":"2026-02-21T23:20:53.551Z","parentOrderId":null,"forwardedToOrderId":null,"isEdited":false,"statusUpdateWebhookUrl":null,"items":[{"id":"62240194","note":"","size":"Baby špenát & kuře 40cm","count":1,"label":"Baby špenát & kuře 40cm","posId":"104","price":32900,"isExtra":false},{"id":"62240266","note":"","count":1,"label":"Balné","posId":"K0000","price":2000,"isExtra":true}],"importedAt":"2026-02-21T23:06:57.114Z","profileId":"5cbd8e05-4cdb-4711-86df-606cbf9e6845","profile":{"id":"5cbd8e05-4cdb-4711-86df-606cbf9e6845","type":"damejidlo","key":"bams","apikey":null,"name":"Pizza Comeback Bolevec","isEnabled":true,"email":null,"createdAt":"2025-07-17T13:23:34.739Z","tempClosedUntil":null,"configData":{},"eshopConfig":null,"orderConfirmation":"auto","orderConfirmationOptions":{"isEnabled":true,"forcedConfirmMinutes":15},"internalStatusData":{},"openingHours":null,"deliveryData":null,"approvedToMenuUpload":true,"autoApproveMenuUploadAt":null,"menuUploadData":{"status":"completed","updatedAt":"2026-01-31T12:48:11.579Z"},"menuId":"762f8daa-ca39-4d8f-ae4a-d22b4d106e88","lastMenuSync":"2026-01-31T12:48:11.579Z","url":"","posId":"3eb8bd65-26d6-4fa9-a20b-19705f856f17"},"actionRequired":false},{"id":"56c098a2-8cf1-4625-a096-8be22186c458","orderNumber":"260221008","shortCode":"x260221008x","serialNumber":"040","token":null,"destination":{"zip":"30100","city":"Plzeň 1","note":null,"street":"Rooseveltova 35/15","latitude":"49.749183","longitude":"13.378981","deliveryData":{"distanceMeters":4515.5,"durationSeconds":668.2,"computedOnlyByGPS":false}},"customerName":"Dominik Mališ","customerPhone":"+420722138204","customerEmail":"dominikmalis@aol.com","customerNote":null,"createdAt":"2026-02-21T22:52:51.000Z","expiresAt":null,"deliveryAt":"2026-02-21T23:22:51.000Z","promisedAt":"2026-02-21T23:22:51.000Z","pickupAt":"2026-02-21T23:08:42.800Z","prepareAt":"2026-02-21T22:59:04.641Z","cookingTimeMinutes":5,"deliveryOnTime":false,"finishedAt":"2026-02-21T23:22:10.274Z","preparedAt":"2026-02-21T23:08:14.146Z","deliveredAt":"2026-02-21T23:19:29.401Z","originalRequiredAt":"2026-02-21T23:22:51.000Z","isPickup":false,"paymentType":"online","surchargeToMin":"0","deliveryPrice":"0","packingPrice":"0","tipPrice":"3000","itemsPrice":"91700","serviceFeePrice":"0","discountPrice":"0","roundingPrice":"0","discountCode":null,"servicesData":{"dispecink":{"id":"56c098a2-8cf1-4625-a096-8be22186c458","type":"Internal","importedAt":"2026-02-21T22:59:10.877Z","importStatus":"success","statusUpdatedAt":"2026-02-21T22:59:10.880Z","requiredCourierId":"2380dc1a-e4cb-4585-8559-144734a49bee"}},"courierData":{"id":"2380dc1a-e4cb-4585-8559-144734a49bee","name":"Lukáš Ženíšek","phone":"774489064","routeId":"019c826d-a9a7-7e13-ba88-2a6726284c5a","orderAssignedAt":"2026-02-21T22:59:10.887Z"},"courierOrder":0,"note":"","info":null,"deliveryZone":null,"isSelfDelivery":false,"isInRestaurant":false,"deliveryType":"delivery","posImportStatus":"success","posImportScheduledAt":null,"posImportedAt":"2026-02-21T22:54:04.882Z","posPaymentData":null,"posData":{"id":"2568731","receiptNumber":"2568731"},"status":"delivered","statusUpdatedAt":"2026-02-21T23:22:10.275Z","statusCanceledInfo":null,"closedAt":"2026-02-21T23:22:10.274Z","parentOrderId":null,"forwardedToOrderId":null,"isEdited":false,"statusUpdateWebhookUrl":null,"items":[{"id":"d63e9120-8ffe-444c-ba51-6c942a13f4fc","note":"","count":1,"label":"Margherita 40 cm","posId":"100","price":28900,"isExtra":false},{"id":"ed9751e1-1886-4b0f-b8dd-d3c6488dfd29","note":"","count":1,"label":"Mozzarella","posId":"ed9751e1-1886-4b0f-b8dd-d3c6488dfd29","price":4000,"isExtra":true},{"id":"d63e9120-8ffe-444c-ba51-6c942a13f4fc","note":"","count":1,"label":"Margherita 40 cm","posId":"100","price":28900,"isExtra":false},{"id":"ed9751e1-1886-4b0f-b8dd-d3c6488dfd29","note":"","count":1,"label":"Mozzarella","posId":"ed9751e1-1886-4b0f-b8dd-d3c6488dfd29","price":4000,"isExtra":true},{"id":"1da47ebe-2592-435a-b854-8cbe80b56263","note":"","count":1,"label":"Hawai 32 cm","posId":"138","price":25900,"isExtra":false}],"importedAt":"2026-02-21T22:54:04.624Z","profileId":"d49bdbc3-69b7-4c0e-9081-0b8f812859ac","profile":{"id":"d49bdbc3-69b7-4c0e-9081-0b8f812859ac","type":"generic","key":"T4RAu9maLsrjcvX4a","apikey":null,"name":"Adaptee","isEnabled":true,"email":null,"createdAt":"2025-07-17T13:24:02.700Z","tempClosedUntil":null,"configData":{"webhookUrl":"","updateDestinationWithGPS":false,"menuItemAvailabilityWebhook":""},"eshopConfig":null,"orderConfirmation":"auto","orderConfirmationOptions":null,"internalStatusData":null,"openingHours":null,"deliveryData":null,"approvedToMenuUpload":false,"autoApproveMenuUploadAt":null,"menuUploadData":null,"menuId":"762f8daa-ca39-4d8f-ae4a-d22b4d106e88","lastMenuSync":null,"url":"a","posId":"3eb8bd65-26d6-4fa9-a20b-19705f856f17"},"actionRequired":false},{"id":"a2974aee-86bb-4989-9c0f-39184c215b91","orderNumber":"289764131","shortCode":"O8A6F","serialNumber":"039","token":null,"destination":{},"customerName":"Ivan P.","customerPhone":"+420728087488","customerEmail":null,"customerNote":null,"createdAt":"2026-02-21T22:49:17.000Z","expiresAt":"2026-02-21T22:57:18.686Z","deliveryAt":"2026-02-21T23:04:18.709Z","promisedAt":"2026-02-21T23:04:18.709Z","pickupAt":"2026-02-21T23:07:19.000Z","prepareAt":"2026-02-21T23:04:18.709Z","cookingTimeMinutes":15,"deliveryOnTime":false,"finishedAt":"2026-02-21T22:53:29.086Z","preparedAt":"2026-02-21T22:53:29.086Z","deliveredAt":null,"originalRequiredAt":"2026-02-21T22:58:01.000Z","isPickup":true,"paymentType":"online","surchargeToMin":"0","deliveryPrice":"0","packingPrice":"0","tipPrice":"0","itemsPrice":"30900","serviceFeePrice":"0","discountPrice":"0","roundingPrice":"0","discountCode":null,"servicesData":null,"courierData":{"name":"Denys","phone":"+420721836264","expectedArrival":"2026-02-21T23:07:19.000Z"},"courierOrder":null,"note":"","info":null,"deliveryZone":null,"isSelfDelivery":false,"isInRestaurant":false,"deliveryType":"external-delivery","posImportStatus":"success","posImportScheduledAt":null,"posImportedAt":"2026-02-21T22:49:19.813Z","posPaymentData":null,"posData":{"id":"2568692","receiptNumber":"2568692"},"status":"delivered","statusUpdatedAt":"2026-02-21T23:07:00.416Z","statusCanceledInfo":null,"closedAt":"2026-02-21T23:07:00.415Z","parentOrderId":null,"forwardedToOrderId":null,"isEdited":false,"statusUpdateWebhookUrl":null,"items":[{"id":"120","note":"","count":1,"label":"Pepperoni 32cm 🌶️🌶️","posId":"120","price":25900,"isExtra":false},{"id":"K0000","note":"","count":1,"label":"Balné","posId":"K0000","price":1500,"isExtra":true},{"id":"17","note":"","count":1,"label":"USA těsto","posId":"17","price":1000,"isExtra":true},{"id":"ZRB32","note":"","count":1,"label":"BBQ základ","posId":"ZRB32","price":0,"isExtra":true},{"id":"B115","note":"","count":1,"label":"Kukuřice","posId":"B115","price":2500,"KDSTags":["greenhighlight"],"isExtra":true}],"importedAt":"2026-02-21T22:49:18.687Z","profileId":"ad1a379d-dd5a-440d-979b-1c59a2fe38b6","profile":{"id":"ad1a379d-dd5a-440d-979b-1c59a2fe38b6","type":"bolt","key":"vGF2BmlrPz","apikey":null,"name":"Pizza Comeback Bolevec","isEnabled":true,"email":null,"createdAt":"2025-07-17T13:23:16.486Z","tempClosedUntil":null,"configData":{},"eshopConfig":null,"orderConfirmation":"auto","orderConfirmationOptions":{"isEnabled":true,"forcedConfirmMinutes":15},"internalStatusData":{},"openingHours":null,"deliveryData":null,"approvedToMenuUpload":true,"autoApproveMenuUploadAt":null,"menuUploadData":{"status":"completed","updatedAt":"2026-01-31T12:48:13.307Z"},"menuId":"762f8daa-ca39-4d8f-ae4a-d22b4d106e88","lastMenuSync":"2026-01-31T12:48:13.307Z","url":"https://food.bolt.eu/cs-cz/427-plzen/p/159586-pizza-comeback/","posId":"3eb8bd65-26d6-4fa9-a20b-19705f856f17"},"actionRequired":false},{"id":"239377bd-1aa2-4c88-b94e-4f0b575dfc25","orderNumber":"bams-2608-uk75","shortCode":"1618","serialNumber":"038","token":"REpfQ1otYmFtcw-_-oma_fc9aa273-1a61-532e-8608-353162cb26ac-_-eu","destination":{"note":""},"customerName":"Lukáš Šafránek","customerPhone":"+420773089689","customerEmail":null,"customerNote":null,"createdAt":"2026-02-21T22:24:36.707Z","expiresAt":"2026-02-21T22:29:36.587Z","deliveryAt":"2026-02-21T22:39:36.725Z","promisedAt":"2026-02-21T22:39:36.725Z","pickupAt":"2026-02-21T22:39:36.725Z","prepareAt":"2026-02-21T22:39:36.725Z","cookingTimeMinutes":15,"deliveryOnTime":false,"finishedAt":"2026-02-21T22:33:33.546Z","preparedAt":"2026-02-21T22:33:33.546Z","deliveredAt":null,"originalRequiredAt":"2026-02-21T22:34:09.001Z","isPickup":true,"paymentType":"online","surchargeToMin":"0","deliveryPrice":"0","packingPrice":"0","tipPrice":"0","itemsPrice":"33300","serviceFeePrice":"0","discountPrice":"5000","roundingPrice":"0","discountCode":null,"servicesData":null,"courierData":null,"courierOrder":null,"note":"","info":null,"deliveryZone":null,"isSelfDelivery":false,"isInRestaurant":false,"deliveryType":"external-delivery","posImportStatus":"success","posImportScheduledAt":null,"posImportedAt":"2026-02-21T22:24:37.252Z","posPaymentData":null,"posData":{"id":"2568551","receiptNumber":"2568551"},"status":"delivered","statusUpdatedAt":"2026-02-21T22:53:27.181Z","statusCanceledInfo":null,"closedAt":"2026-02-21T22:53:27.181Z","parentOrderId":null,"forwardedToOrderId":null,"isEdited":false,"statusUpdateWebhookUrl":null,"items":[{"id":"62240203","note":"","size":"Pepperoni 32cm 🌶️🌶️","count":1,"label":"Pepperoni 32cm 🌶️🌶️","posId":"120","price":25900,"isExtra":false},{"id":"62240274","note":"","count":1,"label":"Balné","posId":"K0000","price":1500,"isExtra":true},{"id":"62240394","note":"","count":1,"label":"BBQ základ","posId":"ZRB32","price":0,"isExtra":true},{"id":"62240248","note":"","size":"Mirinda 1l","count":1,"label":"Mirinda 1l","posId":"N126","price":5900,"isExtra":false}],"importedAt":"2026-02-21T22:24:36.708Z","profileId":"5cbd8e05-4cdb-4711-86df-606cbf9e6845","profile":{"id":"5cbd8e05-4cdb-4711-86df-606cbf9e6845","type":"damejidlo","key":"bams","apikey":null,"name":"Pizza Comeback Bolevec","isEnabled":true,"email":null,"createdAt":"2025-07-17T13:23:34.739Z","tempClosedUntil":null,"configData":{},"eshopConfig":null,"orderConfirmation":"auto","orderConfirmationOptions":{"isEnabled":true,"forcedConfirmMinutes":15},"internalStatusData":{},"openingHours":null,"deliveryData":null,"approvedToMenuUpload":true,"autoApproveMenuUploadAt":null,"menuUploadData":{"status":"completed","updatedAt":"2026-01-31T12:48:11.579Z"},"menuId":"762f8daa-ca39-4d8f-ae4a-d22b4d106e88","lastMenuSync":"2026-01-31T12:48:11.579Z","url":"","posId":"3eb8bd65-26d6-4fa9-a20b-19705f856f17"},"actionRequired":false},{"id":"b7b81348-de0c-410f-a5ab-3416265323a0","orderNumber":"289762424","shortCode":"QML2M","serialNumber":"037","token":null,"destination":{},"customerName":"Jakub O.","customerPhone":"+420776887644","customerEmail":null,"customerNote":null,"createdAt":"2026-02-21T22:20:14.000Z","expiresAt":"2026-02-21T22:28:16.566Z","deliveryAt":"2026-02-21T22:35:16.610Z","promisedAt":"2026-02-21T22:35:16.610Z","pickupAt":"2026-02-21T22:35:16.610Z","prepareAt":"2026-02-21T22:35:16.610Z","cookingTimeMinutes":15,"deliveryOnTime":false,"finishedAt":"2026-02-21T22:32:52.046Z","preparedAt":"2026-02-21T22:32:52.046Z","deliveredAt":null,"originalRequiredAt":"2026-02-21T22:30:02.000Z","isPickup":true,"paymentType":"online","surchargeToMin":"0","deliveryPrice":"0","packingPrice":"0","tipPrice":"0","itemsPrice":"45300","serviceFeePrice":"0","discountPrice":"0","roundingPrice":"0","discountCode":null,"servicesData":null,"courierData":{"name":"Maksym","phone":"+420607822420","expectedArrival":"2026-02-21T22:34:50.000Z"},"courierOrder":null,"note":"","info":null,"deliveryZone":null,"isSelfDelivery":false,"isInRestaurant":false,"deliveryType":"external-delivery","posImportStatus":"success","posImportScheduledAt":null,"posImportedAt":"2026-02-21T22:20:17.396Z","posPaymentData":null,"posData":{"id":"2568529","receiptNumber":"2568529"},"status":"delivered","statusUpdatedAt":"2026-02-21T22:33:31.729Z","statusCanceledInfo":null,"closedAt":"2026-02-21T22:33:31.728Z","parentOrderId":null,"forwardedToOrderId":null,"isEdited":false,"statusUpdateWebhookUrl":null,"items":[{"id":"106","note":"","count":1,"label":"BBQ Meteor 40cm","posId":"106","price":32900,"isExtra":false},{"id":"K0000","note":"","count":1,"label":"Balné","posId":"K0000","price":2000,"isExtra":true},{"id":"ZBR40","note":"","count":1,"label":"Rajčatový základ","posId":"ZBR40","price":0,"isExtra":true},{"id":"A124","note":"","count":1,"label":"okraj mozzarella, bbq omáčka","posId":"A124","price":6900,"isExtra":true},{"id":"C102","note":"","count":1,"label":"Jalapeňos","posId":"C102","price":3500,"KDSTags":["greenhighlight"],"isExtra":true}],"importedAt":"2026-02-21T22:20:16.567Z","profileId":"ad1a379d-dd5a-440d-979b-1c59a2fe38b6","profile":{"id":"ad1a379d-dd5a-440d-979b-1c59a2fe38b6","type":"bolt","key":"vGF2BmlrPz","apikey":null,"name":"Pizza Comeback Bolevec","isEnabled":true,"email":null,"createdAt":"2025-07-17T13:23:16.486Z","tempClosedUntil":null,"configData":{},"eshopConfig":null,"orderConfirmation":"auto","orderConfirmationOptions":{"isEnabled":true,"forcedConfirmMinutes":15},"internalStatusData":{},"openingHours":null,"deliveryData":null,"approvedToMenuUpload":true,"autoApproveMenuUploadAt":null,"menuUploadData":{"status":"completed","updatedAt":"2026-01-31T12:48:13.307Z"},"menuId":"762f8daa-ca39-4d8f-ae4a-d22b4d106e88","lastMenuSync":"2026-01-31T12:48:13.307Z","url":"https://food.bolt.eu/cs-cz/427-plzen/p/159586-pizza-comeback/","posId":"3eb8bd65-26d6-4fa9-a20b-19705f856f17"},"actionRequired":false},{"id":"74a6cfe8-f241-4f61-8998-2c175d11a888","orderNumber":"289760143","shortCode":"FX2GZ","serialNumber":"036","token":null,"destination":{},"customerName":"Serhii M.","customerPhone":"+420602804550","customerEmail":null,"customerNote":null,"createdAt":"2026-02-21T21:50:15.000Z","expiresAt":"2026-02-21T21:58:18.445Z","deliveryAt":"2026-02-21T22:05:18.472Z","promisedAt":"2026-02-21T22:05:18.472Z","pickupAt":"2026-02-21T22:05:18.472Z","prepareAt":"2026-02-21T22:05:18.472Z","cookingTimeMinutes":15,"deliveryOnTime":false,"finishedAt":"2026-02-21T21:55:26.095Z","preparedAt":"2026-02-21T21:55:26.095Z","deliveredAt":null,"originalRequiredAt":"2026-02-21T22:00:58.000Z","isPickup":true,"paymentType":"online","surchargeToMin":"0","deliveryPrice":"0","packingPrice":"0","tipPrice":"0","itemsPrice":"38400","serviceFeePrice":"0","discountPrice":"0","roundingPrice":"0","discountCode":null,"servicesData":null,"courierData":{"name":"Anatolie","phone":"+420608180901","expectedArrival":"2026-02-21T22:03:41.000Z"},"courierOrder":null,"note":"","info":null,"deliveryZone":null,"isSelfDelivery":false,"isInRestaurant":false,"deliveryType":"external-delivery","posImportStatus":"success","posImportScheduledAt":null,"posImportedAt":"2026-02-21T21:50:19.210Z","posPaymentData":null,"posData":{"id":"2568390","receiptNumber":"2568390"},"status":"delivered","statusUpdatedAt":"2026-02-21T22:01:56.919Z","statusCanceledInfo":null,"closedAt":"2026-02-21T22:01:56.918Z","parentOrderId":null,"forwardedToOrderId":null,"isEdited":false,"statusUpdateWebhookUrl":null,"items":[{"id":"104","note":"","count":1,"label":"Baby špenát & kuře 40cm","posId":"104","price":32900,"isExtra":false},{"id":"K0000","note":"","count":1,"label":"Balné","posId":"K0000","price":2000,"isExtra":true},{"id":"P106","note":"","count":1,"label":"Česnekový dip","posId":"P106","price":2000,"isExtra":false},{"id":"K0000","note":"","count":1,"label":"Balné","posId":"K0000","price":1500,"isExtra":true}],"importedAt":"2026-02-21T21:50:18.446Z","profileId":"ad1a379d-dd5a-440d-979b-1c59a2fe38b6","profile":{"id":"ad1a379d-dd5a-440d-979b-1c59a2fe38b6","type":"bolt","key":"vGF2BmlrPz","apikey":null,"name":"Pizza Comeback Bolevec","isEnabled":true,"email":null,"createdAt":"2025-07-17T13:23:16.486Z","tempClosedUntil":null,"configData":{},"eshopConfig":null,"orderConfirmation":"auto","orderConfirmationOptions":{"isEnabled":true,"forcedConfirmMinutes":15},"internalStatusData":{},"openingHours":null,"deliveryData":null,"approvedToMenuUpload":true,"autoApproveMenuUploadAt":null,"menuUploadData":{"status":"completed","updatedAt":"2026-01-31T12:48:13.307Z"},"menuId":"762f8daa-ca39-4d8f-ae4a-d22b4d106e88","lastMenuSync":"2026-01-31T12:48:13.307Z","url":"https://food.bolt.eu/cs-cz/427-plzen/p/159586-pizza-comeback/","posId":"3eb8bd65-26d6-4fa9-a20b-19705f856f17"},"actionRequired":false},{"id":"a9f7b0e9-cb4e-4198-ac64-a625d39277e7","orderNumber":"289759555","shortCode":"KHONS","serialNumber":"035","token":null,"destination":{},"customerName":"Volodymyr I.","customerPhone":"+420775268156","customerEmail":null,"customerNote":null,"createdAt":"2026-02-21T21:43:53.000Z","expiresAt":"2026-02-21T21:52:06.870Z","deliveryAt":"2026-02-21T21:59:06.898Z","promisedAt":"2026-02-21T21:59:06.898Z","pickupAt":"2026-02-21T21:59:06.898Z","prepareAt":"2026-02-21T21:59:06.898Z","cookingTimeMinutes":15,"deliveryOnTime":false,"finishedAt":"2026-02-21T21:52:38.120Z","preparedAt":"2026-02-21T21:52:38.120Z","deliveredAt":null,"originalRequiredAt":"2026-02-21T21:53:07.000Z","isPickup":true,"paymentType":"online","surchargeToMin":"0","deliveryPrice":"0","packingPrice":"0","tipPrice":"0","itemsPrice":"32400","serviceFeePrice":"0","discountPrice":"0","roundingPrice":"0","discountCode":null,"servicesData":null,"courierData":{"name":"Ivan","phone":"+420728988560","expectedArrival":"2026-02-21T21:57:48.000Z"},"courierOrder":null,"note":"","info":null,"deliveryZone":null,"isSelfDelivery":false,"isInRestaurant":false,"deliveryType":"external-delivery","posImportStatus":"success","posImportScheduledAt":null,"posImportedAt":"2026-02-21T21:44:07.663Z","posPaymentData":null,"posData":{"id":"2568382","receiptNumber":"2568382"},"status":"delivered","statusUpdatedAt":"2026-02-21T21:55:24.812Z","statusCanceledInfo":null,"closedAt":"2026-02-21T21:55:24.811Z","parentOrderId":null,"forwardedToOrderId":null,"isEdited":false,"statusUpdateWebhookUrl":null,"items":[{"id":"123","note":"","count":1,"label":"Quattro Formaggi 32cm","posId":"123","price":25900,"isExtra":false},{"id":"K0000","note":"","count":1,"label":"Balné","posId":"K0000","price":1500,"isExtra":true},{"id":"B100","note":"","count":1,"label":"Ananas","posId":"B100","price":2500,"KDSTags":["greenhighlight"],"isExtra":true},{"id":"B115","note":"","count":1,"label":"Kukuřice","posId":"B115","price":2500,"KDSTags":["greenhighlight"],"isExtra":true}],"importedAt":"2026-02-21T21:44:06.871Z","profileId":"ad1a379d-dd5a-440d-979b-1c59a2fe38b6","profile":{"id":"ad1a379d-dd5a-440d-979b-1c59a2fe38b6","type":"bolt","key":"vGF2BmlrPz","apikey":null,"name":"Pizza Comeback Bolevec","isEnabled":true,"email":null,"createdAt":"2025-07-17T13:23:16.486Z","tempClosedUntil":null,"configData":{},"eshopConfig":null,"orderConfirmation":"auto","orderConfirmationOptions":{"isEnabled":true,"forcedConfirmMinutes":15},"internalStatusData":{},"openingHours":null,"deliveryData":null,"approvedToMenuUpload":true,"autoApproveMenuUploadAt":null,"menuUploadData":{"status":"completed","updatedAt":"2026-01-31T12:48:13.307Z"},"menuId":"762f8daa-ca39-4d8f-ae4a-d22b4d106e88","lastMenuSync":"2026-01-31T12:48:13.307Z","url":"https://food.bolt.eu/cs-cz/427-plzen/p/159586-pizza-comeback/","posId":"3eb8bd65-26d6-4fa9-a20b-19705f856f17"},"actionRequired":false},{"id":"68775bec-1a09-43bf-bb26-a3e442ab2f7a","orderNumber":"bams-2608-n2a6","shortCode":"1617","serialNumber":"034","token":"REpfQ1otYmFtcw-_-oma_65324d10-27ab-5768-9f16-c361b176a93c-_-eu","destination":{"note":""},"customerName":"Jakub Palkoska","customerPhone":"+420732230240","customerEmail":null,"customerNote":null,"createdAt":"2026-02-21T20:52:15.054Z","expiresAt":"2026-02-21T20:57:14.930Z","deliveryAt":"2026-02-21T21:07:15.081Z","promisedAt":"2026-02-21T21:07:15.081Z","pickupAt":"2026-02-21T21:07:15.081Z","prepareAt":"2026-02-21T21:07:15.081Z","cookingTimeMinutes":15,"deliveryOnTime":false,"finishedAt":"2026-02-21T21:01:10.921Z","preparedAt":"2026-02-21T21:01:10.921Z","deliveredAt":null,"originalRequiredAt":"2026-02-21T21:00:14.736Z","isPickup":true,"paymentType":"online","surchargeToMin":"0","deliveryPrice":"0","packingPrice":"0","tipPrice":"0","itemsPrice":"37900","serviceFeePrice":"0","discountPrice":"6500","roundingPrice":"0","discountCode":null,"servicesData":null,"courierData":null,"courierOrder":null,"note":"","info":null,"deliveryZone":null,"isSelfDelivery":false,"isInRestaurant":false,"deliveryType":"external-delivery","posImportStatus":"success","posImportScheduledAt":null,"posImportedAt":"2026-02-21T20:52:15.568Z","posPaymentData":null,"posData":{"id":"2568142","receiptNumber":"2568142"},"status":"delivered","statusUpdatedAt":"2026-02-21T21:01:56.791Z","statusCanceledInfo":null,"closedAt":"2026-02-21T21:01:56.791Z","parentOrderId":null,"forwardedToOrderId":null,"isEdited":false,"statusUpdateWebhookUrl":null,"items":[{"id":"62240223","note":"","size":"Spicy menu Comeback","count":1,"label":"Spicy menu Comeback","posId":"M100","price":37900,"isExtra":false},{"id":"62240312","note":"","count":1,"label":"Comeback","posId":"Y121","price":0,"isExtra":true},{"id":"62240392","note":"","count":1,"label":"Smetanový základ","posId":"ZRS32","price":0,"isExtra":true},{"id":"62240267","note":"","count":1,"label":"spicy wings 🌶️","posId":"P101","price":0,"isExtra":true},{"id":"62240404","note":"","count":1,"label":"Poděbradská malinovka 0,5l","posId":"N129","price":0,"isExtra":true}],"importedAt":"2026-02-21T20:52:15.055Z","profileId":"5cbd8e05-4cdb-4711-86df-606cbf9e6845","profile":{"id":"5cbd8e05-4cdb-4711-86df-606cbf9e6845","type":"damejidlo","key":"bams","apikey":null,"name":"Pizza Comeback Bolevec","isEnabled":true,"email":null,"createdAt":"2025-07-17T13:23:34.739Z","tempClosedUntil":null,"configData":{},"eshopConfig":null,"orderConfirmation":"auto","orderConfirmationOptions":{"isEnabled":true,"forcedConfirmMinutes":15},"internalStatusData":{},"openingHours":null,"deliveryData":null,"approvedToMenuUpload":true,"autoApproveMenuUploadAt":null,"menuUploadData":{"status":"completed","updatedAt":"2026-01-31T12:48:11.579Z"},"menuId":"762f8daa-ca39-4d8f-ae4a-d22b4d106e88","lastMenuSync":"2026-01-31T12:48:11.579Z","url":"","posId":"3eb8bd65-26d6-4fa9-a20b-19705f856f17"},"actionRequired":false},{"id":"d286c8e7-0dbd-441b-a222-988902b905e4","orderNumber":"289752071","shortCode":"BNQVX","serialNumber":"033","token":null,"destination":{},"customerName":"Pavel H.","customerPhone":"+420703484099","customerEmail":null,"customerNote":null,"createdAt":"2026-02-21T20:42:05.000Z","expiresAt":"2026-02-21T20:50:16.233Z","deliveryAt":"2026-02-21T20:57:16.287Z","promisedAt":"2026-02-21T20:57:16.287Z","pickupAt":"2026-02-21T21:01:11.000Z","prepareAt":"2026-02-21T20:57:16.287Z","cookingTimeMinutes":15,"deliveryOnTime":false,"finishedAt":"2026-02-21T20:48:31.323Z","preparedAt":"2026-02-21T20:48:31.323Z","deliveredAt":null,"originalRequiredAt":"2026-02-21T20:51:23.000Z","isPickup":true,"paymentType":"online","surchargeToMin":"0","deliveryPrice":"0","packingPrice":"0","tipPrice":"0","itemsPrice":"30900","serviceFeePrice":"0","discountPrice":"0","roundingPrice":"0","discountCode":null,"servicesData":null,"courierData":{"name":"Ivan","phone":"+420728988560","expectedArrival":"2026-02-21T21:01:11.000Z"},"courierOrder":null,"note":"","info":null,"deliveryZone":null,"isSelfDelivery":false,"isInRestaurant":false,"deliveryType":"external-delivery","posImportStatus":"success","posImportScheduledAt":null,"posImportedAt":"2026-02-21T20:42:17.146Z","posPaymentData":null,"posData":{"id":"2568095","receiptNumber":"2568095"},"status":"delivered","statusUpdatedAt":"2026-02-21T21:01:55.727Z","statusCanceledInfo":null,"closedAt":"2026-02-21T21:01:55.726Z","parentOrderId":null,"forwardedToOrderId":null,"isEdited":false,"statusUpdateWebhookUrl":null,"items":[{"id":"P106","note":"","count":1,"label":"Česnekový dip","posId":"P106","price":2000,"isExtra":false},{"id":"K0000","note":"","count":1,"label":"Balné","posId":"K0000","price":1500,"isExtra":true},{"id":"119","note":"","count":1,"label":"BBQ Texas 32cm","posId":"119","price":25900,"isExtra":false},{"id":"K0000","note":"","count":1,"label":"Balné","posId":"K0000","price":1500,"isExtra":true}],"importedAt":"2026-02-21T20:42:16.233Z","profileId":"ad1a379d-dd5a-440d-979b-1c59a2fe38b6","profile":{"id":"ad1a379d-dd5a-440d-979b-1c59a2fe38b6","type":"bolt","key":"vGF2BmlrPz","apikey":null,"name":"Pizza Comeback Bolevec","isEnabled":true,"email":null,"createdAt":"2025-07-17T13:23:16.486Z","tempClosedUntil":null,"configData":{},"eshopConfig":null,"orderConfirmation":"auto","orderConfirmationOptions":{"isEnabled":true,"forcedConfirmMinutes":15},"internalStatusData":{},"openingHours":null,"deliveryData":null,"approvedToMenuUpload":true,"autoApproveMenuUploadAt":null,"menuUploadData":{"status":"completed","updatedAt":"2026-01-31T12:48:13.307Z"},"menuId":"762f8daa-ca39-4d8f-ae4a-d22b4d106e88","lastMenuSync":"2026-01-31T12:48:13.307Z","url":"https://food.bolt.eu/cs-cz/427-plzen/p/159586-pizza-comeback/","posId":"3eb8bd65-26d6-4fa9-a20b-19705f856f17"},"actionRequired":false},{"id":"cf705dfc-c615-46b1-ad45-be82cccc2b52","orderNumber":"a5bb0fc372","shortCode":"af60","serialNumber":"032","token":null,"destination":{},"customerName":"V restauraci","customerPhone":"774489064","customerEmail":null,"customerNote":null,"createdAt":"2026-02-21T20:28:43.483Z","expiresAt":null,"deliveryAt":"2026-02-21T20:33:43.697Z","promisedAt":"2026-02-21T20:33:43.697Z","pickupAt":"2026-02-21T20:33:43.697Z","prepareAt":"2026-02-21T20:33:43.533Z","cookingTimeMinutes":5,"deliveryOnTime":false,"finishedAt":"2026-02-21T20:28:45.909Z","preparedAt":"2026-02-21T20:28:45.909Z","deliveredAt":"2026-02-21T20:28:48.358Z","originalRequiredAt":null,"isPickup":true,"paymentType":"cash","surchargeToMin":"0","deliveryPrice":"0","packingPrice":"0","tipPrice":"0","itemsPrice":"5500","serviceFeePrice":"0","discountPrice":"3500","roundingPrice":"0","discountCode":null,"servicesData":null,"courierData":null,"courierOrder":null,"note":null,"info":null,"deliveryZone":null,"isSelfDelivery":false,"isInRestaurant":true,"deliveryType":"pickup","posImportStatus":"success","posImportScheduledAt":null,"posImportedAt":"2026-02-21T20:28:43.872Z","posPaymentData":{"posId":"2"},"posData":{"id":"2567994","receiptNumber":"2567994"},"status":"delivered","statusUpdatedAt":"2026-02-21T20:28:48.359Z","statusCanceledInfo":null,"closedAt":"2026-02-21T20:28:48.358Z","parentOrderId":null,"forwardedToOrderId":null,"isEdited":false,"statusUpdateWebhookUrl":null,"items":[{"id":"b45631db-1b89-421f-a9a7-2cef193661b2","count":1,"label":"Guarana classic","posId":"N142","price":5500,"isExtra":false,"discount":{"type":"absolute","value":35},"creatorId":"tgDitUSfMj-G7kqDYcAWf","isPackging":0,"actualLabel":"Guarana classic"}],"importedAt":"2026-02-21T20:28:43.483Z","profileId":"c0fd9cbb-e483-43f3-84b8-9b9a8cc643a8","profile":{"id":"c0fd9cbb-e483-43f3-84b8-9b9a8cc643a8","type":"manual","key":"manual","apikey":null,"name":"Ručně zadané obj.","isEnabled":true,"email":null,"createdAt":"2025-07-17T08:14:49.230Z","tempClosedUntil":null,"configData":null,"eshopConfig":null,"orderConfirmation":"external","orderConfirmationOptions":null,"internalStatusData":null,"openingHours":null,"deliveryData":null,"approvedToMenuUpload":false,"autoApproveMenuUploadAt":null,"menuUploadData":null,"menuId":null,"lastMenuSync":null,"url":null,"posId":"3eb8bd65-26d6-4fa9-a20b-19705f856f17"},"actionRequired":false}]
-=== KONEC BODY ===
+POBOCKA: Malešice | id_pob=1
+activePosId: 38da0b11-20d1-4d08-87d9-0de80d375703
+--------------------------------------------------------------------------------
 
-[2026-02-22 18:08:51 UTC] krůček 13: shrnutí
-[2026-02-22 18:08:51 UTC] shrnutí: pocet_v_body=10
-[2026-02-22 18:08:51 UTC] shrnutí: první_obj: id=4de905d8-860b-4fea-889f-e14c03d2384e orderNumber=bams-2608-1ifp createdAt=2026-02-21T23:06:57.113Z
-[2026-02-22 18:08:51 UTC] krůček 14: flush api_restia
-[2026-02-22 18:08:51 UTC] krůček 15: konec OK
+VARIANTA: baseline_created
+query: {"page":1,"limit":20,"activePosId":"38da0b11-20d1-4d08-87d9-0de80d375703","createdFrom":"2026-05-04T04:00:00.000Z","createdTo":"2026-05-04T22:58:47.942Z"}
+http_status: 200
+ok: 1
+ms: 311
+X-Total-Count: 102
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 14
+ukazka objednavek max 5:
+    id=627d58f0-8b37-4678-b172-14b6a00eaff4 | status=ready_pickup | createdAt=2026-05-04T22:30:57.000Z | statusUpdatedAt=2026-05-04T22:39:30.520Z | closedAt=NULL
+    id=3b90742e-3e40-456c-8be8-fe429d7cb214 | status=delivered | createdAt=2026-05-04T22:23:26.722Z | statusUpdatedAt=2026-05-04T22:47:17.899Z | closedAt=2026-05-04T22:47:17.898Z
+    id=a8363def-2372-476f-96f2-ce042ad11bca | status=ready_pickup | createdAt=2026-05-04T22:13:52.722Z | statusUpdatedAt=2026-05-04T22:25:23.516Z | closedAt=NULL
+    id=47768246-4366-4f00-bb95-42a17c1421dd | status=ready_pickup | createdAt=2026-05-04T22:05:31.790Z | statusUpdatedAt=2026-05-04T22:21:58.630Z | closedAt=NULL
+    id=70979087-b0a7-4253-b7e5-e761c3ebf541 | status=ready_pickup | createdAt=2026-05-04T21:56:30.000Z | statusUpdatedAt=2026-05-04T22:24:48.417Z | closedAt=NULL
+
+VARIANTA: created_plus_updatedFrom
+query: {"page":1,"limit":20,"activePosId":"38da0b11-20d1-4d08-87d9-0de80d375703","createdFrom":"2026-05-04T04:00:00.000Z","createdTo":"2026-05-04T22:58:47.942Z","updatedFrom":"2026-05-04T04:00:00.000Z"}
+http_status: 200
+ok: 1
+ms: 280
+X-Total-Count: 102
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 14
+ukazka objednavek max 5:
+    id=627d58f0-8b37-4678-b172-14b6a00eaff4 | status=ready_pickup | createdAt=2026-05-04T22:30:57.000Z | statusUpdatedAt=2026-05-04T22:39:30.520Z | closedAt=NULL
+    id=3b90742e-3e40-456c-8be8-fe429d7cb214 | status=delivered | createdAt=2026-05-04T22:23:26.722Z | statusUpdatedAt=2026-05-04T22:47:17.899Z | closedAt=2026-05-04T22:47:17.898Z
+    id=a8363def-2372-476f-96f2-ce042ad11bca | status=ready_pickup | createdAt=2026-05-04T22:13:52.722Z | statusUpdatedAt=2026-05-04T22:25:23.516Z | closedAt=NULL
+    id=47768246-4366-4f00-bb95-42a17c1421dd | status=ready_pickup | createdAt=2026-05-04T22:05:31.790Z | statusUpdatedAt=2026-05-04T22:21:58.630Z | closedAt=NULL
+    id=70979087-b0a7-4253-b7e5-e761c3ebf541 | status=ready_pickup | createdAt=2026-05-04T21:56:30.000Z | statusUpdatedAt=2026-05-04T22:24:48.417Z | closedAt=NULL
+
+VARIANTA: created_plus_statusUpdatedFrom
+query: {"page":1,"limit":20,"activePosId":"38da0b11-20d1-4d08-87d9-0de80d375703","createdFrom":"2026-05-04T04:00:00.000Z","createdTo":"2026-05-04T22:58:47.942Z","statusUpdatedFrom":"2026-05-04T04:00:00.000Z"}
+http_status: 200
+ok: 1
+ms: 281
+X-Total-Count: 102
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 14
+ukazka objednavek max 5:
+    id=627d58f0-8b37-4678-b172-14b6a00eaff4 | status=ready_pickup | createdAt=2026-05-04T22:30:57.000Z | statusUpdatedAt=2026-05-04T22:39:30.520Z | closedAt=NULL
+    id=3b90742e-3e40-456c-8be8-fe429d7cb214 | status=delivered | createdAt=2026-05-04T22:23:26.722Z | statusUpdatedAt=2026-05-04T22:47:17.899Z | closedAt=2026-05-04T22:47:17.898Z
+    id=a8363def-2372-476f-96f2-ce042ad11bca | status=ready_pickup | createdAt=2026-05-04T22:13:52.722Z | statusUpdatedAt=2026-05-04T22:25:23.516Z | closedAt=NULL
+    id=47768246-4366-4f00-bb95-42a17c1421dd | status=ready_pickup | createdAt=2026-05-04T22:05:31.790Z | statusUpdatedAt=2026-05-04T22:21:58.630Z | closedAt=NULL
+    id=70979087-b0a7-4253-b7e5-e761c3ebf541 | status=ready_pickup | createdAt=2026-05-04T21:56:30.000Z | statusUpdatedAt=2026-05-04T22:24:48.417Z | closedAt=NULL
+
+VARIANTA: only_updatedFrom
+query: {"page":1,"limit":20,"activePosId":"38da0b11-20d1-4d08-87d9-0de80d375703","updatedFrom":"2026-05-04T04:00:00.000Z"}
+http_status: 200
+ok: 1
+ms: 229
+X-Total-Count: 236
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 14
+ukazka objednavek max 5:
+    id=627d58f0-8b37-4678-b172-14b6a00eaff4 | status=ready_pickup | createdAt=2026-05-04T22:30:57.000Z | statusUpdatedAt=2026-05-04T22:39:30.520Z | closedAt=NULL
+    id=3b90742e-3e40-456c-8be8-fe429d7cb214 | status=delivered | createdAt=2026-05-04T22:23:26.722Z | statusUpdatedAt=2026-05-04T22:47:17.899Z | closedAt=2026-05-04T22:47:17.898Z
+    id=a8363def-2372-476f-96f2-ce042ad11bca | status=ready_pickup | createdAt=2026-05-04T22:13:52.722Z | statusUpdatedAt=2026-05-04T22:25:23.516Z | closedAt=NULL
+    id=47768246-4366-4f00-bb95-42a17c1421dd | status=ready_pickup | createdAt=2026-05-04T22:05:31.790Z | statusUpdatedAt=2026-05-04T22:21:58.630Z | closedAt=NULL
+    id=70979087-b0a7-4253-b7e5-e761c3ebf541 | status=ready_pickup | createdAt=2026-05-04T21:56:30.000Z | statusUpdatedAt=2026-05-04T22:24:48.417Z | closedAt=NULL
+
+VARIANTA: only_statusUpdatedFrom
+query: {"page":1,"limit":20,"activePosId":"38da0b11-20d1-4d08-87d9-0de80d375703","statusUpdatedFrom":"2026-05-04T04:00:00.000Z"}
+http_status: 200
+ok: 1
+ms: 236
+X-Total-Count: 236
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 14
+ukazka objednavek max 5:
+    id=627d58f0-8b37-4678-b172-14b6a00eaff4 | status=ready_pickup | createdAt=2026-05-04T22:30:57.000Z | statusUpdatedAt=2026-05-04T22:39:30.520Z | closedAt=NULL
+    id=3b90742e-3e40-456c-8be8-fe429d7cb214 | status=delivered | createdAt=2026-05-04T22:23:26.722Z | statusUpdatedAt=2026-05-04T22:47:17.899Z | closedAt=2026-05-04T22:47:17.898Z
+    id=a8363def-2372-476f-96f2-ce042ad11bca | status=ready_pickup | createdAt=2026-05-04T22:13:52.722Z | statusUpdatedAt=2026-05-04T22:25:23.516Z | closedAt=NULL
+    id=47768246-4366-4f00-bb95-42a17c1421dd | status=ready_pickup | createdAt=2026-05-04T22:05:31.790Z | statusUpdatedAt=2026-05-04T22:21:58.630Z | closedAt=NULL
+    id=70979087-b0a7-4253-b7e5-e761c3ebf541 | status=ready_pickup | createdAt=2026-05-04T21:56:30.000Z | statusUpdatedAt=2026-05-04T22:24:48.417Z | closedAt=NULL
+
+VARIANTA: only_updatedFrom_today18
+query: {"page":1,"limit":20,"activePosId":"38da0b11-20d1-4d08-87d9-0de80d375703","updatedFrom":"2026-05-04T16:00:00.000Z"}
+http_status: 200
+ok: 1
+ms: 233
+X-Total-Count: 236
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 14
+ukazka objednavek max 5:
+    id=627d58f0-8b37-4678-b172-14b6a00eaff4 | status=ready_pickup | createdAt=2026-05-04T22:30:57.000Z | statusUpdatedAt=2026-05-04T22:39:30.520Z | closedAt=NULL
+    id=3b90742e-3e40-456c-8be8-fe429d7cb214 | status=delivered | createdAt=2026-05-04T22:23:26.722Z | statusUpdatedAt=2026-05-04T22:47:17.899Z | closedAt=2026-05-04T22:47:17.898Z
+    id=a8363def-2372-476f-96f2-ce042ad11bca | status=ready_pickup | createdAt=2026-05-04T22:13:52.722Z | statusUpdatedAt=2026-05-04T22:25:23.516Z | closedAt=NULL
+    id=47768246-4366-4f00-bb95-42a17c1421dd | status=ready_pickup | createdAt=2026-05-04T22:05:31.790Z | statusUpdatedAt=2026-05-04T22:21:58.630Z | closedAt=NULL
+    id=70979087-b0a7-4253-b7e5-e761c3ebf541 | status=ready_pickup | createdAt=2026-05-04T21:56:30.000Z | statusUpdatedAt=2026-05-04T22:24:48.417Z | closedAt=NULL
+
+VARIANTA: only_statusUpdatedFrom_today18
+query: {"page":1,"limit":20,"activePosId":"38da0b11-20d1-4d08-87d9-0de80d375703","statusUpdatedFrom":"2026-05-04T16:00:00.000Z"}
+http_status: 200
+ok: 1
+ms: 225
+X-Total-Count: 236
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 14
+ukazka objednavek max 5:
+    id=627d58f0-8b37-4678-b172-14b6a00eaff4 | status=ready_pickup | createdAt=2026-05-04T22:30:57.000Z | statusUpdatedAt=2026-05-04T22:39:30.520Z | closedAt=NULL
+    id=3b90742e-3e40-456c-8be8-fe429d7cb214 | status=delivered | createdAt=2026-05-04T22:23:26.722Z | statusUpdatedAt=2026-05-04T22:47:17.899Z | closedAt=2026-05-04T22:47:17.898Z
+    id=a8363def-2372-476f-96f2-ce042ad11bca | status=ready_pickup | createdAt=2026-05-04T22:13:52.722Z | statusUpdatedAt=2026-05-04T22:25:23.516Z | closedAt=NULL
+    id=47768246-4366-4f00-bb95-42a17c1421dd | status=ready_pickup | createdAt=2026-05-04T22:05:31.790Z | statusUpdatedAt=2026-05-04T22:21:58.630Z | closedAt=NULL
+    id=70979087-b0a7-4253-b7e5-e761c3ebf541 | status=ready_pickup | createdAt=2026-05-04T21:56:30.000Z | statusUpdatedAt=2026-05-04T22:24:48.417Z | closedAt=NULL
+
+POBOCKA: Prosek | id_pob=4
+activePosId: a125bd4f-01ee-46cb-b833-9270c9a50514
+--------------------------------------------------------------------------------
+
+VARIANTA: baseline_created
+query: {"page":1,"limit":20,"activePosId":"a125bd4f-01ee-46cb-b833-9270c9a50514","createdFrom":"2026-05-04T04:00:00.000Z","createdTo":"2026-05-04T22:58:47.942Z"}
+http_status: 200
+ok: 1
+ms: 259
+X-Total-Count: 47
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 8
+ukazka objednavek max 5:
+    id=07c553ac-1ede-4e5c-aea4-2b12cdbb2a7f | status=ready_pickup | createdAt=2026-05-04T22:36:20.071Z | statusUpdatedAt=2026-05-04T22:44:27.599Z | closedAt=NULL
+    id=28cbd91a-cba9-492f-b46b-83d82a9e8b3e | status=dispatched | createdAt=2026-05-04T22:28:57.000Z | statusUpdatedAt=2026-05-04T22:53:49.980Z | closedAt=NULL
+    id=6aedd17b-7a4f-43c2-a677-8ba9c01f3627 | status=canceled | createdAt=2026-05-04T21:57:46.342Z | statusUpdatedAt=2026-05-04T22:47:59.818Z | closedAt=2026-05-04T22:47:59.584Z
+    id=72549416-3106-4f23-b2ca-72f37c094a36 | status=delivered | createdAt=2026-05-04T21:41:40.228Z | statusUpdatedAt=2026-05-04T22:25:05.895Z | closedAt=2026-05-04T22:03:32.213Z
+    id=18379d8c-3dce-4443-baef-5d496334fbe4 | status=ready_pickup | createdAt=2026-05-04T21:39:50.269Z | statusUpdatedAt=2026-05-04T21:40:44.406Z | closedAt=NULL
+
+VARIANTA: created_plus_updatedFrom
+query: {"page":1,"limit":20,"activePosId":"a125bd4f-01ee-46cb-b833-9270c9a50514","createdFrom":"2026-05-04T04:00:00.000Z","createdTo":"2026-05-04T22:58:47.942Z","updatedFrom":"2026-05-04T04:00:00.000Z"}
+http_status: 200
+ok: 1
+ms: 265
+X-Total-Count: 47
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 8
+ukazka objednavek max 5:
+    id=07c553ac-1ede-4e5c-aea4-2b12cdbb2a7f | status=ready_pickup | createdAt=2026-05-04T22:36:20.071Z | statusUpdatedAt=2026-05-04T22:44:27.599Z | closedAt=NULL
+    id=28cbd91a-cba9-492f-b46b-83d82a9e8b3e | status=dispatched | createdAt=2026-05-04T22:28:57.000Z | statusUpdatedAt=2026-05-04T22:53:49.980Z | closedAt=NULL
+    id=6aedd17b-7a4f-43c2-a677-8ba9c01f3627 | status=canceled | createdAt=2026-05-04T21:57:46.342Z | statusUpdatedAt=2026-05-04T22:47:59.818Z | closedAt=2026-05-04T22:47:59.584Z
+    id=72549416-3106-4f23-b2ca-72f37c094a36 | status=delivered | createdAt=2026-05-04T21:41:40.228Z | statusUpdatedAt=2026-05-04T22:25:05.895Z | closedAt=2026-05-04T22:03:32.213Z
+    id=18379d8c-3dce-4443-baef-5d496334fbe4 | status=ready_pickup | createdAt=2026-05-04T21:39:50.269Z | statusUpdatedAt=2026-05-04T21:40:44.406Z | closedAt=NULL
+
+VARIANTA: created_plus_statusUpdatedFrom
+query: {"page":1,"limit":20,"activePosId":"a125bd4f-01ee-46cb-b833-9270c9a50514","createdFrom":"2026-05-04T04:00:00.000Z","createdTo":"2026-05-04T22:58:47.942Z","statusUpdatedFrom":"2026-05-04T04:00:00.000Z"}
+http_status: 200
+ok: 1
+ms: 264
+X-Total-Count: 47
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 8
+ukazka objednavek max 5:
+    id=07c553ac-1ede-4e5c-aea4-2b12cdbb2a7f | status=ready_pickup | createdAt=2026-05-04T22:36:20.071Z | statusUpdatedAt=2026-05-04T22:44:27.599Z | closedAt=NULL
+    id=28cbd91a-cba9-492f-b46b-83d82a9e8b3e | status=dispatched | createdAt=2026-05-04T22:28:57.000Z | statusUpdatedAt=2026-05-04T22:53:49.980Z | closedAt=NULL
+    id=6aedd17b-7a4f-43c2-a677-8ba9c01f3627 | status=canceled | createdAt=2026-05-04T21:57:46.342Z | statusUpdatedAt=2026-05-04T22:47:59.818Z | closedAt=2026-05-04T22:47:59.584Z
+    id=72549416-3106-4f23-b2ca-72f37c094a36 | status=delivered | createdAt=2026-05-04T21:41:40.228Z | statusUpdatedAt=2026-05-04T22:25:05.895Z | closedAt=2026-05-04T22:03:32.213Z
+    id=18379d8c-3dce-4443-baef-5d496334fbe4 | status=ready_pickup | createdAt=2026-05-04T21:39:50.269Z | statusUpdatedAt=2026-05-04T21:40:44.406Z | closedAt=NULL
+
+VARIANTA: only_updatedFrom
+query: {"page":1,"limit":20,"activePosId":"a125bd4f-01ee-46cb-b833-9270c9a50514","updatedFrom":"2026-05-04T04:00:00.000Z"}
+http_status: 200
+ok: 1
+ms: 234
+X-Total-Count: 126
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 8
+ukazka objednavek max 5:
+    id=07c553ac-1ede-4e5c-aea4-2b12cdbb2a7f | status=ready_pickup | createdAt=2026-05-04T22:36:20.071Z | statusUpdatedAt=2026-05-04T22:44:27.599Z | closedAt=NULL
+    id=28cbd91a-cba9-492f-b46b-83d82a9e8b3e | status=dispatched | createdAt=2026-05-04T22:28:57.000Z | statusUpdatedAt=2026-05-04T22:53:49.980Z | closedAt=NULL
+    id=6aedd17b-7a4f-43c2-a677-8ba9c01f3627 | status=canceled | createdAt=2026-05-04T21:57:46.342Z | statusUpdatedAt=2026-05-04T22:47:59.818Z | closedAt=2026-05-04T22:47:59.584Z
+    id=72549416-3106-4f23-b2ca-72f37c094a36 | status=delivered | createdAt=2026-05-04T21:41:40.228Z | statusUpdatedAt=2026-05-04T22:25:05.895Z | closedAt=2026-05-04T22:03:32.213Z
+    id=18379d8c-3dce-4443-baef-5d496334fbe4 | status=ready_pickup | createdAt=2026-05-04T21:39:50.269Z | statusUpdatedAt=2026-05-04T21:40:44.406Z | closedAt=NULL
+
+VARIANTA: only_statusUpdatedFrom
+query: {"page":1,"limit":20,"activePosId":"a125bd4f-01ee-46cb-b833-9270c9a50514","statusUpdatedFrom":"2026-05-04T04:00:00.000Z"}
+http_status: 200
+ok: 1
+ms: 232
+X-Total-Count: 126
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 8
+ukazka objednavek max 5:
+    id=07c553ac-1ede-4e5c-aea4-2b12cdbb2a7f | status=ready_pickup | createdAt=2026-05-04T22:36:20.071Z | statusUpdatedAt=2026-05-04T22:44:27.599Z | closedAt=NULL
+    id=28cbd91a-cba9-492f-b46b-83d82a9e8b3e | status=dispatched | createdAt=2026-05-04T22:28:57.000Z | statusUpdatedAt=2026-05-04T22:53:49.980Z | closedAt=NULL
+    id=6aedd17b-7a4f-43c2-a677-8ba9c01f3627 | status=canceled | createdAt=2026-05-04T21:57:46.342Z | statusUpdatedAt=2026-05-04T22:47:59.818Z | closedAt=2026-05-04T22:47:59.584Z
+    id=72549416-3106-4f23-b2ca-72f37c094a36 | status=delivered | createdAt=2026-05-04T21:41:40.228Z | statusUpdatedAt=2026-05-04T22:25:05.895Z | closedAt=2026-05-04T22:03:32.213Z
+    id=18379d8c-3dce-4443-baef-5d496334fbe4 | status=ready_pickup | createdAt=2026-05-04T21:39:50.269Z | statusUpdatedAt=2026-05-04T21:40:44.406Z | closedAt=NULL
+
+VARIANTA: only_updatedFrom_today18
+query: {"page":1,"limit":20,"activePosId":"a125bd4f-01ee-46cb-b833-9270c9a50514","updatedFrom":"2026-05-04T16:00:00.000Z"}
+http_status: 200
+ok: 1
+ms: 227
+X-Total-Count: 126
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 8
+ukazka objednavek max 5:
+    id=07c553ac-1ede-4e5c-aea4-2b12cdbb2a7f | status=ready_pickup | createdAt=2026-05-04T22:36:20.071Z | statusUpdatedAt=2026-05-04T22:44:27.599Z | closedAt=NULL
+    id=28cbd91a-cba9-492f-b46b-83d82a9e8b3e | status=dispatched | createdAt=2026-05-04T22:28:57.000Z | statusUpdatedAt=2026-05-04T22:53:49.980Z | closedAt=NULL
+    id=6aedd17b-7a4f-43c2-a677-8ba9c01f3627 | status=canceled | createdAt=2026-05-04T21:57:46.342Z | statusUpdatedAt=2026-05-04T22:47:59.818Z | closedAt=2026-05-04T22:47:59.584Z
+    id=72549416-3106-4f23-b2ca-72f37c094a36 | status=delivered | createdAt=2026-05-04T21:41:40.228Z | statusUpdatedAt=2026-05-04T22:25:05.895Z | closedAt=2026-05-04T22:03:32.213Z
+    id=18379d8c-3dce-4443-baef-5d496334fbe4 | status=ready_pickup | createdAt=2026-05-04T21:39:50.269Z | statusUpdatedAt=2026-05-04T21:40:44.406Z | closedAt=NULL
+
+VARIANTA: only_statusUpdatedFrom_today18
+query: {"page":1,"limit":20,"activePosId":"a125bd4f-01ee-46cb-b833-9270c9a50514","statusUpdatedFrom":"2026-05-04T16:00:00.000Z"}
+http_status: 200
+ok: 1
+ms: 236
+X-Total-Count: 126
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 8
+ukazka objednavek max 5:
+    id=07c553ac-1ede-4e5c-aea4-2b12cdbb2a7f | status=ready_pickup | createdAt=2026-05-04T22:36:20.071Z | statusUpdatedAt=2026-05-04T22:44:27.599Z | closedAt=NULL
+    id=28cbd91a-cba9-492f-b46b-83d82a9e8b3e | status=dispatched | createdAt=2026-05-04T22:28:57.000Z | statusUpdatedAt=2026-05-04T22:53:49.980Z | closedAt=NULL
+    id=6aedd17b-7a4f-43c2-a677-8ba9c01f3627 | status=canceled | createdAt=2026-05-04T21:57:46.342Z | statusUpdatedAt=2026-05-04T22:47:59.818Z | closedAt=2026-05-04T22:47:59.584Z
+    id=72549416-3106-4f23-b2ca-72f37c094a36 | status=delivered | createdAt=2026-05-04T21:41:40.228Z | statusUpdatedAt=2026-05-04T22:25:05.895Z | closedAt=2026-05-04T22:03:32.213Z
+    id=18379d8c-3dce-4443-baef-5d496334fbe4 | status=ready_pickup | createdAt=2026-05-04T21:39:50.269Z | statusUpdatedAt=2026-05-04T21:40:44.406Z | closedAt=NULL
+
+api_restia flush: preskoceno, chybi session id_user/id_login
+
+END: 2026-05-05 00:58:51

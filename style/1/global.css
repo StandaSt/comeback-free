@@ -357,7 +357,7 @@ main{
 }
 
 .head_grid{
-grid-template-columns:70px 280px minmax(0,1fr) 300px;
+grid-template-columns:70px 335px minmax(0,1fr) 300px;
   grid-template-rows:auto auto;
   align-items:start;
 }
@@ -411,7 +411,7 @@ object-fit:contain;
 /* ===== Rozmisteni ===== */
 .head_top{
   grid-column:2 / span 2;
-  grid-row:1;  grid-template-columns:280px minmax(0,1fr);
+  grid-row:1;  grid-template-columns:335px minmax(0,1fr);
   grid-template-rows:64px;
   align-items:stretch;
   min-width:0;
@@ -420,7 +420,7 @@ object-fit:contain;
 .head_bottom{
   grid-column:2 / span 2;
   grid-row:2;
-grid-template-columns:280px minmax(0,1fr);
+grid-template-columns:335px minmax(0,1fr);
   align-items:start;
   min-width:0;
   margin-top:-5px;
@@ -438,7 +438,7 @@ grid-template-columns:280px minmax(0,1fr);
   padding:3px 6px;
   min-width:0;
   overflow:hidden;
-  width:280px;
+  width:335px;
   height:64px;
 }
 
@@ -595,9 +595,9 @@ align-items:center;
   padding:0;
   border:0;
   background:transparent;
-  width:280px;
-  min-width:280px;
-  max-width:280px;
+  width:335px;
+  min-width:335px;
+  max-width:335px;
   box-shadow:none;
   grid-column:1;
   justify-self:start;
@@ -962,18 +962,19 @@ align-items:center;
 .dash_grid{align-items:start;
   align-content:start;
   min-width:0;
+  --MIN_SIRKA_KARTY:440px;
 }
 
 .dash_grid.dash_cols_3{
-  grid-template-columns:repeat(3, minmax(0, 1fr));
+  grid-template-columns:repeat(3, minmax(var(--MIN_SIRKA_KARTY), 1fr));
 }
 
 .dash_grid.dash_cols_4{
-  grid-template-columns:repeat(4, minmax(0, 1fr));
+  grid-template-columns:repeat(4, minmax(var(--MIN_SIRKA_KARTY), 1fr));
 }
 
 .dash_grid.dash_cols_5{
-  grid-template-columns:repeat(5, minmax(0, 1fr));
+  grid-template-columns:repeat(5, minmax(var(--MIN_SIRKA_KARTY), 1fr));
 }
 
 /* =========================

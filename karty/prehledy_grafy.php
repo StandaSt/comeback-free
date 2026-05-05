@@ -35,8 +35,8 @@ $periodOdDate = new DateTimeImmutable($periodOd);
 $periodDoDate = new DateTimeImmutable($periodDo);
 $periodOdTs = $periodOdDate;
 $periodDoExclusive = $periodDoDate;
-$titleOd = $periodOdDate->format('d.m.Y H:i');
-$titleDo = $periodDoDate->format('d.m.Y H:i');
+$titleOd = $periodOdDate->format('j.n.Y G:i');
+$titleDo = $periodDoDate->format('j.n.Y G:i');
 $periodLabel = $titleOd . ' - ' . $titleDo;
 
 $safeOdTs = $pdo->real_escape_string($periodOdTs->format('Y-m-d H:i:s'));

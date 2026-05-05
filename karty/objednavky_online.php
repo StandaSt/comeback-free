@@ -58,7 +58,7 @@ if (!function_exists('cb_k19_online_workday_range')) {
         return [
             'from' => $workdayStart->format('Y-m-d H:i:s'),
             'to' => $now->format('Y-m-d H:i:s'),
-            'label' => $workdayStart->format('j.n.Y H:i') . ' - ' . $now->format('H:i'),
+            'label' => $workdayStart->format('j.n.Y G:i') . ' - ' . $now->format('G:i'),
         ];
     }
 }
@@ -84,12 +84,12 @@ try {
         if ($posledniStart !== '') {
             $dtAktualizace = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $posledniStart, new DateTimeZone('Europe/Prague'));
             if ($dtAktualizace instanceof DateTimeImmutable) {
-                $aktualizaceDoText = $dtAktualizace->format('H:i');
+                $aktualizaceDoText = $dtAktualizace->format('G:i');
             }
         }
     }
     if ($aktualizaceDoText === '') {
-        $aktualizaceDoText = (new DateTimeImmutable((string)$range['to'], new DateTimeZone('Europe/Prague')))->format('H:i');
+        $aktualizaceDoText = (new DateTimeImmutable((string)$range['to'], new DateTimeZone('Europe/Prague')))->format('G:i');
     }
 
     $branchWhere = ' WHERE p.restia_activePosId IS NOT NULL AND p.restia_activePosId <> ""';
@@ -125,6 +125,7 @@ try {
                     'barva' => $barva,
                     'dokonceno' => 0,
                     'na_ceste' => 0,
+                    'osobni_odber' => 0,
                     'vyrabi_se' => 0,
                     'objednavky' => 0,
                     'trzba' => 0.0,
@@ -139,12 +140,14 @@ try {
             zdroj.id_pob,
             SUM(zdroj.dokonceno) AS dokonceno,
             SUM(zdroj.na_ceste) AS na_ceste,
+            SUM(zdroj.osobni_odber) AS osobni_odber,
             SUM(zdroj.vyrabi_se) AS vyrabi_se
         FROM (
             SELECT
                 o.id_pob,
                 CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NOT NULL THEN 1 ELSE 0 END AS dokonceno,
-                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL THEN 1 ELSE 0 END AS na_ceste,
+                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj) THEN 1 ELSE 0 END AS na_ceste,
+                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND NOT EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj) AND EXISTS (SELECT 1 FROM cis_doruceni d WHERE d.id_doruceni = o.id_doruceni AND d.nazev = \'pickup\') THEN 1 ELSE 0 END AS osobni_odber,
                 CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NULL THEN 1 ELSE 0 END AS vyrabi_se
             FROM objednavky_restia o
             INNER JOIN obj_casy ca ON ca.id_obj = o.id_obj
@@ -155,7 +158,8 @@ try {
             SELECT
                 o.id_pob,
                 CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NOT NULL THEN 1 ELSE 0 END AS dokonceno,
-                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL THEN 1 ELSE 0 END AS na_ceste,
+                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj) THEN 1 ELSE 0 END AS na_ceste,
+                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND NOT EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj) AND EXISTS (SELECT 1 FROM cis_doruceni d WHERE d.id_doruceni = o.id_doruceni AND d.nazev = \'pickup\') THEN 1 ELSE 0 END AS osobni_odber,
                 CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NULL THEN 1 ELSE 0 END AS vyrabi_se
             FROM objednavky_restia o
             INNER JOIN obj_casy ca ON ca.id_obj = o.id_obj
@@ -166,7 +170,8 @@ try {
             SELECT
                 o.id_pob,
                 CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NOT NULL THEN 1 ELSE 0 END AS dokonceno,
-                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL THEN 1 ELSE 0 END AS na_ceste,
+                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj) THEN 1 ELSE 0 END AS na_ceste,
+                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND NOT EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj) AND EXISTS (SELECT 1 FROM cis_doruceni d WHERE d.id_doruceni = o.id_doruceni AND d.nazev = \'pickup\') THEN 1 ELSE 0 END AS osobni_odber,
                 CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NULL THEN 1 ELSE 0 END AS vyrabi_se
             FROM objednavky_restia o
             LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
@@ -192,6 +197,7 @@ try {
             }
             $branches[$idPob]['dokonceno'] = (int)($row['dokonceno'] ?? 0);
             $branches[$idPob]['na_ceste'] = (int)($row['na_ceste'] ?? 0);
+            $branches[$idPob]['osobni_odber'] = (int)($row['osobni_odber'] ?? 0);
             $branches[$idPob]['vyrabi_se'] = (int)($row['vyrabi_se'] ?? 0);
         }
         $resCounts->free();
@@ -382,6 +388,7 @@ try {
     $labels = [];
     $dokoncenoData = [];
     $naCesteData = [];
+    $osobniOdberData = [];
     $vyrabiSeData = [];
     $barvyPobocek = [];
     $objednavkyData = [];
@@ -397,6 +404,7 @@ try {
     $sumTrzba = 0.0;
     $sumDokonceno = 0;
     $sumNaCeste = 0;
+    $sumOsobniOdber = 0;
     $sumVyrabiSe = 0;
 
     foreach ($branches as $branch) {
@@ -404,6 +412,7 @@ try {
         $barvyPobocek[] = (string)$branch['barva'];
         $dokonceno = (int)$branch['dokonceno'];
         $naCeste = (int)$branch['na_ceste'];
+        $osobniOdber = (int)$branch['osobni_odber'];
         $vyrabiSe = (int)$branch['vyrabi_se'];
         $objednavky = (int)$branch['objednavky'];
         $trzba = (float)$branch['trzba'];
@@ -430,10 +439,12 @@ try {
         $g6RozdilTrzbaData[] = $g6CurrentTrzba - $g6PreviousTrzba;
         $dokoncenoData[] = $dokonceno;
         $naCesteData[] = $naCeste;
+        $osobniOdberData[] = $osobniOdber;
         $vyrabiSeData[] = $vyrabiSe;
 
         $sumDokonceno += $dokonceno;
         $sumNaCeste += $naCeste;
+        $sumOsobniOdber += $osobniOdber;
         $sumVyrabiSe += $vyrabiSe;
         $sumObjednavky += $objednavky;
         $sumTrzba += $trzba;
@@ -445,7 +456,9 @@ try {
         'labels' => $labels,
         'dokonceno' => $dokoncenoData,
         'na_ceste' => $naCesteData,
+        'osobni_odber' => $osobniOdberData,
         'vyrabi_se' => $vyrabiSeData,
+        'objednavky' => $objednavkyData,
         'colors' => $barvyPobocek,
     ];
     $payloadJson = json_encode(
@@ -613,10 +626,11 @@ try {
       <script type="application/json" data-cb-prehledy-grafy-data><?= $payloadJson ?></script>
 
       <div class="displ_flex jc_mezi text_11 txt_seda gap_8" style="align-items:flex-start; flex-wrap:wrap; line-height:1.15;">
-        <span><?= h((string)$range['label']) ?></span>
+        <span>Aktualizace: <?= h($aktualizaceDoText) ?></span>
         <span class="displ_flex gap_8" style="flex-wrap:wrap; justify-content:flex-end;">
           <span><strong style="color:#16a34a;"><?= h((string)$sumDokonceno) ?></strong> dokončeno</span>
           <span><strong style="color:#f59e0b;"><?= h((string)$sumNaCeste) ?></strong> na cestě</span>
+          <span><strong style="color:#0ea5e9;"><?= h((string)$sumOsobniOdber) ?></strong> osobní odběr</span>
           <span><strong style="color:#dc2626;"><?= h((string)$sumVyrabiSe) ?></strong> vyrábí se</span>
         </span>
       </div>

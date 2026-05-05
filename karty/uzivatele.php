@@ -30,7 +30,7 @@ if (!function_exists('uz_format_reg_cz')) {
         if ($dt === false) {
             return $v;
         }
-        return date_format($dt, 'j.n.Y H:i');
+        return date_format($dt, 'j.n.Y G:i');
     }
 }
 

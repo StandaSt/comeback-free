@@ -3,21 +3,35 @@
 $cbObdobiOdInput = '';
 $cbObdobiDoInput = '';
 try {
-    $cbObdobiOdInput = (new DateTimeImmutable((string)$cbObdobiOd))->format('Y-m-d\TH:i');
+    $cbObdobiOdInput = (new DateTimeImmutable((string)$cbObdobiOd))->format('Y-m-d');
 } catch (Throwable $e) {
     $cbObdobiOdInput = '';
 }
 try {
-    $cbObdobiDoInput = (new DateTimeImmutable((string)$cbObdobiDo))->format('Y-m-d\TH:i');
+    $cbObdobiDoInput = (new DateTimeImmutable((string)$cbObdobiDo))->format('Y-m-d');
 } catch (Throwable $e) {
     $cbObdobiDoInput = '';
+}
+$cbObdobiCasOptions = [];
+for ($i = 0; $i < 48; $i++) {
+    $totalMinutes = (6 * 60) + ($i * 30);
+    $h = intdiv($totalMinutes, 60) % 24;
+    $m = $totalMinutes % 60;
+    $value = sprintf('%02d:%02d', $h, $m);
+    $label = (string)$h . ':' . sprintf('%02d', $m);
+    $cbObdobiCasOptions[] = ['value' => $value, 'label' => $label];
 }
 ?>
 <div class="head_interval ram_hlavicka zaobleni_10 gap_4 displ_flex flex_sloupec jc_stred" aria-label="Období">
   <div class="head_int_row displ_grid">
     <label class="head_date text_11 gap_6 displ_flex">
       <span>Od</span>
-      <input class="text_11 zaobleni_8 ram_ovladace" type="datetime-local" id="cbObdobiOd" value="<?= h($cbObdobiOdInput) ?>">
+      <input class="text_11 zaobleni_8 ram_ovladace" type="date" id="cbObdobiOd" value="<?= h($cbObdobiOdInput) ?>">
+      <select class="text_11 zaobleni_8 ram_ovladace" id="cbObdobiOdCas" aria-label="Čas od">
+        <?php foreach ($cbObdobiCasOptions as $opt): ?>
+          <option value="<?= h($opt['value']) ?>"<?= ($opt['value'] === '06:00') ? ' selected' : '' ?>><?= h($opt['label']) ?></option>
+        <?php endforeach; ?>
+      </select>
     </label>
     <div class="head_quick gap_4 displ_flex jc_konec">
       <button type="button" class="head_pill txt_c cursor_ruka ram_ovladace bg_bila zaobleni_8 text_11" data-range="vcera">Včera</button>
@@ -28,7 +42,12 @@ try {
   <div class="head_int_row displ_grid">
     <label class="head_date text_11 gap_6 displ_flex">
       <span>Do</span>
-      <input class="text_11 zaobleni_8 ram_ovladace" type="datetime-local" id="cbObdobiDo" value="<?= h($cbObdobiDoInput) ?>">
+      <input class="text_11 zaobleni_8 ram_ovladace" type="date" id="cbObdobiDo" value="<?= h($cbObdobiDoInput) ?>">
+      <select class="text_11 zaobleni_8 ram_ovladace" id="cbObdobiDoCas" aria-label="Čas do">
+        <?php foreach ($cbObdobiCasOptions as $opt): ?>
+          <option value="<?= h($opt['value']) ?>"<?= ($opt['value'] === '06:00') ? ' selected' : '' ?>><?= h($opt['label']) ?></option>
+        <?php endforeach; ?>
+      </select>
     </label>
     <div class="head_quick gap_4 displ_flex jc_konec">
       <button type="button" class="head_pill txt_c cursor_ruka ram_ovladace bg_bila zaobleni_8 text_11" data-range="mesic">Měsíc</button>
@@ -41,15 +60,20 @@ try {
 (function(){
   var odInput = document.getElementById('cbObdobiOd');
   var doInput = document.getElementById('cbObdobiDo');
+  var odCasInput = document.getElementById('cbObdobiOdCas');
+  var doCasInput = document.getElementById('cbObdobiDoCas');
   var quickBtns = document.querySelectorAll('.head_interval .head_pill[data-range]');
   var odLabel = odInput ? odInput.closest('.head_date') : null;
   var doLabel = doInput ? doInput.closest('.head_date') : null;
   var activeMode = '<?= h($cbObdobiMode) ?>';
 
-  if (!odInput || !doInput || !quickBtns.length) {
+  if (!odInput || !doInput || !odCasInput || !doCasInput || !quickBtns.length) {
     return;
   }
   var isSaving = false;
+  var defaultTime = '06:00';
+  var odTimeKey = 'cb_obdobi_od_cas';
+  var doTimeKey = 'cb_obdobi_do_cas';
   var allowedModes = ['vcera', 'tyden', 'mesic', 'rok', 'manual'];
   if (activeMode === 'dnes') {
     activeMode = 'vcera';
@@ -59,37 +83,57 @@ try {
     activeMode = 'manual';
   }
 
-  function fmtDateTime(dt){
+  function fmtDate(dt){
     var y = dt.getFullYear();
     var m = String(dt.getMonth() + 1).padStart(2, '0');
     var d = String(dt.getDate()).padStart(2, '0');
-    var h = String(dt.getHours()).padStart(2, '0');
-    var mi = String(dt.getMinutes()).padStart(2, '0');
-    return y + '-' + m + '-' + d + 'T' + h + ':' + mi;
+    return y + '-' + m + '-' + d;
   }
 
-  function parseDateTime(v){
+  function parseDate(v){
     var s = String(v || '').trim();
-    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(s)) return null;
-    var parts = s.split('T');
-    var dateParts = parts[0].split('-');
-    var timeParts = parts[1].split(':');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+    var dateParts = s.split('-');
     var y = Number(dateParts[0]);
     var m = Number(dateParts[1]);
     var d = Number(dateParts[2]);
-    var h = Number(timeParts[0]);
-    var mi = Number(timeParts[1]);
-    var dt = new Date(y, m - 1, d, h, mi, 0, 0);
+    var dt = new Date(y, m - 1, d, 6, 0, 0, 0);
     if (
       dt.getFullYear() !== y
       || (dt.getMonth() + 1) !== m
       || dt.getDate() !== d
-      || dt.getHours() !== h
-      || dt.getMinutes() !== mi
     ) {
       return null;
     }
     return dt;
+  }
+
+  function isTimeValue(v){
+    return /^\d{2}:\d{2}$/.test(String(v || ''));
+  }
+
+  function loadTime(key){
+    try {
+      var v = window.sessionStorage ? window.sessionStorage.getItem(key) : '';
+      return isTimeValue(v) ? v : defaultTime;
+    } catch (e) {
+      return defaultTime;
+    }
+  }
+
+  function saveTime(key, value){
+    try {
+      if (window.sessionStorage && isTimeValue(value)) {
+        window.sessionStorage.setItem(key, value);
+      }
+    } catch (e) {}
+  }
+
+  function periodValue(dateValue, timeValue){
+    var date = String(dateValue || '').trim();
+    var time = isTimeValue(timeValue) ? String(timeValue) : defaultTime;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return '';
+    return date + ' ' + time;
   }
 
   function getCurrentWorkingDayStart(){
@@ -119,12 +163,12 @@ try {
   }
 
   function clampToMax(v, maxDate){
-    var dt = parseDateTime(v);
+    var dt = parseDate(v);
     if (!dt) return '';
     if (dt.getTime() > maxDate.getTime()) {
       dt = new Date(maxDate);
     }
-    return fmtDateTime(dt);
+    return fmtDate(dt);
   }
 
   function setActive(mode){
@@ -139,6 +183,8 @@ try {
     if (doLabel) doLabel.classList.toggle('is-manual', !!isManual);
     if (odInput) odInput.classList.toggle('is-manual', !!isManual);
     if (doInput) doInput.classList.toggle('is-manual', !!isManual);
+    if (odCasInput) odCasInput.classList.toggle('is-manual', !!isManual);
+    if (doCasInput) doCasInput.classList.toggle('is-manual', !!isManual);
   }
 
   function savePeriod(payload){
@@ -173,7 +219,7 @@ try {
     var to = new Date(finishedDayEnd);
 
     if (range === 'vcera') {
-      return { od: fmtDateTime(from), do: fmtDateTime(to) };
+      return { od: fmtDate(from), do: fmtDate(to) };
     }
 
     if (range === 'tyden') {
@@ -181,16 +227,16 @@ try {
       var mondayShift = (day === 0 ? -6 : 1 - day);
       from.setDate(finishedDayStart.getDate() + mondayShift);
       from.setHours(6, 0, 0, 0);
-      return { od: fmtDateTime(from), do: fmtDateTime(to) };
+      return { od: fmtDate(from), do: fmtDate(to) };
     }
 
     if (range === 'mesic') {
       from = new Date(finishedDayStart.getFullYear(), finishedDayStart.getMonth(), 1, 6, 0, 0, 0);
-      return { od: fmtDateTime(from), do: fmtDateTime(to) };
+      return { od: fmtDate(from), do: fmtDate(to) };
     }
 
     from = new Date(finishedDayStart.getFullYear(), 0, 1, 6, 0, 0, 0);
-    return { od: fmtDateTime(from), do: fmtDateTime(to) };
+    return { od: fmtDate(from), do: fmtDate(to) };
   }
 
   quickBtns.forEach(function(btn){
@@ -200,16 +246,26 @@ try {
 
       odInput.value = val.od;
       doInput.value = val.do;
+      odCasInput.value = defaultTime;
+      doCasInput.value = defaultTime;
+      saveTime(odTimeKey, odCasInput.value);
+      saveTime(doTimeKey, doCasInput.value);
       setActive(range);
       setManualHighlight(false);
-      savePeriod({ od: val.od, do: val.do, mode: range });
+      savePeriod({
+        od: periodValue(val.od, odCasInput.value),
+        do: periodValue(val.do, doCasInput.value),
+        mode: range
+      });
     });
   });
 
-  odInput.max = fmtDateTime(getNowMax());
-  doInput.max = fmtDateTime(getNowMax());
+  odCasInput.value = loadTime(odTimeKey);
+  doCasInput.value = loadTime(doTimeKey);
+  odInput.max = fmtDate(getNowMax());
+  doInput.max = fmtDate(getNowMax());
 
-  odInput.addEventListener('change', function(){
+  function saveManualPeriod(){
     var maxDate = getNowMax();
     var od = clampToMax(odInput.value, maxDate);
     var ddo = clampToMax(doInput.value, maxDate);
@@ -219,25 +275,21 @@ try {
     }
     odInput.value = od;
     doInput.value = ddo;
+    saveTime(odTimeKey, odCasInput.value);
+    saveTime(doTimeKey, doCasInput.value);
     setActive('manual');
     setManualHighlight(true);
-    savePeriod({ od: od, do: ddo, mode: 'manual' });
-  });
+    savePeriod({
+      od: periodValue(od, odCasInput.value),
+      do: periodValue(ddo, doCasInput.value),
+      mode: 'manual'
+    });
+  }
 
-  doInput.addEventListener('change', function(){
-    var maxDate = getNowMax();
-    var od = clampToMax(odInput.value, maxDate);
-    var ddo = clampToMax(doInput.value, maxDate);
-    if (!od || !ddo) return;
-    if (ddo < od) {
-      ddo = od;
-    }
-    odInput.value = od;
-    doInput.value = ddo;
-    setActive('manual');
-    setManualHighlight(true);
-    savePeriod({ od: od, do: ddo, mode: 'manual' });
-  });
+  odInput.addEventListener('change', saveManualPeriod);
+  doInput.addEventListener('change', saveManualPeriod);
+  odCasInput.addEventListener('change', saveManualPeriod);
+  doCasInput.addEventListener('change', saveManualPeriod);
 
   setActive(activeMode);
   setManualHighlight(activeMode === 'manual');

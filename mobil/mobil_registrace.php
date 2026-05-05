@@ -77,6 +77,40 @@ function cb_find_pair_token(string $token): ?array
     ];
 }
 
+function cb_pair_user_full_name(int $idUser): string
+{
+    if ($idUser <= 0) {
+        return '';
+    }
+
+    $stmt = db()->prepare('
+        SELECT jmeno, prijmeni, email
+        FROM user
+        WHERE id_user=?
+        LIMIT 1
+    ');
+    if (!$stmt) {
+        return '';
+    }
+
+    $stmt->bind_param('i', $idUser);
+    $stmt->execute();
+    $stmt->bind_result($jmeno, $prijmeni, $email);
+    $ok = $stmt->fetch();
+    $stmt->close();
+
+    if (!$ok) {
+        return '';
+    }
+
+    $fullName = trim((string)($jmeno ?? '') . ' ' . (string)($prijmeni ?? ''));
+    if ($fullName !== '') {
+        return $fullName;
+    }
+
+    return trim((string)($email ?? ''));
+}
+
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     header('Content-Type: application/json; charset=utf-8');
 
@@ -197,6 +231,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
 
 $pair = cb_find_pair_token($token);
 $tokenOk = is_array($pair);
+$pairUserName = $tokenOk ? cb_pair_user_full_name((int)($pair['id_user'] ?? 0)) : '';
 ?>
 <!doctype html>
 <html lang="cs">
@@ -208,6 +243,34 @@ $tokenOk = is_array($pair);
   <style>
     .modal-device-register{
       width: min(315px, 100%);
+    }
+
+    .device-register-success{
+      display: none;
+      text-align: center;
+      color: rgba(15, 23, 42, 0.9);
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    .device-register-success.is-visible{
+      display: block;
+    }
+
+    .device-register-success strong{
+      display: block;
+      margin: 4px 0;
+      color: #0f172a;
+      font-size: 18px;
+      line-height: 1.25;
+    }
+
+    .device-register-success .success-note{
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(15, 23, 42, 0.12);
+      font-size: 14px;
+      color: rgba(15, 23, 42, 0.78);
     }
   </style>
 </head>
@@ -221,7 +284,7 @@ $tokenOk = is_array($pair);
       <div class="modal-logo modal-logo-lg"><img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback"></div>
     </div>
 
-    <div class="modal-center modal-center-lg">
+    <div class="modal-center modal-center-lg" id="registerPanel">
       <p class="modal-title modal-title-center">Registrace zařízení</p>
       <?php if ($vapidPublic === '') { ?>
         <p><strong>Chybí VAPID public key.</strong></p>
@@ -230,16 +293,26 @@ $tokenOk = is_array($pair);
         <p><strong>Neplatný nebo expirovaný odkaz.</strong></p>
         <p class="muted">Vraťte se na PC, otevřete IS a vygenerujte nový QR kód pro registraci zařízení.</p>
       <?php } else { ?>
-        <div class="modal-copy modal-copy-wide">
-          Je třeba povolit notifikace a zaregistrovat toto zařízení.
+        <div class="modal-copy modal-copy-wide" id="registerIntro">
+          Je třeba povolit notifikace<br>
+          a zaregistrovat zařízení.
         </div>
 
         <button type="button" class="modal-btn" id="btnPerm">Povolit notifikace</button>
-        <div class="modal-spacer"></div>
+        <div class="modal-spacer" id="btnSpacer"></div>
         <button type="button" class="modal-btn primary" id="btnPair" disabled>Registrovat zařízení</button>
 
         <div class="modal-status modal-status-center" id="countdownTxt">Na zaregistrování zařízení zbývá: 05:00</div>
         <div class="out" id="out">Stav: čekám…</div>
+
+        <div class="device-register-success" id="registerSuccess">
+          <div>uživatelem</div>
+          <strong><?= h($pairUserName !== '' ? $pairUserName : 'uživatel') ?></strong>
+          <div>byla úspěšná.</div>
+          <div class="success-note">
+            Pamatujte: Právě zaregistrované zařízení budete potřebovat při každém vstupu do Comeback systému z důvodu dvoufázového ověření 2FA.
+          </div>
+        </div>
       <?php } ?>
 
     </div>
@@ -253,7 +326,13 @@ $tokenOk = is_array($pair);
   var btnPerm = document.getElementById('btnPerm');
   var btnPair = document.getElementById('btnPair');
   var countdownTxt = document.getElementById('countdownTxt');
+  var registerPanel = document.getElementById('registerPanel');
+  var registerIntro = document.getElementById('registerIntro');
+  var btnSpacer = document.getElementById('btnSpacer');
+  var registerSuccess = document.getElementById('registerSuccess');
   var deadlineTs = Date.now() + 300000;
+  var countdownTimer = null;
+  var pairUserName = <?php echo json_encode($pairUserName !== '' ? $pairUserName : 'uživatel', JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
 
   function pad(n){
     return String(n).padStart(2, '0');
@@ -276,6 +355,67 @@ $tokenOk = is_array($pair);
   function log(msg){
     if (out) {
       out.textContent = 'Stav: ' + msg;
+    }
+  }
+
+  function showDone(){
+    if (countdownTimer) {
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+    }
+    if (registerPanel) {
+      registerPanel.innerHTML = '';
+
+      var title = document.createElement('p');
+      title.className = 'modal-title modal-title-center';
+      title.textContent = 'Registrace zařízení';
+
+      var done = document.createElement('div');
+      done.className = 'device-register-success is-visible';
+
+      var lineUser = document.createElement('div');
+      lineUser.textContent = 'uživatelem';
+
+      var userName = document.createElement('strong');
+      userName.textContent = pairUserName;
+
+      var lineDone = document.createElement('div');
+      lineDone.textContent = 'byla úspěšná.';
+
+      var note = document.createElement('div');
+      note.className = 'success-note';
+      note.textContent = 'Pamatujte: Právě zaregistrované zařízení budete potřebovat při každém vstupu do Comeback systému z důvodu dvoufázového ověření 2FA.';
+
+      done.appendChild(lineUser);
+      done.appendChild(userName);
+      done.appendChild(lineDone);
+      done.appendChild(note);
+
+      registerPanel.appendChild(title);
+      registerPanel.appendChild(done);
+      return;
+    }
+    if (registerIntro) {
+      registerIntro.style.display = 'none';
+    }
+    if (btnPerm) {
+      btnPerm.style.display = 'none';
+    }
+    if (btnSpacer) {
+      btnSpacer.style.display = 'none';
+    }
+    if (btnPair) {
+      btnPair.style.display = 'none';
+      btnPair.disabled = true;
+    }
+    if (countdownTxt) {
+      countdownTxt.style.display = 'none';
+    }
+    if (out) {
+      out.style.display = 'none';
+    }
+    if (registerSuccess) {
+      registerSuccess.classList.add('is-visible');
     }
   }
 
@@ -361,14 +501,14 @@ $tokenOk = is_array($pair);
         return;
       }
       log('Hotovo: zařízení je zaregistrováno. Můžete se vrátit na PC.');
-      btnPair.disabled = true;
+      showDone();
     }).catch(function(err){
       log('Chyba: ' + (err && err.message ? err.message : err));
     });
   });
 
   renderCountdown();
-  setInterval(renderCountdown, 1000);
+  countdownTimer = setInterval(renderCountdown, 1000);
 })();
 </script>
 <?php } ?>
