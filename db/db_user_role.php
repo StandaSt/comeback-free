@@ -7,7 +7,7 @@ declare(strict_types=1);
  *
  * Co to dělá:
  * - vezme role přihlášeného uživatele ze session (cb_user_profile['roles'])
- * - převede je na id_role v tabulce cis_role (primárně podle názvu role)
+ * - převede je přes cis_role.id_role_smeny na naše id_role
  * - porovná s aktuálním stavem v user_role
  * - smaže jen to, co bylo ve Směnách odebráno
  * - přidá jen to, co bylo ve Směnách přidáno
@@ -47,26 +47,27 @@ if (!function_exists('db_user_role_sync')) {
      *
      * @return array{add:int,del:int,add_names:string[],del_names:string[],sub_role:?int}
      */
-    function db_user_role_sync(mysqli $conn, int $idUser, array $profile): array
+    function db_user_role_sync(mysqli $conn, int $idUser, array $profile, bool $updateSession = true): array
     {
         $rolesRaw = $profile['roles'] ?? [];
         if (!is_array($rolesRaw)) {
             $rolesRaw = [];
         }
 
-        // 1) desiredNames = unikátní názvy rolí ze Směn
-        $desiredNamesMap = [];
+        // 1) desiredRawRoles = unikátní role ze Směn podle jejich id
+        $desiredRawRoles = [];
         foreach ($rolesRaw as $r) {
             if (!is_array($r)) {
                 continue;
             }
-            $name = trim((string)($r['name'] ?? ''));
-            if ($name === '') {
+            $rawRoleId = (int)($r['id'] ?? 0);
+            if ($rawRoleId <= 0) {
                 continue;
             }
-            $desiredNamesMap[$name] = true;
+            $name = trim((string)($r['name'] ?? ''));
+            $desiredRawRoles[$rawRoleId] = $name;
         }
-        $desiredNames = array_keys($desiredNamesMap);
+        $desiredRawIds = array_keys($desiredRawRoles);
 
         // 1b) sub_role = jen vedouci pobocky (4) / vedouci smeny (5)
         //     - bere se primo z id role vraceneho ze Smen
@@ -85,29 +86,34 @@ if (!function_exists('db_user_role_sync')) {
             }
         }
 
-        // 2) desiredIds = id_role z cis_role (mapujeme přes název role)
+        // 2) desiredIds = naše id_role přes cis_role.id_role_smeny
         //    Struktura:
         //    - $desiredIds[<id_role>] = <název role>
         $desiredIds = [];
-        if (count($desiredNames) > 0) {
-            $in = implode(',', array_fill(0, count($desiredNames), '?'));
-            $types = str_repeat('s', count($desiredNames));
+        if (count($desiredRawIds) > 0) {
+            $in = implode(',', array_fill(0, count($desiredRawIds), '?'));
+            $types = str_repeat('i', count($desiredRawIds));
 
-            $sql = "SELECT id_role, role FROM cis_role WHERE role IN ($in) AND aktivni=1";
+            $sql = "
+                SELECT id_role, role
+                FROM cis_role
+                WHERE id_role_smeny IN ($in)
+                  AND aktivni = 1
+            ";
             $stmt = $conn->prepare($sql);
             if ($stmt === false) {
-                throw new RuntimeException('DB: prepare selhal (cis_role map).');
+                throw new RuntimeException('DB: prepare selhal (cis_role id_role_smeny).');
             }
 
             // mysqli::bind_param vyžaduje parametry po referenci → call_user_func_array
             $bind = [];
             $bind[] = &$types;
-            foreach ($desiredNames as $i => $v) {
-                $desiredNames[$i] = (string)$v;
-                $bind[] = &$desiredNames[$i];
+            foreach ($desiredRawIds as $i => $v) {
+                $desiredRawIds[$i] = (int)$v;
+                $bind[] = &$desiredRawIds[$i];
             }
             if (!call_user_func_array([$stmt, 'bind_param'], $bind)) {
-                throw new RuntimeException('DB: bind_param selhal (cis_role map).');
+                throw new RuntimeException('DB: bind_param selhal (cis_role id_role_smeny).');
             }
 
             $stmt->execute();
@@ -121,13 +127,16 @@ if (!function_exists('db_user_role_sync')) {
             }
             $stmt->close();
 
-            // Pokud Směny poslaly role, ale my je neumíme namapovat v cis_role:
+            // Pokud Směny poslaly role, ale my je neumíme namapovat:
             // - nic nemažeme (abychom neodstřelili role omylem)
             // - jen zalogujeme a skončíme bez změn
             if (count($desiredIds) === 0) {
                 cb_login_log_line('db_user_role_map_empty', [
                     'id_user' => (string)$idUser,
-                    'roles' => implode(', ', $desiredNames),
+                    'roles' => implode(', ', array_map(static function (int $id) use ($desiredRawRoles): string {
+                        $name = (string)($desiredRawRoles[$id] ?? '');
+                        return $name === '' ? (string)$id : $id . ':' . $name;
+                    }, array_keys($desiredRawRoles))),
                 ]);
                 return [
                     'add' => 0,
@@ -230,11 +239,13 @@ if (!function_exists('db_user_role_sync')) {
             $stmt->execute();
             $stmt->close();
 
-            if (!isset($_SESSION['cb_user']) || !is_array($_SESSION['cb_user'])) {
-                $_SESSION['cb_user'] = [];
+            if ($updateSession) {
+                if (!isset($_SESSION['cb_user']) || !is_array($_SESSION['cb_user'])) {
+                    $_SESSION['cb_user'] = [];
+                }
+                $_SESSION['cb_user']['id_role'] = $idRoleEffective;
+                $_SESSION['cb_user']['role'] = $roleEffectiveName;
             }
-            $_SESSION['cb_user']['id_role'] = $idRoleEffective;
-            $_SESSION['cb_user']['role'] = $roleEffectiveName;
 
             cb_login_log_line('db_user_role_effective', [
                 'id_user' => (string)$idUser,
@@ -245,7 +256,7 @@ if (!function_exists('db_user_role_sync')) {
             // Směny nevrátily žádnou roli:
             // - v session odstraníme jen údaje o efektivní roli
             // - do DB user.id_role už teď nesahejme (necháváme poslední známý stav)
-            if (isset($_SESSION['cb_user']) && is_array($_SESSION['cb_user'])) {
+            if ($updateSession && isset($_SESSION['cb_user']) && is_array($_SESSION['cb_user'])) {
                 unset($_SESSION['cb_user']['id_role'], $_SESSION['cb_user']['role']);
             }
         }
@@ -262,10 +273,12 @@ if (!function_exists('db_user_role_sync')) {
             $stmtSubRole->execute();
             $stmtSubRole->close();
 
-            if (!isset($_SESSION['cb_user']) || !is_array($_SESSION['cb_user'])) {
-                $_SESSION['cb_user'] = [];
+            if ($updateSession) {
+                if (!isset($_SESSION['cb_user']) || !is_array($_SESSION['cb_user'])) {
+                    $_SESSION['cb_user'] = [];
+                }
+                $_SESSION['cb_user']['sub_role'] = $subRole;
             }
-            $_SESSION['cb_user']['sub_role'] = $subRole;
 
             cb_login_log_line('db_user_role_sub_role', [
                 'id_user' => (string)$idUser,
@@ -280,7 +293,7 @@ if (!function_exists('db_user_role_sync')) {
             $stmtSubRoleNull->execute();
             $stmtSubRoleNull->close();
 
-            if (isset($_SESSION['cb_user']) && is_array($_SESSION['cb_user'])) {
+            if ($updateSession && isset($_SESSION['cb_user']) && is_array($_SESSION['cb_user'])) {
                 unset($_SESSION['cb_user']['sub_role']);
             }
         }

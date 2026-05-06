@@ -144,6 +144,78 @@
       && String(form.getAttribute('data-cb-refresh-dashboard-on-save') || '') === '1';
   }
 
+  function setMaxFormSubmitting(form, submitter, on, text) {
+    if (!(form instanceof HTMLFormElement)) return;
+
+    const buttons = Array.from(form.querySelectorAll('button, input[type="submit"]')).filter((button) => {
+      return button instanceof HTMLButtonElement || button instanceof HTMLInputElement;
+    });
+
+    buttons.forEach((button) => {
+      if (on) {
+        if (!button.hasAttribute('data-cb-submit-original-disabled')) {
+          button.setAttribute('data-cb-submit-original-disabled', button.disabled ? '1' : '0');
+        }
+        button.disabled = true;
+        button.style.pointerEvents = 'none';
+      } else {
+        const wasDisabled = button.getAttribute('data-cb-submit-original-disabled') === '1';
+        button.disabled = wasDisabled;
+        button.style.pointerEvents = '';
+        button.removeAttribute('data-cb-submit-original-disabled');
+      }
+    });
+
+    if (!(submitter instanceof HTMLElement)) return;
+
+    const target = (submitter instanceof HTMLButtonElement || submitter instanceof HTMLInputElement) ? submitter : null;
+    if (!target) return;
+
+    if (on) {
+      if (!target.hasAttribute('data-cb-submit-original-text')) {
+        target.setAttribute('data-cb-submit-original-text', target instanceof HTMLInputElement ? target.value : target.textContent || '');
+      }
+      if (!target.hasAttribute('data-cb-submit-original-style')) {
+        target.setAttribute('data-cb-submit-original-style', target.getAttribute('style') || '');
+      }
+
+      const runningText = String(text || '').trim() || 'Probíhá akce ...';
+      if (target instanceof HTMLInputElement) {
+        target.value = runningText;
+      } else {
+        target.textContent = runningText;
+      }
+      target.style.background = 'var(--clr_cervena)';
+      target.style.borderColor = 'var(--clr_cervena_3)';
+      target.style.color = 'var(--clr_bila)';
+      target.style.cursor = 'wait';
+      target.style.opacity = '1';
+      target.setAttribute('aria-disabled', 'true');
+      return;
+    }
+
+    const originalText = target.getAttribute('data-cb-submit-original-text');
+    if (originalText !== null) {
+      if (target instanceof HTMLInputElement) {
+        target.value = originalText;
+      } else {
+        target.textContent = originalText;
+      }
+      target.removeAttribute('data-cb-submit-original-text');
+    }
+
+    const originalStyle = target.getAttribute('data-cb-submit-original-style');
+    if (originalStyle !== null) {
+      if (originalStyle === '') {
+        target.removeAttribute('style');
+      } else {
+        target.setAttribute('style', originalStyle);
+      }
+      target.removeAttribute('data-cb-submit-original-style');
+    }
+    target.removeAttribute('aria-disabled');
+  }
+
   function getUserSettingValue(form, name) {
     if (!(form instanceof HTMLFormElement)) return '';
     const selector = 'select[name="' + String(name || '').replace(/"/g, '') + '"]';
@@ -243,6 +315,8 @@
       }
     };
 
+    const loaderText = getLoaderTextFromSubmitter(submitter, form);
+
     if (submitter instanceof HTMLElement && !skipSubmitterName) {
       const submitName = String(submitter.getAttribute('name') || submitter.getAttribute('data-cb-submit-name') || '').trim();
       const submitValue = String(submitter.getAttribute('value') || submitter.getAttribute('data-cb-submit-value') || '').trim();
@@ -262,8 +336,9 @@
         submitter.style.pointerEvents = 'none';
         submitter.setAttribute('aria-disabled', 'true');
       }
-      submitter.setAttribute('disabled', 'disabled');
     }
+
+    setMaxFormSubmitting(form, submitter, true, loaderText);
 
     if (cardId > 0) {
       const hiddenCardId = addTempHiddenInput(form, 'cb_card_id', String(cardId));
@@ -274,7 +349,6 @@
 
     const formData = new FormData(form);
 
-    const loaderText = getLoaderTextFromSubmitter(submitter, form);
     const useGlobalLoader = refreshDashboardOnSave || loaderText !== '';
     if (useGlobalLoader) {
       setLoading(true, loaderText, 'dashboard');
@@ -341,9 +415,7 @@
           node.remove();
         }
       });
-      if (submitter instanceof HTMLElement) {
-        submitter.removeAttribute('disabled');
-      }
+      setMaxFormSubmitting(form, submitter, false, '');
       if (useGlobalLoader) {
         setLoading(false, '', 'dashboard');
       }

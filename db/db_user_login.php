@@ -51,6 +51,7 @@ if (!function_exists('cb_db_user_login')) {
         $idUser = (int)$data['id_user'];
         $profile = $data['profile'];
         $working = $data['working'];
+        $mainBranch = $data['main'] ?? null;
 
         $conn = db();
         $conn->begin_transaction();
@@ -62,13 +63,13 @@ if (!function_exists('cb_db_user_login')) {
             ]);
 
             // A) user (profil)
-            cb_db_upsert_user($conn, $profile);
+            cb_db_upsert_user($conn, $profile, true);
 
             // A2) user_set (vychozi zaznam po prvnim loginu)
             cb_db_ensure_user_set($conn, $idUser);
 
             // B) pobočky uživatele (nastav aktuální stav)
-            cb_db_set_user_pobocka($conn, $idUser, $working);
+            cb_db_set_user_pobocka($conn, $idUser, $working, is_string($mainBranch) ? $mainBranch : null);
 
             // C) role (synchronizace + nastavení efektivní role)
             $roleChanges = db_user_role_sync($conn, $idUser, $profile);

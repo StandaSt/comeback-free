@@ -22,12 +22,14 @@ declare(strict_types=1);
  * - $_SESSION['cb_user_profile']  ... profil ze Směn (musí obsahovat 'id')
  * - $_SESSION['cb_user_branches'] ... pobočky ze Směn (musí být pole)
  *   - očekává se klíč 'workingBranchNames' (seznam kódů poboček)
+ *   - volitelně klíč 'mainBranchName' (hlavní pobočka ze Směn)
  *
  * Návrat:
  * - pole:
  *   - 'id_user'  (int)
  *   - 'profile'  (array)
  *   - 'working'  (array)  seznam kódů poboček (může být prázdný)
+ *   - 'main'     (?string) hlavní pobočka ze Směn
  */
 
 if (!function_exists('fce_login_vstupy_priprav')) {
@@ -39,6 +41,7 @@ if (!function_exists('fce_login_vstupy_priprav')) {
      * - id_user  ... (int) id uživatele ze Směn
      * - profile  ... (array) profil uživatele ze Směn
      * - working  ... (array) kódy poboček (workingBranchNames), může být prázdné
+     * - main     ... (?string) hlavní pobočka ze Směn
      *
      * Vyhazuje výjimku, pokud:
      * - chybí profil nebo nemá id
@@ -63,11 +66,13 @@ if (!function_exists('fce_login_vstupy_priprav')) {
         if (!is_array($working)) {
             $working = [];
         }
+        $main = trim((string)($branches['mainBranchName'] ?? ''));
 
         return [
             'id_user' => $idUser,
             'profile' => $profile,
             'working' => $working,
+            'main' => $main !== '' ? $main : null,
         ];
     }
 }

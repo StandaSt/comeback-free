@@ -36,7 +36,7 @@ function cb_db_dt_or_null(mixed $v): ?string
  *
  * @param array $p  plný profil ze Směn (userGetLogged)
  */
-function cb_db_upsert_user(mysqli $conn, array $p): void
+function cb_db_upsert_user(mysqli $conn, array $p, bool $inSystem = true): void
 {
     $idUser = (int)$p['id'];
 
@@ -67,20 +67,21 @@ function cb_db_upsert_user(mysqli $conn, array $p): void
     $stmt->close();
 
     if (!$exists) {
+        $inSystemValue = $inSystem ? 1 : 0;
         $stmt = $conn->prepare(
-            'INSERT INTO user (id_user,jmeno,prijmeni,email,telefon,aktivni,schvalen,vytvoren_smeny,visit_smeny)
-             VALUES (?,?,?,?,?,?,?,?,?)'
+            'INSERT INTO user (id_user,jmeno,prijmeni,email,telefon,aktivni,in_system,schvalen,vytvoren_smeny,visit_smeny)
+             VALUES (?,?,?,?,?,?,?,?,?,?)'
         );
 
-        // 9 hodnot: i s s s s i i s s
         $stmt->bind_param(
-            'issssiiss',
+            'issssiiiss',
             $idUser,
             $jmeno,
             $prijmeni,
             $email,
             $telefon,
             $aktivni,
+            $inSystemValue,
             $schvalen,
             $vytvoren,
             $visit
@@ -90,13 +91,13 @@ function cb_db_upsert_user(mysqli $conn, array $p): void
         return;
     }
 
+    $inSystemSql = $inSystem ? 'in_system=1,' : '';
     $stmt = $conn->prepare(
         'UPDATE user
-         SET jmeno=?, prijmeni=?, email=?, telefon=?, aktivni=?, schvalen=?, vytvoren_smeny=?, visit_smeny=?
+         SET jmeno=?, prijmeni=?, email=?, telefon=?, aktivni=?, ' . $inSystemSql . ' schvalen=?, vytvoren_smeny=?, visit_smeny=?
          WHERE id_user=?'
     );
 
-    // 9 hodnot: s s s s i i s s i
     $stmt->bind_param(
         'ssssiissi',
         $jmeno,

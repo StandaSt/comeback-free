@@ -24,6 +24,12 @@ $cbRunSmenyPlan = (
 $cbOpenSmenyPlan = (
     isset($_POST['open_smeny_plan']) && (string)$_POST['open_smeny_plan'] === '1'
 );
+$cbRunSmenyUser = (
+    isset($_POST['run_smeny_user']) && (string)$_POST['run_smeny_user'] === '1'
+);
+$cbOpenSmenyUser = (
+    isset($_POST['open_smeny_user']) && (string)$_POST['open_smeny_user'] === '1'
+);
 $cbRunGoogleData = (
     isset($_POST['run_google_data']) && (string)$_POST['run_google_data'] === '1'
 );
@@ -60,6 +66,8 @@ if ($cbBackAdminInit) {
     unset($_SESSION['cb_smeny_plan_id_pob']);
     $cbRunSmenyPlan = false;
     $cbOpenSmenyPlan = false;
+    $cbRunSmenyUser = false;
+    $cbOpenSmenyUser = false;
     $cbRunGoogleData = false;
     $cbOpenGoogleData = false;
     $cbRunRestia = false;
@@ -203,12 +211,21 @@ if ($qReport instanceof mysqli_result) {
 }
 
 $cbScriptTables = [
+    'plnime_smeny_user.php' => [
+        'user',
+        'user_pobocka',
+        'user_role',
+        'user_slot',
+    ],
     'plnime_smeny_plan.php' => [
         'smeny_aktualizace',
         'smeny_plan',
     ],
     'google_data.php' => [
-        'smeny_report',
+        'reporty',
+        'reporty_osoby',
+        'reporty_pokladna',
+        'reporty_restia',
     ],
     'plnime_restia_objednavky.php' => [
         'api_restia',
@@ -392,6 +409,18 @@ ob_start();
       </td>
     </tr>
     <tr>
+      <td>plnime_smeny_user.php</td>
+      <td><?= cb_admin_init_status_html('plnime_smeny_user.php', $cbScriptStats) ?></td>
+      <td>uživatelé Směny</td>
+      <td class="txt_c"><span class="txt_zelena text_tucny">OK</span></td>
+      <td>
+        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
+          <input type="hidden" name="open_smeny_user" value="1">
+          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Připravuji import uživatelů">Připrav import</button>
+        </form>
+      </td>
+    </tr>
+    <tr>
       <td>plnime_smeny_plan.php</td>
       <td><?= cb_admin_init_status_html('plnime_smeny_plan.php', $cbScriptStats) ?></td>
       <td>směny plán</td>
@@ -406,7 +435,7 @@ ob_start();
     <tr>
       <td>google_data.php</td>
       <td><?= cb_admin_init_status_html('google_data.php', $cbScriptStats) ?></td>
-      <td>směny Google</td>
+      <td>reporty Google</td>
       <td class="txt_c"><span class="txt_zelena text_tucny">OK</span></td>
       <td>
         <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
@@ -494,6 +523,16 @@ if ($cbRunSmenyPlan || $cbOpenSmenyPlan) {
     $card_max_html = cb_admin_init_capture_max_include(
         __DIR__ . '/../inicializace/plnime_smeny_plan.php',
         'inicializace/plnime_smeny_plan.php',
+        'admin_inicializace',
+        $cbTraceK3Branch
+    );
+}
+
+if ($cbRunSmenyUser || $cbOpenSmenyUser) {
+    $cbTraceK3Branch = $cbRunSmenyUser ? 'run_smeny_user' : 'open_smeny_user';
+    $card_max_html = cb_admin_init_capture_max_include(
+        __DIR__ . '/../inicializace/plnime_smeny_user.php',
+        'inicializace/plnime_smeny_user.php',
         'admin_inicializace',
         $cbTraceK3Branch
     );

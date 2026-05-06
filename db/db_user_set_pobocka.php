@@ -11,12 +11,13 @@ declare(strict_types=1);
  *
  * Vstup:
  * - $workingBranchCodes = seznam kódů poboček ze Směn (workingBranchNames)
+ * - $mainBranchCode = hlavní pobočka ze Směn (mainBranchName)
  *
  * Chování:
  * 1) normalizace kódů (trim, prázdné pryč)
  * 2) kódy -> id_pob přes pobocka.kod
  * 3) smaže všechny vazby user_pobocka pro uživatele
- * 4) vloží aktuální vazby (id_user, id_pob)
+ * 4) vloží aktuální vazby (id_user, id_pob, main)
  *
  * Důležité:
  * - soubor NEVOLÁ Směny (API)
@@ -31,7 +32,7 @@ if (!function_exists('cb_db_set_user_pobocka')) {
      * Poznámka:
      * - pokud Směny vrátí prázdný seznam, uživatel skončí bez poboček (a to je záměr).
      */
-    function cb_db_set_user_pobocka(mysqli $conn, int $idUser, array $workingBranchCodes): void
+    function cb_db_set_user_pobocka(mysqli $conn, int $idUser, array $workingBranchCodes, ?string $mainBranchCode = null): void
     {
         // 1) normalizace vstupu (kódy poboček)
         $codes = [];
@@ -42,16 +43,19 @@ if (!function_exists('cb_db_set_user_pobocka')) {
             }
         }
 
+        $mainBranchCode = trim((string)$mainBranchCode);
+
         // 2) kódy -> id_pob
         $ids = [];
+        $mainIdPob = null;
         if ($codes) {
-            $stmtFind = $conn->prepare('SELECT id_pob FROM pobocka WHERE kod=? LIMIT 1');
+            $stmtFind = $conn->prepare('SELECT id_pob FROM pobocka WHERE kod=? OR nazev=? LIMIT 1');
             if ($stmtFind === false) {
                 throw new RuntimeException('DB: prepare selhal (pobocka lookup).');
             }
 
             foreach ($codes as $kod) {
-                $stmtFind->bind_param('s', $kod);
+                $stmtFind->bind_param('ss', $kod, $kod);
                 $stmtFind->execute();
                 $stmtFind->bind_result($idPobDb);
                 if ($stmtFind->fetch()) {
@@ -59,6 +63,22 @@ if (!function_exists('cb_db_set_user_pobocka')) {
                     if ($idPob > 0) {
                         // deduplikace přes klíč
                         $ids[$idPob] = true;
+                        if ($mainBranchCode !== '' && $kod === $mainBranchCode) {
+                            $mainIdPob = $idPob;
+                        }
+                    }
+                }
+                $stmtFind->free_result();
+            }
+
+            if ($mainIdPob === null && $mainBranchCode !== '') {
+                $stmtFind->bind_param('ss', $mainBranchCode, $mainBranchCode);
+                $stmtFind->execute();
+                $stmtFind->bind_result($idPobDb);
+                if ($stmtFind->fetch()) {
+                    $idPob = (int)$idPobDb;
+                    if ($idPob > 0 && isset($ids[$idPob])) {
+                        $mainIdPob = $idPob;
                     }
                 }
                 $stmtFind->free_result();
@@ -80,13 +100,14 @@ if (!function_exists('cb_db_set_user_pobocka')) {
 
         // 4) vlož aktuální vazby
         if ($desiredIds) {
-            $stmtIns = $conn->prepare('INSERT INTO user_pobocka (id_user, id_pob) VALUES (?,?)');
+            $stmtIns = $conn->prepare('INSERT INTO user_pobocka (id_user, id_pob, main) VALUES (?,?,?)');
             if ($stmtIns === false) {
                 throw new RuntimeException('DB: prepare selhal (user_pobocka insert).');
             }
 
             foreach ($desiredIds as $idPob) {
-                $stmtIns->bind_param('ii', $idUser, $idPob);
+                $main = ($mainIdPob !== null && (int)$idPob === $mainIdPob) ? 1 : null;
+                $stmtIns->bind_param('iii', $idUser, $idPob, $main);
                 $stmtIns->execute();
             }
             $stmtIns->close();
