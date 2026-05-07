@@ -11,8 +11,21 @@ $usUserId = (is_array($usUser) && isset($usUser['id_user'])) ? (int)$usUser['id_
 
 $usPocetSl = 4;
 $usNanoKde = 0;
+$usProdleva = 3000;
 $usPismo = 2;
 $usDark = 0;
+$usProdlevaOptions = [
+    0 => 'Bez prodlevy',
+    1000 => '1 sekunda',
+    1500 => '1,5 sekundy',
+    2000 => '2 sekundy',
+    2500 => '2,5 sekundy',
+    3000 => '3 sekundy',
+    3500 => '3,5 sekundy',
+    4000 => '4 sekundy',
+    4500 => '4,5 sekundy',
+    5000 => '5 sekund',
+];
 
 $formAction = cb_url('/');
 
@@ -23,6 +36,7 @@ if ($usUserId > 0) {
         if ((string)($_POST['us_action'] ?? '') === 'save') {
             $postPocetSl = (int)($_POST['us_pocet_sl'] ?? 4);
             $postNanoKde = (int)($_POST['us_nano_kde'] ?? 0);
+            $postProdleva = (int)($_POST['us_prodleva'] ?? 3000);
             $postPismo = (int)($_POST['us_pismo'] ?? 2);
             $postDark = (int)($_POST['us_dark'] ?? 0);
             $prevPocetSl = null;
@@ -32,6 +46,9 @@ if ($usUserId > 0) {
             }
             if (!in_array($postNanoKde, [0, 1], true)) {
                 $postNanoKde = 0;
+            }
+            if (!array_key_exists($postProdleva, $usProdlevaOptions)) {
+                $postProdleva = 3000;
             }
             if (!in_array($postPismo, [1, 2, 3], true)) {
                 $postPismo = 2;
@@ -52,11 +69,11 @@ if ($usUserId > 0) {
                 $stmtPrev->close();
             }
 
-            $stmtUpd = $conn->prepare('UPDATE user_set SET pocet_sl = ?, nano_kde = ?, pismo = ?, dark = ? WHERE id_user = ?');
+            $stmtUpd = $conn->prepare('UPDATE user_set SET pocet_sl = ?, nano_kde = ?, prodleva = ?, pismo = ?, dark = ? WHERE id_user = ?');
             if ($stmtUpd === false) {
                 throw new RuntimeException('Nepodařilo se připravit update user_set.');
             }
-            $stmtUpd->bind_param('iiiii', $postPocetSl, $postNanoKde, $postPismo, $postDark, $usUserId);
+            $stmtUpd->bind_param('iiiiii', $postPocetSl, $postNanoKde, $postProdleva, $postPismo, $postDark, $usUserId);
             $stmtUpd->execute();
             $stmtUpd->close();
 
@@ -73,18 +90,19 @@ if ($usUserId > 0) {
             $usOk = 'Nastaveni bylo ulozeno.';
         }
 
-        $stmtSel = $conn->prepare('SELECT pocet_sl, nano_kde, pismo, dark FROM user_set WHERE id_user = ? LIMIT 1');
+        $stmtSel = $conn->prepare('SELECT pocet_sl, nano_kde, prodleva, pismo, dark FROM user_set WHERE id_user = ? LIMIT 1');
         if ($stmtSel === false) {
             throw new RuntimeException('Nepodařilo se připravit select user_set.');
         }
 
         $stmtSel->bind_param('i', $usUserId);
         $stmtSel->execute();
-        $stmtSel->bind_result($dbPocetSl, $dbNanoKde, $dbPismo, $dbDark);
+        $stmtSel->bind_result($dbPocetSl, $dbNanoKde, $dbProdleva, $dbPismo, $dbDark);
 
         if ($stmtSel->fetch()) {
             $usPocetSl = in_array((int)$dbPocetSl, [3, 4, 5], true) ? (int)$dbPocetSl : 4;
             $usNanoKde = in_array((int)$dbNanoKde, [0, 1], true) ? (int)$dbNanoKde : 0;
+            $usProdleva = array_key_exists((int)$dbProdleva, $usProdlevaOptions) ? (int)$dbProdleva : 3000;
             $usPismo = in_array((int)$dbPismo, [1, 2, 3], true) ? (int)$dbPismo : 2;
             $usDark = in_array((int)$dbDark, [0, 1], true) ? (int)$dbDark : 0;
         } else {
@@ -115,7 +133,7 @@ ob_start();
   <?php if ($usOk !== ''): ?>
     <p class="card_text txt_zelena odstup_vnejsi_0"><?= h($usOk) ?></p>
   <?php endif; ?>
-  <form method="post" action="<?= h($formAction) ?>" class="card_stack gap_10 displ_flex" autocomplete="off" data-cb-user-setting-form="1" data-cb-refresh-dashboard-on-save="1" data-cb-user-setting-initial-pocet-sl="<?= h((string)$usPocetSl) ?>" data-cb-user-setting-initial-nano-kde="<?= h((string)$usNanoKde) ?>" data-cb-user-setting-initial-pismo="<?= h((string)$usPismo) ?>" data-cb-user-setting-initial-dark="<?= h((string)$usDark) ?>">
+  <form method="post" action="<?= h($formAction) ?>" class="card_stack gap_10 displ_flex" autocomplete="off" data-cb-user-setting-form="1" data-cb-refresh-dashboard-on-save="1" data-cb-user-setting-initial-pocet-sl="<?= h((string)$usPocetSl) ?>" data-cb-user-setting-initial-nano-kde="<?= h((string)$usNanoKde) ?>" data-cb-user-setting-initial-prodleva="<?= h((string)$usProdleva) ?>" data-cb-user-setting-initial-pismo="<?= h((string)$usPismo) ?>" data-cb-user-setting-initial-dark="<?= h((string)$usDark) ?>">
     <input type="hidden" name="us_action" value="save">
 
     <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10">
@@ -134,6 +152,15 @@ ob_start();
         <select class="card_select ram_sedy txt_seda vyska_32" name="us_nano_kde" data-cb-user-setting-field="1">
           <option value="0"<?= $usNanoKde === 0 ? ' selected' : '' ?>>0 = řádek</option>
           <option value="1"<?= $usNanoKde === 1 ? ' selected' : '' ?>>1 = do gridu</option>
+        </select>
+      </label>
+
+      <label class="card_field gap_4 displ_flex">
+        <span>Volba čekání při volbě období</span>
+        <select class="card_select ram_sedy txt_seda vyska_32" name="us_prodleva" data-cb-user-setting-field="1">
+          <?php foreach ($usProdlevaOptions as $prodlevaMs => $prodlevaLabel): ?>
+            <option value="<?= h((string)$prodlevaMs) ?>"<?= $usProdleva === $prodlevaMs ? ' selected' : '' ?>><?= h($prodlevaLabel) ?></option>
+          <?php endforeach; ?>
         </select>
       </label>
     </section>

@@ -141,6 +141,7 @@ $normalizePeriodDateTime = static function (string $v): string {
 $cbObdobiOd = $cbWorkingYesterday;
 $cbObdobiDo = $cbWorkingEnd;
 $cbObdobiMode = trim((string)($_SESSION['cb_obdobi_mode'] ?? 'manual'));
+$cbProdlevaMs = 3000;
 if ($cbObdobiMode === 'dnes') {
     $cbObdobiMode = 'vcera';
 }
@@ -153,11 +154,11 @@ $cbUserIdForPeriod = (int)($cbUser['id_user'] ?? 0);
 if ($cbLoginOk && $cbUserIdForPeriod > 0) {
     try {
         $conn = db();
-        $stmtPeriod = $conn->prepare('SELECT obdobi_od, obdobi_do, obdobi_mode FROM user_set WHERE id_user = ? LIMIT 1');
+        $stmtPeriod = $conn->prepare('SELECT obdobi_od, obdobi_do, obdobi_mode, prodleva FROM user_set WHERE id_user = ? LIMIT 1');
         if ($stmtPeriod) {
             $stmtPeriod->bind_param('i', $cbUserIdForPeriod);
             $stmtPeriod->execute();
-            $stmtPeriod->bind_result($dbObdobiOd, $dbObdobiDo, $dbObdobiMode);
+            $stmtPeriod->bind_result($dbObdobiOd, $dbObdobiDo, $dbObdobiMode, $dbProdlevaMs);
 
             $hasPeriod = false;
             if ($stmtPeriod->fetch()) {
@@ -180,6 +181,10 @@ if ($cbLoginOk && $cbUserIdForPeriod > 0) {
                         $cbObdobiMode = $tmpMode;
                     }
                     $hasPeriod = true;
+                }
+                $tmpProdleva = (int)($dbProdlevaMs ?? 3000);
+                if (in_array($tmpProdleva, [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000], true)) {
+                    $cbProdlevaMs = $tmpProdleva;
                 }
             }
             $stmtPeriod->close();
@@ -336,16 +341,15 @@ if ($cbPobocky) {
     <?php require __DIR__ . '/hlavicka/head_logo.php'; ?>
 
     <?php if ($cbLoginOk): ?>
-      <div class="head_top gap_8 displ_grid" aria-label="Horni radek hlavicky">
+      <div class="head_controls gap_6 displ_flex flex_sloupec" aria-label="Globální nastavení">
         <?php require __DIR__ . '/hlavicka/head_obdobi.php'; ?>
-        <?php require __DIR__ . '/hlavicka/head_kpi.php'; ?>
+        <nav class="head_controls_bottom gap_6 displ_grid" aria-label="Výběr poboček">
+          <?php require __DIR__ . '/hlavicka/head_pobocka.php'; ?>
+        </nav>
       </div>
 
-      <nav class="head_bottom gap_6 displ_grid" aria-label="Dolni radek hlavicky">
-        <?php require __DIR__ . '/hlavicka/head_pobocka.php'; ?>
-        <?php require __DIR__ . '/hlavicka/head_stav.php'; ?>
-      </nav>
-
+      <?php require __DIR__ . '/hlavicka/head_kpi.php'; ?>
+      <?php require __DIR__ . '/hlavicka/head_stav.php'; ?>
       <?php require __DIR__ . '/hlavicka/head_user.php'; ?>
     <?php else: ?>
       <div class="head_guest ram_hlavicka bg_bila zaobleni_12"></div>

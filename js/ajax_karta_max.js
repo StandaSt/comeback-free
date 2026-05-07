@@ -233,17 +233,20 @@
 
     const initialCols = String(form.getAttribute('data-cb-user-setting-initial-pocet-sl') || '');
     const initialNano = String(form.getAttribute('data-cb-user-setting-initial-nano-kde') || '');
+    const initialProdleva = String(form.getAttribute('data-cb-user-setting-initial-prodleva') || '');
     const initialPismo = String(form.getAttribute('data-cb-user-setting-initial-pismo') || '');
     const initialDark = String(form.getAttribute('data-cb-user-setting-initial-dark') || '');
 
     const currentCols = getUserSettingValue(form, 'us_pocet_sl');
     const currentNano = getUserSettingValue(form, 'us_nano_kde');
+    const currentProdleva = getUserSettingValue(form, 'us_prodleva');
     const currentPismo = getUserSettingValue(form, 'us_pismo');
     const currentDark = getUserSettingValue(form, 'us_dark');
 
     const isDirty = (
       currentCols !== initialCols
       || currentNano !== initialNano
+      || currentProdleva !== initialProdleva
       || currentPismo !== initialPismo
       || currentDark !== initialDark
     );

@@ -21,6 +21,10 @@ for ($i = 0; $i < 48; $i++) {
     $label = (string)$h . ':' . sprintf('%02d', $m);
     $cbObdobiCasOptions[] = ['value' => $value, 'label' => $label];
 }
+$cbManualSaveDelayMs = (int)($cbProdlevaMs ?? 3000);
+if (!in_array($cbManualSaveDelayMs, [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000], true)) {
+    $cbManualSaveDelayMs = 3000;
+}
 ?>
 <div class="head_interval ram_hlavicka zaobleni_10 gap_4 displ_flex flex_sloupec jc_stred" aria-label="Období">
   <div class="head_int_row displ_grid">
@@ -54,6 +58,9 @@ for ($i = 0; $i < 48; $i++) {
       <button type="button" class="head_pill txt_c cursor_ruka ram_ovladace bg_bila zaobleni_8 text_11" data-range="rok">Rok</button>
     </div>
   </div>
+  <div class="head_interval_meter" aria-hidden="true">
+    <span class="head_interval_meter_bar"></span>
+  </div>
 </div>
 
 <script>
@@ -63,9 +70,13 @@ for ($i = 0; $i < 48; $i++) {
   var odCasInput = document.getElementById('cbObdobiOdCas');
   var doCasInput = document.getElementById('cbObdobiDoCas');
   var quickBtns = document.querySelectorAll('.head_interval .head_pill[data-range]');
+  var meter = document.querySelector('.head_interval .head_interval_meter');
+  var meterBar = meter ? meter.querySelector('.head_interval_meter_bar') : null;
   var odLabel = odInput ? odInput.closest('.head_date') : null;
   var doLabel = doInput ? doInput.closest('.head_date') : null;
   var activeMode = '<?= h($cbObdobiMode) ?>';
+  var manualSaveTimer = null;
+  var manualSaveDelayMs = <?= (int)$cbManualSaveDelayMs ?>;
 
   if (!odInput || !doInput || !odCasInput || !doCasInput || !quickBtns.length) {
     return;
@@ -212,6 +223,30 @@ for ($i = 0; $i < 48; $i++) {
     .finally(function(){ isSaving = false; });
   }
 
+  function resetManualPeriodMeter(){
+    if (!meter || !meterBar) {
+      return;
+    }
+    meter.classList.remove('is-active');
+    meterBar.style.transitionDuration = '0ms';
+    meterBar.style.transform = 'scaleX(0)';
+  }
+
+  function startManualPeriodMeter(){
+    if (!meter || !meterBar) {
+      return;
+    }
+    meter.classList.add('is-active');
+    meterBar.style.transitionDuration = '0ms';
+    meterBar.style.transform = 'scaleX(0)';
+    window.requestAnimationFrame(function(){
+      window.requestAnimationFrame(function(){
+        meterBar.style.transitionDuration = manualSaveDelayMs + 'ms';
+        meterBar.style.transform = 'scaleX(1)';
+      });
+    });
+  }
+
   function computeRange(range){
     var finishedDayStart = getFinishedWorkingDayStart();
     var finishedDayEnd = getFinishedWorkingDayEnd();
@@ -241,6 +276,7 @@ for ($i = 0; $i < 48; $i++) {
 
   quickBtns.forEach(function(btn){
     btn.addEventListener('click', function(){
+      cancelManualPeriodSave();
       var range = btn.getAttribute('data-range') || 'vcera';
       var val = computeRange(range);
 
@@ -265,13 +301,18 @@ for ($i = 0; $i < 48; $i++) {
   odInput.max = fmtDate(getNowMax());
   doInput.max = fmtDate(getNowMax());
 
-  function saveManualPeriod(){
+  function saveManualPeriod(changedField){
+    resetManualPeriodMeter();
     var maxDate = getNowMax();
     var od = clampToMax(odInput.value, maxDate);
     var ddo = clampToMax(doInput.value, maxDate);
     if (!od || !ddo) return;
     if (od > ddo) {
-      od = ddo;
+      if (changedField === 'do') {
+        od = ddo;
+      } else {
+        ddo = od;
+      }
     }
     odInput.value = od;
     doInput.value = ddo;
@@ -286,12 +327,37 @@ for ($i = 0; $i < 48; $i++) {
     });
   }
 
-  odInput.addEventListener('change', saveManualPeriod);
-  doInput.addEventListener('change', saveManualPeriod);
-  odCasInput.addEventListener('change', saveManualPeriod);
-  doCasInput.addEventListener('change', saveManualPeriod);
+  function scheduleManualPeriodSave(changedField){
+    if (manualSaveTimer) {
+      window.clearTimeout(manualSaveTimer);
+      manualSaveTimer = null;
+    }
+    startManualPeriodMeter();
+    manualSaveTimer = window.setTimeout(function(){
+      manualSaveTimer = null;
+      saveManualPeriod(changedField);
+    }, manualSaveDelayMs);
+  }
+
+  function cancelManualPeriodSave(){
+    if (manualSaveTimer) {
+      window.clearTimeout(manualSaveTimer);
+      manualSaveTimer = null;
+    }
+    resetManualPeriodMeter();
+  }
+
+  [odInput, doInput, odCasInput, doCasInput].forEach(function(field){
+    field.addEventListener('focus', cancelManualPeriodSave);
+  });
+
+  odInput.addEventListener('change', function(){ scheduleManualPeriodSave('od'); });
+  doInput.addEventListener('change', function(){ scheduleManualPeriodSave('do'); });
+  odCasInput.addEventListener('change', function(){ scheduleManualPeriodSave('od_time'); });
+  doCasInput.addEventListener('change', function(){ scheduleManualPeriodSave('do_time'); });
 
   setActive(activeMode);
   setManualHighlight(activeMode === 'manual');
+  resetManualPeriodMeter();
 })();
 </script>
