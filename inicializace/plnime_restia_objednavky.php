@@ -1650,29 +1650,37 @@ if (!function_exists('cb_restia_hist_upsert_order')) {
         $restiaToken = $order['token'] ?? null;
         $restiaToken = ($restiaToken === null || $restiaToken === '') ? null : (string)$restiaToken;
         $restiaCreatedAt = cb_restia_hist_restia_to_local_nullable($order['createdAt'] ?? null);
+        $profilNazev = trim((string)($profile['name'] ?? ''));
+        $profilNazev = ($profilNazev === '') ? null : $profilNazev;
+        $shortCode = $order['shortCode'] ?? null;
+        $shortCode = ($shortCode === null || $shortCode === '') ? null : (string)$shortCode;
+        $serioveCislo = $order['serialNumber'] ?? null;
+        $serioveCislo = ($serioveCislo === null || $serioveCislo === '') ? null : (string)$serioveCislo;
+        $zpozdeniMin = isset($order['cookingTimeMinutes']) ? (int)$order['cookingTimeMinutes'] : null;
         $objPoznamka = $order['note'] ?? null;
         $objPoznamka = ($objPoznamka === null || $objPoznamka === '') ? null : (string)$objPoznamka;
         $importTs = cb_restia_hist_now();
+        $restObj = $restiaIdObj;
 
         $sql = '
             INSERT INTO objednavky_restia (
                 id_pob, id_zak, id_platforma, restia_id_obj, restia_created_at, restia_order_number, restia_token,
-                profil_typ, rest_obj,
+                profil_typ, profil_nazev, rest_obj, short_code, seriove_cislo,
                 id_stav, id_platba, id_doruceni,
-                obj_pozn, restia_imported_at
+                zpozdeni_min, obj_pozn, restia_imported_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 id_obj = LAST_INSERT_ID(id_obj),
                 id_pob = VALUES(id_pob), id_zak = VALUES(id_zak), id_platforma = VALUES(id_platforma), restia_created_at = VALUES(restia_created_at), restia_order_number = VALUES(restia_order_number),
-                restia_token = VALUES(restia_token), profil_typ = VALUES(profil_typ),
-                rest_obj = VALUES(rest_obj), id_stav = VALUES(id_stav), id_platba = VALUES(id_platba), id_doruceni = VALUES(id_doruceni),
-                obj_pozn = VALUES(obj_pozn), restia_imported_at = VALUES(restia_imported_at)
+                restia_token = VALUES(restia_token), profil_typ = VALUES(profil_typ), profil_nazev = VALUES(profil_nazev),
+                rest_obj = VALUES(rest_obj), short_code = VALUES(short_code), seriove_cislo = VALUES(seriove_cislo),
+                id_stav = VALUES(id_stav), id_platba = VALUES(id_platba), id_doruceni = VALUES(id_doruceni),
+                zpozdeni_min = VALUES(zpozdeni_min), obj_pozn = VALUES(obj_pozn), restia_imported_at = VALUES(restia_imported_at)
         ';
 
         $stmt = cb_restia_hist_stmt($conn, 'objednavky_restia_upsert', $sql, 'objednavky_restia upsert');
-        $restObj = $restiaIdObj;
-        $stmt->bind_param('iiissssssiisss', $idPob, $idZak, $idPlatforma, $restiaIdObj, $restiaCreatedAt, $restiaOrderNumber, $restiaToken, $profilTyp, $restObj, $idStav, $idPlatba, $idDoruceni, $objPoznamka, $importTs);
+        $stmt->bind_param('iiissssssssiiiisss', $idPob, $idZak, $idPlatforma, $restiaIdObj, $restiaCreatedAt, $restiaOrderNumber, $restiaToken, $profilTyp, $profilNazev, $restObj, $shortCode, $serioveCislo, $idStav, $idPlatba, $idDoruceni, $zpozdeniMin, $objPoznamka, $importTs);
         $stmt->execute();
         $idObj = (int)$conn->insert_id;
         if ($idObj <= 0 && $existingIdObj > 0) {

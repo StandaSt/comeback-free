@@ -74,9 +74,10 @@ if (
     }
 }
 
+$conn = db_connect();
+
 $usedColors = [];
 if ($idUser > 0) {
-    $conn = db_connect();
     $stmt = $conn->prepare(
         'SELECT DISTINCT color
          FROM user_card_set
@@ -100,23 +101,39 @@ if ($idUser > 0) {
     }
 }
 
-if (!in_array($idRole, [1, 2, 3], true)) {
-    $idRole = 3;
+$defaultRoleId = 9;
+$resRoleMax = $conn->query('SELECT COALESCE(MAX(id_role), 9) AS max_role FROM cis_role WHERE aktivni = 1');
+if ($resRoleMax instanceof mysqli_result) {
+    $rowRoleMax = $resRoleMax->fetch_assoc();
+    $defaultRoleId = max(1, (int)($rowRoleMax['max_role'] ?? 9));
+    $resRoleMax->free();
+}
+if ($idRole <= 0) {
+    $idRole = $defaultRoleId;
 }
 
-$baseRoleColors = [
-    1 => '#fef2f2', // role 1
-    2 => '#f0fdf4', // role 2
-    3 => '#f6f8fb', // role 3
-];
-
 $visibleRoleColors = [];
-if ($idRole === 1) {
-    $visibleRoleColors = [$baseRoleColors[1], $baseRoleColors[2], $baseRoleColors[3]];
-} elseif ($idRole === 2) {
-    $visibleRoleColors = [$baseRoleColors[2], $baseRoleColors[3]];
-} else {
-    $visibleRoleColors = [$baseRoleColors[3]];
+$stmtRoleColors = $conn->prepare(
+    'SELECT card_color
+     FROM cis_role
+     WHERE aktivni = 1
+       AND id_role >= ?
+       AND card_color IS NOT NULL
+       AND card_color <> ""
+     ORDER BY id_role ASC'
+);
+if ($stmtRoleColors instanceof mysqli_stmt) {
+    $stmtRoleColors->bind_param('i', $idRole);
+    if ($stmtRoleColors->execute()) {
+        $stmtRoleColors->bind_result($dbRoleColor);
+        while ($stmtRoleColors->fetch()) {
+            $color = trim((string)$dbRoleColor);
+            if ($color !== '') {
+                $visibleRoleColors[] = $color;
+            }
+        }
+    }
+    $stmtRoleColors->close();
 }
 
 $finalUsedColors = [];

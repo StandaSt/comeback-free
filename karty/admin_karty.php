@@ -14,16 +14,14 @@ $lastAddedName = '-';
 $nextCardId = 1;
 $nextCardPoradi = 1;
 $souborOptions = [];
+$roleOptions = [];
+$defaultMinRole = 3;
 $usedSouborMap = [];
 $activeCards = [];
 $inactiveCards = [];
 $tableColsHtml = '';
 $tableHeadHtml = '';
-$sekceStats = [
-    3 => ['all' => 0, 'on' => 0, 'off' => 0],
-    2 => ['all' => 0, 'on' => 0, 'off' => 0],
-    1 => ['all' => 0, 'on' => 0, 'off' => 0],
-];
+$sekceStats = [];
 
 // Spolecna cast: jednoduche validace a helpery.
 $isName = static function (string $v): bool {
@@ -48,6 +46,49 @@ $normalizeSoubor = static function (string $v) use ($isName): string {
 $setFeedback = static function (string $text, bool $isError) use (&$msg, &$msgErr): void {
     $msg = trim($text);
     $msgErr = $isError;
+};
+
+$loadRoleOptions = static function () use (&$roleOptions, &$defaultMinRole, &$sekceStats): void {
+    $roleOptions = [];
+    $defaultMinRole = 3;
+    $sekceStats = [];
+
+    try {
+        $conn = db();
+        $resRoles = $conn->query('
+            SELECT id_role, role
+            FROM cis_role
+            WHERE aktivni = 1
+            ORDER BY id_role ASC
+        ');
+        if ($resRoles instanceof mysqli_result) {
+            while ($rowRole = $resRoles->fetch_assoc()) {
+                $idRole = (int)($rowRole['id_role'] ?? 0);
+                $roleName = trim((string)($rowRole['role'] ?? ''));
+                if ($idRole <= 0 || $roleName === '') {
+                    continue;
+                }
+                $roleOptions[$idRole] = $roleName;
+            }
+            $resRoles->free();
+        }
+    } catch (Throwable $e) {
+        $roleOptions = [];
+    }
+
+    if ($roleOptions === []) {
+        $roleOptions = [
+            1 => 'admin',
+            2 => 'manager',
+            3 => 'vsichni',
+        ];
+    }
+
+    $roleIds = array_keys($roleOptions);
+    $defaultMinRole = (int)max($roleIds);
+    foreach ($roleIds as $roleId) {
+        $sekceStats[(int)$roleId] = ['all' => 0, 'on' => 0, 'off' => 0];
+    }
 };
 
 $souborExists = static function (mysqli $conn, string $soubor, int $excludeId = 0): bool {
@@ -94,6 +135,8 @@ $loadSharedData = static function () use (
     &$karetCount,
     &$lastAddedName,
     &$nextCardId,
+    &$roleOptions,
+    &$defaultMinRole,
     &$usedSouborMap,
     &$activeCards,
     &$inactiveCards,
@@ -102,10 +145,14 @@ $loadSharedData = static function () use (
     &$tableColsHtml,
     &$tableHeadHtml,
     &$msg,
-    &$msgErr
+    &$msgErr,
+    $loadRoleOptions
 ): void {
     try {
         $conn = db();
+
+        // Nacte aktivni role z DB a pripravi vychozi roli.
+        $loadRoleOptions();
 
         // Zakladni souhrn poctu karet.
         $res = $conn->query('SELECT COUNT(*) AS cnt FROM karty');
@@ -137,28 +184,29 @@ $loadSharedData = static function () use (
         // Souhrny podle role a aktivace.
         $resStats = $conn->query('
             SELECT
-                SUM(min_role = 1) AS r1_all,
-                SUM(min_role = 1 AND aktivni = 1) AS r1_on,
-                SUM(min_role = 1 AND aktivni = 0) AS r1_off,
-                SUM(min_role = 2) AS r2_all,
-                SUM(min_role = 2 AND aktivni = 1) AS r2_on,
-                SUM(min_role = 2 AND aktivni = 0) AS r2_off,
-                SUM(min_role = 3) AS r3_all,
-                SUM(min_role = 3 AND aktivni = 1) AS r3_on,
-                SUM(min_role = 3 AND aktivni = 0) AS r3_off
+                min_role,
+                COUNT(*) AS all_cnt,
+                SUM(aktivni = 1) AS on_cnt,
+                SUM(aktivni = 0) AS off_cnt
             FROM karty
+            GROUP BY min_role
         ');
-        if ($resStats) {
-            $rowStats = $resStats->fetch_assoc();
-            $sekceStats[1]['all'] = (int)($rowStats['r1_all'] ?? 0);
-            $sekceStats[1]['on'] = (int)($rowStats['r1_on'] ?? 0);
-            $sekceStats[1]['off'] = (int)($rowStats['r1_off'] ?? 0);
-            $sekceStats[2]['all'] = (int)($rowStats['r2_all'] ?? 0);
-            $sekceStats[2]['on'] = (int)($rowStats['r2_on'] ?? 0);
-            $sekceStats[2]['off'] = (int)($rowStats['r2_off'] ?? 0);
-            $sekceStats[3]['all'] = (int)($rowStats['r3_all'] ?? 0);
-            $sekceStats[3]['on'] = (int)($rowStats['r3_on'] ?? 0);
-            $sekceStats[3]['off'] = (int)($rowStats['r3_off'] ?? 0);
+        if ($resStats instanceof mysqli_result) {
+            while ($rowStats = $resStats->fetch_assoc()) {
+                $roleId = (int)($rowStats['min_role'] ?? 0);
+                if ($roleId <= 0) {
+                    continue;
+                }
+                if (!isset($sekceStats[$roleId])) {
+                    $sekceStats[$roleId] = ['all' => 0, 'on' => 0, 'off' => 0];
+                    if (!isset($roleOptions[$roleId])) {
+                        $roleOptions[$roleId] = 'role ' . (string)$roleId;
+                    }
+                }
+                $sekceStats[$roleId]['all'] = (int)($rowStats['all_cnt'] ?? 0);
+                $sekceStats[$roleId]['on'] = (int)($rowStats['on_cnt'] ?? 0);
+                $sekceStats[$roleId]['off'] = (int)($rowStats['off_cnt'] ?? 0);
+            }
             $resStats->free();
         }
 
@@ -204,6 +252,7 @@ $loadSharedData = static function () use (
         $karetCount = 0;
         $lastAddedName = '-';
         $nextCardId = 1;
+        $loadRoleOptions();
         $usedSouborMap = [];
         $activeCards = [];
         $inactiveCards = [];
@@ -273,6 +322,8 @@ $loadSharedData = static function () use (
 // Min rezim: jen nacteni dat a mini souhrn.
 if ($renderMode === 'mini') {
     $loadSharedData();
+    $miniRoleOptions = $roleOptions;
+    krsort($miniRoleOptions, SORT_NUMERIC);
 
     ob_start();
     ?>
@@ -285,18 +336,12 @@ if ($renderMode === 'mini') {
       </tr>
     </thead>
     <tbody>
+      <?php foreach ($miniRoleOptions as $roleId => $roleName): ?>
       <tr>
-        <td>zamestnanec</td>
-        <td class="txt_r"><strong><?= h((string)$sekceStats[3]['all']) ?>/<?= h((string)$sekceStats[3]['on']) ?>/<?= h((string)$sekceStats[3]['off']) ?></strong></td>
+        <td><?= h((string)$roleName) ?></td>
+        <td class="txt_r"><strong><?= h((string)($sekceStats[(int)$roleId]['all'] ?? 0)) ?>/<?= h((string)($sekceStats[(int)$roleId]['on'] ?? 0)) ?>/<?= h((string)($sekceStats[(int)$roleId]['off'] ?? 0)) ?></strong></td>
       </tr>
-      <tr>
-        <td>manager</td>
-        <td class="txt_r"><strong><?= h((string)$sekceStats[2]['all']) ?>/<?= h((string)$sekceStats[2]['on']) ?>/<?= h((string)$sekceStats[2]['off']) ?></strong></td>
-      </tr>
-      <tr>
-        <td>admin</td>
-        <td class="txt_r"><strong><?= h((string)$sekceStats[1]['all']) ?>/<?= h((string)$sekceStats[1]['on']) ?>/<?= h((string)$sekceStats[1]['off']) ?></strong></td>
-      </tr>
+      <?php endforeach; ?>
     </tbody>
   </table>
 </div>
@@ -306,6 +351,7 @@ if ($renderMode === 'mini') {
 
 // Max rezim: obsluha formulare, potom znovu nacteni dat a max vykresleni.
 if ($renderMode !== 'mini') {
+    $loadRoleOptions();
     if (isset($_POST['admin_karty_action'])) {
         try {
             $conn = db();
@@ -315,11 +361,14 @@ if ($renderMode !== 'mini') {
                 // Pridani nove karty na konec aktivniho seznamu.
                 $nazev = trim((string)($_POST['nazev'] ?? ''));
                 $soubor = $normalizeSoubor((string)($_POST['soubor'] ?? ''));
-                $minRole = (int)($_POST['min_role'] ?? 3);
+                $minRole = (int)($_POST['min_role'] ?? $defaultMinRole);
                 $refreshOp = isset($_POST['refresh_op']) ? 1 : 0;
 
                 if ($nazev === '' || $soubor === '') {
                     throw new RuntimeException('Neplatna vstupni data.');
+                }
+                if (!isset($roleOptions[$minRole])) {
+                    $minRole = $defaultMinRole;
                 }
 
                 if ($souborExists($conn, $soubor)) {
@@ -350,11 +399,14 @@ if ($renderMode !== 'mini') {
                 $idKarta = (int)($_POST['id_karta'] ?? 0);
                 $nazev = trim((string)($_POST['nazev'] ?? ''));
                 $soubor = $normalizeSoubor((string)($_POST['soubor'] ?? ''));
-                $minRole = (int)($_POST['min_role'] ?? 3);
+                $minRole = (int)($_POST['min_role'] ?? $defaultMinRole);
                 $refreshOp = isset($_POST['refresh_op']) ? 1 : 0;
 
                 if ($idKarta <= 0 || $nazev === '' || $soubor === '') {
                     throw new RuntimeException('Neplatna vstupni data.');
+                }
+                if (!isset($roleOptions[$minRole])) {
+                    $minRole = $defaultMinRole;
                 }
 
                 if ($souborExists($conn, $soubor, $idKarta)) {
@@ -518,6 +570,7 @@ if ($renderMode !== 'mini') {
     }
 
     $loadSharedData();
+    $displayRoleOptions = $roleOptions;
 
     ob_start();
     ?>
@@ -547,9 +600,9 @@ if ($renderMode !== 'mini') {
             </td>
             <td>
               <select class="card_select filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="min_role" required form="karta-add">
-                <option value="1">admin</option>
-                <option value="2">manager</option>
-                <option value="3" selected>vsichni</option>
+                <?php foreach ($displayRoleOptions as $roleId => $roleName): ?>
+                  <option value="<?= h((string)$roleId) ?>"<?= (int)$roleId === $defaultMinRole ? ' selected' : '' ?>><?= h((string)$roleName) ?></option>
+                <?php endforeach; ?>
               </select>
             </td>
             <td class="txt_c">
@@ -582,10 +635,10 @@ if ($renderMode !== 'mini') {
                 </td>
                 <td><input type="text" class="card_input filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="soubor" value="<?= h($card['soubor']) ?>" maxlength="80" form="<?= h($formId) ?>"></td>
                 <td>
-                  <select class="card_select filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="min_role" form="<?= h($formId) ?>">
-                    <option value="1"<?= $card['min_role'] === 1 ? ' selected' : '' ?>>admin</option>
-                    <option value="2"<?= $card['min_role'] === 2 ? ' selected' : '' ?>>manager</option>
-                    <option value="3"<?= $card['min_role'] === 3 ? ' selected' : '' ?>>vsichni</option>
+                  <select class="card_select filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="min_role" form="<?= h($formId) ?>" data-cb-submit-on-change="1" data-cb-submit-name="admin_karty_action" data-cb-submit-value="save">
+                    <?php foreach ($displayRoleOptions as $roleId => $roleName): ?>
+                      <option value="<?= h((string)$roleId) ?>"<?= $card['min_role'] === (int)$roleId ? ' selected' : '' ?>><?= h((string)$roleName) ?></option>
+                    <?php endforeach; ?>
                   </select>
                 </td>
                 <td class="txt_c">
@@ -617,7 +670,7 @@ if ($renderMode !== 'mini') {
                 <td class="txt_c"><?= h((string)$card['id_karta']) ?></td>
                 <td><?= h($card['nazev']) ?></td>
                 <td><?= h($card['soubor']) ?></td>
-                <td><?= h((string)$card['min_role']) ?></td>
+                <td><?= h((string)($displayRoleOptions[(int)$card['min_role']] ?? ('role ' . (string)$card['min_role']))) ?></td>
                 <td class="txt_c"><?= ((int)($card['refresh_op'] ?? 0) === 1) ? '<span class="txt_cervena">Ano</span>' : '<span class="txt_seda">Ano</span>' ?></td>
                 <td class="txt_c">ne</td>
                 <td>

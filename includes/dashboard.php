@@ -214,9 +214,16 @@ if (!function_exists('cb_dashboard_timing_log')) {
 
 cb_dashboard_timing_log('start', $cbDashTimingStart, $cbDashTimingLast);
 
-$roleFilter = (int)(($_SESSION['cb_user']['id_role'] ?? 3));
-if (!in_array($roleFilter, [1, 2, 3], true)) {
-    $roleFilter = 3;
+$roleFilter = (int)(($_SESSION['cb_user']['id_role'] ?? 0));
+$defaultRoleFilter = 9;
+$resRoleMax = db()->query('SELECT COALESCE(MAX(id_role), 9) AS max_role FROM cis_role WHERE aktivni = 1');
+if ($resRoleMax instanceof mysqli_result) {
+    $rowRoleMax = $resRoleMax->fetch_assoc();
+    $defaultRoleFilter = max(1, (int)($rowRoleMax['max_role'] ?? 9));
+    $resRoleMax->free();
+}
+if ($roleFilter <= 0) {
+    $roleFilter = $defaultRoleFilter;
 }
 
 $idUser = (int)(($_SESSION['cb_user']['id_user'] ?? 0));
@@ -365,12 +372,7 @@ if ($stmt) {
 }
 cb_dashboard_timing_log('after_cards_query', $cbDashTimingStart, $cbDashTimingLast);
 
-$emptyMap = [
-    3 => 'Zadna karta k zobrazeni',
-    2 => 'Zadna karta k zobrazeni',
-    1 => 'Zadna karta k zobrazeni',
-];
-$emptyText = (string)($emptyMap[$roleFilter] ?? $emptyMap[3]);
+$emptyText = 'Zadna karta k zobrazeni';
 
 $kartyNano = [];
 $kartyMini = [];

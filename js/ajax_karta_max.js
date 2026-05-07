@@ -453,7 +453,7 @@
       syncUserSettingForm(settingForm);
       return;
     }
-    if (!(target instanceof HTMLInputElement)) return;
+    if (!(target instanceof HTMLInputElement) && !(target instanceof HTMLSelectElement)) return;
     if (String(target.getAttribute('data-cb-submit-on-change') || '') !== '1') return;
 
     const form = target.form;

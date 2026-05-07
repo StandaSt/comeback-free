@@ -75,8 +75,8 @@ $channelMeta = [
     'bolt' => ['label' => 'Bolt', 'color' => '#22c55e'],
     'foodora' => ['label' => 'Foodora', 'color' => '#f97316'],
     'vlastni_web' => ['label' => 'Vlastní web', 'color' => '#7c3aed'],
-    'rucni_obj' => ['label' => 'Ruční obj.', 'color' => '#f59e0b'],
-    'ostatni' => ['label' => 'Generic', 'color' => '#64748b'],
+    'rucni_obj' => ['label' => 'Ruční zadání', 'color' => '#f59e0b'],
+    'ostatni' => ['label' => 'Adaptee', 'color' => '#64748b'],
 ];
 
 $lookupIds = static function (mysqli $conn, string $table, string $idCol, string $nameCol, array $names): array {
