@@ -26,17 +26,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 function cb_2fa_cleanup_session(): void
 {
-    unset($_SESSION['login_ok']);
-    unset($_SESSION['cb_2fa_token']);
-
-    unset($_SESSION['cb_user']);
-    unset($_SESSION['cb_token']);
-    unset($_SESSION['cb_user_profile']);
-    unset($_SESSION['cb_user_branches']);
-
-    unset($_SESSION['cb_timeout_min']);
-    unset($_SESSION['cb_session_start_ts']);
-    unset($_SESSION['cb_last_activity_ts']);
+    cb_session_forget_auth();
 }
 
 try {

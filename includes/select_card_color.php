@@ -6,7 +6,15 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
+require_once __DIR__ . '/../lib/app.php';
 require_once __DIR__ . '/../db/db_connect.php';
+
+if (!empty($_SESSION['login_ok']) && !cb_session_validate_after_login()) {
+    cb_session_forget_auth();
+    http_response_code(401);
+    echo 'Nutne prihlaseni.';
+    exit;
+}
 
 $idUser = (int)(($_SESSION['cb_user']['id_user'] ?? 0));
 $idRole = (int)(($_SESSION['cb_user']['id_role'] ?? 3));

@@ -30,6 +30,9 @@ if (isset($_GET['action']) && (string)$_GET['action'] === 'logout') {
         }
     }
 
+    if (function_exists('cb_session_forget_auth')) {
+        cb_session_forget_auth();
+    }
     $_SESSION = [];
     session_destroy();
 

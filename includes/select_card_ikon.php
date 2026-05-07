@@ -9,6 +9,13 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 require_once __DIR__ . '/../db/db_connect.php';
 require_once __DIR__ . '/../lib/app.php';
 
+if (!empty($_SESSION['login_ok']) && !cb_session_validate_after_login()) {
+    cb_session_forget_auth();
+    http_response_code(401);
+    echo 'Nutne prihlaseni.';
+    exit;
+}
+
 $idUser = (int)(($_SESSION['cb_user']['id_user'] ?? 0));
 $idKarta = (int)($_REQUEST['id_karta'] ?? 0);
 $selectedIkon = (int)($_REQUEST['ikon'] ?? 0);

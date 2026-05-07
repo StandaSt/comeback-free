@@ -5,6 +5,7 @@ declare(strict_types=1);
 
 $card_min_html = '<p class="card_text txt_seda odstup_vnejsi_0">Data online objednavek nejsou k dispozici.</p>';
 $card_max_html = '';
+$subtitleMin = '';
 
 if (!function_exists('cb_k19_render_max_tile')) {
     function cb_k19_render_max_tile(string $code): string
@@ -73,6 +74,7 @@ try {
 
     $range = cb_k19_online_workday_range();
     $aktualizaceDoText = '';
+    $aktualizaceSubtitleText = '';
     $selectedPob = function_exists('get_selected_pobocky') ? get_selected_pobocky() : [];
     $selectedPob = array_values(array_filter(array_map('intval', $selectedPob), static fn(int $v): bool => $v > 0));
 
@@ -85,11 +87,15 @@ try {
             $dtAktualizace = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $posledniStart, new DateTimeZone('Europe/Prague'));
             if ($dtAktualizace instanceof DateTimeImmutable) {
                 $aktualizaceDoText = $dtAktualizace->format('G:i');
+                $aktualizaceSubtitleText = $dtAktualizace->format('j.n.Y G:i');
             }
         }
     }
     if ($aktualizaceDoText === '') {
         $aktualizaceDoText = (new DateTimeImmutable((string)$range['to'], new DateTimeZone('Europe/Prague')))->format('G:i');
+    }
+    if ($aktualizaceSubtitleText !== '') {
+        $subtitleMin = 'Aktualizace: ' . $aktualizaceSubtitleText;
     }
 
     $branchWhere = ' WHERE p.restia_activePosId IS NOT NULL AND p.restia_activePosId <> ""';

@@ -14,6 +14,10 @@ require_once __DIR__ . '/../lib/restia_client.php';
 require_once __DIR__ . '/../db/db_api_restia.php';
 require_once __DIR__ . '/../db/zapis_log_chyby.php';
 
+if (!empty($_SESSION['login_ok']) && !cb_session_validate_after_login()) {
+    cb_session_forget_auth();
+}
+
 const CB_RESTIA_ONLINE_LIMIT = 100;
 if (!function_exists('cb_restia_online_h')) {
     function cb_restia_online_h(string $value): string

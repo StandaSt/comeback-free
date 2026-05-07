@@ -27,6 +27,10 @@ require_once __DIR__ . '/../config/secrets.php';
 require_once __DIR__ . '/../db/db_api_restia.php';
 require_once __DIR__ . '/restia_client.php';
 
+if (!empty($_SESSION['login_ok']) && !cb_session_validate_after_login()) {
+    cb_session_forget_auth();
+}
+
 /*
  * ====== KONFIGURACE TESTU (jen tady se sahá) ======
  */

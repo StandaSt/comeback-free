@@ -25,6 +25,10 @@ require_once __DIR__ . '/system.php';
 require_once __DIR__ . '/../config/secrets.php';
 require_once __DIR__ . '/../db/db_api_restia.php';
 
+if (!empty($_SESSION['login_ok']) && !cb_session_validate_after_login()) {
+    cb_session_forget_auth();
+}
+
 const CB_RESTIA_TEST_ID_POB = 6;
 const CB_RESTIA_MENU_ID = '762f8daa-ca39-4d8f-ae4a-d22b4d106e88';
 const CB_RESTIA_PREVIEW_LIMIT = 10;

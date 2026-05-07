@@ -128,6 +128,8 @@ function cb_login_finalize_after_ok(string $token, int $timeoutMin = 20): void
 
     $idUser = (int)$u['id'];
 
+    cb_session_regenerate_after_login();
+
     $roles = $u['roles'] ?? [];
     if (!is_array($roles)) {
         $roles = [];
@@ -182,6 +184,7 @@ function cb_login_finalize_after_ok(string $token, int $timeoutMin = 20): void
         'workingBranchNames' => $working,
         'mainBranchName' => $mainBranchName,
     ];
+    cb_session_bind_after_login();
 
     require_once __DIR__ . '/zapis_dat_txt.php';
 

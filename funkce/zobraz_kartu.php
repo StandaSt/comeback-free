@@ -67,19 +67,6 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
     $subtitleMin = !$isNano ? (string)($pripravenaKarta['subtitleMin'] ?? '') : '';
     $subtitleMax = !$isNano ? (string)($pripravenaKarta['subtitleMax'] ?? '') : '';
 
-    if (!$isNano && $cardId === 19) {
-        try {
-            $tz = new DateTimeZone('Europe/Prague');
-            $now = new DateTimeImmutable('now', $tz);
-            $todayStart = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $now->format('Y-m-d') . ' 06:00:00', $tz);
-            if ($todayStart instanceof DateTimeImmutable) {
-                $workdayStart = ($now < $todayStart) ? $todayStart->modify('-1 day') : $todayStart;
-                $subtitleMin = $workdayStart->format('j.n.Y G:i') . ' - ' . $now->format('G:i');
-            }
-        } catch (Throwable $e) {
-            $subtitleMin = '';
-        }
-    }
     $minHtml = (string)($pripravenaKarta['minHtml'] ?? '');
     $maxHtml = (string)($pripravenaKarta['maxHtml'] ?? '');
     $renderErrorHtml = (string)($pripravenaKarta['renderErrorHtml'] ?? '');

@@ -1,12 +1,11 @@
 <?php
 // K1
-// karty/admin_karty.php * Verze: V11 * Aktualizace: 15.04.2026
+// karty/admin_karty.php * Verze: V12 * Aktualizace: 07.05.2026
 declare(strict_types=1);
 
-$user = $_SESSION['cb_user'] ?? [];
-$idRole = (int)($user['id_role'] ?? 0);
-$isAdmin = ($idRole === 1);
+// Uvod karty: zakladni kontext a render rezim.
 $formAction = cb_url('/');
+$renderMode = isset($cbDashboardRenderMode) ? trim((string)$cbDashboardRenderMode) : 'max';
 
 $msg = '';
 $msgErr = false;
@@ -26,6 +25,7 @@ $sekceStats = [
     1 => ['all' => 0, 'on' => 0, 'off' => 0],
 ];
 
+// Spolecna cast: jednoduche validace a helpery.
 $isName = static function (string $v): bool {
     return (bool)preg_match('~^[a-z0-9_]{2,80}$~', $v);
 };
@@ -45,7 +45,7 @@ $normalizeSoubor = static function (string $v) use ($isName): string {
     return $s;
 };
 
-$setFeedback = static function (string $text, bool $isError, bool $expand = true) use (&$msg, &$msgErr): void {
+$setFeedback = static function (string $text, bool $isError) use (&$msg, &$msgErr): void {
     $msg = trim($text);
     $msgErr = $isError;
 };
@@ -89,368 +89,193 @@ $souborExists = static function (mysqli $conn, string $soubor, int $excludeId = 
     return $exists;
 };
 
-if ($isAdmin && isset($_POST['admin_karty_action'])) {
+// Spolecna cast: nacte vsechna sdilena data pro mini i max.
+$loadSharedData = static function () use (
+    &$karetCount,
+    &$lastAddedName,
+    &$nextCardId,
+    &$usedSouborMap,
+    &$activeCards,
+    &$inactiveCards,
+    &$souborOptions,
+    &$sekceStats,
+    &$tableColsHtml,
+    &$tableHeadHtml,
+    &$msg,
+    &$msgErr
+): void {
     try {
         $conn = db();
-        $action = trim((string)$_POST['admin_karty_action']);
 
-        if ($action === 'add') {
-            $nazev = trim((string)($_POST['nazev'] ?? ''));
-            $soubor = $normalizeSoubor((string)($_POST['soubor'] ?? ''));
-            $minRole = (int)($_POST['min_role'] ?? 3);
-            $refreshOp = isset($_POST['refresh_op']) ? 1 : 0;
+        // Zakladni souhrn poctu karet.
+        $res = $conn->query('SELECT COUNT(*) AS cnt FROM karty');
+        if ($res) {
+            $row = $res->fetch_assoc();
+            $karetCount = (int)($row['cnt'] ?? 0);
+            $res->free();
+        }
 
-            if ($nazev === '' || $soubor === '') {
-                throw new RuntimeException('Neplatna vstupni data.');
+        // Priprava dalsiho volneho ID pro radek "pridat kartu".
+        $resMax = $conn->query('SELECT COALESCE(MAX(id_karta), 0) AS max_id FROM karty');
+        if ($resMax) {
+            $rowMax = $resMax->fetch_assoc();
+            $nextCardId = ((int)($rowMax['max_id'] ?? 0)) + 1;
+            $resMax->free();
+        }
+
+        // Informacni udaj o naposledy pridane karte.
+        $resLast = $conn->query('SELECT nazev FROM karty ORDER BY id_karta DESC LIMIT 1');
+        if ($resLast) {
+            $rowLast = $resLast->fetch_assoc();
+            $lastAddedName = trim((string)($rowLast['nazev'] ?? ''));
+            if ($lastAddedName === '') {
+                $lastAddedName = '-';
             }
+            $resLast->free();
+        }
 
-            if ($souborExists($conn, $soubor)) {
-                throw new RuntimeException('Tento script uz je pouzity u jine karty.');
-            }
+        // Souhrny podle role a aktivace.
+        $resStats = $conn->query('
+            SELECT
+                SUM(min_role = 1) AS r1_all,
+                SUM(min_role = 1 AND aktivni = 1) AS r1_on,
+                SUM(min_role = 1 AND aktivni = 0) AS r1_off,
+                SUM(min_role = 2) AS r2_all,
+                SUM(min_role = 2 AND aktivni = 1) AS r2_on,
+                SUM(min_role = 2 AND aktivni = 0) AS r2_off,
+                SUM(min_role = 3) AS r3_all,
+                SUM(min_role = 3 AND aktivni = 1) AS r3_on,
+                SUM(min_role = 3 AND aktivni = 0) AS r3_off
+            FROM karty
+        ');
+        if ($resStats) {
+            $rowStats = $resStats->fetch_assoc();
+            $sekceStats[1]['all'] = (int)($rowStats['r1_all'] ?? 0);
+            $sekceStats[1]['on'] = (int)($rowStats['r1_on'] ?? 0);
+            $sekceStats[1]['off'] = (int)($rowStats['r1_off'] ?? 0);
+            $sekceStats[2]['all'] = (int)($rowStats['r2_all'] ?? 0);
+            $sekceStats[2]['on'] = (int)($rowStats['r2_on'] ?? 0);
+            $sekceStats[2]['off'] = (int)($rowStats['r2_off'] ?? 0);
+            $sekceStats[3]['all'] = (int)($rowStats['r3_all'] ?? 0);
+            $sekceStats[3]['on'] = (int)($rowStats['r3_on'] ?? 0);
+            $sekceStats[3]['off'] = (int)($rowStats['r3_off'] ?? 0);
+            $resStats->free();
+        }
 
-            $resNewOrder = $conn->query('SELECT COALESCE(MAX(poradi), 0) + 1 AS next_poradi FROM karty');
-            if ($resNewOrder) {
-                $rowNewOrder = $resNewOrder->fetch_assoc();
-                $nextCardPoradi = max(1, (int)($rowNewOrder['next_poradi'] ?? 1));
-                $resNewOrder->free();
-            }
-
-            $stmt = $conn->prepare('
-                INSERT INTO karty (nazev, soubor, min_role, poradi, refresh_op, aktivni, zalozeno, upraveno)
-                VALUES (?, ?, ?, ?, ?, 1, NOW(), NOW())
-            ');
-            if (!$stmt) {
-                throw new RuntimeException('DB prepare selhal.');
-            }
-            $stmt->bind_param('ssiii', $nazev, $soubor, $minRole, $nextCardPoradi, $refreshOp);
-            $stmt->execute();
-            $stmt->close();
-
-            $setFeedback('Karta byla pridana.', false, true);
-        } elseif ($action === 'save') {
-            $idKarta = (int)($_POST['id_karta'] ?? 0);
-            $nazev = trim((string)($_POST['nazev'] ?? ''));
-            $soubor = $normalizeSoubor((string)($_POST['soubor'] ?? ''));
-            $minRole = (int)($_POST['min_role'] ?? 3);
-            $refreshOp = isset($_POST['refresh_op']) ? 1 : 0;
-
-            if ($idKarta <= 0 || $nazev === '' || $soubor === '') {
-                throw new RuntimeException('Neplatna vstupni data.');
-            }
-
-            if ($souborExists($conn, $soubor, $idKarta)) {
-                throw new RuntimeException('Tento script uz je pouzity u jine karty.');
-            }
-
-            $stmt = $conn->prepare('
-                UPDATE karty
-                SET nazev=?, soubor=?, min_role=?, refresh_op=?, upraveno=NOW()
-                WHERE id_karta=?
-                LIMIT 1
-            ');
-            if (!$stmt) {
-                throw new RuntimeException('DB prepare selhal.');
-            }
-            $stmt->bind_param('ssiii', $nazev, $soubor, $minRole, $refreshOp, $idKarta);
-            $stmt->execute();
-            $stmt->close();
-
-            $setFeedback('Zmena byla ulozena.', false, true);
-        } elseif ($action === 'disable' || $action === 'enable') {
-            $idKarta = (int)($_POST['id_karta'] ?? 0);
-            $aktivni = ($action === 'enable') ? 1 : 0;
-
-            if ($idKarta <= 0) {
-                throw new RuntimeException('Neplatne ID karty.');
-            }
-
-            $stmt = $conn->prepare('
-                UPDATE karty
-                SET aktivni=?, upraveno=NOW()
-                WHERE id_karta=?
-                LIMIT 1
-            ');
-            if (!$stmt) {
-                throw new RuntimeException('DB prepare selhal.');
-            }
-            $stmt->bind_param('ii', $aktivni, $idKarta);
-            $stmt->execute();
-            $stmt->close();
-
-            $setFeedback(($aktivni === 1) ? 'Karta byla povolena.' : 'Karta byla zakazana.', false, true);
-        } elseif ($action === 'move_up' || $action === 'move_down') {
-            $idKarta = (int)($_POST['id_karta'] ?? 0);
-            if ($idKarta <= 0) {
-                throw new RuntimeException('Neplatne ID karty.');
-            }
-
-            $conn->begin_transaction();
-
-            try {
-                $stmtCur = $conn->prepare('
-                    SELECT id_karta, poradi
-                    FROM karty
-                    WHERE id_karta=?
-                    LIMIT 1
-                    FOR UPDATE
-                ');
-                if (!$stmtCur) {
-                    throw new RuntimeException('DB prepare selhal.');
+        // Seznam jiz obsazenych souboru, aby neslo pridat duplicitu.
+        $resUsed = $conn->query('SELECT soubor FROM karty');
+        if ($resUsed) {
+            while ($rowUsed = $resUsed->fetch_assoc()) {
+                $used = trim((string)($rowUsed['soubor'] ?? ''));
+                if ($used !== '') {
+                    $usedSouborMap[strtolower($used)] = true;
                 }
-                $stmtCur->bind_param('i', $idKarta);
-                $stmtCur->execute();
-                $stmtCur->bind_result($curId, $curPoradi);
-                if (!$stmtCur->fetch()) {
-                    $stmtCur->close();
-                    throw new RuntimeException('Karta nebyla nalezena.');
-                }
-                $stmtCur->close();
+            }
+            $resUsed->free();
+        }
 
-                if ($action === 'move_up') {
-                    $stmtNbr = $conn->prepare('
-                        SELECT id_karta, poradi
-                        FROM karty
-                        WHERE ((poradi < ?) OR (poradi = ? AND id_karta < ?))
-                        ORDER BY poradi DESC, id_karta DESC
-                        LIMIT 1
-                        FOR UPDATE
-                    ');
+        // Seznam vsech karet rozdeleny na aktivni a neaktivni.
+        $resCards = $conn->query('
+            SELECT id_karta, nazev, soubor, min_role, poradi, refresh_op, aktivni
+            FROM karty
+            ORDER BY aktivni DESC, poradi ASC, id_karta ASC
+        ');
+        if ($resCards) {
+            while ($rowCard = $resCards->fetch_assoc()) {
+                $item = [
+                    'id_karta' => (int)($rowCard['id_karta'] ?? 0),
+                    'nazev' => (string)($rowCard['nazev'] ?? ''),
+                    'soubor' => (string)($rowCard['soubor'] ?? ''),
+                    'min_role' => (int)($rowCard['min_role'] ?? 0),
+                    'poradi' => (int)($rowCard['poradi'] ?? 0),
+                    'refresh_op' => (int)($rowCard['refresh_op'] ?? 0),
+                    'aktivni' => (int)($rowCard['aktivni'] ?? 0),
+                ];
+
+                if ($item['aktivni'] === 1) {
+                    $activeCards[] = $item;
                 } else {
-                    $stmtNbr = $conn->prepare('
-                        SELECT id_karta, poradi
-                        FROM karty
-                        WHERE ((poradi > ?) OR (poradi = ? AND id_karta > ?))
-                        ORDER BY poradi ASC, id_karta ASC
-                        LIMIT 1
-                        FOR UPDATE
-                    ');
+                    $inactiveCards[] = $item;
                 }
-                if (!$stmtNbr) {
-                    throw new RuntimeException('DB prepare selhal.');
-                }
-                $stmtNbr->bind_param('iii', $curPoradi, $curPoradi, $curId);
-                $stmtNbr->execute();
-                $stmtNbr->bind_result($nbrId, $nbrPoradi);
-                $hasNbr = $stmtNbr->fetch();
-                $stmtNbr->close();
-
-                if ($hasNbr) {
-                    $tmpPoradi = -1;
-
-                    $stmtTmp = $conn->prepare('
-                        UPDATE karty
-                        SET poradi=?, upraveno=NOW()
-                        WHERE id_karta=?
-                        LIMIT 1
-                    ');
-                    if (!$stmtTmp) {
-                        throw new RuntimeException('DB prepare selhal.');
-                    }
-                    $stmtTmp->bind_param('ii', $tmpPoradi, $curId);
-                    $stmtTmp->execute();
-                    $stmtTmp->close();
-
-                    $stmtNbrMove = $conn->prepare('
-                        UPDATE karty
-                        SET poradi=?, upraveno=NOW()
-                        WHERE id_karta=?
-                        LIMIT 1
-                    ');
-                    if (!$stmtNbrMove) {
-                        throw new RuntimeException('DB prepare selhal.');
-                    }
-                    $stmtNbrMove->bind_param('ii', $curPoradi, $nbrId);
-                    $stmtNbrMove->execute();
-                    $stmtNbrMove->close();
-
-                    $stmtCurMove = $conn->prepare('
-                        UPDATE karty
-                        SET poradi=?, upraveno=NOW()
-                        WHERE id_karta=?
-                        LIMIT 1
-                    ');
-                    if (!$stmtCurMove) {
-                        throw new RuntimeException('DB prepare selhal.');
-                    }
-                    $stmtCurMove->bind_param('ii', $nbrPoradi, $curId);
-                    $stmtCurMove->execute();
-                    $stmtCurMove->close();
-                }
-
-                $conn->commit();
-                $setFeedback('Poradi bylo upraveno.', false, true);
-            } catch (Throwable $e) {
-                $conn->rollback();
-                throw $e;
             }
-        } else {
-            throw new RuntimeException('Neznama akce.');
+            $resCards->free();
         }
-
     } catch (Throwable $e) {
-        $setFeedback($e->getMessage(), true, true);
-    }
-}
-
-try {
-    $conn = db();
-
-    $res = $conn->query('SELECT COUNT(*) AS cnt FROM karty');
-    if ($res) {
-        $row = $res->fetch_assoc();
-        $karetCount = (int)($row['cnt'] ?? 0);
-        $res->free();
-    }
-
-    $resMax = $conn->query('SELECT COALESCE(MAX(id_karta), 0) AS max_id FROM karty');
-    if ($resMax) {
-        $rowMax = $resMax->fetch_assoc();
-        $nextCardId = ((int)($rowMax['max_id'] ?? 0)) + 1;
-        $resMax->free();
-    }
-
-    $resLast = $conn->query('SELECT nazev FROM karty ORDER BY id_karta DESC LIMIT 1');
-    if ($resLast) {
-        $rowLast = $resLast->fetch_assoc();
-        $lastAddedName = trim((string)($rowLast['nazev'] ?? ''));
-        if ($lastAddedName === '') {
-            $lastAddedName = '-';
-        }
-        $resLast->free();
-    }
-
-    $resStats = $conn->query('
-        SELECT
-            SUM(min_role = 1) AS r1_all,
-            SUM(min_role = 1 AND aktivni = 1) AS r1_on,
-            SUM(min_role = 1 AND aktivni = 0) AS r1_off,
-            SUM(min_role = 2) AS r2_all,
-            SUM(min_role = 2 AND aktivni = 1) AS r2_on,
-            SUM(min_role = 2 AND aktivni = 0) AS r2_off,
-            SUM(min_role = 3) AS r3_all,
-            SUM(min_role = 3 AND aktivni = 1) AS r3_on,
-            SUM(min_role = 3 AND aktivni = 0) AS r3_off
-        FROM karty
-    ');
-    if ($resStats) {
-        $rowStats = $resStats->fetch_assoc();
-        $sekceStats[1]['all'] = (int)($rowStats['r1_all'] ?? 0);
-        $sekceStats[1]['on'] = (int)($rowStats['r1_on'] ?? 0);
-        $sekceStats[1]['off'] = (int)($rowStats['r1_off'] ?? 0);
-        $sekceStats[2]['all'] = (int)($rowStats['r2_all'] ?? 0);
-        $sekceStats[2]['on'] = (int)($rowStats['r2_on'] ?? 0);
-        $sekceStats[2]['off'] = (int)($rowStats['r2_off'] ?? 0);
-        $sekceStats[3]['all'] = (int)($rowStats['r3_all'] ?? 0);
-        $sekceStats[3]['on'] = (int)($rowStats['r3_on'] ?? 0);
-        $sekceStats[3]['off'] = (int)($rowStats['r3_off'] ?? 0);
-        $resStats->free();
-    }
-
-    $resUsed = $conn->query('SELECT soubor FROM karty');
-    if ($resUsed) {
-        while ($rowUsed = $resUsed->fetch_assoc()) {
-            $used = trim((string)($rowUsed['soubor'] ?? ''));
-            if ($used !== '') {
-                $usedSouborMap[strtolower($used)] = true;
-            }
-        }
-        $resUsed->free();
-    }
-
-    $resCards = $conn->query('
-        SELECT id_karta, nazev, soubor, min_role, poradi, refresh_op, aktivni
-        FROM karty
-        ORDER BY aktivni DESC, poradi ASC, id_karta ASC
-    ');
-    if ($resCards) {
-        while ($rowCard = $resCards->fetch_assoc()) {
-            $item = [
-                'id_karta' => (int)($rowCard['id_karta'] ?? 0),
-                'nazev' => (string)($rowCard['nazev'] ?? ''),
-                'soubor' => (string)($rowCard['soubor'] ?? ''),
-                'min_role' => (int)($rowCard['min_role'] ?? 0),
-                'poradi' => (int)($rowCard['poradi'] ?? 0),
-                'refresh_op' => (int)($rowCard['refresh_op'] ?? 0),
-                'aktivni' => (int)($rowCard['aktivni'] ?? 0),
-            ];
-
-            if ($item['aktivni'] === 1) {
-                $activeCards[] = $item;
-            } else {
-                $inactiveCards[] = $item;
-            }
-        }
-        $resCards->free();
-    }
-} catch (Throwable $e) {
-    $karetCount = 0;
-    $lastAddedName = '-';
-    $nextCardId = 1;
-    $usedSouborMap = [];
-    $activeCards = [];
-    $inactiveCards = [];
-    if ($msg === '') {
-        $msg = 'Nacteni karet selhalo.';
-        $msgErr = true;
-    }
-}
-
-try {
-    $dir = __DIR__;
-    $all = scandir($dir);
-    if (is_array($all)) {
-        foreach ($all as $f) {
-            if (!is_string($f) || $f === '.' || $f === '..') {
-                continue;
-            }
-            if (!preg_match('~^[a-z0-9_]{2,80}\.php$~i', $f)) {
-                continue;
-            }
-            $name = preg_replace('~\.php$~i', '', $f);
-            if (!is_string($name) || $name === '') {
-                continue;
-            }
-            if (isset($usedSouborMap[strtolower($name)])) {
-                continue;
-            }
-            $souborOptions[] = $name;
+        $karetCount = 0;
+        $lastAddedName = '-';
+        $nextCardId = 1;
+        $usedSouborMap = [];
+        $activeCards = [];
+        $inactiveCards = [];
+        if ($msg === '') {
+            $msg = 'Nacteni karet selhalo.';
+            $msgErr = true;
         }
     }
-    sort($souborOptions, SORT_NATURAL | SORT_FLAG_CASE);
-} catch (Throwable $e) {
-    $souborOptions = [];
-}
 
-$adminKartyCols = [
-    ['class' => 'admin_karty_col_id'],
-    ['class' => 'admin_karty_col_nazev'],
-    ['class' => 'admin_karty_col_soubor'],
-    ['class' => 'admin_karty_col_role'],
-    ['class' => 'admin_karty_col_refresh_op'],
-    ['class' => 'admin_karty_col_aktivni'],
-    ['class' => 'admin_karty_col_akce'],
-];
+    try {
+        // Seznam dostupnych souboru pro novou kartu.
+        $dir = __DIR__;
+        $all = scandir($dir);
+        if (is_array($all)) {
+            foreach ($all as $f) {
+                if (!is_string($f) || $f === '.' || $f === '..') {
+                    continue;
+                }
+                if (!preg_match('~^[a-z0-9_]{2,80}\.php$~i', $f)) {
+                    continue;
+                }
+                $name = preg_replace('~\.php$~i', '', $f);
+                if (!is_string($name) || $name === '') {
+                    continue;
+                }
+                if (isset($usedSouborMap[strtolower($name)])) {
+                    continue;
+                }
+                $souborOptions[] = $name;
+            }
+        }
+        sort($souborOptions, SORT_NATURAL | SORT_FLAG_CASE);
+    } catch (Throwable $e) {
+        $souborOptions = [];
+    }
 
-$tableColsHtml = "            <colgroup>\n";
-foreach ($adminKartyCols as $col) {
-    $tableColsHtml .= '              <col class="' . $col['class'] . '">' . "\n";
-}
-$tableColsHtml .= "            </colgroup>";
-$tableHeadHtml = implode("\n", [
-    '            <tr>',
-    '              <th class="admin_karty_col_id txt_c">ID</th>',
-    '              <th class="admin_karty_col_nazev">Nadpis</th>',
-    '              <th class="admin_karty_col_soubor">Soubor</th>',
-    '              <th class="admin_karty_col_role">Min role</th>',
-    '              <th class="admin_karty_col_refresh_op txt_c">Refresh OP</th>',
-    '              <th class="admin_karty_col_aktivni txt_c">Aktivní</th>',
-    '              <th class="admin_karty_col_akce">Akce</th>',
-    '            </tr>',
-]);
-?>
-<?php
-ob_start();
-?>
+    // Spolecna hlavicka tabulky pro max rezim.
+    $adminKartyCols = [
+        ['class' => 'admin_karty_col_id'],
+        ['class' => 'admin_karty_col_nazev'],
+        ['class' => 'admin_karty_col_soubor'],
+        ['class' => 'admin_karty_col_role'],
+        ['class' => 'admin_karty_col_refresh_op'],
+        ['class' => 'admin_karty_col_aktivni'],
+        ['class' => 'admin_karty_col_akce'],
+    ];
+
+    $tableColsHtml = "            <colgroup>\n";
+    foreach ($adminKartyCols as $col) {
+        $tableColsHtml .= '              <col class="' . $col['class'] . '">' . "\n";
+    }
+    $tableColsHtml .= "            </colgroup>";
+
+    $tableHeadHtml = implode("\n", [
+        '            <tr>',
+        '              <th class="admin_karty_col_id txt_c">ID</th>',
+        '              <th class="admin_karty_col_nazev">Nadpis</th>',
+        '              <th class="admin_karty_col_soubor">Soubor</th>',
+        '              <th class="admin_karty_col_role">Min role</th>',
+        '              <th class="admin_karty_col_refresh_op txt_c">Refresh OP</th>',
+        '              <th class="admin_karty_col_aktivni txt_c">Aktivni</th>',
+        '              <th class="admin_karty_col_akce">Akce</th>',
+        '            </tr>',
+    ]);
+};
+
+// Min rezim: jen nacteni dat a mini souhrn.
+if ($renderMode === 'mini') {
+    $loadSharedData();
+
+    ob_start();
+    ?>
 <div class="displ_flex jc_stred">
   <table class="table ram_normal bg_bila radek_1_35 sirka100">
     <thead>
@@ -461,7 +286,7 @@ ob_start();
     </thead>
     <tbody>
       <tr>
-        <td>zaměstnanec</td>
+        <td>zamestnanec</td>
         <td class="txt_r"><strong><?= h((string)$sekceStats[3]['all']) ?>/<?= h((string)$sekceStats[3]['on']) ?>/<?= h((string)$sekceStats[3]['off']) ?></strong></td>
       </tr>
       <tr>
@@ -476,10 +301,226 @@ ob_start();
   </table>
 </div>
 <?php
-$card_min_html = (string)ob_get_clean();
+    $card_min_html = (string)ob_get_clean();
+}
 
-ob_start();
-?>
+// Max rezim: obsluha formulare, potom znovu nacteni dat a max vykresleni.
+if ($renderMode !== 'mini') {
+    if (isset($_POST['admin_karty_action'])) {
+        try {
+            $conn = db();
+            $action = trim((string)$_POST['admin_karty_action']);
+
+            if ($action === 'add') {
+                // Pridani nove karty na konec aktivniho seznamu.
+                $nazev = trim((string)($_POST['nazev'] ?? ''));
+                $soubor = $normalizeSoubor((string)($_POST['soubor'] ?? ''));
+                $minRole = (int)($_POST['min_role'] ?? 3);
+                $refreshOp = isset($_POST['refresh_op']) ? 1 : 0;
+
+                if ($nazev === '' || $soubor === '') {
+                    throw new RuntimeException('Neplatna vstupni data.');
+                }
+
+                if ($souborExists($conn, $soubor)) {
+                    throw new RuntimeException('Tento script uz je pouzity u jine karty.');
+                }
+
+                $resNewOrder = $conn->query('SELECT COALESCE(MAX(poradi), 0) + 1 AS next_poradi FROM karty');
+                if ($resNewOrder) {
+                    $rowNewOrder = $resNewOrder->fetch_assoc();
+                    $nextCardPoradi = max(1, (int)($rowNewOrder['next_poradi'] ?? 1));
+                    $resNewOrder->free();
+                }
+
+                $stmt = $conn->prepare('
+                    INSERT INTO karty (nazev, soubor, min_role, poradi, refresh_op, aktivni, zalozeno, upraveno)
+                    VALUES (?, ?, ?, ?, ?, 1, NOW(), NOW())
+                ');
+                if (!$stmt) {
+                    throw new RuntimeException('DB prepare selhal.');
+                }
+                $stmt->bind_param('ssiii', $nazev, $soubor, $minRole, $nextCardPoradi, $refreshOp);
+                $stmt->execute();
+                $stmt->close();
+
+                $setFeedback('Karta byla pridana.', false);
+            } elseif ($action === 'save') {
+                // Ulozeni upravenych vlastnosti karty.
+                $idKarta = (int)($_POST['id_karta'] ?? 0);
+                $nazev = trim((string)($_POST['nazev'] ?? ''));
+                $soubor = $normalizeSoubor((string)($_POST['soubor'] ?? ''));
+                $minRole = (int)($_POST['min_role'] ?? 3);
+                $refreshOp = isset($_POST['refresh_op']) ? 1 : 0;
+
+                if ($idKarta <= 0 || $nazev === '' || $soubor === '') {
+                    throw new RuntimeException('Neplatna vstupni data.');
+                }
+
+                if ($souborExists($conn, $soubor, $idKarta)) {
+                    throw new RuntimeException('Tento script uz je pouzity u jine karty.');
+                }
+
+                $stmt = $conn->prepare('
+                    UPDATE karty
+                    SET nazev=?, soubor=?, min_role=?, refresh_op=?, upraveno=NOW()
+                    WHERE id_karta=?
+                    LIMIT 1
+                ');
+                if (!$stmt) {
+                    throw new RuntimeException('DB prepare selhal.');
+                }
+                $stmt->bind_param('ssiii', $nazev, $soubor, $minRole, $refreshOp, $idKarta);
+                $stmt->execute();
+                $stmt->close();
+
+                $setFeedback('Zmena byla ulozena.', false);
+            } elseif ($action === 'disable' || $action === 'enable') {
+                // Zapnuti nebo vypnuti karty.
+                $idKarta = (int)($_POST['id_karta'] ?? 0);
+                $aktivni = ($action === 'enable') ? 1 : 0;
+
+                if ($idKarta <= 0) {
+                    throw new RuntimeException('Neplatne ID karty.');
+                }
+
+                $stmt = $conn->prepare('
+                    UPDATE karty
+                    SET aktivni=?, upraveno=NOW()
+                    WHERE id_karta=?
+                    LIMIT 1
+                ');
+                if (!$stmt) {
+                    throw new RuntimeException('DB prepare selhal.');
+                }
+                $stmt->bind_param('ii', $aktivni, $idKarta);
+                $stmt->execute();
+                $stmt->close();
+
+                $setFeedback(($aktivni === 1) ? 'Karta byla povolena.' : 'Karta byla zakazana.', false);
+            } elseif ($action === 'move_up' || $action === 'move_down') {
+                // Prohozeni poradi aktualni karty se sousedni kartou.
+                $idKarta = (int)($_POST['id_karta'] ?? 0);
+                if ($idKarta <= 0) {
+                    throw new RuntimeException('Neplatne ID karty.');
+                }
+
+                $conn->begin_transaction();
+
+                try {
+                    // Uzamkne aktualni kartu pro bezpecnou vymenu.
+                    $stmtCur = $conn->prepare('
+                        SELECT id_karta, poradi
+                        FROM karty
+                        WHERE id_karta=?
+                        LIMIT 1
+                        FOR UPDATE
+                    ');
+                    if (!$stmtCur) {
+                        throw new RuntimeException('DB prepare selhal.');
+                    }
+                    $stmtCur->bind_param('i', $idKarta);
+                    $stmtCur->execute();
+                    $stmtCur->bind_result($curId, $curPoradi);
+                    if (!$stmtCur->fetch()) {
+                        $stmtCur->close();
+                        throw new RuntimeException('Karta nebyla nalezena.');
+                    }
+                    $stmtCur->close();
+
+                    // Najde souseda nad nebo pod aktualni kartou.
+                    if ($action === 'move_up') {
+                        $stmtNbr = $conn->prepare('
+                            SELECT id_karta, poradi
+                            FROM karty
+                            WHERE ((poradi < ?) OR (poradi = ? AND id_karta < ?))
+                            ORDER BY poradi DESC, id_karta DESC
+                            LIMIT 1
+                            FOR UPDATE
+                        ');
+                    } else {
+                        $stmtNbr = $conn->prepare('
+                            SELECT id_karta, poradi
+                            FROM karty
+                            WHERE ((poradi > ?) OR (poradi = ? AND id_karta > ?))
+                            ORDER BY poradi ASC, id_karta ASC
+                            LIMIT 1
+                            FOR UPDATE
+                        ');
+                    }
+                    if (!$stmtNbr) {
+                        throw new RuntimeException('DB prepare selhal.');
+                    }
+                    $stmtNbr->bind_param('iii', $curPoradi, $curPoradi, $curId);
+                    $stmtNbr->execute();
+                    $stmtNbr->bind_result($nbrId, $nbrPoradi);
+                    $hasNbr = $stmtNbr->fetch();
+                    $stmtNbr->close();
+
+                    if ($hasNbr) {
+                        $tmpPoradi = -1;
+
+                        // Docasne uvolni poradi aktualni karty.
+                        $stmtTmp = $conn->prepare('
+                            UPDATE karty
+                            SET poradi=?, upraveno=NOW()
+                            WHERE id_karta=?
+                            LIMIT 1
+                        ');
+                        if (!$stmtTmp) {
+                            throw new RuntimeException('DB prepare selhal.');
+                        }
+                        $stmtTmp->bind_param('ii', $tmpPoradi, $curId);
+                        $stmtTmp->execute();
+                        $stmtTmp->close();
+
+                        // Soused prevezme puvodni pozici aktualni karty.
+                        $stmtNbrMove = $conn->prepare('
+                            UPDATE karty
+                            SET poradi=?, upraveno=NOW()
+                            WHERE id_karta=?
+                            LIMIT 1
+                        ');
+                        if (!$stmtNbrMove) {
+                            throw new RuntimeException('DB prepare selhal.');
+                        }
+                        $stmtNbrMove->bind_param('ii', $curPoradi, $nbrId);
+                        $stmtNbrMove->execute();
+                        $stmtNbrMove->close();
+
+                        // Aktualni karta dokonci presun na misto souseda.
+                        $stmtCurMove = $conn->prepare('
+                            UPDATE karty
+                            SET poradi=?, upraveno=NOW()
+                            WHERE id_karta=?
+                            LIMIT 1
+                        ');
+                        if (!$stmtCurMove) {
+                            throw new RuntimeException('DB prepare selhal.');
+                        }
+                        $stmtCurMove->bind_param('ii', $nbrPoradi, $curId);
+                        $stmtCurMove->execute();
+                        $stmtCurMove->close();
+                    }
+
+                    $conn->commit();
+                    $setFeedback('Poradi bylo upraveno.', false);
+                } catch (Throwable $e) {
+                    $conn->rollback();
+                    throw $e;
+                }
+            } else {
+                throw new RuntimeException('Neznama akce.');
+            }
+        } catch (Throwable $e) {
+            $setFeedback($e->getMessage(), true);
+        }
+    }
+
+    $loadSharedData();
+
+    ob_start();
+    ?>
     <form id="karta-add" method="post" action="<?= h($formAction) ?>" autocomplete="off" data-cb-max-form="1">
       <input type="hidden" name="admin_karty_action" value="add">
     </form>
@@ -488,13 +529,13 @@ ob_start();
 <?= $tableColsHtml . "\n" ?>
         <tbody>
           <tr>
-            <th class="txt_l" colspan="7">Přidání nové karty včetně názvu souboru a minimální role.</th>
+            <th class="txt_l" colspan="7">Pridani nove karty vcetne nazvu souboru a minimalni role.</th>
           </tr>
 <?= $tableHeadHtml . "\n" ?>
           <tr>
             <td class="txt_c"><?= h((string)$nextCardId) ?></td>
             <td>
-              <input class="card_input filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="nazev" type="text" required maxlength="120" placeholder="např. Správa karet" form="karta-add">
+              <input class="card_input filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="nazev" type="text" required maxlength="120" placeholder="napr. Sprava karet" form="karta-add">
             </td>
             <td>
               <select class="card_select filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="soubor" required form="karta-add">
@@ -508,7 +549,7 @@ ob_start();
               <select class="card_select filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="min_role" required form="karta-add">
                 <option value="1">admin</option>
                 <option value="2">manager</option>
-                <option value="3" selected>všichni</option>
+                <option value="3" selected>vsichni</option>
               </select>
             </td>
             <td class="txt_c">
@@ -519,11 +560,11 @@ ob_start();
             </td>
             <td class="txt_c">0</td>
             <td>
-              <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28" type="submit" form="karta-add">Přidat kartu</button>
+              <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28" type="submit" form="karta-add">Pridat kartu</button>
             </td>
           </tr>
           <tr>
-            <th class="txt_l" colspan="7">Seznam aktivních karet</th>
+            <th class="txt_l" colspan="7">Seznam aktivnich karet</th>
           </tr>
 <?= $tableHeadHtml . "\n" ?>
           <?php if (!$activeCards): ?>
@@ -544,7 +585,7 @@ ob_start();
                   <select class="card_select filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="min_role" form="<?= h($formId) ?>">
                     <option value="1"<?= $card['min_role'] === 1 ? ' selected' : '' ?>>admin</option>
                     <option value="2"<?= $card['min_role'] === 2 ? ' selected' : '' ?>>manager</option>
-                    <option value="3"<?= $card['min_role'] === 3 ? ' selected' : '' ?>>všichni</option>
+                    <option value="3"<?= $card['min_role'] === 3 ? ' selected' : '' ?>>vsichni</option>
                   </select>
                 </td>
                 <td class="txt_c">
@@ -557,18 +598,18 @@ ob_start();
                 <td>
                   <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 admin_karty_btn_icon odstup_vnitrni_0" type="submit" name="admin_karty_action" value="move_up" form="<?= h($formId) ?>">&uarr;</button>
                   <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 admin_karty_btn_icon odstup_vnitrni_0" type="submit" name="admin_karty_action" value="move_down" form="<?= h($formId) ?>">&darr;</button>
-                  <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28" type="submit" name="admin_karty_action" value="save" form="<?= h($formId) ?>">Uložit</button>
-                  <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 admin_karty_btn_danger txt_cervena" type="submit" name="admin_karty_action" value="disable" form="<?= h($formId) ?>">Zakázat</button>
+                  <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28" type="submit" name="admin_karty_action" value="save" form="<?= h($formId) ?>">Ulozit</button>
+                  <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 admin_karty_btn_danger txt_cervena" type="submit" name="admin_karty_action" value="disable" form="<?= h($formId) ?>">Zakazat</button>
                 </td>
               </tr>
             <?php endforeach; ?>
           <?php endif; ?>
           <tr>
-            <th class="txt_l" colspan="7">Neaktivní karty</th>
+            <th class="txt_l" colspan="7">Neaktivni karty</th>
           </tr>
 <?= $tableHeadHtml . "\n" ?>
           <?php if (!$inactiveCards): ?>
-            <tr><td colspan="7">Nejsou žádné neaktivní karty</td></tr>
+            <tr><td colspan="7">Nejsou zadne neaktivni karty</td></tr>
           <?php else: ?>
             <?php foreach ($inactiveCards as $card): ?>
               <?php $formId = 'karta-inactive-' . (string)$card['id_karta']; ?>
@@ -592,11 +633,8 @@ ob_start();
       </table>
     </div>
     <div class="admin_karty_msg <?= $msgErr ? 'txt_cervena' : 'txt_zelena' ?>">
-      <strong>Poslední akce:</strong> <?= h($msg) ?>
+      <strong>Posledni akce:</strong> <?= h($msg) ?>
     </div>
 <?php
-$card_max_html = (string)ob_get_clean();
-/* karty/admin_karty.php * Verze: V11 * Aktualizace: 15.04.2026 */
-// Počet řádků: 579
-// Konec souboru
-?>
+    $card_max_html = (string)ob_get_clean();
+}
