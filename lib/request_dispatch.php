@@ -1,5 +1,5 @@
 <?php
-// lib/request_dispatch.php * Verze: V1 * Aktualizace: 23.04.2026
+// lib/request_dispatch.php * Verze: V2 * Aktualizace: 06.05.2026
 declare(strict_types=1);
 
 $cbIsPartial = false;
@@ -10,6 +10,11 @@ if (isset($_SERVER['HTTP_X_COMEBACK_PARTIAL'])) {
 $cbIsCardPartial = false;
 if (isset($_SERVER['HTTP_X_COMEBACK_CARD'])) {
     $cbIsCardPartial = ((string)($_SERVER['HTTP_X_COMEBACK_CARD']) === '1');
+}
+
+$cbIsKpiPartial = false;
+if (isset($_SERVER['HTTP_X_COMEBACK_KPI'])) {
+    $cbIsKpiPartial = ((string)($_SERVER['HTTP_X_COMEBACK_KPI']) === '1');
 }
 
 if ($cbIsCardPartial) {
@@ -23,6 +28,25 @@ if (
 ) {
     $cbCardId = (int)($_POST['cb_card_id'] ?? 0);
     cb_emit_card_json_response($cbCardId, true, 'max_form');
+}
+
+if ($cbIsKpiPartial) {
+    if (empty($_SESSION['login_ok'])) {
+        http_response_code(401);
+        exit;
+    }
+
+    header('Content-Type: text/html; charset=utf-8');
+
+    if (!isset($cbObdobiOd)) {
+        $cbObdobiOd = trim((string)($_SESSION['cb_obdobi_od'] ?? ''));
+    }
+    if (!isset($cbObdobiDo)) {
+        $cbObdobiDo = trim((string)($_SESSION['cb_obdobi_do'] ?? ''));
+    }
+
+    require __DIR__ . '/../includes/hlavicka/head_kpi.php';
+    exit;
 }
 
 if ($cbIsPartial) {

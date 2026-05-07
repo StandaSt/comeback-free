@@ -235,40 +235,46 @@ if ($isAdmin && isset($_POST['admin_karty_action'])) {
                 $stmtNbr->close();
 
                 if ($hasNbr) {
-                    if ($action === 'move_up') {
-                        $stmtShift = $conn->prepare('
-                            UPDATE karty
-                            SET poradi = poradi + 1, upraveno=NOW()
-                            WHERE poradi >= ?
-                              AND poradi < ?
-                        ');
-                    } else {
-                        $stmtShift = $conn->prepare('
-                            UPDATE karty
-                            SET poradi = poradi - 1, upraveno=NOW()
-                            WHERE poradi > ?
-                              AND poradi <= ?
-                        ');
-                    }
-                    if (!$stmtShift) {
-                        throw new RuntimeException('DB prepare selhal.');
-                    }
-                    $stmtShift->bind_param('ii', $nbrPoradi, $curPoradi);
-                    $stmtShift->execute();
-                    $stmtShift->close();
+                    $tmpPoradi = -1;
 
-                    $stmtMove = $conn->prepare('
+                    $stmtTmp = $conn->prepare('
                         UPDATE karty
                         SET poradi=?, upraveno=NOW()
                         WHERE id_karta=?
                         LIMIT 1
                     ');
-                    if (!$stmtMove) {
+                    if (!$stmtTmp) {
                         throw new RuntimeException('DB prepare selhal.');
                     }
-                    $stmtMove->bind_param('ii', $nbrPoradi, $curId);
-                    $stmtMove->execute();
-                    $stmtMove->close();
+                    $stmtTmp->bind_param('ii', $tmpPoradi, $curId);
+                    $stmtTmp->execute();
+                    $stmtTmp->close();
+
+                    $stmtNbrMove = $conn->prepare('
+                        UPDATE karty
+                        SET poradi=?, upraveno=NOW()
+                        WHERE id_karta=?
+                        LIMIT 1
+                    ');
+                    if (!$stmtNbrMove) {
+                        throw new RuntimeException('DB prepare selhal.');
+                    }
+                    $stmtNbrMove->bind_param('ii', $curPoradi, $nbrId);
+                    $stmtNbrMove->execute();
+                    $stmtNbrMove->close();
+
+                    $stmtCurMove = $conn->prepare('
+                        UPDATE karty
+                        SET poradi=?, upraveno=NOW()
+                        WHERE id_karta=?
+                        LIMIT 1
+                    ');
+                    if (!$stmtCurMove) {
+                        throw new RuntimeException('DB prepare selhal.');
+                    }
+                    $stmtCurMove->bind_param('ii', $nbrPoradi, $curId);
+                    $stmtCurMove->execute();
+                    $stmtCurMove->close();
                 }
 
                 $conn->commit();

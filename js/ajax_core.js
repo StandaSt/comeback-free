@@ -871,25 +871,43 @@
       currentGrid.querySelectorAll('[data-cb-dash-card="1"][data-card-refresh-op="1"]')
     ).filter((el) => el instanceof HTMLElement);
 
-    if (cards.length === 0) {
-      traceAjax('refresh_refresh_op_done', {
-        mode: loaderMode,
-        cards: 0
-      });
-      traceAjax('measure_refresh_refresh_op_done', {
-        mode: loaderMode,
-        cards: 0,
-        total_ms: 0,
-        url: String(w.location.href || '')
-      });
-      return Promise.resolve({ ok: true, cards: 0 });
-    }
-
     traceAjax('refresh_refresh_op_start', {
       mode: loaderMode,
       force: force ? 1 : 0,
       cards: cards.length,
       url: String(w.location.href || '')
+    });
+
+    const kpiJob = fetch(String(w.location.href || 'index.php'), {
+      method: 'GET',
+      headers: {
+        'X-Comeback-KPI': '1',
+        'Accept': 'text/html'
+      },
+      credentials: 'same-origin'
+    }).then((res) => {
+      return res.text().then((html) => {
+        if (!res.ok) {
+          throw new Error('Obnoveni KPI selhalo.');
+        }
+
+        const raw = String(html || '').trim();
+        if (raw === '') {
+          throw new Error('KPI ma prazdny obsah.');
+        }
+
+        const wrap = document.createElement('div');
+        wrap.innerHTML = raw;
+
+        const nextKpi = wrap.querySelector('[data-cb-head-kpi="1"]');
+        const currentKpi = document.querySelector('[data-cb-head-kpi="1"]');
+        if (!(nextKpi instanceof HTMLElement) || !(currentKpi instanceof HTMLElement)) {
+          throw new Error('KPI nebylo nalezeno.');
+        }
+
+        currentKpi.replaceWith(nextKpi);
+        return { ok: true };
+      });
     });
 
     const jobs = cards.map((currentCard) => {
@@ -913,12 +931,14 @@
       });
     });
 
-    return Promise.allSettled(jobs).then((results) => {
+    return Promise.allSettled([kpiJob].concat(jobs)).then((results) => {
       const errors = [];
       let count = 0;
-      results.forEach((result) => {
+      results.forEach((result, index) => {
         if (result && result.status === 'fulfilled' && result.value && result.value.ok !== false) {
-          count += 1;
+          if (index > 0) {
+            count += 1;
+          }
           return;
         }
         if (result && result.status === 'rejected') {

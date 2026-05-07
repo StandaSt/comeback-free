@@ -176,6 +176,10 @@ if ($email === '') {
 if ($ip === '') {
     $ip = '---';
 }
+$ipDisplay = $ip;
+if ($ipDisplay !== '---' && strlen($ipDisplay) > 24) {
+    $ipDisplay = substr($ipDisplay, 0, 24) . '...';
+}
 
 /* Čas rozhodnutí */
 $kdyRozhodnuto = date('j. n. Y \v H:i') . ' hod.';
@@ -328,7 +332,7 @@ $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
         <div class="modal-spacer"></div>
 
         <p class="approve-label">Přihlášení z IP:</p>
-        <p class="approve-value"><?= h1($ip) ?></p>
+        <p class="approve-email"><?= h1($ipDisplay) ?></p>
       </div>
 
       <div class="approve-time" id="countTxt">Na rozhodnutí zbývá: --:-- min.</div>

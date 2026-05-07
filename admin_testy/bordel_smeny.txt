@@ -192,8 +192,7 @@ Dočekal Tomáš
 - stav: ponechat bez id_user, dokud se nerozhodne správný účet
 
 Bušek Pavel
-- výskytů v reportech: 5
-- role v reportech: instor 5
+- výskytů v reportech: 5- role v reportech: instor 5
 - pobočka: 4
 - důvod: duplicitní schválené účty ve Směnách, nelze bezpečně vybrat jeden
 - stav: ponechat bez id_user, dokud se nerozhodne správný účet
