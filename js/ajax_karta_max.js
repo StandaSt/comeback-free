@@ -489,8 +489,13 @@
     document.addEventListener('change', handleChange, true);
     document.addEventListener('cb:main-swapped', initUserSettingForms);
     document.addEventListener('cb:card-swapped', initUserSettingForms);
+    document.addEventListener('cb:card-max-loaded', initUserSettingForms);
     document.addEventListener('cb:main-swapped', () => initRestiaAutoResume(document));
     document.addEventListener('cb:card-swapped', (event) => {
+      const card = event && event.detail ? event.detail.card : null;
+      initRestiaAutoResume(card instanceof HTMLElement ? card : document);
+    });
+    document.addEventListener('cb:card-max-loaded', (event) => {
       const card = event && event.detail ? event.detail.card : null;
       initRestiaAutoResume(card instanceof HTMLElement ? card : document);
     });

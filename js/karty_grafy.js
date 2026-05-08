@@ -852,6 +852,14 @@
     }
   });
 
+  document.addEventListener('cb:card-max-loaded', (event) => {
+    const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : null;
+    const card = detail && detail.card instanceof HTMLElement ? detail.card : null;
+    if (card) {
+      renderAll(card);
+    }
+  });
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init, { once: true });
   } else {

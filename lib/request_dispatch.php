@@ -12,9 +12,19 @@ if (isset($_SERVER['HTTP_X_COMEBACK_CARD'])) {
     $cbIsCardPartial = ((string)($_SERVER['HTTP_X_COMEBACK_CARD']) === '1');
 }
 
+$cbIsCardMaxPartial = false;
+if (isset($_SERVER['HTTP_X_COMEBACK_CARD_MAX'])) {
+    $cbIsCardMaxPartial = ((string)($_SERVER['HTTP_X_COMEBACK_CARD_MAX']) === '1');
+}
+
 $cbIsKpiPartial = false;
 if (isset($_SERVER['HTTP_X_COMEBACK_KPI'])) {
     $cbIsKpiPartial = ((string)($_SERVER['HTTP_X_COMEBACK_KPI']) === '1');
+}
+
+if ($cbIsCardMaxPartial) {
+    $cbCardId = (int)($_GET['cb_card_id'] ?? 0);
+    cb_emit_card_max_json_response($cbCardId, 'card_max_partial');
 }
 
 if ($cbIsCardPartial) {

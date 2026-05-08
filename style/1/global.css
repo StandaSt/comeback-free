@@ -1566,6 +1566,16 @@ align-items:center;
   background:var(--clr_modra_2);
 }
 
+.card_btn[disabled],
+.card_btn[aria-disabled="true"]{
+  opacity:.45;
+  cursor:not-allowed;
+  pointer-events:none;
+  background:var(--clr_seda_1);
+  border-color:var(--clr_seda_2);
+  color:var(--clr_seda_3);
+}
+
 .dash_break{
   grid-column:1 / -1;
   height:0;

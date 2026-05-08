@@ -186,7 +186,7 @@ ob_start();
     </section>
 
     <div class="card_actions gap_8 displ_flex jc_konec">
-      <button type="submit" class="btn btn-primary" data-cb-user-setting-save="1" disabled>Uložit nastavení</button>
+      <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-user-setting-save="1" disabled>Uložit nastavení</button>
     </div>
   </form>
 <?php endif; ?>

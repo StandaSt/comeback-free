@@ -1594,7 +1594,7 @@ if (!function_exists('cb_restia_online_upsert_order')) {
 
             $stmt = cb_restia_online_stmt($conn, 'objednavky_restia_update_by_restia_id', $sql, 'objednavky_restia update by restia_id_obj');
             $stmt->bind_param(
-                'iiissssssssiiiisis',
+                'iiissssssssiiiissis',
                 $idPob,
                 $idZak,
                 $idPlatforma,
@@ -1676,13 +1676,13 @@ if (!function_exists('cb_restia_online_default_state')) {
 }
 
 if (!function_exists('cb_restia_online_import_day')) {
-    function cb_restia_online_import_day(mysqli $conn, array $auth, array $branch, string $date): array
+    function cb_restia_online_import_day(mysqli $conn, array $auth, array $branch, string $date, array $onlineRange): array
     {
         $dayStartMs = (int)round(microtime(true) * 1000);
         $idPob = (int)$branch['id_pob'];
         $nazev = (string)$branch['nazev'];
         $activePosId = (string)$branch['active_pos_id'];
-        $range = cb_restia_online_day_range_utc($date);
+        $dayRange = cb_restia_online_day_range_utc($date);
 
         $idImport = 0;
         $lockName = '';
@@ -1692,15 +1692,14 @@ if (!function_exists('cb_restia_online_import_day')) {
 
         try {
             $lockName = cb_restia_online_day_lock_acquire($conn, $idPob, $date, 10);
-            $idImport = cb_restia_online_obj_import_begin($conn, $idPob, $range['from_db'], $range['to_db']);
+            $idImport = cb_restia_online_obj_import_begin($conn, $idPob, $dayRange['from_db'], $dayRange['to_db']);
 
             $page = 1;
             while (true) {
                 $res = cb_restia_get('/api/orders', [
                     'page' => $page,
                     'limit' => CB_RESTIA_ONLINE_LIMIT,
-                    'createdFrom' => $range['from_z'],
-                    'createdTo' => $range['to_z'],
+                    'statusUpdatedFrom' => (string)($onlineRange['from_z'] ?? ''),
                     'activePosId' => $activePosId,
                 ], $activePosId, 'online den=' . $date . ' id_pob=' . $idPob . ' page=' . $page);
 
@@ -1894,6 +1893,58 @@ if (!function_exists('cb_restia_online_current_workday_date')) {
     }
 }
 
+if (!function_exists('cb_restia_online_current_workday_start')) {
+    function cb_restia_online_current_workday_start(): DateTimeImmutable
+    {
+        $tz = new DateTimeZone('Europe/Prague');
+        $now = new DateTimeImmutable('now', $tz);
+        $todayStart = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $now->format('Y-m-d') . ' 06:00:00', $tz);
+        if (!($todayStart instanceof DateTimeImmutable)) {
+            throw new RuntimeException('Nepodarilo se urcit zacatek aktualniho pracovniho dne.');
+        }
+        return ($now < $todayStart) ? $todayStart->modify('-1 day') : $todayStart;
+    }
+}
+
+if (!function_exists('cb_restia_online_status_updated_from')) {
+    function cb_restia_online_status_updated_from(mysqli $conn, int $overlapSeconds = 120): array
+    {
+        $workdayStart = cb_restia_online_current_workday_start();
+        $fromLocal = $workdayStart;
+
+        $res = $conn->query("
+            SELECT konec
+            FROM online_restia
+            WHERE aktivni = 0
+              AND konec IS NOT NULL
+            ORDER BY konec DESC
+            LIMIT 1
+        ");
+        if ($res === false) {
+            throw new RuntimeException('DB dotaz na posledni online_restia beh selhal.');
+        }
+
+        $row = $res->fetch_assoc();
+        $res->free();
+        $lastEnd = trim((string)($row['konec'] ?? ''));
+        if ($lastEnd !== '') {
+            $lastDt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $lastEnd, new DateTimeZone('Europe/Prague'));
+            if ($lastDt instanceof DateTimeImmutable) {
+                $fromLocal = $lastDt->modify('-' . max(0, $overlapSeconds) . ' seconds');
+                if ($fromLocal < $workdayStart) {
+                    $fromLocal = $workdayStart;
+                }
+            }
+        }
+
+        return [
+            'workday_date' => $workdayStart->format('Y-m-d'),
+            'from_db' => $fromLocal->format('Y-m-d H:i:s'),
+            'from_z' => $fromLocal->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.v\Z'),
+        ];
+    }
+}
+
 
 if (!function_exists('cb_restia_online_active_branches')) {
     function cb_restia_online_active_branches(mysqli $conn): array
@@ -1941,10 +1992,11 @@ if (!function_exists('cb_restia_online_run')) {
             cb_restia_online_log_line('');
             cb_restia_online_log_line('Spusteno ' . cb_restia_online_now());
 
-            $date = cb_restia_online_current_workday_date();
+            $onlineRange = cb_restia_online_status_updated_from($conn);
+            $date = (string)($onlineRange['workday_date'] ?? cb_restia_online_current_workday_date());
             $branches = cb_restia_online_active_branches($conn);
             foreach ($branches as $branch) {
-                $day = cb_restia_online_import_day($conn, $auth, $branch, $date);
+                $day = cb_restia_online_import_day($conn, $auth, $branch, $date, $onlineRange);
                 $branchName = trim((string)($branch['nazev'] ?? ''));
                 if ($branchName === '') {
                     $branchName = 'Pobocka #' . (string)((int)($branch['id_pob'] ?? 0));

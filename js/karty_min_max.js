@@ -411,28 +411,28 @@
       return Promise.reject(new Error('ID karty nebylo nalezeno.'));
     }
 
-    if (!(w.CB_AJAX && typeof w.CB_AJAX.refreshCard === 'function')) {
-      return Promise.reject(new Error('Nacteni karty neni dostupne.'));
+    if (!(w.CB_AJAX && typeof w.CB_AJAX.loadCardMaxContent === 'function')) {
+      return Promise.reject(new Error('Nacteni max obsahu neni dostupne.'));
     }
 
-    return w.CB_AJAX.refreshCard(cardId, {
-      force: true,
-      keepLoading: true,
-      showLoading: false,
-      loaderMode: 'cards',
-      loadMax: true
+    return w.CB_AJAX.loadCardMaxContent(cardId, {
+      loaderMode: 'cards'
     }).then((result) => {
-      const nextCard = result && result.card instanceof HTMLElement ? result.card : null;
-      if (!(nextCard instanceof HTMLElement)) {
-        throw new Error('Nova karta nema shell.');
+      const maxHtml = result && typeof result.maxHtml === 'string' ? result.maxHtml : '';
+      const expanded = root.querySelector(CARD_EXPANDED_SELECTOR);
+      if (!(expanded instanceof HTMLElement)) {
+        throw new Error('Karta nema max kontejner.');
       }
 
-      const nextRoot = nextCard.querySelector(CARD_ROOT_SELECTOR);
-      if (!(nextRoot instanceof HTMLElement)) {
-        throw new Error('Nova karta nema shell.');
-      }
-
-      return nextRoot;
+      expanded.innerHTML = maxHtml;
+      root.setAttribute('data-card-max-loaded', '1');
+      document.dispatchEvent(new CustomEvent('cb:card-max-loaded', {
+        detail: {
+          cardId: parseInt(cardId, 10) || 0,
+          card: getDashCard(root)
+        }
+      }));
+      return root;
     });
   }
 

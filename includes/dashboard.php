@@ -2,33 +2,35 @@
 // includes/dashboard.php * Verze: V18 * Aktualizace: 15.04.2026
 declare(strict_types=1);
 
-function cb_dashboard_resolve_file(string $soubor): ?string
-{
-    $raw = trim(str_replace('\\', '/', $soubor));
-    if ($raw === '') {
-        return null;
-    }
+if (!function_exists('cb_dashboard_resolve_file')) {
+    function cb_dashboard_resolve_file(string $soubor): ?string
+    {
+        $raw = trim(str_replace('\\', '/', $soubor));
+        if ($raw === '') {
+            return null;
+        }
 
-    $name = basename($raw);
-    $name = preg_replace('~\.php$~i', '', $name) ?: '';
-    if (!preg_match('~^[a-z0-9_]{2,80}$~', $name)) {
-        return null;
-    }
+        $name = basename($raw);
+        $name = preg_replace('~\.php$~i', '', $name) ?: '';
+        if (!preg_match('~^[a-z0-9_]{2,80}$~', $name)) {
+            return null;
+        }
 
-    $base = realpath(__DIR__ . '/..');
-    if ($base === false) {
-        return null;
-    }
+        $base = realpath(__DIR__ . '/..');
+        if ($base === false) {
+            return null;
+        }
 
-    $full = realpath($base . '/karty/' . $name . '.php');
-    if ($full === false || !is_file($full)) {
-        return null;
-    }
-    if (strpos($full, $base) !== 0) {
-        return null;
-    }
+        $full = realpath($base . '/karty/' . $name . '.php');
+        if ($full === false || !is_file($full)) {
+            return null;
+        }
+        if (strpos($full, $base) !== 0) {
+            return null;
+        }
 
-    return $full;
+        return $full;
+    }
 }
 
 if (!function_exists('cb_dashboard_card_source_path')) {

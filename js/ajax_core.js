@@ -1089,6 +1089,64 @@
       });
   };
 
+  CB_AJAX.loadCardMaxContent = function loadCardMaxContent(cardId, options) {
+    const id = parseInt(String(cardId || '0'), 10);
+    const opts = (options && typeof options === 'object') ? options : {};
+    const loaderMode = normalizeLoaderMode(opts.loaderMode || 'cards');
+
+    if (!Number.isFinite(id) || id <= 0) {
+      return Promise.reject(new Error('ID karty nebylo nalezeno.'));
+    }
+
+    const reqUrl = 'index.php?cb_card_id=' + encodeURIComponent(String(id));
+    traceAjax('load_card_max_start', {
+      mode: loaderMode,
+      card_id: id,
+      url: reqUrl
+    });
+
+    return fetch(reqUrl, {
+      method: 'GET',
+      headers: {
+        'X-Comeback-Card-Max': '1',
+        'Accept': 'application/json'
+      },
+      credentials: 'same-origin'
+    }).then((res) => {
+      return res.text().then((text) => {
+        const raw = String(text || '').trim();
+        let data = null;
+        if (raw !== '') {
+          try {
+            data = JSON.parse(raw);
+          } catch (e) {
+            data = null;
+          }
+        }
+
+        if (!res.ok) {
+          throw new Error(String((data && data.err) ? data.err : 'nacteni max obsahu selhalo'));
+        }
+        if (!data || typeof data !== 'object' || typeof data.maxHtml !== 'string') {
+          throw new Error('Max obsah ma neplatny format.');
+        }
+
+        traceAjax('load_card_max_done', {
+          mode: loaderMode,
+          card_id: id
+        });
+        return { ok: true, cardId: id, maxHtml: data.maxHtml };
+      });
+    }).catch((err) => {
+      traceAjax('load_card_max_error', {
+        mode: loaderMode,
+        card_id: id,
+        message: String((err && err.message) ? err.message : 'nacteni max obsahu selhalo')
+      });
+      throw err;
+    });
+  };
+
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
