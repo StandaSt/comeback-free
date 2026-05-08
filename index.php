@@ -168,7 +168,9 @@ if ($cbLoginOk) {
 <script src="<?= h(cb_asset_url('js/echarts.min.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/ajax_core.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/ajax_karta_max.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/karty_max_loader.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_min_max.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/karty_top_report.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_grafy.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_min_nano.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_hlavicka.js')) ?>"></script>

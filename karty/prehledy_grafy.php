@@ -96,10 +96,15 @@ $trendMonthIndex = array_flip($trendMonthKeys);
 $hourLabels = ['11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '00', '01', '02', '03'];
 $hourIndex = array_flip($hourLabels);
 
-$renderGrafRoot = static function (string $bodyHtml, string $rootJson): string {
+$renderGrafRoot = static function (string $bodyHtml, string $rootJson = ''): string {
+    $dataScript = '';
+    if ($rootJson !== '') {
+        $dataScript = '<script type="application/json" data-cb-prehledy-grafy-data>' . $rootJson . '</script>';
+    }
+
     return ''
         . '<div class="sirka100 displ_flex flex_sloupec" style="height:100%; min-height:0;" data-cb-prehledy-grafy="1">'
-        . '<script type="application/json" data-cb-prehledy-grafy-data>' . $rootJson . '</script>'
+        . $dataScript
         . $bodyHtml
         . '</div>';
 };
@@ -198,8 +203,15 @@ $grafPayload = [
     'kind' => 'bar',
     'title' => 'Počet objednávek, ' . $periodLabel,
     'labels' => $nazvyPobocek,
-    'values' => $hodnotyPobocek,
-    'colors' => $barvyPobocek,
+    'series' => [[
+        'id' => 'values',
+        'name' => 'Objednavky',
+        'data' => $hodnotyPobocek,
+        'colors' => $barvyPobocek,
+    ]],
+    'meta' => [
+        'title' => 'Pocet objednavek, ' . $periodLabel,
+    ],
 ];
 $grafJson = $jsonEncode($grafPayload, 'Nepodařilo se připravit data pro graf.');
 
@@ -331,13 +343,20 @@ $zakOrderPiePayload = [
     'kind' => 'pie',
     'title' => 'Typ zákazníka v objednávkách, ' . $periodLabel,
     'labels' => ['Anonymní', 'V restauraci', 'Telefonem'],
-    'values' => [
-        $zakOrderPieCounts['anonymni'],
-        $zakOrderPieCounts['v_restauraci'],
-        $zakOrderPieCounts['telefonem'],
+    'series' => [[
+        'id' => 'values',
+        'name' => 'Typ zakaznika',
+        'data' => [
+            $zakOrderPieCounts['anonymni'],
+            $zakOrderPieCounts['v_restauraci'],
+            $zakOrderPieCounts['telefonem'],
+        ],
+        'colors' => ['#94a3b8', '#f59e0b', '#2563eb'],
+    ]],
+    'meta' => [
+        'title' => 'Typ zakaznika v objednavkach, ' . $periodLabel,
+        'total' => $zakOrderPieCounts['anonymni'] + $zakOrderPieCounts['v_restauraci'] + $zakOrderPieCounts['telefonem'],
     ],
-    'total' => $zakOrderPieCounts['anonymni'] + $zakOrderPieCounts['v_restauraci'] + $zakOrderPieCounts['telefonem'],
-    'colors' => ['#94a3b8', '#f59e0b', '#2563eb'],
 ];
 
 $trendJson = $jsonEncode($trendPayload, 'Nepodařilo se připravit data pro trendový graf.');
@@ -356,6 +375,5 @@ $maxTiles .= $renderGrafTile('G6', 'Graf 6', $periodLabel, 'graf_max_6');
 $card_max_html = $renderGrafRoot(
     '<div class="sirka100" style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); grid-template-rows:repeat(2, minmax(0, 1fr)); gap:10px; height:100%; min-height:0; flex:1 1 auto; align-content:stretch;">'
     . $maxTiles
-    . '</div>',
-    $grafJson
+    . '</div>'
 );

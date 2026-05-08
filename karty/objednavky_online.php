@@ -44,6 +44,42 @@ if (!function_exists('cb_k19_render_max_chart_tile')) {
     }
 }
 
+if (!function_exists('cb_k19_render_chart_root')) {
+    function cb_k19_render_chart_root(string $bodyHtml, string $rootJson = ''): string
+    {
+        $dataScript = '';
+        if ($rootJson !== '') {
+            $dataScript = '<script type="application/json" data-cb-prehledy-grafy-data>' . $rootJson . '</script>';
+        }
+
+        return ''
+            . '<div class="sirka100 displ_flex flex_sloupec" style="height:100%; min-height:0;" data-cb-prehledy-grafy="1">'
+            . $dataScript
+            . $bodyHtml
+            . '</div>';
+    }
+}
+
+if (!function_exists('cb_k19_chart_json')) {
+    function cb_k19_chart_json(array $payload, string $errorMessage): string
+    {
+        $json = json_encode(
+            $payload,
+            JSON_UNESCAPED_UNICODE
+            | JSON_UNESCAPED_SLASHES
+            | JSON_HEX_TAG
+            | JSON_HEX_AMP
+            | JSON_HEX_APOS
+            | JSON_HEX_QUOT
+        );
+        if (!is_string($json) || $json === '') {
+            throw new RuntimeException($errorMessage);
+        }
+
+        return $json;
+    }
+}
+
 if (!function_exists('cb_k19_online_workday_range')) {
     function cb_k19_online_workday_range(): array
     {
@@ -460,72 +496,46 @@ try {
     $payload = [
         'kind' => 'online_stavy',
         'labels' => $labels,
-        'dokonceno' => $dokoncenoData,
-        'na_ceste' => $naCesteData,
-        'osobni_odber' => $osobniOdberData,
-        'vyrabi_se' => $vyrabiSeData,
-        'objednavky' => $objednavkyData,
-        'colors' => $barvyPobocek,
+        'series' => [
+            ['id' => 'dokonceno', 'name' => 'Dokonceno', 'data' => $dokoncenoData, 'colors' => $barvyPobocek],
+            ['id' => 'na_ceste', 'name' => 'Na ceste', 'data' => $naCesteData],
+            ['id' => 'osobni_odber', 'name' => 'Osobni odber', 'data' => $osobniOdberData],
+            ['id' => 'vyrabi_se', 'name' => 'Vyrabi se', 'data' => $vyrabiSeData],
+            ['id' => 'objednavky', 'name' => 'Objednavky', 'data' => $objednavkyData],
+        ],
     ];
-    $payloadJson = json_encode(
-        $payload,
-        JSON_UNESCAPED_UNICODE
-        | JSON_UNESCAPED_SLASHES
-        | JSON_HEX_TAG
-        | JSON_HEX_AMP
-        | JSON_HEX_APOS
-        | JSON_HEX_QUOT
-    );
-    if (!is_string($payloadJson) || $payloadJson === '') {
-        throw new RuntimeException('Nepodarilo se pripravit graf pro K19.');
-    }
+    $payloadJson = cb_k19_chart_json($payload, 'Nepodarilo se pripravit graf pro K19.');
 
     $g1Payload = [
         'kind' => 'bar_dual',
         'labels' => $labels,
-        'orders' => $objednavkyData,
-        'sales' => $trzbaData,
-        'avg_price' => $prumerCenaData,
-        'colors' => $barvyPobocek,
-        'legend_orders' => 'Obj.',
-        'legend_sales' => 'Tržba',
+        'series' => [
+            ['id' => 'orders', 'name' => 'Obj.', 'data' => $objednavkyData, 'colors' => $barvyPobocek],
+            ['id' => 'sales', 'name' => 'Trzba', 'data' => $trzbaData],
+            ['id' => 'avg_price', 'name' => 'Prumerna cena', 'data' => $prumerCenaData],
+        ],
+        'meta' => [
+            'legend_orders' => 'Obj.',
+            'legend_sales' => 'Trzba',
+        ],
     ];
-    $g1PayloadJson = json_encode(
-        $g1Payload,
-        JSON_UNESCAPED_UNICODE
-        | JSON_UNESCAPED_SLASHES
-        | JSON_HEX_TAG
-        | JSON_HEX_AMP
-        | JSON_HEX_APOS
-        | JSON_HEX_QUOT
-    );
-    if (!is_string($g1PayloadJson) || $g1PayloadJson === '') {
-        throw new RuntimeException('Nepodarilo se pripravit graf G1 pro K19.');
-    }
+    $g1PayloadJson = cb_k19_chart_json($g1Payload, 'Nepodarilo se pripravit graf G1 pro K19.');
 
     $k19G1MaxTileHtml = cb_k19_render_max_chart_tile('G1', 'Objednávky a tržba dnes', (string)$range['label'], 'k19-max-g1-chart', $g1PayloadJson);
 
     $g2Payload = [
         'kind' => 'bar_dual_diff_centered',
         'labels' => $labels,
-        'orders' => $rozdilData,     // pouze rozdílová data, klíče zachovány
-        'sales' => $rozdilTrzbaData,
-        'colors' => $barvyPobocek,
-        'legend_orders' => 'Objednávky',
-        'legend_sales' => 'Tržba',
+        'series' => [
+            ['id' => 'orders', 'name' => 'Objednavky', 'data' => $rozdilData, 'colors' => $barvyPobocek],
+            ['id' => 'sales', 'name' => 'Trzba', 'data' => $rozdilTrzbaData],
+        ],
+        'meta' => [
+            'legend_orders' => 'Objednavky',
+            'legend_sales' => 'Trzba',
+        ],
     ];
-    $g2PayloadJson = json_encode(
-        $g2Payload,
-        JSON_UNESCAPED_UNICODE
-        | JSON_UNESCAPED_SLASHES
-        | JSON_HEX_TAG
-        | JSON_HEX_AMP
-        | JSON_HEX_APOS
-        | JSON_HEX_QUOT
-    );
-    if (!is_string($g2PayloadJson) || $g2PayloadJson === '') {
-        throw new RuntimeException('Nepodarilo se pripravit graf G2 pro K19.');
-    }
+    $g2PayloadJson = cb_k19_chart_json($g2Payload, 'Nepodarilo se pripravit graf G2 pro K19.');
 
     $g2PeriodText = 'Časový interval 6:00 až ' . $aktualizaceDoText;
     $k19G2MaxTileHtml = cb_k19_render_max_chart_tile(
@@ -539,24 +549,16 @@ try {
     $g5Payload = [
         'kind' => 'bar_dual_diff_centered',
         'labels' => $labels,
-        'orders' => $g5RozdilData,
-        'sales' => $g5RozdilTrzbaData,
-        'colors' => $barvyPobocek,
-        'legend_orders' => 'Objednávky',
-        'legend_sales' => 'Tržba',
+        'series' => [
+            ['id' => 'orders', 'name' => 'Objednavky', 'data' => $g5RozdilData, 'colors' => $barvyPobocek],
+            ['id' => 'sales', 'name' => 'Trzba', 'data' => $g5RozdilTrzbaData],
+        ],
+        'meta' => [
+            'legend_orders' => 'Objednavky',
+            'legend_sales' => 'Trzba',
+        ],
     ];
-    $g5PayloadJson = json_encode(
-        $g5Payload,
-        JSON_UNESCAPED_UNICODE
-        | JSON_UNESCAPED_SLASHES
-        | JSON_HEX_TAG
-        | JSON_HEX_AMP
-        | JSON_HEX_APOS
-        | JSON_HEX_QUOT
-    );
-    if (!is_string($g5PayloadJson) || $g5PayloadJson === '') {
-        throw new RuntimeException('Nepodarilo se pripravit graf G5 pro K19.');
-    }
+    $g5PayloadJson = cb_k19_chart_json($g5Payload, 'Nepodarilo se pripravit graf G5 pro K19.');
 
     $g5Now = new DateTimeImmutable((string)$range['to'], new DateTimeZone('Europe/Prague'));
     $g5CurrentWeekMonday = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $g5Now->modify('monday this week')->format('Y-m-d') . ' 06:00:00', new DateTimeZone('Europe/Prague'));
@@ -587,24 +589,16 @@ try {
     $g6Payload = [
         'kind' => 'bar_dual_diff_centered',
         'labels' => $labels,
-        'orders' => $g6RozdilData,
-        'sales' => $g6RozdilTrzbaData,
-        'colors' => $barvyPobocek,
-        'legend_orders' => 'Objednávky',
-        'legend_sales' => 'Tržba',
+        'series' => [
+            ['id' => 'orders', 'name' => 'Objednavky', 'data' => $g6RozdilData, 'colors' => $barvyPobocek],
+            ['id' => 'sales', 'name' => 'Trzba', 'data' => $g6RozdilTrzbaData],
+        ],
+        'meta' => [
+            'legend_orders' => 'Objednavky',
+            'legend_sales' => 'Trzba',
+        ],
     ];
-    $g6PayloadJson = json_encode(
-        $g6Payload,
-        JSON_UNESCAPED_UNICODE
-        | JSON_UNESCAPED_SLASHES
-        | JSON_HEX_TAG
-        | JSON_HEX_AMP
-        | JSON_HEX_APOS
-        | JSON_HEX_QUOT
-    );
-    if (!is_string($g6PayloadJson) || $g6PayloadJson === '') {
-        throw new RuntimeException('Nepodarilo se pripravit graf G6 pro K19.');
-    }
+    $g6PayloadJson = cb_k19_chart_json($g6Payload, 'Nepodarilo se pripravit graf G6 pro K19.');
 
     $g6PeriodText = 'Období '
         . $g6PreviousMonthStart->format('j.n.Y')
@@ -628,9 +622,7 @@ try {
 
     ob_start();
     ?>
-    <div class="sirka100 displ_flex flex_sloupec gap_4" style="height:100%; min-height:0;" data-cb-prehledy-grafy="1">
-      <script type="application/json" data-cb-prehledy-grafy-data><?= $payloadJson ?></script>
-
+    <div class="sirka100 displ_flex flex_sloupec gap_4" style="height:100%; min-height:0;">
       <div class="displ_flex jc_mezi text_11 txt_seda gap_8" style="align-items:flex-start; flex-wrap:wrap; line-height:1.15;">
         <span>Aktualizace: <?= h($aktualizaceDoText) ?></span>
         <span class="displ_flex gap_8" style="flex-wrap:wrap; justify-content:flex-end;">
@@ -644,7 +636,7 @@ try {
       <div id="<?= h($chartId) ?>" data-cb-prehledy-grafy-chart="1" class="sirka100" style="height:180px;"></div>
     </div>
     <?php
-    $card_min_html = (string)ob_get_clean();
+    $card_min_html = cb_k19_render_chart_root((string)ob_get_clean(), $payloadJson);
 
     if (($cbDashboardRenderMode ?? '') === 'mini') {
         return;
@@ -660,19 +652,16 @@ try {
 
 ob_start();
 ?>
-<div class="sirka100 displ_flex flex_sloupec" style="height:100%; min-height:0;" data-cb-prehledy-grafy="1">
-  <script type="application/json" data-cb-prehledy-grafy-data><?= $payloadJson ?? '{}' ?></script>
-  <div class="sirka100" style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); grid-template-rows:repeat(2, minmax(0, 1fr)); gap:10px; height:100%; min-height:0; flex:1 1 auto; align-content:stretch;">
-    <?= $k19G1MaxTileHtml ?>
-    <?= cb_k19_render_max_tile('G4') ?>
-    <?= cb_k19_render_max_tile('G3') ?>
-    <?= $k19G2MaxTileHtml ?>
-    <?= $k19G5MaxTileHtml ?>
-    <?= $k19G6MaxTileHtml ?>
-  </div>
+<div class="sirka100" style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); grid-template-rows:repeat(2, minmax(0, 1fr)); gap:10px; height:100%; min-height:0; flex:1 1 auto; align-content:stretch;">
+  <?= $k19G1MaxTileHtml ?>
+  <?= cb_k19_render_max_tile('G4') ?>
+  <?= cb_k19_render_max_tile('G3') ?>
+  <?= $k19G2MaxTileHtml ?>
+  <?= $k19G5MaxTileHtml ?>
+  <?= $k19G6MaxTileHtml ?>
 </div>
 <?php
-$card_max_html = (string)ob_get_clean();
+$card_max_html = cb_k19_render_chart_root((string)ob_get_clean());
 
 /* karty/objednavky_online.php * Verze: V5 * Aktualizace: 29.04.2026 */
 ?>

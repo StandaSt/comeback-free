@@ -148,18 +148,59 @@
     }
   }
 
+  function getSeriesList(payload) {
+    return Array.isArray(payload && payload.series) ? payload.series : [];
+  }
+
+  function getSeriesItem(payload, seriesId, fallbackIndex) {
+    const list = getSeriesList(payload);
+    const wantedId = String(seriesId || '').trim();
+    if (wantedId !== '') {
+      const found = list.find((item) => String(item && item.id ? item.id : '').trim() === wantedId);
+      if (found && typeof found === 'object') {
+        return found;
+      }
+    }
+
+    const index = Number.isInteger(fallbackIndex) ? fallbackIndex : 0;
+    return list[index] && typeof list[index] === 'object' ? list[index] : null;
+  }
+
+  function getSeriesData(payload, seriesId, fallbackIndex) {
+    const item = getSeriesItem(payload, seriesId, fallbackIndex);
+    return item && Array.isArray(item.data) ? item.data : [];
+  }
+
+  function getSeriesColors(payload, seriesId, fallbackIndex) {
+    const item = getSeriesItem(payload, seriesId, fallbackIndex);
+    return item && Array.isArray(item.colors) ? item.colors.map((value) => String(value || '')) : [];
+  }
+
+  function getMetaValue(payload, key, fallbackValue) {
+    const meta = payload && typeof payload.meta === 'object' ? payload.meta : null;
+    if (meta && Object.prototype.hasOwnProperty.call(meta, key)) {
+      return meta[key];
+    }
+    return fallbackValue;
+  }
+
   function buildOption(payload) {
     if (!payload || typeof payload !== 'object') return null;
     const kind = String(payload.kind || 'bar').trim();
-    const title = String(payload.title || '').trim();
     if (kind === 'online_stavy') {
       const labels = Array.isArray(payload.labels) ? payload.labels.map((item) => String(item)) : [];
-      const dokonceno = Array.isArray(payload.dokonceno) ? payload.dokonceno.map((item) => Number(item) || 0) : [];
-      const naCeste = Array.isArray(payload.na_ceste) ? payload.na_ceste.map((item) => Number(item) || 0) : [];
-      const osobniOdber = Array.isArray(payload.osobni_odber) ? payload.osobni_odber.map((item) => Number(item) || 0) : [];
-      const vyrabiSe = Array.isArray(payload.vyrabi_se) ? payload.vyrabi_se.map((item) => Number(item) || 0) : [];
-      const objednavky = Array.isArray(payload.objednavky) ? payload.objednavky.map((item) => Number(item) || 0) : [];
-      const colors = Array.isArray(payload.colors) ? payload.colors.map((item) => String(item || '')) : [];
+      const dokoncenoRaw = getSeriesData(payload, 'dokonceno', 0);
+      const naCesteRaw = getSeriesData(payload, 'na_ceste', 1);
+      const osobniOdberRaw = getSeriesData(payload, 'osobni_odber', 2);
+      const vyrabiSeRaw = getSeriesData(payload, 'vyrabi_se', 3);
+      const objednavkyRaw = getSeriesData(payload, 'objednavky', 4);
+      const colorsRaw = getSeriesColors(payload, 'dokonceno', 0);
+      const dokonceno = dokoncenoRaw.map((item) => Number(item) || 0);
+      const naCeste = naCesteRaw.map((item) => Number(item) || 0);
+      const osobniOdber = osobniOdberRaw.map((item) => Number(item) || 0);
+      const vyrabiSe = vyrabiSeRaw.map((item) => Number(item) || 0);
+      const objednavky = objednavkyRaw.map((item) => Number(item) || 0);
+      const colors = colorsRaw.map((item) => String(item || ''));
 
       return {
         grid: Object.assign({}, MINI_SLOUPEC_GRID, { top: 30 }),
@@ -239,10 +280,16 @@
 
     if (kind === 'bar_dual') {
       const labels = Array.isArray(payload.labels) ? payload.labels.map((item) => String(item)) : [];
-      const orders = Array.isArray(payload.orders) ? payload.orders.map((item) => Number(item) || 0) : [];
-      const sales = Array.isArray(payload.sales) ? payload.sales.map((item) => Number(item) || 0) : [];
-      const avgPrice = Array.isArray(payload.avg_price) ? payload.avg_price.map((item) => Number(item) || 0) : [];
-      const colors = Array.isArray(payload.colors) ? payload.colors.map((item) => String(item || '')) : [];
+      const ordersRaw = getSeriesData(payload, 'orders', 0);
+      const salesRaw = getSeriesData(payload, 'sales', 1);
+      const avgPriceRaw = getSeriesData(payload, 'avg_price', 2);
+      const colorsRaw = getSeriesColors(payload, 'orders', 0);
+      const ordersLegend = String(getMetaValue(payload, 'legend_orders', 'Objednávky')).trim() || 'Objednávky';
+      const salesLegend = String(getMetaValue(payload, 'legend_sales', 'Tržba')).trim() || 'Tržba';
+      const orders = ordersRaw.map((item) => Number(item) || 0);
+      const sales = salesRaw.map((item) => Number(item) || 0);
+      const avgPrice = (Array.isArray(avgPriceRaw) ? avgPriceRaw : []).map((item) => Number(item) || 0);
+      const colors = colorsRaw.map((item) => String(item || ''));
 
       return {
         grid: {
@@ -262,7 +309,7 @@
             items.forEach((item) => {
               const seriesName = String(item.seriesName || '');
               const value = Number(item.value || 0) || 0;
-              if (seriesName === 'Tržba') {
+              if (seriesName === salesLegend) {
                 lines.push(seriesName + ': ' + formatInt(value) + ' Kč');
                 return;
               }
@@ -305,7 +352,7 @@
         ],
         series: [
           {
-            name: 'Objednávky',
+            name: ordersLegend,
             type: 'bar',
             yAxisIndex: 0,
             barGap: '15%',
@@ -324,7 +371,7 @@
             }
           },
           {
-            name: 'Tržba',
+            name: salesLegend,
             type: 'bar',
             yAxisIndex: 1,
             barMaxWidth: 34,
@@ -349,11 +396,14 @@
 
     if (kind === 'bar_dual_diff_centered') {
       const labels = Array.isArray(payload.labels) ? payload.labels.map((item) => String(item)) : [];
-      const orders = Array.isArray(payload.orders) ? payload.orders.map((item) => Number(item) || 0) : [];
-      const sales = Array.isArray(payload.sales) ? payload.sales.map((item) => Number(item) || 0) : [];
-      const colors = Array.isArray(payload.colors) ? payload.colors.map((item) => String(item || '')) : [];
-      const ordersLegend = String(payload.legend_orders || 'Objednávky').trim() || 'Objednávky';
-      const salesLegend = String(payload.legend_sales || 'Tržba').trim() || 'Tržba';
+      const ordersRaw = getSeriesData(payload, 'orders', 0);
+      const salesRaw = getSeriesData(payload, 'sales', 1);
+      const colorsRaw = getSeriesColors(payload, 'orders', 0);
+      const ordersLegend = String(getMetaValue(payload, 'legend_orders', 'Objednávky')).trim() || 'Objednávky';
+      const salesLegend = String(getMetaValue(payload, 'legend_sales', 'Tržba')).trim() || 'Tržba';
+      const orders = ordersRaw.map((item) => Number(item) || 0);
+      const sales = salesRaw.map((item) => Number(item) || 0);
+      const colors = colorsRaw.map((item) => String(item || ''));
       const ordersAxisMax = getAxisAbsMax(orders, 1);
       const salesAxisMax = getAxisAbsMax(sales, 1000);
 
@@ -492,8 +542,10 @@
 
     if (kind === 'bar_diff') {
       const labels = Array.isArray(payload.labels) ? payload.labels.map((item) => String(item)) : [];
-      const values = Array.isArray(payload.values) ? payload.values.map((item) => Number(item) || 0) : [];
-      const colors = Array.isArray(payload.colors) ? payload.colors.map((item) => String(item || '')) : [];
+      const valuesRaw = getSeriesData(payload, 'values', 0);
+      const colorsRaw = getSeriesColors(payload, 'values', 0);
+      const values = valuesRaw.map((item) => Number(item) || 0);
+      const colors = colorsRaw.map((item) => String(item || ''));
 
       return {
         grid: {
@@ -563,8 +615,10 @@
 
     if (kind === 'bar') {
       const labels = Array.isArray(payload.labels) ? payload.labels.map((item) => String(item)) : [];
-      const values = Array.isArray(payload.values) ? payload.values.map((item) => Number(item) || 0) : [];
-      const colors = Array.isArray(payload.colors) ? payload.colors.map((item) => String(item || '')) : [];
+      const valuesRaw = getSeriesData(payload, 'values', 0);
+      const colorsRaw = getSeriesColors(payload, 'values', 0);
+      const values = valuesRaw.map((item) => Number(item) || 0);
+      const colors = colorsRaw.map((item) => String(item || ''));
 
       if (colors.length !== labels.length) {
         console.error('karty_grafy: Chybi barvy pro graf pobocek:', { labels: labels.length, colors: colors.length });
@@ -660,9 +714,11 @@
 
     if (kind === 'pie') {
       const labels = Array.isArray(payload.labels) ? payload.labels.map((item) => String(item)) : [];
-      const values = Array.isArray(payload.values) ? payload.values.map((item) => Number(item) || 0) : [];
-      const colors = Array.isArray(payload.colors) ? payload.colors.map((item) => String(item || '')) : [];
-      const total = Number(payload.total || 0) || values.reduce((sum, value) => sum + value, 0);
+      const valuesRaw = getSeriesData(payload, 'values', 0);
+      const colorsRaw = getSeriesColors(payload, 'values', 0);
+      const values = valuesRaw.map((item) => Number(item) || 0);
+      const colors = colorsRaw.map((item) => String(item || ''));
+      const total = Number(getMetaValue(payload, 'total', 0)) || values.reduce((sum, value) => sum + value, 0);
 
       if (labels.length === 0 || values.length !== labels.length) return null;
 
@@ -742,6 +798,12 @@
     return null;
   }
 
+  function getChartOption(chartNode, rootPayload) {
+    const payload = parseChartPayload(chartNode) || rootPayload;
+    if (!payload) return null;
+    return buildOption(payload);
+  }
+
   function renderOne(root, attempt) {
     if (!(root instanceof HTMLElement)) return;
 
@@ -750,19 +812,16 @@
     const delay = currentAttempt === 0 ? 0 : 120;
 
     w.setTimeout(() => {
-      const payload = parsePayload(root);
+      const rootPayload = parsePayload(root);
       const chartNodes = getChartNodes(root);
       const echarts = w.echarts;
 
-      if (!payload || chartNodes.length === 0 || !echarts || typeof echarts.init !== 'function') {
+      if (chartNodes.length === 0 || !echarts || typeof echarts.init !== 'function') {
         if (currentAttempt < maxAttempts) {
           renderOne(root, currentAttempt + 1);
         }
         return;
       }
-
-      const option = buildOption(payload);
-      if (!option) return;
 
       let rendered = 0;
       chartNodes.forEach((chartNode) => {
@@ -771,8 +830,7 @@
           return;
         }
 
-        const payloadNode = parseChartPayload(chartNode);
-        const option = buildOption(payloadNode || payload);
+        const option = getChartOption(chartNode, rootPayload);
         if (!option) {
           return;
         }
