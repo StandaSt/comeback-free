@@ -3,6 +3,28 @@
 
 (function (w) {
   const STARTUP_ID = 'cb-startup-loader';
+  // CB_LOGIN_TRACE_TEMP_START
+  function traceLogin(eventName, data) {
+    try {
+      const payload = JSON.stringify({
+        event: eventName,
+        href: w.location.href,
+        path: w.location.pathname,
+        data: data || {}
+      });
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon('lib/ajax_trace.php', new Blob([payload], { type: 'application/json' }));
+        return;
+      }
+      fetch('lib/ajax_trace.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        keepalive: true
+      }).catch(function(){});
+    } catch (e) {}
+  }
+  // CB_LOGIN_TRACE_TEMP_END
 
   function getRoot() {
     const node = document.getElementById(STARTUP_ID);
@@ -36,6 +58,11 @@
     if (!loader) return;
 
     if (visible) {
+      // CB_LOGIN_TRACE_TEMP_START
+      traceLogin('login_trace_loader_visible', {
+        startup_text: String(root.getAttribute('data-cb-startup-text') || '').trim()
+      });
+      // CB_LOGIN_TRACE_TEMP_END
       loader.classList.remove('is-hidden');
       loader.setAttribute('aria-hidden', 'false');
       loader.setAttribute('data-cb-loader-visible', '1');

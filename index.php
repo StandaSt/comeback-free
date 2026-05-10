@@ -12,6 +12,9 @@ require_once __DIR__ . '/lib/system.php';
 require_once __DIR__ . '/config/secrets.php';
 require_once __DIR__ . '/lib/post_prg_redirect.php';
 require_once __DIR__ . '/lib/asset_url.php';
+// CB_LOGIN_TRACE_TEMP_START
+require_once __DIR__ . '/lib/login_diagnostika.php';
+// CB_LOGIN_TRACE_TEMP_END
 
 if (!empty($_SESSION['login_ok']) && !cb_session_validate_after_login()) {
     cb_session_forget_auth();
@@ -20,14 +23,13 @@ if (!empty($_SESSION['login_ok']) && !cb_session_validate_after_login()) {
 $cbTitle = 'Comeback - IS';
 $cbFavicon = cb_url('img/favicon_comeback.png');
 
-$cbLoginOk = !empty($_SESSION['login_ok']);
 $cbAuthOk = !empty($_SESSION['cb_auth_ok']);
 $cb2faPending = !empty($_SESSION['cb_2fa_token']);
 $cbIsPartialRequest = isset($_SERVER['HTTP_X_COMEBACK_PARTIAL']);
 $cbIsCardRequest = isset($_SERVER['HTTP_X_COMEBACK_CARD']);
 $cbIsMaxFormRequest = isset($_SERVER['HTTP_X_COMEBACK_MAX_FORM']);
 
-if ($cbLoginOk) {
+if (!empty($_SESSION['login_ok'])) {
     require_once __DIR__ . '/lib/pobocky_vyber.php';
     require_once __DIR__ . '/lib/card_json_response.php';
     require_once __DIR__ . '/lib/handle_set_period.php';
@@ -41,10 +43,13 @@ if ($cbLoginOk) {
 require_once __DIR__ . '/lib/detektuj_neplatnou_url.php';
 require_once __DIR__ . '/lib/logout_handler.php';
 require_once __DIR__ . '/lib/json_registrace.php';
-if ($cbLoginOk && !$cbIsPartialRequest && !$cbIsCardRequest && !$cbIsMaxFormRequest) {
+if (!empty($_SESSION['login_ok']) && !$cbIsPartialRequest && !$cbIsCardRequest && !$cbIsMaxFormRequest) {
     require_once __DIR__ . '/lib/restia_online_kontrola.php';
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
+    }
 }
-if ($cbLoginOk) {
+if (!empty($_SESSION['login_ok'])) {
     require_once __DIR__ . '/lib/post_akce.php';
 }
 
@@ -77,11 +82,17 @@ if ($cbShowStartupLoader) {
             ) ?? $cbStartupLoaderHtml;
         }
     }
+    // CB_LOGIN_TRACE_TEMP_START
+    cb_login_log_line('startup_loader_server_ready', [
+        'text' => $cbStartupLoaderText,
+        'login_ok' => !empty($_SESSION['login_ok']) ? '1' : '0',
+    ]);
+    // CB_LOGIN_TRACE_TEMP_END
 }
 
 require_once __DIR__ . '/includes/log_a_404.php';
 
-if ($cbLoginOk) {
+if (!empty($_SESSION['login_ok'])) {
     require_once __DIR__ . '/lib/request_dispatch.php';
 } elseif ($cbIsPartialRequest || $cbIsCardRequest || $cbIsMaxFormRequest) {
     http_response_code(401);
@@ -110,7 +121,7 @@ if ($cbLoginOk) {
 <div class="container bg_modra displ_flex sirka100">
 <?php
 
-if ($cbLoginOk) {
+if (!empty($_SESSION['login_ok'])) {
     require_once __DIR__ . '/includes/hlavicka.php';
     require_once __DIR__ . '/modaly/modal_overeni.php';
     require_once __DIR__ . '/lib/kontrola_registrace.php';
@@ -164,7 +175,7 @@ if ($cbLoginOk) {
 </div>
 
 
-<?php if ($cbLoginOk): ?>
+<?php if (!empty($_SESSION['login_ok'])): ?>
 <script src="<?= h(cb_asset_url('js/echarts.min.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/ajax_core.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/ajax_karta_max.js')) ?>"></script>

@@ -357,13 +357,14 @@ main{
 }
 
 .head_grid{
-grid-template-columns:70px 335px minmax(0,1fr) 85px 300px;
+grid-template-columns:70px 335px 100px minmax(0,1fr) 85px 300px;
   grid-template-rows:auto;
   align-items:stretch;
 }
 
 /* ===== Karty (spolecny vzhled) ===== */
 .head_interval,
+.head_gn_placeholder,
 .head_kpi,
 .head_sys,
 .head_user{
@@ -418,6 +419,14 @@ object-fit:contain;
   align-self:stretch;
 }
 
+.head_gn_placeholder{
+  grid-column:3;
+  grid-row:1;
+  height:100%;
+  width:100%;
+  align-self:stretch;
+}
+
 .head_controls_bottom{
   align-items:start;
   min-width:0;
@@ -426,14 +435,6 @@ object-fit:contain;
 }
 
 .head_kpi{
-  grid-column:3;
-  grid-row:1;
-  height:100%;
-  width:100%;
-  align-self:stretch;
-}
-
-.head_sys{
   grid-column:4;
   grid-row:1;
   height:100%;
@@ -441,8 +442,16 @@ object-fit:contain;
   align-self:stretch;
 }
 
-.head_user{
+.head_sys{
   grid-column:5;
+  grid-row:1;
+  height:100%;
+  width:100%;
+  align-self:stretch;
+}
+
+.head_user{
+  grid-column:6;
   grid-row:1;
   height:100%;
   width:100%;

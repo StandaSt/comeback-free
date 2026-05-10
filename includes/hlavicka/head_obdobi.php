@@ -147,6 +147,28 @@ if (!in_array($cbManualSaveDelayMs, [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000
     return date + ' ' + time;
   }
 
+  function timeToMinutes(value){
+    if (!isTimeValue(value)) return null;
+    var parts = String(value).split(':');
+    return (Number(parts[0]) * 60) + Number(parts[1]);
+  }
+
+  function findAdjacentTime(value, direction){
+    var target = String(value || '');
+    var options = Array.from(odCasInput.options || []);
+    var index = options.findIndex(function(option){
+      return String(option.value || '') === target;
+    });
+    if (index === -1) {
+      return '';
+    }
+    var nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= options.length) {
+      return '';
+    }
+    return String(options[nextIndex].value || '');
+  }
+
   function getCurrentWorkingDayStart(){
     var now = new Date();
     var today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 6, 0, 0, 0);
@@ -316,6 +338,25 @@ if (!in_array($cbManualSaveDelayMs, [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000
     }
     odInput.value = od;
     doInput.value = ddo;
+
+    if (od === ddo) {
+      var odMinutes = timeToMinutes(odCasInput.value);
+      var doMinutes = timeToMinutes(doCasInput.value);
+      if (odMinutes !== null && doMinutes !== null && odMinutes >= doMinutes) {
+        if (changedField === 'od' || changedField === 'od_time') {
+          var prevOdTime = findAdjacentTime(doCasInput.value, -1);
+          if (prevOdTime !== '') {
+            odCasInput.value = prevOdTime;
+          }
+        } else {
+          var nextDoTime = findAdjacentTime(odCasInput.value, 1);
+          if (nextDoTime !== '') {
+            doCasInput.value = nextDoTime;
+          }
+        }
+      }
+    }
+
     saveTime(odTimeKey, odCasInput.value);
     saveTime(doTimeKey, doCasInput.value);
     setActive('manual');

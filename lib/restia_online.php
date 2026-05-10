@@ -2,7 +2,7 @@
 // lib/restia_online.php * Verze: V5 * Aktualizace: 28.04.2026
 declare(strict_types=1);
 
-if (session_status() !== PHP_SESSION_ACTIVE) {
+if (empty($GLOBALS['cb_restia_online_session_ready']) && session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
@@ -77,6 +77,13 @@ if (!function_exists('cb_restia_online_now')) {
     function cb_restia_online_now(): string
     {
         return (new DateTimeImmutable('now', new DateTimeZone('Europe/Prague')))->format('Y-m-d H:i:s');
+    }
+}
+
+if (!function_exists('cb_restia_online_now_utc_z')) {
+    function cb_restia_online_now_utc_z(): string
+    {
+        return (new DateTimeImmutable('now', new DateTimeZone('UTC')))->format('Y-m-d\TH:i:s.v\Z');
     }
 }
 
@@ -689,6 +696,44 @@ if (!function_exists('cb_restia_online_last_data_at')) {
     }
 }
 
+if (!function_exists('cb_restia_online_first_open_created_at')) {
+    function cb_restia_online_first_open_created_at(mysqli $conn, int $idPob, string $workdayStartLocal): string
+    {
+        if ($idPob <= 0) {
+            return '';
+        }
+
+        $workdayStartLocal = trim($workdayStartLocal);
+        if ($workdayStartLocal === '') {
+            return '';
+        }
+
+        $stmt = $conn->prepare('
+            SELECT MIN(o.restia_created_at) AS first_open_created_at
+            FROM objednavky_restia o
+            LEFT JOIN obj_casy c ON c.id_obj = o.id_obj
+            WHERE o.id_pob = ?
+              AND o.restia_created_at IS NOT NULL
+              AND o.restia_created_at >= ?
+              AND c.cas_uzavreni IS NULL
+        ');
+        if ($stmt === false) {
+            return '';
+        }
+
+        $stmt->bind_param('is', $idPob, $workdayStartLocal);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $row = ($res instanceof mysqli_result) ? $res->fetch_assoc() : null;
+        if ($res instanceof mysqli_result) {
+            $res->free();
+        }
+        $stmt->close();
+
+        return trim((string)($row['first_open_created_at'] ?? ''));
+    }
+}
+
 if (!function_exists('cb_restia_online_resume_info')) {
     function cb_restia_online_resume_info(mysqli $conn, array $branch): array
     {
@@ -952,7 +997,7 @@ if (!function_exists('cb_restia_online_existing_order_map')) {
         }
 
         $sql = '
-            SELECT o.restia_id_obj, o.id_obj, c.cas_uzavreni
+            SELECT o.restia_id_obj, o.id_obj, c.cas_uzavreni, c.cas_status_zmena
             FROM objednavky_restia o
             LEFT JOIN obj_casy c ON c.id_obj = o.id_obj
             WHERE o.restia_id_obj IN (' . implode(',', $quoted) . ')
@@ -970,6 +1015,7 @@ if (!function_exists('cb_restia_online_existing_order_map')) {
                 $map[$restiaId] = [
                     'id_obj' => $idObj,
                     'cas_uzavreni' => trim((string)($row['cas_uzavreni'] ?? '')),
+                    'cas_status_zmena' => trim((string)($row['cas_status_zmena'] ?? '')),
                 ];
             }
         }
@@ -1683,115 +1729,108 @@ if (!function_exists('cb_restia_online_import_day')) {
         $nazev = (string)$branch['nazev'];
         $activePosId = (string)$branch['active_pos_id'];
         $dayRange = cb_restia_online_day_range_utc($date);
+        $createdFromLocal = (string)($dayRange['from_db'] ?? '');
+        $firstOpenCreatedAt = cb_restia_online_first_open_created_at($conn, $idPob, $createdFromLocal);
+        if ($firstOpenCreatedAt !== '') {
+            $createdFromLocal = $firstOpenCreatedAt;
+        }
+        $createdFromDt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $createdFromLocal, new DateTimeZone('Europe/Prague'));
+        if (!($createdFromDt instanceof DateTimeImmutable)) {
+            throw new RuntimeException('Nelze sestavit createdFrom pro online dotaz.');
+        }
+        $createdFromZ = $createdFromDt->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.v\Z');
+        $createdToZ = cb_restia_online_now_utc_z();
 
         $idImport = 0;
         $lockName = '';
 
-        $pocetObj = 0; $pocetNovych = 0; $pocetZmenenych = 0; $pocetChyb = 0;
+        $pocetObj = 0; $pocetNovych = 0; $pocetZmenenych = 0; $pocetIgnore = 0; $pocetChyb = 0;
         $logLines = [];
 
         try {
             $lockName = cb_restia_online_day_lock_acquire($conn, $idPob, $date, 10);
             $idImport = cb_restia_online_obj_import_begin($conn, $idPob, $dayRange['from_db'], $dayRange['to_db']);
+            $res = cb_restia_get('/api/orders', [
+                'page' => 1,
+                'limit' => 200,
+                'createdFrom' => $createdFromZ,
+                'createdTo' => $createdToZ,
+                'activePosId' => $activePosId,
+            ], $activePosId, 'online den=' . $date . ' id_pob=' . $idPob . ' createdFrom=' . $createdFromZ . ' createdTo=' . $createdToZ);
 
-            $page = 1;
-            while (true) {
-                $res = cb_restia_get('/api/orders', [
-                    'page' => $page,
-                    'limit' => CB_RESTIA_ONLINE_LIMIT,
-                    'statusUpdatedFrom' => (string)($onlineRange['from_z'] ?? ''),
-                    'activePosId' => $activePosId,
-                ], $activePosId, 'online den=' . $date . ' id_pob=' . $idPob . ' page=' . $page);
+            if ((int)($res['ok'] ?? 0) !== 1) {
+                $bodySnippet = mb_substr((string)($res['body'] ?? ''), 0, 300);
+                $http = (int)($res['http_status'] ?? 0);
+                throw new RuntimeException('Restia chyba HTTP=' . $http . ' body=' . $bodySnippet);
+            }
 
-                if ((int)($res['ok'] ?? 0) !== 1) {
-                    $bodySnippet = mb_substr((string)($res['body'] ?? ''), 0, 300);
-                    $http = (int)($res['http_status'] ?? 0);
-                    throw new RuntimeException('Restia chyba HTTP=' . $http . ' body=' . $bodySnippet);
+            $decoded = json_decode((string)($res['body'] ?? ''), true);
+            if (!is_array($decoded)) { throw new RuntimeException('Restia vratila neplatny JSON.'); }
+
+            $orders = cb_restia_online_extract_orders($decoded);
+            $restiaIds = [];
+            foreach ($orders as $order) {
+                if (!is_array($order)) {
+                    throw new RuntimeException('Restia vratila neplatnou objednavku.');
                 }
-
-                $decoded = json_decode((string)($res['body'] ?? ''), true);
-                if (!is_array($decoded)) { throw new RuntimeException('Restia vratila neplatny JSON.'); }
-
-                $orders = cb_restia_online_extract_orders($decoded);
-                $countOrders = count($orders);
-
-                $pageRestiaIds = [];
-                foreach ($orders as $order) {
-                    if (!is_array($order)) {
-                        throw new RuntimeException('Restia vratila neplatnou objednavku.');
-                    }
-                    $restiaIdObj = trim((string)($order['id'] ?? ''));
-                    if ($restiaIdObj === '') {
-                        throw new RuntimeException('Objednavka nema id.');
-                    }
-                    $pageRestiaIds[] = $restiaIdObj;
+                $restiaIdObj = trim((string)($order['id'] ?? ''));
+                if ($restiaIdObj === '') {
+                    throw new RuntimeException('Objednavka nema id.');
                 }
+                $restiaIds[] = $restiaIdObj;
+            }
 
-                $existingMap = cb_restia_online_existing_order_map($conn, $pageRestiaIds);
-                $pagePocetObj = 0;
-                $pagePocetNovych = 0;
-                $pagePocetZmenenych = 0;
-                $pagePocetChyb = 0;
+            $existingMap = cb_restia_online_existing_order_map($conn, $restiaIds);
 
-                $conn->begin_transaction();
-                try {
-                    foreach ($orders as $orderIndex => $order) {
-                        $restiaIdObj = $pageRestiaIds[$orderIndex] ?? '';
-                        $existingInfo = (isset($existingMap[$restiaIdObj]) && is_array($existingMap[$restiaIdObj])) ? $existingMap[$restiaIdObj] : [];
-                        $existingIdObj = (int)($existingInfo['id_obj'] ?? 0);
-                        $existingCasUzavreni = trim((string)($existingInfo['cas_uzavreni'] ?? ''));
-                        if ($existingIdObj > 0 && $existingCasUzavreni !== '') {
-                            continue;
-                        }
-                        $savepoint = 'restia_' . $page . '_' . ($orderIndex + 1);
-                        if ($conn->query('SAVEPOINT ' . $savepoint) === false) {
-                            throw new RuntimeException('Nepodarilo se zalozit savepoint pro objednavku.');
-                        }
-
-                        try {
-                            $upsert = cb_restia_online_upsert_order($conn, $idPob, $activePosId, $order, $existingIdObj);
-                            cb_restia_online_sync_children($conn, (int)$upsert['id_obj'], $idPob, $order, (bool)$upsert['is_new']);
-                            $logLines[] = cb_restia_online_log_order((int)$upsert['id_obj'], $order, (bool)($upsert['is_new'] ?? false));
-                            $conn->query('RELEASE SAVEPOINT ' . $savepoint);
-                        } catch (Throwable $e) {
-                            $conn->query('ROLLBACK TO SAVEPOINT ' . $savepoint);
-                            $conn->query('RELEASE SAVEPOINT ' . $savepoint);
-                            cb_restia_online_error_log(
-                                $idPob,
-                                'ORDER_ERR: datum=' . $date
-                                . ' | id_pob=' . $idPob
-                                . ' | page=' . $page
-                                . ' | restia_id_obj=' . $restiaIdObj
-                                . ' | msg=' . $e->getMessage()
-                            );
-                            $pagePocetChyb++;
-                            continue;
-                        }
-
-                        $pagePocetObj++;
-                        if ((bool)($upsert['is_new'] ?? false)) {
-                            $pagePocetNovych++;
-                        } else {
-                            $pagePocetZmenenych++;
-                        }
+            $conn->begin_transaction();
+            try {
+                foreach ($orders as $orderIndex => $order) {
+                    $restiaIdObj = $restiaIds[$orderIndex] ?? '';
+                    $existingInfo = (isset($existingMap[$restiaIdObj]) && is_array($existingMap[$restiaIdObj])) ? $existingMap[$restiaIdObj] : [];
+                    $existingIdObj = (int)($existingInfo['id_obj'] ?? 0);
+                    $existingCasStatus = trim((string)($existingInfo['cas_status_zmena'] ?? ''));
+                    $incomingCasStatus = cb_restia_online_restia_to_local_nullable($order['statusUpdatedAt'] ?? null);
+                    if ($existingIdObj > 0 && $existingCasStatus !== '' && $incomingCasStatus !== null && $existingCasStatus === $incomingCasStatus) {
+                        $pocetIgnore++;
+                        continue;
+                    }
+                    $savepoint = 'restia_1_' . ($orderIndex + 1);
+                    if ($conn->query('SAVEPOINT ' . $savepoint) === false) {
+                        throw new RuntimeException('Nepodarilo se zalozit savepoint pro objednavku.');
                     }
 
-                    $conn->commit();
-                } catch (Throwable $e) {
-                    $conn->rollback();
-                    throw $e;
+                    try {
+                        $upsert = cb_restia_online_upsert_order($conn, $idPob, $activePosId, $order, $existingIdObj);
+                        cb_restia_online_sync_children($conn, (int)$upsert['id_obj'], $idPob, $order, (bool)$upsert['is_new']);
+                        $logLines[] = cb_restia_online_log_order((int)$upsert['id_obj'], $order, (bool)($upsert['is_new'] ?? false));
+                        $conn->query('RELEASE SAVEPOINT ' . $savepoint);
+                    } catch (Throwable $e) {
+                        $conn->query('ROLLBACK TO SAVEPOINT ' . $savepoint);
+                        $conn->query('RELEASE SAVEPOINT ' . $savepoint);
+                        cb_restia_online_error_log(
+                            $idPob,
+                            'ORDER_ERR: datum=' . $date
+                            . ' | id_pob=' . $idPob
+                            . ' | page=1'
+                            . ' | restia_id_obj=' . $restiaIdObj
+                            . ' | msg=' . $e->getMessage()
+                        );
+                        $pocetChyb++;
+                        continue;
+                    }
+
+                    $pocetObj++;
+                    if ((bool)($upsert['is_new'] ?? false)) {
+                        $pocetNovych++;
+                    } else {
+                        $pocetZmenenych++;
+                    }
                 }
 
-                $pocetObj += $pagePocetObj;
-                $pocetNovych += $pagePocetNovych;
-                $pocetZmenenych += $pagePocetZmenenych;
-                $pocetChyb += $pagePocetChyb;
-
-                if ($countOrders < CB_RESTIA_ONLINE_LIMIT) { break; }
-                $totalCount = isset($res['total_count']) ? (int)$res['total_count'] : 0;
-                if ($totalCount > 0 && ($page * CB_RESTIA_ONLINE_LIMIT) >= $totalCount) { break; }
-                if ($countOrders === 0) { break; }
-                $page++;
+                $conn->commit();
+            } catch (Throwable $e) {
+                $conn->rollback();
+                throw $e;
             }
 
             $poznamka = 'den=' . $date . ' id_pob=' . $idPob . ' obj=' . $pocetObj;
@@ -1799,7 +1838,7 @@ if (!function_exists('cb_restia_online_import_day')) {
             cb_restia_online_try_flush_api($conn, $auth);
 
             $dayMs = (int)round(microtime(true) * 1000) - $dayStartMs;
-            return ['date' => $date, 'branch' => $nazev, 'count' => $pocetObj, 'nove' => $pocetNovych, 'aktualizace' => $pocetZmenenych, 'errors' => $pocetChyb, 'error' => '', 'day_ms' => $dayMs, 'ok' => 1, 'log_lines' => $logLines];
+            return ['date' => $date, 'branch' => $nazev, 'count' => $pocetObj, 'nove' => $pocetNovych, 'aktualizace' => $pocetZmenenych, 'ignore' => $pocetIgnore, 'errors' => $pocetChyb, 'error' => '', 'day_ms' => $dayMs, 'ok' => 1, 'log_lines' => $logLines];
         } catch (Throwable $e) {
             cb_restia_online_try_flush_api($conn, $auth);
             $fatalLine = 'FATAL_STEP: datum=' . $date . ' | id_pob=' . $idPob . ' | msg=' . $e->getMessage();
@@ -1977,12 +2016,14 @@ if (!function_exists('cb_restia_online_run')) {
             return [
                 'zapisy' => 0,
                 'aktualizace' => 0,
+                'ignore' => 0,
                 'chyba' => '',
             ];
         }
 
         $zapisy = 0;
         $aktualizace = 0;
+        $ignore = 0;
         $chyba = '';
 
         try {
@@ -2010,6 +2051,7 @@ if (!function_exists('cb_restia_online_run')) {
                 }
                 $zapisy += (int)($day['nove'] ?? 0);
                 $aktualizace += (int)($day['aktualizace'] ?? 0);
+                $ignore += (int)($day['ignore'] ?? 0);
             }
         } catch (Throwable $e) {
             $chyba = $e->getMessage();
@@ -2019,6 +2061,7 @@ if (!function_exists('cb_restia_online_run')) {
         return [
             'zapisy' => $zapisy,
             'aktualizace' => $aktualizace,
+            'ignore' => $ignore,
             'chyba' => $chyba,
         ];
     }

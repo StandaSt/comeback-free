@@ -16,6 +16,40 @@
  */
 
 (function (w, d) {
+  // CB_LOGIN_TRACE_TEMP_START
+  const LOGOUT_TRACE_KEY = 'cb_login_trace_logout';
+  function traceLogin(eventName, data) {
+    try {
+      const payload = JSON.stringify({
+        event: eventName,
+        href: w.location.href,
+        path: w.location.pathname,
+        data: data || {}
+      });
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon('lib/ajax_trace.php', new Blob([payload], { type: 'application/json' }));
+        return;
+      }
+      fetch('lib/ajax_trace.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        keepalive: true
+      }).catch(function(){});
+    } catch (e) {}
+  }
+  function rememberLogoutStart(reason) {
+    try {
+      if (!w.sessionStorage) return;
+      w.sessionStorage.setItem(LOGOUT_TRACE_KEY, JSON.stringify({
+        reason: String(reason || ''),
+        at_ms: Date.now(),
+        perf_ms: (w.performance && typeof w.performance.now === 'function') ? Math.round(w.performance.now()) : 0
+      }));
+    } catch (e) {}
+  }
+  // CB_LOGIN_TRACE_TEMP_END
+
   function toInt(v) {
     const n = parseInt(String(v || ''), 10);
     return Number.isFinite(n) ? n : 0;
@@ -39,6 +73,7 @@
   const timeoutMin = toInt(box.getAttribute('data-timeout-min'));
   const logoutUrl = String(box.getAttribute('data-logout-url') || '').trim();
   const touchUrl = String(box.getAttribute('data-touch-url') || '').trim();
+  const logoutLink = box.querySelector('.head_user_exit');
 
   if (timeoutMin <= 0) {
     comboEl.textContent = '!';
@@ -99,6 +134,12 @@
     thermoEl.style.setProperty('--thermo', String(thermoPct) + '%');
 
     if (remainMin <= 0 && logoutUrl) {
+      // CB_LOGIN_TRACE_TEMP_START
+      rememberLogoutStart('idle_timer');
+      traceLogin('login_trace_logout_auto', {
+        remain_min: remainMin
+      });
+      // CB_LOGIN_TRACE_TEMP_END
       w.location.href = logoutUrl;
     }
   }
@@ -117,6 +158,17 @@
   d.addEventListener('keydown', activity, true);
   d.addEventListener('scroll', activity, true);
   d.addEventListener('pointerdown', activity, true);
+
+  // CB_LOGIN_TRACE_TEMP_START
+  if (logoutLink) {
+    logoutLink.addEventListener('click', function () {
+      rememberLogoutStart('logout_click');
+      traceLogin('login_trace_logout_click', {
+        href: logoutUrl
+      });
+    }, true);
+  }
+  // CB_LOGIN_TRACE_TEMP_END
 
   render();
   touchServer(true);

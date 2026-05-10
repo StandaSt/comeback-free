@@ -43,7 +43,7 @@ $uzAkt = '1';
 $uzFilters = [];
 $uzError = '';
 $formAction = cb_url('/');
-$roleStats = ['admin' => 0, 'manager' => 0, 'uzivatel' => 0];
+$roleStats = ['admin' => 0, 'manager' => 0, 'vedouci' => 0];
 
 $uzCols = [
     'id' => ['label' => 'Poř.č.', 'db' => 'id_user'],
@@ -157,16 +157,18 @@ try {
 
     $resRoleStats = $conn->query('
         SELECT
-            SUM(id_role = 1) AS admin_cnt,
-            SUM(id_role = 2) AS manager_cnt,
-            SUM(id_role = 3) AS uzivatel_cnt
-        FROM `user`
+            SUM(u.id_role = 1) AS admin_cnt,
+            SUM(u.id_role IN (2, 3)) AS manager_cnt,
+            SUM(u.id_role IN (5, 7)) AS vedouci_cnt
+        FROM `user` u
+        WHERE u.aktivni = 1
+          AND u.in_system = 1
     ');
     if ($resRoleStats) {
         $rowRoleStats = $resRoleStats->fetch_assoc();
         $roleStats['admin'] = (int)($rowRoleStats['admin_cnt'] ?? 0);
         $roleStats['manager'] = (int)($rowRoleStats['manager_cnt'] ?? 0);
-        $roleStats['uzivatel'] = (int)($rowRoleStats['uzivatel_cnt'] ?? 0);
+        $roleStats['vedouci'] = (int)($rowRoleStats['vedouci_cnt'] ?? 0);
         $resRoleStats->free();
     }
 
@@ -255,8 +257,8 @@ ob_start();
     </thead>
     <tbody>
       <tr>
-        <td>uživatel</td>
-        <td class="txt_r"><strong><?= h((string)$roleStats['uzivatel']) ?></strong></td>
+        <td>vedouci</td>
+        <td class="txt_r"><strong><?= h((string)$roleStats['vedouci']) ?></strong></td>
       </tr>
       <tr>
         <td>manager</td>
@@ -268,7 +270,7 @@ ob_start();
       </tr>
       <tr>
         <td><strong>Celkem</strong></td>
-        <td class="txt_r"><strong><?= h((string)($roleStats['uzivatel'] + $roleStats['manager'] + $roleStats['admin'])) ?></strong></td>
+        <td class="txt_r"><strong><?= h((string)($roleStats['vedouci'] + $roleStats['manager'] + $roleStats['admin'])) ?></strong></td>
       </tr>
     </tbody>
   </table>

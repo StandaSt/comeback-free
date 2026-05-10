@@ -3,6 +3,11 @@
    0) Logout (GET)
    ========================= */
 if (isset($_GET['action']) && (string)$_GET['action'] === 'logout') {
+    // CB_LOGIN_TRACE_TEMP_START
+    if (function_exists('cb_login_log_line')) {
+        cb_login_log_line('logout_request_enter');
+    }
+    // CB_LOGIN_TRACE_TEMP_END
     $cbUser = $_SESSION['cb_user'] ?? null;
     $idUser = 0;
     if (is_array($cbUser) && !empty($cbUser['id_user'])) {
@@ -35,6 +40,12 @@ if (isset($_GET['action']) && (string)$_GET['action'] === 'logout') {
     }
     $_SESSION = [];
     session_destroy();
+
+    // CB_LOGIN_TRACE_TEMP_START
+    if (function_exists('cb_login_log_line')) {
+        cb_login_log_line('logout_redirect_login');
+    }
+    // CB_LOGIN_TRACE_TEMP_END
 
     header('Location: ' . cb_url('/'));
     exit;

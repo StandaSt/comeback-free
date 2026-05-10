@@ -23,6 +23,12 @@ function cb_login_log_line(string $step, array $ctx = [], ?Throwable $e = null):
     if (isset($ctx['password'])) $ctx['password'] = '[HIDDEN]';
 
     $ts     = date('Y-m-d H:i:s');
+    // CB_LOGIN_TRACE_TEMP_START
+    $tsMicro = sprintf('%.6f', microtime(true));
+    $reqMs = isset($_SERVER['REQUEST_TIME_FLOAT'])
+        ? (string)round((microtime(true) - (float)$_SERVER['REQUEST_TIME_FLOAT']) * 1000, 1)
+        : '';
+    // CB_LOGIN_TRACE_TEMP_END
     $uri    = (string)($_SERVER['REQUEST_URI'] ?? '');
     $method = (string)($_SERVER['REQUEST_METHOD'] ?? '');
     $ip     = (string)($_SERVER['REMOTE_ADDR'] ?? '');
@@ -48,7 +54,12 @@ function cb_login_log_line(string $step, array $ctx = [], ?Throwable $e = null):
             ' | AT=' . basename($e->getFile()) . ':' . $e->getLine();
     }
 
-    $line = $ts . ' | ' . $step .
+    $line = $ts .
+        // CB_LOGIN_TRACE_TEMP_START
+        ' | t=' . $tsMicro .
+        ($reqMs !== '' ? ' | req_ms=' . $reqMs : '') .
+        // CB_LOGIN_TRACE_TEMP_END
+        ' | ' . $step .
         ' | ' . $method .
         ' | ' . $ip .
         ' | sid=' . $sid .

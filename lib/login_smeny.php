@@ -45,6 +45,11 @@ function post_str(string $k): string
 }
 
 try {
+    // CB_LOGIN_TRACE_TEMP_START
+    cb_login_log_line('request_enter', [
+        'request_time_float' => isset($_SERVER['REQUEST_TIME_FLOAT']) ? sprintf('%.6f', (float)$_SERVER['REQUEST_TIME_FLOAT']) : '',
+    ]);
+    // CB_LOGIN_TRACE_TEMP_END
     cb_login_log_line('start');
 
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
@@ -146,7 +151,7 @@ try {
     $on2fa = (int)$row2fa['on_2fa'];
     $q2fa->free();
 
-    if ((string)($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL' && $on2fa === 0) {
+    if ((string)($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL' || $on2fa !== 1) {
         $_SESSION['login_ok'] = 1;
         unset($_SESSION['cb_auth_ok']);
         unset($_SESSION['cb_2fa_token']);

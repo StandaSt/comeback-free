@@ -26,7 +26,7 @@ $row2fa = $q2fa->fetch_assoc();
 $on2fa = (int)$row2fa['on_2fa'];
 $q2fa->free();
 
-if ($prostredi === 'LOCAL' && $on2fa === 0) {
+if ($prostredi === 'LOCAL' || $on2fa !== 1) {
     $maMobil = true;
 } else {
     if ($idUser > 0) {

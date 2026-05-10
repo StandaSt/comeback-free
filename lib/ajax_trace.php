@@ -59,7 +59,10 @@ if (session_status() === PHP_SESSION_ACTIVE) {
     $filterMode = trim((string)($_SESSION['selected_pobocky_mode'] ?? ''));
 }
 
-if ((int)$user !== 1) {
+// CB_LOGIN_TRACE_TEMP_START
+$isLoginTraceTemp = str_starts_with($event, 'login_trace_');
+// CB_LOGIN_TRACE_TEMP_END
+if ((int)$user !== 1 && !$isLoginTraceTemp) {
     http_response_code(204);
     exit;
 }

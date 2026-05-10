@@ -50,10 +50,17 @@ function cb_restia_online_kontrola()
 
     $zapisy = 0;
     $aktualizace = 0;
+    $ignore = 0;
 
     try {
-
         $file = __DIR__ . '/restia_online.php';
+        $sessionReleased = false;
+
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            $GLOBALS['cb_restia_online_session_ready'] = true;
+            session_write_close();
+            $sessionReleased = true;
+        }
 
         if (!file_exists($file)) {
 
@@ -76,10 +83,16 @@ function cb_restia_online_kontrola()
             if (is_array($result)) {
                 $zapisy = isset($result['zapisy']) ? $result['zapisy'] : 0;
                 $aktualizace = isset($result['aktualizace']) ? $result['aktualizace'] : 0;
+                $ignore = isset($result['ignore']) ? $result['ignore'] : 0;
             }
         }
 
+        if ($sessionReleased) {
+            unset($GLOBALS['cb_restia_online_session_ready']);
+        }
+
     } catch (Throwable $e) {
+        unset($GLOBALS['cb_restia_online_session_ready']);
 
         file_put_contents(
             __DIR__ . '/../log/restia_online.txt',
@@ -98,10 +111,11 @@ function cb_restia_online_kontrola()
         SET konec = NOW(),
             zapisy = ?,
             aktualizace = ?,
+            `ignore` = ?,
             aktivni = 0
         WHERE id_akce = ?
     ");
-    $stmt->bind_param("iii", $zapisy, $aktualizace, $id_akce);
+    $stmt->bind_param("iiii", $zapisy, $aktualizace, $ignore, $id_akce);
     $stmt->execute();
 }
 

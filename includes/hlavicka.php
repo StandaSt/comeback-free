@@ -348,6 +348,7 @@ if ($cbPobocky) {
         </nav>
       </div>
 
+      <div class="head_gn_placeholder ram_hlavicka zaobleni_10" aria-hidden="true"></div>
       <?php require __DIR__ . '/hlavicka/head_kpi.php'; ?>
       <?php require __DIR__ . '/hlavicka/head_stav.php'; ?>
       <?php require __DIR__ . '/hlavicka/head_user.php'; ?>

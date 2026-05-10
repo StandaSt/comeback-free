@@ -58,13 +58,63 @@ $loginDisabled = $loginDbOk ? '' : ' disabled';
 
 <script>
   (function(){
+    // CB_LOGIN_TRACE_TEMP_START
+    var LOGOUT_TRACE_KEY = 'cb_login_trace_logout';
+    // CB_LOGIN_TRACE_TEMP_START
+    function traceLogin(eventName, data) {
+      try {
+        var payload = JSON.stringify({
+          event: eventName,
+          href: window.location.href,
+          path: window.location.pathname,
+          data: data || {}
+        });
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon('<?= h(cb_url('lib/ajax_trace.php')) ?>', new Blob([payload], { type: 'application/json' }));
+          return;
+        }
+        fetch('<?= h(cb_url('lib/ajax_trace.php')) ?>', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload,
+          keepalive: true
+        }).catch(function(){});
+      } catch (e) {}
+    }
+    // CB_LOGIN_TRACE_TEMP_END
     var form = document.getElementById('cbLoginForm');
     var email = document.getElementById('cb_email');
     var pass = document.getElementById('cb_pass');
     var submit = document.getElementById('cbLoginSubmit');
+    // CB_LOGIN_TRACE_TEMP_START
+    var logoutTrace = null;
+    try {
+      if (window.sessionStorage) {
+        logoutTrace = JSON.parse(String(window.sessionStorage.getItem(LOGOUT_TRACE_KEY) || 'null'));
+      }
+    } catch (e) {
+      logoutTrace = null;
+    }
+    traceLogin('login_trace_form_visible', {
+      ready_state: document.readyState,
+      logout_reason: logoutTrace && logoutTrace.reason ? String(logoutTrace.reason) : '',
+      logout_to_form_ms: logoutTrace && logoutTrace.at_ms ? Math.max(0, Date.now() - Number(logoutTrace.at_ms || 0)) : 0
+    });
+    try {
+      if (window.sessionStorage) {
+        window.sessionStorage.removeItem(LOGOUT_TRACE_KEY);
+      }
+    } catch (e) {}
+    // CB_LOGIN_TRACE_TEMP_END
 
     if (form && submit) {
       form.addEventListener('submit', function(){
+        // CB_LOGIN_TRACE_TEMP_START
+        traceLogin('login_trace_form_submit', {
+          email_len: email ? String(email.value || '').length : 0,
+          has_password: !!(pass && String(pass.value || '') !== '')
+        });
+        // CB_LOGIN_TRACE_TEMP_END
         submit.textContent = 'Ověřuji přihlášení...';
         submit.classList.add('is-waiting');
         submit.disabled = true;
