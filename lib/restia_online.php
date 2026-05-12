@@ -8,6 +8,7 @@ if (empty($GLOBALS['cb_restia_online_session_ready']) && session_status() !== PH
 
 require_once __DIR__ . '/../lib/app.php';
 require_once __DIR__ . '/../lib/system.php';
+require_once __DIR__ . '/../lib/format_datum_cas.php';
 require_once __DIR__ . '/../config/secrets.php';
 require_once __DIR__ . '/../lib/restia_access_exist.php';
 require_once __DIR__ . '/../lib/restia_client.php';
@@ -18,29 +19,11 @@ if (!empty($_SESSION['login_ok']) && !cb_session_validate_after_login()) {
     cb_session_forget_auth();
 }
 
-const CB_RESTIA_ONLINE_LIMIT = 100;
-if (!function_exists('cb_restia_online_h')) {
-    function cb_restia_online_h(string $value): string
-    {
-        return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
-    }
-}
-
 if (!function_exists('cb_restia_online_txt_path')) {
     function cb_restia_online_txt_path(int $idPob): string
     {
         $safeIdPob = max(0, $idPob);
         return __DIR__ . '/../log/restia_online.txt';
-    }
-}
-
-if (!function_exists('cb_restia_online_log_init')) {
-    function cb_restia_online_log_init(int $idPob): void
-    {
-        $path = cb_restia_online_txt_path($idPob);
-        if (!is_file($path)) {
-            @file_put_contents($path, '', FILE_APPEND | LOCK_EX);
-        }
     }
 }
 
@@ -60,12 +43,6 @@ if (!function_exists('cb_restia_online_error_txt_path')) {
     }
 }
 
-if (!function_exists('cb_restia_online_error_log_init')) {
-    function cb_restia_online_error_log_init(int $idPob): void
-    {
-    }
-}
-
 if (!function_exists('cb_restia_online_error_log')) {
     function cb_restia_online_error_log(int $idPob, string $line): void
     {
@@ -76,208 +53,70 @@ if (!function_exists('cb_restia_online_error_log')) {
 if (!function_exists('cb_restia_online_now')) {
     function cb_restia_online_now(): string
     {
-        return (new DateTimeImmutable('now', new DateTimeZone('Europe/Prague')))->format('Y-m-d H:i:s');
+        return cb_dt_now_prague();
     }
 }
 
 if (!function_exists('cb_restia_online_now_utc_z')) {
     function cb_restia_online_now_utc_z(): string
     {
-        return (new DateTimeImmutable('now', new DateTimeZone('UTC')))->format('Y-m-d\TH:i:s.v\Z');
+        return cb_dt_now_utc_z();
     }
 }
 
 if (!function_exists('cb_restia_online_today')) {
     function cb_restia_online_today(): string
     {
-        return (new DateTimeImmutable('today', new DateTimeZone('Europe/Prague')))->format('Y-m-d');
-    }
-}
-
-if (!function_exists('cb_restia_online_import_end_date')) {
-    function cb_restia_online_import_end_date(): string
-    {
-        $tz = new DateTimeZone('Europe/Prague');
-        $now = new DateTimeImmutable('now', $tz);
-        $todayStart = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $now->format('Y-m-d') . ' 06:00:00', $tz);
-        if (!($todayStart instanceof DateTimeImmutable)) {
-            throw new RuntimeException('Nepodarilo se urcit konec importu.');
-        }
-
-        $currentWorkdayStart = ($now < $todayStart) ? $todayStart->modify('-1 day') : $todayStart;
-        return $currentWorkdayStart->modify('-1 day')->format('Y-m-d');
+        return cb_dt_today_prague();
     }
 }
 
 if (!function_exists('cb_restia_online_format_date_cs')) {
     function cb_restia_online_format_date_cs(string $date): string
     {
-        $date = trim($date);
-        if ($date === '') {
-            return '';
-        }
-        $dt = DateTimeImmutable::createFromFormat('Y-m-d', $date, new DateTimeZone('Europe/Prague'));
-        if (!($dt instanceof DateTimeImmutable)) {
-            throw new RuntimeException('Neplatne datum pro formatovani: ' . $date);
-        }
-        return $dt->format('d.m.Y');
-    }
-}
-
-if (!function_exists('cb_restia_online_format_date_input_cs')) {
-    function cb_restia_online_format_date_input_cs(string $date): string
-    {
-        $date = trim($date);
-        if ($date === '') {
-            return '';
-        }
-        $dt = DateTimeImmutable::createFromFormat('Y-m-d', $date, new DateTimeZone('Europe/Prague'));
-        if (!($dt instanceof DateTimeImmutable)) {
-            throw new RuntimeException('Neplatne datum pro vstup: ' . $date);
-        }
-        return $dt->format('j.n.Y');
+        return cb_dt_format_date_cs($date);
     }
 }
 
 if (!function_exists('cb_restia_online_format_month_year_cs')) {
     function cb_restia_online_format_month_year_cs(string $date): string
     {
-        $date = trim($date);
-        if ($date === '') {
-            return '';
-        }
-        $dt = DateTimeImmutable::createFromFormat('Y-m-d', $date, new DateTimeZone('Europe/Prague'));
-        if (!($dt instanceof DateTimeImmutable)) {
-            throw new RuntimeException('Neplatne datum pro mesic: ' . $date);
-        }
-        static $months = [
-            1 => 'leden',
-            2 => 'únor',
-            3 => 'březen',
-            4 => 'duben',
-            5 => 'květen',
-            6 => 'červen',
-            7 => 'červenec',
-            8 => 'srpen',
-            9 => 'září',
-            10 => 'říjen',
-            11 => 'listopad',
-            12 => 'prosinec',
-        ];
-        $month = (int)$dt->format('n');
-        return (($months[$month] ?? '') . ' ' . $dt->format('Y'));
+        return cb_dt_format_month_year_cs($date);
     }
 }
 
 if (!function_exists('cb_restia_online_normalize_ymd')) {
     function cb_restia_online_normalize_ymd(string $raw): string
     {
-        $raw = trim($raw);
-        if ($raw === '') {
-            return '';
-        }
-        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $raw, $m) === 1) {
-            $y = (int)$m[1];
-            $mo = (int)$m[2];
-            $d = (int)$m[3];
-            if (checkdate($mo, $d, $y)) {
-                return sprintf('%04d-%02d-%02d', $y, $mo, $d);
-            }
-        }
-        throw new RuntimeException('Neplatne datum Y-m-d: ' . $raw);
-    }
-}
-
-if (!function_exists('cb_restia_online_count_months_between')) {
-    function cb_restia_online_count_months_between(string $startYmd, string $endYmd): int
-    {
-        $startYmd = cb_restia_online_normalize_ymd($startYmd);
-        $endYmd = cb_restia_online_normalize_ymd($endYmd);
-        if ($startYmd === '' || $endYmd === '') {
-            return 0;
-        }
-
-        $tz = new DateTimeZone('Europe/Prague');
-        $startDt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $startYmd . ' 00:00:00', $tz);
-        $endDt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $endYmd . ' 00:00:00', $tz);
-        if (!($startDt instanceof DateTimeImmutable) || !($endDt instanceof DateTimeImmutable) || $endDt < $startDt) {
-            return 0;
-        }
-
-        $months = ((int)$endDt->format('Y') - (int)$startDt->format('Y')) * 12 + ((int)$endDt->format('n') - (int)$startDt->format('n')) + 1;
-        return max(0, $months);
-    }
-}
-
-if (!function_exists('cb_restia_online_format_days_months')) {
-    function cb_restia_online_format_days_months(int $days, int $months): string
-    {
-        return cb_restia_online_h((string)max(0, $days)) . ' dnů / ' . cb_restia_online_h((string)max(0, $months)) . ' měsíců';
+        return cb_dt_normalize_ymd($raw);
     }
 }
 
 if (!function_exists('cb_restia_online_format_datetime_cs')) {
     function cb_restia_online_format_datetime_cs(string $datetime): string
     {
-        $dt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $datetime, new DateTimeZone('Europe/Prague'));
-        if (!($dt instanceof DateTimeImmutable)) {
-            return $datetime;
-        }
-        return $dt->format('d.m.Y H:i:s');
+        return cb_dt_format_datetime_cs($datetime);
     }
 }
 
 if (!function_exists('cb_restia_online_format_range_cs')) {
     function cb_restia_online_format_range_cs(string $fromDate, string $toDate): string
     {
-        $fromDate = cb_restia_online_normalize_ymd($fromDate);
-        $toDate = cb_restia_online_normalize_ymd($toDate);
-        if ($fromDate === '' || $toDate === '' || $fromDate > $toDate) {
-            return '';
-        }
-
-        $tz = new DateTimeZone('Europe/Prague');
-        $fromDt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $fromDate . ' 06:00:00', $tz);
-        $toDt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', cb_restia_online_next_date($toDate) . ' 06:00:00', $tz);
-        if (!($fromDt instanceof DateTimeImmutable) || !($toDt instanceof DateTimeImmutable)) {
-            return '';
-        }
-
-        return $fromDt->format('d.m.Y H:i:s') . ' - ' . $toDt->format('d.m.Y H:i:s');
+        return cb_dt_format_range_cs($fromDate, $toDate, 6);
     }
 }
 
 if (!function_exists('cb_restia_online_next_date')) {
     function cb_restia_online_next_date(string $date): string
     {
-        $tz = new DateTimeZone('Europe/Prague');
-        $dt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $date . ' 00:00:00', $tz);
-        if (!($dt instanceof DateTimeImmutable)) {
-            throw new RuntimeException('Neplatne datum pro posun.');
-        }
-
-        return $dt->modify('+1 day')->format('Y-m-d');
+        return cb_dt_next_date($date);
     }
 }
 
 if (!function_exists('cb_restia_online_day_range_utc')) {
     function cb_restia_online_day_range_utc(string $date): array
     {
-        $tz = new DateTimeZone('Europe/Prague');
-        $fromLocal = DateTimeImmutable::createFromFormat('Y-m-d H:i:s.u', $date . ' 06:00:00.000000', $tz);
-        $nextDate = cb_restia_online_next_date($date);
-        $toLocal = DateTimeImmutable::createFromFormat('Y-m-d H:i:s.u', $nextDate . ' 05:59:59.999000', $tz);
-
-        if (!($fromLocal instanceof DateTimeImmutable) || !($toLocal instanceof DateTimeImmutable)) {
-            throw new RuntimeException('Neplatny den pro interval.');
-        }
-
-        return [
-            'from_z' => $fromLocal->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.v\Z'),
-            'to_z' => $toLocal->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.v\Z'),
-            'from_db' => $fromLocal->format('Y-m-d H:i:s'),
-            'to_db' => $toLocal->format('Y-m-d H:i:s'),
-        ];
+        return cb_dt_workday_range_utc($date, 6);
     }
 }
 
@@ -294,25 +133,6 @@ if (!function_exists('cb_restia_online_extract_orders')) {
             return $json['orders'];
         }
         return [];
-    }
-}
-
-if (!function_exists('cb_restia_online_json')) {
-    function cb_restia_online_json(mixed $value): ?string
-    {
-        $json = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        if (!is_string($json) || $json === '') {
-            return null;
-        }
-        return $json;
-    }
-}
-
-if (!function_exists('cb_restia_online_hash32')) {
-    function cb_restia_online_hash32(string $value): string
-    {
-        $bin = hash('sha256', $value, true);
-        return is_string($bin) ? $bin : str_repeat("\0", 32);
     }
 }
 
@@ -365,337 +185,6 @@ if (!function_exists('cb_restia_online_get_branches')) {
     }
 }
 
-if (!function_exists('cb_restia_online_get_branch_by_id')) {
-    function cb_restia_online_get_branch_by_id(mysqli $conn, int $idPob): array
-    {
-        if ($idPob <= 0) {
-            throw new RuntimeException('Neplatna pobocka.');
-        }
-
-        $stmt = $conn->prepare('
-            SELECT id_pob, nazev, restia_activePosId, prvni_obj
-            FROM pobocka
-            WHERE id_pob = ?
-            LIMIT 1
-        ');
-        if ($stmt === false) {
-            throw new RuntimeException('DB dotaz na pobocku selhal.');
-        }
-        $stmt->bind_param('i', $idPob);
-        $stmt->execute();
-        $res = $stmt->get_result();
-        $row = ($res instanceof mysqli_result) ? $res->fetch_assoc() : null;
-        if ($res instanceof mysqli_result) {
-            $res->free();
-        }
-        $stmt->close();
-
-        if (!is_array($row)) {
-            throw new RuntimeException('Vybrana pobocka neexistuje.');
-        }
-
-        $activePosId = trim((string)($row['restia_activePosId'] ?? ''));
-        if ($activePosId === '') {
-            throw new RuntimeException('Vybrana pobocka nema vyplnene restia_activePosId.');
-        }
-
-        return [
-            'id_pob' => (int)($row['id_pob'] ?? 0),
-            'nazev' => trim((string)($row['nazev'] ?? '')),
-            'active_pos_id' => $activePosId,
-            'prvni_obj' => trim((string)($row['prvni_obj'] ?? '')),
-        ];
-    }
-}
-
-if (!function_exists('cb_restia_online_pick_default_branch')) {
-    function cb_restia_online_pick_default_branch(mysqli $conn): array
-    {
-        $branches = cb_restia_online_get_branches($conn);
-        foreach ($branches as $branch) {
-            if ((bool)($branch['enabled'] ?? false) === true) {
-                return [
-                    'id_pob' => (int)($branch['id_pob'] ?? 0),
-                    'nazev' => (string)($branch['nazev'] ?? ''),
-                    'active_pos_id' => (string)($branch['active_pos_id'] ?? ''),
-                    'prvni_obj' => (string)($branch['prvni_obj'] ?? ''),
-                ];
-            }
-        }
-        throw new RuntimeException('Neni zadna pobocka s vyplnenym restia_activePosId.');
-    }
-}
-
-
-if (!function_exists('cb_restia_online_branch_db_count')) {
-    function cb_restia_online_branch_db_count(mysqli $conn, int $idPob): int
-    {
-        if ($idPob <= 0) {
-            return 0;
-        }
-
-        $stmt = $conn->prepare('
-            SELECT COUNT(*) AS cnt
-            FROM objednavky_restia
-            WHERE id_pob = ?
-        ');
-        if ($stmt === false) {
-            throw new RuntimeException('DB prepare selhal: objednavky_restia count.');
-        }
-
-        $stmt->bind_param('i', $idPob);
-        $stmt->execute();
-        $res = $stmt->get_result();
-        $count = 0;
-        if ($res instanceof mysqli_result) {
-            $row = $res->fetch_assoc();
-            $count = (int)($row['cnt'] ?? 0);
-            $res->free();
-        }
-        $stmt->close();
-
-        return $count;
-    }
-}
-
-if (!function_exists('cb_restia_online_run_batch')) {
-    function cb_restia_online_run_batch(mysqli $conn, array $auth, array $branch, array &$state, array &$rows, string &$message, string $importEndDate): void
-    {
-        if ((int)($state['finished'] ?? 0) !== 0) {
-            return;
-        }
-
-        $importEndDate = cb_restia_online_normalize_ymd($importEndDate);
-        $foundNow = 0;
-        $cycleMonth = '';
-
-        while (true) {
-            $date = (string)($state['next_date'] ?? '');
-            if ($date === '') {
-                $resume = cb_restia_online_resume_info($conn, $branch);
-                $date = (string)($resume['next_date'] ?? '');
-                $state['next_date'] = $date;
-                $state['start_date'] = (string)($resume['start_date'] ?? '');
-                $state['last_date'] = (string)($resume['last_date'] ?? '');
-            }
-
-            if ($date > $importEndDate) {
-                $state['finished'] = 1;
-                $branchName = trim((string)($branch['nazev'] ?? ''));
-                $runFromDate = cb_restia_online_normalize_ymd((string)($state['run_from_date'] ?? ''));
-                $rangeText = cb_restia_online_format_range_cs($runFromDate, $importEndDate);
-                if ($branchName !== '' && $rangeText !== '') {
-                    $message = 'Import ' . $branchName . ' období ' . $rangeText . ' skončil. OK';
-                } else {
-                    $message = 'Akce skončila. Došli jsme do konce importu.';
-                }
-                cb_restia_online_log(
-                    (int)($branch['id_pob'] ?? 0),
-                    'KONEC IMPORTU: '
-                    . cb_restia_online_format_datetime_cs(cb_restia_online_now())
-                    . ' | pobočka=' . ($branchName !== '' ? $branchName : '-')
-                    . ' | součet_cyklus=' . (string)$foundNow
-                );
-                break;
-            }
-
-            $day = cb_restia_online_import_day($conn, $auth, $branch, $date);
-            $startedAtMs = (int)($state['run_started_at_ms'] ?? 0);
-            $nowMs = (int)round(microtime(true) * 1000);
-            $day['total_ms'] = ($startedAtMs > 0) ? max(0, $nowMs - $startedAtMs) : 0;
-            $rows[] = $day;
-            if (count($rows) > 200) {
-                array_shift($rows);
-            }
-
-            $state['run_row_no'] = (int)($state['run_row_no'] ?? 0) + 1;
-            $state['next_date'] = cb_restia_online_next_date($date);
-
-            if ((int)($day['ok'] ?? 0) === 1) {
-                $state['last_date'] = $date;
-            } else {
-                $state['finished'] = 1;
-                if ($message === '') {
-                    $message = (string)($day['error'] ?? '');
-                }
-                break;
-            }
-
-            $dayCount = max(0, (int)($day['count'] ?? 0));
-            $foundNow += $dayCount;
-            $state['found_total'] = (int)($state['found_total'] ?? 0) + $dayCount;
-            $state['branch_db_count'] = (int)($state['branch_db_count'] ?? 0) + $dayCount;
-
-            cb_restia_online_log(
-                (int)($branch['id_pob'] ?? 0),
-                (string)($state['run_row_no'] ?? 0)
-                . ' / ' . cb_restia_online_format_date_cs((string)($day['date'] ?? $date))
-                . ' / ' . (string)$dayCount . ' - ' . (string)(int)($state['branch_db_count'] ?? 0)
-                . ' / ' . cb_restia_online_format_total_time((int)($day['total_ms'] ?? 0))
-            );
-
-            // STOPKA NA ČAS – max 1:45 (105000 ms)
-            $startedAtMs = (int)($state['run_started_at_ms'] ?? 0);
-            $nowMsCheck = (int)round(microtime(true) * 1000);
-            if ($startedAtMs > 0 && ($nowMsCheck - $startedAtMs) >= 105000) {
-                $state['finished'] = 1;
-                if ($message === '') {
-                    $message = 'Import dočasně ukončen kvůli časovému limitu, spusť znovu.';
-                }
-                $branchName = (string)($branch['nazev'] ?? '');
-                cb_restia_online_log(
-                    (int)($branch['id_pob'] ?? 0),
-                    'STOPKA LIMIT: '
-                    . cb_restia_online_format_datetime_cs(cb_restia_online_now())
-                    . ' | pobočka=' . ($branchName !== '' ? $branchName : '-')
-                    . ' | součet_průběžně=' . (string)$foundNow
-                );
-                break;
-            }
-
-
-            $currentMonth = substr((string)$date, 0, 7);
-            $nextMonth = substr((string)($state['next_date'] ?? ''), 0, 7);
-            if ($currentMonth !== '' && $nextMonth !== '' && $nextMonth !== $currentMonth) {
-                $cycleMonth = cb_restia_online_format_month_year_cs((string)$date);
-                $state['finished'] = 1;
-                break;
-            }
-
-            $cycleMonth = cb_restia_online_format_month_year_cs((string)$date);
-        }
-
-        if ((int)($state['finished'] ?? 0) === 1 && $message === '') {
-            $branchName = (string)($branch['nazev'] ?? '');
-            if ($cycleMonth === '') {
-                $cycleMonth = cb_restia_online_format_month_year_cs((string)($day['date'] ?? $date));
-            }
-            $message = 'Import ' . $cycleMonth . ' pro pobočku "' . $branchName . '", uloženo ' . (string)$foundNow . ' objednávek.';
-            cb_restia_online_log(
-                (int)($branch['id_pob'] ?? 0),
-                'KONEC CYKLU: '
-                . cb_restia_online_format_datetime_cs(cb_restia_online_now())
-                . ' | pobočka=' . ($branchName !== '' ? $branchName : '-')
-                . ' | součet_cyklus=' . (string)$foundNow
-            );
-        }
-    }
-}
-
-
-if (!function_exists('cb_restia_online_branch_start_date')) {
-    function cb_restia_online_branch_start_date(array $branch): string
-    {
-        $startDate = cb_restia_online_normalize_ymd((string)($branch['prvni_obj'] ?? ''));
-        if ($startDate === '') {
-            throw new RuntimeException('Chybi prvni_obj pro pobocku id=' . (string)($branch['id_pob'] ?? 0));
-        }
-        return $startDate;
-    }
-}
-
-if (!function_exists('cb_restia_online_last_date')) {
-    function cb_restia_online_last_date(mysqli $conn, int $idPob): string
-    {
-        $stmt = $conn->prepare('
-            SELECT datum_od, datum_do
-            FROM obj_import
-            WHERE typ_importu = "historie"
-              AND stav = "ok"
-              AND id_pob = ?
-            ORDER BY datum_do DESC, id_import DESC
-            LIMIT 1
-        ');
-        if ($stmt === false) {
-            throw new RuntimeException('DB prepare selhal: obj_import last date.');
-        }
-
-        $stmt->bind_param('i', $idPob);
-        $stmt->execute();
-        $res = $stmt->get_result();
-        $row = ($res instanceof mysqli_result) ? $res->fetch_assoc() : null;
-        if ($res instanceof mysqli_result) {
-            $res->free();
-        }
-        $stmt->close();
-
-        if (!is_array($row)) {
-            return '';
-        }
-
-        $datumOd = trim((string)($row['datum_od'] ?? ''));
-        $datumDo = trim((string)($row['datum_do'] ?? ''));
-        if ($datumOd === '' || $datumDo === '') {
-            throw new RuntimeException('Posledni import historie ma prazdny interval pro pobocku id=' . (string)$idPob);
-        }
-
-        $tz = new DateTimeZone('Europe/Prague');
-        $utc = new DateTimeZone('UTC');
-
-        $fromLocal = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $datumOd, $tz);
-        $toLocal = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $datumDo, $tz);
-        if (($fromLocal instanceof DateTimeImmutable) && ($toLocal instanceof DateTimeImmutable)) {
-            $fromTime = $fromLocal->format('H:i:s');
-            $toTime = $toLocal->format('H:i:s');
-            if ($fromTime === '06:00:00' && $toTime === '05:59:59' && $toLocal->format('Y-m-d') === $fromLocal->modify('+1 day')->format('Y-m-d')) {
-                return $fromLocal->format('Y-m-d');
-            }
-            if ($fromTime === '00:00:00' && $toTime === '23:59:59' && $toLocal->format('Y-m-d') === $fromLocal->format('Y-m-d')) {
-                return $fromLocal->modify('-1 day')->format('Y-m-d');
-            }
-        }
-
-        $fromUtc = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $datumOd, $utc);
-        $toUtc = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $datumDo, $utc);
-        if (($fromUtc instanceof DateTimeImmutable) && ($toUtc instanceof DateTimeImmutable)) {
-            $fromUtcLocal = $fromUtc->setTimezone($tz);
-            $toUtcLocal = $toUtc->setTimezone($tz);
-            $fromTime = $fromUtcLocal->format('H:i:s');
-            $toTime = $toUtcLocal->format('H:i:s');
-            if ($fromTime === '06:00:00' && $toTime === '05:59:59' && $toUtcLocal->format('Y-m-d') === $fromUtcLocal->modify('+1 day')->format('Y-m-d')) {
-                return $fromUtcLocal->format('Y-m-d');
-            }
-            if ($fromTime === '00:00:00' && $toTime === '23:59:59' && $toUtcLocal->format('Y-m-d') === $fromUtcLocal->format('Y-m-d')) {
-                return $fromUtcLocal->modify('-1 day')->format('Y-m-d');
-            }
-        }
-
-        throw new RuntimeException(
-            'Neznamy interval posledniho importu historie pro pobocku id=' . (string)$idPob
-            . ' (' . $datumOd . ' - ' . $datumDo . ').'
-        );
-    }
-}
-
-if (!function_exists('cb_restia_online_last_data_at')) {
-    function cb_restia_online_last_data_at(mysqli $conn, int $idPob): string
-    {
-        if ($idPob <= 0) {
-            return '';
-        }
-
-        $stmt = $conn->prepare('
-            SELECT MAX(restia_created_at) AS last_dt
-            FROM objednavky_restia
-            WHERE id_pob = ?
-        ');
-        if ($stmt === false) {
-            return '';
-        }
-
-        $stmt->bind_param('i', $idPob);
-        $stmt->execute();
-        $res = $stmt->get_result();
-        $row = ($res instanceof mysqli_result) ? $res->fetch_assoc() : null;
-        if ($res instanceof mysqli_result) {
-            $res->free();
-        }
-        $stmt->close();
-
-        return trim((string)($row['last_dt'] ?? ''));
-    }
-}
-
 if (!function_exists('cb_restia_online_first_open_created_at')) {
     function cb_restia_online_first_open_created_at(mysqli $conn, int $idPob, string $workdayStartLocal): string
     {
@@ -731,31 +220,6 @@ if (!function_exists('cb_restia_online_first_open_created_at')) {
         $stmt->close();
 
         return trim((string)($row['first_open_created_at'] ?? ''));
-    }
-}
-
-if (!function_exists('cb_restia_online_resume_info')) {
-    function cb_restia_online_resume_info(mysqli $conn, array $branch): array
-    {
-        $idPob = (int)($branch['id_pob'] ?? 0);
-        $startDate = cb_restia_online_branch_start_date($branch);
-        $lastOkDate = ($idPob > 0) ? cb_restia_online_last_date($conn, $idPob) : '';
-        $lastDataAt = ($idPob > 0) ? cb_restia_online_last_data_at($conn, $idPob) : '';
-        $nextDate = $startDate;
-
-        if ($lastOkDate !== '') {
-            $nextDate = cb_restia_online_next_date($lastOkDate);
-            if ($nextDate < $startDate) {
-                throw new RuntimeException('Neposledni datum importu je mensi nez start historie pro pobocku id=' . (string)$idPob);
-            }
-        }
-
-        return [
-            'start_date' => $startDate,
-            'last_date' => $lastOkDate,
-            'last_data_at' => $lastDataAt,
-            'next_date' => $nextDate,
-        ];
     }
 }
 
@@ -929,53 +393,6 @@ if (!function_exists('cb_restia_online_lookup_res_polozka_id')) {
         return (int)($row['id'] ?? 0);
     }
 }
-if (!function_exists('cb_restia_online_order_exists')) {
-    function cb_restia_online_order_exists(mysqli $conn, string $restiaId): bool
-    {
-        $stmt = $conn->prepare('SELECT 1 FROM objednavky_restia WHERE restia_id_obj = ? LIMIT 1');
-        if ($stmt === false) {
-            throw new RuntimeException('DB prepare selhal: order exists.');
-        }
-
-        $stmt->bind_param('s', $restiaId);
-        $stmt->execute();
-        $res = $stmt->get_result();
-        $exists = ($res instanceof mysqli_result) ? ($res->fetch_assoc() !== null) : false;
-        if ($res instanceof mysqli_result) {
-            $res->free();
-        }
-        $stmt->close();
-
-        return $exists;
-    }
-}
-
-if (!function_exists('cb_restia_online_get_obj_id')) {
-    function cb_restia_online_get_obj_id(mysqli $conn, string $restiaIdObj): int
-    {
-        $stmt = $conn->prepare('SELECT id_obj FROM objednavky_restia WHERE restia_id_obj = ? LIMIT 1');
-        if ($stmt === false) {
-            throw new RuntimeException('DB prepare selhal: get id_obj.');
-        }
-
-        $stmt->bind_param('s', $restiaIdObj);
-        $stmt->execute();
-        $res = $stmt->get_result();
-        $row = ($res instanceof mysqli_result) ? $res->fetch_assoc() : null;
-        if ($res instanceof mysqli_result) {
-            $res->free();
-        }
-        $stmt->close();
-
-        $idObj = (int)($row['id_obj'] ?? 0);
-        if ($idObj <= 0) {
-            throw new RuntimeException('Nepodarilo se dohledat id_obj.');
-        }
-
-        return $idObj;
-    }
-}
-
 if (!function_exists('cb_restia_online_existing_order_map')) {
     function cb_restia_online_existing_order_map(mysqli $conn, array $restiaIds): array
     {
@@ -1138,36 +555,14 @@ if (!function_exists('cb_restia_online_obj_import_finish')) {
 if (!function_exists('cb_restia_online_restia_to_local_nullable')) {
     function cb_restia_online_restia_to_local_nullable(mixed $value): ?string
     {
-        if (!is_string($value) || trim($value) === '') {
-            return null;
-        }
-
-        try {
-            $dt = new DateTimeImmutable(trim($value), new DateTimeZone('UTC'));
-            return $dt->setTimezone(new DateTimeZone('Europe/Prague'))->format('Y-m-d H:i:s');
-        } catch (Throwable $e) {
-            return null;
-        }
+        return cb_dt_utc_to_local_nullable($value);
     }
 }
 
 if (!function_exists('cb_restia_online_report_date')) {
     function cb_restia_online_report_date(?string $localDateTime): string
     {
-        if (!is_string($localDateTime) || trim($localDateTime) === '') {
-            return cb_restia_online_today();
-        }
-
-        try {
-            $dt = new DateTimeImmutable($localDateTime, new DateTimeZone('Europe/Prague'));
-            $hour = (int)$dt->format('G');
-            if ($hour < 6) {
-                $dt = $dt->modify('-1 day');
-            }
-            return $dt->format('Y-m-d');
-        } catch (Throwable $e) {
-            return cb_restia_online_today();
-        }
+        return cb_dt_report_date($localDateTime, 6);
     }
 }
 
@@ -1557,22 +952,8 @@ if (!function_exists('cb_restia_online_format_total_time')) {
     }
 }
 
-if (!function_exists('cb_restia_online_sum_orders')) {
-    function cb_restia_online_sum_orders(array $rows): int
-    {
-        $sum = 0;
-        foreach ($rows as $row) {
-            if (!is_array($row)) {
-                continue;
-            }
-            $sum += max(0, (int)($row['count'] ?? 0));
-        }
-        return $sum;
-    }
-}
-
 if (!function_exists('cb_restia_online_upsert_order')) {
-    function cb_restia_online_upsert_order(mysqli $conn, int $idPob, string $activePosId, array $order, int $existingIdObj = 0): array
+    function cb_restia_online_upsert_order(mysqli $conn, int $idPob, array $order, int $existingIdObj = 0): array
     {
         $restiaIdObj = trim((string)($order['id'] ?? ''));
         if ($restiaIdObj === '') {
@@ -1701,28 +1082,8 @@ if (!function_exists('cb_restia_online_try_flush_api')) {
     }
 }
 
-if (!function_exists('cb_restia_online_default_state')) {
-    function cb_restia_online_default_state(): array
-    {
-        return [
-            'next_date' => '',
-            'start_date' => '',
-            'last_date' => '',
-            'run_from_date' => '',
-            'finished' => 0,
-            'branch_name' => '',
-            'branch_id' => 0,
-            'run_started_at_ms' => 0,
-            'run_row_no' => 0,
-            'found_total' => 0,
-            'branch_db_count' => 0,
-            'cycle_errors' => 0,
-        ];
-    }
-}
-
 if (!function_exists('cb_restia_online_import_day')) {
-    function cb_restia_online_import_day(mysqli $conn, array $auth, array $branch, string $date, array $onlineRange): array
+    function cb_restia_online_import_day(mysqli $conn, array $auth, array $branch, string $date): array
     {
         $dayStartMs = (int)round(microtime(true) * 1000);
         $idPob = (int)$branch['id_pob'];
@@ -1800,7 +1161,7 @@ if (!function_exists('cb_restia_online_import_day')) {
                     }
 
                     try {
-                        $upsert = cb_restia_online_upsert_order($conn, $idPob, $activePosId, $order, $existingIdObj);
+                        $upsert = cb_restia_online_upsert_order($conn, $idPob, $order, $existingIdObj);
                         cb_restia_online_sync_children($conn, (int)$upsert['id_obj'], $idPob, $order, (bool)$upsert['is_new']);
                         $logLines[] = cb_restia_online_log_order((int)$upsert['id_obj'], $order, (bool)($upsert['is_new'] ?? false));
                         $conn->query('RELEASE SAVEPOINT ' . $savepoint);
@@ -1919,29 +1280,14 @@ if (!function_exists('cb_restia_online_log_order')) {
 if (!function_exists('cb_restia_online_current_workday_date')) {
     function cb_restia_online_current_workday_date(): string
     {
-        $tz = new DateTimeZone('Europe/Prague');
-        $now = new DateTimeImmutable('now', $tz);
-        $todayStart = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $now->format('Y-m-d') . ' 06:00:00', $tz);
-        if (!($todayStart instanceof DateTimeImmutable)) {
-            throw new RuntimeException('Nepodarilo se urcit aktualni pracovni den.');
-        }
-        if ($now < $todayStart) {
-            return $todayStart->modify('-1 day')->format('Y-m-d');
-        }
-        return $todayStart->format('Y-m-d');
+        return cb_dt_workday_date(null, 6);
     }
 }
 
 if (!function_exists('cb_restia_online_current_workday_start')) {
     function cb_restia_online_current_workday_start(): DateTimeImmutable
     {
-        $tz = new DateTimeZone('Europe/Prague');
-        $now = new DateTimeImmutable('now', $tz);
-        $todayStart = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $now->format('Y-m-d') . ' 06:00:00', $tz);
-        if (!($todayStart instanceof DateTimeImmutable)) {
-            throw new RuntimeException('Nepodarilo se urcit zacatek aktualniho pracovniho dne.');
-        }
-        return ($now < $todayStart) ? $todayStart->modify('-1 day') : $todayStart;
+        return cb_dt_workday_start(null, 6);
     }
 }
 
@@ -2037,7 +1383,7 @@ if (!function_exists('cb_restia_online_run')) {
             $date = (string)($onlineRange['workday_date'] ?? cb_restia_online_current_workday_date());
             $branches = cb_restia_online_active_branches($conn);
             foreach ($branches as $branch) {
-                $day = cb_restia_online_import_day($conn, $auth, $branch, $date, $onlineRange);
+                $day = cb_restia_online_import_day($conn, $auth, $branch, $date);
                 $branchName = trim((string)($branch['nazev'] ?? ''));
                 if ($branchName === '') {
                     $branchName = 'Pobocka #' . (string)((int)($branch['id_pob'] ?? 0));

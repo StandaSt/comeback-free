@@ -3,6 +3,8 @@
 // karty/prehled_smen.php * Verze: V7 * Aktualizace: 27.03.2026
 declare(strict_types=1);
 
+require_once __DIR__ . '/../lib/format_datum_cas.php';
+
 /*
  * Karta "Přehled směn":
  * - čte data ze smeny_report podle globálního období a výběru poboček,
@@ -53,38 +55,14 @@ if ($selectedPob === []) {
 if (!function_exists('ps_format_cz_date')) {
     function ps_format_cz_date(string $ymd): string
     {
-        $value = trim($ymd);
-        if ($value === '') {
-            return '';
-        }
-        try {
-            $dt = new DateTimeImmutable($value);
-            if (preg_match('/\d{1,2}:\d{2}/', $value) === 1) {
-                return $dt->format('j.n.Y G:i');
-            }
-            return $dt->format('j.n.Y');
-        } catch (Throwable $e) {
-        }
-
-        $dt = DateTimeImmutable::createFromFormat('Y-m-d', $ymd);
-        if (!$dt) {
-            return $ymd;
-        }
-        return $dt->format('j.n.Y');
+        return cb_dt_format_date_short_cs($ymd);
     }
 }
 
 if (!function_exists('ps_format_hm')) {
     function ps_format_hm(string $time): string
     {
-        $t = trim($time);
-        if ($t === '') {
-            return '';
-        }
-        if (preg_match('/^(\d{2}):(\d{2})(:\d{2})?$/', $t, $m) === 1) {
-            return (string)(int)$m[1] . ':' . $m[2];
-        }
-        return $t;
+        return cb_dt_time_hm($time);
     }
 }
 

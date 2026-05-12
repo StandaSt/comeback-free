@@ -3,6 +3,8 @@
 // karty/zadani_reportu.php * Verze: V2 * Aktualizace: 09.03.2026
 declare(strict_types=1);
 
+require_once __DIR__ . '/../lib/format_datum_cas.php';
+
 $cbYesterday = new DateTimeImmutable('yesterday');
 $cbDateValue = $cbYesterday->format('Y-m-d');
 $cbWeekdays = [
@@ -15,7 +17,7 @@ $cbWeekdays = [
     'Sunday' => 'Neděle',
 ];
 $cbWeekdayValue = $cbWeekdays[$cbYesterday->format('l')] ?? '';
-$cbDateDisplay = mb_strtolower($cbWeekdayValue) . ' ' . $cbYesterday->format('j.n.Y');
+$cbDateDisplay = cb_dt_weekday_date_label_cs($cbYesterday, true);
 $cbInstorOptions = [
     'Šebesta Tomáš',
     'Pešová Hana',

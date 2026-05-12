@@ -3,6 +3,8 @@
 // karty/prehled_objednavek.php * Verze: V6 * Aktualizace: 14.04.2026
 declare(strict_types=1);
 
+require_once __DIR__ . '/../lib/format_datum_cas.php';
+
 /*
  * Karta "Přehled objednávek":
  * - mini režim: jen souhrn počtu objednávek
@@ -62,12 +64,7 @@ if ($selectedPob === []) {
 if (!function_exists('obj_format_cz_date')) {
     function obj_format_cz_date(string $ymd): string
     {
-        try {
-            $dt = new DateTimeImmutable($ymd);
-        } catch (Throwable $e) {
-            return $ymd;
-        }
-        return $dt->format('j.n.Y G:i');
+        return cb_dt_format_datetime_short_cs($ymd);
     }
 }
 

@@ -324,6 +324,42 @@ if ($renderMode === 'mini') {
     $loadSharedData();
     $miniRoleOptions = $roleOptions;
     krsort($miniRoleOptions, SORT_NUMERIC);
+    $miniRoleRows = [];
+
+    foreach ($miniRoleOptions as $roleId => $roleName) {
+        $roleId = (int)$roleId;
+        $roleNameText = trim((string)$roleName);
+        $roleNameKey = mb_strtolower($roleNameText, 'UTF-8');
+        $stats = [
+            'all' => (int)($sekceStats[$roleId]['all'] ?? 0),
+            'on' => (int)($sekceStats[$roleId]['on'] ?? 0),
+            'off' => (int)($sekceStats[$roleId]['off'] ?? 0),
+        ];
+
+        if ($roleNameKey === 'ved. směny' || $roleNameKey === 'ved. pobočky') {
+            $bucketKey = 'vedouci_pobocky_smeny';
+            $bucketLabel = 'Vedoucí pobočky, směny';
+        } elseif ($roleNameKey === 'manager' || $roleNameKey === 'top management') {
+            $bucketKey = 'manager';
+            $bucketLabel = 'Manager';
+        } else {
+            $bucketKey = 'role_' . (string)$roleId;
+            $bucketLabel = $roleNameText;
+        }
+
+        if (!isset($miniRoleRows[$bucketKey])) {
+            $miniRoleRows[$bucketKey] = [
+                'label' => $bucketLabel,
+                'all' => 0,
+                'on' => 0,
+                'off' => 0,
+            ];
+        }
+
+        $miniRoleRows[$bucketKey]['all'] += $stats['all'];
+        $miniRoleRows[$bucketKey]['on'] += $stats['on'];
+        $miniRoleRows[$bucketKey]['off'] += $stats['off'];
+    }
 
     ob_start();
     ?>
@@ -336,10 +372,10 @@ if ($renderMode === 'mini') {
       </tr>
     </thead>
     <tbody>
-      <?php foreach ($miniRoleOptions as $roleId => $roleName): ?>
+      <?php foreach ($miniRoleRows as $miniRoleRow): ?>
       <tr>
-        <td><?= h((string)$roleName) ?></td>
-        <td class="txt_r"><strong><?= h((string)($sekceStats[(int)$roleId]['all'] ?? 0)) ?>/<?= h((string)($sekceStats[(int)$roleId]['on'] ?? 0)) ?>/<?= h((string)($sekceStats[(int)$roleId]['off'] ?? 0)) ?></strong></td>
+        <td><?= h((string)($miniRoleRow['label'] ?? '')) ?></td>
+        <td class="txt_r"><strong><?= h((string)($miniRoleRow['all'] ?? 0)) ?>/<?= h((string)($miniRoleRow['on'] ?? 0)) ?>/<?= h((string)($miniRoleRow['off'] ?? 0)) ?></strong></td>
       </tr>
       <?php endforeach; ?>
     </tbody>

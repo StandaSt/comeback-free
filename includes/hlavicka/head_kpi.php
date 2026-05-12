@@ -1,10 +1,13 @@
 <?php
-// includes/hlavicka/head_kpi.php * Verze: V2 * Aktualizace: 06.05.2026
+// includes/hlavicka/head_kpi.php * Verze: V3 * Aktualizace: 11.05.2026
 declare(strict_types=1);
 
-$conn = db();
-if (method_exists($conn, 'set_charset')) {
-    $conn->set_charset('utf8mb4');
+$cbHeadKpiRoleId = (int)($cbUserRoleId ?? ($_SESSION['cb_user']['id_role'] ?? 0));
+$cbHeadKpiIsCurrent = ($cbHeadKpiRoleId > 0 && $cbHeadKpiRoleId <= 3);
+$cbHeadKpiIsFuture = ($cbHeadKpiRoleId >= 5);
+
+if (!$cbHeadKpiIsCurrent && !$cbHeadKpiIsFuture) {
+    return;
 }
 
 $selectedPob = function_exists('get_selected_pobocky') ? get_selected_pobocky() : [];
@@ -52,6 +55,10 @@ $formatRatio = static function (float $value): string {
     return number_format($value, 1, ',', ' ') . ' %';
 };
 
+$formatPlaceholder = static function (): string {
+    return '-';
+};
+
 $normalizePercent = static function ($raw): float {
     if ($raw === null || $raw === '') {
         return 0.0;
@@ -68,6 +75,50 @@ $normalizePercent = static function ($raw): float {
 
     return $value;
 };
+
+if (!$cbHeadKpiIsCurrent) {
+    ?>
+<div class="head_kpi ram_hlavicka zaobleni_10 gap_6 displ_grid sirka100" data-cb-head-kpi="1" aria-label="KPI">
+  <div class="head_kpi_item zaobleni_8 displ_flex">
+    <div class="head_kpi_k text_11 radek_1_1">KPI 1</div>
+    <div class="head_kpi_v text_12 radek_1_1">
+      <?= h($formatPlaceholder()) ?>
+      <span class="head_delta text_11 displ_block">Připravujeme</span>
+    </div>
+  </div>
+
+  <div class="head_kpi_item zaobleni_8 displ_flex">
+    <div class="head_kpi_k text_11 radek_1_1">KPI 2</div>
+    <div class="head_kpi_v text_12 radek_1_1">
+      <?= h($formatPlaceholder()) ?>
+      <span class="head_delta text_11 displ_block">Připravujeme</span>
+    </div>
+  </div>
+
+  <div class="head_kpi_item zaobleni_8 displ_flex">
+    <div class="head_kpi_k text_11 radek_1_1">KPI 3</div>
+    <div class="head_kpi_v text_12 radek_1_1">
+      <?= h($formatPlaceholder()) ?>
+      <span class="head_delta text_11 displ_block">Připravujeme</span>
+    </div>
+  </div>
+
+  <div class="head_kpi_item zaobleni_8 displ_flex">
+    <div class="head_kpi_k text_11 radek_1_1">KPI 4</div>
+    <div class="head_kpi_v text_12 radek_1_1">
+      <?= h($formatPlaceholder()) ?>
+      <span class="head_delta text_11 displ_block">Připravujeme</span>
+    </div>
+  </div>
+</div>
+    <?php
+    return;
+}
+
+$conn = db();
+if (method_exists($conn, 'set_charset')) {
+    $conn->set_charset('utf8mb4');
+}
 
 $lookupIds = static function (mysqli $conn, string $table, string $idCol, string $nameCol, array $names): array {
     $names = array_values(array_filter(array_map('strval', $names), static fn (string $v): bool => trim($v) !== ''));

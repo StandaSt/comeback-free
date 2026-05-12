@@ -141,7 +141,26 @@ $normalizePeriodDateTime = static function (string $v): string {
 $cbObdobiOd = $cbWorkingYesterday;
 $cbObdobiDo = $cbWorkingEnd;
 $cbObdobiMode = trim((string)($_SESSION['cb_obdobi_mode'] ?? 'manual'));
-$cbProdlevaMs = 3000;
+$cbProdlevaMs = 1000;
+
+try {
+    $conn = db();
+    $stmtPause = $conn->prepare('SELECT pauza_obdobi FROM set_system WHERE id_set = 1 LIMIT 1');
+    if ($stmtPause) {
+        $stmtPause->execute();
+        $stmtPause->bind_result($dbPauzaObdobi);
+        if ($stmtPause->fetch()) {
+            $tmpProdleva = (int)($dbPauzaObdobi ?? 1000);
+            if (in_array($tmpProdleva, [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000], true)) {
+                $cbProdlevaMs = $tmpProdleva;
+            }
+        }
+        $stmtPause->close();
+    }
+} catch (Throwable $e) {
+    $cbProdlevaMs = 1000;
+}
+
 if ($cbObdobiMode === 'dnes') {
     $cbObdobiMode = 'vcera';
 }
@@ -153,7 +172,7 @@ $cbUserIdForPeriod = (int)($cbUser['id_user'] ?? 0);
 
 if ($cbLoginOk && $cbUserIdForPeriod > 0) {
     try {
-        $conn = db();
+        $conn = isset($conn) && ($conn instanceof mysqli) ? $conn : db();
         $stmtPeriod = $conn->prepare('SELECT obdobi_od, obdobi_do, obdobi_mode, prodleva FROM user_set WHERE id_user = ? LIMIT 1');
         if ($stmtPeriod) {
             $stmtPeriod->bind_param('i', $cbUserIdForPeriod);
