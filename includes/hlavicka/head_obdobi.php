@@ -101,6 +101,10 @@ if (!in_array($cbManualSaveDelayMs, [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000
     return y + '-' + m + '-' + d;
   }
 
+  function fmtTime(dt){
+    return String(dt.getHours()).padStart(2, '0') + ':' + String(dt.getMinutes()).padStart(2, '0');
+  }
+
   function parseDate(v){
     var s = String(v || '').trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
@@ -310,9 +314,14 @@ if (!in_array($cbManualSaveDelayMs, [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000
       saveTime(doTimeKey, doCasInput.value);
       setActive(range);
       setManualHighlight(false);
+      var doValue = periodValue(val.do, doCasInput.value);
+      if (range === 'tyden' || range === 'mesic' || range === 'rok') {
+        var nowMax = getNowMax();
+        doValue = periodValue(fmtDate(nowMax), fmtTime(nowMax));
+      }
       savePeriod({
         od: periodValue(val.od, odCasInput.value),
-        do: periodValue(val.do, doCasInput.value),
+        do: doValue,
         mode: range
       });
     });

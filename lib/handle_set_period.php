@@ -142,6 +142,10 @@ if (
             }
         }
 
+        if (in_array($newMode, ['tyden', 'mesic', 'rok'], true)) {
+            $newDo = $maxDo;
+        }
+
         if ($newOd > $newDo) {
             http_response_code(422);
             echo json_encode(['ok' => false, 'err' => 'Neplatne poradi dat'], JSON_UNESCAPED_UNICODE);

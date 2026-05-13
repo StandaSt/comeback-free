@@ -196,6 +196,22 @@ if (!function_exists('cb_prehled_db_fmt_rows_approx')) {
     }
 }
 
+if (!function_exists('cb_prehled_db_split_dt')) {
+    function cb_prehled_db_split_dt(string $value): array
+    {
+        $value = trim($value);
+        if ($value === '' || $value === 'Ne') {
+            return ['Ne', ''];
+        }
+
+        $parts = preg_split('/\s+/', $value, 2);
+        return [
+            (string)($parts[0] ?? 'Ne'),
+            (string)($parts[1] ?? ''),
+        ];
+    }
+}
+
 if (!function_exists('cb_prehled_db_random_code')) {
     function cb_prehled_db_random_code(): string
     {
@@ -388,8 +404,8 @@ if (($cbDashboardRenderMode ?? '') === 'mini') {
           <tr>
             <th class="txt_l">Zdroj</th>
             <th class="txt_r">záznamů</th>
-            <th class="txt_r">objem</th>
-            <th class="txt_r">aktualizace</th>
+            <th class="txt_r">MB</th>
+            <th class="txt_c cb_tabular_nums" colspan="2">aktualizace</th>
           </tr>
         </thead>
         <tbody>
@@ -397,8 +413,10 @@ if (($cbDashboardRenderMode ?? '') === 'mini') {
             <tr>
               <td><?= cb_prehled_db_h((string)$item['source']) ?></td>
               <td class="<?= cb_prehled_db_h(cb_prehled_db_count_style((int)$item['count'])) ?>"><strong><?= cb_prehled_db_h(number_format((int)$item['count'], 0, ',', ' ')) ?></strong></td>
-              <td class="txt_r"><?= cb_prehled_db_h(cb_prehled_db_fmt_bytes((int)$item['bytes'])) ?></td>
-              <td class="txt_r"><?= cb_prehled_db_h((string)($item['updated_at'] ?? 'Ne')) ?></td>
+              <td class="txt_r"><?= cb_prehled_db_h(number_format(((float)((int)$item['bytes'])) / 1024 / 1024, 2, ',', ' ')) ?></td>
+              <?php [$cbDatePart, $cbTimePart] = cb_prehled_db_split_dt((string)($item['updated_at'] ?? 'Ne')); ?>
+              <td class="txt_r cb_tabular_nums cb_dt_col_date"><?= cb_prehled_db_h($cbDatePart) ?></td>
+              <td class="txt_r cb_tabular_nums cb_dt_col_time"><?= cb_prehled_db_h($cbTimePart) ?></td>
             </tr>
           <?php endforeach; ?>
         </tbody>

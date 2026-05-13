@@ -112,7 +112,6 @@ if (!function_exists('cb_vypocet_prehled_db')) {
             'smeny' => [
                 'label' => 'Směny',
                 'tables' => [
-                    'smeny_akceptovane',
                     'smeny_aktualizace',
                     'smeny_plan',
                 ],

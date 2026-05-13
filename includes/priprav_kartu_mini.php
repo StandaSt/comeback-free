@@ -116,7 +116,7 @@ function cb_priprav_kartu_mini(
         'maxHtml' => '',
         'renderErrorHtml' => $renderErrorHtml,
         'startExpanded' => $startExpanded ? 1 : 0,
-        // NEMENIT: K15 max ma vzdy zabrat cely povoleny prostor dashboardu stejne jako dalsi full-fill karty.
+        // NEMENIT: Vybrane karty maji v max rezimu zabrat cely povoleny prostor dashboardu podle obsahu.
         'maxFill' => in_array($cardId, [12, 15, 19], true) ? 1 : 0,
         'cardColorUrl' => cb_url('/includes/select_card_color.php?id_karta=' . (string)$cardId),
         'cardIconUrl' => cb_url('/includes/select_card_ikon.php?id_karta=' . (string)$cardId),

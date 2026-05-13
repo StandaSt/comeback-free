@@ -986,6 +986,20 @@ align-items:center;
   letter-spacing:.01em;
 }
 
+.cb_tabular_nums{
+  font-variant-numeric:tabular-nums;
+  font-feature-settings:"tnum" 1;
+  white-space:nowrap;
+}
+
+.table td.cb_dt_col_date{
+  border-right:0;
+}
+
+.table td.cb_dt_col_time{
+  border-left:0;
+}
+
 .dash_box.is-dashboard-loading [data-cb-dash-content="1"]{
   pointer-events:none;
 }
@@ -1007,7 +1021,7 @@ align-items:center;
 .dash_grid{align-items:start;
   align-content:start;
   min-width:0;
-  --MIN_SIRKA_KARTY:440px;
+  --MIN_SIRKA_KARTY:370px;
 }
 
 .dash_grid.dash_cols_3{
@@ -1953,7 +1967,9 @@ align-items:center;
 
 .zr_layout{
   display:grid;
-  grid-template-columns:minmax(0, 1fr) 300px;
+  width:max-content;
+  max-width:100%;
+  grid-template-columns:800px 300px;
   align-items:start;
 }
 
@@ -1965,8 +1981,8 @@ align-items:center;
 
 .zr_top{
   display:grid;
-  grid-template-columns:280px minmax(0, 1fr);
-  align-items:start;
+  grid-template-columns:300px minmax(0, 1fr);
+  align-items:stretch;
 }
 
 .zr_left,
@@ -2049,32 +2065,26 @@ align-items:center;
   width:160px;
 }
 
-.zr_money_input{
-  width:10ch;
+.zr_cash_table{
+  width:100%;
+  table-layout:fixed;
 }
 
 .zr_cash_table th,
 .zr_cash_table td{
   padding:4px 6px;
+  background:transparent;
 }
 
 .zr_cash_table th{
   padding-bottom:3px;
   color:var(--clr_seda_4);
-}
-
-.zr_cash_table thead th,
-.zr_cash_table tbody tr:nth-child(2) th{
   font-size:var(--fs_11);
   letter-spacing:.03em;
 }
 
-.zr_cash_table tbody tr:nth-child(odd) td{
-  background:var(--clr_pruhledna_bila_92);
-}
-
-.zr_cash_table tbody tr:nth-child(even) td{
-  background:var(--clr_pruhledna_bila_92);
+.zr_cash_table td .zr_money_input{
+  width:100%;
 }
 
 .zr_person_table th,
@@ -2092,8 +2102,8 @@ align-items:center;
   border-top:1px solid var(--clr_pruhledna_seda_18);
 }
 
-.zr_person_table tbody tr:nth-child(odd) td{
-  background:var(--clr_pruhledna_bila_92);
+.zr_person_table tbody tr[data-zr-editor]{
+  border-top:0;
 }
 
 .zr_person_col_name{
@@ -2106,6 +2116,10 @@ align-items:center;
 
 .zr_person_col_break{
   width:25px;
+}
+
+.zr_person_table td.zr_person_cell_break input{
+  width:5ch;
 }
 
 .zr_person_col_hours{
@@ -2289,13 +2303,8 @@ align-items:center;
 
 .zr_intro_section .zr_table td,
 .zr_intro_section .zr_table th{
-  padding-top:6px;
-  padding-bottom:6px;
-}
-
-.zr_ops_section .zr_restia_table td,
-.zr_restia_section .zr_restia_table td{
-  background:var(--clr_pruhledna_bila_92);
+  padding-top:3px;
+  padding-bottom:3px;
 }
 
 .cb_cardmode_modal{
@@ -2456,7 +2465,7 @@ align-items:center;
 
 
 /* =========================================================
-   MAX TABULKY – CILOVY STAV (NOVA VRSTVA)
+   MAX TABULKY â€“ CILOVY STAV (NOVA VRSTVA)
    ---------------------------------------------------------
    Tato sekce ma byt novy jednotny zaklad pro vsechny tabulky
    v max rezimu karet.
@@ -2479,7 +2488,7 @@ align-items:center;
 
 
 /* =========================
-   MAX TABULKA – ZAKLAD
+   MAX TABULKA â€“ ZAKLAD
    ========================= */
 
 /* Hlavni trida cele tabulky v max karte. */
@@ -2494,10 +2503,10 @@ align-items:center;
   padding:6px 12px;                         /* vnitrni mezera v bunce: nahore/dole 6px, vlevo/vpravo 12px */
   border:1px solid var(--clr_seda_2);       /* jednotny sedy ramecek bunek */
   font-size:var(--fs_14);                   /* bezna velikost textu v tabulce */
-  vertical-align:middle;                    /* obsah bunky bude vyskově uprostred */
+  vertical-align:middle;                    /* obsah bunky bude vyskovÄ› uprostred */
 }
 
-/* Hlavicka tabulky – nazvy sloupcu. */
+/* Hlavicka tabulky â€“ nazvy sloupcu. */
 .card-max-table thead th{
   background:var(--clr_seda_1);             /* svetle sede pozadi hlavicky */
   font-size:var(--fs_13);                   /* hlavicka je o trochu mensi nez obsah */
@@ -2508,19 +2517,19 @@ align-items:center;
   z-index:2;                                /* hlavicka bude nad radky tabulky */
 }
 
-/* Zebra efekt – kazdy sudy radek ma jemne sede pozadi. */
+/* Zebra efekt â€“ kazdy sudy radek ma jemne sede pozadi. */
 .card-max-table tbody tr:nth-child(even) td{
   background:var(--clr_seda_1);
 }
 
-/* Hover efekt – radek pod mysi se podbarvi modre. */
+/* Hover efekt â€“ radek pod mysi se podbarvi modre. */
 .card-max-table tbody tr:hover td{
   background:var(--clr_modra_7);
 }
 
 
 /* =========================
-   MAX TABULKA – FILTRY
+   MAX TABULKA â€“ FILTRY
    ========================= */
 
 /*
@@ -2531,7 +2540,7 @@ align-items:center;
   background:var(--clr_bila);               /* filtracni radek ma bile pozadi */
   padding:4px 8px;                          /* mensi vnitrni mezera nez bezne bunky */
   height:34px;                              /* jednotna vyska celeho filtracniho radku */
-  vertical-align:middle;                    /* filtracni pole bude vyskově uprostred */
+  vertical-align:middle;                    /* filtracni pole bude vyskovÄ› uprostred */
   box-shadow:inset 0 -1px 0 var(--clr_seda_2); /* jemna vnitrni spodni cara */
 }
 
@@ -2566,7 +2575,7 @@ align-items:center;
 
 
 /* =========================
-   MAX TABULKA – SPODNI LISTA
+   MAX TABULKA â€“ SPODNI LISTA
    ========================= */
 
 /*
@@ -2615,7 +2624,7 @@ align-items:center;
   color:var(--clr_modra_3);                 /* modry text aktualni stranky */
 }
 
-/* Zamčeno – pouze tečka (nano tlačítko) */
+/* ZamÄŤeno â€“ pouze teÄŤka (nano tlaÄŤĂ­tko) */
 .nano_dot{
   font-size:18px;
   line-height:1;

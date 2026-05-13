@@ -129,9 +129,82 @@ function smenyPlanBranchLastImportLabel(array $branch): string
     return 'do ' . $lastImportDay;
 }
 
+function smenyPlanNormalizeBranchName(string $name): string
+{
+    $name = trim(mb_strtolower($name, 'UTF-8'));
+    $name = preg_replace('/\s+/u', ' ', $name);
+
+    return is_string($name) ? $name : '';
+}
+
+function smenyPlanApiBranchMap(string $token): array
+{
+    if ($token === '') {
+        return [];
+    }
+
+    $response = cb_smeny_graphql(
+        GQL_URL,
+        'query{ branchFindAll{ id name } }',
+        [],
+        $token,
+        REQUEST_TIMEOUT_SEC
+    );
+
+    $branches = $response['branchFindAll'] ?? [];
+    if (!is_array($branches)) {
+        return [];
+    }
+
+    $map = [];
+    foreach ($branches as $branch) {
+        if (!is_array($branch)) {
+            continue;
+        }
+
+        $id = (int)($branch['id'] ?? 0);
+        $name = trim((string)($branch['name'] ?? ''));
+        if ($id <= 0 || $name === '') {
+            continue;
+        }
+
+        $map[] = [
+            'id' => $id,
+            'name' => $name,
+            'normalized_name' => smenyPlanNormalizeBranchName($name),
+        ];
+    }
+
+    return $map;
+}
+
+function smenyPlanFindApiBranch(array $apiBranches, string $localName): ?array
+{
+    $normalizedLocalName = smenyPlanNormalizeBranchName($localName);
+    if ($normalizedLocalName === '') {
+        return null;
+    }
+
+    foreach ($apiBranches as $apiBranch) {
+        if (($apiBranch['normalized_name'] ?? '') === $normalizedLocalName) {
+            return $apiBranch;
+        }
+    }
+
+    foreach ($apiBranches as $apiBranch) {
+        $apiName = (string)($apiBranch['normalized_name'] ?? '');
+        if ($apiName !== '' && str_contains($apiName, $normalizedLocalName)) {
+            return $apiBranch;
+        }
+    }
+
+    return null;
+}
+
 function getBranches(string $token = ''): array
 {
     $db = db();
+    $apiBranches = smenyPlanApiBranchMap($token);
     $sql = "
         SELECT
             p.id_pob,
@@ -168,6 +241,9 @@ function getBranches(string $token = ''): array
     $rows = [];
     while ($row = $res->fetch_assoc()) {
         if (is_array($row)) {
+            $apiBranch = smenyPlanFindApiBranch($apiBranches, (string)($row['nazev'] ?? ''));
+            $row['smeny_branch_id'] = is_array($apiBranch) ? (int)($apiBranch['id'] ?? 0) : 0;
+            $row['smeny_branch_name'] = is_array($apiBranch) ? (string)($apiBranch['name'] ?? '') : '';
             $rows[] = $row;
         }
     }
@@ -178,6 +254,11 @@ function getBranches(string $token = ''): array
 
 function branchStartDay(array $branch): string
 {
+    $lastImportDay = trim((string)($branch['last_import_day'] ?? ''));
+    if ($lastImportDay !== '') {
+        return normalizeMonday($lastImportDay)->modify('+1 week')->format('Y-m-d');
+    }
+
     $startSmeny = trim((string)($branch['start_smeny'] ?? ''));
     if ($startSmeny === '') {
         throw new RuntimeException('Pobocka nema start_smeny.');
@@ -188,12 +269,7 @@ function branchStartDay(array $branch): string
 
 function branchSkipWeeks(array $branch): int
 {
-    $startSmeny = trim((string)($branch['start_smeny'] ?? ''));
-    if ($startSmeny === '') {
-        throw new RuntimeException('Pobocka nema start_smeny.');
-    }
-
-    return calculateSkipWeeksByStartDay($startSmeny);
+    return calculateSkipWeeksByStartDay(branchStartDay($branch));
 }
 
 function getWeekRaw(string $token, int $branchId, int $skipWeeks): ?array
@@ -548,93 +624,16 @@ function printBranchProgress(int $skipWeeks, int $idPob, string $startDay, int $
     out($line);
 }
 
-function saveAcceptedShifts(array $week, int $idPob): void
-{
-    if (!isset($week['id'], $week['startDay'], $week['shiftDays']) || !is_array($week['shiftDays'])) {
-        return;
-    }
-
-    $smenyWeekId = (int)$week['id'];
-    $startDayApi = (string)$week['startDay'];
-    $rows = [];
-
-    foreach ($week['shiftDays'] as $shiftDay) {
-        if (!is_array($shiftDay)) {
-            continue;
-        }
-
-        $smenyDayId = (int)($shiftDay['id'] ?? 0);
-        $den = (string)($shiftDay['day'] ?? '');
-        $datum = (new DateTimeImmutable($startDayApi))->modify('+' . dayOffset($den) . ' day')->format('Y-m-d');
-
-        foreach (($shiftDay['shiftRoles'] ?? []) as $shiftRole) {
-            if (!is_array($shiftRole)) {
-                continue;
-            }
-
-            $smenyRoleId = (int)($shiftRole['id'] ?? 0);
-            $idSlot = (int)($shiftRole['type']['id'] ?? 0);
-
-            foreach (($shiftRole['shiftHours'] ?? []) as $shiftHour) {
-                if (!is_array($shiftHour) || !isset($shiftHour['employee']['id'])) {
-                    continue;
-                }
-
-                $rows[] = [
-                    'smeny_week_id' => $smenyWeekId,
-                    'smeny_day_id' => $smenyDayId,
-                    'smeny_role_id' => $smenyRoleId,
-                    'shift_hour_id' => (int)($shiftHour['id'] ?? 0),
-                    'datum' => $datum,
-                    'den' => $den,
-                    'id_pob' => $idPob,
-                    'id_slot' => $idSlot,
-                    'start_hour' => (int)($shiftHour['startHour'] ?? 0),
-                    'confirmed' => isset($shiftHour['confirmed']) && $shiftHour['confirmed'] ? 1 : 0,
-                    'is_first' => isset($shiftHour['isFirst']) && $shiftHour['isFirst'] ? 1 : 0,
-                    'id_user' => (int)$shiftHour['employee']['id'],
-                ];
-            }
-        }
-    }
-
-    if (count($rows) === 0) {
-        return;
-    }
-
-    $db = db();
-    $values = [];
-
-    foreach ($rows as $row) {
-        $values[] = '(' .
-            (int)$row['smeny_week_id'] . ',' .
-            (int)$row['smeny_day_id'] . ',' .
-            (int)$row['smeny_role_id'] . ',' .
-            (int)$row['shift_hour_id'] . ", '" .
-            $db->real_escape_string($row['datum']) . "', '" .
-            $db->real_escape_string($row['den']) . "'," .
-            (int)$row['id_pob'] . ',' .
-            (int)$row['id_slot'] . ',' .
-            (int)$row['start_hour'] . ',' .
-            (int)$row['confirmed'] . ',' .
-            (int)$row['is_first'] . ',' .
-            (int)$row['id_user'] .
-            ')';
-    }
-
-    $sql = 'INSERT INTO smeny_akceptovane (
-        smeny_week_id, smeny_day_id, smeny_role_id, shift_hour_id,
-        datum, den, id_pob, id_slot, start_hour, confirmed, is_first, id_user
-    ) VALUES ' . implode(",\n", $values);
-    $db->query($sql);
-}
-
-function processBranch(string $token, int $skipWeeks, int $idPob, string $nazevPob = ''): array
+function processBranch(string $token, int $skipWeeks, int $idPob, int $apiBranchId, string $nazevPob = ''): array
 {
     $defaultStartDay = startDayBySkipWeeks($skipWeeks);
 
     try {
-        $week = getWeekRaw($token, $idPob, $skipWeeks);
+        if ($apiBranchId <= 0) {
+            throw new RuntimeException('Pobočka nebyla nalezena v API Směn podle názvu.');
+        }
+
+        $week = getWeekRaw($token, $apiBranchId, $skipWeeks);
         if ($week === null) {
             deletePlanRows($defaultStartDay, $idPob);
             markBranchAsOk($skipWeeks, $idPob, $defaultStartDay, 0, 0, 'API vratilo prazdny tyden');
@@ -652,7 +651,6 @@ function processBranch(string $token, int $skipWeeks, int $idPob, string $nazevP
         $rows = buildBlocks($week, $idPob);
         $blocks = saveBlocks($startDay, $idPob, $rows);
         $hours = countHours($rows);
-        saveAcceptedShifts($week, $idPob);
         markBranchAsOk($skipWeeks, $idPob, $startDay, $blocks, $hours, null);
 
         return [
@@ -715,7 +713,7 @@ function renderSmenyPlanScreen(array $info, string $mode = 'pick'): void
         <p class="card_text <?= h($messageClass) ?> text_tucny"><?= h($message) ?></p>
       <?php endif; ?>
       <?php if ($mode === 'run'): ?>
-        <p class="card_text txt_seda">Poboček: <?= h((string)$branchesCount) ?> | bloků: <?= h((string)$blocks) ?> | hodin: <?= h((string)$hours) ?>.</p>
+        <p class="card_text txt_seda">Pobočka: <?= h(is_array($selectedBranch) ? (string)($selectedBranch['nazev'] ?? '') : '') ?> | bloků: <?= h((string)$blocks) ?> | hodin: <?= h((string)$hours) ?>.</p>
       <?php endif; ?>
 
       <?php if ($mode === 'pick'): ?>
@@ -759,8 +757,13 @@ function renderSmenyPlanScreen(array $info, string $mode = 'pick'): void
       <?php else: ?>
         <div class="card_actions gap_8 displ_flex odstup_horni_10">
           <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
+            <input type="hidden" name="run_smeny_plan" value="1">
             <input type="hidden" name="cb_action" value="back">
             <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 displ_inline_flex">Zpět</button>
+          </form>
+          <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
+            <input type="hidden" name="back_admin_init" value="1">
+            <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 displ_inline_flex">Konec</button>
           </form>
         </div>
       <?php endif; ?>
@@ -775,6 +778,8 @@ function run(array $branch): array
     $totalStart = microtime(true);
     $token = (string)($_SESSION['cb_token'] ?? '');
     $idPob = (int)($branch['id_pob'] ?? 0);
+    $apiBranchId = (int)($branch['smeny_branch_id'] ?? 0);
+    $apiBranchName = trim((string)($branch['smeny_branch_name'] ?? ''));
     $nazevPob = trim((string)($branch['nazev'] ?? ''));
     $startSmeny = trim((string)($branch['start_smeny'] ?? ''));
 
@@ -808,6 +813,21 @@ function run(array $branch): array
         ];
     }
 
+    if ($apiBranchId <= 0) {
+        return [
+            'status' => 'CHYBA',
+            'message' => 'Pobočka nebyla nalezena v API Směn podle názvu.',
+            'start_day' => '',
+            'skip_weeks' => 0,
+            'branches_list' => [],
+            'selected_branch' => $branch,
+            'selected_branch_id' => $idPob,
+            'blocks' => 0,
+            'hours' => 0,
+            'brake_exists' => skipweekBrakeExists(),
+        ];
+    }
+
     $totalBlocks = 0;
     $totalHours = 0;
     $status = 'OK';
@@ -817,10 +837,12 @@ function run(array $branch): array
     $weeksSincePause = 0;
 
     $startLine = sprintf(
-        'Start importu směn | %s | pobočka=%d | %s | start_smeny=%s | pondělí=%s | od skipWeeks=%d | do skipWeeks=0',
+        'Start importu směn | %s | pobočka=%d | %s | API pobočka=%d | %s | start_smeny=%s | pondělí=%s | od skipWeeks=%d | do skipWeeks=0',
         nowSql(),
         $idPob,
         $nazevPob !== '' ? $nazevPob : 'bez názvu',
+        $apiBranchId,
+        $apiBranchName !== '' ? $apiBranchName : 'bez názvu',
         $startSmeny,
         $branchStartDay,
         $skipWeeks
@@ -836,7 +858,7 @@ function run(array $branch): array
             break;
         }
 
-        $weekResult = processBranch($token, $skipWeeks, $idPob, $nazevPob);
+        $weekResult = processBranch($token, $skipWeeks, $idPob, $apiBranchId, $nazevPob);
 
         printBranchProgress(
             $skipWeeks,

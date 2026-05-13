@@ -243,6 +243,10 @@ if ($cbLoginOk && $cbUserIdForPeriod > 0) {
     }
 }
 
+if (in_array($cbObdobiMode, ['tyden', 'mesic', 'rok'], true)) {
+    $cbObdobiDo = $cbObdobiMax;
+}
+
 $_SESSION['cb_obdobi_od'] = $cbObdobiOd;
 $_SESSION['cb_obdobi_do'] = $cbObdobiDo;
 $_SESSION['cb_obdobi_mode'] = $cbObdobiMode;

@@ -10,7 +10,7 @@ if ((int)$row['restia_online'] === 0) {
     return;
 }
 
-function cb_restia_online_kontrola()
+function cb_restia_online_kontrola(bool $force = false)
 {
     $db = db(); // správné DB připojení
 
@@ -29,7 +29,7 @@ function cb_restia_online_kontrola()
     // 2) poslední dokončený běh
     $q = $db->query("SELECT konec FROM online_restia WHERE aktivni = 0 ORDER BY konec DESC LIMIT 1");
 
-    if ($q && $row = $q->fetch_assoc()) {
+    if (!$force && $q && $row = $q->fetch_assoc()) {
         if ($row['konec']) {
             $last = strtotime($row['konec']);
             if ((time() - $last) < 120) {

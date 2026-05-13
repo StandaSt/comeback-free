@@ -1,4 +1,4 @@
-// js/karty_report_person.js * Verze: V1 * Aktualizace: 11.03.2026
+// js/karty_report_person.js * Verze: V2 * Aktualizace: 12.05.2026
 'use strict';
 
 (function (w) {
@@ -48,6 +48,32 @@
     input.name = name;
     input.value = String(value ?? '');
     return input;
+  }
+
+  function buildTimeSelect(sourceSelect, name, selected) {
+    const select = document.createElement('select');
+    select.name = name;
+    select.setAttribute(name.indexOf('zacatek') !== -1 ? 'data-zr-start' : 'data-zr-end', '');
+
+    if (sourceSelect instanceof HTMLSelectElement) {
+      Array.from(sourceSelect.options).forEach((option) => {
+        const item = document.createElement('option');
+        item.value = option.value;
+        item.textContent = option.textContent;
+        item.selected = option.value === selected;
+        select.appendChild(item);
+      });
+    }
+
+    if (select.options.length === 0) {
+      const item = document.createElement('option');
+      item.value = selected;
+      item.textContent = selected;
+      item.selected = true;
+      select.appendChild(item);
+    }
+
+    return select;
   }
 
   function syncHoursForRow(row) {
@@ -111,10 +137,9 @@
       return;
     }
 
-    const restiaEl = row.querySelector('input[name="kuryr_pocet_rozvozu_restia[]"]');
-    const manualEl = row.querySelector('input[name="kuryr_pocet_rozvozu_manual[]"]');
+    const restiaEl = getEditorField(row, 'delivery_restia');
+    const manualEl = getEditorField(row, 'delivery_manual');
     const totalEl = row.querySelector('[data-zr-delivery-total]');
-    const carCheck = row.querySelector('[data-zr-car-check]');
     const phmValueEl = row.querySelector('[data-zr-phm-value]');
     const phmHiddenEl = row.querySelector('[data-zr-phm-hidden]');
 
@@ -129,16 +154,15 @@
       const restia = Number.parseInt(restiaEl.value || '0', 10) || 0;
       const manual = Number.parseInt(manualEl.value || '0', 10) || 0;
       const total = restia + manual;
-      const phm = total * 40;
+      const phm = total * 45;
       totalEl.value = String(total);
       if (phmValueEl instanceof HTMLElement) {
-        phmValueEl.textContent = String(phm).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' Kč';
+        phmValueEl.textContent = String(phm).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' Kc';
       }
       if (phmHiddenEl instanceof HTMLInputElement) {
         phmHiddenEl.value = String(phm);
       }
     }
-
   }
 
   function resetEditorRow(root, type) {
@@ -182,7 +206,7 @@
     });
     row.querySelectorAll('[data-zr-phm-value]').forEach((el) => {
       if (el instanceof HTMLElement) {
-        el.textContent = '0 Kč';
+        el.textContent = '0 Kc';
       }
     });
     syncKuryrExtras(row);
@@ -209,16 +233,39 @@
 
     const nameCell = buildSavedCell(name.value);
     nameCell.appendChild(buildHidden(type + '_jmeno[]', name.value));
-    nameCell.appendChild(buildHidden(type + '_zacatek[]', start.value));
-    nameCell.appendChild(buildHidden(type + '_konec[]', end.value));
-    nameCell.appendChild(buildHidden(type + '_pauza_hod[]', breakEl.value || '0'));
-    nameCell.appendChild(buildHidden(type + '_hodiny[]', hoursHiddenEl.value));
 
+    savedRow.setAttribute('data-zr-person-row', type);
     savedRow.appendChild(nameCell);
-    savedRow.appendChild(buildSavedCell(start.value));
-    savedRow.appendChild(buildSavedCell(end.value));
-    savedRow.appendChild(buildSavedCell(breakEl.value || '0'));
-    savedRow.appendChild(buildSavedCell(hoursHiddenEl.value + ' hod.'));
+
+    const startCell = document.createElement('td');
+    startCell.appendChild(buildTimeSelect(start, type + '_zacatek[]', start.value));
+    savedRow.appendChild(startCell);
+
+    const endCell = document.createElement('td');
+    endCell.appendChild(buildTimeSelect(end, type + '_konec[]', end.value));
+    savedRow.appendChild(endCell);
+
+    const breakCell = document.createElement('td');
+    breakCell.className = 'zr_person_cell_break';
+    const breakInput = document.createElement('input');
+    breakInput.type = 'text';
+    breakInput.inputMode = 'decimal';
+    breakInput.name = type + '_pauza_hod[]';
+    breakInput.value = breakEl.value || '0';
+    breakInput.setAttribute('data-zr-break', '');
+    breakCell.appendChild(breakInput);
+    savedRow.appendChild(breakCell);
+
+    const hoursCell = document.createElement('td');
+    const hoursValue = document.createElement('strong');
+    hoursValue.className = 'zr_saved_value';
+    hoursValue.setAttribute('data-zr-hours', '');
+    hoursValue.textContent = hoursHiddenEl.value + ' hod.';
+    hoursCell.appendChild(hoursValue);
+    const hoursHidden = buildHidden(type + '_hodiny[]', hoursHiddenEl.value);
+    hoursHidden.setAttribute('data-zr-hours-hidden', '');
+    hoursCell.appendChild(hoursHidden);
+    savedRow.appendChild(hoursCell);
 
     if (type === 'kuryr') {
       const deliveryRestia = getEditorField(row, 'delivery_restia');
@@ -233,19 +280,35 @@
       const carValue = carCheck instanceof HTMLInputElement && carCheck.checked ? '1' : '0';
       const phmValue = phmHidden instanceof HTMLInputElement ? (phmHidden.value || '0') : '0';
 
-      const deliveryCell = buildSavedCell(deliveryRestiaValue + ' + ' + deliveryManualValue);
-      deliveryCell.appendChild(buildHidden('kuryr_pocet_rozvozu_restia[]', deliveryRestiaValue));
-      deliveryCell.appendChild(buildHidden('kuryr_pocet_rozvozu_manual[]', deliveryManualValue));
-      deliveryCell.appendChild(buildHidden('kuryr_pocet_rozvozu[]', deliveryTotalValue));
-      deliveryCell.appendChild(buildHidden('kuryr_vlastni_vuz[]', carValue));
-      deliveryCell.appendChild(buildHidden('kuryr_vyplatit_phm[]', phmValue));
-
-      savedRow.appendChild(deliveryCell);
-      savedRow.appendChild(buildSavedCell(carValue === '1' ? 'Ano' : 'Ne'));
-      savedRow.appendChild(buildSavedCell(String(phmValue).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' Kč'));
-      savedRow.appendChild(buildSavedCell(''));
+      const summaryCell = buildSavedCell(
+        deliveryRestiaValue + ' + ' + deliveryManualValue
+        + ' / '
+        + (carValue === '1' ? 'Ano' : 'Ne')
+        + ' / '
+        + String(phmValue).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' Kc'
+      );
+      summaryCell.appendChild(buildHidden('kuryr_pocet_rozvozu_restia[]', deliveryRestiaValue));
+      summaryCell.appendChild(buildHidden('kuryr_pocet_rozvozu_manual[]', deliveryManualValue));
+      summaryCell.appendChild(buildHidden('kuryr_pocet_rozvozu[]', deliveryTotalValue));
+      summaryCell.appendChild(buildHidden('kuryr_vlastni_vuz[]', carValue));
+      summaryCell.appendChild(buildHidden('kuryr_vyplatit_phm[]', phmValue));
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'zr_row_save zaobleni_10';
+      removeBtn.setAttribute('data-zr-remove-row', '');
+      removeBtn.textContent = 'Odebrat';
+      summaryCell.appendChild(removeBtn);
+      savedRow.appendChild(summaryCell);
     } else {
-      savedRow.appendChild(buildSavedCell(''));
+      const removeCell = document.createElement('td');
+      removeCell.className = 'txt_r';
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'zr_row_save zaobleni_10';
+      removeBtn.setAttribute('data-zr-remove-row', '');
+      removeBtn.textContent = 'Odebrat';
+      removeCell.appendChild(removeBtn);
+      savedRow.appendChild(removeCell);
     }
 
     list.appendChild(savedRow);
@@ -294,6 +357,22 @@
         syncSaveButton(row);
         if (typeof w.cbSyncReportFormState === 'function') {
           w.cbSyncReportFormState(root);
+        }
+      });
+
+      list.addEventListener('click', (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+
+        const removeBtn = target.closest('[data-zr-remove-row]');
+        if (!(removeBtn instanceof HTMLButtonElement)) return;
+
+        const row = removeBtn.closest('[data-zr-person-row]');
+        if (row instanceof HTMLTableRowElement && row.getAttribute('data-zr-editor') === null) {
+          row.remove();
+          if (typeof w.cbSyncReportFormState === 'function') {
+            w.cbSyncReportFormState(root);
+          }
         }
       });
     });

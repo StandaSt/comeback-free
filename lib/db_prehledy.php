@@ -214,7 +214,7 @@ if (!function_exists('cb_db_fmt_bytes')) {
     function cb_db_fmt_bytes(int $bytes): string
     {
         if ($bytes < 1024) {
-            return $bytes . ' B';
+            return number_format((float)$bytes / 1024, 2, ',', ' ');
         }
 
         $units = ['KB', 'MB', 'GB', 'TB'];
@@ -229,7 +229,7 @@ if (!function_exists('cb_db_fmt_bytes')) {
             }
         }
 
-        return number_format($value, 2, ',', ' ') . ' ' . $unit;
+        return number_format($value, 2, ',', ' ');
     }
 }
 

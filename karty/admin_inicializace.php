@@ -116,6 +116,22 @@ if (!function_exists('cb_admin_init_count_fmt')) {
     }
 }
 
+if (!function_exists('cb_admin_init_split_dt')) {
+    function cb_admin_init_split_dt(string $value): array
+    {
+        $value = trim($value);
+        if ($value === '' || $value === 'Ne') {
+            return ['Ne', ''];
+        }
+
+        $parts = preg_split('/\s+/', $value, 2);
+        $datePart = (string)($parts[0] ?? 'Ne');
+        $timePart = (string)($parts[1] ?? '');
+
+        return [$datePart, $timePart];
+    }
+}
+
 if (!function_exists('cb_admin_init_restia_online_enabled')) {
     function cb_admin_init_restia_online_enabled(mysqli $conn): bool
     {
@@ -144,8 +160,8 @@ if (($cbDashboardRenderMode ?? '') === 'mini') {
           <tr>
             <th class="txt_l">Zdroj</th>
             <th class="txt_r">záznamů</th>
-            <th class="txt_r">objem</th>
-            <th class="txt_r">aktualizace</th>
+            <th class="txt_r">MB</th>
+            <th class="txt_c cb_tabular_nums" colspan="2">aktualizace</th>
           </tr>
         </thead>
         <tbody>
@@ -154,7 +170,9 @@ if (($cbDashboardRenderMode ?? '') === 'mini') {
               <td><?= h((string)$row['source']) ?></td>
               <td class="<?= ((int)$row['count'] === 0) ? 'txt_r txt_cervena text_tucny' : 'txt_r' ?>"><strong><?= h(number_format((int)$row['count'], 0, ',', ' ')) ?></strong></td>
               <td class="txt_r"><?= h(cb_db_fmt_bytes((int)$row['bytes'])) ?></td>
-              <td class="txt_r"><?= h((string)($row['updated_at'] ?? 'Ne')) ?></td>
+              <?php [$cbDatePart, $cbTimePart] = cb_admin_init_split_dt((string)($row['updated_at'] ?? 'Ne')); ?>
+              <td class="txt_r cb_tabular_nums cb_dt_col_date"><?= h($cbDatePart) ?></td>
+              <td class="txt_r cb_tabular_nums cb_dt_col_time"><?= h($cbTimePart) ?></td>
             </tr>
           <?php endforeach; ?>
         </tbody>
@@ -345,29 +363,33 @@ $card_min_html = ''
     . '      <tr>'
     . '        <th class="txt_l">Zdroj</th>'
     . '        <th class="txt_r">záznamů</th>'
-    . '        <th class="txt_r">aktualizace</th>'
+    . '        <th class="txt_c cb_tabular_nums" colspan="2">aktualizace</th>'
     . '      </tr>'
     . '    </thead>'
     . '    <tbody>'
     . '      <tr>'
     . '        <td>Restia</td>'
     . '        <td class="txt_r"><strong>' . h(cb_admin_init_count_fmt($cbRestiaCount)) . '</strong></td>'
-    . '        <td class="txt_r">' . h($cbRestiaDate) . '</td>'
+    . '        <td class="txt_r cb_tabular_nums cb_dt_col_date">' . h(cb_admin_init_split_dt($cbRestiaDate)[0]) . '</td>'
+    . '        <td class="txt_r cb_tabular_nums cb_dt_col_time">' . h(cb_admin_init_split_dt($cbRestiaDate)[1]) . '</td>'
     . '      </tr>'
     . '      <tr>'
     . '        <td>Objednávky</td>'
     . '        <td class="txt_r"><strong>' . h(cb_admin_init_count_fmt($cbObjednavkyCount)) . '</strong></td>'
-    . '        <td class="txt_r">' . h($cbObjednavkyDate) . '</td>'
+    . '        <td class="txt_r cb_tabular_nums cb_dt_col_date">' . h(cb_admin_init_split_dt($cbObjednavkyDate)[0]) . '</td>'
+    . '        <td class="txt_r cb_tabular_nums cb_dt_col_time">' . h(cb_admin_init_split_dt($cbObjednavkyDate)[1]) . '</td>'
     . '      </tr>'
     . '      <tr>'
     . '        <td>Směny</td>'
     . '        <td class="txt_r"><strong>' . h(cb_admin_init_count_fmt($cbSmenyCount)) . '</strong></td>'
-    . '        <td class="txt_r">' . h($cbSmenyDate) . '</td>'
+    . '        <td class="txt_r cb_tabular_nums cb_dt_col_date">' . h(cb_admin_init_split_dt($cbSmenyDate)[0]) . '</td>'
+    . '        <td class="txt_r cb_tabular_nums cb_dt_col_time">' . h(cb_admin_init_split_dt($cbSmenyDate)[1]) . '</td>'
     . '      </tr>'
     . '      <tr>'
     . '        <td>Reporty</td>'
     . '        <td class="txt_r"><strong>' . h(cb_admin_init_count_fmt($cbReportCount)) . '</strong></td>'
-    . '        <td class="txt_r">' . h($cbReportDate) . '</td>'
+    . '        <td class="txt_r cb_tabular_nums cb_dt_col_date">' . h(cb_admin_init_split_dt($cbReportDate)[0]) . '</td>'
+    . '        <td class="txt_r cb_tabular_nums cb_dt_col_time">' . h(cb_admin_init_split_dt($cbReportDate)[1]) . '</td>'
     . '      </tr>'
     . '    </tbody>'
     . '  </table>'

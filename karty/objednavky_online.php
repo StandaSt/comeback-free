@@ -624,7 +624,7 @@ try {
     ?>
     <div class="sirka100 displ_flex flex_sloupec gap_4" style="height:100%; min-height:0;">
       <div class="displ_flex jc_mezi text_11 txt_seda gap_8" style="align-items:flex-start; flex-wrap:wrap; line-height:1.15;">
-        <span>Aktualizace: <?= h($aktualizaceDoText) ?></span>
+        
         <span class="displ_flex gap_8" style="flex-wrap:wrap; justify-content:flex-end;">
           <span><strong style="color:#16a34a;"><?= h((string)$sumDokonceno) ?></strong> dokončeno</span>
           <span><strong style="color:#f59e0b;"><?= h((string)$sumNaCeste) ?></strong> na cestě</span>
