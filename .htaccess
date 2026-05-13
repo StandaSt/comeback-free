@@ -19,6 +19,13 @@ RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L,NE]
     Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" "expr=%{HTTPS} == 'on'"
 </IfModule>
 
+
+
+# Blokace citlivých souborů.
+<FilesMatch "^(phpinfo\.php|info\.php|adminer\.php|debug\.log|dump\.sql|backup\.sql|database\.sql)$">
+    Require all denied
+</FilesMatch>
+
 # Nezasahovat do existujících souborů/složek (CSS/JS/IMG atd.)
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
