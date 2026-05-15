@@ -1,6 +1,6 @@
 <?php
 // K7
-// karty/user_setting.php * Verze: V2 * Aktualizace: 27.03.2026
+// karty/user_setting.php * Verze: V3 * Aktualizace: 13.05.2026
 declare(strict_types=1);
 
 $usError = '';
@@ -8,14 +8,15 @@ $usOk = '';
 
 $usUser = $_SESSION['cb_user'] ?? null;
 $usUserId = (is_array($usUser) && isset($usUser['id_user'])) ? (int)$usUser['id_user'] : 0;
+$usCurrentSettings = cb_user_settings();
 
-$usPocetSl = 4;
-$usNanoKde = 0;
-$usProdleva = 3000;
-$usPismo = 2;
-$usDark = 0;
+$usPocetSl = in_array((int)($usCurrentSettings['pocet_sl'] ?? 4), [3, 4, 5], true) ? (int)($usCurrentSettings['pocet_sl'] ?? 4) : 4;
+$usNanoKde = in_array((int)($usCurrentSettings['nano_kde'] ?? 0), [0, 1], true) ? (int)($usCurrentSettings['nano_kde'] ?? 0) : 0;
+$usProdleva = (int)($usCurrentSettings['prodleva'] ?? 3000);
+$usPismo = in_array((int)($usCurrentSettings['pismo'] ?? 2), [1, 2, 3], true) ? (int)($usCurrentSettings['pismo'] ?? 2) : 2;
+$usDark = in_array((int)($usCurrentSettings['dark'] ?? 0), [0, 1], true) ? (int)($usCurrentSettings['dark'] ?? 0) : 0;
 $usProdlevaOptions = [
-    0 => 'Bez prodlevy - POZOR, toto způsobí časté přepočítávání obsahu',
+    0 => 'Bez prodlevy - POZOR, toto zpusobi caste prepocitavani obsahu',
     1000 => '1 sekunda',
     1500 => '1,5 sekundy',
     2000 => '2 sekundy',
@@ -39,7 +40,7 @@ if ($usUserId > 0) {
             $postProdleva = (int)($_POST['us_prodleva'] ?? 3000);
             $postPismo = (int)($_POST['us_pismo'] ?? 2);
             $postDark = (int)($_POST['us_dark'] ?? 0);
-            $prevPocetSl = null;
+            $prevPocetSl = $usPocetSl;
 
             if (!in_array($postPocetSl, [3, 4, 5], true)) {
                 $postPocetSl = 4;
@@ -57,27 +58,15 @@ if ($usUserId > 0) {
                 $postDark = 0;
             }
 
-
-            $stmtPrev = $conn->prepare('SELECT pocet_sl FROM user_set WHERE id_user = ? LIMIT 1');
-            if ($stmtPrev !== false) {
-                $stmtPrev->bind_param('i', $usUserId);
-                $stmtPrev->execute();
-                $stmtPrev->bind_result($dbPrevPocetSl);
-                if ($stmtPrev->fetch()) {
-                    $prevPocetSl = (int)$dbPrevPocetSl;
-                }
-                $stmtPrev->close();
-            }
-
             $stmtUpd = $conn->prepare('UPDATE user_set SET pocet_sl = ?, nano_kde = ?, prodleva = ?, pismo = ?, dark = ? WHERE id_user = ?');
             if ($stmtUpd === false) {
-                throw new RuntimeException('Nepodařilo se připravit update user_set.');
+                throw new RuntimeException('Nepodarilo se pripravit update user_set.');
             }
             $stmtUpd->bind_param('iiiiii', $postPocetSl, $postNanoKde, $postProdleva, $postPismo, $postDark, $usUserId);
             $stmtUpd->execute();
             $stmtUpd->close();
 
-            if ($prevPocetSl !== null && $prevPocetSl !== $postPocetSl) {
+            if ($prevPocetSl !== $postPocetSl) {
                 $stmtUnlock = $conn->prepare('UPDATE user_card_set SET col = NULL, line = NULL WHERE id_user = ?');
                 if ($stmtUnlock !== false) {
                     $stmtUnlock->bind_param('i', $usUserId);
@@ -86,38 +75,28 @@ if ($usUserId > 0) {
                 }
             }
 
-
+            cb_store_user_settings([
+                'pocet_sl' => $postPocetSl,
+                'nano_kde' => $postNanoKde,
+                'prodleva' => $postProdleva,
+                'pismo' => $postPismo,
+                'dark' => $postDark,
+            ]);
+            $usPocetSl = $postPocetSl;
+            $usNanoKde = $postNanoKde;
+            $usProdleva = $postProdleva;
+            $usPismo = $postPismo;
+            $usDark = $postDark;
             $usOk = 'Nastaveni bylo ulozeno.';
         }
-
-        $stmtSel = $conn->prepare('SELECT pocet_sl, nano_kde, prodleva, pismo, dark FROM user_set WHERE id_user = ? LIMIT 1');
-        if ($stmtSel === false) {
-            throw new RuntimeException('Nepodařilo se připravit select user_set.');
-        }
-
-        $stmtSel->bind_param('i', $usUserId);
-        $stmtSel->execute();
-        $stmtSel->bind_result($dbPocetSl, $dbNanoKde, $dbProdleva, $dbPismo, $dbDark);
-
-        if ($stmtSel->fetch()) {
-            $usPocetSl = in_array((int)$dbPocetSl, [3, 4, 5], true) ? (int)$dbPocetSl : 4;
-            $usNanoKde = in_array((int)$dbNanoKde, [0, 1], true) ? (int)$dbNanoKde : 0;
-            $usProdleva = array_key_exists((int)$dbProdleva, $usProdlevaOptions) ? (int)$dbProdleva : 3000;
-            $usPismo = in_array((int)$dbPismo, [1, 2, 3], true) ? (int)$dbPismo : 2;
-            $usDark = in_array((int)$dbDark, [0, 1], true) ? (int)$dbDark : 0;
-        } else {
-            $usError = 'Nenalezen user_set pro uživatele.';
-        }
-
-        $stmtSel->close();
     } catch (Throwable $e) {
-        $usError = 'Načtení uživatelského nastavení selhalo.';
+        $usError = 'Nacteni uzivatelskeho nastaveni selhalo.';
     }
 } else {
-    $usError = 'Nastavení je dostupné až po přihlášení.';
+    $usError = 'Nastaveni je dostupne az po prihlaseni.';
 }
 
-$usNanoText = ($usNanoKde === 1) ? 'Do gridu' : 'Řádek';
+$usNanoText = ($usNanoKde === 1) ? 'Do gridu' : 'Radek';
 $usDarkText = ($usDark === 1) ? 'Ano' : 'Ne';
 
 $card_min_html = ''
@@ -139,24 +118,24 @@ ob_start();
     <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10">
       <h4 class="card_section_title txt_seda">Dashboard</h4>
       <label class="card_field gap_4 displ_flex">
-        <span>Počet sloupců</span>
+        <span>Pocet sloupcu</span>
         <select class="card_select ram_sedy txt_seda vyska_32" name="us_pocet_sl" data-cb-user-setting-field="1">
           <option value="3"<?= $usPocetSl === 3 ? ' selected' : '' ?>>3 sloupce</option>
           <option value="4"<?= $usPocetSl === 4 ? ' selected' : '' ?>>4 sloupce</option>
-          <option value="5"<?= $usPocetSl === 5 ? ' selected' : '' ?>>5 sloupců</option>
+          <option value="5"<?= $usPocetSl === 5 ? ' selected' : '' ?>>5 sloupcu</option>
         </select>
       </label>
 
       <label class="card_field gap_4 displ_flex">
         <span>Nano karty</span>
         <select class="card_select ram_sedy txt_seda vyska_32" name="us_nano_kde" data-cb-user-setting-field="1">
-          <option value="0"<?= $usNanoKde === 0 ? ' selected' : '' ?>>0 = řádek</option>
+          <option value="0"<?= $usNanoKde === 0 ? ' selected' : '' ?>>0 = radek</option>
           <option value="1"<?= $usNanoKde === 1 ? ' selected' : '' ?>>1 = do gridu</option>
         </select>
       </label>
 
       <label class="card_field gap_4 displ_flex">
-        <span>Volba čekání při volbě období</span>
+        <span>Volba cekani pri volbe obdobi</span>
         <select class="card_select ram_sedy txt_seda vyska_32" name="us_prodleva" data-cb-user-setting-field="1">
           <?php foreach ($usProdlevaOptions as $prodlevaMs => $prodlevaLabel): ?>
             <option value="<?= h((string)$prodlevaMs) ?>"<?= $usProdleva === $prodlevaMs ? ' selected' : '' ?>><?= h($prodlevaLabel) ?></option>
@@ -170,14 +149,14 @@ ob_start();
       <label class="card_field gap_4 displ_flex">
         <span>Velikost textu</span>
         <select class="card_select ram_sedy txt_seda vyska_32" name="us_pismo" data-cb-user-setting-field="1">
-          <option value="1"<?= $usPismo === 1 ? ' selected' : '' ?>>1 = menší</option>
+          <option value="1"<?= $usPismo === 1 ? ' selected' : '' ?>>1 = mensi</option>
           <option value="2"<?= $usPismo === 2 ? ' selected' : '' ?>>2 = default</option>
-          <option value="3"<?= $usPismo === 3 ? ' selected' : '' ?>>3 = větší</option>
+          <option value="3"<?= $usPismo === 3 ? ' selected' : '' ?>>3 = vetsi</option>
         </select>
       </label>
 
       <label class="card_field gap_4 displ_flex">
-        <span>Dark režim</span>
+        <span>Dark rezim</span>
         <select class="card_select ram_sedy txt_seda vyska_32" name="us_dark" data-cb-user-setting-field="1">
           <option value="0"<?= $usDark === 0 ? ' selected' : '' ?>>0 = ne</option>
           <option value="1"<?= $usDark === 1 ? ' selected' : '' ?>>1 = ano</option>
@@ -186,13 +165,9 @@ ob_start();
     </section>
 
     <div class="card_actions gap_8 displ_flex jc_konec">
-      <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-user-setting-save="1" disabled>Uložit nastavení</button>
+      <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-user-setting-save="1" disabled>Ulozit nastaveni</button>
     </div>
   </form>
 <?php endif; ?>
 <?php
 $card_max_html = (string)ob_get_clean();
-
-/* karty/user_setting.php * Verze: V2 * Aktualizace: 27.03.2026 */
-// počet řádků 149
-?>

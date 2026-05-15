@@ -126,6 +126,174 @@ function cb_url_abs(string $path): string
     return $scheme . '://' . $host . cb_url($path);
 }
 
+if (!function_exists('cb_system_settings_defaults')) {
+    /**
+     * @return array<string, int>
+     */
+    function cb_system_settings_defaults(): array
+    {
+        return [
+            'restia_online' => 0,
+            'on_2fa' => 1,
+            'system_logout' => 20,
+            'pauza_obdobi' => 1000,
+        ];
+    }
+}
+
+if (!function_exists('cb_store_system_settings')) {
+    /**
+     * @param array<string, mixed> $values
+     */
+    function cb_store_system_settings(array $values): void
+    {
+        $data = cb_system_settings_defaults();
+
+        $data['restia_online'] = ((int)($values['restia_online'] ?? $data['restia_online']) === 1) ? 1 : 0;
+        $data['on_2fa'] = ((int)($values['on_2fa'] ?? $data['on_2fa']) === 1) ? 1 : 0;
+
+        $logout = (int)($values['system_logout'] ?? $data['system_logout']);
+        if (!in_array($logout, [2, 5, 10, 15, 20, 30, 60], true)) {
+            $logout = 20;
+        }
+        $data['system_logout'] = $logout;
+
+        $pauza = (int)($values['pauza_obdobi'] ?? $data['pauza_obdobi']);
+        if (!in_array($pauza, [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000], true)) {
+            $pauza = 1000;
+        }
+        $data['pauza_obdobi'] = $pauza;
+
+        $_SESSION['cb_system'] = $data;
+    }
+}
+
+if (!function_exists('cb_system_settings')) {
+    /**
+     * @return array<string, int>
+     */
+    function cb_system_settings(): array
+    {
+        if (!isset($_SESSION['cb_system']) || !is_array($_SESSION['cb_system'])) {
+            cb_store_system_settings([]);
+        }
+
+        /** @var array<string, int> $settings */
+        $settings = $_SESSION['cb_system'];
+        return $settings;
+    }
+}
+
+if (!function_exists('cb_system_setting')) {
+    function cb_system_setting(string $key, mixed $default = null): mixed
+    {
+        $settings = cb_system_settings();
+        return $settings[$key] ?? $default;
+    }
+}
+
+if (!function_exists('cb_user_settings_defaults')) {
+    /**
+     * @return array<string, mixed>
+     */
+    function cb_user_settings_defaults(): array
+    {
+        return [
+            'pocet_sl' => 4,
+            'nano_kde' => 0,
+            'prodleva' => 3000,
+            'pismo' => 2,
+            'dark' => 0,
+            'obdobi_od' => '',
+            'obdobi_do' => '',
+            'obdobi_mode' => 'manual',
+        ];
+    }
+}
+
+if (!function_exists('cb_store_user_settings')) {
+    /**
+     * @param array<string, mixed> $values
+     */
+    function cb_store_user_settings(array $values): void
+    {
+        $current = [];
+        if (isset($_SESSION['cb_user_settings']) && is_array($_SESSION['cb_user_settings'])) {
+            $current = $_SESSION['cb_user_settings'];
+        }
+
+        $data = array_merge(cb_user_settings_defaults(), $current);
+
+        $pocetSl = (int)($values['pocet_sl'] ?? $data['pocet_sl']);
+        if (!in_array($pocetSl, [3, 4, 5], true)) {
+            $pocetSl = 4;
+        }
+        $data['pocet_sl'] = $pocetSl;
+
+        $nanoKde = (int)($values['nano_kde'] ?? $data['nano_kde']);
+        if (!in_array($nanoKde, [0, 1], true)) {
+            $nanoKde = 0;
+        }
+        $data['nano_kde'] = $nanoKde;
+
+        $prodleva = (int)($values['prodleva'] ?? $data['prodleva']);
+        if (!in_array($prodleva, [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000], true)) {
+            $prodleva = 3000;
+        }
+        $data['prodleva'] = $prodleva;
+
+        $pismo = (int)($values['pismo'] ?? $data['pismo']);
+        if (!in_array($pismo, [1, 2, 3], true)) {
+            $pismo = 2;
+        }
+        $data['pismo'] = $pismo;
+
+        $dark = (int)($values['dark'] ?? $data['dark']);
+        if (!in_array($dark, [0, 1], true)) {
+            $dark = 0;
+        }
+        $data['dark'] = $dark;
+
+        $mode = trim((string)($values['obdobi_mode'] ?? $data['obdobi_mode']));
+        if ($mode === 'dnes') {
+            $mode = 'vcera';
+        }
+        if (!in_array($mode, ['vcera', 'tyden', 'mesic', 'rok', 'manual'], true)) {
+            $mode = 'manual';
+        }
+        $data['obdobi_mode'] = $mode;
+
+        $data['obdobi_od'] = trim((string)($values['obdobi_od'] ?? $data['obdobi_od']));
+        $data['obdobi_do'] = trim((string)($values['obdobi_do'] ?? $data['obdobi_do']));
+
+        $_SESSION['cb_user_settings'] = $data;
+    }
+}
+
+if (!function_exists('cb_user_settings')) {
+    /**
+     * @return array<string, mixed>
+     */
+    function cb_user_settings(): array
+    {
+        if (!isset($_SESSION['cb_user_settings']) || !is_array($_SESSION['cb_user_settings'])) {
+            cb_store_user_settings([]);
+        }
+
+        /** @var array<string, mixed> $settings */
+        $settings = $_SESSION['cb_user_settings'];
+        return $settings;
+    }
+}
+
+if (!function_exists('cb_user_setting')) {
+    function cb_user_setting(string $key, mixed $default = null): mixed
+    {
+        $settings = cb_user_settings();
+        return $settings[$key] ?? $default;
+    }
+}
+
 if (!function_exists('cb_clean_query_array')) {
     /**
      * Odstrani prazdne/default query hodnoty (rekurzivne i pro pole).

@@ -52,10 +52,11 @@ if (!function_exists('cb_session_forget_auth')) {
         unset($_SESSION['cb_timeout_min']);
         unset($_SESSION['cb_session_start_ts']);
         unset($_SESSION['cb_last_activity_ts']);
+        unset($_SESSION['cb_system']);
+        unset($_SESSION['cb_user_settings']);
         unset($_SESSION['cb_session_bound']);
         unset($_SESSION['cb_session_bound_at']);
         unset($_SESSION['cb_session_bound_id']);
         unset($_SESSION['cb_session_fingerprint']);
     }
 }
-

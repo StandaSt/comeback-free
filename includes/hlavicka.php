@@ -141,23 +141,8 @@ $normalizePeriodDateTime = static function (string $v): string {
 $cbObdobiOd = $cbWorkingYesterday;
 $cbObdobiDo = $cbWorkingEnd;
 $cbObdobiMode = trim((string)($_SESSION['cb_obdobi_mode'] ?? 'manual'));
-$cbProdlevaMs = 1000;
-
-try {
-    $conn = db();
-    $stmtPause = $conn->prepare('SELECT pauza_obdobi FROM set_system WHERE id_set = 1 LIMIT 1');
-    if ($stmtPause) {
-        $stmtPause->execute();
-        $stmtPause->bind_result($dbPauzaObdobi);
-        if ($stmtPause->fetch()) {
-            $tmpProdleva = (int)($dbPauzaObdobi ?? 1000);
-            if (in_array($tmpProdleva, [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000], true)) {
-                $cbProdlevaMs = $tmpProdleva;
-            }
-        }
-        $stmtPause->close();
-    }
-} catch (Throwable $e) {
+$cbProdlevaMs = (int)cb_system_setting('pauza_obdobi', 1000);
+if (!in_array($cbProdlevaMs, [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000], true)) {
     $cbProdlevaMs = 1000;
 }
 
@@ -167,80 +152,23 @@ if ($cbObdobiMode === 'dnes') {
 if (!in_array($cbObdobiMode, ['vcera', 'tyden', 'mesic', 'rok', 'manual'], true)) {
     $cbObdobiMode = 'manual';
 }
-$cbNeedInitUserSetPeriod = false;
-$cbUserIdForPeriod = (int)($cbUser['id_user'] ?? 0);
-
-if ($cbLoginOk && $cbUserIdForPeriod > 0) {
-    try {
-        $conn = isset($conn) && ($conn instanceof mysqli) ? $conn : db();
-        $stmtPeriod = $conn->prepare('SELECT obdobi_od, obdobi_do, obdobi_mode, prodleva FROM user_set WHERE id_user = ? LIMIT 1');
-        if ($stmtPeriod) {
-            $stmtPeriod->bind_param('i', $cbUserIdForPeriod);
-            $stmtPeriod->execute();
-            $stmtPeriod->bind_result($dbObdobiOd, $dbObdobiDo, $dbObdobiMode, $dbProdlevaMs);
-
-            $hasPeriod = false;
-            if ($stmtPeriod->fetch()) {
-                $tmpOd = $normalizePeriodDateTime((string)($dbObdobiOd ?? ''));
-                $tmpDo = $normalizePeriodDateTime((string)($dbObdobiDo ?? ''));
-                if (
-                    $tmpOd !== ''
-                    && $tmpDo !== ''
-                    && $tmpOd <= $cbObdobiMax
-                    && $tmpDo <= $cbObdobiMax
-                    && $tmpOd <= $tmpDo
-                ) {
-                    $cbObdobiOd = $tmpOd;
-                    $cbObdobiDo = $tmpDo;
-                    $tmpMode = trim((string)($dbObdobiMode ?? 'manual'));
-                    if ($tmpMode === 'dnes') {
-                        $tmpMode = 'vcera';
-                    }
-                    if (in_array($tmpMode, ['vcera', 'tyden', 'mesic', 'rok', 'manual'], true)) {
-                        $cbObdobiMode = $tmpMode;
-                    }
-                    $hasPeriod = true;
-                }
-                $tmpProdleva = (int)($dbProdlevaMs ?? 3000);
-                if (in_array($tmpProdleva, [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000], true)) {
-                    $cbProdlevaMs = $tmpProdleva;
-                }
-            }
-            $stmtPeriod->close();
-
-            if (!$hasPeriod) {
-                $cbNeedInitUserSetPeriod = true;
-                $cbObdobiMode = 'vcera';
-            }
-        }
-
-        if ($cbNeedInitUserSetPeriod) {
-            $stmtInitPeriod = $conn->prepare('UPDATE user_set SET obdobi_od = ?, obdobi_do = ?, obdobi_mode = ? WHERE id_user = ?');
-            if ($stmtInitPeriod) {
-                $stmtInitPeriod->bind_param('sssi', $cbObdobiOd, $cbObdobiDo, $cbObdobiMode, $cbUserIdForPeriod);
-                $stmtInitPeriod->execute();
-                $stmtInitPeriod->close();
-            }
-        }
-    } catch (Throwable $e) {
-        $cbObdobiOd = $cbWorkingYesterday;
-        $cbObdobiDo = $cbWorkingEnd;
-        $cbObdobiMode = 'vcera';
+$sessionOd = $normalizePeriodDateTime((string)($_SESSION['cb_obdobi_od'] ?? ''));
+$sessionDo = $normalizePeriodDateTime((string)($_SESSION['cb_obdobi_do'] ?? ''));
+if ($sessionOd !== '' && $sessionDo !== '' && $sessionOd <= $cbObdobiMax && $sessionOd <= $sessionDo && $sessionDo <= $cbObdobiMax) {
+    $cbObdobiOd = $sessionOd;
+    $cbObdobiDo = $sessionDo;
+    $sessionMode = trim((string)($_SESSION['cb_obdobi_mode'] ?? 'manual'));
+    if ($sessionMode === 'dnes') {
+        $sessionMode = 'vcera';
     }
-} else {
-    $sessionOd = $normalizePeriodDateTime((string)($_SESSION['cb_obdobi_od'] ?? ''));
-    $sessionDo = $normalizePeriodDateTime((string)($_SESSION['cb_obdobi_do'] ?? ''));
-    if ($sessionOd !== '' && $sessionDo !== '' && $sessionOd <= $cbObdobiMax && $sessionOd <= $sessionDo && $sessionDo <= $cbObdobiMax) {
-        $cbObdobiOd = $sessionOd;
-        $cbObdobiDo = $sessionDo;
-        $sessionMode = trim((string)($_SESSION['cb_obdobi_mode'] ?? 'manual'));
-        if ($sessionMode === 'dnes') {
-            $sessionMode = 'vcera';
-        }
-        if (in_array($sessionMode, ['vcera', 'tyden', 'mesic', 'rok', 'manual'], true)) {
-            $cbObdobiMode = $sessionMode;
-        }
+    if (in_array($sessionMode, ['vcera', 'tyden', 'mesic', 'rok', 'manual'], true)) {
+        $cbObdobiMode = $sessionMode;
     }
+}
+
+$userProdleva = (int)cb_user_setting('prodleva', $cbProdlevaMs);
+if (in_array($userProdleva, [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000], true)) {
+    $cbProdlevaMs = $userProdleva;
 }
 
 if (in_array($cbObdobiMode, ['tyden', 'mesic', 'rok'], true)) {

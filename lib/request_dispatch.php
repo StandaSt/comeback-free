@@ -22,6 +22,48 @@ if (isset($_SERVER['HTTP_X_COMEBACK_KPI'])) {
     $cbIsKpiPartial = ((string)($_SERVER['HTTP_X_COMEBACK_KPI']) === '1');
 }
 
+$cbIsRestiaState = false;
+if (isset($_SERVER['HTTP_X_COMEBACK_RESTIA_STATE'])) {
+    $cbIsRestiaState = ((string)($_SERVER['HTTP_X_COMEBACK_RESTIA_STATE']) === '1');
+}
+
+if ($cbIsRestiaState) {
+    if (empty($_SESSION['login_ok'])) {
+        http_response_code(401);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok' => false, 'err' => 'Nutne prihlaseni'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    header('Content-Type: application/json; charset=utf-8');
+
+    $db = db();
+    $sql = "
+        SELECT id_akce, id_user, start, konec, zapisy, aktualizace, `ignore`, aktivni
+        FROM online_restia
+        ORDER BY aktivni DESC, id_akce DESC
+        LIMIT 1
+    ";
+    $res = $db->query($sql);
+    $row = ($res instanceof mysqli_result) ? $res->fetch_assoc() : null;
+    if ($res instanceof mysqli_result) {
+        $res->free();
+    }
+
+    echo json_encode([
+        'ok' => true,
+        'active' => ((int)($row['aktivni'] ?? 0) === 1) ? 1 : 0,
+        'id_akce' => (int)($row['id_akce'] ?? 0),
+        'id_user' => (int)($row['id_user'] ?? 0),
+        'start' => trim((string)($row['start'] ?? '')),
+        'konec' => trim((string)($row['konec'] ?? '')),
+        'zapisy' => (int)($row['zapisy'] ?? 0),
+        'aktualizace' => (int)($row['aktualizace'] ?? 0),
+        'ignore' => (int)($row['ignore'] ?? 0),
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 if ($cbIsCardMaxPartial) {
     $cbCardId = (int)($_GET['cb_card_id'] ?? 0);
     cb_emit_card_max_json_response($cbCardId, 'card_max_partial');

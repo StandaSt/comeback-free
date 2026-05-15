@@ -37,7 +37,6 @@ $GQL_URL = 'https://smeny.pizzacomeback.cz/graphql';
 /*
  * Timeout neaktivity (minuty) – JEDINÝ zdroj hodnoty.
  */
-$CB_TIMEOUT_MIN = 20;
 
 function post_str(string $k): string
 {
@@ -146,17 +145,15 @@ try {
     $_SESSION['cb_auth_ok'] = 1;
 
     // LOCAL: 2FA se přeskočí jen když je vypnuto v set_system.on_2fa
-    $q2fa = db()->query('SELECT on_2fa FROM set_system WHERE id_set = 1 LIMIT 1');
-    $row2fa = $q2fa->fetch_assoc();
-    $on2fa = (int)$row2fa['on_2fa'];
-    $q2fa->free();
+    cb_login_load_settings_to_session($idUser);
+    $on2fa = (int)cb_system_setting('on_2fa', 1);
 
     if ((string)($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL' || $on2fa !== 1) {
         $_SESSION['login_ok'] = 1;
         unset($_SESSION['cb_auth_ok']);
         unset($_SESSION['cb_2fa_token']);
 
-        cb_login_finalize_after_ok($token, (int)$CB_TIMEOUT_MIN);
+        cb_login_finalize_after_ok($token);
         $_SESSION['cb_initial_loader_text'] = 'Inicializace systému ...';
 
         header('Location: ' . cb_url(''));
@@ -282,6 +279,8 @@ try {
     unset($_SESSION['cb_user_branches']);
     unset($_SESSION['cb_2fa_token']);
     unset($_SESSION['cb_auth_ok']);
+    unset($_SESSION['cb_system']);
+    unset($_SESSION['cb_user_settings']);
 
     unset($_SESSION['cb_timeout_min']);
     unset($_SESSION['cb_session_start_ts']);

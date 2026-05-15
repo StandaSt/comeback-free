@@ -181,6 +181,11 @@ if (
         $_SESSION['cb_obdobi_od'] = $newOd;
         $_SESSION['cb_obdobi_do'] = $newDo;
         $_SESSION['cb_obdobi_mode'] = $newMode;
+        cb_store_user_settings([
+            'obdobi_od' => $newOd,
+            'obdobi_do' => $newDo,
+            'obdobi_mode' => $newMode,
+        ]);
 
         echo json_encode([
             'ok' => true,

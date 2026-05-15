@@ -568,6 +568,69 @@
     });
   };
 
+  function fetchRestiaState() {
+    const reqUrl = String(w.location.href || 'index.php');
+    return fetch(reqUrl, {
+      method: 'GET',
+      headers: { 'X-Comeback-Restia-State': '1' },
+      credentials: 'same-origin'
+    }).then((res) => {
+      if (!res.ok) {
+        throw new Error('HTTP ' + res.status);
+      }
+      return res.json();
+    });
+  }
+
+  function waitForRestiaImportFinish(options) {
+    const opts = (options && typeof options === 'object') ? options : {};
+    const timeoutMs = Math.max(1000, Number(opts.timeoutMs) || 30000);
+    const pollMs = Math.max(200, Number(opts.pollMs) || 500);
+    const reqUrl = String(w.location.href || 'index.php');
+    const startedAt = Date.now();
+
+    traceAjax('restia_wait_start', {
+      timeoutMs: timeoutMs,
+      pollMs: pollMs,
+      url: reqUrl
+    });
+
+    return new Promise((resolve, reject) => {
+      function check() {
+        fetchRestiaState()
+          .then((state) => {
+            const running = !!(state && Number(state.active || 0) === 1);
+            traceAjax('restia_wait_tick', {
+              running: running ? 1 : 0,
+              zapisy: state && typeof state.zapisy !== 'undefined' ? Number(state.zapisy || 0) : 0,
+              aktualizace: state && typeof state.aktualizace !== 'undefined' ? Number(state.aktualizace || 0) : 0,
+              ignore: state && typeof state.ignore !== 'undefined' ? Number(state.ignore || 0) : 0,
+              elapsed_ms: Math.max(0, Date.now() - startedAt)
+            });
+            if (!running) {
+              traceAjax('restia_wait_done', {
+                zapisy: state && typeof state.zapisy !== 'undefined' ? Number(state.zapisy || 0) : 0,
+                aktualizace: state && typeof state.aktualizace !== 'undefined' ? Number(state.aktualizace || 0) : 0,
+                elapsed_ms: Math.max(0, Date.now() - startedAt)
+              });
+              resolve();
+              return;
+            }
+            if ((Date.now() - startedAt) >= timeoutMs) {
+              reject(new Error('Restia aktualizace bezi prilis dlouho.'));
+              return;
+            }
+            w.setTimeout(check, pollMs);
+          })
+          .catch((err) => {
+            reject(err);
+          });
+      }
+
+      check();
+    });
+  }
+
   CB_AJAX.setDashboardLoading = function setDashboardLoadingPublic(on, mode, text) {
     setLoaderLoading(mode || 'dashboard', !!on, text);
   };
@@ -613,6 +676,19 @@
       return res.text();
     }).then(() => {
       if (refreshMode === 'mini') {
+        if (loaderMode === 'restia') {
+          return waitForRestiaImportFinish({
+            timeoutMs: 180000,
+            pollMs: 500
+          }).then(() => {
+            return CB_AJAX.refreshDashboardMini({
+              force: true,
+              keepLoading: keepLoading,
+              loaderMode: loaderMode
+            });
+          });
+        }
+
         return CB_AJAX.refreshDashboardMini({
           force: true,
           keepLoading: keepLoading,

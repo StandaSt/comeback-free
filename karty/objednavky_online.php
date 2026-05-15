@@ -188,7 +188,11 @@ try {
             SELECT
                 o.id_pob,
                 CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NOT NULL THEN 1 ELSE 0 END AS dokonceno,
-                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj) THEN 1 ELSE 0 END AS na_ceste,
+                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND (
+                    EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj)
+                    OR EXISTS (SELECT 1 FROM obj_sluzba s WHERE s.id_obj = o.id_obj)
+                    OR EXISTS (SELECT 1 FROM cis_doruceni d WHERE d.id_doruceni = o.id_doruceni AND d.nazev = \'external-delivery\')
+                ) THEN 1 ELSE 0 END AS na_ceste,
                 CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND NOT EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj) AND EXISTS (SELECT 1 FROM cis_doruceni d WHERE d.id_doruceni = o.id_doruceni AND d.nazev = \'pickup\') THEN 1 ELSE 0 END AS osobni_odber,
                 CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NULL THEN 1 ELSE 0 END AS vyrabi_se
             FROM objednavky_restia o
@@ -200,7 +204,11 @@ try {
             SELECT
                 o.id_pob,
                 CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NOT NULL THEN 1 ELSE 0 END AS dokonceno,
-                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj) THEN 1 ELSE 0 END AS na_ceste,
+                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND (
+                    EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj)
+                    OR EXISTS (SELECT 1 FROM obj_sluzba s WHERE s.id_obj = o.id_obj)
+                    OR EXISTS (SELECT 1 FROM cis_doruceni d WHERE d.id_doruceni = o.id_doruceni AND d.nazev = \'external-delivery\')
+                ) THEN 1 ELSE 0 END AS na_ceste,
                 CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND NOT EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj) AND EXISTS (SELECT 1 FROM cis_doruceni d WHERE d.id_doruceni = o.id_doruceni AND d.nazev = \'pickup\') THEN 1 ELSE 0 END AS osobni_odber,
                 CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NULL THEN 1 ELSE 0 END AS vyrabi_se
             FROM objednavky_restia o
@@ -212,7 +220,11 @@ try {
             SELECT
                 o.id_pob,
                 CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NOT NULL THEN 1 ELSE 0 END AS dokonceno,
-                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj) THEN 1 ELSE 0 END AS na_ceste,
+                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND (
+                    EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj)
+                    OR EXISTS (SELECT 1 FROM obj_sluzba s WHERE s.id_obj = o.id_obj)
+                    OR EXISTS (SELECT 1 FROM cis_doruceni d WHERE d.id_doruceni = o.id_doruceni AND d.nazev = \'external-delivery\')
+                ) THEN 1 ELSE 0 END AS na_ceste,
                 CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND NOT EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj) AND EXISTS (SELECT 1 FROM cis_doruceni d WHERE d.id_doruceni = o.id_doruceni AND d.nazev = \'pickup\') THEN 1 ELSE 0 END AS osobni_odber,
                 CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NULL THEN 1 ELSE 0 END AS vyrabi_se
             FROM objednavky_restia o
@@ -432,6 +444,7 @@ try {
     $naCesteData = [];
     $osobniOdberData = [];
     $vyrabiSeData = [];
+    $miniObjednavkyData = [];
     $barvyPobocek = [];
     $objednavkyData = [];
     $trzbaData = [];
@@ -483,6 +496,7 @@ try {
         $naCesteData[] = $naCeste;
         $osobniOdberData[] = $osobniOdber;
         $vyrabiSeData[] = $vyrabiSe;
+        $miniObjednavkyData[] = $dokonceno + $naCeste + $osobniOdber + $vyrabiSe;
 
         $sumDokonceno += $dokonceno;
         $sumNaCeste += $naCeste;
@@ -501,7 +515,7 @@ try {
             ['id' => 'na_ceste', 'name' => 'Na ceste', 'data' => $naCesteData],
             ['id' => 'osobni_odber', 'name' => 'Osobni odber', 'data' => $osobniOdberData],
             ['id' => 'vyrabi_se', 'name' => 'Vyrabi se', 'data' => $vyrabiSeData],
-            ['id' => 'objednavky', 'name' => 'Objednavky', 'data' => $objednavkyData],
+            ['id' => 'objednavky', 'name' => 'Objednavky', 'data' => $miniObjednavkyData],
         ],
     ];
     $payloadJson = cb_k19_chart_json($payload, 'Nepodarilo se pripravit graf pro K19.');
@@ -521,7 +535,10 @@ try {
     ];
     $g1PayloadJson = cb_k19_chart_json($g1Payload, 'Nepodarilo se pripravit graf G1 pro K19.');
 
-    $k19G1MaxTileHtml = cb_k19_render_max_chart_tile('G1', 'Objednávky a tržba dnes', (string)$range['label'], 'k19-max-g1-chart', $g1PayloadJson);
+    $g1PeriodText = (new DateTimeImmutable((string)$range['from'], new DateTimeZone('Europe/Prague')))->format('j.n.Y G:i')
+        . ' - '
+        . $aktualizaceDoText;
+    $k19G1MaxTileHtml = cb_k19_render_max_chart_tile('G1', 'Objednávky a tržba dnes', $g1PeriodText, 'k19-max-g1-chart', $g1PayloadJson);
 
     $g2Payload = [
         'kind' => 'bar_dual_diff_centered',

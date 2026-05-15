@@ -199,7 +199,11 @@
       const naCeste = naCesteRaw.map((item) => Number(item) || 0);
       const osobniOdber = osobniOdberRaw.map((item) => Number(item) || 0);
       const vyrabiSe = vyrabiSeRaw.map((item) => Number(item) || 0);
-      const objednavky = objednavkyRaw.map((item) => Number(item) || 0);
+      const objednavky = labels.map((label, index) => {
+        const payloadValue = Number(objednavkyRaw[index] || 0) || 0;
+        const stackValue = dokonceno[index] + naCeste[index] + osobniOdber[index] + vyrabiSe[index];
+        return payloadValue > 0 ? payloadValue : stackValue;
+      });
       const colors = colorsRaw.map((item) => String(item || ''));
 
       return {

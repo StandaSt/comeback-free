@@ -127,7 +127,7 @@ try {
         $_SESSION['login_ok'] = 1;
         unset($_SESSION['cb_2fa_token']);
         try {
-            cb_login_finalize_after_ok($loginToken, 20);
+            cb_login_finalize_after_ok($loginToken);
         } catch (Throwable $e) {
             cb_2fa_cleanup_session();
             throw $e;
