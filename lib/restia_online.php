@@ -1389,8 +1389,7 @@ if (!function_exists('cb_restia_online_run')) {
             cb_restia_online_log_line('');
             cb_restia_online_log_line('Spusteno ' . cb_restia_online_now());
 
-            $onlineRange = cb_restia_online_status_updated_from($conn);
-            $date = (string)($onlineRange['workday_date'] ?? cb_restia_online_current_workday_date());
+            $date = cb_restia_online_current_workday_date();
             $branches = cb_restia_online_active_branches($conn);
             foreach ($branches as $branch) {
                 $day = cb_restia_online_import_day($conn, $auth, $branch, $date);
