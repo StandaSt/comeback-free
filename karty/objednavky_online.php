@@ -114,16 +114,16 @@ try {
     $selectedPob = function_exists('get_selected_pobocky') ? get_selected_pobocky() : [];
     $selectedPob = array_values(array_filter(array_map('intval', $selectedPob), static fn(int $v): bool => $v > 0));
 
-    $resAktualizace = $conn->query('SELECT MAX(start) AS posledni_start FROM online_restia');
+    $resAktualizace = $conn->query('SELECT MAX(konec) AS posledni_konec FROM online_restia');
     if ($resAktualizace instanceof mysqli_result) {
         $rowAktualizace = $resAktualizace->fetch_assoc();
-        $posledniStart = trim((string)($rowAktualizace['posledni_start'] ?? ''));
+        $posledniKonec = trim((string)($rowAktualizace['posledni_konec'] ?? ''));
         $resAktualizace->free();
-        if ($posledniStart !== '') {
-            $dtAktualizace = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $posledniStart, new DateTimeZone('Europe/Prague'));
+        if ($posledniKonec !== '') {
+            $dtAktualizace = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $posledniKonec, new DateTimeZone('Europe/Prague'));
             if ($dtAktualizace instanceof DateTimeImmutable) {
                 $aktualizaceDoText = $dtAktualizace->format('G:i');
-                $aktualizaceSubtitleText = $dtAktualizace->format('j.n.Y G:i');
+                $aktualizaceSubtitleText = $dtAktualizace->format('G:i:s');
             }
         }
     }

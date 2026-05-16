@@ -13,7 +13,7 @@ if (method_exists($conn, 'set_charset')) {
 $renderMode = isset($cbDashboardRenderMode) ? trim((string)$cbDashboardRenderMode) : '';
 $isMaxRender = ($renderMode === 'max');
 
-if ($isMaxRender && function_exists('cb_restia_online_kontrola')) {
+if ($renderMode === 'max' && function_exists('cb_restia_online_kontrola')) {
     cb_restia_online_kontrola(true);
 }
 

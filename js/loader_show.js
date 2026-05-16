@@ -86,6 +86,14 @@
     }
   }
 
+  function shouldHoldOnLoad() {
+    const root = getRoot();
+    if (!root) {
+      return false;
+    }
+    return String(root.getAttribute('data-cb-startup-hold') || '') === '1';
+  }
+
   function detectDefaultText() {
     const root = getRoot();
     if (root) {
@@ -113,7 +121,12 @@
       setVisible(true);
     }
 
-    w.addEventListener('load', hide, { once: true });
+    w.addEventListener('load', function () {
+      if (shouldHoldOnLoad()) {
+        return;
+      }
+      hide();
+    }, { once: true });
   }
 
   w.CB_LOADER_SHOW = {

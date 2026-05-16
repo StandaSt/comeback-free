@@ -108,6 +108,15 @@ $cbWorkingYesterdayDate = $cbCurrentWorkdayDate->modify('-1 day');
 $cbWorkingYesterday = $cbWorkingYesterdayDate->setTime(6, 0, 0)->format('Y-m-d H:i:s');
 $cbWorkingEnd = $cbCurrentWorkdayDate->setTime(6, 0, 0)->format('Y-m-d H:i:s');
 $cbObdobiMax = $cbNowPeriod->format('Y-m-d H:i:s');
+$cbObdobiMaxRes = db()->query('SELECT MAX(konec) AS posledni_konec FROM online_restia WHERE konec IS NOT NULL');
+if ($cbObdobiMaxRes instanceof mysqli_result) {
+    $cbObdobiMaxRow = $cbObdobiMaxRes->fetch_assoc();
+    $cbObdobiMaxRes->free();
+    $cbPosledniKonec = trim((string)($cbObdobiMaxRow['posledni_konec'] ?? ''));
+    if ($cbPosledniKonec !== '') {
+        $cbObdobiMax = $cbPosledniKonec;
+    }
+}
 $today = substr($cbWorkingYesterday, 0, 10);
 $tomorrow = substr($cbWorkingEnd, 0, 10);
 

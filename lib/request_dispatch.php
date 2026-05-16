@@ -27,6 +27,90 @@ if (isset($_SERVER['HTTP_X_COMEBACK_RESTIA_STATE'])) {
     $cbIsRestiaState = ((string)($_SERVER['HTTP_X_COMEBACK_RESTIA_STATE']) === '1');
 }
 
+$cbIsRestiaTrigger = false;
+if (isset($_SERVER['HTTP_X_COMEBACK_RESTIA_TRIGGER'])) {
+    $cbIsRestiaTrigger = ((string)($_SERVER['HTTP_X_COMEBACK_RESTIA_TRIGGER']) === '1');
+}
+
+if ($cbIsRestiaTrigger) {
+    if (empty($_SESSION['login_ok'])) {
+        http_response_code(401);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok' => false, 'err' => 'Nutne prihlaseni'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    header('Content-Type: application/json; charset=utf-8');
+
+    $db = db();
+    $stateSql = "
+        SELECT id_akce, id_user, start, konec, zapisy, aktualizace, `ignore`, aktivni
+        FROM online_restia
+        ORDER BY aktivni DESC, id_akce DESC
+        LIMIT 1
+    ";
+    $readState = static function (mysqli $conn, string $sql): array {
+        $res = $conn->query($sql);
+        $row = ($res instanceof mysqli_result) ? $res->fetch_assoc() : null;
+        if ($res instanceof mysqli_result) {
+            $res->free();
+        }
+
+        return [
+            'active' => ((int)($row['aktivni'] ?? 0) === 1) ? 1 : 0,
+            'id_akce' => (int)($row['id_akce'] ?? 0),
+            'id_user' => (int)($row['id_user'] ?? 0),
+            'start' => trim((string)($row['start'] ?? '')),
+            'konec' => trim((string)($row['konec'] ?? '')),
+            'zapisy' => (int)($row['zapisy'] ?? 0),
+            'aktualizace' => (int)($row['aktualizace'] ?? 0),
+            'ignore' => (int)($row['ignore'] ?? 0),
+        ];
+    };
+
+    $resSet = $db->query('SELECT restia_online FROM set_system WHERE id_set = 1 LIMIT 1');
+    $rowSet = ($resSet instanceof mysqli_result) ? $resSet->fetch_assoc() : null;
+    if ($resSet instanceof mysqli_result) {
+        $resSet->free();
+    }
+
+    if ((int)($rowSet['restia_online'] ?? 0) !== 1) {
+        echo json_encode([
+            'ok' => true,
+            'started' => 0,
+            'enabled' => 0,
+            'active' => 0,
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $stateBefore = $readState($db, $stateSql);
+    if ((int)($stateBefore['active'] ?? 0) === 1) {
+        echo json_encode([
+            'ok' => true,
+            'started' => 0,
+            'enabled' => 1,
+        ] + $stateBefore, JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    if (!defined('CB_RESTIA_ONLINE_KONTROLA_AUTO_RUN')) {
+        define('CB_RESTIA_ONLINE_KONTROLA_AUTO_RUN', false);
+    }
+    require_once __DIR__ . '/restia_online_kontrola.php';
+    if (function_exists('cb_restia_online_kontrola')) {
+        cb_restia_online_kontrola();
+    }
+
+    $stateAfter = $readState($db, $stateSql);
+    echo json_encode([
+        'ok' => true,
+        'started' => 1,
+        'enabled' => 1,
+    ] + $stateAfter, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 if ($cbIsRestiaState) {
     if (empty($_SESSION['login_ok'])) {
         http_response_code(401);

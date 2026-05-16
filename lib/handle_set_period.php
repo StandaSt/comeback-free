@@ -77,6 +77,16 @@ if (
 
     try {
         $conn = db();
+        $resMaxDo = $conn->query('SELECT MAX(konec) AS posledni_konec FROM online_restia WHERE konec IS NOT NULL');
+        if ($resMaxDo instanceof mysqli_result) {
+            $rowMaxDo = $resMaxDo->fetch_assoc();
+            $resMaxDo->free();
+            $posledniKonec = trim((string)($rowMaxDo['posledni_konec'] ?? ''));
+            if ($posledniKonec !== '') {
+                $maxDo = $posledniKonec;
+            }
+        }
+
         $stmtCur = $conn->prepare('SELECT obdobi_od, obdobi_do FROM user_set WHERE id_user = ? LIMIT 1');
         if (!$stmtCur) {
             throw new RuntimeException('prepare select failed');

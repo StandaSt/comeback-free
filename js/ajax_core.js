@@ -582,6 +582,23 @@
     });
   }
 
+  function triggerRestiaCheck() {
+    const reqUrl = String(w.location.href || 'index.php');
+    return fetch(reqUrl, {
+      method: 'POST',
+      headers: {
+        'X-Comeback-Restia-Trigger': '1',
+        'Accept': 'application/json'
+      },
+      credentials: 'same-origin'
+    }).then((res) => {
+      if (!res.ok) {
+        throw new Error('HTTP ' + res.status);
+      }
+      return res.json();
+    });
+  }
+
   function waitForRestiaImportFinish(options) {
     const opts = (options && typeof options === 'object') ? options : {};
     const timeoutMs = Math.max(1000, Number(opts.timeoutMs) || 30000);
@@ -630,6 +647,61 @@
       check();
     });
   }
+
+  function hideStartupLoader() {
+    if (w.CB_LOADER_SHOW && typeof w.CB_LOADER_SHOW.hide === 'function') {
+      w.CB_LOADER_SHOW.hide();
+      return;
+    }
+    const root = document.getElementById('cb-startup-loader');
+    if (root && root.parentNode) {
+      root.parentNode.removeChild(root);
+    }
+  }
+
+  CB_AJAX.runRestiaAndRefreshOpCards = function runRestiaAndRefreshOpCards(options) {
+    const opts = (options && typeof options === 'object') ? options : {};
+    const loaderMode = normalizeLoaderMode(opts.loaderMode || 'dashboard');
+    const keepLoading = !!opts.keepLoading;
+    const showLoading = opts.showLoading !== false;
+    const triggerRestia = opts.triggerRestia !== false;
+    const hideStartup = !!opts.hideStartupLoader;
+    const timeoutMs = Math.max(1000, Number(opts.timeoutMs) || 180000);
+    const pollMs = Math.max(200, Number(opts.pollMs) || 500);
+
+    if (showLoading) {
+      setLoaderLoading(loaderMode, true, 'Aktualizuji data ...');
+    }
+
+    const stateJob = triggerRestia ? triggerRestiaCheck() : fetchRestiaState();
+    return stateJob.then((state) => {
+      const isRunning = !!(state && Number(state.active || 0) === 1);
+      if (!isRunning && triggerRestia === false && hideStartup !== true) {
+        return { ok: true, skipped: true };
+      }
+
+      const waitJob = isRunning
+        ? waitForRestiaImportFinish({
+            timeoutMs: timeoutMs,
+            pollMs: pollMs
+          })
+        : Promise.resolve();
+
+      return waitJob.then(() => {
+        return CB_AJAX.refreshDashboardRefreshOpCards({
+          force: true,
+          loaderMode: loaderMode
+        });
+      });
+    }).finally(() => {
+      if (!keepLoading && showLoading) {
+        setLoaderLoading(loaderMode, false);
+      }
+      if (hideStartup) {
+        hideStartupLoader();
+      }
+    });
+  };
 
   CB_AJAX.setDashboardLoading = function setDashboardLoadingPublic(on, mode, text) {
     setLoaderLoading(mode || 'dashboard', !!on, text);
@@ -1223,13 +1295,41 @@
     });
   };
 
+  function initStartupRestiaRefresh() {
+    const root = document.getElementById('cb-startup-loader');
+    if (!(root instanceof HTMLElement)) {
+      return;
+    }
+    if (String(root.getAttribute('data-cb-startup-hold') || '') !== '1') {
+      return;
+    }
+    if (root.getAttribute('data-cb-restia-refresh-init') === '1') {
+      return;
+    }
+    root.setAttribute('data-cb-restia-refresh-init', '1');
+
+    CB_AJAX.runRestiaAndRefreshOpCards({
+      triggerRestia: false,
+      showLoading: false,
+      hideStartupLoader: true,
+      loaderMode: 'dashboard'
+    }).catch((err) => {
+      traceAjax('startup_restia_refresh_error', {
+        message: String((err && err.message) ? err.message : 'startup restia refresh selhal')
+      });
+      hideStartupLoader();
+    });
+  }
+
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
       initRestiaImportLoader();
+      initStartupRestiaRefresh();
     }, { once: true });
   } else {
     initRestiaImportLoader();
+    initStartupRestiaRefresh();
   }
 
   document.addEventListener('cb:main-swapped', function () {

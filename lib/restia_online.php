@@ -1148,6 +1148,14 @@ if (!function_exists('cb_restia_online_import_day')) {
                         $restiaIdObj = $restiaIds[$orderIndex] ?? '';
                         $existingInfo = (isset($existingMap[$restiaIdObj]) && is_array($existingMap[$restiaIdObj])) ? $existingMap[$restiaIdObj] : [];
                         $existingIdObj = (int)($existingInfo['id_obj'] ?? 0);
+                        $existingClosedAt = trim((string)($existingInfo['cas_uzavreni'] ?? ''));
+
+                        if ($existingIdObj > 0 && $existingClosedAt !== '') {
+                            $pocetObj++;
+                            $pocetIgnore++;
+                            continue;
+                        }
+
                         $savepoint = 'restia_' . $page . '_' . ($orderIndex + 1);
                         if ($conn->query('SAVEPOINT ' . $savepoint) === false) {
                             throw new RuntimeException('Nepodarilo se zalozit savepoint pro objednavku.');
