@@ -5,11 +5,10 @@ declare(strict_types=1);
 /*
  * DB: pobocka
  *
- * Účel:
- * - najít pobočku podle kódu (pobocka.kod)
- * - když neexistuje, vytvořit placeholder (dočasné hodnoty)
+ * ĂšÄŤel:
+ * - najĂ­t poboÄŤku podle kĂłdu (pobocka.kod)
+ * - kdyĹľ neexistuje, vytvoĹ™it placeholder (doÄŤasnĂ© hodnoty)
  */
-require_once __DIR__ . '/../lib/login_diagnostika.php';
 
 /**
  * Najde id_pob podle pobocka.kod.
@@ -30,15 +29,15 @@ function cb_db_find_pob_id_by_kod(mysqli $conn, string $kod): ?int
 }
 
 /**
- * Vloží placeholder pobočku, protože pobočka přišla ze Směn, ale neexistuje v naší DB.
+ * VloĹľĂ­ placeholder poboÄŤku, protoĹľe poboÄŤka pĹ™iĹˇla ze SmÄ›n, ale neexistuje v naĹˇĂ­ DB.
  *
  * Pozn.:
- * - tabulka pobocka má NOT NULL sloupce, proto vyplňujeme dočasné hodnoty
+ * - tabulka pobocka mĂˇ NOT NULL sloupce, proto vyplĹujeme doÄŤasnĂ© hodnoty
  * - id_pob je AUTO_INCREMENT
  */
 function cb_db_insert_pob_placeholder(mysqli $conn, string $kod): void
 {
-    $nazev = 'čeká na doplnění';
+    $nazev = 'ÄŤekĂˇ na doplnÄ›nĂ­';
     $ulice = '---';
     $mesto = '---';
     $psc = 0;
@@ -51,14 +50,13 @@ function cb_db_insert_pob_placeholder(mysqli $conn, string $kod): void
     $stmt->execute();
     $stmt->close();
 
-    cb_login_log_line('db_new_branch_placeholder', ['kod' => $kod]);
 }
 
 /**
- * Projde kódy poboček, zajistí pobocka.kod a vrátí seznam id_pob.
+ * Projde kĂłdy poboÄŤek, zajistĂ­ pobocka.kod a vrĂˇtĂ­ seznam id_pob.
  *
  * @param string[] $codes
- * @return int[]  id_pob pro požadované pobočky
+ * @return int[]  id_pob pro poĹľadovanĂ© poboÄŤky
  */
 function cb_db_ensure_branches_get_ids(mysqli $conn, array $codes): array
 {
@@ -87,5 +85,5 @@ function cb_db_ensure_branches_get_ids(mysqli $conn, array $codes): array
     return $ids;
 }
 
-/* db/db_pobocka.php * Verze: V1 * Aktualizace: 12.2.2026 * Počet řádků: 93 */
+/* db/db_pobocka.php * Verze: V1 * Aktualizace: 12.2.2026 * PoÄŤet Ĺ™ĂˇdkĹŻ: 93 */
 // Konec souboru

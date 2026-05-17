@@ -28,7 +28,7 @@ if (!function_exists('cb_priprav_kartu_max')) {
 
             // DOCASNE MERENI CASU KARET
             if (function_exists('cb_tmp_measure_card_time_log')) {
-                cb_tmp_measure_card_time_log($cardId, $title, 'max', 'priprava', $cbTmpMeasureStart);
+                cb_tmp_measure_card_time_log($cardId, $soubor, 'max', 'priprava', $cbTmpMeasureStart);
             }
 
             return $result;
@@ -55,7 +55,7 @@ if (!function_exists('cb_priprav_kartu_max')) {
             $result = (string)$card_max_html;
             // DOCASNE MERENI CASU KARET
             if (function_exists('cb_tmp_measure_card_time_log')) {
-                cb_tmp_measure_card_time_log($cardId, $title, 'max', 'priprava', $cbTmpMeasureStart);
+                cb_tmp_measure_card_time_log($cardId, $soubor, 'max', 'priprava', $cbTmpMeasureStart);
             }
             return $result;
         }
@@ -64,7 +64,7 @@ if (!function_exists('cb_priprav_kartu_max')) {
             $result = (string)$legacy_html;
             // DOCASNE MERENI CASU KARET
             if (function_exists('cb_tmp_measure_card_time_log')) {
-                cb_tmp_measure_card_time_log($cardId, $title, 'max', 'priprava', $cbTmpMeasureStart);
+                cb_tmp_measure_card_time_log($cardId, $soubor, 'max', 'priprava', $cbTmpMeasureStart);
             }
             return $result;
         }
@@ -83,7 +83,7 @@ if (!function_exists('cb_priprav_kartu_max')) {
 
         // DOCASNE MERENI CASU KARET
         if (function_exists('cb_tmp_measure_card_time_log')) {
-            cb_tmp_measure_card_time_log($cardId, $title, 'max', 'priprava', $cbTmpMeasureStart);
+            cb_tmp_measure_card_time_log($cardId, $soubor, 'max', 'priprava', $cbTmpMeasureStart);
         }
 
         return $result;

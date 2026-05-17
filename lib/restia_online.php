@@ -21,22 +21,6 @@ if (!empty($_SESSION['login_ok']) && !cb_session_validate_after_login()) {
     cb_session_forget_auth();
 }
 
-if (!function_exists('cb_restia_online_txt_path')) {
-    function cb_restia_online_txt_path(int $idPob): string
-    {
-        $safeIdPob = max(0, $idPob);
-        return __DIR__ . '/../log/restia_online.txt';
-    }
-}
-
-if (!function_exists('cb_restia_online_log')) {
-    function cb_restia_online_log(int $idPob, string $line): void
-    {
-        $path = cb_restia_online_txt_path($idPob);
-        @file_put_contents($path, $line . "\n", FILE_APPEND | LOCK_EX);
-    }
-}
-
 if (!function_exists('cb_restia_online_error_txt_path')) {
     function cb_restia_online_error_txt_path(int $idPob): string
     {
@@ -1210,7 +1194,6 @@ if (!function_exists('cb_restia_online_import_day')) {
         } catch (Throwable $e) {
             cb_restia_online_try_flush_api($conn, $auth);
             $fatalLine = 'FATAL_STEP: datum=' . $date . ' | id_pob=' . $idPob . ' | msg=' . $e->getMessage();
-            cb_restia_online_log($idPob, $fatalLine);
             cb_restia_online_error_log($idPob, $fatalLine);
             try {
                 db_zapis_log_chyby(
@@ -1235,14 +1218,6 @@ if (!function_exists('cb_restia_online_import_day')) {
         } finally {
             cb_restia_online_day_lock_release($conn, $lockName);
         }
-    }
-}
-
-
-if (!function_exists('cb_restia_online_log_line')) {
-    function cb_restia_online_log_line(string $line): void
-    {
-        @file_put_contents(cb_restia_online_txt_path(0), $line . "\n", FILE_APPEND | LOCK_EX);
     }
 }
 
@@ -1393,25 +1368,10 @@ if (!function_exists('cb_restia_online_run')) {
         try {
             $auth = cb_restia_online_get_auth();
 
-            cb_restia_online_log_line('');
-            cb_restia_online_log_line('');
-            cb_restia_online_log_line('Spusteno ' . cb_restia_online_now());
-
             $date = cb_restia_online_current_workday_date();
             $branches = cb_restia_online_active_branches($conn);
             foreach ($branches as $branch) {
                 $day = cb_restia_online_import_day($conn, $auth, $branch, $date);
-                if ((int)($day['nove'] ?? 0) > 0 || (int)($day['aktualizace'] ?? 0) > 0) {
-                    $branchName = trim((string)($branch['nazev'] ?? ''));
-                    if ($branchName === '') {
-                        $branchName = 'Pobocka #' . (string)((int)($branch['id_pob'] ?? 0));
-                    }
-                    cb_restia_online_log_line('');
-                    cb_restia_online_log_line('Pobocka ' . $branchName);
-                    foreach ((array)($day['log_lines'] ?? []) as $logLine) {
-                        cb_restia_online_log_line((string)$logLine);
-                    }
-                }
                 $zapisy += (int)($day['nove'] ?? 0);
                 $aktualizace += (int)($day['aktualizace'] ?? 0);
                 $ignore += (int)($day['ignore'] ?? 0);
@@ -1424,7 +1384,6 @@ if (!function_exists('cb_restia_online_run')) {
             }
         } catch (Throwable $e) {
             $chyba = $e->getMessage();
-            cb_restia_online_log_line('CHYBA: ' . $chyba);
         }
 
         cb_restia_online_progress_emit([

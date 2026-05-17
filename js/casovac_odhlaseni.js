@@ -74,6 +74,7 @@
   const logoutUrl = String(box.getAttribute('data-logout-url') || '').trim();
   const touchUrl = String(box.getAttribute('data-touch-url') || '').trim();
   const logoutLink = box.querySelector('.head_user_exit');
+  const warningThresholdMin = Math.max(1, Math.ceil(timeoutMin * 0.1));
 
   if (timeoutMin <= 0) {
     comboEl.textContent = '!';
@@ -132,6 +133,11 @@
 
     thermoEl.setAttribute('data-thermo', String(thermoPct));
     thermoEl.style.setProperty('--thermo', String(thermoPct) + '%');
+
+    if (logoutLink) {
+      const warningOn = (remainMin > 0 && remainMin <= warningThresholdMin);
+      logoutLink.classList.toggle('is-timeout-warning', warningOn);
+    }
 
     if (remainMin <= 0 && logoutUrl) {
       // CB_LOGIN_TRACE_TEMP_START

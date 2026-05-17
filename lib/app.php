@@ -173,6 +173,7 @@ if (!function_exists('cb_store_system_settings')) {
         }
 
         $_SESSION['cb_system'] = $data;
+        $_SESSION['cb_timeout_min'] = $data['system_logout'];
     }
 }
 

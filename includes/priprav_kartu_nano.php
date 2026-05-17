@@ -45,7 +45,7 @@ function cb_priprav_kartu_nano(
 
         // DOCASNE MERENI CASU KARET
         if (function_exists('cb_tmp_measure_card_time_log')) {
-            cb_tmp_measure_card_time_log($cardId, $title, 'nano', 'priprava', $cbTmpMeasureStart);
+            cb_tmp_measure_card_time_log($cardId, (string)($karta['soubor'] ?? ''), 'nano', 'priprava', $cbTmpMeasureStart);
         }
 
         return $result;
@@ -71,7 +71,7 @@ function cb_priprav_kartu_nano(
 
     // DOCASNE MERENI CASU KARET
     if (function_exists('cb_tmp_measure_card_time_log')) {
-        cb_tmp_measure_card_time_log($cardId, $title, 'nano', 'priprava', $cbTmpMeasureStart);
+        cb_tmp_measure_card_time_log($cardId, (string)($karta['soubor'] ?? ''), 'nano', 'priprava', $cbTmpMeasureStart);
     }
 
     return $result;

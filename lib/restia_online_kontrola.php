@@ -102,12 +102,6 @@ if (!function_exists('cb_restia_online_kontrola')) {
             }
 
             if (!file_exists($file)) {
-                file_put_contents(
-                    __DIR__ . '/../log/restia_online.txt',
-                    "\n\nSoubor nenalezen: restia_online.php\n",
-                    FILE_APPEND
-                );
-
                 if (function_exists('zapis_log_chyby')) {
                     zapis_log_chyby('Restia online: Soubor nenalezen restia_online.php');
                 }
@@ -142,12 +136,6 @@ if (!function_exists('cb_restia_online_kontrola')) {
             unset($GLOBALS['cb_restia_online_progress_callback']);
         } catch (Throwable $e) {
             unset($GLOBALS['cb_restia_online_session_ready'], $GLOBALS['cb_restia_online_progress_callback']);
-
-            file_put_contents(
-                __DIR__ . '/../log/restia_online.txt',
-                "\n\nChyba: " . $e->getMessage() . "\n",
-                FILE_APPEND
-            );
 
             if (function_exists('zapis_log_chyby')) {
                 zapis_log_chyby('Restia online chyba: ' . $e->getMessage());

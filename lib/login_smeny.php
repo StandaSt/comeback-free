@@ -3,19 +3,19 @@
 declare(strict_types=1);
 
 /*
- * PŘIHLÁŠENÍ PŘES SMĚNY (GraphQL API) + 2FA (schválení na mobilu)
+ * PĹIHLĂĹ ENĂŤ PĹES SMÄšNY (GraphQL API) + 2FA (schvĂˇlenĂ­ na mobilu)
  *
- * Co to dělá:
- * - ověří email/heslo přes Směny (GraphQL)
- * - načte jen základní profil pro modál registrace / 2FA
- * - uloží minimální data do session (bez login_ok)
- * - při prvním loginu bez aktivního zařízení přeskočí 2FA a pustí uživatele do párování mobilu
- * - při dalším loginu připraví 2FA výzvu do DB (push_login_2fa) a odešle notifikaci na spárované zařízení (push_zarizeni)
- * - redirect na úvod (index.php zobrazí čekací modál nebo modál párování)
+ * Co to dÄ›lĂˇ:
+ * - ovÄ›Ĺ™Ă­ email/heslo pĹ™es SmÄ›ny (GraphQL)
+ * - naÄŤte jen zĂˇkladnĂ­ profil pro modĂˇl registrace / 2FA
+ * - uloĹľĂ­ minimĂˇlnĂ­ data do session (bez login_ok)
+ * - pĹ™i prvnĂ­m loginu bez aktivnĂ­ho zaĹ™Ă­zenĂ­ pĹ™eskoÄŤĂ­ 2FA a pustĂ­ uĹľivatele do pĂˇrovĂˇnĂ­ mobilu
+ * - pĹ™i dalĹˇĂ­m loginu pĹ™ipravĂ­ 2FA vĂ˝zvu do DB (push_login_2fa) a odeĹˇle notifikaci na spĂˇrovanĂ© zaĹ™Ă­zenĂ­ (push_zarizeni)
+ * - redirect na Ăşvod (index.php zobrazĂ­ ÄŤekacĂ­ modĂˇl nebo modĂˇl pĂˇrovĂˇnĂ­)
  *
- * Důležité:
- * - login_ok se nastaví AŽ po schválení 2FA (mobil), nebo hned při LOCAL / prvním loginu bez zařízení
- * - LOCAL: 2FA lze vypnout přes set_system.on_2fa (notifikace z LOCAL nechodí)
+ * DĹŻleĹľitĂ©:
+ * - login_ok se nastavĂ­ AĹ˝ po schvĂˇlenĂ­ 2FA (mobil), nebo hned pĹ™i LOCAL / prvnĂ­m loginu bez zaĹ™Ă­zenĂ­
+ * - LOCAL: 2FA lze vypnout pĹ™es set_system.on_2fa (notifikace z LOCAL nechodĂ­)
  */
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
@@ -24,7 +24,6 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 require_once __DIR__ . '/app.php';
 require_once __DIR__ . '/system.php';
 require_once __DIR__ . '/../config/secrets.php';
-require_once __DIR__ . '/login_diagnostika.php';
 require_once __DIR__ . '/smeny_graphql.php';
 require_once __DIR__ . '/user_bad_login.php';
 
@@ -35,7 +34,7 @@ require_once __DIR__ . '/../db/db_api_smeny.php';
 $GQL_URL = 'https://smeny.pizzacomeback.cz/graphql';
 
 /*
- * Timeout neaktivity (minuty) – JEDINÝ zdroj hodnoty.
+ * Timeout neaktivity (minuty) â€“ JEDINĂť zdroj hodnoty.
  */
 
 function post_str(string $k): string
@@ -44,30 +43,18 @@ function post_str(string $k): string
 }
 
 try {
-    // CB_LOGIN_TRACE_TEMP_START
-    cb_login_log_line('request_enter', [
-        'request_time_float' => isset($_SERVER['REQUEST_TIME_FLOAT']) ? sprintf('%.6f', (float)$_SERVER['REQUEST_TIME_FLOAT']) : '',
-    ]);
-    // CB_LOGIN_TRACE_TEMP_END
-    cb_login_log_line('start');
 
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-        cb_login_log_line('bad_method');
-        throw new RuntimeException('Neplatný požadavek.');
+        throw new RuntimeException('NeplatnĂ˝ poĹľadavek.');
     }
 
     $email = post_str('email');
     $heslo = post_str('heslo');
 
     if ($email === '' || $heslo === '') {
-        cb_login_log_line('missing_credentials', [
-            'email' => $email,
-            'heslo_len' => (string)strlen($heslo),
-        ]);
-        throw new RuntimeException('Vyplň email a heslo.');
+        throw new RuntimeException('VyplĹ email a heslo.');
     }
 
-    cb_login_log_line('gql_login_request', ['email' => $email]);
 
     try {
         $login = cb_smeny_graphql(
@@ -80,24 +67,17 @@ try {
             ['email' => $email, 'password' => $heslo]
         );
     } catch (Throwable $e) {
-        cb_login_log_line('gql_login_fail', ['email' => $email], $e);
         cb_user_bad_login_log($email, $heslo);
-        throw new RuntimeException('Neplatné přihlašovací údaje.');
+        throw new RuntimeException('NeplatnĂ© pĹ™ihlaĹˇovacĂ­ Ăşdaje.');
     }
 
     $token = $login['userLogin']['accessToken'] ?? null;
     if (!is_string($token) || $token === '') {
-        cb_login_log_line('no_token', ['email' => $email]);
         cb_user_bad_login_log($email, $heslo);
-        throw new RuntimeException('Neplatné přihlašovací údaje.');
+        throw new RuntimeException('NeplatnĂ© pĹ™ihlaĹˇovacĂ­ Ăşdaje.');
     }
 
-    cb_login_log_line('gql_login_ok', [
-        'email' => $email,
-        'token_len' => (string)strlen($token),
-    ]);
 
-    cb_login_log_line('gql_me_request', ['email' => $email]);
 
     $me = cb_smeny_graphql(
         $GQL_URL,
@@ -118,15 +98,11 @@ try {
 
     $u = $me['userGetLogged'] ?? null;
     if (!is_array($u) || empty($u['id']) || empty($u['email'])) {
-        cb_login_log_line('me_invalid', ['email' => $email]);
-        throw new RuntimeException('Nepodařilo se načíst profil uživatele.');
+        throw new RuntimeException('NepodaĹ™ilo se naÄŤĂ­st profil uĹľivatele.');
     }
 
     $idUser = (int)$u['id'];
 
-    cb_login_log_line('gql_me_ok', [
-        'id_user' => (string)$idUser,
-    ]);
 
     $_SESSION['cb_token'] = $token;
 
@@ -144,7 +120,7 @@ try {
 
     $_SESSION['cb_auth_ok'] = 1;
 
-    // LOCAL: 2FA se přeskočí jen když je vypnuto v set_system.on_2fa
+    // LOCAL: 2FA se pĹ™eskoÄŤĂ­ jen kdyĹľ je vypnuto v set_system.on_2fa
     cb_login_load_settings_to_session($idUser);
     $on2fa = (int)cb_system_setting('on_2fa', 1);
 
@@ -154,13 +130,13 @@ try {
         unset($_SESSION['cb_2fa_token']);
 
         cb_login_finalize_after_ok($token);
-        $_SESSION['cb_initial_loader_text'] = 'Inicializace systému ...';
+        $_SESSION['cb_initial_loader_text'] = 'Inicializace systĂ©mu ...';
 
         header('Location: ' . cb_url(''));
         exit;
     }
 
-    // SERVER: bez aktivního zařízení je to první login => přeskoč 2FA a pusť párování
+    // SERVER: bez aktivnĂ­ho zaĹ™Ă­zenĂ­ je to prvnĂ­ login => pĹ™eskoÄŤ 2FA a pusĹĄ pĂˇrovĂˇnĂ­
     $maAktivniZarizeni = false;
 
     $stmtDevice = db()->prepare('
@@ -182,15 +158,12 @@ try {
         unset($_SESSION['login_ok']);
         unset($_SESSION['cb_2fa_token']);
 
-        cb_login_log_line('first_login_no_device', [
-            'id_user' => (string)$idUser,
-        ]);
 
         header('Location: ' . cb_url(''));
         exit;
     }
 
-    // ====== 2FA: vytvoř výzvu a čekej na schválení ======
+    // ====== 2FA: vytvoĹ™ vĂ˝zvu a ÄŤekej na schvĂˇlenĂ­ ======
     $limitSec = 300;
     if (defined('CB_2FA_LIMIT_SEC')) {
         $limitSec = (int)CB_2FA_LIMIT_SEC;
@@ -199,7 +172,7 @@ try {
         }
     }
 
-    // token je 64 hex znaků (32 bytes)
+    // token je 64 hex znakĹŻ (32 bytes)
     $token2fa = bin2hex(random_bytes(32));
 
     $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '');
@@ -228,31 +201,20 @@ try {
     $stmt->execute();
     $stmt->close();
 
-    // Ulož do session jen identifikátor aktuální 2FA výzvy
+    // UloĹľ do session jen identifikĂˇtor aktuĂˇlnĂ­ 2FA vĂ˝zvy
     $_SESSION['cb_2fa_token'] = $token2fa;
 
-    // login_ok zatím NEEXISTUJE
+    // login_ok zatĂ­m NEEXISTUJE
     unset($_SESSION['login_ok']);
     unset($_SESSION['cb_auth_ok']);
 
-    // ====== Odeslání Web Push notifikace ======
-    cb_login_log_line('2fa_push_send_start', [
-        'id_user' => (string)$idUser,
-    ]);
+    // ====== OdeslĂˇnĂ­ Web Push notifikace ======
 
     $sent = cb_push_send_2fa($idUser, $token2fa);
 
-    cb_login_log_line('2fa_push_send_done', [
-        'id_user' => (string)$idUser,
-        'sent' => $sent ? '1' : '0',
-    ]);
 
-    $_SESSION['cb_flash'] = 'Čekám na schválení přihlášení na mobilu';
+    $_SESSION['cb_flash'] = 'ÄŚekĂˇm na schvĂˇlenĂ­ pĹ™ihlĂˇĹˇenĂ­ na mobilu';
 
-    cb_login_log_line('2fa_wait', [
-        'id_user' => (string)$idUser,
-        'token_len' => (string)strlen($token2fa),
-    ]);
 
     header('Location: ' . cb_url(''));
     exit;
@@ -260,9 +222,9 @@ try {
 } catch (Throwable $e) {
 
     /*
-     * Neúspěšný login / chyba:
-     * - zapíšeme log volání Směn i bez id_user a id_login (NULL)
-     * - nic z toho nesmí shodit redirect ani chování loginu
+     * NeĂşspÄ›ĹˇnĂ˝ login / chyba:
+     * - zapĂ­Ĺˇeme log volĂˇnĂ­ SmÄ›n i bez id_user a id_login (NULL)
+     * - nic z toho nesmĂ­ shodit redirect ani chovĂˇnĂ­ loginu
      */
     try {
         db_api_smeny_flush(db(), null, null);
@@ -270,7 +232,6 @@ try {
         error_log('api_smeny flush (fail) selhal: ' . $eLog->getMessage());
     }
 
-    cb_login_log_line('error', ['email' => (string)($_POST['email'] ?? '')], $e);
 
     unset($_SESSION['login_ok']);
     unset($_SESSION['cb_user']);
@@ -288,12 +249,11 @@ try {
 
     $_SESSION['cb_flash'] = $e->getMessage();
 
-    cb_login_log_line('redirect_fail', ['to' => cb_url('')]);
 
     header('Location: ' . cb_url(''));
     exit;
 }
 
 // lib/login_smeny.php * Verze: V25 * Aktualizace: 30.03.2026
-// Počet řádků: 359
+// PoÄŤet Ĺ™ĂˇdkĹŻ: 359
 // Konec souboru

@@ -22,10 +22,10 @@ $cbAdminSaveValue = trim((string)($_POST['cb_admin_set_value'] ?? ''));
 $cbAdminLogoutOptions = [2, 5, 10, 15, 20, 30, 60];
 $cbAdminPauzaOptions = [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000];
 $cbAdminLogLabels = [
-    'log_1' => 'card_time + db_time (vykon SQL a karet)',
-    'log_2' => 'merime_casy_AI + merime_casy_user (kroky renderu dashboardu)',
-    'log_3' => 'ajax_trace (udalosti loaderu a AJAX toku)',
-    'log_4' => 'plnime_restia_objednavky_X (historie importu Restia po dnech)',
+    'log_1' => 'Měření výkonu systému (SQL + karty)',
+    'log_2' => 'Měření načítání dashboardu',
+    'log_3' => 'Sledování průběhu načítání a AJAX komunikace',
+    'log_4' => 'Historie importu objednávek z Restia (po dnech)',
 ];
 
 try {
@@ -45,7 +45,7 @@ try {
                 $stmt->execute();
                 $stmt->close();
             } else {
-                $cbAdminError = 'Ulozeni nastaveni selhalo.';
+                $cbAdminError = 'Uložení nastavení selhalo.';
             }
         } elseif ($cbAdminSaveName === 'system_logout') {
             $saveValue = (int)$cbAdminSaveValue;
@@ -58,7 +58,7 @@ try {
                 $stmt->execute();
                 $stmt->close();
             } else {
-                $cbAdminError = 'Ulozeni nastaveni selhalo.';
+                $cbAdminError = 'Uložení nastavení selhalo.';
             }
         } elseif ($cbAdminSaveName === 'pauza_obdobi') {
             $saveValue = (int)$cbAdminSaveValue;
@@ -71,7 +71,7 @@ try {
                 $stmt->execute();
                 $stmt->close();
             } else {
-                $cbAdminError = 'Ulozeni nastaveni selhalo.';
+                $cbAdminError = 'Uložení nastavení selhalo.';
             }
         }
     }
@@ -99,15 +99,15 @@ try {
                     cb_store_system_settings($row);
                 }
             } else {
-                $cbAdminError = 'Nastaveni systemu nebylo nalezeno.';
+                $cbAdminError = 'Nastavení systému nebylo nalezeno.';
             }
             $res->free();
         } else {
-            $cbAdminError = 'Nacteni nastaveni systemu selhalo.';
+            $cbAdminError = 'Načtení nastavení systému selhalo.';
         }
     }
 } catch (Throwable $e) {
-    $cbAdminError = 'Nacteni nastaveni systemu selhalo.';
+    $cbAdminError = 'Načtení nastavení systému selhalo.';
 }
 
 $cbAdminBoolClass = static function (int $value): string {
@@ -121,45 +121,46 @@ ob_start();
 <?php if ($cbAdminError !== ''): ?>
   <p class="card_text txt_cervena odstup_vnejsi_0"><?= h($cbAdminError) ?></p>
 <?php else: ?>
+  <?php // VZHLED K2 JE ZAMCENY: bez vyslovneho schvaleni nemenit sirky sloupcu, zarovnani, zalamovani ani texty (vcetne diakritiky). ?>
   <div class="card_stack gap_8">
-    <div class="table-wrap ram_normal bg_bila">
-      <table class="table ram_normal bg_bila radek_1_35 sirka100" style="width:100%;table-layout:fixed;">
+    <div class="table-wrap ram_normal bg_bila" style="width:100%;margin:0 auto;">
+      <table class="table ram_normal bg_bila radek_1_35 sirka100" style="width:100%;table-layout:auto;">
         <thead>
           <tr>
-            <th>Nastaveni</th>
-            <th>Aktualni hodnota</th>
-            <th>Vyznam</th>
+            <th style="width:1%;white-space:nowrap;">Nastavení</th>
+            <th style="width:1%;white-space:nowrap;">Aktuální hodnota</th>
+            <th style="white-space:nowrap;">Význam</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>Restia online</td>
+            <td style="white-space:nowrap;">Restia online</td>
             <td class="<?= h($cbAdminBoolClass($cbAdminSystem['restia_online'])) ?>">
               <form method="post" action="<?= h($cbAdminFormAction) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
                 <input type="hidden" name="cb_admin_set_name" value="restia_online">
                 <select name="cb_admin_set_value" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" onchange="if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
                   <option value="1"<?= $cbAdminSystem['restia_online'] === 1 ? ' selected' : '' ?>>Aktivni</option>
-                  <option value="0"<?= $cbAdminSystem['restia_online'] === 0 ? ' selected' : '' ?>>Neaktivni</option>
+                  <option value="0"<?= $cbAdminSystem['restia_online'] === 0 ? ' selected' : '' ?>>Neaktivní</option>
                 </select>
               </form>
             </td>
-            <td>Automaticke online aktualizace objednavek Restia</td>
+            <td style="white-space:nowrap;">Online aktualizace objednávek Restia</td>
           </tr>
           <tr>
-            <td>2FA</td>
+            <td style="white-space:nowrap;">2FA</td>
             <td class="<?= h($cbAdminBoolClass($cbAdminSystem['on_2fa'])) ?>">
               <form method="post" action="<?= h($cbAdminFormAction) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
                 <input type="hidden" name="cb_admin_set_name" value="on_2fa">
                 <select name="cb_admin_set_value" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" onchange="if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
-                  <option value="1"<?= $cbAdminSystem['on_2fa'] === 1 ? ' selected' : '' ?>>Aktivni</option>
-                  <option value="0"<?= $cbAdminSystem['on_2fa'] === 0 ? ' selected' : '' ?>>Neaktivni</option>
+                  <option value="1"<?= $cbAdminSystem['on_2fa'] === 1 ? ' selected' : '' ?>>Aktivní</option>
+                  <option value="0"<?= $cbAdminSystem['on_2fa'] === 0 ? ' selected' : '' ?>>Neaktivní</option>
                 </select>
               </form>
             </td>
-            <td>Dvoufazove overeni pri prihlaseni</td>
+            <td style="white-space:nowrap;">Dvoufázové ověření při přihlášení</td>
           </tr>
           <tr>
-            <td>System logout</td>
+            <td style="white-space:nowrap;">System logout</td>
             <td class="text_tucny">
               <form method="post" action="<?= h($cbAdminFormAction) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
                 <input type="hidden" name="cb_admin_set_name" value="system_logout">
@@ -170,10 +171,10 @@ ob_start();
                 </select>
               </form>
             </td>
-            <td>Limit necinnosti pred automatickym odhlasenim</td>
+            <td style="white-space:nowrap;">Odhlášení uživatele pro neaktivitu, limit</td>
           </tr>
           <tr>
-            <td>Pauza obdobi</td>
+            <td style="white-space:nowrap;">Pauza období</td>
             <td class="text_tucny">
               <form method="post" action="<?= h($cbAdminFormAction) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
                 <input type="hidden" name="cb_admin_set_name" value="pauza_obdobi">
@@ -184,23 +185,23 @@ ob_start();
                 </select>
               </form>
             </td>
-            <td>Cekani pri rucni volbe obdobi v GN hlavicce</td>
+            <td style="white-space:nowrap;">Prodleva při ruční volbě globálního nastavení období</td>
           </tr>
         </tbody>
       </table>
     </div>
-    <div class="table-wrap ram_normal bg_bila">
-      <table class="table ram_normal bg_bila radek_1_35 sirka100" style="width:100%;table-layout:fixed;">
+    <div class="table-wrap ram_normal bg_bila" style="width:100%;margin:0 auto;">
+      <table class="table ram_normal bg_bila radek_1_35 sirka100" style="width:100%;table-layout:auto;">
         <thead>
           <tr>
-            <th>Aktivni</th>
-            <th>Aktivace logovani</th>
+            <th style="width:1%;white-space:nowrap;">Aktivní</th>
+            <th>Aktivace logování</th>
           </tr>
         </thead>
         <tbody>
           <?php foreach ($cbAdminLogLabels as $cbLogKey => $cbLogLabel): ?>
             <tr>
-              <td class="txt_c">
+              <td class="txt_c" style="white-space:nowrap;">
                 <form method="post" action="<?= h($cbAdminFormAction) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
                   <input type="hidden" name="cb_admin_set_name" value="<?= h($cbLogKey) ?>">
                   <input type="hidden" name="cb_admin_set_value" value="0">

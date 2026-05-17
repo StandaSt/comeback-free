@@ -12,9 +12,6 @@ require_once __DIR__ . '/lib/system.php';
 require_once __DIR__ . '/config/secrets.php';
 require_once __DIR__ . '/lib/post_prg_redirect.php';
 require_once __DIR__ . '/lib/asset_url.php';
-// CB_LOGIN_TRACE_TEMP_START
-require_once __DIR__ . '/lib/login_diagnostika.php';
-// CB_LOGIN_TRACE_TEMP_END
 
 if (!empty($_SESSION['login_ok']) && !cb_session_validate_after_login()) {
     cb_session_forget_auth();
@@ -82,12 +79,6 @@ if ($cbShowStartupLoader) {
             ) ?? $cbStartupLoaderHtml;
         }
     }
-    // CB_LOGIN_TRACE_TEMP_START
-    cb_login_log_line('startup_loader_server_ready', [
-        'text' => $cbStartupLoaderText,
-        'login_ok' => !empty($_SESSION['login_ok']) ? '1' : '0',
-    ]);
-    // CB_LOGIN_TRACE_TEMP_END
 }
 
 require_once __DIR__ . '/includes/log_a_404.php';

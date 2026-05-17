@@ -124,7 +124,7 @@ function cb_priprav_kartu_mini(
 
     // DOCASNE MERENI CASU KARET
     if (function_exists('cb_tmp_measure_card_time_log')) {
-        cb_tmp_measure_card_time_log($cardId, $title, 'mini', 'priprava', $cbTmpMeasureStart);
+        cb_tmp_measure_card_time_log($cardId, $soubor, 'mini', 'priprava', $cbTmpMeasureStart);
     }
 
     return $result;

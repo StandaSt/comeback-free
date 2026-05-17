@@ -3,26 +3,25 @@
 declare(strict_types=1);
 
 /*
- * SYNC SLOTY UŽIVATELE (Směny -> Comeback DB)
+ * SYNC SLOTY UĹ˝IVATELE (SmÄ›ny -> Comeback DB)
  *
- * Co to dělá:
- * - vezme sloty přihlášeného uživatele ze session (cb_user_profile['shiftRoleTypeNames'])
- * - převede je na id_slot v tabulce cis_slot (podle názvu slotu)
- * - porovná s aktuálním stavem v user_slot
- * - smaže jen to, co bylo ve Směnách odebráno
- * - přidá jen to, co bylo ve Směnách přidáno
+ * Co to dÄ›lĂˇ:
+ * - vezme sloty pĹ™ihlĂˇĹˇenĂ©ho uĹľivatele ze session (cb_user_profile['shiftRoleTypeNames'])
+ * - pĹ™evede je na id_slot v tabulce cis_slot (podle nĂˇzvu slotu)
+ * - porovnĂˇ s aktuĂˇlnĂ­m stavem v user_slot
+ * - smaĹľe jen to, co bylo ve SmÄ›nĂˇch odebrĂˇno
+ * - pĹ™idĂˇ jen to, co bylo ve SmÄ›nĂˇch pĹ™idĂˇno
  *
  * Pozn.:
- * - "sloty" jsou ve Směnách názvy (shiftRoleTypeNames), ne ID
- * - nic z API se tady nevolá (bere to jen ze session)
- * - volá se uvnitř transakce z db/db_user_login.php
+ * - "sloty" jsou ve SmÄ›nĂˇch nĂˇzvy (shiftRoleTypeNames), ne ID
+ * - nic z API se tady nevolĂˇ (bere to jen ze session)
+ * - volĂˇ se uvnitĹ™ transakce z db/db_user_login.php
  */
-require_once __DIR__ . '/../lib/login_diagnostika.php';
 
 if (!function_exists('db_user_slot_sync')) {
 
     /**
-     * Synchronizuje sloty uživatele podle session.
+     * Synchronizuje sloty uĹľivatele podle session.
      *
      * @return array{add:int,del:int,add_names:string[],del_names:string[]}
      */
@@ -33,7 +32,7 @@ if (!function_exists('db_user_slot_sync')) {
             $slotyRaw = [];
         }
 
-        // 1) desiredNames = unikátní názvy slotů ze Směn
+        // 1) desiredNames = unikĂˇtnĂ­ nĂˇzvy slotĹŻ ze SmÄ›n
         $desiredNamesMap = [];
         foreach ($slotyRaw as $s) {
             $name = trim((string)$s);
@@ -44,7 +43,7 @@ if (!function_exists('db_user_slot_sync')) {
         }
         $desiredNames = array_keys($desiredNamesMap);
 
-        // 2) desiredIds = id_slot z cis_slot (mapujeme přes název)
+        // 2) desiredIds = id_slot z cis_slot (mapujeme pĹ™es nĂˇzev)
         $desiredIds = [];
         if (count($desiredNames) > 0) {
             $in = implode(',', array_fill(0, count($desiredNames), '?'));
@@ -56,7 +55,7 @@ if (!function_exists('db_user_slot_sync')) {
                 throw new RuntimeException('DB: prepare selhal (cis_slot map).');
             }
 
-            // mysqli::bind_param vyžaduje parametry po referenci → call_user_func_array
+            // mysqli::bind_param vyĹľaduje parametry po referenci â†’ call_user_func_array
             $bind = [];
             $bind[] = &$types;
             foreach ($desiredNames as $i => $v) {
@@ -78,12 +77,8 @@ if (!function_exists('db_user_slot_sync')) {
             }
             $stmt->close();
 
-            // Pokud Směny poslaly sloty, ale my je neumíme namapovat v cis_slot → nic nemažeme, jen zalogujeme.
+            // Pokud SmÄ›ny poslaly sloty, ale my je neumĂ­me namapovat v cis_slot â†’ nic nemaĹľeme, jen zalogujeme.
             if (count($desiredIds) === 0) {
-                cb_login_log_line('db_user_slot_map_empty', [
-                    'id_user' => (string)$idUser,
-                    'sloty' => implode(', ', $desiredNames),
-                ]);
                 return [
                     'add' => 0,
                     'del' => 0,
@@ -126,7 +121,7 @@ if (!function_exists('db_user_slot_sync')) {
             }
         }
 
-        // 5) delete (odebrané ve Směnách)
+        // 5) delete (odebranĂ© ve SmÄ›nĂˇch)
         $delCount = 0;
         $delNames = [];
         if (count($toDel) > 0) {
@@ -144,7 +139,7 @@ if (!function_exists('db_user_slot_sync')) {
             $stmt->close();
         }
 
-        // 6) insert (přidané ve Směnách)
+        // 6) insert (pĹ™idanĂ© ve SmÄ›nĂˇch)
         $addCount = 0;
         $addNames = [];
         if (count($toAdd) > 0) {
@@ -162,20 +157,10 @@ if (!function_exists('db_user_slot_sync')) {
             $stmt->close();
         }
 
-        // 7) log: přidáno/odebráno
+        // 7) log: pĹ™idĂˇno/odebrĂˇno
         if ($addCount > 0) {
-            cb_login_log_line('db_user_slot_add', [
-                'id_user' => (string)$idUser,
-                'count' => (string)$addCount,
-                'sloty' => implode(', ', $addNames),
-            ]);
         }
         if ($delCount > 0) {
-            cb_login_log_line('db_user_slot_del', [
-                'id_user' => (string)$idUser,
-                'count' => (string)$delCount,
-                'sloty' => implode(', ', $delNames),
-            ]);
         }
 
         return [
@@ -187,5 +172,5 @@ if (!function_exists('db_user_slot_sync')) {
     }
 }
 
-/* db/db_user_slot.php * Verze: V3 * Aktualizace: 12.2.2026 * Počet řádků: 193 */
+/* db/db_user_slot.php * Verze: V3 * Aktualizace: 12.2.2026 * PoÄŤet Ĺ™ĂˇdkĹŻ: 193 */
 // Konec souboru

@@ -59,16 +59,13 @@ if (session_status() === PHP_SESSION_ACTIVE) {
     $filterMode = trim((string)($_SESSION['selected_pobocky_mode'] ?? ''));
 }
 
-// CB_LOGIN_TRACE_TEMP_START
-$isLoginTraceTemp = str_starts_with($event, 'login_trace_');
-// CB_LOGIN_TRACE_TEMP_END
 $ajaxTraceEnabled = function_exists('cb_system_setting') && (int)cb_system_setting('log_3', 0) === 1;
-if (!$ajaxTraceEnabled && !$isLoginTraceTemp) {
+if (!$ajaxTraceEnabled) {
     http_response_code(204);
     exit;
 }
 
-if ((int)$user !== 1 && !$isLoginTraceTemp) {
+if ((int)$user !== 1) {
     http_response_code(204);
     exit;
 }

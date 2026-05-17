@@ -825,6 +825,16 @@ align-items:center;
 .head_user_exit:hover{ background:var(--clr_ruzova_2); }
 .head_user_exit:active{ background:var(--clr_ruzova_1); }
 
+.head_user_exit.is-timeout-warning{
+  animation:head_user_exit_pulse 2.8s ease-in-out infinite;
+}
+
+@keyframes head_user_exit_pulse{
+  0%{ background:transparent; }
+  50%{ background:var(--clr_ruzova_2); }
+  100%{ background:transparent; }
+}
+
 /* Teplomer seance */
 .head_user_col--right .head_user_val[data-thermo]{
   position:relative;

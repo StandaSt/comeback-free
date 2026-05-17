@@ -76,32 +76,71 @@ if (!function_exists('cb_dashboard_render_card_error')) {
 
 // DOCASNE MERENI CASU KARET
 if (!function_exists('cb_tmp_measure_card_time_log')) {
-    function cb_tmp_measure_card_time_log(int $cardId, string $cardTitle, string $mode, string $usek, float $startTs): void
+    function cb_tmp_measure_card_time_log(int $cardId, string $cardSource, string $mode, string $usek, float $startTs): void
     {
         if (!function_exists('cb_tmp_time_count_enabled') || !cb_tmp_time_count_enabled()) {
             return;
         }
 
-        if ($cardId > 0 || trim($cardTitle) !== '') {
-            cb_tmp_measure_card_register($cardId, $cardTitle, $mode);
+        static $cbCardTimeSummaryRegistered = false;
+        if (!isset($GLOBALS['cb_tmp_card_time_sum_priprava'])) {
+            $GLOBALS['cb_tmp_card_time_sum_priprava'] = 0.0;
+        }
+        if (!isset($GLOBALS['cb_tmp_card_time_sum_zobrazeni'])) {
+            $GLOBALS['cb_tmp_card_time_sum_zobrazeni'] = 0.0;
+        }
+        if ($cbCardTimeSummaryRegistered === false) {
+            $cbCardTimeSummaryRegistered = true;
+            register_shutdown_function(static function (): void {
+                if (!function_exists('cb_tmp_time_count_enabled') || !cb_tmp_time_count_enabled()) {
+                    return;
+                }
+
+                $sumPriprava = (float)($GLOBALS['cb_tmp_card_time_sum_priprava'] ?? 0.0);
+                $sumZobrazeni = (float)($GLOBALS['cb_tmp_card_time_sum_zobrazeni'] ?? 0.0);
+
+                $summary = sprintf(
+                    "---------- celkem priprava: %s ms ---------------- celkem zobrazeni: %s ms -----------------\n",
+                    number_format($sumPriprava, 3, '.', ''),
+                    number_format($sumZobrazeni, 3, '.', '')
+                );
+                cb_tmp_measure_log_write('card_time.txt', $summary);
+            });
+        }
+
+        $cardSource = trim($cardSource);
+        if ($cardId > 0 || $cardSource !== '') {
+            cb_tmp_measure_card_register($cardId, $cardSource, $mode);
         }
 
         $filters = function_exists('cb_tmp_measure_filters')
             ? cb_tmp_measure_filters()
             : ['od' => '', 'do' => '', 'pobocky' => '', 'pobocky_mode' => ''];
 
+        $pobockyMode = trim((string)$filters['pobocky_mode']);
+        if ($pobockyMode === '') {
+            $pobockyMode = '-';
+        }
+        $pobockyText = 'pobocky ' . $pobockyMode . '=' . (string)$filters['pobocky'];
+
+        $elapsedMs = (microtime(true) - $startTs) * 1000;
+        if ($usek === 'priprava') {
+            $GLOBALS['cb_tmp_card_time_sum_priprava'] = (float)($GLOBALS['cb_tmp_card_time_sum_priprava'] ?? 0.0) + $elapsedMs;
+        } elseif ($usek === 'zobrazeni') {
+            $GLOBALS['cb_tmp_card_time_sum_zobrazeni'] = (float)($GLOBALS['cb_tmp_card_time_sum_zobrazeni'] ?? 0.0) + $elapsedMs;
+        }
+
         $line = sprintf(
-            "%s | karta=%d:%s | mode=%s | usek=%s | ms=%s | obdobi_od=%s | obdobi_do=%s | pobocky=%s | pobocky_mode=%s%s",
+            "%s | ms=%s | karta=%d - %s | mode=%s | usek=%s | obdobi_od=%s | obdobi_do=%s | %s%s",
             date('Y-m-d H:i:s'),
+            number_format($elapsedMs, 3, '.', ''),
             $cardId,
-            trim($cardTitle) !== '' ? trim($cardTitle) : '-',
+            $cardSource !== '' ? $cardSource : '-',
             $mode !== '' ? $mode : '-',
             $usek !== '' ? $usek : '-',
-            number_format((microtime(true) - $startTs) * 1000, 3, '.', ''),
             (string)$filters['od'],
             (string)$filters['do'],
-            (string)$filters['pobocky'],
-            (string)$filters['pobocky_mode'],
+            $pobockyText,
             PHP_EOL
         );
 
