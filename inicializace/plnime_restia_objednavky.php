@@ -38,9 +38,19 @@ if (!function_exists('cb_restia_hist_txt_path')) {
     }
 }
 
+if (!function_exists('cb_restia_hist_logging_enabled')) {
+    function cb_restia_hist_logging_enabled(): bool
+    {
+        return function_exists('cb_system_setting') && (int)cb_system_setting('log_4', 0) === 1;
+    }
+}
+
 if (!function_exists('cb_restia_hist_log_init')) {
     function cb_restia_hist_log_init(int $idPob): void
     {
+        if (!cb_restia_hist_logging_enabled()) {
+            return;
+        }
         $path = cb_restia_hist_txt_path($idPob);
         if (!is_file($path)) {
             @file_put_contents($path, '', FILE_APPEND | LOCK_EX);
@@ -51,6 +61,9 @@ if (!function_exists('cb_restia_hist_log_init')) {
 if (!function_exists('cb_restia_hist_log')) {
     function cb_restia_hist_log(int $idPob, string $line): void
     {
+        if (!cb_restia_hist_logging_enabled()) {
+            return;
+        }
         $path = cb_restia_hist_txt_path($idPob);
         @file_put_contents($path, $line . "\n", FILE_APPEND | LOCK_EX);
     }
@@ -73,6 +86,9 @@ if (!function_exists('cb_restia_hist_error_log_init')) {
 if (!function_exists('cb_restia_hist_error_log')) {
     function cb_restia_hist_error_log(int $idPob, string $line): void
     {
+        if (!cb_restia_hist_logging_enabled()) {
+            return;
+        }
         @file_put_contents(cb_restia_hist_error_txt_path($idPob), $line . "\n", FILE_APPEND | LOCK_EX);
     }
 }
@@ -464,9 +480,7 @@ if (!function_exists('cb_restia_hist_run_batch')) {
 
         $importEndDate = cb_restia_hist_normalize_ymd($importEndDate);
         $foundNow = 0;
-        $cycleMonth = '';
-        $state['auto_resume'] = 0;
-        $state['auto_next_month'] = 0;
+        $state['continue_import'] = 0;
 
         while (true) {
             $date = (string)($state['next_date'] ?? '');
@@ -524,10 +538,6 @@ if (!function_exists('cb_restia_hist_run_batch')) {
             $foundNow += $dayCount;
             $state['found_total'] = (int)($state['found_total'] ?? 0) + $dayCount;
             $state['branch_db_count'] = (int)($state['branch_db_count'] ?? 0) + $dayCount;
-            $state['cycle_found'] = (int)($state['cycle_found'] ?? 0) + $dayCount;
-            $state['cycle_new_obj_casy'] = (int)($state['cycle_new_obj_casy'] ?? 0) + max(0, (int)($day['new_obj_casy'] ?? 0));
-            $state['cycle_new_obj_ceny'] = (int)($state['cycle_new_obj_ceny'] ?? 0) + max(0, (int)($day['new_obj_ceny'] ?? 0));
-
             cb_restia_hist_log(
                 (int)($branch['id_pob'] ?? 0),
                 (string)($state['run_row_no'] ?? 0)
@@ -540,7 +550,7 @@ if (!function_exists('cb_restia_hist_run_batch')) {
             $startedAtMs = (int)($state['run_started_at_ms'] ?? 0);
             $nowMsCheck = (int)round(microtime(true) * 1000);
             if ($startedAtMs > 0 && ($nowMsCheck - $startedAtMs) >= 105000) {
-                $state['auto_resume'] = 1;
+                $state['continue_import'] = 1;
                 $branchName = (string)($branch['nazev'] ?? '');
                 cb_restia_hist_log(
                     (int)($branch['id_pob'] ?? 0),
@@ -551,48 +561,6 @@ if (!function_exists('cb_restia_hist_run_batch')) {
                 );
                 break;
             }
-
-
-            $currentMonth = substr((string)$date, 0, 7);
-            $nextMonth = substr((string)($state['next_date'] ?? ''), 0, 7);
-            if ($currentMonth !== '' && $nextMonth !== '' && $nextMonth !== $currentMonth) {
-                $cycleMonth = cb_restia_hist_format_month_year_cs((string)$date);
-                if ((string)($state['next_date'] ?? '') !== '' && (string)($state['next_date'] ?? '') <= $importEndDate) {
-                    $state['auto_next_month'] = 1;
-                }
-                $state['finished'] = 1;
-                break;
-            }
-
-            $cycleMonth = cb_restia_hist_format_month_year_cs((string)$date);
-        }
-
-        if ((int)($state['finished'] ?? 0) === 1 && $message === '') {
-            $branchName = (string)($branch['nazev'] ?? '');
-            if ($cycleMonth === '') {
-                $cycleMonth = cb_restia_hist_format_month_year_cs((string)($day['date'] ?? $date));
-            }
-            $cycleFound = max(0, (int)($state['cycle_found'] ?? $foundNow));
-            $cycleNewCeny = max(0, (int)($state['cycle_new_obj_ceny'] ?? 0));
-            $cycleNewCasy = max(0, (int)($state['cycle_new_obj_casy'] ?? 0));
-            $message = 'Import ' . $cycleMonth . ', ' . $branchName . ', ulozeno ' . (string)$cycleFound . ' objednavek.';
-            if ($cycleFound === $cycleNewCeny && $cycleFound === $cycleNewCasy) {
-                $state['cycle_check_text'] = 'Ceny a casy souhlasi';
-                $state['cycle_check_ok'] = 1;
-            } else {
-                $state['cycle_check_text'] = 'ceny ' . (string)$cycleNewCeny . ' zazn., casy ' . (string)$cycleNewCasy . ' zazn.';
-                $state['cycle_check_ok'] = 0;
-            }
-            cb_restia_hist_log(
-                (int)($branch['id_pob'] ?? 0),
-                'KONEC CYKLU: '
-                . cb_restia_hist_format_datetime_cs(cb_restia_hist_now())
-                . ' | pobocka=' . ($branchName !== '' ? $branchName : '-')
-                . ' | soucet_cyklus=' . (string)$cycleFound
-            );
-            $state['cycle_found'] = 0;
-            $state['cycle_new_obj_casy'] = 0;
-            $state['cycle_new_obj_ceny'] = 0;
         }
     }
 }
@@ -1713,20 +1681,29 @@ if (!function_exists('cb_restia_hist_default_state')) {
             'last_date' => '',
             'run_from_date' => '',
             'finished' => 0,
-            'auto_resume' => 0,
-            'auto_next_month' => 0,
+            'continue_import' => 0,
             'branch_name' => '',
             'branch_id' => 0,
             'run_started_at_ms' => 0,
             'run_row_no' => 0,
             'found_total' => 0,
             'branch_db_count' => 0,
-            'cycle_errors' => 0,
-            'cycle_found' => 0,
-            'cycle_new_obj_casy' => 0,
-            'cycle_new_obj_ceny' => 0,
-            'cycle_check_text' => '',
-            'cycle_check_ok' => 0,
+        ];
+    }
+}
+
+if (!function_exists('cb_restia_hist_keep_state')) {
+    function cb_restia_hist_keep_state(array $state): array
+    {
+        return [
+            'next_date' => (string)($state['next_date'] ?? ''),
+            'start_date' => (string)($state['start_date'] ?? ''),
+            'last_date' => (string)($state['last_date'] ?? ''),
+            'run_from_date' => (string)($state['run_from_date'] ?? ''),
+            'finished' => (int)($state['finished'] ?? 0),
+            'continue_import' => (int)($state['continue_import'] ?? 0),
+            'branch_name' => (string)($state['branch_name'] ?? ''),
+            'branch_id' => (int)($state['branch_id'] ?? 0),
         ];
     }
 }
@@ -1969,16 +1946,19 @@ if ($action === 'start' && $auth !== null) {
     cb_restia_hist_log((int)$branch['id_pob'], 'LIMIT: ' . (string)CB_RESTIA_HIST_LIMIT);
 
     $state['run_started_at_ms'] = (int)round(microtime(true) * 1000);
-    $state['auto_resume'] = 0;
+    $state['continue_import'] = 0;
     cb_restia_hist_run_batch($conn, $auth, $branch, $state, $rows, $message, $importEndDate);
     $action = '';
 }
 
-$_SESSION[$cbStateKey] = $state;
-$_SESSION[$cbRowsKey] = $rows;
-$_SESSION[$cbMsgKey] = $message;
-if ((int)($state['finished'] ?? 0) === 1) {
+if ((int)($state['continue_import'] ?? 0) === 1) {
+    $_SESSION[$cbStateKey] = cb_restia_hist_keep_state($state);
+    unset($_SESSION[$cbRowsKey], $_SESSION[$cbMsgKey]);
+} elseif ((int)($state['finished'] ?? 0) === 1) {
     unset($_SESSION[$cbStateKey], $_SESSION[$cbRowsKey], $_SESSION[$cbMsgKey]);
+} else {
+    $_SESSION[$cbStateKey] = cb_restia_hist_keep_state($state);
+    unset($_SESSION[$cbRowsKey], $_SESSION[$cbMsgKey]);
 }
 
 $branchOptions = [];
@@ -2069,9 +2049,13 @@ if ($selectedBranchId > 0) {
 
     $lastOkText = (string)$countObj . ' objednávek';
 }
-$cycleCheckText = (string)($state['cycle_check_text'] ?? '');
-$cycleCheckOk = ((int)($state['cycle_check_ok'] ?? 0) === 1);
-$autoResume = ((((int)($state['auto_resume'] ?? 0) === 1) || ((int)($state['auto_next_month'] ?? 0) === 1)) && $selectedBranchId > 0);
+$autoResume = ((int)($state['continue_import'] ?? 0) === 1 && $selectedBranchId > 0);
+$loaderNextDate = cb_restia_hist_normalize_ymd((string)($state['next_date'] ?? $resumeDate));
+$loaderNextDateText = $loaderNextDate !== '' ? cb_restia_hist_format_date_input_cs($loaderNextDate) : '';
+$loaderButtonText = 'API - stahuji objednávky';
+if ($loaderNextDateText !== '') {
+    $loaderButtonText .= ' od "' . $loaderNextDateText . '"';
+}
 
 $canStartImport = ($selectedBranchId > 0 && $selectedBranchEnabled && $selectedBranchHasWork);
 $branchInfoName = $selectedBranchId > 0 ? $selectedBranchName : 'není vybrána';
@@ -2093,7 +2077,6 @@ if (!$canStartImport) {
   <p class="card_text txt_seda text_12">Pobočka: <?= cb_restia_hist_h($branchInfoName) ?> (<?= cb_restia_hist_h($branchInfoId) ?>)</p>
   <p class="card_text txt_seda text_12">První objednávka pobočky: <?= cb_restia_hist_h($branchInfoStart) ?> | V DB je <?= cb_restia_hist_h($lastOkText) ?></p>
   <?php if ($message !== ''): ?><p class="card_text text_tucny txt_seda"><?= cb_restia_hist_h($message) ?></p><?php endif; ?>
-  <?php if ($cycleCheckText !== ''): ?><p class="card_text text_tucny <?= $cycleCheckOk ? 'txt_zelena' : 'txt_cervena' ?>"><?= cb_restia_hist_h($cycleCheckText) ?></p><?php endif; ?>
     <br><br>
  <span class="card_text txt_cervena text_11">Výběr pobočky</span>
   <div class="card_actions gap_8 displ_flex">
@@ -2123,7 +2106,7 @@ if (!$canStartImport) {
         <?php endforeach; ?>
       </select>
       <span class="card_text txt_seda text_14" style="margin-right:8px; line-height:22px;"><?= $resumeDate !== '' ? cb_restia_hist_h(cb_restia_hist_format_month_year_cs($resumeDate)) : '' ?></span>
-      <button type="submit" id="cb_start_import_btn" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" style="<?= cb_restia_hist_h($startButtonStyle) ?>" data-cb-loader-text="API - stahuji objednávky" aria-disabled="<?= $canStartImport ? 'false' : 'true' ?>"<?= $canStartImport ? '' : ' disabled' ?>>Spustit import</button>
+      <button type="submit" id="cb_start_import_btn" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" style="<?= cb_restia_hist_h($startButtonStyle) ?>" data-cb-loader-text="<?= cb_restia_hist_h($loaderButtonText) ?>" aria-disabled="<?= $canStartImport ? 'false' : 'true' ?>"<?= $canStartImport ? '' : ' disabled' ?>>Spustit import</button>
     </form>
   </div>
   <?php if ($autoResume): ?>
@@ -2131,8 +2114,9 @@ if (!$canStartImport) {
       id="cb_restia_auto_resume"
       style="display:none;"
       data-cb-restia-auto-resume="1"
-      data-cb-restia-auto-resume-delay="2000"
+      data-cb-restia-auto-resume-delay="500"
       data-cb-restia-auto-resume-branch="<?= cb_restia_hist_h((string)$selectedBranchId) ?>"
+      data-cb-restia-next-date="<?= cb_restia_hist_h($loaderNextDate) ?>"
     ></div>
   <?php endif; ?>
 

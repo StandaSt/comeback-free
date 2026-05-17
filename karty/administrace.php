@@ -1,6 +1,6 @@
 <?php
 // K2
-// karty/administrace.php * Verze: V3 * Aktualizace: 11.05.2026
+// karty/administrace.php * Verze: V4 * Aktualizace: 17.05.2026
 declare(strict_types=1);
 
 $card_min_html = '<p class="card_text odstup_vnejsi_0">administrace</p>';
@@ -11,12 +11,22 @@ $cbAdminSystem = [
     'on_2fa' => 0,
     'system_logout' => 0,
     'pauza_obdobi' => 1000,
+    'log_1' => 0,
+    'log_2' => 0,
+    'log_3' => 0,
+    'log_4' => 0,
 ];
 $cbAdminError = '';
 $cbAdminSaveName = trim((string)($_POST['cb_admin_set_name'] ?? ''));
 $cbAdminSaveValue = trim((string)($_POST['cb_admin_set_value'] ?? ''));
 $cbAdminLogoutOptions = [2, 5, 10, 15, 20, 30, 60];
 $cbAdminPauzaOptions = [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000];
+$cbAdminLogLabels = [
+    'log_1' => 'card_time + db_time (vykon SQL a karet)',
+    'log_2' => 'merime_casy_AI + merime_casy_user (kroky renderu dashboardu)',
+    'log_3' => 'ajax_trace (udalosti loaderu a AJAX toku)',
+    'log_4' => 'plnime_restia_objednavky_X (historie importu Restia po dnech)',
+];
 
 try {
     $conn = db();
@@ -25,7 +35,7 @@ try {
     }
 
     if ($cbAdminSaveName !== '') {
-        $allowedBoolFields = ['restia_online', 'on_2fa'];
+        $allowedBoolFields = ['restia_online', 'on_2fa', 'log_1', 'log_2', 'log_3', 'log_4'];
         if (in_array($cbAdminSaveName, $allowedBoolFields, true)) {
             $saveValue = ($cbAdminSaveValue === '1') ? 1 : 0;
             $sql = 'UPDATE set_system SET `' . $cbAdminSaveName . '` = ? WHERE id_set = 1 LIMIT 1';
@@ -35,7 +45,7 @@ try {
                 $stmt->execute();
                 $stmt->close();
             } else {
-                $cbAdminError = 'Uložení nastavení selhalo.';
+                $cbAdminError = 'Ulozeni nastaveni selhalo.';
             }
         } elseif ($cbAdminSaveName === 'system_logout') {
             $saveValue = (int)$cbAdminSaveValue;
@@ -48,7 +58,7 @@ try {
                 $stmt->execute();
                 $stmt->close();
             } else {
-                $cbAdminError = 'Uložení nastavení selhalo.';
+                $cbAdminError = 'Ulozeni nastaveni selhalo.';
             }
         } elseif ($cbAdminSaveName === 'pauza_obdobi') {
             $saveValue = (int)$cbAdminSaveValue;
@@ -61,14 +71,14 @@ try {
                 $stmt->execute();
                 $stmt->close();
             } else {
-                $cbAdminError = 'Uložení nastavení selhalo.';
+                $cbAdminError = 'Ulozeni nastaveni selhalo.';
             }
         }
     }
 
     if ($cbAdminError === '') {
         $res = $conn->query('
-            SELECT restia_online, on_2fa, system_logout, pauza_obdobi
+            SELECT restia_online, on_2fa, system_logout, pauza_obdobi, log_1, log_2, log_3, log_4
             FROM set_system
             WHERE id_set = 1
             LIMIT 1
@@ -81,16 +91,23 @@ try {
                 $cbAdminSystem['on_2fa'] = (int)($row['on_2fa'] ?? 0);
                 $cbAdminSystem['system_logout'] = (int)($row['system_logout'] ?? 0);
                 $cbAdminSystem['pauza_obdobi'] = (int)($row['pauza_obdobi'] ?? 1000);
+                $cbAdminSystem['log_1'] = (int)($row['log_1'] ?? 0);
+                $cbAdminSystem['log_2'] = (int)($row['log_2'] ?? 0);
+                $cbAdminSystem['log_3'] = (int)($row['log_3'] ?? 0);
+                $cbAdminSystem['log_4'] = (int)($row['log_4'] ?? 0);
+                if (function_exists('cb_store_system_settings')) {
+                    cb_store_system_settings($row);
+                }
             } else {
-                $cbAdminError = 'Nastavení systému nebylo nalezeno.';
+                $cbAdminError = 'Nastaveni systemu nebylo nalezeno.';
             }
             $res->free();
         } else {
-            $cbAdminError = 'Načtení nastavení systému selhalo.';
+            $cbAdminError = 'Nacteni nastaveni systemu selhalo.';
         }
     }
 } catch (Throwable $e) {
-    $cbAdminError = 'Načtení nastavení systému selhalo.';
+    $cbAdminError = 'Nacteni nastaveni systemu selhalo.';
 }
 
 $cbAdminBoolClass = static function (int $value): string {
@@ -106,12 +123,12 @@ ob_start();
 <?php else: ?>
   <div class="card_stack gap_8">
     <div class="table-wrap ram_normal bg_bila">
-      <table class="table ram_normal bg_bila radek_1_35 sirka100">
+      <table class="table ram_normal bg_bila radek_1_35 sirka100" style="width:100%;table-layout:fixed;">
         <thead>
           <tr>
-            <th>Nastavení</th>
-            <th>Aktuální hodnota</th>
-            <th>Význam</th>
+            <th>Nastaveni</th>
+            <th>Aktualni hodnota</th>
+            <th>Vyznam</th>
           </tr>
         </thead>
         <tbody>
@@ -121,12 +138,12 @@ ob_start();
               <form method="post" action="<?= h($cbAdminFormAction) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
                 <input type="hidden" name="cb_admin_set_name" value="restia_online">
                 <select name="cb_admin_set_value" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" onchange="if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
-                  <option value="1"<?= $cbAdminSystem['restia_online'] === 1 ? ' selected' : '' ?>>Aktivní</option>
-                  <option value="0"<?= $cbAdminSystem['restia_online'] === 0 ? ' selected' : '' ?>>Neaktivní</option>
+                  <option value="1"<?= $cbAdminSystem['restia_online'] === 1 ? ' selected' : '' ?>>Aktivni</option>
+                  <option value="0"<?= $cbAdminSystem['restia_online'] === 0 ? ' selected' : '' ?>>Neaktivni</option>
                 </select>
               </form>
             </td>
-            <td>Automatické online aktualizace objednávek Restia</td>
+            <td>Automaticke online aktualizace objednavek Restia</td>
           </tr>
           <tr>
             <td>2FA</td>
@@ -134,12 +151,12 @@ ob_start();
               <form method="post" action="<?= h($cbAdminFormAction) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
                 <input type="hidden" name="cb_admin_set_name" value="on_2fa">
                 <select name="cb_admin_set_value" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" onchange="if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
-                  <option value="1"<?= $cbAdminSystem['on_2fa'] === 1 ? ' selected' : '' ?>>Aktivní</option>
-                  <option value="0"<?= $cbAdminSystem['on_2fa'] === 0 ? ' selected' : '' ?>>Neaktivní</option>
+                  <option value="1"<?= $cbAdminSystem['on_2fa'] === 1 ? ' selected' : '' ?>>Aktivni</option>
+                  <option value="0"<?= $cbAdminSystem['on_2fa'] === 0 ? ' selected' : '' ?>>Neaktivni</option>
                 </select>
               </form>
             </td>
-            <td>Dvoufázové ověření při přihlášení</td>
+            <td>Dvoufazove overeni pri prihlaseni</td>
           </tr>
           <tr>
             <td>System logout</td>
@@ -153,10 +170,10 @@ ob_start();
                 </select>
               </form>
             </td>
-            <td>Limit nečinnosti před automatickým odhlášením</td>
+            <td>Limit necinnosti pred automatickym odhlasenim</td>
           </tr>
           <tr>
-            <td>Pauza období</td>
+            <td>Pauza obdobi</td>
             <td class="text_tucny">
               <form method="post" action="<?= h($cbAdminFormAction) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
                 <input type="hidden" name="cb_admin_set_name" value="pauza_obdobi">
@@ -167,8 +184,38 @@ ob_start();
                 </select>
               </form>
             </td>
-            <td>Čekání při ruční volbě období v GN hlavičce</td>
+            <td>Cekani pri rucni volbe obdobi v GN hlavicce</td>
           </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="table-wrap ram_normal bg_bila">
+      <table class="table ram_normal bg_bila radek_1_35 sirka100" style="width:100%;table-layout:fixed;">
+        <thead>
+          <tr>
+            <th>Aktivni</th>
+            <th>Aktivace logovani</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($cbAdminLogLabels as $cbLogKey => $cbLogLabel): ?>
+            <tr>
+              <td class="txt_c">
+                <form method="post" action="<?= h($cbAdminFormAction) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
+                  <input type="hidden" name="cb_admin_set_name" value="<?= h($cbLogKey) ?>">
+                  <input type="hidden" name="cb_admin_set_value" value="0">
+                  <input
+                    type="checkbox"
+                    name="cb_admin_set_value"
+                    value="1"
+                    <?= ((int)($cbAdminSystem[$cbLogKey] ?? 0) === 1) ? 'checked' : '' ?>
+                    onchange="if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}"
+                  >
+                </form>
+              </td>
+              <td><?= h($cbLogLabel) ?></td>
+            </tr>
+          <?php endforeach; ?>
         </tbody>
       </table>
     </div>

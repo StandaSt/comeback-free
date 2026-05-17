@@ -75,7 +75,7 @@
         card: nextCard
       }
     }));
-    return true;
+    return nextCard;
   }
 
   function swapCardExpandedFromHtml(cardId, html) {
@@ -105,7 +105,7 @@
         card: currentCard
       }
     }));
-    return true;
+    return currentCard;
   }
 
   function setLoading(on, text, mode) {
@@ -142,6 +142,77 @@
   function isDashboardRefreshForm(form) {
     return form instanceof HTMLFormElement
       && String(form.getAttribute('data-cb-refresh-dashboard-on-save') || '') === '1';
+  }
+
+  function isRestiaImportForm(form) {
+    if (!(form instanceof HTMLFormElement)) return false;
+    const field = form.querySelector('input[name="run_restia_obj"]');
+    return field instanceof HTMLInputElement && String(field.value || '') === '1';
+  }
+
+  function finishRestiaReload(card) {
+    if (!(card instanceof HTMLElement)) {
+      setLoading(false, '', 'dashboard');
+      return;
+    }
+
+    initRestiaAutoResume(card);
+    if (!card.querySelector('#cb_restia_auto_resume[data-cb-restia-auto-resume="1"]')) {
+      setLoading(false, '', 'dashboard');
+    }
+  }
+
+  function reloadRestiaImportMax(cardId, attempt) {
+    const id = parseInt(String(cardId || '0'), 10);
+    if (!Number.isFinite(id) || id <= 0) return;
+    const tries = Number.isFinite(attempt) ? Number(attempt) : 0;
+
+    const url = 'index.php?cb_card_id=' + encodeURIComponent(String(id)) + '&cb_restia_import_max=1';
+    fetch(url, {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: {
+        'X-Comeback-Restia-Import-Max': '1'
+      }
+    }).then((res) => {
+      return res.text().then((text) => {
+        const raw = String(text || '').trim();
+        let data = null;
+        if (raw !== '') {
+          try {
+            data = JSON.parse(raw);
+          } catch (e) {
+            data = null;
+          }
+        }
+
+        if (!res.ok || !data || typeof data !== 'object' || data.ok !== true || typeof data.cardHtml !== 'string') {
+          throw new Error('Max karta se nepodarila nacist.');
+        }
+
+        const expandedCard = swapCardExpandedFromHtml(id, data.cardHtml);
+        if (expandedCard instanceof HTMLElement) {
+          finishRestiaReload(expandedCard);
+          return;
+        }
+
+        const swappedCard = swapCardFromHtml(id, data.cardHtml);
+        finishRestiaReload(swappedCard instanceof HTMLElement ? swappedCard : null);
+      });
+    }).catch(() => {
+      if (tries >= 3) {
+        setLoading(false, '', 'dashboard');
+        return;
+      }
+      w.setTimeout(() => reloadRestiaImportMax(id, tries + 1), 5000);
+    });
+  }
+
+  function formatRestiaLoaderText(nextDateRaw) {
+    const raw = String(nextDateRaw || '').trim();
+    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return 'API - stahuji objednavky';
+    return 'API - stahuji objednavky od "' + m[3] + '.' + m[2] + '.' + m[1] + '"';
   }
 
   function setMaxFormSubmitting(form, submitter, on, text) {
@@ -270,14 +341,21 @@
     if (marker.getAttribute('data-cb-restia-auto-resume-armed') === '1') return;
     marker.setAttribute('data-cb-restia-auto-resume-armed', '1');
 
-    const delayMs = parseInt(String(marker.getAttribute('data-cb-restia-auto-resume-delay') || '2000'), 10);
-    const waitMs = Number.isFinite(delayMs) && delayMs >= 0 ? delayMs : 2000;
+    const delayMs = parseInt(String(marker.getAttribute('data-cb-restia-auto-resume-delay') || '500'), 10);
+    const waitMs = Number.isFinite(delayMs) && delayMs >= 0 ? delayMs : 500;
     const branchId = String(marker.getAttribute('data-cb-restia-auto-resume-branch') || '').trim();
+    const nextDate = String(marker.getAttribute('data-cb-restia-next-date') || '').trim();
 
     w.setTimeout(() => {
       if (!document.body.contains(marker)) return;
-      const form = document.querySelector('form[data-cb-max-form="1"]');
+
+      const card = marker.closest('[data-cb-dash-card="1"]');
+      if (!(card instanceof HTMLElement)) return;
+
+      const form = card.querySelector('form[data-cb-max-form="1"]');
       if (!(form instanceof HTMLFormElement)) return;
+      const loaderText = formatRestiaLoaderText(nextDate);
+      form.setAttribute('data-cb-loader-text', loaderText);
 
       if (typeof w.cbResetIdleLogout === 'function') {
         w.cbResetIdleLogout();
@@ -294,6 +372,9 @@
       }
 
       const submitter = form.querySelector('#cb_start_import_btn');
+      if (submitter instanceof HTMLElement) {
+        submitter.setAttribute('data-cb-loader-text', loaderText);
+      }
       submitAjax(form, submitter instanceof HTMLElement ? submitter : null);
     }, waitMs);
   }
@@ -303,6 +384,7 @@
     const opts = (options && typeof options === 'object') ? options : {};
     const skipSubmitterName = !!opts.skipSubmitterName;
     const refreshDashboardOnSave = isDashboardRefreshForm(form);
+    const restiaImportForm = isRestiaImportForm(form);
 
     const method = String(form.method || 'POST').toUpperCase();
     const reqUrl = String(form.action || w.location.href || 'index.php');
@@ -366,6 +448,8 @@
       requestInit.body = formData;
     }
 
+    let keepRestiaLoader = false;
+
     fetch(fetchUrl, requestInit).then((res) => {
       return res.text().then((text) => {
         const raw = String(text || '').trim();
@@ -380,7 +464,9 @@
 
         if (!res.ok) {
           const errMsg = String((data && data.err) ? data.err : 'Odeslani formulare selhalo.').trim();
-          throw new Error(errMsg + ' HTTP ' + res.status);
+          const err = new Error(errMsg + ' HTTP ' + res.status);
+          err.status = res.status;
+          throw err;
         }
 
         if (!data || typeof data !== 'object' || data.ok !== true || typeof data.cardHtml !== 'string') {
@@ -395,17 +481,32 @@
           });
         }
 
-        if (cardId > 0 && swapCardExpandedFromHtml(cardId, data.cardHtml)) {
-          return { ok: true, cardId: cardId };
+        if (cardId > 0) {
+          const expandedCard = swapCardExpandedFromHtml(cardId, data.cardHtml);
+          if (expandedCard instanceof HTMLElement) {
+            initRestiaAutoResume(expandedCard);
+            return { ok: true, cardId: cardId };
+          }
         }
 
-        if (cardId > 0 && swapCardFromHtml(cardId, data.cardHtml)) {
-          return { ok: true, cardId: cardId };
+        if (cardId > 0) {
+          const swappedCard = swapCardFromHtml(cardId, data.cardHtml);
+          if (swappedCard instanceof HTMLElement) {
+            initRestiaAutoResume(swappedCard);
+            return { ok: true, cardId: cardId };
+          }
         }
 
         throw new Error('Max karta vrátila neplatný HTML obsah.');
       });
     }).catch((err) => {
+      const status = err && typeof err.status === 'number' ? err.status : 0;
+      if (restiaImportForm && status === 504 && cardId > 0) {
+        keepRestiaLoader = true;
+        w.setTimeout(() => reloadRestiaImportMax(cardId), 5000);
+        return;
+      }
+
       const msg = (err && typeof err.message === 'string' && err.message.trim() !== '')
         ? err.message.trim()
         : 'Odeslani formulare selhalo.';
@@ -419,6 +520,9 @@
         }
       });
       setMaxFormSubmitting(form, submitter, false, '');
+      if (keepRestiaLoader) {
+        return;
+      }
       if (useGlobalLoader) {
         setLoading(false, '', 'dashboard');
       }
@@ -499,6 +603,22 @@
       const card = event && event.detail ? event.detail.card : null;
       initRestiaAutoResume(card instanceof HTMLElement ? card : document);
     });
+    document.addEventListener('click', (event) => {
+      const target = event.target instanceof Element ? event.target.closest('[data-cb-restia-stop="1"]') : null;
+      if (!(target instanceof HTMLElement)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      fetch('index.php', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'X-Comeback-Restia-Stop': '1'
+        }
+      }).finally(() => {
+        setLoading(false, '', 'dashboard');
+        w.location.reload();
+      });
+    }, true);
   }
 
   wireOnce();

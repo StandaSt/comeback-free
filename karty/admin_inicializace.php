@@ -52,12 +52,13 @@ $cbRestiaState = $_SESSION['cb_restia_hist_v4_state'] ?? null;
 $cbRestiaStateKeepMax = (
     is_array($cbRestiaState)
     && (
-        (int)($cbRestiaState['days_total'] ?? 0) > 0
-        || (int)($cbRestiaState['remaining_days'] ?? 0) > 0
-        || (int)($cbRestiaState['waiting_continue'] ?? 0) === 1
-        || (int)($cbRestiaState['auto_next'] ?? 0) === 1
+        (int)($cbRestiaState['continue_import'] ?? 0) === 1
+        || (trim((string)($cbRestiaState['next_date'] ?? '')) !== '' && (int)($cbRestiaState['finished'] ?? 0) === 0)
     )
-    && (int)($cbRestiaState['finished'] ?? 0) === 0
+    && (
+        (int)($cbRestiaState['finished'] ?? 0) === 0
+        || (int)($cbRestiaState['continue_import'] ?? 0) === 1
+    )
 );
 $cbKeepRestiaMax = $cbRunRestia || $cbRestiaStateKeepMax;
 $cbTraceK3Branch = 'default';
@@ -168,7 +169,7 @@ if (($cbDashboardRenderMode ?? '') === 'mini') {
           <?php foreach ($rows as $row): ?>
             <tr>
               <td><?= h((string)$row['source']) ?></td>
-              <td class="<?= ((int)$row['count'] === 0) ? 'txt_r txt_cervena text_tucny' : 'txt_r' ?>"><strong><?= h(number_format((int)$row['count'], 0, ',', ' ')) ?></strong></td>
+              <td class="<?= ((int)$row['count'] === 0) ? 'txt_r txt_cervena text_tucny' : 'txt_r' ?>"><?= h(number_format((int)$row['count'], 0, ',', ' ')) ?></td>
               <td class="txt_r"><?= h(cb_db_fmt_bytes((int)$row['bytes'])) ?></td>
               <?php [$cbDatePart, $cbTimePart] = cb_admin_init_split_dt((string)($row['updated_at'] ?? 'Ne')); ?>
               <td class="txt_r cb_tabular_nums cb_dt_col_date"><?= h($cbDatePart) ?></td>

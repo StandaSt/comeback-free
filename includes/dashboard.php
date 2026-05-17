@@ -170,6 +170,10 @@ if (!function_exists('cb_dashboard_timing_log')) {
             return;
         }
 
+        if (!function_exists('cb_system_setting') || (int)cb_system_setting('log_2', 0) !== 1) {
+            return;
+        }
+
         $now = microtime(true);
         $stepMs = (int)round(($now - $lastTs) * 1000);
         $totalMs = (int)round(($now - $startTs) * 1000);

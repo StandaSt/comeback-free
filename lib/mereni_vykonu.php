@@ -5,7 +5,12 @@ declare(strict_types=1);
 if (!function_exists('cb_tmp_time_count_enabled')) {
     function cb_tmp_time_count_enabled(): bool
     {
-        return isset($GLOBALS['time_count']) && (int)$GLOBALS['time_count'] === 1;
+        $timeCountEnabled = isset($GLOBALS['time_count']) && (int)$GLOBALS['time_count'] === 1;
+        if (!$timeCountEnabled) {
+            return false;
+        }
+
+        return function_exists('cb_system_setting') && (int)cb_system_setting('log_1', 0) === 1;
     }
 }
 

@@ -92,7 +92,7 @@ function cb_login_load_settings_to_session(int $idUser): void
 {
     $conn = db();
 
-    $resSystem = $conn->query('SELECT restia_online, on_2fa, system_logout, pauza_obdobi FROM set_system WHERE id_set = 1 LIMIT 1');
+    $resSystem = $conn->query('SELECT restia_online, on_2fa, system_logout, pauza_obdobi, log_1, log_2, log_3, log_4 FROM set_system WHERE id_set = 1 LIMIT 1');
     if (!($resSystem instanceof mysqli_result)) {
         throw new RuntimeException('Nepodarilo se nacist set_system.');
     }
