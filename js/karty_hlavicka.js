@@ -1,9 +1,11 @@
-// js/karty_hlavicka.js * Verze: V1 * Aktualizace: 11.03.2026
+﻿// js/karty_hlavicka.js * Verze: V1 * Aktualizace: 11.03.2026
 'use strict';
 
 (function (w) {
   const MOVE_DEFAULT_TEXT = 'Přesunout na pozici';
   const MOVE_HINT_TEXT = 'Zvol novou pozici pro tuto kartu';
+  const UNLOCK_ALL_CONFIRM_HTML = 'Pokoušíte se uvolnit všechny karty uzamčené na pozici<br><br>Pokud trváte na odemknutí karet,<br>dojde ke změně pořadí všech karet na dashboardu.';
+  const UNLOCK_ALL_CONFIRM_TEXT = 'Pokoušíte se uvolnit všechny karty uzamčené na pozici. Pokud trváte na odemknutí karet, dojde ke změně pořadí všech karet na dashboardu.';
 
   function findCardToggle(cardId) {
     const cid = String(cardId || '').trim();
@@ -124,6 +126,33 @@
       }
     }
 
+    function logUserCardAction(actionId, cardId, success, errMsg) {
+      const idAkce = parseInt(String(actionId || '0'), 10);
+      const idKarta = parseInt(String(cardId || '0'), 10);
+      if (!Number.isFinite(idAkce) || idAkce <= 0 || !Number.isFinite(idKarta) || idKarta <= 0) {
+        return;
+      }
+
+      const payload = {
+        id_akce: idAkce,
+        id_karta: idKarta,
+        vysledek: success ? 1 : 0,
+        err_msg: String(errMsg || '').trim(),
+        zdroj: 'karty_hlavicka'
+      };
+
+      w.fetch('index.php', {
+        method: 'POST',
+        headers: {
+          'X-Comeback-User-Akce': '1',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload)
+      }).catch(() => {});
+    }
+
     function closeCardModeConfirmModal() {
       const modal = getCardModeConfirmModal();
       if (!modal) return false;
@@ -143,6 +172,40 @@
       modal.msg.innerHTML = 'Cílová pozice je obsazena dříve umístěnou kartou.<br><br>Pokud trváš na přesunu karty,<br>bude karta na cílové pozici uvolněna z pozice.';
       modal.cancelBtn.textContent = 'Jéminkote, netrvám na tom';
       modal.confirmBtn.textContent = 'Trvám na přesunu';
+      modal.confirmBtn.classList.remove('is-hidden');
+      modal.root.classList.remove('is-hidden');
+      modal.root.setAttribute('aria-hidden', 'false');
+      modal.confirmBtn.focus();
+
+      const handleYes = function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        closeCardModeConfirmModal();
+        if (typeof onYes === 'function') {
+          onYes();
+        }
+      };
+      const handleNo = function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        closeCardModeConfirmModal();
+        if (typeof onNo === 'function') {
+          onNo();
+        }
+      };
+
+      modal.confirmBtn.addEventListener('click', handleYes, { once: true });
+      modal.cancelBtn.addEventListener('click', handleNo, { once: true });
+      return true;
+    }
+
+    function openUnlockAllConfirm(onYes, onNo) {
+      const modal = getCardModeConfirmModal();
+      if (!modal) return false;
+
+      modal.msg.innerHTML = UNLOCK_ALL_CONFIRM_HTML;
+      modal.cancelBtn.textContent = 'Jéminkote, sem se uklik';
+      modal.confirmBtn.textContent = 'ANO, odemkni karty';
       modal.confirmBtn.classList.remove('is-hidden');
       modal.root.classList.remove('is-hidden');
       modal.root.setAttribute('aria-hidden', 'false');
@@ -367,6 +430,7 @@
             tgt_id: targetId,
             force_unlock: forceUnlock ? 1 : 0
           });
+          logUserCardAction(5, moveSource.id, true, '');
           setCardPlacement(moveSource.root, targetCol, targetLine, true);
           setCardPlacement(targetRoot, 0, 0, false);
           clearMoveSource();
@@ -407,6 +471,7 @@
           tgt_id: targetId,
           message: err
         });
+        logUserCardAction(5, moveSource.id, false, err);
         if (err === 'Pozice 1-1 je určena pro nano karty.') {
           if (!openSystemAlert(err)) {
             window.alert(err);
@@ -420,6 +485,9 @@
         traceAjax('card_move_fetch_error', {
           src_id: moveSource ? moveSource.id : 0
         });
+        if (moveSource && Number.isFinite(moveSource.id) && moveSource.id > 0) {
+          logUserCardAction(5, moveSource.id, false, 'Presun karty selhal.');
+        }
         window.alert('Přesun karty selhal.');
         clearMoveSource();
       });
@@ -513,36 +581,43 @@
           }
           return;
         }
-
         const unlockAllBtn = target.closest('[data-card-pref-unlock-all]');
         if (unlockAllBtn) {
-          traceAjax('card_unlock_all_click', {});
-          fetch('index.php', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Comeback-Unlock-All-Card-Pos': '1'
-            },
-            body: JSON.stringify({})
-          }).then((r) => r.json().catch(() => ({}))).then((data) => {
-          if (data && data.ok) {
-            traceAjax('card_unlock_all_ok', {});
-            clearAllCardPlacements();
-            clearMoveSource();
-            closeAllCardPrefMenus();
-            if (w.CB_AJAX && typeof w.CB_AJAX.relayoutDashboard === 'function') {
-              w.CB_AJAX.relayoutDashboard();
+          const runUnlockAll = function () {
+            traceAjax('card_unlock_all_click', {});
+            fetch('index.php', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Comeback-Unlock-All-Card-Pos': '1'
+              },
+              body: JSON.stringify({})
+            }).then((r) => r.json().catch(() => ({}))).then((data) => {
+              if (data && data.ok) {
+                traceAjax('card_unlock_all_ok', {});
+                clearAllCardPlacements();
+                clearMoveSource();
+                closeAllCardPrefMenus();
+                if (w.CB_AJAX && typeof w.CB_AJAX.relayoutDashboard === 'function') {
+                  w.CB_AJAX.relayoutDashboard();
+                }
+                setDashboardLoading(false);
+                return;
+              }
+              const err = String((data && data.err) ? data.err : 'Odemknutí pozic karet selhalo.');
+              traceAjax('card_unlock_all_error', { message: err });
+              window.alert(err);
+            }).catch(() => {
+              traceAjax('card_unlock_all_fetch_error', {});
+              window.alert('Odemknutí pozic karet selhalo.');
+            });
+          };
+
+          if (!openUnlockAllConfirm(runUnlockAll, function () {})) {
+            if (window.confirm(UNLOCK_ALL_CONFIRM_TEXT)) {
+              runUnlockAll();
             }
-            setDashboardLoading(false);
-            return;
           }
-            const err = String((data && data.err) ? data.err : 'Odemknutí pozic karet selhalo.');
-            traceAjax('card_unlock_all_error', { message: err });
-            window.alert(err);
-          }).catch(() => {
-            traceAjax('card_unlock_all_fetch_error', {});
-            window.alert('Odemknutí pozic karet selhalo.');
-          });
           return;
         }
 

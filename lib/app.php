@@ -137,6 +137,7 @@ if (!function_exists('cb_system_settings_defaults')) {
             'on_2fa' => 1,
             'system_logout' => 20,
             'pauza_obdobi' => 1000,
+            'log_akce' => 0,
             'log_1' => 0,
             'log_2' => 0,
             'log_3' => 0,
@@ -167,6 +168,8 @@ if (!function_exists('cb_store_system_settings')) {
             $pauza = 1000;
         }
         $data['pauza_obdobi'] = $pauza;
+
+        $data['log_akce'] = ((int)($values['log_akce'] ?? $data['log_akce']) === 1) ? 1 : 0;
 
         foreach (['log_1', 'log_2', 'log_3', 'log_4'] as $logKey) {
             $data[$logKey] = ((int)($values[$logKey] ?? $data[$logKey]) === 1) ? 1 : 0;

@@ -13,6 +13,32 @@
   const CARD_COMPACT_SELECTOR = '[data-card-compact]';
   const CARD_EXPANDED_SELECTOR = '[data-card-expanded]';
 
+  function logUserCardAction(actionId, cardId, success, errMsg) {
+    const idAkce = parseInt(String(actionId || '0'), 10);
+    const idKarta = parseInt(String(cardId || '0'), 10);
+    if (!Number.isFinite(idAkce) || idAkce <= 0 || !Number.isFinite(idKarta) || idKarta <= 0) {
+      return;
+    }
+
+    const payload = {
+      id_akce: idAkce,
+      id_karta: idKarta,
+      vysledek: success ? 1 : 0,
+      err_msg: String(errMsg || '').trim()
+    };
+
+    w.fetch('index.php', {
+      method: 'POST',
+      headers: {
+        'X-Comeback-User-Akce': '1',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify(payload)
+    }).catch(() => {});
+  }
+
   function getCurrentLoginId() {
     const grid = document.querySelector('.dash_grid[data-login-id]');
     if (!(grid instanceof HTMLElement)) return '0';
@@ -162,6 +188,7 @@
 
     const options = (opts && typeof opts === 'object') ? opts : {};
     const preserveState = !!options.preserveState;
+    const doLogAction = options.logAction !== false;
 
     const item = activeMaxi;
     const {
@@ -205,6 +232,11 @@
 
     if (!preserveState) {
       clearMaxiState();
+    }
+
+    if (doLogAction) {
+      const cardId = parseInt(String(root.getAttribute('data-card-id') || '0'), 10);
+      logUserCardAction(2, cardId, true, '');
     }
 
     const closedCard = item.dashCard instanceof HTMLElement ? item.dashCard : null;
@@ -289,6 +321,7 @@
 
     if (hasLoadedMax(root)) {
       finishOpenMaxi(root, compactSel, expandedSel, toggleSel);
+      logUserCardAction(1, parseInt(String(root.getAttribute('data-card-id') || '0'), 10), true, '');
       return;
     }
 
@@ -311,7 +344,9 @@
     }).then((nextRoot) => {
       initCard(nextRoot);
       finishOpenMaxi(nextRoot, compactSel, expandedSel, toggleSel);
+      logUserCardAction(1, parseInt(String(nextRoot.getAttribute('data-card-id') || '0'), 10), true, '');
     }).catch(() => {
+      logUserCardAction(1, parseInt(String(root.getAttribute('data-card-id') || '0'), 10), false, 'Otevreni max karty selhalo');
       if (w.alert) {
         w.alert('Otevreni max karty selhalo.');
       }
@@ -400,14 +435,14 @@
     document.addEventListener('cb:maxi-close-request', () => {
       suppressNextRestore = true;
       clearMaxiState();
-      closeActiveMaxi({ preserveState: false });
+      closeActiveMaxi({ preserveState: false, logAction: false });
     });
 
     document.addEventListener('cb:main-swapped', () => {
       if (suppressNextRestore) {
-        closeActiveMaxi({ preserveState: false });
+        closeActiveMaxi({ preserveState: false, logAction: false });
       } else {
-        closeActiveMaxi({ preserveState: true });
+        closeActiveMaxi({ preserveState: true, logAction: false });
       }
       initKartyMinMax();
       if (suppressNextRestore) {
@@ -447,7 +482,7 @@
 
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
-        closeActiveMaxi();
+        closeActiveMaxi({ logAction: true });
       }
     });
   }

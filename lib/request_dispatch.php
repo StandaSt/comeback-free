@@ -37,6 +37,40 @@ if (isset($_SERVER['HTTP_X_COMEBACK_RESTIA_STOP'])) {
     $cbIsRestiaStop = ((string)($_SERVER['HTTP_X_COMEBACK_RESTIA_STOP']) === '1');
 }
 
+$cbIsUserAkce = false;
+if (isset($_SERVER['HTTP_X_COMEBACK_USER_AKCE'])) {
+    $cbIsUserAkce = ((string)($_SERVER['HTTP_X_COMEBACK_USER_AKCE']) === '1');
+}
+
+if ($cbIsUserAkce && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
+    if (empty($_SESSION['login_ok'])) {
+        http_response_code(401);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok' => false, 'err' => 'Nutne prihlaseni'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    header('Content-Type: application/json; charset=utf-8');
+    $raw = (string)file_get_contents('php://input');
+    $data = json_decode($raw, true);
+    if (!is_array($data)) {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'err' => 'Neplatny JSON'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $saved = false;
+    if (function_exists('cb_user_akce_zapis')) {
+        $saved = cb_user_akce_zapis($data);
+    }
+
+    echo json_encode([
+        'ok' => true,
+        'saved' => $saved ? 1 : 0,
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 if ($cbIsRestiaStop && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     if (empty($_SESSION['login_ok'])) {
         http_response_code(401);

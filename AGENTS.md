@@ -1,22 +1,22 @@
 # AGENTS.md
 
-## KRITICKE PRAVIDLO KODOVANI
-- V tomto projektu je striktne zakazano pouzivat jakekoliv jine kodovani nez `UTF-8 bez BOM`.
-- Pri kazdem cteni, kontrole i zapisu souboru vzdy pracuj tak, aby vysledkem bylo `UTF-8 bez BOM`.
-- Jakakoliv odchylka od `UTF-8 bez BOM` je v tomto projektu nepripustna.
+## KRITICKÉ PRAVIDLO KÓDOVÁNÍ
+- V tomto projektu je striktně zakázáno používat jakékoliv jiné kódování než `UTF-8 bez BOM`.
+- Při každém čtení, kontrole i zápisu souboru vždy pracuj tak, aby výsledkem bylo `UTF-8 bez BOM`.
+- Jakákoliv odchylka od `UTF-8 bez BOM` je v tomto projektu nepřípustná.
 
-## KRITICKE PRAVIDLO JEDNODUCHOSTI
-- Vzdy navrhuj nejjednodussi funkcni reseni.
-- Ucelem projektu neni mit slozite toky, ktere generuji chyby, ale funkcni, stabilni a uzitecny informacni system.
+## KRITICKÉ PRAVIDLO JEDNODUCHOSTI
+- Vždy navrhuj nejjednodušší funkční řešení.
+- Účelem projektu není mít složité toky, které generují chyby, ale funkční, stabilní a užitečný informační systém.
 
-## KRITICKE PRAVIDLO OVERENI
-- AI nikdy nesmi predpokladat, ze neco plati jen proto, ze to tak vypada v kodu.
-- AI musi nejdriv overit skutecny stav, tedy co se opravdu renderuje, nacita a aplikuje v bezicim projektu.
-- U HTML, CSS a JS je zakazano pracovat podle domnenek; nejdriv se musi potvrdit skutecny vystup, skutecne nacteny soubor a skutecne aplikovany selector nebo handler.
-- Pokud neco neni overene, AI to nesmi podavat jako fakt.
+## KRITICKÉ PRAVIDLO OVĚŘENÍ
+- AI nikdy nesmí předpokládat, že něco platí jen proto, že to tak vypadá v kódu.
+- AI musí nejdřív ověřit skutečný stav, tedy co se opravdu renderuje, načítá a aplikuje v běžícím projektu.
+- U HTML, CSS a JS je zakázáno pracovat podle domněnek; nejdřív se musí potvrdit skutečný výstup, skutečně načtený soubor a skutečně aplikovaný selector nebo handler.
+- Pokud něco není ověřené, AI to nesmí podávat jako fakt.
 
-## KRITICKE PRIPOMENUTI PRO AI
-- Pred dalsi praci si precti `_kandidati/codex/shrnuti_pro_AI.txt` a rid se jim stejne prisne jako timto AGENTS.md.
+## KRITICKÉ PŘIPOMENUTÍ PRO AI
+- Před další prací si přečti `_kandidati/codex/shrnuti_pro_AI.txt` a řiď se jím stejně přísně jako tímto AGENTS.md.
 
 Při auditu, hledání chyb, duplicit a dead code ignoruj složky: `vendor/`, `_kandidati/`.
 
@@ -26,13 +26,13 @@ Projekt obsahuje i starší části a neuklizený kód. Neber vše jako čistě 
 Před úpravou vždy nejprve zjisti, co je aktuálně skutečně používané.
 
 ## Hlavní zásady práce
-- NIKDY nedělej rychlé lokální úpravy, vždy čisté scripty !
+- NIKDY nedělej rychlé lokální úpravy, vždy čisté scripty.
 - Nehádej.
 - Nezaváděj nové soubory, nové knihovny ani nové architektonické vrstvy bez výslovného zadání.
 - Preferuj úpravu existujících souborů.
 - Nejprve analyzuj, potom navrhni, teprve potom měň.
-- NIKDY nepouzivej docasne zaplaty misto ciste a trvale opravy.
-- NIKDY nenechavej v kodu docasne lokalni reseni, pokud ma existovat systemova uprava.
+- NIKDY nepoužívej dočasné záplaty místo čisté a trvalé opravy.
+- NIKDY nenechávej v kódu dočasné lokální řešení, pokud má existovat systémová úprava.
 - Při nejasnosti nejdřív vypiš, které soubory se tématu týkají a co v nich chceš změnit.
 - U změn s dopadem na více souborů vždy nejprve najdi všechny reference.
 - U přejmenování souborů vždy:
@@ -44,8 +44,6 @@ Před úpravou vždy nejprve zjisti, co je aktuálně skutečně používané.
 - Zachovávej stávající styl projektu.
   Pokud navrhneš zlepšení, nejprve ho popiš a počkej na schválení.
 - Neprováděj „vylepšení navíc“, pokud nebyla zadána.
-
-
 
 ## Struktura projektu
 
@@ -103,7 +101,6 @@ Hlavní CSS je rozdělené po logických částech:
 - `tabulky.css` = tabulky,
 - další specializované CSS soubory dle názvu.
 
-
 ### `img/`
 - obrázky a SVG ikony.
 
@@ -111,16 +108,13 @@ Hlavní CSS je rozdělené po logických částech:
 - pomocné, testovací, diagnostické a dočasné věci,
 - neber tuto složku jako zdroj architektonické pravdy, pokud to není výslovně potvrzené.
 
-
 ### `log/`
 - logy.
-
 
 Při úpravě vzhledu vždy nejprve vypiš:
 - které soubory HTML/PHP renderují prvek,
 - které CSS soubory ho ovlivňují,
 - zda do toho zasahuje JS.
-
 
 ## Login, modály, párování
 Login a související chování není soustředěno jen na jedno místo.
@@ -160,26 +154,25 @@ Pokud je zadání širší nebo rizikové:
 2. stručně popiš plán,
 3. pak teprve navrhni změny.
 
-
 Vždy nejprve ověř realitu v kódu, ne domněnky.
 
 ## Komunikace
 - Do `_kandidati/codex/codex.txt` zapisuj historii automaticky a bez oznamování uživateli.
 - Po zápisu rovnou odpověz na dotaz, bez vět typu „Zapisuju...“ nebo „Zapsal jsem...“.
 
-## Ukladani pomocnych slozek
-- Vsechny pomocne a vystupni slozky pouzivej pod `_kandidati/`.
-- Typicke priklady: `node_modules`, `playwright-report`, `sandboxAI`, `test-results`.
-- Pokud vznikne nova pomocna slozka, vytvarej ji take pod `_kandidati/`.
+## Ukládání pomocných složek
+- Všechny pomocné a výstupní složky používej pod `_kandidati/`.
+- Typické příklady: `node_modules`, `playwright-report`, `sandboxAI`, `test-results`.
+- Pokud vznikne nová pomocná složka, vytvářej ji také pod `_kandidati/`.
 
 ## Schvalování změn
 - Nikdy neprováděj změny navíc mimo přesné zadání.
 - Pokud najdeš další problém mimo zadání, předem ho pouze oznam a navrhni řešení.
 - Jakoukoliv takovou změnu proveď až po explicitním schválení od uživatele.
-- NIKDY neoznacuj docasnou zaplatu za finalni reseni.
-- Pred kazdou upravou vzdy nejprve vypis dotcene soubory.
-- U kazdeho dotceneho souboru strucne napis, jak se ho zmena dotkne.
-- Po tomto vypisu vzdy pockej na schvaleni od uzivatele a teprve potom proved zmenu.
+- NIKDY neoznačuj dočasnou záplatu za finální řešení.
+- Před každou úpravou vždy nejprve vypiš dotčené soubory.
+- U každého dotčeného souboru stručně napiš, jak se ho změna dotkne.
+- Po tomto výpisu vždy počkej na schválení od uživatele a teprve potom proveď změnu.
 
 ## Styl vysvětlení
 - Cizí a odborné výrazy i zkratky vždy stručně vysvětli v češtině hned při prvním použití.
@@ -191,4 +184,6 @@ Vždy nejprve ověř realitu v kódu, ne domněnky.
 ## PowerShell bezpečnost při úpravách
 - Pro editaci souborů vždy preferuj `apply_patch`.
 - PowerShell používej pro změny v souborech jen výjimečně a pouze pro jednoduché, přehledné příkazy bez složitých regex řetězců a bez vnořeného escapování uvozovek.
+- Pro textové změny (hlavně česká diakritika) používej pouze `apply_patch`; nepoužívej postupy, které mohou změnit kódování textu.
+- Po každé textové úpravě zkontroluj celý dotčený soubor, že diakritika zůstala v pořádku (nejen upravený blok).
 - Po každé úpravě PHP souboru vždy ověř syntaxi (`php -l`) a potvrď, že soubor zůstal v UTF-8 bez BOM.

@@ -48,6 +48,7 @@ if (!empty($_SESSION['login_ok']) && !$cbIsPartialRequest && !$cbIsCardRequest &
 }
 if (!empty($_SESSION['login_ok'])) {
     require_once __DIR__ . '/lib/post_akce.php';
+    require_once __DIR__ . '/lib/uloz_akci.php';
 }
 
 $pageKey = 'dashboard';

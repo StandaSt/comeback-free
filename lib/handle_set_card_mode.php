@@ -26,6 +26,7 @@ if (
 
     $idKarta = (int)($data['id_karta'] ?? 0);
     $mode = trim((string)($data['mode'] ?? ''));
+    $forceUnlock = ((int)($data['force_unlock'] ?? 0) === 1);
     if ($idKarta <= 0 || !in_array($mode, ['mini', 'maxi', 'nano'], true)) {
         http_response_code(422);
         echo json_encode(['ok' => false, 'err' => 'Neplatny vstup'], JSON_UNESCAPED_UNICODE);
@@ -35,6 +36,32 @@ if (
     try {
         $conn = db();
         if ($mode === 'nano') {
+            $stmtLock = $conn->prepare('
+                SELECT col, line
+                FROM user_card_set
+                WHERE id_user = ? AND id_karta = ?
+                LIMIT 1
+            ');
+            if (!$stmtLock) {
+                throw new RuntimeException('prepare lock check failed');
+            }
+            $stmtLock->bind_param('ii', $idUser, $idKarta);
+            $stmtLock->execute();
+            $stmtLock->bind_result($lockCol, $lockLine);
+            $hasLockRow = $stmtLock->fetch();
+            $stmtLock->close();
+            $isLocked = $hasLockRow && (int)$lockCol > 0 && (int)$lockLine > 0;
+
+            if ($isLocked && !$forceUnlock) {
+                http_response_code(409);
+                echo json_encode([
+                    'ok' => false,
+                    'needs_confirm' => true,
+                    'err' => 'Karta je momentálně uzamčena na pozici.<br><br>Pokud trváš na přesunu karty,<br>pozice bude uvolněna pro další použití.',
+                ], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
             $maxNano = 9;
             $stmtCnt = $conn->prepare('SELECT COUNT(*) FROM user_nano WHERE id_user = ? AND id_nano <> ?');
             if (!$stmtCnt) {

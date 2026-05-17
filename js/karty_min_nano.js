@@ -9,6 +9,33 @@
   const CARD_EXPANDED_SELECTOR = '[data-card-expanded]';
   const MAX_NANO_CARDS = 9;
 
+  function logUserCardAction(actionId, cardId, success, errMsg) {
+    const idAkce = parseInt(String(actionId || '0'), 10);
+    const idKarta = parseInt(String(cardId || '0'), 10);
+    if (!Number.isFinite(idAkce) || idAkce <= 0 || !Number.isFinite(idKarta) || idKarta <= 0) {
+      return;
+    }
+
+    const payload = {
+      id_akce: idAkce,
+      id_karta: idKarta,
+      vysledek: success ? 1 : 0,
+      err_msg: String(errMsg || '').trim(),
+      zdroj: 'karty_min_nano'
+    };
+
+    w.fetch('index.php', {
+      method: 'POST',
+      headers: {
+        'X-Comeback-User-Akce': '1',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify(payload)
+    }).catch(() => {});
+  }
+
   function getCardRoots() {
     return Array.from(document.querySelectorAll(CARD_ROOT_SELECTOR)).filter((el) => el instanceof HTMLElement);
   }
@@ -93,20 +120,24 @@
     }
   }
 
-  function requestCardMode(cardId, mode) {
+  function requestCardMode(cardId, mode, options) {
+    const opts = (options && typeof options === 'object') ? options : {};
+    const forceUnlock = opts.forceUnlock === true;
     return fetch('index.php', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Comeback-Set-Card-Mode': '1'
       },
-      body: JSON.stringify({ id_karta: cardId, mode: mode })
+      body: JSON.stringify({ id_karta: cardId, mode: mode, force_unlock: forceUnlock ? 1 : 0 })
     }).then((r) => r.json().catch(() => ({})).then((data) => {
       if (r.ok && data && data.ok) {
         return data;
       }
       const err = String((data && data.err) ? data.err : 'Uložení režimu karty selhalo').trim();
-      throw new Error(err !== '' ? err : 'Uložení režimu karty selhalo');
+      const e = new Error(err !== '' ? err : 'Uložení režimu karty selhalo');
+      e.needsConfirm = !!(data && data.needs_confirm);
+      throw e;
     }));
   }
 
@@ -207,6 +238,39 @@
         w.alert(msg);
       }
     }
+  }
+
+  function openNanoUnlockConfirm(onYes, onNo) {
+    const modal = getCardModeModal();
+    if (!modal || !(modal.confirmBtn instanceof HTMLElement)) return false;
+
+    modal.msg.innerHTML = 'Karta je momentálně uzamčena na pozici.<br><br>Pokud trváš na přesunu karty,<br>pozice bude uvolněna pro další použití.';
+    modal.closeBtn.textContent = 'Jéminkote, netrvám na tom';
+    modal.confirmBtn.textContent = 'Trvám na přesunu';
+    modal.confirmBtn.classList.remove('is-hidden');
+    modal.root.classList.remove('is-hidden');
+    modal.root.setAttribute('aria-hidden', 'false');
+    modal.confirmBtn.focus();
+
+    const yes = function (ev) {
+      ev.preventDefault();
+      modal.confirmBtn.removeEventListener('click', yes);
+      modal.closeBtn.removeEventListener('click', no);
+      closeCardModeModal();
+      if (typeof onYes === 'function') onYes();
+    };
+
+    const no = function (ev) {
+      ev.preventDefault();
+      modal.confirmBtn.removeEventListener('click', yes);
+      modal.closeBtn.removeEventListener('click', no);
+      closeCardModeModal();
+      if (typeof onNo === 'function') onNo();
+    };
+
+    modal.confirmBtn.addEventListener('click', yes);
+    modal.closeBtn.addEventListener('click', no);
+    return true;
   }
 
   function createBreakNode() {
@@ -389,10 +453,11 @@
     setDashboardLoading(false);
   }
 
-  function handleModeSwitch(cardId, targetMode, tracePrefix) {
+  function handleModeSwitch(cardId, targetMode, tracePrefix, actionId) {
+    const idAkce = parseInt(String(actionId || '0'), 10);
     setDashboardLoading(true, 'Přesouvám kartu ...');
 
-    requestCardMode(cardId, targetMode).then(() => {
+    requestCardMode(cardId, targetMode, { forceUnlock: false }).then(() => {
       traceAjax(tracePrefix + '_mode_saved', {
         card_id: cardId
       });
@@ -401,12 +466,40 @@
       traceAjax(tracePrefix + '_ok', {
         card_id: cardId
       });
+      logUserCardAction(idAkce, cardId, true, '');
       finishModeSwitch();
     }).catch((err) => {
+      if (err && err.needsConfirm === true) {
+        finishModeSwitch();
+        const opened = openNanoUnlockConfirm(() => {
+          setDashboardLoading(true, 'Přesouvám kartu ...');
+          requestCardMode(cardId, targetMode, { forceUnlock: true }).then(() => {
+            return refreshOnlyCurrentCard(cardId);
+          }).then(() => {
+            traceAjax(tracePrefix + '_ok', {
+              card_id: cardId
+            });
+            logUserCardAction(idAkce, cardId, true, '');
+            finishModeSwitch();
+          }).catch((err2) => {
+            traceAjax(tracePrefix + '_error', {
+              card_id: cardId,
+              message: String((err2 && err2.message) ? err2.message : '')
+            });
+            logUserCardAction(idAkce, cardId, false, String((err2 && err2.message) ? err2.message : ''));
+            finishModeSwitch();
+            showCardModeError(err2);
+          });
+        }, () => {});
+        if (opened) {
+          return;
+        }
+      }
       traceAjax(tracePrefix + '_error', {
         card_id: cardId,
         message: String((err && err.message) ? err.message : '')
       });
+      logUserCardAction(idAkce, cardId, false, String((err && err.message) ? err.message : ''));
       finishModeSwitch();
       showCardModeError(err);
     });
@@ -437,7 +530,7 @@
         card_id: cardId
       });
 
-      handleModeSwitch(cardId, 'nano', 'mini_to_nano');
+      handleModeSwitch(cardId, 'nano', 'mini_to_nano', 3);
     });
   }
 
@@ -467,7 +560,7 @@
           card_id: cardId
         });
 
-        handleModeSwitch(cardId, 'mini', 'nano_to_mini');
+        handleModeSwitch(cardId, 'mini', 'nano_to_mini', 4);
       });
     });
   }

@@ -11,6 +11,7 @@ $cbAdminSystem = [
     'on_2fa' => 0,
     'system_logout' => 0,
     'pauza_obdobi' => 1000,
+    'log_akce' => 0,
     'log_1' => 0,
     'log_2' => 0,
     'log_3' => 0,
@@ -21,12 +22,20 @@ $cbAdminSaveName = trim((string)($_POST['cb_admin_set_name'] ?? ''));
 $cbAdminSaveValue = trim((string)($_POST['cb_admin_set_value'] ?? ''));
 $cbAdminLogoutOptions = [2, 5, 10, 15, 20, 30, 60];
 $cbAdminPauzaOptions = [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000];
+$cbAdminAkceGlobalOptions = [
+    '1' => 'Aktivovat logování akcí pro všechny uživatele',
+    '0' => 'Deaktivovat logování',
+];
 $cbAdminLogLabels = [
     'log_1' => 'Měření výkonu systému (SQL + karty)',
     'log_2' => 'Měření načítání dashboardu',
     'log_3' => 'Sledování průběhu načítání a AJAX komunikace',
     'log_4' => 'Historie importu objednávek z Restia (po dnech)',
 ];
+
+$cbAdminActiveUsers = [];
+$cbAdminUsersLogOn = [];
+$cbAdminUsersLogOff = [];
 
 try {
     $conn = db();
@@ -76,9 +85,63 @@ try {
         }
     }
 
+    if ($cbAdminError === '' && $cbAdminSaveName === 'log_akce') {
+        $saveValue = ($cbAdminSaveValue === '1') ? 1 : 0;
+        $stmt = $conn->prepare('UPDATE set_system SET log_akce = ? WHERE id_set = 1 LIMIT 1');
+        if ($stmt instanceof mysqli_stmt) {
+            $stmt->bind_param('i', $saveValue);
+            $stmt->execute();
+            $stmt->close();
+        } else {
+            $cbAdminError = 'Ulozeni nastaveni selhalo.';
+        }
+    }
+
+    if ($cbAdminError === '' && ($cbAdminSaveName === 'log_akce_user_on' || $cbAdminSaveName === 'log_akce_user_off')) {
+        $idUser = (int)$cbAdminSaveValue;
+        if ($idUser > 0) {
+            $logOn = ($cbAdminSaveName === 'log_akce_user_on') ? 1 : 0;
+            $logOff = ($cbAdminSaveName === 'log_akce_user_off') ? 1 : 0;
+
+            $stmtDel = $conn->prepare('DELETE FROM user_akce_on_off WHERE id_user = ?');
+            if ($stmtDel instanceof mysqli_stmt) {
+                $stmtDel->bind_param('i', $idUser);
+                $stmtDel->execute();
+                $stmtDel->close();
+            } else {
+                $cbAdminError = 'Ulozeni nastaveni selhalo.';
+            }
+
+            if ($cbAdminError === '') {
+                $stmtIns = $conn->prepare('INSERT INTO user_akce_on_off (id_user, log_on, log_off) VALUES (?, ?, ?)');
+                if ($stmtIns instanceof mysqli_stmt) {
+                    $stmtIns->bind_param('iii', $idUser, $logOn, $logOff);
+                    $stmtIns->execute();
+                    $stmtIns->close();
+                } else {
+                    $cbAdminError = 'Ulozeni nastaveni selhalo.';
+                }
+            }
+        }
+    }
+
+    if ($cbAdminError === '' && $cbAdminSaveName === 'log_akce_user_remove') {
+        $idUser = (int)$cbAdminSaveValue;
+        if ($idUser > 0) {
+            $stmt = $conn->prepare('DELETE FROM user_akce_on_off WHERE id_user = ?');
+            if ($stmt instanceof mysqli_stmt) {
+                $stmt->bind_param('i', $idUser);
+                $stmt->execute();
+                $stmt->close();
+            } else {
+                $cbAdminError = 'Ulozeni nastaveni selhalo.';
+            }
+        }
+    }
+
     if ($cbAdminError === '') {
         $res = $conn->query('
-            SELECT restia_online, on_2fa, system_logout, pauza_obdobi, log_1, log_2, log_3, log_4
+            SELECT restia_online, on_2fa, system_logout, pauza_obdobi, log_akce, log_1, log_2, log_3, log_4
             FROM set_system
             WHERE id_set = 1
             LIMIT 1
@@ -91,6 +154,7 @@ try {
                 $cbAdminSystem['on_2fa'] = (int)($row['on_2fa'] ?? 0);
                 $cbAdminSystem['system_logout'] = (int)($row['system_logout'] ?? 0);
                 $cbAdminSystem['pauza_obdobi'] = (int)($row['pauza_obdobi'] ?? 1000);
+                $cbAdminSystem['log_akce'] = (int)($row['log_akce'] ?? 0);
                 $cbAdminSystem['log_1'] = (int)($row['log_1'] ?? 0);
                 $cbAdminSystem['log_2'] = (int)($row['log_2'] ?? 0);
                 $cbAdminSystem['log_3'] = (int)($row['log_3'] ?? 0);
@@ -104,6 +168,68 @@ try {
             $res->free();
         } else {
             $cbAdminError = 'Načtení nastavení systému selhalo.';
+        }
+    }
+    if ($cbAdminError === '') {
+        $resUsers = $conn->query("
+            SELECT id_user, prijmeni, jmeno
+            FROM `user`
+            WHERE in_system = 1
+            ORDER BY prijmeni, jmeno
+        ");
+        if ($resUsers instanceof mysqli_result) {
+            while ($rowUser = $resUsers->fetch_assoc()) {
+                $idUser = (int)($rowUser['id_user'] ?? 0);
+                if ($idUser <= 0) {
+                    continue;
+                }
+                $prijmeni = trim((string)($rowUser['prijmeni'] ?? ''));
+                $jmeno = trim((string)($rowUser['jmeno'] ?? ''));
+                $label = trim($prijmeni . ' ' . $jmeno);
+                if ($label === '') {
+                    $label = 'ID ' . $idUser;
+                }
+                $cbAdminActiveUsers[] = [
+                    'id_user' => $idUser,
+                    'label' => $label,
+                ];
+            }
+            $resUsers->free();
+        }
+    }
+    if ($cbAdminError === '') {
+        $resLogUsers = $conn->query("
+            SELECT uao.id_user, uao.log_on, uao.log_off, u.prijmeni, u.jmeno
+            FROM user_akce_on_off uao
+            LEFT JOIN `user` u ON u.id_user = uao.id_user
+            ORDER BY u.prijmeni, u.jmeno, uao.id_user
+        ");
+        if ($resLogUsers instanceof mysqli_result) {
+            while ($rowLogUser = $resLogUsers->fetch_assoc()) {
+                $idUser = (int)($rowLogUser['id_user'] ?? 0);
+                if ($idUser <= 0) {
+                    continue;
+                }
+                $prijmeni = trim((string)($rowLogUser['prijmeni'] ?? ''));
+                $jmeno = trim((string)($rowLogUser['jmeno'] ?? ''));
+                $label = trim($prijmeni . ' ' . $jmeno);
+                if ($label === '') {
+                    $label = 'ID ' . $idUser;
+                }
+                if ((int)($rowLogUser['log_on'] ?? 0) === 1) {
+                    $cbAdminUsersLogOn[] = [
+                        'id_user' => $idUser,
+                        'label' => $label,
+                    ];
+                }
+                if ((int)($rowLogUser['log_off'] ?? 0) === 1) {
+                    $cbAdminUsersLogOff[] = [
+                        'id_user' => $idUser,
+                        'label' => $label,
+                    ];
+                }
+            }
+            $resLogUsers->free();
         }
     }
 } catch (Throwable $e) {
@@ -123,6 +249,7 @@ ob_start();
 <?php else: ?>
   <?php // VZHLED K2 JE ZAMCENY: bez vyslovneho schvaleni nemenit sirky sloupcu, zarovnani, zalamovani ani texty (vcetne diakritiky). ?>
   <div class="card_stack gap_8">
+    <p class="card_text text_tucny odstup_vnejsi_0" style="font-size:16px;text-align:left;">Globální nastavení systému</p>
     <div class="table-wrap ram_normal bg_bila" style="width:100%;margin:0 auto;">
       <table class="table ram_normal bg_bila radek_1_35 sirka100" style="width:100%;table-layout:auto;">
         <thead>
@@ -190,6 +317,7 @@ ob_start();
         </tbody>
       </table>
     </div>
+    <p class="card_text text_tucny odstup_vnejsi_0" style="font-size:16px;text-align:left;">Logování akcí systému, měření časů</p>
     <div class="table-wrap ram_normal bg_bila" style="width:100%;margin:0 auto;">
       <table class="table ram_normal bg_bila radek_1_35 sirka100" style="width:100%;table-layout:auto;">
         <thead>
@@ -217,6 +345,88 @@ ob_start();
               <td><?= h($cbLogLabel) ?></td>
             </tr>
           <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+    <p class="card_text text_tucny odstup_vnejsi_0" style="font-size:16px;text-align:left;">Logování akcí uživatelů</p>
+    <div class="table-wrap ram_normal bg_bila" style="width:100%;margin:0 auto;">
+      <table class="table ram_normal bg_bila radek_1_35 sirka100" style="width:100%;table-layout:auto;">
+        <thead>
+          <tr>
+            <th style="width:1%;white-space:nowrap;">Logování akcí</th>
+            <th>Nastavení</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="white-space:nowrap;">Globální nastavení</td>
+            <td>
+              <form method="post" action="<?= h($cbAdminFormAction) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
+                <input type="hidden" name="cb_admin_set_name" value="log_akce">
+                <select name="cb_admin_set_value" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" onchange="if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
+                  <?php foreach ($cbAdminAkceGlobalOptions as $cbGlobalValue => $cbGlobalLabel): ?>
+                    <option value="<?= h($cbGlobalValue) ?>"<?= $cbAdminSystem['log_akce'] === (int)$cbGlobalValue ? ' selected' : '' ?>><?= h($cbGlobalLabel) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </form>
+            </td>
+          </tr>
+          <tr>
+            <td style="white-space:nowrap;">Přidej uživatele do logování</td>
+            <td>
+              <form method="post" action="<?= h($cbAdminFormAction) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
+                <input type="hidden" name="cb_admin_set_name" value="log_akce_user_on">
+                <select name="cb_admin_set_value" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" onchange="if(this.value!==''){if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}}">
+                  <option value="">Vyber uživatele</option>
+                  <?php foreach ($cbAdminActiveUsers as $cbUser): ?>
+                    <option value="<?= h((string)$cbUser['id_user']) ?>"><?= h((string)$cbUser['label']) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </form>
+              <div class="odstup_horni_4">
+                <?php if ($cbAdminUsersLogOn === []): ?>
+                  Žádný logovaný uživatel
+                <?php else: ?>
+                  <?php foreach ($cbAdminUsersLogOn as $cbLogUserOn): ?>
+                    <form method="post" action="<?= h($cbAdminFormAction) ?>" class="odstup_vnejsi_0" data-cb-max-form="1" style="display:inline;">
+                      <input type="hidden" name="cb_admin_set_name" value="log_akce_user_remove">
+                      <input type="hidden" name="cb_admin_set_value" value="<?= h((string)$cbLogUserOn['id_user']) ?>">
+                      <button type="submit" class="odstup_vnejsi_0" style="border:0;background:transparent;color:#c00000;cursor:pointer;font-weight:700;line-height:1;padding:0 2px;" title="Odstranit z logování">×</button>
+                    </form>
+                    <span><?= h((string)$cbLogUserOn['label']) ?></span><br>
+                  <?php endforeach; ?>
+                <?php endif; ?>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="white-space:nowrap;">Zakaž logování u uživatele</td>
+            <td>
+              <form method="post" action="<?= h($cbAdminFormAction) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
+                <input type="hidden" name="cb_admin_set_name" value="log_akce_user_off">
+                <select name="cb_admin_set_value" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" onchange="if(this.value!==''){if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}}">
+                  <option value="">Vyber uživatele</option>
+                  <?php foreach ($cbAdminActiveUsers as $cbUser): ?>
+                    <option value="<?= h((string)$cbUser['id_user']) ?>"><?= h((string)$cbUser['label']) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </form>
+              <div class="odstup_horni_4">
+                <?php if ($cbAdminUsersLogOff === []): ?>
+                  Žádný uživatel vyjmutý z logování
+                <?php else: ?>
+                  <?php foreach ($cbAdminUsersLogOff as $cbLogUserOff): ?>
+                    <form method="post" action="<?= h($cbAdminFormAction) ?>" class="odstup_vnejsi_0" data-cb-max-form="1" style="display:inline;">
+                      <input type="hidden" name="cb_admin_set_name" value="log_akce_user_remove">
+                      <input type="hidden" name="cb_admin_set_value" value="<?= h((string)$cbLogUserOff['id_user']) ?>">
+                      <button type="submit" class="odstup_vnejsi_0" style="border:0;background:transparent;color:#c00000;cursor:pointer;font-weight:700;line-height:1;padding:0 2px;" title="Odstranit z logování">×</button>
+                    </form>
+                    <span><?= h((string)$cbLogUserOff['label']) ?></span><br>
+                  <?php endforeach; ?>
+                <?php endif; ?>
+              </div>
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
