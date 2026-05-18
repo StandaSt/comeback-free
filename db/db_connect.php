@@ -53,6 +53,9 @@ if (!function_exists('db_connect')) {
 
         $conn = new mysqli($host, $user, $pass, $name);
         $conn->set_charset('utf8mb4');
+        if (function_exists('cb_db_akce_log_init')) {
+            cb_db_akce_log_init($conn);
+        }
         // DOCASNE MERENI CASU KARET
         if (function_exists('cb_tmp_measure_db_init')) {
             cb_tmp_measure_db_init($conn);

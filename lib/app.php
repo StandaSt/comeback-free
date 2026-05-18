@@ -40,6 +40,7 @@ if (!function_exists('db')) {
 }
 
 require_once __DIR__ . '/mereni_vykonu.php';
+require_once __DIR__ . '/db_akce_log.php';
 require_once __DIR__ . '/db_prehledy.php';
 require_once __DIR__ . '/sesn_kontrola.php';
 require_once __DIR__ . '/sesn_regenerate.php';
