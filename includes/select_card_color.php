@@ -317,9 +317,6 @@ $palette = cb_make_palette();
     </div>
   </div>
 
-  <?php if ($msg !== ''): ?>
-    <div class="<?= $ok === 1 ? 'ok' : 'err' ?>"><?= h($msg) ?></div>
-  <?php endif; ?>
 </form>
 
 <script>
@@ -336,10 +333,39 @@ $palette = cb_make_palette();
   var cardId = <?= (int)$idKarta ?>;
   if (!form || !actionInput || !colorInput || !resetBtn || !toggleBtn || !paletteGrid || !usedGrid || cardId <= 0) return;
 
+  function logColorAction(eventName, extraDetail) {
+    var ev = String(eventName || '').trim();
+    if (ev === '') return;
+    var detail = { event: ev };
+    if (extraDetail && typeof extraDetail === 'object') {
+      Object.keys(extraDetail).forEach(function (k) {
+        detail[k] = extraDetail[k];
+      });
+    }
+    var payload = {
+      id_akce: 6,
+      id_karta: cardId,
+      vysledek: 1,
+      err_msg: '',
+      zdroj: 'select_card_color',
+      detail: detail
+    };
+    window.fetch('<?= h((string)cb_url('/index.php')) ?>', {
+      method: 'POST',
+      headers: {
+        'X-Comeback-User-Akce': '1',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify(payload)
+    }).catch(function () {});
+  }
+
   function paintInParent(color) {
     try {
       if (!window.parent || !window.parent.document) return;
-      var root = window.parent.document.querySelector('[data-card-id="' + String(cardId) + '"]');
+      var root = window.parent.document.querySelector('.card_shell[data-card-id="' + String(cardId) + '"]');
       if (!root) return;
       var head = root.querySelector('.card_top');
       if (!head) return;
@@ -372,10 +398,12 @@ $palette = cb_make_palette();
     actionInput.value = 'save';
     setActiveSwatch(c);
     paintInParent(c);
+    logColorAction('color_pick', { color: c });
   });
 
   resetBtn.addEventListener('click', function () {
     actionInput.value = 'reset';
+    logColorAction('reset_click');
   });
 
   toggleBtn.addEventListener('click', function () {
@@ -393,6 +421,15 @@ $palette = cb_make_palette();
     }
   });
 
+  toggleBtn.addEventListener('click', function () {
+    logColorAction('toggle_used_colors', { showing_used: showingUsed ? 1 : 0 });
+  });
+
+  form.addEventListener('submit', function () {
+    if (actionInput.value === 'save') {
+      logColorAction('save_click', { color: String(colorInput.value || '').trim() });
+    }
+  });
 }());
 </script>
 
@@ -402,19 +439,23 @@ $palette = cb_make_palette();
   try {
     if (!window.parent || !window.parent.document) return;
     var cardId = <?= (int)$idKarta ?>;
-    var root = window.parent.document.querySelector('[data-card-id="' + String(cardId) + '"]');
+    var root = window.parent.document.querySelector('.card_shell[data-card-id="' + String(cardId) + '"]');
     if (!root) return;
     var wrap = root.querySelector('[data-card-pref-wrap]');
     if (!wrap) return;
     var menu = wrap.querySelector('[data-card-pref-menu]');
     var frame = wrap.querySelector('[data-card-pref-frame]');
     var toggle = wrap.querySelector('[data-card-pref-toggle]');
-    if (menu) menu.classList.add('is-hidden');
-    if (frame) {
-      frame.classList.add('is-hidden');
-      frame.removeAttribute('src');
+    var cbAction = '<?= h((string)($_POST['cb_action'] ?? '')) ?>';
+    var shouldClose = (cbAction === 'save');
+    if (shouldClose) {
+      if (menu) menu.classList.add('is-hidden');
+      if (frame) {
+        frame.classList.add('is-hidden');
+        frame.removeAttribute('src');
+      }
+      if (toggle) toggle.setAttribute('aria-expanded', 'false');
     }
-    if (toggle) toggle.setAttribute('aria-expanded', 'false');
 
     <?php if ($selectedColor === ''): ?>
     var head = root.querySelector('.card_top');

@@ -126,7 +126,7 @@
       }
     }
 
-    function logUserCardAction(actionId, cardId, success, errMsg) {
+    function logUserCardAction(actionId, cardId, success, errMsg, detail, source) {
       const idAkce = parseInt(String(actionId || '0'), 10);
       const idKarta = parseInt(String(cardId || '0'), 10);
       if (!Number.isFinite(idAkce) || idAkce <= 0 || !Number.isFinite(idKarta) || idKarta <= 0) {
@@ -138,8 +138,11 @@
         id_karta: idKarta,
         vysledek: success ? 1 : 0,
         err_msg: String(errMsg || '').trim(),
-        zdroj: 'karty_hlavicka'
+        zdroj: String(source || 'karty_hlavicka').trim() || 'karty_hlavicka'
       };
+      if (detail && typeof detail === 'object') {
+        payload.detail = detail;
+      }
 
       w.fetch('index.php', {
         method: 'POST',
@@ -544,6 +547,23 @@
 
         const openBtn = target.closest('[data-card-pref-open]');
         if (openBtn) {
+          const openType = String(openBtn.getAttribute('data-card-pref-open') || '').trim();
+          if (openType === 'color') {
+            const wrapForLog = openBtn.closest('[data-card-pref-wrap]');
+            const rootForLog = wrapForLog ? wrapForLog.closest('.card_shell') : null;
+            const idForLog = rootForLog ? parseInt(String(rootForLog.getAttribute('data-card-id') || '0'), 10) : 0;
+            if (Number.isFinite(idForLog) && idForLog > 0) {
+              logUserCardAction(6, idForLog, true, '', { event: 'menu_open_color' }, 'karty_hlavicka');
+            }
+          }
+          if (openType === 'ikon') {
+            const wrapForLog = openBtn.closest('[data-card-pref-wrap]');
+            const rootForLog = wrapForLog ? wrapForLog.closest('.card_shell') : null;
+            const idForLog = rootForLog ? parseInt(String(rootForLog.getAttribute('data-card-id') || '0'), 10) : 0;
+            if (Number.isFinite(idForLog) && idForLog > 0) {
+              logUserCardAction(7, idForLog, true, '', { event: 'menu_open_icon' }, 'karty_hlavicka');
+            }
+          }
           const wrap = openBtn.closest('[data-card-pref-wrap]');
           const menu = wrap ? wrap.querySelector('[data-card-pref-menu]') : null;
           const frame = menu ? menu.querySelector('[data-card-pref-frame]') : null;

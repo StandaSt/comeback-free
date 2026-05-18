@@ -223,6 +223,35 @@ function h(string $value): string
   var cardId = <?= (int)$idKarta ?>;
   if (!form || !actionInput || !iconInput || !tabInput || !resetBtn || cardId <= 0) return;
 
+  function logIconAction(eventName, extraDetail) {
+    var ev = String(eventName || '').trim();
+    if (ev === '') return;
+    var detail = { event: ev };
+    if (extraDetail && typeof extraDetail === 'object') {
+      Object.keys(extraDetail).forEach(function (k) {
+        detail[k] = extraDetail[k];
+      });
+    }
+    var payload = {
+      id_akce: 7,
+      id_karta: cardId,
+      vysledek: 1,
+      err_msg: '',
+      zdroj: 'select_card_ikon',
+      detail: detail
+    };
+    window.fetch('<?= h((string)cb_url('/index.php')) ?>', {
+      method: 'POST',
+      headers: {
+        'X-Comeback-User-Akce': '1',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify(payload)
+    }).catch(function () {});
+  }
+
   function setActiveIcon(idIkon) {
     document.querySelectorAll('.icon-btn').forEach(function (el) {
       if (!(el instanceof HTMLElement)) return;
@@ -279,6 +308,7 @@ function h(string $value): string
       var t = String(btn.getAttribute('data-tab') || '').trim();
       if (t !== '') {
         showTab(t);
+        logIconAction('tab_change', { tab: t });
       }
     });
   });
@@ -292,6 +322,9 @@ function h(string $value): string
       actionInput.value = 'save';
       setActiveIcon(idIkon);
       previewInParent(src);
+      logIconAction('icon_pick', {
+        icon_id: parseInt(idIkon, 10) || 0
+      });
     });
   });
 
@@ -299,6 +332,13 @@ function h(string $value): string
     actionInput.value = 'reset';
     iconInput.value = '';
     previewResetInParent();
+    logIconAction('reset_click');
+  });
+
+  form.addEventListener('submit', function () {
+    if (actionInput.value === 'save') {
+      logIconAction('save_click', { icon_id: parseInt(String(iconInput.value || '0'), 10) || 0 });
+    }
   });
 }());
 </script>
@@ -316,13 +356,18 @@ function h(string $value): string
     var menu = wrap.querySelector('[data-card-pref-menu]');
     var frame = wrap.querySelector('[data-card-pref-frame]');
     var toggle = wrap.querySelector('[data-card-pref-toggle]');
-    if (menu) menu.classList.add('is-hidden');
-    if (frame) {
-      frame.classList.add('is-hidden');
-      frame.removeAttribute('src');
+    var shouldClose = ('<?= h((string)$lastAction) ?>' === 'save');
+    if (shouldClose) {
+      if (menu) menu.classList.add('is-hidden');
+      if (frame) {
+        frame.classList.add('is-hidden');
+        frame.removeAttribute('src');
+      }
     }
     if (toggle instanceof HTMLElement) {
-      toggle.setAttribute('aria-expanded', 'false');
+      if (shouldClose) {
+        toggle.setAttribute('aria-expanded', 'false');
+      }
       <?php if ($lastAction === 'reset'): ?>
       if (window.parent && typeof window.parent.cbSetCardIconDotsPreview === 'function') {
         window.parent.cbSetCardIconDotsPreview(cardId);

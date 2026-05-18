@@ -53,7 +53,7 @@ if (!function_exists('cb_user_akce_zapis')) {
         }
 
         $idAkce = (int)($payload['id_akce'] ?? 0);
-        if (!in_array($idAkce, [1, 2, 3, 4, 5], true)) {
+        if (!in_array($idAkce, [1, 2, 3, 4, 5, 6, 7], true)) {
             return false;
         }
 
@@ -66,6 +66,17 @@ if (!function_exists('cb_user_akce_zapis')) {
             $zdroj = 'karty';
         }
         $detail = ['zdroj' => $zdroj];
+        if (isset($payload['detail']) && is_array($payload['detail'])) {
+            foreach ((array)$payload['detail'] as $k => $v) {
+                $key = trim((string)$k);
+                if ($key === '' || $key === 'zdroj') {
+                    continue;
+                }
+                if (is_scalar($v) || $v === null) {
+                    $detail[$key] = $v;
+                }
+            }
+        }
 
         return db_user_akce_insert([
             'id_user' => $idUser,
