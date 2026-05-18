@@ -1,32 +1,32 @@
 <?php
 declare(strict_types=1);
-// lib/user_bad_login.php * Verze: V4 * Aktualizace: 20.2.2026 * PoÄŤet Ĺ™ĂˇdkĹŻ: 69
+// lib/user_bad_login.php * Verze: V4 * Aktualizace: 20.2.2026 * Počet řádků: 69
 
 /*
- * NEĂšSPÄšĹ NĂť LOGIN â€“ WRAPPER (bez DB)
+ * NEÚSPĚŠNÝ LOGIN – WRAPPER (bez DB)
  *
- * CĂ­l:
- * - lib/ soubory do DB NESAHĂ
- * - tenhle soubor jen sesbĂ­rĂˇ informace a pĹ™edĂˇ je DB vrstvÄ›
+ * Cíl:
+ * - lib/ soubory do DB NESAHÁ
+ * - tenhle soubor jen sesbírá informace a předá je DB vrstvě
  *
- * Co dÄ›lĂˇ:
- * 1) sesbĂ­rĂˇ data o pokusu o pĹ™ihlĂˇĹˇenĂ­:
+ * Co dělá:
+ * 1) sesbírá data o pokusu o přihlášení:
  *    - email
- *    - heslo (uklĂˇdĂˇ se do DB jako nekĂłdovanĂ˝ Ĺ™etÄ›zec â€“ jen pro internĂ­ diagnostiku)
+ *    - heslo (ukládá se do DB jako nekódovaný řetězec – jen pro interní diagnostiku)
  *    - IP (REMOTE_ADDR)
  *    - user_agent (HTTP_USER_AGENT)
- *    - screen_w, screen_h, is_touch (pokud jsou ve â€žwait spy infoâ€ś v session)
- * 2) zavolĂˇ db/db_bad_login.php â†’ db_bad_login_log()
+ *    - screen_w, screen_h, is_touch (pokud jsou ve „wait spy info“ v session)
+ * 2) zavolá db/db_bad_login.php → db_bad_login_log()
  *
  * Pozn.:
- * - zĂˇznam se dÄ›lĂˇ pokaĹľdĂ©, kdyĹľ SmÄ›ny nevrĂˇtĂ­ token
- * - pokud DB zĂˇpis selĹľe, login se tĂ­m neblokuje (jen se zapĂ­Ĺˇe diagnostika)
+ * - záznam se dělá pokaždé, když Směny nevrátí token
+ * - pokud DB zápis selže, login se tím neblokuje (jen se zapíše diagnostika)
  */
 require_once __DIR__ . '/../db/db_bad_login.php';
 
 /**
- * ZapĂ­Ĺˇe neĂşspÄ›ĹˇnĂ˝ login do DB (user_bad_login).
- * - DB zĂˇpis dÄ›lĂˇ db_bad_login_log() v /db
+ * Zapíše neúspěšný login do DB (user_bad_login).
+ * - DB zápis dělá db_bad_login_log() v /db
  */
 function cb_user_bad_login_log(string $email, string $heslo): void
 {
@@ -34,7 +34,7 @@ function cb_user_bad_login_log(string $email, string $heslo): void
         $ip = $_SERVER['REMOTE_ADDR'] ?? null;
         $ua = $_SERVER['HTTP_USER_AGENT'] ?? null;
 
-        // â€žwait spy infoâ€ś = data z JS, uloĹľenĂˇ pĹ™ed pokusem o login (pokud existujĂ­)
+        // „wait spy info“ = data z JS, uložená před pokusem o login (pokud existují)
         $wait = $_SESSION['wait_spy_info'] ?? null;
 
         $screenW = null;
@@ -53,13 +53,13 @@ function cb_user_bad_login_log(string $email, string $heslo): void
             }
         }
 
-        // DB vrstva si Ĺ™eĹˇĂ­ normalizace vstupĹŻ a vloĹľenĂ­ Ĺ™Ăˇdku
+        // DB vrstva si řeší normalizace vstupů a vložení řádku
         db_bad_login_log($email, $heslo, $ip, $ua, $screenW, $screenH, $isTouch);
 
     } catch (Throwable $e) {
-        // Diagnostika, ale neblokujeme bÄ›h jen kvĹŻli logovĂˇnĂ­.
+        // Diagnostika, ale neblokujeme běh jen kvůli logování.
     }
 }
 
-// lib/user_bad_login.php * Verze: V4 * Aktualizace: 20.2.2026 * PoÄŤet Ĺ™ĂˇdkĹŻ: 69
+// lib/user_bad_login.php * Verze: V4 * Aktualizace: 20.2.2026 * Počet řádků: 69
 // Konec souboru

@@ -21,8 +21,8 @@ if (!function_exists('cb_priprav_kartu_max')) {
                 'Chyba karty',
                 'File not found: ' . $soubor,
                 [
-                    'OÄŤekĂˇvanĂˇ cesta' => cb_dashboard_card_source_path($soubor),
-                    'OÄŤekĂˇvanĂˇ data' => 'card_max_html nebo legacy HTML output',
+                    'Očekávaná cesta' => cb_dashboard_card_source_path($soubor),
+                    'Očekávaná data' => 'card_max_html nebo legacy HTML output',
                 ]
             );
 
@@ -71,12 +71,12 @@ if (!function_exists('cb_priprav_kartu_max')) {
 
         $result = cb_dashboard_render_card_error(
             'Chyba karty',
-            'Max obsah se nepodaĹ™ilo naÄŤĂ­st.',
+            'Max obsah se nepodařilo načíst.',
             [
                 'Soubor' => $soubor,
                 'Cesta' => $fullPath,
-                'OÄŤekĂˇvanĂˇ data' => 'card_max_html nebo legacy HTML output',
-                'ChybÄ›jĂ­cĂ­ data' => 'ĹľĂˇdnĂ˝ HTML vĂ˝stup z include',
+                'Očekávaná data' => 'card_max_html nebo legacy HTML output',
+                'Chybějící data' => 'žádný HTML výstup z include',
                 'Include chyba' => isset($requireError) ? $requireError : '',
             ]
         );

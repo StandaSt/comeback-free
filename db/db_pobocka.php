@@ -5,9 +5,9 @@ declare(strict_types=1);
 /*
  * DB: pobocka
  *
- * ĂšÄŤel:
- * - najĂ­t poboÄŤku podle kĂłdu (pobocka.kod)
- * - kdyĹľ neexistuje, vytvoĹ™it placeholder (doÄŤasnĂ© hodnoty)
+ * Účel:
+ * - najít pobočku podle kódu (pobocka.kod)
+ * - když neexistuje, vytvořit placeholder (dočasné hodnoty)
  */
 
 /**
@@ -29,15 +29,15 @@ function cb_db_find_pob_id_by_kod(mysqli $conn, string $kod): ?int
 }
 
 /**
- * VloĹľĂ­ placeholder poboÄŤku, protoĹľe poboÄŤka pĹ™iĹˇla ze SmÄ›n, ale neexistuje v naĹˇĂ­ DB.
+ * Vloží placeholder pobočku, protože pobočka přišla ze Směn, ale neexistuje v naší DB.
  *
  * Pozn.:
- * - tabulka pobocka mĂˇ NOT NULL sloupce, proto vyplĹujeme doÄŤasnĂ© hodnoty
+ * - tabulka pobocka má NOT NULL sloupce, proto vyplňujeme dočasné hodnoty
  * - id_pob je AUTO_INCREMENT
  */
 function cb_db_insert_pob_placeholder(mysqli $conn, string $kod): void
 {
-    $nazev = 'ÄŤekĂˇ na doplnÄ›nĂ­';
+    $nazev = 'čeká na doplnění';
     $ulice = '---';
     $mesto = '---';
     $psc = 0;
@@ -53,10 +53,10 @@ function cb_db_insert_pob_placeholder(mysqli $conn, string $kod): void
 }
 
 /**
- * Projde kĂłdy poboÄŤek, zajistĂ­ pobocka.kod a vrĂˇtĂ­ seznam id_pob.
+ * Projde kódy poboček, zajistí pobocka.kod a vrátí seznam id_pob.
  *
  * @param string[] $codes
- * @return int[]  id_pob pro poĹľadovanĂ© poboÄŤky
+ * @return int[]  id_pob pro požadované pobočky
  */
 function cb_db_ensure_branches_get_ids(mysqli $conn, array $codes): array
 {
@@ -85,5 +85,5 @@ function cb_db_ensure_branches_get_ids(mysqli $conn, array $codes): array
     return $ids;
 }
 
-/* db/db_pobocka.php * Verze: V1 * Aktualizace: 12.2.2026 * PoÄŤet Ĺ™ĂˇdkĹŻ: 93 */
+/* db/db_pobocka.php * Verze: V1 * Aktualizace: 12.2.2026 * Počet řádků: 93 */
 // Konec souboru

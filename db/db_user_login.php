@@ -3,25 +3,25 @@
 declare(strict_types=1);
 
 /*
- * DB SYNC PO PĹIHLĂĹ ENĂŤ (SmÄ›ny -> Comeback DB)
+ * DB SYNC PO PŘIHLÁŠENÍ (Směny -> Comeback DB)
  *
- * Tenhle soubor je â€žorchestrâ€ś:
- * - vezme pĹ™ipravenĂ© vstupy (ze session pĹ™es funkci v /funkce)
- * - provede DB synchronizaci (user, poboÄŤky, role, sloty)
- * - zapĂ­Ĺˇe login event
- * - zapĂ­Ĺˇe log volĂˇnĂ­ SmÄ›n (api_smeny) â€“ buffer se flushne aĹľ po ĂşspÄ›ĹˇnĂ©m loginu
- * - vĹˇe probĂ­hĂˇ v jednĂ© transakci (kromÄ› session timeout)
+ * Tenhle soubor je „orchestr“:
+ * - vezme připravené vstupy (ze session přes funkci v /funkce)
+ * - provede DB synchronizaci (user, pobočky, role, sloty)
+ * - zapíše login event
+ * - zapíše log volání Směn (api_smeny) – buffer se flushne až po úspěšném loginu
+ * - vše probíhá v jedné transakci (kromě session timeout)
  *
- * DĹŻleĹľitĂ©:
- * - NESMĂŤ volat SmÄ›ny (API)
- * - pĹ™i chybÄ› vyhodĂ­ vĂ˝jimku (login_smeny.php to chytĂ­ a pĹ™ihlĂˇĹˇenĂ­ zruĹˇĂ­)
+ * Důležité:
+ * - NESMÍ volat Směny (API)
+ * - při chybě vyhodí výjimku (login_smeny.php to chytí a přihlášení zruší)
  *
- * EfektivnĂ­ role:
- * - nastavuje se uvnitĹ™ db/db_user_role.php (varianta A)
+ * Efektivní role:
+ * - nastavuje se uvnitř db/db_user_role.php (varianta A)
  *
- * 1 ĂşspÄ›ĹˇnĂ˝ login:
- * - 1 Ĺ™Ăˇdek v user_login (akce=1)
- * - 1 Ĺ™Ăˇdek v user_spy
+ * 1 úspěšný login:
+ * - 1 řádek v user_login (akce=1)
+ * - 1 řádek v user_spy
  */
 
 require_once __DIR__ . '/db_user.php';
@@ -40,11 +40,11 @@ require_once __DIR__ . '/../funkce/fce_login_vstupy.php';
 if (!function_exists('cb_db_user_login')) {
 
     /**
-     * HlavnĂ­ DB orchestr â€“ volĂˇ se po ĂşspÄ›ĹˇnĂ©m loginu do SmÄ›n.
+     * Hlavní DB orchestr – volá se po úspěšném loginu do Směn.
      */
     function cb_db_user_login(): void
     {
-        // 1) pĹ™iprav vstupy (ze session, bez DB)
+        // 1) připrav vstupy (ze session, bez DB)
         $data = fce_login_vstupy_priprav();
 
         $idUser = (int)$data['id_user'];
@@ -63,22 +63,22 @@ if (!function_exists('cb_db_user_login')) {
             // A2) user_set (vychozi zaznam po prvnim loginu)
             cb_db_ensure_user_set($conn, $idUser);
 
-            // B) poboÄŤky uĹľivatele (nastav aktuĂˇlnĂ­ stav)
+            // B) pobočky uživatele (nastav aktuální stav)
             cb_db_set_user_pobocka($conn, $idUser, $working, is_string($mainBranch) ? $mainBranch : null);
 
-            // C) role (synchronizace + nastavenĂ­ efektivnĂ­ role)
+            // C) role (synchronizace + nastavení efektivní role)
             $roleChanges = db_user_role_sync($conn, $idUser, $profile);
 
-            // D) sloty (aktuĂˇlnĂ­)
+            // D) sloty (aktuální)
             $slotChanges = db_user_slot_sync($conn, $idUser, $profile);
 
             // E) login event (akce=1) + user_spy
             $idLogin = cb_db_insert_login_and_spy($conn, $idUser);
 
-            // F) login info do session (pro hlaviÄŤku)
+            // F) login info do session (pro hlavičku)
             cb_db_fill_login_info_session($conn, $idUser, $idLogin);
 
-            // F2) API log SmÄ›n (api_smeny) â€“ zapĂ­Ĺˇeme aĹľ teÄŹ, kdy uĹľ znĂˇme id_user i id_login
+            // F2) API log Směn (api_smeny) – zapíšeme až teď, kdy už známe id_user i id_login
             try {
                 db_api_smeny_flush($conn, $idUser, $idLogin);
             } catch (Throwable $eLog) {
@@ -87,7 +87,7 @@ if (!function_exists('cb_db_user_login')) {
 
             $conn->commit();
 
-            // G) timeout session (nemĂˇ DB, jen session)
+            // G) timeout session (nemá DB, jen session)
             cb_session_init_timeout();
 
 
@@ -99,5 +99,5 @@ if (!function_exists('cb_db_user_login')) {
 }
 
 // db/db_user_login.php * Verze: V14 * Aktualizace: 02.04.2026
-// PoÄŤet Ĺ™ĂˇdkĹŻ: 117
+// Počet řádků: 117
 // Konec souboru

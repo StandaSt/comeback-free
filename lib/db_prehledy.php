@@ -32,7 +32,7 @@ if (!function_exists('cb_db_summary_scopes')) {
                 ],
             ],
             'restia_obj' => [
-                'label' => 'Restia objednĂˇvky',
+                'label' => 'Restia objednávky',
                 'allow_wipe' => true,
                 'tables' => [
                     'api_restia',
@@ -64,7 +64,7 @@ if (!function_exists('cb_db_summary_scopes')) {
                 ],
             ],
             'smeny' => [
-                'label' => 'SmÄ›ny',
+                'label' => 'Směny',
                 'allow_wipe' => true,
                 'tables' => [
                     'api_smeny',
@@ -83,7 +83,7 @@ if (!function_exists('cb_db_summary_scopes')) {
                 ],
             ],
             'system' => [
-                'label' => 'SystĂ©m',
+                'label' => 'Systém',
                 'allow_wipe' => false,
                 'tables' => [
                     'cis_chyby',
@@ -143,7 +143,7 @@ if (!function_exists('cb_db_table_meta')) {
         ';
         $res = $conn->query($sql);
         if (!$res instanceof mysqli_result) {
-            throw new RuntimeException('NepodaĹ™ilo se naÄŤĂ­st metadata tabulek.');
+            throw new RuntimeException('Nepodařilo se načíst metadata tabulek.');
         }
 
         $out = [];

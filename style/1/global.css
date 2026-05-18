@@ -2546,7 +2546,7 @@ align-items:center;
 
 
 /* =========================================================
-   MAX TABULKY â€“ CILOVY STAV (NOVA VRSTVA)
+   MAX TABULKY – CILOVY STAV (NOVA VRSTVA)
    ---------------------------------------------------------
    Tato sekce ma byt novy jednotny zaklad pro vsechny tabulky
    v max rezimu karet.
@@ -2569,7 +2569,7 @@ align-items:center;
 
 
 /* =========================
-   MAX TABULKA â€“ ZAKLAD
+   MAX TABULKA – ZAKLAD
    ========================= */
 
 /* Hlavni trida cele tabulky v max karte. */
@@ -2584,10 +2584,10 @@ align-items:center;
   padding:6px 12px;                         /* vnitrni mezera v bunce: nahore/dole 6px, vlevo/vpravo 12px */
   border:1px solid var(--clr_seda_2);       /* jednotny sedy ramecek bunek */
   font-size:var(--fs_14);                   /* bezna velikost textu v tabulce */
-  vertical-align:middle;                    /* obsah bunky bude vyskovÄ› uprostred */
+  vertical-align:middle;                    /* obsah bunky bude vyskově uprostred */
 }
 
-/* Hlavicka tabulky â€“ nazvy sloupcu. */
+/* Hlavicka tabulky – nazvy sloupcu. */
 .card-max-table thead th{
   background:var(--clr_seda_1);             /* svetle sede pozadi hlavicky */
   font-size:var(--fs_13);                   /* hlavicka je o trochu mensi nez obsah */
@@ -2598,19 +2598,19 @@ align-items:center;
   z-index:2;                                /* hlavicka bude nad radky tabulky */
 }
 
-/* Zebra efekt â€“ kazdy sudy radek ma jemne sede pozadi. */
+/* Zebra efekt – kazdy sudy radek ma jemne sede pozadi. */
 .card-max-table tbody tr:nth-child(even) td{
   background:var(--clr_seda_1);
 }
 
-/* Hover efekt â€“ radek pod mysi se podbarvi modre. */
+/* Hover efekt – radek pod mysi se podbarvi modre. */
 .card-max-table tbody tr:hover td{
   background:var(--clr_modra_7);
 }
 
 
 /* =========================
-   MAX TABULKA â€“ FILTRY
+   MAX TABULKA – FILTRY
    ========================= */
 
 /*
@@ -2621,7 +2621,7 @@ align-items:center;
   background:var(--clr_bila);               /* filtracni radek ma bile pozadi */
   padding:4px 8px;                          /* mensi vnitrni mezera nez bezne bunky */
   height:34px;                              /* jednotna vyska celeho filtracniho radku */
-  vertical-align:middle;                    /* filtracni pole bude vyskovÄ› uprostred */
+  vertical-align:middle;                    /* filtracni pole bude vyskově uprostred */
   box-shadow:inset 0 -1px 0 var(--clr_seda_2); /* jemna vnitrni spodni cara */
 }
 
@@ -2656,7 +2656,7 @@ align-items:center;
 
 
 /* =========================
-   MAX TABULKA â€“ SPODNI LISTA
+   MAX TABULKA – SPODNI LISTA
    ========================= */
 
 /*
@@ -2710,7 +2710,7 @@ align-items:center;
   color:var(--clr_modra_3);                 /* modry text aktualni stranky */
 }
 
-/* ZamÄŤeno â€“ pouze teÄŤka (nano tlaÄŤĂ­tko) */
+/* Zamčeno – pouze tečka (nano tlačítko) */
 .nano_dot{
   font-size:18px;
   line-height:1;

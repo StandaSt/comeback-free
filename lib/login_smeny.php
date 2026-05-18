@@ -3,19 +3,19 @@
 declare(strict_types=1);
 
 /*
- * PĹIHLĂĹ ENĂŤ PĹES SMÄšNY (GraphQL API) + 2FA (schvĂˇlenĂ­ na mobilu)
+ * PŘIHLÁŠENÍ PŘES SMĚNY (GraphQL API) + 2FA (schválení na mobilu)
  *
- * Co to dÄ›lĂˇ:
- * - ovÄ›Ĺ™Ă­ email/heslo pĹ™es SmÄ›ny (GraphQL)
- * - naÄŤte jen zĂˇkladnĂ­ profil pro modĂˇl registrace / 2FA
- * - uloĹľĂ­ minimĂˇlnĂ­ data do session (bez login_ok)
- * - pĹ™i prvnĂ­m loginu bez aktivnĂ­ho zaĹ™Ă­zenĂ­ pĹ™eskoÄŤĂ­ 2FA a pustĂ­ uĹľivatele do pĂˇrovĂˇnĂ­ mobilu
- * - pĹ™i dalĹˇĂ­m loginu pĹ™ipravĂ­ 2FA vĂ˝zvu do DB (push_login_2fa) a odeĹˇle notifikaci na spĂˇrovanĂ© zaĹ™Ă­zenĂ­ (push_zarizeni)
- * - redirect na Ăşvod (index.php zobrazĂ­ ÄŤekacĂ­ modĂˇl nebo modĂˇl pĂˇrovĂˇnĂ­)
+ * Co to dělá:
+ * - ověří email/heslo přes Směny (GraphQL)
+ * - načte jen základní profil pro modál registrace / 2FA
+ * - uloží minimální data do session (bez login_ok)
+ * - při prvním loginu bez aktivního zařízení přeskočí 2FA a pustí uživatele do párování mobilu
+ * - při dalším loginu připraví 2FA výzvu do DB (push_login_2fa) a odešle notifikaci na spárované zařízení (push_zarizeni)
+ * - redirect na úvod (index.php zobrazí čekací modál nebo modál párování)
  *
- * DĹŻleĹľitĂ©:
- * - login_ok se nastavĂ­ AĹ˝ po schvĂˇlenĂ­ 2FA (mobil), nebo hned pĹ™i LOCAL / prvnĂ­m loginu bez zaĹ™Ă­zenĂ­
- * - LOCAL: 2FA lze vypnout pĹ™es set_system.on_2fa (notifikace z LOCAL nechodĂ­)
+ * Důležité:
+ * - login_ok se nastaví AŽ po schválení 2FA (mobil), nebo hned při LOCAL / prvním loginu bez zařízení
+ * - LOCAL: 2FA lze vypnout přes set_system.on_2fa (notifikace z LOCAL nechodí)
  */
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
@@ -34,7 +34,7 @@ require_once __DIR__ . '/../db/db_api_smeny.php';
 $GQL_URL = 'https://smeny.pizzacomeback.cz/graphql';
 
 /*
- * Timeout neaktivity (minuty) â€“ JEDINĂť zdroj hodnoty.
+ * Timeout neaktivity (minuty) – JEDINÝ zdroj hodnoty.
  */
 
 function post_str(string $k): string
@@ -45,14 +45,14 @@ function post_str(string $k): string
 try {
 
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-        throw new RuntimeException('NeplatnĂ˝ poĹľadavek.');
+        throw new RuntimeException('Neplatný požadavek.');
     }
 
     $email = post_str('email');
     $heslo = post_str('heslo');
 
     if ($email === '' || $heslo === '') {
-        throw new RuntimeException('VyplĹ email a heslo.');
+        throw new RuntimeException('Vyplň email a heslo.');
     }
 
 
@@ -68,13 +68,13 @@ try {
         );
     } catch (Throwable $e) {
         cb_user_bad_login_log($email, $heslo);
-        throw new RuntimeException('NeplatnĂ© pĹ™ihlaĹˇovacĂ­ Ăşdaje.');
+        throw new RuntimeException('Neplatné přihlašovací údaje.');
     }
 
     $token = $login['userLogin']['accessToken'] ?? null;
     if (!is_string($token) || $token === '') {
         cb_user_bad_login_log($email, $heslo);
-        throw new RuntimeException('NeplatnĂ© pĹ™ihlaĹˇovacĂ­ Ăşdaje.');
+        throw new RuntimeException('Neplatné přihlašovací údaje.');
     }
 
 
@@ -98,7 +98,7 @@ try {
 
     $u = $me['userGetLogged'] ?? null;
     if (!is_array($u) || empty($u['id']) || empty($u['email'])) {
-        throw new RuntimeException('NepodaĹ™ilo se naÄŤĂ­st profil uĹľivatele.');
+        throw new RuntimeException('Nepodařilo se načíst profil uživatele.');
     }
 
     $idUser = (int)$u['id'];
@@ -120,7 +120,7 @@ try {
 
     $_SESSION['cb_auth_ok'] = 1;
 
-    // LOCAL: 2FA se pĹ™eskoÄŤĂ­ jen kdyĹľ je vypnuto v set_system.on_2fa
+    // LOCAL: 2FA se přeskočí jen když je vypnuto v set_system.on_2fa
     cb_login_load_settings_to_session($idUser);
     $on2fa = (int)cb_system_setting('on_2fa', 1);
 
@@ -130,13 +130,13 @@ try {
         unset($_SESSION['cb_2fa_token']);
 
         cb_login_finalize_after_ok($token);
-        $_SESSION['cb_initial_loader_text'] = 'Inicializace systĂ©mu ...';
+        $_SESSION['cb_initial_loader_text'] = 'Inicializace systému ...';
 
         header('Location: ' . cb_url(''));
         exit;
     }
 
-    // SERVER: bez aktivnĂ­ho zaĹ™Ă­zenĂ­ je to prvnĂ­ login => pĹ™eskoÄŤ 2FA a pusĹĄ pĂˇrovĂˇnĂ­
+    // SERVER: bez aktivního zařízení je to první login => přeskoč 2FA a pusť párování
     $maAktivniZarizeni = false;
 
     $stmtDevice = db()->prepare('
@@ -163,7 +163,7 @@ try {
         exit;
     }
 
-    // ====== 2FA: vytvoĹ™ vĂ˝zvu a ÄŤekej na schvĂˇlenĂ­ ======
+    // ====== 2FA: vytvoř výzvu a čekej na schválení ======
     $limitSec = 300;
     if (defined('CB_2FA_LIMIT_SEC')) {
         $limitSec = (int)CB_2FA_LIMIT_SEC;
@@ -172,7 +172,7 @@ try {
         }
     }
 
-    // token je 64 hex znakĹŻ (32 bytes)
+    // token je 64 hex znaků (32 bytes)
     $token2fa = bin2hex(random_bytes(32));
 
     $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '');
@@ -201,19 +201,19 @@ try {
     $stmt->execute();
     $stmt->close();
 
-    // UloĹľ do session jen identifikĂˇtor aktuĂˇlnĂ­ 2FA vĂ˝zvy
+    // Ulož do session jen identifikátor aktuální 2FA výzvy
     $_SESSION['cb_2fa_token'] = $token2fa;
 
-    // login_ok zatĂ­m NEEXISTUJE
+    // login_ok zatím NEEXISTUJE
     unset($_SESSION['login_ok']);
     unset($_SESSION['cb_auth_ok']);
 
-    // ====== OdeslĂˇnĂ­ Web Push notifikace ======
+    // ====== Odeslání Web Push notifikace ======
 
     $sent = cb_push_send_2fa($idUser, $token2fa);
 
 
-    $_SESSION['cb_flash'] = 'ÄŚekĂˇm na schvĂˇlenĂ­ pĹ™ihlĂˇĹˇenĂ­ na mobilu';
+    $_SESSION['cb_flash'] = 'Čekám na schválení přihlášení na mobilu';
 
 
     header('Location: ' . cb_url(''));
@@ -222,9 +222,9 @@ try {
 } catch (Throwable $e) {
 
     /*
-     * NeĂşspÄ›ĹˇnĂ˝ login / chyba:
-     * - zapĂ­Ĺˇeme log volĂˇnĂ­ SmÄ›n i bez id_user a id_login (NULL)
-     * - nic z toho nesmĂ­ shodit redirect ani chovĂˇnĂ­ loginu
+     * Neúspěšný login / chyba:
+     * - zapíšeme log volání Směn i bez id_user a id_login (NULL)
+     * - nic z toho nesmí shodit redirect ani chování loginu
      */
     try {
         db_api_smeny_flush(db(), null, null);
@@ -255,5 +255,5 @@ try {
 }
 
 // lib/login_smeny.php * Verze: V25 * Aktualizace: 30.03.2026
-// PoÄŤet Ĺ™ĂˇdkĹŻ: 359
+// Počet řádků: 359
 // Konec souboru
