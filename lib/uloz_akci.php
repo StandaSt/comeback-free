@@ -53,7 +53,7 @@ if (!function_exists('cb_user_akce_zapis')) {
         }
 
         $idAkce = (int)($payload['id_akce'] ?? 0);
-        if (!in_array($idAkce, [1, 2, 3, 4, 5, 6, 7], true)) {
+        if (!in_array($idAkce, [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 20], true)) {
             return false;
         }
 
@@ -84,8 +84,6 @@ if (!function_exists('cb_user_akce_zapis')) {
             'id_karta' => ($idKarta > 0) ? $idKarta : null,
             'id_akce' => $idAkce,
             'detail_json' => json_encode($detail, JSON_UNESCAPED_UNICODE),
-            'request_uri' => (string)($_SERVER['REQUEST_URI'] ?? ''),
-            'metoda' => (string)($_SERVER['REQUEST_METHOD'] ?? ''),
             'vysledek' => $vysledek,
             'err_msg' => $errMsg,
         ]);

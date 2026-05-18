@@ -333,9 +333,10 @@ $palette = cb_make_palette();
   var cardId = <?= (int)$idKarta ?>;
   if (!form || !actionInput || !colorInput || !resetBtn || !toggleBtn || !paletteGrid || !usedGrid || cardId <= 0) return;
 
-  function logColorAction(eventName, extraDetail) {
+  function logColorAction(eventName, extraDetail, idAkce) {
     var ev = String(eventName || '').trim();
     if (ev === '') return;
+    var actionId = parseInt(String(idAkce || '6'), 10) || 6;
     var detail = { event: ev };
     if (extraDetail && typeof extraDetail === 'object') {
       Object.keys(extraDetail).forEach(function (k) {
@@ -343,7 +344,7 @@ $palette = cb_make_palette();
       });
     }
     var payload = {
-      id_akce: 6,
+      id_akce: actionId,
       id_karta: cardId,
       vysledek: 1,
       err_msg: '',
@@ -403,7 +404,7 @@ $palette = cb_make_palette();
 
   resetBtn.addEventListener('click', function () {
     actionInput.value = 'reset';
-    logColorAction('reset_click');
+    logColorAction('reset_click', null, 10);
   });
 
   toggleBtn.addEventListener('click', function () {
@@ -422,7 +423,7 @@ $palette = cb_make_palette();
   });
 
   toggleBtn.addEventListener('click', function () {
-    logColorAction('toggle_used_colors', { showing_used: showingUsed ? 1 : 0 });
+    logColorAction('toggle_used_colors', { showing_used: showingUsed ? 1 : 0 }, 9);
   });
 
   form.addEventListener('submit', function () {

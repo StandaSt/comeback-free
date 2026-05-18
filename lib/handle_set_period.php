@@ -197,6 +197,16 @@ if (
             'obdobi_mode' => $newMode,
         ]);
 
+        require_once __DIR__ . '/uloz_akci.php';
+        cb_user_akce_zapis([
+            'id_akce' => 12,
+            'vysledek' => 1,
+            'zdroj' => 'obdobi',
+            'detail' => [
+                'mode' => $newMode,
+            ],
+        ]);
+
         echo json_encode([
             'ok' => true,
             'od' => $newOd,

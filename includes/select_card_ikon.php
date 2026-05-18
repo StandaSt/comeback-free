@@ -223,9 +223,10 @@ function h(string $value): string
   var cardId = <?= (int)$idKarta ?>;
   if (!form || !actionInput || !iconInput || !tabInput || !resetBtn || cardId <= 0) return;
 
-  function logIconAction(eventName, extraDetail) {
+  function logIconAction(eventName, extraDetail, idAkce) {
     var ev = String(eventName || '').trim();
     if (ev === '') return;
+    var actionId = parseInt(String(idAkce || '7'), 10) || 7;
     var detail = { event: ev };
     if (extraDetail && typeof extraDetail === 'object') {
       Object.keys(extraDetail).forEach(function (k) {
@@ -233,7 +234,7 @@ function h(string $value): string
       });
     }
     var payload = {
-      id_akce: 7,
+      id_akce: actionId,
       id_karta: cardId,
       vysledek: 1,
       err_msg: '',
@@ -332,7 +333,7 @@ function h(string $value): string
     actionInput.value = 'reset';
     iconInput.value = '';
     previewResetInParent();
-    logIconAction('reset_click');
+    logIconAction('reset_click', null, 11);
   });
 
   form.addEventListener('submit', function () {

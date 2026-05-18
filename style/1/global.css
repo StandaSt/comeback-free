@@ -1130,14 +1130,16 @@ align-items:center;
 }
 
 .th-sort-arrow{
-  opacity:.65;
-  font-size:var(--fs_12);
+  opacity:.85;
+  font-size:var(--fs_16);
   min-width:12px;
+  color:var(--clr_modra_3);
 }
 
 .th-sort-link.active .th-sort-arrow{
   opacity:1;
   font-weight:700;
+  color:var(--clr_cervena_3);
 }
 
 /* =========================
@@ -1207,6 +1209,35 @@ align-items:center;
   visibility:hidden;
   opacity:0;
   pointer-events:none;
+}
+
+.filter-row .filter-actions .icon-x{
+  visibility:visible;
+  opacity:1;
+  pointer-events:auto;
+}
+
+.filter-reset-btn{
+  align-items:center;
+  gap:6px;
+  width:100%;
+  padding:0 10px;
+  background:var(--clr_modra_1);
+  color:var(--clr_seda_4);
+  text-decoration:none;
+  font-size:var(--fs_12);
+  white-space:nowrap;
+}
+
+.filter-reset-btn:hover{
+  background:var(--clr_modra_2);
+}
+
+.filter-reset-x{
+  color:var(--clr_cervena_3);
+  font-size:var(--fs_16);
+  font-weight:700;
+  line-height:1;
 }
 
 /* =========================
@@ -2659,10 +2690,15 @@ align-items:center;
 
 /* Tlacitka strankovani. */
 .card-max-pagination .icon-btn{
-  min-width:30px;                           /* minimalni sirka tlacitka */
+  min-width:28px;                           /* minimalni sirka tlacitka */
+  height:28px;                              /* kompaktni vyska strankovani */
   width:auto;                               /* sirka se prizpusobi obsahu */
   font-size:var(--fs_11);                   /* mensi text v tlacitku */
   padding:0 6px;                            /* vodorovna mezera uvnitr tlacitka */
+  display:inline-flex;                      /* srovna cisla a sipky na stred */
+  align-items:center;                       /* svisle zarovnani obsahu */
+  justify-content:center;                   /* vodorovne zarovnani obsahu */
+  border-radius:6px;                        /* mirne zaobleni pro mensi tlacitka */
 }
 
 /* Aktualni stranka ve strankovani. */

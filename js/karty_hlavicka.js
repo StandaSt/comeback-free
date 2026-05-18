@@ -1,4 +1,4 @@
-﻿// js/karty_hlavicka.js * Verze: V1 * Aktualizace: 11.03.2026
+// js/karty_hlavicka.js * Verze: V1 * Aktualizace: 11.03.2026
 'use strict';
 
 (function (w) {
@@ -154,6 +154,73 @@
         credentials: 'same-origin',
         body: JSON.stringify(payload)
       }).catch(() => {});
+    }
+
+    function logUserHeaderAction(actionId, detail, source) {
+      const idAkce = parseInt(String(actionId || '0'), 10);
+      if (!Number.isFinite(idAkce) || idAkce <= 0) {
+        return;
+      }
+
+      const payload = {
+        id_akce: idAkce,
+        vysledek: 1,
+        err_msg: '',
+        zdroj: String(source || 'karty_hlavicka').trim() || 'karty_hlavicka'
+      };
+      if (detail && typeof detail === 'object') {
+        payload.detail = detail;
+      }
+
+      w.fetch('index.php', {
+        method: 'POST',
+        headers: {
+          'X-Comeback-User-Akce': '1',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload)
+      }).catch(() => {});
+    }
+
+    function logEmptyCardClick(target) {
+      if (!(target instanceof Element)) return;
+      if (target.closest('button, a, input, select, textarea, label, [role="button"], [data-card-pref-wrap], [contenteditable="true"]')) {
+        return;
+      }
+
+      const root = target.closest('.card_shell[data-card-id]');
+      if (!(root instanceof HTMLElement)) return;
+
+      const cardId = parseInt(String(root.getAttribute('data-card-id') || '0'), 10);
+      if (!Number.isFinite(cardId) || cardId <= 0) return;
+
+      logUserCardAction(20, cardId, true, '', {
+        event: 'empty_card_click',
+        mode: String(root.getAttribute('data-card-mode') || '').trim()
+      }, 'karty_hlavicka');
+    }
+
+    function logEmptyHeaderClick(target) {
+      if (!(target instanceof Element)) return;
+      if (target.closest('button, a, input, select, textarea, label, [role="button"], [contenteditable="true"]')) {
+        return;
+      }
+
+      const block = target.closest('.head_kpi, .head_sys, .head_user');
+      if (!(block instanceof HTMLElement)) return;
+
+      let blockName = '';
+      if (block.classList.contains('head_kpi')) blockName = 'kpi';
+      if (block.classList.contains('head_sys')) blockName = 'system';
+      if (block.classList.contains('head_user')) blockName = 'user';
+      if (blockName === '') return;
+
+      logUserHeaderAction(20, {
+        event: 'empty_header_click',
+        blok: blockName
+      }, 'karty_hlavicka');
     }
 
     function closeCardModeConfirmModal() {
@@ -670,6 +737,9 @@
         if (!target.closest('[data-card-pref-wrap]')) {
           closeAllCardPrefMenus();
         }
+
+        logEmptyCardClick(target);
+        logEmptyHeaderClick(target);
       });
 
       document.addEventListener('keydown', function (e) {

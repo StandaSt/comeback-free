@@ -8,13 +8,21 @@ declare(strict_types=1);
  * - nacita seznam zakazniku,
  * - umi filtrovani a strankovani v max rezimu,
  * - mini rezim ponechava jen souhrn.
+ *
+ * POZOR PRO AI/CODEX:
+ * Max tabulka K9 je odladena a funkcni: filtry, reset filtru, trideni,
+ * strankovani, pocet radku a pevne sirky sloupcu. Nesahat bez vyslovneho
+ * schvaleni uzivatele.
  */
 
 // === KONFIG TABULKY: ZAKAZNICI ===
 $tabKonfig = [
     'enable_filters' => 1,
     'enable_pagination' => 1,
+    'enable_sort' => 1,
     'default_per' => 20,
+    'default_sort' => 'id',
+    'default_dir' => 'DESC',
     'per_options' => [20, 50, 100],
 ];
 
@@ -27,9 +35,23 @@ $zakPages = 1;
 $zakPage = 1;
 $zakPer = (int)$tabKonfig['default_per'];
 $zakBlk = '0';
+$zakSort = (string)$tabKonfig['default_sort'];
+$zakDir = (string)$tabKonfig['default_dir'];
 $zakFilters = [];
 $zakError = '';
 $formAction = cb_url('/');
+
+$zakSortMap = [
+    'id' => 'z.id_zak',
+    'prijmeni' => 'z.prijmeni',
+    'jmeno' => 'z.jmeno',
+    'telefon' => 'z.telefon',
+    'email' => 'z.email',
+    'ulice' => 'z.ulice',
+    'mesto' => 'z.mesto',
+    'pobocka' => 'p.kod',
+    'aktivita' => 'z.posledni_obj',
+];
 
 $zakPerOptions = array_values(array_filter(array_map('intval', (array)$tabKonfig['per_options']), static fn(int $v): bool => $v > 0));
 if ($zakPerOptions === []) {
@@ -49,6 +71,15 @@ if ((int)$tabKonfig['enable_pagination'] === 1 && $zakPageRaw > 1) {
 $zakBlkRaw = (string)($_GET['zak_blk'] ?? '0');
 if (in_array($zakBlkRaw, ['0', '1'], true)) {
     $zakBlk = $zakBlkRaw;
+}
+
+$zakSortRaw = trim((string)($_GET['zak_sort'] ?? (string)$tabKonfig['default_sort']));
+$zakDirRaw = strtoupper(trim((string)($_GET['zak_dir'] ?? (string)$tabKonfig['default_dir'])));
+if ((int)$tabKonfig['enable_sort'] === 1 && array_key_exists($zakSortRaw, $zakSortMap)) {
+    $zakSort = $zakSortRaw;
+}
+if ((int)$tabKonfig['enable_sort'] === 1 && in_array($zakDirRaw, ['ASC', 'DESC'], true)) {
+    $zakDir = $zakDirRaw;
 }
 
 $zakFiltersRaw = $_GET['zak_f'] ?? [];
@@ -156,6 +187,11 @@ try {
         $offset = 0;
     }
 
+    $orderSql = 'z.id_zak DESC';
+    if ((int)$tabKonfig['enable_sort'] === 1) {
+        $orderSql = $zakSortMap[$zakSort] . ' ' . $zakDir . ', z.id_zak DESC';
+    }
+
     $dataSql = '
         SELECT
             z.id_zak,
@@ -171,7 +207,7 @@ try {
         FROM zakaznik z
         LEFT JOIN pobocka p ON p.id_pob = z.id_pob
     ' . $whereSql . '
-        ORDER BY z.id_zak DESC
+        ORDER BY ' . $orderSql . '
         LIMIT ' . (int)$zakPer . ' OFFSET ' . (int)$offset;
 
     $resZak = $conn->query($dataSql);
@@ -196,12 +232,18 @@ $zakQueryDefaults = [
     'zak_p' => '1',
     'zak_per' => (string)$tabKonfig['default_per'],
     'zak_blk' => '0',
+    'zak_sort' => (string)$tabKonfig['default_sort'],
+    'zak_dir' => (string)$tabKonfig['default_dir'],
 ];
 $zakBaseParams = [
     'cb_load_max' => '1',
     'zak_per' => (string)$zakPer,
     'zak_blk' => $zakBlk,
 ];
+if ((int)$tabKonfig['enable_sort'] === 1) {
+    $zakBaseParams['zak_sort'] = $zakSort;
+    $zakBaseParams['zak_dir'] = $zakDir;
+}
 if ((int)$tabKonfig['enable_filters'] === 1 && $zakFilters !== []) {
     $zakBaseParams['zak_f'] = $zakFilters;
 }
@@ -238,6 +280,10 @@ ob_start();
 <form method="get" action="<?= h($formAction) ?>" class="card_stack gap_10 displ_flex" autocomplete="off" data-cb-max-form="1">
   <input type="hidden" name="cb_load_max" value="1">
   <input type="hidden" name="zak_p" value="1">
+  <?php if ((int)$tabKonfig['enable_sort'] === 1): ?>
+    <input type="hidden" name="zak_sort" value="<?= h($zakSort) ?>">
+    <input type="hidden" name="zak_dir" value="<?= h($zakDir) ?>">
+  <?php endif; ?>
   <div style="margin-bottom:12px; font-size:14px;">
     Zákazníků v DB: <strong><?= h((string)$totalZak) ?></strong>
   </div>
@@ -245,28 +291,65 @@ ob_start();
     <table class="card-max-table">
       <thead>
         <tr class="card-max-filter filter-row">
-          <th style="min-width:65px;"></th>
-          <th><input class="filter-input" type="text" name="zak_f[prijmeni]" value="<?= h($zakFilters['prijmeni'] ?? '') ?>" autocomplete="off"></th>
-          <th><input class="filter-input" type="text" name="zak_f[jmeno]" value="<?= h($zakFilters['jmeno'] ?? '') ?>" autocomplete="off"></th>
-          <th><input class="filter-input" type="text" name="zak_f[telefon]" value="<?= h($zakFilters['telefon'] ?? '') ?>" autocomplete="off"></th>
-          <th><input class="filter-input" type="text" name="zak_f[email]" value="<?= h($zakFilters['email'] ?? '') ?>" autocomplete="off"></th>
-          <th><input class="filter-input" type="text" name="zak_f[ulice]" value="<?= h($zakFilters['ulice'] ?? '') ?>" autocomplete="off"></th>
-          <th><input class="filter-input" type="text" name="zak_f[mesto]" value="<?= h($zakFilters['mesto'] ?? '') ?>" autocomplete="off"></th>
-          <th><input class="filter-input" type="text" name="zak_f[pobocka]" value="<?= h($zakFilters['pobocka'] ?? '') ?>" autocomplete="off"></th>
-          <th>
-            <a href="<?= h($zakResetUrl) ?>" class="icon-btn cursor_ruka ram_normal bg_seda text_18 icon-x small zaobleni_6 vyska_24 radek_24 displ_inline_flex">&times;</a>
+          <th style="width:150px;"></th>
+          <th style="width:150px;"><input class="filter-input" type="text" name="zak_f[prijmeni]" value="<?= h($zakFilters['prijmeni'] ?? '') ?>" autocomplete="off"></th>
+          <th style="width:150px;"><input class="filter-input" type="text" name="zak_f[jmeno]" value="<?= h($zakFilters['jmeno'] ?? '') ?>" autocomplete="off"></th>
+          <th style="width:250px;"><input class="filter-input" type="text" name="zak_f[telefon]" value="<?= h($zakFilters['telefon'] ?? '') ?>" autocomplete="off"></th>
+          <th style="width:250px;"><input class="filter-input" type="text" name="zak_f[email]" value="<?= h($zakFilters['email'] ?? '') ?>" autocomplete="off"></th>
+          <th style="width:150px;"><input class="filter-input" type="text" name="zak_f[ulice]" value="<?= h($zakFilters['ulice'] ?? '') ?>" autocomplete="off"></th>
+          <th style="width:150px;"><input class="filter-input" type="text" name="zak_f[mesto]" value="<?= h($zakFilters['mesto'] ?? '') ?>" autocomplete="off"></th>
+          <th style="width:150px;"><input class="filter-input" type="text" name="zak_f[pobocka]" value="<?= h($zakFilters['pobocka'] ?? '') ?>" autocomplete="off"></th>
+          <th style="width:150px;">
+            <div class="filter-actions gap_8 displ_flex">
+              <a href="<?= h($zakResetUrl) ?>" class="filter-reset-btn cursor_ruka ram_normal zaobleni_8 vyska_24 radek_24 displ_inline_flex">
+                <span class="filter-reset-x">&times;</span>
+                <span>Zrušit filtr</span>
+              </a>
+            </div>
           </th>
         </tr>
         <tr>
-          <th style="width:90px;">Poř.č.</th>
-          <th style="width:120px;">příjmení</th>
-          <th style="width:120px;">jméno</th>
-          <th style="width:150px;">telefon</th>
-          <th style="width:auto;">email</th>
-          <th style="width:150px;">ulice</th>
-          <th style="width:150px;">město</th>
-          <th style="width:120px;">pobočka</th>
-          <th style="width:120px;">aktivita</th>
+          <?php
+          $zakCols = [
+              'id' => ['label' => 'Poř.č.', 'width' => '150px'],
+              'prijmeni' => ['label' => 'příjmení', 'width' => '150px'],
+              'jmeno' => ['label' => 'jméno', 'width' => '150px'],
+              'telefon' => ['label' => 'telefon', 'width' => '250px'],
+              'email' => ['label' => 'email', 'width' => '250px'],
+              'ulice' => ['label' => 'ulice', 'width' => '150px'],
+              'mesto' => ['label' => 'město', 'width' => '150px'],
+              'pobocka' => ['label' => 'pobočka', 'width' => '150px'],
+              'aktivita' => ['label' => 'aktivita', 'width' => '150px'],
+          ];
+          ?>
+          <?php foreach ($zakCols as $key => $cfg): ?>
+            <?php
+            $isSortable = isset($zakSortMap[$key]);
+            $isActiveSort = ($zakSort === $key);
+            $arrow = '↕';
+            if ($isActiveSort) {
+                $arrow = $zakDir === 'ASC' ? '↑' : '↓';
+            }
+            ?>
+            <th class="th-sort<?= $isActiveSort ? ' active' : '' ?>" style="width:<?= h((string)$cfg['width']) ?>;">
+              <?php if ((int)$tabKonfig['enable_sort'] === 1 && $isSortable): ?>
+                <?php
+                $nextDir = ($isActiveSort && $zakDir === 'ASC') ? 'DESC' : 'ASC';
+                $sortUrl = $zakBuildUrl([
+                    'zak_p' => '1',
+                    'zak_sort' => $key,
+                    'zak_dir' => $nextDir,
+                ]);
+                ?>
+                <a class="th-sort-link gap_8 jc_mezi sirka100<?= $isActiveSort ? ' active' : '' ?>" href="<?= h($sortUrl) ?>">
+                  <span class="th-sort-label"><?= h((string)$cfg['label']) ?></span>
+                  <span class="th-sort-arrow txt_r"><?= h($arrow) ?></span>
+                </a>
+              <?php else: ?>
+                <span class="th-sort-link gap_8 jc_mezi sirka100"><span class="th-sort-label"><?= h((string)$cfg['label']) ?></span></span>
+              <?php endif; ?>
+            </th>
+          <?php endforeach; ?>
         </tr>
       </thead>
       <tbody>

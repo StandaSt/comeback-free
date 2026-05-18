@@ -31,6 +31,7 @@ Před úpravou vždy nejprve zjisti, co je aktuálně skutečně používané.
 - Nezaváděj nové soubory, nové knihovny ani nové architektonické vrstvy bez výslovného zadání.
 - Preferuj úpravu existujících souborů.
 - Nejprve analyzuj, potom navrhni, teprve potom měň.
+- Před úpravou konkrétního souboru si vždy přečti jeho úvodní a okolní komentáře. Komentáře určené pro AI/Codex jsou závazné lokální pokyny; pokud říkají „nesahat bez schválení“, musíš si před změnou vyžádat výslovné schválení uživatele.
 - NIKDY nepoužívej dočasné záplaty místo čisté a trvalé opravy.
 - NIKDY nenechávej v kódu dočasné lokální řešení, pokud má existovat systémová úprava.
 - Při nejasnosti nejdřív vypiš, které soubory se tématu týkají a co v nich chceš změnit.

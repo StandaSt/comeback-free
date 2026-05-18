@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/uloz_akci.php';
+
 if (!function_exists('cb_pobocky_save_selection_to_db')) {
     /**
      * @param int[] $ids
@@ -93,6 +95,15 @@ if (
         cb_pobocky_set_selected([$idPob]);
         cb_pobocky_set_mode('single', null);
         $_SESSION['cb_pobocka_id'] = $idPob;
+        cb_user_akce_zapis([
+            'id_akce' => 13,
+            'vysledek' => 1,
+            'zdroj' => 'pobocky',
+            'detail' => [
+                'mode' => 'single',
+                'count' => 1,
+            ],
+        ]);
         echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
         exit;
     } catch (Throwable $e) {
@@ -197,6 +208,15 @@ if (
             cb_pobocky_set_selected($ids);
             cb_pobocky_set_mode('area', $selectedOblasti[0]);
             $_SESSION['selected_oblasti'] = $selectedOblasti;
+            cb_user_akce_zapis([
+                'id_akce' => 13,
+                'vysledek' => 1,
+                'zdroj' => 'pobocky',
+                'detail' => [
+                    'mode' => 'area',
+                    'count' => count($ids),
+                ],
+            ]);
             echo json_encode(['ok' => true, 'count' => count($ids), 'oblasti' => $selectedOblasti], JSON_UNESCAPED_UNICODE);
             exit;
         } catch (Throwable $e) {
@@ -231,6 +251,15 @@ if (
         cb_pobocky_set_selected($valid);
         cb_pobocky_set_mode('custom', null);
         $_SESSION['selected_oblasti'] = [];
+        cb_user_akce_zapis([
+            'id_akce' => 13,
+            'vysledek' => 1,
+            'zdroj' => 'pobocky',
+            'detail' => [
+                'mode' => 'custom',
+                'count' => count($valid),
+            ],
+        ]);
         echo json_encode(['ok' => true, 'count' => count($valid)], JSON_UNESCAPED_UNICODE);
         exit;
     } catch (Throwable $e) {

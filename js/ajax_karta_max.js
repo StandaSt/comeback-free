@@ -14,6 +14,20 @@
     return expanded instanceof HTMLElement;
   }
 
+  function getTableFilterPrefix(form) {
+    if (!(form instanceof HTMLFormElement)) return '';
+    const el = form.querySelector('input.filter-input[name*="_f["]');
+    const name = el instanceof HTMLInputElement ? String(el.name || '') : '';
+    const m = name.match(/^([a-z0-9_]+)_f\[/i);
+    return m ? String(m[1] || '').toLowerCase() : '';
+  }
+
+  function isTableFilterForm(form) {
+    return form instanceof HTMLFormElement
+      && String(form.method || 'get').toLowerCase() === 'get'
+      && getTableFilterPrefix(form) !== '';
+  }
+
   function resolveFormFromSubmitter(submitter) {
     if (!(submitter instanceof HTMLElement)) return null;
     const formAttr = String(submitter.getAttribute('form') || '').trim();
@@ -534,6 +548,7 @@
     if (!(target instanceof HTMLElement)) return;
     const form = resolveFormFromSubmitter(target);
     if (!(form instanceof HTMLFormElement)) return;
+    if (isTableFilterForm(form)) return;
     if (!isTargetForm(form)) return;
 
     event.preventDefault();
@@ -544,6 +559,7 @@
   function handleSubmit(event) {
     const form = event.target instanceof HTMLFormElement ? event.target : null;
     if (!(form instanceof HTMLFormElement)) return;
+    if (isTableFilterForm(form)) return;
     if (!isTargetForm(form)) return;
 
     event.preventDefault();

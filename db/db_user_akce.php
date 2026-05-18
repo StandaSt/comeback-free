@@ -15,17 +15,9 @@ if (!function_exists('db_user_akce_insert')) {
 
         $idLogin = isset($row['id_login']) ? (int)$row['id_login'] : null;
         $idKarta = isset($row['id_karta']) ? (int)$row['id_karta'] : null;
-        $metoda = trim((string)($row['metoda'] ?? ''));
-        $requestUri = trim((string)($row['request_uri'] ?? ''));
         $vysledek = ((int)($row['vysledek'] ?? 1) === 1) ? 1 : 0;
         $errMsg = trim((string)($row['err_msg'] ?? ''));
 
-        if ($metoda === '') {
-            $metoda = null;
-        }
-        if ($requestUri === '') {
-            $requestUri = null;
-        }
         if ($errMsg === '') {
             $errMsg = null;
         }
@@ -42,9 +34,9 @@ if (!function_exists('db_user_akce_insert')) {
         $conn = db();
         $sql = '
             INSERT INTO user_akce
-                (id_user, id_login, id_karta, id_akce, detail_json, request_uri, metoda, vysledek, err_msg)
+                (id_user, id_login, id_karta, id_akce, detail_json, vysledek, err_msg)
             VALUES
-                (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (?, ?, ?, ?, ?, ?, ?)
         ';
         $stmt = $conn->prepare($sql);
         if (!$stmt instanceof mysqli_stmt) {
@@ -52,14 +44,12 @@ if (!function_exists('db_user_akce_insert')) {
         }
 
         $stmt->bind_param(
-            'iiiisssis',
+            'iiiisis',
             $idUser,
             $idLogin,
             $idKarta,
             $idAkce,
             $detailJson,
-            $requestUri,
-            $metoda,
             $vysledek,
             $errMsg
         );
@@ -68,4 +58,3 @@ if (!function_exists('db_user_akce_insert')) {
         return $ok;
     }
 }
-
