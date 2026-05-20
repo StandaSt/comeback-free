@@ -30,6 +30,7 @@ require_once __DIR__ . '/user_bad_login.php';
 require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
 
 require_once __DIR__ . '/../db/db_api_smeny.php';
+require_once __DIR__ . '/../db/db_user.php';
 
 $GQL_URL = 'https://smeny.pizzacomeback.cz/graphql';
 
@@ -103,6 +104,7 @@ try {
 
     $idUser = (int)$u['id'];
 
+    cb_db_ensure_user_set(db(), $idUser);
 
     $_SESSION['cb_token'] = $token;
 

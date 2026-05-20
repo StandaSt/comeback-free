@@ -59,6 +59,26 @@
     return estimatedBarHeight >= minRequiredHeight;
   }
 
+  function positionTooltipMiddleAtCursor(point, params, dom, rect, size) {
+    const viewSize = size && Array.isArray(size.viewSize) ? size.viewSize : [0, 0];
+    const contentSize = size && Array.isArray(size.contentSize) ? size.contentSize : [0, 0];
+    const gap = 12;
+    const cursorX = Array.isArray(point) ? Number(point[0]) || 0 : 0;
+    const cursorY = Array.isArray(point) ? Number(point[1]) || 0 : 0;
+    const width = Number(contentSize[0]) || 0;
+    const height = Number(contentSize[1]) || 0;
+    const viewWidth = Number(viewSize[0]) || 0;
+    const viewHeight = Number(viewSize[1]) || 0;
+
+    const rightX = cursorX + gap;
+    const leftX = cursorX - width - gap;
+    const x = (rightX + width + gap <= viewWidth) ? rightX : Math.max(gap, leftX);
+    const maxY = Math.max(gap, viewHeight - height - gap);
+    const y = Math.max(gap, Math.min(cursorY - (height / 2), maxY));
+
+    return [x, y];
+  }
+
   function buildOutsideValueMarkPoints(labels, values, suffix) {
     return labels.map((label, index) => {
       const value = Number(values[index] || 0) || 0;
@@ -208,7 +228,11 @@
 
       return {
         grid: Object.assign({}, MINI_SLOUPEC_GRID, { top: 30 }),
-        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'shadow' },
+          position: positionTooltipMiddleAtCursor
+        },
         legend: { show: false },
         xAxis: {
           type: 'category',
@@ -637,7 +661,8 @@
         grid: MINI_SLOUPEC_GRID,
         tooltip: {
           trigger: 'axis',
-          axisPointer: { type: 'shadow' }
+          axisPointer: { type: 'shadow' },
+          position: positionTooltipMiddleAtCursor
         },
         xAxis: {
           type: 'category',

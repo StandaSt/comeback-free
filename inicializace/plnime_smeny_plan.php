@@ -38,6 +38,11 @@ function currentWeekMonday(): DateTimeImmutable
     return new DateTimeImmutable('monday this week');
 }
 
+function smenyReferenceMonday(): DateTimeImmutable
+{
+    return currentWeekMonday()->modify('+1 week');
+}
+
 function normalizeMonday(string $date): DateTimeImmutable
 {
     return (new DateTimeImmutable($date))->modify('monday this week');
@@ -45,7 +50,7 @@ function normalizeMonday(string $date): DateTimeImmutable
 
 function calculateSkipWeeksByStartDay(string $startDay): int
 {
-    $currentMonday = currentWeekMonday();
+    $currentMonday = smenyReferenceMonday();
     $weekMonday = normalizeMonday($startDay);
     $seconds = $weekMonday->getTimestamp() - $currentMonday->getTimestamp();
 
@@ -59,7 +64,7 @@ function oldestSkipWeeks(): int
 
 function startDayBySkipWeeks(int $skipWeeks): string
 {
-    return currentWeekMonday()->modify(($skipWeeks >= 0 ? '+' : '') . $skipWeeks . ' week')->format('Y-m-d');
+    return smenyReferenceMonday()->modify(($skipWeeks >= 0 ? '+' : '') . $skipWeeks . ' week')->format('Y-m-d');
 }
 
 function ensureLogDir(): void
@@ -120,13 +125,46 @@ function smenyPlanFindBranchById(array $branches, int $idPob): ?array
 
 function smenyPlanBranchLastImportLabel(array $branch): string
 {
-    $lastImportDay = trim((string)($branch['last_import_day'] ?? ''));
+    $lastImportDay = trim((string)($branch['last_plan_day'] ?? ''));
 
     if ($lastImportDay === '') {
         return 'bez importu';
     }
 
-    return 'do ' . $lastImportDay;
+    return smenyPlanFormatDate($lastImportDay);
+}
+
+function smenyPlanRefreshLastPlanDay(array $branch): array
+{
+    $idPob = (int)($branch['id_pob'] ?? 0);
+    if ($idPob <= 0) {
+        return $branch;
+    }
+
+    $db = db();
+    $res = $db->query('SELECT MAX(datum) AS last_plan_day FROM smeny_plan WHERE id_pob=' . $idPob);
+    if ($res instanceof mysqli_result) {
+        $row = $res->fetch_assoc() ?: [];
+        $branch['last_plan_day'] = (string)($row['last_plan_day'] ?? '');
+        $res->free();
+    }
+
+    return $branch;
+}
+
+function smenyPlanFormatDate(string $date): string
+{
+    $date = trim($date);
+    if ($date === '') {
+        return '';
+    }
+
+    $dt = DateTimeImmutable::createFromFormat('Y-m-d', $date);
+    if (!$dt instanceof DateTimeImmutable) {
+        return $date;
+    }
+
+    return $dt->format('j.n.Y');
 }
 
 function smenyPlanNormalizeBranchName(string $name): string
@@ -210,9 +248,15 @@ function getBranches(string $token = ''): array
             p.id_pob,
             p.nazev,
             p.start_smeny,
+            plan.last_plan_day,
             hist.last_import_day,
             hist.last_import_skip_weeks
         FROM pobocka p
+        LEFT JOIN (
+            SELECT id_pob, MAX(datum) AS last_plan_day
+            FROM smeny_plan
+            GROUP BY id_pob
+        ) plan ON plan.id_pob = p.id_pob
         LEFT JOIN (
             SELECT sa.id_pob, sa.start_day AS last_import_day, sa.skip_weeks AS last_import_skip_weeks
             FROM smeny_aktualizace sa
@@ -524,10 +568,9 @@ function saveStateRow(array $state): void
     $db = db();
 
     $stmt = $db->prepare(
-        'INSERT INTO smeny_aktualizace (start_day, skip_weeks, id_pob, stav, datum_od, started_at, finished_at, posledni_ok, pocet_bloku, pocet_hodin, chyba_text)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        'INSERT INTO smeny_aktualizace (start_day, id_pob, stav, datum_od, started_at, finished_at, posledni_ok, pocet_bloku, pocet_hodin, chyba_text)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE
-            skip_weeks = VALUES(skip_weeks),
             stav = VALUES(stav),
             datum_od = VALUES(datum_od),
             started_at = VALUES(started_at),
@@ -543,9 +586,8 @@ function saveStateRow(array $state): void
     }
 
     $stmt->bind_param(
-        'siiissssiis',
+        'siissssiis',
         $state['start_day'],
-        $state['skip_weeks'],
         $state['id_pob'],
         $state['stav'],
         $state['datum_od'],
@@ -572,7 +614,6 @@ function markBranchAsOk(int $skipWeeks, int $idPob, string $startDay, int $block
 
     saveStateRow([
         'start_day' => $startDay,
-        'skip_weeks' => $skipWeeks,
         'id_pob' => $idPob,
         'stav' => 1,
         'datum_od' => $startDay,
@@ -591,7 +632,6 @@ function markBranchAsError(int $skipWeeks, int $idPob, string $startDay, string 
 
     saveStateRow([
         'start_day' => $startDay,
-        'skip_weeks' => $skipWeeks,
         'id_pob' => $idPob,
         'stav' => 2,
         'datum_od' => $startDay,
@@ -635,9 +675,6 @@ function processBranch(string $token, int $skipWeeks, int $idPob, int $apiBranch
 
         $week = getWeekRaw($token, $apiBranchId, $skipWeeks);
         if ($week === null) {
-            deletePlanRows($defaultStartDay, $idPob);
-            markBranchAsOk($skipWeeks, $idPob, $defaultStartDay, 0, 0, 'API vratilo prazdny tyden');
-
             return [
                 'start_day' => $defaultStartDay,
                 'blocks' => 0,
@@ -649,6 +686,16 @@ function processBranch(string $token, int $skipWeeks, int $idPob, int $apiBranch
 
         $startDay = normalizeMonday((string)($week['startDay'] ?? $defaultStartDay))->format('Y-m-d');
         $rows = buildBlocks($week, $idPob);
+        if ($rows === []) {
+            return [
+                'start_day' => $startDay,
+                'blocks' => 0,
+                'hours' => 0,
+                'status' => 'OK',
+                'note' => 'API vratilo tyden bez bloku',
+            ];
+        }
+
         $blocks = saveBlocks($startDay, $idPob, $rows);
         $hours = countHours($rows);
         markBranchAsOk($skipWeeks, $idPob, $startDay, $blocks, $hours, null);
@@ -706,8 +753,8 @@ function renderSmenyPlanScreen(array $info, string $mode = 'pick'): void
       <?php if ($selectedBranchId > 0 && is_array($selectedBranch)): ?>
         <?php $selectedImportLabel = smenyPlanBranchLastImportLabel($selectedBranch); ?>
         <p class="card_text txt_seda">Pobočka: <?= h((string)($selectedBranch['nazev'] ?? '')) ?> (<?= h((string)$selectedBranchId) ?>)</p>
-        <p class="card_text txt_seda">Start historie pobočky: <?= h((string)($selectedBranch['start_smeny'] ?? '')) ?> | v DB je <?= h($selectedImportLabel) ?></p>
-        <p class="card_text txt_seda">První týden importu: <?= h($selectedStartDay !== '' ? $selectedStartDay : 'neznámý') ?> | skipWeeks=<?= h((string)$selectedSkipWeeks) ?>.</p>
+        <p class="card_text txt_seda">Start historie pobočky: <?= h(smenyPlanFormatDate((string)($selectedBranch['start_smeny'] ?? ''))) ?> | poslední uložený den <?= h($selectedImportLabel) ?></p>
+        <p class="card_text txt_seda">První týden importu: <?= h($selectedStartDay !== '' ? smenyPlanFormatDate($selectedStartDay) : 'neznámý') ?> | skipWeeks=<?= h((string)$selectedSkipWeeks) ?>.</p>
       <?php endif; ?>
       <?php if ($message !== ''): ?>
         <p class="card_text <?= h($messageClass) ?> text_tucny"><?= h($message) ?></p>
@@ -851,13 +898,6 @@ function run(array $branch): array
     out($startLine);
 
     while ($skipWeeks <= 0) {
-        if (!skipweekBrakeExists()) {
-            $status = 'STOP';
-            $stopMessage = 'Import korektně ukončen, protože chybí nouzová brzda skipweek.txt.';
-            appendTxtLog($stopMessage);
-            break;
-        }
-
         $weekResult = processBranch($token, $skipWeeks, $idPob, $apiBranchId, $nazevPob);
 
         printBranchProgress(
@@ -900,7 +940,7 @@ function run(array $branch): array
         'start_day' => $branchStartDay,
         'skip_weeks' => branchSkipWeeks($branch),
         'branches_list' => [],
-        'selected_branch' => $branch,
+        'selected_branch' => smenyPlanRefreshLastPlanDay($branch),
         'selected_branch_id' => $idPob,
         'blocks' => $totalBlocks,
         'hours' => $totalHours,

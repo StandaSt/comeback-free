@@ -2170,7 +2170,8 @@ align-items:center;
 
 .zr_person_table th,
 .zr_person_table td{
-  padding:6px 4px;
+  padding:3px 4px;
+  vertical-align:middle;
 }
 
 .zr_person_table thead th{
@@ -2195,12 +2196,34 @@ align-items:center;
   width:45px;
 }
 
+.zr_time_input{
+  height:24px;
+  padding:2px 4px;
+  border:1px solid var(--clr_seda_2);
+  border-radius:6px;
+  background:var(--clr_bila);
+  color:var(--clr_seda_4);
+  font-size:var(--fs_12);
+}
+
+.zr_time_input.edit{
+  border-color:var(--clr_modra_3);
+  background:var(--clr_modra_1);
+}
+
+.zr_time_input.err{
+  border-color:var(--clr_cervena_3);
+  background:#fee2e2;
+}
+
 .zr_person_col_break{
   width:25px;
 }
 
 .zr_person_table td.zr_person_cell_break input{
-  width:5ch;
+  height:24px;
+  padding-left:4px;
+  padding-right:4px;
 }
 
 .zr_person_col_hours{
@@ -2213,7 +2236,7 @@ align-items:center;
 
 .zr_hours_value{
   display:inline-block;
-  line-height:28px;
+  line-height:24px;
   font-size:var(--fs_12);
   font-weight:700;
   color:var(--clr_seda_4);
@@ -2225,7 +2248,9 @@ align-items:center;
 }
 
 .zr_delivery_input{
-  width:5ch;
+  height:24px;
+  padding-left:4px;
+  padding-right:4px;
 }
 
 .zr_delivery_plus{
@@ -2278,7 +2303,7 @@ align-items:center;
 
 .zr_row_save{
   width:104px;
-  height:30px;
+  height:24px;
   border:1px solid var(--clr_modra_3);
   background:linear-gradient(180deg, var(--clr_modra_4), var(--clr_modra_5));
   color:var(--clr_bila);
@@ -2287,9 +2312,37 @@ align-items:center;
   box-shadow:0 6px 14px var(--clr_pruhledna_modra_tmava_18);
 }
 
+.zr_row_ok{
+  width:28px;
+  min-width:28px;
+  border-color:#16a34a;
+  background:#dcfce7;
+  color:#15803d;
+  box-shadow:none;
+  font-size:var(--fs_16);
+  line-height:1;
+}
+
 .zr_row_save:disabled{
   cursor:not-allowed;
   opacity:.45;
+}
+
+.zr_row_remove{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:16px;
+  height:16px;
+  margin-right:6px;
+  border:1px solid var(--clr_cervena_3);
+  border-radius:50%;
+  background:var(--clr_bila);
+  color:var(--clr_cervena);
+  font-size:var(--fs_13);
+  font-weight:700;
+  line-height:1;
+  vertical-align:middle;
 }
 
 .zr_saved_value{

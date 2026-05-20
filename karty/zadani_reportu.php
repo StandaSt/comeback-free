@@ -56,6 +56,13 @@ if ($currentUserId > 0) {
 $allowedBranchIds = array_map('intval', array_keys($allowedBranches));
 $requestedBranchId = (int)($_POST['zr_id_pob'] ?? $_GET['zr_id_pob'] ?? 0);
 $reportBranchId = ($requestedBranchId > 0 && in_array($requestedBranchId, $allowedBranchIds, true)) ? $requestedBranchId : 0;
+$singleAllowedBranchName = '';
+if ($reportBranchId <= 0 && count($allowedBranches) === 1) {
+    $reportBranchId = (int)array_key_first($allowedBranches);
+}
+if (count($allowedBranches) === 1 && $reportBranchId > 0 && isset($allowedBranches[$reportBranchId])) {
+    $singleAllowedBranchName = (string)$allowedBranches[$reportBranchId];
+}
 
 if ($reportBranchId <= 0 && $canSaveReport && $currentUserId > 0) {
     $nowLocal = (new DateTimeImmutable('now', $tz))->format('Y-m-d H:i:s');
@@ -219,24 +226,12 @@ $renderNameSelectOptions = static function (array $options, string $selected, st
     return $html;
 };
 
-$renderTimeOptions = static function (array $options, string $selected): string {
-    $html = '<option value="">--:--</option>';
-    foreach ($options as $option) {
-        $value = trim((string)$option);
-        if ($value === '') {
-            continue;
-        }
-        $html .= '<option value="' . h($value) . '"' . ($value === $selected ? ' selected' : '') . '>' . h($value) . '</option>';
-    }
-    return $html;
-};
+$renderTimeInput = static function (string $name, string $selected, string $dataAttr, string $extraAttr = ''): string {
+    $attrName = trim($name) !== '' ? ' name="' . h($name) . '"' : '';
+    $attrExtra = trim($extraAttr) !== '' ? ' ' . trim($extraAttr) : '';
 
-$timeOptions = [];
-for ($hour = 0; $hour < 24; $hour++) {
-    foreach ([0, 15, 30, 45] as $minute) {
-        $timeOptions[] = sprintf('%02d:%02d', $hour, $minute);
-    }
-}
+    return '<input class="zr_time_input" type="text" inputmode="numeric"' . $attrName . ' value="' . h($selected) . '" style="width:100%;text-align:center;" ' . $dataAttr . $attrExtra . '>';
+};
 
 $instorOptions = $buildBranchSlotNameOptions($conn, $reportBranchId, 1);
 $plannedInstorDefaults = $buildPlannedInstorDefaults($conn, $reportBranchId, $reportDate);
@@ -564,6 +559,57 @@ if (!is_array($reportRow) && $reportBranchId > 0) {
     }
 }
 
+$kuryrDeliveryCounts = [];
+if ($reportBranchId > 0) {
+    $deliverySql = "
+        SELECT
+            TRIM(ok.jmeno) AS kuryr_name,
+            COUNT(DISTINCT o.id_obj) AS rozvozu
+        FROM objednavky_restia o
+        INNER JOIN obj_kuryr ok ON ok.id_obj = o.id_obj
+        LEFT JOIN cis_obj_stav s ON s.id_stav = o.id_stav
+        WHERE o.id_pob = ?
+          AND o.restia_created_at IS NOT NULL
+          AND o.restia_created_at >= ?
+          AND o.restia_created_at < ?
+          AND ok.provider = 'delivery'
+          AND COALESCE(s.nazev, '') NOT IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted')
+        GROUP BY kuryr_name
+        HAVING kuryr_name <> ''
+    ";
+    $stmtDeliveries = $conn->prepare($deliverySql);
+    if ($stmtDeliveries !== false) {
+        $fromDb = (string)$workdayRange['from_db'];
+        $toDb = (string)$workdayRange['to_db'];
+        $stmtDeliveries->bind_param('iss', $reportBranchId, $fromDb, $toDb);
+        $stmtDeliveries->execute();
+        $deliveriesResult = $stmtDeliveries->get_result();
+        if ($deliveriesResult instanceof mysqli_result) {
+            while ($row = $deliveriesResult->fetch_assoc()) {
+                $courierName = trim((string)($row['kuryr_name'] ?? ''));
+                if ($courierName !== '') {
+                    $kuryrDeliveryCounts[$courierName] = (int)($row['rozvozu'] ?? 0);
+                }
+            }
+            $deliveriesResult->free();
+        }
+        $stmtDeliveries->close();
+    }
+}
+
+foreach ($kuryrRows as &$kuryrRow) {
+    $kuryrName = trim((string)($kuryrRow['name'] ?? ''));
+    $deliveryRestia = (int)($kuryrDeliveryCounts[$kuryrName] ?? 0);
+    $deliveryManual = (int)($kuryrRow['delivery_manual'] ?? 0);
+    $kuryrRow['delivery_restia'] = $deliveryRestia;
+    $kuryrRow['delivery_total'] = $deliveryRestia + $deliveryManual;
+}
+unset($kuryrRow);
+$kuryrDeliveryCountsJson = (string)json_encode($kuryrDeliveryCounts, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+if ($kuryrDeliveryCountsJson === '') {
+    $kuryrDeliveryCountsJson = '{}';
+}
+
 $makeTimeLabel = '0 min 00 s';
 if (is_int($restiaSummary['make_time_avg_sec']) && $restiaSummary['make_time_avg_sec'] > 0) {
     $minutes = intdiv((int)$restiaSummary['make_time_avg_sec'], 60);
@@ -571,7 +617,7 @@ if (is_int($restiaSummary['make_time_avg_sec']) && $restiaSummary['make_time_avg
     $makeTimeLabel = $minutes . ' min ' . sprintf('%02d', $seconds) . ' s';
 }
 
-$renderInstorSavedRow = static function (array $row, array $timeOptions, callable $renderTimeOptions): string {
+$renderInstorSavedRow = static function (array $row, callable $renderTimeInput): string {
     $name = trim((string)($row['name'] ?? ''));
     $start = trim((string)($row['start'] ?? ''));
     $end = trim((string)($row['end'] ?? ''));
@@ -580,18 +626,18 @@ $renderInstorSavedRow = static function (array $row, array $timeOptions, callabl
 
     return ''
         . '<tr data-zr-person-row="instor">'
-        . '<td><strong class="zr_saved_value">' . h($name) . '</strong>'
+        . '<td style="width:220px;"><button type="button" class="zr_row_remove" data-zr-remove-row title="Odebrat" aria-label="Odebrat">×</button><strong class="zr_saved_value">' . h($name) . '</strong>'
         . '<input type="hidden" name="instor_jmeno[]" value="' . h($name) . '">'
         . '</td>'
-        . '<td><select name="instor_zacatek[]" data-zr-start>' . $renderTimeOptions($timeOptions, $start) . '</select></td>'
-        . '<td><select name="instor_konec[]" data-zr-end>' . $renderTimeOptions($timeOptions, $end) . '</select></td>'
-        . '<td class="zr_person_cell_break"><input type="text" inputmode="decimal" name="instor_pauza_hod[]" value="' . h($break) . '" data-zr-break></td>'
-        . '<td><strong class="zr_saved_value" data-zr-hours>' . h($hours) . ' hod.</strong><input type="hidden" name="instor_hodiny[]" value="' . h($hours) . '" data-zr-hours-hidden></td>'
-        . '<td class="txt_r"><button type="button" class="zr_row_save zaobleni_10" data-zr-remove-row>Odebrat</button></td>'
+        . '<td style="width:58px;">' . $renderTimeInput('instor_zacatek[]', $start, 'data-zr-start') . '</td>'
+        . '<td style="width:58px;">' . $renderTimeInput('instor_konec[]', $end, 'data-zr-end') . '</td>'
+        . '<td class="zr_person_cell_break" style="width:44px;"><input type="text" inputmode="decimal" name="instor_pauza_hod[]" value="' . h($break) . '" style="width:100%;text-align:center;" data-zr-break></td>'
+        . '<td style="width:70px;"><strong class="zr_saved_value" data-zr-hours>' . h($hours) . ' hod.</strong><input type="hidden" name="instor_hodiny[]" value="' . h($hours) . '" data-zr-hours-hidden></td>'
+        . '<td></td>'
         . '</tr>';
 };
 
-$renderKuryrSavedRow = static function (array $row, callable $formatMoney, array $timeOptions, callable $renderTimeOptions): string {
+$renderKuryrSavedRow = static function (array $row, callable $formatMoney, callable $renderTimeInput): string {
     $name = trim((string)($row['name'] ?? ''));
     $start = trim((string)($row['start'] ?? ''));
     $end = trim((string)($row['end'] ?? ''));
@@ -602,25 +648,21 @@ $renderKuryrSavedRow = static function (array $row, callable $formatMoney, array
     $deliveryTotal = (int)($row['delivery_total'] ?? ($deliveryRestia + $deliveryManual));
     $car = (int)($row['car'] ?? 0);
     $phm = (float)($row['phm'] ?? 0);
-    $summary = $deliveryRestia . ' + ' . $deliveryManual . ' / ' . ($car === 1 ? 'Ano' : 'Ne') . ' / ' . $formatMoney($phm);
-
     return ''
         . '<tr data-zr-person-row="kuryr">'
-        . '<td><strong class="zr_saved_value">' . h($name) . '</strong>'
+        . '<td style="width:220px;"><button type="button" class="zr_row_remove" data-zr-remove-row title="Odebrat" aria-label="Odebrat">×</button><strong class="zr_saved_value">' . h($name) . '</strong>'
         . '<input type="hidden" name="kuryr_jmeno[]" value="' . h($name) . '">'
         . '</td>'
-        . '<td><select name="kuryr_zacatek[]" data-zr-start>' . $renderTimeOptions($timeOptions, $start) . '</select></td>'
-        . '<td><select name="kuryr_konec[]" data-zr-end>' . $renderTimeOptions($timeOptions, $end) . '</select></td>'
-        . '<td class="zr_person_cell_break"><input type="text" inputmode="decimal" name="kuryr_pauza_hod[]" value="' . h($break) . '" data-zr-break></td>'
-        . '<td><strong class="zr_saved_value" data-zr-hours>' . h($hours) . ' hod.</strong><input type="hidden" name="kuryr_hodiny[]" value="' . h($hours) . '" data-zr-hours-hidden></td>'
-        . '<td><strong class="zr_saved_value">' . h($summary) . '</strong>'
-        . '<input type="hidden" name="kuryr_pocet_rozvozu_restia[]" value="' . h((string)$deliveryRestia) . '">'
-        . '<input type="hidden" name="kuryr_pocet_rozvozu_manual[]" value="' . h((string)$deliveryManual) . '">'
+        . '<td style="width:58px;">' . $renderTimeInput('kuryr_zacatek[]', $start, 'data-zr-start') . '</td>'
+        . '<td style="width:58px;">' . $renderTimeInput('kuryr_konec[]', $end, 'data-zr-end') . '</td>'
+        . '<td class="zr_person_cell_break" style="width:44px;"><input type="text" inputmode="decimal" name="kuryr_pauza_hod[]" value="' . h($break) . '" style="width:100%;text-align:center;" data-zr-break></td>'
+        . '<td style="width:70px;"><strong class="zr_saved_value" data-zr-hours>' . h($hours) . ' hod.</strong><input type="hidden" name="kuryr_hodiny[]" value="' . h($hours) . '" data-zr-hours-hidden></td>'
+        . '<td class="txt_c" style="width:48px;"><strong class="zr_saved_value">' . h((string)$deliveryRestia) . '</strong><input type="hidden" name="kuryr_pocet_rozvozu_restia[]" value="' . h((string)$deliveryRestia) . '"></td>'
+        . '<td class="txt_c" style="width:48px;"><strong class="zr_saved_value">' . h((string)$deliveryManual) . '</strong><input type="hidden" name="kuryr_pocet_rozvozu_manual[]" value="' . h((string)$deliveryManual) . '">'
         . '<input type="hidden" name="kuryr_pocet_rozvozu[]" value="' . h((string)$deliveryTotal) . '">'
-        . '<input type="hidden" name="kuryr_vlastni_vuz[]" value="' . h((string)$car) . '">'
-        . '<input type="hidden" name="kuryr_vyplatit_phm[]" value="' . h(number_format($phm, 2, '.', '')) . '">'
-        . '<button type="button" class="zr_row_save zaobleni_10" data-zr-remove-row>Odebrat</button>'
         . '</td>'
+        . '<td class="txt_c" style="width:34px;"><strong class="zr_saved_value">' . h($car === 1 ? 'Ano' : 'Ne') . '</strong><input type="hidden" name="kuryr_vlastni_vuz[]" value="' . h((string)$car) . '"></td>'
+        . '<td><strong class="zr_saved_value">' . h($formatMoney($phm)) . '</strong><input type="hidden" name="kuryr_vyplatit_phm[]" value="' . h(number_format($phm, 2, '.', '')) . '"></td>'
         . '</tr>';
 };
 
@@ -644,12 +686,17 @@ ob_start();
               <tr>
                 <th class="zr_intro_label txt_l">Pobočka</th>
                 <td>
-                  <select class="zr_intro_select" name="zr_id_pob" onchange="if(this.form){this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit();}">
-                    <option value=""><?= h('Vyber pobočku') ?></option>
-                    <?php foreach ($allowedBranches as $branchId => $allowedBranchName): ?>
-                      <option value="<?= h((string)$branchId) ?>"<?= (int)$branchId === $reportBranchId ? ' selected' : '' ?>><?= h((string)$allowedBranchName) ?></option>
-                    <?php endforeach; ?>
-                  </select>
+                  <?php if ($singleAllowedBranchName !== ''): ?>
+                    <span class="text_tucny text_14"><?= h($singleAllowedBranchName) ?></span>
+                    <input type="hidden" name="zr_id_pob" value="<?= h((string)$reportBranchId) ?>">
+                  <?php else: ?>
+                    <select class="zr_intro_select" name="zr_id_pob" onchange="if(this.form){this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit();}">
+                      <option value=""><?= h('Vyber pobočku') ?></option>
+                      <?php foreach ($allowedBranches as $branchId => $allowedBranchName): ?>
+                        <option value="<?= h((string)$branchId) ?>"<?= (int)$branchId === $reportBranchId ? ' selected' : '' ?>><?= h((string)$allowedBranchName) ?></option>
+                      <?php endforeach; ?>
+                    </select>
+                  <?php endif; ?>
                   <input type="hidden" name="id_pob" value="<?= h((string)$reportBranchId) ?>">
                 </td>
               </tr>
@@ -716,53 +763,25 @@ ob_start();
       <div class="zr_left gap_14">
         <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_instor_section">
           <h4 class="card_section_title txt_seda">Instor</h4>
-          <table class="zr_table zr_person_table" data-zr-people-list="instor">
-            <colgroup>
-              <col class="zr_person_col_name">
-              <col class="zr_person_col_time">
-              <col class="zr_person_col_time">
-              <col class="zr_person_col_break">
-              <col class="zr_person_col_hours">
-              <col class="zr_person_col_save">
-            </colgroup>
+          <div style="width:220px;margin-bottom:6px;">
+            <select data-zr-add-person="instor">
+              <?= $renderNameSelectOptions($instorOptions, '', 'Vyber zaměstnance') ?>
+            </select>
+          </div>
+          <table class="zr_table zr_person_table" style="width:100%;" data-zr-people-list="instor">
             <thead>
               <tr>
-                <th class="zr_person_col_name zr_req_label txt_l" data-zr-required-label="instor_jmeno">Instor</th>
-                <th class="zr_person_col_time zr_req_label txt_l" data-zr-required-label="instor_zacatek">Směna od</th>
-                <th class="zr_person_col_time zr_req_label txt_l" data-zr-required-label="instor_konec">Směna do</th>
-                <th class="zr_person_col_break txt_l">Pauza</th>
-                <th class="zr_person_col_hours txt_l">Odpracovano</th>
-                <th class="zr_person_col_save txt_l"></th>
+                <th class="zr_req_label txt_l" style="width:220px;white-space:nowrap;" data-zr-required-label="instor_jmeno">Instor</th>
+                <th class="zr_req_label txt_l" style="width:58px;white-space:nowrap;" data-zr-required-label="instor_zacatek">Směna od</th>
+                <th class="zr_req_label txt_l" style="width:58px;white-space:nowrap;" data-zr-required-label="instor_konec">Směna do</th>
+                <th class="txt_l" style="width:44px;white-space:nowrap;">Pauza</th>
+                <th class="txt_l" style="width:70px;white-space:nowrap;">Odprac.</th>
+                <th class="txt_l" style="white-space:nowrap;"></th>
               </tr>
             </thead>
-            <tbody>
-              <tr data-zr-person-row="instor" data-zr-editor="instor">
-                <td class="zr_person_cell_name">
-                  <select data-zr-editor-field="jmeno" data-zr-required="instor_jmeno">
-                    <?= $renderNameSelectOptions($instorOptions, '', 'Vyber zaměstnance') ?>
-                  </select>
-                </td>
-                <td class="zr_person_cell_time">
-                  <select data-zr-editor-field="start" data-zr-start data-zr-required="instor_zacatek">
-                    <?= $renderTimeOptions($timeOptions, '10:00') ?>
-                  </select>
-                </td>
-                <td class="zr_person_cell_time">
-                  <select data-zr-editor-field="end" data-zr-end data-zr-required="instor_konec">
-                    <?= $renderTimeOptions($timeOptions, '16:00') ?>
-                  </select>
-                </td>
-                <td class="zr_person_cell_break"><input type="text" inputmode="decimal" value="0" data-zr-editor-field="break" data-zr-break data-zr-required="instor_pauza"></td>
-                <td class="zr_person_cell_hours">
-                  <strong class="zr_hours_value" data-zr-hours>10 hod.</strong>
-                  <input type="hidden" value="10" data-zr-hours-hidden>
-                </td>
-                <td class="zr_person_cell_save txt_r"><button type="button" class="zr_row_save zaobleni_10" data-zr-save-row="instor" disabled>Uložit</button></td>
-              </tr>
-            </tbody>
             <tbody data-zr-saved-list="instor">
               <?php foreach ($instorRows as $row): ?>
-                <?= $renderInstorSavedRow($row, $timeOptions, $renderTimeOptions) ?>
+                <?= $renderInstorSavedRow($row, $renderTimeInput) ?>
               <?php endforeach; ?>
             </tbody>
           </table>
@@ -770,74 +789,28 @@ ob_start();
 
         <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_kuryr_section">
           <h4 class="card_section_title txt_seda">Kurýr</h4>
-          <table class="zr_table zr_person_table" data-zr-people-list="kuryr">
-            <colgroup>
-              <col class="zr_person_col_name">
-              <col class="zr_person_col_time">
-              <col class="zr_person_col_time">
-              <col class="zr_person_col_break">
-              <col class="zr_person_col_hours">
-              <col class="zr_person_col_save">
-            </colgroup>
+          <div style="width:220px;margin-bottom:6px;">
+            <select data-zr-add-person="kuryr">
+              <?= $renderNameSelectOptions($kuryrOptions, '', 'Vyber kurýra') ?>
+            </select>
+          </div>
+          <table class="zr_table zr_person_table" style="width:100%;" data-zr-people-list="kuryr" data-zr-delivery-counts="<?= h($kuryrDeliveryCountsJson) ?>">
             <thead>
               <tr>
-                <th class="zr_person_col_name txt_l">Kurýr</th>
-                <th class="zr_person_col_time txt_l">Směna od</th>
-                <th class="zr_person_col_time txt_l">Směna do</th>
-                <th class="zr_person_col_break txt_l">Pauza</th>
-                <th class="zr_person_col_hours txt_l">Odprac.</th>
-                <th class="zr_person_col_save txt_l">Rozvozů / Vlastní vůz / Vyplatit PHM / Uložit</th>
+                <th class="txt_l" style="width:220px;white-space:nowrap;">Kurýr</th>
+                <th class="txt_l" style="width:58px;white-space:nowrap;">Směna od</th>
+                <th class="txt_l" style="width:58px;white-space:nowrap;">Směna do</th>
+                <th class="txt_l" style="width:44px;white-space:nowrap;">Pauza</th>
+                <th class="txt_l" style="width:70px;white-space:nowrap;">Odprac.</th>
+                <th class="txt_l" style="width:48px;white-space:nowrap;">Rozvozů</th>
+                <th class="txt_l" style="width:48px;white-space:nowrap;">Ručně</th>
+                <th class="txt_l" style="width:34px;white-space:nowrap;">Vůz</th>
+                <th class="txt_l" style="white-space:nowrap;">PHM</th>
               </tr>
             </thead>
-            <tbody>
-              <tr data-zr-person-row="kuryr" data-zr-editor="kuryr">
-                <td class="zr_person_cell_name">
-                  <select data-zr-editor-field="jmeno">
-                    <?= $renderNameSelectOptions($kuryrOptions, '', 'Vyber kurýra') ?>
-                  </select>
-                </td>
-                <td class="zr_person_cell_time">
-                  <select data-zr-editor-field="start" data-zr-start>
-                    <?= $renderTimeOptions($timeOptions, '10:00') ?>
-                  </select>
-                </td>
-                <td class="zr_person_cell_time">
-                  <select data-zr-editor-field="end" data-zr-end>
-                    <?= $renderTimeOptions($timeOptions, '16:00') ?>
-                  </select>
-                </td>
-                <td class="zr_person_cell_break"><input type="text" inputmode="decimal" value="0" data-zr-editor-field="break" data-zr-break></td>
-                <td class="zr_person_cell_hours">
-                  <strong class="zr_hours_value" data-zr-hours>10 hod.</strong>
-                  <input type="hidden" value="10" data-zr-hours-hidden>
-                </td>
-                <td class="zr_person_cell_save txt_r">
-                  <div class="zr_kuryr_extra gap_8">
-                    <div class="zr_kuryr_extra_item gap_8">
-                      <div class="zr_delivery_wrap gap_4 zr_delivery_wrap_kuryr">
-                        <input class="zr_delivery_input txt_c" type="text" inputmode="numeric" value="0" data-zr-editor-field="delivery_restia" data-zr-int-short>
-                        <span class="zr_delivery_plus">+</span>
-                        <input class="zr_delivery_input txt_c" type="text" inputmode="numeric" value="" data-zr-editor-field="delivery_manual" data-zr-int-short>
-                      </div>
-                      <input type="hidden" value="0" data-zr-delivery-total>
-                    </div>
-                    <div class="zr_kuryr_extra_item gap_8 zr_kuryr_extra_item_car">
-                      <span class="zr_chk txt_c zr_person_cell_car zr_person_cell_car_inline"><input type="checkbox" value="1" data-zr-editor-field="car" data-zr-car-check></span>
-                    </div>
-                    <div class="zr_kuryr_extra_item gap_8 zr_phm_field zr_person_cell_phm" data-zr-phm-field>
-                      <strong class="zr_hours_value" data-zr-phm-value>0 Kc</strong>
-                      <input type="hidden" value="0" data-zr-phm-hidden>
-                    </div>
-                    <div class="zr_kuryr_extra_item gap_8 zr_kuryr_extra_item_save jc_konec">
-                      <button type="button" class="zr_row_save zaobleni_10" data-zr-save-row="kuryr" disabled>Uložit</button>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
             <tbody data-zr-saved-list="kuryr">
               <?php foreach ($kuryrRows as $row): ?>
-                <?= $renderKuryrSavedRow($row, $formatMoney, $timeOptions, $renderTimeOptions) ?>
+                <?= $renderKuryrSavedRow($row, $formatMoney, $renderTimeInput) ?>
               <?php endforeach; ?>
             </tbody>
           </table>

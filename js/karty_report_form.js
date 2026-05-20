@@ -101,19 +101,19 @@
       case 'vydaje_phm_soukrome':
         return parseMoneyValue(getFieldValue(root, '[data-zr-field="vydaje_phm_soukrome"]'), 'int') !== '';
       case 'instor_jmeno': {
-        const field = root.querySelector('[data-zr-editor="instor"] [data-zr-editor-field="jmeno"]');
-        return field instanceof HTMLSelectElement && String(field.value || '').trim() !== '';
+        const field = root.querySelector('[data-zr-saved-list="instor"] input[name="instor_jmeno[]"]');
+        return field instanceof HTMLInputElement && String(field.value || '').trim() !== '';
       }
       case 'instor_zacatek': {
-        const field = root.querySelector('[data-zr-editor="instor"] [data-zr-editor-field="start"]');
-        return field instanceof HTMLSelectElement && String(field.value || '').trim() !== '';
+        const field = root.querySelector('[data-zr-saved-list="instor"] input[name="instor_zacatek[]"]');
+        return field instanceof HTMLInputElement && String(field.value || '').trim() !== '';
       }
       case 'instor_konec': {
-        const field = root.querySelector('[data-zr-editor="instor"] [data-zr-editor-field="end"]');
-        return field instanceof HTMLSelectElement && String(field.value || '').trim() !== '';
+        const field = root.querySelector('[data-zr-saved-list="instor"] input[name="instor_konec[]"]');
+        return field instanceof HTMLInputElement && String(field.value || '').trim() !== '';
       }
       case 'instor_pauza': {
-        const field = root.querySelector('[data-zr-editor="instor"] [data-zr-editor-field="break"]');
+        const field = root.querySelector('[data-zr-saved-list="instor"] input[name="instor_pauza_hod[]"]');
         return field instanceof HTMLInputElement && String(field.value || '').trim() !== '';
       }
       default:
@@ -259,7 +259,7 @@
   }
 
   function initKartyReportForm() {
-    document.querySelectorAll('.cb-zadani-reportu').forEach(initOne);
+    document.querySelectorAll('.cb-zadani-reportu, [data-zr-form]').forEach(initOne);
   }
 
   w.cbSyncReportFormState = syncRequiredState;
