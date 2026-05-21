@@ -2332,12 +2332,11 @@ align-items:center;
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  width:16px;
-  height:16px;
+  width:auto;
+  height:auto;
   margin-right:6px;
-  border:1px solid var(--clr_cervena_3);
-  border-radius:50%;
-  background:var(--clr_bila);
+  border:0;
+  background:transparent;
   color:var(--clr_cervena);
   font-size:var(--fs_13);
   font-weight:700;
@@ -2363,7 +2362,7 @@ align-items:center;
   margin-bottom:10px;
   border:1px solid var(--clr_pruhledna_modra_tmava_18);
   border-radius:14px;
-  background:linear-gradient(135deg, var(--clr_modra_1), var(--clr_bila));
+  background:linear-gradient(90deg, var(--clr_modra_1), var(--clr_panel));
 }
 
 .zr_metric_label{
@@ -2376,6 +2375,41 @@ align-items:center;
   font-size:28px;
   line-height:1.1;
   color:var(--clr_seda_4);
+  text-align:right;
+}
+
+.zr_restia_update{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin:-4px 0 8px 0;
+  font-size:var(--fs_12);
+  color:var(--clr_seda_3);
+}
+
+.zr_restia_refresh_btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:22px;
+  height:22px;
+  border:0;
+  background:transparent;
+  color:var(--clr_modra_4);
+  font-size:18px;
+  font-weight:700;
+  line-height:1;
+  cursor:pointer;
+}
+
+.zr_restia_refresh_btn:disabled{
+  color:var(--clr_seda_2);
+  cursor:not-allowed;
+}
+
+.zr_restia_refresh_btn.is-loading{
+  opacity:.65;
 }
 
 .zr_restia_table td{
@@ -2409,14 +2443,37 @@ align-items:center;
   font-weight:700;
 }
 
+.zr_readonly_info{
+  margin:0 0 10px 0;
+  padding:8px 10px;
+  border:1px solid var(--clr_modra_2);
+  border-radius:8px;
+  background:rgba(255,255,255,.78);
+  color:var(--clr_seda_5);
+  font-size:var(--fs_13);
+  font-weight:700;
+}
+
+.zr_readonly_overlay{
+  position:absolute;
+  left:0;
+  right:0;
+  top:42px;
+  bottom:0;
+  z-index:10;
+  border-radius:10px;
+  background:rgba(255,255,255,.08);
+  cursor:not-allowed;
+}
+
 .zr_intro_section{
-  background:linear-gradient(180deg, var(--clr_modra_1), var(--clr_panel));
+  background:linear-gradient(90deg, var(--clr_modra_1), var(--clr_panel));
 }
 
 .zr_cash_section,
 .zr_instor_section,
 .zr_kuryr_section{
-  background:linear-gradient(180deg, var(--clr_bila), var(--clr_seda_1));
+  background:linear-gradient(90deg, var(--clr_modra_1), var(--clr_panel));
 }
 
 .zr_restia_section,

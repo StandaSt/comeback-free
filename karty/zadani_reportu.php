@@ -4,6 +4,8 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../lib/format_datum_cas.php';
+require_once __DIR__ . '/../db/db_dr_pracovni.php';
+require_once __DIR__ . '/../db/db_dr_pracovni_osoby.php';
 
 $conn = db();
 if (method_exists($conn, 'set_charset')) {
@@ -13,19 +15,66 @@ if (method_exists($conn, 'set_charset')) {
 $renderMode = isset($cbDashboardRenderMode) ? trim((string)$cbDashboardRenderMode) : '';
 $isMaxRender = ($renderMode === 'max');
 
-if ($renderMode === 'max' && function_exists('cb_restia_online_kontrola')) {
-    cb_restia_online_kontrola(true);
-}
-
 $tz = new DateTimeZone('Europe/Prague');
 $reportDateDt = cb_dt_workday_start(null, 6);
 $reportDate = $reportDateDt->format('Y-m-d');
 $reportDateDisplay = cb_dt_weekday_date_label_cs($reportDateDt, true);
 $workdayRange = cb_dt_workday_range_utc($reportDate);
+$reportSaveMinutes = 5;
+$reportSaveMinutesResult = $conn->query('SELECT report_save FROM set_system WHERE id_set = 1 LIMIT 1');
+if ($reportSaveMinutesResult instanceof mysqli_result) {
+    $reportSaveMinutesRow = $reportSaveMinutesResult->fetch_assoc() ?: [];
+    $reportSaveMinutesResult->free();
+    $reportSaveMinutesValue = (int)($reportSaveMinutesRow['report_save'] ?? 5);
+    if (in_array($reportSaveMinutesValue, [5, 10, 15, 30, 60], true)) {
+        $reportSaveMinutes = $reportSaveMinutesValue;
+    }
+}
+$lastRestiaUpdateLabel = '--:--:--';
+$lastRestiaUpdateResult = $conn->query('SELECT MAX(konec) AS posledni_konec FROM online_restia WHERE konec IS NOT NULL');
+if ($lastRestiaUpdateResult instanceof mysqli_result) {
+    $lastRestiaUpdateRow = $lastRestiaUpdateResult->fetch_assoc() ?: [];
+    $lastRestiaUpdateResult->free();
+    $lastRestiaUpdateRaw = trim((string)($lastRestiaUpdateRow['posledni_konec'] ?? ''));
+    if ($lastRestiaUpdateRaw !== '') {
+        $lastRestiaUpdateDt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $lastRestiaUpdateRaw, $tz);
+        if ($lastRestiaUpdateDt instanceof DateTimeImmutable) {
+            $lastRestiaUpdateLabel = $lastRestiaUpdateDt->format('G:i:s');
+        }
+    }
+}
+$reportEndColumns = [
+    1 => 'end_po',
+    2 => 'end_ut',
+    3 => 'end_st',
+    4 => 'end_ct',
+    5 => 'end_pa',
+    6 => 'end_so',
+    7 => 'end_ne',
+];
 $currentUser = $_SESSION['cb_user'] ?? [];
 $currentUserId = is_array($currentUser) ? (int)($currentUser['id_user'] ?? 0) : 0;
 $currentUserRoleId = is_array($currentUser) ? (int)($currentUser['id_role'] ?? 0) : 0;
-$canSaveReport = in_array($currentUserRoleId, [5, 7], true);
+$currentUserRoleIds = $currentUserRoleId > 0 ? [$currentUserRoleId => true] : [];
+if ($currentUserId > 0) {
+    $stmtUserRoles = $conn->prepare('SELECT id_role FROM user_role WHERE id_user = ?');
+    if ($stmtUserRoles !== false) {
+        $stmtUserRoles->bind_param('i', $currentUserId);
+        $stmtUserRoles->execute();
+        $userRolesResult = $stmtUserRoles->get_result();
+        if ($userRolesResult instanceof mysqli_result) {
+            while ($row = $userRolesResult->fetch_assoc()) {
+                $idRole = (int)($row['id_role'] ?? 0);
+                if ($idRole > 0) {
+                    $currentUserRoleIds[$idRole] = true;
+                }
+            }
+            $userRolesResult->free();
+        }
+        $stmtUserRoles->close();
+    }
+}
+$canSaveReport = isset($currentUserRoleIds[5]) || isset($currentUserRoleIds[7]);
 $allowedBranches = [];
 if ($currentUserId > 0) {
     $stmtAllowedBranches = $conn->prepare("
@@ -97,7 +146,11 @@ if ($reportBranchId <= 0 && $canSaveReport && $currentUserId > 0) {
 $formatMoney = static function (float $value): string {
     $rounded = round($value, 2);
     $decimals = (abs($rounded - round($rounded)) < 0.001) ? 0 : 2;
-    return number_format($rounded, $decimals, ',', ' ') . ' Kc';
+    return number_format($rounded, $decimals, ',', ' ') . ' Kč';
+};
+
+$formatMoneyWhole = static function (float $value): string {
+    return number_format(round($value), 0, ',', ' ') . ' Kč';
 };
 
 $formatInputNumber = static function (float $value): string {
@@ -122,13 +175,13 @@ $personFullName = static function (?string $jmeno, ?string $prijmeni = null): st
     return trim(trim((string)$jmeno) . ' ' . trim((string)$prijmeni));
 };
 
-$buildBranchSlotNameOptions = static function (mysqli $conn, int $idPob, int $idSlot): array {
+$buildBranchSlotUserOptions = static function (mysqli $conn, int $idPob, int $idSlot): array {
     if ($idPob <= 0 || $idSlot <= 0) {
         return [];
     }
 
     $sql = "
-        SELECT DISTINCT TRIM(CONCAT_WS(' ', u.jmeno, u.prijmeni)) AS full_name
+        SELECT DISTINCT u.id_user, TRIM(CONCAT_WS(' ', u.jmeno, u.prijmeni)) AS full_name
         FROM user u
         INNER JOIN user_pobocka up ON up.id_user = u.id_user
         INNER JOIN user_slot us ON us.id_user = u.id_user
@@ -140,16 +193,17 @@ $buildBranchSlotNameOptions = static function (mysqli $conn, int $idPob, int $id
     ";
 
     $stmt = $conn->prepare($sql);
-    $names = [];
+    $users = [];
     if ($stmt !== false) {
         $stmt->bind_param('ii', $idPob, $idSlot);
         $stmt->execute();
         $result = $stmt->get_result();
         if ($result instanceof mysqli_result) {
             while ($row = $result->fetch_assoc()) {
+                $idUser = (int)($row['id_user'] ?? 0);
                 $name = trim((string)($row['full_name'] ?? ''));
-                if ($name !== '') {
-                    $names[] = $name;
+                if ($idUser > 0 && $name !== '') {
+                    $users[$idUser] = ['id_user' => $idUser, 'name' => $name];
                 }
             }
             $result->free();
@@ -157,7 +211,7 @@ $buildBranchSlotNameOptions = static function (mysqli $conn, int $idPob, int $id
         $stmt->close();
     }
 
-    return array_values(array_unique($names));
+    return array_values($users);
 };
 
 $buildPlannedInstorDefaults = static function (mysqli $conn, int $idPob, string $date): array {
@@ -167,6 +221,7 @@ $buildPlannedInstorDefaults = static function (mysqli $conn, int $idPob, string 
 
     $sql = "
         SELECT
+            sp.id_user,
             TRIM(CONCAT_WS(' ', u.jmeno, u.prijmeni)) AS full_name,
             CONCAT(sp.datum, ' ', sp.cas_od) AS start_dt,
             DATE_ADD(CONCAT(sp.datum, ' ', sp.cas_do), INTERVAL CASE WHEN sp.cas_do <= sp.cas_od THEN 1 ELSE 0 END DAY) AS end_dt
@@ -181,8 +236,10 @@ $buildPlannedInstorDefaults = static function (mysqli $conn, int $idPob, string 
 
     $stmt = $conn->prepare($sql);
     $openingName = '';
+    $openingId = null;
     $openingStart = '';
     $closingName = '';
+    $closingId = null;
     $closingEnd = '';
 
     if ($stmt !== false) {
@@ -199,10 +256,12 @@ $buildPlannedInstorDefaults = static function (mysqli $conn, int $idPob, string 
                 }
                 if ($openingName === '' || ($startDt !== '' && strcmp($startDt, $openingStart) < 0)) {
                     $openingName = $name;
+                    $openingId = (int)($row['id_user'] ?? 0);
                     $openingStart = $startDt;
                 }
                 if ($closingName === '' || ($endDt !== '' && strcmp($endDt, $closingEnd) > 0)) {
                     $closingName = $name;
+                    $closingId = (int)($row['id_user'] ?? 0);
                     $closingEnd = $endDt;
                 }
             }
@@ -211,17 +270,40 @@ $buildPlannedInstorDefaults = static function (mysqli $conn, int $idPob, string 
         $stmt->close();
     }
 
-    return ['opening' => $openingName, 'closing' => $closingName];
+    return ['opening' => $openingName, 'opening_id' => $openingId, 'closing' => $closingName, 'closing_id' => $closingId];
 };
 
-$renderNameSelectOptions = static function (array $options, string $selected, string $placeholder): string {
+$userFullNameById = static function (mysqli $conn, ?int $idUser) use ($personFullName): string {
+    if ($idUser === null || $idUser <= 0) {
+        return '';
+    }
+
+    $stmt = $conn->prepare('SELECT jmeno, prijmeni FROM user WHERE id_user = ? LIMIT 1');
+    if ($stmt === false) {
+        return '';
+    }
+    $stmt->bind_param('i', $idUser);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = ($result instanceof mysqli_result) ? ($result->fetch_assoc() ?: null) : null;
+    if ($result instanceof mysqli_result) {
+        $result->free();
+    }
+    $stmt->close();
+
+    return is_array($row) ? $personFullName($row['jmeno'] ?? '', $row['prijmeni'] ?? '') : '';
+};
+
+$renderUserSelectOptions = static function (array $options, int $selectedId, string $placeholder, array $excludeIds = []): string {
     $html = '<option value="">' . h($placeholder) . '</option>';
+    $exclude = array_fill_keys(array_map('intval', $excludeIds), true);
     foreach ($options as $option) {
-        $value = trim((string)$option);
-        if ($value === '') {
+        $idUser = (int)($option['id_user'] ?? 0);
+        $name = trim((string)($option['name'] ?? ''));
+        if ($idUser <= 0 || $name === '' || isset($exclude[$idUser])) {
             continue;
         }
-        $html .= '<option value="' . h($value) . '"' . ($value === $selected ? ' selected' : '') . '>' . h($value) . '</option>';
+        $html .= '<option value="' . h((string)$idUser) . '"' . ($idUser === $selectedId ? ' selected' : '') . '>' . h($name) . '</option>';
     }
     return $html;
 };
@@ -233,156 +315,57 @@ $renderTimeInput = static function (string $name, string $selected, string $data
     return '<input class="zr_time_input" type="text" inputmode="numeric"' . $attrName . ' value="' . h($selected) . '" style="width:100%;text-align:center;" ' . $dataAttr . $attrExtra . '>';
 };
 
-$instorOptions = $buildBranchSlotNameOptions($conn, $reportBranchId, 1);
+$instorOptions = $buildBranchSlotUserOptions($conn, $reportBranchId, 1);
 $plannedInstorDefaults = $buildPlannedInstorDefaults($conn, $reportBranchId, $reportDate);
-$kuryrOptions = $buildBranchSlotNameOptions($conn, $reportBranchId, 2);
+$kuryrOptions = $buildBranchSlotUserOptions($conn, $reportBranchId, 2);
 
-$reportRow = null;
+$draftRow = null;
+$idDr = 0;
 $instorRows = [];
 $kuryrRows = [];
+$reportSaveAtTs = 0;
 
 if ($reportBranchId > 0) {
-    $sqlReport = "
-        SELECT
-            r.id_reportu,
-            r.oteviral_text,
-            r.zaviral_text,
-            rr.trzba,
-            rr.wolt,
-            rr.bolt,
-            rr.damejidlo,
-            rr.web,
-            rr.wolt_cash,
-            rr.dj_cash,
-            rr.zrusene_obj_ks,
-            rr.zrusene_obj_kc,
-            rr.zpozdene_rozvozy_5_min,
-            rr.make_time_prumer_sec,
-            rr.objednavky_nezrusene_ks,
-            rr.nase_rozvozy_ks,
-            rr.woltdrive_pozde_5_min,
-            rp.hotovost,
-            rp.terminal,
-            rp.stravenky,
-            rp.vydaje_benzin,
-            rp.vydaje_auta,
-            rp.vydaje_suroviny,
-            rp.vydaje_ostatni,
-            rp.vydaje_phm_soukrome,
-            rp.vydaje_doklady_ks
-        FROM reporty r
-        LEFT JOIN reporty_restia rr ON rr.id_reportu = r.id_reportu
-        LEFT JOIN reporty_pokladna rp ON rp.id_reportu = r.id_reportu
-        WHERE r.id_pob = ?
-          AND r.datum_reportu = ?
-          AND r.platny = 1
-        ORDER BY r.id_reportu DESC
-        LIMIT 1
-    ";
-    $stmtReport = $conn->prepare($sqlReport);
-    if ($stmtReport !== false) {
-        $stmtReport->bind_param('is', $reportBranchId, $reportDate);
-        $stmtReport->execute();
-        $resultReport = $stmtReport->get_result();
-        if ($resultReport instanceof mysqli_result) {
-            $reportRow = $resultReport->fetch_assoc() ?: null;
-            $resultReport->free();
-        }
-        $stmtReport->close();
-    }
-
-    if (is_array($reportRow) && isset($reportRow['id_reportu'])) {
-        $reportId = (int)$reportRow['id_reportu'];
-        $stmtPeople = $conn->prepare("
-            SELECT slot, jmeno, prijmeni, smena_od, smena_do, pauza, odpracovano, rozvozu_restia, rozvozu_manual, rozvozu_celkem, vlastni_vuz, vyplatit_phm
-            FROM reporty_osoby
-            WHERE id_reportu = ?
-            ORDER BY slot ASC, smena_od ASC, jmeno ASC, prijmeni ASC
-        ");
-        if ($stmtPeople !== false) {
-            $stmtPeople->bind_param('i', $reportId);
-            $stmtPeople->execute();
-            $resultPeople = $stmtPeople->get_result();
-            if ($resultPeople instanceof mysqli_result) {
-                while ($row = $resultPeople->fetch_assoc()) {
-                    $personRow = [
-                        'name' => $personFullName($row['jmeno'] ?? '', $row['prijmeni'] ?? ''),
-                        'start' => $formatTime((string)($row['smena_od'] ?? '')),
-                        'end' => $formatTime((string)($row['smena_do'] ?? '')),
-                        'break' => $formatInputNumber((float)($row['pauza'] ?? 0)),
-                        'hours' => $formatInputNumber((float)($row['odpracovano'] ?? 0)),
-                        'delivery_restia' => (int)($row['rozvozu_restia'] ?? 0),
-                        'delivery_manual' => (int)($row['rozvozu_manual'] ?? 0),
-                        'delivery_total' => (int)($row['rozvozu_celkem'] ?? 0),
-                        'car' => (int)($row['vlastni_vuz'] ?? 0),
-                        'phm' => (float)($row['vyplatit_phm'] ?? 0),
-                    ];
-                    if (($row['slot'] ?? '') === 'kuryr') {
-                        $kuryrRows[] = $personRow;
-                    } else {
-                        $instorRows[] = $personRow;
-                    }
-                }
-                $resultPeople->free();
+    $endColumn = $reportEndColumns[(int)$reportDateDt->format('N')] ?? '';
+    if ($endColumn !== '') {
+        $stmtEnd = $conn->prepare('SELECT `' . $endColumn . '` AS end_hour FROM pobocka WHERE id_pob = ? LIMIT 1');
+        if ($stmtEnd !== false) {
+            $stmtEnd->bind_param('i', $reportBranchId);
+            $stmtEnd->execute();
+            $endResult = $stmtEnd->get_result();
+            $endRow = $endResult instanceof mysqli_result ? ($endResult->fetch_assoc() ?: []) : [];
+            if ($endResult instanceof mysqli_result) {
+                $endResult->free();
             }
-            $stmtPeople->close();
+            $stmtEnd->close();
+
+            $endHour = max(0, min(23, (int)($endRow['end_hour'] ?? 0)));
+            $reportSaveAtTs = $reportDateDt->modify('+1 day')->setTime($endHour, 0, 0)->modify('-' . $reportSaveMinutes . ' minutes')->getTimestamp();
         }
     }
 }
+$reportRefreshAtTs = $reportSaveAtTs > 300 ? $reportSaveAtTs - 300 : 0;
 
-if ($instorRows === [] && $kuryrRows === [] && $reportBranchId > 0) {
-    $sqlShiftReport = "
-        SELECT
-            CASE WHEN id_slot = 1 THEN 'instor' WHEN id_slot = 2 THEN 'kuryr' ELSE '' END AS slot_name,
-            jmeno,
-            prijmeni,
-            cas_od,
-            cas_do,
-            COALESCE(TIME_TO_SEC(pauza) / 3600, 0) AS pauza_hod,
-            COALESCE(odpracovano, 0) AS odpracovano
-        FROM smeny_report
-        WHERE id_pob = ?
-          AND datum = ?
-          AND id_slot IN (1, 2)
-        ORDER BY id_slot ASC, cas_od ASC, jmeno ASC, prijmeni ASC
-    ";
-    $stmtShiftReport = $conn->prepare($sqlShiftReport);
-    if ($stmtShiftReport !== false) {
-        $stmtShiftReport->bind_param('is', $reportBranchId, $reportDate);
-        $stmtShiftReport->execute();
-        $resultShiftReport = $stmtShiftReport->get_result();
-        if ($resultShiftReport instanceof mysqli_result) {
-            while ($row = $resultShiftReport->fetch_assoc()) {
-                $personRow = [
-                    'name' => $personFullName($row['jmeno'] ?? '', $row['prijmeni'] ?? ''),
-                    'start' => $formatTime((string)($row['cas_od'] ?? '')),
-                    'end' => $formatTime((string)($row['cas_do'] ?? '')),
-                    'break' => $formatInputNumber((float)($row['pauza_hod'] ?? 0)),
-                    'hours' => $formatInputNumber((float)($row['odpracovano'] ?? 0)),
-                    'delivery_restia' => 0,
-                    'delivery_manual' => 0,
-                    'delivery_total' => 0,
-                    'car' => 0,
-                    'phm' => 0.0,
-                ];
-                if (($row['slot_name'] ?? '') === 'kuryr') {
-                    $kuryrRows[] = $personRow;
-                } else {
-                    $instorRows[] = $personRow;
-                }
-            }
-            $resultShiftReport->free();
-        }
-        $stmtShiftReport->close();
+if ($reportBranchId > 0) {
+    $idDr = cb_db_dr_pracovni_ensure(
+        $conn,
+        $reportBranchId,
+        $reportDate,
+        $currentUserId,
+        isset($plannedInstorDefaults['opening_id']) ? (int)$plannedInstorDefaults['opening_id'] : null,
+        isset($plannedInstorDefaults['closing_id']) ? (int)$plannedInstorDefaults['closing_id'] : null
+    );
+    $draftRow = cb_db_dr_pracovni_find($conn, $reportBranchId, $reportDate);
+    if (!is_array($draftRow) && $idDr > 0) {
+        $draftRow = ['id_dr' => $idDr, 'id_pob' => $reportBranchId, 'datum_reportu' => $reportDate];
     }
 }
 
-if ($instorRows === [] && $kuryrRows === [] && $reportBranchId > 0) {
+if ($idDr > 0 && cb_db_dr_pracovni_osoby_list($conn, $idDr) === []) {
     $sqlShiftPlan = "
         SELECT
-            CASE WHEN sp.id_slot = 1 THEN 'instor' WHEN sp.id_slot = 2 THEN 'kuryr' ELSE '' END AS slot_name,
-            u.jmeno,
-            u.prijmeni,
+            sp.id_user,
+            sp.id_slot,
             sp.cas_od,
             sp.cas_do,
             TIMESTAMPDIFF(MINUTE, CONCAT(sp.datum, ' ', sp.cas_od), DATE_ADD(CONCAT(sp.datum, ' ', sp.cas_do), INTERVAL CASE WHEN sp.cas_do < sp.cas_od THEN 1 ELSE 0 END DAY)) / 60 AS odpracovano
@@ -400,23 +383,16 @@ if ($instorRows === [] && $kuryrRows === [] && $reportBranchId > 0) {
         $resultShiftPlan = $stmtShiftPlan->get_result();
         if ($resultShiftPlan instanceof mysqli_result) {
             while ($row = $resultShiftPlan->fetch_assoc()) {
-                $personRow = [
-                    'name' => $personFullName($row['jmeno'] ?? '', $row['prijmeni'] ?? ''),
-                    'start' => $formatTime((string)($row['cas_od'] ?? '')),
-                    'end' => $formatTime((string)($row['cas_do'] ?? '')),
-                    'break' => '0',
-                    'hours' => $formatInputNumber((float)($row['odpracovano'] ?? 0)),
-                    'delivery_restia' => 0,
-                    'delivery_manual' => 0,
-                    'delivery_total' => 0,
-                    'car' => 0,
-                    'phm' => 0.0,
-                ];
-                if (($row['slot_name'] ?? '') === 'kuryr') {
-                    $kuryrRows[] = $personRow;
-                } else {
-                    $instorRows[] = $personRow;
-                }
+                cb_db_dr_pracovni_osoby_insert(
+                    $conn,
+                    $idDr,
+                    (int)($row['id_user'] ?? 0),
+                    (int)($row['id_slot'] ?? 0),
+                    (string)($row['cas_od'] ?? ''),
+                    (string)($row['cas_do'] ?? ''),
+                    0.0,
+                    (float)($row['odpracovano'] ?? 0)
+                );
             }
             $resultShiftPlan->free();
         }
@@ -424,31 +400,61 @@ if ($instorRows === [] && $kuryrRows === [] && $reportBranchId > 0) {
     }
 }
 
-$openingName = trim((string)($reportRow['oteviral_text'] ?? ''));
-$closingName = trim((string)($reportRow['zaviral_text'] ?? ''));
+$draftPersonRows = $idDr > 0 ? cb_db_dr_pracovni_osoby_list($conn, $idDr) : [];
+foreach ($draftPersonRows as $row) {
+    $personRow = [
+        'id_dr_osoby' => (int)($row['id_dr_osoby'] ?? 0),
+        'id_user' => (int)($row['id_user'] ?? 0),
+        'name' => $personFullName($row['jmeno'] ?? '', $row['prijmeni'] ?? ''),
+        'start' => $formatTime((string)($row['smena_od'] ?? '')),
+        'end' => $formatTime((string)($row['smena_do'] ?? '')),
+        'break' => $row['pauza'] === null ? '' : $formatInputNumber((float)$row['pauza']),
+        'hours' => $row['odpracovano'] === null ? '0' : $formatInputNumber((float)$row['odpracovano']),
+        'delivery_restia' => 0,
+        'delivery_manual' => (int)($row['rozvozu_manual'] ?? 0),
+        'delivery_total' => 0,
+        'car' => (int)($row['vlastni_vuz'] ?? 0),
+        'phm' => (float)($row['vyplatit_phm'] ?? 0),
+    ];
+    if ((int)($row['id_slot'] ?? 0) === 2) {
+        $kuryrRows[] = $personRow;
+    } elseif ((int)($row['id_slot'] ?? 0) === 1) {
+        $instorRows[] = $personRow;
+    }
+}
+
+$usedInstorIds = array_values(array_filter(array_map(static fn(array $row): int => (int)($row['id_user'] ?? 0), $instorRows)));
+$usedKuryrIds = array_values(array_filter(array_map(static fn(array $row): int => (int)($row['id_user'] ?? 0), $kuryrRows)));
+
+$openingId = isset($draftRow['oteviral']) ? (int)$draftRow['oteviral'] : 0;
+$closingId = isset($draftRow['zaviral']) ? (int)$draftRow['zaviral'] : 0;
+$openingName = $userFullNameById($conn, $openingId > 0 ? $openingId : null);
+$closingName = $userFullNameById($conn, $closingId > 0 ? $closingId : null);
 if ($openingName === '') {
     $openingName = (string)($plannedInstorDefaults['opening'] ?? '');
+    $openingId = (int)($plannedInstorDefaults['opening_id'] ?? 0);
 }
 if ($closingName === '') {
     $closingName = (string)($plannedInstorDefaults['closing'] ?? '');
+    $closingId = (int)($plannedInstorDefaults['closing_id'] ?? 0);
 }
 
 $restiaSummary = [
-    'trzba' => (float)($reportRow['trzba'] ?? 0),
-    'wolt' => (float)($reportRow['wolt'] ?? 0),
-    'bolt' => (float)($reportRow['bolt'] ?? 0),
-    'dj' => (float)($reportRow['damejidlo'] ?? 0),
-    'web' => (float)($reportRow['web'] ?? 0),
-    'wolt_cash' => (float)($reportRow['wolt_cash'] ?? 0),
-    'dj_cash' => (float)($reportRow['dj_cash'] ?? 0),
-    'cancel_count' => (int)($reportRow['zrusene_obj_ks'] ?? 0),
-    'cancel_value' => (float)($reportRow['zrusene_obj_kc'] ?? 0),
-    'delay_count' => (int)($reportRow['zpozdene_rozvozy_5_min'] ?? 0),
-    'make_time_avg_sec' => isset($reportRow['make_time_prumer_sec']) ? (int)$reportRow['make_time_prumer_sec'] : null,
-    'docs_count' => (int)($reportRow['vydaje_doklady_ks'] ?? 0),
-    'orders_total' => (int)($reportRow['objednavky_nezrusene_ks'] ?? 0),
-    'own_deliveries' => (int)($reportRow['nase_rozvozy_ks'] ?? 0),
-    'woltdrive_late' => (int)($reportRow['woltdrive_pozde_5_min'] ?? 0),
+    'trzba' => 0.0,
+    'wolt' => 0.0,
+    'bolt' => 0.0,
+    'dj' => 0.0,
+    'web' => 0.0,
+    'wolt_cash' => 0.0,
+    'dj_cash' => 0.0,
+    'cancel_count' => 0,
+    'cancel_value' => 0.0,
+    'delay_count' => 0,
+    'make_time_avg_sec' => null,
+    'docs_count' => 0,
+    'orders_total' => 0,
+    'own_deliveries' => 0,
+    'woltdrive_late' => 0,
 ];
 
 $cashInputValue = static function (?array $row, string $key) use ($formatInputNumber): string {
@@ -460,17 +466,17 @@ $cashInputValue = static function (?array $row, string $key) use ($formatInputNu
 };
 
 $cashData = [
-    'hotovost' => $cashInputValue($reportRow, 'hotovost'),
-    'terminal' => $cashInputValue($reportRow, 'terminal'),
-    'stravenky' => $cashInputValue($reportRow, 'stravenky'),
-    'vydaje_benzin' => $cashInputValue($reportRow, 'vydaje_benzin'),
-    'vydaje_auta' => $cashInputValue($reportRow, 'vydaje_auta'),
-    'vydaje_suroviny' => $cashInputValue($reportRow, 'vydaje_suroviny'),
-    'vydaje_ostatni' => $cashInputValue($reportRow, 'vydaje_ostatni'),
-    'vydaje_phm_soukrome' => $cashInputValue($reportRow, 'vydaje_phm_soukrome'),
+    'hotovost' => $cashInputValue($draftRow, 'hotovost'),
+    'terminal' => $cashInputValue($draftRow, 'terminal'),
+    'stravenky' => $cashInputValue($draftRow, 'stravenky'),
+    'vydaje_benzin' => $cashInputValue($draftRow, 'vydaje_benzin'),
+    'vydaje_auta' => $cashInputValue($draftRow, 'vydaje_auta'),
+    'vydaje_suroviny' => $cashInputValue($draftRow, 'vydaje_suroviny'),
+    'vydaje_ostatni' => $cashInputValue($draftRow, 'vydaje_ostatni'),
+    'vydaje_phm_soukrome' => $cashInputValue($draftRow, 'vydaje_phm_soukrome'),
 ];
 
-if (!is_array($reportRow) && $reportBranchId > 0) {
+if ($reportBranchId > 0) {
     $sqlIds = "
         SELECT
             MAX(CASE WHEN p.nazev = 'cash' THEN p.id_platba ELSE NULL END) AS cash_id,
@@ -618,6 +624,8 @@ if (is_int($restiaSummary['make_time_avg_sec']) && $restiaSummary['make_time_avg
 }
 
 $renderInstorSavedRow = static function (array $row, callable $renderTimeInput): string {
+    $idDrOsoby = (int)($row['id_dr_osoby'] ?? 0);
+    $idUser = (int)($row['id_user'] ?? 0);
     $name = trim((string)($row['name'] ?? ''));
     $start = trim((string)($row['start'] ?? ''));
     $end = trim((string)($row['end'] ?? ''));
@@ -625,9 +633,10 @@ $renderInstorSavedRow = static function (array $row, callable $renderTimeInput):
     $hours = trim((string)($row['hours'] ?? '0'));
 
     return ''
-        . '<tr data-zr-person-row="instor">'
+        . '<tr data-zr-person-row="instor" data-zr-id-user="' . h((string)$idUser) . '" data-zr-id-dr-osoby="' . h((string)$idDrOsoby) . '">'
         . '<td style="width:220px;"><button type="button" class="zr_row_remove" data-zr-remove-row title="Odebrat" aria-label="Odebrat">×</button><strong class="zr_saved_value">' . h($name) . '</strong>'
         . '<input type="hidden" name="instor_jmeno[]" value="' . h($name) . '">'
+        . '<input type="hidden" name="instor_id_user[]" value="' . h((string)$idUser) . '">'
         . '</td>'
         . '<td style="width:58px;">' . $renderTimeInput('instor_zacatek[]', $start, 'data-zr-start') . '</td>'
         . '<td style="width:58px;">' . $renderTimeInput('instor_konec[]', $end, 'data-zr-end') . '</td>'
@@ -638,6 +647,8 @@ $renderInstorSavedRow = static function (array $row, callable $renderTimeInput):
 };
 
 $renderKuryrSavedRow = static function (array $row, callable $formatMoney, callable $renderTimeInput): string {
+    $idDrOsoby = (int)($row['id_dr_osoby'] ?? 0);
+    $idUser = (int)($row['id_user'] ?? 0);
     $name = trim((string)($row['name'] ?? ''));
     $start = trim((string)($row['start'] ?? ''));
     $end = trim((string)($row['end'] ?? ''));
@@ -649,9 +660,10 @@ $renderKuryrSavedRow = static function (array $row, callable $formatMoney, calla
     $car = (int)($row['car'] ?? 0);
     $phm = (float)($row['phm'] ?? 0);
     return ''
-        . '<tr data-zr-person-row="kuryr">'
+        . '<tr data-zr-person-row="kuryr" data-zr-id-user="' . h((string)$idUser) . '" data-zr-id-dr-osoby="' . h((string)$idDrOsoby) . '">'
         . '<td style="width:220px;"><button type="button" class="zr_row_remove" data-zr-remove-row title="Odebrat" aria-label="Odebrat">×</button><strong class="zr_saved_value">' . h($name) . '</strong>'
         . '<input type="hidden" name="kuryr_jmeno[]" value="' . h($name) . '">'
+        . '<input type="hidden" name="kuryr_id_user[]" value="' . h((string)$idUser) . '">'
         . '</td>'
         . '<td style="width:58px;">' . $renderTimeInput('kuryr_zacatek[]', $start, 'data-zr-start') . '</td>'
         . '<td style="width:58px;">' . $renderTimeInput('kuryr_konec[]', $end, 'data-zr-end') . '</td>'
@@ -676,7 +688,13 @@ $card_min_html = (string)ob_get_clean();
 
 ob_start();
 ?>
-<form class="zr_form gap_14" autocomplete="off" method="post" action="<?= h(cb_url('/')) ?>" data-zr-form data-cb-max-form="1" data-cb-loader-text="Načítám report pobočky">
+<?php if (!$canSaveReport): ?>
+  <div class="zr_readonly_info">
+    Denní report mohou upravovat pouze oprávnění uživatelé. Zobrazená data jsou jen pro kontrolu.
+  </div>
+<?php endif; ?>
+<form class="zr_form gap_14" autocomplete="off" method="post" action="<?= h(cb_url('/')) ?>" data-zr-form data-cb-max-form="1" data-cb-loader-text="Načítám report pobočky" style="position:relative;">
+  <input type="hidden" name="dr_id" value="<?= h((string)$idDr) ?>" data-zr-dr-id>
   <div class="zr_layout gap_14">
     <div class="zr_main gap_14">
       <section class="zr_top gap_14">
@@ -711,7 +729,7 @@ ob_start();
                 <th class="zr_intro_label zr_req_label txt_l" data-zr-required-label="oteviral">Otevíral</th>
                 <td>
                   <select class="zr_intro_select" name="oteviral" data-zr-field="oteviral" data-zr-required="oteviral">
-                    <?= $renderNameSelectOptions($instorOptions, $openingName, 'Vyber jméno') ?>
+                    <?= $renderUserSelectOptions($instorOptions, $openingId, 'Vyber jméno') ?>
                   </select>
                 </td>
               </tr>
@@ -719,7 +737,7 @@ ob_start();
                 <th class="zr_intro_label zr_req_label txt_l" data-zr-required-label="zaviral">Zavíral</th>
                 <td>
                   <select class="zr_intro_select" name="zaviral" data-zr-field="zaviral" data-zr-required="zaviral">
-                    <?= $renderNameSelectOptions($instorOptions, $closingName, 'Vyber jméno') ?>
+                    <?= $renderUserSelectOptions($instorOptions, $closingId, 'Vyber jméno') ?>
                   </select>
                 </td>
               </tr>
@@ -765,7 +783,7 @@ ob_start();
           <h4 class="card_section_title txt_seda">Instor</h4>
           <div style="width:220px;margin-bottom:6px;">
             <select data-zr-add-person="instor">
-              <?= $renderNameSelectOptions($instorOptions, '', 'Vyber zaměstnance') ?>
+              <?= $renderUserSelectOptions($instorOptions, 0, 'Vyber zaměstnance', $usedInstorIds) ?>
             </select>
           </div>
           <table class="zr_table zr_person_table" style="width:100%;" data-zr-people-list="instor">
@@ -791,7 +809,7 @@ ob_start();
           <h4 class="card_section_title txt_seda">Kurýr</h4>
           <div style="width:220px;margin-bottom:6px;">
             <select data-zr-add-person="kuryr">
-              <?= $renderNameSelectOptions($kuryrOptions, '', 'Vyber kurýra') ?>
+              <?= $renderUserSelectOptions($kuryrOptions, 0, 'Vyber kurýra', $usedKuryrIds) ?>
             </select>
           </div>
           <table class="zr_table zr_person_table" style="width:100%;" data-zr-people-list="kuryr" data-zr-delivery-counts="<?= h($kuryrDeliveryCountsJson) ?>">
@@ -808,31 +826,55 @@ ob_start();
                 <th class="txt_l" style="white-space:nowrap;">PHM</th>
               </tr>
             </thead>
-            <tbody data-zr-saved-list="kuryr">
+          <tbody data-zr-saved-list="kuryr">
               <?php foreach ($kuryrRows as $row): ?>
                 <?= $renderKuryrSavedRow($row, $formatMoney, $renderTimeInput) ?>
               <?php endforeach; ?>
-            </tbody>
+          </tbody>
           </table>
         </section>
+        <?php if ($canSaveReport && $reportBranchId > 0): ?>
+          <button
+            type="button"
+            class="zr_submit"
+            disabled
+            data-zr-submit
+            data-zr-submit-locked-text="Report bude možné uložit za"
+            data-zr-submit-ready-text="Report je zkontrolovaný, uložit"
+            data-zr-submit-at="<?= h((string)$reportSaveAtTs) ?>"
+            style="background:#d9dee8;border-color:#c1c9d6;color:#5f6b7a;cursor:not-allowed;opacity:1;"
+          >Report bude možné uložit za 0:00:00</button>
+        <?php endif; ?>
       </div>
     </div>
 
     <aside class="zr_side gap_14">
       <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_restia_section">
-        <h4 class="card_section_title txt_seda">Automaticky z Restie</h4>
+        <h4 class="card_section_title txt_seda">Aktuální data z Restie</h4>
+        <div class="zr_restia_update">
+          <span>Aktualizace v <?= h($lastRestiaUpdateLabel) ?></span>
+          <button
+            type="button"
+            class="zr_restia_refresh_btn"
+            disabled
+            data-zr-restia-refresh
+            data-zr-restia-refresh-at="<?= h((string)$reportRefreshAtTs) ?>"
+            title="Aktualizovat Restii"
+            aria-label="Aktualizovat Restii"
+          >↻</button>
+        </div>
         <div class="zr_restia_total gap_4">
-          <span class="zr_metric_label">Trzba</span>
-          <strong class="zr_metric_value" data-zr-restia-trzba><?= h($formatMoney((float)$restiaSummary['trzba'])) ?></strong>
+          <span class="zr_metric_label">Tržba</span>
+          <strong class="zr_metric_value" data-zr-restia-trzba><?= h($formatMoneyWhole((float)$restiaSummary['trzba'])) ?></strong>
         </div>
         <table class="zr_table zr_restia_table">
           <tbody>
-            <tr><td class="zr_restia_key">Wolt</td><td class="zr_restia_value txt_r"><strong data-zr-restia-wolt><?= h($formatMoney((float)$restiaSummary['wolt'])) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Bolt</td><td class="zr_restia_value txt_r"><strong data-zr-restia-bolt><?= h($formatMoney((float)$restiaSummary['bolt'])) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Dáme jídlo</td><td class="zr_restia_value txt_r"><strong data-zr-restia-dj><?= h($formatMoney((float)$restiaSummary['dj'])) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Web</td><td class="zr_restia_value txt_r"><strong data-zr-restia-web><?= h($formatMoney((float)$restiaSummary['web'])) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Wolt drive cash</td><td class="zr_restia_value txt_r"><strong data-zr-restia-wolt-cash><?= h($formatMoney((float)$restiaSummary['wolt_cash'])) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">DJ cash</td><td class="zr_restia_value txt_r"><strong data-zr-restia-dj-cash><?= h($formatMoney((float)$restiaSummary['dj_cash'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Wolt</td><td class="zr_restia_value txt_r"><strong data-zr-restia-wolt><?= h($formatMoneyWhole((float)$restiaSummary['wolt'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Bolt</td><td class="zr_restia_value txt_r"><strong data-zr-restia-bolt><?= h($formatMoneyWhole((float)$restiaSummary['bolt'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Foodora</td><td class="zr_restia_value txt_r"><strong data-zr-restia-dj><?= h($formatMoneyWhole((float)$restiaSummary['dj'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Web</td><td class="zr_restia_value txt_r"><strong data-zr-restia-web><?= h($formatMoneyWhole((float)$restiaSummary['web'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Wolt drive cash</td><td class="zr_restia_value txt_r"><strong data-zr-restia-wolt-cash><?= h($formatMoneyWhole((float)$restiaSummary['wolt_cash'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">DJ cash</td><td class="zr_restia_value txt_r"><strong data-zr-restia-dj-cash><?= h($formatMoneyWhole((float)$restiaSummary['dj_cash'])) ?></strong></td></tr>
           </tbody>
         </table>
       </section>
@@ -842,7 +884,7 @@ ob_start();
         <table class="zr_table zr_restia_table">
           <tbody>
             <tr><td class="zr_restia_key">Zrušené obj. ks</td><td class="zr_restia_value txt_r"><strong data-zr-cancel-count><?= h((string)$restiaSummary['cancel_count']) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Zrušené obj. Kč</td><td class="zr_restia_value txt_r"><strong data-zr-cancel-value><?= h($formatMoney((float)$restiaSummary['cancel_value'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Zrušené obj. Kč</td><td class="zr_restia_value txt_r"><strong data-zr-cancel-value><?= h($formatMoneyWhole((float)$restiaSummary['cancel_value'])) ?></strong></td></tr>
             <tr><td class="zr_restia_key">Zpožděné rozvozy +5 min</td><td class="zr_restia_value txt_r"><strong data-zr-delay-count><?= h((string)$restiaSummary['delay_count']) ?></strong></td></tr>
             <tr><td class="zr_restia_key">Průměrný make time</td><td class="zr_restia_value txt_r"><strong data-zr-make-time><?= h($makeTimeLabel) ?></strong></td></tr>
             <tr><td class="zr_restia_key">Výdajové doklady</td><td class="zr_restia_value txt_r"><strong data-zr-docs-count><?= h((string)$restiaSummary['docs_count']) ?></strong></td></tr>
@@ -851,14 +893,12 @@ ob_start();
             <tr><td class="zr_restia_key">Pozdě WoltDrive 5+</td><td class="zr_restia_value txt_r"><strong data-zr-woltdrive-late><?= h((string)$restiaSummary['woltdrive_late']) ?></strong></td></tr>
           </tbody>
         </table>
-        <?php if ($canSaveReport): ?>
-          <div class="card_actions gap_8 displ_flex jc_konec odstup_horni_10">
-            <button type="button" class="zr_submit text_18 is-hidden" data-zr-submit>Uložit</button>
-          </div>
-        <?php endif; ?>
       </section>
     </aside>
   </div>
+  <?php if (!$canSaveReport): ?>
+    <div class="zr_readonly_overlay" aria-hidden="true"></div>
+  <?php endif; ?>
 </form>
 <?php
 $card_max_html = (string)ob_get_clean();

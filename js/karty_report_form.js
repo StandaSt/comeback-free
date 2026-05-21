@@ -12,6 +12,66 @@
     return String(field.value || '').trim();
   }
 
+  function getForm(root) {
+    if (root instanceof HTMLFormElement) return root;
+    const form = root.querySelector('[data-zr-form]');
+    return form instanceof HTMLFormElement ? form : null;
+  }
+
+  function getReportValue(root, selector) {
+    const field = root.querySelector(selector);
+    return field instanceof HTMLInputElement ? String(field.value || '').trim() : '';
+  }
+
+  function saveDraftAction(root, action, data) {
+    const form = getForm(root);
+    if (!(form instanceof HTMLFormElement)) return Promise.resolve({ ok: true });
+
+    const body = new FormData();
+    body.set('dr_action', action);
+    body.set('id_pob', getReportValue(root, 'input[name="id_pob"]'));
+    body.set('datum_reportu', getReportValue(root, 'input[name="datum_reportu"]'));
+    Object.keys(data || {}).forEach((key) => {
+      body.set(key, String(data[key] ?? ''));
+    });
+
+    return fetch(form.action || 'index.php', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'X-Comeback-Dr-Pracovni': '1'
+      },
+      body
+    }).then((res) => {
+      return res.text().then((text) => {
+        let json = null;
+        try {
+          json = JSON.parse(String(text || '{}'));
+        } catch (e) {
+          json = null;
+        }
+        if (!res.ok || !json || json.ok !== true) {
+          throw new Error((json && json.err) ? String(json.err) : 'Uložení pole selhalo.');
+        }
+        return json;
+      });
+    });
+  }
+
+  function dbMoneyField(uiField) {
+    const map = {
+      pokladna_hotovost: 'hotovost',
+      pokladna_terminal: 'terminal',
+      pokladna_stravenky: 'stravenky',
+      vydaje_benzin: 'vydaje_benzin',
+      vydaje_auta: 'vydaje_auta',
+      vydaje_suroviny: 'vydaje_suroviny',
+      vydaje_ostatni: 'vydaje_ostatni',
+      vydaje_phm_soukrome: 'vydaje_phm_soukrome'
+    };
+    return map[String(uiField || '')] || '';
+  }
+
   function parseMoneyValue(raw, kind) {
     let value = String(raw || '').replace(/\s+/g, '').replace(/Kč/gi, '').replace(',', '.');
     if (kind === 'decimal') {
@@ -41,6 +101,68 @@
     const numeric = Number.parseInt(clean, 10);
     if (Number.isNaN(numeric)) return '';
     return String(numeric).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' Kč';
+  }
+
+  function formatDuration(totalSeconds) {
+    const safeSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+    const hours = Math.floor(safeSeconds / 3600);
+    const minutes = Math.floor((safeSeconds % 3600) / 60);
+    const seconds = safeSeconds % 60;
+    return hours + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+  }
+
+  function setSubmitLocked(button, text) {
+    button.disabled = true;
+    button.setAttribute('aria-disabled', 'true');
+    button.style.background = '#d9dee8';
+    button.style.borderColor = '#c1c9d6';
+    button.style.color = '#5f6b7a';
+    button.style.cursor = 'not-allowed';
+    button.style.opacity = '1';
+    button.textContent = text;
+  }
+
+  function setSubmitReady(button, text) {
+    button.disabled = false;
+    button.setAttribute('aria-disabled', 'false');
+    button.style.background = '';
+    button.style.borderColor = '';
+    button.style.color = '';
+    button.style.cursor = '';
+    button.style.opacity = '';
+    button.textContent = text;
+  }
+
+  function bindSubmitCountdown(root) {
+    const button = root.querySelector('[data-zr-submit]');
+    if (!(button instanceof HTMLButtonElement) || button.getAttribute('data-zr-countdown-bound') === '1') {
+      return;
+    }
+    button.setAttribute('data-zr-countdown-bound', '1');
+
+    const targetTs = Number.parseInt(String(button.getAttribute('data-zr-submit-at') || '0'), 10) || 0;
+    const lockedText = String(button.getAttribute('data-zr-submit-locked-text') || 'Report bude možné uložit za');
+    const readyText = String(button.getAttribute('data-zr-submit-ready-text') || 'Report je zkontrolovaný, uložit');
+
+    const tick = () => {
+      const remaining = targetTs - Math.floor(Date.now() / 1000);
+      if (remaining <= 0) {
+        setSubmitReady(button, readyText);
+        return true;
+      }
+      setSubmitLocked(button, lockedText + ' ' + formatDuration(remaining));
+      return false;
+    };
+
+    if (tick()) {
+      return;
+    }
+
+    const timer = w.setInterval(() => {
+      if (!document.body.contains(button) || tick()) {
+        w.clearInterval(timer);
+      }
+    }, 1000);
   }
 
   function syncWeekdayFromDate(root) {
@@ -121,11 +243,6 @@
     }
   }
 
-  function isFirstInstorRowComplete(root) {
-    const list = root.querySelector('[data-zr-saved-list="instor"]');
-    return !!(list instanceof HTMLElement && list.children.length > 0);
-  }
-
   function syncRequiredState(root) {
     if (!(root instanceof HTMLElement)) return;
 
@@ -135,25 +252,6 @@
       label.classList.toggle('is-valid', isRequiredFilled(root, key));
     });
 
-    const submit = root.querySelector('[data-zr-submit]');
-    if (!(submit instanceof HTMLButtonElement)) return;
-
-    const ready = (
-      isRequiredFilled(root, 'datum') &&
-      isRequiredFilled(root, 'oteviral') &&
-      isRequiredFilled(root, 'zaviral') &&
-      isRequiredFilled(root, 'pokladna_hotovost') &&
-      isRequiredFilled(root, 'pokladna_terminal') &&
-      isRequiredFilled(root, 'pokladna_stravenky') &&
-      isRequiredFilled(root, 'vydaje_benzin') &&
-      isRequiredFilled(root, 'vydaje_auta') &&
-      isRequiredFilled(root, 'vydaje_suroviny') &&
-      isRequiredFilled(root, 'vydaje_ostatni') &&
-      isRequiredFilled(root, 'vydaje_phm_soukrome') &&
-      isFirstInstorRowComplete(root)
-    );
-
-    submit.classList.toggle('is-hidden', !ready);
   }
 
   function bindMoneyInputs(root) {
@@ -176,6 +274,15 @@
       input.addEventListener('blur', () => {
         input.value = formatMoneyValue(input.value, kind);
         syncRequiredState(root);
+        const field = dbMoneyField(input.getAttribute('data-zr-field'));
+        if (field !== '') {
+          saveDraftAction(root, 'update_money', {
+            field,
+            value: parseMoneyValue(input.value, kind)
+          }).catch((err) => {
+            if (w.alert) w.alert(err && err.message ? err.message : 'Uložení částky selhalo.');
+          });
+        }
       });
 
       if (String(input.value || '').trim() !== '') {
@@ -236,6 +343,7 @@
 
     bindMoneyInputs(root);
     bindEnterNavigation(root);
+    bindSubmitCountdown(root);
     syncWeekdayFromDate(root);
     syncRequiredState(root);
 
@@ -254,7 +362,20 @@
     const form = root.querySelector('[data-zr-form]');
     if (form instanceof HTMLFormElement) {
       form.addEventListener('input', () => syncRequiredState(root));
-      form.addEventListener('change', () => syncRequiredState(root));
+      form.addEventListener('change', (event) => {
+        syncRequiredState(root);
+        const target = event.target;
+        if (!(target instanceof HTMLSelectElement)) return;
+        const field = String(target.getAttribute('data-zr-field') || '');
+        if (field !== 'oteviral' && field !== 'zaviral') return;
+
+        saveDraftAction(root, 'update_user', {
+          field,
+          value: String(target.value || '')
+        }).catch((err) => {
+          if (w.alert) w.alert(err && err.message ? err.message : 'Uložení jména selhalo.');
+        });
+      });
     }
   }
 
@@ -269,4 +390,6 @@
   } else {
     initKartyReportForm();
   }
+  document.addEventListener('cb:card-swapped', initKartyReportForm);
+  document.addEventListener('cb:card-max-loaded', initKartyReportForm);
 }(window));

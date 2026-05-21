@@ -11,6 +11,7 @@ $cbAdminSystem = [
     'on_2fa' => 0,
     'system_logout' => 0,
     'pauza_obdobi' => 1000,
+    'report_save' => 5,
     'log_akce' => 0,
     'log_1' => 0,
     'log_2' => 0,
@@ -22,6 +23,7 @@ $cbAdminSaveName = trim((string)($_POST['cb_admin_set_name'] ?? ''));
 $cbAdminSaveValue = trim((string)($_POST['cb_admin_set_value'] ?? ''));
 $cbAdminLogoutOptions = [2, 5, 10, 15, 20, 30, 60];
 $cbAdminPauzaOptions = [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000];
+$cbAdminReportSaveOptions = [5, 10, 15, 30, 60];
 $cbAdminAkceGlobalOptions = [
     '1' => 'Aktivovat logování akcí pro všechny uživatele',
     '0' => 'Deaktivovat logování',
@@ -75,6 +77,19 @@ try {
                 $saveValue = 1000;
             }
             $stmt = $conn->prepare('UPDATE set_system SET pauza_obdobi = ? WHERE id_set = 1 LIMIT 1');
+            if ($stmt instanceof mysqli_stmt) {
+                $stmt->bind_param('i', $saveValue);
+                $stmt->execute();
+                $stmt->close();
+            } else {
+                $cbAdminError = 'Uložení nastavení selhalo.';
+            }
+        } elseif ($cbAdminSaveName === 'report_save') {
+            $saveValue = (int)$cbAdminSaveValue;
+            if (!in_array($saveValue, $cbAdminReportSaveOptions, true)) {
+                $saveValue = 5;
+            }
+            $stmt = $conn->prepare('UPDATE set_system SET report_save = ? WHERE id_set = 1 LIMIT 1');
             if ($stmt instanceof mysqli_stmt) {
                 $stmt->bind_param('i', $saveValue);
                 $stmt->execute();
@@ -141,7 +156,7 @@ try {
 
     if ($cbAdminError === '') {
         $res = $conn->query('
-            SELECT restia_online, on_2fa, system_logout, pauza_obdobi, log_akce, log_1, log_2, log_3, log_4
+            SELECT restia_online, on_2fa, system_logout, pauza_obdobi, report_save, log_akce, log_1, log_2, log_3, log_4
             FROM set_system
             WHERE id_set = 1
             LIMIT 1
@@ -154,6 +169,7 @@ try {
                 $cbAdminSystem['on_2fa'] = (int)($row['on_2fa'] ?? 0);
                 $cbAdminSystem['system_logout'] = (int)($row['system_logout'] ?? 0);
                 $cbAdminSystem['pauza_obdobi'] = (int)($row['pauza_obdobi'] ?? 1000);
+                $cbAdminSystem['report_save'] = (int)($row['report_save'] ?? 5);
                 $cbAdminSystem['log_akce'] = (int)($row['log_akce'] ?? 0);
                 $cbAdminSystem['log_1'] = (int)($row['log_1'] ?? 0);
                 $cbAdminSystem['log_2'] = (int)($row['log_2'] ?? 0);
@@ -313,6 +329,20 @@ ob_start();
               </form>
             </td>
             <td style="white-space:nowrap;">Prodleva při ruční volbě globálního nastavení období</td>
+          </tr>
+          <tr>
+            <td style="white-space:nowrap;">Uložení reportu</td>
+            <td class="text_tucny">
+              <form method="post" action="<?= h($cbAdminFormAction) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
+                <input type="hidden" name="cb_admin_set_name" value="report_save">
+                <select name="cb_admin_set_value" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" onchange="if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
+                  <?php foreach ($cbAdminReportSaveOptions as $cbReportSaveValue): ?>
+                    <option value="<?= h((string)$cbReportSaveValue) ?>"<?= $cbAdminSystem['report_save'] === $cbReportSaveValue ? ' selected' : '' ?>><?= h((string)$cbReportSaveValue) ?> min</option>
+                  <?php endforeach; ?>
+                </select>
+              </form>
+            </td>
+            <td style="white-space:nowrap;">Kolik minut před uzavřením restaurace lze uložit</td>
           </tr>
         </tbody>
       </table>

@@ -29,6 +29,102 @@
     return input;
   }
 
+  function getForm(root) {
+    if (root instanceof HTMLFormElement) return root;
+    const form = root instanceof HTMLElement ? root.querySelector('[data-zr-form]') : null;
+    return form instanceof HTMLFormElement ? form : null;
+  }
+
+  function getReportValue(root, selector) {
+    const field = root instanceof HTMLElement ? root.querySelector(selector) : null;
+    return field instanceof HTMLInputElement ? String(field.value || '').trim() : '';
+  }
+
+  function savePersonAction(root, action, type, idUser, extra) {
+    const form = getForm(root);
+    if (!(form instanceof HTMLFormElement)) return Promise.resolve({ ok: true });
+
+    const data = new FormData();
+    data.set('dr_action', action);
+    data.set('id_pob', getReportValue(root, 'input[name="id_pob"]'));
+    data.set('datum_reportu', getReportValue(root, 'input[name="datum_reportu"]'));
+    data.set('id_user', String(idUser || ''));
+    data.set('id_slot', type === 'kuryr' ? '2' : '1');
+    if (extra && typeof extra === 'object') {
+      Object.keys(extra).forEach((key) => {
+        data.set(key, String(extra[key] ?? ''));
+      });
+    }
+
+    return fetch(form.action || 'index.php', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'X-Comeback-Dr-Pracovni': '1'
+      },
+      body: data
+    }).then((res) => {
+      return res.text().then((text) => {
+        let json = null;
+        try {
+          json = JSON.parse(String(text || '{}'));
+        } catch (e) {
+          json = null;
+        }
+        if (!res.ok || !json || json.ok !== true) {
+          throw new Error((json && json.err) ? String(json.err) : 'Uložení řádku selhalo.');
+        }
+        return json;
+      });
+    });
+  }
+
+  function getRowType(row) {
+    return String(row instanceof HTMLElement ? row.getAttribute('data-zr-person-row') || '' : '');
+  }
+
+  function getRowUserId(row) {
+    return Number.parseInt(String(row instanceof HTMLElement ? row.getAttribute('data-zr-id-user') || '0' : '0'), 10) || 0;
+  }
+
+  function getRowPersonId(row) {
+    return Number.parseInt(String(row instanceof HTMLElement ? row.getAttribute('data-zr-id-dr-osoby') || '0' : '0'), 10) || 0;
+  }
+
+  function getInputValue(row, selector) {
+    const input = row instanceof HTMLElement ? row.querySelector(selector) : null;
+    return input instanceof HTMLInputElement ? String(input.value || '').trim() : '';
+  }
+
+  function saveTimeForRow(root, row) {
+    const type = getRowType(row);
+    const idUser = getRowUserId(row);
+    const idDrOsoby = getRowPersonId(row);
+    if (type === '' || idUser <= 0 || idDrOsoby <= 0) return Promise.resolve({ ok: true });
+
+    return savePersonAction(root, 'update_time', type, idUser, {
+      id_dr_osoby: idDrOsoby,
+      smena_od: getInputValue(row, '[data-zr-start]'),
+      smena_do: getInputValue(row, '[data-zr-end]'),
+      pauza: getInputValue(row, '[data-zr-break]'),
+      odpracovano: getInputValue(row, '[data-zr-hours-hidden]')
+    });
+  }
+
+  function saveKuryrForRow(root, row) {
+    if (getRowType(row) !== 'kuryr') return Promise.resolve({ ok: true });
+    const idUser = getRowUserId(row);
+    const idDrOsoby = getRowPersonId(row);
+    if (idUser <= 0 || idDrOsoby <= 0) return Promise.resolve({ ok: true });
+
+    return savePersonAction(root, 'update_kuryr', 'kuryr', idUser, {
+      id_dr_osoby: idDrOsoby,
+      rozvozu_manual: getInputValue(row, '[data-zr-editor-field="delivery_manual"]'),
+      vlastni_vuz: getInputValue(row, '[data-zr-car-hidden]'),
+      vyplatit_phm: getInputValue(row, '[data-zr-phm-hidden]')
+    });
+  }
+
   function buildRemoveButton() {
     const button = document.createElement('button');
     button.type = 'button';
@@ -222,7 +318,7 @@
         restiaValueEl.textContent = String(restia);
       }
       if (phmValueEl instanceof HTMLElement) {
-        phmValueEl.textContent = String(phm).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' Kc';
+        phmValueEl.textContent = String(phm).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' Kč';
       }
       if (phmHiddenEl instanceof HTMLInputElement) {
         phmHiddenEl.value = String(phm);
@@ -245,17 +341,37 @@
     }
   }
 
-  function addPersonRow(root, type, name) {
+  function addOption(select, idUser, name) {
+    if (!(select instanceof HTMLSelectElement) || !idUser || String(name || '').trim() === '') return;
+    if (select.querySelector('option[value="' + String(idUser).replace(/"/g, '') + '"]')) return;
+    const option = document.createElement('option');
+    option.value = String(idUser);
+    option.textContent = String(name || '').trim();
+    select.appendChild(option);
+  }
+
+  function removeOption(select, idUser) {
+    if (!(select instanceof HTMLSelectElement) || !idUser) return;
+    const option = select.querySelector('option[value="' + String(idUser).replace(/"/g, '') + '"]');
+    if (option instanceof HTMLOptionElement) {
+      option.remove();
+    }
+  }
+
+  function addPersonRow(root, type, idUser, name) {
     const list = getSavedList(root, type);
-    if (!(list instanceof HTMLElement) || String(name || '').trim() === '') return;
+    if (!(list instanceof HTMLElement) || !idUser || String(name || '').trim() === '') return null;
 
     const savedRow = document.createElement('tr');
     savedRow.setAttribute('data-zr-person-row', type);
+    savedRow.setAttribute('data-zr-id-user', String(idUser));
+    savedRow.setAttribute('data-zr-id-dr-osoby', '0');
 
     const nameCell = buildSavedCell(name);
     nameCell.style.width = '220px';
     nameCell.insertBefore(buildRemoveButton(), nameCell.firstChild);
     nameCell.appendChild(buildHidden(type + '_jmeno[]', name));
+    nameCell.appendChild(buildHidden(type + '_id_user[]', idUser));
     savedRow.appendChild(nameCell);
 
     const startCell = document.createElement('td');
@@ -344,7 +460,7 @@
       const phmValueEl = document.createElement('strong');
       phmValueEl.className = 'zr_hours_value';
       phmValueEl.setAttribute('data-zr-phm-value', '');
-      phmValueEl.textContent = String(phmValue).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' Kc';
+      phmValueEl.textContent = String(phmValue).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' Kč';
       phmCell.appendChild(phmValueEl);
       const phmHidden = buildHidden('kuryr_vyplatit_phm[]', phmValue);
       phmHidden.setAttribute('data-zr-phm-hidden', '');
@@ -361,6 +477,7 @@
     if (typeof w.cbSyncReportFormState === 'function') {
       w.cbSyncReportFormState(root);
     }
+    return savedRow;
   }
 
   function bindPeopleRows(root) {
@@ -371,10 +488,22 @@
       select.setAttribute('data-zr-add-bound', '1');
       select.addEventListener('change', () => {
         const type = String(select.getAttribute('data-zr-add-person') || '');
-        const name = String(select.value || '').trim();
-        if (type !== '' && name !== '') {
-          addPersonRow(root, type, name);
+        const idUser = Number.parseInt(String(select.value || '0'), 10) || 0;
+        const selectedOption = select.selectedOptions && select.selectedOptions.length ? select.selectedOptions[0] : null;
+        const name = selectedOption instanceof HTMLOptionElement ? String(selectedOption.textContent || '').trim() : '';
+        if (type !== '' && idUser > 0 && name !== '') {
+          const row = addPersonRow(root, type, idUser, name);
+          removeOption(select, idUser);
           select.value = '';
+          savePersonAction(root, 'add_person', type, idUser).then((json) => {
+            if (row instanceof HTMLTableRowElement && json && json.id_dr_osoby) {
+              row.setAttribute('data-zr-id-dr-osoby', String(json.id_dr_osoby));
+            }
+          }).catch((err) => {
+            if (row instanceof HTMLTableRowElement) row.remove();
+            addOption(select, idUser, name);
+            if (w.alert) w.alert(err && err.message ? err.message : 'Uložení řádku selhalo.');
+          });
         }
       });
     });
@@ -397,6 +526,11 @@
         syncKuryrExtras(row);
         if (typeof w.cbSyncReportFormState === 'function') {
           w.cbSyncReportFormState(root);
+        }
+        if (target.hasAttribute('data-zr-car-check')) {
+          saveKuryrForRow(root, row).catch((err) => {
+            if (w.alert) w.alert(err && err.message ? err.message : 'Uložení kurýra selhalo.');
+          });
         }
       });
 
@@ -439,9 +573,35 @@
         if (normalized) {
           syncHoursForRow(row);
           sortPersonRows(list);
+          saveTimeForRow(root, row).catch((err) => {
+            if (w.alert) w.alert(err && err.message ? err.message : 'Uložení času selhalo.');
+          });
         }
         if (typeof w.cbSyncReportFormState === 'function') {
           w.cbSyncReportFormState(root);
+        }
+      });
+
+      list.addEventListener('focusout', (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLInputElement) || isTimeInput(target)) return;
+
+        const row = target.closest('[data-zr-person-row]');
+        if (!(row instanceof HTMLElement)) return;
+
+        if (target.hasAttribute('data-zr-break')) {
+          syncHoursForRow(row);
+          saveTimeForRow(root, row).catch((err) => {
+            if (w.alert) w.alert(err && err.message ? err.message : 'Uložení pauzy selhalo.');
+          });
+          return;
+        }
+
+        if (String(target.getAttribute('data-zr-editor-field') || '') === 'delivery_manual') {
+          syncKuryrExtras(row);
+          saveKuryrForRow(root, row).catch((err) => {
+            if (w.alert) w.alert(err && err.message ? err.message : 'Uložení kurýra selhalo.');
+          });
         }
       });
 
@@ -455,10 +615,19 @@
         event.preventDefault();
         const row = removeBtn.closest('[data-zr-person-row]');
         if (row instanceof HTMLTableRowElement) {
-          row.remove();
-          if (typeof w.cbSyncReportFormState === 'function') {
-            w.cbSyncReportFormState(root);
-          }
+          const type = String(row.getAttribute('data-zr-person-row') || '');
+          const idUser = Number.parseInt(String(row.getAttribute('data-zr-id-user') || '0'), 10) || 0;
+          const nameEl = row.querySelector('.zr_saved_value');
+          const name = nameEl instanceof HTMLElement ? String(nameEl.textContent || '').trim() : '';
+          savePersonAction(root, 'delete_person', type, idUser).then(() => {
+            row.remove();
+            addOption(root.querySelector('[data-zr-add-person="' + type + '"]'), idUser, name);
+            if (typeof w.cbSyncReportFormState === 'function') {
+              w.cbSyncReportFormState(root);
+            }
+          }).catch((err) => {
+            if (w.alert) w.alert(err && err.message ? err.message : 'Smazání řádku selhalo.');
+          });
         }
       });
     });

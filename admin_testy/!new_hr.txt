@@ -1,0 +1,310 @@
+NOVY HR MODUL - PRACOVNI SHRNUTI
+Datum zapisu: 21.05.2026
+
+Cil
+===
+V Comebacku vznikne novy HR/mzdovy modul.
+Nebude to kopie puvodnich Google Sheets ani kopie souboru HR 2024.xlsx.
+HR 2024.xlsx pouzijeme jen jako zdroj historickych dat pro import.
+
+Novy modul ma byt lepsi, jednodussi a dlouhodobe pouzitelny.
+
+
+Hlavni domluva
+==============
+1. Směny zustanou dal pouzivane.
+   - Systém Směny funguje roky a nemenime ho.
+   - Dale ho pouzijeme jako zdroj planu smen.
+   - Dale z nej ziskame id_user a profil po registraci zamestnance ve Směnách.
+
+2. Comeback bude mit vlastni HR logiku.
+   - HR data nebudou zavisla na Google Sheets.
+   - Email bude hlavni jednoznacny spojovaci udaj zamestnance.
+   - Stare uzivatele a existujici neporadek v pravech/pobockach vyresime pozdeji samostatne.
+
+3. Zaklad osoby zustava tabulka user.
+   - Nebudeme delat novou tabulku typu hr_user jen proto, abychom kopirovali user.
+   - user.aktivni uz existuje.
+   - Pro mzdy pravdepodobne staci pridat do user novy sloupec mzda_typ.
+   - Priklady mzda_typ:
+     - hodinova
+     - fix
+     - kombinovana
+     - bez_mzdy
+
+4. HR 2024.xlsx neni navrh databaze.
+   - Je to jen zdroj existujicich historickych dat.
+   - Tabulky navrhneme podle toho, jak ma fungovat novy system.
+   - Import historickych dat je bonus, ne hlavni pravidlo navrhu.
+
+
+COL
+===
+COL uz umime vecne spocitat, ale chybi nam mzdova data v nasi DB.
+
+Overeno v Report Chodov.xlsx:
+- osobni naklad je v radcich osob:
+  - Instor: 12-21
+  - Kuryr: 25-31
+- pro bezne lidi se bere hodinova sazba z reportoveho listu HR, sloupec V
+- manageri se v osobnich radcich pocitaji jako 0
+- managersky naklad se pricitava zvlast jako denni naklad
+- do COL vstupuji take:
+  - osobni naklady lidi
+  - PHM soukrome kuryrum
+  - Wolt drive naklad
+  - denni naklady manageru
+  - trzba
+
+Vzorec pro smer:
+COL naklad =
+  suma(odpracovane hodiny * hodinova sazba)
+  + PHM soukrome
+  + Wolt drive naklad
+  + denni managerske naklady
+
+COL % =
+  COL naklad / trzba * 100
+
+
+Nastup noveho zamestnance - cilovy tok
+======================================
+1. Kandidat vyplni vstupni dotaznik v nasem systemu.
+   - Uvede nacionale.
+   - Uvede email.
+   - Tento email se s nim dal potahne celou dobu.
+
+2. Z dotazniku vznikne HR zaznam.
+   - Zatim jeste nemusi existovat id_user ze Směn.
+   - Hlavni identifikace je email.
+
+3. HR oddeleni doplni pracovni udaje.
+   - druh smlouvy
+   - mzdu / sazbu / fix
+   - pobocku nebo pobocky
+   - datum nastupu
+   - dalsi nutne udaje
+
+4. System vygeneruje pracovni smlouvu ze vzoru.
+   - V systemu budou vzory smluv.
+   - Nacionale se vezmou z dotazniku.
+   - HR doplni jen to, co musi rozhodnout.
+
+5. Smlouva se odesle k elektronickemu podpisu pres inSign.
+   - Podpis nebudeme delat vlastnim kodem.
+   - Chceme vyuzit existujici zpusob podpisu.
+   - inSign ma byt externi podpisova sluzba.
+   - Do budoucna lze zvazit API napojeni.
+
+6. Po podpisu se ulozi stav a dokument.
+   - cekame na podpis
+   - podepsano
+   - odmitnuto / expirovano
+   - ulozene ID dokumentu nebo odkaz
+   - idealne i podepsane PDF
+
+7. Zamestnanec se zaregistruje ve Směnách.
+   - Bez registrace ve Směnách nemuze mit planovane smeny.
+   - Pouzije stejny email.
+
+8. Comeback propoji HR zaznam s userem ze Směn.
+   - Bud rucne pri prvnim vstupu do systemu.
+   - Nebo lepe nocnim cronem.
+   - Cron jednou denne zkontroluje nove usery ve Směnách.
+   - Pokud najde email, ktery uz mame v HR, doplni id_user a profil.
+
+
+inSign
+======
+Aktualni stav:
+- HR dnes smlouvu nejak vytvori rucne.
+- Potom ji posle pres inSign k elektronickemu podpisu.
+
+Cil:
+- HR v Comebacku vybere druh smlouvy a doplni mzdu.
+- System vezme nacionale z dotazniku.
+- System vygeneruje smlouvu.
+- Jednim klikem se odesle pres inSign.
+- HR jen ceka na navrat podepsane smlouvy.
+
+Poznamka:
+- Vlastni elektronicky podpis delat nechceme.
+- Chceme pouzit inSign.
+- Nejdriv muze system jen generovat dokument a HR ho posle do inSign rucne.
+- Pozdeji lze dodelat API napojeni inSign.
+
+
+Predbezny navrh DB - smer, ne finalni create table
+==================================================
+Zakladni princip:
+- user zustava hlavni osoba v systemu.
+- HR modul prida smlouvy, sazby, mzdove nastaveni a historii.
+- Nechceme kopirovat Excel po sloupcich.
+
+Mozne tabulky:
+
+1. user
+-------
+Pridat:
+- mzda_typ
+
+Smysl:
+- zakladni typ odmenovani zamestnance.
+
+
+2. hr_kandidat / hr_dotaznik
+----------------------------
+Ulozi data z nastupniho dotazniku pred vznikem usera ze Směn.
+
+Typicka pole:
+- id_hr_kandidat
+- email
+- jmeno
+- prijmeni
+- telefon
+- datum_narozeni
+- adresa
+- bankovni_ucet
+- dalsi nacionale
+- stav
+- created_at
+- updated_at
+
+Poznamka:
+- Nazev a presna pole se musi jeste domyslet.
+- Cilem je nepřepisovat udaje ze vstupniho dotazniku rucne.
+
+
+3. hr_smlouvy
+-------------
+Evidence smluv zamestnance.
+
+Typicka pole:
+- id_hr_smlouva
+- id_user NULL
+- id_hr_kandidat NULL
+- email
+- druh_smlouvy
+- datum_nastupu
+- datum_od
+- datum_do NULL
+- stav
+- mzda_typ
+- hodinova_sazba
+- mesicni_fix
+- dokument_vzor
+- dokument_pdf
+- insign_id
+- insign_stav
+- podepsano_at
+- created_at
+- updated_at
+
+Smysl:
+- smlouva je samostatny HR dokument a nemela by byt zamichana do smen.
+
+
+4. hr_sazby
+-----------
+Mzdove nastaveni platne v case.
+
+Typicka pole:
+- id_hr_sazba
+- id_user
+- platnost_od
+- platnost_do NULL
+- mzda_typ
+- hodinova_sazba
+- mesicni_fix
+- denni_naklad_col
+- je_manager_col
+- poznamka
+- created_at
+- updated_at
+
+Smysl:
+- sazby se meni v case.
+- COL musi umet najit sazbu podle data reportu.
+- Historie je dulezita.
+
+
+5. hr_user_pobocka
+------------------
+HR vazba cloveka na pobocky v case.
+
+Typicka pole:
+- id_hr_user_pobocka
+- id_user
+- id_pob
+- platnost_od
+- platnost_do NULL
+- hlavni
+- poradi
+
+Smysl:
+- clovek muze patri k vice pobockam.
+- Soucasny neporadek v user_pobocka se bude uklizet pozdeji.
+- HR modul potrebuje vlastni historickou pravdu.
+
+
+6. hr_mzdy_mesic
+----------------
+Mesicni mzdova uzaverka / vypocet.
+
+Typicka pole:
+- id_hr_mzdy_mesic
+- id_user
+- rok
+- mesic
+- hodiny
+- zaklad
+- bonus
+- hruba_mzda
+- cista_mzda
+- stav
+- created_at
+- updated_at
+
+Smysl:
+- sazba je nastaveni.
+- mesicni mzda je vysledek.
+- Tohle prijde na radu az po zakladnim HR a COL.
+
+
+Otevrene otazky
+===============
+1. Jak presne ma vypadat vstupni dotaznik?
+2. Jake druhy smluv se pouzivaji?
+3. Kde budou ulozene vzory smluv?
+4. V jakem formatu budeme generovat smlouvy?
+   - PDF primo?
+   - DOCX ze sablony a potom PDF?
+5. Jak presne pouzivat inSign?
+   - nejdriv rucni odeslani?
+   - pozdeji API?
+6. Jak presne mapovat stare lidi z HR 2024.xlsx na user?
+7. Jak vyresit stavajici neporadek v pravech a povolenych pobockach?
+8. Ktere HR udaje maji byt historicke a ktere jen aktualni?
+9. Kdy presne v procesu vznikne user v Comebacku?
+10. Bude cron pro nove usery ze Směn stacit 1x denne v noci?
+
+
+Navrh dalsiho postupu
+=====================
+1. Nechat cele HR tema ulezet.
+2. Priste nejdriv potvrdit cilovy tok nastupu zamestnance.
+3. Potom zacit od DB modelu, ale ne jako kopie Excelu.
+4. Jako prvni prakticky krok navrhnout:
+   - user.mzda_typ
+   - hr_kandidat / dotaznik
+   - hr_smlouvy
+   - hr_sazby
+5. Az potom resit import HR 2024.xlsx.
+6. A az po tom napojit COL v K10 na nova HR data.
+
+
+Klicova veta pro navazani
+=========================
+Novy HR modul nema byt pokracovani HR 2024.xlsx.
+Ma nahradit puvodni Google Sheets system lepsim systemem v Comebacku.
+HR 2024.xlsx je jen historicky zdroj dat pro import.

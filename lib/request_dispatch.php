@@ -147,12 +147,14 @@ if ($cbIsRestiaTrigger) {
         exit;
     }
 
+    $forceRestia = ((string)($_SERVER['HTTP_X_COMEBACK_RESTIA_FORCE'] ?? '') === '1');
+
     if (!defined('CB_RESTIA_ONLINE_KONTROLA_AUTO_RUN')) {
         define('CB_RESTIA_ONLINE_KONTROLA_AUTO_RUN', false);
     }
     require_once __DIR__ . '/restia_online_kontrola.php';
     if (function_exists('cb_restia_online_kontrola')) {
-        cb_restia_online_kontrola();
+        cb_restia_online_kontrola($forceRestia);
     }
 
     $stateAfter = $readState($db, $stateSql);
