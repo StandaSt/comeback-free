@@ -308,3 +308,40 @@ Klicova veta pro navazani
 Novy HR modul nema byt pokracovani HR 2024.xlsx.
 Ma nahradit puvodni Google Sheets system lepsim systemem v Comebacku.
 HR 2024.xlsx je jen historicky zdroj dat pro import.
+
+
+Poznamka pro novy chat
+======================
+Na zacatku noveho chatu staci rict:
+"Pokracujeme v novem HR modulu, precti si admin_testy/!new_hr.txt."
+
+AI ma nejdriv precist tento soubor a AGENTS.md.
+Pak nema znovu zkoumat od nuly HR 2024.xlsx, COL.gs ani Report Chodov.xlsx, pokud k tomu nebude novy duvod.
+
+Stav po posledni kontrole K10 / Restia
+======================================
+K10 uz umi brat aktualni data z nasi Restia DB.
+Pri kontrole Bolevce 20.05.2026 se ukazalo:
+- zakladni data v DB sedi:
+  - trzba
+  - Wolt
+  - Bolt
+  - Foodora
+  - nezrusene objednavky
+  - nase rozvozy
+- problem nebyl v zakladnich datech, ale ve vypoctech a parovani:
+  - make time musi pouzit stejnou logiku jako Google report: prumer jen z hodnot 5 az 30 minut
+  - WoltDrive metriky v K10 zatim nepocitaji presne totéz co Google report
+  - rozvozy kurýru narazi na rozdily ve jménech, např. Restia "Rudolf Kalocai" vs user "Rudolf Kaločai"
+
+Z toho plyne pro HR modul:
+- bude potreba systemove vyresit aliasy jmen / mapovani externich jmen na user
+- jinak se budou chyby opakovat v K10, mzdach, rozvozech i importech
+
+Mozna budouci tabulka pro aliasy jmen:
+- user_alias
+- id_user
+- zdroj
+- alias_text
+
+Toto je zatim jen poznamka, ne schvaleny create table.

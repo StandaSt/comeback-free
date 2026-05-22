@@ -11,7 +11,9 @@ if (!function_exists('cb_db_akce_log_enabled')) {
             return false;
         }
 
-        return (int)cb_system_setting('log_1', 0) === 1;
+        return (int)cb_system_setting('log_1', 0) === 1
+            || (int)cb_system_setting('log_2', 0) === 1
+            || (int)cb_system_setting('log_3', 0) === 1;
     }
 }
 
@@ -121,8 +123,12 @@ if (!function_exists('cb_db_akce_log_init')) {
         $idAkce = cb_db_akce_log_id_akce();
         $profilingOk = true;
         $profilingError = '';
+        $logSqlDetails = function_exists('cb_system_setting') && (int)cb_system_setting('log_1', 0) === 1;
 
         try {
+            if ($logSqlDetails) {
+                $conn->query('SET profiling_history_size = 1000');
+            }
             $conn->query('SET profiling = 1');
         } catch (Throwable $e) {
             $profilingOk = false;
@@ -136,7 +142,7 @@ if (!function_exists('cb_db_akce_log_init')) {
             }
         }
 
-        register_shutdown_function(static function () use ($conn, $startTime, $startStats, $idAkce, $profilingOk, $profilingError): void {
+        register_shutdown_function(static function () use ($conn, $startTime, $startStats, $idAkce, $profilingOk, $profilingError, $logSqlDetails): void {
             if (!cb_db_akce_log_enabled()) {
                 return;
             }
@@ -177,16 +183,21 @@ if (!function_exists('cb_db_akce_log_init')) {
 
                             if (
                                 stripos($sql, 'SET profiling') === 0
+                                || stripos($sql, 'SET profiling_history_size') === 0
                                 || stripos($sql, 'SHOW PROFILES') === 0
                             ) {
                                 continue;
                             }
 
                             $durationMs = round(((float)($row['Duration'] ?? 0)) * 1000, 3);
+                            $queryId = (int)($row['Query_ID'] ?? 0);
                             $sqlCount++;
                             $sqlTotalMs += $durationMs;
                             if ($durationMs > $sqlMaxMs) {
                                 $sqlMaxMs = $durationMs;
+                            }
+                            if ($logSqlDetails && function_exists('cb_tmp_measure_sql_detail_add')) {
+                                cb_tmp_measure_sql_detail_add($queryId, $sql, $durationMs);
                             }
                         }
                         $resProfiles->free();
@@ -207,7 +218,7 @@ if (!function_exists('cb_db_akce_log_init')) {
                 + cb_db_akce_log_stat_diff($startStats, $endStats, 'rows_affected_ps');
 
             try {
-                db_user_akce_db_insert($conn, [
+                $idUserAkceDb = db_user_akce_db_insert($conn, [
                     'cas_start' => cb_db_akce_log_datetime($startTime),
                     'id_user' => $idUser,
                     'id_akce' => $idAkce,
@@ -224,6 +235,10 @@ if (!function_exists('cb_db_akce_log_init')) {
                     'status' => $status,
                     'err_msg' => $errMsg,
                 ]);
+
+                if ($idUserAkceDb > 0 && function_exists('cb_tmp_measure_detail_flush')) {
+                    cb_tmp_measure_detail_flush($conn, $idUserAkceDb);
+                }
             } catch (Throwable $e) {
                 // Logovani provozu DB nesmi rozbit bezny request.
             }

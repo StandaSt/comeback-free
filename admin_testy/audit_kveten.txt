@@ -1,0 +1,177 @@
+AUDIT KVETEN 2026 - STRUCNY SEZNAM POTENCIALNICH PROBLEMU
+Datum: 21.05.2026
+
+komentář začínající *** přidal Standa, autor systému a tyto poznámky je třeba brát v úvahu
+
+
+Rozsah kontroly
+===============
+- Prosel jsem hlavne PHP, JS a CSS v aktivnim projektu.
+- Podle AGENTS.md jsem ignoroval vendor/ a _kandidati/.
+- Binární historicka data typu XLSX/JPEG nehodnotim jako aplikacni kod.
+- Jde o rychly technicky audit, ne o navrh konkretnich uprav.
+
+Vysvetleni pojmu
+================
+- Refaktor = uprava struktury kodu bez zmeny chovani pro uzivatele.
+- Fallback = nahradni cesta, kdyz hlavni reseni selze.
+- Legacy = stary zpusob, ktery v projektu zustal kvuli kompatibilite.
+- Handler = skript nebo cast kodu, ktera obsluhuje konkretni akci.
+
+Strucny seznam nalezu
+=====================
+
+1. style/1/global.css je prilis velky soubor
+- Overeno: cca 2383 radku.
+- Obsahuje obecne styly, utility, tabulky, casti karet i lokalni upravy.
+- V souboru jsou i TODO poznamky k docasne ponechanym pravidlum.
+- Riziko: pri uprave vzhledu se spatne hleda, ktery selector opravdu rozhoduje.
+- Pozdeji by davalo smysl postupne vyclenit jednoúčelové CSS podle oblasti, ne najednou.
+*** Souhlas, ale čím dříve, tím lépe, rozdělit glogal.css uvnitř na bloky, univerzální část a pak části určené pro konkrétní karty které nelze dát do univerzálního bloku
+*** Komentáře mi nevadí, pokud mají  smysl, třeba popisují co který blok nastavuje
+
+2. inicializace/plnime_restia_objednavky.php kumuluje moc odpovednosti
+- Overeno: cca 1971 radku a cca 67 funkci.
+- Resi UI importu, stav importu, logovani, zamky, Restia API, prevod dat i zapis do vice DB tabulek.
+- Riziko: kazda zmena Restie muze rozbit import, logiku UI nebo zapis deti objednavky.
+- Vhodny smer: rozdelit casem na male jednotky typu datumy, logovani, import dne, mapovani objednavky, zapis objednavky.
+*** tento soubor je víceméně spustitelný pouze jednou na každém novém serveru, lze ho nahradit tím, že se místo něj zkopíruje předchozí DB, 
+pak se nebude muset už použít vůbec. Neřešil bych to jako problém.
+
+3. lib/restia_online.php vypada jako paralelni verze historickeho Restia importu
+- Overeno: cca 1247 radku a cca 48 funkci.
+- Ma podobnou strukturu jako historicky import, jen pro online aktualizace.
+- Riziko: dve podobne Restia logiky se budou casem rozchazet.
+- Vhodny smer: spolecnou logiku Restia objednavky a zapisu dat dat do sdilene jednoúčelové vrstvy, az bude jasne, co presne je shodne.
+*** Používá se už pouze tento soubor, historii máme a není třeba jí stahovat podruhé
+
+4. inicializace/google_data.php je velky importer se spoustou opravnych pravidel
+- Overeno: cca 1740 radku a cca 80 funkci.
+- Obsahuje fallbacky pro oteviral/zaviral a fallback rozdeleni jmena.
+- Riziko: import Google reportu muze v sobe skryvat pravidla, ktera nepatri do noveho HR systemu.
+- Vhodny smer: u HR importu ho pouzit jen jako zdroj poznatku, ne jako vzor architektury.
+*** stejně jako bod 2, je to pouze dočasný soubor pro stažení historie, nyní se budou data zadávat do nového HR modulu a do denních reportů, 
+inicializace je opravdu pouze pro instalaci systému na nový server, pak je již zbytečná
+
+5. karty/top_report.php je monolit pro data i render
+- Overeno: cca 1962 radku a cca 34 funkci.
+- V jednom souboru jsou DB dotazy, vypocty metrik, priprava grafu i HTML render.
+- Riziko: obtizne se meni konkretni metrika bez dopadu na zbytek karty.
+- Vhodny smer: pri dalsich upravach oddelit vypocty metrik od renderu, ale jen po malych krocich.
+*** Zcela jistě mají být výpočty mimo
+
+6. karty/zadani_reportu.php je aktualne funkcni, ale roste do prilis velkeho K10 centra
+- Overeno: cca 851 radku.
+- Obsahuje prava, vyber pobocky, plan smen, pracovni report, Restia souhrny, kuryrske rozvozy i HTML.
+- Riziko: HR/COL rozsireni by ho mohlo jeste vic zatizit.
+- Vhodny smer: COL a HR sazby nepridavat primo jako dalsi velky blok do tohoto souboru; nejdriv pripravit maly datovy pomocnik.
+*** HR modul bude samostatný, nová karta pro správu mezd, později smluv, vstupní dotazník a ukládání dalších dokumentů. 
+Ale uděláme to postupně, nejprve nahradíme HR 2024.xlsx
+
+7. js/ajax_core.js resi prilis mnoho ruznych AJAX toku
+- Overeno: cca 1199 radku a cca 58 funkci.
+- V jednom souboru je dashboard loader, cards loader, Restia loader, mereni vykonu, tracing a startup refresh.
+- Riziko: obecny AJAX helper se meni kvuli specialnim pripadum Restie nebo karet.
+- Vhodny smer: casem oddelit Restia loader a tracing do samostatnych skriptu.
+*** katastrofa ! Jasně stále opakuji že chci raději více jednoúčelových scriptů než jeden velký který řeší vše 
+
+8. js/ajax_karta_max.js obsahuje specialni Restia auto-resume logiku
+- Overeno: v souboru jsou specialni funkce pro Restia import form, auto resume, reload a stop.
+- Riziko: obecny loader max karty nese specialni logiku jedne oblasti.
+- Vhodny smer: Restia max import obsluhu presunout do jednoúčelového JS, az se do nej bude znovu sahat.
+*** ok, souhlas
+
+9. includes/priprav_kartu_mini.php, includes/priprav_kartu_max.php a includes/priprav_kartu_nano.php maji legacy HTML fallback
+- Overeno: v souborech je fallback na legacy HTML output a docasne mereni casu karet.
+- Riziko: karta muze fungovat dvema cestami a chyba v nove ceste se muze skryt starym vystupem.
+- Vhodny smer: nejdriv zjistit, ktere karty jeste legacy vystup opravdu pouzivaji, potom cistit po jedne karte.
+*** fallback je pro mě sprosté slovo ! Nechci žádné zakrývání chyb. Pokud nastane chyba, musí se projevit aby šla odstranit.
+Kdykoliv najdeš nějaké zakrývání chyb, druhou cestu nebo starý kod již nepoužívaný, oznámíš mi to.
+
+10. Docasne mereni casu karet je rozlezle ve vice souborech
+- Overeno ve vice mistech: lib/app.php, includes/dashboard.php, includes/priprav_kartu_*.php, db/db_connect.php.
+- Riziko: diagnostika zustane natrvalo jako soucast bezne logiky.
+- Vhodny smer: bud ji centralizovat do lib/mereni_vykonu.php, nebo vypnout a odstranit az po potvrzeni, ze uz neni potreba.
+*** Dignostiku chci. Aktuálně by měla být funkční možnost jí vypínat v K2. Ovšem to že je to rozlezlé po mnoha souborech, co s tím? 
+Jak to nějak inteligentně centralizovat?
+
+11. includes/dashboard.php kumuluje skladani dashboardu, pozice, locky i logovani
+- Overeno: cca 622 radku, obsahuje i zapis logu pres @file_put_contents a fallback razeni.
+- Riziko: dashboard bude tezke rozsirovat, protoze zobrazeni a stav uzivatelskych pozic jsou v jednom toku.
+- Vhodny smer: pri nejblizsi vetsi praci s dashboardem oddelit nacitani dat o kartach/pozicich od samotneho renderu.
+*** Souhlas
+
+12. select_card_ikon.php a select_card_color.php míchaji PHP render a vlozeny JS
+- Overeno: oba soubory maji stovky radku a obsahují inline script.
+- Riziko: tezsi kontrola nacitani JS a opakovane inicializace po AJAX vymenach.
+- Vhodny smer: az se bude sahat do vyberu ikon/barvy, presunout obsluhu do samostatneho JS.
+*** Souhlas
+
+13. K10 JS je rozdelene, ale porad silne provazane pres data-zr atributy
+- Overeno: js/karty_report_form.js a js/karty_report_person.js sdili mnoho data-zr atributu.
+- Riziko: zmena nazvu pole v PHP rozbije ulozeni nebo validaci v JS.
+- Vhodny smer: pred COL/HR napojenim sepsat jeden kratky seznam datovych atributu K10, aby se nepridavaly dalsi nahodne vazby.
+*** To úplně nechápu. Před zásahem to probereme.
+
+14. K10 rozvozy kurýru porad stoji na textovem jmenu
+- Overeno z predchozi kontroly: Restia "Rudolf Kalocai" vs user "Rudolf Kaločai".
+- Riziko: chyby v rozvozech, mzdach, COL i importech se budou vracet.
+- Vhodny smer: resit systemove pres aliasy externich jmen na id_user, ne dalsimi lokalnimi opravami v K10.
+*** Věř  nebo nevěř, ale alias mě napadl také. Nejprve se ale pokusím zavést pořádek v systému směn. 
+Problém bude s Restií, tam těžko změníme jméno kurýra, takže alias bude jediná možnost jak ošetřit historický bordel.
+
+15. COL v K10 zatim nema vlastni HR zdroj pravdy
+- Overeno v admin_testy/!new_hr.txt: chybi mzdova data v DB.
+- Riziko: pokud se COL doplni primo do reportu bez HR sazeb platnych v case, vznikne dalsi docasna logika.
+- Vhodny smer: nejdriv jednoduche HR sazby s platnosti od/do, potom teprve COL vypocet.
+*** COL zatím neřešíme, nejprve funkční HR
+
+16. Opakovane fallbacky na session cb_pobocka_id ukazuji nejasny zdroj vybrane pobocky
+- Overeno v lib/pobocky_vyber.php a vice kartach.
+- Riziko: ruzne karty mohou brat pobocku z ruznych zdroju.
+- Vhodny smer: pozdeji sjednotit pravidlo "odkud se bere aktivni pobocka" a fallback pouzit jen na jednom miste.
+*** zase termín fallback, začneme tím že odstraníme fallbacky, při této akci budeme i sjednocovat kde je zdroj pobočky.
+
+17. Mnoho chyb je potlaceno pres prazdne catch bloky nebo @file_put_contents
+- Overeno hlavne v JS loaderech, Restia importech, dashboardu a logovacich pomocnicich.
+- Riziko: skutecna chyba se neukaze a vypada to jako pomale nebo prazdne UI.
+- Vhodny smer: u dulezitych toku logovat chybu konzistentne jednim helperem; ne opravovat vse najednou.
+*** Opět - potlačování chyb je pro mě zásadní problém, chyby se nebudou potlačovat, tedy žádné záplaty a pokud možno, 
+žádné zbytečné pojistky.
+
+18. admin_testy obsahuje velke kopie cizich/testovacich zdroju
+- Overeno: admin_testy/smeny_testy/_kody_smeny a historicka Google data jsou rozsahle.
+- Riziko: audit a hledani v projektu se zanasi vecmi, ktere nejsou Comeback aplikacni kod.
+- Vhodny smer: pri beznych auditech explicitne vylucovat tyto podstromy, pokud se prave neresi Směny nebo import historie.
+*** admin_testy/ neřeš , pokud ten adresář přesuneme mimo comeback, dostaneš se k němu?
+
+19. db/db_pobocka.php vytvari placeholder pobocky s docasnymi hodnotami
+- Overeno v komentari souboru.
+- Riziko: docasna data v pobockach mohou pozdeji vypadat jako realna.
+- Vhodny smer: zjistit, kdo tuto funkci vola, a potom rozhodnout, jestli ma byt placeholder povolen jen pro import.
+*** placeholder? Vůbec netuším proč se vytváří v tomto případě, až na to přijde řada, zjistíš detaily.
+
+20. Karty maji obecne vice paralelnich obsluh podle velikosti mini/max/nano
+- Overeno v includes/priprav_kartu_*.php a JS karty_min_nano.js, karty_min_max.js, ajax_karta_max.js.
+- Riziko: stejna karta ma vice zpusobu zivota a chyby se lisi podle rezimu.
+- Vhodny smer: pri kazde dalsi uprave karty kontrolovat vsechny tri rezimy, ale neprovadet velky refaktor bez jasneho duvodu.
+*** Původní záměr byl časem utopen v mnoho změnách, vylepšeních a nových funkcích. Chtěl jsem jednotnou obsluhu pro každý režim karty. 
+Bohužel mnoho výjimek a rozsáhlost projektu způsobily že jsem to nestihl ohlídat :-(
+
+Priorita pro dalsi praci
+========================
+1. Nepridavat HR/COL logiku primo do karty K10, dokud neexistuje jednoduchy HR zdroj sazeb.
+2. Pred prvnim HR DB krokem navrhnout minimalni tabulky: mzda_typ, hr_kandidat/dotaznik, hr_smlouvy, hr_sazby.
+3. Alias jmen resit systemove, protoze ovlivni Restia, K10, mzdy i importy.
+4. Pri praci s Restii nepsat dalsi kopii importni logiky; hledat misto pro sdilenou jednoúčelovou cast.
+5. Velke uklidy delat pouze po malych bezpecnych krocich a vzdy po overeni skutecne pouzivane cesty.
+
+
+*** Toto bude pracovní list. Sem bude Codex zapisovat provedené úpravy při zachování maximální stručnosti. 
+*** Sem budu já přidávat své další komentáře pokud bude třeba.
+*** Systém je nyní bez viditelných chyb, výše uvedené problémy a jejich náprava NESMÍ v žádném případě systém poškodit, to je naprostá priorita.
+
+Provedene upravy
+================
+2026-05-21 - Bod 9: odstranena obecna legacy HTML fallback cesta v includes/priprav_kartu_mini.php a includes/priprav_kartu_max.php. Karta musi vytvorit card_min_html/card_max_html, jinak se ukaze chyba karty.
+2026-05-21 - Bod 10: pridano DB ukladani detailu mereni karet a dashboardu do user_akce_db_detail s vazbou na user_akce_db. TXT logy zatim ponechany pro porovnani.

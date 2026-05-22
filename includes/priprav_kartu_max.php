@@ -9,7 +9,6 @@ if (!function_exists('cb_priprav_kartu_max')) {
         $cbTmpMeasureStart = microtime(true);
         $card_max_html = '';
         $card_min_html = '';
-        $legacy_html = '';
         $requireError = '';
 
         $cardId = (int)($karta['id_karta'] ?? 0);
@@ -22,13 +21,13 @@ if (!function_exists('cb_priprav_kartu_max')) {
                 'File not found: ' . $soubor,
                 [
                     'Očekávaná cesta' => cb_dashboard_card_source_path($soubor),
-                    'Očekávaná data' => 'card_max_html nebo legacy HTML output',
+                    'Očekávaná data' => 'card_max_html',
                 ]
             );
 
             // DOCASNE MERENI CASU KARET
-            if (function_exists('cb_tmp_measure_card_time_log')) {
-                cb_tmp_measure_card_time_log($cardId, $soubor, 'max', 'priprava', $cbTmpMeasureStart);
+            if (function_exists('cb_tmp_measure_card_detail_log')) {
+                cb_tmp_measure_card_detail_log($cardId, $soubor, 'max', 'priprava', $cbTmpMeasureStart);
             }
 
             return $result;
@@ -41,11 +40,10 @@ if (!function_exists('cb_priprav_kartu_max')) {
             require $fullPath;
         } catch (Throwable $e) {
             $requireOk = false;
-            $legacy_html = '';
             $requireError = $e->getMessage();
         }
         if ($requireOk) {
-            $legacy_html = (string)ob_get_clean();
+            ob_end_clean();
         } else {
             ob_end_clean();
         }
@@ -54,17 +52,8 @@ if (!function_exists('cb_priprav_kartu_max')) {
         if (trim($card_max_html) !== '') {
             $result = (string)$card_max_html;
             // DOCASNE MERENI CASU KARET
-            if (function_exists('cb_tmp_measure_card_time_log')) {
-                cb_tmp_measure_card_time_log($cardId, $soubor, 'max', 'priprava', $cbTmpMeasureStart);
-            }
-            return $result;
-        }
-
-        if (trim($legacy_html) !== '') {
-            $result = (string)$legacy_html;
-            // DOCASNE MERENI CASU KARET
-            if (function_exists('cb_tmp_measure_card_time_log')) {
-                cb_tmp_measure_card_time_log($cardId, $soubor, 'max', 'priprava', $cbTmpMeasureStart);
+            if (function_exists('cb_tmp_measure_card_detail_log')) {
+                cb_tmp_measure_card_detail_log($cardId, $soubor, 'max', 'priprava', $cbTmpMeasureStart);
             }
             return $result;
         }
@@ -75,15 +64,15 @@ if (!function_exists('cb_priprav_kartu_max')) {
             [
                 'Soubor' => $soubor,
                 'Cesta' => $fullPath,
-                'Očekávaná data' => 'card_max_html nebo legacy HTML output',
-                'Chybějící data' => 'žádný HTML výstup z include',
+                'Očekávaná data' => 'card_max_html',
+                'Chybějící data' => 'card_max_html je prázdné',
                 'Include chyba' => isset($requireError) ? $requireError : '',
             ]
         );
 
         // DOCASNE MERENI CASU KARET
-        if (function_exists('cb_tmp_measure_card_time_log')) {
-            cb_tmp_measure_card_time_log($cardId, $soubor, 'max', 'priprava', $cbTmpMeasureStart);
+        if (function_exists('cb_tmp_measure_card_detail_log')) {
+            cb_tmp_measure_card_detail_log($cardId, $soubor, 'max', 'priprava', $cbTmpMeasureStart);
         }
 
         return $result;

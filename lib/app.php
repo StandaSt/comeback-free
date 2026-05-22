@@ -32,8 +32,6 @@ if (!function_exists('db')) {
 
         require_once __DIR__ . '/../db/db_connect.php';
         $conn = db_connect();
-        // DOCASNE MERENI CASU KARET
-        $GLOBALS['cb_tmp_db_conn'] = $conn;
 
         return $conn;
     }

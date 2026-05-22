@@ -36,6 +36,18 @@ $cbRunGoogleData = (
 $cbOpenGoogleData = (
     isset($_POST['open_google_data']) && (string)$_POST['open_google_data'] === '1'
 );
+$cbRunHrMzdy = (
+    isset($_POST['run_hr_mzdy']) && (string)$_POST['run_hr_mzdy'] === '1'
+);
+$cbOpenHrMzdy = (
+    isset($_POST['open_hr_mzdy']) && (string)$_POST['open_hr_mzdy'] === '1'
+);
+$cbRunHrSazby = (
+    isset($_POST['run_hr_sazby']) && (string)$_POST['run_hr_sazby'] === '1'
+);
+$cbOpenHrSazby = (
+    isset($_POST['open_hr_sazby']) && (string)$_POST['open_hr_sazby'] === '1'
+);
 $cbRunRestia = (
     isset($_POST['run_restia_obj']) && (string)$_POST['run_restia_obj'] === '1'
 );
@@ -71,6 +83,10 @@ if ($cbBackAdminInit) {
     $cbOpenSmenyUser = false;
     $cbRunGoogleData = false;
     $cbOpenGoogleData = false;
+    $cbRunHrMzdy = false;
+    $cbOpenHrMzdy = false;
+    $cbRunHrSazby = false;
+    $cbOpenHrSazby = false;
     $cbRunRestia = false;
     $cbRunRestiaMenu = false;
     $cbOpenRestiaMenu = false;
@@ -245,6 +261,12 @@ $cbScriptTables = [
         'reporty_osoby',
         'reporty_pokladna',
         'reporty_restia',
+    ],
+    'plnime_hr_mzdy.php' => [
+        'hr_mzdy_mesic',
+    ],
+    'vypocet_hr_sazby.php' => [
+        'hr_sazby',
     ],
     'plnime_restia_objednavky.php' => [
         'api_restia',
@@ -467,6 +489,30 @@ ob_start();
         </form>
       </td>
     </tr>
+    <tr>
+      <td>plnime_hr_mzdy.php</td>
+      <td><?= cb_admin_init_status_html('plnime_hr_mzdy.php', $cbScriptStats) ?></td>
+      <td>HR mzdy</td>
+      <td class="txt_c"><span class="txt_zelena text_tucny">OK</span></td>
+      <td>
+        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
+          <input type="hidden" name="open_hr_mzdy" value="1">
+          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Připravuji import HR mezd">Připrav import</button>
+        </form>
+      </td>
+    </tr>
+    <tr>
+      <td>vypocet_hr_sazby.php</td>
+      <td><?= cb_admin_init_status_html('vypocet_hr_sazby.php', $cbScriptStats) ?></td>
+      <td>HR sazby</td>
+      <td class="txt_c"><span class="txt_zelena text_tucny">OK</span></td>
+      <td>
+        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
+          <input type="hidden" name="open_hr_sazby" value="1">
+          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Připravuji výpočet HR sazeb">Připrav výpočet</button>
+        </form>
+      </td>
+    </tr>
 </tbody>
 </table>
 <div style="margin-top:20px; margin-left:18px; margin-right:10px; margin-bottom:90px;">
@@ -566,6 +612,26 @@ if ($cbRunGoogleData || $cbOpenGoogleData) {
     $card_max_html = cb_admin_init_capture_max_include(
         __DIR__ . '/../inicializace/google_data.php',
         'inicializace/google_data.php',
+        'admin_inicializace',
+        $cbTraceK3Branch
+    );
+}
+
+if ($cbRunHrMzdy || $cbOpenHrMzdy) {
+    $cbTraceK3Branch = $cbRunHrMzdy ? 'run_hr_mzdy' : 'open_hr_mzdy';
+    $card_max_html = cb_admin_init_capture_max_include(
+        __DIR__ . '/../inicializace/plnime_hr_mzdy.php',
+        'inicializace/plnime_hr_mzdy.php',
+        'admin_inicializace',
+        $cbTraceK3Branch
+    );
+}
+
+if ($cbRunHrSazby || $cbOpenHrSazby) {
+    $cbTraceK3Branch = $cbRunHrSazby ? 'run_hr_sazby' : 'open_hr_sazby';
+    $card_max_html = cb_admin_init_capture_max_include(
+        __DIR__ . '/../inicializace/vypocet_hr_sazby.php',
+        'inicializace/vypocet_hr_sazby.php',
         'admin_inicializace',
         $cbTraceK3Branch
     );

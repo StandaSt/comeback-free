@@ -1,0 +1,79 @@
+Problémy párování lidí v HR a historických datech
+22.05.2026
+
+Stručně pro schůzku:
+
+1) Jména nejsou jednotná napříč zdroji
+- stejní lidé jsou vedeni různě v HR, reportech, Směnách a Restii,
+- časté jsou prohozené jméno/příjmení, diakritika, překlepy, zkratky a aliasy,
+- automatické párování podle jména proto není bezpečné.
+
+Příklady:
+- Čonka Ludovít / Čonka Ludovíd,
+- Hofmanová Jana / Jana Hofmanová,
+- Chyský David / Chyský žl David,
+- Přibyl Jan / Jan Přibyl / Honza Přibyl,
+- Paziak Viktoriia / Viktoriia Paziak / Nina Paziak,
+- Roth Stanislav st. / Roth Stanislav ml.
+
+2) Některá jména mají více možných uživatelů
+- u části lidí existuje více kandidátů v tabulce user,
+- bez ruční kontroly hrozí přiřazení mzdy špatnému člověku.
+
+Příklady:
+- Pavel Bušek: správně id_user=604, druhý Pavel Bušek nikdy nepoužil Směny,
+- Putna Jaroslav: část záznamů bez ID, část s ID,
+- Veselý: reporty a HR sazby ukazují na rozdílné osoby,
+- Roth: starší/mladší varianta.
+
+3) Část mezd byla bez vazby na id_user
+- import HR našel lidi, kteří mají mzdu a hodiny, ale nebyli jednoznačně spárovaní,
+- některé šlo dohledat podle starého souboru bordel_smeny.txt,
+- některé podle reportů a loginů,
+- zbytek musí projít ručně.
+
+Ručně ověřené příklady:
+- Chyský David = id_user 147,
+- Hofmanová Jana = id_user 37,
+- Čonka Ludovít = id_user 611,
+- Bušek Pavel = id_user 604.
+
+4) HR 2024.xlsx není čistý datový zdroj
+- obsahuje hotové výpočty, vzorce a ruční zásahy,
+- nestačí převzít jen sazbu/fix,
+- pro přesnou mzdu jsou potřeba i měsíční parametry: ISK, bonusy a další ruční položky.
+
+Příklad:
+- Kinkorová 4/26: fix 51 000 sedí,
+- rozdíl vzniká kvůli ISK 0,6, bonus_1 9 500 a bonus_2 700,
+- bez těchto parametrů nový výpočet nevyjde stejně jako HR 2024.xlsx.
+
+5) Problém id_user vs importované jméno
+- některé sazby lze uložit pod id_user,
+- některé zatím jen pod importované jméno,
+- dokud se jména nedopárují, musí systém umět obě varianty.
+
+Typické případy:
+- Přibyl: reporty mají id_user, HR sazba je pod importovaným jménem,
+- Paziak: nejasná vazba mezi jménem v HR a osobou v reportech,
+- Putna: část historie bez ID, část s ID.
+
+6) Staré datové zdroje jsou duplicitní
+- existují smeny_report i reporty_osoby,
+- oba zdroje obsahují podobná historická data,
+- pro nové HR má dávat smysl hlavně reporty/reporty_osoby.
+
+7) Textové hodnoty se musí nahradit číselníky
+- slot nemá být text instor/kuryr/vyroba, ale id z cis_slot,
+- typ mzdy nemá být text Fix/Hodinová, ale id z cis_mzda_typ,
+- jinak se data špatně filtrují, párují a udržují.
+
+8) Importy nesmí potichu pokračovat po chybě
+- při chybě zápisu do DB musí import skončit viditelnou chybou,
+- nesmí se tvářit jako úspěšný, pokud část dat nevznikla.
+
+9) Co z toho plyne
+- historická data zachráníme, ale část párování je ruční práce,
+- hlavní problém není výpočet mzdy, ale nejednotná identita lidí,
+- nový HR modul musí stát na jednom jednoznačném ID člověka,
+- mzdy, reporty i směny se musí vázat na ID, ne na ručně psané jméno.

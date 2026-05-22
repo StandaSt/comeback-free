@@ -2708,6 +2708,16 @@ align-items:center;
   z-index:2;                                /* hlavicka bude nad radky tabulky */
 }
 
+.card-max-table thead .filter-row th{
+  top:0;
+  z-index:5;
+}
+
+.card-max-table thead .filter-row + tr th{
+  top:34px;
+  z-index:4;
+}
+
 /* Zebra efekt – kazdy sudy radek ma jemne sede pozadi. */
 .card-max-table tbody tr:nth-child(even) td{
   background:var(--clr_seda_1);
@@ -2716,6 +2726,23 @@ align-items:center;
 /* Hover efekt – radek pod mysi se podbarvi modre. */
 .card-max-table tbody tr:hover td{
   background:var(--clr_modra_7);
+}
+
+.card-max-table tbody tr.k17-row-unpaired td{
+  background:#fde2e2;
+}
+
+.card-max-table tbody tr.k17-row-unpaired:hover td{
+  background:#f8caca;
+}
+
+.card-max-table tfoot td{
+  background:var(--clr_seda_1);
+  color:var(--clr_seda_4);
+  font-weight:700;
+  position:sticky;
+  bottom:0;
+  z-index:3;
 }
 
 

@@ -19,17 +19,6 @@ if (isset($_GET['action']) && (string)$_GET['action'] === 'logout') {
         }
     }
 
-    if ($idUser === 1) {
-        $logDir = __DIR__ . '/../log';
-        $logFiles = [
-            $logDir . '/merime_casy_AI.txt',
-            $logDir . '/merime_casy_user.txt',
-        ];
-        foreach ($logFiles as $logFile) {
-            @file_put_contents($logFile, '', LOCK_EX);
-        }
-    }
-
     if (function_exists('cb_session_forget_auth')) {
         cb_session_forget_auth();
     }

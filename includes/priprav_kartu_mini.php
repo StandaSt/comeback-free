@@ -41,7 +41,6 @@ function cb_priprav_kartu_mini(
 
     $card_min_html = '';
     $card_max_html = '';
-    $legacy_html = '';
     $renderErrorHtml = '';
     $startExpanded = false;
 
@@ -55,11 +54,10 @@ function cb_priprav_kartu_mini(
             require $fullPath;
         } catch (Throwable $e) {
             $requireOk = false;
-            $legacy_html = '';
             $requireError = $e->getMessage();
         }
         if ($requireOk) {
-            $legacy_html = (string)ob_get_clean();
+            ob_end_clean();
         } else {
             ob_end_clean();
         }
@@ -70,26 +68,22 @@ function cb_priprav_kartu_mini(
             'File not found: ' . $soubor,
             [
                 'Očekávaná cesta' => cb_dashboard_card_source_path($soubor),
-                'Očekávaná data' => 'card_min_html nebo legacy HTML output',
+                'Očekávaná data' => 'card_min_html',
             ]
         );
         $card_max_html = $card_min_html;
         $renderErrorHtml = $card_min_html;
     }
 
-    if ($card_min_html === '' && $card_max_html === '' && trim($legacy_html) !== '') {
-        $card_min_html = $legacy_html;
-    }
-
-    if ($card_min_html === '' && $card_max_html === '' && trim($legacy_html) === '') {
+    if ($card_min_html === '' && $card_max_html === '') {
         $card_min_html = cb_dashboard_render_card_error(
             'Chyba karty',
             'Mini obsah se nepodařilo načíst.',
             [
                 'Soubor' => $soubor,
                 'Cesta' => ($fullPath !== null) ? $fullPath : cb_dashboard_card_source_path($soubor),
-                'Očekávaná data' => 'card_min_html nebo legacy HTML output',
-                'Chybějící data' => 'žádný HTML výstup z include',
+                'Očekávaná data' => 'card_min_html',
+                'Chybějící data' => 'card_min_html je prázdné',
                 'Include chyba' => isset($requireError) ? $requireError : '',
             ]
         );
@@ -123,8 +117,8 @@ function cb_priprav_kartu_mini(
     ];
 
     // DOCASNE MERENI CASU KARET
-    if (function_exists('cb_tmp_measure_card_time_log')) {
-        cb_tmp_measure_card_time_log($cardId, $soubor, 'mini', 'priprava', $cbTmpMeasureStart);
+    if (function_exists('cb_tmp_measure_card_detail_log')) {
+        cb_tmp_measure_card_detail_log($cardId, $soubor, 'mini', 'priprava', $cbTmpMeasureStart);
     }
 
     return $result;

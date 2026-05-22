@@ -36,6 +36,7 @@ const GOOGLE_BRANCH_MAP = [
     'Prosek' => 4,
     'Libuš' => 5,
     'Bolevec' => 6,
+    'Výroba' => 0,
 ];
 
 if (isset($_POST['run_google_data']) && (string)$_POST['run_google_data'] === '1') {
@@ -208,7 +209,9 @@ function main(): void
                 if ($rows === []) {
                     fail('Nepodařilo se načíst řádky listu ' . $sheetName . ' v sešitu: ' . $workbookName . '. Import nesmí potichu přeskočit část historie.');
                 }
-                $reports = createReportsFromRows($rows, $idPob, $userMap);
+                $reports = $idPob === 0
+                    ? createProductionReportsFromRows($rows, $idPob, $userMap)
+                    : createReportsFromRows($rows, $idPob, $userMap);
                 $ulozenoMesic = 0;
 
                 foreach ($reports as $report) {
@@ -391,6 +394,81 @@ function createReportsFromRows(array $rows, int $idPob, array $userMap): array
     unset($report);
 
     return array_values($reports);
+}
+
+function createProductionReportsFromRows(array $rows, int $idPob, array $userMap): array
+{
+    $reports = [];
+
+    foreach ($rows as $rowNo => $row) {
+        if ($rowNo < 2) {
+            continue;
+        }
+
+        $datum = normalizeDate((string)($row['A'] ?? ''));
+        if ($datum === null) {
+            continue;
+        }
+
+        $person = createProductionPersonRecord($row, $userMap, $datum, $idPob);
+        if ($person === null) {
+            continue;
+        }
+
+        if (!isset($reports[$datum])) {
+            $reports[$datum] = emptyReport($datum, $idPob);
+        }
+        $reports[$datum]['persons'][] = $person;
+    }
+
+    ksort($reports);
+    return array_values($reports);
+}
+
+function createProductionPersonRecord(array $row, array $userMap, string $datum, int $idPob): ?array
+{
+    $fullName = (string)($row['C'] ?? '');
+    $start = normalizeTime((string)($row['D'] ?? ''));
+    $end = normalizeTime((string)($row['E'] ?? ''));
+    $pause = normalizeHoursDecimal($row['F'] ?? '');
+    $worked = normalizeHoursDecimal($row['G'] ?? '');
+
+    if ($fullName === '' || ($start === null && $end === null && $worked === null)) {
+        return null;
+    }
+
+    if ($worked === null) {
+        $worked = computeWorkedHours($start, $end, $pause);
+    }
+    if ($pause === null) {
+        $pause = '0.00';
+    }
+    if ($worked === null) {
+        $worked = '0.00';
+    }
+
+    $resolved = resolveUserName($fullName, $userMap, $idPob);
+    logMissingReportUser($datum, $idPob, 'vyroba', $resolved);
+    logReportUserMatch($datum, $idPob, 'vyroba', $resolved);
+
+    return [
+        'id_user' => $resolved['id_user'],
+        'jmeno' => $resolved['jmeno'],
+        'prijmeni' => $resolved['prijmeni'],
+        'full_name' => $resolved['full_name'],
+        'match_code' => $resolved['match_code'] ?? '',
+        'user_full_name' => $resolved['user_full_name'] ?? '',
+        'slot' => 'vyroba',
+        'smena_od' => $start,
+        'smena_do' => $end,
+        'pauza' => $pause,
+        'odpracovano' => $worked,
+        'rozvozu_restia' => 0,
+        'rozvozu_manual' => 0,
+        'rozvozu_celkem' => 0,
+        'vlastni_vuz' => 0,
+        'vyplatit_phm' => '0.00',
+    ];
 }
 
 function emptyReport(string $datum, int $idPob): array
@@ -939,7 +1017,7 @@ function insertReportPerson(mysqli $db, int $idReportu, array $p): void
     $idUser = $p['id_user'];
     $jmeno = $p['jmeno'];
     $prijmeni = $p['prijmeni'];
-    $slot = (string)$p['slot'];
+    $slot = reportPersonSlotId((string)$p['slot']);
     $smenaOd = $p['smena_od'];
     $smenaDo = $p['smena_do'];
     $pauza = (string)$p['pauza'];
@@ -950,7 +1028,7 @@ function insertReportPerson(mysqli $db, int $idReportu, array $p): void
     $vlastniVuz = (int)$p['vlastni_vuz'];
     $vyplatitPhm = (string)$p['vyplatit_phm'];
     $stmt->bind_param(
-        'iisssssddiiiid',
+        'iississddiiiid',
         $idReportu,
         $idUser,
         $jmeno,
@@ -968,6 +1046,16 @@ function insertReportPerson(mysqli $db, int $idReportu, array $p): void
     );
     $stmt->execute();
     $stmt->close();
+}
+
+function reportPersonSlotId(string $slot): int
+{
+    return match ($slot) {
+        'instor' => 1,
+        'kuryr' => 2,
+        'vyroba' => 3,
+        default => 0,
+    };
 }
 
 function getUserMap(mysqli $db): array

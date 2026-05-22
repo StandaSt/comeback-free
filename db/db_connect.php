@@ -56,10 +56,6 @@ if (!function_exists('db_connect')) {
         if (function_exists('cb_db_akce_log_init')) {
             cb_db_akce_log_init($conn);
         }
-        // DOCASNE MERENI CASU KARET
-        if (function_exists('cb_tmp_measure_db_init')) {
-            cb_tmp_measure_db_init($conn);
-        }
 
         return $conn;
     }

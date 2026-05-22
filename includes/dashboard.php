@@ -74,77 +74,37 @@ if (!function_exists('cb_dashboard_render_card_error')) {
     }
 }
 
-// DOCASNE MERENI CASU KARET
-if (!function_exists('cb_tmp_measure_card_time_log')) {
-    function cb_tmp_measure_card_time_log(int $cardId, string $cardSource, string $mode, string $usek, float $startTs): void
+// Mereni karet do DB detailu
+if (!function_exists('cb_tmp_measure_card_detail_log')) {
+    function cb_tmp_measure_card_detail_log(int $cardId, string $cardSource, string $mode, string $usek, float $startTs): void
     {
-        if (!function_exists('cb_tmp_time_count_enabled') || !cb_tmp_time_count_enabled()) {
+        if (!function_exists('cb_tmp_log1_enabled') || !cb_tmp_log1_enabled()) {
             return;
         }
 
-        static $cbCardTimeSummaryRegistered = false;
-        if (!isset($GLOBALS['cb_tmp_card_time_sum_priprava'])) {
-            $GLOBALS['cb_tmp_card_time_sum_priprava'] = 0.0;
-        }
-        if (!isset($GLOBALS['cb_tmp_card_time_sum_zobrazeni'])) {
-            $GLOBALS['cb_tmp_card_time_sum_zobrazeni'] = 0.0;
-        }
-        if ($cbCardTimeSummaryRegistered === false) {
-            $cbCardTimeSummaryRegistered = true;
-            register_shutdown_function(static function (): void {
-                if (!function_exists('cb_tmp_time_count_enabled') || !cb_tmp_time_count_enabled()) {
-                    return;
-                }
-
-                $sumPriprava = (float)($GLOBALS['cb_tmp_card_time_sum_priprava'] ?? 0.0);
-                $sumZobrazeni = (float)($GLOBALS['cb_tmp_card_time_sum_zobrazeni'] ?? 0.0);
-
-                $summary = sprintf(
-                    "---------- celkem priprava: %s ms ---------------- celkem zobrazeni: %s ms -----------------\n",
-                    number_format($sumPriprava, 3, '.', ''),
-                    number_format($sumZobrazeni, 3, '.', '')
-                );
-                cb_tmp_measure_log_write('card_time.txt', $summary);
-            });
-        }
-
         $cardSource = trim($cardSource);
-        if ($cardId > 0 || $cardSource !== '') {
-            cb_tmp_measure_card_register($cardId, $cardSource, $mode);
-        }
-
         $filters = function_exists('cb_tmp_measure_filters')
             ? cb_tmp_measure_filters()
             : ['od' => '', 'do' => '', 'pobocky' => '', 'pobocky_mode' => ''];
 
-        $pobockyMode = trim((string)$filters['pobocky_mode']);
-        if ($pobockyMode === '') {
-            $pobockyMode = '-';
-        }
-        $pobockyText = 'pobocky ' . $pobockyMode . '=' . (string)$filters['pobocky'];
-
         $elapsedMs = (microtime(true) - $startTs) * 1000;
-        if ($usek === 'priprava') {
-            $GLOBALS['cb_tmp_card_time_sum_priprava'] = (float)($GLOBALS['cb_tmp_card_time_sum_priprava'] ?? 0.0) + $elapsedMs;
-        } elseif ($usek === 'zobrazeni') {
-            $GLOBALS['cb_tmp_card_time_sum_zobrazeni'] = (float)($GLOBALS['cb_tmp_card_time_sum_zobrazeni'] ?? 0.0) + $elapsedMs;
+        if (function_exists('cb_tmp_measure_detail_add')) {
+            cb_tmp_measure_detail_add([
+                'typ' => 'card',
+                'nazev' => $cardSource !== '' ? $cardSource . ':' . $usek : $usek,
+                'id_karta' => $cardId,
+                'soubor' => $cardSource,
+                'mode' => $mode,
+                'usek' => $usek,
+                'ms' => round($elapsedMs, 3),
+                'detail' => [
+                    'obdobi_od' => (string)$filters['od'],
+                    'obdobi_do' => (string)$filters['do'],
+                    'pobocky' => (string)$filters['pobocky'],
+                    'pobocky_mode' => (string)$filters['pobocky_mode'],
+                ],
+            ]);
         }
-
-        $line = sprintf(
-            "%s | ms=%s | karta=%d - %s | mode=%s | usek=%s | obdobi_od=%s | obdobi_do=%s | %s%s",
-            date('Y-m-d H:i:s'),
-            number_format($elapsedMs, 3, '.', ''),
-            $cardId,
-            $cardSource !== '' ? $cardSource : '-',
-            $mode !== '' ? $mode : '-',
-            $usek !== '' ? $usek : '-',
-            (string)$filters['od'],
-            (string)$filters['do'],
-            $pobockyText,
-            PHP_EOL
-        );
-
-        cb_tmp_measure_log_write('card_time.txt', $line);
     }
 }
 
@@ -180,32 +140,9 @@ $cbDashTimingAllowed = (
 $GLOBALS['cbDashTimingAllowed'] = $cbDashTimingAllowed;
 
 if (!function_exists('cb_dashboard_timing_log')) {
-    function cb_dashboard_measure_filter_text(): string
-    {
-        $od = trim((string)($_SESSION['cb_obdobi_od'] ?? ''));
-        $do = trim((string)($_SESSION['cb_obdobi_do'] ?? ''));
-        $pob = [];
-        if (function_exists('get_selected_pobocky')) {
-            $pob = get_selected_pobocky();
-        } elseif (isset($_SESSION['selected_pobocky']) && is_array($_SESSION['selected_pobocky'])) {
-            $pob = $_SESSION['selected_pobocky'];
-        } elseif (isset($_SESSION['cb_pobocka_id'])) {
-            $pob = [(int)$_SESSION['cb_pobocka_id']];
-        }
-        $pob = array_values(array_filter(array_map('intval', $pob), static fn (int $v): bool => $v > 0));
-        $mode = trim((string)($_SESSION['selected_pobocky_mode'] ?? ''));
-
-        return 'filter_od=' . $od . ' | filter_do=' . $do . ' | filter_pob=' . implode(',', $pob) . ' | filter_mode=' . $mode;
-    }
-
     function cb_dashboard_timing_log(string $label, float $startTs, float &$lastTs): void
     {
         if (empty($GLOBALS['cbDashTimingAllowed'])) {
-            return;
-        }
-
-        $idUser = (int)(($_SESSION['cb_user']['id_user'] ?? 0));
-        if ($idUser !== 1) {
             return;
         }
 
@@ -218,42 +155,28 @@ if (!function_exists('cb_dashboard_timing_log')) {
         $totalMs = (int)round(($now - $startTs) * 1000);
         $lastTs = $now;
 
-        $dir = __DIR__ . '/../log';
-        $fileAi = $dir . '/merime_casy_AI.txt';
-        $fileUser = $dir . '/merime_casy_user.txt';
-        @mkdir($dir, 0775, true);
+        if (function_exists('cb_tmp_measure_detail_add')) {
+            $filters = function_exists('cb_tmp_measure_filters')
+                ? cb_tmp_measure_filters()
+                : ['od' => '', 'do' => '', 'pobocky' => '', 'pobocky_mode' => ''];
 
-        $lineUser = sprintf(
-            "%s | dashboard | %s / total_ms=%d\n",
-            date('Y-m-d H:i:s'),
-            $label,
-            $totalMs
-        );
-
-        $lineAi = sprintf(
-            "%s | dashboard | %s / total_ms=%d%s  step_ms=%d%s  uri=%s%s  partial=%s%s  card=%s%s  card_id=%s%s%s",
-            date('Y-m-d H:i:s'),
-            $label,
-            $totalMs,
-            PHP_EOL,
-            $stepMs,
-            PHP_EOL,
-            (string)($_SERVER['REQUEST_URI'] ?? ''),
-            PHP_EOL,
-            isset($_SERVER['HTTP_X_COMEBACK_PARTIAL']) ? '1' : '0',
-            PHP_EOL,
-            isset($_SERVER['HTTP_X_COMEBACK_CARD']) ? '1' : '0',
-            PHP_EOL,
-            (string)($GLOBALS['cb_dashboard_single_card_id'] ?? 0),
-            PHP_EOL,
-            PHP_EOL,
-            cb_dashboard_measure_filter_text(),
-            PHP_EOL,
-            PHP_EOL
-        );
-
-        @file_put_contents($fileUser, $lineUser, FILE_APPEND | LOCK_EX);
-        @file_put_contents($fileAi, $lineAi, FILE_APPEND | LOCK_EX);
+            cb_tmp_measure_detail_add([
+                'typ' => 'dashboard',
+                'nazev' => $label,
+                'id_karta' => (int)($GLOBALS['cb_dashboard_single_card_id'] ?? 0),
+                'total_ms' => $totalMs,
+                'step_ms' => $stepMs,
+                'detail' => [
+                    'request_uri' => (string)($_SERVER['REQUEST_URI'] ?? ''),
+                    'partial' => isset($_SERVER['HTTP_X_COMEBACK_PARTIAL']) ? 1 : 0,
+                    'card_request' => isset($_SERVER['HTTP_X_COMEBACK_CARD']) ? 1 : 0,
+                    'obdobi_od' => (string)$filters['od'],
+                    'obdobi_do' => (string)$filters['do'],
+                    'pobocky' => (string)$filters['pobocky'],
+                    'pobocky_mode' => (string)$filters['pobocky_mode'],
+                ],
+            ]);
+        }
     }
 }
 

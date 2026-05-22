@@ -44,8 +44,8 @@ function cb_priprav_kartu_nano(
         ];
 
         // DOCASNE MERENI CASU KARET
-        if (function_exists('cb_tmp_measure_card_time_log')) {
-            cb_tmp_measure_card_time_log($cardId, (string)($karta['soubor'] ?? ''), 'nano', 'priprava', $cbTmpMeasureStart);
+        if (function_exists('cb_tmp_measure_card_detail_log')) {
+            cb_tmp_measure_card_detail_log($cardId, (string)($karta['soubor'] ?? ''), 'nano', 'priprava', $cbTmpMeasureStart);
         }
 
         return $result;
@@ -70,8 +70,8 @@ function cb_priprav_kartu_nano(
     ];
 
     // DOCASNE MERENI CASU KARET
-    if (function_exists('cb_tmp_measure_card_time_log')) {
-        cb_tmp_measure_card_time_log($cardId, (string)($karta['soubor'] ?? ''), 'nano', 'priprava', $cbTmpMeasureStart);
+    if (function_exists('cb_tmp_measure_card_detail_log')) {
+        cb_tmp_measure_card_detail_log($cardId, (string)($karta['soubor'] ?? ''), 'nano', 'priprava', $cbTmpMeasureStart);
     }
 
     return $result;

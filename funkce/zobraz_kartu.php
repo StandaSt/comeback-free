@@ -190,8 +190,8 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
     $result = (string)ob_get_clean();
 
     // DOCASNE MERENI CASU KARET
-    if (function_exists('cb_tmp_measure_card_time_log')) {
-        cb_tmp_measure_card_time_log($cardId, $soubor, $mode, 'zobrazeni', $cbTmpMeasureStart);
+    if (function_exists('cb_tmp_measure_card_detail_log')) {
+        cb_tmp_measure_card_detail_log($cardId, $soubor, $mode, 'zobrazeni', $cbTmpMeasureStart);
     }
 
     return $result;

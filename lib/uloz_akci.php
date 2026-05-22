@@ -78,7 +78,7 @@ if (!function_exists('cb_user_akce_zapis')) {
             }
         }
 
-        return db_user_akce_insert([
+        $saved = db_user_akce_insert([
             'id_user' => $idUser,
             'id_login' => (int)($_SESSION['cb_id_login'] ?? 0),
             'id_karta' => ($idKarta > 0) ? $idKarta : null,
@@ -87,5 +87,23 @@ if (!function_exists('cb_user_akce_zapis')) {
             'vysledek' => $vysledek,
             'err_msg' => $errMsg,
         ]);
+
+        if ($saved && function_exists('cb_tmp_measure_detail_add')) {
+            cb_tmp_measure_detail_add([
+                'typ' => 'ajax',
+                'nazev' => 'user_akce_' . $idAkce,
+                'id_karta' => ($idKarta > 0) ? $idKarta : null,
+                'detail' => [
+                    'id_akce' => $idAkce,
+                    'id_user' => $idUser,
+                    'id_login' => (int)($_SESSION['cb_id_login'] ?? 0),
+                    'vysledek' => $vysledek,
+                    'err_msg' => $errMsg,
+                    'payload_detail' => $detail,
+                ],
+            ]);
+        }
+
+        return $saved;
     }
 }

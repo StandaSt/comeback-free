@@ -6,7 +6,6 @@ declare(strict_types=1);
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
-$time_count = 1;
 require_once __DIR__ . '/lib/app.php';
 require_once __DIR__ . '/lib/system.php';
 require_once __DIR__ . '/config/secrets.php';
