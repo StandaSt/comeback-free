@@ -33,7 +33,7 @@ if ($cb2faToken !== '') {
 
         <div class="modal-center">
           <div class="modal-box">
-            <p class="modal-copy" style="color:#c00;text-align:center;">Zkontrolujte své registrované zařízení.</p>
+            <p class="modal-copy" style="color:#c00;text-align:center;">Zkontrolujte své registrované zařízení - odemkněte jej.</p>
             <div class="modal-status modal-status-center" id="cb2faStatus">Na potvrzení přihlášení zbývá: --:--</div>
           </div>
 

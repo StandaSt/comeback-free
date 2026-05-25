@@ -26,6 +26,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 require_once __DIR__ . '/../lib/app.php';
 require_once __DIR__ . '/../lib/system.php';
 require_once __DIR__ . '/../config/secrets.php';
+require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
 header('X-Robots-Tag: noindex, nofollow');
 
 $vapidPublic = defined('CB_VAPID_PUBLIC') ? (string)CB_VAPID_PUBLIC : '';
@@ -216,6 +217,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
 
         $conn->commit();
 
+        try {
+            cb_push_send_first_entry_admin(cb_pair_user_full_name($idUser), 1);
+        } catch (Throwable $eNotify) {
+            // Notifikace adminovi nesmí zrušit úspěšnou registraci zařízení.
+        }
+
         echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
         exit;
 
@@ -272,6 +279,11 @@ $pairUserName = $tokenOk ? cb_pair_user_full_name((int)($pair['id_user'] ?? 0)) 
       font-size: 14px;
       color: rgba(15, 23, 42, 0.78);
     }
+
+    .device-register-success .success-remember{
+      color: #c00;
+      font-weight: 800;
+    }
   </style>
 </head>
 <body class="modal-page">
@@ -298,9 +310,9 @@ $pairUserName = $tokenOk ? cb_pair_user_full_name((int)($pair['id_user'] ?? 0)) 
           a zaregistrovat zařízení.
         </div>
 
-        <button type="button" class="modal-btn" id="btnPerm">Povolit notifikace</button>
-        <div class="modal-spacer" id="btnSpacer"></div>
-        <button type="button" class="modal-btn primary" id="btnPair" disabled>Registrovat zařízení</button>
+        <button type="button" class="modal-btn primary" id="btnPerm">Povolit notifikace</button>
+        <div class="modal-spacer" id="btnSpacer" hidden></div>
+        <button type="button" class="modal-btn primary" id="btnPair" hidden disabled>Registrovat zařízení</button>
 
         <div class="modal-status modal-status-center" id="countdownTxt">Na zaregistrování zařízení zbývá: 05:00</div>
         <div class="out" id="out">Stav: čekám…</div>
@@ -310,7 +322,7 @@ $pairUserName = $tokenOk ? cb_pair_user_full_name((int)($pair['id_user'] ?? 0)) 
           <strong><?= h($pairUserName !== '' ? $pairUserName : 'uživatel') ?></strong>
           <div>byla úspěšná.</div>
           <div class="success-note">
-            Pamatujte: Právě zaregistrované zařízení budete potřebovat při každém vstupu do Comeback systému z důvodu dvoufázového ověření 2FA.
+            <span class="success-remember">Pamatujte:</span> Právě zaregistrované zařízení budete potřebovat při každém vstupu do Comeback systému z důvodu dvoufázového ověření 2FA.
           </div>
         </div>
       <?php } ?>
@@ -358,6 +370,26 @@ $pairUserName = $tokenOk ? cb_pair_user_full_name((int)($pair['id_user'] ?? 0)) 
     }
   }
 
+  function showAllowedText(){
+    if (registerIntro) {
+      registerIntro.innerHTML = 'Notifikace jsou povoleny,<br>nyní je třeba zaregistrovat zařízení.';
+    }
+  }
+
+  function showPairButton(){
+    showAllowedText();
+    if (btnPerm) {
+      btnPerm.hidden = true;
+    }
+    if (btnSpacer) {
+      btnSpacer.hidden = true;
+    }
+    if (btnPair) {
+      btnPair.hidden = false;
+      btnPair.disabled = false;
+    }
+  }
+
   function showDone(){
     if (countdownTimer) {
       clearInterval(countdownTimer);
@@ -384,7 +416,12 @@ $pairUserName = $tokenOk ? cb_pair_user_full_name((int)($pair['id_user'] ?? 0)) 
 
       var note = document.createElement('div');
       note.className = 'success-note';
-      note.textContent = 'Pamatujte: Právě zaregistrované zařízení budete potřebovat při každém vstupu do Comeback systému z důvodu dvoufázového ověření 2FA.';
+      var remember = document.createElement('span');
+      remember.className = 'success-remember';
+      remember.textContent = 'Pamatujte:';
+
+      note.appendChild(remember);
+      note.appendChild(document.createTextNode(' Právě zaregistrované zařízení budete potřebovat při každém vstupu do Comeback systému z důvodu dvoufázového ověření 2FA.'));
 
       done.appendChild(lineUser);
       done.appendChild(userName);
@@ -450,7 +487,7 @@ $pairUserName = $tokenOk ? cb_pair_user_full_name((int)($pair['id_user'] ?? 0)) 
     Notification.requestPermission().then(function(permission){
       if (permission === 'granted') {
         log('Notifikace byly povoleny.');
-        btnPair.disabled = false;
+        showPairButton();
       } else {
         log('Notifikace nebyly povoleny.');
       }
@@ -458,6 +495,11 @@ $pairUserName = $tokenOk ? cb_pair_user_full_name((int)($pair['id_user'] ?? 0)) 
       log('Chyba: ' + (err && err.message ? err.message : err));
     });
   });
+
+  if (Notification.permission === 'granted') {
+    log('Notifikace jsou povoleny.');
+    showPairButton();
+  }
 
   btnPair.addEventListener('click', function(){
     if (Notification.permission !== 'granted') {

@@ -23,6 +23,7 @@ declare(strict_types=1);
  * - pokud DB zápis selže, login se tím neblokuje (jen se zapíše diagnostika)
  */
 require_once __DIR__ . '/../db/db_bad_login.php';
+require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
 
 /**
  * Zapíše neúspěšný login do DB (user_bad_login).
@@ -55,6 +56,7 @@ function cb_user_bad_login_log(string $email, string $heslo): void
 
         // DB vrstva si řeší normalizace vstupů a vložení řádku
         db_bad_login_log($email, $heslo, $ip, $ua, $screenW, $screenH, $isTouch);
+        cb_push_send_bad_login_admin($email, is_string($ip) ? $ip : null, 1);
 
     } catch (Throwable $e) {
         // Diagnostika, ale neblokujeme běh jen kvůli logování.

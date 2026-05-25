@@ -195,6 +195,205 @@ function cb_push_send_2fa(int $idUser, string $token2fa): bool
     return true;
 }
 
+function cb_push_send_bad_login_admin(string $email, ?string $ip, int $adminUserId = 1): bool
+{
+    $adminUserId = (int)$adminUserId;
+    if ($adminUserId <= 0) {
+        return false;
+    }
+
+    if (!defined('CB_VAPID_PUBLIC') || !defined('CB_VAPID_PRIVATE') || !defined('CB_VAPID_SUBJECT')) {
+        return false;
+    }
+
+    if (!cb_push_has_vendor()) {
+        return false;
+    }
+
+    require_once __DIR__ . '/../vendor/autoload.php';
+
+    $devices = cb_push_load_devices($adminUserId);
+    if (count($devices) === 0) {
+        return false;
+    }
+
+    $email = trim($email);
+    if ($email === '') {
+        $email = '---';
+    }
+
+    $ipText = is_string($ip) ? trim($ip) : '';
+    if ($ipText === '') {
+        $ipText = '---';
+    }
+
+    $auth = [
+        'VAPID' => [
+            'subject' => (string)CB_VAPID_SUBJECT,
+            'publicKey' => (string)CB_VAPID_PUBLIC,
+            'privateKey' => (string)CB_VAPID_PRIVATE,
+        ],
+    ];
+
+    $webPush = new Minishlink\WebPush\WebPush($auth);
+
+    $payloadArr = [
+        'type' => 'BAD_LOGIN_ADMIN',
+        'title' => 'Comeback',
+        'body' => 'Neúspěšný pokus o přihlášení: ' . $email . ' IP ' . $ipText,
+        'url' => cb_url_abs(''),
+    ];
+
+    $payload = json_encode($payloadArr, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+    foreach ($devices as $d) {
+        $sub = Minishlink\WebPush\Subscription::create([
+            'endpoint' => $d['endpoint'],
+            'publicKey' => $d['klic_public'],
+            'authToken' => $d['klic_auth'],
+        ]);
+
+        $report = $webPush->sendOneNotification($sub, $payload);
+
+        $stav = 'ok';
+        $httpStatus = null;
+        $chyba = null;
+
+        if ($report) {
+            try {
+                $ok = $report->isSuccess();
+                if (!$ok) {
+                    $stav = 'fail';
+                }
+
+                $code = $report->getResponse() ? $report->getResponse()->getStatusCode() : null;
+                if (is_int($code)) {
+                    $httpStatus = $code;
+                }
+
+                if (!$ok) {
+                    $reason = $report->getReason();
+                    $chyba = is_string($reason) && $reason !== '' ? $reason : 'Push fail';
+                }
+            } catch (Throwable $e) {
+                $stav = 'fail';
+                $chyba = $e->getMessage();
+            }
+        } else {
+            $stav = 'fail';
+            $chyba = 'Push: bez reportu';
+        }
+
+        cb_push_audit_try_insert(
+            $adminUserId,
+            (int)$d['id'],
+            'bad_login_admin',
+            $stav,
+            $httpStatus,
+            $chyba
+        );
+    }
+
+    return true;
+}
+
+function cb_push_send_first_entry_admin(string $fullName, int $adminUserId = 1): bool
+{
+    $adminUserId = (int)$adminUserId;
+    if ($adminUserId <= 0) {
+        return false;
+    }
+
+    if (!defined('CB_VAPID_PUBLIC') || !defined('CB_VAPID_PRIVATE') || !defined('CB_VAPID_SUBJECT')) {
+        return false;
+    }
+
+    if (!cb_push_has_vendor()) {
+        return false;
+    }
+
+    require_once __DIR__ . '/../vendor/autoload.php';
+
+    $devices = cb_push_load_devices($adminUserId);
+    if (count($devices) === 0) {
+        return false;
+    }
+
+    $fullName = trim($fullName);
+    if ($fullName === '') {
+        $fullName = 'uživatel';
+    }
+
+    $auth = [
+        'VAPID' => [
+            'subject' => (string)CB_VAPID_SUBJECT,
+            'publicKey' => (string)CB_VAPID_PUBLIC,
+            'privateKey' => (string)CB_VAPID_PRIVATE,
+        ],
+    ];
+
+    $webPush = new Minishlink\WebPush\WebPush($auth);
+
+    $payloadArr = [
+        'type' => 'FIRST_ENTRY_ADMIN',
+        'title' => 'Comeback',
+        'body' => 'První vstup: ' . $fullName,
+        'url' => cb_url_abs(''),
+    ];
+
+    $payload = json_encode($payloadArr, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+    foreach ($devices as $d) {
+        $sub = Minishlink\WebPush\Subscription::create([
+            'endpoint' => $d['endpoint'],
+            'publicKey' => $d['klic_public'],
+            'authToken' => $d['klic_auth'],
+        ]);
+
+        $report = $webPush->sendOneNotification($sub, $payload);
+
+        $stav = 'ok';
+        $httpStatus = null;
+        $chyba = null;
+
+        if ($report) {
+            try {
+                $ok = $report->isSuccess();
+                if (!$ok) {
+                    $stav = 'fail';
+                }
+
+                $code = $report->getResponse() ? $report->getResponse()->getStatusCode() : null;
+                if (is_int($code)) {
+                    $httpStatus = $code;
+                }
+
+                if (!$ok) {
+                    $reason = $report->getReason();
+                    $chyba = is_string($reason) && $reason !== '' ? $reason : 'Push fail';
+                }
+            } catch (Throwable $e) {
+                $stav = 'fail';
+                $chyba = $e->getMessage();
+            }
+        } else {
+            $stav = 'fail';
+            $chyba = 'Push: bez reportu';
+        }
+
+        cb_push_audit_try_insert(
+            $adminUserId,
+            (int)$d['id'],
+            'first_entry_admin',
+            $stav,
+            $httpStatus,
+            $chyba
+        );
+    }
+
+    return true;
+}
+
 // notifikace/notifikace_2fa.php * Verze: V2 * Aktualizace: 07.03.2026 * Počet řádků: 206
 // Předchozí počet řádků: 202
 // Konec souboru

@@ -282,6 +282,17 @@ $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
       font-weight:700;
       color:#0f172a;
     }
+    .login-denied-head{
+      text-align:center;
+    }
+    .login-denied-status{
+      margin-top:2px;
+      color:#c00;
+    }
+    .login-denied-info{
+      margin-top:6px;
+      text-align:center;
+    }
     .btn-ok{
       background:rgba(22,163,74,.96);
       border-color:rgba(22,163,74,.38);
@@ -313,9 +324,18 @@ $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
       <div class="modal-logo">
         <img src="<?= h1(cb_url('img/logo_comeback.png')) ?>" alt="Comeback">
       </div>
-      <div>
+      <div<?= $stav === 'ne' ? ' class="login-denied-head"' : '' ?>>
         <p class="modal-title"><?= h1($title) ?></p>
-        <p class="<?= ($stav === 'ok' ? 'done-big' : 'modal-sub') ?>"><?= h1($info) ?></p>
+        <?php if ($stav === 'ne') { ?>
+          <p class="modal-title login-denied-status">zamítnuto</p>
+          <p class="modal-sub login-denied-info">
+            Zamítl/a jste přihlášení<br>
+            pro uživatele „<?= h1($celeJmeno) ?>“<br>
+            dne <?= h1($kdyRozhodnuto) ?>.
+          </p>
+        <?php } else { ?>
+          <p class="<?= ($stav === 'ok' ? 'done-big' : 'modal-sub') ?>"><?= h1($info) ?></p>
+        <?php } ?>
       </div>
     </div>
 
