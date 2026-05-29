@@ -2,6 +2,8 @@
 'use strict';
 
 (function (w) {
+  let restiaDetailAutoStopped = false;
+
   function isTargetForm(form) {
     if (!(form instanceof HTMLFormElement)) return false;
     if (form.getAttribute('data-cb-max-form') === '1') return true;
@@ -140,10 +142,11 @@
   }
 
   function getLoaderTextFromSubmitter(submitter, form) {
-    if (!(submitter instanceof HTMLElement)) return '';
-    const submitterText = String(submitter.getAttribute('data-cb-loader-text') || '').trim();
-    if (submitterText !== '') {
-      return submitterText;
+    if (submitter instanceof HTMLElement) {
+      const submitterText = String(submitter.getAttribute('data-cb-loader-text') || '').trim();
+      if (submitterText !== '') {
+        return submitterText;
+      }
     }
 
     if (form instanceof HTMLFormElement) {
@@ -158,10 +161,35 @@
       && String(form.getAttribute('data-cb-refresh-dashboard-on-save') || '') === '1';
   }
 
-  function isRestiaImportForm(form) {
+  function getRestiaImportMode(form) {
+    if (!(form instanceof HTMLFormElement)) return '';
+    const historyField = form.querySelector('input[name="run_restia_obj"]');
+    if (historyField instanceof HTMLInputElement && String(historyField.value || '') === '1') {
+      return 'history';
+    }
+
+    const rawOpenField = form.querySelector('input[name="open_restia_raw"]');
+    const rawRunField = form.querySelector('input[name="run"]');
+    if (
+      rawOpenField instanceof HTMLInputElement
+      && rawRunField instanceof HTMLInputElement
+      && String(rawOpenField.value || '') === '1'
+      && String(rawRunField.value || '') === '1'
+    ) {
+      return 'raw';
+    }
+
+    return '';
+  }
+
+  function isRestiaDetailRunForm(form) {
     if (!(form instanceof HTMLFormElement)) return false;
-    const field = form.querySelector('input[name="run_restia_obj"]');
-    return field instanceof HTMLInputElement && String(field.value || '') === '1';
+    const detailField = form.querySelector('input[name="open_restia_detail"]');
+    const runField = form.querySelector('input[name="run"]');
+    return detailField instanceof HTMLInputElement
+      && runField instanceof HTMLInputElement
+      && String(detailField.value || '') === '1'
+      && String(runField.value || '') === '1';
   }
 
   function finishRestiaReload(card) {
@@ -176,17 +204,19 @@
     }
   }
 
-  function reloadRestiaImportMax(cardId, attempt) {
+  function reloadRestiaImportMax(cardId, attempt, mode) {
     const id = parseInt(String(cardId || '0'), 10);
     if (!Number.isFinite(id) || id <= 0) return;
     const tries = Number.isFinite(attempt) ? Number(attempt) : 0;
+    const reloadMode = String(mode || '') === 'raw' ? 'raw' : 'history';
 
-    const url = 'index.php?cb_card_id=' + encodeURIComponent(String(id)) + '&cb_restia_import_max=1';
+    const url = 'index.php?cb_card_id=' + encodeURIComponent(String(id))
+      + (reloadMode === 'raw' ? '&cb_restia_raw_max=1' : '&cb_restia_import_max=1');
     fetch(url, {
       method: 'GET',
       credentials: 'same-origin',
       headers: {
-        'X-Comeback-Restia-Import-Max': '1'
+        [reloadMode === 'raw' ? 'X-Comeback-Restia-Raw-Max' : 'X-Comeback-Restia-Import-Max']: '1'
       }
     }).then((res) => {
       return res.text().then((text) => {
@@ -218,7 +248,7 @@
         setLoading(false, '', 'dashboard');
         return;
       }
-      w.setTimeout(() => reloadRestiaImportMax(id, tries + 1), 5000);
+      w.setTimeout(() => reloadRestiaImportMax(id, tries + 1, reloadMode), 5000);
     });
   }
 
@@ -359,16 +389,76 @@
     const waitMs = Number.isFinite(delayMs) && delayMs >= 0 ? delayMs : 500;
     const branchId = String(marker.getAttribute('data-cb-restia-auto-resume-branch') || '').trim();
     const nextDate = String(marker.getAttribute('data-cb-restia-next-date') || '').trim();
+    const infoSelector = String(marker.getAttribute('data-cb-restia-auto-resume-info') || '').trim();
+    const stopSelector = String(marker.getAttribute('data-cb-restia-auto-resume-stop') || '').trim();
+    const checkboxSelector = String(marker.getAttribute('data-cb-restia-auto-resume-checkbox') || '').trim();
+    const cycleText = String(marker.getAttribute('data-cb-restia-auto-resume-cycle') || '').trim();
+    const nextText = String(marker.getAttribute('data-cb-restia-auto-resume-next-text') || nextDate).trim();
+    const info = infoSelector !== '' ? root.querySelector(infoSelector) : null;
+    const stop = stopSelector !== '' ? root.querySelector(stopSelector) : null;
+    const checkbox = checkboxSelector !== '' ? root.querySelector(checkboxSelector) : null;
+    let stopped = false;
+    let left = Math.max(1, Math.ceil(waitMs / 1000));
 
-    w.setTimeout(() => {
-      if (!document.body.contains(marker)) return;
+    const setAutoResumeInfo = (text) => {
+      if (info instanceof HTMLElement) {
+        info.textContent = text;
+      }
+    };
+
+    const formatAutoResumeInfo = () => {
+      const prefix = cycleText !== '' ? 'Cyklus č. ' + cycleText + ' začne' : 'Automatické pokračování začne';
+      const suffix = nextText !== '' ? ' od ' + nextText : '';
+      return prefix + ' za ' + left + ' s' + suffix + '.';
+    };
+
+    setAutoResumeInfo(formatAutoResumeInfo());
+
+    if (checkbox instanceof HTMLInputElement && restiaDetailAutoStopped) {
+      checkbox.checked = false;
+      marker.setAttribute('data-cb-restia-auto-resume-armed', '1');
+      setAutoResumeInfo('Automatické pokračování zastaveno.');
+      return;
+    }
+
+    const countdown = w.setInterval(() => {
+      if (stopped || !document.body.contains(marker)) {
+        w.clearInterval(countdown);
+        return;
+      }
+      left -= 1;
+      if (left > 0) {
+        setAutoResumeInfo(formatAutoResumeInfo());
+      }
+    }, 1000);
+
+    const timer = w.setTimeout(() => {
+      w.clearInterval(countdown);
+      if (stopped || !document.body.contains(marker)) return;
 
       const card = marker.closest('[data-cb-dash-card="1"]');
       if (!(card instanceof HTMLElement)) return;
 
-      const form = card.querySelector('form[data-cb-max-form="1"]');
+      const formSelector = String(marker.getAttribute('data-cb-restia-auto-resume-form') || '').trim();
+      let form = null;
+      if (formSelector !== '') {
+        try {
+          form = card.querySelector(formSelector);
+        } catch (e) {
+          form = null;
+        }
+      }
+      if (!(form instanceof HTMLFormElement)) {
+        form = card.querySelector('form[data-cb-max-form="1"]');
+      }
       if (!(form instanceof HTMLFormElement)) return;
-      const loaderText = formatRestiaLoaderText(nextDate);
+      if (checkbox instanceof HTMLInputElement && !checkbox.checked) {
+        restiaDetailAutoStopped = true;
+        setAutoResumeInfo('Automatické pokračování zastaveno.');
+        return;
+      }
+      const formLoaderText = String(form.getAttribute('data-cb-loader-text') || '').trim();
+      const loaderText = formLoaderText !== '' ? formLoaderText : formatRestiaLoaderText(nextDate);
       form.setAttribute('data-cb-loader-text', loaderText);
 
       if (typeof w.cbResetIdleLogout === 'function') {
@@ -389,8 +479,35 @@
       if (submitter instanceof HTMLElement) {
         submitter.setAttribute('data-cb-loader-text', loaderText);
       }
+      setAutoResumeInfo('Spouštím další cyklus...');
       submitAjax(form, submitter instanceof HTMLElement ? submitter : null);
     }, waitMs);
+
+    if (stop instanceof HTMLElement) {
+      stop.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        stopped = true;
+        if (checkbox instanceof HTMLInputElement) {
+          restiaDetailAutoStopped = true;
+          checkbox.checked = false;
+        }
+        w.clearTimeout(timer);
+        w.clearInterval(countdown);
+        setAutoResumeInfo('Automatické pokračování zastaveno.');
+      }, true);
+    }
+
+    if (checkbox instanceof HTMLInputElement) {
+      checkbox.addEventListener('change', () => {
+        restiaDetailAutoStopped = !checkbox.checked;
+        if (checkbox.checked) return;
+        stopped = true;
+        w.clearTimeout(timer);
+        w.clearInterval(countdown);
+        setAutoResumeInfo('Automatické pokračování zastaveno.');
+      }, true);
+    }
   }
 
   function submitAjax(form, submitter, options) {
@@ -398,7 +515,13 @@
     const opts = (options && typeof options === 'object') ? options : {};
     const skipSubmitterName = !!opts.skipSubmitterName;
     const refreshDashboardOnSave = isDashboardRefreshForm(form);
-    const restiaImportForm = isRestiaImportForm(form);
+    const restiaImportMode = getRestiaImportMode(form);
+    if (isRestiaDetailRunForm(form) && submitter instanceof HTMLElement) {
+      const autoContinue = form.querySelector('input[name="auto_continue"]');
+      if (autoContinue instanceof HTMLInputElement && autoContinue.checked) {
+        restiaDetailAutoStopped = false;
+      }
+    }
 
     const method = String(form.method || 'POST').toUpperCase();
     const reqUrl = String(form.action || w.location.href || 'index.php');
@@ -515,9 +638,9 @@
       });
     }).catch((err) => {
       const status = err && typeof err.status === 'number' ? err.status : 0;
-      if (restiaImportForm && status === 504 && cardId > 0) {
+      if (restiaImportMode !== '' && status === 504 && cardId > 0) {
         keepRestiaLoader = true;
-        w.setTimeout(() => reloadRestiaImportMax(cardId), 5000);
+        w.setTimeout(() => reloadRestiaImportMax(cardId, 0, restiaImportMode), 5000);
         return;
       }
 

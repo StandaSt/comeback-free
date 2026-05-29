@@ -89,7 +89,7 @@ if (!function_exists('cb_restia_online_format_datetime_cs')) {
 if (!function_exists('cb_restia_online_format_range_cs')) {
     function cb_restia_online_format_range_cs(string $fromDate, string $toDate): string
     {
-        return cb_dt_format_range_cs($fromDate, $toDate, 6);
+        return cb_dt_format_range_cs($fromDate, $toDate, 8);
     }
 }
 
@@ -103,7 +103,7 @@ if (!function_exists('cb_restia_online_next_date')) {
 if (!function_exists('cb_restia_online_day_range_utc')) {
     function cb_restia_online_day_range_utc(string $date): array
     {
-        return cb_dt_workday_range_utc($date, 6);
+        return cb_dt_workday_range_utc($date, 8);
     }
 }
 
@@ -550,7 +550,7 @@ if (!function_exists('cb_restia_online_restia_to_local_nullable')) {
 if (!function_exists('cb_restia_online_report_date')) {
     function cb_restia_online_report_date(?string $localDateTime): string
     {
-        return cb_dt_report_date($localDateTime, 6);
+        return cb_dt_report_date($localDateTime, 8);
     }
 }
 
@@ -975,10 +975,11 @@ if (!function_exists('cb_restia_online_upsert_order')) {
         $shortCode = ($shortCode === null || $shortCode === '') ? null : (string)$shortCode;
         $serioveCislo = $order['serialNumber'] ?? null;
         $serioveCislo = ($serioveCislo === null || $serioveCislo === '') ? null : (string)$serioveCislo;
-        $zpozdeniMin = isset($order['cookingTimeMinutes']) ? (int)$order['cookingTimeMinutes'] : null;
+        $casPripravy = isset($order['cookingTimeMinutes']) ? (int)$order['cookingTimeMinutes'] : null;
         $objPoznamka = $order['note'] ?? null;
         $objPoznamka = ($objPoznamka === null || $objPoznamka === '') ? null : (string)$objPoznamka;
         $importTs = cb_restia_online_now();
+        $report = cb_restia_online_report_date($restiaCreatedAt ?? $importTs);
 
         $restObj = $restiaIdObj;
 
@@ -987,6 +988,7 @@ if (!function_exists('cb_restia_online_upsert_order')) {
                 UPDATE objednavky_restia
                 SET id_pob = ?,
                     id_zak = ?,
+                    report = ?,
                     id_platforma = ?,
                     restia_created_at = ?,
                     restia_order_number = ?,
@@ -999,7 +1001,7 @@ if (!function_exists('cb_restia_online_upsert_order')) {
                     id_stav = ?,
                     id_platba = ?,
                     id_doruceni = ?,
-                    zpozdeni_min = ?,
+                    cas_pripravy = ?,
                     obj_pozn = ?,
                     restia_imported_at = ?
                 WHERE id_obj = ?
@@ -1009,9 +1011,10 @@ if (!function_exists('cb_restia_online_upsert_order')) {
 
             $stmt = cb_restia_online_stmt($conn, 'objednavky_restia_update_by_restia_id', $sql, 'objednavky_restia update by restia_id_obj');
             $stmt->bind_param(
-                'iiissssssssiiiissis',
+                'iisissssssssiiiissis',
                 $idPob,
                 $idZak,
+                $report,
                 $idPlatforma,
                 $restiaCreatedAt,
                 $restiaOrderNumber,
@@ -1024,7 +1027,7 @@ if (!function_exists('cb_restia_online_upsert_order')) {
                 $idStav,
                 $idPlatba,
                 $idDoruceni,
-                $zpozdeniMin,
+                $casPripravy,
                 $objPoznamka,
                 $importTs,
                 $existingIdObj,
@@ -1040,16 +1043,16 @@ if (!function_exists('cb_restia_online_upsert_order')) {
 
         $sql = '
             INSERT INTO objednavky_restia (
-                id_pob, id_zak, id_platforma, restia_id_obj, restia_created_at, restia_order_number, restia_token,
+                id_pob, id_zak, report, id_platforma, restia_id_obj, restia_created_at, restia_order_number, restia_token,
                 profil_typ, profil_nazev, rest_obj, short_code, seriove_cislo,
                 id_stav, id_platba, id_doruceni,
-                zpozdeni_min, obj_pozn, restia_imported_at
+                cas_pripravy, obj_pozn, restia_imported_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ';
 
         $stmt = cb_restia_online_stmt($conn, 'objednavky_restia_insert', $sql, 'objednavky_restia insert');
-        $stmt->bind_param('iiissssssssiiiisss', $idPob, $idZak, $idPlatforma, $restiaIdObj, $restiaCreatedAt, $restiaOrderNumber, $restiaToken, $profilTyp, $profilNazev, $restObj, $shortCode, $serioveCislo, $idStav, $idPlatba, $idDoruceni, $zpozdeniMin, $objPoznamka, $importTs);
+        $stmt->bind_param('iisissssssssiiiisss', $idPob, $idZak, $report, $idPlatforma, $restiaIdObj, $restiaCreatedAt, $restiaOrderNumber, $restiaToken, $profilTyp, $profilNazev, $restObj, $shortCode, $serioveCislo, $idStav, $idPlatba, $idDoruceni, $casPripravy, $objPoznamka, $importTs);
         $stmt->execute();
         $idObj = (int)$conn->insert_id;
         if ($idObj <= 0) {
@@ -1262,14 +1265,14 @@ if (!function_exists('cb_restia_online_log_order')) {
 if (!function_exists('cb_restia_online_current_workday_date')) {
     function cb_restia_online_current_workday_date(): string
     {
-        return cb_dt_workday_date(null, 6);
+        return cb_dt_workday_date(null, 8);
     }
 }
 
 if (!function_exists('cb_restia_online_current_workday_start')) {
     function cb_restia_online_current_workday_start(): DateTimeImmutable
     {
-        return cb_dt_workday_start(null, 6);
+        return cb_dt_workday_start(null, 8);
     }
 }
 
