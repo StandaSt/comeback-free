@@ -140,6 +140,40 @@ if (!function_exists('db_user_role_sync')) {
             }
         }
 
+        $isLocalAdmin = false;
+        if ($idUser === 1) {
+            $isLocalAdmin = true;
+        } else {
+            $stmtAdmin = $conn->prepare('SELECT `admin` FROM `user` WHERE id_user = ? LIMIT 1');
+            if ($stmtAdmin === false) {
+                throw new RuntimeException('DB: prepare selhal (user admin select).');
+            }
+            $stmtAdmin->bind_param('i', $idUser);
+            $stmtAdmin->execute();
+            $stmtAdmin->bind_result($adminFlag);
+            if ($stmtAdmin->fetch()) {
+                $isLocalAdmin = ((int)$adminFlag === 1);
+            }
+            $stmtAdmin->close();
+        }
+
+        if (array_key_exists(1, $desiredIds)) {
+            unset($desiredIds[1]);
+        }
+        if ($isLocalAdmin) {
+            $adminRoleName = 'admin';
+            $resAdminRole = $conn->query('SELECT role FROM cis_role WHERE id_role = 1 LIMIT 1');
+            if ($resAdminRole instanceof mysqli_result) {
+                $rowAdminRole = $resAdminRole->fetch_assoc();
+                $resAdminRole->free();
+                $dbAdminRoleName = trim((string)($rowAdminRole['role'] ?? ''));
+                if ($dbAdminRoleName !== '') {
+                    $adminRoleName = $dbAdminRoleName;
+                }
+            }
+            $desiredIds[1] = $adminRoleName;
+        }
+
         // 3) currentIds = aktuální role uživatele v DB (user_role)
         //    Struktura:
         //    - $currentIds[<id_role>] = <název role>
@@ -223,7 +257,7 @@ if (!function_exists('db_user_role_sync')) {
             $idRoleEffective = min(array_keys($desiredIds));
             $roleEffectiveName = (string)($desiredIds[$idRoleEffective] ?? '');
 
-            $stmt = $conn->prepare('UPDATE user SET id_role=? WHERE id_user=?');
+            $stmt = $conn->prepare('UPDATE `user` SET id_role=? WHERE id_user=?');
             if ($stmt === false) {
                 throw new RuntimeException('DB: prepare selhal (user id_role update).');
             }
@@ -240,10 +274,39 @@ if (!function_exists('db_user_role_sync')) {
             }
 
         } else {
-            // Směny nevrátily žádnou roli:
-            // - v session odstraníme jen údaje o efektivní roli
-            // - do DB user.id_role už teď nesahejme (necháváme poslední známý stav)
-            if ($updateSession && isset($_SESSION['cb_user']) && is_array($_SESSION['cb_user'])) {
+            $fallbackRoleId = 0;
+            $fallbackRoleName = '';
+            $resFallbackRole = $conn->query('
+                SELECT id_role, role
+                FROM cis_role
+                WHERE aktivni = 1
+                ORDER BY id_role DESC
+                LIMIT 1
+            ');
+            if ($resFallbackRole instanceof mysqli_result) {
+                $rowFallbackRole = $resFallbackRole->fetch_assoc();
+                $resFallbackRole->free();
+                $fallbackRoleId = (int)($rowFallbackRole['id_role'] ?? 0);
+                $fallbackRoleName = (string)($rowFallbackRole['role'] ?? '');
+            }
+
+            if ($fallbackRoleId > 0) {
+                $stmt = $conn->prepare('UPDATE `user` SET id_role=? WHERE id_user=?');
+                if ($stmt === false) {
+                    throw new RuntimeException('DB: prepare selhal (user id_role fallback update).');
+                }
+                $stmt->bind_param('ii', $fallbackRoleId, $idUser);
+                $stmt->execute();
+                $stmt->close();
+
+                if ($updateSession) {
+                    if (!isset($_SESSION['cb_user']) || !is_array($_SESSION['cb_user'])) {
+                        $_SESSION['cb_user'] = [];
+                    }
+                    $_SESSION['cb_user']['id_role'] = $fallbackRoleId;
+                    $_SESSION['cb_user']['role'] = $fallbackRoleName;
+                }
+            } elseif ($updateSession && isset($_SESSION['cb_user']) && is_array($_SESSION['cb_user'])) {
                 unset($_SESSION['cb_user']['id_role'], $_SESSION['cb_user']['role']);
             }
         }

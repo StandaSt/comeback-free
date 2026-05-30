@@ -70,7 +70,7 @@ try {
 
     $selectCols = array_merge(['id_pob'], $editCols);
     $sqlRows = 'SELECT ' . implode(', ', array_map(static fn(string $c): string => '`' . $c . '`', $selectCols))
-        . ' FROM pobocka ORDER BY nazev ASC, id_pob ASC';
+        . ' FROM pobocka WHERE id_pob > 0 ORDER BY id_pob ASC';
     $resRows = $conn->query($sqlRows);
     if ($resRows) {
         while ($r = $resRows->fetch_assoc()) {

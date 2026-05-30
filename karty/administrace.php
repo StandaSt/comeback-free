@@ -38,6 +38,8 @@ $cbAdminLogLabels = [
 $cbAdminActiveUsers = [];
 $cbAdminUsersLogOn = [];
 $cbAdminUsersLogOff = [];
+$cbAdminUsersAdmin = [];
+$cbAdminUsersAdminAdd = [];
 
 try {
     $conn = db();
@@ -154,6 +156,94 @@ try {
         }
     }
 
+    if ($cbAdminError === '' && ($cbAdminSaveName === 'admin_user_on' || $cbAdminSaveName === 'admin_user_off')) {
+        $idUser = (int)$cbAdminSaveValue;
+        if ($idUser > 0) {
+            $adminValue = ($cbAdminSaveName === 'admin_user_on') ? 1 : 0;
+            if ($idUser === 1) {
+                $adminValue = 1;
+            }
+
+            $stmtAdmin = $conn->prepare('UPDATE `user` SET `admin` = ? WHERE id_user = ? LIMIT 1');
+            if ($stmtAdmin instanceof mysqli_stmt) {
+                $stmtAdmin->bind_param('ii', $adminValue, $idUser);
+                $stmtAdmin->execute();
+                $stmtAdmin->close();
+            } else {
+                $cbAdminError = 'Ulozeni nastaveni selhalo.';
+            }
+
+            if ($cbAdminError === '') {
+                if ($adminValue === 1) {
+                    $stmtRole = $conn->prepare('INSERT IGNORE INTO user_role (id_user, id_role) VALUES (?, 1)');
+                    if ($stmtRole instanceof mysqli_stmt) {
+                        $stmtRole->bind_param('i', $idUser);
+                        $stmtRole->execute();
+                        $stmtRole->close();
+                    } else {
+                        $cbAdminError = 'Ulozeni nastaveni selhalo.';
+                    }
+                } else {
+                    $stmtRole = $conn->prepare('DELETE FROM user_role WHERE id_user = ? AND id_role = 1');
+                    if ($stmtRole instanceof mysqli_stmt) {
+                        $stmtRole->bind_param('i', $idUser);
+                        $stmtRole->execute();
+                        $stmtRole->close();
+                    } else {
+                        $cbAdminError = 'Ulozeni nastaveni selhalo.';
+                    }
+                }
+            }
+
+            if ($cbAdminError === '') {
+                if ($adminValue === 1) {
+                    $stmtUserRole = $conn->prepare('UPDATE `user` SET id_role = 1 WHERE id_user = ? LIMIT 1');
+                    if ($stmtUserRole instanceof mysqli_stmt) {
+                        $stmtUserRole->bind_param('i', $idUser);
+                        $stmtUserRole->execute();
+                        $stmtUserRole->close();
+                    } else {
+                        $cbAdminError = 'Ulozeni nastaveni selhalo.';
+                    }
+                } else {
+                    $stmtMinRole = $conn->prepare('SELECT MIN(id_role) AS min_role FROM user_role WHERE id_user = ?');
+                    if ($stmtMinRole instanceof mysqli_stmt) {
+                        $stmtMinRole->bind_param('i', $idUser);
+                        $stmtMinRole->execute();
+                        $resMinRole = $stmtMinRole->get_result();
+                        $rowMinRole = ($resMinRole instanceof mysqli_result) ? $resMinRole->fetch_assoc() : null;
+                        if ($resMinRole instanceof mysqli_result) {
+                            $resMinRole->free();
+                        }
+                        $stmtMinRole->close();
+                        $minRole = is_array($rowMinRole) ? (int)($rowMinRole['min_role'] ?? 0) : 0;
+                        if ($minRole <= 0) {
+                            $resFallbackRole = $conn->query('SELECT id_role FROM cis_role WHERE aktivni = 1 ORDER BY id_role DESC LIMIT 1');
+                            if ($resFallbackRole instanceof mysqli_result) {
+                                $rowFallbackRole = $resFallbackRole->fetch_assoc();
+                                $resFallbackRole->free();
+                                $minRole = (int)($rowFallbackRole['id_role'] ?? 0);
+                            }
+                        }
+
+                        if ($minRole > 0) {
+                            $stmtUserRole = $conn->prepare('UPDATE `user` SET id_role = ? WHERE id_user = ? LIMIT 1');
+                            if ($stmtUserRole instanceof mysqli_stmt) {
+                                $stmtUserRole->bind_param('ii', $minRole, $idUser);
+                                $stmtUserRole->execute();
+                                $stmtUserRole->close();
+                            } else {
+                                $cbAdminError = 'Ulozeni nastaveni selhalo.';
+                            }
+                        }
+                    } else {
+                        $cbAdminError = 'Ulozeni nastaveni selhalo.';
+                    }
+                }
+            }
+        }
+    }
+
     if ($cbAdminError === '') {
         $res = $conn->query('
             SELECT restia_online, on_2fa, system_logout, pauza_obdobi, report_save, log_akce, log_1, log_2, log_3, log_4
@@ -248,6 +338,66 @@ try {
             $resLogUsers->free();
         }
     }
+    if ($cbAdminError === '') {
+        $resAdminAddUsers = $conn->query("
+            SELECT id_user, prijmeni, jmeno
+            FROM `user`
+            WHERE aktivni = 1
+              AND in_system = 1
+              AND id_role <= 3
+              AND `admin` = 0
+              AND id_user <> 1
+            ORDER BY prijmeni, jmeno
+        ");
+        if ($resAdminAddUsers instanceof mysqli_result) {
+            while ($rowAdminAddUser = $resAdminAddUsers->fetch_assoc()) {
+                $idUser = (int)($rowAdminAddUser['id_user'] ?? 0);
+                if ($idUser <= 0) {
+                    continue;
+                }
+                $prijmeni = trim((string)($rowAdminAddUser['prijmeni'] ?? ''));
+                $jmeno = trim((string)($rowAdminAddUser['jmeno'] ?? ''));
+                $label = trim($prijmeni . ' ' . $jmeno);
+                if ($label === '') {
+                    $label = 'ID ' . $idUser;
+                }
+                $cbAdminUsersAdminAdd[] = [
+                    'id_user' => $idUser,
+                    'label' => $label,
+                ];
+            }
+            $resAdminAddUsers->free();
+        }
+    }
+    if ($cbAdminError === '') {
+        $resAdminUsers = $conn->query("
+            SELECT id_user, prijmeni, jmeno, `admin`
+            FROM `user`
+            WHERE in_system = 1
+              AND (id_user = 1 OR (`admin` = 1 AND aktivni = 1))
+            ORDER BY id_user ASC
+        ");
+        if ($resAdminUsers instanceof mysqli_result) {
+            while ($rowAdminUser = $resAdminUsers->fetch_assoc()) {
+                $idUser = (int)($rowAdminUser['id_user'] ?? 0);
+                if ($idUser <= 0) {
+                    continue;
+                }
+                $prijmeni = trim((string)($rowAdminUser['prijmeni'] ?? ''));
+                $jmeno = trim((string)($rowAdminUser['jmeno'] ?? ''));
+                $label = trim($prijmeni . ' ' . $jmeno);
+                if ($label === '') {
+                    $label = 'ID ' . $idUser;
+                }
+                $cbAdminUsersAdmin[] = [
+                    'id_user' => $idUser,
+                    'label' => $label,
+                    'fixed' => ($idUser === 1),
+                ];
+            }
+            $resAdminUsers->free();
+        }
+    }
 } catch (Throwable $e) {
     $cbAdminError = 'Načtení nastavení systému selhalo.';
 }
@@ -265,6 +415,30 @@ ob_start();
 <?php else: ?>
   <?php // VZHLED K2 JE ZAMCENY: bez vyslovneho schvaleni nemenit sirky sloupcu, zarovnani, zalamovani ani texty (vcetne diakritiky). ?>
   <div class="card_stack gap_8">
+    <style>
+      .cb_admin_tabs{display:flex;gap:8px;flex-wrap:wrap;}
+      .cb_admin_tabs label{padding:4px 10px;border:1px solid #d0d0d0;background:#fff;cursor:pointer;}
+      .cb_admin_panel{display:none;}
+      #cb_admin_tab_system:checked ~ .cb_admin_tabs label[for="cb_admin_tab_system"],
+      #cb_admin_tab_log_system:checked ~ .cb_admin_tabs label[for="cb_admin_tab_log_system"],
+      #cb_admin_tab_log_users:checked ~ .cb_admin_tabs label[for="cb_admin_tab_log_users"],
+      #cb_admin_tab_admins:checked ~ .cb_admin_tabs label[for="cb_admin_tab_admins"]{font-weight:700;}
+      #cb_admin_tab_system:checked ~ .cb_admin_panel_system,
+      #cb_admin_tab_log_system:checked ~ .cb_admin_panel_log_system,
+      #cb_admin_tab_log_users:checked ~ .cb_admin_panel_log_users,
+      #cb_admin_tab_admins:checked ~ .cb_admin_panel_admins{display:block;}
+    </style>
+    <input type="radio" id="cb_admin_tab_system" name="cb_admin_tab" checked hidden>
+    <input type="radio" id="cb_admin_tab_log_system" name="cb_admin_tab" hidden>
+    <input type="radio" id="cb_admin_tab_log_users" name="cb_admin_tab" hidden>
+    <input type="radio" id="cb_admin_tab_admins" name="cb_admin_tab" hidden>
+    <div class="cb_admin_tabs">
+      <label for="cb_admin_tab_system" class="zaobleni_6">set systém</label>
+      <label for="cb_admin_tab_log_system" class="zaobleni_6">logování systém</label>
+      <label for="cb_admin_tab_log_users" class="zaobleni_6">logování users</label>
+      <label for="cb_admin_tab_admins" class="zaobleni_6">set admins</label>
+    </div>
+    <div class="cb_admin_panel cb_admin_panel_system">
     <p class="card_text text_tucny odstup_vnejsi_0" style="font-size:16px;text-align:left;">Globální nastavení systému</p>
     <div class="table-wrap ram_normal bg_bila" style="width:100%;margin:0 auto;">
       <table class="table ram_normal bg_bila radek_1_35 sirka100" style="width:100%;table-layout:auto;">
@@ -347,6 +521,8 @@ ob_start();
         </tbody>
       </table>
     </div>
+    </div>
+    <div class="cb_admin_panel cb_admin_panel_log_system">
     <p class="card_text text_tucny odstup_vnejsi_0" style="font-size:16px;text-align:left;">Logování akcí systému, měření časů</p>
     <div class="table-wrap ram_normal bg_bila" style="width:100%;margin:0 auto;">
       <table class="table ram_normal bg_bila radek_1_35 sirka100" style="width:100%;table-layout:auto;">
@@ -378,6 +554,8 @@ ob_start();
         </tbody>
       </table>
     </div>
+    </div>
+    <div class="cb_admin_panel cb_admin_panel_log_users">
     <p class="card_text text_tucny odstup_vnejsi_0" style="font-size:16px;text-align:left;">Logování akcí uživatelů</p>
     <div class="table-wrap ram_normal bg_bila" style="width:100%;margin:0 auto;">
       <table class="table ram_normal bg_bila radek_1_35 sirka100" style="width:100%;table-layout:auto;">
@@ -459,6 +637,48 @@ ob_start();
           </tr>
         </tbody>
       </table>
+    </div>
+    </div>
+    <div class="cb_admin_panel cb_admin_panel_admins">
+    <p class="card_text text_tucny odstup_vnejsi_0" style="font-size:16px;text-align:left;">Administrátoři systému</p>
+    <div class="table-wrap ram_normal bg_bila" style="width:100%;margin:0 auto;">
+      <table class="table ram_normal bg_bila radek_1_35 sirka100" style="width:100%;table-layout:auto;">
+        <tbody>
+          <tr>
+            <td colspan="2">
+              <p class="card_text text_tucny odstup_vnejsi_0">Přidat admina</p>
+              <form method="post" action="<?= h($cbAdminFormAction) ?>" class="odstup_vnejsi_0 displ_flex gap_8 ai_stred" data-cb-max-form="1">
+                <input type="hidden" name="cb_admin_set_name" value="admin_user_on">
+                <select name="cb_admin_set_value" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" onchange="var b=this.form.querySelector('button[type=submit]');if(b){var on=this.value!=='';b.disabled=!on;b.setAttribute('aria-disabled',on?'false':'true');}">
+                  <option value="">vyber dalšího admina</option>
+                  <?php foreach ($cbAdminUsersAdminAdd as $cbUser): ?>
+                    <option value="<?= h((string)$cbUser['id_user']) ?>"><?= h((string)$cbUser['label']) ?></option>
+                  <?php endforeach; ?>
+                </select>
+                <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" disabled aria-disabled="true">Přidat</button>
+              </form>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2" style="padding-top:14px;">
+              <p class="card_text text_tucny txt_cervena odstup_vnejsi_0">Odebrat admina</p>
+              <form method="post" action="<?= h($cbAdminFormAction) ?>" class="odstup_vnejsi_0 displ_flex gap_8 ai_stred" data-cb-max-form="1">
+                <input type="hidden" name="cb_admin_set_name" value="admin_user_off">
+                <select name="cb_admin_set_value" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" onchange="var b=this.form.querySelector('button[type=submit]');if(b){var on=this.value!=='';b.disabled=!on;b.setAttribute('aria-disabled',on?'false':'true');}">
+                  <option value="">Zvol admina k odstranění</option>
+                  <?php foreach ($cbAdminUsersAdmin as $cbAdminUser): ?>
+                    <?php if (!(bool)($cbAdminUser['fixed'] ?? false)): ?>
+                      <option value="<?= h((string)$cbAdminUser['id_user']) ?>"><?= h((string)$cbAdminUser['label']) ?></option>
+                    <?php endif; ?>
+                  <?php endforeach; ?>
+                </select>
+                <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" disabled aria-disabled="true">Odebrat</button>
+              </form>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
     </div>
   </div>
 <?php endif; ?>

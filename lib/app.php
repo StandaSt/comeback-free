@@ -175,7 +175,13 @@ if (!function_exists('cb_store_system_settings')) {
         }
 
         $_SESSION['cb_system'] = $data;
-        $_SESSION['cb_timeout_min'] = $data['system_logout'];
+        $userSettings = (isset($_SESSION['cb_user_settings']) && is_array($_SESSION['cb_user_settings']))
+            ? $_SESSION['cb_user_settings']
+            : [];
+        $userLogoutLimit = $userSettings['logout_limit'] ?? null;
+        $_SESSION['cb_timeout_min'] = ($userLogoutLimit !== null && in_array((int)$userLogoutLimit, [30, 60, 120, 240, 480], true))
+            ? (int)$userLogoutLimit
+            : $data['system_logout'];
     }
 }
 
@@ -215,6 +221,7 @@ if (!function_exists('cb_user_settings_defaults')) {
             'prodleva' => 3000,
             'pismo' => 2,
             'dark' => 0,
+            'logout_limit' => null,
             'obdobi_od' => '',
             'obdobi_do' => '',
             'obdobi_mode' => 'manual',
@@ -265,6 +272,14 @@ if (!function_exists('cb_store_user_settings')) {
         }
         $data['dark'] = $dark;
 
+        $logoutLimit = $values['logout_limit'] ?? $data['logout_limit'];
+        if ($logoutLimit === null || $logoutLimit === '') {
+            $data['logout_limit'] = null;
+        } else {
+            $logoutLimit = (int)$logoutLimit;
+            $data['logout_limit'] = in_array($logoutLimit, [30, 60, 120, 240, 480], true) ? $logoutLimit : null;
+        }
+
         $mode = trim((string)($values['obdobi_mode'] ?? $data['obdobi_mode']));
         if ($mode === 'dnes') {
             $mode = 'vcera';
@@ -278,6 +293,9 @@ if (!function_exists('cb_store_user_settings')) {
         $data['obdobi_do'] = trim((string)($values['obdobi_do'] ?? $data['obdobi_do']));
 
         $_SESSION['cb_user_settings'] = $data;
+        $_SESSION['cb_timeout_min'] = $data['logout_limit'] !== null
+            ? (int)$data['logout_limit']
+            : (int)cb_system_setting('system_logout', 20);
     }
 }
 

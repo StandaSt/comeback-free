@@ -343,31 +343,45 @@
     if (!(form instanceof HTMLFormElement)) return;
     if (String(form.getAttribute('data-cb-user-setting-form') || '') !== '1') return;
 
-    const saveBtn = form.querySelector('[data-cb-user-setting-save="1"]');
-    if (!(saveBtn instanceof HTMLButtonElement)) return;
+    const saveButtons = form.querySelectorAll('[data-cb-user-setting-save]');
+    if (!saveButtons.length) return;
 
     const initialCols = String(form.getAttribute('data-cb-user-setting-initial-pocet-sl') || '');
     const initialNano = String(form.getAttribute('data-cb-user-setting-initial-nano-kde') || '');
     const initialProdleva = String(form.getAttribute('data-cb-user-setting-initial-prodleva') || '');
     const initialPismo = String(form.getAttribute('data-cb-user-setting-initial-pismo') || '');
     const initialDark = String(form.getAttribute('data-cb-user-setting-initial-dark') || '');
+    const initialLogoutLimit = String(form.getAttribute('data-cb-user-setting-initial-logout-limit') || '');
 
     const currentCols = getUserSettingValue(form, 'us_pocet_sl');
     const currentNano = getUserSettingValue(form, 'us_nano_kde');
     const currentProdleva = getUserSettingValue(form, 'us_prodleva');
     const currentPismo = getUserSettingValue(form, 'us_pismo');
     const currentDark = getUserSettingValue(form, 'us_dark');
+    const currentLogoutLimit = getUserSettingValue(form, 'us_logout_limit');
 
-    const isDirty = (
-      currentCols !== initialCols
-      || currentNano !== initialNano
-      || currentProdleva !== initialProdleva
-      || currentPismo !== initialPismo
-      || currentDark !== initialDark
-    );
+    const dirtyByGroup = {
+      dashboard: (
+        currentCols !== initialCols
+        || currentNano !== initialNano
+        || currentProdleva !== initialProdleva
+      ),
+      vzhled: (
+        currentPismo !== initialPismo
+        || currentDark !== initialDark
+      ),
+      manager: currentLogoutLimit !== initialLogoutLimit
+    };
 
-    saveBtn.disabled = !isDirty;
-    saveBtn.setAttribute('aria-disabled', isDirty ? 'false' : 'true');
+    let isDirty = false;
+    saveButtons.forEach((button) => {
+      if (!(button instanceof HTMLButtonElement)) return;
+      const group = String(button.getAttribute('data-cb-user-setting-save') || '');
+      const groupDirty = !!dirtyByGroup[group];
+      isDirty = isDirty || groupDirty;
+      button.disabled = !groupDirty;
+      button.setAttribute('aria-disabled', groupDirty ? 'false' : 'true');
+    });
     form.setAttribute('data-cb-user-setting-dirty', isDirty ? '1' : '0');
   }
 

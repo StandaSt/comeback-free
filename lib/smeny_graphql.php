@@ -105,7 +105,7 @@ function cb_login_load_settings_to_session(int $idUser): void
     cb_store_system_settings($rowSystem);
 
     $stmtUserSet = $conn->prepare(
-        'SELECT pocet_sl, nano_kde, prodleva, pismo, dark, obdobi_od, obdobi_do, obdobi_mode FROM user_set WHERE id_user = ? LIMIT 1'
+        'SELECT pocet_sl, nano_kde, prodleva, pismo, dark, logout_limit, obdobi_od, obdobi_do, obdobi_mode FROM user_set WHERE id_user = ? LIMIT 1'
     );
     if (!($stmtUserSet instanceof mysqli_stmt)) {
         throw new RuntimeException('Nepodarilo se nacist user_set.');
@@ -286,10 +286,14 @@ function cb_login_finalize_after_ok(string $token): void
 
     require_once __DIR__ . '/../db/db_user_login.php';
     cb_db_user_login();
+    cb_login_load_settings_to_session($idUser);
 
     require_once __DIR__ . '/restia_access_exist.php';
 
-    $_SESSION['cb_timeout_min'] = (int)cb_system_setting('system_logout', 20);
+    $userLogoutLimit = cb_user_setting('logout_limit', null);
+    $_SESSION['cb_timeout_min'] = $userLogoutLimit !== null
+        ? (int)$userLogoutLimit
+        : (int)cb_system_setting('system_logout', 20);
     $_SESSION['cb_session_start_ts'] = time();
     $_SESSION['cb_last_activity_ts'] = time();
 }
