@@ -11,6 +11,43 @@ $baseCols = ['nazev', 'ulice', 'mesto', 'psc'];
 $endCols = [];
 $editCols = [];
 
+$isEndCol = static function (string $col): bool {
+    return str_starts_with($col, 'end_');
+};
+
+$formatEndTime = static function (mixed $value): string {
+    $raw = trim((string)$value);
+    if ($raw === '') {
+        return '00:00';
+    }
+    if (preg_match('/^(\d{1,2}):(\d{2})(?::\d{2})?$/', $raw, $m) === 1) {
+        return sprintf('%d:%02d', (int)$m[1], (int)$m[2]);
+    }
+    if (preg_match('/^\d{1,2}$/', $raw) === 1) {
+        return sprintf('%d:00', (int)$raw);
+    }
+
+    return '0:00';
+};
+
+$normalizeEndTimeForDb = static function (mixed $value): string {
+    $raw = trim((string)$value);
+    if ($raw === '') {
+        return '00:00:00';
+    }
+    if (preg_match('/^(\d{1,2}):(\d{2})(?::\d{2})?$/', $raw, $m) === 1) {
+        $hour = max(0, min(23, (int)$m[1]));
+        $minute = max(0, min(59, (int)$m[2]));
+        return sprintf('%02d:%02d:00', $hour, $minute);
+    }
+    if (preg_match('/^\d{1,2}$/', $raw) === 1) {
+        $hour = max(0, min(23, (int)$raw));
+        return sprintf('%02d:00:00', $hour);
+    }
+
+    return '00:00:00';
+};
+
 try {
     $conn = db();
     $conn->set_charset('utf8mb4');
@@ -42,7 +79,11 @@ try {
         foreach ($editCols as $col) {
             $setParts[] = '`' . $col . '` = ?';
             $types .= 's';
-            $vals[] = trim((string)($_POST[$col] ?? ''));
+            if ($isEndCol($col)) {
+                $vals[] = $normalizeEndTimeForDb($_POST[$col] ?? '');
+            } else {
+                $vals[] = trim((string)($_POST[$col] ?? ''));
+            }
         }
 
         if (!$setParts) {
@@ -89,7 +130,7 @@ $sirkaSloupcu = [
     'ulice' => 'width:20ch;',
     'mesto' => 'width:12ch;',
     'psc' => 'width:7ch;',
-    'end' => 'width:4ch;',
+    'end' => 'width:54px;',
     'akce' => 'width:9ch;',
 ];
 
@@ -119,13 +160,17 @@ ob_start();
             <?php $formId = 'cb-admin-pobocky-' . (int)($row['id_pob'] ?? 0); ?>
             <tr>
               <?php foreach ($editCols as $col): ?>
-                <?php $maxLenAttr = str_starts_with($col, 'end_') ? ' maxlength="3"' : ''; ?>
+                <?php $isEndInput = $isEndCol($col); ?>
+                <?php $maxLenAttr = $isEndInput ? ' maxlength="5" pattern="[0-9]{1,2}:[0-9]{2}" placeholder="0:00"' : ''; ?>
                 <?php
                   $inputStyle = match (true) {
-                      str_starts_with($col, 'end_') => ' style="' . $sirkaSloupcu['end'] . '"',
+                      $isEndInput => ' style="' . $sirkaSloupcu['end'] . '"',
                       isset($sirkaSloupcu[$col]) => ' style="' . $sirkaSloupcu[$col] . '"',
                       default => '',
                   };
+                  $inputValue = $isEndInput
+                      ? $formatEndTime($row[$col] ?? '')
+                      : (string)($row[$col] ?? '');
                 ?>
                 <td class="txt_r">
                   <?php if ($col === $editCols[0]): ?>
@@ -137,7 +182,7 @@ ob_start();
                     class="card_input ram_sedy txt_seda vyska_32 txt_r"
                     form="<?= h($formId) ?>"
                     name="<?= h($col) ?>"
-                    value="<?= h((string)($row[$col] ?? '')) ?>"
+                    value="<?= h($inputValue) ?>"
                     <?= $maxLenAttr ?><?= $inputStyle ?>
                   >
                 </td>

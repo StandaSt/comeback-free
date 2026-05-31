@@ -171,6 +171,27 @@ $formatTime = static function (?string $value): string {
     return cb_dt_time_hm($raw);
 };
 
+$parseBranchEndTime = static function (?string $value): array {
+    $raw = trim((string)$value);
+    if ($raw === '') {
+        return ['hour' => 0, 'minute' => 0];
+    }
+    if (preg_match('/^(\d{1,2}):(\d{2})(?::\d{2})?$/', $raw, $m) === 1) {
+        return [
+            'hour' => max(0, min(23, (int)$m[1])),
+            'minute' => max(0, min(59, (int)$m[2])),
+        ];
+    }
+    if (preg_match('/^\d{1,2}$/', $raw) === 1) {
+        return [
+            'hour' => max(0, min(23, (int)$raw)),
+            'minute' => 0,
+        ];
+    }
+
+    return ['hour' => 0, 'minute' => 0];
+};
+
 $personFullName = static function (?string $jmeno, ?string $prijmeni = null): string {
     return trim(trim((string)$jmeno) . ' ' . trim((string)$prijmeni));
 };
@@ -328,7 +349,7 @@ $reportSaveAtTs = 0;
 if ($reportBranchId > 0) {
     $endColumn = $reportEndColumns[(int)$reportDateDt->format('N')] ?? '';
     if ($endColumn !== '') {
-        $stmtEnd = $conn->prepare('SELECT `' . $endColumn . '` AS end_hour FROM pobocka WHERE id_pob = ? LIMIT 1');
+        $stmtEnd = $conn->prepare('SELECT `' . $endColumn . '` AS end_time FROM pobocka WHERE id_pob = ? LIMIT 1');
         if ($stmtEnd !== false) {
             $stmtEnd->bind_param('i', $reportBranchId);
             $stmtEnd->execute();
@@ -339,8 +360,14 @@ if ($reportBranchId > 0) {
             }
             $stmtEnd->close();
 
-            $endHour = max(0, min(23, (int)($endRow['end_hour'] ?? 0)));
-            $reportSaveAtTs = $reportDateDt->modify('+1 day')->setTime($endHour, 0, 0)->modify('-' . $reportSaveMinutes . ' minutes')->getTimestamp();
+            $endTime = $parseBranchEndTime((string)($endRow['end_time'] ?? ''));
+            $endTimeMinutes = ((int)$endTime['hour'] * 60) + (int)$endTime['minute'];
+            $workdayStartMinutes = 6 * 60;
+            $endBaseDate = $endTimeMinutes < $workdayStartMinutes ? $reportDateDt->modify('+1 day') : $reportDateDt;
+            $reportSaveAtTs = $endBaseDate
+                ->setTime((int)$endTime['hour'], (int)$endTime['minute'], 0)
+                ->modify('-' . $reportSaveMinutes . ' minutes')
+                ->getTimestamp();
         }
     }
 }
@@ -465,16 +492,29 @@ $cashInputValue = static function (?array $row, string $key) use ($formatInputNu
     return $formatInputNumber((float)$row[$key]);
 };
 
+$cashInputValueOrZero = static function (?array $row, string $key) use ($cashInputValue): string {
+    $value = $cashInputValue($row, $key);
+    return $value !== '' ? $value : '0';
+};
+
 $cashData = [
     'hotovost' => $cashInputValue($draftRow, 'hotovost'),
     'terminal' => $cashInputValue($draftRow, 'terminal'),
     'stravenky' => $cashInputValue($draftRow, 'stravenky'),
-    'vydaje_benzin' => $cashInputValue($draftRow, 'vydaje_benzin'),
-    'vydaje_auta' => $cashInputValue($draftRow, 'vydaje_auta'),
-    'vydaje_suroviny' => $cashInputValue($draftRow, 'vydaje_suroviny'),
-    'vydaje_ostatni' => $cashInputValue($draftRow, 'vydaje_ostatni'),
-    'vydaje_phm_soukrome' => $cashInputValue($draftRow, 'vydaje_phm_soukrome'),
+    'vydaje_benzin' => $cashInputValueOrZero($draftRow, 'vydaje_benzin'),
+    'vydaje_auta' => $cashInputValueOrZero($draftRow, 'vydaje_auta'),
+    'vydaje_suroviny' => $cashInputValueOrZero($draftRow, 'vydaje_suroviny'),
+    'vydaje_ostatni' => $cashInputValueOrZero($draftRow, 'vydaje_ostatni'),
+    'vydaje_phm_soukrome' => $cashInputValueOrZero($draftRow, 'vydaje_phm_soukrome'),
 ];
+
+$draftNote = trim((string)($draftRow['poznamka'] ?? ''));
+$previousNote = '';
+if ($reportBranchId > 0) {
+    $previousReportDate = $reportDateDt->modify('-1 day')->format('Y-m-d');
+    $previousRow = cb_db_dr_pracovni_find($conn, $reportBranchId, $previousReportDate);
+    $previousNote = trim((string)($previousRow['poznamka'] ?? ''));
+}
 
 if ($reportBranchId > 0) {
     $sqlIds = "
@@ -751,8 +791,8 @@ ob_start();
             <tbody>
               <tr>
                 <th class="zr_req_label txt_l" data-zr-required-label="pokladna_hotovost">Hotovost</th>
-                <th class="txt_l">Terminal</th>
-                <th class="txt_l">Stravenky</th>
+                <th class="zr_req_label txt_l" data-zr-required-label="pokladna_terminal">Terminal</th>
+                <th class="zr_req_label txt_l" data-zr-required-label="pokladna_stravenky">Stravenky</th>
                 <th class="txt_l">Benzín</th>
               </tr>
               <tr>
@@ -833,6 +873,23 @@ ob_start();
           </tbody>
           </table>
         </section>
+        <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_note_section">
+          <?php if ($previousNote !== ''): ?>
+            <div style="margin-bottom:8px;">
+              <div class="txt_seda text_12">Včerejší vzkaz</div>
+              <div class="text_14"><?= h($previousNote) ?></div>
+            </div>
+          <?php endif; ?>
+          <label class="txt_seda text_12" for="zr_note">Vzkaz pro další směnu nebo managera</label>
+          <input
+            id="zr_note"
+            type="text"
+            name="poznamka"
+            value="<?= h($draftNote) ?>"
+            data-zr-note
+            style="width:100%;margin-top:4px;"
+          >
+        </section>
         <?php if ($canSaveReport && $reportBranchId > 0): ?>
           <button
             type="button"
@@ -841,6 +898,7 @@ ob_start();
             data-zr-submit
             data-zr-submit-locked-text="Report bude možné uložit za"
             data-zr-submit-ready-text="Report je zkontrolovaný, uložit"
+            data-zr-submit-missing-text="Vyplň všechna povinná data reportu"
             data-zr-submit-at="<?= h((string)$reportSaveAtTs) ?>"
             style="background:#d9dee8;border-color:#c1c9d6;color:#5f6b7a;cursor:not-allowed;opacity:1;"
           >Report bude možné uložit za 0:00:00</button>

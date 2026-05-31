@@ -111,4 +111,21 @@ function cb_db_dr_pracovni_update_money(mysqli $conn, int $idDr, string $field, 
     $stmt->close();
 }
 
+function cb_db_dr_pracovni_update_note(mysqli $conn, int $idDr, string $value, int $idUser): void
+{
+    if ($idDr <= 0) {
+        throw new RuntimeException('Neplatny pozadavek pro update poznamky dr_pracovni.');
+    }
+
+    $stmt = $conn->prepare('UPDATE dr_pracovni SET poznamka = ?, updated_by = ? WHERE id_dr = ?');
+    if ($stmt === false) {
+        throw new RuntimeException('Nepodarilo se pripravit update poznamky dr_pracovni.');
+    }
+
+    $updatedBy = $idUser > 0 ? $idUser : null;
+    $stmt->bind_param('sii', $value, $updatedBy, $idDr);
+    $stmt->execute();
+    $stmt->close();
+}
+
 // db/db_dr_pracovni.php * Konec souboru

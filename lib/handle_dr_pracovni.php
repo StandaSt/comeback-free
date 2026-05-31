@@ -112,6 +112,12 @@ try {
         $sendJson(200, ['ok' => true, 'id_dr' => $idDr]);
     }
 
+    if ($action === 'update_note') {
+        $value = trim((string)($_POST['value'] ?? ''));
+        cb_db_dr_pracovni_update_note($conn, $idDr, $value, $currentUserId);
+        $sendJson(200, ['ok' => true, 'id_dr' => $idDr]);
+    }
+
     if (in_array($action, ['add_person', 'delete_person', 'update_time', 'update_kuryr'], true)) {
         $assertReportUser($idUser, $idSlot);
     }

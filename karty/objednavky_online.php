@@ -298,6 +298,122 @@ try {
     }
     $stmtG1->close();
 
+    $labels = [];
+    $dokoncenoData = [];
+    $naCesteData = [];
+    $osobniOdberData = [];
+    $vyrabiSeData = [];
+    $miniObjednavkyData = [];
+    $miniTrzbaData = [];
+    $barvyPobocek = [];
+    $sumDokonceno = 0;
+    $sumNaCeste = 0;
+    $sumOsobniOdber = 0;
+    $sumVyrabiSe = 0;
+    $sumObjednavkyMini = 0;
+    $sumTrzbaMini = 0.0;
+
+    foreach ($branches as $branch) {
+        $labels[] = (string)$branch['nazev'];
+        $barvyPobocek[] = (string)$branch['barva'];
+        $dokonceno = (int)$branch['dokonceno'];
+        $naCeste = (int)$branch['na_ceste'];
+        $osobniOdber = (int)$branch['osobni_odber'];
+        $vyrabiSe = (int)$branch['vyrabi_se'];
+
+        $dokoncenoData[] = $dokonceno;
+        $naCesteData[] = $naCeste;
+        $osobniOdberData[] = $osobniOdber;
+        $vyrabiSeData[] = $vyrabiSe;
+        $miniObjednavkyData[] = (int)$branch['objednavky'];
+        $miniTrzbaData[] = (float)$branch['trzba'];
+
+        $sumDokonceno += $dokonceno;
+        $sumNaCeste += $naCeste;
+        $sumOsobniOdber += $osobniOdber;
+        $sumVyrabiSe += $vyrabiSe;
+        $sumObjednavkyMini += (int)$branch['objednavky'];
+        $sumTrzbaMini += (float)$branch['trzba'];
+    }
+
+    $chartId = 'k19-online-chart';
+    $payload = [
+        'kind' => 'online_stavy',
+        'labels' => $labels,
+        'series' => [
+            ['id' => 'dokonceno', 'name' => 'Dokončeno', 'data' => $dokoncenoData, 'colors' => $barvyPobocek],
+            ['id' => 'na_ceste', 'name' => 'Na cestě', 'data' => $naCesteData],
+            ['id' => 'osobni_odber', 'name' => 'Osobní odběr', 'data' => $osobniOdberData],
+            ['id' => 'vyrabi_se', 'name' => 'Vyrábí se', 'data' => $vyrabiSeData],
+            ['id' => 'objednavky', 'name' => 'Objednávky', 'data' => $miniObjednavkyData],
+            ['id' => 'trzba', 'name' => 'Tržba', 'data' => $miniTrzbaData],
+        ],
+    ];
+    $payloadJson = cb_k19_chart_json($payload, 'Nepodařilo se připravit graf pro K19.');
+
+    ob_start();
+    ?>
+    <div class="sirka100 displ_flex flex_sloupec gap_4" style="height:100%; min-height:0;" data-cb-tooltip-boundary="1">
+      <div class="displ_flex jc_mezi text_11 txt_seda gap_8" style="align-items:flex-start; flex-wrap:wrap; line-height:1.15;">
+
+        <span class="displ_flex gap_8" style="flex-wrap:wrap; justify-content:flex-end;">
+          <span><strong style="color:#16a34a;"><?= h((string)$sumDokonceno) ?></strong> dokončeno</span>
+          <span><strong style="color:#f59e0b;"><?= h((string)$sumNaCeste) ?></strong> na cestě</span>
+          <span><strong style="color:#0ea5e9;"><?= h((string)$sumOsobniOdber) ?></strong> osobní odběr</span>
+          <span><strong style="color:#dc2626;"><?= h((string)$sumVyrabiSe) ?></strong> vyrábí se</span>
+        </span>
+        <span class="cb_tooltip" tabindex="0" aria-label="Souhrn online objednávek" data-cb-tooltip-position="1">
+          <span>detail</span>
+          <span class="cb_tooltip_panel cb_tooltip_card" data-cb-tooltip-panel="1">
+            <span class="cb_tooltip_title">Online objednávky podle poboček</span>
+            <table class="cb_tooltip_table">
+              <thead>
+                <tr>
+                  <th>Pobočka</th>
+                  <th class="cb_tooltip_num">Dok.</th>
+                  <th class="cb_tooltip_num">Cesta</th>
+                  <th class="cb_tooltip_num">Odběr</th>
+                  <th class="cb_tooltip_num">Výroba</th>
+                  <th class="cb_tooltip_num">Obj.</th>
+                  <th class="cb_tooltip_num">Tržba</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php foreach ($branches as $branch): ?>
+                  <tr>
+                    <td><?= h((string)$branch['nazev']) ?></td>
+                    <td class="cb_tooltip_num"><?= h((string)(int)$branch['dokonceno']) ?></td>
+                    <td class="cb_tooltip_num"><?= h((string)(int)$branch['na_ceste']) ?></td>
+                    <td class="cb_tooltip_num"><?= h((string)(int)$branch['osobni_odber']) ?></td>
+                    <td class="cb_tooltip_num"><?= h((string)(int)$branch['vyrabi_se']) ?></td>
+                    <td class="cb_tooltip_num"><?= h((string)(int)$branch['objednavky']) ?></td>
+                    <td class="cb_tooltip_num"><?= h(number_format((float)$branch['trzba'], 0, ',', ' ')) ?> Kč</td>
+                  </tr>
+                <?php endforeach; ?>
+                <tr>
+                  <th>Celkem</th>
+                  <th class="cb_tooltip_num"><?= h((string)$sumDokonceno) ?></th>
+                  <th class="cb_tooltip_num"><?= h((string)$sumNaCeste) ?></th>
+                  <th class="cb_tooltip_num"><?= h((string)$sumOsobniOdber) ?></th>
+                  <th class="cb_tooltip_num"><?= h((string)$sumVyrabiSe) ?></th>
+                  <th class="cb_tooltip_num"><?= h((string)$sumObjednavkyMini) ?></th>
+                  <th class="cb_tooltip_num"><?= h(number_format($sumTrzbaMini, 0, ',', ' ')) ?> Kč</th>
+                </tr>
+              </tbody>
+            </table>
+          </span>
+        </span>
+      </div>
+
+      <div id="<?= h($chartId) ?>" data-cb-prehledy-grafy-chart="1" class="sirka100" style="height:180px;"></div>
+    </div>
+    <?php
+    $card_min_html = cb_k19_render_chart_root((string)ob_get_clean(), $payloadJson);
+
+    if (($cbDashboardRenderMode ?? '') === 'mini') {
+        return;
+    }
+
     $prevRangeFrom = (new DateTimeImmutable((string)$range['from'], new DateTimeZone('Europe/Prague')))
         ->modify('-7 days');
     $prevRangeToExclusive = (new DateTimeImmutable($g1ToTsExclusive, new DateTimeZone('Europe/Prague')))
@@ -445,6 +561,7 @@ try {
     $osobniOdberData = [];
     $vyrabiSeData = [];
     $miniObjednavkyData = [];
+    $miniTrzbaData = [];
     $barvyPobocek = [];
     $objednavkyData = [];
     $trzbaData = [];
@@ -496,7 +613,8 @@ try {
         $naCesteData[] = $naCeste;
         $osobniOdberData[] = $osobniOdber;
         $vyrabiSeData[] = $vyrabiSe;
-        $miniObjednavkyData[] = $dokonceno + $naCeste + $osobniOdber + $vyrabiSe;
+        $miniObjednavkyData[] = $objednavky;
+        $miniTrzbaData[] = $trzba;
 
         $sumDokonceno += $dokonceno;
         $sumNaCeste += $naCeste;
@@ -511,14 +629,15 @@ try {
         'kind' => 'online_stavy',
         'labels' => $labels,
         'series' => [
-            ['id' => 'dokonceno', 'name' => 'Dokonceno', 'data' => $dokoncenoData, 'colors' => $barvyPobocek],
-            ['id' => 'na_ceste', 'name' => 'Na ceste', 'data' => $naCesteData],
-            ['id' => 'osobni_odber', 'name' => 'Osobni odber', 'data' => $osobniOdberData],
-            ['id' => 'vyrabi_se', 'name' => 'Vyrabi se', 'data' => $vyrabiSeData],
-            ['id' => 'objednavky', 'name' => 'Objednavky', 'data' => $miniObjednavkyData],
+            ['id' => 'dokonceno', 'name' => 'Dokončeno', 'data' => $dokoncenoData, 'colors' => $barvyPobocek],
+            ['id' => 'na_ceste', 'name' => 'Na cestě', 'data' => $naCesteData],
+            ['id' => 'osobni_odber', 'name' => 'Osobní odběr', 'data' => $osobniOdberData],
+            ['id' => 'vyrabi_se', 'name' => 'Vyrábí se', 'data' => $vyrabiSeData],
+            ['id' => 'objednavky', 'name' => 'Objednávky', 'data' => $miniObjednavkyData],
+            ['id' => 'trzba', 'name' => 'Tržba', 'data' => $miniTrzbaData],
         ],
     ];
-    $payloadJson = cb_k19_chart_json($payload, 'Nepodarilo se pripravit graf pro K19.');
+    $payloadJson = cb_k19_chart_json($payload, 'Nepodařilo se připravit graf pro K19.');
 
     $g1Payload = [
         'kind' => 'bar_dual',

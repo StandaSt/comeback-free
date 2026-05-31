@@ -133,6 +133,71 @@
     button.textContent = text;
   }
 
+  function setSubmitMissing(button, text) {
+    button.disabled = true;
+    button.setAttribute('aria-disabled', 'true');
+    button.style.background = '#f8d7da';
+    button.style.borderColor = '#f1aeb5';
+    button.style.color = '#842029';
+    button.style.cursor = 'not-allowed';
+    button.style.opacity = '1';
+    button.textContent = text;
+  }
+
+  function areSubmitRequiredFieldsFilled(root) {
+    if (
+      getFieldValue(root, '[data-zr-field="oteviral"]') === ''
+      || getFieldValue(root, '[data-zr-field="zaviral"]') === ''
+      || parseMoneyValue(getFieldValue(root, '[data-zr-field="pokladna_hotovost"]'), 'int') === ''
+      || parseMoneyValue(getFieldValue(root, '[data-zr-field="pokladna_terminal"]'), 'decimal') === ''
+      || parseMoneyValue(getFieldValue(root, '[data-zr-field="pokladna_stravenky"]'), 'int') === ''
+    ) {
+      return false;
+    }
+
+    const personRows = root.querySelectorAll('[data-zr-person-row="instor"], [data-zr-person-row="kuryr"]');
+    for (const row of personRows) {
+      const start = row.querySelector('[data-zr-start]');
+      const end = row.querySelector('[data-zr-end]');
+      if (
+        !(start instanceof HTMLInputElement)
+        || !(end instanceof HTMLInputElement)
+        || String(start.value || '').trim() === ''
+        || String(end.value || '').trim() === ''
+      ) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  function syncSubmitButton(root) {
+    const button = root.querySelector('[data-zr-submit]');
+    if (!(button instanceof HTMLButtonElement)) {
+      return true;
+    }
+
+    const targetTs = Number.parseInt(String(button.getAttribute('data-zr-submit-at') || '0'), 10) || 0;
+    const lockedText = String(button.getAttribute('data-zr-submit-locked-text') || 'Report bude možné uložit za');
+    const readyText = String(button.getAttribute('data-zr-submit-ready-text') || 'Report je zkontrolovaný, uložit');
+    const missingText = String(button.getAttribute('data-zr-submit-missing-text') || 'Vyplň povinná pole');
+    const remaining = targetTs - Math.floor(Date.now() / 1000);
+
+    if (remaining > 0) {
+      setSubmitLocked(button, lockedText + ' ' + formatDuration(remaining));
+      return false;
+    }
+
+    if (!areSubmitRequiredFieldsFilled(root)) {
+      setSubmitMissing(button, missingText);
+      return false;
+    }
+
+    setSubmitReady(button, readyText);
+    return true;
+  }
+
   function bindSubmitCountdown(root) {
     const button = root.querySelector('[data-zr-submit]');
     if (!(button instanceof HTMLButtonElement) || button.getAttribute('data-zr-countdown-bound') === '1') {
@@ -140,26 +205,12 @@
     }
     button.setAttribute('data-zr-countdown-bound', '1');
 
-    const targetTs = Number.parseInt(String(button.getAttribute('data-zr-submit-at') || '0'), 10) || 0;
-    const lockedText = String(button.getAttribute('data-zr-submit-locked-text') || 'Report bude možné uložit za');
-    const readyText = String(button.getAttribute('data-zr-submit-ready-text') || 'Report je zkontrolovaný, uložit');
-
-    const tick = () => {
-      const remaining = targetTs - Math.floor(Date.now() / 1000);
-      if (remaining <= 0) {
-        setSubmitReady(button, readyText);
-        return true;
-      }
-      setSubmitLocked(button, lockedText + ' ' + formatDuration(remaining));
-      return false;
-    };
-
-    if (tick()) {
+    if (syncSubmitButton(root)) {
       return;
     }
 
     const timer = w.setInterval(() => {
-      if (!document.body.contains(button) || tick()) {
+      if (!document.body.contains(button) || syncSubmitButton(root)) {
         w.clearInterval(timer);
       }
     }, 1000);
@@ -291,6 +342,22 @@
     });
   }
 
+  function bindNoteInput(root) {
+    const input = root.querySelector('[data-zr-note]');
+    if (!(input instanceof HTMLInputElement) || input.getAttribute('data-zr-note-bound') === '1') {
+      return;
+    }
+    input.setAttribute('data-zr-note-bound', '1');
+
+    input.addEventListener('blur', () => {
+      saveDraftAction(root, 'update_note', {
+        value: String(input.value || '').trim()
+      }).catch((err) => {
+        if (w.alert) w.alert(err && err.message ? err.message : 'Uložení poznámky selhalo.');
+      });
+    });
+  }
+
   function bindEnterNavigation(root) {
     const form = root.querySelector('[data-zr-form]');
     if (!(form instanceof HTMLFormElement) || form.getAttribute('data-zr-enter-bound') === '1') {
@@ -342,6 +409,7 @@
     root.setAttribute('data-zr-form-init', '1');
 
     bindMoneyInputs(root);
+    bindNoteInput(root);
     bindEnterNavigation(root);
     bindSubmitCountdown(root);
     syncWeekdayFromDate(root);
@@ -361,9 +429,13 @@
 
     const form = root.querySelector('[data-zr-form]');
     if (form instanceof HTMLFormElement) {
-      form.addEventListener('input', () => syncRequiredState(root));
+      form.addEventListener('input', () => {
+        syncRequiredState(root);
+        syncSubmitButton(root);
+      });
       form.addEventListener('change', (event) => {
         syncRequiredState(root);
+        syncSubmitButton(root);
         const target = event.target;
         if (!(target instanceof HTMLSelectElement)) return;
         const field = String(target.getAttribute('data-zr-field') || '');

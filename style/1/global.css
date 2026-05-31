@@ -325,6 +325,92 @@ main{
   font-weight:700;
 }
 
+.cb_tooltip{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.cb_tooltip_icon{
+  width:18px;
+  height:18px;
+  border:1px solid var(--clr_seda_2);
+  border-radius:50%;
+  background:var(--clr_bila);
+  color:var(--clr_seda_4);
+  font-size:12px;
+  line-height:16px;
+  font-weight:700;
+  text-align:center;
+  cursor:help;
+  user-select:none;
+}
+
+.cb_tooltip_panel{
+  position:fixed;
+  left:0;
+  top:0;
+  z-index:9999;
+  display:none;
+  min-width:360px;
+}
+
+.cb_tooltip_panel.is-visible{
+  display:block;
+}
+
+.cb_tooltip_card{
+  padding:8px;
+  border:1px solid var(--clr_seda_4);
+  border-radius:8px;
+  background:var(--clr_modra_7);
+  color:var(--clr_cerna);
+  box-shadow:0 14px 34px var(--clr_pruhledna_cerna_25);
+}
+
+.cb_tooltip_title{
+  margin:0 0 6px;
+  font-size:var(--fs_12);
+  line-height:1.2;
+  font-weight:700;
+  color:var(--clr_seda_4);
+}
+
+.cb_tooltip_table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:var(--fs_11);
+  line-height:1.15;
+}
+
+.cb_tooltip_table th,
+.cb_tooltip_table td{
+  padding:3px 6px;
+  border-bottom:1px solid var(--clr_seda_2);
+  white-space:nowrap;
+  text-align:left;
+  font-weight:400;
+}
+
+.cb_tooltip_table th{
+  background:var(--clr_modra_2);
+  font-weight:700;
+}
+
+.cb_tooltip_table tr:last-child td{
+  border-bottom:0;
+}
+
+.cb_tooltip_num{
+  text-align:right !important;
+  font-variant-numeric:tabular-nums;
+}
+
+.cb_chart_tooltip{
+  pointer-events:none;
+}
+
 /* =========================
    ENTER + X - GLOBALNI
    ========================= */
@@ -2166,6 +2252,7 @@ align-items:center;
 
 .zr_cash_table td .zr_money_input{
   width:100%;
+  text-align:right;
 }
 
 .zr_person_table th,

@@ -20,6 +20,15 @@
     return String(intValue).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   }
 
+  function escapeHtml(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   function lightenColor(color, amount) {
     const raw = String(color || '').trim();
     const match = raw.match(/^#([0-9a-f]{6})$/i);
@@ -77,6 +86,70 @@
     const y = Math.max(gap, Math.min(cursorY - (height / 2), maxY));
 
     return [x, y];
+  }
+
+  function positionTooltipBottomRightAtCursor(point, params, dom, rect, size) {
+    const viewSize = size && Array.isArray(size.viewSize) ? size.viewSize : [0, 0];
+    const contentSize = size && Array.isArray(size.contentSize) ? size.contentSize : [0, 0];
+    const gap = 12;
+    const cursorX = Array.isArray(point) ? Number(point[0]) || 0 : 0;
+    const cursorY = Array.isArray(point) ? Number(point[1]) || 0 : 0;
+    const width = Number(contentSize[0]) || 0;
+    const height = Number(contentSize[1]) || 0;
+    const viewWidth = Number(viewSize[0]) || 0;
+    const viewHeight = Number(viewSize[1]) || 0;
+
+    let x = cursorX + gap;
+    let y = cursorY + gap;
+
+    if (x + width + gap > viewWidth) {
+      x = cursorX - width - gap;
+    }
+    if (y + height + gap > viewHeight) {
+      y = cursorY - height - gap;
+    }
+
+    x = Math.max(gap, Math.min(x, Math.max(gap, viewWidth - width - gap)));
+    y = Math.max(gap, Math.min(y, Math.max(gap, viewHeight - height - gap)));
+
+    return [x, y];
+  }
+
+  function positionTooltipOutsideCard(chartNode) {
+    return (point, params, dom, rect, size) => {
+      const contentSize = size && Array.isArray(size.contentSize) ? size.contentSize : [0, 0];
+      const gap = 12;
+      const extraRightOffset = 15;
+      const width = Number(contentSize[0]) || 0;
+      const height = Number(contentSize[1]) || 0;
+      const viewWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+      const viewHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+      const boundary = chartNode instanceof HTMLElement ? chartNode.closest('[data-cb-tooltip-boundary="1"]') : null;
+      const boundaryRect = boundary instanceof HTMLElement
+        ? boundary.getBoundingClientRect()
+        : (chartNode instanceof HTMLElement ? chartNode.getBoundingClientRect() : { left: 0, right: 0, top: 0 });
+      const chartRect = chartNode instanceof HTMLElement
+        ? chartNode.getBoundingClientRect()
+        : { left: 0, top: 0 };
+
+      let viewportX = boundaryRect.right + gap + extraRightOffset;
+      if (viewportX + width + gap > viewWidth) {
+        viewportX = boundaryRect.left - width - gap;
+      }
+
+      let viewportY = boundaryRect.top + gap;
+      if (viewportY + height + gap > viewHeight) {
+        viewportY = viewHeight - height - gap;
+      }
+
+      viewportX = Math.max(gap, Math.min(viewportX, Math.max(gap, viewWidth - width - gap)));
+      viewportY = Math.max(gap, Math.min(viewportY, Math.max(gap, viewHeight - height - gap)));
+
+      return [
+        viewportX - chartRect.left,
+        viewportY - chartRect.top
+      ];
+    };
   }
 
   function buildOutsideValueMarkPoints(labels, values, suffix) {
@@ -204,7 +277,7 @@
     return fallbackValue;
   }
 
-  function buildOption(payload) {
+  function buildOption(payload, chartNode) {
     if (!payload || typeof payload !== 'object') return null;
     const kind = String(payload.kind || 'bar').trim();
     if (kind === 'online_stavy') {
@@ -214,6 +287,7 @@
       const osobniOdberRaw = getSeriesData(payload, 'osobni_odber', 2);
       const vyrabiSeRaw = getSeriesData(payload, 'vyrabi_se', 3);
       const objednavkyRaw = getSeriesData(payload, 'objednavky', 4);
+      const trzbaRaw = getSeriesData(payload, 'trzba', 5);
       const colorsRaw = getSeriesColors(payload, 'dokonceno', 0);
       const dokonceno = dokoncenoRaw.map((item) => Number(item) || 0);
       const naCeste = naCesteRaw.map((item) => Number(item) || 0);
@@ -224,7 +298,148 @@
         const stackValue = dokonceno[index] + naCeste[index] + osobniOdber[index] + vyrabiSe[index];
         return payloadValue > 0 ? payloadValue : stackValue;
       });
+      const trzba = labels.map((label, index) => Number(trzbaRaw[index] || 0) || 0);
       const colors = colorsRaw.map((item) => String(item || ''));
+
+      if (trzbaRaw.length > 0) {
+        return {
+          grid: MINI_SLOUPEC_GRID,
+          tooltip: {
+            trigger: 'axis',
+            axisPointer: { type: 'shadow' },
+            appendToBody: true,
+            showDelay: 0,
+            hideDelay: 250,
+            transitionDuration: 0,
+            enterable: true,
+            backgroundColor: 'transparent',
+            borderWidth: 0,
+            padding: 0,
+            position: positionTooltipOutsideCard(chartNode),
+            formatter: (params) => {
+              const items = Array.isArray(params) ? params : [];
+              const name = items.length > 0 ? String(items[0].axisValue || '') : '';
+              const index = items.length > 0 ? Number(items[0].dataIndex || 0) || 0 : 0;
+              return ''
+                + '<div class="cb_chart_tooltip cb_tooltip_card">'
+                + '<div class="cb_tooltip_title">' + escapeHtml(name) + '</div>'
+                + '<table class="cb_tooltip_table">'
+                + '<tbody>'
+                + '<tr><td>Dokončeno</td><td class="cb_tooltip_num">' + formatInt(dokonceno[index] ?? 0) + '</td></tr>'
+                + '<tr><td>Na cestě</td><td class="cb_tooltip_num">' + formatInt(naCeste[index] ?? 0) + '</td></tr>'
+                + '<tr><td>Osobní odběr</td><td class="cb_tooltip_num">' + formatInt(osobniOdber[index] ?? 0) + '</td></tr>'
+                + '<tr><td>Vyrábí se</td><td class="cb_tooltip_num">' + formatInt(vyrabiSe[index] ?? 0) + '</td></tr>'
+                + '<tr><th>Objednávky</th><th class="cb_tooltip_num">' + formatInt(objednavky[index] ?? 0) + '</th></tr>'
+                + '<tr><th>Tržba</th><th class="cb_tooltip_num">' + formatInt(trzba[index] ?? 0) + ' Kč</th></tr>'
+                + '</tbody>'
+                + '</table>'
+                + '</div>';
+            }
+          },
+          legend: { show: false },
+          xAxis: {
+            type: 'category',
+            data: labels,
+            axisLabel: {
+              interval: 0,
+              rotate: labels.length > 6 ? 20 : 0
+            }
+          },
+          yAxis: [
+            {
+              type: 'value',
+              axisLabel: { show: false },
+              axisTick: { show: false },
+              splitLine: { show: false }
+            },
+            {
+              type: 'value',
+              axisLabel: { show: false },
+              axisTick: { show: false },
+              splitLine: { show: false }
+            }
+          ],
+          series: [
+            {
+              name: 'Dokončeno',
+              type: 'bar',
+              yAxisIndex: 0,
+              stack: 'online',
+              barGap: '25%',
+              barMaxWidth: MINI_SLOUPEC_BAR_MAX_WIDTH,
+              data: labels.map((label, index) => ({
+                value: dokonceno[index] ?? 0,
+                itemStyle: { color: colors[index] || '#16a34a' }
+              }))
+            },
+            {
+              name: 'Na cestě',
+              type: 'bar',
+              yAxisIndex: 0,
+              stack: 'online',
+              barMaxWidth: MINI_SLOUPEC_BAR_MAX_WIDTH,
+              itemStyle: { color: '#f59e0b' },
+              data: naCeste
+            },
+            {
+              name: 'Osobní odběr',
+              type: 'bar',
+              yAxisIndex: 0,
+              stack: 'online',
+              barMaxWidth: MINI_SLOUPEC_BAR_MAX_WIDTH,
+              itemStyle: { color: '#0ea5e9' },
+              data: osobniOdber
+            },
+            {
+              name: 'Vyrábí se',
+              type: 'bar',
+              yAxisIndex: 0,
+              stack: 'online',
+              barMaxWidth: MINI_SLOUPEC_BAR_MAX_WIDTH,
+              itemStyle: { color: '#dc2626' },
+              data: vyrabiSe
+            },
+            {
+              name: 'Objednávky',
+              type: 'bar',
+              yAxisIndex: 0,
+              stack: 'online',
+              barMaxWidth: MINI_SLOUPEC_BAR_MAX_WIDTH,
+              silent: true,
+              tooltip: { show: false },
+              itemStyle: { color: 'transparent' },
+              emphasis: { disabled: true },
+              label: {
+                show: true,
+                position: 'top',
+                color: '#475569',
+                fontSize: 10,
+                fontWeight: 600,
+                formatter: (params) => formatInt(objednavky[params.dataIndex] ?? 0)
+              },
+              data: labels.map(() => 0)
+            },
+            {
+              name: 'Tržba',
+              type: 'bar',
+              yAxisIndex: 1,
+              barWidth: 5,
+              barMaxWidth: 5,
+              data: labels.map((label, index) => ({
+                value: trzba[index] ?? 0,
+                itemStyle: {
+                  color: lightenColor(colors[index] || '#16a34a', 0.45),
+                  borderColor: colors[index] || '#16a34a',
+                  borderWidth: 1
+                }
+              })),
+              label: {
+                show: false
+              }
+            }
+          ]
+        };
+      }
 
       return {
         grid: Object.assign({}, MINI_SLOUPEC_GRID, { top: 30 }),
@@ -830,7 +1045,7 @@
   function getChartOption(chartNode, rootPayload) {
     const payload = parseChartPayload(chartNode) || rootPayload;
     if (!payload) return null;
-    return buildOption(payload);
+    return buildOption(payload, chartNode);
   }
 
   function renderOne(root, attempt) {

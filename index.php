@@ -175,6 +175,7 @@ if (!empty($_SESSION['login_ok'])) {
 <script src="<?= h(cb_asset_url('js/karty_min_max.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_top_report.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_grafy.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/tooltip_pozice.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_min_nano.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_hlavicka.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_report_restia.js')) ?>"></script>
