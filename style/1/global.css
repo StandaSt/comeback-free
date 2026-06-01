@@ -2155,6 +2155,15 @@ align-items:center;
 .zr_left,
 .zr_side{
   min-width:0;
+}
+
+.zr_left{
+  display:grid;
+  grid-template-columns:minmax(0, 1fr) minmax(0, 1fr) 180px;
+  align-items:start;
+}
+
+.zr_side{
   display:flex;
   flex-direction:column;
 }
@@ -2253,6 +2262,50 @@ align-items:center;
 .zr_cash_table td .zr_money_input{
   width:100%;
   text-align:right;
+}
+
+.zr_instor_section{
+  grid-column:1 / span 2;
+}
+
+.zr_control_section{
+  grid-column:3;
+}
+
+.zr_kuryr_section,
+.zr_note_section,
+.zr_submit{
+  grid-column:1 / -1;
+}
+
+.zr_control_metric{
+  padding:8px 0;
+  border-top:1px solid var(--clr_pruhledna_seda_18);
+}
+
+.zr_control_metric:first-of-type{
+  border-top:0;
+  padding-top:0;
+}
+
+.zr_control_label{
+  display:block;
+  font-size:var(--fs_12);
+  color:var(--clr_seda_3);
+}
+
+.zr_control_value{
+  display:block;
+  margin-top:3px;
+  font-size:22px;
+  line-height:1.1;
+  font-weight:700;
+  color:var(--clr_seda_4);
+  text-align:right;
+}
+
+.zr_control_value_col{
+  font-size:34px;
 }
 
 .zr_person_table th,
@@ -2559,7 +2612,8 @@ align-items:center;
 
 .zr_cash_section,
 .zr_instor_section,
-.zr_kuryr_section{
+.zr_kuryr_section,
+.zr_control_section{
   background:linear-gradient(90deg, var(--clr_modra_1), var(--clr_panel));
 }
 
@@ -2572,6 +2626,7 @@ align-items:center;
 .zr_ops_section .card_section_title,
 .zr_instor_section .card_section_title,
 .zr_kuryr_section .card_section_title,
+.zr_control_section .card_section_title,
 .zr_cash_section .card_section_title{
   margin-bottom:10px;
   font-size:var(--fs_15);

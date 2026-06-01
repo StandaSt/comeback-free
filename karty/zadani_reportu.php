@@ -663,6 +663,41 @@ if (is_int($restiaSummary['make_time_avg_sec']) && $restiaSummary['make_time_avg
     $makeTimeLabel = $minutes . ' min ' . sprintf('%02d', $seconds) . ' s';
 }
 
+$draftMoneyValue = static function (?array $row, string $key): float {
+    if (!is_array($row) || !array_key_exists($key, $row) || $row[$key] === null) {
+        return 0.0;
+    }
+
+    return (float)$row[$key];
+};
+$hasRequiredCashValues = is_array($draftRow)
+    && array_key_exists('hotovost', $draftRow)
+    && $draftRow['hotovost'] !== null
+    && array_key_exists('terminal', $draftRow)
+    && $draftRow['terminal'] !== null
+    && array_key_exists('stravenky', $draftRow)
+    && $draftRow['stravenky'] !== null;
+$reportDifference = null;
+if ($hasRequiredCashValues) {
+    $reportIncome = (float)$restiaSummary['wolt']
+        + (float)$restiaSummary['bolt']
+        + (float)$restiaSummary['dj']
+        + (float)$restiaSummary['web']
+        + (float)$restiaSummary['wolt_cash']
+        + (float)$restiaSummary['dj_cash']
+        + $draftMoneyValue($draftRow, 'terminal')
+        + $draftMoneyValue($draftRow, 'stravenky')
+        + $draftMoneyValue($draftRow, 'hotovost');
+    $reportExpenses = $draftMoneyValue($draftRow, 'vydaje_benzin')
+        + $draftMoneyValue($draftRow, 'vydaje_auta')
+        + $draftMoneyValue($draftRow, 'vydaje_suroviny')
+        + $draftMoneyValue($draftRow, 'vydaje_ostatni')
+        + $draftMoneyValue($draftRow, 'vydaje_phm_soukrome');
+    $reportDifference = $reportIncome + $reportExpenses - (float)$restiaSummary['trzba'];
+}
+$reportDifferenceLabel = $reportDifference === null ? '-- Kč' : $formatMoneyWhole((float)$reportDifference);
+$reportColLabel = '-- %';
+
 $renderInstorSavedRow = static function (array $row, callable $renderTimeInput): string {
     $idDrOsoby = (int)($row['id_dr_osoby'] ?? 0);
     $idUser = (int)($row['id_user'] ?? 0);
@@ -843,6 +878,18 @@ ob_start();
               <?php endforeach; ?>
             </tbody>
           </table>
+        </section>
+
+        <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_control_section">
+          <h4 class="card_section_title txt_seda">Kontrola</h4>
+          <div class="zr_control_metric">
+            <span class="zr_control_label">Rozdíl</span>
+            <strong class="zr_control_value"><?= h($reportDifferenceLabel) ?></strong>
+          </div>
+          <div class="zr_control_metric zr_control_metric_col">
+            <span class="zr_control_label">COL</span>
+            <strong class="zr_control_value zr_control_value_col"><?= h($reportColLabel) ?></strong>
+          </div>
         </section>
 
         <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_kuryr_section">
