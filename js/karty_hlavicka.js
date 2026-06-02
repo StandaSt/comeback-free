@@ -2,10 +2,10 @@
 'use strict';
 
 (function (w) {
-  const MOVE_DEFAULT_TEXT = 'Přesunout na pozici';
-  const MOVE_HINT_TEXT = 'Zvol novou pozici pro tuto kartu';
-  const UNLOCK_ALL_CONFIRM_HTML = 'Pokoušíte se uvolnit všechny karty uzamčené na pozici<br><br>Pokud trváte na odemknutí karet,<br>dojde ke změně pořadí všech karet na dashboardu.';
-  const UNLOCK_ALL_CONFIRM_TEXT = 'Pokoušíte se uvolnit všechny karty uzamčené na pozici. Pokud trváte na odemknutí karet, dojde ke změně pořadí všech karet na dashboardu.';
+  const MOVE_DEFAULT_TEXT = 'Přesunout kartu';
+  const MOVE_HINT_TEXT = 'Zvol kartu pro prohození pořadí';
+  const UNLOCK_ALL_CONFIRM_HTML = 'Pokoušíte se obnovit výchozí pořadí karet.<br><br>Barvy a ikony karet zůstanou zachované.';
+  const UNLOCK_ALL_CONFIRM_TEXT = 'Pokoušíte se obnovit výchozí pořadí karet. Barvy a ikony karet zůstanou zachované.';
 
   function findCardToggle(cardId) {
     const cid = String(cardId || '').trim();
@@ -235,40 +235,6 @@
       return true;
     }
 
-    function openMoveUnlockConfirm(onYes, onNo) {
-      const modal = getCardModeConfirmModal();
-      if (!modal) return false;
-
-      modal.msg.innerHTML = 'Cílová pozice je obsazena dříve umístěnou kartou.<br><br>Pokud trváš na přesunu karty,<br>bude karta na cílové pozici uvolněna z pozice.';
-      modal.cancelBtn.textContent = 'Jéminkote, netrvám na tom';
-      modal.confirmBtn.textContent = 'Trvám na přesunu';
-      modal.confirmBtn.classList.remove('is-hidden');
-      modal.root.classList.remove('is-hidden');
-      modal.root.setAttribute('aria-hidden', 'false');
-      modal.confirmBtn.focus();
-
-      const handleYes = function (ev) {
-        ev.preventDefault();
-        ev.stopPropagation();
-        closeCardModeConfirmModal();
-        if (typeof onYes === 'function') {
-          onYes();
-        }
-      };
-      const handleNo = function (ev) {
-        ev.preventDefault();
-        ev.stopPropagation();
-        closeCardModeConfirmModal();
-        if (typeof onNo === 'function') {
-          onNo();
-        }
-      };
-
-      modal.confirmBtn.addEventListener('click', handleYes, { once: true });
-      modal.cancelBtn.addEventListener('click', handleNo, { once: true });
-      return true;
-    }
-
     function openUnlockAllConfirm(onYes, onNo) {
       const modal = getCardModeConfirmModal();
       if (!modal) return false;
@@ -347,30 +313,21 @@
       });
     }
 
-    function setCardPlacement(root, col, line, isLocked) {
+    function clearCardPlacement(root) {
       if (!(root instanceof HTMLElement)) return;
       const section = root.closest('[data-cb-dash-card="1"]');
       const prefWrap = root.querySelector('[data-card-pref-wrap]');
-      const safeCol = (Number.isFinite(col) && col > 0) ? Math.trunc(col) : 0;
-      const safeLine = (Number.isFinite(line) && line > 0) ? Math.trunc(line) : 0;
 
-      root.setAttribute('data-card-col', String(safeCol));
-      root.setAttribute('data-card-line', String(safeLine));
-      if (typeof isLocked === 'boolean') {
-        root.setAttribute('data-card-pos-locked', isLocked ? '1' : '0');
-        if (prefWrap instanceof HTMLElement) {
-          prefWrap.classList.toggle('card_pref_wrap_pos_locked', isLocked);
-        }
+      root.setAttribute('data-card-col', '0');
+      root.setAttribute('data-card-line', '0');
+      root.setAttribute('data-card-pos-locked', '0');
+      if (prefWrap instanceof HTMLElement) {
+        prefWrap.classList.remove('card_pref_wrap_pos_locked');
       }
 
       if (section instanceof HTMLElement) {
-        if (safeCol > 0 && safeLine > 0) {
-          section.style.gridColumn = String(safeCol);
-          section.style.gridRow = String(safeLine);
-        } else {
-          section.style.gridColumn = '';
-          section.style.gridRow = '';
-        }
+        section.style.gridColumn = '';
+        section.style.gridRow = '';
       }
     }
 
@@ -378,29 +335,7 @@
       document.querySelectorAll('.card_shell').forEach(function (root) {
         if (!(root instanceof HTMLElement)) return;
         if (String(root.getAttribute('data-card-mode') || 'mini').trim() === 'nano') return;
-        setCardPlacement(root, 0, 0, false);
-      });
-    }
-
-    function applyLockedPlacementsFromData(lockedPositions) {
-      const rows = Array.isArray(lockedPositions) ? lockedPositions : [];
-
-      document.querySelectorAll('.card_shell').forEach(function (root) {
-        if (!(root instanceof HTMLElement)) return;
-        root.setAttribute('data-card-pos-locked', '0');
-      });
-
-      rows.forEach(function (row) {
-        if (!row || typeof row !== 'object') return;
-        const cardId = parseInt(String(row.id_karta || '0'), 10);
-        const col = parseInt(String(row.col || '0'), 10);
-        const line = parseInt(String(row.line || '0'), 10);
-        if (!Number.isFinite(cardId) || cardId <= 0 || !Number.isFinite(col) || col <= 0 || !Number.isFinite(line) || line <= 0) {
-          return;
-        }
-        const root = document.querySelector('.card_shell[data-card-id="' + String(cardId) + '"]');
-        if (!(root instanceof HTMLElement)) return;
-        setCardPlacement(root, col, line, true);
+        clearCardPlacement(root);
       });
     }
 
@@ -409,19 +344,15 @@
       const root = wrap ? wrap.closest('.card_shell') : null;
       if (!(root instanceof HTMLElement)) return false;
       const id = parseInt(String(root.getAttribute('data-card-id') || '0'), 10);
-      const col = parseInt(String(root.getAttribute('data-card-col') || '0'), 10);
-      const line = parseInt(String(root.getAttribute('data-card-line') || '0'), 10);
       const title = String(root.getAttribute('data-card-title') || '').trim();
-      if (!Number.isFinite(id) || id <= 0 || !Number.isFinite(col) || col <= 0 || !Number.isFinite(line) || line <= 0) {
+      if (!Number.isFinite(id) || id <= 0) {
         return false;
       }
 
       clearMoveSource();
-      moveSource = { id, col, line, title, root, btn: fromBtn };
+      moveSource = { id, title, root, btn: fromBtn };
       traceAjax('card_move_start', {
         id: id,
-        col: col,
-        line: line,
         title: title
       });
       root.setAttribute('data-card-move-source', '1');
@@ -432,28 +363,18 @@
       return true;
     }
 
-    function doMoveToTarget(targetRoot, forceUnlock) {
+    function doMoveToTarget(targetRoot) {
       if (!(moveSource && moveSource.root instanceof HTMLElement)) return;
       const targetMode = String(targetRoot.getAttribute('data-card-mode') || '').trim();
-      const targetCol = parseInt(String(targetRoot.getAttribute('data-card-col') || '0'), 10);
-      const targetLine = parseInt(String(targetRoot.getAttribute('data-card-line') || '0'), 10);
       if (targetMode === 'nano') {
-        if (!openSystemAlert('Pozice 1-1 je určena pro nano karty.')) {
-          window.alert('Pozice 1-1 je určena pro nano karty.');
-        }
-        clearMoveSource();
-        return;
-      }
-      if (targetCol === 1 && targetLine === 1) {
-        if (!openSystemAlert('Pozice 1-1 je určena pro nano karty.')) {
-          window.alert('Pozice 1-1 je určena pro nano karty.');
+        if (!openSystemAlert('Nano kartu nelze použít jako cíl přesunu.')) {
+          window.alert('Nano kartu nelze použít jako cíl přesunu.');
         }
         clearMoveSource();
         return;
       }
       const targetId = parseInt(String(targetRoot.getAttribute('data-card-id') || '0'), 10);
-      const targetLocked = String(targetRoot.getAttribute('data-card-pos-locked') || '0') === '1';
-      if (!Number.isFinite(targetId) || targetId <= 0 || !Number.isFinite(targetCol) || targetCol <= 0 || !Number.isFinite(targetLine) || targetLine <= 0) {
+      if (!Number.isFinite(targetId) || targetId <= 0) {
         clearMoveSource();
         return;
       }
@@ -468,13 +389,7 @@
 
       traceAjax('card_move_submit', {
         src_id: moveSource.id,
-        src_col: moveSource.col,
-        src_line: moveSource.line,
-        tgt_id: targetId,
-        tgt_col: targetCol,
-        tgt_line: targetLine,
-        target_locked: targetLocked ? 1 : 0,
-        force_unlock: forceUnlock ? 1 : 0
+        tgt_id: targetId
       });
       setDashboardLoading(true, 'Přesouvám kartu ...');
       fetch('index.php', {
@@ -485,52 +400,29 @@
         },
         body: JSON.stringify({
           src_id: moveSource.id,
-          src_col: moveSource.col,
-          src_line: moveSource.line,
-          tgt_id: targetId,
-          tgt_col: targetCol,
-          tgt_line: targetLine,
-          target_locked: targetLocked ? 1 : 0,
-          force_unlock: forceUnlock ? 1 : 0
+          tgt_id: targetId
         })
       }).then((r) => r.json().catch(() => ({}))).then((data) => {
         if (data && data.ok) {
           traceAjax('card_move_ok', {
             src_id: moveSource.id,
-            tgt_id: targetId,
-            force_unlock: forceUnlock ? 1 : 0
+            tgt_id: targetId
           });
           logUserCardAction(5, moveSource.id, true, '');
-          setCardPlacement(moveSource.root, targetCol, targetLine, true);
-          setCardPlacement(targetRoot, 0, 0, false);
           clearMoveSource();
           closeAllCardPrefMenus();
-          if (w.CB_AJAX && typeof w.CB_AJAX.relayoutDashboard === 'function') {
-            return Promise.resolve(w.CB_AJAX.relayoutDashboard()).finally(() => {
+          if (w.CB_AJAX && typeof w.CB_AJAX.refreshDashboard === 'function') {
+            return Promise.resolve(w.CB_AJAX.refreshDashboard({
+              force: true,
+              loaderMode: 'dashboard'
+            })).finally(() => {
               setDashboardLoading(false);
             });
           }
-          setDashboardLoading(false);
-          return;
-        }
-
-        if (data && data.needs_confirm) {
-          traceAjax('card_move_needs_confirm', {
-            src_id: moveSource.id,
-            tgt_id: targetId
-          });
-          setDashboardLoading(false);
-          if (!openMoveUnlockConfirm(function () {
-            doMoveToTarget(targetRoot, true);
-          }, function () {
-            clearMoveSource();
-          })) {
-            if (window.confirm('Cílová pozice je obsazena zamčenou kartou. Pokud trváš na přesunu, bude karta uvolněna z pozice.')) {
-              doMoveToTarget(targetRoot, true);
-            } else {
-              clearMoveSource();
-            }
+          if (w.CB_AJAX && typeof w.CB_AJAX.relayoutDashboard === 'function') {
+            w.CB_AJAX.relayoutDashboard();
           }
+          setDashboardLoading(false);
           return;
         }
 
@@ -542,11 +434,7 @@
           message: err
         });
         logUserCardAction(5, moveSource.id, false, err);
-        if (err === 'Pozice 1-1 je určena pro nano karty.') {
-          if (!openSystemAlert(err)) {
-            window.alert(err);
-          }
-        } else {
+        if (!openSystemAlert(err)) {
           window.alert(err);
         }
         clearMoveSource();
@@ -607,7 +495,7 @@
           if (targetRoot instanceof HTMLElement) {
             e.preventDefault();
             e.stopPropagation();
-            doMoveToTarget(targetRoot, false);
+            doMoveToTarget(targetRoot);
             return;
           }
         }
@@ -685,18 +573,26 @@
                 clearAllCardPlacements();
                 clearMoveSource();
                 closeAllCardPrefMenus();
+                if (w.CB_AJAX && typeof w.CB_AJAX.refreshDashboard === 'function') {
+                  return w.CB_AJAX.refreshDashboard({
+                    force: true,
+                    loaderMode: 'dashboard'
+                  }).finally(() => {
+                    setDashboardLoading(false);
+                  });
+                }
                 if (w.CB_AJAX && typeof w.CB_AJAX.relayoutDashboard === 'function') {
                   w.CB_AJAX.relayoutDashboard();
                 }
                 setDashboardLoading(false);
                 return;
               }
-              const err = String((data && data.err) ? data.err : 'Odemknutí pozic karet selhalo.');
+              const err = String((data && data.err) ? data.err : 'Obnovení výchozího pořadí karet selhalo.');
               traceAjax('card_unlock_all_error', { message: err });
               window.alert(err);
             }).catch(() => {
               traceAjax('card_unlock_all_fetch_error', {});
-              window.alert('Odemknutí pozic karet selhalo.');
+              window.alert('Obnovení výchozího pořadí karet selhalo.');
             });
           };
 

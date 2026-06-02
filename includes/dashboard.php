@@ -201,7 +201,7 @@ $nanoKde = 0;
 $nanoCardIds = [];
 $userCardHeaderColorById = [];
 $userCardIconFileById = [];
-$userCardPosById = [];
+$userCardOrderById = [];
 $dashColsPostOverride = null;
 $singleCardId = (int)($GLOBALS['cb_dashboard_single_card_id'] ?? 0);
 $singleCardLoadMax = (((int)($_GET['cb_load_max'] ?? 0)) === 1);
@@ -289,25 +289,21 @@ if ($idUser > 0) {
     }
     cb_dashboard_timing_log('after_card_icons', $cbDashTimingStart, $cbDashTimingLast);
 
-    $stmtCardPos = db()->prepare('SELECT id_karta, col, line FROM user_card_set WHERE id_user = ?');
-    if ($stmtCardPos) {
-        $stmtCardPos->bind_param('i', $idUser);
-        $stmtCardPos->execute();
-        $stmtCardPos->bind_result($posCardId, $posCol, $posLine);
-        while ($stmtCardPos->fetch()) {
-            $cid = (int)$posCardId;
-            $cc = ($posCol === null) ? null : (int)$posCol;
-            $ll = ($posLine === null) ? null : (int)$posLine;
-            if ($cid > 0) {
-                $userCardPosById[$cid] = [
-                    'col' => ($cc !== null && $cc > 0) ? $cc : null,
-                    'line' => ($ll !== null && $ll > 0) ? $ll : null,
-                ];
+    $stmtCardOrder = db()->prepare('SELECT id_karta, poradi FROM user_card_set WHERE id_user = ?');
+    if ($stmtCardOrder) {
+        $stmtCardOrder->bind_param('i', $idUser);
+        $stmtCardOrder->execute();
+        $stmtCardOrder->bind_result($orderCardId, $orderValue);
+        while ($stmtCardOrder->fetch()) {
+            $cid = (int)$orderCardId;
+            $order = ($orderValue === null) ? 0 : (int)$orderValue;
+            if ($cid > 0 && $order > 0) {
+                $userCardOrderById[$cid] = $order;
             }
         }
-        $stmtCardPos->close();
+        $stmtCardOrder->close();
     }
-    cb_dashboard_timing_log('after_card_positions', $cbDashTimingStart, $cbDashTimingLast);
+    cb_dashboard_timing_log('after_card_order', $cbDashTimingStart, $cbDashTimingLast);
 }
 
 $karty = [];
@@ -367,49 +363,21 @@ $sortByFallback = static function (array &$list): void {
     });
 };
 
-$applyUserSlots = static function (array $list, int $startSlot = 1) use ($userCardPosById, $dashGridCols, $sortByFallback): array {
+$applyUserOrder = static function (array $list) use ($userCardOrderById, $sortByFallback): array {
     if (count($list) <= 1) {
-        foreach ($list as &$singleCard) {
-            if (!is_array($singleCard)) {
-                continue;
-            }
-            $idK = (int)($singleCard['id_karta'] ?? 0);
-            $pos = ($idK > 0 && isset($userCardPosById[$idK])) ? (array)$userCardPosById[$idK] : ['col' => null, 'line' => null];
-            $storedCol = (int)($pos['col'] ?? 0);
-            $storedLine = (int)($pos['line'] ?? 0);
-            if ($storedCol > 0 && $storedLine > 0) {
-                $singleCard['__render_pos'] = (((max($storedLine, 1) - 1) * (($dashGridCols > 0) ? $dashGridCols : 3)) + $storedCol);
-            } else {
-                $singleCard['__render_pos'] = ($startSlot > 0) ? $startSlot : 1;
-            }
-        }
-        unset($singleCard);
         return $list;
     }
 
-    $cols = ($dashGridCols > 0) ? $dashGridCols : 3;
-
-    $lockedBySlot = [];
+    $lockedByOrder = [];
     $unlocked = [];
-    $lowestLockedSlot = null;
 
     foreach ($list as $card) {
         $idK = (int)($card['id_karta'] ?? 0);
-        $pos = ($idK > 0 && isset($userCardPosById[$idK])) ? (array)$userCardPosById[$idK] : ['col' => null, 'line' => null];
+        $order = ($idK > 0 && isset($userCardOrderById[$idK])) ? (int)$userCardOrderById[$idK] : 0;
 
-        $col = ($pos['col'] ?? null);
-        $line = ($pos['line'] ?? null);
-
-        $hasLock = ($col !== null && $line !== null && (int)$col > 0 && (int)$line > 0 && (int)$col <= $cols);
-
-        if ($hasLock) {
-            $slot = (((int)$line - 1) * $cols) + (int)$col;
-
-            if (!isset($lockedBySlot[$slot])) {
-                $lockedBySlot[$slot] = $card;
-                if ($lowestLockedSlot === null || $slot < $lowestLockedSlot) {
-                    $lowestLockedSlot = $slot;
-                }
+        if ($order > 0) {
+            if (!isset($lockedByOrder[$order])) {
+                $lockedByOrder[$order] = $card;
                 continue;
             }
         }
@@ -424,18 +392,15 @@ $applyUserSlots = static function (array $list, int $startSlot = 1) use ($userCa
     $result = [];
     $unlockIdx = 0;
 
-    $slot = ($startSlot > 0) ? $startSlot : 1;
-    if ($lowestLockedSlot !== null && $lowestLockedSlot > 0 && $lowestLockedSlot < $slot) {
-        $slot = $lowestLockedSlot;
-    }
+    $slot = 1;
     $placed = 0;
     $total = count($list);
 
     while ($placed < $total) {
-        if (isset($lockedBySlot[$slot])) {
-            $card = $lockedBySlot[$slot];
+        if (isset($lockedByOrder[$slot])) {
+            $card = $lockedByOrder[$slot];
             if (is_array($card)) {
-                $card['__render_pos'] = $slot;
+                $card['__dash_order'] = $slot;
             }
             $result[] = $card;
             $placed++;
@@ -446,7 +411,7 @@ $applyUserSlots = static function (array $list, int $startSlot = 1) use ($userCa
         if (isset($unlocked[$unlockIdx])) {
             $card = $unlocked[$unlockIdx];
             if (is_array($card)) {
-                $card['__render_pos'] = $slot;
+                $card['__dash_order'] = $slot;
             }
             $result[] = $card;
             $unlockIdx++;
@@ -464,11 +429,8 @@ $applyUserSlots = static function (array $list, int $startSlot = 1) use ($userCa
 $dashGridClass = $dashColsClass . ' dash_nano_kde_' . $nanoKde;
 $cbLoginId = (int)($_SESSION['cb_id_login'] ?? 0);
 
-$miniStartSlot = ($nanoKde === 1 && !empty($kartyNano))
-    ? 2
-    : (count($kartyNano) + 1);
-$kartyMini = $applyUserSlots($kartyMini, $miniStartSlot);
-cb_dashboard_timing_log('after_apply_slots', $cbDashTimingStart, $cbDashTimingLast);
+$kartyMini = $applyUserOrder($kartyMini);
+cb_dashboard_timing_log('after_apply_order', $cbDashTimingStart, $cbDashTimingLast);
 
 if ($singleCardId > 0) {
     foreach ($kartyNano as $kartaNanoRaw) {
@@ -480,7 +442,7 @@ if ($singleCardId > 0) {
             $kartaNanoRaw,
             $userCardHeaderColorById,
             $userCardIconFileById,
-            $userCardPosById,
+            [],
             $dashGridCols
         ));
         cb_dashboard_timing_log('single_card_nano_render', $cbDashTimingStart, $cbDashTimingLast);
@@ -496,7 +458,7 @@ if ($singleCardId > 0) {
             $kartaMiniRaw,
             $userCardHeaderColorById,
             $userCardIconFileById,
-            $userCardPosById,
+            [],
             $dashGridCols
         );
         cb_dashboard_timing_log('single_card_mini_prepare', $cbDashTimingStart, $cbDashTimingLast);
@@ -525,7 +487,7 @@ if ($nanoKde === 1) {
                 $kartaNanoRaw,
                 $userCardHeaderColorById,
                 $userCardIconFileById,
-                $userCardPosById,
+                [],
                 $dashGridCols
             );
             cb_dashboard_timing_log('nano_prepare_card_' . (string)($kartaNanoRaw['id_karta'] ?? 0), $cbDashTimingStart, $cbDashTimingLast);
@@ -544,7 +506,7 @@ if ($nanoKde === 1) {
                 $kartaNanoRaw,
                 $userCardHeaderColorById,
                 $userCardIconFileById,
-                $userCardPosById,
+                [],
                 $dashGridCols
             ),
         ];
@@ -564,7 +526,7 @@ foreach ($kartyMini as $kartaMiniRaw) {
             $kartaMiniRaw,
             $userCardHeaderColorById,
             $userCardIconFileById,
-            $userCardPosById,
+            [],
             $dashGridCols
         ),
     ];

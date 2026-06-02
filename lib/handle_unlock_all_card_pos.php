@@ -18,52 +18,74 @@ if (
 
     try {
         $conn = db();
-        $stmt = $conn->prepare('UPDATE user_card_set SET col = NULL, line = NULL WHERE id_user = ?');
-        if (!$stmt) {
-            throw new RuntimeException('prepare unlock all card positions failed');
-        }
-        $stmt->bind_param('i', $idUser);
-        $stmt->execute();
-        $stmt->close();
 
-        $lockedPositions = [];
-        $stmtLocked = $conn->prepare('
-            SELECT id_karta, col, line
+        $conn->begin_transaction();
+        try {
+            $stmt = $conn->prepare('UPDATE user_card_set SET poradi = NULL WHERE id_user = ?');
+            if (!$stmt) {
+                throw new RuntimeException('prepare reset all card order failed');
+            }
+            $stmt->bind_param('i', $idUser);
+            $stmt->execute();
+            $stmt->close();
+
+            $stmtClean = $conn->prepare('
+                DELETE FROM user_card_set
+                WHERE id_user = ?
+                  AND color IS NULL
+                  AND ikon IS NULL
+                  AND col IS NULL
+                  AND line IS NULL
+                  AND poradi IS NULL
+            ');
+            if (!$stmtClean) {
+                throw new RuntimeException('prepare clean empty user card rows failed');
+            }
+            $stmtClean->bind_param('i', $idUser);
+            $stmtClean->execute();
+            $stmtClean->close();
+
+            $conn->commit();
+        } catch (Throwable $e) {
+            $conn->rollback();
+            throw $e;
+        }
+
+        $cardOrders = [];
+        $stmtOrder = $conn->prepare('
+            SELECT id_karta, poradi
             FROM user_card_set
             WHERE id_user = ?
-              AND col IS NOT NULL
-              AND line IS NOT NULL
-            ORDER BY line ASC, col ASC, id_karta ASC
+              AND poradi IS NOT NULL
+            ORDER BY poradi ASC, id_karta ASC
         ');
-        if (!$stmtLocked) {
-            throw new RuntimeException('prepare select locked positions failed');
+        if (!$stmtOrder) {
+            throw new RuntimeException('prepare select card order failed');
         }
-        $stmtLocked->bind_param('i', $idUser);
-        $stmtLocked->execute();
-        $stmtLocked->bind_result($lockedCardId, $lockedCol, $lockedLine);
-        while ($stmtLocked->fetch()) {
-            $cardId = (int)$lockedCardId;
-            $col = (int)$lockedCol;
-            $line = (int)$lockedLine;
-            if ($cardId <= 0 || $col <= 0 || $line <= 0) {
+        $stmtOrder->bind_param('i', $idUser);
+        $stmtOrder->execute();
+        $stmtOrder->bind_result($orderCardId, $orderValue);
+        while ($stmtOrder->fetch()) {
+            $cardId = (int)$orderCardId;
+            $order = (int)$orderValue;
+            if ($cardId <= 0 || $order <= 0) {
                 continue;
             }
-            $lockedPositions[] = [
+            $cardOrders[] = [
                 'id_karta' => $cardId,
-                'col' => $col,
-                'line' => $line,
+                'poradi' => $order,
             ];
         }
-        $stmtLocked->close();
+        $stmtOrder->close();
 
         echo json_encode([
             'ok' => true,
-            'locked_positions' => $lockedPositions,
+            'card_orders' => $cardOrders,
         ], JSON_UNESCAPED_UNICODE);
         exit;
     } catch (Throwable $e) {
         http_response_code(500);
-        echo json_encode(['ok' => false, 'err' => 'Odemknuti pozic karet selhalo'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'err' => 'Obnoveni vychoziho poradi karet selhalo'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 }

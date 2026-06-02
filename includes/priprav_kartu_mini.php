@@ -15,29 +15,6 @@ function cb_priprav_kartu_mini(
     $title = (string)($karta['nazev'] ?? '');
     $subtitleMin = (string)($karta['subtitle_min'] ?? '');
     $subtitleMax = (string)($karta['subtitle_max'] ?? '');
-    $cols = ($dashGridCols > 0) ? $dashGridCols : 3;
-
-    $renderPos = (int)($karta['__render_pos'] ?? 0);
-    $renderCol = 0;
-    $renderLine = 0;
-    if ($renderPos > 0) {
-        $renderCol = (($renderPos - 1) % $cols) + 1;
-        $renderLine = (int)floor(($renderPos - 1) / $cols) + 1;
-    }
-
-    $storedPos = ($cardId > 0 && isset($userCardPosById[$cardId]))
-        ? (array)$userCardPosById[$cardId]
-        : ['col' => null, 'line' => null];
-
-    $isPosLocked = (($storedPos['col'] ?? null) !== null && ($storedPos['line'] ?? null) !== null);
-    if ($isPosLocked) {
-        $storedCol = (int)($storedPos['col'] ?? 0);
-        $storedLine = (int)($storedPos['line'] ?? 0);
-        if ($storedCol > 0 && $storedLine > 0) {
-            $renderCol = $storedCol;
-            $renderLine = $storedLine;
-        }
-    }
 
     $card_min_html = '';
     $card_max_html = '';
@@ -94,7 +71,7 @@ function cb_priprav_kartu_mini(
     $result = [
         'mode' => 'mini',
         'cardId' => $cardId,
-        'cardPoradi' => (int)($karta['poradi'] ?? 0),
+        'cardPoradi' => (int)($karta['__dash_order'] ?? ($karta['poradi'] ?? 0)),
         'title' => $title,
         'soubor' => $soubor,
         'refreshOp' => (int)($karta['refresh_op'] ?? 0),
@@ -103,9 +80,9 @@ function cb_priprav_kartu_mini(
         'color' => ($cardId > 0 && isset($userCardHeaderColorById[$cardId])) ? (string)$userCardHeaderColorById[$cardId] : '',
         'iconFile' => ($cardId > 0 && isset($userCardIconFileById[$cardId])) ? (string)$userCardIconFileById[$cardId] : '',
         'role' => (int)($karta['min_role'] ?? 3),
-        'col' => $renderCol,
-        'line' => $renderLine,
-        'isPosLocked' => $isPosLocked ? 1 : 0,
+        'col' => 0,
+        'line' => 0,
+        'isPosLocked' => 0,
         'minHtml' => $card_min_html,
         'maxHtml' => '',
         'renderErrorHtml' => $renderErrorHtml,

@@ -45,13 +45,6 @@
     return grid instanceof HTMLElement ? grid : null;
   }
 
-  function getDashCols(grid) {
-    if (!(grid instanceof HTMLElement)) return 3;
-    if (grid.classList.contains('dash_cols_5')) return 5;
-    if (grid.classList.contains('dash_cols_4')) return 4;
-    return 3;
-  }
-
   function getCardSectionFromRoot(root) {
     if (!(root instanceof HTMLElement)) return null;
     const card = root.closest('[data-cb-dash-card="1"]');
@@ -84,40 +77,15 @@
     return Number.isFinite(value) && value > 0 ? value : 0;
   }
 
-  function readPositiveIntAttr(el, name) {
-    if (!(el instanceof HTMLElement)) return 0;
-    const value = parseInt(String(el.getAttribute(name) || '0'), 10);
-    return Number.isFinite(value) && value > 0 ? value : 0;
-  }
-
-  function getCardSlot(section, cols) {
-    const root = getCardRootFromSection(section);
-    if (!(root instanceof HTMLElement)) return 0;
-    const col = readPositiveIntAttr(root, 'data-card-col');
-    const line = readPositiveIntAttr(root, 'data-card-line');
-    if (col <= 0 || line <= 0) return 0;
-    return (((line - 1) * cols) + col);
-  }
-
-  function setCardPlacement(section, col, line) {
+  function clearCardPlacement(section) {
     if (!(section instanceof HTMLElement)) return;
     const root = getCardRootFromSection(section);
     if (!(root instanceof HTMLElement)) return;
 
-    const safeCol = (Number.isFinite(col) && col > 0) ? Math.trunc(col) : 0;
-    const safeLine = (Number.isFinite(line) && line > 0) ? Math.trunc(line) : 0;
-
-    if (safeCol > 0 && safeLine > 0) {
-      section.style.gridColumn = String(safeCol);
-      section.style.gridRow = String(safeLine);
-      root.setAttribute('data-card-col', String(safeCol));
-      root.setAttribute('data-card-line', String(safeLine));
-    } else {
-      section.style.gridColumn = '';
-      section.style.gridRow = '';
-      root.setAttribute('data-card-col', '0');
-      root.setAttribute('data-card-line', '0');
-    }
+    section.style.gridColumn = '';
+    section.style.gridRow = '';
+    root.setAttribute('data-card-col', '0');
+    root.setAttribute('data-card-line', '0');
   }
 
   function requestCardMode(cardId, mode, options) {
@@ -301,21 +269,11 @@
     return sections;
   }
 
-  function relayoutMiniCards(miniCards, startSlot, cols) {
-    const lockedBySlot = new Map();
-    const unlocked = [];
+  function relayoutMiniCards(miniCards) {
+    const ordered = [];
 
     miniCards.forEach((section, index) => {
-      const root = getCardRootFromSection(section);
-      const isLocked = root instanceof HTMLElement && String(root.getAttribute('data-card-pos-locked') || '0') === '1';
-      const slot = getCardSlot(section, cols);
-
-      if (isLocked && slot > 0 && !lockedBySlot.has(slot)) {
-        lockedBySlot.set(slot, section);
-        return;
-      }
-
-      unlocked.push({
+      ordered.push({
         section,
         index,
         poradi: getCardOrderFromSection(section),
@@ -323,7 +281,7 @@
       });
     });
 
-    unlocked.sort((a, b) => {
+    ordered.sort((a, b) => {
       if (a.poradi !== b.poradi) {
         return a.poradi - b.poradi;
       }
@@ -333,33 +291,9 @@
       return a.index - b.index;
     });
 
-    const total = miniCards.length;
-    const placed = [];
-    let nextUnlocked = 0;
-    let slot = startSlot > 0 ? startSlot : 1;
-
-    while (placed.length < total) {
-      if (lockedBySlot.has(slot)) {
-        placed.push(lockedBySlot.get(slot));
-        slot++;
-        continue;
-      }
-
-      if (nextUnlocked < unlocked.length) {
-        placed.push(unlocked[nextUnlocked].section);
-        nextUnlocked++;
-        slot++;
-        continue;
-      }
-
-      slot++;
-    }
-
-    placed.forEach((section, index) => {
-      const targetSlot = startSlot + index;
-      const col = ((targetSlot - 1) % cols) + 1;
-      const line = Math.floor((targetSlot - 1) / cols) + 1;
-      setCardPlacement(section, col, line);
+    const placed = ordered.map((item) => item.section);
+    placed.forEach((section) => {
+      clearCardPlacement(section);
     });
 
     return placed;
@@ -369,7 +303,6 @@
     const grid = getDashGrid();
     if (!(grid instanceof HTMLElement)) return;
 
-    const cols = getDashCols(grid);
     const allSections = collectGridSections(grid);
     const nanoCards = [];
     const miniCards = [];
@@ -383,7 +316,7 @@
     });
 
     nanoCards.forEach((section) => {
-      setCardPlacement(section, 0, 0);
+      clearCardPlacement(section);
     });
 
     const nodes = [];
@@ -397,7 +330,7 @@
         nodes.push(group);
       }
 
-      const placedMini = relayoutMiniCards(miniCards, nanoCards.length > 0 ? 2 : 1, cols);
+      const placedMini = relayoutMiniCards(miniCards);
       placedMini.forEach((section) => {
         nodes.push(section);
       });
@@ -410,7 +343,7 @@
       nodes.push(section);
     });
 
-    const placedMini = relayoutMiniCards(miniCards, nanoCards.length + 1, cols);
+    const placedMini = relayoutMiniCards(miniCards);
 
     if (nanoCards.length > 0 && placedMini.length > 0) {
       nodes.push(createBreakNode());
