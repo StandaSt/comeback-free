@@ -157,10 +157,10 @@ if (!function_exists('db_user_role_sync')) {
             $stmtAdmin->close();
         }
 
-        if (array_key_exists(1, $desiredIds)) {
-            unset($desiredIds[1]);
-        }
         if ($isLocalAdmin) {
+            if (array_key_exists(1, $desiredIds)) {
+                unset($desiredIds[1]);
+            }
             $adminRoleName = 'admin';
             $resAdminRole = $conn->query('SELECT role FROM cis_role WHERE id_role = 1 LIMIT 1');
             if ($resAdminRole instanceof mysqli_result) {
@@ -172,6 +172,21 @@ if (!function_exists('db_user_role_sync')) {
                 }
             }
             $desiredIds[1] = $adminRoleName;
+        } else {
+            if (array_key_exists(1, $desiredRawRoles)) {
+                $resManagerRole = $conn->query('SELECT role FROM cis_role WHERE id_role = 3 AND aktivni = 1 LIMIT 1');
+                if ($resManagerRole instanceof mysqli_result) {
+                    $rowManagerRole = $resManagerRole->fetch_assoc();
+                    $resManagerRole->free();
+                    $managerRoleName = trim((string)($rowManagerRole['role'] ?? ''));
+                    if ($managerRoleName !== '') {
+                        $desiredIds[3] = $managerRoleName;
+                    }
+                }
+            }
+            if (array_key_exists(1, $desiredIds)) {
+                unset($desiredIds[1]);
+            }
         }
 
         // 3) currentIds = aktuální role uživatele v DB (user_role)

@@ -103,6 +103,64 @@
     return String(numeric).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' Kč';
   }
 
+  function parseReportNumber(raw) {
+    const value = String(raw || '').replace(/\s+/g, '').replace(/Kč/gi, '').replace('%', '').replace(',', '.').replace(/[^0-9.-]/g, '');
+    if (value === '' || value === '-' || value === '.') return null;
+    const numeric = Number.parseFloat(value);
+    return Number.isNaN(numeric) ? null : numeric;
+  }
+
+  function reportMoneyNumber(root, selector, kind) {
+    const value = parseMoneyValue(getFieldValue(root, selector), kind);
+    if (value === '') return null;
+    const numeric = Number.parseFloat(value);
+    return Number.isNaN(numeric) ? null : numeric;
+  }
+
+  function restiaNumber(root, selector) {
+    const element = root.querySelector(selector);
+    if (!(element instanceof HTMLElement)) return 0;
+    return parseReportNumber(element.getAttribute('data-zr-value')) || 0;
+  }
+
+  function formatReportMoney(value) {
+    const rounded = Math.round(Number(value) || 0);
+    return String(rounded).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' Kč';
+  }
+
+  function syncReportDifference(root) {
+    const cash = reportMoneyNumber(root, '[data-zr-field="pokladna_hotovost"]', 'int');
+    const terminal = reportMoneyNumber(root, '[data-zr-field="pokladna_terminal"]', 'decimal');
+    const vouchers = reportMoneyNumber(root, '[data-zr-field="pokladna_stravenky"]', 'int');
+    if (cash === null || terminal === null || vouchers === null) {
+      return;
+    }
+
+    const income = restiaNumber(root, '[data-zr-restia-wolt]')
+      + restiaNumber(root, '[data-zr-restia-bolt]')
+      + restiaNumber(root, '[data-zr-restia-dj]')
+      + restiaNumber(root, '[data-zr-restia-web]')
+      + restiaNumber(root, '[data-zr-restia-wolt-cash]')
+      + restiaNumber(root, '[data-zr-restia-dj-cash]')
+      + terminal
+      + vouchers
+      + cash;
+    const expenses = (reportMoneyNumber(root, '[data-zr-field="vydaje_benzin"]', 'int') || 0)
+      + (reportMoneyNumber(root, '[data-zr-field="vydaje_auta"]', 'int') || 0)
+      + (reportMoneyNumber(root, '[data-zr-field="vydaje_suroviny"]', 'int') || 0)
+      + (reportMoneyNumber(root, '[data-zr-field="vydaje_ostatni"]', 'int') || 0)
+      + (reportMoneyNumber(root, '[data-zr-field="vydaje_phm_soukrome"]', 'int') || 0);
+    const difference = income + expenses - restiaNumber(root, '[data-zr-restia-trzba]');
+    const visible = root.querySelector('[data-zr-report-rozdil]');
+    const hidden = root.querySelector('[data-zr-report-rozdil-value]');
+    if (visible instanceof HTMLElement) {
+      visible.textContent = formatReportMoney(difference);
+    }
+    if (hidden instanceof HTMLInputElement) {
+      hidden.value = difference.toFixed(2);
+    }
+  }
+
   function formatDuration(totalSeconds) {
     const safeSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
     const hours = Math.floor(safeSeconds / 3600);
@@ -320,11 +378,13 @@
 
       input.addEventListener('input', () => {
         input.value = parseMoneyValue(input.value, kind);
+        syncReportDifference(root);
       });
 
       input.addEventListener('blur', () => {
         input.value = formatMoneyValue(input.value, kind);
         syncRequiredState(root);
+        syncReportDifference(root);
         const field = dbMoneyField(input.getAttribute('data-zr-field'));
         if (field !== '') {
           saveDraftAction(root, 'update_money', {
@@ -414,6 +474,7 @@
     bindSubmitCountdown(root);
     syncWeekdayFromDate(root);
     syncRequiredState(root);
+    syncReportDifference(root);
 
     const dateInput = root.querySelector('[data-zr-date]');
     if (dateInput instanceof HTMLInputElement) {

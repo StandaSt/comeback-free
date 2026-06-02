@@ -4,6 +4,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../lib/format_datum_cas.php';
+require_once __DIR__ . '/../lib/vypocty_report.php';
 require_once __DIR__ . '/../db/db_dr_pracovni.php';
 require_once __DIR__ . '/../db/db_dr_pracovni_osoby.php';
 
@@ -169,27 +170,6 @@ $formatTime = static function (?string $value): string {
     }
 
     return cb_dt_time_hm($raw);
-};
-
-$parseBranchEndTime = static function (?string $value): array {
-    $raw = trim((string)$value);
-    if ($raw === '') {
-        return ['hour' => 0, 'minute' => 0];
-    }
-    if (preg_match('/^(\d{1,2}):(\d{2})(?::\d{2})?$/', $raw, $m) === 1) {
-        return [
-            'hour' => max(0, min(23, (int)$m[1])),
-            'minute' => max(0, min(59, (int)$m[2])),
-        ];
-    }
-    if (preg_match('/^\d{1,2}$/', $raw) === 1) {
-        return [
-            'hour' => max(0, min(23, (int)$raw)),
-            'minute' => 0,
-        ];
-    }
-
-    return ['hour' => 0, 'minute' => 0];
 };
 
 $personFullName = static function (?string $jmeno, ?string $prijmeni = null): string {
@@ -360,18 +340,11 @@ if ($reportBranchId > 0) {
             }
             $stmtEnd->close();
 
-            $endTime = $parseBranchEndTime((string)($endRow['end_time'] ?? ''));
-            $endTimeMinutes = ((int)$endTime['hour'] * 60) + (int)$endTime['minute'];
-            $workdayStartMinutes = 6 * 60;
-            $endBaseDate = $endTimeMinutes < $workdayStartMinutes ? $reportDateDt->modify('+1 day') : $reportDateDt;
-            $reportSaveAtTs = $endBaseDate
-                ->setTime((int)$endTime['hour'], (int)$endTime['minute'], 0)
-                ->modify('-' . $reportSaveMinutes . ' minutes')
-                ->getTimestamp();
+            $reportSaveAtTs = cb_report_save_at_ts($reportDateDt, (string)($endRow['end_time'] ?? ''), $reportSaveMinutes, 6);
         }
     }
 }
-$reportRefreshAtTs = $reportSaveAtTs > 300 ? $reportSaveAtTs - 300 : 0;
+$reportRefreshAtTs = cb_report_refresh_at_ts($reportSaveAtTs, 300);
 
 if ($reportBranchId > 0) {
     $idDr = cb_db_dr_pracovni_ensure(
@@ -656,47 +629,12 @@ if ($kuryrDeliveryCountsJson === '') {
     $kuryrDeliveryCountsJson = '{}';
 }
 
-$makeTimeLabel = '0 min 00 s';
-if (is_int($restiaSummary['make_time_avg_sec']) && $restiaSummary['make_time_avg_sec'] > 0) {
-    $minutes = intdiv((int)$restiaSummary['make_time_avg_sec'], 60);
-    $seconds = (int)$restiaSummary['make_time_avg_sec'] % 60;
-    $makeTimeLabel = $minutes . ' min ' . sprintf('%02d', $seconds) . ' s';
-}
-
-$draftMoneyValue = static function (?array $row, string $key): float {
-    if (!is_array($row) || !array_key_exists($key, $row) || $row[$key] === null) {
-        return 0.0;
-    }
-
-    return (float)$row[$key];
-};
-$hasRequiredCashValues = is_array($draftRow)
-    && array_key_exists('hotovost', $draftRow)
-    && $draftRow['hotovost'] !== null
-    && array_key_exists('terminal', $draftRow)
-    && $draftRow['terminal'] !== null
-    && array_key_exists('stravenky', $draftRow)
-    && $draftRow['stravenky'] !== null;
-$reportDifference = null;
-if ($hasRequiredCashValues) {
-    $reportIncome = (float)$restiaSummary['wolt']
-        + (float)$restiaSummary['bolt']
-        + (float)$restiaSummary['dj']
-        + (float)$restiaSummary['web']
-        + (float)$restiaSummary['wolt_cash']
-        + (float)$restiaSummary['dj_cash']
-        + $draftMoneyValue($draftRow, 'terminal')
-        + $draftMoneyValue($draftRow, 'stravenky')
-        + $draftMoneyValue($draftRow, 'hotovost');
-    $reportExpenses = $draftMoneyValue($draftRow, 'vydaje_benzin')
-        + $draftMoneyValue($draftRow, 'vydaje_auta')
-        + $draftMoneyValue($draftRow, 'vydaje_suroviny')
-        + $draftMoneyValue($draftRow, 'vydaje_ostatni')
-        + $draftMoneyValue($draftRow, 'vydaje_phm_soukrome');
-    $reportDifference = $reportIncome + $reportExpenses - (float)$restiaSummary['trzba'];
-}
+$makeTimeLabel = cb_report_make_time_label(is_int($restiaSummary['make_time_avg_sec']) ? (int)$restiaSummary['make_time_avg_sec'] : null);
+$reportDifference = cb_report_vypocet_rozdil($restiaSummary, $draftRow);
 $reportDifferenceLabel = $reportDifference === null ? '-- Kč' : $formatMoneyWhole((float)$reportDifference);
+$reportDifferenceValue = $reportDifference === null ? '' : number_format((float)$reportDifference, 2, '.', '');
 $reportColLabel = '-- %';
+$reportColValue = '';
 
 $renderInstorSavedRow = static function (array $row, callable $renderTimeInput): string {
     $idDrOsoby = (int)($row['id_dr_osoby'] ?? 0);
@@ -881,14 +819,15 @@ ob_start();
         </section>
 
         <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_control_section">
-          <h4 class="card_section_title txt_seda">Kontrola</h4>
+          <strong class="zr_control_label zr_control_label_rozdil">Rozdíl pokladna</strong>
           <div class="zr_control_metric">
-            <span class="zr_control_label">Rozdíl</span>
-            <strong class="zr_control_value"><?= h($reportDifferenceLabel) ?></strong>
+            <strong class="zr_control_value" data-zr-report-rozdil><?= h($reportDifferenceLabel) ?></strong>
+            <input type="hidden" name="rozdil" value="<?= h($reportDifferenceValue) ?>" data-zr-report-rozdil-value>
           </div>
           <div class="zr_control_metric zr_control_metric_col">
-            <span class="zr_control_label">COL</span>
-            <strong class="zr_control_value zr_control_value_col"><?= h($reportColLabel) ?></strong>
+            <strong class="zr_control_label zr_control_label_col">COL</strong>
+            <strong class="zr_control_value zr_control_value_col" data-zr-report-col><?= h($reportColLabel) ?></strong>
+            <input type="hidden" name="col_pomer" value="<?= h($reportColValue) ?>" data-zr-report-col-value>
           </div>
         </section>
 
@@ -970,16 +909,16 @@ ob_start();
         </div>
         <div class="zr_restia_total gap_4">
           <span class="zr_metric_label">Tržba</span>
-          <strong class="zr_metric_value" data-zr-restia-trzba><?= h($formatMoneyWhole((float)$restiaSummary['trzba'])) ?></strong>
+          <strong class="zr_metric_value" data-zr-restia-trzba data-zr-value="<?= h(number_format((float)$restiaSummary['trzba'], 2, '.', '')) ?>"><?= h($formatMoneyWhole((float)$restiaSummary['trzba'])) ?></strong>
         </div>
         <table class="zr_table zr_restia_table">
           <tbody>
-            <tr><td class="zr_restia_key">Wolt</td><td class="zr_restia_value txt_r"><strong data-zr-restia-wolt><?= h($formatMoneyWhole((float)$restiaSummary['wolt'])) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Bolt</td><td class="zr_restia_value txt_r"><strong data-zr-restia-bolt><?= h($formatMoneyWhole((float)$restiaSummary['bolt'])) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Foodora</td><td class="zr_restia_value txt_r"><strong data-zr-restia-dj><?= h($formatMoneyWhole((float)$restiaSummary['dj'])) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Web</td><td class="zr_restia_value txt_r"><strong data-zr-restia-web><?= h($formatMoneyWhole((float)$restiaSummary['web'])) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Wolt drive cash</td><td class="zr_restia_value txt_r"><strong data-zr-restia-wolt-cash><?= h($formatMoneyWhole((float)$restiaSummary['wolt_cash'])) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">DJ cash</td><td class="zr_restia_value txt_r"><strong data-zr-restia-dj-cash><?= h($formatMoneyWhole((float)$restiaSummary['dj_cash'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Wolt</td><td class="zr_restia_value txt_r"><strong data-zr-restia-wolt data-zr-value="<?= h(number_format((float)$restiaSummary['wolt'], 2, '.', '')) ?>"><?= h($formatMoneyWhole((float)$restiaSummary['wolt'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Bolt</td><td class="zr_restia_value txt_r"><strong data-zr-restia-bolt data-zr-value="<?= h(number_format((float)$restiaSummary['bolt'], 2, '.', '')) ?>"><?= h($formatMoneyWhole((float)$restiaSummary['bolt'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Foodora</td><td class="zr_restia_value txt_r"><strong data-zr-restia-dj data-zr-value="<?= h(number_format((float)$restiaSummary['dj'], 2, '.', '')) ?>"><?= h($formatMoneyWhole((float)$restiaSummary['dj'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Web</td><td class="zr_restia_value txt_r"><strong data-zr-restia-web data-zr-value="<?= h(number_format((float)$restiaSummary['web'], 2, '.', '')) ?>"><?= h($formatMoneyWhole((float)$restiaSummary['web'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Wolt drive cash</td><td class="zr_restia_value txt_r"><strong data-zr-restia-wolt-cash data-zr-value="<?= h(number_format((float)$restiaSummary['wolt_cash'], 2, '.', '')) ?>"><?= h($formatMoneyWhole((float)$restiaSummary['wolt_cash'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">DJ cash</td><td class="zr_restia_value txt_r"><strong data-zr-restia-dj-cash data-zr-value="<?= h(number_format((float)$restiaSummary['dj_cash'], 2, '.', '')) ?>"><?= h($formatMoneyWhole((float)$restiaSummary['dj_cash'])) ?></strong></td></tr>
           </tbody>
         </table>
       </section>

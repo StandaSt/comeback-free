@@ -2290,7 +2290,10 @@ align-items:center;
 
 .zr_control_label{
   display:block;
-  font-size:var(--fs_12);
+  margin:0 0 8px 0;
+  font-size:var(--fs_15);
+  font-weight:700;
+  letter-spacing:.01em;
   color:var(--clr_seda_3);
 }
 
@@ -2304,8 +2307,12 @@ align-items:center;
   text-align:right;
 }
 
-.zr_control_value_col{
-  font-size:34px;
+.zr_control_label_rozdil{
+  color:var(--clr_cervena);
+}
+
+.zr_control_label_col{
+  color:var(--clr_modra_4);
 }
 
 .zr_person_table th,
