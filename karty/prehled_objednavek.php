@@ -93,21 +93,13 @@ $pobLabel = 'Pobočky';
 $pobText = '-';
 
 $objCols = [
-    'cislo_obj' => ['label' => 'č.obj.', 'db' => 'cislo_obj', 'filter' => true],
-    'stav' => ['label' => 'stav', 'db' => 'stav', 'filter' => true],
-    'cena' => ['label' => 'cena', 'db' => 'cena'],
-    'typ' => ['label' => 'typ', 'db' => 'typ', 'filter' => true],
-    'platba' => ['label' => 'platba', 'db' => 'platba', 'filter' => true],
-    'zakaznik' => ['label' => 'zákazník', 'db' => 'zakaznik', 'filter' => true],
-    'vytvoreno' => ['label' => 'vytvořeno', 'db' => 'vytvoreno'],
-];
-
-$objFilterStyle = [
-    'cislo_obj' => 'width:9ch;',
-    'stav' => 'width:10ch;',
-    'typ' => 'width:12ch;',
-    'platba' => 'width:10ch;',
-    'zakaznik' => 'width:16ch;',
+    'cislo_obj' => ['label' => 'č.obj.', 'db' => 'cislo_obj', 'filter' => true, 'width' => '150px'],
+    'stav' => ['label' => 'stav', 'db' => 'stav', 'filter' => true, 'width' => '150px'],
+    'cena' => ['label' => 'cena', 'db' => 'cena', 'width' => '150px'],
+    'typ' => ['label' => 'typ', 'db' => 'typ', 'filter' => true, 'width' => '150px'],
+    'platba' => ['label' => 'platba', 'db' => 'platba', 'filter' => true, 'width' => '150px'],
+    'zakaznik' => ['label' => 'zákazník', 'db' => 'zakaznik', 'filter' => true, 'width' => '250px'],
+    'vytvoreno' => ['label' => 'vytvořeno', 'db' => 'vytvoreno', 'width' => '150px'],
 ];
 
 $objSortMap = [
@@ -514,6 +506,7 @@ $objQueryDefaults = [
 ];
 
 $objBaseParams = [
+    'cb_load_max' => '1',
     'obj_per' => (string)$objPer,
 ];
 
@@ -528,6 +521,7 @@ if ((int)$tabKonfig['enable_filters'] === 1 && $objFilters !== []) {
 $objBuildUrl = static function (array $extra = []) use ($objBaseParams, $objQueryDefaults): string {
     return cb_url_query('/', array_merge($objBaseParams, $extra), $objQueryDefaults);
 };
+$objResetUrl = cb_url_query('/', ['cb_load_max' => '1'], $objQueryDefaults);
 
 $card_min_html = ''
     . '<div class="table-wrap ram_normal bg_bila zaobleni_12">'
@@ -554,45 +548,75 @@ ob_start();
 <?php if ($objError !== ''): ?>
   <p class="card_text txt_seda odstup_vnejsi_0 card_text_muted"><?= h($objError) ?></p>
 <?php else: ?>
-  <form method="get" action="<?= h($formAction) ?>" class="card_stack gap_10 displ_flex" autocomplete="off">
+  <form method="get" action="<?= h($formAction) ?>" class="card_stack gap_10 displ_flex" autocomplete="off" data-cb-max-form="1">
+    <input type="hidden" name="cb_load_max" value="1">
     <input type="hidden" name="obj_p" value="1">
     <?php if ((int)$tabKonfig['enable_sort'] === 1): ?>
       <input type="hidden" name="obj_sort" value="<?= h($objSort) ?>">
       <input type="hidden" name="obj_dir" value="<?= h($objDir) ?>">
     <?php endif; ?>
+    <div style="margin-bottom:12px; font-size:14px;">
+      Objednávek: <strong><?= h((string)$objTotal) ?></strong>
+    </div>
 
     <div class="table-wrap ram_normal bg_bila zaobleni_12">
-      <table class="table ram_normal bg_bila radek_1_35 card_table_max">
+      <table class="card-max-table">
         <thead>
-          <tr class="filter-row">
-            <th class="txt_l">
-              <input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($objFilterStyle['cislo_obj'] ?? 'width:9ch;')) ?>" type="text" name="obj_f[cislo_obj]" value="<?= h($objFilters['cislo_obj'] ?? '') ?>">
+          <tr class="card-max-filter filter-row">
+            <th style="width:<?= h((string)$objCols['cislo_obj']['width']) ?>;">
+              <input class="filter-input" type="text" name="obj_f[cislo_obj]" value="<?= h($objFilters['cislo_obj'] ?? '') ?>" autocomplete="off">
             </th>
-            <th class="txt_l">
-              <input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($objFilterStyle['stav'] ?? 'width:10ch;')) ?>" type="text" name="obj_f[stav]" value="<?= h($objFilters['stav'] ?? '') ?>">
+            <th style="width:<?= h((string)$objCols['stav']['width']) ?>;">
+              <input class="filter-input" type="text" name="obj_f[stav]" value="<?= h($objFilters['stav'] ?? '') ?>" autocomplete="off">
             </th>
-            <th class="txt_r"></th>
-            <th class="txt_l">
-              <input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($objFilterStyle['typ'] ?? 'width:12ch;')) ?>" type="text" name="obj_f[typ]" value="<?= h($objFilters['typ'] ?? '') ?>">
+            <th style="width:<?= h((string)$objCols['cena']['width']) ?>;"></th>
+            <th style="width:<?= h((string)$objCols['typ']['width']) ?>;">
+              <input class="filter-input" type="text" name="obj_f[typ]" value="<?= h($objFilters['typ'] ?? '') ?>" autocomplete="off">
             </th>
-            <th class="txt_l">
-              <input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($objFilterStyle['platba'] ?? 'width:10ch;')) ?>" type="text" name="obj_f[platba]" value="<?= h($objFilters['platba'] ?? '') ?>">
+            <th style="width:<?= h((string)$objCols['platba']['width']) ?>;">
+              <input class="filter-input" type="text" name="obj_f[platba]" value="<?= h($objFilters['platba'] ?? '') ?>" autocomplete="off">
             </th>
-            <th class="txt_l">
-              <input class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" style="<?= h((string)($objFilterStyle['zakaznik'] ?? 'width:16ch;')) ?>" type="text" name="obj_f[zakaznik]" value="<?= h($objFilters['zakaznik'] ?? '') ?>">
+            <th style="width:<?= h((string)$objCols['zakaznik']['width']) ?>;">
+              <input class="filter-input" type="text" name="obj_f[zakaznik]" value="<?= h($objFilters['zakaznik'] ?? '') ?>" autocomplete="off">
             </th>
-            <th class="txt_r">
-              <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 icon-x small zaobleni_6 vyska_24 radek_24 displ_inline_flex" href="<?= h($formAction) ?>">&times;</a>
+            <th style="width:<?= h((string)$objCols['vytvoreno']['width']) ?>;">
+              <div class="filter-actions gap_8 displ_flex">
+                <a href="<?= h($objResetUrl) ?>" class="filter-reset-btn cursor_ruka ram_normal zaobleni_8 vyska_24 radek_24 displ_inline_flex">
+                  <span class="filter-reset-x">&times;</span>
+                  <span>Zrušit filtr</span>
+                </a>
+              </div>
             </th>
           </tr>
           <tr>
-            <th class="txt_l">č.obj.</th>
-            <th class="txt_l">stav</th>
-            <th class="txt_r">cena</th>
-            <th class="txt_l">typ</th>
-            <th class="txt_l">platba</th>
-            <th class="txt_l">zákazník</th>
-            <th class="txt_r">vytvořeno</th>
+            <?php foreach ($objCols as $key => $cfg): ?>
+              <?php
+              $isSortable = isset($objSortMap[$key]);
+              $isActiveSort = ($objSort === $key);
+              $arrow = '↕';
+              if ($isActiveSort) {
+                  $arrow = $objDir === 'ASC' ? '↑' : '↓';
+              }
+              ?>
+              <th class="th-sort<?= $isActiveSort ? ' active' : '' ?>" style="width:<?= h((string)$cfg['width']) ?>;">
+                <?php if ((int)$tabKonfig['enable_sort'] === 1 && $isSortable): ?>
+                  <?php
+                  $nextDir = ($isActiveSort && $objDir === 'ASC') ? 'DESC' : 'ASC';
+                  $sortUrl = $objBuildUrl([
+                      'obj_p' => '1',
+                      'obj_sort' => $key,
+                      'obj_dir' => $nextDir,
+                  ]);
+                  ?>
+                  <a class="th-sort-link gap_8 jc_mezi sirka100<?= $isActiveSort ? ' active' : '' ?>" href="<?= h($sortUrl) ?>">
+                    <span class="th-sort-label"><?= h((string)$cfg['label']) ?></span>
+                    <span class="th-sort-arrow txt_r"><?= h($arrow) ?></span>
+                  </a>
+                <?php else: ?>
+                  <span class="th-sort-link gap_8 jc_mezi sirka100"><span class="th-sort-label"><?= h((string)$cfg['label']) ?></span></span>
+                <?php endif; ?>
+              </th>
+            <?php endforeach; ?>
           </tr>
         </thead>
         <tbody>
@@ -618,7 +642,7 @@ ob_start();
     </div>
 
     <?php if ((int)$tabKonfig['enable_pagination'] === 1): ?>
-      <div class="list-bottom gap_14 gap_10 odstup_vnitrni_0 displ_grid">
+      <div class="card-max-pagination list-bottom gap_14 gap_10 odstup_vnitrni_0 displ_grid">
         <div class="per-form gap_8 displ_inline_flex">
           <span>Zobrazuji</span>
           <select name="obj_per" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 per-select" onchange="this.form.obj_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
@@ -632,8 +656,8 @@ ob_start();
           <?php $prevDisabled = $objPage <= 1; ?>
           <?php $nextDisabled = $objPage >= $objPages; ?>
 
-          <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24<?= $prevDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $prevDisabled ? '#' : h($objBuildUrl(['obj_p' => '1'])) ?>">«</a>
-          <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24<?= $prevDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $prevDisabled ? '#' : h($objBuildUrl(['obj_p' => (string)max(1, $objPage - 1)])) ?>">‹</a>
+          <a class="icon-btn<?= $prevDisabled ? ' disabled' : '' ?>" href="<?= $prevDisabled ? '#' : h($objBuildUrl(['obj_p' => '1'])) ?>">«</a>
+          <a class="icon-btn<?= $prevDisabled ? ' disabled' : '' ?>" href="<?= $prevDisabled ? '#' : h($objBuildUrl(['obj_p' => (string)max(1, $objPage - 1)])) ?>">‹</a>
 
           <?php
           $pageItems = [];
@@ -652,16 +676,16 @@ ob_start();
 
           <?php foreach ($pageItems as $item): ?>
             <?php if ($item === '…'): ?>
-              <span class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24 disabled displ_inline_flex">…</span>
+              <span class="icon-btn disabled">…</span>
             <?php elseif ((int)$item === $objPage): ?>
-              <span class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24 page-current displ_inline_flex"><?= h((string)$item) ?></span>
+              <span class="icon-btn page-current"><?= h((string)$item) ?></span>
             <?php else: ?>
-              <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24 displ_inline_flex" href="<?= h($objBuildUrl(['obj_p' => (string)$item])) ?>"><?= h((string)$item) ?></a>
+              <a class="icon-btn" href="<?= h($objBuildUrl(['obj_p' => (string)$item])) ?>"><?= h((string)$item) ?></a>
             <?php endif; ?>
           <?php endforeach; ?>
 
-          <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24<?= $nextDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $nextDisabled ? '#' : h($objBuildUrl(['obj_p' => (string)min($objPages, $objPage + 1)])) ?>">›</a>
-          <a class="icon-btn cursor_ruka ram_normal bg_seda text_18 w44 vyska_24 radek_24<?= $nextDisabled ? ' disabled' : '' ?> displ_inline_flex" href="<?= $nextDisabled ? '#' : h($objBuildUrl(['obj_p' => (string)$objPages])) ?>">»</a>
+          <a class="icon-btn<?= $nextDisabled ? ' disabled' : '' ?>" href="<?= $nextDisabled ? '#' : h($objBuildUrl(['obj_p' => (string)min($objPages, $objPage + 1)])) ?>">›</a>
+          <a class="icon-btn<?= $nextDisabled ? ' disabled' : '' ?>" href="<?= $nextDisabled ? '#' : h($objBuildUrl(['obj_p' => (string)$objPages])) ?>">»</a>
         </div>
 
         <div class="per-form gap_8 right displ_inline_flex jc_konec">

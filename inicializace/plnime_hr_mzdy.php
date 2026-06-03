@@ -1,5 +1,5 @@
 <?php
-// inicializace/plnime_hr_mzdy.php * Verze: V2 * Aktualizace: 22.05.2026
+// inicializace/plnime_hr_mzdy.php * Verze: V3 * Aktualizace: 03.06.2026
 declare(strict_types=1);
 
 if (PHP_SAPI !== 'cli' && (!defined('HR_MZDY_HELPERS_ONLY') || HR_MZDY_HELPERS_ONLY !== true) && session_status() !== PHP_SESSION_ACTIVE) {
@@ -10,7 +10,6 @@ require_once __DIR__ . '/../lib/app.php';
 require_once __DIR__ . '/../config/secrets.php';
 
 const HR_MZDY_XLSX = __DIR__ . '/../admin_testy/reporty_google_testy/google_data/HR 2024.xlsx';
-const HR_MZDY_IMPORT_DO = '2026-04-30';
 
 if (!defined('HR_MZDY_HELPERS_ONLY') || HR_MZDY_HELPERS_ONLY !== true) {
     if (isset($_POST['run_hr_mzdy']) && (string)$_POST['run_hr_mzdy'] === '1') {
@@ -32,8 +31,9 @@ function hrMzdyRun(bool $write): void
     $db = db();
     $db->set_charset('utf8mb4');
 
-    $rows = hrMzdyBuildRows($db);
-    $summary = hrMzdySummary($rows);
+    $importState = hrMzdyImportState($db);
+    $rows = hrMzdyBuildRows($db, $importState);
+    $summary = hrMzdySummary($rows, $importState);
     $result = [];
 
     if ($write) {
@@ -44,13 +44,65 @@ function hrMzdyRun(bool $write): void
 }
 
 /**
+ * @return array<string, mixed>
+ */
+function hrMzdyImportState(mysqli $db): array
+{
+    $state = [
+        'existing_total' => 0,
+        'max_datum_od' => null,
+        'max_datum_do' => null,
+        'last_closed_do' => hrMzdyLastClosedDate(),
+        'imported_months' => [],
+    ];
+
+    $res = $db->query("
+        SELECT COUNT(*) AS total, MAX(datum_od) AS max_datum_od, MAX(datum_do) AS max_datum_do
+        FROM hr_mzdy_mesic
+        WHERE zdroj = 'HR 2024.xlsx'
+    ");
+    if ($res instanceof mysqli_result) {
+        $row = $res->fetch_assoc() ?: [];
+        $state['existing_total'] = (int)($row['total'] ?? 0);
+        $state['max_datum_od'] = $row['max_datum_od'] ?? null;
+        $state['max_datum_do'] = $row['max_datum_do'] ?? null;
+        $res->free();
+    }
+
+    $resMonths = $db->query("
+        SELECT DISTINCT datum_od
+        FROM hr_mzdy_mesic
+        WHERE zdroj = 'HR 2024.xlsx'
+    ");
+    if ($resMonths instanceof mysqli_result) {
+        while ($row = $resMonths->fetch_assoc()) {
+            $month = (string)($row['datum_od'] ?? '');
+            if ($month !== '') {
+                $state['imported_months'][$month] = true;
+            }
+        }
+        $resMonths->free();
+    }
+
+    return $state;
+}
+
+function hrMzdyLastClosedDate(): string
+{
+    return (new DateTimeImmutable('first day of this month'))->modify('-1 day')->format('Y-m-d');
+}
+
+/**
  * @return array<int, array<string, mixed>>
  */
-function hrMzdyBuildRows(mysqli $db): array
+function hrMzdyBuildRows(mysqli $db, array $importState): array
 {
     $users = hrMzdyUserMap($db);
     $targets = hrMzdyWorkbookSheetTargets(HR_MZDY_XLSX);
     $out = [];
+    $hasExistingData = (int)($importState['existing_total'] ?? 0) > 0;
+    $importedMonths = (array)($importState['imported_months'] ?? []);
+    $lastClosedDo = (string)($importState['last_closed_do'] ?? hrMzdyLastClosedDate());
 
     foreach ($targets as $sheetName => $sheetPath) {
         if (!str_starts_with((string)$sheetName, 'Mzdy') || $sheetName === 'Mzdy' || $sheetName === '__TEMP_SORT_MZDY__') {
@@ -63,7 +115,10 @@ function hrMzdyBuildRows(mysqli $db): array
         }
 
         $period = hrMzdySheetPeriod($rows[1] ?? []);
-        if ($period === null || $period['datum_od'] > HR_MZDY_IMPORT_DO) {
+        if ($period === null || $period['datum_do'] > $lastClosedDo) {
+            continue;
+        }
+        if ($hasExistingData && isset($importedMonths[(string)$period['datum_od']])) {
             continue;
         }
 
@@ -136,15 +191,17 @@ function hrMzdyBuildRows(mysqli $db): array
  * @param array<int, array<string, mixed>> $rows
  * @return array<string, mixed>
  */
-function hrMzdySummary(array $rows): array
+function hrMzdySummary(array $rows, array $importState): array
 {
     $months = [];
+    $importMonths = [];
     $unmatched = [];
     $ambiguous = [];
     $matched = 0;
 
     foreach ($rows as $row) {
         $month = (string)$row['datum_od'];
+        $importMonths[$month] = true;
         if (!isset($months[$month])) {
             $months[$month] = ['total' => 0, 'matched' => 0, 'unmatched' => 0, 'ambiguous' => 0];
         }
@@ -166,14 +223,26 @@ function hrMzdySummary(array $rows): array
     }
 
     ksort($months);
+    ksort($importMonths);
+
+    $unmatchedNames = array_keys($unmatched);
+    $ambiguousNames = array_keys($ambiguous);
+    $unknownNames = array_values(array_unique(array_merge($unmatchedNames, $ambiguousNames)));
+    sort($unknownNames, SORT_STRING);
 
     return [
         'total' => count($rows),
         'matched' => $matched,
         'unmatched' => count($rows) - $matched,
+        'unmatched_unique' => count($unknownNames),
         'months' => $months,
-        'unmatched_names' => array_keys($unmatched),
-        'ambiguous_names' => array_keys($ambiguous),
+        'import_months' => array_keys($importMonths),
+        'unmatched_names' => $unmatchedNames,
+        'ambiguous_names' => $ambiguousNames,
+        'unknown_names' => $unknownNames,
+        'existing_total' => (int)($importState['existing_total'] ?? 0),
+        'max_datum_do' => $importState['max_datum_do'] ?? null,
+        'last_closed_do' => (string)($importState['last_closed_do'] ?? hrMzdyLastClosedDate()),
     ];
 }
 
@@ -183,10 +252,12 @@ function hrMzdySummary(array $rows): array
  */
 function hrMzdyWrite(mysqli $db, array $rows): array
 {
+    if ($rows === []) {
+        return ['inserted' => 0];
+    }
+
     $db->begin_transaction();
     try {
-        $db->query("DELETE FROM hr_mzdy_mesic WHERE zdroj = 'HR 2024.xlsx'");
-
         $stmt = $db->prepare('
             INSERT INTO hr_mzdy_mesic (
                 id_user, rok, mesic, datum_od, datum_do, mzda_typ, slot,
@@ -274,11 +345,54 @@ function hrMzdyWrite(mysqli $db, array $rows): array
         $stmt->close();
         $db->commit();
 
-        return ['inserted' => $inserted, 'deleted_old' => 1];
+        return ['inserted' => $inserted];
     } catch (Throwable $e) {
         $db->rollback();
-        return ['inserted' => 0, 'deleted_old' => 0, 'error' => 1, 'error_message' => $e->getMessage()];
+        return ['inserted' => 0, 'error' => 1, 'error_message' => $e->getMessage()];
     }
+}
+
+function hrMzdyMonthLabel(?string $date): string
+{
+    $date = trim((string)$date);
+    if ($date === '') {
+        return 'Ne';
+    }
+
+    try {
+        $dt = new DateTimeImmutable($date);
+    } catch (Throwable) {
+        return $date;
+    }
+
+    $months = [
+        1 => 'leden',
+        2 => 'únor',
+        3 => 'březen',
+        4 => 'duben',
+        5 => 'květen',
+        6 => 'červen',
+        7 => 'červenec',
+        8 => 'srpen',
+        9 => 'září',
+        10 => 'říjen',
+        11 => 'listopad',
+        12 => 'prosinec',
+    ];
+
+    return $months[(int)$dt->format('n')] . ' ' . $dt->format('Y');
+}
+
+/**
+ * @param array<int, string> $months
+ */
+function hrMzdyMonthListLabel(array $months): string
+{
+    if ($months === []) {
+        return 'Žádné';
+    }
+
+    return implode(', ', array_map(static fn (string $date): string => hrMzdyMonthLabel($date), $months));
 }
 
 /**
@@ -290,7 +404,7 @@ function hrMzdyRender(array $summary, array $result, bool $write): void
     ?>
     <div class="table-wrap ram_normal bg_bila zaobleni_12 odstup_vnitrni_10">
       <h2 class="card_title txt_seda text_24 text_tucny odstup_vnejsi_0">Inicializace HR mezd</h2>
-      <p class="card_text txt_seda">Script načte historii z HR 2024.xlsx do tabulky hr_mzdy_mesic. Rozpracovaný list Mzdy se neimportuje.</p>
+      <p class="card_text txt_seda">Script načte uzavřené měsíce z HR 2024.xlsx do tabulky hr_mzdy_mesic. Již importované měsíce a rozpracovaný list Mzdy se neimportují.</p>
 
       <?php if ($write): ?>
         <?php if ((int)($result['error'] ?? 0) === 1): ?>
@@ -303,9 +417,13 @@ function hrMzdyRender(array $summary, array $result, bool $write): void
 
       <table class="table ram_normal bg_bila radek_1_35 sirka100">
         <tbody>
-          <tr><td>Řádků celkem</td><td class="txt_r"><strong><?= hrMzdyH(number_format((int)$summary['total'], 0, ',', ' ')) ?></strong></td></tr>
+          <tr><td>Staženo do</td><td class="txt_r"><strong><?= hrMzdyH(hrMzdyMonthLabel($summary['max_datum_do'] ?? null)) ?></strong></td></tr>
+          <tr><td>Poslední uzavřený měsíc</td><td class="txt_r"><strong><?= hrMzdyH(hrMzdyMonthLabel((string)$summary['last_closed_do'])) ?></strong></td></tr>
+          <tr><td>Měsíce k importu</td><td class="txt_r"><strong><?= hrMzdyH(hrMzdyMonthListLabel((array)$summary['import_months'])) ?></strong></td></tr>
+          <tr><td>Řádků k importu celkem</td><td class="txt_r"><strong><?= hrMzdyH(number_format((int)$summary['total'], 0, ',', ' ')) ?></strong></td></tr>
           <tr><td>Spárované řádky</td><td class="txt_r"><strong><?= hrMzdyH(number_format((int)$summary['matched'], 0, ',', ' ')) ?></strong></td></tr>
           <tr><td>Neurčené řádky</td><td class="txt_r"><strong><?= hrMzdyH(number_format((int)$summary['unmatched'], 0, ',', ' ')) ?></strong></td></tr>
+          <tr><td>Neurčená unikátní jména</td><td class="txt_r"><strong><?= hrMzdyH(number_format((int)$summary['unmatched_unique'], 0, ',', ' ')) ?></strong></td></tr>
         </tbody>
       </table>
 
@@ -327,7 +445,7 @@ function hrMzdyRender(array $summary, array $result, bool $write): void
       </table>
 
       <h3 class="card_title txt_seda text_18 text_tucny odstup_horni_15">Neurčená jména</h3>
-      <p class="card_text txt_seda"><?= hrMzdyH(implode(', ', array_merge((array)$summary['unmatched_names'], (array)$summary['ambiguous_names']))) ?></p>
+      <p class="card_text txt_seda"><?= hrMzdyH(implode(', ', (array)$summary['unknown_names'])) ?></p>
 
       <div class="card_actions gap_8 displ_flex odstup_horni_10">
         <form method="post" action="<?= hrMzdyH(cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1" data-cb-loader-text="Probíhá import HR mezd">
@@ -387,14 +505,25 @@ function hrMzdyUserMap(mysqli $db): array
         hrMzdyAddCandidate($map['reverse'], hrMzdyNameKey($user['prijmeni'] . ' ' . $user['jmeno']), $user);
         hrMzdyAddCandidate($map['full_plain'], hrMzdyPlainNameKey($user['jmeno'] . ' ' . $user['prijmeni']), $user);
         hrMzdyAddCandidate($map['reverse_plain'], hrMzdyPlainNameKey($user['prijmeni'] . ' ' . $user['jmeno']), $user);
-        hrMzdyAddCandidate($map['alias'], hrMzdyNameKey($user['alias']), $user);
-        hrMzdyAddCandidate($map['alias_plain'], hrMzdyPlainNameKey($user['alias']), $user);
+        foreach (hrMzdyAliasList($user['alias']) as $alias) {
+            hrMzdyAddCandidate($map['alias'], hrMzdyNameKey($alias), $user);
+            hrMzdyAddCandidate($map['alias_plain'], hrMzdyPlainNameKey($alias), $user);
+        }
         hrMzdyAddCandidate($map['surname'], hrMzdyNameKey($user['prijmeni']), $user);
         hrMzdyAddCandidate($map['surname_plain'], hrMzdyPlainNameKey($user['prijmeni']), $user);
     }
     $res->free();
 
     return $map;
+}
+
+/**
+ * @return array<int, string>
+ */
+function hrMzdyAliasList(string $alias): array
+{
+    $items = array_map('trim', explode('+!+', $alias));
+    return array_values(array_unique(array_filter($items, static fn (string $item): bool => $item !== '')));
 }
 
 /**
@@ -429,6 +558,7 @@ function hrMzdyResolveUser(string $name, array $users, array $branchIds): array
         'Eszenyiová Patrícia' => 493,
         'Jáklová Dominika' => 464,
         'Šarközi Dávid' => 469,
+        'Roth Stanislav st.' => 1,
         'Roth Stanislav ml.' => 3,
         'Hegedüs Gergö' => 520,
         'Chyský David' => 147,
@@ -888,4 +1018,4 @@ PS;
     return $cache[$filePath];
 }
 
-// inicializace/plnime_hr_mzdy.php * Verze: V2 * Aktualizace: 22.05.2026
+// inicializace/plnime_hr_mzdy.php * Verze: V3 * Aktualizace: 03.06.2026

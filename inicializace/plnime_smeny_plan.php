@@ -1,5 +1,5 @@
 <?php
-// inicializace/plnime_smeny_plan.php * Verze: V16 * Aktualizace: 21.04.2026
+// inicializace/plnime_smeny_plan.php * Verze: V17 * Aktualizace: 03.06.2026
 
 declare(strict_types=1);
 
@@ -17,6 +17,7 @@ const REQUEST_TIMEOUT_SEC = 60;
 const SLEEP_BETWEEN_WEEKS_US = 500000;
 const LOG_DIR = __DIR__ . '/../log/smeny';
 const SKIPWEEK_FILE = LOG_DIR . '/skipweek.txt';
+const SMENY_PLAN_UPDATE_ALL_ID = -1;
 
 function out(string $text): void
 {
@@ -721,6 +722,54 @@ function processBranch(string $token, int $skipWeeks, int $idPob, int $apiBranch
     }
 }
 
+function processPlannedWeekUpdate(string $token, int $skipWeeks, int $idPob, int $apiBranchId, string $nazevPob = ''): array
+{
+    $defaultStartDay = startDayBySkipWeeks($skipWeeks);
+
+    try {
+        if ($apiBranchId <= 0) {
+            throw new RuntimeException('Pobočka nebyla nalezena v API Směn podle názvu.');
+        }
+
+        $week = getWeekRaw($token, $apiBranchId, $skipWeeks);
+        if ($week === null) {
+            return [
+                'start_day' => $defaultStartDay,
+                'blocks' => 0,
+                'hours' => 0,
+                'status' => 'OK',
+                'note' => 'API vratilo prazdny tyden, DB ponechana beze zmen',
+            ];
+        }
+
+        $startDay = normalizeMonday((string)($week['startDay'] ?? $defaultStartDay))->format('Y-m-d');
+        $rows = buildBlocks($week, $idPob);
+        $blocks = saveBlocks($startDay, $idPob, $rows);
+        $hours = countHours($rows);
+        $note = $rows === [] ? 'API vratilo tyden bez bloku, ulozeny tyden byl vycisten' : null;
+        markBranchAsOk($skipWeeks, $idPob, $startDay, $blocks, $hours, $note);
+
+        return [
+            'start_day' => $startDay,
+            'blocks' => $blocks,
+            'hours' => $hours,
+            'status' => 'OK',
+            'note' => $note,
+        ];
+    } catch (Throwable $e) {
+        $message = mb_substr($e->getMessage(), 0, 1000, 'UTF-8');
+        markBranchAsError($skipWeeks, $idPob, $defaultStartDay, $message);
+
+        return [
+            'start_day' => $defaultStartDay,
+            'blocks' => 0,
+            'hours' => 0,
+            'status' => 'CHYBA',
+            'note' => $message,
+        ];
+    }
+}
+
 function renderSmenyPlanScreen(array $info, string $mode = 'pick'): void
 {
     $branches = $info['branches_list'] ?? [];
@@ -739,6 +788,9 @@ function renderSmenyPlanScreen(array $info, string $mode = 'pick'): void
     $branchesCount = count($branches);
     $blocks = (int)($info['blocks'] ?? 0);
     $hours = (int)($info['hours'] ?? 0);
+    $branchesDone = (int)($info['branches_done'] ?? 0);
+    $weeksDone = (int)($info['weeks_done'] ?? 0);
+    $errors = (int)($info['errors'] ?? 0);
     $status = strtoupper((string)($info['status'] ?? ''));
     $messageClass = $mode === 'run'
         ? ($status === 'OK' ? 'txt_zelena' : 'txt_cervena')
@@ -760,7 +812,11 @@ function renderSmenyPlanScreen(array $info, string $mode = 'pick'): void
         <p class="card_text <?= h($messageClass) ?> text_tucny"><?= h($message) ?></p>
       <?php endif; ?>
       <?php if ($mode === 'run'): ?>
-        <p class="card_text txt_seda">Pobočka: <?= h(is_array($selectedBranch) ? (string)($selectedBranch['nazev'] ?? '') : '') ?> | bloků: <?= h((string)$blocks) ?> | hodin: <?= h((string)$hours) ?>.</p>
+        <?php if ($selectedBranchId > 0): ?>
+          <p class="card_text txt_seda">Pobočka: <?= h(is_array($selectedBranch) ? (string)($selectedBranch['nazev'] ?? '') : '') ?> | bloků: <?= h((string)$blocks) ?> | hodin: <?= h((string)$hours) ?>.</p>
+        <?php else: ?>
+          <p class="card_text txt_seda">Poboček: <?= h((string)$branchesDone) ?> | týdnů: <?= h((string)$weeksDone) ?> | bloků: <?= h((string)$blocks) ?> | hodin: <?= h((string)$hours) ?> | chyb: <?= h((string)$errors) ?>.</p>
+        <?php endif; ?>
       <?php endif; ?>
 
       <?php if ($mode === 'pick'): ?>
@@ -768,8 +824,9 @@ function renderSmenyPlanScreen(array $info, string $mode = 'pick'): void
           <input type="hidden" name="run_smeny_plan" value="1">
           <input type="hidden" name="cb_action" value="start" id="cb_action_field">
           <div class="displ_flex gap_8 align_items_center flex_wrap">
-            <select name="cb_id_pob" class="card_select ram_sedy txt_seda bg_bila zaobleni_8" style="min-width:260px; height:28px; margin-right:8px;" onchange="var a=document.getElementById('cb_action_field');if(a){a.value='select_branch';}var f=this.form;if(f){var o=this.options[this.selectedIndex];var t=o?String(o.textContent||o.innerText||'').trim():'';var p=t.indexOf(' | ');if(p>=0){t=t.substring(0,p);}f.setAttribute('data-cb-loader-text','Připravuji směny pobočky '+t);if(f.requestSubmit){f.requestSubmit();}else{f.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));}}">
+            <select name="cb_id_pob" class="card_select ram_sedy txt_seda bg_bila zaobleni_8" style="min-width:260px; height:28px; margin-right:8px;" onchange="var a=document.getElementById('cb_action_field');var v=String(this.value||'');if(a){a.value=(v==='<?= h((string)SMENY_PLAN_UPDATE_ALL_ID) ?>'?'update_planned':'select_branch');}var f=this.form;if(f){var o=this.options[this.selectedIndex];var t=o?String(o.textContent||o.innerText||'').trim():'';var p=t.indexOf(' | ');if(p>=0){t=t.substring(0,p);}f.setAttribute('data-cb-loader-text',v==='<?= h((string)SMENY_PLAN_UPDATE_ALL_ID) ?>'?'Aktualizuji naplánované směny':'Připravuji směny pobočky '+t);if(f.requestSubmit){f.requestSubmit();}else{f.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));}}">
               <option value="0">Vyber pobočku</option>
+              <option value="<?= h((string)SMENY_PLAN_UPDATE_ALL_ID) ?>">Aktualizuj naplánované směny</option>
               <?php foreach ($branches as $branch): ?>
                 <?php
                     $branchId = (int)($branch['id_pob'] ?? 0);
@@ -948,6 +1005,95 @@ function run(array $branch): array
     ];
 }
 
+function runPlannedUpdate(array $branches): array
+{
+    set_time_limit(0);
+
+    $totalStart = microtime(true);
+    $token = (string)($_SESSION['cb_token'] ?? '');
+    if ($token === '') {
+        return [
+            'status' => 'CHYBA',
+            'message' => 'Chybí token v session (cb_token).',
+            'branches_list' => $branches,
+            'selected_branch' => null,
+            'selected_branch_id' => 0,
+            'start_day' => '',
+            'skip_weeks' => 0,
+            'blocks' => 0,
+            'hours' => 0,
+            'branches_done' => 0,
+            'weeks_done' => 0,
+            'errors' => 1,
+            'brake_exists' => skipweekBrakeExists(),
+        ];
+    }
+
+    $skipWeeksList = [-1, 0];
+    $totalBlocks = 0;
+    $totalHours = 0;
+    $branchesDone = 0;
+    $weeksDone = 0;
+    $errors = 0;
+
+    appendTxtLog(sprintf(
+        'Start aktualizace naplánovaných směn | %s | poboček=%d | týdny=%s',
+        nowSql(),
+        count($branches),
+        implode(',', $skipWeeksList)
+    ));
+
+    foreach ($branches as $branch) {
+        $idPob = (int)($branch['id_pob'] ?? 0);
+        $apiBranchId = (int)($branch['smeny_branch_id'] ?? 0);
+        $nazevPob = trim((string)($branch['nazev'] ?? ''));
+        if ($idPob <= 0) {
+            continue;
+        }
+
+        $branchesDone++;
+        foreach ($skipWeeksList as $skipWeeks) {
+            $weekResult = processPlannedWeekUpdate($token, $skipWeeks, $idPob, $apiBranchId, $nazevPob);
+            printBranchProgress(
+                $skipWeeks,
+                $idPob,
+                (string)$weekResult['start_day'],
+                (int)$weekResult['blocks'],
+                (int)$weekResult['hours'],
+                (string)$weekResult['status'],
+                $weekResult['note'] ?? null
+            );
+
+            $weeksDone++;
+            if ((string)$weekResult['status'] !== 'OK') {
+                $errors++;
+                continue;
+            }
+
+            $totalBlocks += (int)$weekResult['blocks'];
+            $totalHours += (int)$weekResult['hours'];
+        }
+    }
+
+    $message = 'Aktualizace naplánovaných směn dokončena. Celkový čas: ' . formatDuration(microtime(true) - $totalStart) . '.';
+
+    return [
+        'status' => $errors > 0 ? 'CHYBA' : 'OK',
+        'message' => $message,
+        'branches_list' => $branches,
+        'selected_branch' => null,
+        'selected_branch_id' => 0,
+        'start_day' => currentWeekMonday()->format('Y-m-d'),
+        'skip_weeks' => -1,
+        'blocks' => $totalBlocks,
+        'hours' => $totalHours,
+        'branches_done' => $branchesDone,
+        'weeks_done' => $weeksDone,
+        'errors' => $errors,
+        'brake_exists' => skipweekBrakeExists(),
+    ];
+}
+
 $token = (string)($_SESSION['cb_token'] ?? '');
 $branches = [];
 if ($token !== '') {
@@ -963,6 +1109,13 @@ if ($action === 'back') {
     smenyPlanSetSelectedBranchId(0);
     $selectedBranchId = 0;
     $selectedBranch = null;
+}
+
+if ($action === 'update_planned') {
+    smenyPlanSetSelectedBranchId(0);
+    $runInfo = runPlannedUpdate($branches);
+    renderSmenyPlanScreen($runInfo, 'run');
+    return;
 }
 
 if ($action === 'select_branch') {

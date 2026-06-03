@@ -60,6 +60,10 @@ if (($loginOk || $cbAuthOk) && $idUser > 0) {
 
     <div class="modal-spacer"></div>
     <div class="modal-qr modal-qr-main" id="cbPrvniQr"></div>
+    <?php if ($pairUrl !== ''): ?>
+      <div class="modal-spacer"></div>
+      <a class="modal-btn primary modal-touch-register" id="cbPrvniTouchRegister" href="<?= h($pairUrl) ?>" hidden>Registrovat toto zařízení</a>
+    <?php endif; ?>
 
     <div class="modal-foot">
       <div class="modal-status" id="cbPrvniStatus">Čekám na spárování zařízení…</div>
@@ -74,6 +78,17 @@ if (($loginOk || $cbAuthOk) && $idUser > 0) {
   var btn = document.getElementById('cbPrvniReload');
   var st = document.getElementById('cbPrvniStatus');
   var x = document.getElementById('cbPrvniClose');
+  var touchRegister = document.getElementById('cbPrvniTouchRegister');
+
+  function isTouchDevice(){
+    if (navigator && Number(navigator.maxTouchPoints || 0) > 0) {
+      return true;
+    }
+    if (window.matchMedia) {
+      return window.matchMedia('(pointer: coarse)').matches;
+    }
+    return false;
+  }
 
   function setTxt(t){
     if (st) {
@@ -121,6 +136,9 @@ if (($loginOk || $cbAuthOk) && $idUser > 0) {
   }
   if (x) {
     x.addEventListener('click', doAbort);
+  }
+  if (touchRegister && isTouchDevice()) {
+    touchRegister.hidden = false;
   }
 
   try {

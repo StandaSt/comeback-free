@@ -36,6 +36,7 @@
   align-items: center;
   justify-content: center;
   padding: 18px;
+  overflow-y: auto;
 }
 
 .modal{
@@ -46,6 +47,10 @@
   border-radius: 18px;
   box-shadow: var(--cb-modal-shadow);
   padding: 20px;
+  max-height: calc(100vh - 36px);
+  max-height: calc(100dvh - 36px);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-spacer{
@@ -373,6 +378,12 @@
   background: var(--cb-modal-primary-hover);
 }
 
+.modal-touch-register:not([hidden]){
+  display: block;
+  text-align: center;
+  text-decoration: none;
+}
+
 .modal-btn.primary.is-waiting,
 .modal-btn.primary.is-waiting:hover{
   background: #fee2e2;
@@ -411,9 +422,37 @@ code{
 }
 
 @media (max-width: 640px){
+  .modal-overlay,
+  #cb-2fa-ovl{
+    align-items: flex-start;
+    padding: 10px;
+    padding-top: max(10px, env(safe-area-inset-top));
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+
   .modal{
     width: 100%;
-    padding: 16px;
+    max-height: calc(100vh - 20px);
+    max-height: calc(100dvh - 20px);
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .modal-head{
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .modal-logo{
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+  }
+
+  .modal-logo-lg{
+    width: 58px;
+    height: 58px;
+    border-radius: 14px;
   }
 
   .modal-title{
@@ -426,7 +465,7 @@ code{
   }
 
   .modal-qr-main{
-    width: 200px;
-    height: 200px;
+    width: clamp(150px, 48vw, 190px);
+    height: clamp(150px, 48vw, 190px);
   }
 }
