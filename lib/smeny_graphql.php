@@ -105,7 +105,7 @@ function cb_login_load_settings_to_session(int $idUser): void
     cb_store_system_settings($rowSystem);
 
     $stmtUserSet = $conn->prepare(
-        'SELECT pocet_sl, nano_kde, prodleva, pismo, dark, logout_limit, obdobi_od, obdobi_do, obdobi_mode FROM user_set WHERE id_user = ? LIMIT 1'
+        'SELECT nano_kde, prodleva, pismo, dark, logout_limit, obdobi_od, obdobi_do, obdobi_mode FROM user_set WHERE id_user = ? LIMIT 1'
     );
     if (!($stmtUserSet instanceof mysqli_stmt)) {
         throw new RuntimeException('Nepodarilo se nacist user_set.');

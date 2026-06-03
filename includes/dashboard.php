@@ -195,41 +195,23 @@ if ($roleFilter <= 0) {
 }
 
 $idUser = (int)(($_SESSION['cb_user']['id_user'] ?? 0));
-$dashColsClass = 'dash_cols_3';
-$dashGridCols = 3;
 $nanoKde = 0;
 $nanoCardIds = [];
 $userCardHeaderColorById = [];
 $userCardIconFileById = [];
 $userCardOrderById = [];
-$dashColsPostOverride = null;
 $singleCardId = (int)($GLOBALS['cb_dashboard_single_card_id'] ?? 0);
 $singleCardLoadMax = (((int)($_GET['cb_load_max'] ?? 0)) === 1);
 
-if ((string)($_POST['us_action'] ?? '') === 'save') {
-    $postColsRaw = (int)($_POST['us_pocet_sl'] ?? 0);
-    if (in_array($postColsRaw, [3, 4, 5], true)) {
-        $dashColsPostOverride = $postColsRaw;
-    }
-}
-
 if ($idUser > 0) {
-    $stmtCols = db()->prepare('SELECT pocet_sl, nano_kde FROM `user_set` WHERE id_user = ? LIMIT 1');
+    $stmtCols = db()->prepare('SELECT nano_kde FROM `user_set` WHERE id_user = ? LIMIT 1');
     if ($stmtCols) {
         $stmtCols->bind_param('i', $idUser);
         $stmtCols->execute();
-        $stmtCols->bind_result($pocetSl, $nanoKdeDb);
+        $stmtCols->bind_result($nanoKdeDb);
         if ($stmtCols->fetch()) {
-            $effectivePocetSl = ($dashColsPostOverride !== null) ? (int)$dashColsPostOverride : (int)$pocetSl;
-            if ($effectivePocetSl === 5) {
-                $dashColsClass = 'dash_cols_5';
-                $dashGridCols = 5;
-            } elseif ($effectivePocetSl === 4) {
-                $dashColsClass = 'dash_cols_4';
-                $dashGridCols = 4;
-            }
+            $nanoKde = (int)$nanoKdeDb;
         }
-        $nanoKde = (int)$nanoKdeDb;
         if (!in_array($nanoKde, [0, 1], true)) {
             $nanoKde = 0;
         }
@@ -426,7 +408,7 @@ $applyUserOrder = static function (array $list) use ($userCardOrderById, $sortBy
     return $result;
 };
 
-$dashGridClass = $dashColsClass . ' dash_nano_kde_' . $nanoKde;
+$dashGridClass = 'dash_nano_kde_' . $nanoKde;
 $cbLoginId = (int)($_SESSION['cb_id_login'] ?? 0);
 
 $kartyMini = $applyUserOrder($kartyMini);
@@ -441,9 +423,7 @@ if ($singleCardId > 0) {
         echo cb_zobraz_kartu(cb_priprav_kartu_nano(
             $kartaNanoRaw,
             $userCardHeaderColorById,
-            $userCardIconFileById,
-            [],
-            $dashGridCols
+            $userCardIconFileById
         ));
         cb_dashboard_timing_log('single_card_nano_render', $cbDashTimingStart, $cbDashTimingLast);
         return;
@@ -457,9 +437,7 @@ if ($singleCardId > 0) {
         $pripravenaMini = cb_priprav_kartu_mini(
             $kartaMiniRaw,
             $userCardHeaderColorById,
-            $userCardIconFileById,
-            [],
-            $dashGridCols
+            $userCardIconFileById
         );
         cb_dashboard_timing_log('single_card_mini_prepare', $cbDashTimingStart, $cbDashTimingLast);
 
@@ -486,9 +464,7 @@ if ($nanoKde === 1) {
             $nanoSkupinaPrepared[] = cb_priprav_kartu_nano(
                 $kartaNanoRaw,
                 $userCardHeaderColorById,
-                $userCardIconFileById,
-                [],
-                $dashGridCols
+                $userCardIconFileById
             );
             cb_dashboard_timing_log('nano_prepare_card_' . (string)($kartaNanoRaw['id_karta'] ?? 0), $cbDashTimingStart, $cbDashTimingLast);
         }
@@ -505,9 +481,7 @@ if ($nanoKde === 1) {
             'karta' => cb_priprav_kartu_nano(
                 $kartaNanoRaw,
                 $userCardHeaderColorById,
-                $userCardIconFileById,
-                [],
-                $dashGridCols
+                $userCardIconFileById
             ),
         ];
         cb_dashboard_timing_log('nano_prepare_card_' . (string)($kartaNanoRaw['id_karta'] ?? 0), $cbDashTimingStart, $cbDashTimingLast);
@@ -525,9 +499,7 @@ foreach ($kartyMini as $kartaMiniRaw) {
         'karta' => cb_priprav_kartu_mini(
             $kartaMiniRaw,
             $userCardHeaderColorById,
-            $userCardIconFileById,
-            [],
-            $dashGridCols
+            $userCardIconFileById
         ),
     ];
     cb_dashboard_timing_log('mini_prepare_card_' . (string)($kartaMiniRaw['id_karta'] ?? 0), $cbDashTimingStart, $cbDashTimingLast);

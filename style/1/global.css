@@ -209,7 +209,7 @@ main{
   min-height:100vh;      /* vyska cele stranky */
   flex:1;               /* kontejner vyplni vysku mezi body okraji */
   min-height:0;         /* nutne pro spravne fungovani flex+scroll */
-  min-width:1300px;
+  min-width:0;
   overflow:hidden;      /* zabrani rozjizdeni layoutu mimo kontejner */
 }
 
@@ -1118,18 +1118,7 @@ align-items:center;
   align-content:start;
   min-width:0;
   --MIN_SIRKA_KARTY:370px;
-}
-
-.dash_grid.dash_cols_3{
-  grid-template-columns:repeat(3, minmax(var(--MIN_SIRKA_KARTY), 1fr));
-}
-
-.dash_grid.dash_cols_4{
-  grid-template-columns:repeat(4, minmax(var(--MIN_SIRKA_KARTY), 1fr));
-}
-
-.dash_grid.dash_cols_5{
-  grid-template-columns:repeat(5, minmax(var(--MIN_SIRKA_KARTY), 1fr));
+  grid-template-columns:repeat(auto-fit, minmax(min(100%, var(--MIN_SIRKA_KARTY)), 1fr));
 }
 
 /* =========================

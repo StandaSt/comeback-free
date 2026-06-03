@@ -216,7 +216,6 @@ if (!function_exists('cb_user_settings_defaults')) {
     function cb_user_settings_defaults(): array
     {
         return [
-            'pocet_sl' => 4,
             'nano_kde' => 0,
             'prodleva' => 3000,
             'pismo' => 2,
@@ -241,12 +240,6 @@ if (!function_exists('cb_store_user_settings')) {
         }
 
         $data = array_merge(cb_user_settings_defaults(), $current);
-
-        $pocetSl = (int)($values['pocet_sl'] ?? $data['pocet_sl']);
-        if (!in_array($pocetSl, [3, 4, 5], true)) {
-            $pocetSl = 4;
-        }
-        $data['pocet_sl'] = $pocetSl;
 
         $nanoKde = (int)($values['nano_kde'] ?? $data['nano_kde']);
         if (!in_array($nanoKde, [0, 1], true)) {

@@ -346,14 +346,12 @@
     const saveButtons = form.querySelectorAll('[data-cb-user-setting-save]');
     if (!saveButtons.length) return;
 
-    const initialCols = String(form.getAttribute('data-cb-user-setting-initial-pocet-sl') || '');
     const initialNano = String(form.getAttribute('data-cb-user-setting-initial-nano-kde') || '');
     const initialProdleva = String(form.getAttribute('data-cb-user-setting-initial-prodleva') || '');
     const initialPismo = String(form.getAttribute('data-cb-user-setting-initial-pismo') || '');
     const initialDark = String(form.getAttribute('data-cb-user-setting-initial-dark') || '');
     const initialLogoutLimit = String(form.getAttribute('data-cb-user-setting-initial-logout-limit') || '');
 
-    const currentCols = getUserSettingValue(form, 'us_pocet_sl');
     const currentNano = getUserSettingValue(form, 'us_nano_kde');
     const currentProdleva = getUserSettingValue(form, 'us_prodleva');
     const currentPismo = getUserSettingValue(form, 'us_pismo');
@@ -362,8 +360,7 @@
 
     const dirtyByGroup = {
       dashboard: (
-        currentCols !== initialCols
-        || currentNano !== initialNano
+        currentNano !== initialNano
         || currentProdleva !== initialProdleva
       ),
       vzhled: (

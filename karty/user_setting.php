@@ -12,7 +12,6 @@ $usRoleId = (is_array($usUser) && isset($usUser['id_role'])) ? (int)$usUser['id_
 $usCanManager = ($usRoleId > 0 && $usRoleId <= 3);
 $usCurrentSettings = cb_user_settings();
 
-$usPocetSl = in_array((int)($usCurrentSettings['pocet_sl'] ?? 4), [3, 4, 5], true) ? (int)($usCurrentSettings['pocet_sl'] ?? 4) : 4;
 $usNanoKde = in_array((int)($usCurrentSettings['nano_kde'] ?? 0), [0, 1], true) ? (int)($usCurrentSettings['nano_kde'] ?? 0) : 0;
 $usProdleva = (int)($usCurrentSettings['prodleva'] ?? 3000);
 $usPismo = in_array((int)($usCurrentSettings['pismo'] ?? 2), [1, 2, 3], true) ? (int)($usCurrentSettings['pismo'] ?? 2) : 2;
@@ -49,17 +48,12 @@ if ($usUserId > 0) {
         $conn = db();
 
         if ((string)($_POST['us_action'] ?? '') === 'save') {
-            $postPocetSl = (int)($_POST['us_pocet_sl'] ?? 4);
             $postNanoKde = (int)($_POST['us_nano_kde'] ?? 0);
             $postProdleva = (int)($_POST['us_prodleva'] ?? 3000);
             $postPismo = (int)($_POST['us_pismo'] ?? 2);
             $postDark = (int)($_POST['us_dark'] ?? 0);
             $postLogoutLimit = $usLogoutLimit;
-            $prevPocetSl = $usPocetSl;
 
-            if (!in_array($postPocetSl, [3, 4, 5], true)) {
-                $postPocetSl = 4;
-            }
             if (!in_array($postNanoKde, [0, 1], true)) {
                 $postNanoKde = 0;
             }
@@ -84,32 +78,21 @@ if ($usUserId > 0) {
                 }
             }
 
-            $stmtUpd = $conn->prepare('UPDATE user_set SET pocet_sl = ?, nano_kde = ?, prodleva = ?, pismo = ?, dark = ?, logout_limit = ? WHERE id_user = ?');
+            $stmtUpd = $conn->prepare('UPDATE user_set SET nano_kde = ?, prodleva = ?, pismo = ?, dark = ?, logout_limit = ? WHERE id_user = ?');
             if ($stmtUpd === false) {
                 throw new RuntimeException('Nepodarilo se pripravit update user_set.');
             }
-            $stmtUpd->bind_param('iiiiiii', $postPocetSl, $postNanoKde, $postProdleva, $postPismo, $postDark, $postLogoutLimit, $usUserId);
+            $stmtUpd->bind_param('iiiiii', $postNanoKde, $postProdleva, $postPismo, $postDark, $postLogoutLimit, $usUserId);
             $stmtUpd->execute();
             $stmtUpd->close();
 
-            if ($prevPocetSl !== $postPocetSl) {
-                $stmtUnlock = $conn->prepare('UPDATE user_card_set SET col = NULL, line = NULL WHERE id_user = ?');
-                if ($stmtUnlock !== false) {
-                    $stmtUnlock->bind_param('i', $usUserId);
-                    $stmtUnlock->execute();
-                    $stmtUnlock->close();
-                }
-            }
-
             cb_store_user_settings([
-                'pocet_sl' => $postPocetSl,
                 'nano_kde' => $postNanoKde,
                 'prodleva' => $postProdleva,
                 'pismo' => $postPismo,
                 'dark' => $postDark,
                 'logout_limit' => $postLogoutLimit,
             ]);
-            $usPocetSl = $postPocetSl;
             $usNanoKde = $postNanoKde;
             $usProdleva = $postProdleva;
             $usPismo = $postPismo;
@@ -128,7 +111,6 @@ $usNanoText = ($usNanoKde === 1) ? 'Do gridu' : 'Řádek';
 $usDarkText = ($usDark === 1) ? 'Ano' : 'Ne';
 
 $card_min_html = ''
-    . '<p class="card_text txt_seda odstup_vnejsi_0">Sloupce dashboardu: <strong>' . h((string)$usPocetSl) . '</strong></p>'
     . '<p class="card_text txt_seda odstup_vnejsi_0">Nano karty: <strong>' . h($usNanoText) . '</strong></p>'
     . '<p class="card_text txt_seda odstup_vnejsi_0">Velikost textu: <strong>' . h((string)$usPismo) . '</strong> | Tmavý režim: <strong>' . h($usDarkText) . '</strong></p>';
 
@@ -140,7 +122,7 @@ ob_start();
   <?php if ($usOk !== ''): ?>
     <p class="card_text txt_zelena odstup_vnejsi_0"><?= h($usOk) ?></p>
   <?php endif; ?>
-  <form method="post" action="<?= h($formAction) ?>" class="card_stack gap_10 displ_flex" autocomplete="off" data-cb-user-setting-form="1" data-cb-refresh-dashboard-on-save="1" data-cb-user-setting-initial-pocet-sl="<?= h((string)$usPocetSl) ?>" data-cb-user-setting-initial-nano-kde="<?= h((string)$usNanoKde) ?>" data-cb-user-setting-initial-prodleva="<?= h((string)$usProdleva) ?>" data-cb-user-setting-initial-pismo="<?= h((string)$usPismo) ?>" data-cb-user-setting-initial-dark="<?= h((string)$usDark) ?>" data-cb-user-setting-initial-logout-limit="<?= h(($usCanManager && $usLogoutLimit !== null) ? (string)$usLogoutLimit : '') ?>">
+  <form method="post" action="<?= h($formAction) ?>" class="card_stack gap_10 displ_flex" autocomplete="off" data-cb-user-setting-form="1" data-cb-refresh-dashboard-on-save="1" data-cb-user-setting-initial-nano-kde="<?= h((string)$usNanoKde) ?>" data-cb-user-setting-initial-prodleva="<?= h((string)$usProdleva) ?>" data-cb-user-setting-initial-pismo="<?= h((string)$usPismo) ?>" data-cb-user-setting-initial-dark="<?= h((string)$usDark) ?>" data-cb-user-setting-initial-logout-limit="<?= h(($usCanManager && $usLogoutLimit !== null) ? (string)$usLogoutLimit : '') ?>">
     <input type="hidden" name="us_action" value="save">
 
     <style>
@@ -169,15 +151,6 @@ ob_start();
 
     <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 cb_user_panel cb_user_panel_dashboard">
       <h4 class="card_section_title txt_seda">Dashboard</h4>
-      <label class="card_field gap_4 displ_flex">
-        <span>Počet sloupců</span>
-        <select class="card_select ram_sedy txt_seda vyska_32" name="us_pocet_sl" data-cb-user-setting-field="1">
-          <option value="3"<?= $usPocetSl === 3 ? ' selected' : '' ?>>3 sloupce</option>
-          <option value="4"<?= $usPocetSl === 4 ? ' selected' : '' ?>>4 sloupce</option>
-          <option value="5"<?= $usPocetSl === 5 ? ' selected' : '' ?>>5 sloupců</option>
-        </select>
-      </label>
-
       <label class="card_field gap_4 displ_flex">
         <span>Nano karty</span>
         <select class="card_select ram_sedy txt_seda vyska_32" name="us_nano_kde" data-cb-user-setting-field="1">

@@ -5,9 +5,7 @@ declare(strict_types=1);
 function cb_priprav_kartu_nano(
     array $karta,
     array $userCardHeaderColorById,
-    array $userCardIconFileById,
-    array $userCardPosById,
-    int $dashGridCols
+    array $userCardIconFileById
 ): array {
     // DOCASNE MERENI CASU KARET
     $cbTmpMeasureStart = microtime(true);
