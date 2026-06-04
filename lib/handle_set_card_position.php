@@ -1,5 +1,5 @@
 <?php
-// lib/handle_set_card_position.php * Verze: V1 * Aktualizace: 23.04.2026
+// lib/handle_set_card_position.php * Verze: V2 * Aktualizace: 04.06.2026
 declare(strict_types=1);
 
 if (
@@ -26,7 +26,6 @@ if (
 
     $srcId = (int)($data['src_id'] ?? 0);
     $tgtId = (int)($data['tgt_id'] ?? 0);
-
     if ($srcId <= 0 || $tgtId <= 0 || $srcId === $tgtId) {
         http_response_code(422);
         echo json_encode(['ok' => false, 'err' => 'Neplatny vstup'], JSON_UNESCAPED_UNICODE);
@@ -35,70 +34,116 @@ if (
 
     try {
         $conn = db();
+        $idRole = (is_array($cbUser) && isset($cbUser['id_role'])) ? (int)$cbUser['id_role'] : 9;
+        if ($idRole <= 0) {
+            $idRole = 9;
+        }
+
+        $parseCardOrderIds = static function (?string $value): array {
+            $raw = trim((string)$value);
+            if ($raw === '') {
+                return [];
+            }
+
+            $ids = [];
+            foreach (explode(',', $raw) as $part) {
+                $id = (int)trim($part);
+                if ($id > 0 && !isset($ids[$id])) {
+                    $ids[$id] = $id;
+                }
+            }
+
+            return array_values($ids);
+        };
+
+        $orderBySavedIds = static function (array $fallbackIds, array $savedIds): array {
+            if (empty($savedIds)) {
+                return $fallbackIds;
+            }
+
+            $available = array_fill_keys($fallbackIds, true);
+            $used = [];
+            $result = [];
+
+            foreach ($savedIds as $idKarta) {
+                $idKarta = (int)$idKarta;
+                if ($idKarta > 0 && isset($available[$idKarta]) && !isset($used[$idKarta])) {
+                    $result[] = $idKarta;
+                    $used[$idKarta] = true;
+                }
+            }
+
+            foreach ($fallbackIds as $idKarta) {
+                if (!isset($used[$idKarta])) {
+                    $result[] = $idKarta;
+                }
+            }
+
+            return $result;
+        };
 
         $conn->begin_transaction();
         try {
-            $orders = [];
-            $stmtOrders = $conn->prepare('
-                SELECT k.id_karta, COALESCE(ucs.poradi, k.poradi) AS poradi
-                FROM karty k
-                LEFT JOIN user_card_set ucs
-                  ON ucs.id_user = ?
-                 AND ucs.id_karta = k.id_karta
-                WHERE k.id_karta IN (?, ?)
-                LIMIT 2
-            ');
-            if (!$stmtOrders) {
-                throw new RuntimeException('prepare select card order failed');
+            $savedMiniRaw = null;
+            $savedNanoRaw = null;
+            $stmtSaved = $conn->prepare('SELECT poradi_mini, poradi_nano FROM user_set WHERE id_user = ? LIMIT 1');
+            if (!$stmtSaved) {
+                throw new RuntimeException('prepare select user orders failed');
             }
-            $stmtOrders->bind_param('iii', $idUser, $srcId, $tgtId);
-            $stmtOrders->execute();
-            $stmtOrders->bind_result($orderCardId, $orderValue);
-            while ($stmtOrders->fetch()) {
-                $cid = (int)$orderCardId;
-                $order = (int)$orderValue;
-                if ($cid > 0 && $order > 0) {
-                    $orders[$cid] = $order;
+            $stmtSaved->bind_param('i', $idUser);
+            $stmtSaved->execute();
+            $stmtSaved->bind_result($savedMiniRaw, $savedNanoRaw);
+            $stmtSaved->fetch();
+            $stmtSaved->close();
+
+            $savedNanoIds = $parseCardOrderIds($savedNanoRaw === null ? null : (string)$savedNanoRaw);
+            $savedNanoSet = empty($savedNanoIds) ? [] : array_fill_keys($savedNanoIds, true);
+
+            $fallbackMiniIds = [];
+            $stmtCards = $conn->prepare('
+                SELECT id_karta
+                FROM karty
+                WHERE aktivni = 1
+                  AND min_role >= ?
+                ORDER BY poradi ASC, id_karta ASC
+            ');
+            if (!$stmtCards) {
+                throw new RuntimeException('prepare select cards failed');
+            }
+            $stmtCards->bind_param('i', $idRole);
+            $stmtCards->execute();
+            $stmtCards->bind_result($cardIdDb);
+            while ($stmtCards->fetch()) {
+                $cardId = (int)$cardIdDb;
+                if ($cardId > 0 && !isset($savedNanoSet[$cardId])) {
+                    $fallbackMiniIds[] = $cardId;
                 }
             }
-            $stmtOrders->close();
+            $stmtCards->close();
 
-            if (!isset($orders[$srcId], $orders[$tgtId])) {
-                throw new RuntimeException('card order not found');
+            $miniIds = $orderBySavedIds($fallbackMiniIds, $parseCardOrderIds($savedMiniRaw === null ? null : (string)$savedMiniRaw));
+            $srcIndex = array_search($srcId, $miniIds, true);
+            $tgtIndex = array_search($tgtId, $miniIds, true);
+            if ($srcIndex === false || $tgtIndex === false) {
+                throw new RuntimeException('mini card order not found');
             }
 
-            $stmtUpsert = $conn->prepare('
-                INSERT INTO user_card_set (id_user, id_karta)
+            $tmp = $miniIds[$srcIndex];
+            $miniIds[$srcIndex] = $miniIds[$tgtIndex];
+            $miniIds[$tgtIndex] = $tmp;
+
+            $miniOrder = empty($miniIds) ? null : implode(',', array_map('strval', $miniIds));
+            $stmtSave = $conn->prepare('
+                INSERT INTO user_set (id_user, poradi_mini)
                 VALUES (?, ?)
-                ON DUPLICATE KEY UPDATE id_karta = VALUES(id_karta)
+                ON DUPLICATE KEY UPDATE poradi_mini = VALUES(poradi_mini)
             ');
-            if (!$stmtUpsert) {
-                throw new RuntimeException('prepare upsert user_card_set failed');
+            if (!$stmtSave) {
+                throw new RuntimeException('prepare save mini order failed');
             }
-            $stmtUpsert->bind_param('ii', $idUser, $srcId);
-            $stmtUpsert->execute();
-            $stmtUpsert->bind_param('ii', $idUser, $tgtId);
-            $stmtUpsert->execute();
-            $stmtUpsert->close();
-
-            $srcOrder = (int)$orders[$srcId];
-            $tgtOrder = (int)$orders[$tgtId];
-
-            $stmtSrc = $conn->prepare('UPDATE user_card_set SET poradi = ? WHERE id_user = ? AND id_karta = ?');
-            if (!$stmtSrc) {
-                throw new RuntimeException('prepare set source order failed');
-            }
-            $stmtSrc->bind_param('iii', $tgtOrder, $idUser, $srcId);
-            $stmtSrc->execute();
-            $stmtSrc->close();
-
-            $stmtTgt = $conn->prepare('UPDATE user_card_set SET poradi = ? WHERE id_user = ? AND id_karta = ?');
-            if (!$stmtTgt) {
-                throw new RuntimeException('prepare set target order failed');
-            }
-            $stmtTgt->bind_param('iii', $srcOrder, $idUser, $tgtId);
-            $stmtTgt->execute();
-            $stmtTgt->close();
+            $stmtSave->bind_param('is', $idUser, $miniOrder);
+            $stmtSave->execute();
+            $stmtSave->close();
 
             $conn->commit();
         } catch (Throwable $e) {
@@ -107,31 +152,12 @@ if (
         }
 
         $cardOrders = [];
-        $stmtOrderList = $conn->prepare('
-            SELECT id_karta, poradi
-            FROM user_card_set
-            WHERE id_user = ?
-              AND poradi IS NOT NULL
-            ORDER BY poradi ASC, id_karta ASC
-        ');
-        if (!$stmtOrderList) {
-            throw new RuntimeException('prepare select card order list failed');
-        }
-        $stmtOrderList->bind_param('i', $idUser);
-        $stmtOrderList->execute();
-        $stmtOrderList->bind_result($orderedCardId, $orderedValue);
-        while ($stmtOrderList->fetch()) {
-            $cardId = (int)$orderedCardId;
-            $order = (int)$orderedValue;
-            if ($cardId <= 0 || $order <= 0) {
-                continue;
-            }
+        foreach ($miniIds as $index => $cardId) {
             $cardOrders[] = [
-                'id_karta' => $cardId,
-                'poradi' => $order,
+                'id_karta' => (int)$cardId,
+                'poradi' => $index + 1,
             ];
         }
-        $stmtOrderList->close();
 
         echo json_encode([
             'ok' => true,

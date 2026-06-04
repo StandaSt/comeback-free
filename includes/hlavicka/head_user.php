@@ -14,6 +14,7 @@ declare(strict_types=1);
     <div class="head_user_lab text_11 radek_1_15">Poslední přístup:</div>
     <div class="head_user_lab text_11 radek_1_15">Přihlášení:</div>
     <div class="head_user_lab text_11 radek_1_15">Seance/zbývá:</div>
+    <button type="button" class="head_kpi_toggle txt_c cursor_ruka" data-cb-kpi-toggle="1" aria-pressed="false">Skrýt KPI</button>
   </div>
 
   <div class="head_user_col head_user_col--right txt_l gap_6 displ_flex flex_sloupec">

@@ -25,7 +25,7 @@ function cb_priprav_kartu_nano(
         $result = [
             'mode' => 'nano',
             'cardId' => $cardId,
-            'cardPoradi' => (int)($karta['poradi'] ?? 0),
+            'cardPoradi' => (int)($karta['__dash_order'] ?? ($karta['poradi'] ?? 0)),
             'title' => $title,
             'soubor' => (string)($karta['soubor'] ?? ''),
             'refreshOp' => (int)($karta['refresh_op'] ?? 0),
@@ -52,7 +52,7 @@ function cb_priprav_kartu_nano(
     $result = [
         'mode' => 'nano',
         'cardId' => $cardId,
-        'cardPoradi' => (int)($karta['poradi'] ?? 0),
+        'cardPoradi' => (int)($karta['__dash_order'] ?? ($karta['poradi'] ?? 0)),
         'title' => $title,
         'soubor' => (string)($karta['soubor'] ?? ''),
         'refreshOp' => (int)($karta['refresh_op'] ?? 0),

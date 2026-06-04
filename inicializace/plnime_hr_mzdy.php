@@ -9,7 +9,7 @@ if (PHP_SAPI !== 'cli' && (!defined('HR_MZDY_HELPERS_ONLY') || HR_MZDY_HELPERS_O
 require_once __DIR__ . '/../lib/app.php';
 require_once __DIR__ . '/../config/secrets.php';
 
-const HR_MZDY_XLSX = __DIR__ . '/../admin_testy/reporty_google_testy/google_data/HR 2024.xlsx';
+const HR_MZDY_XLSX = __DIR__ . '/../google_data/HR 2024.xlsx';
 
 if (!defined('HR_MZDY_HELPERS_ONLY') || HR_MZDY_HELPERS_ONLY !== true) {
     if (isset($_POST['run_hr_mzdy']) && (string)$_POST['run_hr_mzdy'] === '1') {

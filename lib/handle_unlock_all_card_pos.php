@@ -21,6 +21,14 @@ if (
 
         $conn->begin_transaction();
         try {
+            $stmtUserSet = $conn->prepare('UPDATE user_set SET poradi_mini = NULL, poradi_nano = NULL WHERE id_user = ?');
+            if (!$stmtUserSet) {
+                throw new RuntimeException('prepare reset user card order failed');
+            }
+            $stmtUserSet->bind_param('i', $idUser);
+            $stmtUserSet->execute();
+            $stmtUserSet->close();
+
             $stmt = $conn->prepare('UPDATE user_card_set SET poradi = NULL WHERE id_user = ?');
             if (!$stmt) {
                 throw new RuntimeException('prepare reset all card order failed');

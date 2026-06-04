@@ -443,7 +443,7 @@ main{
 }
 
 .head_grid{
-grid-template-columns:70px 335px 100px minmax(0,1fr) 85px 300px;
+grid-template-columns:70px 335px 100px minmax(0,1fr) 300px;
   grid-template-rows:auto;
   align-items:stretch;
 }
@@ -452,7 +452,6 @@ grid-template-columns:70px 335px 100px minmax(0,1fr) 85px 300px;
 .head_interval,
 .head_gn_placeholder,
 .head_kpi,
-.head_sys,
 .head_user{
   background:var(--clr_bila);
 }
@@ -528,16 +527,8 @@ object-fit:contain;
   align-self:stretch;
 }
 
-.head_sys{
-  grid-column:5;
-  grid-row:1;
-  height:100%;
-  width:100%;
-  align-self:stretch;
-}
-
 .head_user{
-  grid-column:6;
+  grid-column:5;
   grid-row:1;
   height:100%;
   width:100%;
@@ -665,38 +656,6 @@ flex-direction:column;
 
 .head_delta.is-pos{ color:var(--clr_zelena); }
 .head_delta.is-neg{ color:var(--clr_cervena); }
-
-/* ===== Stav systemu ===== */
-.head_sys{
-  align-items:start;
-  padding:6px 8px 5px 8px;
-  min-width:0;
-  overflow:hidden;
-  justify-self:stretch;
-  grid-template-rows:auto 1fr auto;
-}
-
-.head_sys_title{
-  white-space:nowrap;
-}
-
-.head_sys_item{align-items:center;
-  color:var(--clr_cerna);
-  white-space:nowrap;
-  justify-content:space-between;
-}
-
-.head_sys_lab{
-  white-space:nowrap;
-}
-
-.head_sys_list{
-  min-width:0;
-}
-
-.head_sys_tools{
-  min-width:0;
-}
 
 .head_led{
   width:9px;
@@ -890,6 +849,22 @@ align-items:center;
   line-height:1.05;
 }
 
+.head_kpi_toggle{
+  display:none;
+  align-self:flex-start;
+  width:max-content;
+  max-width:100%;
+  height:20px;
+  padding:0 8px;
+  border:1px solid var(--clr_pruhledna_tmava_14);
+  border-radius:6px;
+  background:var(--clr_bila);
+  color:var(--clr_tmava_1);
+  font-size:var(--fs_11);
+  font-weight:700;
+  line-height:18px;
+}
+
 .head_user_exit{
   flex:0 0 26px !important;
   width:26px !important;
@@ -919,6 +894,44 @@ align-items:center;
   0%{ background:transparent; }
   50%{ background:var(--clr_ruzova_2); }
   100%{ background:transparent; }
+}
+
+@media (max-width: 1559px){
+  .head_grid{
+    grid-template-columns:70px minmax(0,1fr) 100px 300px;
+    grid-template-rows:auto auto;
+  }
+
+  .head_controls{
+    grid-column:2;
+    grid-row:1;
+  }
+
+  .head_gn_placeholder{
+    grid-column:3;
+    grid-row:1;
+  }
+
+  .head_kpi{
+    grid-column:2 / 5;
+    grid-row:2;
+  }
+
+  .head_user{
+    grid-column:4;
+    grid-row:1;
+  }
+
+  .head_box.is-kpi-hidden .head_kpi{
+    display:none;
+  }
+
+  .head_kpi_toggle{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    margin-top:1px;
+  }
 }
 
 /* Teplomer seance */
@@ -2724,38 +2737,6 @@ align-items:center;
 .cb_cardmode_btn:active{
   background:var(--clr_modra_1);
 }
-
-/* media vyresime az bude system funkcni :-) */
-/*
-@media (max-width: 760px){
-  .head_grid{
-    grid-template-columns:70px 1fr;
-    grid-template-rows:auto auto auto;
-  }
-
-  .head_logo_wrap{ grid-column:1; grid-row:1 / span 3; }
-
-  .head_top{
-    grid-column:2;
-    grid-row:1;
-    grid-template-columns:240px minmax(0,1fr);
-  }
-
-  .head_bottom{
-    grid-column:2;
-    grid-row:2;
-    grid-template-columns:240px minmax(0,1fr) 235px;
-  }
-
-  .head_user{
-    grid-column:2;
-    grid-row:3;
-  }
-
-  .head_branch_wrap{ width:240px; min-width:240px; max-width:240px; }
-  .head_sys{ width:235px; }
-}
-*/
 
 @media (max-width: 720px){
   .footer_box{

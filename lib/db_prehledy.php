@@ -110,7 +110,6 @@ if (!function_exists('cb_db_summary_scopes')) {
                     'user',
                     'user_bad_login',
                     'user_login',
-                    'user_nano',
                     'user_pin',
                     'user_pobocka',
                     'user_pobocka_set',

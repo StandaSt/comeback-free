@@ -85,6 +85,8 @@
 
   function initKartyHlavicka() {
     let moveSource = null;
+    const KPI_COLLAPSE_QUERY = '(max-width: 1559px)';
+    const kpiCollapseMql = typeof w.matchMedia === 'function' ? w.matchMedia(KPI_COLLAPSE_QUERY) : null;
 
     function getCardModeConfirmModal() {
       const root = document.getElementById('cbCardModeModal');
@@ -112,6 +114,46 @@
       modal.root.setAttribute('aria-hidden', 'false');
       modal.cancelBtn.focus();
       return true;
+    }
+
+    function getHeaderRoot() {
+      const root = document.querySelector('.head_box');
+      return root instanceof HTMLElement ? root : null;
+    }
+
+    function getKpiToggleButton() {
+      const btn = document.querySelector('[data-cb-kpi-toggle="1"]');
+      return btn instanceof HTMLButtonElement ? btn : null;
+    }
+
+    function isKpiCollapseMode() {
+      if (kpiCollapseMql) return !!kpiCollapseMql.matches;
+      return (w.innerWidth || 0) <= 1559;
+    }
+
+    function syncKpiToggleUi() {
+      const header = getHeaderRoot();
+      const btn = getKpiToggleButton();
+      if (!(header instanceof HTMLElement) || !(btn instanceof HTMLElement)) return;
+
+      if (!isKpiCollapseMode()) {
+        header.classList.remove('is-kpi-hidden');
+        btn.textContent = 'Skrýt KPI';
+        btn.setAttribute('aria-pressed', 'false');
+        return;
+      }
+
+      const hidden = header.classList.contains('is-kpi-hidden');
+      btn.textContent = hidden ? 'Zobrazit KPI' : 'Skrýt KPI';
+      btn.setAttribute('aria-pressed', hidden ? 'true' : 'false');
+    }
+
+    function toggleKpiVisibility() {
+      if (!isKpiCollapseMode()) return;
+      const header = getHeaderRoot();
+      if (!(header instanceof HTMLElement)) return;
+      header.classList.toggle('is-kpi-hidden');
+      syncKpiToggleUi();
     }
 
     function setDashboardLoading(on, text) {
@@ -208,12 +250,11 @@
         return;
       }
 
-      const block = target.closest('.head_kpi, .head_sys, .head_user');
+      const block = target.closest('.head_kpi, .head_user');
       if (!(block instanceof HTMLElement)) return;
 
       let blockName = '';
       if (block.classList.contains('head_kpi')) blockName = 'kpi';
-      if (block.classList.contains('head_sys')) blockName = 'system';
       if (block.classList.contains('head_user')) blockName = 'user';
       if (blockName === '') return;
 
@@ -221,6 +262,15 @@
         event: 'empty_header_click',
         blok: blockName
       }, 'karty_hlavicka');
+    }
+
+    syncKpiToggleUi();
+    if (kpiCollapseMql && typeof kpiCollapseMql.addEventListener === 'function') {
+      kpiCollapseMql.addEventListener('change', syncKpiToggleUi);
+    } else if (kpiCollapseMql && typeof kpiCollapseMql.addListener === 'function') {
+      kpiCollapseMql.addListener(syncKpiToggleUi);
+    } else {
+      w.addEventListener('resize', syncKpiToggleUi);
     }
 
     function closeCardModeConfirmModal() {
@@ -600,6 +650,15 @@
             if (window.confirm(UNLOCK_ALL_CONFIRM_TEXT)) {
               runUnlockAll();
             }
+          }
+          return;
+        }
+
+        const kpiToggleBtn = target.closest('[data-cb-kpi-toggle="1"]');
+        if (kpiToggleBtn) {
+          if (isKpiCollapseMode()) {
+            e.preventDefault();
+            toggleKpiVisibility();
           }
           return;
         }

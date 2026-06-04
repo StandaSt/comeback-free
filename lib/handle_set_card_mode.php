@@ -1,5 +1,5 @@
 <?php
-// lib/handle_set_card_mode.php * Verze: V1 * Aktualizace: 23.04.2026
+// lib/handle_set_card_mode.php * Verze: V2 * Aktualizace: 04.06.2026
 declare(strict_types=1);
 
 if (
@@ -34,39 +34,153 @@ if (
 
     try {
         $conn = db();
-        if ($mode === 'nano') {
-            $maxNano = 9;
-            $stmtCnt = $conn->prepare('SELECT COUNT(*) FROM user_nano WHERE id_user = ? AND id_nano <> ?');
-            if (!$stmtCnt) {
-                throw new RuntimeException('prepare count user_nano failed');
-            }
-            $stmtCnt->bind_param('ii', $idUser, $idKarta);
-            $stmtCnt->execute();
-            $stmtCnt->bind_result($nanoCount);
-            $stmtCnt->fetch();
-            $stmtCnt->close();
+        $idRole = (is_array($cbUser) && isset($cbUser['id_role'])) ? (int)$cbUser['id_role'] : 9;
+        if ($idRole <= 0) {
+            $idRole = 9;
+        }
 
-            if ((int)$nanoCount >= $maxNano) {
-                http_response_code(409);
-                echo json_encode(['ok' => false, 'err' => 'Nano režim je omezen na 9 karet. Desátou kartu nelze přidat.'], JSON_UNESCAPED_UNICODE);
-                exit;
+        $parseCardOrderIds = static function (?string $value): array {
+            $raw = trim((string)$value);
+            if ($raw === '') {
+                return [];
             }
 
-            $stmt = $conn->prepare('INSERT IGNORE INTO user_nano (id_user, id_nano) VALUES (?, ?)');
-            if (!$stmt) {
-                throw new RuntimeException('prepare insert user_nano failed');
+            $ids = [];
+            foreach (explode(',', $raw) as $part) {
+                $id = (int)trim($part);
+                if ($id > 0 && !isset($ids[$id])) {
+                    $ids[$id] = $id;
+                }
             }
-            $stmt->bind_param('ii', $idUser, $idKarta);
-            $stmt->execute();
-            $stmt->close();
-        } else {
-            $stmt = $conn->prepare('DELETE FROM user_nano WHERE id_user = ? AND id_nano = ?');
-            if (!$stmt) {
-                throw new RuntimeException('prepare delete user_nano failed');
+
+            return array_values($ids);
+        };
+
+        $orderBySavedIds = static function (array $fallbackIds, array $savedIds): array {
+            if (empty($savedIds)) {
+                return $fallbackIds;
             }
-            $stmt->bind_param('ii', $idUser, $idKarta);
-            $stmt->execute();
-            $stmt->close();
+
+            $available = array_fill_keys($fallbackIds, true);
+            $used = [];
+            $result = [];
+
+            foreach ($savedIds as $idKarta) {
+                $idKarta = (int)$idKarta;
+                if ($idKarta > 0 && isset($available[$idKarta]) && !isset($used[$idKarta])) {
+                    $result[] = $idKarta;
+                    $used[$idKarta] = true;
+                }
+            }
+
+            foreach ($fallbackIds as $idKarta) {
+                if (!isset($used[$idKarta])) {
+                    $result[] = $idKarta;
+                }
+            }
+
+            return $result;
+        };
+
+        $removeCardId = static function (array $ids, int $idKarta): array {
+            $result = [];
+            foreach ($ids as $id) {
+                $id = (int)$id;
+                if ($id > 0 && $id !== $idKarta) {
+                    $result[] = $id;
+                }
+            }
+            return $result;
+        };
+
+        $conn->begin_transaction();
+        try {
+            $savedMiniRaw = null;
+            $savedNanoRaw = null;
+            $stmtSaved = $conn->prepare('SELECT poradi_mini, poradi_nano FROM user_set WHERE id_user = ? LIMIT 1');
+            if (!$stmtSaved) {
+                throw new RuntimeException('prepare select user orders failed');
+            }
+            $stmtSaved->bind_param('i', $idUser);
+            $stmtSaved->execute();
+            $stmtSaved->bind_result($savedMiniRaw, $savedNanoRaw);
+            $stmtSaved->fetch();
+            $stmtSaved->close();
+
+            $savedMiniIds = $parseCardOrderIds($savedMiniRaw === null ? null : (string)$savedMiniRaw);
+            $savedNanoIds = $parseCardOrderIds($savedNanoRaw === null ? null : (string)$savedNanoRaw);
+            $savedNanoSet = empty($savedNanoIds) ? [] : array_fill_keys($savedNanoIds, true);
+
+            $fallbackMiniIds = [];
+            $fallbackNanoIds = [];
+            $stmtCards = $conn->prepare('
+                SELECT id_karta
+                FROM karty
+                WHERE aktivni = 1
+                  AND min_role >= ?
+                ORDER BY poradi ASC, id_karta ASC
+            ');
+            if (!$stmtCards) {
+                throw new RuntimeException('prepare select cards failed');
+            }
+            $stmtCards->bind_param('i', $idRole);
+            $stmtCards->execute();
+            $stmtCards->bind_result($cardIdDb);
+            while ($stmtCards->fetch()) {
+                $cardId = (int)$cardIdDb;
+                if ($cardId <= 0) {
+                    continue;
+                }
+                if (isset($savedNanoSet[$cardId])) {
+                    $fallbackNanoIds[] = $cardId;
+                } else {
+                    $fallbackMiniIds[] = $cardId;
+                }
+            }
+            $stmtCards->close();
+
+            $miniIds = $orderBySavedIds($fallbackMiniIds, $savedMiniIds);
+            $nanoIds = $orderBySavedIds($fallbackNanoIds, $savedNanoIds);
+
+            if ($mode === 'nano') {
+                $isAlreadyNano = in_array($idKarta, $nanoIds, true);
+                if (!$isAlreadyNano && count($nanoIds) >= 9) {
+                    $conn->rollback();
+                    http_response_code(409);
+                    echo json_encode(['ok' => false, 'err' => 'Nano reĹľim je omezen na 9 karet. DesĂˇtou kartu nelze pĹ™idat.'], JSON_UNESCAPED_UNICODE);
+                    exit;
+                }
+
+                $miniIds = $removeCardId($miniIds, $idKarta);
+                $nanoIds = $removeCardId($nanoIds, $idKarta);
+                $nanoIds[] = $idKarta;
+            } else {
+                $nanoIds = $removeCardId($nanoIds, $idKarta);
+                $miniIds = $removeCardId($miniIds, $idKarta);
+                $miniIds[] = $idKarta;
+            }
+
+            $miniOrder = empty($miniIds) ? null : implode(',', array_map('strval', $miniIds));
+            $nanoOrder = empty($nanoIds) ? null : implode(',', array_map('strval', $nanoIds));
+
+            $stmtSave = $conn->prepare('
+                INSERT INTO user_set (id_user, poradi_mini, poradi_nano)
+                VALUES (?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                    poradi_mini = VALUES(poradi_mini),
+                    poradi_nano = VALUES(poradi_nano)
+            ');
+            if (!$stmtSave) {
+                throw new RuntimeException('prepare save card orders failed');
+            }
+            $stmtSave->bind_param('iss', $idUser, $miniOrder, $nanoOrder);
+            $stmtSave->execute();
+            $stmtSave->close();
+
+            $conn->commit();
+        } catch (Throwable $e) {
+            $conn->rollback();
+            throw $e;
         }
 
         echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);

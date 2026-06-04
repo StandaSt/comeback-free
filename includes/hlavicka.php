@@ -317,7 +317,6 @@ if ($cbPobocky) {
 
       <div class="head_gn_placeholder ram_hlavicka zaobleni_10" style="display:flex; align-items:center; justify-content:center; text-align:center;" aria-label="Testovací režim">Testovací<br>režim</div>
       <?php require __DIR__ . '/hlavicka/head_kpi.php'; ?>
-      <?php require __DIR__ . '/hlavicka/head_stav.php'; ?>
       <?php require __DIR__ . '/hlavicka/head_user.php'; ?>
     <?php else: ?>
       <div class="head_guest ram_hlavicka bg_bila zaobleni_12"></div>

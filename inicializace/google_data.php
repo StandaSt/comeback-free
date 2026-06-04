@@ -9,7 +9,7 @@ set_time_limit(0);
 
 require_once __DIR__ . '/../db/db_connect.php';
 
-const BASE_DIR = __DIR__ . '/../admin_testy/reporty_google_testy/google_data/Pobočky';
+const BASE_DIR = __DIR__ . '/../google_data/Pobočky';
 const REPORT_LOG_FILE = __DIR__ . '/../log/google_reporty.txt';
 const REPORT_IMPORT_LOG_FILE = __DIR__ . '/../log/reporty_import.txt';
 const REPORT_IMPORT_MATCH_LOG_FILE = __DIR__ . '/../log/reporty_import_match.txt';
