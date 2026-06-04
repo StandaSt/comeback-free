@@ -1,5 +1,5 @@
 <?php
-// lib/prehled_smen_data.php * Verze: V1 * Aktualizace: 03.06.2026
+// lib/prehled_smen_data.php * Verze: V2 * Aktualizace: 04.06.2026
 declare(strict_types=1);
 
 /*
@@ -307,9 +307,12 @@ if (!function_exists('ps_prehled_smen_data')) {
                     ro.slot,
                     ro.smena_od,
                     ro.smena_do,
-                    ro.odpracovano
+                    ro.odpracovano,
+                    r.id_pob,
+                    COALESCE(p.nazev, "") AS pobocka
                 FROM reporty_osoby ro
                 INNER JOIN reporty r ON r.id_reportu = ro.id_reportu
+                LEFT JOIN pobocka p ON p.id_pob = r.id_pob
                 WHERE r.platny = 1
                   AND r.stav = 1
                   AND r.datum_reportu >= ?
@@ -357,6 +360,8 @@ if (!function_exists('ps_prehled_smen_data')) {
                         'vikend' => 0.0,
                         'svatek' => 0.0,
                         'svatek_detail' => [],
+                        'detail_key' => substr(hash('sha256', $key), 0, 12),
+                        'detail_rows' => [],
                     ];
                 }
 
@@ -373,6 +378,18 @@ if (!function_exists('ps_prehled_smen_data')) {
                 $rows[$key]['noc'] += $parts['night'];
                 $rows[$key]['vikend'] += $parts['weekend'];
                 $rows[$key]['svatek'] += $parts['holiday'];
+                $rows[$key]['detail_rows'][] = [
+                    'datum' => (string)$row['datum_reportu'],
+                    'id_pob' => (int)($row['id_pob'] ?? 0),
+                    'pobocka' => trim((string)($row['pobocka'] ?? '')),
+                    'slot' => $slot,
+                    'celkem' => $worked,
+                    'den' => (float)$parts['day'],
+                    'noc' => (float)$parts['night'],
+                    'vikend' => (float)$parts['weekend'],
+                    'svatek' => (float)$parts['holiday'],
+                    'svatek_detail' => $parts['holiday_details'],
+                ];
                 foreach ($parts['holiday_details'] as $holidayKey => $holidayDetail) {
                     if (!isset($rows[$key]['svatek_detail'][$holidayKey])) {
                         $rows[$key]['svatek_detail'][$holidayKey] = $holidayDetail;
@@ -447,5 +464,5 @@ if (!function_exists('ps_prehled_smen_data')) {
     }
 }
 
-/* lib/prehled_smen_data.php * Verze: V1 * Aktualizace: 03.06.2026 */
+/* lib/prehled_smen_data.php * Verze: V2 * Aktualizace: 04.06.2026 */
 ?>

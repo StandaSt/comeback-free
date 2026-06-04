@@ -183,6 +183,7 @@ if (!empty($_SESSION['login_ok'])) {
 <script src="<?= h(cb_asset_url('js/karty_report_person.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/select_pobocky.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/filtry.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/rozbalovaci_detail.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/casovac_odhlaseni.js')) ?>"></script>
 <?php endif; ?>
 

@@ -1,6 +1,6 @@
 <?php
 // K11
-// karty/prehled_smen.php * Verze: V12 * Aktualizace: 03.06.2026
+// karty/prehled_smen.php * Verze: V14 * Aktualizace: 04.06.2026
 declare(strict_types=1);
 
 /*
@@ -151,6 +151,7 @@ ob_start();
                 </a>
               </div>
             </th>
+            <th class="txt_r" style="white-space:nowrap;"></th>
           </tr>
           <tr>
             <?php foreach ($psCols as $key => $cfg): ?>
@@ -174,14 +175,16 @@ ob_start();
                 </a>
               </th>
             <?php endforeach; ?>
+            <th class="txt_r" style="white-space:nowrap;">detail</th>
           </tr>
         </thead>
         <tbody>
           <?php if ($psDisplayRows === []): ?>
-            <tr><td colspan="9">Žádná data</td></tr>
+            <tr><td colspan="10">Žádná data</td></tr>
           <?php else: ?>
             <?php foreach ($psDisplayRows as $row): ?>
               <?php
+              $detailId = 'ps-detail-' . h((string)($row['detail_key'] ?? ''));
               $svatekTitle = '';
               if ((float)$row['svatek'] > 0.0 && isset($row['svatek_detail']) && is_array($row['svatek_detail'])) {
                   $svatekLines = [];
@@ -207,6 +210,61 @@ ob_start();
                 <td class="txt_r" style="white-space:nowrap;"><?= h(ps_num_or_dash((float)$row['noc'])) ?></td>
                 <td class="txt_r" style="white-space:nowrap;"><?= h(ps_num_or_dash((float)$row['vikend'])) ?></td>
                 <td class="txt_r" style="white-space:nowrap;"<?= $svatekTitle !== '' ? ' title="' . h($svatekTitle) . '"' : '' ?>><?= h(ps_num_or_dash((float)$row['svatek'])) ?></td>
+                <td class="txt_r" style="white-space:nowrap;">
+                  <button type="button" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_24 card_btn_primary displ_inline_flex" data-row-detail-toggle="<?= $detailId ?>" aria-expanded="false">
+                    detail
+                  </button>
+                </td>
+              </tr>
+              <tr data-row-detail="<?= $detailId ?>" hidden>
+                <td colspan="10" style="padding:0;background:#eef7ff;">
+                  <p class="card_text text_tucny odstup_vnejsi_0" style="font-size:15px;text-align:left;padding:10px 12px 8px 12px;">Detail - odpracované hodiny <?= h((string)$row['cele_jmeno']) ?></p>
+                  <div class="ram_normal" style="width:100%;background:#eef7ff;">
+                    <table class="card-max-table" style="width:100%;">
+                      <thead>
+                        <tr>
+                          <th class="txt_r" colspan="2" style="white-space:nowrap;">datum</th>
+                          <th class="txt_r" style="white-space:nowrap;">pobočka</th>
+                          <th class="txt_r" style="white-space:nowrap;">slot</th>
+                          <th class="txt_r" style="white-space:nowrap;">odpracováno</th>
+                          <th class="txt_r" style="white-space:nowrap;">6-22</th>
+                          <th class="txt_r" style="white-space:nowrap;">22-6</th>
+                          <th class="txt_r" style="white-space:nowrap;">So+Ne</th>
+                          <th class="txt_r" style="white-space:nowrap;">svátek</th>
+                          <th class="txt_r" style="white-space:nowrap;"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <?php $detailRows = isset($row['detail_rows']) && is_array($row['detail_rows']) ? $row['detail_rows'] : []; ?>
+                        <?php if ($detailRows === []): ?>
+                          <tr><td colspan="10">Žádná data</td></tr>
+                        <?php else: ?>
+                          <?php foreach ($detailRows as $detailRow): ?>
+                            <?php
+                            $detailDate = DateTimeImmutable::createFromFormat('Y-m-d', (string)($detailRow['datum'] ?? ''));
+                            $detailDateText = $detailDate instanceof DateTimeImmutable ? $detailDate->format('j.n.Y') : (string)($detailRow['datum'] ?? '');
+                            $branchName = trim((string)($detailRow['pobocka'] ?? ''));
+                            if ($branchName === '' && (int)($detailRow['id_pob'] ?? 0) > 0) {
+                                $branchName = 'ID ' . (string)(int)$detailRow['id_pob'];
+                            }
+                            ?>
+                            <tr>
+                              <td class="txt_r" colspan="2" style="white-space:nowrap;"><?= h($detailDateText) ?></td>
+                              <td class="txt_r" style="white-space:nowrap;"><?= h($branchName !== '' ? $branchName : '-') ?></td>
+                              <td class="txt_r" style="white-space:nowrap;"><?= h(ps_slot_label((int)($detailRow['slot'] ?? 0))) ?></td>
+                              <td class="txt_r" style="white-space:nowrap;"><?= h(ps_num_or_dash((float)($detailRow['celkem'] ?? 0.0))) ?></td>
+                              <td class="txt_r" style="white-space:nowrap;"><?= h(ps_num_or_dash((float)($detailRow['den'] ?? 0.0))) ?></td>
+                              <td class="txt_r" style="white-space:nowrap;"><?= h(ps_num_or_dash((float)($detailRow['noc'] ?? 0.0))) ?></td>
+                              <td class="txt_r" style="white-space:nowrap;"><?= h(ps_num_or_dash((float)($detailRow['vikend'] ?? 0.0))) ?></td>
+                              <td class="txt_r" style="white-space:nowrap;"><?= h(ps_num_or_dash((float)($detailRow['svatek'] ?? 0.0))) ?></td>
+                              <td class="txt_r" style="white-space:nowrap;"></td>
+                            </tr>
+                          <?php endforeach; ?>
+                        <?php endif; ?>
+                      </tbody>
+                    </table>
+                  </div>
+                </td>
               </tr>
             <?php endforeach; ?>
           <?php endif; ?>
@@ -269,5 +327,5 @@ ob_start();
 <?php
 $card_max_html = (string)ob_get_clean();
 
-/* karty/prehled_smen.php * Verze: V12 * Aktualizace: 03.06.2026 */
+/* karty/prehled_smen.php * Verze: V14 * Aktualizace: 04.06.2026 */
 ?>
