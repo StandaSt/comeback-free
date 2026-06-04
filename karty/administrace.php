@@ -1,6 +1,6 @@
 <?php
 // K2
-// karty/administrace.php * Verze: V4 * Aktualizace: 17.05.2026
+// karty/administrace.php * Verze: V5 * Aktualizace: 03.06.2026
 declare(strict_types=1);
 
 $card_min_html = '<p class="card_text odstup_vnejsi_0">administrace</p>';
@@ -17,10 +17,13 @@ $cbAdminSystem = [
     'log_2' => 0,
     'log_3' => 0,
     'log_4' => 0,
+    'notif_chyby' => 0,
+    'notif_bad_login' => 0,
 ];
 $cbAdminError = '';
 $cbAdminSaveName = trim((string)($_POST['cb_admin_set_name'] ?? ''));
 $cbAdminSaveValue = trim((string)($_POST['cb_admin_set_value'] ?? ''));
+$cbAdminActiveTab = 'system';
 $cbAdminLogoutOptions = [2, 5, 10, 15, 20, 30, 60];
 $cbAdminPauzaOptions = [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000];
 $cbAdminReportSaveOptions = [5, 10, 15, 30, 60];
@@ -34,12 +37,32 @@ $cbAdminLogLabels = [
     'log_3' => 'Sledování průběhu načítání a AJAX komunikace',
     'log_4' => 'Historie importu objednávek z Restia (po dnech)',
 ];
+$cbAdminNotifLabels = [
+    'notif_chyby' => [
+        'nazev' => 'Chyby systému',
+        'vyznam' => 'Push upozornění adminovi při systémové chybě',
+    ],
+    'notif_bad_login' => [
+        'nazev' => 'Nepovedený login',
+        'vyznam' => 'Push upozornění adminovi při neúspěšném přihlášení',
+    ],
+];
 
 $cbAdminActiveUsers = [];
 $cbAdminUsersLogOn = [];
 $cbAdminUsersLogOff = [];
 $cbAdminUsersAdmin = [];
 $cbAdminUsersAdminAdd = [];
+
+if (in_array($cbAdminSaveName, ['notif_chyby', 'notif_bad_login'], true)) {
+    $cbAdminActiveTab = 'notif';
+} elseif (in_array($cbAdminSaveName, ['log_1', 'log_2', 'log_3', 'log_4'], true)) {
+    $cbAdminActiveTab = 'log_system';
+} elseif (in_array($cbAdminSaveName, ['log_akce', 'log_akce_user_on', 'log_akce_user_off', 'log_akce_user_remove'], true)) {
+    $cbAdminActiveTab = 'log_users';
+} elseif (in_array($cbAdminSaveName, ['admin_user_on', 'admin_user_off'], true)) {
+    $cbAdminActiveTab = 'admins';
+}
 
 try {
     $conn = db();
@@ -48,7 +71,7 @@ try {
     }
 
     if ($cbAdminSaveName !== '') {
-        $allowedBoolFields = ['restia_online', 'on_2fa', 'log_1', 'log_2', 'log_3', 'log_4'];
+        $allowedBoolFields = ['restia_online', 'on_2fa', 'log_1', 'log_2', 'log_3', 'log_4', 'notif_chyby', 'notif_bad_login'];
         if (in_array($cbAdminSaveName, $allowedBoolFields, true)) {
             $saveValue = ($cbAdminSaveValue === '1') ? 1 : 0;
             $sql = 'UPDATE set_system SET `' . $cbAdminSaveName . '` = ? WHERE id_set = 1 LIMIT 1';
@@ -246,7 +269,7 @@ try {
 
     if ($cbAdminError === '') {
         $res = $conn->query('
-            SELECT restia_online, on_2fa, system_logout, pauza_obdobi, report_save, log_akce, log_1, log_2, log_3, log_4
+            SELECT restia_online, on_2fa, system_logout, pauza_obdobi, report_save, log_akce, log_1, log_2, log_3, log_4, notif_chyby, notif_bad_login
             FROM set_system
             WHERE id_set = 1
             LIMIT 1
@@ -265,6 +288,8 @@ try {
                 $cbAdminSystem['log_2'] = (int)($row['log_2'] ?? 0);
                 $cbAdminSystem['log_3'] = (int)($row['log_3'] ?? 0);
                 $cbAdminSystem['log_4'] = (int)($row['log_4'] ?? 0);
+                $cbAdminSystem['notif_chyby'] = (int)($row['notif_chyby'] ?? 0);
+                $cbAdminSystem['notif_bad_login'] = (int)($row['notif_bad_login'] ?? 0);
                 if (function_exists('cb_store_system_settings')) {
                     cb_store_system_settings($row);
                 }
@@ -422,21 +447,25 @@ ob_start();
       #cb_admin_tab_system:checked ~ .cb_admin_tabs label[for="cb_admin_tab_system"],
       #cb_admin_tab_log_system:checked ~ .cb_admin_tabs label[for="cb_admin_tab_log_system"],
       #cb_admin_tab_log_users:checked ~ .cb_admin_tabs label[for="cb_admin_tab_log_users"],
-      #cb_admin_tab_admins:checked ~ .cb_admin_tabs label[for="cb_admin_tab_admins"]{font-weight:700;}
+      #cb_admin_tab_admins:checked ~ .cb_admin_tabs label[for="cb_admin_tab_admins"],
+      #cb_admin_tab_notif:checked ~ .cb_admin_tabs label[for="cb_admin_tab_notif"]{font-weight:700;}
       #cb_admin_tab_system:checked ~ .cb_admin_panel_system,
       #cb_admin_tab_log_system:checked ~ .cb_admin_panel_log_system,
       #cb_admin_tab_log_users:checked ~ .cb_admin_panel_log_users,
-      #cb_admin_tab_admins:checked ~ .cb_admin_panel_admins{display:block;}
+      #cb_admin_tab_admins:checked ~ .cb_admin_panel_admins,
+      #cb_admin_tab_notif:checked ~ .cb_admin_panel_notif{display:block;}
     </style>
-    <input type="radio" id="cb_admin_tab_system" name="cb_admin_tab" checked hidden>
-    <input type="radio" id="cb_admin_tab_log_system" name="cb_admin_tab" hidden>
-    <input type="radio" id="cb_admin_tab_log_users" name="cb_admin_tab" hidden>
-    <input type="radio" id="cb_admin_tab_admins" name="cb_admin_tab" hidden>
+    <input type="radio" id="cb_admin_tab_system" name="cb_admin_tab"<?= $cbAdminActiveTab === 'system' ? ' checked' : '' ?> hidden>
+    <input type="radio" id="cb_admin_tab_log_system" name="cb_admin_tab"<?= $cbAdminActiveTab === 'log_system' ? ' checked' : '' ?> hidden>
+    <input type="radio" id="cb_admin_tab_log_users" name="cb_admin_tab"<?= $cbAdminActiveTab === 'log_users' ? ' checked' : '' ?> hidden>
+    <input type="radio" id="cb_admin_tab_admins" name="cb_admin_tab"<?= $cbAdminActiveTab === 'admins' ? ' checked' : '' ?> hidden>
+    <input type="radio" id="cb_admin_tab_notif" name="cb_admin_tab"<?= $cbAdminActiveTab === 'notif' ? ' checked' : '' ?> hidden>
     <div class="cb_admin_tabs">
       <label for="cb_admin_tab_system" class="zaobleni_6">set systém</label>
       <label for="cb_admin_tab_log_system" class="zaobleni_6">logování systém</label>
       <label for="cb_admin_tab_log_users" class="zaobleni_6">logování users</label>
       <label for="cb_admin_tab_admins" class="zaobleni_6">set admins</label>
+      <label for="cb_admin_tab_notif" class="zaobleni_6">Upozornění</label>
     </div>
     <div class="cb_admin_panel cb_admin_panel_system">
     <p class="card_text text_tucny odstup_vnejsi_0" style="font-size:16px;text-align:left;">Globální nastavení systému</p>
@@ -518,6 +547,41 @@ ob_start();
             </td>
             <td style="white-space:nowrap;">Kolik minut před uzavřením restaurace lze uložit</td>
           </tr>
+        </tbody>
+      </table>
+    </div>
+    </div>
+    <div class="cb_admin_panel cb_admin_panel_notif">
+    <p class="card_text text_tucny odstup_vnejsi_0" style="font-size:16px;text-align:left;">Upozornění adminovi</p>
+    <div class="table-wrap ram_normal bg_bila" style="width:100%;margin:0 auto;">
+      <table class="table ram_normal bg_bila radek_1_35 sirka100" style="width:100%;table-layout:auto;">
+        <thead>
+          <tr>
+            <th style="width:1%;white-space:nowrap;">Aktivní</th>
+            <th style="width:1%;white-space:nowrap;">Upozornění</th>
+            <th>Význam</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($cbAdminNotifLabels as $cbNotifKey => $cbNotifInfo): ?>
+            <tr>
+              <td class="txt_c" style="white-space:nowrap;">
+                <form method="post" action="<?= h($cbAdminFormAction) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
+                  <input type="hidden" name="cb_admin_set_name" value="<?= h($cbNotifKey) ?>">
+                  <input type="hidden" name="cb_admin_set_value" value="0">
+                  <input
+                    type="checkbox"
+                    name="cb_admin_set_value"
+                    value="1"
+                    <?= ((int)($cbAdminSystem[$cbNotifKey] ?? 0) === 1) ? 'checked' : '' ?>
+                    onchange="if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}"
+                  >
+                </form>
+              </td>
+              <td style="white-space:nowrap;"><?= h((string)$cbNotifInfo['nazev']) ?></td>
+              <td><?= h((string)$cbNotifInfo['vyznam']) ?></td>
+            </tr>
+          <?php endforeach; ?>
         </tbody>
       </table>
     </div>

@@ -57,6 +57,12 @@ if (!function_exists('db_zapis_log_chyby')) {
 
         $stmt->execute();
         $stmt->close();
+
+        try {
+            require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
+            cb_push_send_error_admin($zprava, $soubor, $radek, 1);
+        } catch (Throwable $e) {
+        }
     }
 
 } else {

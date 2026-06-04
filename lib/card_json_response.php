@@ -1,5 +1,5 @@
 <?php
-// lib/card_json_response.php * Verze: V1 * Aktualizace: 23.04.2026
+// lib/card_json_response.php * Verze: V2 * Aktualizace: 03.06.2026
 declare(strict_types=1);
 
 if (!function_exists('cb_emit_card_json_response')) {
@@ -41,12 +41,14 @@ if (!function_exists('cb_emit_card_json_response')) {
         $GLOBALS['cb_dashboard_single_card_id'] = $cardId;
 
         $html = '';
+        $renderError = null;
         ob_start();
         try {
             require $file;
             $html = trim((string)ob_get_clean());
         } catch (Throwable $e) {
             $html = '';
+            $renderError = $e;
             if (ob_get_level() > 0) {
                 ob_end_clean();
             }
@@ -61,10 +63,22 @@ if (!function_exists('cb_emit_card_json_response')) {
 
         if ($html === '') {
             http_response_code(500);
-            echo json_encode([
+            $payload = [
                 'ok' => false,
                 'err' => 'Max karta se nepodarila vyrenderovat',
-            ], JSON_UNESCAPED_UNICODE);
+            ];
+            if ($renderError instanceof Throwable) {
+                try {
+                    require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
+                    cb_push_send_error_admin($renderError->getMessage(), $renderError->getFile(), $renderError->getLine(), 1);
+                } catch (Throwable $pushError) {
+                }
+
+                $payload['err_detail'] = $renderError->getMessage();
+                $payload['err_file'] = $renderError->getFile();
+                $payload['err_line'] = $renderError->getLine();
+            }
+            echo json_encode($payload, JSON_UNESCAPED_UNICODE);
             exit;
         }
 

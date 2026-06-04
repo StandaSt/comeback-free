@@ -1,4 +1,4 @@
-// js/filtry.js * Verze: V7 * Aktualizace: 27.03.2026
+// js/filtry.js * Verze: V8 * Aktualizace: 03.06.2026
 'use strict';
 
 /*
@@ -131,10 +131,20 @@
 
     const curTable = curForm.querySelector('.table-wrap');
     const curBottom = curForm.querySelector('.list-bottom');
+    const curSummary = curForm.querySelector('.card-max-summary');
     const newTable = newForm.querySelector('.table-wrap');
     const newBottom = newForm.querySelector('.list-bottom');
+    const newSummary = newForm.querySelector('.card-max-summary');
 
     if (!curTable || !newTable) return false;
+
+    if (curSummary && newSummary) {
+      curSummary.replaceWith(newSummary);
+    } else if (curSummary && !newSummary) {
+      curSummary.remove();
+    } else if (!curSummary && newSummary) {
+      curForm.insertBefore(newSummary, curTable);
+    }
 
     curTable.replaceWith(newTable);
     if (curBottom && newBottom) {
@@ -326,6 +336,7 @@
   document.addEventListener('click', (ev) => {
     const a = ev.target instanceof Element ? ev.target.closest('a') : null;
     if (!(a instanceof HTMLAnchorElement)) return;
+    if (a.getAttribute('data-cb-filter-ignore') === '1') return;
 
     const form = a.closest('form');
     if (!(form instanceof HTMLFormElement)) return;
@@ -362,5 +373,5 @@
 
 })(window);
 
-// js/filtry.js * Verze: V7 * Aktualizace: 27.03.2026
+// js/filtry.js * Verze: V8 * Aktualizace: 03.06.2026
 // Konec souboru

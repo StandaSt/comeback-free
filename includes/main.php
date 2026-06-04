@@ -1,5 +1,5 @@
 <?php
-// includes/main.php * Verze: V6 * Aktualizace: 06.03.2026
+// includes/main.php * Verze: V7 * Aktualizace: 03.06.2026
 // Počet řádků: 36
 // Předchozí počet řádků: 36
 
@@ -30,7 +30,22 @@ declare(strict_types=1);
      * Rozložení dashboard karet řeší dashboard.php přes .dash_grid.
      */
     if (isset($file) && is_string($file) && $file !== '' && is_file($file)) {
-        require $file;
+        try {
+            require $file;
+        } catch (Throwable $e) {
+            try {
+                require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
+                cb_push_send_error_admin($e->getMessage(), $e->getFile(), $e->getLine(), 1);
+            } catch (Throwable $pushError) {
+            }
+
+            echo '<section class="card_box ram_normal bg_bila zaobleni_12 odstup_vnitrni_14">';
+            echo '<p class="card_text txt_cervena text_tucny odstup_vnejsi_0">Chyba načtení obsahu</p>';
+            echo '<p class="card_text txt_cervena odstup_vnejsi_0">' . h($e->getMessage()) . '</p>';
+            echo '<p class="card_text txt_seda odstup_vnejsi_0">Soubor: ' . h($e->getFile()) . '</p>';
+            echo '<p class="card_text txt_seda odstup_vnejsi_0">Řádek: ' . h((string)$e->getLine()) . '</p>';
+            echo '</section>';
+        }
     } else {
         echo '<section class="card_box ram_normal bg_bila zaobleni_12 odstup_vnitrni_14"><p>Obsah stránky nebyl nalezen.</p></section>';
     }

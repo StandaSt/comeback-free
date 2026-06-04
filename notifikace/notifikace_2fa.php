@@ -197,6 +197,10 @@ function cb_push_send_2fa(int $idUser, string $token2fa): bool
 
 function cb_push_send_bad_login_admin(string $email, ?string $ip, int $adminUserId = 1): bool
 {
+    if (function_exists('cb_push_system_enabled') && !cb_push_system_enabled('notif_bad_login')) {
+        return false;
+    }
+
     $adminUserId = (int)$adminUserId;
     if ($adminUserId <= 0) {
         return false;
@@ -288,6 +292,145 @@ function cb_push_send_bad_login_admin(string $email, ?string $ip, int $adminUser
             $adminUserId,
             (int)$d['id'],
             'bad_login_admin',
+            $stav,
+            $httpStatus,
+            $chyba
+        );
+    }
+
+    return true;
+}
+
+function cb_push_system_enabled(string $key): bool
+{
+    $key = trim($key);
+    if (!in_array($key, ['notif_chyby', 'notif_bad_login'], true)) {
+        return false;
+    }
+
+    try {
+        if (function_exists('cb_system_setting') && (int)cb_system_setting($key, 0) === 1) {
+            return true;
+        }
+
+        $conn = db();
+        $sql = 'SELECT `' . $key . '` AS value_on FROM set_system WHERE id_set = 1 LIMIT 1';
+        $res = $conn->query($sql);
+        if ($res instanceof mysqli_result) {
+            $row = $res->fetch_assoc();
+            $res->free();
+            return (int)($row['value_on'] ?? 0) === 1;
+        }
+    } catch (Throwable $e) {
+        return false;
+    }
+
+    return false;
+}
+
+function cb_push_send_error_admin(string $message, ?string $file = null, ?int $line = null, int $adminUserId = 1): bool
+{
+    if (!cb_push_system_enabled('notif_chyby')) {
+        return false;
+    }
+
+    $adminUserId = (int)$adminUserId;
+    if ($adminUserId <= 0) {
+        return false;
+    }
+
+    if (!defined('CB_VAPID_PUBLIC') || !defined('CB_VAPID_PRIVATE') || !defined('CB_VAPID_SUBJECT')) {
+        return false;
+    }
+
+    if (!cb_push_has_vendor()) {
+        return false;
+    }
+
+    require_once __DIR__ . '/../vendor/autoload.php';
+
+    $devices = cb_push_load_devices($adminUserId);
+    if (count($devices) === 0) {
+        return false;
+    }
+
+    $message = trim($message);
+    if ($message === '') {
+        $message = 'Neznámá chyba IS';
+    }
+    if (mb_strlen($message, 'UTF-8') > 140) {
+        $message = mb_substr($message, 0, 137, 'UTF-8') . '...';
+    }
+
+    $fileText = trim((string)$file);
+    $lineText = ($line !== null && $line > 0) ? ':' . (string)$line : '';
+
+    $body = 'Chyba IS: ' . $message;
+    if ($fileText !== '') {
+        $body .= ' (' . basename($fileText) . $lineText . ')';
+    }
+
+    $auth = [
+        'VAPID' => [
+            'subject' => (string)CB_VAPID_SUBJECT,
+            'publicKey' => (string)CB_VAPID_PUBLIC,
+            'privateKey' => (string)CB_VAPID_PRIVATE,
+        ],
+    ];
+
+    $webPush = new Minishlink\WebPush\WebPush($auth);
+
+    $payloadArr = [
+        'type' => 'SYSTEM_ERROR_ADMIN',
+        'title' => 'Comeback',
+        'body' => $body,
+        'url' => cb_url_abs(''),
+    ];
+
+    $payload = json_encode($payloadArr, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+    foreach ($devices as $d) {
+        $sub = Minishlink\WebPush\Subscription::create([
+            'endpoint' => $d['endpoint'],
+            'publicKey' => $d['klic_public'],
+            'authToken' => $d['klic_auth'],
+        ]);
+
+        $report = $webPush->sendOneNotification($sub, $payload);
+
+        $stav = 'ok';
+        $httpStatus = null;
+        $chyba = null;
+
+        if ($report) {
+            try {
+                $ok = $report->isSuccess();
+                if (!$ok) {
+                    $stav = 'fail';
+                }
+
+                $code = $report->getResponse() ? $report->getResponse()->getStatusCode() : null;
+                if (is_int($code)) {
+                    $httpStatus = $code;
+                }
+
+                if (!$ok) {
+                    $reason = $report->getReason();
+                    $chyba = is_string($reason) && $reason !== '' ? $reason : 'Push fail';
+                }
+            } catch (Throwable $e) {
+                $stav = 'fail';
+                $chyba = $e->getMessage();
+            }
+        } else {
+            $stav = 'fail';
+            $chyba = 'Push: bez reportu';
+        }
+
+        cb_push_audit_try_insert(
+            $adminUserId,
+            (int)$d['id'],
+            'system_error_admin',
             $stav,
             $httpStatus,
             $chyba

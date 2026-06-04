@@ -141,6 +141,8 @@ if (!function_exists('cb_system_settings_defaults')) {
             'log_2' => 0,
             'log_3' => 0,
             'log_4' => 0,
+            'notif_chyby' => 0,
+            'notif_bad_login' => 0,
         ];
     }
 }
@@ -170,7 +172,7 @@ if (!function_exists('cb_store_system_settings')) {
 
         $data['log_akce'] = ((int)($values['log_akce'] ?? $data['log_akce']) === 1) ? 1 : 0;
 
-        foreach (['log_1', 'log_2', 'log_3', 'log_4'] as $logKey) {
+        foreach (['log_1', 'log_2', 'log_3', 'log_4', 'notif_chyby', 'notif_bad_login'] as $logKey) {
             $data[$logKey] = ((int)($values[$logKey] ?? $data[$logKey]) === 1) ? 1 : 0;
         }
 
