@@ -2835,6 +2835,21 @@ align-items:center;
   vertical-align:middle;                    /* obsah bunky bude vyskově uprostred */
 }
 
+/* Kompaktni varianta max tabulky. */
+.card-max-table.is-compact th,
+.card-max-table.is-compact td{
+  padding:3px 10px;
+  line-height:18px;
+}
+
+.card-max-table.is-compact .card_btn{
+  height:20px;
+  min-height:20px;
+  padding:0 8px;
+  line-height:18px;
+  font-size:var(--fs_13);
+}
+
 /* Hlavicka tabulky – nazvy sloupcu. */
 .card-max-table thead th{
   background:var(--clr_seda_1);             /* svetle sede pozadi hlavicky */

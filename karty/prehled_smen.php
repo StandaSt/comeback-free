@@ -1,6 +1,6 @@
 <?php
 // K11
-// karty/prehled_smen.php * Verze: V14 * Aktualizace: 04.06.2026
+// karty/prehled_smen.php * Verze: V15 * Aktualizace: 04.06.2026
 declare(strict_types=1);
 
 /*
@@ -17,6 +17,19 @@ if (!function_exists('ps_num_or_dash')) {
     function ps_num_or_dash(float $value): string
     {
         return abs($value) < 0.005 ? '-' : ps_num($value);
+    }
+}
+
+if (!function_exists('ps_num_with_info')) {
+    function ps_num_with_info(float $value, string $title): string
+    {
+        $text = h(ps_num_or_dash($value));
+        if (abs($value) < 0.005 || $title === '') {
+            return $text;
+        }
+
+        return $text
+            . ' <span title="' . h($title) . '" style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:#dcecff;color:#005bd3;border:1px solid #7fb0ff;font-size:10px;font-weight:700;line-height:14px;cursor:help;">i</span>';
     }
 }
 
@@ -43,6 +56,9 @@ if ($psPage > $psPages) {
 $offset = ($psPage - 1) * $psPer;
 $psDisplayRows = array_slice($psFilteredRows, $offset, $psPer);
 $formAction = cb_url('/');
+$psColWidths = ['6%', '8%', '22%', '10%', '9%', '9%', '9%', '9%', '10%', '8%'];
+$psDetailBg = '#d9ecff';
+$psDetailEndBg = '#ffdada';
 
 $card_min_html = ''
     . '<p class="card_text txt_seda odstup_vnejsi_0">Měsíc: <strong>' . h($psMonthLabel) . '</strong></p>'
@@ -107,15 +123,17 @@ ob_start();
         Přehled za <strong><?= h($psMonthLabel) ?></strong>, celkem: <strong><?= h(ps_num($psFilteredHours)) ?></strong> hodin
       </div>
       <div class="displ_flex ai_stred gap_8">
-        <span style="line-height:24px;">Export do:</span>
-        <a class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_24 card_btn_primary displ_inline_flex" href="<?= h($psExportPdfUrl) ?>" aria-label="Export PDF" data-cb-filter-ignore="1">PDF</a>
-        <a class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_24 card_btn_primary displ_inline_flex" href="<?= h($psExportTxtUrl) ?>" aria-label="Export TXT" data-cb-filter-ignore="1">TXT</a>
-        <a class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_24 card_btn_primary displ_inline_flex" href="<?= h($psExportXlsxUrl) ?>" aria-label="Export XLSX" data-cb-filter-ignore="1">XLSX</a>
+        <button type="button" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_24 card_btn_primary displ_inline_flex" data-ps-export-open="psExportModal">Export</button>
       </div>
     </div>
 
     <div class="table-wrap ram_normal bg_bila zaobleni_12">
-      <table class="card-max-table">
+      <table class="card-max-table is-compact">
+        <colgroup>
+          <?php foreach ($psColWidths as $psColWidth): ?>
+            <col style="width:<?= h($psColWidth) ?>;">
+          <?php endforeach; ?>
+        </colgroup>
         <thead>
           <tr class="card-max-filter filter-row">
             <th class="txt_r" style="white-space:nowrap;">
@@ -209,7 +227,7 @@ ob_start();
                 <td class="txt_r" style="white-space:nowrap;"><?= h(ps_num_or_dash((float)$row['den'])) ?></td>
                 <td class="txt_r" style="white-space:nowrap;"><?= h(ps_num_or_dash((float)$row['noc'])) ?></td>
                 <td class="txt_r" style="white-space:nowrap;"><?= h(ps_num_or_dash((float)$row['vikend'])) ?></td>
-                <td class="txt_r" style="white-space:nowrap;"<?= $svatekTitle !== '' ? ' title="' . h($svatekTitle) . '"' : '' ?>><?= h(ps_num_or_dash((float)$row['svatek'])) ?></td>
+                <td class="txt_r" style="white-space:nowrap;"><?= ps_num_with_info((float)$row['svatek'], $svatekTitle) ?></td>
                 <td class="txt_r" style="white-space:nowrap;">
                   <button type="button" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_24 card_btn_primary displ_inline_flex" data-row-detail-toggle="<?= $detailId ?>" aria-expanded="false">
                     detail
@@ -217,54 +235,61 @@ ob_start();
                 </td>
               </tr>
               <tr data-row-detail="<?= $detailId ?>" hidden>
-                <td colspan="10" style="padding:0;background:#eef7ff;">
-                  <p class="card_text text_tucny odstup_vnejsi_0" style="font-size:15px;text-align:left;padding:10px 12px 8px 12px;">Detail - odpracované hodiny <?= h((string)$row['cele_jmeno']) ?></p>
-                  <div class="ram_normal" style="width:100%;background:#eef7ff;">
-                    <table class="card-max-table" style="width:100%;">
-                      <thead>
-                        <tr>
-                          <th class="txt_r" colspan="2" style="white-space:nowrap;">datum</th>
-                          <th class="txt_r" style="white-space:nowrap;">pobočka</th>
-                          <th class="txt_r" style="white-space:nowrap;">slot</th>
-                          <th class="txt_r" style="white-space:nowrap;">odpracováno</th>
-                          <th class="txt_r" style="white-space:nowrap;">6-22</th>
-                          <th class="txt_r" style="white-space:nowrap;">22-6</th>
-                          <th class="txt_r" style="white-space:nowrap;">So+Ne</th>
-                          <th class="txt_r" style="white-space:nowrap;">svátek</th>
-                          <th class="txt_r" style="white-space:nowrap;"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <?php $detailRows = isset($row['detail_rows']) && is_array($row['detail_rows']) ? $row['detail_rows'] : []; ?>
-                        <?php if ($detailRows === []): ?>
-                          <tr><td colspan="10">Žádná data</td></tr>
-                        <?php else: ?>
-                          <?php foreach ($detailRows as $detailRow): ?>
-                            <?php
-                            $detailDate = DateTimeImmutable::createFromFormat('Y-m-d', (string)($detailRow['datum'] ?? ''));
-                            $detailDateText = $detailDate instanceof DateTimeImmutable ? $detailDate->format('j.n.Y') : (string)($detailRow['datum'] ?? '');
-                            $branchName = trim((string)($detailRow['pobocka'] ?? ''));
-                            if ($branchName === '' && (int)($detailRow['id_pob'] ?? 0) > 0) {
-                                $branchName = 'ID ' . (string)(int)$detailRow['id_pob'];
-                            }
-                            ?>
-                            <tr>
-                              <td class="txt_r" colspan="2" style="white-space:nowrap;"><?= h($detailDateText) ?></td>
-                              <td class="txt_r" style="white-space:nowrap;"><?= h($branchName !== '' ? $branchName : '-') ?></td>
-                              <td class="txt_r" style="white-space:nowrap;"><?= h(ps_slot_label((int)($detailRow['slot'] ?? 0))) ?></td>
-                              <td class="txt_r" style="white-space:nowrap;"><?= h(ps_num_or_dash((float)($detailRow['celkem'] ?? 0.0))) ?></td>
-                              <td class="txt_r" style="white-space:nowrap;"><?= h(ps_num_or_dash((float)($detailRow['den'] ?? 0.0))) ?></td>
-                              <td class="txt_r" style="white-space:nowrap;"><?= h(ps_num_or_dash((float)($detailRow['noc'] ?? 0.0))) ?></td>
-                              <td class="txt_r" style="white-space:nowrap;"><?= h(ps_num_or_dash((float)($detailRow['vikend'] ?? 0.0))) ?></td>
-                              <td class="txt_r" style="white-space:nowrap;"><?= h(ps_num_or_dash((float)($detailRow['svatek'] ?? 0.0))) ?></td>
-                              <td class="txt_r" style="white-space:nowrap;"></td>
-                            </tr>
-                          <?php endforeach; ?>
-                        <?php endif; ?>
-                      </tbody>
-                    </table>
-                  </div>
-                </td>
+                <td colspan="10" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;font-size:15px;text-align:left;padding:10px 12px 8px 12px;font-weight:700;">Detail - odpracované hodiny <?= h((string)$row['cele_jmeno']) ?></td>
+              </tr>
+              <tr data-row-detail="<?= $detailId ?>" hidden>
+                <th class="txt_r" colspan="2" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;">datum</th>
+                <th class="txt_r" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;">pobočka</th>
+                <th class="txt_r" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;">slot</th>
+                <th class="txt_r" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;">odpracováno</th>
+                <th class="txt_r" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;">6-22</th>
+                <th class="txt_r" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;">22-6</th>
+                <th class="txt_r" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;">So+Ne</th>
+                <th class="txt_r" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;">svátek</th>
+                <th class="txt_r" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;"></th>
+              </tr>
+              <?php $detailRows = isset($row['detail_rows']) && is_array($row['detail_rows']) ? $row['detail_rows'] : []; ?>
+              <?php if ($detailRows === []): ?>
+                <tr data-row-detail="<?= $detailId ?>" hidden><td colspan="10" style="background:<?= h($psDetailBg) ?>;">Žádná data</td></tr>
+              <?php else: ?>
+                <?php foreach ($detailRows as $detailRow): ?>
+                  <?php
+                  $detailDate = DateTimeImmutable::createFromFormat('Y-m-d', (string)($detailRow['datum'] ?? ''));
+                  $detailDateText = $detailDate instanceof DateTimeImmutable ? $detailDate->format('j.n.Y') : (string)($detailRow['datum'] ?? '');
+                  $branchName = trim((string)($detailRow['pobocka'] ?? ''));
+                  if ($branchName === '' && (int)($detailRow['id_pob'] ?? 0) > 0) {
+                      $branchName = 'ID ' . (string)(int)$detailRow['id_pob'];
+                  }
+                  $detailSvatekTitle = '';
+                  if ((float)($detailRow['svatek'] ?? 0.0) > 0.0 && isset($detailRow['svatek_detail']) && is_array($detailRow['svatek_detail'])) {
+                      $detailSvatekLines = [];
+                      foreach ($detailRow['svatek_detail'] as $svatekDetail) {
+                          $svatekDate = DateTimeImmutable::createFromFormat('Y-m-d', (string)($svatekDetail['date'] ?? ''));
+                          $svatekDateText = $svatekDate instanceof DateTimeImmutable ? $svatekDate->format('j.n.Y') : (string)($svatekDetail['date'] ?? '');
+                          $svatekName = trim((string)($svatekDetail['name'] ?? ''));
+                          $svatekHours = ps_num((float)($svatekDetail['hours'] ?? 0.0));
+                          if ($svatekDateText !== '' && $svatekName !== '') {
+                              $detailSvatekLines[] = $svatekDateText . ' ' . $svatekName . ': ' . $svatekHours . ' h';
+                          }
+                      }
+                      $detailSvatekTitle = implode("\n", $detailSvatekLines);
+                  }
+                  ?>
+                  <tr data-row-detail="<?= $detailId ?>" hidden>
+                    <td class="txt_r" colspan="2" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;"><?= h($detailDateText) ?></td>
+                    <td class="txt_r" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;"><?= h($branchName !== '' ? $branchName : '-') ?></td>
+                    <td class="txt_r" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;"><?= h(ps_slot_label((int)($detailRow['slot'] ?? 0))) ?></td>
+                    <td class="txt_r" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;"><?= h(ps_num_or_dash((float)($detailRow['celkem'] ?? 0.0))) ?></td>
+                    <td class="txt_r" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;"><?= h(ps_num_or_dash((float)($detailRow['den'] ?? 0.0))) ?></td>
+                    <td class="txt_r" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;"><?= h(ps_num_or_dash((float)($detailRow['noc'] ?? 0.0))) ?></td>
+                    <td class="txt_r" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;"><?= h(ps_num_or_dash((float)($detailRow['vikend'] ?? 0.0))) ?></td>
+                    <td class="txt_r" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;"><?= ps_num_with_info((float)($detailRow['svatek'] ?? 0.0), $detailSvatekTitle) ?></td>
+                    <td class="txt_r" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;"></td>
+                  </tr>
+                <?php endforeach; ?>
+              <?php endif; ?>
+              <tr data-row-detail="<?= $detailId ?>" hidden>
+                <td colspan="10" style="height:14px;padding:0;background:<?= h($psDetailEndBg) ?>;"></td>
               </tr>
             <?php endforeach; ?>
           <?php endif; ?>
@@ -323,9 +348,10 @@ ob_start();
       </div>
     </div>
   </form>
+  <?php require __DIR__ . '/../modaly/modal_prehled_smen_export.php'; ?>
 <?php endif; ?>
 <?php
 $card_max_html = (string)ob_get_clean();
 
-/* karty/prehled_smen.php * Verze: V14 * Aktualizace: 04.06.2026 */
+/* karty/prehled_smen.php * Verze: V15 * Aktualizace: 04.06.2026 */
 ?>

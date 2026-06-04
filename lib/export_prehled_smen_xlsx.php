@@ -1,5 +1,5 @@
 <?php
-// lib/export_prehled_smen_xlsx.php * Verze: V1 * Aktualizace: 03.06.2026
+// lib/export_prehled_smen_xlsx.php * Verze: V2 * Aktualizace: 04.06.2026
 declare(strict_types=1);
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
@@ -36,33 +36,60 @@ if ((string)$data['error'] !== '') {
 }
 
 $month = sprintf('%04d-%02d', (int)$data['selectedYear'], (int)$data['selectedMonth']);
-$filename = 'prehled_smen_' . $month . '.xlsx';
+$scope = (string)($_GET['ps_scope'] ?? 'summary') === 'detail' ? 'detail' : 'summary';
+$filename = 'prehled_smen_' . ($scope === 'detail' ? 'detail_' : '') . $month . '.xlsx';
 
 $spreadsheet = new Spreadsheet();
 $sheet = $spreadsheet->getActiveSheet();
-$sheet->setTitle('Přehled směn');
+$sheet->setTitle($scope === 'detail' ? 'Detail směn' : 'Přehled směn');
 
 $sheet->setCellValue('A1', 'Přehled za ' . (string)$data['monthLabel']);
 $sheet->setCellValue('A2', 'Celkem hodin');
 $sheet->setCellValue('B2', (float)$data['filteredHours']);
 
-$headers = ['měsíc', 'rok', 'celé jméno', 'slot', 'odpracováno', '6-22', '22-6', 'So+Ne', 'svátek'];
+$headers = $scope === 'detail'
+    ? ['celé jméno', 'slot', 'datum', 'pobočka', 'odpracováno', '6-22', '22-6', 'So+Ne', 'svátek']
+    : ['měsíc', 'rok', 'celé jméno', 'slot', 'odpracováno', '6-22', '22-6', 'So+Ne', 'svátek'];
 $sheet->fromArray($headers, null, 'A4');
 
 $rowNum = 5;
-foreach ((array)$data['filteredRows'] as $row) {
-    $sheet->fromArray([
-        (int)$row['mesic'],
-        (int)$row['rok'],
-        (string)$row['cele_jmeno'],
-        ps_slot_label((int)$row['slot']),
-        (float)$row['celkem'],
-        (float)$row['den'],
-        (float)$row['noc'],
-        (float)$row['vikend'],
-        (float)$row['svatek'],
-    ], null, 'A' . (string)$rowNum);
-    $rowNum++;
+if ($scope === 'detail') {
+    foreach ((array)$data['filteredRows'] as $row) {
+        $detailRows = isset($row['detail_rows']) && is_array($row['detail_rows']) ? $row['detail_rows'] : [];
+        foreach ($detailRows as $detailRow) {
+            $branchName = trim((string)($detailRow['pobocka'] ?? ''));
+            if ($branchName === '' && (int)($detailRow['id_pob'] ?? 0) > 0) {
+                $branchName = 'ID ' . (string)(int)$detailRow['id_pob'];
+            }
+            $sheet->fromArray([
+                (string)$row['cele_jmeno'],
+                ps_slot_label((int)$row['slot']),
+                (string)($detailRow['datum'] ?? ''),
+                $branchName !== '' ? $branchName : '-',
+                (float)($detailRow['celkem'] ?? 0.0),
+                (float)($detailRow['den'] ?? 0.0),
+                (float)($detailRow['noc'] ?? 0.0),
+                (float)($detailRow['vikend'] ?? 0.0),
+                (float)($detailRow['svatek'] ?? 0.0),
+            ], null, 'A' . (string)$rowNum);
+            $rowNum++;
+        }
+    }
+} else {
+    foreach ((array)$data['filteredRows'] as $row) {
+        $sheet->fromArray([
+            (int)$row['mesic'],
+            (int)$row['rok'],
+            (string)$row['cele_jmeno'],
+            ps_slot_label((int)$row['slot']),
+            (float)$row['celkem'],
+            (float)$row['den'],
+            (float)$row['noc'],
+            (float)$row['vikend'],
+            (float)$row['svatek'],
+        ], null, 'A' . (string)$rowNum);
+        $rowNum++;
+    }
 }
 
 $lastRow = max(4, $rowNum - 1);
@@ -71,8 +98,7 @@ $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
 $sheet->getStyle('A4:I4')->getFont()->setBold(true);
 $sheet->getStyle('A4:I' . (string)$lastRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
 $sheet->getStyle('A4:I' . (string)$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-$sheet->getStyle('C4:C' . (string)$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
-$sheet->getStyle('D4:D' . (string)$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+$sheet->getStyle(($scope === 'detail' ? 'A4:D' : 'C4:D') . (string)$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
 $sheet->getStyle('B2')->getNumberFormat()->setFormatCode('# ##0.00');
 $sheet->getStyle('E5:I' . (string)$lastRow)->getNumberFormat()->setFormatCode('# ##0.00');
 
@@ -89,5 +115,5 @@ $writer = new Xlsx($spreadsheet);
 $writer->save('php://output');
 $spreadsheet->disconnectWorksheets();
 
-/* lib/export_prehled_smen_xlsx.php * Verze: V1 * Aktualizace: 03.06.2026 */
+/* lib/export_prehled_smen_xlsx.php * Verze: V2 * Aktualizace: 04.06.2026 */
 ?>
