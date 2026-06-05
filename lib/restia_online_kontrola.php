@@ -99,7 +99,7 @@ if (!function_exists('cb_restia_online_kontrola_notify_admin')) {
         $konecText = ($konecDt instanceof DateTimeImmutable) ? $konecDt->format('j.n.Y H:i:s') : $konec;
         $celkem = $zapisy + $aktualizace + $ignore;
 
-        $obsah = 'Aktualizace ' . $konecText . "\n\n"
+        $obsah = 'Aktualizace ' . $konecText . "\n"
             . 'zápisy      ' . (string)$zapisy . "\n"
             . 'aktualizace ' . (string)$aktualizace . "\n"
             . 'ignore      ' . (string)$ignore . "\n"

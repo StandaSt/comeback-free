@@ -98,16 +98,25 @@ function cb_admin_info_content_html(string $content): string
     }
 
     $out = [];
+    $firstLine = true;
     foreach ($lines as $line) {
-        $line = (string)$line;
+        $line = trim((string)$line);
+        if ($line === '') {
+            continue;
+        }
+
+        if ($firstLine) {
+            $out[] = '<div>' . cb_admin_info_h($line) . '</div>';
+            $out[] = '<div class="admin-info-gap"></div>';
+            $firstLine = false;
+            continue;
+        }
+
         if (preg_match('/^(zápisy|aktualizace|ignore|celkem)\s+(\d+)$/u', $line, $m) === 1) {
             $out[] = '<div class="admin-info-row"><span>' . cb_admin_info_h((string)$m[1]) . '</span><strong>' . cb_admin_info_h((string)$m[2]) . '</strong></div>';
             continue;
         }
-        if ($line === '') {
-            $out[] = '<div class="admin-info-gap"></div>';
-            continue;
-        }
+
         $out[] = '<div>' . cb_admin_info_h($line) . '</div>';
     }
 
@@ -167,7 +176,6 @@ if (is_array($row) && (int)($row['id_odeslal'] ?? 0) > 0) {
       font-size:15px;
       font-weight:700;
       line-height:1.45;
-      white-space:pre-wrap;
       word-break:break-word;
       font-family:"Segoe UI", "Trebuchet MS", Arial, sans-serif;
     }
@@ -186,7 +194,7 @@ if (is_array($row) && (int)($row['id_odeslal'] ?? 0) > 0) {
       height:10px;
     }
     .admin-info-sender{
-      margin-top:28px;
+      margin-top:20px;
     }
   </style>
 </head>
