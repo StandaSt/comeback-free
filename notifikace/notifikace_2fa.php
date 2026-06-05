@@ -537,6 +537,190 @@ function cb_push_send_first_entry_admin(string $fullName, int $adminUserId = 1):
     return true;
 }
 
+function cb_push_send_admin_info(
+    array $idUsers,
+    string $typ,
+    string $obsah,
+    string $nadpis = 'Admin info',
+    string $pozn = '',
+    ?int $idOdeslal = null
+): array {
+    global $PROSTREDI;
+
+    if ((string)($PROSTREDI ?? 'SERVER') !== 'SERVER') {
+        return ['ok' => 0, 'id_admin_info' => 0, 'odeslano' => 0];
+    }
+
+    $cleanUsers = [];
+    foreach ($idUsers as $idUser) {
+        $idUser = (int)$idUser;
+        if ($idUser > 0) {
+            $cleanUsers[$idUser] = $idUser;
+        }
+    }
+
+    $typ = trim($typ);
+    if ($typ === '') {
+        $typ = 'admin_info';
+    }
+
+    $nadpis = trim($nadpis);
+    if ($nadpis === '') {
+        $nadpis = 'Admin info';
+    }
+
+    $obsah = trim($obsah);
+    if ($cleanUsers === [] || $obsah === '') {
+        return ['ok' => 0, 'id_admin_info' => 0, 'odeslano' => 0];
+    }
+
+    $pozn = trim($pozn);
+    $idOdeslal = ($idOdeslal !== null && $idOdeslal > 0) ? $idOdeslal : null;
+
+    $canPush = (
+        defined('CB_VAPID_PUBLIC')
+        && defined('CB_VAPID_PRIVATE')
+        && defined('CB_VAPID_SUBJECT')
+        && cb_push_has_vendor()
+    );
+    if (!$canPush) {
+        return ['ok' => 0, 'id_admin_info' => 0, 'odeslano' => 0];
+    }
+
+    $devicesByUser = [];
+    foreach ($cleanUsers as $idUser) {
+        $devices = cb_push_load_devices($idUser);
+        if (count($devices) > 0) {
+            $devicesByUser[$idUser] = $devices;
+        }
+    }
+    if ($devicesByUser === []) {
+        return ['ok' => 0, 'id_admin_info' => 0, 'odeslano' => 0];
+    }
+
+    $conn = db();
+    $stmtInfo = $conn->prepare('
+        INSERT INTO admin_info (typ, nadpis, obsah, pozn, id_odeslal, vytvoreno)
+        VALUES (?, ?, ?, ?, ?, NOW())
+    ');
+    if (!$stmtInfo) {
+        return ['ok' => 0, 'id_admin_info' => 0, 'odeslano' => 0];
+    }
+    $stmtInfo->bind_param('ssssi', $typ, $nadpis, $obsah, $pozn, $idOdeslal);
+    $stmtInfo->execute();
+    $idAdminInfo = (int)$stmtInfo->insert_id;
+    $stmtInfo->close();
+
+    if ($idAdminInfo <= 0) {
+        return ['ok' => 0, 'id_admin_info' => 0, 'odeslano' => 0];
+    }
+
+    $webPush = null;
+    require_once __DIR__ . '/../vendor/autoload.php';
+    $auth = [
+        'VAPID' => [
+            'subject' => (string)CB_VAPID_SUBJECT,
+            'publicKey' => (string)CB_VAPID_PUBLIC,
+            'privateKey' => (string)CB_VAPID_PRIVATE,
+        ],
+    ];
+    $webPush = new Minishlink\WebPush\WebPush($auth);
+    $odeslano = 0;
+    $body = preg_replace('/\s+/', ' ', $obsah) ?? $obsah;
+    if (mb_strlen($body, 'UTF-8') > 140) {
+        $body = mb_substr($body, 0, 137, 'UTF-8') . '...';
+    }
+
+    foreach ($devicesByUser as $idUser => $devices) {
+        $token = bin2hex(random_bytes(32));
+        $stmtUser = $conn->prepare('
+            INSERT INTO admin_info_user (id_admin_info, id_user, token)
+            VALUES (?, ?, ?)
+        ');
+        if (!$stmtUser) {
+            continue;
+        }
+        $stmtUser->bind_param('iis', $idAdminInfo, $idUser, $token);
+        $stmtUser->execute();
+        $stmtUser->close();
+
+        if (!($webPush instanceof Minishlink\WebPush\WebPush)) {
+            continue;
+        }
+
+        $url = '/mobil/admin_info.php?t=' . rawurlencode($token);
+        $payloadArr = [
+            'type' => 'ADMIN_INFO',
+            'title' => $nadpis,
+            'body' => $body,
+            'url' => $url,
+        ];
+        $payload = json_encode($payloadArr, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        foreach ($devices as $d) {
+            $sub = Minishlink\WebPush\Subscription::create([
+                'endpoint' => $d['endpoint'],
+                'publicKey' => $d['klic_public'],
+                'authToken' => $d['klic_auth'],
+            ]);
+
+            $report = $webPush->sendOneNotification($sub, $payload);
+            $stav = 'ok';
+            $httpStatus = null;
+            $chyba = null;
+
+            if ($report) {
+                try {
+                    $ok = $report->isSuccess();
+                    if (!$ok) {
+                        $stav = 'fail';
+                    }
+
+                    $code = $report->getResponse() ? $report->getResponse()->getStatusCode() : null;
+                    if (is_int($code)) {
+                        $httpStatus = $code;
+                    }
+
+                    if (!$ok) {
+                        $reason = $report->getReason();
+                        $chyba = is_string($reason) && $reason !== '' ? $reason : 'Push fail';
+                    }
+                } catch (Throwable $e) {
+                    $stav = 'fail';
+                    $chyba = $e->getMessage();
+                }
+            } else {
+                $stav = 'fail';
+                $chyba = 'Push: bez reportu';
+            }
+
+            cb_push_audit_try_insert(
+                $idUser,
+                (int)$d['id'],
+                'admin_info',
+                $stav,
+                $httpStatus,
+                $chyba
+            );
+        }
+
+        $stmtSent = $conn->prepare('
+            UPDATE admin_info_user
+            SET odeslano = NOW()
+            WHERE id_admin_info = ? AND id_user = ?
+            LIMIT 1
+        ');
+        if ($stmtSent) {
+            $stmtSent->bind_param('ii', $idAdminInfo, $idUser);
+            $stmtSent->execute();
+            $stmtSent->close();
+        }
+        $odeslano++;
+    }
+
+    return ['ok' => 1, 'id_admin_info' => $idAdminInfo, 'odeslano' => $odeslano];
+}
+
 // notifikace/notifikace_2fa.php * Verze: V2 * Aktualizace: 07.03.2026 * Počet řádků: 206
 // Předchozí počet řádků: 202
 // Konec souboru

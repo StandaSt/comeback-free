@@ -131,13 +131,9 @@ if (!function_exists('cb_restia_online_get_auth')) {
         $idUser = (int)(is_array($user) ? ($user['id_user'] ?? 0) : 0);
         $idLogin = (int)($_SESSION['cb_id_login'] ?? 0);
 
-        if ($idUser <= 0 || $idLogin <= 0) {
-            throw new RuntimeException('Chybi prihlaseny uzivatel nebo id_login.');
-        }
-
         return [
-            'id_user' => $idUser,
-            'id_login' => $idLogin,
+            'id_user' => ($idUser > 0) ? $idUser : null,
+            'id_login' => ($idLogin > 0) ? $idLogin : null,
         ];
     }
 }
@@ -1069,7 +1065,13 @@ if (!function_exists('cb_restia_online_try_flush_api')) {
     function cb_restia_online_try_flush_api(?mysqli $conn, ?array $auth): void
     {
         if (!($conn instanceof mysqli) || !is_array($auth)) { return; }
-        db_api_restia_flush($conn, (int)($auth['id_user'] ?? 0), (int)($auth['id_login'] ?? 0));
+        $idUser = isset($auth['id_user']) ? (int)$auth['id_user'] : null;
+        $idLogin = isset($auth['id_login']) ? (int)$auth['id_login'] : null;
+        db_api_restia_flush(
+            $conn,
+            ($idUser !== null && $idUser > 0) ? $idUser : null,
+            ($idLogin !== null && $idLogin > 0) ? $idLogin : null
+        );
     }
 }
 

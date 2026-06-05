@@ -12,6 +12,7 @@ $cbAdminSystem = [
     'system_logout' => 0,
     'pauza_obdobi' => 1000,
     'report_save' => 5,
+    'restia_notifikace' => 1,
     'log_akce' => 0,
     'log_1' => 0,
     'log_2' => 0,
@@ -71,7 +72,7 @@ try {
     }
 
     if ($cbAdminSaveName !== '') {
-        $allowedBoolFields = ['restia_online', 'on_2fa', 'log_1', 'log_2', 'log_3', 'log_4', 'notif_chyby', 'notif_bad_login'];
+        $allowedBoolFields = ['restia_online', 'on_2fa', 'restia_notifikace', 'log_1', 'log_2', 'log_3', 'log_4', 'notif_chyby', 'notif_bad_login'];
         if (in_array($cbAdminSaveName, $allowedBoolFields, true)) {
             $saveValue = ($cbAdminSaveValue === '1') ? 1 : 0;
             $sql = 'UPDATE set_system SET `' . $cbAdminSaveName . '` = ? WHERE id_set = 1 LIMIT 1';
@@ -269,7 +270,7 @@ try {
 
     if ($cbAdminError === '') {
         $res = $conn->query('
-            SELECT restia_online, on_2fa, system_logout, pauza_obdobi, report_save, log_akce, log_1, log_2, log_3, log_4, notif_chyby, notif_bad_login
+            SELECT restia_online, on_2fa, system_logout, pauza_obdobi, report_save, restia_notifikace, log_akce, log_1, log_2, log_3, log_4, notif_chyby, notif_bad_login
             FROM set_system
             WHERE id_set = 1
             LIMIT 1
@@ -283,6 +284,7 @@ try {
                 $cbAdminSystem['system_logout'] = (int)($row['system_logout'] ?? 0);
                 $cbAdminSystem['pauza_obdobi'] = (int)($row['pauza_obdobi'] ?? 1000);
                 $cbAdminSystem['report_save'] = (int)($row['report_save'] ?? 5);
+                $cbAdminSystem['restia_notifikace'] = (int)($row['restia_notifikace'] ?? 1);
                 $cbAdminSystem['log_akce'] = (int)($row['log_akce'] ?? 0);
                 $cbAdminSystem['log_1'] = (int)($row['log_1'] ?? 0);
                 $cbAdminSystem['log_2'] = (int)($row['log_2'] ?? 0);
@@ -546,6 +548,19 @@ ob_start();
               </form>
             </td>
             <td style="white-space:nowrap;">Kolik minut před uzavřením restaurace lze uložit</td>
+          </tr>
+          <tr>
+            <td style="white-space:nowrap;">Restia CRON</td>
+            <td class="<?= h($cbAdminBoolClass($cbAdminSystem['restia_notifikace'])) ?>">
+              <form method="post" action="<?= h($cbAdminFormAction) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
+                <input type="hidden" name="cb_admin_set_name" value="restia_notifikace">
+                <select name="cb_admin_set_value" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" onchange="if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
+                  <option value="1"<?= $cbAdminSystem['restia_notifikace'] === 1 ? ' selected' : '' ?>>Aktivní</option>
+                  <option value="0"<?= $cbAdminSystem['restia_notifikace'] === 0 ? ' selected' : '' ?>>Vypnuto</option>
+                </select>
+              </form>
+            </td>
+            <td style="white-space:nowrap;">Upozornění adminovi na průběh aktualizace</td>
           </tr>
         </tbody>
       </table>

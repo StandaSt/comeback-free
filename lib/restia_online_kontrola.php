@@ -4,6 +4,22 @@
 // Aktualizace: 14.05.2026
 declare(strict_types=1);
 
+if (PHP_SAPI === 'cli') {
+    if (!isset($_SESSION) || !is_array($_SESSION)) {
+        $_SESSION = [];
+    }
+    $GLOBALS['cb_restia_online_session_ready'] = true;
+} elseif (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+
+require_once __DIR__ . '/app.php';
+require_once __DIR__ . '/../config/secrets.php';
+
+if (PHP_SAPI === 'cli') {
+    $PROSTREDI = 'SERVER';
+}
+
 $db = db();
 $q = $db->query("SELECT restia_online FROM set_system WHERE id_set = 1");
 $row = ($q instanceof mysqli_result) ? $q->fetch_assoc() : null;
@@ -41,16 +57,67 @@ if (!function_exists('cb_restia_online_kontrola_update_row')) {
     }
 }
 
+if (!function_exists('cb_restia_online_kontrola_notify_admin')) {
+    function cb_restia_online_kontrola_notify_admin(
+        mysqli $db,
+        int $idAkce,
+        int $zapisy,
+        int $aktualizace,
+        int $ignore
+    ): void {
+        if (PHP_SAPI !== 'cli') {
+            return;
+        }
+
+        $resSet = $db->query('SELECT restia_notifikace FROM set_system WHERE id_set = 1 LIMIT 1');
+        $rowSet = ($resSet instanceof mysqli_result) ? $resSet->fetch_assoc() : null;
+        if ($resSet instanceof mysqli_result) {
+            $resSet->free();
+        }
+        if ((int)($rowSet['restia_notifikace'] ?? 0) !== 1) {
+            return;
+        }
+
+        $stmt = $db->prepare('SELECT konec FROM online_restia WHERE id_akce = ? LIMIT 1');
+        if (!$stmt) {
+            return;
+        }
+        $stmt->bind_param('i', $idAkce);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $row = ($res instanceof mysqli_result) ? $res->fetch_assoc() : null;
+        if ($res instanceof mysqli_result) {
+            $res->free();
+        }
+        $stmt->close();
+
+        $konec = trim((string)($row['konec'] ?? ''));
+        if ($konec === '') {
+            $konec = date('Y-m-d H:i:s');
+        }
+        $konecDt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $konec, new DateTimeZone('Europe/Prague'));
+        $konecText = ($konecDt instanceof DateTimeImmutable) ? $konecDt->format('j.n.Y H:i:s') : $konec;
+        $celkem = $zapisy + $aktualizace + $ignore;
+
+        $obsah = 'Aktualizace ' . $konecText . "\n\n"
+            . 'zápisy      ' . (string)$zapisy . "\n"
+            . 'aktualizace ' . (string)$aktualizace . "\n"
+            . 'ignore      ' . (string)$ignore . "\n"
+            . 'celkem      ' . (string)$celkem;
+
+        require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
+        cb_push_send_admin_info([1], 'restia_cron', $obsah, 'Admin info');
+    }
+}
+
 if (!function_exists('cb_restia_online_kontrola')) {
     function cb_restia_online_kontrola(bool $force = false)
     {
         $db = db();
 
         $cbUser = $_SESSION['cb_user'] ?? null;
-        $idUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
-        if ($idUser <= 0) {
-            return;
-        }
+        $idUserRaw = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
+        $idUser = ($idUserRaw > 0) ? $idUserRaw : null;
 
         $q = $db->query("SELECT id_akce FROM online_restia WHERE aktivni = 1 LIMIT 1");
         if ($q instanceof mysqli_result) {
@@ -143,6 +210,7 @@ if (!function_exists('cb_restia_online_kontrola')) {
         }
 
         cb_restia_online_kontrola_update_row($db, $idAkce, $zapisy, $aktualizace, $ignore, 0);
+        cb_restia_online_kontrola_notify_admin($db, $idAkce, $zapisy, $aktualizace, $ignore);
     }
 }
 
