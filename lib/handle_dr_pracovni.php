@@ -13,6 +13,11 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../db/db_dr_pracovni.php';
 require_once __DIR__ . '/../db/db_dr_pracovni_osoby.php';
+require_once __DIR__ . '/../db/db_zapis_denni_report.php';
+require_once __DIR__ . '/format_datum_cas.php';
+require_once __DIR__ . '/vypocty_report.php';
+require_once __DIR__ . '/vypocet_col_rozdil.php';
+require_once __DIR__ . '/denni_report_data.php';
 
 $sendJson = static function (int $code, array $data): void {
     http_response_code($code);
@@ -60,6 +65,63 @@ if (!$isAllowed) {
 
 try {
     $idDr = cb_db_dr_pracovni_ensure($conn, $idPob, $datum, $currentUserId, null, null);
+
+    if ($action === 'prepocet_col_rozdil') {
+        $workdayRange = cb_dt_workday_range_utc($datum);
+        $restiaSummary = cb_denni_report_restia_summary($conn, $idPob, $workdayRange);
+        $values = cb_vypocet_col_rozdil(
+            $conn,
+            $datum,
+            $restiaSummary,
+            cb_vcr_cash_from_post($_POST),
+            cb_vcr_people_from_post($_POST)
+        );
+        $rozdil = $values['rozdil'];
+        $colPomer = $values['col_pomer'];
+        $sendJson(200, [
+            'ok' => true,
+            'rozdil' => $rozdil === null ? null : round((float)$rozdil, 2),
+            'rozdil_label' => $rozdil === null ? '-- Kč' : cb_denni_report_format_money_whole((float)$rozdil),
+            'col_pomer' => $colPomer === null ? null : round((float)$colPomer, 6),
+            'col_label' => $colPomer === null ? '-- %' : number_format((float)$colPomer * 100, 2, ',', ' ') . ' %',
+        ]);
+    }
+
+    if ($action === 'final_save') {
+        $roleIds = [];
+        $currentUser = $_SESSION['cb_user'] ?? [];
+        $roleId = is_array($currentUser) ? (int)($currentUser['id_role'] ?? 0) : 0;
+        if ($roleId > 0) {
+            $roleIds[$roleId] = true;
+        }
+        $stmtRoles = $conn->prepare('SELECT id_role FROM user_role WHERE id_user = ?');
+        if ($stmtRoles !== false) {
+            $stmtRoles->bind_param('i', $currentUserId);
+            $stmtRoles->execute();
+            $rolesResult = $stmtRoles->get_result();
+            if ($rolesResult instanceof mysqli_result) {
+                while ($row = $rolesResult->fetch_assoc()) {
+                    $idRole = (int)($row['id_role'] ?? 0);
+                    if ($idRole > 0) {
+                        $roleIds[$idRole] = true;
+                    }
+                }
+                $rolesResult->free();
+            }
+            $stmtRoles->close();
+        }
+        if (!isset($roleIds[5]) && !isset($roleIds[7])) {
+            $sendJson(403, ['ok' => false, 'err' => 'Nemate pravo ulozit report']);
+        }
+
+        $workdayRange = cb_dt_workday_range_utc($datum);
+        $rozdilFormRaw = trim((string)($_POST['rozdil'] ?? ''));
+        $colPomerFormRaw = trim((string)($_POST['col_pomer'] ?? ''));
+        $rozdilForm = $rozdilFormRaw === '' ? null : cb_vcr_float($rozdilFormRaw);
+        $colPomerForm = $colPomerFormRaw === '' ? null : cb_vcr_float($colPomerFormRaw);
+        $idReportu = cb_db_zapis_denni_report($conn, $idPob, $datum, $currentUserId, $workdayRange, $rozdilForm, $colPomerForm);
+        $sendJson(200, ['ok' => true, 'id_reportu' => $idReportu]);
+    }
 
     $assertReportUser = static function (int $valueUserId, int $slotId) use ($conn, $sendJson, $idPob): void {
         if ($valueUserId <= 0 || !in_array($slotId, [1, 2], true)) {

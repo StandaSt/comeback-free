@@ -82,26 +82,8 @@ function cb_report_has_required_cash_values(?array $draft): bool
 
 function cb_report_vypocet_rozdil(array $restiaSummary, ?array $draft): ?float
 {
-    if (!cb_report_has_required_cash_values($draft)) {
-        return null;
-    }
-
-    $reportIncome = (float)($restiaSummary['wolt'] ?? 0)
-        + (float)($restiaSummary['bolt'] ?? 0)
-        + (float)($restiaSummary['dj'] ?? 0)
-        + (float)($restiaSummary['web'] ?? 0)
-        + (float)($restiaSummary['wolt_cash'] ?? 0)
-        + (float)($restiaSummary['dj_cash'] ?? 0)
-        + cb_report_money_value($draft, 'terminal')
-        + cb_report_money_value($draft, 'stravenky')
-        + cb_report_money_value($draft, 'hotovost');
-    $reportExpenses = cb_report_money_value($draft, 'vydaje_benzin')
-        + cb_report_money_value($draft, 'vydaje_auta')
-        + cb_report_money_value($draft, 'vydaje_suroviny')
-        + cb_report_money_value($draft, 'vydaje_ostatni')
-        + cb_report_money_value($draft, 'vydaje_phm_soukrome');
-
-    return $reportIncome + $reportExpenses - (float)($restiaSummary['trzba'] ?? 0);
+    require_once __DIR__ . '/vypocet_col_rozdil.php';
+    return cb_vcr_rozdil($restiaSummary, is_array($draft) ? $draft : []);
 }
 
 // lib/vypocty_report.php * Konec souboru

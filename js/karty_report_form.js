@@ -3,6 +3,7 @@
 
 (function (w) {
   const FORM_CONTROL_SELECTOR = 'input, select, button';
+  const reportCalcTimers = new WeakMap();
 
   function getFieldValue(root, selector) {
     const field = root.querySelector(selector);
@@ -103,62 +104,72 @@
     return String(numeric).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' Kč';
   }
 
-  function parseReportNumber(raw) {
-    const value = String(raw || '').replace(/\s+/g, '').replace(/Kč/gi, '').replace('%', '').replace(',', '.').replace(/[^0-9.-]/g, '');
-    if (value === '' || value === '-' || value === '.') return null;
-    const numeric = Number.parseFloat(value);
-    return Number.isNaN(numeric) ? null : numeric;
-  }
-
-  function reportMoneyNumber(root, selector, kind) {
-    const value = parseMoneyValue(getFieldValue(root, selector), kind);
-    if (value === '') return null;
-    const numeric = Number.parseFloat(value);
-    return Number.isNaN(numeric) ? null : numeric;
-  }
-
-  function restiaNumber(root, selector) {
-    const element = root.querySelector(selector);
-    if (!(element instanceof HTMLElement)) return 0;
-    return parseReportNumber(element.getAttribute('data-zr-value')) || 0;
-  }
-
-  function formatReportMoney(value) {
-    const rounded = Math.round(Number(value) || 0);
-    return String(rounded).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' Kč';
-  }
-
-  function syncReportDifference(root) {
-    const cash = reportMoneyNumber(root, '[data-zr-field="pokladna_hotovost"]', 'int');
-    const terminal = reportMoneyNumber(root, '[data-zr-field="pokladna_terminal"]', 'decimal');
-    const vouchers = reportMoneyNumber(root, '[data-zr-field="pokladna_stravenky"]', 'int');
-    if (cash === null || terminal === null || vouchers === null) {
-      return;
-    }
-
-    const income = restiaNumber(root, '[data-zr-restia-wolt]')
-      + restiaNumber(root, '[data-zr-restia-bolt]')
-      + restiaNumber(root, '[data-zr-restia-dj]')
-      + restiaNumber(root, '[data-zr-restia-web]')
-      + restiaNumber(root, '[data-zr-restia-wolt-cash]')
-      + restiaNumber(root, '[data-zr-restia-dj-cash]')
-      + terminal
-      + vouchers
-      + cash;
-    const expenses = (reportMoneyNumber(root, '[data-zr-field="vydaje_benzin"]', 'int') || 0)
-      + (reportMoneyNumber(root, '[data-zr-field="vydaje_auta"]', 'int') || 0)
-      + (reportMoneyNumber(root, '[data-zr-field="vydaje_suroviny"]', 'int') || 0)
-      + (reportMoneyNumber(root, '[data-zr-field="vydaje_ostatni"]', 'int') || 0)
-      + (reportMoneyNumber(root, '[data-zr-field="vydaje_phm_soukrome"]', 'int') || 0);
-    const difference = income + expenses - restiaNumber(root, '[data-zr-restia-trzba]');
+  function applyReportCalculation(root, json) {
     const visible = root.querySelector('[data-zr-report-rozdil]');
     const hidden = root.querySelector('[data-zr-report-rozdil-value]');
     if (visible instanceof HTMLElement) {
-      visible.textContent = formatReportMoney(difference);
+      visible.textContent = String(json && json.rozdil_label ? json.rozdil_label : '-- K\u010d');
     }
     if (hidden instanceof HTMLInputElement) {
-      hidden.value = difference.toFixed(2);
+      hidden.value = json && json.rozdil !== null && json.rozdil !== undefined ? Number(json.rozdil).toFixed(2) : '';
     }
+
+    const colVisible = root.querySelector('[data-zr-report-col]');
+    const colHidden = root.querySelector('[data-zr-report-col-value]');
+    if (colVisible instanceof HTMLElement) {
+      colVisible.textContent = String(json && json.col_label ? json.col_label : '-- %');
+    }
+    if (colHidden instanceof HTMLInputElement) {
+      colHidden.value = json && json.col_pomer !== null && json.col_pomer !== undefined ? Number(json.col_pomer).toFixed(6) : '';
+    }
+  }
+
+  function requestReportCalculation(root) {
+    const form = getForm(root);
+    if (!(form instanceof HTMLFormElement)) return Promise.resolve(null);
+
+    const body = new FormData(form);
+    body.set('dr_action', 'prepocet_col_rozdil');
+    body.set('id_pob', getReportValue(root, 'input[name="id_pob"]'));
+    body.set('datum_reportu', getReportValue(root, 'input[name="datum_reportu"]'));
+
+    return fetch(form.action || 'index.php', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'X-Comeback-Dr-Pracovni': '1'
+      },
+      body
+    }).then((res) => {
+      return res.text().then((text) => {
+        let json = null;
+        try {
+          json = JSON.parse(String(text || '{}'));
+        } catch (e) {
+          json = null;
+        }
+        if (!res.ok || !json || json.ok !== true) {
+          throw new Error((json && json.err) ? String(json.err) : 'Prepocet reportu selhal.');
+        }
+        applyReportCalculation(root, json);
+        return json;
+      });
+    });
+  }
+
+  function syncReportDifference(root) {
+    if (!(root instanceof HTMLElement)) return;
+    const oldTimer = reportCalcTimers.get(root);
+    if (oldTimer) {
+      w.clearTimeout(oldTimer);
+    }
+    const timer = w.setTimeout(() => {
+      reportCalcTimers.delete(root);
+      requestReportCalculation(root).catch((err) => {
+        if (w.console && w.console.warn) w.console.warn(err);
+      });
+    }, 200);
+    reportCalcTimers.set(root, timer);
   }
 
   function formatDuration(totalSeconds) {
@@ -272,6 +283,35 @@
         w.clearInterval(timer);
       }
     }, 1000);
+  }
+
+  function bindFinalSubmit(root) {
+    const button = root.querySelector('[data-zr-submit]');
+    if (!(button instanceof HTMLButtonElement) || button.getAttribute('data-zr-final-bound') === '1') {
+      return;
+    }
+    button.setAttribute('data-zr-final-bound', '1');
+
+    button.addEventListener('click', () => {
+      if (button.disabled || !syncSubmitButton(root)) {
+        return;
+      }
+      const originalText = button.textContent;
+      button.disabled = true;
+      button.textContent = 'Ukládám report';
+      saveDraftAction(root, 'final_save', {
+        rozdil: getReportValue(root, '[data-zr-report-rozdil-value]'),
+        col_pomer: getReportValue(root, '[data-zr-report-col-value]')
+      })
+        .then(() => {
+          button.textContent = 'Report uložen';
+        })
+        .catch((err) => {
+          button.disabled = false;
+          button.textContent = originalText || 'Report je zkontrolovaný, uložit';
+          if (w.alert) w.alert(err && err.message ? err.message : 'Uložení reportu selhalo.');
+        });
+    });
   }
 
   function syncWeekdayFromDate(root) {
@@ -472,6 +512,7 @@
     bindNoteInput(root);
     bindEnterNavigation(root);
     bindSubmitCountdown(root);
+    bindFinalSubmit(root);
     syncWeekdayFromDate(root);
     syncRequiredState(root);
     syncReportDifference(root);
@@ -517,6 +558,10 @@
   }
 
   w.cbSyncReportFormState = syncRequiredState;
+  w.cbPrepocetReportValues = function (root) {
+    const target = root instanceof HTMLElement ? root : document.querySelector('[data-zr-form]');
+    return target instanceof HTMLElement ? requestReportCalculation(target) : Promise.resolve(null);
+  };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initKartyReportForm);

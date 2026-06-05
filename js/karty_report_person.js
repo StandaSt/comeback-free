@@ -125,6 +125,17 @@
     });
   }
 
+  function syncReportState(root) {
+    if (typeof w.cbSyncReportFormState === 'function') {
+      w.cbSyncReportFormState(root);
+    }
+    if (typeof w.cbPrepocetReportValues === 'function') {
+      w.cbPrepocetReportValues(root).catch((err) => {
+        if (w.console && w.console.warn) w.console.warn(err);
+      });
+    }
+  }
+
   function buildRemoveButton() {
     const button = document.createElement('button');
     button.type = 'button';
@@ -474,9 +485,7 @@
     syncHoursForRow(savedRow);
     syncKuryrExtras(savedRow);
     sortPersonRows(list);
-    if (typeof w.cbSyncReportFormState === 'function') {
-      w.cbSyncReportFormState(root);
-    }
+    syncReportState(root);
     return savedRow;
   }
 
@@ -524,9 +533,7 @@
 
         syncHoursForRow(row);
         syncKuryrExtras(row);
-        if (typeof w.cbSyncReportFormState === 'function') {
-          w.cbSyncReportFormState(root);
-        }
+        syncReportState(root);
         if (target.hasAttribute('data-zr-car-check')) {
           saveKuryrForRow(root, row).catch((err) => {
             if (w.alert) w.alert(err && err.message ? err.message : 'Uložení kurýra selhalo.');
@@ -549,9 +556,7 @@
         if (!row) return;
         syncHoursForRow(row);
         syncKuryrExtras(row);
-        if (typeof w.cbSyncReportFormState === 'function') {
-          w.cbSyncReportFormState(root);
-        }
+        syncReportState(root);
       });
 
       list.addEventListener('focusin', (event) => {
@@ -577,9 +582,7 @@
             if (w.alert) w.alert(err && err.message ? err.message : 'Uložení času selhalo.');
           });
         }
-        if (typeof w.cbSyncReportFormState === 'function') {
-          w.cbSyncReportFormState(root);
-        }
+        syncReportState(root);
       });
 
       list.addEventListener('focusout', (event) => {
@@ -622,9 +625,7 @@
           savePersonAction(root, 'delete_person', type, idUser).then(() => {
             row.remove();
             addOption(root.querySelector('[data-zr-add-person="' + type + '"]'), idUser, name);
-            if (typeof w.cbSyncReportFormState === 'function') {
-              w.cbSyncReportFormState(root);
-            }
+            syncReportState(root);
           }).catch((err) => {
             if (w.alert) w.alert(err && err.message ? err.message : 'Smazání řádku selhalo.');
           });
@@ -642,9 +643,7 @@
     root.querySelectorAll('[data-zr-person-row]').forEach(syncHoursForRow);
     root.querySelectorAll('[data-zr-person-row]').forEach(syncKuryrExtras);
     root.querySelectorAll('[data-zr-saved-list]').forEach(sortPersonRows);
-    if (typeof w.cbSyncReportFormState === 'function') {
-      w.cbSyncReportFormState(root);
-    }
+    syncReportState(root);
   }
 
   function initKartyReportPerson() {

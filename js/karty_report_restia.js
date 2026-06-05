@@ -82,6 +82,11 @@
       const currentSide = form.querySelector('.zr_side');
       if (nextSide instanceof HTMLElement && currentSide instanceof HTMLElement) {
         currentSide.replaceWith(nextSide);
+        if (typeof w.cbPrepocetReportValues === 'function') {
+          w.cbPrepocetReportValues(form).catch((err) => {
+            if (w.console && w.console.warn) w.console.warn(err);
+          });
+        }
       }
     });
   }
