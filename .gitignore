@@ -15,7 +15,8 @@ Thumbs.db
 pomocne/
 csv/*.csv
 _kandidati/
-admin_testy
+admin_testy/
+google_data/
 
 # Playwright
 node_modules/
