@@ -440,6 +440,21 @@ function cb_denni_report_used_user_ids(array $rows): array
     return array_values(array_filter(array_map(static fn(array $row): int => (int)($row['id_user'] ?? 0), $rows)));
 }
 
+function cb_denni_report_docs_count_from_person_rows(array $rows): int
+{
+    $count = 0;
+    foreach ($rows as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        if ((int)($row['id_slot'] ?? 0) === 2 && (float)($row['vyplatit_phm'] ?? 0) > 0) {
+            $count++;
+        }
+    }
+
+    return $count;
+}
+
 function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): array
 {
     $renderMode = trim($renderMode);
@@ -684,6 +699,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
     $previousNote = cb_denni_report_previous_note($conn, $reportBranchId, $reportDateDt);
     
     $restiaSummary = cb_denni_report_restia_summary($conn, $reportBranchId, $workdayRange);
+    $restiaSummary['docs_count'] = cb_denni_report_docs_count_from_person_rows($draftPersonRows);
     
     $kuryrDeliveryData = cb_denni_report_kuryr_delivery_data($conn, $reportBranchId, $workdayRange, $kuryrRows);
     $kuryrRows = $kuryrDeliveryData['kuryr_rows'];

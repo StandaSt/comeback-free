@@ -42,8 +42,6 @@ if (
                 WHERE id_user = ?
                   AND color IS NULL
                   AND ikon IS NULL
-                  AND col IS NULL
-                  AND line IS NULL
                   AND poradi IS NULL
             ');
             if (!$stmtClean) {

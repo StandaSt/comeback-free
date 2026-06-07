@@ -151,7 +151,7 @@ function cb_vcr_col_cost(mysqli $conn, string $datumReportu, array $people): flo
 
     $idList = implode(',', array_map('intval', array_keys($ids)));
     $sql = '
-        SELECT s.id_user, s.je_manager_col, s.naklad_col_hod
+        SELECT s.id_user, s.id_mzda_typ, s.naklad_col_hod, s.naklad_col_den
         FROM hr_sazby s
         INNER JOIN (
             SELECT id_user, MAX(platnost_od) AS platnost_od
@@ -174,8 +174,12 @@ function cb_vcr_col_cost(mysqli $conn, string $datumReportu, array $people): flo
     if ($result instanceof mysqli_result) {
         while ($row = $result->fetch_assoc()) {
             $idUser = (int)($row['id_user'] ?? 0);
-            if ($idUser > 0 && (int)($row['je_manager_col'] ?? 0) !== 1) {
-                $rates[$idUser] = cb_vcr_float($row['naklad_col_hod'] ?? 0);
+            if ($idUser > 0) {
+                $rates[$idUser] = [
+                    'type' => (int)($row['id_mzda_typ'] ?? 1),
+                    'hour' => cb_vcr_float($row['naklad_col_hod'] ?? 0),
+                    'day' => cb_vcr_float($row['naklad_col_den'] ?? 0),
+                ];
             }
         }
         $result->free();
@@ -183,11 +187,24 @@ function cb_vcr_col_cost(mysqli $conn, string $datumReportu, array $people): flo
     $stmt->close();
 
     $cost = 0.0;
+    $fixedAdded = [];
     foreach ($people as $person) {
         $idUser = (int)($person['id_user'] ?? 0);
         $hours = cb_vcr_float($person['hours'] ?? 0);
-        if ($idUser > 0 && $hours > 0 && isset($rates[$idUser])) {
-            $cost += $hours * (float)$rates[$idUser];
+        if ($idUser <= 0 || !isset($rates[$idUser])) {
+            continue;
+        }
+
+        if ((int)$rates[$idUser]['type'] === 2) {
+            if (!isset($fixedAdded[$idUser])) {
+                $cost += (float)$rates[$idUser]['day'];
+                $fixedAdded[$idUser] = true;
+            }
+            continue;
+        }
+
+        if ($hours > 0) {
+            $cost += $hours * (float)$rates[$idUser]['hour'];
         }
     }
 

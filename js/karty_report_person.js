@@ -79,6 +79,40 @@
     });
   }
 
+  function saveMoneyAction(root, field, value) {
+    const form = getForm(root);
+    if (!(form instanceof HTMLFormElement) || String(field || '') === '') return Promise.resolve({ ok: true });
+
+    const data = new FormData();
+    data.set('dr_action', 'update_money');
+    data.set('id_pob', getReportValue(root, 'input[name="id_pob"]'));
+    data.set('datum_reportu', getReportValue(root, 'input[name="datum_reportu"]'));
+    data.set('field', String(field));
+    data.set('value', String(value ?? ''));
+
+    return fetch(form.action || 'index.php', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'X-Comeback-Dr-Pracovni': '1'
+      },
+      body: data
+    }).then((res) => {
+      return res.text().then((text) => {
+        let json = null;
+        try {
+          json = JSON.parse(String(text || '{}'));
+        } catch (e) {
+          json = null;
+        }
+        if (!res.ok || !json || json.ok !== true) {
+          throw new Error((json && json.err) ? String(json.err) : 'Uložení PHM selhalo.');
+        }
+        return json;
+      });
+    });
+  }
+
   function getRowType(row) {
     return String(row instanceof HTMLElement ? row.getAttribute('data-zr-person-row') || '' : '');
   }
@@ -134,6 +168,34 @@
         if (w.console && w.console.warn) w.console.warn(err);
       });
     }
+  }
+
+  function formatWholeMoney(value) {
+    const numeric = Math.max(0, Math.round(Number(value) || 0));
+    return String(numeric).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' Kč';
+  }
+
+  function syncPrivateFuelExpense(root, persist) {
+    const form = getForm(root);
+    if (!(form instanceof HTMLFormElement)) return Promise.resolve({ ok: true });
+
+    let total = 0;
+    form.querySelectorAll('[data-zr-person-row="kuryr"] [data-zr-phm-hidden]').forEach((input) => {
+      if (input instanceof HTMLInputElement) {
+        total += Number.parseFloat(String(input.value || '0').replace(',', '.')) || 0;
+      }
+    });
+
+    const field = form.querySelector('[data-zr-field="vydaje_phm_soukrome"]');
+    if (field instanceof HTMLInputElement) {
+      field.value = formatWholeMoney(total);
+    }
+
+    if (typeof w.cbSyncReportFormState === 'function') {
+      w.cbSyncReportFormState(form);
+    }
+
+    return persist ? saveMoneyAction(form, 'vydaje_phm_soukrome', String(Math.round(total))) : Promise.resolve({ ok: true });
   }
 
   function buildRemoveButton() {
@@ -323,7 +385,8 @@
       const restia = Number.parseInt(restiaEl.value || '0', 10) || 0;
       const manual = Number.parseInt(manualEl.value || '0', 10) || 0;
       const total = restia + manual;
-      const phm = total * 45;
+      const hasCar = carCheck instanceof HTMLInputElement && carCheck.checked;
+      const phm = hasCar ? total * 45 : 0;
       totalEl.value = String(total);
       if (restiaValueEl instanceof HTMLElement) {
         restiaValueEl.textContent = String(restia);
@@ -336,6 +399,10 @@
       }
       if (carCheck instanceof HTMLInputElement && carHiddenEl instanceof HTMLInputElement) {
         carHiddenEl.value = carCheck.checked ? '1' : '0';
+      }
+      const form = row.closest('[data-zr-form]');
+      if (form instanceof HTMLFormElement) {
+        syncPrivateFuelExpense(form, false);
       }
     }
   }
@@ -423,7 +490,7 @@
     if (type === 'kuryr') {
       const deliveryRestiaValue = String(getDeliveryCountForName(list, name));
       const deliveryTotalValue = deliveryRestiaValue;
-      const phmValue = String((Number.parseInt(deliveryTotalValue, 10) || 0) * 45);
+      const phmValue = '0';
 
       const deliveryRestiaCell = buildSavedCell(deliveryRestiaValue);
       deliveryRestiaCell.className = 'txt_c';
@@ -538,6 +605,10 @@
           saveKuryrForRow(root, row).catch((err) => {
             if (w.alert) w.alert(err && err.message ? err.message : 'Uložení kurýra selhalo.');
           });
+          syncPrivateFuelExpense(root, true).catch((err) => {
+            if (w.alert) w.alert(err && err.message ? err.message : 'Uložení PHM selhalo.');
+          });
+          syncReportState(root);
         }
       });
 
@@ -605,6 +676,10 @@
           saveKuryrForRow(root, row).catch((err) => {
             if (w.alert) w.alert(err && err.message ? err.message : 'Uložení kurýra selhalo.');
           });
+          syncPrivateFuelExpense(root, true).catch((err) => {
+            if (w.alert) w.alert(err && err.message ? err.message : 'Uložení PHM selhalo.');
+          });
+          syncReportState(root);
         }
       });
 
@@ -625,6 +700,9 @@
           savePersonAction(root, 'delete_person', type, idUser).then(() => {
             row.remove();
             addOption(root.querySelector('[data-zr-add-person="' + type + '"]'), idUser, name);
+            syncPrivateFuelExpense(root, true).catch((err) => {
+              if (w.alert) w.alert(err && err.message ? err.message : 'Uložení PHM selhalo.');
+            });
             syncReportState(root);
           }).catch((err) => {
             if (w.alert) w.alert(err && err.message ? err.message : 'Smazání řádku selhalo.');

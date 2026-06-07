@@ -477,6 +477,67 @@ if (!function_exists('cb_restia_online_obj_import_find')) {
     }
 }
 
+if (!function_exists('cb_restia_online_last_imported_workday_date')) {
+    function cb_restia_online_last_imported_workday_date(mysqli $conn, int $idPob): string
+    {
+        if ($idPob <= 0) {
+            return '';
+        }
+
+        $typ = 'online';
+        $stav = 'ok';
+        $stmt = $conn->prepare('
+            SELECT datum_od
+            FROM obj_import
+            WHERE typ_importu = ?
+              AND id_pob = ?
+              AND stav = ?
+              AND datum_od IS NOT NULL
+            ORDER BY datum_od DESC
+            LIMIT 1
+        ');
+        if ($stmt === false) {
+            throw new RuntimeException('DB prepare selhal: obj_import last imported day.');
+        }
+
+        $stmt->bind_param('sis', $typ, $idPob, $stav);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $row = ($res instanceof mysqli_result) ? $res->fetch_assoc() : null;
+        if ($res instanceof mysqli_result) {
+            $res->free();
+        }
+        $stmt->close();
+
+        $datumOd = trim((string)($row['datum_od'] ?? ''));
+        if ($datumOd === '') {
+            return '';
+        }
+
+        return cb_dt_workday_date($datumOd, 8);
+    }
+}
+
+if (!function_exists('cb_restia_online_import_dates')) {
+    function cb_restia_online_import_dates(mysqli $conn, int $idPob, string $currentDate): array
+    {
+        $currentDate = cb_restia_online_normalize_ymd($currentDate);
+        $startDate = cb_restia_online_last_imported_workday_date($conn, $idPob);
+        if ($startDate === '' || strcmp($startDate, $currentDate) > 0) {
+            $startDate = $currentDate;
+        }
+
+        $dates = [];
+        $date = $startDate;
+        while (strcmp($date, $currentDate) <= 0) {
+            $dates[] = $date;
+            $date = cb_restia_online_next_date($date);
+        }
+
+        return $dates;
+    }
+}
+
 if (!function_exists('cb_restia_online_obj_import_begin')) {
     function cb_restia_online_obj_import_begin(mysqli $conn, int $idPob, string $fromUtcDb, string $toUtcDb): int
     {
@@ -1373,19 +1434,22 @@ if (!function_exists('cb_restia_online_run')) {
         try {
             $auth = cb_restia_online_get_auth();
 
-            $date = cb_restia_online_current_workday_date();
+            $currentDate = cb_restia_online_current_workday_date();
             $branches = cb_restia_online_active_branches($conn);
             foreach ($branches as $branch) {
-                $day = cb_restia_online_import_day($conn, $auth, $branch, $date);
-                $zapisy += (int)($day['nove'] ?? 0);
-                $aktualizace += (int)($day['aktualizace'] ?? 0);
-                $ignore += (int)($day['ignore'] ?? 0);
-                cb_restia_online_progress_emit([
-                    'zapisy' => $zapisy,
-                    'aktualizace' => $aktualizace,
-                    'ignore' => $ignore,
-                    'finished' => 0,
-                ]);
+                $dates = cb_restia_online_import_dates($conn, (int)($branch['id_pob'] ?? 0), $currentDate);
+                foreach ($dates as $date) {
+                    $day = cb_restia_online_import_day($conn, $auth, $branch, $date);
+                    $zapisy += (int)($day['nove'] ?? 0);
+                    $aktualizace += (int)($day['aktualizace'] ?? 0);
+                    $ignore += (int)($day['ignore'] ?? 0);
+                    cb_restia_online_progress_emit([
+                        'zapisy' => $zapisy,
+                        'aktualizace' => $aktualizace,
+                        'ignore' => $ignore,
+                        'finished' => 0,
+                    ]);
+                }
             }
         } catch (Throwable $e) {
             $chyba = $e->getMessage();

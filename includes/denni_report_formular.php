@@ -70,12 +70,12 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput): 
         . '<td style="width:58px;">' . $renderTimeInput('kuryr_konec[]', $end, 'data-zr-end') . '</td>'
         . '<td class="zr_person_cell_break" style="width:44px;"><input type="text" inputmode="decimal" name="kuryr_pauza_hod[]" value="' . h($break) . '" style="width:100%;text-align:center;" data-zr-break></td>'
         . '<td style="width:70px;"><strong class="zr_saved_value" data-zr-hours>' . h($hours) . ' hod.</strong><input type="hidden" name="kuryr_hodiny[]" value="' . h($hours) . '" data-zr-hours-hidden></td>'
-        . '<td class="txt_c" style="width:48px;"><strong class="zr_saved_value">' . h((string)$deliveryRestia) . '</strong><input type="hidden" name="kuryr_pocet_rozvozu_restia[]" value="' . h((string)$deliveryRestia) . '"></td>'
-        . '<td class="txt_c" style="width:48px;"><strong class="zr_saved_value">' . h((string)$deliveryManual) . '</strong><input type="hidden" name="kuryr_pocet_rozvozu_manual[]" value="' . h((string)$deliveryManual) . '">'
-        . '<input type="hidden" name="kuryr_pocet_rozvozu[]" value="' . h((string)$deliveryTotal) . '">'
+        . '<td class="txt_c" style="width:48px;"><strong class="zr_saved_value" data-zr-delivery-restia-value>' . h((string)$deliveryRestia) . '</strong><input type="hidden" name="kuryr_pocet_rozvozu_restia[]" value="' . h((string)$deliveryRestia) . '" data-zr-editor-field="delivery_restia"></td>'
+        . '<td class="txt_c" style="width:48px;"><input class="zr_delivery_input txt_c" type="text" inputmode="numeric" name="kuryr_pocet_rozvozu_manual[]" value="' . h((string)$deliveryManual) . '" style="width:100%;" data-zr-editor-field="delivery_manual" data-zr-int-short>'
+        . '<input type="hidden" name="kuryr_pocet_rozvozu[]" value="' . h((string)$deliveryTotal) . '" data-zr-delivery-total>'
         . '</td>'
-        . '<td class="txt_c" style="width:34px;"><strong class="zr_saved_value">' . h($car === 1 ? 'Ano' : 'Ne') . '</strong><input type="hidden" name="kuryr_vlastni_vuz[]" value="' . h((string)$car) . '"></td>'
-        . '<td><strong class="zr_saved_value">' . h(cb_denni_report_format_money($phm)) . '</strong><input type="hidden" name="kuryr_vyplatit_phm[]" value="' . h(number_format($phm, 2, '.', '')) . '"></td>'
+        . '<td class="txt_c" style="width:34px;"><span class="zr_chk txt_c zr_person_cell_car zr_person_cell_car_inline"><input type="checkbox" value="1"' . ($car === 1 ? ' checked' : '') . ' data-zr-editor-field="car" data-zr-car-check></span><input type="hidden" name="kuryr_vlastni_vuz[]" value="' . h((string)$car) . '" data-zr-car-hidden></td>'
+        . '<td><strong class="zr_saved_value" data-zr-phm-value>' . h(cb_denni_report_format_money($phm)) . '</strong><input type="hidden" name="kuryr_vyplatit_phm[]" value="' . h(number_format($phm, 2, '.', '')) . '" data-zr-phm-hidden></td>'
         . '</tr>';
 };
 
@@ -235,7 +235,7 @@ $card_min_html = (string)ob_get_clean();
                 <th class="txt_l" style="width:70px;white-space:nowrap;">Odprac.</th>
                 <th class="txt_l" style="width:48px;white-space:nowrap;">Rozvozů</th>
                 <th class="txt_l" style="width:48px;white-space:nowrap;">Ručně</th>
-                <th class="txt_l" style="width:34px;white-space:nowrap;">Vůz</th>
+                <th class="txt_l" style="width:34px;white-space:nowrap;">Vl. vůz</th>
                 <th class="txt_l" style="white-space:nowrap;">PHM</th>
               </tr>
             </thead>

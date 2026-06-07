@@ -89,7 +89,7 @@ function cb_db_zapis_denni_report(mysqli $conn, int $idPob, string $datumReportu
         $vydajeSuroviny = (float)($draftRow['vydaje_suroviny'] ?? 0);
         $vydajeOstatni = (float)($draftRow['vydaje_ostatni'] ?? 0);
         $vydajePhmSoukrome = (float)($draftRow['vydaje_phm_soukrome'] ?? 0);
-        $vydajeDokladyKs = 0;
+        $vydajeDokladyKs = cb_denni_report_docs_count_from_person_rows($rawPersonRows);
         $stmtPokladna->bind_param('idddddddddi', $idReportu, $hotovost, $terminal, $stravenky, $rozdil, $vydajeBenzin, $vydajeAuta, $vydajeSuroviny, $vydajeOstatni, $vydajePhmSoukrome, $vydajeDokladyKs);
         $stmtPokladna->execute();
         $stmtPokladna->close();
