@@ -14,9 +14,7 @@ declare(strict_types=1);
  * - stav: ceka|ok|ne|exp
  * - zbyva_sec: int (jen pro stav=ceka)
  */
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
+require_once __DIR__ . '/session_boot.php';
 
 require_once __DIR__ . '/app.php';
 require_once __DIR__ . '/system.php';

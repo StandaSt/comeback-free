@@ -17,9 +17,7 @@ declare(strict_types=1);
  * - login_ok se nastaví AŽ po schválení 2FA (mobil), nebo hned při LOCAL / prvním loginu bez zařízení
  * - LOCAL: 2FA lze vypnout přes set_system.on_2fa (notifikace z LOCAL nechodí)
  */
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
+require_once __DIR__ . '/session_boot.php';
 
 require_once __DIR__ . '/app.php';
 require_once __DIR__ . '/system.php';

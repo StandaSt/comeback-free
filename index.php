@@ -3,9 +3,7 @@
 
 declare(strict_types=1);
 
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
+require_once __DIR__ . '/lib/session_boot.php';
 require_once __DIR__ . '/lib/app.php';
 require_once __DIR__ . '/lib/system.php';
 require_once __DIR__ . '/config/secrets.php';
@@ -41,9 +39,6 @@ require_once __DIR__ . '/lib/logout_handler.php';
 require_once __DIR__ . '/lib/json_registrace.php';
 if (!empty($_SESSION['login_ok']) && !$cbIsPartialRequest && !$cbIsCardRequest && !$cbIsMaxFormRequest) {
     require_once __DIR__ . '/lib/restia_online_kontrola.php';
-    if (session_status() !== PHP_SESSION_ACTIVE) {
-        session_start();
-    }
 }
 if (!empty($_SESSION['login_ok'])) {
     require_once __DIR__ . '/lib/post_akce.php';

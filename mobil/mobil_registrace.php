@@ -19,9 +19,7 @@ declare(strict_types=1);
  * CSS:
  * - používá jednotné třídy z style/1/modal_alert.css (modal-page, modal, modal-btn, atd.)
  */
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
+require_once __DIR__ . '/../lib/session_boot.php';
 
 require_once __DIR__ . '/../lib/app.php';
 require_once __DIR__ . '/../lib/system.php';

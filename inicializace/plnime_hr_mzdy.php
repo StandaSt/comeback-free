@@ -2,9 +2,7 @@
 // inicializace/plnime_hr_mzdy.php * Verze: V3 * Aktualizace: 03.06.2026
 declare(strict_types=1);
 
-if (PHP_SAPI !== 'cli' && (!defined('HR_MZDY_HELPERS_ONLY') || HR_MZDY_HELPERS_ONLY !== true) && session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
+require_once __DIR__ . '/../lib/session_boot.php';
 
 require_once __DIR__ . '/../lib/app.php';
 require_once __DIR__ . '/../config/secrets.php';

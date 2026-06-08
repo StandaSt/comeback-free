@@ -2,9 +2,7 @@
 // inicializace/kontrola_restia_objednavky.php * Verze: V1 * Aktualizace: 27.05.2026
 declare(strict_types=1);
 
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
+require_once __DIR__ . '/../lib/session_boot.php';
 
 require_once __DIR__ . '/../lib/app.php';
 require_once __DIR__ . '/../lib/system.php';

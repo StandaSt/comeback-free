@@ -2,9 +2,7 @@
 // includes/select_card_ikon.php * Verze: V2 * Aktualizace: 07.04.2026
 declare(strict_types=1);
 
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
+require_once __DIR__ . '/../lib/session_boot.php';
 
 require_once __DIR__ . '/../db/db_connect.php';
 require_once __DIR__ . '/../lib/app.php';
