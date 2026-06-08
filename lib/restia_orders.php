@@ -17,9 +17,7 @@ declare(strict_types=1);
  * - neobnovuje token (musí být platný v restia_token)
  * - do TXT zapisuje průběh krok za krokem (krůčky), abychom viděli, kam to došlo
  */
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
+require_once __DIR__ . '/session_boot.php';
 
 require_once __DIR__ . '/app.php';
 require_once __DIR__ . '/system.php';

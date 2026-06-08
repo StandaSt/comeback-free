@@ -2,8 +2,8 @@
 // lib/restia_online.php * Verze: V5 * Aktualizace: 28.04.2026
 declare(strict_types=1);
 
-if (empty($GLOBALS['cb_restia_online_session_ready']) && session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
+if (empty($GLOBALS['cb_restia_online_session_ready'])) {
+    require_once __DIR__ . '/session_boot.php';
 }
 
 require_once __DIR__ . '/../lib/app.php';

@@ -16,9 +16,7 @@ declare(strict_types=1);
  *     - pomocne/restia_menu.json
  * - token se bere z DB tabulky restia_token (id_restia_token=1)
  */
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
+require_once __DIR__ . '/session_boot.php';
 
 require_once __DIR__ . '/app.php';
 require_once __DIR__ . '/system.php';

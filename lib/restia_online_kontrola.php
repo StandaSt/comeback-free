@@ -9,8 +9,8 @@ if (PHP_SAPI === 'cli') {
         $_SESSION = [];
     }
     $GLOBALS['cb_restia_online_session_ready'] = true;
-} elseif (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
+} else {
+    require_once __DIR__ . '/session_boot.php';
 }
 
 require_once __DIR__ . '/app.php';

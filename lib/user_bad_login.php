@@ -64,4 +64,16 @@ function cb_user_bad_login_log(string $email, string $heslo): void
 }
 
 // lib/user_bad_login.php * Verze: V4 * Aktualizace: 20.2.2026 * Počet řádků: 69
+/**
+ * Vrati true, kdyz je email docasne blokovany kvuli opakovanym neuspesnym pokusum.
+ */
+function cb_user_bad_login_is_blocked(string $email, int $maxAttempts = 5, int $minutes = 15): bool
+{
+    try {
+        return db_bad_login_count_recent_by_email($email, $minutes) >= $maxAttempts;
+    } catch (Throwable $e) {
+        return false;
+    }
+}
+
 // Konec souboru

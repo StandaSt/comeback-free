@@ -104,4 +104,38 @@ if (!function_exists('db_bad_login_log')) {
 }
 
 // db/db_bad_login.php * Verze: V3 * Aktualizace: 20.2.2026 * Počet řádků: 110
+if (!function_exists('db_bad_login_count_recent_by_email')) {
+
+    /**
+     * Vrati pocet neuspesnych pokusu pro stejny email za poslednich X minut.
+     */
+    function db_bad_login_count_recent_by_email(string $email, int $minutes): int
+    {
+        $email = trim($email);
+        $minutes = (int)$minutes;
+        if ($minutes <= 0) {
+            $minutes = 1;
+        }
+
+        $conn = db();
+        $stmt = $conn->prepare(
+            'SELECT COUNT(*) AS cnt
+             FROM user_bad_login
+             WHERE email = ?
+               AND kdy >= (NOW() - INTERVAL ? MINUTE)'
+        );
+        if ($stmt === false) {
+            throw new RuntimeException('DB: prepare selhal (user_bad_login count).');
+        }
+
+        $stmt->bind_param('si', $email, $minutes);
+        $stmt->execute();
+        $stmt->bind_result($cnt);
+        $stmt->fetch();
+        $stmt->close();
+
+        return (int)$cnt;
+    }
+}
+
 // Konec souboru

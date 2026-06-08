@@ -3,9 +3,7 @@
 // karty/go_test.php * Verze: V9 * Aktualizace: 21.04.2026
 declare(strict_types=1);
 
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
+require_once __DIR__ . '/../lib/session_boot.php';
 
 $card_min_html = '<p class="card_text txt_seda odstup_vnejsi_0">Vyber a spuštění testovacích scriptů z admin_testy/ a vybraných podsložek.</p>';
 

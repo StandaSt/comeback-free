@@ -55,6 +55,10 @@ try {
     }
 
 
+    if (cb_user_bad_login_is_blocked($email, 5, 15)) {
+        throw new RuntimeException('Přihlášení se nezdařilo.');
+    }
+
     try {
         $login = cb_smeny_graphql(
             $GQL_URL,
