@@ -188,3 +188,4 @@ Vždy nejprve ověř realitu v kódu, ne domněnky.
 - Pro textové změny (hlavně česká diakritika) používej pouze `apply_patch`; nepoužívej postupy, které mohou změnit kódování textu.
 - Po každé textové úpravě zkontroluj celý dotčený soubor, že diakritika zůstala v pořádku (nejen upravený blok).
 - Po každé úpravě PHP souboru vždy ověř syntaxi (`php -l`) a potvrď, že soubor zůstal v UTF-8 bez BOM.
+- Pokud terminalovy vypis ukaze rozbitou cestinu, nejdriv over skutecny obsah primo v souboru pres UTF-8 cteni nebo kontrolu bajtu. Dokud to neni potvrzene v souboru, text neopravuj.
