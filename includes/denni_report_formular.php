@@ -8,10 +8,12 @@ $renderUserSelectOptions = static function (array $options, int $selectedId, str
     foreach ($options as $option) {
         $idUser = (int)($option['id_user'] ?? 0);
         $name = trim((string)($option['name'] ?? ''));
+        $restiaName = trim((string)($option['restia_name'] ?? ''));
         if ($idUser <= 0 || $name === '' || isset($exclude[$idUser])) {
             continue;
         }
-        $html .= '<option value="' . h((string)$idUser) . '"' . ($idUser === $selectedId ? ' selected' : '') . '>' . h($name) . '</option>';
+        $restiaAttr = $restiaName !== '' ? ' data-zr-restia-name="' . h($restiaName) . '"' : '';
+        $html .= '<option value="' . h((string)$idUser) . '"' . $restiaAttr . ($idUser === $selectedId ? ' selected' : '') . '>' . h($name) . '</option>';
     }
     return $html;
 };
@@ -51,6 +53,7 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput): 
     $idDrOsoby = (int)($row['id_dr_osoby'] ?? 0);
     $idUser = (int)($row['id_user'] ?? 0);
     $name = trim((string)($row['name'] ?? ''));
+    $restiaName = trim((string)($row['restia_name'] ?? ''));
     $start = trim((string)($row['start'] ?? ''));
     $end = trim((string)($row['end'] ?? ''));
     $break = trim((string)($row['break'] ?? '0'));
@@ -61,7 +64,7 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput): 
     $car = (int)($row['car'] ?? 0);
     $phm = (float)($row['phm'] ?? 0);
     return ''
-        . '<tr data-zr-person-row="kuryr" data-zr-id-user="' . h((string)$idUser) . '" data-zr-id-dr-osoby="' . h((string)$idDrOsoby) . '">'
+        . '<tr data-zr-person-row="kuryr" data-zr-id-user="' . h((string)$idUser) . '" data-zr-id-dr-osoby="' . h((string)$idDrOsoby) . '"' . ($restiaName !== '' ? ' data-zr-restia-name="' . h($restiaName) . '"' : '') . '>'
         . '<td style="width:220px;"><button type="button" class="zr_row_remove" data-zr-remove-row title="Odebrat" aria-label="Odebrat">×</button><strong class="zr_saved_value">' . h($name) . '</strong>'
         . '<input type="hidden" name="kuryr_jmeno[]" value="' . h($name) . '">'
         . '<input type="hidden" name="kuryr_id_user[]" value="' . h((string)$idUser) . '">'

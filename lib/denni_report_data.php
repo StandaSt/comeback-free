@@ -41,6 +41,11 @@ function cb_denni_report_person_full_name(?string $jmeno, ?string $prijmeni = nu
     return trim(trim((string)$jmeno) . ' ' . trim((string)$prijmeni));
 }
 
+function cb_denni_report_person_display_name(?string $jmeno, ?string $prijmeni = null): string
+{
+    return trim(trim((string)$prijmeni) . ' ' . trim((string)$jmeno));
+}
+
 function cb_denni_report_user_full_name_by_id(mysqli $conn, ?int $idUser): string
 {
     if ($idUser === null || $idUser <= 0) {
@@ -70,7 +75,10 @@ function cb_denni_report_branch_slot_user_options(mysqli $conn, int $idPob, int 
     }
 
     $sql = "
-        SELECT DISTINCT u.id_user, TRIM(CONCAT_WS(' ', u.jmeno, u.prijmeni)) AS full_name
+        SELECT DISTINCT
+            u.id_user,
+            TRIM(CONCAT_WS(' ', u.jmeno, u.prijmeni)) AS full_name,
+            TRIM(CONCAT_WS(' ', u.prijmeni, u.jmeno)) AS display_name
         FROM user u
         INNER JOIN user_pobocka up ON up.id_user = u.id_user
         INNER JOIN user_slot us ON us.id_user = u.id_user
@@ -78,7 +86,7 @@ function cb_denni_report_branch_slot_user_options(mysqli $conn, int $idPob, int 
           AND up.id_pob = ?
           AND us.id_slot = ?
         HAVING full_name <> ''
-        ORDER BY full_name ASC
+        ORDER BY display_name ASC
     ";
 
     $stmt = $conn->prepare($sql);
@@ -91,8 +99,13 @@ function cb_denni_report_branch_slot_user_options(mysqli $conn, int $idPob, int 
             while ($row = $result->fetch_assoc()) {
                 $idUser = (int)($row['id_user'] ?? 0);
                 $name = trim((string)($row['full_name'] ?? ''));
+                $displayName = trim((string)($row['display_name'] ?? ''));
                 if ($idUser > 0 && $name !== '') {
-                    $users[$idUser] = ['id_user' => $idUser, 'name' => $name];
+                    $users[$idUser] = [
+                        'id_user' => $idUser,
+                        'name' => $displayName !== '' ? $displayName : $name,
+                        'restia_name' => $name,
+                    ];
                 }
             }
             $result->free();
@@ -362,7 +375,7 @@ function cb_denni_report_kuryr_delivery_data(mysqli $conn, int $idPob, array $wo
     }
 
     foreach ($kuryrRows as &$kuryrRow) {
-        $kuryrName = trim((string)($kuryrRow['name'] ?? ''));
+        $kuryrName = trim((string)($kuryrRow['restia_name'] ?? $kuryrRow['name'] ?? ''));
         $deliveryRestia = (int)($kuryrDeliveryCounts[$kuryrName] ?? 0);
         $deliveryManual = (int)($kuryrRow['delivery_manual'] ?? 0);
         $kuryrRow['delivery_restia'] = $deliveryRestia;
@@ -413,7 +426,8 @@ function cb_denni_report_person_rows(array $draftPersonRows): array
         $personRow = [
             'id_dr_osoby' => (int)($row['id_dr_osoby'] ?? 0),
             'id_user' => (int)($row['id_user'] ?? 0),
-            'name' => cb_denni_report_person_full_name($row['jmeno'] ?? '', $row['prijmeni'] ?? ''),
+            'name' => cb_denni_report_person_display_name($row['jmeno'] ?? '', $row['prijmeni'] ?? ''),
+            'restia_name' => cb_denni_report_person_full_name($row['jmeno'] ?? '', $row['prijmeni'] ?? ''),
             'start' => cb_denni_report_format_time((string)($row['smena_od'] ?? '')),
             'end' => cb_denni_report_format_time((string)($row['smena_do'] ?? '')),
             'break' => $row['pauza'] === null ? '' : cb_denni_report_format_input_number((float)$row['pauza']),

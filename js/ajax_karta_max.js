@@ -680,6 +680,7 @@
   function handleClick(event) {
     const target = event.target instanceof Element ? event.target.closest('button, input[type="submit"]') : null;
     if (!(target instanceof HTMLElement)) return;
+    if (target instanceof HTMLButtonElement && String(target.type || '').toLowerCase() !== 'submit') return;
     const form = resolveFormFromSubmitter(target);
     if (!(form instanceof HTMLFormElement)) return;
     if (isTableFilterForm(form)) return;

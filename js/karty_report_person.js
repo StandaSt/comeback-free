@@ -419,12 +419,15 @@
     }
   }
 
-  function addOption(select, idUser, name) {
+  function addOption(select, idUser, name, restiaName) {
     if (!(select instanceof HTMLSelectElement) || !idUser || String(name || '').trim() === '') return;
     if (select.querySelector('option[value="' + String(idUser).replace(/"/g, '') + '"]')) return;
     const option = document.createElement('option');
     option.value = String(idUser);
     option.textContent = String(name || '').trim();
+    if (String(restiaName || '').trim() !== '') {
+      option.setAttribute('data-zr-restia-name', String(restiaName || '').trim());
+    }
     select.appendChild(option);
   }
 
@@ -436,7 +439,7 @@
     }
   }
 
-  function addPersonRow(root, type, idUser, name) {
+  function addPersonRow(root, type, idUser, name, restiaName) {
     const list = getSavedList(root, type);
     if (!(list instanceof HTMLElement) || !idUser || String(name || '').trim() === '') return null;
 
@@ -444,6 +447,9 @@
     savedRow.setAttribute('data-zr-person-row', type);
     savedRow.setAttribute('data-zr-id-user', String(idUser));
     savedRow.setAttribute('data-zr-id-dr-osoby', '0');
+    if (String(restiaName || '').trim() !== '') {
+      savedRow.setAttribute('data-zr-restia-name', String(restiaName || '').trim());
+    }
 
     const nameCell = buildSavedCell(name);
     nameCell.style.width = '220px';
@@ -488,7 +494,7 @@
     savedRow.appendChild(hoursCell);
 
     if (type === 'kuryr') {
-      const deliveryRestiaValue = String(getDeliveryCountForName(list, name));
+      const deliveryRestiaValue = String(getDeliveryCountForName(list, String(restiaName || '').trim() || name));
       const deliveryTotalValue = deliveryRestiaValue;
       const phmValue = '0';
 
@@ -567,8 +573,9 @@
         const idUser = Number.parseInt(String(select.value || '0'), 10) || 0;
         const selectedOption = select.selectedOptions && select.selectedOptions.length ? select.selectedOptions[0] : null;
         const name = selectedOption instanceof HTMLOptionElement ? String(selectedOption.textContent || '').trim() : '';
+        const restiaName = selectedOption instanceof HTMLOptionElement ? String(selectedOption.getAttribute('data-zr-restia-name') || '').trim() : '';
         if (type !== '' && idUser > 0 && name !== '') {
-          const row = addPersonRow(root, type, idUser, name);
+          const row = addPersonRow(root, type, idUser, name, restiaName);
           removeOption(select, idUser);
           select.value = '';
           savePersonAction(root, 'add_person', type, idUser).then((json) => {
@@ -577,7 +584,7 @@
             }
           }).catch((err) => {
             if (row instanceof HTMLTableRowElement) row.remove();
-            addOption(select, idUser, name);
+            addOption(select, idUser, name, restiaName);
             if (w.alert) w.alert(err && err.message ? err.message : 'Uložení řádku selhalo.');
           });
         }
@@ -695,11 +702,12 @@
         if (row instanceof HTMLTableRowElement) {
           const type = String(row.getAttribute('data-zr-person-row') || '');
           const idUser = Number.parseInt(String(row.getAttribute('data-zr-id-user') || '0'), 10) || 0;
+          const restiaName = String(row.getAttribute('data-zr-restia-name') || '').trim();
           const nameEl = row.querySelector('.zr_saved_value');
           const name = nameEl instanceof HTMLElement ? String(nameEl.textContent || '').trim() : '';
           savePersonAction(root, 'delete_person', type, idUser).then(() => {
             row.remove();
-            addOption(root.querySelector('[data-zr-add-person="' + type + '"]'), idUser, name);
+            addOption(root.querySelector('[data-zr-add-person="' + type + '"]'), idUser, name, restiaName);
             syncPrivateFuelExpense(root, true).catch((err) => {
               if (w.alert) w.alert(err && err.message ? err.message : 'Uložení PHM selhalo.');
             });
