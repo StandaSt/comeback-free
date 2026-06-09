@@ -179,10 +179,12 @@
 html{
   height:100%;
   scrollbar-gutter:stable;
+  overflow-x:hidden;
 }
 
 body{
   height:100%;
+  overflow-x:hidden;
   font-family:Arial, Helvetica, sans-serif;
   background:var(--clr_seda_1);
   color:var(--clr_cerna);

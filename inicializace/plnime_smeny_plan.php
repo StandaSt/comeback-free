@@ -1,5 +1,5 @@
 <?php
-// inicializace/plnime_smeny_plan.php * Verze: V17 * Aktualizace: 03.06.2026
+// inicializace/plnime_smeny_plan.php * Verze: V19 * Aktualizace: 09.06.2026
 
 declare(strict_types=1);
 
@@ -247,28 +247,13 @@ function getBranches(string $token = ''): array
             p.id_pob,
             p.nazev,
             p.start_smeny,
-            plan.last_plan_day,
-            hist.last_import_day,
-            hist.last_import_skip_weeks
+            plan.last_plan_day
         FROM pobocka p
         LEFT JOIN (
             SELECT id_pob, MAX(datum) AS last_plan_day
             FROM smeny_plan
             GROUP BY id_pob
         ) plan ON plan.id_pob = p.id_pob
-        LEFT JOIN (
-            SELECT sa.id_pob, sa.start_day AS last_import_day, sa.skip_weeks AS last_import_skip_weeks
-            FROM smeny_aktualizace sa
-            INNER JOIN (
-                SELECT id_pob, MAX(start_day) AS max_start_day
-                FROM smeny_aktualizace
-                WHERE stav = 1
-                GROUP BY id_pob
-            ) last_ok
-                ON last_ok.id_pob = sa.id_pob
-               AND last_ok.max_start_day = sa.start_day
-            WHERE sa.stav = 1
-        ) hist ON hist.id_pob = p.id_pob
         WHERE p.aktivni = 1
           AND p.start_smeny IS NOT NULL
           AND p.start_smeny <> ''
@@ -297,9 +282,9 @@ function getBranches(string $token = ''): array
 
 function branchStartDay(array $branch): string
 {
-    $lastImportDay = trim((string)($branch['last_import_day'] ?? ''));
-    if ($lastImportDay !== '') {
-        return normalizeMonday($lastImportDay)->modify('+1 week')->format('Y-m-d');
+    $lastPlanDay = trim((string)($branch['last_plan_day'] ?? ''));
+    if ($lastPlanDay !== '') {
+        return normalizeMonday($lastPlanDay)->modify('+1 week')->format('Y-m-d');
     }
 
     $startSmeny = trim((string)($branch['start_smeny'] ?? ''));
@@ -607,7 +592,7 @@ function saveStateRow(array $state): void
     $stmt->close();
 }
 
-function markBranchAsOk(int $skipWeeks, int $idPob, string $startDay, int $blocks, int $hours, ?string $note): void
+function markBranchAsOk(int $idPob, string $startDay, int $blocks, int $hours, ?string $note): void
 {
     $now = nowSql();
 
@@ -625,7 +610,7 @@ function markBranchAsOk(int $skipWeeks, int $idPob, string $startDay, int $block
     ]);
 }
 
-function markBranchAsError(int $skipWeeks, int $idPob, string $startDay, string $message): void
+function markBranchAsError(int $idPob, string $startDay, string $message): void
 {
     $now = nowSql();
 
@@ -697,7 +682,7 @@ function processBranch(string $token, int $skipWeeks, int $idPob, int $apiBranch
 
         $blocks = saveBlocks($startDay, $idPob, $rows);
         $hours = countHours($rows);
-        markBranchAsOk($skipWeeks, $idPob, $startDay, $blocks, $hours, null);
+        markBranchAsOk($idPob, $startDay, $blocks, $hours, null);
 
         return [
             'start_day' => $startDay,
@@ -708,7 +693,7 @@ function processBranch(string $token, int $skipWeeks, int $idPob, int $apiBranch
         ];
     } catch (Throwable $e) {
         $message = mb_substr($e->getMessage(), 0, 1000, 'UTF-8');
-        markBranchAsError($skipWeeks, $idPob, $defaultStartDay, $message);
+        markBranchAsError($idPob, $defaultStartDay, $message);
 
         return [
             'start_day' => $defaultStartDay,
@@ -745,7 +730,7 @@ function processPlannedWeekUpdate(string $token, int $skipWeeks, int $idPob, int
         $blocks = saveBlocks($startDay, $idPob, $rows);
         $hours = countHours($rows);
         $note = $rows === [] ? 'API vratilo tyden bez bloku, ulozeny tyden byl vycisten' : null;
-        markBranchAsOk($skipWeeks, $idPob, $startDay, $blocks, $hours, $note);
+        markBranchAsOk($idPob, $startDay, $blocks, $hours, $note);
 
         return [
             'start_day' => $startDay,
@@ -756,7 +741,7 @@ function processPlannedWeekUpdate(string $token, int $skipWeeks, int $idPob, int
         ];
     } catch (Throwable $e) {
         $message = mb_substr($e->getMessage(), 0, 1000, 'UTF-8');
-        markBranchAsError($skipWeeks, $idPob, $defaultStartDay, $message);
+        markBranchAsError($idPob, $defaultStartDay, $message);
 
         return [
             'start_day' => $defaultStartDay,
@@ -1098,10 +1083,16 @@ if ($token !== '') {
     $branches = getBranches($token);
 }
 
-$selectedBranchId = smenyPlanSelectedBranchId();
-$selectedBranch = $selectedBranchId > 0 ? smenyPlanFindBranchById($branches, $selectedBranchId) : null;
 $action = (string)($_POST['cb_action'] ?? '');
 $inputBranchId = (int)($_POST['cb_id_pob'] ?? 0);
+
+if ($action === '') {
+    $selectedBranchId = 0;
+    $selectedBranch = null;
+} else {
+    $selectedBranchId = smenyPlanSelectedBranchId();
+    $selectedBranch = $selectedBranchId > 0 ? smenyPlanFindBranchById($branches, $selectedBranchId) : null;
+}
 
 if ($action === 'back') {
     smenyPlanSetSelectedBranchId(0);
@@ -1140,22 +1131,6 @@ if ($action === 'start' && $selectedBranch !== null) {
 }
 
 if ($selectedBranch !== null && $action !== '') {
-    renderSmenyPlanScreen([
-        'status' => 'OK',
-        'message' => 'Pobočka je připravená ke spuštění importu.',
-        'branches_list' => $branches,
-        'selected_branch' => $selectedBranch,
-        'selected_branch_id' => $selectedBranchId,
-        'start_day' => branchStartDay($selectedBranch),
-        'skip_weeks' => branchSkipWeeks($selectedBranch),
-        'blocks' => 0,
-        'hours' => 0,
-        'brake_exists' => skipweekBrakeExists(),
-    ], 'confirm');
-    return;
-}
-
-if ($selectedBranch !== null && $action === '') {
     renderSmenyPlanScreen([
         'status' => 'OK',
         'message' => 'Pobočka je připravená ke spuštění importu.',

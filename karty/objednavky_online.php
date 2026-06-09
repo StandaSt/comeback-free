@@ -39,7 +39,7 @@ if (!function_exists('cb_k19_render_max_chart_tile')) {
             . '</div>'
             . '<div class="card_text txt_seda text_12 txt_c" style="line-height:1.15;">' . h($periodText) . '</div>'
             . '</div>'
-            . '<div id="' . h($chartId) . '" data-cb-prehledy-grafy-chart="1" data-cb-prehledy-grafy-chart-data="' . h($chartJson) . '" class="sirka100" style="height:460px;"></div>'
+            . '<div id="' . h($chartId) . '" data-cb-prehledy-grafy-chart="1" data-cb-prehledy-grafy-chart-data="' . h($chartJson) . '" class="sirka100" style="height:100%; min-height:0; flex:1 1 auto;"></div>'
             . '</div>';
     }
 }
@@ -111,8 +111,6 @@ try {
     $range = cb_k19_online_workday_range();
     $aktualizaceDoText = '';
     $aktualizaceSubtitleText = '';
-    $selectedPob = function_exists('get_selected_pobocky') ? get_selected_pobocky() : [];
-    $selectedPob = array_values(array_filter(array_map('intval', $selectedPob), static fn(int $v): bool => $v > 0));
 
     $resAktualizace = $conn->query('SELECT MAX(konec) AS posledni_konec FROM online_restia');
     if ($resAktualizace instanceof mysqli_result) {
@@ -139,13 +137,6 @@ try {
     $ordersWhereCreated = ' WHERE ca.cas_vytvor IS NULL AND o.restia_created_at >= ? AND o.restia_created_at <= ?';
     $ordersWhereImported = ' WHERE ca.cas_vytvor IS NULL AND o.restia_created_at IS NULL AND o.restia_imported_at >= ? AND o.restia_imported_at <= ?';
 
-    if ($selectedPob !== []) {
-        $branchWhere .= ' AND p.id_pob IN (' . implode(',', array_map('intval', $selectedPob)) . ')';
-        $branchFilter = ' AND o.id_pob IN (' . implode(',', array_map('intval', $selectedPob)) . ')';
-        $ordersWhereCa .= $branchFilter;
-        $ordersWhereCreated .= $branchFilter;
-        $ordersWhereImported .= $branchFilter;
-    }
 
     $branches = [];
     $branchSql = '
@@ -259,9 +250,6 @@ try {
     $stmtCounts->close();
 
     $g1Where = ' WHERE o.restia_created_at IS NOT NULL AND o.restia_created_at >= ? AND o.restia_created_at < ?';
-    if ($selectedPob !== []) {
-        $g1Where .= ' AND o.id_pob IN (' . implode(',', array_map('intval', $selectedPob)) . ')';
-    }
 
     $g1Sql = '
         SELECT
@@ -788,10 +776,7 @@ try {
 
 ob_start();
 ?>
-<div class="sirka100" style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); grid-template-rows:repeat(2, minmax(0, 1fr)); gap:10px; height:100%; min-height:0; flex:1 1 auto; align-content:stretch;">
-  <?= $k19G1MaxTileHtml ?>
-  <?= cb_k19_render_max_tile('G4') ?>
-  <?= cb_k19_render_max_tile('G3') ?>
+<div class="sirka100" style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); grid-template-rows:minmax(0, 1fr); gap:10px; height:100%; min-height:0; flex:1 1 auto; align-content:stretch;">
   <?= $k19G2MaxTileHtml ?>
   <?= $k19G5MaxTileHtml ?>
   <?= $k19G6MaxTileHtml ?>
