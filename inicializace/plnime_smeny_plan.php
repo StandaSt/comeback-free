@@ -1,5 +1,5 @@
 <?php
-// inicializace/plnime_smeny_plan.php * Verze: V19 * Aktualizace: 09.06.2026
+// inicializace/plnime_smeny_plan.php * Verze: V20 * Aktualizace: 09.06.2026
 
 declare(strict_types=1);
 
@@ -238,10 +238,9 @@ function smenyPlanFindApiBranch(array $apiBranches, string $localName): ?array
     return null;
 }
 
-function getBranches(string $token = ''): array
+function getBranchesLocal(): array
 {
     $db = db();
-    $apiBranches = smenyPlanApiBranchMap($token);
     $sql = "
         SELECT
             p.id_pob,
@@ -269,13 +268,26 @@ function getBranches(string $token = ''): array
     $rows = [];
     while ($row = $res->fetch_assoc()) {
         if (is_array($row)) {
-            $apiBranch = smenyPlanFindApiBranch($apiBranches, (string)($row['nazev'] ?? ''));
-            $row['smeny_branch_id'] = is_array($apiBranch) ? (int)($apiBranch['id'] ?? 0) : 0;
-            $row['smeny_branch_name'] = is_array($apiBranch) ? (string)($apiBranch['name'] ?? '') : '';
+            $row['smeny_branch_id'] = 0;
+            $row['smeny_branch_name'] = '';
             $rows[] = $row;
         }
     }
     $res->free();
+
+    return $rows;
+}
+
+function getBranches(string $token = ''): array
+{
+    $rows = getBranchesLocal();
+    $apiBranches = smenyPlanApiBranchMap($token);
+
+    foreach ($rows as $key => $row) {
+        $apiBranch = smenyPlanFindApiBranch($apiBranches, (string)($row['nazev'] ?? ''));
+        $rows[$key]['smeny_branch_id'] = is_array($apiBranch) ? (int)($apiBranch['id'] ?? 0) : 0;
+        $rows[$key]['smeny_branch_name'] = is_array($apiBranch) ? (string)($apiBranch['name'] ?? '') : '';
+    }
 
     return $rows;
 }
@@ -809,7 +821,7 @@ function renderSmenyPlanScreen(array $info, string $mode = 'pick'): void
           <div class="displ_flex gap_8 align_items_center flex_wrap">
             <select name="cb_id_pob" class="card_select ram_sedy txt_seda bg_bila zaobleni_8" style="min-width:260px; height:28px; margin-right:8px;" onchange="var a=document.getElementById('cb_action_field');var v=String(this.value||'');if(a){a.value=(v==='<?= h((string)SMENY_PLAN_UPDATE_ALL_ID) ?>'?'update_planned':'select_branch');}var f=this.form;if(f){var o=this.options[this.selectedIndex];var t=o?String(o.textContent||o.innerText||'').trim():'';var p=t.indexOf(' | ');if(p>=0){t=t.substring(0,p);}f.setAttribute('data-cb-loader-text',v==='<?= h((string)SMENY_PLAN_UPDATE_ALL_ID) ?>'?'Aktualizuji naplánované směny':'Připravuji směny pobočky '+t);if(f.requestSubmit){f.requestSubmit();}else{f.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));}}">
               <option value="0">Vyber pobočku</option>
-              <option value="<?= h((string)SMENY_PLAN_UPDATE_ALL_ID) ?>">Aktualizuj naplánované směny</option>
+              <option value="<?= h((string)SMENY_PLAN_UPDATE_ALL_ID) ?>">Stáhni všechny pobočky</option>
               <?php foreach ($branches as $branch): ?>
                 <?php
                     $branchId = (int)($branch['id_pob'] ?? 0);
@@ -1078,13 +1090,20 @@ function runPlannedUpdate(array $branches): array
 }
 
 $token = (string)($_SESSION['cb_token'] ?? '');
-$branches = [];
-if ($token !== '') {
-    $branches = getBranches($token);
-}
-
 $action = (string)($_POST['cb_action'] ?? '');
 $inputBranchId = (int)($_POST['cb_id_pob'] ?? 0);
+$branches = [];
+$needsApiBranches = in_array($action, ['select_branch', 'start', 'update_planned'], true);
+if ($action === '' || $action === 'back') {
+    // První načtení karty nebo návrat – jen lokální DB
+    $branches = getBranchesLocal();
+} elseif ($needsApiBranches && $token !== '') {
+    // Akce, které skutečně potřebují mapování z API
+    $branches = getBranches($token);
+} else {
+    // Fallback (např. chybí token) – načteme lokální DB
+    $branches = getBranchesLocal();
+}
 
 if ($action === '') {
     $selectedBranchId = 0;
