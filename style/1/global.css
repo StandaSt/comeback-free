@@ -2992,3 +2992,65 @@ align-items:center;
 .card_shell[data-card-pos-locked="1"] .nano_dot{
   color:var(--clr_cervena_2);
 }
+
+/* K10 – denní report: kompaktní MAX režim (jen uvnitř overlay karty) */
+.dash_card.is-maxi-overlay .zr_form .gap_14,
+.dash_card.is-maxi-overlay .zr_form.gap_14{
+  gap:8px;
+}
+
+.dash_card.is-maxi-overlay .zr_form .odstup_vnitrni_10{
+  padding:6px 8px;
+}
+
+.dash_card.is-maxi-overlay .zr_form .zr_section{
+  padding:8px 10px;
+}
+
+.dash_card.is-maxi-overlay .zr_form .zr_table th,
+.dash_card.is-maxi-overlay .zr_form .zr_table td{
+  padding:3px 4px;
+}
+
+.dash_card.is-maxi-overlay .zr_form input,
+.dash_card.is-maxi-overlay .zr_form select{
+  height:24px;
+  min-height:24px;
+  padding:1px 6px;
+  border-radius:8px;
+}
+
+.dash_card.is-maxi-overlay .zr_form .zr_time_input,
+.dash_card.is-maxi-overlay .zr_form td.zr_person_cell_break input,
+.dash_card.is-maxi-overlay .zr_form .zr_delivery_input{
+  height:22px;
+  padding:1px 4px;
+}
+
+.dash_card.is-maxi-overlay .zr_form .zr_saved_value{
+  line-height:24px;
+}
+
+.dash_card.is-maxi-overlay .zr_form .card_section_title{
+  margin-bottom:6px;
+}
+
+.dash_card.is-maxi-overlay .zr_form .zr_control_metric{
+  padding:4px 0;
+}
+
+.dash_card.is-maxi-overlay .zr_form .zr_control_label{
+  margin:0 0 4px 0;
+  font-size:var(--fs_14);
+}
+
+.dash_card.is-maxi-overlay .zr_form .zr_control_value{
+  margin-top:1px;
+  font-size:20px;
+}
+
+.dash_card.is-maxi-overlay .zr_form .zr_restia_total{
+  padding:8px 10px;
+  margin-bottom:6px;
+}
+

@@ -1,6 +1,6 @@
 <?php
 // K16
-// karty/mzdy_new.php * Verze: V2 * Aktualizace: 22.05.2026
+// karty/mzdy_new.php * Verze: V5 * Aktualizace: 10.06.2026
 declare(strict_types=1);
 
 /*
@@ -144,6 +144,62 @@ $mzdyTotals = [
 ];
 $formAction = cb_url('/');
 
+$prihlasenyIdUser = (int)($_SESSION['cb_user']['id_user'] ?? 0);
+$prihlasenyIdRole = (int)($_SESSION['cb_user']['id_role'] ?? 0);
+$mzdyRoleLimitSql = '';
+
+if ($prihlasenyIdRole > 3) {
+    if ($prihlasenyIdRole === 9) {
+        $mzdyRoleLimitSql = '
+          AND m.id_user = ' . $prihlasenyIdUser;
+    } elseif ($prihlasenyIdRole === 7) {
+        $mzdyRoleLimitSql = '
+          AND m.id_user IS NOT NULL
+          AND (
+              m.id_user = ' . $prihlasenyIdUser . '
+              OR (
+                  EXISTS (
+                      SELECT 1
+                      FROM user_role ur_radek
+                      WHERE ur_radek.id_user = m.id_user
+                        AND ur_radek.id_role = 9
+                  )
+                  AND EXISTS (
+                      SELECT 1
+                      FROM user_pobocka up_prihlaseny
+                      INNER JOIN user_pobocka up_radek ON up_radek.id_pob = up_prihlaseny.id_pob
+                      WHERE up_prihlaseny.id_user = ' . $prihlasenyIdUser . '
+                        AND up_radek.id_user = m.id_user
+                  )
+              )
+          )';
+    } elseif ($prihlasenyIdRole === 5) {
+        $mzdyRoleLimitSql = '
+          AND m.id_user IS NOT NULL
+          AND (
+              m.id_user = ' . $prihlasenyIdUser . '
+              OR (
+                  EXISTS (
+                      SELECT 1
+                      FROM user_role ur_radek
+                      WHERE ur_radek.id_user = m.id_user
+                        AND ur_radek.id_role IN (7, 9)
+                  )
+                  AND EXISTS (
+                      SELECT 1
+                      FROM user_pobocka up_prihlaseny
+                      INNER JOIN user_pobocka up_radek ON up_radek.id_pob = up_prihlaseny.id_pob
+                      WHERE up_prihlaseny.id_user = ' . $prihlasenyIdUser . '
+                        AND up_radek.id_user = m.id_user
+                  )
+              )
+          )';
+    } else {
+        $mzdyRoleLimitSql = '
+          AND m.id_user = ' . $prihlasenyIdUser;
+    }
+}
+
 $mzdyCols = [
     'mesic' => ['label' => 'měsíc', 'width' => '90px', 'filter' => true],
     'id_user' => ['label' => 'ID user', 'width' => '90px', 'filter' => true],
@@ -237,6 +293,11 @@ try {
             m.slot_id,
             COALESCE(u.prijmeni, "") AS prijmeni,
             COALESCE(u.jmeno, "") AS jmeno,
+            (
+                SELECT MIN(ur_select.id_role)
+                FROM user_role ur_select
+                WHERE ur_select.id_user = m.id_user
+            ) AS id_role,
             hs.id_mzda_typ,
             COALESCE(cmt.nazev, "") AS mzda_typ,
             hs.hodinova_sazba,
@@ -276,11 +337,16 @@ try {
            AND hs.platnost_od <= m.mesic_od
            AND (hs.platnost_do IS NULL OR hs.platnost_do >= m.mesic_od)
         LEFT JOIN cis_mzda_typ cmt ON cmt.id_mzda_typ = hs.id_mzda_typ
+        WHERE 1 = 1
+        ' . $mzdyRoleLimitSql . '
     ';
 
     $resRows = $conn->query($sql);
-    if ($resRows) {
-        while ($row = $resRows->fetch_assoc()) {
+    if (!$resRows) {
+        throw new RuntimeException('SQL chyba mezd: ' . $conn->error);
+    }
+
+    while ($row = $resRows->fetch_assoc()) {
             $hours = (float)($row['hodiny'] ?? 0);
             $typeId = $row['id_mzda_typ'] !== null ? (int)$row['id_mzda_typ'] : null;
             $hourRate = $row['hodinova_sazba'] !== null ? (float)$row['hodinova_sazba'] : null;
@@ -296,8 +362,7 @@ try {
             $row['superhruba_mzda'] = $calc['superhruba_mzda'];
             $mzdyRowsAll[] = $row;
         }
-        $resRows->free();
-    }
+    $resRows->free();
 
     $mzdyStats['total'] = count($mzdyRowsAll);
     foreach ($mzdyRowsAll as $row) {
@@ -370,7 +435,7 @@ try {
     $mzdyTotal = 0;
     $mzdyPages = 1;
     $mzdyPage = 1;
-    $mzdyError = 'Načtení mezd selhalo.';
+    $mzdyError = 'Načtení mezd selhalo: ' . $e->getMessage();
 }
 
 $mzdyQueryDefaults = [
@@ -604,5 +669,5 @@ ob_start();
 <?php
 $card_max_html = (string)ob_get_clean();
 
-/* karty/mzdy_new.php * Verze: V2 * Aktualizace: 22.05.2026 */
+/* karty/mzdy_new.php * Verze: V4 * Aktualizace: 10.06.2026 */
 ?>

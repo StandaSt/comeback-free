@@ -286,16 +286,18 @@
       const naCesteRaw = getSeriesData(payload, 'na_ceste', 1);
       const osobniOdberRaw = getSeriesData(payload, 'osobni_odber', 2);
       const vyrabiSeRaw = getSeriesData(payload, 'vyrabi_se', 3);
-      const objednavkyRaw = getSeriesData(payload, 'objednavky', 4);
-      const trzbaRaw = getSeriesData(payload, 'trzba', 5);
+      const zrusenoRaw = getSeriesData(payload, 'zruseno', 4);
+      const objednavkyRaw = getSeriesData(payload, 'objednavky', 5);
+      const trzbaRaw = getSeriesData(payload, 'trzba', 6);
       const colorsRaw = getSeriesColors(payload, 'dokonceno', 0);
       const dokonceno = dokoncenoRaw.map((item) => Number(item) || 0);
       const naCeste = naCesteRaw.map((item) => Number(item) || 0);
       const osobniOdber = osobniOdberRaw.map((item) => Number(item) || 0);
       const vyrabiSe = vyrabiSeRaw.map((item) => Number(item) || 0);
+      const zruseno = zrusenoRaw.map((item) => Number(item) || 0);
       const objednavky = labels.map((label, index) => {
         const payloadValue = Number(objednavkyRaw[index] || 0) || 0;
-        const stackValue = dokonceno[index] + naCeste[index] + osobniOdber[index] + vyrabiSe[index];
+        const stackValue = dokonceno[index] + naCeste[index] + osobniOdber[index] + vyrabiSe[index] + zruseno[index];
         return payloadValue > 0 ? payloadValue : stackValue;
       });
       const trzba = labels.map((label, index) => Number(trzbaRaw[index] || 0) || 0);
@@ -329,6 +331,7 @@
                 + '<tr><td>Na cestě</td><td class="cb_tooltip_num">' + formatInt(naCeste[index] ?? 0) + '</td></tr>'
                 + '<tr><td>Osobní odběr</td><td class="cb_tooltip_num">' + formatInt(osobniOdber[index] ?? 0) + '</td></tr>'
                 + '<tr><td>Vyrábí se</td><td class="cb_tooltip_num">' + formatInt(vyrabiSe[index] ?? 0) + '</td></tr>'
+                + '<tr><td>Zrušeno</td><td class="cb_tooltip_num">' + formatInt(zruseno[index] ?? 0) + '</td></tr>'
                 + '<tr><th>Objednávky</th><th class="cb_tooltip_num">' + formatInt(objednavky[index] ?? 0) + '</th></tr>'
                 + '<tr><th>Tržba</th><th class="cb_tooltip_num">' + formatInt(trzba[index] ?? 0) + ' Kč</th></tr>'
                 + '</tbody>'
@@ -398,6 +401,15 @@
               barMaxWidth: MINI_SLOUPEC_BAR_MAX_WIDTH,
               itemStyle: { color: '#dc2626' },
               data: vyrabiSe
+            },
+            {
+              name: 'Zrušeno',
+              type: 'bar',
+              yAxisIndex: 0,
+              stack: 'online',
+              barMaxWidth: MINI_SLOUPEC_BAR_MAX_WIDTH,
+              itemStyle: { color: '#64748b' },
+              data: zruseno
             },
             {
               name: 'Objednávky',
@@ -497,6 +509,14 @@
             barMaxWidth: MINI_SLOUPEC_BAR_MAX_WIDTH,
             itemStyle: { color: '#dc2626' },
             data: vyrabiSe
+          },
+          {
+            name: 'Zrušeno',
+            type: 'bar',
+            stack: 'online',
+            barMaxWidth: MINI_SLOUPEC_BAR_MAX_WIDTH,
+            itemStyle: { color: '#64748b' },
+            data: zruseno
           },
           {
             name: 'Objednávky',

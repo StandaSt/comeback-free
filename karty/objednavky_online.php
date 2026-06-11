@@ -136,6 +136,7 @@ try {
     $ordersWhereCa = ' WHERE ca.cas_vytvor >= ? AND ca.cas_vytvor <= ?';
     $ordersWhereCreated = ' WHERE ca.cas_vytvor IS NULL AND o.restia_created_at >= ? AND o.restia_created_at <= ?';
     $ordersWhereImported = ' WHERE ca.cas_vytvor IS NULL AND o.restia_created_at IS NULL AND o.restia_imported_at >= ? AND o.restia_imported_at <= ?';
+    $cancelStateSql = "('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted')";
 
 
     $branches = [];
@@ -160,6 +161,7 @@ try {
                     'na_ceste' => 0,
                     'osobni_odber' => 0,
                     'vyrabi_se' => 0,
+                    'zruseno' => 0,
                     'objednavky' => 0,
                     'trzba' => 0.0,
                 ];
@@ -174,19 +176,22 @@ try {
             SUM(zdroj.dokonceno) AS dokonceno,
             SUM(zdroj.na_ceste) AS na_ceste,
             SUM(zdroj.osobni_odber) AS osobni_odber,
-            SUM(zdroj.vyrabi_se) AS vyrabi_se
+            SUM(zdroj.vyrabi_se) AS vyrabi_se,
+            SUM(zdroj.zruseno) AS zruseno
         FROM (
             SELECT
                 o.id_pob,
-                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NOT NULL THEN 1 ELSE 0 END AS dokonceno,
-                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND (
+                CASE WHEN COALESCE(st.nazev, \'\') NOT IN ' . $cancelStateSql . ' AND COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NOT NULL THEN 1 ELSE 0 END AS dokonceno,
+                CASE WHEN COALESCE(st.nazev, \'\') NOT IN ' . $cancelStateSql . ' AND COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND (
                     EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj)
                     OR EXISTS (SELECT 1 FROM obj_sluzba s WHERE s.id_obj = o.id_obj)
                     OR EXISTS (SELECT 1 FROM cis_doruceni d WHERE d.id_doruceni = o.id_doruceni AND d.nazev = \'external-delivery\')
                 ) THEN 1 ELSE 0 END AS na_ceste,
-                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND NOT EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj) AND EXISTS (SELECT 1 FROM cis_doruceni d WHERE d.id_doruceni = o.id_doruceni AND d.nazev = \'pickup\') THEN 1 ELSE 0 END AS osobni_odber,
-                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NULL THEN 1 ELSE 0 END AS vyrabi_se
+                CASE WHEN COALESCE(st.nazev, \'\') NOT IN ' . $cancelStateSql . ' AND COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND NOT EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj) AND EXISTS (SELECT 1 FROM cis_doruceni d WHERE d.id_doruceni = o.id_doruceni AND d.nazev = \'pickup\') THEN 1 ELSE 0 END AS osobni_odber,
+                CASE WHEN COALESCE(st.nazev, \'\') NOT IN ' . $cancelStateSql . ' AND COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NULL THEN 1 ELSE 0 END AS vyrabi_se,
+                CASE WHEN COALESCE(st.nazev, \'\') IN ' . $cancelStateSql . ' THEN 1 ELSE 0 END AS zruseno
             FROM objednavky_restia o
+            LEFT JOIN cis_obj_stav st ON st.id_stav = o.id_stav
             INNER JOIN obj_casy ca ON ca.id_obj = o.id_obj
             ' . $ordersWhereCa . '
 
@@ -194,15 +199,17 @@ try {
 
             SELECT
                 o.id_pob,
-                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NOT NULL THEN 1 ELSE 0 END AS dokonceno,
-                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND (
+                CASE WHEN COALESCE(st.nazev, \'\') NOT IN ' . $cancelStateSql . ' AND COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NOT NULL THEN 1 ELSE 0 END AS dokonceno,
+                CASE WHEN COALESCE(st.nazev, \'\') NOT IN ' . $cancelStateSql . ' AND COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND (
                     EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj)
                     OR EXISTS (SELECT 1 FROM obj_sluzba s WHERE s.id_obj = o.id_obj)
                     OR EXISTS (SELECT 1 FROM cis_doruceni d WHERE d.id_doruceni = o.id_doruceni AND d.nazev = \'external-delivery\')
                 ) THEN 1 ELSE 0 END AS na_ceste,
-                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND NOT EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj) AND EXISTS (SELECT 1 FROM cis_doruceni d WHERE d.id_doruceni = o.id_doruceni AND d.nazev = \'pickup\') THEN 1 ELSE 0 END AS osobni_odber,
-                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NULL THEN 1 ELSE 0 END AS vyrabi_se
+                CASE WHEN COALESCE(st.nazev, \'\') NOT IN ' . $cancelStateSql . ' AND COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND NOT EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj) AND EXISTS (SELECT 1 FROM cis_doruceni d WHERE d.id_doruceni = o.id_doruceni AND d.nazev = \'pickup\') THEN 1 ELSE 0 END AS osobni_odber,
+                CASE WHEN COALESCE(st.nazev, \'\') NOT IN ' . $cancelStateSql . ' AND COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NULL THEN 1 ELSE 0 END AS vyrabi_se,
+                CASE WHEN COALESCE(st.nazev, \'\') IN ' . $cancelStateSql . ' THEN 1 ELSE 0 END AS zruseno
             FROM objednavky_restia o
+            LEFT JOIN cis_obj_stav st ON st.id_stav = o.id_stav
             INNER JOIN obj_casy ca ON ca.id_obj = o.id_obj
             ' . $ordersWhereCreated . '
 
@@ -210,15 +217,17 @@ try {
 
             SELECT
                 o.id_pob,
-                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NOT NULL THEN 1 ELSE 0 END AS dokonceno,
-                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND (
+                CASE WHEN COALESCE(st.nazev, \'\') NOT IN ' . $cancelStateSql . ' AND COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NOT NULL THEN 1 ELSE 0 END AS dokonceno,
+                CASE WHEN COALESCE(st.nazev, \'\') NOT IN ' . $cancelStateSql . ' AND COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND (
                     EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj)
                     OR EXISTS (SELECT 1 FROM obj_sluzba s WHERE s.id_obj = o.id_obj)
                     OR EXISTS (SELECT 1 FROM cis_doruceni d WHERE d.id_doruceni = o.id_doruceni AND d.nazev = \'external-delivery\')
                 ) THEN 1 ELSE 0 END AS na_ceste,
-                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND NOT EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj) AND EXISTS (SELECT 1 FROM cis_doruceni d WHERE d.id_doruceni = o.id_doruceni AND d.nazev = \'pickup\') THEN 1 ELSE 0 END AS osobni_odber,
-                CASE WHEN COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NULL THEN 1 ELSE 0 END AS vyrabi_se
+                CASE WHEN COALESCE(st.nazev, \'\') NOT IN ' . $cancelStateSql . ' AND COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND NOT EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj) AND EXISTS (SELECT 1 FROM cis_doruceni d WHERE d.id_doruceni = o.id_doruceni AND d.nazev = \'pickup\') THEN 1 ELSE 0 END AS osobni_odber,
+                CASE WHEN COALESCE(st.nazev, \'\') NOT IN ' . $cancelStateSql . ' AND COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NULL THEN 1 ELSE 0 END AS vyrabi_se,
+                CASE WHEN COALESCE(st.nazev, \'\') IN ' . $cancelStateSql . ' THEN 1 ELSE 0 END AS zruseno
             FROM objednavky_restia o
+            LEFT JOIN cis_obj_stav st ON st.id_stav = o.id_stav
             LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
             ' . $ordersWhereImported . '
         ) AS zdroj
@@ -244,6 +253,7 @@ try {
             $branches[$idPob]['na_ceste'] = (int)($row['na_ceste'] ?? 0);
             $branches[$idPob]['osobni_odber'] = (int)($row['osobni_odber'] ?? 0);
             $branches[$idPob]['vyrabi_se'] = (int)($row['vyrabi_se'] ?? 0);
+            $branches[$idPob]['zruseno'] = (int)($row['zruseno'] ?? 0);
         }
         $resCounts->free();
     }
@@ -255,8 +265,9 @@ try {
         SELECT
             o.id_pob,
             COUNT(*) AS objednavky,
-            SUM(COALESCE(c.cena_celk, 0)) AS trzba
+            SUM(CASE WHEN COALESCE(st.nazev, \'\') IN ' . $cancelStateSql . ' THEN 0 ELSE COALESCE(c.cena_celk, 0) END) AS trzba
         FROM objednavky_restia o
+        LEFT JOIN cis_obj_stav st ON st.id_stav = o.id_stav
         LEFT JOIN obj_ceny c ON c.id_obj = o.id_obj
         ' . $g1Where . '
         GROUP BY o.id_pob
@@ -291,6 +302,7 @@ try {
     $naCesteData = [];
     $osobniOdberData = [];
     $vyrabiSeData = [];
+    $zrusenoData = [];
     $miniObjednavkyData = [];
     $miniTrzbaData = [];
     $barvyPobocek = [];
@@ -298,6 +310,7 @@ try {
     $sumNaCeste = 0;
     $sumOsobniOdber = 0;
     $sumVyrabiSe = 0;
+    $sumZruseno = 0;
     $sumObjednavkyMini = 0;
     $sumTrzbaMini = 0.0;
 
@@ -308,11 +321,13 @@ try {
         $naCeste = (int)$branch['na_ceste'];
         $osobniOdber = (int)$branch['osobni_odber'];
         $vyrabiSe = (int)$branch['vyrabi_se'];
+        $zruseno = (int)$branch['zruseno'];
 
         $dokoncenoData[] = $dokonceno;
         $naCesteData[] = $naCeste;
         $osobniOdberData[] = $osobniOdber;
         $vyrabiSeData[] = $vyrabiSe;
+        $zrusenoData[] = $zruseno;
         $miniObjednavkyData[] = (int)$branch['objednavky'];
         $miniTrzbaData[] = (float)$branch['trzba'];
 
@@ -320,6 +335,7 @@ try {
         $sumNaCeste += $naCeste;
         $sumOsobniOdber += $osobniOdber;
         $sumVyrabiSe += $vyrabiSe;
+        $sumZruseno += $zruseno;
         $sumObjednavkyMini += (int)$branch['objednavky'];
         $sumTrzbaMini += (float)$branch['trzba'];
     }
@@ -333,6 +349,7 @@ try {
             ['id' => 'na_ceste', 'name' => 'Na cestě', 'data' => $naCesteData],
             ['id' => 'osobni_odber', 'name' => 'Osobní odběr', 'data' => $osobniOdberData],
             ['id' => 'vyrabi_se', 'name' => 'Vyrábí se', 'data' => $vyrabiSeData],
+            ['id' => 'zruseno', 'name' => 'Zrušeno', 'data' => $zrusenoData],
             ['id' => 'objednavky', 'name' => 'Objednávky', 'data' => $miniObjednavkyData],
             ['id' => 'trzba', 'name' => 'Tržba', 'data' => $miniTrzbaData],
         ],
@@ -349,6 +366,7 @@ try {
           <span><strong style="color:#f59e0b;"><?= h((string)$sumNaCeste) ?></strong> na cestě</span>
           <span><strong style="color:#0ea5e9;"><?= h((string)$sumOsobniOdber) ?></strong> osobní odběr</span>
           <span><strong style="color:#dc2626;"><?= h((string)$sumVyrabiSe) ?></strong> vyrábí se</span>
+          <span><strong style="color:#64748b;"><?= h((string)$sumZruseno) ?></strong> zrušeno</span>
         </span>
         <span class="cb_tooltip" tabindex="0" aria-label="Souhrn online objednávek" data-cb-tooltip-position="1">
           <span>detail</span>
@@ -363,6 +381,7 @@ try {
                   <th class="cb_tooltip_num">Odběr</th>
                   <th class="cb_tooltip_num">Výroba</th>
                   <th class="cb_tooltip_num">Obj.</th>
+                  <th class="cb_tooltip_num">Zruš.</th>
                   <th class="cb_tooltip_num">Tržba</th>
                 </tr>
               </thead>
@@ -375,6 +394,7 @@ try {
                     <td class="cb_tooltip_num"><?= h((string)(int)$branch['osobni_odber']) ?></td>
                     <td class="cb_tooltip_num"><?= h((string)(int)$branch['vyrabi_se']) ?></td>
                     <td class="cb_tooltip_num"><?= h((string)(int)$branch['objednavky']) ?></td>
+                    <td class="cb_tooltip_num"><?= h((string)(int)$branch['zruseno']) ?></td>
                     <td class="cb_tooltip_num"><?= h(number_format((float)$branch['trzba'], 0, ',', ' ')) ?> Kč</td>
                   </tr>
                 <?php endforeach; ?>
@@ -385,6 +405,7 @@ try {
                   <th class="cb_tooltip_num"><?= h((string)$sumOsobniOdber) ?></th>
                   <th class="cb_tooltip_num"><?= h((string)$sumVyrabiSe) ?></th>
                   <th class="cb_tooltip_num"><?= h((string)$sumObjednavkyMini) ?></th>
+                  <th class="cb_tooltip_num"><?= h((string)$sumZruseno) ?></th>
                   <th class="cb_tooltip_num"><?= h(number_format($sumTrzbaMini, 0, ',', ' ')) ?> Kč</th>
                 </tr>
               </tbody>
@@ -548,6 +569,7 @@ try {
     $naCesteData = [];
     $osobniOdberData = [];
     $vyrabiSeData = [];
+    $zrusenoData = [];
     $miniObjednavkyData = [];
     $miniTrzbaData = [];
     $barvyPobocek = [];
@@ -566,6 +588,7 @@ try {
     $sumNaCeste = 0;
     $sumOsobniOdber = 0;
     $sumVyrabiSe = 0;
+    $sumZruseno = 0;
 
     foreach ($branches as $branch) {
         $labels[] = (string)$branch['nazev'];
@@ -574,6 +597,7 @@ try {
         $naCeste = (int)$branch['na_ceste'];
         $osobniOdber = (int)$branch['osobni_odber'];
         $vyrabiSe = (int)$branch['vyrabi_se'];
+        $zruseno = (int)$branch['zruseno'];
         $objednavky = (int)$branch['objednavky'];
         $trzba = (float)$branch['trzba'];
         $prumerCena = ($objednavky > 0) ? ($trzba / $objednavky) : 0.0;
@@ -601,6 +625,7 @@ try {
         $naCesteData[] = $naCeste;
         $osobniOdberData[] = $osobniOdber;
         $vyrabiSeData[] = $vyrabiSe;
+        $zrusenoData[] = $zruseno;
         $miniObjednavkyData[] = $objednavky;
         $miniTrzbaData[] = $trzba;
 
@@ -608,6 +633,7 @@ try {
         $sumNaCeste += $naCeste;
         $sumOsobniOdber += $osobniOdber;
         $sumVyrabiSe += $vyrabiSe;
+        $sumZruseno += $zruseno;
         $sumObjednavky += $objednavky;
         $sumTrzba += $trzba;
     }
@@ -621,6 +647,7 @@ try {
             ['id' => 'na_ceste', 'name' => 'Na cestě', 'data' => $naCesteData],
             ['id' => 'osobni_odber', 'name' => 'Osobní odběr', 'data' => $osobniOdberData],
             ['id' => 'vyrabi_se', 'name' => 'Vyrábí se', 'data' => $vyrabiSeData],
+            ['id' => 'zruseno', 'name' => 'Zrušeno', 'data' => $zrusenoData],
             ['id' => 'objednavky', 'name' => 'Objednávky', 'data' => $miniObjednavkyData],
             ['id' => 'trzba', 'name' => 'Tržba', 'data' => $miniTrzbaData],
         ],
@@ -754,6 +781,7 @@ try {
           <span><strong style="color:#f59e0b;"><?= h((string)$sumNaCeste) ?></strong> na cestě</span>
           <span><strong style="color:#0ea5e9;"><?= h((string)$sumOsobniOdber) ?></strong> osobní odběr</span>
           <span><strong style="color:#dc2626;"><?= h((string)$sumVyrabiSe) ?></strong> vyrábí se</span>
+          <span><strong style="color:#64748b;"><?= h((string)$sumZruseno) ?></strong> zrušeno</span>
         </span>
       </div>
 
