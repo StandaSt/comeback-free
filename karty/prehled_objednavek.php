@@ -1,6 +1,6 @@
 <?php
 // K14
-// karty/prehled_objednavek.php * Verze: V6 * Aktualizace: 14.04.2026
+// karty/prehled_objednavek.php * Verze: V7 * Aktualizace: 11.06.2026
 declare(strict_types=1);
 
 require_once __DIR__ . '/../lib/format_datum_cas.php';
@@ -20,7 +20,7 @@ $tabKonfig = [
     'enable_sort' => 1,
     'enable_pagination' => 1,
     'default_per' => 20,
-    'per_options' => [20, 50, 100],
+    'per_options' => [20, 50, 100, 500],
     'default_sort' => 'vytvoreno',
     'default_dir' => 'DESC',
 ];
@@ -34,6 +34,7 @@ $objPage = 1;
 $objPer = (int)$tabKonfig['default_per'];
 $objFilters = [];
 $objError = '';
+$objShowItems = ((string)($_GET['obj_items'] ?? '') === '1');
 
 $periodOd = trim((string)($_SESSION['cb_obdobi_od'] ?? ''));
 $periodDo = trim((string)($_SESSION['cb_obdobi_do'] ?? ''));
@@ -94,13 +95,20 @@ $pobText = '-';
 
 $objCols = [
     'cislo_obj' => ['label' => 'č.obj.', 'db' => 'cislo_obj', 'filter' => true, 'width' => '150px'],
-    'stav' => ['label' => 'stav', 'db' => 'stav', 'filter' => true, 'width' => '150px'],
-    'cena' => ['label' => 'cena', 'db' => 'cena', 'width' => '150px'],
-    'typ' => ['label' => 'typ', 'db' => 'typ', 'filter' => true, 'width' => '150px'],
-    'platba' => ['label' => 'platba', 'db' => 'platba', 'filter' => true, 'width' => '150px'],
-    'zakaznik' => ['label' => 'zákazník', 'db' => 'zakaznik', 'filter' => true, 'width' => '250px'],
+    'stav' => ['label' => 'stav', 'db' => 'stav', 'filter' => true, 'width' => '100px'],
+    'cena' => ['label' => 'cena', 'db' => 'cena', 'width' => '90px'],
+    'typ' => ['label' => 'typ', 'db' => 'typ', 'filter' => true, 'width' => '100px'],
+    'platba' => ['label' => 'platba', 'db' => 'platba', 'filter' => true, 'width' => '100px'],
+    'zakaznik' => ['label' => 'zákazník', 'db' => 'zakaznik', 'filter' => true, 'width' => '180px'],
     'vytvoreno' => ['label' => 'vytvořeno', 'db' => 'vytvoreno', 'width' => '150px'],
 ];
+
+if ($objShowItems) {
+    $objCols['polozek'] = ['label' => 'položek', 'db' => 'polozek', 'width' => '80px'];
+    $objCols['pizza_18'] = ['label' => 'pizza 18', 'db' => 'pizza_18', 'width' => '80px'];
+    $objCols['pizza_32'] = ['label' => 'pizza 32', 'db' => 'pizza_32', 'width' => '80px'];
+    $objCols['pizza_40'] = ['label' => 'pizza 40', 'db' => 'pizza_40', 'width' => '80px'];
+}
 
 $objSortMap = [
     'cislo_obj' => 'COALESCE(o.restia_order_number, "")',
@@ -111,6 +119,13 @@ $objSortMap = [
     'zakaznik' => 'TRIM(CONCAT(COALESCE(z.jmeno, ""), " ", COALESCE(z.prijmeni, "")))',
     'vytvoreno' => 'COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at)',
 ];
+
+if ($objShowItems) {
+    $objSortMap['polozek'] = 'COALESCE(ip.polozek, 0)';
+    $objSortMap['pizza_18'] = 'COALESCE(ip.pizza_18, 0)';
+    $objSortMap['pizza_32'] = 'COALESCE(ip.pizza_32, 0)';
+    $objSortMap['pizza_40'] = 'COALESCE(ip.pizza_40, 0)';
+}
 
 $objSortRaw = trim((string)($_GET['obj_sort'] ?? (string)$tabKonfig['default_sort']));
 $objDirRaw = strtoupper(trim((string)($_GET['obj_dir'] ?? (string)$tabKonfig['default_dir'])));
@@ -126,7 +141,7 @@ if ((int)$tabKonfig['enable_sort'] === 1 && in_array($objDirRaw, ['ASC', 'DESC']
 
 $objPerOptions = array_values(array_filter(array_map('intval', (array)$tabKonfig['per_options']), static fn(int $v): bool => $v > 0));
 if ($objPerOptions === []) {
-    $objPerOptions = [20, 50, 100];
+    $objPerOptions = [20, 50, 100, 500];
 }
 
 $objPerRaw = (int)($_GET['obj_per'] ?? (int)$tabKonfig['default_per']);
@@ -427,6 +442,44 @@ try {
         $orderSql = $objSortMap[$objSort] . ' ' . $objDir . ', o.id_obj DESC';
     }
 
+    $itemSelectSql = '';
+    $itemJoinSql = '';
+    if ($objShowItems) {
+        $itemSelectSql = ',
+            COALESCE(ip.polozek, 0) AS polozek,
+            COALESCE(ip.pizza_18, 0) AS pizza_18,
+            COALESCE(ip.pizza_32, 0) AS pizza_32,
+            COALESCE(ip.pizza_40, 0) AS pizza_40,
+            COALESCE(ip.polozky_tooltip, "") AS polozky_tooltip';
+        $itemJoinSql = '
+        LEFT JOIN (
+            SELECT
+                op.id_obj,
+                SUM(op.mnozstvi) AS polozek,
+                SUM(CASE WHEN cp.id_polozka = 4 OR INSTR(LOWER(rk.nazev_kategorie), "18cm") > 0 THEN op.mnozstvi ELSE 0 END) AS pizza_18,
+                SUM(CASE WHEN cp.id_polozka = 3 OR INSTR(LOWER(rk.nazev_kategorie), "32cm") > 0 THEN op.mnozstvi ELSE 0 END) AS pizza_32,
+                SUM(CASE WHEN cp.id_polozka = 2 OR INSTR(LOWER(rk.nazev_kategorie), "40cm") > 0 THEN op.mnozstvi ELSE 0 END) AS pizza_40,
+                GROUP_CONCAT(
+                    CONCAT(op.mnozstvi, 0x7820, CASE WHEN op.res_item = "K0000" THEN "balné" ELSE COALESCE(NULLIF(rp.nazev, ""), op.res_item) END)
+                    ORDER BY
+                        CASE
+                            WHEN cp.id_polozka = 2 OR INSTR(LOWER(rk.nazev_kategorie), "40cm") > 0 THEN 1
+                            WHEN cp.id_polozka = 3 OR INSTR(LOWER(rk.nazev_kategorie), "32cm") > 0 THEN 2
+                            WHEN cp.id_polozka = 4 OR INSTR(LOWER(rk.nazev_kategorie), "18cm") > 0 THEN 3
+                            ELSE 4
+                        END ASC,
+                        op.poradi ASC,
+                        op.id_obj_polozka ASC
+                    SEPARATOR 0x0A
+                ) AS polozky_tooltip
+            FROM obj_polozky op
+            LEFT JOIN res_polozky rp ON rp.id_res_polozka = op.id_res_polozka
+            LEFT JOIN res_kategorie rk ON rk.id_res_kategorie = rp.id_res_kategorie
+            LEFT JOIN cis_polozky cp ON cp.pos_id = rk.id_restia_kategorie
+            GROUP BY op.id_obj
+        ) ip ON ip.id_obj = o.id_obj';
+    }
+
     $dataSql = '
         SELECT
             COALESCE(o.restia_order_number, "") AS cislo_obj,
@@ -436,6 +489,7 @@ try {
             COALESCE(p.nazev, "") AS platba,
             TRIM(CONCAT(COALESCE(z.jmeno, ""), " ", COALESCE(z.prijmeni, ""))) AS zakaznik,
             COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at) AS vytvoreno
+            ' . $itemSelectSql . '
         FROM objednavky_restia o
         ' . $periodJoinSql . '
         LEFT JOIN cis_obj_stav s ON s.id_stav = o.id_stav
@@ -444,6 +498,7 @@ try {
         LEFT JOIN obj_ceny c ON c.id_obj = o.id_obj
         LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
         LEFT JOIN zakaznik z ON z.id_zak = o.id_zak
+        ' . $itemJoinSql . '
     ' . $whereSql . '
         ORDER BY ' . $orderSql . '
         LIMIT ' . (int)$objPer . ' OFFSET ' . (int)$offset;
@@ -479,6 +534,14 @@ try {
             'zakaznik' => trim((string)($row['zakaznik'] ?? '')) !== '' ? trim((string)($row['zakaznik'] ?? '')) : '-',
             'vytvoreno' => $vytvoreno,
         ];
+
+        if ($objShowItems) {
+            $objRows[count($objRows) - 1]['polozek'] = (string)(int)($row['polozek'] ?? 0);
+            $objRows[count($objRows) - 1]['pizza_18'] = (string)(int)($row['pizza_18'] ?? 0);
+            $objRows[count($objRows) - 1]['pizza_32'] = (string)(int)($row['pizza_32'] ?? 0);
+            $objRows[count($objRows) - 1]['pizza_40'] = (string)(int)($row['pizza_40'] ?? 0);
+            $objRows[count($objRows) - 1]['polozky_tooltip'] = trim((string)($row['polozky_tooltip'] ?? ''));
+        }
     }
     $resRows->free();
 } catch (Throwable $e) {
@@ -503,12 +566,17 @@ $objQueryDefaults = [
     'obj_per' => (string)$tabKonfig['default_per'],
     'obj_sort' => (string)$tabKonfig['default_sort'],
     'obj_dir' => (string)$tabKonfig['default_dir'],
+    'obj_items' => '0',
 ];
 
 $objBaseParams = [
     'cb_load_max' => '1',
     'obj_per' => (string)$objPer,
 ];
+
+if ($objShowItems) {
+    $objBaseParams['obj_items'] = '1';
+}
 
 if ((int)$tabKonfig['enable_sort'] === 1) {
     $objBaseParams['obj_sort'] = $objSort;
@@ -548,38 +616,40 @@ ob_start();
 <?php if ($objError !== ''): ?>
   <p class="card_text txt_seda odstup_vnejsi_0 card_text_muted"><?= h($objError) ?></p>
 <?php else: ?>
-  <form method="get" action="<?= h($formAction) ?>" class="card_stack gap_10 displ_flex" autocomplete="off" data-cb-max-form="1">
+  <form method="get" action="<?= h($formAction) ?>" class="card_stack gap_10 displ_flex" autocomplete="off" data-cb-max-form="1" data-cb-loader-text="Přepočítávám tabulku">
     <input type="hidden" name="cb_load_max" value="1">
     <input type="hidden" name="obj_p" value="1">
+    <input type="hidden" name="obj_items" value="0">
     <?php if ((int)$tabKonfig['enable_sort'] === 1): ?>
       <input type="hidden" name="obj_sort" value="<?= h($objSort) ?>">
       <input type="hidden" name="obj_dir" value="<?= h($objDir) ?>">
     <?php endif; ?>
-    <div style="margin-bottom:12px; font-size:14px;">
-      Objednávek: <strong><?= h((string)$objTotal) ?></strong>
-    </div>
+  <!--  <div style="margin-bottom:12px; font-size:14px;">
+   Objednávek: <strong><?= h((string)$objTotal) ?></strong> 
+
+    </div> -->
 
     <div class="table-wrap ram_normal bg_bila zaobleni_12">
-      <table class="card-max-table">
+      <table class="card-max-table k14-obj-table">
         <thead>
           <tr class="card-max-filter filter-row">
-            <th style="width:<?= h((string)$objCols['cislo_obj']['width']) ?>;">
+            <th>
               <input class="filter-input" type="text" name="obj_f[cislo_obj]" value="<?= h($objFilters['cislo_obj'] ?? '') ?>" autocomplete="off">
             </th>
-            <th style="width:<?= h((string)$objCols['stav']['width']) ?>;">
+            <th>
               <input class="filter-input" type="text" name="obj_f[stav]" value="<?= h($objFilters['stav'] ?? '') ?>" autocomplete="off">
             </th>
-            <th style="width:<?= h((string)$objCols['cena']['width']) ?>;"></th>
-            <th style="width:<?= h((string)$objCols['typ']['width']) ?>;">
+            <th></th>
+            <th>
               <input class="filter-input" type="text" name="obj_f[typ]" value="<?= h($objFilters['typ'] ?? '') ?>" autocomplete="off">
             </th>
-            <th style="width:<?= h((string)$objCols['platba']['width']) ?>;">
+            <th>
               <input class="filter-input" type="text" name="obj_f[platba]" value="<?= h($objFilters['platba'] ?? '') ?>" autocomplete="off">
             </th>
-            <th style="width:<?= h((string)$objCols['zakaznik']['width']) ?>;">
+            <th>
               <input class="filter-input" type="text" name="obj_f[zakaznik]" value="<?= h($objFilters['zakaznik'] ?? '') ?>" autocomplete="off">
             </th>
-            <th style="width:<?= h((string)$objCols['vytvoreno']['width']) ?>;">
+            <th>
               <div class="filter-actions gap_8 displ_flex">
                 <a href="<?= h($objResetUrl) ?>" class="filter-reset-btn cursor_ruka ram_normal zaobleni_8 vyska_24 radek_24 displ_inline_flex">
                   <span class="filter-reset-x">&times;</span>
@@ -587,6 +657,12 @@ ob_start();
                 </a>
               </div>
             </th>
+            <?php if ($objShowItems): ?>
+              <th></th>
+              <th></th>
+              <th></th>
+              <th></th>
+            <?php endif; ?>
           </tr>
           <tr>
             <?php foreach ($objCols as $key => $cfg): ?>
@@ -634,6 +710,37 @@ ob_start();
                 <td><?= h($row['platba']) ?></td>
                 <td><?= h($row['zakaznik']) ?></td>
                 <td class="txt_r"><?= h($row['vytvoreno']) ?></td>
+                <?php if ($objShowItems): ?>
+                  <td class="txt_r">
+                    <?php $polozkyTooltip = trim((string)($row['polozky_tooltip'] ?? '')); ?>
+                    <?php if ($polozkyTooltip !== ''): ?>
+                      <span class="cb_tooltip" tabindex="0" aria-label="Položky objednávky" data-cb-tooltip-position="1">
+                        <span class="cursor_ruka"><?= h($row['polozek']) ?></span>
+                        <span class="cb_tooltip_panel cb_tooltip_card" data-cb-tooltip-panel="1">
+                          <span class="cb_tooltip_title">Položky objednávky</span>
+                          <table class="cb_tooltip_table">
+                            <tbody>
+                              <?php foreach (explode("\n", $polozkyTooltip) as $polozkaTooltipLine): ?>
+                                <?php $polozkaTooltipLine = trim((string)$polozkaTooltipLine); ?>
+                                <?php if ($polozkaTooltipLine === ''): ?>
+                                  <?php continue; ?>
+                                <?php endif; ?>
+                                <tr>
+                                  <td><?= h($polozkaTooltipLine) ?></td>
+                                </tr>
+                              <?php endforeach; ?>
+                            </tbody>
+                          </table>
+                        </span>
+                      </span>
+                    <?php else: ?>
+                      <?= h($row['polozek']) ?>
+                    <?php endif; ?>
+                  </td>
+                  <td class="txt_r<?= ((int)$row['pizza_18'] === 0) ? ' txt_seda' : '' ?>"><?= h($row['pizza_18']) ?></td>
+                  <td class="txt_r<?= ((int)$row['pizza_32'] === 0) ? ' txt_seda' : '' ?>"><?= h($row['pizza_32']) ?></td>
+                  <td class="txt_r<?= ((int)$row['pizza_40'] === 0) ? ' txt_seda' : '' ?>"><?= h($row['pizza_40']) ?></td>
+                <?php endif; ?>
               </tr>
             <?php endforeach; ?>
           <?php endif; ?>
@@ -642,17 +749,19 @@ ob_start();
     </div>
 
     <?php if ((int)$tabKonfig['enable_pagination'] === 1): ?>
-      <div class="card-max-pagination list-bottom gap_14 gap_10 odstup_vnitrni_0 displ_grid">
-        <div class="per-form gap_8 displ_inline_flex">
+      <div class="card-max-pagination list-bottom k14-obj-bottom gap_14 gap_10 odstup_vnitrni_0 displ_grid" style="grid-template-columns:max-content 1fr max-content max-content; align-items:center; overflow-x:auto; white-space:nowrap;">
+        <div class="per-form gap_8 displ_inline_flex" style="white-space:nowrap;">
           <span>Zobrazuji</span>
           <select name="obj_per" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 per-select" onchange="this.form.obj_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
             <option value="20"<?= $objPer === 20 ? ' selected' : '' ?>>20 řádků</option>
             <option value="50"<?= $objPer === 50 ? ' selected' : '' ?>>50 řádků</option>
             <option value="100"<?= $objPer === 100 ? ' selected' : '' ?>>100 řádků</option>
+            <option value="500"<?= $objPer === 500 ? ' selected' : '' ?>>500 řádků</option>
+
           </select>
         </div>
 
-        <div class="pagination-icon gap_4 displ_inline_flex">
+        <div class="pagination-icon gap_4 displ_inline_flex" style="white-space:nowrap;">
           <?php $prevDisabled = $objPage <= 1; ?>
           <?php $nextDisabled = $objPage >= $objPages; ?>
 
@@ -688,7 +797,14 @@ ob_start();
           <a class="icon-btn<?= $nextDisabled ? ' disabled' : '' ?>" href="<?= $nextDisabled ? '#' : h($objBuildUrl(['obj_p' => (string)$objPages])) ?>">»</a>
         </div>
 
-        <div class="per-form gap_8 right displ_inline_flex jc_konec">
+        <div class="per-form gap_8 displ_inline_flex jc_stred" style="white-space:nowrap;">
+          <label class="displ_inline_flex gap_6 cursor_ruka" style="white-space:nowrap;">
+            <input type="checkbox" name="obj_items" value="1"<?= $objShowItems ? ' checked' : '' ?> onchange="this.form.obj_p.value=1; if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
+            <span>Zobraz položky</span>
+          </label>
+        </div>
+
+        <div class="per-form gap_8 right displ_inline_flex jc_konec" style="white-space:nowrap;">
           <span>Celkem: <?= h((string)$objTotal) ?></span>
         </div>
       </div>
@@ -698,7 +814,7 @@ ob_start();
 <?php
 $card_max_html = (string)ob_get_clean();
 
-/* karty/prehled_objednavek.php * Verze: V6 * Aktualizace: 14.04.2026 */
-// Počet řádků: 501
-// Předchozí počet řádků: 498
+/* karty/prehled_objednavek.php * Verze: V7 * Aktualizace: 11.06.2026 */
+// Počet řádků: 820
+// Předchozí počet řádků: 727
 ?>

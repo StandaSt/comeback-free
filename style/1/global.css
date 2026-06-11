@@ -2066,6 +2066,65 @@ align-items:center;
   background:var(--clr_ruzova_2);
 }
 
+
+/* =========================
+   K14 – prehled objednavek: kompaktni MAX tabulka
+   ========================= */
+
+.k14-obj-table th,
+.k14-obj-table td{
+  text-align:right;
+  white-space:nowrap;
+}
+
+.k14-obj-table .th-sort-link{
+  justify-content:flex-end;
+  text-align:right;
+}
+
+.k14-obj-table .card-max-filter th{
+  text-align:right;
+}
+
+.k14-obj-table .card-max-filter input{
+  width:70px;
+  display:inline-block;
+  text-align:right;
+}
+
+.k14-obj-table .card-max-filter input[name="obj_f[cislo_obj]"]{
+  width:130px;
+}
+
+.k14-obj-table .card-max-filter input[name="obj_f[zakaznik]"]{
+  width:150px;
+}
+
+.k14-obj-table .cb_tooltip_panel{
+  min-width:190px;
+  max-width:min(280px, calc(100vw - 24px));
+}
+
+.k14-obj-table .cb_tooltip_table td{
+  white-space:normal;
+}
+
+.k14-obj-table td.txt_seda{
+  color:var(--clr_pruhledna_cerna_3);
+}
+
+.k14-obj-bottom{
+  width:100%;
+}
+
+.k14-obj-bottom .pagination-icon{
+  justify-self:center;
+}
+
+.k14-obj-bottom .per-form.right{
+  justify-self:end;
+}
+
 /* =========================================================
    KONEC BLOKU 1 (AKTIVNI CSS)
    ========================================================= */
@@ -3053,4 +3112,3 @@ align-items:center;
   padding:8px 10px;
   margin-bottom:6px;
 }
-

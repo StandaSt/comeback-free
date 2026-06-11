@@ -182,6 +182,12 @@
 
     const reqUrl = String(buildUrlFromForm(form, reqUrlOverride));
     const cardId = getCardIdFromForm(form);
+    const loaderText = String(form.getAttribute('data-cb-loader-text') || '').trim();
+    const useLoader = loaderText !== '' && CB_AJAX && typeof CB_AJAX.setDashboardLoading === 'function';
+
+    if (useLoader) {
+      CB_AJAX.setDashboardLoading(true, 'dashboard', loaderText);
+    }
 
     const request = cardId > 0
       ? fetch(reqUrl, {
@@ -239,6 +245,11 @@
       .catch((err) => {
         if (err && err.name === 'AbortError') return;
         controllers.delete(form);
+      })
+      .finally(() => {
+        if (useLoader && controllers.get(form) !== ctrl) {
+          CB_AJAX.setDashboardLoading(false, 'dashboard');
+        }
       });
   }
 
