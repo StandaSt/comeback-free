@@ -240,11 +240,6 @@ if (!in_array($cbManualSaveDelayMs, [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000
     .then(function(r){ return r.json().catch(function(){ return {}; }); })
     .then(function(json){
       if (json && json.ok === true) {
-        if (window.CB_AJAX && typeof window.CB_AJAX.runRestiaAndRefreshOpCards === 'function') {
-          return window.CB_AJAX.runRestiaAndRefreshOpCards({
-            loaderMode: 'dashboard'
-          });
-        }
         if (window.CB_AJAX && typeof window.CB_AJAX.refreshDashboardRefreshOpCards === 'function') {
           return window.CB_AJAX.refreshDashboardRefreshOpCards({
             loaderMode: 'dashboard'

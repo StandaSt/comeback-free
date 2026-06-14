@@ -192,12 +192,6 @@
               }
               return;
             }
-            if (w.CB_AJAX && typeof w.CB_AJAX.runRestiaAndRefreshOpCards === 'function') {
-              updateBranchButtonLabel(String(payload.mode || ''), payload.selected_oblasti || []);
-              return w.CB_AJAX.runRestiaAndRefreshOpCards({
-                loaderMode: 'dashboard'
-              });
-            }
             if (w.CB_AJAX && typeof w.CB_AJAX.refreshDashboardRefreshOpCards === 'function') {
               updateBranchButtonLabel(String(payload.mode || ''), payload.selected_oblasti || []);
               return w.CB_AJAX.refreshDashboardRefreshOpCards({
