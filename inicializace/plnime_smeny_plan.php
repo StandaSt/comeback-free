@@ -1089,6 +1089,20 @@ function runPlannedUpdate(array $branches): array
     ];
 }
 
+if (!empty($GLOBALS['cb_smeny_plan_cron'])) {
+    set_time_limit(0);
+
+    $token = (string)($_SESSION['cb_token'] ?? '');
+    if ($token === '') {
+        throw new RuntimeException('Chybí token v session (cb_token).');
+    }
+
+    $branches = getBranches($token);
+    runPlannedUpdate($branches);
+
+    return;
+}
+
 $token = (string)($_SESSION['cb_token'] ?? '');
 $action = (string)($_POST['cb_action'] ?? '');
 $inputBranchId = (int)($_POST['cb_id_pob'] ?? 0);
