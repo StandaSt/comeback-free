@@ -215,7 +215,13 @@ $card_min_html = (string)ob_get_clean();
             <input type="hidden" name="rozdil" value="<?= h($reportDifferenceValue) ?>" data-zr-report-rozdil-value>
           </div>
           <div class="zr_control_metric zr_control_metric_col">
-            <strong class="zr_control_label zr_control_label_col">COL</strong>
+            <span class="cb_tooltip" tabindex="0" aria-label="Informace k COL" data-cb-tooltip-position="1">
+              <strong class="zr_control_label zr_control_label_col" style="display:inline-block;margin-bottom:0;cursor:help;">COL</strong>
+              <span class="cb_tooltip_panel cb_tooltip_card" data-cb-tooltip-panel="1">
+                <span class="cb_tooltip_title">Informativní varianta</span>
+                <div class="text_12" data-zr-report-col-bez-dph><?= h($reportColBezDphLabel) ?></div>
+              </span>
+            </span>
             <strong class="zr_control_value zr_control_value_col" data-zr-report-col><?= h($reportColLabel) ?></strong>
             <input type="hidden" name="col_pomer" value="<?= h($reportColValue) ?>" data-zr-report-col-value>
           </div>

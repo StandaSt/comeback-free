@@ -221,14 +221,26 @@ function cb_vcr_col(mysqli $conn, string $datumReportu, array $restiaSummary, ar
     return cb_vcr_col_cost($conn, $datumReportu, $people) / $trzba;
 }
 
+function cb_vcr_col_bez_dph(mysqli $conn, string $datumReportu, array $restiaSummary, array $people): ?float
+{
+    $trzbaBezDph = cb_vcr_money($restiaSummary, 'trzba') / 1.12;
+    if ($trzbaBezDph <= 0) {
+        return null;
+    }
+
+    return cb_vcr_col_cost($conn, $datumReportu, $people) / $trzbaBezDph;
+}
+
 function cb_vypocet_col_rozdil(mysqli $conn, string $datumReportu, array $restiaSummary, array $cash, array $people): array
 {
     $rozdil = cb_vcr_rozdil($restiaSummary, $cash);
     $col = cb_vcr_col($conn, $datumReportu, $restiaSummary, $people);
+    $colBezDph = cb_vcr_col_bez_dph($conn, $datumReportu, $restiaSummary, $people);
 
     return [
         'rozdil' => $rozdil,
         'col_pomer' => $col,
+        'col_bez_dph_pomer' => $colBezDph,
     ];
 }
 

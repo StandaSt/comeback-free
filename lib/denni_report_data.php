@@ -23,6 +23,11 @@ function cb_denni_report_format_input_number(float $value): string
     return number_format($rounded, $decimals, '.', '');
 }
 
+function cb_denni_report_format_percent(?float $value): string
+{
+    return $value === null ? '-- %' : number_format($value * 100, 2, ',', ' ') . ' %';
+}
+
 function cb_denni_report_format_time(?string $value): string
 {
     $raw = trim((string)$value);
@@ -403,13 +408,17 @@ function cb_denni_report_control_values(mysqli $conn, string $datumReportu, arra
     );
     $reportDifference = $values['rozdil'];
     $reportCol = $values['col_pomer'];
+    $reportColBezDph = isset($values['col_bez_dph_pomer']) && is_numeric($values['col_bez_dph_pomer'])
+        ? (float)$values['col_bez_dph_pomer']
+        : null;
 
     return [
         'make_time_label' => $makeTimeLabel,
         'difference_label' => $reportDifference === null ? '-- Kč' : cb_denni_report_format_money_whole((float)$reportDifference),
         'difference_value' => $reportDifference === null ? '' : number_format((float)$reportDifference, 2, '.', ''),
-        'col_label' => $reportCol === null ? '-- %' : number_format((float)$reportCol * 100, 2, ',', ' ') . ' %',
+        'col_label' => cb_denni_report_format_percent($reportCol),
         'col_value' => $reportCol === null ? '' : number_format((float)$reportCol, 6, '.', ''),
+        'col_bez_dph_label' => 'COL bez DPH: ' . cb_denni_report_format_percent($reportColBezDph),
     ];
 }
 
@@ -725,6 +734,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
     $reportDifferenceValue = $controlValues['difference_value'];
     $reportColLabel = $controlValues['col_label'];
     $reportColValue = $controlValues['col_value'];
+    $reportColBezDphLabel = (string)($controlValues['col_bez_dph_label'] ?? 'COL bez DPH: -- %');
     
     
     
@@ -778,6 +788,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
         'reportDifferenceValue' => $reportDifferenceValue,
         'reportColLabel' => $reportColLabel,
         'reportColValue' => $reportColValue,
+        'reportColBezDphLabel' => $reportColBezDphLabel,
     ];
 }
 

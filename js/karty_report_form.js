@@ -122,6 +122,11 @@
     if (colHidden instanceof HTMLInputElement) {
       colHidden.value = json && json.col_pomer !== null && json.col_pomer !== undefined ? Number(json.col_pomer).toFixed(6) : '';
     }
+
+    const colBezDph = root.querySelector('[data-zr-report-col-bez-dph]');
+    if (colBezDph instanceof HTMLElement) {
+      colBezDph.textContent = String(json && json.col_bez_dph_label ? json.col_bez_dph_label : 'COL bez DPH: -- %');
+    }
   }
 
   function requestReportCalculation(root) {

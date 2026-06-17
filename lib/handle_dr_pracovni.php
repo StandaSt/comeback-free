@@ -78,12 +78,14 @@ try {
         );
         $rozdil = $values['rozdil'];
         $colPomer = $values['col_pomer'];
+        $colBezDphPomer = $values['col_bez_dph_pomer'] ?? null;
         $sendJson(200, [
             'ok' => true,
             'rozdil' => $rozdil === null ? null : round((float)$rozdil, 2),
             'rozdil_label' => $rozdil === null ? '-- Kč' : cb_denni_report_format_money_whole((float)$rozdil),
             'col_pomer' => $colPomer === null ? null : round((float)$colPomer, 6),
             'col_label' => $colPomer === null ? '-- %' : number_format((float)$colPomer * 100, 2, ',', ' ') . ' %',
+            'col_bez_dph_label' => 'COL bez DPH: ' . cb_denni_report_format_percent(is_numeric($colBezDphPomer) ? (float)$colBezDphPomer : null),
         ]);
     }
 
