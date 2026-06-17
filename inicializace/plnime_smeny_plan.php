@@ -351,6 +351,17 @@ GQL;
     return is_array($week) ? $week : null;
 }
 
+function smenyPlanLogWeekApiFailure(int $branchId, int $skipWeeks, string $message): void
+{
+    $query = 'query($branchId:Int!, $skipWeeks:Int!){ branchGetShiftWeek(branchId:$branchId, skipWeeks:$skipWeeks){ id startDay } }';
+    $line = 'branchGetShiftWeek FAIL'
+        . ' | branchId=' . (string)$branchId
+        . ' | skipWeeks=' . (string)$skipWeeks
+        . ' | query=' . $query
+        . ' | message=' . trim($message);
+    appendTxtLog($line);
+}
+
 function dayOffset(string $day): int
 {
     return match ($day) {
@@ -565,16 +576,7 @@ function saveStateRow(array $state): void
 
     $stmt = $db->prepare(
         'INSERT INTO smeny_aktualizace (start_day, id_pob, stav, datum_od, started_at, finished_at, posledni_ok, pocet_bloku, pocet_hodin, chyba_text)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE
-            stav = VALUES(stav),
-            datum_od = VALUES(datum_od),
-            started_at = VALUES(started_at),
-            finished_at = VALUES(finished_at),
-            posledni_ok = VALUES(posledni_ok),
-            pocet_bloku = VALUES(pocet_bloku),
-            pocet_hodin = VALUES(pocet_hodin),
-            chyba_text = VALUES(chyba_text)'
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
 
     if (!$stmt) {
@@ -598,7 +600,7 @@ function saveStateRow(array $state): void
     if (!$stmt->execute()) {
         $msg = $stmt->error;
         $stmt->close();
-        throw new RuntimeException('UPSERT smeny_aktualizace selhal: ' . $msg);
+        throw new RuntimeException('INSERT smeny_aktualizace selhal: ' . $msg);
     }
 
     $stmt->close();
@@ -705,6 +707,7 @@ function processBranch(string $token, int $skipWeeks, int $idPob, int $apiBranch
         ];
     } catch (Throwable $e) {
         $message = mb_substr($e->getMessage(), 0, 1000, 'UTF-8');
+        smenyPlanLogWeekApiFailure($apiBranchId, $skipWeeks, $message);
         markBranchAsError($idPob, $defaultStartDay, $message);
 
         return [
@@ -753,6 +756,7 @@ function processPlannedWeekUpdate(string $token, int $skipWeeks, int $idPob, int
         ];
     } catch (Throwable $e) {
         $message = mb_substr($e->getMessage(), 0, 1000, 'UTF-8');
+        smenyPlanLogWeekApiFailure($apiBranchId, $skipWeeks, $message);
         markBranchAsError($idPob, $defaultStartDay, $message);
 
         return [

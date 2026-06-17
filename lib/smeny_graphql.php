@@ -50,14 +50,17 @@ function cb_smeny_graphql(string $url, string $query, array $vars = [], ?string 
     $out = '';
     $ok = true;
     $chyba = null;
+    $httpCode = 0;
+    $curlError = '';
 
     try {
         $out = curl_exec($ch);
+        $httpCode = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
         if ($out === false) {
             $ok = false;
-            $err = curl_error($ch);
+            $curlError = curl_error($ch);
             $chyba = 'cURL chyba';
-            throw new RuntimeException('cURL chyba: ' . $err);
+            throw new RuntimeException('cURL chyba: ' . $curlError);
         }
 
         $json = json_decode($out, true);
@@ -69,12 +72,12 @@ function cb_smeny_graphql(string $url, string $query, array $vars = [], ?string 
 
         if (!empty($json['errors'])) {
             $ok = false;
-            $chyba = 'neplatne prihlaseni';
 
             $m = $json['errors'][0]['message'] ?? 'Neznama chyba.';
             if (is_array($m)) {
                 $m = json_encode($m, JSON_UNESCAPED_UNICODE);
             }
+            $chyba = (string)$m;
             throw new RuntimeException((string)$m);
         }
 

@@ -15,6 +15,7 @@ if (PHP_SAPI === 'cli') {
 require_once __DIR__ . '/app.php';
 require_once __DIR__ . '/../config/secrets.php';
 require_once __DIR__ . '/smeny_graphql.php';
+require_once __DIR__ . '/../db/db_api_smeny.php';
 
 if (PHP_SAPI === 'cli') {
     $PROSTREDI = 'SERVER';
@@ -57,6 +58,41 @@ if (!function_exists('cb_smeny_plan_kontrola_login')) {
         if (!is_string($token) || $token === '') {
             throw new RuntimeException('Směny cron: nepodařilo se získat accessToken.');
         }
+
+        $me = cb_smeny_graphql(
+            'https://smeny.pizzacomeback.cz/graphql',
+            'query{
+                userGetLogged{
+                    id
+                    name
+                    surname
+                    email
+                    phoneNumber
+                    active
+                    approved
+                }
+            }',
+            [],
+            $token
+        );
+
+        $u = $me['userGetLogged'] ?? null;
+        if (!is_array($u) || empty($u['id']) || empty($u['email'])) {
+            throw new RuntimeException('Směny cron: nepodařilo se načíst profil přihlášeného uživatele.');
+        }
+
+        $_SESSION['cb_user'] = [
+            'id_user' => (int)$u['id'],
+            'name' => (string)($u['name'] ?? ''),
+            'surname' => (string)($u['surname'] ?? ''),
+            'email' => (string)($u['email'] ?? ''),
+            'telefon' => (string)($u['phoneNumber'] ?? ''),
+            'active' => (bool)($u['active'] ?? false),
+            'approved' => (bool)($u['approved'] ?? false),
+            'roles' => [],
+            'sloty' => [],
+        ];
+        $_SESSION['login_ok'] = 1;
 
         return $token;
     }
@@ -133,6 +169,13 @@ if (!function_exists('cb_smeny_plan_kontrola')) {
             $lockName = cb_smeny_plan_kontrola_lock_acquire($db, 10);
             include $file;
         } finally {
+            try {
+                db_api_smeny_flush($db, null, null);
+            } catch (Throwable $e) {
+                if (function_exists('error_log')) {
+                    error_log('Směny cron api_smeny flush selhal: ' . $e->getMessage());
+                }
+            }
             cb_smeny_plan_kontrola_lock_release($db, $lockName);
         }
     }
