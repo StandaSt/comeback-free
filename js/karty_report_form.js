@@ -21,17 +21,27 @@
 
   function getReportValue(root, selector) {
     const field = root.querySelector(selector);
-    return field instanceof HTMLInputElement ? String(field.value || '').trim() : '';
+    return (field instanceof HTMLInputElement || field instanceof HTMLSelectElement) ? String(field.value || '').trim() : '';
+  }
+
+  function usesDraftPersistence(root) {
+    const form = getForm(root);
+    return form instanceof HTMLFormElement && String(form.getAttribute('data-zr-draft-mode') || '0') === '1';
+  }
+
+  function usesFinalFullSubmit(root) {
+    const form = getForm(root);
+    return form instanceof HTMLFormElement && String(form.getAttribute('data-zr-final-full') || '0') === '1';
   }
 
   function saveDraftAction(root, action, data) {
     const form = getForm(root);
     if (!(form instanceof HTMLFormElement)) return Promise.resolve({ ok: true });
 
-    const body = new FormData();
+    const body = (action === 'final_save' && usesFinalFullSubmit(root)) ? new FormData(form) : new FormData();
     body.set('dr_action', action);
     body.set('id_pob', getReportValue(root, 'input[name="id_pob"]'));
-    body.set('datum_reportu', getReportValue(root, 'input[name="datum_reportu"]'));
+    body.set('datum_reportu', getReportValue(root, '[name="datum_reportu"]'));
     Object.keys(data || {}).forEach((key) => {
       body.set(key, String(data[key] ?? ''));
     });
@@ -136,7 +146,7 @@
     const body = new FormData(form);
     body.set('dr_action', 'prepocet_col_rozdil');
     body.set('id_pob', getReportValue(root, 'input[name="id_pob"]'));
-    body.set('datum_reportu', getReportValue(root, 'input[name="datum_reportu"]'));
+    body.set('datum_reportu', getReportValue(root, '[name="datum_reportu"]'));
 
     return fetch(form.action || 'index.php', {
       method: 'POST',
@@ -322,7 +332,10 @@
   function syncWeekdayFromDate(root) {
     const dateInput = root.querySelector('[data-zr-date]');
     const dateDisplay = root.querySelector('[data-zr-date-display]');
-    if (!(dateInput instanceof HTMLInputElement) || !(dateDisplay instanceof HTMLInputElement)) {
+    if (!(dateInput instanceof HTMLInputElement) && !(dateInput instanceof HTMLSelectElement)) {
+      return;
+    }
+    if (!(dateDisplay instanceof HTMLInputElement)) {
       return;
     }
 
@@ -431,7 +444,7 @@
         syncRequiredState(root);
         syncReportDifference(root);
         const field = dbMoneyField(input.getAttribute('data-zr-field'));
-        if (field !== '') {
+        if (field !== '' && usesDraftPersistence(root)) {
           saveDraftAction(root, 'update_money', {
             field,
             value: parseMoneyValue(input.value, kind)
@@ -455,6 +468,7 @@
     input.setAttribute('data-zr-note-bound', '1');
 
     input.addEventListener('blur', () => {
+      if (!usesDraftPersistence(root)) return;
       saveDraftAction(root, 'update_note', {
         value: String(input.value || '').trim()
       }).catch((err) => {
@@ -523,7 +537,7 @@
     syncReportDifference(root);
 
     const dateInput = root.querySelector('[data-zr-date]');
-    if (dateInput instanceof HTMLInputElement) {
+    if (dateInput instanceof HTMLInputElement || dateInput instanceof HTMLSelectElement) {
       dateInput.addEventListener('change', () => {
         syncWeekdayFromDate(root);
         syncRequiredState(root);
@@ -548,6 +562,7 @@
         const field = String(target.getAttribute('data-zr-field') || '');
         if (field !== 'oteviral' && field !== 'zaviral') return;
 
+        if (!usesDraftPersistence(root)) return;
         saveDraftAction(root, 'update_user', {
           field,
           value: String(target.value || '')

@@ -2,6 +2,15 @@
 // includes/denni_report_formular.php * K10 formular denniho reportu
 declare(strict_types=1);
 
+$zrEditableDisabledAttr = !empty($isReadOnlyForm) ? ' disabled' : '';
+$zrEditableReadonlyAttr = !empty($isReadOnlyForm) ? ' readonly' : '';
+$zrReadonlyInfoText = trim((string)($readonlyInfoText ?? ''));
+$zrUsesDraftMode = !empty($usesDraftPersistence) ? '1' : '0';
+$zrFinalFullMode = (!empty($canEditReport) && empty($isCurrentWorkday)) ? '1' : '0';
+$zrRemoveButtonHtml = !empty($isReadOnlyForm)
+    ? ''
+    : '<button type="button" class="zr_row_remove" data-zr-remove-row title="Odebrat" aria-label="Odebrat">×</button>';
+
 $renderUserSelectOptions = static function (array $options, int $selectedId, string $placeholder, array $excludeIds = []): string {
     $html = '<option value="">' . h($placeholder) . '</option>';
     $exclude = array_fill_keys(array_map('intval', $excludeIds), true);
@@ -25,8 +34,7 @@ $renderTimeInput = static function (string $name, string $selected, string $data
     return '<input class="zr_time_input" type="text" inputmode="numeric"' . $attrName . ' value="' . h($selected) . '" style="width:100%;text-align:center;" ' . $dataAttr . $attrExtra . '>';
 };
 
-
-$renderInstorSavedRow = static function (array $row, callable $renderTimeInput): string {
+$renderInstorSavedRow = static function (array $row, callable $renderTimeInput) use ($zrEditableDisabledAttr, $zrEditableReadonlyAttr, $zrRemoveButtonHtml): string {
     $idDrOsoby = (int)($row['id_dr_osoby'] ?? 0);
     $idUser = (int)($row['id_user'] ?? 0);
     $name = trim((string)($row['name'] ?? ''));
@@ -37,19 +45,19 @@ $renderInstorSavedRow = static function (array $row, callable $renderTimeInput):
 
     return ''
         . '<tr data-zr-person-row="instor" data-zr-id-user="' . h((string)$idUser) . '" data-zr-id-dr-osoby="' . h((string)$idDrOsoby) . '">'
-        . '<td style="width:220px;"><button type="button" class="zr_row_remove" data-zr-remove-row title="Odebrat" aria-label="Odebrat">×</button><strong class="zr_saved_value">' . h($name) . '</strong>'
+        . '<td style="width:220px;">' . $zrRemoveButtonHtml . '<strong class="zr_saved_value">' . h($name) . '</strong>'
         . '<input type="hidden" name="instor_jmeno[]" value="' . h($name) . '">'
         . '<input type="hidden" name="instor_id_user[]" value="' . h((string)$idUser) . '">'
         . '</td>'
-        . '<td style="width:58px;">' . $renderTimeInput('instor_zacatek[]', $start, 'data-zr-start') . '</td>'
-        . '<td style="width:58px;">' . $renderTimeInput('instor_konec[]', $end, 'data-zr-end') . '</td>'
-        . '<td class="zr_person_cell_break" style="width:44px;"><input type="text" inputmode="decimal" name="instor_pauza_hod[]" value="' . h($break) . '" style="width:100%;text-align:center;" data-zr-break></td>'
+        . '<td style="width:58px;">' . $renderTimeInput('instor_zacatek[]', $start, 'data-zr-start', trim($zrEditableDisabledAttr . ' ' . $zrEditableReadonlyAttr)) . '</td>'
+        . '<td style="width:58px;">' . $renderTimeInput('instor_konec[]', $end, 'data-zr-end', trim($zrEditableDisabledAttr . ' ' . $zrEditableReadonlyAttr)) . '</td>'
+        . '<td class="zr_person_cell_break" style="width:44px;"><input type="text" inputmode="decimal" name="instor_pauza_hod[]" value="' . h($break) . '" style="width:100%;text-align:center;" data-zr-break' . $zrEditableReadonlyAttr . $zrEditableDisabledAttr . '></td>'
         . '<td style="width:70px;"><strong class="zr_saved_value" data-zr-hours>' . h($hours) . ' hod.</strong><input type="hidden" name="instor_hodiny[]" value="' . h($hours) . '" data-zr-hours-hidden></td>'
         . '<td></td>'
         . '</tr>';
 };
 
-$renderKuryrSavedRow = static function (array $row, callable $renderTimeInput): string {
+$renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) use ($zrEditableDisabledAttr, $zrEditableReadonlyAttr, $zrRemoveButtonHtml): string {
     $idDrOsoby = (int)($row['id_dr_osoby'] ?? 0);
     $idUser = (int)($row['id_user'] ?? 0);
     $name = trim((string)($row['name'] ?? ''));
@@ -63,21 +71,22 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput): 
     $deliveryTotal = (int)($row['delivery_total'] ?? ($deliveryRestia + $deliveryManual));
     $car = (int)($row['car'] ?? 0);
     $phm = (float)($row['phm'] ?? 0);
+
     return ''
         . '<tr data-zr-person-row="kuryr" data-zr-id-user="' . h((string)$idUser) . '" data-zr-id-dr-osoby="' . h((string)$idDrOsoby) . '"' . ($restiaName !== '' ? ' data-zr-restia-name="' . h($restiaName) . '"' : '') . '>'
-        . '<td style="width:220px;"><button type="button" class="zr_row_remove" data-zr-remove-row title="Odebrat" aria-label="Odebrat">×</button><strong class="zr_saved_value">' . h($name) . '</strong>'
+        . '<td style="width:220px;">' . $zrRemoveButtonHtml . '<strong class="zr_saved_value">' . h($name) . '</strong>'
         . '<input type="hidden" name="kuryr_jmeno[]" value="' . h($name) . '">'
         . '<input type="hidden" name="kuryr_id_user[]" value="' . h((string)$idUser) . '">'
         . '</td>'
-        . '<td style="width:58px;">' . $renderTimeInput('kuryr_zacatek[]', $start, 'data-zr-start') . '</td>'
-        . '<td style="width:58px;">' . $renderTimeInput('kuryr_konec[]', $end, 'data-zr-end') . '</td>'
-        . '<td class="zr_person_cell_break" style="width:44px;"><input type="text" inputmode="decimal" name="kuryr_pauza_hod[]" value="' . h($break) . '" style="width:100%;text-align:center;" data-zr-break></td>'
+        . '<td style="width:58px;">' . $renderTimeInput('kuryr_zacatek[]', $start, 'data-zr-start', trim($zrEditableDisabledAttr . ' ' . $zrEditableReadonlyAttr)) . '</td>'
+        . '<td style="width:58px;">' . $renderTimeInput('kuryr_konec[]', $end, 'data-zr-end', trim($zrEditableDisabledAttr . ' ' . $zrEditableReadonlyAttr)) . '</td>'
+        . '<td class="zr_person_cell_break" style="width:44px;"><input type="text" inputmode="decimal" name="kuryr_pauza_hod[]" value="' . h($break) . '" style="width:100%;text-align:center;" data-zr-break' . $zrEditableReadonlyAttr . $zrEditableDisabledAttr . '></td>'
         . '<td style="width:70px;"><strong class="zr_saved_value" data-zr-hours>' . h($hours) . ' hod.</strong><input type="hidden" name="kuryr_hodiny[]" value="' . h($hours) . '" data-zr-hours-hidden></td>'
         . '<td class="txt_c" style="width:48px;"><strong class="zr_saved_value" data-zr-delivery-restia-value>' . h((string)$deliveryRestia) . '</strong><input type="hidden" name="kuryr_pocet_rozvozu_restia[]" value="' . h((string)$deliveryRestia) . '" data-zr-editor-field="delivery_restia"></td>'
-        . '<td class="txt_c" style="width:48px;"><input class="zr_delivery_input txt_c" type="text" inputmode="numeric" name="kuryr_pocet_rozvozu_manual[]" value="' . h((string)$deliveryManual) . '" style="width:100%;" data-zr-editor-field="delivery_manual" data-zr-int-short>'
+        . '<td class="txt_c" style="width:48px;"><input class="zr_delivery_input txt_c" type="text" inputmode="numeric" name="kuryr_pocet_rozvozu_manual[]" value="' . h((string)$deliveryManual) . '" style="width:100%;" data-zr-editor-field="delivery_manual" data-zr-int-short' . $zrEditableReadonlyAttr . $zrEditableDisabledAttr . '>'
         . '<input type="hidden" name="kuryr_pocet_rozvozu[]" value="' . h((string)$deliveryTotal) . '" data-zr-delivery-total>'
         . '</td>'
-        . '<td class="txt_c" style="width:34px;"><span class="zr_chk txt_c zr_person_cell_car zr_person_cell_car_inline"><input type="checkbox" value="1"' . ($car === 1 ? ' checked' : '') . ' data-zr-editor-field="car" data-zr-car-check></span><input type="hidden" name="kuryr_vlastni_vuz[]" value="' . h((string)$car) . '" data-zr-car-hidden></td>'
+        . '<td class="txt_c" style="width:34px;"><span class="zr_chk txt_c zr_person_cell_car zr_person_cell_car_inline"><input type="checkbox" value="1"' . ($car === 1 ? ' checked' : '') . ' data-zr-editor-field="car" data-zr-car-check' . $zrEditableDisabledAttr . '></span><input type="hidden" name="kuryr_vlastni_vuz[]" value="' . h((string)$car) . '" data-zr-car-hidden></td>'
         . '<td><strong class="zr_saved_value" data-zr-phm-value>' . h(cb_denni_report_format_money($phm)) . '</strong><input type="hidden" name="kuryr_vyplatit_phm[]" value="' . h(number_format($phm, 2, '.', '')) . '" data-zr-phm-hidden></td>'
         . '</tr>';
 };
@@ -91,12 +100,12 @@ ob_start();
 $card_min_html = (string)ob_get_clean();
 
 ?>
-<?php if (!$canSaveReport): ?>
+<?php if ($zrReadonlyInfoText !== ''): ?>
   <div class="zr_readonly_info">
-    Denní report mohou upravovat pouze oprávnění uživatelé. Zobrazená data jsou jen pro kontrolu.
+    <?= h($zrReadonlyInfoText) ?>
   </div>
 <?php endif; ?>
-<form class="zr_form gap_14" autocomplete="off" method="post" action="<?= h(cb_url('/')) ?>" data-zr-form data-cb-max-form="1" data-cb-loader-text="Načítám report pobočky" style="position:relative;">
+<form class="zr_form gap_14" autocomplete="off" method="post" action="<?= h(cb_url('/')) ?>" data-zr-form data-zr-draft-mode="<?= h($zrUsesDraftMode) ?>" data-zr-final-full="<?= h($zrFinalFullMode) ?>" data-zr-form-mode="<?= h((string)($formMode ?? 'workday')) ?>" data-zr-readonly="<?= !empty($isReadOnlyForm) ? '1' : '0' ?>" data-cb-max-form="1" data-cb-loader-text="Načítám report pobočky" style="position:relative;">
   <input type="hidden" name="dr_id" value="<?= h((string)$idDr) ?>" data-zr-dr-id>
   <div class="zr_layout gap_14">
     <div class="zr_main gap_14">
@@ -124,14 +133,17 @@ $card_min_html = (string)ob_get_clean();
               <tr>
                 <th class="zr_intro_label zr_req_label txt_l" data-zr-required-label="datum">Datum</th>
                 <td>
-                  <input class="zr_date_display" type="text" value="<?= h($reportDateDisplay) ?>" readonly data-zr-date-display>
-                  <input type="hidden" name="datum_reportu" value="<?= h($reportDate) ?>" data-zr-date data-zr-required="datum">
+                  <select class="zr_intro_select" name="datum_reportu" data-zr-date data-zr-required="datum" onchange="if(this.form){this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit();}">
+                    <?php foreach (($workdayOptions ?? []) as $dayOption): ?>
+                      <option value="<?= h((string)$dayOption['value']) ?>"<?= ((string)$dayOption['value'] === (string)$reportDate) ? ' selected' : '' ?>><?= h((string)$dayOption['label']) ?></option>
+                    <?php endforeach; ?>
+                  </select>
                 </td>
               </tr>
               <tr>
                 <th class="zr_intro_label zr_req_label txt_l" data-zr-required-label="oteviral">Otevíral</th>
                 <td>
-                  <select class="zr_intro_select" name="oteviral" data-zr-field="oteviral" data-zr-required="oteviral">
+                  <select class="zr_intro_select" name="oteviral" data-zr-field="oteviral" data-zr-required="oteviral"<?= $zrEditableDisabledAttr ?>>
                     <?= $renderUserSelectOptions($instorOptions, $openingId, 'Vyber jméno') ?>
                   </select>
                 </td>
@@ -139,7 +151,7 @@ $card_min_html = (string)ob_get_clean();
               <tr>
                 <th class="zr_intro_label zr_req_label txt_l" data-zr-required-label="zaviral">Zavíral</th>
                 <td>
-                  <select class="zr_intro_select" name="zaviral" data-zr-field="zaviral" data-zr-required="zaviral">
+                  <select class="zr_intro_select" name="zaviral" data-zr-field="zaviral" data-zr-required="zaviral"<?= $zrEditableDisabledAttr ?>>
                     <?= $renderUserSelectOptions($instorOptions, $closingId, 'Vyber jméno') ?>
                   </select>
                 </td>
@@ -159,22 +171,22 @@ $card_min_html = (string)ob_get_clean();
                 <th class="txt_l">Benzín</th>
               </tr>
               <tr>
-                <td><input class="zr_money_input" type="text" inputmode="numeric" name="pokladna_hotovost" value="<?= h($cashData['hotovost']) ?>" data-zr-field="pokladna_hotovost" data-zr-money="int" data-zr-required="pokladna_hotovost"></td>
-                <td><input class="zr_money_input" type="text" inputmode="decimal" name="pokladna_terminal" value="<?= h($cashData['terminal']) ?>" data-zr-field="pokladna_terminal" data-zr-money="decimal" data-zr-required="pokladna_terminal"></td>
-                <td><input class="zr_money_input" type="text" inputmode="numeric" name="pokladna_stravenky" value="<?= h($cashData['stravenky']) ?>" data-zr-field="pokladna_stravenky" data-zr-money="int" data-zr-required="pokladna_stravenky"></td>
-                <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_benzin" value="<?= h($cashData['vydaje_benzin']) ?>" data-zr-field="vydaje_benzin" data-zr-money="int" data-zr-required="vydaje_benzin"></td>
+                <td><input class="zr_money_input" type="text" inputmode="numeric" name="pokladna_hotovost" value="<?= h($cashData['hotovost']) ?>" data-zr-field="pokladna_hotovost" data-zr-money="int" data-zr-required="pokladna_hotovost"<?= $zrEditableReadonlyAttr . $zrEditableDisabledAttr ?>></td>
+                <td><input class="zr_money_input" type="text" inputmode="decimal" name="pokladna_terminal" value="<?= h($cashData['terminal']) ?>" data-zr-field="pokladna_terminal" data-zr-money="decimal" data-zr-required="pokladna_terminal"<?= $zrEditableReadonlyAttr . $zrEditableDisabledAttr ?>></td>
+                <td><input class="zr_money_input" type="text" inputmode="numeric" name="pokladna_stravenky" value="<?= h($cashData['stravenky']) ?>" data-zr-field="pokladna_stravenky" data-zr-money="int" data-zr-required="pokladna_stravenky"<?= $zrEditableReadonlyAttr . $zrEditableDisabledAttr ?>></td>
+                <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_benzin" value="<?= h($cashData['vydaje_benzin']) ?>" data-zr-field="vydaje_benzin" data-zr-money="int" data-zr-required="vydaje_benzin"<?= $zrEditableReadonlyAttr . $zrEditableDisabledAttr ?>></td>
               </tr>
               <tr>
                 <th class="txt_l">Auta</th>
                 <th class="txt_l">Suroviny</th>
-                <th class="txt_l">Ostatni</th>
+                <th class="txt_l">Ostatní</th>
                 <th class="txt_l">PHM-soukr.</th>
               </tr>
               <tr>
-                <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_auta" value="<?= h($cashData['vydaje_auta']) ?>" data-zr-field="vydaje_auta" data-zr-money="int" data-zr-required="vydaje_auta"></td>
-                <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_suroviny" value="<?= h($cashData['vydaje_suroviny']) ?>" data-zr-field="vydaje_suroviny" data-zr-money="int" data-zr-required="vydaje_suroviny"></td>
-                <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_ostatni" value="<?= h($cashData['vydaje_ostatni']) ?>" data-zr-field="vydaje_ostatni" data-zr-money="int" data-zr-required="vydaje_ostatni"></td>
-                <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_phm_soukrome" value="<?= h($cashData['vydaje_phm_soukrome']) ?>" data-zr-field="vydaje_phm_soukrome" data-zr-money="int" data-zr-required="vydaje_phm_soukrome"></td>
+                <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_auta" value="<?= h($cashData['vydaje_auta']) ?>" data-zr-field="vydaje_auta" data-zr-money="int" data-zr-required="vydaje_auta"<?= $zrEditableReadonlyAttr . $zrEditableDisabledAttr ?>></td>
+                <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_suroviny" value="<?= h($cashData['vydaje_suroviny']) ?>" data-zr-field="vydaje_suroviny" data-zr-money="int" data-zr-required="vydaje_suroviny"<?= $zrEditableReadonlyAttr . $zrEditableDisabledAttr ?>></td>
+                <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_ostatni" value="<?= h($cashData['vydaje_ostatni']) ?>" data-zr-field="vydaje_ostatni" data-zr-money="int" data-zr-required="vydaje_ostatni"<?= $zrEditableReadonlyAttr . $zrEditableDisabledAttr ?>></td>
+                <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_phm_soukrome" value="<?= h($cashData['vydaje_phm_soukrome']) ?>" data-zr-field="vydaje_phm_soukrome" data-zr-money="int" data-zr-required="vydaje_phm_soukrome"<?= $zrEditableReadonlyAttr . $zrEditableDisabledAttr ?>></td>
               </tr>
             </tbody>
           </table>
@@ -185,7 +197,7 @@ $card_min_html = (string)ob_get_clean();
         <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_instor_section">
           <h4 class="card_section_title txt_seda">Instor</h4>
           <div style="width:220px;margin-bottom:6px;">
-            <select data-zr-add-person="instor">
+            <select data-zr-add-person="instor"<?= $zrEditableDisabledAttr ?>>
               <?= $renderUserSelectOptions($instorOptions, 0, 'Vyber zaměstnance', $usedInstorIds) ?>
             </select>
           </div>
@@ -230,7 +242,7 @@ $card_min_html = (string)ob_get_clean();
         <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_kuryr_section">
           <h4 class="card_section_title txt_seda">Kurýr</h4>
           <div style="width:220px;margin-bottom:6px;">
-            <select data-zr-add-person="kuryr">
+            <select data-zr-add-person="kuryr"<?= $zrEditableDisabledAttr ?>>
               <?= $renderUserSelectOptions($kuryrOptions, 0, 'Vyber kurýra', $usedKuryrIds) ?>
             </select>
           </div>
@@ -248,11 +260,11 @@ $card_min_html = (string)ob_get_clean();
                 <th class="txt_l" style="white-space:nowrap;">PHM</th>
               </tr>
             </thead>
-          <tbody data-zr-saved-list="kuryr">
+            <tbody data-zr-saved-list="kuryr">
               <?php foreach ($kuryrRows as $row): ?>
                 <?= $renderKuryrSavedRow($row, $renderTimeInput) ?>
               <?php endforeach; ?>
-          </tbody>
+            </tbody>
           </table>
         </section>
         <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_note_section">
@@ -269,10 +281,11 @@ $card_min_html = (string)ob_get_clean();
             name="poznamka"
             value="<?= h($draftNote) ?>"
             data-zr-note
+            <?= $zrEditableReadonlyAttr . $zrEditableDisabledAttr ?>
             style="width:100%;margin-top:4px;"
           >
         </section>
-        <?php if ($canSaveReport && $reportBranchId > 0): ?>
+        <?php if (!empty($canEditReport) && $reportBranchId > 0): ?>
           <button
             type="button"
             class="zr_submit"
@@ -336,7 +349,7 @@ $card_min_html = (string)ob_get_clean();
       </section>
     </aside>
   </div>
-  <?php if (!$canSaveReport): ?>
+  <?php if (!empty($isReadOnlyForm)): ?>
     <div class="zr_readonly_overlay" aria-hidden="true"></div>
   <?php endif; ?>
 </form>

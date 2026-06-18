@@ -47,6 +47,31 @@ if (method_exists($conn, 'set_charset')) {
     $conn->set_charset('utf8mb4');
 }
 
+$currentWorkday = cb_denni_report_current_workday_date()->format('Y-m-d');
+$isCurrentWorkday = ($datum === $currentWorkday);
+
+$roleIds = [];
+$roleId = is_array($currentUser) ? (int)($currentUser['id_role'] ?? 0) : 0;
+if ($roleId > 0) {
+    $roleIds[$roleId] = true;
+}
+$stmtRoles = $conn->prepare('SELECT id_role FROM user_role WHERE id_user = ?');
+if ($stmtRoles !== false) {
+    $stmtRoles->bind_param('i', $currentUserId);
+    $stmtRoles->execute();
+    $rolesResult = $stmtRoles->get_result();
+    if ($rolesResult instanceof mysqli_result) {
+        while ($row = $rolesResult->fetch_assoc()) {
+            $idRole = (int)($row['id_role'] ?? 0);
+            if ($idRole > 0) {
+                $roleIds[$idRole] = true;
+            }
+        }
+        $rolesResult->free();
+    }
+    $stmtRoles->close();
+}
+
 $stmtAllowed = $conn->prepare('SELECT 1 FROM user_pobocka WHERE id_user = ? AND id_pob = ? LIMIT 1');
 if ($stmtAllowed === false) {
     $sendJson(500, ['ok' => false, 'err' => 'Nelze overit pobocku']);
@@ -63,12 +88,47 @@ if (!$isAllowed) {
     $sendJson(403, ['ok' => false, 'err' => 'Pobocka neni povolena']);
 }
 
+$isMainBranch = false;
+$stmtMainBranch = $conn->prepare('SELECT 1 FROM user_pobocka WHERE id_user = ? AND id_pob = ? AND main = 1 LIMIT 1');
+if ($stmtMainBranch !== false) {
+    $stmtMainBranch->bind_param('ii', $currentUserId, $idPob);
+    $stmtMainBranch->execute();
+    $mainResult = $stmtMainBranch->get_result();
+    $isMainBranch = $mainResult instanceof mysqli_result && $mainResult->num_rows > 0;
+    if ($mainResult instanceof mysqli_result) {
+        $mainResult->free();
+    }
+    $stmtMainBranch->close();
+}
+
+$historyData = (!$isCurrentWorkday) ? cb_denni_report_history_load($conn, $idPob, $datum) : null;
+$historyReportExists = is_array($historyData) && (int)(($historyData['report']['id_reportu'] ?? 0)) > 0;
+$canFinalizeCurrent = $isCurrentWorkday && (isset($roleIds[5]) || isset($roleIds[7]));
+$canFinalizeHistory = !$isCurrentWorkday && isset($roleIds[5]) && $isMainBranch && $historyReportExists;
+
+$draftOnlyActions = ['update_user', 'update_money', 'update_note', 'add_person', 'delete_person', 'update_time', 'update_kuryr'];
+if (in_array($action, $draftOnlyActions, true) && !$isCurrentWorkday) {
+    $sendJson(403, ['ok' => false, 'err' => 'Starsi provozni den nelze prubezne menit.']);
+}
+
 try {
-    $idDr = cb_db_dr_pracovni_ensure($conn, $idPob, $datum, $currentUserId, null, null);
+    $idDr = $isCurrentWorkday ? cb_db_dr_pracovni_ensure($conn, $idPob, $datum, $currentUserId, null, null) : 0;
 
     if ($action === 'prepocet_col_rozdil') {
-        $workdayRange = cb_dt_workday_range_utc($datum);
-        $restiaSummary = cb_denni_report_restia_summary($conn, $idPob, $workdayRange);
+        if ($isCurrentWorkday) {
+            $workdayRange = cb_dt_workday_range_utc($datum);
+            $restiaSummary = cb_denni_report_restia_summary($conn, $idPob, $workdayRange);
+        } else {
+            $historyReport = is_array($historyData) ? (array)($historyData['report'] ?? []) : [];
+            $restiaSummary = cb_denni_report_restia_summary_default();
+            $restiaSummary['trzba'] = (float)($historyReport['trzba'] ?? 0);
+            $restiaSummary['wolt'] = (float)($historyReport['wolt'] ?? 0);
+            $restiaSummary['bolt'] = (float)($historyReport['bolt'] ?? 0);
+            $restiaSummary['dj'] = (float)($historyReport['damejidlo'] ?? 0);
+            $restiaSummary['web'] = (float)($historyReport['web'] ?? 0);
+            $restiaSummary['wolt_cash'] = (float)($historyReport['wolt_cash'] ?? 0);
+            $restiaSummary['dj_cash'] = (float)($historyReport['dj_cash'] ?? 0);
+        }
         $values = cb_vypocet_col_rozdil(
             $conn,
             $datum,
@@ -90,38 +150,40 @@ try {
     }
 
     if ($action === 'final_save') {
-        $roleIds = [];
-        $currentUser = $_SESSION['cb_user'] ?? [];
-        $roleId = is_array($currentUser) ? (int)($currentUser['id_role'] ?? 0) : 0;
-        if ($roleId > 0) {
-            $roleIds[$roleId] = true;
-        }
-        $stmtRoles = $conn->prepare('SELECT id_role FROM user_role WHERE id_user = ?');
-        if ($stmtRoles !== false) {
-            $stmtRoles->bind_param('i', $currentUserId);
-            $stmtRoles->execute();
-            $rolesResult = $stmtRoles->get_result();
-            if ($rolesResult instanceof mysqli_result) {
-                while ($row = $rolesResult->fetch_assoc()) {
-                    $idRole = (int)($row['id_role'] ?? 0);
-                    if ($idRole > 0) {
-                        $roleIds[$idRole] = true;
-                    }
-                }
-                $rolesResult->free();
-            }
-            $stmtRoles->close();
-        }
-        if (!isset($roleIds[5]) && !isset($roleIds[7])) {
-            $sendJson(403, ['ok' => false, 'err' => 'Nemate pravo ulozit report']);
-        }
-
-        $workdayRange = cb_dt_workday_range_utc($datum);
         $rozdilFormRaw = trim((string)($_POST['rozdil'] ?? ''));
         $colPomerFormRaw = trim((string)($_POST['col_pomer'] ?? ''));
         $rozdilForm = $rozdilFormRaw === '' ? null : cb_vcr_float($rozdilFormRaw);
         $colPomerForm = $colPomerFormRaw === '' ? null : cb_vcr_float($colPomerFormRaw);
-        $idReportu = cb_db_zapis_denni_report($conn, $idPob, $datum, $currentUserId, $workdayRange, $rozdilForm, $colPomerForm);
+        if ($isCurrentWorkday) {
+            if (!$canFinalizeCurrent) {
+                $sendJson(403, ['ok' => false, 'err' => 'Nemate pravo ulozit report']);
+            }
+            $workdayRange = cb_dt_workday_range_utc($datum);
+            $idReportu = cb_db_zapis_denni_report($conn, $idPob, $datum, $currentUserId, $workdayRange, $rozdilForm, $colPomerForm);
+            $sendJson(200, ['ok' => true, 'id_reportu' => $idReportu]);
+        }
+
+        if (!$canFinalizeHistory) {
+            $sendJson(403, ['ok' => false, 'err' => 'Nemate pravo upravit historicky report']);
+        }
+
+        $historyReport = is_array($historyData) ? (array)($historyData['report'] ?? []) : [];
+        $restiaSummary = cb_denni_report_restia_summary_default();
+        $restiaSummary['trzba'] = (float)($historyReport['trzba'] ?? 0);
+        $restiaSummary['wolt'] = (float)($historyReport['wolt'] ?? 0);
+        $restiaSummary['bolt'] = (float)($historyReport['bolt'] ?? 0);
+        $restiaSummary['dj'] = (float)($historyReport['damejidlo'] ?? 0);
+        $restiaSummary['web'] = (float)($historyReport['web'] ?? 0);
+        $restiaSummary['wolt_cash'] = (float)($historyReport['wolt_cash'] ?? 0);
+        $restiaSummary['dj_cash'] = (float)($historyReport['dj_cash'] ?? 0);
+        $restiaSummary['cancel_count'] = (int)($historyReport['zrusene_obj_ks'] ?? 0);
+        $restiaSummary['cancel_value'] = (float)($historyReport['zrusene_obj_kc'] ?? 0);
+        $restiaSummary['delay_count'] = (int)($historyReport['zpozdene_rozvozy_5_min'] ?? 0);
+        $restiaSummary['make_time_avg_sec'] = isset($historyReport['make_time_prumer_sec']) ? (int)$historyReport['make_time_prumer_sec'] : null;
+        $restiaSummary['orders_total'] = (int)($historyReport['objednavky_nezrusene_ks'] ?? 0);
+        $restiaSummary['own_deliveries'] = (int)($historyReport['nase_rozvozy_ks'] ?? 0);
+        $restiaSummary['woltdrive_late'] = (int)($historyReport['woltdrive_pozde_5_min'] ?? 0);
+        $idReportu = cb_db_zapis_denni_report_from_form($conn, $idPob, $datum, $currentUserId, $restiaSummary, $_POST, $rozdilForm, $colPomerForm);
         $sendJson(200, ['ok' => true, 'id_reportu' => $idReportu]);
     }
 

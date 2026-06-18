@@ -37,17 +37,23 @@
 
   function getReportValue(root, selector) {
     const field = root instanceof HTMLElement ? root.querySelector(selector) : null;
-    return field instanceof HTMLInputElement ? String(field.value || '').trim() : '';
+    return (field instanceof HTMLInputElement || field instanceof HTMLSelectElement) ? String(field.value || '').trim() : '';
+  }
+
+  function usesDraftPersistence(root) {
+    const form = getForm(root);
+    return form instanceof HTMLFormElement && String(form.getAttribute('data-zr-draft-mode') || '0') === '1';
   }
 
   function savePersonAction(root, action, type, idUser, extra) {
     const form = getForm(root);
     if (!(form instanceof HTMLFormElement)) return Promise.resolve({ ok: true });
+    if (!usesDraftPersistence(root)) return Promise.resolve({ ok: true });
 
     const data = new FormData();
     data.set('dr_action', action);
     data.set('id_pob', getReportValue(root, 'input[name="id_pob"]'));
-    data.set('datum_reportu', getReportValue(root, 'input[name="datum_reportu"]'));
+    data.set('datum_reportu', getReportValue(root, '[name="datum_reportu"]'));
     data.set('id_user', String(idUser || ''));
     data.set('id_slot', type === 'kuryr' ? '2' : '1');
     if (extra && typeof extra === 'object') {
@@ -82,11 +88,12 @@
   function saveMoneyAction(root, field, value) {
     const form = getForm(root);
     if (!(form instanceof HTMLFormElement) || String(field || '') === '') return Promise.resolve({ ok: true });
+    if (!usesDraftPersistence(root)) return Promise.resolve({ ok: true });
 
     const data = new FormData();
     data.set('dr_action', 'update_money');
     data.set('id_pob', getReportValue(root, 'input[name="id_pob"]'));
-    data.set('datum_reportu', getReportValue(root, 'input[name="datum_reportu"]'));
+    data.set('datum_reportu', getReportValue(root, '[name="datum_reportu"]'));
     data.set('field', String(field));
     data.set('value', String(value ?? ''));
 

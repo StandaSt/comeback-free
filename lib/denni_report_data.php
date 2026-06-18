@@ -73,6 +73,253 @@ function cb_denni_report_user_full_name_by_id(mysqli $conn, ?int $idUser): strin
     return is_array($row) ? cb_denni_report_person_full_name($row['jmeno'] ?? '', $row['prijmeni'] ?? '') : '';
 }
 
+function cb_denni_report_user_name_parts_by_id(mysqli $conn, ?int $idUser): array
+{
+    if ($idUser === null || $idUser <= 0) {
+        return ['jmeno' => '', 'prijmeni' => ''];
+    }
+
+    $stmt = $conn->prepare('SELECT jmeno, prijmeni FROM user WHERE id_user = ? LIMIT 1');
+    if ($stmt === false) {
+        return ['jmeno' => '', 'prijmeni' => ''];
+    }
+    $stmt->bind_param('i', $idUser);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = ($result instanceof mysqli_result) ? ($result->fetch_assoc() ?: null) : null;
+    if ($result instanceof mysqli_result) {
+        $result->free();
+    }
+    $stmt->close();
+
+    if (!is_array($row)) {
+        return ['jmeno' => '', 'prijmeni' => ''];
+    }
+
+    return [
+        'jmeno' => trim((string)($row['jmeno'] ?? '')),
+        'prijmeni' => trim((string)($row['prijmeni'] ?? '')),
+    ];
+}
+
+function cb_denni_report_current_workday_date(): DateTimeImmutable
+{
+    return cb_dt_workday_start(null, 6);
+}
+
+function cb_denni_report_workday_options(DateTimeImmutable $currentWorkdayStart): array
+{
+    $options = [];
+    for ($i = 0; $i <= 5; $i++) {
+        $date = $currentWorkdayStart->modify('-' . $i . ' day');
+        $value = $date->format('Y-m-d');
+        $label = cb_dt_weekday_date_label_cs($date, true);
+        if ($i === 0) {
+            $label .= ' (dnes)';
+        }
+        $options[] = [
+            'value' => $value,
+            'label' => $label,
+        ];
+    }
+
+    return $options;
+}
+
+function cb_denni_report_user_main_branch_id(mysqli $conn, int $idUser): int
+{
+    if ($idUser <= 0) {
+        return 0;
+    }
+
+    $stmt = $conn->prepare('
+        SELECT id_pob
+        FROM user_pobocka
+        WHERE id_user = ?
+          AND main = 1
+        LIMIT 1
+    ');
+    if ($stmt === false) {
+        return 0;
+    }
+
+    $stmt->bind_param('i', $idUser);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = ($result instanceof mysqli_result) ? ($result->fetch_assoc() ?: null) : null;
+    if ($result instanceof mysqli_result) {
+        $result->free();
+    }
+    $stmt->close();
+
+    return is_array($row) ? (int)($row['id_pob'] ?? 0) : 0;
+}
+
+function cb_denni_report_history_load(mysqli $conn, int $idPob, string $reportDate): ?array
+{
+    if ($idPob <= 0 || $reportDate === '') {
+        return null;
+    }
+
+    $stmt = $conn->prepare('
+        SELECT
+            r.id_reportu,
+            r.datum_reportu,
+            r.id_pob,
+            r.oteviral,
+            r.zaviral,
+            r.oteviral_text,
+            r.zaviral_text,
+            r.poznamka,
+            pk.hotovost,
+            pk.terminal,
+            pk.stravenky,
+            pk.rozdil,
+            pk.vydaje_benzin,
+            pk.vydaje_auta,
+            pk.vydaje_suroviny,
+            pk.vydaje_ostatni,
+            pk.vydaje_phm_soukrome,
+            ri.trzba,
+            ri.wolt,
+            ri.bolt,
+            ri.damejidlo,
+            ri.web,
+            ri.wolt_cash,
+            ri.dj_cash,
+            ri.col_pomer,
+            ri.zrusene_obj_ks,
+            ri.zrusene_obj_kc,
+            ri.zpozdene_rozvozy_5_min,
+            ri.make_time_prumer_sec,
+            ri.objednavky_nezrusene_ks,
+            ri.nase_rozvozy_ks,
+            ri.woltdrive_pozde_5_min
+        FROM reporty_is r
+        LEFT JOIN reporty_is_pokladna pk
+            ON pk.id_reportu = r.id_reportu
+        LEFT JOIN reporty_is_restia ri
+            ON ri.id_reportu = r.id_reportu
+        WHERE r.id_pob = ?
+          AND r.datum_reportu = ?
+          AND r.platny = 1
+        ORDER BY r.id_reportu DESC
+        LIMIT 1
+    ');
+    if ($stmt === false) {
+        return null;
+    }
+
+    $stmt->bind_param('is', $idPob, $reportDate);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $reportRow = ($result instanceof mysqli_result) ? ($result->fetch_assoc() ?: null) : null;
+    if ($result instanceof mysqli_result) {
+        $result->free();
+    }
+    $stmt->close();
+
+    if (!is_array($reportRow)) {
+        return null;
+    }
+
+    $idReportu = (int)($reportRow['id_reportu'] ?? 0);
+    if ($idReportu <= 0) {
+        return null;
+    }
+
+    $stmtPeople = $conn->prepare('
+        SELECT
+            0 AS id_dr_osoby,
+            id_user,
+            slot AS id_slot,
+            jmeno,
+            prijmeni,
+            smena_od,
+            smena_do,
+            pauza,
+            odpracovano,
+            rozvozu_manual,
+            vlastni_vuz,
+            vyplatit_phm,
+            rozvozu_restia
+        FROM reporty_is_osoby
+        WHERE id_reportu = ?
+        ORDER BY slot ASC, COALESCE(smena_od, "00:00:00") ASC, COALESCE(smena_do, "00:00:00") ASC, prijmeni ASC, jmeno ASC
+    ');
+    $peopleRows = [];
+    if ($stmtPeople !== false) {
+        $stmtPeople->bind_param('i', $idReportu);
+        $stmtPeople->execute();
+        $peopleResult = $stmtPeople->get_result();
+        if ($peopleResult instanceof mysqli_result) {
+            while ($row = $peopleResult->fetch_assoc()) {
+                $peopleRows[] = $row;
+            }
+            $peopleResult->free();
+        }
+        $stmtPeople->close();
+    }
+
+    return [
+        'report' => $reportRow,
+        'people_rows' => $peopleRows,
+    ];
+}
+
+function cb_denni_report_previous_note_from_history(mysqli $conn, int $idPob, DateTimeImmutable $reportDateDt): string
+{
+    if ($idPob <= 0) {
+        return '';
+    }
+
+    $previousReportDate = $reportDateDt->modify('-1 day')->format('Y-m-d');
+    $stmt = $conn->prepare('
+        SELECT poznamka
+        FROM reporty_is
+        WHERE id_pob = ?
+          AND datum_reportu = ?
+          AND platny = 1
+        ORDER BY id_reportu DESC
+        LIMIT 1
+    ');
+    if ($stmt === false) {
+        return '';
+    }
+
+    $stmt->bind_param('is', $idPob, $previousReportDate);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = ($result instanceof mysqli_result) ? ($result->fetch_assoc() ?: null) : null;
+    if ($result instanceof mysqli_result) {
+        $result->free();
+    }
+    $stmt->close();
+
+    return trim((string)($row['poznamka'] ?? ''));
+}
+
+function cb_denni_report_ensure_user_option(array $options, int $selectedId, string $selectedName): array
+{
+    if ($selectedId <= 0 || trim($selectedName) === '') {
+        return $options;
+    }
+
+    foreach ($options as $option) {
+        if ((int)($option['id_user'] ?? 0) === $selectedId) {
+            return $options;
+        }
+    }
+
+    array_unshift($options, [
+        'id_user' => $selectedId,
+        'name' => $selectedName,
+        'restia_name' => $selectedName,
+    ]);
+
+    return $options;
+}
+
 function cb_denni_report_branch_slot_user_options(mysqli $conn, int $idPob, int $idSlot): array
 {
     if ($idPob <= 0 || $idSlot <= 0) {
@@ -484,8 +731,20 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
     $isMaxRender = ($renderMode === 'max');
     
     $tz = new DateTimeZone('Europe/Prague');
-    $reportDateDt = cb_dt_workday_start(null, 6);
-    $reportDate = $reportDateDt->format('Y-m-d');
+    $currentWorkdayDt = cb_denni_report_current_workday_date();
+    $workdayOptions = cb_denni_report_workday_options($currentWorkdayDt);
+    $allowedWorkdayValues = array_column($workdayOptions, 'value');
+    $requestedReportDate = trim((string)($_POST['datum_reportu'] ?? $_GET['datum_reportu'] ?? ''));
+    if (!in_array($requestedReportDate, $allowedWorkdayValues, true)) {
+        $requestedReportDate = $currentWorkdayDt->format('Y-m-d');
+    }
+    $reportDate = $requestedReportDate;
+    $reportDateDt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $reportDate . ' 06:00:00', $tz);
+    if (!($reportDateDt instanceof DateTimeImmutable)) {
+        $reportDateDt = $currentWorkdayDt;
+        $reportDate = $reportDateDt->format('Y-m-d');
+    }
+    $isCurrentWorkday = ($reportDate === $currentWorkdayDt->format('Y-m-d'));
     $reportDateDisplay = cb_dt_weekday_date_label_cs($reportDateDt, true);
     $workdayRange = cb_dt_workday_range_utc($reportDate);
     $reportSaveMinutes = 5;
@@ -543,6 +802,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
         }
     }
     $canSaveReport = isset($currentUserRoleIds[5]) || isset($currentUserRoleIds[7]);
+    $hasRole5 = isset($currentUserRoleIds[5]);
     $allowedBranches = [];
     if ($currentUserId > 0) {
         $stmtAllowedBranches = $conn->prepare("
@@ -571,6 +831,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
         }
     }
     $allowedBranchIds = array_map('intval', array_keys($allowedBranches));
+    $mainBranchId = cb_denni_report_user_main_branch_id($conn, $currentUserId);
     $requestedBranchId = (int)($_POST['zr_id_pob'] ?? $_GET['zr_id_pob'] ?? 0);
     $reportBranchId = ($requestedBranchId > 0 && in_array($requestedBranchId, $allowedBranchIds, true)) ? $requestedBranchId : 0;
     $singleAllowedBranchName = '';
@@ -581,10 +842,10 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
         $singleAllowedBranchName = (string)$allowedBranches[$reportBranchId];
     }
     
-    if ($reportBranchId <= 0 && $canSaveReport && $currentUserId > 0) {
+    if ($reportBranchId <= 0 && $canSaveReport && $currentUserId > 0 && $isCurrentWorkday) {
         $nowLocal = (new DateTimeImmutable('now', $tz))->format('Y-m-d H:i:s');
-        $dateFrom = $reportDateDt->modify('-1 day')->format('Y-m-d');
-        $dateTo = $reportDateDt->format('Y-m-d');
+        $dateFrom = $currentWorkdayDt->modify('-1 day')->format('Y-m-d');
+        $dateTo = $currentWorkdayDt->format('Y-m-d');
         $stmtCurrentShift = $conn->prepare("
             SELECT sp.id_pob
             FROM smeny_plan sp
@@ -611,6 +872,29 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
         }
     }
     
+    $historyData = null;
+    $historyReportId = 0;
+    $historyReportExists = false;
+    if ($reportBranchId > 0 && !$isCurrentWorkday) {
+        $historyData = cb_denni_report_history_load($conn, $reportBranchId, $reportDate);
+        if (is_array($historyData)) {
+            $historyReportId = (int)($historyData['report']['id_reportu'] ?? 0);
+            $historyReportExists = ($historyReportId > 0);
+        }
+    }
+
+    $canEditHistory = (!$isCurrentWorkday && $historyReportExists && $hasRole5 && $mainBranchId > 0 && $mainBranchId === $reportBranchId);
+    $canEditReport = $isCurrentWorkday ? $canSaveReport : $canEditHistory;
+    $usesDraftPersistence = $isCurrentWorkday && $canEditReport;
+    $isReadOnlyForm = !$canEditReport;
+    $formMode = $isCurrentWorkday ? 'workday' : ($canEditHistory ? 'history_edit' : 'history_readonly');
+    $readonlyInfoText = '';
+    if (!$isCurrentWorkday && !$historyReportExists && $reportBranchId > 0) {
+        $readonlyInfoText = 'Pro vybraný provozní den není uložený platný report.';
+    } elseif ($isReadOnlyForm) {
+        $readonlyInfoText = 'Denní report mohou upravovat pouze oprávnění uživatelé. Zobrazená data jsou jen pro kontrolu.';
+    }
+
     $instorOptions = cb_denni_report_branch_slot_user_options($conn, $reportBranchId, 1);
     $plannedInstorDefaults = cb_denni_report_planned_instor_defaults($conn, $reportBranchId, $reportDate);
     $kuryrOptions = cb_denni_report_branch_slot_user_options($conn, $reportBranchId, 2);
@@ -621,7 +905,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
     $kuryrRows = [];
     $reportSaveAtTs = 0;
     
-    if ($reportBranchId > 0) {
+    if ($reportBranchId > 0 && $isCurrentWorkday) {
         $endColumn = $reportEndColumns[(int)$reportDateDt->format('N')] ?? '';
         if ($endColumn !== '') {
             $stmtEnd = $conn->prepare('SELECT `' . $endColumn . '` AS end_time FROM pobocka WHERE id_pob = ? LIMIT 1');
@@ -641,7 +925,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
     }
     $reportRefreshAtTs = cb_report_refresh_at_ts($reportSaveAtTs, 300);
     
-    if ($reportBranchId > 0) {
+    if ($reportBranchId > 0 && $usesDraftPersistence) {
         $idDr = cb_db_dr_pracovni_ensure(
             $conn,
             $reportBranchId,
@@ -656,7 +940,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
         }
     }
     
-    if ($idDr > 0 && cb_db_dr_pracovni_osoby_list($conn, $idDr) === []) {
+    if ($usesDraftPersistence && $idDr > 0 && cb_db_dr_pracovni_osoby_list($conn, $idDr) === []) {
         $sqlShiftPlan = "
             SELECT
                 sp.id_user,
@@ -695,7 +979,31 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
         }
     }
     
-    $draftPersonRows = $idDr > 0 ? cb_db_dr_pracovni_osoby_list($conn, $idDr) : [];
+    if ($usesDraftPersistence) {
+        $draftPersonRows = $idDr > 0 ? cb_db_dr_pracovni_osoby_list($conn, $idDr) : [];
+    } elseif (is_array($historyData)) {
+        $historyReport = $historyData['report'];
+        $draftRow = [
+            'datum_reportu' => $reportDate,
+            'id_pob' => $reportBranchId,
+            'oteviral' => (int)($historyReport['oteviral'] ?? 0),
+            'zaviral' => (int)($historyReport['zaviral'] ?? 0),
+            'hotovost' => $historyReport['hotovost'] ?? null,
+            'terminal' => $historyReport['terminal'] ?? null,
+            'stravenky' => $historyReport['stravenky'] ?? null,
+            'vydaje_benzin' => $historyReport['vydaje_benzin'] ?? 0,
+            'vydaje_auta' => $historyReport['vydaje_auta'] ?? 0,
+            'vydaje_suroviny' => $historyReport['vydaje_suroviny'] ?? 0,
+            'vydaje_ostatni' => $historyReport['vydaje_ostatni'] ?? 0,
+            'vydaje_phm_soukrome' => $historyReport['vydaje_phm_soukrome'] ?? 0,
+            'poznamka' => $historyReport['poznamka'] ?? '',
+            'oteviral_text' => $historyReport['oteviral_text'] ?? '',
+            'zaviral_text' => $historyReport['zaviral_text'] ?? '',
+        ];
+        $draftPersonRows = is_array($historyData['people_rows'] ?? null) ? $historyData['people_rows'] : [];
+    } else {
+        $draftPersonRows = [];
+    }
     $reportPersonRows = cb_denni_report_person_rows($draftPersonRows);
     $instorRows = $reportPersonRows['instor'];
     $kuryrRows = $reportPersonRows['kuryr'];
@@ -707,6 +1015,12 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
     $closingId = isset($draftRow['zaviral']) ? (int)$draftRow['zaviral'] : 0;
     $openingName = cb_denni_report_user_full_name_by_id($conn, $openingId > 0 ? $openingId : null);
     $closingName = cb_denni_report_user_full_name_by_id($conn, $closingId > 0 ? $closingId : null);
+    if ($openingName === '' && !$isCurrentWorkday) {
+        $openingName = trim((string)($draftRow['oteviral_text'] ?? ''));
+    }
+    if ($closingName === '' && !$isCurrentWorkday) {
+        $closingName = trim((string)($draftRow['zaviral_text'] ?? ''));
+    }
     if ($openingName === '') {
         $openingName = (string)($plannedInstorDefaults['opening'] ?? '');
         $openingId = (int)($plannedInstorDefaults['opening_id'] ?? 0);
@@ -715,20 +1029,62 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
         $closingName = (string)($plannedInstorDefaults['closing'] ?? '');
         $closingId = (int)($plannedInstorDefaults['closing_id'] ?? 0);
     }
+    $instorOptions = cb_denni_report_ensure_user_option($instorOptions, $openingId, $openingName);
+    $instorOptions = cb_denni_report_ensure_user_option($instorOptions, $closingId, $closingName);
     
     $cashData = cb_denni_report_cash_data($draftRow);
     
     $draftNote = trim((string)($draftRow['poznamka'] ?? ''));
-    $previousNote = cb_denni_report_previous_note($conn, $reportBranchId, $reportDateDt);
+    $previousNote = $isCurrentWorkday
+        ? cb_denni_report_previous_note($conn, $reportBranchId, $reportDateDt)
+        : cb_denni_report_previous_note_from_history($conn, $reportBranchId, $reportDateDt);
     
-    $restiaSummary = cb_denni_report_restia_summary($conn, $reportBranchId, $workdayRange);
-    $restiaSummary['docs_count'] = cb_denni_report_docs_count_from_person_rows($draftPersonRows);
-    
-    $kuryrDeliveryData = cb_denni_report_kuryr_delivery_data($conn, $reportBranchId, $workdayRange, $kuryrRows);
-    $kuryrRows = $kuryrDeliveryData['kuryr_rows'];
-    $kuryrDeliveryCountsJson = $kuryrDeliveryData['counts_json'];
-    
-    $controlValues = cb_denni_report_control_values($conn, $reportDate, $restiaSummary, $draftRow, $draftPersonRows);
+    if ($isCurrentWorkday) {
+        $restiaSummary = cb_denni_report_restia_summary($conn, $reportBranchId, $workdayRange);
+        $restiaSummary['docs_count'] = cb_denni_report_docs_count_from_person_rows($draftPersonRows);
+        
+        $kuryrDeliveryData = cb_denni_report_kuryr_delivery_data($conn, $reportBranchId, $workdayRange, $kuryrRows);
+        $kuryrRows = $kuryrDeliveryData['kuryr_rows'];
+        $kuryrDeliveryCountsJson = $kuryrDeliveryData['counts_json'];
+        
+        $controlValues = cb_denni_report_control_values($conn, $reportDate, $restiaSummary, $draftRow, $draftPersonRows);
+    } else {
+        $historyReport = is_array($historyData) ? (array)$historyData['report'] : [];
+        $restiaSummary = cb_denni_report_restia_summary_default();
+        $restiaSummary['trzba'] = (float)($historyReport['trzba'] ?? 0);
+        $restiaSummary['wolt'] = (float)($historyReport['wolt'] ?? 0);
+        $restiaSummary['bolt'] = (float)($historyReport['bolt'] ?? 0);
+        $restiaSummary['dj'] = (float)($historyReport['damejidlo'] ?? 0);
+        $restiaSummary['web'] = (float)($historyReport['web'] ?? 0);
+        $restiaSummary['wolt_cash'] = (float)($historyReport['wolt_cash'] ?? 0);
+        $restiaSummary['dj_cash'] = (float)($historyReport['dj_cash'] ?? 0);
+        $restiaSummary['cancel_count'] = (int)($historyReport['zrusene_obj_ks'] ?? 0);
+        $restiaSummary['cancel_value'] = (float)($historyReport['zrusene_obj_kc'] ?? 0);
+        $restiaSummary['delay_count'] = (int)($historyReport['zpozdene_rozvozy_5_min'] ?? 0);
+        $restiaSummary['make_time_avg_sec'] = isset($historyReport['make_time_prumer_sec']) ? (int)$historyReport['make_time_prumer_sec'] : null;
+        $restiaSummary['docs_count'] = cb_denni_report_docs_count_from_person_rows($draftPersonRows);
+        $restiaSummary['orders_total'] = (int)($historyReport['objednavky_nezrusene_ks'] ?? 0);
+        $restiaSummary['own_deliveries'] = (int)($historyReport['nase_rozvozy_ks'] ?? 0);
+        $restiaSummary['woltdrive_late'] = (int)($historyReport['woltdrive_pozde_5_min'] ?? 0);
+
+        $kuryrDeliveryCountsJson = '{}';
+        $controlValues = cb_denni_report_control_values($conn, $reportDate, $restiaSummary, $draftRow, $draftPersonRows);
+        if (array_key_exists('rozdil', $historyReport)) {
+            $savedRozdil = $historyReport['rozdil'];
+            $controlValues['difference_label'] = $savedRozdil === null ? '-- Kč' : cb_denni_report_format_money_whole((float)$savedRozdil);
+            $controlValues['difference_value'] = $savedRozdil === null ? '' : number_format((float)$savedRozdil, 2, '.', '');
+        }
+        if (array_key_exists('col_pomer', $historyReport)) {
+            $savedCol = $historyReport['col_pomer'];
+            $savedColFloat = $savedCol === null ? null : (float)$savedCol;
+            $controlValues['col_label'] = cb_denni_report_format_percent($savedColFloat);
+            $controlValues['col_value'] = $savedColFloat === null ? '' : number_format($savedColFloat, 6, '.', '');
+        }
+        $kuryrDeliveryData = [
+            'kuryr_rows' => $kuryrRows,
+            'counts_json' => $kuryrDeliveryCountsJson,
+        ];
+    }
     $makeTimeLabel = $controlValues['make_time_label'];
     $reportDifferenceLabel = $controlValues['difference_label'];
     $reportDifferenceValue = $controlValues['difference_value'];
@@ -742,6 +1098,9 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
         'renderMode' => $renderMode,
         'isMaxRender' => $isMaxRender,
         'tz' => $tz,
+        'currentWorkdayDt' => $currentWorkdayDt,
+        'workdayOptions' => $workdayOptions,
+        'isCurrentWorkday' => $isCurrentWorkday,
         'reportDateDt' => $reportDateDt,
         'reportDate' => $reportDate,
         'reportDateDisplay' => $reportDateDisplay,
@@ -753,12 +1112,23 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
         'currentUserId' => $currentUserId,
         'currentUserRoleId' => $currentUserRoleId,
         'currentUserRoleIds' => $currentUserRoleIds,
+        'mainBranchId' => $mainBranchId,
         'canSaveReport' => $canSaveReport,
+        'hasRole5' => $hasRole5,
         'allowedBranches' => $allowedBranches,
         'allowedBranchIds' => $allowedBranchIds,
         'requestedBranchId' => $requestedBranchId,
         'reportBranchId' => $reportBranchId,
         'singleAllowedBranchName' => $singleAllowedBranchName,
+        'historyData' => $historyData,
+        'historyReportId' => $historyReportId,
+        'historyReportExists' => $historyReportExists,
+        'canEditHistory' => $canEditHistory,
+        'canEditReport' => $canEditReport,
+        'usesDraftPersistence' => $usesDraftPersistence,
+        'isReadOnlyForm' => $isReadOnlyForm,
+        'formMode' => $formMode,
+        'readonlyInfoText' => $readonlyInfoText,
         'instorOptions' => $instorOptions,
         'plannedInstorDefaults' => $plannedInstorDefaults,
         'kuryrOptions' => $kuryrOptions,
