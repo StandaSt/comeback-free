@@ -126,6 +126,50 @@ function cb_denni_report_workday_options(DateTimeImmutable $currentWorkdayStart)
     return $options;
 }
 
+function cb_denni_report_missing_reports_summary(mysqli $conn, string $date): array
+{
+    if ($date === '') {
+        return [];
+    }
+
+    $sql = "
+        SELECT p.id_pob, p.nazev
+        FROM pobocka p
+        LEFT JOIN reporty_is r
+            ON r.id_pob = p.id_pob
+           AND r.datum_reportu = ?
+           AND r.platny = 1
+        WHERE p.aktivni = 1
+          AND p.id_pob > 0
+          AND r.id_reportu IS NULL
+        ORDER BY p.id_pob ASC
+    ";
+
+    $stmt = $conn->prepare($sql);
+    $rows = [];
+    if ($stmt !== false) {
+        $stmt->bind_param('s', $date);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($result instanceof mysqli_result) {
+            while ($row = $result->fetch_assoc()) {
+                $idPob = (int)($row['id_pob'] ?? 0);
+                $name = trim((string)($row['nazev'] ?? ''));
+                if ($idPob >= 0) {
+                    $rows[] = [
+                        'id_pob' => $idPob,
+                        'nazev' => $name !== '' ? $name : ('Pobočka ' . $idPob),
+                    ];
+                }
+            }
+            $result->free();
+        }
+        $stmt->close();
+    }
+
+    return $rows;
+}
+
 function cb_denni_report_user_main_branch_id(mysqli $conn, int $idUser): int
 {
     if ($idUser <= 0) {
@@ -366,6 +410,53 @@ function cb_denni_report_branch_slot_user_options(mysqli $conn, int $idPob, int 
     }
 
     return array_values($users);
+}
+
+function cb_denni_report_shift_plan_people_rows(mysqli $conn, int $idPob, string $date): array
+{
+    if ($idPob <= 0 || $date === '') {
+        return [];
+    }
+
+    $sqlShiftPlan = "
+        SELECT
+            0 AS id_dr_osoby,
+            sp.id_user,
+            sp.id_slot,
+            u.jmeno,
+            u.prijmeni,
+            sp.cas_od AS smena_od,
+            sp.cas_do AS smena_do,
+            0 AS pauza,
+            TIMESTAMPDIFF(MINUTE, CONCAT(sp.datum, ' ', sp.cas_od), DATE_ADD(CONCAT(sp.datum, ' ', sp.cas_do), INTERVAL CASE WHEN sp.cas_do < sp.cas_od THEN 1 ELSE 0 END DAY)) / 60 AS odpracovano,
+            0 AS rozvozu_manual,
+            0 AS vlastni_vuz,
+            0 AS vyplatit_phm,
+            0 AS rozvozu_restia
+        FROM smeny_plan sp
+        INNER JOIN user u ON u.id_user = sp.id_user
+        WHERE sp.id_pob = ?
+          AND sp.datum = ?
+          AND sp.id_slot IN (1, 2)
+        ORDER BY sp.id_slot ASC, sp.cas_od ASC, u.jmeno ASC, u.prijmeni ASC
+    ";
+
+    $stmtShiftPlan = $conn->prepare($sqlShiftPlan);
+    $rows = [];
+    if ($stmtShiftPlan !== false) {
+        $stmtShiftPlan->bind_param('is', $idPob, $date);
+        $stmtShiftPlan->execute();
+        $resultShiftPlan = $stmtShiftPlan->get_result();
+        if ($resultShiftPlan instanceof mysqli_result) {
+            while ($row = $resultShiftPlan->fetch_assoc()) {
+                $rows[] = $row;
+            }
+            $resultShiftPlan->free();
+        }
+        $stmtShiftPlan->close();
+    }
+
+    return $rows;
 }
 
 function cb_denni_report_planned_instor_defaults(mysqli $conn, int $idPob, string $date): array
@@ -733,6 +824,23 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
     $tz = new DateTimeZone('Europe/Prague');
     $currentWorkdayDt = cb_denni_report_current_workday_date();
     $workdayOptions = cb_denni_report_workday_options($currentWorkdayDt);
+    $miniMissingReportDays = [];
+    for ($i = 1; $i <= 5; $i++) {
+        $miniMissingReportDays[] = $currentWorkdayDt->modify('-' . $i . ' day');
+    }
+    $miniMissingReports = [];
+    foreach ($miniMissingReportDays as $dayDt) {
+        $dayDate = $dayDt->format('Y-m-d');
+        $missingBranches = cb_denni_report_missing_reports_summary($conn, $dayDate);
+        $miniMissingReports[] = [
+            'date' => $dayDate,
+            'label' => cb_dt_weekday_date_label_cs($dayDt, true),
+            'branches' => $missingBranches,
+            'branches_text' => $missingBranches !== []
+                ? implode(', ', array_map(static fn(array $row): string => (string)$row['nazev'], $missingBranches))
+                : 'OK',
+        ];
+    }
     $allowedWorkdayValues = array_column($workdayOptions, 'value');
     $requestedReportDate = trim((string)($_POST['datum_reportu'] ?? $_GET['datum_reportu'] ?? ''));
     if (!in_array($requestedReportDate, $allowedWorkdayValues, true)) {
@@ -888,9 +996,10 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
     $usesDraftPersistence = $isCurrentWorkday && $canEditReport;
     $isReadOnlyForm = !$canEditReport;
     $formMode = $isCurrentWorkday ? 'workday' : ($canEditHistory ? 'history_edit' : 'history_readonly');
+    $missingHistoryReport = (!$isCurrentWorkday && !$historyReportExists && $reportBranchId > 0);
     $readonlyInfoText = '';
-    if (!$isCurrentWorkday && !$historyReportExists && $reportBranchId > 0) {
-        $readonlyInfoText = 'Pro vybraný provozní den není uložený platný report.';
+    if ($missingHistoryReport) {
+        $readonlyInfoText = '';
     } elseif ($isReadOnlyForm) {
         $readonlyInfoText = 'Denní report mohou upravovat pouze oprávnění uživatelé. Zobrazená data jsou jen pro kontrolu.';
     }
@@ -898,6 +1007,13 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
     $instorOptions = cb_denni_report_branch_slot_user_options($conn, $reportBranchId, 1);
     $plannedInstorDefaults = cb_denni_report_planned_instor_defaults($conn, $reportBranchId, $reportDate);
     $kuryrOptions = cb_denni_report_branch_slot_user_options($conn, $reportBranchId, 2);
+    $reportBranchName = $reportBranchId > 0 ? trim((string)($allowedBranches[$reportBranchId] ?? '')) : '';
+    if ($reportBranchName === '' && $singleAllowedBranchName !== '') {
+        $reportBranchName = trim($singleAllowedBranchName);
+    }
+    $missingHistoryReportText = $missingHistoryReport
+        ? 'Pobočka ' . ($reportBranchName !== '' ? $reportBranchName : ('ID ' . $reportBranchId)) . ' nemá dne ' . $reportDateDisplay . ' zadaný report.'
+        : '';
     
     $draftRow = null;
     $idDr = 0;
@@ -941,46 +1057,24 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
     }
     
     if ($usesDraftPersistence && $idDr > 0 && cb_db_dr_pracovni_osoby_list($conn, $idDr) === []) {
-        $sqlShiftPlan = "
-            SELECT
-                sp.id_user,
-                sp.id_slot,
-                sp.cas_od,
-                sp.cas_do,
-                TIMESTAMPDIFF(MINUTE, CONCAT(sp.datum, ' ', sp.cas_od), DATE_ADD(CONCAT(sp.datum, ' ', sp.cas_do), INTERVAL CASE WHEN sp.cas_do < sp.cas_od THEN 1 ELSE 0 END DAY)) / 60 AS odpracovano
-            FROM smeny_plan sp
-            INNER JOIN user u ON u.id_user = sp.id_user
-            WHERE sp.id_pob = ?
-              AND sp.datum = ?
-              AND sp.id_slot IN (1, 2)
-            ORDER BY sp.id_slot ASC, sp.cas_od ASC, u.jmeno ASC, u.prijmeni ASC
-        ";
-        $stmtShiftPlan = $conn->prepare($sqlShiftPlan);
-        if ($stmtShiftPlan !== false) {
-            $stmtShiftPlan->bind_param('is', $reportBranchId, $reportDate);
-            $stmtShiftPlan->execute();
-            $resultShiftPlan = $stmtShiftPlan->get_result();
-            if ($resultShiftPlan instanceof mysqli_result) {
-                while ($row = $resultShiftPlan->fetch_assoc()) {
-                    cb_db_dr_pracovni_osoby_insert(
-                        $conn,
-                        $idDr,
-                        (int)($row['id_user'] ?? 0),
-                        (int)($row['id_slot'] ?? 0),
-                        (string)($row['cas_od'] ?? ''),
-                        (string)($row['cas_do'] ?? ''),
-                        0.0,
-                        (float)($row['odpracovano'] ?? 0)
-                    );
-                }
-                $resultShiftPlan->free();
-            }
-            $stmtShiftPlan->close();
+        foreach (cb_denni_report_shift_plan_people_rows($conn, $reportBranchId, $reportDate) as $row) {
+            cb_db_dr_pracovni_osoby_insert(
+                $conn,
+                $idDr,
+                (int)($row['id_user'] ?? 0),
+                (int)($row['id_slot'] ?? 0),
+                (string)($row['smena_od'] ?? ''),
+                (string)($row['smena_do'] ?? ''),
+                0.0,
+                (float)($row['odpracovano'] ?? 0)
+            );
         }
     }
     
     if ($usesDraftPersistence) {
         $draftPersonRows = $idDr > 0 ? cb_db_dr_pracovni_osoby_list($conn, $idDr) : [];
+    } elseif ($isCurrentWorkday) {
+        $draftPersonRows = cb_denni_report_shift_plan_people_rows($conn, $reportBranchId, $reportDate);
     } elseif (is_array($historyData)) {
         $historyReport = $historyData['report'];
         $draftRow = [
@@ -1100,6 +1194,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
         'tz' => $tz,
         'currentWorkdayDt' => $currentWorkdayDt,
         'workdayOptions' => $workdayOptions,
+        'miniMissingReports' => $miniMissingReports,
         'isCurrentWorkday' => $isCurrentWorkday,
         'reportDateDt' => $reportDateDt,
         'reportDate' => $reportDate,
@@ -1120,6 +1215,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
         'requestedBranchId' => $requestedBranchId,
         'reportBranchId' => $reportBranchId,
         'singleAllowedBranchName' => $singleAllowedBranchName,
+        'reportBranchName' => $reportBranchName,
         'historyData' => $historyData,
         'historyReportId' => $historyReportId,
         'historyReportExists' => $historyReportExists,
@@ -1128,6 +1224,8 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
         'usesDraftPersistence' => $usesDraftPersistence,
         'isReadOnlyForm' => $isReadOnlyForm,
         'formMode' => $formMode,
+        'missingHistoryReport' => $missingHistoryReport,
+        'missingHistoryReportText' => $missingHistoryReportText,
         'readonlyInfoText' => $readonlyInfoText,
         'instorOptions' => $instorOptions,
         'plannedInstorDefaults' => $plannedInstorDefaults,

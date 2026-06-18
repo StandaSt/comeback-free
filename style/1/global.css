@@ -2681,6 +2681,18 @@ align-items:center;
   font-weight:700;
 }
 
+.zr_missing_report_bar{
+  margin:0 0 10px 0;
+  padding:7px 10px;
+  border:1px solid #d84d4d;
+  border-radius:8px;
+  background:#f7caca;
+  color:#8f1f1f;
+  font-size:var(--fs_13);
+  font-weight:700;
+  text-align:center;
+}
+
 .zr_readonly_overlay{
   position:absolute;
   left:0;

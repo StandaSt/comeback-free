@@ -91,15 +91,10 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
         . '</tr>';
 };
 
-ob_start();
 ?>
-<p class="card_text txt_seda odstup_vnejsi_0">
-  Denni report za pobočku je možné zadat<br>po ukončení směny.
-</p>
-<?php
-$card_min_html = (string)ob_get_clean();
-
-?>
+<?php if (!empty($missingHistoryReport)): ?>
+  <div class="zr_missing_report_bar"><?= h((string)($missingHistoryReportText ?? 'Tento report není zadán')) ?></div>
+<?php endif; ?>
 <?php if ($zrReadonlyInfoText !== ''): ?>
   <div class="zr_readonly_info">
     <?= h($zrReadonlyInfoText) ?>
@@ -349,7 +344,4 @@ $card_min_html = (string)ob_get_clean();
       </section>
     </aside>
   </div>
-  <?php if (!empty($isReadOnlyForm)): ?>
-    <div class="zr_readonly_overlay" aria-hidden="true"></div>
-  <?php endif; ?>
 </form>
