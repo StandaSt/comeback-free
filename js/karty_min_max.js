@@ -84,6 +84,22 @@
     return root.closest('.dash_box') || document.querySelector('.dash_box');
   }
 
+  function getOverlayLayer(dashBox) {
+    if (!(dashBox instanceof HTMLElement)) return null;
+
+    let layer = dashBox.querySelector('[data-cb-maxi-layer="1"]');
+    if (layer instanceof HTMLElement) {
+      return layer;
+    }
+
+    layer = document.createElement('div');
+    layer.className = 'cb_maxi_layer';
+    layer.setAttribute('data-cb-maxi-layer', '1');
+    dashBox.appendChild(layer);
+
+    return layer;
+  }
+
   function getCardHead(root) {
     if (!root) return null;
 
@@ -100,7 +116,9 @@
   }
 
   function getCardRoots() {
-    return Array.from(document.querySelectorAll(CARD_ROOT_SELECTOR)).filter((el) => el instanceof HTMLElement);
+    return Array.from(document.querySelectorAll(CARD_ROOT_SELECTOR)).filter((el) => {
+      return el instanceof HTMLElement && !(el.closest('[data-cb-maxi-clone="1"]') instanceof HTMLElement);
+    });
   }
 
   function restoreActiveMaxi() {
@@ -183,6 +201,78 @@
     return String(root.getAttribute('data-card-max-loaded') || '0') === '1';
   }
 
+  function syncOverlayPosition(item) {
+    if (!item || !(item.overlayCard instanceof HTMLElement) || !(item.dashBox instanceof HTMLElement)) {
+      return;
+    }
+
+    const overlayTop = item.forceFill ? 0 : item.dashBox.scrollTop;
+    item.overlayCard.style.top = String(overlayTop) + 'px';
+  }
+
+  function buildOverlayClone(item) {
+    if (
+      !item
+      || !(item.dashCard instanceof HTMLElement)
+      || !(item.expanded instanceof HTMLElement)
+    ) {
+      return null;
+    }
+
+    const clone = item.dashCard.cloneNode(true);
+    if (!(clone instanceof HTMLElement)) return null;
+
+    clone.removeAttribute('data-cb-dash-card');
+    clone.classList.remove('is-maxi-placeholder');
+    clone.classList.add('is-maxi-overlay');
+    clone.setAttribute('data-cb-maxi-clone', '1');
+
+    const cloneShell = clone.querySelector(CARD_ROOT_SELECTOR);
+    if (!(cloneShell instanceof HTMLElement)) return null;
+
+    const cloneCompact = clone.querySelector(CARD_COMPACT_SELECTOR);
+    const cloneExpanded = clone.querySelector(CARD_EXPANDED_SELECTOR);
+    const cloneBody = clone.querySelector('.card_body');
+    const cloneToggle = clone.querySelector(CARD_TOGGLE_SELECTOR);
+    const cloneNano = clone.querySelector('[data-card-to-nano]');
+    const cloneHead = getCardHead(cloneShell);
+    if (!(cloneBody instanceof HTMLElement)) return null;
+
+    if (cloneCompact instanceof HTMLElement) {
+      cloneCompact.classList.add('is-hidden');
+    }
+    if (cloneExpanded instanceof HTMLElement) {
+      cloneExpanded.remove();
+    }
+    item.expanded.classList.remove('is-hidden');
+    cloneBody.appendChild(item.expanded);
+    if (cloneToggle instanceof HTMLElement) {
+      updateToggle(cloneToggle, true);
+    }
+    if (cloneNano instanceof HTMLElement) {
+      cloneNano.style.display = 'none';
+    }
+
+    if (cloneHead instanceof HTMLElement) {
+      cloneHead.addEventListener('mousedown', blockHeadSelection);
+      cloneHead.addEventListener('dblclick', (event) => {
+        if (event.target instanceof Element && event.target.closest(CARD_TOGGLE_SELECTOR)) {
+          return;
+        }
+        clearSelection();
+        closeActiveMaxi();
+      });
+    }
+
+    if (cloneToggle instanceof HTMLElement) {
+      cloneToggle.addEventListener('click', () => {
+        closeActiveMaxi();
+      });
+    }
+
+    return clone;
+  }
+
   function closeActiveMaxi(opts) {
     if (!activeMaxi) return;
 
@@ -197,10 +287,17 @@
       expanded,
       toggle,
       dashCard,
-      dashBox
+      dashBox,
+      overlayLayer,
+      overlayCard,
+      scrollHandler,
+      originalBody
     } = item;
 
-    if (expanded) expanded.classList.add('is-hidden');
+    if (expanded instanceof HTMLElement && originalBody instanceof HTMLElement) {
+      originalBody.appendChild(expanded);
+      expanded.classList.add('is-hidden');
+    }
     if (compact) compact.classList.remove('is-hidden');
     if (toggle) updateToggle(toggle, false);
     updateSubtitle(root, false);
@@ -212,20 +309,22 @@
 
     if (dashCard) {
       dashCard.classList.remove('is-expanded');
-      dashCard.classList.remove('is-maxi-overlay');
-      dashCard.style.top = '';
-      dashCard.style.right = '';
-      dashCard.style.bottom = '';
-      dashCard.style.left = '';
-      dashCard.style.transform = '';
-      dashCard.style.width = '';
-      dashCard.style.height = '';
-      dashCard.style.maxWidth = '';
-      dashCard.style.maxHeight = '';
     }
 
     if (dashBox) {
       dashBox.classList.remove('has-maxi');
+    }
+
+    if (dashBox instanceof HTMLElement && typeof scrollHandler === 'function') {
+      dashBox.removeEventListener('scroll', scrollHandler);
+    }
+
+    if (overlayCard instanceof HTMLElement) {
+      overlayCard.remove();
+    }
+
+    if (overlayLayer instanceof HTMLElement && !overlayLayer.children.length) {
+      overlayLayer.remove();
     }
 
     activeMaxi = null;
@@ -258,33 +357,36 @@
     const toggle = root.querySelector(toggleSel);
     const dashCard = getDashCard(root);
     const dashBox = getDashBox(root);
+    const overlayLayer = getOverlayLayer(dashBox);
+    const originalBody = root.querySelector('.card_body');
 
-    if (!(compact instanceof HTMLElement) || !(expanded instanceof HTMLElement) || !(toggle instanceof HTMLElement) || !(dashCard instanceof HTMLElement)) {
+    if (
+      !(compact instanceof HTMLElement)
+      || !(expanded instanceof HTMLElement)
+      || !(toggle instanceof HTMLElement)
+      || !(dashCard instanceof HTMLElement)
+      || !(dashBox instanceof HTMLElement)
+      || !(overlayLayer instanceof HTMLElement)
+      || !(originalBody instanceof HTMLElement)
+    ) {
       return;
     }
 
-    const overlayTop = (dashBox instanceof HTMLElement) ? dashBox.scrollTop : 0;
+    if (activeMaxi && activeMaxi.root === root) {
+      if (activeMaxi.dashBox instanceof HTMLElement && typeof activeMaxi.scrollHandler === 'function') {
+        activeMaxi.dashBox.removeEventListener('scroll', activeMaxi.scrollHandler);
+      }
+      if (activeMaxi.overlayCard instanceof HTMLElement) {
+        activeMaxi.overlayCard.remove();
+      }
+      activeMaxi.overlayCard = null;
+      activeMaxi.scrollHandler = null;
+    }
+
     const forceFill = root.getAttribute('data-card-max-fill') === '1';
 
     updateSubtitle(root, true);
     toggleNanoBtn(root, false);
-    expanded.classList.remove('is-hidden');
-    compact.classList.add('is-hidden');
-    dashCard.classList.add('is-expanded');
-    dashCard.classList.add('is-maxi-overlay');
-    if (forceFill) {
-      dashCard.style.left = '0';
-      dashCard.style.right = '0';
-      dashCard.style.top = String(overlayTop) + 'px';
-      dashCard.style.bottom = '0';
-      dashCard.style.transform = 'none';
-      dashCard.style.width = 'auto';
-      dashCard.style.height = 'auto';
-      dashCard.style.maxWidth = 'none';
-      dashCard.style.maxHeight = 'none';
-    } else {
-      dashCard.style.top = String(overlayTop) + 'px';
-    }
 
     if (dashBox) {
       dashBox.classList.add('has-maxi');
@@ -296,15 +398,42 @@
       w.cbSetBranchSelectDisabledForRoot(root, true);
     }
 
-    activeMaxi = {
+    const nextItem = {
       root,
       compact,
       expanded,
       toggle,
       dashCard,
       dashBox,
-      forceFill
+      overlayLayer,
+      overlayCard: null,
+      originalBody,
+      forceFill,
+      scrollHandler: null
     };
+
+    const overlayCard = buildOverlayClone(nextItem);
+    if (!(overlayCard instanceof HTMLElement)) {
+      toggleNanoBtn(root, true);
+      updateToggle(toggle, false);
+      updateSubtitle(root, false);
+      dashBox.classList.remove('has-maxi');
+      if (typeof w.cbSetBranchSelectDisabledForRoot === 'function') {
+        w.cbSetBranchSelectDisabledForRoot(root, false);
+      }
+      return;
+    }
+
+    overlayLayer.innerHTML = '';
+    overlayLayer.appendChild(overlayCard);
+    nextItem.overlayCard = overlayCard;
+    nextItem.scrollHandler = () => {
+      syncOverlayPosition(nextItem);
+    };
+    dashBox.addEventListener('scroll', nextItem.scrollHandler, { passive: true });
+    syncOverlayPosition(nextItem);
+
+    activeMaxi = nextItem;
 
     saveMaxiState(String(root.getAttribute('data-card-id') || ''));
   }
@@ -475,6 +604,12 @@
       initCard(nextRoot);
 
       if (activeMaxi && String(activeMaxi.root.getAttribute('data-card-id') || '').trim() === cardId) {
+        if (activeMaxi.dashBox instanceof HTMLElement && typeof activeMaxi.scrollHandler === 'function') {
+          activeMaxi.dashBox.removeEventListener('scroll', activeMaxi.scrollHandler);
+        }
+        if (activeMaxi.overlayCard instanceof HTMLElement) {
+          activeMaxi.overlayCard.remove();
+        }
         activeMaxi = null;
         finishOpenMaxi(nextRoot, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR);
       }

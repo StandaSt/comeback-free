@@ -1808,6 +1808,23 @@ align-items:center;
   z-index:40;
 }
 
+.cb_maxi_layer{
+  position:absolute;
+  inset:0;
+  z-index:45;
+  pointer-events:none;
+}
+
+.cb_maxi_layer > .dash_card.is-maxi-overlay{
+  pointer-events:auto;
+}
+
+.dash_card.is-maxi-placeholder .card_shell,
+.dash_card.is-maxi-placeholder .dash_card_loader{
+  visibility:hidden;
+  pointer-events:none;
+}
+
 .dash_card.is-maxi-overlay{
   position:absolute;
   top:0;
