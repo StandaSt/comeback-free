@@ -563,11 +563,21 @@ function cb_denni_report_restia_summary_default(): array
     return [
         'trzba' => 0.0,
         'wolt' => 0.0,
+        'wolt_count' => 0,
         'bolt' => 0.0,
+        'bolt_count' => 0,
         'dj' => 0.0,
+        'dj_count' => 0,
         'web' => 0.0,
+        'web_count' => 0,
         'wolt_cash' => 0.0,
+        'wolt_cash_count' => 0,
         'dj_cash' => 0.0,
+        'dj_cash_count' => 0,
+        'other' => 0.0,
+        'other_count' => 0,
+        'control_amount' => 0.0,
+        'control_count' => 0,
         'cancel_count' => 0,
         'cancel_value' => 0.0,
         'delay_count' => 0,
@@ -584,40 +594,49 @@ function cb_denni_report_restia_summary(mysqli $conn, int $idPob, array $workday
     $restiaSummary = cb_denni_report_restia_summary_default();
 
     if ($idPob > 0) {
-        $sqlIds = "
-            SELECT
-                MAX(CASE WHEN p.nazev = 'cash' THEN p.id_platba ELSE NULL END) AS cash_id,
-                MAX(CASE WHEN p.nazev = 'online' THEN p.id_platba ELSE NULL END) AS online_id
-            FROM cis_obj_platby p
-        ";
-        $idsRow = [];
-        $idsResult = $conn->query($sqlIds);
-        if ($idsResult instanceof mysqli_result) {
-            $idsRow = $idsResult->fetch_assoc() ?: [];
-            $idsResult->free();
-        }
-        $cashPaymentId = (int)($idsRow['cash_id'] ?? 0);
-        $onlinePaymentId = (int)($idsRow['online_id'] ?? 0);
-    
+        $notCanceled = "COALESCE(s.nazev, '') NOT IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted')";
+        $woltCondition = $notCanceled . " AND cp.kod = 'wolt' AND COALESCE(p.nazev, '') <> 'cash'";
+        $boltCondition = $notCanceled . " AND cp.kod = 'bolt'";
+        $djCondition = $notCanceled . " AND cp.kod IN ('foodora', 'damejidlo') AND COALESCE(p.nazev, '') <> 'cash'";
+        $webCondition = $notCanceled . " AND cp.kod = 'generic' AND COALESCE(p.nazev, '') = 'online'";
+        $woltCashCondition = $notCanceled . " AND cp.kod = 'generic' AND COALESCE(d.nazev, '') = 'delivery' AND COALESCE(p.nazev, '') = 'cash'";
+        $djCashCondition = $notCanceled . " AND cp.kod IN ('foodora', 'damejidlo') AND COALESCE(p.nazev, '') = 'cash'";
+        $otherCondition = $notCanceled . " AND NOT (("
+            . $woltCondition . ") OR ("
+            . $boltCondition . ") OR ("
+            . $djCondition . ") OR ("
+            . $webCondition . ") OR ("
+            . $woltCashCondition . ") OR ("
+            . $djCashCondition . "))";
+
         $summarySql = "
             SELECT
                 SUM(CASE WHEN COALESCE(s.nazev, '') IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted') THEN 0 ELSE COALESCE(c.cena_celk, 0) END) AS trzba,
-                SUM(CASE WHEN COALESCE(s.nazev, '') NOT IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted') AND cp.kod = 'wolt' AND o.id_platba <> ? THEN COALESCE(c.cena_celk, 0) ELSE 0 END) AS wolt,
-                SUM(CASE WHEN COALESCE(s.nazev, '') NOT IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted') AND cp.kod = 'bolt' THEN COALESCE(c.cena_celk, 0) ELSE 0 END) AS bolt,
-                SUM(CASE WHEN COALESCE(s.nazev, '') NOT IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted') AND cp.kod IN ('foodora', 'damejidlo') AND o.id_platba <> ? THEN COALESCE(c.cena_celk, 0) ELSE 0 END) AS damejidlo,
-                SUM(CASE WHEN COALESCE(s.nazev, '') NOT IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted') AND cp.kod = 'generic' AND o.id_platba = ? THEN COALESCE(c.cena_celk, 0) ELSE 0 END) AS web,
-                SUM(CASE WHEN COALESCE(s.nazev, '') NOT IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted') AND cp.kod = 'generic' AND COALESCE(d.nazev, '') = 'delivery' AND o.id_platba = ? THEN COALESCE(c.cena_celk, 0) ELSE 0 END) AS wolt_cash,
-                SUM(CASE WHEN COALESCE(s.nazev, '') NOT IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted') AND cp.kod IN ('foodora', 'damejidlo') AND o.id_platba = ? THEN COALESCE(c.cena_celk, 0) ELSE 0 END) AS dj_cash,
+                SUM(CASE WHEN " . $woltCondition . " THEN COALESCE(c.cena_celk, 0) ELSE 0 END) AS wolt,
+                COUNT(DISTINCT CASE WHEN " . $woltCondition . " THEN o.id_obj ELSE NULL END) AS wolt_count,
+                SUM(CASE WHEN " . $boltCondition . " THEN COALESCE(c.cena_celk, 0) ELSE 0 END) AS bolt,
+                COUNT(DISTINCT CASE WHEN " . $boltCondition . " THEN o.id_obj ELSE NULL END) AS bolt_count,
+                SUM(CASE WHEN " . $djCondition . " THEN COALESCE(c.cena_celk, 0) ELSE 0 END) AS damejidlo,
+                COUNT(DISTINCT CASE WHEN " . $djCondition . " THEN o.id_obj ELSE NULL END) AS damejidlo_count,
+                SUM(CASE WHEN " . $webCondition . " THEN COALESCE(c.cena_celk, 0) ELSE 0 END) AS web,
+                COUNT(DISTINCT CASE WHEN " . $webCondition . " THEN o.id_obj ELSE NULL END) AS web_count,
+                SUM(CASE WHEN " . $woltCashCondition . " THEN COALESCE(c.cena_celk, 0) ELSE 0 END) AS wolt_cash,
+                COUNT(DISTINCT CASE WHEN " . $woltCashCondition . " THEN o.id_obj ELSE NULL END) AS wolt_cash_count,
+                SUM(CASE WHEN " . $djCashCondition . " THEN COALESCE(c.cena_celk, 0) ELSE 0 END) AS dj_cash,
+                COUNT(DISTINCT CASE WHEN " . $djCashCondition . " THEN o.id_obj ELSE NULL END) AS dj_cash_count,
+                SUM(CASE WHEN " . $otherCondition . " THEN COALESCE(c.cena_celk, 0) ELSE 0 END) AS other,
+                COUNT(DISTINCT CASE WHEN " . $otherCondition . " THEN o.id_obj ELSE NULL END) AS other_count,
                 SUM(CASE WHEN COALESCE(s.nazev, '') IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted') THEN 1 ELSE 0 END) AS cancel_count,
                 SUM(CASE WHEN COALESCE(s.nazev, '') IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted') THEN COALESCE(c.cena_celk, 0) ELSE 0 END) AS cancel_value,
-                AVG(CASE WHEN COALESCE(s.nazev, '') NOT IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted') AND ca.cas_vytvor IS NOT NULL AND ca.cas_pripr_v IS NOT NULL THEN TIMESTAMPDIFF(SECOND, ca.cas_vytvor, ca.cas_pripr_v) END) AS make_time_avg_sec,
-                SUM(CASE WHEN COALESCE(s.nazev, '') NOT IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted') THEN 1 ELSE 0 END) AS orders_total,
-                SUM(CASE WHEN COALESCE(s.nazev, '') NOT IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted') AND ok.provider = 'delivery' THEN 1 ELSE 0 END) AS own_deliveries,
-                SUM(CASE WHEN COALESCE(s.nazev, '') NOT IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted') AND ok.provider = 'delivery' AND ca.cas_slib IS NOT NULL AND ca.cas_doruc IS NOT NULL AND TIMESTAMPDIFF(MINUTE, ca.cas_slib, ca.cas_doruc) > 5 THEN 1 ELSE 0 END) AS delay_count,
-                SUM(CASE WHEN COALESCE(s.nazev, '') NOT IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted') AND ok.provider = 'external-delivery' AND ca.cas_slib IS NOT NULL AND ca.cas_doruc IS NOT NULL AND TIMESTAMPDIFF(MINUTE, ca.cas_slib, ca.cas_doruc) > 5 THEN 1 ELSE 0 END) AS woltdrive_late
+                AVG(CASE WHEN " . $notCanceled . " AND ca.cas_vytvor IS NOT NULL AND ca.cas_pripr_v IS NOT NULL THEN TIMESTAMPDIFF(SECOND, ca.cas_vytvor, ca.cas_pripr_v) END) AS make_time_avg_sec,
+                COUNT(DISTINCT CASE WHEN " . $notCanceled . " THEN o.id_obj ELSE NULL END) AS orders_total,
+                COUNT(DISTINCT CASE WHEN " . $notCanceled . " AND ok.provider = 'delivery' THEN o.id_obj ELSE NULL END) AS own_deliveries,
+                COUNT(DISTINCT CASE WHEN " . $notCanceled . " AND ok.provider = 'delivery' AND ca.cas_slib IS NOT NULL AND ca.cas_doruc IS NOT NULL AND TIMESTAMPDIFF(MINUTE, ca.cas_slib, ca.cas_doruc) > 5 THEN o.id_obj ELSE NULL END) AS delay_count,
+                COUNT(DISTINCT CASE WHEN " . $notCanceled . " AND ok.provider = 'external-delivery' AND ca.cas_slib IS NOT NULL AND ca.cas_doruc IS NOT NULL AND TIMESTAMPDIFF(MINUTE, ca.cas_slib, ca.cas_doruc) > 5 THEN o.id_obj ELSE NULL END) AS woltdrive_late
             FROM objednavky_restia o
             LEFT JOIN cis_obj_platforma cp ON cp.id_platforma = o.id_platforma
             LEFT JOIN cis_doruceni d ON d.id_doruceni = o.id_doruceni
+            LEFT JOIN cis_obj_platby p ON p.id_platba = o.id_platba
             LEFT JOIN cis_obj_stav s ON s.id_stav = o.id_stav
             LEFT JOIN obj_ceny c ON c.id_obj = o.id_obj
             LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
@@ -635,29 +654,43 @@ function cb_denni_report_restia_summary(mysqli $conn, int $idPob, array $workday
         if ($stmtSummary !== false) {
             $fromDb = (string)$workdayRange['from_db'];
             $toDb = (string)$workdayRange['to_db'];
-            $stmtSummary->bind_param(
-                'iiiiiiss',
-                $cashPaymentId,
-                $cashPaymentId,
-                $onlinePaymentId,
-                $cashPaymentId,
-                $cashPaymentId,
-                $idPob,
-                $fromDb,
-                $toDb
-            );
+            $stmtSummary->bind_param('iss', $idPob, $fromDb, $toDb);
             $stmtSummary->execute();
             $summaryResult = $stmtSummary->get_result();
             if ($summaryResult instanceof mysqli_result) {
                 $summaryRow = $summaryResult->fetch_assoc() ?: [];
+                $wolt = (float)($summaryRow['wolt'] ?? 0);
+                $bolt = (float)($summaryRow['bolt'] ?? 0);
+                $dj = (float)($summaryRow['damejidlo'] ?? 0);
+                $web = (float)($summaryRow['web'] ?? 0);
+                $woltCash = (float)($summaryRow['wolt_cash'] ?? 0);
+                $djCash = (float)($summaryRow['dj_cash'] ?? 0);
+                $other = (float)($summaryRow['other'] ?? 0);
+                $woltCount = (int)($summaryRow['wolt_count'] ?? 0);
+                $boltCount = (int)($summaryRow['bolt_count'] ?? 0);
+                $djCount = (int)($summaryRow['damejidlo_count'] ?? 0);
+                $webCount = (int)($summaryRow['web_count'] ?? 0);
+                $woltCashCount = (int)($summaryRow['wolt_cash_count'] ?? 0);
+                $djCashCount = (int)($summaryRow['dj_cash_count'] ?? 0);
+                $otherCount = (int)($summaryRow['other_count'] ?? 0);
                 $restiaSummary = [
                     'trzba' => (float)($summaryRow['trzba'] ?? 0),
-                    'wolt' => (float)($summaryRow['wolt'] ?? 0),
-                    'bolt' => (float)($summaryRow['bolt'] ?? 0),
-                    'dj' => (float)($summaryRow['damejidlo'] ?? 0),
-                    'web' => (float)($summaryRow['web'] ?? 0),
-                    'wolt_cash' => (float)($summaryRow['wolt_cash'] ?? 0),
-                    'dj_cash' => (float)($summaryRow['dj_cash'] ?? 0),
+                    'wolt' => $wolt,
+                    'wolt_count' => $woltCount,
+                    'bolt' => $bolt,
+                    'bolt_count' => $boltCount,
+                    'dj' => $dj,
+                    'dj_count' => $djCount,
+                    'web' => $web,
+                    'web_count' => $webCount,
+                    'wolt_cash' => $woltCash,
+                    'wolt_cash_count' => $woltCashCount,
+                    'dj_cash' => $djCash,
+                    'dj_cash_count' => $djCashCount,
+                    'other' => $other,
+                    'other_count' => $otherCount,
+                    'control_amount' => $wolt + $bolt + $dj + $web + $woltCash + $djCash + $other,
+                    'control_count' => $woltCount + $boltCount + $djCount + $webCount + $woltCashCount + $djCashCount + $otherCount,
                     'cancel_count' => (int)($summaryRow['cancel_count'] ?? 0),
                     'cancel_value' => (float)($summaryRow['cancel_value'] ?? 0),
                     'delay_count' => (int)($summaryRow['delay_count'] ?? 0),
@@ -984,13 +1017,14 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
     $historyData = null;
     $historyReportId = 0;
     $historyReportExists = false;
-    if ($reportBranchId > 0 && !$isCurrentWorkday) {
+    if ($reportBranchId > 0) {
         $historyData = cb_denni_report_history_load($conn, $reportBranchId, $reportDate);
         if (is_array($historyData)) {
             $historyReportId = (int)($historyData['report']['id_reportu'] ?? 0);
             $historyReportExists = ($historyReportId > 0);
         }
     }
+    $preferFinalReportData = $isCurrentWorkday && $historyReportExists && is_array($historyData);
 
     $canEditHistory = (!$isCurrentWorkday && $historyReportExists && $hasRole5 && $mainBranchId > 0 && $mainBranchId === $reportBranchId);
     $canEditReport = $isCurrentWorkday ? $canSaveReport : $canEditHistory;
@@ -1072,7 +1106,30 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
         }
     }
     
-    if ($usesDraftPersistence) {
+    if ($usesDraftPersistence && $preferFinalReportData) {
+        $historyReport = (array)($historyData['report'] ?? []);
+        $draftRow = array_merge(
+            is_array($draftRow) ? $draftRow : [],
+            [
+                'datum_reportu' => $reportDate,
+                'id_pob' => $reportBranchId,
+                'oteviral' => (int)($historyReport['oteviral'] ?? 0),
+                'zaviral' => (int)($historyReport['zaviral'] ?? 0),
+                'hotovost' => $historyReport['hotovost'] ?? null,
+                'terminal' => $historyReport['terminal'] ?? null,
+                'stravenky' => $historyReport['stravenky'] ?? null,
+                'vydaje_benzin' => $historyReport['vydaje_benzin'] ?? 0,
+                'vydaje_auta' => $historyReport['vydaje_auta'] ?? 0,
+                'vydaje_suroviny' => $historyReport['vydaje_suroviny'] ?? 0,
+                'vydaje_ostatni' => $historyReport['vydaje_ostatni'] ?? 0,
+                'vydaje_phm_soukrome' => $historyReport['vydaje_phm_soukrome'] ?? 0,
+                'poznamka' => $historyReport['poznamka'] ?? '',
+                'oteviral_text' => $historyReport['oteviral_text'] ?? '',
+                'zaviral_text' => $historyReport['zaviral_text'] ?? '',
+            ]
+        );
+        $draftPersonRows = is_array($historyData['people_rows'] ?? null) ? $historyData['people_rows'] : [];
+    } elseif ($usesDraftPersistence) {
         $draftPersonRows = $idDr > 0 ? cb_db_dr_pracovni_osoby_list($conn, $idDr) : [];
     } elseif ($isCurrentWorkday) {
         $draftPersonRows = cb_denni_report_shift_plan_people_rows($conn, $reportBranchId, $reportDate);
@@ -1145,22 +1202,8 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
         $controlValues = cb_denni_report_control_values($conn, $reportDate, $restiaSummary, $draftRow, $draftPersonRows);
     } else {
         $historyReport = is_array($historyData) ? (array)$historyData['report'] : [];
-        $restiaSummary = cb_denni_report_restia_summary_default();
-        $restiaSummary['trzba'] = (float)($historyReport['trzba'] ?? 0);
-        $restiaSummary['wolt'] = (float)($historyReport['wolt'] ?? 0);
-        $restiaSummary['bolt'] = (float)($historyReport['bolt'] ?? 0);
-        $restiaSummary['dj'] = (float)($historyReport['damejidlo'] ?? 0);
-        $restiaSummary['web'] = (float)($historyReport['web'] ?? 0);
-        $restiaSummary['wolt_cash'] = (float)($historyReport['wolt_cash'] ?? 0);
-        $restiaSummary['dj_cash'] = (float)($historyReport['dj_cash'] ?? 0);
-        $restiaSummary['cancel_count'] = (int)($historyReport['zrusene_obj_ks'] ?? 0);
-        $restiaSummary['cancel_value'] = (float)($historyReport['zrusene_obj_kc'] ?? 0);
-        $restiaSummary['delay_count'] = (int)($historyReport['zpozdene_rozvozy_5_min'] ?? 0);
-        $restiaSummary['make_time_avg_sec'] = isset($historyReport['make_time_prumer_sec']) ? (int)$historyReport['make_time_prumer_sec'] : null;
+        $restiaSummary = cb_denni_report_restia_summary($conn, $reportBranchId, $workdayRange);
         $restiaSummary['docs_count'] = cb_denni_report_docs_count_from_person_rows($draftPersonRows);
-        $restiaSummary['orders_total'] = (int)($historyReport['objednavky_nezrusene_ks'] ?? 0);
-        $restiaSummary['own_deliveries'] = (int)($historyReport['nase_rozvozy_ks'] ?? 0);
-        $restiaSummary['woltdrive_late'] = (int)($historyReport['woltdrive_pozde_5_min'] ?? 0);
 
         $kuryrDeliveryCountsJson = '{}';
         $controlValues = cb_denni_report_control_values($conn, $reportDate, $restiaSummary, $draftRow, $draftPersonRows);

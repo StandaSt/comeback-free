@@ -480,8 +480,8 @@ $card_min_html = (string)ob_get_clean();
 
 ob_start();
 ?>
-<div id="<?= cb_prehled_db_h($cardRootId) ?>" class="ram_normal bg_bila zaobleni_12 odstup_vnitrni_10 sirka100" style="max-height:100%; box-sizing:border-box; overflow:hidden;">
-  <div style="display:grid; grid-template-columns:220px minmax(0, 1fr); gap:12px; align-items:stretch; flex:1 1 auto; min-height:0; max-height:100%;">
+<div id="<?= cb_prehled_db_h($cardRootId) ?>" class="ram_normal bg_bila zaobleni_12 odstup_vnitrni_10 sirka100" style="display:flex; flex-direction:column; flex:1 1 auto; min-height:0; height:100%; max-height:100%; box-sizing:border-box; overflow:hidden;">
+  <div style="display:grid; grid-template-columns:220px minmax(0, 1fr); gap:12px; align-items:stretch; flex:1 1 auto; min-height:0; height:100%; max-height:100%; overflow:hidden;">
     <div class="displ_flex flex_sloupec" style="min-height:0; max-height:100%;">
       <form method="post" action="<?= cb_prehled_db_h(cb_url('/')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
         <input type="hidden" name="page" value="<?= cb_prehled_db_h($page) ?>">
@@ -503,7 +503,7 @@ ob_start();
       </form>
     </div>
 
-    <div class="displ_flex flex_sloupec" style="min-height:0; height:100%;">
+    <div class="displ_flex flex_sloupec" style="min-height:0; height:100%; overflow:hidden;">
       <?php if ($msgErr !== ''): ?>
         <div class="ram_normal bg_bila zaobleni_12 odstup_vnitrni_10">
           <p class="card_text txt_cervena odstup_vnejsi_0"><?= cb_prehled_db_h($msgErr) ?></p>

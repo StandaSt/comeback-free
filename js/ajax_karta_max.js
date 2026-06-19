@@ -721,15 +721,19 @@
     event.preventDefault();
     event.stopPropagation();
 
-    let hidden = form.querySelector('input[data-cb-temp-action="1"]');
-    if (!(hidden instanceof HTMLInputElement)) {
-      hidden = addTempHiddenInput(form, 'admin_karty_action', 'save');
-      if (hidden instanceof HTMLInputElement) {
-        hidden.setAttribute('data-cb-temp-action', '1');
+    const submitName = String(target.getAttribute('data-cb-submit-name') || '').trim();
+    if (submitName !== '') {
+      const submitValue = String(target.getAttribute('data-cb-submit-value') || '').trim();
+      let hidden = form.querySelector('input[data-cb-temp-action="1"]');
+      if (!(hidden instanceof HTMLInputElement)) {
+        hidden = addTempHiddenInput(form, submitName, submitValue);
+        if (hidden instanceof HTMLInputElement) {
+          hidden.setAttribute('data-cb-temp-action', '1');
+        }
+      } else {
+        hidden.name = submitName;
+        hidden.value = submitValue;
       }
-    } else {
-      hidden.name = 'admin_karty_action';
-      hidden.value = 'save';
     }
 
     submitAjax(form, target, { skipSubmitterName: true });

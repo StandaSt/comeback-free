@@ -36,6 +36,8 @@ ob_start();
     <?php endforeach; ?>
   </tbody>
 </table>
+<p class="card_text odstup_vnejsi_0" style="line-height:0.5;">&nbsp;</p>
+<p class="card_text txt_cervena odstup_vnejsi_0">Vypisujte prosím i tento report, je třeba odladit případné chyby. Díky</p>
 <?php
 $card_min_html = (string)ob_get_clean();
 

@@ -181,7 +181,7 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
                 <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_auta" value="<?= h($cashData['vydaje_auta']) ?>" data-zr-field="vydaje_auta" data-zr-money="int" data-zr-required="vydaje_auta"<?= $zrEditableReadonlyAttr . $zrEditableDisabledAttr ?>></td>
                 <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_suroviny" value="<?= h($cashData['vydaje_suroviny']) ?>" data-zr-field="vydaje_suroviny" data-zr-money="int" data-zr-required="vydaje_suroviny"<?= $zrEditableReadonlyAttr . $zrEditableDisabledAttr ?>></td>
                 <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_ostatni" value="<?= h($cashData['vydaje_ostatni']) ?>" data-zr-field="vydaje_ostatni" data-zr-money="int" data-zr-required="vydaje_ostatni"<?= $zrEditableReadonlyAttr . $zrEditableDisabledAttr ?>></td>
-                <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_phm_soukrome" value="<?= h($cashData['vydaje_phm_soukrome']) ?>" data-zr-field="vydaje_phm_soukrome" data-zr-money="int" data-zr-required="vydaje_phm_soukrome"<?= $zrEditableReadonlyAttr . $zrEditableDisabledAttr ?>></td>
+                <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_phm_soukrome" value="<?= h($cashData['vydaje_phm_soukrome']) ?>" data-zr-field="vydaje_phm_soukrome" data-zr-money="int" data-zr-required="vydaje_phm_soukrome" readonly<?= $zrEditableDisabledAttr ?>></td>
               </tr>
             </tbody>
           </table>
@@ -316,13 +316,22 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
           <strong class="zr_metric_value" data-zr-restia-trzba data-zr-value="<?= h(number_format((float)$restiaSummary['trzba'], 2, '.', '')) ?>"><?= h(cb_denni_report_format_money_whole((float)$restiaSummary['trzba'])) ?></strong>
         </div>
         <table class="zr_table zr_restia_table">
+          <thead>
+            <tr>
+              <th class="zr_restia_key">Položka</th>
+              <th class="zr_restia_value txt_r">Obj.</th>
+              <th class="zr_restia_value txt_r">Kč</th>
+            </tr>
+          </thead>
           <tbody>
-            <tr><td class="zr_restia_key">Wolt</td><td class="zr_restia_value txt_r"><strong data-zr-restia-wolt data-zr-value="<?= h(number_format((float)$restiaSummary['wolt'], 2, '.', '')) ?>"><?= h(cb_denni_report_format_money_whole((float)$restiaSummary['wolt'])) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Bolt</td><td class="zr_restia_value txt_r"><strong data-zr-restia-bolt data-zr-value="<?= h(number_format((float)$restiaSummary['bolt'], 2, '.', '')) ?>"><?= h(cb_denni_report_format_money_whole((float)$restiaSummary['bolt'])) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Foodora</td><td class="zr_restia_value txt_r"><strong data-zr-restia-dj data-zr-value="<?= h(number_format((float)$restiaSummary['dj'], 2, '.', '')) ?>"><?= h(cb_denni_report_format_money_whole((float)$restiaSummary['dj'])) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Web</td><td class="zr_restia_value txt_r"><strong data-zr-restia-web data-zr-value="<?= h(number_format((float)$restiaSummary['web'], 2, '.', '')) ?>"><?= h(cb_denni_report_format_money_whole((float)$restiaSummary['web'])) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Wolt drive cash</td><td class="zr_restia_value txt_r"><strong data-zr-restia-wolt-cash data-zr-value="<?= h(number_format((float)$restiaSummary['wolt_cash'], 2, '.', '')) ?>"><?= h(cb_denni_report_format_money_whole((float)$restiaSummary['wolt_cash'])) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">DJ cash</td><td class="zr_restia_value txt_r"><strong data-zr-restia-dj-cash data-zr-value="<?= h(number_format((float)$restiaSummary['dj_cash'], 2, '.', '')) ?>"><?= h(cb_denni_report_format_money_whole((float)$restiaSummary['dj_cash'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Wolt</td><td class="zr_restia_value txt_r"><?= h((string)($restiaSummary['wolt_count'] ?? 0)) ?></td><td class="zr_restia_value txt_r"><strong data-zr-restia-wolt data-zr-value="<?= h(number_format((float)$restiaSummary['wolt'], 2, '.', '')) ?>"><?= h(cb_denni_report_format_money_whole((float)$restiaSummary['wolt'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Bolt</td><td class="zr_restia_value txt_r"><?= h((string)($restiaSummary['bolt_count'] ?? 0)) ?></td><td class="zr_restia_value txt_r"><strong data-zr-restia-bolt data-zr-value="<?= h(number_format((float)$restiaSummary['bolt'], 2, '.', '')) ?>"><?= h(cb_denni_report_format_money_whole((float)$restiaSummary['bolt'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Foodora</td><td class="zr_restia_value txt_r"><?= h((string)($restiaSummary['dj_count'] ?? 0)) ?></td><td class="zr_restia_value txt_r"><strong data-zr-restia-dj data-zr-value="<?= h(number_format((float)$restiaSummary['dj'], 2, '.', '')) ?>"><?= h(cb_denni_report_format_money_whole((float)$restiaSummary['dj'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Web</td><td class="zr_restia_value txt_r"><?= h((string)($restiaSummary['web_count'] ?? 0)) ?></td><td class="zr_restia_value txt_r"><strong data-zr-restia-web data-zr-value="<?= h(number_format((float)$restiaSummary['web'], 2, '.', '')) ?>"><?= h(cb_denni_report_format_money_whole((float)$restiaSummary['web'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Wolt drive cash</td><td class="zr_restia_value txt_r"><?= h((string)($restiaSummary['wolt_cash_count'] ?? 0)) ?></td><td class="zr_restia_value txt_r"><strong data-zr-restia-wolt-cash data-zr-value="<?= h(number_format((float)$restiaSummary['wolt_cash'], 2, '.', '')) ?>"><?= h(cb_denni_report_format_money_whole((float)$restiaSummary['wolt_cash'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">DJ cash</td><td class="zr_restia_value txt_r"><?= h((string)($restiaSummary['dj_cash_count'] ?? 0)) ?></td><td class="zr_restia_value txt_r"><strong data-zr-restia-dj-cash data-zr-value="<?= h(number_format((float)$restiaSummary['dj_cash'], 2, '.', '')) ?>"><?= h(cb_denni_report_format_money_whole((float)$restiaSummary['dj_cash'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Ostatní</td><td class="zr_restia_value txt_r"><?= h((string)($restiaSummary['other_count'] ?? 0)) ?></td><td class="zr_restia_value txt_r"><strong><?= h(cb_denni_report_format_money_whole((float)($restiaSummary['other'] ?? 0))) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Kontrola</td><td class="zr_restia_value txt_r"><?= h((string)($restiaSummary['control_count'] ?? 0)) ?></td><td class="zr_restia_value txt_r"><strong><?= h(cb_denni_report_format_money_whole((float)($restiaSummary['control_amount'] ?? 0))) ?></strong></td></tr>
           </tbody>
         </table>
       </section>

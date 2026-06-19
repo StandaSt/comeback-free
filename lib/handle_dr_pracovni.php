@@ -159,7 +159,8 @@ try {
                 $sendJson(403, ['ok' => false, 'err' => 'Nemate pravo ulozit report']);
             }
             $workdayRange = cb_dt_workday_range_utc($datum);
-            $idReportu = cb_db_zapis_denni_report($conn, $idPob, $datum, $currentUserId, $workdayRange, $rozdilForm, $colPomerForm);
+            $restiaSummary = cb_denni_report_restia_summary($conn, $idPob, $workdayRange);
+            $idReportu = cb_db_zapis_denni_report_from_form($conn, $idPob, $datum, $currentUserId, $restiaSummary, $_POST, $rozdilForm, $colPomerForm);
             $sendJson(200, ['ok' => true, 'id_reportu' => $idReportu]);
         }
 

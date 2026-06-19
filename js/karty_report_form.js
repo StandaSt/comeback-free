@@ -29,16 +29,11 @@
     return form instanceof HTMLFormElement && String(form.getAttribute('data-zr-draft-mode') || '0') === '1';
   }
 
-  function usesFinalFullSubmit(root) {
-    const form = getForm(root);
-    return form instanceof HTMLFormElement && String(form.getAttribute('data-zr-final-full') || '0') === '1';
-  }
-
   function saveDraftAction(root, action, data) {
     const form = getForm(root);
     if (!(form instanceof HTMLFormElement)) return Promise.resolve({ ok: true });
 
-    const body = (action === 'final_save' && usesFinalFullSubmit(root)) ? new FormData(form) : new FormData();
+    const body = action === 'final_save' ? new FormData(form) : new FormData();
     body.set('dr_action', action);
     body.set('id_pob', getReportValue(root, 'input[name="id_pob"]'));
     body.set('datum_reportu', getReportValue(root, '[name="datum_reportu"]'));
@@ -319,6 +314,15 @@
         col_pomer: getReportValue(root, '[data-zr-report-col-value]')
       })
         .then(() => {
+          const form = getForm(root);
+          if (form instanceof HTMLFormElement) {
+            if (form.requestSubmit) {
+              form.requestSubmit();
+            } else {
+              form.submit();
+            }
+            return;
+          }
           button.textContent = 'Report uložen';
         })
         .catch((err) => {
@@ -526,6 +530,8 @@
       return;
     }
     root.setAttribute('data-zr-form-init', '1');
+    const modeForm = getForm(root);
+    const formMode = modeForm instanceof HTMLFormElement ? String(modeForm.getAttribute('data-zr-form-mode') || '') : '';
 
     bindMoneyInputs(root);
     bindNoteInput(root);
@@ -534,7 +540,9 @@
     bindFinalSubmit(root);
     syncWeekdayFromDate(root);
     syncRequiredState(root);
-    syncReportDifference(root);
+    if (formMode !== 'history_readonly') {
+      syncReportDifference(root);
+    }
 
     const dateInput = root.querySelector('[data-zr-date]');
     if (dateInput instanceof HTMLInputElement || dateInput instanceof HTMLSelectElement) {
