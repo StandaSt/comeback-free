@@ -29,6 +29,16 @@
     return form instanceof HTMLFormElement && String(form.getAttribute('data-zr-draft-mode') || '0') === '1';
   }
 
+  function getFormMode(root) {
+    const form = getForm(root);
+    return form instanceof HTMLFormElement ? String(form.getAttribute('data-zr-form-mode') || '') : '';
+  }
+
+  function isReadOnlyForm(root) {
+    const form = getForm(root);
+    return form instanceof HTMLFormElement && String(form.getAttribute('data-zr-readonly') || '0') === '1';
+  }
+
   function saveDraftAction(root, action, data) {
     const form = getForm(root);
     if (!(form instanceof HTMLFormElement)) return Promise.resolve({ ok: true });
@@ -45,7 +55,7 @@
       method: 'POST',
       credentials: 'same-origin',
       headers: {
-        'X-Comeback-Dr-Pracovni': '1'
+        [action === 'final_save' ? 'X-Comeback-Reporty-Is' : 'X-Comeback-Dr-Pracovni']: '1'
       },
       body
     }).then((res) => {
@@ -257,9 +267,10 @@
       return true;
     }
 
-    const targetTs = Number.parseInt(String(button.getAttribute('data-zr-submit-at') || '0'), 10) || 0;
-    const lockedText = String(button.getAttribute('data-zr-submit-locked-text') || 'Report bude možné uložit za');
-    const readyText = String(button.getAttribute('data-zr-submit-ready-text') || 'Report je zkontrolovaný, uložit');
+    const isFinalEdit = getFormMode(root) === 'final_edit';
+    const targetTs = isFinalEdit ? 0 : (Number.parseInt(String(button.getAttribute('data-zr-submit-at') || '0'), 10) || 0);
+    const lockedText = isFinalEdit ? 'Chci uložit opravený report' : String(button.getAttribute('data-zr-submit-locked-text') || 'Report bude možné uložit za');
+    const readyText = isFinalEdit ? 'Chci uložit opravený report' : String(button.getAttribute('data-zr-submit-ready-text') || 'Report je zkontrolovaný, uložit');
     const missingText = String(button.getAttribute('data-zr-submit-missing-text') || 'Vyplň povinná pole');
     const remaining = targetTs - Math.floor(Date.now() / 1000);
 
@@ -316,6 +327,10 @@
         .then(() => {
           const form = getForm(root);
           if (form instanceof HTMLFormElement) {
+            const editFinalInput = form.querySelector('[data-zr-edit-final]');
+            if (editFinalInput instanceof HTMLInputElement) {
+              editFinalInput.value = '0';
+            }
             if (form.requestSubmit) {
               form.requestSubmit();
             } else {
@@ -330,6 +345,30 @@
           button.textContent = originalText || 'Report je zkontrolovaný, uložit';
           if (w.alert) w.alert(err && err.message ? err.message : 'Uložení reportu selhalo.');
         });
+    });
+  }
+
+  function bindEditFinalButton(root) {
+    const button = root.querySelector('[data-zr-edit-final-button]');
+    if (!(button instanceof HTMLButtonElement) || button.getAttribute('data-zr-edit-final-bound') === '1') {
+      return;
+    }
+    button.setAttribute('data-zr-edit-final-bound', '1');
+
+    button.addEventListener('click', () => {
+      const form = getForm(root);
+      if (!(form instanceof HTMLFormElement)) {
+        return;
+      }
+      const editFinalInput = form.querySelector('[data-zr-edit-final]');
+      if (editFinalInput instanceof HTMLInputElement) {
+        editFinalInput.value = '1';
+      }
+      if (form.requestSubmit) {
+        form.requestSubmit();
+      } else {
+        form.submit();
+      }
     });
   }
 
@@ -538,9 +577,10 @@
     bindEnterNavigation(root);
     bindSubmitCountdown(root);
     bindFinalSubmit(root);
+    bindEditFinalButton(root);
     syncWeekdayFromDate(root);
     syncRequiredState(root);
-    if (formMode !== 'history_readonly') {
+    if (!isReadOnlyForm(root)) {
       syncReportDifference(root);
     }
 

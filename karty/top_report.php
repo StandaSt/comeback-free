@@ -325,7 +325,6 @@ if ($isMaxRender) {
         LEFT JOIN reporty_osoby ro
             ON ro.id_reportu = r.id_reportu
         WHERE r.platny = 1
-          AND r.stav = 1
           AND r.datum_reportu >= ?
           AND r.datum_reportu <= ?
     ';
@@ -596,7 +595,6 @@ if ($isMaxRender) {
         LEFT JOIN reporty_osoby ro
             ON ro.id_reportu = r.id_reportu
         WHERE r.platny = 1
-          AND r.stav = 1
           AND r.datum_reportu >= ?
           AND r.datum_reportu <= ?
     ';

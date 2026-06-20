@@ -31,6 +31,11 @@ if (
         echo json_encode(['ok' => false, 'err' => 'Neplatny vstup'], JSON_UNESCAPED_UNICODE);
         exit;
     }
+    if ($idKarta === 20 && $mode === 'nano') {
+        http_response_code(409);
+        echo json_encode(['ok' => false, 'err' => 'K20 - HelpDesk nelze prepnout do nano rezimu.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 
     try {
         $conn = db();

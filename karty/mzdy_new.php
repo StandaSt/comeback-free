@@ -318,7 +318,6 @@ try {
             FROM reporty r
             INNER JOIN reporty_osoby ro ON ro.id_reportu = r.id_reportu
             WHERE r.platny = 1
-              AND r.stav = 1
             GROUP BY
                 YEAR(r.datum_reportu),
                 MONTH(r.datum_reportu),

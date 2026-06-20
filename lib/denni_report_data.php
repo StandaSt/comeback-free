@@ -980,6 +980,9 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
     if ($reportBranchId <= 0 && count($allowedBranches) === 1) {
         $reportBranchId = (int)array_key_first($allowedBranches);
     }
+    if ($reportBranchId <= 0 && $mainBranchId > 0 && in_array($mainBranchId, $allowedBranchIds, true)) {
+        $reportBranchId = $mainBranchId;
+    }
     if (count($allowedBranches) === 1 && $reportBranchId > 0 && isset($allowedBranches[$reportBranchId])) {
         $singleAllowedBranchName = (string)$allowedBranches[$reportBranchId];
     }
@@ -1024,13 +1027,23 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
             $historyReportExists = ($historyReportId > 0);
         }
     }
-    $preferFinalReportData = $isCurrentWorkday && $historyReportExists && is_array($historyData);
+    $preferFinalReportData = $historyReportExists && is_array($historyData);
+    $requestedFinalEdit = ((int)($_POST['zr_edit_final'] ?? $_GET['zr_edit_final'] ?? 0)) === 1;
+    $canUnlockFinalReport = ($historyReportExists && $hasRole5 && $mainBranchId > 0 && $mainBranchId === $reportBranchId);
+    $isEditingFinalReport = $canUnlockFinalReport && $requestedFinalEdit;
+    $canEditHistory = (!$isCurrentWorkday && $canUnlockFinalReport);
 
-    $canEditHistory = (!$isCurrentWorkday && $historyReportExists && $hasRole5 && $mainBranchId > 0 && $mainBranchId === $reportBranchId);
-    $canEditReport = $isCurrentWorkday ? $canSaveReport : $canEditHistory;
-    $usesDraftPersistence = $isCurrentWorkday && $canEditReport;
-    $isReadOnlyForm = !$canEditReport;
-    $formMode = $isCurrentWorkday ? 'workday' : ($canEditHistory ? 'history_edit' : 'history_readonly');
+    if ($historyReportExists) {
+        $canEditReport = $isEditingFinalReport;
+        $usesDraftPersistence = false;
+        $isReadOnlyForm = !$isEditingFinalReport;
+        $formMode = $isEditingFinalReport ? 'final_edit' : 'final_readonly';
+    } else {
+        $canEditReport = $isCurrentWorkday ? $canSaveReport : false;
+        $usesDraftPersistence = $isCurrentWorkday && $canEditReport;
+        $isReadOnlyForm = !$canEditReport;
+        $formMode = $isCurrentWorkday ? 'workday' : 'history_readonly';
+    }
     $missingHistoryReport = (!$isCurrentWorkday && !$historyReportExists && $reportBranchId > 0);
     $readonlyInfoText = '';
     if ($missingHistoryReport) {
@@ -1106,7 +1119,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
         }
     }
     
-    if ($usesDraftPersistence && $preferFinalReportData) {
+    if ($preferFinalReportData) {
         $historyReport = (array)($historyData['report'] ?? []);
         $draftRow = array_merge(
             is_array($draftRow) ? $draftRow : [],
@@ -1167,10 +1180,10 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
     $closingId = isset($draftRow['zaviral']) ? (int)$draftRow['zaviral'] : 0;
     $openingName = cb_denni_report_user_full_name_by_id($conn, $openingId > 0 ? $openingId : null);
     $closingName = cb_denni_report_user_full_name_by_id($conn, $closingId > 0 ? $closingId : null);
-    if ($openingName === '' && !$isCurrentWorkday) {
+    if ($openingName === '' && $historyReportExists) {
         $openingName = trim((string)($draftRow['oteviral_text'] ?? ''));
     }
-    if ($closingName === '' && !$isCurrentWorkday) {
+    if ($closingName === '' && $historyReportExists) {
         $closingName = trim((string)($draftRow['zaviral_text'] ?? ''));
     }
     if ($openingName === '') {
@@ -1191,7 +1204,53 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
         ? cb_denni_report_previous_note($conn, $reportBranchId, $reportDateDt)
         : cb_denni_report_previous_note_from_history($conn, $reportBranchId, $reportDateDt);
     
-    if ($isCurrentWorkday) {
+    if ($historyReportExists) {
+        $historyReport = is_array($historyData) ? (array)$historyData['report'] : [];
+        $restiaSummary = cb_denni_report_restia_summary_default();
+        $restiaSummary['trzba'] = (float)($historyReport['trzba'] ?? 0);
+        $restiaSummary['wolt'] = (float)($historyReport['wolt'] ?? 0);
+        $restiaSummary['bolt'] = (float)($historyReport['bolt'] ?? 0);
+        $restiaSummary['dj'] = (float)($historyReport['damejidlo'] ?? 0);
+        $restiaSummary['web'] = (float)($historyReport['web'] ?? 0);
+        $restiaSummary['wolt_cash'] = (float)($historyReport['wolt_cash'] ?? 0);
+        $restiaSummary['dj_cash'] = (float)($historyReport['dj_cash'] ?? 0);
+        $restiaSummary['wolt_count'] = 0;
+        $restiaSummary['bolt_count'] = 0;
+        $restiaSummary['dj_count'] = 0;
+        $restiaSummary['web_count'] = 0;
+        $restiaSummary['wolt_cash_count'] = 0;
+        $restiaSummary['dj_cash_count'] = 0;
+        $restiaSummary['other'] = 0.0;
+        $restiaSummary['other_count'] = 0;
+        $restiaSummary['control_amount'] = (float)($historyReport['trzba'] ?? 0);
+        $restiaSummary['control_count'] = (int)($historyReport['objednavky_nezrusene_ks'] ?? 0);
+        $restiaSummary['cancel_count'] = (int)($historyReport['zrusene_obj_ks'] ?? 0);
+        $restiaSummary['cancel_value'] = (float)($historyReport['zrusene_obj_kc'] ?? 0);
+        $restiaSummary['delay_count'] = (int)($historyReport['zpozdene_rozvozy_5_min'] ?? 0);
+        $restiaSummary['make_time_avg_sec'] = isset($historyReport['make_time_prumer_sec']) ? (int)$historyReport['make_time_prumer_sec'] : null;
+        $restiaSummary['docs_count'] = cb_denni_report_docs_count_from_person_rows($draftPersonRows);
+        $restiaSummary['orders_total'] = (int)($historyReport['objednavky_nezrusene_ks'] ?? 0);
+        $restiaSummary['own_deliveries'] = (int)($historyReport['nase_rozvozy_ks'] ?? 0);
+        $restiaSummary['woltdrive_late'] = (int)($historyReport['woltdrive_pozde_5_min'] ?? 0);
+
+        $kuryrDeliveryCountsJson = '{}';
+        $controlValues = cb_denni_report_control_values($conn, $reportDate, $restiaSummary, $draftRow, $draftPersonRows);
+        if (array_key_exists('rozdil', $historyReport)) {
+            $savedRozdil = $historyReport['rozdil'];
+            $controlValues['difference_label'] = $savedRozdil === null ? '-- KÄŤ' : cb_denni_report_format_money_whole((float)$savedRozdil);
+            $controlValues['difference_value'] = $savedRozdil === null ? '' : number_format((float)$savedRozdil, 2, '.', '');
+        }
+        if (array_key_exists('col_pomer', $historyReport)) {
+            $savedCol = $historyReport['col_pomer'];
+            $savedColFloat = $savedCol === null ? null : (float)$savedCol;
+            $controlValues['col_label'] = cb_denni_report_format_percent($savedColFloat);
+            $controlValues['col_value'] = $savedColFloat === null ? '' : number_format($savedColFloat, 6, '.', '');
+        }
+        $kuryrDeliveryData = [
+            'kuryr_rows' => $kuryrRows,
+            'counts_json' => $kuryrDeliveryCountsJson,
+        ];
+    } elseif ($isCurrentWorkday) {
         $restiaSummary = cb_denni_report_restia_summary($conn, $reportBranchId, $workdayRange);
         $restiaSummary['docs_count'] = cb_denni_report_docs_count_from_person_rows($draftPersonRows);
         
@@ -1263,6 +1322,9 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
         'historyData' => $historyData,
         'historyReportId' => $historyReportId,
         'historyReportExists' => $historyReportExists,
+        'canUnlockFinalReport' => $canUnlockFinalReport,
+        'requestedFinalEdit' => $requestedFinalEdit,
+        'isEditingFinalReport' => $isEditingFinalReport,
         'canEditHistory' => $canEditHistory,
         'canEditReport' => $canEditReport,
         'usesDraftPersistence' => $usesDraftPersistence,

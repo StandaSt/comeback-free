@@ -81,17 +81,6 @@ $formatDayLabel = static function (DateTimeImmutable $date): string {
     return $date->format('j.n.');
 };
 
-$stavText = static function (int $stav): string {
-    if ($stav === 2) {
-        return 'uzamčeno';
-    }
-    if ($stav === 9) {
-        return 'storno';
-    }
-
-    return 'uloženo';
-};
-
 $zdrojText = static function (int $zdroj): string {
     if ($zdroj === 1) {
         return 'Google';
@@ -124,7 +113,6 @@ $sql = '
         r.oteviral_text,
         r.zaviral_text,
         r.zdroj,
-        r.stav,
         r.platny,
         COALESCE(pk.hotovost, 0) AS hotovost,
         COALESCE(pk.terminal, 0) AS terminal,
@@ -215,17 +203,12 @@ if ($result instanceof mysqli_result) {
             $colPomer = (float)$colPomerRaw;
         }
 
-        $stav = (int)$row['stav'];
         $platny = (int)$row['platny'];
         $pocetOsob = (int)$row['pocet_osob'];
         $hasProblem = false;
         $problemText = 'OK';
 
-        if ($stav === 9) {
-            $hasProblem = true;
-            $problemText = 'storno';
-            $stornoCount++;
-        } elseif ($platny !== 1) {
+        if ($platny !== 1) {
             $hasProblem = true;
             $problemText = 'neplatný';
             $neplatneCount++;
@@ -259,7 +242,6 @@ if ($result instanceof mysqli_result) {
             'pobocka' => trim((string)$row['pobocka']),
             'id_pob' => (int)$row['id_pob'],
             'zdroj' => (int)$row['zdroj'],
-            'stav' => $stav,
             'platny' => $platny,
             'oteviral_text' => trim((string)$row['oteviral_text']),
             'zaviral_text' => trim((string)$row['zaviral_text']),

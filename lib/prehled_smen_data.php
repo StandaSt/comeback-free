@@ -314,7 +314,6 @@ if (!function_exists('ps_prehled_smen_data')) {
                 INNER JOIN reporty r ON r.id_reportu = ro.id_reportu
                 LEFT JOIN pobocka p ON p.id_pob = r.id_pob
                 WHERE r.platny = 1
-                  AND r.stav = 1
                   AND r.datum_reportu >= ?
                   AND r.datum_reportu <= ?
                 ORDER BY ro.prijmeni ASC, ro.jmeno ASC, ro.slot ASC, r.datum_reportu ASC

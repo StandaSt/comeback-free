@@ -318,6 +318,10 @@ if (!empty($userNanoOrderIds)) {
 }
 foreach ($karty as $kartaRow) {
     $idK = (int)($kartaRow['id_karta'] ?? 0);
+    if ($idK === 20) {
+        $kartyMini[] = $kartaRow;
+        continue;
+    }
     if ($idK > 0 && !empty($nanoOrderSet) && isset($nanoOrderSet[$idK])) {
         $kartyNano[] = $kartaRow;
     } else {

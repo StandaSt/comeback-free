@@ -79,6 +79,7 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
     $startExpanded = ((int)($pripravenaKarta['startExpanded'] ?? 0) === 1);
     $maxFill = ((int)($pripravenaKarta['maxFill'] ?? 0) === 1);
     $hasMaxLoaded = (!$isNano && trim($maxHtml) !== '');
+    $allowNanoSwitch = (!$isNano && $cardId !== 20);
 
     $hasCardIcon = ($iconFile !== '');
     $cardIconSrc = $hasCardIcon ? cb_url('/img/card_icons/' . ltrim($iconFile, '/')) : '';
@@ -163,7 +164,9 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
           <button type="button" class="card_tool_btn cursor_ruka txt_seda bg_bila zaobleni_8 text_14 card_mode_btn odstup_vnitrni_0 displ_inline_flex" data-card-nano-target="mini" title="Prepnout na mini">&#8722;</button>
         <?php else: ?>
           <button type="button" class="card_tool_btn cursor_ruka txt_seda bg_bila zaobleni_8 text_14 card_mode_btn odstup_vnitrni_0 displ_inline_flex" data-card-toggle="1" aria-expanded="false" title="Prepnout na maxi/mini">&#10530;</button>
-          <button type="button" class="card_tool_btn only-mini cursor_ruka txt_seda bg_bila zaobleni_8 text_14 card_mode_btn odstup_vnitrni_0 displ_inline_flex" data-card-to-nano="1" title="Prepnout na nano"><span class="nano_dot">&bull;</span></button>
+          <?php if ($allowNanoSwitch): ?>
+            <button type="button" class="card_tool_btn only-mini cursor_ruka txt_seda bg_bila zaobleni_8 text_14 card_mode_btn odstup_vnitrni_0 displ_inline_flex" data-card-to-nano="1" title="Prepnout na nano"><span class="nano_dot">&bull;</span></button>
+          <?php endif; ?>
         <?php endif; ?>
       </div>
     </div>

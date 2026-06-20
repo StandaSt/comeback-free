@@ -42,6 +42,43 @@ if (isset($_SERVER['HTTP_X_COMEBACK_USER_AKCE'])) {
     $cbIsUserAkce = ((string)($_SERVER['HTTP_X_COMEBACK_USER_AKCE']) === '1');
 }
 
+$cbIsHelpdesk = false;
+if (isset($_SERVER['HTTP_X_COMEBACK_HELPDESK'])) {
+    $cbIsHelpdesk = ((string)($_SERVER['HTTP_X_COMEBACK_HELPDESK']) === '1');
+}
+
+if ($cbIsHelpdesk) {
+    if (empty($_SESSION['login_ok'])) {
+        http_response_code(401);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok' => false, 'err' => 'Nutne prihlaseni'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $cbHelpdeskAction = trim((string)($_GET['helpdesk_action'] ?? $_POST['helpdesk_action'] ?? ''));
+    $cbHelpdeskMap = [
+        'vytvorit' => __DIR__ . '/../ajax/helpdesk_vytvorit.php',
+        'detail' => __DIR__ . '/../ajax/helpdesk_detail.php',
+        'zprava_pridat' => __DIR__ . '/../ajax/helpdesk_zprava_pridat.php',
+        'priloha_nahrat' => __DIR__ . '/../ajax/helpdesk_priloha_nahrat.php',
+        'sledovat' => __DIR__ . '/../ajax/helpdesk_sledovat.php',
+        'stav_zmenit' => __DIR__ . '/../ajax/helpdesk_stav_zmenit.php',
+        'notifikace_nacist' => __DIR__ . '/../ajax/helpdesk_notifikace_nacist.php',
+        'notifikace_precteno' => __DIR__ . '/../ajax/helpdesk_notifikace_precteno.php',
+    ];
+
+    if (!isset($cbHelpdeskMap[$cbHelpdeskAction])) {
+        http_response_code(404);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok' => false, 'err' => 'Neznamy HelpDesk pozadavek'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    define('CB_HELPDESK_DISPATCH_INTERNAL', true);
+    require $cbHelpdeskMap[$cbHelpdeskAction];
+    exit;
+}
+
 if ($cbIsUserAkce && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     if (empty($_SESSION['login_ok'])) {
         http_response_code(401);

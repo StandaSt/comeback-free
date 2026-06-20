@@ -168,12 +168,12 @@
 
   function syncReportState(root) {
     const form = getForm(root);
-    const formMode = form instanceof HTMLFormElement ? String(form.getAttribute('data-zr-form-mode') || '') : '';
+    const isReadOnly = form instanceof HTMLFormElement && String(form.getAttribute('data-zr-readonly') || '0') === '1';
 
     if (typeof w.cbSyncReportFormState === 'function') {
       w.cbSyncReportFormState(root);
     }
-    if (formMode !== 'history_readonly' && typeof w.cbPrepocetReportValues === 'function') {
+    if (!isReadOnly && typeof w.cbPrepocetReportValues === 'function') {
       w.cbPrepocetReportValues(root).catch((err) => {
         if (w.console && w.console.warn) w.console.warn(err);
       });

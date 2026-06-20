@@ -6,7 +6,11 @@ $zrEditableDisabledAttr = !empty($isReadOnlyForm) ? ' disabled' : '';
 $zrEditableReadonlyAttr = !empty($isReadOnlyForm) ? ' readonly' : '';
 $zrReadonlyInfoText = trim((string)($readonlyInfoText ?? ''));
 $zrUsesDraftMode = !empty($usesDraftPersistence) ? '1' : '0';
-$zrFinalFullMode = (!empty($canEditReport) && empty($isCurrentWorkday)) ? '1' : '0';
+$zrFinalFullMode = !empty($isEditingFinalReport) ? '1' : '0';
+$zrCanUnlockFinalReport = !empty($canUnlockFinalReport);
+$zrIsEditingFinalReport = !empty($isEditingFinalReport);
+$zrSubmitReadyText = $zrIsEditingFinalReport ? 'Chci uložit opravený report' : 'Report je zkontrolovaný, uložit';
+$zrSubmitLockedText = $zrIsEditingFinalReport ? 'Chci uložit opravený report' : 'Report bude možné uložit za';
 $zrRemoveButtonHtml = !empty($isReadOnlyForm)
     ? ''
     : '<button type="button" class="zr_row_remove" data-zr-remove-row title="Odebrat" aria-label="Odebrat">×</button>';
@@ -102,6 +106,7 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
 <?php endif; ?>
 <form class="zr_form gap_14" autocomplete="off" method="post" action="<?= h(cb_url('/')) ?>" data-zr-form data-zr-draft-mode="<?= h($zrUsesDraftMode) ?>" data-zr-final-full="<?= h($zrFinalFullMode) ?>" data-zr-form-mode="<?= h((string)($formMode ?? 'workday')) ?>" data-zr-readonly="<?= !empty($isReadOnlyForm) ? '1' : '0' ?>" data-cb-max-form="1" data-cb-loader-text="Načítám report pobočky" style="position:relative;">
   <input type="hidden" name="dr_id" value="<?= h((string)$idDr) ?>" data-zr-dr-id>
+  <input type="hidden" name="zr_edit_final" value="<?= $zrIsEditingFinalReport ? '1' : '0' ?>" data-zr-edit-final>
   <div class="zr_layout gap_14">
     <div class="zr_main gap_14">
       <section class="zr_top gap_14">
@@ -280,18 +285,25 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
             style="width:100%;margin-top:4px;"
           >
         </section>
-        <?php if (!empty($canEditReport) && $reportBranchId > 0): ?>
+        <?php if ($zrCanUnlockFinalReport && !$zrIsEditingFinalReport && $reportBranchId > 0): ?>
+          <button
+            type="button"
+            class="zr_submit"
+            data-zr-edit-final-button
+            style="background:#c62828;border-color:#b71c1c;color:#fff;cursor:pointer;opacity:1;"
+          >Editovat tento report</button>
+        <?php elseif (!empty($canEditReport) && $reportBranchId > 0): ?>
           <button
             type="button"
             class="zr_submit"
             disabled
             data-zr-submit
-            data-zr-submit-locked-text="Report bude možné uložit za"
-            data-zr-submit-ready-text="Report je zkontrolovaný, uložit"
+            data-zr-submit-locked-text="<?= h($zrSubmitLockedText) ?>"
+            data-zr-submit-ready-text="<?= h($zrSubmitReadyText) ?>"
             data-zr-submit-missing-text="Vyplň všechna povinná data reportu"
-            data-zr-submit-at="<?= h((string)$reportSaveAtTs) ?>"
-            style="background:#d9dee8;border-color:#c1c9d6;color:#5f6b7a;cursor:not-allowed;opacity:1;"
-          >Report bude možné uložit za 0:00:00</button>
+            data-zr-submit-at="<?= h((string)($zrIsEditingFinalReport ? 0 : $reportSaveAtTs)) ?>"
+            <?php if ($zrIsEditingFinalReport): ?>style="background:#2e7d32;border-color:#1b5e20;color:#fff;cursor:pointer;opacity:1;"<?php else: ?>style="background:#d9dee8;border-color:#c1c9d6;color:#5f6b7a;cursor:not-allowed;opacity:1;"<?php endif; ?>
+          ><?= h($zrIsEditingFinalReport ? 'Chci uložit opravený report' : 'Report bude možné uložit za 0:00:00') ?></button>
         <?php endif; ?>
       </div>
     </div>

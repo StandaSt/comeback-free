@@ -42,7 +42,6 @@ function cb_vcr_rozdil(array $restiaSummary, array $cash): ?float
         + cb_vcr_money($restiaSummary, 'bolt')
         + cb_vcr_money($restiaSummary, 'dj')
         + cb_vcr_money($restiaSummary, 'web')
-        + cb_vcr_money($restiaSummary, 'wolt_cash')
         + cb_vcr_money($cash, 'terminal')
         + cb_vcr_money($cash, 'stravenky')
         + cb_vcr_money($cash, 'hotovost');

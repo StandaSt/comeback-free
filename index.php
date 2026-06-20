@@ -42,12 +42,17 @@ if (!empty($_SESSION['login_ok']) && !$cbIsPartialRequest && !$cbIsCardRequest &
 }
 if (!empty($_SESSION['login_ok'])) {
     require_once __DIR__ . '/lib/post_akce.php';
-    require_once __DIR__ . '/lib/handle_dr_pracovni.php';
+    require_once __DIR__ . '/lib/uloz_dr_pracovni.php';
+    require_once __DIR__ . '/lib/uloz_reporty_is.php';
     require_once __DIR__ . '/lib/uloz_akci.php';
 }
 
 $pageKey = 'dashboard';
 $file = __DIR__ . '/includes/dashboard.php';
+$cbPage = trim((string)($_GET['page'] ?? 'dashboard'));
+if ($cbPage === '') {
+    $cbPage = 'dashboard';
+}
 $cbStartupLoaderText = trim((string)($_SESSION['cb_initial_loader_text'] ?? ''));
 if ($cbStartupLoaderText !== '') {
     unset($_SESSION['cb_initial_loader_text']);
