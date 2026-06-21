@@ -133,7 +133,7 @@ function cb_helpdesk_can_write(mysqli $conn, int $idHelpdesk, int $idUser): bool
         return false;
     }
 
-    if (in_array((string)$stav, ['vyreseno', 'zamitnuto'], true) && !cb_helpdesk_is_admin()) {
+    if (in_array((string)$stav, ['vyřešeno', 'zamítnuto'], true) && !cb_helpdesk_is_admin()) {
         return false;
     }
 
@@ -166,7 +166,7 @@ function cb_helpdesk_can_write(mysqli $conn, int $idHelpdesk, int $idUser): bool
 function cb_helpdesk_admin_ids(mysqli $conn): array
 {
     $out = [];
-    $sql = 'SELECT id_user FROM `user` WHERE aktivni = 1 AND (admin = 1 OR id_role <= 3) ORDER BY id_user ASC';
+    $sql = 'SELECT id_user FROM `user` WHERE aktivni = 1 AND id_role = 1 ORDER BY id_user ASC';
     $res = $conn->query($sql);
     if ($res instanceof mysqli_result) {
         while ($row = $res->fetch_assoc()) {

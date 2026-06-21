@@ -65,7 +65,7 @@ try {
     $stmt = $conn->prepare('
         INSERT INTO helpdesk
         (id_user_zalozil, typ, stav, verejny, predmet, popis, vytvoreno, upraveno)
-        VALUES (?, ?, \'novy\', ?, ?, ?, NOW(), NOW())
+        VALUES (?, ?, \'nový\', ?, ?, ?, NOW(), NOW())
     ');
     if (!($stmt instanceof mysqli_stmt)) {
         throw new RuntimeException('Nepodařilo se připravit založení požadavku.');

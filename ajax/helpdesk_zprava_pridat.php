@@ -61,6 +61,18 @@ try {
 
     $conn->begin_transaction();
 
+    $stavPred = '';
+    $stmtBefore = $conn->prepare('SELECT stav FROM helpdesk WHERE id_helpdesk = ? LIMIT 1');
+    if ($stmtBefore instanceof mysqli_stmt) {
+        $stmtBefore->bind_param('i', $idHelpdesk);
+        $stmtBefore->execute();
+        $stmtBefore->bind_result($stavPredDb);
+        if ($stmtBefore->fetch()) {
+            $stavPred = trim((string)$stavPredDb);
+        }
+        $stmtBefore->close();
+    }
+
     $stmt = $conn->prepare('
         INSERT INTO helpdesk_zprava
         (id_helpdesk, id_user, typ_autora, zprava, systemova, vytvoreno)
@@ -75,11 +87,25 @@ try {
     $idZprava = (int)$stmt->insert_id;
     $stmt->close();
 
-    $stmtU = $conn->prepare('UPDATE helpdesk SET upraveno = NOW() WHERE id_helpdesk = ? LIMIT 1');
-    if ($stmtU instanceof mysqli_stmt) {
-        $stmtU->bind_param('i', $idHelpdesk);
-        $stmtU->execute();
-        $stmtU->close();
+    $novyStav = $stavPred;
+    if (cb_helpdesk_is_admin() && $stavPred === 'nový') {
+        $novyStav = 'řeší se';
+    }
+
+    if ($novyStav !== '' && $novyStav !== $stavPred) {
+        $stmtU = $conn->prepare('UPDATE helpdesk SET stav = ?, upraveno = NOW() WHERE id_helpdesk = ? LIMIT 1');
+        if ($stmtU instanceof mysqli_stmt) {
+            $stmtU->bind_param('si', $novyStav, $idHelpdesk);
+            $stmtU->execute();
+            $stmtU->close();
+        }
+    } else {
+        $stmtU = $conn->prepare('UPDATE helpdesk SET upraveno = NOW() WHERE id_helpdesk = ? LIMIT 1');
+        if ($stmtU instanceof mysqli_stmt) {
+            $stmtU->bind_param('i', $idHelpdesk);
+            $stmtU->execute();
+            $stmtU->close();
+        }
     }
 
     $stmtS = $conn->prepare('
@@ -96,10 +122,16 @@ try {
 
     cb_helpdesk_snapshot_zapis($conn, $idHelpdesk, $idZprava, $idUser);
 
+    $textNotifikaceZprava = preg_replace('/\s+/u', ' ', $zprava);
+    $textNotifikaceZprava = trim((string)$textNotifikaceZprava);
+    if (mb_strlen($textNotifikaceZprava, 'UTF-8') > 180) {
+        $textNotifikaceZprava = mb_substr($textNotifikaceZprava, 0, 177, 'UTF-8') . '...';
+    }
+
     if (cb_helpdesk_is_admin()) {
-        cb_helpdesk_notifikace_ucastnikum($conn, $idHelpdesk, $idZprava, $idUser, 'nova_odpoved', 'Nová admin odpověď v HelpDesku #' . (string)$idHelpdesk);
+        cb_helpdesk_notifikace_ucastnikum($conn, $idHelpdesk, $idZprava, $idUser, 'nova_odpoved', 'Admin reaguje na tiket č.' . (string)$idHelpdesk . ': ' . $textNotifikaceZprava);
     } else {
-        cb_helpdesk_notifikace_adminum($conn, $idHelpdesk, $idZprava, $idUser, 'nova_odpoved', 'Nová odpověď v HelpDesku #' . (string)$idHelpdesk);
+        cb_helpdesk_notifikace_adminum($conn, $idHelpdesk, $idZprava, $idUser, 'nova_odpoved', 'Uživatel reaguje na tiket č.' . (string)$idHelpdesk . ': ' . $textNotifikaceZprava);
     }
 
     $conn->commit();
@@ -108,6 +140,7 @@ try {
         'ok' => true,
         'id_helpdesk' => $idHelpdesk,
         'id_helpdesk_zprava' => $idZprava,
+        'stav' => $novyStav,
     ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     if (isset($conn) && $conn instanceof mysqli) {

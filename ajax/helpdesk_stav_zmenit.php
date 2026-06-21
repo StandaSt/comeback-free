@@ -41,7 +41,7 @@ try {
     $idUser = cb_helpdesk_current_user_id();
     $idHelpdesk = (int)($data['id_helpdesk'] ?? 0);
     $stav = trim((string)($data['stav'] ?? ''));
-    if (!in_array($stav, ['novy', 'resi_se', 'vyreseno', 'zamitnuto'], true)) {
+    if (!in_array($stav, ['nový', 'řeší se', 'vyřešeno', 'zamítnuto'], true)) {
         throw new RuntimeException('Neplatný stav.');
     }
 
@@ -50,7 +50,7 @@ try {
     }
 
     $uzavrenoSql = 'NULL';
-    if (in_array($stav, ['vyreseno', 'zamitnuto'], true)) {
+    if (in_array($stav, ['vyřešeno', 'zamítnuto'], true)) {
         $uzavrenoSql = 'NOW()';
     }
 

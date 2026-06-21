@@ -86,7 +86,10 @@ if ($cb2faToken !== '') {
                 return;
               }
               if (j.stav === 'ok') {
-                window.location.href = '<?= h(cb_url('')) ?>';
+                setTxt('Přístup schválen - načítám IS');
+                setTimeout(function(){
+                  window.location.href = '<?= h(cb_url('')) ?>';
+                }, 400);
                 return;
               }
               if (j.stav === 'ne') {

@@ -10,6 +10,7 @@ $cbLoginOk = !empty($_SESSION['login_ok']);
 $cbUser = $_SESSION['cb_user'] ?? [];
 $cbUserName = 'Uzivatel';
 $cbUserRole = '-';
+$cbUserRoleLabel = '-';
 $cbUserRoleId = 0;
 
 if (is_array($cbUser)) {
@@ -21,6 +22,7 @@ if (is_array($cbUser)) {
     }
 
     $cbUserRole = (string)($cbUser['role'] ?? $cbUser['nazev_role'] ?? $cbUserRole);
+    $cbUserRoleLabel = $cbUserRole;
     $cbUserRoleId = (int)($cbUser['id_role'] ?? 0);
 }
 
@@ -336,10 +338,13 @@ if ($cbPobocky) {
   <div id="cb-helpdesk-modal" style="display:none;position:fixed;inset:0;z-index:13000;align-items:center;justify-content:center;padding:18px;background:rgba(15,23,42,.48);">
     <div class="ram_normal zaobleni_12 bg_bila" role="dialog" aria-modal="true" aria-labelledby="cb-helpdesk-modal-title" style="width:min(720px,calc(100vw - 32px));max-height:calc(100vh - 36px);overflow:auto;padding:16px 18px 14px;">
       <div style="display:flex;align-items:center;justify-content:flex-start;gap:12px;margin-bottom:12px;">
-        <h2 id="cb-helpdesk-modal-title" style="margin:0;font-size:20px;line-height:1.2;">HelpDesk</h2>
+        <h2 id="cb-helpdesk-modal-title" style="margin:0;font-size:24px;line-height:1.2;color:#0f3f91;">HelpDesk</h2>
       </div>
 
       <div style="display:grid;grid-template-columns:160px 1fr;gap:10px 12px;align-items:center;">
+        <div style="font-weight:700;color:#334155;">Zadává:</div>
+        <div style="color:#334155;line-height:1.4;"><?= h($cbUserName) ?> (<?= h($cbUserRoleLabel) ?>)</div>
+
         <label for="cb-helpdesk-typ">Typ</label>
         <select id="cb-helpdesk-typ" style="width:100%;min-height:34px;padding:6px 10px;border:1px solid rgba(15,23,42,.18);border-radius:8px;background:#fff;">
           <option value="chyba">Chyba systému</option>
@@ -348,26 +353,30 @@ if ($cbPobocky) {
         </select>
 
         <label for="cb-helpdesk-predmet">Předmět</label>
-        <input type="text" id="cb-helpdesk-predmet" maxlength="160" style="width:100%;min-height:34px;padding:6px 10px;border:1px solid rgba(15,23,42,.18);border-radius:8px;background:#fff;">
+        <div>
+          <input type="text" id="cb-helpdesk-predmet" maxlength="160" placeholder="Nutno vyplnit" style="width:100%;min-height:34px;padding:6px 10px;border:1px solid rgba(15,23,42,.18);border-radius:8px;background:#fff;">
+        </div>
 
         <div style="align-self:start;padding-top:8px;">Určení:</div>
         <div style="display:grid;gap:8px;padding:4px 0;">
-          <label style="display:flex;align-items:flex-start;gap:8px;">
+          <label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;line-height:1.35;">
             <input type="radio" name="cb-helpdesk-urceni" value="admin">
             <span>Pouze pro admina</span>
           </label>
-          <label style="display:flex;align-items:flex-start;gap:8px;">
+          <label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;line-height:1.35;">
             <input type="radio" name="cb-helpdesk-urceni" value="reagovat" checked>
             <span>Všichni mohou reagovat</span>
           </label>
-          <label style="display:flex;align-items:flex-start;gap:8px;">
+          <label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;line-height:1.35;">
             <input type="radio" name="cb-helpdesk-urceni" value="cist">
             <span>Všichni mohou číst</span>
           </label>
         </div>
 
         <label for="cb-helpdesk-popis" style="align-self:start;padding-top:8px;">Popis</label>
-        <textarea id="cb-helpdesk-popis" rows="8" style="width:100%;padding:8px 10px;border:1px solid rgba(15,23,42,.18);border-radius:8px;background:#fff;resize:vertical;"></textarea>
+        <div>
+          <textarea id="cb-helpdesk-popis" rows="8" placeholder="Minimální délka zprávy je 25 znaků" style="width:100%;padding:8px 10px;border:1px solid rgba(15,23,42,.18);border-radius:8px;background:#fff;resize:vertical;"></textarea>
+        </div>
 
         <label style="align-self:start;padding-top:8px;">Přílohy</label>
         <div id="cb-helpdesk-prilohy" style="display:grid;gap:8px;">
