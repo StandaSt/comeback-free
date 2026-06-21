@@ -48,10 +48,6 @@ if (!function_exists('cb_user_akce_zapis')) {
             return false;
         }
 
-        if (!cb_user_akce_should_log($idUser)) {
-            return false;
-        }
-
         $idAkce = (int)($payload['id_akce'] ?? 0);
         if (!in_array($idAkce, [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 20], true)) {
             return false;

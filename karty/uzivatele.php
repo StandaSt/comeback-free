@@ -34,6 +34,21 @@ if (!function_exists('uz_format_reg_cz')) {
     }
 }
 
+if (!function_exists('uz_format_time_cz')) {
+    function uz_format_time_cz(string $value): string
+    {
+        $v = trim($value);
+        if ($v === '' || $v === '0000-00-00' || $v === '0000-00-00 00:00:00') {
+            return '';
+        }
+        $dt = date_create($v);
+        if ($dt === false) {
+            return $v;
+        }
+        return date_format($dt, 'G:i');
+    }
+}
+
 $uzRows = [];
 $uzTotal = 0;
 $uzPages = 1;
@@ -44,6 +59,8 @@ $uzFilters = [];
 $uzError = '';
 $formAction = cb_url('/');
 $roleStats = ['admin' => 0, 'manager' => 0, 'vedouci' => 0];
+$uzMiniOnlineRows = [];
+$uzMiniIsAdmin = (int)($_SESSION['cb_user']['id_role'] ?? 0) === 1;
 
 $uzCols = [
     'id' => ['label' => 'Poř.č.', 'db' => 'id_user'],
@@ -172,6 +189,44 @@ try {
         $resRoleStats->free();
     }
 
+    if ($uzMiniIsAdmin) {
+        $resMiniOnline = $conn->query('
+            SELECT
+                u.id_user,
+                TRIM(CONCAT_WS(" ", u.jmeno, u.prijmeni)) AS full_name,
+                ul_last.id_login AS login_id,
+                ul_last.kdy AS login_time,
+                ua_last.last_action_time
+            FROM `user` u
+            LEFT JOIN (
+                SELECT ul1.id_user, ul1.id_login, ul1.kdy
+                FROM user_login ul1
+                INNER JOIN (
+                    SELECT id_user, MAX(id_login) AS id_login
+                    FROM user_login
+                    WHERE akce = 1
+                    GROUP BY id_user
+                ) ulx ON ulx.id_user = ul1.id_user AND ulx.id_login = ul1.id_login
+            ) ul_last ON ul_last.id_user = u.id_user
+            LEFT JOIN (
+                SELECT ua.id_login, MAX(ua.cas) AS last_action_time
+                FROM user_akce ua
+                WHERE ua.id_login IS NOT NULL
+                GROUP BY ua.id_login
+            ) ua_last ON ua_last.id_login = ul_last.id_login
+            WHERE u.aktivni = 1
+              AND u.in_system = 1
+              AND COALESCE(u.id_role, 0) <> 1
+            ORDER BY COALESCE(ua_last.last_action_time, ul_last.kdy) DESC, full_name ASC, u.id_user ASC
+        ');
+        if ($resMiniOnline) {
+            while ($rowMiniOnline = $resMiniOnline->fetch_assoc()) {
+                $uzMiniOnlineRows[] = $rowMiniOnline;
+            }
+            $resMiniOnline->free();
+        }
+    }
+
     if ((int)$tabKonfig['enable_pagination'] === 1) {
         $uzPages = max(1, (int)ceil($uzTotal / $uzPer));
         if ($uzPage > $uzPages) {
@@ -248,32 +303,61 @@ $uzResetUrl = cb_url_query('/', ['cb_load_max' => '1'], $uzQueryDefaults);
 ob_start();
 ?>
 <div class="displ_flex jc_stred">
-  <table class="table ram_normal bg_bila radek_1_35 card_table_min sirka100" aria-label="Přehled uživatelů IS Comeback">
+  <div class="sirka100" style="max-height:238px;overflow:auto;">
+  <table class="table ram_normal bg_bila card_table_min sirka100" aria-label="Přehled uživatelů IS Comeback" style="line-height:1.1;font-size:12px;">
     <thead>
       <tr>
-        <th>Přidělená role</th>
-        <th class="txt_r">počet</th>
+        <?php if ($uzMiniIsAdmin): ?>
+          <th>Celé jméno</th>
+          <th class="txt_r">Přihlášení</th>
+          <th class="txt_r">Poslední akce</th>
+        <?php else: ?>
+          <th>Přidělená role</th>
+          <th class="txt_r">počet</th>
+        <?php endif; ?>
       </tr>
     </thead>
     <tbody>
-      <tr>
-        <td>vedouci</td>
-        <td class="txt_r"><strong><?= h((string)$roleStats['vedouci']) ?></strong></td>
-      </tr>
-      <tr>
-        <td>manager</td>
-        <td class="txt_r"><strong><?= h((string)$roleStats['manager']) ?></strong></td>
-      </tr>
-      <tr>
-        <td>admin</td>
-        <td class="txt_r"><strong><?= h((string)$roleStats['admin']) ?></strong></td>
-      </tr>
-      <tr>
-        <td><strong>Celkem</strong></td>
-        <td class="txt_r"><strong><?= h((string)($roleStats['vedouci'] + $roleStats['manager'] + $roleStats['admin'])) ?></strong></td>
-      </tr>
+      <?php if ($uzMiniIsAdmin): ?>
+        <?php if ($uzMiniOnlineRows === []): ?>
+          <tr>
+            <td colspan="3">Žádní online uživatelé</td>
+          </tr>
+        <?php else: ?>
+          <?php foreach ($uzMiniOnlineRows as $uzMiniRow): ?>
+            <?php
+            $uzMiniFullName = trim((string)($uzMiniRow['full_name'] ?? ''));
+            $uzMiniLoginTime = trim((string)($uzMiniRow['login_time'] ?? ''));
+            $uzMiniLastActionTime = trim((string)($uzMiniRow['last_action_time'] ?? ''));
+            ?>
+            <tr>
+              <td><?= h($uzMiniFullName !== '' ? $uzMiniFullName : ('ID ' . (string)($uzMiniRow['id_user'] ?? ''))) ?></td>
+              <td class="txt_r"><?= h($uzMiniLoginTime !== '' ? uz_format_time_cz($uzMiniLoginTime) : '-') ?></td>
+              <td class="txt_r"><?= h($uzMiniLastActionTime !== '' ? uz_format_time_cz($uzMiniLastActionTime) : '-') ?></td>
+            </tr>
+          <?php endforeach; ?>
+        <?php endif; ?>
+      <?php else: ?>
+        <tr>
+          <td>vedouci</td>
+          <td class="txt_r"><strong><?= h((string)$roleStats['vedouci']) ?></strong></td>
+        </tr>
+        <tr>
+          <td>manager</td>
+          <td class="txt_r"><strong><?= h((string)$roleStats['manager']) ?></strong></td>
+        </tr>
+        <tr>
+          <td>admin</td>
+          <td class="txt_r"><strong><?= h((string)$roleStats['admin']) ?></strong></td>
+        </tr>
+        <tr>
+          <td><strong>Celkem</strong></td>
+          <td class="txt_r"><strong><?= h((string)($roleStats['vedouci'] + $roleStats['manager'] + $roleStats['admin'])) ?></strong></td>
+        </tr>
+      <?php endif; ?>
     </tbody>
   </table>
+  </div>
 </div>
 <?php
 $card_min_html = (string)ob_get_clean();

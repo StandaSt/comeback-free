@@ -1844,6 +1844,14 @@ align-items:center;
   box-shadow:0 18px 44px var(--clr_stin_5);
 }
 
+.dash_card.is-maxi-overlay:has(.card_shell[data-card-max-fill="1"]){
+  left:12px;
+  right:12px;
+  transform:none;
+  width:auto;
+  max-width:none;
+}
+
 .dash_card.is-maxi-overlay .card_shell{
   display:flex;
   flex-direction:column;

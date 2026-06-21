@@ -19,10 +19,24 @@ $cbFavicon = cb_url('img/favicon_comeback.png');
 
 $cbAuthOk = !empty($_SESSION['cb_auth_ok']);
 $cb2faPending = !empty($_SESSION['cb_2fa_token']);
+$cbRequestMethod = strtoupper(trim((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')));
+$cbHasComebackHeader = false;
+foreach (array_keys($_SERVER) as $cbServerKey) {
+    if (strncmp((string)$cbServerKey, 'HTTP_X_COMEBACK_', 16) === 0) {
+        $cbHasComebackHeader = true;
+        break;
+    }
+}
 $cbIsPartialRequest = isset($_SERVER['HTTP_X_COMEBACK_PARTIAL']);
 $cbIsCardRequest = isset($_SERVER['HTTP_X_COMEBACK_CARD']);
+$cbIsCardMaxRequest = isset($_SERVER['HTTP_X_COMEBACK_CARD_MAX']);
 $cbIsMaxFormRequest = isset($_SERVER['HTTP_X_COMEBACK_MAX_FORM']);
-$cbCanEarlyStartupFlush = !empty($_SESSION['login_ok']) && !$cbIsPartialRequest && !$cbIsCardRequest && !$cbIsMaxFormRequest;
+$cbIsReportDraftRequest = isset($_SERVER['HTTP_X_COMEBACK_DR_PRACOVNI']);
+$cbIsReportFinalRequest = isset($_SERVER['HTTP_X_COMEBACK_REPORTY_IS']);
+$cbIsFullStartupRequest = !empty($_SESSION['login_ok'])
+    && $cbRequestMethod === 'GET'
+    && !$cbHasComebackHeader;
+$cbCanEarlyStartupFlush = $cbIsFullStartupRequest;
 $cbEarlyStartupFlushed = false;
 $cbStartupLoaderText = trim((string)($_SESSION['cb_initial_loader_text'] ?? ''));
 if ($cbStartupLoaderText !== '') {
@@ -92,7 +106,7 @@ if ($cbCanEarlyStartupFlush && $cbStartupLoaderHtml !== '') {
     flush();
     $cbEarlyStartupFlushed = true;
 }
-if (!empty($_SESSION['login_ok']) && !$cbIsPartialRequest && !$cbIsCardRequest && !$cbIsMaxFormRequest) {
+if ($cbIsFullStartupRequest) {
     require_once __DIR__ . '/lib/restia_online_kontrola.php';
 }
 if (!empty($_SESSION['login_ok'])) {
