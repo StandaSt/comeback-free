@@ -22,6 +22,8 @@ $cb2faPending = !empty($_SESSION['cb_2fa_token']);
 $cbIsPartialRequest = isset($_SERVER['HTTP_X_COMEBACK_PARTIAL']);
 $cbIsCardRequest = isset($_SERVER['HTTP_X_COMEBACK_CARD']);
 $cbIsMaxFormRequest = isset($_SERVER['HTTP_X_COMEBACK_MAX_FORM']);
+$cbStartupRestiaHold = false;
+$cbStartupRestiaTrigger = false;
 
 if (!empty($_SESSION['login_ok'])) {
     require_once __DIR__ . '/lib/pobocky_vyber.php';
@@ -38,6 +40,45 @@ require_once __DIR__ . '/lib/detektuj_neplatnou_url.php';
 require_once __DIR__ . '/lib/logout_handler.php';
 require_once __DIR__ . '/lib/json_registrace.php';
 if (!empty($_SESSION['login_ok']) && !$cbIsPartialRequest && !$cbIsCardRequest && !$cbIsMaxFormRequest) {
+    $cbStartupRestiaDb = db();
+    $cbStartupRestiaEnabled = false;
+    $cbStartupRestiaLastEnd = '';
+    $cbStartupRestiaActive = false;
+
+    $cbStartupRestiaSetRes = $cbStartupRestiaDb->query('SELECT restia_online FROM set_system WHERE id_set = 1 LIMIT 1');
+    if ($cbStartupRestiaSetRes instanceof mysqli_result) {
+        $cbStartupRestiaSetRow = $cbStartupRestiaSetRes->fetch_assoc();
+        $cbStartupRestiaSetRes->free();
+        $cbStartupRestiaEnabled = ((int)($cbStartupRestiaSetRow['restia_online'] ?? 0) === 1);
+    }
+
+    if ($cbStartupRestiaEnabled) {
+        $cbStartupRestiaStateRes = $cbStartupRestiaDb->query("
+            SELECT aktivni, konec
+            FROM online_restia
+            ORDER BY aktivni DESC, id_akce DESC
+            LIMIT 1
+        ");
+        if ($cbStartupRestiaStateRes instanceof mysqli_result) {
+            $cbStartupRestiaStateRow = $cbStartupRestiaStateRes->fetch_assoc();
+            $cbStartupRestiaStateRes->free();
+            $cbStartupRestiaActive = ((int)($cbStartupRestiaStateRow['aktivni'] ?? 0) === 1);
+            $cbStartupRestiaLastEnd = trim((string)($cbStartupRestiaStateRow['konec'] ?? ''));
+        }
+
+        if ($cbStartupRestiaActive) {
+            $cbStartupRestiaHold = true;
+            $cbStartupRestiaTrigger = false;
+        } else {
+            $cbStartupRestiaLastTs = ($cbStartupRestiaLastEnd !== '') ? strtotime($cbStartupRestiaLastEnd) : false;
+            if ($cbStartupRestiaLastTs === false || (time() - $cbStartupRestiaLastTs) >= 120) {
+                $cbStartupRestiaHold = true;
+                $cbStartupRestiaTrigger = true;
+            }
+        }
+    }
+}
+if (!empty($_SESSION['login_ok']) && !$cbIsPartialRequest && !$cbIsCardRequest && !$cbIsMaxFormRequest && !$cbStartupRestiaHold) {
     require_once __DIR__ . '/lib/restia_online_kontrola.php';
 }
 if (!empty($_SESSION['login_ok'])) {
@@ -56,6 +97,9 @@ if ($cbPage === '') {
 $cbStartupLoaderText = trim((string)($_SESSION['cb_initial_loader_text'] ?? ''));
 if ($cbStartupLoaderText !== '') {
     unset($_SESSION['cb_initial_loader_text']);
+}
+if ($cbStartupRestiaHold) {
+    $cbStartupLoaderText = 'Aktualizuji online data ...';
 }
 
 $cbStartupLoaderHtml = '';
@@ -104,7 +148,7 @@ if (!empty($_SESSION['login_ok'])) {
 <body>
 
 <?php if ($cbShowStartupLoader && $cbStartupLoaderHtml !== ''): ?>
-<div id="cb-startup-loader" class="dash_box bg_modra sirka100 is-dashboard-loading" data-cb-startup-text="<?= h($cbStartupLoaderText) ?>" style="position:fixed;left:0;top:0;right:0;bottom:0;z-index:12000;padding:0 12px;background-clip:content-box;overflow:hidden;">
+<div id="cb-startup-loader" class="dash_box bg_modra sirka100 is-dashboard-loading" data-cb-startup-text="<?= h($cbStartupLoaderText) ?>"<?= $cbStartupRestiaHold ? ' data-cb-startup-hold="1" data-cb-restia-trigger="' . ($cbStartupRestiaTrigger ? '1' : '0') . '"' : '' ?> style="position:fixed;left:0;top:0;right:0;bottom:0;z-index:12000;padding:0 12px;background-clip:content-box;overflow:hidden;">
   <?= $cbStartupLoaderHtml ?>
 </div>
 <script src="<?= h(cb_url('js/loader_show.js')) ?>"></script>
@@ -114,15 +158,17 @@ if (!empty($_SESSION['login_ok'])) {
 <?php
 
 if (!empty($_SESSION['login_ok'])) {
-    require_once __DIR__ . '/includes/hlavicka.php';
-    require_once __DIR__ . '/modaly/modal_overeni.php';
-    require_once __DIR__ . '/lib/kontrola_registrace.php';
+    if (!$cbStartupRestiaHold) {
+        require_once __DIR__ . '/includes/hlavicka.php';
+        require_once __DIR__ . '/modaly/modal_overeni.php';
+        require_once __DIR__ . '/lib/kontrola_registrace.php';
 
-    $cb_page_exists = $cbPageExists;
-    $cb_page_file = $file;
+        $cb_page_exists = $cbPageExists;
+        $cb_page_file = $file;
 
-    require_once __DIR__ . '/includes/main.php';
-    require_once __DIR__ . '/includes/paticka.php';
+        require_once __DIR__ . '/includes/main.php';
+        require_once __DIR__ . '/includes/paticka.php';
+    }
 } elseif ($cb2faPending) {
     require_once __DIR__ . '/modaly/modal_overeni.php';
 } elseif ($cbAuthOk) {
@@ -167,7 +213,9 @@ if (!empty($_SESSION['login_ok'])) {
 </div>
 
 
-<?php if (!empty($_SESSION['login_ok'])): ?>
+<?php if (!empty($_SESSION['login_ok']) && $cbStartupRestiaHold): ?>
+<script src="<?= h(cb_asset_url('js/ajax_core.js')) ?>"></script>
+<?php elseif (!empty($_SESSION['login_ok'])): ?>
 <script src="<?= h(cb_asset_url('js/echarts.min.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/ajax_core.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/ajax_karta_max.js')) ?>"></script>

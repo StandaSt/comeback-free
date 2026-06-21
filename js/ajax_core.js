@@ -1307,17 +1307,28 @@
       return;
     }
     root.setAttribute('data-cb-restia-refresh-init', '1');
+    const triggerRestia = String(root.getAttribute('data-cb-restia-trigger') || '') === '1';
 
-    CB_AJAX.runRestiaAndRefreshOpCards({
-      triggerRestia: false,
-      showLoading: false,
-      hideStartupLoader: true,
-      loaderMode: 'dashboard'
+    const stateJob = triggerRestia ? triggerRestiaCheck() : fetchRestiaState();
+    stateJob.then((state) => {
+      const isRunning = !!(state && Number(state.active || 0) === 1);
+      const waitJob = isRunning
+        ? waitForRestiaImportFinish({
+            timeoutMs: 180000,
+            pollMs: 500
+          })
+        : Promise.resolve();
+
+      return waitJob.then(() => {
+        w.location.reload();
+      });
     }).catch((err) => {
       traceAjax('startup_restia_refresh_error', {
         message: String((err && err.message) ? err.message : 'startup restia refresh selhal')
       });
-      hideStartupLoader();
+      if (w.CB_LOADER_SHOW && typeof w.CB_LOADER_SHOW.setText === 'function') {
+        w.CB_LOADER_SHOW.setText('Aktualizace dat selhala. Obnovte stránku.');
+      }
     });
   }
 

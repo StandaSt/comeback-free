@@ -102,13 +102,7 @@
         return attr;
       }
     }
-
-    const perf = w.performance || null;
-    const nav = perf && typeof perf.getEntriesByType === 'function'
-      ? perf.getEntriesByType('navigation')[0]
-      : null;
-    const isReload = nav && String(nav.type || '') === 'reload';
-    return isReload ? 'Probíhá refresh ...' : '';
+    return '';
   }
 
   function bootstrap() {

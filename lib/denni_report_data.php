@@ -170,6 +170,35 @@ function cb_denni_report_missing_reports_summary(mysqli $conn, string $date): ar
     return $rows;
 }
 
+function cb_denni_report_has_any_report(mysqli $conn, string $date): bool
+{
+    if ($date === '') {
+        return false;
+    }
+
+    $stmt = $conn->prepare('
+        SELECT 1
+        FROM reporty_is
+        WHERE datum_reportu = ?
+          AND platny = 1
+        LIMIT 1
+    ');
+    if ($stmt === false) {
+        return false;
+    }
+
+    $stmt->bind_param('s', $date);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $hasRow = ($result instanceof mysqli_result) ? ($result->fetch_assoc() !== null) : false;
+    if ($result instanceof mysqli_result) {
+        $result->free();
+    }
+    $stmt->close();
+
+    return $hasRow;
+}
+
 function cb_denni_report_user_main_branch_id(mysqli $conn, int $idUser): int
 {
     if ($idUser <= 0) {
@@ -859,7 +888,12 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
     $currentWorkdayDt = cb_denni_report_current_workday_date();
     $workdayOptions = cb_denni_report_workday_options($currentWorkdayDt);
     $miniMissingReportDays = [];
-    for ($i = 1; $i <= 5; $i++) {
+    $todayDate = $currentWorkdayDt->format('Y-m-d');
+    $showTodayMiniMissingReport = cb_denni_report_has_any_report($conn, $todayDate);
+    for ($i = 0; $i <= 4; $i++) {
+        if ($i === 0 && !$showTodayMiniMissingReport) {
+            continue;
+        }
         $miniMissingReportDays[] = $currentWorkdayDt->modify('-' . $i . ' day');
     }
     $miniMissingReports = [];
