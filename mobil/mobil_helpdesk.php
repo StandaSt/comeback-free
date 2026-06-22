@@ -1,5 +1,5 @@
 <?php
-// mobil/mobil_helpdesk.php * Verze: V1 * Aktualizace: 21.06.2026
+// mobil/mobil_helpdesk.php * Verze: V1 * Aktualizace: 22.06.2026
 declare(strict_types=1);
 
 require_once __DIR__ . '/../lib/session_boot.php';
@@ -27,10 +27,24 @@ function cb_mobil_helpdesk_fetch(string $token): ?array
     }
 
     $stmt = db()->prepare('
-        SELECT n.id_helpdesk_notifikace, n.id_helpdesk, n.id_helpdesk_zprava, n.id_user, n.typ, n.text, n.vytvoreno, n.precteno,
-               h.predmet, h.stav, h.typ AS typ_ticket
+        SELECT
+            n.id_helpdesk_notifikace,
+            n.id_helpdesk,
+            n.id_helpdesk_zprava,
+            n.id_user,
+            n.typ,
+            n.text,
+            n.vytvoreno,
+            n.precteno,
+            h.predmet,
+            h.popis,
+            h.verejny,
+            h.typ AS typ_ticket,
+            u.jmeno,
+            u.prijmeni
         FROM helpdesk_notifikace n
         INNER JOIN helpdesk h ON h.id_helpdesk = n.id_helpdesk
+        LEFT JOIN `user` u ON u.id_user = h.id_user_zalozil
         WHERE n.id_helpdesk_notifikace = ? AND n.id_user = ?
         LIMIT 1
     ');
@@ -47,11 +61,7 @@ function cb_mobil_helpdesk_fetch(string $token): ?array
     }
     $stmt->close();
 
-    if (!is_array($row)) {
-        return null;
-    }
-
-    return $row;
+    return is_array($row) ? $row : null;
 }
 
 function cb_mobil_helpdesk_mark_read(int $idNotifikace, int $idUser): void
@@ -100,6 +110,21 @@ function cb_mobil_helpdesk_type_label(string $value): string
     };
 }
 
+function cb_mobil_helpdesk_visibility_label(mixed $value): string
+{
+    return match ((int)$value) {
+        0 => 'Pouze pro admina',
+        2 => 'Všichni mohou číst',
+        default => 'Všichni mohou reagovat',
+    };
+}
+
+function cb_mobil_helpdesk_full_name(?string $jmeno, ?string $prijmeni): string
+{
+    $fullName = trim(trim((string)$jmeno) . ' ' . trim((string)$prijmeni));
+    return $fullName !== '' ? $fullName : '---';
+}
+
 $token = trim((string)($_GET['t'] ?? ''));
 $row = cb_mobil_helpdesk_fetch($token);
 
@@ -107,14 +132,18 @@ if (is_array($row)) {
     cb_mobil_helpdesk_mark_read((int)($row['id_helpdesk_notifikace'] ?? 0), (int)($row['id_user'] ?? 0));
 }
 
-$title = 'HelpDesk';
-$subtitle = 'Nová notifikace';
-$message = is_array($row) ? trim((string)($row['text'] ?? '')) : 'Notifikace nebyla nalezena nebo už není dostupná.';
 $ticketId = is_array($row) ? (int)($row['id_helpdesk'] ?? 0) : 0;
+$title = 'HelpDesk';
+$subtitle = $ticketId > 0 ? ('Tiket č. ' . (string)$ticketId) : 'Tiket';
+$message = is_array($row) ? trim((string)($row['text'] ?? '')) : 'Notifikace nebyla nalezena nebo už není dostupná.';
 $ticketSubject = is_array($row) ? trim((string)($row['predmet'] ?? '')) : '';
-$ticketState = is_array($row) ? trim((string)($row['stav'] ?? '')) : '';
+$ticketDescription = is_array($row) ? trim((string)($row['popis'] ?? '')) : '';
 $ticketType = is_array($row) ? cb_mobil_helpdesk_type_label((string)($row['typ_ticket'] ?? '')) : '';
+$ticketVisibility = is_array($row) ? cb_mobil_helpdesk_visibility_label($row['verejny'] ?? null) : '---';
 $createdAt = is_array($row) ? cb_mobil_helpdesk_format_datetime((string)($row['vytvoreno'] ?? '')) : '---';
+$authorName = is_array($row)
+    ? cb_mobil_helpdesk_full_name((string)($row['jmeno'] ?? ''), (string)($row['prijmeni'] ?? ''))
+    : '---';
 
 ?>
 <!doctype html>
@@ -151,37 +180,43 @@ $createdAt = is_array($row) ? cb_mobil_helpdesk_format_datetime((string)($row['v
     }
     .hd-ticket-id{
       font-size:12px;
-      font-weight:700;
-      color:#0f3f91;
-      letter-spacing:.04em;
-      text-transform:uppercase;
+      color:#64748b;
     }
-    .hd-ticket-subject{
-      margin-top:6px;
-      font-size:18px;
-      font-weight:800;
-      line-height:1.25;
-      color:#0f172a;
-      word-break:break-word;
-    }
-    .hd-ticket-meta{
-      margin-top:8px;
-      font-size:12px;
-      line-height:1.45;
-      color:#475569;
-    }
-    .hd-message{
+    .hd-block{
       margin-top:12px;
       padding:14px;
       border-radius:16px;
       background:rgba(255,255,255,.96);
       border:1px solid rgba(15,23,42,.10);
+      box-shadow:0 8px 24px rgba(15,23,42,.06);
+    }
+    .hd-row{
+      font-size:14px;
+      line-height:1.55;
       color:#0f172a;
+    }
+    .hd-row + .hd-row{
+      margin-top:6px;
+    }
+    .hd-label{
+      font-weight:700;
+      color:#0f3f91;
+    }
+    .hd-subject{
+      margin-top:6px;
+      font-size:16px;
+      font-weight:700;
+      line-height:1.4;
+      color:#0f172a;
+      word-break:break-word;
+    }
+    .hd-description{
+      margin-top:14px;
       font-size:15px;
-      line-height:1.5;
+      line-height:1.55;
+      color:#475569;
       white-space:pre-wrap;
       word-break:break-word;
-      box-shadow:0 8px 24px rgba(15,23,42,.06);
     }
     .hd-note{
       margin-top:14px;
@@ -209,19 +244,27 @@ $createdAt = is_array($row) ? cb_mobil_helpdesk_format_datetime((string)($row['v
 
     <?php if (is_array($row)): ?>
       <div class="hd-ticket">
-        <div class="hd-ticket-id">Tiket č.<?= cb_mobil_helpdesk_h((string)$ticketId) ?></div>
-        <div class="hd-ticket-subject"><?= cb_mobil_helpdesk_h($ticketSubject !== '' ? $ticketSubject : 'Bez předmětu') ?></div>
-        <div class="hd-ticket-meta">
-          Typ: <?= cb_mobil_helpdesk_h($ticketType) ?><br>
-          Stav: <?= cb_mobil_helpdesk_h($ticketState) ?><br>
-          Vytvořeno: <?= cb_mobil_helpdesk_h($createdAt) ?>
-        </div>
+        <div class="hd-ticket-id">Tiket č. <?= cb_mobil_helpdesk_h((string)$ticketId) ?></div>
       </div>
 
-      <div class="hd-message"><?= cb_mobil_helpdesk_h($message) ?></div>
-      <div class="hd-note">Notifikace byla otevřena přes zabezpečený odkaz z mobilu.</div>
+      <div class="hd-block">
+        <div class="hd-row"><span class="hd-label">Typ:</span> <?= cb_mobil_helpdesk_h($ticketType) ?></div>
+        <div class="hd-row"><span class="hd-label">Určení:</span> <?= cb_mobil_helpdesk_h($ticketVisibility) ?></div>
+        <div class="hd-row"><span class="hd-label">Vytvořeno:</span> <?= cb_mobil_helpdesk_h($createdAt) ?></div>
+        <div class="hd-row"><span class="hd-label">Zapsal:</span> <?= cb_mobil_helpdesk_h($authorName) ?></div>
+      </div>
+
+      <div class="hd-block">
+        <div class="hd-row"><span class="hd-label">Předmět:</span></div>
+        <div class="hd-subject"><?= cb_mobil_helpdesk_h($ticketSubject !== '' ? $ticketSubject : 'Bez předmětu') ?></div>
+        <div class="hd-description"><span class="hd-label">Popis:</span><br><?= cb_mobil_helpdesk_h($ticketDescription !== '' ? $ticketDescription : '---') ?></div>
+      </div>
+
+      <div class="hd-note">Detail byl otevřen přes zabezpečený odkaz z mobilu.</div>
     <?php else: ?>
-      <div class="hd-message"><?= cb_mobil_helpdesk_h($message) ?></div>
+      <div class="hd-block">
+        <div class="hd-description"><?= cb_mobil_helpdesk_h($message) ?></div>
+      </div>
     <?php endif; ?>
 
     <div class="modal-spacer"></div>
@@ -250,5 +293,5 @@ $createdAt = is_array($row) ? cb_mobil_helpdesk_format_datetime((string)($row['v
 </body>
 </html>
 <?php
-// mobil/mobil_helpdesk.php * Verze: V1 * Aktualizace: 21.06.2026
+// mobil/mobil_helpdesk.php * Verze: V1 * Aktualizace: 22.06.2026
 // Konec souboru

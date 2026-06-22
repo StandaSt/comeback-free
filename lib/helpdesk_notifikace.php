@@ -110,14 +110,6 @@ function cb_helpdesk_push_odeslat(int $idUser, int $idNotifikace, string $typ, s
 
     require_once __DIR__ . '/../vendor/autoload.php';
 
-    $body = trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
-    if ($body === '') {
-        return;
-    }
-    if (mb_strlen($body, 'UTF-8') > 140) {
-        $body = mb_substr($body, 0, 137, 'UTF-8') . '...';
-    }
-
     $auth = [
         'VAPID' => [
             'subject' => (string)CB_VAPID_SUBJECT,
@@ -129,8 +121,8 @@ function cb_helpdesk_push_odeslat(int $idUser, int $idNotifikace, string $typ, s
     $webPush = new Minishlink\WebPush\WebPush($auth);
     $payload = json_encode([
         'type' => 'HELPDESK',
-        'title' => 'HelpDesk',
-        'body' => $body,
+        'title' => 'Comeback',
+        'body' => 'Nový ticket v HelpDesku.',
         'url' => cb_url_abs('mobil/mobil_helpdesk.php?t=' . rawurlencode($token)),
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     if (!is_string($payload) || $payload === '') {

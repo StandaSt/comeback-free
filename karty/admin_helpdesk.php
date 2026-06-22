@@ -1,5 +1,5 @@
 <?php
-// K20
+// K20 ...
 // karty/admin_helpdesk.php * Verze: V1 * Aktualizace: 20.06.2026
 declare(strict_types=1);
 

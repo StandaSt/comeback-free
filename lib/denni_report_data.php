@@ -909,6 +909,16 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
                 : 'OK',
         ];
     }
+    if (!$isMaxRender) {
+        return [
+            'renderMode' => $renderMode,
+            'isMaxRender' => $isMaxRender,
+            'tz' => $tz,
+            'currentWorkdayDt' => $currentWorkdayDt,
+            'workdayOptions' => $workdayOptions,
+            'miniMissingReports' => $miniMissingReports,
+        ];
+    }
     $allowedWorkdayValues = array_column($workdayOptions, 'value');
     $requestedReportDate = trim((string)($_POST['datum_reportu'] ?? $_GET['datum_reportu'] ?? ''));
     if (!in_array($requestedReportDate, $allowedWorkdayValues, true)) {
