@@ -1017,7 +1017,16 @@
 
     const cards = Array.from(
       currentGrid.querySelectorAll('[data-cb-dash-card="1"][data-card-refresh-op="1"]')
-    ).filter((el) => el instanceof HTMLElement);
+    ).filter((el) => {
+      if (!(el instanceof HTMLElement)) {
+        return false;
+      }
+      const shell = el.querySelector('.card_shell[data-card-id]');
+      if (!(shell instanceof HTMLElement)) {
+        return false;
+      }
+      return String(shell.getAttribute('data-card-mode') || 'mini').trim() !== 'nano';
+    });
 
     traceAjax('refresh_refresh_op_start', {
       mode: loaderMode,

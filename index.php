@@ -29,14 +29,10 @@ foreach (array_keys($_SERVER) as $cbServerKey) {
 }
 $cbIsPartialRequest = isset($_SERVER['HTTP_X_COMEBACK_PARTIAL']);
 $cbIsCardRequest = isset($_SERVER['HTTP_X_COMEBACK_CARD']);
-$cbIsCardMaxRequest = isset($_SERVER['HTTP_X_COMEBACK_CARD_MAX']);
 $cbIsMaxFormRequest = isset($_SERVER['HTTP_X_COMEBACK_MAX_FORM']);
-$cbIsReportDraftRequest = isset($_SERVER['HTTP_X_COMEBACK_DR_PRACOVNI']);
-$cbIsReportFinalRequest = isset($_SERVER['HTTP_X_COMEBACK_REPORTY_IS']);
 $cbIsFullStartupRequest = !empty($_SESSION['login_ok'])
     && $cbRequestMethod === 'GET'
     && !$cbHasComebackHeader;
-$cbCanEarlyStartupFlush = $cbIsFullStartupRequest;
 $cbEarlyStartupFlushed = false;
 $cbStartupLoaderText = trim((string)($_SESSION['cb_initial_loader_text'] ?? ''));
 if ($cbStartupLoaderText !== '') {
@@ -80,7 +76,7 @@ if (!empty($_SESSION['login_ok'])) {
 require_once __DIR__ . '/lib/detektuj_neplatnou_url.php';
 require_once __DIR__ . '/lib/logout_handler.php';
 require_once __DIR__ . '/lib/json_registrace.php';
-if ($cbCanEarlyStartupFlush && $cbStartupLoaderHtml !== '') {
+if ($cbIsFullStartupRequest && $cbStartupLoaderHtml !== '') {
     ?>
 <!doctype html>
 <html lang="cs">
@@ -127,7 +123,7 @@ require_once __DIR__ . '/includes/log_a_404.php';
 
 if (!empty($_SESSION['login_ok'])) {
     require_once __DIR__ . '/lib/request_dispatch.php';
-} elseif ($cbIsPartialRequest || $cbIsCardRequest || $cbIsMaxFormRequest) {
+} elseif ($cbHasComebackHeader) {
     http_response_code(401);
     exit;
 }

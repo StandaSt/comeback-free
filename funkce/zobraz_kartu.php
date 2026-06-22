@@ -79,6 +79,7 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
     $startExpanded = ((int)($pripravenaKarta['startExpanded'] ?? 0) === 1);
     $maxFill = ((int)($pripravenaKarta['maxFill'] ?? 0) === 1);
     $hasMaxLoaded = (!$isNano && trim($maxHtml) !== '');
+    $cardRefreshOp = (!$isNano && $refreshOp === 1) ? 1 : 0;
     $allowNanoSwitch = (!$isNano && $cardId !== 20);
 
     $hasCardIcon = ($iconFile !== '');
@@ -116,7 +117,7 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
 
     ob_start();
 ?>
-<section class="<?= h($cardClass) ?>" data-cb-dash-card="1" data-card-refresh-op="<?= $refreshOp === 1 ? '1' : '0' ?>"<?= $gridStyle !== '' ? ' style="' . h($gridStyle) . '"' : '' ?>>
+<section class="<?= h($cardClass) ?>" data-cb-dash-card="1" data-card-refresh-op="<?= $cardRefreshOp === 1 ? '1' : '0' ?>"<?= $gridStyle !== '' ? ' style="' . h($gridStyle) . '"' : '' ?>>
   <article class="card_shell<?= h($cardLineHeightClass) ?> odstup_vnitrni_0"
     data-card-id="<?= h((string)$cardId) ?>"
     data-card-poradi="<?= h((string)$cardPoradi) ?>"

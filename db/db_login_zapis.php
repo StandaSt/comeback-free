@@ -11,7 +11,7 @@ declare(strict_types=1);
  *
  * Důležité:
  * - tenhle soubor NEVOLÁ Směny (API)
- * - bere jen data z PHP runtime (session_id, IP, User-Agent)
+ * - bere jen data z PHP runtime (IP, User-Agent)
  *
  * Návratová hodnota:
  * - vrací id_login (AUTO_INCREMENT) z tabulky user_login
@@ -30,7 +30,7 @@ if (!function_exists('cb_db_insert_login_and_spy')) {
      * Vloží záznam o přihlášení do user_login a navazující user_spy.
      *
      * Co ukládáme:
-     * - user_login: id_user, session_id, kdy (auto), akce=1, duvod=0, ip
+     * - user_login: id_user, kdy (auto), akce=1, duvod=0, ip
      * - user_spy:  id_login (FK), id_user, user_agent (+ do budoucna screen/touch)
      *
      * Vrací:
@@ -41,9 +41,6 @@ if (!function_exists('cb_db_insert_login_and_spy')) {
      */
     function cb_db_insert_login_and_spy(mysqli $conn, int $idUser): int
     {
-        // Session ID je vždy k dispozici, pokud běží session.
-        $sessionId = (string)session_id();
-
         // IP adresa – může být prázdná nebo chybět (např. CLI).
         $ip = $_SERVER['REMOTE_ADDR'] ?? null;
         if (is_string($ip)) {
@@ -66,11 +63,11 @@ if (!function_exists('cb_db_insert_login_and_spy')) {
             $ua = null;
         }
 
-        // 1) user_login (akce=1, duvod=0)
+        // 1) user_login (akce=1, duvod=2 = user je online)
         $stmt = $conn->prepare(
-            'INSERT INTO user_login (id_user, session_id, akce, duvod, ip) VALUES (?,?,1,0,?)'
+            'INSERT INTO user_login (id_user, akce, duvod, ip) VALUES (?,1,2,?)'
         );
-        $stmt->bind_param('iss', $idUser, $sessionId, $ip);
+        $stmt->bind_param('is', $idUser, $ip);
         $stmt->execute();
         $stmt->close();
 

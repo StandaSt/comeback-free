@@ -196,15 +196,16 @@ try {
                 TRIM(CONCAT_WS(" ", u.jmeno, u.prijmeni)) AS full_name,
                 ul_last.id_login AS login_id,
                 ul_last.kdy AS login_time,
-                ua_last.last_action_time
+                ua_last.last_action_time,
+                COALESCE(us.logout_limit, ss.system_logout) AS logout_limit_min
             FROM `user` u
-            LEFT JOIN (
+            INNER JOIN (
                 SELECT ul1.id_user, ul1.id_login, ul1.kdy
                 FROM user_login ul1
                 INNER JOIN (
                     SELECT id_user, MAX(id_login) AS id_login
                     FROM user_login
-                    WHERE akce = 1
+                    WHERE akce = 1 AND duvod = 2
                     GROUP BY id_user
                 ) ulx ON ulx.id_user = ul1.id_user AND ulx.id_login = ul1.id_login
             ) ul_last ON ul_last.id_user = u.id_user
@@ -214,16 +215,47 @@ try {
                 WHERE ua.id_login IS NOT NULL
                 GROUP BY ua.id_login
             ) ua_last ON ua_last.id_login = ul_last.id_login
-            WHERE u.aktivni = 1
-              AND u.in_system = 1
-              AND COALESCE(u.id_role, 0) <> 1
+            LEFT JOIN user_set us ON us.id_user = u.id_user
+            CROSS JOIN (
+                SELECT system_logout
+                FROM set_system
+                WHERE id_set = 1
+                LIMIT 1
+            ) ss
+            WHERE COALESCE(u.id_role, 0) <> 1
             ORDER BY COALESCE(ua_last.last_action_time, ul_last.kdy) DESC, full_name ASC, u.id_user ASC
         ');
         if ($resMiniOnline) {
+            $uzExpiredLoginIds = [];
+            $uzNowTs = time();
+
             while ($rowMiniOnline = $resMiniOnline->fetch_assoc()) {
+                $uzLoginId = (int)($rowMiniOnline['login_id'] ?? 0);
+                $uzLoginTime = trim((string)($rowMiniOnline['login_time'] ?? ''));
+                $uzLastActionTime = trim((string)($rowMiniOnline['last_action_time'] ?? ''));
+                $uzRefTime = $uzLastActionTime !== '' ? $uzLastActionTime : $uzLoginTime;
+                $uzRefTs = $uzRefTime !== '' ? strtotime($uzRefTime) : false;
+                $uzLogoutLimitMin = (int)($rowMiniOnline['logout_limit_min'] ?? 0);
+
+                if ($uzLogoutLimitMin <= 0) {
+                    $uzLogoutLimitMin = 20;
+                }
+
+                if ($uzLoginId <= 0 || $uzRefTs === false || ($uzRefTs + ($uzLogoutLimitMin * 60)) < $uzNowTs) {
+                    if ($uzLoginId > 0) {
+                        $uzExpiredLoginIds[] = $uzLoginId;
+                    }
+                    continue;
+                }
+
                 $uzMiniOnlineRows[] = $rowMiniOnline;
             }
             $resMiniOnline->free();
+
+            if ($uzExpiredLoginIds !== []) {
+                $uzExpiredLoginIds = array_values(array_unique(array_map('intval', $uzExpiredLoginIds)));
+                $conn->query('UPDATE user_login SET duvod = 0 WHERE duvod = 2 AND id_login IN (' . implode(',', $uzExpiredLoginIds) . ')');
+            }
         }
     }
 

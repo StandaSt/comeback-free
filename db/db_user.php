@@ -155,12 +155,23 @@ function cb_db_ensure_user_set(mysqli $conn, int $idUser): void
 }
 
 /**
- * Zápis do user_login (akce = 1 přihlášení / 0 odhlášení)
+ * Zápis do user_login (akce = 1 přihlášení / 0 odhlášení, duvod = 0 auto / 1 ručně)
  */
-function cb_db_insert_login_event(mysqli $conn, int $idUser, int $akce): void
+function cb_db_insert_login_event(mysqli $conn, int $idUser, int $akce, int $duvod = 0): void
 {
-    $stmt = $conn->prepare('INSERT INTO user_login (id_user, akce) VALUES (?,?)');
-    $stmt->bind_param('ii', $idUser, $akce);
+    $stmt = $conn->prepare('INSERT INTO user_login (id_user, akce, duvod) VALUES (?,?,?)');
+    $stmt->bind_param('iii', $idUser, $akce, $duvod);
+    $stmt->execute();
+    $stmt->close();
+}
+
+/**
+ * Zrusi online priznak vsech otevrenych loginu uzivatele.
+ */
+function cb_db_clear_online_login_flags(mysqli $conn, int $idUser): void
+{
+    $stmt = $conn->prepare('UPDATE user_login SET duvod = 0 WHERE id_user = ? AND akce = 1 AND duvod = 2');
+    $stmt->bind_param('i', $idUser);
     $stmt->execute();
     $stmt->close();
 }

@@ -170,7 +170,7 @@
     logoutLink.addEventListener('click', function () {
       rememberLogoutStart('logout_click');
       traceLogin('login_trace_logout_click', {
-        href: logoutUrl
+        href: logoutLink.href || logoutUrl
       });
     }, true);
   }

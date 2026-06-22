@@ -138,19 +138,20 @@ function cb_helpdesk_push_odeslat(int $idUser, int $idNotifikace, string $typ, s
     }
 
     foreach ($devices as $d) {
-        $sub = Minishlink\WebPush\Subscription::create([
-            'endpoint' => $d['endpoint'],
-            'publicKey' => $d['klic_public'],
-            'authToken' => $d['klic_auth'],
-        ]);
-
-        $report = $webPush->sendOneNotification($sub, $payload);
         $stav = 'ok';
         $httpStatus = null;
         $chyba = null;
 
-        if ($report) {
-            try {
+        try {
+            $sub = Minishlink\WebPush\Subscription::create([
+                'endpoint' => $d['endpoint'],
+                'publicKey' => $d['klic_public'],
+                'authToken' => $d['klic_auth'],
+            ]);
+
+            $report = $webPush->sendOneNotification($sub, $payload);
+
+            if ($report) {
                 $ok = $report->isSuccess();
                 if (!$ok) {
                     $stav = 'fail';
@@ -165,13 +166,13 @@ function cb_helpdesk_push_odeslat(int $idUser, int $idNotifikace, string $typ, s
                     $reason = $report->getReason();
                     $chyba = is_string($reason) && $reason !== '' ? $reason : 'Push fail';
                 }
-            } catch (Throwable $e) {
+            } else {
                 $stav = 'fail';
-                $chyba = $e->getMessage();
+                $chyba = 'Push: bez reportu';
             }
-        } else {
+        } catch (Throwable $e) {
             $stav = 'fail';
-            $chyba = 'Push: bez reportu';
+            $chyba = $e->getMessage();
         }
 
         cb_push_audit_try_insert(
