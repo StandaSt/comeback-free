@@ -1753,7 +1753,7 @@ align-items:center;
   border-radius:14px;
   box-shadow:0 8px 22px var(--clr_pruhledna_tmava_04);
   overflow:hidden;
-  height:242px;
+  height:230px;  /* výška mini karty */
 }
 
 .dash_card.is-card-refreshing{

@@ -288,39 +288,12 @@ ob_start();
     return box instanceof HTMLElement ? box : null;
   }
 
-  function getRowOpenButton(row) {
-    if (!(row instanceof HTMLElement)) {
-      return null;
-    }
-    var button = row.querySelector('[data-cb-hd-open-detail]');
-    return button instanceof HTMLButtonElement ? button : null;
-  }
-
-  function setRowOpenState(row, isOpen) {
-    var button = getRowOpenButton(row);
-    if (!(button instanceof HTMLButtonElement)) {
-      return;
-    }
-    button.textContent = isOpen ? 'Zavřít' : 'Otevřít';
-    button.className = isOpen ? btnBaseClass : btnPrimaryClass;
-    if (isOpen) {
-      button.style.background = '#fff';
-      button.style.color = 'var(--clr_seda_4)';
-      button.style.borderColor = 'var(--clr_pruhledna_tmava_14)';
-    } else {
-      button.style.background = '';
-      button.style.color = '';
-      button.style.borderColor = '';
-    }
-  }
-
   function closeDetailRow(row) {
     var box = getInlineDetailBox(row);
     if (box instanceof HTMLElement) {
       box.style.display = 'none';
       box.innerHTML = '';
     }
-    setRowOpenState(row, false);
   }
 
   function closeActiveDetail() {
@@ -486,12 +459,6 @@ ob_start();
 
     var id = text(ticket.id_helpdesk || '');
     var html = '<div class="ram_normal zaobleni_10" style="margin-top:10px;padding:12px;background:#f8fafc;">';
-    html += '<div style="font-size:12px;line-height:1.4;color:#475569;margin-bottom:10px;">';
-    html += '<strong>' + esc(text(ticket.stav || '')) + '</strong>';
-    html += ' | ' + esc(typeText(ticket.typ || ''));
-    html += ' | ' + esc(visibilityText(ticket.verejny || 0));
-    html += '</div>';
-    html += '<div style="margin-top:12px;white-space:pre-wrap;font-size:13px;line-height:1.5;color:#1f2937;">' + esc(text(ticket.popis || '')) + '</div>';
     html += renderAttachments(data && data.prilohy ? data.prilohy : []);
     html += '<div style="margin-top:12px;">' + renderMessages(data && data.zpravy ? data.zpravy : []) + '</div>';
     html += '<div style="margin-top:12px;">' + renderReplyActions(id, ticket, data || {}) + '</div>';
@@ -514,7 +481,6 @@ ob_start();
 
     closeActiveDetail();
     activeDetailId = String(id);
-    setRowOpenState(row, true);
     detailBox.style.display = 'block';
     detailBox.innerHTML = '<div style="font-size:13px;color:#64748b;">Načítám detail...</div>';
 
@@ -529,7 +495,6 @@ ob_start();
       .then(function (data) {
         if (!data || data.ok !== true) {
           detailBox.innerHTML = '<div style="font-size:13px;color:#b91c1c;">Detail se nepodařilo načíst.</div>';
-          setRowOpenState(row, false);
           activeDetailId = '';
           return;
         }
@@ -537,7 +502,6 @@ ob_start();
       })
       .catch(function () {
         detailBox.innerHTML = '<div style="font-size:13px;color:#b91c1c;">Detail se nepodařilo načíst.</div>';
-        setRowOpenState(row, false);
         activeDetailId = '';
       });
   }
@@ -570,20 +534,6 @@ ob_start();
     applyFilter();
   }
 
-  function bumpRowReplyCount(id) {
-    var row = getItemRow(id);
-    if (!(row instanceof HTMLElement)) { return; }
-    var countBox = row.querySelector('[data-hd-reply-count="1"]');
-    if (!(countBox instanceof HTMLElement)) { return; }
-    var value = parseInt(String(countBox.getAttribute('data-count') || countBox.textContent || '0'), 10);
-    if (!Number.isFinite(value)) {
-      value = 0;
-    }
-    value += 1;
-    countBox.setAttribute('data-count', String(value));
-    countBox.textContent = String(value);
-  }
-
   function buildListRowHtml(detail) {
     var id = Number(detail && detail.id_helpdesk ? detail.id_helpdesk : 0);
     if (!Number.isFinite(id) || id <= 0) { return ''; }
@@ -592,11 +542,9 @@ ob_start();
     var stavFiltr = esc(filterStatusValue(detail.stav || 'nový'));
     var typ = esc(text(detail.typ_label || detail.typ || ''));
     var visibility = esc(text(detail.visibility_label || ''));
-    var replies = Number(detail && detail.pocet_zprav ? detail.pocet_zprav : 1);
-    if (!Number.isFinite(replies) || replies < 0) { replies = 0; }
 
     var html = '';
-    html += '<article class="ram_normal zaobleni_10" data-hd-item="' + String(id) + '" data-hd-stav="' + stav + '" data-hd-filtr="' + stavFiltr + '" style="padding:10px;background:#fff;">';
+    html += '<article class="ram_normal zaobleni_10" data-hd-item="' + String(id) + '" data-hd-stav="' + stav + '" data-hd-filtr="' + stavFiltr + '" style="padding:10px;background:#fff;cursor:pointer;">';
     html += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">';
     html += '<div style="display:grid;gap:4px;">';
     html += '<strong style="font-size:14px;color:#0f172a;">#' + String(id) + ' ' + predmet + '</strong>';
@@ -606,16 +554,13 @@ ob_start();
     if (visibility !== '') {
       html += ' | Určení: ' + visibility;
     }
-    html += ' | Zprávy: <span data-hd-reply-count="1" data-count="' + String(replies) + '">' + String(replies) + '</span>';
     html += '</div>';
     html += '</div>';
-    html += '<button type="button" class="' + btnPrimaryClass + '" data-cb-hd-open-detail="' + String(id) + '">Otevřít</button>';
     html += '</div>';
     html += '<div data-hd-inline-detail="1" style="display:none;"></div>';
     html += '</article>';
     return html;
   }
-
   document.addEventListener('click', function (e) {
     var target = e.target;
     if (!(target instanceof Element)) { return; }
@@ -631,15 +576,6 @@ ob_start();
       openCardMax();
       waitForExpanded(function () {
         setFilterValue(filterValue);
-      }, 0);
-      return;
-    }
-
-    var openDetail = target.closest('[data-cb-hd-open-detail]');
-    if (openDetail instanceof HTMLElement) {
-      openCardMax();
-      waitForExpanded(function () {
-        loadDetail(openDetail.getAttribute('data-cb-hd-open-detail') || '');
       }, 0);
       return;
     }
@@ -688,7 +624,6 @@ ob_start();
         if (result.data && result.data.stav) {
           updateRowState(replyId, String(result.data.stav));
         }
-        bumpRowReplyCount(replyId);
         reloadOpenDetail(replyId);
       });
       return;
@@ -703,12 +638,23 @@ ob_start();
         stav: stateValue
       }).then(function (result) {
         if (!result.ok || !result.data || result.data.ok !== true) {
-          window.alert(result.data && result.data.err ? String(result.data.err) : 'Změna stavu selhala.');
+          window.alert(result.data && result.data.err ? String(result.data.err) : 'ZmÄ›na stavu selhala.');
           return;
         }
         updateRowState(stateId, stateValue);
         reloadOpenDetail(stateId);
       });
+      return;
+    }
+
+    var detailArea = target.closest('[data-hd-inline-detail="1"]');
+    if (detailArea instanceof HTMLElement) {
+      return;
+    }
+
+    var row = target.closest('article[data-hd-item]');
+    if (row instanceof HTMLElement) {
+      loadDetail(row.getAttribute('data-hd-item') || '');
     }
   });
 
@@ -807,7 +753,7 @@ ob_start();
       <div data-cb-hd-empty="1" class="ram_normal zaobleni_10" style="padding:12px;background:#fff;color:#64748b;">Zatím bez záznamu.</div>
     <?php else: ?>
       <?php foreach ($items as $item): ?>
-        <article class="ram_normal zaobleni_10" data-hd-item="<?= cb_helpdesk_card_h((string)(int)$item['id_helpdesk']) ?>" data-hd-stav="<?= cb_helpdesk_card_h((string)$item['stav']) ?>" data-hd-filtr="<?= cb_helpdesk_card_h(in_array((string)$item['stav'], ['vyřešeno', 'zamítnuto'], true) ? 'uzavřené' : (trim((string)$item['stav']) === 'řeší se' ? 'řeší se' : 'nový')) ?>" style="padding:10px;background:#fff;">
+        <article class="ram_normal zaobleni_10" data-hd-item="<?= cb_helpdesk_card_h((string)(int)$item['id_helpdesk']) ?>" data-hd-stav="<?= cb_helpdesk_card_h((string)$item['stav']) ?>" data-hd-filtr="<?= cb_helpdesk_card_h(in_array((string)$item['stav'], ['vyřešeno', 'zamítnuto'], true) ? 'uzavřené' : (trim((string)$item['stav']) === 'řeší se' ? 'řeší se' : 'nový')) ?>" style="padding:10px;background:#fff;cursor:pointer;">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
             <div style="display:grid;gap:4px;">
               <strong style="font-size:14px;color:#0f172a;"><?= cb_helpdesk_card_h('#' . (string)(int)$item['id_helpdesk'] . ' ' . (string)$item['predmet']) ?></strong>
@@ -815,11 +761,8 @@ ob_start();
                 Stav: <span data-hd-state-text="1"><?= cb_helpdesk_card_h((string)$item['stav']) ?></span>
                 | Typ: <?= cb_helpdesk_card_h(cb_helpdesk_card_type_label((string)$item['typ'])) ?>
                 | Určení: <?= cb_helpdesk_card_h(cb_helpdesk_card_visibility_label((int)$item['verejny'])) ?>
-                | Autor: <?= cb_helpdesk_card_h(cb_helpdesk_card_author($item)) ?>
-                | Zprávy: <span data-hd-reply-count="1" data-count="<?= cb_helpdesk_card_h((string)(int)$item['pocet_zprav']) ?>"><?= cb_helpdesk_card_h((string)(int)$item['pocet_zprav']) ?></span>
               </div>
             </div>
-            <button type="button" class="<?= cb_helpdesk_card_h($hdBtnPrimary) ?>" data-cb-hd-open-detail="<?= cb_helpdesk_card_h((string)(int)$item['id_helpdesk']) ?>">Otevřít</button>
           </div>
           <div data-hd-inline-detail="1" style="display:none;"></div>
         </article>

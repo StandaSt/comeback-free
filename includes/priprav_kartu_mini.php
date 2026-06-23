@@ -86,7 +86,7 @@ function cb_priprav_kartu_mini(
         'renderErrorHtml' => $renderErrorHtml,
         'startExpanded' => $startExpanded ? 1 : 0,
         // NEMENIT: Vybrane karty maji v max rezimu zabrat cely povoleny prostor dashboardu podle obsahu.
-        'maxFill' => in_array($cardId, [12, 15, 19], true) ? 1 : 0,
+        'maxFill' => in_array($cardId, [1, 12, 15, 19], true) ? 1 : 0,
         'cardColorUrl' => cb_url('/includes/select_card_color.php?id_karta=' . (string)$cardId),
         'cardIconUrl' => cb_url('/includes/select_card_ikon.php?id_karta=' . (string)$cardId),
     ];

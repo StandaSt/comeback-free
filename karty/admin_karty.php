@@ -224,7 +224,7 @@ $loadSharedData = static function () use (
 
         // Seznam vsech karet rozdeleny na aktivni a neaktivni.
         $resCards = $conn->query('
-            SELECT id_karta, nazev, soubor, min_role, poradi, refresh_op, aktivni
+            SELECT id_karta, nazev, soubor, min_role, subtitle_min, subtitle_max, poradi, refresh_op, aktivni
             FROM karty
             ORDER BY aktivni DESC, poradi ASC, id_karta ASC
         ');
@@ -235,6 +235,8 @@ $loadSharedData = static function () use (
                     'nazev' => (string)($rowCard['nazev'] ?? ''),
                     'soubor' => (string)($rowCard['soubor'] ?? ''),
                     'min_role' => (int)($rowCard['min_role'] ?? 0),
+                    'subtitle_min' => (string)($rowCard['subtitle_min'] ?? ''),
+                    'subtitle_max' => (string)($rowCard['subtitle_max'] ?? ''),
                     'poradi' => (int)($rowCard['poradi'] ?? 0),
                     'refresh_op' => (int)($rowCard['refresh_op'] ?? 0),
                     'aktivni' => (int)($rowCard['aktivni'] ?? 0),
@@ -291,18 +293,21 @@ $loadSharedData = static function () use (
 
     // Spolecna hlavicka tabulky pro max rezim.
     $adminKartyCols = [
-        ['class' => 'admin_karty_col_id'],
-        ['class' => 'admin_karty_col_nazev'],
-        ['class' => 'admin_karty_col_soubor'],
-        ['class' => 'admin_karty_col_role'],
-        ['class' => 'admin_karty_col_refresh_op'],
-        ['class' => 'admin_karty_col_aktivni'],
+        ['class' => 'admin_karty_col_id', 'style' => 'width:2%;'],
+        ['class' => 'admin_karty_col_nazev', 'style' => 'width:15%;'],
+        ['class' => 'admin_karty_col_soubor', 'style' => 'width:9%;'],
+        ['class' => 'admin_karty_col_role', 'style' => 'width:8%;'],
+        ['class' => 'admin_karty_col_nazev', 'style' => 'width:20%;'],
+        ['class' => 'admin_karty_col_nazev', 'style' => 'width:20%;'],
+        ['class' => 'admin_karty_col_refresh_op', 'style' => 'width:5%;'],
+        ['class' => 'admin_karty_col_aktivni', 'style' => 'width:5%;'],
         ['class' => 'admin_karty_col_akce'],
     ];
 
     $tableColsHtml = "            <colgroup>\n";
     foreach ($adminKartyCols as $col) {
-        $tableColsHtml .= '              <col class="' . $col['class'] . '">' . "\n";
+        $styleAttr = isset($col['style']) && trim((string)$col['style']) !== '' ? ' style="' . h((string)$col['style']) . '"' : '';
+        $tableColsHtml .= '              <col class="' . $col['class'] . '"' . $styleAttr . '>' . "\n";
     }
     $tableColsHtml .= "            </colgroup>";
 
@@ -312,6 +317,8 @@ $loadSharedData = static function () use (
         '              <th class="admin_karty_col_nazev">Nadpis</th>',
         '              <th class="admin_karty_col_soubor">Soubor</th>',
         '              <th class="admin_karty_col_role">Min role</th>',
+        '              <th class="admin_karty_col_nazev">Popis mini</th>',
+        '              <th class="admin_karty_col_nazev">Popis max</th>',
         '              <th class="admin_karty_col_refresh_op txt_c">Refresh OP</th>',
         '              <th class="admin_karty_col_aktivni txt_c">Aktivni</th>',
         '              <th class="admin_karty_col_akce">Akce</th>',
@@ -398,6 +405,8 @@ if ($renderMode !== 'mini') {
                 $nazev = trim((string)($_POST['nazev'] ?? ''));
                 $soubor = $normalizeSoubor((string)($_POST['soubor'] ?? ''));
                 $minRole = (int)($_POST['min_role'] ?? $defaultMinRole);
+                $subtitleMin = trim((string)($_POST['subtitle_min'] ?? ''));
+                $subtitleMax = trim((string)($_POST['subtitle_max'] ?? ''));
                 $refreshOp = isset($_POST['refresh_op']) ? 1 : 0;
 
                 if ($nazev === '' || $soubor === '') {
@@ -419,13 +428,13 @@ if ($renderMode !== 'mini') {
                 }
 
                 $stmt = $conn->prepare('
-                    INSERT INTO karty (nazev, soubor, min_role, poradi, refresh_op, aktivni, zalozeno, upraveno)
-                    VALUES (?, ?, ?, ?, ?, 1, NOW(), NOW())
+                    INSERT INTO karty (nazev, soubor, min_role, subtitle_min, subtitle_max, poradi, refresh_op, aktivni, zalozeno, upraveno)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())
                 ');
                 if (!$stmt) {
                     throw new RuntimeException('DB prepare selhal.');
                 }
-                $stmt->bind_param('ssiii', $nazev, $soubor, $minRole, $nextCardPoradi, $refreshOp);
+                $stmt->bind_param('ssissii', $nazev, $soubor, $minRole, $subtitleMin, $subtitleMax, $nextCardPoradi, $refreshOp);
                 $stmt->execute();
                 $stmt->close();
 
@@ -436,6 +445,8 @@ if ($renderMode !== 'mini') {
                 $nazev = trim((string)($_POST['nazev'] ?? ''));
                 $soubor = $normalizeSoubor((string)($_POST['soubor'] ?? ''));
                 $minRole = (int)($_POST['min_role'] ?? $defaultMinRole);
+                $subtitleMin = trim((string)($_POST['subtitle_min'] ?? ''));
+                $subtitleMax = trim((string)($_POST['subtitle_max'] ?? ''));
                 $refreshOp = isset($_POST['refresh_op']) ? 1 : 0;
 
                 if ($idKarta <= 0 || $nazev === '' || $soubor === '') {
@@ -451,14 +462,14 @@ if ($renderMode !== 'mini') {
 
                 $stmt = $conn->prepare('
                     UPDATE karty
-                    SET nazev=?, soubor=?, min_role=?, refresh_op=?, upraveno=NOW()
+                    SET nazev=?, soubor=?, min_role=?, subtitle_min=?, subtitle_max=?, refresh_op=?, upraveno=NOW()
                     WHERE id_karta=?
                     LIMIT 1
                 ');
                 if (!$stmt) {
                     throw new RuntimeException('DB prepare selhal.');
                 }
-                $stmt->bind_param('ssiii', $nazev, $soubor, $minRole, $refreshOp, $idKarta);
+                $stmt->bind_param('ssissii', $nazev, $soubor, $minRole, $subtitleMin, $subtitleMax, $refreshOp, $idKarta);
                 $stmt->execute();
                 $stmt->close();
 
@@ -613,12 +624,12 @@ if ($renderMode !== 'mini') {
     <form id="karta-add" method="post" action="<?= h($formAction) ?>" autocomplete="off" data-cb-max-form="1">
       <input type="hidden" name="admin_karty_action" value="add">
     </form>
-    <div class="table-wrap ram_normal bg_bila zaobleni_12">
-      <table class="table ram_normal bg_bila radek_1_35 admin_karty_table sirka100">
+    <div class="table-wrap ram_normal bg_bila zaobleni_12" style="width:100%;max-width:100%;align-self:stretch;">
+      <table class="table ram_normal bg_bila radek_1_35 admin_karty_table sirka100" style="width:100%;table-layout:fixed;">
 <?= $tableColsHtml . "\n" ?>
         <tbody>
           <tr>
-            <th class="txt_l" colspan="7">Pridani nove karty vcetne nazvu souboru a minimalni role.</th>
+            <th class="txt_l" colspan="9">Přidaní nové karty.</th>
           </tr>
 <?= $tableHeadHtml . "\n" ?>
           <tr>
@@ -641,6 +652,12 @@ if ($renderMode !== 'mini') {
                 <?php endforeach; ?>
               </select>
             </td>
+            <td>
+              <input class="card_input filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="subtitle_min" type="text" maxlength="255" placeholder="Popis mini" form="karta-add">
+            </td>
+            <td>
+              <input class="card_input filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="subtitle_max" type="text" maxlength="255" placeholder="Popis max" form="karta-add">
+            </td>
             <td class="txt_c">
               <label class="filter-actions displ_inline_flex gap_6 cursor_ruka jc_stred">
                 <input type="checkbox" name="refresh_op" value="1" form="karta-add" onchange="this.nextElementSibling.className=this.checked?'txt_cervena':'txt_seda';">
@@ -649,15 +666,15 @@ if ($renderMode !== 'mini') {
             </td>
             <td class="txt_c">0</td>
             <td>
-              <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28" type="submit" form="karta-add">Pridat kartu</button>
+              <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28" type="submit" form="karta-add">Přidat kartu</button>
             </td>
           </tr>
           <tr>
-            <th class="txt_l" colspan="7">Seznam aktivnich karet</th>
+            <th class="txt_l" colspan="9">Seznam aktivních karet</th>
           </tr>
 <?= $tableHeadHtml . "\n" ?>
           <?php if (!$activeCards): ?>
-            <tr><td colspan="7">Zatim nejsou zadne aktivni karty.</td></tr>
+            <tr><td colspan="9">Zatím nejsou žádné aktivní karty.</td></tr>
           <?php else: ?>
             <?php foreach ($activeCards as $card): ?>
               <?php $formId = 'karta-' . (string)$card['id_karta']; ?>
@@ -677,6 +694,8 @@ if ($renderMode !== 'mini') {
                     <?php endforeach; ?>
                   </select>
                 </td>
+                <td><input type="text" class="card_input filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="subtitle_min" value="<?= h((string)($card['subtitle_min'] ?? '')) ?>" maxlength="255" form="<?= h($formId) ?>"></td>
+                <td><input type="text" class="card_input filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24 sirka100" name="subtitle_max" value="<?= h((string)($card['subtitle_max'] ?? '')) ?>" maxlength="255" form="<?= h($formId) ?>"></td>
                 <td class="txt_c">
                   <label class="filter-actions displ_inline_flex gap_6 cursor_ruka jc_stred">
                     <input type="checkbox" name="refresh_op" value="1"<?= ((int)($card['refresh_op'] ?? 0) === 1) ? ' checked' : '' ?> form="<?= h($formId) ?>" data-cb-submit-on-change="1" data-cb-submit-name="admin_karty_action" data-cb-submit-value="save" onchange="this.nextElementSibling.className=this.checked?'txt_cervena':'txt_seda';">
@@ -694,11 +713,11 @@ if ($renderMode !== 'mini') {
             <?php endforeach; ?>
           <?php endif; ?>
           <tr>
-            <th class="txt_l" colspan="7">Neaktivni karty</th>
+            <th class="txt_l" colspan="9">Neaktivní karty</th>
           </tr>
 <?= $tableHeadHtml . "\n" ?>
           <?php if (!$inactiveCards): ?>
-            <tr><td colspan="7">Nejsou zadne neaktivni karty</td></tr>
+            <tr><td colspan="9">Nejsou žádne neaktivní karty</td></tr>
           <?php else: ?>
             <?php foreach ($inactiveCards as $card): ?>
               <?php $formId = 'karta-inactive-' . (string)$card['id_karta']; ?>
@@ -707,6 +726,8 @@ if ($renderMode !== 'mini') {
                 <td><?= h($card['nazev']) ?></td>
                 <td><?= h($card['soubor']) ?></td>
                 <td><?= h((string)($displayRoleOptions[(int)$card['min_role']] ?? ('role ' . (string)$card['min_role']))) ?></td>
+                <td><?= h((string)($card['subtitle_min'] ?? '')) ?></td>
+                <td><?= h((string)($card['subtitle_max'] ?? '')) ?></td>
                 <td class="txt_c"><?= ((int)($card['refresh_op'] ?? 0) === 1) ? '<span class="txt_cervena">Ano</span>' : '<span class="txt_seda">Ano</span>' ?></td>
                 <td class="txt_c">ne</td>
                 <td>
