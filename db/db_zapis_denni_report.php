@@ -2,6 +2,29 @@
 // db/db_zapis_denni_report.php * K10 finalni zapis denniho reportu
 declare(strict_types=1);
 
+function cb_db_zapis_denni_report_already_saved_message(): string
+{
+    return 'Report je již uložen. Opakovaný pokus o uložení byl zablokován.';
+}
+
+function cb_db_zapis_denni_report_is_duplicate_error(Throwable $e, string $indexName = ''): bool
+{
+    if ((int)$e->getCode() !== 1062) {
+        return false;
+    }
+
+    $message = (string)$e->getMessage();
+    if (stripos($message, 'Duplicate entry') === false) {
+        return false;
+    }
+
+    if ($indexName === '') {
+        return true;
+    }
+
+    return stripos($message, $indexName) !== false;
+}
+
 function cb_db_reporty_is_find_active_id(mysqli $conn, int $idPob, string $datumReportu): int
 {
     $stmt = $conn->prepare('
@@ -117,7 +140,7 @@ function cb_db_zapis_denni_report_from_form(mysqli $conn, int $idPob, string $da
     try {
         $activeReportId = cb_db_reporty_is_find_active_id($conn, $idPob, $datumReportu);
         if ($activeReportId > 0 && !$invalidateExistingActive) {
-            throw new RuntimeException('Finalni report pro tuto pobocku a den uz existuje.');
+            throw new RuntimeException(cb_db_zapis_denni_report_already_saved_message());
         }
         if ($activeReportId > 0 && $invalidateExistingActive) {
             cb_db_reporty_is_mark_invalid($conn, $activeReportId);
@@ -132,7 +155,15 @@ function cb_db_zapis_denni_report_from_form(mysqli $conn, int $idPob, string $da
             throw new RuntimeException('Nelze pripravit ulozeni reportu.');
         }
         $stmtReport->bind_param('siiisssiii', $datumReportu, $idPob, $oteviral, $zaviral, $oteviralText, $zaviralText, $poznamka, $zdroj, $idUser, $platny);
-        $stmtReport->execute();
+        try {
+            $stmtReport->execute();
+        } catch (Throwable $e) {
+            $stmtReport->close();
+            if (!$invalidateExistingActive && cb_db_zapis_denni_report_is_duplicate_error($e, 'uq_reporty_is_pob_datum')) {
+                throw new RuntimeException(cb_db_zapis_denni_report_already_saved_message(), 0, $e);
+            }
+            throw $e;
+        }
         $idReportu = (int)$conn->insert_id;
         $stmtReport->close();
         if ($idReportu <= 0) {

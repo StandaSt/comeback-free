@@ -143,5 +143,16 @@ try {
     $sendJson(200, ['ok' => true, 'id_reportu' => $idReportu]);
 } catch (Throwable $e) {
     $message = trim($e->getMessage());
-    $sendJson(500, ['ok' => false, 'err' => $message !== '' ? $message : 'Ulozeni finalniho reportu selhalo']);
+    if (
+        $message === cb_db_zapis_denni_report_already_saved_message()
+        || (!$requestedFinalEdit && cb_db_zapis_denni_report_is_duplicate_error($e, 'uq_reporty_is_pob_datum'))
+    ) {
+        $sendJson(409, ['ok' => false, 'err' => cb_db_zapis_denni_report_already_saved_message()]);
+    }
+
+    if ($e instanceof RuntimeException && $message !== '') {
+        $sendJson(500, ['ok' => false, 'err' => $message]);
+    }
+
+    $sendJson(500, ['ok' => false, 'err' => 'Ulozeni finalniho reportu selhalo']);
 }

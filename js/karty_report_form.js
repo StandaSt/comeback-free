@@ -34,6 +34,17 @@
     return form instanceof HTMLFormElement ? String(form.getAttribute('data-zr-form-mode') || '') : '';
   }
 
+  function isSubmitBusy(root) {
+    const form = getForm(root);
+    return form instanceof HTMLFormElement && String(form.getAttribute('data-zr-submit-busy') || '0') === '1';
+  }
+
+  function setSubmitBusy(root, busy) {
+    const form = getForm(root);
+    if (!(form instanceof HTMLFormElement)) return;
+    form.setAttribute('data-zr-submit-busy', busy ? '1' : '0');
+  }
+
   function isReadOnlyForm(root) {
     const form = getForm(root);
     return form instanceof HTMLFormElement && String(form.getAttribute('data-zr-readonly') || '0') === '1';
@@ -267,6 +278,11 @@
       return true;
     }
 
+    if (isSubmitBusy(root)) {
+      setSubmitLocked(button, 'Ukládám report');
+      return false;
+    }
+
     const isFinalEdit = getFormMode(root) === 'final_edit';
     const targetTs = isFinalEdit ? 0 : (Number.parseInt(String(button.getAttribute('data-zr-submit-at') || '0'), 10) || 0);
     const lockedText = isFinalEdit ? 'Chci uložit opravený report' : String(button.getAttribute('data-zr-submit-locked-text') || 'Report bude možné uložit za');
@@ -314,10 +330,10 @@
     button.setAttribute('data-zr-final-bound', '1');
 
     button.addEventListener('click', () => {
-      if (button.disabled || !syncSubmitButton(root)) {
+      if (isSubmitBusy(root) || button.disabled || !syncSubmitButton(root)) {
         return;
       }
-      const originalText = button.textContent;
+      setSubmitBusy(root, true);
       button.disabled = true;
       button.textContent = 'Ukládám report';
       saveDraftAction(root, 'final_save', {
@@ -341,8 +357,8 @@
           button.textContent = 'Report uložen';
         })
         .catch((err) => {
-          button.disabled = false;
-          button.textContent = originalText || 'Report je zkontrolovaný, uložit';
+          setSubmitBusy(root, false);
+          syncSubmitButton(root);
           if (w.alert) w.alert(err && err.message ? err.message : 'Uložení reportu selhalo.');
         });
     });
