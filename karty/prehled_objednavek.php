@@ -268,15 +268,15 @@ if (($cbDashboardRenderMode ?? '') === 'mini') {
     ob_start();
     ?>
     <div class="displ_flex jc_stred">
-      <table class="table ram_normal bg_bila radek_1_35 card_table_min sirka100">
+      <table class="card_mini_table">
         <tbody>
           <tr>
             <td>Období</td>
-            <td class="txt_r"><strong><?= h($periodOdText) ?> - <?= h($periodDoText) ?></strong></td>
+            <td class="txt_r"><span class="text_tucny"><?= h($periodOdText) ?> - <?= h($periodDoText) ?></span></td>
           </tr>
           <tr>
             <td><?= h($pobLabel) ?></td>
-            <td class="txt_r"><strong><?= h($pobText) ?></strong></td>
+            <td class="txt_r"><span class="text_tucny"><?= h($pobText) ?></span></td>
           </tr>
           <tr>
             <td>Celkem</td>
@@ -593,19 +593,19 @@ $objResetUrl = cb_url_query('/', ['cb_load_max' => '1'], $objQueryDefaults);
 
 $card_min_html = ''
     . '<div class="table-wrap ram_normal bg_bila zaobleni_12">'
-    . '  <table class="table ram_normal bg_bila radek_1_35 card_table_min">'
+    . '  <table class="card_mini_table">'
     . '    <tbody>'
     . '      <tr>'
     . '        <td>Období</td>'
-    . '        <td class="txt_r"><strong>' . h($periodOdText) . ' - ' . h($periodDoText) . '</strong></td>'
+    . '        <td class="txt_r"><span class="text_tucny">' . h($periodOdText) . ' - ' . h($periodDoText) . '</span></td>'
     . '      </tr>'
     . '      <tr>'
     . '        <td>' . h($pobLabel) . '</td>'
-    . '        <td class="txt_r"><strong>' . h($pobText) . '</strong></td>'
+    . '        <td class="txt_r"><span class="text_tucny">' . h($pobText) . '</span></td>'
     . '      </tr>'
     . '      <tr>'
     . '        <td>Celkem</td>'
-    . '        <td class="txt_r"><strong>' . h((string)$pocetObj) . '</strong> ' . h(obj_sklonuj_objednavka($pocetObj)) . '</td>'
+    . '        <td class="txt_r"><span class="text_tucny">' . h((string)$pocetObj) . '</span> ' . h(obj_sklonuj_objednavka($pocetObj)) . '</td>'
     . '      </tr>'
     . '    </tbody>'
     . '  </table>'

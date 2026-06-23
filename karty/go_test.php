@@ -5,7 +5,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../lib/session_boot.php';
 
-$card_min_html = '<p class="card_text txt_seda odstup_vnejsi_0">Vyber a spuštění testovacích scriptů z admin_testy/ a vybraných podsložek.</p>';
+$card_min_html = '<p class="card_mini_text txt_seda">Vyber a spuštění testovacích scriptů z admin_testy/ a vybraných podsložek.</p>';
 
 if (($cbDashboardRenderMode ?? '') === 'mini') {
     return;
@@ -342,7 +342,7 @@ ob_start();
     <?php elseif ($gtStep === 'run'): ?>
       <div data-go-test-run="1">
         <?php if ($gtHasSelection && $gtRunSrc !== ''): ?>
-          <p class="card_text txt_seda odstup_vnejsi_0"><?= h($gtInfo) ?></p>
+          <p class="card_mini_text txt_seda"><?= h($gtInfo) ?></p>
           <iframe
             src="<?= h($gtRunSrc) ?>"
             title="Výstup test scriptu"

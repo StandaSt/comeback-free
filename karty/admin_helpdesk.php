@@ -61,7 +61,7 @@ $hdBtnBase = 'card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 displ_inl
 $hdBtnPrimary = $hdBtnBase . ' card_btn_primary';
 
 if (empty($_SESSION['login_ok'])) {
-    $card_min_html = '<p class="card_text odstup_vnejsi_0">Nutné přihlášení.</p>';
+    $card_min_html = '<p class="card_mini_text">Nutné přihlášení.</p>';
     $card_max_html = $card_min_html;
     return;
 }
@@ -174,16 +174,16 @@ ob_start();
 <div class="cb-hd-card-min" style="display:grid;gap:6px;">
   <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;">
     <button type="button" class="ram_normal zaobleni_10" data-cb-hd-min-filter="nový" style="padding:6px 8px;background:#f8fbff;border:1px solid rgba(15,23,42,.10);text-align:left;cursor:pointer;">
-      <div style="font-size:10px;color:#64748b;line-height:1.1;">nový</div>
-      <div style="font-size:16px;font-weight:700;line-height:1.05;color:#0f172a;margin-top:1px;"><?= cb_helpdesk_card_h((string)$stats['new']) ?></div>
+      <div class="card_mini_text txt_seda">nový</div>
+      <div class="card_mini_text text_tucny" style="color:#0f172a;margin-top:1px;"><?= cb_helpdesk_card_h((string)$stats['new']) ?></div>
     </button>
     <button type="button" class="ram_normal zaobleni_10" data-cb-hd-min-filter="řeší se" style="padding:6px 8px;background:#fffaf0;border:1px solid rgba(15,23,42,.10);text-align:left;cursor:pointer;">
-      <div style="font-size:10px;color:#64748b;line-height:1.1;">řeší se</div>
-      <div style="font-size:16px;font-weight:700;line-height:1.05;color:#9a6700;margin-top:1px;"><?= cb_helpdesk_card_h((string)$stats['active']) ?></div>
+      <div class="card_mini_text txt_seda">řeší se</div>
+      <div class="card_mini_text text_tucny" style="color:#9a6700;margin-top:1px;"><?= cb_helpdesk_card_h((string)$stats['active']) ?></div>
     </button>
     <button type="button" class="ram_normal zaobleni_10" data-cb-hd-min-filter="uzavřené" style="padding:6px 8px;background:#f3faf5;border:1px solid rgba(15,23,42,.10);text-align:left;cursor:pointer;">
-      <div style="font-size:10px;color:#64748b;line-height:1.1;">uzavřené</div>
-      <div style="font-size:16px;font-weight:700;line-height:1.05;color:#166534;margin-top:1px;"><?= cb_helpdesk_card_h((string)$stats['closed']) ?></div>
+      <div class="card_mini_text txt_seda">uzavřené</div>
+      <div class="card_mini_text text_tucny" style="color:#166534;margin-top:1px;"><?= cb_helpdesk_card_h((string)$stats['closed']) ?></div>
     </button>
   </div>
 </div>

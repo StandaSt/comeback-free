@@ -19,8 +19,8 @@ extract($denniReportData, EXTR_SKIP);
 
 ob_start();
 ?>
-<p class="card_text txt_cervena odstup_vnejsi_0"><strong>Nezadané reporty</strong></p>
-<table style="width:100%;border-collapse:collapse;table-layout:auto;">
+<p class="card_mini_text txt_cervena"><span class="text_tucny">Nezadané reporty</span></p>
+<table class="card_mini_table">
   <tbody>
     <?php foreach (($miniMissingReports ?? []) as $miniMissingReport): ?>
       <?php
@@ -29,15 +29,15 @@ ob_start();
       $dateLabel = (string)($labelParts[1] ?? '');
       ?>
       <tr>
-        <td class="card_text txt_seda odstup_vnejsi_0" style="padding:0 8px 0 0;white-space:nowrap;vertical-align:top;"><?= h($weekday) ?></td>
-        <td class="card_text txt_seda odstup_vnejsi_0" style="padding:0 8px 0 0;white-space:nowrap;vertical-align:top;"><?= h($dateLabel) ?></td>
-        <td class="card_text txt_seda odstup_vnejsi_0" style="padding:0;vertical-align:top;word-break:break-word;"><?= h((string)($miniMissingReport['branches_text'] ?? 'Žádné')) ?></td>
+        <td class="txt_seda" ><?= h($weekday) ?></td>
+        <td class="txt_seda" ><?= h($dateLabel) ?></td>
+        <td class="txt_seda" ><?= h((string)($miniMissingReport['branches_text'] ?? 'Žádné')) ?></td>
       </tr>
     <?php endforeach; ?>
   </tbody>
 </table>
-<p class="card_text odstup_vnejsi_0" style="line-height:0.5;">&nbsp;</p>
-<p class="card_text txt_cervena odstup_vnejsi_0">Vypisujte prosím i tento report, je třeba odladit případné chyby. Díky</p>
+<p class="card_mini_text">&nbsp;</p>
+<p class="card_mini_text txt_cervena">Vypisujte prosím i tento report, je třeba odladit případné chyby. Díky</p>
 <?php
 $card_min_html = (string)ob_get_clean();
 

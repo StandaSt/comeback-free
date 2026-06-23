@@ -111,8 +111,8 @@ $usNanoText = ($usNanoKde === 1) ? 'Do gridu' : 'Řádek';
 $usDarkText = ($usDark === 1) ? 'Ano' : 'Ne';
 
 $card_min_html = ''
-    . '<p class="card_text txt_seda odstup_vnejsi_0">Nano karty: <strong>' . h($usNanoText) . '</strong></p>'
-    . '<p class="card_text txt_seda odstup_vnejsi_0">Velikost textu: <strong>' . h((string)$usPismo) . '</strong> | Tmavý režim: <strong>' . h($usDarkText) . '</strong></p>';
+    . '<p class="card_mini_text txt_seda">Nano karty: <span class="text_tucny">' . h($usNanoText) . '</span></p>'
+    . '<p class="card_mini_text txt_seda">Velikost textu: <span class="text_tucny">' . h((string)$usPismo) . '</span> | Tmavý režim: <span class="text_tucny">' . h($usDarkText) . '</span></p>';
 
 ob_start();
 ?>

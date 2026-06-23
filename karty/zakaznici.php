@@ -257,11 +257,11 @@ $zakResetUrl = cb_url_query('/', ['cb_load_max' => '1'], $zakQueryDefaults);
 ob_start();
 ?>
 <div class="displ_flex jc_stred">
-  <table class="table ram_normal bg_bila radek_1_35 card_table_min sirka100">
+  <table class="card_mini_table">
     <tbody>
       <tr>
         <td>Zákazníků v DB</td>
-        <td class="txt_r"><strong><?= h((string)$totalZak) ?></strong></td>
+        <td class="txt_r"><span class="text_tucny"><?= h((string)$totalZak) ?></span></td>
       </tr>
     </tbody>
   </table>
@@ -285,7 +285,7 @@ ob_start();
     <input type="hidden" name="zak_dir" value="<?= h($zakDir) ?>">
   <?php endif; ?>
   <div style="margin-bottom:12px; font-size:14px;">
-    Zákazníků v DB: <strong><?= h((string)$totalZak) ?></strong>
+    Zákazníků v DB: <span class="text_tucny"><?= h((string)$totalZak) ?></span>
   </div>
   <div class="table-wrap ram_normal bg_bila zaobleni_12">
     <table class="card-max-table">

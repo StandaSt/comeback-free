@@ -4,7 +4,7 @@
 // Zmena V3: max rezim ma denni tlacitka a jednoduchou tabulku po pobočkach z reporty_is a navaznych tabulek.
 declare(strict_types=1);
 
-$card_min_html = '<p class="card_text txt_seda odstup_vnejsi_0">Kontrola tržeb není k dispozici.</p>';
+$card_min_html = '<p class="card_mini_text txt_seda">Kontrola tržeb není k dispozici.</p>';
 $card_max_html = '';
 
 $conn = db();
@@ -159,7 +159,7 @@ $sql = '
 
 $stmt = $conn->prepare($sql);
 if ($stmt === false) {
-    $card_min_html = '<p class="card_text txt_cervena odstup_vnejsi_0">Kontrolu tržeb se nepodařilo připravit.</p>';
+    $card_min_html = '<p class="card_mini_text txt_cervena">Kontrolu tržeb se nepodařilo připravit.</p>';
     $card_max_html = $card_min_html;
     return;
 }
@@ -389,18 +389,18 @@ try {
 ob_start();
 ?>
 <div class="sirka100 displ_flex flex_sloupec gap_8" style="height:100%; min-height:0;">
-  <div class="displ_flex jc_mezi gap_8" style="align-items:flex-start; flex-wrap:wrap; line-height:1.2;">
-    <span class="card_text txt_seda text_11"><?= h($periodLabel) ?></span>
-    <span class="card_text text_11">
-      <strong><?= h($formatCount($reportCount)) ?></strong> reportů,
-      <strong><?= h($formatMoney($sumTrzba)) ?></strong>,
-      <strong><?= h($formatCount($problemCount)) ?></strong> problémů
+  <div class="displ_flex jc_mezi gap_8" style="align-items:flex-start; flex-wrap:wrap;">
+    <span class="card_mini_text txt_seda"><?= h($periodLabel) ?></span>
+    <span class="card_mini_text">
+      <span class="text_tucny"><?= h($formatCount($reportCount)) ?></span> reportů,
+      <span class="text_tucny"><?= h($formatMoney($sumTrzba)) ?></span>,
+      <span class="text_tucny"><?= h($formatCount($problemCount)) ?></span> problémů
     </span>
   </div>
   <div class="displ_flex gap_8" style="flex-wrap:wrap;">
-    <span class="card_text text_11 ram_sedy zaobleni_8 odstup_vnitrni_8 bg_bila">Rozdíl: <strong><?= h($formatMoney($sumRozdil)) ?></strong></span>
-    <span class="card_text text_11 ram_sedy zaobleni_8 odstup_vnitrni_8 bg_bila">Výdaje: <strong><?= h($formatMoney($sumVydaje)) ?></strong></span>
-    <span class="card_text text_11 ram_sedy zaobleni_8 odstup_vnitrni_8 bg_bila">COL: <strong><?= h($formatCol($avgCol)) ?></strong></span>
+    <span class="card_mini_text ram_sedy zaobleni_8 odstup_vnitrni_8 bg_bila">Rozdíl: <span class="text_tucny"><?= h($formatMoney($sumRozdil)) ?></span></span>
+    <span class="card_mini_text ram_sedy zaobleni_8 odstup_vnitrni_8 bg_bila">Výdaje: <span class="text_tucny"><?= h($formatMoney($sumVydaje)) ?></span></span>
+    <span class="card_mini_text ram_sedy zaobleni_8 odstup_vnitrni_8 bg_bila">COL: <span class="text_tucny"><?= h($formatCol($avgCol)) ?></span></span>
   </div>
 </div>
 <?php
@@ -409,7 +409,7 @@ $card_min_html = (string)ob_get_clean();
 ob_start();
 ?>
 <?php if ($dayError !== ''): ?>
-  <p class="card_text txt_cervena odstup_vnejsi_0"><?= h($dayError) ?></p>
+  <p class="card_mini_text txt_cervena"><?= h($dayError) ?></p>
 <?php else: ?>
   <form method="get" action="<?= h(cb_url('/')) ?>" class="card_stack gap_10 displ_flex" autocomplete="off" data-cb-max-form="1" data-cb-loader-text="Načítám kontrolu tržeb">
     <input type="hidden" name="cb_load_max" value="1">

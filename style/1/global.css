@@ -1981,6 +1981,26 @@ align-items:center;
   padding-bottom:5px;
 }
 
+.card_mini_text{
+  font-size:12px;
+  line-height:1.25;
+  margin:0;
+}
+
+.card_mini_table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:12px;
+  line-height:1.2;
+}
+
+.card_mini_table th,
+.card_mini_table td{
+  padding:3px 5px;
+  border:1px solid var(--clr_seda_2);
+  vertical-align:middle;
+}
+
 .cb-restia-stop-alert{
   position:fixed;
   top:8px;

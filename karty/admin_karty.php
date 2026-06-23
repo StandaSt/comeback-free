@@ -364,7 +364,7 @@ if ($renderMode === 'mini') {
     ob_start();
     ?>
 <div class="displ_flex jc_stred">
-  <table class="table ram_normal bg_bila radek_1_35 sirka100">
+  <table class="card_mini_table">
     <thead>
       <tr>
         <th class="txt_l">Karty podle role</th>
@@ -375,7 +375,7 @@ if ($renderMode === 'mini') {
       <?php foreach ($miniRoleRows as $miniRoleRow): ?>
       <tr>
         <td><?= h((string)($miniRoleRow['label'] ?? '')) ?></td>
-        <td class="txt_r"><strong><?= h((string)($miniRoleRow['all'] ?? 0)) ?>/<?= h((string)($miniRoleRow['on'] ?? 0)) ?>/<?= h((string)($miniRoleRow['off'] ?? 0)) ?></strong></td>
+        <td class="txt_r"><span class="text_tucny"><?= h((string)($miniRoleRow['all'] ?? 0)) ?>/<?= h((string)($miniRoleRow['on'] ?? 0)) ?>/<?= h((string)($miniRoleRow['off'] ?? 0)) ?></span></td>
       </tr>
       <?php endforeach; ?>
     </tbody>

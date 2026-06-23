@@ -61,9 +61,9 @@ $psDetailBg = '#d9ecff';
 $psDetailEndBg = '#ffdada';
 
 $card_min_html = ''
-    . '<p class="card_text txt_seda odstup_vnejsi_0">Měsíc: <strong>' . h($psMonthLabel) . '</strong></p>'
-    . '<p class="card_text txt_seda odstup_vnejsi_0">Osob/slotů: <strong>' . h((string)$psTotal) . '</strong></p>'
-    . '<p class="card_text txt_seda odstup_vnejsi_0">Hodin celkem: <strong>' . h(ps_num($psFilteredHours)) . '</strong></p>';
+    . '<p class="card_mini_text txt_seda">Měsíc: <span class="text_tucny">' . h($psMonthLabel) . '</span></p>'
+    . '<p class="card_mini_text txt_seda">Osob/slotů: <span class="text_tucny">' . h((string)$psTotal) . '</span></p>'
+    . '<p class="card_mini_text txt_seda">Hodin celkem: <span class="text_tucny">' . h(ps_num($psFilteredHours)) . '</span></p>';
 
 $psQueryDefaults = [
     'ps_p' => '1',

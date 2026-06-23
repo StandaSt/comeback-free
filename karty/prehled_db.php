@@ -397,7 +397,7 @@ if (($cbDashboardRenderMode ?? '') === 'mini') {
     ob_start();
     ?>
     <div class="displ_flex jc_stred">
-      <table class="table ram_normal bg_bila radek_1_35 sirka100">
+      <table class="card_mini_table">
         <thead>
           <tr>
             <th class="txt_l">Zdroj</th>
@@ -410,7 +410,7 @@ if (($cbDashboardRenderMode ?? '') === 'mini') {
           <?php foreach ($minSummary as $item): ?>
             <tr>
               <td><?= cb_prehled_db_h((string)$item['source']) ?></td>
-              <td class="<?= cb_prehled_db_h(cb_prehled_db_count_style((int)$item['count'])) ?>"><strong><?= cb_prehled_db_h(number_format((int)$item['count'], 0, ',', ' ')) ?></strong></td>
+              <td class="<?= cb_prehled_db_h(cb_prehled_db_count_style((int)$item['count'])) ?>"><span class="text_tucny"><?= cb_prehled_db_h(number_format((int)$item['count'], 0, ',', ' ')) ?></span></td>
               <td class="txt_r"><?= cb_prehled_db_h(number_format(((float)((int)$item['bytes'])) / 1024 / 1024, 2, ',', ' ')) ?></td>
               <?php [$cbDatePart, $cbTimePart] = cb_prehled_db_split_dt((string)($item['updated_at'] ?? 'Ne')); ?>
               <td class="txt_r cb_tabular_nums cb_dt_col_date"><?= cb_prehled_db_h($cbDatePart) ?></td>
@@ -454,7 +454,7 @@ $cleanUrl = cb_url('/');
 ob_start();
 ?>
 <div class="displ_flex jc_stred">
-  <table class="table ram_normal bg_bila radek_1_35 sirka100">
+  <table class="card_mini_table">
     <thead>
       <tr>
         <th class="txt_l">Zdroj</th>
@@ -467,7 +467,7 @@ ob_start();
       <?php foreach ($minSummary as $item): ?>
         <tr>
           <td><?= cb_prehled_db_h((string)$item['source']) ?></td>
-          <td class="<?= cb_prehled_db_h(cb_prehled_db_count_style((int)$item['count'])) ?>"><strong><?= cb_prehled_db_h(number_format((int)$item['count'], 0, ',', ' ')) ?></strong></td>
+          <td class="<?= cb_prehled_db_h(cb_prehled_db_count_style((int)$item['count'])) ?>"><span class="text_tucny"><?= cb_prehled_db_h(number_format((int)$item['count'], 0, ',', ' ')) ?></span></td>
           <td><?= cb_prehled_db_h(cb_prehled_db_fmt_bytes((int)$item['bytes'])) ?></td>
           <td><?= cb_prehled_db_h((string)($item['updated_at'] ?? 'Ne')) ?></td>
         </tr>
@@ -529,7 +529,7 @@ ob_start();
       <?php endif; ?>
 
       <div class="table-wrap" style="flex:1 1 auto; min-height:0; max-height:100%; overflow-y:auto; overflow-x:auto; background:var(--clr_bila);">
-        <table class="table ram_normal bg_bila radek_1_35 sirka100" style="table-layout:fixed; margin:0;">
+        <table class="card_mini_table" style="table-layout:fixed; margin:0;">
           <colgroup>
             <col style="width:42%;">
             <col style="width:29%;">

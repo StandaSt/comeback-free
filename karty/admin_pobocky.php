@@ -124,7 +124,7 @@ try {
     $msgErr = true;
 }
 
-$card_min_html = '<p class="card_text txt_seda odstup_vnejsi_0">Správa poboček</p>';
+$card_min_html = '<p class="card_mini_text txt_seda">Správa poboček</p>';
 $sirkaSloupcu = [
     'nazev' => 'width:15ch;',
     'ulice' => 'width:20ch;',

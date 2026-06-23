@@ -184,7 +184,7 @@ if (($cbDashboardRenderMode ?? '') === 'mini') {
     ob_start();
     ?>
     <div class="displ_flex jc_stred">
-      <table class="table ram_normal bg_bila radek_1_35 sirka100">
+      <table class="card_mini_table">
         <thead>
           <tr>
             <th class="txt_l">Zdroj</th>
@@ -419,7 +419,7 @@ $cbRestiaOnlineActionHtml = '<button type="button" class="card_btn ram_btn bg_bi
 
 $card_min_html = ''
     . '<div class="table-wrap ram_normal bg_bila zaobleni_12">'
-    . '  <table class="table ram_normal bg_bila radek_1_35">'
+    . '  <table class="card_mini_table">'
     . '    <thead>'
     . '      <tr>'
     . '        <th class="txt_l">Zdroj</th>'
@@ -430,25 +430,25 @@ $card_min_html = ''
     . '    <tbody>'
     . '      <tr>'
     . '        <td>Restia</td>'
-    . '        <td class="txt_r"><strong>' . h(cb_admin_init_count_fmt($cbRestiaCount)) . '</strong></td>'
+    . '        <td class="txt_r"><span class="text_tucny">' . h(cb_admin_init_count_fmt($cbRestiaCount)) . '</span></td>'
     . '        <td class="txt_r cb_tabular_nums cb_dt_col_date">' . h(cb_admin_init_split_dt($cbRestiaDate)[0]) . '</td>'
     . '        <td class="txt_r cb_tabular_nums cb_dt_col_time">' . h(cb_admin_init_split_dt($cbRestiaDate)[1]) . '</td>'
     . '      </tr>'
     . '      <tr>'
     . '        <td>Objednávky</td>'
-    . '        <td class="txt_r"><strong>' . h(cb_admin_init_count_fmt($cbObjednavkyCount)) . '</strong></td>'
+    . '        <td class="txt_r"><span class="text_tucny">' . h(cb_admin_init_count_fmt($cbObjednavkyCount)) . '</span></td>'
     . '        <td class="txt_r cb_tabular_nums cb_dt_col_date">' . h(cb_admin_init_split_dt($cbObjednavkyDate)[0]) . '</td>'
     . '        <td class="txt_r cb_tabular_nums cb_dt_col_time">' . h(cb_admin_init_split_dt($cbObjednavkyDate)[1]) . '</td>'
     . '      </tr>'
     . '      <tr>'
     . '        <td>Směny</td>'
-    . '        <td class="txt_r"><strong>' . h(cb_admin_init_count_fmt($cbSmenyCount)) . '</strong></td>'
+    . '        <td class="txt_r"><span class="text_tucny">' . h(cb_admin_init_count_fmt($cbSmenyCount)) . '</span></td>'
     . '        <td class="txt_r cb_tabular_nums cb_dt_col_date">' . h(cb_admin_init_split_dt($cbSmenyDate)[0]) . '</td>'
     . '        <td class="txt_r cb_tabular_nums cb_dt_col_time">' . h(cb_admin_init_split_dt($cbSmenyDate)[1]) . '</td>'
     . '      </tr>'
     . '      <tr>'
     . '        <td>Reporty</td>'
-    . '        <td class="txt_r"><strong>' . h(cb_admin_init_count_fmt($cbReportCount)) . '</strong></td>'
+    . '        <td class="txt_r"><span class="text_tucny">' . h(cb_admin_init_count_fmt($cbReportCount)) . '</span></td>'
     . '        <td class="txt_r cb_tabular_nums cb_dt_col_date">' . h(cb_admin_init_split_dt($cbReportDate)[0]) . '</td>'
     . '        <td class="txt_r cb_tabular_nums cb_dt_col_time">' . h(cb_admin_init_split_dt($cbReportDate)[1]) . '</td>'
     . '      </tr>'
@@ -459,7 +459,7 @@ $card_min_html = ''
 ob_start();
 ?>
 <div class="table-wrap ram_normal bg_bila">
-<table class="table ram_normal bg_bila radek_1_35 sirka100">
+<table class="card_mini_table">
   <thead>
     <tr>
       <th class="txt_l">script v inicializace/</th>

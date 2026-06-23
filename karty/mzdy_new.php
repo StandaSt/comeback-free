@@ -468,15 +468,15 @@ $mzdyResetUrl = cb_url_query('/', ['cb_load_max' => '1'], $mzdyQueryDefaults);
 ob_start();
 ?>
 <div class="displ_flex jc_stred">
-  <table class="table ram_normal bg_bila radek_1_35 card_table_min sirka100">
+  <table class="card_mini_table">
     <tbody>
       <tr>
         <td>Mzdy celkem</td>
-        <td class="txt_r"><strong><?= h(cb_k16_int($mzdyStats['total'])) ?></strong></td>
+        <td class="txt_r"><span class="text_tucny"><?= h(cb_k16_int($mzdyStats['total'])) ?></span></td>
       </tr>
       <tr>
         <td>Bez ID</td>
-        <td class="txt_r"><strong><?= h(cb_k16_int($mzdyStats['without_id'])) ?></strong></td>
+        <td class="txt_r"><span class="text_tucny"><?= h(cb_k16_int($mzdyStats['without_id'])) ?></span></td>
       </tr>
     </tbody>
   </table>
