@@ -255,11 +255,17 @@ function cb_denni_report_history_load(mysqli $conn, int $idPob, string $reportDa
             pk.vydaje_phm_soukrome,
             ri.trzba,
             ri.wolt,
+            ri.wolt_obj,
             ri.bolt,
+            ri.bolt_obj,
             ri.damejidlo,
+            ri.damejidlo_obj,
             ri.web,
+            ri.web_obj,
             ri.wolt_cash,
+            ri.wolt_cash_obj,
             ri.dj_cash,
+            ri.dj_cash_obj,
             ri.col_pomer,
             ri.zrusene_obj_ks,
             ri.zrusene_obj_kc,
@@ -1258,12 +1264,12 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
         $restiaSummary['web'] = (float)($historyReport['web'] ?? 0);
         $restiaSummary['wolt_cash'] = (float)($historyReport['wolt_cash'] ?? 0);
         $restiaSummary['dj_cash'] = (float)($historyReport['dj_cash'] ?? 0);
-        $restiaSummary['wolt_count'] = 0;
-        $restiaSummary['bolt_count'] = 0;
-        $restiaSummary['dj_count'] = 0;
-        $restiaSummary['web_count'] = 0;
-        $restiaSummary['wolt_cash_count'] = 0;
-        $restiaSummary['dj_cash_count'] = 0;
+        $restiaSummary['wolt_count'] = (int)($historyReport['wolt_obj'] ?? 0);
+        $restiaSummary['bolt_count'] = (int)($historyReport['bolt_obj'] ?? 0);
+        $restiaSummary['dj_count'] = (int)($historyReport['damejidlo_obj'] ?? 0);
+        $restiaSummary['web_count'] = (int)($historyReport['web_obj'] ?? 0);
+        $restiaSummary['wolt_cash_count'] = (int)($historyReport['wolt_cash_obj'] ?? 0);
+        $restiaSummary['dj_cash_count'] = (int)($historyReport['dj_cash_obj'] ?? 0);
         $restiaSummary['other'] = 0.0;
         $restiaSummary['other_count'] = 0;
         $restiaSummary['control_amount'] = (float)($historyReport['trzba'] ?? 0);

@@ -7,6 +7,10 @@ require_once __DIR__ . '/../lib/session_boot.php';
 
 $card_min_html = '<p class="card_text txt_seda odstup_vnejsi_0">Vyber a spuštění testovacích scriptů z admin_testy/ a vybraných podsložek.</p>';
 
+if (($cbDashboardRenderMode ?? '') === 'mini') {
+    return;
+}
+
 const CB_GO_TEST_STATE_KEY = 'cb_go_test_state_v1';
 
 if (!function_exists('cb_go_test_norm_name')) {

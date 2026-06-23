@@ -199,19 +199,25 @@ function cb_db_zapis_denni_report_from_form(mysqli $conn, int $idPob, string $da
 
         $stmtRestia = $conn->prepare('
             INSERT INTO reporty_is_restia
-                (id_reportu, trzba, wolt, bolt, damejidlo, web, wolt_cash, dj_cash, col_pomer, zrusene_obj_ks, zrusene_obj_kc, zpozdene_rozvozy_5_min, make_time_prumer_sec, objednavky_nezrusene_ks, nase_rozvozy_ks, woltdrive_ks, woltdrive_pozde_5_min, woltdrive_pozde_nase_vina, nase_rozvozy_pozde_pomer, woltdrive_zpozdene_ks, doruceno_vcas_pomer, woltdrive_zpozdene_pomer)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (id_reportu, trzba, wolt, wolt_obj, bolt, bolt_obj, damejidlo, damejidlo_obj, web, web_obj, wolt_cash, wolt_cash_obj, dj_cash, dj_cash_obj, col_pomer, zrusene_obj_ks, zrusene_obj_kc, zpozdene_rozvozy_5_min, make_time_prumer_sec, objednavky_nezrusene_ks, nase_rozvozy_ks, woltdrive_ks, woltdrive_pozde_5_min, woltdrive_pozde_nase_vina, nase_rozvozy_pozde_pomer, woltdrive_zpozdene_ks, doruceno_vcas_pomer, woltdrive_zpozdene_pomer)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ');
         if ($stmtRestia === false) {
             throw new RuntimeException('Nelze pripravit ulozeni Restie.');
         }
         $trzba = (float)($restiaSummary['trzba'] ?? 0);
         $wolt = (float)($restiaSummary['wolt'] ?? 0);
+        $woltObj = (int)($restiaSummary['wolt_count'] ?? 0);
         $bolt = (float)($restiaSummary['bolt'] ?? 0);
+        $boltObj = (int)($restiaSummary['bolt_count'] ?? 0);
         $damejidlo = (float)($restiaSummary['dj'] ?? 0);
+        $damejidloObj = (int)($restiaSummary['dj_count'] ?? 0);
         $web = (float)($restiaSummary['web'] ?? 0);
+        $webObj = (int)($restiaSummary['web_count'] ?? 0);
         $woltCash = (float)($restiaSummary['wolt_cash'] ?? 0);
+        $woltCashObj = (int)($restiaSummary['wolt_cash_count'] ?? 0);
         $djCash = (float)($restiaSummary['dj_cash'] ?? 0);
+        $djCashObj = (int)($restiaSummary['dj_cash_count'] ?? 0);
         $colPomer = $colPomerForm;
         $zruseneKs = (int)($restiaSummary['cancel_count'] ?? 0);
         $zruseneKc = (float)($restiaSummary['cancel_value'] ?? 0);
@@ -226,7 +232,7 @@ function cb_db_zapis_denni_report_from_form(mysqli $conn, int $idPob, string $da
         $woltdriveZpozdeneKs = $woltdrivePozde;
         $dorucenoVcasPomer = null;
         $woltdriveZpozdenePomer = null;
-        $stmtRestia->bind_param('iddddddddidiiiiiiididd', $idReportu, $trzba, $wolt, $bolt, $damejidlo, $web, $woltCash, $djCash, $colPomer, $zruseneKs, $zruseneKc, $zpozdeneRozvozy, $makeTime, $objednavkyNezrusene, $naseRozvozy, $woltdriveKs, $woltdrivePozde, $woltdriveNaseVina, $naseRozvozyPozdePomer, $woltdriveZpozdeneKs, $dorucenoVcasPomer, $woltdriveZpozdenePomer);
+        $stmtRestia->bind_param('ididididididididiiiiiiididd', $idReportu, $trzba, $wolt, $woltObj, $bolt, $boltObj, $damejidlo, $damejidloObj, $web, $webObj, $woltCash, $woltCashObj, $djCash, $djCashObj, $colPomer, $zruseneKs, $zruseneKc, $zpozdeneRozvozy, $makeTime, $objednavkyNezrusene, $naseRozvozy, $woltdriveKs, $woltdrivePozde, $woltdriveNaseVina, $naseRozvozyPozdePomer, $woltdriveZpozdeneKs, $dorucenoVcasPomer, $woltdriveZpozdenePomer);
         $stmtRestia->execute();
         $stmtRestia->close();
 
