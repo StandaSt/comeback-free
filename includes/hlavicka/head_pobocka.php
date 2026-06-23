@@ -66,7 +66,7 @@ foreach ($cbAllowedPobockyById as $p) {
     }
 }
 
-$cbCanUseArea = ((int)($cbUserRoleId ?? 0) !== 3);
+$cbCanUseArea = ($cbAllowedCount > 1);
 
 $cbPobLabel = 'Pobocka';
 $cbPobTitle = 'Vyberte pobocky';
