@@ -3,7 +3,9 @@
 // karty/administrace.php * Verze: V5 * Aktualizace: 03.06.2026
 declare(strict_types=1);
 
-$card_min_html = '<p class="card_text odstup_vnejsi_0">administrace</p>';
+$card_min_html = '<p class="card_text odstup_vnejsi_0">administrace</p><br>
+Zde se nastavují globální parametry systému.<br>
+Logování, volba admina, upozornění na chyby, 2FA ověření a další věci.';
 $card_max_html = '';
 
 $cbAdminSystem = [

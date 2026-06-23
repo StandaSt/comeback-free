@@ -1519,14 +1519,14 @@ $renderMiniChannelBars = static function (array $rows, float $maxValue, float $t
         $html .= ''
             . ($isTotal ? '<div style="border-top:1px solid #d1d5db; margin:2px 0 1px 0;"></div>' : '')
             . '<div class="displ_flex gap_4" style="align-items:center;">'
-            . '<div class="card_text text_11' . ($isTotal ? ' text_tucny' : '') . '" style="width:84px; line-height:1.05; white-space:nowrap;">' . h((string)$row['label']) . '</div>'
+            . '<div class="card_text text_11' . ($isTotal ? ' text_tucny' : '') . '" style="width:84px; line-height:0.8; white-space:nowrap;">' . h((string)$row['label']) . '</div>'
             . ($isTotal
-                ? '<div style="flex:1 1 auto; min-width:0; height:15px;"></div>'
-                : '<div class="ram_sedy zaobleni_8" style="flex:1 1 auto; min-width:0; height:15px; overflow:hidden; background:#eef2f7;">'
+                ? '<div style="flex:1 1 auto; min-width:0; height:11px;"></div>'
+                : '<div class="ram_sedy zaobleni_8" style="flex:1 1 auto; min-width:0; height:11px; overflow:hidden; background:#eef2f7;">'
                     . '<div style="height:100%; width:' . h(number_format($width, 2, '.', '')) . '%; background:' . h((string)$row['color']) . ';"></div>'
                 . '</div>')
-            . '<div class="card_text text_11 txt_r' . ($isTotal ? ' text_tucny' : '') . '" style="width:46px; line-height:1.05; white-space:nowrap;">' . ($isTotal ? '' : h($formatRatio($share))) . '</div>'
-            . '<div class="card_text text_11 txt_r' . ($isTotal ? ' text_tucny' : '') . '" style="width:88px; line-height:1.05; white-space:nowrap;">' . h($formatMoney((float)$row['value'])) . '</div>'
+            . '<div class="card_text text_11 txt_r' . ($isTotal ? ' text_tucny' : '') . '" style="width:46px; line-height:0.8; white-space:nowrap;">' . ($isTotal ? '' : h($formatRatio($share))) . '</div>'
+            . '<div class="card_text text_11 txt_r' . ($isTotal ? ' text_tucny' : '') . '" style="width:88px; line-height:0.8; white-space:nowrap;">' . h($formatMoney((float)$row['value'])) . '</div>'
             . '</div>';
     }
     $html .= '</div>';
@@ -1810,7 +1810,20 @@ foreach ($channelRows as $channelRow) {
 }
 $summaryTableHtml .= '</tbody></table></div>';
 
-$summaryMiniHtml = $renderMiniChannelBars($channelRows, $maxChannelValue, (float)$topSummary['trzba'], $formatMoney, $formatRatio);
+$summaryMiniRows = array_values(array_filter($channelRows, static function (array $row): bool {
+    return ((string)($row['label'] ?? '') !== 'Celkem');
+}));
+usort($summaryMiniRows, static function (array $a, array $b): int {
+    return ((float)($b['value'] ?? 0.0) <=> (float)($a['value'] ?? 0.0));
+});
+foreach ($channelRows as $row) {
+    if ((string)($row['label'] ?? '') === 'Celkem') {
+        $summaryMiniRows[] = $row;
+        break;
+    }
+}
+
+$summaryMiniHtml = $renderMiniChannelBars($summaryMiniRows, $maxChannelValue, (float)$topSummary['trzba'], $formatMoney, $formatRatio);
 $card_min_html = '';
 $card_max_html = '';
 $subtitleMin = $periodLabel;

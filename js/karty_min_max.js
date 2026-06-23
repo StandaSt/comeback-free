@@ -1,15 +1,12 @@
-// js/karty_min_max.js * Verze: V5 * Aktualizace: 15.04.2026
+// js/karty_min_max.js * Verze: V6 * Aktualizace: 23.06.2026
 'use strict';
 
 (function (w) {
-  const ICON_MAX = '\u2922';
-  const ICON_MIN = '\u2212';
   const MAXI_STATE_KEY = 'cb_maxi_state_v1';
   let activeMaxi = null;
   let suppressNextRestore = false;
 
   const CARD_ROOT_SELECTOR = '.card_shell';
-  const CARD_TOGGLE_SELECTOR = '[data-card-toggle]';
   const CARD_COMPACT_SELECTOR = '[data-card-compact]';
   const CARD_EXPANDED_SELECTOR = '[data-card-expanded]';
 
@@ -102,15 +99,6 @@
 
   function getCardHead(root) {
     if (!root) return null;
-
-    const toggle = root.querySelector(CARD_TOGGLE_SELECTOR);
-    if (toggle instanceof HTMLElement) {
-      const head = toggle.closest('.card_top');
-      if (head instanceof HTMLElement) {
-        return head;
-      }
-    }
-
     const fallback = root.querySelector('.card_top');
     return fallback instanceof HTMLElement ? fallback : null;
   }
@@ -119,38 +107,6 @@
     return Array.from(document.querySelectorAll(CARD_ROOT_SELECTOR)).filter((el) => {
       return el instanceof HTMLElement && !(el.closest('[data-cb-maxi-clone="1"]') instanceof HTMLElement);
     });
-  }
-
-  function restoreActiveMaxi() {
-    if (suppressNextRestore) {
-      suppressNextRestore = false;
-      clearMaxiState();
-      return;
-    }
-
-    const state = loadMaxiState();
-    if (!state) return;
-
-    const currentLoginId = getCurrentLoginId();
-    if (String(state.loginId || '0').trim() !== currentLoginId) {
-      clearMaxiState();
-      return;
-    }
-
-    const cardId = String(state.cardId || '').trim();
-    if (cardId === '') return;
-
-    const root = document.querySelector('.card_shell[data-card-id="' + cardId.replace(/"/g, '') + '"]');
-    if (!(root instanceof HTMLElement)) return;
-
-    openMaxi(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR);
-  }
-
-  function updateToggle(toggle, isOn) {
-    if (!(toggle instanceof HTMLElement)) return;
-    toggle.textContent = isOn ? ICON_MIN : ICON_MAX;
-    toggle.setAttribute('aria-expanded', isOn ? 'true' : 'false');
-    toggle.setAttribute('title', isOn ? 'Přepnout do mini' : 'Přepnout do max');
   }
 
   function updateSubtitle(root, isExpanded) {
@@ -189,9 +145,6 @@
 
   function blockHeadSelection(event) {
     if (!(event instanceof MouseEvent)) return;
-    if (event.target instanceof Element && event.target.closest(CARD_TOGGLE_SELECTOR)) {
-      return;
-    }
     event.preventDefault();
     clearSelection();
   }
@@ -233,7 +186,6 @@
     const cloneCompact = clone.querySelector(CARD_COMPACT_SELECTOR);
     const cloneExpanded = clone.querySelector(CARD_EXPANDED_SELECTOR);
     const cloneBody = clone.querySelector('.card_body');
-    const cloneToggle = clone.querySelector(CARD_TOGGLE_SELECTOR);
     const cloneNano = clone.querySelector('[data-card-to-nano]');
     const cloneHead = getCardHead(cloneShell);
     if (!(cloneBody instanceof HTMLElement)) return null;
@@ -246,26 +198,14 @@
     }
     item.expanded.classList.remove('is-hidden');
     cloneBody.appendChild(item.expanded);
-    if (cloneToggle instanceof HTMLElement) {
-      updateToggle(cloneToggle, true);
-    }
     if (cloneNano instanceof HTMLElement) {
       cloneNano.style.display = 'none';
     }
 
     if (cloneHead instanceof HTMLElement) {
       cloneHead.addEventListener('mousedown', blockHeadSelection);
-      cloneHead.addEventListener('dblclick', (event) => {
-        if (event.target instanceof Element && event.target.closest(CARD_TOGGLE_SELECTOR)) {
-          return;
-        }
+      cloneHead.addEventListener('dblclick', () => {
         clearSelection();
-        closeActiveMaxi();
-      });
-    }
-
-    if (cloneToggle instanceof HTMLElement) {
-      cloneToggle.addEventListener('click', () => {
         closeActiveMaxi();
       });
     }
@@ -285,7 +225,6 @@
       root,
       compact,
       expanded,
-      toggle,
       dashCard,
       dashBox,
       overlayLayer,
@@ -298,8 +237,7 @@
       originalBody.appendChild(expanded);
       expanded.classList.add('is-hidden');
     }
-    if (compact) compact.classList.remove('is-hidden');
-    if (toggle) updateToggle(toggle, false);
+    if (compact instanceof HTMLElement) compact.classList.remove('is-hidden');
     updateSubtitle(root, false);
     toggleNanoBtn(root, true);
 
@@ -307,11 +245,11 @@
       w.cbSetBranchSelectDisabledForRoot(root, false);
     }
 
-    if (dashCard) {
+    if (dashCard instanceof HTMLElement) {
       dashCard.classList.remove('is-expanded');
     }
 
-    if (dashBox) {
+    if (dashBox instanceof HTMLElement) {
       dashBox.classList.remove('has-maxi');
     }
 
@@ -338,7 +276,7 @@
       logUserCardAction(2, cardId, true, '');
     }
 
-    const closedCard = item.dashCard instanceof HTMLElement ? item.dashCard : null;
+    const closedCard = dashCard instanceof HTMLElement ? dashCard : null;
     if (closedCard instanceof HTMLElement) {
       w.setTimeout(() => {
         document.dispatchEvent(new CustomEvent('cb:card-swapped', {
@@ -351,10 +289,9 @@
     }
   }
 
-  function finishOpenMaxi(root, compactSel, expandedSel, toggleSel) {
+  function finishOpenMaxi(root, compactSel, expandedSel) {
     const compact = root.querySelector(compactSel);
     const expanded = root.querySelector(expandedSel);
-    const toggle = root.querySelector(toggleSel);
     const dashCard = getDashCard(root);
     const dashBox = getDashBox(root);
     const overlayLayer = getOverlayLayer(dashBox);
@@ -363,7 +300,6 @@
     if (
       !(compact instanceof HTMLElement)
       || !(expanded instanceof HTMLElement)
-      || !(toggle instanceof HTMLElement)
       || !(dashCard instanceof HTMLElement)
       || !(dashBox instanceof HTMLElement)
       || !(overlayLayer instanceof HTMLElement)
@@ -388,11 +324,7 @@
     updateSubtitle(root, true);
     toggleNanoBtn(root, false);
 
-    if (dashBox) {
-      dashBox.classList.add('has-maxi');
-    }
-
-    updateToggle(toggle, true);
+    dashBox.classList.add('has-maxi');
 
     if (typeof w.cbSetBranchSelectDisabledForRoot === 'function') {
       w.cbSetBranchSelectDisabledForRoot(root, true);
@@ -402,7 +334,6 @@
       root,
       compact,
       expanded,
-      toggle,
       dashCard,
       dashBox,
       overlayLayer,
@@ -415,7 +346,6 @@
     const overlayCard = buildOverlayClone(nextItem);
     if (!(overlayCard instanceof HTMLElement)) {
       toggleNanoBtn(root, true);
-      updateToggle(toggle, false);
       updateSubtitle(root, false);
       dashBox.classList.remove('has-maxi');
       if (typeof w.cbSetBranchSelectDisabledForRoot === 'function') {
@@ -438,7 +368,7 @@
     saveMaxiState(String(root.getAttribute('data-card-id') || ''));
   }
 
-  function openMaxi(root, compactSel, expandedSel, toggleSel) {
+  function openMaxi(root, compactSel, expandedSel) {
     if (!(root instanceof HTMLElement)) return;
 
     if (activeMaxi && activeMaxi.root === root) {
@@ -449,7 +379,7 @@
     closeActiveMaxi();
 
     if (hasLoadedMax(root)) {
-      finishOpenMaxi(root, compactSel, expandedSel, toggleSel);
+      finishOpenMaxi(root, compactSel, expandedSel);
       logUserCardAction(1, parseInt(String(root.getAttribute('data-card-id') || '0'), 10), true, '');
       return;
     }
@@ -472,7 +402,7 @@
       expandedSelector: CARD_EXPANDED_SELECTOR
     }).then((nextRoot) => {
       initCard(nextRoot);
-      finishOpenMaxi(nextRoot, compactSel, expandedSel, toggleSel);
+      finishOpenMaxi(nextRoot, compactSel, expandedSel);
       logUserCardAction(1, parseInt(String(nextRoot.getAttribute('data-card-id') || '0'), 10), true, '');
     }).catch(() => {
       logUserCardAction(1, parseInt(String(root.getAttribute('data-card-id') || '0'), 10), false, 'Otevreni max karty selhalo');
@@ -486,17 +416,16 @@
     });
   }
 
-  function setExpanded(root, compactSel, expandedSel, toggleSel, on) {
+  function setExpanded(root, compactSel, expandedSel, on) {
     if (!(root instanceof HTMLElement)) return;
 
     const compact = root.querySelector(compactSel);
     const expanded = root.querySelector(expandedSel);
-    const toggle = root.querySelector(toggleSel);
     const dashCard = getDashCard(root);
     const isOn = !!on;
 
     if (isOn) {
-      openMaxi(root, compactSel, expandedSel, toggleSel);
+      openMaxi(root, compactSel, expandedSel);
       return;
     }
 
@@ -512,9 +441,13 @@
       dashCard.classList.remove('is-maxi-overlay');
       dashCard.style.top = '';
     }
-    updateToggle(toggle, false);
     updateSubtitle(root, false);
     toggleNanoBtn(root, true);
+  }
+
+  function openCardMax(root) {
+    if (!(root instanceof HTMLElement)) return;
+    setExpanded(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, true);
   }
 
   function initCard(root) {
@@ -523,38 +456,53 @@
 
     root.setAttribute('data-card-init-max', '1');
 
-    const toggle = root.querySelector(CARD_TOGGLE_SELECTOR);
     const head = getCardHead(root);
     const compact = root.querySelector(CARD_COMPACT_SELECTOR);
     const expanded = root.querySelector(CARD_EXPANDED_SELECTOR);
 
-    if (!(toggle instanceof HTMLElement) || !(head instanceof HTMLElement) || !(compact instanceof HTMLElement) || !(expanded instanceof HTMLElement)) {
+    if (!(head instanceof HTMLElement) || !(compact instanceof HTMLElement) || !(expanded instanceof HTMLElement)) {
       return;
     }
 
     makeHeadInteractive(head);
-    setExpanded(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR, false);
-
-    toggle.addEventListener('click', () => {
-      const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-      setExpanded(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR, !isExpanded);
-    });
+    setExpanded(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, false);
 
     head.addEventListener('mousedown', blockHeadSelection);
-    head.addEventListener('dblclick', (event) => {
-      if (event.target instanceof Element && event.target.closest(CARD_TOGGLE_SELECTOR)) {
-        return;
-      }
+    head.addEventListener('dblclick', () => {
       clearSelection();
-      const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-      setExpanded(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR, !isExpanded);
+      const isExpanded = !!(activeMaxi && activeMaxi.root === root);
+      setExpanded(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, !isExpanded);
     });
-
   }
 
   function initKartyMinMax() {
     const roots = getCardRoots();
     roots.forEach(initCard);
+  }
+
+  function restoreActiveMaxi() {
+    if (suppressNextRestore) {
+      suppressNextRestore = false;
+      clearMaxiState();
+      return;
+    }
+
+    const state = loadMaxiState();
+    if (!state) return;
+
+    const currentLoginId = getCurrentLoginId();
+    if (String(state.loginId || '0').trim() !== currentLoginId) {
+      clearMaxiState();
+      return;
+    }
+
+    const cardId = String(state.cardId || '').trim();
+    if (cardId === '') return;
+
+    const root = document.querySelector('.card_shell[data-card-id="' + cardId.replace(/"/g, '') + '"]');
+    if (!(root instanceof HTMLElement)) return;
+
+    openMaxi(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR);
   }
 
   function wireOnce() {
@@ -584,7 +532,7 @@
     document.addEventListener('cb:dashboard-layout-changed', () => {
       initKartyMinMax();
       if (activeMaxi && activeMaxi.root instanceof HTMLElement) {
-        finishOpenMaxi(activeMaxi.root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR);
+        finishOpenMaxi(activeMaxi.root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR);
       }
     });
 
@@ -611,7 +559,7 @@
           activeMaxi.overlayCard.remove();
         }
         activeMaxi = null;
-        finishOpenMaxi(nextRoot, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR, CARD_TOGGLE_SELECTOR);
+        finishOpenMaxi(nextRoot, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR);
       }
     });
 
@@ -623,6 +571,8 @@
   }
 
   wireOnce();
+  w.CB_KARTY_MINMAX = w.CB_KARTY_MINMAX || {};
+  w.CB_KARTY_MINMAX.openCardMax = openCardMax;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initKartyMinMax, { once: true });
@@ -631,5 +581,5 @@
   }
 })(window);
 
-// js/karty_min_max.js * Verze: V5 * Aktualizace: 15.04.2026
+// js/karty_min_max.js * Verze: V6 * Aktualizace: 23.06.2026
 // Konec souboru

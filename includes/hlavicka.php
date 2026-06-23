@@ -681,10 +681,8 @@ if ($cbPobocky) {
 
       var expanded = root.querySelector('[data-card-expanded]');
       var isHidden = expanded instanceof HTMLElement && expanded.classList.contains('is-hidden');
-      var toggle = root.querySelector('[data-card-toggle="1"]');
-
-      if (isHidden && toggle instanceof HTMLButtonElement) {
-        toggle.click();
+      if (isHidden && window.CB_KARTY_MINMAX && typeof window.CB_KARTY_MINMAX.openCardMax === 'function') {
+        window.CB_KARTY_MINMAX.openCardMax(root);
       }
 
       root.scrollIntoView({behavior: 'smooth', block: 'start'});
