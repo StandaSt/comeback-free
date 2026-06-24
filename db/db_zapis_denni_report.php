@@ -232,7 +232,7 @@ function cb_db_zapis_denni_report_from_form(mysqli $conn, int $idPob, string $da
         $woltdriveZpozdeneKs = $woltdrivePozde;
         $dorucenoVcasPomer = null;
         $woltdriveZpozdenePomer = null;
-        $stmtRestia->bind_param('ididididididididiiiiiiididd', $idReportu, $trzba, $wolt, $woltObj, $bolt, $boltObj, $damejidlo, $damejidloObj, $web, $webObj, $woltCash, $woltCashObj, $djCash, $djCashObj, $colPomer, $zruseneKs, $zruseneKc, $zpozdeneRozvozy, $makeTime, $objednavkyNezrusene, $naseRozvozy, $woltdriveKs, $woltdrivePozde, $woltdriveNaseVina, $naseRozvozyPozdePomer, $woltdriveZpozdeneKs, $dorucenoVcasPomer, $woltdriveZpozdenePomer);
+        $stmtRestia->bind_param('iddidididididididiiiiiiididd', $idReportu, $trzba, $wolt, $woltObj, $bolt, $boltObj, $damejidlo, $damejidloObj, $web, $webObj, $woltCash, $woltCashObj, $djCash, $djCashObj, $colPomer, $zruseneKs, $zruseneKc, $zpozdeneRozvozy, $makeTime, $objednavkyNezrusene, $naseRozvozy, $woltdriveKs, $woltdrivePozde, $woltdriveNaseVina, $naseRozvozyPozdePomer, $woltdriveZpozdeneKs, $dorucenoVcasPomer, $woltdriveZpozdenePomer);
         $stmtRestia->execute();
         $stmtRestia->close();
 

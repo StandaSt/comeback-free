@@ -1,5 +1,5 @@
 <?php
-// mobil/mobil_helpdesk.php * Verze: V1 * Aktualizace: 22.06.2026
+// mobil/mobil_helpdesk.php * Verze: V1 * Aktualizace: 24.06.2026
 declare(strict_types=1);
 
 require_once __DIR__ . '/../lib/session_boot.php';
@@ -41,10 +41,15 @@ function cb_mobil_helpdesk_fetch(string $token): ?array
             h.verejny,
             h.typ AS typ_ticket,
             u.jmeno,
-            u.prijmeni
+            u.prijmeni,
+            ur.jmeno AS prijemce_jmeno,
+            ur.prijmeni AS prijemce_prijmeni,
+            hz.zprava AS notifikace_zprava
         FROM helpdesk_notifikace n
         INNER JOIN helpdesk h ON h.id_helpdesk = n.id_helpdesk
         LEFT JOIN `user` u ON u.id_user = h.id_user_zalozil
+        LEFT JOIN `user` ur ON ur.id_user = n.id_user
+        LEFT JOIN helpdesk_zprava hz ON hz.id_helpdesk_zprava = n.id_helpdesk_zprava
         WHERE n.id_helpdesk_notifikace = ? AND n.id_user = ?
         LIMIT 1
     ');
@@ -125,6 +130,23 @@ function cb_mobil_helpdesk_full_name(?string $jmeno, ?string $prijmeni): string
     return $fullName !== '' ? $fullName : '---';
 }
 
+function cb_mobil_helpdesk_info_lines(?array $row, string $createdAt, string $recipientName): array
+{
+    if (!is_array($row)) {
+        return [];
+    }
+
+    if (trim((string)($row['typ'] ?? '')) !== 'admin_odpoved') {
+        return [];
+    }
+
+    return [
+        'Informace pro: ' . $recipientName,
+        'Admin odpověděl ' . $createdAt,
+        'na Vámi vytvořený/sledovaný tiket HelpDesku',
+    ];
+}
+
 $token = trim((string)($_GET['t'] ?? ''));
 $row = cb_mobil_helpdesk_fetch($token);
 
@@ -144,6 +166,20 @@ $createdAt = is_array($row) ? cb_mobil_helpdesk_format_datetime((string)($row['v
 $authorName = is_array($row)
     ? cb_mobil_helpdesk_full_name((string)($row['jmeno'] ?? ''), (string)($row['prijmeni'] ?? ''))
     : '---';
+$recipientName = is_array($row)
+    ? cb_mobil_helpdesk_full_name((string)($row['prijemce_jmeno'] ?? ''), (string)($row['prijemce_prijmeni'] ?? ''))
+    : '---';
+$infoLines = cb_mobil_helpdesk_info_lines($row, $createdAt, $recipientName);
+
+$detailLabel = 'Popis:';
+$detailText = $ticketDescription !== '' ? $ticketDescription : '---';
+if (is_array($row) && trim((string)($row['typ'] ?? '')) === 'admin_odpoved') {
+    $detailLabel = 'Odpověď:';
+    $detailText = trim((string)($row['notifikace_zprava'] ?? ''));
+    if ($detailText === '') {
+        $detailText = $message !== '' ? $message : '---';
+    }
+}
 
 ?>
 <!doctype html>
@@ -254,10 +290,18 @@ $authorName = is_array($row)
         <div class="hd-row"><span class="hd-label">Zapsal:</span> <?= cb_mobil_helpdesk_h($authorName) ?></div>
       </div>
 
+      <?php if ($infoLines !== []): ?>
+        <div class="hd-block">
+          <?php foreach ($infoLines as $line): ?>
+            <div class="hd-row"><?= cb_mobil_helpdesk_h($line) ?></div>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+
       <div class="hd-block">
         <div class="hd-row"><span class="hd-label">Předmět:</span></div>
         <div class="hd-subject"><?= cb_mobil_helpdesk_h($ticketSubject !== '' ? $ticketSubject : 'Bez předmětu') ?></div>
-        <div class="hd-description"><span class="hd-label">Popis:</span><br><?= cb_mobil_helpdesk_h($ticketDescription !== '' ? $ticketDescription : '---') ?></div>
+        <div class="hd-description"><span class="hd-label"><?= cb_mobil_helpdesk_h($detailLabel) ?></span><br><?= cb_mobil_helpdesk_h($detailText) ?></div>
       </div>
 
       <div class="hd-note">Detail byl otevřen přes zabezpečený odkaz z mobilu.</div>
@@ -293,5 +337,5 @@ $authorName = is_array($row)
 </body>
 </html>
 <?php
-// mobil/mobil_helpdesk.php * Verze: V1 * Aktualizace: 22.06.2026
+// mobil/mobil_helpdesk.php * Verze: V1 * Aktualizace: 24.06.2026
 // Konec souboru

@@ -1,5 +1,5 @@
 <?php
-// ajax/helpdesk_zprava_pridat.php * Verze: V1 * Aktualizace: 20.06.2026
+// ajax/helpdesk_zprava_pridat.php * Verze: V1 * Aktualizace: 24.06.2026
 declare(strict_types=1);
 
 if (!defined('CB_HELPDESK_DISPATCH_INTERNAL')) {
@@ -54,10 +54,7 @@ try {
         exit;
     }
 
-    $typAutora = 'user';
-    if (cb_helpdesk_is_admin()) {
-        $typAutora = 'admin';
-    }
+    $typAutora = cb_helpdesk_is_admin() ? 'admin' : 'user';
 
     $conn->begin_transaction();
 
@@ -122,16 +119,23 @@ try {
 
     cb_helpdesk_snapshot_zapis($conn, $idHelpdesk, $idZprava, $idUser);
 
-    $textNotifikaceZprava = preg_replace('/\s+/u', ' ', $zprava);
-    $textNotifikaceZprava = trim((string)$textNotifikaceZprava);
-    if (mb_strlen($textNotifikaceZprava, 'UTF-8') > 180) {
-        $textNotifikaceZprava = mb_substr($textNotifikaceZprava, 0, 177, 'UTF-8') . '...';
-    }
-
     if (cb_helpdesk_is_admin()) {
-        cb_helpdesk_notifikace_ucastnikum($conn, $idHelpdesk, $idZprava, $idUser, 'nova_odpoved', 'Admin reaguje na tiket č.' . (string)$idHelpdesk . ': ' . $textNotifikaceZprava);
+        cb_helpdesk_notifikace_sledujicim_o_admin_odpovedi($conn, $idHelpdesk, $idZprava, $idUser, $zprava);
     } else {
-        cb_helpdesk_notifikace_adminum($conn, $idHelpdesk, $idZprava, $idUser, 'nova_odpoved', 'Uživatel reaguje na tiket č.' . (string)$idHelpdesk . ': ' . $textNotifikaceZprava);
+        $textNotifikaceZprava = preg_replace('/\s+/u', ' ', $zprava);
+        $textNotifikaceZprava = trim((string)$textNotifikaceZprava);
+        if (mb_strlen($textNotifikaceZprava, 'UTF-8') > 180) {
+            $textNotifikaceZprava = mb_substr($textNotifikaceZprava, 0, 177, 'UTF-8') . '...';
+        }
+
+        cb_helpdesk_notifikace_adminum(
+            $conn,
+            $idHelpdesk,
+            $idZprava,
+            $idUser,
+            'nova_odpoved',
+            'Uživatel reaguje na tiket č.' . (string)$idHelpdesk . ': ' . $textNotifikaceZprava
+        );
     }
 
     $conn->commit();
@@ -150,5 +154,5 @@ try {
     echo json_encode(['ok' => false, 'err' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
 }
 
-// ajax/helpdesk_zprava_pridat.php * Verze: V1 * Aktualizace: 20.06.2026
+// ajax/helpdesk_zprava_pridat.php * Verze: V1 * Aktualizace: 24.06.2026
 // Konec souboru

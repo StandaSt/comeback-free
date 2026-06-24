@@ -1,5 +1,5 @@
 <?php
-// lib/helpdesk_notifikace.php * Verze: V1 * Aktualizace: 20.06.2026
+// lib/helpdesk_notifikace.php * Verze: V1 * Aktualizace: 24.06.2026
 declare(strict_types=1);
 
 require_once __DIR__ . '/helpdesk_prava.php';
@@ -78,6 +78,17 @@ function cb_helpdesk_push_token_parse(string $token): ?array
     ];
 }
 
+function cb_helpdesk_push_body(string $typ): string
+{
+    return match ($typ) {
+        'admin_odpoved' => 'Admin odpověděl na tiket HelpDesku.',
+        'nova_odpoved' => 'Uživatel odpověděl na tiket HelpDesku.',
+        'zmena_stavu' => 'V HelpDesku došlo ke změně stavu.',
+        'nova_priloha' => 'V HelpDesku byla přidána příloha.',
+        default => 'Nový ticket v HelpDesku.',
+    };
+}
+
 function cb_helpdesk_push_odeslat(int $idUser, int $idNotifikace, string $typ, string $text): void
 {
     global $PROSTREDI;
@@ -122,7 +133,7 @@ function cb_helpdesk_push_odeslat(int $idUser, int $idNotifikace, string $typ, s
     $payload = json_encode([
         'type' => 'HELPDESK',
         'title' => 'Comeback',
-        'body' => 'Nový ticket v HelpDesku.',
+        'body' => cb_helpdesk_push_body($typ),
         'url' => cb_url_abs('mobil/mobil_helpdesk.php?t=' . rawurlencode($token)),
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     if (!is_string($payload) || $payload === '') {
@@ -282,5 +293,99 @@ function cb_helpdesk_notifikace_ucastnikum(mysqli $conn, int $idHelpdesk, ?int $
     }
 }
 
-// lib/helpdesk_notifikace.php * Verze: V1 * Aktualizace: 20.06.2026
+function cb_helpdesk_notifikace_full_name(?string $jmeno, ?string $prijmeni, int $idUser = 0): string
+{
+    $fullName = trim(trim((string)$jmeno) . ' ' . trim((string)$prijmeni));
+    if ($fullName !== '') {
+        return $fullName;
+    }
+
+    if ($idUser > 0) {
+        return 'Uživatel #' . (string)$idUser;
+    }
+
+    return 'Uživatel';
+}
+
+function cb_helpdesk_notifikace_sledujicim_o_admin_odpovedi(mysqli $conn, int $idHelpdesk, int $idZprava, int $idAutor, string $odpoved): void
+{
+    if ($idHelpdesk <= 0 || $idZprava <= 0) {
+        return;
+    }
+
+    $users = [];
+
+    $stmtOwner = $conn->prepare('SELECT id_user_zalozil FROM helpdesk WHERE id_helpdesk = ? LIMIT 1');
+    if ($stmtOwner instanceof mysqli_stmt) {
+        $stmtOwner->bind_param('i', $idHelpdesk);
+        $stmtOwner->execute();
+        $stmtOwner->bind_result($idZalozil);
+        if ($stmtOwner->fetch()) {
+            $idZalozil = (int)$idZalozil;
+            if ($idZalozil > 0) {
+                $users[$idZalozil] = $idZalozil;
+            }
+        }
+        $stmtOwner->close();
+    }
+
+    $stmtWatch = $conn->prepare('SELECT id_user FROM helpdesk_sledujici WHERE id_helpdesk = ?');
+    if ($stmtWatch instanceof mysqli_stmt) {
+        $stmtWatch->bind_param('i', $idHelpdesk);
+        $stmtWatch->execute();
+        $res = $stmtWatch->get_result();
+        if ($res instanceof mysqli_result) {
+            while ($row = $res->fetch_assoc()) {
+                $idUser = (int)($row['id_user'] ?? 0);
+                if ($idUser > 0) {
+                    $users[$idUser] = $idUser;
+                }
+            }
+            $res->free();
+        }
+        $stmtWatch->close();
+    }
+
+    if ($users === []) {
+        return;
+    }
+
+    $when = (new DateTimeImmutable('now', new DateTimeZone('Europe/Prague')))->format('j. n. Y \v H:i');
+    $odpoved = trim((string)preg_replace('/\s+/u', ' ', $odpoved));
+    if (mb_strlen($odpoved, 'UTF-8') > 110) {
+        $odpoved = mb_substr($odpoved, 0, 107, 'UTF-8') . '...';
+    }
+    $stmtUser = $conn->prepare('SELECT jmeno, prijmeni FROM `user` WHERE id_user = ? LIMIT 1');
+
+    foreach ($users as $idUser) {
+        $idUser = (int)$idUser;
+        if ($idUser <= 0 || $idUser === $idAutor) {
+            continue;
+        }
+
+        $fullName = cb_helpdesk_notifikace_full_name(null, null, $idUser);
+        if ($stmtUser instanceof mysqli_stmt) {
+            $stmtUser->bind_param('i', $idUser);
+            $stmtUser->execute();
+            $stmtUser->bind_result($jmeno, $prijmeni);
+            if ($stmtUser->fetch()) {
+                $fullName = cb_helpdesk_notifikace_full_name((string)$jmeno, (string)$prijmeni, $idUser);
+            }
+            $stmtUser->free_result();
+        }
+
+        $text = 'Informace pro: ' . $fullName
+            . ' | Admin odpověděl ' . $when
+            . ' | na Vámi vytvořený/sledovaný tiket HelpDesku'
+            . ' | Odpověď: ' . $odpoved;
+
+        cb_helpdesk_notifikace_pridat($conn, $idHelpdesk, $idZprava, $idUser, 'admin_odpoved', $text);
+    }
+
+    if ($stmtUser instanceof mysqli_stmt) {
+        $stmtUser->close();
+    }
+}
+
+// lib/helpdesk_notifikace.php * Verze: V1 * Aktualizace: 24.06.2026
 // Konec souboru

@@ -186,6 +186,8 @@ Vždy nejprve ověř realitu v kódu, ne domněnky.
 - Pro editaci souborů vždy preferuj `apply_patch`.
 - PowerShell používej pro změny v souborech jen výjimečně a pouze pro jednoduché, přehledné příkazy bez složitých regex řetězců a bez vnořeného escapování uvozovek.
 - Pro textové změny (hlavně česká diakritika) používej pouze `apply_patch`; nepoužívej postupy, které mohou změnit kódování textu.
+- Pro soubory `PHP`, `HTML` a `JS` s českou diakritikou je zakázáno dělat řádkové textové přepisy přes shell; používej pouze `apply_patch`.
 - Po každé textové úpravě zkontroluj celý dotčený soubor, že diakritika zůstala v pořádku (nejen upravený blok).
 - Po každé úpravě PHP souboru vždy ověř syntaxi (`php -l`) a potvrď, že soubor zůstal v UTF-8 bez BOM.
+- Po každé úpravě souboru s českou diakritikou povinně ověř tři věci: syntaxe (pokud dává smysl), `UTF-8 bez BOM` a skutečný text diakritiky přímo v souboru.
 - Pokud terminalovy vypis ukaze rozbitou cestinu, nejdriv over skutecny obsah primo v souboru pres UTF-8 cteni nebo kontrolu bajtu. Dokud to neni potvrzene v souboru, text neopravuj.
