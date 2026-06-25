@@ -78,12 +78,12 @@ function cb_helpdesk_push_token_parse(string $token): ?array
     ];
 }
 
-function cb_helpdesk_push_body(string $typ): string
+function cb_helpdesk_push_body(string $typ, string $text = ''): string
 {
+    $text = trim($text);
+
     return match ($typ) {
-        'admin_odpoved' => 'Admin odpověděl na tiket HelpDesku.',
-        'nova_odpoved' => 'Uživatel odpověděl na tiket HelpDesku.',
-        'zmena_stavu' => 'V HelpDesku došlo ke změně stavu.',
+        'admin_odpoved', 'nova_odpoved', 'zmena_stavu' => $text !== '' ? $text : 'HelpDesk',
         'nova_priloha' => 'V HelpDesku byla přidána příloha.',
         default => 'Nový ticket v HelpDesku.',
     };
@@ -133,7 +133,7 @@ function cb_helpdesk_push_odeslat(int $idUser, int $idNotifikace, string $typ, s
     $payload = json_encode([
         'type' => 'HELPDESK',
         'title' => 'Comeback',
-        'body' => cb_helpdesk_push_body($typ),
+        'body' => cb_helpdesk_push_body($typ, $text),
         'url' => cb_url_abs('mobil/mobil_helpdesk.php?t=' . rawurlencode($token)),
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     if (!is_string($payload) || $payload === '') {
@@ -350,11 +350,6 @@ function cb_helpdesk_notifikace_sledujicim_o_admin_odpovedi(mysqli $conn, int $i
         return;
     }
 
-    $when = (new DateTimeImmutable('now', new DateTimeZone('Europe/Prague')))->format('j. n. Y \v H:i');
-    $odpoved = trim((string)preg_replace('/\s+/u', ' ', $odpoved));
-    if (mb_strlen($odpoved, 'UTF-8') > 110) {
-        $odpoved = mb_substr($odpoved, 0, 107, 'UTF-8') . '...';
-    }
     $stmtUser = $conn->prepare('SELECT jmeno, prijmeni FROM `user` WHERE id_user = ? LIMIT 1');
 
     foreach ($users as $idUser) {
@@ -374,10 +369,7 @@ function cb_helpdesk_notifikace_sledujicim_o_admin_odpovedi(mysqli $conn, int $i
             $stmtUser->free_result();
         }
 
-        $text = 'Informace pro: ' . $fullName
-            . ' | Admin odpověděl ' . $when
-            . ' | na Vámi vytvořený/sledovaný tiket HelpDesku'
-            . ' | Odpověď: ' . $odpoved;
+        $text = 'Admin reagoval na tiket č. ' . (string)$idHelpdesk;
 
         cb_helpdesk_notifikace_pridat($conn, $idHelpdesk, $idZprava, $idUser, 'admin_odpoved', $text);
     }

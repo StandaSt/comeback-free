@@ -70,7 +70,25 @@ try {
     $stmt->execute();
     $stmt->close();
 
-    cb_helpdesk_notifikace_ucastnikum($conn, $idHelpdesk, null, $idUser, 'zmena_stavu', 'HelpDesk #' . (string)$idHelpdesk . ' změnil stav na ' . $stav);
+    if ($stav === 'zamítnuto') {
+        cb_helpdesk_notifikace_ucastnikum(
+            $conn,
+            $idHelpdesk,
+            null,
+            $idUser,
+            'zmena_stavu',
+            'Tiket č. ' . (string)$idHelpdesk . ' byl zamítnut a nebude se řešit'
+        );
+    } elseif ($stav === 'vyřešeno') {
+        cb_helpdesk_notifikace_ucastnikum(
+            $conn,
+            $idHelpdesk,
+            null,
+            $idUser,
+            'zmena_stavu',
+            'Tiket č. ' . (string)$idHelpdesk . ' byl uzavřen a označen jako vyřešený'
+        );
+    }
 
     echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {

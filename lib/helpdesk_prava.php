@@ -77,7 +77,7 @@ function cb_helpdesk_can_view(mysqli $conn, int $idHelpdesk, int $idUser): bool
                    WHERE s.id_helpdesk = h.id_helpdesk
                      AND s.id_user = ?
                ) AS sleduje
-        FROM helpdesk
+        FROM helpdesk h
         WHERE id_helpdesk = ?
         LIMIT 1
     ');
@@ -161,6 +161,55 @@ function cb_helpdesk_can_write(mysqli $conn, int $idHelpdesk, int $idUser): bool
     }
 
     return true;
+}
+
+function cb_helpdesk_visible_scope(int $idUser): array
+{
+    if (cb_helpdesk_is_admin()) {
+        return [
+            'sql' => '1=1',
+            'types' => '',
+            'params' => [],
+        ];
+    }
+
+    return [
+        'sql' => '
+            (
+                h.id_user_zalozil = ?
+                OR h.verejny IN (1, 2)
+                OR EXISTS (
+                    SELECT 1
+                    FROM helpdesk_sledujici sx
+                    WHERE sx.id_helpdesk = h.id_helpdesk
+                      AND sx.id_user = ?
+                )
+            )
+        ',
+        'types' => 'ii',
+        'params' => [$idUser, $idUser],
+    ];
+}
+
+function cb_helpdesk_mark_read(mysqli $conn, int $idHelpdesk, int $idUser): void
+{
+    if ($idHelpdesk <= 0 || $idUser <= 0) {
+        return;
+    }
+
+    $stmt = $conn->prepare('
+        INSERT INTO helpdesk_read
+        (id_helpdesk, id_user, precteno)
+        VALUES (?, ?, NOW())
+        ON DUPLICATE KEY UPDATE precteno = VALUES(precteno)
+    ');
+    if (!($stmt instanceof mysqli_stmt)) {
+        return;
+    }
+
+    $stmt->bind_param('ii', $idHelpdesk, $idUser);
+    $stmt->execute();
+    $stmt->close();
 }
 
 function cb_helpdesk_admin_ids(mysqli $conn): array

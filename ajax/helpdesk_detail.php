@@ -57,6 +57,8 @@ try {
         throw new RuntimeException('Požadavek nenalezen.');
     }
 
+    cb_helpdesk_mark_read($conn, $idHelpdesk, $idUser);
+
     $zpravy = [];
     $stmtZ = $conn->prepare('
         SELECT z.id_helpdesk_zprava, z.id_helpdesk, z.id_user, z.typ_autora, z.zprava, z.systemova, z.vytvoreno,
@@ -107,6 +109,7 @@ try {
         'admin' => cb_helpdesk_is_admin() ? 1 : 0,
         'current_user_id' => $idUser,
         'can_write' => cb_helpdesk_can_write($conn, $idHelpdesk, $idUser) ? 1 : 0,
+        'has_new_reply' => 0,
     ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     http_response_code(400);

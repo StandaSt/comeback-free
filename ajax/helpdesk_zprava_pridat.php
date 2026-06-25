@@ -90,14 +90,14 @@ try {
     }
 
     if ($novyStav !== '' && $novyStav !== $stavPred) {
-        $stmtU = $conn->prepare('UPDATE helpdesk SET stav = ?, upraveno = NOW() WHERE id_helpdesk = ? LIMIT 1');
+        $stmtU = $conn->prepare('UPDATE helpdesk SET stav = ?, upraveno = NOW(), posledni_zprava = NOW() WHERE id_helpdesk = ? LIMIT 1');
         if ($stmtU instanceof mysqli_stmt) {
             $stmtU->bind_param('si', $novyStav, $idHelpdesk);
             $stmtU->execute();
             $stmtU->close();
         }
     } else {
-        $stmtU = $conn->prepare('UPDATE helpdesk SET upraveno = NOW() WHERE id_helpdesk = ? LIMIT 1');
+        $stmtU = $conn->prepare('UPDATE helpdesk SET upraveno = NOW(), posledni_zprava = NOW() WHERE id_helpdesk = ? LIMIT 1');
         if ($stmtU instanceof mysqli_stmt) {
             $stmtU->bind_param('i', $idHelpdesk);
             $stmtU->execute();
@@ -117,16 +117,18 @@ try {
         $stmtS->close();
     }
 
+    cb_helpdesk_mark_read($conn, $idHelpdesk, $idUser);
+
     cb_helpdesk_snapshot_zapis($conn, $idHelpdesk, $idZprava, $idUser);
 
     if (cb_helpdesk_is_admin()) {
         cb_helpdesk_notifikace_sledujicim_o_admin_odpovedi($conn, $idHelpdesk, $idZprava, $idUser, $zprava);
     } else {
-        $textNotifikaceZprava = preg_replace('/\s+/u', ' ', $zprava);
-        $textNotifikaceZprava = trim((string)$textNotifikaceZprava);
-        if (mb_strlen($textNotifikaceZprava, 'UTF-8') > 180) {
-            $textNotifikaceZprava = mb_substr($textNotifikaceZprava, 0, 177, 'UTF-8') . '...';
-        }
+        $jmenoAutora = cb_helpdesk_notifikace_full_name(
+            (string)($_SESSION['cb_user']['name'] ?? ''),
+            (string)($_SESSION['cb_user']['surname'] ?? ''),
+            $idUser
+        );
 
         cb_helpdesk_notifikace_adminum(
             $conn,
@@ -134,7 +136,7 @@ try {
             $idZprava,
             $idUser,
             'nova_odpoved',
-            'Uživatel reaguje na tiket č.' . (string)$idHelpdesk . ': ' . $textNotifikaceZprava
+            $jmenoAutora . ' reagoval na tiket č. ' . (string)$idHelpdesk
         );
     }
 
@@ -145,6 +147,7 @@ try {
         'id_helpdesk' => $idHelpdesk,
         'id_helpdesk_zprava' => $idZprava,
         'stav' => $novyStav,
+        'has_new_reply' => 0,
     ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     if (isset($conn) && $conn instanceof mysqli) {

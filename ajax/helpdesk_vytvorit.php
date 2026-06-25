@@ -64,8 +64,8 @@ try {
 
     $stmt = $conn->prepare('
         INSERT INTO helpdesk
-        (id_user_zalozil, typ, stav, verejny, predmet, popis, vytvoreno, upraveno)
-        VALUES (?, ?, \'nový\', ?, ?, ?, NOW(), NOW())
+        (id_user_zalozil, typ, stav, verejny, predmet, popis, vytvoreno, upraveno, posledni_zprava)
+        VALUES (?, ?, \'nový\', ?, ?, ?, NOW(), NOW(), NOW())
     ');
     if (!($stmt instanceof mysqli_stmt)) {
         throw new RuntimeException('Nepodařilo se připravit založení požadavku.');
@@ -110,6 +110,8 @@ try {
         $stmtS->execute();
         $stmtS->close();
     }
+
+    cb_helpdesk_mark_read($conn, $idHelpdesk, $idUser);
 
     cb_helpdesk_snapshot_zapis($conn, $idHelpdesk, $idZprava, $idUser);
     cb_helpdesk_notifikace_adminum($conn, $idHelpdesk, $idZprava, $idUser, 'novy_pozadavek', 'Nový HelpDesk požadavek #' . (string)$idHelpdesk . ': ' . $predmet);

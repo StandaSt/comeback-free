@@ -65,6 +65,7 @@ if ($cbIsHelpdesk) {
         'stav_zmenit' => __DIR__ . '/../ajax/helpdesk_stav_zmenit.php',
         'notifikace_nacist' => __DIR__ . '/../ajax/helpdesk_notifikace_nacist.php',
         'notifikace_precteno' => __DIR__ . '/../ajax/helpdesk_notifikace_precteno.php',
+        'stav_tiketu' => __DIR__ . '/../ajax/helpdesk_stav_tiketu.php',
     ];
 
     if (!isset($cbHelpdeskMap[$cbHelpdeskAction])) {

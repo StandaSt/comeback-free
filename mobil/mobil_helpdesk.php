@@ -44,12 +44,16 @@ function cb_mobil_helpdesk_fetch(string $token): ?array
             u.prijmeni,
             ur.jmeno AS prijemce_jmeno,
             ur.prijmeni AS prijemce_prijmeni,
-            hz.zprava AS notifikace_zprava
+            hz.zprava AS notifikace_zprava,
+            hz.typ_autora AS zprava_typ_autora,
+            uz.jmeno AS zprava_jmeno,
+            uz.prijmeni AS zprava_prijmeni
         FROM helpdesk_notifikace n
         INNER JOIN helpdesk h ON h.id_helpdesk = n.id_helpdesk
         LEFT JOIN `user` u ON u.id_user = h.id_user_zalozil
         LEFT JOIN `user` ur ON ur.id_user = n.id_user
         LEFT JOIN helpdesk_zprava hz ON hz.id_helpdesk_zprava = n.id_helpdesk_zprava
+        LEFT JOIN `user` uz ON uz.id_user = hz.id_user
         WHERE n.id_helpdesk_notifikace = ? AND n.id_user = ?
         LIMIT 1
     ');
@@ -156,16 +160,24 @@ if (is_array($row)) {
 
 $ticketId = is_array($row) ? (int)($row['id_helpdesk'] ?? 0) : 0;
 $title = 'HelpDesk';
-$subtitle = $ticketId > 0 ? ('Tiket č. ' . (string)$ticketId) : 'Tiket';
+$subtitle = 'IS Comeback';
 $message = is_array($row) ? trim((string)($row['text'] ?? '')) : 'Notifikace nebyla nalezena nebo už není dostupná.';
 $ticketSubject = is_array($row) ? trim((string)($row['predmet'] ?? '')) : '';
 $ticketDescription = is_array($row) ? trim((string)($row['popis'] ?? '')) : '';
 $ticketType = is_array($row) ? cb_mobil_helpdesk_type_label((string)($row['typ_ticket'] ?? '')) : '';
 $ticketVisibility = is_array($row) ? cb_mobil_helpdesk_visibility_label($row['verejny'] ?? null) : '---';
 $createdAt = is_array($row) ? cb_mobil_helpdesk_format_datetime((string)($row['vytvoreno'] ?? '')) : '---';
-$authorName = is_array($row)
+$ticketAuthorName = is_array($row)
     ? cb_mobil_helpdesk_full_name((string)($row['jmeno'] ?? ''), (string)($row['prijmeni'] ?? ''))
     : '---';
+$messageAuthorName = is_array($row)
+    ? cb_mobil_helpdesk_full_name((string)($row['zprava_jmeno'] ?? ''), (string)($row['zprava_prijmeni'] ?? ''))
+    : '---';
+$authorName = $messageAuthorName !== '---' ? $messageAuthorName : $ticketAuthorName;
+$isAdminAuthor = is_array($row) && trim((string)($row['zprava_typ_autora'] ?? '')) === 'admin';
+if ($isAdminAuthor) {
+    $authorName = 'Admin IS Comeback';
+}
 $recipientName = is_array($row)
     ? cb_mobil_helpdesk_full_name((string)($row['prijemce_jmeno'] ?? ''), (string)($row['prijemce_prijmeni'] ?? ''))
     : '---';
@@ -218,6 +230,12 @@ if (is_array($row) && trim((string)($row['typ'] ?? '')) === 'admin_odpoved') {
       font-size:12px;
       color:#64748b;
     }
+    .hd-brand{
+      font-size:18px;
+      font-weight:700;
+      line-height:1.3;
+      color:#0f3f91;
+    }
     .hd-block{
       margin-top:12px;
       padding:14px;
@@ -237,6 +255,10 @@ if (is_array($row) && trim((string)($row['typ'] ?? '')) === 'admin_odpoved') {
     .hd-label{
       font-weight:700;
       color:#0f3f91;
+    }
+    .hd-author-admin{
+      color:#b91c1c;
+      font-weight:700;
     }
     .hd-subject{
       margin-top:6px;
@@ -274,20 +296,13 @@ if (is_array($row) && trim((string)($row['typ'] ?? '')) === 'admin_odpoved') {
       </div>
       <div>
         <p class="modal-title"><?= cb_mobil_helpdesk_h($title) ?></p>
-        <p class="modal-sub"><?= cb_mobil_helpdesk_h($subtitle) ?></p>
+        <p class="modal-sub hd-brand"><?= cb_mobil_helpdesk_h($subtitle) ?></p>
       </div>
     </div>
 
     <?php if (is_array($row)): ?>
       <div class="hd-ticket">
         <div class="hd-ticket-id">Tiket č. <?= cb_mobil_helpdesk_h((string)$ticketId) ?></div>
-      </div>
-
-      <div class="hd-block">
-        <div class="hd-row"><span class="hd-label">Typ:</span> <?= cb_mobil_helpdesk_h($ticketType) ?></div>
-        <div class="hd-row"><span class="hd-label">Určení:</span> <?= cb_mobil_helpdesk_h($ticketVisibility) ?></div>
-        <div class="hd-row"><span class="hd-label">Vytvořeno:</span> <?= cb_mobil_helpdesk_h($createdAt) ?></div>
-        <div class="hd-row"><span class="hd-label">Zapsal:</span> <?= cb_mobil_helpdesk_h($authorName) ?></div>
       </div>
 
       <?php if ($infoLines !== []): ?>
@@ -299,8 +314,14 @@ if (is_array($row) && trim((string)($row['typ'] ?? '')) === 'admin_odpoved') {
       <?php endif; ?>
 
       <div class="hd-block">
-        <div class="hd-row"><span class="hd-label">Předmět:</span></div>
-        <div class="hd-subject"><?= cb_mobil_helpdesk_h($ticketSubject !== '' ? $ticketSubject : 'Bez předmětu') ?></div>
+        <div class="hd-row"><span class="hd-label">Od:</span> <?php if ($isAdminAuthor): ?><span class="hd-author-admin"><?= cb_mobil_helpdesk_h($authorName) ?></span><?php else: ?><?= cb_mobil_helpdesk_h($authorName) ?><?php endif; ?></div>
+        <div class="hd-row"><span class="hd-label">Typ:</span> <?= cb_mobil_helpdesk_h($ticketType) ?></div>
+        <div class="hd-row"><span class="hd-label">Určení:</span> <?= cb_mobil_helpdesk_h($ticketVisibility) ?></div>
+        <div class="hd-row"><span class="hd-label">Vytvořeno:</span> <?= cb_mobil_helpdesk_h($createdAt) ?></div>
+      </div>
+
+      <div class="hd-block">
+        <div class="hd-row"><span class="hd-label">Předmět:</span> <?= cb_mobil_helpdesk_h($ticketSubject !== '' ? $ticketSubject : 'Bez předmětu') ?></div>
         <div class="hd-description"><span class="hd-label"><?= cb_mobil_helpdesk_h($detailLabel) ?></span><br><?= cb_mobil_helpdesk_h($detailText) ?></div>
       </div>
 

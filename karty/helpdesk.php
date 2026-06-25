@@ -28,17 +28,17 @@ if (!function_exists('cb_helpdesk_card_author_color')) {
     function cb_helpdesk_card_author_color(array $row): string
     {
         $idRole = (int)($row['id_role'] ?? 0);
-        if ($idRole === 3) {
+        if ($idRole > 0 && $idRole <= 1) {
             return '#c77b7b';
         }
-        if ($idRole === 5 || $idRole === 7) {
+        if ($idRole === 2 || $idRole === 3) {
             return '#6f8fcf';
         }
-        if ($idRole === 9) {
-            return '#334155';
+        if ($idRole >= 4 && $idRole <= 7) {
+            return '#5f8f63';
         }
 
-        return '#64748b';
+        return '#404040';
     }
 }
 
@@ -98,6 +98,7 @@ $stats = [
     'rejected' => 0,
 ];
 $items = [];
+$scope = cb_helpdesk_visible_scope($idUser);
 
 if ($isAdmin) {
     $resStats = $conn->query("
@@ -126,10 +127,16 @@ if ($isAdmin) {
     $stmtItems = $conn->prepare('
         SELECT h.id_helpdesk, h.id_user_zalozil, h.typ, h.stav, h.verejny, h.predmet, h.vytvoreno, h.upraveno,
                u.jmeno, u.prijmeni, u.id_role,
+               CASE
+                   WHEN hr.id_helpdesk_read IS NULL THEN 1
+                   WHEN h.posledni_zprava IS NOT NULL AND h.posledni_zprava > hr.precteno THEN 1
+                   ELSE 0
+               END AS has_new_reply,
                (SELECT COUNT(*) FROM helpdesk_zprava z WHERE z.id_helpdesk = h.id_helpdesk) AS pocet_zprav
         FROM helpdesk h
         LEFT JOIN `user` u ON u.id_user = h.id_user_zalozil
-        ORDER BY FIELD(h.stav, \'nový\', \'řeší se\', \'vyřešeno\', \'zamítnuto\'), h.upraveno DESC, h.vytvoreno DESC
+        LEFT JOIN helpdesk_read hr ON hr.id_helpdesk = h.id_helpdesk AND hr.id_user = ?
+        ORDER BY h.vytvoreno DESC, h.id_helpdesk DESC
         LIMIT 120
     ');
 } else {
@@ -166,22 +173,36 @@ if ($isAdmin) {
     $stmtItems = $conn->prepare('
         SELECT h.id_helpdesk, h.id_user_zalozil, h.typ, h.stav, h.verejny, h.predmet, h.vytvoreno, h.upraveno,
                u.jmeno, u.prijmeni, u.id_role,
+               CASE
+                   WHEN hr.id_helpdesk_read IS NULL THEN 1
+                   WHEN h.posledni_zprava IS NOT NULL AND h.posledni_zprava > hr.precteno THEN 1
+                   ELSE 0
+               END AS has_new_reply,
                (SELECT COUNT(*) FROM helpdesk_zprava z WHERE z.id_helpdesk = h.id_helpdesk) AS pocet_zprav
         FROM helpdesk h
         LEFT JOIN `user` u ON u.id_user = h.id_user_zalozil
-        WHERE h.id_user_zalozil = ?
-           OR h.verejny IN (1, 2)
-           OR EXISTS (SELECT 1 FROM helpdesk_sledujici sx WHERE sx.id_helpdesk = h.id_helpdesk AND sx.id_user = ?)
-        ORDER BY h.upraveno DESC, h.vytvoreno DESC
+        LEFT JOIN helpdesk_read hr ON hr.id_helpdesk = h.id_helpdesk AND hr.id_user = ?
+        WHERE ' . $scope['sql'] . '
+        ORDER BY h.vytvoreno DESC, h.id_helpdesk DESC
         LIMIT 120
     ');
 }
 
 if ($stmtItems instanceof mysqli_stmt) {
     if ($isAdmin) {
+        $stmtItems->bind_param('i', $idUser);
         $stmtItems->execute();
     } else {
-        $stmtItems->bind_param('ii', $idUser, $idUser);
+        $types = 'i' . (string)$scope['types'];
+        $params = [$idUser];
+        foreach ((array)($scope['params'] ?? []) as $value) {
+            $params[] = $value;
+        }
+        $bind = [$types];
+        foreach ($params as $index => $value) {
+            $bind[] = &$params[$index];
+        }
+        call_user_func_array([$stmtItems, 'bind_param'], $bind);
         $stmtItems->execute();
     }
     $resItems = $stmtItems->get_result();
@@ -232,6 +253,8 @@ ob_start();
   var arrowIconUrl = <?= json_encode($arrowIconUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
   var isAdmin = <?= $isAdmin ? 'true' : 'false' ?>;
   var activeDetailId = '';
+  var pollTimerId = 0;
+  var scrollDetailToBottomOnRender = false;
 
   var btnBaseClass = 'card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 displ_inline_flex';
   var btnPrimaryClass = btnBaseClass + ' card_btn_primary';
@@ -247,6 +270,70 @@ ob_start();
     return text(v).replace(/[&<>'"]/g, function (ch) {
       return {'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;'}[ch];
     });
+  }
+
+  function hasNewReplyValue(value) {
+    return Number(value || 0) === 1 ? '1' : '0';
+  }
+
+  function buildBellHtml(hasNewReply) {
+    if (hasNewReplyValue(hasNewReply) === '1') {
+      return '<span data-hd-bell="1" title="Nová reakce" aria-label="Nová reakce"'
+        + ' style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;'
+        + 'color:#dc2626;font-size:18px;font-weight:700;line-height:1;">!</span>';
+    }
+
+    return '<span data-hd-bell="0" title="Bez nové reakce" aria-label="Bez nové reakce"'
+      + ' style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;'
+      + 'color:rgba(0,0,0,.12);font-size:18px;font-weight:700;line-height:1;">!</span>';
+  }
+
+  function formatMessageDateTime(raw) {
+    var value = text(raw).trim();
+    if (value === '') { return ''; }
+
+    var match = value.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+    if (!match) { return value; }
+
+    var year = Number(match[1]);
+    var month = Number(match[2]);
+    var day = Number(match[3]);
+    var hour = match[4];
+    var minute = match[5];
+    if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+      return value;
+    }
+
+    var now = new Date();
+    var todayKey = (new Date(now.getFullYear(), now.getMonth(), now.getDate())).getTime();
+    var messageKey = (new Date(year, month - 1, day)).getTime();
+    var yesterdayKey = todayKey - 86400000;
+    var timeText = hour + ':' + minute;
+
+    if (messageKey === todayKey) {
+      return 'Dnes ' + timeText;
+    }
+    if (messageKey === yesterdayKey) {
+      return 'Včera ' + timeText;
+    }
+
+    return String(day) + '. ' + String(month) + '. ' + String(year) + ' ' + timeText;
+  }
+
+  function messageCountValue(value) {
+    var count = Number(value || 0);
+    if (!Number.isFinite(count) || count < 1) {
+      count = 1;
+    }
+    return String(Math.trunc(count));
+  }
+
+  function authorColorByRole(roleId) {
+    var role = Number(roleId || 0);
+    if (role > 0 && role <= 1) { return '#c77b7b'; }
+    if (role === 2 || role === 3) { return '#6f8fcf'; }
+    if (role >= 4 && role <= 7) { return '#5f8f63'; }
+    return '#404040';
   }
 
   function filterStatusValue(state) {
@@ -304,10 +391,22 @@ ob_start();
     return expanded.querySelector('[data-cb-hd-list]');
   }
 
+  function isCardExpandedVisible() {
+    var expanded = getExpandedBox();
+    return expanded instanceof HTMLElement && !expanded.classList.contains('is-hidden');
+  }
+
   function getDetailPanelBox() {
     var expanded = getExpandedBox();
     if (!(expanded instanceof HTMLElement)) { return null; }
     var box = expanded.querySelector('[data-cb-hd-detail-panel]');
+    return box instanceof HTMLElement ? box : null;
+  }
+
+  function getDetailScrollBox() {
+    var panel = getDetailPanelBox();
+    if (!(panel instanceof HTMLElement)) { return null; }
+    var box = panel.parentElement;
     return box instanceof HTMLElement ? box : null;
   }
 
@@ -322,6 +421,18 @@ ob_start();
     var list = getListBox();
     if (!(list instanceof HTMLElement)) { return null; }
     return list.querySelector('[data-hd-item="' + String(id).replace(/"/g, '') + '"]');
+  }
+
+  function updateRowHasNewReply(id, hasNewReply) {
+    var row = getItemRow(id);
+    if (!(row instanceof HTMLElement)) { return; }
+
+    row.setAttribute('data-hd-has-new-reply', hasNewReplyValue(hasNewReply));
+
+    var bellWrap = row.querySelector('[data-hd-bell-wrap="1"]');
+    if (bellWrap instanceof HTMLElement) {
+      bellWrap.innerHTML = buildBellHtml(hasNewReply);
+    }
   }
 
   function normalizeFilterValue(value) {
@@ -459,6 +570,12 @@ ob_start();
     loadDetail(targetId);
   }
 
+  function scrollDetailToBottom() {
+    var box = getDetailScrollBox();
+    if (!(box instanceof HTMLElement)) { return; }
+    box.scrollTop = box.scrollHeight;
+  }
+
   function postJson(url, data) {
     return fetch(url, {
       method: 'POST',
@@ -480,8 +597,8 @@ ob_start();
       return '';
     }
 
-    var html = '<div style="display:grid;gap:6px;">';
-    html += '<div style="font-size:12px;font-weight:700;color:#334155;">Přílohy</div>';
+    var html = '<div style="display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;font-size:12px;line-height:1.5;color:#334155;">';
+    html += '<span style="font-weight:700;color:#334155;">Přílohy:</span>';
     for (var i = 0; i < prilohy.length; i++) {
       var p = prilohy[i] || {};
       var name = text(p.puvodni_nazev || p.ulozeny_nazev || ('Příloha ' + String(i + 1)));
@@ -499,20 +616,38 @@ ob_start();
     }
 
     var html = '<div style="display:grid;gap:8px;">';
+    var detailBox = getDetailPanelBox();
+    var ownerId = 0;
+    var currentUserId = 0;
+    if (detailBox instanceof HTMLElement) {
+      ownerId = Number(detailBox.getAttribute('data-cb-hd-owner-id') || '0');
+      currentUserId = Number(detailBox.getAttribute('data-cb-hd-current-user-id') || '0');
+    }
     for (var i = 0; i < zpravy.length; i++) {
       var z = zpravy[i] || {};
       var first = text(z.jmeno || '');
       var last = text(z.prijmeni || '');
       var author = (first + ' ' + last).trim();
+      var isAdminMessage = text(z.typ_autora || '') === 'admin';
+      if (isAdminMessage) {
+        author = 'Admin';
+      }
       if (author === '') {
         author = 'ID ' + text(z.id_user || '0');
       }
-      var isAdminMessage = text(z.typ_autora || '') === 'admin';
-      var bg = isAdminMessage ? '#fff1f1' : '#eef6ff';
+      var messageUserId = Number(z.id_user || 0);
+      var bg = '#f3f4f6';
+      if (isAdminMessage) {
+        bg = '#fff1f1';
+      } else if (!isAdmin && messageUserId === currentUserId) {
+        bg = '#eef6ff';
+      } else if (isAdmin && messageUserId === ownerId) {
+        bg = '#eef6ff';
+      }
       html += '<div class="ram_normal zaobleni_10" style="padding:6px 10px;background:' + bg + ';">';
       html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px;">';
       html += '<strong style="font-size:13px;color:#0f172a;">' + esc(author) + '</strong>';
-      html += '<span style="font-size:11px;color:#64748b;">' + esc(text(z.vytvoreno || '')) + '</span>';
+      html += '<span style="font-size:11px;color:#64748b;">' + esc(formatMessageDateTime(z.vytvoreno || '')) + '</span>';
       html += '</div>';
       html += '<div style="white-space:pre-wrap;font-size:13px;line-height:1.45;color:#1f2937;">' + esc(text(z.zprava || '')) + '</div>';
       html += '</div>';
@@ -565,6 +700,8 @@ ob_start();
     if (!(detailBox instanceof HTMLElement)) { return; }
 
     var id = text(ticket.id_helpdesk || '');
+    detailBox.setAttribute('data-cb-hd-owner-id', text(ticket.id_user_zalozil || '0'));
+    detailBox.setAttribute('data-cb-hd-current-user-id', text(data && data.current_user_id ? data.current_user_id : 0));
     var html = '<div style="display:grid;gap:10px;">';
     html += '<div style="font-size:18px;font-weight:700;line-height:1.2;color:#0f172a;padding:2px 0 0 0;">#' + esc(id) + ' ' + esc(text(ticket.predmet || '')) + '</div>';
     html += renderAttachments(data && data.prilohy ? data.prilohy : []);
@@ -574,7 +711,14 @@ ob_start();
 
     detailBox.innerHTML = html;
     activeDetailId = text(ticket.id_helpdesk || row.getAttribute('data-hd-item') || '');
+    updateRowHasNewReply(activeDetailId, data && data.has_new_reply ? data.has_new_reply : 0);
     refreshActiveRowUi();
+    if (scrollDetailToBottomOnRender) {
+      scrollDetailToBottomOnRender = false;
+      window.requestAnimationFrame(function () {
+        scrollDetailToBottom();
+      });
+    }
   }
 
   function loadDetail(id) {
@@ -590,6 +734,7 @@ ob_start();
 
     closeActiveDetail();
     activeDetailId = String(id);
+    scrollDetailToBottomOnRender = true;
     refreshActiveRowUi();
     detailBox.innerHTML = '<div class="ram_normal zaobleni_10" style="padding:14px 16px;background:#fff;font-size:13px;color:#64748b;">Načítám detail...</div>';
 
@@ -659,6 +804,42 @@ ob_start();
     applyFilter();
   }
 
+  function pollTicketStates() {
+    if (!isCardExpandedVisible()) { return; }
+
+    fetch(apiUrl + '?helpdesk_action=stav_tiketu', {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: {
+        'X-Comeback-Helpdesk': '1'
+      }
+    })
+      .then(function (r) { return r.json().catch(function () { return {}; }); })
+      .then(function (data) {
+        if (!data || data.ok !== true || !Array.isArray(data.tickets)) {
+          return;
+        }
+
+        var map = {};
+        data.tickets.forEach(function (item) {
+          if (!item) { return; }
+          map[String(item.id_helpdesk || '')] = Number(item.has_new_reply || 0);
+        });
+
+        var list = getListBox();
+        if (!(list instanceof HTMLElement)) { return; }
+
+        list.querySelectorAll('[data-hd-item]').forEach(function (row) {
+          if (!(row instanceof HTMLElement)) { return; }
+          var rowId = String(row.getAttribute('data-hd-item') || '');
+          if (!Object.prototype.hasOwnProperty.call(map, rowId)) { return; }
+          updateRowHasNewReply(rowId, map[rowId]);
+        });
+      })
+      .catch(function () {
+      });
+  }
+
   function buildListRowHtml(detail) {
     var id = Number(detail && detail.id_helpdesk ? detail.id_helpdesk : 0);
     if (!Number.isFinite(id) || id <= 0) { return ''; }
@@ -667,18 +848,34 @@ ob_start();
     var stavFiltr = esc(filterStatusValue(detail.stav || 'nový'));
     var typ = esc(text(detail.typ_label || detail.typ || ''));
     var visibility = esc(text(detail.visibility_label || ''));
+    var hasNewReply = hasNewReplyValue(detail && detail.has_new_reply ? detail.has_new_reply : 0);
+    var authorName = esc(text(detail.author_name || 'ID ' + String(detail.author_id || 0)));
+    var authorColor = esc(authorColorByRole(detail && detail.author_role ? detail.author_role : 0));
+    var messageCount = messageCountValue(detail && detail.pocet_zprav ? detail.pocet_zprav : 0);
 
     var html = '';
-    html += '<article class="ram_normal zaobleni_10" data-hd-item="' + String(id) + '" data-hd-stav="' + stav + '" data-hd-filtr="' + stavFiltr + '" style="padding:10px;background:#fff;cursor:pointer;">';
+    html += '<article class="ram_normal zaobleni_10" data-hd-item="' + String(id) + '" data-hd-stav="' + stav + '" data-hd-filtr="' + stavFiltr + '" data-hd-has-new-reply="' + hasNewReply + '" style="padding:10px;background:#fff;cursor:pointer;">';
     html += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">';
     html += '<div style="display:grid;gap:4px;width:100%;">';
-    html += '<strong style="font-size:14px;color:#0f172a;">#' + String(id) + ' ' + predmet + '</strong>';
-    html += '<div style="font-size:12px;line-height:1.4;color:#64748b;">';
-    html += 'Stav: <span data-hd-state-text="1">' + stav + '</span>';
+    html += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">';
+    html += '<strong style="flex:1 1 auto;min-width:0;font-size:14px;color:#0f172a;">Tiket č.: ' + String(id) + '</strong>';
+    html += '<div style="flex:0 0 auto;display:flex;align-items:flex-start;justify-content:flex-end;gap:8px;min-width:0;">';
+    html += '<strong style="flex:0 1 auto;font-size:12px;color:' + authorColor + ';white-space:nowrap;text-align:right;">' + authorName + '</strong>';
+    html += '<span style="flex:0 0 18px;width:18px;min-width:18px;display:inline-flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;text-align:center;">';
+    html += '<span data-hd-bell-wrap="1" style="width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;">' + buildBellHtml(hasNewReply) + '</span>';
+    html += '<span style="width:18px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;text-align:center;">' + messageCount + '</span>';
+    html += '</span>';
+    html += '</div>';
+    html += '</div>';
+    html += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;font-size:12px;line-height:1.4;color:#64748b;">';
+    html += '<div style="flex:1 1 auto;min-width:0;">';
+    html += predmet;
+    html += ' | Stav: <span data-hd-state-text="1">' + stav + '</span>';
     html += ' | Typ: ' + typ;
     if (visibility !== '') {
       html += ' | Určení: ' + visibility;
     }
+    html += '</div>';
     html += '</div>';
     html += '</div>';
     html += '</div>';
@@ -692,6 +889,7 @@ ob_start();
 
     if (target.closest('[data-cb-hd-card-open="1"]')) {
       openCardMax();
+      waitForExpanded(pollTicketStates, 0);
       return;
     }
 
@@ -701,6 +899,7 @@ ob_start();
       openCardMax();
       waitForExpanded(function () {
         setFilterValue(filterValue);
+        pollTicketStates();
       }, 0);
       return;
     }
@@ -754,6 +953,8 @@ ob_start();
         if (result.data && result.data.stav) {
           updateRowState(replyId, String(result.data.stav));
         }
+        updateRowHasNewReply(replyId, result.data && result.data.has_new_reply ? result.data.has_new_reply : 0);
+        scrollDetailToBottomOnRender = true;
         reloadOpenDetail(replyId);
       });
       return;
@@ -786,6 +987,7 @@ ob_start();
   refreshFilterBlocks();
   renderEmptyDetailPanel();
   refreshActiveRowUi();
+  pollTimerId = window.setInterval(pollTicketStates, 15000);
 
   document.addEventListener('cb:helpdesk-created', function (e) {
     if (isAdmin) { return; }
@@ -800,7 +1002,11 @@ ob_start();
       typ: detail.typ,
       typ_label: detail.typ === 'chyba' ? 'Chyba systému' : (detail.typ === 'dotaz' ? 'Dotaz' : 'Námět na vylepšení'),
       visibility_label: '',
-      pocet_zprav: 1
+      has_new_reply: 0,
+      pocet_zprav: 1,
+      author_name: <?= json_encode(trim((string)($_SESSION['cb_user']['name'] ?? '') . ' ' . (string)($_SESSION['cb_user']['surname'] ?? '')), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>,
+      author_id: <?= (int)$idUser ?>,
+      author_role: <?= (int)($_SESSION['cb_user']['id_role'] ?? cb_helpdesk_current_user_role()) ?>
     });
     if (html === '') { return; }
 
@@ -817,10 +1023,34 @@ $card_min_html = (string)ob_get_clean();
 
 ob_start();
 ?>
-<table style="width:100%;table-layout:fixed;border-collapse:collapse;">
-  <tr>
-    <td style="width:34%;vertical-align:top;padding:0 18px 0 0;">
-      <section class="cb-hd-card-max" style="display:grid;gap:10px;height:100%;max-height:100%;overflow-y:auto;padding-right:4px;" data-cb-hd-filter-value="new">
+<style>
+  .cb-hd-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #8fb3e8 #e8f0fb;
+  }
+
+  .cb-hd-scroll::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .cb-hd-scroll::-webkit-scrollbar-track {
+    background: #e8f0fb;
+    border-radius: 999px;
+  }
+
+  .cb-hd-scroll::-webkit-scrollbar-thumb {
+    background: #8fb3e8;
+    border-radius: 999px;
+    border: 2px solid #e8f0fb;
+  }
+
+  .cb-hd-scroll::-webkit-scrollbar-thumb:hover {
+    background: #6f9add;
+  }
+</style>
+<div style="display:flex;align-items:stretch;gap:0;height:100%;min-height:0;">
+  <div style="flex:0 0 34%;min-width:0;padding:0 18px 0 0;display:flex;flex-direction:column;min-height:0;">
+      <section class="cb-hd-card-max" style="display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:10px;flex:1 1 auto;min-height:0;" data-cb-hd-filter-value="new">
         <div>
           <div style="font-size:18px;font-weight:700;line-height:1.2;color:#0f172a;"><?= $isAdmin ? 'Správa HelpDesku' : 'Moje hlášení a historie' ?></div>
         </div>
@@ -848,42 +1078,51 @@ ob_start();
           </button>
         </div>
 
-        <div data-cb-hd-list="1" style="display:grid;gap:8px;">
-          <?php if ($items === []): ?>
-            <div data-cb-hd-empty="1" class="ram_normal zaobleni_10" style="padding:12px;background:#fff;color:#64748b;">Zatím bez záznamu.</div>
-          <?php else: ?>
-            <?php foreach ($items as $item): ?>
-              <article class="ram_normal zaobleni_10" data-hd-item="<?= cb_helpdesk_card_h((string)(int)$item['id_helpdesk']) ?>" data-hd-stav="<?= cb_helpdesk_card_h((string)$item['stav']) ?>" data-hd-filtr="<?= cb_helpdesk_card_h(in_array((string)$item['stav'], ['vyřešeno', 'zamítnuto'], true) ? 'uzavřené' : (trim((string)$item['stav']) === 'řeší se' ? 'řeší se' : 'nový')) ?>" style="padding:10px;background:#fff;cursor:pointer;">
-                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-                  <div style="display:grid;gap:4px;width:100%;">
-                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
-                      <strong style="flex:1 1 auto;min-width:0;font-size:14px;color:#0f172a;"><?= cb_helpdesk_card_h('#' . (string)(int)$item['id_helpdesk'] . ' ' . (string)$item['predmet']) ?></strong>
-                      <?php if ($isAdmin): ?>
-                        <strong style="flex:0 0 auto;margin-left:auto;font-size:12px;color:<?= cb_helpdesk_card_h(cb_helpdesk_card_author_color($item)) ?>;white-space:nowrap;text-align:right;"><?= cb_helpdesk_card_h(cb_helpdesk_card_author($item)) ?></strong>
-                      <?php endif; ?>
-                    </div>
-                    <div style="font-size:12px;line-height:1.4;color:#64748b;">
-                      Stav: <span data-hd-state-text="1"><?= cb_helpdesk_card_h((string)$item['stav']) ?></span>
-                      | Typ: <?= cb_helpdesk_card_h(cb_helpdesk_card_type_label((string)$item['typ'])) ?>
-                      | Určení: <?= cb_helpdesk_card_h(cb_helpdesk_card_visibility_label((int)$item['verejny'])) ?>
+        <div class="cb-hd-scroll" style="min-height:0;overflow-y:auto;padding-right:6px;">
+          <div data-cb-hd-list="1" style="display:grid;gap:8px;">
+            <?php if ($items === []): ?>
+              <div data-cb-hd-empty="1" class="ram_normal zaobleni_10" style="padding:12px;background:#fff;color:#64748b;">Zatím bez záznamu.</div>
+            <?php else: ?>
+              <?php foreach ($items as $item): ?>
+                <article class="ram_normal zaobleni_10" data-hd-item="<?= cb_helpdesk_card_h((string)(int)$item['id_helpdesk']) ?>" data-hd-stav="<?= cb_helpdesk_card_h((string)$item['stav']) ?>" data-hd-filtr="<?= cb_helpdesk_card_h(in_array((string)$item['stav'], ['vyřešeno', 'zamítnuto'], true) ? 'uzavřené' : (trim((string)$item['stav']) === 'řeší se' ? 'řeší se' : 'nový')) ?>" data-hd-has-new-reply="<?= (int)($item['has_new_reply'] ?? 0) === 1 ? '1' : '0' ?>" style="padding:10px;background:#fff;cursor:pointer;">
+                  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                    <div style="display:grid;gap:4px;width:100%;">
+                      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+                        <strong style="flex:1 1 auto;min-width:0;font-size:14px;color:#0f172a;"><?= cb_helpdesk_card_h('Tiket č.: ' . (string)(int)$item['id_helpdesk']) ?></strong>
+                        <div style="flex:0 0 auto;display:flex;align-items:flex-start;justify-content:flex-end;gap:8px;min-width:0;">
+                          <strong style="flex:0 1 auto;font-size:12px;color:<?= cb_helpdesk_card_h(cb_helpdesk_card_author_color($item)) ?>;white-space:nowrap;text-align:right;"><?= cb_helpdesk_card_h(cb_helpdesk_card_author($item)) ?></strong>
+                          <span style="flex:0 0 18px;width:18px;min-width:18px;display:inline-flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;text-align:center;">
+                            <span data-hd-bell-wrap="1" style="width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;"><?= (int)($item['has_new_reply'] ?? 0) === 1 ? '<span data-hd-bell="1" title="Nová reakce" aria-label="Nová reakce" style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;color:#dc2626;font-size:18px;font-weight:700;line-height:1;">!</span>' : '<span data-hd-bell="0" title="Bez nové reakce" aria-label="Bez nové reakce" style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;color:rgba(0,0,0,.12);font-size:18px;font-weight:700;line-height:1;">!</span>' ?></span>
+                            <span style="width:18px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;text-align:center;"><?= cb_helpdesk_card_h((string)max(1, (int)($item['pocet_zprav'] ?? 0))) ?></span>
+                          </span>
+                        </div>
+                      </div>
+                      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;font-size:12px;line-height:1.4;color:#64748b;">
+                        <div style="flex:1 1 auto;min-width:0;">
+                          <?= cb_helpdesk_card_h((string)$item['predmet']) ?> | Stav: <span data-hd-state-text="1"><?= cb_helpdesk_card_h((string)$item['stav']) ?></span>
+                          | Typ: <?= cb_helpdesk_card_h(cb_helpdesk_card_type_label((string)$item['typ'])) ?>
+                          | Určení: <?= cb_helpdesk_card_h(cb_helpdesk_card_visibility_label((int)$item['verejny'])) ?>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </article>
-            <?php endforeach; ?>
-          <?php endif; ?>
+                </article>
+              <?php endforeach; ?>
+            <?php endif; ?>
+          </div>
         </div>
       </section>
-    </td>
-    <td style="width:28px;vertical-align:top;padding:0 8px 0 0;">
-      <div style="position:relative;height:100%;min-height:100%;">
+  </div>
+  <div style="flex:0 0 28px;min-width:28px;padding:0 8px 0 0;display:flex;flex-direction:column;min-height:0;">
+      <div style="position:relative;flex:1 1 auto;min-height:0;">
         <div data-cb-hd-detail-marker="1" style="display:none;position:relative;height:100%;min-height:100%;"></div>
       </div>
-    </td>
-    <td style="width:auto;vertical-align:top;">
-      <div data-cb-hd-detail-panel="1" style="display:grid;gap:12px;align-content:start;"></div>
-    </td>
-  </tr>
-</table>
+  </div>
+  <div style="flex:1 1 auto;min-width:0;display:flex;flex-direction:column;min-height:0;">
+      <div class="cb-hd-scroll" style="flex:1 1 auto;min-height:0;overflow-y:auto;padding-right:6px;">
+        <div data-cb-hd-detail-panel="1" style="display:grid;gap:12px;align-content:start;min-height:100%;"></div>
+      </div>
+  </div>
+</div>
 <?php
 $card_max_html = (string)ob_get_clean();
