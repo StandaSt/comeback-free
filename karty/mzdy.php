@@ -214,85 +214,87 @@ try {
 
     $whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
 
-    $countSql = '
-        SELECT COUNT(*)
-        FROM hr_mzdy_mesic m
-        LEFT JOIN `user` u ON u.id_user = m.id_user
-    ' . $whereSql;
-    $resCount = $conn->query($countSql);
-    if ($resCount) {
-        $rowCount = $resCount->fetch_row();
-        $mzdyTotal = (int)($rowCount[0] ?? 0);
-        $resCount->free();
-    }
-
-    $totalsSql = '
-        SELECT
-            SUM(COALESCE(m.hodiny, 0)) AS hodiny,
-            SUM(COALESCE(m.cista_mzda, 0)) AS cista_mzda,
-            SUM(COALESCE(m.hruba_mzda, 0)) AS hruba_mzda,
-            SUM(COALESCE(m.superhruba_mzda, 0)) AS superhruba_mzda
-        FROM hr_mzdy_mesic m
-        LEFT JOIN `user` u ON u.id_user = m.id_user
-    ' . $whereSql;
-    $resTotals = $conn->query($totalsSql);
-    if ($resTotals) {
-        $rowTotals = $resTotals->fetch_assoc() ?: [];
-        $mzdyTotals['hodiny'] = (float)($rowTotals['hodiny'] ?? 0);
-        $mzdyTotals['cista_mzda'] = (float)($rowTotals['cista_mzda'] ?? 0);
-        $mzdyTotals['hruba_mzda'] = (float)($rowTotals['hruba_mzda'] ?? 0);
-        $mzdyTotals['superhruba_mzda'] = (float)($rowTotals['superhruba_mzda'] ?? 0);
-        $resTotals->free();
-    }
-
-    if ((int)$tabKonfig['enable_pagination'] === 1) {
-        $mzdyPages = max(1, (int)ceil($mzdyTotal / $mzdyPer));
-        if ($mzdyPage > $mzdyPages) {
-            $mzdyPage = $mzdyPages;
+    if (($cbDashboardRenderMode ?? '') !== 'mini') {
+        $countSql = '
+            SELECT COUNT(*)
+            FROM hr_mzdy_mesic m
+            LEFT JOIN `user` u ON u.id_user = m.id_user
+        ' . $whereSql;
+        $resCount = $conn->query($countSql);
+        if ($resCount) {
+            $rowCount = $resCount->fetch_row();
+            $mzdyTotal = (int)($rowCount[0] ?? 0);
+            $resCount->free();
         }
-        $offset = ($mzdyPage - 1) * $mzdyPer;
-    } else {
-        $mzdyPages = 1;
-        $mzdyPage = 1;
-        $mzdyPer = max(1, $mzdyTotal);
-        $offset = 0;
-    }
 
-    $sortExpr = $mzdySortMap[$mzdySort] ?? $mzdySortMap['mesic'];
-    if (str_contains($sortExpr, '{DIR}')) {
-        $orderSql = str_replace('{DIR}', $mzdyDir, $sortExpr) . ' ' . $mzdyDir . ', m.id_hr_mzda_mesic DESC';
-    } else {
-        $orderSql = $sortExpr . ' ' . $mzdyDir . ', m.rok DESC, m.mesic DESC, m.id_hr_mzda_mesic DESC';
-    }
-
-    $dataSql = '
-        SELECT
-            m.id_hr_mzda_mesic,
-            m.rok,
-            m.mesic,
-            m.id_user,
-            COALESCE(m.import_jmeno, "") AS import_jmeno,
-            COALESCE(u.prijmeni, "") AS prijmeni,
-            COALESCE(u.jmeno, "") AS jmeno,
-            m.mzda_typ,
-            m.hodiny,
-            m.hodinova_sazba,
-            m.mesicni_fix,
-            m.cista_mzda,
-            m.hruba_mzda,
-            m.superhruba_mzda
-        FROM hr_mzdy_mesic m
-        LEFT JOIN `user` u ON u.id_user = m.id_user
-    ' . $whereSql . '
-        ORDER BY ' . $orderSql . '
-        LIMIT ' . (int)$mzdyPer . ' OFFSET ' . (int)$offset;
-
-    $resRows = $conn->query($dataSql);
-    if ($resRows) {
-        while ($row = $resRows->fetch_assoc()) {
-            $mzdyRows[] = $row;
+        $totalsSql = '
+            SELECT
+                SUM(COALESCE(m.hodiny, 0)) AS hodiny,
+                SUM(COALESCE(m.cista_mzda, 0)) AS cista_mzda,
+                SUM(COALESCE(m.hruba_mzda, 0)) AS hruba_mzda,
+                SUM(COALESCE(m.superhruba_mzda, 0)) AS superhruba_mzda
+            FROM hr_mzdy_mesic m
+            LEFT JOIN `user` u ON u.id_user = m.id_user
+        ' . $whereSql;
+        $resTotals = $conn->query($totalsSql);
+        if ($resTotals) {
+            $rowTotals = $resTotals->fetch_assoc() ?: [];
+            $mzdyTotals['hodiny'] = (float)($rowTotals['hodiny'] ?? 0);
+            $mzdyTotals['cista_mzda'] = (float)($rowTotals['cista_mzda'] ?? 0);
+            $mzdyTotals['hruba_mzda'] = (float)($rowTotals['hruba_mzda'] ?? 0);
+            $mzdyTotals['superhruba_mzda'] = (float)($rowTotals['superhruba_mzda'] ?? 0);
+            $resTotals->free();
         }
-        $resRows->free();
+
+        if ((int)$tabKonfig['enable_pagination'] === 1) {
+            $mzdyPages = max(1, (int)ceil($mzdyTotal / $mzdyPer));
+            if ($mzdyPage > $mzdyPages) {
+                $mzdyPage = $mzdyPages;
+            }
+            $offset = ($mzdyPage - 1) * $mzdyPer;
+        } else {
+            $mzdyPages = 1;
+            $mzdyPage = 1;
+            $mzdyPer = max(1, $mzdyTotal);
+            $offset = 0;
+        }
+
+        $sortExpr = $mzdySortMap[$mzdySort] ?? $mzdySortMap['mesic'];
+        if (str_contains($sortExpr, '{DIR}')) {
+            $orderSql = str_replace('{DIR}', $mzdyDir, $sortExpr) . ' ' . $mzdyDir . ', m.id_hr_mzda_mesic DESC';
+        } else {
+            $orderSql = $sortExpr . ' ' . $mzdyDir . ', m.rok DESC, m.mesic DESC, m.id_hr_mzda_mesic DESC';
+        }
+
+        $dataSql = '
+            SELECT
+                m.id_hr_mzda_mesic,
+                m.rok,
+                m.mesic,
+                m.id_user,
+                COALESCE(m.import_jmeno, "") AS import_jmeno,
+                COALESCE(u.prijmeni, "") AS prijmeni,
+                COALESCE(u.jmeno, "") AS jmeno,
+                m.mzda_typ,
+                m.hodiny,
+                m.hodinova_sazba,
+                m.mesicni_fix,
+                m.cista_mzda,
+                m.hruba_mzda,
+                m.superhruba_mzda
+            FROM hr_mzdy_mesic m
+            LEFT JOIN `user` u ON u.id_user = m.id_user
+        ' . $whereSql . '
+            ORDER BY ' . $orderSql . '
+            LIMIT ' . (int)$mzdyPer . ' OFFSET ' . (int)$offset;
+
+        $resRows = $conn->query($dataSql);
+        if ($resRows) {
+            while ($row = $resRows->fetch_assoc()) {
+                $mzdyRows[] = $row;
+            }
+            $resRows->free();
+        }
     }
 } catch (Throwable $e) {
     $mzdyRows = [];
@@ -348,6 +350,10 @@ ob_start();
 </div>
 <?php
 $card_min_html = (string)ob_get_clean();
+
+if (($cbDashboardRenderMode ?? '') === 'mini') {
+    return;
+}
 
 ob_start();
 ?>

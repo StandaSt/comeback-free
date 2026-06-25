@@ -131,7 +131,7 @@ $souborExists = static function (mysqli $conn, string $soubor, int $excludeId = 
 };
 
 // Spolecna cast: nacte vsechna sdilena data pro mini i max.
-$loadSharedData = static function () use (
+$loadSharedData = static function (bool $includeMaxData = true) use (
     &$karetCount,
     &$lastAddedName,
     &$nextCardId,
@@ -153,33 +153,6 @@ $loadSharedData = static function () use (
 
         // Nacte aktivni role z DB a pripravi vychozi roli.
         $loadRoleOptions();
-
-        // Zakladni souhrn poctu karet.
-        $res = $conn->query('SELECT COUNT(*) AS cnt FROM karty');
-        if ($res) {
-            $row = $res->fetch_assoc();
-            $karetCount = (int)($row['cnt'] ?? 0);
-            $res->free();
-        }
-
-        // Priprava dalsiho volneho ID pro radek "pridat kartu".
-        $resMax = $conn->query('SELECT COALESCE(MAX(id_karta), 0) AS max_id FROM karty');
-        if ($resMax) {
-            $rowMax = $resMax->fetch_assoc();
-            $nextCardId = ((int)($rowMax['max_id'] ?? 0)) + 1;
-            $resMax->free();
-        }
-
-        // Informacni udaj o naposledy pridane karte.
-        $resLast = $conn->query('SELECT nazev FROM karty ORDER BY id_karta DESC LIMIT 1');
-        if ($resLast) {
-            $rowLast = $resLast->fetch_assoc();
-            $lastAddedName = trim((string)($rowLast['nazev'] ?? ''));
-            if ($lastAddedName === '') {
-                $lastAddedName = '-';
-            }
-            $resLast->free();
-        }
 
         // Souhrny podle role a aktivace.
         $resStats = $conn->query('
@@ -210,45 +183,74 @@ $loadSharedData = static function () use (
             $resStats->free();
         }
 
-        // Seznam jiz obsazenych souboru, aby neslo pridat duplicitu.
-        $resUsed = $conn->query('SELECT soubor FROM karty');
-        if ($resUsed) {
-            while ($rowUsed = $resUsed->fetch_assoc()) {
-                $used = trim((string)($rowUsed['soubor'] ?? ''));
-                if ($used !== '') {
-                    $usedSouborMap[strtolower($used)] = true;
-                }
+        if ($includeMaxData) {
+            // Zakladni souhrn poctu karet.
+            $res = $conn->query('SELECT COUNT(*) AS cnt FROM karty');
+            if ($res) {
+                $row = $res->fetch_assoc();
+                $karetCount = (int)($row['cnt'] ?? 0);
+                $res->free();
             }
-            $resUsed->free();
-        }
 
-        // Seznam vsech karet rozdeleny na aktivni a neaktivni.
-        $resCards = $conn->query('
-            SELECT id_karta, nazev, soubor, min_role, subtitle_min, subtitle_max, poradi, refresh_op, aktivni
-            FROM karty
-            ORDER BY aktivni DESC, poradi ASC, id_karta ASC
-        ');
-        if ($resCards) {
-            while ($rowCard = $resCards->fetch_assoc()) {
-                $item = [
-                    'id_karta' => (int)($rowCard['id_karta'] ?? 0),
-                    'nazev' => (string)($rowCard['nazev'] ?? ''),
-                    'soubor' => (string)($rowCard['soubor'] ?? ''),
-                    'min_role' => (int)($rowCard['min_role'] ?? 0),
-                    'subtitle_min' => (string)($rowCard['subtitle_min'] ?? ''),
-                    'subtitle_max' => (string)($rowCard['subtitle_max'] ?? ''),
-                    'poradi' => (int)($rowCard['poradi'] ?? 0),
-                    'refresh_op' => (int)($rowCard['refresh_op'] ?? 0),
-                    'aktivni' => (int)($rowCard['aktivni'] ?? 0),
-                ];
-
-                if ($item['aktivni'] === 1) {
-                    $activeCards[] = $item;
-                } else {
-                    $inactiveCards[] = $item;
-                }
+            // Priprava dalsiho volneho ID pro radek "pridat kartu".
+            $resMax = $conn->query('SELECT COALESCE(MAX(id_karta), 0) AS max_id FROM karty');
+            if ($resMax) {
+                $rowMax = $resMax->fetch_assoc();
+                $nextCardId = ((int)($rowMax['max_id'] ?? 0)) + 1;
+                $resMax->free();
             }
-            $resCards->free();
+
+            // Informacni udaj o naposledy pridane karte.
+            $resLast = $conn->query('SELECT nazev FROM karty ORDER BY id_karta DESC LIMIT 1');
+            if ($resLast) {
+                $rowLast = $resLast->fetch_assoc();
+                $lastAddedName = trim((string)($rowLast['nazev'] ?? ''));
+                if ($lastAddedName === '') {
+                    $lastAddedName = '-';
+                }
+                $resLast->free();
+            }
+
+            // Seznam jiz obsazenych souboru, aby neslo pridat duplicitu.
+            $resUsed = $conn->query('SELECT soubor FROM karty');
+            if ($resUsed) {
+                while ($rowUsed = $resUsed->fetch_assoc()) {
+                    $used = trim((string)($rowUsed['soubor'] ?? ''));
+                    if ($used !== '') {
+                        $usedSouborMap[strtolower($used)] = true;
+                    }
+                }
+                $resUsed->free();
+            }
+
+            // Seznam vsech karet rozdeleny na aktivni a neaktivni.
+            $resCards = $conn->query('
+                SELECT id_karta, nazev, soubor, min_role, subtitle_min, subtitle_max, poradi, refresh_op, aktivni
+                FROM karty
+                ORDER BY aktivni DESC, poradi ASC, id_karta ASC
+            ');
+            if ($resCards) {
+                while ($rowCard = $resCards->fetch_assoc()) {
+                    $item = [
+                        'id_karta' => (int)($rowCard['id_karta'] ?? 0),
+                        'nazev' => (string)($rowCard['nazev'] ?? ''),
+                        'soubor' => (string)($rowCard['soubor'] ?? ''),
+                        'min_role' => (int)($rowCard['min_role'] ?? 0),
+                        'subtitle_min' => (string)($rowCard['subtitle_min'] ?? ''),
+                        'subtitle_max' => (string)($rowCard['subtitle_max'] ?? ''),
+                        'poradi' => (int)($rowCard['poradi'] ?? 0),
+                        'refresh_op' => (int)($rowCard['refresh_op'] ?? 0),
+                        'aktivni' => (int)($rowCard['aktivni'] ?? 0),
+                    ];
+
+                    if ($item['aktivni'] === 1) {
+                        $activeCards[] = $item;
+                    } else {
+                        $inactiveCards[] = $item;
+                    }
+                }
+                $resCards->free();
+            }
         }
     } catch (Throwable $e) {
         $karetCount = 0;
@@ -264,71 +266,73 @@ $loadSharedData = static function () use (
         }
     }
 
-    try {
-        // Seznam dostupnych souboru pro novou kartu.
-        $dir = __DIR__;
-        $all = scandir($dir);
-        if (is_array($all)) {
-            foreach ($all as $f) {
-                if (!is_string($f) || $f === '.' || $f === '..') {
-                    continue;
+    if ($includeMaxData) {
+        try {
+            // Seznam dostupnych souboru pro novou kartu.
+            $dir = __DIR__;
+            $all = scandir($dir);
+            if (is_array($all)) {
+                foreach ($all as $f) {
+                    if (!is_string($f) || $f === '.' || $f === '..') {
+                        continue;
+                    }
+                    if (!preg_match('~^[a-z0-9_]{2,80}\.php$~i', $f)) {
+                        continue;
+                    }
+                    $name = preg_replace('~\.php$~i', '', $f);
+                    if (!is_string($name) || $name === '') {
+                        continue;
+                    }
+                    if (isset($usedSouborMap[strtolower($name)])) {
+                        continue;
+                    }
+                    $souborOptions[] = $name;
                 }
-                if (!preg_match('~^[a-z0-9_]{2,80}\.php$~i', $f)) {
-                    continue;
-                }
-                $name = preg_replace('~\.php$~i', '', $f);
-                if (!is_string($name) || $name === '') {
-                    continue;
-                }
-                if (isset($usedSouborMap[strtolower($name)])) {
-                    continue;
-                }
-                $souborOptions[] = $name;
             }
+            sort($souborOptions, SORT_NATURAL | SORT_FLAG_CASE);
+        } catch (Throwable $e) {
+            $souborOptions = [];
         }
-        sort($souborOptions, SORT_NATURAL | SORT_FLAG_CASE);
-    } catch (Throwable $e) {
-        $souborOptions = [];
+
+        // Spolecna hlavicka tabulky pro max rezim.
+        $adminKartyCols = [
+            ['class' => 'admin_karty_col_id', 'style' => 'width:2%;'],
+            ['class' => 'admin_karty_col_nazev', 'style' => 'width:15%;'],
+            ['class' => 'admin_karty_col_soubor', 'style' => 'width:9%;'],
+            ['class' => 'admin_karty_col_role', 'style' => 'width:8%;'],
+            ['class' => 'admin_karty_col_nazev', 'style' => 'width:20%;'],
+            ['class' => 'admin_karty_col_nazev', 'style' => 'width:20%;'],
+            ['class' => 'admin_karty_col_refresh_op', 'style' => 'width:5%;'],
+            ['class' => 'admin_karty_col_aktivni', 'style' => 'width:5%;'],
+            ['class' => 'admin_karty_col_akce'],
+        ];
+
+        $tableColsHtml = "            <colgroup>\n";
+        foreach ($adminKartyCols as $col) {
+            $styleAttr = isset($col['style']) && trim((string)$col['style']) !== '' ? ' style="' . h((string)$col['style']) . '"' : '';
+            $tableColsHtml .= '              <col class="' . $col['class'] . '"' . $styleAttr . '>' . "\n";
+        }
+        $tableColsHtml .= "            </colgroup>";
+
+        $tableHeadHtml = implode("\n", [
+            '            <tr>',
+            '              <th class="admin_karty_col_id txt_c">ID</th>',
+            '              <th class="admin_karty_col_nazev">Nadpis</th>',
+            '              <th class="admin_karty_col_soubor">Soubor</th>',
+            '              <th class="admin_karty_col_role">Min role</th>',
+            '              <th class="admin_karty_col_nazev">Popis mini</th>',
+            '              <th class="admin_karty_col_nazev">Popis max</th>',
+            '              <th class="admin_karty_col_refresh_op txt_c">Refresh OP</th>',
+            '              <th class="admin_karty_col_aktivni txt_c">Aktivni</th>',
+            '              <th class="admin_karty_col_akce">Akce</th>',
+            '            </tr>',
+        ]);
     }
-
-    // Spolecna hlavicka tabulky pro max rezim.
-    $adminKartyCols = [
-        ['class' => 'admin_karty_col_id', 'style' => 'width:2%;'],
-        ['class' => 'admin_karty_col_nazev', 'style' => 'width:15%;'],
-        ['class' => 'admin_karty_col_soubor', 'style' => 'width:9%;'],
-        ['class' => 'admin_karty_col_role', 'style' => 'width:8%;'],
-        ['class' => 'admin_karty_col_nazev', 'style' => 'width:20%;'],
-        ['class' => 'admin_karty_col_nazev', 'style' => 'width:20%;'],
-        ['class' => 'admin_karty_col_refresh_op', 'style' => 'width:5%;'],
-        ['class' => 'admin_karty_col_aktivni', 'style' => 'width:5%;'],
-        ['class' => 'admin_karty_col_akce'],
-    ];
-
-    $tableColsHtml = "            <colgroup>\n";
-    foreach ($adminKartyCols as $col) {
-        $styleAttr = isset($col['style']) && trim((string)$col['style']) !== '' ? ' style="' . h((string)$col['style']) . '"' : '';
-        $tableColsHtml .= '              <col class="' . $col['class'] . '"' . $styleAttr . '>' . "\n";
-    }
-    $tableColsHtml .= "            </colgroup>";
-
-    $tableHeadHtml = implode("\n", [
-        '            <tr>',
-        '              <th class="admin_karty_col_id txt_c">ID</th>',
-        '              <th class="admin_karty_col_nazev">Nadpis</th>',
-        '              <th class="admin_karty_col_soubor">Soubor</th>',
-        '              <th class="admin_karty_col_role">Min role</th>',
-        '              <th class="admin_karty_col_nazev">Popis mini</th>',
-        '              <th class="admin_karty_col_nazev">Popis max</th>',
-        '              <th class="admin_karty_col_refresh_op txt_c">Refresh OP</th>',
-        '              <th class="admin_karty_col_aktivni txt_c">Aktivni</th>',
-        '              <th class="admin_karty_col_akce">Akce</th>',
-        '            </tr>',
-    ]);
 };
 
 // Min rezim: jen nacteni dat a mini souhrn.
 if ($renderMode === 'mini') {
-    $loadSharedData();
+    $loadSharedData(false);
     $miniRoleOptions = $roleOptions;
     krsort($miniRoleOptions, SORT_NUMERIC);
     $miniRoleRows = [];
@@ -390,6 +394,7 @@ if ($renderMode === 'mini') {
 </div>
 <?php
     $card_min_html = (string)ob_get_clean();
+    return;
 }
 
 // Max rezim: obsluha formulare, potom znovu nacteni dat a max vykresleni.
@@ -707,7 +712,9 @@ if ($renderMode !== 'mini') {
                   <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 admin_karty_btn_icon odstup_vnitrni_0" type="submit" name="admin_karty_action" value="move_up" form="<?= h($formId) ?>">&uarr;</button>
                   <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 admin_karty_btn_icon odstup_vnitrni_0" type="submit" name="admin_karty_action" value="move_down" form="<?= h($formId) ?>">&darr;</button>
                   <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28" type="submit" name="admin_karty_action" value="save" form="<?= h($formId) ?>">Ulozit</button>
-                  <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 admin_karty_btn_danger txt_cervena" type="submit" name="admin_karty_action" value="disable" form="<?= h($formId) ?>">Zakazat</button>
+                  <?php if ((int)$card['id_karta'] !== 1): ?>
+                    <button class="admin_karty_btn cursor_ruka ram_btn bg_bila zaobleni_6 admin_karty_btn_danger txt_cervena" type="submit" name="admin_karty_action" value="disable" form="<?= h($formId) ?>">Zakazat</button>
+                  <?php endif; ?>
                 </td>
               </tr>
             <?php endforeach; ?>

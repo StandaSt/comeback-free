@@ -114,6 +114,10 @@ $card_min_html = ''
     . '<p class="card_mini_text txt_seda">Nano karty: <span class="text_tucny">' . h($usNanoText) . '</span></p>'
     . '<p class="card_mini_text txt_seda">Velikost textu: <span class="text_tucny">' . h((string)$usPismo) . '</span> | Tmavý režim: <span class="text_tucny">' . h($usDarkText) . '</span></p>';
 
+if (($cbDashboardRenderMode ?? '') === 'mini') {
+    return;
+}
+
 ob_start();
 ?>
 <?php if ($usError !== ''): ?>

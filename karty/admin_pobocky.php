@@ -11,6 +11,13 @@ $baseCols = ['nazev', 'ulice', 'mesto', 'psc'];
 $endCols = [];
 $editCols = [];
 
+$card_min_html = '<p class="card_mini_text txt_seda">SprĂˇva poboÄŤek</p>';
+$renderMode = isset($cbDashboardRenderMode) ? trim((string)$cbDashboardRenderMode) : '';
+
+if ($renderMode === 'mini') {
+    return;
+}
+
 $isEndCol = static function (string $col): bool {
     return str_starts_with($col, 'end_');
 };

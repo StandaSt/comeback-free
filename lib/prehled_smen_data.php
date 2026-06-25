@@ -273,9 +273,10 @@ if (!function_exists('ps_request_state')) {
 if (!function_exists('ps_prehled_smen_data')) {
     /**
      * @param array<string,mixed> $request
+     * @param bool $includeMaxData
      * @return array<string,mixed>
      */
-    function ps_prehled_smen_data(array $request): array
+    function ps_prehled_smen_data(array $request, bool $includeMaxData = true): array
     {
         $state = ps_request_state($request);
         $selectedMonth = (int)$state['selectedMonth'];
@@ -354,47 +355,51 @@ if (!function_exists('ps_prehled_smen_data')) {
                         'cele_jmeno' => trim($prijmeni . ' ' . $jmeno),
                         'slot' => $slot,
                         'celkem' => 0.0,
-                        'den' => 0.0,
-                        'noc' => 0.0,
-                        'vikend' => 0.0,
-                        'svatek' => 0.0,
-                        'svatek_detail' => [],
-                        'detail_key' => substr(hash('sha256', $key), 0, 12),
-                        'detail_rows' => [],
                     ];
+                    if ($includeMaxData) {
+                        $rows[$key]['den'] = 0.0;
+                        $rows[$key]['noc'] = 0.0;
+                        $rows[$key]['vikend'] = 0.0;
+                        $rows[$key]['svatek'] = 0.0;
+                        $rows[$key]['svatek_detail'] = [];
+                        $rows[$key]['detail_key'] = substr(hash('sha256', $key), 0, 12);
+                        $rows[$key]['detail_rows'] = [];
+                    }
                 }
 
                 $worked = (float)($row['odpracovano'] ?? 0);
-                $parts = ps_shift_parts(
-                    (string)$row['datum_reportu'],
-                    (string)($row['smena_od'] ?? '00:00:00'),
-                    (string)($row['smena_do'] ?? '00:00:00'),
-                    $worked
-                );
-
                 $rows[$key]['celkem'] += $worked;
-                $rows[$key]['den'] += $parts['day'];
-                $rows[$key]['noc'] += $parts['night'];
-                $rows[$key]['vikend'] += $parts['weekend'];
-                $rows[$key]['svatek'] += $parts['holiday'];
-                $rows[$key]['detail_rows'][] = [
-                    'datum' => (string)$row['datum_reportu'],
-                    'id_pob' => (int)($row['id_pob'] ?? 0),
-                    'pobocka' => trim((string)($row['pobocka'] ?? '')),
-                    'slot' => $slot,
-                    'celkem' => $worked,
-                    'den' => (float)$parts['day'],
-                    'noc' => (float)$parts['night'],
-                    'vikend' => (float)$parts['weekend'],
-                    'svatek' => (float)$parts['holiday'],
-                    'svatek_detail' => $parts['holiday_details'],
-                ];
-                foreach ($parts['holiday_details'] as $holidayKey => $holidayDetail) {
-                    if (!isset($rows[$key]['svatek_detail'][$holidayKey])) {
-                        $rows[$key]['svatek_detail'][$holidayKey] = $holidayDetail;
-                        continue;
+                if ($includeMaxData) {
+                    $parts = ps_shift_parts(
+                        (string)$row['datum_reportu'],
+                        (string)($row['smena_od'] ?? '00:00:00'),
+                        (string)($row['smena_do'] ?? '00:00:00'),
+                        $worked
+                    );
+
+                    $rows[$key]['den'] += $parts['day'];
+                    $rows[$key]['noc'] += $parts['night'];
+                    $rows[$key]['vikend'] += $parts['weekend'];
+                    $rows[$key]['svatek'] += $parts['holiday'];
+                    $rows[$key]['detail_rows'][] = [
+                        'datum' => (string)$row['datum_reportu'],
+                        'id_pob' => (int)($row['id_pob'] ?? 0),
+                        'pobocka' => trim((string)($row['pobocka'] ?? '')),
+                        'slot' => $slot,
+                        'celkem' => $worked,
+                        'den' => (float)$parts['day'],
+                        'noc' => (float)$parts['night'],
+                        'vikend' => (float)$parts['weekend'],
+                        'svatek' => (float)$parts['holiday'],
+                        'svatek_detail' => $parts['holiday_details'],
+                    ];
+                    foreach ($parts['holiday_details'] as $holidayKey => $holidayDetail) {
+                        if (!isset($rows[$key]['svatek_detail'][$holidayKey])) {
+                            $rows[$key]['svatek_detail'][$holidayKey] = $holidayDetail;
+                            continue;
+                        }
+                        $rows[$key]['svatek_detail'][$holidayKey]['hours'] += (float)$holidayDetail['hours'];
                     }
-                    $rows[$key]['svatek_detail'][$holidayKey]['hours'] += (float)$holidayDetail['hours'];
                 }
                 $totalHours += $worked;
             }
@@ -424,28 +429,30 @@ if (!function_exists('ps_prehled_smen_data')) {
             $filteredRows[] = $row;
         }
 
-        usort($filteredRows, static function (array $a, array $b) use ($sort, $dir): int {
-            $left = $a[$sort] ?? '';
-            $right = $b[$sort] ?? '';
-            if ($sort === 'cele_jmeno') {
-                $cmp = mb_strtolower((string)$left, 'UTF-8') <=> mb_strtolower((string)$right, 'UTF-8');
-            } else {
-                $cmp = (float)$left <=> (float)$right;
-            }
-            if ($cmp === 0) {
-                $cmp = [
-                    mb_strtolower((string)$a['prijmeni'], 'UTF-8'),
-                    mb_strtolower((string)$a['jmeno'], 'UTF-8'),
-                    (int)$a['slot'],
-                ] <=> [
-                    mb_strtolower((string)$b['prijmeni'], 'UTF-8'),
-                    mb_strtolower((string)$b['jmeno'], 'UTF-8'),
-                    (int)$b['slot'],
-                ];
-            }
+        if ($includeMaxData) {
+            usort($filteredRows, static function (array $a, array $b) use ($sort, $dir): int {
+                $left = $a[$sort] ?? '';
+                $right = $b[$sort] ?? '';
+                if ($sort === 'cele_jmeno') {
+                    $cmp = mb_strtolower((string)$left, 'UTF-8') <=> mb_strtolower((string)$right, 'UTF-8');
+                } else {
+                    $cmp = (float)$left <=> (float)$right;
+                }
+                if ($cmp === 0) {
+                    $cmp = [
+                        mb_strtolower((string)$a['prijmeni'], 'UTF-8'),
+                        mb_strtolower((string)$a['jmeno'], 'UTF-8'),
+                        (int)$a['slot'],
+                    ] <=> [
+                        mb_strtolower((string)$b['prijmeni'], 'UTF-8'),
+                        mb_strtolower((string)$b['jmeno'], 'UTF-8'),
+                        (int)$b['slot'],
+                    ];
+                }
 
-            return $dir === 'DESC' ? -$cmp : $cmp;
-        });
+                return $dir === 'DESC' ? -$cmp : $cmp;
+            });
+        }
 
         foreach ($filteredRows as $row) {
             $filteredHours += (float)($row['celkem'] ?? 0.0);

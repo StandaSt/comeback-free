@@ -41,6 +41,10 @@ ob_start();
 <?php
 $card_min_html = (string)ob_get_clean();
 
+if (($cbDashboardRenderMode ?? '') === 'mini') {
+    return;
+}
+
 ob_start();
 require __DIR__ . '/../includes/denni_report_formular.php';
 $card_max_html = (string)ob_get_clean();

@@ -372,62 +372,64 @@ try {
         }
     }
 
-    $filtered = [];
-    foreach ($mzdyRowsAll as $row) {
-        if ($mzdyMode === 'with_id' && (int)($row['id_user'] ?? 0) <= 0) {
-            continue;
-        }
-        if ($mzdyMode === 'without_id' && (int)($row['id_user'] ?? 0) > 0) {
-            continue;
-        }
-        if ($mzdySlot !== 'all' && (string)($row['slot_id'] ?? '') !== $mzdySlot) {
-            continue;
-        }
-        if ($mzdyHours === 'with_hours' && (float)($row['hodiny'] ?? 0) <= 0) {
-            continue;
-        }
-        if (!cb_k16_contains(cb_k16_month_label((int)$row['rok'], (int)$row['mesic']), $mzdyFilters['mesic'] ?? '')) {
-            continue;
-        }
-        if (($mzdyFilters['id_user'] ?? '') !== '' && (string)($row['id_user'] ?? '') !== (string)$mzdyFilters['id_user']) {
-            continue;
-        }
-        foreach (['import_jmeno', 'prijmeni', 'jmeno', 'mzda_typ'] as $filterKey) {
-            if (!cb_k16_contains($row[$filterKey] ?? '', $mzdyFilters[$filterKey] ?? '')) {
-                continue 2;
+    if (($cbDashboardRenderMode ?? '') !== 'mini') {
+        $filtered = [];
+        foreach ($mzdyRowsAll as $row) {
+            if ($mzdyMode === 'with_id' && (int)($row['id_user'] ?? 0) <= 0) {
+                continue;
             }
+            if ($mzdyMode === 'without_id' && (int)($row['id_user'] ?? 0) > 0) {
+                continue;
+            }
+            if ($mzdySlot !== 'all' && (string)($row['slot_id'] ?? '') !== $mzdySlot) {
+                continue;
+            }
+            if ($mzdyHours === 'with_hours' && (float)($row['hodiny'] ?? 0) <= 0) {
+                continue;
+            }
+            if (!cb_k16_contains(cb_k16_month_label((int)$row['rok'], (int)$row['mesic']), $mzdyFilters['mesic'] ?? '')) {
+                continue;
+            }
+            if (($mzdyFilters['id_user'] ?? '') !== '' && (string)($row['id_user'] ?? '') !== (string)$mzdyFilters['id_user']) {
+                continue;
+            }
+            foreach (['import_jmeno', 'prijmeni', 'jmeno', 'mzda_typ'] as $filterKey) {
+                if (!cb_k16_contains($row[$filterKey] ?? '', $mzdyFilters[$filterKey] ?? '')) {
+                    continue 2;
+                }
+            }
+            $filtered[] = $row;
         }
-        $filtered[] = $row;
-    }
 
-    foreach ($filtered as $row) {
-        $mzdyTotals['hodiny'] += (float)($row['hodiny'] ?? 0);
-        $mzdyTotals['cista_mzda'] += (float)($row['cista_mzda'] ?? 0);
-        $mzdyTotals['hruba_mzda'] += (float)($row['hruba_mzda'] ?? 0);
-        $mzdyTotals['superhruba_mzda'] += (float)($row['superhruba_mzda'] ?? 0);
-    }
-
-    $sortFn = $mzdySortMap[$mzdySort] ?? $mzdySortMap['mesic'];
-    usort($filtered, static function (array $a, array $b) use ($sortFn, $mzdyDir): int {
-        $av = $sortFn($a);
-        $bv = $sortFn($b);
-        $cmp = is_numeric($av) && is_numeric($bv) ? ((float)$av <=> (float)$bv) : strnatcasecmp((string)$av, (string)$bv);
-        if ($cmp === 0) {
-            $cmp = sprintf('%04d-%02d', (int)$a['rok'], (int)$a['mesic']) <=> sprintf('%04d-%02d', (int)$b['rok'], (int)$b['mesic']);
+        foreach ($filtered as $row) {
+            $mzdyTotals['hodiny'] += (float)($row['hodiny'] ?? 0);
+            $mzdyTotals['cista_mzda'] += (float)($row['cista_mzda'] ?? 0);
+            $mzdyTotals['hruba_mzda'] += (float)($row['hruba_mzda'] ?? 0);
+            $mzdyTotals['superhruba_mzda'] += (float)($row['superhruba_mzda'] ?? 0);
         }
-        return $mzdyDir === 'DESC' ? -$cmp : $cmp;
-    });
 
-    $mzdyTotal = count($filtered);
-    if ((int)$tabKonfig['enable_pagination'] === 1) {
-        $mzdyPages = max(1, (int)ceil($mzdyTotal / $mzdyPer));
-        if ($mzdyPage > $mzdyPages) {
-            $mzdyPage = $mzdyPages;
+        $sortFn = $mzdySortMap[$mzdySort] ?? $mzdySortMap['mesic'];
+        usort($filtered, static function (array $a, array $b) use ($sortFn, $mzdyDir): int {
+            $av = $sortFn($a);
+            $bv = $sortFn($b);
+            $cmp = is_numeric($av) && is_numeric($bv) ? ((float)$av <=> (float)$bv) : strnatcasecmp((string)$av, (string)$bv);
+            if ($cmp === 0) {
+                $cmp = sprintf('%04d-%02d', (int)$a['rok'], (int)$a['mesic']) <=> sprintf('%04d-%02d', (int)$b['rok'], (int)$b['mesic']);
+            }
+            return $mzdyDir === 'DESC' ? -$cmp : $cmp;
+        });
+
+        $mzdyTotal = count($filtered);
+        if ((int)$tabKonfig['enable_pagination'] === 1) {
+            $mzdyPages = max(1, (int)ceil($mzdyTotal / $mzdyPer));
+            if ($mzdyPage > $mzdyPages) {
+                $mzdyPage = $mzdyPages;
+            }
+            $offset = ($mzdyPage - 1) * $mzdyPer;
+            $mzdyRows = array_slice($filtered, $offset, $mzdyPer);
+        } else {
+            $mzdyRows = $filtered;
         }
-        $offset = ($mzdyPage - 1) * $mzdyPer;
-        $mzdyRows = array_slice($filtered, $offset, $mzdyPer);
-    } else {
-        $mzdyRows = $filtered;
     }
 } catch (Throwable $e) {
     $mzdyRows = [];
@@ -483,6 +485,10 @@ ob_start();
 </div>
 <?php
 $card_min_html = (string)ob_get_clean();
+
+if (($cbDashboardRenderMode ?? '') === 'mini') {
+    return;
+}
 
 ob_start();
 ?>

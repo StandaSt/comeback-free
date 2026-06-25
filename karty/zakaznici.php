@@ -122,100 +122,102 @@ try {
         $resCount->free();
     }
 
-    $where = [];
-    if ($selectedPobocky) {
-        $where[] = 'z.id_pob IN (' . implode(',', $selectedPobocky) . ')';
-    }
+    if (($cbDashboardRenderMode ?? '') !== 'mini') {
+        $where = [];
+        if ($selectedPobocky) {
+            $where[] = 'z.id_pob IN (' . implode(',', $selectedPobocky) . ')';
+        }
 
-    $where[] = 'z.blokovany = ' . (int)$zakBlk;
+        $where[] = 'z.blokovany = ' . (int)$zakBlk;
 
-    if ((int)$tabKonfig['enable_filters'] === 1) {
-        if (($zakFilters['prijmeni'] ?? '') !== '') {
-            $safe = $conn->real_escape_string((string)$zakFilters['prijmeni']);
-            $where[] = "COALESCE(z.prijmeni, '') LIKE '%" . $safe . "%'";
+        if ((int)$tabKonfig['enable_filters'] === 1) {
+            if (($zakFilters['prijmeni'] ?? '') !== '') {
+                $safe = $conn->real_escape_string((string)$zakFilters['prijmeni']);
+                $where[] = "COALESCE(z.prijmeni, '') LIKE '%" . $safe . "%'";
+            }
+            if (($zakFilters['jmeno'] ?? '') !== '') {
+                $safe = $conn->real_escape_string((string)$zakFilters['jmeno']);
+                $where[] = "COALESCE(z.jmeno, '') LIKE '%" . $safe . "%'";
+            }
+            if (($zakFilters['telefon'] ?? '') !== '') {
+                $safe = $conn->real_escape_string((string)$zakFilters['telefon']);
+                $where[] = "COALESCE(z.telefon, '') LIKE '%" . $safe . "%'";
+            }
+            if (($zakFilters['email'] ?? '') !== '') {
+                $safe = $conn->real_escape_string((string)$zakFilters['email']);
+                $where[] = "COALESCE(z.email, '') LIKE '%" . $safe . "%'";
+            }
+            if (($zakFilters['ulice'] ?? '') !== '') {
+                $safe = $conn->real_escape_string((string)$zakFilters['ulice']);
+                $where[] = "COALESCE(z.ulice, '') LIKE '%" . $safe . "%'";
+            }
+            if (($zakFilters['mesto'] ?? '') !== '') {
+                $safe = $conn->real_escape_string((string)$zakFilters['mesto']);
+                $where[] = "COALESCE(z.mesto, '') LIKE '%" . $safe . "%'";
+            }
+            if (($zakFilters['pobocka'] ?? '') !== '') {
+                $safe = $conn->real_escape_string((string)$zakFilters['pobocka']);
+                $where[] = "COALESCE(p.kod, '') LIKE '%" . $safe . "%'";
+            }
         }
-        if (($zakFilters['jmeno'] ?? '') !== '') {
-            $safe = $conn->real_escape_string((string)$zakFilters['jmeno']);
-            $where[] = "COALESCE(z.jmeno, '') LIKE '%" . $safe . "%'";
-        }
-        if (($zakFilters['telefon'] ?? '') !== '') {
-            $safe = $conn->real_escape_string((string)$zakFilters['telefon']);
-            $where[] = "COALESCE(z.telefon, '') LIKE '%" . $safe . "%'";
-        }
-        if (($zakFilters['email'] ?? '') !== '') {
-            $safe = $conn->real_escape_string((string)$zakFilters['email']);
-            $where[] = "COALESCE(z.email, '') LIKE '%" . $safe . "%'";
-        }
-        if (($zakFilters['ulice'] ?? '') !== '') {
-            $safe = $conn->real_escape_string((string)$zakFilters['ulice']);
-            $where[] = "COALESCE(z.ulice, '') LIKE '%" . $safe . "%'";
-        }
-        if (($zakFilters['mesto'] ?? '') !== '') {
-            $safe = $conn->real_escape_string((string)$zakFilters['mesto']);
-            $where[] = "COALESCE(z.mesto, '') LIKE '%" . $safe . "%'";
-        }
-        if (($zakFilters['pobocka'] ?? '') !== '') {
-            $safe = $conn->real_escape_string((string)$zakFilters['pobocka']);
-            $where[] = "COALESCE(p.kod, '') LIKE '%" . $safe . "%'";
-        }
-    }
 
-    $whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
+        $whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
 
-    $countSql = '
-        SELECT COUNT(*)
-        FROM zakaznik z
-        LEFT JOIN pobocka p ON p.id_pob = z.id_pob
-    ' . $whereSql;
-    $resZakCount = $conn->query($countSql);
-    if ($resZakCount) {
-        $rowCount = $resZakCount->fetch_row();
-        $zakTotal = (int)($rowCount[0] ?? 0);
-        $resZakCount->free();
-    }
-
-    if ((int)$tabKonfig['enable_pagination'] === 1) {
-        $zakPages = max(1, (int)ceil($zakTotal / $zakPer));
-        if ($zakPage > $zakPages) {
-            $zakPage = $zakPages;
+        $countSql = '
+            SELECT COUNT(*)
+            FROM zakaznik z
+            LEFT JOIN pobocka p ON p.id_pob = z.id_pob
+        ' . $whereSql;
+        $resZakCount = $conn->query($countSql);
+        if ($resZakCount) {
+            $rowCount = $resZakCount->fetch_row();
+            $zakTotal = (int)($rowCount[0] ?? 0);
+            $resZakCount->free();
         }
-        $offset = ($zakPage - 1) * $zakPer;
-    } else {
-        $zakPages = 1;
-        $zakPage = 1;
-        $zakPer = max(1, $zakTotal);
-        $offset = 0;
-    }
 
-    $orderSql = 'z.id_zak DESC';
-    if ((int)$tabKonfig['enable_sort'] === 1) {
-        $orderSql = $zakSortMap[$zakSort] . ' ' . $zakDir . ', z.id_zak DESC';
-    }
-
-    $dataSql = '
-        SELECT
-            z.id_zak,
-            z.prijmeni,
-            z.jmeno,
-            COALESCE(z.telefon, "") AS telefon,
-            COALESCE(z.email, "") AS email,
-            COALESCE(z.ulice, "") AS ulice,
-            COALESCE(z.mesto, "") AS mesto,
-            COALESCE(p.kod, "") AS pobocka,
-            z.posledni_obj,
-            z.blokovany
-        FROM zakaznik z
-        LEFT JOIN pobocka p ON p.id_pob = z.id_pob
-    ' . $whereSql . '
-        ORDER BY ' . $orderSql . '
-        LIMIT ' . (int)$zakPer . ' OFFSET ' . (int)$offset;
-
-    $resZak = $conn->query($dataSql);
-    if ($resZak) {
-        while ($rowZak = $resZak->fetch_assoc()) {
-            $zakRows[] = $rowZak;
+        if ((int)$tabKonfig['enable_pagination'] === 1) {
+            $zakPages = max(1, (int)ceil($zakTotal / $zakPer));
+            if ($zakPage > $zakPages) {
+                $zakPage = $zakPages;
+            }
+            $offset = ($zakPage - 1) * $zakPer;
+        } else {
+            $zakPages = 1;
+            $zakPage = 1;
+            $zakPer = max(1, $zakTotal);
+            $offset = 0;
         }
-        $resZak->free();
+
+        $orderSql = 'z.id_zak DESC';
+        if ((int)$tabKonfig['enable_sort'] === 1) {
+            $orderSql = $zakSortMap[$zakSort] . ' ' . $zakDir . ', z.id_zak DESC';
+        }
+
+        $dataSql = '
+            SELECT
+                z.id_zak,
+                z.prijmeni,
+                z.jmeno,
+                COALESCE(z.telefon, "") AS telefon,
+                COALESCE(z.email, "") AS email,
+                COALESCE(z.ulice, "") AS ulice,
+                COALESCE(z.mesto, "") AS mesto,
+                COALESCE(p.kod, "") AS pobocka,
+                z.posledni_obj,
+                z.blokovany
+            FROM zakaznik z
+            LEFT JOIN pobocka p ON p.id_pob = z.id_pob
+        ' . $whereSql . '
+            ORDER BY ' . $orderSql . '
+            LIMIT ' . (int)$zakPer . ' OFFSET ' . (int)$offset;
+
+        $resZak = $conn->query($dataSql);
+        if ($resZak) {
+            while ($rowZak = $resZak->fetch_assoc()) {
+                $zakRows[] = $rowZak;
+            }
+            $resZak->free();
+        }
     }
 } catch (Throwable $e) {
     $totalZak = 0;
@@ -268,6 +270,10 @@ ob_start();
 </div>
 <?php
 $card_min_html = (string)ob_get_clean();
+
+if (($cbDashboardRenderMode ?? '') === 'mini') {
+    return;
+}
 // --- Kompaktni verze pro MAX TABULKA VZOR ---
 // $card_max_html = ... zde je pouze HTML pro max-rezim tabulky zakazniku
 ob_start();

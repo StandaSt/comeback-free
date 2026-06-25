@@ -8,6 +8,12 @@ $card_min_html = '<p class="card_mini_text">administrace</p>'
     . '<p class="card_mini_text">Logování, volba admina, upozornění na chyby, 2FA ověření a další věci.</p>';
 $card_max_html = '';
 
+$renderMode = isset($cbDashboardRenderMode) ? trim((string)$cbDashboardRenderMode) : '';
+
+if ($renderMode === 'mini') {
+    return;
+}
+
 $cbAdminSystem = [
     'restia_online' => 0,
     'on_2fa' => 0,

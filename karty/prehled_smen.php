@@ -13,6 +13,8 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../lib/prehled_smen_data.php';
 
+$renderMode = isset($cbDashboardRenderMode) ? trim((string)$cbDashboardRenderMode) : '';
+
 if (!function_exists('ps_num_or_dash')) {
     function ps_num_or_dash(float $value): string
     {
@@ -33,7 +35,7 @@ if (!function_exists('ps_num_with_info')) {
     }
 }
 
-$psData = ps_prehled_smen_data($_GET);
+$psData = ps_prehled_smen_data($_GET, $renderMode !== 'mini');
 $tabKonfig = (array)$psData['tabKonfig'];
 $psCols = (array)$psData['cols'];
 $psFilters = (array)$psData['filters'];
@@ -49,21 +51,26 @@ $psFilteredHours = (float)$psData['filteredHours'];
 $psTotal = (int)$psData['totalRows'];
 $psError = (string)$psData['error'];
 $psMonthLabel = (string)$psData['monthLabel'];
+$formAction = cb_url('/');
+
+$card_min_html = ''
+    . '<p class="card_mini_text txt_seda">Měsíc: <span class="text_tucny">' . h($psMonthLabel) . '</span></p>'
+    . '<p class="card_mini_text txt_seda">Osob/slotů: <span class="text_tucny">' . h((string)$psTotal) . '</span></p>'
+    . '<p class="card_mini_text txt_seda">Hodin celkem: <span class="text_tucny">' . h(ps_num($psFilteredHours)) . '</span></p>';
+
+if ($renderMode === 'mini') {
+    return;
+}
+
 $psPages = max(1, (int)ceil($psTotal / $psPer));
 if ($psPage > $psPages) {
     $psPage = $psPages;
 }
 $offset = ($psPage - 1) * $psPer;
 $psDisplayRows = array_slice($psFilteredRows, $offset, $psPer);
-$formAction = cb_url('/');
 $psColWidths = ['6%', '8%', '22%', '10%', '9%', '9%', '9%', '9%', '10%', '8%'];
 $psDetailBg = '#d9ecff';
 $psDetailEndBg = '#ffdada';
-
-$card_min_html = ''
-    . '<p class="card_mini_text txt_seda">Měsíc: <span class="text_tucny">' . h($psMonthLabel) . '</span></p>'
-    . '<p class="card_mini_text txt_seda">Osob/slotů: <span class="text_tucny">' . h((string)$psTotal) . '</span></p>'
-    . '<p class="card_mini_text txt_seda">Hodin celkem: <span class="text_tucny">' . h(ps_num($psFilteredHours)) . '</span></p>';
 
 $psQueryDefaults = [
     'ps_p' => '1',

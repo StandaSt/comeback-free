@@ -188,7 +188,7 @@ if ($isAdmin) {
     ');
 }
 
-if ($stmtItems instanceof mysqli_stmt) {
+if (($cbDashboardRenderMode ?? '') !== 'mini' && $stmtItems instanceof mysqli_stmt) {
     if ($isAdmin) {
         $stmtItems->bind_param('i', $idUser);
         $stmtItems->execute();
@@ -1020,6 +1020,10 @@ ob_start();
 </script>
 <?php
 $card_min_html = (string)ob_get_clean();
+
+if (($cbDashboardRenderMode ?? '') === 'mini') {
+    return;
+}
 
 ob_start();
 ?>
