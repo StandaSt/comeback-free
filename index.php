@@ -86,8 +86,7 @@ if ($cbIsFullStartupRequest && $cbStartupLoaderHtml !== '') {
     <title><?= h($cbTitle) ?></title>
     <link rel="icon" type="image/png" href="<?= h($cbFavicon) ?>">
 
-    <link rel="stylesheet" href="<?= h(cb_asset_url('style/1/global.css')) ?>">
-    <link rel="stylesheet" href="<?= h(cb_asset_url('style/1/modal_alert.css')) ?>">
+    <?php require_once __DIR__ . '/lib/nacti_styly.php'; ?>
 </head>
 <body>
 <div id="cb-startup-loader" class="dash_box bg_modra sirka100 is-dashboard-loading" data-cb-startup-text="<?= h($cbStartupLoaderText) ?>" style="position:fixed;left:0;top:0;right:0;bottom:0;z-index:12000;padding:0 12px;background-clip:content-box;overflow:hidden;">
@@ -138,8 +137,7 @@ if (!empty($_SESSION['login_ok'])) {
     <title><?= h($cbTitle) ?></title>
     <link rel="icon" type="image/png" href="<?= h($cbFavicon) ?>">
 
-    <link rel="stylesheet" href="<?= h(cb_asset_url('style/1/global.css')) ?>">
-    <link rel="stylesheet" href="<?= h(cb_asset_url('style/1/modal_alert.css')) ?>">
+    <?php require_once __DIR__ . '/lib/nacti_styly.php'; ?>
 </head>
 <body>
 

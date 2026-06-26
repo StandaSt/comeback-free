@@ -1987,6 +1987,27 @@ align-items:center;
   margin:0;
 }
 
+.helpd-mini-btn{
+  flex:1 1 calc(20% - 5px);
+  min-width:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:6px 8px;
+  background:#eff6ff;
+  border:1px solid rgba(15,23,42,.10);
+  text-align:center;
+  cursor:pointer;
+}
+
+.helpd-mini-btn .card_mini_text{
+  color:#0f172a;
+}
+
+.helpd-mini-btn strong.card_mini_text{
+  color:#355c9a;
+}
+
 .card_mini_table{
   width:100%;
   border-collapse:collapse;

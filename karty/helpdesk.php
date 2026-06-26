@@ -222,25 +222,20 @@ ob_start();
 ?>
 <div class="cb-hd-card-min" style="display:grid;gap:6px;">
   <div style="display:flex;gap:6px;flex-wrap:nowrap;">
-    <button type="button" class="ram_normal zaobleni_10" data-cb-hd-min-filter="all" style="flex:1 1 calc(20% - 5px);min-width:0;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 8px;background:#eff6ff;border:1px solid rgba(15,23,42,.10);text-align:left;cursor:pointer;">
-      <span class="card_mini_text" style="color:#0f172a;">Vše</span>
-      <strong class="card_mini_text text_tucny" style="color:#355c9a;"><?= cb_helpdesk_card_h((string)$stats['total']) ?></strong>
+    <button type="button" class="ram_normal zaobleni_10 helpd-mini-btn" data-cb-hd-min-filter="all">
+      <span class="card_mini_text">Vše<br><strong class="card_mini_text text_tucny"><?= cb_helpdesk_card_h((string)$stats['total']) ?></strong></span>
     </button>
-    <button type="button" class="ram_normal zaobleni_10" data-cb-hd-min-filter="new" style="flex:1 1 calc(20% - 5px);min-width:0;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 8px;background:#eef8ef;border:1px solid rgba(34,120,70,.28);text-align:left;cursor:pointer;">
-      <span class="card_mini_text" style="color:#0f172a;">Nové</span>
-      <strong class="card_mini_text text_tucny" style="color:#355c9a;"><?= cb_helpdesk_card_h((string)$stats['new']) ?></strong>
+    <button type="button" class="ram_normal zaobleni_10 helpd-mini-btn" data-cb-hd-min-filter="new">
+      <span class="card_mini_text">Nové<br><strong class="card_mini_text text_tucny"><?= cb_helpdesk_card_h((string)$stats['new']) ?></strong></span>
     </button>
-    <button type="button" class="ram_normal zaobleni_10" data-cb-hd-min-filter="active" style="flex:1 1 calc(20% - 5px);min-width:0;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 8px;background:#eff6ff;border:1px solid rgba(15,23,42,.10);text-align:left;cursor:pointer;">
-      <span class="card_mini_text" style="color:#0f172a;">Řeší se</span>
-      <strong class="card_mini_text text_tucny" style="color:#355c9a;"><?= cb_helpdesk_card_h((string)$stats['active']) ?></strong>
+    <button type="button" class="ram_normal zaobleni_10 helpd-mini-btn" data-cb-hd-min-filter="active">
+      <span class="card_mini_text">Řeší se<br><strong class="card_mini_text text_tucny"><?= cb_helpdesk_card_h((string)$stats['active']) ?></strong></span>
     </button>
-    <button type="button" class="ram_normal zaobleni_10" data-cb-hd-min-filter="resolved" style="flex:1 1 calc(20% - 5px);min-width:0;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 8px;background:#eff6ff;border:1px solid rgba(15,23,42,.10);text-align:left;cursor:pointer;">
-      <span class="card_mini_text" style="color:#0f172a;">Uzavřeno</span>
-      <strong class="card_mini_text text_tucny" style="color:#355c9a;"><?= cb_helpdesk_card_h((string)$stats['resolved']) ?></strong>
+    <button type="button" class="ram_normal zaobleni_10 helpd-mini-btn" data-cb-hd-min-filter="resolved">
+      <span class="card_mini_text">Uzavřeno<br><strong class="card_mini_text text_tucny"><?= cb_helpdesk_card_h((string)$stats['resolved']) ?></strong></span>
     </button>
-    <button type="button" class="ram_normal zaobleni_10" data-cb-hd-min-filter="rejected" style="flex:1 1 calc(20% - 5px);min-width:0;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 8px;background:#eff6ff;border:1px solid rgba(15,23,42,.10);text-align:left;cursor:pointer;">
-      <span class="card_mini_text" style="color:#0f172a;">Zamítnuto</span>
-      <strong class="card_mini_text text_tucny" style="color:#355c9a;"><?= cb_helpdesk_card_h((string)$stats['rejected']) ?></strong>
+    <button type="button" class="ram_normal zaobleni_10 helpd-mini-btn" data-cb-hd-min-filter="rejected">
+      <span class="card_mini_text">Zamítnuto<br><strong class="card_mini_text text_tucny"><?= cb_helpdesk_card_h((string)$stats['rejected']) ?></strong></span>
     </button>
   </div>
 </div>
@@ -551,10 +546,10 @@ ob_start();
     if (!(root instanceof HTMLElement)) {
       return;
     }
-    var toggle = root.querySelector('[data-card-toggle="1"]');
     var expanded = getExpandedBox();
-    if (toggle instanceof HTMLButtonElement && expanded instanceof HTMLElement && expanded.classList.contains('is-hidden')) {
-      toggle.click();
+    if (expanded instanceof HTMLElement && expanded.classList.contains('is-hidden')
+      && window.CB_KARTY_MINMAX && typeof window.CB_KARTY_MINMAX.openCardMax === 'function') {
+      window.CB_KARTY_MINMAX.openCardMax(root);
     }
   }
 
