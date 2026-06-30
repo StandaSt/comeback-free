@@ -444,7 +444,7 @@ ob_start();
         <tbody>
           <?php if (!$mzdyRows): ?>
             <tr>
-              <td colspan="<?= h((string)count($mzdyCols)) ?>" style="text-align:center; padding:22px 0; color:#888;">Žádná data</td>
+              <td colspan="<?= h((string)count($mzdyCols)) ?>" class="txt_c odstup_vnitrni_14 txt_cervena">Žádná data</td>
             </tr>
           <?php else: ?>
             <?php foreach ($mzdyRows as $row): ?>

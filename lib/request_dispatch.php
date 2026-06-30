@@ -175,16 +175,6 @@ if ($cbIsRestiaTrigger) {
         exit;
     }
 
-    $stateBefore = $readState($db, $stateSql);
-    if ((int)($stateBefore['active'] ?? 0) === 1) {
-        echo json_encode([
-            'ok' => true,
-            'started' => 0,
-            'enabled' => 1,
-        ] + $stateBefore, JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-
     $forceRestia = ((string)($_SERVER['HTTP_X_COMEBACK_RESTIA_FORCE'] ?? '') === '1');
 
     if (!defined('CB_RESTIA_ONLINE_KONTROLA_AUTO_RUN')) {
@@ -196,9 +186,10 @@ if ($cbIsRestiaTrigger) {
     }
 
     $stateAfter = $readState($db, $stateSql);
+    $started = ((int)($stateAfter['active'] ?? 0) === 1) ? 1 : 0;
     echo json_encode([
         'ok' => true,
-        'started' => 1,
+        'started' => $started,
         'enabled' => 1,
     ] + $stateAfter, JSON_UNESCAPED_UNICODE);
     exit;
