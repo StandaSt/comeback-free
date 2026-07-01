@@ -151,12 +151,15 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
         <div class="card_head_text">
           <h3 class="card_title txt_seda text_15 odstup_vnejsi_0"><?= h($title) ?></h3>
           <?php if (!$isNano): ?>
-            <p
-              class="card_subtitle text_12"
-              data-card-subtitle="1"
-              data-subtitle-min="<?= h($subtitleMin) ?>"
-              data-subtitle-max="<?= h($subtitleMax) ?>"
-            ><?= h($subtitleMin) ?></p>
+            <div class="card_subtitle_row">
+              <p
+                class="card_subtitle text_12"
+                data-card-subtitle="1"
+                data-subtitle-min="<?= h($subtitleMin) ?>"
+                data-subtitle-max="<?= h($subtitleMax) ?>"
+              ><?= h($subtitleMin) ?></p>
+              <p class="card_subtitle_side text_12" data-card-subtitle-side="1"></p>
+            </div>
           <?php endif; ?>
         </div>
       </div>

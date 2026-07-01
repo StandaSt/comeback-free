@@ -13,15 +13,30 @@
 
 declare(strict_types=1);
 
-$cbVerzeText = '';
-if (isset($CB_VERZE)) {
-    $cbVerzeText = trim((string)$CB_VERZE);
-}
-if ($cbVerzeText === '' && defined('CB_VERZE')) {
-    $cbVerzeText = trim((string)CB_VERZE);
-}
-if ($cbVerzeText === '') {
-    $cbVerzeText = '0.86';
+$cbPatickaVerze = '0';
+$cbPatickaUprava = '---';
+
+try {
+    $conn = db_connect();
+    $resPaticka = $conn->query('SELECT verze, uprava_souboru FROM set_system WHERE id_set = 1 LIMIT 1');
+    if ($resPaticka instanceof mysqli_result) {
+        $rowPaticka = $resPaticka->fetch_assoc();
+        $resPaticka->free();
+
+        if (is_array($rowPaticka)) {
+            $cbPatickaVerze = (string)((int)($rowPaticka['verze'] ?? 0));
+
+            $cbPatickaUpravaRaw = trim((string)($rowPaticka['uprava_souboru'] ?? ''));
+            if ($cbPatickaUpravaRaw !== '') {
+                try {
+                    $cbPatickaUprava = (new DateTimeImmutable($cbPatickaUpravaRaw))->format('j.n.Y H:i:s');
+                } catch (Throwable $e) {
+                    $cbPatickaUprava = $cbPatickaUpravaRaw;
+                }
+            }
+        }
+    }
+} catch (Throwable $e) {
 }
 
 ?>
@@ -37,7 +52,12 @@ if ($cbVerzeText === '') {
         </div>
 
         <div class="foot_right txt_r">
-            <strong>verze <?= h($cbVerzeText) ?></strong> 
+            <span class="cb_tooltip" tabindex="0" aria-label="Datum a čas verze" data-cb-tooltip-position="1">
+                <strong style="display:inline-block;cursor:help;">Verze: 0.3.<?= h($cbPatickaVerze) ?></strong>
+                <span class="cb_tooltip_panel cb_tooltip_card" data-cb-tooltip-panel="1">
+                    <div class="text_12">Poslední aktualizace: <?= h($cbPatickaUprava) ?></div>
+                </span>
+            </span>
         </div>
     </div>
 </footer>

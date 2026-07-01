@@ -83,6 +83,24 @@
     });
   }
 
+  function syncReportCardSubtitles(scope) {
+    const root = (scope instanceof Element || scope instanceof Document) ? scope : document;
+
+    root.querySelectorAll('[data-zr-card-subtitle-side]').forEach((node) => {
+      if (!(node instanceof HTMLElement)) return;
+
+      const sideText = String(node.getAttribute('data-zr-card-subtitle-side') || '').trim();
+
+      const card = node.closest('.card_shell');
+      if (!(card instanceof HTMLElement)) return;
+
+      const subtitleSide = card.querySelector('[data-card-subtitle-side]');
+      if (!(subtitleSide instanceof HTMLElement)) return;
+
+      subtitleSide.textContent = sideText;
+    });
+  }
+
   function initKartyHlavicka() {
     let moveSource = null;
     const KPI_COLLAPSE_QUERY = '(max-width: 1559px)';
@@ -708,6 +726,7 @@
     }
 
     syncBranchTitle();
+    syncReportCardSubtitles(document);
   }
 
   w.cbSetBranchSelectDisabledForRoot = setBranchSelectDisabledForRoot;
@@ -720,4 +739,12 @@
   } else {
     initKartyHlavicka();
   }
+
+  document.addEventListener('cb:card-swapped', function (e) {
+    syncReportCardSubtitles(e.target instanceof Element ? e.target : document);
+  });
+
+  document.addEventListener('cb:card-max-loaded', function (e) {
+    syncReportCardSubtitles(e.target instanceof Element ? e.target : document);
+  });
 }(window));

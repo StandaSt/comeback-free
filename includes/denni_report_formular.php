@@ -309,10 +309,10 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
     </div>
 
     <aside class="zr_side gap_14">
+      <div class="is-hidden" data-zr-card-subtitle-side="<?= h('Aktualizace v ' . (string)$lastRestiaUpdateLabel) ?>"></div>
       <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_restia_section">
-        <h4 class="card_section_title txt_seda">Aktuální data z Restie</h4>
-        <div class="zr_restia_update">
-          <span>Aktualizace v <?= h($lastRestiaUpdateLabel) ?></span>
+        <div class="zr_restia_head">
+          <h4 class="card_section_title txt_seda">Aktuální data z Restie</h4>
           <button
             type="button"
             class="zr_restia_refresh_btn"

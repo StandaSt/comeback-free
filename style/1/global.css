@@ -355,7 +355,7 @@ main{
   top:0;
   z-index:9999;
   display:none;
-  min-width:360px;
+  min-width:200px;
 }
 
 .cb_tooltip_panel.is-visible{
@@ -1424,6 +1424,7 @@ align-items:center;
 }
 
 .card_head_left{
+  flex:1 1 auto;
   align-items:center;
   gap:8px;
   min-width:0;
@@ -1431,6 +1432,15 @@ align-items:center;
 
 .card_head_text{
   min-width:0;
+  flex:1 1 auto;
+}
+
+.card_subtitle_row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+  width:100%;
 }
 
 .card_pref_wrap{
@@ -1966,9 +1976,32 @@ align-items:center;
 }
 
 .card_shell[data-card-mode="mini"] .card_subtitle{
+  flex:1 1 auto;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
+}
+
+.card_subtitle_side{
+  flex:0 0 auto;
+  margin:0;
+  margin-left:auto;
+  white-space:nowrap;
+  text-align:right;
+}
+
+.zr_restia_head{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.zr_restia_head .card_section_title{
+  margin-bottom:0;
+}
+
+.zr_restia_head .zr_restia_refresh_btn{
+  margin-left:auto;
 }
 
 .card_shell[data-card-mode="mini"] .card_top{
@@ -2632,7 +2665,10 @@ align-items:center;
 
 .zr_restia_total{
   display:flex;
-  flex-direction:column;
+  flex-direction:row;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:10px;
   padding:12px 14px;
   margin-bottom:10px;
   border:1px solid var(--clr_pruhledna_modra_tmava_18);
@@ -2651,16 +2687,6 @@ align-items:center;
   line-height:1.1;
   color:var(--clr_seda_4);
   text-align:right;
-}
-
-.zr_restia_update{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:8px;
-  margin:-4px 0 8px 0;
-  font-size:var(--fs_12);
-  color:var(--clr_seda_3);
 }
 
 .zr_restia_refresh_btn{
@@ -2687,10 +2713,12 @@ align-items:center;
   opacity:.65;
 }
 
+.zr_restia_table th,
 .zr_restia_table td{
   padding:7px 8px;
   border:1px solid var(--clr_pruhledna_seda_18);
   background:var(--clr_bila);
+  line-height:1.15;
 }
 
 .zr_side .zr_restia_table{
@@ -3130,6 +3158,13 @@ align-items:center;
 }
 
 /* K10 – denní report: kompaktní MAX režim (jen uvnitř overlay karty) */
+.dash_card.is-maxi-overlay .zr_form{
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+}
+
 .dash_card.is-maxi-overlay .zr_form .gap_14,
 .dash_card.is-maxi-overlay .zr_form.gap_14{
   gap:7px;
@@ -3207,11 +3242,7 @@ align-items:center;
   line-height:1.05;
 }
 
-.dash_card.is-maxi-overlay .zr_form .zr_restia_update{
-  margin:-3px 0 5px 0;
-  line-height:1.1;
-}
-
+.dash_card.is-maxi-overlay .zr_form .zr_restia_table th,
 .dash_card.is-maxi-overlay .zr_form .zr_restia_table td{
   padding:4px 6px;
   line-height:1.15;
