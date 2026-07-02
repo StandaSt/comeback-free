@@ -41,7 +41,7 @@ try {
     $idUser = cb_helpdesk_current_user_id();
     $idHelpdesk = (int)($data['id_helpdesk'] ?? 0);
     $stav = trim((string)($data['stav'] ?? ''));
-    if (!in_array($stav, ['nový', 'řeší se', 'vyřešeno', 'zamítnuto'], true)) {
+    if (!in_array($stav, ['nový', 'řeší se', 'vyřešeno'], true)) {
         throw new RuntimeException('Neplatný stav.');
     }
 
@@ -50,7 +50,7 @@ try {
     }
 
     $uzavrenoSql = 'NULL';
-    if (in_array($stav, ['vyřešeno', 'zamítnuto'], true)) {
+    if ($stav === 'vyřešeno') {
         $uzavrenoSql = 'NOW()';
     }
 
@@ -70,16 +70,7 @@ try {
     $stmt->execute();
     $stmt->close();
 
-    if ($stav === 'zamítnuto') {
-        cb_helpdesk_notifikace_ucastnikum(
-            $conn,
-            $idHelpdesk,
-            null,
-            $idUser,
-            'zmena_stavu',
-            'Tiket č. ' . (string)$idHelpdesk . ' byl zamítnut a nebude se řešit'
-        );
-    } elseif ($stav === 'vyřešeno') {
+    if ($stav === 'vyřešeno') {
         cb_helpdesk_notifikace_ucastnikum(
             $conn,
             $idHelpdesk,

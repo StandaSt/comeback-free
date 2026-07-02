@@ -95,7 +95,6 @@ $stats = [
     'new' => 0,
     'active' => 0,
     'resolved' => 0,
-    'rejected' => 0,
 ];
 $items = [];
 $scope = cb_helpdesk_visible_scope($idUser);
@@ -105,11 +104,10 @@ if ($isAdmin) {
         SELECT
             COUNT(*) AS total,
             SUM(stav IN ('nový', 'řeší se')) AS open_cnt,
-            SUM(stav IN ('vyřešeno', 'zamítnuto')) AS closed_cnt,
+            SUM(stav = 'vyřešeno') AS closed_cnt,
             SUM(stav = 'nový') AS new_cnt,
             SUM(stav = 'řeší se') AS active_cnt,
-            SUM(stav = 'vyřešeno') AS resolved_cnt,
-            SUM(stav = 'zamítnuto') AS rejected_cnt
+            SUM(stav = 'vyřešeno') AS resolved_cnt
         FROM helpdesk
     ");
     if ($resStats instanceof mysqli_result) {
@@ -120,7 +118,6 @@ if ($isAdmin) {
         $stats['new'] = (int)($rowStats['new_cnt'] ?? 0);
         $stats['active'] = (int)($rowStats['active_cnt'] ?? 0);
         $stats['resolved'] = (int)($rowStats['resolved_cnt'] ?? 0);
-        $stats['rejected'] = (int)($rowStats['rejected_cnt'] ?? 0);
         $resStats->free();
     }
 
@@ -144,16 +141,20 @@ if ($isAdmin) {
         SELECT
             COUNT(*) AS total,
             SUM(stav IN ('nový', 'řeší se')) AS open_cnt,
-            SUM(stav IN ('vyřešeno', 'zamítnuto')) AS closed_cnt,
+            SUM(stav = 'vyřešeno') AS closed_cnt,
             SUM(stav = 'nový') AS new_cnt,
             SUM(stav = 'řeší se') AS active_cnt,
-            SUM(stav = 'vyřešeno') AS resolved_cnt,
-            SUM(stav = 'zamítnuto') AS rejected_cnt
-        FROM helpdesk
-        WHERE id_user_zalozil = ?
-    ");
+            SUM(stav = 'vyřešeno') AS resolved_cnt
+        FROM helpdesk h
+        WHERE " . $scope['sql']);
     if ($stmtStats instanceof mysqli_stmt) {
-        $stmtStats->bind_param('i', $idUser);
+        $types = (string)$scope['types'];
+        $params = (array)($scope['params'] ?? []);
+        $bind = [$types];
+        foreach ($params as $index => $value) {
+            $bind[] = &$params[$index];
+        }
+        call_user_func_array([$stmtStats, 'bind_param'], $bind);
         $stmtStats->execute();
         $resStats = $stmtStats->get_result();
         if ($resStats instanceof mysqli_result) {
@@ -164,7 +165,6 @@ if ($isAdmin) {
             $stats['new'] = (int)($rowStats['new_cnt'] ?? 0);
             $stats['active'] = (int)($rowStats['active_cnt'] ?? 0);
             $stats['resolved'] = (int)($rowStats['resolved_cnt'] ?? 0);
-            $stats['rejected'] = (int)($rowStats['rejected_cnt'] ?? 0);
             $resStats->free();
         }
         $stmtStats->close();
@@ -233,9 +233,6 @@ ob_start();
     </button>
     <button type="button" class="ram_normal zaobleni_10 helpd-mini-btn" data-cb-hd-min-filter="resolved">
       <span class="card_mini_text">Uzavřeno<br><strong class="card_mini_text text_tucny"><?= cb_helpdesk_card_h((string)$stats['resolved']) ?></strong></span>
-    </button>
-    <button type="button" class="ram_normal zaobleni_10 helpd-mini-btn" data-cb-hd-min-filter="rejected">
-      <span class="card_mini_text">Zamítnuto<br><strong class="card_mini_text text_tucny"><?= cb_helpdesk_card_h((string)$stats['rejected']) ?></strong></span>
     </button>
   </div>
 </div>
@@ -333,7 +330,7 @@ ob_start();
 
   function filterStatusValue(state) {
     var value = text(state).trim();
-    if (value === 'vyřešeno' || value === 'zamítnuto' || value === 'uzavřené') {
+    if (value === 'vyřešeno' || value === 'uzavřené') {
       return 'uzavřené';
     }
     if (value === 'řeší se') {
@@ -436,7 +433,6 @@ ob_start();
     if (normalized === 'nový' || normalized === 'novy' || normalized === 'new') { return 'new'; }
     if (normalized === 'řeší se' || normalized === 'resi se' || normalized === 'active') { return 'active'; }
     if (normalized === 'vyřešeno' || normalized === 'vyreseno' || normalized === 'resolved') { return 'resolved'; }
-    if (normalized === 'zamítnuto' || normalized === 'zamitnuto' || normalized === 'rejected') { return 'rejected'; }
     if (normalized === 'uzavřené' || normalized === 'uzavrene' || normalized === 'closed') { return 'closed'; }
     return 'all';
   }
@@ -453,9 +449,22 @@ ob_start();
     var current = getCurrentFilterValue();
     expanded.querySelectorAll('[data-cb-hd-filter-block]').forEach(function (button) {
       if (!(button instanceof HTMLButtonElement)) { return; }
-      var isActive = normalizeFilterValue(button.getAttribute('data-cb-hd-filter-block') || '') === current;
-      button.style.background = isActive ? '#eef8ef' : '#eff6ff';
-      button.style.borderColor = isActive ? 'rgba(34,120,70,.28)' : 'rgba(15,23,42,.10)';
+      var filterValue = normalizeFilterValue(button.getAttribute('data-cb-hd-filter-block') || '');
+      var isActive = filterValue === current;
+      var bg = '#ffffff';
+      var borderColor = 'rgba(15,23,42,.10)';
+      var countColor = '#355c9a';
+      if (filterValue === 'active') {
+        bg = '#eaf3ff';
+        borderColor = 'rgba(59,130,246,.22)';
+        countColor = '#1d4ed8';
+      } else if (filterValue === 'resolved') {
+        bg = '#eef9f1';
+        borderColor = 'rgba(34,197,94,.22)';
+        countColor = '#15803d';
+      }
+      button.style.background = bg;
+      button.style.borderColor = borderColor;
       button.style.boxShadow = isActive ? 'inset 0 0 0 1px rgba(15,23,42,.08)' : 'none';
       button.style.transform = isActive ? 'translateY(-1px)' : 'none';
       var label = button.querySelector('[data-cb-hd-filter-label]');
@@ -464,8 +473,29 @@ ob_start();
         label.style.fontSize = isActive ? '13px' : '12px';
         label.style.color = '#0f172a';
       }
+      var count = button.querySelector('strong');
+      if (count instanceof HTMLElement) {
+        count.style.color = countColor;
+      }
       button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     });
+  }
+
+  function changeFilterCount(filterValue, delta) {
+    var expanded = getExpandedBox();
+    if (!(expanded instanceof HTMLElement)) { return; }
+    var count = expanded.querySelector('[data-cb-hd-count="' + normalizeFilterValue(filterValue) + '"]');
+    if (!(count instanceof HTMLElement)) { return; }
+    var next = Number(count.textContent || '0') + Number(delta || 0);
+    count.textContent = String(Math.max(0, next));
+  }
+
+  function updateFilterCountsAfterStateChange(oldState, newState) {
+    var oldValue = normalizeFilterValue(oldState);
+    var newValue = normalizeFilterValue(newState);
+    if (oldValue === newValue) { return; }
+    changeFilterCount(oldValue, -1);
+    changeFilterCount(newValue, 1);
   }
 
   function setFilterValue(value) {
@@ -505,9 +535,16 @@ ob_start();
     if (list instanceof HTMLElement) {
       list.querySelectorAll('[data-hd-item]').forEach(function (row) {
         if (!(row instanceof HTMLElement)) { return; }
+        var rowState = normalizeFilterValue(row.getAttribute('data-hd-stav') || '');
+        var rowBg = '#ffffff';
+        if (rowState === 'active') {
+          rowBg = '#eaf3ff';
+        } else if (rowState === 'resolved') {
+          rowBg = '#eef9f1';
+        }
         var isActive = activeDetailId !== '' && row.getAttribute('data-hd-item') === activeDetailId;
-        row.style.background = isActive ? '#dbeafe' : '#fff';
-        row.style.borderColor = isActive ? '#2563eb' : '';
+        row.style.background = rowBg;
+        row.style.borderColor = isActive ? '#2563eb' : 'rgba(15,23,42,.10)';
         row.style.boxShadow = isActive ? 'inset 0 0 0 1px rgba(37,99,235,.22)' : 'none';
       });
     }
@@ -666,7 +703,6 @@ ob_start();
         html += '<button type="button" class="' + esc(btnBaseClass) + '" style="' + esc(actionBtnStyle) + '" data-cb-hd-follow="' + esc(id) + '">Mám stejný problém</button>';
       }
       if (isAdmin) {
-        html += '<button type="button" class="' + esc(btnBaseClass) + '" style="' + esc(btnDangerStyle . actionBtnStyle) + '" data-cb-hd-quick-state="' + esc(id) + '" data-cb-hd-quick-value="zamítnuto">Zamítnout</button>';
         html += '<button type="button" class="' + esc(btnBaseClass) + '" style="' + esc(btnSuccessStyle . actionBtnStyle) + '" data-cb-hd-quick-state="' + esc(id) + '" data-cb-hd-quick-value="vyřešeno">Vyřešeno</button>';
       }
       html += '<button type="button" class="' + esc(btnPrimaryClass) + '" style="' + esc(sendBtnStyle) + '" data-cb-hd-send-reply="' + esc(id) + '">Odeslat odpověď</button>';
@@ -679,7 +715,6 @@ ob_start();
         html += '<button type="button" class="' + esc(btnBaseClass) + '" style="' + esc(actionBtnStyle) + '" data-cb-hd-follow="' + esc(id) + '">Mám stejný problém</button>';
       }
       if (isAdmin) {
-        html += '<button type="button" class="' + esc(btnBaseClass) + '" style="' + esc(btnDangerStyle . actionBtnStyle) + '" data-cb-hd-quick-state="' + esc(id) + '" data-cb-hd-quick-value="zamítnuto">Zamítnout</button>';
         html += '<button type="button" class="' + esc(btnBaseClass) + '" style="' + esc(btnSuccessStyle . actionBtnStyle) + '" data-cb-hd-quick-state="' + esc(id) + '" data-cb-hd-quick-value="vyřešeno">Vyřešeno</button>';
       }
       html += '<button type="button" class="' + esc(btnBaseClass) + '" style="' + esc(actionBtnStyle) + '" data-cb-hd-close-detail="1">Zavřít</button>';
@@ -763,8 +798,7 @@ ob_start();
     if (filterValue === 'new') { return state === 'nový'; }
     if (filterValue === 'active') { return state === 'řeší se'; }
     if (filterValue === 'resolved') { return state === 'vyřešeno'; }
-    if (filterValue === 'rejected') { return state === 'zamítnuto'; }
-    if (filterValue === 'closed') { return state === 'vyřešeno' || state === 'zamítnuto'; }
+    if (filterValue === 'closed') { return state === 'vyřešeno'; }
     return true;
   }
 
@@ -790,12 +824,14 @@ ob_start();
   function updateRowState(id, state) {
     var row = getItemRow(id);
     if (!(row instanceof HTMLElement)) { return; }
+    var oldState = row.getAttribute('data-hd-stav') || '';
     row.setAttribute('data-hd-stav', text(state));
     row.setAttribute('data-hd-filtr', filterStatusValue(state));
     var stateBox = row.querySelector('[data-hd-state-text="1"]');
     if (stateBox instanceof HTMLElement) {
       stateBox.textContent = text(state);
     }
+    updateFilterCountsAfterStateChange(oldState, state);
     applyFilter();
   }
 
@@ -1051,29 +1087,25 @@ ob_start();
   <div style="flex:0 0 34%;min-width:0;padding:0 18px 0 0;display:flex;flex-direction:column;min-height:0;">
       <section class="cb-hd-card-max" style="display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:10px;flex:1 1 auto;min-height:0;" data-cb-hd-filter-value="new">
         <div>
-          <div style="font-size:18px;font-weight:700;line-height:1.2;color:#0f172a;"><?= $isAdmin ? 'Správa HelpDesku' : 'Moje hlášení a historie' ?></div>
+          <div style="font-size:18px;font-weight:700;line-height:1.2;color:#0f172a;"><?= $isAdmin ? 'Správa HelpDesku' : 'Přehled tiketů' ?></div>
         </div>
 
-        <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;">
-          <button type="button" class="ram_normal zaobleni_10" data-cb-hd-filter-block="all" aria-pressed="false" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;background:#eff6ff;border:1px solid rgba(15,23,42,.10);text-align:left;cursor:pointer;">
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;">
+          <button type="button" class="ram_normal zaobleni_10" data-cb-hd-filter-block="all" aria-pressed="false" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;background:#ffffff;border:1px solid rgba(15,23,42,.10);text-align:left;cursor:pointer;">
             <span data-cb-hd-filter-label="1" style="font-size:12px;font-weight:500;color:#0f172a;line-height:1.2;">Vše</span>
-            <strong style="font-size:18px;font-weight:700;line-height:1;color:#355c9a;"><?= cb_helpdesk_card_h((string)$stats['total']) ?></strong>
+            <strong data-cb-hd-count="all" style="font-size:18px;font-weight:700;line-height:1;color:#355c9a;"><?= cb_helpdesk_card_h((string)$stats['total']) ?></strong>
           </button>
-          <button type="button" class="ram_normal zaobleni_10" data-cb-hd-filter-block="new" aria-pressed="true" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;background:#eef8ef;border:1px solid rgba(34,120,70,.28);text-align:left;cursor:pointer;">
+          <button type="button" class="ram_normal zaobleni_10" data-cb-hd-filter-block="new" aria-pressed="true" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;background:#ffffff;border:1px solid rgba(15,23,42,.10);text-align:left;cursor:pointer;">
             <span data-cb-hd-filter-label="1" style="font-size:13px;font-weight:700;color:#0f172a;line-height:1.2;">Nové</span>
-            <strong style="font-size:18px;font-weight:700;line-height:1;color:#355c9a;"><?= cb_helpdesk_card_h((string)$stats['new']) ?></strong>
+            <strong data-cb-hd-count="new" style="font-size:18px;font-weight:700;line-height:1;color:#355c9a;"><?= cb_helpdesk_card_h((string)$stats['new']) ?></strong>
           </button>
-          <button type="button" class="ram_normal zaobleni_10" data-cb-hd-filter-block="active" aria-pressed="false" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;background:#eff6ff;border:1px solid rgba(15,23,42,.10);text-align:left;cursor:pointer;">
+          <button type="button" class="ram_normal zaobleni_10" data-cb-hd-filter-block="active" aria-pressed="false" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;background:#eaf3ff;border:1px solid rgba(59,130,246,.22);text-align:left;cursor:pointer;">
             <span data-cb-hd-filter-label="1" style="font-size:12px;font-weight:500;color:#0f172a;line-height:1.2;">Řeší se</span>
-            <strong style="font-size:18px;font-weight:700;line-height:1;color:#355c9a;"><?= cb_helpdesk_card_h((string)$stats['active']) ?></strong>
+            <strong data-cb-hd-count="active" style="font-size:18px;font-weight:700;line-height:1;color:#1d4ed8;"><?= cb_helpdesk_card_h((string)$stats['active']) ?></strong>
           </button>
-          <button type="button" class="ram_normal zaobleni_10" data-cb-hd-filter-block="resolved" aria-pressed="false" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;background:#eff6ff;border:1px solid rgba(15,23,42,.10);text-align:left;cursor:pointer;">
+          <button type="button" class="ram_normal zaobleni_10" data-cb-hd-filter-block="resolved" aria-pressed="false" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;background:#eef9f1;border:1px solid rgba(34,197,94,.22);text-align:left;cursor:pointer;">
             <span data-cb-hd-filter-label="1" style="font-size:12px;font-weight:500;color:#0f172a;line-height:1.2;">Uzavřeno</span>
-            <strong style="font-size:18px;font-weight:700;line-height:1;color:#355c9a;"><?= cb_helpdesk_card_h((string)$stats['resolved']) ?></strong>
-          </button>
-          <button type="button" class="ram_normal zaobleni_10" data-cb-hd-filter-block="rejected" aria-pressed="false" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;background:#eff6ff;border:1px solid rgba(15,23,42,.10);text-align:left;cursor:pointer;">
-            <span data-cb-hd-filter-label="1" style="font-size:12px;font-weight:500;color:#0f172a;line-height:1.2;">Zamítnuto</span>
-            <strong style="font-size:18px;font-weight:700;line-height:1;color:#355c9a;"><?= cb_helpdesk_card_h((string)$stats['rejected']) ?></strong>
+            <strong data-cb-hd-count="resolved" style="font-size:18px;font-weight:700;line-height:1;color:#15803d;"><?= cb_helpdesk_card_h((string)$stats['resolved']) ?></strong>
           </button>
         </div>
 
@@ -1083,7 +1115,7 @@ ob_start();
               <div data-cb-hd-empty="1" class="ram_normal zaobleni_10" style="padding:12px;background:#fff;color:#64748b;">Zatím bez záznamu.</div>
             <?php else: ?>
               <?php foreach ($items as $item): ?>
-                <article class="ram_normal zaobleni_10" data-hd-item="<?= cb_helpdesk_card_h((string)(int)$item['id_helpdesk']) ?>" data-hd-stav="<?= cb_helpdesk_card_h((string)$item['stav']) ?>" data-hd-filtr="<?= cb_helpdesk_card_h(in_array((string)$item['stav'], ['vyřešeno', 'zamítnuto'], true) ? 'uzavřené' : (trim((string)$item['stav']) === 'řeší se' ? 'řeší se' : 'nový')) ?>" data-hd-has-new-reply="<?= (int)($item['has_new_reply'] ?? 0) === 1 ? '1' : '0' ?>" style="padding:10px;background:#fff;cursor:pointer;">
+                <article class="ram_normal zaobleni_10" data-hd-item="<?= cb_helpdesk_card_h((string)(int)$item['id_helpdesk']) ?>" data-hd-stav="<?= cb_helpdesk_card_h((string)$item['stav']) ?>" data-hd-filtr="<?= cb_helpdesk_card_h((string)$item['stav'] === 'vyřešeno' ? 'uzavřené' : (trim((string)$item['stav']) === 'řeší se' ? 'řeší se' : 'nový')) ?>" data-hd-has-new-reply="<?= (int)($item['has_new_reply'] ?? 0) === 1 ? '1' : '0' ?>" style="padding:10px;background:#fff;cursor:pointer;">
                   <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
                     <div style="display:grid;gap:4px;width:100%;">
                       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">

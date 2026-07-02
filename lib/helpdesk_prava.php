@@ -133,7 +133,7 @@ function cb_helpdesk_can_write(mysqli $conn, int $idHelpdesk, int $idUser): bool
         return false;
     }
 
-    if (in_array((string)$stav, ['vyřešeno', 'zamítnuto'], true) && !cb_helpdesk_is_admin()) {
+    if ((string)$stav === 'vyřešeno' && !cb_helpdesk_is_admin()) {
         return false;
     }
 

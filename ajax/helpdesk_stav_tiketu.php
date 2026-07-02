@@ -39,7 +39,7 @@ try {
                ON hr.id_helpdesk = h.id_helpdesk
               AND hr.id_user = ?
         WHERE ' . $scope['sql'] . '
-        ORDER BY FIELD(h.stav, \'nový\', \'řeší se\', \'vyřešeno\', \'zamítnuto\'), h.upraveno DESC, h.vytvoreno DESC
+        ORDER BY FIELD(h.stav, \'nový\', \'řeší se\', \'vyřešeno\'), h.upraveno DESC, h.vytvoreno DESC
         LIMIT 120
     ';
 
