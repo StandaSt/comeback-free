@@ -145,7 +145,7 @@ try {
     $message = trim($e->getMessage());
     if (
         $message === cb_db_zapis_denni_report_already_saved_message()
-        || (!$requestedFinalEdit && cb_db_zapis_denni_report_is_duplicate_error($e, 'uq_reporty_is_pob_datum'))
+        || cb_db_zapis_denni_report_is_duplicate_error($e, 'uq_reporty_is_pob_datum')
     ) {
         $sendJson(409, ['ok' => false, 'err' => cb_db_zapis_denni_report_already_saved_message()]);
     }

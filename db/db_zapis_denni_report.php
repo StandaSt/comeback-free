@@ -74,6 +74,51 @@ function cb_db_reporty_is_mark_invalid(mysqli $conn, int $idReportu): void
     $stmt->close();
 }
 
+function cb_db_reporty_is_lock_name(int $idPob, string $datumReportu): string
+{
+    return 'reporty_is_final_' . $idPob . '_' . $datumReportu;
+}
+
+function cb_db_reporty_is_acquire_lock(mysqli $conn, int $idPob, string $datumReportu, int $timeoutSeconds = 10): string
+{
+    $lockName = cb_db_reporty_is_lock_name($idPob, $datumReportu);
+    $stmt = $conn->prepare('SELECT GET_LOCK(?, ?) AS lock_ok');
+    if ($stmt === false) {
+        throw new RuntimeException('Nelze pripravit zamek finalniho reportu.');
+    }
+
+    $stmt->bind_param('si', $lockName, $timeoutSeconds);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result instanceof mysqli_result ? ($result->fetch_assoc() ?: null) : null;
+    if ($result instanceof mysqli_result) {
+        $result->free();
+    }
+    $stmt->close();
+
+    if ((int)($row['lock_ok'] ?? 0) !== 1) {
+        throw new RuntimeException('Ulozeni tohoto reportu uz prave probiha. Zkus to prosim za chvili znovu.');
+    }
+
+    return $lockName;
+}
+
+function cb_db_reporty_is_release_lock(mysqli $conn, string $lockName): void
+{
+    if ($lockName === '') {
+        return;
+    }
+
+    $stmt = $conn->prepare('SELECT RELEASE_LOCK(?)');
+    if ($stmt === false) {
+        return;
+    }
+
+    $stmt->bind_param('s', $lockName);
+    $stmt->execute();
+    $stmt->close();
+}
+
 function cb_db_zapis_denni_report_people_from_post(array $post, string $type): array
 {
     $prefix = ($type === 'kuryr') ? 'kuryr' : 'instor';
@@ -135,9 +180,10 @@ function cb_db_zapis_denni_report_from_form(mysqli $conn, int $idPob, string $da
         cb_db_zapis_denni_report_people_from_post($post, 'instor'),
         cb_db_zapis_denni_report_people_from_post($post, 'kuryr')
     );
+    $lockName = cb_db_reporty_is_acquire_lock($conn, $idPob, $datumReportu);
 
-    $conn->begin_transaction();
     try {
+        $conn->begin_transaction();
         $activeReportId = cb_db_reporty_is_find_active_id($conn, $idPob, $datumReportu);
         if ($activeReportId > 0 && !$invalidateExistingActive) {
             throw new RuntimeException(cb_db_zapis_denni_report_already_saved_message());
@@ -277,6 +323,8 @@ function cb_db_zapis_denni_report_from_form(mysqli $conn, int $idPob, string $da
     } catch (Throwable $e) {
         $conn->rollback();
         throw $e;
+    } finally {
+        cb_db_reporty_is_release_lock($conn, $lockName);
     }
 }
 

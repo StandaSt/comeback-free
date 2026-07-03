@@ -634,7 +634,7 @@ function cb_denni_report_restia_summary(mysqli $conn, int $idPob, array $workday
         $boltCondition = $notCanceled . " AND cp.kod = 'bolt'";
         $djCondition = $notCanceled . " AND cp.kod IN ('foodora', 'damejidlo') AND COALESCE(p.nazev, '') <> 'cash'";
         $webCondition = $notCanceled . " AND cp.kod = 'generic' AND COALESCE(p.nazev, '') = 'online'";
-        $woltCashCondition = $notCanceled . " AND cp.kod = 'generic' AND COALESCE(d.nazev, '') = 'delivery' AND COALESCE(p.nazev, '') = 'cash'";
+        $woltCashCondition = $notCanceled . " AND cp.kod = 'generic' AND COALESCE(d.nazev, '') = 'delivery' AND COALESCE(p.nazev, '') = 'cash' AND COALESCE(ok.is_wolt_kuryr, 0) = 1";
         $djCashCondition = $notCanceled . " AND cp.kod IN ('foodora', 'damejidlo') AND COALESCE(p.nazev, '') = 'cash'";
         $otherCondition = $notCanceled . " AND NOT (("
             . $woltCondition . ") OR ("
@@ -676,7 +676,10 @@ function cb_denni_report_restia_summary(mysqli $conn, int $idPob, array $workday
             LEFT JOIN obj_ceny c ON c.id_obj = o.id_obj
             LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
             LEFT JOIN (
-                SELECT id_obj, MIN(provider) AS provider
+                SELECT
+                    id_obj,
+                    MIN(provider) AS provider,
+                    MAX(CASE WHEN TRIM(COALESCE(jmeno, '')) = 'Wolt Kurýr' THEN 1 ELSE 0 END) AS is_wolt_kuryr
                 FROM obj_kuryr
                 GROUP BY id_obj
             ) ok ON ok.id_obj = o.id_obj

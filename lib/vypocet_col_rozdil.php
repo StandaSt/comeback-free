@@ -38,10 +38,27 @@ function cb_vcr_rozdil(array $restiaSummary, array $cash): ?float
         return null;
     }
 
+    /*
+     * Rozdil ma odpovidat historickemu vypoctu ze starych reportu.
+     *
+     * Logika je zamerne jednoducha:
+     * 1. Secteme prijmy, ktere maji realne "sedet" proti pokladne:
+     *    - online kanaly Wolt, Bolt, DJ a web
+     *    - Wolt drive cash
+     *    - hotovost, terminal a stravenky z pokladny
+     * 2. K tomu pricteme vydaje z pokladny.
+     * 3. Nakonec odecteme celkovou trzbu z Restie.
+     *
+     * Dulezite:
+     * - wolt_cash se do rozdilu zapocitava, protoze tak odpovidaji stare reporty
+     * - dj_cash se sem naopak zamerne nepridava, protoze ve starych reportech
+     *   se do rozdilu stejnym zpusobem nepromital
+     */
     $income = cb_vcr_money($restiaSummary, 'wolt')
         + cb_vcr_money($restiaSummary, 'bolt')
         + cb_vcr_money($restiaSummary, 'dj')
         + cb_vcr_money($restiaSummary, 'web')
+        + cb_vcr_money($restiaSummary, 'wolt_cash')
         + cb_vcr_money($cash, 'terminal')
         + cb_vcr_money($cash, 'stravenky')
         + cb_vcr_money($cash, 'hotovost');
