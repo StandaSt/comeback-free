@@ -56,7 +56,8 @@ if (!function_exists('cb_restia_kontrola_get_branches')) {
         $res = $conn->query('
             SELECT id_pob, nazev, restia_activePosId, prvni_obj
             FROM pobocka
-            WHERE restia_activePosId IS NOT NULL
+            WHERE id_pob > 0
+              AND restia_activePosId IS NOT NULL
               AND restia_activePosId <> ""
               AND prvni_obj IS NOT NULL
               AND prvni_obj <> ""
@@ -216,6 +217,52 @@ if (!function_exists('cb_restia_kontrola_upsert')) {
     }
 }
 
+if (!function_exists('cb_restia_kontrola_month_key')) {
+    function cb_restia_kontrola_month_key(int $rok, int $mesic): string
+    {
+        return sprintf('%04d-%02d', $rok, $mesic);
+    }
+}
+
+if (!function_exists('cb_restia_kontrola_db_counts_for_branch')) {
+    function cb_restia_kontrola_db_counts_for_branch(mysqli $conn, int $idPob): array
+    {
+        $stmt = $conn->prepare('
+            SELECT
+                YEAR(restia_created_at) AS rok,
+                MONTH(restia_created_at) AS mesic,
+                COUNT(*) AS cnt
+            FROM objednavky_restia
+            WHERE id_pob = ?
+              AND restia_created_at IS NOT NULL
+            GROUP BY YEAR(restia_created_at), MONTH(restia_created_at)
+        ');
+        if ($stmt === false) {
+            throw new RuntimeException('DB prepare selhal: objednavky_restia měsíční count.');
+        }
+
+        $stmt->bind_param('i', $idPob);
+        $stmt->execute();
+        $res = $stmt->get_result();
+
+        $out = [];
+        if ($res instanceof mysqli_result) {
+            while ($row = $res->fetch_assoc()) {
+                $rok = (int)($row['rok'] ?? 0);
+                $mesic = (int)($row['mesic'] ?? 0);
+                if ($rok <= 0 || $mesic < 1 || $mesic > 12) {
+                    continue;
+                }
+                $out[cb_restia_kontrola_month_key($rok, $mesic)] = (int)($row['cnt'] ?? 0);
+            }
+            $res->free();
+        }
+        $stmt->close();
+
+        return $out;
+    }
+}
+
 if (!function_exists('cb_restia_kontrola_load_branch_rows')) {
     function cb_restia_kontrola_load_branch_rows(mysqli $conn, int $idPob): array
     {
@@ -223,23 +270,18 @@ if (!function_exists('cb_restia_kontrola_load_branch_rows')) {
             return [];
         }
 
-        $current = new DateTimeImmutable('now', new DateTimeZone('Europe/Prague'));
-        $currentYear = (int)$current->format('Y');
-        $currentMonth = (int)$current->format('n');
-
         $stmt = $conn->prepare('
             SELECT k.rok, k.mesic, k.id_pob, k.restia_pocet, k.db_pocet, k.rozdil, p.nazev
             FROM objednavky_kontrola k
             LEFT JOIN pobocka p ON p.id_pob = k.id_pob
             WHERE k.id_pob = ?
-              AND (k.rok < ? OR (k.rok = ? AND k.mesic < ?))
             ORDER BY k.rok ASC, k.mesic ASC
         ');
         if ($stmt === false) {
             throw new RuntimeException('DB prepare selhal: objednavky_kontrola výpis.');
         }
 
-        $stmt->bind_param('iiii', $idPob, $currentYear, $currentYear, $currentMonth);
+        $stmt->bind_param('i', $idPob);
         $stmt->execute();
         $res = $stmt->get_result();
 
@@ -249,6 +291,43 @@ if (!function_exists('cb_restia_kontrola_load_branch_rows')) {
                 $out[] = [
                     'pobocka' => trim((string)($row['nazev'] ?? ('Pobočka #' . (string)$idPob))),
                     'id_pob' => (int)($row['id_pob'] ?? $idPob),
+                    'rok' => (int)($row['rok'] ?? 0),
+                    'mesic' => (int)($row['mesic'] ?? 0),
+                    'restia_pocet' => (int)($row['restia_pocet'] ?? 0),
+                    'db_pocet' => (int)($row['db_pocet'] ?? 0),
+                    'rozdil' => (int)($row['rozdil'] ?? 0),
+                ];
+            }
+            $res->free();
+        }
+        $stmt->close();
+
+        return $out;
+    }
+}
+
+if (!function_exists('cb_restia_kontrola_load_all_rows')) {
+    function cb_restia_kontrola_load_all_rows(mysqli $conn): array
+    {
+        $stmt = $conn->prepare('
+            SELECT k.rok, k.mesic, k.id_pob, k.restia_pocet, k.db_pocet, k.rozdil, p.nazev
+            FROM objednavky_kontrola k
+            LEFT JOIN pobocka p ON p.id_pob = k.id_pob
+            ORDER BY k.id_pob ASC, k.rok ASC, k.mesic ASC
+        ');
+        if ($stmt === false) {
+            throw new RuntimeException('DB prepare selhal: objednavky_kontrola výpis všech poboček.');
+        }
+
+        $stmt->execute();
+        $res = $stmt->get_result();
+
+        $out = [];
+        if ($res instanceof mysqli_result) {
+            while ($row = $res->fetch_assoc()) {
+                $out[] = [
+                    'pobocka' => trim((string)($row['nazev'] ?? ('Pobočka #' . (string)($row['id_pob'] ?? 0)))),
+                    'id_pob' => (int)($row['id_pob'] ?? 0),
                     'rok' => (int)($row['rok'] ?? 0),
                     'mesic' => (int)($row['mesic'] ?? 0),
                     'restia_pocet' => (int)($row['restia_pocet'] ?? 0),
@@ -299,52 +378,6 @@ if (!function_exists('cb_restia_kontrola_next_branch')) {
         }
 
         return null;
-    }
-}
-
-if (!function_exists('cb_restia_kontrola_offset_range')) {
-    function cb_restia_kontrola_offset_range(int $rok, int $mesic, int $offsetHours): array
-    {
-        $tz = new DateTimeZone('Europe/Prague');
-        $start = DateTimeImmutable::createFromFormat(
-            'Y-m-d H:i:s',
-            sprintf('%04d-%02d-01 00:00:00', $rok, $mesic),
-            $tz
-        );
-        if (!($start instanceof DateTimeImmutable)) {
-            throw new RuntimeException('Neplatný měsíc pro diagnostiku.');
-        }
-
-        $next = $start->modify('first day of next month')->setTime(0, 0, 0);
-        $modifier = ($offsetHours >= 0 ? '+' : '') . (string)$offsetHours . ' hours';
-
-        return [
-            'from_z' => $start->modify($modifier)->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.v\Z'),
-            'to_z' => $next->modify($modifier)->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.v\Z'),
-        ];
-    }
-}
-
-if (!function_exists('cb_restia_kontrola_restia_count_raw')) {
-    function cb_restia_kontrola_restia_count_raw(string $activePosId, string $fromZ, string $toZ, string $note): int
-    {
-        $res = cb_restia_get('/api/orders', [
-            'page' => 1,
-            'limit' => 1,
-            'createdFrom' => $fromZ,
-            'createdTo' => $toZ,
-            'activePosId' => $activePosId,
-        ], $activePosId, $note);
-
-        if ((int)($res['ok'] ?? 0) !== 1) {
-            throw new RuntimeException('Restia diagnostika chyba HTTP=' . (string)($res['http_status'] ?? '') . ' ' . (string)($res['chyba'] ?? ''));
-        }
-
-        if (!array_key_exists('total_count', $res) || $res['total_count'] === null) {
-            throw new RuntimeException('Restia diagnostika nevrátila X-Total-Count.');
-        }
-
-        return max(0, (int)$res['total_count']);
     }
 }
 
@@ -596,7 +629,7 @@ $stats = [
 ];
 $error = '';
 $selectedBranch = null;
-$hasNextBranch = false;
+$nextBranch = null;
 $afterBranchId = max(0, (int)($_POST['cb_restia_kontrola_after'] ?? 0));
 
 try {
@@ -605,15 +638,17 @@ try {
     }
 
     $branches = cb_restia_kontrola_get_branches($conn);
-    $lastClosedMonth = (new DateTimeImmutable('now', new DateTimeZone('Europe/Prague')))->modify('first day of this month')->setTime(0, 0, 0)->modify('-1 month');
-    $selectedBranch = cb_restia_kontrola_next_branch($conn, $branches, $lastClosedMonth, $afterBranchId);
+    $currentMonth = (new DateTimeImmutable('now', new DateTimeZone('Europe/Prague')))->modify('first day of this month')->setTime(0, 0, 0);
+    $selectedBranch = cb_restia_kontrola_next_branch($conn, $branches, $currentMonth, $afterBranchId);
 
     if ($selectedBranch !== null) {
         $branch = $selectedBranch;
         $idPob = (int)($branch['id_pob'] ?? 0);
+        $dbCounts = cb_restia_kontrola_db_counts_for_branch($conn, $idPob);
 
         $month = cb_restia_kontrola_month_start((string)($branch['prvni_obj'] ?? ''));
-        while ($month <= $lastClosedMonth) {
+        $rowsToUpsert = [];
+        while ($month <= $currentMonth) {
             $range = cb_restia_kontrola_month_range($month);
             $rok = (int)$range['rok'];
             $mesic = (int)$range['mesic'];
@@ -625,15 +660,10 @@ try {
             }
 
             $restiaPocet = cb_restia_kontrola_restia_count($branch, $range);
-            $dbPocet = cb_restia_kontrola_db_count($conn, $idPob, (string)$range['from_db'], (string)$range['to_db']);
-            $rozdil = cb_restia_kontrola_upsert($conn, $rok, $mesic, $idPob, $restiaPocet, $dbPocet);
+            $dbPocet = (int)($dbCounts[cb_restia_kontrola_month_key($rok, $mesic)] ?? 0);
+            $rozdil = $dbPocet - $restiaPocet;
 
-            $stats['checked']++;
-            if ($rozdil !== 0) {
-                $stats['diff']++;
-            }
-
-            $rows[] = [
+            $rowsToUpsert[] = [
                 'pobocka' => (string)($branch['nazev'] ?? ('Pobočka #' . (string)$idPob)),
                 'id_pob' => $idPob,
                 'rok' => $rok,
@@ -646,8 +676,27 @@ try {
             $month = $month->modify('first day of next month')->setTime(0, 0, 0);
         }
 
-        $hasNextBranch = (cb_restia_kontrola_next_branch($conn, $branches, $lastClosedMonth, $idPob) !== null);
-        $rows = cb_restia_kontrola_load_branch_rows($conn, $idPob);
+        foreach ($rowsToUpsert as $rowToUpsert) {
+            $rozdil = cb_restia_kontrola_upsert(
+                $conn,
+                (int)$rowToUpsert['rok'],
+                (int)$rowToUpsert['mesic'],
+                (int)$rowToUpsert['id_pob'],
+                (int)$rowToUpsert['restia_pocet'],
+                (int)$rowToUpsert['db_pocet']
+            );
+            $stats['checked']++;
+            if ($rozdil !== 0) {
+                $stats['diff']++;
+            }
+        }
+
+        $nextBranch = cb_restia_kontrola_next_branch($conn, $branches, $currentMonth, $idPob);
+        if (is_array($nextBranch)) {
+            $rows = cb_restia_kontrola_load_branch_rows($conn, $idPob);
+        } else {
+            $rows = cb_restia_kontrola_load_all_rows($conn);
+        }
     }
 
     db_api_restia_flush($conn, $auth['id_user'], $auth['id_login']);
@@ -701,50 +750,6 @@ if (is_array($exampleRow)) {
     }
 }
 
-$diagnosticRows = [];
-$diagnosticError = '';
-if ($error === '' && is_array($selectedBranch) && count($completeRows) > 0) {
-    $activePosIdDiag = (string)($selectedBranch['active_pos_id'] ?? '');
-    if ($activePosIdDiag !== '') {
-        try {
-            foreach ([-2, -1, 0, 1, 2] as $offsetHours) {
-                $dbTotalDiag = 0;
-                $restiaTotalDiag = 0;
-                foreach ($completeRows as $row) {
-                    $rokDiag = (int)($row['rok'] ?? 0);
-                    $mesicDiag = (int)($row['mesic'] ?? 0);
-                    if ($rokDiag <= 0 || $mesicDiag < 1 || $mesicDiag > 12) {
-                        continue;
-                    }
-                    $rangeDiag = cb_restia_kontrola_offset_range($rokDiag, $mesicDiag, $offsetHours);
-                    $restiaTotalDiag += cb_restia_kontrola_restia_count_raw(
-                        $activePosIdDiag,
-                        (string)$rangeDiag['from_z'],
-                        (string)$rangeDiag['to_z'],
-                        'diagnostika offset=' . (string)$offsetHours . ' mesic=' . (string)$rokDiag . '-' . sprintf('%02d', $mesicDiag) . ' id_pob=' . (string)($selectedBranch['id_pob'] ?? 0)
-                    );
-                    $dbTotalDiag += (int)($row['db_pocet'] ?? 0);
-                }
-
-                $diagnosticRows[] = [
-                    'offset' => $offsetHours,
-                    'db_pocet' => $dbTotalDiag,
-                    'restia_pocet' => $restiaTotalDiag,
-                    'rozdil' => $dbTotalDiag - $restiaTotalDiag,
-                ];
-            }
-        } catch (Throwable $diagError) {
-            $diagnosticError = $diagError->getMessage();
-        }
-
-        try {
-            db_api_restia_flush($conn, $auth['id_user'], $auth['id_login']);
-        } catch (Throwable $flushError) {
-            $diagnosticError = trim($diagnosticError . ' / api_restia flush: ' . $flushError->getMessage(), ' /');
-        }
-    }
-}
-
 cb_restia_kontrola_write_diag(
     $conn,
     is_array($selectedBranch) ? $selectedBranch : null,
@@ -752,10 +757,10 @@ cb_restia_kontrola_write_diag(
     $completeRows,
     $currentRows,
     $completeTotals,
-    $diagnosticRows,
+    [],
     $exampleRange,
     $error,
-    $diagnosticError
+    ''
 );
 cb_restia_kontrola_write_summary($conn);
 ?>
@@ -860,43 +865,19 @@ cb_restia_kontrola_write_summary($conn);
     <p class="card_text txt_zelena text_tucny">Nebyla nalezena žádná další pobočka ke kontrole.</p>
   <?php endif; ?>
 
-  <?php if ($diagnosticError !== ''): ?>
-    <p class="card_text txt_cervena text_tucny">Diagnostika hranice období: <?= cb_restia_kontrola_h($diagnosticError) ?></p>
-  <?php elseif (count($diagnosticRows) > 0): ?>
-    <p class="card_text txt_seda text_tucny" style="margin-top:14px;">Diagnostika hranice období</p>
-    <p class="card_text txt_seda odstup_vnejsi_0">Součty kompletních měsíců při posunu hranice Restia dotazu. DB zůstává stejná, mění se jen <code>createdFrom</code>/<code>createdTo</code> poslané do Restie.</p>
-    <div class="table-wrap ram_normal bg_bila zaobleni_8 odstup_vnejsi_10" style="overflow:auto;">
-      <table class="table">
-        <thead>
-          <tr>
-            <th class="txt_r">Posun hodin</th>
-            <th class="txt_r">Restia</th>
-            <th class="txt_r">DB</th>
-            <th class="txt_r">Rozdíl DB - Restia</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($diagnosticRows as $diagRow): ?>
-            <?php $diagDiff = (int)($diagRow['rozdil'] ?? 0); ?>
-            <?php $diagOffset = (int)($diagRow['offset'] ?? 0); ?>
-            <tr>
-              <td class="txt_r"><?= cb_restia_kontrola_h(($diagOffset >= 0 ? '+' : '') . (string)$diagOffset) ?></td>
-              <td class="txt_r"><?= cb_restia_kontrola_h(number_format((int)($diagRow['restia_pocet'] ?? 0), 0, ',', ' ')) ?></td>
-              <td class="txt_r"><?= cb_restia_kontrola_h(number_format((int)($diagRow['db_pocet'] ?? 0), 0, ',', ' ')) ?></td>
-              <td class="txt_r <?= $diagDiff === 0 ? 'txt_zelena' : 'txt_cervena text_tucny' ?>"><?= cb_restia_kontrola_h(number_format($diagDiff, 0, ',', ' ')) ?></td>
-            </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
-  <?php endif; ?>
-
   <div class="displ_flex gap_8" style="margin-top:16px; justify-content:flex-end;">
-    <?php if ($error === '' && is_array($selectedBranch) && $hasNextBranch): ?>
-      <form method="post" action="<?= cb_restia_kontrola_h((string)cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
+    <?php if ($error === '' && is_array($selectedBranch) && is_array($nextBranch)): ?>
+      <div
+        data-cb-auto-continue="1"
+        data-cb-auto-continue-delay="2000"
+        data-cb-auto-continue-form="#cb_restia_kontrola_next_form"
+        data-cb-auto-continue-button="#cb_restia_kontrola_next_btn"
+        data-cb-auto-continue-loader-text="Zpracovávám pobočku <?= cb_restia_kontrola_h((string)($nextBranch['nazev'] ?? '')) ?>"
+      ></div>
+      <form method="post" action="<?= cb_restia_kontrola_h((string)cb_url('/index.php')) ?>" id="cb_restia_kontrola_next_form" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1" data-cb-loader-text="Zpracovávám pobočku <?= cb_restia_kontrola_h((string)($nextBranch['nazev'] ?? '')) ?>">
         <input type="hidden" name="run_restia_kontrola" value="1">
         <input type="hidden" name="cb_restia_kontrola_after" value="<?= cb_restia_kontrola_h((string)($selectedBranch['id_pob'] ?? 0)) ?>">
-        <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Kontroluji další pobočku">Pokračovat další pobočkou</button>
+        <button type="submit" id="cb_restia_kontrola_next_btn" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Zpracovávám pobočku <?= cb_restia_kontrola_h((string)($nextBranch['nazev'] ?? '')) ?>">Pokračovat další pobočkou</button>
       </form>
     <?php endif; ?>
     <form method="post" action="<?= cb_restia_kontrola_h((string)cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex">

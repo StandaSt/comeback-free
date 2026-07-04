@@ -60,12 +60,6 @@ $cbOpenRestiaMenu = (
 $cbRunRestiaKontrola = (
     isset($_POST['run_restia_kontrola']) && (string)$_POST['run_restia_kontrola'] === '1'
 );
-$cbOpenRestiaRaw = (
-    isset($_POST['open_restia_raw']) && (string)$_POST['open_restia_raw'] === '1'
-);
-$cbOpenRestiaDetail = (
-    isset($_POST['open_restia_detail']) && (string)$_POST['open_restia_detail'] === '1'
-);
 $cbBackAdminInit = (
     isset($_POST['back_admin_init']) && (string)$_POST['back_admin_init'] === '1'
 );
@@ -100,8 +94,6 @@ if ($cbBackAdminInit) {
     $cbRunRestiaMenu = false;
     $cbOpenRestiaMenu = false;
     $cbRunRestiaKontrola = false;
-    $cbOpenRestiaRaw = false;
-    $cbOpenRestiaDetail = false;
     $cbKeepRestiaMax = false;
 }
 
@@ -258,27 +250,6 @@ if ($qReport instanceof mysqli_result) {
 }
 
 $cbScriptTables = [
-    'objednavky_restia_raw.php' => [
-        'objednavky_raw_import',
-        'objednavky_raw',
-    ],
-    'objednavky_ulozeni_detail.php' => [
-        'objednavky_raw',
-        'cis_doruceni',
-        'cis_obj_platforma',
-        'cis_obj_platby',
-        'cis_obj_stav',
-        'obj_adresa',
-        'obj_casy',
-        'obj_ceny',
-        'obj_kuryr',
-        'obj_polozka_kds_tag',
-        'obj_polozka_mod',
-        'obj_polozky',
-        'obj_sluzba',
-        'objednavky_restia',
-        'zakaznik',
-    ],
     'plnime_smeny_user.php' => [
         'user',
         'user_pobocka',
@@ -470,30 +441,6 @@ ob_start();
     </tr>
   </thead>
   <tbody>
-    <tr>
-      <td>objednavky_restia_raw.php</td>
-      <td><?= cb_admin_init_status_html('objednavky_restia_raw.php', $cbScriptStats) ?></td>
-      <td>Restia RAW objednávky</td>
-      <td class="txt_c"><span class="txt_zelena text_tucny">OK</span></td>
-      <td>
-        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
-          <input type="hidden" name="open_restia_raw" value="1">
-          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Připravuji RAW import">Připrav RAW</button>
-        </form>
-      </td>
-    </tr>
-    <tr>
-      <td>objednavky_ulozeni_detail.php</td>
-      <td><?= cb_admin_init_status_html('objednavky_ulozeni_detail.php', $cbScriptStats) ?></td>
-      <td>Restia RAW - objednávkové tabulky</td>
-      <td class="txt_c"><span class="txt_zelena text_tucny">OK</span></td>
-      <td>
-        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
-          <input type="hidden" name="open_restia_detail" value="1">
-          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Připravuji plnění z RAW">Připrav plnění</button>
-        </form>
-      </td>
-    </tr>
     <tr>
       <td>plnime_restia_objednavky.php</td>
       <td><?= cb_admin_init_status_html('plnime_restia_objednavky.php', $cbScriptStats) ?></td>
@@ -741,26 +688,6 @@ if ($cbRunRestiaKontrola) {
     $card_max_html = cb_admin_init_capture_max_include(
         __DIR__ . '/../inicializace/kontrola_restia_objednavky.php',
         'inicializace/kontrola_restia_objednavky.php',
-        'admin_inicializace',
-        $cbTraceK3Branch
-    );
-}
-
-if ($cbOpenRestiaRaw) {
-    $cbTraceK3Branch = 'open_restia_raw';
-    $card_max_html = cb_admin_init_capture_max_include(
-        __DIR__ . '/../inicializace/objednavky_restia_raw.php',
-        'inicializace/objednavky_restia_raw.php',
-        'admin_inicializace',
-        $cbTraceK3Branch
-    );
-}
-
-if ($cbOpenRestiaDetail) {
-    $cbTraceK3Branch = 'open_restia_detail';
-    $card_max_html = cb_admin_init_capture_max_include(
-        __DIR__ . '/../inicializace/objednavky_ulozeni_detail.php',
-        'inicializace/objednavky_ulozeni_detail.php',
         'admin_inicializace',
         $cbTraceK3Branch
     );

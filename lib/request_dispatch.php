@@ -234,7 +234,7 @@ if ($cbIsRestiaState) {
 
 if (
     ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET'
-    && (isset($_SERVER['HTTP_X_COMEBACK_RESTIA_IMPORT_MAX']) || isset($_SERVER['HTTP_X_COMEBACK_RESTIA_RAW_MAX']))
+    && isset($_SERVER['HTTP_X_COMEBACK_RESTIA_IMPORT_MAX'])
 ) {
     if (empty($_SESSION['login_ok'])) {
         http_response_code(401);
@@ -246,16 +246,10 @@ if (
     header('Content-Type: application/json; charset=utf-8');
 
     $cbCardId = (int)($_GET['cb_card_id'] ?? 0);
-    $cbRestiaRawReload = isset($_SERVER['HTTP_X_COMEBACK_RESTIA_RAW_MAX']);
     $html = '';
     ob_start();
     try {
-        if ($cbRestiaRawReload) {
-            $_REQUEST['open_restia_raw'] = '1';
-            require __DIR__ . '/../inicializace/objednavky_restia_raw.php';
-        } else {
-            require __DIR__ . '/../inicializace/plnime_restia_objednavky.php';
-        }
+        require __DIR__ . '/../inicializace/plnime_restia_objednavky.php';
         $html = trim((string)ob_get_clean());
     } catch (Throwable $e) {
         $html = '';

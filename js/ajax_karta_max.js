@@ -168,28 +168,7 @@
       return 'history';
     }
 
-    const rawOpenField = form.querySelector('input[name="open_restia_raw"]');
-    const rawRunField = form.querySelector('input[name="run"]');
-    if (
-      rawOpenField instanceof HTMLInputElement
-      && rawRunField instanceof HTMLInputElement
-      && String(rawOpenField.value || '') === '1'
-      && String(rawRunField.value || '') === '1'
-    ) {
-      return 'raw';
-    }
-
     return '';
-  }
-
-  function isRestiaDetailRunForm(form) {
-    if (!(form instanceof HTMLFormElement)) return false;
-    const detailField = form.querySelector('input[name="open_restia_detail"]');
-    const runField = form.querySelector('input[name="run"]');
-    return detailField instanceof HTMLInputElement
-      && runField instanceof HTMLInputElement
-      && String(detailField.value || '') === '1'
-      && String(runField.value || '') === '1';
   }
 
   function finishRestiaReload(card) {
@@ -208,15 +187,14 @@
     const id = parseInt(String(cardId || '0'), 10);
     if (!Number.isFinite(id) || id <= 0) return;
     const tries = Number.isFinite(attempt) ? Number(attempt) : 0;
-    const reloadMode = String(mode || '') === 'raw' ? 'raw' : 'history';
+    const reloadMode = 'history';
 
-    const url = 'index.php?cb_card_id=' + encodeURIComponent(String(id))
-      + (reloadMode === 'raw' ? '&cb_restia_raw_max=1' : '&cb_restia_import_max=1');
+    const url = 'index.php?cb_card_id=' + encodeURIComponent(String(id)) + '&cb_restia_import_max=1';
     fetch(url, {
       method: 'GET',
       credentials: 'same-origin',
       headers: {
-        [reloadMode === 'raw' ? 'X-Comeback-Restia-Raw-Max' : 'X-Comeback-Restia-Import-Max']: '1'
+        'X-Comeback-Restia-Import-Max': '1'
       }
     }).then((res) => {
       return res.text().then((text) => {
@@ -521,18 +499,66 @@
     }
   }
 
+  function initCardAutoContinue(scope) {
+    const root = scope instanceof HTMLElement || scope instanceof Document ? scope : document;
+    const marker = root.querySelector('[data-cb-auto-continue="1"]');
+    if (!(marker instanceof HTMLElement)) return;
+    if (marker.getAttribute('data-cb-auto-continue-armed') === '1') return;
+    marker.setAttribute('data-cb-auto-continue-armed', '1');
+
+    const delayMs = parseInt(String(marker.getAttribute('data-cb-auto-continue-delay') || '2000'), 10);
+    const waitMs = Number.isFinite(delayMs) && delayMs >= 0 ? delayMs : 2000;
+    const formSelector = String(marker.getAttribute('data-cb-auto-continue-form') || '').trim();
+    const buttonSelector = String(marker.getAttribute('data-cb-auto-continue-button') || '').trim();
+    const loaderText = String(marker.getAttribute('data-cb-auto-continue-loader-text') || '').trim();
+
+    const card = marker.closest('[data-cb-dash-card="1"]');
+    if (!(card instanceof HTMLElement)) return;
+
+    let form = null;
+    if (formSelector !== '') {
+      try {
+        form = card.querySelector(formSelector);
+      } catch (e) {
+        form = null;
+      }
+    }
+    if (!(form instanceof HTMLFormElement)) {
+      form = card.querySelector('form[data-cb-max-form="1"]');
+    }
+    if (!(form instanceof HTMLFormElement)) return;
+
+    let submitter = null;
+    if (buttonSelector !== '') {
+      try {
+        submitter = card.querySelector(buttonSelector);
+      } catch (e) {
+        submitter = null;
+      }
+    }
+    if (!(submitter instanceof HTMLElement)) {
+      submitter = form.querySelector('button[type="submit"], input[type="submit"]');
+    }
+
+    if (loaderText !== '') {
+      form.setAttribute('data-cb-loader-text', loaderText);
+      if (submitter instanceof HTMLElement) {
+        submitter.setAttribute('data-cb-loader-text', loaderText);
+      }
+      setLoading(true, loaderText, 'dashboard');
+    }
+
+    w.setTimeout(() => {
+      submitAjax(form, submitter instanceof HTMLElement ? submitter : null);
+    }, waitMs);
+  }
+
   function submitAjax(form, submitter, options) {
     if (!(form instanceof HTMLFormElement)) return;
     const opts = (options && typeof options === 'object') ? options : {};
     const skipSubmitterName = !!opts.skipSubmitterName;
     const refreshDashboardOnSave = isDashboardRefreshForm(form);
     const restiaImportMode = getRestiaImportMode(form);
-    if (isRestiaDetailRunForm(form) && submitter instanceof HTMLElement) {
-      const autoContinue = form.querySelector('input[name="auto_continue"]');
-      if (autoContinue instanceof HTMLInputElement && autoContinue.checked) {
-        restiaDetailAutoStopped = false;
-      }
-    }
 
     const method = String(form.method || 'POST').toUpperCase();
     const reqUrl = String(form.action || w.location.href || 'index.php');
@@ -597,6 +623,7 @@
     }
 
     let keepRestiaLoader = false;
+    let keepGlobalLoader = false;
 
     fetch(fetchUrl, requestInit).then((res) => {
       return res.text().then((text) => {
@@ -633,6 +660,8 @@
           const expandedCard = swapCardExpandedFromHtml(cardId, data.cardHtml);
           if (expandedCard instanceof HTMLElement) {
             initRestiaAutoResume(expandedCard);
+            initCardAutoContinue(expandedCard);
+            keepGlobalLoader = !!expandedCard.querySelector('[data-cb-auto-continue="1"]');
             return { ok: true, cardId: cardId };
           }
         }
@@ -641,6 +670,8 @@
           const swappedCard = swapCardFromHtml(cardId, data.cardHtml);
           if (swappedCard instanceof HTMLElement) {
             initRestiaAutoResume(swappedCard);
+            initCardAutoContinue(swappedCard);
+            keepGlobalLoader = !!swappedCard.querySelector('[data-cb-auto-continue="1"]');
             return { ok: true, cardId: cardId };
           }
         }
@@ -668,7 +699,7 @@
         }
       });
       setMaxFormSubmitting(form, submitter, false, '');
-      if (keepRestiaLoader) {
+      if (keepRestiaLoader || keepGlobalLoader) {
         return;
       }
       if (useGlobalLoader) {
@@ -753,10 +784,12 @@
     document.addEventListener('cb:card-swapped', (event) => {
       const card = event && event.detail ? event.detail.card : null;
       initRestiaAutoResume(card instanceof HTMLElement ? card : document);
+      initCardAutoContinue(card instanceof HTMLElement ? card : document);
     });
     document.addEventListener('cb:card-max-loaded', (event) => {
       const card = event && event.detail ? event.detail.card : null;
       initRestiaAutoResume(card instanceof HTMLElement ? card : document);
+      initCardAutoContinue(card instanceof HTMLElement ? card : document);
     });
     document.addEventListener('click', (event) => {
       const target = event.target instanceof Element ? event.target.closest('[data-cb-restia-stop="1"]') : null;
@@ -780,6 +813,7 @@
 
   initUserSettingForms();
   initRestiaAutoResume(document);
+  initCardAutoContinue(document);
 })(window);
 
 // js/ajax_karta_max.js * Verze: V3 * Aktualizace: 17.04.2026
