@@ -1,6 +1,10 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../funkce/last_aktualizace_systemu.php';
+
+cb_last_aktualizace_systemu();
+
 $aktualniUrl = cb_url_abs('');
 $loginDbOk = !empty($cbLoginDbOk);
 $loginDbName = trim((string)($cbLoginDbName ?? '---'));

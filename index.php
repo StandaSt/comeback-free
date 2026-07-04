@@ -1,6 +1,7 @@
 <?php
 // index.php * Verze: V25 * Aktualizace: 28.04.2026
 
+
 declare(strict_types=1);
 
 require_once __DIR__ . '/lib/session_boot.php';

@@ -59,17 +59,9 @@ function cb_last_aktualizace_systemu(): void
         }
 
         $masky = [
-            $root . '/db/*.php',
-            $root . '/includes/*.php',
-            $root . '/includes/loaders/*.php',
-            $root . '/includes/hlavicka/*.php',
-            $root . '/js/*.js',
-            $root . '/ajax/*.php',
-            $root . '/funkce/*.php',
             $root . '/karty/*.php',
+            $root . '/includes/*.php',
             $root . '/lib/*.php',
-            $root . '/mobil/*.php',
-            $root . '/modaly/*.php',
         ];
 
         foreach ($masky as $maska) {
