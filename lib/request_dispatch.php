@@ -117,7 +117,11 @@ if ($cbIsRestiaStop && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         exit;
     }
 
-    unset($_SESSION['cb_restia_hist_v4_state'], $_SESSION['cb_restia_hist_v4_rows'], $_SESSION['cb_restia_hist_v4_msg']);
+    unset(
+        $_SESSION['cb_restia_hist_v4_state'],
+        $_SESSION['cb_restia_hist_v4_rows'],
+        $_SESSION['cb_restia_hist_v4_msg']
+    );
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['ok' => true, 'stopped' => 1], JSON_UNESCAPED_UNICODE);
     exit;
@@ -298,45 +302,6 @@ if (
     && isset($_SERVER['HTTP_X_COMEBACK_MAX_FORM'])
 ) {
     $cbCardId = (int)($_POST['cb_card_id'] ?? 0);
-    if (isset($_POST['run_restia_obj']) && (string)$_POST['run_restia_obj'] === '1') {
-        header('Content-Type: application/json; charset=utf-8');
-
-        $html = '';
-        ob_start();
-        try {
-            require __DIR__ . '/../inicializace/plnime_restia_objednavky.php';
-            $html = trim((string)ob_get_clean());
-        } catch (Throwable $e) {
-            $html = '';
-            if (ob_get_level() > 0) {
-                ob_end_clean();
-            }
-            http_response_code(500);
-            echo json_encode([
-                'ok' => false,
-                'err' => $e->getMessage(),
-            ], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-
-        if ($html === '') {
-            http_response_code(500);
-            echo json_encode([
-                'ok' => false,
-                'err' => 'Restia import nevratil obsah.',
-            ], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-
-        echo json_encode([
-            'ok' => true,
-            'cardId' => $cbCardId,
-            'cardHtml' => $html,
-            'loadMax' => 1,
-            'request' => 'restia_max_form',
-        ], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
     cb_emit_card_json_response($cbCardId, true, 'max_form');
 }
 

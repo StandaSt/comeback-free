@@ -242,12 +242,6 @@ if (!$cbPobockaMultiFromCard && !empty($cbSelectedPobocky)) {
     $cbPobockaId = (int)$cbSelectedPobocky[0];
 }
 
-$cbRestiaHistState = $_SESSION['cb_restia_hist_v4_state'] ?? null;
-$cbRestiaHistRunning = (
-    is_array($cbRestiaHistState)
-    && (int)($cbRestiaHistState['continue_import'] ?? 0) === 1
-    && (int)($cbRestiaHistState['finished'] ?? 0) === 0
-);
 $cbHelpdeskIsRoleOne = ((int)$cbUserRoleId === 1);
 $cbHelpdeskApiUrl = cb_url('index.php');
 
@@ -693,10 +687,4 @@ if ($cbPobocky) {
     });
   })();
   </script>
-<?php endif; ?>
-<?php if ($cbLoginOk && $cbRestiaHistRunning): ?>
-  <div class="cb-restia-stop-alert">
-    <span>Probíhá import objednávek.</span>
-    <button type="button" class="cb-restia-stop-btn" data-cb-restia-stop="1">Stop</button>
-  </div>
 <?php endif; ?>

@@ -20,6 +20,7 @@ $cbAdminSystem = [
     'system_logout' => 0,
     'pauza_obdobi' => 1000,
     'report_save' => 5,
+    'zamek' => 0,
     'restia_notifikace' => 1,
     'log_akce' => 0,
     'log_1' => 0,
@@ -36,6 +37,10 @@ $cbAdminActiveTab = 'system';
 $cbAdminLogoutOptions = [2, 5, 10, 15, 20, 30, 60];
 $cbAdminPauzaOptions = [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000];
 $cbAdminReportSaveOptions = [5, 10, 15, 30, 60];
+$cbAdminZamekOptions = [
+    '0' => 'Odemčeno',
+    '1' => 'Zamknuto',
+];
 $cbAdminAkceGlobalOptions = [
     '1' => 'Aktivovat logování akcí pro všechny uživatele',
     '0' => 'Deaktivovat logování',
@@ -80,7 +85,7 @@ try {
     }
 
     if ($cbAdminSaveName !== '') {
-        $allowedBoolFields = ['restia_online', 'on_2fa', 'restia_notifikace', 'log_1', 'log_2', 'log_3', 'log_4', 'notif_chyby', 'notif_bad_login'];
+        $allowedBoolFields = ['restia_online', 'on_2fa', 'zamek', 'restia_notifikace', 'log_1', 'log_2', 'log_3', 'log_4', 'notif_chyby', 'notif_bad_login'];
         if (in_array($cbAdminSaveName, $allowedBoolFields, true)) {
             $saveValue = ($cbAdminSaveValue === '1') ? 1 : 0;
             $sql = 'UPDATE set_system SET `' . $cbAdminSaveName . '` = ? WHERE id_set = 1 LIMIT 1';
@@ -278,7 +283,7 @@ try {
 
     if ($cbAdminError === '') {
         $res = $conn->query('
-            SELECT restia_online, on_2fa, system_logout, pauza_obdobi, report_save, restia_notifikace, log_akce, log_1, log_2, log_3, log_4, notif_chyby, notif_bad_login
+            SELECT restia_online, on_2fa, system_logout, pauza_obdobi, report_save, zamek, restia_notifikace, log_akce, log_1, log_2, log_3, log_4, notif_chyby, notif_bad_login
             FROM set_system
             WHERE id_set = 1
             LIMIT 1
@@ -292,6 +297,7 @@ try {
                 $cbAdminSystem['system_logout'] = (int)($row['system_logout'] ?? 0);
                 $cbAdminSystem['pauza_obdobi'] = (int)($row['pauza_obdobi'] ?? 1000);
                 $cbAdminSystem['report_save'] = (int)($row['report_save'] ?? 5);
+                $cbAdminSystem['zamek'] = (int)($row['zamek'] ?? 0);
                 $cbAdminSystem['restia_notifikace'] = (int)($row['restia_notifikace'] ?? 1);
                 $cbAdminSystem['log_akce'] = (int)($row['log_akce'] ?? 0);
                 $cbAdminSystem['log_1'] = (int)($row['log_1'] ?? 0);
@@ -556,6 +562,20 @@ ob_start();
               </form>
             </td>
             <td style="white-space:nowrap;">Kolik minut před uzavřením restaurace lze uložit</td>
+          </tr>
+          <tr>
+            <td style="white-space:nowrap;">Zamknout systém</td>
+            <td class="<?= h($cbAdminBoolClass($cbAdminSystem['zamek'])) ?>">
+              <form method="post" action="<?= h($cbAdminFormAction) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
+                <input type="hidden" name="cb_admin_set_name" value="zamek">
+                <select name="cb_admin_set_value" class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24" onchange="if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}">
+                  <?php foreach ($cbAdminZamekOptions as $cbZamekValue => $cbZamekLabel): ?>
+                    <option value="<?= h($cbZamekValue) ?>"<?= $cbAdminSystem['zamek'] === (int)$cbZamekValue ? ' selected' : '' ?>><?= h($cbZamekLabel) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </form>
+            </td>
+            <td style="white-space:nowrap;">Zamkne IS pro uživatele</td>
           </tr>
           <tr>
             <td style="white-space:nowrap;">Restia CRON</td>

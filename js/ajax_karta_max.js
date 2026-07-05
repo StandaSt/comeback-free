@@ -2,8 +2,6 @@
 'use strict';
 
 (function (w) {
-  let restiaDetailAutoStopped = false;
-
   function isTargetForm(form) {
     if (!(form instanceof HTMLFormElement)) return false;
     if (form.getAttribute('data-cb-max-form') === '1') return true;
@@ -177,8 +175,8 @@
       return;
     }
 
-    initRestiaAutoResume(card);
-    if (!card.querySelector('#cb_restia_auto_resume[data-cb-restia-auto-resume="1"]')) {
+    initCardAutoContinue(card);
+    if (!card.querySelector('[data-cb-auto-continue="1"]')) {
       setLoading(false, '', 'dashboard');
     }
   }
@@ -228,13 +226,6 @@
       }
       w.setTimeout(() => reloadRestiaImportMax(id, tries + 1, reloadMode), 5000);
     });
-  }
-
-  function formatRestiaLoaderText(nextDateRaw) {
-    const raw = String(nextDateRaw || '').trim();
-    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!m) return 'API - stahuji objednavky';
-    return 'API - stahuji objednavky od "' + m[3] + '.' + m[2] + '.' + m[1] + '"';
   }
 
   function setMaxFormSubmitting(form, submitter, on, text) {
@@ -367,138 +358,6 @@
     });
   }
 
-  function initRestiaAutoResume(scope) {
-    const root = scope instanceof HTMLElement || scope instanceof Document ? scope : document;
-    const marker = root.querySelector('#cb_restia_auto_resume[data-cb-restia-auto-resume="1"]');
-    if (!(marker instanceof HTMLElement)) return;
-    if (marker.getAttribute('data-cb-restia-auto-resume-armed') === '1') return;
-    marker.setAttribute('data-cb-restia-auto-resume-armed', '1');
-
-    const delayMs = parseInt(String(marker.getAttribute('data-cb-restia-auto-resume-delay') || '500'), 10);
-    const waitMs = Number.isFinite(delayMs) && delayMs >= 0 ? delayMs : 500;
-    const branchId = String(marker.getAttribute('data-cb-restia-auto-resume-branch') || '').trim();
-    const nextDate = String(marker.getAttribute('data-cb-restia-next-date') || '').trim();
-    const infoSelector = String(marker.getAttribute('data-cb-restia-auto-resume-info') || '').trim();
-    const stopSelector = String(marker.getAttribute('data-cb-restia-auto-resume-stop') || '').trim();
-    const checkboxSelector = String(marker.getAttribute('data-cb-restia-auto-resume-checkbox') || '').trim();
-    const cycleText = String(marker.getAttribute('data-cb-restia-auto-resume-cycle') || '').trim();
-    const nextText = String(marker.getAttribute('data-cb-restia-auto-resume-next-text') || nextDate).trim();
-    const info = infoSelector !== '' ? root.querySelector(infoSelector) : null;
-    const stop = stopSelector !== '' ? root.querySelector(stopSelector) : null;
-    const checkbox = checkboxSelector !== '' ? root.querySelector(checkboxSelector) : null;
-    let stopped = false;
-    let left = Math.max(1, Math.ceil(waitMs / 1000));
-
-    const setAutoResumeInfo = (text) => {
-      if (info instanceof HTMLElement) {
-        info.textContent = text;
-      }
-    };
-
-    const formatAutoResumeInfo = () => {
-      const prefix = cycleText !== '' ? 'Cyklus č. ' + cycleText + ' začne' : 'Automatické pokračování začne';
-      const suffix = nextText !== '' ? ' od ' + nextText : '';
-      return prefix + ' za ' + left + ' s' + suffix + '.';
-    };
-
-    setAutoResumeInfo(formatAutoResumeInfo());
-
-    if (checkbox instanceof HTMLInputElement && restiaDetailAutoStopped) {
-      checkbox.checked = false;
-      marker.setAttribute('data-cb-restia-auto-resume-armed', '1');
-      setAutoResumeInfo('Automatické pokračování zastaveno.');
-      return;
-    }
-
-    const countdown = w.setInterval(() => {
-      if (stopped || !document.body.contains(marker)) {
-        w.clearInterval(countdown);
-        return;
-      }
-      left -= 1;
-      if (left > 0) {
-        setAutoResumeInfo(formatAutoResumeInfo());
-      }
-    }, 1000);
-
-    const timer = w.setTimeout(() => {
-      w.clearInterval(countdown);
-      if (stopped || !document.body.contains(marker)) return;
-
-      const card = marker.closest('[data-cb-dash-card="1"]');
-      if (!(card instanceof HTMLElement)) return;
-
-      const formSelector = String(marker.getAttribute('data-cb-restia-auto-resume-form') || '').trim();
-      let form = null;
-      if (formSelector !== '') {
-        try {
-          form = card.querySelector(formSelector);
-        } catch (e) {
-          form = null;
-        }
-      }
-      if (!(form instanceof HTMLFormElement)) {
-        form = card.querySelector('form[data-cb-max-form="1"]');
-      }
-      if (!(form instanceof HTMLFormElement)) return;
-      if (checkbox instanceof HTMLInputElement && !checkbox.checked) {
-        restiaDetailAutoStopped = true;
-        setAutoResumeInfo('Automatické pokračování zastaveno.');
-        return;
-      }
-      const formLoaderText = String(form.getAttribute('data-cb-loader-text') || '').trim();
-      const loaderText = formLoaderText !== '' ? formLoaderText : formatRestiaLoaderText(nextDate);
-      form.setAttribute('data-cb-loader-text', loaderText);
-
-      if (typeof w.cbResetIdleLogout === 'function') {
-        w.cbResetIdleLogout();
-      }
-
-      const branchSelect = form.querySelector('select[name="cb_id_pob"]');
-      if (branchSelect instanceof HTMLSelectElement && branchId !== '') {
-        branchSelect.value = branchId;
-      }
-
-      const actionField = form.querySelector('#cb_action_field');
-      if (actionField instanceof HTMLInputElement) {
-        actionField.value = 'start';
-      }
-
-      const submitter = form.querySelector('#cb_start_import_btn');
-      if (submitter instanceof HTMLElement) {
-        submitter.setAttribute('data-cb-loader-text', loaderText);
-      }
-      setAutoResumeInfo('Spouštím další cyklus...');
-      submitAjax(form, submitter instanceof HTMLElement ? submitter : null);
-    }, waitMs);
-
-    if (stop instanceof HTMLElement) {
-      stop.addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        stopped = true;
-        if (checkbox instanceof HTMLInputElement) {
-          restiaDetailAutoStopped = true;
-          checkbox.checked = false;
-        }
-        w.clearTimeout(timer);
-        w.clearInterval(countdown);
-        setAutoResumeInfo('Automatické pokračování zastaveno.');
-      }, true);
-    }
-
-    if (checkbox instanceof HTMLInputElement) {
-      checkbox.addEventListener('change', () => {
-        restiaDetailAutoStopped = !checkbox.checked;
-        if (checkbox.checked) return;
-        stopped = true;
-        w.clearTimeout(timer);
-        w.clearInterval(countdown);
-        setAutoResumeInfo('Automatické pokračování zastaveno.');
-      }, true);
-    }
-  }
-
   function initCardAutoContinue(scope) {
     const root = scope instanceof HTMLElement || scope instanceof Document ? scope : document;
     const marker = root.querySelector('[data-cb-auto-continue="1"]');
@@ -549,6 +408,10 @@
     }
 
     w.setTimeout(() => {
+      if (!document.body.contains(marker) || !document.body.contains(form)) {
+        setLoading(false, '', 'dashboard');
+        return;
+      }
       submitAjax(form, submitter instanceof HTMLElement ? submitter : null);
     }, waitMs);
   }
@@ -608,7 +471,7 @@
 
     const formData = new FormData(form);
 
-    const useGlobalLoader = refreshDashboardOnSave || loaderText !== '';
+    const useGlobalLoader = refreshDashboardOnSave || (loaderText !== '' && restiaImportMode === '');
     if (useGlobalLoader) {
       setLoading(true, loaderText, 'dashboard');
     }
@@ -659,7 +522,6 @@
         if (cardId > 0) {
           const expandedCard = swapCardExpandedFromHtml(cardId, data.cardHtml);
           if (expandedCard instanceof HTMLElement) {
-            initRestiaAutoResume(expandedCard);
             initCardAutoContinue(expandedCard);
             keepGlobalLoader = !!expandedCard.querySelector('[data-cb-auto-continue="1"]');
             return { ok: true, cardId: cardId };
@@ -669,7 +531,6 @@
         if (cardId > 0) {
           const swappedCard = swapCardFromHtml(cardId, data.cardHtml);
           if (swappedCard instanceof HTMLElement) {
-            initRestiaAutoResume(swappedCard);
             initCardAutoContinue(swappedCard);
             keepGlobalLoader = !!swappedCard.querySelector('[data-cb-auto-continue="1"]');
             return { ok: true, cardId: cardId };
@@ -702,7 +563,7 @@
       if (keepRestiaLoader || keepGlobalLoader) {
         return;
       }
-      if (useGlobalLoader) {
+      if (useGlobalLoader || restiaImportMode !== '') {
         setLoading(false, '', 'dashboard');
       }
     });
@@ -780,39 +641,19 @@
     document.addEventListener('cb:main-swapped', initUserSettingForms);
     document.addEventListener('cb:card-swapped', initUserSettingForms);
     document.addEventListener('cb:card-max-loaded', initUserSettingForms);
-    document.addEventListener('cb:main-swapped', () => initRestiaAutoResume(document));
     document.addEventListener('cb:card-swapped', (event) => {
       const card = event && event.detail ? event.detail.card : null;
-      initRestiaAutoResume(card instanceof HTMLElement ? card : document);
       initCardAutoContinue(card instanceof HTMLElement ? card : document);
     });
     document.addEventListener('cb:card-max-loaded', (event) => {
       const card = event && event.detail ? event.detail.card : null;
-      initRestiaAutoResume(card instanceof HTMLElement ? card : document);
       initCardAutoContinue(card instanceof HTMLElement ? card : document);
     });
-    document.addEventListener('click', (event) => {
-      const target = event.target instanceof Element ? event.target.closest('[data-cb-restia-stop="1"]') : null;
-      if (!(target instanceof HTMLElement)) return;
-      event.preventDefault();
-      event.stopPropagation();
-      fetch('index.php', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: {
-          'X-Comeback-Restia-Stop': '1'
-        }
-      }).finally(() => {
-        setLoading(false, '', 'dashboard');
-        w.location.reload();
-      });
-    }, true);
   }
 
   wireOnce();
 
   initUserSettingForms();
-  initRestiaAutoResume(document);
   initCardAutoContinue(document);
 })(window);
 

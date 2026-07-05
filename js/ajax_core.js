@@ -1082,6 +1082,7 @@
       return CB_AJAX.refreshCard(cardId, {
         force: true,
         keepLoading: false,
+        showLoading: false,
         loaderMode: loaderMode,
         loaderText: 'Obnovuji data ...',
         loadMax: loadMax

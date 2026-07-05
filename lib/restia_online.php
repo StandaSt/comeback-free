@@ -671,20 +671,21 @@ if (!function_exists('cb_restia_online_sync_children')) {
         $casImportPos = cb_restia_online_restia_to_local_nullable($order['posImportedAt'] ?? null);
         $casVyzv = cb_restia_online_restia_to_local_nullable($order['pickupAt'] ?? null);
         $casDisp = cb_restia_online_restia_to_local_nullable($order['deliveryAt'] ?? null);
+        $casPripravy = isset($order['cookingTimeMinutes']) ? (int)$order['cookingTimeMinutes'] : null;
         $report = cb_restia_online_report_date($casVytvor ?? cb_restia_online_now());
 
         $stmtCasy = cb_restia_online_stmt($conn, 'obj_casy_upsert', '
             INSERT INTO obj_casy (
-                id_obj, report, cas_vytvor, cas_expirace, cas_slib, cas_pripr_do, cas_pripr_v, cas_dokonc, cas_doruc,
+                id_obj, report, cas_vytvor, cas_expirace, cas_slib, cas_pripr_do, cas_pripr_v, cas_pripravy, cas_dokonc, cas_doruc,
                 cas_status_zmena, cas_uzavreni, cas_import_restia, cas_import_pos, cas_vyzv, cas_disp
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 report = VALUES(report), cas_vytvor = VALUES(cas_vytvor), cas_expirace = VALUES(cas_expirace), cas_slib = VALUES(cas_slib),
-                cas_pripr_do = VALUES(cas_pripr_do), cas_pripr_v = VALUES(cas_pripr_v), cas_dokonc = VALUES(cas_dokonc), cas_doruc = VALUES(cas_doruc),
+                cas_pripr_do = VALUES(cas_pripr_do), cas_pripr_v = VALUES(cas_pripr_v), cas_pripravy = VALUES(cas_pripravy), cas_dokonc = VALUES(cas_dokonc), cas_doruc = VALUES(cas_doruc),
                 cas_status_zmena = VALUES(cas_status_zmena), cas_uzavreni = VALUES(cas_uzavreni), cas_import_restia = VALUES(cas_import_restia),
                 cas_import_pos = VALUES(cas_import_pos), cas_vyzv = VALUES(cas_vyzv), cas_disp = VALUES(cas_disp)
         ', 'obj_casy');
-        $stmtCasy->bind_param('issssssssssssss', $idObj, $report, $casVytvor, $casExp, $casSlib, $casPriprDo, $casPriprV, $casDokonc, $casDoruc, $casStatus, $casUzavreni, $casImportRestia, $casImportPos, $casVyzv, $casDisp);
+        $stmtCasy->bind_param('issssssissssssss', $idObj, $report, $casVytvor, $casExp, $casSlib, $casPriprDo, $casPriprV, $casPripravy, $casDokonc, $casDoruc, $casStatus, $casUzavreni, $casImportRestia, $casImportPos, $casVyzv, $casDisp);
         $stmtCasy->execute();
 
         $cenaPol = (float)cb_restia_online_money($order['itemsPrice'] ?? null);
@@ -1023,8 +1024,6 @@ if (!function_exists('cb_restia_online_upsert_order')) {
         if ($idZak === 0) { $idZak = null; }
 
         $restiaOrderNumber = trim((string)($order['orderNumber'] ?? ''));
-        $restiaToken = $order['token'] ?? null;
-        $restiaToken = ($restiaToken === null || $restiaToken === '') ? null : (string)$restiaToken;
         $restiaCreatedAt = cb_restia_online_restia_to_local_nullable($order['createdAt'] ?? null);
         $profilNazev = trim((string)($profile['name'] ?? ''));
         $profilNazev = ($profilNazev === '') ? null : $profilNazev;
@@ -1032,7 +1031,6 @@ if (!function_exists('cb_restia_online_upsert_order')) {
         $shortCode = ($shortCode === null || $shortCode === '') ? null : (string)$shortCode;
         $serioveCislo = $order['serialNumber'] ?? null;
         $serioveCislo = ($serioveCislo === null || $serioveCislo === '') ? null : (string)$serioveCislo;
-        $casPripravy = isset($order['cookingTimeMinutes']) ? (int)$order['cookingTimeMinutes'] : null;
         $objPoznamka = $order['note'] ?? null;
         $objPoznamka = ($objPoznamka === null || $objPoznamka === '') ? null : (string)$objPoznamka;
         $importTs = cb_restia_online_now();
@@ -1049,7 +1047,6 @@ if (!function_exists('cb_restia_online_upsert_order')) {
                     id_platforma = ?,
                     restia_created_at = ?,
                     restia_order_number = ?,
-                    restia_token = ?,
                     profil_typ = ?,
                     profil_nazev = ?,
                     rest_obj = ?,
@@ -1058,7 +1055,6 @@ if (!function_exists('cb_restia_online_upsert_order')) {
                     id_stav = ?,
                     id_platba = ?,
                     id_doruceni = ?,
-                    cas_pripravy = ?,
                     obj_pozn = ?,
                     restia_imported_at = ?
                 WHERE id_obj = ?
@@ -1068,14 +1064,13 @@ if (!function_exists('cb_restia_online_upsert_order')) {
 
             $stmt = cb_restia_online_stmt($conn, 'objednavky_restia_update_by_restia_id', $sql, 'objednavky_restia update by restia_id_obj');
             $stmt->bind_param(
-                'iisissssssssiiiissis',
+                'iisisssssssiiissis',
                 $idPob,
                 $idZak,
                 $report,
                 $idPlatforma,
                 $restiaCreatedAt,
                 $restiaOrderNumber,
-                $restiaToken,
                 $profilTyp,
                 $profilNazev,
                 $restObj,
@@ -1084,7 +1079,6 @@ if (!function_exists('cb_restia_online_upsert_order')) {
                 $idStav,
                 $idPlatba,
                 $idDoruceni,
-                $casPripravy,
                 $objPoznamka,
                 $importTs,
                 $existingIdObj,
@@ -1100,16 +1094,16 @@ if (!function_exists('cb_restia_online_upsert_order')) {
 
         $sql = '
             INSERT INTO objednavky_restia (
-                id_pob, id_zak, report, id_platforma, restia_id_obj, restia_created_at, restia_order_number, restia_token,
+                id_pob, id_zak, report, id_platforma, restia_id_obj, restia_created_at, restia_order_number,
                 profil_typ, profil_nazev, rest_obj, short_code, seriove_cislo,
                 id_stav, id_platba, id_doruceni,
-                cas_pripravy, obj_pozn, restia_imported_at
+                obj_pozn, restia_imported_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ';
 
         $stmt = cb_restia_online_stmt($conn, 'objednavky_restia_insert', $sql, 'objednavky_restia insert');
-        $stmt->bind_param('iisissssssssiiiisss', $idPob, $idZak, $report, $idPlatforma, $restiaIdObj, $restiaCreatedAt, $restiaOrderNumber, $restiaToken, $profilTyp, $profilNazev, $restObj, $shortCode, $serioveCislo, $idStav, $idPlatba, $idDoruceni, $casPripravy, $objPoznamka, $importTs);
+        $stmt->bind_param('iisissssssssiiiss', $idPob, $idZak, $report, $idPlatforma, $restiaIdObj, $restiaCreatedAt, $restiaOrderNumber, $profilTyp, $profilNazev, $restObj, $shortCode, $serioveCislo, $idStav, $idPlatba, $idDoruceni, $objPoznamka, $importTs);
         $stmt->execute();
         $idObj = (int)$conn->insert_id;
         if ($idObj <= 0) {

@@ -136,6 +136,7 @@ if (!function_exists('cb_system_settings_defaults')) {
             'on_2fa' => 1,
             'system_logout' => 20,
             'pauza_obdobi' => 1000,
+            'zamek' => 0,
             'log_akce' => 0,
             'log_1' => 0,
             'log_2' => 0,
@@ -157,6 +158,7 @@ if (!function_exists('cb_store_system_settings')) {
 
         $data['restia_online'] = ((int)($values['restia_online'] ?? $data['restia_online']) === 1) ? 1 : 0;
         $data['on_2fa'] = ((int)($values['on_2fa'] ?? $data['on_2fa']) === 1) ? 1 : 0;
+        $data['zamek'] = ((int)($values['zamek'] ?? $data['zamek']) === 1) ? 1 : 0;
 
         $logout = (int)($values['system_logout'] ?? $data['system_logout']);
         if (!in_array($logout, [2, 5, 10, 15, 20, 30, 60], true)) {

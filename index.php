@@ -20,7 +20,23 @@ $cbFavicon = cb_url('img/favicon_comeback.png');
 
 $cbAuthOk = !empty($_SESSION['cb_auth_ok']);
 $cb2faPending = !empty($_SESSION['cb_2fa_token']);
-$cbRequestMethod = strtoupper(trim((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')));
+$cbSystemLocked = false;
+$cbUserRoleId = (int)($_SESSION['cb_user']['id_role'] ?? 0);
+if (!empty($_SESSION['login_ok']) && (int)($_SESSION['cb_system']['zamek'] ?? 0) === 1 && $cbUserRoleId !== 1) {
+    try {
+        $cbLockConn = db();
+        $cbLockRes = $cbLockConn->query('SELECT zamek FROM set_system WHERE id_set = 1 LIMIT 1');
+        if ($cbLockRes instanceof mysqli_result) {
+            $cbLockRow = $cbLockRes->fetch_assoc();
+            $cbLockRes->free();
+            $_SESSION['cb_system']['zamek'] = ((int)($cbLockRow['zamek'] ?? 0) === 1) ? 1 : 0;
+        }
+    } catch (Throwable $e) {
+    }
+    if ((int)($_SESSION['cb_system']['zamek'] ?? 0) === 1) {
+        $cbSystemLocked = true;
+    }
+}
 $cbHasComebackHeader = false;
 foreach (array_keys($_SERVER) as $cbServerKey) {
     if (strncmp((string)$cbServerKey, 'HTTP_X_COMEBACK_', 16) === 0) {
@@ -31,39 +47,9 @@ foreach (array_keys($_SERVER) as $cbServerKey) {
 $cbIsPartialRequest = isset($_SERVER['HTTP_X_COMEBACK_PARTIAL']);
 $cbIsCardRequest = isset($_SERVER['HTTP_X_COMEBACK_CARD']);
 $cbIsMaxFormRequest = isset($_SERVER['HTTP_X_COMEBACK_MAX_FORM']);
-$cbIsFullStartupRequest = !empty($_SESSION['login_ok'])
-    && $cbRequestMethod === 'GET'
-    && !$cbHasComebackHeader;
-$cbEarlyStartupFlushed = false;
-$cbStartupLoaderText = trim((string)($_SESSION['cb_initial_loader_text'] ?? ''));
-if ($cbStartupLoaderText !== '') {
-    unset($_SESSION['cb_initial_loader_text']);
-}
-$cbStartupLoaderHtml = '';
-$cbShowStartupLoader = !empty($_SESSION['login_ok']);
-if ($cbShowStartupLoader) {
-    ob_start();
-    require __DIR__ . '/includes/loaders/dashboard.php';
-    $cbStartupLoaderHtml = trim((string)ob_get_clean());
-    if ($cbStartupLoaderHtml !== '') {
-        $cbStartupLoaderHtml = preg_replace(
-            '~<div class="dash_loader is-hidden" data-cb-loader-mode="dashboard" aria-hidden="true">~',
-            '<div class="dash_loader" data-cb-loader-mode="dashboard" aria-hidden="false" data-cb-loader-visible="1">',
-            $cbStartupLoaderHtml,
-            1
-        ) ?? $cbStartupLoaderHtml;
-        if ($cbStartupLoaderText !== '') {
-            $cbStartupLoaderHtml = preg_replace(
-                '~<p class="dash_loader_text">.*?</p>~s',
-                '<p class="dash_loader_text">' . h($cbStartupLoaderText) . '</p>',
-                $cbStartupLoaderHtml,
-                1
-            ) ?? $cbStartupLoaderHtml;
-        }
-    }
-}
+unset($_SESSION['cb_initial_loader_text']);
 
-if (!empty($_SESSION['login_ok'])) {
+if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
     require_once __DIR__ . '/lib/pobocky_vyber.php';
     require_once __DIR__ . '/lib/card_json_response.php';
     require_once __DIR__ . '/lib/handle_set_period.php';
@@ -77,36 +63,24 @@ if (!empty($_SESSION['login_ok'])) {
 require_once __DIR__ . '/lib/detektuj_neplatnou_url.php';
 require_once __DIR__ . '/lib/logout_handler.php';
 require_once __DIR__ . '/lib/json_registrace.php';
-if ($cbIsFullStartupRequest && $cbStartupLoaderHtml !== '') {
-    ?>
-<!doctype html>
-<html lang="cs">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= h($cbTitle) ?></title>
-    <link rel="icon" type="image/png" href="<?= h($cbFavicon) ?>">
-
-    <?php require_once __DIR__ . '/lib/nacti_styly.php'; ?>
-</head>
-<body>
-<div id="cb-startup-loader" class="dash_box bg_modra sirka100 is-dashboard-loading" data-cb-startup-text="<?= h($cbStartupLoaderText) ?>" style="position:fixed;left:0;top:0;right:0;bottom:0;z-index:12000;padding:0 12px;background-clip:content-box;overflow:hidden;">
-  <?= $cbStartupLoaderHtml ?>
-</div>
-<script src="<?= h(cb_url('js/loader_show.js')) ?>"></script>
-<script src="<?= h(cb_url('js/loader_timer.js')) ?>"></script>
-<?= "<!-- cb-startup-flush -->\n" . str_repeat(' ', 4096) ?>
-<?php
-    if (function_exists('ob_get_level') && ob_get_level() > 0) {
-        @ob_flush();
+if (!empty($_SESSION['login_ok']) && $cbSystemLocked && isset($_GET['cb_lock_check']) && (string)$_GET['cb_lock_check'] === '1') {
+    header('Content-Type: application/json; charset=utf-8');
+    $cbLockedNow = 1;
+    try {
+        $cbLockConn = db();
+        $cbLockRes = $cbLockConn->query('SELECT zamek FROM set_system WHERE id_set = 1 LIMIT 1');
+        if ($cbLockRes instanceof mysqli_result) {
+            $cbLockRow = $cbLockRes->fetch_assoc();
+            $cbLockRes->free();
+            $cbLockedNow = ((int)($cbLockRow['zamek'] ?? 0) === 1) ? 1 : 0;
+            $_SESSION['cb_system']['zamek'] = $cbLockedNow;
+        }
+    } catch (Throwable $e) {
     }
-    flush();
-    $cbEarlyStartupFlushed = true;
+    echo json_encode(['ok' => true, 'locked' => $cbLockedNow], JSON_UNESCAPED_UNICODE);
+    exit;
 }
-if ($cbIsFullStartupRequest) {
-    require_once __DIR__ . '/lib/restia_online_kontrola.php';
-}
-if (!empty($_SESSION['login_ok'])) {
+if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
     require_once __DIR__ . '/lib/post_akce.php';
     require_once __DIR__ . '/lib/uloz_dr_pracovni.php';
     require_once __DIR__ . '/lib/uloz_reporty_is.php';
@@ -122,14 +96,13 @@ if ($cbPage === '') {
 
 require_once __DIR__ . '/includes/log_a_404.php';
 
-if (!empty($_SESSION['login_ok'])) {
+if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
     require_once __DIR__ . '/lib/request_dispatch.php';
 } elseif ($cbHasComebackHeader) {
     http_response_code(401);
     exit;
 }
 ?>
-<?php if (!$cbEarlyStartupFlushed): ?>
 <!doctype html>
 <html lang="cs">
 <head>
@@ -142,18 +115,34 @@ if (!empty($_SESSION['login_ok'])) {
 </head>
 <body>
 
-<?php if ($cbShowStartupLoader && $cbStartupLoaderHtml !== ''): ?>
-<div id="cb-startup-loader" class="dash_box bg_modra sirka100 is-dashboard-loading" data-cb-startup-text="<?= h($cbStartupLoaderText) ?>" style="position:fixed;left:0;top:0;right:0;bottom:0;z-index:12000;padding:0 12px;background-clip:content-box;overflow:hidden;">
-  <?= $cbStartupLoaderHtml ?>
-</div>
-<script src="<?= h(cb_url('js/loader_show.js')) ?>"></script>
-<script src="<?= h(cb_url('js/loader_timer.js')) ?>"></script>
-<?php endif; ?>
-<?php endif; ?>
 <div class="container bg_modra displ_flex sirka100">
 <?php
 
-if (!empty($_SESSION['login_ok'])) {
+if (!empty($_SESSION['login_ok']) && $cbSystemLocked) {
+    ?>
+    <div style="width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;background:#0f172a;overflow:hidden;">
+      <img src="<?= h(cb_url('img/udrzba.png')) ?>" alt="Údržba systému" style="width:100vw;height:100vh;object-fit:contain;display:block;">
+    </div>
+    <script>
+    (function(){
+      // Kontrola, zda admin uz system odemkl.
+      var checkUrl = <?= json_encode(cb_url('/?cb_lock_check=1'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+      var logoutUrl = <?= json_encode(cb_url('/?action=logout'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+      function checkLock(){
+        fetch(checkUrl, { cache: 'no-store' })
+          .then(function(r){ return r.json(); })
+          .then(function(j){
+            if (j && j.ok === true && Number(j.locked) === 0) {
+              window.location.href = logoutUrl;
+            }
+          })
+          .catch(function(){});
+      }
+      setInterval(checkLock, 60000);
+    })();
+    </script>
+    <?php
+} elseif (!empty($_SESSION['login_ok'])) {
     require_once __DIR__ . '/includes/hlavicka.php';
     require_once __DIR__ . '/modaly/modal_overeni.php';
     require_once __DIR__ . '/lib/kontrola_registrace.php';
@@ -207,7 +196,7 @@ if (!empty($_SESSION['login_ok'])) {
 </div>
 
 
-<?php if (!empty($_SESSION['login_ok'])): ?>
+<?php if (!empty($_SESSION['login_ok']) && !$cbSystemLocked): ?>
 <script src="<?= h(cb_asset_url('js/echarts.min.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/ajax_core.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/ajax_karta_max.js')) ?>"></script>
