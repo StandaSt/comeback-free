@@ -2535,21 +2535,13 @@ if (!$canStartImport) {
     <p id="cb_restia_stop_info" class="card_text txt_seda text_13" style="margin:8px 0 0 0; max-width:620px;"><?= $stopRequested ? 'Další dávka se už nespustí.' : '' ?></p>
   </div>
   <?php if ($autoResume): ?>
-    <form method="post" action="<?= cb_restia_hist_h((string)cb_url('/index.php')) ?>" id="cb_restia_auto_form" data-cb-max-form="1" style="display:none;">
-      <input type="hidden" name="run_restia_obj" value="1">
-      <input type="hidden" name="cb_action" value="start">
-      <input type="hidden" name="cb_auto_continue" value="1">
-      <input type="hidden" name="cb_id_pob" value="<?= cb_restia_hist_h((string)$selectedBranchId) ?>">
-      <button type="submit" id="cb_restia_auto_btn" data-cb-loader-text="<?= cb_restia_hist_h($loaderButtonText) ?>">Pokračovat</button>
-    </form>
     <div
-      id="cb_restia_auto_continue"
+      id="cb_restia_auto_resume"
       style="display:none;"
-      data-cb-auto-continue="1"
-      data-cb-auto-continue-delay="500"
-      data-cb-auto-continue-form="#cb_restia_auto_form"
-      data-cb-auto-continue-button="#cb_restia_auto_btn"
-      data-cb-auto-continue-loader-text="<?= cb_restia_hist_h($loaderButtonText) ?>"
+      data-cb-restia-auto-resume="1"
+      data-cb-restia-auto-resume-delay="500"
+      data-cb-restia-auto-resume-branch="<?= cb_restia_hist_h((string)$selectedBranchId) ?>"
+      data-cb-restia-next-date="<?= cb_restia_hist_h($loaderNextDate) ?>"
     ></div>
   <?php endif; ?>
 
