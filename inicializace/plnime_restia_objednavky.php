@@ -2535,14 +2535,20 @@ if (!$canStartImport) {
     <p id="cb_restia_stop_info" class="card_text txt_seda text_13" style="margin:8px 0 0 0; max-width:620px;"><?= $stopRequested ? 'Další dávka se už nespustí.' : '' ?></p>
   </div>
   <?php if ($autoResume): ?>
-    <div
-      id="cb_restia_auto_resume"
-      style="display:none;"
-      data-cb-restia-auto-resume="1"
-      data-cb-restia-auto-resume-delay="500"
-      data-cb-restia-auto-resume-branch="<?= cb_restia_hist_h((string)$selectedBranchId) ?>"
-      data-cb-restia-next-date="<?= cb_restia_hist_h($loaderNextDate) ?>"
-    ></div>
+    <form method="post" action="<?= cb_restia_hist_h((string)cb_url('/index.php')) ?>" id="cb_restia_auto_resume_form" style="display:none;">
+      <input type="hidden" name="run_restia_obj" value="1">
+      <input type="hidden" name="cb_action" value="start">
+      <input type="hidden" name="cb_id_pob" value="<?= cb_restia_hist_h((string)$selectedBranchId) ?>">
+      <input type="hidden" name="cb_auto_continue" value="1">
+    </form>
+    <script>
+      window.setTimeout(function () {
+        var form = document.getElementById('cb_restia_auto_resume_form');
+        if (form) {
+          form.submit();
+        }
+      }, 500);
+    </script>
   <?php endif; ?>
 
 
