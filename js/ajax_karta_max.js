@@ -141,6 +141,9 @@
 
   function getLoaderTextFromSubmitter(submitter, form) {
     if (submitter instanceof HTMLElement) {
+      if (submitter.id === 'cb_start_import_btn') {
+        return '';
+      }
       const submitterText = String(submitter.getAttribute('data-cb-loader-text') || '').trim();
       if (submitterText !== '') {
         return submitterText;
@@ -157,6 +160,10 @@
   function isDashboardRefreshForm(form) {
     return form instanceof HTMLFormElement
       && String(form.getAttribute('data-cb-refresh-dashboard-on-save') || '') === '1';
+  }
+
+  function shouldBypassAjaxSubmit(form) {
+    return false;
   }
 
   function getRestiaImportMode(form) {
@@ -176,7 +183,7 @@
     }
 
     initRestiaAutoResume(card);
-    if (!card.querySelector('#cb_restia_auto_resume[data-cb-restia-auto-resume="1"]')) {
+    if (!card.querySelector('#cb_restia_continue_btn[data-cb-restia-auto-resume="1"]')) {
       setLoading(false, '', 'dashboard');
     }
   }
@@ -261,6 +268,13 @@
       }
       if (!target.hasAttribute('data-cb-submit-original-style')) {
         target.setAttribute('data-cb-submit-original-style', target.getAttribute('style') || '');
+      }
+
+      if (target.id === 'cb_start_import_btn') {
+        target.style.cursor = 'wait';
+        target.style.opacity = '1';
+        target.setAttribute('aria-disabled', 'true');
+        return;
       }
 
       const runningText = String(text || '').trim() || 'Probíhá akce ...';
@@ -360,46 +374,30 @@
 
   function initRestiaAutoResume(scope) {
     const root = scope instanceof HTMLElement || scope instanceof Document ? scope : document;
-    const marker = root.querySelector('#cb_restia_auto_resume[data-cb-restia-auto-resume="1"]');
-    if (!(marker instanceof HTMLElement)) return;
-    if (marker.getAttribute('data-cb-restia-auto-resume-armed') === '1') return;
-    marker.setAttribute('data-cb-restia-auto-resume-armed', '1');
+    const submitter = root.querySelector('#cb_restia_continue_btn[data-cb-restia-auto-resume="1"]');
+    if (!(submitter instanceof HTMLElement)) return;
+    if (submitter.getAttribute('data-cb-restia-auto-resume-armed') === '1') return;
+    submitter.setAttribute('data-cb-restia-auto-resume-armed', '1');
 
-    const delayMs = parseInt(String(marker.getAttribute('data-cb-restia-auto-resume-delay') || '500'), 10);
+    const delayMs = parseInt(String(submitter.getAttribute('data-cb-restia-auto-resume-delay') || '500'), 10);
     const waitMs = Number.isFinite(delayMs) && delayMs >= 0 ? delayMs : 500;
-    const branchId = String(marker.getAttribute('data-cb-restia-auto-resume-branch') || '').trim();
 
     w.setTimeout(() => {
-      if (!document.body.contains(marker)) return;
-
-      const card = marker.closest('[data-cb-dash-card="1"]');
-      if (!(card instanceof HTMLElement)) return;
-
-      const form = card.querySelector('form[data-cb-max-form="1"]');
+      if (!document.body.contains(submitter)) return;
+      const form = submitter.closest('form');
       if (!(form instanceof HTMLFormElement)) return;
 
       if (typeof w.cbResetIdleLogout === 'function') {
         w.cbResetIdleLogout();
       }
 
-      const branchSelect = form.querySelector('select[name="cb_id_pob"]');
-      if (branchSelect instanceof HTMLSelectElement && branchId !== '') {
-        branchSelect.value = branchId;
-      }
-
-      const actionField = form.querySelector('#cb_action_field');
-      if (actionField instanceof HTMLInputElement) {
-        actionField.value = 'start';
-      }
-
-      const submitter = form.querySelector('#cb_start_import_btn');
       submitAjax(form, submitter instanceof HTMLElement ? submitter : null);
     }, waitMs);
   }
 
   function initCardAutoContinue(scope) {
-    const root = scope instanceof HTMLElement || scope instanceof Document ? scope : document;
-    const marker = root.querySelector('[data-cb-auto-continue="1"]');
+      const root = scope instanceof HTMLElement || scope instanceof Document ? scope : document;
+      const marker = root.querySelector('[data-cb-auto-continue="1"]');
     if (!(marker instanceof HTMLElement)) return;
     if (marker.getAttribute('data-cb-auto-continue-armed') === '1') return;
     marker.setAttribute('data-cb-auto-continue-armed', '1');
@@ -616,6 +614,7 @@
     if (!(form instanceof HTMLFormElement)) return;
     if (isTableFilterForm(form)) return;
     if (!isTargetForm(form)) return;
+    if (shouldBypassAjaxSubmit(form)) return;
 
     event.preventDefault();
     event.stopPropagation();
@@ -627,6 +626,7 @@
     if (!(form instanceof HTMLFormElement)) return;
     if (isTableFilterForm(form)) return;
     if (!isTargetForm(form)) return;
+    if (shouldBypassAjaxSubmit(form)) return;
 
     event.preventDefault();
     event.stopPropagation();

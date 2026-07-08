@@ -2218,20 +2218,6 @@ if ($action === 'select_branch') {
 }
 
 if ($action === 'stop') {
-    $_SESSION[$cbStopKey] = 1;
-    if ($inputBranchId > 0) {
-        $_SESSION[$cbSelectedBranchKey] = $inputBranchId;
-    }
-    unset($_SESSION[$cbStateKey], $_SESSION[$cbRowsKey], $_SESSION[$cbMsgKey]);
-    $state = cb_restia_hist_default_state();
-    $state['continue_import'] = 0;
-    $message = 'Import je zastavený. Běžící dávka doběhne a další se nespustí. Pokračovat lze jen novým spuštěním z K3.';
-    $action = '';
-}
-
-if ($action === 'start' && $auth !== null && $autoContinueRequest && (int)($_SESSION[$cbStopKey] ?? 0) === 1) {
-    $state['continue_import'] = 0;
-    $message = 'Import je zastavený. Další automatická dávka se nespustila.';
     $action = '';
 }
 
@@ -2339,13 +2325,86 @@ if ($action === 'start' && $auth !== null) {
     $action = '';
 }
 
-$stopRequested = ((int)($_SESSION[$cbStopKey] ?? 0) === 1);
-if ($stopRequested && (int)($state['continue_import'] ?? 0) === 1) {
-    $state['continue_import'] = 0;
-    if ($message === '') {
-        $message = 'Import je zastavený. Běžící dávka doběhla a další se nespustí. Pokračovat lze jen novým spuštěním z K3.';
+if ($action === 'auto_next' && $auth !== null) {
+    $autoBranchId = (int)($state['branch_id'] ?? 0);
+    if ($autoBranchId > 0) {
+        $_SESSION[$cbSelectedBranchKey] = $autoBranchId;
+        $branch = cb_restia_hist_get_branch_by_id($conn, $autoBranchId);
+    } else {
+        $legacyBranchId = (int)($_SESSION['cb_pobocka_id'] ?? 0);
+        if ($legacyBranchId > 0) {
+            $branch = cb_restia_hist_get_branch_by_id($conn, $legacyBranchId);
+        } else {
+            $branch = cb_restia_hist_pick_default_branch($conn);
+        }
+        $_SESSION[$cbSelectedBranchKey] = (int)($branch['id_pob'] ?? 0);
     }
+
+    $_SESSION['cb_pobocka_id'] = (int)($branch['id_pob'] ?? 0);
+    $_SESSION['selected_pobocky'] = [(int)($branch['id_pob'] ?? 0)];
+
+    if (trim((string)($state['next_date'] ?? '')) === '') {
+        $resumeInfo = cb_restia_hist_resume_info($conn, $branch);
+        $state['start_date'] = (string)($resumeInfo['start_date'] ?? '');
+        $state['next_date'] = (string)($resumeInfo['next_date'] ?? '');
+        $state['last_date'] = (string)($resumeInfo['last_date'] ?? '');
+        $state['run_from_date'] = (string)($resumeInfo['next_date'] ?? '');
+        $state['branch_name'] = (string)($branch['nazev'] ?? '');
+        $state['branch_id'] = (int)($branch['id_pob'] ?? 0);
+    }
+
+    cb_restia_hist_ensure_default_customer($conn, (int)($branch['id_pob'] ?? 0));
+    $state['run_started_at_ms'] = (int)round(microtime(true) * 1000);
+    $rows = [];
+    $message = '';
+    $state['continue_import'] = 0;
+    cb_restia_hist_run_batch($conn, $auth, $branch, $state, $rows, $message, $importEndDate);
+    if ((int)($state['finished'] ?? 0) === 1) {
+        $_SESSION[$cbImportEndKey] = cb_restia_hist_import_end_date();
+        $importEndDate = cb_restia_hist_normalize_ymd((string)$_SESSION[$cbImportEndKey]);
+        $nextImport = cb_restia_hist_pick_next_incomplete_branch($conn, $importEndDate);
+        if (is_array($nextImport)) {
+            $nextBranch = $nextImport['branch'];
+            $nextResume = $nextImport['resume'];
+            $nextBranchId = (int)($nextBranch['id_pob'] ?? 0);
+            $nextBranchName = (string)($nextBranch['nazev'] ?? '');
+            $_SESSION[$cbSelectedBranchKey] = $nextBranchId;
+            $_SESSION['cb_pobocka_id'] = $nextBranchId;
+            $_SESSION['selected_pobocky'] = [$nextBranchId];
+
+            $state = cb_restia_hist_default_state();
+            $state['next_date'] = (string)($nextResume['next_date'] ?? '');
+            $state['start_date'] = (string)($nextResume['start_date'] ?? '');
+            $state['last_date'] = (string)($nextResume['last_date'] ?? '');
+            $state['run_from_date'] = (string)($nextResume['next_date'] ?? '');
+            $state['branch_name'] = $nextBranchName;
+            $state['branch_id'] = $nextBranchId;
+            $state['run_started_at_ms'] = 0;
+            $state['total_started_at_ms'] = (int)round(microtime(true) * 1000);
+            $state['run_row_no'] = 0;
+            $state['found_total'] = 0;
+            $state['branch_db_count'] = cb_restia_hist_branch_db_count($conn, $nextBranchId);
+            $state['continue_import'] = 1;
+            $state['finished'] = 0;
+
+            cb_restia_hist_log_init($nextBranchId);
+            cb_restia_hist_error_log_init($nextBranchId);
+            cb_restia_hist_log($nextBranchId, '-----');
+            cb_restia_hist_log($nextBranchId, 'START_AUTO: ' . cb_restia_hist_format_datetime_cs(cb_restia_hist_now()));
+            cb_restia_hist_log($nextBranchId, 'POBOČKA: ' . $nextBranchName . ' (' . (string)$nextBranchId . ')');
+            cb_restia_hist_log($nextBranchId, 'SCRIPT: ' . basename(__FILE__));
+            cb_restia_hist_log($nextBranchId, 'START_BASE: ' . cb_restia_hist_format_date_cs((string)($nextResume['start_date'] ?? '')));
+            cb_restia_hist_log($nextBranchId, 'RESUME_FROM: ' . cb_restia_hist_format_date_cs((string)($nextResume['next_date'] ?? '')));
+            cb_restia_hist_log($nextBranchId, 'IMPORT_TO: ' . cb_restia_hist_format_date_cs($importEndDate));
+            cb_restia_hist_log($nextBranchId, 'LIMIT: ' . (string)CB_RESTIA_HIST_LIMIT);
+
+            $message = 'Pobočka ' . (string)($branch['nazev'] ?? '') . ' skončila. Pokračuji další pobočkou: ' . $nextBranchName . '.';
+        }
+    }
+    $action = '';
 }
+
+$stopRequested = false;
 
 if ((int)($state['continue_import'] ?? 0) === 1) {
     $_SESSION[$cbStateKey] = cb_restia_hist_keep_state($state);
@@ -2453,9 +2512,7 @@ if ($loaderNextDateText !== '') {
 }
 
 $restiaStatusText = '';
-if ($stopRequested) {
-    $restiaStatusText = 'Stav: import je zastavený. Další dávka se nespustí.';
-} elseif ($autoResume) {
+if ($autoResume) {
     $restiaStatusText = 'Dávka doběhla časovým limitem. Další dávka se spustí automaticky';
     if ($loaderNextDateText !== '') {
         $restiaStatusText .= ' od ' . $loaderNextDateText;
@@ -2523,32 +2580,25 @@ if (!$canStartImport) {
     </form>
     <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px; width:100%;">
       <button type="submit" form="cb_restia_import_form" id="cb_start_import_btn" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" style="<?= cb_restia_hist_h($startButtonStyle) ?>" data-cb-loader-text="<?= cb_restia_hist_h($loaderButtonText) ?>" aria-disabled="<?= $canStartImport ? 'false' : 'true' ?>"<?= $canStartImport ? '' : ' disabled' ?>>Spustit import</button>
-      <?php if ($selectedBranchId > 0): ?>
-        <form method="post" action="<?= cb_restia_hist_h((string)cb_url('/index.php')) ?>" id="cb_restia_stop_form" class="odstup_vnejsi_0" data-cb-max-form="1" style="margin-left:auto;">
-          <input type="hidden" name="run_restia_obj" value="1">
-          <input type="hidden" name="cb_action" value="stop">
-          <input type="hidden" name="cb_id_pob" value="<?= cb_restia_hist_h((string)$selectedBranchId) ?>">
-          <button type="submit" id="cb_restia_stop_btn" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28" style="min-width:170px;" data-cb-loader-text="Další cyklus se nespustí">STOP</button>
-        </form>
-      <?php endif; ?>
     </div>
-    <p id="cb_restia_stop_info" class="card_text txt_seda text_13" style="margin:8px 0 0 0; max-width:620px;"><?= $stopRequested ? 'Další dávka se už nespustí.' : '' ?></p>
   </div>
   <?php if ($autoResume): ?>
-    <form method="post" action="<?= cb_restia_hist_h((string)cb_url('/index.php')) ?>" id="cb_restia_auto_resume_form" style="display:none;">
-      <input type="hidden" name="run_restia_obj" value="1">
-      <input type="hidden" name="cb_action" value="start">
-      <input type="hidden" name="cb_id_pob" value="<?= cb_restia_hist_h((string)$selectedBranchId) ?>">
-      <input type="hidden" name="cb_auto_continue" value="1">
-    </form>
-    <script>
-      window.setTimeout(function () {
-        var form = document.getElementById('cb_restia_auto_resume_form');
-        if (form) {
-          form.submit();
-        }
-      }, 500);
-    </script>
+    <div class="displ_flex" style="margin-top:10px;">
+      <form method="post" action="<?= cb_restia_hist_h((string)cb_url('/index.php')) ?>" id="cb_restia_continue_form" class="odstup_vnejsi_0" data-cb-max-form="1">
+        <input type="hidden" name="run_restia_obj" value="1">
+        <input type="hidden" name="cb_action" value="auto_next">
+        <input type="hidden" name="cb_id_pob" value="<?= cb_restia_hist_h((string)$selectedBranchId) ?>">
+        <button
+          type="submit"
+          id="cb_restia_continue_btn"
+          class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex"
+          style="min-width:260px;"
+          data-cb-loader-text="<?= cb_restia_hist_h($loaderButtonText) ?>"
+          data-cb-restia-auto-resume="1"
+          data-cb-restia-auto-resume-delay="500"
+        >Pokračovat dalším cyklem</button>
+      </form>
+    </div>
   <?php endif; ?>
 
 

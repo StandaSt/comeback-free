@@ -123,26 +123,8 @@ if (!empty($_SESSION['login_ok']) && $cbSystemLocked) {
     <div style="width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;background:#0f172a;overflow:hidden;">
       <img src="<?= h(cb_url('img/udrzba.png')) ?>" alt="Údržba systému" style="width:100vw;height:100vh;object-fit:contain;display:block;">
     </div>
-    <script>
-    (function(){
-      // Kontrola, zda admin uz system odemkl.
-      var checkUrl = <?= json_encode(cb_url('/?cb_lock_check=1'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-      var logoutUrl = <?= json_encode(cb_url('/?action=logout'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-      function checkLock(){
-        fetch(checkUrl, { cache: 'no-store' })
-          .then(function(r){ return r.json(); })
-          .then(function(j){
-            if (j && j.ok === true && Number(j.locked) === 0) {
-              window.location.href = logoutUrl;
-            }
-          })
-          .catch(function(){});
-      }
-      setInterval(checkLock, 60000);
-    })();
-    </script>
-    <?php
-} elseif (!empty($_SESSION['login_ok'])) {
+      <?php
+  } elseif (!empty($_SESSION['login_ok'])) {
     require_once __DIR__ . '/includes/hlavicka.php';
     require_once __DIR__ . '/modaly/modal_overeni.php';
     require_once __DIR__ . '/lib/kontrola_registrace.php';

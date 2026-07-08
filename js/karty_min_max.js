@@ -574,10 +574,15 @@
   w.CB_KARTY_MINMAX = w.CB_KARTY_MINMAX || {};
   w.CB_KARTY_MINMAX.openCardMax = openCardMax;
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initKartyMinMax, { once: true });
-  } else {
+  function initAndRestoreMaxi() {
     initKartyMinMax();
+    w.setTimeout(restoreActiveMaxi, 0);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAndRestoreMaxi, { once: true });
+  } else {
+    initAndRestoreMaxi();
   }
 })(window);
 

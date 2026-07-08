@@ -63,7 +63,19 @@ $cbRunRestiaKontrola = (
 $cbBackAdminInit = (
     isset($_POST['back_admin_init']) && (string)$_POST['back_admin_init'] === '1'
 );
-$cbKeepRestiaMax = $cbRunRestia;
+$cbRestiaState = $_SESSION['cb_restia_hist_v4_state'] ?? null;
+$cbRestiaStateKeepMax = (
+    is_array($cbRestiaState)
+    && (
+        (int)($cbRestiaState['continue_import'] ?? 0) === 1
+        || (trim((string)($cbRestiaState['next_date'] ?? '')) !== '' && (int)($cbRestiaState['finished'] ?? 0) === 0)
+    )
+    && (
+        (int)($cbRestiaState['finished'] ?? 0) === 0
+        || (int)($cbRestiaState['continue_import'] ?? 0) === 1
+    )
+);
+$cbKeepRestiaMax = $cbRunRestia || $cbRestiaStateKeepMax;
 $cbTraceK3Branch = 'default';
 if ($cbBackAdminInit) {
     unset($_SESSION['cb_restia_hist_v4_state'], $_SESSION['cb_restia_hist_v4_rows'], $_SESSION['cb_restia_hist_v4_msg']);
