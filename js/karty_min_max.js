@@ -2,9 +2,7 @@
 'use strict';
 
 (function (w) {
-  const MAXI_STATE_KEY = 'cb_maxi_state_v1';
   let activeMaxi = null;
-  let suppressNextRestore = false;
 
   const CARD_ROOT_SELECTOR = '.card_shell';
   const CARD_COMPACT_SELECTOR = '[data-card-compact]';
@@ -34,41 +32,6 @@
       credentials: 'same-origin',
       body: JSON.stringify(payload)
     }).catch(() => {});
-  }
-
-  function getCurrentLoginId() {
-    const grid = document.querySelector('.dash_grid[data-login-id]');
-    if (!(grid instanceof HTMLElement)) return '0';
-    return String(grid.getAttribute('data-login-id') || '0').trim() || '0';
-  }
-
-  function clearMaxiState() {
-    try { w.sessionStorage.removeItem(MAXI_STATE_KEY); } catch (e) {}
-  }
-
-  function saveMaxiState(cardId) {
-    const cid = String(cardId || '').trim();
-    if (cid === '') return;
-    const payload = {
-      cardId: cid,
-      loginId: getCurrentLoginId()
-    };
-    try { w.sessionStorage.setItem(MAXI_STATE_KEY, JSON.stringify(payload)); } catch (e) {}
-  }
-
-  function loadMaxiState() {
-    try {
-      const raw = String(w.sessionStorage.getItem(MAXI_STATE_KEY) || '');
-      if (raw === '') return null;
-      const parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== 'object') return null;
-      const cardId = String(parsed.cardId || '').trim();
-      if (cardId === '') return null;
-      const loginId = String(parsed.loginId || '0').trim() || '0';
-      return { cardId, loginId };
-    } catch (e) {
-      return null;
-    }
   }
 
   function getDashCard(root) {
@@ -159,8 +122,7 @@
       return;
     }
 
-    const overlayTop = item.forceFill ? 0 : item.dashBox.scrollTop;
-    item.overlayCard.style.top = String(overlayTop) + 'px';
+    item.overlayCard.style.top = String(item.dashBox.scrollTop) + 'px';
   }
 
   function buildOverlayClone(item) {
@@ -190,6 +152,16 @@
     const cloneHead = getCardHead(cloneShell);
     if (!(cloneBody instanceof HTMLElement)) return null;
 
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'cb_maxi_close_btn';
+    closeBtn.setAttribute('aria-label', 'Zavřít max kartu');
+    closeBtn.setAttribute('title', 'Zavřít max kartu');
+    closeBtn.textContent = '×';
+    closeBtn.addEventListener('click', () => {
+      closeActiveMaxi();
+    });
+
     if (cloneCompact instanceof HTMLElement) {
       cloneCompact.classList.add('is-hidden');
     }
@@ -203,6 +175,7 @@
     }
 
     if (cloneHead instanceof HTMLElement) {
+      cloneHead.appendChild(closeBtn);
       cloneHead.addEventListener('mousedown', blockHeadSelection);
       cloneHead.addEventListener('dblclick', () => {
         clearSelection();
@@ -217,7 +190,6 @@
     if (!activeMaxi) return;
 
     const options = (opts && typeof opts === 'object') ? opts : {};
-    const preserveState = !!options.preserveState;
     const doLogAction = options.logAction !== false;
 
     const item = activeMaxi;
@@ -267,10 +239,6 @@
 
     activeMaxi = null;
 
-    if (!preserveState) {
-      clearMaxiState();
-    }
-
     if (doLogAction) {
       const cardId = parseInt(String(root.getAttribute('data-card-id') || '0'), 10);
       logUserCardAction(2, cardId, true, '');
@@ -319,8 +287,6 @@
       activeMaxi.scrollHandler = null;
     }
 
-    const forceFill = root.getAttribute('data-card-max-fill') === '1';
-
     updateSubtitle(root, true);
     toggleNanoBtn(root, false);
 
@@ -339,7 +305,6 @@
       overlayLayer,
       overlayCard: null,
       originalBody,
-      forceFill,
       scrollHandler: null
     };
 
@@ -364,8 +329,6 @@
     syncOverlayPosition(nextItem);
 
     activeMaxi = nextItem;
-
-    saveMaxiState(String(root.getAttribute('data-card-id') || ''));
   }
 
   function openMaxi(root, compactSel, expandedSel) {
@@ -480,53 +443,13 @@
     roots.forEach(initCard);
   }
 
-  function restoreActiveMaxi() {
-    if (suppressNextRestore) {
-      suppressNextRestore = false;
-      clearMaxiState();
-      return;
-    }
-
-    const state = loadMaxiState();
-    if (!state) return;
-
-    const currentLoginId = getCurrentLoginId();
-    if (String(state.loginId || '0').trim() !== currentLoginId) {
-      clearMaxiState();
-      return;
-    }
-
-    const cardId = String(state.cardId || '').trim();
-    if (cardId === '') return;
-
-    const root = document.querySelector('.card_shell[data-card-id="' + cardId.replace(/"/g, '') + '"]');
-    if (!(root instanceof HTMLElement)) return;
-
-    openMaxi(root, CARD_COMPACT_SELECTOR, CARD_EXPANDED_SELECTOR);
-  }
-
   function wireOnce() {
     if (w.__CB_KARTY_MINMAX_WIRED__) return;
     w.__CB_KARTY_MINMAX_WIRED__ = true;
 
-    document.addEventListener('cb:maxi-close-request', () => {
-      suppressNextRestore = true;
-      clearMaxiState();
-      closeActiveMaxi({ preserveState: false, logAction: false });
-    });
-
     document.addEventListener('cb:main-swapped', () => {
-      if (suppressNextRestore) {
-        closeActiveMaxi({ preserveState: false, logAction: false });
-      } else {
-        closeActiveMaxi({ preserveState: true, logAction: false });
-      }
+      closeActiveMaxi({ logAction: false });
       initKartyMinMax();
-      if (suppressNextRestore) {
-        suppressNextRestore = false;
-      } else {
-        w.setTimeout(restoreActiveMaxi, 0);
-      }
     });
 
     document.addEventListener('cb:dashboard-layout-changed', () => {
@@ -574,15 +497,14 @@
   w.CB_KARTY_MINMAX = w.CB_KARTY_MINMAX || {};
   w.CB_KARTY_MINMAX.openCardMax = openCardMax;
 
-  function initAndRestoreMaxi() {
+  function initKartyMinMaxOnLoad() {
     initKartyMinMax();
-    w.setTimeout(restoreActiveMaxi, 0);
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initAndRestoreMaxi, { once: true });
+    document.addEventListener('DOMContentLoaded', initKartyMinMaxOnLoad, { once: true });
   } else {
-    initAndRestoreMaxi();
+    initKartyMinMaxOnLoad();
   }
 })(window);
 

@@ -109,6 +109,13 @@ if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
     http_response_code(401);
     exit;
 }
+
+if (!empty($_SESSION['login_ok']) && !$cbSystemLocked && !$cbHasComebackHeader) {
+    require_once __DIR__ . '/lib/restia_online_kontrola.php';
+    if (function_exists('cb_restia_online_kontrola')) {
+        cb_restia_online_kontrola();
+    }
+}
 ?>
 <!doctype html>
 <html lang="cs">

@@ -77,7 +77,6 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
     $cardColorUrl = (string)($pripravenaKarta['cardColorUrl'] ?? '');
     $cardIconUrl = (string)($pripravenaKarta['cardIconUrl'] ?? '');
     $startExpanded = ((int)($pripravenaKarta['startExpanded'] ?? 0) === 1);
-    $maxFill = ((int)($pripravenaKarta['maxFill'] ?? 0) === 1) || $cardId === 20;
     $hasMaxLoaded = (!$isNano && trim($maxHtml) !== '');
     $cardRefreshOp = (!$isNano && $refreshOp === 1) ? 1 : 0;
     $allowNanoSwitch = (!$isNano && !in_array($cardId, [10, 19, 20], true));
@@ -127,7 +126,6 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
     data-card-line="<?= h((string)$line) ?>"
     data-card-pos-locked="<?= $isPosLocked ? '1' : '0' ?>"
     data-card-max-loaded="<?= $hasMaxLoaded ? '1' : '0' ?>"
-    <?= $maxFill ? ' data-card-max-fill="1"' : '' ?>
     <?= $startExpanded ? ' data-card-start-expanded="1"' : '' ?>>
     <div class="card_top<?= h($cardTopRoleClass) ?> gap_10 displ_flex jc_mezi"<?= $cardTopStyle !== '' ? ' style="' . h($cardTopStyle) . '"' : '' ?>>
       <div class="card_head_left displ_flex">

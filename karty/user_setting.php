@@ -4,7 +4,6 @@
 declare(strict_types=1);
 
 $usError = '';
-$usOk = '';
 
 $usUser = $_SESSION['cb_user'] ?? null;
 $usUserId = (is_array($usUser) && isset($usUser['id_user'])) ? (int)$usUser['id_user'] : 0;
@@ -98,7 +97,6 @@ if ($usUserId > 0) {
             $usPismo = $postPismo;
             $usDark = $postDark;
             $usLogoutLimit = $postLogoutLimit;
-            $usOk = 'Nastavení bylo uloženo.';
         }
     } catch (Throwable $e) {
         $usError = 'Načtení uživatelského nastavení selhalo.';
@@ -123,10 +121,7 @@ ob_start();
 <?php if ($usError !== ''): ?>
   <p class="card_text txt_seda odstup_vnejsi_0 card_text_muted"><?= h($usError) ?></p>
 <?php else: ?>
-  <?php if ($usOk !== ''): ?>
-    <p class="card_text txt_zelena odstup_vnejsi_0"><?= h($usOk) ?></p>
-  <?php endif; ?>
-  <form method="post" action="<?= h($formAction) ?>" class="card_stack gap_10 displ_flex" autocomplete="off" data-cb-user-setting-form="1" data-cb-refresh-dashboard-on-save="1" data-cb-user-setting-initial-nano-kde="<?= h((string)$usNanoKde) ?>" data-cb-user-setting-initial-prodleva="<?= h((string)$usProdleva) ?>" data-cb-user-setting-initial-pismo="<?= h((string)$usPismo) ?>" data-cb-user-setting-initial-dark="<?= h((string)$usDark) ?>" data-cb-user-setting-initial-logout-limit="<?= h(($usCanManager && $usLogoutLimit !== null) ? (string)$usLogoutLimit : '') ?>">
+  <form method="post" action="<?= h($formAction) ?>" class="card_stack gap_10 displ_flex" autocomplete="off" data-cb-user-setting-form="1" data-cb-user-setting-initial-nano-kde="<?= h((string)$usNanoKde) ?>" data-cb-user-setting-initial-prodleva="<?= h((string)$usProdleva) ?>" data-cb-user-setting-initial-pismo="<?= h((string)$usPismo) ?>" data-cb-user-setting-initial-dark="<?= h((string)$usDark) ?>" data-cb-user-setting-initial-logout-limit="<?= h(($usCanManager && $usLogoutLimit !== null) ? (string)$usLogoutLimit : '') ?>">
     <input type="hidden" name="us_action" value="save">
 
     <style>

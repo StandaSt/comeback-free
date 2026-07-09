@@ -157,11 +157,6 @@
     return '';
   }
 
-  function isDashboardRefreshForm(form) {
-    return form instanceof HTMLFormElement
-      && String(form.getAttribute('data-cb-refresh-dashboard-on-save') || '') === '1';
-  }
-
   function shouldBypassAjaxSubmit(form) {
     return false;
   }
@@ -322,6 +317,60 @@
     return String(field.value || '');
   }
 
+  function clearUserSettingSavedMessages(form) {
+    if (!(form instanceof HTMLFormElement)) return;
+    form.querySelectorAll('[data-cb-user-setting-saved-msg="1"]').forEach((node) => {
+      if (node instanceof HTMLElement) {
+        node.remove();
+      }
+    });
+  }
+
+  function getUserSettingGroupFromSubmitter(submitter) {
+    if (!(submitter instanceof HTMLElement)) return '';
+    return String(submitter.getAttribute('data-cb-user-setting-save') || '').trim();
+  }
+
+  function showUserSettingSavedMessage(card, group) {
+    if (!(card instanceof HTMLElement)) return;
+    const shell = card.querySelector('.card_shell[data-card-id]');
+    const cardId = shell instanceof HTMLElement ? String(shell.getAttribute('data-card-id') || '').replace(/"/g, '') : '';
+    const overlayForm = cardId !== ''
+      ? document.querySelector('[data-cb-maxi-clone="1"] .card_shell[data-card-id="' + cardId + '"] form[data-cb-user-setting-form="1"]')
+      : null;
+    const form = overlayForm instanceof HTMLFormElement
+      ? overlayForm
+      : card.querySelector('form[data-cb-user-setting-form="1"]');
+    if (!(form instanceof HTMLFormElement)) return;
+
+    const activeGroup = String(group || '').trim();
+    if (activeGroup !== '') {
+      const tab = form.querySelector('#cb_user_tab_' + activeGroup);
+      if (tab instanceof HTMLInputElement) {
+        tab.checked = true;
+      }
+    }
+
+    clearUserSettingSavedMessages(form);
+
+    const panel = activeGroup !== ''
+      ? form.querySelector('.cb_user_panel_' + activeGroup)
+      : form.querySelector('.cb_user_panel');
+    if (!(panel instanceof HTMLElement)) return;
+
+    const msg = document.createElement('p');
+    msg.className = 'card_text txt_cervena text_tucny odstup_vnejsi_0';
+    msg.setAttribute('data-cb-user-setting-saved-msg', '1');
+    msg.textContent = 'Změny byly uloženy';
+
+    const title = panel.querySelector('.card_section_title');
+    if (title instanceof HTMLElement && title.nextSibling) {
+      panel.insertBefore(msg, title.nextSibling);
+    } else {
+      panel.insertBefore(msg, panel.firstChild);
+    }
+  }
+
   function syncUserSettingForm(form) {
     if (!(form instanceof HTMLFormElement)) return;
     if (String(form.getAttribute('data-cb-user-setting-form') || '') !== '1') return;
@@ -457,8 +506,8 @@
     if (!(form instanceof HTMLFormElement)) return;
     const opts = (options && typeof options === 'object') ? options : {};
     const skipSubmitterName = !!opts.skipSubmitterName;
-    const refreshDashboardOnSave = isDashboardRefreshForm(form);
     const restiaImportMode = getRestiaImportMode(form);
+    const userSettingSaveGroup = getUserSettingGroupFromSubmitter(submitter);
 
     const method = String(form.method || 'POST').toUpperCase();
     const reqUrl = String(form.action || w.location.href || 'index.php');
@@ -508,7 +557,7 @@
 
     const formData = new FormData(form);
 
-    const useGlobalLoader = refreshDashboardOnSave || (loaderText !== '' && restiaImportMode === '');
+    const useGlobalLoader = (loaderText !== '' && restiaImportMode === '');
     if (useGlobalLoader) {
       setLoading(true, loaderText, 'dashboard');
     }
@@ -548,17 +597,10 @@
           throw new Error(String((data && data.err) ? data.err : 'Max karta vrátila neplatný JSON obsah.'));
         }
 
-        if (refreshDashboardOnSave && w.CB_AJAX && typeof w.CB_AJAX.refreshDashboard === 'function') {
-          document.dispatchEvent(new CustomEvent('cb:maxi-close-request'));
-          return w.CB_AJAX.refreshDashboard({
-            force: true,
-            loaderMode: 'dashboard'
-          });
-        }
-
         if (cardId > 0) {
           const expandedCard = swapCardExpandedFromHtml(cardId, data.cardHtml);
           if (expandedCard instanceof HTMLElement) {
+            showUserSettingSavedMessage(expandedCard, userSettingSaveGroup);
             initCardAutoContinue(expandedCard);
             keepGlobalLoader = !!expandedCard.querySelector('[data-cb-auto-continue="1"]');
             return { ok: true, cardId: cardId };
@@ -568,6 +610,7 @@
         if (cardId > 0) {
           const swappedCard = swapCardFromHtml(cardId, data.cardHtml);
           if (swappedCard instanceof HTMLElement) {
+            showUserSettingSavedMessage(swappedCard, userSettingSaveGroup);
             initCardAutoContinue(swappedCard);
             keepGlobalLoader = !!swappedCard.querySelector('[data-cb-auto-continue="1"]');
             return { ok: true, cardId: cardId };
@@ -638,6 +681,10 @@
     if (!target) return;
 
     const settingForm = target.closest('form[data-cb-user-setting-form="1"]');
+    if (settingForm instanceof HTMLFormElement && target instanceof HTMLInputElement && String(target.name || '') === 'cb_user_tab') {
+      clearUserSettingSavedMessages(settingForm);
+      return;
+    }
     if (settingForm instanceof HTMLFormElement && target instanceof HTMLSelectElement) {
       syncUserSettingForm(settingForm);
       return;

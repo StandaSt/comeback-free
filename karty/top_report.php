@@ -1948,7 +1948,6 @@ if ($isMaxRender || !$isMiniRender) {
       id="<?= h($uiId) ?>"
       class="sirka100 displ_flex flex_sloupec gap_10"
       data-cb-top-report-manager="1"
-      <?php /* NEMENIT: Rozmer K15 max se ridi pres data-card-max-fill v includes/priprav_kartu_mini.php. */ ?>
       data-top-report-period="<?= h($periodLabel) ?>"
       data-top-report-metrics-active="<?= h(implode(',', array_values(array_filter((array)($managerDefault['metrics'] ?? ['trzby']), static fn ($metric): bool => trim((string)$metric) !== '')))) ?>"
       data-top-report-view-active="<?= h((string)($managerDefault['view'] ?? 'pobocky')) ?>"
