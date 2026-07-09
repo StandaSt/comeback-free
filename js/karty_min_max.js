@@ -321,6 +321,13 @@
 
     overlayLayer.innerHTML = '';
     overlayLayer.appendChild(overlayCard);
+    dashCard.classList.add('is-expanded');
+    document.dispatchEvent(new CustomEvent('cb:card-max-loaded', {
+      detail: {
+        cardId: parseInt(String(root.getAttribute('data-card-id') || '0'), 10) || 0,
+        card: overlayCard
+      }
+    }));
     nextItem.overlayCard = overlayCard;
     nextItem.scrollHandler = () => {
       syncOverlayPosition(nextItem);
