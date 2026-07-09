@@ -47,6 +47,13 @@ foreach (array_keys($_SERVER) as $cbServerKey) {
 $cbIsPartialRequest = isset($_SERVER['HTTP_X_COMEBACK_PARTIAL']);
 $cbIsCardRequest = isset($_SERVER['HTTP_X_COMEBACK_CARD']);
 $cbIsMaxFormRequest = isset($_SERVER['HTTP_X_COMEBACK_MAX_FORM']);
+$cbStartupLoaderText = '';
+if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
+    $cbStartupLoaderText = trim((string)($_SESSION['cb_initial_loader_text'] ?? ''));
+    if ($cbStartupLoaderText === '') {
+        $cbStartupLoaderText = 'Aktualizuji data ...';
+    }
+}
 unset($_SESSION['cb_initial_loader_text']);
 
 if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
@@ -114,6 +121,14 @@ if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
     <?php require_once __DIR__ . '/lib/nacti_styly.php'; ?>
 </head>
 <body>
+
+<?php if (!empty($_SESSION['login_ok']) && !$cbSystemLocked && $cbStartupLoaderText !== ''): ?>
+<div id="cb-startup-loader" class="dash_box bg_modra sirka100 is-dashboard-loading" data-cb-startup-text="<?= h($cbStartupLoaderText) ?>" style="position:fixed;left:0;top:0;right:0;bottom:0;z-index:12000;padding:0 12px;background-clip:content-box;overflow:hidden;">
+  <?php require __DIR__ . '/includes/loaders/dashboard.php'; ?>
+</div>
+<script src="<?= h(cb_url('js/loader_show.js')) ?>"></script>
+<script src="<?= h(cb_url('js/loader_timer.js')) ?>"></script>
+<?php endif; ?>
 
 <div class="container bg_modra displ_flex sirka100">
 <?php

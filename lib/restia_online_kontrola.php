@@ -344,7 +344,3 @@ if (!function_exists('cb_restia_online_kontrola')) {
         cb_restia_online_kontrola_notify_admin($db, $idAkce, $zapisy, $aktualizace, $ignore);
     }
 }
-
-if (!defined('CB_RESTIA_ONLINE_KONTROLA_AUTO_RUN') || CB_RESTIA_ONLINE_KONTROLA_AUTO_RUN !== false) {
-    cb_restia_online_kontrola();
-}

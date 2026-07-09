@@ -148,56 +148,64 @@ $prihlasenyIdUser = (int)($_SESSION['cb_user']['id_user'] ?? 0);
 $prihlasenyIdRole = (int)($_SESSION['cb_user']['id_role'] ?? 0);
 $mzdyRoleLimitSql = '';
 
-if ($prihlasenyIdRole > 3) {
-    if ($prihlasenyIdRole === 9) {
-        $mzdyRoleLimitSql = '
-          AND m.id_user = ' . $prihlasenyIdUser;
-    } elseif ($prihlasenyIdRole === 7) {
-        $mzdyRoleLimitSql = '
-          AND m.id_user IS NOT NULL
+if ($prihlasenyIdRole === 9) {
+    $mzdyRoleLimitSql = '
+          AND ro.id_user = ' . $prihlasenyIdUser;
+} elseif ($prihlasenyIdRole === 7) {
+    $mzdyRoleLimitSql = '
+          AND ro.id_user IS NOT NULL
           AND (
-              m.id_user = ' . $prihlasenyIdUser . '
+              ro.id_user = ' . $prihlasenyIdUser . '
               OR (
                   EXISTS (
                       SELECT 1
-                      FROM user_role ur_radek
-                      WHERE ur_radek.id_user = m.id_user
-                        AND ur_radek.id_role = 9
+                      FROM `user` u_radek
+                      WHERE u_radek.id_user = ro.id_user
+                        AND u_radek.id_role > 7
                   )
                   AND EXISTS (
                       SELECT 1
                       FROM user_pobocka up_prihlaseny
-                      INNER JOIN user_pobocka up_radek ON up_radek.id_pob = up_prihlaseny.id_pob
                       WHERE up_prihlaseny.id_user = ' . $prihlasenyIdUser . '
-                        AND up_radek.id_user = m.id_user
+                        AND up_prihlaseny.id_pob = r.id_pob
                   )
               )
           )';
-    } elseif ($prihlasenyIdRole === 5) {
-        $mzdyRoleLimitSql = '
-          AND m.id_user IS NOT NULL
+} elseif ($prihlasenyIdRole === 5) {
+    $mzdyRoleLimitSql = '
+          AND ro.id_user IS NOT NULL
           AND (
-              m.id_user = ' . $prihlasenyIdUser . '
+              ro.id_user = ' . $prihlasenyIdUser . '
               OR (
                   EXISTS (
                       SELECT 1
-                      FROM user_role ur_radek
-                      WHERE ur_radek.id_user = m.id_user
-                        AND ur_radek.id_role IN (7, 9)
+                      FROM `user` u_radek
+                      WHERE u_radek.id_user = ro.id_user
+                        AND u_radek.id_role > 5
                   )
                   AND EXISTS (
                       SELECT 1
                       FROM user_pobocka up_prihlaseny
-                      INNER JOIN user_pobocka up_radek ON up_radek.id_pob = up_prihlaseny.id_pob
                       WHERE up_prihlaseny.id_user = ' . $prihlasenyIdUser . '
-                        AND up_radek.id_user = m.id_user
+                        AND up_prihlaseny.id_pob = r.id_pob
                   )
               )
           )';
-    } else {
-        $mzdyRoleLimitSql = '
-          AND m.id_user = ' . $prihlasenyIdUser;
-    }
+} elseif ($prihlasenyIdRole === 3) {
+    $mzdyRoleLimitSql = '
+          AND ro.id_user IS NOT NULL
+          AND (
+              ro.id_user = ' . $prihlasenyIdUser . '
+              OR EXISTS (
+                  SELECT 1
+                  FROM `user` u_radek
+                  WHERE u_radek.id_user = ro.id_user
+                    AND u_radek.id_role > 3
+              )
+          )';
+} elseif ($prihlasenyIdRole > 3) {
+    $mzdyRoleLimitSql = '
+          AND ro.id_user = ' . $prihlasenyIdUser;
 }
 
 $mzdyCols = [
@@ -318,6 +326,7 @@ try {
             FROM reporty r
             INNER JOIN reporty_osoby ro ON ro.id_reportu = r.id_reportu
             WHERE r.platny = 1
+            ' . $mzdyRoleLimitSql . '
             GROUP BY
                 YEAR(r.datum_reportu),
                 MONTH(r.datum_reportu),
@@ -337,7 +346,6 @@ try {
            AND (hs.platnost_do IS NULL OR hs.platnost_do >= m.mesic_od)
         LEFT JOIN cis_mzda_typ cmt ON cmt.id_mzda_typ = hs.id_mzda_typ
         WHERE 1 = 1
-        ' . $mzdyRoleLimitSql . '
     ';
 
     $resRows = $conn->query($sql);

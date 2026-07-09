@@ -582,14 +582,20 @@
     });
   }
 
-  function triggerRestiaCheck() {
+  function triggerRestiaCheck(options) {
+    const opts = (options && typeof options === 'object') ? options : {};
     const reqUrl = String(w.location.href || 'index.php');
+    const headers = {
+      'X-Comeback-Restia-Trigger': '1',
+      'Accept': 'application/json'
+    };
+    if (opts.forceRestia === true) {
+      headers['X-Comeback-Restia-Force'] = '1';
+    }
+
     return fetch(reqUrl, {
       method: 'POST',
-      headers: {
-        'X-Comeback-Restia-Trigger': '1',
-        'Accept': 'application/json'
-      },
+      headers: headers,
       credentials: 'same-origin'
     }).then((res) => {
       if (!res.ok) {
@@ -666,6 +672,8 @@
     const showLoading = opts.showLoading !== false;
     const triggerRestia = opts.triggerRestia !== false;
     const hideStartup = !!opts.hideStartupLoader;
+    const forceRestia = !!opts.forceRestia;
+    const refreshOpCards = opts.refreshOpCards !== false;
     const timeoutMs = Math.max(1000, Number(opts.timeoutMs) || 180000);
     const pollMs = Math.max(200, Number(opts.pollMs) || 500);
 
@@ -673,7 +681,7 @@
       setLoaderLoading(loaderMode, true, 'Aktualizuji data ...');
     }
 
-    const stateJob = triggerRestia ? triggerRestiaCheck() : fetchRestiaState();
+    const stateJob = triggerRestia ? triggerRestiaCheck({ forceRestia: forceRestia }) : fetchRestiaState();
     return stateJob.then((state) => {
       const isRunning = !!(state && Number(state.active || 0) === 1);
       if (!isRunning && triggerRestia === false && hideStartup !== true) {
@@ -688,6 +696,9 @@
         : Promise.resolve();
 
       return waitJob.then(() => {
+        if (!refreshOpCards) {
+          return { ok: true, refreshed: false };
+        }
         return CB_AJAX.refreshDashboardRefreshOpCards({
           force: true,
           loaderMode: loaderMode

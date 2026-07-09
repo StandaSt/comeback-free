@@ -10,51 +10,6 @@
     return hours + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
   }
 
-  function fetchRestiaState() {
-    return fetch(String(w.location.href || 'index.php'), {
-      method: 'GET',
-      headers: { 'X-Comeback-Restia-State': '1' },
-      credentials: 'same-origin'
-    }).then((res) => res.json());
-  }
-
-  function triggerRestiaForce() {
-    return fetch(String(w.location.href || 'index.php'), {
-      method: 'POST',
-      headers: {
-        'X-Comeback-Restia-Trigger': '1',
-        'X-Comeback-Restia-Force': '1',
-        'Accept': 'application/json'
-      },
-      credentials: 'same-origin'
-    }).then((res) => {
-      if (!res.ok) throw new Error('Aktualizace Restie selhala.');
-      return res.json();
-    });
-  }
-
-  function waitRestiaDone() {
-    const startedAt = Date.now();
-    const timeoutMs = 180000;
-
-    return new Promise((resolve, reject) => {
-      const check = () => {
-        fetchRestiaState().then((state) => {
-          if (!state || Number(state.active || 0) !== 1) {
-            resolve();
-            return;
-          }
-          if (Date.now() - startedAt >= timeoutMs) {
-            reject(new Error('Aktualizace Restie běží příliš dlouho.'));
-            return;
-          }
-          w.setTimeout(check, 500);
-        }).catch(reject);
-      };
-      check();
-    });
-  }
-
   function refreshRightSide(form) {
     const shell = form.closest('.card_shell[data-card-id]');
     const cardId = shell instanceof HTMLElement ? String(shell.getAttribute('data-card-id') || '') : '';
@@ -136,8 +91,18 @@
       if (button.disabled) return;
       button.disabled = true;
       button.classList.add('is-loading');
-      triggerRestiaForce()
-        .then(waitRestiaDone)
+      if (!w.CB_AJAX || typeof w.CB_AJAX.runRestiaAndRefreshOpCards !== 'function') {
+        w.alert('Aktualizace Restie není dostupná.');
+        button.classList.remove('is-loading');
+        setRefreshReady(button);
+        return;
+      }
+      w.CB_AJAX.runRestiaAndRefreshOpCards({
+          forceRestia: true,
+          refreshOpCards: false,
+          loaderMode: 'dashboard',
+          showLoading: false
+        })
         .then(() => refreshRightSide(form))
         .catch((err) => {
           w.alert((err && err.message) ? err.message : 'Aktualizace Restie selhala.');
