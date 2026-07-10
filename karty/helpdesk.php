@@ -250,8 +250,6 @@ ob_start();
 
   var btnBaseClass = 'card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 displ_inline_flex';
   var btnPrimaryClass = btnBaseClass + ' card_btn_primary';
-  var btnDangerStyle = 'border-color:var(--clr_pruhledna_cervena_28);background:var(--clr_ruzova_5);color:var(--clr_cervena);';
-  var btnSuccessStyle = 'border-color:rgba(22,163,74,.24);background:var(--clr_zelena_3);color:var(--clr_zelena);';
 
   function text(v) {
     if (v === null || v === undefined) { return ''; }
@@ -443,6 +441,11 @@ ob_start();
     return normalizeFilterValue(expanded.getAttribute('data-cb-hd-filter-value') || 'new');
   }
 
+  function getUnreadOnlyValue() {
+    var expanded = getExpandedBox();
+    return expanded instanceof HTMLElement && expanded.getAttribute('data-cb-hd-unread-only') === '1';
+  }
+
   function refreshFilterBlocks() {
     var expanded = getExpandedBox();
     if (!(expanded instanceof HTMLElement)) { return; }
@@ -479,12 +482,23 @@ ob_start();
     changeFilterCount(newValue, 1);
   }
 
-  function setFilterValue(value) {
+  function setFilterValue(value, unreadOnly) {
     var expanded = getExpandedBox();
     if (!(expanded instanceof HTMLElement)) { return; }
     expanded.setAttribute('data-cb-hd-filter-value', normalizeFilterValue(value));
+    if (arguments.length > 1) {
+      expanded.setAttribute('data-cb-hd-unread-only', unreadOnly ? '1' : '0');
+    }
     refreshFilterBlocks();
     applyFilter();
+  }
+
+  function openUnreadFilter(value) {
+    openCardMax();
+    waitForExpanded(function () {
+      setFilterValue(value, true);
+      pollTicketStates();
+    }, 0);
   }
 
   function waitForExpanded(callback, attempt) {
@@ -684,10 +698,10 @@ ob_start();
         html += '<button type="button" class="' + esc(btnBaseClass) + '" style="' + esc(actionBtnStyle) + '" data-cb-hd-follow="' + esc(id) + '">Mám stejný problém</button>';
       }
       if (isAdmin) {
-        html += '<button type="button" class="' + esc(btnBaseClass) + '" style="' + esc(btnSuccessStyle . actionBtnStyle) + '" data-cb-hd-quick-state="' + esc(id) + '" data-cb-hd-quick-value="vyřešeno">Vyřešeno</button>';
+        html += '<button type="button" class="' + esc(btnBaseClass) + '" style="' + esc(sendBtnStyle) + '" data-cb-hd-send-reply="' + esc(id) + '" data-cb-hd-resolve="1">Odeslat - tiket vyřešen</button>';
       }
       html += '<button type="button" class="' + esc(btnPrimaryClass) + '" style="' + esc(sendBtnStyle) + '" data-cb-hd-send-reply="' + esc(id) + '">Odeslat odpověď</button>';
-      html += '<button type="button" class="' + esc(btnBaseClass) + '" style="' + esc(actionBtnStyle) + '" data-cb-hd-close-detail="1">Zavřít</button>';
+      html += '<button type="button" class="' + esc(btnBaseClass) + '" style="' + esc(actionBtnStyle) + '" data-cb-hd-close-detail="1">Zpět</button>';
       html += '</div>';
     } else {
       html += '<div style="font-size:13px;color:#64748b;margin-top:10px;">Na tento požadavek už nelze odpovídat.</div>';
@@ -695,10 +709,7 @@ ob_start();
       if (!isAdmin && ownerId !== currentUserId) {
         html += '<button type="button" class="' + esc(btnBaseClass) + '" style="' + esc(actionBtnStyle) + '" data-cb-hd-follow="' + esc(id) + '">Mám stejný problém</button>';
       }
-      if (isAdmin) {
-        html += '<button type="button" class="' + esc(btnBaseClass) + '" style="' + esc(btnSuccessStyle . actionBtnStyle) + '" data-cb-hd-quick-state="' + esc(id) + '" data-cb-hd-quick-value="vyřešeno">Vyřešeno</button>';
-      }
-      html += '<button type="button" class="' + esc(btnBaseClass) + '" style="' + esc(actionBtnStyle) + '" data-cb-hd-close-detail="1">Zavřít</button>';
+      html += '<button type="button" class="' + esc(btnBaseClass) + '" style="' + esc(actionBtnStyle) + '" data-cb-hd-close-detail="1">Zpět</button>';
       html += '</div>';
     }
 
@@ -723,6 +734,12 @@ ob_start();
     detailBox.innerHTML = html;
     activeDetailId = text(ticket.id_helpdesk || row.getAttribute('data-hd-item') || '');
     updateRowHasNewReply(activeDetailId, data && data.has_new_reply ? data.has_new_reply : 0);
+    if (getUnreadOnlyValue() && row instanceof HTMLElement) {
+      row.style.display = 'none';
+    }
+    if (window.CB_HELPDESK_HEADER && typeof window.CB_HELPDESK_HEADER.refresh === 'function') {
+      window.CB_HELPDESK_HEADER.refresh();
+    }
     refreshActiveRowUi();
     if (scrollDetailToBottomOnRender) {
       scrollDetailToBottomOnRender = false;
@@ -785,13 +802,15 @@ ob_start();
 
   function applyFilter() {
     var value = getCurrentFilterValue();
+    var unreadOnly = getUnreadOnlyValue();
     var list = getListBox();
     if (!(list instanceof HTMLElement)) { return; }
 
     list.querySelectorAll('[data-hd-item]').forEach(function (row) {
       if (!(row instanceof HTMLElement)) { return; }
       var rowState = text(row.getAttribute('data-hd-stav') || '');
-      row.style.display = filterMatchesState(value, rowState) ? '' : 'none';
+      var rowUnread = row.getAttribute('data-hd-has-new-reply') === '1';
+      row.style.display = filterMatchesState(value, rowState) && (!unreadOnly || rowUnread) ? '' : 'none';
     });
 
     var activeRow = getItemRow(activeDetailId);
@@ -910,7 +929,7 @@ ob_start();
       var filterValue = minFilter.getAttribute('data-cb-hd-min-filter') || 'new';
       openCardMax();
       waitForExpanded(function () {
-        setFilterValue(filterValue);
+        setFilterValue(filterValue, false);
         pollTicketStates();
       }, 0);
       return;
@@ -918,7 +937,7 @@ ob_start();
 
     var filterBlock = target.closest('[data-cb-hd-filter-block]');
     if (filterBlock instanceof HTMLElement) {
-      setFilterValue(filterBlock.getAttribute('data-cb-hd-filter-block') || 'all');
+      setFilterValue(filterBlock.getAttribute('data-cb-hd-filter-block') || 'all', false);
       return;
     }
 
@@ -954,10 +973,14 @@ ob_start();
         return;
       }
       var replyId = replyBtn.getAttribute('data-cb-hd-send-reply') || '';
-      postJson(apiUrl + '?helpdesk_action=zprava_pridat', {
+      var replyPayload = {
         id_helpdesk: replyId,
         zprava: replyText
-      }).then(function (result) {
+      };
+      if (replyBtn.getAttribute('data-cb-hd-resolve') === '1') {
+        replyPayload.uzavrit = 1;
+      }
+      postJson(apiUrl + '?helpdesk_action=zprava_pridat', replyPayload).then(function (result) {
         if (!result.ok || !result.data || result.data.ok !== true) {
           window.alert(result.data && result.data.err ? String(result.data.err) : 'Odeslání odpovědi selhalo.');
           return;
@@ -972,24 +995,6 @@ ob_start();
       return;
     }
 
-    var stateBtn = target.closest('[data-cb-hd-quick-state]');
-    if (stateBtn instanceof HTMLElement) {
-      var stateId = stateBtn.getAttribute('data-cb-hd-quick-state') || '';
-      var stateValue = stateBtn.getAttribute('data-cb-hd-quick-value') || '';
-      postJson(apiUrl + '?helpdesk_action=stav_zmenit', {
-        id_helpdesk: stateId,
-        stav: stateValue
-      }).then(function (result) {
-        if (!result.ok || !result.data || result.data.ok !== true) {
-          window.alert(result.data && result.data.err ? String(result.data.err) : 'Změna stavu selhala.');
-          return;
-        }
-        updateRowState(stateId, stateValue);
-        reloadOpenDetail(stateId);
-      });
-      return;
-    }
-
     var row = target.closest('article[data-hd-item]');
     if (row instanceof HTMLElement) {
       loadDetail(row.getAttribute('data-hd-item') || '');
@@ -1000,6 +1005,15 @@ ob_start();
   renderEmptyDetailPanel();
   refreshActiveRowUi();
   pollTimerId = window.setInterval(pollTicketStates, 15000);
+
+  window.CB_HELPDESK20 = {
+    openUnreadFilter: openUnreadFilter
+  };
+
+  document.addEventListener('cb:helpdesk-header-filter', function (e) {
+    var detail = e && e.detail ? e.detail : {};
+    openUnreadFilter(detail.filter || 'all');
+  });
 
   document.addEventListener('cb:helpdesk-created', function (e) {
     if (isAdmin) { return; }

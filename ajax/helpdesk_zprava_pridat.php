@@ -36,6 +36,8 @@ try {
     $idUser = cb_helpdesk_current_user_id();
     $idHelpdesk = (int)($data['id_helpdesk'] ?? 0);
     $zprava = trim((string)($data['zprava'] ?? ''));
+    $jeAdmin = cb_helpdesk_is_admin();
+    $uzavrit = (int)($data['uzavrit'] ?? 0) === 1;
 
     if ($idUser <= 0) {
         throw new RuntimeException('Neznámý uživatel.');
@@ -46,6 +48,9 @@ try {
     if ($zprava === '') {
         throw new RuntimeException('Zpráva je prázdná.');
     }
+    if ($uzavrit && !$jeAdmin) {
+        throw new RuntimeException('Jen admin může uzavřít tiket.');
+    }
 
     $conn = db();
     if (!cb_helpdesk_can_write($conn, $idHelpdesk, $idUser)) {
@@ -54,7 +59,7 @@ try {
         exit;
     }
 
-    $typAutora = cb_helpdesk_is_admin() ? 'admin' : 'user';
+    $typAutora = $jeAdmin ? 'admin' : 'user';
 
     $conn->begin_transaction();
 
@@ -85,23 +90,30 @@ try {
     $stmt->close();
 
     $novyStav = $stavPred;
-    if (cb_helpdesk_is_admin() && $stavPred === 'nový') {
+    if ($uzavrit) {
+        $novyStav = 'vyřešeno';
+    } elseif ($jeAdmin) {
         $novyStav = 'řeší se';
     }
 
-    if ($novyStav !== '' && $novyStav !== $stavPred) {
-        $stmtU = $conn->prepare('UPDATE helpdesk SET stav = ?, upraveno = NOW(), posledni_zprava = NOW() WHERE id_helpdesk = ? LIMIT 1');
-        if ($stmtU instanceof mysqli_stmt) {
+    if ($uzavrit) {
+        $stmtU = $conn->prepare('UPDATE helpdesk SET stav = ?, upraveno = NOW(), posledni_zprava = NOW(), uzavreno = NOW() WHERE id_helpdesk = ? LIMIT 1');
+    } else {
+        $stmtU = $conn->prepare('UPDATE helpdesk SET stav = ?, upraveno = NOW(), posledni_zprava = NOW(), uzavreno = NULL WHERE id_helpdesk = ? LIMIT 1');
+    }
+    if ($stmtU instanceof mysqli_stmt) {
+        if ($uzavrit || ($novyStav !== '' && $novyStav !== $stavPred)) {
             $stmtU->bind_param('si', $novyStav, $idHelpdesk);
             $stmtU->execute();
             $stmtU->close();
-        }
-    } else {
-        $stmtU = $conn->prepare('UPDATE helpdesk SET upraveno = NOW(), posledni_zprava = NOW() WHERE id_helpdesk = ? LIMIT 1');
-        if ($stmtU instanceof mysqli_stmt) {
-            $stmtU->bind_param('i', $idHelpdesk);
-            $stmtU->execute();
+        } else {
             $stmtU->close();
+            $stmtU = $conn->prepare('UPDATE helpdesk SET upraveno = NOW(), posledni_zprava = NOW() WHERE id_helpdesk = ? LIMIT 1');
+            if ($stmtU instanceof mysqli_stmt) {
+                $stmtU->bind_param('i', $idHelpdesk);
+                $stmtU->execute();
+                $stmtU->close();
+            }
         }
     }
 
@@ -121,8 +133,19 @@ try {
 
     cb_helpdesk_snapshot_zapis($conn, $idHelpdesk, $idZprava, $idUser);
 
-    if (cb_helpdesk_is_admin()) {
-        cb_helpdesk_notifikace_sledujicim_o_admin_odpovedi($conn, $idHelpdesk, $idZprava, $idUser, $zprava);
+    if ($jeAdmin) {
+        if ($uzavrit) {
+            cb_helpdesk_notifikace_sledujicim_o_admin_odpovedi(
+                $conn,
+                $idHelpdesk,
+                $idZprava,
+                $idUser,
+                $zprava,
+                'Admin uzavřel tiket č. ' . (string)$idHelpdesk . ' - VYŘEŠENO'
+            );
+        } else {
+            cb_helpdesk_notifikace_sledujicim_o_admin_odpovedi($conn, $idHelpdesk, $idZprava, $idUser, $zprava);
+        }
     } else {
         $jmenoAutora = cb_helpdesk_notifikace_full_name(
             (string)($_SESSION['cb_user']['name'] ?? ''),

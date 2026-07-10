@@ -319,11 +319,43 @@ if ($cbPobocky) {
         <?php else: ?>
           <button type="button" data-cb-helpdesk-open="1" style="display:inline-flex;align-items:center;justify-content:center;width:100%;min-height:20px;padding:0 8px;border:1px solid #b8d0ef;border-radius:8px;background:#dcecff;color:#0f3f91;font-size:11px;font-weight:700;line-height:18px;cursor:pointer;">HelpDesk</button>
         <?php endif; ?>
-        <div class="cb-head-helpdesk-meter" aria-hidden="true">
-          <span class="cb-head-helpdesk-meter-part is-all"></span>
-          <span class="cb-head-helpdesk-meter-part is-new"></span>
-          <span class="cb-head-helpdesk-meter-part is-active"></span>
-          <span class="cb-head-helpdesk-meter-part is-resolved"></span>
+        <div class="cb-head-helpdesk-meter" aria-label="Nepřečtené tikety">
+          <button type="button" class="cb-head-helpdesk-meter-part is-all" data-cb-helpdesk-header-filter="all" aria-label="Nepřečtené tikety bez ohledu na stav" style="border:0;padding:2px 3px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;font:inherit;color:inherit;">
+            <strong data-cb-helpdesk-header-count="all" style="font-size:13px;line-height:1;">0</strong>
+            <span class="cb_tooltip_panel cb_tooltip_card" data-cb-helpdesk-head-tooltip="1" style="min-width:0;white-space:nowrap;pointer-events:none;font-size:var(--fs_12);line-height:1.2;">
+              <span style="display:grid;gap:3px;">
+                <span style="color:var(--clr_cervena);font-weight:700;">Nepřečtené tikety</span>
+                <span style="color:var(--clr_cerna);font-weight:400;">bez ohledu na stav</span>
+              </span>
+            </span>
+          </button>
+          <button type="button" class="cb-head-helpdesk-meter-part is-new" data-cb-helpdesk-header-filter="new" aria-label="Nepřečtené tikety nové" style="border:0;padding:2px 3px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;font:inherit;color:inherit;">
+            <strong data-cb-helpdesk-header-count="new" style="font-size:13px;line-height:1;">0</strong>
+            <span class="cb_tooltip_panel cb_tooltip_card" data-cb-helpdesk-head-tooltip="1" style="min-width:0;white-space:nowrap;pointer-events:none;font-size:var(--fs_12);line-height:1.2;">
+              <span style="display:grid;gap:3px;">
+                <span style="color:var(--clr_cervena);font-weight:700;">Nepřečtené tikety</span>
+                <span style="color:var(--clr_cerna);font-weight:400;">nové</span>
+              </span>
+            </span>
+          </button>
+          <button type="button" class="cb-head-helpdesk-meter-part is-active" data-cb-helpdesk-header-filter="active" aria-label="Nepřečtené tikety v řešení" style="border:0;padding:2px 3px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;font:inherit;color:inherit;">
+            <strong data-cb-helpdesk-header-count="active" style="font-size:13px;line-height:1;">0</strong>
+            <span class="cb_tooltip_panel cb_tooltip_card" data-cb-helpdesk-head-tooltip="1" style="min-width:0;white-space:nowrap;pointer-events:none;font-size:var(--fs_12);line-height:1.2;">
+              <span style="display:grid;gap:3px;">
+                <span style="color:var(--clr_cervena);font-weight:700;">Nepřečtené tikety</span>
+                <span style="color:var(--clr_cerna);font-weight:400;">v řešení</span>
+              </span>
+            </span>
+          </button>
+          <button type="button" class="cb-head-helpdesk-meter-part is-resolved" data-cb-helpdesk-header-filter="resolved" aria-label="Nepřečtené tikety vyřešené, uzavřené" style="border:0;padding:2px 3px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;font:inherit;color:inherit;">
+            <strong data-cb-helpdesk-header-count="resolved" style="font-size:13px;line-height:1;">0</strong>
+            <span class="cb_tooltip_panel cb_tooltip_card" data-cb-helpdesk-head-tooltip="1" style="min-width:0;white-space:nowrap;pointer-events:none;font-size:var(--fs_12);line-height:1.2;">
+              <span style="display:grid;gap:3px;">
+                <span style="color:var(--clr_cervena);font-weight:700;">Nepřečtené tikety</span>
+                <span style="color:var(--clr_cerna);font-weight:400;">vyřešené, uzavřené</span>
+              </span>
+            </span>
+          </button>
         </div>
       </div>
       <?php require __DIR__ . '/hlavicka/head_kpi.php'; ?>
@@ -334,6 +366,167 @@ if ($cbPobocky) {
 
   </div>
 </header>
+<?php if ($cbLoginOk): ?>
+  <script>
+  (function () {
+    var apiUrl = <?= json_encode($cbHelpdeskApiUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+
+    function countBox(key) {
+      return document.querySelector('[data-cb-helpdesk-header-count="' + key + '"]');
+    }
+
+    function numberValue(value) {
+      var n = Number(value || 0);
+      if (!Number.isFinite(n) || n < 0) {
+        return 0;
+      }
+      return Math.trunc(n);
+    }
+
+    function setCounts(counts) {
+      var source = counts || {};
+      ['all', 'new', 'active', 'resolved'].forEach(function (key) {
+        var box = countBox(key);
+        if (box instanceof HTMLElement) {
+          box.textContent = String(numberValue(source[key]));
+        }
+      });
+    }
+
+    function refresh() {
+      return fetch(apiUrl + '?helpdesk_action=stav_tiketu', {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: {
+          'X-Comeback-Helpdesk': '1'
+        }
+      })
+        .then(function (r) { return r.json().catch(function () { return {}; }); })
+        .then(function (data) {
+          if (data && data.ok === true && data.counts) {
+            setCounts(data.counts);
+          }
+        })
+        .catch(function () {
+        });
+    }
+
+    function openCard(filter) {
+      var filterValue = String(filter || 'all');
+      if (window.CB_HELPDESK20 && typeof window.CB_HELPDESK20.openUnreadFilter === 'function') {
+        window.CB_HELPDESK20.openUnreadFilter(filterValue);
+        return;
+      }
+
+      var root = document.querySelector('.card_shell[data-card-id="20"]');
+      if (root instanceof HTMLElement) {
+        var expanded = root.querySelector('[data-card-expanded]');
+        var isHidden = expanded instanceof HTMLElement && expanded.classList.contains('is-hidden');
+        if (isHidden && window.CB_KARTY_MINMAX && typeof window.CB_KARTY_MINMAX.openCardMax === 'function') {
+          window.CB_KARTY_MINMAX.openCardMax(root);
+        }
+        root.scrollIntoView({behavior: 'smooth', block: 'start'});
+      }
+
+      document.dispatchEvent(new CustomEvent('cb:helpdesk-header-filter', {
+        detail: {
+          filter: filterValue
+        }
+      }));
+    }
+
+    function placeTooltip(root, event) {
+      var panel = root.querySelector('[data-cb-helpdesk-head-tooltip="1"]');
+      if (!(panel instanceof HTMLElement)) { return; }
+      panel.classList.add('is-visible');
+
+      var rect = root.getBoundingClientRect();
+      var clientX = event && typeof event.clientX === 'number' ? event.clientX : rect.right;
+      var clientY = event && typeof event.clientY === 'number' ? event.clientY : rect.top;
+      var panelRect = panel.getBoundingClientRect();
+      var gap = 8;
+      var left = clientX + 14;
+      var top = clientY - panelRect.height - gap;
+      var viewWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+
+      if (left + panelRect.width + gap > viewWidth) {
+        left = Math.max(gap, viewWidth - panelRect.width - gap);
+      }
+      if (top < gap) {
+        top = clientY + gap;
+      }
+
+      panel.style.left = String(left) + 'px';
+      panel.style.top = String(top) + 'px';
+    }
+
+    function hideTooltip(root) {
+      var panel = root.querySelector('[data-cb-helpdesk-head-tooltip="1"]');
+      if (!(panel instanceof HTMLElement)) { return; }
+      panel.classList.remove('is-visible');
+      panel.style.left = '';
+      panel.style.top = '';
+    }
+
+    window.CB_HELPDESK_HEADER = {
+      refresh: refresh,
+      open: openCard
+    };
+
+    document.addEventListener('click', function (e) {
+      var target = e.target;
+      if (!(target instanceof Element)) { return; }
+      var item = target.closest('[data-cb-helpdesk-header-filter]');
+      if (!(item instanceof HTMLElement)) { return; }
+      openCard(item.getAttribute('data-cb-helpdesk-header-filter') || 'all');
+    });
+
+    document.addEventListener('mouseenter', function (e) {
+      var target = e.target;
+      var item = target instanceof Element ? target.closest('[data-cb-helpdesk-header-filter]') : null;
+      if (item instanceof HTMLElement) {
+        placeTooltip(item, e);
+      }
+    }, true);
+
+    document.addEventListener('mousemove', function (e) {
+      var target = e.target;
+      var item = target instanceof Element ? target.closest('[data-cb-helpdesk-header-filter]') : null;
+      if (item instanceof HTMLElement) {
+        placeTooltip(item, e);
+      }
+    }, true);
+
+    document.addEventListener('mouseleave', function (e) {
+      var target = e.target;
+      var item = target instanceof Element ? target.closest('[data-cb-helpdesk-header-filter]') : null;
+      var related = e.relatedTarget;
+      if (item instanceof HTMLElement && !(related instanceof Node && item.contains(related))) {
+        hideTooltip(item);
+      }
+    }, true);
+
+    document.addEventListener('focusin', function (e) {
+      var target = e.target;
+      var item = target instanceof Element ? target.closest('[data-cb-helpdesk-header-filter]') : null;
+      if (item instanceof HTMLElement) {
+        placeTooltip(item, null);
+      }
+    });
+
+    document.addEventListener('focusout', function (e) {
+      var target = e.target;
+      var item = target instanceof Element ? target.closest('[data-cb-helpdesk-header-filter]') : null;
+      var related = e.relatedTarget;
+      if (item instanceof HTMLElement && !(related instanceof Node && item.contains(related))) {
+        hideTooltip(item);
+      }
+    });
+
+    refresh();
+  })();
+  </script>
+<?php endif; ?>
 <?php if ($cbLoginOk && !$cbHelpdeskIsRoleOne): ?>
   <div id="cb-helpdesk-modal" style="display:none;position:fixed;inset:0;z-index:13000;align-items:center;justify-content:center;padding:18px;background:rgba(15,23,42,.48);">
     <div class="ram_normal zaobleni_12 bg_bila" role="dialog" aria-modal="true" aria-labelledby="cb-helpdesk-modal-title" style="width:min(720px,calc(100vw - 32px));max-height:calc(100vh - 36px);overflow:auto;padding:16px 18px 14px;">

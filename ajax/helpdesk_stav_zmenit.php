@@ -57,7 +57,7 @@ try {
     $conn = db();
     $sql = '
         UPDATE helpdesk
-        SET stav = ?, upraveno = NOW(), uzavreno = ' . $uzavrenoSql . '
+        SET stav = ?, upraveno = NOW(), posledni_zprava = NOW(), uzavreno = ' . $uzavrenoSql . '
         WHERE id_helpdesk = ?
         LIMIT 1
     ';

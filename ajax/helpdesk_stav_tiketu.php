@@ -26,6 +26,76 @@ try {
 
     $conn = db();
     $scope = cb_helpdesk_visible_scope($idUser);
+    $counts = [
+        'all' => 0,
+        'new' => 0,
+        'active' => 0,
+        'resolved' => 0,
+    ];
+
+    $sqlCounts = '
+        SELECT
+            SUM(CASE
+                WHEN (
+                    hr.id_helpdesk_read IS NULL
+                    OR (h.posledni_zprava IS NOT NULL AND h.posledni_zprava > hr.precteno)
+                ) AND h.stav = \'nový\' THEN 1
+                ELSE 0
+            END) AS new_cnt,
+            SUM(CASE
+                WHEN (
+                    hr.id_helpdesk_read IS NULL
+                    OR (h.posledni_zprava IS NOT NULL AND h.posledni_zprava > hr.precteno)
+                ) AND h.stav = \'řeší se\' THEN 1
+                ELSE 0
+            END) AS active_cnt,
+            SUM(CASE
+                WHEN (
+                    hr.id_helpdesk_read IS NULL
+                    OR (h.posledni_zprava IS NOT NULL AND h.posledni_zprava > hr.precteno)
+                ) AND h.stav = \'vyřešeno\' THEN 1
+                ELSE 0
+            END) AS resolved_cnt
+        FROM helpdesk h
+        LEFT JOIN helpdesk_read hr
+               ON hr.id_helpdesk = h.id_helpdesk
+              AND hr.id_user = ?
+        WHERE ' . $scope['sql'] . '
+    ';
+
+    $stmtCounts = $conn->prepare($sqlCounts);
+    if (!($stmtCounts instanceof mysqli_stmt)) {
+        throw new RuntimeException('Nepodařilo se načíst počty tiketů.');
+    }
+
+    if (($scope['types'] ?? '') === '') {
+        $stmtCounts->bind_param('i', $idUser);
+    } else {
+        $types = 'i' . (string)$scope['types'];
+        $params = [$idUser];
+        foreach ((array)($scope['params'] ?? []) as $value) {
+            $params[] = $value;
+        }
+
+        $bind = [$types];
+        foreach ($params as $index => $value) {
+            $bind[] = &$params[$index];
+        }
+        call_user_func_array([$stmtCounts, 'bind_param'], $bind);
+    }
+
+    $stmtCounts->execute();
+    $resCounts = $stmtCounts->get_result();
+    if ($resCounts instanceof mysqli_result) {
+        $rowCounts = $resCounts->fetch_assoc() ?: [];
+        $counts['new'] = (int)($rowCounts['new_cnt'] ?? 0);
+        $counts['active'] = (int)($rowCounts['active_cnt'] ?? 0);
+        $counts['resolved'] = (int)($rowCounts['resolved_cnt'] ?? 0);
+        $counts['all'] = $counts['new'] + $counts['active'] + $counts['resolved'];
+        $resCounts->free();
+    }
+    $stmtCounts->close();
+
     $sql = '
         SELECT
             h.id_helpdesk,
@@ -80,6 +150,7 @@ try {
 
     echo json_encode([
         'ok' => true,
+        'counts' => $counts,
         'tickets' => $tickets,
     ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {

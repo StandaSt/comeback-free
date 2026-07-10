@@ -307,7 +307,7 @@ function cb_helpdesk_notifikace_full_name(?string $jmeno, ?string $prijmeni, int
     return 'Uživatel';
 }
 
-function cb_helpdesk_notifikace_sledujicim_o_admin_odpovedi(mysqli $conn, int $idHelpdesk, int $idZprava, int $idAutor, string $odpoved): void
+function cb_helpdesk_notifikace_sledujicim_o_admin_odpovedi(mysqli $conn, int $idHelpdesk, int $idZprava, int $idAutor, string $odpoved, string $textNotifikace = ''): void
 {
     if ($idHelpdesk <= 0 || $idZprava <= 0) {
         return;
@@ -369,7 +369,10 @@ function cb_helpdesk_notifikace_sledujicim_o_admin_odpovedi(mysqli $conn, int $i
             $stmtUser->free_result();
         }
 
-        $text = 'Admin reagoval na tiket č. ' . (string)$idHelpdesk;
+        $text = trim($textNotifikace);
+        if ($text === '') {
+            $text = 'Admin reagoval na tiket č. ' . (string)$idHelpdesk;
+        }
 
         cb_helpdesk_notifikace_pridat($conn, $idHelpdesk, $idZprava, $idUser, 'admin_odpoved', $text);
     }
