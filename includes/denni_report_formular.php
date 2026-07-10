@@ -7,6 +7,7 @@ $zrEditableReadonlyAttr = !empty($isReadOnlyForm) ? ' readonly' : '';
 $zrReadonlyInfoText = trim((string)($readonlyInfoText ?? ''));
 $zrUsesDraftMode = !empty($usesDraftPersistence) ? '1' : '0';
 $zrFinalFullMode = !empty($isEditingFinalReport) ? '1' : '0';
+$zrRozvozSazba = max(0, (int)($zrRozvozSazba ?? 0));
 $zrCanUnlockFinalReport = !empty($canUnlockFinalReport);
 $zrIsEditingFinalReport = !empty($isEditingFinalReport);
 $zrSubmitReadyText = $zrIsEditingFinalReport ? 'Chci uložit opravený report' : 'Report je zkontrolovaný, uložit';
@@ -104,7 +105,7 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
     <?= h($zrReadonlyInfoText) ?>
   </div>
 <?php endif; ?>
-<form class="zr_form gap_14" autocomplete="off" method="post" action="<?= h(cb_url('/')) ?>" data-zr-form data-zr-draft-mode="<?= h($zrUsesDraftMode) ?>" data-zr-final-full="<?= h($zrFinalFullMode) ?>" data-zr-form-mode="<?= h((string)($formMode ?? 'workday')) ?>" data-zr-readonly="<?= !empty($isReadOnlyForm) ? '1' : '0' ?>" data-cb-max-form="1" data-cb-loader-text="Načítám report pobočky" style="position:relative;">
+<form class="zr_form gap_14" autocomplete="off" method="post" action="<?= h(cb_url('/')) ?>" data-zr-form data-zr-draft-mode="<?= h($zrUsesDraftMode) ?>" data-zr-final-full="<?= h($zrFinalFullMode) ?>" data-zr-form-mode="<?= h((string)($formMode ?? 'workday')) ?>" data-zr-readonly="<?= !empty($isReadOnlyForm) ? '1' : '0' ?>" data-zr-rozvoz-sazba="<?= h((string)$zrRozvozSazba) ?>" data-cb-max-form="1" data-cb-loader-text="Načítám report pobočky" style="position:relative;">
   <input type="hidden" name="dr_id" value="<?= h((string)$idDr) ?>" data-zr-dr-id>
   <input type="hidden" name="zr_edit_final" value="<?= $zrIsEditingFinalReport ? '1' : '0' ?>" data-zr-edit-final>
   <div class="zr_layout gap_14">

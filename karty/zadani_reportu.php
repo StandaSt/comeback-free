@@ -14,6 +14,14 @@ if (method_exists($conn, 'set_charset')) {
     $conn->set_charset('utf8mb4');
 }
 
+$zrRozvozSazba = 0;
+$resRozvozSazba = $conn->query('SELECT rozvoz_sazba FROM set_system WHERE id_set = 1 LIMIT 1');
+if ($resRozvozSazba instanceof mysqli_result) {
+    $rowRozvozSazba = $resRozvozSazba->fetch_assoc();
+    $zrRozvozSazba = (int)($rowRozvozSazba['rozvoz_sazba'] ?? 0);
+    $resRozvozSazba->free();
+}
+
 $denniReportData = cb_denni_report_prepare_data($conn, isset($cbDashboardRenderMode) ? (string)$cbDashboardRenderMode : '');
 extract($denniReportData, EXTR_SKIP);
 

@@ -22,6 +22,11 @@ if (isset($_SERVER['HTTP_X_COMEBACK_KPI'])) {
     $cbIsKpiPartial = ((string)($_SERVER['HTTP_X_COMEBACK_KPI']) === '1');
 }
 
+$cbIsKpiSetting = false;
+if (isset($_SERVER['HTTP_X_COMEBACK_KPI_SETTING'])) {
+    $cbIsKpiSetting = ((string)($_SERVER['HTTP_X_COMEBACK_KPI_SETTING']) === '1');
+}
+
 $cbIsRestiaState = false;
 if (isset($_SERVER['HTTP_X_COMEBACK_RESTIA_STATE'])) {
     $cbIsRestiaState = ((string)($_SERVER['HTTP_X_COMEBACK_RESTIA_STATE']) === '1');
@@ -106,6 +111,48 @@ if ($cbIsUserAkce && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         'ok' => true,
         'saved' => $saved ? 1 : 0,
     ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if ($cbIsKpiSetting && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
+    if (empty($_SESSION['login_ok'])) {
+        http_response_code(401);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok' => false, 'err' => 'Nutne prihlaseni'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    header('Content-Type: application/json; charset=utf-8');
+    $raw = (string)file_get_contents('php://input');
+    $data = json_decode($raw, true);
+    if (!is_array($data)) {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'err' => 'Neplatny JSON'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $idUser = (int)($_SESSION['cb_user']['id_user'] ?? 0);
+    if ($idUser <= 0) {
+        http_response_code(401);
+        echo json_encode(['ok' => false, 'err' => 'Neplatny uzivatel'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $kpi = ((int)($data['kpi'] ?? 1) === 1) ? 1 : 0;
+    $conn = db();
+    $stmt = $conn->prepare('UPDATE user_set SET kpi = ? WHERE id_user = ? LIMIT 1');
+    if (!($stmt instanceof mysqli_stmt)) {
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'err' => 'Ulozeni KPI selhalo'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    $stmt->bind_param('ii', $kpi, $idUser);
+    $stmt->execute();
+    $stmt->close();
+
+    cb_store_user_settings(['kpi' => $kpi]);
+
+    echo json_encode(['ok' => true, 'kpi' => $kpi], JSON_UNESCAPED_UNICODE);
     exit;
 }
 

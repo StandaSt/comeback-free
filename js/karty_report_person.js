@@ -375,6 +375,10 @@
       return;
     }
 
+    const form = row.closest('[data-zr-form]');
+    const rozvozSazba = form instanceof HTMLFormElement
+      ? Math.max(0, Number.parseInt(String(form.getAttribute('data-zr-rozvoz-sazba') || '0'), 10) || 0)
+      : 0;
     const restiaEl = getEditorField(row, 'delivery_restia');
     const manualEl = getEditorField(row, 'delivery_manual');
     const totalEl = row.querySelector('[data-zr-delivery-total]');
@@ -396,7 +400,7 @@
       const manual = Number.parseInt(manualEl.value || '0', 10) || 0;
       const total = restia + manual;
       const hasCar = carCheck instanceof HTMLInputElement && carCheck.checked;
-      const phm = hasCar ? total * 45 : 0;
+      const phm = hasCar ? total * rozvozSazba : 0;
       totalEl.value = String(total);
       if (restiaValueEl instanceof HTMLElement) {
         restiaValueEl.textContent = String(restia);
@@ -410,7 +414,6 @@
       if (carCheck instanceof HTMLInputElement && carHiddenEl instanceof HTMLInputElement) {
         carHiddenEl.value = carCheck.checked ? '1' : '0';
       }
-      const form = row.closest('[data-zr-form]');
       if (form instanceof HTMLFormElement) {
         syncPrivateFuelExpense(form, false);
       }

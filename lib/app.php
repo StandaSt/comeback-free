@@ -225,6 +225,7 @@ if (!function_exists('cb_user_settings_defaults')) {
             'pismo' => 2,
             'dark' => 0,
             'logout_limit' => null,
+            'kpi' => 1,
             'obdobi_od' => '',
             'obdobi_do' => '',
             'obdobi_mode' => 'manual',
@@ -268,6 +269,12 @@ if (!function_exists('cb_store_user_settings')) {
             $dark = 0;
         }
         $data['dark'] = $dark;
+
+        $kpi = (int)($values['kpi'] ?? $data['kpi']);
+        if (!in_array($kpi, [0, 1], true)) {
+            $kpi = 1;
+        }
+        $data['kpi'] = $kpi;
 
         $logoutLimit = $values['logout_limit'] ?? $data['logout_limit'];
         if ($logoutLimit === null || $logoutLimit === '') {

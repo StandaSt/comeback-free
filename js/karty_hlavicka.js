@@ -166,11 +166,36 @@
       btn.setAttribute('aria-pressed', hidden ? 'true' : 'false');
     }
 
+    function saveKpiState(kpiState) {
+      const value = kpiState === 1 ? 1 : 0;
+      w.fetch('index.php', {
+        method: 'POST',
+        headers: {
+          'X-Comeback-KPI-Setting': '1',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({ kpi: value })
+      }).catch(() => {});
+    }
+
     function toggleKpiVisibility() {
       if (!isKpiCollapseMode()) return;
       const header = getHeaderRoot();
       if (!(header instanceof HTMLElement)) return;
       header.classList.toggle('is-kpi-hidden');
+      saveKpiState(header.classList.contains('is-kpi-hidden') ? 0 : 1);
+      syncKpiToggleUi();
+    }
+
+    function applySavedKpiState() {
+      if (!isKpiCollapseMode()) return;
+      const header = getHeaderRoot();
+      const btn = getKpiToggleButton();
+      if (!(header instanceof HTMLElement) || !(btn instanceof HTMLElement)) return;
+      const kpiState = String(btn.getAttribute('data-cb-kpi-state') || '1') === '0' ? 0 : 1;
+      header.classList.toggle('is-kpi-hidden', kpiState === 0);
       syncKpiToggleUi();
     }
 
@@ -282,13 +307,13 @@
       }, 'karty_hlavicka');
     }
 
-    syncKpiToggleUi();
+    applySavedKpiState();
     if (kpiCollapseMql && typeof kpiCollapseMql.addEventListener === 'function') {
-      kpiCollapseMql.addEventListener('change', syncKpiToggleUi);
+      kpiCollapseMql.addEventListener('change', applySavedKpiState);
     } else if (kpiCollapseMql && typeof kpiCollapseMql.addListener === 'function') {
-      kpiCollapseMql.addListener(syncKpiToggleUi);
+      kpiCollapseMql.addListener(applySavedKpiState);
     } else {
-      w.addEventListener('resize', syncKpiToggleUi);
+      w.addEventListener('resize', applySavedKpiState);
     }
 
     function closeCardModeConfirmModal() {

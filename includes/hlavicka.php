@@ -313,12 +313,18 @@ if ($cbPobocky) {
         </nav>
       </div>
 
-      <div class="head_gn_placeholder ram_hlavicka zaobleni_10" style="display:flex;align-items:flex-start;justify-content:center;text-align:center;padding:8px;" aria-label="HelpDesk">
+      <div class="head_gn_placeholder ram_hlavicka zaobleni_10" style="display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:6px;text-align:center;padding:8px;" aria-label="HelpDesk">
         <?php if ($cbHelpdeskIsRoleOne): ?>
           <button type="button" data-cb-helpdesk-card-open="1" style="display:inline-flex;align-items:center;justify-content:center;width:100%;min-height:20px;padding:0 8px;border:1px solid #e7b7b7;border-radius:8px;background:#f9dede;color:#9f1d1d;font-size:11px;font-weight:700;line-height:18px;cursor:pointer;">HelpDesk</button>
         <?php else: ?>
           <button type="button" data-cb-helpdesk-open="1" style="display:inline-flex;align-items:center;justify-content:center;width:100%;min-height:20px;padding:0 8px;border:1px solid #b8d0ef;border-radius:8px;background:#dcecff;color:#0f3f91;font-size:11px;font-weight:700;line-height:18px;cursor:pointer;">HelpDesk</button>
         <?php endif; ?>
+        <div class="cb-head-helpdesk-meter" aria-hidden="true">
+          <span class="cb-head-helpdesk-meter-part is-all"></span>
+          <span class="cb-head-helpdesk-meter-part is-new"></span>
+          <span class="cb-head-helpdesk-meter-part is-active"></span>
+          <span class="cb-head-helpdesk-meter-part is-resolved"></span>
+        </div>
       </div>
       <?php require __DIR__ . '/hlavicka/head_kpi.php'; ?>
       <?php require __DIR__ . '/hlavicka/head_user.php'; ?>

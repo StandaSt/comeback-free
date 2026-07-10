@@ -451,31 +451,12 @@ ob_start();
       if (!(button instanceof HTMLButtonElement)) { return; }
       var filterValue = normalizeFilterValue(button.getAttribute('data-cb-hd-filter-block') || '');
       var isActive = filterValue === current;
-      var bg = '#ffffff';
-      var borderColor = 'rgba(15,23,42,.10)';
-      var countColor = '#355c9a';
-      if (filterValue === 'active') {
-        bg = '#eaf3ff';
-        borderColor = 'rgba(59,130,246,.22)';
-        countColor = '#1d4ed8';
-      } else if (filterValue === 'resolved') {
-        bg = '#eef9f1';
-        borderColor = 'rgba(34,197,94,.22)';
-        countColor = '#15803d';
-      }
-      button.style.background = bg;
-      button.style.borderColor = borderColor;
-      button.style.boxShadow = isActive ? 'inset 0 0 0 1px rgba(15,23,42,.08)' : 'none';
+      button.style.boxShadow = isActive ? 'inset 0 0 0 1px var(--clr_pruhledna_tmava_14)' : 'none';
       button.style.transform = isActive ? 'translateY(-1px)' : 'none';
       var label = button.querySelector('[data-cb-hd-filter-label]');
       if (label instanceof HTMLElement) {
         label.style.fontWeight = isActive ? '700' : '500';
         label.style.fontSize = isActive ? '13px' : '12px';
-        label.style.color = '#0f172a';
-      }
-      var count = button.querySelector('strong');
-      if (count instanceof HTMLElement) {
-        count.style.color = countColor;
       }
       button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     });
@@ -1091,21 +1072,21 @@ ob_start();
         </div>
 
         <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;">
-          <button type="button" class="ram_normal zaobleni_10" data-cb-hd-filter-block="all" aria-pressed="false" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;background:#ffffff;border:1px solid rgba(15,23,42,.10);text-align:left;cursor:pointer;">
-            <span data-cb-hd-filter-label="1" style="font-size:12px;font-weight:500;color:#0f172a;line-height:1.2;">Vše</span>
-            <strong data-cb-hd-count="all" style="font-size:18px;font-weight:700;line-height:1;color:#355c9a;"><?= cb_helpdesk_card_h((string)$stats['total']) ?></strong>
+          <button type="button" class="ram_normal zaobleni_10" data-cb-hd-filter-block="all" aria-pressed="false" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;text-align:left;cursor:pointer;">
+            <span data-cb-hd-filter-label="1" style="font-size:12px;font-weight:500;line-height:1.2;">Vše</span>
+            <strong data-cb-hd-count="all" style="font-size:18px;font-weight:700;line-height:1;"><?= cb_helpdesk_card_h((string)$stats['total']) ?></strong>
           </button>
-          <button type="button" class="ram_normal zaobleni_10" data-cb-hd-filter-block="new" aria-pressed="true" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;background:#ffffff;border:1px solid rgba(15,23,42,.10);text-align:left;cursor:pointer;">
-            <span data-cb-hd-filter-label="1" style="font-size:13px;font-weight:700;color:#0f172a;line-height:1.2;">Nové</span>
-            <strong data-cb-hd-count="new" style="font-size:18px;font-weight:700;line-height:1;color:#355c9a;"><?= cb_helpdesk_card_h((string)$stats['new']) ?></strong>
+          <button type="button" class="ram_normal zaobleni_10" data-cb-hd-filter-block="new" aria-pressed="true" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;text-align:left;cursor:pointer;">
+            <span data-cb-hd-filter-label="1" style="font-size:13px;font-weight:700;line-height:1.2;">Nové</span>
+            <strong data-cb-hd-count="new" style="font-size:18px;font-weight:700;line-height:1;"><?= cb_helpdesk_card_h((string)$stats['new']) ?></strong>
           </button>
-          <button type="button" class="ram_normal zaobleni_10" data-cb-hd-filter-block="active" aria-pressed="false" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;background:#eaf3ff;border:1px solid rgba(59,130,246,.22);text-align:left;cursor:pointer;">
-            <span data-cb-hd-filter-label="1" style="font-size:12px;font-weight:500;color:#0f172a;line-height:1.2;">Řeší se</span>
-            <strong data-cb-hd-count="active" style="font-size:18px;font-weight:700;line-height:1;color:#1d4ed8;"><?= cb_helpdesk_card_h((string)$stats['active']) ?></strong>
+          <button type="button" class="ram_normal zaobleni_10" data-cb-hd-filter-block="active" aria-pressed="false" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;text-align:left;cursor:pointer;">
+            <span data-cb-hd-filter-label="1" style="font-size:12px;font-weight:500;line-height:1.2;">Řeší se</span>
+            <strong data-cb-hd-count="active" style="font-size:18px;font-weight:700;line-height:1;"><?= cb_helpdesk_card_h((string)$stats['active']) ?></strong>
           </button>
-          <button type="button" class="ram_normal zaobleni_10" data-cb-hd-filter-block="resolved" aria-pressed="false" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;background:#eef9f1;border:1px solid rgba(34,197,94,.22);text-align:left;cursor:pointer;">
-            <span data-cb-hd-filter-label="1" style="font-size:12px;font-weight:500;color:#0f172a;line-height:1.2;">Uzavřeno</span>
-            <strong data-cb-hd-count="resolved" style="font-size:18px;font-weight:700;line-height:1;color:#15803d;"><?= cb_helpdesk_card_h((string)$stats['resolved']) ?></strong>
+          <button type="button" class="ram_normal zaobleni_10" data-cb-hd-filter-block="resolved" aria-pressed="false" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;text-align:left;cursor:pointer;">
+            <span data-cb-hd-filter-label="1" style="font-size:12px;font-weight:500;line-height:1.2;">Uzavřeno</span>
+            <strong data-cb-hd-count="resolved" style="font-size:18px;font-weight:700;line-height:1;"><?= cb_helpdesk_card_h((string)$stats['resolved']) ?></strong>
           </button>
         </div>
 

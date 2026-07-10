@@ -2046,18 +2046,92 @@ align-items:center;
   align-items:center;
   justify-content:center;
   padding:6px 8px;
-  background:#eff6ff;
-  border:1px solid rgba(15,23,42,.10);
+  background:var(--clr_bila);
+  border:1px solid var(--clr_seda_2);
   text-align:center;
   cursor:pointer;
 }
 
 .helpd-mini-btn .card_mini_text{
-  color:#0f172a;
+  color:var(--clr_tmava_1);
 }
 
 .helpd-mini-btn strong.card_mini_text{
-  color:#355c9a;
+  color:var(--clr_tmava_1);
+}
+
+.helpd-mini-btn[data-cb-hd-min-filter="all"],
+.cb-hd-card-max [data-cb-hd-filter-block="all"]{
+  background:var(--clr_pruhledna_seda_30);
+  border-color:var(--clr_seda_3);
+}
+
+.helpd-mini-btn[data-cb-hd-min-filter="new"],
+.cb-hd-card-max [data-cb-hd-filter-block="new"]{
+  background:var(--clr_ruzova_2);
+  border-color:var(--clr_cervena);
+}
+
+.helpd-mini-btn[data-cb-hd-min-filter="active"],
+.cb-hd-card-max [data-cb-hd-filter-block="active"]{
+  background:var(--clr_zelena_3);
+  border-color:var(--clr_zelena);
+}
+
+.helpd-mini-btn[data-cb-hd-min-filter="resolved"],
+.cb-hd-card-max [data-cb-hd-filter-block="resolved"]{
+  background:var(--clr_modra_2);
+  border-color:var(--clr_modra_3);
+}
+
+.cb-hd-card-max [data-cb-hd-filter-block]{
+  border-width:1px;
+  border-style:solid;
+}
+
+.cb-hd-card-max [data-cb-hd-filter-label],
+.cb-hd-card-max [data-cb-hd-count]{
+  color:var(--clr_tmava_1);
+}
+
+.cb-head-helpdesk-meter{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  grid-template-rows:repeat(2,1fr);
+  width:100%;
+  flex:1 1 auto;
+  min-height:0;
+  overflow:hidden;
+  border:1px solid var(--clr_seda_3);
+  border-radius:8px;
+}
+
+.cb-head-helpdesk-meter-part{
+  min-width:0;
+}
+
+.cb-head-helpdesk-meter-part:nth-child(even){
+  border-left:1px solid var(--clr_seda_3);
+}
+
+.cb-head-helpdesk-meter-part:nth-child(n+3){
+  border-top:1px solid var(--clr_seda_3);
+}
+
+.cb-head-helpdesk-meter-part.is-all{
+  background:var(--clr_pruhledna_seda_30);
+}
+
+.cb-head-helpdesk-meter-part.is-new{
+  background:var(--clr_ruzova_2);
+}
+
+.cb-head-helpdesk-meter-part.is-active{
+  background:var(--clr_zelena_3);
+}
+
+.cb-head-helpdesk-meter-part.is-resolved{
+  background:var(--clr_modra_2);
 }
 
 .card_mini_table{

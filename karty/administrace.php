@@ -29,6 +29,7 @@ $cbAdminSystem = [
     'log_4' => 0,
     'notif_chyby' => 0,
     'notif_bad_login' => 0,
+    'rozvoz_sazba' => 0,
 ];
 $cbAdminError = '';
 $cbAdminSaveName = trim((string)($_POST['cb_admin_set_name'] ?? ''));
@@ -76,6 +77,8 @@ if (in_array($cbAdminSaveName, ['notif_chyby', 'notif_bad_login'], true)) {
     $cbAdminActiveTab = 'log_users';
 } elseif (in_array($cbAdminSaveName, ['admin_user_on', 'admin_user_off'], true)) {
     $cbAdminActiveTab = 'admins';
+} elseif ($cbAdminSaveName === 'rozvoz_sazba') {
+    $cbAdminActiveTab = 'promenne';
 }
 
 try {
@@ -129,6 +132,16 @@ try {
                 $saveValue = 5;
             }
             $stmt = $conn->prepare('UPDATE set_system SET report_save = ? WHERE id_set = 1 LIMIT 1');
+            if ($stmt instanceof mysqli_stmt) {
+                $stmt->bind_param('i', $saveValue);
+                $stmt->execute();
+                $stmt->close();
+            } else {
+                $cbAdminError = 'Uložení nastavení selhalo.';
+            }
+        } elseif ($cbAdminSaveName === 'rozvoz_sazba') {
+            $saveValue = max(0, (int)$cbAdminSaveValue);
+            $stmt = $conn->prepare('UPDATE set_system SET rozvoz_sazba = ? WHERE id_set = 1 LIMIT 1');
             if ($stmt instanceof mysqli_stmt) {
                 $stmt->bind_param('i', $saveValue);
                 $stmt->execute();
@@ -283,7 +296,7 @@ try {
 
     if ($cbAdminError === '') {
         $res = $conn->query('
-            SELECT restia_online, on_2fa, system_logout, pauza_obdobi, report_save, zamek, restia_notifikace, log_akce, log_1, log_2, log_3, log_4, notif_chyby, notif_bad_login
+            SELECT restia_online, on_2fa, system_logout, pauza_obdobi, report_save, zamek, restia_notifikace, log_akce, log_1, log_2, log_3, log_4, notif_chyby, notif_bad_login, rozvoz_sazba
             FROM set_system
             WHERE id_set = 1
             LIMIT 1
@@ -306,6 +319,7 @@ try {
                 $cbAdminSystem['log_4'] = (int)($row['log_4'] ?? 0);
                 $cbAdminSystem['notif_chyby'] = (int)($row['notif_chyby'] ?? 0);
                 $cbAdminSystem['notif_bad_login'] = (int)($row['notif_bad_login'] ?? 0);
+                $cbAdminSystem['rozvoz_sazba'] = (int)($row['rozvoz_sazba'] ?? 0);
                 if (function_exists('cb_store_system_settings')) {
                     cb_store_system_settings($row);
                 }
@@ -464,24 +478,28 @@ ob_start();
       #cb_admin_tab_log_system:checked ~ .cb_admin_tabs label[for="cb_admin_tab_log_system"],
       #cb_admin_tab_log_users:checked ~ .cb_admin_tabs label[for="cb_admin_tab_log_users"],
       #cb_admin_tab_admins:checked ~ .cb_admin_tabs label[for="cb_admin_tab_admins"],
-      #cb_admin_tab_notif:checked ~ .cb_admin_tabs label[for="cb_admin_tab_notif"]{font-weight:700;}
+      #cb_admin_tab_notif:checked ~ .cb_admin_tabs label[for="cb_admin_tab_notif"],
+      #cb_admin_tab_promenne:checked ~ .cb_admin_tabs label[for="cb_admin_tab_promenne"]{font-weight:700;}
       #cb_admin_tab_system:checked ~ .cb_admin_panel_system,
       #cb_admin_tab_log_system:checked ~ .cb_admin_panel_log_system,
       #cb_admin_tab_log_users:checked ~ .cb_admin_panel_log_users,
       #cb_admin_tab_admins:checked ~ .cb_admin_panel_admins,
-      #cb_admin_tab_notif:checked ~ .cb_admin_panel_notif{display:block;}
+      #cb_admin_tab_notif:checked ~ .cb_admin_panel_notif,
+      #cb_admin_tab_promenne:checked ~ .cb_admin_panel_promenne{display:block;}
     </style>
     <input type="radio" id="cb_admin_tab_system" name="cb_admin_tab"<?= $cbAdminActiveTab === 'system' ? ' checked' : '' ?> hidden>
     <input type="radio" id="cb_admin_tab_log_system" name="cb_admin_tab"<?= $cbAdminActiveTab === 'log_system' ? ' checked' : '' ?> hidden>
     <input type="radio" id="cb_admin_tab_log_users" name="cb_admin_tab"<?= $cbAdminActiveTab === 'log_users' ? ' checked' : '' ?> hidden>
     <input type="radio" id="cb_admin_tab_admins" name="cb_admin_tab"<?= $cbAdminActiveTab === 'admins' ? ' checked' : '' ?> hidden>
     <input type="radio" id="cb_admin_tab_notif" name="cb_admin_tab"<?= $cbAdminActiveTab === 'notif' ? ' checked' : '' ?> hidden>
+    <input type="radio" id="cb_admin_tab_promenne" name="cb_admin_tab"<?= $cbAdminActiveTab === 'promenne' ? ' checked' : '' ?> hidden>
     <div class="cb_admin_tabs">
       <label for="cb_admin_tab_system" class="zaobleni_6">set systém</label>
       <label for="cb_admin_tab_log_system" class="zaobleni_6">logování systém</label>
       <label for="cb_admin_tab_log_users" class="zaobleni_6">logování users</label>
       <label for="cb_admin_tab_admins" class="zaobleni_6">set admins</label>
       <label for="cb_admin_tab_notif" class="zaobleni_6">Upozornění</label>
+      <label for="cb_admin_tab_promenne" class="zaobleni_6">proměnné</label>
     </div>
     <div class="cb_admin_panel cb_admin_panel_system">
     <p class="card_text text_tucny odstup_vnejsi_0" style="font-size:16px;text-align:left;">Globální nastavení systému</p>
@@ -589,6 +607,39 @@ ob_start();
               </form>
             </td>
             <td style="white-space:nowrap;">Upozornění adminovi na průběh aktualizace</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    </div>
+    <div class="cb_admin_panel cb_admin_panel_promenne">
+    <p class="card_text text_tucny odstup_vnejsi_0" style="font-size:16px;text-align:left;">Proměnné</p>
+    <div class="table-wrap ram_normal bg_bila" style="width:100%;margin:0 auto;">
+      <table class="table ram_normal bg_bila radek_1_35 sirka100" style="width:100%;table-layout:auto;">
+        <thead>
+          <tr>
+            <th style="width:1%;white-space:nowrap;">Hodnota</th>
+            <th style="width:1%;white-space:nowrap;">Proměnná</th>
+            <th>Popis</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="white-space:nowrap;">
+              <form method="post" action="<?= h($cbAdminFormAction) ?>" class="odstup_vnejsi_0 displ_inline_flex gap_4" style="align-items:baseline;" data-cb-max-form="1">
+                <input type="hidden" name="cb_admin_set_name" value="rozvoz_sazba">
+                <input
+                  type="text"
+                  name="cb_admin_set_value"
+                  value="<?= h((string)$cbAdminSystem['rozvoz_sazba']) ?>"
+                  class="filter-input ram_sedy txt_seda bg_bila zaobleni_8 vyska_24"
+                  onchange="if(this.form.requestSubmit){this.form.requestSubmit();}else{this.form.submit();}"
+                >
+                Kč
+              </form>
+            </td>
+            <td style="white-space:nowrap;">sazba za rozvoz</td>
+            <td>Částka k vyplacení pro kurýra za rozvoz vlastním vozidlem</td>
           </tr>
         </tbody>
       </table>
