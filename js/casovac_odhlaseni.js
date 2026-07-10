@@ -176,8 +176,7 @@
   }
   // CB_LOGIN_TRACE_TEMP_END
 
-  render();
-  touchServer(true);
+  activity();
   w.setInterval(render, 1000);
 })(window, document);
 

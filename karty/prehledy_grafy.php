@@ -176,6 +176,7 @@ $grafyK12 = [
     'g2_vytizenost_pobocek.php',
     'g3_typ_zakaznika.php',
     'g4_trzby_mesic.php',
+    'g5_vytizenost_pobocky_dny_hodiny.php',
 ];
 
 $maxTiles = '';

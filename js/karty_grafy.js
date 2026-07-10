@@ -277,6 +277,22 @@
     return fallbackValue;
   }
 
+  function getHeatmapSelectedBranchId(payload, chartNode) {
+    const fallback = String(payload && typeof payload.selectedBranchId !== 'undefined' ? payload.selectedBranchId : '').trim();
+    if (!(chartNode instanceof HTMLElement)) return fallback;
+
+    const tile = chartNode.closest('[data-cb-graf-tile="1"]');
+    const select = tile instanceof HTMLElement ? tile.querySelector('[data-cb-graf-branch-select="1"]') : null;
+    if (select instanceof HTMLSelectElement) {
+      const selected = String(select.value || '').trim();
+      if (selected !== '') {
+        return selected;
+      }
+    }
+
+    return fallback;
+  }
+
   function buildOption(payload, chartNode) {
     if (!payload || typeof payload !== 'object') return null;
     const kind = String(payload.kind || 'bar').trim();
@@ -976,6 +992,148 @@
       };
     }
 
+    if (kind === 'heatmap_week_hour') {
+      const labels = Array.isArray(payload.labels) ? payload.labels.map((item) => String(item)) : [];
+      const intervalLabels = Array.isArray(payload.intervalLabels) ? payload.intervalLabels.map((item) => String(item)) : [];
+      const yLabels = Array.isArray(payload.yLabels) ? payload.yLabels.map((item) => String(item)) : [];
+      const yShortLabels = Array.isArray(payload.yShortLabels) ? payload.yShortLabels.map((item) => String(item)) : [];
+      const branches = Array.isArray(payload.branches) ? payload.branches : [];
+      const dataByBranch = payload && typeof payload.dataByBranch === 'object' ? payload.dataByBranch : {};
+      const selectedBranchId = getHeatmapSelectedBranchId(payload, chartNode);
+      const selectedBranch = branches.find((item) => String(item && item.id ? item.id : '').trim() === selectedBranchId);
+      const selectedBranchName = String(selectedBranch && selectedBranch.name ? selectedBranch.name : '').trim();
+      const rawData = Array.isArray(dataByBranch[selectedBranchId]) ? dataByBranch[selectedBranchId] : [];
+      const data = rawData.map((item) => {
+        const row = Array.isArray(item) ? item : [];
+        return [
+          Number(row[0]) || 0,
+          Number(row[1]) || 0,
+          Number(row[2]) || 0,
+          Number(row[3]) === 1 ? 1 : 0
+        ];
+      });
+      const maxValue = data.reduce((result, item) => {
+        const value = Array.isArray(item) ? Number(item[2]) || 0 : 0;
+        return value > result ? value : result;
+      }, 0);
+      const dayTotals = yLabels.map((item, index) => data.reduce((sum, row) => {
+        const dayIndex = Array.isArray(row) ? Number(row[1]) || 0 : 0;
+        const count = Array.isArray(row) ? Number(row[2]) || 0 : 0;
+        return dayIndex === index ? sum + count : sum;
+      }, 0));
+      const yAxisLabels = yLabels.map((item, index) => {
+        const shortLabel = String(yShortLabels[index] || item || '').trim();
+        return shortLabel + ' (' + formatInt(dayTotals[index] || 0) + ')';
+      });
+      const heatmapColor = (value) => {
+        const max = Math.max(1, maxValue);
+        const ratio = Math.max(0, Math.min(1, (Number(value) || 0) / max));
+        if (ratio <= 0) return '#f8fafc';
+        if (ratio < 0.34) return '#dbeafe';
+        if (ratio < 0.67) return '#93c5fd';
+        return '#2563eb';
+      };
+      const chartData = data.map((item) => {
+        const count = Array.isArray(item) ? Number(item[2]) || 0 : 0;
+        const isOpen = Array.isArray(item) ? Number(item[3]) === 1 : false;
+
+        return {
+          value: item,
+          itemStyle: {
+            color: isOpen ? heatmapColor(count) : '#f1f5f9',
+            borderColor: isOpen ? '#e2e8f0' : '#cbd5e1',
+            borderWidth: 1
+          },
+          label: {
+            color: isOpen && count === 0 ? '#dc2626' : (isOpen ? '#0f172a' : '#64748b'),
+            fontWeight: 700
+          }
+        };
+      });
+
+      if (labels.length === 0 || yLabels.length === 0) return null;
+
+      return {
+        grid: {
+          left: 76,
+          right: 14,
+          top: 18,
+          bottom: 28,
+          containLabel: false
+        },
+        tooltip: {
+          trigger: 'item',
+          appendToBody: true,
+          showDelay: 0,
+          hideDelay: 250,
+          transitionDuration: 0,
+          enterable: true,
+          backgroundColor: 'transparent',
+          borderWidth: 0,
+          padding: 0,
+          position: positionTooltipOutsideCard(chartNode),
+          formatter: (params) => {
+            const value = Array.isArray(params && params.value) ? params.value : [];
+            const hourIndex = Number(value[0]) || 0;
+            const dayIndex = Number(value[1]) || 0;
+            const count = Number(value[2]) || 0;
+            const isOpen = Number(value[3]) === 1;
+            const day = yLabels[dayIndex] || '';
+            const interval = intervalLabels[hourIndex] || labels[hourIndex] || '';
+            const status = isOpen ? 'Otevřeno' : 'Zavřeno';
+            return ''
+              + '<div class="cb_chart_tooltip cb_tooltip_card">'
+              + '<div class="cb_tooltip_title">' + escapeHtml(selectedBranchName || 'Pobočka') + '</div>'
+              + '<table class="cb_tooltip_table">'
+              + '<tbody>'
+              + '<tr><td>Den</td><td class="cb_tooltip_num">' + escapeHtml(day) + '</td></tr>'
+              + '<tr><td>Interval</td><td class="cb_tooltip_num">' + escapeHtml(interval) + '</td></tr>'
+              + '<tr><td>Stav</td><td class="cb_tooltip_num">' + escapeHtml(status) + '</td></tr>'
+              + '<tr><th>Objednávky</th><th class="cb_tooltip_num">' + formatInt(count) + '</th></tr>'
+              + '</tbody>'
+              + '</table>'
+              + '</div>';
+          }
+        },
+        xAxis: {
+          type: 'category',
+          data: labels,
+          splitArea: { show: true },
+          axisTick: { show: false },
+          axisLabel: { interval: 0 }
+        },
+        yAxis: {
+          type: 'category',
+          data: yAxisLabels,
+          inverse: true,
+          splitArea: { show: true },
+          axisTick: { show: false }
+        },
+        series: [{
+          name: 'Objednávky',
+          type: 'heatmap',
+          data: chartData,
+          label: {
+            show: true,
+            color: '#0f172a',
+            fontSize: 10,
+            formatter: (params) => {
+              const value = Array.isArray(params && params.value) ? Number(params.value[2]) || 0 : 0;
+              const isOpen = Array.isArray(params && params.value) ? Number(params.value[3]) === 1 : true;
+              if (!isOpen) return 'x';
+              return value > 0 ? formatInt(value) : '0';
+            }
+          },
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 8,
+              shadowColor: 'rgba(15, 23, 42, 0.25)'
+            }
+          }
+        }]
+      };
+    }
+
     if (kind === 'pie') {
       const labels = Array.isArray(payload.labels) ? payload.labels.map((item) => String(item)) : [];
       const valuesRaw = getSeriesData(payload, 'values', 0);
@@ -1179,6 +1337,17 @@
     const card = detail && detail.card instanceof HTMLElement ? detail.card : null;
     if (card) {
       renderAll(card);
+    }
+  });
+
+  document.addEventListener('change', (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    if (!(target instanceof HTMLSelectElement)) return;
+    if (String(target.getAttribute('data-cb-graf-branch-select') || '') !== '1') return;
+
+    const wrapper = target.closest(WRAPPER_SELECTOR);
+    if (wrapper instanceof HTMLElement) {
+      renderOne(wrapper, 0);
     }
   });
 
