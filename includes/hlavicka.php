@@ -313,6 +313,7 @@ if ($cbPobocky) {
         </nav>
       </div>
 
+      <?php require __DIR__ . '/hlavicka/head_kpi.php'; ?>
       <div class="head_gn_placeholder ram_hlavicka zaobleni_10" style="display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:6px;text-align:center;padding:8px;" aria-label="HelpDesk">
         <?php if ($cbHelpdeskIsRoleOne): ?>
           <button type="button" data-cb-helpdesk-card-open="1" style="display:inline-flex;align-items:center;justify-content:center;width:100%;min-height:20px;padding:0 8px;border:1px solid #e7b7b7;border-radius:8px;background:#f9dede;color:#9f1d1d;font-size:11px;font-weight:700;line-height:18px;cursor:pointer;">HelpDesk</button>
@@ -358,7 +359,6 @@ if ($cbPobocky) {
           </button>
         </div>
       </div>
-      <?php require __DIR__ . '/hlavicka/head_kpi.php'; ?>
       <?php require __DIR__ . '/hlavicka/head_user.php'; ?>
     <?php else: ?>
       <div class="head_guest ram_hlavicka bg_bila zaobleni_12"></div>

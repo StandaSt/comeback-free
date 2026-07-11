@@ -687,11 +687,16 @@ ob_start();
     var canWrite = Number(data && data.can_write ? data.can_write : 0) === 1;
     var currentUserId = Number(data && data.current_user_id ? data.current_user_id : 0);
     var ownerId = Number(ticket && ticket.id_user_zalozil ? ticket.id_user_zalozil : 0);
+    var isResolved = filterStatusValue(ticket && ticket.stav ? ticket.stav : '') === 'uzavřené';
     var actionBtnStyle = 'width:150px;justify-content:center;';
     var sendBtnStyle = 'width:308px;justify-content:center;';
     var html = '';
 
-    if (canWrite) {
+    if (isResolved) {
+      html += '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px;">';
+      html += '<button type="button" class="' + esc(btnBaseClass) + '" style="' + esc(actionBtnStyle) + '" data-cb-hd-close-detail="1">Zpět</button>';
+      html += '</div>';
+    } else if (canWrite) {
       html += '<textarea data-cb-hd-reply-text="1" rows="4" style="width:100%;padding:8px 10px;border:1px solid rgba(15,23,42,.18);border-radius:8px;background:#fff;resize:vertical;"></textarea>';
       html += '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px;">';
       if (!isAdmin && ownerId !== currentUserId) {
@@ -989,6 +994,10 @@ ob_start();
           updateRowState(replyId, String(result.data.stav));
         }
         updateRowHasNewReply(replyId, result.data && result.data.has_new_reply ? result.data.has_new_reply : 0);
+        if (replyPayload.uzavrit === 1 || (result.data && filterStatusValue(result.data.stav || '') === 'uzavřené')) {
+          closeActiveDetail();
+          return;
+        }
         scrollDetailToBottomOnRender = true;
         reloadOpenDetail(replyId);
       });
