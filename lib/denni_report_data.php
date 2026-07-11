@@ -273,7 +273,13 @@ function cb_denni_report_history_load(mysqli $conn, int $idPob, string $reportDa
             ri.make_time_prumer_sec,
             ri.objednavky_nezrusene_ks,
             ri.nase_rozvozy_ks,
-            ri.woltdrive_pozde_5_min
+            ri.woltdrive_ks,
+            ri.woltdrive_pozde_5_min,
+            ri.woltdrive_pozde_nase_vina,
+            ri.nase_rozvozy_pozde_pomer,
+            ri.woltdrive_zpozdene_ks,
+            ri.doruceno_vcas_pomer,
+            ri.woltdrive_zpozdene_pomer
         FROM reporty_is r
         LEFT JOIN reporty_is_pokladna pk
             ON pk.id_reportu = r.id_reportu

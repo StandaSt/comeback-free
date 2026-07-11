@@ -47,6 +47,7 @@ foreach (array_keys($_SERVER) as $cbServerKey) {
 $cbIsPartialRequest = isset($_SERVER['HTTP_X_COMEBACK_PARTIAL']);
 $cbIsCardRequest = isset($_SERVER['HTTP_X_COMEBACK_CARD']);
 $cbIsMaxFormRequest = isset($_SERVER['HTTP_X_COMEBACK_MAX_FORM']);
+$cbStartupRestiaLoader = false;
 $cbStartupLoaderText = '';
 if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
     $cbStartupLoaderText = trim((string)($_SESSION['cb_initial_loader_text'] ?? ''));
@@ -54,7 +55,9 @@ if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
         $cbStartupLoaderText = 'Aktualizuji data ...';
     }
 }
-unset($_SESSION['cb_initial_loader_text']);
+if (!$cbHasComebackHeader) {
+    unset($_SESSION['cb_initial_loader_text']);
+}
 
 if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
     require_once __DIR__ . '/lib/pobocky_vyber.php';
@@ -110,10 +113,40 @@ if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
     exit;
 }
 
-if (!empty($_SESSION['login_ok']) && !$cbSystemLocked && !$cbHasComebackHeader) {
-    require_once __DIR__ . '/lib/restia_online_kontrola.php';
-    if (function_exists('cb_restia_online_kontrola')) {
-        cb_restia_online_kontrola();
+if (!empty($_SESSION['login_ok']) && !$cbSystemLocked && !$cbHasComebackHeader && strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'GET') {
+    try {
+        $cbRestiaConn = db();
+        $cbRestiaSetRes = $cbRestiaConn->query('SELECT restia_online FROM set_system WHERE id_set = 1 LIMIT 1');
+        $cbRestiaSetRow = ($cbRestiaSetRes instanceof mysqli_result) ? $cbRestiaSetRes->fetch_assoc() : null;
+        if ($cbRestiaSetRes instanceof mysqli_result) {
+            $cbRestiaSetRes->free();
+        }
+
+        if ((int)($cbRestiaSetRow['restia_online'] ?? 0) === 1) {
+            $cbRestiaActive = false;
+            $cbRestiaActiveRes = $cbRestiaConn->query('SELECT id_akce FROM online_restia WHERE aktivni = 1 LIMIT 1');
+            if ($cbRestiaActiveRes instanceof mysqli_result) {
+                $cbRestiaActive = ($cbRestiaActiveRes->num_rows > 0);
+                $cbRestiaActiveRes->free();
+            }
+
+            $cbRestiaFresh = false;
+            $cbRestiaLastRes = $cbRestiaConn->query('SELECT konec FROM online_restia WHERE aktivni = 0 ORDER BY konec DESC LIMIT 1');
+            if ($cbRestiaLastRes instanceof mysqli_result) {
+                $cbRestiaLastRow = $cbRestiaLastRes->fetch_assoc();
+                $cbRestiaLastRes->free();
+                $cbRestiaLast = strtotime((string)($cbRestiaLastRow['konec'] ?? ''));
+                $cbRestiaFresh = ($cbRestiaLast !== false && (time() - $cbRestiaLast) < 120);
+            }
+
+            $cbStartupRestiaLoader = ($cbRestiaActive || !$cbRestiaFresh);
+            if ($cbStartupRestiaLoader) {
+                $cbStartupLoaderText = 'Aktualizuji objednávky ...';
+                $_SESSION['cb_initial_loader_text'] = 'Inicializace systému ...';
+            }
+        }
+    } catch (Throwable $e) {
+        $cbStartupRestiaLoader = false;
     }
 }
 ?>
@@ -130,13 +163,14 @@ if (!empty($_SESSION['login_ok']) && !$cbSystemLocked && !$cbHasComebackHeader) 
 <body>
 
 <?php if (!empty($_SESSION['login_ok']) && !$cbSystemLocked && $cbStartupLoaderText !== ''): ?>
-<div id="cb-startup-loader" class="dash_box bg_modra sirka100 is-dashboard-loading" data-cb-startup-text="<?= h($cbStartupLoaderText) ?>" style="position:fixed;left:0;top:0;right:0;bottom:0;z-index:12000;padding:0 12px;background-clip:content-box;overflow:hidden;">
+<div id="cb-startup-loader" class="dash_box bg_modra sirka100 is-dashboard-loading" data-cb-startup-text="<?= h($cbStartupLoaderText) ?>"<?php if ($cbStartupRestiaLoader): ?> data-cb-startup-hold="1" data-cb-restia-trigger="1" data-cb-restia-text="Aktualizuji objednávky ..." data-cb-startup-next-text="Inicializace systému ..."<?php endif; ?> style="position:fixed;left:0;top:0;right:0;bottom:0;z-index:12000;padding:0 12px;background-clip:content-box;overflow:hidden;">
   <?php require __DIR__ . '/includes/loaders/dashboard.php'; ?>
 </div>
 <script src="<?= h(cb_url('js/loader_show.js')) ?>"></script>
 <script src="<?= h(cb_url('js/loader_timer.js')) ?>"></script>
 <?php endif; ?>
 
+<?php if (!$cbStartupRestiaLoader): ?>
 <div class="container bg_modra displ_flex sirka100">
 <?php
 
@@ -220,9 +254,12 @@ if (!empty($_SESSION['login_ok']) && $cbSystemLocked) {
 <script src="<?= h(cb_asset_url('js/rozbalovaci_detail.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/casovac_odhlaseni.js')) ?>"></script>
 <?php endif; ?>
+<?php else: ?>
+<script src="<?= h(cb_asset_url('js/ajax_core.js')) ?>"></script>
+<?php endif; ?>
 
 <?php
-if (!empty($cbInvalidUrl)) {
+if (!$cbStartupRestiaLoader && !empty($cbInvalidUrl)) {
     $cbUserForAlert = $_SESSION['cb_user'] ?? [];
     $cbUserName = trim((string)($cbUserForAlert['name'] ?? ''));
     $cbUserSurname = trim((string)($cbUserForAlert['surname'] ?? ''));

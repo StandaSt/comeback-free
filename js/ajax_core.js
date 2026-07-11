@@ -1329,6 +1329,11 @@
     }
     root.setAttribute('data-cb-restia-refresh-init', '1');
     const triggerRestia = String(root.getAttribute('data-cb-restia-trigger') || '') === '1';
+    const restiaText = String(root.getAttribute('data-cb-restia-text') || 'Aktualizuji objednávky ...').trim();
+    const nextText = String(root.getAttribute('data-cb-startup-next-text') || 'Inicializace systému ...').trim();
+    if (restiaText !== '' && w.CB_LOADER_SHOW && typeof w.CB_LOADER_SHOW.setText === 'function') {
+      w.CB_LOADER_SHOW.setText(restiaText);
+    }
 
     const stateJob = triggerRestia ? triggerRestiaCheck() : fetchRestiaState();
     stateJob.then((state) => {
@@ -1341,7 +1346,12 @@
         : Promise.resolve();
 
       return waitJob.then(() => {
-        w.location.reload();
+        if (nextText !== '' && w.CB_LOADER_SHOW && typeof w.CB_LOADER_SHOW.setText === 'function') {
+          w.CB_LOADER_SHOW.setText(nextText);
+        }
+        w.setTimeout(() => {
+          w.location.reload();
+        }, 300);
       });
     }).catch((err) => {
       traceAjax('startup_restia_refresh_error', {

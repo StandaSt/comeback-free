@@ -160,6 +160,134 @@ function cb_db_zapis_denni_report_people_from_post(array $post, string $type): a
     return $rows;
 }
 
+function cb_db_zapis_denni_report_valid_time(string $value): bool
+{
+    if (!preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/', $value)) {
+        return false;
+    }
+
+    return true;
+}
+
+function cb_db_zapis_denni_report_user_allowed(mysqli $conn, int $idPob, int $idUser, int $slot): bool
+{
+    $stmt = $conn->prepare('
+        SELECT 1
+        FROM user_pobocka up
+        INNER JOIN user_slot us ON us.id_user = up.id_user
+        WHERE up.id_pob = ?
+          AND up.id_user = ?
+          AND us.id_slot = ?
+        LIMIT 1
+    ');
+    if ($stmt === false) {
+        throw new RuntimeException('Nelze overit pracovnika reportu.');
+    }
+
+    $stmt->bind_param('iii', $idPob, $idUser, $slot);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $allowed = $result instanceof mysqli_result && $result->num_rows > 0;
+    if ($result instanceof mysqli_result) {
+        $result->free();
+    }
+    $stmt->close();
+
+    return $allowed;
+}
+
+function cb_db_zapis_denni_report_user_in_active_report(mysqli $conn, int $idPob, string $datumReportu, int $idUser, int $slot, string $usage): bool
+{
+    if ($usage === 'oteviral' || $usage === 'zaviral') {
+        $column = $usage;
+        $stmt = $conn->prepare('
+            SELECT 1
+            FROM reporty_is
+            WHERE id_pob = ?
+              AND datum_reportu = ?
+              AND platny = 1
+              AND `' . $column . '` = ?
+            LIMIT 1
+        ');
+    } else {
+        $stmt = $conn->prepare('
+            SELECT 1
+            FROM reporty_is r
+            INNER JOIN reporty_is_osoby o ON o.id_reportu = r.id_reportu
+            WHERE r.id_pob = ?
+              AND r.datum_reportu = ?
+              AND r.platny = 1
+              AND o.id_user = ?
+              AND o.slot = ?
+            LIMIT 1
+        ');
+    }
+    if ($stmt === false) {
+        throw new RuntimeException('Nelze overit puvodniho pracovnika reportu.');
+    }
+
+    if ($usage === 'oteviral' || $usage === 'zaviral') {
+        $stmt->bind_param('isi', $idPob, $datumReportu, $idUser);
+    } else {
+        $stmt->bind_param('isii', $idPob, $datumReportu, $idUser, $slot);
+    }
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $exists = $result instanceof mysqli_result && $result->num_rows > 0;
+    if ($result instanceof mysqli_result) {
+        $result->free();
+    }
+    $stmt->close();
+
+    return $exists;
+}
+
+function cb_db_zapis_denni_report_validate(mysqli $conn, int $idPob, string $datumReportu, array $post, array $personRows, bool $allowExistingReportUsers): void
+{
+    $oteviral = (int)($post['oteviral'] ?? 0);
+    $zaviral = (int)($post['zaviral'] ?? 0);
+    if ($oteviral <= 0 || $zaviral <= 0) {
+        throw new RuntimeException('Vyberte, kdo oteviral a zaviral pobocku.');
+    }
+    $oteviralAllowed = cb_db_zapis_denni_report_user_allowed($conn, $idPob, $oteviral, 1)
+        || ($allowExistingReportUsers && cb_db_zapis_denni_report_user_in_active_report($conn, $idPob, $datumReportu, $oteviral, 1, 'oteviral'));
+    $zaviralAllowed = cb_db_zapis_denni_report_user_allowed($conn, $idPob, $zaviral, 1)
+        || ($allowExistingReportUsers && cb_db_zapis_denni_report_user_in_active_report($conn, $idPob, $datumReportu, $zaviral, 1, 'zaviral'));
+    if (!$oteviralAllowed || !$zaviralAllowed) {
+        throw new RuntimeException('Otevirajici nebo zavirajici nepatri mezi pracovniky pobocky.');
+    }
+
+    foreach (['pokladna_hotovost', 'pokladna_terminal', 'pokladna_stravenky'] as $field) {
+        if (trim((string)($post[$field] ?? '')) === '') {
+            throw new RuntimeException('Vyplnte vsechny povinne hodnoty pokladny.');
+        }
+    }
+
+    $seen = [];
+    foreach ($personRows as $row) {
+        $idUser = (int)($row['id_user'] ?? 0);
+        $slot = (int)($row['slot'] ?? 0);
+        $start = trim((string)($row['smena_od'] ?? ''));
+        $end = trim((string)($row['smena_do'] ?? ''));
+        if ($idUser <= 0 || !in_array($slot, [1, 2], true)) {
+            throw new RuntimeException('Report obsahuje neplatneho pracovnika.');
+        }
+        if (!cb_db_zapis_denni_report_valid_time($start) || !cb_db_zapis_denni_report_valid_time($end)) {
+            throw new RuntimeException('U kazdeho pracovnika vyplnte platny zacatek a konec smeny.');
+        }
+        $personAllowed = cb_db_zapis_denni_report_user_allowed($conn, $idPob, $idUser, $slot)
+            || ($allowExistingReportUsers && cb_db_zapis_denni_report_user_in_active_report($conn, $idPob, $datumReportu, $idUser, $slot, 'person'));
+        if (!$personAllowed) {
+            throw new RuntimeException('Pracovnik nepatri do vybrane pobocky nebo typu smeny.');
+        }
+        $personKey = $slot . ':' . $idUser;
+        if (isset($seen[$personKey])) {
+            throw new RuntimeException('Stejny pracovnik je v reportu uveden vicekrat.');
+        }
+        $seen[$personKey] = true;
+    }
+}
+
 function cb_db_zapis_denni_report_from_form(mysqli $conn, int $idPob, string $datumReportu, int $idUser, array $restiaSummary, array $post, ?float $rozdilForm, ?float $colPomerForm, bool $invalidateExistingActive = false): int
 {
     if ($idPob <= 0 || $datumReportu === '' || $idUser <= 0) {
@@ -180,6 +308,7 @@ function cb_db_zapis_denni_report_from_form(mysqli $conn, int $idPob, string $da
         cb_db_zapis_denni_report_people_from_post($post, 'instor'),
         cb_db_zapis_denni_report_people_from_post($post, 'kuryr')
     );
+    cb_db_zapis_denni_report_validate($conn, $idPob, $datumReportu, $post, $rawPersonRows, $invalidateExistingActive);
     $lockName = cb_db_reporty_is_acquire_lock($conn, $idPob, $datumReportu);
 
     try {
@@ -271,13 +400,13 @@ function cb_db_zapis_denni_report_from_form(mysqli $conn, int $idPob, string $da
         $makeTime = isset($restiaSummary['make_time_avg_sec']) ? (int)$restiaSummary['make_time_avg_sec'] : null;
         $objednavkyNezrusene = (int)($restiaSummary['orders_total'] ?? 0);
         $naseRozvozy = (int)($restiaSummary['own_deliveries'] ?? 0);
-        $woltdriveKs = 0;
+        $woltdriveKs = (int)($restiaSummary['woltdrive_count'] ?? 0);
         $woltdrivePozde = (int)($restiaSummary['woltdrive_late'] ?? 0);
-        $woltdriveNaseVina = 0;
-        $naseRozvozyPozdePomer = null;
-        $woltdriveZpozdeneKs = $woltdrivePozde;
-        $dorucenoVcasPomer = null;
-        $woltdriveZpozdenePomer = null;
+        $woltdriveNaseVina = (int)($restiaSummary['woltdrive_our_fault'] ?? 0);
+        $naseRozvozyPozdePomer = isset($restiaSummary['own_delivery_late_ratio']) ? (float)$restiaSummary['own_delivery_late_ratio'] : null;
+        $woltdriveZpozdeneKs = (int)($restiaSummary['woltdrive_late_count'] ?? $woltdrivePozde);
+        $dorucenoVcasPomer = isset($restiaSummary['delivered_on_time_ratio']) ? (float)$restiaSummary['delivered_on_time_ratio'] : null;
+        $woltdriveZpozdenePomer = isset($restiaSummary['woltdrive_late_ratio']) ? (float)$restiaSummary['woltdrive_late_ratio'] : null;
         $stmtRestia->bind_param('iddidididididididiiiiiiididd', $idReportu, $trzba, $wolt, $woltObj, $bolt, $boltObj, $damejidlo, $damejidloObj, $web, $webObj, $woltCash, $woltCashObj, $djCash, $djCashObj, $colPomer, $zruseneKs, $zruseneKc, $zpozdeneRozvozy, $makeTime, $objednavkyNezrusene, $naseRozvozy, $woltdriveKs, $woltdrivePozde, $woltdriveNaseVina, $naseRozvozyPozdePomer, $woltdriveZpozdeneKs, $dorucenoVcasPomer, $woltdriveZpozdenePomer);
         $stmtRestia->execute();
         $stmtRestia->close();
