@@ -301,7 +301,7 @@ if ($cbPobocky) {
 }
 ?>
 <header class="head_box bg_modra sirka100">
-  <div class="head_grid gap_6 displ_grid sirka100">
+  <div class="head_grid gap_2 displ_grid sirka100">
 
     <?php require __DIR__ . '/hlavicka/head_logo.php'; ?>
 
