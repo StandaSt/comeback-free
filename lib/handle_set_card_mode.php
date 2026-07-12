@@ -148,14 +148,6 @@ if (
             $nanoIds = $orderBySavedIds($fallbackNanoIds, $savedNanoIds);
 
             if ($mode === 'nano') {
-                $isAlreadyNano = in_array($idKarta, $nanoIds, true);
-                if (!$isAlreadyNano && count($nanoIds) >= 9) {
-                    $conn->rollback();
-                    http_response_code(409);
-                    echo json_encode(['ok' => false, 'err' => 'Nano reĹľim je omezen na 9 karet. DesĂˇtou kartu nelze pĹ™idat.'], JSON_UNESCAPED_UNICODE);
-                    exit;
-                }
-
                 $miniIds = $removeCardId($miniIds, $idKarta);
                 $nanoIds = $removeCardId($nanoIds, $idKarta);
                 $nanoIds[] = $idKarta;

@@ -9,10 +9,6 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
     $makeDiagnosticHtml = static function (string $soubor, string $mode, string $reason, array $details = []): string {
         $title = 'Chyba karty';
         $message = 'Max obsah se nepodařilo načíst.';
-        if ($mode === 'nano') {
-            $message = 'Obsah karty se nepodařilo načíst.';
-        }
-
         $extra = [
             'Soubor' => $soubor !== '' ? $soubor : 'neznámý',
             'Očekávané' => 'card_max_html nebo legacy HTML output',
@@ -46,17 +42,7 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
         return $html;
     };
 
-    $mode = trim((string)($pripravenaKarta['mode'] ?? ''));
-    if (!in_array($mode, ['mini', 'nano'], true)) {
-        $mode = (isset($pripravenaKarta['col'], $pripravenaKarta['line'])
-            && (int)$pripravenaKarta['col'] === 1
-            && (int)$pripravenaKarta['line'] > 0
-            && empty($pripravenaKarta['minHtml']))
-            ? 'nano'
-            : 'mini';
-    }
-
-    $isNano = ($mode === 'nano');
+    $mode = 'mini';
     $cardId = (int)($pripravenaKarta['cardId'] ?? 0);
     $cardPoradi = (int)($pripravenaKarta['cardPoradi'] ?? 0);
     $refreshOp = (int)($pripravenaKarta['refreshOp'] ?? 0);
@@ -64,8 +50,8 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
     $role = (int)($pripravenaKarta['role'] ?? 3);
     $color = (string)($pripravenaKarta['color'] ?? '');
     $iconFile = (string)($pripravenaKarta['iconFile'] ?? '');
-    $subtitleMin = !$isNano ? (string)($pripravenaKarta['subtitleMin'] ?? '') : '';
-    $subtitleMax = !$isNano ? (string)($pripravenaKarta['subtitleMax'] ?? '') : '';
+    $subtitleMin = (string)($pripravenaKarta['subtitleMin'] ?? '');
+    $subtitleMax = (string)($pripravenaKarta['subtitleMax'] ?? '');
 
     $minHtml = (string)($pripravenaKarta['minHtml'] ?? '');
     $maxHtml = (string)($pripravenaKarta['maxHtml'] ?? '');
@@ -73,30 +59,28 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
     $soubor = (string)($pripravenaKarta['soubor'] ?? '');
     $col = isset($pripravenaKarta['col']) ? (int)$pripravenaKarta['col'] : 0;
     $line = isset($pripravenaKarta['line']) ? (int)$pripravenaKarta['line'] : 0;
-    $isPosLocked = !$isNano && ((int)($pripravenaKarta['isPosLocked'] ?? 0) === 1);
+    $isPosLocked = ((int)($pripravenaKarta['isPosLocked'] ?? 0) === 1);
     $cardColorUrl = (string)($pripravenaKarta['cardColorUrl'] ?? '');
     $cardIconUrl = (string)($pripravenaKarta['cardIconUrl'] ?? '');
     $startExpanded = ((int)($pripravenaKarta['startExpanded'] ?? 0) === 1);
-    $hasMaxLoaded = (!$isNano && trim($maxHtml) !== '');
-    $cardRefreshOp = (!$isNano && $refreshOp === 1) ? 1 : 0;
-    $allowNanoSwitch = (!$isNano && !in_array($cardId, [10, 19, 20], true));
+    $hasMaxLoaded = (trim($maxHtml) !== '');
+    $cardRefreshOp = ($refreshOp === 1) ? 1 : 0;
+    $allowNanoSwitch = !in_array($cardId, [7, 10, 19, 20], true);
 
     $hasCardIcon = ($iconFile !== '');
     $cardIconSrc = $hasCardIcon ? cb_url('/img/card_icons/' . ltrim($iconFile, '/')) : '';
     $cardTopStyle = $color !== '' ? 'background:' . h($color) . ';' : '';
     $cardTopRoleClass = ($role === 1) ? ' card_top_role_1' : (($role === 2) ? ' card_top_role_2' : '');
-    $cardClass = 'dash_card bg_bila card_blue zaobleni_12' . ($isNano ? ' card_mode_nano' : '');
-    $cardLineHeightClass = $isNano ? ' radek_1_1' : ' radek_1_15';
+    $cardClass = 'dash_card bg_bila card_blue zaobleni_12';
+    $cardLineHeightClass = ' radek_1_15';
 
     if ($renderErrorHtml !== '') {
-        if ($isNano && trim($minHtml) === '') {
-            $minHtml = $renderErrorHtml;
-        } elseif (!$isNano && trim($maxHtml) === '') {
+        if (trim($maxHtml) === '') {
             $maxHtml = $renderErrorHtml;
         }
     }
 
-    if (!$isNano && trim($maxHtml) === '') {
+    if (trim($maxHtml) === '') {
         $reason = (trim($renderErrorHtml) !== '') ? 'prázdný max obsah po načtení' : 'prázdný výstup z render pipeline';
         $maxHtml = $makeDiagnosticHtml(
             $soubor,
@@ -133,41 +117,37 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
           <button type="button" class="card_pref_toggle cursor_ruka bg_bila" data-card-pref-toggle="1" aria-haspopup="true" aria-expanded="false" title="Nastavení karty">
             <?php if ($hasCardIcon): ?>
               <span class="card_pref_icon"><img src="<?= h((string)$cardIconSrc) ?>" class="card_pref_icon_img" alt=""></span>
-            <?php elseif ($isNano): ?>
-              <span class="card_pref_empty" aria-hidden="true"></span>
             <?php else: ?>
               <span class="card_pref_dots txt_seda">&#8942;</span>
             <?php endif; ?>
           </button>
-          <?php if (!$isNano): ?>
-            <div class="card_pref_menu is-hidden" data-card-pref-menu="1">
-              <?php require __DIR__ . '/../includes/card_menu_mini.php'; ?>
-              <?php require __DIR__ . '/../includes/card_menu_max.php'; ?>
-            </div>
-          <?php endif; ?>
+          <div class="card_pref_menu is-hidden" data-card-pref-menu="1">
+            <?php require __DIR__ . '/../includes/card_menu_mini.php'; ?>
+            <?php require __DIR__ . '/../includes/card_menu_max.php'; ?>
+          </div>
         </div>
         <div class="card_head_text">
           <h3 class="card_title txt_seda text_15 odstup_vnejsi_0"><?= h($title) ?></h3>
-          <?php if (!$isNano): ?>
-            <div class="card_subtitle_row">
-              <p
-                class="card_subtitle text_12"
-                data-card-subtitle="1"
-                data-subtitle-min="<?= h($subtitleMin) ?>"
-                data-subtitle-max="<?= h($subtitleMax) ?>"
-              ><?= h($subtitleMin) ?></p>
-              <p class="card_subtitle_side text_12" data-card-subtitle-side="1"></p>
-            </div>
-          <?php endif; ?>
+          <div class="card_subtitle_row">
+            <p
+              class="card_subtitle text_12"
+              data-card-subtitle="1"
+              data-subtitle-min="<?= h($subtitleMin) ?>"
+              data-subtitle-max="<?= h($subtitleMax) ?>"
+            ><?= h($subtitleMin) ?></p>
+            <p class="card_subtitle_side text_12" data-card-subtitle-side="1"></p>
+          </div>
         </div>
       </div>
-      <?php if ($isNano || $allowNanoSwitch): ?>
+      <?php if ($allowNanoSwitch): ?>
         <div class="card_tools gap_4 displ_flex flex_sloupec">
-          <?php if ($isNano): ?>
-            <button type="button" class="card_tool_btn cursor_ruka txt_seda bg_bila zaobleni_8 text_14 card_mode_btn odstup_vnitrni_0 displ_inline_flex" data-card-nano-target="mini" title="Prepnout na mini">&#8722;</button>
-          <?php elseif ($allowNanoSwitch): ?>
-            <button type="button" class="card_tool_btn only-mini cursor_ruka txt_seda bg_bila zaobleni_8 text_14 card_mode_btn odstup_vnitrni_0 displ_inline_flex" data-card-to-nano="1" title="Prepnout na nano"><span class="nano_dot">&bull;</span></button>
-          <?php endif; ?>
+          <span class="card_nano_tooltip_wrap">
+            <button type="button" class="card_tool_btn only-mini cursor_ruka txt_seda bg_bila zaobleni_8 text_14 card_mode_btn odstup_vnitrni_0 displ_inline_flex" data-card-to-nano="1" aria-label="Skrýt kartu"><span class="nano_dot">&bull;</span></button>
+            <span class="card_nano_tooltip" aria-hidden="true">
+              <span class="card_nano_tooltip_title">Skrýt kartu</span>
+              <span class="card_nano_tooltip_text">Lze kdykoliv opět zobrazit</span>
+            </span>
+          </span>
         </div>
       <?php endif; ?>
     </div>
@@ -175,11 +155,9 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
       <div class="card_min card_compact odstup_vnitrni_10" data-card-compact>
         <?= $minHtml ?>
       </div>
-      <?php if (!$isNano): ?>
-        <div class="card_max card_expanded odstup_vnitrni_10 is-hidden" data-card-expanded>
-          <?= $maxHtml ?>
-        </div>
-      <?php endif; ?>
+      <div class="card_max card_expanded odstup_vnitrni_10 is-hidden" data-card-expanded>
+        <?= $maxHtml ?>
+      </div>
     </div>
   </article>
   <div class="dash_loader dash_card_loader is-hidden" data-card-loader="1" aria-hidden="true">

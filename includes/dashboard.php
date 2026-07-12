@@ -108,7 +108,6 @@ if (!function_exists('cb_tmp_measure_card_detail_log')) {
     }
 }
 
-require_once __DIR__ . '/priprav_kartu_nano.php';
 require_once __DIR__ . '/priprav_kartu_mini.php';
 require_once __DIR__ . '/priprav_kartu_max.php';
 require_once __DIR__ . '/../funkce/zobraz_kartu.php';
@@ -195,7 +194,6 @@ if ($roleFilter <= 0) {
 }
 
 $idUser = (int)(($_SESSION['cb_user']['id_user'] ?? 0));
-$nanoKde = 0;
 $userCardHeaderColorById = [];
 $userCardIconFileById = [];
 $userMiniOrderIds = [];
@@ -221,18 +219,14 @@ $parseCardOrderIds = static function (?string $value): array {
 };
 
 if ($idUser > 0) {
-    $stmtCols = db()->prepare('SELECT nano_kde, poradi_mini, poradi_nano FROM `user_set` WHERE id_user = ? LIMIT 1');
+    $stmtCols = db()->prepare('SELECT poradi_mini, poradi_nano FROM `user_set` WHERE id_user = ? LIMIT 1');
     if ($stmtCols) {
         $stmtCols->bind_param('i', $idUser);
         $stmtCols->execute();
-        $stmtCols->bind_result($nanoKdeDb, $poradiMiniDb, $poradiNanoDb);
+        $stmtCols->bind_result($poradiMiniDb, $poradiNanoDb);
         if ($stmtCols->fetch()) {
-            $nanoKde = (int)$nanoKdeDb;
             $userMiniOrderIds = $parseCardOrderIds($poradiMiniDb === null ? null : (string)$poradiMiniDb);
             $userNanoOrderIds = $parseCardOrderIds($poradiNanoDb === null ? null : (string)$poradiNanoDb);
-        }
-        if (!in_array($nanoKde, [0, 1], true)) {
-            $nanoKde = 0;
         }
         $stmtCols->close();
     }
@@ -406,28 +400,12 @@ $applySavedOrder = static function (array $list, array $savedIds) use ($sortByFa
     return $result;
 };
 
-$dashGridClass = 'dash_nano_kde_' . $nanoKde;
 $cbLoginId = (int)($_SESSION['cb_id_login'] ?? 0);
 
-$kartyNano = $applySavedOrder($kartyNano, $userNanoOrderIds);
 $kartyMini = $applySavedOrder($kartyMini, $userMiniOrderIds);
 cb_dashboard_timing_log('after_apply_order', $cbDashTimingStart, $cbDashTimingLast);
 
 if ($singleCardId > 0) {
-    foreach ($kartyNano as $kartaNanoRaw) {
-        if ((int)($kartaNanoRaw['id_karta'] ?? 0) !== $singleCardId) {
-            continue;
-        }
-
-        echo cb_zobraz_kartu(cb_priprav_kartu_nano(
-            $kartaNanoRaw,
-            $userCardHeaderColorById,
-            $userCardIconFileById
-        ));
-        cb_dashboard_timing_log('single_card_nano_render', $cbDashTimingStart, $cbDashTimingLast);
-        return;
-    }
-
     foreach ($kartyMini as $kartaMiniRaw) {
         if ((int)($kartaMiniRaw['id_karta'] ?? 0) !== $singleCardId) {
             continue;
@@ -456,42 +434,6 @@ if ($singleCardId > 0) {
 }
 
 $renderItems = [];
-if ($nanoKde === 1) {
-    foreach (array_chunk($kartyNano, 9) as $nanoSkupinaRaw) {
-        $nanoSkupinaPrepared = [];
-        foreach ($nanoSkupinaRaw as $kartaNanoRaw) {
-            $nanoSkupinaPrepared[] = cb_priprav_kartu_nano(
-                $kartaNanoRaw,
-                $userCardHeaderColorById,
-                $userCardIconFileById
-            );
-            cb_dashboard_timing_log('nano_prepare_card_' . (string)($kartaNanoRaw['id_karta'] ?? 0), $cbDashTimingStart, $cbDashTimingLast);
-        }
-        $renderItems[] = [
-            'kind' => 'nano_group',
-            'karty' => $nanoSkupinaPrepared,
-        ];
-        cb_dashboard_timing_log('nano_group_ready', $cbDashTimingStart, $cbDashTimingLast);
-    }
-} else {
-    foreach ($kartyNano as $kartaNanoRaw) {
-        $renderItems[] = [
-            'kind' => 'card',
-            'karta' => cb_priprav_kartu_nano(
-                $kartaNanoRaw,
-                $userCardHeaderColorById,
-                $userCardIconFileById
-            ),
-        ];
-        cb_dashboard_timing_log('nano_prepare_card_' . (string)($kartaNanoRaw['id_karta'] ?? 0), $cbDashTimingStart, $cbDashTimingLast);
-    }
-}
-cb_dashboard_timing_log('after_nano_render_items', $cbDashTimingStart, $cbDashTimingLast);
-
-if ($nanoKde === 0 && !empty($kartyNano) && !empty($kartyMini)) {
-    $renderItems[] = ['kind' => 'break'];
-}
-
 foreach ($kartyMini as $kartaMiniRaw) {
     $renderItems[] = [
         'kind' => 'card',
@@ -506,8 +448,8 @@ foreach ($kartyMini as $kartaMiniRaw) {
 cb_dashboard_timing_log('after_mini_render_items', $cbDashTimingStart, $cbDashTimingLast);
 ?>
 
-<div class="dash_grid gap_2 <?= h($dashGridClass) ?> displ_grid sirka100" data-login-id="<?= h((string)$cbLoginId) ?>">
-  <?php if (empty($karty)): ?>
+<div class="dash_grid gap_2 displ_grid sirka100" data-login-id="<?= h((string)$cbLoginId) ?>">
+  <?php if (empty($renderItems)): ?>
     <section class="dash_card ram_normal bg_bila card_blue zaobleni_12" data-cb-dash-card="1">
       <div class="dash_card_body">
         <p class="small_note text_12"><?= h($emptyText) ?></p>
@@ -516,20 +458,6 @@ cb_dashboard_timing_log('after_mini_render_items', $cbDashTimingStart, $cbDashTi
   <?php else: ?>
     <?php foreach ($renderItems as $renderItem): ?>
       <?php
-      if (($renderItem['kind'] ?? '') === 'break') {
-          echo '<div class="dash_break odstup_vnejsi_0 odstup_vnitrni_0" aria-hidden="true"></div>';
-          continue;
-      }
-
-      if (($renderItem['kind'] ?? '') === 'nano_group') {
-          echo '<div class="dash_nano_group">';
-          foreach ((array)($renderItem['karty'] ?? []) as $kartaNanoPrepared) {
-              echo cb_zobraz_kartu((array)$kartaNanoPrepared);
-          }
-          echo '</div>';
-          continue;
-      }
-
       echo cb_zobraz_kartu((array)($renderItem['karta'] ?? []));
       ?>
     <?php endforeach; ?>

@@ -11,7 +11,6 @@ $usRoleId = (is_array($usUser) && isset($usUser['id_role'])) ? (int)$usUser['id_
 $usCanManager = ($usRoleId > 0 && $usRoleId <= 3);
 $usCurrentSettings = cb_user_settings();
 
-$usNanoKde = in_array((int)($usCurrentSettings['nano_kde'] ?? 0), [0, 1], true) ? (int)($usCurrentSettings['nano_kde'] ?? 0) : 0;
 $usProdleva = (int)($usCurrentSettings['prodleva'] ?? 3000);
 $usPismo = in_array((int)($usCurrentSettings['pismo'] ?? 2), [1, 2, 3], true) ? (int)($usCurrentSettings['pismo'] ?? 2) : 2;
 $usDark = in_array((int)($usCurrentSettings['dark'] ?? 0), [0, 1], true) ? (int)($usCurrentSettings['dark'] ?? 0) : 0;
@@ -41,21 +40,42 @@ $usLogoutLimitOptions = [
 ];
 
 $formAction = cb_url('/');
+$usNanoCards = [];
 
 if ($usUserId > 0) {
     try {
         $conn = db();
 
+        $stmtNano = $conn->prepare('
+            SELECT k.id_karta, k.nazev, k.subtitle_min
+            FROM user_set us
+            JOIN karty k ON FIND_IN_SET(k.id_karta, us.poradi_nano) > 0
+            WHERE us.id_user = ?
+              AND k.aktivni = 1
+              AND k.min_role >= ?
+            ORDER BY k.id_karta ASC
+        ');
+        if ($stmtNano === false) {
+            throw new RuntimeException('Nepodarilo se nacist nano karty.');
+        }
+        $stmtNano->bind_param('ii', $usUserId, $usRoleId);
+        $stmtNano->execute();
+        $stmtNano->bind_result($usNanoCardId, $usNanoCardName, $usNanoCardDescription);
+        while ($stmtNano->fetch()) {
+            $usNanoCards[] = [
+                'id_karta' => (int)$usNanoCardId,
+                'nazev' => (string)$usNanoCardName,
+                'popis_mini' => (string)$usNanoCardDescription,
+            ];
+        }
+        $stmtNano->close();
+
         if ((string)($_POST['us_action'] ?? '') === 'save') {
-            $postNanoKde = (int)($_POST['us_nano_kde'] ?? 0);
             $postProdleva = (int)($_POST['us_prodleva'] ?? 3000);
             $postPismo = (int)($_POST['us_pismo'] ?? 2);
             $postDark = (int)($_POST['us_dark'] ?? 0);
             $postLogoutLimit = $usLogoutLimit;
 
-            if (!in_array($postNanoKde, [0, 1], true)) {
-                $postNanoKde = 0;
-            }
             if (!array_key_exists($postProdleva, $usProdlevaOptions)) {
                 $postProdleva = 3000;
             }
@@ -77,22 +97,20 @@ if ($usUserId > 0) {
                 }
             }
 
-            $stmtUpd = $conn->prepare('UPDATE user_set SET nano_kde = ?, prodleva = ?, pismo = ?, dark = ?, logout_limit = ? WHERE id_user = ?');
+            $stmtUpd = $conn->prepare('UPDATE user_set SET prodleva = ?, pismo = ?, dark = ?, logout_limit = ? WHERE id_user = ?');
             if ($stmtUpd === false) {
                 throw new RuntimeException('Nepodarilo se pripravit update user_set.');
             }
-            $stmtUpd->bind_param('iiiiii', $postNanoKde, $postProdleva, $postPismo, $postDark, $postLogoutLimit, $usUserId);
+            $stmtUpd->bind_param('iiiii', $postProdleva, $postPismo, $postDark, $postLogoutLimit, $usUserId);
             $stmtUpd->execute();
             $stmtUpd->close();
 
             cb_store_user_settings([
-                'nano_kde' => $postNanoKde,
                 'prodleva' => $postProdleva,
                 'pismo' => $postPismo,
                 'dark' => $postDark,
                 'logout_limit' => $postLogoutLimit,
             ]);
-            $usNanoKde = $postNanoKde;
             $usProdleva = $postProdleva;
             $usPismo = $postPismo;
             $usDark = $postDark;
@@ -105,11 +123,10 @@ if ($usUserId > 0) {
     $usError = 'Nastavení je dostupné až po přihlášení.';
 }
 
-$usNanoText = ($usNanoKde === 1) ? 'Do gridu' : 'Řádek';
 $usDarkText = ($usDark === 1) ? 'Ano' : 'Ne';
 
 $card_min_html = ''
-    . '<p class="card_mini_text txt_seda">Nano karty: <span class="text_tucny">' . h($usNanoText) . '</span></p>'
+    . '<p class="card_mini_text txt_seda">Skryté karty: <span class="text_tucny">' . h((string)count($usNanoCards)) . '</span></p>'
     . '<p class="card_mini_text txt_seda">Velikost textu: <span class="text_tucny">' . h((string)$usPismo) . '</span> | Tmavý režim: <span class="text_tucny">' . h($usDarkText) . '</span></p>';
 
 if (($cbDashboardRenderMode ?? '') === 'mini') {
@@ -121,20 +138,9 @@ ob_start();
 <?php if ($usError !== ''): ?>
   <p class="card_text txt_seda odstup_vnejsi_0 card_text_muted"><?= h($usError) ?></p>
 <?php else: ?>
-  <form method="post" action="<?= h($formAction) ?>" class="card_stack gap_10 displ_flex" autocomplete="off" data-cb-user-setting-form="1" data-cb-user-setting-initial-nano-kde="<?= h((string)$usNanoKde) ?>" data-cb-user-setting-initial-prodleva="<?= h((string)$usProdleva) ?>" data-cb-user-setting-initial-pismo="<?= h((string)$usPismo) ?>" data-cb-user-setting-initial-dark="<?= h((string)$usDark) ?>" data-cb-user-setting-initial-logout-limit="<?= h(($usCanManager && $usLogoutLimit !== null) ? (string)$usLogoutLimit : '') ?>">
+  <form method="post" action="<?= h($formAction) ?>" class="card_stack gap_10 displ_flex" autocomplete="off" data-cb-user-setting-form="1" data-cb-user-setting-initial-prodleva="<?= h((string)$usProdleva) ?>" data-cb-user-setting-initial-pismo="<?= h((string)$usPismo) ?>" data-cb-user-setting-initial-dark="<?= h((string)$usDark) ?>" data-cb-user-setting-initial-logout-limit="<?= h(($usCanManager && $usLogoutLimit !== null) ? (string)$usLogoutLimit : '') ?>">
     <input type="hidden" name="us_action" value="save">
 
-    <style>
-      .cb_user_tabs{display:flex;gap:8px;flex-wrap:wrap;}
-      .cb_user_tabs label{padding:4px 10px;border:1px solid #d0d0d0;background:#fff;cursor:pointer;}
-      .cb_user_panel{display:none;}
-      #cb_user_tab_dashboard:checked ~ .cb_user_tabs label[for="cb_user_tab_dashboard"],
-      #cb_user_tab_vzhled:checked ~ .cb_user_tabs label[for="cb_user_tab_vzhled"],
-      #cb_user_tab_manager:checked ~ .cb_user_tabs label[for="cb_user_tab_manager"]{font-weight:700;}
-      #cb_user_tab_dashboard:checked ~ .cb_user_panel_dashboard,
-      #cb_user_tab_vzhled:checked ~ .cb_user_panel_vzhled,
-      #cb_user_tab_manager:checked ~ .cb_user_panel_manager{display:block;}
-    </style>
     <input type="radio" id="cb_user_tab_dashboard" name="cb_user_tab" checked hidden>
     <input type="radio" id="cb_user_tab_vzhled" name="cb_user_tab" hidden>
     <?php if ($usCanManager): ?>
@@ -149,15 +155,7 @@ ob_start();
     </div>
 
     <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 cb_user_panel cb_user_panel_dashboard">
-      <h4 class="card_section_title txt_seda">Dashboard</h4>
-      <label class="card_field gap_4 displ_flex">
-        <span>Nano karty</span>
-        <select class="card_select ram_sedy txt_seda vyska_32" name="us_nano_kde" data-cb-user-setting-field="1">
-          <option value="0"<?= $usNanoKde === 0 ? ' selected' : '' ?>>0 = řádek</option>
-          <option value="1"<?= $usNanoKde === 1 ? ' selected' : '' ?>>1 = do gridu</option>
-        </select>
-      </label>
-
+      <h4 class="card_section_title txt_seda">Individuální nastavení</h4>
       <label class="card_field gap_4 displ_flex">
         <span>Volba čekání při volbě období</span>
         <select class="card_select ram_sedy txt_seda vyska_32" name="us_prodleva" data-cb-user-setting-field="1">
@@ -166,8 +164,28 @@ ob_start();
           <?php endforeach; ?>
         </select>
       </label>
-      <div class="card_actions gap_8 displ_flex jc_konec">
-        <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-user-setting-save="dashboard" disabled>Uložit nastavení</button>
+
+      <h4 class="card_section_title txt_seda cb_user_hidden_cards_title">Přehled skrytých karet</h4>
+      <div class="table-wrap">
+        <table class="table cb_user_hidden_cards_table">
+          <caption class="card_text txt_seda<?= empty($usNanoCards) ? '' : ' is-hidden' ?>" data-cb-nano-empty="1">Žádné skryté karty</caption>
+          <thead>
+            <tr>
+              <th>Název karty</th>
+              <th>Popis karty</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody data-cb-nano-list="1">
+            <?php foreach ($usNanoCards as $usNanoCard): ?>
+              <tr data-cb-nano-card-row="<?= h((string)$usNanoCard['id_karta']) ?>">
+                <td><?= h($usNanoCard['nazev']) ?></td>
+                <td><?= h($usNanoCard['popis_mini']) ?></td>
+                <td><button type="button" class="card_btn cursor_ruka ram_btn zaobleni_6 vyska_28 displ_inline_flex cb_user_hidden_activate" data-cb-nano-activate="<?= h((string)$usNanoCard['id_karta']) ?>">Aktivovat</button></td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
       </div>
     </section>
 

@@ -4,10 +4,6 @@
 (function (w) {
   const CARD_ROOT_SELECTOR = '.card_shell';
   const CARD_TO_NANO_SELECTOR = '[data-card-to-nano]';
-  const CARD_NANO_TARGET_SELECTOR = '[data-card-nano-target]';
-  const CARD_COMPACT_SELECTOR = '[data-card-compact]';
-  const CARD_EXPANDED_SELECTOR = '[data-card-expanded]';
-  const MAX_NANO_CARDS = 9;
 
   function logUserCardAction(actionId, cardId, success, errMsg) {
     const idAkce = parseInt(String(actionId || '0'), 10);
@@ -57,12 +53,6 @@
     return root instanceof HTMLElement ? root : null;
   }
 
-  function getCardModeFromSection(section) {
-    const root = getCardRootFromSection(section);
-    if (!(root instanceof HTMLElement)) return 'mini';
-    return String(root.getAttribute('data-card-mode') || 'mini').trim() || 'mini';
-  }
-
   function getCardOrderFromSection(section) {
     const root = getCardRootFromSection(section);
     if (!(root instanceof HTMLElement)) return 999999;
@@ -109,10 +99,6 @@
     }));
   }
 
-  function getNanoCardCount() {
-    return document.querySelectorAll('.card_shell[data-card-mode="nano"]').length;
-  }
-
   function setDashboardLoading(on, text) {
     if (w.CB_AJAX && typeof w.CB_AJAX.setDashboardLoading === 'function') {
       w.CB_AJAX.setDashboardLoading(!!on, 'cards', text);
@@ -123,16 +109,6 @@
     if (w.CB_AJAX && typeof w.CB_AJAX.trace === 'function') {
       w.CB_AJAX.trace(event, data);
     }
-  }
-
-  function canSwitchToNano(cardId) {
-    const cid = parseInt(String(cardId || '0'), 10);
-    if (!Number.isFinite(cid) || cid <= 0) return false;
-
-    const alreadyNano = document.querySelector('.card_shell[data-card-id="' + String(cid) + '"][data-card-mode="nano"]');
-    if (alreadyNano) return true;
-
-    return getNanoCardCount() < MAX_NANO_CARDS;
   }
 
   function getCardModeModal() {
@@ -192,13 +168,6 @@
     return true;
   }
 
-  function showNanoLimitAlert() {
-    const msg = 'Nano režim je omezen na 9 karet.\nDesátou kartu nelze přidat.';
-    if (!openCardModeModal(msg)) {
-      w.alert(msg);
-    }
-  }
-
   function showCardModeError(err) {
     const msg = (err && typeof err.message === 'string') ? err.message.trim() : '';
     if (msg !== '') {
@@ -241,34 +210,6 @@
     return true;
   }
 
-  function createBreakNode() {
-    const el = document.createElement('div');
-    el.className = 'dash_break odstup_vnejsi_0 odstup_vnitrni_0';
-    el.setAttribute('aria-hidden', 'true');
-    return el;
-  }
-
-  function collectGridSections(grid) {
-    const sections = [];
-    Array.from(grid.children).forEach((child) => {
-      if (!(child instanceof HTMLElement)) return;
-
-      if (child.classList.contains('dash_nano_group')) {
-        Array.from(child.children).forEach((nested) => {
-          if (nested instanceof HTMLElement && nested.matches('[data-cb-dash-card="1"]')) {
-            sections.push(nested);
-          }
-        });
-        return;
-      }
-
-      if (child.matches('[data-cb-dash-card="1"]')) {
-        sections.push(child);
-      }
-    });
-    return sections;
-  }
-
   function relayoutMiniCards(miniCards) {
     const ordered = [];
 
@@ -303,77 +244,10 @@
     const grid = getDashGrid();
     if (!(grid instanceof HTMLElement)) return;
 
-    const allSections = collectGridSections(grid);
-    const nanoCards = [];
-    const miniCards = [];
-
-    allSections.forEach((section) => {
-      if (getCardModeFromSection(section) === 'nano') {
-        nanoCards.push(section);
-      } else {
-        miniCards.push(section);
-      }
-    });
-
-    nanoCards.forEach((section) => {
-      clearCardPlacement(section);
-    });
-
-    const nodes = [];
-    if (grid.classList.contains('dash_nano_kde_1')) {
-      if (nanoCards.length > 0) {
-        const group = document.createElement('div');
-        group.className = 'dash_nano_group';
-        nanoCards.forEach((section) => {
-          group.appendChild(section);
-        });
-        nodes.push(group);
-      }
-
-      const placedMini = relayoutMiniCards(miniCards);
-      placedMini.forEach((section) => {
-        nodes.push(section);
-      });
-
-      grid.replaceChildren(...nodes);
-      return;
-    }
-
-    nanoCards.forEach((section) => {
-      nodes.push(section);
-    });
-
-    const placedMini = relayoutMiniCards(miniCards);
-
-    if (nanoCards.length > 0 && placedMini.length > 0) {
-      nodes.push(createBreakNode());
-    }
-
-    placedMini.forEach((section) => {
-      nodes.push(section);
-    });
-
-    grid.replaceChildren(...nodes);
-  }
-
-  function refreshOnlyCurrentCard(cardId) {
-    if (!(w.CB_AJAX && typeof w.CB_AJAX.refreshCard === 'function')) {
-      return Promise.reject(new Error('Obnovení jedné karty není dostupné.'));
-    }
-
-    return w.CB_AJAX.refreshCard(cardId, {
-      force: true,
-      keepLoading: true,
-      loaderMode: 'cards'
-    }).then((result) => {
-      if (w.CB_AJAX && typeof w.CB_AJAX.relayoutDashboard === 'function') {
-        w.CB_AJAX.relayoutDashboard();
-      } else {
-        rebuildGridAfterModeSwitch();
-        document.dispatchEvent(new CustomEvent('cb:dashboard-layout-changed'));
-      }
-      return result;
-    });
+    const miniCards = Array.from(grid.children).filter((child) => (
+      child instanceof HTMLElement && child.matches('[data-cb-dash-card="1"]')
+    ));
+    grid.replaceChildren(...relayoutMiniCards(miniCards));
   }
 
   function relayoutDashboard() {
@@ -386,6 +260,65 @@
     setDashboardLoading(false);
   }
 
+  function appendActivatedMiniCard(cardId) {
+    const id = parseInt(String(cardId || '0'), 10);
+    if (!Number.isFinite(id) || id <= 0) {
+      return Promise.reject(new Error('ID karty nebylo nalezeno.'));
+    }
+
+    return fetch('index.php?cb_card_id=' + encodeURIComponent(String(id)), {
+      method: 'GET',
+      headers: {
+        'X-Comeback-Card': '1',
+        'Accept': 'application/json'
+      },
+      credentials: 'same-origin'
+    }).then((response) => response.text().then((text) => {
+      let data = null;
+      try {
+        data = JSON.parse(String(text || '').trim());
+      } catch (e) {
+        data = null;
+      }
+
+      if (!response.ok || !data || typeof data.cardHtml !== 'string') {
+        throw new Error(String((data && data.err) ? data.err : 'Aktivovanou kartu se nepodařilo načíst.'));
+      }
+
+      const wrap = document.createElement('div');
+      wrap.innerHTML = String(data.cardHtml || '').trim();
+      const card = wrap.firstElementChild;
+      const grid = getDashGrid();
+      if (!(card instanceof HTMLElement) || !(grid instanceof HTMLElement)) {
+        throw new Error('Aktivovanou kartu se nepodařilo vložit na dashboard.');
+      }
+
+      grid.appendChild(card);
+      relayoutDashboard();
+      document.dispatchEvent(new CustomEvent('cb:card-swapped', {
+        detail: {
+          cardId: id,
+          card: card
+        }
+      }));
+
+      document.querySelectorAll('[data-cb-nano-card-row="' + String(id) + '"]').forEach((row) => {
+        if (!(row instanceof HTMLElement)) return;
+        const list = row.closest('[data-cb-nano-list="1"]');
+        row.remove();
+        if (list instanceof HTMLElement && !list.querySelector('[data-cb-nano-card-row]')) {
+          const panel = list.parentElement;
+          const empty = panel ? panel.querySelector('[data-cb-nano-empty="1"]') : null;
+          if (empty instanceof HTMLElement) {
+            empty.classList.remove('is-hidden');
+          }
+        }
+      });
+
+      return { ok: true, cardId: id, card: card };
+    }));
+  }
+
   function handleModeSwitch(cardId, targetMode, tracePrefix, actionId) {
     const idAkce = parseInt(String(actionId || '0'), 10);
     setDashboardLoading(true, 'Přesouvám kartu ...');
@@ -394,7 +327,15 @@
       traceAjax(tracePrefix + '_mode_saved', {
         card_id: cardId
       });
-      return refreshOnlyCurrentCard(cardId);
+      if (targetMode === 'nano') {
+        const root = document.querySelector('.card_shell[data-card-id="' + String(cardId) + '"]');
+        const section = getCardSectionFromRoot(root);
+        if (section instanceof HTMLElement) {
+          section.remove();
+        }
+        return relayoutDashboard();
+      }
+      return appendActivatedMiniCard(cardId);
     }).then(() => {
       traceAjax(tracePrefix + '_ok', {
         card_id: cardId
@@ -407,7 +348,15 @@
         const opened = openNanoUnlockConfirm(() => {
           setDashboardLoading(true, 'Přesouvám kartu ...');
           requestCardMode(cardId, targetMode, { forceUnlock: true }).then(() => {
-            return refreshOnlyCurrentCard(cardId);
+            if (targetMode === 'nano') {
+              const root = document.querySelector('.card_shell[data-card-id="' + String(cardId) + '"]');
+              const section = getCardSectionFromRoot(root);
+              if (section instanceof HTMLElement) {
+                section.remove();
+              }
+              return relayoutDashboard();
+            }
+            return appendActivatedMiniCard(cardId);
           }).then(() => {
             traceAjax(tracePrefix + '_ok', {
               card_id: cardId
@@ -454,47 +403,11 @@
     nanoBtn.addEventListener('click', () => {
       if (!Number.isFinite(cardId) || cardId <= 0) return;
 
-      if (!canSwitchToNano(cardId)) {
-        showNanoLimitAlert();
-        return;
-      }
-
       traceAjax('mini_to_nano_click', {
         card_id: cardId
       });
 
       handleModeSwitch(cardId, 'nano', 'mini_to_nano', 3);
-    });
-  }
-
-  function initNanoCard(root) {
-    if (!(root instanceof HTMLElement) || root.getAttribute('data-card-init-nano') === '1') return;
-    if (String(root.getAttribute('data-card-mode') || 'mini').trim() !== 'nano') return;
-
-    root.setAttribute('data-card-init-nano', '1');
-
-    const cardId = parseInt(String(root.getAttribute('data-card-id') || '0'), 10);
-    const compact = root.querySelector(CARD_COMPACT_SELECTOR);
-    const expanded = root.querySelector(CARD_EXPANDED_SELECTOR);
-
-    if (compact instanceof HTMLElement) compact.classList.add('is-hidden');
-    if (expanded instanceof HTMLElement) expanded.classList.add('is-hidden');
-
-    const nanoTargets = root.querySelectorAll(CARD_NANO_TARGET_SELECTOR);
-
-    nanoTargets.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        if (!Number.isFinite(cardId) || cardId <= 0) return;
-
-        const target = String(btn.getAttribute('data-card-nano-target') || 'mini').trim();
-        if (target !== 'mini') return;
-
-        traceAjax('nano_to_mini_click', {
-          card_id: cardId
-        });
-
-        handleModeSwitch(cardId, 'mini', 'nano_to_mini', 4);
-      });
     });
   }
 
@@ -507,10 +420,6 @@
 
   function initCardRoot(root) {
     if (!(root instanceof HTMLElement)) return;
-    if (String(root.getAttribute('data-card-mode') || 'mini').trim() === 'nano') {
-      initNanoCard(root);
-      return;
-    }
     initMiniCard(root);
   }
 
@@ -524,6 +433,14 @@
 
       if (target.closest('[data-cb-cardmode-close]')) {
         closeCardModeModal();
+        return;
+      }
+
+      const activate = target.closest('[data-cb-nano-activate]');
+      if (activate instanceof HTMLElement) {
+        const cardId = parseInt(String(activate.getAttribute('data-cb-nano-activate') || '0'), 10);
+        if (!Number.isFinite(cardId) || cardId <= 0) return;
+        handleModeSwitch(cardId, 'mini', 'nano_to_mini', 4);
       }
     });
 

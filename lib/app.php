@@ -220,7 +220,6 @@ if (!function_exists('cb_user_settings_defaults')) {
     function cb_user_settings_defaults(): array
     {
         return [
-            'nano_kde' => 0,
             'prodleva' => 3000,
             'pismo' => 2,
             'dark' => 0,
@@ -245,12 +244,6 @@ if (!function_exists('cb_store_user_settings')) {
         }
 
         $data = array_merge(cb_user_settings_defaults(), $current);
-
-        $nanoKde = (int)($values['nano_kde'] ?? $data['nano_kde']);
-        if (!in_array($nanoKde, [0, 1], true)) {
-            $nanoKde = 0;
-        }
-        $data['nano_kde'] = $nanoKde;
 
         $prodleva = (int)($values['prodleva'] ?? $data['prodleva']);
         if (!in_array($prodleva, [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000], true)) {
