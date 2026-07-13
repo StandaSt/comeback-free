@@ -873,6 +873,18 @@ align-items:center;
   line-height:14px;
 }
 
+.head_kpi_toggle.is-kpi-show{
+  background:var(--clr_zelena_3);
+  border-color:#86efac;
+  color:var(--clr_zelena);
+}
+
+.head_kpi_toggle.is-kpi-hide{
+  background:var(--clr_ruzova_4);
+  border-color:var(--clr_ruzova_1);
+  color:var(--clr_cervena);
+}
+
 .head_user_exit{
   flex:0 0 26px !important;
   width:26px !important;

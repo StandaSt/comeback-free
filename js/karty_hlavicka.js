@@ -157,12 +157,16 @@
       if (!isKpiCollapseMode()) {
         header.classList.remove('is-kpi-hidden');
         btn.textContent = 'Skrýt KPI';
+        btn.classList.remove('is-kpi-show');
+        btn.classList.add('is-kpi-hide');
         btn.setAttribute('aria-pressed', 'false');
         return;
       }
 
       const hidden = header.classList.contains('is-kpi-hidden');
       btn.textContent = hidden ? 'Zobrazit KPI' : 'Skrýt KPI';
+      btn.classList.toggle('is-kpi-show', hidden);
+      btn.classList.toggle('is-kpi-hide', !hidden);
       btn.setAttribute('aria-pressed', hidden ? 'true' : 'false');
     }
 
