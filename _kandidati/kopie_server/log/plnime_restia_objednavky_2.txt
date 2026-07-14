@@ -1,0 +1,241 @@
+-----
+START_AUTO: 05.07.2026 21:08:13
+POBOČKA: Chodov (2)
+SCRIPT: plnime_restia_objednavky.php
+START_BASE: 21.11.2023
+RESUME_FROM: 21.11.2023
+IMPORT_TO: 04.07.2026
+LIMIT: 200
+-----
+START: 05.07.2026 21:24:29
+POBOČKA: Chodov (2)
+SCRIPT: plnime_restia_objednavky.php
+START_BASE: 21.11.2023
+RESUME_FROM: 21.11.2023
+IMPORT_TO: 04.07.2026
+LIMIT: 200
+1 / 21.11.2023 / 36 - 36 / 0 min 0 sec / celkem 0 min 0 sec
+2 / 22.11.2023 / 38 - 74 / 0 min 0 sec / celkem 0 min 0 sec
+3 / 23.11.2023 / 45 - 119 / 0 min 0 sec / celkem 0 min 0 sec
+4 / 24.11.2023 / 74 - 193 / 0 min 1 sec / celkem 0 min 1 sec
+5 / 25.11.2023 / 70 - 263 / 0 min 1 sec / celkem 0 min 1 sec
+6 / 26.11.2023 / 45 - 308 / 0 min 2 sec / celkem 0 min 2 sec
+7 / 27.11.2023 / 109 - 417 / 0 min 2 sec / celkem 0 min 2 sec
+8 / 28.11.2023 / 134 - 551 / 0 min 3 sec / celkem 0 min 3 sec
+9 / 29.11.2023 / 118 - 669 / 0 min 4 sec / celkem 0 min 4 sec
+10 / 30.11.2023 / 141 - 810 / 0 min 6 sec / celkem 0 min 6 sec
+11 / 01.12.2023 / 193 - 1003 / 0 min 8 sec / celkem 0 min 8 sec
+12 / 02.12.2023 / 171 - 1174 / 0 min 10 sec / celkem 0 min 10 sec
+13 / 03.12.2023 / 131 - 1305 / 0 min 11 sec / celkem 0 min 11 sec
+14 / 04.12.2023 / 103 - 1408 / 0 min 12 sec / celkem 0 min 12 sec
+15 / 05.12.2023 / 132 - 1540 / 0 min 13 sec / celkem 0 min 13 sec
+16 / 06.12.2023 / 134 - 1674 / 0 min 14 sec / celkem 0 min 14 sec
+17 / 07.12.2023 / 132 - 1806 / 0 min 14 sec / celkem 0 min 14 sec
+18 / 08.12.2023 / 210 - 2016 / 0 min 16 sec / celkem 0 min 16 sec
+19 / 09.12.2023 / 241 - 2257 / 0 min 17 sec / celkem 0 min 17 sec
+20 / 10.12.2023 / 153 - 2410 / 0 min 18 sec / celkem 0 min 18 sec
+21 / 11.12.2023 / 97 - 2507 / 0 min 19 sec / celkem 0 min 19 sec
+22 / 12.12.2023 / 123 - 2630 / 0 min 19 sec / celkem 0 min 19 sec
+23 / 13.12.2023 / 128 - 2758 / 0 min 20 sec / celkem 0 min 20 sec
+24 / 14.12.2023 / 167 - 2925 / 0 min 21 sec / celkem 0 min 21 sec
+25 / 15.12.2023 / 214 - 3139 / 0 min 23 sec / celkem 0 min 23 sec
+26 / 16.12.2023 / 234 - 3373 / 0 min 24 sec / celkem 0 min 24 sec
+27 / 17.12.2023 / 154 - 3527 / 0 min 25 sec / celkem 0 min 25 sec
+28 / 18.12.2023 / 119 - 3646 / 0 min 26 sec / celkem 0 min 26 sec
+29 / 19.12.2023 / 143 - 3789 / 0 min 27 sec / celkem 0 min 27 sec
+30 / 20.12.2023 / 127 - 3916 / 0 min 27 sec / celkem 0 min 27 sec
+31 / 21.12.2023 / 155 - 4071 / 0 min 28 sec / celkem 0 min 28 sec
+32 / 22.12.2023 / 196 - 4267 / 0 min 30 sec / celkem 0 min 30 sec
+33 / 23.12.2023 / 0 - 4267 / 0 min 30 sec / celkem 0 min 30 sec
+34 / 24.12.2023 / 0 - 4267 / 0 min 30 sec / celkem 0 min 30 sec
+35 / 25.12.2023 / 0 - 4267 / 0 min 30 sec / celkem 0 min 30 sec
+36 / 26.12.2023 / 182 - 4449 / 0 min 31 sec / celkem 0 min 31 sec
+37 / 27.12.2023 / 137 - 4586 / 0 min 39 sec / celkem 0 min 39 sec
+38 / 28.12.2023 / 131 - 4717 / 0 min 46 sec / celkem 0 min 46 sec
+39 / 29.12.2023 / 149 - 4866 / 0 min 49 sec / celkem 0 min 49 sec
+40 / 30.12.2023 / 140 - 5006 / 0 min 52 sec / celkem 0 min 52 sec
+41 / 31.12.2023 / 109 - 5115 / 0 min 54 sec / celkem 0 min 54 sec
+42 / 01.01.2024 / 214 - 5329 / 0 min 56 sec / celkem 0 min 56 sec
+43 / 02.01.2024 / 110 - 5439 / 0 min 58 sec / celkem 0 min 58 sec
+44 / 03.01.2024 / 117 - 5556 / 0 min 59 sec / celkem 0 min 59 sec
+45 / 04.01.2024 / 127 - 5683 / 1 min 1 sec / celkem 1 min 1 sec
+46 / 05.01.2024 / 157 - 5840 / 1 min 2 sec / celkem 1 min 2 sec
+47 / 06.01.2024 / 163 - 6003 / 1 min 4 sec / celkem 1 min 4 sec
+48 / 07.01.2024 / 119 - 6122 / 1 min 5 sec / celkem 1 min 5 sec
+49 / 08.01.2024 / 114 - 6236 / 1 min 6 sec / celkem 1 min 6 sec
+50 / 09.01.2024 / 110 - 6346 / 1 min 7 sec / celkem 1 min 7 sec
+51 / 10.01.2024 / 153 - 6499 / 1 min 9 sec / celkem 1 min 9 sec
+52 / 11.01.2024 / 143 - 6642 / 1 min 11 sec / celkem 1 min 11 sec
+53 / 12.01.2024 / 199 - 6841 / 1 min 13 sec / celkem 1 min 13 sec
+54 / 13.01.2024 / 191 - 7032 / 1 min 15 sec / celkem 1 min 15 sec
+55 / 14.01.2024 / 121 - 7153 / 1 min 16 sec / celkem 1 min 16 sec
+56 / 15.01.2024 / 113 - 7266 / 1 min 17 sec / celkem 1 min 17 sec
+57 / 16.01.2024 / 117 - 7383 / 1 min 18 sec / celkem 1 min 18 sec
+58 / 17.01.2024 / 141 - 7524 / 1 min 19 sec / celkem 1 min 19 sec
+59 / 18.01.2024 / 140 - 7664 / 1 min 20 sec / celkem 1 min 20 sec
+60 / 19.01.2024 / 171 - 7835 / 1 min 21 sec / celkem 1 min 21 sec
+61 / 20.01.2024 / 183 - 8018 / 1 min 22 sec / celkem 1 min 22 sec
+62 / 21.01.2024 / 117 - 8135 / 1 min 23 sec / celkem 1 min 23 sec
+63 / 22.01.2024 / 121 - 8256 / 1 min 23 sec / celkem 1 min 23 sec
+64 / 23.01.2024 / 123 - 8379 / 1 min 24 sec / celkem 1 min 24 sec
+65 / 24.01.2024 / 128 - 8507 / 1 min 25 sec / celkem 1 min 25 sec
+66 / 25.01.2024 / 124 - 8631 / 1 min 26 sec / celkem 1 min 26 sec
+67 / 26.01.2024 / 169 - 8800 / 1 min 27 sec / celkem 1 min 27 sec
+68 / 27.01.2024 / 182 - 8982 / 1 min 28 sec / celkem 1 min 28 sec
+69 / 28.01.2024 / 106 - 9088 / 1 min 29 sec / celkem 1 min 29 sec
+70 / 29.01.2024 / 81 - 9169 / 1 min 29 sec / celkem 1 min 29 sec
+71 / 30.01.2024 / 110 - 9279 / 1 min 30 sec / celkem 1 min 30 sec
+72 / 31.01.2024 / 132 - 9411 / 1 min 31 sec / celkem 1 min 31 sec
+73 / 01.02.2024 / 132 - 9543 / 1 min 32 sec / celkem 1 min 32 sec
+74 / 02.02.2024 / 190 - 9733 / 1 min 36 sec / celkem 1 min 36 sec
+75 / 03.02.2024 / 161 - 9894 / 1 min 37 sec / celkem 1 min 37 sec
+76 / 04.02.2024 / 111 - 10005 / 1 min 38 sec / celkem 1 min 38 sec
+77 / 05.02.2024 / 89 - 10094 / 1 min 38 sec / celkem 1 min 38 sec
+78 / 06.02.2024 / 109 - 10203 / 1 min 39 sec / celkem 1 min 39 sec
+79 / 07.02.2024 / 153 - 10356 / 1 min 40 sec / celkem 1 min 40 sec
+80 / 08.02.2024 / 139 - 10495 / 1 min 41 sec / celkem 1 min 41 sec
+81 / 09.02.2024 / 173 - 10668 / 1 min 42 sec / celkem 1 min 42 sec
+82 / 10.02.2024 / 145 - 10813 / 1 min 43 sec / celkem 1 min 43 sec
+83 / 11.02.2024 / 118 - 10931 / 1 min 43 sec / celkem 1 min 43 sec
+84 / 12.02.2024 / 105 - 11036 / 1 min 44 sec / celkem 1 min 44 sec
+85 / 13.02.2024 / 111 - 11147 / 1 min 45 sec / celkem 1 min 45 sec
+STOPKA LIMIT: 05.07.2026 21:26:14 | pobočka=Chodov | součet_průběžně=11147
+-----
+START: 05.07.2026 21:32:40
+POBOČKA: Chodov (2)
+SCRIPT: plnime_restia_objednavky.php
+START_BASE: 21.11.2023
+RESUME_FROM: 14.02.2024
+IMPORT_TO: 04.07.2026
+LIMIT: 200
+1 / 14.02.2024 / 149 - 11296 / 0 min 0 sec / celkem 0 min 0 sec
+2 / 15.02.2024 / 116 - 11412 / 0 min 1 sec / celkem 0 min 1 sec
+3 / 16.02.2024 / 180 - 11592 / 0 min 2 sec / celkem 0 min 2 sec
+4 / 17.02.2024 / 173 - 11765 / 0 min 3 sec / celkem 0 min 3 sec
+5 / 18.02.2024 / 109 - 11874 / 0 min 4 sec / celkem 0 min 4 sec
+6 / 19.02.2024 / 82 - 11956 / 0 min 5 sec / celkem 0 min 5 sec
+7 / 20.02.2024 / 109 - 12065 / 0 min 5 sec / celkem 0 min 5 sec
+8 / 21.02.2024 / 113 - 12178 / 0 min 6 sec / celkem 0 min 6 sec
+9 / 22.02.2024 / 116 - 12294 / 0 min 7 sec / celkem 0 min 7 sec
+10 / 23.02.2024 / 199 - 12493 / 0 min 8 sec / celkem 0 min 8 sec
+11 / 24.02.2024 / 171 - 12664 / 0 min 9 sec / celkem 0 min 9 sec
+12 / 25.02.2024 / 120 - 12784 / 0 min 10 sec / celkem 0 min 10 sec
+13 / 26.02.2024 / 113 - 12897 / 0 min 10 sec / celkem 0 min 10 sec
+14 / 27.02.2024 / 83 - 12980 / 0 min 11 sec / celkem 0 min 11 sec
+15 / 28.02.2024 / 99 - 13079 / 0 min 11 sec / celkem 0 min 11 sec
+16 / 29.02.2024 / 112 - 13191 / 0 min 12 sec / celkem 0 min 12 sec
+17 / 01.03.2024 / 148 - 13339 / 0 min 13 sec / celkem 0 min 13 sec
+18 / 02.03.2024 / 146 - 13485 / 0 min 14 sec / celkem 0 min 14 sec
+19 / 03.03.2024 / 123 - 13608 / 0 min 15 sec / celkem 0 min 15 sec
+20 / 04.03.2024 / 84 - 13692 / 0 min 15 sec / celkem 0 min 15 sec
+21 / 05.03.2024 / 91 - 13783 / 0 min 16 sec / celkem 0 min 16 sec
+22 / 06.03.2024 / 91 - 13874 / 0 min 16 sec / celkem 0 min 16 sec
+23 / 07.03.2024 / 120 - 13994 / 0 min 17 sec / celkem 0 min 17 sec
+24 / 08.03.2024 / 203 - 14197 / 0 min 18 sec / celkem 0 min 18 sec
+25 / 09.03.2024 / 182 - 14379 / 0 min 19 sec / celkem 0 min 19 sec
+26 / 10.03.2024 / 122 - 14501 / 0 min 23 sec / celkem 0 min 23 sec
+27 / 11.03.2024 / 84 - 14585 / 0 min 24 sec / celkem 0 min 24 sec
+28 / 12.03.2024 / 113 - 14698 / 0 min 25 sec / celkem 0 min 25 sec
+29 / 13.03.2024 / 107 - 14805 / 0 min 26 sec / celkem 0 min 26 sec
+30 / 14.03.2024 / 99 - 14904 / 0 min 27 sec / celkem 0 min 27 sec
+31 / 15.03.2024 / 171 - 15075 / 0 min 28 sec / celkem 0 min 28 sec
+32 / 16.03.2024 / 157 - 15232 / 0 min 28 sec / celkem 0 min 28 sec
+33 / 17.03.2024 / 120 - 15352 / 0 min 29 sec / celkem 0 min 29 sec
+34 / 18.03.2024 / 81 - 15433 / 0 min 30 sec / celkem 0 min 30 sec
+35 / 19.03.2024 / 104 - 15537 / 0 min 30 sec / celkem 0 min 30 sec
+36 / 20.03.2024 / 96 - 15633 / 0 min 31 sec / celkem 0 min 31 sec
+37 / 21.03.2024 / 104 - 15737 / 0 min 32 sec / celkem 0 min 32 sec
+38 / 22.03.2024 / 151 - 15888 / 0 min 32 sec / celkem 0 min 32 sec
+39 / 23.03.2024 / 154 - 16042 / 0 min 34 sec / celkem 0 min 34 sec
+40 / 24.03.2024 / 109 - 16151 / 0 min 34 sec / celkem 0 min 34 sec
+41 / 25.03.2024 / 90 - 16241 / 0 min 35 sec / celkem 0 min 35 sec
+42 / 26.03.2024 / 107 - 16348 / 0 min 36 sec / celkem 0 min 36 sec
+43 / 27.03.2024 / 95 - 16443 / 0 min 36 sec / celkem 0 min 36 sec
+44 / 28.03.2024 / 125 - 16568 / 0 min 37 sec / celkem 0 min 37 sec
+45 / 29.03.2024 / 105 - 16673 / 0 min 38 sec / celkem 0 min 38 sec
+46 / 30.03.2024 / 92 - 16765 / 0 min 38 sec / celkem 0 min 38 sec
+47 / 31.03.2024 / 76 - 16841 / 0 min 39 sec / celkem 0 min 39 sec
+48 / 01.04.2024 / 130 - 16971 / 0 min 40 sec / celkem 0 min 40 sec
+49 / 02.04.2024 / 87 - 17058 / 0 min 40 sec / celkem 0 min 40 sec
+50 / 03.04.2024 / 85 - 17143 / 0 min 41 sec / celkem 0 min 41 sec
+51 / 04.04.2024 / 89 - 17232 / 0 min 41 sec / celkem 0 min 41 sec
+52 / 05.04.2024 / 159 - 17391 / 0 min 42 sec / celkem 0 min 42 sec
+53 / 06.04.2024 / 126 - 17517 / 0 min 43 sec / celkem 0 min 43 sec
+54 / 07.04.2024 / 100 - 17617 / 0 min 44 sec / celkem 0 min 44 sec
+55 / 08.04.2024 / 84 - 17701 / 0 min 44 sec / celkem 0 min 44 sec
+56 / 09.04.2024 / 89 - 17790 / 0 min 45 sec / celkem 0 min 45 sec
+57 / 10.04.2024 / 118 - 17908 / 0 min 45 sec / celkem 0 min 45 sec
+58 / 11.04.2024 / 105 - 18013 / 0 min 46 sec / celkem 0 min 46 sec
+59 / 12.04.2024 / 188 - 18201 / 0 min 47 sec / celkem 0 min 47 sec
+60 / 13.04.2024 / 148 - 18349 / 0 min 48 sec / celkem 0 min 48 sec
+61 / 14.04.2024 / 107 - 18456 / 0 min 49 sec / celkem 0 min 49 sec
+62 / 15.04.2024 / 100 - 18556 / 0 min 50 sec / celkem 0 min 50 sec
+63 / 16.04.2024 / 125 - 18681 / 0 min 50 sec / celkem 0 min 50 sec
+64 / 17.04.2024 / 99 - 18780 / 0 min 51 sec / celkem 0 min 51 sec
+65 / 18.04.2024 / 135 - 18915 / 0 min 52 sec / celkem 0 min 52 sec
+66 / 19.04.2024 / 187 - 19102 / 0 min 53 sec / celkem 0 min 53 sec
+67 / 20.04.2024 / 171 - 19273 / 0 min 54 sec / celkem 0 min 54 sec
+68 / 21.04.2024 / 109 - 19382 / 0 min 54 sec / celkem 0 min 54 sec
+69 / 22.04.2024 / 101 - 19483 / 0 min 55 sec / celkem 0 min 55 sec
+70 / 23.04.2024 / 98 - 19581 / 0 min 55 sec / celkem 0 min 55 sec
+71 / 24.04.2024 / 116 - 19697 / 0 min 56 sec / celkem 0 min 56 sec
+72 / 25.04.2024 / 128 - 19825 / 0 min 57 sec / celkem 0 min 57 sec
+73 / 26.04.2024 / 158 - 19983 / 0 min 58 sec / celkem 0 min 58 sec
+74 / 27.04.2024 / 159 - 20142 / 0 min 59 sec / celkem 0 min 59 sec
+75 / 28.04.2024 / 116 - 20258 / 0 min 59 sec / celkem 0 min 59 sec
+76 / 29.04.2024 / 95 - 20353 / 1 min 0 sec / celkem 1 min 0 sec
+77 / 30.04.2024 / 117 - 20470 / 1 min 1 sec / celkem 1 min 1 sec
+78 / 01.05.2024 / 122 - 20592 / 1 min 2 sec / celkem 1 min 2 sec
+79 / 02.05.2024 / 102 - 20694 / 1 min 2 sec / celkem 1 min 2 sec
+80 / 03.05.2024 / 162 - 20856 / 1 min 3 sec / celkem 1 min 3 sec
+81 / 04.05.2024 / 134 - 20990 / 1 min 4 sec / celkem 1 min 4 sec
+82 / 05.05.2024 / 106 - 21096 / 1 min 5 sec / celkem 1 min 5 sec
+83 / 06.05.2024 / 73 - 21169 / 1 min 5 sec / celkem 1 min 5 sec
+84 / 07.05.2024 / 128 - 21297 / 1 min 6 sec / celkem 1 min 6 sec
+85 / 08.05.2024 / 152 - 21449 / 1 min 7 sec / celkem 1 min 7 sec
+86 / 09.05.2024 / 99 - 21548 / 1 min 8 sec / celkem 1 min 8 sec
+87 / 10.05.2024 / 124 - 21672 / 1 min 8 sec / celkem 1 min 8 sec
+88 / 11.05.2024 / 166 - 21838 / 1 min 10 sec / celkem 1 min 10 sec
+89 / 12.05.2024 / 100 - 21938 / 1 min 10 sec / celkem 1 min 10 sec
+90 / 13.05.2024 / 110 - 22048 / 1 min 11 sec / celkem 1 min 11 sec
+91 / 14.05.2024 / 100 - 22148 / 1 min 11 sec / celkem 1 min 11 sec
+92 / 15.05.2024 / 121 - 22269 / 1 min 12 sec / celkem 1 min 12 sec
+93 / 16.05.2024 / 92 - 22361 / 1 min 13 sec / celkem 1 min 13 sec
+94 / 17.05.2024 / 179 - 22540 / 1 min 14 sec / celkem 1 min 14 sec
+95 / 18.05.2024 / 170 - 22710 / 1 min 15 sec / celkem 1 min 15 sec
+96 / 19.05.2024 / 114 - 22824 / 1 min 15 sec / celkem 1 min 15 sec
+97 / 20.05.2024 / 105 - 22929 / 1 min 16 sec / celkem 1 min 16 sec
+98 / 21.05.2024 / 110 - 23039 / 1 min 17 sec / celkem 1 min 17 sec
+99 / 22.05.2024 / 109 - 23148 / 1 min 17 sec / celkem 1 min 17 sec
+100 / 23.05.2024 / 114 - 23262 / 1 min 18 sec / celkem 1 min 18 sec
+101 / 24.05.2024 / 140 - 23402 / 1 min 19 sec / celkem 1 min 19 sec
+102 / 25.05.2024 / 162 - 23564 / 1 min 20 sec / celkem 1 min 20 sec
+103 / 26.05.2024 / 134 - 23698 / 1 min 23 sec / celkem 1 min 23 sec
+104 / 27.05.2024 / 80 - 23778 / 1 min 24 sec / celkem 1 min 24 sec
+105 / 28.05.2024 / 94 - 23872 / 1 min 26 sec / celkem 1 min 26 sec
+106 / 29.05.2024 / 102 - 23974 / 1 min 26 sec / celkem 1 min 26 sec
+107 / 30.05.2024 / 110 - 24084 / 1 min 27 sec / celkem 1 min 27 sec
+108 / 31.05.2024 / 152 - 24236 / 1 min 28 sec / celkem 1 min 28 sec
+109 / 01.06.2024 / 165 - 24401 / 1 min 29 sec / celkem 1 min 29 sec
+110 / 02.06.2024 / 116 - 24517 / 1 min 30 sec / celkem 1 min 30 sec
+111 / 03.06.2024 / 81 - 24598 / 1 min 30 sec / celkem 1 min 30 sec
+112 / 04.06.2024 / 105 - 24703 / 1 min 31 sec / celkem 1 min 31 sec
+113 / 05.06.2024 / 94 - 24797 / 1 min 32 sec / celkem 1 min 32 sec
+114 / 06.06.2024 / 122 - 24919 / 1 min 32 sec / celkem 1 min 32 sec
+115 / 07.06.2024 / 138 - 25057 / 1 min 33 sec / celkem 1 min 33 sec
+116 / 08.06.2024 / 158 - 25215 / 1 min 34 sec / celkem 1 min 34 sec
+117 / 09.06.2024 / 122 - 25337 / 1 min 35 sec / celkem 1 min 35 sec
+118 / 10.06.2024 / 91 - 25428 / 1 min 36 sec / celkem 1 min 36 sec
+119 / 11.06.2024 / 106 - 25534 / 1 min 36 sec / celkem 1 min 36 sec
+120 / 12.06.2024 / 109 - 25643 / 1 min 37 sec / celkem 1 min 37 sec
+121 / 13.06.2024 / 124 - 25767 / 1 min 38 sec / celkem 1 min 38 sec
+122 / 14.06.2024 / 151 - 25918 / 1 min 39 sec / celkem 1 min 39 sec
+123 / 15.06.2024 / 160 - 26078 / 1 min 40 sec / celkem 1 min 40 sec
+124 / 16.06.2024 / 116 - 26194 / 1 min 40 sec / celkem 1 min 40 sec
+125 / 17.06.2024 / 75 - 26269 / 1 min 41 sec / celkem 1 min 41 sec
+126 / 18.06.2024 / 106 - 26375 / 1 min 41 sec / celkem 1 min 41 sec
+127 / 19.06.2024 / 117 - 26492 / 1 min 42 sec / celkem 1 min 42 sec
+128 / 20.06.2024 / 130 - 26622 / 1 min 43 sec / celkem 1 min 43 sec
+129 / 21.06.2024 / 153 - 26775 / 1 min 44 sec / celkem 1 min 44 sec
+130 / 22.06.2024 / 163 - 26938 / 1 min 45 sec / celkem 1 min 45 sec
+STOPKA LIMIT: 05.07.2026 21:34:25 | pobočka=Chodov | součet_průběžně=15791

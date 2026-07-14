@@ -1,0 +1,1382 @@
+// js/ajax_core.js * Verze: V5 * Aktualizace: 15.04.2026
+'use strict';
+
+/*
+ * AJAX core - spolecny pomocnik pro fetch a tri oddelene loadery:
+ * - dashboard
+ * - cards
+ * - restia
+ */
+
+(function (w) {
+  const CB_AJAX = w.CB_AJAX || (w.CB_AJAX = {});
+  const LOADER_MODES = ['dashboard', 'cards', 'restia'];
+
+  function createLoaderState() {
+    return {
+      loading: false,
+      timer: null,
+      startedAt: 0
+    };
+  }
+
+  const loaderState = {
+    dashboard: createLoaderState(),
+    cards: createLoaderState(),
+    restia: createLoaderState()
+  };
+
+  const AJAX_TRACE_URL = new URL('lib/ajax_trace.php', w.location.href).toString();
+
+  function normalizeLoaderMode(mode) {
+    const raw = String(mode || 'dashboard').trim();
+    return LOADER_MODES.indexOf(raw) !== -1 ? raw : 'dashboard';
+  }
+
+  function getLoaderState(mode) {
+    return loaderState[normalizeLoaderMode(mode)];
+  }
+
+  function traceAjax(event, data) {
+    try {
+      const payload = {
+        event: String(event || '').trim(),
+        data: data && typeof data === 'object' ? data : {},
+        href: String(w.location.href || ''),
+        path: String(w.location.pathname || ''),
+        ts: Date.now()
+      };
+      if (payload.event === '') {
+        return;
+      }
+      const body = JSON.stringify(payload);
+      if (w.navigator && typeof w.navigator.sendBeacon === 'function') {
+        w.navigator.sendBeacon(AJAX_TRACE_URL, new Blob([body], { type: 'application/json' }));
+        return;
+      }
+      w.fetch(AJAX_TRACE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        keepalive: true,
+        credentials: 'same-origin'
+      }).catch(() => {});
+    } catch (e) {}
+  }
+
+  function getNavigationEntry() {
+    const perf = w.performance || null;
+    if (!perf || typeof perf.getEntriesByType !== 'function') {
+      return null;
+    }
+    const navEntries = perf.getEntriesByType('navigation');
+    return Array.isArray(navEntries) && navEntries.length > 0 ? navEntries[0] : null;
+  }
+
+  function getNavigationSummary(stage) {
+    const perf = w.performance || null;
+    const nav = getNavigationEntry();
+    const legacy = perf && perf.timing ? perf.timing : null;
+    const navType = nav ? String(nav.type || '') : '';
+    const legacyNavType = perf && perf.navigation ? Number(perf.navigation.type || 0) : 0;
+    const isReload = navType === 'reload' || legacyNavType === 1;
+
+    return {
+      stage: String(stage || ''),
+      nav_type: navType || (legacyNavType === 1 ? 'reload' : ''),
+      is_reload: isReload ? 1 : 0,
+      dom_content_loaded_ms: nav && typeof nav.domContentLoadedEventEnd === 'number'
+        ? Math.max(0, Math.round(nav.domContentLoadedEventEnd))
+        : (legacy ? Math.max(0, Math.round(legacy.domContentLoadedEventEnd - legacy.navigationStart)) : 0),
+      load_event_ms: nav && typeof nav.loadEventEnd === 'number'
+        ? Math.max(0, Math.round(nav.loadEventEnd))
+        : (legacy ? Math.max(0, Math.round(legacy.loadEventEnd - legacy.navigationStart)) : 0),
+      dom_complete_ms: nav && typeof nav.domComplete === 'number'
+        ? Math.max(0, Math.round(nav.domComplete))
+        : (legacy ? Math.max(0, Math.round(legacy.domComplete - legacy.navigationStart)) : 0),
+      response_end_ms: nav && typeof nav.responseEnd === 'number'
+        ? Math.max(0, Math.round(nav.responseEnd))
+        : (legacy ? Math.max(0, Math.round(legacy.responseEnd - legacy.navigationStart)) : 0),
+      transfer_size: nav && typeof nav.transferSize === 'number' ? Math.max(0, Math.round(nav.transferSize)) : 0,
+      encoded_body_size: nav && typeof nav.encodedBodySize === 'number' ? Math.max(0, Math.round(nav.encodedBodySize)) : 0,
+      decoded_body_size: nav && typeof nav.decodedBodySize === 'number' ? Math.max(0, Math.round(nav.decodedBodySize)) : 0,
+      url: String(w.location.href || '')
+    };
+  }
+
+  function getSlowResources(limit) {
+    try {
+      const perf = w.performance || null;
+      if (!perf || typeof perf.getEntriesByType !== 'function') {
+        return [];
+      }
+      const entries = perf.getEntriesByType('resource');
+      if (!Array.isArray(entries) || entries.length === 0) {
+        return [];
+      }
+
+      const sorted = entries
+        .filter((entry) => entry && typeof entry === 'object')
+        .map((entry) => ({
+          name: String(entry.name || ''),
+          initiatorType: String(entry.initiatorType || ''),
+          duration_ms: Math.max(0, Math.round(Number(entry.duration || 0))),
+          start_ms: Math.max(0, Math.round(Number(entry.startTime || 0))),
+          end_ms: Math.max(0, Math.round(Number(entry.responseEnd || 0))),
+          transfer_size: Math.max(0, Math.round(Number(entry.transferSize || 0)))
+        }))
+        .sort((a, b) => b.duration_ms - a.duration_ms)
+        .slice(0, Math.max(0, Number(limit) || 10));
+
+      return sorted;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function traceLifecycle(stage) {
+    try {
+      if (w.__cbLifecycleTraceDone === true) {
+        return;
+      }
+      traceAjax('measure_lifecycle_' + String(stage || 'unknown'), {
+        nav: getNavigationSummary(stage),
+        slow_resources: getSlowResources(12),
+        ready_state: String(document.readyState || ''),
+        visibility_state: String(document.visibilityState || '')
+      });
+    } catch (e) {}
+  }
+
+  function markLifecycleDone() {
+    w.__cbLifecycleTraceDone = true;
+  }
+
+  function logFullPageReloadTiming() {
+    try {
+      if (w.__cbFullPageReloadTimingSent === true) {
+        return;
+      }
+
+      const nav = getNavigationEntry();
+      const perf = w.performance || null;
+      const navType = nav ? String(nav.type || '') : '';
+      const legacyNavType = perf && perf.navigation ? Number(perf.navigation.type || 0) : 0;
+      const isReload = navType === 'reload' || legacyNavType === 1;
+      if (!isReload) {
+        return;
+      }
+
+      const totalMs = Math.max(
+        0,
+        Math.round(
+          Number(
+            (nav && typeof nav.duration === 'number' ? nav.duration : 0)
+            || (nav && typeof nav.loadEventEnd === 'number' ? nav.loadEventEnd : 0)
+            || (nav && typeof nav.domComplete === 'number' ? nav.domComplete : 0)
+            || 0
+          )
+        )
+      );
+
+      w.__cbFullPageReloadTimingSent = true;
+      traceAjax('measure_full_page_reload', {
+        nav_type: navType || (legacyNavType === 1 ? 'reload' : ''),
+        total_ms: totalMs,
+        nav: getNavigationSummary('load'),
+        slow_resources: getSlowResources(20),
+        url: String(w.location.href || '')
+      });
+    } catch (e) {}
+  }
+
+  function traceDomReady(stage) {
+    try {
+      traceAjax('measure_dom_' + stage, {
+        nav: getNavigationSummary(stage),
+        slow_resources: getSlowResources(12),
+        ready_state: String(document.readyState || ''),
+        visibility_state: String(document.visibilityState || '')
+      });
+    } catch (e) {}
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('readystatechange', function () {
+      traceAjax('measure_readystatechange', {
+        state: String(document.readyState || ''),
+        nav: getNavigationSummary('readystatechange'),
+        slow_resources: getSlowResources(8)
+      });
+    });
+    document.addEventListener('DOMContentLoaded', function () {
+      traceDomReady('contentloaded');
+    }, { once: true });
+  } else {
+    traceDomReady('already_ready');
+  }
+
+  if (document.readyState === 'complete') {
+    traceDomReady('load_already_complete');
+    w.setTimeout(logFullPageReloadTiming, 0);
+  } else {
+    w.addEventListener('load', function () {
+      traceDomReady('load');
+      w.setTimeout(logFullPageReloadTiming, 0);
+    }, { once: true });
+  }
+
+  w.addEventListener('pageshow', function (event) {
+    traceAjax('measure_pageshow', {
+      persisted: event && event.persisted ? 1 : 0,
+      nav: getNavigationSummary('pageshow'),
+      slow_resources: getSlowResources(10)
+    });
+  });
+
+  w.addEventListener('pagehide', function (event) {
+    traceAjax('measure_pagehide', {
+      persisted: event && event.persisted ? 1 : 0,
+      nav: getNavigationSummary('pagehide')
+    });
+  });
+
+  w.addEventListener('beforeunload', function () {
+    traceAjax('measure_beforeunload', {
+      nav: getNavigationSummary('beforeunload')
+    });
+  });
+
+  document.addEventListener('visibilitychange', function () {
+    traceAjax('measure_visibilitychange', {
+      state: String(document.visibilityState || ''),
+      nav: getNavigationSummary('visibilitychange')
+    });
+  });
+
+  function getLoaderParts(mode) {
+    const loaderMode = normalizeLoaderMode(mode);
+    const loader = document.querySelector('.dash_loader[data-cb-loader-mode="' + loaderMode + '"]');
+    if (!(loader instanceof HTMLElement)) return null;
+    const box = loader.closest('.dash_box');
+    if (!(box instanceof HTMLElement)) return null;
+    const timer = loader.querySelector('[data-cb-loader-time]');
+    return {
+      mode: loaderMode,
+      box,
+      loader,
+      timer: (timer instanceof HTMLElement) ? timer : null
+    };
+  }
+
+  function getCardLoaderParts(card) {
+    if (!(card instanceof HTMLElement)) return null;
+    const loader = card.querySelector('.dash_card_loader[data-card-loader="1"]');
+    if (!(loader instanceof HTMLElement)) return null;
+    const timer = loader.querySelector('[data-cb-loader-time]');
+    const textNode = loader.querySelector('.dash_loader_text');
+    return {
+      card,
+      loader,
+      timer: (timer instanceof HTMLElement) ? timer : null,
+      textNode: (textNode instanceof HTMLElement) ? textNode : null
+    };
+  }
+
+  function stopCardLoaderTimer(loader) {
+    if (!(loader instanceof HTMLElement)) return;
+    const timerId = Number(loader.__cbCardLoaderTimerId || 0);
+    if (timerId) {
+      w.clearInterval(timerId);
+    }
+    loader.__cbCardLoaderTimerId = 0;
+    loader.__cbCardLoaderStartedAt = 0;
+    const parts = getCardLoaderParts(loader.closest('.dash_card'));
+    if (parts && parts.timer) {
+      parts.timer.textContent = '0.00 s';
+    }
+  }
+
+  function startCardLoaderTimer(loader) {
+    if (!(loader instanceof HTMLElement)) return;
+    stopCardLoaderTimer(loader);
+    loader.__cbCardLoaderStartedAt = (w.performance && typeof w.performance.now === 'function')
+      ? w.performance.now()
+      : Date.now();
+    const tick = () => {
+      const startedAt = Number(loader.__cbCardLoaderStartedAt || 0);
+      const parts = getCardLoaderParts(loader.closest('.dash_card'));
+      if (!startedAt || !parts || !parts.timer || !loader.isConnected) {
+        stopCardLoaderTimer(loader);
+        return;
+      }
+      const now = (w.performance && typeof w.performance.now === 'function') ? w.performance.now() : Date.now();
+      parts.timer.textContent = formatLoadingTime(now - startedAt);
+    };
+    tick();
+    loader.__cbCardLoaderTimerId = w.setInterval(tick, 50);
+  }
+
+  function setCardLoaderLoading(card, visible, text) {
+    const parts = getCardLoaderParts(card);
+    if (!parts) return;
+
+    if (!parts.loader.hasAttribute('data-card-loader-default-text')) {
+      parts.loader.setAttribute('data-card-loader-default-text', String(parts.textNode ? parts.textNode.textContent || '' : ''));
+    }
+
+    if (visible) {
+      const nextText = typeof text === 'string' && text.trim() !== ''
+        ? text.trim()
+        : String(parts.loader.getAttribute('data-card-loader-default-text') || 'Obnovuji data ...');
+      if (parts.textNode) {
+        parts.textNode.textContent = nextText;
+      }
+      parts.loader.classList.remove('is-hidden');
+      parts.loader.setAttribute('aria-hidden', 'false');
+      parts.loader.setAttribute('data-cb-loader-visible', '1');
+      startCardLoaderTimer(parts.loader);
+      return;
+    }
+
+    stopCardLoaderTimer(parts.loader);
+    parts.loader.classList.add('is-hidden');
+    parts.loader.setAttribute('aria-hidden', 'true');
+    parts.loader.removeAttribute('data-cb-loader-visible');
+  }
+
+  function anyLoaderActive() {
+    return LOADER_MODES.some((mode) => getLoaderState(mode).loading);
+  }
+
+  function syncDashBoxLoadingState() {
+    const parts = getLoaderParts('dashboard') || getLoaderParts('cards') || getLoaderParts('restia');
+    if (!parts) return;
+    if (anyLoaderActive()) {
+      parts.box.classList.add('is-dashboard-loading');
+      parts.box.setAttribute('aria-busy', 'true');
+    } else {
+      parts.box.classList.remove('is-dashboard-loading');
+      parts.box.removeAttribute('aria-busy');
+    }
+  }
+
+  function setLoaderVisibility(mode, visible) {
+    const loaderMode = normalizeLoaderMode(mode);
+    const loaders = Array.from(document.querySelectorAll('.dash_loader[data-cb-loader-mode]')).filter((el) => el instanceof HTMLElement);
+    if (loaders.length === 0) return;
+    if (visible) {
+      loaders.forEach((loader) => {
+        const isTarget = String(loader.getAttribute('data-cb-loader-mode') || '') === loaderMode;
+        if (isTarget) {
+          loader.classList.remove('is-hidden');
+          loader.setAttribute('aria-hidden', 'false');
+          loader.setAttribute('data-cb-loader-visible', '1');
+        } else {
+          loader.classList.add('is-hidden');
+          loader.setAttribute('aria-hidden', 'true');
+          loader.removeAttribute('data-cb-loader-visible');
+        }
+      });
+    } else {
+      loaders.forEach((loader) => {
+        if (String(loader.getAttribute('data-cb-loader-mode') || '') !== loaderMode) {
+          return;
+        }
+        loader.classList.add('is-hidden');
+        loader.setAttribute('aria-hidden', 'true');
+        loader.removeAttribute('data-cb-loader-visible');
+      });
+    }
+  }
+
+  function formatLoadingTime(ms) {
+    const sec = Math.max(0, Number(ms) || 0) / 1000;
+    return sec.toFixed(2) + ' s';
+  }
+
+  function stopLoaderTimer(mode) {
+    const state = getLoaderState(mode);
+    if (state.timer !== null) {
+      w.clearInterval(state.timer);
+      state.timer = null;
+    }
+    state.startedAt = 0;
+    const parts = getLoaderParts(mode);
+    if (parts && parts.timer) {
+      parts.timer.textContent = '0.00 s';
+    }
+  }
+
+  function setLoaderText(mode, text) {
+    const loaderMode = normalizeLoaderMode(mode);
+    const parts = getLoaderParts(loaderMode);
+    if (!parts || !parts.loader) return;
+
+    const textNode = parts.loader.querySelector('.dash_loader_text');
+    if (!(textNode instanceof HTMLElement)) return;
+
+    if (!parts.loader.hasAttribute('data-cb-loader-default-text')) {
+      parts.loader.setAttribute('data-cb-loader-default-text', String(textNode.textContent || ''));
+    }
+
+    if (typeof text === 'string' && text.trim() !== '') {
+      textNode.textContent = text.trim();
+      return;
+    }
+
+    const defaultText = String(parts.loader.getAttribute('data-cb-loader-default-text') || '');
+    textNode.textContent = defaultText;
+  }
+
+  function startLoaderTimer(mode) {
+    const loaderMode = normalizeLoaderMode(mode);
+    const state = getLoaderState(loaderMode);
+    stopLoaderTimer(loaderMode);
+    state.startedAt = (w.performance && typeof w.performance.now === 'function') ? w.performance.now() : Date.now();
+    const tick = function () {
+      const parts = getLoaderParts(loaderMode);
+      if (!parts || !parts.timer) return;
+      const now = (w.performance && typeof w.performance.now === 'function') ? w.performance.now() : Date.now();
+      parts.timer.textContent = formatLoadingTime(now - state.startedAt);
+    };
+    tick();
+    state.timer = w.setInterval(tick, 50);
+  }
+
+  function getElapsedMs(mode) {
+    const state = getLoaderState(mode);
+    if (!state.startedAt) return 0;
+    const now = (w.performance && typeof w.performance.now === 'function') ? w.performance.now() : Date.now();
+    return Math.max(0, now - state.startedAt);
+  }
+
+  function setLoaderLoading(mode, on, text) {
+    const loaderMode = normalizeLoaderMode(mode);
+    const state = getLoaderState(loaderMode);
+    const nextOn = !!on;
+    traceAjax('loader_state', {
+      mode: loaderMode,
+      on: nextOn ? 1 : 0,
+      active: anyLoaderActive() ? 1 : 0
+    });
+
+    if (nextOn) {
+      if (!state.loading) {
+        startLoaderTimer(loaderMode);
+      }
+      state.loading = true;
+      setLoaderText(loaderMode, typeof text === 'string' ? text : '');
+      setLoaderVisibility(loaderMode, true);
+      syncDashBoxLoadingState();
+      return;
+    }
+
+    state.loading = false;
+    stopLoaderTimer(loaderMode);
+    setLoaderText(loaderMode, '');
+    setLoaderVisibility(loaderMode, false);
+    syncDashBoxLoadingState();
+  }
+
+  function getRestiaImportParts() {
+    const form = document.getElementById('cb_restia_import_form');
+    if (!(form instanceof HTMLFormElement)) return null;
+    const actionField = document.getElementById('cb_action_field');
+    return {
+      form,
+      actionField: (actionField instanceof HTMLInputElement) ? actionField : null,
+      pauseMs: parseInt(String(form.getAttribute('data-restia-pause-ms') || '0'), 10) || 0
+    };
+  }
+
+  function initRestiaImportLoader() {
+    const parts = getRestiaImportParts();
+    if (!parts) {
+      traceAjax('restia_init_missing_form', {});
+      setLoaderLoading('restia', false);
+      return;
+    }
+
+    const form = parts.form;
+    const actionField = parts.actionField;
+    traceAjax('restia_init', {
+      pauseMs: parts.pauseMs,
+      bound: form.getAttribute('data-restia-loader-bound') === '1' ? 1 : 0
+    });
+
+    if (form.getAttribute('data-restia-loader-bound') === '1') {
+      setLoaderLoading('restia', false);
+      return;
+    }
+    form.setAttribute('data-restia-loader-bound', '1');
+
+    function startLoading() {
+      traceAjax('restia_start', {
+        pauseMs: parts.pauseMs
+      });
+      setLoaderLoading('restia', true);
+    }
+
+    function submitAjax(targetForm) {
+      if (!(targetForm instanceof HTMLFormElement)) {
+        return;
+      }
+      traceAjax('restia_submit', {
+        formId: String(targetForm.id || ''),
+        action: String(targetForm.action || ''),
+        actionValue: actionField ? String(actionField.value || '') : ''
+      });
+      CB_AJAX.submitFormAndRefresh(targetForm, {
+        showLoading: false,
+        loaderMode: 'restia',
+        refreshMode: 'mini'
+      }).catch((err) => {
+        traceAjax('restia_submit_error', {
+          message: String((err && err.message) ? err.message : 'Import selhal.')
+        });
+        setLoaderLoading('restia', false);
+        const msg = String((err && err.message) ? err.message : 'Import selhal.');
+        w.alert(msg);
+      });
+    }
+
+    form.addEventListener('submit', function (event) {
+      const action = actionField ? String(actionField.value || '') : '';
+      if (action === 'start' || action === 'continue_yes' || action === 'auto_next') {
+        event.preventDefault();
+        event.stopPropagation();
+        startLoading();
+        submitAjax(form);
+      }
+    }, { capture: true });
+
+    setLoaderLoading('restia', false);
+  }
+
+  CB_AJAX.fetchText = function fetchText(url, headers, signal) {
+    const u = String(url || '');
+    const h = (headers && typeof headers === 'object') ? headers : {};
+
+    return fetch(u, {
+      method: 'GET',
+      headers: h,
+      signal: signal
+    }).then((res) => {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.text();
+    });
+  };
+
+  function fetchRestiaState() {
+    const reqUrl = String(w.location.href || 'index.php');
+    return fetch(reqUrl, {
+      method: 'GET',
+      headers: { 'X-Comeback-Restia-State': '1' },
+      credentials: 'same-origin'
+    }).then((res) => {
+      if (!res.ok) {
+        throw new Error('HTTP ' + res.status);
+      }
+      return res.json();
+    });
+  }
+
+  function triggerRestiaCheck(options) {
+    const opts = (options && typeof options === 'object') ? options : {};
+    const reqUrl = String(w.location.href || 'index.php');
+    const headers = {
+      'X-Comeback-Restia-Trigger': '1',
+      'Accept': 'application/json'
+    };
+    if (opts.forceRestia === true) {
+      headers['X-Comeback-Restia-Force'] = '1';
+    }
+
+    return fetch(reqUrl, {
+      method: 'POST',
+      headers: headers,
+      credentials: 'same-origin'
+    }).then((res) => {
+      if (!res.ok) {
+        throw new Error('HTTP ' + res.status);
+      }
+      return res.json();
+    });
+  }
+
+  function waitForRestiaImportFinish(options) {
+    const opts = (options && typeof options === 'object') ? options : {};
+    const timeoutMs = Math.max(1000, Number(opts.timeoutMs) || 30000);
+    const pollMs = Math.max(200, Number(opts.pollMs) || 500);
+    const reqUrl = String(w.location.href || 'index.php');
+    const startedAt = Date.now();
+
+    traceAjax('restia_wait_start', {
+      timeoutMs: timeoutMs,
+      pollMs: pollMs,
+      url: reqUrl
+    });
+
+    return new Promise((resolve, reject) => {
+      function check() {
+        fetchRestiaState()
+          .then((state) => {
+            const running = !!(state && Number(state.active || 0) === 1);
+            traceAjax('restia_wait_tick', {
+              running: running ? 1 : 0,
+              zapisy: state && typeof state.zapisy !== 'undefined' ? Number(state.zapisy || 0) : 0,
+              aktualizace: state && typeof state.aktualizace !== 'undefined' ? Number(state.aktualizace || 0) : 0,
+              ignore: state && typeof state.ignore !== 'undefined' ? Number(state.ignore || 0) : 0,
+              elapsed_ms: Math.max(0, Date.now() - startedAt)
+            });
+            if (!running) {
+              traceAjax('restia_wait_done', {
+                zapisy: state && typeof state.zapisy !== 'undefined' ? Number(state.zapisy || 0) : 0,
+                aktualizace: state && typeof state.aktualizace !== 'undefined' ? Number(state.aktualizace || 0) : 0,
+                elapsed_ms: Math.max(0, Date.now() - startedAt)
+              });
+              resolve();
+              return;
+            }
+            if ((Date.now() - startedAt) >= timeoutMs) {
+              reject(new Error('Restia aktualizace bezi prilis dlouho.'));
+              return;
+            }
+            w.setTimeout(check, pollMs);
+          })
+          .catch((err) => {
+            reject(err);
+          });
+      }
+
+      check();
+    });
+  }
+
+  function hideStartupLoader() {
+    if (w.CB_LOADER_SHOW && typeof w.CB_LOADER_SHOW.hide === 'function') {
+      w.CB_LOADER_SHOW.hide();
+      return;
+    }
+    const root = document.getElementById('cb-startup-loader');
+    if (root && root.parentNode) {
+      root.parentNode.removeChild(root);
+    }
+  }
+
+  CB_AJAX.runRestiaAndRefreshOpCards = function runRestiaAndRefreshOpCards(options) {
+    const opts = (options && typeof options === 'object') ? options : {};
+    const loaderMode = normalizeLoaderMode(opts.loaderMode || 'dashboard');
+    const keepLoading = !!opts.keepLoading;
+    const showLoading = opts.showLoading !== false;
+    const triggerRestia = opts.triggerRestia !== false;
+    const hideStartup = !!opts.hideStartupLoader;
+    const forceRestia = !!opts.forceRestia;
+    const refreshOpCards = opts.refreshOpCards !== false;
+    const timeoutMs = Math.max(1000, Number(opts.timeoutMs) || 180000);
+    const pollMs = Math.max(200, Number(opts.pollMs) || 500);
+
+    if (showLoading) {
+      setLoaderLoading(loaderMode, true, 'Aktualizuji data ...');
+    }
+
+    const stateJob = triggerRestia ? triggerRestiaCheck({ forceRestia: forceRestia }) : fetchRestiaState();
+    return stateJob.then((state) => {
+      const isRunning = !!(state && Number(state.active || 0) === 1);
+      if (!isRunning && triggerRestia === false && hideStartup !== true) {
+        return { ok: true, skipped: true };
+      }
+
+      const waitJob = isRunning
+        ? waitForRestiaImportFinish({
+            timeoutMs: timeoutMs,
+            pollMs: pollMs
+          })
+        : Promise.resolve();
+
+      return waitJob.then(() => {
+        if (!refreshOpCards) {
+          return { ok: true, refreshed: false };
+        }
+        return CB_AJAX.refreshDashboardRefreshOpCards({
+          force: true,
+          loaderMode: loaderMode
+        });
+      });
+    }).finally(() => {
+      if (!keepLoading && showLoading) {
+        setLoaderLoading(loaderMode, false);
+      }
+      if (hideStartup) {
+        hideStartupLoader();
+      }
+    });
+  };
+
+  CB_AJAX.setDashboardLoading = function setDashboardLoadingPublic(on, mode, text) {
+    setLoaderLoading(mode || 'dashboard', !!on, text);
+  };
+
+  CB_AJAX.trace = function tracePublic(event, data) {
+    traceAjax(event, data);
+  };
+
+  CB_AJAX.submitFormAndRefresh = function submitFormAndRefreshPublic(form, options) {
+    const targetForm = (form instanceof HTMLFormElement) ? form : null;
+    if (!targetForm) {
+      return Promise.reject(new Error('Formular nebyl nalezen.'));
+    }
+
+    const opts = (options && typeof options === 'object') ? options : {};
+    const loaderMode = normalizeLoaderMode(opts.loaderMode || 'dashboard');
+    const refreshMode = String(opts.refreshMode || 'dashboard').trim() || 'dashboard';
+    const keepLoading = !!opts.keepLoading;
+    const body = new FormData(targetForm);
+    const reqUrl = String(targetForm.action || w.location.href || 'index.php');
+    const method = String(targetForm.method || 'POST').toUpperCase();
+    traceAjax('submit_start', {
+      mode: loaderMode,
+      refreshMode: refreshMode,
+      formId: String(targetForm.id || ''),
+      action: reqUrl,
+      method: method
+    });
+
+    if (opts.showLoading !== false) {
+      setLoaderLoading(loaderMode, true);
+    }
+
+    return fetch(reqUrl, {
+      method: method,
+      body: body,
+      credentials: 'same-origin',
+      redirect: 'follow'
+    }).then((res) => {
+      if (!res.ok) {
+        throw new Error('HTTP ' + res.status);
+      }
+      return res.text();
+    }).then(() => {
+      if (refreshMode === 'mini') {
+        if (loaderMode === 'restia') {
+          return waitForRestiaImportFinish({
+            timeoutMs: 180000,
+            pollMs: 500
+          }).then(() => {
+            return CB_AJAX.refreshDashboardMini({
+              force: true,
+              keepLoading: keepLoading,
+              loaderMode: loaderMode
+            });
+          });
+        }
+
+        return CB_AJAX.refreshDashboardMini({
+          force: true,
+          keepLoading: keepLoading,
+          loaderMode: loaderMode
+        });
+      }
+
+      return CB_AJAX.refreshDashboard({
+        force: true,
+        keepLoading: keepLoading,
+        loaderMode: refreshMode
+      });
+    }).then(() => {
+      traceAjax('submit_done', {
+        mode: loaderMode,
+        refreshMode: refreshMode
+      });
+    }).catch((err) => {
+      traceAjax('submit_error', {
+        mode: loaderMode,
+        refreshMode: refreshMode,
+        message: String((err && err.message) ? err.message : 'submit selhal')
+      });
+      throw err;
+    });
+  };
+
+  CB_AJAX.runAfterDashboardLoading = function runAfterDashboardLoading(action, minVisibleMs) {
+    if (typeof action !== 'function') return;
+    const minMs = Math.max(0, Number(minVisibleMs) || 0);
+    if (!anyLoaderActive() || minMs <= 0) {
+      action();
+      return;
+    }
+    const activeMode = LOADER_MODES.find((mode) => getLoaderState(mode).loading) || 'dashboard';
+    const waitMs = Math.max(0, minMs - getElapsedMs(activeMode));
+    w.setTimeout(action, waitMs);
+  };
+
+  CB_AJAX.refreshDashboard = function refreshDashboard(options) {
+    const opts = (options && typeof options === 'object') ? options : {};
+    const force = !!opts.force;
+    const keepLoading = !!opts.keepLoading;
+    const loaderMode = normalizeLoaderMode(opts.loaderMode || 'dashboard');
+    const refreshStartedAt = (w.performance && typeof w.performance.now === 'function') ? w.performance.now() : Date.now();
+
+    if (getLoaderState(loaderMode).loading && !force) {
+      return Promise.resolve({ ok: false, busy: true });
+    }
+
+    const parts = getLoaderParts(loaderMode);
+    if (!parts) {
+      traceAjax('refresh_missing_parts', {
+        mode: loaderMode
+      });
+      return Promise.reject(new Error('Dashboard container nebyl nalezen.'));
+    }
+    if (!force) {
+      setLoaderLoading(loaderMode, true);
+    }
+
+    const reqUrl = String(w.location.href || 'index.php');
+    traceAjax('refresh_start', {
+      mode: loaderMode,
+      force: force ? 1 : 0,
+      keepLoading: keepLoading ? 1 : 0,
+      url: reqUrl
+    });
+    traceAjax('measure_refresh_start', {
+      mode: loaderMode,
+      force: force ? 1 : 0,
+      keepLoading: keepLoading ? 1 : 0,
+      url: reqUrl
+    });
+    return CB_AJAX.fetchText(reqUrl, { 'X-Comeback-Partial': '1' })
+      .then((html) => {
+        parts.box.querySelector('[data-cb-dash-content="1"]').innerHTML = String(html || '');
+        document.dispatchEvent(new CustomEvent('cb:main-swapped'));
+        traceAjax('refresh_done', {
+          mode: loaderMode
+        });
+        traceAjax('measure_refresh_done', {
+          mode: loaderMode,
+          total_ms: Math.max(0, Math.round(((w.performance && typeof w.performance.now === 'function') ? w.performance.now() : Date.now()) - refreshStartedAt)),
+          url: reqUrl
+        });
+        return { ok: true };
+      }).catch((err) => {
+        traceAjax('refresh_error', {
+          mode: loaderMode,
+          message: String((err && err.message) ? err.message : 'refresh selhal')
+        });
+        traceAjax('measure_refresh_error', {
+          mode: loaderMode,
+          total_ms: Math.max(0, Math.round(((w.performance && typeof w.performance.now === 'function') ? w.performance.now() : Date.now()) - refreshStartedAt)),
+          message: String((err && err.message) ? err.message : 'refresh selhal'),
+          url: reqUrl
+        });
+        throw err;
+      })
+      .finally(() => {
+        if (!keepLoading) {
+          setLoaderLoading(loaderMode, false);
+        }
+      });
+  };
+
+  CB_AJAX.refreshDashboardMini = function refreshDashboardMini(options) {
+    const opts = (options && typeof options === 'object') ? options : {};
+    const force = !!opts.force;
+    const keepLoading = !!opts.keepLoading;
+    const loaderMode = normalizeLoaderMode(opts.loaderMode || 'dashboard');
+    const refreshStartedAt = (w.performance && typeof w.performance.now === 'function') ? w.performance.now() : Date.now();
+
+    if (getLoaderState(loaderMode).loading && !force) {
+      return Promise.resolve({ ok: false, busy: true });
+    }
+
+    const parts = getLoaderParts(loaderMode);
+    if (!parts) {
+      traceAjax('refresh_mini_missing_parts', {
+        mode: loaderMode
+      });
+      return Promise.reject(new Error('Dashboard container nebyl nalezen.'));
+    }
+    if (!force) {
+      setLoaderLoading(loaderMode, true);
+    }
+
+    const reqUrl = String(w.location.href || 'index.php');
+    traceAjax('refresh_mini_start', {
+      mode: loaderMode,
+      force: force ? 1 : 0,
+      keepLoading: keepLoading ? 1 : 0,
+      url: reqUrl
+    });
+    traceAjax('measure_refresh_mini_start', {
+      mode: loaderMode,
+      force: force ? 1 : 0,
+      keepLoading: keepLoading ? 1 : 0,
+      url: reqUrl
+    });
+
+    return CB_AJAX.fetchText(reqUrl, { 'X-Comeback-Partial': '1' })
+      .then((html) => {
+        const responseWrap = document.createElement('div');
+        responseWrap.innerHTML = String(html || '').trim();
+
+        const currentContent = parts.box.querySelector('[data-cb-dash-content="1"]');
+        const nextContent = responseWrap.querySelector('[data-cb-dash-content="1"]');
+        if (!(currentContent instanceof HTMLElement) || !(nextContent instanceof HTMLElement)) {
+          throw new Error('Dashboard obsah nebyl nalezen.');
+        }
+
+        const currentGrid = currentContent.querySelector('.dash_grid[data-login-id]');
+        const nextGrid = nextContent.querySelector('.dash_grid[data-login-id]');
+        if (!(currentGrid instanceof HTMLElement) || !(nextGrid instanceof HTMLElement)) {
+          throw new Error('Dashboard grid nebyl nalezen.');
+        }
+
+        const updatedCards = [];
+        const currentCards = Array.from(currentGrid.querySelectorAll('[data-cb-dash-card="1"]')).filter((el) => el instanceof HTMLElement);
+
+        currentCards.forEach((currentCard) => {
+          const currentShell = currentCard.querySelector('.card_shell[data-card-id]');
+          if (!(currentShell instanceof HTMLElement)) {
+            return;
+          }
+
+          const cardId = parseInt(String(currentShell.getAttribute('data-card-id') || '0'), 10);
+          if (!Number.isFinite(cardId) || cardId <= 0) {
+            return;
+          }
+
+          const nextShell = nextGrid.querySelector('.card_shell[data-card-id="' + String(cardId).replace(/"/g, '') + '"]');
+          if (!(nextShell instanceof HTMLElement)) {
+            return;
+          }
+
+          const currentCompact = currentCard.querySelector('[data-card-compact]');
+          const nextCompact = nextShell.closest('[data-cb-dash-card="1"]');
+          const nextCompactNode = nextCompact ? nextCompact.querySelector('[data-card-compact]') : null;
+          if (currentCompact instanceof HTMLElement && nextCompactNode instanceof HTMLElement) {
+            currentCompact.innerHTML = String(nextCompactNode.innerHTML || '');
+          }
+
+          updatedCards.push(currentCard);
+        });
+
+        if (updatedCards.length === 0) {
+          throw new Error('Zadny obsah k aktualizaci nebyl nalezen.');
+        }
+
+        document.dispatchEvent(new CustomEvent('cb:dashboard-mini-swapped', {
+          detail: {
+            cards: updatedCards,
+            url: reqUrl
+          }
+        }));
+
+        traceAjax('refresh_mini_done', {
+          mode: loaderMode,
+          cards: updatedCards.length
+        });
+        traceAjax('measure_refresh_mini_done', {
+          mode: loaderMode,
+          cards: updatedCards.length,
+          total_ms: Math.max(0, Math.round(((w.performance && typeof w.performance.now === 'function') ? w.performance.now() : Date.now()) - refreshStartedAt)),
+          url: reqUrl
+        });
+        return { ok: true, cards: updatedCards.length };
+      }).catch((err) => {
+        traceAjax('refresh_mini_error', {
+          mode: loaderMode,
+          message: String((err && err.message) ? err.message : 'refresh mini selhal')
+        });
+        traceAjax('measure_refresh_mini_error', {
+          mode: loaderMode,
+          total_ms: Math.max(0, Math.round(((w.performance && typeof w.performance.now === 'function') ? w.performance.now() : Date.now()) - refreshStartedAt)),
+          message: String((err && err.message) ? err.message : 'refresh mini selhal'),
+          url: reqUrl
+        });
+        throw err;
+      })
+      .finally(() => {
+        if (!keepLoading) {
+          setLoaderLoading(loaderMode, false);
+        }
+      });
+  };
+
+  CB_AJAX.refreshDashboardRefreshOpCards = function refreshDashboardRefreshOpCards(options) {
+    const opts = (options && typeof options === 'object') ? options : {};
+    const force = !!opts.force;
+    const loaderMode = normalizeLoaderMode(opts.loaderMode || 'cards');
+    const refreshStartedAt = (w.performance && typeof w.performance.now === 'function') ? w.performance.now() : Date.now();
+    const parts = getLoaderParts('dashboard') || getLoaderParts('cards') || getLoaderParts('restia');
+
+    if (!parts) {
+      traceAjax('refresh_refresh_op_missing_parts', {
+        mode: loaderMode
+      });
+      return Promise.reject(new Error('Dashboard container nebyl nalezen.'));
+    }
+
+    const currentContent = parts.box.querySelector('[data-cb-dash-content="1"]');
+    const currentGrid = currentContent instanceof HTMLElement ? currentContent.querySelector('.dash_grid[data-login-id]') : null;
+    if (!(currentGrid instanceof HTMLElement)) {
+      traceAjax('refresh_refresh_op_missing_grid', {
+        mode: loaderMode
+      });
+      return Promise.reject(new Error('Dashboard grid nebyl nalezen.'));
+    }
+
+    const cards = Array.from(
+      currentGrid.querySelectorAll('[data-cb-dash-card="1"][data-card-refresh-op="1"]')
+    ).filter((el) => {
+      if (!(el instanceof HTMLElement)) {
+        return false;
+      }
+      const shell = el.querySelector('.card_shell[data-card-id]');
+      if (!(shell instanceof HTMLElement)) {
+        return false;
+      }
+      return String(shell.getAttribute('data-card-mode') || 'mini').trim() !== 'nano';
+    });
+
+    traceAjax('refresh_refresh_op_start', {
+      mode: loaderMode,
+      force: force ? 1 : 0,
+      cards: cards.length,
+      url: String(w.location.href || '')
+    });
+
+    const kpiJob = fetch(String(w.location.href || 'index.php'), {
+      method: 'GET',
+      headers: {
+        'X-Comeback-KPI': '1',
+        'Accept': 'text/html'
+      },
+      credentials: 'same-origin'
+    }).then((res) => {
+      return res.text().then((html) => {
+        if (!res.ok) {
+          throw new Error('Obnoveni KPI selhalo.');
+        }
+
+        const raw = String(html || '').trim();
+        if (raw === '') {
+          throw new Error('KPI ma prazdny obsah.');
+        }
+
+        const wrap = document.createElement('div');
+        wrap.innerHTML = raw;
+
+        const nextKpi = wrap.querySelector('[data-cb-head-kpi="1"]');
+        const currentKpi = document.querySelector('[data-cb-head-kpi="1"]');
+        if (!(nextKpi instanceof HTMLElement) || !(currentKpi instanceof HTMLElement)) {
+          throw new Error('KPI nebylo nalezeno.');
+        }
+
+        currentKpi.replaceWith(nextKpi);
+        return { ok: true };
+      });
+    });
+
+    const jobs = cards.map((currentCard) => {
+      const currentShell = currentCard.querySelector('.card_shell[data-card-id]');
+      if (!(currentShell instanceof HTMLElement)) {
+        return Promise.resolve({ ok: false, skipped: true });
+      }
+
+      const cardId = parseInt(String(currentShell.getAttribute('data-card-id') || '0'), 10);
+      if (!Number.isFinite(cardId) || cardId <= 0) {
+        return Promise.resolve({ ok: false, skipped: true });
+      }
+
+      const loadMax = currentCard.classList.contains('is-expanded');
+      return CB_AJAX.refreshCard(cardId, {
+        force: true,
+        keepLoading: false,
+        showLoading: false,
+        loaderMode: loaderMode,
+        loaderText: 'Obnovuji data ...',
+        loadMax: loadMax
+      });
+    });
+
+    return Promise.allSettled([kpiJob].concat(jobs)).then((results) => {
+      const errors = [];
+      let count = 0;
+      results.forEach((result, index) => {
+        if (result && result.status === 'fulfilled' && result.value && result.value.ok !== false) {
+          if (index > 0) {
+            count += 1;
+          }
+          return;
+        }
+        if (result && result.status === 'rejected') {
+          errors.push(result.reason);
+        }
+      });
+
+      if (errors.length > 0) {
+        const err = errors[0];
+        const msg = String((err && err.message) ? err.message : 'Přenačtení karet selhalo.');
+        traceAjax('refresh_refresh_op_error', {
+          mode: loaderMode,
+          cards: count,
+          message: msg
+        });
+        traceAjax('measure_refresh_refresh_op_error', {
+          mode: loaderMode,
+          cards: count,
+          total_ms: Math.max(0, Math.round(((w.performance && typeof w.performance.now === 'function') ? w.performance.now() : Date.now()) - refreshStartedAt)),
+          message: msg,
+          url: String(w.location.href || '')
+        });
+        throw err instanceof Error ? err : new Error(msg);
+      }
+
+      traceAjax('refresh_refresh_op_done', {
+        mode: loaderMode,
+        cards: count
+      });
+      traceAjax('measure_refresh_refresh_op_done', {
+        mode: loaderMode,
+        cards: count,
+        total_ms: Math.max(0, Math.round(((w.performance && typeof w.performance.now === 'function') ? w.performance.now() : Date.now()) - refreshStartedAt)),
+        url: String(w.location.href || '')
+      });
+      return { ok: true, cards: count };
+    });
+  };
+
+  CB_AJAX.refreshCard = function refreshCard(cardId, options) {
+    const id = parseInt(String(cardId || '0'), 10);
+    const opts = (options && typeof options === 'object') ? options : {};
+    const force = !!opts.force;
+    const keepLoading = !!opts.keepLoading;
+    const showLoading = opts.showLoading !== false;
+    const loadMax = !!opts.loadMax;
+    const loaderMode = normalizeLoaderMode(opts.loaderMode || 'cards');
+    const loaderText = typeof opts.loaderText === 'string' ? opts.loaderText : 'Obnovuji data ...';
+
+    if (!Number.isFinite(id) || id <= 0) {
+      return Promise.reject(new Error('ID karty nebylo nalezeno.'));
+    }
+
+    if (getLoaderState(loaderMode).loading && !force) {
+      return Promise.resolve({ ok: false, busy: true });
+    }
+
+    const dashCard = document.querySelector('[data-cb-dash-card="1"] .card_shell[data-card-id="' + String(id) + '"]');
+    const currentShell = dashCard instanceof HTMLElement ? dashCard : null;
+    const currentCard = currentShell ? currentShell.closest('[data-cb-dash-card="1"]') : null;
+
+    if (!(currentCard instanceof HTMLElement)) {
+      traceAjax('refresh_card_missing', {
+        mode: loaderMode,
+        card_id: id
+      });
+      return Promise.reject(new Error('Karta nebyla nalezena.'));
+    }
+
+    if (showLoading) {
+      setCardLoaderLoading(currentCard, true, loaderText);
+    }
+    currentCard.classList.add('is-card-refreshing');
+    currentCard.setAttribute('aria-busy', 'true');
+
+    const reqUrl = 'index.php?cb_card_id=' + encodeURIComponent(String(id)) + (loadMax ? '&cb_load_max=1' : '');
+    traceAjax('refresh_card_start', {
+      mode: loaderMode,
+      force: force ? 1 : 0,
+      keepLoading: keepLoading ? 1 : 0,
+      loadMax: loadMax ? 1 : 0,
+      card_id: id,
+      url: reqUrl
+    });
+
+    return fetch(reqUrl, {
+      method: 'GET',
+      headers: {
+        'X-Comeback-Card': '1',
+        'Accept': 'application/json'
+      },
+      credentials: 'same-origin'
+    }).then((res) => {
+      return res.text().then((text) => {
+        const raw = String(text || '').trim();
+        let data = null;
+        if (raw !== '') {
+          try {
+            data = JSON.parse(raw);
+          } catch (e) {
+            data = null;
+          }
+        }
+
+        if (!res.ok) {
+          throw new Error(String((data && data.err) ? data.err : 'refresh card selhal'));
+        }
+        if (!data || typeof data !== 'object' || typeof data.cardHtml !== 'string') {
+          throw new Error('Nova karta ma neplatny obsah.');
+        }
+
+        const wrap = document.createElement('div');
+        wrap.innerHTML = String(data.cardHtml || '').trim();
+        const nextCard = wrap.firstElementChild;
+
+        if (!(nextCard instanceof HTMLElement)) {
+          throw new Error('Nova karta ma neplatny obsah.');
+        }
+
+        currentCard.replaceWith(nextCard);
+        document.dispatchEvent(new CustomEvent('cb:card-swapped', {
+          detail: {
+            cardId: id,
+            card: nextCard
+          }
+        }));
+        traceAjax('refresh_card_done', {
+          mode: loaderMode,
+          loadMax: loadMax ? 1 : 0,
+          card_id: id
+        });
+        return { ok: true, cardId: id, card: nextCard };
+      });
+    }).catch((err) => {
+        traceAjax('refresh_card_error', {
+          mode: loaderMode,
+          loadMax: loadMax ? 1 : 0,
+          card_id: id,
+          message: String((err && err.message) ? err.message : 'refresh card selhal')
+        });
+        throw err;
+      }).finally(() => {
+        currentCard.classList.remove('is-card-refreshing');
+        currentCard.removeAttribute('aria-busy');
+        if (showLoading) {
+          setCardLoaderLoading(currentCard, false);
+        }
+      });
+  };
+
+  CB_AJAX.loadCardMaxContent = function loadCardMaxContent(cardId, options) {
+    const id = parseInt(String(cardId || '0'), 10);
+    const opts = (options && typeof options === 'object') ? options : {};
+    const loaderMode = normalizeLoaderMode(opts.loaderMode || 'cards');
+
+    if (!Number.isFinite(id) || id <= 0) {
+      return Promise.reject(new Error('ID karty nebylo nalezeno.'));
+    }
+
+    const reqUrl = 'index.php?cb_card_id=' + encodeURIComponent(String(id));
+    traceAjax('load_card_max_start', {
+      mode: loaderMode,
+      card_id: id,
+      url: reqUrl
+    });
+
+    return fetch(reqUrl, {
+      method: 'GET',
+      headers: {
+        'X-Comeback-Card-Max': '1',
+        'Accept': 'application/json'
+      },
+      credentials: 'same-origin'
+    }).then((res) => {
+      return res.text().then((text) => {
+        const raw = String(text || '').trim();
+        let data = null;
+        if (raw !== '') {
+          try {
+            data = JSON.parse(raw);
+          } catch (e) {
+            data = null;
+          }
+        }
+
+        if (!res.ok) {
+          throw new Error(String((data && data.err) ? data.err : 'nacteni max obsahu selhalo'));
+        }
+        if (!data || typeof data !== 'object' || typeof data.maxHtml !== 'string') {
+          throw new Error('Max obsah ma neplatny format.');
+        }
+
+        traceAjax('load_card_max_done', {
+          mode: loaderMode,
+          card_id: id
+        });
+        return { ok: true, cardId: id, maxHtml: data.maxHtml };
+      });
+    }).catch((err) => {
+      traceAjax('load_card_max_error', {
+        mode: loaderMode,
+        card_id: id,
+        message: String((err && err.message) ? err.message : 'nacteni max obsahu selhalo')
+      });
+      throw err;
+    });
+  };
+
+  function initStartupRestiaRefresh() {
+    const root = document.getElementById('cb-startup-loader');
+    if (!(root instanceof HTMLElement)) {
+      return;
+    }
+    if (String(root.getAttribute('data-cb-startup-hold') || '') !== '1') {
+      return;
+    }
+    if (root.getAttribute('data-cb-restia-refresh-init') === '1') {
+      return;
+    }
+    root.setAttribute('data-cb-restia-refresh-init', '1');
+    const triggerRestia = String(root.getAttribute('data-cb-restia-trigger') || '') === '1';
+    const restiaText = String(root.getAttribute('data-cb-restia-text') || 'Aktualizuji objednávky ...').trim();
+    const nextText = String(root.getAttribute('data-cb-startup-next-text') || 'Inicializace systému ...').trim();
+    if (restiaText !== '' && w.CB_LOADER_SHOW && typeof w.CB_LOADER_SHOW.setText === 'function') {
+      w.CB_LOADER_SHOW.setText(restiaText);
+    }
+
+    const stateJob = triggerRestia ? triggerRestiaCheck() : fetchRestiaState();
+    stateJob.then((state) => {
+      const isRunning = !!(state && Number(state.active || 0) === 1);
+      const waitJob = isRunning
+        ? waitForRestiaImportFinish({
+            timeoutMs: 180000,
+            pollMs: 500
+          })
+        : Promise.resolve();
+
+      return waitJob.then(() => {
+        if (nextText !== '' && w.CB_LOADER_SHOW && typeof w.CB_LOADER_SHOW.setText === 'function') {
+          w.CB_LOADER_SHOW.setText(nextText);
+        }
+        w.setTimeout(() => {
+          w.location.reload();
+        }, 300);
+      });
+    }).catch((err) => {
+      traceAjax('startup_restia_refresh_error', {
+        message: String((err && err.message) ? err.message : 'startup restia refresh selhal')
+      });
+      if (w.CB_LOADER_SHOW && typeof w.CB_LOADER_SHOW.setText === 'function') {
+        w.CB_LOADER_SHOW.setText('Aktualizace dat selhala. Obnovte stránku.');
+      }
+    });
+  }
+
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      initRestiaImportLoader();
+      initStartupRestiaRefresh();
+    }, { once: true });
+  } else {
+    initRestiaImportLoader();
+    initStartupRestiaRefresh();
+  }
+
+  document.addEventListener('cb:main-swapped', function () {
+    initRestiaImportLoader();
+  });
+
+})(window);
+// js/ajax_core.js * Verze: V5 * Aktualizace: 15.04.2026 * Konec souboru

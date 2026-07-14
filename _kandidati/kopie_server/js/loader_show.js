@@ -1,0 +1,140 @@
+// js/loader_show.js * Verze: V1 * Aktualizace: 17.04.2026
+'use strict';
+
+(function (w) {
+  const STARTUP_ID = 'cb-startup-loader';
+  // CB_LOGIN_TRACE_TEMP_START
+  function traceLogin(eventName, data) {
+    try {
+      const payload = JSON.stringify({
+        event: eventName,
+        href: w.location.href,
+        path: w.location.pathname,
+        data: data || {}
+      });
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon('lib/ajax_trace.php', new Blob([payload], { type: 'application/json' }));
+        return;
+      }
+      fetch('lib/ajax_trace.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        keepalive: true
+      }).catch(function(){});
+    } catch (e) {}
+  }
+  // CB_LOGIN_TRACE_TEMP_END
+
+  function getRoot() {
+    const node = document.getElementById(STARTUP_ID);
+    return node instanceof HTMLElement ? node : null;
+  }
+
+  function getLoader(root) {
+    if (!(root instanceof HTMLElement)) return null;
+    const loader = root.querySelector('.dash_loader');
+    return loader instanceof HTMLElement ? loader : null;
+  }
+
+  function getTextNode(root) {
+    if (!(root instanceof HTMLElement)) return null;
+    const text = root.querySelector('.dash_loader_text');
+    return text instanceof HTMLElement ? text : null;
+  }
+
+  function setText(text) {
+    const root = getRoot();
+    const node = getTextNode(root);
+    if (!node) return;
+    node.textContent = String(text || '').trim();
+    root.setAttribute('data-cb-startup-text', String(text || '').trim());
+  }
+
+  function setVisible(visible) {
+    const root = getRoot();
+    if (!root) return;
+    const loader = getLoader(root);
+    if (!loader) return;
+
+    if (visible) {
+      // CB_LOGIN_TRACE_TEMP_START
+      traceLogin('login_trace_loader_visible', {
+        startup_text: String(root.getAttribute('data-cb-startup-text') || '').trim()
+      });
+      // CB_LOGIN_TRACE_TEMP_END
+      loader.classList.remove('is-hidden');
+      loader.setAttribute('aria-hidden', 'false');
+      loader.setAttribute('data-cb-loader-visible', '1');
+      loader.style.display = 'flex';
+      root.classList.add('is-dashboard-loading');
+      root.setAttribute('aria-busy', 'true');
+    } else {
+      loader.classList.add('is-hidden');
+      loader.setAttribute('aria-hidden', 'true');
+      loader.removeAttribute('data-cb-loader-visible');
+      loader.style.display = 'none';
+      root.classList.remove('is-dashboard-loading');
+      root.removeAttribute('aria-busy');
+    }
+  }
+
+  function hide() {
+    const root = getRoot();
+    if (root && root.parentNode) {
+      root.parentNode.removeChild(root);
+    }
+  }
+
+  function shouldHoldOnLoad() {
+    const root = getRoot();
+    if (!root) {
+      return false;
+    }
+    return String(root.getAttribute('data-cb-startup-hold') || '') === '1';
+  }
+
+  function detectDefaultText() {
+    const root = getRoot();
+    if (root) {
+      const attr = String(root.getAttribute('data-cb-startup-text') || '').trim();
+      if (attr !== '') {
+        return attr;
+      }
+    }
+    return '';
+  }
+
+  function bootstrap() {
+    const root = getRoot();
+    if (!root) return;
+
+    const text = detectDefaultText();
+    if (text !== '') {
+      setText(text);
+      setVisible(true);
+    }
+
+    w.addEventListener('load', function () {
+      if (shouldHoldOnLoad()) {
+        return;
+      }
+      hide();
+    }, { once: true });
+  }
+
+  w.CB_LOADER_SHOW = {
+    bootstrap,
+    hide,
+    setText,
+    setVisible
+  };
+
+  if (!getRoot()) {
+    document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
+  } else {
+    bootstrap();
+  }
+})(window);
+
+// js/loader_show.js * Verze: V1 * Aktualizace: 17.04.2026 * Konec souboru

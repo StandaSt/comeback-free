@@ -1,0 +1,252 @@
+RESTIA UPDATED FILTER PROBE - START
+verze: V1
+spusteno: 2026-05-07 23:54:55
+soubor: admin_testy/restia_testy/07_restia_probe_updated_filtry.php
+vystup: C:\xampp\htdocs\comeback\admin_testy\restia_testy/restia_test.txt
+poznamka: diagnostika nic neimportuje a neuklada objednavky do DB
+--------------------------------------------------------------------------------
+pracovni den Praha od: 2026-05-07 06:00:00
+pracovni den Praha do: 2026-05-07 23:54:55
+test status zmen Praha od: 2026-05-07 18:00:00
+UTC od: 2026-05-07T04:00:00.000Z
+UTC do: 2026-05-07T21:54:55.619Z
+UTC test status zmen od: 2026-05-07T16:00:00.000Z
+limit na dotaz: 20
+pobocky nalezeno: 2
+--------------------------------------------------------------------------------
+
+POBOCKA: Malešice | id_pob=1
+activePosId: 38da0b11-20d1-4d08-87d9-0de80d375703
+--------------------------------------------------------------------------------
+
+VARIANTA: baseline_created
+query: {"page":1,"limit":20,"activePosId":"38da0b11-20d1-4d08-87d9-0de80d375703","createdFrom":"2026-05-07T04:00:00.000Z","createdTo":"2026-05-07T21:54:55.619Z"}
+http_status: 200
+ok: 1
+ms: 364
+X-Total-Count: 108
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 12
+ukazka objednavek max 5:
+    id=e1b976e4-c7bb-47c2-8f20-c7b3e4c582ad | status=ready_pickup | createdAt=2026-05-07T21:28:06.543Z | statusUpdatedAt=2026-05-07T21:43:35.877Z | closedAt=NULL
+    id=bf252fee-78f4-4646-9fa6-abee29ff3019 | status=ready_pickup | createdAt=2026-05-07T21:17:47.546Z | statusUpdatedAt=2026-05-07T21:27:01.998Z | closedAt=NULL
+    id=3282cffd-d3af-45e6-84ac-be2cd5de9f12 | status=ready_pickup | createdAt=2026-05-07T21:10:49.418Z | statusUpdatedAt=2026-05-07T21:18:45.171Z | closedAt=NULL
+    id=30caa95b-3603-4aa3-96df-f4dc5561394b | status=ready_pickup | createdAt=2026-05-07T21:10:49.403Z | statusUpdatedAt=2026-05-07T21:20:07.843Z | closedAt=NULL
+    id=0570d266-7c2e-45eb-a552-69562e4cbee4 | status=ready_pickup | createdAt=2026-05-07T21:07:30.739Z | statusUpdatedAt=2026-05-07T21:10:47.650Z | closedAt=NULL
+
+VARIANTA: created_plus_updatedFrom
+query: {"page":1,"limit":20,"activePosId":"38da0b11-20d1-4d08-87d9-0de80d375703","createdFrom":"2026-05-07T04:00:00.000Z","createdTo":"2026-05-07T21:54:55.619Z","updatedFrom":"2026-05-07T04:00:00.000Z"}
+http_status: 200
+ok: 1
+ms: 311
+X-Total-Count: 108
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 12
+ukazka objednavek max 5:
+    id=e1b976e4-c7bb-47c2-8f20-c7b3e4c582ad | status=ready_pickup | createdAt=2026-05-07T21:28:06.543Z | statusUpdatedAt=2026-05-07T21:43:35.877Z | closedAt=NULL
+    id=bf252fee-78f4-4646-9fa6-abee29ff3019 | status=ready_pickup | createdAt=2026-05-07T21:17:47.546Z | statusUpdatedAt=2026-05-07T21:27:01.998Z | closedAt=NULL
+    id=3282cffd-d3af-45e6-84ac-be2cd5de9f12 | status=ready_pickup | createdAt=2026-05-07T21:10:49.418Z | statusUpdatedAt=2026-05-07T21:18:45.171Z | closedAt=NULL
+    id=30caa95b-3603-4aa3-96df-f4dc5561394b | status=ready_pickup | createdAt=2026-05-07T21:10:49.403Z | statusUpdatedAt=2026-05-07T21:20:07.843Z | closedAt=NULL
+    id=0570d266-7c2e-45eb-a552-69562e4cbee4 | status=ready_pickup | createdAt=2026-05-07T21:07:30.739Z | statusUpdatedAt=2026-05-07T21:10:47.650Z | closedAt=NULL
+
+VARIANTA: created_plus_statusUpdatedFrom
+query: {"page":1,"limit":20,"activePosId":"38da0b11-20d1-4d08-87d9-0de80d375703","createdFrom":"2026-05-07T04:00:00.000Z","createdTo":"2026-05-07T21:54:55.619Z","statusUpdatedFrom":"2026-05-07T04:00:00.000Z"}
+http_status: 200
+ok: 1
+ms: 275
+X-Total-Count: 108
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 12
+ukazka objednavek max 5:
+    id=e1b976e4-c7bb-47c2-8f20-c7b3e4c582ad | status=ready_pickup | createdAt=2026-05-07T21:28:06.543Z | statusUpdatedAt=2026-05-07T21:43:35.877Z | closedAt=NULL
+    id=bf252fee-78f4-4646-9fa6-abee29ff3019 | status=ready_pickup | createdAt=2026-05-07T21:17:47.546Z | statusUpdatedAt=2026-05-07T21:27:01.998Z | closedAt=NULL
+    id=3282cffd-d3af-45e6-84ac-be2cd5de9f12 | status=ready_pickup | createdAt=2026-05-07T21:10:49.418Z | statusUpdatedAt=2026-05-07T21:18:45.171Z | closedAt=NULL
+    id=30caa95b-3603-4aa3-96df-f4dc5561394b | status=ready_pickup | createdAt=2026-05-07T21:10:49.403Z | statusUpdatedAt=2026-05-07T21:20:07.843Z | closedAt=NULL
+    id=0570d266-7c2e-45eb-a552-69562e4cbee4 | status=ready_pickup | createdAt=2026-05-07T21:07:30.739Z | statusUpdatedAt=2026-05-07T21:10:47.650Z | closedAt=NULL
+
+VARIANTA: only_updatedFrom
+query: {"page":1,"limit":20,"activePosId":"38da0b11-20d1-4d08-87d9-0de80d375703","updatedFrom":"2026-05-07T04:00:00.000Z"}
+http_status: 200
+ok: 1
+ms: 240
+X-Total-Count: 237
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 13
+ukazka objednavek max 5:
+    id=2445b24f-07e7-451f-9f95-a3af10a79ac4 | status=accepted | createdAt=2026-05-07T21:54:18.505Z | statusUpdatedAt=2026-05-07T21:54:57.558Z | closedAt=NULL
+    id=4e6d8ecc-e559-4204-9513-07b77b923f08 | status=accepted | createdAt=2026-05-07T21:53:21.000Z | statusUpdatedAt=2026-05-07T21:54:03.015Z | closedAt=NULL
+    id=5c8d9192-5843-4a16-80fd-52147386b83f | status=accepted | createdAt=2026-05-07T21:44:21.650Z | statusUpdatedAt=2026-05-07T21:44:54.105Z | closedAt=NULL
+    id=e1b976e4-c7bb-47c2-8f20-c7b3e4c582ad | status=ready_pickup | createdAt=2026-05-07T21:28:06.543Z | statusUpdatedAt=2026-05-07T21:43:35.877Z | closedAt=NULL
+    id=bf252fee-78f4-4646-9fa6-abee29ff3019 | status=ready_pickup | createdAt=2026-05-07T21:17:47.546Z | statusUpdatedAt=2026-05-07T21:27:01.998Z | closedAt=NULL
+
+VARIANTA: only_statusUpdatedFrom
+query: {"page":1,"limit":20,"activePosId":"38da0b11-20d1-4d08-87d9-0de80d375703","statusUpdatedFrom":"2026-05-07T04:00:00.000Z"}
+http_status: 200
+ok: 1
+ms: 241
+X-Total-Count: 237
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 13
+ukazka objednavek max 5:
+    id=2445b24f-07e7-451f-9f95-a3af10a79ac4 | status=accepted | createdAt=2026-05-07T21:54:18.505Z | statusUpdatedAt=2026-05-07T21:54:57.558Z | closedAt=NULL
+    id=4e6d8ecc-e559-4204-9513-07b77b923f08 | status=accepted | createdAt=2026-05-07T21:53:21.000Z | statusUpdatedAt=2026-05-07T21:54:03.015Z | closedAt=NULL
+    id=5c8d9192-5843-4a16-80fd-52147386b83f | status=accepted | createdAt=2026-05-07T21:44:21.650Z | statusUpdatedAt=2026-05-07T21:44:54.105Z | closedAt=NULL
+    id=e1b976e4-c7bb-47c2-8f20-c7b3e4c582ad | status=ready_pickup | createdAt=2026-05-07T21:28:06.543Z | statusUpdatedAt=2026-05-07T21:43:35.877Z | closedAt=NULL
+    id=bf252fee-78f4-4646-9fa6-abee29ff3019 | status=ready_pickup | createdAt=2026-05-07T21:17:47.546Z | statusUpdatedAt=2026-05-07T21:27:01.998Z | closedAt=NULL
+
+VARIANTA: only_updatedFrom_today18
+query: {"page":1,"limit":20,"activePosId":"38da0b11-20d1-4d08-87d9-0de80d375703","updatedFrom":"2026-05-07T16:00:00.000Z"}
+http_status: 200
+ok: 1
+ms: 235
+X-Total-Count: 237
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 13
+ukazka objednavek max 5:
+    id=2445b24f-07e7-451f-9f95-a3af10a79ac4 | status=accepted | createdAt=2026-05-07T21:54:18.505Z | statusUpdatedAt=2026-05-07T21:54:57.558Z | closedAt=NULL
+    id=4e6d8ecc-e559-4204-9513-07b77b923f08 | status=accepted | createdAt=2026-05-07T21:53:21.000Z | statusUpdatedAt=2026-05-07T21:54:03.015Z | closedAt=NULL
+    id=5c8d9192-5843-4a16-80fd-52147386b83f | status=accepted | createdAt=2026-05-07T21:44:21.650Z | statusUpdatedAt=2026-05-07T21:44:54.105Z | closedAt=NULL
+    id=e1b976e4-c7bb-47c2-8f20-c7b3e4c582ad | status=ready_pickup | createdAt=2026-05-07T21:28:06.543Z | statusUpdatedAt=2026-05-07T21:43:35.877Z | closedAt=NULL
+    id=bf252fee-78f4-4646-9fa6-abee29ff3019 | status=ready_pickup | createdAt=2026-05-07T21:17:47.546Z | statusUpdatedAt=2026-05-07T21:27:01.998Z | closedAt=NULL
+
+VARIANTA: only_statusUpdatedFrom_today18
+query: {"page":1,"limit":20,"activePosId":"38da0b11-20d1-4d08-87d9-0de80d375703","statusUpdatedFrom":"2026-05-07T16:00:00.000Z"}
+http_status: 200
+ok: 1
+ms: 238
+X-Total-Count: 239
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 13
+ukazka objednavek max 5:
+    id=6e78d76f-6290-4597-8e0f-0e5ec24a59b5 | status=new | createdAt=2026-05-07T21:54:59.537Z | statusUpdatedAt= | closedAt=NULL
+    id=3fec01ee-8e71-4732-96cb-58522418c743 | status=new | createdAt=2026-05-07T21:54:59.517Z | statusUpdatedAt= | closedAt=NULL
+    id=2445b24f-07e7-451f-9f95-a3af10a79ac4 | status=accepted | createdAt=2026-05-07T21:54:18.505Z | statusUpdatedAt=2026-05-07T21:54:57.558Z | closedAt=NULL
+    id=4e6d8ecc-e559-4204-9513-07b77b923f08 | status=accepted | createdAt=2026-05-07T21:53:21.000Z | statusUpdatedAt=2026-05-07T21:54:03.015Z | closedAt=NULL
+    id=5c8d9192-5843-4a16-80fd-52147386b83f | status=accepted | createdAt=2026-05-07T21:44:21.650Z | statusUpdatedAt=2026-05-07T21:44:54.105Z | closedAt=NULL
+
+POBOCKA: Prosek | id_pob=4
+activePosId: a125bd4f-01ee-46cb-b833-9270c9a50514
+--------------------------------------------------------------------------------
+
+VARIANTA: baseline_created
+query: {"page":1,"limit":20,"activePosId":"a125bd4f-01ee-46cb-b833-9270c9a50514","createdFrom":"2026-05-07T04:00:00.000Z","createdTo":"2026-05-07T21:54:55.619Z"}
+http_status: 200
+ok: 1
+ms: 277
+X-Total-Count: 70
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 8
+ukazka objednavek max 5:
+    id=447450d3-703e-49b0-96fb-99bd4540ab49 | status=delivered | createdAt=2026-05-07T21:28:09.175Z | statusUpdatedAt=2026-05-07T21:50:05.779Z | closedAt=2026-05-07T21:50:05.778Z
+    id=ba49dc50-d21d-4d45-a4ca-78f83d2a4e0c | status=ready_pickup | createdAt=2026-05-07T21:27:38.000Z | statusUpdatedAt=2026-05-07T21:34:49.737Z | closedAt=NULL
+    id=6c03e6a5-3964-4fb2-a536-f7e21c3f17fa | status=ready_pickup | createdAt=2026-05-07T21:21:01.028Z | statusUpdatedAt=2026-05-07T21:33:20.587Z | closedAt=NULL
+    id=104332ff-6d34-4f5a-aa52-da514af4c9e2 | status=delivered | createdAt=2026-05-07T21:18:47.440Z | statusUpdatedAt=2026-05-07T21:44:51.186Z | closedAt=2026-05-07T21:36:03.287Z
+    id=133d7511-22c5-40db-b54e-9c82f27e5fb9 | status=ready_pickup | createdAt=2026-05-07T21:18:38.000Z | statusUpdatedAt=2026-05-07T21:27:49.821Z | closedAt=NULL
+
+VARIANTA: created_plus_updatedFrom
+query: {"page":1,"limit":20,"activePosId":"a125bd4f-01ee-46cb-b833-9270c9a50514","createdFrom":"2026-05-07T04:00:00.000Z","createdTo":"2026-05-07T21:54:55.619Z","updatedFrom":"2026-05-07T04:00:00.000Z"}
+http_status: 200
+ok: 1
+ms: 836
+X-Total-Count: 70
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 8
+ukazka objednavek max 5:
+    id=447450d3-703e-49b0-96fb-99bd4540ab49 | status=delivered | createdAt=2026-05-07T21:28:09.175Z | statusUpdatedAt=2026-05-07T21:50:05.779Z | closedAt=2026-05-07T21:50:05.778Z
+    id=ba49dc50-d21d-4d45-a4ca-78f83d2a4e0c | status=ready_pickup | createdAt=2026-05-07T21:27:38.000Z | statusUpdatedAt=2026-05-07T21:34:49.737Z | closedAt=NULL
+    id=6c03e6a5-3964-4fb2-a536-f7e21c3f17fa | status=ready_pickup | createdAt=2026-05-07T21:21:01.028Z | statusUpdatedAt=2026-05-07T21:33:20.587Z | closedAt=NULL
+    id=104332ff-6d34-4f5a-aa52-da514af4c9e2 | status=delivered | createdAt=2026-05-07T21:18:47.440Z | statusUpdatedAt=2026-05-07T21:44:51.186Z | closedAt=2026-05-07T21:36:03.287Z
+    id=133d7511-22c5-40db-b54e-9c82f27e5fb9 | status=ready_pickup | createdAt=2026-05-07T21:18:38.000Z | statusUpdatedAt=2026-05-07T21:27:49.821Z | closedAt=NULL
+
+VARIANTA: created_plus_statusUpdatedFrom
+query: {"page":1,"limit":20,"activePosId":"a125bd4f-01ee-46cb-b833-9270c9a50514","createdFrom":"2026-05-07T04:00:00.000Z","createdTo":"2026-05-07T21:54:55.619Z","statusUpdatedFrom":"2026-05-07T04:00:00.000Z"}
+http_status: 200
+ok: 1
+ms: 298
+X-Total-Count: 70
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 8
+ukazka objednavek max 5:
+    id=447450d3-703e-49b0-96fb-99bd4540ab49 | status=delivered | createdAt=2026-05-07T21:28:09.175Z | statusUpdatedAt=2026-05-07T21:50:05.779Z | closedAt=2026-05-07T21:50:05.778Z
+    id=ba49dc50-d21d-4d45-a4ca-78f83d2a4e0c | status=ready_pickup | createdAt=2026-05-07T21:27:38.000Z | statusUpdatedAt=2026-05-07T21:34:49.737Z | closedAt=NULL
+    id=6c03e6a5-3964-4fb2-a536-f7e21c3f17fa | status=ready_pickup | createdAt=2026-05-07T21:21:01.028Z | statusUpdatedAt=2026-05-07T21:33:20.587Z | closedAt=NULL
+    id=104332ff-6d34-4f5a-aa52-da514af4c9e2 | status=delivered | createdAt=2026-05-07T21:18:47.440Z | statusUpdatedAt=2026-05-07T21:44:51.186Z | closedAt=2026-05-07T21:36:03.287Z
+    id=133d7511-22c5-40db-b54e-9c82f27e5fb9 | status=ready_pickup | createdAt=2026-05-07T21:18:38.000Z | statusUpdatedAt=2026-05-07T21:27:49.821Z | closedAt=NULL
+
+VARIANTA: only_updatedFrom
+query: {"page":1,"limit":20,"activePosId":"a125bd4f-01ee-46cb-b833-9270c9a50514","updatedFrom":"2026-05-07T04:00:00.000Z"}
+http_status: 200
+ok: 1
+ms: 246
+X-Total-Count: 156
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 11
+ukazka objednavek max 5:
+    id=e95fccf1-9aae-4d1a-b159-dfb510fe3751 | status=ready_pickup | createdAt=2026-05-07T21:41:15.691Z | statusUpdatedAt=2026-05-07T21:52:22.977Z | closedAt=NULL
+    id=6c453696-3c02-4232-aac1-2ffaebf318b2 | status=ready_pickup | createdAt=2026-05-07T21:39:15.522Z | statusUpdatedAt=2026-05-07T21:53:37.890Z | closedAt=NULL
+    id=d7c3b234-6d19-42ee-8ba7-f1732a573e96 | status=ready_pickup | createdAt=2026-05-07T21:38:59.000Z | statusUpdatedAt=2026-05-07T21:46:31.030Z | closedAt=NULL
+    id=447450d3-703e-49b0-96fb-99bd4540ab49 | status=delivered | createdAt=2026-05-07T21:28:09.175Z | statusUpdatedAt=2026-05-07T21:50:05.779Z | closedAt=2026-05-07T21:50:05.778Z
+    id=ba49dc50-d21d-4d45-a4ca-78f83d2a4e0c | status=ready_pickup | createdAt=2026-05-07T21:27:38.000Z | statusUpdatedAt=2026-05-07T21:34:49.737Z | closedAt=NULL
+
+VARIANTA: only_statusUpdatedFrom
+query: {"page":1,"limit":20,"activePosId":"a125bd4f-01ee-46cb-b833-9270c9a50514","statusUpdatedFrom":"2026-05-07T04:00:00.000Z"}
+http_status: 200
+ok: 1
+ms: 228
+X-Total-Count: 156
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 11
+ukazka objednavek max 5:
+    id=e95fccf1-9aae-4d1a-b159-dfb510fe3751 | status=ready_pickup | createdAt=2026-05-07T21:41:15.691Z | statusUpdatedAt=2026-05-07T21:52:22.977Z | closedAt=NULL
+    id=6c453696-3c02-4232-aac1-2ffaebf318b2 | status=ready_pickup | createdAt=2026-05-07T21:39:15.522Z | statusUpdatedAt=2026-05-07T21:53:37.890Z | closedAt=NULL
+    id=d7c3b234-6d19-42ee-8ba7-f1732a573e96 | status=ready_pickup | createdAt=2026-05-07T21:38:59.000Z | statusUpdatedAt=2026-05-07T21:46:31.030Z | closedAt=NULL
+    id=447450d3-703e-49b0-96fb-99bd4540ab49 | status=delivered | createdAt=2026-05-07T21:28:09.175Z | statusUpdatedAt=2026-05-07T21:50:05.779Z | closedAt=2026-05-07T21:50:05.778Z
+    id=ba49dc50-d21d-4d45-a4ca-78f83d2a4e0c | status=ready_pickup | createdAt=2026-05-07T21:27:38.000Z | statusUpdatedAt=2026-05-07T21:34:49.737Z | closedAt=NULL
+
+VARIANTA: only_updatedFrom_today18
+query: {"page":1,"limit":20,"activePosId":"a125bd4f-01ee-46cb-b833-9270c9a50514","updatedFrom":"2026-05-07T16:00:00.000Z"}
+http_status: 200
+ok: 1
+ms: 232
+X-Total-Count: 156
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 11
+ukazka objednavek max 5:
+    id=e95fccf1-9aae-4d1a-b159-dfb510fe3751 | status=ready_pickup | createdAt=2026-05-07T21:41:15.691Z | statusUpdatedAt=2026-05-07T21:52:22.977Z | closedAt=NULL
+    id=6c453696-3c02-4232-aac1-2ffaebf318b2 | status=ready_pickup | createdAt=2026-05-07T21:39:15.522Z | statusUpdatedAt=2026-05-07T21:53:37.890Z | closedAt=NULL
+    id=d7c3b234-6d19-42ee-8ba7-f1732a573e96 | status=ready_pickup | createdAt=2026-05-07T21:38:59.000Z | statusUpdatedAt=2026-05-07T21:46:31.030Z | closedAt=NULL
+    id=447450d3-703e-49b0-96fb-99bd4540ab49 | status=delivered | createdAt=2026-05-07T21:28:09.175Z | statusUpdatedAt=2026-05-07T21:50:05.779Z | closedAt=2026-05-07T21:50:05.778Z
+    id=ba49dc50-d21d-4d45-a4ca-78f83d2a4e0c | status=ready_pickup | createdAt=2026-05-07T21:27:38.000Z | statusUpdatedAt=2026-05-07T21:34:49.737Z | closedAt=NULL
+
+VARIANTA: only_statusUpdatedFrom_today18
+query: {"page":1,"limit":20,"activePosId":"a125bd4f-01ee-46cb-b833-9270c9a50514","statusUpdatedFrom":"2026-05-07T16:00:00.000Z"}
+http_status: 200
+ok: 1
+ms: 233
+X-Total-Count: 156
+valid_json: 1
+pocet_v_body: 20
+neuzavrene_v_body: 11
+ukazka objednavek max 5:
+    id=e95fccf1-9aae-4d1a-b159-dfb510fe3751 | status=ready_pickup | createdAt=2026-05-07T21:41:15.691Z | statusUpdatedAt=2026-05-07T21:52:22.977Z | closedAt=NULL
+    id=6c453696-3c02-4232-aac1-2ffaebf318b2 | status=ready_pickup | createdAt=2026-05-07T21:39:15.522Z | statusUpdatedAt=2026-05-07T21:53:37.890Z | closedAt=NULL
+    id=d7c3b234-6d19-42ee-8ba7-f1732a573e96 | status=ready_pickup | createdAt=2026-05-07T21:38:59.000Z | statusUpdatedAt=2026-05-07T21:46:31.030Z | closedAt=NULL
+    id=447450d3-703e-49b0-96fb-99bd4540ab49 | status=delivered | createdAt=2026-05-07T21:28:09.175Z | statusUpdatedAt=2026-05-07T21:50:05.779Z | closedAt=2026-05-07T21:50:05.778Z
+    id=ba49dc50-d21d-4d45-a4ca-78f83d2a4e0c | status=ready_pickup | createdAt=2026-05-07T21:27:38.000Z | statusUpdatedAt=2026-05-07T21:34:49.737Z | closedAt=NULL
+
+api_restia flush: preskoceno, chybi session id_user/id_login
+
+END: 2026-05-07 23:54:59

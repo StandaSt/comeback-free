@@ -1,0 +1,65 @@
+Comeback IS - denni historie
+Datum: 2026-03-11
+Cas zapisu: 2026-03-12 00:18:00
+Autor: Codex + Standa
+
+1) Shrnuti dne
+- Hlavnim tematem dne bylo sjednoceni dashboard karet a prepis K2, tedy zadani denniho reportu.
+- Resilo se chovani mini / maxi karet, jednotna kostra karet a rozdeleni JS podle skutecnych uloh.
+- Soucasne vznikal prvni realny navrh DB pro denni report a personal reportu.
+- Velka cast dne byla venovana tomu, aby se K2 prestala vrstvit do zbytecne sloziteho HTML, CSS a JS.
+
+2) Dashboard karty a min / max
+- Karty dostaly jednotnejsi zaklad v CSS.
+- Mini / maxi rezim byl predelan z pouheho roztazeni v gridu na overlay rezim nad dashboardem.
+- Ostatni karty pri maxi zustavaji na puvodnim miste a zdrojova karta se skryje jako placeholder.
+- Zavirani klikem do pozadi bylo zruseno, zustalo zavirani ikonou, menu a Esc.
+- Pridano i prepinani dvojklikem na vrsek karty.
+
+3) Sjednoceni karet
+- Do vsech aktualnich dashboard karet byl doplnen kod K{id_karta}.
+- Titulky karet byly napojeny na nazev z DB misto pevnych textu v souborech.
+- K1 az K? byly postupne srovnavany na stejny princip kostry a obsluhy min / max.
+- Karty se posunuly bliz k tomu, aby vsechny soucasne i budouci pouzivaly stejnou kostru a stejny JS tok.
+
+4) K2 - denni report
+- K2 se behem dne vicekrat predelavala:
+  - rozlozeni vstupu,
+  - pokladna a vydaje,
+  - Instor a Kuryr,
+  - bloky Restia a operativy,
+  - podminky pro hlavni Ulozit report.
+- Pridana logika pro datum, den v tydnu, penize, odpracovane hodiny, rozvozy a PHM.
+- Postupne se ukazalo, ze puvodni pristup vedl k prilis slozitemu CSS a hlubokemu zanoreni HTML.
+- Na konci dne se K2 zacala zjednodusovat do melci kostry a tabulkoveho rozlozeni.
+
+5) Rozdeleni JS
+- Puvodne pretezene karty_min_max.js bylo rozdelovano do mensich jednoúcelovych souboru.
+- Vznikly samostatne skripty pro:
+  - hlavicku,
+  - Restia blok,
+  - obecny formular reportu,
+  - personal reportu,
+  - admin kartu.
+- Cilem bylo, aby min / max zustalo opravdu jen min / max.
+
+6) DB pro reporty
+- Byl navrzen a upraven model tabulek cb_reporty a cb_reporty_person.
+- Odeslo reseni pres JSON a misto nej se zvolil relacni zapis personálních radku.
+- Do reportu byly doplneny i sloupce zapis_od a zapis_do.
+- Byl potvrzen smer, ze report pujde opravovat pres novy zaznam a stary se bude zneplatnovat.
+
+7) Kvalita kodu a organizace
+- Probihala kontrola kodovani a dalsi tlak na UTF-8 bez BOM.
+- Do AGENTS.md byla doplnena dalsi prisnejsi pravidla:
+  - jednoduchost reseni,
+  - vypis dotcenych souboru pred zmenou,
+  - cekani na schvaleni.
+- Soucasne se ukazalo, ze samotny zapis pravidel nestaci bez dusledne discipliny pri provedeni.
+
+8) Co navazuje priste
+- Dokoncit K2 do opravdu cisteho a stabilniho formulare.
+- Dotahnout vzhled a jednoduchsost HTML/CSS bez dalsich vrstev.
+- Navazat ulozeni reportu do DB a dalsi tok oprav reportu.
+
+Konec zapisu.

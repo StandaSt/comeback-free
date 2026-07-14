@@ -1,0 +1,35 @@
+RESTIA MENU TEST – START
+kdy_utc: 2026-02-22 20:11:31
+soubor: lib/restia_polozky.php
+id_pob: 6
+menuId: 762f8daa-ca39-4d8f-ae4a-d22b4d106e88
+preview_limit: 10
+----------------------------------------
+[2026-02-22 20:11:31 UTC] krůček 1: start
+[2026-02-22 20:11:31 UTC] krůček 2: kontrola přihlášení (cb_user + cb_id_login)
+[2026-02-22 20:11:31 UTC] krůček 3: přihlášen OK (id_user=593, id_login=117)
+[2026-02-22 20:11:31 UTC] krůček 4: db()
+[2026-02-22 20:11:31 UTC] krůček 5: db() OK
+[2026-02-22 20:11:31 UTC] krůček 6: načtu restia_activePosId z pobocka (id_pob=6)
+[2026-02-22 20:11:31 UTC] krůček 7: restia_activePosId OK: 3eb8bd65-26d6-4fa9-a20b-19705f856f17
+[2026-02-22 20:11:31 UTC] --- REQUEST (přesně jak se posílá) ---
+[2026-02-22 20:11:31 UTC] HTTP GET https://apilite.restia.cz/api/menu/762f8daa-ca39-4d8f-ae4a-d22b4d106e88?activePosId=3eb8bd65-26d6-4fa9-a20b-19705f856f17
+[2026-02-22 20:11:31 UTC] Headers:
+[2026-02-22 20:11:31 UTC] Accept: application/json
+[2026-02-22 20:11:31 UTC] Content-Type: application/json
+[2026-02-22 20:11:31 UTC] Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZSI6eyJpZCI6ImQ5NmRkNjhhLWE2MGItNDQ5OS1iNTA5LWYyZjhhMjBmNTM4ZCJ9LCJVVUlEIjoiY2ViOWJkZGMtOTBlMi00OGY3LWJhODgtZTk3MzVjMzk5ZmEyIiwiY3JlYXRlZEF0IjoiMjAyNi0wMi0yMlQxNDoxNzo1MS44NzRaIiwiaWF0IjoxNzcxNzY5ODcxLCJleHAiOjE3NzE4NTYyNzF9.ktwqdeBGFImB4E1rolOEl8FI16PYJsqyegoA_NTAus8
+[2026-02-22 20:11:31 UTC] --- KONEC REQUESTU ---
+[2026-02-22 20:11:31 UTC] krůček 8: volám Restii
+[2026-02-22 20:11:32 UTC] krůček 9: Restia volání hotovo
+[2026-02-22 20:11:32 UTC] krůček 10: http_status=200
+[2026-02-22 20:11:32 UTC] krůček 11: JSON uložen do pomocne/restia_menu.json
+[2026-02-22 20:11:32 UTC] krůček 12: nalezeno položek=6
+[2026-02-22 20:11:32 UTC] preview 1: pos_id=3eb8bd65-26d6-4fa9-a20b-19705f856f17 | nazev=Hlavní menu
+[2026-02-22 20:11:32 UTC] preview 2: pos_id=KF_5p8lPQo7Fz3gaG5NRl | nazev=🍕 PIZZA 40CM
+[2026-02-22 20:11:32 UTC] preview 3: pos_id=iHZ0tNa53UbAVSffTF5ey | nazev=🍕 PIZZA 32CM
+[2026-02-22 20:11:32 UTC] preview 4: pos_id=lxxBGfYSkwS7wMUojy-Ww | nazev=🍕 PIZZA 18CM
+[2026-02-22 20:11:32 UTC] preview 5: pos_id=KvgTbhIe2tbCR6cuNMZCG | nazev=🤩 VÝHODNÉ MENU
+[2026-02-22 20:11:32 UTC] preview 6: pos_id=A80QFKGs1vqNbGVvQZQVr | nazev=🥤 NÁPOJE
+[2026-02-22 20:11:32 UTC] krůček 13b: zapsáno do DB (cis_polozka) řádků=6
+[2026-02-22 20:11:32 UTC] krůček 14: flush api_restia
+[2026-02-22 20:11:32 UTC] konec OK

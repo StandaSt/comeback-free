@@ -1,0 +1,1 @@
+Start importu směn | 2026-05-19 12:29:49 | pobočka=1 | Malešice | API pobočka=2 | Malešice | start_smeny=2020-10-26 | pondělí=2026-05-25 | od skipWeeks=1 | do skipWeeks=0

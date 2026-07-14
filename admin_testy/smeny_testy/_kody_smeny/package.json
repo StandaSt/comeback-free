@@ -1,0 +1,20 @@
+{
+  "name": "shift-planner",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "app",
+    "api",
+    "shared",
+    "deploy"
+  ],
+  "engines": {
+    "node": "14.15"
+  },
+  "devDependencies": {
+    "@types/node": "^14.14.6"
+  },
+  "dependencies": {
+    "forever": "^3.0.2"
+  }
+}

@@ -1,0 +1,6 @@
+Start importu směn | 2026-06-09 22:28:02 | pobočka=5 | Libuš | API pobočka=4 | Libuš | start_smeny=2023-12-04 | pondělí=2026-06-08 | od skipWeeks=-1 | do skipWeeks=0
+skipWeeks=-1 | id_pob=5 | startDay=2026-06-08 | pocet_bloku=29 | pocet_hodin=239 | stav=OK
+skipWeeks=0 | id_pob=5 | startDay=2026-06-15 | pocet_bloku=0 | pocet_hodin=0 | stav=OK | poznamka=API vratilo tyden bez bloku
+Start importu směn | 2026-06-09 22:28:31 | pobočka=6 | Bolevec | API pobočka=6 | Plzeň - Bolevec | start_smeny=2025-08-11 | pondělí=2026-06-08 | od skipWeeks=-1 | do skipWeeks=0
+skipWeeks=-1 | id_pob=6 | startDay=2026-06-08 | pocet_bloku=17 | pocet_hodin=200 | stav=OK
+skipWeeks=0 | id_pob=6 | startDay=2026-06-15 | pocet_bloku=0 | pocet_hodin=0 | stav=OK | poznamka=API vratilo tyden bez bloku

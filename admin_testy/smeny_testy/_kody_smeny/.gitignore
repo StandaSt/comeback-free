@@ -1,0 +1,8 @@
+.idea
+
+yarn-error.log
+
+node_modules
+
+schema.graphql
+

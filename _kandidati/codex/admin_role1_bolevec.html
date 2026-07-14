@@ -1,0 +1,232 @@
+  <div class="zr_readonly_info">
+    Denní report mohou upravovat pouze oprávnění uživatelé. Zobrazená data jsou jen pro kontrolu.  </div>
+<form class="zr_form gap_14" autocomplete="off" method="post" action="./" data-zr-form data-zr-draft-mode="0" data-zr-final-full="0" data-zr-form-mode="final_readonly" data-zr-readonly="1" data-cb-max-form="1" data-cb-loader-text="Načítám report pobočky" style="position:relative;">
+  <input type="hidden" name="dr_id" value="0" data-zr-dr-id>
+  <input type="hidden" name="zr_edit_final" value="0" data-zr-edit-final>
+  <div class="zr_layout gap_14">
+    <div class="zr_main gap_14">
+      <section class="zr_top gap_14">
+        <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_intro_section">
+          <table class="zr_table">
+            <tbody>
+              <tr>
+                <th class="zr_intro_label txt_l">Pobočka</th>
+                <td>
+                                      <select class="zr_intro_select" name="zr_id_pob" onchange="if(this.form){this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit();}">
+                      <option value="">Vyber pobočku</option>
+                                              <option value="1">Malešice</option>
+                                              <option value="2">Chodov</option>
+                                              <option value="3">Zličín</option>
+                                              <option value="4">Prosek</option>
+                                              <option value="5">Libuš</option>
+                                              <option value="6" selected>Bolevec</option>
+                                          </select>
+                                    <input type="hidden" name="id_pob" value="6">
+                </td>
+              </tr>
+              <tr>
+                <th class="zr_intro_label zr_req_label txt_l" data-zr-required-label="datum">Datum</th>
+                <td>
+                  <select class="zr_intro_select" name="datum_reportu" data-zr-date data-zr-required="datum" onchange="if(this.form){this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit();}">
+                                          <option value="2026-06-18" selected>čtvrtek 18.6.2026 (dnes)</option>
+                                          <option value="2026-06-17">středa 17.6.2026</option>
+                                          <option value="2026-06-16">úterý 16.6.2026</option>
+                                          <option value="2026-06-15">pondělí 15.6.2026</option>
+                                          <option value="2026-06-14">neděle 14.6.2026</option>
+                                          <option value="2026-06-13">sobota 13.6.2026</option>
+                                      </select>
+                </td>
+              </tr>
+              <tr>
+                <th class="zr_intro_label zr_req_label txt_l" data-zr-required-label="oteviral">Otevíral</th>
+                <td>
+                  <select class="zr_intro_select" name="oteviral" data-zr-field="oteviral" data-zr-required="oteviral" disabled>
+                    <option value="">Vyber jméno</option><option value="320" data-zr-restia-name="Viktoriia Ahurieva">Ahurieva Viktoriia</option><option value="3" data-zr-restia-name="Stanislav Roth" selected>Roth Stanislav</option><option value="593" data-zr-restia-name="Standa Tester">Tester Standa</option><option value="565" data-zr-restia-name="Lukáš Ženíšek">Ženíšek Lukáš</option>                  </select>
+                </td>
+              </tr>
+              <tr>
+                <th class="zr_intro_label zr_req_label txt_l" data-zr-required-label="zaviral">Zavíral</th>
+                <td>
+                  <select class="zr_intro_select" name="zaviral" data-zr-field="zaviral" data-zr-required="zaviral" disabled>
+                    <option value="">Vyber jméno</option><option value="320" data-zr-restia-name="Viktoriia Ahurieva">Ahurieva Viktoriia</option><option value="3" data-zr-restia-name="Stanislav Roth" selected>Roth Stanislav</option><option value="593" data-zr-restia-name="Standa Tester">Tester Standa</option><option value="565" data-zr-restia-name="Lukáš Ženíšek">Ženíšek Lukáš</option>                  </select>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_cash_section">
+          <h4 class="card_section_title txt_seda">Pokladna a výdaje</h4>
+          <table class="zr_table zr_cash_table">
+            <tbody>
+              <tr>
+                <th class="zr_req_label txt_l" data-zr-required-label="pokladna_hotovost">Hotovost</th>
+                <th class="zr_req_label txt_l" data-zr-required-label="pokladna_terminal">Terminal</th>
+                <th class="zr_req_label txt_l" data-zr-required-label="pokladna_stravenky">Stravenky</th>
+                <th class="txt_l">Benzín</th>
+              </tr>
+              <tr>
+                <td><input class="zr_money_input" type="text" inputmode="numeric" name="pokladna_hotovost" value="2628" data-zr-field="pokladna_hotovost" data-zr-money="int" data-zr-required="pokladna_hotovost" readonly disabled></td>
+                <td><input class="zr_money_input" type="text" inputmode="decimal" name="pokladna_terminal" value="4285.20" data-zr-field="pokladna_terminal" data-zr-money="decimal" data-zr-required="pokladna_terminal" readonly disabled></td>
+                <td><input class="zr_money_input" type="text" inputmode="numeric" name="pokladna_stravenky" value="0" data-zr-field="pokladna_stravenky" data-zr-money="int" data-zr-required="pokladna_stravenky" readonly disabled></td>
+                <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_benzin" value="0" data-zr-field="vydaje_benzin" data-zr-money="int" data-zr-required="vydaje_benzin" readonly disabled></td>
+              </tr>
+              <tr>
+                <th class="txt_l">Auta</th>
+                <th class="txt_l">Suroviny</th>
+                <th class="txt_l">Ostatní</th>
+                <th class="txt_l">PHM-soukr.</th>
+              </tr>
+              <tr>
+                <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_auta" value="0" data-zr-field="vydaje_auta" data-zr-money="int" data-zr-required="vydaje_auta" readonly disabled></td>
+                <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_suroviny" value="0" data-zr-field="vydaje_suroviny" data-zr-money="int" data-zr-required="vydaje_suroviny" readonly disabled></td>
+                <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_ostatni" value="0" data-zr-field="vydaje_ostatni" data-zr-money="int" data-zr-required="vydaje_ostatni" readonly disabled></td>
+                <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_phm_soukrome" value="495" data-zr-field="vydaje_phm_soukrome" data-zr-money="int" data-zr-required="vydaje_phm_soukrome" readonly disabled></td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      </section>
+
+      <div class="zr_left gap_14">
+        <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_instor_section">
+          <h4 class="card_section_title txt_seda">Instor</h4>
+          <div style="width:220px;margin-bottom:6px;">
+            <select data-zr-add-person="instor" disabled>
+              <option value="">Vyber zaměstnance</option><option value="320" data-zr-restia-name="Viktoriia Ahurieva">Ahurieva Viktoriia</option><option value="593" data-zr-restia-name="Standa Tester">Tester Standa</option><option value="565" data-zr-restia-name="Lukáš Ženíšek">Ženíšek Lukáš</option>            </select>
+          </div>
+          <table class="zr_table zr_person_table" style="width:100%;" data-zr-people-list="instor">
+            <thead>
+              <tr>
+                <th class="zr_req_label txt_l" style="width:220px;white-space:nowrap;" data-zr-required-label="instor_jmeno">Instor</th>
+                <th class="zr_req_label txt_l" style="width:58px;white-space:nowrap;" data-zr-required-label="instor_zacatek">Směna od</th>
+                <th class="zr_req_label txt_l" style="width:58px;white-space:nowrap;" data-zr-required-label="instor_konec">Směna do</th>
+                <th class="txt_l" style="width:44px;white-space:nowrap;">Pauza</th>
+                <th class="txt_l" style="width:70px;white-space:nowrap;">Odprac.</th>
+                <th class="txt_l" style="white-space:nowrap;"></th>
+              </tr>
+            </thead>
+            <tbody data-zr-saved-list="instor">
+                              <tr data-zr-person-row="instor" data-zr-id-user="3" data-zr-id-dr-osoby="0"><td style="width:220px;"><strong class="zr_saved_value">Roth Stanislav</strong><input type="hidden" name="instor_jmeno[]" value="Roth Stanislav"><input type="hidden" name="instor_id_user[]" value="3"></td><td style="width:58px;"><input class="zr_time_input" type="text" inputmode="numeric" name="instor_zacatek[]" value="10:00" style="width:100%;text-align:center;" data-zr-start disabled  readonly></td><td style="width:58px;"><input class="zr_time_input" type="text" inputmode="numeric" name="instor_konec[]" value="01:00" style="width:100%;text-align:center;" data-zr-end disabled  readonly></td><td class="zr_person_cell_break" style="width:44px;"><input type="text" inputmode="decimal" name="instor_pauza_hod[]" value="4" style="width:100%;text-align:center;" data-zr-break readonly disabled></td><td style="width:70px;"><strong class="zr_saved_value" data-zr-hours>11 hod.</strong><input type="hidden" name="instor_hodiny[]" value="11" data-zr-hours-hidden></td><td></td></tr>                          </tbody>
+          </table>
+        </section>
+
+        <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_control_section">
+          <strong class="zr_control_label zr_control_label_rozdil">Rozdíl pokladna</strong>
+          <div class="zr_control_metric">
+            <strong class="zr_control_value" data-zr-report-rozdil>1 150 Kč</strong>
+            <input type="hidden" name="rozdil" value="1149.80" data-zr-report-rozdil-value>
+          </div>
+          <div class="zr_control_metric zr_control_metric_col">
+            <span class="cb_tooltip" tabindex="0" aria-label="Informace k COL" data-cb-tooltip-position="1">
+              <strong class="zr_control_label zr_control_label_col" style="display:inline-block;margin-bottom:0;cursor:help;">COL</strong>
+              <span class="cb_tooltip_panel cb_tooltip_card" data-cb-tooltip-panel="1">
+                <span class="cb_tooltip_title">Informativní varianta</span>
+                <div class="text_12" data-zr-report-col-bez-dph>COL bez DPH: 39,03 %</div>
+              </span>
+            </span>
+            <strong class="zr_control_value zr_control_value_col" data-zr-report-col>34,85 %</strong>
+            <input type="hidden" name="col_pomer" value="0.348502" data-zr-report-col-value>
+          </div>
+        </section>
+
+        <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_kuryr_section">
+          <h4 class="card_section_title txt_seda">Kurýr</h4>
+          <div style="width:220px;margin-bottom:6px;">
+            <select data-zr-add-person="kuryr" disabled>
+              <option value="">Vyber kurýra</option><option value="619" data-zr-restia-name="Pavel Břicháč">Břicháč Pavel</option><option value="630" data-zr-restia-name="Alfréd Dragoun">Dragoun Alfréd</option><option value="599" data-zr-restia-name="Milan Kavalír">Kavalír Milan</option><option value="579" data-zr-restia-name="Anna Kneblová">Kneblová Anna</option><option value="598" data-zr-restia-name="Adéla Mikešová">Mikešová Adéla</option><option value="547" data-zr-restia-name="Monika Richterová">Richterová Monika</option><option value="2" data-zr-restia-name="Stanislav  Roth st.">Roth st. Stanislav</option><option value="3" data-zr-restia-name="Stanislav Roth">Roth Stanislav</option><option value="557" data-zr-restia-name="David Serin">Serin David</option><option value="628" data-zr-restia-name="Magdalena Stehlíková">Stehlíková Magdalena</option><option value="593" data-zr-restia-name="Standa Tester">Tester Standa</option><option value="594" data-zr-restia-name="Testovací účet">účet Testovací</option><option value="560" data-zr-restia-name="Anna Vaníková">Vaníková Anna</option><option value="536" data-zr-restia-name="Anna Vopatová">Vopatová Anna</option><option value="548" data-zr-restia-name="Šárka Vopatová">Vopatová Šárka</option><option value="565" data-zr-restia-name="Lukáš Ženíšek">Ženíšek Lukáš</option>            </select>
+          </div>
+          <table class="zr_table zr_person_table" style="width:100%;" data-zr-people-list="kuryr" data-zr-delivery-counts="{}">
+            <thead>
+              <tr>
+                <th class="txt_l" style="width:220px;white-space:nowrap;">Kurýr</th>
+                <th class="txt_l" style="width:58px;white-space:nowrap;">Směna od</th>
+                <th class="txt_l" style="width:58px;white-space:nowrap;">Směna do</th>
+                <th class="txt_l" style="width:44px;white-space:nowrap;">Pauza</th>
+                <th class="txt_l" style="width:70px;white-space:nowrap;">Odprac.</th>
+                <th class="txt_l" style="width:48px;white-space:nowrap;">Rozvozů</th>
+                <th class="txt_l" style="width:48px;white-space:nowrap;">Ručně</th>
+                <th class="txt_l" style="width:34px;white-space:nowrap;">Vl. vůz</th>
+                <th class="txt_l" style="white-space:nowrap;">PHM</th>
+              </tr>
+            </thead>
+            <tbody data-zr-saved-list="kuryr">
+                              <tr data-zr-person-row="kuryr" data-zr-id-user="609" data-zr-id-dr-osoby="0" data-zr-restia-name="Rudolf Kaločai"><td style="width:220px;"><strong class="zr_saved_value">Kaločai Rudolf</strong><input type="hidden" name="kuryr_jmeno[]" value="Kaločai Rudolf"><input type="hidden" name="kuryr_id_user[]" value="609"></td><td style="width:58px;"><input class="zr_time_input" type="text" inputmode="numeric" name="kuryr_zacatek[]" value="10:00" style="width:100%;text-align:center;" data-zr-start disabled  readonly></td><td style="width:58px;"><input class="zr_time_input" type="text" inputmode="numeric" name="kuryr_konec[]" value="17:00" style="width:100%;text-align:center;" data-zr-end disabled  readonly></td><td class="zr_person_cell_break" style="width:44px;"><input type="text" inputmode="decimal" name="kuryr_pauza_hod[]" value="0" style="width:100%;text-align:center;" data-zr-break readonly disabled></td><td style="width:70px;"><strong class="zr_saved_value" data-zr-hours>7 hod.</strong><input type="hidden" name="kuryr_hodiny[]" value="7" data-zr-hours-hidden></td><td class="txt_c" style="width:48px;"><strong class="zr_saved_value" data-zr-delivery-restia-value>0</strong><input type="hidden" name="kuryr_pocet_rozvozu_restia[]" value="0" data-zr-editor-field="delivery_restia"></td><td class="txt_c" style="width:48px;"><input class="zr_delivery_input txt_c" type="text" inputmode="numeric" name="kuryr_pocet_rozvozu_manual[]" value="0" style="width:100%;" data-zr-editor-field="delivery_manual" data-zr-int-short readonly disabled><input type="hidden" name="kuryr_pocet_rozvozu[]" value="0" data-zr-delivery-total></td><td class="txt_c" style="width:34px;"><span class="zr_chk txt_c zr_person_cell_car zr_person_cell_car_inline"><input type="checkbox" value="1" data-zr-editor-field="car" data-zr-car-check disabled></span><input type="hidden" name="kuryr_vlastni_vuz[]" value="0" data-zr-car-hidden></td><td><strong class="zr_saved_value" data-zr-phm-value>0 Kč</strong><input type="hidden" name="kuryr_vyplatit_phm[]" value="0.00" data-zr-phm-hidden></td></tr>                              <tr data-zr-person-row="kuryr" data-zr-id-user="575" data-zr-id-dr-osoby="0" data-zr-restia-name="František Světlík"><td style="width:220px;"><strong class="zr_saved_value">Světlík František</strong><input type="hidden" name="kuryr_jmeno[]" value="Světlík František"><input type="hidden" name="kuryr_id_user[]" value="575"></td><td style="width:58px;"><input class="zr_time_input" type="text" inputmode="numeric" name="kuryr_zacatek[]" value="11:00" style="width:100%;text-align:center;" data-zr-start disabled  readonly></td><td style="width:58px;"><input class="zr_time_input" type="text" inputmode="numeric" name="kuryr_konec[]" value="01:00" style="width:100%;text-align:center;" data-zr-end disabled  readonly></td><td class="zr_person_cell_break" style="width:44px;"><input type="text" inputmode="decimal" name="kuryr_pauza_hod[]" value="0" style="width:100%;text-align:center;" data-zr-break readonly disabled></td><td style="width:70px;"><strong class="zr_saved_value" data-zr-hours>14 hod.</strong><input type="hidden" name="kuryr_hodiny[]" value="14" data-zr-hours-hidden></td><td class="txt_c" style="width:48px;"><strong class="zr_saved_value" data-zr-delivery-restia-value>0</strong><input type="hidden" name="kuryr_pocet_rozvozu_restia[]" value="0" data-zr-editor-field="delivery_restia"></td><td class="txt_c" style="width:48px;"><input class="zr_delivery_input txt_c" type="text" inputmode="numeric" name="kuryr_pocet_rozvozu_manual[]" value="11" style="width:100%;" data-zr-editor-field="delivery_manual" data-zr-int-short readonly disabled><input type="hidden" name="kuryr_pocet_rozvozu[]" value="0" data-zr-delivery-total></td><td class="txt_c" style="width:34px;"><span class="zr_chk txt_c zr_person_cell_car zr_person_cell_car_inline"><input type="checkbox" value="1" checked data-zr-editor-field="car" data-zr-car-check disabled></span><input type="hidden" name="kuryr_vlastni_vuz[]" value="1" data-zr-car-hidden></td><td><strong class="zr_saved_value" data-zr-phm-value>495 Kč</strong><input type="hidden" name="kuryr_vyplatit_phm[]" value="495.00" data-zr-phm-hidden></td></tr>                          </tbody>
+          </table>
+        </section>
+        <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_note_section">
+                      <div style="margin-bottom:8px;">
+              <div class="txt_seda text_12">Včerejší vzkaz</div>
+              <div class="text_14">Stehlíková Magdalena není v reportu. Kurýr 11.00 -1:30, 6 rozvozu</div>
+            </div>
+                    <label class="txt_seda text_12" for="zr_note">Vzkaz pro další směnu nebo managera</label>
+          <input
+            id="zr_note"
+            type="text"
+            name="poznamka"
+            value=""
+            data-zr-note
+             readonly disabled            style="width:100%;margin-top:4px;"
+          >
+        </section>
+              </div>
+    </div>
+
+    <aside class="zr_side gap_14">
+      <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_restia_section">
+        <h4 class="card_section_title txt_seda">Aktuální data z Restie</h4>
+        <div class="zr_restia_update">
+          <span>Aktualizace v 4:26:49</span>
+          <button
+            type="button"
+            class="zr_restia_refresh_btn"
+            disabled
+            data-zr-restia-refresh
+            data-zr-restia-refresh-at="1781822700"
+            title="Aktualizovat Restii"
+            aria-label="Aktualizovat Restii"
+          >↻</button>
+        </div>
+        <div class="zr_restia_total gap_4">
+          <span class="zr_metric_label">Tržba</span>
+          <strong class="zr_metric_value" data-zr-restia-trzba data-zr-value="19415.10">19 415 Kč</strong>
+        </div>
+        <table class="zr_table zr_restia_table">
+          <thead>
+            <tr>
+              <th class="zr_restia_key">Položka</th>
+              <th class="zr_restia_value txt_r">Obj.</th>
+              <th class="zr_restia_value txt_r">Kč</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="zr_restia_key">Wolt</td><td class="zr_restia_value txt_r">0</td><td class="zr_restia_value txt_r"><strong data-zr-restia-wolt data-zr-value="6290.20">6 290 Kč</strong></td></tr>
+            <tr><td class="zr_restia_key">Bolt</td><td class="zr_restia_value txt_r">0</td><td class="zr_restia_value txt_r"><strong data-zr-restia-bolt data-zr-value="737.00">737 Kč</strong></td></tr>
+            <tr><td class="zr_restia_key">Foodora</td><td class="zr_restia_value txt_r">0</td><td class="zr_restia_value txt_r"><strong data-zr-restia-dj data-zr-value="3420.50">3 421 Kč</strong></td></tr>
+            <tr><td class="zr_restia_key">Web</td><td class="zr_restia_value txt_r">0</td><td class="zr_restia_value txt_r"><strong data-zr-restia-web data-zr-value="1559.00">1 559 Kč</strong></td></tr>
+            <tr><td class="zr_restia_key">Wolt drive cash</td><td class="zr_restia_value txt_r">0</td><td class="zr_restia_value txt_r"><strong data-zr-restia-wolt-cash data-zr-value="1150.00">1 150 Kč</strong></td></tr>
+            <tr><td class="zr_restia_key">DJ cash</td><td class="zr_restia_value txt_r">0</td><td class="zr_restia_value txt_r"><strong data-zr-restia-dj-cash data-zr-value="1020.00">1 020 Kč</strong></td></tr>
+            <tr><td class="zr_restia_key">Ostatní</td><td class="zr_restia_value txt_r">0</td><td class="zr_restia_value txt_r"><strong>0 Kč</strong></td></tr>
+            <tr><td class="zr_restia_key">Kontrola</td><td class="zr_restia_value txt_r">55</td><td class="zr_restia_value txt_r"><strong>19 415 Kč</strong></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_ops_section">
+        <h4 class="card_section_title txt_seda">Operativa a kontrola</h4>
+        <table class="zr_table zr_restia_table">
+          <tbody>
+            <tr><td class="zr_restia_key">Zrušené obj. ks</td><td class="zr_restia_value txt_r"><strong data-zr-cancel-count>0</strong></td></tr>
+            <tr><td class="zr_restia_key">Zrušené obj. Kč</td><td class="zr_restia_value txt_r"><strong data-zr-cancel-value>0 Kč</strong></td></tr>
+            <tr><td class="zr_restia_key">Zpožděné rozvozy +5 min</td><td class="zr_restia_value txt_r"><strong data-zr-delay-count>0</strong></td></tr>
+            <tr><td class="zr_restia_key">Průměrný make time</td><td class="zr_restia_value txt_r"><strong data-zr-make-time>18 min 07 s</strong></td></tr>
+            <tr><td class="zr_restia_key">Výdajové doklady</td><td class="zr_restia_value txt_r"><strong data-zr-docs-count>1</strong></td></tr>
+            <tr><td class="zr_restia_key">Nezrušené celkem</td><td class="zr_restia_value txt_r"><strong data-zr-orders-total>55</strong></td></tr>
+            <tr><td class="zr_restia_key">Naše rozvozy</td><td class="zr_restia_value txt_r"><strong data-zr-own-deliveries>11</strong></td></tr>
+            <tr><td class="zr_restia_key">Pozdě WoltDrive 5+</td><td class="zr_restia_value txt_r"><strong data-zr-woltdrive-late>0</strong></td></tr>
+          </tbody>
+        </table>
+      </section>
+    </aside>
+  </div>
+</form>

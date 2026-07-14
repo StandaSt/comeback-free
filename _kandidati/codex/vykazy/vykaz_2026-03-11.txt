@@ -1,0 +1,99 @@
+VYKAZ PRACE - 11.03.2026
+
+1) Sjednoceni zakladu dashboard karet
+- Sdileny shell, compact a expanded zaklad presunut do style/1/karty/karty.css.
+- Upraveny karty:
+  - karty/admin_karty.php
+  - karty/admin_testy.php
+  - karty/uzivatele.php
+  - karty/zadani_reportu.php
+  - karty/zakaznici.php
+- Lokální CSS zredukovano jen na specifika.
+
+2) Mini / maxi rezim
+- Upraven symbol minimalizace.
+- Implementovan overlay maxi rezim nad dashboardem.
+- Zdrojova karta pri maxi zustava jen jako neviditelna rezervace mista.
+- Zruseno zavirani klikem do pozadi.
+- Pridano zavirani Esc a dvojklik na vrsek karty.
+
+3) Kody K{id_karta} a titulky z DB
+- Do vsech aktualnich dashboard karet doplnen kod K{id_karta}.
+- Titulky karet prepnute na nazev z DB.
+- K2 dostala doplneni nazvu o aktualni pobocku z hlavicky.
+- Pri maxi K2 je select pobocky v hlavicce deaktivovany.
+
+4) K2 - formular denniho reportu
+- Vice kol predelani layoutu:
+  - datum, oteviral, zaviral,
+  - pokladna a vydaje,
+  - Instor,
+  - Kuryr,
+  - Restia blok,
+  - Operativa a kontrola.
+- Doplneno:
+  - den z datumu,
+  - formátovani penez,
+  - validace povinnych poli,
+  - vypocet odpracovano,
+  - vypocet PHM,
+  - hlavni tlacitko Ulozit report.
+
+5) Instor a Kuryr
+- Pridano explicitni radkove Ulozit pro Instor a Kuryr.
+- Aktivace tlacitek byla nekolikrat zjednodusovana az na primou vazbu na vyber jmena.
+- Ulozene radky se presouvaji pod editor.
+- Kuryr ma 2 pole Rozvozu, vlastni vuz a vypocet Vyplatit PHM.
+
+6) Rozdeleni JS do jednoúcelovych souboru
+- Z js/karty_min_max.js vyjmuty casti do:
+  - js/karty_hlavicka.js
+  - js/karty_report_restia.js
+  - js/karty_report_form.js
+  - js/karty_report_person.js
+  - js/admin_karty.js
+- index.php doplnen o nacitani novych skriptu.
+- Karty_min_max.js ponechany pro min / max.
+
+7) Sjednoceni min / max kostry karet
+- Vsechny aktualni dashboard karty prepnute na stejne atributy:
+  - data-card-toggle
+  - data-card-compact
+  - data-card-expanded
+- Specialni vetve po kartach v js/karty_min_max.js byly odstraneny a nahrazeny jednou generickou obsluhou.
+
+8) DB pro reporty
+- Vytvorena prvni verze cb_reporty.
+- Nasledne prepracovano podle pripominek:
+  - bez JSON,
+  - s id_pob,
+  - s oteviral a zaviral jako id_user,
+  - s platny.
+- Vytvorena i cb_reporty_person pro vice radku Instor / Kuryr.
+- Do cb_reporty doplneno zapis_od a zapis_do.
+
+9) Cekarna a budouci smer reportu
+- Do cekarny pridan bod pro out rezim karty.
+- Do cekarny pridan blok pro budouci editaci reportu:
+  - audit,
+  - opravne verze,
+  - platny i v person tabulce,
+  - zapis_od / zapis_do,
+  - push notifikace po ulozeni.
+
+10) K2 - zjednoduseni HTML a CSS
+- K2 byla prevedena na tabulkove bloky:
+  - Pokladna a vydaje
+  - Instor
+  - Kuryr
+  - Automaticky z Restie
+  - Operativa a kontrola
+- Lokální CSS pro K2 bylo postupne stazeno:
+  - zhruba z 411 radku nejprve na 212
+  - a dale zredukovano i poctem trid
+- Formular byl predelavan do melci kostry s mene wrappery.
+
+STAV NA KONCI DNE
+- Projekt se posunul k jednotnejsim kartam a cistsimu rozdeleni JS.
+- DB navrh reportu uz ma realny zaklad.
+- K2 je funkcne rozpracovana, ale vzhled a struktura stale potrebuji dalsi finalni dotazeni.

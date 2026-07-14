@@ -1,0 +1,13 @@
+Start aktualizace naplánovaných směn | 2026-07-02 10:00:02 | poboček=6 | týdny=-1,0
+skipWeeks=-1 | id_pob=1 | startDay=2026-06-29 | pocet_bloku=30 | pocet_hodin=275 | stav=OK
+skipWeeks=0 | id_pob=1 | startDay=2026-07-06 | pocet_bloku=0 | pocet_hodin=0 | stav=OK | poznamka=API vratilo tyden bez bloku, ulozeny tyden byl vycisten
+skipWeeks=-1 | id_pob=2 | startDay=2026-06-29 | pocet_bloku=29 | pocet_hodin=252 | stav=OK
+skipWeeks=0 | id_pob=2 | startDay=2026-07-06 | pocet_bloku=0 | pocet_hodin=0 | stav=OK | poznamka=API vratilo tyden bez bloku, ulozeny tyden byl vycisten
+skipWeeks=-1 | id_pob=3 | startDay=2026-06-29 | pocet_bloku=33 | pocet_hodin=266 | stav=OK
+skipWeeks=0 | id_pob=3 | startDay=2026-07-06 | pocet_bloku=0 | pocet_hodin=0 | stav=OK | poznamka=API vratilo tyden bez bloku, ulozeny tyden byl vycisten
+skipWeeks=-1 | id_pob=5 | startDay=2026-06-29 | pocet_bloku=31 | pocet_hodin=242 | stav=OK
+skipWeeks=0 | id_pob=5 | startDay=2026-07-06 | pocet_bloku=0 | pocet_hodin=0 | stav=OK | poznamka=API vratilo tyden bez bloku, ulozeny tyden byl vycisten
+skipWeeks=-1 | id_pob=4 | startDay=2026-06-29 | pocet_bloku=23 | pocet_hodin=233 | stav=OK
+skipWeeks=0 | id_pob=4 | startDay=2026-07-06 | pocet_bloku=21 | pocet_hodin=220 | stav=OK
+skipWeeks=-1 | id_pob=6 | startDay=2026-06-29 | pocet_bloku=19 | pocet_hodin=209 | stav=OK
+skipWeeks=0 | id_pob=6 | startDay=2026-07-06 | pocet_bloku=0 | pocet_hodin=0 | stav=OK | poznamka=API vratilo tyden bez bloku, ulozeny tyden byl vycisten

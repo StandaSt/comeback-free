@@ -1,0 +1,3 @@
+Start importu směn | 2026-05-31 00:23:06 | pobočka=4 | Prosek | API pobočka=5 | Prosek | start_smeny=2024-03-25 | pondělí=2026-05-25 | od skipWeeks=-1 | do skipWeeks=0
+skipWeeks=-1 | id_pob=4 | startDay=2026-05-25 | pocet_bloku=24 | pocet_hodin=219 | stav=OK
+skipWeeks=0 | id_pob=4 | startDay=2026-06-01 | pocet_bloku=22 | pocet_hodin=211 | stav=OK

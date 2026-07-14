@@ -1,0 +1,240 @@
+Bordel ve Směnách - podklad k historickému importu reportů
+Datum: 06.05.2026
+
+Účel:
+Tento soubor shrnuje problémy, které vyšly při importu historických denních reportů z Google Sheets.
+Reporty v Google Sheets ukládají osoby jako textové jméno, ne jako id_user. Proto se při importu muselo dohledávat, který záznam v tabulce user danému jménu odpovídá.
+
+
+Souhrn importu
+--------------
+reporty_osoby celkem: 15 053 záznamů
+id_user doplněno: 14 822 záznamů
+id_user zůstalo NULL: 231 záznamů
+
+Nedohledané záznamy v log/reporty_import.txt:
+296 řádků, 10 různých jmen.
+
+Dohledané nečisté shody v log/reporty_import_match.txt:
+5 244 řádků.
+To jsou případy, kdy jméno z reportu nešlo najít přímo a import musel použít náhradní pravidlo.
+
+
+Co se ukázalo jako problém
+--------------------------
+1. Ve Směnách mohou existovat duplicitní osoby se stejným jménem.
+2. Admin ve Směnách schvaluje i duplicitní registrace.
+3. Jména nejsou konzistentní:
+   - někde chybí diakritika,
+   - někde je překlep,
+   - někde je přezdívka,
+   - někde je prohozené jméno a příjmení,
+   - někde je u příjmení doplněk "žl".
+4. Google report ukládá pouze text, takže zpětně nelze vždy bezpečně poznat správné id_user.
+
+
+Dohledané výjimky - kumulovaný přehled
+--------------------------------------
+Níže jsou jména, která se v reportech podařilo spárovat až přes náhradní pravidla.
+Popis pravidla je napsaný lidsky, bez interních kódů importu.
+
+Hegedüs Erik
+- výskytů v reportech: 984
+- přiřazeno na: id_user 291, Erik Hegedus
+- důvod dohledání: rozdíl v diakritice
+
+Pekárková Milena
+- výskytů v reportech: 857
+- přiřazeno na: id_user 408, Míla Pekárková
+- důvod dohledání: v user bylo jednoznačné příjmení, ale jiné křestní jméno
+- poznámka: typicky přezdívka / zkrácené jméno
+
+Kinkorová Petra
+- výskytů v reportech: 813
+- přiřazeno na: id_user 415, Petra Kinkorová
+- důvod dohledání: více shod podle jména, vybrán jediný aktivní účet
+
+Veselý Ondřej
+- výskytů v reportech: 515
+- přiřazeno na: id_user 63, Tomáš Veselý
+- důvod dohledání: v importu vyšlo jako jednoznačné příjmení
+- VAROVÁNÍ: toto je pravděpodobně špatně. Ve Směnách / user je zřejmě aktivní Ondřej Veselý s nepořádkem ve jméně nebo příjmení, takže se musí ručně ověřit a případně opravit data.
+
+Pechová Barbora
+- výskytů v reportech: 322
+- přiřazeno na: id_user 431, Bára Pechová
+- důvod dohledání: v user bylo jednoznačné příjmení, ale jiné křestní jméno
+- poznámka: typicky přezdívka / zkrácené jméno
+
+Lanský Zoltan
+- výskytů v reportech: 241
+- přiřazeno na: id_user 385, Zoltan Lánský
+- důvod dohledání: rozdíl v diakritice
+
+Pešta Milan
+- výskytů v reportech: 194
+- přiřazeno na: id_user 433, Milan Pešta
+- důvod dohledání: více shod podle jména, vybrán jediný aktivní účet
+
+Rothová Anastasia
+- výskytů v reportech: 185
+- přiřazeno na: id_user 234, Anastasiia Rothova
+- důvod dohledání: rozdíl v diakritice a přepisu jména, vybrán jediný aktivní účet
+
+Chlubnová Adéla
+- výskytů v reportech: 146
+- přiřazeno na: id_user 577, Adela Chlubnova
+- důvod dohledání: rozdíl v diakritice
+
+Martin Sova
+- výskytů v reportech: 126
+- přiřazeno na: id_user 18, Martin Sova
+- důvod dohledání: v reportu je pořadí "jméno příjmení", ve Směnách se dohledávalo podle opačného pořadí
+
+Eszenyiová Patrícia
+- výskytů v reportech: 113
+- přiřazeno na: id_user 493, Patricia Eszenyiová
+- důvod dohledání: rozdíl v diakritice
+
+Michal Nedbal
+- výskytů v reportech: 98
+- přiřazeno na: id_user 83, Michal Nedbal
+- důvod dohledání: v reportu je pořadí "jméno příjmení"
+
+Jáklová Dominika
+- výskytů v reportech: 88
+- přiřazeno na: id_user 464, Dominika Jaklová
+- důvod dohledání: rozdíl v diakritice, vybrán jediný aktivní účet
+
+Ondřej Navrátil
+- výskytů v reportech: 65
+- přiřazeno na: id_user 82, Ondřej Navrátil
+- důvod dohledání: v reportu je pořadí "jméno příjmení"
+
+Židek Petr
+- výskytů v reportech: 50
+- přiřazeno na: id_user 606, petr židek
+- důvod dohledání: rozdíl v diakritice a jiný zápis velikosti písmen
+
+Šarközi Dávid
+- výskytů v reportech: 49
+- přiřazeno na: id_user 469, David Sarkozi
+- důvod dohledání: rozdíl v diakritice
+
+Roth Stanislav ml.
+- výskytů v reportech: 42
+- přiřazeno na: id_user 3, Stanislav Roth
+- důvod dohledání: v user bylo jednoznačné příjmení, ale report obsahuje doplněk "ml."
+
+Hegedüs Gergö
+- výskytů v reportech: 27
+- přiřazeno na: id_user 520, Gergő Hegedűs
+- důvod dohledání: rozdíl v diakritice
+
+Dolejš Petr
+- výskytů v reportech: 5
+- přiřazeno na: id_user 52, Adam Petr
+- důvod dohledání: v importu vyšlo jako jednoznačné příjmení
+- VAROVÁNÍ: toto je podezřelé a musí se ručně ověřit.
+
+
+Jména, která zůstala bez id_user
+--------------------------------
+Toto jsou případy, které import aktuálně nepřiřadil. U některých je známý důvod a oprava se má udělat ve Směnách, ne dalším chytrým pravidlem v importu.
+
+Putna Jaroslav
+- výskytů v reportech: 125
+- role v reportech: instor 104, otevíral 19, zavíral 2
+- pobočka: 3
+- důvod: duplicitní schválené účty ve Směnách, nelze bezpečně vybrat jeden
+- stav: ponechat bez id_user, dokud se nerozhodne správný účet
+
+Hofmanová Jana
+- výskytů v reportech: 57
+- role v reportech: instor 30, otevíral 27
+- pobočka: 2
+- důvod: ve Směnách je u příjmení doplněk "žl"
+- stav: opravit ve Směnách
+
+Kořínek Dominik
+- výskytů v reportech: 51
+- role v reportech: instor 36, zavíral 10, otevíral 5
+- pobočka: 1
+- důvod: ve Směnách / user zatím nenalezen
+- stav: zůstává bez id_user
+
+Chyský David
+- výskytů v reportech: 36
+- role v reportech: kurýr 36
+- pobočky: 2 a 5
+- důvod: ve Směnách je u příjmení doplněk "žl"; podle kontroly je aktivní
+- stav: opravit ve Směnách
+
+Velichkina Veronika
+- výskytů v reportech: 8
+- role v reportech: instor 6, zavíral 2
+- pobočka: 1
+- důvod: ve Směnách / user zatím nenalezena
+- stav: zůstává bez id_user
+
+Kotniukh Volodymyr
+- výskytů v reportech: 6
+- role v reportech: instor 6
+- pobočka: 4
+- důvod: ve Směnách / user zatím nenalezen
+- stav: zůstává bez id_user
+
+Dočekal Tomáš
+- výskytů v reportech: 5
+- role v reportech: kurýr 5
+- pobočka: 3
+- důvod: duplicitní schválené účty ve Směnách, nelze bezpečně vybrat jeden
+- stav: ponechat bez id_user, dokud se nerozhodne správný účet
+
+Bušek Pavel
+- výskytů v reportech: 5- role v reportech: instor 5
+- pobočka: 4
+- důvod: duplicitní schválené účty ve Směnách, nelze bezpečně vybrat jeden
+- stav: ponechat bez id_user, dokud se nerozhodne správný účet
+
+Janků Michaela
+- výskytů v reportech: 2
+- role v reportech: kurýr 2
+- pobočka: 1
+- důvod: ve Směnách / user zatím nenalezena
+- stav: zůstává bez id_user
+
+Čonka Ludovít
+- výskytů v reportech: 1
+- role v reportech: kurýr 1
+- pobočka: 4
+- důvod: ve Směnách je zapsán jako "Ludovíd Čonka"
+- stav: opravit ve Směnách
+
+
+Poznámka k příjmení s "žl"
+--------------------------
+Podle ruční kontroly je ve Směnách více lidí s doplňkem "žl" u příjmení.
+Pro import reportů to není dobrý stav, protože report obsahuje běžné jméno bez tohoto doplňku.
+Aktuálně se to nebude řešit dalším fallback pravidlem v importu. Správná oprava je uklidit data ve Směnách.
+
+
+Doporučení
+----------
+1. Ve Směnách opravit jasné překlepy a doplňky ve jménech:
+   - Čonka Ludovít / Ludovíd Čonka
+   - Chyský David / Chyský žl
+   - Hofmanová Jana / Hofmanová žl
+
+2. Ručně rozhodnout duplicitní schválené osoby:
+   - Putna Jaroslav
+   - Dočekal Tomáš
+   - Bušek Pavel
+
+3. Ručně prověřit podezřelé automatické přiřazení:
+   - Veselý Ondřej -> Tomáš Veselý
+   - Dolejš Petr -> Adam Petr
+
+4. Do nových reportů v Comebacku ukládat primárně id_user.
+   Textové jméno má být jen zobrazovací hodnota, ne hlavní identifikátor osoby.
+

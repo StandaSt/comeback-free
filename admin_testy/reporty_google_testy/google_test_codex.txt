@@ -1,0 +1,199 @@
+cas behu: 00:00
+========================================
+pobocka: Bolevec
+========================================
+ctu sesit: Databaze Bolevec 2025.xlsx
+- list: December 2025
+- list: November 2025
+- list: October 2025
+- list: September 2025
+- list: August 2025
+cas behu: 00:08
+ctu sesit: Databaze Bolevec 2026.xlsx
+- list: March 2026
+- list: February 2026
+- list: January 2026
+cas behu: 00:14
+
+========================================
+pobocka: Chodov
+========================================
+ctu sesit: Databaze Chodov 2024.xlsx
+- list: December 2024
+- list: November 2024
+- list: October 2024
+- list: September 2024
+- list: August 2024
+cas behu: 00:24
+ctu sesit: Databaze Chodov 2025.xlsx
+- list: December 2025
+- list: November 2025
+- list: October 2025
+- list: September 2025
+- list: August 2025
+- list: July 2025
+- list: June 2025
+- list: May 2025
+- list: April 2025
+- list: March 2025
+- list: February 2025
+- list: January 2025
+cas behu: 00:45
+ctu sesit: Databaze Chodov 2026.xlsx
+- list: March 2026
+- list: February 2026
+- list: January 2026
+cas behu: 00:50
+
+========================================
+pobocka: Libuš
+========================================
+ctu sesit: Databaze Libuš 2024.xlsx
+- list: December 2024
+- list: November 2024
+- list: October 2024
+- list: September 2024
+cas behu: 00:57
+ctu sesit: Databaze Libuš 2025.xlsx
+- list: December 2025
+- list: November 2025
+- list: October 2025
+- list: September 2025
+- list: August 2025
+- list: July 2025
+- list: June 2025
+- list: May 2025
+- list: April 2025
+- list: March 2025
+- list: February 2025
+- list: January 2025
+cas behu: 01:19
+ctu sesit: Databaze Libuš 2026.xlsx
+- list: March 2026
+- list: February 2026
+- list: January 2026
+cas behu: 01:25
+
+========================================
+pobocka: Malešice
+========================================
+ctu sesit: Databaze Malešice 2024.xlsx
+- list: December 2024
+- list: November 2024
+- list: October 2024
+- list: September 2024
+- list: August 2024
+cas behu: 01:35
+ctu sesit: Databaze Malešice 2025.xlsx
+- list: December 2025
+- list: November 2025
+- list: October 2025
+- list: September 2025
+- list: August 2025
+- list: July 2025
+- list: June 2025
+- list: May 2025
+- list: April 2025
+- list: March 2025
+- list: February 2025
+- list: January 2025
+cas behu: 01:58
+ctu sesit: Databaze Malešice 2026.xlsx
+- list: March 2026
+- list: February 2026
+- list: January 2026
+cas behu: 02:04
+
+========================================
+pobocka: Prosek
+========================================
+ctu sesit: Databaze Prosek 2024.xlsx
+- list: December 2024
+- list: November 2024
+- list: October 2024
+- list: September 2024
+- list: August 2024
+cas behu: 02:12
+ctu sesit: Databaze Prosek 2025.xlsx
+- list: December 2025
+- list: November 2025
+- list: October 2025
+- list: September 2025
+- list: August 2025
+- list: July 2025
+- list: June 2025
+- list: May 2025
+- list: April 2025
+- list: March 2025
+- list: February 2025
+- list: January 2025
+cas behu: 02:32
+ctu sesit: Databaze Prosek 2026.xlsx
+- list: March 2026
+- list: February 2026
+- list: January 2026
+cas behu: 02:38
+
+========================================
+pobocka: Výroba
+========================================
+ctu sesit: Databaze Výroba 2024.xlsx
+- list: December 2024
+- list: November 2024
+- list: October 2024
+- list: September 2024
+cas behu: 02:44
+ctu sesit: Databaze Výroba 2025.xlsx
+- list: December 2025
+- list: November 2025
+- list: October 2025
+- list: September 2025
+- list: August 2025
+- list: July 2025
+- list: June 2025
+- list: May 2025
+- list: April 2025
+- list: March 2025
+- list: February 2025
+- list: January 2025
+cas behu: 03:02
+ctu sesit: Databaze Výroba 2026.xlsx
+- list: March 2026
+- list: February 2026
+- list: January 2026
+cas behu: 03:06
+
+========================================
+pobocka: Zličín
+========================================
+ctu sesit: Databaze Zličín 2024.xlsx
+- list: December 2024
+- list: November 2024
+- list: October 2024
+- list: September 2024
+- list: August 2024
+cas behu: 03:15
+ctu sesit: Databaze Zličín 2025.xlsx
+- list: December 2025
+- list: November 2025
+- list: October 2025
+- list: September 2025
+- list: August 2025
+- list: July 2025
+- list: June 2025
+- list: May 2025
+- list: April 2025
+- list: March 2025
+- list: February 2025
+- list: January 2025
+cas behu: 03:35
+ctu sesit: Databaze Zličín 2026.xlsx
+- list: March 2026
+- list: February 2026
+- list: January 2026
+cas behu: 03:41
+
+zpracovane radky: 125879
+ulozene zaznamy: 15372
+pocet chyb: 12
+celkova doba behu: 03:41

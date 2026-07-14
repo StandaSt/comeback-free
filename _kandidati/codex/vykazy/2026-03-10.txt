@@ -1,0 +1,71 @@
+Comeback IS - denni historie
+Datum: 2026-03-10
+Cas zapisu: 2026-03-11 20:05:00
+Autor: Codex + Standa
+
+1) Shrnuti dne
+- Hlavnim tematem dne byly planovane smeny a jejich synchronizace po loginu.
+- Probihalo vice pokusu nad GraphQL dotazy, tokem synchronizace a zapisovanim do DB.
+- Soucasne se uklizel projekt: bootstrap, stare menu, CSS, testovaci skripty a orientace v souborech.
+- Vznikla cekarna jako trvaly seznam cekajicich ukolu.
+
+2) Planovane smeny - hledani funkcniho toku
+- Byl vytvoren prvni skript pro synchronizaci planovanych smen po loginu.
+- Sync se presouval z blokujiciho toku do AJAX rezimu po nacteni dashboardu.
+- Postupne se zkousely ruzne rezimy:
+  - lock nad synchronizaci,
+  - start / next / step endpoint,
+  - synchronizace po pobockach,
+  - synchronizace po tydnech,
+  - diagnosticky rezim s vypisy API dotazu.
+- Cilem bylo najit funkcni a neblokujici cestu k datum planovanych smen uzivatele.
+
+3) Smeny - DB a pomocne struktury
+- Byla overena a vytvorena tabulka smeny_plan.
+- Do user byl doplnen sloupec last_smeny pro evidenci posledni synchronizace.
+- Pro testovani vznikly probe a pomocne skripty k odhaleni resolveru a fields v GraphQL.
+
+4) UX synchronizace
+- Do stredu dashboardu byl pridan informacni overlay se stavem synchronizace.
+- Postupne zobrazoval stav, pobocku, obdobi a dalsi texty k prubehu API dotazu.
+- Debug rezim vypisoval i API dotaz cislo x a zpracovavane obdobi.
+- Pozdeji byl tenhle smer opet zjednodusovan a osekavan.
+
+5) Cisteni projektu
+- Menu URL bylo upraveno na cistou adresu bez ?sekce.
+- Byla pridana karta admin_testy pro spousteni pomocnych testovacich skriptu.
+- Promenne z nastaveni.css byly slouceny do global.css a stary soubor zmizel.
+- Probihl audit stare logiky menu a jeji dalsi omezeni.
+
+6) Bootstrap a start aplikace
+- Probehl velky audit mist, kde se vola bootstrap.
+- Postupne byla odstanovana zbytecna volani bootstrapu z include/helper souboru.
+- Nakonec se aktivni kod dostal do stavu bez bootstrap.php.
+- Start aplikace byl zjednodusen na session + app + system + secrets.
+
+7) Cekarna a organizace prace
+- Vznikl soubor codex/cekarna.txt.
+- Cekarna byla prepsana na cislovany seznam a pozdeji rozdelena na CEKAJICI a SPLNENO.
+- Pribyly body kolem modalu prvniho prihlaseni a noveho cisteho skriptu smeny_naplanovane.php.
+
+8) Logout a dalsi systemove zmeny
+- Implementovan cisty logout pres index.php?action=logout.
+- Stary lib/logout.php byl odstraneny.
+- Upraveny byly odkazy v hlavicce, aby smerovaly na novy logout handler.
+
+9) Kodovani a soubory
+- Probehla plosna kontrola a oprava kodovani v aktivnich textovych souborech.
+- Soubory se drzi v UTF-8 bez BOM.
+- Soucasne vznikl seznam dalsich souboru, ktere chtely rucni dozpracovani cestiny.
+
+10) Dulezita rozhodnuti dne
+- Synchronizace planovanych smen se nebude dal nasilne tlacit do rozdelaneho skriptu bez jasneho vysledku.
+- Bootstrap ma bezet jen tam, kde je skutecne nutny.
+- Pomocne probe skripty patri mimo aktivni produkcni tok.
+
+11) Co navazuje priste
+- Vratit se k cistsimu a jednodussimu pristupu nad planovanymi smenami.
+- Pokracovat v dashboardovych kartach a sjednocovani vzhledu.
+- Dotahnout dalsi cleanup kolem CSS, JS a kodovani.
+
+Konec zapisu.

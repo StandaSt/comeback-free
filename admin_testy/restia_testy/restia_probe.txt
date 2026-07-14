@@ -1,0 +1,1072 @@
+RESTIA PROBE
+kdy: 2026-04-01 01:51:16
+id_pob: 6
+pobocka: Bolevec
+activePosId: 3eb8bd65-26d6-4fa9-a20b-19705f856f17
+auto_pobocka: ano
+od_utc: 2026-03-30T00:00:00.000Z
+do_utc: 2026-03-30T23:59:59.999Z
+limit: 100
+pages: 3
+menu_id: 762f8daa-ca39-4d8f-ae4a-d22b4d106e88
+
+ORDERS STRANKY
+--------------
+page=1 http=200 total_count=35 pocet=35 ms=502 bytes_in=90288
+celkem_objednavek_ve_vzorku=35
+
+ORDERS CESTY
+------------
+order || count=35 || types=object:35 || sample={keys:id,orderNumber,shortCode,serialNumber,token,destination,customerName,customerPhone,customerEmail,customerNote,createdAt,expiresAt,deliveryAt,promisedAt,pickupAt,prepareAt,cookingTimeMinutes,deliveryOnTime,finishedAt,preparedAt,deliveredAt,originalRequiredAt,isPickup,paymentType,surchargeToMin,deliveryPrice,packingPrice,tipPrice,itemsPrice,serviceFeePrice,discountPrice,roundingPrice,discountCode,servicesData,courierData,courierOrder,note,info,deliveryZone,isSelfDelivery,isInRestaurant,deliveryType,posImportStatus,posImportScheduledAt,posImportedAt,posPaymentData,posData,status,statusUpdatedAt,statusCanceledInfo,closedAt,parentOrderId,forwardedToOrderId,isEdited,statusUpdateWebhookUrl,items,importedAt,profileId,profile,actionRequired}
+order.actionRequired || count=35 || types=bool:35 || sample=false
+order.closedAt || count=35 || types=string:35 || sample=2026-03-30T21:11:19.542Z | 2026-03-30T21:06:59.336Z | 2026-03-30T20:47:35.812Z | 2026-03-30T19:48:53.282Z | 2026-03-30T19:48:52.641Z
+order.cookingTimeMinutes || count=35 || types=int:35 || sample=15 | 5
+order.courierData || count=35 || types=null:34,object:1 || sample=null | {keys:id,name,phone,routeId,orderAssignedAt}
+order.courierData.id || count=1 || types=string:1 || sample=2380dc1a-e4cb-4585-8559-144734a49bee
+order.courierData.name || count=1 || types=string:1 || sample=Lukáš Ženíšek
+order.courierData.orderAssignedAt || count=1 || types=string:1 || sample=2026-03-30T17:34:35.666Z
+order.courierData.phone || count=1 || types=string:1 || sample=774489064
+order.courierData.routeId || count=1 || types=string:1 || sample=019d3fcf-ca92-72d2-8979-37c15e354c1e
+order.courierOrder || count=35 || types=null:34,int:1 || sample=null | 0
+order.createdAt || count=35 || types=string:35 || sample=2026-03-30T20:58:38.130Z | 2026-03-30T20:55:05.532Z | 2026-03-30T20:38:43.855Z | 2026-03-30T19:33:52.991Z | 2026-03-30T19:27:22.919Z
+order.customerEmail || count=35 || types=null:33,string:2 || sample=null | cubahruby@gmail.com | simonmiky@seznam.cz
+order.customerName || count=35 || types=string:35 || sample=Martin Jára | Ivo Vaněrka | V restauraci | Karel Karel | Roman Maxim Dostál
+order.customerNote || count=35 || types=null:35 || sample=null
+order.customerPhone || count=35 || types=string:35 || sample=+420604949683 | +420775957861 | 774489064 | +420728616833 | +420606503615
+order.deliveredAt || count=35 || types=null:10,string:25 || sample=null | 2026-03-30T20:47:35.812Z | 2026-03-30T19:19:41.228Z | 2026-03-30T18:10:48.071Z | 2026-03-30T17:51:30.328Z
+order.deliveryAt || count=35 || types=string:35 || sample=2026-03-30T21:13:38.153Z | 2026-03-30T21:10:05.577Z | 2026-03-30T20:43:43.893Z | 2026-03-30T19:48:53.016Z | 2026-03-30T19:42:22.948Z
+order.deliveryOnTime || count=35 || types=bool:35 || sample=false | true
+order.deliveryPrice || count=35 || types=string:35 || sample=0
+order.deliveryType || count=35 || types=string:35 || sample=external-delivery | pickup | delivery
+order.deliveryZone || count=35 || types=null:35 || sample=null
+order.destination || count=35 || types=object:13,array:22 || sample={keys:note} | [] | {keys:zip,city,street,latitude,longitude,deliveryData} | {keys:zip,city,note,street,latitude,longitude}
+order.destination.city || count=3 || types=string:1,null:2 || sample=Plzeň | null
+order.destination.deliveryData || count=1 || types=object:1 || sample={keys:distanceMeters,durationSeconds,computedOnlyByGPS}
+order.destination.deliveryData.computedOnlyByGPS || count=1 || types=bool:1 || sample=false
+order.destination.deliveryData.distanceMeters || count=1 || types=float:1 || sample=5953.3
+order.destination.deliveryData.durationSeconds || count=1 || types=float:1 || sample=774.2
+order.destination.latitude || count=3 || types=float:1,null:2 || sample=49.76135 | null
+order.destination.longitude || count=3 || types=float:1,null:2 || sample=13.41734 | null
+order.destination.note || count=12 || types=string:10,null:2 || sample=[empty string] | null
+order.destination.street || count=3 || types=string:1,null:2 || sample=Ke Sv. Jiří 1191/34 | null
+order.destination.zip || count=3 || types=string:1,null:2 || sample=312 00 | null
+order.discountCode || count=35 || types=null:35 || sample=null
+order.discountPrice || count=35 || types=string:35 || sample=0 | 10000 | 5000 | 6500 | 6600
+order.expiresAt || count=35 || types=string:10,null:25 || sample=2026-03-30T21:03:37.944Z | 2026-03-30T21:00:05.399Z | null | 2026-03-30T19:38:52.874Z | 2026-03-30T19:32:22.800Z
+order.finishedAt || count=35 || types=string:35 || sample=2026-03-30T21:07:06.468Z | 2026-03-30T21:04:09.317Z | 2026-03-30T20:47:35.058Z | 2026-03-30T19:45:33.136Z | 2026-03-30T19:38:29.175Z
+order.forwardedToOrderId || count=35 || types=null:35 || sample=null
+order.id || count=35 || types=string:35 || sample=3296c380-f446-45f8-b156-c04693a21b57 | 73cd3928-ce26-4219-a69c-59e7f5085b8b | faf8206b-c826-4b8b-b6aa-8ea3b95bd6d0 | f6102c0c-269a-4a63-b5bc-bea5c7e66f49 | 2b23a794-4e9f-44a4-9994-99048085b8f8
+order.importedAt || count=35 || types=string:35 || sample=2026-03-30T20:58:38.131Z | 2026-03-30T20:55:05.533Z | 2026-03-30T20:38:43.855Z | 2026-03-30T19:33:52.992Z | 2026-03-30T19:27:22.920Z
+order.info || count=35 || types=null:35 || sample=null
+order.isEdited || count=35 || types=bool:35 || sample=false
+order.isInRestaurant || count=35 || types=bool:35 || sample=false | true
+order.isPickup || count=35 || types=bool:35 || sample=true | false
+order.isSelfDelivery || count=35 || types=bool:35 || sample=false
+order.items || count=35 || types=array:35 || sample=[items:3] | [items:4] | [items:2] | [items:7] | [items:1]
+order.itemsPrice || count=35 || types=string:35 || sample=29900 | 36300 | 31800 | 28300 | 62200
+order.items[] || count=71 || types=object:71 || sample={keys:id,note,size,count,label,posId,price,isExtra} | {keys:id,note,count,label,posId,price,isExtra} | {keys:id,note,count,label,posId,price,KDSTags,isExtra} | {keys:id,count,label,posId,price,isExtra,creatorId,isPackging,actualLabel} | {keys:id,count,label,posId,price,isExtra,mainItemId}
+order.items[].KDSTags || count=3 || types=array:3 || sample=[items:1]
+order.items[].KDSTags[] || count=3 || types=string:3 || sample=greenhighlight
+order.items[].actualLabel || count=29 || types=string:29 || sample=Pizza Comeback 32 | Pepsi 1l | Pizza Pepperoni 18 | Pizza Capricciosa 40 | Cappucino
+order.items[].count || count=71 || types=int:71 || sample=1 | 2
+order.items[].creatorId || count=29 || types=string:29 || sample=XJf5K08vHd-Ew93OIugy5 | KBP1zO4QKIR7doLbhAVxP | hdpAn45C_4Hs-Ujwkwk9Z | ApLsXIuQ_ogy7D96ZBMf_ | dfZBkUTmTSCsGGs21DJ4-
+order.items[].id || count=71 || types=string:71 || sample=62240201 | 62240274 | 62240347 | 62240209 | 62240325
+order.items[].isExtra || count=71 || types=bool:71 || sample=false | true
+order.items[].isPackging || count=29 || types=int:29 || sample=0
+order.items[].label || count=71 || types=string:71 || sample=Hot & Spicy 32cm 🌶️🌶️ | Balné | Cibule | Baby Špenát & kuře 32cm | okraj hotdog, hořčice
+order.items[].mainItemId || count=4 || types=string:4 || sample=8bba451a-3c5e-4c20-9575-e5341c254b5e | dd64d382-320f-41bf-9f06-cbddc81362f7
+order.items[].note || count=38 || types=string:38 || sample=[empty string]
+order.items[].posId || count=71 || types=string:71 || sample=122 | K0000 | B103 | 116 | A117
+order.items[].price || count=71 || types=int:71 || sample=25900 | 1500 | 2500 | 5900 | 3000
+order.items[].size || count=15 || types=string:15 || sample=Hot & Spicy 32cm 🌶️🌶️ | Baby Špenát & kuře 32cm | Margherita 32cm | Aquilla zelený čaj/citron 0,5l | Quattro Formaggi 32cm
+order.note || count=35 || types=string:12,null:23 || sample=[empty string] | null | #upstairs# Výnos do patra - vyneste objednávku zákazníkovi do patra.
+order.orderNumber || count=35 || types=string:35 || sample=bams-2614-pdme | bams-2614-o76v | 784ab7a475 | bams-2614-slz8 | bams-2614-4z2r
+order.originalRequiredAt || count=35 || types=string:12,null:23 || sample=2026-03-30T21:07:08.683Z | 2026-03-30T21:03:05.149Z | null | 2026-03-30T19:40:52.665Z | 2026-03-30T19:39:00.502Z
+order.packingPrice || count=35 || types=string:35 || sample=0
+order.parentOrderId || count=35 || types=null:35 || sample=null
+order.paymentType || count=35 || types=string:35 || sample=online | cash | card
+order.pickupAt || count=35 || types=string:35 || sample=2026-03-30T21:13:38.153Z | 2026-03-30T21:10:05.577Z | 2026-03-30T20:43:43.893Z | 2026-03-30T19:48:53.016Z | 2026-03-30T19:42:22.948Z
+order.posData || count=35 || types=object:35 || sample={keys:id,receiptNumber}
+order.posData.id || count=35 || types=string:35 || sample=2682478 | 2682457 | 2682395 | 2682169 | 2682119
+order.posData.receiptNumber || count=35 || types=string:35 || sample=2682478 | 2682457 | 2682395 | 2682169 | 2682119
+order.posImportScheduledAt || count=35 || types=null:35 || sample=null
+order.posImportStatus || count=35 || types=string:35 || sample=success
+order.posImportedAt || count=35 || types=string:35 || sample=2026-03-30T20:58:38.669Z | 2026-03-30T20:55:06.069Z | 2026-03-30T20:38:44.051Z | 2026-03-30T19:33:53.420Z | 2026-03-30T19:27:23.500Z
+order.posPaymentData || count=35 || types=null:12,object:23 || sample=null | {keys:posId}
+order.posPaymentData.posId || count=23 || types=string:23 || sample=34 | 2
+order.prepareAt || count=35 || types=string:35 || sample=2026-03-30T21:13:38.153Z | 2026-03-30T21:10:05.577Z | 2026-03-30T20:43:43.867Z | 2026-03-30T19:48:53.016Z | 2026-03-30T19:42:22.948Z
+order.preparedAt || count=35 || types=string:35 || sample=2026-03-30T21:07:06.468Z | 2026-03-30T21:04:09.317Z | 2026-03-30T20:47:35.058Z | 2026-03-30T19:45:33.136Z | 2026-03-30T19:38:29.175Z
+order.profile || count=35 || types=object:35 || sample={keys:id,type,key,apikey,name,isEnabled,email,createdAt,tempClosedUntil,configData,eshopConfig,orderConfirmation,orderConfirmationOptions,internalStatusData,openingHours,deliveryData,approvedToMenuUpload,autoApproveMenuUploadAt,menuUploadData,menuId,lastMenuSync,url,posId}
+order.profile.apikey || count=35 || types=null:35 || sample=null
+order.profile.approvedToMenuUpload || count=35 || types=bool:35 || sample=true | false
+order.profile.autoApproveMenuUploadAt || count=35 || types=null:35 || sample=null
+order.profile.configData || count=35 || types=array:10,null:23,object:2 || sample=[] | null | {keys:webhookUrl,menuWebhookUrl,updateDestinationWithGPS,menuItemAvailabilityWebhook,orderStatusUpdateWebhookUrl}
+order.profile.configData.menuItemAvailabilityWebhook || count=2 || types=string:2 || sample=[empty string]
+order.profile.configData.menuWebhookUrl || count=2 || types=string:2 || sample=[empty string]
+order.profile.configData.orderStatusUpdateWebhookUrl || count=2 || types=string:2 || sample=[empty string]
+order.profile.configData.updateDestinationWithGPS || count=2 || types=bool:2 || sample=false
+order.profile.configData.webhookUrl || count=2 || types=string:2 || sample=[empty string]
+order.profile.createdAt || count=35 || types=string:35 || sample=2025-07-17T13:23:34.739Z | 2025-07-17T08:14:49.230Z | 2025-07-17T13:24:02.700Z
+order.profile.deliveryData || count=35 || types=null:35 || sample=null
+order.profile.email || count=35 || types=null:35 || sample=null
+order.profile.eshopConfig || count=35 || types=null:35 || sample=null
+order.profile.id || count=35 || types=string:35 || sample=5cbd8e05-4cdb-4711-86df-606cbf9e6845 | c0fd9cbb-e483-43f3-84b8-9b9a8cc643a8 | d49bdbc3-69b7-4c0e-9081-0b8f812859ac
+order.profile.internalStatusData || count=35 || types=object:10,null:25 || sample={keys:apiCommErrorFrom} | null
+order.profile.internalStatusData.apiCommErrorFrom || count=10 || types=string:10 || sample=2026-03-31T18:51:11.576Z
+order.profile.isEnabled || count=35 || types=bool:35 || sample=true
+order.profile.key || count=35 || types=string:35 || sample=bams | manual | T4RAu9maLsrjcvX4a
+order.profile.lastMenuSync || count=35 || types=string:10,null:25 || sample=2026-03-18T12:53:18.440Z | null
+order.profile.menuId || count=35 || types=string:12,null:23 || sample=762f8daa-ca39-4d8f-ae4a-d22b4d106e88 | null
+order.profile.menuUploadData || count=35 || types=object:10,null:25 || sample={keys:status,updatedAt} | null
+order.profile.menuUploadData.status || count=10 || types=string:10 || sample=completed
+order.profile.menuUploadData.updatedAt || count=10 || types=string:10 || sample=2026-03-18T12:53:18.440Z
+order.profile.name || count=35 || types=string:35 || sample=Pizza Comeback Bolevec | Ručně zadané obj. | Adaptee
+order.profile.openingHours || count=35 || types=null:35 || sample=null
+order.profile.orderConfirmation || count=35 || types=string:35 || sample=auto | external
+order.profile.orderConfirmationOptions || count=35 || types=object:10,null:25 || sample={keys:isEnabled,forcedConfirmMinutes} | null
+order.profile.orderConfirmationOptions.forcedConfirmMinutes || count=10 || types=int:10 || sample=15
+order.profile.orderConfirmationOptions.isEnabled || count=10 || types=bool:10 || sample=true
+order.profile.posId || count=35 || types=string:35 || sample=3eb8bd65-26d6-4fa9-a20b-19705f856f17
+order.profile.tempClosedUntil || count=35 || types=null:35 || sample=null
+order.profile.type || count=35 || types=string:35 || sample=damejidlo | manual | generic
+order.profile.url || count=35 || types=string:12,null:23 || sample=[empty string] | null | a
+order.profileId || count=35 || types=string:35 || sample=5cbd8e05-4cdb-4711-86df-606cbf9e6845 | c0fd9cbb-e483-43f3-84b8-9b9a8cc643a8 | d49bdbc3-69b7-4c0e-9081-0b8f812859ac
+order.promisedAt || count=35 || types=string:35 || sample=2026-03-30T21:13:38.153Z | 2026-03-30T21:10:05.577Z | 2026-03-30T20:43:43.893Z | 2026-03-30T19:48:53.016Z | 2026-03-30T19:42:22.948Z
+order.roundingPrice || count=35 || types=string:35 || sample=0
+order.serialNumber || count=35 || types=string:35 || sample=035 | 034 | 033 | 032 | 031
+order.serviceFeePrice || count=35 || types=string:35 || sample=0
+order.servicesData || count=35 || types=null:34,object:1 || sample=null | {keys:dispecink}
+order.servicesData.dispecink || count=1 || types=object:1 || sample={keys:id,type,importedAt,importStatus,statusUpdatedAt,requiredCourierId}
+order.servicesData.dispecink.id || count=1 || types=string:1 || sample=20226093-f6f3-4f37-818b-5a5bd79d8060
+order.servicesData.dispecink.importStatus || count=1 || types=string:1 || sample=success
+order.servicesData.dispecink.importedAt || count=1 || types=string:1 || sample=2026-03-30T17:34:35.653Z
+order.servicesData.dispecink.requiredCourierId || count=1 || types=string:1 || sample=2380dc1a-e4cb-4585-8559-144734a49bee
+order.servicesData.dispecink.statusUpdatedAt || count=1 || types=string:1 || sample=2026-03-30T17:34:35.657Z
+order.servicesData.dispecink.type || count=1 || types=string:1 || sample=Internal
+order.shortCode || count=35 || types=string:35 || sample=2107 | 2106 | 32aa | 2105 | 2104
+order.status || count=35 || types=string:35 || sample=delivered
+order.statusCanceledInfo || count=35 || types=null:35 || sample=null
+order.statusUpdateWebhookUrl || count=35 || types=null:35 || sample=null
+order.statusUpdatedAt || count=35 || types=string:35 || sample=2026-03-30T21:11:19.543Z | 2026-03-30T21:06:59.337Z | 2026-03-30T20:47:35.813Z | 2026-03-30T19:48:53.283Z | 2026-03-30T19:48:52.642Z
+order.surchargeToMin || count=35 || types=string:35 || sample=0
+order.tipPrice || count=35 || types=string:35 || sample=0
+order.token || count=35 || types=string:10,null:25 || sample=REpfQ1otYmFtcw-_-oma_ed65ee72-e5b1-5ba6-8b4c-088723dc13a0-_-eu | REpfQ1otYmFtcw-_-oma_968e8d04-7710-5895-8d4a-eda081780b3b-_-eu | null | REpfQ1otYmFtcw-_-oma_f0cc74d4-992f-5958-ac19-c89367e7ba5a-_-eu | REpfQ1otYmFtcw-_-oma_b428acea-de4b-5ca2-8356-c97e52a73323-_-eu
+orders_response || count=1 || types=array:1 || sample=[items:35]
+orders_response[] || count=35 || types=object:35 || sample={keys:id,orderNumber,shortCode,serialNumber,token,destination,customerName,customerPhone,customerEmail,customerNote,createdAt,expiresAt,deliveryAt,promisedAt,pickupAt,prepareAt,cookingTimeMinutes,deliveryOnTime,finishedAt,preparedAt,deliveredAt,originalRequiredAt,isPickup,paymentType,surchargeToMin,deliveryPrice,packingPrice,tipPrice,itemsPrice,serviceFeePrice,discountPrice,roundingPrice,discountCode,servicesData,courierData,courierOrder,note,info,deliveryZone,isSelfDelivery,isInRestaurant,deliveryType,posImportStatus,posImportScheduledAt,posImportedAt,posPaymentData,posData,status,statusUpdatedAt,statusCanceledInfo,closedAt,parentOrderId,forwardedToOrderId,isEdited,statusUpdateWebhookUrl,items,importedAt,profileId,profile,actionRequired}
+orders_response[].actionRequired || count=35 || types=bool:35 || sample=false
+orders_response[].closedAt || count=35 || types=string:35 || sample=2026-03-30T21:11:19.542Z | 2026-03-30T21:06:59.336Z | 2026-03-30T20:47:35.812Z | 2026-03-30T19:48:53.282Z | 2026-03-30T19:48:52.641Z
+orders_response[].cookingTimeMinutes || count=35 || types=int:35 || sample=15 | 5
+orders_response[].courierData || count=35 || types=null:34,object:1 || sample=null | {keys:id,name,phone,routeId,orderAssignedAt}
+orders_response[].courierData.id || count=1 || types=string:1 || sample=2380dc1a-e4cb-4585-8559-144734a49bee
+orders_response[].courierData.name || count=1 || types=string:1 || sample=Lukáš Ženíšek
+orders_response[].courierData.orderAssignedAt || count=1 || types=string:1 || sample=2026-03-30T17:34:35.666Z
+orders_response[].courierData.phone || count=1 || types=string:1 || sample=774489064
+orders_response[].courierData.routeId || count=1 || types=string:1 || sample=019d3fcf-ca92-72d2-8979-37c15e354c1e
+orders_response[].courierOrder || count=35 || types=null:34,int:1 || sample=null | 0
+orders_response[].createdAt || count=35 || types=string:35 || sample=2026-03-30T20:58:38.130Z | 2026-03-30T20:55:05.532Z | 2026-03-30T20:38:43.855Z | 2026-03-30T19:33:52.991Z | 2026-03-30T19:27:22.919Z
+orders_response[].customerEmail || count=35 || types=null:33,string:2 || sample=null | cubahruby@gmail.com | simonmiky@seznam.cz
+orders_response[].customerName || count=35 || types=string:35 || sample=Martin Jára | Ivo Vaněrka | V restauraci | Karel Karel | Roman Maxim Dostál
+orders_response[].customerNote || count=35 || types=null:35 || sample=null
+orders_response[].customerPhone || count=35 || types=string:35 || sample=+420604949683 | +420775957861 | 774489064 | +420728616833 | +420606503615
+orders_response[].deliveredAt || count=35 || types=null:10,string:25 || sample=null | 2026-03-30T20:47:35.812Z | 2026-03-30T19:19:41.228Z | 2026-03-30T18:10:48.071Z | 2026-03-30T17:51:30.328Z
+orders_response[].deliveryAt || count=35 || types=string:35 || sample=2026-03-30T21:13:38.153Z | 2026-03-30T21:10:05.577Z | 2026-03-30T20:43:43.893Z | 2026-03-30T19:48:53.016Z | 2026-03-30T19:42:22.948Z
+orders_response[].deliveryOnTime || count=35 || types=bool:35 || sample=false | true
+orders_response[].deliveryPrice || count=35 || types=string:35 || sample=0
+orders_response[].deliveryType || count=35 || types=string:35 || sample=external-delivery | pickup | delivery
+orders_response[].deliveryZone || count=35 || types=null:35 || sample=null
+orders_response[].destination || count=35 || types=object:13,array:22 || sample={keys:note} | [] | {keys:zip,city,street,latitude,longitude,deliveryData} | {keys:zip,city,note,street,latitude,longitude}
+orders_response[].destination.city || count=3 || types=string:1,null:2 || sample=Plzeň | null
+orders_response[].destination.deliveryData || count=1 || types=object:1 || sample={keys:distanceMeters,durationSeconds,computedOnlyByGPS}
+orders_response[].destination.deliveryData.computedOnlyByGPS || count=1 || types=bool:1 || sample=false
+orders_response[].destination.deliveryData.distanceMeters || count=1 || types=float:1 || sample=5953.3
+orders_response[].destination.deliveryData.durationSeconds || count=1 || types=float:1 || sample=774.2
+orders_response[].destination.latitude || count=3 || types=float:1,null:2 || sample=49.76135 | null
+orders_response[].destination.longitude || count=3 || types=float:1,null:2 || sample=13.41734 | null
+orders_response[].destination.note || count=12 || types=string:10,null:2 || sample=[empty string] | null
+orders_response[].destination.street || count=3 || types=string:1,null:2 || sample=Ke Sv. Jiří 1191/34 | null
+orders_response[].destination.zip || count=3 || types=string:1,null:2 || sample=312 00 | null
+orders_response[].discountCode || count=35 || types=null:35 || sample=null
+orders_response[].discountPrice || count=35 || types=string:35 || sample=0 | 10000 | 5000 | 6500 | 6600
+orders_response[].expiresAt || count=35 || types=string:10,null:25 || sample=2026-03-30T21:03:37.944Z | 2026-03-30T21:00:05.399Z | null | 2026-03-30T19:38:52.874Z | 2026-03-30T19:32:22.800Z
+orders_response[].finishedAt || count=35 || types=string:35 || sample=2026-03-30T21:07:06.468Z | 2026-03-30T21:04:09.317Z | 2026-03-30T20:47:35.058Z | 2026-03-30T19:45:33.136Z | 2026-03-30T19:38:29.175Z
+orders_response[].forwardedToOrderId || count=35 || types=null:35 || sample=null
+orders_response[].id || count=35 || types=string:35 || sample=3296c380-f446-45f8-b156-c04693a21b57 | 73cd3928-ce26-4219-a69c-59e7f5085b8b | faf8206b-c826-4b8b-b6aa-8ea3b95bd6d0 | f6102c0c-269a-4a63-b5bc-bea5c7e66f49 | 2b23a794-4e9f-44a4-9994-99048085b8f8
+orders_response[].importedAt || count=35 || types=string:35 || sample=2026-03-30T20:58:38.131Z | 2026-03-30T20:55:05.533Z | 2026-03-30T20:38:43.855Z | 2026-03-30T19:33:52.992Z | 2026-03-30T19:27:22.920Z
+orders_response[].info || count=35 || types=null:35 || sample=null
+orders_response[].isEdited || count=35 || types=bool:35 || sample=false
+orders_response[].isInRestaurant || count=35 || types=bool:35 || sample=false | true
+orders_response[].isPickup || count=35 || types=bool:35 || sample=true | false
+orders_response[].isSelfDelivery || count=35 || types=bool:35 || sample=false
+orders_response[].items || count=35 || types=array:35 || sample=[items:3] | [items:4] | [items:2] | [items:7] | [items:1]
+orders_response[].itemsPrice || count=35 || types=string:35 || sample=29900 | 36300 | 31800 | 28300 | 62200
+orders_response[].items[] || count=71 || types=object:71 || sample={keys:id,note,size,count,label,posId,price,isExtra} | {keys:id,note,count,label,posId,price,isExtra} | {keys:id,note,count,label,posId,price,KDSTags,isExtra} | {keys:id,count,label,posId,price,isExtra,creatorId,isPackging,actualLabel} | {keys:id,count,label,posId,price,isExtra,mainItemId}
+orders_response[].items[].KDSTags || count=3 || types=array:3 || sample=[items:1]
+orders_response[].items[].KDSTags[] || count=3 || types=string:3 || sample=greenhighlight
+orders_response[].items[].actualLabel || count=29 || types=string:29 || sample=Pizza Comeback 32 | Pepsi 1l | Pizza Pepperoni 18 | Pizza Capricciosa 40 | Cappucino
+orders_response[].items[].count || count=71 || types=int:71 || sample=1 | 2
+orders_response[].items[].creatorId || count=29 || types=string:29 || sample=XJf5K08vHd-Ew93OIugy5 | KBP1zO4QKIR7doLbhAVxP | hdpAn45C_4Hs-Ujwkwk9Z | ApLsXIuQ_ogy7D96ZBMf_ | dfZBkUTmTSCsGGs21DJ4-
+orders_response[].items[].id || count=71 || types=string:71 || sample=62240201 | 62240274 | 62240347 | 62240209 | 62240325
+orders_response[].items[].isExtra || count=71 || types=bool:71 || sample=false | true
+orders_response[].items[].isPackging || count=29 || types=int:29 || sample=0
+orders_response[].items[].label || count=71 || types=string:71 || sample=Hot & Spicy 32cm 🌶️🌶️ | Balné | Cibule | Baby Špenát & kuře 32cm | okraj hotdog, hořčice
+orders_response[].items[].mainItemId || count=4 || types=string:4 || sample=8bba451a-3c5e-4c20-9575-e5341c254b5e | dd64d382-320f-41bf-9f06-cbddc81362f7
+orders_response[].items[].note || count=38 || types=string:38 || sample=[empty string]
+orders_response[].items[].posId || count=71 || types=string:71 || sample=122 | K0000 | B103 | 116 | A117
+orders_response[].items[].price || count=71 || types=int:71 || sample=25900 | 1500 | 2500 | 5900 | 3000
+orders_response[].items[].size || count=15 || types=string:15 || sample=Hot & Spicy 32cm 🌶️🌶️ | Baby Špenát & kuře 32cm | Margherita 32cm | Aquilla zelený čaj/citron 0,5l | Quattro Formaggi 32cm
+orders_response[].note || count=35 || types=string:12,null:23 || sample=[empty string] | null | #upstairs# Výnos do patra - vyneste objednávku zákazníkovi do patra.
+orders_response[].orderNumber || count=35 || types=string:35 || sample=bams-2614-pdme | bams-2614-o76v | 784ab7a475 | bams-2614-slz8 | bams-2614-4z2r
+orders_response[].originalRequiredAt || count=35 || types=string:12,null:23 || sample=2026-03-30T21:07:08.683Z | 2026-03-30T21:03:05.149Z | null | 2026-03-30T19:40:52.665Z | 2026-03-30T19:39:00.502Z
+orders_response[].packingPrice || count=35 || types=string:35 || sample=0
+orders_response[].parentOrderId || count=35 || types=null:35 || sample=null
+orders_response[].paymentType || count=35 || types=string:35 || sample=online | cash | card
+orders_response[].pickupAt || count=35 || types=string:35 || sample=2026-03-30T21:13:38.153Z | 2026-03-30T21:10:05.577Z | 2026-03-30T20:43:43.893Z | 2026-03-30T19:48:53.016Z | 2026-03-30T19:42:22.948Z
+orders_response[].posData || count=35 || types=object:35 || sample={keys:id,receiptNumber}
+orders_response[].posData.id || count=35 || types=string:35 || sample=2682478 | 2682457 | 2682395 | 2682169 | 2682119
+orders_response[].posData.receiptNumber || count=35 || types=string:35 || sample=2682478 | 2682457 | 2682395 | 2682169 | 2682119
+orders_response[].posImportScheduledAt || count=35 || types=null:35 || sample=null
+orders_response[].posImportStatus || count=35 || types=string:35 || sample=success
+orders_response[].posImportedAt || count=35 || types=string:35 || sample=2026-03-30T20:58:38.669Z | 2026-03-30T20:55:06.069Z | 2026-03-30T20:38:44.051Z | 2026-03-30T19:33:53.420Z | 2026-03-30T19:27:23.500Z
+orders_response[].posPaymentData || count=35 || types=null:12,object:23 || sample=null | {keys:posId}
+orders_response[].posPaymentData.posId || count=23 || types=string:23 || sample=34 | 2
+orders_response[].prepareAt || count=35 || types=string:35 || sample=2026-03-30T21:13:38.153Z | 2026-03-30T21:10:05.577Z | 2026-03-30T20:43:43.867Z | 2026-03-30T19:48:53.016Z | 2026-03-30T19:42:22.948Z
+orders_response[].preparedAt || count=35 || types=string:35 || sample=2026-03-30T21:07:06.468Z | 2026-03-30T21:04:09.317Z | 2026-03-30T20:47:35.058Z | 2026-03-30T19:45:33.136Z | 2026-03-30T19:38:29.175Z
+orders_response[].profile || count=35 || types=object:35 || sample={keys:id,type,key,apikey,name,isEnabled,email,createdAt,tempClosedUntil,configData,eshopConfig,orderConfirmation,orderConfirmationOptions,internalStatusData,openingHours,deliveryData,approvedToMenuUpload,autoApproveMenuUploadAt,menuUploadData,menuId,lastMenuSync,url,posId}
+orders_response[].profile.apikey || count=35 || types=null:35 || sample=null
+orders_response[].profile.approvedToMenuUpload || count=35 || types=bool:35 || sample=true | false
+orders_response[].profile.autoApproveMenuUploadAt || count=35 || types=null:35 || sample=null
+orders_response[].profile.configData || count=35 || types=array:10,null:23,object:2 || sample=[] | null | {keys:webhookUrl,menuWebhookUrl,updateDestinationWithGPS,menuItemAvailabilityWebhook,orderStatusUpdateWebhookUrl}
+orders_response[].profile.configData.menuItemAvailabilityWebhook || count=2 || types=string:2 || sample=[empty string]
+orders_response[].profile.configData.menuWebhookUrl || count=2 || types=string:2 || sample=[empty string]
+orders_response[].profile.configData.orderStatusUpdateWebhookUrl || count=2 || types=string:2 || sample=[empty string]
+orders_response[].profile.configData.updateDestinationWithGPS || count=2 || types=bool:2 || sample=false
+orders_response[].profile.configData.webhookUrl || count=2 || types=string:2 || sample=[empty string]
+orders_response[].profile.createdAt || count=35 || types=string:35 || sample=2025-07-17T13:23:34.739Z | 2025-07-17T08:14:49.230Z | 2025-07-17T13:24:02.700Z
+orders_response[].profile.deliveryData || count=35 || types=null:35 || sample=null
+orders_response[].profile.email || count=35 || types=null:35 || sample=null
+orders_response[].profile.eshopConfig || count=35 || types=null:35 || sample=null
+orders_response[].profile.id || count=35 || types=string:35 || sample=5cbd8e05-4cdb-4711-86df-606cbf9e6845 | c0fd9cbb-e483-43f3-84b8-9b9a8cc643a8 | d49bdbc3-69b7-4c0e-9081-0b8f812859ac
+orders_response[].profile.internalStatusData || count=35 || types=object:10,null:25 || sample={keys:apiCommErrorFrom} | null
+orders_response[].profile.internalStatusData.apiCommErrorFrom || count=10 || types=string:10 || sample=2026-03-31T18:51:11.576Z
+orders_response[].profile.isEnabled || count=35 || types=bool:35 || sample=true
+orders_response[].profile.key || count=35 || types=string:35 || sample=bams | manual | T4RAu9maLsrjcvX4a
+orders_response[].profile.lastMenuSync || count=35 || types=string:10,null:25 || sample=2026-03-18T12:53:18.440Z | null
+orders_response[].profile.menuId || count=35 || types=string:12,null:23 || sample=762f8daa-ca39-4d8f-ae4a-d22b4d106e88 | null
+orders_response[].profile.menuUploadData || count=35 || types=object:10,null:25 || sample={keys:status,updatedAt} | null
+orders_response[].profile.menuUploadData.status || count=10 || types=string:10 || sample=completed
+orders_response[].profile.menuUploadData.updatedAt || count=10 || types=string:10 || sample=2026-03-18T12:53:18.440Z
+orders_response[].profile.name || count=35 || types=string:35 || sample=Pizza Comeback Bolevec | Ručně zadané obj. | Adaptee
+orders_response[].profile.openingHours || count=35 || types=null:35 || sample=null
+orders_response[].profile.orderConfirmation || count=35 || types=string:35 || sample=auto | external
+orders_response[].profile.orderConfirmationOptions || count=35 || types=object:10,null:25 || sample={keys:isEnabled,forcedConfirmMinutes} | null
+orders_response[].profile.orderConfirmationOptions.forcedConfirmMinutes || count=10 || types=int:10 || sample=15
+orders_response[].profile.orderConfirmationOptions.isEnabled || count=10 || types=bool:10 || sample=true
+orders_response[].profile.posId || count=35 || types=string:35 || sample=3eb8bd65-26d6-4fa9-a20b-19705f856f17
+orders_response[].profile.tempClosedUntil || count=35 || types=null:35 || sample=null
+orders_response[].profile.type || count=35 || types=string:35 || sample=damejidlo | manual | generic
+orders_response[].profile.url || count=35 || types=string:12,null:23 || sample=[empty string] | null | a
+orders_response[].profileId || count=35 || types=string:35 || sample=5cbd8e05-4cdb-4711-86df-606cbf9e6845 | c0fd9cbb-e483-43f3-84b8-9b9a8cc643a8 | d49bdbc3-69b7-4c0e-9081-0b8f812859ac
+orders_response[].promisedAt || count=35 || types=string:35 || sample=2026-03-30T21:13:38.153Z | 2026-03-30T21:10:05.577Z | 2026-03-30T20:43:43.893Z | 2026-03-30T19:48:53.016Z | 2026-03-30T19:42:22.948Z
+orders_response[].roundingPrice || count=35 || types=string:35 || sample=0
+orders_response[].serialNumber || count=35 || types=string:35 || sample=035 | 034 | 033 | 032 | 031
+orders_response[].serviceFeePrice || count=35 || types=string:35 || sample=0
+orders_response[].servicesData || count=35 || types=null:34,object:1 || sample=null | {keys:dispecink}
+orders_response[].servicesData.dispecink || count=1 || types=object:1 || sample={keys:id,type,importedAt,importStatus,statusUpdatedAt,requiredCourierId}
+orders_response[].servicesData.dispecink.id || count=1 || types=string:1 || sample=20226093-f6f3-4f37-818b-5a5bd79d8060
+orders_response[].servicesData.dispecink.importStatus || count=1 || types=string:1 || sample=success
+orders_response[].servicesData.dispecink.importedAt || count=1 || types=string:1 || sample=2026-03-30T17:34:35.653Z
+orders_response[].servicesData.dispecink.requiredCourierId || count=1 || types=string:1 || sample=2380dc1a-e4cb-4585-8559-144734a49bee
+orders_response[].servicesData.dispecink.statusUpdatedAt || count=1 || types=string:1 || sample=2026-03-30T17:34:35.657Z
+orders_response[].servicesData.dispecink.type || count=1 || types=string:1 || sample=Internal
+orders_response[].shortCode || count=35 || types=string:35 || sample=2107 | 2106 | 32aa | 2105 | 2104
+orders_response[].status || count=35 || types=string:35 || sample=delivered
+orders_response[].statusCanceledInfo || count=35 || types=null:35 || sample=null
+orders_response[].statusUpdateWebhookUrl || count=35 || types=null:35 || sample=null
+orders_response[].statusUpdatedAt || count=35 || types=string:35 || sample=2026-03-30T21:11:19.543Z | 2026-03-30T21:06:59.337Z | 2026-03-30T20:47:35.813Z | 2026-03-30T19:48:53.283Z | 2026-03-30T19:48:52.642Z
+orders_response[].surchargeToMin || count=35 || types=string:35 || sample=0
+orders_response[].tipPrice || count=35 || types=string:35 || sample=0
+orders_response[].token || count=35 || types=string:10,null:25 || sample=REpfQ1otYmFtcw-_-oma_ed65ee72-e5b1-5ba6-8b4c-088723dc13a0-_-eu | REpfQ1otYmFtcw-_-oma_968e8d04-7710-5895-8d4a-eda081780b3b-_-eu | null | REpfQ1otYmFtcw-_-oma_f0cc74d4-992f-5958-ac19-c89367e7ba5a-_-eu | REpfQ1otYmFtcw-_-oma_b428acea-de4b-5ca2-8356-c97e52a73323-_-eu
+
+MENU INFO
+---------
+http=200 ms=684 bytes_in=285360
+
+MENU CESTY
+----------
+menu || count=1 || types=object:1 || sample={keys:id,posId,name,data,createdAt,updatedAt}
+menu.createdAt || count=1 || types=string:1 || sample=2025-07-17T08:14:49.225Z
+menu.data || count=1 || types=object:1 || sample={keys:categories,lastSaved,archive}
+menu.data.archive || count=1 || types=array:1 || sample=[items:7]
+menu.data.archive[] || count=7 || types=object:7 || sample={keys:wolt,damejidlo,bolt,generic,_general,id,hiddenFrom} | {keys:bolt,wolt,damejidlo,generic,_general,id,hiddenFrom}
+menu.data.archive[]._general || count=7 || types=object:7 || sample={keys:isHidden,name,description,posCode,imageUrl,sizes,extras,vat,allergens,pictograms} | {keys:isHidden,name,posCode,imageUrl,sizes,extras,vat,allergens,pictograms,color,nutritionInfo} | {keys:isHidden,name,posCode,imageUrl,sizes,extras,vat,allergens,pictograms,printTags,kitchens,color,nutritionInfo,deposit} | {keys:isHidden,name,posCode,imageUrl,sizes,extras,vat,allergens,vatInRestaurant,color,nutritionInfo,deposit}
+menu.data.archive[]._general.allergens || count=7 || types=array:7 || sample=[]
+menu.data.archive[]._general.color || count=6 || types=string:6 || sample=[empty string]
+menu.data.archive[]._general.deposit || count=2 || types=object:2 || sample={keys:price,vat}
+menu.data.archive[]._general.deposit.price || count=2 || types=int:2 || sample=0
+menu.data.archive[]._general.deposit.vat || count=2 || types=string:2 || sample=0.12
+menu.data.archive[]._general.description || count=1 || types=string:1 || sample=Česká zmrzlina z Opočna - ananas/kokos
+menu.data.archive[]._general.extras || count=7 || types=array:7 || sample=[]
+menu.data.archive[]._general.imageUrl || count=7 || types=string:7 || sample=images/9dc65c8d20b55311eb832a9484a2c701fce6dd316a58c86ca0300b63786fb214.jpeg | images/7b515269111ac78073b2a6fa3cf7876a96152e9f1348d37ada784d1264bf54be.jpeg | images/463855a5987417f533fddb83af8fa5dc0d9c20440cac02419c3afc50c7b10144.jpeg | images/dd22702ab7132227064bc1b616938cae892ee803f754d2e0c3f5f3260b079b5d.png | images/1fe52246806f4f82e083431595564c7103eac047b13b753f577eb564b14c6194.jpeg
+menu.data.archive[]._general.isHidden || count=7 || types=bool:7 || sample=true
+menu.data.archive[]._general.kitchens || count=1 || types=array:1 || sample=[]
+menu.data.archive[]._general.name || count=7 || types=string:7 || sample=Opočno ananas/kokos | BIRGO Cedrata 0,5l | BIRGO malina/ostružina 0,5l | Matonni jemně perlivá 0,75l | Matonni neperivá 0,75l
+menu.data.archive[]._general.nutritionInfo || count=6 || types=object:6 || sample={keys:servingSize,energyKcal,energyKJ,alcohol,fats,saturatedFats,monoUnsaturatedFats,polyUnsaturatedFats,carbohydrate,sugar,polyols,starch,protein,salt,sodium,fibres,vitamin_c,calcium,magnesium,chloride,potassium,fluoride,caffeine}
+menu.data.archive[]._general.nutritionInfo.alcohol || count=6 || types=null:6 || sample=null
+menu.data.archive[]._general.nutritionInfo.caffeine || count=6 || types=object:6 || sample={keys:unit,value}
+menu.data.archive[]._general.nutritionInfo.caffeine.unit || count=6 || types=string:6 || sample=mg
+menu.data.archive[]._general.nutritionInfo.caffeine.value || count=6 || types=int:6 || sample=0
+menu.data.archive[]._general.nutritionInfo.calcium || count=6 || types=object:6 || sample={keys:unit,value}
+menu.data.archive[]._general.nutritionInfo.calcium.unit || count=6 || types=string:6 || sample=mg
+menu.data.archive[]._general.nutritionInfo.calcium.value || count=6 || types=int:6 || sample=0
+menu.data.archive[]._general.nutritionInfo.carbohydrate || count=6 || types=object:6 || sample={keys:unit,value}
+menu.data.archive[]._general.nutritionInfo.carbohydrate.unit || count=6 || types=string:6 || sample=g
+menu.data.archive[]._general.nutritionInfo.carbohydrate.value || count=6 || types=int:6 || sample=0
+menu.data.archive[]._general.nutritionInfo.chloride || count=6 || types=object:6 || sample={keys:unit,value}
+menu.data.archive[]._general.nutritionInfo.chloride.unit || count=6 || types=string:6 || sample=mg
+menu.data.archive[]._general.nutritionInfo.chloride.value || count=6 || types=int:6 || sample=0
+menu.data.archive[]._general.nutritionInfo.energyKJ || count=6 || types=int:6 || sample=0
+menu.data.archive[]._general.nutritionInfo.energyKcal || count=6 || types=int:6 || sample=0
+menu.data.archive[]._general.nutritionInfo.fats || count=6 || types=object:6 || sample={keys:unit,value}
+menu.data.archive[]._general.nutritionInfo.fats.unit || count=6 || types=string:6 || sample=g
+menu.data.archive[]._general.nutritionInfo.fats.value || count=6 || types=int:6 || sample=0
+menu.data.archive[]._general.nutritionInfo.fibres || count=6 || types=object:6 || sample={keys:unit,value}
+menu.data.archive[]._general.nutritionInfo.fibres.unit || count=6 || types=string:6 || sample=g
+menu.data.archive[]._general.nutritionInfo.fibres.value || count=6 || types=int:6 || sample=0
+menu.data.archive[]._general.nutritionInfo.fluoride || count=6 || types=object:6 || sample={keys:unit,value}
+menu.data.archive[]._general.nutritionInfo.fluoride.unit || count=6 || types=string:6 || sample=mg
+menu.data.archive[]._general.nutritionInfo.fluoride.value || count=6 || types=int:6 || sample=0
+menu.data.archive[]._general.nutritionInfo.magnesium || count=6 || types=object:6 || sample={keys:unit,value}
+menu.data.archive[]._general.nutritionInfo.magnesium.unit || count=6 || types=string:6 || sample=mg
+menu.data.archive[]._general.nutritionInfo.magnesium.value || count=6 || types=int:6 || sample=0
+menu.data.archive[]._general.nutritionInfo.monoUnsaturatedFats || count=6 || types=object:6 || sample={keys:unit,value}
+menu.data.archive[]._general.nutritionInfo.monoUnsaturatedFats.unit || count=6 || types=string:6 || sample=g
+menu.data.archive[]._general.nutritionInfo.monoUnsaturatedFats.value || count=6 || types=int:6 || sample=0
+menu.data.archive[]._general.nutritionInfo.polyUnsaturatedFats || count=6 || types=object:6 || sample={keys:unit,value}
+menu.data.archive[]._general.nutritionInfo.polyUnsaturatedFats.unit || count=6 || types=string:6 || sample=g
+menu.data.archive[]._general.nutritionInfo.polyUnsaturatedFats.value || count=6 || types=int:6 || sample=0
+menu.data.archive[]._general.nutritionInfo.polyols || count=6 || types=object:6 || sample={keys:unit,value}
+menu.data.archive[]._general.nutritionInfo.polyols.unit || count=6 || types=string:6 || sample=g
+menu.data.archive[]._general.nutritionInfo.polyols.value || count=6 || types=int:6 || sample=0
+menu.data.archive[]._general.nutritionInfo.potassium || count=6 || types=object:6 || sample={keys:unit,value}
+menu.data.archive[]._general.nutritionInfo.potassium.unit || count=6 || types=string:6 || sample=mg
+menu.data.archive[]._general.nutritionInfo.potassium.value || count=6 || types=int:6 || sample=0
+menu.data.archive[]._general.nutritionInfo.protein || count=6 || types=object:6 || sample={keys:unit,value}
+menu.data.archive[]._general.nutritionInfo.protein.unit || count=6 || types=string:6 || sample=g
+menu.data.archive[]._general.nutritionInfo.protein.value || count=6 || types=int:6 || sample=0
+menu.data.archive[]._general.nutritionInfo.salt || count=6 || types=object:6 || sample={keys:unit,value}
+menu.data.archive[]._general.nutritionInfo.salt.unit || count=6 || types=string:6 || sample=g
+menu.data.archive[]._general.nutritionInfo.salt.value || count=6 || types=int:6 || sample=0
+menu.data.archive[]._general.nutritionInfo.saturatedFats || count=6 || types=object:6 || sample={keys:unit,value}
+menu.data.archive[]._general.nutritionInfo.saturatedFats.unit || count=6 || types=string:6 || sample=g
+menu.data.archive[]._general.nutritionInfo.saturatedFats.value || count=6 || types=int:6 || sample=0
+menu.data.archive[]._general.nutritionInfo.servingSize || count=6 || types=string:6 || sample=100g
+menu.data.archive[]._general.nutritionInfo.sodium || count=6 || types=object:6 || sample={keys:unit,value}
+menu.data.archive[]._general.nutritionInfo.sodium.unit || count=6 || types=string:6 || sample=g
+menu.data.archive[]._general.nutritionInfo.sodium.value || count=6 || types=int:6 || sample=0
+menu.data.archive[]._general.nutritionInfo.starch || count=6 || types=object:6 || sample={keys:unit,value}
+menu.data.archive[]._general.nutritionInfo.starch.unit || count=6 || types=string:6 || sample=g
+menu.data.archive[]._general.nutritionInfo.starch.value || count=6 || types=int:6 || sample=0
+menu.data.archive[]._general.nutritionInfo.sugar || count=6 || types=object:6 || sample={keys:unit,value}
+menu.data.archive[]._general.nutritionInfo.sugar.unit || count=6 || types=string:6 || sample=g
+menu.data.archive[]._general.nutritionInfo.sugar.value || count=6 || types=int:6 || sample=0
+menu.data.archive[]._general.nutritionInfo.vitamin_c || count=6 || types=object:6 || sample={keys:unit,value}
+menu.data.archive[]._general.nutritionInfo.vitamin_c.unit || count=6 || types=string:6 || sample=mg
+menu.data.archive[]._general.nutritionInfo.vitamin_c.value || count=6 || types=int:6 || sample=0
+menu.data.archive[]._general.pictograms || count=6 || types=array:6 || sample=[]
+menu.data.archive[]._general.posCode || count=7 || types=string:7 || sample=D111 | N128 | N130 | N122 | N123
+menu.data.archive[]._general.printTags || count=1 || types=array:1 || sample=[]
+menu.data.archive[]._general.sizes || count=7 || types=array:7 || sample=[items:1]
+menu.data.archive[]._general.sizes[] || count=7 || types=object:7 || sample={keys:price,packing,posCode,isDefault,id}
+menu.data.archive[]._general.sizes[].id || count=7 || types=string:7 || sample=TT_x_wraeSqoVHxcvWX7W | lFlaUzVKq50ihmyLH4XvO | 4gsAY-M6MwCpZYVI8-_bn | HM0cJPaKt5ZM9uWBMgT3z | xacDHmBBezhpGxgSnWAXd
+menu.data.archive[]._general.sizes[].isDefault || count=7 || types=bool:7 || sample=true
+menu.data.archive[]._general.sizes[].packing || count=7 || types=int:7 || sample=0 | 1500
+menu.data.archive[]._general.sizes[].posCode || count=7 || types=string:7 || sample=D111 | N128 | N130 | N122 | N123
+menu.data.archive[]._general.sizes[].price || count=7 || types=int:7 || sample=12900 | 4500 | 3900 | 8900 | 5900
+menu.data.archive[]._general.vat || count=7 || types=string:7 || sample=0.12 | 0.21
+menu.data.archive[]._general.vatInRestaurant || count=1 || types=string:1 || sample=0.12
+menu.data.archive[].bolt || count=7 || types=object:7 || sample={keys:hasItsOwnSettings,isHidden,sizes,extras,vat,allergens,imageUrl} | {keys:hasItsOwnSettings,isHidden,sizes,extras,vat,allergens} | {keys:hasItsOwnSettings,isHidden,sizes,extras,vat,allergens,color,nutritionInfo}
+menu.data.archive[].bolt.allergens || count=7 || types=array:7 || sample=[]
+menu.data.archive[].bolt.color || count=1 || types=string:1 || sample=[empty string]
+menu.data.archive[].bolt.extras || count=7 || types=array:7 || sample=[]
+menu.data.archive[].bolt.hasItsOwnSettings || count=7 || types=bool:7 || sample=false | true
+menu.data.archive[].bolt.imageUrl || count=1 || types=string:1 || sample=images/6f547645d6f375ad213703d5b15d4594f55179d6335f7a02daf61657ab00dfd1.jpeg
+menu.data.archive[].bolt.isHidden || count=7 || types=bool:7 || sample=false
+menu.data.archive[].bolt.nutritionInfo || count=1 || types=object:1 || sample={keys:servingSize,energyKcal,energyKJ,alcohol,fats,saturatedFats,monoUnsaturatedFats,polyUnsaturatedFats,carbohydrate,sugar,polyols,starch,protein,salt,sodium,fibres,vitamin_c,calcium,magnesium,chloride,potassium,fluoride,caffeine}
+menu.data.archive[].bolt.nutritionInfo.alcohol || count=1 || types=null:1 || sample=null
+menu.data.archive[].bolt.nutritionInfo.caffeine || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].bolt.nutritionInfo.caffeine.unit || count=1 || types=string:1 || sample=mg
+menu.data.archive[].bolt.nutritionInfo.caffeine.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].bolt.nutritionInfo.calcium || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].bolt.nutritionInfo.calcium.unit || count=1 || types=string:1 || sample=mg
+menu.data.archive[].bolt.nutritionInfo.calcium.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].bolt.nutritionInfo.carbohydrate || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].bolt.nutritionInfo.carbohydrate.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].bolt.nutritionInfo.carbohydrate.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].bolt.nutritionInfo.chloride || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].bolt.nutritionInfo.chloride.unit || count=1 || types=string:1 || sample=mg
+menu.data.archive[].bolt.nutritionInfo.chloride.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].bolt.nutritionInfo.energyKJ || count=1 || types=int:1 || sample=0
+menu.data.archive[].bolt.nutritionInfo.energyKcal || count=1 || types=int:1 || sample=0
+menu.data.archive[].bolt.nutritionInfo.fats || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].bolt.nutritionInfo.fats.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].bolt.nutritionInfo.fats.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].bolt.nutritionInfo.fibres || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].bolt.nutritionInfo.fibres.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].bolt.nutritionInfo.fibres.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].bolt.nutritionInfo.fluoride || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].bolt.nutritionInfo.fluoride.unit || count=1 || types=string:1 || sample=mg
+menu.data.archive[].bolt.nutritionInfo.fluoride.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].bolt.nutritionInfo.magnesium || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].bolt.nutritionInfo.magnesium.unit || count=1 || types=string:1 || sample=mg
+menu.data.archive[].bolt.nutritionInfo.magnesium.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].bolt.nutritionInfo.monoUnsaturatedFats || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].bolt.nutritionInfo.monoUnsaturatedFats.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].bolt.nutritionInfo.monoUnsaturatedFats.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].bolt.nutritionInfo.polyUnsaturatedFats || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].bolt.nutritionInfo.polyUnsaturatedFats.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].bolt.nutritionInfo.polyUnsaturatedFats.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].bolt.nutritionInfo.polyols || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].bolt.nutritionInfo.polyols.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].bolt.nutritionInfo.polyols.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].bolt.nutritionInfo.potassium || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].bolt.nutritionInfo.potassium.unit || count=1 || types=string:1 || sample=mg
+menu.data.archive[].bolt.nutritionInfo.potassium.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].bolt.nutritionInfo.protein || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].bolt.nutritionInfo.protein.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].bolt.nutritionInfo.protein.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].bolt.nutritionInfo.salt || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].bolt.nutritionInfo.salt.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].bolt.nutritionInfo.salt.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].bolt.nutritionInfo.saturatedFats || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].bolt.nutritionInfo.saturatedFats.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].bolt.nutritionInfo.saturatedFats.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].bolt.nutritionInfo.servingSize || count=1 || types=string:1 || sample=100g
+menu.data.archive[].bolt.nutritionInfo.sodium || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].bolt.nutritionInfo.sodium.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].bolt.nutritionInfo.sodium.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].bolt.nutritionInfo.starch || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].bolt.nutritionInfo.starch.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].bolt.nutritionInfo.starch.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].bolt.nutritionInfo.sugar || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].bolt.nutritionInfo.sugar.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].bolt.nutritionInfo.sugar.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].bolt.nutritionInfo.vitamin_c || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].bolt.nutritionInfo.vitamin_c.unit || count=1 || types=string:1 || sample=mg
+menu.data.archive[].bolt.nutritionInfo.vitamin_c.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].bolt.sizes || count=7 || types=array:7 || sample=[items:1]
+menu.data.archive[].bolt.sizes[] || count=7 || types=object:7 || sample={keys:id,size} | {keys:id,price,packing,posCode}
+menu.data.archive[].bolt.sizes[].id || count=7 || types=string:7 || sample=-0MuzJIkdknpLcGeILTdY | yR24_a2t9wVwUp-kxyrVV | szoWfNJAmTU1rRZPHsBxQ | IfZVamifYn4k-VzJnFfCA | E5aXmRmDpBmddcAGqFxUx
+menu.data.archive[].bolt.sizes[].packing || count=1 || types=int:1 || sample=1500
+menu.data.archive[].bolt.sizes[].posCode || count=1 || types=string:1 || sample=P110
+menu.data.archive[].bolt.sizes[].price || count=1 || types=int:1 || sample=8900
+menu.data.archive[].bolt.sizes[].size || count=6 || types=string:6 || sample=[empty string]
+menu.data.archive[].bolt.vat || count=7 || types=string:7 || sample=0.12
+menu.data.archive[].damejidlo || count=7 || types=object:7 || sample={keys:hasItsOwnSettings,isHidden,sizes,extras,vat,imageUrl} | {keys:hasItsOwnSettings,isHidden,sizes,extras,vat} | {keys:hasItsOwnSettings,isHidden,sizes,extras,vat,color,nutritionInfo}
+menu.data.archive[].damejidlo.color || count=1 || types=string:1 || sample=[empty string]
+menu.data.archive[].damejidlo.extras || count=7 || types=array:7 || sample=[]
+menu.data.archive[].damejidlo.hasItsOwnSettings || count=7 || types=bool:7 || sample=false | true
+menu.data.archive[].damejidlo.imageUrl || count=1 || types=string:1 || sample=images/3c8bbdffb817de2a1d607af5a24b599096597ca477414057be5d48fa7081ba78.jpeg
+menu.data.archive[].damejidlo.isHidden || count=7 || types=bool:7 || sample=false
+menu.data.archive[].damejidlo.nutritionInfo || count=1 || types=object:1 || sample={keys:servingSize,energyKcal,energyKJ,alcohol,fats,saturatedFats,monoUnsaturatedFats,polyUnsaturatedFats,carbohydrate,sugar,polyols,starch,protein,salt,sodium,fibres,vitamin_c,calcium,magnesium,chloride,potassium,fluoride,caffeine}
+menu.data.archive[].damejidlo.nutritionInfo.alcohol || count=1 || types=null:1 || sample=null
+menu.data.archive[].damejidlo.nutritionInfo.caffeine || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].damejidlo.nutritionInfo.caffeine.unit || count=1 || types=string:1 || sample=mg
+menu.data.archive[].damejidlo.nutritionInfo.caffeine.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].damejidlo.nutritionInfo.calcium || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].damejidlo.nutritionInfo.calcium.unit || count=1 || types=string:1 || sample=mg
+menu.data.archive[].damejidlo.nutritionInfo.calcium.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].damejidlo.nutritionInfo.carbohydrate || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].damejidlo.nutritionInfo.carbohydrate.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].damejidlo.nutritionInfo.carbohydrate.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].damejidlo.nutritionInfo.chloride || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].damejidlo.nutritionInfo.chloride.unit || count=1 || types=string:1 || sample=mg
+menu.data.archive[].damejidlo.nutritionInfo.chloride.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].damejidlo.nutritionInfo.energyKJ || count=1 || types=int:1 || sample=0
+menu.data.archive[].damejidlo.nutritionInfo.energyKcal || count=1 || types=int:1 || sample=0
+menu.data.archive[].damejidlo.nutritionInfo.fats || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].damejidlo.nutritionInfo.fats.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].damejidlo.nutritionInfo.fats.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].damejidlo.nutritionInfo.fibres || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].damejidlo.nutritionInfo.fibres.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].damejidlo.nutritionInfo.fibres.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].damejidlo.nutritionInfo.fluoride || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].damejidlo.nutritionInfo.fluoride.unit || count=1 || types=string:1 || sample=mg
+menu.data.archive[].damejidlo.nutritionInfo.fluoride.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].damejidlo.nutritionInfo.magnesium || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].damejidlo.nutritionInfo.magnesium.unit || count=1 || types=string:1 || sample=mg
+menu.data.archive[].damejidlo.nutritionInfo.magnesium.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].damejidlo.nutritionInfo.monoUnsaturatedFats || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].damejidlo.nutritionInfo.monoUnsaturatedFats.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].damejidlo.nutritionInfo.monoUnsaturatedFats.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].damejidlo.nutritionInfo.polyUnsaturatedFats || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].damejidlo.nutritionInfo.polyUnsaturatedFats.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].damejidlo.nutritionInfo.polyUnsaturatedFats.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].damejidlo.nutritionInfo.polyols || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].damejidlo.nutritionInfo.polyols.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].damejidlo.nutritionInfo.polyols.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].damejidlo.nutritionInfo.potassium || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].damejidlo.nutritionInfo.potassium.unit || count=1 || types=string:1 || sample=mg
+menu.data.archive[].damejidlo.nutritionInfo.potassium.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].damejidlo.nutritionInfo.protein || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].damejidlo.nutritionInfo.protein.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].damejidlo.nutritionInfo.protein.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].damejidlo.nutritionInfo.salt || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].damejidlo.nutritionInfo.salt.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].damejidlo.nutritionInfo.salt.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].damejidlo.nutritionInfo.saturatedFats || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].damejidlo.nutritionInfo.saturatedFats.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].damejidlo.nutritionInfo.saturatedFats.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].damejidlo.nutritionInfo.servingSize || count=1 || types=string:1 || sample=100g
+menu.data.archive[].damejidlo.nutritionInfo.sodium || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].damejidlo.nutritionInfo.sodium.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].damejidlo.nutritionInfo.sodium.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].damejidlo.nutritionInfo.starch || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].damejidlo.nutritionInfo.starch.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].damejidlo.nutritionInfo.starch.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].damejidlo.nutritionInfo.sugar || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].damejidlo.nutritionInfo.sugar.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].damejidlo.nutritionInfo.sugar.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].damejidlo.nutritionInfo.vitamin_c || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].damejidlo.nutritionInfo.vitamin_c.unit || count=1 || types=string:1 || sample=mg
+menu.data.archive[].damejidlo.nutritionInfo.vitamin_c.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].damejidlo.sizes || count=7 || types=array:7 || sample=[items:1]
+menu.data.archive[].damejidlo.sizes[] || count=7 || types=object:7 || sample={keys:id,size} | {keys:id,price,packing,posCode}
+menu.data.archive[].damejidlo.sizes[].id || count=7 || types=string:7 || sample=_LNQICoIOXg5e8KxZ0q6m | GvAp5ieGF4WOvbdtIQa1K | ocp7DpByGSXhJeEvRrJ95 | uRs4OnIrF1Y8sijeFGQe9 | r_E5eTfIH1mITOzf2Zkco
+menu.data.archive[].damejidlo.sizes[].packing || count=1 || types=int:1 || sample=1500
+menu.data.archive[].damejidlo.sizes[].posCode || count=1 || types=string:1 || sample=P110
+menu.data.archive[].damejidlo.sizes[].price || count=1 || types=int:1 || sample=8900
+menu.data.archive[].damejidlo.sizes[].size || count=6 || types=string:6 || sample=[empty string]
+menu.data.archive[].damejidlo.vat || count=7 || types=string:7 || sample=0.12
+menu.data.archive[].generic || count=7 || types=object:7 || sample={keys:hasItsOwnSettings,isHidden,sizes,extras,vat}
+menu.data.archive[].generic.extras || count=7 || types=array:7 || sample=[]
+menu.data.archive[].generic.hasItsOwnSettings || count=7 || types=bool:7 || sample=false
+menu.data.archive[].generic.isHidden || count=7 || types=bool:7 || sample=false
+menu.data.archive[].generic.sizes || count=7 || types=array:7 || sample=[items:1]
+menu.data.archive[].generic.sizes[] || count=7 || types=object:7 || sample={keys:id,size}
+menu.data.archive[].generic.sizes[].id || count=7 || types=string:7 || sample=2YFiQOKcuo7SAfXRU47NV | UGVK0CEI4J485684j7y7o | U00eqilHUa9Lmw103alpY | jgH3Zy0HYSwed06LR5L1Z | 2IYZuEzhcGejj1Fam-gue
+menu.data.archive[].generic.sizes[].size || count=7 || types=string:7 || sample=[empty string]
+menu.data.archive[].generic.vat || count=7 || types=string:7 || sample=0.12
+menu.data.archive[].hiddenFrom || count=7 || types=string:7 || sample=2025-08-08T09:56:04.336Z | 2025-08-08T09:57:10.175Z | 2025-08-08T09:57:17.604Z | 2025-08-08T09:58:10.903Z | 2025-08-08T09:58:14.148Z
+menu.data.archive[].id || count=7 || types=string:7 || sample=ZYc2JjlXgGrBbpJdKdw5f | 0A8WuEMvB-cxyuAPWedsb | gp6gJnAS84vO_PzamIJD0 | GuylpaT0nvYyAHcPup_BI | d9_95N4rFsbvU712kQQ0Q
+menu.data.archive[].wolt || count=7 || types=object:7 || sample={keys:hasItsOwnSettings,isHidden,imageUrl,sizes,extras,vat} | {keys:hasItsOwnSettings,isHidden,sizes,extras,vat} | {keys:hasItsOwnSettings,isHidden,sizes,extras,vat,color,nutritionInfo}
+menu.data.archive[].wolt.color || count=1 || types=string:1 || sample=[empty string]
+menu.data.archive[].wolt.extras || count=7 || types=array:7 || sample=[]
+menu.data.archive[].wolt.hasItsOwnSettings || count=7 || types=bool:7 || sample=false | true
+menu.data.archive[].wolt.imageUrl || count=1 || types=string:1 || sample=images/2c2da9bbc00d32f227affc7dd4e94e210d0839e05f0cd0e7e57eb7075d60bf1c.jpeg
+menu.data.archive[].wolt.isHidden || count=7 || types=bool:7 || sample=false
+menu.data.archive[].wolt.nutritionInfo || count=1 || types=object:1 || sample={keys:servingSize,energyKcal,energyKJ,alcohol,fats,saturatedFats,monoUnsaturatedFats,polyUnsaturatedFats,carbohydrate,sugar,polyols,starch,protein,salt,sodium,fibres,vitamin_c,calcium,magnesium,chloride,potassium,fluoride,caffeine}
+menu.data.archive[].wolt.nutritionInfo.alcohol || count=1 || types=null:1 || sample=null
+menu.data.archive[].wolt.nutritionInfo.caffeine || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].wolt.nutritionInfo.caffeine.unit || count=1 || types=string:1 || sample=mg
+menu.data.archive[].wolt.nutritionInfo.caffeine.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].wolt.nutritionInfo.calcium || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].wolt.nutritionInfo.calcium.unit || count=1 || types=string:1 || sample=mg
+menu.data.archive[].wolt.nutritionInfo.calcium.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].wolt.nutritionInfo.carbohydrate || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].wolt.nutritionInfo.carbohydrate.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].wolt.nutritionInfo.carbohydrate.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].wolt.nutritionInfo.chloride || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].wolt.nutritionInfo.chloride.unit || count=1 || types=string:1 || sample=mg
+menu.data.archive[].wolt.nutritionInfo.chloride.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].wolt.nutritionInfo.energyKJ || count=1 || types=int:1 || sample=0
+menu.data.archive[].wolt.nutritionInfo.energyKcal || count=1 || types=int:1 || sample=0
+menu.data.archive[].wolt.nutritionInfo.fats || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].wolt.nutritionInfo.fats.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].wolt.nutritionInfo.fats.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].wolt.nutritionInfo.fibres || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].wolt.nutritionInfo.fibres.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].wolt.nutritionInfo.fibres.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].wolt.nutritionInfo.fluoride || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].wolt.nutritionInfo.fluoride.unit || count=1 || types=string:1 || sample=mg
+menu.data.archive[].wolt.nutritionInfo.fluoride.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].wolt.nutritionInfo.magnesium || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].wolt.nutritionInfo.magnesium.unit || count=1 || types=string:1 || sample=mg
+menu.data.archive[].wolt.nutritionInfo.magnesium.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].wolt.nutritionInfo.monoUnsaturatedFats || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].wolt.nutritionInfo.monoUnsaturatedFats.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].wolt.nutritionInfo.monoUnsaturatedFats.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].wolt.nutritionInfo.polyUnsaturatedFats || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].wolt.nutritionInfo.polyUnsaturatedFats.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].wolt.nutritionInfo.polyUnsaturatedFats.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].wolt.nutritionInfo.polyols || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].wolt.nutritionInfo.polyols.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].wolt.nutritionInfo.polyols.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].wolt.nutritionInfo.potassium || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].wolt.nutritionInfo.potassium.unit || count=1 || types=string:1 || sample=mg
+menu.data.archive[].wolt.nutritionInfo.potassium.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].wolt.nutritionInfo.protein || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].wolt.nutritionInfo.protein.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].wolt.nutritionInfo.protein.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].wolt.nutritionInfo.salt || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].wolt.nutritionInfo.salt.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].wolt.nutritionInfo.salt.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].wolt.nutritionInfo.saturatedFats || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].wolt.nutritionInfo.saturatedFats.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].wolt.nutritionInfo.saturatedFats.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].wolt.nutritionInfo.servingSize || count=1 || types=string:1 || sample=100g
+menu.data.archive[].wolt.nutritionInfo.sodium || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].wolt.nutritionInfo.sodium.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].wolt.nutritionInfo.sodium.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].wolt.nutritionInfo.starch || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].wolt.nutritionInfo.starch.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].wolt.nutritionInfo.starch.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].wolt.nutritionInfo.sugar || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].wolt.nutritionInfo.sugar.unit || count=1 || types=string:1 || sample=g
+menu.data.archive[].wolt.nutritionInfo.sugar.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].wolt.nutritionInfo.vitamin_c || count=1 || types=object:1 || sample={keys:unit,value}
+menu.data.archive[].wolt.nutritionInfo.vitamin_c.unit || count=1 || types=string:1 || sample=mg
+menu.data.archive[].wolt.nutritionInfo.vitamin_c.value || count=1 || types=int:1 || sample=0
+menu.data.archive[].wolt.sizes || count=7 || types=array:7 || sample=[items:1]
+menu.data.archive[].wolt.sizes[] || count=7 || types=object:7 || sample={keys:id,size} | {keys:id,price,packing,posCode}
+menu.data.archive[].wolt.sizes[].id || count=7 || types=string:7 || sample=qVJpmSXGes577V5hTZsjL | Tghd3gXI1O9cWtayo9ium | fr07CjuAfFRVxTZKuD0Uf | aoNLnLrrUlkEbzvBt51Av | 5ZBO5QOQXmmD4Vgra4bNg
+menu.data.archive[].wolt.sizes[].packing || count=1 || types=int:1 || sample=1500
+menu.data.archive[].wolt.sizes[].posCode || count=1 || types=string:1 || sample=P110
+menu.data.archive[].wolt.sizes[].price || count=1 || types=int:1 || sample=8900
+menu.data.archive[].wolt.sizes[].size || count=6 || types=string:6 || sample=[empty string]
+menu.data.archive[].wolt.vat || count=7 || types=string:7 || sample=0.12
+menu.data.categories || count=1 || types=array:1 || sample=[items:9]
+menu.data.categories[] || count=9 || types=object:9 || sample={keys:restia,damejidlo,wolt,bolt,_general,id,dishes,value,label,menuId,generic} | {keys:restia,damejidlo,wolt,bolt,_general,id,dishes,value,label,menuId} | {keys:restia,damejidlo,wolt,bolt,_general,id,dishes} | {keys:wolt,bolt,damejidlo,generic,_general,id,dishes}
+menu.data.categories[]._general || count=9 || types=object:9 || sample={keys:isHidden,name,hasTimetable,timetable} | {keys:isHidden,name,nameEN,description,descriptionEN,hasTimetable,timetable}
+menu.data.categories[]._general.description || count=4 || types=string:4 || sample=[empty string]
+menu.data.categories[]._general.descriptionEN || count=4 || types=string:4 || sample=[empty string]
+menu.data.categories[]._general.hasTimetable || count=9 || types=bool:9 || sample=false
+menu.data.categories[]._general.isHidden || count=9 || types=bool:9 || sample=false | true
+menu.data.categories[]._general.name || count=9 || types=string:9 || sample=🍕 PIZZA 40CM | 🍕 PIZZA 32CM | 🍕 PIZZA 18CM | 🤩 VÝHODNÉ MENU | 🍯 PŘÍLOHY
+menu.data.categories[]._general.nameEN || count=4 || types=string:4 || sample=PIZZA | SIDE DISHES | DESSERTS | DRINKS
+menu.data.categories[]._general.timetable || count=9 || types=array:9 || sample=[]
+menu.data.categories[].bolt || count=9 || types=object:5,array:4 || sample={keys:hasItsOwnSettings,isHidden,hasTimetable,timetable} | []
+menu.data.categories[].bolt.hasItsOwnSettings || count=5 || types=bool:5 || sample=false | true
+menu.data.categories[].bolt.hasTimetable || count=5 || types=bool:5 || sample=false
+menu.data.categories[].bolt.isHidden || count=5 || types=bool:5 || sample=false | true
+menu.data.categories[].bolt.timetable || count=5 || types=array:5 || sample=[]
+menu.data.categories[].damejidlo || count=9 || types=object:5,array:4 || sample={keys:hasItsOwnSettings,isHidden,hasTimetable,timetable} | []
+menu.data.categories[].damejidlo.hasItsOwnSettings || count=5 || types=bool:5 || sample=false | true
+menu.data.categories[].damejidlo.hasTimetable || count=5 || types=bool:5 || sample=false
+menu.data.categories[].damejidlo.isHidden || count=5 || types=bool:5 || sample=false | true
+menu.data.categories[].damejidlo.timetable || count=5 || types=array:5 || sample=[]
+menu.data.categories[].dishes || count=9 || types=array:9 || sample=[items:13] | [items:3] | [items:11] | [items:4] | [items:12]
+menu.data.categories[].dishes[] || count=93 || types=object:93 || sample={keys:restia,damejidlo,wolt,bolt,_general,id,generic} | {keys:damejidlo,bolt,wolt,generic,_general,id} | {keys:restia,damejidlo,wolt,bolt,_general,id,generic,hiddenFrom} | {keys:wolt,damejidlo,bolt,generic,_general,id} | {keys:bolt,wolt,damejidlo,generic,_general,id}
+menu.data.categories[].dishes[]._general || count=93 || types=object:93 || sample={keys:isHidden,name,nameEN,description,descriptionEN,posCode,imageUrl,sizes,extras,vat,allergens,vatInRestaurant,color,nutritionInfo,deposit} | {keys:isHidden,name,description,posCode,imageUrl,sizes,extras,vat,allergens,vatInRestaurant,pictograms,color,nutritionInfo,deposit} | {keys:isHidden,name,nameEN,description,descriptionEN,posCode,imageUrl,sizes,extras,vat,allergens,vatInRestaurant,pictograms,color,nutritionInfo,deposit} | {keys:isHidden,name,description,posCode,imageUrl,sizes,extras,vat,allergens,pictograms,color,nutritionInfo} | {keys:isHidden,name,nameEN,description,descriptionEN,posCode,imageUrl,sizes,extras,vat,allergens,pictograms}
+menu.data.categories[].dishes[]._general.allergens || count=93 || types=array:93 || sample=[items:14] | []
+menu.data.categories[].dishes[]._general.allergens[] || count=686 || types=string:686 || sample=1 | 2 | 3 | 4 | 5
+menu.data.categories[].dishes[]._general.color || count=89 || types=string:89 || sample=[empty string]
+menu.data.categories[].dishes[]._general.deposit || count=62 || types=object:62 || sample={keys:price,vat}
+menu.data.categories[].dishes[]._general.deposit.price || count=62 || types=int:62 || sample=0
+menu.data.categories[].dishes[]._general.deposit.vat || count=62 || types=string:62 || sample=0.12
+menu.data.categories[].dishes[]._general.description || count=56 || types=string:56 || sample=rajčatový základ, mozzarella | smetanový základ, mozzarella, gorgonzola, grana padano, pecorino, parmazán | rajčatový základ, mozzarella, pepperoni salám, jalapeños, cibule | rajčatový základ, mozzarella, šunka, slanina, pepperoni salám, cibule | rajčatový základ, mozzarella, pepperoni salám
+menu.data.categories[].dishes[]._general.descriptionEN || count=44 || types=string:44 || sample=Tomato base, mozzarella | Creamy base, mozzarella, gorgonzola, Grana Padano, pecorino, parmesan | Tomato base, mozzarella, pepperoni salami, jalapeños, onions | Tomato base, mozzarella, ham, bacon, pepperoni salami, onion | Tomato base, mozzarella, pepperoni salami
+menu.data.categories[].dishes[]._general.extras || count=93 || types=array:93 || sample=[items:4] | [] | [items:5] | [items:3] | [items:6]
+menu.data.categories[].dishes[]._general.extras[] || count=274 || types=string:274 || sample=catExtra_5f0dd8bd67a5954b0c7e7f71 | catExtra_62e79575f6350da9bc0f5a20 | skmP5BDQoL0BV21J0zRS_ | catExtra_6262aa34ef26f51e1e0f7664 | catExtra_6262aa2a3afa92de522966b7
+menu.data.categories[].dishes[]._general.imageUrl || count=69 || types=string:69 || sample=images/9cc940d906d473f0257fd390b3fd47687d54fb75dc34cf1fd808f3cf8d7f64cc.jpeg | images/88fe0087267d8595d0b5c20c13f6d855fa9f99eeddd8036df61e4458e40f9f9c.jpeg | images/8058228a290f468ec1308febb3d4e786b71a703d24f28cd86abd17a5d4374c28.jpeg | images/ce3b48c16695e82bfeb9eaf03baa16811cc6fd3abc1a21acebf1b3461bd0e161.jpeg | images/946dfd0d8e2a5592b872625a66d7af962c07e967f5e27e0ce3a48f3d18d2c022.jpeg
+menu.data.categories[].dishes[]._general.isHidden || count=93 || types=bool:93 || sample=false | true
+menu.data.categories[].dishes[]._general.name || count=93 || types=string:93 || sample=Margherita 40cm | Quattro Formaggi 40cm | Hot & Spicy 40cm 🌶️🌶️ | Comeback 40cm 🌶️ | Pepperoni 40cm 🌶️🌶️
+menu.data.categories[].dishes[]._general.nameEN || count=44 || types=string:44 || sample=Margherita 40cm | Quattro Formaggi 40cm | Hot & Spicy 40cm 🌶️🌶️ | Comeback 40cm 🌶️ | Pepperoni 40cm 🌶️🌶️
+menu.data.categories[].dishes[]._general.nutritionInfo || count=89 || types=object:89 || sample={keys:servingSize,energyKcal,energyKJ,alcohol,fats,saturatedFats,monoUnsaturatedFats,polyUnsaturatedFats,carbohydrate,sugar,polyols,starch,protein,salt,sodium,fibres,vitamin_c,calcium,magnesium,chloride,potassium,fluoride,caffeine}
+menu.data.categories[].dishes[]._general.nutritionInfo.alcohol || count=89 || types=null:89 || sample=null
+menu.data.categories[].dishes[]._general.nutritionInfo.caffeine || count=89 || types=object:89 || sample={keys:unit,value}
+menu.data.categories[].dishes[]._general.nutritionInfo.caffeine.unit || count=89 || types=string:89 || sample=mg
+menu.data.categories[].dishes[]._general.nutritionInfo.caffeine.value || count=89 || types=int:89 || sample=0
+menu.data.categories[].dishes[]._general.nutritionInfo.calcium || count=89 || types=object:89 || sample={keys:unit,value}
+menu.data.categories[].dishes[]._general.nutritionInfo.calcium.unit || count=89 || types=string:89 || sample=mg
+menu.data.categories[].dishes[]._general.nutritionInfo.calcium.value || count=89 || types=int:89 || sample=0
+menu.data.categories[].dishes[]._general.nutritionInfo.carbohydrate || count=89 || types=object:89 || sample={keys:unit,value}
+menu.data.categories[].dishes[]._general.nutritionInfo.carbohydrate.unit || count=89 || types=string:89 || sample=g
+menu.data.categories[].dishes[]._general.nutritionInfo.carbohydrate.value || count=89 || types=int:89 || sample=0
+menu.data.categories[].dishes[]._general.nutritionInfo.chloride || count=89 || types=object:89 || sample={keys:unit,value}
+menu.data.categories[].dishes[]._general.nutritionInfo.chloride.unit || count=89 || types=string:89 || sample=mg
+menu.data.categories[].dishes[]._general.nutritionInfo.chloride.value || count=89 || types=int:89 || sample=0
+menu.data.categories[].dishes[]._general.nutritionInfo.energyKJ || count=89 || types=int:89 || sample=0
+menu.data.categories[].dishes[]._general.nutritionInfo.energyKcal || count=89 || types=int:89 || sample=0
+menu.data.categories[].dishes[]._general.nutritionInfo.fats || count=89 || types=object:89 || sample={keys:unit,value}
+menu.data.categories[].dishes[]._general.nutritionInfo.fats.unit || count=89 || types=string:89 || sample=g
+menu.data.categories[].dishes[]._general.nutritionInfo.fats.value || count=89 || types=int:89 || sample=0
+menu.data.categories[].dishes[]._general.nutritionInfo.fibres || count=89 || types=object:89 || sample={keys:unit,value}
+menu.data.categories[].dishes[]._general.nutritionInfo.fibres.unit || count=89 || types=string:89 || sample=g
+menu.data.categories[].dishes[]._general.nutritionInfo.fibres.value || count=89 || types=int:89 || sample=0
+menu.data.categories[].dishes[]._general.nutritionInfo.fluoride || count=89 || types=object:89 || sample={keys:unit,value}
+menu.data.categories[].dishes[]._general.nutritionInfo.fluoride.unit || count=89 || types=string:89 || sample=mg
+menu.data.categories[].dishes[]._general.nutritionInfo.fluoride.value || count=89 || types=int:89 || sample=0
+menu.data.categories[].dishes[]._general.nutritionInfo.magnesium || count=89 || types=object:89 || sample={keys:unit,value}
+menu.data.categories[].dishes[]._general.nutritionInfo.magnesium.unit || count=89 || types=string:89 || sample=mg
+menu.data.categories[].dishes[]._general.nutritionInfo.magnesium.value || count=89 || types=int:89 || sample=0
+menu.data.categories[].dishes[]._general.nutritionInfo.monoUnsaturatedFats || count=89 || types=object:89 || sample={keys:unit,value}
+menu.data.categories[].dishes[]._general.nutritionInfo.monoUnsaturatedFats.unit || count=89 || types=string:89 || sample=g
+menu.data.categories[].dishes[]._general.nutritionInfo.monoUnsaturatedFats.value || count=89 || types=int:89 || sample=0
+menu.data.categories[].dishes[]._general.nutritionInfo.polyUnsaturatedFats || count=89 || types=object:89 || sample={keys:unit,value}
+menu.data.categories[].dishes[]._general.nutritionInfo.polyUnsaturatedFats.unit || count=89 || types=string:89 || sample=g
+menu.data.categories[].dishes[]._general.nutritionInfo.polyUnsaturatedFats.value || count=89 || types=int:89 || sample=0
+menu.data.categories[].dishes[]._general.nutritionInfo.polyols || count=89 || types=object:89 || sample={keys:unit,value}
+menu.data.categories[].dishes[]._general.nutritionInfo.polyols.unit || count=89 || types=string:89 || sample=g
+menu.data.categories[].dishes[]._general.nutritionInfo.polyols.value || count=89 || types=int:89 || sample=0
+menu.data.categories[].dishes[]._general.nutritionInfo.potassium || count=89 || types=object:89 || sample={keys:unit,value}
+menu.data.categories[].dishes[]._general.nutritionInfo.potassium.unit || count=89 || types=string:89 || sample=mg
+menu.data.categories[].dishes[]._general.nutritionInfo.potassium.value || count=89 || types=int:89 || sample=0
+menu.data.categories[].dishes[]._general.nutritionInfo.protein || count=89 || types=object:89 || sample={keys:unit,value}
+menu.data.categories[].dishes[]._general.nutritionInfo.protein.unit || count=89 || types=string:89 || sample=g
+menu.data.categories[].dishes[]._general.nutritionInfo.protein.value || count=89 || types=int:89 || sample=0
+menu.data.categories[].dishes[]._general.nutritionInfo.salt || count=89 || types=object:89 || sample={keys:unit,value}
+menu.data.categories[].dishes[]._general.nutritionInfo.salt.unit || count=89 || types=string:89 || sample=g
+menu.data.categories[].dishes[]._general.nutritionInfo.salt.value || count=89 || types=int:89 || sample=0
+menu.data.categories[].dishes[]._general.nutritionInfo.saturatedFats || count=89 || types=object:89 || sample={keys:unit,value}
+menu.data.categories[].dishes[]._general.nutritionInfo.saturatedFats.unit || count=89 || types=string:89 || sample=g
+menu.data.categories[].dishes[]._general.nutritionInfo.saturatedFats.value || count=89 || types=int:89 || sample=0
+menu.data.categories[].dishes[]._general.nutritionInfo.servingSize || count=89 || types=string:89 || sample=100g
+menu.data.categories[].dishes[]._general.nutritionInfo.sodium || count=89 || types=object:89 || sample={keys:unit,value}
+menu.data.categories[].dishes[]._general.nutritionInfo.sodium.unit || count=89 || types=string:89 || sample=g
+menu.data.categories[].dishes[]._general.nutritionInfo.sodium.value || count=89 || types=int:89 || sample=0
+menu.data.categories[].dishes[]._general.nutritionInfo.starch || count=89 || types=object:89 || sample={keys:unit,value}
+menu.data.categories[].dishes[]._general.nutritionInfo.starch.unit || count=89 || types=string:89 || sample=g
+menu.data.categories[].dishes[]._general.nutritionInfo.starch.value || count=89 || types=int:89 || sample=0
+menu.data.categories[].dishes[]._general.nutritionInfo.sugar || count=89 || types=object:89 || sample={keys:unit,value}
+menu.data.categories[].dishes[]._general.nutritionInfo.sugar.unit || count=89 || types=string:89 || sample=g
+menu.data.categories[].dishes[]._general.nutritionInfo.sugar.value || count=89 || types=int:89 || sample=0
+menu.data.categories[].dishes[]._general.nutritionInfo.vitamin_c || count=89 || types=object:89 || sample={keys:unit,value}
+menu.data.categories[].dishes[]._general.nutritionInfo.vitamin_c.unit || count=89 || types=string:89 || sample=mg
+menu.data.categories[].dishes[]._general.nutritionInfo.vitamin_c.value || count=89 || types=int:89 || sample=0
+menu.data.categories[].dishes[]._general.pictograms || count=49 || types=array:49 || sample=[] | [items:1]
+menu.data.categories[].dishes[]._general.pictograms[] || count=1 || types=string:1 || sample=3
+menu.data.categories[].dishes[]._general.posCode || count=93 || types=string:93 || sample=100 | 111 | 110 | 109 | 108
+menu.data.categories[].dishes[]._general.sizes || count=93 || types=array:93 || sample=[items:1]
+menu.data.categories[].dishes[]._general.sizes[] || count=93 || types=object:93 || sample={keys:price,packing,posCode,isDefault,size,id} | {keys:price,packing,posCode,isDefault,id} | {keys:price,packing,isDefault,size,id}
+menu.data.categories[].dishes[]._general.sizes[].id || count=93 || types=string:93 || sample=size_20230331101805_4 | size_20230331101805_5 | size_20230331101806_6 | size_20230331101806_7 | size_20230331101806_8
+menu.data.categories[].dishes[]._general.sizes[].isDefault || count=93 || types=bool:93 || sample=true
+menu.data.categories[].dishes[]._general.sizes[].packing || count=93 || types=int:93 || sample=0 | 1500
+menu.data.categories[].dishes[]._general.sizes[].posCode || count=89 || types=string:89 || sample=100 | 111 | 110 | 109 | 108
+menu.data.categories[].dishes[]._general.sizes[].price || count=93 || types=int:93 || sample=27900 | 32900 | 21900 | 25900 | 13900
+menu.data.categories[].dishes[]._general.sizes[].size || count=46 || types=string:46 || sample=[empty string]
+menu.data.categories[].dishes[]._general.vat || count=93 || types=string:93 || sample=0.12 | 0.21
+menu.data.categories[].dishes[]._general.vatInRestaurant || count=62 || types=string:62 || sample=0.12
+menu.data.categories[].dishes[].bolt || count=93 || types=object:92,array:1 || sample={keys:hasItsOwnSettings,isHidden,sizes,extras,vat,allergens,vatInRestaurant,color,nutritionInfo,deposit} | {keys:hasItsOwnSettings,isHidden,sizes,extras,vat,allergens} | {keys:hasItsOwnSettings,isHidden,sizes,extras,vat,allergens,vatInRestaurant,nutritionInfo,deposit} | [] | {keys:hasItsOwnSettings,isHidden,sizes,extras,vat,allergens,color,nutritionInfo}
+menu.data.categories[].dishes[].bolt.allergens || count=92 || types=array:92 || sample=[]
+menu.data.categories[].dishes[].bolt.color || count=29 || types=string:29 || sample=[empty string]
+menu.data.categories[].dishes[].bolt.deposit || count=33 || types=object:33 || sample={keys:price}
+menu.data.categories[].dishes[].bolt.deposit.price || count=33 || types=int:33 || sample=0
+menu.data.categories[].dishes[].bolt.extras || count=92 || types=array:92 || sample=[]
+menu.data.categories[].dishes[].bolt.hasItsOwnSettings || count=92 || types=bool:92 || sample=true | false
+menu.data.categories[].dishes[].bolt.isHidden || count=92 || types=bool:92 || sample=false
+menu.data.categories[].dishes[].bolt.nutritionInfo || count=35 || types=object:35 || sample={keys:servingSize,energyKcal,energyKJ,alcohol,fats,saturatedFats,monoUnsaturatedFats,polyUnsaturatedFats,carbohydrate,sugar,polyols,starch,protein,salt,sodium,fibres,vitamin_c,calcium,magnesium,chloride,potassium,fluoride,caffeine}
+menu.data.categories[].dishes[].bolt.nutritionInfo.alcohol || count=35 || types=null:35 || sample=null
+menu.data.categories[].dishes[].bolt.nutritionInfo.caffeine || count=35 || types=object:35 || sample={keys:unit,value}
+menu.data.categories[].dishes[].bolt.nutritionInfo.caffeine.unit || count=35 || types=string:35 || sample=mg
+menu.data.categories[].dishes[].bolt.nutritionInfo.caffeine.value || count=35 || types=int:35 || sample=0
+menu.data.categories[].dishes[].bolt.nutritionInfo.calcium || count=35 || types=object:35 || sample={keys:unit,value}
+menu.data.categories[].dishes[].bolt.nutritionInfo.calcium.unit || count=35 || types=string:35 || sample=mg
+menu.data.categories[].dishes[].bolt.nutritionInfo.calcium.value || count=35 || types=int:35 || sample=0
+menu.data.categories[].dishes[].bolt.nutritionInfo.carbohydrate || count=35 || types=object:35 || sample={keys:unit,value}
+menu.data.categories[].dishes[].bolt.nutritionInfo.carbohydrate.unit || count=35 || types=string:35 || sample=g
+menu.data.categories[].dishes[].bolt.nutritionInfo.carbohydrate.value || count=35 || types=int:35 || sample=0
+menu.data.categories[].dishes[].bolt.nutritionInfo.chloride || count=35 || types=object:35 || sample={keys:unit,value}
+menu.data.categories[].dishes[].bolt.nutritionInfo.chloride.unit || count=35 || types=string:35 || sample=mg
+menu.data.categories[].dishes[].bolt.nutritionInfo.chloride.value || count=35 || types=int:35 || sample=0
+menu.data.categories[].dishes[].bolt.nutritionInfo.energyKJ || count=35 || types=int:35 || sample=0
+menu.data.categories[].dishes[].bolt.nutritionInfo.energyKcal || count=35 || types=int:35 || sample=0
+menu.data.categories[].dishes[].bolt.nutritionInfo.fats || count=35 || types=object:35 || sample={keys:unit,value}
+menu.data.categories[].dishes[].bolt.nutritionInfo.fats.unit || count=35 || types=string:35 || sample=g
+menu.data.categories[].dishes[].bolt.nutritionInfo.fats.value || count=35 || types=int:35 || sample=0
+menu.data.categories[].dishes[].bolt.nutritionInfo.fibres || count=35 || types=object:35 || sample={keys:unit,value}
+menu.data.categories[].dishes[].bolt.nutritionInfo.fibres.unit || count=35 || types=string:35 || sample=g
+menu.data.categories[].dishes[].bolt.nutritionInfo.fibres.value || count=35 || types=int:35 || sample=0
+menu.data.categories[].dishes[].bolt.nutritionInfo.fluoride || count=35 || types=object:35 || sample={keys:unit,value}
+menu.data.categories[].dishes[].bolt.nutritionInfo.fluoride.unit || count=35 || types=string:35 || sample=mg
+menu.data.categories[].dishes[].bolt.nutritionInfo.fluoride.value || count=35 || types=int:35 || sample=0
+menu.data.categories[].dishes[].bolt.nutritionInfo.magnesium || count=35 || types=object:35 || sample={keys:unit,value}
+menu.data.categories[].dishes[].bolt.nutritionInfo.magnesium.unit || count=35 || types=string:35 || sample=mg
+menu.data.categories[].dishes[].bolt.nutritionInfo.magnesium.value || count=35 || types=int:35 || sample=0
+menu.data.categories[].dishes[].bolt.nutritionInfo.monoUnsaturatedFats || count=35 || types=object:35 || sample={keys:unit,value}
+menu.data.categories[].dishes[].bolt.nutritionInfo.monoUnsaturatedFats.unit || count=35 || types=string:35 || sample=g
+menu.data.categories[].dishes[].bolt.nutritionInfo.monoUnsaturatedFats.value || count=35 || types=int:35 || sample=0
+menu.data.categories[].dishes[].bolt.nutritionInfo.polyUnsaturatedFats || count=35 || types=object:35 || sample={keys:unit,value}
+menu.data.categories[].dishes[].bolt.nutritionInfo.polyUnsaturatedFats.unit || count=35 || types=string:35 || sample=g
+menu.data.categories[].dishes[].bolt.nutritionInfo.polyUnsaturatedFats.value || count=35 || types=int:35 || sample=0
+menu.data.categories[].dishes[].bolt.nutritionInfo.polyols || count=35 || types=object:35 || sample={keys:unit,value}
+menu.data.categories[].dishes[].bolt.nutritionInfo.polyols.unit || count=35 || types=string:35 || sample=g
+menu.data.categories[].dishes[].bolt.nutritionInfo.polyols.value || count=35 || types=int:35 || sample=0
+menu.data.categories[].dishes[].bolt.nutritionInfo.potassium || count=35 || types=object:35 || sample={keys:unit,value}
+menu.data.categories[].dishes[].bolt.nutritionInfo.potassium.unit || count=35 || types=string:35 || sample=mg
+menu.data.categories[].dishes[].bolt.nutritionInfo.potassium.value || count=35 || types=int:35 || sample=0
+menu.data.categories[].dishes[].bolt.nutritionInfo.protein || count=35 || types=object:35 || sample={keys:unit,value}
+menu.data.categories[].dishes[].bolt.nutritionInfo.protein.unit || count=35 || types=string:35 || sample=g
+menu.data.categories[].dishes[].bolt.nutritionInfo.protein.value || count=35 || types=int:35 || sample=0
+menu.data.categories[].dishes[].bolt.nutritionInfo.salt || count=35 || types=object:35 || sample={keys:unit,value}
+menu.data.categories[].dishes[].bolt.nutritionInfo.salt.unit || count=35 || types=string:35 || sample=g
+menu.data.categories[].dishes[].bolt.nutritionInfo.salt.value || count=35 || types=int:35 || sample=0
+menu.data.categories[].dishes[].bolt.nutritionInfo.saturatedFats || count=35 || types=object:35 || sample={keys:unit,value}
+menu.data.categories[].dishes[].bolt.nutritionInfo.saturatedFats.unit || count=35 || types=string:35 || sample=g
+menu.data.categories[].dishes[].bolt.nutritionInfo.saturatedFats.value || count=35 || types=int:35 || sample=0
+menu.data.categories[].dishes[].bolt.nutritionInfo.servingSize || count=35 || types=string:35 || sample=100g
+menu.data.categories[].dishes[].bolt.nutritionInfo.sodium || count=35 || types=object:35 || sample={keys:unit,value}
+menu.data.categories[].dishes[].bolt.nutritionInfo.sodium.unit || count=35 || types=string:35 || sample=g
+menu.data.categories[].dishes[].bolt.nutritionInfo.sodium.value || count=35 || types=int:35 || sample=0
+menu.data.categories[].dishes[].bolt.nutritionInfo.starch || count=35 || types=object:35 || sample={keys:unit,value}
+menu.data.categories[].dishes[].bolt.nutritionInfo.starch.unit || count=35 || types=string:35 || sample=g
+menu.data.categories[].dishes[].bolt.nutritionInfo.starch.value || count=35 || types=int:35 || sample=0
+menu.data.categories[].dishes[].bolt.nutritionInfo.sugar || count=35 || types=object:35 || sample={keys:unit,value}
+menu.data.categories[].dishes[].bolt.nutritionInfo.sugar.unit || count=35 || types=string:35 || sample=g
+menu.data.categories[].dishes[].bolt.nutritionInfo.sugar.value || count=35 || types=int:35 || sample=0
+menu.data.categories[].dishes[].bolt.nutritionInfo.vitamin_c || count=35 || types=object:35 || sample={keys:unit,value}
+menu.data.categories[].dishes[].bolt.nutritionInfo.vitamin_c.unit || count=35 || types=string:35 || sample=mg
+menu.data.categories[].dishes[].bolt.nutritionInfo.vitamin_c.value || count=35 || types=int:35 || sample=0
+menu.data.categories[].dishes[].bolt.sizes || count=92 || types=array:92 || sample=[items:1]
+menu.data.categories[].dishes[].bolt.sizes[] || count=92 || types=object:92 || sample={keys:price,packing,size,id,posCode} | {keys:packing,id} | {keys:packing,id,size,price,posCode} | {keys:id,size} | {keys:size,id}
+menu.data.categories[].dishes[].bolt.sizes[].id || count=92 || types=string:92 || sample=size_20230331101805_4 | size_20230331101805_5 | size_20230331101806_6 | size_20230331101806_7 | size_20230331101806_8
+menu.data.categories[].dishes[].bolt.sizes[].packing || count=48 || types=int:48 || sample=2000 | 1500 | 1000 | 3000
+menu.data.categories[].dishes[].bolt.sizes[].posCode || count=42 || types=string:42 || sample=100 | 111 | 110 | 109 | 108
+menu.data.categories[].dishes[].bolt.sizes[].price || count=46 || types=int:46 || sample=27900 | 32900 | 21900 | 25900 | 11900
+menu.data.categories[].dishes[].bolt.sizes[].size || count=87 || types=string:87 || sample=[empty string]
+menu.data.categories[].dishes[].bolt.vat || count=92 || types=string:92 || sample=0.12
+menu.data.categories[].dishes[].bolt.vatInRestaurant || count=33 || types=string:33 || sample=0.12
+menu.data.categories[].dishes[].damejidlo || count=93 || types=object:91,array:2 || sample={keys:hasItsOwnSettings,isHidden,sizes,extras,vat,vatInRestaurant,color,nutritionInfo,deposit} | {keys:hasItsOwnSettings,isHidden,sizes,extras,vat} | [] | {keys:hasItsOwnSettings,isHidden,sizes,extras,vat,color,nutritionInfo} | {keys:hasItsOwnSettings,isHidden,sizes,extras,vat,vatInRestaurant,nutritionInfo,deposit}
+menu.data.categories[].dishes[].damejidlo.color || count=29 || types=string:29 || sample=[empty string]
+menu.data.categories[].dishes[].damejidlo.deposit || count=33 || types=object:33 || sample={keys:price}
+menu.data.categories[].dishes[].damejidlo.deposit.price || count=33 || types=int:33 || sample=0
+menu.data.categories[].dishes[].damejidlo.extras || count=91 || types=array:91 || sample=[]
+menu.data.categories[].dishes[].damejidlo.hasItsOwnSettings || count=91 || types=bool:91 || sample=true | false
+menu.data.categories[].dishes[].damejidlo.isHidden || count=91 || types=bool:91 || sample=false | true
+menu.data.categories[].dishes[].damejidlo.nutritionInfo || count=34 || types=object:34 || sample={keys:servingSize,energyKcal,energyKJ,alcohol,fats,saturatedFats,monoUnsaturatedFats,polyUnsaturatedFats,carbohydrate,sugar,polyols,starch,protein,salt,sodium,fibres,vitamin_c,calcium,magnesium,chloride,potassium,fluoride,caffeine}
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.alcohol || count=34 || types=null:34 || sample=null
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.caffeine || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.caffeine.unit || count=34 || types=string:34 || sample=mg
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.caffeine.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.calcium || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.calcium.unit || count=34 || types=string:34 || sample=mg
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.calcium.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.carbohydrate || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.carbohydrate.unit || count=34 || types=string:34 || sample=g
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.carbohydrate.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.chloride || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.chloride.unit || count=34 || types=string:34 || sample=mg
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.chloride.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.energyKJ || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.energyKcal || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.fats || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.fats.unit || count=34 || types=string:34 || sample=g
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.fats.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.fibres || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.fibres.unit || count=34 || types=string:34 || sample=g
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.fibres.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.fluoride || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.fluoride.unit || count=34 || types=string:34 || sample=mg
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.fluoride.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.magnesium || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.magnesium.unit || count=34 || types=string:34 || sample=mg
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.magnesium.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.monoUnsaturatedFats || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.monoUnsaturatedFats.unit || count=34 || types=string:34 || sample=g
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.monoUnsaturatedFats.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.polyUnsaturatedFats || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.polyUnsaturatedFats.unit || count=34 || types=string:34 || sample=g
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.polyUnsaturatedFats.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.polyols || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.polyols.unit || count=34 || types=string:34 || sample=g
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.polyols.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.potassium || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.potassium.unit || count=34 || types=string:34 || sample=mg
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.potassium.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.protein || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.protein.unit || count=34 || types=string:34 || sample=g
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.protein.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.salt || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.salt.unit || count=34 || types=string:34 || sample=g
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.salt.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.saturatedFats || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.saturatedFats.unit || count=34 || types=string:34 || sample=g
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.saturatedFats.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.servingSize || count=34 || types=string:34 || sample=100g
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.sodium || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.sodium.unit || count=34 || types=string:34 || sample=g
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.sodium.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.starch || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.starch.unit || count=34 || types=string:34 || sample=g
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.starch.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.sugar || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.sugar.unit || count=34 || types=string:34 || sample=g
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.sugar.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.vitamin_c || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.vitamin_c.unit || count=34 || types=string:34 || sample=mg
+menu.data.categories[].dishes[].damejidlo.nutritionInfo.vitamin_c.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].damejidlo.sizes || count=91 || types=array:91 || sample=[items:1]
+menu.data.categories[].dishes[].damejidlo.sizes[] || count=91 || types=object:91 || sample={keys:price,packing,size,id,posCode} | {keys:packing,id} | {keys:packing,id,size,price,posCode} | {keys:id} | {keys:size,id}
+menu.data.categories[].dishes[].damejidlo.sizes[].id || count=91 || types=string:91 || sample=size_20230331101805_4 | size_20230331101805_5 | size_20230331101806_6 | size_20230331101806_7 | size_20230331101806_8
+menu.data.categories[].dishes[].damejidlo.sizes[].packing || count=48 || types=int:48 || sample=2000 | 1500 | 1000 | 3000
+menu.data.categories[].dishes[].damejidlo.sizes[].posCode || count=42 || types=string:42 || sample=100 | 111 | 110 | 109 | 108
+menu.data.categories[].dishes[].damejidlo.sizes[].price || count=46 || types=int:46 || sample=27900 | 32900 | 21900 | 25900 | 11900
+menu.data.categories[].dishes[].damejidlo.sizes[].size || count=85 || types=string:85 || sample=[empty string]
+menu.data.categories[].dishes[].damejidlo.vat || count=91 || types=string:91 || sample=0.12
+menu.data.categories[].dishes[].damejidlo.vatInRestaurant || count=33 || types=string:33 || sample=0.12
+menu.data.categories[].dishes[].generic || count=93 || types=object:93 || sample={keys:hasItsOwnSettings,isHidden,sizes,extras,vat} | {keys:hasItsOwnSettings,isHidden,sizes,extras,vat,vatInRestaurant,nutritionInfo,deposit} | {keys:hasItsOwnSettings,isHidden,sizes,extras,vat,nutritionInfo}
+menu.data.categories[].dishes[].generic.deposit || count=8 || types=object:8 || sample={keys:price}
+menu.data.categories[].dishes[].generic.deposit.price || count=8 || types=int:8 || sample=0
+menu.data.categories[].dishes[].generic.extras || count=93 || types=array:93 || sample=[]
+menu.data.categories[].dishes[].generic.hasItsOwnSettings || count=93 || types=bool:93 || sample=false
+menu.data.categories[].dishes[].generic.isHidden || count=93 || types=bool:93 || sample=false
+menu.data.categories[].dishes[].generic.nutritionInfo || count=10 || types=object:10 || sample={keys:servingSize,energyKcal,energyKJ,alcohol,fats,saturatedFats,monoUnsaturatedFats,polyUnsaturatedFats,carbohydrate,sugar,polyols,starch,protein,salt,sodium,fibres,vitamin_c,calcium,magnesium,chloride,potassium,fluoride,caffeine}
+menu.data.categories[].dishes[].generic.nutritionInfo.alcohol || count=10 || types=null:10 || sample=null
+menu.data.categories[].dishes[].generic.nutritionInfo.caffeine || count=10 || types=object:10 || sample={keys:unit,value}
+menu.data.categories[].dishes[].generic.nutritionInfo.caffeine.unit || count=10 || types=string:10 || sample=mg
+menu.data.categories[].dishes[].generic.nutritionInfo.caffeine.value || count=10 || types=int:10 || sample=0
+menu.data.categories[].dishes[].generic.nutritionInfo.calcium || count=10 || types=object:10 || sample={keys:unit,value}
+menu.data.categories[].dishes[].generic.nutritionInfo.calcium.unit || count=10 || types=string:10 || sample=mg
+menu.data.categories[].dishes[].generic.nutritionInfo.calcium.value || count=10 || types=int:10 || sample=0
+menu.data.categories[].dishes[].generic.nutritionInfo.carbohydrate || count=10 || types=object:10 || sample={keys:unit,value}
+menu.data.categories[].dishes[].generic.nutritionInfo.carbohydrate.unit || count=10 || types=string:10 || sample=g
+menu.data.categories[].dishes[].generic.nutritionInfo.carbohydrate.value || count=10 || types=int:10 || sample=0
+menu.data.categories[].dishes[].generic.nutritionInfo.chloride || count=10 || types=object:10 || sample={keys:unit,value}
+menu.data.categories[].dishes[].generic.nutritionInfo.chloride.unit || count=10 || types=string:10 || sample=mg
+menu.data.categories[].dishes[].generic.nutritionInfo.chloride.value || count=10 || types=int:10 || sample=0
+menu.data.categories[].dishes[].generic.nutritionInfo.energyKJ || count=10 || types=int:10 || sample=0
+menu.data.categories[].dishes[].generic.nutritionInfo.energyKcal || count=10 || types=int:10 || sample=0
+menu.data.categories[].dishes[].generic.nutritionInfo.fats || count=10 || types=object:10 || sample={keys:unit,value}
+menu.data.categories[].dishes[].generic.nutritionInfo.fats.unit || count=10 || types=string:10 || sample=g
+menu.data.categories[].dishes[].generic.nutritionInfo.fats.value || count=10 || types=int:10 || sample=0
+menu.data.categories[].dishes[].generic.nutritionInfo.fibres || count=10 || types=object:10 || sample={keys:unit,value}
+menu.data.categories[].dishes[].generic.nutritionInfo.fibres.unit || count=10 || types=string:10 || sample=g
+menu.data.categories[].dishes[].generic.nutritionInfo.fibres.value || count=10 || types=int:10 || sample=0
+menu.data.categories[].dishes[].generic.nutritionInfo.fluoride || count=10 || types=object:10 || sample={keys:unit,value}
+menu.data.categories[].dishes[].generic.nutritionInfo.fluoride.unit || count=10 || types=string:10 || sample=mg
+menu.data.categories[].dishes[].generic.nutritionInfo.fluoride.value || count=10 || types=int:10 || sample=0
+menu.data.categories[].dishes[].generic.nutritionInfo.magnesium || count=10 || types=object:10 || sample={keys:unit,value}
+menu.data.categories[].dishes[].generic.nutritionInfo.magnesium.unit || count=10 || types=string:10 || sample=mg
+menu.data.categories[].dishes[].generic.nutritionInfo.magnesium.value || count=10 || types=int:10 || sample=0
+menu.data.categories[].dishes[].generic.nutritionInfo.monoUnsaturatedFats || count=10 || types=object:10 || sample={keys:unit,value}
+menu.data.categories[].dishes[].generic.nutritionInfo.monoUnsaturatedFats.unit || count=10 || types=string:10 || sample=g
+menu.data.categories[].dishes[].generic.nutritionInfo.monoUnsaturatedFats.value || count=10 || types=int:10 || sample=0
+menu.data.categories[].dishes[].generic.nutritionInfo.polyUnsaturatedFats || count=10 || types=object:10 || sample={keys:unit,value}
+menu.data.categories[].dishes[].generic.nutritionInfo.polyUnsaturatedFats.unit || count=10 || types=string:10 || sample=g
+menu.data.categories[].dishes[].generic.nutritionInfo.polyUnsaturatedFats.value || count=10 || types=int:10 || sample=0
+menu.data.categories[].dishes[].generic.nutritionInfo.polyols || count=10 || types=object:10 || sample={keys:unit,value}
+menu.data.categories[].dishes[].generic.nutritionInfo.polyols.unit || count=10 || types=string:10 || sample=g
+menu.data.categories[].dishes[].generic.nutritionInfo.polyols.value || count=10 || types=int:10 || sample=0
+menu.data.categories[].dishes[].generic.nutritionInfo.potassium || count=10 || types=object:10 || sample={keys:unit,value}
+menu.data.categories[].dishes[].generic.nutritionInfo.potassium.unit || count=10 || types=string:10 || sample=mg
+menu.data.categories[].dishes[].generic.nutritionInfo.potassium.value || count=10 || types=int:10 || sample=0
+menu.data.categories[].dishes[].generic.nutritionInfo.protein || count=10 || types=object:10 || sample={keys:unit,value}
+menu.data.categories[].dishes[].generic.nutritionInfo.protein.unit || count=10 || types=string:10 || sample=g
+menu.data.categories[].dishes[].generic.nutritionInfo.protein.value || count=10 || types=int:10 || sample=0
+menu.data.categories[].dishes[].generic.nutritionInfo.salt || count=10 || types=object:10 || sample={keys:unit,value}
+menu.data.categories[].dishes[].generic.nutritionInfo.salt.unit || count=10 || types=string:10 || sample=g
+menu.data.categories[].dishes[].generic.nutritionInfo.salt.value || count=10 || types=int:10 || sample=0
+menu.data.categories[].dishes[].generic.nutritionInfo.saturatedFats || count=10 || types=object:10 || sample={keys:unit,value}
+menu.data.categories[].dishes[].generic.nutritionInfo.saturatedFats.unit || count=10 || types=string:10 || sample=g
+menu.data.categories[].dishes[].generic.nutritionInfo.saturatedFats.value || count=10 || types=int:10 || sample=0
+menu.data.categories[].dishes[].generic.nutritionInfo.servingSize || count=10 || types=string:10 || sample=100g
+menu.data.categories[].dishes[].generic.nutritionInfo.sodium || count=10 || types=object:10 || sample={keys:unit,value}
+menu.data.categories[].dishes[].generic.nutritionInfo.sodium.unit || count=10 || types=string:10 || sample=g
+menu.data.categories[].dishes[].generic.nutritionInfo.sodium.value || count=10 || types=int:10 || sample=0
+menu.data.categories[].dishes[].generic.nutritionInfo.starch || count=10 || types=object:10 || sample={keys:unit,value}
+menu.data.categories[].dishes[].generic.nutritionInfo.starch.unit || count=10 || types=string:10 || sample=g
+menu.data.categories[].dishes[].generic.nutritionInfo.starch.value || count=10 || types=int:10 || sample=0
+menu.data.categories[].dishes[].generic.nutritionInfo.sugar || count=10 || types=object:10 || sample={keys:unit,value}
+menu.data.categories[].dishes[].generic.nutritionInfo.sugar.unit || count=10 || types=string:10 || sample=g
+menu.data.categories[].dishes[].generic.nutritionInfo.sugar.value || count=10 || types=int:10 || sample=0
+menu.data.categories[].dishes[].generic.nutritionInfo.vitamin_c || count=10 || types=object:10 || sample={keys:unit,value}
+menu.data.categories[].dishes[].generic.nutritionInfo.vitamin_c.unit || count=10 || types=string:10 || sample=mg
+menu.data.categories[].dishes[].generic.nutritionInfo.vitamin_c.value || count=10 || types=int:10 || sample=0
+menu.data.categories[].dishes[].generic.sizes || count=93 || types=array:93 || sample=[items:1]
+menu.data.categories[].dishes[].generic.sizes[] || count=93 || types=object:93 || sample={keys:id,size} | {keys:isDefault,id,size}
+menu.data.categories[].dishes[].generic.sizes[].id || count=93 || types=string:93 || sample=HMoFImD9gVmx1r8PYeTqy | 2Jp-N_b44yzH9O5ee0uB0 | rFq6yvU6KkoAgqJYaPw9S | h8ZgIzvQMObWfo4JFviz1 | cX-5c_Rnlkzr7wLeS3_su
+menu.data.categories[].dishes[].generic.sizes[].isDefault || count=1 || types=bool:1 || sample=false
+menu.data.categories[].dishes[].generic.sizes[].size || count=93 || types=string:93 || sample=[empty string]
+menu.data.categories[].dishes[].generic.vat || count=93 || types=string:93 || sample=0.12
+menu.data.categories[].dishes[].generic.vatInRestaurant || count=8 || types=string:8 || sample=0.12
+menu.data.categories[].dishes[].hiddenFrom || count=3 || types=string:3 || sample=2026-03-02T15:22:55.963Z | 2025-12-28T17:51:03.485Z | 2025-12-28T17:51:05.994Z
+menu.data.categories[].dishes[].id || count=93 || types=string:93 || sample=bL0hVgoSXqfLoKA4uUtGl | NT_WMIgQrnmqL9VhY7jdp | RVQ2QDe5MTu-7XIyJGagC | k45HyHAOaeiIqCw8iOUwc | WREWnTn5XqPpp_6-7MKG6
+menu.data.categories[].dishes[].restia || count=46 || types=array:46 || sample=[]
+menu.data.categories[].dishes[].wolt || count=93 || types=object:91,array:2 || sample={keys:hasItsOwnSettings,isHidden,sizes,extras,vat,vatInRestaurant,color,nutritionInfo,deposit} | {keys:hasItsOwnSettings,isHidden,sizes,extras,vat} | {keys:hasItsOwnSettings,isHidden,sizes,extras,vat,vatInRestaurant,nutritionInfo,deposit} | [] | {keys:hasItsOwnSettings,isHidden,sizes,extras,vat,color,nutritionInfo}
+menu.data.categories[].dishes[].wolt.color || count=28 || types=string:28 || sample=[empty string]
+menu.data.categories[].dishes[].wolt.deposit || count=33 || types=object:33 || sample={keys:price}
+menu.data.categories[].dishes[].wolt.deposit.price || count=33 || types=int:33 || sample=0
+menu.data.categories[].dishes[].wolt.extras || count=91 || types=array:91 || sample=[]
+menu.data.categories[].dishes[].wolt.hasItsOwnSettings || count=91 || types=bool:91 || sample=true | false
+menu.data.categories[].dishes[].wolt.isHidden || count=91 || types=bool:91 || sample=false
+menu.data.categories[].dishes[].wolt.nutritionInfo || count=34 || types=object:34 || sample={keys:servingSize,energyKcal,energyKJ,alcohol,fats,saturatedFats,monoUnsaturatedFats,polyUnsaturatedFats,carbohydrate,sugar,polyols,starch,protein,salt,sodium,fibres,vitamin_c,calcium,magnesium,chloride,potassium,fluoride,caffeine}
+menu.data.categories[].dishes[].wolt.nutritionInfo.alcohol || count=34 || types=null:34 || sample=null
+menu.data.categories[].dishes[].wolt.nutritionInfo.caffeine || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].wolt.nutritionInfo.caffeine.unit || count=34 || types=string:34 || sample=mg
+menu.data.categories[].dishes[].wolt.nutritionInfo.caffeine.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].wolt.nutritionInfo.calcium || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].wolt.nutritionInfo.calcium.unit || count=34 || types=string:34 || sample=mg
+menu.data.categories[].dishes[].wolt.nutritionInfo.calcium.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].wolt.nutritionInfo.carbohydrate || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].wolt.nutritionInfo.carbohydrate.unit || count=34 || types=string:34 || sample=g
+menu.data.categories[].dishes[].wolt.nutritionInfo.carbohydrate.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].wolt.nutritionInfo.chloride || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].wolt.nutritionInfo.chloride.unit || count=34 || types=string:34 || sample=mg
+menu.data.categories[].dishes[].wolt.nutritionInfo.chloride.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].wolt.nutritionInfo.energyKJ || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].wolt.nutritionInfo.energyKcal || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].wolt.nutritionInfo.fats || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].wolt.nutritionInfo.fats.unit || count=34 || types=string:34 || sample=g
+menu.data.categories[].dishes[].wolt.nutritionInfo.fats.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].wolt.nutritionInfo.fibres || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].wolt.nutritionInfo.fibres.unit || count=34 || types=string:34 || sample=g
+menu.data.categories[].dishes[].wolt.nutritionInfo.fibres.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].wolt.nutritionInfo.fluoride || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].wolt.nutritionInfo.fluoride.unit || count=34 || types=string:34 || sample=mg
+menu.data.categories[].dishes[].wolt.nutritionInfo.fluoride.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].wolt.nutritionInfo.magnesium || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].wolt.nutritionInfo.magnesium.unit || count=34 || types=string:34 || sample=mg
+menu.data.categories[].dishes[].wolt.nutritionInfo.magnesium.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].wolt.nutritionInfo.monoUnsaturatedFats || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].wolt.nutritionInfo.monoUnsaturatedFats.unit || count=34 || types=string:34 || sample=g
+menu.data.categories[].dishes[].wolt.nutritionInfo.monoUnsaturatedFats.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].wolt.nutritionInfo.polyUnsaturatedFats || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].wolt.nutritionInfo.polyUnsaturatedFats.unit || count=34 || types=string:34 || sample=g
+menu.data.categories[].dishes[].wolt.nutritionInfo.polyUnsaturatedFats.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].wolt.nutritionInfo.polyols || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].wolt.nutritionInfo.polyols.unit || count=34 || types=string:34 || sample=g
+menu.data.categories[].dishes[].wolt.nutritionInfo.polyols.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].wolt.nutritionInfo.potassium || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].wolt.nutritionInfo.potassium.unit || count=34 || types=string:34 || sample=mg
+menu.data.categories[].dishes[].wolt.nutritionInfo.potassium.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].wolt.nutritionInfo.protein || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].wolt.nutritionInfo.protein.unit || count=34 || types=string:34 || sample=g
+menu.data.categories[].dishes[].wolt.nutritionInfo.protein.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].wolt.nutritionInfo.salt || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].wolt.nutritionInfo.salt.unit || count=34 || types=string:34 || sample=g
+menu.data.categories[].dishes[].wolt.nutritionInfo.salt.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].wolt.nutritionInfo.saturatedFats || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].wolt.nutritionInfo.saturatedFats.unit || count=34 || types=string:34 || sample=g
+menu.data.categories[].dishes[].wolt.nutritionInfo.saturatedFats.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].wolt.nutritionInfo.servingSize || count=34 || types=string:34 || sample=100g
+menu.data.categories[].dishes[].wolt.nutritionInfo.sodium || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].wolt.nutritionInfo.sodium.unit || count=34 || types=string:34 || sample=g
+menu.data.categories[].dishes[].wolt.nutritionInfo.sodium.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].wolt.nutritionInfo.starch || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].wolt.nutritionInfo.starch.unit || count=34 || types=string:34 || sample=g
+menu.data.categories[].dishes[].wolt.nutritionInfo.starch.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].wolt.nutritionInfo.sugar || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].wolt.nutritionInfo.sugar.unit || count=34 || types=string:34 || sample=g
+menu.data.categories[].dishes[].wolt.nutritionInfo.sugar.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].wolt.nutritionInfo.vitamin_c || count=34 || types=object:34 || sample={keys:unit,value}
+menu.data.categories[].dishes[].wolt.nutritionInfo.vitamin_c.unit || count=34 || types=string:34 || sample=mg
+menu.data.categories[].dishes[].wolt.nutritionInfo.vitamin_c.value || count=34 || types=int:34 || sample=0
+menu.data.categories[].dishes[].wolt.sizes || count=91 || types=array:91 || sample=[items:1]
+menu.data.categories[].dishes[].wolt.sizes[] || count=91 || types=object:91 || sample={keys:price,packing,size,id,posCode} | {keys:packing,id} | {keys:packing,id,size,price,posCode} | {keys:id,size} | {keys:size,id}
+menu.data.categories[].dishes[].wolt.sizes[].id || count=91 || types=string:91 || sample=size_20230331101805_4 | size_20230331101805_5 | size_20230331101806_6 | size_20230331101806_7 | size_20230331101806_8
+menu.data.categories[].dishes[].wolt.sizes[].packing || count=48 || types=int:48 || sample=2000 | 1500 | 1000 | 3000
+menu.data.categories[].dishes[].wolt.sizes[].posCode || count=42 || types=string:42 || sample=100 | 111 | 110 | 109 | 108
+menu.data.categories[].dishes[].wolt.sizes[].price || count=46 || types=int:46 || sample=27900 | 32900 | 21900 | 25900 | 11900
+menu.data.categories[].dishes[].wolt.sizes[].size || count=86 || types=string:86 || sample=[empty string]
+menu.data.categories[].dishes[].wolt.vat || count=91 || types=string:91 || sample=0.12
+menu.data.categories[].dishes[].wolt.vatInRestaurant || count=33 || types=string:33 || sample=0.12
+menu.data.categories[].generic || count=5 || types=object:5 || sample={keys:hasItsOwnSettings,isHidden,hasTimetable,timetable}
+menu.data.categories[].generic.hasItsOwnSettings || count=5 || types=bool:5 || sample=false
+menu.data.categories[].generic.hasTimetable || count=5 || types=bool:5 || sample=false
+menu.data.categories[].generic.isHidden || count=5 || types=bool:5 || sample=false
+menu.data.categories[].generic.timetable || count=5 || types=array:5 || sample=[]
+menu.data.categories[].id || count=9 || types=string:9 || sample=KF_5p8lPQo7Fz3gaG5NRl | iHZ0tNa53UbAVSffTF5ey | lxxBGfYSkwS7wMUojy-Ww | KvgTbhIe2tbCR6cuNMZCG | qrh7RXdUIxVOwRELtkCLR
+menu.data.categories[].label || count=5 || types=string:5 || sample=🍕 PIZZA 40CM | 🍕 PIZZA 32CM | 🍕 PIZZA 18CM | 🤩 VÝHODNÉ MENU | 🥤 NÁPOJE
+menu.data.categories[].menuId || count=5 || types=string:5 || sample=68733e41-78fc-448b-86cb-6979c14e9a73 | 762f8daa-ca39-4d8f-ae4a-d22b4d106e88
+menu.data.categories[].restia || count=7 || types=array:7 || sample=[]
+menu.data.categories[].value || count=5 || types=string:5 || sample=B7OKO9nNo3gNPOS42rK__ | FCau_p73gcDtYu76Gvl7M | tQ5N6kSLOmocKARLan0m1 | 4aBiYrXXRbn5PSjatl1lt | A80QFKGs1vqNbGVvQZQVr
+menu.data.categories[].wolt || count=9 || types=object:5,array:4 || sample={keys:hasItsOwnSettings,isHidden,hasTimetable,timetable} | []
+menu.data.categories[].wolt.hasItsOwnSettings || count=5 || types=bool:5 || sample=false | true
+menu.data.categories[].wolt.hasTimetable || count=5 || types=bool:5 || sample=false
+menu.data.categories[].wolt.isHidden || count=5 || types=bool:5 || sample=false | true
+menu.data.categories[].wolt.timetable || count=5 || types=array:5 || sample=[]
+menu.data.lastSaved || count=1 || types=string:1 || sample=2026-03-10T20:16:33.048Z
+menu.id || count=1 || types=string:1 || sample=762f8daa-ca39-4d8f-ae4a-d22b4d106e88
+menu.name || count=1 || types=string:1 || sample=Hlavní menu
+menu.posId || count=1 || types=string:1 || sample=3eb8bd65-26d6-4fa9-a20b-19705f856f17
+menu.updatedAt || count=1 || types=string:1 || sample=2026-03-10T20:16:34.658Z
+

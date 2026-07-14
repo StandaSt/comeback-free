@@ -1,0 +1,14 @@
+import {MigrationInterface, QueryRunner} from "typeorm";
+
+export class RemoveAllResources1592416870991 implements MigrationInterface {
+
+    public async up(queryRunner: QueryRunner): Promise<any> {
+        await queryRunner.query("DELETE FROM `resource`");
+        await queryRunner.query("DELETE FROM `resource_category`")
+    }
+
+    public async down(queryRunner: QueryRunner): Promise<any> {
+        await queryRunner.query("INSERT INTO `resource` VALUES (1,'ROLE_EDIT',1,1,'Editace, vytváření a mazání rolí.','Editace rolí'),(2,'USER_SEE_ALL',1,2,'Zobrazení všech uživatelů.','Zobrazení všech uživatelů'),(3,'USER_ADD',0,2,'Přidávání uživatelů.','Přidávání uživatelů'),(4,'USER_ACTIVATE',0,2,'Aktivace a deaktivace uživatelů.','Aktivace uživatelů'),(5,'USER_GENERATE_PASSWORD',0,2,'Generování nového heslo pro uživatele.','Generování hesla uživatelů'),(6,'ROLE_ASSIGN_USER',1,1,'Přiřazování rolí uživatelům.','Přiřazování rolí uživatelům'),(7,'BRANCH_SEE_ALL',0,3,'Zobrazení všech poboček','Zobrazení všech poboček'),(8,'BRANCH_CREATE',0,3,'Vytváření/editování/mazání pobočky.','Vytvoření pobočky'),(9,'BRANCH_ASSIGN_PLANNER',0,3,'Přiřazování plánovačů (uživatelé co mohou plánovat směny) k pobočce.','Přiřazení plánovaču k pobočce'),(11,'BRANCH_ACTIVATE',0,3,'Aktivování/deaktivování poboček.','Aktivování poboček'),(12,'BRANCH_EDIT',0,3,'Editace poboček.','Editace poboček'),(13,'BRANCH_SEE_SHIFT_WEEKS',0,3,'Zobrazí všechny pracovní týdny poboček','Zobrazení pracovních týdnů'),(14,'USER_EDIT',0,2,'Editace uživatelů.','Editace uživatelů'),(16,'SHIFT_ROLE_TYPE_SEE_ALL',0,5,'Zobrazení všech typů.','Zobrazení všech typů'),(17,'SHIFT_ROLE_TYPE_CREATE',0,5,'Vytváření typů směn.','Vytváření typů směn'),(18,'SHIFT_ROLE_TYPE_DEACTIVATE',0,5,'Odstranění typů směn.','Odstranění typů směn'),(19,'SHIFT_ROLE_TYPE_EDIT',0,5,'Editace typů směn.','Editace typů směn'),(21,'PREFERRED_WEEK_CAN_PREFER',0,6,'Může volit požadavky a může být přiřazen do směn.','Volba požadavků'),(22,'GLOBAL_SETTINGS_CAN_EDIT',0,7,'Může upravovat globální nastavení.','Úprava globálního nastavení'),(23,'SHIFT_ROLE_TYPE_ASSIGN_WORKER',0,5,'Přiřazení zaměstanců k typu směny. Typy směn určují na jakých pozicích může zaměstatnec pracovat.','Přiřazení pracovníků'),(24,'SHIFT_CAN_PLAN',0,4,'Plánování směn.','Plánování směn'),(25,'SHIFT_CAN_PUBLISH',0,4,'Může směnu publikovat, bez tohoto zdroje může směnu pouze dát ke schválení.','Pubikování směn'),(26,'BRANCH_ASSIGN_WORKER',0,3,'Přiřazení pracovníků k pobočce.','Přiřazení pracovníků k pobočce'),(27,'SHIFT_EDIT_TEMPLATE',0,4,'Může upravovat/vytvářet šablony','Upravování šablon'),(28,'PREFERRED_WEEK_SEE_ALL',0,6,'Může zobrazit všechny požadavky v systému.','Zobrazení všech požadavků'),(29,'SHIFT_EDIT_PUBLISHED',0,4,'Může editovat již publikované směny bez nutnosti je vrátit do módu úpravy.','Editování publikovaných směn'),(30,'NEWS_SEE',0,8,'Může si zobrazit novinky','Zobrazení novinek');");
+    }
+
+}
