@@ -1240,3 +1240,19 @@ Continue: 2026-06-09 - K19 objednavky_online.php: odstraneno cteni a pouziti $se
 2026-07-15 - Kontrola K8 uzivatele.php: zahajen audit mini karty online uzivatelu a fallbacku posledni akce na cas prihlaseni; zatim bez uprav kodu.
 
 2026-07-15 - K8 uzivatele.php: opravena mini karta online uzivatelu. last_action_time se pocita uz v SQL jako COALESCE(posledni user_akce, cas prihlaseni), aby online login nemel prazdnou posledni akci. Overuje se php -l a UTF-8 bez BOM.
+
+2026-07-15 - HR modul: provedeno kompaktni snizeni placeholder vzhledu pouze v www/style/hr/hr.css. Snizeny topbar, content padding, stat karty, panely, seznamy, tabulky, filtry, karta zamestnance, zalozky a placeholder min-height. Overuje se UTF-8 bez BOM a lokalni CSS odpoved.
+
+2026-07-15 - HR modul: druhy vyraznejsi kompaktni rez v www/style/hr/hr.css. Snizeno radkovani a vyska menu, topbar, mezery mezi bloky, padding panelu, vyska stat karet, tabulkove radky, filtry, zalozky, timeline a placeholder. Overeno UTF-8 bez BOM, lokalni CSS 200 a PHP HTML vystup s CSS linkem.
+
+2026-07-15 - HR modul: zmapovany DB tabulky s prefixem hr_. Zamestnanecke tabulky jsou prazdne: hr_zamestnanec, hr_osobni_udaje, hr_pracovni_vztah. Existuji ciselniky HPP/DPP/DPC, email/telefon typy, pobocka a cis_slot. Dalsi navrh: odstranit tvrda demo data a napojit seznam + vlozeni zamestnance na DB pres hr_zamestnanec a souvisejici hr_ tabulky.
+
+2026-07-15 - HR modul: prvni DB rez. Pridany hr/includes/hr_data.php, hr/actions/zamestnanec_uloz.php a stranka novy_zamestnanec. Dashboard, seznam a detail zamestnance uz nectou demo data, ale hr_ tabulky. Vlozeni zamestnance zapisuje transakcne hr_zamestnanec, hr_osobni_udaje, hr_pracovni_vztah, hr_zamestnanec_pracoviste, hr_zamestnanec_zarazeni a volitelne telefon/email. Smoke test vlozil a uklidil test zaznam; HR tabulky zustaly prazdne. Overeno php -l, UTF-8 bez BOM, CLI render a CSS HTTP 200.
+
+2026-07-15 - HR menu: pridana polozka Nabor hned pod Prehled a nad Zamestnanci. Do hr/index.php pridana routa nabor na existujici placeholder. Overeno php -l, UTF-8 bez BOM a CLI render aktivni polozky.
+
+2026-07-15 - HR menu user box: odstraneny placeholdery Prihlaseny uzivatel / HR uzivatel. hr/index.php bere jmeno a roli z $_SESSION['cb_user'] a roli pripadne z $_SESSION['cb_user_profile']['roles']. Overeno php -l, UTF-8 bez BOM a CLI render bez starych placeholder textu.
+
+2026-07-15 - Oprava omylu s dotaznik/index.php v hr/: hr/index.php obnoven na HR router s aktualnimi upravami, dotaznik/index.php ponechan beze zmen, odstraneno omylem zkopirovane hr/assets/dotaznik.css. Overeno php -l hr/index.php a dotaznik/index.php, UTF-8 bez BOM, CLI render HR bez dotaznik kodu.
+
+2026-07-15 - Reorganizace HR a dotazniku: HR index.php prejmenovan na index_hr.php, adresare na hr_assets/hr_includes/hr_pages/hr_actions, doplnen hr/.htaccess DirectoryIndex. Dotaznik index.php prejmenovan na index_dotaznik.php, assets na dot_assets, doplnen dotaznik/.htaccess DirectoryIndex. Opraveny require/include/src/form action cesty. Overeno php -l, UTF-8 bez BOM, HR CLI render a dotaznik HTTP /dotaznik/ 200 s dot_assets CSS.
