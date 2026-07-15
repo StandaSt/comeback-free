@@ -1238,3 +1238,5 @@ Continue: 2026-06-09 - K19 objednavky_online.php: odstraneno cteni a pouziti $se
 2026-07-14 - Presun registrace push zarizeni pod www: zalozeno www/mobil/mobil_registrace.php, www/modaly/modal_registrace.php generuje QR na www/mobil, is/modaly/modal_registrace.php presmerovan pres novy cb_public_url_abs helper, is/mobil/mobil_registrace.php registruje www/sw.js kvuli starym odkazum. www/sw.js pouziva ikonu relativne ke scope. Overeno php -l, node --check, URL simulace a UTF-8 bez BOM.
 
 2026-07-15 - Kontrola K8 uzivatele.php: zahajen audit mini karty online uzivatelu a fallbacku posledni akce na cas prihlaseni; zatim bez uprav kodu.
+
+2026-07-15 - K8 uzivatele.php: opravena mini karta online uzivatelu. last_action_time se pocita uz v SQL jako COALESCE(posledni user_akce, cas prihlaseni), aby online login nemel prazdnou posledni akci. Overuje se php -l a UTF-8 bez BOM.

@@ -176,7 +176,7 @@ try {
             TRIM(CONCAT_WS(" ", u.jmeno, u.prijmeni)) AS full_name,
             ul_last.id_login AS login_id,
             ul_last.kdy AS login_time,
-            ua_last.last_action_time,
+            COALESCE(ua_last.last_action_time, ul_last.kdy) AS last_action_time,
             COALESCE(us.logout_limit, ss.system_logout) AS logout_limit_min
         FROM `user` u
         INNER JOIN (
@@ -203,7 +203,7 @@ try {
         ) ss
         WHERE ul_last.akce = 1
           AND ul_last.duvod = 2
-        ORDER BY COALESCE(ua_last.last_action_time, ul_last.kdy) DESC, full_name ASC, u.id_user ASC
+        ORDER BY last_action_time DESC, full_name ASC, u.id_user ASC
     ');
     if ($resMiniOnline) {
         $uzExpiredLoginIds = [];
