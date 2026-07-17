@@ -1316,3 +1316,5 @@ Continue: 2026-06-09 - K19 objednavky_online.php: odstraneno cteni a pouziti $se
 2026-07-17 Codex: Opraven is/.htaccess po prejmenovani vstupu - doplnen DirectoryIndex index_is.php, aby /comeback/is/ neukazoval vypis slozky.
 
 2026-07-17 Codex: Po rucnim presunu Composeru z www do korene upraveny autoload cesty na korenovy vendor/autoload.php, pridano /vendor/ do .gitignore, overeny reference, autoload, PHP syntaxe, BOM a Git stav bez composer update.
+
+2026-07-17 Codex: Odstranena lokalni IS konfigurace secrets; 18 IS require cest presmerovano na www/config/secrets.php, overeny sekce bez vypisu hodnot, smazan is/config/secrets.php a prazdny is/config, overena syntaxe, BOM, ignore a reference.

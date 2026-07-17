@@ -21,7 +21,7 @@ require_once __DIR__ . '/../../www/lib/session_boot.php';
 
 require_once __DIR__ . '/../../www/lib/app.php';
 require_once __DIR__ . '/../../www/lib/system.php';
-require_once __DIR__ . '/../config/secrets.php';
+require_once __DIR__ . '/../../www/config/secrets.php';
 require_once __DIR__ . '/../db/db_api_restia.php';
 require_once __DIR__ . '/restia_client.php';
 

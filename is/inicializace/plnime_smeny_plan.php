@@ -6,7 +6,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../www/lib/session_boot.php';
 
 require_once __DIR__ . '/../../www/lib/app.php';
-require_once __DIR__ . '/../config/secrets.php';
+require_once __DIR__ . '/../../www/config/secrets.php';
 require_once __DIR__ . '/../../www/lib/smeny_graphql.php';
 
 const GQL_URL = 'https://smeny.pizzacomeback.cz/graphql';

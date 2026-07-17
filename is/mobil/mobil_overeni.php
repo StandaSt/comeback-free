@@ -22,7 +22,7 @@ require_once __DIR__ . '/../../www/lib/session_boot.php';
 
 require_once __DIR__ . '/../../www/lib/app.php';
 require_once __DIR__ . '/../../www/lib/system.php';
-require_once __DIR__ . '/../config/secrets.php';
+require_once __DIR__ . '/../../www/config/secrets.php';
 /* Limit pro odpočet v UI (sekundy). Hodnota je i v DB (vyprsi), UI je jen zobrazení. */
 $limitSecPhp = 300;
 if (defined('CB_2FA_LIMIT_SEC')) {

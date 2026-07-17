@@ -5,7 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../www/lib/session_boot.php';
 require_once __DIR__ . '/../../www/lib/app.php';
 require_once __DIR__ . '/../../www/lib/system.php';
-require_once __DIR__ . '/../config/secrets.php';
+require_once __DIR__ . '/../../www/config/secrets.php';
 require_once __DIR__ . '/../lib/helpdesk_notifikace.php';
 
 function cb_mobil_helpdesk_h(string $s): string
