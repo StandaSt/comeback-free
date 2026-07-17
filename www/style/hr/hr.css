@@ -684,6 +684,42 @@ html[data-theme="dark"] .badge.success {
     gap: 12px;
 }
 
+.employee-profile {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(260px, .9fr) auto;
+    gap: 16px;
+    align-items: stretch;
+}
+
+.employee-profile-main {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    min-width: 0;
+}
+
+.employee-profile-info {
+    min-width: 0;
+}
+
+.employee-profile-info p {
+    margin: 4px 0 0;
+    color: var(--primary);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.employee-profile-side {
+    padding-left: 14px;
+    border-left: 1px solid var(--border);
+}
+
+.employee-profile-actions {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
 .employee-main {
     display: flex;
     align-items: center;
@@ -703,10 +739,21 @@ html[data-theme="dark"] .badge.success {
     font-weight: 800;
 }
 
+.employee-photo-large {
+    flex-basis: 96px;
+    width: 96px;
+    height: 96px;
+    font-size: 27px;
+}
+
 .employee-name-line {
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+.employee-name-line-large h2 {
+    font-size: 24px;
 }
 
 .employee-name-line h2,
@@ -731,6 +778,54 @@ html[data-theme="dark"] .badge.success {
 .employee-actions {
     display: flex;
     gap: 8px;
+}
+
+.employee-contact-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 24px;
+    margin-top: 18px;
+    font-size: 13px;
+}
+
+.employee-contact-grid span {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.employee-contact-grid b {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.profile-facts {
+    display: grid;
+    gap: 0;
+    margin: 0;
+    font-size: 12px;
+}
+
+.profile-facts div {
+    display: grid;
+    grid-template-columns: 1fr 1.15fr;
+    gap: 12px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.profile-facts div:last-child {
+    border-bottom: 0;
+}
+
+.profile-facts dt {
+    color: var(--muted);
+}
+
+.profile-facts dd {
+    margin: 0;
+    text-align: right;
 }
 
 .tabs {
@@ -771,10 +866,21 @@ html[data-theme="dark"] .badge.success {
     gap: 10px;
 }
 
+.employee-card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
 .detail-list {
     display: grid;
     gap: 6px;
     margin: 0;
+}
+
+.compact-detail-list {
+    gap: 4px;
+    font-size: 12px;
 }
 
 .detail-list div {
@@ -792,6 +898,37 @@ html[data-theme="dark"] .badge.success {
 .detail-list dd {
     margin: 0;
     text-align: right;
+}
+
+.compact-empty-state {
+    padding: 12px;
+    font-size: 12px;
+}
+
+.quick-action-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.quick-action-grid a {
+    display: grid;
+    place-items: center;
+    min-height: 44px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    background: var(--surface-strong);
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+}
+
+.quick-action-grid a:hover {
+    color: var(--primary);
+    background: var(--surface-hover);
 }
 
 .alert-list.compact li {
@@ -843,8 +980,18 @@ html[data-theme="dark"] .badge.success {
     }
 
     .dashboard-grid,
-    .employee-grid {
+    .employee-grid,
+    .employee-card-grid {
         grid-template-columns: 1fr 1fr;
+    }
+
+    .employee-profile {
+        grid-template-columns: 1fr;
+    }
+
+    .employee-profile-side {
+        padding-left: 0;
+        border-left: 0;
     }
 
     .panel-wide {
@@ -883,7 +1030,8 @@ html[data-theme="dark"] .badge.success {
     }
 
     .dashboard-grid,
-    .employee-grid {
+    .employee-grid,
+    .employee-card-grid {
         grid-template-columns: 1fr;
     }
 
@@ -894,6 +1042,16 @@ html[data-theme="dark"] .badge.success {
     .employee-header {
         align-items: flex-start;
         flex-direction: column;
+    }
+
+    .employee-profile-main {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .employee-contact-grid {
+        grid-template-columns: 1fr;
+        margin-top: 12px;
     }
 
     .form-grid {

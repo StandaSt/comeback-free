@@ -11,6 +11,97 @@ if (empty($_SESSION['login_ok'])) {
     exit;
 }
 
+$cbUser = $_SESSION['cb_user'] ?? [];
+$roleId = is_array($cbUser) ? (int)($cbUser['id_role'] ?? 0) : 0;
+
+if ($roleId !== 1) {
+    ?><!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>PizzaComeback - HR</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f5f5f5;
+    overflow: hidden;
+}
+
+.menu {
+    flex: 0 0 auto;
+    padding: 15px;
+    text-align: center;
+    background: #ffffff;
+    border-bottom: 1px solid #dcdcdc;
+}
+
+.menu a {
+    display: inline-block;
+    margin: 0 10px;
+    padding: 10px 20px;
+    text-decoration: none;
+    font-weight: bold;
+    color: #ffffff;
+    background: #2f6fed;
+    border-radius: 6px;
+}
+
+.menu a:hover {
+    background: #1f56c5;
+}
+
+.container {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.container img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+</style>
+</head>
+
+<body>
+
+<div class="menu">
+    <a href="<?= h(cb_module_url('is')) ?>">IS</a>
+    <a href="<?= h(cb_module_url('smeny')) ?>">Směny</a>
+</div>
+
+<div class="container">
+    <img src="pripravujeme_hr.png" alt="HR se připravuje">
+</div>
+
+</body>
+</html>
+<?php
+    exit;
+}
+
 $pages = [
     'dashboard' => [
         'file' => __DIR__ . '/hr_pages/dashboard.php',
@@ -70,7 +161,6 @@ if (!isset($pages[$page])) {
 $currentPage = $pages[$page];
 $pageTitle = $currentPage['title'];
 
-$cbUser = $_SESSION['cb_user'] ?? [];
 $cbProfile = $_SESSION['cb_user_profile'] ?? [];
 $userName = '';
 $userRole = '';
@@ -103,6 +193,9 @@ if ($userRole === '') {
 $db = db();
 $flash = $_SESSION['hr_flash'] ?? null;
 unset($_SESSION['hr_flash']);
+$hrCssUrl = ((string)($GLOBALS['PROSTREDI'] ?? '') === 'SERVER')
+    ? 'https://www.comebacks.cz/style/hr/hr.css'
+    : cb_root_url('style/hr/hr.css');
 
 ?><!DOCTYPE html>
 <html lang="cs" data-theme="light">
@@ -110,7 +203,7 @@ unset($_SESSION['hr_flash']);
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= h($pageTitle) ?> | Comeback HR</title>
-    <link rel="stylesheet" href="<?= h(cb_root_url('style/hr/hr.css')) ?>">
+    <link rel="stylesheet" href="<?= h($hrCssUrl) ?>">
 </head>
 <body>
 <div class="app">

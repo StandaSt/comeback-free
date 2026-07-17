@@ -17,6 +17,5 @@ declare(strict_types=1);
             <span data-theme-icon>☾</span>
         </button>
 
-        <a class="primary-button" href="?page=novy_zamestnanec">+ Nový zaměstnanec</a>
     </div>
 </header>

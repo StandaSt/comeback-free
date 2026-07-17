@@ -1,0 +1,417 @@
+HR MODUL - PRACOVNI SHRNUTI PRO DALSI POKRACOVANI
+Datum zapisu: 16.07.2026
+
+Tento soubor shrnuje, co bylo domluveno o HR modulu, naboru, verejnem dotazniku,
+vstupnim dotazniku, vzniku zamestnance a karte zamestnance. Ucelem je, aby se
+pri dalsi praci nemusely znovu vysvetlovat zakladni principy.
+
+
+1) Zakladni princip celeho HR
+============================
+
+HR nebude jen jedna tabulka zamestnancu. Bude to samostatny modul pro personalni
+agendu, ktery bude postupne obsahovat:
+
+- nabor,
+- evidenci zamestnancu,
+- pracovni pomery,
+- pracovni zarazeni,
+- dokumenty,
+- skoleni,
+- lekarske prohlidky,
+- dovolenou,
+- dalsi personalni agendu.
+
+Dulezity princip:
+
+Uchazec a zamestnanec jsou dve samostatne evidence.
+
+Uchazec neni zamestnanec.
+Zamestnanec nevznika upravou uchazece.
+Zamestnanec vznikne az pozdeji jako novy zaznam, ktery prevezme potrebne udaje
+z uchazece.
+
+Mezi uchazecem a zamestnancem zustane vazba, aby bylo mozne kdykoliv dohledat
+celou historii naboru. Po vzniku zamestnance je ale zdrojem pravdy karta
+zamestnance v HR, ne karta uchazece.
+
+
+2) Moduly a struktura
+=====================
+
+Projekt ma vice samostatnych aplikaci / subdomen:
+
+- www/       verejna cast a sdilene soubory
+- is/        interni system
+- hr/        HR modul
+- smeny/     smeny
+- dotaznik/  verejny dotaznik
+
+HR uz bylo reorganizovano:
+
+- hr/index_hr.php
+- hr/hr_assets/
+- hr/hr_includes/
+- hr/hr_pages/
+- hr/hr_actions/
+- hr/.htaccess s DirectoryIndex index_hr.php
+
+Dotaznik uz bylo reorganizovano:
+
+- dotaznik/index_dotaznik.php
+- dotaznik/dot_assets/
+- dotaznik/.htaccess s DirectoryIndex index_dotaznik.php
+
+U dotazniku ma byt prefix adresaru dot_, ne dotaznik_.
+
+HR modul je pristupny pouze adminovi:
+
+- plne HR vidi pouze uzivatel s id_role = 1,
+- ostatni prihlaseni uzivatele vidi pouze obrazovku "pripravujeme HR" podle
+  puvodniho hr/index2.php,
+- tato kontrola je v hr/index_hr.php.
+
+
+3) Nabor jako samostatna cast HR
+================================
+
+Nabor bude samostatna cast HR, oddelena od evidence zamestnancu.
+
+Nabor pracuje s uchazeci, ne se zamestnanci.
+
+Na zacatku je vzdy zajemce / uchazec. Nikdy ne zamestnanec.
+
+Personalista musi v naboru videt:
+
+- seznam uchazecu,
+- detail uchazece,
+- aktualni stav naboru,
+- celou casovou osu,
+- poznamky,
+- kontakty,
+- pohovory,
+- vysledky pohovoru,
+- dalsi naplanovany krok,
+- dokumenty uchazece,
+- dotazniky uchazece,
+- pozdejsi vazbu na zamestnance, pokud uchazec projde.
+
+Dulezite je vse evidovat v case. U uchazece musi byt jasne videt, co se stalo
+a kdy se to stalo.
+
+Priklady udalosti v casove ose:
+
+- prisel verejny dotaznik,
+- personalista dotaznik otevrel,
+- personalista uchazece kontaktoval,
+- probehl telefonat,
+- byl domluven pohovor,
+- probehl pohovor,
+- zaznamenan vysledek pohovoru,
+- uchazec byl zamitnut,
+- uchazec pokracuje,
+- personalista odeslal vstupni dotaznik,
+- uchazec vstupni dotaznik otevrel,
+- uchazec vstupni dotaznik odeslal,
+- personalista vybral sablonu smlouvy,
+- smlouva byla odeslana k podpisu,
+- smlouva byla podepsana,
+- vznikl zamestnanec.
+
+Naborove veci se nemaji michat do karty zamestnance. Karta zamestnance je az
+pro cloveka, ktery se stal zamestnancem.
+
+
+4) Verejny dotaznik
+===================
+
+Verejny dotaznik uz existuje jako samostatna subdomena / aplikace v dotaznik/.
+
+Verejny dotaznik slouzi pouze pro prvni zajem o praci a domluvu pohovoru.
+
+Neni to vstupni dotaznik pro pracovni pomer.
+Nema sbirat vsechny osobni a smluvni udaje.
+
+Verejny dotaznik ma obsahovat pouze zakladni udaje potrebne pro prvni kontakt,
+napriklad:
+
+- jmeno,
+- prijmeni,
+- telefon,
+- e-mail,
+- pozice / typ prace,
+- pobocka / lokalita,
+- mozny nastup,
+- kratke povidani / poznamka uchazece.
+
+Po odeslani verejneho dotazniku vznikne zaznam uchazece.
+
+V DB uz existuji tabulky pro uchazece a nabor:
+
+- hr_uchazec
+- hr_uchazec_aktivita
+- hr_uchazec_aktivita_typ
+- hr_uchazec_stav
+- hr_uchazec_stav_historie
+- hr_uchazec_dotaznik
+- hr_uchazec_token
+- hr_uchazec_dokument
+- hr_uchazec_dokument_typ
+- hr_uchazec_pozice
+- hr_uchazec_pracoviste
+- hr_uchazec_zdroj
+- hr_dotaznik_typ
+
+Verejny dotaznik ma zapisovat do uchazece a souvisejicich naborovych tabulek.
+Nema vytvaret zamestnance.
+
+
+5) Prace personalisty s uchazecem
+=================================
+
+Po odeslani verejneho dotazniku pracuje s uchazecem personalista.
+
+Personalista ma v HR casti Nabor:
+
+- otevrit detail uchazece,
+- videt, kdy dotaznik dorazil,
+- videt zakladni udaje uchazece,
+- videt casovou osu,
+- pridavat poznamky,
+- zapisovat kontaktovani,
+- planovat pohovor,
+- zapisovat misto a cas pohovoru,
+- zapisovat vysledek pohovoru,
+- menit stav naboru,
+- rozhodnout, zda uchazec pokracuje nebo je zamitnut.
+
+Pokud uchazec neuspeje:
+
+- zustava pouze v evidenci uchazecu,
+- nikdy se z nej nestane zamestnanec,
+- jeho historie zustane zachovana.
+
+Pokud po pohovoru trva zajem obou stran:
+
+- personalista jednim klikem odesle uchazeci e-mail s odkazem na vstupni
+  dotaznik,
+- odkaz bude obsahovat token,
+- tento token bude navazan na konkretniho uchazece.
+
+
+6) Vstupni dotaznik po pohovoru
+===============================
+
+Vstupni dotaznik je jina faze nez verejny dotaznik.
+
+Verejny dotaznik:
+
+- je verejny,
+- je pro prvni zajem,
+- vytvari uchazece,
+- obsahuje minimum udaju.
+
+Vstupni dotaznik:
+
+- neni obecne verejny,
+- posila ho personalista konkretnimu uchazeci,
+- funguje pres token v odkazu,
+- slouzi pro sber podrobnych udaju potrebnych pro pracovni pomer a smlouvu,
+- zapisuje se k uchazeci,
+- po odeslani personalista dostane informaci / notifikaci, ze dotaznik dorazil.
+
+Cil vstupniho dotazniku:
+
+Uchazec si vyplni vetsinu udaju sam, aby je personalista nemusel prepisovat.
+
+Vstupni dotaznik bude chtit vice udaju, napriklad:
+
+- osobni udaje,
+- datum narozeni,
+- rodne cislo,
+- adresa,
+- statni obcanstvi,
+- kontaktni udaje,
+- udaje pro pracovni smlouvu,
+- udaje pro pracovni pomer,
+- pripadne dokumenty nebo dalsi informace podle typu smlouvy.
+
+Data ze vstupniho dotazniku se ulozi do DB.
+Vhodna tabulka je hr_uchazec_dotaznik s vazbou na hr_uchazec a typ dotazniku.
+Detailni data mohou byt v data_json, dokud nebude navrzena presnejsi struktura.
+
+
+7) Pracovni smlouva a podpis
+============================
+
+Po odeslani vstupniho dotazniku personalista vybere spravnou sablonu pracovni
+smlouvy.
+
+Sablon bude vice.
+Spravnou verzi vybere personalista.
+
+Z vyplnenych udaju se doplni pracovni smlouva.
+
+Smlouva se odesle elektronicky k podpisu.
+Po podpisu se podepsana smlouva ulozi do DB / dokumentu.
+Personalista ma dostat informaci / notifikaci, ze smlouva byla podepsana.
+
+Teprve po podpisu smlouvy vznikne zamestnanec.
+
+
+8) Vznik zamestnance
+====================
+
+Zamestnanec vznikne az po podpisu pracovni smlouvy.
+
+Nevznikne tak, ze se "upravi" uchazec.
+Vznikne vytvorenim noveho zaznamu zamestnance.
+
+Novy zamestnanec prevezme potrebne udaje z uchazece a vstupniho dotazniku.
+
+Mezi uchazecem a zamestnancem zustane vazba:
+
+- v hr_uchazec je sloupec id_zamestnanec,
+- tim se dohleda, z jakeho naboru zamestnanec vznikl.
+
+Od okamziku vzniku zamestnance se s clovekem pracuje uz pouze jako se
+zamestnancem.
+
+Zdrojem pravdy pro dalsi personalni agendu je karta zamestnance v HR.
+
+
+9) Karta zamestnance
+====================
+
+Karta zamestnance ma byt samostatna evidence zamestnance, ne naborova karta.
+
+Uzivatel dodal vzorovy obrazek:
+
+_kandidati/karta_vzor.png
+
+Pozadovany smer vzhledu:
+
+- kompaktni profilova karta,
+- nahore fotka a zakladni udaje,
+- vedle nebo pod tim osobni a pracovni souhrn,
+- pod tim mensi panely v mrizce,
+- karta ma byt kompaktni na vysku,
+- ma se do ni vejit:
+  - prehled dokumentu,
+  - lekarske prohlidky,
+  - prehled cerpani dovolene,
+  - pripadne rychle akce.
+
+Fotka zamestnance:
+
+- zamestnanec ma mit fotku,
+- fotky se budou ukladat do hr/foto/,
+- na karte zamestnance bude fotka videt.
+
+Aktualni stav:
+
+- v DB zatim neni jasny sloupec nebo tabulka pro fotku zamestnance,
+- nejjednodussi funkcni varianta bez zmeny DB je ukladat fotku podle
+  id_zamestnanec, napriklad hr/foto/123.jpg,
+- karta muze fotku dohledat podle ID zamestnance.
+
+Pozor:
+
+Dokumenty, lekarske prohlidky a dovolena pro zamestnance zatim nejsou plne
+navrzene v DB. Nemaji se tam vkladat falesna demo data. Pokud jeste nejsou
+tabulky, zobrazit prazdny stav nebo pripravene panely bez vymyslenych dat.
+
+Na karte zamestnance chybi editace udaju. Bude potreba doplnit:
+
+- moznost upravit zakladni udaje,
+- moznost nahrat/zmenit fotku,
+- pozdeji moznost spravovat dokumenty, prohlidky, dovolene a dalsi agendu.
+
+
+10) Aktualni dulezite soubory HR
+================================
+
+Po reorganizaci jsou dulezite zejmena:
+
+- hr/index_hr.php
+- hr/hr_includes/hr_data.php
+- hr/hr_includes/menu.php
+- hr/hr_includes/topbar.php
+- hr/hr_pages/dashboard.php
+- hr/hr_pages/zamestnanci.php
+- hr/hr_pages/zamestnanec.php
+- hr/hr_pages/novy_zamestnanec.php
+- hr/hr_pages/placeholder.php
+- hr/hr_actions/zamestnanec_uloz.php
+- www/style/hr/hr.css
+- dotaznik/index_dotaznik.php
+- dotaznik/dot_assets/dotaznik.css
+
+HR CSS na serveru:
+
+- HR pouziva CSS z verejne casti www/style/hr/hr.css,
+- na serveru je potreba mit aktualni soubor i aktualni hr/index_hr.php,
+- pokud se CSS nenacita, zkontrolovat URL a nahrani www/style/hr/hr.css.
+
+
+11) Co nedelat
+==============
+
+- Nemichat uchazece a zamestnance do jedne evidence.
+- Nevytvaret zamestnance hned po verejnem dotazniku.
+- Nepouzivat verejny dotaznik jako vstupni dotaznik pro smlouvu.
+- Nedavat naborovou historii jako hlavni data do karty zamestnance.
+- Nevymyslet falesna demo data do dokumentu/prohlidek/dovolene.
+- Nedelat velke refaktory mimo presne zadani.
+- Nepridavat nove architektonicke vrstvy, pokud nejsou potreba.
+- Drzet jednoduche funkcni reseni.
+
+
+12) Doporuceny dalsi postup
+===========================
+
+Nejlogictejsi dalsi kroky:
+
+1. Zprovoznit HR cast Nabor:
+   - seznam uchazecu,
+   - detail uchazece,
+   - casova osa,
+   - pridani aktivity,
+   - zmena stavu.
+
+2. Napojit verejny dotaznik na vytvoreni uchazece:
+   - dotaznik/index_dotaznik.php nesmi vytvaret zamestnance,
+   - ma vytvorit hr_uchazec a souvisejici vazby.
+
+3. Pridat tokenovy vstupni dotaznik:
+   - odeslani odkazu personalistou,
+   - token v hr_uchazec_token,
+   - stav v hr_uchazec_dotaznik,
+   - zapis data_json,
+   - info pro personalistu po odeslani.
+
+4. Navrhnout smlouvy:
+   - sablony,
+   - vyber sablony personalistou,
+   - doplneni dat,
+   - odeslani k podpisu,
+   - ulozeni podepsane smlouvy.
+
+5. Az po podpisu smlouvy vytvorit zamestnance:
+   - zalozeni hr_zamestnanec,
+   - prevzeti udaju,
+   - vazba z hr_uchazec.id_zamestnanec.
+
+6. Upravit kartu zamestnance:
+   - kompaktni layout podle _kandidati/karta_vzor.png,
+   - fotka v hr/foto/,
+   - editace zakladnich udaju,
+   - panely dokumenty/prohlidky/dovolena.
+
+
+13) Jedna veta jako hlavni pravidlo
+===================================
+
+Nabor konci podpisem smlouvy a vytvorenim zamestnance; od teto chvile je
+jedinym zdrojem pravdy karta zamestnance v HR, zatimco uchazec zustava jen
+jako historie naboroveho procesu.

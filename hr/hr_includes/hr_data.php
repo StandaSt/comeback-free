@@ -44,25 +44,131 @@ function hr_fetch_lookup(mysqli $db, string $table, string $idColumn, string $la
 
 function hr_fetch_dashboard(mysqli $db): array
 {
-    $counts = [
-        'aktivni' => 0,
-        'priprava' => 0,
-        'preruseny' => 0,
-        'ukonceny' => 0,
+    $nabor = [
+        'novy' => 0,
+        'v_procesu' => 0,
     ];
 
-    $result = $db->query('SELECT stav, COUNT(*) AS cnt FROM hr_zamestnanec GROUP BY stav');
+    $result = $db->query("
+        SELECT s.kod, COUNT(u.id_uchazec) AS cnt
+        FROM hr_uchazec_stav s
+        LEFT JOIN hr_uchazec u
+            ON u.id_uchazec_stav = s.id_uchazec_stav
+           AND u.aktivni = 1
+        WHERE s.kod IN ('novy', 'v_procesu')
+        GROUP BY s.kod
+    ");
     while ($row = $result->fetch_assoc()) {
-        $stav = (string)$row['stav'];
-        if (array_key_exists($stav, $counts)) {
-            $counts[$stav] = (int)$row['cnt'];
+        $kod = (string)$row['kod'];
+        if (array_key_exists($kod, $nabor)) {
+            $nabor[$kod] = (int)$row['cnt'];
         }
     }
+    $result->free();
+
+    $zamestnanci = [
+        'HPP' => 0,
+        'DPC' => 0,
+        'DPP' => 0,
+    ];
+
+    $result = $db->query("
+        SELECT pvt.kod, COUNT(DISTINCT z.id_zamestnanec) AS cnt
+        FROM hr_zamestnanec z
+        INNER JOIN hr_pracovni_vztah pv
+            ON pv.id_zamestnanec = z.id_zamestnanec
+           AND pv.platny = 1
+           AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE())
+        INNER JOIN hr_pracovni_vztah_typ pvt
+            ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ
+        WHERE z.stav = 'aktivni'
+          AND z.aktivni = 1
+          AND pvt.kod IN ('HPP', 'DPC', 'DPP')
+        GROUP BY pvt.kod
+    ");
+    while ($row = $result->fetch_assoc()) {
+        $kod = (string)$row['kod'];
+        if (array_key_exists($kod, $zamestnanci)) {
+            $zamestnanci[$kod] = (int)$row['cnt'];
+        }
+    }
+    $result->free();
+
+    $kReseni = [
+        'koncici_smlouvy' => 0,
+        'zdravotni_prohlidky' => 0,
+        'bozp' => 0,
+    ];
+
+    $result = $db->query("
+        SELECT COUNT(*) AS cnt
+        FROM hr_pracovni_vztah
+        WHERE platny = 1
+          AND datum_ukonceni IS NOT NULL
+          AND datum_ukonceni BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+    ");
+    if ($row = $result->fetch_assoc()) {
+        $kReseni['koncici_smlouvy'] = (int)$row['cnt'];
+    }
+    $result->free();
 
     return [
-        'counts' => $counts,
+        'nabor' => $nabor,
+        'zamestnanci' => $zamestnanci,
+        'pozadavky' => [
+            'celkem' => 0,
+            'instor' => 0,
+            'kuryr' => 0,
+        ],
+        'k_reseni' => $kReseni,
+        'dokumenty' => hr_fetch_dashboard_documents($db, 5),
+        'lekarske_prohlidky' => [],
+        'skoleni' => [],
+        'dovolene' => [],
         'latest' => hr_fetch_employees($db, 5),
     ];
+}
+
+function hr_fetch_dashboard_documents(mysqli $db, int $limit = 5): array
+{
+    $limit = max(1, min($limit, 20));
+    $sql = "
+        SELECT
+            d.id_uchazec_dokument,
+            d.puvodni_nazev,
+            d.zadano,
+            dt.nazev AS typ,
+            u.jmeno,
+            u.prijmeni
+        FROM hr_uchazec_dokument d
+        INNER JOIN hr_uchazec u
+            ON u.id_uchazec = d.id_uchazec
+        INNER JOIN hr_uchazec_dokument_typ dt
+            ON dt.id_uchazec_dokument_typ = d.id_uchazec_dokument_typ
+        WHERE d.aktivni = 1
+          AND d.smazano IS NULL
+        ORDER BY d.zadano DESC, d.id_uchazec_dokument DESC
+        LIMIT ?
+    ";
+
+    $stmt = $db->prepare($sql);
+    $stmt->bind_param('i', $limit);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $rows = [];
+    while ($row = $result->fetch_assoc()) {
+        $rows[] = [
+            'id_uchazec_dokument' => (int)$row['id_uchazec_dokument'],
+            'nazev' => (string)$row['puvodni_nazev'],
+            'typ' => (string)$row['typ'],
+            'osoba' => trim((string)$row['prijmeni'] . ' ' . (string)$row['jmeno']),
+            'zadano' => (string)$row['zadano'],
+        ];
+    }
+    $stmt->close();
+
+    return $rows;
 }
 
 function hr_fetch_employees(mysqli $db, int $limit = 100): array

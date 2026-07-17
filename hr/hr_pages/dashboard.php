@@ -2,44 +2,110 @@
 declare(strict_types=1);
 
 $dashboard = hr_fetch_dashboard($db);
-$counts = $dashboard['counts'];
+$nabor = $dashboard['nabor'];
+$zamestnanci = $dashboard['zamestnanci'];
+$pozadavky = $dashboard['pozadavky'];
+$kReseni = $dashboard['k_reseni'];
+$dokumenty = $dashboard['dokumenty'];
+$lekarskeProhlidky = $dashboard['lekarske_prohlidky'];
+$skoleni = $dashboard['skoleni'];
+$dovolene = $dashboard['dovolene'];
 $latest = $dashboard['latest'];
 ?>
 <section class="stats-grid">
     <article class="stat-card accent-blue">
-        <div class="stat-icon">👥</div>
+        <div class="stat-icon">N</div>
         <div>
-            <span>Aktivní zaměstnanci</span>
-            <strong><?= h($counts['aktivni']) ?></strong>
-            <small>aktuální stav v HR</small>
+            <span>Nábor</span>
+            <strong><?= h($nabor['novy']) ?> / <?= h($nabor['v_procesu']) ?></strong>
+            <small>noví / v procesu</small>
         </div>
     </article>
 
     <article class="stat-card accent-green">
-        <div class="stat-icon">＋</div>
+        <div class="stat-icon">Z</div>
         <div>
-            <span>V přípravě</span>
-            <strong><?= h($counts['priprava']) ?></strong>
-            <small>rozpracované karty</small>
+            <span>Zaměstnanci</span>
+            <strong><?= h($zamestnanci['HPP']) ?> / <?= h($zamestnanci['DPC']) ?> / <?= h($zamestnanci['DPP']) ?></strong>
+            <small>HPP / DPČ / DPP</small>
         </div>
     </article>
 
     <article class="stat-card accent-orange">
-        <div class="stat-icon">▣</div>
+        <div class="stat-icon">P</div>
         <div>
-            <span>Přerušení</span>
-            <strong><?= h($counts['preruseny']) ?></strong>
-            <small>přerušený vztah</small>
+            <span>Požadavky</span>
+            <strong><?= h($pozadavky['celkem']) ?> / <?= h($pozadavky['instor']) ?> / <?= h($pozadavky['kuryr']) ?></strong>
+            <small>celkem / instor / kurýr</small>
         </div>
     </article>
 
     <article class="stat-card accent-red">
-        <div class="stat-icon">▤</div>
+        <div class="stat-icon">!</div>
         <div>
-            <span>Ukončení</span>
-            <strong><?= h($counts['ukonceny']) ?></strong>
-            <small>ukončené karty</small>
+            <span>K řešení</span>
+            <strong><?= h($kReseni['koncici_smlouvy']) ?> / <?= h($kReseni['zdravotni_prohlidky']) ?> / <?= h($kReseni['bozp']) ?></strong>
+            <small>smlouvy / prohlídky / BOZP</small>
         </div>
+    </article>
+</section>
+
+<section class="dashboard-grid">
+    <article class="panel">
+        <div class="panel-header">
+            <h2>Dokumenty</h2>
+            <a href="?page=dokumenty">Zobrazit</a>
+        </div>
+        <?php if ($dokumenty === []): ?>
+            <p class="empty-state">Zatím nejsou evidované žádné nové dokumenty.</p>
+        <?php else: ?>
+            <ul class="activity-list">
+                <?php foreach ($dokumenty as $dokument): ?>
+                    <li>
+                        <span class="dot blue"></span>
+                        <strong><?= h($dokument['osoba']) ?></strong>
+                        <span><?= h($dokument['typ']) ?> · <?= h($dokument['nazev']) ?></span>
+                        <time><?= h(hr_format_date((string)$dokument['zadano'])) ?></time>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+    </article>
+
+    <article class="panel">
+        <div class="panel-header">
+            <h2>Lékařské prohlídky</h2>
+            <a href="?page=prohlidky">Zobrazit</a>
+        </div>
+        <?php if ($lekarskeProhlidky === []): ?>
+            <p class="empty-state">Evidence lékařských prohlídek zatím není napojená.</p>
+        <?php else: ?>
+            <ul class="activity-list"></ul>
+        <?php endif; ?>
+    </article>
+
+    <article class="panel">
+        <div class="panel-header">
+            <h2>Školení</h2>
+            <a href="?page=skoleni">Zobrazit</a>
+        </div>
+        <?php if ($skoleni === []): ?>
+            <p class="empty-state">Evidence školení zatím není napojená.</p>
+        <?php else: ?>
+            <ul class="activity-list"></ul>
+        <?php endif; ?>
+    </article>
+
+    <article class="panel">
+        <div class="panel-header">
+            <h2>Dovolené</h2>
+            <a href="?page=dovolene">Zobrazit</a>
+        </div>
+        <?php if ($dovolene === []): ?>
+            <p class="empty-state">Evidence dovolených zatím není napojená.</p>
+        <?php else: ?>
+            <ul class="activity-list"></ul>
+        <?php endif; ?>
     </article>
 </section>
 
@@ -70,7 +136,6 @@ $latest = $dashboard['latest'];
             <h2>Rychlé odkazy</h2>
         </div>
         <div class="quick-links">
-            <a href="?page=novy_zamestnanec">Nový zaměstnanec <span>›</span></a>
             <a href="?page=zamestnanci">Seznam zaměstnanců <span>›</span></a>
             <a href="?page=pracovni_pomery">Pracovní poměry <span>›</span></a>
             <a href="?page=dokumenty">Dokumenty <span>›</span></a>

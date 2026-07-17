@@ -12,7 +12,7 @@ if (empty($_SESSION['login_ok'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: ' . cb_module_url('hr') . '?page=novy_zamestnanec');
+    header('Location: ../?page=novy_zamestnanec');
     exit;
 }
 
@@ -22,13 +22,13 @@ try {
         'type' => 'success',
         'text' => 'Zaměstnanec byl uložen.',
     ];
-    header('Location: ' . cb_module_url('hr') . '?page=zamestnanec&id=' . $idZamestnanec);
+    header('Location: ../?page=zamestnanec&id=' . $idZamestnanec);
     exit;
 } catch (Throwable $e) {
     $_SESSION['hr_flash'] = [
         'type' => 'error',
         'text' => $e->getMessage(),
     ];
-    header('Location: ' . cb_module_url('hr') . '?page=novy_zamestnanec');
+    header('Location: ../?page=novy_zamestnanec');
     exit;
 }

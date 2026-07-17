@@ -22,3 +22,9 @@
 2026-07-15 15:00:06 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":3,"name":"Zaměstnanec"}]
 2026-07-15 15:00:06 | USER:SLOTY | []
 2026-07-15 15:00:06 | RUN:END | {"mode":"login_auto"}
+2026-07-16 10:48:05 | RUN:START | {"mode":"login_auto","email":"maniiax3d@gmail.com","id_user":1}
+2026-07-16 10:48:05 | USER:PROFILE | {"id":1,"name":"Standa","surname":"Stst","email":"maniiax3d@gmail.com","phoneNumber":"608891898","active":true,"approved":true,"createTime":"2020-04-24T10:58:55.000Z","lastLoginTime":"2026-07-16T08:48:07.000Z","roles":[{"id":1,"name":"Admin"},{"id":3,"name":"Zaměstnanec"}],"shiftRoleTypeNames":[]}
+2026-07-16 10:48:05 | USER:BRANCHES | {"workingBranchNames":["Chodov","Malešice","Zličín","Libuš","Prosek","Plzeň - Bolevec"],"mainBranchName":"Plzeň - Bolevec"}
+2026-07-16 10:48:05 | USER:ROLES | [{"id":1,"name":"Admin"},{"id":3,"name":"Zaměstnanec"}]
+2026-07-16 10:48:05 | USER:SLOTY | []
+2026-07-16 10:48:05 | RUN:END | {"mode":"login_auto"}

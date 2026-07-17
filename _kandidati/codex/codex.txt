@@ -1256,3 +1256,33 @@ Continue: 2026-06-09 - K19 objednavky_online.php: odstraneno cteni a pouziti $se
 2026-07-15 - Oprava omylu s dotaznik/index.php v hr/: hr/index.php obnoven na HR router s aktualnimi upravami, dotaznik/index.php ponechan beze zmen, odstraneno omylem zkopirovane hr/assets/dotaznik.css. Overeno php -l hr/index.php a dotaznik/index.php, UTF-8 bez BOM, CLI render HR bez dotaznik kodu.
 
 2026-07-15 - Reorganizace HR a dotazniku: HR index.php prejmenovan na index_hr.php, adresare na hr_assets/hr_includes/hr_pages/hr_actions, doplnen hr/.htaccess DirectoryIndex. Dotaznik index.php prejmenovan na index_dotaznik.php, assets na dot_assets, doplnen dotaznik/.htaccess DirectoryIndex. Opraveny require/include/src/form action cesty. Overeno php -l, UTF-8 bez BOM, HR CLI render a dotaznik HTTP /dotaznik/ 200 s dot_assets CSS.
+
+2026-07-15 - HR pristup omezen na admina: v hr/index_hr.php pridana kontrola $_SESSION['cb_user']['id_role'] === 1. Ne-admin vidi pripravenou stranku z index2.php s listou IS/Smeny a pripravujeme_hr.png. Overeno php -l, UTF-8 bez BOM, admin render plne HR, ne-admin render placeholder.
+
+2026-07-16 - Vytvoren soubor _kandidati/codex/hr.txt se souhrnem domluveneho fungovani HR: nabor, verejny dotaznik, vstupni tokenovy dotaznik, smlouvy, vznik zamestnance, karta zamestnance, struktura modulu a doporuceny dalsi postup. Overeno UTF-8 bez BOM.
+
+2026-07-16 - HR karta zamestnance: vzhledove prestavena hr/hr_pages/zamestnanec.php podle vzoru _kandidati/karta_vzor.png. Doplnene CSS ve www/style/hr/hr.css pro kompaktni profil, mrezku panelu, prazdne stavy dokumentu/prohlidek/dovolene a rychle akce. Bez DB zmen a bez vymyslenych dat. Overeno php -l, UTF-8 bez BOM a HTTP CSS 200.
+
+2026-07-16 - HR ulozeni zamestnance: opravena chyba redirectu po reorganizaci hr_actions. hr/hr_actions/zamestnanec_uloz.php uz nepouziva cb_module_url('hr'), protoze z /hr/hr_actions/ skladal spatne /hr/hr_actions/hr/. Redirecty prepsany na ../?page=... Overeno php -l, UTF-8 bez BOM. Zjisteno, ze zamestnanec id=1 se pri pokusu ulozil, chyba byla az po zapisu.
+
+2026-07-16 - HR karta zamestnance: odstraneny nefunkcni taby, z Osobnich udaju odstraneno Jmeno/Prijmeni, z Aktualniho pracovniho vztahu odstraneno Datum ukonceni. Overeno php -l a UTF-8 bez BOM.
+
+2026-07-16 - HR nabor prvni krok: zkontrolovan verejny dotaznik dotaznik/index_dotaznik.php a DB tabulky hr_uchazec, hr_uchazec_dotaznik, stavova historie, pozice, aktivity, tokeny, dokumenty. Zjisteno: formular uz uklada uchazece, stav, pozice a JSON dotazniku; chybi zejmena strukturovane ulozeni mesta/pracoviste, timeline aktivita prijeti dotazniku, notifikace/prehled v HR, deduplikace a jasne rozliseni otevreni personalistou.
+
+2026-07-16 - HR nabor princip timeline: verejny dotaznik musi evidovat odeslani, pozdejsi otevreni personalistou/opravnenym uzivatelem, domluveni pohovoru, vysledek pohovoru a dalsi kroky. Cilem je kompletni casova osa vseho, co se s uchazecem deje.
+
+2026-07-16 - Verejny dotaznik HR: upraveno dotaznik/index_dotaznik.php. Po odeslani se novemu uchazeci ukladaji pracoviste podle zvoleneho mesta do hr_uchazec_pracoviste, vznikne systemova udalost v hr_uchazec_aktivita a hr_uchazec_dotaznik.otevreno zustava NULL, aby pozdeji znamenalo skutecne otevreni personalistou. Overeno php -l, UTF-8 bez BOM, DB predpoklady Praha/Plzen a systemova_udalost.
+
+2026-07-16 - Pripraven skript _kandidati/codex/hr_uprav_stavy_uchazecu.php pro zjednoduseni stavu uchazecu na novy, v_procesu, odmitnut, nema_zajem, nastoupil. Skript je idempotentni a mapuje pripadne stare aktualni stavy uchazecu na nove hlavni stavy.
+
+2026-07-16 - Stavy uchazecu upraveny podle domluvy. Aktivni jsou jen novy, v_procesu, odmitnut, nema_zajem, nastoupil. Stare detailni stavy zustaly v hr_uchazec_stav neaktivni kvuli historii. Overeno, ze aktivni ciselnik ma 5 stavu a aktualne zadny uchazec neni na starem stavu. Skript: _kandidati/codex/hr_uprav_stavy_uchazecu.php.
+
+2026-07-16 - Verejny dotaznik: po doplneni DB sloupce id_uchazec_duplicita doplnena kontrola duplicit. Presna shoda jmeno/prijmeni/telefon/email do 30 dni se neulozi a zobrazi hlasku s datem. Presna shoda starsi nez 30 dni se ulozi jako opakovany kontakt s vazbou na puvodniho uchazece. Shoda telefonu nebo e-mailu s jinym uchazecem se ulozi a zapise do casove osy upozorneni pro personalistu. Overeno php -l, UTF-8 bez BOM a diff check.
+
+2026-07-16 - Verejny dotaznik: chyba 'Formular se nepodarilo odeslat' byla zpusobena honeypot polem firma_web, pravdepodobne autofill v prohlizeci. Pole prejmenovano na dot_kontrola_pole, label zmenen na neutralni Kontrola a autocomplete na new-password. Overeno php -l, UTF-8 bez BOM a diff check.
+
+2026-07-16 - Ciste URL: uzivatel chce na lokalu dotaznik stale jako http://localhost/comeback/dotaznik/ a HR stale jako http://localhost/comeback/hr/. Na serveru samostatne subdomeny. Dotaznik upraven tak, ze po uspesnem odeslani uklada potvrzeni do session, presmeruje na ./ a nepouziva ?odeslano=1. Po zobrazeni potvrzeni se session priznak smaze.
+
+2026-07-16 - HR dashboard Prehled: odstraneno tlacitko Novy zamestnanec z topbaru i rychlych odkazu dashboardu. 4 horni bloky prejmenovany a prepocteny na Nabor, Zamestnanci, Pozadavky, K reseni. Nabor se pocita z hr_uchazec podle stavu novy/v_procesu, zamestnanci z aktivnich pracovnich vztahu HPP/DPC/DPP, pozadavky zatim 0 bez existujici tabulky, k reseni koncici smlouvy do 30 dni + prohlidky/BOZP 0 bez tabulek. Overeno php -l, UTF-8 bez BOM, dashboard data a HTTP 200 pro /hr/.
+
+2026-07-16 - HR dashboard: po schvaleni doplneny panely Dokumenty, Lekarske prohlidky, Skoleni, Dovolene. Dokumenty se nacitaji z hr_uchazec_dokument, ostatni oblasti zatim vraci prazdny stav bez vymyslenych dat, protoze nejsou napojene tabulky. Overeno php -l, UTF-8 bez BOM a data funkce hr_fetch_dashboard. HTTP test bez admin session vraci 200, ale neukazuje admin dashboard.

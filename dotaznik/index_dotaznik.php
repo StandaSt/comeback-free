@@ -79,8 +79,69 @@ function nacti_ciselniky(mysqli $db): array
     return $pozice;
 }
 
+function nacti_pracoviste_ids(mysqli $db, string $mesto): array
+{
+    $stmt = $db->prepare('SELECT id_pob FROM pobocka WHERE mesto = ? AND aktivni = 1 AND id_pob > 0 ORDER BY id_pob');
+    $stmt->bind_param('s', $mesto);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $ids = [];
+    while ($row = $result->fetch_assoc()) {
+        $ids[] = (int)$row['id_pob'];
+    }
+
+    $stmt->close();
+    return $ids;
+}
+
+function formatuj_datum_cas(string $datumCas): string
+{
+    $datum = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $datumCas);
+    return $datum ? $datum->format('d. m. Y H:i') : $datumCas;
+}
+
+function najdi_presnou_duplicitu(mysqli $db, string $jmeno, string $prijmeni, string $telefonNormalizovany, string $email): ?array
+{
+    $stmt = $db->prepare('
+        SELECT id_uchazec, zadano
+        FROM hr_uchazec
+        WHERE jmeno = ?
+            AND prijmeni = ?
+            AND telefon_normalizovany = ?
+            AND email = ?
+        ORDER BY zadano DESC, id_uchazec DESC
+        LIMIT 1
+    ');
+    $stmt->bind_param('ssss', $jmeno, $prijmeni, $telefonNormalizovany, $email);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    return is_array($row) ? $row : null;
+}
+
+function najdi_kontaktni_duplicitu(mysqli $db, string $jmeno, string $prijmeni, string $telefonNormalizovany, string $email): ?array
+{
+    $stmt = $db->prepare('
+        SELECT id_uchazec, jmeno, prijmeni, telefon, telefon_normalizovany, email, zadano
+        FROM hr_uchazec
+        WHERE (telefon_normalizovany = ? OR email = ?)
+            AND NOT (jmeno = ? AND prijmeni = ? AND telefon_normalizovany = ? AND email = ?)
+        ORDER BY zadano DESC, id_uchazec DESC
+        LIMIT 1
+    ');
+    $stmt->bind_param('ssssss', $telefonNormalizovany, $email, $jmeno, $prijmeni, $telefonNormalizovany, $email);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    return is_array($row) ? $row : null;
+}
+
 $chyby = [];
-$odeslano = isset($_GET['odeslano']) && $_GET['odeslano'] === '1';
+$odeslano = !empty($_SESSION['dotaznik_odeslano']);
+unset($_SESSION['dotaznik_odeslano']);
 $dbChyba = '';
 $db = null;
 $pozice = [];
@@ -104,7 +165,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $db instanceof mysqli) {
     if ($csrf === '' || $sessionCsrf === '' || !hash_equals($sessionCsrf, $csrf)) {
         $chyby[] = 'Platnost formuláře vypršela. Obnovte stránku a zkuste to znovu.';
     }
-    if (post_text('firma_web', 200) !== '') {
+    if (post_text('dot_kontrola_pole', 200) !== '') {
         $chyby[] = 'Formulář se nepodařilo odeslat.';
     }
     if ((time() - (int)($_SESSION['dotaznik_zobrazen'] ?? 0)) < 3) {
@@ -150,6 +211,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $db instanceof mysqli) {
         }
     }
 
+    $presnaDuplicita = null;
+    $kontaktniDuplicita = null;
+    $idUchazecDuplicita = null;
+
+    if ($chyby === []) {
+        $presnaDuplicita = najdi_presnou_duplicitu($db, $jmeno, $prijmeni, $telefonNormalizovany, $email);
+        if ($presnaDuplicita !== null) {
+            $zadano = (string)$presnaDuplicita['zadano'];
+            $zadanoCas = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $zadano);
+            if ($zadanoCas && $zadanoCas >= new DateTimeImmutable('-30 days')) {
+                $chyby[] = 'Vámi zadané údaje již byly použity ' . formatuj_datum_cas($zadano) . '.';
+            } else {
+                $idUchazecDuplicita = (int)$presnaDuplicita['id_uchazec'];
+            }
+        }
+
+        if ($chyby === []) {
+            $kontaktniDuplicita = najdi_kontaktni_duplicitu($db, $jmeno, $prijmeni, $telefonNormalizovany, $email);
+            if ($idUchazecDuplicita === null && $kontaktniDuplicita !== null) {
+                $idUchazecDuplicita = (int)$kontaktniDuplicita['id_uchazec'];
+            }
+        }
+    }
+
     if ($chyby === []) {
         try {
             $db->begin_transaction();
@@ -162,11 +247,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $db instanceof mysqli) {
             $idZdroj = $zdroj ? (int)$zdroj['id_uchazec_zdroj'] : null;
 
             $stmt = $db->prepare("INSERT INTO hr_uchazec (
-                id_uchazec_stav, id_uchazec_zdroj, jmeno, prijmeni, telefon,
+                id_uchazec_stav, id_uchazec_zdroj, id_uchazec_duplicita, jmeno, prijmeni, telefon,
                 telefon_normalizovany, email, mozny_nastup, ocekavana_mzda,
                 povidani, prvni_kontakt, posledni_aktivita, zadal, zadano, aktivni
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?, ?, NOW(), NOW(), NULL, NOW(), 1)");
-            $stmt->bind_param('iissssssds', $idStav, $idZdroj, $jmeno, $prijmeni, $telefon, $telefonNormalizovany, $email, $moznyNastup, $ocekavanaMzda, $povidani);
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?, ?, NOW(), NOW(), NULL, NOW(), 1)");
+            $stmt->bind_param('iiissssssds', $idStav, $idZdroj, $idUchazecDuplicita, $jmeno, $prijmeni, $telefon, $telefonNormalizovany, $email, $moznyNastup, $ocekavanaMzda, $povidani);
             $stmt->execute();
             $idUchazec = (int)$db->insert_id;
             $stmt->close();
@@ -180,6 +265,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $db instanceof mysqli) {
             foreach ($poziceIds as $i => $idSlot) {
                 $hlavni = $i === 0 ? 1 : 0;
                 $stmt->bind_param('iii', $idUchazec, $idSlot, $hlavni);
+                $stmt->execute();
+            }
+            $stmt->close();
+
+            $pracovisteIds = nacti_pracoviste_ids($db, $mesto);
+            if ($pracovisteIds === []) throw new RuntimeException('Chybí pracoviště pro zvolené město.');
+
+            $poznamkaPracoviste = 'Zvolené město ve veřejném dotazníku: ' . $mesto;
+            $stmt = $db->prepare('INSERT INTO hr_uchazec_pracoviste (id_uchazec, id_pob, hlavni, poznamka, zadal, zadano, aktivni) VALUES (?, ?, ?, ?, NULL, NOW(), 1)');
+            foreach ($pracovisteIds as $i => $idPob) {
+                $hlavni = $i === 0 ? 1 : 0;
+                $stmt->bind_param('iiis', $idUchazec, $idPob, $hlavni, $poznamkaPracoviste);
                 $stmt->execute();
             }
             $stmt->close();
@@ -207,15 +304,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $db instanceof mysqli) {
             $stmt = $db->prepare("INSERT INTO hr_uchazec_dotaznik (
                 id_uchazec, id_dotaznik_typ, stav, odeslano, otevreno, ulozeno,
                 data_json, ip_adresa, user_agent, zadal, zadano
-            ) VALUES (?, ?, 'vyplnen', NOW(), NOW(), NOW(), ?, ?, ?, NULL, NOW())");
+            ) VALUES (?, ?, 'vyplnen', NOW(), NULL, NOW(), ?, ?, ?, NULL, NOW())");
             $stmt->bind_param('iisss', $idUchazec, $idDotaznikTyp, $dataJson, $ip, $userAgent);
             $stmt->execute();
             $stmt->close();
 
+            $aktivitaTyp = $db->query("SELECT id_uchazec_aktivita_typ FROM hr_uchazec_aktivita_typ WHERE kod = 'systemova_udalost' AND aktivni = 1 LIMIT 1")->fetch_assoc();
+            if (!$aktivitaTyp) throw new RuntimeException('Chybí typ aktivity systemova_udalost.');
+            $idAktivitaTyp = (int)$aktivitaTyp['id_uchazec_aktivita_typ'];
+            $predmet = 'Dorazil veřejný dotazník';
+            $obsah = 'Uchazeč odeslal veřejný dotazník pro první kontakt.';
+            $stmt = $db->prepare('INSERT INTO hr_uchazec_aktivita (id_uchazec, id_uchazec_aktivita_typ, provedeno_kdy, predmet, obsah, id_user, zadano) VALUES (?, ?, NOW(), ?, ?, NULL, NOW())');
+            $stmt->bind_param('iiss', $idUchazec, $idAktivitaTyp, $predmet, $obsah);
+            $stmt->execute();
+            $stmt->close();
+
+            if ($presnaDuplicita !== null && $idUchazecDuplicita !== null) {
+                $predmet = 'Opakovaný kontakt uchazeče';
+                $obsah = 'Uchazeč zadal stejné údaje jako u staršího záznamu #' . $idUchazecDuplicita . '. Původní záznam byl vytvořen ' . formatuj_datum_cas((string)$presnaDuplicita['zadano']) . '.';
+                $stmt = $db->prepare('INSERT INTO hr_uchazec_aktivita (id_uchazec, id_uchazec_aktivita_typ, provedeno_kdy, predmet, obsah, id_user, zadano) VALUES (?, ?, NOW(), ?, ?, NULL, NOW())');
+                $stmt->bind_param('iiss', $idUchazec, $idAktivitaTyp, $predmet, $obsah);
+                $stmt->execute();
+                $stmt->close();
+            }
+
+            if ($kontaktniDuplicita !== null) {
+                $idKontaktniDuplicita = (int)$kontaktniDuplicita['id_uchazec'];
+                $predmet = 'Možná duplicita kontaktu';
+                $obsah = 'Stejný telefon nebo e-mail už existuje u uchazeče #' . $idKontaktniDuplicita . ': '
+                    . trim((string)$kontaktniDuplicita['jmeno'] . ' ' . (string)$kontaktniDuplicita['prijmeni'])
+                    . ', telefon ' . (string)$kontaktniDuplicita['telefon']
+                    . ', e-mail ' . (string)$kontaktniDuplicita['email']
+                    . ', záznam vytvořen ' . formatuj_datum_cas((string)$kontaktniDuplicita['zadano']) . '.';
+                $stmt = $db->prepare('INSERT INTO hr_uchazec_aktivita (id_uchazec, id_uchazec_aktivita_typ, provedeno_kdy, predmet, obsah, id_user, zadano) VALUES (?, ?, NOW(), ?, ?, NULL, NOW())');
+                $stmt->bind_param('iiss', $idUchazec, $idAktivitaTyp, $predmet, $obsah);
+                $stmt->execute();
+                $stmt->close();
+            }
+
             $db->commit();
             $_SESSION['dotaznik_posledni_odeslani'] = time();
+            $_SESSION['dotaznik_odeslano'] = 1;
             unset($_SESSION['dotaznik_csrf'], $_SESSION['dotaznik_zobrazen']);
-            header('Location: ./?odeslano=1', true, 303);
+            header('Location: ./', true, 303);
             exit;
         } catch (Throwable $e) {
             $db->rollback();
@@ -273,7 +404,7 @@ $vybranePozice = post_ids('pozice');
                 <?php if ($dbChyba === ''): ?>
                 <form method="post" action="./" autocomplete="on">
                     <input type="hidden" name="csrf" value="<?= e($csrf) ?>">
-                    <div class="honeypot"><label>Web firmy<input type="text" name="firma_web" tabindex="-1" autocomplete="off"></label></div>
+                    <div class="honeypot" aria-hidden="true"><label>Kontrola<input type="text" name="dot_kontrola_pole" tabindex="-1" autocomplete="new-password"></label></div>
 
                     <fieldset>
                         <legend>Kontaktní údaje</legend>
