@@ -9,12 +9,12 @@ if (PHP_SAPI === 'cli') {
         $_SESSION = [];
     }
 } else {
-    require_once __DIR__ . '/session_boot.php';
+    require_once __DIR__ . '/../../www/lib/session_boot.php';
 }
 
-require_once __DIR__ . '/app.php';
+require_once __DIR__ . '/../../www/lib/app.php';
 require_once __DIR__ . '/../config/secrets.php';
-require_once __DIR__ . '/smeny_graphql.php';
+require_once __DIR__ . '/../../www/lib/smeny_graphql.php';
 
 if (PHP_SAPI === 'cli') {
     $PROSTREDI = 'SERVER';

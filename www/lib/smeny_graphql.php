@@ -285,8 +285,6 @@ function cb_login_finalize_after_ok(string $token): void
     ];
     cb_session_bind_after_login();
 
-    require_once __DIR__ . '/zapis_dat_txt.php';
-
     require_once __DIR__ . '/../db/db_user_login.php';
     cb_db_user_login();
     cb_login_load_settings_to_session($idUser);

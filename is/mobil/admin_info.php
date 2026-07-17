@@ -2,10 +2,10 @@
 // mobil/admin_info.php * Verze: V1 * Aktualizace: 05.06.2026
 declare(strict_types=1);
 
-require_once __DIR__ . '/../lib/session_boot.php';
+require_once __DIR__ . '/../../www/lib/session_boot.php';
 
-require_once __DIR__ . '/../lib/app.php';
-require_once __DIR__ . '/../lib/system.php';
+require_once __DIR__ . '/../../www/lib/app.php';
+require_once __DIR__ . '/../../www/lib/system.php';
 require_once __DIR__ . '/../config/secrets.php';
 
 function cb_admin_info_h(string $s): string
@@ -203,7 +203,7 @@ if (is_array($row) && (int)($row['id_odeslal'] ?? 0) > 0) {
 
     <div class="modal-head">
       <div class="modal-logo">
-        <img src="<?= cb_admin_info_h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback">
+        <img src="<?= cb_admin_info_h(cb_public_url('img/logo_comeback.png')) ?>" alt="Comeback">
       </div>
       <div>
         <p class="modal-title"><?= cb_admin_info_h($title) ?></p>

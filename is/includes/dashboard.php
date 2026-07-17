@@ -469,7 +469,7 @@ cb_dashboard_timing_log('after_mini_render_items', $cbDashTimingStart, $cbDashTi
   <div class="cb_cardmode_dialog">
     <div class="cb_cardmode_head">
       <div class="cb_cardmode_logo_wrap">
-        <img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback" class="cb_cardmode_logo">
+        <img src="<?= h(cb_public_url('img/logo_comeback.png')) ?>" alt="Comeback" class="cb_cardmode_logo">
       </div>
       <div class="cb_cardmode_head_text">
         <h4 class="cb_cardmode_title">Upozornění systému</h4>

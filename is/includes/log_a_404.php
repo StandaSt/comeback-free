@@ -14,7 +14,7 @@ declare(strict_types=1);
  * - při 404 zapíše záznam přes db_zapis_log_chyby()
  */
 
-require_once __DIR__ . '/../db/zapis_log_chyby.php';
+require_once __DIR__ . '/../../www/db/zapis_log_chyby.php';
 
 $file = $file ?? '';
 $pageKey = $pageKey ?? '';

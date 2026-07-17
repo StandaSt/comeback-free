@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 if (!defined('CB_HELPDESK_DISPATCH_INTERNAL')) {
-    require_once __DIR__ . '/../lib/session_boot.php';
-    require_once __DIR__ . '/../lib/app.php';
+    require_once __DIR__ . '/../../www/lib/session_boot.php';
+    require_once __DIR__ . '/../../www/lib/app.php';
 }
 require_once __DIR__ . '/../lib/helpdesk_prava.php';
 require_once __DIR__ . '/../lib/helpdesk_notifikace.php';

@@ -2,10 +2,10 @@
 // includes/select_card_ikon.php * Verze: V2 * Aktualizace: 07.04.2026
 declare(strict_types=1);
 
-require_once __DIR__ . '/../lib/session_boot.php';
+require_once __DIR__ . '/../../www/lib/session_boot.php';
 
-require_once __DIR__ . '/../db/db_connect.php';
-require_once __DIR__ . '/../lib/app.php';
+require_once __DIR__ . '/../../www/db/db_connect.php';
+require_once __DIR__ . '/../../www/lib/app.php';
 
 if (!empty($_SESSION['login_ok']) && !cb_session_validate_after_login()) {
     cb_session_forget_auth();

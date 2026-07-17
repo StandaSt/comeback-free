@@ -1290,3 +1290,23 @@ Continue: 2026-06-09 - K19 objednavky_online.php: odstraneno cteni a pouziti $se
 2026-07-17 - Rychly prehled modulu bez _kandidati a admin_testy: projekt ma samostatne vstupy hr, is, smeny a www/dotaznik. Smeny jsou zatim placeholder. HR ma admin dashboard a castecne funkcni evidenci, ale vice casti je placeholder nebo nenapojeno. IS je plnohodnotny funkcni modul s dashboardem, kartami, AJAX, DB vrstvou a integracemi. Overeno php -l pro hlavni vstupy a HTTP 302 na login bez session.
 
 2026-07-17 - Obnoven .gitignore v koreni projektu. Doplneno ignorovani www/config/secrets.php a config/secrets.php, logu, pomocnych vystupu v _kandidati a editor/OS souboru. www/config/secrets.php odebran pouze z git indexu pres git rm --cached, fyzicky na disku zustal. Overeno UTF-8 bez BOM a git check-ignore.
+
+2026-07-17 - Po schvaleni odstranena diagnostika zapisujici profil uzivatele ze Smen do data_smeny.txt. Z www/lib/smeny_graphql.php a is/lib/smeny_graphql.php odebrano pouze require_once na zapis_dat_txt.php. Smazany diagnosticke soubory www/lib/zapis_dat_txt.php, is/lib/zapis_dat_txt.php a data_smeny.txt ve www/pomocne, is/pomocne a admin_testy/smeny_testy. Do .gitignore doplneno data_smeny.txt.
+
+2026-07-17 - Po schvaleni presunut HR CSS beze zmeny obsahu z www/style/hr/hr.css do hr/hr_assets/css/hr.css. V hr/index_hr.php upraveno nacteni CSS na cb_current_module_url('hr_assets/css/hr.css'), aby fungovalo lokalne i na hr.comebacks.cz. Overen hash, php -l, UTF-8 bez BOM a absence referenci na puvodni cestu.
+
+2026-07-17 - Po schvaleni presunut global.css beze zmeny obsahu z www/style/1/global.css do is/style/1/global.css. V is/lib/asset_url.php upraveno smerovani tak, aby style/1/global.css slo z modulu IS a style/1/modal_alert.css zustalo z www. Overen hash, skutecne URL pro lokal i server, php -l, UTF-8 bez BOM a reference.
+
+2026-07-17 - Po schvaleni sjednoceno pouzivani app.php v IS na spolecny www/lib/app.php. Do www/lib/app.php presunuty helpery cb_public_url a cb_public_url_abs se zachovanim lokalniho i serveroveho chovani. IS soubory drive nacitajici is/lib/app.php presmerovany na www/lib/app.php, pote smazan is/lib/app.php. Overeny reference, php -l, URL helperu a UTF-8 bez BOM.
+
+2026-07-17 - Po schvaleni ponechany knihovny db_prehledy.php, mereni_vykonu.php a ajax_trace.php pouze v is/lib. Z www/lib/app.php odstraneno automaticke nacitani mereni_vykonu.php a db_prehledy.php. IS nyni nacita mereni_vykonu.php v is/index.php a is/lib/ajax_trace.php, db_prehledy.php v is/lib/vypocet_prehled_db.php. Kopie ve www/lib smazany po kontrole referenci. Overen php -l, UTF-8 bez BOM a reference.
+
+2026-07-17 - Po schvaleni ponechany session_boot.php, system.php, sesn_kontrola.php a sesn_regenerate.php pouze jako spolecne zdroje ve www/lib. IS odkazy na session_boot.php a system.php presmerovany do www/lib, kopie v is/lib smazany po kontrole referenci. Logika souboru nemenena. Overeno php -l, UTF-8 bez BOM a absence referenci na is/lib kopie.
+
+2026-07-17 - Po schvaleni sjednocena vyjmenovana spolecna DB vrstva do www/db. IS reference na mistni kopie db_api_smeny, db_bad_login, db_connect, db_login_blok_info, db_login_zapis, db_user, db_user_akce_db, db_user_login, db_user_role, db_user_set_pobocka, db_user_slot a zapis_log_chyby presmerovany na www/db. Po kontrole nulovych referenci smazany odpovidajici kopie v is/db. Overeno php -l, UTF-8 bez BOM a existence www/db souboru.
+
+2026-07-17 - Po schvaleni ponechany vyjmenovane sdilene knihovny pouze ve www/lib: api_smeny_log, json_registrace, kontrola_registrace, login_smeny, push_2fa_api, smeny_graphql, user_bad_login, restia_access_exist, restia_ziskej_access a db_akce_log. IS odkazy presmerovany na www/lib, login modal a 2FA polling presmerovany na cb_public_url do www se zachovanim module=is. Kopie v is/lib smazany po kontrole referenci. Overeno php -l, URL, UTF-8 bez BOM a existence www/lib souboru.
+
+2026-07-17 - Po schvaleni ponechany spolecne notifikace/modal/mobil registrace pouze ve www. IS odkazy na notifikace_2fa presmerovany do www/notifikace, spolecny modal_registrace generuje parovaci URL pres cb_public_url_abs na www/mobil/mobil_registrace. Smazany kopie is/notifikace/notifikace_2fa.php, is/modaly/modal_login.php, is/modaly/modal_overeni.php, is/modaly/modal_registrace.php a is/mobil/mobil_registrace.php. Na is/mobil/mobil_overeni.php, mobil_helpdesk.php a admin_info.php nebylo sahano. Overeno reference, php -l, URL a UTF-8 bez BOM.
+
+2026-07-17 Codex: Presmerovany IS odkazy na spolecne www assety/funkce pro logo_comeback.png, qrcode.min.js a login/session funkce; smazany kopie v is/funkce, is/img, is/js; overeny reference, URL, php -l a UTF-8 bez BOM.

@@ -2,15 +2,15 @@
 // inicializace/plnime_restia_objednavky.php * Verze: V5 * Aktualizace: 10.04.2026
 declare(strict_types=1);
 
-require_once __DIR__ . '/../lib/session_boot.php';
+require_once __DIR__ . '/../../www/lib/session_boot.php';
 
-require_once __DIR__ . '/../lib/app.php';
-require_once __DIR__ . '/../lib/system.php';
+require_once __DIR__ . '/../../www/lib/app.php';
+require_once __DIR__ . '/../../www/lib/system.php';
 require_once __DIR__ . '/../config/secrets.php';
-require_once __DIR__ . '/../lib/restia_access_exist.php';
+require_once __DIR__ . '/../../www/lib/restia_access_exist.php';
 require_once __DIR__ . '/../lib/restia_client.php';
 require_once __DIR__ . '/../db/db_api_restia.php';
-require_once __DIR__ . '/../db/zapis_log_chyby.php';
+require_once __DIR__ . '/../../www/db/zapis_log_chyby.php';
 
 const CB_RESTIA_HIST_LIMIT = 200;
 

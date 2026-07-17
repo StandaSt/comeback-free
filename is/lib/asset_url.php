@@ -25,7 +25,8 @@ if (!function_exists('cb_asset_url')) {
     function cb_asset_url(string $path): string
     {
         $cleanPath = ltrim($path, '/');
-        $isPublicStyle = str_starts_with($cleanPath, 'style/');
+        $isIsStyle = ($cleanPath === 'style/1/global.css');
+        $isPublicStyle = str_starts_with($cleanPath, 'style/') && !$isIsStyle;
         $full = $isPublicStyle
             ? __DIR__ . '/../../www/' . $cleanPath
             : __DIR__ . '/../' . $cleanPath;

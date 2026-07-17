@@ -8,7 +8,7 @@ $cbLogoTime = $cbNow->format('H:i:s');
 ?>
 <div class="head_logo_wrap gap_4 displ_flex flex_sloupec">
   <a class="head_logo ram_hlavicka bg_bila zaobleni_12 odstup_vnitrni_0 displ_flex jc_stred" href="https://www.pizzacomeback.cz/" target="_blank" aria-label="Comeback">
-    <img class="head_logo_img displ_block sirka100" src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback">
+    <img class="head_logo_img displ_block sirka100" src="<?= h(cb_public_url('img/logo_comeback.png')) ?>" alt="Comeback">
   </a>
   <div class="head_logo_meta gap_2 displ_flex flex_sloupec" aria-live="off">
     <span class="head_logo_date txt_seda text_11 radek_1_05 displ_block" id="cbHeadLogoDate"><?= h($cbLogoDate) ?></span>

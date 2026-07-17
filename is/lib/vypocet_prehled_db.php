@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../www/lib/app.php';
+require_once __DIR__ . '/db_prehledy.php';
 
 if (!function_exists('cb_vypocet_prehled_db_table_count')) {
     function cb_vypocet_prehled_db_table_count(mysqli $conn, string $table): int

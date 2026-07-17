@@ -8,7 +8,7 @@ $cbAlertInvalidUrl = isset($cbAlertInvalidUrl) ? (string)$cbAlertInvalidUrl : ''
   <div class="modal">
     <div class="modal-head">
       <div class="modal-logo" aria-hidden="true">
-        <img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback">
+        <img src="<?= h(cb_public_url('img/logo_comeback.png')) ?>" alt="Comeback">
       </div>
       <div>
         <p class="modal-title-alert">Přihlášený: <?= h($cbAlertUserName) ?></p>

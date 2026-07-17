@@ -35,7 +35,7 @@ if (($loginOk || $cbAuthOk) && $idUser > 0) {
         $stmt->close();
     }
 
-    $pairUrl = cb_url_abs('mobil/mobil_registrace.php?t=' . rawurlencode($token));
+    $pairUrl = cb_public_url_abs('mobil/mobil_registrace.php?t=' . rawurlencode($token));
 }
 ?>
 <div class="modal-overlay" role="dialog" aria-modal="true" aria-label="První přihlášení">
@@ -44,7 +44,7 @@ if (($loginOk || $cbAuthOk) && $idUser > 0) {
 
     <div class="modal-head">
       <div class="modal-logo">
-        <img src="<?= h(cb_root_url('img/logo_comeback.png')) ?>" alt="Comeback">
+        <img src="<?= h(cb_public_url('img/logo_comeback.png')) ?>" alt="Comeback">
       </div>
       <div>
         <p class="modal-title">První přihlášení</p>
@@ -74,7 +74,7 @@ if (($loginOk || $cbAuthOk) && $idUser > 0) {
   </div>
 </div>
 
-<script src="<?= h(cb_root_url('js/qrcode.min.js')) ?>"></script>
+<script src="<?= h(cb_public_url('js/qrcode.min.js')) ?>"></script>
 <script>
 (function(){
   var btn = document.getElementById('cbPrvniReload');

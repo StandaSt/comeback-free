@@ -2,9 +2,9 @@
 // mobil/mobil_helpdesk.php * Verze: V1 * Aktualizace: 24.06.2026
 declare(strict_types=1);
 
-require_once __DIR__ . '/../lib/session_boot.php';
-require_once __DIR__ . '/../lib/app.php';
-require_once __DIR__ . '/../lib/system.php';
+require_once __DIR__ . '/../../www/lib/session_boot.php';
+require_once __DIR__ . '/../../www/lib/app.php';
+require_once __DIR__ . '/../../www/lib/system.php';
 require_once __DIR__ . '/../config/secrets.php';
 require_once __DIR__ . '/../lib/helpdesk_notifikace.php';
 
@@ -292,7 +292,7 @@ if (is_array($row) && trim((string)($row['typ'] ?? '')) === 'admin_odpoved') {
 
     <div class="modal-head">
       <div class="modal-logo">
-        <img src="<?= cb_mobil_helpdesk_h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback">
+        <img src="<?= cb_mobil_helpdesk_h(cb_public_url('img/logo_comeback.png')) ?>" alt="Comeback">
       </div>
       <div>
         <p class="modal-title"><?= cb_mobil_helpdesk_h($title) ?></p>

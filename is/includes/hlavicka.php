@@ -89,7 +89,7 @@ try {
     } elseif (cb_head_restia_token_is_valid($connRestia)) {
         $sysRestia = 'ok';
     } else {
-        require_once __DIR__ . '/../lib/restia_ziskej_access.php';
+        require_once __DIR__ . '/../../www/lib/restia_ziskej_access.php';
         if (cb_head_restia_online_is_running($connRestia)) {
             $sysRestia = 'bad';
         } else {

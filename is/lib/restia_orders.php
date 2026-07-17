@@ -17,10 +17,10 @@ declare(strict_types=1);
  * - neobnovuje token (musí být platný v restia_token)
  * - do TXT zapisuje průběh krok za krokem (krůčky), abychom viděli, kam to došlo
  */
-require_once __DIR__ . '/session_boot.php';
+require_once __DIR__ . '/../../www/lib/session_boot.php';
 
-require_once __DIR__ . '/app.php';
-require_once __DIR__ . '/system.php';
+require_once __DIR__ . '/../../www/lib/app.php';
+require_once __DIR__ . '/../../www/lib/system.php';
 require_once __DIR__ . '/../config/secrets.php';
 require_once __DIR__ . '/../db/db_api_restia.php';
 require_once __DIR__ . '/restia_client.php';

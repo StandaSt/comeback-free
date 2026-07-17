@@ -6,9 +6,10 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/session_boot.php';
+require_once __DIR__ . '/../../www/lib/session_boot.php';
 
-require_once __DIR__ . '/app.php';
+require_once __DIR__ . '/../../www/lib/app.php';
+require_once __DIR__ . '/mereni_vykonu.php';
 
 $raw = file_get_contents('php://input');
 $data = [];

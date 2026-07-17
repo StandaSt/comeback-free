@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/helpdesk_prava.php';
-require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
+require_once __DIR__ . '/../../www/notifikace/notifikace_2fa.php';
 
 function cb_helpdesk_push_secret(): string
 {

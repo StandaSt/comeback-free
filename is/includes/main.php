@@ -34,7 +34,7 @@ declare(strict_types=1);
             require $file;
         } catch (Throwable $e) {
             try {
-                require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
+                require_once __DIR__ . '/../../www/notifikace/notifikace_2fa.php';
                 cb_push_send_error_admin($e->getMessage(), $e->getFile(), $e->getLine(), 1);
             } catch (Throwable $pushError) {
             }

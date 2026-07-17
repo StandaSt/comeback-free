@@ -19,7 +19,7 @@ $loginDisabled = $loginDbOk ? '' : ' disabled';
   <div class="modal">
     <div class="modal-head">
       <div class="modal-logo" aria-hidden="true">
-        <img src="<?= h(cb_root_url('img/logo_comeback.png')) ?>" alt="Comeback">
+        <img src="<?= h(cb_public_url('img/logo_comeback.png')) ?>" alt="Comeback">
       </div>
       <div>
         <p class="modal-title">Přihlášení Comeback</p>

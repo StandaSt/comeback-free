@@ -18,10 +18,10 @@ declare(strict_types=1);
  * Pozn.:
  * - toto je stránka pro mobil, NE API pro PC polling (to řeší lib/push_2fa_api.php)
  */
-require_once __DIR__ . '/../lib/session_boot.php';
+require_once __DIR__ . '/../../www/lib/session_boot.php';
 
-require_once __DIR__ . '/../lib/app.php';
-require_once __DIR__ . '/../lib/system.php';
+require_once __DIR__ . '/../../www/lib/app.php';
+require_once __DIR__ . '/../../www/lib/system.php';
 require_once __DIR__ . '/../config/secrets.php';
 /* Limit pro odpočet v UI (sekundy). Hodnota je i v DB (vyprsi), UI je jen zobrazení. */
 $limitSecPhp = 300;
@@ -320,7 +320,7 @@ $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
 
     <div class="modal-head">
       <div class="modal-logo">
-        <img src="<?= h1(cb_url('img/logo_comeback.png')) ?>" alt="Comeback">
+        <img src="<?= h1(cb_public_url('img/logo_comeback.png')) ?>" alt="Comeback">
       </div>
       <div<?= $stav === 'ne' ? ' class="login-denied-head"' : '' ?>>
         <p class="modal-title"><?= h1($title) ?></p>

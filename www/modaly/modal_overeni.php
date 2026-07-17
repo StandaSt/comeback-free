@@ -25,7 +25,7 @@ if ($cb2faToken !== '') {
 
         <div class="modal-head">
           <div class="modal-logo" aria-hidden="true">
-            <img src="<?= h(cb_root_url('img/logo_comeback.png')) ?>" alt="Comeback">
+            <img src="<?= h(cb_public_url('img/logo_comeback.png')) ?>" alt="Comeback">
           </div>
           <div>
             <p class="modal-title">Schválení přihlášení</p>
@@ -49,7 +49,7 @@ if ($cb2faToken !== '') {
       </div>
     </div>
 
-    <script src="<?= h(cb_root_url('js/qrcode.min.js')) ?>"></script>
+    <script src="<?= h(cb_public_url('js/qrcode.min.js')) ?>"></script>
     <script>
       (function(){
         var st = document.getElementById('cb2faStatus');

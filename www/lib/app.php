@@ -37,9 +37,7 @@ if (!function_exists('db')) {
     }
 }
 
-require_once __DIR__ . '/mereni_vykonu.php';
 require_once __DIR__ . '/db_akce_log.php';
-require_once __DIR__ . '/db_prehledy.php';
 require_once __DIR__ . '/sesn_kontrola.php';
 require_once __DIR__ . '/sesn_regenerate.php';
 
@@ -148,6 +146,40 @@ function cb_root_url(string $path = ''): string
 function cb_url_abs(string $path): string
 {
     $url = cb_url($path);
+    if (preg_match('~^https?://~i', $url) === 1) {
+        return $url;
+    }
+
+    $forwardedProto = strtolower(trim((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')));
+    $forwardedSsl = strtolower(trim((string)($_SERVER['HTTP_X_FORWARDED_SSL'] ?? '')));
+    $isHttps =
+        (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+        $forwardedProto === 'https' ||
+        $forwardedSsl === 'on';
+
+    $scheme = $isHttps ? 'https' : 'http';
+    $host = (string)($_SERVER['HTTP_HOST'] ?? 'localhost');
+
+    return $scheme . '://' . $host . $url;
+}
+
+function cb_public_url(string $path = ''): string
+{
+    global $PROSTREDI, $BASE_PATH;
+
+    $path = '/' . ltrim($path, '/');
+
+    if ($PROSTREDI === 'LOCAL') {
+        $base = preg_replace('~/is$~', '', rtrim((string)$BASE_PATH, '/')) ?? '';
+        return rtrim($base, '/') . '/www' . $path;
+    }
+
+    return 'https://www.comebacks.cz' . $path;
+}
+
+function cb_public_url_abs(string $path = ''): string
+{
+    $url = cb_public_url($path);
     if (preg_match('~^https?://~i', $url) === 1) {
         return $url;
     }

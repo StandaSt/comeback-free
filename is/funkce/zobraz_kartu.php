@@ -162,7 +162,7 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
   </article>
   <div class="dash_loader dash_card_loader is-hidden" data-card-loader="1" aria-hidden="true">
     <div class="dash_loader_inner">
-      <img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback" class="dash_loader_logo">
+      <img src="<?= h(cb_public_url('img/logo_comeback.png')) ?>" alt="Comeback" class="dash_loader_logo">
       <p class="dash_loader_text">Obnovuji data ...</p>
       <div class="dash_loader_time" data-cb-loader-time>0.00 s</div>
     </div>

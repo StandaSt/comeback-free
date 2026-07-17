@@ -2,12 +2,12 @@
 // inicializace/plnime_restia_menu.php * Verze: V1 * Aktualizace: 02.04.2026
 declare(strict_types=1);
 
-require_once __DIR__ . '/../lib/session_boot.php';
+require_once __DIR__ . '/../../www/lib/session_boot.php';
 
-require_once __DIR__ . '/../lib/app.php';
-require_once __DIR__ . '/../lib/system.php';
+require_once __DIR__ . '/../../www/lib/app.php';
+require_once __DIR__ . '/../../www/lib/system.php';
 require_once __DIR__ . '/../config/secrets.php';
-require_once __DIR__ . '/../lib/restia_access_exist.php';
+require_once __DIR__ . '/../../www/lib/restia_access_exist.php';
 require_once __DIR__ . '/../lib/restia_client.php';
 require_once __DIR__ . '/../db/db_api_restia.php';
 

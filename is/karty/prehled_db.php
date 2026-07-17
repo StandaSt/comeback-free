@@ -5,7 +5,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../lib/vypocet_prehled_db.php';
 
-require_once __DIR__ . '/../lib/session_boot.php';
+require_once __DIR__ . '/../../www/lib/session_boot.php';
 
 if (!function_exists('cb_prehled_db_page')) {
     function cb_prehled_db_page(): string

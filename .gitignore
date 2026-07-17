@@ -4,6 +4,7 @@ config/secrets.php
 
 # Logs
 *.log
+data_smeny.txt
 log/
 www/log/
 

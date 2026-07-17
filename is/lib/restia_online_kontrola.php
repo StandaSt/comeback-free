@@ -233,7 +233,7 @@ if (!function_exists('cb_restia_online_kontrola_notify_admin')) {
             . 'ignore      ' . (string)$ignore . "\n"
             . 'celkem      ' . (string)$celkem;
 
-        require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
+        require_once __DIR__ . '/../../www/notifikace/notifikace_2fa.php';
         cb_push_send_admin_info([1], 'restia_cron', $obsah, 'Admin info');
     }
 }

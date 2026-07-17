@@ -69,7 +69,7 @@ if (!function_exists('cb_emit_card_json_response')) {
             ];
             if ($renderError instanceof Throwable) {
                 try {
-                    require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
+                    require_once __DIR__ . '/../../www/notifikace/notifikace_2fa.php';
                     cb_push_send_error_admin($renderError->getMessage(), $renderError->getFile(), $renderError->getLine(), 1);
                 } catch (Throwable $pushError) {
                 }

@@ -193,9 +193,7 @@ if ($userRole === '') {
 $db = db();
 $flash = $_SESSION['hr_flash'] ?? null;
 unset($_SESSION['hr_flash']);
-$hrCssUrl = ((string)($GLOBALS['PROSTREDI'] ?? '') === 'SERVER')
-    ? 'https://www.comebacks.cz/style/hr/hr.css'
-    : cb_root_url('style/hr/hr.css');
+$hrCssUrl = cb_current_module_url('hr_assets/css/hr.css');
 
 ?><!DOCTYPE html>
 <html lang="cs" data-theme="light">

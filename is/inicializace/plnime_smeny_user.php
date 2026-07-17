@@ -3,14 +3,14 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../lib/session_boot.php';
+require_once __DIR__ . '/../../www/lib/session_boot.php';
 
-require_once __DIR__ . '/../lib/app.php';
-require_once __DIR__ . '/../lib/smeny_graphql.php';
-require_once __DIR__ . '/../db/db_user.php';
-require_once __DIR__ . '/../db/db_user_set_pobocka.php';
-require_once __DIR__ . '/../db/db_user_role.php';
-require_once __DIR__ . '/../db/db_user_slot.php';
+require_once __DIR__ . '/../../www/lib/app.php';
+require_once __DIR__ . '/../../www/lib/smeny_graphql.php';
+require_once __DIR__ . '/../../www/db/db_user.php';
+require_once __DIR__ . '/../../www/db/db_user_set_pobocka.php';
+require_once __DIR__ . '/../../www/db/db_user_role.php';
+require_once __DIR__ . '/../../www/db/db_user_slot.php';
 
 const SMENY_USER_GQL_URL = 'https://smeny.pizzacomeback.cz/graphql';
 const SMENY_USER_PAGE_LIMIT = 100;

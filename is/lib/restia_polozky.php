@@ -16,10 +16,10 @@ declare(strict_types=1);
  *     - pomocne/restia_menu.json
  * - token se bere z DB tabulky restia_token (id_restia_token=1)
  */
-require_once __DIR__ . '/session_boot.php';
+require_once __DIR__ . '/../../www/lib/session_boot.php';
 
-require_once __DIR__ . '/app.php';
-require_once __DIR__ . '/system.php';
+require_once __DIR__ . '/../../www/lib/app.php';
+require_once __DIR__ . '/../../www/lib/system.php';
 require_once __DIR__ . '/../config/secrets.php';
 require_once __DIR__ . '/../db/db_api_restia.php';
 
