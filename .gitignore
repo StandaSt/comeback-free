@@ -1,0 +1,20 @@
+# Secrets / local config
+www/config/secrets.php
+config/secrets.php
+
+# Logs
+*.log
+log/
+www/log/
+
+# Local helper/output folders
+_kandidati/node_modules/
+_kandidati/playwright-report/
+_kandidati/test-results/
+_kandidati/sandboxAI/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
