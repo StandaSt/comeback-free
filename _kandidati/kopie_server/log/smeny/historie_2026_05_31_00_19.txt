@@ -1,6 +1,0 @@
-Start importu směn | 2026-05-31 00:19:20 | pobočka=1 | Malešice | API pobočka=2 | Malešice | start_smeny=2020-10-26 | pondělí=2026-05-25 | od skipWeeks=-1 | do skipWeeks=0
-skipWeeks=-1 | id_pob=1 | startDay=2026-05-25 | pocet_bloku=31 | pocet_hodin=288 | stav=OK
-skipWeeks=0 | id_pob=1 | startDay=2026-06-01 | pocet_bloku=32 | pocet_hodin=300 | stav=OK
-Start importu směn | 2026-05-31 00:19:59 | pobočka=2 | Chodov | API pobočka=1 | Chodov | start_smeny=2020-10-26 | pondělí=2026-05-25 | od skipWeeks=-1 | do skipWeeks=0
-skipWeeks=-1 | id_pob=2 | startDay=2026-05-25 | pocet_bloku=34 | pocet_hodin=264 | stav=OK
-skipWeeks=0 | id_pob=2 | startDay=2026-06-01 | pocet_bloku=36 | pocet_hodin=281 | stav=OK

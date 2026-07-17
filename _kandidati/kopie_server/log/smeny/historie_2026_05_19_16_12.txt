@@ -1,2 +1,0 @@
-Start importu směn | 2026-05-19 16:12:01 | pobočka=2 | Chodov | API pobočka=1 | Chodov | start_smeny=2020-10-26 | pondělí=2026-05-18 | od skipWeeks=0 | do skipWeeks=0
-skipWeeks=0 | id_pob=2 | startDay=2026-05-25 | pocet_bloku=0 | pocet_hodin=0 | stav=OK | poznamka=API vratilo tyden bez bloku

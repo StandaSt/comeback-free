@@ -1,2 +1,0 @@
-Start importu směn | 2026-05-19 15:58:16 | pobočka=1 | Malešice | API pobočka=2 | Malešice | start_smeny=2020-10-26 | pondělí=2026-05-18 | od skipWeeks=0 | do skipWeeks=0
-Import korektně ukončen, protože chybí nouzová brzda skipweek.txt.

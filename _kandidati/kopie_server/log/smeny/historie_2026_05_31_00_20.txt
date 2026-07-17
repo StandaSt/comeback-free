@@ -1,3 +1,0 @@
-Start importu směn | 2026-05-31 00:20:40 | pobočka=3 | Zličín | API pobočka=3 | Zličín | start_smeny=2022-02-21 | pondělí=2026-05-25 | od skipWeeks=-1 | do skipWeeks=0
-skipWeeks=-1 | id_pob=3 | startDay=2026-05-25 | pocet_bloku=35 | pocet_hodin=275 | stav=OK
-skipWeeks=0 | id_pob=3 | startDay=2026-06-01 | pocet_bloku=39 | pocet_hodin=288 | stav=OK

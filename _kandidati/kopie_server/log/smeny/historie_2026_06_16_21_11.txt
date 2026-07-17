@@ -1,7 +1,0 @@
-Start cron importu směn | 2026-06-16 21:11:38 | poboček=6
-skipWeeks=0 | id_pob=1 | startDay=2026-06-22 | pocet_bloku=0 | pocet_hodin=0 | stav=CHYBA | poznamka={"statusCode":400,"error":"Bad Request"}
-skipWeeks=0 | id_pob=2 | startDay=2026-06-22 | pocet_bloku=0 | pocet_hodin=0 | stav=CHYBA | poznamka={"statusCode":400,"error":"Bad Request"}
-skipWeeks=0 | id_pob=3 | startDay=2026-06-22 | pocet_bloku=0 | pocet_hodin=0 | stav=CHYBA | poznamka={"statusCode":400,"error":"Bad Request"}
-skipWeeks=0 | id_pob=5 | startDay=2026-06-22 | pocet_bloku=0 | pocet_hodin=0 | stav=CHYBA | poznamka={"statusCode":400,"error":"Bad Request"}
-skipWeeks=0 | id_pob=4 | startDay=2026-06-22 | pocet_bloku=0 | pocet_hodin=0 | stav=CHYBA | poznamka={"statusCode":400,"error":"Bad Request"}
-skipWeeks=0 | id_pob=6 | startDay=2026-06-22 | pocet_bloku=0 | pocet_hodin=0 | stav=CHYBA | poznamka={"statusCode":400,"error":"Bad Request"}

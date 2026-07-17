@@ -1,5 +1,0 @@
-### Denni historie (dopsano po pulnoci, vedeno pod 2026-03-18)
-
-- Oprava podtabulkoveho ovladani K3/K4: odstraneno stare strankovani z index.php a smazan soubor js/strankovani.js.
-- Uklid filtru: odstraneno nacitani js/filtry_reset.js z index.php a smazan soubor js/filtry_reset.js.
-- Aktualizovan AGENTS.md: cesta na _kandidati/codex/shrnuti_pro_AI.txt a pravidlo umistovani pomocnych slozek pod _kandidati/.

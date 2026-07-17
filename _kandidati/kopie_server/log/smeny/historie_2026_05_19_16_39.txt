@@ -1,3 +1,0 @@
-Start importu směn | 2026-05-19 16:39:12 | pobočka=6 | Bolevec | API pobočka=6 | Plzeň - Bolevec | start_smeny=2025-08-11 | pondělí=2026-05-18 | od skipWeeks=-1 | do skipWeeks=0
-skipWeeks=-1 | id_pob=6 | startDay=2026-05-18 | pocet_bloku=25 | pocet_hodin=209 | stav=OK
-skipWeeks=0 | id_pob=6 | startDay=2026-05-25 | pocet_bloku=0 | pocet_hodin=0 | stav=OK | poznamka=API vratilo tyden bez bloku

@@ -1,5 +1,0 @@
-2026-06-29	pobocka=0	role=vyroba	jmeno=Koteliuk Maryna
-2026-06-30	pobocka=0	role=vyroba	jmeno=Koteliuk Maryna
-2026-07-01	pobocka=0	role=vyroba	jmeno=Koteliuk Maryna
-2026-07-02	pobocka=0	role=vyroba	jmeno=Koteliuk Maryna
-2026-07-03	pobocka=0	role=vyroba	jmeno=Koteliuk Maryna
