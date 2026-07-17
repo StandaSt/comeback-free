@@ -819,7 +819,7 @@ function renderSmenyPlanScreen(array $info, string $mode = 'pick'): void
       <?php endif; ?>
 
       <?php if ($mode === 'pick'): ?>
-        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
+        <form method="post" action="<?= h(cb_url('/index_is.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
           <input type="hidden" name="run_smeny_plan" value="1">
           <input type="hidden" name="cb_action" value="start" id="cb_action_field">
           <div class="displ_flex gap_8 align_items_center flex_wrap">
@@ -842,29 +842,29 @@ function renderSmenyPlanScreen(array $info, string $mode = 'pick'): void
         </form>
       <?php elseif ($mode === 'confirm'): ?>
         <div class="card_actions gap_8 displ_flex odstup_horni_10">
-          <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1" data-cb-loader-text="Probíhá import směn">
+          <form method="post" action="<?= h(cb_url('/index_is.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1" data-cb-loader-text="Probíhá import směn">
             <input type="hidden" name="run_smeny_plan" value="1">
             <input type="hidden" name="cb_action" value="start">
             <input type="hidden" name="cb_id_pob" value="<?= h((string)$selectedBranchId) ?>">
             <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Probíhá import směn">Spustit import</button>
           </form>
-          <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
+          <form method="post" action="<?= h(cb_url('/index_is.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
             <input type="hidden" name="cb_action" value="back">
             <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 displ_inline_flex">Zpět</button>
           </form>
-          <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
+          <form method="post" action="<?= h(cb_url('/index_is.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
             <input type="hidden" name="back_admin_init" value="1">
             <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 displ_inline_flex">Konec</button>
           </form>
         </div>
       <?php else: ?>
         <div class="card_actions gap_8 displ_flex odstup_horni_10">
-          <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
+          <form method="post" action="<?= h(cb_url('/index_is.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
             <input type="hidden" name="run_smeny_plan" value="1">
             <input type="hidden" name="cb_action" value="back">
             <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 displ_inline_flex">Zpět</button>
           </form>
-          <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
+          <form method="post" action="<?= h(cb_url('/index_is.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
             <input type="hidden" name="back_admin_init" value="1">
             <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 displ_inline_flex">Konec</button>
           </form>

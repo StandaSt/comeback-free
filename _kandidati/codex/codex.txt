@@ -1310,3 +1310,7 @@ Continue: 2026-06-09 - K19 objednavky_online.php: odstraneno cteni a pouziti $se
 2026-07-17 - Po schvaleni ponechany spolecne notifikace/modal/mobil registrace pouze ve www. IS odkazy na notifikace_2fa presmerovany do www/notifikace, spolecny modal_registrace generuje parovaci URL pres cb_public_url_abs na www/mobil/mobil_registrace. Smazany kopie is/notifikace/notifikace_2fa.php, is/modaly/modal_login.php, is/modaly/modal_overeni.php, is/modaly/modal_registrace.php a is/mobil/mobil_registrace.php. Na is/mobil/mobil_overeni.php, mobil_helpdesk.php a admin_info.php nebylo sahano. Overeno reference, php -l, URL a UTF-8 bez BOM.
 
 2026-07-17 Codex: Presmerovany IS odkazy na spolecne www assety/funkce pro logo_comeback.png, qrcode.min.js a login/session funkce; smazany kopie v is/funkce, is/img, is/js; overeny reference, URL, php -l a UTF-8 bez BOM.
+
+2026-07-17 Codex: Prejmenovany vstupy is/index.php na is/index_is.php a smeny/index.php na smeny/index_smeny.php; upraveny IS odkazy/AJAX/formulare/.htaccess; vytvoren smeny/.htaccess; odstranen fallback www/notifikace na is/vendor; overeny reference, PHP/JS syntaxe, UTF-8 bez BOM, URL a www/index.php beze zmeny.
+
+2026-07-17 Codex: Opraven is/.htaccess po prejmenovani vstupu - doplnen DirectoryIndex index_is.php, aby /comeback/is/ neukazoval vypis slozky.

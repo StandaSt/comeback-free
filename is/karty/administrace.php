@@ -461,7 +461,7 @@ $cbAdminBoolClass = static function (int $value): string {
     return $value === 1 ? 'txt_zelena text_tucny' : 'txt_cervena text_tucny';
 };
 
-$cbAdminFormAction = cb_url('/index.php');
+$cbAdminFormAction = cb_url('/index_is.php');
 
 ob_start();
 ?>

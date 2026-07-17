@@ -96,7 +96,7 @@ if ($cbAllSelected) {
   class="head_branch_wrap zaobleni_10 displ_flex"
   aria-label="Výběr poboček"
   data-cb-select-pobocky-root="1"
-  data-save-url="<?= h(cb_url('index.php')) ?>"
+  data-save-url="<?= h(cb_url('index_is.php')) ?>"
   data-cb-pob-header="1"
 >
   <?php if ($cbAllowedCount <= 1): ?>

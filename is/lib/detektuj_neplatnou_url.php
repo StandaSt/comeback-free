@@ -30,7 +30,7 @@ if ($modulePath !== '/' && ($appPath === $modulePath || str_starts_with($appPath
 }
 
 $isAssetPath = (bool)preg_match('/\.(css|js|map|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|eot)$/i', $appPath);
-$allowedPaths = ['/', '/index.php'];
+$allowedPaths = ['/', '/index_is.php'];
 if (!$isAssetPath && !in_array($appPath, $allowedPaths, true)) {
     $cbInvalidUrl = true;
 

@@ -68,7 +68,7 @@
       payload.detail = detail;
     }
 
-    w.fetch('index.php', {
+    w.fetch('index_is.php', {
       method: 'POST',
       headers: {
         'X-Comeback-User-Akce': '1',

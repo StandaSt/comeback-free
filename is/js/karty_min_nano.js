@@ -20,7 +20,7 @@
       zdroj: 'karty_min_nano'
     };
 
-    w.fetch('index.php', {
+    w.fetch('index_is.php', {
       method: 'POST',
       headers: {
         'X-Comeback-User-Akce': '1',
@@ -81,7 +81,7 @@
   function requestCardMode(cardId, mode, options) {
     const opts = (options && typeof options === 'object') ? options : {};
     const forceUnlock = opts.forceUnlock === true;
-    return fetch('index.php', {
+    return fetch('index_is.php', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -266,7 +266,7 @@
       return Promise.reject(new Error('ID karty nebylo nalezeno.'));
     }
 
-    return fetch('index.php?cb_card_id=' + encodeURIComponent(String(id)), {
+    return fetch('index_is.php?cb_card_id=' + encodeURIComponent(String(id)), {
       method: 'GET',
       headers: {
         'X-Comeback-Card': '1',

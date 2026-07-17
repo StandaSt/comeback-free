@@ -189,7 +189,7 @@
     const tries = Number.isFinite(attempt) ? Number(attempt) : 0;
     const reloadMode = 'history';
 
-    const url = 'index.php?cb_card_id=' + encodeURIComponent(String(id)) + '&cb_restia_import_max=1';
+    const url = 'index_is.php?cb_card_id=' + encodeURIComponent(String(id)) + '&cb_restia_import_max=1';
     fetch(url, {
       method: 'GET',
       credentials: 'same-origin',
@@ -505,7 +505,7 @@
     const userSettingSaveGroup = getUserSettingGroupFromSubmitter(submitter);
 
     const method = String(form.method || 'POST').toUpperCase();
-    const reqUrl = String(form.action || w.location.href || 'index.php');
+    const reqUrl = String(form.action || w.location.href || 'index_is.php');
     const tempNodes = [];
     const cardId = getCardIdFromForm(form);
     let fetchUrl = reqUrl;

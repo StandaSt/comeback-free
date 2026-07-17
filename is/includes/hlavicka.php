@@ -243,7 +243,7 @@ if (!$cbPobockaMultiFromCard && !empty($cbSelectedPobocky)) {
 }
 
 $cbHelpdeskIsRoleOne = ((int)$cbUserRoleId === 1);
-$cbHelpdeskApiUrl = cb_url('index.php');
+$cbHelpdeskApiUrl = cb_url('index_is.php');
 
 if ($cbLoginOk) {
     try {

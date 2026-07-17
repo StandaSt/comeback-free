@@ -382,7 +382,7 @@ if (!function_exists('cb_admin_init_status_html')) {
 }
 
 $cbRestiaImportActionHtml = ''
-    . '<form method="post" action="' . h(cb_url('/index.php')) . '" class="odstup_vnejsi_0" data-cb-max-form="1">'
+    . '<form method="post" action="' . h(cb_url('/index_is.php')) . '" class="odstup_vnejsi_0" data-cb-max-form="1">'
     . '<input type="hidden" name="run_restia_obj" value="1">'
     . '<button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Připravuji historii">Připrav import</button>'
     . '</form>';
@@ -456,7 +456,7 @@ ob_start();
       <td>Restia menu</td>
       <td class="txt_c"><span class="txt_zelena text_tucny">OK</span></td>
       <td>
-        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
+        <form method="post" action="<?= h(cb_url('/index_is.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
           <input type="hidden" name="open_restia_menu" value="1">
           <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Připravuji import menu">Připrav import</button>
         </form>
@@ -468,7 +468,7 @@ ob_start();
       <td>kontrola počtu objednávek</td>
       <td class="txt_c"><span class="txt_zelena text_tucny">OK</span></td>
       <td>
-        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
+        <form method="post" action="<?= h(cb_url('/index_is.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
           <input type="hidden" name="run_restia_kontrola" value="1">
           <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Kontroluji Restia objednávky">Spustit kontrolu</button>
         </form>
@@ -480,7 +480,7 @@ ob_start();
       <td>uživatelé Směny</td>
       <td class="txt_c"><span class="txt_zelena text_tucny">OK</span></td>
       <td>
-        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
+        <form method="post" action="<?= h(cb_url('/index_is.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
           <input type="hidden" name="open_smeny_user" value="1">
           <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Připravuji import uživatelů">Připrav import</button>
         </form>
@@ -492,7 +492,7 @@ ob_start();
       <td>směny plán</td>
       <td class="txt_c"><span class="txt_zelena text_tucny">OK</span></td>
       <td>
-        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
+        <form method="post" action="<?= h(cb_url('/index_is.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
           <input type="hidden" name="open_smeny_plan" value="1">
           <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Připravuji import plánovaných směn">Připrav import</button>
         </form>
@@ -504,7 +504,7 @@ ob_start();
       <td>reporty Google</td>
       <td class="txt_c"><span class="txt_zelena text_tucny">OK</span></td>
       <td>
-        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
+        <form method="post" action="<?= h(cb_url('/index_is.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
           <input type="hidden" name="open_google_data" value="1">
           <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Připravuji import reportů">Připrav import</button>
         </form>
@@ -516,7 +516,7 @@ ob_start();
       <td>HR mzdy</td>
       <td class="txt_c"><span class="txt_zelena text_tucny">OK</span></td>
       <td>
-        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
+        <form method="post" action="<?= h(cb_url('/index_is.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
           <input type="hidden" name="open_hr_mzdy" value="1">
           <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Připravuji import HR mezd">Připrav import</button>
         </form>
@@ -528,7 +528,7 @@ ob_start();
       <td>HR sazby</td>
       <td class="txt_c"><span class="txt_zelena text_tucny">OK</span></td>
       <td>
-        <form method="post" action="<?= h(cb_url('/index.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
+        <form method="post" action="<?= h(cb_url('/index_is.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
           <input type="hidden" name="open_hr_sazby" value="1">
           <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Připravuji výpočet HR sazeb">Připrav výpočet</button>
         </form>

@@ -172,7 +172,7 @@
 
     function saveKpiState(kpiState) {
       const value = kpiState === 1 ? 1 : 0;
-      w.fetch('index.php', {
+      w.fetch('index_is.php', {
         method: 'POST',
         headers: {
           'X-Comeback-KPI-Setting': '1',
@@ -233,7 +233,7 @@
         payload.detail = detail;
       }
 
-      w.fetch('index.php', {
+      w.fetch('index_is.php', {
         method: 'POST',
         headers: {
           'X-Comeback-User-Akce': '1',
@@ -261,7 +261,7 @@
         payload.detail = detail;
       }
 
-      w.fetch('index.php', {
+      w.fetch('index_is.php', {
         method: 'POST',
         headers: {
           'X-Comeback-User-Akce': '1',
@@ -489,7 +489,7 @@
         tgt_id: targetId
       });
       setDashboardLoading(true, 'Přesouvám kartu ...');
-      fetch('index.php', {
+      fetch('index_is.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -657,7 +657,7 @@
         if (unlockAllBtn) {
           const runUnlockAll = function () {
             traceAjax('card_unlock_all_click', {});
-            fetch('index.php', {
+            fetch('index_is.php', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',

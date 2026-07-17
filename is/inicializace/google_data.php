@@ -53,7 +53,7 @@ function renderGoogleDataPreview(): void
     $statusByBranch = getGoogleImportStatusByBranch();
     $importUntil = getGoogleReportImportUntilDate();
     $resumeFrom = getGoogleResumeFromDate($statusByBranch);
-    $actionUrl = function_exists('cb_url') ? (string)cb_url('/index.php') : '/index.php';
+    $actionUrl = function_exists('cb_url') ? (string)cb_url('/index_is.php') : '/index_is.php';
     ?>
     <div class="table-wrap ram_normal bg_bila zaobleni_12 odstup_vnitrni_10">
       <h2 class="card_title txt_seda text_24 text_tucny odstup_vnejsi_0">Inicializace reportů Google</h2>
@@ -1928,7 +1928,7 @@ function getReportTableCounts(mysqli $db): array
 
 function renderBackButton(): void
 {
-    $actionUrl = function_exists('cb_url') ? (string)cb_url('/index.php') : '/index.php';
+    $actionUrl = function_exists('cb_url') ? (string)cb_url('/index_is.php') : '/index_is.php';
     ?>
     <div style="margin-top:16px; text-align:right;">
       <form method="post" action="<?= htmlspecialchars($actionUrl, ENT_QUOTES, 'UTF-8') ?>" class="odstup_vnejsi_0 displ_inline_flex">

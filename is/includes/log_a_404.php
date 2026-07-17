@@ -5,7 +5,7 @@ declare(strict_types=1);
 /*
  * 404 + log chyby
  *
- * Vstup z index.php:
+ * Vstup z index_is.php:
  * - $file
  * - $pageKey
  *

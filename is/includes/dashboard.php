@@ -126,13 +126,13 @@ $cbDashTimingAllowed = (
     isset($_SERVER['HTTP_X_COMEBACK_PARTIAL'])
     || isset($_SERVER['HTTP_X_COMEBACK_CARD'])
     || $cbDashTimingPath === '/'
-    || $cbDashTimingPath === '/index.php'
+    || $cbDashTimingPath === '/index_is.php'
     || (
         $cbDashBasePath !== ''
         && (
             $cbDashTimingPath === $cbDashBasePath
             || $cbDashTimingPath === $cbDashBasePath . '/'
-            || $cbDashTimingPath === $cbDashBasePath . '/index.php'
+            || $cbDashTimingPath === $cbDashBasePath . '/index_is.php'
         )
     )
 );

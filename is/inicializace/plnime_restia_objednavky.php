@@ -14,7 +14,7 @@ require_once __DIR__ . '/../../www/db/zapis_log_chyby.php';
 
 const CB_RESTIA_HIST_LIMIT = 200;
 
-$cbRestiaEmbedMode = (basename((string)($_SERVER['SCRIPT_NAME'] ?? '')) === 'index.php');
+$cbRestiaEmbedMode = (basename((string)($_SERVER['SCRIPT_NAME'] ?? '')) === 'index_is.php');
 $cbStateKey = 'cb_restia_hist_v4_state';
 $cbRowsKey = 'cb_restia_hist_v4_rows';
 $cbMsgKey = 'cb_restia_hist_v4_msg';
@@ -2547,7 +2547,7 @@ if (!$canStartImport) {
   <?php if ($message !== ''): ?><p class="card_text text_tucny txt_seda"><?= cb_restia_hist_h($message) ?></p><?php endif; ?>
   <div style="margin-top:22px; max-width:760px;">
     <span class="card_text txt_cervena text_11">Výběr pobočky</span>
-    <form method="post" action="<?= cb_restia_hist_h((string)cb_url('/index.php')) ?>" id="cb_restia_import_form" class="odstup_vnejsi_0" data-cb-max-form="1" style="display:flex; flex-direction:column; gap:10px;">
+    <form method="post" action="<?= cb_restia_hist_h((string)cb_url('/index_is.php')) ?>" id="cb_restia_import_form" class="odstup_vnejsi_0" data-cb-max-form="1" style="display:flex; flex-direction:column; gap:10px;">
       <input type="hidden" name="run_restia_obj" value="1"><input type="hidden" name="cb_action" value="start" id="cb_action_field">
       <div style="display:flex; flex-wrap:wrap; align-items:flex-end; gap:12px;">
         <div style="display:flex; flex-direction:column; gap:4px;">
@@ -2584,7 +2584,7 @@ if (!$canStartImport) {
   </div>
   <?php if ($autoResume): ?>
     <div class="displ_flex" style="margin-top:10px;">
-      <form method="post" action="<?= cb_restia_hist_h((string)cb_url('/index.php')) ?>" id="cb_restia_continue_form" class="odstup_vnejsi_0" data-cb-max-form="1">
+      <form method="post" action="<?= cb_restia_hist_h((string)cb_url('/index_is.php')) ?>" id="cb_restia_continue_form" class="odstup_vnejsi_0" data-cb-max-form="1">
         <input type="hidden" name="run_restia_obj" value="1">
         <input type="hidden" name="cb_action" value="auto_next">
         <input type="hidden" name="cb_id_pob" value="<?= cb_restia_hist_h((string)$selectedBranchId) ?>">
@@ -2679,7 +2679,7 @@ if (!$canStartImport) {
     </table>
   </div>
   <div style="margin-top:16px; text-align:right;">
-    <form method="post" action="<?= cb_restia_hist_h((string)cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex">
+    <form method="post" action="<?= cb_restia_hist_h((string)cb_url('/index_is.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex">
       <input type="hidden" name="back_admin_init" value="1">
       <button type="submit" class="card_btn cursor_ruka ram_btn zaobleni_6 vyska_28 displ_inline_flex" style="background:var(--clr_ruzova_4); border-color:var(--clr_ruzova_1); color:var(--clr_cervena);">Zpět</button>
     </form>

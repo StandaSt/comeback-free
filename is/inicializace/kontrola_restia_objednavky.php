@@ -874,13 +874,13 @@ cb_restia_kontrola_write_summary($conn);
         data-cb-auto-continue-button="#cb_restia_kontrola_next_btn"
         data-cb-auto-continue-loader-text="Zpracovávám pobočku <?= cb_restia_kontrola_h((string)($nextBranch['nazev'] ?? '')) ?>"
       ></div>
-      <form method="post" action="<?= cb_restia_kontrola_h((string)cb_url('/index.php')) ?>" id="cb_restia_kontrola_next_form" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1" data-cb-loader-text="Zpracovávám pobočku <?= cb_restia_kontrola_h((string)($nextBranch['nazev'] ?? '')) ?>">
+      <form method="post" action="<?= cb_restia_kontrola_h((string)cb_url('/index_is.php')) ?>" id="cb_restia_kontrola_next_form" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1" data-cb-loader-text="Zpracovávám pobočku <?= cb_restia_kontrola_h((string)($nextBranch['nazev'] ?? '')) ?>">
         <input type="hidden" name="run_restia_kontrola" value="1">
         <input type="hidden" name="cb_restia_kontrola_after" value="<?= cb_restia_kontrola_h((string)($selectedBranch['id_pob'] ?? 0)) ?>">
         <button type="submit" id="cb_restia_kontrola_next_btn" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Zpracovávám pobočku <?= cb_restia_kontrola_h((string)($nextBranch['nazev'] ?? '')) ?>">Pokračovat další pobočkou</button>
       </form>
     <?php endif; ?>
-    <form method="post" action="<?= cb_restia_kontrola_h((string)cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex">
+    <form method="post" action="<?= cb_restia_kontrola_h((string)cb_url('/index_is.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex">
       <input type="hidden" name="back_admin_init" value="1">
       <button type="submit" class="card_btn cursor_ruka ram_btn zaobleni_6 vyska_28 displ_inline_flex" style="background:var(--clr_ruzova_4); border-color:var(--clr_ruzova_1); color:var(--clr_cervena);">Zpět</button>
     </form>

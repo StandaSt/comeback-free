@@ -62,7 +62,7 @@
       });
     }
 
-    return fetch(form.action || 'index.php', {
+    return fetch(form.action || 'index_is.php', {
       method: 'POST',
       credentials: 'same-origin',
       headers: {
@@ -97,7 +97,7 @@
     data.set('field', String(field));
     data.set('value', String(value ?? ''));
 
-    return fetch(form.action || 'index.php', {
+    return fetch(form.action || 'index_is.php', {
       method: 'POST',
       credentials: 'same-origin',
       headers: {

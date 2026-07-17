@@ -13,7 +13,7 @@ require_once __DIR__ . '/../db/db_api_restia.php';
 
 const CB_RESTIA_MENU_DEFAULT_ID = '762f8daa-ca39-4d8f-ae4a-d22b4d106e88';
 
-$cbRestiaMenuEmbedMode = (basename((string)($_SERVER['SCRIPT_NAME'] ?? '')) === 'index.php');
+$cbRestiaMenuEmbedMode = (basename((string)($_SERVER['SCRIPT_NAME'] ?? '')) === 'index_is.php');
 
 if (!function_exists('cb_restia_menu_h')) {
     function cb_restia_menu_h(string $value): string
@@ -761,7 +761,7 @@ if ($run) {
     <p class="card_text <?= $ok === 1 ? 'txt_zelena' : 'txt_cervena' ?> text_tucny odstup_horni_10"><?= cb_restia_menu_h($message) ?></p>
   <?php endif; ?>
   <div style="margin-top:16px; text-align:right;">
-    <form method="post" action="<?= cb_restia_menu_h((string)cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex">
+    <form method="post" action="<?= cb_restia_menu_h((string)cb_url('/index_is.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex">
       <input type="hidden" name="back_admin_init" value="1">
       <button type="submit" class="card_btn cursor_ruka ram_btn zaobleni_6 vyska_28 displ_inline_flex" style="background:var(--clr_ruzova_4); border-color:var(--clr_ruzova_1); color:var(--clr_cervena);">Zpět</button>
     </form>

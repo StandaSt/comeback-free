@@ -62,7 +62,7 @@
       body.set(key, String(data[key] ?? ''));
     });
 
-    return fetch(form.action || 'index.php', {
+    return fetch(form.action || 'index_is.php', {
       method: 'POST',
       credentials: 'same-origin',
       headers: {
@@ -164,7 +164,7 @@
     body.set('id_pob', getReportValue(root, 'input[name="id_pob"]'));
     body.set('datum_reportu', getReportValue(root, '[name="datum_reportu"]'));
 
-    return fetch(form.action || 'index.php', {
+    return fetch(form.action || 'index_is.php', {
       method: 'POST',
       credentials: 'same-origin',
       headers: {

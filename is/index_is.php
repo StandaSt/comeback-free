@@ -1,5 +1,5 @@
 <?php
-// index.php * Verze: V25 * Aktualizace: 28.04.2026
+// index_is.php * Verze: V25 * Aktualizace: 28.04.2026
 
 
 declare(strict_types=1);
@@ -294,5 +294,5 @@ if (!$cbStartupRestiaLoader && !empty($cbInvalidUrl)) {
 </body>
 </html>
 <?php
-/* index.php * Verze: V25 * Aktualizace: 28.04.2026 */
+/* index_is.php * Verze: V25 * Aktualizace: 28.04.2026 */
 // Konec souboru

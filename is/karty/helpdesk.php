@@ -215,7 +215,7 @@ if (($cbDashboardRenderMode ?? '') !== 'mini' && $stmtItems instanceof mysqli_st
     $stmtItems->close();
 }
 
-$helpdeskApiUrl = cb_url('index.php');
+$helpdeskApiUrl = cb_url('index_is.php');
 $arrowIconUrl = cb_url('img/icons/arrow-32.png');
 
 ob_start();

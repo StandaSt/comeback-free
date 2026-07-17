@@ -14,7 +14,7 @@
     var toggle = root.querySelector('[data-cb-pob-toggle="1"]');
     var saveUrl = String(root.getAttribute('data-save-url') || '');
     if (saveUrl === '') {
-      saveUrl = 'index.php';
+      saveUrl = 'index_is.php';
     }
     var branchToggleBtn = root.querySelector('[data-cb-pob-toggle="1"]');
 

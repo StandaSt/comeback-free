@@ -239,7 +239,7 @@ function h(string $value): string
       zdroj: 'select_card_ikon',
       detail: detail
     };
-    window.fetch('<?= h((string)cb_url('/index.php')) ?>', {
+    window.fetch('<?= h((string)cb_url('/index_is.php')) ?>', {
       method: 'POST',
       headers: {
         'X-Comeback-User-Akce': '1',

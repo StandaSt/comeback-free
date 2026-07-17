@@ -569,7 +569,7 @@
   };
 
   function fetchRestiaState() {
-    const reqUrl = String(w.location.href || 'index.php');
+    const reqUrl = String(w.location.href || 'index_is.php');
     return fetch(reqUrl, {
       method: 'GET',
       headers: { 'X-Comeback-Restia-State': '1' },
@@ -584,7 +584,7 @@
 
   function triggerRestiaCheck(options) {
     const opts = (options && typeof options === 'object') ? options : {};
-    const reqUrl = String(w.location.href || 'index.php');
+    const reqUrl = String(w.location.href || 'index_is.php');
     const headers = {
       'X-Comeback-Restia-Trigger': '1',
       'Accept': 'application/json'
@@ -609,7 +609,7 @@
     const opts = (options && typeof options === 'object') ? options : {};
     const timeoutMs = Math.max(1000, Number(opts.timeoutMs) || 30000);
     const pollMs = Math.max(200, Number(opts.pollMs) || 500);
-    const reqUrl = String(w.location.href || 'index.php');
+    const reqUrl = String(w.location.href || 'index_is.php');
     const startedAt = Date.now();
 
     traceAjax('restia_wait_start', {
@@ -733,7 +733,7 @@
     const refreshMode = String(opts.refreshMode || 'dashboard').trim() || 'dashboard';
     const keepLoading = !!opts.keepLoading;
     const body = new FormData(targetForm);
-    const reqUrl = String(targetForm.action || w.location.href || 'index.php');
+    const reqUrl = String(targetForm.action || w.location.href || 'index_is.php');
     const method = String(targetForm.method || 'POST').toUpperCase();
     traceAjax('submit_start', {
       mode: loaderMode,
@@ -833,7 +833,7 @@
       setLoaderLoading(loaderMode, true);
     }
 
-    const reqUrl = String(w.location.href || 'index.php');
+    const reqUrl = String(w.location.href || 'index_is.php');
     traceAjax('refresh_start', {
       mode: loaderMode,
       force: force ? 1 : 0,
@@ -901,7 +901,7 @@
       setLoaderLoading(loaderMode, true);
     }
 
-    const reqUrl = String(w.location.href || 'index.php');
+    const reqUrl = String(w.location.href || 'index_is.php');
     traceAjax('refresh_mini_start', {
       mode: loaderMode,
       force: force ? 1 : 0,
@@ -1046,7 +1046,7 @@
       url: String(w.location.href || '')
     });
 
-    const kpiJob = fetch(String(w.location.href || 'index.php'), {
+    const kpiJob = fetch(String(w.location.href || 'index_is.php'), {
       method: 'GET',
       headers: {
         'X-Comeback-KPI': '1',
@@ -1183,7 +1183,7 @@
     currentCard.classList.add('is-card-refreshing');
     currentCard.setAttribute('aria-busy', 'true');
 
-    const reqUrl = 'index.php?cb_card_id=' + encodeURIComponent(String(id)) + (loadMax ? '&cb_load_max=1' : '');
+    const reqUrl = 'index_is.php?cb_card_id=' + encodeURIComponent(String(id)) + (loadMax ? '&cb_load_max=1' : '');
     traceAjax('refresh_card_start', {
       mode: loaderMode,
       force: force ? 1 : 0,
@@ -1267,7 +1267,7 @@
       return Promise.reject(new Error('ID karty nebylo nalezeno.'));
     }
 
-    const reqUrl = 'index.php?cb_card_id=' + encodeURIComponent(String(id));
+    const reqUrl = 'index_is.php?cb_card_id=' + encodeURIComponent(String(id));
     traceAjax('load_card_max_start', {
       mode: loaderMode,
       card_id: id,

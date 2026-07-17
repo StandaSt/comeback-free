@@ -517,11 +517,11 @@ function hrSazbyRender(array $summary, array $intervals, array $result, bool $wr
       </table>
 
       <div class="card_actions gap_8 displ_flex odstup_horni_10">
-        <form method="post" action="<?= hrSazbyH(cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1" data-cb-loader-text="Počítám HR sazby">
+        <form method="post" action="<?= hrSazbyH(cb_url('/index_is.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1" data-cb-loader-text="Počítám HR sazby">
           <input type="hidden" name="run_hr_sazby" value="1">
           <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Počítám HR sazby">Spustit výpočet</button>
         </form>
-        <form method="post" action="<?= hrSazbyH(cb_url('/index.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
+        <form method="post" action="<?= hrSazbyH(cb_url('/index_is.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
           <input type="hidden" name="back_admin_init" value="1">
           <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 displ_inline_flex">Zpět</button>
         </form>

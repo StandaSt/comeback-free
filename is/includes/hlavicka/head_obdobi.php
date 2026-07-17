@@ -229,7 +229,7 @@ if (!in_array($cbManualSaveDelayMs, [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000
       return Promise.resolve();
     }
     isSaving = true;
-    return fetch('<?= h(cb_url('index.php')) ?>', {
+    return fetch('<?= h(cb_url('index_is.php')) ?>', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

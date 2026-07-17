@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 $cbPrgKey = 'cb_prg_post_payload_v1';
-$cbRequestUri = (string)($_SERVER['REQUEST_URI'] ?? '/index.php');
+$cbRequestUri = (string)($_SERVER['REQUEST_URI'] ?? '/index_is.php');
 $cbRequestMethod = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
 
 if ($cbRequestMethod === 'GET' && isset($_SESSION[$cbPrgKey]) && is_array($_SESSION[$cbPrgKey])) {

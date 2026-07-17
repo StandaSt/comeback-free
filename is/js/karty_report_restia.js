@@ -17,7 +17,7 @@
     const idPob = idPobInput instanceof HTMLInputElement ? String(idPobInput.value || '') : '';
     if (cardId === '') return Promise.resolve();
 
-    const url = 'index.php?cb_card_id=' + encodeURIComponent(cardId)
+    const url = 'index_is.php?cb_card_id=' + encodeURIComponent(cardId)
       + '&cb_load_max=1&zr_id_pob=' + encodeURIComponent(idPob);
 
     return fetch(url, {

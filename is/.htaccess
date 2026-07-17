@@ -2,6 +2,7 @@
 
 RewriteEngine On
 RewriteBase /
+DirectoryIndex index_is.php
 
 # Produkce musí běžet přes HTTPS kvůli Service Workeru a Web Push.
 # Localhost necháváme bez přesměrování kvůli lokálnímu XAMPP vývoji.
@@ -31,15 +32,15 @@ RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
-# Pojistka: samotný index.php už dál nepřepisuj
-RewriteRule ^index\.php$ - [L]
+# Pojistka: samotný index_is.php už dál nepřepisuj
+RewriteRule ^index_is\.php$ - [L]
 
-# 1) Root obslouží index.php (interně, bez změny URL)
-RewriteRule ^$ index.php [L,QSA]
+# 1) Root obslouží index_is.php (interně, bez změny URL)
+RewriteRule ^$ index_is.php [L,QSA]
 
-# 2) Cokoliv dalšího obslouží index.php interně.
-# Díky tomu index.php vidí původní REQUEST_URI a může ji zalogovat.
-RewriteRule ^.*$ index.php [L,QSA]
+# 2) Cokoliv dalšího obslouží index_is.php interně.
+# Díky tomu index_is.php vidí původní REQUEST_URI a může ji zalogovat.
+RewriteRule ^.*$ index_is.php [L,QSA]
 
 # .htaccess * Verze: V5 * Aktualizace: 2.5.2026
 # Konec souboru
