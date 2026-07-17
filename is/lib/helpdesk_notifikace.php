@@ -119,7 +119,7 @@ function cb_helpdesk_push_odeslat(int $idUser, int $idNotifikace, string $typ, s
         return;
     }
 
-    require_once __DIR__ . '/../../www/vendor/autoload.php';
+    require_once __DIR__ . '/../../vendor/autoload.php';
 
     $auth = [
         'VAPID' => [

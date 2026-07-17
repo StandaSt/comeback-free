@@ -7,7 +7,7 @@ require_once __DIR__ . '/../../www/lib/session_boot.php';
 require_once __DIR__ . '/../config/secrets.php';
 require_once __DIR__ . '/../../www/lib/app.php';
 require_once __DIR__ . '/prehled_smen_data.php';
-require_once __DIR__ . '/../../www/vendor/autoload.php';
+require_once __DIR__ . '/../../vendor/autoload.php';
 
 use Dompdf\Dompdf;
 use Dompdf\Options;

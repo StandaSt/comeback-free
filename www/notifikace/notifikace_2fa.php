@@ -26,7 +26,7 @@ function cb_push_has_vendor(): bool
 function cb_push_vendor_autoload(): string
 {
     $paths = [
-        __DIR__ . '/../vendor/autoload.php',
+        __DIR__ . '/../../vendor/autoload.php',
     ];
 
     foreach ($paths as $autoload) {

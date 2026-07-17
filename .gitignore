@@ -9,6 +9,7 @@ log/
 www/log/
 
 # Local helper/output folders
+/vendor/
 _kandidati/node_modules/
 _kandidati/playwright-report/
 _kandidati/test-results/

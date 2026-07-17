@@ -1314,3 +1314,5 @@ Continue: 2026-06-09 - K19 objednavky_online.php: odstraneno cteni a pouziti $se
 2026-07-17 Codex: Prejmenovany vstupy is/index.php na is/index_is.php a smeny/index.php na smeny/index_smeny.php; upraveny IS odkazy/AJAX/formulare/.htaccess; vytvoren smeny/.htaccess; odstranen fallback www/notifikace na is/vendor; overeny reference, PHP/JS syntaxe, UTF-8 bez BOM, URL a www/index.php beze zmeny.
 
 2026-07-17 Codex: Opraven is/.htaccess po prejmenovani vstupu - doplnen DirectoryIndex index_is.php, aby /comeback/is/ neukazoval vypis slozky.
+
+2026-07-17 Codex: Po rucnim presunu Composeru z www do korene upraveny autoload cesty na korenovy vendor/autoload.php, pridano /vendor/ do .gitignore, overeny reference, autoload, PHP syntaxe, BOM a Git stav bez composer update.
