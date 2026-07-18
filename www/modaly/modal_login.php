@@ -35,6 +35,7 @@ $loginDisabled = $loginDbOk ? '' : ' disabled';
                name="email"
                type="email"
                autocomplete="username"
+               placeholder="Email"
                required<?= $loginDisabled ?>>
       </div>
 
@@ -45,13 +46,23 @@ $loginDisabled = $loginDbOk ? '' : ' disabled';
                name="heslo"
                type="password"
                autocomplete="current-password"
+               placeholder="Heslo"
                required<?= $loginDisabled ?>>
       </div>
 
       <div class="modal-actions modal-actions-modules">
-        <button class="modal-btn primary" type="submit" name="module" value="is"<?= $loginDisabled ?>>IS</button>
-        <button class="modal-btn primary" type="submit" name="module" value="hr"<?= $loginDisabled ?>>HR</button>
-        <button class="modal-btn primary" type="submit" name="module" value="smeny"<?= $loginDisabled ?>>směny</button>
+        <button class="modal-btn primary" type="submit" name="module" value="is"<?= $loginDisabled ?>>
+          <span class="modal-btn-main">IS</span>
+          <span class="modal-btn-sub">Informační systém</span>
+        </button>
+        <button class="modal-btn primary" type="submit" name="module" value="hr"<?= $loginDisabled ?>>
+          <span class="modal-btn-main">HR</span>
+          <span class="modal-btn-sub">Personální systém</span>
+        </button>
+        <button class="modal-btn primary" type="submit" name="module" value="smeny"<?= $loginDisabled ?>>
+          <span class="modal-btn-main">směny</span>
+          <span class="modal-btn-sub">Plánování směn</span>
+        </button>
       </div>
 
       <p class="modal-sub modal-url" style="margin-top:10px;">
