@@ -8,9 +8,7 @@ require_once __DIR__ . '/lib/system.php';
 require_once __DIR__ . '/config/secrets.php';
 require_once __DIR__ . '/lib/json_registrace.php';
 
-if (!empty($_SESSION['login_ok']) && !cb_session_validate_after_login()) {
-    cb_session_forget_auth();
-}
+cb_session_guard_entry();
 
 $cbAuthOk = !empty($_SESSION['cb_auth_ok']);
 $cb2faPending = !empty($_SESSION['cb_2fa_token']);

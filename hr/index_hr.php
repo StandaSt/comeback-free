@@ -6,6 +6,8 @@ require_once __DIR__ . '/../www/config/secrets.php';
 require_once __DIR__ . '/../www/lib/app.php';
 require_once __DIR__ . '/hr_includes/hr_data.php';
 
+cb_session_guard_entry();
+
 if (empty($_SESSION['login_ok'])) {
     header('Location: ' . cb_login_url());
     exit;

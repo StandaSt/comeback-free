@@ -176,7 +176,7 @@
   }
   // CB_LOGIN_TRACE_TEMP_END
 
-  activity();
+  render();
   w.setInterval(render, 1000);
 })(window, document);
 

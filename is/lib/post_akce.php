@@ -276,11 +276,13 @@ if (
     ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
     && isset($_SERVER['HTTP_X_COMEBACK_TOUCH'])
 ) {
-    $nowTs = time();
-    if (!isset($_SESSION['cb_session_start_ts']) || (int)$_SESSION['cb_session_start_ts'] <= 0) {
-        $_SESSION['cb_session_start_ts'] = $nowTs;
+    if (empty($_SESSION['login_ok']) || !cb_session_validate_after_login()) {
+        cb_session_invalidate_auth();
+        http_response_code(401);
+        exit;
     }
-    $_SESSION['cb_last_activity_ts'] = $nowTs;
+
+    cb_session_touch_activity();
     http_response_code(204);
     exit;
 }

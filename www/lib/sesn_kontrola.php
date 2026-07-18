@@ -1,5 +1,5 @@
 <?php
-// lib/sesn_kontrola.php * Verze: V1 * Aktualizace: 07.05.2026
+// lib/sesn_kontrola.php * Verze: V2 * Aktualizace: 18.07.2026
 declare(strict_types=1);
 
 if (!function_exists('cb_session_client_fingerprint')) {
@@ -17,7 +17,7 @@ if (!function_exists('cb_session_client_fingerprint')) {
 
 if (!function_exists('cb_session_validate_after_login')) {
     /**
-     * Overi, ze prihlasena session porad patri stejnemu klientovi.
+     * Overi, ze prihlasena session porad patri stejnemu klientovi a neni prosla.
      */
     function cb_session_validate_after_login(): bool
     {
@@ -30,7 +30,71 @@ if (!function_exists('cb_session_validate_after_login')) {
             return false;
         }
 
-        return hash_equals($stored, cb_session_client_fingerprint());
+        if (!hash_equals($stored, cb_session_client_fingerprint())) {
+            return false;
+        }
+
+        $timeoutMinRaw = $_SESSION['cb_timeout_min'] ?? null;
+        if (!is_int($timeoutMinRaw) && !is_string($timeoutMinRaw)) {
+            return false;
+        }
+
+        $timeoutMin = filter_var($timeoutMinRaw, FILTER_VALIDATE_INT);
+        if ($timeoutMin === false || $timeoutMin <= 0) {
+            return false;
+        }
+
+        $lastActivityRaw = $_SESSION['cb_last_activity_ts'] ?? null;
+        if (!is_int($lastActivityRaw) && !is_string($lastActivityRaw)) {
+            return false;
+        }
+
+        $lastActivityTs = filter_var($lastActivityRaw, FILTER_VALIDATE_INT);
+        if ($lastActivityTs === false || $lastActivityTs <= 0) {
+            return false;
+        }
+
+        $nowTs = time();
+        if ($lastActivityTs > $nowTs) {
+            return false;
+        }
+
+        return ($nowTs - $lastActivityTs) < ($timeoutMin * 60);
+    }
+}
+
+if (!function_exists('cb_session_is_internal_request')) {
+    /**
+     * Pozna interni AJAX pozadavek podle projektovych hlavicek X-Comeback-*.
+     */
+    function cb_session_is_internal_request(): bool
+    {
+        foreach (array_keys($_SERVER) as $serverKey) {
+            if (strncmp((string)$serverKey, 'HTTP_X_COMEBACK_', 16) === 0) {
+                return true;
+            }
+        }
+
+        $requestedWith = strtolower(trim((string)($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')));
+        return $requestedWith === 'xmlhttprequest';
+    }
+}
+
+if (!function_exists('cb_session_touch_activity')) {
+    /**
+     * Obnovi cas posledni skutecne aktivity uzivatele.
+     */
+    function cb_session_touch_activity(): void
+    {
+        if (empty($_SESSION['login_ok'])) {
+            return;
+        }
+
+        $nowTs = time();
+        if (!isset($_SESSION['cb_session_start_ts']) || (int)$_SESSION['cb_session_start_ts'] <= 0) {
+            $_SESSION['cb_session_start_ts'] = $nowTs;
+        }
+        $_SESSION['cb_last_activity_ts'] = $nowTs;
     }
 }
 
@@ -58,5 +122,48 @@ if (!function_exists('cb_session_forget_auth')) {
         unset($_SESSION['cb_session_bound_at']);
         unset($_SESSION['cb_session_bound_id']);
         unset($_SESSION['cb_session_fingerprint']);
+    }
+}
+
+if (!function_exists('cb_session_invalidate_auth')) {
+    /**
+     * Serverove zneplatni prihlasenou cast session a zabrani pouziti stareho ID.
+     */
+    function cb_session_invalidate_auth(): void
+    {
+        cb_session_forget_auth();
+
+        if (session_status() === PHP_SESSION_ACTIVE && !headers_sent()) {
+            session_regenerate_id(true);
+        }
+    }
+}
+
+if (!function_exists('cb_session_guard_entry')) {
+    /**
+     * Centralni kontrola prihlasene session pro vstupni soubory modulu.
+     */
+    function cb_session_guard_entry(bool $touchValidPageRequest = true): void
+    {
+        if (empty($_SESSION['login_ok'])) {
+            return;
+        }
+
+        if (!cb_session_validate_after_login()) {
+            cb_session_invalidate_auth();
+
+            if (cb_session_is_internal_request()) {
+                http_response_code(401);
+                exit;
+            }
+
+            header('Location: ' . cb_login_url());
+            exit;
+        }
+
+        $method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+        if ($touchValidPageRequest && $method === 'GET' && !cb_session_is_internal_request()) {
+            cb_session_touch_activity();
+        }
     }
 }
