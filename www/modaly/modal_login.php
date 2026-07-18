@@ -57,7 +57,7 @@ $loginDisabled = $loginDbOk ? '' : ' disabled';
         </button>
         <button class="modal-btn primary" type="submit" name="module" value="hr"<?= $loginDisabled ?>>
           <span class="modal-btn-main">HR</span>
-          <span class="modal-btn-sub">Personální systém</span>
+          <span class="modal-btn-sub">Personální agenda</span>
         </button>
         <button class="modal-btn primary" type="submit" name="module" value="smeny"<?= $loginDisabled ?>>
           <span class="modal-btn-main">směny</span>
@@ -71,5 +71,5 @@ $loginDisabled = $loginDbOk ? '' : ' disabled';
       </p>
     </form>
   </div>
+  <p class="modal-login-note">Případná podoba s kýmkoliv je čistě náhodná</p>
 </div>
-

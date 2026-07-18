@@ -49,6 +49,14 @@ if (!empty($_SESSION['login_ok'])) {
     header('Location: ' . cb_login_target_url());
     exit;
 }
+
+$cbLoginBackgroundFiles = glob(__DIR__ . '/img/pozadi_login/login_pozadi_*.png');
+$cbLoginBackgroundCount = is_array($cbLoginBackgroundFiles) ? count($cbLoginBackgroundFiles) : 0;
+$cbLoginBackgroundUrl = cb_url('img/login_pozadi.png');
+if ($cbLoginBackgroundCount > 0) {
+    $cbLoginBackgroundIndex = random_int(1, $cbLoginBackgroundCount);
+    $cbLoginBackgroundUrl = cb_url('img/pozadi_login/login_pozadi_' . $cbLoginBackgroundIndex . '.png');
+}
 ?>
 <!doctype html>
 <html lang="cs">
@@ -59,7 +67,7 @@ if (!empty($_SESSION['login_ok'])) {
   <link rel="icon" type="image/png" href="<?= h(cb_url('img/logo_comeback.png')) ?>">
   <link rel="stylesheet" href="<?= h(cb_url('style/1/modal_alert.css')) ?>">
 </head>
-<body class="modal-page modal-login-page">
+<body class="modal-page modal-login-page" style="--cb-login-bg: url('<?= h($cbLoginBackgroundUrl) ?>');">
 <div class="modal-login-container">
 <?php
 if ($cb2faPending) {

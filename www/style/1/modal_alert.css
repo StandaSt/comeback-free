@@ -41,6 +41,10 @@
   justify-content: center;
 }
 
+.modal-login-note{
+  display: none;
+}
+
 .modal-login-page .modal-overlay{
   background: transparent;
   backdrop-filter: none;
@@ -491,7 +495,7 @@ code{
     min-height: 100dvh;
     padding: 0;
     overflow-x: hidden;
-    background: url("../../img/login_pozadi.png") center / cover no-repeat fixed;
+    background: var(--cb-login-bg, url("../../img/login_pozadi.png")) center / cover no-repeat fixed;
   }
 
   .modal-login-container{
@@ -520,13 +524,13 @@ code{
     padding: clamp(28px, 3.5vw, 54px) clamp(30px, 3.8vw, 58px);
     border: 1px solid rgba(255, 255, 255, 0.52);
     border-radius: 24px;
-    background: rgba(24, 22, 18, 0.50);
+    background: rgba(24, 22, 18, 0.25);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.28),
       inset 0 0 52px rgba(255, 255, 255, 0.06),
       0 28px 70px rgba(0, 0, 0, 0.38);
-    backdrop-filter: blur(14px) saturate(1.05);
-    -webkit-backdrop-filter: blur(14px) saturate(1.05);
+    backdrop-filter: blur(7px) saturate(1.05);
+    -webkit-backdrop-filter: blur(7px) saturate(1.05);
     color: #ffffff;
   }
 
@@ -716,7 +720,7 @@ code{
   .modal-login-page .modal-btn::before{
     content: "";
     position: absolute;
-    left: 34px;
+    left: 22px;
     top: 50%;
     width: 46px;
     height: 46px;
@@ -729,7 +733,7 @@ code{
   .modal-login-page .modal-actions-modules .modal-btn:first-child::before{
     width: 58px;
     height: 58px;
-    left: 68px;
+    left: 54px;
     background-size: contain;
     background-image: url("../../img/ikona1 (4).png");
   }
@@ -749,12 +753,12 @@ code{
     line-height: 1;
     font-weight: 800;
     text-transform: none;
-    padding-left: 82px;
+    padding-left: 70px;
   }
 
   .modal-login-page .modal-actions-modules .modal-btn:first-child .modal-btn-main{
     font-size: 56px;
-    padding-left: 176px;
+    padding-left: 158px;
   }
 
   .modal-login-page .modal-actions-modules .modal-btn:nth-child(3) .modal-btn-main{
@@ -767,13 +771,27 @@ code{
     font-size: 11px;
     line-height: 1.15;
     font-weight: 700;
-    text-transform: uppercase;
-    padding-left: 82px;
+    text-transform: none;
+    padding-left: 70px;
   }
 
   .modal-login-page .modal-actions-modules .modal-btn:first-child .modal-btn-sub{
     font-size: 15px;
-    padding-left: 176px;
+    padding-left: 158px;
+  }
+
+  .modal-login-page .modal-login-note{
+    display: block;
+    position: absolute;
+    right: clamp(14px, 3vw, 58px);
+    bottom: 8px;
+    margin: 0;
+    padding: 4px 8px;
+    color: #ffffff;
+    background: rgba(80, 80, 80, 0.72);
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.2;
   }
 
   .modal-login-page .modal-url{
