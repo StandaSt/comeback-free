@@ -9,13 +9,13 @@ if (PHP_SAPI === 'cli') {
         $_SESSION = [];
     }
 } else {
-    require_once __DIR__ . '/../../www/lib/session_boot.php';
+    require_once __DIR__ . '/session_boot.php';
 }
 
-require_once __DIR__ . '/../../www/lib/app.php';
-require_once __DIR__ . '/../../www/config/secrets.php';
-require_once __DIR__ . '/../../www/lib/smeny_graphql.php';
-require_once __DIR__ . '/../../www/db/db_api_smeny.php';
+require_once __DIR__ . '/app.php';
+require_once __DIR__ . '/../config/secrets.php';
+require_once __DIR__ . '/smeny_graphql.php';
+require_once __DIR__ . '/../db/db_api_smeny.php';
 
 if (PHP_SAPI === 'cli') {
     $PROSTREDI = 'SERVER';
@@ -157,7 +157,7 @@ if (!function_exists('cb_smeny_plan_kontrola')) {
         $GLOBALS['cb_smeny_plan_cron'] = true;
         $GLOBALS['cb_smeny_plan_import_all'] = true;
 
-        $file = __DIR__ . '/../inicializace/plnime_smeny_plan.php';
+        $file = __DIR__ . '/../../is/inicializace/plnime_smeny_plan.php';
         if (!file_exists($file)) {
             throw new RuntimeException('Směny cron: soubor nenalezen plnime_smeny_plan.php.');
         }

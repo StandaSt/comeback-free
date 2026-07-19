@@ -41,7 +41,8 @@
   justify-content: center;
 }
 
-.modal-login-note{
+.modal-login-note,
+.modal-login-count{
   display: none;
 }
 
@@ -780,10 +781,10 @@ code{
     padding-left: 158px;
   }
 
-  .modal-login-page .modal-login-note{
+  .modal-login-page .modal-login-note,
+  .modal-login-page .modal-login-count{
     display: block;
     position: absolute;
-    right: clamp(14px, 3vw, 58px);
     bottom: 8px;
     margin: 0;
     padding: 4px 8px;
@@ -792,6 +793,14 @@ code{
     border-radius: 4px;
     font-size: 12px;
     line-height: 1.2;
+  }
+
+  .modal-login-page .modal-login-note{
+    right: clamp(14px, 3vw, 58px);
+  }
+
+  .modal-login-page .modal-login-count{
+    left: clamp(14px, 3vw, 58px);
   }
 
   .modal-login-page .modal-url{

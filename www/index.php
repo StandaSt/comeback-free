@@ -53,9 +53,12 @@ if (!empty($_SESSION['login_ok'])) {
 $cbLoginBackgroundFiles = glob(__DIR__ . '/img/pozadi_login/login_pozadi_*.png');
 $cbLoginBackgroundCount = is_array($cbLoginBackgroundFiles) ? count($cbLoginBackgroundFiles) : 0;
 $cbLoginBackgroundUrl = cb_url('img/login_pozadi.png');
+$cbLoginBackgroundLabel = '';
 if ($cbLoginBackgroundCount > 0) {
     $cbLoginBackgroundIndex = random_int(1, $cbLoginBackgroundCount);
-    $cbLoginBackgroundUrl = cb_url('img/pozadi_login/login_pozadi_' . $cbLoginBackgroundIndex . '.png');
+    $cbLoginBackgroundFile = __DIR__ . '/img/pozadi_login/login_pozadi_' . $cbLoginBackgroundIndex . '.png';
+    $cbLoginBackgroundUrl = cb_url('img/pozadi_login/login_pozadi_' . $cbLoginBackgroundIndex . '.png?v=' . filemtime($cbLoginBackgroundFile));
+    $cbLoginBackgroundLabel = $cbLoginBackgroundIndex . '/' . $cbLoginBackgroundCount;
 }
 ?>
 <!doctype html>
@@ -65,7 +68,7 @@ if ($cbLoginBackgroundCount > 0) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Comeback - přihlášení</title>
   <link rel="icon" type="image/png" href="<?= h(cb_url('img/logo_comeback.png')) ?>">
-  <link rel="stylesheet" href="<?= h(cb_url('style/1/modal_alert.css')) ?>">
+  <link rel="stylesheet" href="<?= h(cb_url('style/1/modal_alert.css?v=' . filemtime(__DIR__ . '/style/1/modal_alert.css'))) ?>">
 </head>
 <body class="modal-page modal-login-page" style="--cb-login-bg: url('<?= h($cbLoginBackgroundUrl) ?>');">
 <div class="modal-login-container">

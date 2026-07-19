@@ -71,5 +71,8 @@ $loginDisabled = $loginDbOk ? '' : ' disabled';
       </p>
     </form>
   </div>
+  <?php if (!empty($cbLoginBackgroundLabel)): ?>
+  <p class="modal-login-count"><?= h((string)$cbLoginBackgroundLabel) ?></p>
+  <?php endif; ?>
   <p class="modal-login-note">Případná podoba s kýmkoliv je čistě náhodná</p>
 </div>
