@@ -207,6 +207,74 @@ if (!function_exists('cb_restia_online_first_open_created_at')) {
     }
 }
 
+if (!function_exists('cb_restia_online_local_to_utc_z')) {
+    function cb_restia_online_local_to_utc_z(string $localDateTime): string
+    {
+        $localDateTime = trim($localDateTime);
+        if ($localDateTime === '') {
+            return '';
+        }
+
+        try {
+            $dt = new DateTimeImmutable($localDateTime, new DateTimeZone('Europe/Prague'));
+        } catch (Throwable $e) {
+            return '';
+        }
+
+        return $dt->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.v\Z');
+    }
+}
+
+if (!function_exists('cb_restia_online_created_from_for_day')) {
+    function cb_restia_online_created_from_for_day(mysqli $conn, int $idPob, string $date, array $dayRange): array
+    {
+        $fromDb = trim((string)($dayRange['from_db'] ?? ''));
+        $toDb = trim((string)($dayRange['to_db'] ?? ''));
+        $fromZ = trim((string)($dayRange['from_z'] ?? ''));
+
+        if ($fromDb === '' || $toDb === '' || $fromZ === '') {
+            return $dayRange;
+        }
+
+        if ($date !== cb_restia_online_current_workday_date()) {
+            return $dayRange;
+        }
+
+        $candidates = [];
+
+        $firstOpen = cb_restia_online_first_open_created_at($conn, $idPob, $fromDb);
+        if ($firstOpen !== '' && strcmp($firstOpen, $toDb) < 0) {
+            $candidates[] = $firstOpen;
+        }
+
+        $lastRun = cb_restia_online_status_updated_from($conn, 120);
+        $lastRunFrom = trim((string)($lastRun['from_db'] ?? ''));
+        if ($lastRunFrom !== '' && strcmp($lastRunFrom, $toDb) < 0) {
+            $candidates[] = $lastRunFrom;
+        }
+
+        if ($candidates === []) {
+            return $dayRange;
+        }
+
+        sort($candidates, SORT_STRING);
+        $newFromDb = (string)$candidates[0];
+        if (strcmp($newFromDb, $fromDb) < 0) {
+            $newFromDb = $fromDb;
+        }
+
+        $newFromZ = cb_restia_online_local_to_utc_z($newFromDb);
+        if ($newFromZ === '') {
+            return $dayRange;
+        }
+
+        $dayRange['from_db'] = $newFromDb;
+        $dayRange['from_z'] = $newFromZ;
+
+        return $dayRange;
+    }
+}
+
 if (!function_exists('cb_restia_online_day_lock_name')) {
     function cb_restia_online_day_lock_name(int $idPob, string $date): string
     {
@@ -1137,6 +1205,8 @@ if (!function_exists('cb_restia_online_import_day')) {
         $nazev = (string)$branch['nazev'];
         $activePosId = (string)$branch['active_pos_id'];
         $dayRange = cb_restia_online_day_range_utc($date);
+        $dayRangeFull = $dayRange;
+        $dayRange = cb_restia_online_created_from_for_day($conn, $idPob, $date, $dayRange);
         $createdFromZ = (string)($dayRange['from_z'] ?? '');
         $createdToZ = (string)($dayRange['to_z'] ?? '');
         if ($createdFromZ === '' || $createdToZ === '') {
@@ -1151,7 +1221,7 @@ if (!function_exists('cb_restia_online_import_day')) {
 
         try {
             $lockName = cb_restia_online_day_lock_acquire($conn, $idPob, $date, 10);
-            $idImport = cb_restia_online_obj_import_begin($conn, $idPob, $dayRange['from_db'], $dayRange['to_db']);
+            $idImport = cb_restia_online_obj_import_begin($conn, $idPob, $dayRangeFull['from_db'], $dayRangeFull['to_db']);
             $page = 1;
             while (true) {
                 $res = cb_restia_get('/api/orders', [
@@ -1193,11 +1263,22 @@ if (!function_exists('cb_restia_online_import_day')) {
                         $existingInfo = (isset($existingMap[$restiaIdObj]) && is_array($existingMap[$restiaIdObj])) ? $existingMap[$restiaIdObj] : [];
                         $existingIdObj = (int)($existingInfo['id_obj'] ?? 0);
                         $existingClosedAt = trim((string)($existingInfo['cas_uzavreni'] ?? ''));
+                        $existingStatusChangedAt = substr(trim((string)($existingInfo['cas_status_zmena'] ?? '')), 0, 19);
 
                         if ($existingIdObj > 0 && $existingClosedAt !== '') {
                             $pocetObj++;
                             $pocetIgnore++;
                             continue;
+                        }
+
+                        if ($existingIdObj > 0) {
+                            $restiaStatusChangedAt = cb_restia_online_restia_to_local_nullable($order['statusUpdatedAt'] ?? null);
+                            $restiaStatusChangedAt = substr(trim((string)($restiaStatusChangedAt ?? '')), 0, 19);
+                            if ($restiaStatusChangedAt !== '' && $existingStatusChangedAt !== '' && $restiaStatusChangedAt === $existingStatusChangedAt) {
+                                $pocetObj++;
+                                $pocetIgnore++;
+                                continue;
+                            }
                         }
 
                         $savepoint = 'restia_' . $page . '_' . ($orderIndex + 1);
