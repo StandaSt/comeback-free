@@ -467,7 +467,7 @@ $vybranePozice = post_ids('pozice');
                         <label class="field"><span>Napište nám něco o sobě</span><textarea name="povidani" rows="6" maxlength="5000" placeholder="Například jakou máte praxi, jaké směny vám vyhovují nebo proč vás práce u nás zaujala."><?= e(post_text('povidani', 5000)) ?></textarea><small>Nemusí to být formální. Stačí pár vět.</small></label>
                     </fieldset>
 
-                    <label class="consent"><input type="checkbox" name="souhlas" value="1" <?= isset($_POST['souhlas']) ? 'checked' : '' ?> required><span>Souhlasím se zpracováním uvedených osobních údajů společností Pizza Comeback pro účely výběrového řízení. *</span></label>
+                    <label class="consent"><input type="checkbox" name="souhlas" value="1" <?= isset($_POST['souhlas']) ? 'checked' : '' ?> required><span>Souhlasím se zpracováním uvedených osobních údajů společností Rolling dough s.r.o. IČ: 06636705,<br>provozovatelem Pizza Comeback pro účely výběrového řízení.</span></label>
                     <button class="button primary" type="submit">Odeslat dotazník <span>→</span></button>
                     <p class="privacy-note">Údaje použijeme pouze pro komunikaci a posouzení vašeho zájmu o práci.</p>
                 </form>
