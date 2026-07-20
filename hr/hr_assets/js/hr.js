@@ -22,4 +22,5 @@
         localStorage.setItem(storageKey, nextTheme);
         applyTheme(nextTheme);
     });
+
 })();

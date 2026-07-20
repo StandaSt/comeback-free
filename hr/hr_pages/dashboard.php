@@ -13,32 +13,32 @@ $dovolene = $dashboard['dovolene'];
 $latest = $dashboard['latest'];
 ?>
 <section class="stats-grid">
-    <article class="stat-card accent-blue">
+    <a class="stat-card accent-blue" href="?page=nabor" aria-label="Nábor">
         <div class="stat-icon">N</div>
         <div>
             <span>Nábor</span>
             <strong><?= h($nabor['novy']) ?> / <?= h($nabor['v_procesu']) ?></strong>
             <small>noví / v procesu</small>
         </div>
-    </article>
+    </a>
 
-    <article class="stat-card accent-green">
+    <a class="stat-card accent-green" href="?page=zamestnanci" aria-label="Zaměstnanci">
         <div class="stat-icon">Z</div>
         <div>
             <span>Zaměstnanci</span>
             <strong><?= h($zamestnanci['HPP']) ?> / <?= h($zamestnanci['DPC']) ?> / <?= h($zamestnanci['DPP']) ?></strong>
             <small>HPP / DPČ / DPP</small>
         </div>
-    </article>
+    </a>
 
-    <article class="stat-card accent-orange">
+    <a class="stat-card accent-orange" href="?page=pozadavky" aria-label="Požadavky">
         <div class="stat-icon">P</div>
         <div>
             <span>Požadavky</span>
             <strong><?= h($pozadavky['celkem']) ?> / <?= h($pozadavky['instor']) ?> / <?= h($pozadavky['kuryr']) ?></strong>
             <small>celkem / instor / kurýr</small>
         </div>
-    </article>
+    </a>
 
     <article class="stat-card accent-red">
         <div class="stat-icon">!</div>

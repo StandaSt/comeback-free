@@ -48,7 +48,7 @@ button, input, textarea { font: inherit; }
 .brand-text strong, .brand-text small { display: block; }
 .brand-text strong { font-size: 14px; letter-spacing: .08em; }
 .brand-text small { margin-top: 1px; color: rgba(255,255,255,.72); font-size: 12px; }
-.hero-content { position: relative; z-index: 1; margin: 22vh 0 0; max-width: 620px; }
+.hero-content { position: relative; z-index: 1; margin: 25vh 0 0; max-width: 620px; }
 .eyebrow { display: inline-block; margin-bottom: 12px; color: #aecdff; font-size: 12px; font-weight: 800; letter-spacing: .12em; }
 .hero h1 { max-width: 650px; margin: 0; font-size: clamp(36px, 4.2vw, 66px); line-height: 1.06; letter-spacing: -.045em; }
 .hero p { max-width: 580px; margin: 16px 0 0; color: rgba(255,255,255,.78); font-size: clamp(16px, 1.45vw, 20px); }

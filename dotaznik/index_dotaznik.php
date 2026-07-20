@@ -41,6 +41,23 @@ function post_ids(string $name): array
     return array_values($ids);
 }
 
+function post_allowed_values(string $name, array $allowed): array
+{
+    $values = $_POST[$name] ?? [];
+    if (!is_array($values)) {
+        return [];
+    }
+
+    $out = [];
+    foreach ($values as $value) {
+        $text = trim((string)$value);
+        if (in_array($text, $allowed, true)) {
+            $out[$text] = $text;
+        }
+    }
+    return array_values($out);
+}
+
 function normalizuj_telefon(string $telefon): string
 {
     $plus = str_starts_with(trim($telefon), '+');
@@ -77,22 +94,6 @@ function nacti_ciselniky(mysqli $db): array
     $result->free();
 
     return $pozice;
-}
-
-function nacti_pracoviste_ids(mysqli $db, string $mesto): array
-{
-    $stmt = $db->prepare('SELECT id_pob FROM pobocka WHERE mesto = ? AND aktivni = 1 AND id_pob > 0 ORDER BY id_pob');
-    $stmt->bind_param('s', $mesto);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    $ids = [];
-    while ($row = $result->fetch_assoc()) {
-        $ids[] = (int)$row['id_pob'];
-    }
-
-    $stmt->close();
-    return $ids;
 }
 
 function formatuj_datum_cas(string $datumCas): string
@@ -184,7 +185,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $db instanceof mysqli) {
     $mzdaText = str_replace(',', '.', post_text('ocekavana_mzda', 20));
     $povidani = post_text('povidani', 5000);
     $poziceIds = post_ids('pozice');
-    $mesto = post_text('mesto', 20);
+    $mesta = post_allowed_values('mesto', ['Praha', 'Plzeň']);
+    $pracovistePreference = implode(', ', $mesta);
     $souhlas = isset($_POST['souhlas']) ? 1 : 0;
 
     if ($jmeno === '') $chyby[] = 'Vyplňte křestní jméno.';
@@ -192,7 +194,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $db instanceof mysqli) {
     if ($telefon === '' || mb_strlen($telefonNormalizovany) < 9) $chyby[] = 'Vyplňte platné telefonní číslo.';
     if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) $chyby[] = 'Vyplňte platnou e-mailovou adresu.';
     if ($poziceIds === []) $chyby[] = 'Vyberte alespoň jednu pozici.';
-    if (!in_array($mesto, ['Praha', 'Plzeň'], true)) $chyby[] = 'Vyberte město, ve kterém chcete pracovat.';
+    if ($mesta === []) $chyby[] = 'Vyberte alespoň jedno město, ve kterém chcete pracovat.';
     if ($souhlas !== 1) $chyby[] = 'Pro odeslání je potřeba souhlasit se zpracováním údajů pro účely náboru.';
 
     if ($moznyNastup !== '') {
@@ -245,13 +247,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $db instanceof mysqli) {
 
             $zdroj = $db->query("SELECT id_uchazec_zdroj FROM hr_uchazec_zdroj WHERE nazev = 'Veřejný dotazník' AND aktivni = 1 LIMIT 1")->fetch_assoc();
             $idZdroj = $zdroj ? (int)$zdroj['id_uchazec_zdroj'] : null;
+            $idSlot = (int)$poziceIds[0];
 
             $stmt = $db->prepare("INSERT INTO hr_uchazec (
-                id_uchazec_stav, id_uchazec_zdroj, id_uchazec_duplicita, jmeno, prijmeni, telefon,
+                id_uchazec_stav, id_uchazec_zdroj, id_uchazec_duplicita, id_slot, pracoviste_preference, jmeno, prijmeni, telefon,
                 telefon_normalizovany, email, mozny_nastup, ocekavana_mzda,
                 povidani, prvni_kontakt, posledni_aktivita, zadal, zadano, aktivni
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?, ?, NOW(), NOW(), NULL, NOW(), 1)");
-            $stmt->bind_param('iiissssssds', $idStav, $idZdroj, $idUchazecDuplicita, $jmeno, $prijmeni, $telefon, $telefonNormalizovany, $email, $moznyNastup, $ocekavanaMzda, $povidani);
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?, ?, NOW(), NOW(), NULL, NOW(), 1)");
+            $stmt->bind_param('iiiisssssssds', $idStav, $idZdroj, $idUchazecDuplicita, $idSlot, $pracovistePreference, $jmeno, $prijmeni, $telefon, $telefonNormalizovany, $email, $moznyNastup, $ocekavanaMzda, $povidani);
             $stmt->execute();
             $idUchazec = (int)$db->insert_id;
             $stmt->close();
@@ -259,26 +262,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $db instanceof mysqli) {
             $stmt = $db->prepare("INSERT INTO hr_uchazec_stav_historie (id_uchazec, id_uchazec_stav, duvod, zadal, zadano) VALUES (?, ?, 'Nový uchazeč z veřejného dotazníku', NULL, NOW())");
             $stmt->bind_param('ii', $idUchazec, $idStav);
             $stmt->execute();
-            $stmt->close();
-
-            $stmt = $db->prepare('INSERT INTO hr_uchazec_pozice (id_uchazec, id_slot, hlavni, poznamka, zadal, zadano, aktivni) VALUES (?, ?, ?, NULL, NULL, NOW(), 1)');
-            foreach ($poziceIds as $i => $idSlot) {
-                $hlavni = $i === 0 ? 1 : 0;
-                $stmt->bind_param('iii', $idUchazec, $idSlot, $hlavni);
-                $stmt->execute();
-            }
-            $stmt->close();
-
-            $pracovisteIds = nacti_pracoviste_ids($db, $mesto);
-            if ($pracovisteIds === []) throw new RuntimeException('Chybí pracoviště pro zvolené město.');
-
-            $poznamkaPracoviste = 'Zvolené město ve veřejném dotazníku: ' . $mesto;
-            $stmt = $db->prepare('INSERT INTO hr_uchazec_pracoviste (id_uchazec, id_pob, hlavni, poznamka, zadal, zadano, aktivni) VALUES (?, ?, ?, ?, NULL, NOW(), 1)');
-            foreach ($pracovisteIds as $i => $idPob) {
-                $hlavni = $i === 0 ? 1 : 0;
-                $stmt->bind_param('iiis', $idUchazec, $idPob, $hlavni, $poznamkaPracoviste);
-                $stmt->execute();
-            }
             $stmt->close();
 
             $typ = $db->query("SELECT id_dotaznik_typ FROM hr_dotaznik_typ WHERE kod = 'prvni_kontakt' AND aktivni = 1 ORDER BY verze DESC LIMIT 1")->fetch_assoc();
@@ -291,7 +274,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $db instanceof mysqli) {
                 'telefon' => $telefon,
                 'email' => $email,
                 'pozice' => $poziceIds,
-                'mesto' => $mesto,
+                'mesta' => $mesta,
                 'mozny_nastup' => $moznyNastup,
                 'ocekavana_mzda' => $ocekavanaMzda,
                 'povidani' => $povidani,
@@ -358,6 +341,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $db instanceof mysqli) {
 
 $csrf = (string)($_SESSION['dotaznik_csrf'] ?? novy_csrf_token());
 $vybranePozice = post_ids('pozice');
+$vybranaMesta = post_allowed_values('mesto', ['Praha', 'Plzeň']);
 ?><!DOCTYPE html>
 <html lang="cs">
 <head>
@@ -451,7 +435,7 @@ $vybranePozice = post_ids('pozice');
                         <div class="city-grid">
                             <?php foreach (['Praha', 'Plzeň'] as $mestoVolba): ?>
                                 <label class="city-choice">
-                                    <input type="radio" name="mesto" value="<?= e($mestoVolba) ?>" <?= post_text('mesto', 20) === $mestoVolba ? 'checked' : '' ?> required>
+                                    <input type="checkbox" name="mesto[]" value="<?= e($mestoVolba) ?>" <?= in_array($mestoVolba, $vybranaMesta, true) ? 'checked' : '' ?>>
                                     <span><?= e($mestoVolba) ?></span>
                                 </label>
                             <?php endforeach; ?>

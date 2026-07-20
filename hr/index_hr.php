@@ -110,7 +110,7 @@ $pages = [
         'title' => 'Přehled',
     ],
     'nabor' => [
-        'file' => __DIR__ . '/hr_pages/placeholder.php',
+        'file' => __DIR__ . '/hr_pages/nabor.php',
         'title' => 'Nábor',
     ],
     'zamestnanci' => [
@@ -124,6 +124,10 @@ $pages = [
     'novy_zamestnanec' => [
         'file' => __DIR__ . '/hr_pages/novy_zamestnanec.php',
         'title' => 'Nový zaměstnanec',
+    ],
+    'pozadavky' => [
+        'file' => __DIR__ . '/hr_pages/pozadavky.php',
+        'title' => 'Požadavky',
     ],
     'pracovni_pomery' => [
         'file' => __DIR__ . '/hr_pages/placeholder.php',
@@ -193,6 +197,27 @@ if ($userRole === '') {
     $userRole = 'Uživatel';
 }
 $db = db();
+
+if ($page === 'pozadavky' && $_SERVER['REQUEST_METHOD'] === 'POST' && in_array($roleId, [1, 5], true)) {
+    $mainPobocka = hr_nacti_hlavni_pobocku_uzivatele($db, (int)($cbUser['id_user'] ?? 0));
+    $akce = (string)($_POST['akce'] ?? 'vytvorit');
+
+    if ($akce === 'zrusit') {
+        hr_zrus_pozadavek($db, (int)($_POST['id_hr_pozadavek'] ?? 0), (int)$mainPobocka['id_pob'], (int)($cbUser['id_user'] ?? 0), $roleId);
+        $_SESSION['hr_pozadavek_zrusen'] = 1;
+    } else {
+        $pocet = (int)($_POST['pocet'] ?? 1);
+        $idSlot = (int)($_POST['id_slot'] ?? 0);
+        $upresneni = mb_substr(trim((string)($_POST['upresneni'] ?? '')), 0, 500);
+
+        hr_uloz_pozadavek($db, (int)$mainPobocka['id_pob'], $idSlot, $pocet, $upresneni, (int)($cbUser['id_user'] ?? 0));
+        $_SESSION['hr_pozadavek_ulozeno'] = 1;
+    }
+
+    header('Location: ?page=pozadavky');
+    exit;
+}
+
 $flash = $_SESSION['hr_flash'] ?? null;
 unset($_SESSION['hr_flash']);
 $hrCssUrl = cb_current_module_url('hr_assets/css/hr.css');

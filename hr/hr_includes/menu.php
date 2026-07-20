@@ -5,6 +5,7 @@ $menuItems = [
     ['page' => 'dashboard', 'label' => 'Přehled', 'icon' => '⌂'],
     ['page' => 'nabor', 'label' => 'Nábor', 'icon' => '＋'],
     ['page' => 'zamestnanci', 'label' => 'Zaměstnanci', 'icon' => '👥'],
+    ['page' => 'pozadavky', 'label' => 'Požadavky', 'icon' => '▤'],
     ['page' => 'pracovni_pomery', 'label' => 'Pracovní poměry', 'icon' => '▣'],
     ['page' => 'dokumenty', 'label' => 'Dokumenty', 'icon' => '▤'],
     ['page' => 'skoleni', 'label' => 'Školení', 'icon' => '◇'],
