@@ -15,8 +15,9 @@ if (empty($_SESSION['login_ok'])) {
 
 $cbUser = $_SESSION['cb_user'] ?? [];
 $roleId = is_array($cbUser) ? (int)($cbUser['id_role'] ?? 0) : 0;
+$userId = is_array($cbUser) ? (int)($cbUser['id_user'] ?? 0) : 0;
 
-if ($roleId !== 1) {
+if ($roleId !== 1 && $userId !== 57) {
     ?><!DOCTYPE html>
 <html lang="cs">
 <head>

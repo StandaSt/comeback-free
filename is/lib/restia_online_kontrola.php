@@ -344,3 +344,7 @@ if (!function_exists('cb_restia_online_kontrola')) {
         cb_restia_online_kontrola_notify_admin($db, $idAkce, $zapisy, $aktualizace, $ignore);
     }
 }
+
+if (isset($_SERVER['SCRIPT_FILENAME']) && realpath((string)$_SERVER['SCRIPT_FILENAME']) === __FILE__) {
+    cb_restia_online_kontrola();
+}
