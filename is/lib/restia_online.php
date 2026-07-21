@@ -1331,7 +1331,7 @@ if (!function_exists('cb_restia_online_import_day')) {
             cb_restia_online_obj_import_finish($conn, $idImport, $pocetObj, $pocetNovych, $pocetZmenenych, $pocetChyb, $poznamka);
             cb_restia_online_try_flush_api($conn, $auth);
 
-            return ['date' => $date, 'branch' => $nazev, 'count' => $pocetObj, 'nove' => $pocetNovych, 'aktualizace' => $pocetZmenenych, 'ignore' => $pocetIgnore, 'errors' => $pocetChyb, 'error' => '', 'ok' => 1, 'log_lines' => $logLines];
+            return ['date' => $date, 'id_pob' => $idPob, 'branch' => $nazev, 'created_from' => $createdFromZ, 'created_to' => $createdToZ, 'count' => $pocetObj, 'nove' => $pocetNovych, 'aktualizace' => $pocetZmenenych, 'ignore' => $pocetIgnore, 'errors' => $pocetChyb, 'error' => '', 'ok' => 1, 'log_lines' => $logLines];
         } catch (Throwable $e) {
             cb_restia_online_try_flush_api($conn, $auth);
             $fatalLine = 'FATAL_STEP: datum=' . $date . ' | id_pob=' . $idPob . ' | msg=' . $e->getMessage();
@@ -1484,6 +1484,57 @@ if (!function_exists('cb_restia_online_progress_emit')) {
     }
 }
 
+if (!function_exists('cb_restia_online_active_id_akce')) {
+    function cb_restia_online_active_id_akce(mysqli $conn): int
+    {
+        $res = $conn->query('
+            SELECT id_akce
+            FROM online_restia
+            WHERE aktivni = 1
+            ORDER BY id_akce DESC
+            LIMIT 1
+        ');
+        if (!($res instanceof mysqli_result)) {
+            return 0;
+        }
+
+        $row = $res->fetch_assoc();
+        $res->free();
+
+        return (int)($row['id_akce'] ?? 0);
+    }
+}
+
+if (!function_exists('cb_restia_online_insert_branch_progress')) {
+    function cb_restia_online_insert_branch_progress(
+        mysqli $conn,
+        int $idAkce,
+        int $idPob,
+        string $createdFrom,
+        string $createdTo,
+        int $zapisy,
+        int $aktualizace,
+        int $ignore
+    ): void {
+        if ($idAkce <= 0 || $idPob <= 0) {
+            return;
+        }
+
+        $stmt = $conn->prepare('
+            INSERT INTO online_restia_pobocky
+                (id_akce, id_pob, `od`, `do`, zapisy, aktualizace, `ignore`)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ');
+        if ($stmt === false) {
+            throw new RuntimeException('DB prepare selhal: online_restia_pobocky insert.');
+        }
+
+        $stmt->bind_param('iissiii', $idAkce, $idPob, $createdFrom, $createdTo, $zapisy, $aktualizace, $ignore);
+        $stmt->execute();
+        $stmt->close();
+    }
+}
+
 
 if (!function_exists('cb_restia_online_run')) {
     function cb_restia_online_run(): array
@@ -1509,6 +1560,7 @@ if (!function_exists('cb_restia_online_run')) {
         try {
             $auth = cb_restia_online_get_auth();
 
+            $idAkce = cb_restia_online_active_id_akce($conn);
             $currentDate = cb_restia_online_current_workday_date();
             $branches = cb_restia_online_active_branches($conn);
             foreach ($branches as $branch) {
@@ -1518,6 +1570,16 @@ if (!function_exists('cb_restia_online_run')) {
                     $zapisy += (int)($day['nove'] ?? 0);
                     $aktualizace += (int)($day['aktualizace'] ?? 0);
                     $ignore += (int)($day['ignore'] ?? 0);
+                    cb_restia_online_insert_branch_progress(
+                        $conn,
+                        $idAkce,
+                        (int)($day['id_pob'] ?? 0),
+                        (string)($day['created_from'] ?? ''),
+                        (string)($day['created_to'] ?? ''),
+                        (int)($day['nove'] ?? 0),
+                        (int)($day['aktualizace'] ?? 0),
+                        (int)($day['ignore'] ?? 0)
+                    );
                     cb_restia_online_progress_emit([
                         'zapisy' => $zapisy,
                         'aktualizace' => $aktualizace,
