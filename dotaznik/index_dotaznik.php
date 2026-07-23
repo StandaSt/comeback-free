@@ -419,9 +419,12 @@ $vybranaMesta = post_allowed_values('mesto', ['Praha', 'Plzeň']);
 <div class="page">
     <header class="hero">
         <div class="hero-content">
-            <span class="eyebrow">PRÁCE V PIZZA COMEBACK</span>
-            <h1>Máte zájem pracovat v Pizza Comeback?</h1>
-            <p>Vyplňte prosím několik základních údajů. Budeme Vás co nejdříve kontaktovat ohledně dalšího postupu.</p>
+            <h1>Přidejte se k nám</h1>
+            <p>Hledáme nové kolegy do restaurací i na rozvoz.<p>
+            <p>Chcete připravovat pizzu nebo objednávky rozvážet?<br>
+            Je to možné. Volba je na Vás.<p> 
+            <p>Vyplňte dotazník vpravo a budeme Vás co nejdříve kontaktovat.<br>
+            Domluvíme si pohovor a probereme detaily případné spolupráce.</p>
         </div>
     </header>
 
