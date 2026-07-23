@@ -70,6 +70,19 @@ function klient_ip(): string
     return mb_substr(trim((string)($_SERVER['REMOTE_ADDR'] ?? '')), 0, 45);
 }
 
+function dotaznik_hr_zapis_akci(mysqli $db, ?int $idPerson, string $akce, string $detail = ''): void
+{
+    // Zapise verejnou nebo systemovou udalost do spolecne HR auditni tabulky.
+    $detailDb = $detail !== '' ? $detail : null;
+    $stmt = $db->prepare('
+        INSERT INTO hr_akce (id_person, akce, detail, vytvoreno)
+        VALUES (?, ?, ?, NOW())
+    ');
+    $stmt->bind_param('iss', $idPerson, $akce, $detailDb);
+    $stmt->execute();
+    $stmt->close();
+}
+
 function novy_csrf_token(): string
 {
     $token = bin2hex(random_bytes(32));
@@ -105,13 +118,22 @@ function formatuj_datum_cas(string $datumCas): string
 function najdi_presnou_duplicitu(mysqli $db, string $jmeno, string $prijmeni, string $telefonNormalizovany, string $email): ?array
 {
     $stmt = $db->prepare('
-        SELECT id_uchazec, zadano
-        FROM hr_uchazec
-        WHERE jmeno = ?
-            AND prijmeni = ?
-            AND telefon_normalizovany = ?
-            AND email = ?
-        ORDER BY zadano DESC, id_uchazec DESC
+        SELECT p.id_person, p.zadano
+        FROM hr_person p
+        INNER JOIN hr_telefon tel
+            ON tel.id_person = p.id_person
+           AND tel.platny = 1
+           AND tel.hlavni = 1
+        INNER JOIN hr_email em
+            ON em.id_person = p.id_person
+           AND em.platny = 1
+           AND em.hlavni = 1
+        WHERE p.jmeno = ?
+            AND p.prijmeni = ?
+            AND tel.telefon_normalizovany = ?
+            AND em.email = ?
+            AND p.aktivni = 1
+        ORDER BY p.zadano DESC, p.id_person DESC
         LIMIT 1
     ');
     $stmt->bind_param('ssss', $jmeno, $prijmeni, $telefonNormalizovany, $email);
@@ -125,11 +147,27 @@ function najdi_presnou_duplicitu(mysqli $db, string $jmeno, string $prijmeni, st
 function najdi_kontaktni_duplicitu(mysqli $db, string $jmeno, string $prijmeni, string $telefonNormalizovany, string $email): ?array
 {
     $stmt = $db->prepare('
-        SELECT id_uchazec, jmeno, prijmeni, telefon, telefon_normalizovany, email, zadano
-        FROM hr_uchazec
-        WHERE (telefon_normalizovany = ? OR email = ?)
-            AND NOT (jmeno = ? AND prijmeni = ? AND telefon_normalizovany = ? AND email = ?)
-        ORDER BY zadano DESC, id_uchazec DESC
+        SELECT
+            p.id_person,
+            p.jmeno,
+            p.prijmeni,
+            tel.telefon,
+            tel.telefon_normalizovany,
+            em.email,
+            p.zadano
+        FROM hr_person p
+        LEFT JOIN hr_telefon tel
+            ON tel.id_person = p.id_person
+           AND tel.platny = 1
+           AND tel.hlavni = 1
+        LEFT JOIN hr_email em
+            ON em.id_person = p.id_person
+           AND em.platny = 1
+           AND em.hlavni = 1
+        WHERE (tel.telefon_normalizovany = ? OR em.email = ?)
+            AND NOT (p.jmeno = ? AND p.prijmeni = ? AND tel.telefon_normalizovany = ? AND em.email = ?)
+            AND p.aktivni = 1
+        ORDER BY p.zadano DESC, p.id_person DESC
         LIMIT 1
     ');
     $stmt->bind_param('ssssss', $telefonNormalizovany, $email, $jmeno, $prijmeni, $telefonNormalizovany, $email);
@@ -215,7 +253,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $db instanceof mysqli) {
 
     $presnaDuplicita = null;
     $kontaktniDuplicita = null;
-    $idUchazecDuplicita = null;
+    $idPersonDuplicita = null;
 
     if ($chyby === []) {
         $presnaDuplicita = najdi_presnou_duplicitu($db, $jmeno, $prijmeni, $telefonNormalizovany, $email);
@@ -225,14 +263,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $db instanceof mysqli) {
             if ($zadanoCas && $zadanoCas >= new DateTimeImmutable('-30 days')) {
                 $chyby[] = 'Vámi zadané údaje již byly použity ' . formatuj_datum_cas($zadano) . '.';
             } else {
-                $idUchazecDuplicita = (int)$presnaDuplicita['id_uchazec'];
+                $idPersonDuplicita = (int)$presnaDuplicita['id_person'];
             }
         }
 
         if ($chyby === []) {
             $kontaktniDuplicita = najdi_kontaktni_duplicitu($db, $jmeno, $prijmeni, $telefonNormalizovany, $email);
-            if ($idUchazecDuplicita === null && $kontaktniDuplicita !== null) {
-                $idUchazecDuplicita = (int)$kontaktniDuplicita['id_uchazec'];
+            if ($idPersonDuplicita === null && $kontaktniDuplicita !== null) {
+                $idPersonDuplicita = (int)$kontaktniDuplicita['id_person'];
             }
         }
     }
@@ -249,18 +287,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $db instanceof mysqli) {
             $idZdroj = $zdroj ? (int)$zdroj['id_uchazec_zdroj'] : null;
             $idSlot = (int)$poziceIds[0];
 
-            $stmt = $db->prepare("INSERT INTO hr_uchazec (
-                id_uchazec_stav, id_uchazec_zdroj, id_uchazec_duplicita, id_slot, pracoviste_preference, jmeno, prijmeni, telefon,
-                telefon_normalizovany, email, mozny_nastup, ocekavana_mzda,
+            // Zalozi osobu jako uchazece v jednotne HR tabulce.
+            $stmt = $db->prepare("INSERT INTO hr_person (
+                vztah, id_uchazec_stav, id_uchazec_zdroj, id_person_duplicita, id_slot,
+                pracoviste_preference, jmeno, prijmeni, mozny_nastup, ocekavana_mzda,
                 povidani, prvni_kontakt, posledni_aktivita, zadal, zadano, aktivni
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?, ?, NOW(), NOW(), NULL, NOW(), 1)");
-            $stmt->bind_param('iiiisssssssds', $idStav, $idZdroj, $idUchazecDuplicita, $idSlot, $pracovistePreference, $jmeno, $prijmeni, $telefon, $telefonNormalizovany, $email, $moznyNastup, $ocekavanaMzda, $povidani);
+            ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?, ?, NOW(), NOW(), NULL, NOW(), 1)");
+            $stmt->bind_param('iiiissssds', $idStav, $idZdroj, $idPersonDuplicita, $idSlot, $pracovistePreference, $jmeno, $prijmeni, $moznyNastup, $ocekavanaMzda, $povidani);
             $stmt->execute();
-            $idUchazec = (int)$db->insert_id;
+            $idPerson = (int)$db->insert_id;
             $stmt->close();
 
-            $stmt = $db->prepare("INSERT INTO hr_uchazec_stav_historie (id_uchazec, id_uchazec_stav, duvod, zadal, zadano) VALUES (?, ?, 'Nový uchazeč z veřejného dotazníku', NULL, NOW())");
-            $stmt->bind_param('ii', $idUchazec, $idStav);
+            // U verejneho dotazniku osoba vklada sama sebe.
+            $stmt = $db->prepare('UPDATE hr_person SET zadal = ? WHERE id_person = ?');
+            $stmt->bind_param('ii', $idPerson, $idPerson);
+            $stmt->execute();
+            $stmt->close();
+
+            // Ulozi hlavni telefon uchazece.
+            $telefonTyp = 1;
+            $hlavni = 1;
+            $platny = 1;
+            $stmt = $db->prepare('
+                INSERT INTO hr_telefon (id_person, id_telefon_typ, telefon, telefon_normalizovany, hlavni, zadal, vytvoreno, platny)
+                VALUES (?, ?, ?, ?, ?, ?, NOW(), ?)
+            ');
+            $stmt->bind_param('iissiii', $idPerson, $telefonTyp, $telefon, $telefonNormalizovany, $hlavni, $idPerson, $platny);
+            $stmt->execute();
+            $stmt->close();
+
+            // Ulozi hlavni e-mail uchazece.
+            $emailTyp = 1;
+            $stmt = $db->prepare('
+                INSERT INTO hr_email (id_person, id_email_typ, email, hlavni, zadal, vytvoreno, platny)
+                VALUES (?, ?, ?, ?, ?, NOW(), ?)
+            ');
+            $stmt->bind_param('iisiii', $idPerson, $emailTyp, $email, $hlavni, $idPerson, $platny);
             $stmt->execute();
             $stmt->close();
 
@@ -285,42 +347,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $db instanceof mysqli) {
             $ip = klient_ip();
             $userAgent = mb_substr(trim((string)($_SERVER['HTTP_USER_AGENT'] ?? '')), 0, 500);
             $stmt = $db->prepare("INSERT INTO hr_uchazec_dotaznik (
-                id_uchazec, id_dotaznik_typ, stav, odeslano, otevreno, ulozeno,
+                id_person, id_dotaznik_typ, stav, odeslano, otevreno, ulozeno,
                 data_json, ip_adresa, user_agent, zadal, zadano
-            ) VALUES (?, ?, 'vyplnen', NOW(), NULL, NOW(), ?, ?, ?, NULL, NOW())");
-            $stmt->bind_param('iisss', $idUchazec, $idDotaznikTyp, $dataJson, $ip, $userAgent);
+            ) VALUES (?, ?, 'vyplnen', NOW(), NULL, NOW(), ?, ?, ?, ?, NOW())");
+            $stmt->bind_param('iisssi', $idPerson, $idDotaznikTyp, $dataJson, $ip, $userAgent, $idPerson);
             $stmt->execute();
             $stmt->close();
+
+            dotaznik_hr_zapis_akci($db, $idPerson, 'odeslani_verejneho_dotazniku', 'Uchazec odeslal verejny dotaznik.');
 
             $aktivitaTyp = $db->query("SELECT id_uchazec_aktivita_typ FROM hr_uchazec_aktivita_typ WHERE kod = 'systemova_udalost' AND aktivni = 1 LIMIT 1")->fetch_assoc();
             if (!$aktivitaTyp) throw new RuntimeException('Chybí typ aktivity systemova_udalost.');
             $idAktivitaTyp = (int)$aktivitaTyp['id_uchazec_aktivita_typ'];
             $predmet = 'Dorazil veřejný dotazník';
             $obsah = 'Uchazeč odeslal veřejný dotazník pro první kontakt.';
-            $stmt = $db->prepare('INSERT INTO hr_uchazec_aktivita (id_uchazec, id_uchazec_aktivita_typ, provedeno_kdy, predmet, obsah, id_user, zadano) VALUES (?, ?, NOW(), ?, ?, NULL, NOW())');
-            $stmt->bind_param('iiss', $idUchazec, $idAktivitaTyp, $predmet, $obsah);
+            $stmt = $db->prepare('INSERT INTO hr_uchazec_aktivita (id_person, id_uchazec_aktivita_typ, provedeno_kdy, predmet, obsah, zadano) VALUES (?, ?, NOW(), ?, ?, NOW())');
+            $stmt->bind_param('iiss', $idPerson, $idAktivitaTyp, $predmet, $obsah);
             $stmt->execute();
             $stmt->close();
 
-            if ($presnaDuplicita !== null && $idUchazecDuplicita !== null) {
+            if ($presnaDuplicita !== null && $idPersonDuplicita !== null) {
                 $predmet = 'Opakovaný kontakt uchazeče';
-                $obsah = 'Uchazeč zadal stejné údaje jako u staršího záznamu #' . $idUchazecDuplicita . '. Původní záznam byl vytvořen ' . formatuj_datum_cas((string)$presnaDuplicita['zadano']) . '.';
-                $stmt = $db->prepare('INSERT INTO hr_uchazec_aktivita (id_uchazec, id_uchazec_aktivita_typ, provedeno_kdy, predmet, obsah, id_user, zadano) VALUES (?, ?, NOW(), ?, ?, NULL, NOW())');
-                $stmt->bind_param('iiss', $idUchazec, $idAktivitaTyp, $predmet, $obsah);
+                $obsah = 'Uchazeč zadal stejné údaje jako u staršího záznamu #' . $idPersonDuplicita . '. Původní záznam byl vytvořen ' . formatuj_datum_cas((string)$presnaDuplicita['zadano']) . '.';
+                $stmt = $db->prepare('INSERT INTO hr_uchazec_aktivita (id_person, id_uchazec_aktivita_typ, provedeno_kdy, predmet, obsah, zadano) VALUES (?, ?, NOW(), ?, ?, NOW())');
+                $stmt->bind_param('iiss', $idPerson, $idAktivitaTyp, $predmet, $obsah);
                 $stmt->execute();
                 $stmt->close();
             }
 
             if ($kontaktniDuplicita !== null) {
-                $idKontaktniDuplicita = (int)$kontaktniDuplicita['id_uchazec'];
+                $idKontaktniDuplicita = (int)$kontaktniDuplicita['id_person'];
                 $predmet = 'Možná duplicita kontaktu';
                 $obsah = 'Stejný telefon nebo e-mail už existuje u uchazeče #' . $idKontaktniDuplicita . ': '
                     . trim((string)$kontaktniDuplicita['jmeno'] . ' ' . (string)$kontaktniDuplicita['prijmeni'])
                     . ', telefon ' . (string)$kontaktniDuplicita['telefon']
                     . ', e-mail ' . (string)$kontaktniDuplicita['email']
                     . ', záznam vytvořen ' . formatuj_datum_cas((string)$kontaktniDuplicita['zadano']) . '.';
-                $stmt = $db->prepare('INSERT INTO hr_uchazec_aktivita (id_uchazec, id_uchazec_aktivita_typ, provedeno_kdy, predmet, obsah, id_user, zadano) VALUES (?, ?, NOW(), ?, ?, NULL, NOW())');
-                $stmt->bind_param('iiss', $idUchazec, $idAktivitaTyp, $predmet, $obsah);
+                $stmt = $db->prepare('INSERT INTO hr_uchazec_aktivita (id_person, id_uchazec_aktivita_typ, provedeno_kdy, predmet, obsah, zadano) VALUES (?, ?, NOW(), ?, ?, NOW())');
+                $stmt->bind_param('iiss', $idPerson, $idAktivitaTyp, $predmet, $obsah);
                 $stmt->execute();
                 $stmt->close();
             }
@@ -354,9 +418,6 @@ $vybranaMesta = post_allowed_values('mesto', ['Praha', 'Plzeň']);
 <body>
 <div class="page">
     <header class="hero">
-        <a class="brand" href="https://www.pizzacomeback.cz/" target="_blank" rel="noopener">
-            <img src="https://www.comebacks.cz/img/logo_comeback.png" alt="Pizza Comeback">
-        </a>
         <div class="hero-content">
             <span class="eyebrow">PRÁCE V PIZZA COMEBACK</span>
             <h1>Máte zájem pracovat v Pizza Comeback?</h1>
@@ -374,10 +435,16 @@ $vybranaMesta = post_allowed_values('mesto', ['Praha', 'Plzeň']);
             </section>
         <?php else: ?>
             <section class="form-card">
-                <div class="form-heading">
-                    <span>První kontakt</span>
-                    <h2>Sdělte nám prosím Vaše kontaktní údaje</h2>
-                    <p>Údaje použijeme k tomu, abychom Vás mohli kontaktovat ohledně pracovních možností.</p>
+                <div class="form-headline">
+                    <a class="brand" href="https://www.pizzacomeback.cz/" target="_blank" rel="noopener">
+                        <img src="../www/img/logo_transparent_1.png" alt="Pizza Comeback bez ramecku">
+                    </a>
+
+                    <div class="form-heading">
+                        <span>První kontakt</span>
+                        <h2>Sdělte nám prosím Vaše kontaktní údaje</h2>
+                        <p>Údaje použijeme k tomu, abychom Vás mohli kontaktovat ohledně pracovních možností.</p>
+                    </div>
                 </div>
 
                 <?php if ($dbChyba !== ''): ?><div class="message error"><?= e($dbChyba) ?></div><?php endif; ?>
@@ -408,9 +475,11 @@ $vybranaMesta = post_allowed_values('mesto', ['Praha', 'Plzeň']);
                             <?php foreach ($pozice as $polozka): ?>
                                 <?php $jeKuryr = $polozka['nazev'] === 'Kurýr'; ?>
                                 <label class="position-card">
-                                    <input type="checkbox" name="pozice[]" value="<?= $polozka['id'] ?>" <?= in_array($polozka['id'], $vybranePozice, true) ? 'checked' : '' ?>>
-                                    <span class="position-content">
+                                    <span class="position-main">
+                                        <input type="checkbox" name="pozice[]" value="<?= $polozka['id'] ?>" <?= in_array($polozka['id'], $vybranePozice, true) ? 'checked' : '' ?>>
                                         <strong><?= e($polozka['nazev']) ?></strong>
+                                    </span>
+                                    <span class="position-points">
                                         <ul>
                                             <?php if ($jeKuryr): ?>
                                                 <li>Rozvoz objednávek zákazníkům</li>
@@ -448,17 +517,15 @@ $vybranaMesta = post_allowed_values('mesto', ['Praha', 'Plzeň']);
                             <label class="field"><span>Nástup možný od:</span><input type="date" name="mozny_nastup" value="<?= e(post_text('mozny_nastup', 10)) ?>"></label>
                             <label class="field"><span>Představa o hodinové odměně</span><div class="input-suffix"><input type="number" name="ocekavana_mzda" value="<?= e(post_text('ocekavana_mzda', 20)) ?>" min="0" max="10000" step="1"><span>Kč/h</span></div></label>
                         </div>
-                        <label class="field"><span>Napište nám něco o sobě</span><textarea name="povidani" rows="6" maxlength="5000" placeholder="Například jakou máte praxi, jaké směny vám vyhovují nebo proč vás práce u nás zaujala."><?= e(post_text('povidani', 5000)) ?></textarea><small>Nemusí to být formální. Stačí pár vět.</small></label>
+                        <label class="field"><span>Napište nám něco o sobě</span><textarea name="povidani" rows="2" maxlength="5000" placeholder="Například jakou máte praxi, jaké směny vám vyhovují nebo proč vás práce u nás zaujala."><?= e(post_text('povidani', 5000)) ?></textarea><small>Nemusí to být formální. Stačí pár vět.</small></label>
                     </fieldset>
 
                     <label class="consent"><input type="checkbox" name="souhlas" value="1" <?= isset($_POST['souhlas']) ? 'checked' : '' ?> required><span>Souhlasím se zpracováním uvedených osobních údajů společností Rolling dough s.r.o. IČ: 06636705,<br>provozovatelem Pizza Comeback pro účely výběrového řízení.</span></label>
                     <button class="button primary" type="submit">Odeslat dotazník <span>→</span></button>
-                    <p class="privacy-note">Údaje použijeme pouze pro komunikaci a posouzení vašeho zájmu o práci.</p>
                 </form>
                 <?php endif; ?>
             </section>
         <?php endif; ?>
-        <footer><strong>Pizza Comeback</strong><span>První krok k práci u nás</span></footer>
     </main>
 </div>
 </body>

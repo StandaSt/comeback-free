@@ -13,12 +13,12 @@ function hr_fetch_lookup(mysqli $db, string $table, string $idColumn, string $la
     ];
 
     if (!isset($allowed[$table])) {
-        return [];
+        throw new RuntimeException('Nepovolený HR číselník: ' . $table);
     }
 
     [$safeId, $safeLabel, $safeOrder] = $allowed[$table];
     if ($idColumn !== $safeId || $labelColumn !== $safeLabel) {
-        return [];
+        throw new RuntimeException('Neplatné sloupce HR číselníku: ' . $table);
     }
 
     $orderBy = $orderColumn !== '' ? $safeOrder : $safeId;

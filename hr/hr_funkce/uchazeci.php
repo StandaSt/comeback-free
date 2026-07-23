@@ -31,7 +31,7 @@ function hr_pocet_uchazecu_text(int $pocet): string
 }
 
 /**
- * Nacte aktivni uchazece podle kodu jejich stavu.
+ * Nacte aktivni uchazece podle kodu jejich naboroveho stavu.
  */
 function hr_nacti_uchazece_podle_stavu(mysqli $db, array $stavy): array
 {
@@ -43,24 +43,33 @@ function hr_nacti_uchazece_podle_stavu(mysqli $db, array $stavy): array
     $placeholders = implode(',', array_fill(0, count($stavy), '?'));
     $sql = "
         SELECT
-            u.id_uchazec,
-            u.jmeno,
-            u.prijmeni,
-            u.telefon,
-            u.email,
-            u.pracoviste_preference,
-            u.zadano,
-            u.posledni_aktivita,
+            p.id_person,
+            p.jmeno,
+            p.prijmeni,
+            tel.telefon,
+            em.email,
+            p.pracoviste_preference,
+            p.zadano,
+            p.posledni_aktivita,
             s.nazev AS stav_nazev,
             cs.slot AS pozice
-        FROM hr_uchazec u
+        FROM hr_person p
         INNER JOIN hr_uchazec_stav s
-            ON s.id_uchazec_stav = u.id_uchazec_stav
+            ON s.id_uchazec_stav = p.id_uchazec_stav
         LEFT JOIN cis_slot cs
-            ON cs.id_slot = u.id_slot
-        WHERE u.aktivni = 1
+            ON cs.id_slot = p.id_slot
+        LEFT JOIN hr_telefon tel
+            ON tel.id_person = p.id_person
+           AND tel.platny = 1
+           AND tel.hlavni = 1
+        LEFT JOIN hr_email em
+            ON em.id_person = p.id_person
+           AND em.platny = 1
+           AND em.hlavni = 1
+        WHERE p.vztah = 1
+          AND p.aktivni = 1
           AND s.kod IN ({$placeholders})
-        ORDER BY u.zadano DESC, u.id_uchazec DESC
+        ORDER BY p.zadano DESC, p.id_person DESC
     ";
 
     $stmt = $db->prepare($sql);
@@ -78,20 +87,20 @@ function hr_nacti_uchazece_podle_stavu(mysqli $db, array $stavy): array
 }
 
 /**
- * Nacte naplanovane pohovory, ktere jeste neprobehly a nejsou zrusene.
+ * Nacte naplanovane pohovory uchazecu, ktere jeste neprobehly a nejsou zrusene.
  */
 function hr_nacti_domluvene_pohovory(mysqli $db): array
 {
     $sql = "
         SELECT
-            u.id_uchazec,
-            u.jmeno,
-            u.prijmeni,
-            u.telefon,
-            u.email,
-            u.pracoviste_preference,
-            u.zadano,
-            u.posledni_aktivita,
+            p.id_person,
+            p.jmeno,
+            p.prijmeni,
+            tel.telefon,
+            em.email,
+            p.pracoviste_preference,
+            p.zadano,
+            p.posledni_aktivita,
             s.nazev AS stav_nazev,
             cs.slot AS pozice,
             a.planovano_na,
@@ -100,13 +109,22 @@ function hr_nacti_domluvene_pohovory(mysqli $db): array
         FROM hr_uchazec_aktivita a
         INNER JOIN hr_uchazec_aktivita_typ at
             ON at.id_uchazec_aktivita_typ = a.id_uchazec_aktivita_typ
-        INNER JOIN hr_uchazec u
-            ON u.id_uchazec = a.id_uchazec
-           AND u.aktivni = 1
+        INNER JOIN hr_person p
+            ON p.id_person = a.id_person
+           AND p.vztah = 1
+           AND p.aktivni = 1
         INNER JOIN hr_uchazec_stav s
-            ON s.id_uchazec_stav = u.id_uchazec_stav
+            ON s.id_uchazec_stav = p.id_uchazec_stav
         LEFT JOIN cis_slot cs
-            ON cs.id_slot = u.id_slot
+            ON cs.id_slot = p.id_slot
+        LEFT JOIN hr_telefon tel
+            ON tel.id_person = p.id_person
+           AND tel.platny = 1
+           AND tel.hlavni = 1
+        LEFT JOIN hr_email em
+            ON em.id_person = p.id_person
+           AND em.platny = 1
+           AND em.hlavni = 1
         WHERE at.kod IN ('pohovor_telefon', 'pohovor_osobni', 'pohovor_online')
           AND a.planovano_na IS NOT NULL
           AND a.provedeno_kdy IS NULL
@@ -131,14 +149,14 @@ function hr_nacti_cekajici_vstupni_dotaznik(mysqli $db): array
 {
     $sql = "
         SELECT
-            u.id_uchazec,
-            u.jmeno,
-            u.prijmeni,
-            u.telefon,
-            u.email,
-            u.pracoviste_preference,
-            u.zadano,
-            u.posledni_aktivita,
+            p.id_person,
+            p.jmeno,
+            p.prijmeni,
+            tel.telefon,
+            em.email,
+            p.pracoviste_preference,
+            p.zadano,
+            p.posledni_aktivita,
             s.nazev AS stav_nazev,
             cs.slot AS pozice,
             d.odeslano,
@@ -146,13 +164,22 @@ function hr_nacti_cekajici_vstupni_dotaznik(mysqli $db): array
         FROM hr_uchazec_dotaznik d
         INNER JOIN hr_dotaznik_typ dt
             ON dt.id_dotaznik_typ = d.id_dotaznik_typ
-        INNER JOIN hr_uchazec u
-            ON u.id_uchazec = d.id_uchazec
-           AND u.aktivni = 1
+        INNER JOIN hr_person p
+            ON p.id_person = d.id_person
+           AND p.vztah = 1
+           AND p.aktivni = 1
         INNER JOIN hr_uchazec_stav s
-            ON s.id_uchazec_stav = u.id_uchazec_stav
+            ON s.id_uchazec_stav = p.id_uchazec_stav
         LEFT JOIN cis_slot cs
-            ON cs.id_slot = u.id_slot
+            ON cs.id_slot = p.id_slot
+        LEFT JOIN hr_telefon tel
+            ON tel.id_person = p.id_person
+           AND tel.platny = 1
+           AND tel.hlavni = 1
+        LEFT JOIN hr_email em
+            ON em.id_person = p.id_person
+           AND em.platny = 1
+           AND em.hlavni = 1
         WHERE dt.kod = 'nastupni'
           AND d.stav IN ('pripraven', 'odeslan', 'otevren', 'rozpracovan')
         ORDER BY COALESCE(d.odeslano, d.zadano) DESC, d.id_uchazec_dotaznik DESC

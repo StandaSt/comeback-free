@@ -166,7 +166,7 @@ $latest = $dashboard['latest'];
                 <tbody>
                     <?php foreach ($latest as $employee): ?>
                         <tr>
-                            <td><a href="?page=zamestnanec&id=<?= h($employee['id_zamestnanec']) ?>"><?= h($employee['cele_jmeno']) ?></a></td>
+                            <td><a href="?page=zamestnanec&id=<?= h($employee['id_person']) ?>"><?= h($employee['cele_jmeno']) ?></a></td>
                             <td><?= h((string)($employee['pracoviste'] ?? '-')) ?></td>
                             <td><?= h((string)($employee['zarazeni'] ?? '-')) ?></td>
                             <td><?= h(hr_format_date((string)($employee['datum_nastupu'] ?? ''))) ?></td>

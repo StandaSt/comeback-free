@@ -11,12 +11,14 @@ function hr_fetch_dashboard(mysqli $db): array
         'v_procesu' => 0,
     ];
 
+    // Spocita uchazece podle naboroveho stavu v jednotne tabulce osob.
     $result = $db->query("
-        SELECT s.kod, COUNT(u.id_uchazec) AS cnt
+        SELECT s.kod, COUNT(p.id_person) AS cnt
         FROM hr_uchazec_stav s
-        LEFT JOIN hr_uchazec u
-            ON u.id_uchazec_stav = s.id_uchazec_stav
-           AND u.aktivni = 1
+        LEFT JOIN hr_person p
+            ON p.id_uchazec_stav = s.id_uchazec_stav
+           AND p.vztah = 1
+           AND p.aktivni = 1
         WHERE s.kod IN ('novy', 'v_procesu')
         GROUP BY s.kod
     ");
@@ -34,17 +36,18 @@ function hr_fetch_dashboard(mysqli $db): array
         'DPP' => 0,
     ];
 
+    // Spocita aktivni zamestnance podle typu aktualniho pracovniho vztahu.
     $result = $db->query("
-        SELECT pvt.kod, COUNT(DISTINCT z.id_zamestnanec) AS cnt
-        FROM hr_zamestnanec z
+        SELECT pvt.kod, COUNT(DISTINCT p.id_person) AS cnt
+        FROM hr_person p
         INNER JOIN hr_pracovni_vztah pv
-            ON pv.id_zamestnanec = z.id_zamestnanec
+            ON pv.id_person = p.id_person
            AND pv.platny = 1
            AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE())
         INNER JOIN hr_pracovni_vztah_typ pvt
             ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ
-        WHERE z.stav = 'aktivni'
-          AND z.aktivni = 1
+        WHERE p.vztah = 2
+          AND p.aktivni = 1
           AND pvt.kod IN ('HPP', 'DPC', 'DPP')
         GROUP BY pvt.kod
     ");

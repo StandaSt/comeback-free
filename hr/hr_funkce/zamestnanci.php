@@ -2,45 +2,49 @@
 declare(strict_types=1);
 
 /**
- * Nacte seznam zamestnancu pro HR vypisy.
+ * Nacte seznam aktivnich zamestnancu z jednotne tabulky osob.
  */
 function hr_fetch_employees(mysqli $db, int $limit = 100): array
 {
     $limit = max(1, min($limit, 500));
     $sql = "
         SELECT
-            z.id_zamestnanec,
-            z.osobni_cislo,
-            z.stav,
-            z.zadano,
-            ou.jmeno,
-            ou.prijmeni,
+            p.id_person,
+            p.osobni_cislo,
+            CASE p.vztah
+                WHEN 2 THEN 'aktivni'
+                WHEN 3 THEN 'ukonceny'
+                ELSE 'priprava'
+            END AS stav,
+            p.zadano,
+            p.jmeno,
+            p.prijmeni,
             pv.datum_nastupu,
-            p.nazev AS pracoviste,
+            pob.nazev AS pracoviste,
             cs.slot AS zarazeni,
             pvt.kod AS vztah_kod
-        FROM hr_zamestnanec z
-        LEFT JOIN hr_osobni_udaje ou
-            ON ou.id_zamestnanec = z.id_zamestnanec
-           AND ou.platny = 1
+        FROM hr_person p
         LEFT JOIN hr_pracovni_vztah pv
-            ON pv.id_zamestnanec = z.id_zamestnanec
+            ON pv.id_person = p.id_person
            AND pv.platny = 1
+           AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE())
         LEFT JOIN hr_pracovni_vztah_typ pvt
             ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ
-        LEFT JOIN hr_zamestnanec_pracoviste zp
-            ON zp.id_zamestnanec = z.id_zamestnanec
-           AND zp.platny = 1
-           AND zp.hlavni = 1
-        LEFT JOIN pobocka p
-            ON p.id_pob = zp.id_pob
-        LEFT JOIN hr_zamestnanec_zarazeni zz
-            ON zz.id_zamestnanec = z.id_zamestnanec
-           AND zz.platny = 1
-           AND zz.hlavni = 1
+        LEFT JOIN hr_person_pracoviste pp
+            ON pp.id_person = p.id_person
+           AND pp.platny = 1
+           AND pp.hlavni = 1
+        LEFT JOIN pobocka pob
+            ON pob.id_pob = pp.id_pob
+        LEFT JOIN hr_person_zarazeni pz
+            ON pz.id_person = p.id_person
+           AND pz.platny = 1
+           AND pz.hlavni = 1
         LEFT JOIN cis_slot cs
-            ON cs.id_slot = zz.id_slot
-        ORDER BY z.id_zamestnanec DESC
+            ON cs.id_slot = pz.id_slot
+        WHERE p.vztah = 2
+          AND p.aktivni = 1
+        ORDER BY p.id_person DESC
         LIMIT ?
     ";
 
@@ -59,18 +63,22 @@ function hr_fetch_employees(mysqli $db, int $limit = 100): array
 }
 
 /**
- * Nacte detail jednoho zamestnance podle ID.
+ * Nacte detail jednoho zamestnance podle id_person.
  */
 function hr_fetch_employee(mysqli $db, int $id): ?array
 {
     $sql = "
         SELECT
-            z.id_zamestnanec,
-            z.osobni_cislo,
-            z.stav,
-            z.zadano,
-            ou.jmeno,
-            ou.prijmeni,
+            p.id_person,
+            p.osobni_cislo,
+            CASE p.vztah
+                WHEN 2 THEN 'aktivni'
+                WHEN 3 THEN 'ukonceny'
+                ELSE 'priprava'
+            END AS stav,
+            p.zadano,
+            p.jmeno,
+            p.prijmeni,
             ou.datum_narozeni,
             ou.rodne_cislo,
             ou.pohlavi,
@@ -82,42 +90,44 @@ function hr_fetch_employee(mysqli $db, int $id): ?array
             pv.hodin_tydne,
             pv.doba_urcita,
             pv.delka_zk_doby,
-            p.nazev AS pracoviste,
+            pob.nazev AS pracoviste,
             cs.slot AS zarazeni,
             pvt.kod AS vztah_kod,
             pvt.nazev AS vztah_nazev,
             tel.telefon,
             em.email
-        FROM hr_zamestnanec z
+        FROM hr_person p
         LEFT JOIN hr_osobni_udaje ou
-            ON ou.id_zamestnanec = z.id_zamestnanec
+            ON ou.id_person = p.id_person
            AND ou.platny = 1
         LEFT JOIN hr_pracovni_vztah pv
-            ON pv.id_zamestnanec = z.id_zamestnanec
+            ON pv.id_person = p.id_person
            AND pv.platny = 1
         LEFT JOIN hr_pracovni_vztah_typ pvt
             ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ
-        LEFT JOIN hr_zamestnanec_pracoviste zp
-            ON zp.id_zamestnanec = z.id_zamestnanec
-           AND zp.platny = 1
-           AND zp.hlavni = 1
-        LEFT JOIN pobocka p
-            ON p.id_pob = zp.id_pob
-        LEFT JOIN hr_zamestnanec_zarazeni zz
-            ON zz.id_zamestnanec = z.id_zamestnanec
-           AND zz.platny = 1
-           AND zz.hlavni = 1
+        LEFT JOIN hr_person_pracoviste pp
+            ON pp.id_person = p.id_person
+           AND pp.platny = 1
+           AND pp.hlavni = 1
+        LEFT JOIN pobocka pob
+            ON pob.id_pob = pp.id_pob
+        LEFT JOIN hr_person_zarazeni pz
+            ON pz.id_person = p.id_person
+           AND pz.platny = 1
+           AND pz.hlavni = 1
         LEFT JOIN cis_slot cs
-            ON cs.id_slot = zz.id_slot
+            ON cs.id_slot = pz.id_slot
         LEFT JOIN hr_telefon tel
-            ON tel.id_zamestnanec = z.id_zamestnanec
+            ON tel.id_person = p.id_person
            AND tel.platny = 1
            AND tel.hlavni = 1
         LEFT JOIN hr_email em
-            ON em.id_zamestnanec = z.id_zamestnanec
+            ON em.id_person = p.id_person
            AND em.platny = 1
            AND em.hlavni = 1
-        WHERE z.id_zamestnanec = ?
+        WHERE p.id_person = ?
+          AND p.vztah = 2
+          AND p.aktivni = 1
         LIMIT 1
     ";
 

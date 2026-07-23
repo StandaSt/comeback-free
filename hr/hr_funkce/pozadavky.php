@@ -33,16 +33,28 @@ function hr_nacti_hlavni_pobocku_uzivatele(mysqli $db, int $idUser): array
 /**
  * Ulozi HR pozadavek na tolik radku, kolik zamestnancu je pozadovano.
  */
-function hr_uloz_pozadavek(mysqli $db, int $idPob, int $idSlot, int $pocet, string $upresneni, int $zadal): void
+function hr_uloz_pozadavek(mysqli $db, int $idPob, int $idSlot, int $pocet, string $upresneni, int $zadalPerson): void
 {
+    if ($zadalPerson <= 0) {
+        throw new RuntimeException('Chybí HR osoba zadavatele požadavku.');
+    }
+
     $stmt = $db->prepare("
         INSERT INTO hr_pozadavek (id_pob, id_slot, upresneni, stav, zadal, zadano)
         VALUES (?, ?, ?, 1, ?, NOW())
     ");
 
     for ($i = 0; $i < $pocet; $i++) {
-        $stmt->bind_param('iisi', $idPob, $idSlot, $upresneni, $zadal);
+        $stmt->bind_param('iisi', $idPob, $idSlot, $upresneni, $zadalPerson);
         $stmt->execute();
+
+        // Zapise vytvoreni pozadavku do HR auditu.
+        hr_zapis_akci(
+            $db,
+            $zadalPerson,
+            'vytvoreni_pozadavku',
+            'Vytvoren personalni pozadavek #' . (int)$db->insert_id . '.'
+        );
     }
 
     $stmt->close();
@@ -51,8 +63,12 @@ function hr_uloz_pozadavek(mysqli $db, int $idPob, int $idSlot, int $pocet, stri
 /**
  * Zrusi otevreny HR pozadavek zadavatelem nebo vedoucim stejne pobocky.
  */
-function hr_zrus_pozadavek(mysqli $db, int $idPozadavek, int $idPob, int $idUser, int $idRole): void
+function hr_zrus_pozadavek(mysqli $db, int $idPozadavek, int $idPob, int $zrusilPerson, int $idRole): void
 {
+    if ($zrusilPerson <= 0) {
+        throw new RuntimeException('Chybí HR osoba pro zrušení požadavku.');
+    }
+
     $stmt = $db->prepare("
         UPDATE hr_pozadavek
         SET stav = 0,
@@ -62,9 +78,20 @@ function hr_zrus_pozadavek(mysqli $db, int $idPozadavek, int $idPob, int $idUser
           AND stav = 1
           AND (zadal = ? OR (? = 5 AND id_pob = ?))
     ");
-    $stmt->bind_param('iiiii', $idUser, $idPozadavek, $idUser, $idRole, $idPob);
+    $stmt->bind_param('iiiii', $zrusilPerson, $idPozadavek, $zrusilPerson, $idRole, $idPob);
     $stmt->execute();
+    $zruseno = $stmt->affected_rows > 0;
     $stmt->close();
+
+    // Zapise zruseni pozadavku jen pokud se radek skutecne zmenil.
+    if ($zruseno) {
+        hr_zapis_akci(
+            $db,
+            $zrusilPerson,
+            'zruseni_pozadavku',
+            'Zrusen personalni pozadavek #' . $idPozadavek . '.'
+        );
+    }
 }
 
 /**

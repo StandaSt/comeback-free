@@ -2,27 +2,31 @@
 declare(strict_types=1);
 
 /**
- * Nacte posledni dokumenty nahrane k uchazecum.
+ * Nacte posledni aktualni dokumenty evidovane u HR osob.
  */
 function hr_fetch_dashboard_documents(mysqli $db, int $limit = 5): array
 {
     $limit = max(1, min($limit, 20));
     $sql = "
         SELECT
-            d.id_uchazec_dokument,
-            d.puvodni_nazev,
-            d.zadano,
+            d.id_dokument,
+            d.verze,
+            d.vytvoreno,
+            ds.puvodni_nazev,
             dt.nazev AS typ,
-            u.jmeno,
-            u.prijmeni
-        FROM hr_uchazec_dokument d
-        INNER JOIN hr_uchazec u
-            ON u.id_uchazec = d.id_uchazec
-        INNER JOIN hr_uchazec_dokument_typ dt
-            ON dt.id_uchazec_dokument_typ = d.id_uchazec_dokument_typ
-        WHERE d.aktivni = 1
-          AND d.smazano IS NULL
-        ORDER BY d.zadano DESC, d.id_uchazec_dokument DESC
+            p.jmeno,
+            p.prijmeni
+        FROM hr_dokument d
+        INNER JOIN hr_person p
+            ON p.id_person = d.id_person
+        INNER JOIN hr_dokument_typ dt
+            ON dt.id_dokument_typ = d.id_dokument_typ
+        LEFT JOIN hr_dokument_soubor ds
+            ON ds.id_dokument = d.id_dokument
+           AND ds.verze = d.verze
+           AND ds.poradi = 1
+        WHERE d.platny = 1
+        ORDER BY d.vytvoreno DESC, d.id_dokument DESC
         LIMIT ?
     ";
 
@@ -33,12 +37,14 @@ function hr_fetch_dashboard_documents(mysqli $db, int $limit = 5): array
 
     $rows = [];
     while ($row = $result->fetch_assoc()) {
+        // Zachova vystupni klice pro existujici dashboard sablonu.
         $rows[] = [
-            'id_uchazec_dokument' => (int)$row['id_uchazec_dokument'],
-            'nazev' => (string)$row['puvodni_nazev'],
+            'id_dokument' => (int)$row['id_dokument'],
+            'verze' => (int)$row['verze'],
+            'nazev' => trim((string)($row['puvodni_nazev'] ?? '')) !== '' ? (string)$row['puvodni_nazev'] : 'Bez souboru',
             'typ' => (string)$row['typ'],
             'osoba' => trim((string)$row['prijmeni'] . ' ' . (string)$row['jmeno']),
-            'zadano' => (string)$row['zadano'],
+            'zadano' => (string)$row['vytvoreno'],
         ];
     }
     $stmt->close();

@@ -30,7 +30,7 @@ $employees = hr_fetch_employees($db);
                 <tbody>
                     <?php foreach ($employees as $employee): ?>
                         <tr>
-                            <td><a href="?page=zamestnanec&id=<?= h($employee['id_zamestnanec']) ?>"><?= h($employee['cele_jmeno']) ?></a></td>
+                            <td><a href="?page=zamestnanec&id=<?= h($employee['id_person']) ?>"><?= h($employee['cele_jmeno']) ?></a></td>
                             <td><?= h((string)($employee['zarazeni'] ?? '-')) ?></td>
                             <td><?= h((string)($employee['pracoviste'] ?? '-')) ?></td>
                             <td><?= h((string)($employee['vztah_kod'] ?? '-')) ?></td>

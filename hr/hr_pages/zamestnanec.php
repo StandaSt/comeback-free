@@ -1,8 +1,9 @@
 <?php
 declare(strict_types=1);
 
-$idZamestnanec = (int)($_GET['id'] ?? 0);
-$employee = $idZamestnanec > 0 ? hr_fetch_employee($db, $idZamestnanec) : null;
+// Detail zamestnance se nacita podle id_person.
+$idPerson = (int)($_GET['id'] ?? 0);
+$employee = $idPerson > 0 ? hr_fetch_employee($db, $idPerson) : null;
 ?>
 <?php if ($employee === null): ?>
     <section class="panel">

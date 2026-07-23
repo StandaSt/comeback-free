@@ -3,9 +3,9 @@ declare(strict_types=1);
 
 $pozadavkyUser = $_SESSION['cb_user'] ?? [];
 $pozadavkyRoleId = is_array($pozadavkyUser) ? (int)($pozadavkyUser['id_role'] ?? 0) : 0;
-$pozadavkyUserId = is_array($pozadavkyUser) ? (int)($pozadavkyUser['id_user'] ?? 0) : 0;
 $pozadavkyMuzeZadat = in_array($pozadavkyRoleId, [1, 5], true);
 $pozadavkyMainPobocka = [];
+$pozadavkyPersonId = $pozadavkyMuzeZadat ? hr_current_person_id($db) : 0;
 $pozadavkyUlozeno = !empty($_SESSION['hr_pozadavek_ulozeno']);
 $pozadavkyZrusen = !empty($_SESSION['hr_pozadavek_zrusen']);
 unset($_SESSION['hr_pozadavek_ulozeno']);
@@ -95,7 +95,7 @@ $pozadavkyZrusene = $pozadavkyMuzeZadat
                                 <td><?= h($pozadavek['upresneni']) ?></td>
                                 <td><?= h(hr_format_date((string)$pozadavek['zadano'])) ?></td>
                                 <td>
-                                    <?php if ((int)$pozadavek['zadal'] === $pozadavkyUserId || ($pozadavkyRoleId === 5 && (int)$pozadavek['id_pob'] === (int)$pozadavkyMainPobocka['id_pob'])): ?>
+                                    <?php if ((int)$pozadavek['zadal'] === $pozadavkyPersonId || ($pozadavkyRoleId === 5 && (int)$pozadavek['id_pob'] === (int)$pozadavkyMainPobocka['id_pob'])): ?>
                                         <form method="post" action="" class="hr-row-action-form">
                                             <input type="hidden" name="akce" value="zrusit">
                                             <input type="hidden" name="id_hr_pozadavek" value="<?= h($pozadavek['id_hr_pozadavek']) ?>">

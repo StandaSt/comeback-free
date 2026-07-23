@@ -1520,6 +1520,12 @@ if (!function_exists('cb_restia_online_insert_branch_progress')) {
             return;
         }
 
+        $odDb = cb_restia_online_restia_to_local_nullable($createdFrom);
+        $doDb = cb_restia_online_restia_to_local_nullable($createdTo);
+        if ($odDb === null || $doDb === null) {
+            throw new RuntimeException('Nelze prevest online_restia_pobocky od/do na DATETIME.');
+        }
+
         $stmt = $conn->prepare('
             INSERT INTO online_restia_pobocky
                 (id_akce, id_pob, `od`, `do`, zapisy, aktualizace, `ignore`)
@@ -1529,7 +1535,7 @@ if (!function_exists('cb_restia_online_insert_branch_progress')) {
             throw new RuntimeException('DB prepare selhal: online_restia_pobocky insert.');
         }
 
-        $stmt->bind_param('iissiii', $idAkce, $idPob, $createdFrom, $createdTo, $zapisy, $aktualizace, $ignore);
+        $stmt->bind_param('iissiii', $idAkce, $idPob, $odDb, $doDb, $zapisy, $aktualizace, $ignore);
         $stmt->execute();
         $stmt->close();
     }
@@ -1564,28 +1570,53 @@ if (!function_exists('cb_restia_online_run')) {
             $currentDate = cb_restia_online_current_workday_date();
             $branches = cb_restia_online_active_branches($conn);
             foreach ($branches as $branch) {
+                $branchIdPob = (int)($branch['id_pob'] ?? 0);
+                $branchProcessed = false;
+                $branchZapisy = 0;
+                $branchAktualizace = 0;
+                $branchIgnore = 0;
+                $branchCreatedFrom = '';
+                $branchCreatedTo = '';
                 $dates = cb_restia_online_import_dates($conn, (int)($branch['id_pob'] ?? 0), $currentDate);
                 foreach ($dates as $date) {
                     $day = cb_restia_online_import_day($conn, $auth, $branch, $date);
-                    $zapisy += (int)($day['nove'] ?? 0);
-                    $aktualizace += (int)($day['aktualizace'] ?? 0);
-                    $ignore += (int)($day['ignore'] ?? 0);
-                    cb_restia_online_insert_branch_progress(
-                        $conn,
-                        $idAkce,
-                        (int)($day['id_pob'] ?? 0),
-                        (string)($day['created_from'] ?? ''),
-                        (string)($day['created_to'] ?? ''),
-                        (int)($day['nove'] ?? 0),
-                        (int)($day['aktualizace'] ?? 0),
-                        (int)($day['ignore'] ?? 0)
-                    );
+                    $dayZapisy = (int)($day['nove'] ?? 0);
+                    $dayAktualizace = (int)($day['aktualizace'] ?? 0);
+                    $dayIgnore = (int)($day['ignore'] ?? 0);
+                    $dayCreatedFrom = (string)($day['created_from'] ?? '');
+                    $dayCreatedTo = (string)($day['created_to'] ?? '');
+
+                    $zapisy += $dayZapisy;
+                    $aktualizace += $dayAktualizace;
+                    $ignore += $dayIgnore;
+                    $branchProcessed = true;
+                    $branchZapisy += $dayZapisy;
+                    $branchAktualizace += $dayAktualizace;
+                    $branchIgnore += $dayIgnore;
+                    if ($dayCreatedFrom !== '' && ($branchCreatedFrom === '' || strcmp($dayCreatedFrom, $branchCreatedFrom) < 0)) {
+                        $branchCreatedFrom = $dayCreatedFrom;
+                    }
+                    if ($dayCreatedTo !== '' && ($branchCreatedTo === '' || strcmp($dayCreatedTo, $branchCreatedTo) > 0)) {
+                        $branchCreatedTo = $dayCreatedTo;
+                    }
                     cb_restia_online_progress_emit([
                         'zapisy' => $zapisy,
                         'aktualizace' => $aktualizace,
                         'ignore' => $ignore,
                         'finished' => 0,
                     ]);
+                }
+                if ($branchProcessed) {
+                    cb_restia_online_insert_branch_progress(
+                        $conn,
+                        $idAkce,
+                        $branchIdPob,
+                        $branchCreatedFrom,
+                        $branchCreatedTo,
+                        $branchZapisy,
+                        $branchAktualizace,
+                        $branchIgnore
+                    );
                 }
             }
         } catch (Throwable $e) {

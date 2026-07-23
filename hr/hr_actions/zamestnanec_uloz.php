@@ -17,12 +17,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 try {
-    $idZamestnanec = hr_insert_employee(db(), $_POST, hr_current_user_id());
+    $db = db();
+    $idPerson = hr_insert_employee($db, $_POST, hr_current_person_id($db));
     $_SESSION['hr_flash'] = [
         'type' => 'success',
         'text' => 'Zaměstnanec byl uložen.',
     ];
-    header('Location: ../?page=zamestnanec&id=' . $idZamestnanec);
+    header('Location: ../?page=zamestnanec&id=' . $idPerson);
     exit;
 } catch (Throwable $e) {
     $_SESSION['hr_flash'] = [
