@@ -39,7 +39,6 @@ $employee = $idPerson > 0 ? hr_fetch_employee($db, $idPerson) : null;
                 <div><dt>Datum narození</dt><dd><?= h(hr_format_date((string)($employee['datum_narozeni'] ?? ''))) ?></dd></div>
                 <div><dt>Pracoviště</dt><dd><?= h((string)($employee['pracoviste'] ?? '-')) ?></dd></div>
                 <div><dt>Zařazení</dt><dd><?= h((string)($employee['zarazeni'] ?? '-')) ?></dd></div>
-                <div><dt>Úvazek</dt><dd><?= h((string)($employee['uvazek'] ?? '-')) ?></dd></div>
             </dl>
         </div>
 
@@ -66,8 +65,6 @@ $employee = $idPerson > 0 ? hr_fetch_employee($db, $idPerson) : null;
             <dl class="detail-list compact-detail-list">
                 <div><dt>Druh vztahu</dt><dd><?= h((string)($employee['vztah_nazev'] ?? '-')) ?></dd></div>
                 <div><dt>Datum nástupu</dt><dd><?= h(hr_format_date((string)($employee['datum_nastupu'] ?? ''))) ?></dd></div>
-                <div><dt>Úvazek</dt><dd><?= h((string)($employee['uvazek'] ?? '-')) ?></dd></div>
-                <div><dt>Hodin týdně</dt><dd><?= h((string)($employee['hodin_tydne'] ?? '-')) ?></dd></div>
                 <div><dt>Zařazení</dt><dd><?= h((string)($employee['zarazeni'] ?? '-')) ?></dd></div>
                 <div><dt>Pracoviště</dt><dd><?= h((string)($employee['pracoviste'] ?? '-')) ?></dd></div>
             </dl>

@@ -40,21 +40,13 @@ function hr_uloz_pozadavek(mysqli $db, int $idPob, int $idSlot, int $pocet, stri
     }
 
     $stmt = $db->prepare("
-        INSERT INTO hr_pozadavek (id_pob, id_slot, upresneni, stav, zadal, zadano)
-        VALUES (?, ?, ?, 1, ?, NOW())
+        INSERT INTO hr_pozadavek (id_pob, id_slot, id_pozadavek_stav, upresneni, zadal, zadano)
+        VALUES (?, ?, 1, ?, ?, NOW())
     ");
 
     for ($i = 0; $i < $pocet; $i++) {
         $stmt->bind_param('iisi', $idPob, $idSlot, $upresneni, $zadalPerson);
         $stmt->execute();
-
-        // Zapise vytvoreni pozadavku do HR auditu.
-        hr_zapis_akci(
-            $db,
-            $zadalPerson,
-            'vytvoreni_pozadavku',
-            'Vytvoren personalni pozadavek #' . (int)$db->insert_id . '.'
-        );
     }
 
     $stmt->close();
@@ -71,27 +63,16 @@ function hr_zrus_pozadavek(mysqli $db, int $idPozadavek, int $idPob, int $zrusil
 
     $stmt = $db->prepare("
         UPDATE hr_pozadavek
-        SET stav = 0,
-            zruseno_kdy = NOW(),
-            zrusil = ?
-        WHERE id_hr_pozadavek = ?
-          AND stav = 1
+        SET id_pozadavek_stav = 4,
+            uzavreno = NOW(),
+            uzavrel = ?
+        WHERE id_pozadavek = ?
+          AND id_pozadavek_stav = 1
           AND (zadal = ? OR (? = 5 AND id_pob = ?))
     ");
     $stmt->bind_param('iiiii', $zrusilPerson, $idPozadavek, $zrusilPerson, $idRole, $idPob);
     $stmt->execute();
-    $zruseno = $stmt->affected_rows > 0;
     $stmt->close();
-
-    // Zapise zruseni pozadavku jen pokud se radek skutecne zmenil.
-    if ($zruseno) {
-        hr_zapis_akci(
-            $db,
-            $zrusilPerson,
-            'zruseni_pozadavku',
-            'Zrusen personalni pozadavek #' . $idPozadavek . '.'
-        );
-    }
 }
 
 /**
@@ -101,7 +82,7 @@ function hr_nacti_pozadavky_pobocky_podle_stavu(mysqli $db, int $idPob, int $sta
 {
     $stmt = $db->prepare("
         SELECT
-            hp.id_hr_pozadavek,
+            hp.id_pozadavek,
             hp.id_slot,
             hp.upresneni,
             hp.zadal,
@@ -112,8 +93,8 @@ function hr_nacti_pozadavky_pobocky_podle_stavu(mysqli $db, int $idPob, int $sta
         INNER JOIN cis_slot cs
             ON cs.id_slot = hp.id_slot
         WHERE hp.id_pob = ?
-          AND hp.stav = ?
-        ORDER BY hp.zadano ASC, hp.id_hr_pozadavek ASC
+          AND hp.id_pozadavek_stav = ?
+        ORDER BY hp.zadano ASC, hp.id_pozadavek ASC
     ");
     $stmt->bind_param('ii', $idPob, $stav);
     $stmt->execute();

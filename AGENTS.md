@@ -183,6 +183,7 @@ Vždy nejprve ověř realitu v kódu, ne domněnky.
 - Kódování všech upravovaných souborů: UTF-8 bez BOM (bez výjimky).
 
 ## PowerShell bezpečnost při úpravách
+- PowerShell používej pouze v nevyhnutných případech; pokud lze práci udělat přes `rg`, `php`, `apply_patch` nebo jiný jednodušší nástroj, nepoužívej PowerShell.
 - Pro editaci souborů vždy preferuj `apply_patch`.
 - PowerShell používej pro změny v souborech jen výjimečně a pouze pro jednoduché, přehledné příkazy bez složitých regex řetězců a bez vnořeného escapování uvozovek.
 - Pro textové změny (hlavně česká diakritika) používej pouze `apply_patch`; nepoužívej postupy, které mohou změnit kódování textu.

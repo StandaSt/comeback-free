@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * Nacte seznam aktivnich zamestnancu z jednotne tabulky osob.
+ * Nacte seznam aktivnich zamestnancu.
  */
 function hr_fetch_employees(mysqli $db, int $limit = 100): array
 {
@@ -11,24 +11,26 @@ function hr_fetch_employees(mysqli $db, int $limit = 100): array
         SELECT
             p.id_person,
             p.osobni_cislo,
-            CASE p.vztah
-                WHEN 2 THEN 'aktivni'
-                WHEN 3 THEN 'ukonceny'
-                ELSE 'priprava'
+            CASE
+                WHEN pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE() THEN 'aktivni'
+                ELSE 'ukonceny'
             END AS stav,
-            p.zadano,
-            p.jmeno,
-            p.prijmeni,
+            p.vytvoreno AS zadano,
+            ou.jmeno,
+            ou.prijmeni,
             pv.datum_nastupu,
             pob.nazev AS pracoviste,
             cs.slot AS zarazeni,
-            pvt.kod AS vztah_kod
+            pvt.nazev AS vztah_kod
         FROM hr_person p
+        LEFT JOIN hr_osobni_udaje ou
+            ON ou.id_person = p.id_person
+           AND ou.platny = 1
         LEFT JOIN hr_pracovni_vztah pv
             ON pv.id_person = p.id_person
            AND pv.platny = 1
            AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE())
-        LEFT JOIN hr_pracovni_vztah_typ pvt
+        LEFT JOIN hr_cis_pracovni_vztah_typ pvt
             ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ
         LEFT JOIN hr_person_pracoviste pp
             ON pp.id_person = p.id_person
@@ -42,8 +44,7 @@ function hr_fetch_employees(mysqli $db, int $limit = 100): array
            AND pz.hlavni = 1
         LEFT JOIN cis_slot cs
             ON cs.id_slot = pz.id_slot
-        WHERE p.vztah = 2
-          AND p.aktivni = 1
+        WHERE p.aktivni = 1
         ORDER BY p.id_person DESC
         LIMIT ?
     ";
@@ -71,14 +72,13 @@ function hr_fetch_employee(mysqli $db, int $id): ?array
         SELECT
             p.id_person,
             p.osobni_cislo,
-            CASE p.vztah
-                WHEN 2 THEN 'aktivni'
-                WHEN 3 THEN 'ukonceny'
-                ELSE 'priprava'
+            CASE
+                WHEN pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE() THEN 'aktivni'
+                ELSE 'ukonceny'
             END AS stav,
-            p.zadano,
-            p.jmeno,
-            p.prijmeni,
+            p.vytvoreno AS zadano,
+            ou.jmeno,
+            ou.prijmeni,
             ou.datum_narozeni,
             ou.rodne_cislo,
             ou.pohlavi,
@@ -86,13 +86,9 @@ function hr_fetch_employee(mysqli $db, int $id): ?array
             ou.misto_narozeni,
             pv.datum_nastupu,
             pv.datum_ukonceni,
-            pv.uvazek,
-            pv.hodin_tydne,
-            pv.doba_urcita,
-            pv.delka_zk_doby,
             pob.nazev AS pracoviste,
             cs.slot AS zarazeni,
-            pvt.kod AS vztah_kod,
+            pvt.nazev AS vztah_kod,
             pvt.nazev AS vztah_nazev,
             tel.telefon,
             em.email
@@ -103,7 +99,7 @@ function hr_fetch_employee(mysqli $db, int $id): ?array
         LEFT JOIN hr_pracovni_vztah pv
             ON pv.id_person = p.id_person
            AND pv.platny = 1
-        LEFT JOIN hr_pracovni_vztah_typ pvt
+        LEFT JOIN hr_cis_pracovni_vztah_typ pvt
             ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ
         LEFT JOIN hr_person_pracoviste pp
             ON pp.id_person = p.id_person
@@ -126,7 +122,6 @@ function hr_fetch_employee(mysqli $db, int $id): ?array
            AND em.platny = 1
            AND em.hlavni = 1
         WHERE p.id_person = ?
-          AND p.vztah = 2
           AND p.aktivni = 1
         LIMIT 1
     ";

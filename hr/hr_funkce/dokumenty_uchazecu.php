@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * Nacte posledni aktualni dokumenty evidovane u HR osob.
+ * Nacte posledni aktualni dokumenty evidovane u VD nebo zamestnancu.
  */
 function hr_fetch_dashboard_documents(mysqli $db, int $limit = 5): array
 {
@@ -14,13 +14,18 @@ function hr_fetch_dashboard_documents(mysqli $db, int $limit = 5): array
             d.vytvoreno,
             ds.puvodni_nazev,
             dt.nazev AS typ,
-            p.jmeno,
-            p.prijmeni
+            vd.jmeno AS vd_jmeno,
+            vd.prijmeni AS vd_prijmeni,
+            ou.jmeno AS person_jmeno,
+            ou.prijmeni AS person_prijmeni
         FROM hr_dokument d
-        INNER JOIN hr_person p
-            ON p.id_person = d.id_person
-        INNER JOIN hr_dokument_typ dt
+        INNER JOIN hr_cis_dokument_typ dt
             ON dt.id_dokument_typ = d.id_dokument_typ
+        LEFT JOIN hr_vd vd
+            ON vd.id_vd = d.id_vd
+        LEFT JOIN hr_osobni_udaje ou
+            ON ou.id_person = d.id_person
+           AND ou.platny = 1
         LEFT JOIN hr_dokument_soubor ds
             ON ds.id_dokument = d.id_dokument
            AND ds.verze = d.verze
@@ -37,13 +42,16 @@ function hr_fetch_dashboard_documents(mysqli $db, int $limit = 5): array
 
     $rows = [];
     while ($row = $result->fetch_assoc()) {
+        $vdJmeno = trim((string)$row['vd_prijmeni'] . ' ' . (string)$row['vd_jmeno']);
+        $personJmeno = trim((string)$row['person_prijmeni'] . ' ' . (string)$row['person_jmeno']);
+
         // Zachova vystupni klice pro existujici dashboard sablonu.
         $rows[] = [
             'id_dokument' => (int)$row['id_dokument'],
             'verze' => (int)$row['verze'],
             'nazev' => trim((string)($row['puvodni_nazev'] ?? '')) !== '' ? (string)$row['puvodni_nazev'] : 'Bez souboru',
             'typ' => (string)$row['typ'],
-            'osoba' => trim((string)$row['prijmeni'] . ' ' . (string)$row['jmeno']),
+            'osoba' => $personJmeno !== '' ? $personJmeno : ($vdJmeno !== '' ? $vdJmeno : '-'),
             'zadano' => (string)$row['vytvoreno'],
         ];
     }

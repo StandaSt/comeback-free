@@ -199,13 +199,41 @@ if ($userRole === '') {
 }
 $db = db();
 
+if ($page === 'nabor' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $idVd = (int)($_POST['id_vd'] ?? 0);
+
+    try {
+        hr_uloz_vd_akci(
+            $db,
+            $idVd,
+            (int)($_POST['id_vd_stav'] ?? 0),
+            (int)($_POST['id_vd_akce_typ'] ?? 0),
+            trim((string)($_POST['akce_kdy'] ?? '')),
+            (string)($_POST['poznamka'] ?? ''),
+            hr_current_person_id($db)
+        );
+        $_SESSION['hr_flash'] = [
+            'type' => 'success',
+            'text' => 'Akce byla uložena.',
+        ];
+    } catch (Throwable $e) {
+        $_SESSION['hr_flash'] = [
+            'type' => 'error',
+            'text' => $e->getMessage(),
+        ];
+    }
+
+    header('Location: ?page=nabor&id_vd=' . $idVd);
+    exit;
+}
+
 if ($page === 'pozadavky' && $_SERVER['REQUEST_METHOD'] === 'POST' && in_array($roleId, [1, 5], true)) {
     $mainPobocka = hr_nacti_hlavni_pobocku_uzivatele($db, (int)($cbUser['id_user'] ?? 0));
     $currentPersonId = hr_current_person_id($db);
     $akce = (string)($_POST['akce'] ?? 'vytvorit');
 
     if ($akce === 'zrusit') {
-        hr_zrus_pozadavek($db, (int)($_POST['id_hr_pozadavek'] ?? 0), (int)$mainPobocka['id_pob'], $currentPersonId, $roleId);
+        hr_zrus_pozadavek($db, (int)($_POST['id_pozadavek'] ?? 0), (int)$mainPobocka['id_pob'], $currentPersonId, $roleId);
         $_SESSION['hr_pozadavek_zrusen'] = 1;
     } else {
         $pocet = (int)($_POST['pocet'] ?? 1);

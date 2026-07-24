@@ -12,16 +12,45 @@ session_set_cookie_params([
 session_start();
 
 require_once __DIR__ . '/../www/db/db_connect.php';
+require_once __DIR__ . '/../www/config/secrets.php';
+require_once __DIR__ . '/../www/lib/mailer.php';
 
 function e(mixed $value): string
 {
     return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 }
 
+function dotaznik_absolutni_url(string $path): string
+{
+    $https =
+        (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+        strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
+    $scheme = $https ? 'https' : 'http';
+    $host = (string)($_SERVER['HTTP_HOST'] ?? 'localhost');
+    $dir = str_replace('\\', '/', dirname((string)($_SERVER['SCRIPT_NAME'] ?? '/dotaznik/index_dotaznik.php')));
+    $dir = rtrim($dir === '/' ? '' : $dir, '/');
+
+    return $scheme . '://' . $host . $dir . '/' . ltrim($path, '/');
+}
+
 function post_text(string $name, int $maxLength = 5000): string
 {
     $value = trim((string)($_POST[$name] ?? ''));
     return mb_strlen($value) > $maxLength ? mb_substr($value, 0, $maxLength) : $value;
+}
+
+// Overi jednoduche jmeno nebo prijmeni bez opakovani tri stejnych znaku za sebou.
+function validni_jmeno(string $text): bool
+{
+    if (mb_strlen($text) < 2) {
+        return false;
+    }
+
+    if (preg_match('/(.)\1\1/u', $text) === 1) {
+        return false;
+    }
+
+    return preg_match('/^[\p{L}]+(?:[ -][\p{L}]+)*$/u', $text) === 1;
 }
 
 function post_ids(string $name): array
@@ -58,29 +87,128 @@ function post_allowed_values(string $name, array $allowed): array
     return array_values($out);
 }
 
+// Prevede cesky telefon na jednotny tvar +420XXXXXXXXX, jinak vrati prazdny text.
 function normalizuj_telefon(string $telefon): string
 {
-    $plus = str_starts_with(trim($telefon), '+');
     $cisla = preg_replace('/\D+/', '', $telefon) ?? '';
-    return ($plus ? '+' : '') . $cisla;
+    if (strlen($cisla) === 9) {
+        return '+420' . $cisla;
+    }
+
+    if (strlen($cisla) === 12 && str_starts_with($cisla, '420')) {
+        return '+' . $cisla;
+    }
+
+    if (strlen($cisla) === 14 && str_starts_with($cisla, '00420')) {
+        return '+420' . substr($cisla, 5);
+    }
+
+    return '';
+}
+
+// Overi zakladni tvar e-mailu a rozumnou delku koncovky domeny.
+function validni_email(string $email): bool
+{
+    if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+        return false;
+    }
+
+    $casti = explode('.', substr(strrchr($email, '@') ?: '', 1));
+    $koncovka = (string)end($casti);
+    return preg_match('/^[a-z]{2,6}$/i', $koncovka) === 1;
+}
+
+// Posle uchazeci potvrzovaci e-mail se shrnutim verejneho dotazniku.
+function odesli_overeni_vd_email(array $data, string $overovaciUrl, string $odmitnutiUrl): void
+{
+    $to = (string)$data['email'];
+    $subject = 'Ověření dotazníku Pizza Comeback';
+    $radky = [
+        'Jméno' => (string)$data['jmeno'] . ' ' . (string)$data['prijmeni'],
+        'Telefon' => (string)$data['telefon'],
+        'E-mail' => (string)$data['email'],
+        'Pozice' => (string)$data['pozice'],
+        'Pracoviště' => (string)$data['pracoviste'],
+        'Možný nástup' => (string)$data['mozny_nastup'] !== '' ? (string)$data['mozny_nastup'] : '-',
+        'Očekávaná odměna' => $data['ocekavana_mzda'] !== null ? (string)$data['ocekavana_mzda'] . ' Kč/h' : '-',
+    ];
+
+    $tabulka = '';
+    foreach ($radky as $label => $hodnota) {
+        $tabulka .= '<tr>'
+            . '<th style="padding:10px 12px;text-align:left;border-bottom:1px solid #d7e3f4;color:#244b7a;width:170px;">' . e($label) . '</th>'
+            . '<td style="padding:10px 12px;border-bottom:1px solid #d7e3f4;color:#111827;">' . e($hodnota) . '</td>'
+            . '</tr>';
+    }
+
+    $body = '<!doctype html><html lang="cs"><head><meta charset="utf-8"></head>'
+        . '<body style="margin:0;padding:0;background:#eef6ff;font-family:Arial,Helvetica,sans-serif;color:#111827;">'
+        . '<div style="padding:28px 14px;">'
+        . '<div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #cfe0f3;border-radius:8px;overflow:hidden;">'
+        . '<div style="padding:22px 28px;background:#0b64b4;color:#ffffff;">'
+        . '<table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;">'
+        . '<tr>'
+        . '<td style="width:86px;vertical-align:middle;"><img src="' . e(dotaznik_absolutni_url('../www/img/logo_transparent_1.png')) . '" width="70" height="70" alt="Pizza Comeback" style="display:block;width:70px;height:70px;"></td>'
+        . '<td style="vertical-align:middle;">'
+        . '<h1 style="margin:0;font-size:22px;line-height:1.25;">Pizza Comeback</h1>'
+        . '<p style="margin:6px 0 0;font-size:15px;">Ověření kontaktního formuláře</p>'
+        . '</td>'
+        . '</tr>'
+        . '</table>'
+        . '</div>'
+        . '<div style="padding:26px 28px;">'
+        . '<p style="margin:0 0 14px;">Dobrý den,</p>'
+        . '<p style="margin:0 0 14px;">děkujeme za vyplnění kontaktního formuláře společnosti Pizza Comeback.</p>'
+        . '<p style="margin:0 0 22px;">Po potvrzení níže uvedených údajů Vás budeme co nejdříve kontaktovat.</p>'
+        . '<table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;background:#f8fbff;border:1px solid #d7e3f4;margin:0 0 24px;">'
+        . $tabulka
+        . '</table>'
+        . '<p style="margin:0 0 18px;text-align:center;"><a href="' . e($overovaciUrl) . '" style="display:inline-block;background:#0b64b4;color:#ffffff;text-decoration:none;font-weight:bold;font-size:17px;padding:14px 26px;border-radius:6px;">Potvrzuji uvedené údaje</a></p>'
+        . '<p style="margin:0 0 26px;text-align:center;"><a href="' . e($odmitnutiUrl) . '" style="display:inline-block;background:#eef2f7;color:#334155;text-decoration:none;font-size:13px;padding:9px 14px;border-radius:5px;border:1px solid #cbd5e1;">Dotazník jsem nevyplnil. Prosím o odstranění mých údajů.</a></p>'
+        . '<p style="margin:0;">personální oddělení<br>Pizza Comeback</p>'
+        . '</div>'
+        . '<div style="padding:16px 28px;background:#f3f7fc;color:#64748b;font-size:11px;line-height:1.45;border-top:1px solid #d7e3f4;">'
+        . 'Pizza Comeback je provozována společností Rolling dough s.r.o.<br>'
+        . 'Zapsaná v OR vedeném Městským soudem v Praze, oddíl C, vložka 285948, den zápisu: 28. 11. 2017<br>'
+        . 'IČ: 06636705<br>'
+        . 'DIČ: CZ06636705'
+        . '</div>'
+        . '</div>'
+        . '</div>'
+        . '</body></html>';
+
+    $alt = implode("\n", [
+        'Dobrý den,',
+        '',
+        'děkujeme za vyplnění kontaktního formuláře společnosti Pizza Comeback.',
+        'Po potvrzení níže uvedených údajů Vás budeme co nejdříve kontaktovat.',
+        '',
+        'Jméno: ' . $radky['Jméno'],
+        'Telefon: ' . $radky['Telefon'],
+        'E-mail: ' . $radky['E-mail'],
+        'Pozice: ' . $radky['Pozice'],
+        'Pracoviště: ' . $radky['Pracoviště'],
+        'Možný nástup: ' . $radky['Možný nástup'],
+        'Očekávaná odměna: ' . $radky['Očekávaná odměna'],
+        '',
+        'Potvrzení údajů: ' . $overovaciUrl,
+        'Odstranění údajů: ' . $odmitnutiUrl,
+        '',
+        'personální oddělení',
+        'Pizza Comeback',
+        '',
+        'Pizza Comeback je provozována společností Rolling dough s.r.o.',
+        'Zapsaná v OR vedeném Městským soudem v Praze, oddíl C, vložka 285948, den zápisu: 28. 11. 2017',
+        'IČ: 06636705',
+        'DIČ: CZ06636705',
+    ]);
+
+    cb_mail_send('hr', $to, $subject, $body, $alt);
 }
 
 function klient_ip(): string
 {
     return mb_substr(trim((string)($_SERVER['REMOTE_ADDR'] ?? '')), 0, 45);
-}
-
-function dotaznik_hr_zapis_akci(mysqli $db, ?int $idPerson, string $akce, string $detail = ''): void
-{
-    // Zapise verejnou nebo systemovou udalost do spolecne HR auditni tabulky.
-    $detailDb = $detail !== '' ? $detail : null;
-    $stmt = $db->prepare('
-        INSERT INTO hr_akce (id_person, akce, detail, vytvoreno)
-        VALUES (?, ?, ?, NOW())
-    ');
-    $stmt->bind_param('iss', $idPerson, $akce, $detailDb);
-    $stmt->execute();
-    $stmt->close();
 }
 
 function novy_csrf_token(): string
@@ -115,72 +243,55 @@ function formatuj_datum_cas(string $datumCas): string
     return $datum ? $datum->format('d. m. Y H:i') : $datumCas;
 }
 
-function najdi_presnou_duplicitu(mysqli $db, string $jmeno, string $prijmeni, string $telefonNormalizovany, string $email): ?array
+function existuje_pouzity_kontakt(mysqli $db, string $telefonNormalizovany, string $email): bool
 {
     $stmt = $db->prepare('
-        SELECT p.id_person, p.zadano
-        FROM hr_person p
-        INNER JOIN hr_telefon tel
-            ON tel.id_person = p.id_person
-           AND tel.platny = 1
-           AND tel.hlavni = 1
-        INNER JOIN hr_email em
-            ON em.id_person = p.id_person
-           AND em.platny = 1
-           AND em.hlavni = 1
-        WHERE p.jmeno = ?
-            AND p.prijmeni = ?
-            AND tel.telefon_normalizovany = ?
-            AND em.email = ?
-            AND p.aktivni = 1
-        ORDER BY p.zadano DESC, p.id_person DESC
+        SELECT 1
+        FROM hr_vd
+        WHERE telefon_normalizovany = ?
+           OR email = ?
         LIMIT 1
     ');
-    $stmt->bind_param('ssss', $jmeno, $prijmeni, $telefonNormalizovany, $email);
+    $stmt->bind_param('ss', $telefonNormalizovany, $email);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if (is_array($row)) {
+        return true;
+    }
+
+    $stmt = $db->prepare('
+        SELECT 1
+        FROM hr_telefon
+        WHERE telefon_normalizovany = ?
+        LIMIT 1
+    ');
+    $stmt->bind_param('s', $telefonNormalizovany);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if (is_array($row)) {
+        return true;
+    }
+
+    $stmt = $db->prepare('
+        SELECT 1
+        FROM hr_email
+        WHERE email = ?
+        LIMIT 1
+    ');
+    $stmt->bind_param('s', $email);
     $stmt->execute();
     $row = $stmt->get_result()->fetch_assoc();
     $stmt->close();
 
-    return is_array($row) ? $row : null;
-}
-
-function najdi_kontaktni_duplicitu(mysqli $db, string $jmeno, string $prijmeni, string $telefonNormalizovany, string $email): ?array
-{
-    $stmt = $db->prepare('
-        SELECT
-            p.id_person,
-            p.jmeno,
-            p.prijmeni,
-            tel.telefon,
-            tel.telefon_normalizovany,
-            em.email,
-            p.zadano
-        FROM hr_person p
-        LEFT JOIN hr_telefon tel
-            ON tel.id_person = p.id_person
-           AND tel.platny = 1
-           AND tel.hlavni = 1
-        LEFT JOIN hr_email em
-            ON em.id_person = p.id_person
-           AND em.platny = 1
-           AND em.hlavni = 1
-        WHERE (tel.telefon_normalizovany = ? OR em.email = ?)
-            AND NOT (p.jmeno = ? AND p.prijmeni = ? AND tel.telefon_normalizovany = ? AND em.email = ?)
-            AND p.aktivni = 1
-        ORDER BY p.zadano DESC, p.id_person DESC
-        LIMIT 1
-    ');
-    $stmt->bind_param('ssssss', $telefonNormalizovany, $email, $jmeno, $prijmeni, $telefonNormalizovany, $email);
-    $stmt->execute();
-    $row = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
-
-    return is_array($row) ? $row : null;
+    return is_array($row);
 }
 
 $chyby = [];
-$odeslano = !empty($_SESSION['dotaznik_odeslano']);
-unset($_SESSION['dotaznik_odeslano']);
+// Vysledek posledniho odeslani se prenasi pres session po presmerovani.
+$vysledekOdeslani = is_array($_SESSION['dotaznik_vysledek'] ?? null) ? $_SESSION['dotaznik_vysledek'] : null;
+unset($_SESSION['dotaznik_vysledek']);
 $dbChyba = '';
 $db = null;
 $pozice = [];
@@ -210,13 +321,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $db instanceof mysqli) {
     if ((time() - (int)($_SESSION['dotaznik_zobrazen'] ?? 0)) < 3) {
         $chyby[] = 'Formulář byl odeslán příliš rychle. Zkontrolujte prosím údaje.';
     }
-    if ((time() - (int)($_SESSION['dotaznik_posledni_odeslani'] ?? 0)) < 60) {
-        $chyby[] = 'Dotazník už byl nedávno odeslán. Vyčkejte prosím chvíli.';
-    }
-
     $jmeno = post_text('jmeno', 60);
     $prijmeni = post_text('prijmeni', 80);
-    $telefon = post_text('telefon', 30);
+    $telefon = post_text('telefon', 18);
     $telefonNormalizovany = normalizuj_telefon($telefon);
     $email = mb_strtolower(post_text('email', 150));
     $moznyNastup = post_text('mozny_nastup', 10);
@@ -227,10 +334,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $db instanceof mysqli) {
     $pracovistePreference = implode(', ', $mesta);
     $souhlas = isset($_POST['souhlas']) ? 1 : 0;
 
-    if ($jmeno === '') $chyby[] = 'Vyplňte křestní jméno.';
-    if ($prijmeni === '') $chyby[] = 'Vyplňte příjmení.';
-    if ($telefon === '' || mb_strlen($telefonNormalizovany) < 9) $chyby[] = 'Vyplňte platné telefonní číslo.';
-    if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) $chyby[] = 'Vyplňte platnou e-mailovou adresu.';
+    if (!validni_jmeno($jmeno)) $chyby[] = 'Vyplňte platné křestní jméno, alespoň 2 znaky.';
+    if (!validni_jmeno($prijmeni)) $chyby[] = 'Vyplňte platné příjmení, alespoň 2 znaky.';
+    if ($telefonNormalizovany === '') $chyby[] = 'Vyplňte platné telefonní číslo.';
+    if ($email === '' || !validni_email($email)) $chyby[] = 'Vyplňte platnou e-mailovou adresu.';
     if ($poziceIds === []) $chyby[] = 'Vyberte alespoň jednu pozici.';
     if ($mesta === []) $chyby[] = 'Vyberte alespoň jedno město, ve kterém chcete pracovat.';
     if ($souhlas !== 1) $chyby[] = 'Pro odeslání je potřeba souhlasit se zpracováním údajů pro účely náboru.';
@@ -244,34 +351,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $db instanceof mysqli) {
 
     $ocekavanaMzda = null;
     if ($mzdaText !== '') {
-        if (!is_numeric($mzdaText) || (float)$mzdaText < 0) {
-            $chyby[] = 'Představa o hodinové odměně musí být číslo.';
+        if (preg_match('/^\d+$/', $mzdaText) !== 1) {
+            $chyby[] = 'Představa o hodinové odměně musí být celé číslo.';
+        } elseif ((int)$mzdaText < 0 || (int)$mzdaText > 600) {
+            $chyby[] = 'Představa o hodinové odměně může být maximálně 600 Kč/h.';
         } else {
-            $ocekavanaMzda = round((float)$mzdaText, 2);
+            $ocekavanaMzda = (int)$mzdaText;
         }
     }
 
-    $presnaDuplicita = null;
-    $kontaktniDuplicita = null;
-    $idPersonDuplicita = null;
-
     if ($chyby === []) {
-        $presnaDuplicita = najdi_presnou_duplicitu($db, $jmeno, $prijmeni, $telefonNormalizovany, $email);
-        if ($presnaDuplicita !== null) {
-            $zadano = (string)$presnaDuplicita['zadano'];
-            $zadanoCas = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $zadano);
-            if ($zadanoCas && $zadanoCas >= new DateTimeImmutable('-30 days')) {
-                $chyby[] = 'Vámi zadané údaje již byly použity ' . formatuj_datum_cas($zadano) . '.';
-            } else {
-                $idPersonDuplicita = (int)$presnaDuplicita['id_person'];
-            }
-        }
-
-        if ($chyby === []) {
-            $kontaktniDuplicita = najdi_kontaktni_duplicitu($db, $jmeno, $prijmeni, $telefonNormalizovany, $email);
-            if ($idPersonDuplicita === null && $kontaktniDuplicita !== null) {
-                $idPersonDuplicita = (int)$kontaktniDuplicita['id_person'];
-            }
+        // Zabrani opakovanemu ulozeni kontaktu, ktery uz evidujeme ve VD nebo u zamestnance.
+        if (existuje_pouzity_kontakt($db, $telefonNormalizovany, $email)) {
+            $chyby[] = 'Tento e-mail nebo telefon již byl v minulosti použit a dotazník tedy nelze uložit.';
         }
     }
 
@@ -279,119 +371,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $db instanceof mysqli) {
         try {
             $db->begin_transaction();
 
-            $stav = $db->query("SELECT id_uchazec_stav FROM hr_uchazec_stav WHERE kod = 'novy' AND aktivni = 1 LIMIT 1")->fetch_assoc();
-            if (!$stav) throw new RuntimeException('Chybí stav novy.');
-            $idStav = (int)$stav['id_uchazec_stav'];
-
-            $zdroj = $db->query("SELECT id_uchazec_zdroj FROM hr_uchazec_zdroj WHERE nazev = 'Veřejný dotazník' AND aktivni = 1 LIMIT 1")->fetch_assoc();
-            $idZdroj = $zdroj ? (int)$zdroj['id_uchazec_zdroj'] : null;
+            // Stav 0 znamena neovereny verejny dotaznik cekajici na potvrzeni e-mailu.
+            $idStav = 0;
+            $idZdroj = 1;
             $idSlot = (int)$poziceIds[0];
-
-            // Zalozi osobu jako uchazece v jednotne HR tabulce.
-            $stmt = $db->prepare("INSERT INTO hr_person (
-                vztah, id_uchazec_stav, id_uchazec_zdroj, id_person_duplicita, id_slot,
-                pracoviste_preference, jmeno, prijmeni, mozny_nastup, ocekavana_mzda,
-                povidani, prvni_kontakt, posledni_aktivita, zadal, zadano, aktivni
-            ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?, ?, NOW(), NOW(), NULL, NOW(), 1)");
-            $stmt->bind_param('iiiissssds', $idStav, $idZdroj, $idPersonDuplicita, $idSlot, $pracovistePreference, $jmeno, $prijmeni, $moznyNastup, $ocekavanaMzda, $povidani);
-            $stmt->execute();
-            $idPerson = (int)$db->insert_id;
-            $stmt->close();
-
-            // U verejneho dotazniku osoba vklada sama sebe.
-            $stmt = $db->prepare('UPDATE hr_person SET zadal = ? WHERE id_person = ?');
-            $stmt->bind_param('ii', $idPerson, $idPerson);
-            $stmt->execute();
-            $stmt->close();
-
-            // Ulozi hlavni telefon uchazece.
-            $telefonTyp = 1;
-            $hlavni = 1;
-            $platny = 1;
-            $stmt = $db->prepare('
-                INSERT INTO hr_telefon (id_person, id_telefon_typ, telefon, telefon_normalizovany, hlavni, zadal, vytvoreno, platny)
-                VALUES (?, ?, ?, ?, ?, ?, NOW(), ?)
-            ');
-            $stmt->bind_param('iissiii', $idPerson, $telefonTyp, $telefon, $telefonNormalizovany, $hlavni, $idPerson, $platny);
-            $stmt->execute();
-            $stmt->close();
-
-            // Ulozi hlavni e-mail uchazece.
-            $emailTyp = 1;
-            $stmt = $db->prepare('
-                INSERT INTO hr_email (id_person, id_email_typ, email, hlavni, zadal, vytvoreno, platny)
-                VALUES (?, ?, ?, ?, ?, NOW(), ?)
-            ');
-            $stmt->bind_param('iisiii', $idPerson, $emailTyp, $email, $hlavni, $idPerson, $platny);
-            $stmt->execute();
-            $stmt->close();
-
-            $typ = $db->query("SELECT id_dotaznik_typ FROM hr_dotaznik_typ WHERE kod = 'prvni_kontakt' AND aktivni = 1 ORDER BY verze DESC LIMIT 1")->fetch_assoc();
-            if (!$typ) throw new RuntimeException('Chybí dotazník prvni_kontakt.');
-            $idDotaznikTyp = (int)$typ['id_dotaznik_typ'];
-
-            $dataJson = json_encode([
-                'jmeno' => $jmeno,
-                'prijmeni' => $prijmeni,
-                'telefon' => $telefon,
-                'email' => $email,
-                'pozice' => $poziceIds,
-                'mesta' => $mesta,
-                'mozny_nastup' => $moznyNastup,
-                'ocekavana_mzda' => $ocekavanaMzda,
-                'povidani' => $povidani,
-                'souhlas' => $souhlas,
-                'souhlas_kdy' => date('Y-m-d H:i:s'),
-            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
-
             $ip = klient_ip();
             $userAgent = mb_substr(trim((string)($_SERVER['HTTP_USER_AGENT'] ?? '')), 0, 500);
-            $stmt = $db->prepare("INSERT INTO hr_uchazec_dotaznik (
-                id_person, id_dotaznik_typ, stav, odeslano, otevreno, ulozeno,
-                data_json, ip_adresa, user_agent, zadal, zadano
-            ) VALUES (?, ?, 'vyplnen', NOW(), NULL, NOW(), ?, ?, ?, ?, NOW())");
-            $stmt->bind_param('iisssi', $idPerson, $idDotaznikTyp, $dataJson, $ip, $userAgent, $idPerson);
+            $overovaciToken = bin2hex(random_bytes(32));
+            $overovaciHash = hash('sha256', $overovaciToken);
+
+            // Ulozi verejny dotaznik jako samostatny naborovy pripad.
+            $stmt = $db->prepare('
+                INSERT INTO hr_vd (
+                    id_vd_stav, id_vd_zdroj, id_person,
+                    jmeno, prijmeni, telefon, telefon_normalizovany, email,
+                    id_slot, pracoviste_preference, mozny_nastup, ocekavana_mzda, povidani,
+                    ip_adresa, user_agent, odeslano, aktivni
+                ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, \'\'), ?, ?, ?, ?, NOW(), 1)
+            ');
+            $stmt->bind_param(
+                'iisssssissdsss',
+                $idStav,
+                $idZdroj,
+                $jmeno,
+                $prijmeni,
+                $telefon,
+                $telefonNormalizovany,
+                $email,
+                $idSlot,
+                $pracovistePreference,
+                $moznyNastup,
+                $ocekavanaMzda,
+                $povidani,
+                $ip,
+                $userAgent
+            );
+            $stmt->execute();
+            $idVd = (int)$db->insert_id;
+            $stmt->close();
+
+            // Ulozi hash overovaciho tokenu, skutecny token je pouze v e-mailovem odkazu.
+            $idDotaznikTyp = 1;
+            $stmt = $db->prepare('
+                INSERT INTO hr_vd_token (id_vd, token_hash, id_dotaznik_typ, platnost_do, pouzito, vytvoreno, aktivni)
+                VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 48 HOUR), NULL, NOW(), 1)
+            ');
+            $stmt->bind_param('isi', $idVd, $overovaciHash, $idDotaznikTyp);
             $stmt->execute();
             $stmt->close();
 
-            dotaznik_hr_zapis_akci($db, $idPerson, 'odeslani_verejneho_dotazniku', 'Uchazec odeslal verejny dotaznik.');
-
-            $aktivitaTyp = $db->query("SELECT id_uchazec_aktivita_typ FROM hr_uchazec_aktivita_typ WHERE kod = 'systemova_udalost' AND aktivni = 1 LIMIT 1")->fetch_assoc();
-            if (!$aktivitaTyp) throw new RuntimeException('Chybí typ aktivity systemova_udalost.');
-            $idAktivitaTyp = (int)$aktivitaTyp['id_uchazec_aktivita_typ'];
-            $predmet = 'Dorazil veřejný dotazník';
-            $obsah = 'Uchazeč odeslal veřejný dotazník pro první kontakt.';
-            $stmt = $db->prepare('INSERT INTO hr_uchazec_aktivita (id_person, id_uchazec_aktivita_typ, provedeno_kdy, predmet, obsah, zadano) VALUES (?, ?, NOW(), ?, ?, NOW())');
-            $stmt->bind_param('iiss', $idPerson, $idAktivitaTyp, $predmet, $obsah);
-            $stmt->execute();
-            $stmt->close();
-
-            if ($presnaDuplicita !== null && $idPersonDuplicita !== null) {
-                $predmet = 'Opakovaný kontakt uchazeče';
-                $obsah = 'Uchazeč zadal stejné údaje jako u staršího záznamu #' . $idPersonDuplicita . '. Původní záznam byl vytvořen ' . formatuj_datum_cas((string)$presnaDuplicita['zadano']) . '.';
-                $stmt = $db->prepare('INSERT INTO hr_uchazec_aktivita (id_person, id_uchazec_aktivita_typ, provedeno_kdy, predmet, obsah, zadano) VALUES (?, ?, NOW(), ?, ?, NOW())');
-                $stmt->bind_param('iiss', $idPerson, $idAktivitaTyp, $predmet, $obsah);
-                $stmt->execute();
-                $stmt->close();
+            $poziceNazev = '-';
+            foreach ($pozice as $polozka) {
+                if ((int)$polozka['id'] === $idSlot) {
+                    $poziceNazev = (string)$polozka['nazev'];
+                    break;
+                }
             }
 
-            if ($kontaktniDuplicita !== null) {
-                $idKontaktniDuplicita = (int)$kontaktniDuplicita['id_person'];
-                $predmet = 'Možná duplicita kontaktu';
-                $obsah = 'Stejný telefon nebo e-mail už existuje u uchazeče #' . $idKontaktniDuplicita . ': '
-                    . trim((string)$kontaktniDuplicita['jmeno'] . ' ' . (string)$kontaktniDuplicita['prijmeni'])
-                    . ', telefon ' . (string)$kontaktniDuplicita['telefon']
-                    . ', e-mail ' . (string)$kontaktniDuplicita['email']
-                    . ', záznam vytvořen ' . formatuj_datum_cas((string)$kontaktniDuplicita['zadano']) . '.';
-                $stmt = $db->prepare('INSERT INTO hr_uchazec_aktivita (id_person, id_uchazec_aktivita_typ, provedeno_kdy, predmet, obsah, zadano) VALUES (?, ?, NOW(), ?, ?, NOW())');
-                $stmt->bind_param('iiss', $idPerson, $idAktivitaTyp, $predmet, $obsah);
-                $stmt->execute();
-                $stmt->close();
-            }
+            odesli_overeni_vd_email([
+                'jmeno' => $jmeno,
+                'prijmeni' => $prijmeni,
+                'telefon' => $telefonNormalizovany,
+                'email' => $email,
+                'pozice' => $poziceNazev,
+                'pracoviste' => $pracovistePreference,
+                'mozny_nastup' => $moznyNastup,
+                'ocekavana_mzda' => $ocekavanaMzda,
+            ], dotaznik_absolutni_url('overit.php?t=' . rawurlencode($overovaciToken)), dotaznik_absolutni_url('overit.php?a=odmitnout&t=' . rawurlencode($overovaciToken)));
 
             $db->commit();
-            $_SESSION['dotaznik_posledni_odeslani'] = time();
-            $_SESSION['dotaznik_odeslano'] = 1;
+            $_SESSION['dotaznik_vysledek'] = [
+                'stav' => 'cekame_na_overeni',
+                'email' => $email,
+            ];
             unset($_SESSION['dotaznik_csrf'], $_SESSION['dotaznik_zobrazen']);
             header('Location: ./', true, 303);
             exit;
@@ -429,11 +481,12 @@ $vybranaMesta = post_allowed_values('mesto', ['Praha', 'Plzeň']);
     </header>
 
     <main class="form-column">
-        <?php if ($odeslano): ?>
+        <?php if (($vysledekOdeslani['stav'] ?? '') === 'cekame_na_overeni'): ?>
             <section class="success-card">
                 <div class="success-icon">✓</div>
                 <h2>Děkujeme za váš zájem</h2>
-                <p>Dotazník jsme v pořádku přijali. Ozveme se vám na uvedený telefon nebo e-mail.</p>
+                <p>Dotazník jsme přijali. Na adresu <?= e((string)$vysledekOdeslani['email']) ?> jsme odeslali shrnutí právě odeslaného dotazníku.</p>
+                <p><strong>Pro zařazení do náboru je potřeba údaje potvrdit odkazem v e-mailu.</strong></p>
                 <a class="button secondary" href="./">Zpět na dotazník</a>
             </section>
         <?php else: ?>
@@ -467,7 +520,7 @@ $vybranaMesta = post_allowed_values('mesto', ['Praha', 'Plzeň']);
                             <label class="field"><span>Příjmení *</span><input type="text" name="prijmeni" value="<?= e(post_text('prijmeni', 80)) ?>" maxlength="80" autocomplete="family-name" required></label>
                         </div>
                         <div class="grid two">
-                            <label class="field"><span>Telefon *</span><input type="tel" name="telefon" value="<?= e(post_text('telefon', 30)) ?>" maxlength="30" autocomplete="tel" placeholder="+420 777 123 456" required></label>
+                            <label class="field"><span>Telefon *</span><input type="tel" name="telefon" value="<?= e(post_text('telefon', 18)) ?>" maxlength="18" autocomplete="tel" placeholder="+420 777 123 456" required></label>
                             <label class="field"><span>E-mail *</span><input type="email" name="email" value="<?= e(post_text('email', 150)) ?>" maxlength="150" autocomplete="email" placeholder="vas@email.cz" required></label>
                         </div>
                     </fieldset>
@@ -518,7 +571,7 @@ $vybranaMesta = post_allowed_values('mesto', ['Praha', 'Plzeň']);
                         <legend>Ještě pár informací</legend>
                         <div class="grid two">
                             <label class="field"><span>Nástup možný od:</span><input type="date" name="mozny_nastup" value="<?= e(post_text('mozny_nastup', 10)) ?>"></label>
-                            <label class="field"><span>Představa o hodinové odměně</span><div class="input-suffix"><input type="number" name="ocekavana_mzda" value="<?= e(post_text('ocekavana_mzda', 20)) ?>" min="0" max="10000" step="1"><span>Kč/h</span></div></label>
+                            <label class="field"><span>Představa o hodinové odměně</span><div class="input-suffix"><input type="number" name="ocekavana_mzda" value="<?= e(post_text('ocekavana_mzda', 20)) ?>" min="0" max="600" step="1"><span>Kč/h</span></div></label>
                         </div>
                         <label class="field"><span>Napište nám něco o sobě</span><textarea name="povidani" rows="2" maxlength="5000" placeholder="Například jakou máte praxi, jaké směny vám vyhovují nebo proč vás práce u nás zaujala."><?= e(post_text('povidani', 5000)) ?></textarea><small>Nemusí to být formální. Stačí pár vět.</small></label>
                     </fieldset>

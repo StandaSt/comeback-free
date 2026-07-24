@@ -25,7 +25,7 @@ $pozadavkyExpirovane = $pozadavkyMuzeZadat
     ? hr_nacti_pozadavky_pobocky_podle_stavu($db, (int)$pozadavkyMainPobocka['id_pob'], 3)
     : [];
 $pozadavkyZrusene = $pozadavkyMuzeZadat
-    ? hr_nacti_pozadavky_pobocky_podle_stavu($db, (int)$pozadavkyMainPobocka['id_pob'], 0)
+    ? hr_nacti_pozadavky_pobocky_podle_stavu($db, (int)$pozadavkyMainPobocka['id_pob'], 4)
     : [];
 ?>
 <section class="panel">
@@ -90,7 +90,7 @@ $pozadavkyZrusene = $pozadavkyMuzeZadat
                     <tbody>
                         <?php foreach ($pozadavkyNove as $pozadavek): ?>
                             <tr>
-                                <td>#<?= h($pozadavek['id_hr_pozadavek']) ?></td>
+                                <td>#<?= h($pozadavek['id_pozadavek']) ?></td>
                                 <td><?= h($pozadavek['slot']) ?></td>
                                 <td><?= h($pozadavek['upresneni']) ?></td>
                                 <td><?= h(hr_format_date((string)$pozadavek['zadano'])) ?></td>
@@ -98,7 +98,7 @@ $pozadavkyZrusene = $pozadavkyMuzeZadat
                                     <?php if ((int)$pozadavek['zadal'] === $pozadavkyPersonId || ($pozadavkyRoleId === 5 && (int)$pozadavek['id_pob'] === (int)$pozadavkyMainPobocka['id_pob'])): ?>
                                         <form method="post" action="" class="hr-row-action-form">
                                             <input type="hidden" name="akce" value="zrusit">
-                                            <input type="hidden" name="id_hr_pozadavek" value="<?= h($pozadavek['id_hr_pozadavek']) ?>">
+                                            <input type="hidden" name="id_pozadavek" value="<?= h($pozadavek['id_pozadavek']) ?>">
                                             <button class="hr-delete-button" type="submit" title="Odstranit" aria-label="Odstranit">×</button>
                                         </form>
                                     <?php endif; ?>
@@ -134,7 +134,7 @@ $pozadavkyZrusene = $pozadavkyMuzeZadat
                     <tbody>
                         <?php foreach ($pozadavkyVyresene as $pozadavek): ?>
                             <tr>
-                                <td>#<?= h($pozadavek['id_hr_pozadavek']) ?></td>
+                                <td>#<?= h($pozadavek['id_pozadavek']) ?></td>
                                 <td><?= h($pozadavek['slot']) ?></td>
                                 <td><?= h($pozadavek['upresneni']) ?></td>
                                 <td><?= h(hr_format_date((string)$pozadavek['zadano'])) ?></td>
@@ -167,7 +167,7 @@ $pozadavkyZrusene = $pozadavkyMuzeZadat
                     <tbody>
                         <?php foreach ($pozadavkyExpirovane as $pozadavek): ?>
                             <tr>
-                                <td>#<?= h($pozadavek['id_hr_pozadavek']) ?></td>
+                                <td>#<?= h($pozadavek['id_pozadavek']) ?></td>
                                 <td><?= h($pozadavek['slot']) ?></td>
                                 <td><?= h($pozadavek['upresneni']) ?></td>
                                 <td><?= h(hr_format_date((string)$pozadavek['zadano'])) ?></td>
@@ -202,7 +202,7 @@ $pozadavkyZrusene = $pozadavkyMuzeZadat
                     <tbody>
                         <?php foreach ($pozadavkyZrusene as $pozadavek): ?>
                             <tr>
-                                <td>#<?= h($pozadavek['id_hr_pozadavek']) ?></td>
+                                <td>#<?= h($pozadavek['id_pozadavek']) ?></td>
                                 <td><?= h($pozadavek['slot']) ?></td>
                                 <td><?= h($pozadavek['upresneni']) ?></td>
                                 <td><?= h(hr_format_date((string)$pozadavek['zadano'])) ?></td>

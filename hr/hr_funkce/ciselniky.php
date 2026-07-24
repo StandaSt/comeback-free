@@ -7,7 +7,7 @@ declare(strict_types=1);
 function hr_fetch_lookup(mysqli $db, string $table, string $idColumn, string $labelColumn, string $orderColumn = ''): array
 {
     $allowed = [
-        'hr_pracovni_vztah_typ' => ['id_pracovni_vztah_typ', 'nazev', 'poradi'],
+        'hr_cis_pracovni_vztah_typ' => ['id_pracovni_vztah_typ', 'nazev', 'id_pracovni_vztah_typ'],
         'pobocka' => ['id_pob', 'nazev', 'id_pob'],
         'cis_slot' => ['id_slot', 'slot', 'id_slot'],
     ];
@@ -23,7 +23,7 @@ function hr_fetch_lookup(mysqli $db, string $table, string $idColumn, string $la
 
     $orderBy = $orderColumn !== '' ? $safeOrder : $safeId;
     $where = '';
-    if ($table === 'hr_pracovni_vztah_typ') {
+    if ($table === 'hr_cis_pracovni_vztah_typ') {
         $where = ' WHERE aktivni = 1';
     }
 

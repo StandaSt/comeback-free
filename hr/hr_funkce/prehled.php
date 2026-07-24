@@ -11,22 +11,18 @@ function hr_fetch_dashboard(mysqli $db): array
         'v_procesu' => 0,
     ];
 
-    // Spocita uchazece podle naboroveho stavu v jednotne tabulce osob.
+    // Spocita verejne dotazniky podle pevnych ID stavu VD.
     $result = $db->query("
-        SELECT s.kod, COUNT(p.id_person) AS cnt
-        FROM hr_uchazec_stav s
-        LEFT JOIN hr_person p
-            ON p.id_uchazec_stav = s.id_uchazec_stav
-           AND p.vztah = 1
-           AND p.aktivni = 1
-        WHERE s.kod IN ('novy', 'v_procesu')
-        GROUP BY s.kod
+        SELECT
+            SUM(CASE WHEN id_vd_stav = 1 THEN 1 ELSE 0 END) AS novy,
+            SUM(CASE WHEN id_vd_stav IN (3,7,8,9,10) THEN 1 ELSE 0 END) AS v_procesu
+        FROM hr_vd
+        WHERE id_person IS NULL
+          AND aktivni = 1
     ");
-    while ($row = $result->fetch_assoc()) {
-        $kod = (string)$row['kod'];
-        if (array_key_exists($kod, $nabor)) {
-            $nabor[$kod] = (int)$row['cnt'];
-        }
+    if ($row = $result->fetch_assoc()) {
+        $nabor['novy'] = (int)($row['novy'] ?? 0);
+        $nabor['v_procesu'] = (int)($row['v_procesu'] ?? 0);
     }
     $result->free();
 
@@ -36,26 +32,23 @@ function hr_fetch_dashboard(mysqli $db): array
         'DPP' => 0,
     ];
 
-    // Spocita aktivni zamestnance podle typu aktualniho pracovniho vztahu.
+    // Spocita aktivni zamestnance podle pevnych ID typu pracovniho vztahu.
     $result = $db->query("
-        SELECT pvt.kod, COUNT(DISTINCT p.id_person) AS cnt
+        SELECT
+            COUNT(DISTINCT CASE WHEN pv.id_pracovni_vztah_typ = 1 THEN p.id_person END) AS HPP,
+            COUNT(DISTINCT CASE WHEN pv.id_pracovni_vztah_typ = 3 THEN p.id_person END) AS DPC,
+            COUNT(DISTINCT CASE WHEN pv.id_pracovni_vztah_typ = 2 THEN p.id_person END) AS DPP
         FROM hr_person p
         INNER JOIN hr_pracovni_vztah pv
             ON pv.id_person = p.id_person
            AND pv.platny = 1
            AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE())
-        INNER JOIN hr_pracovni_vztah_typ pvt
-            ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ
-        WHERE p.vztah = 2
-          AND p.aktivni = 1
-          AND pvt.kod IN ('HPP', 'DPC', 'DPP')
-        GROUP BY pvt.kod
+        WHERE p.aktivni = 1
     ");
-    while ($row = $result->fetch_assoc()) {
-        $kod = (string)$row['kod'];
-        if (array_key_exists($kod, $zamestnanci)) {
-            $zamestnanci[$kod] = (int)$row['cnt'];
-        }
+    if ($row = $result->fetch_assoc()) {
+        $zamestnanci['HPP'] = (int)($row['HPP'] ?? 0);
+        $zamestnanci['DPC'] = (int)($row['DPC'] ?? 0);
+        $zamestnanci['DPP'] = (int)($row['DPP'] ?? 0);
     }
     $result->free();
 
