@@ -26,7 +26,7 @@ $employee = $idPerson > 0 ? hr_fetch_employee($db, $idPerson) : null;
 
                 <div class="employee-contact-grid">
                     <span><b>E-mail</b><?= h((string)($employee['email'] ?? '-')) ?></span>
-                    <span><b>Telefon</b><?= h((string)($employee['telefon'] ?? '-')) ?></span>
+                    <span><b>Telefon</b><?= h(hr_format_phone((string)$employee['telefon'])) ?></span>
                     <span><b>Nástup</b><?= h(hr_format_date((string)($employee['datum_nastupu'] ?? ''))) ?></span>
                     <span><b>Typ vztahu</b><?= h((string)($employee['vztah_kod'] ?? '-')) ?></span>
                 </div>
@@ -55,7 +55,7 @@ $employee = $idPerson > 0 ? hr_fetch_employee($db, $idPerson) : null;
                 <div><dt>Datum narození</dt><dd><?= h(hr_format_date((string)($employee['datum_narozeni'] ?? ''))) ?></dd></div>
                 <div><dt>Rodné číslo</dt><dd><?= h((string)($employee['rodne_cislo'] ?? '-')) ?></dd></div>
                 <div><dt>Pohlaví</dt><dd><?= h((string)($employee['pohlavi'] ?? '-')) ?></dd></div>
-                <div><dt>Telefon</dt><dd><?= h((string)($employee['telefon'] ?? '-')) ?></dd></div>
+                <div><dt>Telefon</dt><dd><?= h(hr_format_phone((string)$employee['telefon'])) ?></dd></div>
                 <div><dt>E-mail</dt><dd><?= h((string)($employee['email'] ?? '-')) ?></dd></div>
             </dl>
         </article>

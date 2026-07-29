@@ -2,6 +2,10 @@
 declare(strict_types=1);
 
 /**
+ * DB dotazy pro dokumenty zobrazovane v HR dashboardu.
+ */
+
+/**
  * Nacte posledni aktualni dokumenty evidovane u VD nebo zamestnancu.
  */
 function hr_fetch_dashboard_documents(mysqli $db, int $limit = 5): array

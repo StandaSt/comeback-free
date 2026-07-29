@@ -7,6 +7,14 @@ $vdAkce = $vdDetail !== null ? hr_nacti_vd_akce($db, $idVd) : [];
 $vdStavy = $vdDetail !== null ? hr_nacti_vd_stavy($db) : [];
 $vdAkceTypy = $vdDetail !== null ? hr_nacti_vd_akce_typy($db) : [];
 $nabor = hr_nacti_nabor_prehled($db);
+$formatDateTime = static function (?string $date): string {
+    if ($date === null || $date === '' || $date === '0000-00-00') {
+        return '-';
+    }
+
+    $ts = strtotime($date);
+    return $ts === false ? '-' : date('j. n. Y H:i', $ts);
+};
 
 $bloky = [
     [
@@ -15,6 +23,7 @@ $bloky = [
         'date_key' => 'zadano',
         'date_label' => 'Uloženo',
         'minimal' => true,
+        'show_expiration' => true,
     ],
     [
         'title' => 'Nové veřejné dotazníky',
@@ -44,6 +53,13 @@ $bloky = [
         'date_label' => 'Aktivita',
         'minimal' => false,
     ],
+    [
+        'title' => 'Expirované - nepotvrzené dotazníky',
+        'rows' => $nabor['expirovane_dotazniky'],
+        'date_key' => 'posledni_aktivita',
+        'date_label' => 'Expirace',
+        'minimal' => true,
+    ],
 ];
 ?>
 <?php if ($idVd > 0): ?>
@@ -64,20 +80,25 @@ $bloky = [
                 <a class="secondary-button" href="?page=nabor">Zavřít detail</a>
             </div>
 
-            <dl class="detail-list compact-detail-list">
-                <div><dt>Telefon</dt><dd><?= h($vdDetail['telefon']) ?></dd></div>
-                <div><dt>E-mail</dt><dd><?= h($vdDetail['email']) ?></dd></div>
-                <div><dt>Pozice</dt><dd><?= h($vdDetail['pozice']) ?></dd></div>
-                <div><dt>Pracoviště</dt><dd><?= h($vdDetail['pracoviste_preference']) ?></dd></div>
-                <div><dt>Možný nástup</dt><dd><?= h(hr_format_date((string)($vdDetail['mozny_nastup'] ?? ''))) ?></dd></div>
-                <div><dt>Očekávaná mzda</dt><dd><?= h((string)($vdDetail['ocekavana_mzda'] ?? '-')) ?></dd></div>
-                <div><dt>Zdroj</dt><dd><?= h($vdDetail['zdroj_nazev']) ?></dd></div>
-                <div><dt>Odesláno</dt><dd><?= h(hr_format_date((string)($vdDetail['zadano'] ?? ''))) ?></dd></div>
-            </dl>
+            <div class="vd-detail-grid">
+                <dl class="detail-list compact-detail-list">
+                    <div><dt>Telefon</dt><dd><?= h($vdDetail['telefon']) ?></dd></div>
+                    <div><dt>E-mail</dt><dd><?= h($vdDetail['email']) ?></dd></div>
+                    <div><dt>Zdroj</dt><dd><?= h($vdDetail['zdroj_nazev']) ?></dd></div>
+                </dl>
 
-            <dl class="detail-list compact-detail-list">
-                <div><dt>Povídání</dt><dd><?= h(trim((string)($vdDetail['povidani'] ?? '')) !== '' ? (string)$vdDetail['povidani'] : '-') ?></dd></div>
-            </dl>
+                <dl class="detail-list compact-detail-list">
+                    <div><dt>Pracoviště</dt><dd><?= h($vdDetail['pracoviste_preference']) ?></dd></div>
+                    <div><dt>Pozice</dt><dd><?= h($vdDetail['pozice']) ?></dd></div>
+                    <div><dt>Očekávaná mzda</dt><dd><?= h((string)($vdDetail['ocekavana_mzda'] ?? '-')) ?></dd></div>
+                </dl>
+
+                <dl class="detail-list compact-detail-list">
+                    <div><dt>Odesláno</dt><dd><?= h(hr_format_date((string)($vdDetail['zadano'] ?? ''))) ?></dd></div>
+                    <div><dt>Možný nástup</dt><dd><?= h(hr_format_date((string)($vdDetail['mozny_nastup'] ?? ''))) ?></dd></div>
+                    <div><dt>Povídání</dt><dd><?= h(trim((string)($vdDetail['povidani'] ?? '')) !== '' ? (string)$vdDetail['povidani'] : '-') ?></dd></div>
+                </dl>
+            </div>
 
             <form class="hr-form" method="post" action="?page=nabor&id_vd=<?= h((string)$vdDetail['id_vd']) ?>">
                 <input type="hidden" name="id_vd" value="<?= h((string)$vdDetail['id_vd']) ?>">
@@ -156,10 +177,8 @@ $bloky = [
 <?php foreach ($bloky as $blok): ?>
     <section class="panel">
         <div class="panel-header">
-            <div>
-                <h2><?= h($blok['title']) ?></h2>
-                <p class="muted"><?= h(hr_pocet_uchazecu_text(count($blok['rows']))) ?></p>
-            </div>
+            <h2><?= h($blok['title']) ?></h2>
+            <span class="panel-header-count"><?= h(hr_pocet_uchazecu_text(count($blok['rows']))) ?></span>
         </div>
 
         <?php if ($blok['rows'] === []): ?>
@@ -170,13 +189,19 @@ $bloky = [
                     <thead>
                         <tr>
                             <th>Uchazeč</th>
-                            <?php if (empty($blok['minimal'])): ?>
+                            <?php if (!empty($blok['show_expiration'])): ?>
+                                <th>E-mail</th>
+                                <th>Telefon</th>
+                            <?php elseif (empty($blok['minimal'])): ?>
                                 <th>Telefon</th>
                                 <th>E-mail</th>
                                 <th>Pozice</th>
                                 <th>Pracoviště</th>
                             <?php endif; ?>
                             <th><?= h($blok['date_label']) ?></th>
+                            <?php if (!empty($blok['show_expiration'])): ?>
+                                <th>Expiruje</th>
+                            <?php endif; ?>
                             <?php if (empty($blok['minimal'])): ?>
                                 <th>Stav</th>
                             <?php endif; ?>
@@ -192,13 +217,19 @@ $bloky = [
                                         <?= h($uchazec['cele_jmeno']) ?>
                                     <?php endif; ?>
                                 </td>
-                                <?php if (empty($blok['minimal'])): ?>
+                                <?php if (!empty($blok['show_expiration'])): ?>
+                                    <td><?= h($uchazec['email']) ?></td>
+                                    <td><?= h($uchazec['telefon']) ?></td>
+                                <?php elseif (empty($blok['minimal'])): ?>
                                     <td><?= h($uchazec['telefon']) ?></td>
                                     <td><?= h($uchazec['email']) ?></td>
                                     <td><?= h($uchazec['pozice']) ?></td>
                                     <td><?= h($uchazec['pracoviste_preference']) ?></td>
                                 <?php endif; ?>
-                                <td><?= h(hr_format_date((string)($uchazec[$blok['date_key']] ?? ''))) ?></td>
+                                <td><?= h(!empty($blok['show_expiration']) ? $formatDateTime((string)($uchazec[$blok['date_key']] ?? '')) : hr_format_date((string)($uchazec[$blok['date_key']] ?? ''))) ?></td>
+                                <?php if (!empty($blok['show_expiration'])): ?>
+                                    <td><?= h($formatDateTime((string)($uchazec['platnost_do'] ?? ''))) ?></td>
+                                <?php endif; ?>
                                 <?php if (empty($blok['minimal'])): ?>
                                     <td><span class="badge neutral"><?= h($uchazec['stav_nazev']) ?></span></td>
                                 <?php endif; ?>

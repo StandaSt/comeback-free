@@ -2,6 +2,10 @@
 declare(strict_types=1);
 
 /**
+ * DB operace pro HR pozadavky pobocky.
+ */
+
+/**
  * Nacte hlavni pobocku uzivatele pro zadani HR pozadavku.
  */
 function hr_nacti_hlavni_pobocku_uzivatele(mysqli $db, int $idUser): array
@@ -38,6 +42,9 @@ function hr_uloz_pozadavek(mysqli $db, int $idPob, int $idSlot, int $pocet, stri
     if ($zadalPerson <= 0) {
         throw new RuntimeException('Chybí HR osoba zadavatele požadavku.');
     }
+    if ($idPob <= 0 || $idSlot <= 0 || $pocet <= 0) {
+        throw new RuntimeException('Chybí povinné údaje požadavku.');
+    }
 
     $stmt = $db->prepare("
         INSERT INTO hr_pozadavek (id_pob, id_slot, id_pozadavek_stav, upresneni, zadal, zadano)
@@ -53,7 +60,7 @@ function hr_uloz_pozadavek(mysqli $db, int $idPob, int $idSlot, int $pocet, stri
 }
 
 /**
- * Zrusi otevreny HR pozadavek zadavatelem nebo vedoucim stejne pobocky.
+ * Zrusi otevreny HR pozadavek podle opravneni role.
  */
 function hr_zrus_pozadavek(mysqli $db, int $idPozadavek, int $idPob, int $zrusilPerson, int $idRole): void
 {
@@ -68,9 +75,9 @@ function hr_zrus_pozadavek(mysqli $db, int $idPozadavek, int $idPob, int $zrusil
             uzavrel = ?
         WHERE id_pozadavek = ?
           AND id_pozadavek_stav = 1
-          AND (zadal = ? OR (? = 5 AND id_pob = ?))
+          AND (? = 1 OR zadal = ? OR (? = 5 AND id_pob = ?))
     ");
-    $stmt->bind_param('iiiii', $zrusilPerson, $idPozadavek, $zrusilPerson, $idRole, $idPob);
+    $stmt->bind_param('iiiiii', $zrusilPerson, $idPozadavek, $idRole, $zrusilPerson, $idRole, $idPob);
     $stmt->execute();
     $stmt->close();
 }
@@ -97,6 +104,44 @@ function hr_nacti_pozadavky_pobocky_podle_stavu(mysqli $db, int $idPob, int $sta
         ORDER BY hp.zadano ASC, hp.id_pozadavek ASC
     ");
     $stmt->bind_param('ii', $idPob, $stav);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $rows = [];
+    while ($row = $result->fetch_assoc()) {
+        $rows[] = $row + [
+            'upresneni' => trim((string)($row['upresneni'] ?? '')) !== '' ? (string)$row['upresneni'] : '-',
+        ];
+    }
+    $stmt->close();
+
+    return $rows;
+}
+
+/**
+ * Nacte HR pozadavky vsech pobocek podle stavu.
+ */
+function hr_nacti_pozadavky_podle_stavu(mysqli $db, int $stav): array
+{
+    $stmt = $db->prepare("
+        SELECT
+            hp.id_pozadavek,
+            hp.id_slot,
+            hp.upresneni,
+            hp.zadal,
+            hp.zadano,
+            hp.id_pob,
+            cs.slot,
+            p.nazev AS pobocka
+        FROM hr_pozadavek hp
+        INNER JOIN cis_slot cs
+            ON cs.id_slot = hp.id_slot
+        INNER JOIN pobocka p
+            ON p.id_pob = hp.id_pob
+        WHERE hp.id_pozadavek_stav = ?
+        ORDER BY p.nazev ASC, hp.zadano ASC, hp.id_pozadavek ASC
+    ");
+    $stmt->bind_param('i', $stav);
     $stmt->execute();
     $result = $stmt->get_result();
 

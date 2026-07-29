@@ -13,3 +13,11 @@ function hr_format_date(?string $date): string
     $ts = strtotime($date);
     return $ts === false ? '-' : date('j. n. Y', $ts);
 }
+
+/**
+ * Vlozi mezery do ceskeho telefonu ulozeneho jako 9 cislic.
+ */
+function hr_format_phone(string $telefon): string
+{
+    return substr($telefon, 0, 3) . ' ' . substr($telefon, 3, 3) . ' ' . substr($telefon, 6, 3);
+}

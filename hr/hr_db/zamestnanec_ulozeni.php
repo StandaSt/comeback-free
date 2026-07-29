@@ -2,6 +2,10 @@
 declare(strict_types=1);
 
 /**
+ * DB zapis noveho zamestnance a jeho zakladnich navaznych zaznamu.
+ */
+
+/**
  * Ulozi noveho zamestnance a jeho zakladni navazna HR data.
  */
 function hr_insert_employee(mysqli $db, array $data, int $zadalPerson): int
@@ -16,8 +20,16 @@ function hr_insert_employee(mysqli $db, array $data, int $zadalPerson): int
     $datumNastupu = trim((string)($data['datum_nastupu'] ?? ''));
     $idVztahTyp = (int)($data['id_pracovni_vztah_typ'] ?? 0);
     $idPob = (int)($data['id_pob'] ?? 0);
-    $idSlot = (int)($data['id_slot'] ?? 0);
-    $telefon = trim((string)($data['telefon'] ?? ''));
+    $slotVolba = (string)($data['id_slot'] ?? '');
+    $idSlot = (int)$slotVolba;
+    $slotJine = trim((string)($data['slot_jine'] ?? ''));
+    $telefon = preg_replace('/\D+/', '', (string)($data['telefon'] ?? '')) ?? '';
+    if (strlen($telefon) === 12 && str_starts_with($telefon, '420')) {
+        $telefon = substr($telefon, 3);
+    }
+    if (strlen($telefon) === 14 && str_starts_with($telefon, '00420')) {
+        $telefon = substr($telefon, 5);
+    }
     $email = trim((string)($data['email'] ?? ''));
 
     if ($jmeno === '' || $prijmeni === '') {
@@ -26,11 +38,14 @@ function hr_insert_employee(mysqli $db, array $data, int $zadalPerson): int
     if ($datumNastupu === '' || strtotime($datumNastupu) === false) {
         throw new RuntimeException('Vyplňte datum nástupu.');
     }
-    if ($idVztahTyp <= 0 || $idPob <= 0 || $idSlot <= 0) {
+    if ($idVztahTyp <= 0 || $idPob <= 0 || ($idSlot <= 0 && ($slotVolba !== '__jine__' || $slotJine === ''))) {
         throw new RuntimeException('Vyberte typ vztahu, pobočku a zařazení.');
     }
     if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
         throw new RuntimeException('E-mail nemá platný tvar.');
+    }
+    if ($telefon !== '' && strlen($telefon) !== 9) {
+        throw new RuntimeException('Telefon musí být české číslo s 9 číslicemi.');
     }
 
     $osobniCisloDb = $osobniCislo !== '' ? $osobniCislo : null;
@@ -42,6 +57,18 @@ function hr_insert_employee(mysqli $db, array $data, int $zadalPerson): int
 
     $db->begin_transaction();
     try {
+        if ($slotVolba === '__jine__') {
+            // Doplni novou polozku do ciselniku zarazeni.
+            $stmt = $db->prepare('
+                INSERT INTO cis_slot (slot)
+                VALUES (?)
+            ');
+            $stmt->bind_param('s', $slotJine);
+            $stmt->execute();
+            $idSlot = (int)$db->insert_id;
+            $stmt->close();
+        }
+
         // Zalozi stabilni identitu zamestnance.
         $stmt = $db->prepare('
             INSERT INTO hr_person (osobni_cislo, zdroj, id_person_zadal, vytvoreno, aktivni)
@@ -91,12 +118,11 @@ function hr_insert_employee(mysqli $db, array $data, int $zadalPerson): int
 
         if ($telefon !== '') {
             // Ulozi hlavni telefon, pokud byl vyplnen.
-            $telefonNorm = preg_replace('~\s+~', '', $telefon) ?? $telefon;
             $stmt = $db->prepare('
-                INSERT INTO hr_telefon (id_person, id_telefon_typ, telefon, telefon_normalizovany, hlavni, id_person_zadal, vytvoreno, platny)
-                VALUES (?, ?, ?, ?, ?, ?, NOW(), ?)
+                INSERT INTO hr_telefon (id_person, id_telefon_typ, telefon, hlavni, id_person_zadal, vytvoreno, platny)
+                VALUES (?, ?, ?, ?, ?, NOW(), ?)
             ');
-            $stmt->bind_param('iissiii', $idPerson, $telefonTyp, $telefon, $telefonNorm, $hlavni, $zadalPerson, $platny);
+            $stmt->bind_param('iisiii', $idPerson, $telefonTyp, $telefon, $hlavni, $zadalPerson, $platny);
             $stmt->execute();
             $stmt->close();
         }

@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Verejny HR dotaznik pro prvni kontakt s uchazecem.
+ */
 session_name('CB_DOTAZNIK');
 session_set_cookie_params([
     'lifetime' => 0,
@@ -18,6 +21,15 @@ require_once __DIR__ . '/../www/lib/mailer.php';
 function e(mixed $value): string
 {
     return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+}
+
+function chyba_html(mixed $chyba): string
+{
+    if (is_array($chyba) && isset($chyba['html'])) {
+        return (string)$chyba['html'];
+    }
+
+    return e($chyba);
 }
 
 function dotaznik_absolutni_url(string $path): string
@@ -87,20 +99,18 @@ function post_allowed_values(string $name, array $allowed): array
     return array_values($out);
 }
 
-// Prevede cesky telefon na jednotny tvar +420XXXXXXXXX, jinak vrati prazdny text.
+// Prevede cesky telefon na 9 cislic bez predvolby, jinak vrati prazdny text.
 function normalizuj_telefon(string $telefon): string
 {
     $cisla = preg_replace('/\D+/', '', $telefon) ?? '';
-    if (strlen($cisla) === 9) {
-        return '+420' . $cisla;
-    }
-
     if (strlen($cisla) === 12 && str_starts_with($cisla, '420')) {
-        return '+' . $cisla;
+        $cisla = substr($cisla, 3);
     }
-
     if (strlen($cisla) === 14 && str_starts_with($cisla, '00420')) {
-        return '+420' . substr($cisla, 5);
+        $cisla = substr($cisla, 5);
+    }
+    if (strlen($cisla) === 9) {
+        return $cisla;
     }
 
     return '';
@@ -243,35 +253,44 @@ function formatuj_datum_cas(string $datumCas): string
     return $datum ? $datum->format('d. m. Y H:i') : $datumCas;
 }
 
-function existuje_pouzity_kontakt(mysqli $db, string $telefonNormalizovany, string $email): bool
+function nacti_pouzity_kontakt(mysqli $db, string $telefon, string $email): array
 {
+    $pouzityKontakt = [
+        'telefon' => false,
+        'email' => false,
+    ];
+
     $stmt = $db->prepare('
-        SELECT 1
+        SELECT telefon, email
         FROM hr_vd
-        WHERE telefon_normalizovany = ?
+        WHERE telefon = ?
            OR email = ?
-        LIMIT 1
     ');
-    $stmt->bind_param('ss', $telefonNormalizovany, $email);
+    $stmt->bind_param('ss', $telefon, $email);
     $stmt->execute();
-    $row = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
-    if (is_array($row)) {
-        return true;
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
+        if ((string)$row['telefon'] === $telefon) {
+            $pouzityKontakt['telefon'] = true;
+        }
+        if ((string)$row['email'] === $email) {
+            $pouzityKontakt['email'] = true;
+        }
     }
+    $stmt->close();
 
     $stmt = $db->prepare('
         SELECT 1
         FROM hr_telefon
-        WHERE telefon_normalizovany = ?
+        WHERE telefon = ?
         LIMIT 1
     ');
-    $stmt->bind_param('s', $telefonNormalizovany);
+    $stmt->bind_param('s', $telefon);
     $stmt->execute();
     $row = $stmt->get_result()->fetch_assoc();
     $stmt->close();
     if (is_array($row)) {
-        return true;
+        $pouzityKontakt['telefon'] = true;
     }
 
     $stmt = $db->prepare('
@@ -284,8 +303,11 @@ function existuje_pouzity_kontakt(mysqli $db, string $telefonNormalizovany, stri
     $stmt->execute();
     $row = $stmt->get_result()->fetch_assoc();
     $stmt->close();
+    if (is_array($row)) {
+        $pouzityKontakt['email'] = true;
+    }
 
-    return is_array($row);
+    return $pouzityKontakt;
 }
 
 $chyby = [];
@@ -323,8 +345,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $db instanceof mysqli) {
     }
     $jmeno = post_text('jmeno', 60);
     $prijmeni = post_text('prijmeni', 80);
-    $telefon = post_text('telefon', 18);
-    $telefonNormalizovany = normalizuj_telefon($telefon);
+    $telefon = normalizuj_telefon(post_text('telefon', 18));
     $email = mb_strtolower(post_text('email', 150));
     $moznyNastup = post_text('mozny_nastup', 10);
     $mzdaText = str_replace(',', '.', post_text('ocekavana_mzda', 20));
@@ -336,7 +357,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $db instanceof mysqli) {
 
     if (!validni_jmeno($jmeno)) $chyby[] = 'Vyplňte platné křestní jméno, alespoň 2 znaky.';
     if (!validni_jmeno($prijmeni)) $chyby[] = 'Vyplňte platné příjmení, alespoň 2 znaky.';
-    if ($telefonNormalizovany === '') $chyby[] = 'Vyplňte platné telefonní číslo.';
+    if ($telefon === '') $chyby[] = 'Vyplňte platné české telefonní číslo.';
     if ($email === '' || !validni_email($email)) $chyby[] = 'Vyplňte platnou e-mailovou adresu.';
     if ($poziceIds === []) $chyby[] = 'Vyberte alespoň jednu pozici.';
     if ($mesta === []) $chyby[] = 'Vyberte alespoň jedno město, ve kterém chcete pracovat.';
@@ -362,8 +383,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $db instanceof mysqli) {
 
     if ($chyby === []) {
         // Zabrani opakovanemu ulozeni kontaktu, ktery uz evidujeme ve VD nebo u zamestnance.
-        if (existuje_pouzity_kontakt($db, $telefonNormalizovany, $email)) {
-            $chyby[] = 'Tento e-mail nebo telefon již byl v minulosti použit a dotazník tedy nelze uložit.';
+        $pouzityKontakt = nacti_pouzity_kontakt($db, $telefon, $email);
+        if ($pouzityKontakt['telefon']) {
+            $chyby[] = ['html' => 'Telefon <strong>' . e($telefon) . '</strong> již byl v minulosti použit a dotazník tedy nelze uložit.'];
+        }
+        if ($pouzityKontakt['email']) {
+            $chyby[] = ['html' => 'E-mail <strong>' . e($email) . '</strong> již byl v minulosti použit a dotazník tedy nelze uložit.'];
         }
     }
 
@@ -384,19 +409,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $db instanceof mysqli) {
             $stmt = $db->prepare('
                 INSERT INTO hr_vd (
                     id_vd_stav, id_vd_zdroj, id_person,
-                    jmeno, prijmeni, telefon, telefon_normalizovany, email,
+                    jmeno, prijmeni, telefon, email,
                     id_slot, pracoviste_preference, mozny_nastup, ocekavana_mzda, povidani,
                     ip_adresa, user_agent, odeslano, aktivni
-                ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, \'\'), ?, ?, ?, ?, NOW(), 1)
+                ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, NULLIF(?, \'\'), ?, ?, ?, ?, NOW(), 1)
             ');
             $stmt->bind_param(
-                'iisssssissdsss',
+                'iissssissdsss',
                 $idStav,
                 $idZdroj,
                 $jmeno,
                 $prijmeni,
                 $telefon,
-                $telefonNormalizovany,
                 $email,
                 $idSlot,
                 $pracovistePreference,
@@ -431,7 +455,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $db instanceof mysqli) {
             odesli_overeni_vd_email([
                 'jmeno' => $jmeno,
                 'prijmeni' => $prijmeni,
-                'telefon' => $telefonNormalizovany,
+                'telefon' => $telefon,
                 'email' => $email,
                 'pozice' => $poziceNazev,
                 'pracoviste' => $pracovistePreference,
@@ -486,7 +510,7 @@ $vybranaMesta = post_allowed_values('mesto', ['Praha', 'Plzeň']);
                 <div class="success-icon">✓</div>
                 <h2>Děkujeme za váš zájem</h2>
                 <p>Dotazník jsme přijali. Na adresu <?= e((string)$vysledekOdeslani['email']) ?> jsme odeslali shrnutí právě odeslaného dotazníku.</p>
-                <p><strong>Pro zařazení do náboru je potřeba údaje potvrdit odkazem v e-mailu.</strong></p>
+                <p><strong>Pro zařazení do náboru je potřeba údaje potvrdit<br>do 48 hodin odkazem v e-mailu.</strong></p>
                 <a class="button secondary" href="./">Zpět na dotazník</a>
             </section>
         <?php else: ?>
@@ -505,7 +529,7 @@ $vybranaMesta = post_allowed_values('mesto', ['Praha', 'Plzeň']);
 
                 <?php if ($dbChyba !== ''): ?><div class="message error"><?= e($dbChyba) ?></div><?php endif; ?>
                 <?php if ($chyby !== []): ?>
-                    <div class="message error"><strong>Formulář prosím zkontrolujte:</strong><ul><?php foreach ($chyby as $chyba): ?><li><?= e($chyba) ?></li><?php endforeach; ?></ul></div>
+                    <div class="message error"><strong>Formulář prosím zkontrolujte:</strong><ul><?php foreach ($chyby as $chyba): ?><li><?= chyba_html($chyba) ?></li><?php endforeach; ?></ul></div>
                 <?php endif; ?>
 
                 <?php if ($dbChyba === ''): ?>
@@ -520,7 +544,7 @@ $vybranaMesta = post_allowed_values('mesto', ['Praha', 'Plzeň']);
                             <label class="field"><span>Příjmení *</span><input type="text" name="prijmeni" value="<?= e(post_text('prijmeni', 80)) ?>" maxlength="80" autocomplete="family-name" required></label>
                         </div>
                         <div class="grid two">
-                            <label class="field"><span>Telefon *</span><input type="tel" name="telefon" value="<?= e(post_text('telefon', 18)) ?>" maxlength="18" autocomplete="tel" placeholder="+420 777 123 456" required></label>
+                            <label class="field"><span>Telefon *</span><span class="phone-field"><span class="phone-prefix">+420</span><input type="tel" name="telefon" value="<?= e(post_text('telefon', 18)) ?>" maxlength="11" autocomplete="tel" placeholder="123 456 789" data-phone-cz required></span></label>
                             <label class="field"><span>E-mail *</span><input type="email" name="email" value="<?= e(post_text('email', 150)) ?>" maxlength="150" autocomplete="email" placeholder="vas@email.cz" required></label>
                         </div>
                     </fieldset>
@@ -584,5 +608,6 @@ $vybranaMesta = post_allowed_values('mesto', ['Praha', 'Plzeň']);
         <?php endif; ?>
     </main>
 </div>
+<script src="dot_assets/dotaznik.js"></script>
 </body>
 </html>

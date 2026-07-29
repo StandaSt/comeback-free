@@ -2,10 +2,16 @@
 declare(strict_types=1);
 
 /**
+ * DB dotazy pro hlavni dashboard HR modulu.
+ */
+
+/**
  * Nacte data pro hlavni prehled HR modulu.
  */
 function hr_fetch_dashboard(mysqli $db): array
 {
+    hr_expiruj_nepotvrzene_vd($db);
+
     $nabor = [
         'novy' => 0,
         'v_procesu' => 0,

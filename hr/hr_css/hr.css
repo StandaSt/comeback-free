@@ -1,3 +1,5 @@
+/* Vzhled interniho HR modulu. */
+
 :root {
     --bg: #eef2f7;
     --surface: #ffffff;
@@ -435,6 +437,11 @@ select {
     font-size: 14px;
 }
 
+.panel-header-count {
+    color: var(--muted);
+    font-size: 14px;
+}
+
 .panel-header a {
     color: var(--primary);
     font-size: 12px;
@@ -670,6 +677,39 @@ html[data-theme="dark"] .badge.success {
     color: var(--muted);
     font-size: 12px;
     font-weight: 700;
+}
+
+.hr-slot-choice {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.hr-slot-choice input:disabled {
+    opacity: .55;
+}
+
+.hr-phone-field {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--surface-strong);
+}
+
+.hr-phone-prefix {
+    padding: 0 9px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.hr-form .hr-phone-field input {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
 }
 
 .hr-request-title {
@@ -991,6 +1031,12 @@ html[data-theme="dark"] .badge.success {
     text-align: right;
 }
 
+.vd-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 18px 80px;
+}
+
 .compact-empty-state {
     padding: 12px;
     font-size: 12px;
@@ -1146,6 +1192,10 @@ html[data-theme="dark"] .badge.success {
     }
 
     .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .vd-detail-grid {
         grid-template-columns: 1fr;
     }
 }

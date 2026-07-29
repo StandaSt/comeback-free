@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Vstupni bod HR modulu: overi pristup, vybere stranku a nacte layout.
+ */
 require_once __DIR__ . '/../www/lib/session_boot.php';
 require_once __DIR__ . '/../www/config/secrets.php';
 require_once __DIR__ . '/../www/lib/app.php';
@@ -17,91 +20,8 @@ $cbUser = $_SESSION['cb_user'] ?? [];
 $roleId = is_array($cbUser) ? (int)($cbUser['id_role'] ?? 0) : 0;
 $userId = is_array($cbUser) ? (int)($cbUser['id_user'] ?? 0) : 0;
 
-if ($roleId !== 1 && $userId !== 57) {
-    ?><!DOCTYPE html>
-<html lang="cs">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>PizzaComeback - HR</title>
-
-<style>
-* {
-    box-sizing: border-box;
-}
-
-html,
-body {
-    width: 100%;
-    height: 100%;
-    margin: 0;
-}
-
-body {
-    display: flex;
-    flex-direction: column;
-    font-family: Arial, Helvetica, sans-serif;
-    background: #f5f5f5;
-    overflow: hidden;
-}
-
-.menu {
-    flex: 0 0 auto;
-    padding: 15px;
-    text-align: center;
-    background: #ffffff;
-    border-bottom: 1px solid #dcdcdc;
-}
-
-.menu a {
-    display: inline-block;
-    margin: 0 10px;
-    padding: 10px 20px;
-    text-decoration: none;
-    font-weight: bold;
-    color: #ffffff;
-    background: #2f6fed;
-    border-radius: 6px;
-}
-
-.menu a:hover {
-    background: #1f56c5;
-}
-
-.container {
-    flex: 1 1 auto;
-    min-width: 0;
-    min-height: 0;
-    padding: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.container img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-}
-</style>
-</head>
-
-<body>
-
-<div class="menu">
-    <a href="<?= h(cb_module_url('is')) ?>">IS</a>
-    <a href="<?= h(cb_module_url('smeny')) ?>">Směny</a>
-</div>
-
-<div class="container">
-    <img src="pripravujeme_hr.png" alt="HR se připravuje">
-</div>
-
-</body>
-</html>
-<?php
+if (!in_array($roleId, [1, 3, 5], true) && $userId !== 57) {
+    require __DIR__ . '/hr_includes/pripravujeme.php';
     exit;
 }
 
@@ -200,57 +120,20 @@ if ($userRole === '') {
 $db = db();
 
 if ($page === 'nabor' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $idVd = (int)($_POST['id_vd'] ?? 0);
-
-    try {
-        hr_uloz_vd_akci(
-            $db,
-            $idVd,
-            (int)($_POST['id_vd_stav'] ?? 0),
-            (int)($_POST['id_vd_akce_typ'] ?? 0),
-            trim((string)($_POST['akce_kdy'] ?? '')),
-            (string)($_POST['poznamka'] ?? ''),
-            hr_current_person_id($db)
-        );
-        $_SESSION['hr_flash'] = [
-            'type' => 'success',
-            'text' => 'Akce byla uložena.',
-        ];
-    } catch (Throwable $e) {
-        $_SESSION['hr_flash'] = [
-            'type' => 'error',
-            'text' => $e->getMessage(),
-        ];
-    }
-
-    header('Location: ?page=nabor&id_vd=' . $idVd);
-    exit;
+    hr_post_nabor($db);
 }
 
 if ($page === 'pozadavky' && $_SERVER['REQUEST_METHOD'] === 'POST' && in_array($roleId, [1, 5], true)) {
-    $mainPobocka = hr_nacti_hlavni_pobocku_uzivatele($db, (int)($cbUser['id_user'] ?? 0));
-    $currentPersonId = hr_current_person_id($db);
-    $akce = (string)($_POST['akce'] ?? 'vytvorit');
+    hr_post_pozadavky($db, $cbUser, $roleId);
+}
 
-    if ($akce === 'zrusit') {
-        hr_zrus_pozadavek($db, (int)($_POST['id_pozadavek'] ?? 0), (int)$mainPobocka['id_pob'], $currentPersonId, $roleId);
-        $_SESSION['hr_pozadavek_zrusen'] = 1;
-    } else {
-        $pocet = (int)($_POST['pocet'] ?? 1);
-        $idSlot = (int)($_POST['id_slot'] ?? 0);
-        $upresneni = mb_substr(trim((string)($_POST['upresneni'] ?? '')), 0, 500);
-
-        hr_uloz_pozadavek($db, (int)$mainPobocka['id_pob'], $idSlot, $pocet, $upresneni, $currentPersonId);
-        $_SESSION['hr_pozadavek_ulozeno'] = 1;
-    }
-
-    header('Location: ?page=pozadavky');
-    exit;
+if ($page === 'novy_zamestnanec' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    hr_post_zamestnanec($db, $roleId);
 }
 
 $flash = $_SESSION['hr_flash'] ?? null;
 unset($_SESSION['hr_flash']);
-$hrCssUrl = cb_current_module_url('hr_assets/css/hr.css');
+$hrCssUrl = cb_current_module_url('hr_css/hr.css');
 
 ?><!DOCTYPE html>
 <html lang="cs" data-theme="light">
@@ -276,6 +159,6 @@ $hrCssUrl = cb_current_module_url('hr_assets/css/hr.css');
     </div>
 </div>
 
-<script src="<?= h(cb_current_module_url('hr_assets/js/hr.js')) ?>"></script>
+<script src="<?= h(cb_current_module_url('hr_js/hr.js')) ?>"></script>
 </body>
 </html>

@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Stranka s formularem pro rucni zalozeni zamestnance.
+ */
 $vztahy = hr_fetch_lookup($db, 'hr_cis_pracovni_vztah_typ', 'id_pracovni_vztah_typ', 'nazev', 'id_pracovni_vztah_typ');
 $pobocky = hr_fetch_lookup($db, 'pobocka', 'id_pob', 'nazev');
 $sloty = hr_fetch_lookup($db, 'cis_slot', 'id_slot', 'slot');
@@ -13,7 +16,7 @@ $sloty = hr_fetch_lookup($db, 'cis_slot', 'id_slot', 'slot');
         </div>
     </div>
 
-    <form class="hr-form" method="post" action="<?= h(cb_current_module_url('hr_actions/zamestnanec_uloz.php')) ?>">
+    <form class="hr-form" method="post" action="?page=novy_zamestnanec">
         <div class="form-grid">
             <label>
                 <span>Jméno</span>
@@ -57,17 +60,21 @@ $sloty = hr_fetch_lookup($db, 'cis_slot', 'id_slot', 'slot');
 
             <label>
                 <span>Zařazení</span>
-                <select name="id_slot" required>
-                    <option value="">Vyberte</option>
-                    <?php foreach ($sloty as $slot): ?>
-                        <option value="<?= h($slot['id']) ?>"><?= h($slot['label']) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <span class="hr-slot-choice">
+                    <select name="id_slot" data-slot-select required>
+                        <option value="">Vyberte</option>
+                        <?php foreach ($sloty as $slot): ?>
+                            <option value="<?= h($slot['id']) ?>"><?= h($slot['label']) ?></option>
+                        <?php endforeach; ?>
+                        <option value="__jine__">Jiné</option>
+                    </select>
+                    <input type="text" name="slot_jine" maxlength="80" disabled data-slot-other>
+                </span>
             </label>
 
             <label>
                 <span>Telefon</span>
-                <input name="telefon" maxlength="30" autocomplete="tel">
+                <span class="hr-phone-field"><span class="hr-phone-prefix">+420</span><input name="telefon" maxlength="11" autocomplete="tel" data-phone-cz></span>
             </label>
 
             <label>

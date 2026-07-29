@@ -2,6 +2,10 @@
 declare(strict_types=1);
 
 /**
+ * DB dotazy pro seznam a detail zamestnancu v HR.
+ */
+
+/**
  * Nacte seznam aktivnich zamestnancu.
  */
 function hr_fetch_employees(mysqli $db, int $limit = 100): array
