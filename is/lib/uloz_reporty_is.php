@@ -31,6 +31,7 @@ if ($currentUserId <= 0 || empty($_SESSION['login_ok'])) {
 
 $idPob = (int)($_POST['id_pob'] ?? 0);
 $datum = trim((string)($_POST['datum_reportu'] ?? ''));
+$action = trim((string)($_POST['dr_action'] ?? ''));
 if ($idPob <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $datum)) {
     $sendJson(422, ['ok' => false, 'err' => 'Neplatny pozadavek']);
 }
@@ -107,23 +108,7 @@ $rozdilFormRaw = trim((string)($_POST['rozdil'] ?? ''));
 $colPomerFormRaw = trim((string)($_POST['col_pomer'] ?? ''));
 $rozdilForm = $rozdilFormRaw === '' ? null : cb_vcr_float($rozdilFormRaw);
 $colPomerForm = $colPomerFormRaw === '' ? null : cb_vcr_float($colPomerFormRaw);
-
-try {
-    if ($isCurrentWorkday) {
-        if (!$canFinalizeCurrentNew && !$canFinalizeCurrentEdit) {
-            $sendJson(403, ['ok' => false, 'err' => 'Nemate pravo ulozit report']);
-        }
-        $workdayRange = cb_dt_workday_range_utc($datum);
-        $restiaSummary = cb_denni_report_restia_summary($conn, $idPob, $workdayRange);
-        $idReportu = cb_db_zapis_denni_report_from_form($conn, $idPob, $datum, $currentUserId, $restiaSummary, $_POST, $rozdilForm, $colPomerForm, $canFinalizeCurrentEdit);
-        $sendJson(200, ['ok' => true, 'id_reportu' => $idReportu]);
-    }
-
-    if (!$canFinalizeHistory) {
-        $sendJson(403, ['ok' => false, 'err' => 'Nemate pravo upravit historicky report']);
-    }
-
-    $historyReport = is_array($historyData) ? (array)($historyData['report'] ?? []) : [];
+$historyRestiaSummary = static function (array $historyReport): array {
     $restiaSummary = cb_denni_report_restia_summary_default();
     $restiaSummary['trzba'] = (float)($historyReport['trzba'] ?? 0);
     $restiaSummary['wolt'] = (float)($historyReport['wolt'] ?? 0);
@@ -151,6 +136,60 @@ try {
     $restiaSummary['woltdrive_late_count'] = (int)($historyReport['woltdrive_zpozdene_ks'] ?? 0);
     $restiaSummary['delivered_on_time_ratio'] = isset($historyReport['doruceno_vcas_pomer']) ? (float)$historyReport['doruceno_vcas_pomer'] : null;
     $restiaSummary['woltdrive_late_ratio'] = isset($historyReport['woltdrive_zpozdene_pomer']) ? (float)$historyReport['woltdrive_zpozdene_pomer'] : null;
+
+    return $restiaSummary;
+};
+
+try {
+    if ($action === 'prepocet_col_rozdil') {
+        if ($isCurrentWorkday) {
+            if (!$canFinalizeCurrentEdit) {
+                $sendJson(403, ['ok' => false, 'err' => 'Nemate pravo prepocitat report']);
+            }
+            $workdayRange = cb_dt_workday_range_utc($datum);
+            $restiaSummary = cb_denni_report_restia_summary($conn, $idPob, $workdayRange);
+        } else {
+            if (!$canFinalizeHistory) {
+                $sendJson(403, ['ok' => false, 'err' => 'Nemate pravo prepocitat report']);
+            }
+            $historyReport = is_array($historyData) ? (array)($historyData['report'] ?? []) : [];
+            $restiaSummary = $historyRestiaSummary($historyReport);
+        }
+
+        $values = cb_vypocet_col_rozdil(
+            $conn,
+            $datum,
+            $restiaSummary,
+            cb_vcr_cash_from_post($_POST),
+            cb_vcr_people_from_post($_POST)
+        );
+        $rozdil = $values['rozdil'];
+        $colPomer = $values['col_pomer'];
+        $sendJson(200, [
+            'ok' => true,
+            'rozdil' => $rozdil === null ? null : round((float)$rozdil, 2),
+            'rozdil_label' => $rozdil === null ? '-- Kč' : cb_denni_report_format_money_whole((float)$rozdil),
+            'col_pomer' => $colPomer === null ? null : round((float)$colPomer, 6),
+            'col_label' => $colPomer === null ? '-- %' : number_format((float)$colPomer * 100, 2, ',', ' ') . ' %',
+        ]);
+    }
+
+    if ($isCurrentWorkday) {
+        if (!$canFinalizeCurrentNew && !$canFinalizeCurrentEdit) {
+            $sendJson(403, ['ok' => false, 'err' => 'Nemate pravo ulozit report']);
+        }
+        $workdayRange = cb_dt_workday_range_utc($datum);
+        $restiaSummary = cb_denni_report_restia_summary($conn, $idPob, $workdayRange);
+        $idReportu = cb_db_zapis_denni_report_from_form($conn, $idPob, $datum, $currentUserId, $restiaSummary, $_POST, $rozdilForm, $colPomerForm, $canFinalizeCurrentEdit);
+        $sendJson(200, ['ok' => true, 'id_reportu' => $idReportu]);
+    }
+
+    if (!$canFinalizeHistory) {
+        $sendJson(403, ['ok' => false, 'err' => 'Nemate pravo upravit historicky report']);
+    }
+
+    $historyReport = is_array($historyData) ? (array)($historyData['report'] ?? []) : [];
+    $restiaSummary = $historyRestiaSummary($historyReport);
     $idReportu = cb_db_zapis_denni_report_from_form($conn, $idPob, $datum, $currentUserId, $restiaSummary, $_POST, $rozdilForm, $colPomerForm, true);
     $sendJson(200, ['ok' => true, 'id_reportu' => $idReportu]);
 } catch (Throwable $e) {

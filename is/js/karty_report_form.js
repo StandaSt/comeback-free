@@ -149,10 +149,6 @@
       colHidden.value = json && json.col_pomer !== null && json.col_pomer !== undefined ? Number(json.col_pomer).toFixed(6) : '';
     }
 
-    const colBezDph = root.querySelector('[data-zr-report-col-bez-dph]');
-    if (colBezDph instanceof HTMLElement) {
-      colBezDph.textContent = String(json && json.col_bez_dph_label ? json.col_bez_dph_label : 'COL bez DPH: -- %');
-    }
   }
 
   function requestReportCalculation(root) {
@@ -163,12 +159,13 @@
     body.set('dr_action', 'prepocet_col_rozdil');
     body.set('id_pob', getReportValue(root, 'input[name="id_pob"]'));
     body.set('datum_reportu', getReportValue(root, '[name="datum_reportu"]'));
+    const isFinalEdit = getFormMode(root) === 'final_edit';
 
     return fetch(form.action || 'index_is.php', {
       method: 'POST',
       credentials: 'same-origin',
       headers: {
-        'X-Comeback-Dr-Pracovni': '1'
+        [isFinalEdit ? 'X-Comeback-Reporty-Is' : 'X-Comeback-Dr-Pracovni']: '1'
       },
       body
     }).then((res) => {

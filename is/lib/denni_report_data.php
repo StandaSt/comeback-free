@@ -110,7 +110,7 @@ function cb_denni_report_current_workday_date(): DateTimeImmutable
 function cb_denni_report_workday_options(DateTimeImmutable $currentWorkdayStart): array
 {
     $options = [];
-    for ($i = 0; $i <= 5; $i++) {
+    for ($i = 0; $i <= 7; $i++) {
         $date = $currentWorkdayStart->modify('-' . $i . ' day');
         $value = $date->format('Y-m-d');
         $label = cb_dt_weekday_date_label_cs($date, true);
@@ -124,6 +124,36 @@ function cb_denni_report_workday_options(DateTimeImmutable $currentWorkdayStart)
     }
 
     return $options;
+}
+
+function cb_denni_report_has_active_branch_report(mysqli $conn, int $idPob, string $date): bool
+{
+    if ($idPob <= 0 || $date === '') {
+        return false;
+    }
+
+    $stmt = $conn->prepare('
+        SELECT 1
+        FROM reporty_is
+        WHERE id_pob = ?
+          AND datum_reportu = ?
+          AND platny = 1
+        LIMIT 1
+    ');
+    if ($stmt === false) {
+        return false;
+    }
+
+    $stmt->bind_param('is', $idPob, $date);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $exists = $result instanceof mysqli_result && $result->num_rows > 0;
+    if ($result instanceof mysqli_result) {
+        $result->free();
+    }
+    $stmt->close();
+
+    return $exists;
 }
 
 function cb_denni_report_missing_reports_summary(mysqli $conn, string $date): array
@@ -824,9 +854,6 @@ function cb_denni_report_control_values(mysqli $conn, string $datumReportu, arra
     );
     $reportDifference = $values['rozdil'];
     $reportCol = $values['col_pomer'];
-    $reportColBezDph = isset($values['col_bez_dph_pomer']) && is_numeric($values['col_bez_dph_pomer'])
-        ? (float)$values['col_bez_dph_pomer']
-        : null;
 
     return [
         'make_time_label' => $makeTimeLabel,
@@ -834,7 +861,6 @@ function cb_denni_report_control_values(mysqli $conn, string $datumReportu, arra
         'difference_value' => $reportDifference === null ? '' : number_format((float)$reportDifference, 2, '.', ''),
         'col_label' => cb_denni_report_format_percent($reportCol),
         'col_value' => $reportCol === null ? '' : number_format((float)$reportCol, 6, '.', ''),
-        'col_bez_dph_label' => 'COL bez DPH: ' . cb_denni_report_format_percent($reportColBezDph),
     ];
 }
 
@@ -1045,6 +1071,19 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
     if (count($allowedBranches) === 1 && $reportBranchId > 0 && isset($allowedBranches[$reportBranchId])) {
         $singleAllowedBranchName = (string)$allowedBranches[$reportBranchId];
     }
+
+    if ($reportBranchId > 0) {
+        foreach ($workdayOptions as $dayOptionIndex => $dayOption) {
+            $dayValue = (string)($dayOption['value'] ?? '');
+            if ($dayValue === '' || $dayValue === $currentWorkdayDt->format('Y-m-d')) {
+                continue;
+            }
+            if (!cb_denni_report_has_active_branch_report($conn, $reportBranchId, $dayValue)) {
+                $workdayOptions[$dayOptionIndex]['disabled'] = true;
+                $workdayOptions[$dayOptionIndex]['label'] = (string)($dayOption['label'] ?? $dayValue) . ' (nezadán)';
+            }
+        }
+    }
     
     if ($reportBranchId <= 0 && $canSaveReport && $currentUserId > 0 && $isCurrentWorkday) {
         $nowLocal = (new DateTimeImmutable('now', $tz))->format('Y-m-d H:i:s');
@@ -1088,7 +1127,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
     }
     $preferFinalReportData = $historyReportExists && is_array($historyData);
     $requestedFinalEdit = ((int)($_POST['zr_edit_final'] ?? $_GET['zr_edit_final'] ?? 0)) === 1;
-    $canUnlockFinalReport = ($historyReportExists && $hasRole5 && $mainBranchId > 0 && $mainBranchId === $reportBranchId);
+    $canUnlockFinalReport = ($hasRole5 && $mainBranchId > 0 && $mainBranchId === $reportBranchId);
     $isEditingFinalReport = $canUnlockFinalReport && $requestedFinalEdit;
     $canEditHistory = (!$isCurrentWorkday && $canUnlockFinalReport);
 
@@ -1107,8 +1146,6 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
     $readonlyInfoText = '';
     if ($missingHistoryReport) {
         $readonlyInfoText = '';
-    } elseif ($isReadOnlyForm) {
-        $readonlyInfoText = 'Denní report mohou upravovat pouze oprávnění uživatelé. Zobrazená data jsou jen pro kontrolu.';
     }
 
     $instorOptions = cb_denni_report_branch_slot_user_options($conn, $reportBranchId, 1);
@@ -1346,7 +1383,6 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
     $reportDifferenceValue = $controlValues['difference_value'];
     $reportColLabel = $controlValues['col_label'];
     $reportColValue = $controlValues['col_value'];
-    $reportColBezDphLabel = (string)($controlValues['col_bez_dph_label'] ?? 'COL bez DPH: -- %');
     
     
     
@@ -1421,7 +1457,6 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
         'reportDifferenceValue' => $reportDifferenceValue,
         'reportColLabel' => $reportColLabel,
         'reportColValue' => $reportColValue,
-        'reportColBezDphLabel' => $reportColBezDphLabel,
     ];
 }
 
