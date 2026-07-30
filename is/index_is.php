@@ -123,6 +123,23 @@ if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
     exit;
 }
 
+if (
+    !empty($_SESSION['login_ok'])
+    && !$cbSystemLocked
+    && isset($_REQUEST['open_kontrola_email'])
+    && (string)$_REQUEST['open_kontrola_email'] === '1'
+    && (
+        (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && (string)($_POST['ajax'] ?? '') === '1')
+        || (string)($_GET['export'] ?? '') === 'pdf'
+    )
+) {
+    if (!defined('CB_KONTROLA_EMAIL_EMBED')) {
+        define('CB_KONTROLA_EMAIL_EMBED', true);
+    }
+    require __DIR__ . '/includes/kontrola_email.php';
+    exit;
+}
+
 if (!empty($_SESSION['login_ok']) && !$cbSystemLocked && !$cbHasComebackHeader && strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'GET') {
     try {
         $cbRestiaConn = db();

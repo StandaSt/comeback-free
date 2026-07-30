@@ -60,6 +60,9 @@ $cbOpenRestiaMenu = (
 $cbRunRestiaKontrola = (
     isset($_POST['run_restia_kontrola']) && (string)$_POST['run_restia_kontrola'] === '1'
 );
+$cbOpenKontrolaEmail = (
+    isset($_REQUEST['open_kontrola_email']) && (string)$_REQUEST['open_kontrola_email'] === '1'
+);
 $cbBackAdminInit = (
     isset($_POST['back_admin_init']) && (string)$_POST['back_admin_init'] === '1'
 );
@@ -94,6 +97,7 @@ if ($cbBackAdminInit) {
     $cbRunRestiaMenu = false;
     $cbOpenRestiaMenu = false;
     $cbRunRestiaKontrola = false;
+    $cbOpenKontrolaEmail = false;
     $cbKeepRestiaMax = false;
 }
 
@@ -301,6 +305,10 @@ $cbScriptTables = [
         'objednavky_kontrola',
         'objednavky_restia',
         'pobocka',
+    ],
+    'kontrola_email.php' => [
+        'aaa_email_overeni',
+        'user',
     ],
 ];
 
@@ -534,6 +542,18 @@ ob_start();
         </form>
       </td>
     </tr>
+    <tr>
+      <td>kontrola_email.php</td>
+      <td><?= cb_admin_init_status_html('kontrola_email.php', $cbScriptStats) ?></td>
+      <td>kontrola e-mailů uživatelů</td>
+      <td class="txt_c"><span class="txt_zelena text_tucny">OK</span></td>
+      <td>
+        <form method="post" action="<?= h(cb_url('/index_is.php')) ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
+          <input type="hidden" name="open_kontrola_email" value="1">
+          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Připravuji kontrolu e-mailů">Spustit kontrolu</button>
+        </form>
+      </td>
+    </tr>
 </tbody>
 </table>
 <div style="margin-top:20px; margin-left:18px; margin-right:10px; margin-bottom:90px;">
@@ -688,6 +708,19 @@ if ($cbRunRestiaKontrola) {
     $card_max_html = cb_admin_init_capture_max_include(
         __DIR__ . '/../inicializace/kontrola_restia_objednavky.php',
         'inicializace/kontrola_restia_objednavky.php',
+        'admin_inicializace',
+        $cbTraceK3Branch
+    );
+}
+
+if ($cbOpenKontrolaEmail) {
+    $cbTraceK3Branch = 'open_kontrola_email';
+    if (!defined('CB_KONTROLA_EMAIL_EMBED')) {
+        define('CB_KONTROLA_EMAIL_EMBED', true);
+    }
+    $card_max_html = cb_admin_init_capture_max_include(
+        __DIR__ . '/../includes/kontrola_email.php',
+        'includes/kontrola_email.php',
         'admin_inicializace',
         $cbTraceK3Branch
     );
