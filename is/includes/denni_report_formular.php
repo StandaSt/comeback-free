@@ -10,8 +10,14 @@ $zrFinalFullMode = !empty($isEditingFinalReport) ? '1' : '0';
 $zrRozvozSazba = max(0, (int)($zrRozvozSazba ?? 0));
 $zrCanUnlockFinalReport = !empty($canUnlockFinalReport);
 $zrIsEditingFinalReport = !empty($isEditingFinalReport);
-$zrSubmitReadyText = $zrIsEditingFinalReport ? 'Chci uložit opravený report' : 'Report je zkontrolovaný, uložit';
-$zrSubmitLockedText = $zrIsEditingFinalReport ? 'Chci uložit opravený report' : 'Report bude možné uložit za';
+$zrIsCreatingMissingFinalReport = !empty($isCreatingMissingFinalReport);
+$zrMissingFinalReportDate = trim((string)($reportDateDisplay ?? $reportDate ?? ''));
+$zrSubmitReadyText = $zrIsCreatingMissingFinalReport
+    ? 'Uložit report pro den ' . $zrMissingFinalReportDate
+    : ($zrIsEditingFinalReport ? 'Chci uložit opravený report' : 'Report je zkontrolovaný, uložit');
+$zrSubmitLockedText = $zrIsCreatingMissingFinalReport
+    ? 'Uložit report pro den ' . $zrMissingFinalReportDate
+    : ($zrIsEditingFinalReport ? 'Chci uložit opravený report' : 'Report bude možné uložit za');
 $zrRemoveButtonHtml = !empty($isReadOnlyForm)
     ? ''
     : '<button type="button" class="zr_row_remove" data-zr-remove-row title="Odebrat" aria-label="Odebrat">×</button>';
@@ -136,7 +142,7 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
                 <td>
                   <select class="zr_intro_select" name="datum_reportu" data-zr-date data-zr-required="datum" onchange="if(this.form){this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit();}">
                     <?php foreach (($workdayOptions ?? []) as $dayOption): ?>
-                      <option value="<?= h((string)$dayOption['value']) ?>"<?= ((string)$dayOption['value'] === (string)$reportDate) ? ' selected' : '' ?><?= !empty($dayOption['disabled']) ? ' disabled' : '' ?>><?= h((string)$dayOption['label']) ?></option>
+                      <option value="<?= h((string)$dayOption['value']) ?>"<?= ((string)$dayOption['value'] === (string)$reportDate) ? ' selected' : '' ?><?= !empty($dayOption['missing']) ? ' style="color:#c62828;"' : '' ?>><?= h((string)$dayOption['label']) ?></option>
                     <?php endforeach; ?>
                   </select>
                 </td>
@@ -298,7 +304,7 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
             data-zr-submit-missing-text="Vyplň všechna povinná data reportu"
             data-zr-submit-at="<?= h((string)($zrIsEditingFinalReport ? 0 : $reportSaveAtTs)) ?>"
             <?php if ($zrIsEditingFinalReport): ?>style="background:#2e7d32;border-color:#1b5e20;color:#fff;cursor:pointer;opacity:1;"<?php else: ?>style="background:#d9dee8;border-color:#c1c9d6;color:#5f6b7a;cursor:not-allowed;opacity:1;"<?php endif; ?>
-          ><?= h($zrIsEditingFinalReport ? 'Chci uložit opravený report' : 'Report bude možné uložit za 0:00:00') ?></button>
+          ><?= h($zrIsEditingFinalReport ? $zrSubmitReadyText : 'Report bude možné uložit za 0:00:00') ?></button>
         <?php endif; ?>
       </div>
     </div>

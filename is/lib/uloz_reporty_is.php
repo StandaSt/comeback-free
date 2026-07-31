@@ -102,7 +102,7 @@ $activeCurrentReportId = $isCurrentWorkday ? cb_db_reporty_is_find_active_id($co
 $currentFinalExists = $activeCurrentReportId > 0;
 $canFinalizeCurrentNew = $isCurrentWorkday && !$currentFinalExists && (isset($roleIds[5]) || isset($roleIds[7]));
 $canFinalizeCurrentEdit = $isCurrentWorkday && $currentFinalExists && $requestedFinalEdit && isset($roleIds[5]) && $isMainBranch;
-$canFinalizeHistory = !$isCurrentWorkday && $requestedFinalEdit && isset($roleIds[5]) && $isMainBranch && $historyReportExists;
+$canFinalizeHistory = !$isCurrentWorkday && $requestedFinalEdit && isset($roleIds[5]) && $isMainBranch;
 
 $rozdilFormRaw = trim((string)($_POST['rozdil'] ?? ''));
 $colPomerFormRaw = trim((string)($_POST['col_pomer'] ?? ''));
@@ -152,8 +152,13 @@ try {
             if (!$canFinalizeHistory) {
                 $sendJson(403, ['ok' => false, 'err' => 'Nemate pravo prepocitat report']);
             }
-            $historyReport = is_array($historyData) ? (array)($historyData['report'] ?? []) : [];
-            $restiaSummary = $historyRestiaSummary($historyReport);
+            if ($historyReportExists) {
+                $historyReport = is_array($historyData) ? (array)($historyData['report'] ?? []) : [];
+                $restiaSummary = $historyRestiaSummary($historyReport);
+            } else {
+                $workdayRange = cb_dt_workday_range_utc($datum);
+                $restiaSummary = cb_denni_report_restia_summary($conn, $idPob, $workdayRange);
+            }
         }
 
         $values = cb_vypocet_col_rozdil(
@@ -188,9 +193,14 @@ try {
         $sendJson(403, ['ok' => false, 'err' => 'Nemate pravo upravit historicky report']);
     }
 
-    $historyReport = is_array($historyData) ? (array)($historyData['report'] ?? []) : [];
-    $restiaSummary = $historyRestiaSummary($historyReport);
-    $idReportu = cb_db_zapis_denni_report_from_form($conn, $idPob, $datum, $currentUserId, $restiaSummary, $_POST, $rozdilForm, $colPomerForm, true);
+    if ($historyReportExists) {
+        $historyReport = is_array($historyData) ? (array)($historyData['report'] ?? []) : [];
+        $restiaSummary = $historyRestiaSummary($historyReport);
+    } else {
+        $workdayRange = cb_dt_workday_range_utc($datum);
+        $restiaSummary = cb_denni_report_restia_summary($conn, $idPob, $workdayRange);
+    }
+    $idReportu = cb_db_zapis_denni_report_from_form($conn, $idPob, $datum, $currentUserId, $restiaSummary, $_POST, $rozdilForm, $colPomerForm, $historyReportExists);
     $sendJson(200, ['ok' => true, 'id_reportu' => $idReportu]);
 } catch (Throwable $e) {
     $message = trim($e->getMessage());

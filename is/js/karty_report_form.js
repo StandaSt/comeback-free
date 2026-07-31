@@ -282,8 +282,8 @@
 
     const isFinalEdit = getFormMode(root) === 'final_edit';
     const targetTs = isFinalEdit ? 0 : (Number.parseInt(String(button.getAttribute('data-zr-submit-at') || '0'), 10) || 0);
-    const lockedText = isFinalEdit ? 'Chci uložit opravený report' : String(button.getAttribute('data-zr-submit-locked-text') || 'Report bude možné uložit za');
-    const readyText = isFinalEdit ? 'Chci uložit opravený report' : String(button.getAttribute('data-zr-submit-ready-text') || 'Report je zkontrolovaný, uložit');
+    const lockedText = String(button.getAttribute('data-zr-submit-locked-text') || (isFinalEdit ? 'Chci uložit opravený report' : 'Report bude možné uložit za'));
+    const readyText = String(button.getAttribute('data-zr-submit-ready-text') || (isFinalEdit ? 'Chci uložit opravený report' : 'Report je zkontrolovaný, uložit'));
     const missingText = String(button.getAttribute('data-zr-submit-missing-text') || 'Vyplň povinná pole');
     const remaining = targetTs - Math.floor(Date.now() / 1000);
 

@@ -883,9 +883,9 @@ function cb_denni_report_person_rows(array $draftPersonRows): array
             'end' => cb_denni_report_format_time((string)($row['smena_do'] ?? '')),
             'break' => $row['pauza'] === null ? '' : cb_denni_report_format_input_number((float)$row['pauza']),
             'hours' => $row['odpracovano'] === null ? '0' : cb_denni_report_format_input_number((float)$row['odpracovano']),
-            'delivery_restia' => 0,
+            'delivery_restia' => (int)($row['rozvozu_restia'] ?? 0),
             'delivery_manual' => (int)($row['rozvozu_manual'] ?? 0),
-            'delivery_total' => 0,
+            'delivery_total' => (int)($row['rozvozu_restia'] ?? 0) + (int)($row['rozvozu_manual'] ?? 0),
             'car' => (int)($row['vlastni_vuz'] ?? 0),
             'phm' => (float)($row['vyplatit_phm'] ?? 0),
         ];
@@ -1079,7 +1079,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
                 continue;
             }
             if (!cb_denni_report_has_active_branch_report($conn, $reportBranchId, $dayValue)) {
-                $workdayOptions[$dayOptionIndex]['disabled'] = true;
+                $workdayOptions[$dayOptionIndex]['missing'] = true;
                 $workdayOptions[$dayOptionIndex]['label'] = (string)($dayOption['label'] ?? $dayValue) . ' (nezadán)';
             }
         }
@@ -1128,7 +1128,8 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
     $preferFinalReportData = $historyReportExists && is_array($historyData);
     $requestedFinalEdit = ((int)($_POST['zr_edit_final'] ?? $_GET['zr_edit_final'] ?? 0)) === 1;
     $canUnlockFinalReport = ($hasRole5 && $mainBranchId > 0 && $mainBranchId === $reportBranchId);
-    $isEditingFinalReport = $canUnlockFinalReport && $requestedFinalEdit;
+    $isCreatingMissingFinalReport = (!$isCurrentWorkday && !$historyReportExists && $canUnlockFinalReport);
+    $isEditingFinalReport = $canUnlockFinalReport && ($requestedFinalEdit || $isCreatingMissingFinalReport);
     $canEditHistory = (!$isCurrentWorkday && $canUnlockFinalReport);
 
     if ($historyReportExists) {
@@ -1137,10 +1138,10 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
         $isReadOnlyForm = !$isEditingFinalReport;
         $formMode = $isEditingFinalReport ? 'final_edit' : 'final_readonly';
     } else {
-        $canEditReport = $isCurrentWorkday ? $canSaveReport : false;
+        $canEditReport = $isCurrentWorkday ? $canSaveReport : $isCreatingMissingFinalReport;
         $usesDraftPersistence = $isCurrentWorkday && $canEditReport;
         $isReadOnlyForm = !$canEditReport;
-        $formMode = $isCurrentWorkday ? 'workday' : 'history_readonly';
+        $formMode = $isCurrentWorkday ? 'workday' : ($isCreatingMissingFinalReport ? 'final_edit' : 'history_readonly');
     }
     $missingHistoryReport = (!$isCurrentWorkday && !$historyReportExists && $reportBranchId > 0);
     $readonlyInfoText = '';
@@ -1240,6 +1241,8 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
         $draftPersonRows = is_array($historyData['people_rows'] ?? null) ? $historyData['people_rows'] : [];
     } elseif ($usesDraftPersistence) {
         $draftPersonRows = $idDr > 0 ? cb_db_dr_pracovni_osoby_list($conn, $idDr) : [];
+    } elseif ($isCreatingMissingFinalReport) {
+        $draftPersonRows = cb_denni_report_shift_plan_people_rows($conn, $reportBranchId, $reportDate);
     } elseif ($isCurrentWorkday) {
         $draftPersonRows = cb_denni_report_shift_plan_people_rows($conn, $reportBranchId, $reportDate);
     } elseif (is_array($historyData)) {
@@ -1360,7 +1363,13 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
         $restiaSummary = cb_denni_report_restia_summary($conn, $reportBranchId, $workdayRange);
         $restiaSummary['docs_count'] = cb_denni_report_docs_count_from_person_rows($draftPersonRows);
 
-        $kuryrDeliveryCountsJson = '{}';
+        if ($isCreatingMissingFinalReport) {
+            $kuryrDeliveryData = cb_denni_report_kuryr_delivery_data($conn, $reportBranchId, $workdayRange, $kuryrRows);
+            $kuryrRows = $kuryrDeliveryData['kuryr_rows'];
+            $kuryrDeliveryCountsJson = $kuryrDeliveryData['counts_json'];
+        } else {
+            $kuryrDeliveryCountsJson = '{}';
+        }
         $controlValues = cb_denni_report_control_values($conn, $reportDate, $restiaSummary, $draftRow, $draftPersonRows);
         if (array_key_exists('rozdil', $historyReport)) {
             $savedRozdil = $historyReport['rozdil'];
@@ -1373,10 +1382,12 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
             $controlValues['col_label'] = cb_denni_report_format_percent($savedColFloat);
             $controlValues['col_value'] = $savedColFloat === null ? '' : number_format($savedColFloat, 6, '.', '');
         }
-        $kuryrDeliveryData = [
-            'kuryr_rows' => $kuryrRows,
-            'counts_json' => $kuryrDeliveryCountsJson,
-        ];
+        if (!$isCreatingMissingFinalReport) {
+            $kuryrDeliveryData = [
+                'kuryr_rows' => $kuryrRows,
+                'counts_json' => $kuryrDeliveryCountsJson,
+            ];
+        }
     }
     $makeTimeLabel = $controlValues['make_time_label'];
     $reportDifferenceLabel = $controlValues['difference_label'];
@@ -1419,6 +1430,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
         'historyReportExists' => $historyReportExists,
         'canUnlockFinalReport' => $canUnlockFinalReport,
         'requestedFinalEdit' => $requestedFinalEdit,
+        'isCreatingMissingFinalReport' => $isCreatingMissingFinalReport,
         'isEditingFinalReport' => $isEditingFinalReport,
         'canEditHistory' => $canEditHistory,
         'canEditReport' => $canEditReport,
