@@ -679,6 +679,19 @@ if (!function_exists('cb_restia_online_report_date')) {
     }
 }
 
+if (!function_exists('cb_restia_online_order_report_date')) {
+    function cb_restia_online_order_report_date(?string $createdAt, ?string $promisedAt): string
+    {
+        $createdReport = cb_restia_online_report_date($createdAt ?? cb_restia_online_now());
+        if ($promisedAt === null || trim($promisedAt) === '') {
+            return $createdReport;
+        }
+
+        $promisedReport = cb_restia_online_report_date($promisedAt);
+        return max($createdReport, $promisedReport);
+    }
+}
+
 if (!function_exists('cb_restia_online_money')) {
     function cb_restia_online_money(mixed $value): string
     {
@@ -740,7 +753,7 @@ if (!function_exists('cb_restia_online_sync_children')) {
         $casVyzv = cb_restia_online_restia_to_local_nullable($order['pickupAt'] ?? null);
         $casDisp = cb_restia_online_restia_to_local_nullable($order['deliveryAt'] ?? null);
         $casPripravy = isset($order['cookingTimeMinutes']) ? (int)$order['cookingTimeMinutes'] : null;
-        $report = cb_restia_online_report_date($casVytvor ?? cb_restia_online_now());
+        $report = cb_restia_online_order_report_date($casVytvor, $casSlib);
 
         $stmtCasy = cb_restia_online_stmt($conn, 'obj_casy_upsert', '
             INSERT INTO obj_casy (
@@ -764,7 +777,7 @@ if (!function_exists('cb_restia_online_sync_children')) {
         $cenaServis = (float)cb_restia_online_money($order['serviceFeePrice'] ?? null);
         $sleva = (float)cb_restia_online_money($order['discountPrice'] ?? null);
         $zaokrouhleni = (float)cb_restia_online_money($order['roundingPrice'] ?? null);
-        $cenaCelk = $cenaPol + $cenaBalne + $cenaDopr + $dyska + $cenaDoMin + $cenaServis + $zaokrouhleni - $sleva;
+        $cenaCelk = $cenaPol + $cenaBalne + $cenaDopr + $dyska + $cenaDoMin + $cenaServis + $zaokrouhleni - abs($sleva);
 
         $stmtCeny = cb_restia_online_stmt($conn, 'obj_ceny_upsert', '
             INSERT INTO obj_ceny (
@@ -1093,6 +1106,7 @@ if (!function_exists('cb_restia_online_upsert_order')) {
 
         $restiaOrderNumber = trim((string)($order['orderNumber'] ?? ''));
         $restiaCreatedAt = cb_restia_online_restia_to_local_nullable($order['createdAt'] ?? null);
+        $restiaPromisedAt = cb_restia_online_restia_to_local_nullable($order['promisedAt'] ?? null);
         $profilNazev = trim((string)($profile['name'] ?? ''));
         $profilNazev = ($profilNazev === '') ? null : $profilNazev;
         $shortCode = $order['shortCode'] ?? null;
@@ -1102,7 +1116,7 @@ if (!function_exists('cb_restia_online_upsert_order')) {
         $objPoznamka = $order['note'] ?? null;
         $objPoznamka = ($objPoznamka === null || $objPoznamka === '') ? null : (string)$objPoznamka;
         $importTs = cb_restia_online_now();
-        $report = cb_restia_online_report_date($restiaCreatedAt ?? $importTs);
+        $report = cb_restia_online_order_report_date($restiaCreatedAt ?? $importTs, $restiaPromisedAt);
 
         $restObj = $restiaIdObj;
 

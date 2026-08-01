@@ -1398,6 +1398,19 @@ if (!function_exists('cb_restia_hist_report_date')) {
     }
 }
 
+if (!function_exists('cb_restia_hist_order_report_date')) {
+    function cb_restia_hist_order_report_date(?string $createdAt, ?string $promisedAt): string
+    {
+        $createdReport = cb_restia_hist_report_date($createdAt ?? cb_restia_hist_now());
+        if ($promisedAt === null || trim($promisedAt) === '') {
+            return $createdReport;
+        }
+
+        $promisedReport = cb_restia_hist_report_date($promisedAt);
+        return max($createdReport, $promisedReport);
+    }
+}
+
 if (!function_exists('cb_restia_hist_money')) {
     function cb_restia_hist_money(mixed $value): string
     {
@@ -1464,7 +1477,7 @@ if (!function_exists('cb_restia_hist_sync_children')) {
         $casVyzv = cb_restia_hist_restia_to_local_nullable($order['pickupAt'] ?? null);
         $casDisp = cb_restia_hist_restia_to_local_nullable($order['deliveryAt'] ?? null);
         $casPripravy = isset($order['cookingTimeMinutes']) ? (int)$order['cookingTimeMinutes'] : null;
-        $report = cb_restia_hist_report_date($casVytvor ?? cb_restia_hist_now());
+        $report = cb_restia_hist_order_report_date($casVytvor, $casSlib);
 
         $stmtCasy = cb_restia_hist_stmt($conn, 'obj_casy_upsert', '
             INSERT INTO obj_casy (
@@ -1491,7 +1504,7 @@ if (!function_exists('cb_restia_hist_sync_children')) {
         $cenaServis = (float)cb_restia_hist_money($order['serviceFeePrice'] ?? null);
         $sleva = (float)cb_restia_hist_money($order['discountPrice'] ?? null);
         $zaokrouhleni = (float)cb_restia_hist_money($order['roundingPrice'] ?? null);
-        $cenaCelk = $cenaPol + $cenaBalne + $cenaDopr + $dyska + $cenaDoMin + $cenaServis + $zaokrouhleni - $sleva;
+        $cenaCelk = $cenaPol + $cenaBalne + $cenaDopr + $dyska + $cenaDoMin + $cenaServis + $zaokrouhleni - abs($sleva);
 
         $stmtCeny = cb_restia_hist_stmt($conn, 'obj_ceny_upsert', '
             INSERT INTO obj_ceny (
@@ -1854,7 +1867,8 @@ if (!function_exists('cb_restia_hist_upsert_order')) {
 
         $restiaOrderNumber = trim((string)($order['orderNumber'] ?? ''));
         $restiaCreatedAt = cb_restia_hist_restia_to_local_nullable($order['createdAt'] ?? null);
-        $report = cb_restia_hist_report_date($restiaCreatedAt ?? cb_restia_hist_now());
+        $restiaPromisedAt = cb_restia_hist_restia_to_local_nullable($order['promisedAt'] ?? null);
+        $report = cb_restia_hist_order_report_date($restiaCreatedAt ?? cb_restia_hist_now(), $restiaPromisedAt);
         $profilNazev = trim((string)($profile['name'] ?? ''));
         $profilNazev = ($profilNazev === '') ? null : $profilNazev;
         $profilMenuId = $profile['menuId'] ?? ($profile['menu']['id'] ?? null);

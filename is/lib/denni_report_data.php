@@ -699,7 +699,7 @@ function cb_denni_report_restia_summary(mysqli $conn, int $idPob, array $workday
                 COUNT(DISTINCT CASE WHEN " . $otherCondition . " THEN o.id_obj ELSE NULL END) AS other_count,
                 SUM(CASE WHEN COALESCE(s.nazev, '') IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted') THEN 1 ELSE 0 END) AS cancel_count,
                 SUM(CASE WHEN COALESCE(s.nazev, '') IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted') THEN COALESCE(c.cena_celk, 0) ELSE 0 END) AS cancel_value,
-                AVG(CASE WHEN " . $notCanceled . " AND ca.cas_vytvor IS NOT NULL AND ca.cas_pripr_v IS NOT NULL THEN TIMESTAMPDIFF(SECOND, ca.cas_vytvor, ca.cas_pripr_v) END) AS make_time_avg_sec,
+                AVG(CASE WHEN " . $notCanceled . " AND COALESCE(ca.cas_import_restia, ca.cas_vytvor) IS NOT NULL AND ca.cas_pripr_v IS NOT NULL THEN TIMESTAMPDIFF(SECOND, COALESCE(ca.cas_import_restia, ca.cas_vytvor), ca.cas_pripr_v) END) AS make_time_avg_sec,
                 COUNT(DISTINCT CASE WHEN " . $notCanceled . " THEN o.id_obj ELSE NULL END) AS orders_total,
                 COUNT(DISTINCT CASE WHEN " . $notCanceled . " AND ok.provider = 'delivery' THEN o.id_obj ELSE NULL END) AS own_deliveries,
                 COUNT(DISTINCT CASE WHEN " . $notCanceled . " AND ok.provider = 'delivery' AND ca.cas_slib IS NOT NULL AND ca.cas_doruc IS NOT NULL AND TIMESTAMPDIFF(MINUTE, ca.cas_slib, ca.cas_doruc) > 5 THEN o.id_obj ELSE NULL END) AS delay_count,
@@ -720,9 +720,8 @@ function cb_denni_report_restia_summary(mysqli $conn, int $idPob, array $workday
                 GROUP BY id_obj
             ) ok ON ok.id_obj = o.id_obj
             WHERE o.id_pob = ?
-              AND o.restia_created_at IS NOT NULL
-              AND o.restia_created_at >= ?
-              AND o.restia_created_at < ?
+              AND ca.report >= DATE(?)
+              AND ca.report < DATE(?)
         ";
         $stmtSummary = $conn->prepare($summarySql);
         if ($stmtSummary !== false) {
@@ -796,10 +795,10 @@ function cb_denni_report_kuryr_delivery_data(mysqli $conn, int $idPob, array $wo
             FROM objednavky_restia o
             INNER JOIN obj_kuryr ok ON ok.id_obj = o.id_obj
             LEFT JOIN cis_obj_stav s ON s.id_stav = o.id_stav
+            LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
             WHERE o.id_pob = ?
-              AND o.restia_created_at IS NOT NULL
-              AND o.restia_created_at >= ?
-              AND o.restia_created_at < ?
+              AND ca.report >= DATE(?)
+              AND ca.report < DATE(?)
               AND ok.provider = 'delivery'
               AND COALESCE(s.nazev, '') NOT IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted')
             GROUP BY kuryr_name
