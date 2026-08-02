@@ -1,7 +1,7 @@
 <?php
 // includes/hlavicka.php * Verze: V45 * Aktualizace: 27.04.2026
 declare(strict_types=1);
-require_once __DIR__ . '/../../www/db/db_user_role.php';
+require_once __DIR__ . '/../../common/db/db_user_role.php';
 
 // Priznak prihlaseni urcuje, zda se vykresli plna hlavicka, nebo guest varianta.
 $cbLoginOk = !empty($_SESSION['login_ok']);
@@ -89,7 +89,7 @@ try {
     } elseif (cb_head_restia_token_is_valid($connRestia)) {
         $sysRestia = 'ok';
     } else {
-        require_once __DIR__ . '/../../www/lib/restia_ziskej_access.php';
+        require_once __DIR__ . '/../../common/lib/restia_ziskej_access.php';
         if (cb_head_restia_online_is_running($connRestia)) {
             $sysRestia = 'bad';
         } else {

@@ -28,10 +28,10 @@ if (!function_exists('cb_asset_url')) {
         if ($isLocal) {
             $scriptName = str_replace('\\', '/', (string)($_SERVER['SCRIPT_NAME'] ?? ''));
             $base = preg_replace('~/is(?:/.*)?$~', '', $scriptName) ?? '';
-            return rtrim($base, '/') . '/www/' . $path;
+            return rtrim($base, '/') . '/common/' . $path;
         }
 
-        return 'https://www.comebacks.cz/' . $path;
+        return 'https://comebacks.cz/common/' . $path;
     }
 
     function cb_asset_url(string $path): string
@@ -39,7 +39,7 @@ if (!function_exists('cb_asset_url')) {
         $cleanPath = ltrim($path, '/');
         $isPublicStyle = str_starts_with($cleanPath, 'style/');
         $full = $isPublicStyle
-            ? __DIR__ . '/../../www/' . $cleanPath
+            ? __DIR__ . '/../../common/' . $cleanPath
             : __DIR__ . '/../' . $cleanPath;
         $ver = is_file($full) ? (string)filemtime($full) : '1';
         $url = $isPublicStyle

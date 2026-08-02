@@ -2,10 +2,10 @@
 // inicializace/vypocet_hr_sazby.php * Verze: V1 * Aktualizace: 22.05.2026
 declare(strict_types=1);
 
-require_once __DIR__ . '/../../www/lib/session_boot.php';
+require_once __DIR__ . '/../../common/lib/session_boot.php';
 
-require_once __DIR__ . '/../../www/lib/app.php';
-require_once __DIR__ . '/../../www/config/secrets.php';
+require_once __DIR__ . '/../../common/lib/app.php';
+require_once __DIR__ . '/../../common/config/secrets.php';
 
 define('HR_MZDY_HELPERS_ONLY', true);
 require_once __DIR__ . '/plnime_hr_mzdy.php';

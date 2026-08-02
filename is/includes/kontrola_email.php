@@ -3,10 +3,10 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../../www/lib/session_boot.php';
-require_once __DIR__ . '/../../www/db/db_connect.php';
-require_once __DIR__ . '/../../www/config/secrets.php';
-require_once __DIR__ . '/../../www/lib/mailer.php';
+require_once __DIR__ . '/../../common/lib/session_boot.php';
+require_once __DIR__ . '/../../common/db/db_connect.php';
+require_once __DIR__ . '/../../common/config/secrets.php';
+require_once __DIR__ . '/../../common/lib/mailer.php';
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
@@ -25,7 +25,7 @@ if (!function_exists('h')) {
 
 function absolutni_url(array $params = []): string
 {
-    $base = 'https://is.comebacks.cz/overit_email.php';
+$base = 'https://comebacks.cz/is/overit_email.php';
     $query = $params !== [] ? '?' . http_build_query($params) : '';
 
     return $base . $query;
@@ -242,7 +242,7 @@ function odesli_overovaci_email(string $email, string $celeJmeno, string $potvrz
 {
     $subject = 'Opravené potvrzení platnosti e-mailové adresy';
     $osloveniJmeno = $celeJmeno !== '' ? $celeJmeno : 'uživatele';
-    $obrazekUrl = 'https://is.comebacks.cz/img/mejl_email.jpg';
+$obrazekUrl = 'https://comebacks.cz/is/img/mejl_email.jpg';
     $omluvaHtml = '<p style="margin:0 0 10px;color:#b91c1c;font-weight:bold;">Velmi se omlouváme.</p>'
         . '<p style="margin:0 0 12px;color:#b91c1c;font-weight:bold;">Předchozí potvrzovací e-mail mohl obsahovat nefunkční odkaz.</p>'
         . '<p style="margin:0 0 16px;color:#b91c1c;font-weight:bold;">Prosíme, potvrďte e-mailovou adresu znovu pomocí tohoto již opraveného e-mailu.</p>';

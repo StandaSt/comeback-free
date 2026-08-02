@@ -27,7 +27,7 @@ $loginDisabled = $loginDbOk ? '' : ' disabled';
       </div>
     </div>
 
-    <form method="post" action="<?= h(cb_root_url('lib/login_smeny.php')) ?>" class="modal-form" id="cbLoginForm">
+    <form method="post" action="<?= h(cb_root_url('common/lib/login_smeny.php')) ?>" class="modal-form" id="cbLoginForm">
       <div class="modal-field">
         <label class="modal-label" for="cb_email">E-mail</label>
         <input class="modal-input"

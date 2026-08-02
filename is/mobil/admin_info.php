@@ -2,11 +2,11 @@
 // mobil/admin_info.php * Verze: V1 * Aktualizace: 05.06.2026
 declare(strict_types=1);
 
-require_once __DIR__ . '/../../www/lib/session_boot.php';
+require_once __DIR__ . '/../../common/lib/session_boot.php';
 
-require_once __DIR__ . '/../../www/lib/app.php';
-require_once __DIR__ . '/../../www/lib/system.php';
-require_once __DIR__ . '/../../www/config/secrets.php';
+require_once __DIR__ . '/../../common/lib/app.php';
+require_once __DIR__ . '/../../common/lib/system.php';
+require_once __DIR__ . '/../../common/config/secrets.php';
 
 function cb_admin_info_h(string $s): string
 {

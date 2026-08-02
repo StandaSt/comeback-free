@@ -74,7 +74,7 @@ if ($scriptName !== '') {
             }
         }
 
-        $stripDirs = ['lib', 'pages', 'includes', 'mobil', 'modaly', 'notifikace'];
+        $stripDirs = ['common', 'lib', 'pages', 'includes', 'mobil', 'modaly', 'notifikace'];
         while ($parts !== []) {
             $last = (string)end($parts);
             if (!in_array($last, $stripDirs, true) && !in_array($last, $CB_MODULES, true)) {
@@ -100,7 +100,7 @@ $BASE_PATH = $baseFromUrl;
 
 // 2) Fallback z FS (kdyz by SCRIPT_NAME nebyl pouzitelny)
 if ($BASE_PATH === '') {
-    $PROJECT_ROOT_FS = realpath(__DIR__ . '/..') ?: '';
+    $PROJECT_ROOT_FS = realpath(__DIR__ . '/../..') ?: '';
     $DOCROOT_FS = realpath($_SERVER['DOCUMENT_ROOT'] ?? '') ?: '';
 
     if ($PROJECT_ROOT_FS !== '' && $DOCROOT_FS !== '') {
@@ -134,9 +134,6 @@ function cb_root_url(string $path = ''): string
     global $BASE_PATH, $PROSTREDI;
     $path = '/' . ltrim($path, '/');
     $basePath = (string)$BASE_PATH;
-    if ($PROSTREDI === 'LOCAL' && cb_current_module() !== '' && !str_ends_with(rtrim($basePath, '/'), '/www')) {
-        $basePath = rtrim($basePath, '/') . '/www';
-    }
     if ($basePath !== '') {
         return $basePath . $path;
     }
@@ -170,11 +167,10 @@ function cb_public_url(string $path = ''): string
     $path = '/' . ltrim($path, '/');
 
     if ($PROSTREDI === 'LOCAL') {
-        $base = preg_replace('~/is$~', '', rtrim((string)$BASE_PATH, '/')) ?? '';
-        return rtrim($base, '/') . '/www' . $path;
+        return cb_root_url('common' . $path);
     }
 
-    return 'https://www.comebacks.cz' . $path;
+    return 'https://comebacks.cz/common' . $path;
 }
 
 function cb_public_url_abs(string $path = ''): string
@@ -205,7 +201,7 @@ function cb_login_url(): string
         return cb_root_url('');
     }
 
-    return 'https://www.comebacks.cz/';
+    return 'https://comebacks.cz/';
 }
 
 function cb_module_url(string $module): string
@@ -219,11 +215,10 @@ function cb_module_url(string $module): string
 
     if ($PROSTREDI === 'LOCAL') {
         $root = rtrim(cb_root_url(''), '/');
-        $projectRoot = preg_replace('~/www$~', '', $root) ?? $root;
-        return rtrim($projectRoot, '/') . '/' . $module . '/';
+        return rtrim($root, '/') . '/' . $module . '/';
     }
 
-    return 'https://' . $module . '.comebacks.cz/';
+    return 'https://comebacks.cz/' . $module . '/';
 }
 
 function cb_current_module(): string

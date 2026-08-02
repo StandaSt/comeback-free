@@ -28,12 +28,12 @@ declare(strict_types=1);
  * - menu_id=...
  */
 
-require_once __DIR__ . '/../../www/lib/session_boot.php';
+require_once __DIR__ . '/../../common/lib/session_boot.php';
 
-require_once __DIR__ . '/../../www/lib/app.php';
-require_once __DIR__ . '/../../www/lib/system.php';
-require_once __DIR__ . '/../../www/config/secrets.php';
-require_once __DIR__ . '/../../www/lib/restia_access_exist.php';
+require_once __DIR__ . '/../../common/lib/app.php';
+require_once __DIR__ . '/../../common/lib/system.php';
+require_once __DIR__ . '/../../common/config/secrets.php';
+require_once __DIR__ . '/../../common/lib/restia_access_exist.php';
 require_once __DIR__ . '/restia_client.php';
 
 const CB_RESTIA_PROBE_DEFAULT_MENU_ID = '762f8daa-ca39-4d8f-ae4a-d22b4d106e88';

@@ -2,11 +2,11 @@
 // index.php * Spolecny login Comeback
 declare(strict_types=1);
 
-require_once __DIR__ . '/lib/session_boot.php';
-require_once __DIR__ . '/lib/app.php';
-require_once __DIR__ . '/lib/system.php';
-require_once __DIR__ . '/config/secrets.php';
-require_once __DIR__ . '/lib/json_registrace.php';
+require_once __DIR__ . '/common/lib/session_boot.php';
+require_once __DIR__ . '/common/lib/app.php';
+require_once __DIR__ . '/common/lib/system.php';
+require_once __DIR__ . '/common/config/secrets.php';
+require_once __DIR__ . '/common/lib/json_registrace.php';
 
 cb_session_guard_entry();
 
@@ -50,14 +50,14 @@ if (!empty($_SESSION['login_ok'])) {
     exit;
 }
 
-$cbLoginBackgroundFiles = glob(__DIR__ . '/img/pozadi_login/login_pozadi_*.png');
+$cbLoginBackgroundFiles = glob(__DIR__ . '/common/img/pozadi_login/login_pozadi_*.png');
 $cbLoginBackgroundCount = is_array($cbLoginBackgroundFiles) ? count($cbLoginBackgroundFiles) : 0;
-$cbLoginBackgroundUrl = cb_url('img/login_pozadi.png');
+$cbLoginBackgroundUrl = cb_public_url('img/login_pozadi.png');
 $cbLoginBackgroundLabel = '';
 if ($cbLoginBackgroundCount > 0) {
     $cbLoginBackgroundIndex = random_int(1, $cbLoginBackgroundCount);
-    $cbLoginBackgroundFile = __DIR__ . '/img/pozadi_login/login_pozadi_' . $cbLoginBackgroundIndex . '.png';
-    $cbLoginBackgroundUrl = cb_url('img/pozadi_login/login_pozadi_' . $cbLoginBackgroundIndex . '.png?v=' . filemtime($cbLoginBackgroundFile));
+    $cbLoginBackgroundFile = __DIR__ . '/common/img/pozadi_login/login_pozadi_' . $cbLoginBackgroundIndex . '.png';
+    $cbLoginBackgroundUrl = cb_public_url('img/pozadi_login/login_pozadi_' . $cbLoginBackgroundIndex . '.png?v=' . filemtime($cbLoginBackgroundFile));
     $cbLoginBackgroundLabel = $cbLoginBackgroundIndex . '/' . $cbLoginBackgroundCount;
 }
 ?>
@@ -67,21 +67,21 @@ if ($cbLoginBackgroundCount > 0) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Comeback - přihlášení</title>
-  <link rel="icon" type="image/png" href="<?= h(cb_url('img/logo_comeback.png')) ?>">
-  <link rel="stylesheet" href="<?= h(cb_url('style/1/modal_alert.css?v=' . filemtime(__DIR__ . '/style/1/modal_alert.css'))) ?>">
+  <link rel="icon" type="image/png" href="<?= h(cb_public_url('img/logo_comeback.png')) ?>">
+  <link rel="stylesheet" href="<?= h(cb_public_url('style/1/modal_alert.css?v=' . filemtime(__DIR__ . '/common/style/1/modal_alert.css'))) ?>">
 </head>
 <body class="modal-page modal-login-page" style="--cb-login-bg: url('<?= h($cbLoginBackgroundUrl) ?>');">
 <div class="modal-login-container">
 <?php
 if ($cb2faPending) {
-    require_once __DIR__ . '/modaly/modal_overeni.php';
+    require_once __DIR__ . '/common/modaly/modal_overeni.php';
 } elseif ($cbAuthOk) {
-    require_once __DIR__ . '/lib/kontrola_registrace.php';
+    require_once __DIR__ . '/common/lib/kontrola_registrace.php';
     if (!empty($_SESSION['login_ok'])) {
         echo '<script>window.location.href=' . json_encode(cb_login_target_url(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . ';</script>';
     }
 } else {
-    require_once __DIR__ . '/modaly/modal_login.php';
+    require_once __DIR__ . '/common/modaly/modal_login.php';
 }
 ?>
 </div>

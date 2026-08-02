@@ -4,11 +4,11 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../www/lib/session_boot.php';
-require_once __DIR__ . '/../www/lib/app.php';
+require_once __DIR__ . '/../common/lib/session_boot.php';
+require_once __DIR__ . '/../common/lib/app.php';
 require_once __DIR__ . '/lib/mereni_vykonu.php';
-require_once __DIR__ . '/../www/lib/system.php';
-require_once __DIR__ . '/../www/config/secrets.php';
+require_once __DIR__ . '/../common/lib/system.php';
+require_once __DIR__ . '/../common/config/secrets.php';
 require_once __DIR__ . '/lib/post_prg_redirect.php';
 require_once __DIR__ . '/lib/asset_url.php';
 
@@ -82,7 +82,7 @@ if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
 
 require_once __DIR__ . '/lib/detektuj_neplatnou_url.php';
 require_once __DIR__ . '/lib/logout_handler.php';
-require_once __DIR__ . '/../www/lib/json_registrace.php';
+require_once __DIR__ . '/../common/lib/json_registrace.php';
 if (!empty($_SESSION['login_ok']) && $cbSystemLocked && isset($_GET['cb_lock_check']) && (string)$_GET['cb_lock_check'] === '1') {
     header('Content-Type: application/json; charset=utf-8');
     $cbLockedNow = 1;
@@ -209,8 +209,8 @@ if (!empty($_SESSION['login_ok']) && $cbSystemLocked) {
       <?php
   } elseif (!empty($_SESSION['login_ok'])) {
     require_once __DIR__ . '/includes/hlavicka.php';
-    require_once __DIR__ . '/../www/modaly/modal_overeni.php';
-    require_once __DIR__ . '/../www/lib/kontrola_registrace.php';
+    require_once __DIR__ . '/../common/modaly/modal_overeni.php';
+    require_once __DIR__ . '/../common/lib/kontrola_registrace.php';
 
     $cb_page_exists = $cbPageExists;
     $cb_page_file = $file;
@@ -218,9 +218,9 @@ if (!empty($_SESSION['login_ok']) && $cbSystemLocked) {
     require_once __DIR__ . '/includes/main.php';
     require_once __DIR__ . '/includes/paticka.php';
 } elseif ($cb2faPending) {
-    require_once __DIR__ . '/../www/modaly/modal_overeni.php';
+    require_once __DIR__ . '/../common/modaly/modal_overeni.php';
 } elseif ($cbAuthOk) {
-    require_once __DIR__ . '/../www/lib/kontrola_registrace.php';
+    require_once __DIR__ . '/../common/lib/kontrola_registrace.php';
 } else {
     $cbLoginDbOk = false;
     $cbLoginDbName = '---';
@@ -254,7 +254,7 @@ if (!empty($_SESSION['login_ok']) && $cbSystemLocked) {
         $cbLoginDbOk = false;
     }
 
-    require_once __DIR__ . '/../www/modaly/modal_login.php';
+    require_once __DIR__ . '/../common/modaly/modal_login.php';
 }
 
 ?>

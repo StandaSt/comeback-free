@@ -2,10 +2,10 @@
 // inicializace/plnime_hr_mzdy.php * Verze: V3 * Aktualizace: 03.06.2026
 declare(strict_types=1);
 
-require_once __DIR__ . '/../../www/lib/session_boot.php';
+require_once __DIR__ . '/../../common/lib/session_boot.php';
 
-require_once __DIR__ . '/../../www/lib/app.php';
-require_once __DIR__ . '/../../www/config/secrets.php';
+require_once __DIR__ . '/../../common/lib/app.php';
+require_once __DIR__ . '/../../common/config/secrets.php';
 
 const HR_MZDY_XLSX = __DIR__ . '/../google_data/HR 2024.xlsx';
 

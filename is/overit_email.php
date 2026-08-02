@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/../www/db/db_connect.php';
+require_once __DIR__ . '/../common/db/db_connect.php';
 
 function e(mixed $value): string
 {

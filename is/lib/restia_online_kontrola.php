@@ -10,11 +10,11 @@ if (PHP_SAPI === 'cli') {
     }
     $GLOBALS['cb_restia_online_session_ready'] = true;
 } else {
-    require_once __DIR__ . '/../../www/lib/session_boot.php';
+    require_once __DIR__ . '/../../common/lib/session_boot.php';
 }
 
-require_once __DIR__ . '/../../www/lib/app.php';
-require_once __DIR__ . '/../../www/config/secrets.php';
+require_once __DIR__ . '/../../common/lib/app.php';
+require_once __DIR__ . '/../../common/config/secrets.php';
 
 if (PHP_SAPI === 'cli') {
     $PROSTREDI = 'SERVER';
@@ -233,7 +233,7 @@ if (!function_exists('cb_restia_online_kontrola_notify_admin')) {
             . 'ignore      ' . (string)$ignore . "\n"
             . 'celkem      ' . (string)$celkem;
 
-        require_once __DIR__ . '/../../www/notifikace/notifikace_2fa.php';
+        require_once __DIR__ . '/../../common/notifikace/notifikace_2fa.php';
         cb_push_send_admin_info([1], 'restia_cron', $obsah, 'Admin info');
     }
 }

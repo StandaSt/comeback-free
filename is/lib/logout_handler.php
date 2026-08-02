@@ -3,7 +3,7 @@
    0) Logout (GET)
    ========================= */
 if (isset($_GET['action']) && (string)$_GET['action'] === 'logout') {
-    require_once __DIR__ . '/../../www/db/db_user.php';
+    require_once __DIR__ . '/../../common/db/db_user.php';
 
     $cbLogoutReasonRaw = trim((string)($_GET['duvod'] ?? '1'));
     $cbLogoutReason = ($cbLogoutReasonRaw === '0') ? 0 : 1;

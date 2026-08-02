@@ -4,9 +4,9 @@ declare(strict_types=1);
 /**
  * Vstupni bod HR modulu: overi pristup, vybere stranku a nacte layout.
  */
-require_once __DIR__ . '/../www/lib/session_boot.php';
-require_once __DIR__ . '/../www/config/secrets.php';
-require_once __DIR__ . '/../www/lib/app.php';
+require_once __DIR__ . '/../common/lib/session_boot.php';
+require_once __DIR__ . '/../common/config/secrets.php';
+require_once __DIR__ . '/../common/lib/app.php';
 require_once __DIR__ . '/hr_includes/hr_data.php';
 
 cb_session_guard_entry();

@@ -3,17 +3,17 @@
 declare(strict_types=1);
 
 if (empty($GLOBALS['cb_restia_online_session_ready'])) {
-    require_once __DIR__ . '/../../www/lib/session_boot.php';
+    require_once __DIR__ . '/../../common/lib/session_boot.php';
 }
 
-require_once __DIR__ . '/../../www/lib/app.php';
-require_once __DIR__ . '/../../www/lib/system.php';
+require_once __DIR__ . '/../../common/lib/app.php';
+require_once __DIR__ . '/../../common/lib/system.php';
 require_once __DIR__ . '/../lib/format_datum_cas.php';
-require_once __DIR__ . '/../../www/config/secrets.php';
-require_once __DIR__ . '/../../www/lib/restia_access_exist.php';
+require_once __DIR__ . '/../../common/config/secrets.php';
+require_once __DIR__ . '/../../common/lib/restia_access_exist.php';
 require_once __DIR__ . '/../lib/restia_client.php';
 require_once __DIR__ . '/../db/db_api_restia.php';
-require_once __DIR__ . '/../../www/db/zapis_log_chyby.php';
+require_once __DIR__ . '/../../common/db/zapis_log_chyby.php';
 
 const CB_RESTIA_ONLINE_LIMIT = 100;
 

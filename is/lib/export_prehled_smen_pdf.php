@@ -2,10 +2,10 @@
 // lib/export_prehled_smen_pdf.php * Verze: V2 * Aktualizace: 04.06.2026
 declare(strict_types=1);
 
-require_once __DIR__ . '/../../www/lib/session_boot.php';
+require_once __DIR__ . '/../../common/lib/session_boot.php';
 
-require_once __DIR__ . '/../../www/config/secrets.php';
-require_once __DIR__ . '/../../www/lib/app.php';
+require_once __DIR__ . '/../../common/config/secrets.php';
+require_once __DIR__ . '/../../common/lib/app.php';
 require_once __DIR__ . '/prehled_smen_data.php';
 require_once __DIR__ . '/../../vendor/autoload.php';
 

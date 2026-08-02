@@ -34,7 +34,7 @@ $allowedPaths = ['/', '/index_is.php'];
 if (!$isAssetPath && !in_array($appPath, $allowedPaths, true)) {
     $cbInvalidUrl = true;
 
-    require_once __DIR__ . '/../../www/db/zapis_log_chyby.php';
+    require_once __DIR__ . '/../../common/db/zapis_log_chyby.php';
 
     try {
         $cbUser = $_SESSION['cb_user'] ?? null;

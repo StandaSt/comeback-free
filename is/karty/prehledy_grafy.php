@@ -4,7 +4,7 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../../www/db/db_connect.php';
+require_once __DIR__ . '/../../common/db/db_connect.php';
 
 $card_min_html = '';
 $card_max_html = '';

@@ -2,9 +2,9 @@
 // lib/porovnani_reportu_detail.php * Verze: V2 * Aktualizace: 02.07.2026
 declare(strict_types=1);
 
-require_once __DIR__ . '/../../www/lib/session_boot.php';
-require_once __DIR__ . '/../../www/config/secrets.php';
-require_once __DIR__ . '/../../www/lib/app.php';
+require_once __DIR__ . '/../../common/lib/session_boot.php';
+require_once __DIR__ . '/../../common/config/secrets.php';
+require_once __DIR__ . '/../../common/lib/app.php';
 
 if (!empty($_SESSION['login_ok']) && !cb_session_validate_after_login()) {
     cb_session_forget_auth();

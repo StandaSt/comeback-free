@@ -14,9 +14,9 @@ session_set_cookie_params([
 ]);
 session_start();
 
-require_once __DIR__ . '/../www/db/db_connect.php';
-require_once __DIR__ . '/../www/config/secrets.php';
-require_once __DIR__ . '/../www/lib/mailer.php';
+require_once __DIR__ . '/../common/db/db_connect.php';
+require_once __DIR__ . '/../common/config/secrets.php';
+require_once __DIR__ . '/../common/lib/mailer.php';
 
 function e(mixed $value): string
 {
@@ -158,7 +158,7 @@ function odesli_overeni_vd_email(array $data, string $overovaciUrl, string $odmi
         . '<div style="padding:22px 28px;background:#0b64b4;color:#ffffff;">'
         . '<table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;">'
         . '<tr>'
-        . '<td style="width:86px;vertical-align:middle;"><img src="' . e(dotaznik_absolutni_url('../www/img/logo_transparent_1.png')) . '" width="70" height="70" alt="Pizza Comeback" style="display:block;width:70px;height:70px;"></td>'
+        . '<td style="width:86px;vertical-align:middle;"><img src="' . e(dotaznik_absolutni_url('../common/img/logo_transparent_1.png')) . '" width="70" height="70" alt="Pizza Comeback" style="display:block;width:70px;height:70px;"></td>'
         . '<td style="vertical-align:middle;">'
         . '<h1 style="margin:0;font-size:22px;line-height:1.25;">Pizza Comeback</h1>'
         . '<p style="margin:6px 0 0;font-size:15px;">Ověření kontaktního formuláře</p>'
@@ -517,7 +517,7 @@ $vybranaMesta = post_allowed_values('mesto', ['Praha', 'Plzeň']);
             <section class="form-card">
                 <div class="form-headline">
                     <a class="brand" href="https://www.pizzacomeback.cz/" target="_blank" rel="noopener">
-                        <img src="../www/img/logo_transparent_1.png" alt="Pizza Comeback bez ramecku">
+                        <img src="../common/img/logo_transparent_1.png" alt="Pizza Comeback bez ramecku">
                     </a>
 
                     <div class="form-heading">

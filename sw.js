@@ -2,7 +2,7 @@
 // Service Worker – Web Push + test notifikací
 
 const CB_SW_ROOT = new URL('./', self.registration.scope);
-const CB_LOGO_URL = new URL('img/logo_comeback.png', CB_SW_ROOT).toString();
+const CB_LOGO_URL = new URL('common/img/logo_comeback.png', CB_SW_ROOT).toString();
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
