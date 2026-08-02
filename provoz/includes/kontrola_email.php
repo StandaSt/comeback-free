@@ -25,7 +25,7 @@ if (!function_exists('h')) {
 
 function absolutni_url(array $params = []): string
 {
-$base = 'https://comebacks.cz/is/overit_email.php';
+$base = 'https://comebacks.cz/provoz/overit_email.php';
     $query = $params !== [] ? '?' . http_build_query($params) : '';
 
     return $base . $query;
@@ -242,7 +242,7 @@ function odesli_overovaci_email(string $email, string $celeJmeno, string $potvrz
 {
     $subject = 'Opravené potvrzení platnosti e-mailové adresy';
     $osloveniJmeno = $celeJmeno !== '' ? $celeJmeno : 'uživatele';
-$obrazekUrl = 'https://comebacks.cz/is/img/mejl_email.jpg';
+$obrazekUrl = 'https://comebacks.cz/provoz/img/mejl_email.jpg';
     $omluvaHtml = '<p style="margin:0 0 10px;color:#b91c1c;font-weight:bold;">Velmi se omlouváme.</p>'
         . '<p style="margin:0 0 12px;color:#b91c1c;font-weight:bold;">Předchozí potvrzovací e-mail mohl obsahovat nefunkční odkaz.</p>'
         . '<p style="margin:0 0 16px;color:#b91c1c;font-weight:bold;">Prosíme, potvrďte e-mailovou adresu znovu pomocí tohoto již opraveného e-mailu.</p>';

@@ -27,7 +27,7 @@ if (!function_exists('cb_asset_url')) {
 
         if ($isLocal) {
             $scriptName = str_replace('\\', '/', (string)($_SERVER['SCRIPT_NAME'] ?? ''));
-            $base = preg_replace('~/is(?:/.*)?$~', '', $scriptName) ?? '';
+            $base = preg_replace('~/provoz(?:/.*)?$~', '', $scriptName) ?? '';
             return rtrim($base, '/') . '/common/' . $path;
         }
 
@@ -45,7 +45,7 @@ if (!function_exists('cb_asset_url')) {
         $url = $isPublicStyle
             ? cb_public_style_url($cleanPath)
             : (function_exists('cb_module_asset_url')
-            ? cb_module_asset_url($path, 'is')
+            ? cb_module_asset_url($path, 'provoz')
             : cb_url($path));
         return $url . '?v=' . $ver;
     }

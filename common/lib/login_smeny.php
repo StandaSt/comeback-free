@@ -44,8 +44,11 @@ function post_str(string $k): string
 function post_module(): string
 {
     $module = strtolower(post_str('module'));
-    if (!in_array($module, ['is', 'hr', 'smeny'], true)) {
-        return 'is';
+    if ($module === 'is') {
+        return 'provoz';
+    }
+    if (!in_array($module, ['provoz', 'hr', 'smeny'], true)) {
+        return 'provoz';
     }
 
     return $module;

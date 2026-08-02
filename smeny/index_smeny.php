@@ -83,7 +83,7 @@ body {
 <body>
 
 <div class="menu">
-    <a href="<?= h(cb_module_url('is')) ?>">IS</a>
+    <a href="<?= h(cb_module_url('provoz')) ?>">Provoz</a>
     <a href="<?= h(cb_module_url('hr')) ?>">HR</a>
 </div>
 

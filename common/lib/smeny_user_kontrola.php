@@ -105,7 +105,7 @@ if (!function_exists('cb_smeny_user_kontrola')) {
         $_SESSION['cb_token'] = $token;
         $GLOBALS['cb_smeny_user_cron'] = true;
 
-        $file = __DIR__ . '/../../is/inicializace/plnime_smeny_user.php';
+        $file = __DIR__ . '/../../provoz/inicializace/plnime_smeny_user.php';
         if (!file_exists($file)) {
             throw new RuntimeException('Směny cron user: soubor nenalezen plnime_smeny_user.php.');
         }

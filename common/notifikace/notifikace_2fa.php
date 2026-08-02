@@ -141,7 +141,7 @@ function cb_push_send_2fa(int $idUser, string $token2fa): bool
 
     $webPush = new Minishlink\WebPush\WebPush($auth);
 
-    $url = cb_module_url('is') . 'mobil/mobil_overeni.php?t=' . rawurlencode($token2fa);
+    $url = cb_module_url('provoz') . 'mobil/mobil_overeni.php?t=' . rawurlencode($token2fa);
 
     $payloadArr = [
         'type' => '2FA_LOGIN',

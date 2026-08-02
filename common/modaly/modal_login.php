@@ -51,9 +51,9 @@ $loginDisabled = $loginDbOk ? '' : ' disabled';
       </div>
 
       <div class="modal-actions modal-actions-modules">
-        <button class="modal-btn primary" type="submit" name="module" value="is"<?= $loginDisabled ?>>
-          <span class="modal-btn-main">IS</span>
-          <span class="modal-btn-sub">Informační systém</span>
+        <button class="modal-btn primary" type="submit" name="module" value="provoz"<?= $loginDisabled ?>>
+          <span class="modal-btn-main">Provoz</span>
+          <span class="modal-btn-sub">Provozní systém</span>
         </button>
         <button class="modal-btn primary" type="submit" name="module" value="hr"<?= $loginDisabled ?>>
           <span class="modal-btn-main">HR</span>

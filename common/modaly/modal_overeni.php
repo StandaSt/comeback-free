@@ -11,7 +11,7 @@ $cb2faToken = (string)($_SESSION['cb_2fa_token'] ?? '');
 if ($cb2faToken !== '') {
     $pollMs = defined('CB_2FA_POLL_MS') ? (int)CB_2FA_POLL_MS : 2000;
 
-    $pairUrl = cb_module_url('is') . 'mobil/mobil_overeni.php?t=' . rawurlencode($cb2faToken);
+    $pairUrl = cb_module_url('provoz') . 'mobil/mobil_overeni.php?t=' . rawurlencode($cb2faToken);
     $checkUrl = cb_root_url('common/lib/push_2fa_api.php?check=1');
     $cancelUrl = cb_root_url('common/lib/push_2fa_api.php?cancel=1');
     $targetUrl = cb_login_target_url();

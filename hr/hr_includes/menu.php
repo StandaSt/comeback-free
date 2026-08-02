@@ -44,9 +44,9 @@ $menuItems = [
 
     <div class="sidebar-section">
         <div class="sidebar-label">MODULY</div>
-        <a class="nav-link" href="<?= h(cb_module_url('is')) ?>">
+        <a class="nav-link" href="<?= h(cb_module_url('provoz')) ?>">
             <span class="nav-icon" aria-hidden="true">▦</span>
-            <span>IS</span>
+            <span>Provoz</span>
         </a>
         <a class="nav-link" href="<?= h(cb_module_url('smeny')) ?>">
             <span class="nav-icon" aria-hidden="true">▧</span>

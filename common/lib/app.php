@@ -57,7 +57,7 @@ if ($JE_LOCAL || $IS_CLI) {
 
 // ====== BASE_PATH (neprustrelne) ======
 // 1) Primarne z URL: root projektu (funguje i kdyz se vola /lib/*.php primo)
-$CB_MODULES = ['is', 'hr', 'smeny'];
+$CB_MODULES = ['provoz', 'hr', 'smeny'];
 $scriptName = (string)($_SERVER['SCRIPT_NAME'] ?? '');
 $baseFromUrl = '';
 $CURRENT_MODULE = '';
@@ -209,8 +209,11 @@ function cb_module_url(string $module): string
     global $PROSTREDI;
 
     $module = strtolower(trim($module));
-    if (!in_array($module, ['is', 'hr', 'smeny'], true)) {
-        $module = 'is';
+    if ($module === 'is') {
+        $module = 'provoz';
+    }
+    if (!in_array($module, ['provoz', 'hr', 'smeny'], true)) {
+        $module = 'provoz';
     }
 
     if ($PROSTREDI === 'LOCAL') {
@@ -243,7 +246,10 @@ function cb_module_asset_url(string $path, string $module = ''): string
         $module = cb_current_module();
     }
 
-    if (!in_array($module, ['is', 'hr', 'smeny'], true)) {
+    if ($module === 'is') {
+        $module = 'provoz';
+    }
+    if (!in_array($module, ['provoz', 'hr', 'smeny'], true)) {
         return cb_url($path);
     }
 
@@ -252,9 +258,12 @@ function cb_module_asset_url(string $path, string $module = ''): string
 
 function cb_login_target_module(): string
 {
-    $module = strtolower(trim((string)($_SESSION['cb_login_target_module'] ?? 'is')));
-    if (!in_array($module, ['is', 'hr', 'smeny'], true)) {
-        return 'is';
+    $module = strtolower(trim((string)($_SESSION['cb_login_target_module'] ?? 'provoz')));
+    if ($module === 'is') {
+        $module = 'provoz';
+    }
+    if (!in_array($module, ['provoz', 'hr', 'smeny'], true)) {
+        return 'provoz';
     }
 
     return $module;

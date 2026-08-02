@@ -157,7 +157,7 @@ if (!function_exists('cb_smeny_plan_kontrola')) {
         $GLOBALS['cb_smeny_plan_cron'] = true;
         $GLOBALS['cb_smeny_plan_import_all'] = true;
 
-        $file = __DIR__ . '/../../is/inicializace/plnime_smeny_plan.php';
+        $file = __DIR__ . '/../../provoz/inicializace/plnime_smeny_plan.php';
         if (!file_exists($file)) {
             throw new RuntimeException('Směny cron: soubor nenalezen plnime_smeny_plan.php.');
         }
