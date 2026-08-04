@@ -6,7 +6,7 @@ require_once __DIR__ . '/../../common/lib/session_boot.php';
 require_once __DIR__ . '/../../common/lib/app.php';
 require_once __DIR__ . '/../../common/lib/system.php';
 require_once __DIR__ . '/../../common/config/secrets.php';
-require_once __DIR__ . '/../lib/helpdesk_notifikace.php';
+require_once __DIR__ . '/../../helpdesk/hl_lib/hl_notifikace.php';
 
 function cb_mobil_helpdesk_h(string $s): string
 {
@@ -200,7 +200,7 @@ if (is_array($row) && trim((string)($row['typ'] ?? '')) === 'admin_odpoved') {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= cb_mobil_helpdesk_h($title) ?></title>
-  <link rel="stylesheet" href="<?= cb_mobil_helpdesk_h(cb_public_url('style/1/modal_alert.css')) ?>">
+  <link rel="stylesheet" href="<?= cb_mobil_helpdesk_h(cb_public_url('style/modal_alert.css')) ?>">
   <style>
     .modal{
       width:min(340px, 100%);

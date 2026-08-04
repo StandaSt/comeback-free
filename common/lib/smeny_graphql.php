@@ -291,10 +291,7 @@ function cb_login_finalize_after_ok(string $token): void
 
     require_once __DIR__ . '/restia_access_exist.php';
 
-    $userLogoutLimit = cb_user_setting('logout_limit', null);
-    $_SESSION['cb_timeout_min'] = $userLogoutLimit !== null
-        ? (int)$userLogoutLimit
-        : (int)cb_system_setting('system_logout', 20);
+    $_SESSION['cb_timeout_min'] = 720;
     $_SESSION['cb_session_start_ts'] = time();
     $_SESSION['cb_last_activity_ts'] = time();
 }

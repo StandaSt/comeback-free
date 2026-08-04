@@ -13,6 +13,83 @@ cb_session_guard_entry();
 $cbAuthOk = !empty($_SESSION['cb_auth_ok']);
 $cb2faPending = !empty($_SESSION['cb_2fa_token']);
 
+if (!empty($_SESSION['login_ok'])) {
+    require_once __DIR__ . '/common/lib/pobocky_vyber.php';
+    require_once __DIR__ . '/common/lib/handle_set_period.php';
+    require_once __DIR__ . '/common/lib/handle_set_pobocky.php';
+}
+
+if (!empty($_SESSION['login_ok']) && (isset($_GET['helpdesk_action']) || isset($_POST['helpdesk_action']))) {
+    $cbHelpdeskAction = trim((string)($_GET['helpdesk_action'] ?? $_POST['helpdesk_action'] ?? ''));
+    $cbHelpdeskRoutes = [
+        'detail' => __DIR__ . '/helpdesk/hl_ajax/hl_detail.php',
+        'notifikace_nacist' => __DIR__ . '/helpdesk/hl_ajax/hl_notifikace_nacist.php',
+        'notifikace_precteno' => __DIR__ . '/helpdesk/hl_ajax/hl_notifikace_precteno.php',
+        'priloha_nahrat' => __DIR__ . '/helpdesk/hl_ajax/hl_priloha_nahrat.php',
+        'sledovat' => __DIR__ . '/helpdesk/hl_ajax/hl_sledovat.php',
+        'stav_tiketu' => __DIR__ . '/helpdesk/hl_ajax/hl_stav_tiketu.php',
+        'stav_zmenit' => __DIR__ . '/helpdesk/hl_ajax/hl_stav_zmenit.php',
+        'vytvorit' => __DIR__ . '/helpdesk/hl_ajax/hl_vytvorit.php',
+        'zprava_pridat' => __DIR__ . '/helpdesk/hl_ajax/hl_zprava_pridat.php',
+    ];
+    if (!isset($cbHelpdeskRoutes[$cbHelpdeskAction])) {
+        http_response_code(404);
+        exit;
+    }
+
+    $GLOBALS['CURRENT_MODULE'] = 'helpdesk';
+    define('CB_EMBEDDED_MODULE', 'helpdesk');
+    require $cbHelpdeskRoutes[$cbHelpdeskAction];
+    exit;
+}
+
+if (!empty($_SESSION['login_ok']) && isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODULE'])) {
+    $cbShellModule = strtolower(trim((string)($_POST['cb_shell_module'] ?? 'provoz')));
+    if (!in_array($cbShellModule, ['provoz', 'hr', 'smeny', 'helpdesk'], true)) {
+        $cbShellModule = 'provoz';
+    }
+
+    $GLOBALS['CURRENT_MODULE'] = $cbShellModule;
+    define('CB_EMBEDDED_MODULE', $cbShellModule);
+    header('Content-Type: text/html; charset=utf-8');
+
+    if ($cbShellModule === 'hr') {
+        require __DIR__ . '/hr/hr.php';
+    } elseif ($cbShellModule === 'smeny') {
+        require __DIR__ . '/smeny/smeny.php';
+    } elseif ($cbShellModule === 'helpdesk') {
+        require __DIR__ . '/helpdesk/helpdesk.php';
+    } else {
+        require __DIR__ . '/provoz/provoz.php';
+    }
+    exit;
+}
+
+if (!empty($_SESSION['login_ok'])) {
+    $cbHasAsyncHeader = false;
+    foreach (array_keys($_SERVER) as $cbServerKey) {
+        if (strncmp((string)$cbServerKey, 'HTTP_X_COMEBACK_', 16) === 0) {
+            $cbHasAsyncHeader = true;
+            break;
+        }
+    }
+
+    $cbIsProvozRequest =
+        $cbHasAsyncHeader
+        || isset($_GET['cb_card_id'])
+        || isset($_GET['cb_load_max'])
+        || isset($_GET['cb_restia_import_max'])
+        || isset($_GET['helpdesk_action'])
+        || isset($_POST['helpdesk_action']);
+
+    if ($cbIsProvozRequest) {
+        $GLOBALS['CURRENT_MODULE'] = 'provoz';
+        define('CB_EMBEDDED_MODULE', 'provoz');
+        require __DIR__ . '/provoz/provoz.php';
+        exit;
+    }
+}
+
 $cbLoginDbOk = false;
 $cbLoginDbName = '---';
 
@@ -46,7 +123,180 @@ try {
 }
 
 if (!empty($_SESSION['login_ok'])) {
-    header('Location: ' . cb_login_target_url());
+    $GLOBALS['CURRENT_MODULE'] = 'provoz';
+    require_once __DIR__ . '/provoz/lib/asset_url.php';
+    require_once __DIR__ . '/common/lib/pobocky_vyber.php';
+    cb_pobocky_bootstrap_session();
+
+    $cbTitle = 'Comeback - IS';
+    $cbFavicon = cb_module_asset_url('img/favicon_comeback.png', 'provoz');
+    $cbShellUrl = cb_root_url('index.php');
+    $cbPublicShellUrl = cb_root_url('');
+    $cbSelectPobockyJsPath = __DIR__ . '/common/js/select_pobocky.js';
+    $cbSelectPobockyJsUrl = cb_public_url('js/select_pobocky.js') . '?v=' . (is_file($cbSelectPobockyJsPath) ? (string)filemtime($cbSelectPobockyJsPath) : '1');
+    ?><!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><?= h($cbTitle) ?></title>
+  <link rel="icon" type="image/png" href="<?= h($cbFavicon) ?>">
+  <?php require_once __DIR__ . '/provoz/lib/nacti_styly.php'; ?>
+  <link rel="stylesheet" href="<?= h(cb_module_asset_url('hr_css/hr.css', 'hr')) ?>">
+  <style>
+  #cb-module-root{
+    --cb-module-bg:#dbeafe;
+    --cb-module-accent:#2563eb;
+    display:block;
+    width:100%;
+    min-width:0;
+    position:relative;
+    z-index:1;
+    overflow:visible;
+    margin-top:5px;
+    background:var(--cb-module-bg);
+  }
+  #cb-module-root.cb-context--provoz{
+    --cb-module-bg:#dbeafe;
+    --cb-module-accent:#2563eb;
+  }
+  #cb-module-root.cb-context--hr{
+    --cb-module-bg:#dcfce7;
+    --cb-module-accent:#16a34a;
+  }
+  #cb-module-root.cb-context--smeny{
+    --cb-module-bg:#fef3c7;
+    --cb-module-accent:#d97706;
+  }
+  #cb-module-root.cb-context--ukoly{
+    --cb-module-bg:#f3e8ff;
+    --cb-module-accent:#9333ea;
+  }
+  #cb-module-root.cb-module-root--hr,
+  #cb-module-root.cb-module-root--smeny,
+  #cb-module-root.cb-module-root--helpdesk{
+    background:var(--cb-module-bg);
+  }
+  #cb-module-root > .container{
+    width:100%;
+    max-width:none;
+    margin:0;
+  }
+  #cb-module-root.cb-module-root--provoz > .container{
+    display:block;
+  }
+  </style>
+</head>
+<body>
+<?php
+    require_once __DIR__ . '/common/includes/hlavicka.php';
+?>
+<main id="cb-module-root" class="cb-module-root--provoz cb-context--provoz" data-cb-module-root="1">
+<?php
+    define('CB_EMBEDDED_MODULE', 'provoz');
+    require __DIR__ . '/provoz/provoz.php';
+?>
+</main>
+<script>
+window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+</script>
+<script src="<?= h(cb_asset_url('js/echarts.min.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/ajax_core.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/ajax_karta_max.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/karty_max_loader.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/karty_min_max.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/karty_top_report.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/karty_grafy.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/tooltip_pozice.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/karty_min_nano.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/karty_hlavicka.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/karty_report_restia.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/karty_report_form.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/karty_report_person.js')) ?>"></script>
+<script src="<?= h($cbSelectPobockyJsUrl) ?>"></script>
+<script src="<?= h(cb_asset_url('js/filtry.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/prehled_smen_export.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/rozbalovaci_detail.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/casovac_odhlaseni.js')) ?>"></script>
+<script>
+(function(){
+  'use strict';
+
+  var root = document.querySelector('[data-cb-module-root="1"]');
+  var shellUrl = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+  var publicShellUrl = <?= json_encode($cbPublicShellUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+  var activeMainModule = 'provoz';
+  if (!root) return;
+  history.replaceState(null, '', publicShellUrl);
+
+  function setActive(moduleName){
+    if (moduleName === 'helpdesk') return;
+
+    var links = Array.prototype.slice.call(document.querySelectorAll('[data-cb-module-link="1"]'));
+    links.forEach(function(link){
+      var active = link.getAttribute('data-cb-module') === moduleName;
+      link.classList.toggle('is-active', active);
+    });
+  }
+
+  function setRootModule(moduleName){
+    root.classList.remove('cb-module-root--provoz', 'cb-module-root--hr', 'cb-module-root--smeny', 'cb-module-root--helpdesk');
+    root.classList.add('cb-module-root--' + moduleName);
+
+    if (moduleName !== 'helpdesk') {
+      activeMainModule = moduleName;
+    }
+    root.classList.remove('cb-context--provoz', 'cb-context--hr', 'cb-context--smeny', 'cb-context--ukoly');
+    root.classList.add('cb-context--' + activeMainModule);
+  }
+
+  function loadModule(moduleName, pushState){
+    if (!moduleName) return;
+
+    var body = new URLSearchParams();
+    body.set('cb_shell_module', moduleName);
+
+    fetch(shellUrl, {
+      method: 'POST',
+      headers: {
+        'X-Comeback-Shell-Module': '1',
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+      },
+      body: body.toString(),
+      credentials: 'same-origin'
+    })
+      .then(function(response){
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        return response.text();
+      })
+      .then(function(html){
+        setRootModule(moduleName);
+        root.innerHTML = html;
+        setActive(moduleName);
+      })
+      .catch(function(error){
+        root.innerHTML = '<div style="padding:12px;color:#b91c1c;background:#fff;border:1px solid #fecaca;">Modul se nepodařilo načíst: ' + String(error.message || error) + '</div>';
+      });
+  }
+
+  window.CB_LOAD_MODULE = loadModule;
+
+  document.addEventListener('click', function(event){
+    var link = event.target.closest ? event.target.closest('[data-cb-module-link="1"]') : null;
+    if (!link) return;
+
+    var moduleName = link.getAttribute('data-cb-module') || '';
+    if (!moduleName) return;
+
+    event.preventDefault();
+    loadModule(moduleName, true);
+  });
+
+})();
+</script>
+</body>
+</html>
+<?php
     exit;
 }
 
@@ -68,7 +318,7 @@ if ($cbLoginBackgroundCount > 0) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Comeback - přihlášení</title>
   <link rel="icon" type="image/png" href="<?= h(cb_public_url('img/logo_comeback.png')) ?>">
-  <link rel="stylesheet" href="<?= h(cb_public_url('style/1/modal_alert.css?v=' . filemtime(__DIR__ . '/common/style/1/modal_alert.css'))) ?>">
+<link rel="stylesheet" href="<?= h(cb_public_url('style/modal_alert.css?v=' . filemtime(__DIR__ . '/common/style/modal_alert.css'))) ?>">
 </head>
 <body class="modal-page modal-login-page" style="--cb-login-bg: url('<?= h($cbLoginBackgroundUrl) ?>');">
 <div class="modal-login-container">

@@ -121,6 +121,17 @@ if ($BASE_PATH === '') {
 
 function cb_url(string $path): string
 {
+    $cleanPath = ltrim($path, '/');
+    $query = '';
+    $queryPos = strpos($cleanPath, '?');
+    if ($queryPos !== false) {
+        $query = substr($cleanPath, $queryPos);
+        $cleanPath = substr($cleanPath, 0, $queryPos);
+    }
+    if (in_array($cleanPath, ['provoz.php', 'hr.php', 'smeny.php'], true)) {
+        return cb_root_url('index.php' . $query);
+    }
+
     $module = cb_current_module();
     if ($module !== '') {
         return cb_current_module_url($path);
@@ -212,7 +223,7 @@ function cb_module_url(string $module): string
     if ($module === 'is') {
         $module = 'provoz';
     }
-    if (!in_array($module, ['provoz', 'hr', 'smeny'], true)) {
+    if (!in_array($module, ['provoz', 'hr', 'smeny', 'helpdesk'], true)) {
         $module = 'provoz';
     }
 
@@ -222,6 +233,26 @@ function cb_module_url(string $module): string
     }
 
     return 'https://comebacks.cz/' . $module . '/';
+}
+
+function cb_module_entry_file(string $module): string
+{
+    $module = strtolower(trim($module));
+    if ($module === 'is') {
+        $module = 'provoz';
+    }
+
+    return match ($module) {
+        'hr' => 'hr.php',
+        'smeny' => 'smeny.php',
+        'helpdesk' => 'helpdesk.php',
+        default => 'provoz.php',
+    };
+}
+
+function cb_module_entry_url(string $module): string
+{
+    return cb_root_url('');
 }
 
 function cb_current_module(): string
@@ -262,7 +293,7 @@ function cb_login_target_module(): string
     if ($module === 'is') {
         $module = 'provoz';
     }
-    if (!in_array($module, ['provoz', 'hr', 'smeny'], true)) {
+    if (!in_array($module, ['provoz', 'hr', 'smeny', 'helpdesk'], true)) {
         return 'provoz';
     }
 
@@ -271,7 +302,7 @@ function cb_login_target_module(): string
 
 function cb_login_target_url(): string
 {
-    return cb_module_url(cb_login_target_module());
+    return cb_module_entry_url(cb_login_target_module());
 }
 
 if (!function_exists('cb_system_settings_defaults')) {
@@ -328,13 +359,7 @@ if (!function_exists('cb_store_system_settings')) {
         }
 
         $_SESSION['cb_system'] = $data;
-        $userSettings = (isset($_SESSION['cb_user_settings']) && is_array($_SESSION['cb_user_settings']))
-            ? $_SESSION['cb_user_settings']
-            : [];
-        $userLogoutLimit = $userSettings['logout_limit'] ?? null;
-        $_SESSION['cb_timeout_min'] = ($userLogoutLimit !== null && in_array((int)$userLogoutLimit, [30, 60, 120, 240, 480], true))
-            ? (int)$userLogoutLimit
-            : $data['system_logout'];
+        $_SESSION['cb_timeout_min'] = 720;
     }
 }
 
@@ -439,9 +464,7 @@ if (!function_exists('cb_store_user_settings')) {
         $data['obdobi_do'] = trim((string)($values['obdobi_do'] ?? $data['obdobi_do']));
 
         $_SESSION['cb_user_settings'] = $data;
-        $_SESSION['cb_timeout_min'] = $data['logout_limit'] !== null
-            ? (int)$data['logout_limit']
-            : (int)cb_system_setting('system_logout', 20);
+        $_SESSION['cb_timeout_min'] = 720;
     }
 }
 

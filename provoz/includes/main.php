@@ -9,9 +9,9 @@ declare(strict_types=1);
  * MAIN (obsah) – kostra mezi hlavičkou a patičkou
  *
  * Cíl:
- * - scroll je pouze uvnitř <main class="dash_box bg_modra">
+ * - pokud je obsah vyšší než okno, scrolluje běžně okno prohlížeče
  * - uvnitř main se renderuje obsah z aktuální include/page
- * - dashboard už nepoužívá žádný další vnořený obal pro scroll
+ * - dashboard nepoužívá vlastní vnitřní scroll
  */
 ?>
 

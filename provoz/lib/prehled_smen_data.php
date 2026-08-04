@@ -294,6 +294,8 @@ if (!function_exists('ps_prehled_smen_data')) {
 
         $yearStart = (new DateTimeImmutable($selectedYear . '-01-01'))->setTime(0, 0);
         $yearEnd = $yearStart->modify('last day of december')->setTime(23, 59, 59);
+        $monthStart = (new DateTimeImmutable(sprintf('%04d-%02d-01', $selectedYear, $selectedMonth)))->setTime(0, 0);
+        $monthEnd = $monthStart->modify('last day of this month')->setTime(23, 59, 59);
 
         try {
             $conn = db();
@@ -325,8 +327,8 @@ if (!function_exists('ps_prehled_smen_data')) {
                 throw new RuntimeException('Nepodařilo se připravit dotaz přehledu směn.');
             }
 
-            $dateFrom = $yearStart->format('Y-m-d');
-            $dateTo = $yearEnd->format('Y-m-d');
+            $dateFrom = ($includeMaxData ? $yearStart : $monthStart)->format('Y-m-d');
+            $dateTo = ($includeMaxData ? $yearEnd : $monthEnd)->format('Y-m-d');
             $stmt->bind_param('ss', $dateFrom, $dateTo);
             if (!$stmt->execute()) {
                 throw new RuntimeException('Dotaz přehledu směn selhal.');

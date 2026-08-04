@@ -76,7 +76,7 @@ select {
 .app {
     display: grid;
     grid-template-columns: 240px minmax(0, 1fr);
-    min-height: 100vh;
+    min-height: calc(100vh - 67px);
 }
 
 .sidebar {

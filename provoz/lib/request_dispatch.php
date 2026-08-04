@@ -17,16 +17,6 @@ if (isset($_SERVER['HTTP_X_COMEBACK_CARD_MAX'])) {
     $cbIsCardMaxPartial = ((string)($_SERVER['HTTP_X_COMEBACK_CARD_MAX']) === '1');
 }
 
-$cbIsKpiPartial = false;
-if (isset($_SERVER['HTTP_X_COMEBACK_KPI'])) {
-    $cbIsKpiPartial = ((string)($_SERVER['HTTP_X_COMEBACK_KPI']) === '1');
-}
-
-$cbIsKpiSetting = false;
-if (isset($_SERVER['HTTP_X_COMEBACK_KPI_SETTING'])) {
-    $cbIsKpiSetting = ((string)($_SERVER['HTTP_X_COMEBACK_KPI_SETTING']) === '1');
-}
-
 $cbIsRestiaState = false;
 if (isset($_SERVER['HTTP_X_COMEBACK_RESTIA_STATE'])) {
     $cbIsRestiaState = ((string)($_SERVER['HTTP_X_COMEBACK_RESTIA_STATE']) === '1');
@@ -45,44 +35,6 @@ if (isset($_SERVER['HTTP_X_COMEBACK_RESTIA_STOP'])) {
 $cbIsUserAkce = false;
 if (isset($_SERVER['HTTP_X_COMEBACK_USER_AKCE'])) {
     $cbIsUserAkce = ((string)($_SERVER['HTTP_X_COMEBACK_USER_AKCE']) === '1');
-}
-
-$cbIsHelpdesk = false;
-if (isset($_SERVER['HTTP_X_COMEBACK_HELPDESK'])) {
-    $cbIsHelpdesk = ((string)($_SERVER['HTTP_X_COMEBACK_HELPDESK']) === '1');
-}
-
-if ($cbIsHelpdesk) {
-    if (empty($_SESSION['login_ok'])) {
-        http_response_code(401);
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode(['ok' => false, 'err' => 'Nutne prihlaseni'], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-
-    $cbHelpdeskAction = trim((string)($_GET['helpdesk_action'] ?? $_POST['helpdesk_action'] ?? ''));
-    $cbHelpdeskMap = [
-        'vytvorit' => __DIR__ . '/../ajax/helpdesk_vytvorit.php',
-        'detail' => __DIR__ . '/../ajax/helpdesk_detail.php',
-        'zprava_pridat' => __DIR__ . '/../ajax/helpdesk_zprava_pridat.php',
-        'priloha_nahrat' => __DIR__ . '/../ajax/helpdesk_priloha_nahrat.php',
-        'sledovat' => __DIR__ . '/../ajax/helpdesk_sledovat.php',
-        'stav_zmenit' => __DIR__ . '/../ajax/helpdesk_stav_zmenit.php',
-        'notifikace_nacist' => __DIR__ . '/../ajax/helpdesk_notifikace_nacist.php',
-        'notifikace_precteno' => __DIR__ . '/../ajax/helpdesk_notifikace_precteno.php',
-        'stav_tiketu' => __DIR__ . '/../ajax/helpdesk_stav_tiketu.php',
-    ];
-
-    if (!isset($cbHelpdeskMap[$cbHelpdeskAction])) {
-        http_response_code(404);
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode(['ok' => false, 'err' => 'Neznamy HelpDesk pozadavek'], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-
-    define('CB_HELPDESK_DISPATCH_INTERNAL', true);
-    require $cbHelpdeskMap[$cbHelpdeskAction];
-    exit;
 }
 
 if ($cbIsUserAkce && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
@@ -111,48 +63,6 @@ if ($cbIsUserAkce && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         'ok' => true,
         'saved' => $saved ? 1 : 0,
     ], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
-if ($cbIsKpiSetting && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
-    if (empty($_SESSION['login_ok'])) {
-        http_response_code(401);
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode(['ok' => false, 'err' => 'Nutne prihlaseni'], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-
-    header('Content-Type: application/json; charset=utf-8');
-    $raw = (string)file_get_contents('php://input');
-    $data = json_decode($raw, true);
-    if (!is_array($data)) {
-        http_response_code(400);
-        echo json_encode(['ok' => false, 'err' => 'Neplatny JSON'], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-
-    $idUser = (int)($_SESSION['cb_user']['id_user'] ?? 0);
-    if ($idUser <= 0) {
-        http_response_code(401);
-        echo json_encode(['ok' => false, 'err' => 'Neplatny uzivatel'], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-
-    $kpi = ((int)($data['kpi'] ?? 1) === 1) ? 1 : 0;
-    $conn = db();
-    $stmt = $conn->prepare('UPDATE user_set SET kpi = ? WHERE id_user = ? LIMIT 1');
-    if (!($stmt instanceof mysqli_stmt)) {
-        http_response_code(500);
-        echo json_encode(['ok' => false, 'err' => 'Ulozeni KPI selhalo'], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-    $stmt->bind_param('ii', $kpi, $idUser);
-    $stmt->execute();
-    $stmt->close();
-
-    cb_store_user_settings(['kpi' => $kpi]);
-
-    echo json_encode(['ok' => true, 'kpi' => $kpi], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -391,25 +301,6 @@ if (
         exit;
     }
     cb_emit_card_json_response($cbCardId, true, 'max_form');
-}
-
-if ($cbIsKpiPartial) {
-    if (empty($_SESSION['login_ok'])) {
-        http_response_code(401);
-        exit;
-    }
-
-    header('Content-Type: text/html; charset=utf-8');
-
-    if (!isset($cbObdobiOd)) {
-        $cbObdobiOd = trim((string)($_SESSION['cb_obdobi_od'] ?? ''));
-    }
-    if (!isset($cbObdobiDo)) {
-        $cbObdobiDo = trim((string)($_SESSION['cb_obdobi_do'] ?? ''));
-    }
-
-    require __DIR__ . '/../includes/hlavicka/head_kpi.php';
-    exit;
 }
 
 if ($cbIsPartial) {

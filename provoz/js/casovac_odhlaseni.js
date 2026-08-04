@@ -5,9 +5,7 @@
  * Casovac neaktivity v user bloku hlavicky.
  *
  * Co dela:
- * - zobrazuje "Seance/zbyva" (delka aktualni session / zbyvajici cas)
  * - pri aktivite uzivatele resetuje neaktivitu na plny timeout
- * - prubezne updatuje teplomer neaktivity (odkryva barevny pas)
  * - periodicky posila "touch" na server
  *
  * Zmena V10:
@@ -68,7 +66,6 @@
 
   const comboEl = box.querySelector('.cb-session-combo');
   const thermoEl = box.querySelector('.cb-session-thermo');
-  if (!comboEl || !thermoEl) return;
 
   const timeoutMin = toInt(box.getAttribute('data-timeout-min'));
   const logoutUrl = String(box.getAttribute('data-logout-url') || '').trim();
@@ -77,7 +74,7 @@
   const warningThresholdMin = Math.max(1, Math.ceil(timeoutMin * 0.1));
 
   if (timeoutMin <= 0) {
-    comboEl.textContent = '!';
+    if (comboEl) comboEl.textContent = '!';
     return;
   }
 
@@ -125,14 +122,18 @@
     let remainMin = timeoutMin - idleMin;
     if (remainMin < 0) remainMin = 0;
 
-    comboEl.textContent = String(runMin) + ' min/' + String(remainMin) + ' min';
+    if (comboEl) {
+      comboEl.textContent = String(runMin) + ' min/' + String(remainMin) + ' min';
+    }
 
     // Teplomer = procento vycerpane neaktivity.
     let thermoPct = Math.round((idleSec / timeoutSec) * 100);
     thermoPct = clamp(thermoPct, 0, 100);
 
-    thermoEl.setAttribute('data-thermo', String(thermoPct));
-    thermoEl.style.setProperty('--thermo', String(thermoPct) + '%');
+    if (thermoEl) {
+      thermoEl.setAttribute('data-thermo', String(thermoPct));
+      thermoEl.style.setProperty('--thermo', String(thermoPct) + '%');
+    }
 
     if (logoutLink) {
       const warningOn = (remainMin > 0 && remainMin <= warningThresholdMin);

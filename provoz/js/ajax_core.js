@@ -569,7 +569,7 @@
   };
 
   function fetchRestiaState() {
-    const reqUrl = String(w.location.href || 'index_is.php');
+    const reqUrl = String(w.location.href || (w.CB_ENDPOINT || 'index.php'));
     return fetch(reqUrl, {
       method: 'GET',
       headers: { 'X-Comeback-Restia-State': '1' },
@@ -584,7 +584,7 @@
 
   function triggerRestiaCheck(options) {
     const opts = (options && typeof options === 'object') ? options : {};
-    const reqUrl = String(w.location.href || 'index_is.php');
+    const reqUrl = String(w.location.href || (w.CB_ENDPOINT || 'index.php'));
     const headers = {
       'X-Comeback-Restia-Trigger': '1',
       'Accept': 'application/json'
@@ -609,7 +609,7 @@
     const opts = (options && typeof options === 'object') ? options : {};
     const timeoutMs = Math.max(1000, Number(opts.timeoutMs) || 30000);
     const pollMs = Math.max(200, Number(opts.pollMs) || 500);
-    const reqUrl = String(w.location.href || 'index_is.php');
+    const reqUrl = String(w.location.href || (w.CB_ENDPOINT || 'index.php'));
     const startedAt = Date.now();
 
     traceAjax('restia_wait_start', {
@@ -733,7 +733,7 @@
     const refreshMode = String(opts.refreshMode || 'dashboard').trim() || 'dashboard';
     const keepLoading = !!opts.keepLoading;
     const body = new FormData(targetForm);
-    const reqUrl = String(targetForm.action || w.location.href || 'index_is.php');
+    const reqUrl = String(targetForm.action || w.location.href || (w.CB_ENDPOINT || 'index.php'));
     const method = String(targetForm.method || 'POST').toUpperCase();
     traceAjax('submit_start', {
       mode: loaderMode,
@@ -833,7 +833,7 @@
       setLoaderLoading(loaderMode, true);
     }
 
-    const reqUrl = String(w.location.href || 'index_is.php');
+    const reqUrl = String(w.location.href || (w.CB_ENDPOINT || 'index.php'));
     traceAjax('refresh_start', {
       mode: loaderMode,
       force: force ? 1 : 0,
@@ -901,7 +901,7 @@
       setLoaderLoading(loaderMode, true);
     }
 
-    const reqUrl = String(w.location.href || 'index_is.php');
+    const reqUrl = String(w.location.href || (w.CB_ENDPOINT || 'index.php'));
     traceAjax('refresh_mini_start', {
       mode: loaderMode,
       force: force ? 1 : 0,
@@ -1046,38 +1046,6 @@
       url: String(w.location.href || '')
     });
 
-    const kpiJob = fetch(String(w.location.href || 'index_is.php'), {
-      method: 'GET',
-      headers: {
-        'X-Comeback-KPI': '1',
-        'Accept': 'text/html'
-      },
-      credentials: 'same-origin'
-    }).then((res) => {
-      return res.text().then((html) => {
-        if (!res.ok) {
-          throw new Error('Obnoveni KPI selhalo.');
-        }
-
-        const raw = String(html || '').trim();
-        if (raw === '') {
-          throw new Error('KPI ma prazdny obsah.');
-        }
-
-        const wrap = document.createElement('div');
-        wrap.innerHTML = raw;
-
-        const nextKpi = wrap.querySelector('[data-cb-head-kpi="1"]');
-        const currentKpi = document.querySelector('[data-cb-head-kpi="1"]');
-        if (!(nextKpi instanceof HTMLElement) || !(currentKpi instanceof HTMLElement)) {
-          throw new Error('KPI nebylo nalezeno.');
-        }
-
-        currentKpi.replaceWith(nextKpi);
-        return { ok: true };
-      });
-    });
-
     const jobs = cards.map((currentCard) => {
       const currentShell = currentCard.querySelector('.card_shell[data-card-id]');
       if (!(currentShell instanceof HTMLElement)) {
@@ -1100,14 +1068,12 @@
       });
     });
 
-    return Promise.allSettled([kpiJob].concat(jobs)).then((results) => {
+    return Promise.allSettled(jobs).then((results) => {
       const errors = [];
       let count = 0;
-      results.forEach((result, index) => {
+      results.forEach((result) => {
         if (result && result.status === 'fulfilled' && result.value && result.value.ok !== false) {
-          if (index > 0) {
-            count += 1;
-          }
+          count += 1;
           return;
         }
         if (result && result.status === 'rejected') {
@@ -1183,7 +1149,7 @@
     currentCard.classList.add('is-card-refreshing');
     currentCard.setAttribute('aria-busy', 'true');
 
-    const reqUrl = 'index_is.php?cb_card_id=' + encodeURIComponent(String(id)) + (loadMax ? '&cb_load_max=1' : '');
+    const reqUrl = (w.CB_ENDPOINT || 'index.php') + '?cb_card_id=' + encodeURIComponent(String(id)) + (loadMax ? '&cb_load_max=1' : '');
     traceAjax('refresh_card_start', {
       mode: loaderMode,
       force: force ? 1 : 0,
@@ -1267,7 +1233,7 @@
       return Promise.reject(new Error('ID karty nebylo nalezeno.'));
     }
 
-    const reqUrl = 'index_is.php?cb_card_id=' + encodeURIComponent(String(id));
+    const reqUrl = (w.CB_ENDPOINT || 'index.php') + '?cb_card_id=' + encodeURIComponent(String(id));
     traceAjax('load_card_max_start', {
       mode: loaderMode,
       card_id: id,

@@ -210,7 +210,7 @@ $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= h1($title) ?></title>
-  <link rel="stylesheet" href="<?= h1(cb_public_url('style/1/modal_alert.css')) ?>">
+  <link rel="stylesheet" href="<?= h1(cb_public_url('style/modal_alert.css')) ?>">
 
   <style>
     .modal{

@@ -16,6 +16,7 @@ if ($selectedPob === []) {
         $selectedPob = [$fallbackPob];
     }
 }
+$ordersIndexHint = $selectedPob !== [] ? ' FORCE INDEX (idx_objednavky_restia_idpob_created_at)' : '';
 
 $periodOdRaw = trim((string)($_SESSION['cb_obdobi_od'] ?? ''));
 $periodDoRaw = trim((string)($_SESSION['cb_obdobi_do'] ?? ''));
@@ -207,7 +208,7 @@ $summarySql = '
         SUM(CASE WHEN ' . $webCondition . ' THEN COALESCE(c.cena_celk, 0) ELSE 0 END) AS vlastni_web,
         SUM(CASE WHEN ' . $manualCondition . ' THEN COALESCE(c.cena_celk, 0) ELSE 0 END) AS rucni_obj,
         SUM(CASE WHEN NOT ' . $knownCondition . ' THEN COALESCE(c.cena_celk, 0) ELSE 0 END) AS ostatni
-    FROM objednavky_restia o
+    FROM objednavky_restia o' . $ordersIndexHint . '
     LEFT JOIN cis_obj_platforma cp
         ON cp.id_platforma = o.id_platforma
     LEFT JOIN obj_ceny c
@@ -269,7 +270,7 @@ if ($isMaxRender) {
             COALESCE(p.pob_color, "") AS pob_color,
             COUNT(*) AS objednavky,
             SUM(COALESCE(c.cena_celk, 0)) AS trzba
-        FROM objednavky_restia o FORCE INDEX (idx_objednavky_restia_idpob_created_at)
+        FROM objednavky_restia o' . $ordersIndexHint . '
         INNER JOIN pobocka p
             ON p.id_pob = o.id_pob
         LEFT JOIN obj_ceny c
@@ -519,7 +520,7 @@ if ($isMaxRender) {
             END AS kanal,
             COUNT(*) AS objednavky,
             SUM(COALESCE(c.cena_celk, 0)) AS trzba
-        FROM objednavky_restia o FORCE INDEX (idx_objednavky_restia_idpob_created_at)
+        FROM objednavky_restia o' . $ordersIndexHint . '
         LEFT JOIN cis_obj_platforma cp
             ON cp.id_platforma = o.id_platforma
         LEFT JOIN obj_ceny c
@@ -674,7 +675,7 @@ if ($isMaxRender) {
             WEEKDAY(o.restia_created_at) AS den_tydne,
             COUNT(*) AS storna_ks,
             SUM(COALESCE(c.cena_celk, 0)) AS storna_kc
-        FROM objednavky_restia o FORCE INDEX (idx_objednavky_restia_idpob_created_at)
+        FROM objednavky_restia o' . $ordersIndexHint . '
         LEFT JOIN obj_ceny c
             ON c.id_obj = o.id_obj
     ' . $cancelWhereSql . '

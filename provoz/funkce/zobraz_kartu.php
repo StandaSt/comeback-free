@@ -6,41 +6,6 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
 {
     // DOCASNE MERENI CASU KARET
     $cbTmpMeasureStart = microtime(true);
-    $makeDiagnosticHtml = static function (string $soubor, string $mode, string $reason, array $details = []): string {
-        $title = 'Chyba karty';
-        $message = 'Max obsah se nepodařilo načíst.';
-        $extra = [
-            'Soubor' => $soubor !== '' ? $soubor : 'neznámý',
-            'Očekávané' => 'card_max_html nebo legacy HTML output',
-            'Selhání' => $reason,
-        ];
-
-        foreach ($details as $key => $value) {
-            $text = trim((string)$value);
-            if ($text === '') {
-                continue;
-            }
-            $extra[(string)$key] = $text;
-        }
-
-        if (function_exists('cb_dashboard_render_card_error')) {
-            return cb_dashboard_render_card_error($title, $message, $extra);
-        }
-
-        $escape = static function (string $value): string {
-            return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        };
-
-        $html = '<div class="odstup_vnitrni_0">';
-        $html .= '<p class="card_text txt_cervena text_tucny odstup_vnejsi_0">' . $escape($title) . '</p>';
-        $html .= '<p class="card_text txt_cervena odstup_vnejsi_0">' . $escape($message) . '</p>';
-        foreach ($extra as $label => $value) {
-            $html .= '<p class="card_text txt_seda odstup_vnejsi_0">' . $escape((string)$label . ': ' . (string)$value) . '</p>';
-        }
-        $html .= '</div>';
-
-        return $html;
-    };
 
     $mode = 'mini';
     $cardId = (int)($pripravenaKarta['cardId'] ?? 0);
@@ -63,7 +28,6 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
     $cardColorUrl = (string)($pripravenaKarta['cardColorUrl'] ?? '');
     $cardIconUrl = (string)($pripravenaKarta['cardIconUrl'] ?? '');
     $startExpanded = ((int)($pripravenaKarta['startExpanded'] ?? 0) === 1);
-    $hasMaxLoaded = (trim($maxHtml) !== '');
     $cardRefreshOp = ($refreshOp === 1) ? 1 : 0;
     $allowNanoSwitch = !in_array($cardId, [7, 10, 19, 20], true);
 
@@ -79,19 +43,7 @@ function cb_zobraz_kartu(array $pripravenaKarta): string
             $maxHtml = $renderErrorHtml;
         }
     }
-
-    if (trim($maxHtml) === '') {
-        $reason = (trim($renderErrorHtml) !== '') ? 'prázdný max obsah po načtení' : 'prázdný výstup z render pipeline';
-        $maxHtml = $makeDiagnosticHtml(
-            $soubor,
-            $mode,
-            $reason,
-            [
-                'Požadovaný obsah' => 'max',
-                'Chybějící data' => 'žádný HTML výstup',
-            ]
-        );
-    }
+    $hasMaxLoaded = (trim($maxHtml) !== '');
 
     $gridStyle = '';
     if ($col > 0 && $line > 0) {

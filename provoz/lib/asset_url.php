@@ -6,17 +6,8 @@ if (!function_exists('cb_asset_url')) {
     function cb_public_style_url(string $path): string
     {
         $path = ltrim($path, '/');
-        $host = strtolower((string)($_SERVER['HTTP_HOST'] ?? ''));
-        $isLocal =
-            $host === 'localhost' ||
-            str_starts_with($host, 'localhost:') ||
-            $host === '127.0.0.1' ||
-            str_starts_with($host, '127.0.0.1:');
-
-        if ($isLocal) {
-            $scriptName = str_replace('\\', '/', (string)($_SERVER['SCRIPT_NAME'] ?? ''));
-            $base = preg_replace('~/provoz(?:/.*)?$~', '', $scriptName) ?? '';
-            return rtrim($base, '/') . '/common/' . $path;
+        if (function_exists('cb_public_url')) {
+            return cb_public_url($path);
         }
 
         return 'https://comebacks.cz/common/' . $path;
@@ -25,8 +16,8 @@ if (!function_exists('cb_asset_url')) {
     function cb_asset_url(string $path): string
     {
         $cleanPath = ltrim($path, '/');
-        $isIsStyle = ($cleanPath === 'style/1/global.css');
-        $isPublicStyle = str_starts_with($cleanPath, 'style/') && !$isIsStyle;
+        $isProvozStyle = in_array($cleanPath, ['style/provoz.css', 'style/media.css'], true);
+        $isPublicStyle = str_starts_with($cleanPath, 'style/') && !$isProvozStyle;
         $full = $isPublicStyle
             ? __DIR__ . '/../../common/' . $cleanPath
             : __DIR__ . '/../' . $cleanPath;

@@ -8,6 +8,17 @@
   const CARD_COMPACT_SELECTOR = '[data-card-compact]';
   const CARD_EXPANDED_SELECTOR = '[data-card-expanded]';
 
+  function lockPageScrollForMaxi() {
+    w.scrollTo(0, 0);
+    document.documentElement.style.overflowY = 'hidden';
+    document.body.style.overflowY = 'hidden';
+  }
+
+  function unlockPageScrollForMaxi() {
+    document.documentElement.style.overflowY = '';
+    document.body.style.overflowY = '';
+  }
+
   function logUserCardAction(actionId, cardId, success, errMsg) {
     const idAkce = parseInt(String(actionId || '0'), 10);
     const idKarta = parseInt(String(cardId || '0'), 10);
@@ -22,7 +33,7 @@
       err_msg: String(errMsg || '').trim()
     };
 
-    w.fetch('index_is.php', {
+    w.fetch((w.CB_ENDPOINT || 'index.php'), {
       method: 'POST',
       headers: {
         'X-Comeback-User-Akce': '1',
@@ -117,14 +128,6 @@
     return String(root.getAttribute('data-card-max-loaded') || '0') === '1';
   }
 
-  function syncOverlayPosition(item) {
-    if (!item || !(item.overlayCard instanceof HTMLElement) || !(item.dashBox instanceof HTMLElement)) {
-      return;
-    }
-
-    item.overlayCard.style.top = String(item.dashBox.scrollTop) + 'px';
-  }
-
   function buildOverlayClone(item) {
     if (
       !item
@@ -201,7 +204,6 @@
       dashBox,
       overlayLayer,
       overlayCard,
-      scrollHandler,
       originalBody
     } = item;
 
@@ -224,10 +226,7 @@
     if (dashBox instanceof HTMLElement) {
       dashBox.classList.remove('has-maxi');
     }
-
-    if (dashBox instanceof HTMLElement && typeof scrollHandler === 'function') {
-      dashBox.removeEventListener('scroll', scrollHandler);
-    }
+    unlockPageScrollForMaxi();
 
     if (overlayCard instanceof HTMLElement) {
       overlayCard.remove();
@@ -277,20 +276,17 @@
     }
 
     if (activeMaxi && activeMaxi.root === root) {
-      if (activeMaxi.dashBox instanceof HTMLElement && typeof activeMaxi.scrollHandler === 'function') {
-        activeMaxi.dashBox.removeEventListener('scroll', activeMaxi.scrollHandler);
-      }
       if (activeMaxi.overlayCard instanceof HTMLElement) {
         activeMaxi.overlayCard.remove();
       }
       activeMaxi.overlayCard = null;
-      activeMaxi.scrollHandler = null;
     }
 
     updateSubtitle(root, true);
     toggleNanoBtn(root, false);
 
     dashBox.classList.add('has-maxi');
+    lockPageScrollForMaxi();
 
     if (typeof w.cbSetBranchSelectDisabledForRoot === 'function') {
       w.cbSetBranchSelectDisabledForRoot(root, true);
@@ -304,8 +300,7 @@
       dashBox,
       overlayLayer,
       overlayCard: null,
-      originalBody,
-      scrollHandler: null
+      originalBody
     };
 
     const overlayCard = buildOverlayClone(nextItem);
@@ -313,6 +308,7 @@
       toggleNanoBtn(root, true);
       updateSubtitle(root, false);
       dashBox.classList.remove('has-maxi');
+      unlockPageScrollForMaxi();
       if (typeof w.cbSetBranchSelectDisabledForRoot === 'function') {
         w.cbSetBranchSelectDisabledForRoot(root, false);
       }
@@ -329,11 +325,6 @@
       }
     }));
     nextItem.overlayCard = overlayCard;
-    nextItem.scrollHandler = () => {
-      syncOverlayPosition(nextItem);
-    };
-    dashBox.addEventListener('scroll', nextItem.scrollHandler, { passive: true });
-    syncOverlayPosition(nextItem);
 
     activeMaxi = nextItem;
   }
@@ -482,9 +473,6 @@
       initCard(nextRoot);
 
       if (activeMaxi && String(activeMaxi.root.getAttribute('data-card-id') || '').trim() === cardId) {
-        if (activeMaxi.dashBox instanceof HTMLElement && typeof activeMaxi.scrollHandler === 'function') {
-          activeMaxi.dashBox.removeEventListener('scroll', activeMaxi.scrollHandler);
-        }
         if (activeMaxi.overlayCard instanceof HTMLElement) {
           activeMaxi.overlayCard.remove();
         }

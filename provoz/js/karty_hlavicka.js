@@ -103,8 +103,6 @@
 
   function initKartyHlavicka() {
     let moveSource = null;
-    const KPI_COLLAPSE_QUERY = '(max-width: 1559px)';
-    const kpiCollapseMql = typeof w.matchMedia === 'function' ? w.matchMedia(KPI_COLLAPSE_QUERY) : null;
 
     function getCardModeConfirmModal() {
       const root = document.getElementById('cbCardModeModal');
@@ -132,75 +130,6 @@
       modal.root.setAttribute('aria-hidden', 'false');
       modal.cancelBtn.focus();
       return true;
-    }
-
-    function getHeaderRoot() {
-      const root = document.querySelector('.head_box');
-      return root instanceof HTMLElement ? root : null;
-    }
-
-    function getKpiToggleButton() {
-      const btn = document.querySelector('[data-cb-kpi-toggle="1"]');
-      return btn instanceof HTMLButtonElement ? btn : null;
-    }
-
-    function isKpiCollapseMode() {
-      if (kpiCollapseMql) return !!kpiCollapseMql.matches;
-      return (w.innerWidth || 0) <= 1559;
-    }
-
-    function syncKpiToggleUi() {
-      const header = getHeaderRoot();
-      const btn = getKpiToggleButton();
-      if (!(header instanceof HTMLElement) || !(btn instanceof HTMLElement)) return;
-
-      if (!isKpiCollapseMode()) {
-        header.classList.remove('is-kpi-hidden');
-        btn.textContent = 'Skrýt KPI';
-        btn.classList.remove('is-kpi-show');
-        btn.classList.add('is-kpi-hide');
-        btn.setAttribute('aria-pressed', 'false');
-        return;
-      }
-
-      const hidden = header.classList.contains('is-kpi-hidden');
-      btn.textContent = hidden ? 'Zobrazit KPI' : 'Skrýt KPI';
-      btn.classList.toggle('is-kpi-show', hidden);
-      btn.classList.toggle('is-kpi-hide', !hidden);
-      btn.setAttribute('aria-pressed', hidden ? 'true' : 'false');
-    }
-
-    function saveKpiState(kpiState) {
-      const value = kpiState === 1 ? 1 : 0;
-      w.fetch('index_is.php', {
-        method: 'POST',
-        headers: {
-          'X-Comeback-KPI-Setting': '1',
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        credentials: 'same-origin',
-        body: JSON.stringify({ kpi: value })
-      }).catch(() => {});
-    }
-
-    function toggleKpiVisibility() {
-      if (!isKpiCollapseMode()) return;
-      const header = getHeaderRoot();
-      if (!(header instanceof HTMLElement)) return;
-      header.classList.toggle('is-kpi-hidden');
-      saveKpiState(header.classList.contains('is-kpi-hidden') ? 0 : 1);
-      syncKpiToggleUi();
-    }
-
-    function applySavedKpiState() {
-      if (!isKpiCollapseMode()) return;
-      const header = getHeaderRoot();
-      const btn = getKpiToggleButton();
-      if (!(header instanceof HTMLElement) || !(btn instanceof HTMLElement)) return;
-      const kpiState = String(btn.getAttribute('data-cb-kpi-state') || '1') === '0' ? 0 : 1;
-      header.classList.toggle('is-kpi-hidden', kpiState === 0);
-      syncKpiToggleUi();
     }
 
     function setDashboardLoading(on, text) {
@@ -233,7 +162,7 @@
         payload.detail = detail;
       }
 
-      w.fetch('index_is.php', {
+      w.fetch((w.CB_ENDPOINT || 'index.php'), {
         method: 'POST',
         headers: {
           'X-Comeback-User-Akce': '1',
@@ -261,7 +190,7 @@
         payload.detail = detail;
       }
 
-      w.fetch('index_is.php', {
+      w.fetch((w.CB_ENDPOINT || 'index.php'), {
         method: 'POST',
         headers: {
           'X-Comeback-User-Akce': '1',
@@ -297,11 +226,10 @@
         return;
       }
 
-      const block = target.closest('.head_kpi, .head_user');
+      const block = target.closest('.head_user');
       if (!(block instanceof HTMLElement)) return;
 
       let blockName = '';
-      if (block.classList.contains('head_kpi')) blockName = 'kpi';
       if (block.classList.contains('head_user')) blockName = 'user';
       if (blockName === '') return;
 
@@ -309,15 +237,6 @@
         event: 'empty_header_click',
         blok: blockName
       }, 'karty_hlavicka');
-    }
-
-    applySavedKpiState();
-    if (kpiCollapseMql && typeof kpiCollapseMql.addEventListener === 'function') {
-      kpiCollapseMql.addEventListener('change', applySavedKpiState);
-    } else if (kpiCollapseMql && typeof kpiCollapseMql.addListener === 'function') {
-      kpiCollapseMql.addListener(applySavedKpiState);
-    } else {
-      w.addEventListener('resize', applySavedKpiState);
     }
 
     function closeCardModeConfirmModal() {
@@ -489,7 +408,7 @@
         tgt_id: targetId
       });
       setDashboardLoading(true, 'Přesouvám kartu ...');
-      fetch('index_is.php', {
+      fetch((w.CB_ENDPOINT || 'index.php'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -657,7 +576,7 @@
         if (unlockAllBtn) {
           const runUnlockAll = function () {
             traceAjax('card_unlock_all_click', {});
-            fetch('index_is.php', {
+            fetch((w.CB_ENDPOINT || 'index.php'), {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -697,15 +616,6 @@
             if (window.confirm(UNLOCK_ALL_CONFIRM_TEXT)) {
               runUnlockAll();
             }
-          }
-          return;
-        }
-
-        const kpiToggleBtn = target.closest('[data-cb-kpi-toggle="1"]');
-        if (kpiToggleBtn) {
-          if (isKpiCollapseMode()) {
-            e.preventDefault();
-            toggleKpiVisibility();
           }
           return;
         }

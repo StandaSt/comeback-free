@@ -134,9 +134,7 @@ try {
     }
 
     $branchWhere = ' WHERE p.restia_activePosId IS NOT NULL AND p.restia_activePosId <> ""';
-    $ordersCreatedExpr = 'COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at)';
-    $ordersReportExpr = 'COALESCE(ca.report, o.report)';
-    $ordersWhereReportRange = ' WHERE ' . $ordersReportExpr . ' >= DATE(?) AND ' . $ordersReportExpr . ' < DATE(?) AND ' . $ordersCreatedExpr . ' < ?';
+    $ordersWhereReportRange = ' WHERE ca.report >= DATE(?) AND ca.report < DATE(?) AND ca.cas_vytvor < ?';
     $cancelStateSql = "('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted')";
 
 
@@ -171,48 +169,41 @@ try {
         $branchRes->free();
     }
 
-    $countsSql = '
+    $summarySql = '
         SELECT
-            zdroj.id_pob,
-            SUM(zdroj.dokonceno) AS dokonceno,
-            SUM(zdroj.na_ceste) AS na_ceste,
-            SUM(zdroj.osobni_odber) AS osobni_odber,
-            SUM(zdroj.vyrabi_se) AS vyrabi_se,
-            SUM(zdroj.zruseno) AS zruseno
-        FROM (
-            SELECT
-                o.id_pob,
-                CASE WHEN COALESCE(st.nazev, \'\') NOT IN ' . $cancelStateSql . ' AND COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NOT NULL THEN 1 ELSE 0 END AS dokonceno,
-                CASE WHEN COALESCE(st.nazev, \'\') NOT IN ' . $cancelStateSql . ' AND COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND (
-                    EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj)
-                    OR EXISTS (SELECT 1 FROM obj_sluzba s WHERE s.id_obj = o.id_obj)
-                    OR EXISTS (SELECT 1 FROM cis_doruceni d WHERE d.id_doruceni = o.id_doruceni AND d.nazev = \'external-delivery\')
-                ) THEN 1 ELSE 0 END AS na_ceste,
-                CASE WHEN COALESCE(st.nazev, \'\') NOT IN ' . $cancelStateSql . ' AND COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND NOT EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj) AND EXISTS (SELECT 1 FROM cis_doruceni d WHERE d.id_doruceni = o.id_doruceni AND d.nazev = \'pickup\') THEN 1 ELSE 0 END AS osobni_odber,
-                CASE WHEN COALESCE(st.nazev, \'\') NOT IN ' . $cancelStateSql . ' AND COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NULL THEN 1 ELSE 0 END AS vyrabi_se,
-                CASE WHEN COALESCE(st.nazev, \'\') IN ' . $cancelStateSql . ' THEN 1 ELSE 0 END AS zruseno
-            FROM objednavky_restia o
-            LEFT JOIN cis_obj_stav st ON st.id_stav = o.id_stav
-            LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
-            ' . $ordersWhereReportRange . '
-        ) AS zdroj
-        GROUP BY zdroj.id_pob
+            o.id_pob,
+            SUM(CASE WHEN COALESCE(st.nazev, \'\') NOT IN ' . $cancelStateSql . ' AND COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NOT NULL THEN 1 ELSE 0 END) AS dokonceno,
+            SUM(CASE WHEN COALESCE(st.nazev, \'\') NOT IN ' . $cancelStateSql . ' AND COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND (
+                EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj)
+                OR EXISTS (SELECT 1 FROM obj_sluzba s WHERE s.id_obj = o.id_obj)
+                OR EXISTS (SELECT 1 FROM cis_doruceni d WHERE d.id_doruceni = o.id_doruceni AND d.nazev = \'external-delivery\')
+            ) THEN 1 ELSE 0 END) AS na_ceste,
+            SUM(CASE WHEN COALESCE(st.nazev, \'\') NOT IN ' . $cancelStateSql . ' AND COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NOT NULL AND NOT EXISTS (SELECT 1 FROM obj_kuryr k WHERE k.id_obj = o.id_obj) AND EXISTS (SELECT 1 FROM cis_doruceni d WHERE d.id_doruceni = o.id_doruceni AND d.nazev = \'pickup\') THEN 1 ELSE 0 END) AS osobni_odber,
+            SUM(CASE WHEN COALESCE(st.nazev, \'\') NOT IN ' . $cancelStateSql . ' AND COALESCE(ca.cas_doruc, ca.cas_uzavreni) IS NULL AND ca.cas_dokonc IS NULL THEN 1 ELSE 0 END) AS vyrabi_se,
+            SUM(CASE WHEN COALESCE(st.nazev, \'\') IN ' . $cancelStateSql . ' THEN 1 ELSE 0 END) AS zruseno,
+            SUM(CASE WHEN COALESCE(st.nazev, \'\') NOT IN ' . $cancelStateSql . ' THEN 1 ELSE 0 END) AS objednavky,
+            SUM(COALESCE(c.cena_celk, 0)) AS trzba
+        FROM obj_casy ca FORCE INDEX (ix_obj_casy_report_id)
+        INNER JOIN objednavky_restia o ON o.id_obj = ca.id_obj
+        LEFT JOIN cis_obj_stav st ON st.id_stav = o.id_stav
+        LEFT JOIN obj_ceny c ON c.id_obj = o.id_obj
+        ' . $ordersWhereReportRange . '
+        GROUP BY o.id_pob
     ';
 
-    $stmtCounts = $conn->prepare($countsSql);
-    if ($stmtCounts === false) {
+    $stmtSummary = $conn->prepare($summarySql);
+    if ($stmtSummary === false) {
         throw new RuntimeException('Nepodarilo se pripravit data pro K19.');
     }
-    $fromTs = (string)$range['from'];
     $toTs = (string)$range['to'];
     $reportFromDate = (string)$range['report_date'];
     $reportToDate = (new DateTimeImmutable($reportFromDate . ' 00:00:00', new DateTimeZone('Europe/Prague')))->modify('+1 day')->format('Y-m-d');
     $toTsExclusive = (new DateTimeImmutable($toTs, new DateTimeZone('Europe/Prague')))->modify('+1 second')->format('Y-m-d H:i:s');
-    $stmtCounts->bind_param('sss', $reportFromDate, $reportToDate, $toTsExclusive);
-    $stmtCounts->execute();
-    $resCounts = $stmtCounts->get_result();
-    if ($resCounts instanceof mysqli_result) {
-        while ($row = $resCounts->fetch_assoc()) {
+    $stmtSummary->bind_param('sss', $reportFromDate, $reportToDate, $toTsExclusive);
+    $stmtSummary->execute();
+    $resSummary = $stmtSummary->get_result();
+    if ($resSummary instanceof mysqli_result) {
+        while ($row = $resSummary->fetch_assoc()) {
             $idPob = (int)($row['id_pob'] ?? 0);
             if (!isset($branches[$idPob])) {
                 continue;
@@ -222,46 +213,25 @@ try {
             $branches[$idPob]['osobni_odber'] = (int)($row['osobni_odber'] ?? 0);
             $branches[$idPob]['vyrabi_se'] = (int)($row['vyrabi_se'] ?? 0);
             $branches[$idPob]['zruseno'] = (int)($row['zruseno'] ?? 0);
-        }
-        $resCounts->free();
-    }
-    $stmtCounts->close();
-
-    $g1Where = $ordersWhereReportRange;
-
-    $g1Sql = '
-        SELECT
-            o.id_pob,
-            COUNT(DISTINCT CASE WHEN COALESCE(st.nazev, \'\') NOT IN ' . $cancelStateSql . ' THEN o.id_obj ELSE NULL END) AS objednavky,
-            SUM(COALESCE(c.cena_celk, 0)) AS trzba
-        FROM objednavky_restia o
-        LEFT JOIN cis_obj_stav st ON st.id_stav = o.id_stav
-        LEFT JOIN obj_ceny c ON c.id_obj = o.id_obj
-        LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
-        ' . $g1Where . '
-        GROUP BY o.id_pob
-    ';
-
-    $stmtG1 = $conn->prepare($g1Sql);
-    if ($stmtG1 === false) {
-        throw new RuntimeException('Nepodarilo se pripravit graf G1 pro K19.');
-    }
-    $g1ToTsExclusive = $toTsExclusive;
-    $stmtG1->bind_param('sss', $reportFromDate, $reportToDate, $g1ToTsExclusive);
-    $stmtG1->execute();
-    $resG1 = $stmtG1->get_result();
-    if ($resG1 instanceof mysqli_result) {
-        while ($row = $resG1->fetch_assoc()) {
-            $idPob = (int)($row['id_pob'] ?? 0);
-            if (!isset($branches[$idPob])) {
-                continue;
-            }
             $branches[$idPob]['objednavky'] = (int)($row['objednavky'] ?? 0);
             $branches[$idPob]['trzba'] = (float)($row['trzba'] ?? 0);
         }
-        $resG1->free();
+        $resSummary->free();
     }
-    $stmtG1->close();
+    $stmtSummary->close();
+
+    $branchSalesSql = '
+        SELECT
+            o.id_pob,
+            SUM(CASE WHEN COALESCE(st.nazev, \'\') NOT IN ' . $cancelStateSql . ' THEN 1 ELSE 0 END) AS objednavky,
+            SUM(COALESCE(c.cena_celk, 0)) AS trzba
+        FROM obj_casy ca FORCE INDEX (ix_obj_casy_report_id)
+        INNER JOIN objednavky_restia o ON o.id_obj = ca.id_obj
+        LEFT JOIN cis_obj_stav st ON st.id_stav = o.id_stav
+        LEFT JOIN obj_ceny c ON c.id_obj = o.id_obj
+        ' . $ordersWhereReportRange . '
+        GROUP BY o.id_pob
+    ';
 
     $labels = [];
     $dokoncenoData = [];
@@ -391,23 +361,10 @@ try {
 
     $prevRangeFrom = (new DateTimeImmutable((string)$range['from'], new DateTimeZone('Europe/Prague')))
         ->modify('-7 days');
-    $prevRangeToExclusive = (new DateTimeImmutable($g1ToTsExclusive, new DateTimeZone('Europe/Prague')))
+    $prevRangeToExclusive = (new DateTimeImmutable($toTsExclusive, new DateTimeZone('Europe/Prague')))
         ->modify('-7 days');
 
-    $g2Sql = '
-        SELECT
-            o.id_pob,
-            COUNT(DISTINCT CASE WHEN COALESCE(st.nazev, \'\') NOT IN ' . $cancelStateSql . ' THEN o.id_obj ELSE NULL END) AS objednavky,
-            SUM(COALESCE(c.cena_celk, 0)) AS trzba
-        FROM objednavky_restia o
-        LEFT JOIN cis_obj_stav st ON st.id_stav = o.id_stav
-        LEFT JOIN obj_ceny c ON c.id_obj = o.id_obj
-        LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
-        ' . $g1Where . '
-        GROUP BY o.id_pob
-    ';
-
-    $stmtG2 = $conn->prepare($g2Sql);
+    $stmtG2 = $conn->prepare($branchSalesSql);
     if ($stmtG2 === false) {
         throw new RuntimeException('Nepodarilo se pripravit graf G2 pro K19.');
     }
@@ -437,7 +394,7 @@ try {
     $g5CurrentToTsExclusive = $g5Now->modify('+1 second')->format('Y-m-d H:i:s');
     $g5PreviousToTsExclusive = $g5Now->modify('-7 days')->modify('+1 second')->format('Y-m-d H:i:s');
 
-    $stmtG5Current = $conn->prepare($g2Sql);
+    $stmtG5Current = $conn->prepare($branchSalesSql);
     if ($stmtG5Current === false) {
         throw new RuntimeException('Nepodarilo se pripravit aktualni data grafu G5 pro K19.');
     }
@@ -458,7 +415,7 @@ try {
     }
     $stmtG5Current->close();
 
-    $stmtG5Previous = $conn->prepare($g2Sql);
+    $stmtG5Previous = $conn->prepare($branchSalesSql);
     if ($stmtG5Previous === false) {
         throw new RuntimeException('Nepodarilo se pripravit predchozi data grafu G5 pro K19.');
     }
@@ -499,7 +456,7 @@ try {
     }
     $g6PreviousToTsExclusive = $g6PreviousPeriodEnd->modify('+1 second')->format('Y-m-d H:i:s');
 
-    $stmtG6Current = $conn->prepare($g2Sql);
+    $stmtG6Current = $conn->prepare($branchSalesSql);
     if ($stmtG6Current === false) {
         throw new RuntimeException('Nepodarilo se pripravit aktualni data grafu G6 pro K19.');
     }
@@ -520,7 +477,7 @@ try {
     }
     $stmtG6Current->close();
 
-    $stmtG6Previous = $conn->prepare($g2Sql);
+    $stmtG6Previous = $conn->prepare($branchSalesSql);
     if ($stmtG6Previous === false) {
         throw new RuntimeException('Nepodarilo se pripravit predchozi data grafu G6 pro K19.');
     }

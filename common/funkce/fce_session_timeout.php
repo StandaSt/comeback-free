@@ -22,8 +22,7 @@ if (!function_exists('cb_session_init_timeout')) {
      */
     function cb_session_init_timeout(): void
     {
-        // zatím pevně, později půjde z administrace (DB)
-        $_SESSION['cb_timeout_min'] = 20;
+        $_SESSION['cb_timeout_min'] = 720;
 
         // kdy naposledy proběhla uživatelská akce (na startu = teď)
         $_SESSION['cb_last_activity_ts'] = time();

@@ -1,0 +1,768 @@
+/* global.css */
+
+:root {
+  --clr_bila:#fff;
+  --clr_cervena_2:#ef4444;
+  --clr_cervena:#b91c1c;
+  --clr_zelena:#166534;
+  --clr_modra_1:#e0e7ff;
+  --clr_modra_2:#dbeafe;
+  --clr_modra_6:#4f8df6;
+  --clr_seda_1:#f6f8fb;
+  --clr_seda_2:#d9e2ec;
+  --clr_seda_4:#334155;
+  --clr_cerna:#1f2933;
+  --clr_tmava_1:#0f172a;
+  --clr_pruhledna_cerna_18:rgba(0,0,0,.18);
+  --clr_pruhledna_tmava_14:rgba(15,23,42,.14);
+  --head-control-border:2px solid #8fa8c4;
+  --clr_stin_2:rgba(148,163,184,.10);
+  --fs_11:11px;
+}
+
+.sirka100{ width:100%; }
+.bg_bila{ background:var(--clr_bila); }
+.ram_normal{ border:1px solid var(--clr_seda_2); }
+.ram_hlavicka{ border:1px solid var(--clr_pruhledna_tmava_14); }
+.ram_ovladace{ border:1px solid var(--clr_pruhledna_cerna_18); }
+.zaobleni_8{ border-radius:8px; }
+.zaobleni_10{ border-radius:10px; }
+.zaobleni_12{ border-radius:12px; }
+.displ_flex{ display:flex; }
+.displ_grid{ display:grid; }
+.displ_block{ display:block; }
+.displ_inline_flex{ display:inline-flex; }
+.flex_sloupec{ flex-direction:column; }
+.jc_stred{ justify-content:center; }
+.jc_konec{ justify-content:flex-end; }
+.odstup_vnitrni_0{ padding:0; }
+.odstup_vnitrni_10{ padding:10px; }
+.gap_4{ gap:4px; }
+.gap_6{ gap:6px; }
+.text_11{ font-size:var(--fs_11); }
+.txt_c{ text-align:center; }
+.txt_seda{ color:var(--clr_seda_4); }
+.cursor_ruka{ cursor:pointer; }
+.is-hidden{ display:none !important; }
+
+/*
+ * HLAVICKA (dashboard)
+ * Cil:
+ * - stabilni desktop layout bez skakani bloku
+ * - bez horizontalnich posuvniku uvnitr hlavicky
+ * - vizualne cistsi oddeleni hlavicky od dashboardu
+ */
+
+
+.head_grid{
+  box-sizing:border-box;
+  display:grid;
+  grid-template-columns:70px 130px 270px 112px 405px 150px 210px;
+  grid-template-rows:26px 26px;
+  grid-template-areas:
+    "logo title modules todo branch update user"
+    "logo subtitle modules helpdesk period update user";
+  align-items:stretch;
+  column-gap:4px;
+  row-gap:3px;
+  width:100%;
+  min-height:67px;
+  margin:0 auto;
+  padding:5px 8px;
+  border:0;
+  border-radius:6px 6px 3px 3px;
+  background:var(--clr_bila);
+  box-shadow:0 4px 14px var(--clr_stin_2);
+  font-family:Arial, Helvetica, sans-serif;
+  color:var(--clr_cerna);
+}
+
+.head_grid *,
+.head_grid *::before,
+.head_grid *::after{
+  box-sizing:border-box;
+  min-width:0;
+  min-height:0;
+}
+
+.head_grid,
+.head_grid button,
+.head_grid input,
+.head_grid select,
+.head_grid textarea{
+  font-family:Arial, Helvetica, sans-serif;
+  font-size:14px;
+  line-height:1.2;
+  color:#0f172a;
+}
+
+.head_grid button,
+.head_grid input,
+.head_grid select,
+.head_grid textarea{
+  margin:0;
+}
+
+.head_grid button{
+  appearance:none;
+  background:transparent;
+}
+
+.head_grid a{
+  color:inherit;
+  text-decoration:none;
+}
+
+/* ===== Karty (spolecny vzhled) ===== */
+.head_period_btn,
+.head_branch_btn,
+.head_branch_btn_static,
+.head_update,
+.head_user{
+  background:var(--clr_bila);
+}
+
+/* ===== Logo ===== */
+.head_logo{
+  grid-area:logo;
+  justify-self:start;
+  align-self:center;
+  width:55px;
+  height:55px;
+  aspect-ratio:1 / 1;
+  align-items:center;
+  overflow:visible;
+  text-decoration:none;
+}
+
+.head_logo_img{
+  height:100%;
+  object-fit:contain;
+}
+
+.head_title{
+  grid-area:title;
+  align-self:end;
+  display:block;
+  min-width:0;
+  color:var(--clr_tmava_1);
+  font-size:24px;
+  line-height:1.1;
+  font-weight:400;
+}
+
+.head_subtitle{
+  grid-area:subtitle;
+  align-self:start;
+  display:block;
+  min-width:0;
+  color:var(--clr_seda_4);
+  font-size:14px;
+  line-height:1.2;
+}
+
+/* ===== Rozmisteni ===== */
+.head_module_nav{
+  grid-area:modules;
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:4px;
+  align-items:stretch;
+  height:55px;
+  min-height:55px;
+  min-width:0;
+}
+
+.head_module_link{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-width:0;
+  padding:0 10px;
+  color:var(--clr_tmava_1);
+  font-size:15px;
+  font-weight:400;
+  line-height:1.1;
+  text-decoration:none;
+  border:var(--head-control-border);
+  border-radius:6px;
+  background:#eef7ff;
+  overflow:hidden;
+}
+
+.head_module_link:hover{
+  background:#dbeafe;
+}
+
+.head_module_link.is-active{
+  color:#0f5fbd;
+  background:#dbeafe;
+}
+
+.head_module_link.is-active::after{
+  content:"";
+  position:absolute;
+  left:10px;
+  right:10px;
+  bottom:0;
+  height:3px;
+  border-radius:999px 999px 0 0;
+  background:#0f5fbd;
+}
+
+.head_block_text{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  min-width:0;
+  text-align:left;
+}
+
+.head_block_label{
+  display:block;
+  color:var(--clr_tmava_1);
+  font-size:13px;
+  line-height:1.15;
+  font-weight:400;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.head_block_value{
+  display:block;
+  min-width:0;
+  color:var(--clr_tmava_1);
+  font-size:13px;
+  line-height:1.2;
+  font-weight:400;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.head_block_chev{
+  flex:0 0 auto;
+  color:var(--clr_seda_4);
+  font-size:17px;
+  line-height:1;
+}
+
+.head_period_btn .head_block_text,
+.head_branch_btn .head_block_text,
+.head_branch_btn_static .head_block_text{
+  flex:1 1 auto;
+  flex-direction:row;
+  align-items:center;
+  justify-content:flex-start;
+  gap:5px;
+}
+
+.head_period_btn .head_block_label,
+.head_branch_btn .head_block_label,
+.head_branch_btn_static .head_block_label{
+  flex:0 0 auto;
+  font-weight:700;
+}
+
+/* ===== Vyber pobocek / obdobi ===== */
+.head_select{
+  position:relative;
+  min-width:0;
+  align-self:stretch;
+}
+
+.head_select--branch{
+  grid-area:branch;
+}
+
+.head_select--period{
+  grid-area:period;
+}
+
+.head_period_btn{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  justify-content:space-between;
+  width:100%;
+  height:26px;
+  min-height:26px;
+  padding:3px 8px;
+  border:var(--head-control-border);
+  border-radius:6px;
+  background:#eef7ff;
+  cursor:pointer;
+}
+
+.head_period_btn:hover{
+  background:#dbeafe;
+}
+
+.head_period_panel{
+  position:absolute;
+  top:calc(100% + 8px);
+  left:0;
+  width:430px;
+  max-width:min(430px, 92vw);
+  z-index:130;
+  border:1px solid var(--clr_pruhledna_tmava_14);
+  box-shadow:0 14px 34px var(--clr_pruhledna_cerna_18);
+}
+
+.head_interval{
+  position:relative;
+  padding:2px 6px 5px 6px;
+  min-width:0;
+  overflow:hidden;
+  width:100%;
+  min-height:64px;
+}
+
+.head_interval_meter{
+  position:absolute;
+  left:6px;
+  right:6px;
+  bottom:2px;
+  height:2px;
+  overflow:hidden;
+  opacity:0;
+  pointer-events:none;
+}
+
+.head_interval_meter.is-active{
+  opacity:1;
+}
+
+.head_interval_meter_bar{
+  display:block;
+  width:100%;
+  height:100%;
+  background:var(--clr_cervena_2);
+  transform:scaleX(0);
+  transform-origin:left center;
+  will-change:transform;
+}
+
+.head_int_row{grid-template-columns:auto auto;
+  align-items:center;
+  justify-content:space-between;
+  column-gap:6px;
+  min-width:0;
+}
+
+.head_date{align-items:center;
+  min-width:0;
+  color:var(--clr_cerna);
+}
+
+.head_date span{ min-width:18px; }
+
+.head_date.is-manual span{
+  color:var(--clr_modra_6);
+  font-weight:400;
+}
+
+.head_date input{
+  height:20px;
+  padding:0 7px;
+  width:118px;
+}
+
+.head_date input.is-manual{
+  background:var(--clr_modra_1);
+  border-color:var(--clr_modra_6);
+  box-shadow:inset 0 0 0 1px rgba(79,141,246,.18);
+}
+
+.head_quick{width:auto;
+  min-width:fit-content;
+}
+
+.head_pill{
+  height:20px;
+  line-height:18px;
+  padding:0 6px;
+  white-space:nowrap;
+  min-width:56px;
+}
+
+.head_pill:hover{ background:var(--clr_seda_1); }
+
+.head_pill.is-on{
+  background:var(--clr_modra_6);
+  border-color:var(--clr_modra_6);
+  color:var(--clr_bila);
+  font-weight:400;
+}
+
+.head_branch_btn{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  justify-content:space-between;
+  width:100%;
+  height:26px;
+  min-height:26px;
+  padding:3px 8px;
+  border:var(--head-control-border);
+  border-radius:6px;
+  background:#eef7ff;
+  color:var(--clr_tmava_1);
+  cursor:pointer;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.head_branch_btn_static{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  justify-content:space-between;
+  width:100%;
+  height:26px;
+  min-height:26px;
+  padding:3px 8px;
+  border:var(--head-control-border);
+  border-radius:6px;
+  background:#eef7ff;
+  color:var(--clr_tmava_1);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.head_branch_btn:hover{
+  background:#dbeafe;
+}
+
+.head_branch_panel{
+  position:absolute;
+  top:calc(100% + 8px);
+  left:0;
+  width:max-content;
+  min-width:280px;
+  max-width:min(500px, 72vw);
+  z-index:120;
+  border:1px solid var(--clr_pruhledna_tmava_14);
+  box-shadow:0 14px 34px var(--clr_pruhledna_cerna_18);
+}
+
+.head_branch_panel_grid{
+  grid-template-columns:minmax(180px, auto) minmax(180px, auto);
+  column-gap:5px;
+  row-gap:8px;
+}
+
+.head_branch_panel_grid.is-single-col{
+  grid-template-columns:minmax(180px, auto);
+}
+
+.head_branch_section{
+  max-height:260px;
+  overflow:hidden;
+  padding-right:0;
+  display:flex;
+  flex-direction:column;
+}
+
+.head_branch_section_title{
+  margin-bottom:6px;
+}
+
+.head_branch_field{
+  margin-bottom:2px;
+}
+
+.head_branch_area_list{
+  flex:1 1 auto;
+  overflow:auto;
+  padding-right:4px;
+}
+
+.head_branch_field_select_all{
+  margin-top:auto;
+  margin-bottom:0;
+  padding-top:6px;
+}
+
+.head_branch_field_select_all > span{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  color:var(--clr_zelena);
+  font-weight:400;
+}
+
+.head_branch_actions{
+  margin-top:8px;
+  width:100%;
+}
+
+.head_branch_save_btn{
+  width:100%;
+  justify-content:center;
+}
+
+/* ===== Ukoly / HelpDesk / aktualizace ===== */
+.head_task_btn{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:6px;
+  min-width:0;
+  height:26px;
+  min-height:26px;
+  padding:4px 7px;
+  border:var(--head-control-border);
+  border-radius:6px;
+  background:#eef7ff;
+  color:var(--clr_tmava_1);
+  font-size:13px;
+  font-weight:400;
+  line-height:1;
+  cursor:pointer;
+}
+
+.head_task_btn--todo{
+  grid-area:todo;
+}
+
+.head_task_btn--helpdesk{
+  grid-area:helpdesk;
+  background:#eef7ff;
+}
+
+.head_task_btn:disabled{
+  cursor:default;
+  opacity:.75;
+}
+
+.head_task_btn strong{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:18px;
+  height:18px;
+  padding:0 5px;
+  border-radius:999px;
+  background:#0f5fbd;
+  color:var(--clr_bila);
+  font-size:11px;
+  font-weight:400;
+  line-height:1;
+}
+
+.head_task_btn--helpdesk:hover{
+  background:#dbeafe;
+}
+
+.head_update{
+  grid-area:update;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  height:55px;
+  min-height:55px;
+  min-width:0;
+  padding:6px 8px;
+  border:var(--head-control-border);
+  border-radius:6px;
+  background:#eef7ff;
+}
+
+.head_update_icon{
+  flex:0 0 auto;
+  color:var(--clr_tmava_1);
+  font-size:22px;
+  line-height:1;
+}
+
+.head_update strong{
+  display:block;
+  margin-top:2px;
+  color:var(--clr_tmava_1);
+  font-size:13px;
+  font-weight:400;
+  line-height:1.2;
+  white-space:nowrap;
+}
+
+/* ===== User ===== */
+.head_user{
+  grid-area:user;
+  display:grid;
+  grid-template-columns:40px minmax(0, 1fr) 28px;
+  align-items:center;
+  justify-self:stretch;
+  width:100%;
+  gap:7px;
+  height:55px;
+  min-height:55px;
+  min-width:0;
+  padding:5px 7px;
+  border:var(--head-control-border);
+  border-radius:6px;
+  background:#eef7ff;
+  overflow:hidden;
+}
+
+.head_user_avatar{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:38px;
+  height:38px;
+  border-radius:50%;
+  background:#dbeafe;
+  color:var(--clr_tmava_1);
+  font-size:17px;
+  font-weight:400;
+  line-height:1;
+}
+
+.head_user_main{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  justify-content:flex-start;
+  min-height:50px;
+  min-width:0;
+}
+
+.head_user_name{
+  display:block;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  color:var(--clr_tmava_1);
+  font-size:14px;
+  line-height:1.1;
+  font-weight:400;
+}
+
+.head_user_role{
+  display:block;
+  color:var(--clr_seda_4);
+  font-size:12px;
+  font-weight:400;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  line-height:1.1;
+}
+
+.head_user_exit{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:28px;
+  height:38px;
+  color:var(--clr_tmava_1);
+  text-decoration:none;
+  border-radius:8px;
+}
+
+.head_user_exit_ico{
+  width:18px;
+  height:18px;
+}
+
+.head_user_exit:hover{ background:var(--clr_ruzova_2); }
+.head_user_exit:active{ background:var(--clr_ruzova_1); }
+
+.head_user_exit.is-timeout-warning{
+  animation:head_user_exit_pulse 2.8s ease-in-out infinite;
+}
+
+@keyframes head_user_exit_pulse{
+  0%{ background:transparent; }
+  50%{ background:var(--clr_ruzova_2); }
+  100%{ background:transparent; }
+}
+
+/* ===== Guest ===== */
+.head_guest{
+  grid-column:2 / span 2;
+  grid-row:1 / span 2;
+  min-height:92px;
+}
+
+/* ===== Responsive ===== */
+
+/* =========================
+   PATICKA
+   ========================= */
+
+.footer{
+  border-top:0;
+}
+
+.footer_box{
+align-items:center;
+  gap:0px;
+  padding:6px 12px;
+}
+
+.foot_left{
+  max-width:350px;
+}
+
+.foot_center{
+  flex:1;
+  opacity:.85;
+}
+
+.foot_right{
+  max-width:350px;
+}
+
+/* =========================
+   MOBIL
+   ========================= */
+
+/* =========================
+   MAIN
+   ========================= */
+/* Modulove barvy */
+.head_module_link--provoz{
+  --head-module-color:#2563eb;
+  --head-module-soft:#dbeafe;
+}
+
+.head_module_link--hr{
+  --head-module-color:#16a34a;
+  --head-module-soft:#dcfce7;
+}
+
+.head_module_link--smeny{
+  --head-module-color:#d97706;
+  --head-module-soft:#fef3c7;
+}
+
+.head_module_link--provoz:hover,
+.head_module_link--provoz.is-active,
+.head_module_link--hr:hover,
+.head_module_link--hr.is-active,
+.head_module_link--smeny:hover,
+.head_module_link--smeny.is-active{
+  color:var(--head-module-color);
+  background:var(--head-module-soft);
+}
+
+.head_module_link--provoz.is-active::after,
+.head_module_link--hr.is-active::after,
+.head_module_link--smeny.is-active::after{
+  background:var(--head-module-color);
+}
+
+#cb-module-root.cb-module-root--helpdesk .helpdesk_module_page{
+  background:var(--cb-module-bg);
+}
+
+#cb-module-root.cb-module-root--helpdesk .helpdesk_module_menu_btn.is-active{
+  border-color:var(--cb-module-accent);
+  background:color-mix(in srgb, var(--cb-module-bg) 80%, #fff);
+}

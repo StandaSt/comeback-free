@@ -62,7 +62,7 @@
       body.set(key, String(data[key] ?? ''));
     });
 
-    return fetch(form.action || 'index_is.php', {
+    return fetch(form.action || (window.CB_ENDPOINT || 'index.php'), {
       method: 'POST',
       credentials: 'same-origin',
       headers: {
@@ -161,7 +161,7 @@
     body.set('datum_reportu', getReportValue(root, '[name="datum_reportu"]'));
     const isFinalEdit = getFormMode(root) === 'final_edit';
 
-    return fetch(form.action || 'index_is.php', {
+    return fetch(form.action || (window.CB_ENDPOINT || 'index.php'), {
       method: 'POST',
       credentials: 'same-origin',
       headers: {

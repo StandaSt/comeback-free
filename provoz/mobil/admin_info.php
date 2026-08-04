@@ -146,7 +146,7 @@ if (is_array($row) && (int)($row['id_odeslal'] ?? 0) > 0) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= cb_admin_info_h($title) ?></title>
-  <link rel="stylesheet" href="<?= cb_admin_info_h(cb_public_url('style/1/modal_alert.css')) ?>">
+  <link rel="stylesheet" href="<?= cb_admin_info_h(cb_public_url('style/modal_alert.css')) ?>">
   <style>
     .modal{
       width:min(315px, 100%);

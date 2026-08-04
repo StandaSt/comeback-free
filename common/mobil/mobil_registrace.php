@@ -17,7 +17,7 @@ declare(strict_types=1);
  * - uloží subscription do DB do push_zarizeni a označí token jako použitý
  *
  * CSS:
- * - používá jednotné třídy z style/1/modal_alert.css (modal-page, modal, modal-btn, atd.)
+ * - používá jednotné třídy z style/modal_alert.css (modal-page, modal, modal-btn, atd.)
  */
 require_once __DIR__ . '/../lib/session_boot.php';
 
@@ -244,7 +244,7 @@ $pairUserName = $tokenOk ? cb_pair_user_full_name((int)($pair['id_user'] ?? 0)) 
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Comeback – registrace zařízení</title>
-  <link rel="stylesheet" href="<?= h(cb_url('style/1/modal_alert.css')) ?>">
+<link rel="stylesheet" href="<?= h(cb_url('style/modal_alert.css')) ?>">
   <style>
     .modal-device-register{
       width: min(315px, 100%);

@@ -77,8 +77,8 @@ body {
 <body>
 
 <div class="menu">
-    <a href="<?= h(cb_module_url('provoz')) ?>">Provoz</a>
-    <a href="<?= h(cb_module_url('smeny')) ?>">Směny</a>
+    <a href="<?= h(cb_module_entry_url('provoz')) ?>">Provoz</a>
+    <a href="<?= h(cb_module_entry_url('smeny')) ?>">Směny</a>
 </div>
 
 <div class="container">

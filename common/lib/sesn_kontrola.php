@@ -59,6 +59,26 @@ if (!function_exists('cb_session_validate_after_login')) {
             return false;
         }
 
+        $sessionStartRaw = $_SESSION['cb_session_start_ts'] ?? null;
+        if (!is_int($sessionStartRaw) && !is_string($sessionStartRaw)) {
+            return false;
+        }
+
+        $sessionStartTs = filter_var($sessionStartRaw, FILTER_VALIDATE_INT);
+        if ($sessionStartTs === false || $sessionStartTs <= 0 || $sessionStartTs > $nowTs) {
+            return false;
+        }
+
+        $maxSessionSeconds = 12 * 60 * 60;
+        if (($nowTs - $sessionStartTs) >= $maxSessionSeconds) {
+            return false;
+        }
+
+        $todayStart = (new DateTimeImmutable('today 08:00'))->getTimestamp();
+        if ($nowTs >= $todayStart && $sessionStartTs < $todayStart) {
+            return false;
+        }
+
         return ($nowTs - $lastActivityTs) < ($timeoutMin * 60);
     }
 }

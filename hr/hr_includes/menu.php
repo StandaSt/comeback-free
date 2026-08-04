@@ -44,11 +44,11 @@ $menuItems = [
 
     <div class="sidebar-section">
         <div class="sidebar-label">MODULY</div>
-        <a class="nav-link" href="<?= h(cb_module_url('provoz')) ?>">
+        <a class="nav-link" href="<?= h(cb_module_entry_url('provoz')) ?>">
             <span class="nav-icon" aria-hidden="true">▦</span>
             <span>Provoz</span>
         </a>
-        <a class="nav-link" href="<?= h(cb_module_url('smeny')) ?>">
+        <a class="nav-link" href="<?= h(cb_module_entry_url('smeny')) ?>">
             <span class="nav-icon" aria-hidden="true">▧</span>
             <span>Směny</span>
         </a>

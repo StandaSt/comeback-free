@@ -740,7 +740,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && trim((string)($_POST['ak
 
 $prehledEmailu = nacti_prehled_emailu($db);
 $exportPdfUrl = ($cbKontrolaEmailEmbed && function_exists('cb_url'))
-    ? cb_url('/index_is.php?open_kontrola_email=1&export=pdf')
+    ? cb_url('/provoz.php?open_kontrola_email=1&export=pdf')
     : '?export=pdf';
 
 ?><?php if (!$cbKontrolaEmailEmbed): ?><!doctype html>

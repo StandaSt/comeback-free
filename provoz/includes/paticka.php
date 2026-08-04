@@ -8,7 +8,7 @@
  * - vykreslí patičku stránky (footer)
  *
  * Pozn.:
- * - žádné <script> ani </body></html> (to je v index_is.php)
+ * - žádné <script> ani </body></html> (to je v provoz.php)
  */
 
 declare(strict_types=1);
