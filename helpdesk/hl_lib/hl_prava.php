@@ -59,6 +59,47 @@ function cb_helpdesk_visibility_value(mixed $value): int
     return $visibility;
 }
 
+function cb_helpdesk_module_id(mixed $value): int
+{
+    if (is_int($value) || is_float($value) || (is_string($value) && preg_match('~^\d+$~', trim($value)) === 1)) {
+        $id = (int)$value;
+        return $id > 0 ? $id : 1;
+    }
+
+    return match (strtolower(trim((string)$value))) {
+        'hr' => 2,
+        'smeny' => 3,
+        'ukoly' => 4,
+        default => 1,
+    };
+}
+
+function cb_helpdesk_current_module_id(): int
+{
+    $raw = $_GET['cb_helpdesk_module'] ?? $_POST['cb_helpdesk_module'] ?? $_SESSION['cb_helpdesk_source_module'] ?? 'provoz';
+    return cb_helpdesk_module_id($raw);
+}
+
+function cb_helpdesk_ticket_in_module(mysqli $conn, int $idHelpdesk, int $idModule): bool
+{
+    if ($idHelpdesk <= 0 || $idModule <= 0) {
+        return false;
+    }
+
+    $stmt = $conn->prepare('SELECT id_helpdesk FROM helpdesk WHERE id_helpdesk = ? AND modul = ? LIMIT 1');
+    if (!($stmt instanceof mysqli_stmt)) {
+        return false;
+    }
+
+    $stmt->bind_param('ii', $idHelpdesk, $idModule);
+    $stmt->execute();
+    $stmt->store_result();
+    $found = $stmt->num_rows > 0;
+    $stmt->close();
+
+    return $found;
+}
+
 function cb_helpdesk_can_view(mysqli $conn, int $idHelpdesk, int $idUser): bool
 {
     if ($idHelpdesk <= 0 || $idUser <= 0) {

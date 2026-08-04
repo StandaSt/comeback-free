@@ -9,6 +9,7 @@ require_once __DIR__ . '/common/config/secrets.php';
 require_once __DIR__ . '/common/lib/json_registrace.php';
 
 cb_session_guard_entry();
+require_once __DIR__ . '/provoz/lib/logout_handler.php';
 
 $cbAuthOk = !empty($_SESSION['cb_auth_ok']);
 $cb2faPending = !empty($_SESSION['cb_2fa_token']);
@@ -20,6 +21,13 @@ if (!empty($_SESSION['login_ok'])) {
 }
 
 if (!empty($_SESSION['login_ok']) && (isset($_GET['helpdesk_action']) || isset($_POST['helpdesk_action']))) {
+    if (isset($_GET['cb_helpdesk_module']) || isset($_POST['cb_helpdesk_module'])) {
+        $cbHelpdeskSourceModule = strtolower(trim((string)($_GET['cb_helpdesk_module'] ?? $_POST['cb_helpdesk_module'] ?? '')));
+        if (in_array($cbHelpdeskSourceModule, ['provoz', 'hr', 'smeny', 'ukoly'], true)) {
+            $_SESSION['cb_helpdesk_source_module'] = $cbHelpdeskSourceModule;
+        }
+    }
+
     $cbHelpdeskAction = trim((string)($_GET['helpdesk_action'] ?? $_POST['helpdesk_action'] ?? ''));
     $cbHelpdeskRoutes = [
         'detail' => __DIR__ . '/helpdesk/hl_ajax/hl_detail.php',
@@ -45,8 +53,15 @@ if (!empty($_SESSION['login_ok']) && (isset($_GET['helpdesk_action']) || isset($
 
 if (!empty($_SESSION['login_ok']) && isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODULE'])) {
     $cbShellModule = strtolower(trim((string)($_POST['cb_shell_module'] ?? 'provoz')));
-    if (!in_array($cbShellModule, ['provoz', 'hr', 'smeny', 'helpdesk'], true)) {
+    if (!in_array($cbShellModule, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk'], true)) {
         $cbShellModule = 'provoz';
+    }
+    if ($cbShellModule === 'helpdesk') {
+        $cbHelpdeskSourceModule = strtolower(trim((string)($_POST['cb_helpdesk_source_module'] ?? $_SESSION['cb_helpdesk_source_module'] ?? 'provoz')));
+        if (!in_array($cbHelpdeskSourceModule, ['provoz', 'hr', 'smeny', 'ukoly'], true)) {
+            $cbHelpdeskSourceModule = 'provoz';
+        }
+        $_SESSION['cb_helpdesk_source_module'] = $cbHelpdeskSourceModule;
     }
 
     $GLOBALS['CURRENT_MODULE'] = $cbShellModule;
@@ -57,6 +72,8 @@ if (!empty($_SESSION['login_ok']) && isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODUL
         require __DIR__ . '/hr/hr.php';
     } elseif ($cbShellModule === 'smeny') {
         require __DIR__ . '/smeny/smeny.php';
+    } elseif ($cbShellModule === 'ukoly') {
+        require __DIR__ . '/ukoly/ukoly.php';
     } elseif ($cbShellModule === 'helpdesk') {
         require __DIR__ . '/helpdesk/helpdesk.php';
     } else {
@@ -123,7 +140,19 @@ try {
 }
 
 if (!empty($_SESSION['login_ok'])) {
-    $GLOBALS['CURRENT_MODULE'] = 'provoz';
+    $cbInitialModule = strtolower(trim((string)($_GET['m'] ?? 'provoz')));
+    if (!in_array($cbInitialModule, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk'], true)) {
+        $cbInitialModule = 'provoz';
+    }
+    if ($cbInitialModule === 'helpdesk') {
+        $cbHelpdeskSourceModule = strtolower(trim((string)($_GET['src'] ?? $_SESSION['cb_helpdesk_source_module'] ?? 'provoz')));
+        if (!in_array($cbHelpdeskSourceModule, ['provoz', 'hr', 'smeny', 'ukoly'], true)) {
+            $cbHelpdeskSourceModule = 'provoz';
+        }
+        $_SESSION['cb_helpdesk_source_module'] = $cbHelpdeskSourceModule;
+    }
+
+    $GLOBALS['CURRENT_MODULE'] = $cbInitialModule;
     require_once __DIR__ . '/provoz/lib/asset_url.php';
     require_once __DIR__ . '/common/lib/pobocky_vyber.php';
     cb_pobocky_bootstrap_session();
@@ -134,6 +163,8 @@ if (!empty($_SESSION['login_ok'])) {
     $cbPublicShellUrl = cb_root_url('');
     $cbSelectPobockyJsPath = __DIR__ . '/common/js/select_pobocky.js';
     $cbSelectPobockyJsUrl = cb_public_url('js/select_pobocky.js') . '?v=' . (is_file($cbSelectPobockyJsPath) ? (string)filemtime($cbSelectPobockyJsPath) : '1');
+    $cbHelpdeskCssPath = __DIR__ . '/helpdesk/hl_style/helpdesk.css';
+    $cbHelpdeskCssUrl = cb_root_url('helpdesk/hl_style/helpdesk.css') . '?v=' . (is_file($cbHelpdeskCssPath) ? (string)filemtime($cbHelpdeskCssPath) : '1');
     ?><!doctype html>
 <html lang="cs">
 <head>
@@ -143,6 +174,7 @@ if (!empty($_SESSION['login_ok'])) {
   <link rel="icon" type="image/png" href="<?= h($cbFavicon) ?>">
   <?php require_once __DIR__ . '/provoz/lib/nacti_styly.php'; ?>
   <link rel="stylesheet" href="<?= h(cb_module_asset_url('hr_css/hr.css', 'hr')) ?>">
+  <link rel="stylesheet" href="<?= h($cbHelpdeskCssUrl) ?>">
   <style>
   #cb-module-root{
     --cb-module-bg:#dbeafe;
@@ -174,6 +206,7 @@ if (!empty($_SESSION['login_ok'])) {
   }
   #cb-module-root.cb-module-root--hr,
   #cb-module-root.cb-module-root--smeny,
+  #cb-module-root.cb-module-root--ukoly,
   #cb-module-root.cb-module-root--helpdesk{
     background:var(--cb-module-bg);
   }
@@ -191,10 +224,20 @@ if (!empty($_SESSION['login_ok'])) {
 <?php
     require_once __DIR__ . '/common/includes/hlavicka.php';
 ?>
-<main id="cb-module-root" class="cb-module-root--provoz cb-context--provoz" data-cb-module-root="1">
+<main id="cb-module-root" class="cb-module-root--<?= h($cbInitialModule) ?> cb-context--<?= h($cbInitialModule === 'helpdesk' ? ($_SESSION['cb_helpdesk_source_module'] ?? 'provoz') : $cbInitialModule) ?>" data-cb-module-root="1">
 <?php
-    define('CB_EMBEDDED_MODULE', 'provoz');
-    require __DIR__ . '/provoz/provoz.php';
+    define('CB_EMBEDDED_MODULE', $cbInitialModule);
+    if ($cbInitialModule === 'hr') {
+        require __DIR__ . '/hr/hr.php';
+    } elseif ($cbInitialModule === 'smeny') {
+        require __DIR__ . '/smeny/smeny.php';
+    } elseif ($cbInitialModule === 'ukoly') {
+        require __DIR__ . '/ukoly/ukoly.php';
+    } elseif ($cbInitialModule === 'helpdesk') {
+        require __DIR__ . '/helpdesk/helpdesk.php';
+    } else {
+        require __DIR__ . '/provoz/provoz.php';
+    }
 ?>
 </main>
 <script>
@@ -218,6 +261,7 @@ window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_
 <script src="<?= h(cb_asset_url('js/prehled_smen_export.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/rozbalovaci_detail.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/casovac_odhlaseni.js')) ?>"></script>
+<script src="<?= h(cb_root_url('helpdesk/hl_js/hl_helpdesk.js')) ?>"></script>
 <script>
 (function(){
   'use strict';
@@ -225,7 +269,8 @@ window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_
   var root = document.querySelector('[data-cb-module-root="1"]');
   var shellUrl = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
   var publicShellUrl = <?= json_encode($cbPublicShellUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
-  var activeMainModule = 'provoz';
+  var activeMainModule = <?= json_encode($cbInitialModule === 'helpdesk' ? ($_SESSION['cb_helpdesk_source_module'] ?? 'provoz') : $cbInitialModule, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+  window.CB_ACTIVE_MAIN_MODULE = activeMainModule;
   if (!root) return;
   history.replaceState(null, '', publicShellUrl);
 
@@ -240,11 +285,12 @@ window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_
   }
 
   function setRootModule(moduleName){
-    root.classList.remove('cb-module-root--provoz', 'cb-module-root--hr', 'cb-module-root--smeny', 'cb-module-root--helpdesk');
+    root.classList.remove('cb-module-root--provoz', 'cb-module-root--hr', 'cb-module-root--smeny', 'cb-module-root--ukoly', 'cb-module-root--helpdesk');
     root.classList.add('cb-module-root--' + moduleName);
 
     if (moduleName !== 'helpdesk') {
       activeMainModule = moduleName;
+      window.CB_ACTIVE_MAIN_MODULE = activeMainModule;
     }
     root.classList.remove('cb-context--provoz', 'cb-context--hr', 'cb-context--smeny', 'cb-context--ukoly');
     root.classList.add('cb-context--' + activeMainModule);
@@ -255,6 +301,10 @@ window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_
 
     var body = new URLSearchParams();
     body.set('cb_shell_module', moduleName);
+    if (moduleName === 'helpdesk') {
+      body.set('cb_helpdesk_source_module', activeMainModule);
+      window.CB_HELPDESK_SOURCE_MODULE = activeMainModule;
+    }
 
     fetch(shellUrl, {
       method: 'POST',
@@ -270,8 +320,15 @@ window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_
         return response.text();
       })
       .then(function(html){
+        if (typeof window.__CB_HELPDESK_CLEANUP__ === 'function') {
+          window.__CB_HELPDESK_CLEANUP__();
+          window.__CB_HELPDESK_CLEANUP__ = null;
+        }
         setRootModule(moduleName);
         root.innerHTML = html;
+        if (moduleName === 'helpdesk' && window.CB_HELPDESK_INIT) {
+          window.CB_HELPDESK_INIT(root);
+        }
         setActive(moduleName);
       })
       .catch(function(error){

@@ -31,6 +31,6 @@ function hr_post_pozadavky(mysqli $db, array $cbUser, int $roleId): void
         $_SESSION['hr_pozadavek_ulozeno'] = 1;
     }
 
-    header('Location: ?page=pozadavky');
+    header('Location: ' . cb_root_url('index.php?m=hr&page=pozadavky'));
     exit;
 }

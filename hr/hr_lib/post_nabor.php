@@ -29,6 +29,6 @@ function hr_post_nabor(mysqli $db): void
         ];
     }
 
-    header('Location: ?page=nabor&id_vd=' . $idVd);
+    header('Location: ' . cb_root_url('index.php?m=hr&page=nabor&id_vd=' . rawurlencode((string)$idVd)));
     exit;
 }

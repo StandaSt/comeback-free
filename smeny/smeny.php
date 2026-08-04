@@ -64,96 +64,6 @@ $smMenu = [
 ];
 
 ?><style>
-.sm_module{
-    display:grid;
-    grid-template-columns:260px 1fr;
-    gap:5px;
-    min-height:calc(100vh - 72px);
-    background:#fef3c7;
-    color:#111827;
-    font-family:Arial, Helvetica, sans-serif;
-}
-
-.sm_menu{
-    background:#fff;
-    border:1px solid #f59e0b;
-    border-radius:6px;
-    padding:8px;
-}
-
-.sm_menu_list{
-    display:grid;
-    gap:4px;
-    margin:0;
-    padding:0;
-    list-style:none;
-}
-
-.sm_menu_btn{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:8px;
-    width:100%;
-    min-height:32px;
-    padding:6px 9px;
-    border:1px solid #fed7aa;
-    border-radius:5px;
-    background:#fff7ed;
-    color:#111827;
-    font-size:14px;
-    line-height:1.2;
-    text-align:left;
-    cursor:pointer;
-}
-
-.sm_menu_btn.is-active{
-    border-color:#f97316;
-    background:#fed7aa;
-}
-
-.sm_menu_chev{
-    flex:0 0 auto;
-    color:#9a3412;
-    font-size:13px;
-    line-height:1;
-}
-
-.sm_menu_item.is-open > .sm_menu_btn .sm_menu_chev{
-    transform:rotate(180deg);
-}
-
-.sm_menu_item.is-open > .sm_menu_btn{
-    font-weight:700;
-}
-
-.sm_submenu{
-    display:none;
-    gap:3px;
-    margin:4px 0 2px;
-    padding:0 0 0 14px;
-    list-style:none;
-}
-
-.sm_menu_item.is-open > .sm_submenu{
-    display:grid;
-}
-
-.sm_submenu_btn{
-    display:flex;
-    align-items:center;
-    width:100%;
-    min-height:27px;
-    padding:5px 8px;
-    border:1px solid #ffedd5;
-    border-radius:5px;
-    background:#fff;
-    color:#374151;
-    font-size:13px;
-    line-height:1.2;
-    text-align:left;
-}
-
 .sm_content{
     min-width:0;
     background:#fff;
@@ -177,26 +87,27 @@ $smMenu = [
 }
 </style>
 
-<section class="sm_module">
-    <nav class="sm_menu" aria-label="Menu směn">
-        <ul class="sm_menu_list">
+<section class="module_shell">
+    <nav class="module_menu" aria-label="Menu směn">
+        <h2 class="module_menu_title">Směny</h2>
+        <ul class="module_menu_list">
             <?php foreach ($smMenu as $index => $section): ?>
                 <?php
                 $items = is_array($section['items']) ? $section['items'] : [];
                 $isActive = $index === 0;
                 ?>
-                <li class="sm_menu_item">
-                    <button type="button" class="sm_menu_btn<?= $isActive ? ' is-active' : '' ?>"<?= $items !== [] ? ' onclick="var i=this.closest(\'.sm_menu_item\');var o=i.classList.contains(\'is-open\');this.closest(\'.sm_menu\').querySelectorAll(\'.sm_menu_item.is-open\').forEach(function(x){x.classList.remove(\'is-open\');});if(!o){i.classList.add(\'is-open\');}"' : '' ?>>
+                <li class="module_menu_item">
+                    <button type="button" class="module_menu_btn<?= $isActive ? ' is-active' : '' ?>"<?= $items !== [] ? ' onclick="var i=this.closest(\'.module_menu_item\');var o=i.classList.contains(\'is-open\');this.closest(\'.module_menu\').querySelectorAll(\'.module_menu_item.is-open\').forEach(function(x){x.classList.remove(\'is-open\');});if(!o){i.classList.add(\'is-open\');}"' : '' ?>>
                         <span><?= h((string)$section['label']) ?></span>
                         <?php if ($items !== []): ?>
-                            <span class="sm_menu_chev" aria-hidden="true">⌄</span>
+                            <span class="module_menu_chev" aria-hidden="true">⌄</span>
                         <?php endif; ?>
                     </button>
                     <?php if ($items !== []): ?>
-                        <ul class="sm_submenu">
+                        <ul class="module_submenu">
                             <?php foreach ($items as $item): ?>
                                 <li>
-                                    <button type="button" class="sm_submenu_btn">
+                                    <button type="button" class="module_submenu_btn">
                                         <?= h((string)$item) ?>
                                     </button>
                                 </li>

@@ -308,7 +308,7 @@ try {
     $cbHeadAktualizaceDat = '---';
 }
 $cbCurrentModule = function_exists('cb_current_module') ? cb_current_module() : 'provoz';
-if (!in_array($cbCurrentModule, ['provoz', 'hr', 'smeny', 'helpdesk'], true)) {
+if (!in_array($cbCurrentModule, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk'], true)) {
     $cbCurrentModule = 'provoz';
 }
 $cbHeaderPostUrl = cb_root_url('index.php');
@@ -327,7 +327,7 @@ $cbProvozPostUrl = cb_root_url('index.php');
         <a class="head_module_link head_module_link--smeny<?= $cbCurrentModule === 'smeny' ? ' is-active' : '' ?>" href="<?= h(cb_root_url('')) ?>" data-cb-module-link="1" data-cb-module="smeny">Směny</a>
       </nav>
 
-      <button type="button" class="head_task_btn head_task_btn--todo" disabled>
+      <button type="button" class="head_task_btn head_task_btn--todo<?= $cbCurrentModule === 'ukoly' ? ' is-active' : '' ?>" data-cb-module-link="1" data-cb-module="ukoly">
         <span>Úkoly</span>
         <strong>0</strong>
       </button>
@@ -388,7 +388,8 @@ $cbProvozPostUrl = cb_root_url('index.php');
     }
 
     function refresh() {
-      return fetch(apiUrl + '?helpdesk_action=stav_tiketu', {
+      var moduleName = window.CB_HELPDESK_SOURCE_MODULE || window.CB_ACTIVE_MAIN_MODULE || 'provoz';
+      return fetch(apiUrl + '?helpdesk_action=stav_tiketu&cb_helpdesk_module=' + encodeURIComponent(String(moduleName)), {
         method: 'GET',
         credentials: 'same-origin',
         headers: {
@@ -405,22 +406,18 @@ $cbProvozPostUrl = cb_root_url('index.php');
         });
     }
 
-    function openCard(filter) {
+    function openHelpdesk(filter) {
       var filterValue = String(filter || 'all');
-      if (window.CB_HELPDESK20 && typeof window.CB_HELPDESK20.openUnreadFilter === 'function') {
-        window.CB_HELPDESK20.openUnreadFilter(filterValue);
+      if (window.CB_HELPDESK && typeof window.CB_HELPDESK.openUnreadFilter === 'function') {
+        window.CB_HELPDESK.openUnreadFilter(filterValue);
         return;
       }
+
+      window.CB_HELPDESK_PENDING_FILTER = filterValue;
 
       if (typeof window.CB_LOAD_MODULE === 'function') {
         window.CB_LOAD_MODULE('helpdesk', true);
       }
-
-      document.dispatchEvent(new CustomEvent('cb:helpdesk-header-filter', {
-        detail: {
-          filter: filterValue
-        }
-      }));
     }
 
     function placeTooltip(root, event) {
@@ -458,7 +455,7 @@ $cbProvozPostUrl = cb_root_url('index.php');
 
     window.CB_HELPDESK_HEADER = {
       refresh: refresh,
-      open: openCard
+      open: openHelpdesk
     };
 
     document.addEventListener('click', function (e) {
@@ -466,7 +463,7 @@ $cbProvozPostUrl = cb_root_url('index.php');
       if (!(target instanceof Element)) { return; }
       var item = target.closest('[data-cb-helpdesk-header-filter]');
       if (!(item instanceof HTMLElement)) { return; }
-      openCard(item.getAttribute('data-cb-helpdesk-header-filter') || 'all');
+      openHelpdesk(item.getAttribute('data-cb-helpdesk-header-filter') || 'all');
     });
 
     document.addEventListener('mouseenter', function (e) {
@@ -512,341 +509,6 @@ $cbProvozPostUrl = cb_root_url('index.php');
     });
 
     refresh();
-  })();
-  </script>
-<?php endif; ?>
-<?php if ($cbLoginOk && !$cbHelpdeskIsRoleOne): ?>
-  <div id="cb-helpdesk-modal" style="display:none;position:fixed;inset:0;z-index:13000;align-items:center;justify-content:center;padding:18px;background:rgba(15,23,42,.48);">
-    <div class="ram_normal zaobleni_12 bg_bila" role="dialog" aria-modal="true" aria-labelledby="cb-helpdesk-modal-title" style="width:min(720px,calc(100vw - 32px));max-height:calc(100vh - 36px);overflow:auto;padding:16px 18px 14px;">
-      <div style="display:flex;align-items:center;justify-content:flex-start;gap:12px;margin-bottom:12px;">
-        <h2 id="cb-helpdesk-modal-title" style="margin:0;font-size:24px;line-height:1.2;color:#0f3f91;">HelpDesk</h2>
-      </div>
-
-      <div style="display:grid;grid-template-columns:160px 1fr;gap:10px 12px;align-items:center;">
-        <div style="font-weight:700;color:#334155;">Zadává:</div>
-        <div style="color:#334155;line-height:1.4;"><?= h($cbUserName) ?> (<?= h($cbUserRoleLabel) ?>)</div>
-
-        <label for="cb-helpdesk-typ">Typ</label>
-        <select id="cb-helpdesk-typ" style="width:100%;min-height:34px;padding:6px 10px;border:1px solid rgba(15,23,42,.18);border-radius:8px;background:#fff;">
-          <option value="chyba">Chyba systému</option>
-          <option value="dotaz">Dotaz</option>
-          <option value="navrh">Námět na vylepšení</option>
-        </select>
-
-        <label for="cb-helpdesk-predmet">Předmět</label>
-        <div>
-          <input type="text" id="cb-helpdesk-predmet" maxlength="160" placeholder="Nutno vyplnit" style="width:100%;min-height:34px;padding:6px 10px;border:1px solid rgba(15,23,42,.18);border-radius:8px;background:#fff;">
-        </div>
-
-        <div style="align-self:start;padding-top:8px;">Určení:</div>
-        <div style="display:grid;gap:8px;padding:4px 0;">
-          <label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;line-height:1.35;">
-            <input type="radio" name="cb-helpdesk-urceni" value="admin">
-            <span>Pouze pro admina</span>
-          </label>
-          <label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;line-height:1.35;">
-            <input type="radio" name="cb-helpdesk-urceni" value="reagovat" checked>
-            <span>Všichni mohou reagovat</span>
-          </label>
-          <label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;line-height:1.35;">
-            <input type="radio" name="cb-helpdesk-urceni" value="cist">
-            <span>Všichni mohou číst</span>
-          </label>
-        </div>
-
-        <label for="cb-helpdesk-popis" style="align-self:start;padding-top:8px;">Popis</label>
-        <div>
-          <textarea id="cb-helpdesk-popis" rows="8" placeholder="Minimální délka zprávy je 25 znaků" style="width:100%;padding:8px 10px;border:1px solid rgba(15,23,42,.18);border-radius:8px;background:#fff;resize:vertical;"></textarea>
-        </div>
-
-        <label style="align-self:start;padding-top:8px;">Přílohy</label>
-        <div id="cb-helpdesk-prilohy" style="display:grid;gap:8px;">
-          <div data-cb-helpdesk-attachment-list="1" style="display:grid;gap:8px;"></div>
-        </div>
-      </div>
-
-      <p id="cb-helpdesk-msg" style="margin:12px 0 0 0;min-height:20px;color:#b91c1c;font-size:13px;line-height:1.35;"></p>
-
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;">
-        <button type="button" data-cb-helpdesk-send="1" style="display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:7px 14px;border:1px solid #cbd5e1;border-radius:8px;background:#e5e7eb;color:#64748b;font-size:13px;font-weight:700;line-height:1.15;cursor:default;" disabled>Odeslat</button>
-        <button type="button" data-cb-helpdesk-close="1" style="display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:7px 14px;border:1px solid rgba(15,23,42,.14);border-radius:8px;background:#fff;color:#1f2933;font-size:13px;font-weight:700;line-height:1.15;cursor:pointer;">Zavřít bez odeslání</button>
-      </div>
-    </div>
-  </div>
-  <script>
-  (function () {
-    var modal = document.getElementById('cb-helpdesk-modal');
-    if (!modal) { return; }
-
-    var openBtn = document.querySelector('[data-cb-helpdesk-open="1"]');
-    var msg = document.getElementById('cb-helpdesk-msg');
-    var typ = document.getElementById('cb-helpdesk-typ');
-    var predmet = document.getElementById('cb-helpdesk-predmet');
-    var popis = document.getElementById('cb-helpdesk-popis');
-    var attachmentList = modal.querySelector('[data-cb-helpdesk-attachment-list="1"]');
-    var sendBtn = modal.querySelector('[data-cb-helpdesk-send="1"]');
-    var lastActive = null;
-    var isBusy = false;
-
-    if (!openBtn || !msg || !typ || !predmet || !popis || !attachmentList || !sendBtn) { return; }
-
-    function setBusy(on) {
-      isBusy = !!on;
-      sendBtn.disabled = !!on;
-      sendBtn.style.opacity = on ? '0.7' : '1';
-      syncSendButton();
-    }
-
-    function getSelectedUrceni() {
-      var checked = modal.querySelector('input[name="cb-helpdesk-urceni"]:checked');
-      return checked instanceof HTMLInputElement ? String(checked.value || 'reagovat') : 'reagovat';
-    }
-
-    function getDescriptionLength() {
-      return String(popis.value || '').trim().length;
-    }
-
-    function isFormValid() {
-      return String(predmet.value || '').trim() !== '' && getDescriptionLength() > 25;
-    }
-
-    function syncSendButton() {
-      var enabled = !isBusy && isFormValid();
-      sendBtn.disabled = !enabled;
-      sendBtn.style.cursor = enabled ? 'pointer' : 'default';
-      sendBtn.style.background = enabled ? '#0f3f91' : '#e5e7eb';
-      sendBtn.style.borderColor = enabled ? '#0f3f91' : '#cbd5e1';
-      sendBtn.style.color = enabled ? '#fff' : '#64748b';
-    }
-
-    function createAttachmentRow() {
-      var row = document.createElement('div');
-      row.style.display = 'flex';
-      row.style.alignItems = 'center';
-      row.style.gap = '8px';
-      row.style.minHeight = '34px';
-      row.setAttribute('data-cb-helpdesk-attachment-row', '1');
-
-      var input = document.createElement('input');
-      input.type = 'file';
-      input.name = 'soubor';
-      input.style.width = '100%';
-      input.style.minHeight = '34px';
-      input.style.padding = '6px 10px';
-      input.style.border = '1px solid rgba(15,23,42,.18)';
-      input.style.borderRadius = '8px';
-      input.style.background = '#fff';
-
-      var text = document.createElement('div');
-      text.style.display = 'none';
-      text.style.width = '100%';
-      text.style.minHeight = '34px';
-      text.style.padding = '7px 10px';
-      text.style.border = '1px solid rgba(15,23,42,.12)';
-      text.style.borderRadius = '8px';
-      text.style.background = '#f8fafc';
-      text.style.color = '#334155';
-      text.style.fontSize = '13px';
-      text.style.lineHeight = '1.35';
-      text.setAttribute('data-cb-helpdesk-attachment-text', '1');
-
-      row.appendChild(input);
-      row.appendChild(text);
-      attachmentList.appendChild(row);
-      return input;
-    }
-
-    function ensureEmptyAttachmentRow() {
-      var inputs = attachmentList.querySelectorAll('input[type="file"]');
-      if (!inputs.length) {
-        createAttachmentRow();
-        return;
-      }
-
-      var last = inputs[inputs.length - 1];
-      if (last instanceof HTMLInputElement && last.files && last.files.length > 0) {
-        createAttachmentRow();
-      }
-    }
-
-    function getAttachmentFiles() {
-      var out = [];
-      attachmentList.querySelectorAll('input[type="file"]').forEach(function (input) {
-        if (!(input instanceof HTMLInputElement)) { return; }
-        if (input.files && input.files.length > 0) {
-          out.push(input.files[0]);
-        }
-      });
-      return out;
-    }
-
-    async function uploadAttachment(idHelpdesk, idZprava, file) {
-      var formData = new FormData();
-      formData.append('id_helpdesk', String(idHelpdesk));
-      formData.append('id_helpdesk_zprava', String(idZprava));
-      formData.append('soubor', file);
-
-      formData.append('helpdesk_action', 'priloha_nahrat');
-
-      var response = await fetch('<?= h($cbHelpdeskApiUrl) ?>', {
-        method: 'POST',
-        headers: {
-          'X-Comeback-Helpdesk': '1'
-        },
-        body: formData
-      });
-      var data = await response.json().catch(function () { return {}; });
-      if (!response.ok || !data || data.ok !== true) {
-        throw new Error((data && data.err) ? String(data.err) : 'Nahrání přílohy se nepodařilo.');
-      }
-    }
-
-    function resetForm() {
-      typ.value = 'chyba';
-      predmet.value = '';
-      popis.value = '';
-      msg.textContent = '';
-      msg.style.color = '#b91c1c';
-      attachmentList.innerHTML = '';
-      var checked = modal.querySelector('input[name="cb-helpdesk-urceni"][value="reagovat"]');
-      if (checked instanceof HTMLInputElement) {
-        checked.checked = true;
-      }
-      ensureEmptyAttachmentRow();
-      syncSendButton();
-    }
-
-    function openModal() {
-      lastActive = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-      modal.style.display = 'flex';
-      predmet.focus();
-    }
-
-    function closeModal(reset) {
-      modal.style.display = 'none';
-      setBusy(false);
-      if (reset) {
-        resetForm();
-      }
-      if (lastActive instanceof HTMLElement) {
-        lastActive.focus();
-      }
-    }
-
-    function postJson(url, data) {
-      return fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Comeback-Helpdesk': '1'
-        },
-        body: JSON.stringify(data)
-      }).then(function (r) {
-        return r.json().catch(function () { return {}; });
-      });
-    }
-
-    openBtn.addEventListener('click', function () {
-      openModal();
-    });
-
-    modal.addEventListener('click', function (e) {
-      var target = e.target;
-      if (!(target instanceof Element)) { return; }
-      if (target.closest('[data-cb-helpdesk-close="1"]')) {
-        closeModal(false);
-      }
-    });
-
-    attachmentList.addEventListener('change', function (e) {
-      var target = e.target;
-      if (!(target instanceof HTMLInputElement)) { return; }
-      if (target.type !== 'file') { return; }
-      var row = target.closest('[data-cb-helpdesk-attachment-row="1"]');
-      if (row instanceof HTMLElement) {
-        var text = row.querySelector('[data-cb-helpdesk-attachment-text="1"]');
-        if (text instanceof HTMLElement) {
-          if (target.files && target.files.length > 0) {
-            text.textContent = target.files[0].name || 'Soubor';
-            text.style.display = 'block';
-            target.style.display = 'none';
-          } else {
-            text.textContent = '';
-            text.style.display = 'none';
-            target.style.display = '';
-          }
-        }
-      }
-      ensureEmptyAttachmentRow();
-    });
-
-    predmet.addEventListener('input', syncSendButton);
-    popis.addEventListener('input', syncSendButton);
-    modal.querySelectorAll('input[name="cb-helpdesk-urceni"]').forEach(function (radio) {
-      radio.addEventListener('change', syncSendButton);
-    });
-
-    sendBtn.addEventListener('click', async function () {
-      if (!isFormValid() || isBusy) {
-        syncSendButton();
-        return;
-      }
-      msg.textContent = '';
-      msg.style.color = '#b91c1c';
-      setBusy(true);
-
-      try {
-        var data = await postJson('<?= h($cbHelpdeskApiUrl) ?>?helpdesk_action=vytvorit', {
-          typ: typ.value,
-          predmet: predmet.value,
-          urceni: getSelectedUrceni(),
-          popis: popis.value
-        });
-        if (!data || data.ok !== true) {
-          msg.textContent = (data && data.err) ? String(data.err) : 'Odeslání se nepodařilo.';
-          setBusy(false);
-          return;
-        }
-
-        var files = getAttachmentFiles();
-        var failedUploads = [];
-        for (var i = 0; i < files.length; i++) {
-          try {
-            await uploadAttachment(data.id_helpdesk, data.id_helpdesk_zprava, files[i]);
-          } catch (err) {
-            failedUploads.push(files[i].name || ('Příloha ' + String(i + 1)));
-          }
-        }
-
-        if (failedUploads.length > 0) {
-          msg.style.color = '#9a6700';
-          msg.textContent = 'Požadavek byl odeslán, ale nepodařilo se nahrát: ' + failedUploads.join(', ');
-          window.setTimeout(function () {
-            closeModal(true);
-          }, 1800);
-          return;
-        }
-
-        msg.style.color = '#166534';
-        msg.textContent = 'Požadavek byl odeslán.';
-        document.dispatchEvent(new CustomEvent('cb:helpdesk-created', {
-          detail: {
-            id_helpdesk: data.id_helpdesk,
-            id_helpdesk_zprava: data.id_helpdesk_zprava,
-            predmet: String(predmet.value || '').trim(),
-            typ: String(typ.value || '').trim()
-          }
-        }));
-        window.setTimeout(function () {
-          closeModal(true);
-        }, 350);
-      } catch (e) {
-        msg.textContent = 'Odeslání se nepodařilo.';
-        setBusy(false);
-      }
-    });
-
-    resetForm();
   })();
   </script>
 <?php endif; ?>

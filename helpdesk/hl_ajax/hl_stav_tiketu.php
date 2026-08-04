@@ -26,6 +26,7 @@ try {
 
     $conn = db();
     $scope = cb_helpdesk_visible_scope($idUser);
+    $idModule = cb_helpdesk_current_module_id();
     $counts = [
         'all' => 0,
         'new' => 0,
@@ -60,7 +61,7 @@ try {
         LEFT JOIN helpdesk_read hr
                ON hr.id_helpdesk = h.id_helpdesk
               AND hr.id_user = ?
-        WHERE ' . $scope['sql'] . '
+        WHERE h.modul = ? AND ' . $scope['sql'] . '
     ';
 
     $stmtCounts = $conn->prepare($sqlCounts);
@@ -69,10 +70,10 @@ try {
     }
 
     if (($scope['types'] ?? '') === '') {
-        $stmtCounts->bind_param('i', $idUser);
+        $stmtCounts->bind_param('ii', $idUser, $idModule);
     } else {
-        $types = 'i' . (string)$scope['types'];
-        $params = [$idUser];
+        $types = 'ii' . (string)$scope['types'];
+        $params = [$idUser, $idModule];
         foreach ((array)($scope['params'] ?? []) as $value) {
             $params[] = $value;
         }
@@ -108,7 +109,7 @@ try {
         LEFT JOIN helpdesk_read hr
                ON hr.id_helpdesk = h.id_helpdesk
               AND hr.id_user = ?
-        WHERE ' . $scope['sql'] . '
+        WHERE h.modul = ? AND ' . $scope['sql'] . '
         ORDER BY FIELD(h.stav, \'nový\', \'řeší se\', \'vyřešeno\'), h.upraveno DESC, h.vytvoreno DESC
         LIMIT 120
     ';
@@ -119,10 +120,10 @@ try {
     }
 
     if (($scope['types'] ?? '') === '') {
-        $stmt->bind_param('i', $idUser);
+        $stmt->bind_param('ii', $idUser, $idModule);
     } else {
-        $types = 'i' . (string)$scope['types'];
-        $params = [$idUser];
+        $types = 'ii' . (string)$scope['types'];
+        $params = [$idUser, $idModule];
         foreach ((array)($scope['params'] ?? []) as $value) {
             $params[] = $value;
         }

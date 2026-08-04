@@ -9,29 +9,22 @@ if (!defined('CB_HELPDESK_DISPATCH_INTERNAL')) {
 require_once __DIR__ . '/../hl_lib/hl_prava.php';
 require_once __DIR__ . '/../hl_lib/hl_snapshot.php';
 require_once __DIR__ . '/../hl_lib/hl_notifikace.php';
+require_once __DIR__ . '/../hl_lib/hl_upload.php';
 
-if (!headers_sent()) {
-    header('Content-Type: application/json; charset=utf-8');
-}
+$redirectBase = cb_root_url('index.php?m=helpdesk&src=' . rawurlencode((string)($_SESSION['cb_helpdesk_source_module'] ?? 'provoz')));
 
 try {
     if (empty($_SESSION['login_ok'])) {
-        http_response_code(401);
-        echo json_encode(['ok' => false, 'err' => 'Nutné přihlášení.'], JSON_UNESCAPED_UNICODE);
+        header('Location: ' . cb_root_url('index.php'));
         exit;
     }
 
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-        http_response_code(405);
-        echo json_encode(['ok' => false, 'err' => 'Neplatná metoda.'], JSON_UNESCAPED_UNICODE);
+        header('Location: ' . $redirectBase . '&hd=new-ticket&err=method');
         exit;
     }
 
-    $raw = (string)file_get_contents('php://input');
-    $data = json_decode($raw, true);
-    if (!is_array($data)) {
-        throw new RuntimeException('Neplatná data.');
-    }
+    $data = $_POST;
 
     $idUser = cb_helpdesk_current_user_id();
     if ($idUser <= 0) {
@@ -51,6 +44,7 @@ try {
         'cist' => 2,
         default => 1,
     };
+    $modul = cb_helpdesk_module_id($data['modul'] ?? $data['module'] ?? $_SESSION['cb_helpdesk_source_module'] ?? 'provoz');
 
     if ($predmet === '') {
         throw new RuntimeException('Chybí předmět.');
@@ -58,20 +52,23 @@ try {
     if ($popis === '') {
         throw new RuntimeException('Chybí popis.');
     }
+    if (mb_strlen($popis, 'UTF-8') < 25) {
+        throw new RuntimeException('Popis je příliš krátký.');
+    }
 
     $conn = db();
     $conn->begin_transaction();
 
     $stmt = $conn->prepare('
         INSERT INTO helpdesk
-        (id_user_zalozil, typ, stav, verejny, predmet, popis, vytvoreno, upraveno, posledni_zprava)
-        VALUES (?, ?, \'nový\', ?, ?, ?, NOW(), NOW(), NOW())
+        (id_user_zalozil, modul, typ, stav, verejny, predmet, popis, vytvoreno, upraveno, posledni_zprava)
+        VALUES (?, ?, ?, \'nový\', ?, ?, ?, NOW(), NOW(), NOW())
     ');
     if (!($stmt instanceof mysqli_stmt)) {
         throw new RuntimeException('Nepodařilo se připravit založení požadavku.');
     }
 
-    $stmt->bind_param('isiss', $idUser, $typ, $verejny, $predmet, $popis);
+    $stmt->bind_param('iisiss', $idUser, $modul, $typ, $verejny, $predmet, $popis);
     $stmt->execute();
     $idHelpdesk = (int)$stmt->insert_id;
     $stmt->close();
@@ -113,22 +110,34 @@ try {
 
     cb_helpdesk_mark_read($conn, $idHelpdesk, $idUser);
 
+    $files = $_FILES['prilohy'] ?? null;
+    if (is_array($files) && isset($files['error']) && is_array($files['error'])) {
+        foreach ($files['error'] as $index => $error) {
+            if ((int)$error === UPLOAD_ERR_NO_FILE) {
+                continue;
+            }
+            $file = [
+                'name' => (string)($files['name'][$index] ?? ''),
+                'type' => (string)($files['type'][$index] ?? ''),
+                'tmp_name' => (string)($files['tmp_name'][$index] ?? ''),
+                'error' => (int)$error,
+                'size' => (int)($files['size'][$index] ?? 0),
+            ];
+            cb_helpdesk_upload_priloha($conn, $idHelpdesk, $idZprava, $idUser, $file);
+        }
+    }
+
     cb_helpdesk_snapshot_zapis($conn, $idHelpdesk, $idZprava, $idUser);
     cb_helpdesk_notifikace_adminum($conn, $idHelpdesk, $idZprava, $idUser, 'novy_pozadavek', 'Nový HelpDesk požadavek #' . (string)$idHelpdesk . ': ' . $predmet);
 
     $conn->commit();
 
-    echo json_encode([
-        'ok' => true,
-        'id_helpdesk' => $idHelpdesk,
-        'id_helpdesk_zprava' => $idZprava,
-    ], JSON_UNESCAPED_UNICODE);
+    header('Location: ' . $redirectBase . '&hd=mine&created=' . (string)$idHelpdesk);
 } catch (Throwable $e) {
     if (isset($conn) && $conn instanceof mysqli) {
         $conn->rollback();
     }
-    http_response_code(400);
-    echo json_encode(['ok' => false, 'err' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    header('Location: ' . $redirectBase . '&hd=new-ticket&err=save');
 }
 
 // helpdesk/hl_ajax/hl_vytvorit.php * Verze: V1 * Aktualizace: 20.06.2026

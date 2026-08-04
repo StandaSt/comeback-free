@@ -97,31 +97,6 @@ function cb_helpdesk_snapshot_load_sloty(mysqli $conn, int $idUser): array
     return $out;
 }
 
-function cb_helpdesk_snapshot_load_karty(mysqli $conn, int $idUser): array
-{
-    $out = [];
-    $stmt = $conn->prepare('
-        SELECT *
-        FROM user_card_set
-        WHERE id_user = ?
-        ORDER BY poradi ASC, id_karta ASC
-    ');
-    if ($stmt instanceof mysqli_stmt) {
-        $stmt->bind_param('i', $idUser);
-        $stmt->execute();
-        $res = $stmt->get_result();
-        if ($res instanceof mysqli_result) {
-            while ($row = $res->fetch_assoc()) {
-                $out[] = $row;
-            }
-            $res->free();
-        }
-        $stmt->close();
-    }
-
-    return $out;
-}
-
 function cb_helpdesk_snapshot_load_obdobi(): array
 {
     $out = [];
@@ -151,7 +126,7 @@ function cb_helpdesk_snapshot_zapis(mysqli $conn, int $idHelpdesk, int $idZprava
     $user = cb_helpdesk_snapshot_load_user($conn, $idUser);
     $pobocky = cb_helpdesk_snapshot_load_pobocky($conn, $idUser);
     $sloty = cb_helpdesk_snapshot_load_sloty($conn, $idUser);
-    $karty = cb_helpdesk_snapshot_load_karty($conn, $idUser);
+    $karty = [];
     $obdobi = cb_helpdesk_snapshot_load_obdobi();
 
     $sessionSafe = [

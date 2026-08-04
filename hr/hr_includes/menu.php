@@ -14,51 +14,23 @@ $menuItems = [
     ['page' => 'reporty', 'label' => 'Reporty', 'icon' => '▥'],
 ];
 ?>
-<aside class="sidebar">
-    <div class="brand">
-        <div class="brand-mark">C</div>
-        <div>
-            <strong>COMEBACK</strong>
-            <span>HR</span>
-        </div>
-    </div>
+<aside class="module_menu" aria-label="Menu personalistiky">
+    <h2 class="module_menu_title">Personalistika</h2>
 
-    <nav class="nav" aria-label="Hlavní menu">
+    <nav class="module_menu_list" aria-label="Hlavní menu">
         <?php foreach ($menuItems as $item): ?>
             <a
-                class="nav-link<?= $page === $item['page'] ? ' active' : '' ?>"
-                href="?page=<?= h($item['page']) ?>"
+                class="module_menu_btn<?= $page === $item['page'] ? ' is-active' : '' ?>"
+                href="<?= h(cb_root_url('index.php?m=hr&page=' . rawurlencode((string)$item['page']))) ?>"
             >
-                <span class="nav-icon" aria-hidden="true"><?= h($item['icon']) ?></span>
                 <span><?= h($item['label']) ?></span>
             </a>
         <?php endforeach; ?>
     </nav>
 
-    <div class="sidebar-section">
-        <a class="nav-link<?= $page === 'nastaveni' ? ' active' : '' ?>" href="?page=nastaveni">
-            <span class="nav-icon" aria-hidden="true">⚙</span>
+    <div class="module_menu_list">
+        <a class="module_menu_btn<?= $page === 'nastaveni' ? ' is-active' : '' ?>" href="<?= h(cb_root_url('index.php?m=hr&page=nastaveni')) ?>">
             <span>Nastavení</span>
         </a>
-    </div>
-
-    <div class="sidebar-section">
-        <div class="sidebar-label">MODULY</div>
-        <a class="nav-link" href="<?= h(cb_module_entry_url('provoz')) ?>">
-            <span class="nav-icon" aria-hidden="true">▦</span>
-            <span>Provoz</span>
-        </a>
-        <a class="nav-link" href="<?= h(cb_module_entry_url('smeny')) ?>">
-            <span class="nav-icon" aria-hidden="true">▧</span>
-            <span>Směny</span>
-        </a>
-    </div>
-
-    <div class="sidebar-user">
-        <div class="avatar"><?= h(mb_strtoupper(mb_substr($userName, 0, 1))) ?></div>
-        <div class="sidebar-user-text">
-            <strong><?= h($userName) ?></strong>
-            <span><?= h($userRole) ?></span>
-        </div>
     </div>
 </aside>

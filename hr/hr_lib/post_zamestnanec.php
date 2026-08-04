@@ -21,14 +21,14 @@ function hr_post_zamestnanec(mysqli $db, int $roleId): void
             'type' => 'success',
             'text' => 'Zaměstnanec byl uložen.',
         ];
-        header('Location: ?page=zamestnanec&id=' . $idPerson);
+        header('Location: ' . cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson)));
         exit;
     } catch (Throwable $e) {
         $_SESSION['hr_flash'] = [
             'type' => 'error',
             'text' => $e->getMessage(),
         ];
-        header('Location: ?page=novy_zamestnanec');
+        header('Location: ' . cb_root_url('index.php?m=hr&page=novy_zamestnanec'));
         exit;
     }
 }

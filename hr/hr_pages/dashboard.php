@@ -13,7 +13,7 @@ $dovolene = $dashboard['dovolene'];
 $latest = $dashboard['latest'];
 ?>
 <section class="stats-grid">
-    <a class="stat-card accent-blue" href="?page=nabor" aria-label="Nábor">
+    <a class="stat-card accent-blue" href="<?= h(cb_root_url('index.php?m=hr&page=nabor')) ?>" aria-label="Nábor">
         <div class="stat-icon">N</div>
         <div>
             <span>Nábor</span>
@@ -22,7 +22,7 @@ $latest = $dashboard['latest'];
         </div>
     </a>
 
-    <a class="stat-card accent-green" href="?page=zamestnanci" aria-label="Zaměstnanci">
+    <a class="stat-card accent-green" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanci')) ?>" aria-label="Zaměstnanci">
         <div class="stat-icon">Z</div>
         <div>
             <span>Zaměstnanci</span>
@@ -31,7 +31,7 @@ $latest = $dashboard['latest'];
         </div>
     </a>
 
-    <a class="stat-card accent-orange" href="?page=pozadavky" aria-label="Požadavky">
+    <a class="stat-card accent-orange" href="<?= h(cb_root_url('index.php?m=hr&page=pozadavky')) ?>" aria-label="Požadavky">
         <div class="stat-icon">P</div>
         <div>
             <span>Požadavky</span>
@@ -54,7 +54,7 @@ $latest = $dashboard['latest'];
     <article class="panel">
         <div class="panel-header">
             <h2>Dokumenty</h2>
-            <a href="?page=dokumenty">Zobrazit</a>
+            <a href="<?= h(cb_root_url('index.php?m=hr&page=dokumenty')) ?>">Zobrazit</a>
         </div>
         <?php if ($dokumenty === []): ?>
             <p class="empty-state">Zatím nejsou evidované žádné nové dokumenty.</p>
@@ -75,7 +75,7 @@ $latest = $dashboard['latest'];
     <article class="panel">
         <div class="panel-header">
             <h2>Lékařské prohlídky</h2>
-            <a href="?page=prohlidky">Zobrazit</a>
+            <a href="<?= h(cb_root_url('index.php?m=hr&page=prohlidky')) ?>">Zobrazit</a>
         </div>
         <?php if ($lekarskeProhlidky === []): ?>
             <p class="empty-state">Evidence lékařských prohlídek zatím není napojená.</p>
@@ -87,7 +87,7 @@ $latest = $dashboard['latest'];
     <article class="panel">
         <div class="panel-header">
             <h2>Školení</h2>
-            <a href="?page=skoleni">Zobrazit</a>
+            <a href="<?= h(cb_root_url('index.php?m=hr&page=skoleni')) ?>">Zobrazit</a>
         </div>
         <?php if ($skoleni === []): ?>
             <p class="empty-state">Evidence školení zatím není napojená.</p>
@@ -99,7 +99,7 @@ $latest = $dashboard['latest'];
     <article class="panel">
         <div class="panel-header">
             <h2>Dovolené</h2>
-            <a href="?page=dovolene">Zobrazit</a>
+            <a href="<?= h(cb_root_url('index.php?m=hr&page=dovolene')) ?>">Zobrazit</a>
         </div>
         <?php if ($dovolene === []): ?>
             <p class="empty-state">Evidence dovolených zatím není napojená.</p>
@@ -113,7 +113,7 @@ $latest = $dashboard['latest'];
     <article class="panel panel-wide">
         <div class="panel-header">
             <h2>Poslední zaměstnanci</h2>
-            <a href="?page=zamestnanci">Zobrazit všechny</a>
+            <a href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanci')) ?>">Zobrazit všechny</a>
         </div>
         <?php if ($latest === []): ?>
             <p class="empty-state">Zatím není vložený žádný zaměstnanec.</p>
@@ -136,9 +136,9 @@ $latest = $dashboard['latest'];
             <h2>Rychlé odkazy</h2>
         </div>
         <div class="quick-links">
-            <a href="?page=zamestnanci">Seznam zaměstnanců <span>›</span></a>
-            <a href="?page=pracovni_pomery">Pracovní poměry <span>›</span></a>
-            <a href="?page=dokumenty">Dokumenty <span>›</span></a>
+            <a href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanci')) ?>">Seznam zaměstnanců <span>›</span></a>
+            <a href="<?= h(cb_root_url('index.php?m=hr&page=pracovni_pomery')) ?>">Pracovní poměry <span>›</span></a>
+            <a href="<?= h(cb_root_url('index.php?m=hr&page=dokumenty')) ?>">Dokumenty <span>›</span></a>
         </div>
     </article>
 </section>
@@ -146,7 +146,7 @@ $latest = $dashboard['latest'];
 <section class="panel">
     <div class="panel-header">
         <h2>Seznam posledních záznamů</h2>
-        <a href="?page=zamestnanci">Zobrazit všechny</a>
+        <a href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanci')) ?>">Zobrazit všechny</a>
     </div>
     <?php if ($latest === []): ?>
         <p class="empty-state">HR evidence je připravená, ale zatím neobsahuje žádná data.</p>
@@ -166,7 +166,7 @@ $latest = $dashboard['latest'];
                 <tbody>
                     <?php foreach ($latest as $employee): ?>
                         <tr>
-                            <td><a href="?page=zamestnanec&id=<?= h($employee['id_person']) ?>"><?= h($employee['cele_jmeno']) ?></a></td>
+                            <td><a href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$employee['id_person']))) ?>"><?= h($employee['cele_jmeno']) ?></a></td>
                             <td><?= h((string)($employee['pracoviste'] ?? '-')) ?></td>
                             <td><?= h((string)($employee['zarazeni'] ?? '-')) ?></td>
                             <td><?= h(hr_format_date((string)($employee['datum_nastupu'] ?? ''))) ?></td>

@@ -44,7 +44,7 @@ $employee = $idPerson > 0 ? hr_fetch_employee($db, $idPerson) : null;
 
         <div class="employee-profile-actions">
             <a class="primary-button" href="#">Upravit kartu</a>
-            <a class="secondary-button" href="?page=zamestnanci">Zpět</a>
+            <a class="secondary-button" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanci')) ?>">Zpět</a>
         </div>
     </section>
 

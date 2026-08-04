@@ -84,7 +84,6 @@ if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
 }
 
 require_once __DIR__ . '/lib/detektuj_neplatnou_url.php';
-require_once __DIR__ . '/lib/logout_handler.php';
 require_once __DIR__ . '/../common/lib/json_registrace.php';
 if (!empty($_SESSION['login_ok']) && $cbSystemLocked && isset($_GET['cb_lock_check']) && (string)$_GET['cb_lock_check'] === '1') {
     header('Content-Type: application/json; charset=utf-8');

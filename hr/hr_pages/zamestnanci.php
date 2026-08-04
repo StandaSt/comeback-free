@@ -9,7 +9,7 @@ $employees = hr_fetch_employees($db);
             <h2>Seznam zaměstnanců</h2>
             <p class="muted">Reálná data z HR evidence</p>
         </div>
-        <a class="primary-button" href="?page=novy_zamestnanec">+ Nový zaměstnanec</a>
+        <a class="primary-button" href="<?= h(cb_root_url('index.php?m=hr&page=novy_zamestnanec')) ?>">+ Nový zaměstnanec</a>
     </div>
 
     <?php if ($employees === []): ?>
@@ -30,7 +30,7 @@ $employees = hr_fetch_employees($db);
                 <tbody>
                     <?php foreach ($employees as $employee): ?>
                         <tr>
-                            <td><a href="?page=zamestnanec&id=<?= h($employee['id_person']) ?>"><?= h($employee['cele_jmeno']) ?></a></td>
+                            <td><a href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$employee['id_person']))) ?>"><?= h($employee['cele_jmeno']) ?></a></td>
                             <td><?= h((string)($employee['zarazeni'] ?? '-')) ?></td>
                             <td><?= h((string)($employee['pracoviste'] ?? '-')) ?></td>
                             <td><?= h((string)($employee['vztah_kod'] ?? '-')) ?></td>

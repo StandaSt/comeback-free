@@ -26,6 +26,13 @@ try {
     }
 
     $conn = db();
+    $idModule = cb_helpdesk_current_module_id();
+    if (!cb_helpdesk_ticket_in_module($conn, $idHelpdesk, $idModule)) {
+        http_response_code(404);
+        echo json_encode(['ok' => false, 'err' => 'Požadavek v tomto modulu neexistuje.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     if (!cb_helpdesk_can_view($conn, $idHelpdesk, $idUser)) {
         http_response_code(403);
         echo json_encode(['ok' => false, 'err' => 'Nemáte přístup k požadavku.'], JSON_UNESCAPED_UNICODE);

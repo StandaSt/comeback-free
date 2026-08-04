@@ -77,7 +77,7 @@ $bloky = [
                     <h2><?= h($vdDetail['cele_jmeno']) ?></h2>
                     <p class="muted">VD #<?= h((string)$vdDetail['id_vd']) ?> · <?= h($vdDetail['stav_nazev']) ?></p>
                 </div>
-                <a class="secondary-button" href="?page=nabor">Zavřít detail</a>
+                <a class="secondary-button" href="<?= h(cb_root_url('index.php?m=hr&page=nabor')) ?>">Zavřít detail</a>
             </div>
 
             <div class="vd-detail-grid">
@@ -100,7 +100,7 @@ $bloky = [
                 </dl>
             </div>
 
-            <form class="hr-form" method="post" action="?page=nabor&id_vd=<?= h((string)$vdDetail['id_vd']) ?>">
+            <form class="hr-form" method="post" action="<?= h(cb_root_url('index.php?m=hr&page=nabor&id_vd=' . rawurlencode((string)$vdDetail['id_vd']))) ?>">
                 <input type="hidden" name="id_vd" value="<?= h((string)$vdDetail['id_vd']) ?>">
                 <div class="form-grid">
                     <label>
@@ -212,7 +212,7 @@ $bloky = [
                             <tr>
                                 <td>
                                     <?php if (empty($blok['minimal'])): ?>
-                                        <a href="?page=nabor&id_vd=<?= h((string)$uchazec['id_vd']) ?>"><?= h($uchazec['cele_jmeno']) ?></a>
+                                        <a href="<?= h(cb_root_url('index.php?m=hr&page=nabor&id_vd=' . rawurlencode((string)$uchazec['id_vd']))) ?>"><?= h($uchazec['cele_jmeno']) ?></a>
                                     <?php else: ?>
                                         <?= h($uchazec['cele_jmeno']) ?>
                                     <?php endif; ?>

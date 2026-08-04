@@ -16,7 +16,7 @@ $sloty = hr_fetch_lookup($db, 'cis_slot', 'id_slot', 'slot');
         </div>
     </div>
 
-    <form class="hr-form" method="post" action="?page=novy_zamestnanec">
+    <form class="hr-form" method="post" action="<?= h(cb_root_url('index.php?m=hr&page=novy_zamestnanec')) ?>">
         <div class="form-grid">
             <label>
                 <span>Jméno</span>
@@ -84,7 +84,7 @@ $sloty = hr_fetch_lookup($db, 'cis_slot', 'id_slot', 'slot');
         </div>
 
         <div class="form-actions">
-            <a class="secondary-button" href="?page=zamestnanci">Zrušit</a>
+            <a class="secondary-button" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanci')) ?>">Zrušit</a>
             <button class="primary-button" type="submit">Uložit zaměstnance</button>
         </div>
     </form>

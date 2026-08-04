@@ -73,7 +73,7 @@ $pozadavkyRozsah = $pozadavkyZobraziPobocku ? 'všech poboček' : 'pobočky ' . 
     </div>
 
     <?php if ($pozadavkyMuzeZadat): ?>
-        <form class="hr-form hr-request-form" method="post" action="" data-hr-request-form>
+        <form class="hr-form hr-request-form" method="post" action="<?= h(cb_root_url('index.php?m=hr&page=pozadavky')) ?>" data-hr-request-form>
             <input type="hidden" name="akce" value="vytvorit">
             <span>Požaduji</span>
             <select class="hr-request-select" name="pocet">
@@ -143,7 +143,7 @@ $pozadavkyRozsah = $pozadavkyZobraziPobocku ? 'všech poboček' : 'pobočky ' . 
                                 <?php if ($pozadavkyMuzeZadat): ?>
                                     <td>
                                         <?php if ($pozadavkyJeAdmin || (int)$pozadavek['zadal'] === $pozadavkyPersonId || ($pozadavkyJeVedouci && (int)$pozadavek['id_pob'] === (int)$pozadavkyMainPobocka['id_pob'])): ?>
-                                            <form method="post" action="" class="hr-row-action-form">
+                                            <form method="post" action="<?= h(cb_root_url('index.php?m=hr&page=pozadavky')) ?>" class="hr-row-action-form">
                                                 <input type="hidden" name="akce" value="zrusit">
                                                 <input type="hidden" name="id_pozadavek" value="<?= h($pozadavek['id_pozadavek']) ?>">
                                                 <button class="hr-delete-button" type="submit" title="Odstranit" aria-label="Odstranit">×</button>
