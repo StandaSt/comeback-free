@@ -31,6 +31,13 @@ RewriteRule ^common/(config|db)/ - [F,L]
 RewriteCond %{REQUEST_URI} ^(.*/)is(?:/.*)?$ [NC]
 RewriteRule ^is(?:/.*)?$ %1index.php [R=301,L,NE]
 
+# Moduly nemaji vlastni vstup. Prime otevreni posli na korenovy index.
+RewriteCond %{REQUEST_URI} ^(.*/)(?:provoz|hr|smeny|ukoly|helpdesk)/?$ [NC]
+RewriteRule ^(?:provoz|hr|smeny|ukoly|helpdesk)/?$ %1index.php [R=301,L,NE]
+
+RewriteCond %{REQUEST_URI} ^(.*/)(?:provoz/provoz|hr/hr|smeny/smeny|ukoly/ukoly|helpdesk/helpdesk)\.php$ [NC]
+RewriteRule ^(?:provoz/provoz|hr/hr|smeny/smeny|ukoly/ukoly|helpdesk/helpdesk)\.php$ %1index.php [R=301,L,NE]
+
 # Nezasahovat do existujicich souboru a adresaru.
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d

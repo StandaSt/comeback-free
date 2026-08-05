@@ -129,16 +129,18 @@ if ($userRole === '') {
     $userRole = 'Uživatel';
 }
 $db = db();
+$hrIsShellRequest = isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODULE']);
+$hrIsFormPost = ($_SERVER['REQUEST_METHOD'] === 'POST') && !$hrIsShellRequest;
 
-if ($page === 'nabor' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($page === 'nabor' && $hrIsFormPost) {
     hr_post_nabor($db);
 }
 
-if ($page === 'pozadavky' && $_SERVER['REQUEST_METHOD'] === 'POST' && in_array($roleId, [1, 5], true)) {
+if ($page === 'pozadavky' && $hrIsFormPost && in_array($roleId, [1, 5], true)) {
     hr_post_pozadavky($db, $cbUser, $roleId);
 }
 
-if ($page === 'novy_zamestnanec' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($page === 'novy_zamestnanec' && $hrIsFormPost) {
     hr_post_zamestnanec($db, $roleId);
 }
 

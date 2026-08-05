@@ -57,66 +57,18 @@ if (!function_exists('cb_restia_online_kontrola_update_row')) {
     }
 }
 
-if (!function_exists('cb_restia_online_kontrola_close_stale_active')) {
-    function cb_restia_online_kontrola_close_stale_active(mysqli $db, int $maxAgeSeconds = 120): bool
+if (!function_exists('cb_restia_online_kontrola_close_finished_active')) {
+    function cb_restia_online_kontrola_close_finished_active(mysqli $db): bool
     {
-        $stmt = $db->prepare("
-            SELECT id_akce, start, konec
-            FROM online_restia
-            WHERE aktivni = 1
-            ORDER BY id_akce DESC
-            LIMIT 1
-        ");
-        if ($stmt === false) {
-            return false;
-        }
-        $stmt->execute();
-        $res = $stmt->get_result();
-        $row = ($res instanceof mysqli_result) ? $res->fetch_assoc() : null;
-        if ($res instanceof mysqli_result) {
-            $res->free();
-        }
-        $stmt->close();
-
-        if (!is_array($row)) {
-            return false;
-        }
-
-        $idAkce = (int)($row['id_akce'] ?? 0);
-        $start = trim((string)($row['start'] ?? ''));
-        $konec = trim((string)($row['konec'] ?? ''));
-        if ($idAkce <= 0) {
-            return false;
-        }
-
-        $isStale = false;
-        if ($konec !== '') {
-            $isStale = true;
-        } elseif ($start !== '') {
-            $startTs = strtotime($start);
-            if ($startTs !== false && (time() - $startTs) >= max(1, $maxAgeSeconds)) {
-                $isStale = true;
-            }
-        }
-
-        if (!$isStale) {
-            return false;
-        }
-
         $stmtUpd = $db->prepare("
             UPDATE online_restia
-            SET aktivni = 0,
-                konec = CASE
-                    WHEN konec IS NULL OR konec = '' THEN NOW()
-                    ELSE konec
-                END
-            WHERE id_akce = ?
+            SET aktivni = 0
+            WHERE konec IS NOT NULL
               AND aktivni = 1
         ");
         if ($stmtUpd === false) {
             return false;
         }
-        $stmtUpd->bind_param('i', $idAkce);
         $stmtUpd->execute();
         $affected = $stmtUpd->affected_rows;
         $stmtUpd->close();
@@ -247,16 +199,7 @@ if (!function_exists('cb_restia_online_kontrola')) {
         $idUserRaw = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
         $idUser = ($idUserRaw > 0) ? $idUserRaw : null;
 
-        cb_restia_online_kontrola_close_stale_active($db, 120);
-
-        $q = $db->query("SELECT id_akce FROM online_restia WHERE aktivni = 1 LIMIT 1");
-        if ($q instanceof mysqli_result) {
-            $isRunning = ($q->num_rows > 0);
-            $q->free();
-            if ($isRunning) {
-                return;
-            }
-        }
+        cb_restia_online_kontrola_close_finished_active($db);
 
         $q = $db->query("SELECT konec FROM online_restia WHERE aktivni = 0 ORDER BY konec DESC LIMIT 1");
         if (!$force && $q instanceof mysqli_result) {
@@ -280,7 +223,24 @@ if (!function_exists('cb_restia_online_kontrola')) {
             throw new RuntimeException('Nepodarilo se pripravit INSERT online_restia.');
         }
         $stmt->bind_param("i", $idUser);
-        $stmt->execute();
+        try {
+            $stmt->execute();
+        } catch (mysqli_sql_exception $e) {
+            $stmt->close();
+            if ((int)$e->getCode() === 1062) {
+                return;
+            }
+            throw $e;
+        }
+        if ($stmt->errno === 1062) {
+            $stmt->close();
+            return;
+        }
+        if ($stmt->errno !== 0) {
+            $error = $stmt->error;
+            $stmt->close();
+            throw new RuntimeException('Nepodarilo se vlozit aktivni beh Restia: ' . $error);
+        }
         $idAkce = (int)$stmt->insert_id;
         $stmt->close();
         cb_restia_online_kontrola_register_shutdown($idAkce);
