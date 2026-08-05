@@ -202,18 +202,8 @@ foreach ($items as $item) {
 }
 
 ?>
-<div class="module_shell helpdesk_module_page" data-cb-helpdesk-module="1" data-cb-hd-api-url="<?= h($helpdeskApiUrl) ?>" data-cb-hd-arrow-url="<?= h($arrowIconUrl) ?>" data-cb-hd-is-admin="<?= $isAdmin ? '1' : '0' ?>" data-cb-hd-author-id="<?= (int)$idUser ?>">
-  <nav class="module_menu" aria-label="HelpDesk menu">
-    <h2 class="module_menu_title">HelpDesk</h2>
-    <a class="module_menu_btn<?= $helpdeskView === 'all' ? ' is-active' : '' ?>" href="<?= h($helpdeskMenuUrl('all')) ?>">Přehled</a>
-    <a class="module_menu_btn<?= $helpdeskView === 'new-ticket' ? ' is-active' : '' ?>" href="<?= h($helpdeskMenuUrl('new-ticket')) ?>">Nový tiket</a>
-    <a class="module_menu_btn<?= $helpdeskView === 'mine' ? ' is-active' : '' ?>" href="<?= h($helpdeskMenuUrl('mine')) ?>">Moje tikety</a>
-    <a class="module_menu_btn<?= $helpdeskView === 'watched' ? ' is-active' : '' ?>" href="<?= h($helpdeskMenuUrl('watched')) ?>">Sledované</a>
-    <a class="module_menu_btn<?= $helpdeskView === 'closed' ? ' is-active' : '' ?>" href="<?= h($helpdeskMenuUrl('closed')) ?>">Uzavřené</a>
-    <?php if ($isAdmin): ?>
-      <a class="module_menu_btn<?= $helpdeskView === 'admin' ? ' is-active' : '' ?>" href="<?= h($helpdeskMenuUrl('admin')) ?>">Admin</a>
-    <?php endif; ?>
-  </nav>
+<section class="module_shell helpdesk_module_page" data-cb-helpdesk-module="1" data-cb-hd-api-url="<?= h($helpdeskApiUrl) ?>" data-cb-hd-arrow-url="<?= h($arrowIconUrl) ?>" data-cb-hd-is-admin="<?= $isAdmin ? '1' : '0' ?>" data-cb-hd-author-id="<?= (int)$idUser ?>">
+  <?php require __DIR__ . '/hl_menu.php'; ?>
   <section class="module_content helpdesk_module_content">
 <?php if ($helpdeskView === 'new-ticket'): ?>
     <form class="helpdesk_form ram_normal zaobleni_8" method="post" action="<?= h($helpdeskCreateUrl) ?>" enctype="multipart/form-data">
@@ -304,7 +294,7 @@ foreach ($items as $item) {
         <div class="helpdesk_detail_panel" data-cb-hd-detail-panel="1"></div>
       </div>
   </div>
-</div>
+</section>
 <?php endif; ?>
   </section>
 </div>

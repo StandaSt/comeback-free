@@ -146,10 +146,10 @@ $flash = $_SESSION['hr_flash'] ?? null;
 unset($_SESSION['hr_flash']);
 
 ?>
-<div class="app">
-    <?php require __DIR__ . '/hr_includes/menu.php'; ?>
+<section class="module_shell hr_module_page">
+    <?php require __DIR__ . '/hr_includes/hr_menu.php'; ?>
 
-    <div class="workspace">
+    <section class="module_content hr_module_content">
         <?php require __DIR__ . '/hr_includes/topbar.php'; ?>
 
         <main class="content">
@@ -158,5 +158,5 @@ unset($_SESSION['hr_flash']);
             <?php endif; ?>
             <?php require $currentPage['file']; ?>
         </main>
-    </div>
-</div>
+    </section>
+</section>

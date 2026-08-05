@@ -4,8 +4,6 @@
     // Chovani HR modulu v prohlizeci.
 
     const root = document.documentElement;
-    const button = document.querySelector('[data-theme-toggle]');
-    const icon = document.querySelector('[data-theme-icon]');
     const storageKey = 'comeback_hr_theme';
 
     // Formatuje cesky telefon na tvar 123 456 789.
@@ -24,44 +22,64 @@
     const applyTheme = (theme) => {
         const normalized = theme === 'dark' ? 'dark' : 'light';
         root.dataset.theme = normalized;
+        const icon = document.querySelector('[data-theme-icon]');
         if (icon) {
             icon.textContent = normalized === 'dark' ? '☀' : '☾';
         }
     };
 
-    const savedTheme = localStorage.getItem(storageKey);
-    applyTheme(savedTheme || 'light');
+    const initHr = (scope) => {
+        const container = scope instanceof Element || scope instanceof Document ? scope : document;
+        const button = container.querySelector('[data-theme-toggle]');
 
-    button?.addEventListener('click', () => {
-        const nextTheme = root.dataset.theme === 'dark' ? 'light' : 'dark';
-        localStorage.setItem(storageKey, nextTheme);
-        applyTheme(nextTheme);
-    });
+        applyTheme(localStorage.getItem(storageKey) || 'light');
 
-    document.querySelectorAll('[data-phone-cz]').forEach((input) => {
-        input.value = formatCzechPhone(input.value);
-        input.addEventListener('input', () => {
-            input.value = formatCzechPhone(input.value);
-        });
-    });
-
-    document.querySelectorAll('[data-slot-select]').forEach((select) => {
-        const input = select.closest('.hr-slot-choice')?.querySelector('[data-slot-other]');
-        if (!input) {
-            return;
+        if (button && button.dataset.hrBound !== '1') {
+            button.dataset.hrBound = '1';
+            button.addEventListener('click', () => {
+                const nextTheme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+                localStorage.setItem(storageKey, nextTheme);
+                applyTheme(nextTheme);
+            });
         }
 
-        const updateOtherSlot = () => {
-            const active = select.value === '__jine__';
-            input.disabled = !active;
-            input.required = active;
-            if (!active) {
-                input.value = '';
+        container.querySelectorAll('[data-phone-cz]').forEach((input) => {
+            if (input.dataset.hrPhoneBound === '1') {
+                return;
             }
-        };
+            input.dataset.hrPhoneBound = '1';
+            input.value = formatCzechPhone(input.value);
+            input.addEventListener('input', () => {
+                input.value = formatCzechPhone(input.value);
+            });
+        });
 
-        updateOtherSlot();
-        select.addEventListener('change', updateOtherSlot);
-    });
+        container.querySelectorAll('[data-slot-select]').forEach((select) => {
+            if (select.dataset.hrSlotBound === '1') {
+                return;
+            }
+            select.dataset.hrSlotBound = '1';
+
+            const input = select.closest('.hr-slot-choice')?.querySelector('[data-slot-other]');
+            if (!input) {
+                return;
+            }
+
+            const updateOtherSlot = () => {
+                const active = select.value === '__jine__';
+                input.disabled = !active;
+                input.required = active;
+                if (!active) {
+                    input.value = '';
+                }
+            };
+
+            updateOtherSlot();
+            select.addEventListener('change', updateOtherSlot);
+        });
+    };
+
+    window.CB_HR_INIT = initHr;
+    initHr(document);
 
 })();

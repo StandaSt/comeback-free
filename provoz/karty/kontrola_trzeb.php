@@ -465,32 +465,32 @@ ob_start();
               $branchName = $row['pobocka'] !== '' ? $row['pobocka'] : 'Pobočka ' . (string)$row['id_pob'];
               ?>
               <tr>
-                <td style="padding:5px 8px; border-bottom:1px solid var(--clr_seda_5);"><?= h($branchName) ?></td>
-                <td class="txt_p" style="padding:5px 8px; border-bottom:1px solid var(--clr_seda_5);">
+                <td style="padding:5px 8px; border-bottom:1px solid var(--clr_seda_2);"><?= h($branchName) ?></td>
+                <td class="txt_p" style="padding:5px 8px; border-bottom:1px solid var(--clr_seda_2);">
                   <?= h($formatMoney((float)$row['trzba'])) ?>
                 </td>
-                <td class="txt_p" style="padding:5px 8px; border-bottom:1px solid var(--clr_seda_5);">
+                <td class="txt_p" style="padding:5px 8px; border-bottom:1px solid var(--clr_seda_2);">
                   <?= h($formatMoney((float)$row['hotovost'])) ?>
                 </td>
-                <td class="txt_p" style="padding:5px 8px; border-bottom:1px solid var(--clr_seda_5);">
+                <td class="txt_p" style="padding:5px 8px; border-bottom:1px solid var(--clr_seda_2);">
                   <?= h($formatMoney((float)$row['terminal'])) ?>
                 </td>
-                <td class="txt_p" style="padding:5px 8px; border-bottom:1px solid var(--clr_seda_5);">
+                <td class="txt_p" style="padding:5px 8px; border-bottom:1px solid var(--clr_seda_2);">
                   <?= h($formatMoney((float)$row['stravenky'])) ?>
                 </td>
-                <td class="txt_p" style="padding:5px 8px; border-bottom:1px solid var(--clr_seda_5);">
+                <td class="txt_p" style="padding:5px 8px; border-bottom:1px solid var(--clr_seda_2);">
                   <?= h($formatMoney((float)$row['vydaje'])) ?>
                 </td>
-                <td class="txt_p" style="padding:5px 8px; border-bottom:1px solid var(--clr_seda_5);">
+                <td class="txt_p" style="padding:5px 8px; border-bottom:1px solid var(--clr_seda_2);">
                   <?= h($formatMoney((float)$row['rozdil'])) ?>
                 </td>
-                <td class="txt_p" style="padding:5px 8px; border-bottom:1px solid var(--clr_seda_5);">
+                <td class="txt_p" style="padding:5px 8px; border-bottom:1px solid var(--clr_seda_2);">
                   <?= h($formatNumber((float)$row['odpracovano'], 1)) ?>
                 </td>
-                <td class="txt_p" style="padding:5px 8px; border-bottom:1px solid var(--clr_seda_5);">
+                <td class="txt_p" style="padding:5px 8px; border-bottom:1px solid var(--clr_seda_2);">
                   <?= h($formatCol($row['col_pomer'] !== null ? (float)$row['col_pomer'] : null)) ?>
                 </td>
-                <td class="txt_p" style="padding:5px 8px; border-bottom:1px solid var(--clr_seda_5);">
+                <td class="txt_p" style="padding:5px 8px; border-bottom:1px solid var(--clr_seda_2);">
                   <?= h($formatCount((int)$row['pocet_osob'])) ?>
                 </td>
               </tr>

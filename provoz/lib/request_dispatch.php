@@ -94,6 +94,18 @@ if ($cbIsRestiaTrigger) {
 
     header('Content-Type: application/json; charset=utf-8');
 
+    $cbRestiaModule = strtolower(trim((string)($_SERVER['HTTP_X_COMEBACK_MODULE'] ?? '')));
+    if ($cbRestiaModule !== 'provoz') {
+        echo json_encode([
+            'ok' => true,
+            'started' => 0,
+            'enabled' => 1,
+            'active' => 0,
+            'skipped_module' => 1,
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     $db = db();
     $stateSql = "
         SELECT id_akce, id_user, start, konec, zapisy, aktualizace, `ignore`, aktivni

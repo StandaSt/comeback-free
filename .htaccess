@@ -27,9 +27,9 @@ RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L,NE]
 # Blokace citlivych spolecnych casti.
 RewriteRule ^common/(config|db)/ - [F,L]
 
-# Stary modul is uz neexistuje. Cokoliv pod /is posli na Provoz.
+# Stary modul is uz neexistuje. Cokoliv pod /is posli na korenovy vstup.
 RewriteCond %{REQUEST_URI} ^(.*/)is(?:/.*)?$ [NC]
-RewriteRule ^is(?:/.*)?$ %1provoz/? [R=301,L,NE]
+RewriteRule ^is(?:/.*)?$ %1index.php [R=301,L,NE]
 
 # Nezasahovat do existujicich souboru a adresaru.
 RewriteCond %{REQUEST_FILENAME} -f [OR]

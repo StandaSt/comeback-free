@@ -1,5 +1,5 @@
 # Secrets / local config
-www/config/secrets.php
+common//config/
 config/secrets.php
 
 # Logs
@@ -16,6 +16,7 @@ _kandidati/node_modules/
 _kandidati/playwright-report/
 _kandidati/test-results/
 _kandidati/sandboxAI/
+
 
 # OS/editor noise
 .DS_Store

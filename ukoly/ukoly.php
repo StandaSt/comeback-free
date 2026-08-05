@@ -24,25 +24,9 @@ if (empty($_SESSION['login_ok'])) {
 
 cb_pobocky_bootstrap_session();
 
-$ukolyMenu = [
-    'Nové zadání',
-    'Přehled úkolů',
-    'Úkoly pro mě',
-    'Mé požadavky',
-];
-
 ?>
 <section class="module_shell">
-    <nav class="module_menu" aria-label="Menu úkolů">
-        <h2 class="module_menu_title">Úkoly-požadavky</h2>
-        <div class="module_menu_list">
-            <?php foreach ($ukolyMenu as $index => $item): ?>
-                <button type="button" class="module_menu_btn<?= $index === 0 ? ' is-active' : '' ?>">
-                    <span><?= h($item) ?></span>
-                </button>
-            <?php endforeach; ?>
-        </div>
-    </nav>
+    <?php require __DIR__ . '/uk_includes/uk_menu.php'; ?>
 
     <div class="module_content">
         <div class="module_placeholder">
@@ -51,4 +35,3 @@ $ukolyMenu = [
         </div>
     </div>
 </section>
-

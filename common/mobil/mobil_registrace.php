@@ -244,7 +244,7 @@ $pairUserName = $tokenOk ? cb_pair_user_full_name((int)($pair['id_user'] ?? 0)) 
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Comeback – registrace zařízení</title>
-<link rel="stylesheet" href="<?= h(cb_url('style/modal_alert.css')) ?>">
+<link rel="stylesheet" href="<?= h(cb_public_url('style/modal_alert.css')) ?>">
   <style>
     .modal-device-register{
       width: min(315px, 100%);
@@ -291,7 +291,7 @@ $pairUserName = $tokenOk ? cb_pair_user_full_name((int)($pair['id_user'] ?? 0)) 
     <a class="modal-x" href="about:blank" aria-label="Zavřít">×</a>
 
     <div class="modal-head modal-head-top">
-      <div class="modal-logo modal-logo-lg"><img src="<?= h(cb_url('img/logo_comeback.png')) ?>" alt="Comeback"></div>
+      <div class="modal-logo modal-logo-lg"><img src="<?= h(cb_public_url('img/logo_comeback.png')) ?>" alt="Comeback"></div>
     </div>
 
     <div class="modal-center modal-center-lg" id="registerPanel">

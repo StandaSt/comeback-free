@@ -1,0 +1,19 @@
+/* Modul Smeny: vlastni obsah pod spolecnym module menu. */
+
+#cb-module-root.cb-module-root--smeny .sm_content{
+    align-content:start;
+}
+
+#cb-module-root.cb-module-root--smeny .sm_content_title{
+    margin:0 0 6px;
+    font-size:20px;
+    line-height:1.2;
+    font-weight:400;
+}
+
+#cb-module-root.cb-module-root--smeny .sm_content_text{
+    margin:0;
+    color:#4b5563;
+    font-size:14px;
+    line-height:1.4;
+}

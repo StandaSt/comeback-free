@@ -584,9 +584,19 @@
 
   function triggerRestiaCheck(options) {
     const opts = (options && typeof options === 'object') ? options : {};
+    const activeModule = String(w.CB_ACTIVE_MAIN_MODULE || '');
+    if (activeModule !== 'provoz') {
+      return Promise.resolve({
+        ok: true,
+        started: 0,
+        active: 0,
+        skipped_module: 1
+      });
+    }
     const reqUrl = String(w.location.href || (w.CB_ENDPOINT || 'index.php'));
     const headers = {
       'X-Comeback-Restia-Trigger': '1',
+      'X-Comeback-Module': activeModule,
       'Accept': 'application/json'
     };
     if (opts.forceRestia === true) {
@@ -1315,9 +1325,12 @@
         if (nextText !== '' && w.CB_LOADER_SHOW && typeof w.CB_LOADER_SHOW.setText === 'function') {
           w.CB_LOADER_SHOW.setText(nextText);
         }
-        w.setTimeout(() => {
-          w.location.reload();
-        }, 300);
+        return CB_AJAX.refreshDashboardRefreshOpCards({
+          force: true,
+          loaderMode: 'dashboard'
+        }).finally(() => {
+          hideStartupLoader();
+        });
       });
     }).catch((err) => {
       traceAjax('startup_restia_refresh_error', {

@@ -98,11 +98,9 @@
 /* ----- Barva textu ----- */
 .txt_cervena{ color:var(--clr_cervena); }
 .txt_zelena{ color:var(--clr_zelena); }
-.txt_seda{ color:var(--clr_seda_4); }
 
 /* ----- Zarovnani textu ----- */
 .txt_l{ text-align:left; }
-.txt_c{ text-align:center; }
 .txt_r{ text-align:right; }
 
 /* ----- Vaha pismena    */
@@ -111,7 +109,6 @@
 
 
 /* ----- Velikost textu ----- */
-.text_11{ font-size:var(--fs_11); }
 .text_12{ font-size:var(--fs_12); }
 .text_14{ font-size:var(--fs_14); }
 .text_15{ font-size:var(--fs_15); }
@@ -130,81 +127,21 @@
 .vyska_32{ height:32px; }
 
 .zaobleni_6{ border-radius:6px; }
-.zaobleni_8{ border-radius:8px; }
-.zaobleni_10{ border-radius:10px; }
-.zaobleni_12{ border-radius:12px; }
-
 .bg_modra{ background:var(--clr_modra_2); }
-.bg_bila{ background:var(--clr_bila); }
 .bg_seda{ background:var(--clr_seda_1); }
-.ram_normal{ border:1px solid var(--clr_seda_2); }
-.ram_hlavicka{ border:1px solid var(--clr_pruhledna_tmava_14); }
 .ram_sedy{ border:1px solid var(--clr_seda_2); }
 .ram_btn{ border:1px solid var(--clr_pruhledna_tmava_14); }
-.ram_ovladace{ border:1px solid var(--clr_pruhledna_cerna_18); }
 
 /* ----- Display ----- */
-.displ_flex{ display:flex; }
-.displ_grid{ display:grid; }
-.displ_block{ display:block; }
-.displ_inline_flex{ display:inline-flex; }
-.flex_sloupec{ flex-direction:column; }
-.sirka100{ width:100%; }
-.cursor_ruka{ cursor:pointer; }
-.jc_stred{ justify-content:center; }
-.jc_konec{ justify-content:flex-end; }
 .jc_mezi{ justify-content:space-between; }
 
 /* ----- Rozestupy ----- */
 .odstup_vnejsi_0{ margin:0; }
-.odstup_vnitrni_0{ padding:0; }
-.odstup_vnitrni_10{ padding:10px; }
 .odstup_vnitrni_14{ padding:14px; }
-.gap_4{ gap:4px; }
 .gap_2{ gap:2px; }
-.gap_6{ gap:6px; }
 .gap_8{ gap:8px; }
 .gap_10{ gap:10px; }
 .gap_14{ gap:14px; }
-
-*{ box-sizing:border-box; }
-
-html{
-  min-height:100%;
-  scrollbar-gutter:stable;
-  overflow-x:hidden;
-}
-
-body{
-  min-height:100%;
-  overflow-x:hidden;
-  font-family:Arial, Helvetica, sans-serif;
-  background:var(--clr_seda_1);
-  color:var(--clr_cerna);
-  margin:0;
-  display:flex;
-  flex-direction:column;
-}
-
-/* =========================
-   HLAVNI LAYOUT (header / main / footer)
-   ========================= */
-
-main{
-  flex:0 0 auto;
-  overflow:visible;
-}
-
-/* =========================
-   KONTEJNER STRANKY
-   ========================= */
-
-.container{
-  padding:0;  flex-direction:column;
-  min-height:100vh;      /* vyska cele stranky */
-  min-width:0;
-  overflow:visible;
-}
 
 /* =========================
    IKONY - GLOBALNI TLACITKA
@@ -796,7 +733,7 @@ main{
 
 .card_pref_toggle:hover{
   border-color:var(--clr_pruhledna_cerna_18);
-  background:var(--clr_pruhledna_bila_45);
+  background:var(--clr_pruhledna_bila_92);
 }
 
 .card_pref_dots{
@@ -2033,7 +1970,7 @@ Sekce obsahuje styly, ktere byly presunute z drivejsich karty CSS
   border:1px solid var(--clr_modra_2);
   border-radius:8px;
   background:rgba(255,255,255,.78);
-  color:var(--clr_seda_5);
+  color:var(--clr_seda_4);
   font-size:var(--fs_13);
   font-weight:700;
 }

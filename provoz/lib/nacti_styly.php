@@ -55,14 +55,8 @@ if (!function_exists('cb_asset_url')) {
 ?>
 <!-- styly -->
 <link rel="stylesheet" href="<?= h(cb_asset_url('style/global.css')) ?>">
-<link rel="stylesheet" href="<?= h(cb_asset_url('style/provoz.css')) ?>">
 <link rel="stylesheet" href="<?= h(cb_asset_url('style/modal_alert.css')) ?>">
-<style>
-.head_user_gap{grid-column:-2/-1;grid-row:1;justify-self:end;width:48px;height:100%;align-self:stretch;overflow:visible;display:grid;grid-template-rows:1fr 1fr;gap:5px}
-.head_user_gap_btn{display:flex;align-items:center;justify-content:center;min-width:0;min-height:0;font-size:11px;font-weight:700;line-height:1;text-align:center;text-decoration:none;white-space:nowrap;border-radius:8px}
-.head_user_gap_btn--hr{border:2px solid #e7b7b7;color:#9f1d1d;background:#f9dede}
-.head_user_gap_btn--smeny{border:2px solid #b8d0ef;color:#0f3f91;background:#dcecff}
-</style>
+<link rel="stylesheet" href="<?= h(cb_asset_url('style/provoz.css')) ?>">
 
 
 
