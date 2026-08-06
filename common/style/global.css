@@ -59,7 +59,7 @@ body{
   min-height:100%;
   overflow-x:hidden;
   font-family:Arial, Helvetica, sans-serif;
-  background:var(--cb-module-bg, var(--clr_seda_1));
+  background:var(--clr_bila);
   color:var(--clr_cerna);
   margin:0;
   display:flex;
@@ -69,6 +69,16 @@ body{
 main{
   flex:0 0 auto;
   overflow:visible;
+}
+
+#cb-module-root::before{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  top:-5px;
+  height:5px;
+  background:var(--cb-module-bg);
 }
 
 .container{
@@ -92,25 +102,21 @@ main{
   background:var(--cb-module-bg);
 }
 
-body.cb-context--provoz,
 #cb-module-root.cb-context--provoz{
   --cb-module-bg:#dbeafe;
   --cb-module-accent:#2563eb;
 }
 
-body.cb-context--hr,
 #cb-module-root.cb-context--hr{
   --cb-module-bg:#dcfce7;
   --cb-module-accent:#16a34a;
 }
 
-body.cb-context--smeny,
 #cb-module-root.cb-context--smeny{
   --cb-module-bg:#fef3c7;
   --cb-module-accent:#d97706;
 }
 
-body.cb-context--ukoly,
 #cb-module-root.cb-context--ukoly{
   --cb-module-bg:#f3e8ff;
   --cb-module-accent:#9333ea;
@@ -121,16 +127,6 @@ body.cb-context--ukoly,
 #cb-module-root.cb-module-root--ukoly,
 #cb-module-root.cb-module-root--helpdesk{
   background:var(--cb-module-bg);
-}
-
-#cb-module-root > .container{
-  width:100%;
-  max-width:none;
-  margin:0;
-}
-
-#cb-module-root.cb-module-root--provoz > .container{
-  display:block;
 }
 
 .cb-module-load-error{
@@ -900,7 +896,8 @@ align-items:center;
   grid-template-columns:220px minmax(0,1fr);
   gap:8px;
   width:100%;
-  min-height:calc(100vh - 67px);
+  height:calc(100vh - 72px);
+  min-height:0;
   padding:0;
   background:var(--cb-module-bg);
 }
@@ -909,6 +906,9 @@ align-items:center;
   display:grid;
   align-content:start;
   gap:4px;
+  min-height:0;
+  overflow:auto;
+  margin-bottom:13px;
   padding:8px;
   font-family:Arial, Helvetica, sans-serif;
   background:#f8fafc;
@@ -1002,7 +1002,8 @@ align-items:center;
 .module_content{
   min-width:0;
   min-height:0;
-  padding:8px 8px 8px 0;
+  overflow:auto;
+  padding:10px;
 }
 
 .module_placeholder{

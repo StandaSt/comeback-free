@@ -45,9 +45,6 @@ foreach (array_keys($_SERVER) as $cbServerKey) {
         break;
     }
 }
-$cbIsPartialRequest = isset($_SERVER['HTTP_X_COMEBACK_PARTIAL']);
-$cbIsCardRequest = isset($_SERVER['HTTP_X_COMEBACK_CARD']);
-$cbIsMaxFormRequest = isset($_SERVER['HTTP_X_COMEBACK_MAX_FORM']);
 
 if (empty($_SESSION['login_ok'])) {
     if ($cbHasComebackHeader) {
@@ -76,9 +73,6 @@ if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
     require_once __DIR__ . '/lib/card_json_response.php';
     require_once __DIR__ . '/../common/lib/handle_set_period.php';
     require_once __DIR__ . '/../common/lib/handle_set_pobocky.php';
-    require_once __DIR__ . '/lib/handle_set_card_mode.php';
-    require_once __DIR__ . '/lib/handle_unlock_all_card_pos.php';
-    require_once __DIR__ . '/lib/handle_set_card_position.php';
 
     cb_pobocky_bootstrap_session();
 }
@@ -109,12 +103,22 @@ if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
     require_once __DIR__ . '/../common/lib/uloz_akci.php';
 }
 
-$pageKey = 'dashboard';
-$file = __DIR__ . '/includes/dashboard.php';
 $cbPage = trim((string)($_GET['page'] ?? 'dashboard'));
 if ($cbPage === '') {
     $cbPage = 'dashboard';
 }
+$cbProvozPages = [
+    'dashboard' => __DIR__ . '/pages/prehled.php',
+    'prehled' => __DIR__ . '/pages/prehled.php',
+    'stranka_1' => __DIR__ . '/pages/stranka_1.php',
+    'stranka_2' => __DIR__ . '/pages/stranka_2.php',
+    'stranka_3' => __DIR__ . '/pages/stranka_3.php',
+];
+if (!isset($cbProvozPages[$cbPage])) {
+    $cbPage = 'dashboard';
+}
+$pageKey = $cbPage;
+$file = $cbProvozPages[$cbPage];
 
 require_once __DIR__ . '/includes/log_a_404.php';
 
@@ -189,7 +193,6 @@ if (!empty($_SESSION['login_ok']) && !$cbSystemLocked && !$cbHasComebackHeader &
 <?php endif; ?>
 
 <?php if ($cbEmbeddedModule || !$cbStartupRestiaLoader): ?>
-<div class="container bg_modra displ_flex sirka100">
 <?php
 
 if (!empty($_SESSION['login_ok']) && $cbSystemLocked) {
@@ -205,11 +208,19 @@ if (!empty($_SESSION['login_ok']) && $cbSystemLocked) {
     require_once __DIR__ . '/../common/modaly/modal_overeni.php';
     require_once __DIR__ . '/../common/lib/kontrola_registrace.php';
 
-    $cb_page_exists = $cbPageExists;
-    $cb_page_file = $file;
+    ?>
+    <section class="module_shell">
+        <?php require __DIR__ . '/includes/menu.php'; ?>
 
-    require_once __DIR__ . '/includes/main.php';
-    require_once __DIR__ . '/includes/paticka.php';
+        <section class="module_content">
+            <?php
+            if ($cbPageExists) {
+                require $file;
+            }
+            ?>
+        </section>
+    </section>
+    <?php
 } elseif ($cb2faPending) {
     require_once __DIR__ . '/../common/modaly/modal_overeni.php';
 } elseif ($cbAuthOk) {
@@ -251,29 +262,8 @@ if (!empty($_SESSION['login_ok']) && $cbSystemLocked) {
 }
 
 ?>
-</div>
 
 
-<?php if (!$cbEmbeddedModule && !empty($_SESSION['login_ok']) && !$cbSystemLocked): ?>
-<script src="<?= h(cb_asset_url('js/echarts.min.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/ajax_core.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/ajax_karta_max.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/karty_max_loader.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/karty_min_max.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/karty_top_report.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/karty_grafy.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/tooltip_pozice.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/karty_min_nano.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/karty_hlavicka.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/karty_report_restia.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/karty_report_form.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/karty_report_person.js')) ?>"></script>
-<script src="<?= h($cbSelectPobockyJsUrl) ?>"></script>
-<script src="<?= h(cb_asset_url('js/filtry.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/prehled_smen_export.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/rozbalovaci_detail.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/casovac_odhlaseni.js')) ?>"></script>
-<?php endif; ?>
 <?php elseif (!$cbEmbeddedModule): ?>
 <script src="<?= h(cb_asset_url('js/ajax_core.js')) ?>"></script>
 <?php endif; ?>

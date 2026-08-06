@@ -28,10 +28,10 @@ cb_pobocky_bootstrap_session();
 <section class="module_shell">
     <?php require __DIR__ . '/uk_includes/uk_menu.php'; ?>
 
-    <div class="module_content">
+    <section class="module_content">
         <div class="module_placeholder">
             <h1>Úkoly-požadavky</h1>
             <p>Modul je připravený pro další doplnění obsahu.</p>
         </div>
-    </div>
+    </section>
 </section>

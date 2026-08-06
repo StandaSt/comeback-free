@@ -241,14 +241,8 @@ window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_
 </script>
 <script src="<?= h(cb_asset_url('js/echarts.min.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/ajax_core.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/ajax_karta_max.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/karty_max_loader.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/karty_min_max.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_top_report.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_grafy.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/tooltip_pozice.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/karty_min_nano.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/karty_hlavicka.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_report_restia.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_report_form.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/karty_report_person.js')) ?>"></script>
@@ -332,6 +326,7 @@ window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_
         }
         setRootModule(moduleName);
         root.innerHTML = html;
+        document.dispatchEvent(new CustomEvent('cb:main-swapped'));
         if (moduleName === 'hr' && window.CB_HR_INIT) {
           window.CB_HR_INIT(root);
         }
