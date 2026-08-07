@@ -354,7 +354,6 @@ $cbProvozPostUrl = cb_root_url('index.php');
         </span>
       </div>
 
-      <?php require __DIR__ . '/hlavicka/head_user.php'; ?>
     <?php else: ?>
       <div class="head_guest ram_hlavicka bg_bila zaobleni_12"></div>
     <?php endif; ?>

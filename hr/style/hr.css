@@ -70,24 +70,15 @@ html[data-theme="dark"] #cb-module-root.cb-module-root--hr {
 }
 
 #cb-module-root.cb-module-root--hr .hr_module_content {
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
-    gap: 0;
+    display: block;
 }
 
 #cb-module-root.cb-module-root--hr .topbar {
-    position: sticky;
-    top: 0;
-    z-index: 10;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 14px;
-    min-height: 56px;
-    padding: 8px 20px;
-    background: color-mix(in srgb, var(--bg) 88%, transparent);
-    border-bottom: 1px solid var(--border);
-    backdrop-filter: blur(12px);
+    padding: 0;
 }
 
 #cb-module-root.cb-module-root--hr .topbar h1 {

@@ -14,14 +14,14 @@ require_once __DIR__ . '/../lib/denni_report_data.php';
         $data = cb_denni_report_prepare_data($conn, 'mini');
         $missingReports = is_array($data['miniMissingReports'] ?? null) ? $data['miniMissingReports'] : [];
     } catch (Throwable $e) {
-        echo '<section class="prehled_block"><h2>Denní report</h2><p class="txt_cervena">Data se nepodařilo načíst.</p></section>';
+        echo '<section class="provoz_prehled_block"><h2 class="provoz_prehled_title">Denní report</h2><p class="txt_cervena">Data se nepodařilo načíst.</p></section>';
         return;
     }
     ?>
-    <section class="prehled_block prehled_block--denni-report">
-        <h2>Denní report</h2>
-        <p class="card_mini_text txt_cervena"><span class="text_tucny">Nezadané reporty</span></p>
-        <table class="card_mini_table">
+    <section class="provoz_prehled_block provoz_prehled_block_denni_report">
+        <h2 class="provoz_prehled_title">Denní report</h2>
+        <p class="provoz_prehled_text txt_cervena"><span class="text_tucny">Nezadané reporty</span></p>
+        <table class="provoz_prehled_mini_table">
             <tbody>
                 <?php foreach ($missingReports as $missingReport): ?>
                     <?php
@@ -37,8 +37,8 @@ require_once __DIR__ . '/../lib/denni_report_data.php';
                 <?php endforeach; ?>
             </tbody>
         </table>
-        <p class="card_mini_text">&nbsp;</p>
-        <p class="card_mini_text txt_cervena">Vypisujte prosím i tento report, je třeba odladit případné chyby. Díky</p>
+        <p class="provoz_prehled_text">&nbsp;</p>
+        <p class="provoz_prehled_text txt_cervena">Vypisujte prosím i tento report, je třeba odladit případné chyby. Díky</p>
     </section>
     <?php
 })();

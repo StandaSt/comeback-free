@@ -24,7 +24,7 @@ declare(strict_types=1);
     $now = new DateTimeImmutable('now', $tz);
     $todayStart = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $now->format('Y-m-d') . ' 06:00:00', $tz);
     if (!($todayStart instanceof DateTimeImmutable)) {
-        echo '<section class="prehled_block"><h2>Objednávky online</h2><p class="txt_cervena">Data se nepodařilo načíst.</p></section>';
+        echo '<section class="provoz_prehled_block"><h2 class="provoz_prehled_title">Objednávky online</h2><p class="txt_cervena">Data se nepodařilo načíst.</p></section>';
         return;
     }
 
@@ -183,63 +183,63 @@ declare(strict_types=1);
             ],
         ]);
     } catch (Throwable $e) {
-        echo '<section class="prehled_block"><h2>Objednávky online</h2><p class="txt_cervena">Online objednávky se nepodařilo načíst.</p></section>';
+        echo '<section class="provoz_prehled_block"><h2 class="provoz_prehled_title">Objednávky online</h2><p class="txt_cervena">Online objednávky se nepodařilo načíst.</p></section>';
         return;
     }
     ?>
-    <section class="prehled_block prehled_block--online">
-        <h2>Objednávky online</h2>
-        <div class="prehled_online_root" data-cb-prehledy-grafy="1">
+    <section class="provoz_prehled_block provoz_prehled_block_online">
+        <h2 class="provoz_prehled_title">Objednávky online</h2>
+        <div class="provoz_prehled_online_root" data-cb-prehledy-grafy="1">
             <script type="application/json" data-cb-prehledy-grafy-data><?= $payloadJson ?></script>
 
-            <div class="prehled_online_summary" data-cb-tooltip-boundary="1">
-                <span class="prehled_online_states">
-                    <span><strong class="prehled_online_state prehled_online_state--ok"><?= h((string)$sumDokonceno) ?></strong> OK</span>
-                    <span><strong class="prehled_online_state prehled_online_state--road"><?= h((string)$sumNaCeste) ?></strong> na cestě</span>
-                    <span><strong class="prehled_online_state prehled_online_state--pickup"><?= h((string)$sumOsobniOdber) ?></strong> os. odběr</span>
-                    <span><strong class="prehled_online_state prehled_online_state--work"><?= h((string)$sumVyrabiSe) ?></strong> vyrábí se</span>
-                    <span><strong class="prehled_online_state prehled_online_state--cancel"><?= h((string)$sumZruseno) ?></strong> zrušeno</span>
+            <div class="provoz_prehled_online_summary" data-cb-tooltip-boundary="1">
+                <span class="provoz_prehled_online_states">
+                    <span><strong class="provoz_prehled_online_state_ok"><?= h((string)$sumDokonceno) ?></strong> OK</span>
+                    <span><strong class="provoz_prehled_online_state_road"><?= h((string)$sumNaCeste) ?></strong> na cestě</span>
+                    <span><strong class="provoz_prehled_online_state_pickup"><?= h((string)$sumOsobniOdber) ?></strong> os. odběr</span>
+                    <span><strong class="provoz_prehled_online_state_work"><?= h((string)$sumVyrabiSe) ?></strong> vyrábí se</span>
+                    <span><strong class="provoz_prehled_online_state_cancel"><?= h((string)$sumZruseno) ?></strong> zrušeno</span>
                 </span>
 
-                <span class="cb_tooltip" tabindex="0" aria-label="Souhrn online objednávek" data-cb-tooltip-position="1">
+                <span class="provoz_tooltip" tabindex="0" aria-label="Souhrn online objednávek" data-cb-tooltip-position="1">
                     <span>detail</span>
-                    <span class="cb_tooltip_panel cb_tooltip_card" data-cb-tooltip-panel="1">
-                        <span class="cb_tooltip_title">Online objednávky podle poboček</span>
-                        <table class="cb_tooltip_table">
+                    <span class="provoz_tooltip_panel provoz_tooltip_card" data-cb-tooltip-panel="1">
+                        <span class="provoz_tooltip_title">Online objednávky podle poboček</span>
+                        <table class="provoz_tooltip_table">
                             <thead>
                                 <tr>
                                     <th>Pobočka</th>
-                                    <th class="cb_tooltip_num">Dok.</th>
-                                    <th class="cb_tooltip_num">Cesta</th>
-                                    <th class="cb_tooltip_num">Odběr</th>
-                                    <th class="cb_tooltip_num">Výroba</th>
-                                    <th class="cb_tooltip_num">Obj.</th>
-                                    <th class="cb_tooltip_num">Zruš.</th>
-                                    <th class="cb_tooltip_num">Tržba</th>
+                                    <th class="provoz_tooltip_num">Dok.</th>
+                                    <th class="provoz_tooltip_num">Cesta</th>
+                                    <th class="provoz_tooltip_num">Odběr</th>
+                                    <th class="provoz_tooltip_num">Výroba</th>
+                                    <th class="provoz_tooltip_num">Obj.</th>
+                                    <th class="provoz_tooltip_num">Zruš.</th>
+                                    <th class="provoz_tooltip_num">Tržba</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($branches as $branch): ?>
                                     <tr>
                                         <td><?= h((string)$branch['nazev']) ?></td>
-                                        <td class="cb_tooltip_num"><?= h((string)(int)$branch['dokonceno']) ?></td>
-                                        <td class="cb_tooltip_num"><?= h((string)(int)$branch['na_ceste']) ?></td>
-                                        <td class="cb_tooltip_num"><?= h((string)(int)$branch['osobni_odber']) ?></td>
-                                        <td class="cb_tooltip_num"><?= h((string)(int)$branch['vyrabi_se']) ?></td>
-                                        <td class="cb_tooltip_num"><?= h((string)(int)$branch['objednavky']) ?></td>
-                                        <td class="cb_tooltip_num"><?= h((string)(int)$branch['zruseno']) ?></td>
-                                        <td class="cb_tooltip_num"><?= h(number_format((float)$branch['trzba'], 0, ',', ' ')) ?> Kč</td>
+                                        <td class="provoz_tooltip_num"><?= h((string)(int)$branch['dokonceno']) ?></td>
+                                        <td class="provoz_tooltip_num"><?= h((string)(int)$branch['na_ceste']) ?></td>
+                                        <td class="provoz_tooltip_num"><?= h((string)(int)$branch['osobni_odber']) ?></td>
+                                        <td class="provoz_tooltip_num"><?= h((string)(int)$branch['vyrabi_se']) ?></td>
+                                        <td class="provoz_tooltip_num"><?= h((string)(int)$branch['objednavky']) ?></td>
+                                        <td class="provoz_tooltip_num"><?= h((string)(int)$branch['zruseno']) ?></td>
+                                        <td class="provoz_tooltip_num"><?= h(number_format((float)$branch['trzba'], 0, ',', ' ')) ?> Kč</td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <tr>
                                     <th>Celkem</th>
-                                    <th class="cb_tooltip_num"><?= h((string)$sumDokonceno) ?></th>
-                                    <th class="cb_tooltip_num"><?= h((string)$sumNaCeste) ?></th>
-                                    <th class="cb_tooltip_num"><?= h((string)$sumOsobniOdber) ?></th>
-                                    <th class="cb_tooltip_num"><?= h((string)$sumVyrabiSe) ?></th>
-                                    <th class="cb_tooltip_num"><?= h((string)$sumObjednavky) ?></th>
-                                    <th class="cb_tooltip_num"><?= h((string)$sumZruseno) ?></th>
-                                    <th class="cb_tooltip_num"><?= h(number_format($sumTrzba, 0, ',', ' ')) ?> Kč</th>
+                                    <th class="provoz_tooltip_num"><?= h((string)$sumDokonceno) ?></th>
+                                    <th class="provoz_tooltip_num"><?= h((string)$sumNaCeste) ?></th>
+                                    <th class="provoz_tooltip_num"><?= h((string)$sumOsobniOdber) ?></th>
+                                    <th class="provoz_tooltip_num"><?= h((string)$sumVyrabiSe) ?></th>
+                                    <th class="provoz_tooltip_num"><?= h((string)$sumObjednavky) ?></th>
+                                    <th class="provoz_tooltip_num"><?= h((string)$sumZruseno) ?></th>
+                                    <th class="provoz_tooltip_num"><?= h(number_format($sumTrzba, 0, ',', ' ')) ?> Kč</th>
                                 </tr>
                             </tbody>
                         </table>
@@ -247,7 +247,7 @@ declare(strict_types=1);
                 </span>
             </div>
 
-            <div id="prehled-objednavky-online-chart" class="prehled_online_chart" data-cb-prehledy-grafy-chart="1"></div>
+            <div id="prehled-objednavky-online-chart" class="provoz_prehled_online_chart" data-cb-prehledy-grafy-chart="1"></div>
         </div>
     </section>
     <?php

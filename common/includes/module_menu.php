@@ -12,6 +12,57 @@ if (!function_exists('cb_module_menu_h')) {
     }
 }
 
+if (!function_exists('cb_render_module_user')) {
+    function cb_render_module_user(): void
+    {
+        $user = $_SESSION['cb_user'] ?? [];
+        $userName = 'Uzivatel';
+        $userRole = '-';
+
+        if (is_array($user)) {
+            $fullName = trim((string)($user['name'] ?? '') . ' ' . (string)($user['surname'] ?? ''));
+            if ($fullName !== '') {
+                $userName = $fullName;
+            } else {
+                $userName = (string)($user['jmeno'] ?? $user['email'] ?? $user['login'] ?? $userName);
+            }
+
+            $userRole = (string)($user['role'] ?? $user['nazev_role'] ?? $userRole);
+        }
+
+        $timeoutMin = (int)($_SESSION['cb_timeout_min'] ?? 720);
+        if ($timeoutMin <= 0) {
+            $timeoutMin = 20;
+        }
+
+        $nowTs = time();
+        $startTs = (int)($_SESSION['cb_session_start_ts'] ?? $nowTs);
+        $lastTs = (int)($_SESSION['cb_last_activity_ts'] ?? $nowTs);
+        if ($startTs <= 0 || $startTs > $nowTs) {
+            $startTs = $nowTs;
+        }
+        if ($lastTs <= 0 || $lastTs > $nowTs || $lastTs < $startTs) {
+            $lastTs = $nowTs;
+        }
+
+        $postUrl = function_exists('cb_root_url') ? cb_root_url('index.php') : 'index.php';
+        $settingsUrl = function_exists('cb_root_url') ? cb_root_url('index.php?m=provoz&page=nastaveni') : 'index.php?m=provoz&page=nastaveni';
+        ?>
+        <div class="module_user"
+             data-timeout-min="<?= cb_module_menu_h((string)$timeoutMin) ?>"
+             data-start-ts="<?= cb_module_menu_h((string)$startTs) ?>"
+             data-last-ts="<?= cb_module_menu_h((string)$lastTs) ?>"
+             data-logout-url="<?= cb_module_menu_h($postUrl . '?action=logout&duvod=0') ?>"
+             data-touch-url="<?= cb_module_menu_h($postUrl) ?>">
+            <div class="module_user_name"><?= cb_module_menu_h($userName) ?></div>
+            <div class="module_user_role"><?= cb_module_menu_h($userRole) ?></div>
+            <a class="module_user_action" href="<?= cb_module_menu_h($settingsUrl) ?>">Nastavení</a>
+            <a class="module_user_action module_user_logout" href="<?= cb_module_menu_h($postUrl . '?action=logout&duvod=1') ?>">Odhlásit</a>
+        </div>
+        <?php
+    }
+}
+
 if (!function_exists('cb_render_module_menu')) {
     function cb_render_module_menu(array $menu): void
     {
@@ -82,6 +133,8 @@ if (!function_exists('cb_render_module_menu')) {
                     </li>
                 <?php endforeach; ?>
             </ul>
+
+            <?php cb_render_module_user(); ?>
         </nav>
         <?php
     }

@@ -2,7 +2,7 @@
 'use strict';
 
 /*
- * Casovac neaktivity v user bloku hlavicky.
+ * Casovac neaktivity v user bloku menu.
  *
  * Co dela:
  * - pri aktivite uzivatele resetuje neaktivitu na plny timeout
@@ -61,7 +61,7 @@
     return Math.max(min, Math.min(max, v));
   }
 
-  const box = d.querySelector('.head_user[data-timeout-min]');
+  const box = d.querySelector('.module_user[data-timeout-min]');
   if (!box) return;
 
   const comboEl = box.querySelector('.cb-session-combo');
@@ -70,7 +70,7 @@
   const timeoutMin = toInt(box.getAttribute('data-timeout-min'));
   const logoutUrl = String(box.getAttribute('data-logout-url') || '').trim();
   const touchUrl = String(box.getAttribute('data-touch-url') || '').trim();
-  const logoutLink = box.querySelector('.head_user_exit');
+  const logoutLink = box.querySelector('.module_user_logout');
   const warningThresholdMin = Math.max(1, Math.ceil(timeoutMin * 0.1));
 
   if (timeoutMin <= 0) {

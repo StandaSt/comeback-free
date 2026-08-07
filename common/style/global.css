@@ -59,7 +59,7 @@ body{
   min-height:100%;
   overflow-x:hidden;
   font-family:Arial, Helvetica, sans-serif;
-  background:var(--clr_bila);
+  background:var(--cb-module-bg, var(--clr_bila));
   color:var(--clr_cerna);
   margin:0;
   display:flex;
@@ -69,16 +69,6 @@ body{
 main{
   flex:0 0 auto;
   overflow:visible;
-}
-
-#cb-module-root::before{
-  content:"";
-  position:absolute;
-  left:0;
-  right:0;
-  top:-5px;
-  height:5px;
-  background:var(--cb-module-bg);
 }
 
 .container{
@@ -98,8 +88,24 @@ main{
   position:relative;
   z-index:1;
   overflow:visible;
-  margin-top:5px;
+  margin-top:10px;
   background:var(--cb-module-bg);
+}
+
+body.cb-context--provoz{
+  --cb-module-bg:#dbeafe;
+}
+
+body.cb-context--hr{
+  --cb-module-bg:#dcfce7;
+}
+
+body.cb-context--smeny{
+  --cb-module-bg:#fef3c7;
+}
+
+body.cb-context--ukoly{
+  --cb-module-bg:#f3e8ff;
 }
 
 #cb-module-root.cb-context--provoz{
@@ -148,15 +154,16 @@ main{
 .head_grid{
   box-sizing:border-box;
   display:grid;
-  grid-template-columns:70px 130px 270px 112px 405px 150px 210px;
+  grid-template-columns:70px 130px 270px 112px 405px 150px;
   grid-template-rows:26px 26px;
   grid-template-areas:
-    "logo title modules todo branch update user"
-    "logo subtitle modules helpdesk period update user";
+    "logo title modules todo branch update"
+    "logo subtitle modules helpdesk period update";
   align-items:stretch;
   column-gap:4px;
   row-gap:3px;
   width:100%;
+  height:67px;
   min-height:67px;
   margin:0 auto;
   padding:5px 8px;
@@ -208,8 +215,7 @@ main{
 .head_period_btn,
 .head_branch_btn,
 .head_branch_btn_static,
-.head_update,
-.head_user{
+.head_update{
   background:var(--clr_bila);
 }
 
@@ -682,139 +688,6 @@ main{
   white-space:nowrap;
 }
 
-/* ===== User ===== */
-.head_user{
-  grid-area:user;
-  display:grid;
-  grid-template-columns:40px minmax(0, 1fr) 28px;
-  align-items:center;
-  justify-self:stretch;
-  width:100%;
-  gap:7px;
-  height:55px;
-  min-height:55px;
-  min-width:0;
-  padding:5px 7px;
-  border:var(--head-control-border);
-  border-radius:6px;
-  background:#eef7ff;
-  overflow:hidden;
-}
-
-.head_user_avatar{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  width:38px;
-  height:38px;
-  border-radius:50%;
-  background:#dbeafe;
-  color:var(--clr_tmava_1);
-  font-size:17px;
-  font-weight:400;
-  line-height:1;
-}
-
-.head_user_main{
-  display:flex;
-  flex-direction:column;
-  gap:2px;
-  justify-content:flex-start;
-  min-height:50px;
-  min-width:0;
-}
-
-.head_user_name{
-  display:block;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  color:var(--clr_tmava_1);
-  font-size:14px;
-  line-height:1.1;
-  font-weight:400;
-}
-
-.head_user_role{
-  display:block;
-  color:var(--clr_seda_4);
-  font-size:12px;
-  font-weight:400;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  line-height:1.1;
-}
-
-.head_user_exit{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  width:28px;
-  height:38px;
-  color:var(--clr_tmava_1);
-  text-decoration:none;
-  border-radius:8px;
-}
-
-.head_user_exit_ico{
-  width:18px;
-  height:18px;
-}
-
-.head_user_exit:hover{ background:var(--clr_ruzova_2); }
-.head_user_exit:active{ background:var(--clr_ruzova_1); }
-
-.head_user_exit.is-timeout-warning{
-  animation:head_user_exit_pulse 2.8s ease-in-out infinite;
-}
-
-.head_user_gap{
-  grid-column:-2/-1;
-  grid-row:1;
-  justify-self:end;
-  width:48px;
-  height:100%;
-  align-self:stretch;
-  overflow:visible;
-  display:grid;
-  grid-template-rows:1fr 1fr;
-  gap:5px;
-}
-
-.head_user_gap_btn{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  min-width:0;
-  min-height:0;
-  font-size:11px;
-  font-weight:700;
-  line-height:1;
-  text-align:center;
-  text-decoration:none;
-  white-space:nowrap;
-  border-radius:8px;
-}
-
-.head_user_gap_btn--hr{
-  border:2px solid #e7b7b7;
-  color:#9f1d1d;
-  background:#f9dede;
-}
-
-.head_user_gap_btn--smeny{
-  border:2px solid #b8d0ef;
-  color:#0f3f91;
-  background:#dcecff;
-}
-
-@keyframes head_user_exit_pulse{
-  0%{ background:transparent; }
-  50%{ background:var(--clr_ruzova_2); }
-  100%{ background:transparent; }
-}
-
 /* ===== Guest ===== */
 .head_guest{
   grid-column:2 / span 2;
@@ -894,17 +767,18 @@ align-items:center;
 .module_shell{
   display:grid;
   grid-template-columns:220px minmax(0,1fr);
-  gap:8px;
+  gap:10px;
+  align-items:start;
   width:100%;
-  height:calc(100vh - 72px);
+  height:auto;
   min-height:0;
   padding:0;
   background:var(--cb-module-bg);
 }
 
 .module_menu{
-  display:grid;
-  align-content:start;
+  display:flex;
+  flex-direction:column;
   gap:4px;
   min-height:0;
   overflow:auto;
@@ -999,11 +873,68 @@ align-items:center;
   text-align:left;
 }
 
+.module_user{
+  display:grid;
+  gap:4px;
+  margin-top:auto;
+  min-width:0;
+  padding-top:8px;
+  border-top:1px solid rgba(15,23,42,.14);
+}
+
+.module_user_name{
+  min-width:0;
+  overflow:hidden;
+  color:#0f172a;
+  font-size:14px;
+  font-weight:700;
+  line-height:1.2;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.module_user_role{
+  min-width:0;
+  overflow:hidden;
+  color:#64748b;
+  font-size:12px;
+  line-height:1.2;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.module_user_action{
+  display:flex;
+  align-items:center;
+  min-height:28px;
+  padding:5px 8px;
+  color:#0f172a;
+  font-size:13px;
+  line-height:1.2;
+  text-decoration:none;
+}
+
+.module_user_action:hover{
+  background:color-mix(in srgb, var(--cb-module-bg) 80%, #fff);
+}
+
+.module_user_logout.is-timeout-warning{
+  animation:module_user_logout_pulse 2.8s ease-in-out infinite;
+}
+
+@keyframes module_user_logout_pulse{
+  0%{ background:transparent; }
+  50%{ background:var(--clr_ruzova_2); }
+  100%{ background:transparent; }
+}
+
 .module_content{
   min-width:0;
   min-height:0;
+  height:auto;
   overflow:auto;
-  padding:10px;
+  padding:0;
+  background:#ff0000;
 }
 
 .module_placeholder{

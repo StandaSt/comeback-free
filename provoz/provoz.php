@@ -110,6 +110,7 @@ if ($cbPage === '') {
 $cbProvozPages = [
     'dashboard' => __DIR__ . '/pages/prehled.php',
     'prehled' => __DIR__ . '/pages/prehled.php',
+    'nastaveni' => __DIR__ . '/karty/user_setting.php',
     'stranka_1' => __DIR__ . '/pages/stranka_1.php',
     'stranka_2' => __DIR__ . '/pages/stranka_2.php',
     'stranka_3' => __DIR__ . '/pages/stranka_3.php',
@@ -216,6 +217,12 @@ if (!empty($_SESSION['login_ok']) && $cbSystemLocked) {
             <?php
             if ($cbPageExists) {
                 require $file;
+                if ($cbPage === 'nastaveni' && isset($card_max_html)) {
+                    echo '<section class="provoz_prehled_block">';
+                    echo '<h2 class="provoz_prehled_title">Nastavení</h2>';
+                    echo $card_max_html;
+                    echo '</section>';
+                }
             }
             ?>
         </section>

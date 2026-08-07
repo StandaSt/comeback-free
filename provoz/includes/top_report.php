@@ -50,14 +50,14 @@ declare(strict_types=1);
         }
         $stmt->close();
     } catch (Throwable $e) {
-        echo '<section class="prehled_block"><h2>Top report</h2><p class="txt_cervena">Data se nepodařilo načíst.</p></section>';
+        echo '<section class="provoz_prehled_block"><h2 class="provoz_prehled_title">Top report</h2><p class="txt_cervena">Data se nepodařilo načíst.</p></section>';
         return;
     }
     ?>
-    <section class="prehled_block">
-        <h2>Top report</h2>
-        <p class="prehled_meta"><?= h($from->format('j.n.Y G:i')) ?> - <?= h($now->format('G:i')) ?></p>
-        <table class="prehled_data">
+    <section class="provoz_prehled_block">
+        <h2 class="provoz_prehled_title">Top report</h2>
+        <p class="provoz_prehled_meta"><?= h($from->format('j.n.Y G:i')) ?> - <?= h($now->format('G:i')) ?></p>
+        <table class="provoz_prehled_data">
             <thead><tr><th>Kanál</th><th>Obj.</th><th>Tržba</th><th>Podíl</th></tr></thead>
             <tbody>
                 <?php foreach ($rows as $row): ?>

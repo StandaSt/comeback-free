@@ -152,9 +152,9 @@ unset($_SESSION['hr_flash']);
     <?php require __DIR__ . '/hr_includes/hr_menu.php'; ?>
 
     <section class="module_content hr_module_content">
-        <?php require __DIR__ . '/hr_includes/topbar.php'; ?>
-
         <main class="content">
+            <?php require __DIR__ . '/hr_includes/topbar.php'; ?>
+
             <?php if (is_array($flash) && isset($flash['text'])): ?>
                 <div class="notice <?= h((string)($flash['type'] ?? 'info')) ?>"><?= h((string)$flash['text']) ?></div>
             <?php endif; ?>

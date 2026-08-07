@@ -1,20 +1,20 @@
 /* Modul Provoz: styly pouze pro aktualni pracovni plochu Provozu. */
 
-#cb-module-root.cb-module-root--provoz .prehled_table{
+.provoz_prehled_grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:10px;
   width:100%;
-  min-height:700px;
-  border-collapse:collapse;
-  table-layout:fixed;
+  min-height:650px;
 }
 
-#cb-module-root.cb-module-root--provoz .prehled_cell{
-  width:50%;
-  height:350px;
-  padding:6px;
-  vertical-align:top;
+.provoz_prehled_cell{
+  min-width:0;
+  min-height:230px;
+  padding:0;
 }
 
-#cb-module-root.cb-module-root--provoz .prehled_block{
+.provoz_prehled_block{
   height:100%;
   min-height:0;
   overflow:auto;
@@ -24,50 +24,50 @@
   border-radius:8px;
 }
 
-#cb-module-root.cb-module-root--provoz .prehled_block h2{
+.provoz_prehled_title{
   margin:0 0 4px;
   color:var(--clr_seda_4);
   font-size:var(--fs_16);
   line-height:1.2;
 }
 
-#cb-module-root.cb-module-root--provoz .prehled_meta{
+.provoz_prehled_meta{
   margin:0 0 8px;
   color:var(--clr_seda_3);
   font-size:var(--fs_12);
   line-height:1.2;
 }
 
-#cb-module-root.cb-module-root--provoz .prehled_data{
+.provoz_prehled_data{
   width:100%;
   border-collapse:collapse;
   font-size:var(--fs_12);
 }
 
-#cb-module-root.cb-module-root--provoz .prehled_data th,
-#cb-module-root.cb-module-root--provoz .prehled_data td{
+.provoz_prehled_data th,
+.provoz_prehled_data td{
   padding:4px 6px;
   border:1px solid var(--clr_seda_2);
   text-align:right;
 }
 
-#cb-module-root.cb-module-root--provoz .prehled_data th:first-child,
-#cb-module-root.cb-module-root--provoz .prehled_data td:first-child{
+.provoz_prehled_data th:first-child,
+.provoz_prehled_data td:first-child{
   text-align:left;
 }
 
-#cb-module-root.cb-module-root--provoz .prehled_data thead th,
-#cb-module-root.cb-module-root--provoz .prehled_data tfoot th{
+.provoz_prehled_data thead th,
+.provoz_prehled_data tfoot th{
   background:var(--clr_seda_1);
   color:var(--clr_seda_4);
 }
 
-#cb-module-root.cb-module-root--provoz .prehled_block--online{
+.provoz_prehled_block_online{
   display:flex;
   flex-direction:column;
 }
 
-#cb-module-root.cb-module-root--provoz .prehled_online_root{
+.provoz_prehled_online_root{
   display:flex;
   flex:1 1 auto;
   flex-direction:column;
@@ -75,7 +75,7 @@
   gap:4px;
 }
 
-#cb-module-root.cb-module-root--provoz .prehled_online_summary{
+.provoz_prehled_online_summary{
   display:flex;
   justify-content:space-between;
   align-items:flex-start;
@@ -85,59 +85,59 @@
   line-height:1.15;
 }
 
-#cb-module-root.cb-module-root--provoz .prehled_online_states{
+.provoz_prehled_online_states{
   display:flex;
   flex-wrap:wrap;
   gap:8px;
 }
 
-#cb-module-root.cb-module-root--provoz .prehled_online_state--ok{
+.provoz_prehled_online_state_ok{
   color:#16a34a;
 }
 
-#cb-module-root.cb-module-root--provoz .prehled_online_state--road{
+.provoz_prehled_online_state_road{
   color:#f59e0b;
 }
 
-#cb-module-root.cb-module-root--provoz .prehled_online_state--pickup{
+.provoz_prehled_online_state_pickup{
   color:#0ea5e9;
 }
 
-#cb-module-root.cb-module-root--provoz .prehled_online_state--work{
+.provoz_prehled_online_state_work{
   color:#dc2626;
 }
 
-#cb-module-root.cb-module-root--provoz .prehled_online_state--cancel{
+.provoz_prehled_online_state_cancel{
   color:#64748b;
 }
 
-#cb-module-root.cb-module-root--provoz .prehled_online_chart{
+.provoz_prehled_online_chart{
   width:100%;
   flex:1 1 auto;
   min-height:180px;
 }
 
-#cb-module-root.cb-module-root--provoz .card_mini_text{
+.provoz_prehled_text{
   margin:0 0 6px;
   font-size:var(--fs_13);
   line-height:1.25;
 }
 
-#cb-module-root.cb-module-root--provoz .card_mini_table{
+.provoz_prehled_mini_table{
   width:100%;
   border-collapse:collapse;
   font-size:var(--fs_12);
 }
 
-#cb-module-root.cb-module-root--provoz .card_mini_table th,
-#cb-module-root.cb-module-root--provoz .card_mini_table td{
+.provoz_prehled_mini_table th,
+.provoz_prehled_mini_table td{
   padding:3px 5px;
   border:1px solid var(--clr_seda_2);
   text-align:left;
   vertical-align:top;
 }
 
-#cb-module-root.cb-module-root--provoz .cb_tooltip{
+.provoz_tooltip{
   position:relative;
   display:inline-flex;
   align-items:center;
@@ -145,7 +145,7 @@
   cursor:help;
 }
 
-#cb-module-root.cb-module-root--provoz .cb_tooltip_panel{
+.provoz_tooltip_panel{
   position:absolute;
   right:0;
   top:calc(100% + 6px);
@@ -153,13 +153,13 @@
   z-index:30;
 }
 
-#cb-module-root.cb-module-root--provoz .cb_tooltip:hover .cb_tooltip_panel,
-#cb-module-root.cb-module-root--provoz .cb_tooltip:focus-within .cb_tooltip_panel{
+.provoz_tooltip:hover .provoz_tooltip_panel,
+.provoz_tooltip:focus-within .provoz_tooltip_panel{
   display:block;
 }
 
-#cb-module-root.cb-module-root--provoz .cb_tooltip_card,
-#cb-module-root.cb-module-root--provoz .cb_chart_tooltip{
+.provoz_tooltip_card,
+.provoz_chart_tooltip{
   width:max-content;
   max-width:min(720px, calc(100vw - 32px));
   padding:8px;
@@ -170,27 +170,27 @@
   color:var(--clr_cerna);
 }
 
-#cb-module-root.cb-module-root--provoz .cb_tooltip_title{
+.provoz_tooltip_title{
   display:block;
   margin:0 0 6px;
   color:var(--clr_seda_4);
   font-weight:700;
 }
 
-#cb-module-root.cb-module-root--provoz .cb_tooltip_table{
+.provoz_tooltip_table{
   width:100%;
   border-collapse:collapse;
   font-size:var(--fs_12);
 }
 
-#cb-module-root.cb-module-root--provoz .cb_tooltip_table th,
-#cb-module-root.cb-module-root--provoz .cb_tooltip_table td{
+.provoz_tooltip_table th,
+.provoz_tooltip_table td{
   padding:3px 5px;
   border:1px solid var(--clr_seda_2);
   white-space:nowrap;
 }
 
-#cb-module-root.cb-module-root--provoz .cb_tooltip_num{
+.provoz_tooltip_num{
   text-align:right;
   font-variant-numeric:tabular-nums;
 }
