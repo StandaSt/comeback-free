@@ -37,8 +37,8 @@ if (!in_array($roleId, [1, 3, 5], true) && $userId !== 57) {
 cb_pobocky_bootstrap_session();
 
 $pages = [
-    'dashboard' => [
-        'file' => __DIR__ . '/hr_pages/dashboard.php',
+    'prehled' => [
+        'file' => __DIR__ . '/hr_pages/prehled.php',
         'title' => 'Přehled',
     ],
     'nabor' => [
@@ -91,9 +91,12 @@ $pages = [
     ],
 ];
 
-$page = strtolower(trim((string)($_GET['page'] ?? 'dashboard')));
+$page = strtolower(trim((string)($_GET['page'] ?? 'prehled')));
+if ($page === 'dashboard') {
+    $page = 'prehled';
+}
 if (!isset($pages[$page])) {
-    $page = 'dashboard';
+    $page = 'prehled';
 }
 
 $currentPage = $pages[$page];
@@ -150,9 +153,9 @@ unset($_SESSION['hr_flash']);
 ?>
 <?php require __DIR__ . '/hr_includes/hr_menu.php'; ?>
 
-<section class="blok_pp hr_pp">
-    <header class="blok_pp_header">
-        <h1 class="blok_pp_title"><?= h($pageTitle) ?></h1>
+<section class="pp hr_pp" data-module="hr" data-page="<?= h($page) ?>">
+    <header class="pp_header">
+        <h1><?= h($pageTitle) ?></h1>
         <?php require __DIR__ . '/hr_includes/topbar.php'; ?>
     </header>
     <main class="hr_content">

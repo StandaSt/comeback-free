@@ -141,12 +141,12 @@ declare(strict_types=1);
         }
         $stmt->close();
     } catch (Throwable $e) {
-        echo '<section class="provoz_prehled_block"><h2 class="provoz_prehled_title">Top report</h2><p class="txt_cervena">Chyba Top reportu: ' . h($e->getMessage()) . '</p></section>';
+        echo '<section class="blok"><h2 class="blok_title">Top report</h2><p class="txt_cervena">Chyba Top reportu: ' . h($e->getMessage()) . '</p></section>';
         return;
     }
     ?>
-    <section class="provoz_prehled_block">
-        <h2 class="provoz_prehled_title">Top report</h2>
+    <section class="blok">
+        <h2 class="blok_title">Top report</h2>
         <p class="provoz_prehled_meta"><?= h($periodLabel) ?></p>
         <?php if ($branchLabel !== ''): ?>
             <p class="provoz_prehled_meta"><?= h($branchLabel) ?></p>

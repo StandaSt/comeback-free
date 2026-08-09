@@ -5,9 +5,7 @@ require_once __DIR__ . '/../../common/includes/blok_menu.php';
 
 $provozMenuItems = [
     ['page' => 'prehled', 'label' => 'Přehled'],
-    ['page' => 'stranka_1', 'label' => 'Stránka 1'],
-    ['page' => 'stranka_2', 'label' => 'Stránka 2'],
-    ['page' => 'stranka_3', 'label' => 'Stránka 3'],
+    ['page' => 'denni_report', 'label' => 'Denní report'],
 ];
 
 $provozMenu = [];
@@ -16,7 +14,7 @@ foreach ($provozMenuItems as $item) {
     $provozMenu[] = [
         'label' => (string)$item['label'],
         'url' => cb_root_url('index.php?m=provoz&page=' . rawurlencode($itemPage)),
-        'active' => $cbPage === $itemPage || ($itemPage === 'prehled' && $cbPage === 'dashboard'),
+        'active' => $cbPage === $itemPage,
     ];
 }
 

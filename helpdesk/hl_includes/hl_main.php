@@ -212,9 +212,9 @@ foreach ($items as $item) {
 
 ?>
 <?php require __DIR__ . '/hl_menu.php'; ?>
-<section class="blok_pp helpdesk_module_content" data-cb-helpdesk-module="1" data-cb-hd-api-url="<?= h($helpdeskApiUrl) ?>" data-cb-hd-arrow-url="<?= h($arrowIconUrl) ?>" data-cb-hd-is-admin="<?= $isAdmin ? '1' : '0' ?>" data-cb-hd-author-id="<?= (int)$idUser ?>">
-<header class="blok_pp_header">
-<h1 class="blok_pp_title"><?= h($helpdeskPageTitle) ?></h1>
+<section class="pp helpdesk_module_content" data-module="helpdesk" data-page="<?= h($helpdeskView) ?>" data-cb-helpdesk-module="1" data-cb-hd-api-url="<?= h($helpdeskApiUrl) ?>" data-cb-hd-arrow-url="<?= h($arrowIconUrl) ?>" data-cb-hd-is-admin="<?= $isAdmin ? '1' : '0' ?>" data-cb-hd-author-id="<?= (int)$idUser ?>">
+<header class="pp_header">
+<h1><?= h($helpdeskPageTitle) ?></h1>
 </header>
 <?php if ($helpdeskView === 'new-ticket'): ?>
     <form class="helpdesk_form ram_normal zaobleni_8" method="post" action="<?= h($helpdeskCreateUrl) ?>" enctype="multipart/form-data">

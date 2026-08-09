@@ -41,12 +41,12 @@ declare(strict_types=1);
             $result->free();
         }
     } catch (Throwable $e) {
-        echo '<section class="provoz_prehled_block"><h2 class="provoz_prehled_title">Přehled online uživatelů</h2><p class="txt_cervena">Data se nepodařilo načíst.</p></section>';
+        echo '<section class="blok"><h2 class="blok_title">Přehled online uživatelů</h2><p class="txt_cervena">Data se nepodařilo načíst.</p></section>';
         return;
     }
     ?>
-    <section class="provoz_prehled_block">
-        <h2 class="provoz_prehled_title">Přehled online uživatelů</h2>
+    <section class="blok">
+        <h2 class="blok_title">Přehled online uživatelů</h2>
         <p class="provoz_prehled_meta"><?= h((string)count($rows)) ?> online</p>
         <table class="provoz_prehled_data">
             <thead><tr><th class="provoz_prehled_data_cell provoz_prehled_data_cell_left provoz_prehled_data_head">Uživatel</th><th class="provoz_prehled_data_cell provoz_prehled_data_head">Přihlášení</th><th class="provoz_prehled_data_cell provoz_prehled_data_head">Poslední akce</th></tr></thead>

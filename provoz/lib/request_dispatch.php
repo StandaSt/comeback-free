@@ -7,16 +7,6 @@ if (isset($_SERVER['HTTP_X_COMEBACK_PARTIAL'])) {
     $cbIsPartial = ((string)($_SERVER['HTTP_X_COMEBACK_PARTIAL']) === '1');
 }
 
-$cbIsCardPartial = false;
-if (isset($_SERVER['HTTP_X_COMEBACK_CARD'])) {
-    $cbIsCardPartial = ((string)($_SERVER['HTTP_X_COMEBACK_CARD']) === '1');
-}
-
-$cbIsCardMaxPartial = false;
-if (isset($_SERVER['HTTP_X_COMEBACK_CARD_MAX'])) {
-    $cbIsCardMaxPartial = ((string)($_SERVER['HTTP_X_COMEBACK_CARD_MAX']) === '1');
-}
-
 $cbIsRestiaState = false;
 if (isset($_SERVER['HTTP_X_COMEBACK_RESTIA_STATE'])) {
     $cbIsRestiaState = ((string)($_SERVER['HTTP_X_COMEBACK_RESTIA_STATE']) === '1');
@@ -200,119 +190,6 @@ if ($cbIsRestiaState) {
         'ignore' => (int)($row['ignore'] ?? 0),
     ], JSON_UNESCAPED_UNICODE);
     exit;
-}
-
-if (
-    ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET'
-    && isset($_SERVER['HTTP_X_COMEBACK_RESTIA_IMPORT_MAX'])
-) {
-    if (empty($_SESSION['login_ok'])) {
-        http_response_code(401);
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode(['ok' => false, 'err' => 'Nutne prihlaseni'], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-
-    header('Content-Type: application/json; charset=utf-8');
-
-    $cbCardId = (int)($_GET['cb_card_id'] ?? 0);
-    $html = '';
-    ob_start();
-    try {
-        require __DIR__ . '/../inicializace/plnime_restia_objednavky.php';
-        $html = trim((string)ob_get_clean());
-    } catch (Throwable $e) {
-        $html = '';
-        if (ob_get_level() > 0) {
-            ob_end_clean();
-        }
-        http_response_code(500);
-        echo json_encode([
-            'ok' => false,
-            'err' => $e->getMessage(),
-        ], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-
-    if ($html === '') {
-        http_response_code(500);
-        echo json_encode([
-            'ok' => false,
-            'err' => 'Restia import nevratil obsah.',
-        ], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-
-    echo json_encode([
-        'ok' => true,
-        'cardId' => $cbCardId,
-        'cardHtml' => $html,
-        'loadMax' => 1,
-        'request' => $cbRestiaRawReload ? 'restia_raw_max' : 'restia_import_max',
-    ], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
-if ($cbIsCardMaxPartial) {
-    $cbCardId = (int)($_GET['cb_card_id'] ?? 0);
-    cb_emit_card_max_json_response($cbCardId, 'card_max_partial');
-}
-
-if ($cbIsCardPartial) {
-    $cbCardId = (int)($_GET['cb_card_id'] ?? 0);
-    cb_emit_card_json_response($cbCardId, ((int)($_GET['cb_load_max'] ?? 0) === 1), 'card_partial');
-}
-
-if (
-    ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
-    && isset($_SERVER['HTTP_X_COMEBACK_MAX_FORM'])
-) {
-    $cbCardId = (int)($_POST['cb_card_id'] ?? 0);
-    $cbRestiaAction = trim((string)($_POST['cb_action'] ?? ''));
-    $cbIsRestiaImportFormPost = (
-        isset($_POST['run_restia_obj']) && (string)$_POST['run_restia_obj'] === '1'
-        && ($cbRestiaAction === 'start' || $cbRestiaAction === 'auto_next')
-    );
-    if ($cbIsRestiaImportFormPost) {
-        header('Content-Type: application/json; charset=utf-8');
-
-        $html = '';
-        ob_start();
-        try {
-            require __DIR__ . '/../inicializace/plnime_restia_objednavky.php';
-            $html = trim((string)ob_get_clean());
-        } catch (Throwable $e) {
-            $html = '';
-            if (ob_get_level() > 0) {
-                ob_end_clean();
-            }
-            http_response_code(500);
-            echo json_encode([
-                'ok' => false,
-                'err' => $e->getMessage(),
-            ], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-
-        if ($html === '') {
-            http_response_code(500);
-            echo json_encode([
-                'ok' => false,
-                'err' => 'Restia import nevratil obsah.',
-            ], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-
-        echo json_encode([
-            'ok' => true,
-            'cardId' => $cbCardId,
-            'cardHtml' => $html,
-            'loadMax' => 1,
-            'request' => 'restia_max_form',
-        ], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-    cb_emit_card_json_response($cbCardId, true, 'max_form');
 }
 
 if ($cbIsPartial) {

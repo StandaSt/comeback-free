@@ -420,7 +420,7 @@ if (!function_exists('cb_store_user_settings')) {
         $data = array_merge(cb_user_settings_defaults(), $current);
 
         $prodleva = (int)($values['prodleva'] ?? $data['prodleva']);
-        if (!in_array($prodleva, [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000], true)) {
+        if (!in_array($prodleva, range(1000, 10000, 1000), true)) {
             $prodleva = 3000;
         }
         $data['prodleva'] = $prodleva;

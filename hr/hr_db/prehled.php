@@ -2,13 +2,13 @@
 declare(strict_types=1);
 
 /**
- * DB dotazy pro hlavni dashboard HR modulu.
+ * DB dotazy pro hlavni prehled HR modulu.
  */
 
 /**
  * Nacte data pro hlavni prehled HR modulu.
  */
-function hr_fetch_dashboard(mysqli $db): array
+function hr_fetch_prehled(mysqli $db): array
 {
     hr_expiruj_nepotvrzene_vd($db);
 
@@ -85,7 +85,7 @@ function hr_fetch_dashboard(mysqli $db): array
             'kuryr' => 0,
         ],
         'k_reseni' => $kReseni,
-        'dokumenty' => hr_fetch_dashboard_documents($db, 5),
+        'dokumenty' => hr_fetch_prehled_documents($db, 5),
         'lekarske_prohlidky' => [],
         'skoleni' => [],
         'dovolene' => [],

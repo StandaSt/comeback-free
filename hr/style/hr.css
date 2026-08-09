@@ -204,7 +204,7 @@
 .hr_accent_red { --accent: var(--red); }
 
 /* Panely prehledu HR. */
-.hr_dashboard_grid {
+.hr_prehled_grid {
     display: grid;
     grid-template-columns: 1.1fr 1.1fr .9fr;
     gap: 10px;

@@ -67,12 +67,12 @@ if (!function_exists('cb_render_blok_menu_user')) {
             <div class="blok_menu_user_role"><?= cb_blok_menu_h($userRole) ?></div>
             <div class="blok_menu_user_settings">
                 <a class="blok_menu_user_action" href="<?= cb_blok_menu_h($settingsUrl) ?>">Nastavení</a>
-                <form class="blok_menu_theme_form" method="post" action="<?= cb_blok_menu_h($postUrl) ?>">
+                <form class="blok_menu_theme_form" method="post" action="<?= cb_blok_menu_h($postUrl) ?>" data-cb-theme-form="1" data-theme-level="<?= cb_blok_menu_h((string)$themeLevel) ?>">
                     <input type="hidden" name="cb_theme_module" value="<?= cb_blok_menu_h($themeModule) ?>">
                     <input type="hidden" name="cb_theme_return" value="<?= cb_blok_menu_h($themeReturn) ?>">
-                    <button class="blok_menu_theme_btn" type="submit" name="cb_theme_delta" value="-1" aria-label="Zesvětlit"<?= $themeLevel <= 0 ? ' disabled' : '' ?>>-</button>
-                    <span class="blok_menu_theme_value"><?= cb_blok_menu_h((string)$themeLevel) ?></span>
-                    <button class="blok_menu_theme_btn" type="submit" name="cb_theme_delta" value="1" aria-label="Ztmavit"<?= $themeLevel >= 6 ? ' disabled' : '' ?>>+</button>
+                    <button class="blok_menu_theme_btn" type="submit" name="cb_theme_delta" value="-1" aria-label="Zesvětlit" data-cb-theme-delta="-1"<?= $themeLevel <= 0 ? ' disabled' : '' ?>>-</button>
+                    <span class="blok_menu_theme_value" data-cb-theme-value="1"><?= cb_blok_menu_h((string)$themeLevel) ?></span>
+                    <button class="blok_menu_theme_btn" type="submit" name="cb_theme_delta" value="1" aria-label="Ztmavit" data-cb-theme-delta="1"<?= $themeLevel >= 6 ? ' disabled' : '' ?>>+</button>
                 </form>
             </div>
             <a class="blok_menu_user_action blok_menu_user_logout" href="<?= cb_blok_menu_h($postUrl . '?action=logout&duvod=1') ?>">Odhlásit</a>

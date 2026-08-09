@@ -1,4 +1,4 @@
-// js/karty_report_restia.js * Verze: V2 * Aktualizace: 12.05.2026
+// js/denni_report_restia.js * Verze: V1
 'use strict';
 
 (function (w, d) {
@@ -11,28 +11,34 @@
   }
 
   function refreshRightSide(form) {
-    const shell = form.closest('.card_shell[data-card-id]');
-    const cardId = shell instanceof HTMLElement ? String(shell.getAttribute('data-card-id') || '') : '';
     const idPobInput = form.querySelector('input[name="id_pob"]');
+    const datumInput = form.querySelector('[name="datum_reportu"]');
     const idPob = idPobInput instanceof HTMLInputElement ? String(idPobInput.value || '') : '';
-    if (cardId === '') return Promise.resolve();
+    const datum = datumInput instanceof HTMLInputElement || datumInput instanceof HTMLSelectElement ? String(datumInput.value || '') : '';
+    const body = new URLSearchParams();
+    body.set('cb_shell_module', 'provoz');
+    body.set('page', 'denni_report');
+    if (idPob !== '') {
+      body.set('zr_id_pob', idPob);
+    }
+    if (datum !== '') {
+      body.set('datum_reportu', datum);
+    }
 
-    const url = (window.CB_ENDPOINT || 'index.php') + '?cb_card_id=' + encodeURIComponent(cardId)
-      + '&cb_load_max=1&zr_id_pob=' + encodeURIComponent(idPob);
-
-    return fetch(url, {
-      method: 'GET',
+    return fetch(window.CB_ENDPOINT || 'index.php', {
+      method: 'POST',
       headers: {
-        'X-Comeback-Card': '1',
-        'Accept': 'application/json'
+        'X-Comeback-Shell-Module': '1',
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
       },
+      body: body.toString(),
       credentials: 'same-origin'
-    }).then((res) => res.json()).then((data) => {
-      if (!data || typeof data.cardHtml !== 'string') {
-        throw new Error('Nová data Restie nemají platný obsah.');
-      }
+    }).then((res) => {
+      if (!res.ok) throw new Error('Nová data Restie se nepodařilo načíst.');
+      return res.text();
+    }).then((html) => {
       const wrap = d.createElement('div');
-      wrap.innerHTML = String(data.cardHtml || '').trim();
+      wrap.innerHTML = String(html || '').trim();
       const nextSide = wrap.querySelector('.zr_side');
       const currentSide = form.querySelector('.zr_side');
       if (nextSide instanceof HTMLElement && currentSide instanceof HTMLElement) {
@@ -42,6 +48,8 @@
             if (w.console && w.console.warn) w.console.warn(err);
           });
         }
+      } else {
+        throw new Error('Nová data Restie nemají platný obsah.');
       }
     });
   }
@@ -91,17 +99,14 @@
       if (button.disabled) return;
       button.disabled = true;
       button.classList.add('is-loading');
-      if (!w.CB_AJAX || typeof w.CB_AJAX.runRestiaAndRefreshOpCards !== 'function') {
+      if (!w.CB_RESTIA || typeof w.CB_RESTIA.run !== 'function') {
         w.alert('Aktualizace Restie není dostupná.');
         button.classList.remove('is-loading');
         setRefreshReady(button);
         return;
       }
-      w.CB_AJAX.runRestiaAndRefreshOpCards({
-          forceRestia: true,
-          refreshOpCards: false,
-          loaderMode: 'dashboard',
-          showLoading: false
+      w.CB_RESTIA.run({
+          forceRestia: true
         })
         .then(() => refreshRightSide(form))
         .catch((err) => {
@@ -116,10 +121,7 @@
   }
 
   function init(event) {
-    const root = event && event.detail && event.detail.card instanceof HTMLElement
-      ? event.detail.card
-      : d;
-    bindRestiaRefresh(root);
+    bindRestiaRefresh(d);
   }
 
   if (d.readyState === 'loading') {
@@ -127,6 +129,5 @@
   } else {
     init();
   }
-  d.addEventListener('cb:card-swapped', init);
-  d.addEventListener('cb:card-max-loaded', init);
+  d.addEventListener('cb:main-swapped', init);
 })(window, document);

@@ -21,19 +21,40 @@ if (!empty($_SESSION['login_ok'])) {
 }
 
 if (!empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['cb_theme_delta'])) {
+    $cbThemeAjax = isset($_SERVER['HTTP_X_COMEBACK_THEME']);
+    $cbThemeLevel = max(0, min(6, (int)cb_user_setting('dark', 0)));
+    $cbThemeSaved = false;
     $cbUser = $_SESSION['cb_user'] ?? null;
     $cbIdUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
     if ($cbIdUser > 0) {
         $cbThemeDelta = (int)$_POST['cb_theme_delta'];
         $cbThemeDelta = $cbThemeDelta < 0 ? -1 : ($cbThemeDelta > 0 ? 1 : 0);
-        $cbThemeLevel = max(0, min(6, (int)cb_user_setting('dark', 0) + $cbThemeDelta));
+        $cbThemeLevel = max(0, min(6, $cbThemeLevel + $cbThemeDelta));
         $cbThemeStmt = db()->prepare('UPDATE user_set SET dark = ? WHERE id_user = ?');
         if ($cbThemeStmt instanceof mysqli_stmt) {
             $cbThemeStmt->bind_param('ii', $cbThemeLevel, $cbIdUser);
-            $cbThemeStmt->execute();
+            $cbThemeSaved = $cbThemeStmt->execute();
             $cbThemeStmt->close();
-            cb_store_user_settings(['dark' => $cbThemeLevel]);
+            if ($cbThemeSaved) {
+                cb_store_user_settings(['dark' => $cbThemeLevel]);
+            }
         }
+    } elseif ($cbThemeAjax) {
+        header('Content-Type: application/json; charset=utf-8');
+        http_response_code(401);
+        echo json_encode(['ok' => false, 'err' => 'Nutne prihlaseni'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    if ($cbThemeAjax) {
+        header('Content-Type: application/json; charset=utf-8');
+        if (!$cbThemeSaved) {
+            http_response_code(500);
+            echo json_encode(['ok' => false, 'err' => 'Ulozeni selhalo'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        echo json_encode(['ok' => true, 'dark' => $cbThemeLevel], JSON_UNESCAPED_UNICODE);
+        exit;
     }
 
     $cbThemeModule = strtolower(trim((string)($_POST['cb_theme_module'] ?? 'provoz')));
@@ -45,6 +66,77 @@ if (!empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POS
         $cbThemeReturn = cb_root_url('index.php?m=' . rawurlencode($cbThemeModule));
     }
     header('Location: ' . $cbThemeReturn);
+    exit;
+}
+
+if (!empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_SERVER['HTTP_X_COMEBACK_SET_PRODLEVA'])) {
+    header('Content-Type: application/json; charset=utf-8');
+
+    $cbProdlevaRaw = $_POST['prodleva'] ?? null;
+    if ($cbProdlevaRaw === null) {
+        $cbProdlevaInput = json_decode((string)file_get_contents('php://input'), true);
+        if (is_array($cbProdlevaInput)) {
+            $cbProdlevaRaw = $cbProdlevaInput['prodleva'] ?? null;
+        }
+    }
+
+    $cbProdlevaSec = (int)$cbProdlevaRaw;
+    if ($cbProdlevaSec < 1 || $cbProdlevaSec > 10) {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'err' => 'Neplatna prodleva'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $cbProdlevaMs = $cbProdlevaSec * 1000;
+    $cbUser = $_SESSION['cb_user'] ?? null;
+    $cbIdUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
+    if ($cbIdUser <= 0) {
+        http_response_code(401);
+        echo json_encode(['ok' => false, 'err' => 'Nutne prihlaseni'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $cbProdlevaSaved = false;
+    $cbProdlevaStmt = db()->prepare('UPDATE user_set SET prodleva = ? WHERE id_user = ?');
+    if ($cbProdlevaStmt instanceof mysqli_stmt) {
+        $cbProdlevaStmt->bind_param('ii', $cbProdlevaMs, $cbIdUser);
+        $cbProdlevaSaved = $cbProdlevaStmt->execute();
+        $cbProdlevaStmt->close();
+    }
+
+    if (!$cbProdlevaSaved) {
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'err' => 'Ulozeni selhalo'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    cb_store_user_settings(['prodleva' => $cbProdlevaMs]);
+    echo json_encode(['ok' => true, 'prodleva' => $cbProdlevaMs, 'sec' => $cbProdlevaSec], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if (!empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_SERVER['HTTP_X_COMEBACK_GN_BLOCK'])) {
+    $cbGnModule = strtolower(trim((string)($_POST['module'] ?? '')));
+    $cbGnPage = strtolower(trim((string)($_POST['page'] ?? '')));
+    $cbGnBlock = strtolower(trim((string)($_POST['block'] ?? '')));
+    if ($cbGnPage === 'dashboard') {
+        $cbGnPage = 'prehled';
+    }
+
+    if ($cbGnModule === 'provoz' && $cbGnPage === 'prehled' && $cbGnBlock === 'top_report') {
+        require_once __DIR__ . '/common/lib/pobocky_vyber.php';
+        cb_pobocky_bootstrap_session();
+
+        $GLOBALS['CURRENT_MODULE'] = 'provoz';
+        define('CB_EMBEDDED_MODULE', 'provoz');
+        header('Content-Type: text/html; charset=utf-8');
+        echo '<div class="provoz_prehled_cell" data-pp-block="top_report" data-gn="1">';
+        require __DIR__ . '/provoz/bloky/top_report.php';
+        echo '</div>';
+        exit;
+    }
+
+    http_response_code(404);
     exit;
 }
 
@@ -155,9 +247,6 @@ if (!empty($_SESSION['login_ok'])) {
 
     $cbIsProvozRequest =
         $cbHasAsyncHeader
-        || isset($_GET['cb_card_id'])
-        || isset($_GET['cb_load_max'])
-        || isset($_GET['cb_restia_import_max'])
         || isset($_GET['helpdesk_action'])
         || isset($_POST['helpdesk_action']);
 
@@ -218,6 +307,14 @@ if (!empty($_SESSION['login_ok'])) {
     $cbPublicShellUrl = cb_root_url('');
     $cbSelectPobockyJsPath = __DIR__ . '/common/js/select_pobocky.js';
     $cbSelectPobockyJsUrl = cb_public_url('js/select_pobocky.js') . '?v=' . (is_file($cbSelectPobockyJsPath) ? (string)filemtime($cbSelectPobockyJsPath) : '1');
+    $cbObdobiJsPath = __DIR__ . '/common/js/obdobi.js';
+    $cbObdobiJsUrl = cb_public_url('js/obdobi.js') . '?v=' . (is_file($cbObdobiJsPath) ? (string)filemtime($cbObdobiJsPath) : '1');
+    $cbSetProdlevaJsPath = __DIR__ . '/common/js/set_prodleva.js';
+    $cbSetProdlevaJsUrl = cb_public_url('js/set_prodleva.js') . '?v=' . (is_file($cbSetProdlevaJsPath) ? (string)filemtime($cbSetProdlevaJsPath) : '1');
+    $cbGnRefreshJsPath = __DIR__ . '/common/js/gn_refresh.js';
+    $cbGnRefreshJsUrl = cb_public_url('js/gn_refresh.js') . '?v=' . (is_file($cbGnRefreshJsPath) ? (string)filemtime($cbGnRefreshJsPath) : '1');
+    $cbThemeJsPath = __DIR__ . '/common/js/theme_level.js';
+    $cbThemeJsUrl = cb_public_url('js/theme_level.js') . '?v=' . (is_file($cbThemeJsPath) ? (string)filemtime($cbThemeJsPath) : '1');
     $cbHrCssPath = __DIR__ . '/hr/style/hr.css';
     $cbHrCssUrl = cb_root_url('hr/style/hr.css') . '?v=' . (is_file($cbHrCssPath) ? (string)filemtime($cbHrCssPath) : '1');
     $cbHrJsPath = __DIR__ . '/hr/hr_js/hr.js';
@@ -280,12 +377,20 @@ window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_
 </script>
 <script src="<?= h(cb_asset_url('js/echarts.min.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/ajax_core.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/karty_top_report.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/karty_grafy.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/karty_report_restia.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/karty_report_form.js')) ?>"></script>
-<script src="<?= h(cb_asset_url('js/karty_report_person.js')) ?>"></script>
+<script src="<?= h(cb_public_url('js/data_grafu.js')) ?>"></script>
+<script src="<?= h(cb_public_url('js/tooltip.js')) ?>"></script>
+<script src="<?= h(cb_public_url('js/resize_graf.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/objednavky_online_graf.js')) ?>"></script>
+<script src="<?= h(cb_public_url('js/vykresleni_grafu.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/restia_online.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/denni_report_restia.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/denni_report_form.js')) ?>"></script>
+<script src="<?= h(cb_asset_url('js/denni_report_osoby.js')) ?>"></script>
 <script src="<?= h($cbSelectPobockyJsUrl) ?>"></script>
+<script src="<?= h($cbObdobiJsUrl) ?>"></script>
+<script src="<?= h($cbSetProdlevaJsUrl) ?>"></script>
+<script src="<?= h($cbGnRefreshJsUrl) ?>"></script>
+<script src="<?= h($cbThemeJsUrl) ?>"></script>
 <script src="<?= h(cb_asset_url('js/filtry.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/prehled_smen_export.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/rozbalovaci_detail.js')) ?>"></script>

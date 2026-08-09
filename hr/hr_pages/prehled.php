@@ -1,16 +1,16 @@
 <?php
 declare(strict_types=1);
 
-$dashboard = hr_fetch_dashboard($db);
-$nabor = $dashboard['nabor'];
-$zamestnanci = $dashboard['zamestnanci'];
-$pozadavky = $dashboard['pozadavky'];
-$kReseni = $dashboard['k_reseni'];
-$dokumenty = $dashboard['dokumenty'];
-$lekarskeProhlidky = $dashboard['lekarske_prohlidky'];
-$skoleni = $dashboard['skoleni'];
-$dovolene = $dashboard['dovolene'];
-$latest = $dashboard['latest'];
+$prehled = hr_fetch_prehled($db);
+$nabor = $prehled['nabor'];
+$zamestnanci = $prehled['zamestnanci'];
+$pozadavky = $prehled['pozadavky'];
+$kReseni = $prehled['k_reseni'];
+$dokumenty = $prehled['dokumenty'];
+$lekarskeProhlidky = $prehled['lekarske_prohlidky'];
+$skoleni = $prehled['skoleni'];
+$dovolene = $prehled['dovolene'];
+$latest = $prehled['latest'];
 ?>
 <section class="hr_stats_grid">
     <a class="hr_stat_box hr_accent_blue" href="<?= h(cb_root_url('index.php?m=hr&page=nabor')) ?>" aria-label="Nábor">
@@ -50,7 +50,7 @@ $latest = $dashboard['latest'];
     </article>
 </section>
 
-<section class="hr_dashboard_grid">
+<section class="hr_prehled_grid">
     <article class="hr_panel">
         <div class="hr_panel_header">
             <h2 class="hr_panel_title">Dokumenty</h2>
@@ -109,7 +109,7 @@ $latest = $dashboard['latest'];
     </article>
 </section>
 
-<section class="hr_dashboard_grid">
+<section class="hr_prehled_grid">
     <article class="hr_panel hr_panel_wide">
         <div class="hr_panel_header">
             <h2 class="hr_panel_title">Poslední zaměstnanci</h2>

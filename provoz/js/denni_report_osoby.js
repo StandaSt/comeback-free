@@ -1,4 +1,4 @@
-// js/karty_report_person.js * Verze: V2 * Aktualizace: 12.05.2026
+// js/denni_report_osoby.js * Verze: V2 * Aktualizace: 12.05.2026
 'use strict';
 
 (function (w) {
@@ -745,15 +745,14 @@
     syncReportState(root);
   }
 
-  function initKartyReportPerson() {
+  function initDenniReportOsoby() {
     document.querySelectorAll('.cb-zadani-reportu, [data-zr-form]').forEach(initOne);
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initKartyReportPerson);
+    document.addEventListener('DOMContentLoaded', initDenniReportOsoby);
   } else {
-    initKartyReportPerson();
+    initDenniReportOsoby();
   }
-  document.addEventListener('cb:card-swapped', initKartyReportPerson);
-  document.addEventListener('cb:card-max-loaded', initKartyReportPerson);
+  document.addEventListener('cb:main-swapped', initDenniReportOsoby);
 }(window));

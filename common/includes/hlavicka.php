@@ -154,7 +154,7 @@ $cbObdobiOd = $cbWorkingYesterday;
 $cbObdobiDo = $cbWorkingEnd;
 $cbObdobiMode = trim((string)($_SESSION['cb_obdobi_mode'] ?? 'manual'));
 $cbProdlevaMs = (int)cb_system_setting('pauza_obdobi', 1000);
-if (!in_array($cbProdlevaMs, [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000], true)) {
+if (!in_array($cbProdlevaMs, range(1000, 10000, 1000), true)) {
     $cbProdlevaMs = 1000;
 }
 
@@ -179,7 +179,7 @@ if ($sessionOd !== '' && $sessionDo !== '' && $sessionOd <= $cbObdobiMax && $ses
 }
 
 $userProdleva = (int)cb_user_setting('prodleva', $cbProdlevaMs);
-if (in_array($userProdleva, [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000], true)) {
+if (in_array($userProdleva, range(1000, 10000, 1000), true)) {
     $cbProdlevaMs = $userProdleva;
 }
 

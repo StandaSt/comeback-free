@@ -50,9 +50,9 @@ if ($smPageTitle === 'Přehled') {
 ?>
 <?php require __DIR__ . '/sm_includes/sm_menu.php'; ?>
 
-<section class="blok_pp smeny_content">
-    <header class="blok_pp_header">
-        <h1 class="blok_pp_title"><?= h($smPageTitle) ?></h1>
+<section class="pp smeny_content" data-module="smeny" data-page="<?= h($smPage) ?>">
+    <header class="pp_header">
+        <h1><?= h($smPageTitle) ?></h1>
     </header>
     <p class="smeny_content_text">Modul Směny je připravený pro další napojení obsahu.</p>
 </section>

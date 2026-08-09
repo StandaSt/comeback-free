@@ -14,7 +14,7 @@
     var toggle = root.querySelector('[data-cb-pob-toggle="1"]');
     var saveUrl = String(root.getAttribute('data-save-url') || '');
     if (saveUrl === '') {
-      saveUrl = 'provoz.php';
+      saveUrl = 'index.php';
     }
     var branchToggleBtn = root.querySelector('[data-cb-pob-toggle="1"]');
 
@@ -182,7 +182,8 @@
             'Content-Type': 'application/json',
             'X-Comeback-Set-Branches': '1'
           },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
+          credentials: 'same-origin'
         })
           .then(function (r) { return r.json().catch(function () { return {}; }); })
           .then(function (json) {
@@ -197,12 +198,10 @@
               }
               return;
             }
-            if (w.CB_AJAX && typeof w.CB_AJAX.refreshDashboardRefreshOpCards === 'function') {
-              updateBranchButtonLabel(String(payload.mode || ''), payload.selected_oblasti || []);
-              return w.CB_AJAX.refreshDashboardRefreshOpCards({
-                loaderMode: 'dashboard'
-              });
-            }
+            updateBranchButtonLabel(String(payload.mode || ''), payload.selected_oblasti || []);
+            document.dispatchEvent(new CustomEvent('cb:gn-changed', {
+              detail: { source: 'pobocky' }
+            }));
           })
           .catch(function () {
             alert('Uložení výběru selhalo.');

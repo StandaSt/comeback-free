@@ -1,4 +1,4 @@
-// js/karty_report_form.js * Verze: V1 * Aktualizace: 11.03.2026
+// js/denni_report_form.js * Verze: V1 * Aktualizace: 11.03.2026
 'use strict';
 
 (function (w) {
@@ -634,7 +634,7 @@
     }
   }
 
-  function initKartyReportForm() {
+  function initDenniReportForm() {
     document.querySelectorAll('.cb-zadani-reportu, [data-zr-form]').forEach(initOne);
   }
 
@@ -645,10 +645,9 @@
   };
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initKartyReportForm);
+    document.addEventListener('DOMContentLoaded', initDenniReportForm);
   } else {
-    initKartyReportForm();
+    initDenniReportForm();
   }
-  document.addEventListener('cb:card-swapped', initKartyReportForm);
-  document.addEventListener('cb:card-max-loaded', initKartyReportForm);
+  document.addEventListener('cb:main-swapped', initDenniReportForm);
 }(window));

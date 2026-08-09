@@ -11,15 +11,15 @@ require_once __DIR__ . '/../lib/denni_report_data.php';
             $conn->set_charset('utf8mb4');
         }
 
-        $data = cb_denni_report_prepare_data($conn, 'mini');
-        $missingReports = is_array($data['miniMissingReports'] ?? null) ? $data['miniMissingReports'] : [];
+        $data = cb_denni_report_prehled_data($conn);
+        $missingReports = is_array($data['missingReports'] ?? null) ? $data['missingReports'] : [];
     } catch (Throwable $e) {
-        echo '<section class="provoz_prehled_block"><h2 class="provoz_prehled_title">Denní report</h2><p class="txt_cervena">Data se nepodařilo načíst.</p></section>';
+        echo '<section class="blok"><h2 class="blok_title">Denní report</h2><p class="txt_cervena">Data se nepodařilo načíst.</p></section>';
         return;
     }
     ?>
-    <section class="provoz_prehled_block provoz_prehled_block_denni_report">
-        <h2 class="provoz_prehled_title">Denní report</h2>
+    <section class="blok blok_denni_report">
+        <h2 class="blok_title">Denní report</h2>
         <p class="provoz_prehled_text txt_cervena"><span class="text_tucny">Nezadané reporty</span></p>
         <table class="provoz_prehled_mini_table">
             <tbody>

@@ -22,9 +22,10 @@ for ($i = 0; $i < 48; $i++) {
     $cbObdobiCasOptions[] = ['value' => $value, 'label' => $label];
 }
 $cbManualSaveDelayMs = (int)($cbProdlevaMs ?? 3000);
-if (!in_array($cbManualSaveDelayMs, [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000], true)) {
+if (!in_array($cbManualSaveDelayMs, range(1000, 10000, 1000), true)) {
     $cbManualSaveDelayMs = 3000;
 }
+$cbManualSaveDelaySec = intdiv($cbManualSaveDelayMs, 1000);
 
 $cbObdobiSummary = 'Období není zvoleno';
 try {
@@ -35,7 +36,13 @@ try {
     $cbObdobiSummary = 'Období není zvoleno';
 }
 ?>
-<div class="head_select head_select--period" data-cb-period-root="1">
+<div
+  class="head_select head_select--period"
+  data-cb-period-root="1"
+  data-save-url="<?= h($cbHeaderPostUrl) ?>"
+  data-active-mode="<?= h($cbObdobiMode) ?>"
+  data-manual-save-delay-ms="<?= (int)$cbManualSaveDelayMs ?>"
+>
   <button type="button" class="head_period_btn" data-cb-period-toggle="1" aria-expanded="false">
     <span class="head_block_text head_block_text_inline">
       <span class="head_block_label head_block_label_inline">Období:</span>
@@ -80,417 +87,25 @@ try {
       <div class="head_interval_meter" aria-hidden="true">
         <span class="head_interval_meter_bar"></span>
       </div>
+      <div class="head_prodleva" data-cb-prodleva-root="1">
+        <div class="head_prodleva_top">
+          <span class="head_prodleva_label">Prodleva uložení</span>
+          <span class="head_prodleva_value" data-cb-prodleva-value="1"><?= h((string)$cbManualSaveDelaySec) ?> sec.</span>
+        </div>
+        <label class="head_prodleva_slider">
+          <span>1 sec.</span>
+          <input
+            type="range"
+            min="1"
+            max="10"
+            step="1"
+            value="<?= h((string)$cbManualSaveDelaySec) ?>"
+            data-cb-prodleva-range="1"
+            aria-label="Prodleva uložení období"
+          >
+          <span>10 sec.</span>
+        </label>
+      </div>
     </div>
   </div>
 </div>
-
-<script>
-(function(){
-  var periodRoot = document.querySelector('[data-cb-period-root="1"]');
-  var periodToggle = periodRoot ? periodRoot.querySelector('[data-cb-period-toggle="1"]') : null;
-  var periodPanel = periodRoot ? periodRoot.querySelector('[data-cb-period-panel="1"]') : null;
-  var odInput = document.getElementById('cbObdobiOd');
-  var doInput = document.getElementById('cbObdobiDo');
-  var odCasInput = document.getElementById('cbObdobiOdCas');
-  var doCasInput = document.getElementById('cbObdobiDoCas');
-  var quickBtns = document.querySelectorAll('.head_interval .head_pill[data-range]');
-  var meter = document.querySelector('.head_interval .head_interval_meter');
-  var meterBar = meter ? meter.querySelector('.head_interval_meter_bar') : null;
-  var summaryEl = document.querySelector('[data-cb-period-summary="1"]');
-    var odLabel = odInput ? odInput.closest('.head_date') : null;
-    var doLabel = doInput ? doInput.closest('.head_date') : null;
-    var odLabelText = odLabel ? odLabel.querySelector('.head_date_label') : null;
-    var doLabelText = doLabel ? doLabel.querySelector('.head_date_label') : null;
-  var activeMode = '<?= h($cbObdobiMode) ?>';
-  var manualSaveTimer = null;
-  var manualSaveDelayMs = <?= (int)$cbManualSaveDelayMs ?>;
-
-  if (!odInput || !doInput || !odCasInput || !doCasInput || !quickBtns.length) {
-    return;
-  }
-
-  function closePeriodPanel() {
-    if (!periodPanel || !periodToggle) return;
-    periodPanel.classList.add('is-hidden');
-    periodToggle.setAttribute('aria-expanded', 'false');
-  }
-
-  function openPeriodPanel() {
-    if (!periodPanel || !periodToggle) return;
-    periodPanel.classList.remove('is-hidden');
-    periodToggle.setAttribute('aria-expanded', 'true');
-  }
-
-  if (periodToggle && periodPanel) {
-    periodToggle.addEventListener('click', function(event){
-      event.preventDefault();
-      event.stopPropagation();
-      if (periodPanel.classList.contains('is-hidden')) {
-        openPeriodPanel();
-      } else {
-        closePeriodPanel();
-      }
-    });
-    periodPanel.addEventListener('click', function(event){
-      event.stopPropagation();
-    });
-    document.addEventListener('click', closePeriodPanel);
-    document.addEventListener('keydown', function(event){
-      if (event.key === 'Escape') {
-        closePeriodPanel();
-      }
-    });
-  }
-  var isSaving = false;
-  var defaultTime = '06:00';
-  var odTimeKey = 'cb_obdobi_od_cas';
-  var doTimeKey = 'cb_obdobi_do_cas';
-  var allowedModes = ['vcera', 'tyden', 'mesic', 'rok', 'manual'];
-  if (activeMode === 'dnes') {
-    activeMode = 'vcera';
-  }
-
-  if (allowedModes.indexOf(activeMode) === -1) {
-    activeMode = 'manual';
-  }
-
-  function fmtDate(dt){
-    var y = dt.getFullYear();
-    var m = String(dt.getMonth() + 1).padStart(2, '0');
-    var d = String(dt.getDate()).padStart(2, '0');
-    return y + '-' + m + '-' + d;
-  }
-
-  function fmtTime(dt){
-    return String(dt.getHours()).padStart(2, '0') + ':' + String(dt.getMinutes()).padStart(2, '0');
-  }
-
-  function parseDate(v){
-    var s = String(v || '').trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
-    var dateParts = s.split('-');
-    var y = Number(dateParts[0]);
-    var m = Number(dateParts[1]);
-    var d = Number(dateParts[2]);
-    var dt = new Date(y, m - 1, d, 6, 0, 0, 0);
-    if (
-      dt.getFullYear() !== y
-      || (dt.getMonth() + 1) !== m
-      || dt.getDate() !== d
-    ) {
-      return null;
-    }
-    return dt;
-  }
-
-  function isTimeValue(v){
-    return /^\d{2}:\d{2}$/.test(String(v || ''));
-  }
-
-  function loadTime(key){
-    try {
-      var v = window.sessionStorage ? window.sessionStorage.getItem(key) : '';
-      return isTimeValue(v) ? v : defaultTime;
-    } catch (e) {
-      return defaultTime;
-    }
-  }
-
-  function saveTime(key, value){
-    try {
-      if (window.sessionStorage && isTimeValue(value)) {
-        window.sessionStorage.setItem(key, value);
-      }
-    } catch (e) {}
-  }
-
-  function periodValue(dateValue, timeValue){
-    var date = String(dateValue || '').trim();
-    var time = isTimeValue(timeValue) ? String(timeValue) : defaultTime;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return '';
-    return date + ' ' + time;
-  }
-
-  function formatSummaryDateTime(value){
-    var raw = String(value || '').trim().replace('T', ' ');
-    var m = raw.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/);
-    if (!m) return '';
-    return Number(m[3]) + '.' + Number(m[2]) + '.' + m[1] + ' ' + m[4] + ':' + m[5];
-  }
-
-  function syncSummaryFromJson(json){
-    if (!(summaryEl instanceof HTMLElement) || !json) {
-      return;
-    }
-    var od = formatSummaryDateTime(json.od);
-    var ddo = formatSummaryDateTime(json.do);
-    if (od !== '' && ddo !== '') {
-      summaryEl.textContent = od + ' - ' + ddo;
-    }
-  }
-
-  function timeToMinutes(value){
-    if (!isTimeValue(value)) return null;
-    var parts = String(value).split(':');
-    return (Number(parts[0]) * 60) + Number(parts[1]);
-  }
-
-  function findAdjacentTime(value, direction){
-    var target = String(value || '');
-    var options = Array.from(odCasInput.options || []);
-    var index = options.findIndex(function(option){
-      return String(option.value || '') === target;
-    });
-    if (index === -1) {
-      return '';
-    }
-    var nextIndex = index + direction;
-    if (nextIndex < 0 || nextIndex >= options.length) {
-      return '';
-    }
-    return String(options[nextIndex].value || '');
-  }
-
-  function getCurrentWorkingDayStart(){
-    var now = new Date();
-    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 6, 0, 0, 0);
-    if (now.getHours() < 6) {
-      today.setDate(today.getDate() - 1);
-    }
-    return today;
-  }
-
-  function getFinishedWorkingDayStart(){
-    var start = new Date(getCurrentWorkingDayStart());
-    start.setDate(start.getDate() - 1);
-    return start;
-  }
-
-  function getFinishedWorkingDayEnd(){
-    var end = new Date(getCurrentWorkingDayStart());
-    return end;
-  }
-
-  function getNowMax(){
-    var now = new Date();
-    now.setSeconds(0, 0);
-    return now;
-  }
-
-  function clampToMax(v, maxDate){
-    var dt = parseDate(v);
-    if (!dt) return '';
-    if (dt.getTime() > maxDate.getTime()) {
-      dt = new Date(maxDate);
-    }
-    return fmtDate(dt);
-  }
-
-  function setActive(mode){
-    activeMode = mode;
-    quickBtns.forEach(function(btn){
-      btn.classList.toggle('is-on', mode !== 'manual' && btn.getAttribute('data-range') === mode);
-    });
-  }
-
-    function setManualHighlight(isManual){
-      if (odLabel) odLabel.classList.toggle('is-manual', !!isManual);
-      if (doLabel) doLabel.classList.toggle('is-manual', !!isManual);
-      if (odLabelText) odLabelText.classList.toggle('is-manual', !!isManual);
-      if (doLabelText) doLabelText.classList.toggle('is-manual', !!isManual);
-      if (odInput) odInput.classList.toggle('is-manual', !!isManual);
-    if (doInput) doInput.classList.toggle('is-manual', !!isManual);
-    if (odCasInput) odCasInput.classList.toggle('is-manual', !!isManual);
-    if (doCasInput) doCasInput.classList.toggle('is-manual', !!isManual);
-  }
-
-  function savePeriod(payload){
-    if (isSaving) {
-      return Promise.resolve();
-    }
-    isSaving = true;
-    return fetch('<?= h($cbHeaderPostUrl) ?>', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Comeback-Set-Period': '1'
-      },
-      body: JSON.stringify(payload)
-    })
-    .then(function(r){ return r.json().catch(function(){ return {}; }); })
-    .then(function(json){
-      if (json && json.ok === true) {
-        syncSummaryFromJson(json);
-        if (window.CB_AJAX && typeof window.CB_AJAX.runRestiaAndRefreshOpCards === 'function') {
-          return window.CB_AJAX.runRestiaAndRefreshOpCards({
-            loaderMode: 'dashboard'
-          });
-        }
-      }
-    })
-    .catch(function(){})
-    .finally(function(){ isSaving = false; });
-  }
-
-  function resetManualPeriodMeter(){
-    if (!meter || !meterBar) {
-      return;
-    }
-    meter.classList.remove('is-active');
-    meterBar.style.transitionDuration = '0ms';
-    meterBar.style.transform = 'scaleX(0)';
-  }
-
-  function startManualPeriodMeter(){
-    if (!meter || !meterBar) {
-      return;
-    }
-    meter.classList.add('is-active');
-    meterBar.style.transitionDuration = '0ms';
-    meterBar.style.transform = 'scaleX(0)';
-    window.requestAnimationFrame(function(){
-      window.requestAnimationFrame(function(){
-        meterBar.style.transitionDuration = manualSaveDelayMs + 'ms';
-        meterBar.style.transform = 'scaleX(1)';
-      });
-    });
-  }
-
-  function computeRange(range){
-    var finishedDayStart = getFinishedWorkingDayStart();
-    var finishedDayEnd = getFinishedWorkingDayEnd();
-    var from = new Date(finishedDayStart);
-    var to = new Date(finishedDayEnd);
-
-    if (range === 'vcera') {
-      return { od: fmtDate(from), do: fmtDate(to) };
-    }
-
-    if (range === 'tyden') {
-      var day = finishedDayStart.getDay();
-      var mondayShift = (day === 0 ? -6 : 1 - day);
-      from.setDate(finishedDayStart.getDate() + mondayShift);
-      from.setHours(6, 0, 0, 0);
-      return { od: fmtDate(from), do: fmtDate(to) };
-    }
-
-    if (range === 'mesic') {
-      from = new Date(finishedDayStart.getFullYear(), finishedDayStart.getMonth(), 1, 6, 0, 0, 0);
-      return { od: fmtDate(from), do: fmtDate(to) };
-    }
-
-    from = new Date(finishedDayStart.getFullYear(), 0, 1, 6, 0, 0, 0);
-    return { od: fmtDate(from), do: fmtDate(to) };
-  }
-
-  quickBtns.forEach(function(btn){
-    btn.addEventListener('click', function(){
-      cancelManualPeriodSave();
-      var range = btn.getAttribute('data-range') || 'vcera';
-      var val = computeRange(range);
-
-      odInput.value = val.od;
-      doInput.value = val.do;
-      odCasInput.value = defaultTime;
-      doCasInput.value = defaultTime;
-      saveTime(odTimeKey, odCasInput.value);
-      saveTime(doTimeKey, doCasInput.value);
-      setActive(range);
-      setManualHighlight(false);
-      var doValue = periodValue(val.do, doCasInput.value);
-      if (range === 'tyden' || range === 'mesic' || range === 'rok') {
-        var nowMax = getNowMax();
-        doValue = periodValue(fmtDate(nowMax), fmtTime(nowMax));
-      }
-      savePeriod({
-        od: periodValue(val.od, odCasInput.value),
-        do: doValue,
-        mode: range
-      });
-    });
-  });
-
-  odCasInput.value = loadTime(odTimeKey);
-  doCasInput.value = loadTime(doTimeKey);
-  odInput.max = fmtDate(getNowMax());
-  doInput.max = fmtDate(getNowMax());
-
-  function saveManualPeriod(changedField){
-    resetManualPeriodMeter();
-    var maxDate = getNowMax();
-    var od = clampToMax(odInput.value, maxDate);
-    var ddo = clampToMax(doInput.value, maxDate);
-    if (!od || !ddo) return;
-    if (od > ddo) {
-      if (changedField === 'do') {
-        od = ddo;
-      } else {
-        ddo = od;
-      }
-    }
-    odInput.value = od;
-    doInput.value = ddo;
-
-    if (od === ddo) {
-      var odMinutes = timeToMinutes(odCasInput.value);
-      var doMinutes = timeToMinutes(doCasInput.value);
-      if (odMinutes !== null && doMinutes !== null && odMinutes >= doMinutes) {
-        if (changedField === 'od' || changedField === 'od_time') {
-          var prevOdTime = findAdjacentTime(doCasInput.value, -1);
-          if (prevOdTime !== '') {
-            odCasInput.value = prevOdTime;
-          }
-        } else {
-          var nextDoTime = findAdjacentTime(odCasInput.value, 1);
-          if (nextDoTime !== '') {
-            doCasInput.value = nextDoTime;
-          }
-        }
-      }
-    }
-
-    saveTime(odTimeKey, odCasInput.value);
-    saveTime(doTimeKey, doCasInput.value);
-    setActive('manual');
-    setManualHighlight(true);
-    savePeriod({
-      od: periodValue(od, odCasInput.value),
-      do: periodValue(ddo, doCasInput.value),
-      mode: 'manual'
-    });
-  }
-
-  function scheduleManualPeriodSave(changedField){
-    if (manualSaveTimer) {
-      window.clearTimeout(manualSaveTimer);
-      manualSaveTimer = null;
-    }
-    startManualPeriodMeter();
-    manualSaveTimer = window.setTimeout(function(){
-      manualSaveTimer = null;
-      saveManualPeriod(changedField);
-    }, manualSaveDelayMs);
-  }
-
-  function cancelManualPeriodSave(){
-    if (manualSaveTimer) {
-      window.clearTimeout(manualSaveTimer);
-      manualSaveTimer = null;
-    }
-    resetManualPeriodMeter();
-  }
-
-  [odInput, doInput, odCasInput, doCasInput].forEach(function(field){
-    field.addEventListener('focus', cancelManualPeriodSave);
-  });
-
-  odInput.addEventListener('change', function(){ scheduleManualPeriodSave('od'); });
-  doInput.addEventListener('change', function(){ scheduleManualPeriodSave('do'); });
-  odCasInput.addEventListener('change', function(){ scheduleManualPeriodSave('od_time'); });
-  doCasInput.addEventListener('change', function(){ scheduleManualPeriodSave('do_time'); });
-
-  setActive(activeMode);
-  setManualHighlight(activeMode === 'manual');
-  resetManualPeriodMeter();
-})();
-</script>

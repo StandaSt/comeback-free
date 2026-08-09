@@ -24,7 +24,7 @@ declare(strict_types=1);
     $now = new DateTimeImmutable('now', $tz);
     $todayStart = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $now->format('Y-m-d') . ' 06:00:00', $tz);
     if (!($todayStart instanceof DateTimeImmutable)) {
-        echo '<section class="provoz_prehled_block"><h2 class="provoz_prehled_title">Objednávky online</h2><p class="txt_cervena">Data se nepodařilo načíst.</p></section>';
+        echo '<section class="blok"><h2 class="blok_title">Objednávky online</h2><p class="txt_cervena">Data se nepodařilo načíst.</p></section>';
         return;
     }
 
@@ -183,16 +183,16 @@ declare(strict_types=1);
             ],
         ]);
     } catch (Throwable $e) {
-        echo '<section class="provoz_prehled_block"><h2 class="provoz_prehled_title">Objednávky online</h2><p class="txt_cervena">Online objednávky se nepodařilo načíst.</p></section>';
+        echo '<section class="blok"><h2 class="blok_title">Objednávky online</h2><p class="txt_cervena">Online objednávky se nepodařilo načíst.</p></section>';
         return;
     }
     ?>
-    <section class="provoz_prehled_block provoz_prehled_block_online">
-        <h2 class="provoz_prehled_title">Objednávky online</h2>
-        <div class="provoz_prehled_online_root" data-cb-prehledy-grafy="1">
-            <script type="application/json" data-cb-prehledy-grafy-data><?= $payloadJson ?></script>
+    <section class="blok blok_online">
+        <h2 class="blok_title">Objednávky online</h2>
+        <div class="provoz_prehled_online_root" data-graf="1">
+            <script type="application/json" data-graf-data><?= $payloadJson ?></script>
 
-            <div class="provoz_prehled_online_summary" data-cb-tooltip-boundary="1">
+            <div class="provoz_prehled_online_summary" data-tooltip-boundary="1">
                 <span class="provoz_prehled_online_states">
                     <span><strong class="provoz_prehled_online_state_ok"><?= h((string)$sumDokonceno) ?></strong> OK</span>
                     <span><strong class="provoz_prehled_online_state_road"><?= h((string)$sumNaCeste) ?></strong> na cestě</span>
@@ -201,9 +201,9 @@ declare(strict_types=1);
                     <span><strong class="provoz_prehled_online_state_cancel"><?= h((string)$sumZruseno) ?></strong> zrušeno</span>
                 </span>
 
-                <span class="provoz_tooltip" tabindex="0" aria-label="Souhrn online objednávek" data-cb-tooltip-position="1">
+                <span class="provoz_tooltip" tabindex="0" aria-label="Souhrn online objednávek" data-tooltip="1">
                     <span>detail</span>
-                    <span class="provoz_tooltip_panel provoz_tooltip_card" data-cb-tooltip-panel="1">
+                    <span class="provoz_tooltip_panel provoz_tooltip_card" data-tooltip-panel="1">
                         <span class="provoz_tooltip_title">Online objednávky podle poboček</span>
                         <table class="provoz_tooltip_table">
                             <thead>
@@ -247,7 +247,7 @@ declare(strict_types=1);
                 </span>
             </div>
 
-            <div id="prehled-objednavky-online-chart" class="provoz_prehled_online_chart" data-cb-prehledy-grafy-chart="1"></div>
+            <div id="prehled-objednavky-online-chart" class="provoz_prehled_online_chart" data-graf-canvas="1"></div>
         </div>
     </section>
     <?php

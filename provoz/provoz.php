@@ -70,7 +70,6 @@ if (!$cbHasComebackHeader) {
 
 if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
     require_once __DIR__ . '/../common/lib/pobocky_vyber.php';
-    require_once __DIR__ . '/lib/card_json_response.php';
     require_once __DIR__ . '/../common/lib/handle_set_period.php';
     require_once __DIR__ . '/../common/lib/handle_set_pobocky.php';
 
@@ -103,28 +102,22 @@ if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
     require_once __DIR__ . '/../common/lib/uloz_akci.php';
 }
 
-$cbPage = trim((string)($_GET['page'] ?? 'dashboard'));
-if ($cbPage === '') {
-    $cbPage = 'dashboard';
+$cbPage = trim((string)($_GET['page'] ?? 'prehled'));
+if ($cbPage === '' || $cbPage === 'dashboard') {
+    $cbPage = 'prehled';
 }
 $cbProvozPages = [
-    'dashboard' => __DIR__ . '/pages/prehled.php',
     'prehled' => __DIR__ . '/pages/prehled.php',
+    'denni_report' => __DIR__ . '/pages/denni_report.php',
     'nastaveni' => __DIR__ . '/karty/user_setting.php',
-    'stranka_1' => __DIR__ . '/pages/stranka_1.php',
-    'stranka_2' => __DIR__ . '/pages/stranka_2.php',
-    'stranka_3' => __DIR__ . '/pages/stranka_3.php',
 ];
 $cbProvozPageTitles = [
-    'dashboard' => 'Přehled',
     'prehled' => 'Přehled',
+    'denni_report' => 'Denní report',
     'nastaveni' => 'Nastavení',
-    'stranka_1' => 'Stránka 1',
-    'stranka_2' => 'Stránka 2',
-    'stranka_3' => 'Stránka 3',
 ];
 if (!isset($cbProvozPages[$cbPage])) {
-    $cbPage = 'dashboard';
+    $cbPage = 'prehled';
 }
 $pageKey = $cbPage;
 $file = $cbProvozPages[$cbPage];
@@ -221,16 +214,16 @@ if (!empty($_SESSION['login_ok']) && $cbSystemLocked) {
     ?>
     <?php require __DIR__ . '/includes/menu.php'; ?>
 
-    <section class="blok_pp">
-        <header class="blok_pp_header">
-            <h1 class="blok_pp_title"><?= h($cbProvozPageTitle) ?></h1>
+    <section class="pp" data-module="provoz" data-page="<?= h($cbPage) ?>">
+        <header class="pp_header">
+            <h1><?= h($cbProvozPageTitle) ?></h1>
         </header>
         <?php
         if ($cbPageExists) {
             require $file;
             if ($cbPage === 'nastaveni' && isset($card_max_html)) {
-                echo '<section class="provoz_prehled_block">';
-                echo '<h2 class="provoz_prehled_title">Nastavení</h2>';
+                echo '<section class="blok">';
+                echo '<h2 class="blok_title">Nastavení</h2>';
                 echo $card_max_html;
                 echo '</section>';
             }

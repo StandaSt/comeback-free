@@ -2,13 +2,13 @@
 declare(strict_types=1);
 
 /**
- * DB dotazy pro dokumenty zobrazovane v HR dashboardu.
+ * DB dotazy pro dokumenty zobrazovane v HR prehledu.
  */
 
 /**
  * Nacte posledni aktualni dokumenty evidovane u VD nebo zamestnancu.
  */
-function hr_fetch_dashboard_documents(mysqli $db, int $limit = 5): array
+function hr_fetch_prehled_documents(mysqli $db, int $limit = 5): array
 {
     $limit = max(1, min($limit, 20));
     $sql = "
@@ -49,7 +49,7 @@ function hr_fetch_dashboard_documents(mysqli $db, int $limit = 5): array
         $vdJmeno = trim((string)$row['vd_prijmeni'] . ' ' . (string)$row['vd_jmeno']);
         $personJmeno = trim((string)$row['person_prijmeni'] . ' ' . (string)$row['person_jmeno']);
 
-        // Zachova vystupni klice pro existujici dashboard sablonu.
+        // Zachova vystupni klice pro existujici sablonu prehledu.
         $rows[] = [
             'id_dokument' => (int)$row['id_dokument'],
             'verze' => (int)$row['verze'],

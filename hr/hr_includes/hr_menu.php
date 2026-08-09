@@ -4,7 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../common/includes/blok_menu.php';
 
 $hrMenuItems = [
-    ['page' => 'dashboard', 'label' => 'Přehled'],
+    ['page' => 'prehled', 'label' => 'Přehled'],
     ['page' => 'nabor', 'label' => 'Nábor'],
     ['page' => 'zamestnanci', 'label' => 'Zaměstnanci'],
     ['page' => 'pozadavky', 'label' => 'Požadavky'],

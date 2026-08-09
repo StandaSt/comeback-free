@@ -919,28 +919,38 @@ function cb_denni_report_docs_count_from_person_rows(array $rows): int
     return $count;
 }
 
-function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): array
+function cb_denni_report_prehled_data(mysqli $conn): array
 {
-    $renderMode = trim($renderMode);
-    $isMaxRender = ($renderMode === 'max');
-    
+    return cb_denni_report_prepare_data($conn, 'prehled');
+}
+
+function cb_denni_report_zadani_data(mysqli $conn): array
+{
+    return cb_denni_report_prepare_data($conn, 'zadani');
+}
+
+function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): array
+{
+    $typ = trim($typ);
+    $isZadani = ($typ === 'zadani');
+
     $tz = new DateTimeZone('Europe/Prague');
     $currentWorkdayDt = cb_denni_report_current_workday_date();
     $workdayOptions = cb_denni_report_workday_options($currentWorkdayDt);
-    $miniMissingReportDays = [];
+    $missingReportDays = [];
     $todayDate = $currentWorkdayDt->format('Y-m-d');
-    $showTodayMiniMissingReport = cb_denni_report_has_any_report($conn, $todayDate);
+    $showTodayMissingReport = cb_denni_report_has_any_report($conn, $todayDate);
     for ($i = 0; $i <= 4; $i++) {
-        if ($i === 0 && !$showTodayMiniMissingReport) {
+        if ($i === 0 && !$showTodayMissingReport) {
             continue;
         }
-        $miniMissingReportDays[] = $currentWorkdayDt->modify('-' . $i . ' day');
+        $missingReportDays[] = $currentWorkdayDt->modify('-' . $i . ' day');
     }
-    $miniMissingReports = [];
-    foreach ($miniMissingReportDays as $dayDt) {
+    $missingReports = [];
+    foreach ($missingReportDays as $dayDt) {
         $dayDate = $dayDt->format('Y-m-d');
         $missingBranches = cb_denni_report_missing_reports_summary($conn, $dayDate);
-        $miniMissingReports[] = [
+        $missingReports[] = [
             'date' => $dayDate,
             'label' => cb_dt_weekday_date_label_cs($dayDt, true),
             'branches' => $missingBranches,
@@ -949,14 +959,12 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
                 : 'OK',
         ];
     }
-    if (!$isMaxRender) {
+    if (!$isZadani) {
         return [
-            'renderMode' => $renderMode,
-            'isMaxRender' => $isMaxRender,
             'tz' => $tz,
             'currentWorkdayDt' => $currentWorkdayDt,
             'workdayOptions' => $workdayOptions,
-            'miniMissingReports' => $miniMissingReports,
+            'missingReports' => $missingReports,
         ];
     }
     $allowedWorkdayValues = array_column($workdayOptions, 'value');
@@ -1397,12 +1405,10 @@ function cb_denni_report_prepare_data(mysqli $conn, string $renderMode = ''): ar
     
     
     return [
-        'renderMode' => $renderMode,
-        'isMaxRender' => $isMaxRender,
         'tz' => $tz,
         'currentWorkdayDt' => $currentWorkdayDt,
         'workdayOptions' => $workdayOptions,
-        'miniMissingReports' => $miniMissingReports,
+        'missingReports' => $missingReports,
         'isCurrentWorkday' => $isCurrentWorkday,
         'reportDateDt' => $reportDateDt,
         'reportDate' => $reportDate,
