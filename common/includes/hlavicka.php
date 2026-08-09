@@ -314,7 +314,7 @@ if (!in_array($cbCurrentModule, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk'], 
 $cbHeaderPostUrl = cb_root_url('index.php');
 $cbProvozPostUrl = cb_root_url('index.php');
 ?>
-<header class="head_grid sirka100">
+<header class="blok_hlavicka sirka100">
 
     <?php require __DIR__ . '/hlavicka/head_logo.php'; ?>
     <strong class="head_title">Comeback</strong>
@@ -329,17 +329,17 @@ $cbProvozPostUrl = cb_root_url('index.php');
 
       <button type="button" class="head_task_btn head_task_btn--todo<?= $cbCurrentModule === 'ukoly' ? ' is-active' : '' ?>" data-cb-module-link="1" data-cb-module="ukoly">
         <span>Úkoly</span>
-        <strong>0</strong>
+        <strong class="head_task_count">0</strong>
       </button>
       <?php if ($cbHelpdeskIsRoleOne): ?>
         <button type="button" class="head_task_btn head_task_btn--helpdesk" data-cb-module-link="1" data-cb-module="helpdesk">
           <span>HelpDesk</span>
-          <strong data-cb-helpdesk-header-count="all">0</strong>
+          <strong class="head_task_count" data-cb-helpdesk-header-count="all">0</strong>
         </button>
       <?php else: ?>
         <button type="button" class="head_task_btn head_task_btn--helpdesk" data-cb-module-link="1" data-cb-module="helpdesk">
           <span>HelpDesk</span>
-          <strong data-cb-helpdesk-header-count="all">0</strong>
+          <strong class="head_task_count" data-cb-helpdesk-header-count="all">0</strong>
         </button>
       <?php endif; ?>
 
@@ -350,7 +350,7 @@ $cbProvozPostUrl = cb_root_url('index.php');
         <span class="head_update_icon" aria-hidden="true">⟳</span>
         <span>
           <span class="head_block_label">Aktualizace dat</span>
-          <strong><?= h($cbHeadAktualizaceDat) ?></strong>
+          <strong class="head_update_value"><?= h($cbHeadAktualizaceDat) ?></strong>
         </span>
       </div>
 

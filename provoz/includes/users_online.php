@@ -49,10 +49,10 @@ declare(strict_types=1);
         <h2 class="provoz_prehled_title">Přehled online uživatelů</h2>
         <p class="provoz_prehled_meta"><?= h((string)count($rows)) ?> online</p>
         <table class="provoz_prehled_data">
-            <thead><tr><th>Uživatel</th><th>Přihlášení</th><th>Poslední akce</th></tr></thead>
+            <thead><tr><th class="provoz_prehled_data_cell provoz_prehled_data_cell_left provoz_prehled_data_head">Uživatel</th><th class="provoz_prehled_data_cell provoz_prehled_data_head">Přihlášení</th><th class="provoz_prehled_data_cell provoz_prehled_data_head">Poslední akce</th></tr></thead>
             <tbody>
                 <?php if ($rows === []): ?>
-                    <tr><td colspan="3">Žádní online uživatelé</td></tr>
+                    <tr><td class="provoz_prehled_data_cell provoz_prehled_data_cell_left" colspan="3">Žádní online uživatelé</td></tr>
                 <?php endif; ?>
                 <?php foreach ($rows as $row): ?>
                     <?php
@@ -61,9 +61,9 @@ declare(strict_types=1);
                     $lastActionTime = trim((string)$row['last_action_time']);
                     ?>
                     <tr>
-                        <td><?= h($name !== '' ? $name : ('ID ' . (string)$row['id_user'])) ?></td>
-                        <td><?= h($loginTime !== '' ? date('G:i', strtotime($loginTime)) : '-') ?></td>
-                        <td><?= h($lastActionTime !== '' ? date('G:i', strtotime($lastActionTime)) : '-') ?></td>
+                        <td class="provoz_prehled_data_cell provoz_prehled_data_cell_left"><?= h($name !== '' ? $name : ('ID ' . (string)$row['id_user'])) ?></td>
+                        <td class="provoz_prehled_data_cell"><?= h($loginTime !== '' ? date('G:i', strtotime($loginTime)) : '-') ?></td>
+                        <td class="provoz_prehled_data_cell"><?= h($lastActionTime !== '' ? date('G:i', strtotime($lastActionTime)) : '-') ?></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>

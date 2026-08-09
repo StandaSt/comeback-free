@@ -432,10 +432,7 @@ if (!function_exists('cb_store_user_settings')) {
         $data['pismo'] = $pismo;
 
         $dark = (int)($values['dark'] ?? $data['dark']);
-        if (!in_array($dark, [0, 1], true)) {
-            $dark = 0;
-        }
-        $data['dark'] = $dark;
+        $data['dark'] = max(0, min(6, $dark));
 
         $kpi = (int)($values['kpi'] ?? $data['kpi']);
         if (!in_array($kpi, [0, 1], true)) {

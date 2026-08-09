@@ -44,7 +44,7 @@
 
   function buildBellHtml(hasNewReply) {
     if (hasNewReplyValue(hasNewReply) === '1') {
-      return '<span class="helpdesk_ticket_bell is-unread" data-hd-bell="1" title="Nová reakce" aria-label="Nová reakce">!</span>';
+      return '<span class="helpdesk_ticket_bell helpdesk_state_unread" data-hd-bell="1" title="Nová reakce" aria-label="Nová reakce">!</span>';
     }
 
     return '<span class="helpdesk_ticket_bell" data-hd-bell="0" title="Bez nové reakce" aria-label="Bez nové reakce">!</span>';
@@ -141,7 +141,7 @@
 
   function isHelpdeskVisible() {
     var expanded = getExpandedBox();
-    return expanded instanceof HTMLElement && !expanded.classList.contains('is-hidden');
+    return expanded instanceof HTMLElement && !expanded.classList.contains('helpdesk_state_hidden');
   }
 
   function getDetailPanelBox() {
@@ -255,30 +255,30 @@
         if (!(row instanceof HTMLElement)) { return; }
         var isActive = activeDetailId !== '' && row.getAttribute('data-hd-item') === activeDetailId;
         var rowState = normalizeFilterValue(row.getAttribute('data-hd-stav') || '');
-        row.classList.toggle('is-active', isActive);
-        row.classList.toggle('is-read', row.getAttribute('data-hd-has-new-reply') !== '1');
-        row.classList.toggle('is-state-active', rowState === 'active');
-        row.classList.toggle('is-state-resolved', rowState === 'resolved');
+        row.classList.toggle('helpdesk_state_active', isActive);
+        row.classList.toggle('helpdesk_state_read', row.getAttribute('data-hd-has-new-reply') !== '1');
+        row.classList.toggle('helpdesk_state_status_active', rowState === 'active');
+        row.classList.toggle('helpdesk_state_status_resolved', rowState === 'resolved');
       });
     }
 
     var marker = getDetailMarkerBox();
     if (!(marker instanceof HTMLElement)) { return; }
     if (activeDetailId === '') {
-      marker.classList.remove('is-visible');
+      marker.classList.remove('helpdesk_state_visible');
       marker.innerHTML = '';
       return;
     }
 
     var row = getItemRow(activeDetailId);
-    if (!(row instanceof HTMLElement) || row.classList.contains('is-hidden')) {
-      marker.classList.remove('is-visible');
+    if (!(row instanceof HTMLElement) || row.classList.contains('helpdesk_state_hidden')) {
+      marker.classList.remove('helpdesk_state_visible');
       marker.innerHTML = '';
       return;
     }
 
-    marker.classList.add('is-visible');
-    marker.innerHTML = '<div class="helpdesk_marker_arrow"><img src="' + esc(arrowIconUrl) + '" alt=""></div>';
+    marker.classList.add('helpdesk_state_visible');
+    marker.innerHTML = '<div class="helpdesk_marker_arrow"><img class="helpdesk_marker_arrow_img" src="' + esc(arrowIconUrl) + '" alt=""></div>';
   }
 
   function closeActiveDetail() {
@@ -367,11 +367,11 @@
       var messageUserId = Number(z.id_user || 0);
       var messageClass = 'helpdesk_message ram_normal zaobleni_10';
       if (isAdminMessage) {
-        messageClass += ' is-admin';
+        messageClass += ' helpdesk_state_admin';
       } else if (!isAdmin && messageUserId === currentUserId) {
-        messageClass += ' is-current-user';
+        messageClass += ' helpdesk_state_current_user';
       } else if (isAdmin && messageUserId === ownerId) {
-        messageClass += ' is-admin-owner';
+        messageClass += ' helpdesk_state_admin_owner';
       }
       html += '<div class="' + esc(messageClass) + '">';
       html += '<div class="helpdesk_message_head">';
@@ -440,7 +440,7 @@
     activeDetailId = text(ticket.id_helpdesk || row.getAttribute('data-hd-item') || '');
     updateRowHasNewReply(activeDetailId, data && data.has_new_reply ? data.has_new_reply : 0);
     if (getUnreadOnlyValue() && row instanceof HTMLElement) {
-      row.classList.add('is-hidden');
+      row.classList.add('helpdesk_state_hidden');
     }
     if (window.CB_HELPDESK_HEADER && typeof window.CB_HELPDESK_HEADER.refresh === 'function') {
       window.CB_HELPDESK_HEADER.refresh();
@@ -469,7 +469,7 @@
     activeDetailId = String(id);
     scrollDetailToBottomOnRender = true;
     refreshActiveRowUi();
-    detailBox.innerHTML = '<div class="helpdesk_detail_notice is-loading ram_normal zaobleni_10">Načítám detail...</div>';
+    detailBox.innerHTML = '<div class="helpdesk_detail_notice helpdesk_state_loading ram_normal zaobleni_10">Načítám detail...</div>';
 
     fetch(apiActionUrl('detail') + '&id_helpdesk=' + encodeURIComponent(String(id)), {
       method: 'GET',
@@ -481,7 +481,7 @@
       .then(function (r) { return r.json().catch(function () { return {}; }); })
       .then(function (data) {
         if (!data || data.ok !== true) {
-          detailBox.innerHTML = '<div class="helpdesk_detail_notice is-error ram_normal zaobleni_10">Detail se nepodařilo načíst.</div>';
+          detailBox.innerHTML = '<div class="helpdesk_detail_notice helpdesk_state_error ram_normal zaobleni_10">Detail se nepodařilo načíst.</div>';
           activeDetailId = '';
           refreshActiveRowUi();
           return;
@@ -489,7 +489,7 @@
         renderDetail(data, row);
       })
       .catch(function () {
-        detailBox.innerHTML = '<div class="helpdesk_detail_notice is-error ram_normal zaobleni_10">Detail se nepodařilo načíst.</div>';
+        detailBox.innerHTML = '<div class="helpdesk_detail_notice helpdesk_state_error ram_normal zaobleni_10">Detail se nepodařilo načíst.</div>';
         activeDetailId = '';
         refreshActiveRowUi();
       });
@@ -518,11 +518,11 @@
       if (!(row instanceof HTMLElement)) { return; }
       var rowState = text(row.getAttribute('data-hd-stav') || '');
       var rowUnread = row.getAttribute('data-hd-has-new-reply') === '1';
-      row.classList.toggle('is-hidden', !(filterMatchesState(value, rowState, row) && (!unreadOnly || rowUnread)));
+      row.classList.toggle('helpdesk_state_hidden', !(filterMatchesState(value, rowState, row) && (!unreadOnly || rowUnread)));
     });
 
     var activeRow = getItemRow(activeDetailId);
-    if (activeDetailId !== '' && activeRow instanceof HTMLElement && activeRow.classList.contains('is-hidden')) {
+    if (activeDetailId !== '' && activeRow instanceof HTMLElement && activeRow.classList.contains('helpdesk_state_hidden')) {
       closeActiveDetail();
       return;
     }

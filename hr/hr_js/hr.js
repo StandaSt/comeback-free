@@ -3,9 +3,6 @@
 
     // Chovani HR modulu v prohlizeci.
 
-    const root = document.documentElement;
-    const storageKey = 'comeback_hr_theme';
-
     // Formatuje cesky telefon na tvar 123 456 789.
     const formatCzechPhone = (value) => {
         let digits = String(value || '').replace(/\D+/g, '');
@@ -19,29 +16,8 @@
         return digits.replace(/(\d{3})(?=\d)/g, '$1 ').trim();
     };
 
-    const applyTheme = (theme) => {
-        const normalized = theme === 'dark' ? 'dark' : 'light';
-        root.dataset.theme = normalized;
-        const icon = document.querySelector('[data-theme-icon]');
-        if (icon) {
-            icon.textContent = normalized === 'dark' ? '☀' : '☾';
-        }
-    };
-
     const initHr = (scope) => {
         const container = scope instanceof Element || scope instanceof Document ? scope : document;
-        const button = container.querySelector('[data-theme-toggle]');
-
-        applyTheme(localStorage.getItem(storageKey) || 'light');
-
-        if (button && button.dataset.hrBound !== '1') {
-            button.dataset.hrBound = '1';
-            button.addEventListener('click', () => {
-                const nextTheme = root.dataset.theme === 'dark' ? 'light' : 'dark';
-                localStorage.setItem(storageKey, nextTheme);
-                applyTheme(nextTheme);
-            });
-        }
 
         container.querySelectorAll('[data-phone-cz]').forEach((input) => {
             if (input.dataset.hrPhoneBound === '1') {
@@ -60,7 +36,7 @@
             }
             select.dataset.hrSlotBound = '1';
 
-            const input = select.closest('.hr-slot-choice')?.querySelector('[data-slot-other]');
+            const input = select.closest('.hr_slot_choice')?.querySelector('[data-slot-other]');
             if (!input) {
                 return;
             }
@@ -76,6 +52,26 @@
 
             updateOtherSlot();
             select.addEventListener('change', updateOtherSlot);
+        });
+
+        container.querySelectorAll('[data-hr_request_form]').forEach((form) => {
+            if (form.dataset.hrRequestBound === '1') {
+                return;
+            }
+            form.dataset.hrRequestBound = '1';
+
+            const slot = form.querySelector('[data-hr-request-slot]');
+            const submit = form.querySelector('.hr_request_submit');
+            if (!slot || !submit) {
+                return;
+            }
+
+            const updateRequestSubmit = () => {
+                submit.classList.toggle('hr_request_submit_active', slot.value !== '');
+            };
+
+            updateRequestSubmit();
+            slot.addEventListener('change', updateRequestSubmit);
         });
     };
 

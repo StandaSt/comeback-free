@@ -220,25 +220,6 @@
       }, 'karty_hlavicka');
     }
 
-    function logEmptyHeaderClick(target) {
-      if (!(target instanceof Element)) return;
-      if (target.closest('button, a, input, select, textarea, label, [role="button"], [contenteditable="true"]')) {
-        return;
-      }
-
-      const block = target.closest('.head_user');
-      if (!(block instanceof HTMLElement)) return;
-
-      let blockName = '';
-      if (block.classList.contains('head_user')) blockName = 'user';
-      if (blockName === '') return;
-
-      logUserHeaderAction(20, {
-        event: 'empty_header_click',
-        blok: blockName
-      }, 'karty_hlavicka');
-    }
-
     function closeCardModeConfirmModal() {
       const modal = getCardModeConfirmModal();
       if (!modal) return false;
@@ -651,7 +632,6 @@
         }
 
         logEmptyCardClick(target);
-        logEmptyHeaderClick(target);
       });
 
       document.addEventListener('keydown', function (e) {

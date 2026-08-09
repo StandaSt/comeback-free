@@ -115,11 +115,20 @@ $cbProvozPages = [
     'stranka_2' => __DIR__ . '/pages/stranka_2.php',
     'stranka_3' => __DIR__ . '/pages/stranka_3.php',
 ];
+$cbProvozPageTitles = [
+    'dashboard' => 'Přehled',
+    'prehled' => 'Přehled',
+    'nastaveni' => 'Nastavení',
+    'stranka_1' => 'Stránka 1',
+    'stranka_2' => 'Stránka 2',
+    'stranka_3' => 'Stránka 3',
+];
 if (!isset($cbProvozPages[$cbPage])) {
     $cbPage = 'dashboard';
 }
 $pageKey = $cbPage;
 $file = $cbProvozPages[$cbPage];
+$cbProvozPageTitle = $cbProvozPageTitles[$cbPage] ?? 'Přehled';
 
 require_once __DIR__ . '/includes/log_a_404.php';
 
@@ -210,22 +219,23 @@ if (!empty($_SESSION['login_ok']) && $cbSystemLocked) {
     require_once __DIR__ . '/../common/lib/kontrola_registrace.php';
 
     ?>
-    <section class="module_shell">
-        <?php require __DIR__ . '/includes/menu.php'; ?>
+    <?php require __DIR__ . '/includes/menu.php'; ?>
 
-        <section class="module_content">
-            <?php
-            if ($cbPageExists) {
-                require $file;
-                if ($cbPage === 'nastaveni' && isset($card_max_html)) {
-                    echo '<section class="provoz_prehled_block">';
-                    echo '<h2 class="provoz_prehled_title">Nastavení</h2>';
-                    echo $card_max_html;
-                    echo '</section>';
-                }
+    <section class="blok_pp">
+        <header class="blok_pp_header">
+            <h1 class="blok_pp_title"><?= h($cbProvozPageTitle) ?></h1>
+        </header>
+        <?php
+        if ($cbPageExists) {
+            require $file;
+            if ($cbPage === 'nastaveni' && isset($card_max_html)) {
+                echo '<section class="provoz_prehled_block">';
+                echo '<h2 class="provoz_prehled_title">Nastavení</h2>';
+                echo $card_max_html;
+                echo '</section>';
             }
-            ?>
-        </section>
+        }
+        ?>
     </section>
     <?php
 } elseif ($cb2faPending) {

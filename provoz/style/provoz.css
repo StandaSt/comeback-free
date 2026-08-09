@@ -1,72 +1,188 @@
-/* Modul Provoz: styly pouze pro aktualni pracovni plochu Provozu. */
+/* Modul Provoz: styly pouze pro pracovni plochu Provozu. */
 
+/* Prehled 2x2 - rastr ctyr hlavnich bloku. */
 .provoz_prehled_grid{
   display:grid;
+  flex:1 1 auto;
   grid-template-columns:repeat(2, minmax(0, 1fr));
+  grid-template-rows:repeat(2, minmax(300px, 1fr));
   gap:10px;
   width:100%;
-  min-height:650px;
+  height:auto;
+  min-height:0;
 }
 
+/* Prehled 2x2 - jedna bunka rastru. */
 .provoz_prehled_cell{
   min-width:0;
-  min-height:230px;
+  min-height:0;
   padding:0;
 }
 
+/* Blok prehledu - panel uvnitr rastru. */
 .provoz_prehled_block{
   height:100%;
   min-height:0;
   overflow:auto;
   padding:10px;
-  background:var(--clr_bila);
-  border:1px solid var(--clr_seda_2);
+  border:1px solid;
   border-radius:8px;
 }
 
+/* Blok prehledu - nadpis panelu. */
 .provoz_prehled_title{
   margin:0 0 4px;
-  color:var(--clr_seda_4);
   font-size:var(--fs_16);
   line-height:1.2;
 }
 
+/* Blok prehledu - drobny popis pod nadpisem. */
 .provoz_prehled_meta{
   margin:0 0 8px;
-  color:var(--clr_seda_3);
   font-size:var(--fs_12);
   line-height:1.2;
 }
 
+/* Blok prehledu - bezny text. */
+.provoz_prehled_text{
+  margin:0 0 6px;
+  font-size:var(--fs_13);
+  line-height:1.25;
+}
+
+/* Tabulka prehledu - cela tabulka. */
 .provoz_prehled_data{
   width:100%;
   border-collapse:collapse;
   font-size:var(--fs_12);
 }
 
-.provoz_prehled_data th,
-.provoz_prehled_data td{
+/* Tabulka prehledu - bunka s ciselnym zarovnanim vpravo. */
+.provoz_prehled_data_cell{
   padding:4px 6px;
-  border:1px solid var(--clr_seda_2);
+  border:1px solid var(--cb-border);
+  color:var(--cb-text-main);
   text-align:right;
 }
 
-.provoz_prehled_data th:first-child,
-.provoz_prehled_data td:first-child{
+/* Tabulka prehledu - bunka se zarovnanim vlevo. */
+.provoz_prehled_data_cell_left{
   text-align:left;
 }
 
-.provoz_prehled_data thead th,
-.provoz_prehled_data tfoot th{
-  background:var(--clr_seda_1);
-  color:var(--clr_seda_4);
+/* Tabulka prehledu - hlavicka a soucet. */
+.provoz_prehled_data_head{
 }
 
+/* Top report - popis grafu. */
+.provoz_top_report_heading{
+  margin:0 0 10px;
+  color:var(--cb-text-muted);
+  font-size:var(--fs_11);
+  font-weight:700;
+  line-height:1.1;
+}
+
+/* Top report - vodorovny graf podle kanalu. */
+.provoz_top_report_chart{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  width:100%;
+}
+
+/* Top report - jeden radek grafu. */
+.provoz_top_report_row,
+.provoz_top_report_total{
+  display:grid;
+  grid-template-columns:84px minmax(0, 1fr) 46px 88px;
+  align-items:center;
+  gap:4px;
+  min-width:0;
+}
+
+/* Top report - nazev kanalu. */
+.provoz_top_report_label{
+  overflow:hidden;
+  color:var(--cb-text-main);
+  font-size:var(--fs_11);
+  line-height:1;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+/* Top report - podklad sloupce. */
+.provoz_top_report_track{
+  display:block;
+  min-width:0;
+  height:11px;
+  overflow:hidden;
+  border:1px solid var(--cb-border);
+  border-radius:8px;
+  background:var(--cb-bg-panel-soft);
+}
+
+/* Top report - barevny sloupec. */
+.provoz_top_report_bar{
+  display:block;
+  width:var(--provoz-top-report-width);
+  height:100%;
+  background:var(--provoz-top-report-color);
+}
+
+/* Top report - podil kanalu. */
+.provoz_top_report_share{
+  color:var(--cb-text-muted);
+  font-size:var(--fs_11);
+  line-height:1;
+  text-align:right;
+  white-space:nowrap;
+}
+
+/* Top report - trzba kanalu. */
+.provoz_top_report_value{
+  color:var(--cb-text-main);
+  font-size:var(--fs_11);
+  line-height:1;
+  text-align:right;
+  white-space:nowrap;
+}
+
+/* Top report - soucet pod grafem. */
+.provoz_top_report_total{
+  margin-top:2px;
+  padding-top:5px;
+  border-top:1px solid var(--cb-border);
+}
+
+/* Top report - prazdne misto misto sloupce v souctu. */
+.provoz_top_report_total_space{
+  min-width:0;
+}
+
+/* Mini tabulka prehledu - cela tabulka. */
+.provoz_prehled_mini_table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:var(--fs_12);
+}
+
+/* Mini tabulka prehledu - bunka. */
+.provoz_prehled_mini_cell{
+  padding:3px 5px;
+  border:1px solid var(--cb-border);
+  color:var(--cb-text-main);
+  text-align:left;
+  vertical-align:top;
+}
+
+/* Objednavky online - panel s grafem. */
 .provoz_prehled_block_online{
   display:flex;
   flex-direction:column;
 }
 
+/* Objednavky online - vnitrni sloupec se souhrnem a grafem. */
 .provoz_prehled_online_root{
   display:flex;
   flex:1 1 auto;
@@ -75,76 +191,65 @@
   gap:4px;
 }
 
+/* Objednavky online - radek se soucty. */
 .provoz_prehled_online_summary{
   display:flex;
   justify-content:space-between;
   align-items:flex-start;
   gap:8px;
-  color:var(--clr_seda_4);
   font-size:var(--fs_11);
   line-height:1.15;
 }
 
+/* Objednavky online - seznam stavu. */
 .provoz_prehled_online_states{
   display:flex;
   flex-wrap:wrap;
   gap:8px;
 }
 
+/* Objednavky online - barva stavu OK. */
 .provoz_prehled_online_state_ok{
   color:#16a34a;
 }
 
+/* Objednavky online - barva stavu na ceste. */
 .provoz_prehled_online_state_road{
   color:#f59e0b;
 }
 
+/* Objednavky online - barva stavu osobni odber. */
 .provoz_prehled_online_state_pickup{
   color:#0ea5e9;
 }
 
+/* Objednavky online - barva stavu vyrabi se. */
 .provoz_prehled_online_state_work{
   color:#dc2626;
 }
 
+/* Objednavky online - barva stavu zruseno. */
 .provoz_prehled_online_state_cancel{
   color:#64748b;
 }
 
+/* Objednavky online - plocha grafu. */
 .provoz_prehled_online_chart{
   width:100%;
   flex:1 1 auto;
   min-height:180px;
 }
 
-.provoz_prehled_text{
-  margin:0 0 6px;
-  font-size:var(--fs_13);
-  line-height:1.25;
-}
-
-.provoz_prehled_mini_table{
-  width:100%;
-  border-collapse:collapse;
-  font-size:var(--fs_12);
-}
-
-.provoz_prehled_mini_table th,
-.provoz_prehled_mini_table td{
-  padding:3px 5px;
-  border:1px solid var(--clr_seda_2);
-  text-align:left;
-  vertical-align:top;
-}
-
+/* Tooltip - spousteci prvek detailu. */
 .provoz_tooltip{
   position:relative;
   display:inline-flex;
   align-items:center;
-  color:var(--clr_modra_2);
+  color:var(--cb-link);
   cursor:help;
 }
 
+/* Tooltip - plovouci panel. */
 .provoz_tooltip_panel{
   position:absolute;
   right:0;
@@ -153,44 +258,76 @@
   z-index:30;
 }
 
-.provoz_tooltip:hover .provoz_tooltip_panel,
-.provoz_tooltip:focus-within .provoz_tooltip_panel{
+/* Tooltip - viditelny plovouci panel. */
+.provoz_tooltip_panel_visible{
   display:block;
 }
 
+/* Tooltip - vzhled karty. */
 .provoz_tooltip_card,
 .provoz_chart_tooltip{
   width:max-content;
   max-width:min(720px, calc(100vw - 32px));
   padding:8px;
-  background:var(--clr_bila);
-  border:1px solid var(--clr_seda_2);
+  border:1px solid;
   border-radius:8px;
   box-shadow:0 8px 24px var(--clr_stin_2);
-  color:var(--clr_cerna);
 }
 
+/* Tooltip - titulek. */
 .provoz_tooltip_title{
   display:block;
   margin:0 0 6px;
-  color:var(--clr_seda_4);
   font-weight:700;
 }
 
+/* Tooltip - tabulka. */
 .provoz_tooltip_table{
   width:100%;
   border-collapse:collapse;
   font-size:var(--fs_12);
 }
 
-.provoz_tooltip_table th,
-.provoz_tooltip_table td{
+/* Tooltip - bunka tabulky. */
+.provoz_tooltip_table_cell{
   padding:3px 5px;
-  border:1px solid var(--clr_seda_2);
+  border:1px solid var(--cb-border);
+  color:var(--cb-text-main);
   white-space:nowrap;
 }
 
+/* Tooltip - cislo zarovnane doprava. */
 .provoz_tooltip_num{
   text-align:right;
   font-variant-numeric:tabular-nums;
+}
+
+/* Barvy prehledu - spolecne promenne. */
+.provoz_prehled_block{
+  background:var(--cb-bg-panel);
+  border-color:var(--cb-border);
+  color:var(--cb-text-main);
+}
+
+.provoz_prehled_title,
+.provoz_prehled_online_summary,
+.provoz_tooltip_title{
+  color:var(--cb-text-main);
+}
+
+.provoz_prehled_meta{
+  color:var(--cb-text-muted);
+}
+
+.provoz_prehled_data_head{
+  background:var(--cb-bg-panel-soft);
+  color:var(--cb-text-main);
+}
+
+.provoz_tooltip_card,
+.provoz_chart_tooltip{
+  background:var(--cb-bg-panel);
+  border-color:var(--cb-border);
+  color:var(--cb-text-main);
+  box-shadow:0 8px 24px var(--cb-shadow);
 }

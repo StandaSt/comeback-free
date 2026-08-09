@@ -148,17 +148,17 @@ $flash = $_SESSION['hr_flash'] ?? null;
 unset($_SESSION['hr_flash']);
 
 ?>
-<section class="module_shell hr_module_page">
-    <?php require __DIR__ . '/hr_includes/hr_menu.php'; ?>
+<?php require __DIR__ . '/hr_includes/hr_menu.php'; ?>
 
-    <section class="module_content hr_module_content">
-        <main class="content">
-            <?php require __DIR__ . '/hr_includes/topbar.php'; ?>
-
-            <?php if (is_array($flash) && isset($flash['text'])): ?>
-                <div class="notice <?= h((string)($flash['type'] ?? 'info')) ?>"><?= h((string)$flash['text']) ?></div>
-            <?php endif; ?>
-            <?php require $currentPage['file']; ?>
-        </main>
-    </section>
+<section class="blok_pp hr_pp">
+    <header class="blok_pp_header">
+        <h1 class="blok_pp_title"><?= h($pageTitle) ?></h1>
+        <?php require __DIR__ . '/hr_includes/topbar.php'; ?>
+    </header>
+    <main class="hr_content">
+        <?php if (is_array($flash) && isset($flash['text'])): ?>
+            <div class="hr_notice <?= h((string)($flash['type'] ?? 'hr_info')) ?>"><?= h((string)$flash['text']) ?></div>
+        <?php endif; ?>
+        <?php require $currentPage['file']; ?>
+    </main>
 </section>

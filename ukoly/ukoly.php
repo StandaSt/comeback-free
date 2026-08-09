@@ -24,14 +24,33 @@ if (empty($_SESSION['login_ok'])) {
 
 cb_pobocky_bootstrap_session();
 
-?>
-<section class="module_shell">
-    <?php require __DIR__ . '/uk_includes/uk_menu.php'; ?>
+$ukMenuItems = [
+    ['page' => 'prehled', 'label' => 'Přehled'],
+    ['page' => 'nove_zadani', 'label' => 'Nové zadání'],
+    ['page' => 'prehled_ukolu', 'label' => 'Přehled úkolů'],
+    ['page' => 'ukoly_pro_me', 'label' => 'Úkoly pro mě'],
+    ['page' => 'me_pozadavky', 'label' => 'Mé požadavky'],
+];
+$ukPage = strtolower(trim((string)($_GET['page'] ?? 'prehled')));
+$ukPageTitle = 'Přehled';
+foreach ($ukMenuItems as $ukItem) {
+    if ((string)$ukItem['page'] === $ukPage) {
+        $ukPageTitle = (string)$ukItem['label'];
+        break;
+    }
+}
+if ($ukPageTitle === 'Přehled') {
+    $ukPage = 'prehled';
+}
 
-    <section class="module_content">
-        <div class="module_placeholder">
-            <h1>Úkoly-požadavky</h1>
-            <p>Modul je připravený pro další doplnění obsahu.</p>
-        </div>
-    </section>
+?>
+<?php require __DIR__ . '/uk_includes/uk_menu.php'; ?>
+
+<section class="blok_pp ukoly_content">
+    <header class="blok_pp_header">
+        <h1 class="blok_pp_title"><?= h($ukPageTitle) ?></h1>
+    </header>
+    <div class="ukoly_placeholder">
+        <p class="ukoly_placeholder_text">Modul je připravený pro další doplnění obsahu.</p>
+    </div>
 </section>

@@ -22,6 +22,13 @@ $SECRETS['db']['server'] = [
     'name' => 'comeback_system',
 ];
 
+$SECRETS['db']['codex'] = [
+    'host' => '127.0.0.1',
+    'user' => 'codex',
+    'pass' => '1234',
+    'name' => 'comeback',
+];
+
 
 /*
   RESTIA API

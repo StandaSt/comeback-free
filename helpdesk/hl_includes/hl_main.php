@@ -28,16 +28,16 @@ if (!function_exists('cb_helpdesk_ticket_author_class')) {
     {
         $idRole = (int)($row['id_role'] ?? 0);
         if ($idRole > 0 && $idRole <= 1) {
-            return 'is-role-admin';
+            return 'helpdesk_state_role_admin';
         }
         if ($idRole === 2 || $idRole === 3) {
-            return 'is-role-manager';
+            return 'helpdesk_state_role_manager';
         }
         if ($idRole >= 4 && $idRole <= 7) {
-            return 'is-role-branch';
+            return 'helpdesk_state_role_branch';
         }
 
-        return 'is-role-default';
+        return 'helpdesk_state_role_default';
     }
 }
 
@@ -179,6 +179,15 @@ if (!in_array($helpdeskView, ['all', 'new-ticket', 'mine', 'watched', 'closed', 
 if ($helpdeskView === 'admin' && !$isAdmin) {
     $helpdeskView = 'all';
 }
+$helpdeskViewTitles = [
+    'all' => 'Přehled',
+    'new-ticket' => 'Nový tiket',
+    'mine' => 'Moje tikety',
+    'watched' => 'Sledované',
+    'closed' => 'Uzavřené',
+    'admin' => 'Admin',
+];
+$helpdeskPageTitle = $helpdeskViewTitles[$helpdeskView] ?? 'Přehled';
 
 $helpdeskMenuUrl = static function (string $view) use ($helpdeskSourceModule): string {
     return cb_root_url('index.php?m=helpdesk&src=' . rawurlencode($helpdeskSourceModule) . '&hd=' . rawurlencode($view));
@@ -202,9 +211,11 @@ foreach ($items as $item) {
 }
 
 ?>
-<section class="module_shell helpdesk_module_page" data-cb-helpdesk-module="1" data-cb-hd-api-url="<?= h($helpdeskApiUrl) ?>" data-cb-hd-arrow-url="<?= h($arrowIconUrl) ?>" data-cb-hd-is-admin="<?= $isAdmin ? '1' : '0' ?>" data-cb-hd-author-id="<?= (int)$idUser ?>">
-  <?php require __DIR__ . '/hl_menu.php'; ?>
-  <section class="module_content helpdesk_module_content">
+<?php require __DIR__ . '/hl_menu.php'; ?>
+<section class="blok_pp helpdesk_module_content" data-cb-helpdesk-module="1" data-cb-hd-api-url="<?= h($helpdeskApiUrl) ?>" data-cb-hd-arrow-url="<?= h($arrowIconUrl) ?>" data-cb-hd-is-admin="<?= $isAdmin ? '1' : '0' ?>" data-cb-hd-author-id="<?= (int)$idUser ?>">
+<header class="blok_pp_header">
+<h1 class="blok_pp_title"><?= h($helpdeskPageTitle) ?></h1>
+</header>
 <?php if ($helpdeskView === 'new-ticket'): ?>
     <form class="helpdesk_form ram_normal zaobleni_8" method="post" action="<?= h($helpdeskCreateUrl) ?>" enctype="multipart/form-data">
       <h3 class="helpdesk_form_title">Zadání nového tiketu</h3>
@@ -214,28 +225,28 @@ foreach ($items as $item) {
         <div class="helpdesk_form_static"><?= h($helpdeskUserName) ?> (<?= h($helpdeskUserRole) ?>)</div>
 
         <label class="helpdesk_form_label" for="hl-ticket-typ">Typ</label>
-        <select id="hl-ticket-typ" name="typ">
+        <select class="helpdesk_form_input" id="hl-ticket-typ" name="typ">
           <option value="chyba">Chyba systému</option>
           <option value="dotaz">Dotaz</option>
           <option value="navrh">Námět na vylepšení</option>
         </select>
 
         <label class="helpdesk_form_label" for="hl-ticket-predmet">Předmět</label>
-        <input id="hl-ticket-predmet" type="text" name="predmet" maxlength="160" placeholder="Nutno vyplnit" required>
+        <input class="helpdesk_form_input" id="hl-ticket-predmet" type="text" name="predmet" maxlength="160" placeholder="Nutno vyplnit" required>
 
         <div class="helpdesk_form_label">Určení:</div>
         <div class="helpdesk_form_radio_group">
-          <label><input type="radio" name="urceni" value="admin"> Pouze pro admina</label>
-          <label><input type="radio" name="urceni" value="reagovat" checked> Všichni mohou reagovat</label>
-          <label><input type="radio" name="urceni" value="cist"> Všichni mohou číst</label>
+          <label class="helpdesk_form_radio_label"><input class="helpdesk_form_radio_input" type="radio" name="urceni" value="admin"> Pouze pro admina</label>
+          <label class="helpdesk_form_radio_label"><input class="helpdesk_form_radio_input" type="radio" name="urceni" value="reagovat" checked> Všichni mohou reagovat</label>
+          <label class="helpdesk_form_radio_label"><input class="helpdesk_form_radio_input" type="radio" name="urceni" value="cist"> Všichni mohou číst</label>
         </div>
 
         <label class="helpdesk_form_label" for="hl-ticket-popis">Popis</label>
-        <textarea id="hl-ticket-popis" name="popis" rows="8" minlength="25" placeholder="Minimální délka zprávy je 25 znaků" required></textarea>
+        <textarea class="helpdesk_form_input helpdesk_form_textarea" id="hl-ticket-popis" name="popis" rows="8" minlength="25" placeholder="Minimální délka zprávy je 25 znaků" required></textarea>
 
         <label class="helpdesk_form_label" for="hl-ticket-prilohy">Přílohy</label>
         <div class="helpdesk_form_files">
-          <input id="hl-ticket-prilohy" type="file" name="prilohy[]" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.pdf">
+          <input class="helpdesk_form_input" id="hl-ticket-prilohy" type="file" name="prilohy[]" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.pdf">
           <div class="helpdesk_form_hint">Povolené typy: PNG, JPG, WEBP, GIF, PDF. Maximálně 5 MB na soubor.</div>
         </div>
       </div>
@@ -263,7 +274,7 @@ foreach ($items as $item) {
                         <div class="helpdesk_ticket_meta">
                           <strong class="helpdesk_ticket_author <?= cb_helpdesk_ticket_h(cb_helpdesk_ticket_author_class($item)) ?>"><?= cb_helpdesk_ticket_h(cb_helpdesk_ticket_author($item)) ?></strong>
                           <span class="helpdesk_ticket_counter">
-                            <span class="helpdesk_ticket_bell_wrap" data-hd-bell-wrap="1"><?= (int)($item['has_new_reply'] ?? 0) === 1 ? '<span class="helpdesk_ticket_bell is-unread" data-hd-bell="1" title="Nová reakce" aria-label="Nová reakce">!</span>' : '<span class="helpdesk_ticket_bell" data-hd-bell="0" title="Bez nové reakce" aria-label="Bez nové reakce">!</span>' ?></span>
+                            <span class="helpdesk_ticket_bell_wrap" data-hd-bell-wrap="1"><?= (int)($item['has_new_reply'] ?? 0) === 1 ? '<span class="helpdesk_ticket_bell helpdesk_state_unread" data-hd-bell="1" title="Nová reakce" aria-label="Nová reakce">!</span>' : '<span class="helpdesk_ticket_bell" data-hd-bell="0" title="Bez nové reakce" aria-label="Bez nové reakce">!</span>' ?></span>
                             <span class="helpdesk_ticket_count"><?= cb_helpdesk_ticket_h((string)max(1, (int)($item['pocet_zprav'] ?? 0))) ?></span>
                           </span>
                         </div>
@@ -296,5 +307,4 @@ foreach ($items as $item) {
   </div>
 </section>
 <?php endif; ?>
-  </section>
-</div>
+</section>

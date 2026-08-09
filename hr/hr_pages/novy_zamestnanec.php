@@ -8,32 +8,32 @@ $vztahy = hr_fetch_lookup($db, 'hr_cis_pracovni_vztah_typ', 'id_pracovni_vztah_t
 $pobocky = hr_fetch_lookup($db, 'pobocka', 'id_pob', 'nazev');
 $sloty = hr_fetch_lookup($db, 'cis_slot', 'id_slot', 'slot');
 ?>
-<section class="panel">
-    <div class="panel-header">
+<section class="hr_panel">
+    <div class="hr_panel_header">
         <div>
-            <h2>Nový zaměstnanec</h2>
-            <p class="muted">Základní údaje pro první HR kartu</p>
+            <h2 class="hr_panel_title">Nový zaměstnanec</h2>
+            <p class="hr_muted">Základní údaje pro první HR kartu</p>
         </div>
     </div>
 
-    <form class="hr-form" method="post" action="<?= h(cb_root_url('index.php?m=hr&page=novy_zamestnanec')) ?>">
-        <div class="form-grid">
-            <label>
+    <form class="hr_form" method="post" action="<?= h(cb_root_url('index.php?m=hr&page=novy_zamestnanec')) ?>">
+        <div class="hr_form_grid">
+            <label class="hr_form_label">
                 <span>Jméno</span>
                 <input name="jmeno" required maxlength="60" autocomplete="given-name">
             </label>
 
-            <label>
+            <label class="hr_form_label">
                 <span>Příjmení</span>
                 <input name="prijmeni" required maxlength="80" autocomplete="family-name">
             </label>
 
-            <label>
+            <label class="hr_form_label">
                 <span>Osobní číslo</span>
                 <input name="osobni_cislo" maxlength="20">
             </label>
 
-            <label>
+            <label class="hr_form_label">
                 <span>Typ vztahu</span>
                 <select name="id_pracovni_vztah_typ" required>
                     <option value="">Vyberte</option>
@@ -43,12 +43,12 @@ $sloty = hr_fetch_lookup($db, 'cis_slot', 'id_slot', 'slot');
                 </select>
             </label>
 
-            <label>
+            <label class="hr_form_label">
                 <span>Datum nástupu</span>
                 <input type="date" name="datum_nastupu" required value="<?= h(date('Y-m-d')) ?>">
             </label>
 
-            <label>
+            <label class="hr_form_label">
                 <span>Pobočka</span>
                 <select name="id_pob" required>
                     <option value="">Vyberte</option>
@@ -58,9 +58,9 @@ $sloty = hr_fetch_lookup($db, 'cis_slot', 'id_slot', 'slot');
                 </select>
             </label>
 
-            <label>
+            <label class="hr_form_label">
                 <span>Zařazení</span>
-                <span class="hr-slot-choice">
+                <span class="hr_slot_choice">
                     <select name="id_slot" data-slot-select required>
                         <option value="">Vyberte</option>
                         <?php foreach ($sloty as $slot): ?>
@@ -68,24 +68,24 @@ $sloty = hr_fetch_lookup($db, 'cis_slot', 'id_slot', 'slot');
                         <?php endforeach; ?>
                         <option value="__jine__">Jiné</option>
                     </select>
-                    <input type="text" name="slot_jine" maxlength="80" disabled data-slot-other>
+                    <input class="hr_slot_choice_input" type="text" name="slot_jine" maxlength="80" disabled data-slot-other>
                 </span>
             </label>
 
-            <label>
+            <label class="hr_form_label">
                 <span>Telefon</span>
-                <span class="hr-phone-field"><span class="hr-phone-prefix">+420</span><input name="telefon" maxlength="11" autocomplete="tel" data-phone-cz></span>
+                <span class="hr_phone_field"><span class="hr_phone_prefix">+420</span><input class="hr_phone_input" name="telefon" maxlength="11" autocomplete="tel" data-phone-cz></span>
             </label>
 
-            <label>
+            <label class="hr_form_label">
                 <span>E-mail</span>
                 <input type="email" name="email" maxlength="150" autocomplete="email">
             </label>
         </div>
 
-        <div class="form-actions">
-            <a class="secondary-button" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanci')) ?>">Zrušit</a>
-            <button class="primary-button" type="submit">Uložit zaměstnance</button>
+        <div class="hr_form_actions">
+            <a class="hr_secondary_button hr_panel_button_secondary" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanci')) ?>">Zrušit</a>
+            <button class="hr_primary_button" type="submit">Uložit zaměstnance</button>
         </div>
     </form>
 </section>

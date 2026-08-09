@@ -24,12 +24,35 @@ if (empty($_SESSION['login_ok'])) {
 
 cb_pobocky_bootstrap_session();
 
-?>
-<section class="module_shell">
-    <?php require __DIR__ . '/sm_includes/sm_menu.php'; ?>
+$smMenuItems = [
+    ['page' => 'prehled', 'label' => 'Přehled'],
+    ['page' => 'pozadavky', 'label' => 'Požadavky'],
+    ['page' => 'hodnoceni', 'label' => 'Hodnocení'],
+    ['page' => 'me_smeny', 'label' => 'Mé směny', 'items' => ['Aktuální týden', 'Týden + 1', 'Týden + 2']],
+    ['page' => 'planovani_smen', 'label' => 'Plánování směn', 'items' => ['Aktuální týden', 'Týden + 1']],
+    ['page' => 'sablony', 'label' => 'Šablony'],
+    ['page' => 'naplanovane_smeny', 'label' => 'Naplánované směny', 'items' => ['Aktuální týden', 'Týden + 1', 'Týden + 2']],
+    ['page' => 'zadane_pozadavky', 'label' => 'Zadané požadavky', 'items' => ['Aktuální týden', 'Týden + 1', 'Týden + 2', 'Historie']],
+    ['page' => 'administrace', 'label' => 'Administrace'],
+];
+$smPage = strtolower(trim((string)($_GET['page'] ?? 'prehled')));
+$smPageTitle = 'Přehled';
+foreach ($smMenuItems as $smItem) {
+    if ((string)$smItem['page'] === $smPage) {
+        $smPageTitle = (string)$smItem['label'];
+        break;
+    }
+}
+if ($smPageTitle === 'Přehled') {
+    $smPage = 'prehled';
+}
 
-    <section class="module_content sm_content">
-        <h1 class="sm_content_title">Přehled</h1>
-        <p class="sm_content_text">Modul Směny je připravený pro další napojení obsahu.</p>
-    </section>
+?>
+<?php require __DIR__ . '/sm_includes/sm_menu.php'; ?>
+
+<section class="blok_pp smeny_content">
+    <header class="blok_pp_header">
+        <h1 class="blok_pp_title"><?= h($smPageTitle) ?></h1>
+    </header>
+    <p class="smeny_content_text">Modul Směny je připravený pro další napojení obsahu.</p>
 </section>

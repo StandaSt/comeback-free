@@ -198,6 +198,25 @@
     return Array.from(scope.querySelectorAll(WRAPPER_SELECTOR)).filter((node) => node instanceof HTMLElement);
   }
 
+  function wireStaticTooltips(root) {
+    const scope = root instanceof HTMLElement ? root : document;
+    const tooltips = Array.from(scope.querySelectorAll('.provoz_tooltip')).filter((node) => node instanceof HTMLElement);
+    tooltips.forEach((tooltip) => {
+      if (tooltip.dataset.provozTooltipReady === '1') return;
+      tooltip.dataset.provozTooltipReady = '1';
+      const panel = tooltip.querySelector('.provoz_tooltip_panel');
+      if (!(panel instanceof HTMLElement)) return;
+
+      const showPanel = () => panel.classList.add('provoz_tooltip_panel_visible');
+      const hidePanel = () => panel.classList.remove('provoz_tooltip_panel_visible');
+
+      tooltip.addEventListener('mouseenter', showPanel);
+      tooltip.addEventListener('focusin', showPanel);
+      tooltip.addEventListener('mouseleave', hidePanel);
+      tooltip.addEventListener('focusout', hidePanel);
+    });
+  }
+
   function parsePayload(root) {
     if (!(root instanceof HTMLElement)) return null;
     const node = root.querySelector(DATA_SELECTOR);
@@ -343,13 +362,13 @@
                 + '<div class="provoz_tooltip_title">' + escapeHtml(name) + '</div>'
                 + '<table class="provoz_tooltip_table">'
                 + '<tbody>'
-                + '<tr><td>Dokončeno</td><td class="provoz_tooltip_num">' + formatInt(dokonceno[index] ?? 0) + '</td></tr>'
-                + '<tr><td>Na cestě</td><td class="provoz_tooltip_num">' + formatInt(naCeste[index] ?? 0) + '</td></tr>'
-                + '<tr><td>Osobní odběr</td><td class="provoz_tooltip_num">' + formatInt(osobniOdber[index] ?? 0) + '</td></tr>'
-                + '<tr><td>Vyrábí se</td><td class="provoz_tooltip_num">' + formatInt(vyrabiSe[index] ?? 0) + '</td></tr>'
-                + '<tr><td>Zrušeno</td><td class="provoz_tooltip_num">' + formatInt(zruseno[index] ?? 0) + '</td></tr>'
-                + '<tr><th>Objednávky</th><th class="provoz_tooltip_num">' + formatInt(objednavky[index] ?? 0) + '</th></tr>'
-                + '<tr><th>Tržba</th><th class="provoz_tooltip_num">' + formatInt(trzba[index] ?? 0) + ' Kč</th></tr>'
+                + '<tr><td class="provoz_tooltip_table_cell">Dokončeno</td><td class="provoz_tooltip_table_cell provoz_tooltip_num">' + formatInt(dokonceno[index] ?? 0) + '</td></tr>'
+                + '<tr><td class="provoz_tooltip_table_cell">Na cestě</td><td class="provoz_tooltip_table_cell provoz_tooltip_num">' + formatInt(naCeste[index] ?? 0) + '</td></tr>'
+                + '<tr><td class="provoz_tooltip_table_cell">Osobní odběr</td><td class="provoz_tooltip_table_cell provoz_tooltip_num">' + formatInt(osobniOdber[index] ?? 0) + '</td></tr>'
+                + '<tr><td class="provoz_tooltip_table_cell">Vyrábí se</td><td class="provoz_tooltip_table_cell provoz_tooltip_num">' + formatInt(vyrabiSe[index] ?? 0) + '</td></tr>'
+                + '<tr><td class="provoz_tooltip_table_cell">Zrušeno</td><td class="provoz_tooltip_table_cell provoz_tooltip_num">' + formatInt(zruseno[index] ?? 0) + '</td></tr>'
+                + '<tr><th class="provoz_tooltip_table_cell">Objednávky</th><th class="provoz_tooltip_table_cell provoz_tooltip_num">' + formatInt(objednavky[index] ?? 0) + '</th></tr>'
+                + '<tr><th class="provoz_tooltip_table_cell">Tržba</th><th class="provoz_tooltip_table_cell provoz_tooltip_num">' + formatInt(trzba[index] ?? 0) + ' Kč</th></tr>'
                 + '</tbody>'
                 + '</table>'
                 + '</div>';
@@ -1086,10 +1105,10 @@
               + '<div class="provoz_tooltip_title">' + escapeHtml(selectedBranchName || 'Pobočka') + '</div>'
               + '<table class="provoz_tooltip_table">'
               + '<tbody>'
-              + '<tr><td>Den</td><td class="provoz_tooltip_num">' + escapeHtml(day) + '</td></tr>'
-              + '<tr><td>Interval</td><td class="provoz_tooltip_num">' + escapeHtml(interval) + '</td></tr>'
-              + '<tr><td>Stav</td><td class="provoz_tooltip_num">' + escapeHtml(status) + '</td></tr>'
-              + '<tr><th>Objednávky</th><th class="provoz_tooltip_num">' + formatInt(count) + '</th></tr>'
+              + '<tr><td class="provoz_tooltip_table_cell">Den</td><td class="provoz_tooltip_table_cell provoz_tooltip_num">' + escapeHtml(day) + '</td></tr>'
+              + '<tr><td class="provoz_tooltip_table_cell">Interval</td><td class="provoz_tooltip_table_cell provoz_tooltip_num">' + escapeHtml(interval) + '</td></tr>'
+              + '<tr><td class="provoz_tooltip_table_cell">Stav</td><td class="provoz_tooltip_table_cell provoz_tooltip_num">' + escapeHtml(status) + '</td></tr>'
+              + '<tr><th class="provoz_tooltip_table_cell">Objednávky</th><th class="provoz_tooltip_table_cell provoz_tooltip_num">' + formatInt(count) + '</th></tr>'
               + '</tbody>'
               + '</table>'
               + '</div>';
@@ -1298,6 +1317,7 @@
 
   function init() {
     wireResize();
+    wireStaticTooltips(document);
     renderAll(document);
   }
 
@@ -1307,6 +1327,7 @@
   w.__CB_PREHLEDY_GRAFY_INITED__ = true;
 
   document.addEventListener('cb:main-swapped', () => {
+    wireStaticTooltips(document);
     renderAll(document);
   });
 

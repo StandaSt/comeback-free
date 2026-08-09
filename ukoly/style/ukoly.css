@@ -1,10 +1,14 @@
-/* Vlastni obsah smen. */
+/* Vlastni obsah ukolu. */
 
-.smeny_content{
+.ukoly_content{
     align-content:start;
 }
 
-.smeny_content_text{
+.ukoly_placeholder{
+    display:block;
+}
+
+.ukoly_placeholder_text{
     margin:0;
     color:var(--cb-text-muted);
     font-size:14px;

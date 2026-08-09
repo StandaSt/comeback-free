@@ -37,8 +37,8 @@ try {
 ?>
 <div class="head_select head_select--period" data-cb-period-root="1">
   <button type="button" class="head_period_btn" data-cb-period-toggle="1" aria-expanded="false">
-    <span class="head_block_text">
-      <span class="head_block_label">Období:</span>
+    <span class="head_block_text head_block_text_inline">
+      <span class="head_block_label head_block_label_inline">Období:</span>
       <span class="head_block_value" data-cb-period-summary="1"><?= h($cbObdobiSummary) ?></span>
     </span>
     <span class="head_block_chev" aria-hidden="true">⌄</span>
@@ -48,9 +48,9 @@ try {
     <div class="head_interval gap_4 displ_flex flex_sloupec jc_stred" aria-label="Nastavení období">
       <div class="head_int_row displ_grid">
         <label class="head_date text_11 gap_6 displ_flex">
-          <span>Od</span>
-          <input class="text_11 zaobleni_8 ram_ovladace" type="date" id="cbObdobiOd" value="<?= h($cbObdobiOdInput) ?>">
-          <select class="text_11 zaobleni_8 ram_ovladace" id="cbObdobiOdCas" aria-label="Čas od">
+          <span class="head_date_label">Od</span>
+          <input class="head_date_input text_11 zaobleni_8 ram_ovladace" type="date" id="cbObdobiOd" value="<?= h($cbObdobiOdInput) ?>">
+          <select class="head_time_select text_11 zaobleni_8 ram_ovladace" id="cbObdobiOdCas" aria-label="Čas od">
             <?php foreach ($cbObdobiCasOptions as $opt): ?>
               <option value="<?= h($opt['value']) ?>"<?= ($opt['value'] === '06:00') ? ' selected' : '' ?>><?= h($opt['label']) ?></option>
             <?php endforeach; ?>
@@ -64,9 +64,9 @@ try {
 
       <div class="head_int_row displ_grid">
         <label class="head_date text_11 gap_6 displ_flex">
-          <span>Do</span>
-          <input class="text_11 zaobleni_8 ram_ovladace" type="date" id="cbObdobiDo" value="<?= h($cbObdobiDoInput) ?>">
-          <select class="text_11 zaobleni_8 ram_ovladace" id="cbObdobiDoCas" aria-label="Čas do">
+          <span class="head_date_label">Do</span>
+          <input class="head_date_input text_11 zaobleni_8 ram_ovladace" type="date" id="cbObdobiDo" value="<?= h($cbObdobiDoInput) ?>">
+          <select class="head_time_select text_11 zaobleni_8 ram_ovladace" id="cbObdobiDoCas" aria-label="Čas do">
             <?php foreach ($cbObdobiCasOptions as $opt): ?>
               <option value="<?= h($opt['value']) ?>"<?= ($opt['value'] === '06:00') ? ' selected' : '' ?>><?= h($opt['label']) ?></option>
             <?php endforeach; ?>
@@ -97,8 +97,10 @@ try {
   var meter = document.querySelector('.head_interval .head_interval_meter');
   var meterBar = meter ? meter.querySelector('.head_interval_meter_bar') : null;
   var summaryEl = document.querySelector('[data-cb-period-summary="1"]');
-  var odLabel = odInput ? odInput.closest('.head_date') : null;
-  var doLabel = doInput ? doInput.closest('.head_date') : null;
+    var odLabel = odInput ? odInput.closest('.head_date') : null;
+    var doLabel = doInput ? doInput.closest('.head_date') : null;
+    var odLabelText = odLabel ? odLabel.querySelector('.head_date_label') : null;
+    var doLabelText = doLabel ? doLabel.querySelector('.head_date_label') : null;
   var activeMode = '<?= h($cbObdobiMode) ?>';
   var manualSaveTimer = null;
   var manualSaveDelayMs = <?= (int)$cbManualSaveDelayMs ?>;
@@ -291,10 +293,12 @@ try {
     });
   }
 
-  function setManualHighlight(isManual){
-    if (odLabel) odLabel.classList.toggle('is-manual', !!isManual);
-    if (doLabel) doLabel.classList.toggle('is-manual', !!isManual);
-    if (odInput) odInput.classList.toggle('is-manual', !!isManual);
+    function setManualHighlight(isManual){
+      if (odLabel) odLabel.classList.toggle('is-manual', !!isManual);
+      if (doLabel) doLabel.classList.toggle('is-manual', !!isManual);
+      if (odLabelText) odLabelText.classList.toggle('is-manual', !!isManual);
+      if (doLabelText) doLabelText.classList.toggle('is-manual', !!isManual);
+      if (odInput) odInput.classList.toggle('is-manual', !!isManual);
     if (doInput) doInput.classList.toggle('is-manual', !!isManual);
     if (odCasInput) odCasInput.classList.toggle('is-manual', !!isManual);
     if (doCasInput) doCasInput.classList.toggle('is-manual', !!isManual);

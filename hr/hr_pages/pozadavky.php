@@ -60,93 +60,93 @@ if ($pozadavkyMuzeCist && $pozadavkyZobraziPobocku) {
 
 $pozadavkyRozsah = $pozadavkyZobraziPobocku ? 'všech poboček' : 'pobočky ' . (string)($pozadavkyMainPobocka['nazev'] ?? '');
 ?>
-<section class="panel">
-    <div class="panel-header">
+<section class="hr_panel">
+    <div class="hr_panel_header">
         <div>
-            <h2 class="hr-request-title">Zadání požadavku</h2>
+            <h2 class="hr_request_title hr_panel_title">Zadání požadavku</h2>
         </div>
         <?php if ($pozadavkyUlozeno): ?>
-            <p class="notice success hr-request-notice">Požadavek byl uložen.</p>
+            <p class="hr_notice hr_success hr_request_notice">Požadavek byl uložen.</p>
         <?php elseif ($pozadavkyZrusen): ?>
-            <p class="notice success hr-request-notice">Požadavek byl odstraněn.</p>
+            <p class="hr_notice hr_success hr_request_notice">Požadavek byl odstraněn.</p>
         <?php endif; ?>
     </div>
 
     <?php if ($pozadavkyMuzeZadat): ?>
-        <form class="hr-form hr-request-form" method="post" action="<?= h(cb_root_url('index.php?m=hr&page=pozadavky')) ?>" data-hr-request-form>
+        <form class="hr_form hr_request_form" method="post" action="<?= h(cb_root_url('index.php?m=hr&page=pozadavky')) ?>" data-hr_request_form>
             <input type="hidden" name="akce" value="vytvorit">
-            <span>Požaduji</span>
-            <select class="hr-request-select" name="pocet">
+            <span class="hr_request_text">Požaduji</span>
+            <select class="hr_request_select" name="pocet">
                 <?php for ($i = 1; $i <= 4; $i++): ?>
                     <option value="<?= h($i) ?>"<?= $i === 1 ? ' selected' : '' ?>><?= h($i) ?></option>
                 <?php endfor; ?>
             </select>
-            <span>zaměstnance na pozici</span>
-            <select class="hr-request-select" name="id_slot" data-hr-request-slot required>
+            <span class="hr_request_text">zaměstnance na pozici</span>
+            <select class="hr_request_select" name="id_slot" data-hr-request-slot required>
                 <option value="">Vyber</option>
                 <option value="1">instor</option>
                 <option value="2">kurýr</option>
             </select>
             <?php if ($pozadavkyJeAdmin): ?>
-                <span>pro pobočku</span>
-                <select class="hr-request-select" name="id_pob" required>
+                <span class="hr_request_text">pro pobočku</span>
+                <select class="hr_request_select" name="id_pob" required>
                     <option value="">Vyberte</option>
                     <?php foreach ($pozadavkyPobocky as $pobocka): ?>
                         <option value="<?= h($pobocka['id']) ?>"><?= h($pobocka['label']) ?></option>
                     <?php endforeach; ?>
                 </select>
             <?php else: ?>
-                <span>pro pobočku <?= h($pozadavkyMainPobocka['nazev']) ?>.</span>
+                <span class="hr_request_text">pro pobočku <?= h($pozadavkyMainPobocka['nazev']) ?>.</span>
             <?php endif; ?>
-            <span>Poznámka:</span>
-            <input class="hr-note-input" type="text" name="upresneni" maxlength="500" placeholder="Zde upřesněte, třeba termín nástupu.">
-            <button class="primary-button hr-request-submit" type="submit">Zadat požadavek</button>
+            <span class="hr_request_text">Poznámka:</span>
+            <input class="hr_note_input hr_request_field" type="text" name="upresneni" maxlength="500" placeholder="Zde upřesněte, třeba termín nástupu.">
+            <button class="hr_primary_button hr_request_submit" type="submit">Zadat požadavek</button>
         </form>
     <?php elseif ($pozadavkyJenCteni): ?>
-        <p class="empty-state">Požadavky máte dostupné pouze pro čtení.</p>
+        <p class="hr_empty_state">Požadavky máte dostupné pouze pro čtení.</p>
     <?php else: ?>
-        <p class="empty-state">Na tuto stránku nemáte přístup.</p>
+        <p class="hr_empty_state">Na tuto stránku nemáte přístup.</p>
     <?php endif; ?>
 </section>
 
 <?php if ($pozadavkyMuzeCist): ?>
-    <section class="panel">
-        <div class="panel-header">
+    <section class="hr_panel">
+        <div class="hr_panel_header">
             <div>
-                <h2>Nové požadavky <?= h($pozadavkyRozsah) ?></h2>
+                <h2 class="hr_panel_title">Nové požadavky <?= h($pozadavkyRozsah) ?></h2>
             </div>
         </div>
 
         <?php if ($pozadavkyNove === []): ?>
-            <p class="empty-state">Žádné zadané požadavky</p>
+            <p class="hr_empty_state">Žádné zadané požadavky</p>
         <?php else: ?>
-            <div class="table-wrap">
-                <table>
+            <div class="hr_table_wrap">
+                <table class="hr_table">
                     <thead>
                         <tr>
-                            <th>Požadavek</th>
-                            <?php if ($pozadavkyZobraziPobocku): ?><th>Pobočka</th><?php endif; ?>
-                            <th>Pozice</th>
-                            <th>Upřesnění</th>
-                            <th>Zadáno</th>
-                            <?php if ($pozadavkyMuzeZadat): ?><th>Akce</th><?php endif; ?>
+                            <th class="hr_table_cell hr_table_head">Požadavek</th>
+                            <?php if ($pozadavkyZobraziPobocku): ?><th class="hr_table_cell hr_table_head">Pobočka</th><?php endif; ?>
+                            <th class="hr_table_cell hr_table_head">Pozice</th>
+                            <th class="hr_table_cell hr_table_head">Upřesnění</th>
+                            <th class="hr_table_cell hr_table_head">Zadáno</th>
+                            <?php if ($pozadavkyMuzeZadat): ?><th class="hr_table_cell hr_table_head">Akce</th><?php endif; ?>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($pozadavkyNove as $pozadavek): ?>
                             <tr>
-                                <td>#<?= h($pozadavek['id_pozadavek']) ?></td>
-                                <?php if ($pozadavkyZobraziPobocku): ?><td><?= h((string)$pozadavek['pobocka']) ?></td><?php endif; ?>
-                                <td><?= h($pozadavek['slot']) ?></td>
-                                <td><?= h($pozadavek['upresneni']) ?></td>
-                                <td><?= h(hr_format_date((string)$pozadavek['zadano'])) ?></td>
+                                <td class="hr_table_cell">#<?= h($pozadavek['id_pozadavek']) ?></td>
+                                <?php if ($pozadavkyZobraziPobocku): ?><td class="hr_table_cell"><?= h((string)$pozadavek['pobocka']) ?></td><?php endif; ?>
+                                <td class="hr_table_cell"><?= h($pozadavek['slot']) ?></td>
+                                <td class="hr_table_cell"><?= h($pozadavek['upresneni']) ?></td>
+                                <td class="hr_table_cell"><?= h(hr_format_date((string)$pozadavek['zadano'])) ?></td>
                                 <?php if ($pozadavkyMuzeZadat): ?>
-                                    <td>
+                                    <td class="hr_table_cell">
                                         <?php if ($pozadavkyJeAdmin || (int)$pozadavek['zadal'] === $pozadavkyPersonId || ($pozadavkyJeVedouci && (int)$pozadavek['id_pob'] === (int)$pozadavkyMainPobocka['id_pob'])): ?>
-                                            <form method="post" action="<?= h(cb_root_url('index.php?m=hr&page=pozadavky')) ?>" class="hr-row-action-form">
+                                            <form method="post" action="<?= h(cb_root_url('index.php?m=hr&page=pozadavky')) ?>" class="hr_row_action_form">
                                                 <input type="hidden" name="akce" value="zrusit">
                                                 <input type="hidden" name="id_pozadavek" value="<?= h($pozadavek['id_pozadavek']) ?>">
-                                                <button class="hr-delete-button" type="submit" title="Odstranit" aria-label="Odstranit">×</button>
+                                                <button class="hr_delete_button" type="submit" title="Odstranit" aria-label="Odstranit">×</button>
                                             </form>
                                         <?php endif; ?>
                                     </td>
@@ -159,35 +159,35 @@ $pozadavkyRozsah = $pozadavkyZobraziPobocku ? 'všech poboček' : 'pobočky ' . 
         <?php endif; ?>
     </section>
 
-    <section class="panel">
-        <div class="panel-header">
+    <section class="hr_panel">
+        <div class="hr_panel_header">
             <div>
-                <h2>Vyřešené požadavky <?= h($pozadavkyRozsah) ?></h2>
+                <h2 class="hr_panel_title">Vyřešené požadavky <?= h($pozadavkyRozsah) ?></h2>
             </div>
         </div>
 
         <?php if ($pozadavkyVyresene === []): ?>
-            <p class="empty-state">Bez záznamu</p>
+            <p class="hr_empty_state">Bez záznamu</p>
         <?php else: ?>
-            <div class="table-wrap">
-                <table>
+            <div class="hr_table_wrap">
+                <table class="hr_table">
                     <thead>
                         <tr>
-                            <th>Požadavek</th>
-                            <?php if ($pozadavkyZobraziPobocku): ?><th>Pobočka</th><?php endif; ?>
-                            <th>Pozice</th>
-                            <th>Upřesnění</th>
-                            <th>Zadáno</th>
+                            <th class="hr_table_cell hr_table_head">Požadavek</th>
+                            <?php if ($pozadavkyZobraziPobocku): ?><th class="hr_table_cell hr_table_head">Pobočka</th><?php endif; ?>
+                            <th class="hr_table_cell hr_table_head">Pozice</th>
+                            <th class="hr_table_cell hr_table_head">Upřesnění</th>
+                            <th class="hr_table_cell hr_table_head">Zadáno</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($pozadavkyVyresene as $pozadavek): ?>
                             <tr>
-                                <td>#<?= h($pozadavek['id_pozadavek']) ?></td>
-                                <?php if ($pozadavkyZobraziPobocku): ?><td><?= h((string)$pozadavek['pobocka']) ?></td><?php endif; ?>
-                                <td><?= h($pozadavek['slot']) ?></td>
-                                <td><?= h($pozadavek['upresneni']) ?></td>
-                                <td><?= h(hr_format_date((string)$pozadavek['zadano'])) ?></td>
+                                <td class="hr_table_cell">#<?= h($pozadavek['id_pozadavek']) ?></td>
+                                <?php if ($pozadavkyZobraziPobocku): ?><td class="hr_table_cell"><?= h((string)$pozadavek['pobocka']) ?></td><?php endif; ?>
+                                <td class="hr_table_cell"><?= h($pozadavek['slot']) ?></td>
+                                <td class="hr_table_cell"><?= h($pozadavek['upresneni']) ?></td>
+                                <td class="hr_table_cell"><?= h(hr_format_date((string)$pozadavek['zadano'])) ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -197,32 +197,32 @@ $pozadavkyRozsah = $pozadavkyZobraziPobocku ? 'všech poboček' : 'pobočky ' . 
     </section>
 
     <?php if ($pozadavkyExpirovane !== []): ?>
-        <section class="panel">
-            <div class="panel-header">
+        <section class="hr_panel">
+            <div class="hr_panel_header">
                 <div>
-                    <h2>Expirované požadavky <?= h($pozadavkyRozsah) ?> - uzavřené systémem pro neaktivitu</h2>
+                    <h2 class="hr_panel_title">Expirované požadavky <?= h($pozadavkyRozsah) ?> - uzavřené systémem pro neaktivitu</h2>
                 </div>
             </div>
 
-            <div class="table-wrap">
-                <table>
+            <div class="hr_table_wrap">
+                <table class="hr_table">
                     <thead>
                         <tr>
-                            <th>Požadavek</th>
-                            <?php if ($pozadavkyZobraziPobocku): ?><th>Pobočka</th><?php endif; ?>
-                            <th>Pozice</th>
-                            <th>Upřesnění</th>
-                            <th>Zadáno</th>
+                            <th class="hr_table_cell hr_table_head">Požadavek</th>
+                            <?php if ($pozadavkyZobraziPobocku): ?><th class="hr_table_cell hr_table_head">Pobočka</th><?php endif; ?>
+                            <th class="hr_table_cell hr_table_head">Pozice</th>
+                            <th class="hr_table_cell hr_table_head">Upřesnění</th>
+                            <th class="hr_table_cell hr_table_head">Zadáno</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($pozadavkyExpirovane as $pozadavek): ?>
                             <tr>
-                                <td>#<?= h($pozadavek['id_pozadavek']) ?></td>
-                                <?php if ($pozadavkyZobraziPobocku): ?><td><?= h((string)$pozadavek['pobocka']) ?></td><?php endif; ?>
-                                <td><?= h($pozadavek['slot']) ?></td>
-                                <td><?= h($pozadavek['upresneni']) ?></td>
-                                <td><?= h(hr_format_date((string)$pozadavek['zadano'])) ?></td>
+                                <td class="hr_table_cell">#<?= h($pozadavek['id_pozadavek']) ?></td>
+                                <?php if ($pozadavkyZobraziPobocku): ?><td class="hr_table_cell"><?= h((string)$pozadavek['pobocka']) ?></td><?php endif; ?>
+                                <td class="hr_table_cell"><?= h($pozadavek['slot']) ?></td>
+                                <td class="hr_table_cell"><?= h($pozadavek['upresneni']) ?></td>
+                                <td class="hr_table_cell"><?= h(hr_format_date((string)$pozadavek['zadano'])) ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -231,35 +231,35 @@ $pozadavkyRozsah = $pozadavkyZobraziPobocku ? 'všech poboček' : 'pobočky ' . 
         </section>
     <?php endif; ?>
 
-    <section class="panel">
-        <div class="panel-header">
+    <section class="hr_panel">
+        <div class="hr_panel_header">
             <div>
-                <h2>Požadavky zrušené zadavatelem <?= h($pozadavkyRozsah) ?></h2>
+                <h2 class="hr_panel_title">Požadavky zrušené zadavatelem <?= h($pozadavkyRozsah) ?></h2>
             </div>
         </div>
 
         <?php if ($pozadavkyZrusene === []): ?>
-            <p class="empty-state">Bez záznamu</p>
+            <p class="hr_empty_state">Bez záznamu</p>
         <?php else: ?>
-            <div class="table-wrap">
-                <table>
+            <div class="hr_table_wrap">
+                <table class="hr_table">
                     <thead>
                         <tr>
-                            <th>Požadavek</th>
-                            <?php if ($pozadavkyZobraziPobocku): ?><th>Pobočka</th><?php endif; ?>
-                            <th>Pozice</th>
-                            <th>Upřesnění</th>
-                            <th>Zadáno</th>
+                            <th class="hr_table_cell hr_table_head">Požadavek</th>
+                            <?php if ($pozadavkyZobraziPobocku): ?><th class="hr_table_cell hr_table_head">Pobočka</th><?php endif; ?>
+                            <th class="hr_table_cell hr_table_head">Pozice</th>
+                            <th class="hr_table_cell hr_table_head">Upřesnění</th>
+                            <th class="hr_table_cell hr_table_head">Zadáno</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($pozadavkyZrusene as $pozadavek): ?>
                             <tr>
-                                <td>#<?= h($pozadavek['id_pozadavek']) ?></td>
-                                <?php if ($pozadavkyZobraziPobocku): ?><td><?= h((string)$pozadavek['pobocka']) ?></td><?php endif; ?>
-                                <td><?= h($pozadavek['slot']) ?></td>
-                                <td><?= h($pozadavek['upresneni']) ?></td>
-                                <td><?= h(hr_format_date((string)$pozadavek['zadano'])) ?></td>
+                                <td class="hr_table_cell">#<?= h($pozadavek['id_pozadavek']) ?></td>
+                                <?php if ($pozadavkyZobraziPobocku): ?><td class="hr_table_cell"><?= h((string)$pozadavek['pobocka']) ?></td><?php endif; ?>
+                                <td class="hr_table_cell"><?= h($pozadavek['slot']) ?></td>
+                                <td class="hr_table_cell"><?= h($pozadavek['upresneni']) ?></td>
+                                <td class="hr_table_cell"><?= h(hr_format_date((string)$pozadavek['zadano'])) ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>

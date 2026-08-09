@@ -152,7 +152,7 @@ function hr_normalize_employee_row(array $row): array
         'cele_jmeno' => $fullName !== '' ? $fullName : 'Bez jména',
         'inicialy' => hr_initials($jmeno, $prijmeni),
         'stav_label' => hr_stav_label((string)($row['stav'] ?? '')),
-        'stav_badge' => ((string)($row['stav'] ?? '')) === 'aktivni' ? 'success' : 'neutral',
+        'stav_badge' => ((string)($row['stav'] ?? '')) === 'aktivni' ? 'hr_success' : 'hr_neutral',
     ];
 }
 

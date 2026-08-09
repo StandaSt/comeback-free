@@ -30,9 +30,9 @@ require_once __DIR__ . '/../lib/denni_report_data.php';
                     $dateLabel = (string)($labelParts[1] ?? '');
                     ?>
                     <tr>
-                        <td class="txt_seda"><?= h($weekday) ?></td>
-                        <td class="txt_seda"><?= h($dateLabel) ?></td>
-                        <td class="txt_seda"><?= h((string)($missingReport['branches_text'] ?? 'Žádné')) ?></td>
+                        <td class="provoz_prehled_mini_cell txt_seda"><?= h($weekday) ?></td>
+                        <td class="provoz_prehled_mini_cell txt_seda"><?= h($dateLabel) ?></td>
+                        <td class="provoz_prehled_mini_cell txt_seda"><?= h((string)($missingReport['branches_text'] ?? 'Žádné')) ?></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>

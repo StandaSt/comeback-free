@@ -19,12 +19,12 @@ function hr_post_nabor(mysqli $db): void
             hr_current_person_id($db)
         );
         $_SESSION['hr_flash'] = [
-            'type' => 'success',
+            'type' => 'hr_success',
             'text' => 'Akce byla uložena.',
         ];
     } catch (Throwable $e) {
         $_SESSION['hr_flash'] = [
-            'type' => 'error',
+            'type' => 'hr_error',
             'text' => $e->getMessage(),
         ];
     }

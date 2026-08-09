@@ -101,8 +101,8 @@ if ($cbAllSelected) {
 >
   <?php if ($cbAllowedCount <= 1): ?>
     <span class="head_branch_btn_static" title="<?= h($cbPobTitle) ?>">
-      <span class="head_block_text">
-        <span class="head_block_label">Pobočky:</span>
+      <span class="head_block_text head_block_text_inline">
+        <span class="head_block_label head_block_label_inline">Pobočky:</span>
         <span class="head_block_value"><?= h($cbPobLabel) ?></span>
       </span>
       <span class="head_block_chev" aria-hidden="true">⌄</span>
@@ -115,8 +115,8 @@ if ($cbAllSelected) {
       title="<?= h($cbPobTitle) ?>"
       aria-label="<?= h($cbPobTitle) ?>"
     >
-      <span class="head_block_text">
-        <span class="head_block_label">Pobočky:</span>
+      <span class="head_block_text head_block_text_inline">
+        <span class="head_block_label head_block_label_inline">Pobočky:</span>
         <span class="head_block_value"><?= h($cbPobLabel) ?></span>
       </span>
       <span class="head_block_chev" aria-hidden="true">⌄</span>
@@ -139,7 +139,7 @@ if ($cbAllSelected) {
               <?php endforeach; ?>
             </div>
             <label class="head_branch_field head_branch_field_select_all text_11 gap_4 displ_flex">
-              <span>
+              <span class="head_branch_select_all_text">
                 <input type="checkbox" class="cb-pob-area-all" value="1">
                 Vybrat vše
               </span>

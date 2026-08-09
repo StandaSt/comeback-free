@@ -208,38 +208,38 @@ declare(strict_types=1);
                         <table class="provoz_tooltip_table">
                             <thead>
                                 <tr>
-                                    <th>Pobočka</th>
-                                    <th class="provoz_tooltip_num">Dok.</th>
-                                    <th class="provoz_tooltip_num">Cesta</th>
-                                    <th class="provoz_tooltip_num">Odběr</th>
-                                    <th class="provoz_tooltip_num">Výroba</th>
-                                    <th class="provoz_tooltip_num">Obj.</th>
-                                    <th class="provoz_tooltip_num">Zruš.</th>
-                                    <th class="provoz_tooltip_num">Tržba</th>
+                                    <th class="provoz_tooltip_table_cell">Pobočka</th>
+                                    <th class="provoz_tooltip_table_cell provoz_tooltip_num">Dok.</th>
+                                    <th class="provoz_tooltip_table_cell provoz_tooltip_num">Cesta</th>
+                                    <th class="provoz_tooltip_table_cell provoz_tooltip_num">Odběr</th>
+                                    <th class="provoz_tooltip_table_cell provoz_tooltip_num">Výroba</th>
+                                    <th class="provoz_tooltip_table_cell provoz_tooltip_num">Obj.</th>
+                                    <th class="provoz_tooltip_table_cell provoz_tooltip_num">Zruš.</th>
+                                    <th class="provoz_tooltip_table_cell provoz_tooltip_num">Tržba</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($branches as $branch): ?>
                                     <tr>
-                                        <td><?= h((string)$branch['nazev']) ?></td>
-                                        <td class="provoz_tooltip_num"><?= h((string)(int)$branch['dokonceno']) ?></td>
-                                        <td class="provoz_tooltip_num"><?= h((string)(int)$branch['na_ceste']) ?></td>
-                                        <td class="provoz_tooltip_num"><?= h((string)(int)$branch['osobni_odber']) ?></td>
-                                        <td class="provoz_tooltip_num"><?= h((string)(int)$branch['vyrabi_se']) ?></td>
-                                        <td class="provoz_tooltip_num"><?= h((string)(int)$branch['objednavky']) ?></td>
-                                        <td class="provoz_tooltip_num"><?= h((string)(int)$branch['zruseno']) ?></td>
-                                        <td class="provoz_tooltip_num"><?= h(number_format((float)$branch['trzba'], 0, ',', ' ')) ?> Kč</td>
+                                        <td class="provoz_tooltip_table_cell"><?= h((string)$branch['nazev']) ?></td>
+                                        <td class="provoz_tooltip_table_cell provoz_tooltip_num"><?= h((string)(int)$branch['dokonceno']) ?></td>
+                                        <td class="provoz_tooltip_table_cell provoz_tooltip_num"><?= h((string)(int)$branch['na_ceste']) ?></td>
+                                        <td class="provoz_tooltip_table_cell provoz_tooltip_num"><?= h((string)(int)$branch['osobni_odber']) ?></td>
+                                        <td class="provoz_tooltip_table_cell provoz_tooltip_num"><?= h((string)(int)$branch['vyrabi_se']) ?></td>
+                                        <td class="provoz_tooltip_table_cell provoz_tooltip_num"><?= h((string)(int)$branch['objednavky']) ?></td>
+                                        <td class="provoz_tooltip_table_cell provoz_tooltip_num"><?= h((string)(int)$branch['zruseno']) ?></td>
+                                        <td class="provoz_tooltip_table_cell provoz_tooltip_num"><?= h(number_format((float)$branch['trzba'], 0, ',', ' ')) ?> Kč</td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <tr>
-                                    <th>Celkem</th>
-                                    <th class="provoz_tooltip_num"><?= h((string)$sumDokonceno) ?></th>
-                                    <th class="provoz_tooltip_num"><?= h((string)$sumNaCeste) ?></th>
-                                    <th class="provoz_tooltip_num"><?= h((string)$sumOsobniOdber) ?></th>
-                                    <th class="provoz_tooltip_num"><?= h((string)$sumVyrabiSe) ?></th>
-                                    <th class="provoz_tooltip_num"><?= h((string)$sumObjednavky) ?></th>
-                                    <th class="provoz_tooltip_num"><?= h((string)$sumZruseno) ?></th>
-                                    <th class="provoz_tooltip_num"><?= h(number_format($sumTrzba, 0, ',', ' ')) ?> Kč</th>
+                                    <th class="provoz_tooltip_table_cell">Celkem</th>
+                                    <th class="provoz_tooltip_table_cell provoz_tooltip_num"><?= h((string)$sumDokonceno) ?></th>
+                                    <th class="provoz_tooltip_table_cell provoz_tooltip_num"><?= h((string)$sumNaCeste) ?></th>
+                                    <th class="provoz_tooltip_table_cell provoz_tooltip_num"><?= h((string)$sumOsobniOdber) ?></th>
+                                    <th class="provoz_tooltip_table_cell provoz_tooltip_num"><?= h((string)$sumVyrabiSe) ?></th>
+                                    <th class="provoz_tooltip_table_cell provoz_tooltip_num"><?= h((string)$sumObjednavky) ?></th>
+                                    <th class="provoz_tooltip_table_cell provoz_tooltip_num"><?= h((string)$sumZruseno) ?></th>
+                                    <th class="provoz_tooltip_table_cell provoz_tooltip_num"><?= h(number_format($sumTrzba, 0, ',', ' ')) ?> Kč</th>
                                 </tr>
                             </tbody>
                         </table>

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/../../common/includes/module_menu.php';
+require_once __DIR__ . '/../../common/includes/blok_menu.php';
 
 $hlMenuItems = [
     [
@@ -43,7 +43,7 @@ foreach ($hlMenuItems as $item) {
     ];
 }
 
-cb_render_module_menu([
+cb_render_blok_menu([
     'title' => 'HelpDesk',
     'aria_label' => 'HelpDesk menu',
     'items' => $hlMenu,
