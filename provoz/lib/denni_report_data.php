@@ -608,7 +608,7 @@ function cb_denni_report_cash_data(?array $row): array
     return [
         'hotovost' => $value($row, 'hotovost'),
         'terminal' => $value($row, 'terminal'),
-        'stravenky' => $value($row, 'stravenky'),
+        'stravenky' => $valueOrZero($row, 'stravenky'),
         'vydaje_benzin' => $valueOrZero($row, 'vydaje_benzin'),
         'vydaje_auta' => $valueOrZero($row, 'vydaje_auta'),
         'vydaje_suroviny' => $valueOrZero($row, 'vydaje_suroviny'),

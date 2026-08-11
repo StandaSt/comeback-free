@@ -27,6 +27,38 @@ if (isset($_SERVER['HTTP_X_COMEBACK_USER_AKCE'])) {
     $cbIsUserAkce = ((string)($_SERVER['HTTP_X_COMEBACK_USER_AKCE']) === '1');
 }
 
+if (isset($_SERVER['HTTP_X_COMEBACK_SMENY_PLAN_STATE']) && (string)($_SERVER['HTTP_X_COMEBACK_SMENY_PLAN_STATE']) === '1') {
+    if (empty($_SESSION['login_ok'])) {
+        http_response_code(401);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok' => false, 'err' => 'Nutne prihlaseni'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $lastSync = '';
+    $shouldRun = false;
+    if ((string)($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL') {
+        $db = db();
+        $res = $db->query('SELECT MAX(finished_at) AS last_sync FROM smeny_aktualizace');
+        $row = ($res instanceof mysqli_result) ? $res->fetch_assoc() : null;
+        if ($res instanceof mysqli_result) {
+            $res->free();
+        }
+
+        $lastSync = trim((string)($row['last_sync'] ?? ''));
+        $lastSyncTs = ($lastSync !== '') ? strtotime($lastSync) : false;
+        $shouldRun = ($lastSyncTs === false || $lastSyncTs < (time() - 3600));
+    }
+
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'ok' => true,
+        'last_sync' => $lastSync,
+        'should_run' => $shouldRun ? 1 : 0,
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 if ($cbIsUserAkce && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     if (empty($_SESSION['login_ok'])) {
         http_response_code(401);

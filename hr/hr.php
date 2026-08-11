@@ -1,9 +1,12 @@
 <?php
 declare(strict_types=1);
 
-/**
- * Vstupni bod HR modulu: overi pristup, vybere stranku a nacte layout.
+/*
+ * Modulový vstup HR.
+ * Sem nepatří SQL dotazy, HTML bloky, AJAX handlery ani pomocné funkce.
+ * Soubor má pouze připravit modul, předat akce dispatcheru, vybrat stránku/pohled a načíst modulový layout.
  */
+
 require_once __DIR__ . '/../common/lib/session_boot.php';
 require_once __DIR__ . '/../common/config/secrets.php';
 require_once __DIR__ . '/../common/lib/app.php';
@@ -11,6 +14,8 @@ require_once __DIR__ . '/../common/lib/pobocky_vyber.php';
 require_once __DIR__ . '/../common/lib/handle_set_period.php';
 require_once __DIR__ . '/../common/lib/handle_set_pobocky.php';
 require_once __DIR__ . '/hr_includes/hr_data.php';
+require_once __DIR__ . '/hr_lib/hr_pages.php';
+require_once __DIR__ . '/hr_lib/hr_request_dispatch.php';
 
 cb_session_guard_entry();
 
@@ -36,70 +41,8 @@ if (!in_array($roleId, [1, 3, 5], true) && $userId !== 57) {
 
 cb_pobocky_bootstrap_session();
 
-$pages = [
-    'prehled' => [
-        'file' => __DIR__ . '/hr_pages/prehled.php',
-        'title' => 'Přehled',
-    ],
-    'nabor' => [
-        'file' => __DIR__ . '/hr_pages/nabor.php',
-        'title' => 'Nábor',
-    ],
-    'zamestnanci' => [
-        'file' => __DIR__ . '/hr_pages/zamestnanci.php',
-        'title' => 'Zaměstnanci',
-    ],
-    'zamestnanec' => [
-        'file' => __DIR__ . '/hr_pages/zamestnanec.php',
-        'title' => 'Karta zaměstnance',
-    ],
-    'novy_zamestnanec' => [
-        'file' => __DIR__ . '/hr_pages/novy_zamestnanec.php',
-        'title' => 'Nový zaměstnanec',
-    ],
-    'pozadavky' => [
-        'file' => __DIR__ . '/hr_pages/pozadavky.php',
-        'title' => 'Požadavky',
-    ],
-    'pracovni_pomery' => [
-        'file' => __DIR__ . '/hr_pages/placeholder.php',
-        'title' => 'Pracovní poměry',
-    ],
-    'dokumenty' => [
-        'file' => __DIR__ . '/hr_pages/placeholder.php',
-        'title' => 'Dokumenty',
-    ],
-    'skoleni' => [
-        'file' => __DIR__ . '/hr_pages/placeholder.php',
-        'title' => 'Školení',
-    ],
-    'prohlidky' => [
-        'file' => __DIR__ . '/hr_pages/placeholder.php',
-        'title' => 'Lékařské prohlídky',
-    ],
-    'dovolene' => [
-        'file' => __DIR__ . '/hr_pages/placeholder.php',
-        'title' => 'Dovolené',
-    ],
-    'reporty' => [
-        'file' => __DIR__ . '/hr_pages/placeholder.php',
-        'title' => 'Reporty',
-    ],
-    'nastaveni' => [
-        'file' => __DIR__ . '/hr_pages/placeholder.php',
-        'title' => 'Nastavení',
-    ],
-];
-
-$page = strtolower(trim((string)($_GET['page'] ?? 'prehled')));
-if ($page === 'dashboard') {
-    $page = 'prehled';
-}
-if (!isset($pages[$page])) {
-    $page = 'prehled';
-}
-
-$currentPage = $pages[$page];
+$currentPage = cb_hr_current_page();
+$page = $currentPage['key'];
 $pageTitle = $currentPage['title'];
 
 $cbProfile = $_SESSION['cb_user_profile'] ?? [];
@@ -132,20 +75,7 @@ if ($userRole === '') {
     $userRole = 'Uživatel';
 }
 $db = db();
-$hrIsShellRequest = isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODULE']);
-$hrIsFormPost = ($_SERVER['REQUEST_METHOD'] === 'POST') && !$hrIsShellRequest;
-
-if ($page === 'nabor' && $hrIsFormPost) {
-    hr_post_nabor($db);
-}
-
-if ($page === 'pozadavky' && $hrIsFormPost && in_array($roleId, [1, 5], true)) {
-    hr_post_pozadavky($db, $cbUser, $roleId);
-}
-
-if ($page === 'novy_zamestnanec' && $hrIsFormPost) {
-    hr_post_zamestnanec($db, $roleId);
-}
+cb_hr_request_dispatch($db, $page, $cbUser, $roleId);
 
 $flash = $_SESSION['hr_flash'] ?? null;
 unset($_SESSION['hr_flash']);
@@ -153,6 +83,9 @@ unset($_SESSION['hr_flash']);
 ?>
 <?php require __DIR__ . '/hr_includes/hr_menu.php'; ?>
 
+<?php if ($page === 'uprava_profilu'): ?>
+    <?php require __DIR__ . '/../common/pages/uprava_profilu.php'; ?>
+<?php else: ?>
 <section class="pp hr_pp" data-module="hr" data-page="<?= h($page) ?>">
     <header class="pp_header">
         <h1><?= h($pageTitle) ?></h1>
@@ -165,3 +98,4 @@ unset($_SESSION['hr_flash']);
         <?php require $currentPage['file']; ?>
     </main>
 </section>
+<?php endif; ?>

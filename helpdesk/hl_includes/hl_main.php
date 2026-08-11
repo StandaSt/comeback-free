@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../hl_lib/hl_prava.php';
+require_once __DIR__ . '/../hl_lib/hl_pages.php';
 
 if (!function_exists('cb_helpdesk_ticket_h')) {
     function cb_helpdesk_ticket_h(string $value): string
@@ -172,22 +173,9 @@ $helpdeskUserRole = trim((string)($helpdeskUser['role'] ?? $helpdeskUser['nazev_
 if ($helpdeskUserRole === '') {
     $helpdeskUserRole = '-';
 }
-$helpdeskView = strtolower(trim((string)($_GET['hd'] ?? 'all')));
-if (!in_array($helpdeskView, ['all', 'new-ticket', 'mine', 'watched', 'closed', 'admin'], true)) {
-    $helpdeskView = 'all';
-}
-if ($helpdeskView === 'admin' && !$isAdmin) {
-    $helpdeskView = 'all';
-}
-$helpdeskViewTitles = [
-    'all' => 'Přehled',
-    'new-ticket' => 'Nový tiket',
-    'mine' => 'Moje tikety',
-    'watched' => 'Sledované',
-    'closed' => 'Uzavřené',
-    'admin' => 'Admin',
-];
-$helpdeskPageTitle = $helpdeskViewTitles[$helpdeskView] ?? 'Přehled';
+$helpdeskCurrentView = cb_helpdesk_current_view($isAdmin);
+$helpdeskView = $helpdeskCurrentView['key'];
+$helpdeskPageTitle = $helpdeskCurrentView['title'];
 
 $helpdeskMenuUrl = static function (string $view) use ($helpdeskSourceModule): string {
     return cb_root_url('index.php?m=helpdesk&src=' . rawurlencode($helpdeskSourceModule) . '&hd=' . rawurlencode($view));
@@ -212,6 +200,10 @@ foreach ($items as $item) {
 
 ?>
 <?php require __DIR__ . '/hl_menu.php'; ?>
+<?php if ($helpdeskView === 'uprava_profilu'): ?>
+    <?php require __DIR__ . '/../../common/pages/uprava_profilu.php'; ?>
+    <?php return; ?>
+<?php endif; ?>
 <section class="pp helpdesk_module_content" data-module="helpdesk" data-page="<?= h($helpdeskView) ?>" data-cb-helpdesk-module="1" data-cb-hd-api-url="<?= h($helpdeskApiUrl) ?>" data-cb-hd-arrow-url="<?= h($arrowIconUrl) ?>" data-cb-hd-is-admin="<?= $isAdmin ? '1' : '0' ?>" data-cb-hd-author-id="<?= (int)$idUser ?>">
 <header class="pp_header">
 <h1><?= h($helpdeskPageTitle) ?></h1>

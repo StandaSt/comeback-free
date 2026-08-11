@@ -145,7 +145,7 @@ declare(strict_types=1);
         return;
     }
     ?>
-    <section class="blok">
+    <section class="blok" data-cb-restia-needed="1">
         <h2 class="blok_title">Top report</h2>
         <p class="provoz_prehled_meta"><?= h($periodLabel) ?></p>
         <?php if ($branchLabel !== ''): ?>

@@ -21,6 +21,32 @@ if (PHP_SAPI === 'cli') {
     $PROSTREDI = 'SERVER';
 }
 
+if (!function_exists('cb_smeny_plan_session_snapshot')) {
+    function cb_smeny_plan_session_snapshot(): array
+    {
+        $keys = ['cb_token', 'cb_user', 'login_ok', 'cb_auth_ok', 'cb_2fa_token', 'cb_user_profile', 'cb_user_branches'];
+        $snapshot = [];
+        foreach ($keys as $key) {
+            $snapshot[$key] = array_key_exists($key, $_SESSION) ? $_SESSION[$key] : null;
+        }
+
+        return $snapshot;
+    }
+}
+
+if (!function_exists('cb_smeny_plan_session_restore')) {
+    function cb_smeny_plan_session_restore(array $snapshot): void
+    {
+        foreach ($snapshot as $key => $value) {
+            if ($value === null) {
+                unset($_SESSION[$key]);
+                continue;
+            }
+            $_SESSION[$key] = $value;
+        }
+    }
+}
+
 if (!function_exists('cb_smeny_plan_kontrola_get_secret')) {
     function cb_smeny_plan_kontrola_get_secret(string $key): string
     {
@@ -149,34 +175,42 @@ if (!function_exists('cb_smeny_plan_kontrola_lock_release')) {
 }
 
 if (!function_exists('cb_smeny_plan_kontrola')) {
-    function cb_smeny_plan_kontrola(): void
+    function cb_smeny_plan_kontrola(bool $preserveSession = false): void
     {
-        $token = cb_smeny_plan_kontrola_login();
-
-        $_SESSION['cb_token'] = $token;
-        $GLOBALS['cb_smeny_plan_cron'] = true;
-        $GLOBALS['cb_smeny_plan_import_all'] = true;
-
-        $file = __DIR__ . '/../../provoz/inicializace/plnime_smeny_plan.php';
-        if (!file_exists($file)) {
-            throw new RuntimeException('Směny cron: soubor nenalezen plnime_smeny_plan.php.');
-        }
-
-        $db = db();
-        $lockName = '';
+        $snapshot = $preserveSession ? cb_smeny_plan_session_snapshot() : [];
 
         try {
-            $lockName = cb_smeny_plan_kontrola_lock_acquire($db, 10);
-            include $file;
-        } finally {
-            try {
-                db_api_smeny_flush($db, null, null);
-            } catch (Throwable $e) {
-                if (function_exists('error_log')) {
-                    error_log('Směny cron api_smeny flush selhal: ' . $e->getMessage());
-                }
+            $token = cb_smeny_plan_kontrola_login();
+
+            $_SESSION['cb_token'] = $token;
+            $GLOBALS['cb_smeny_plan_cron'] = true;
+            $GLOBALS['cb_smeny_plan_import_all'] = true;
+
+            $file = __DIR__ . '/../../provoz/inicializace/plnime_smeny_plan.php';
+            if (!file_exists($file)) {
+                throw new RuntimeException('Směny cron: soubor nenalezen plnime_smeny_plan.php.');
             }
-            cb_smeny_plan_kontrola_lock_release($db, $lockName);
+
+            $db = db();
+            $lockName = '';
+
+            try {
+                $lockName = cb_smeny_plan_kontrola_lock_acquire($db, 10);
+                include $file;
+            } finally {
+                try {
+                    db_api_smeny_flush($db, null, null);
+                } catch (Throwable $e) {
+                    if (function_exists('error_log')) {
+                        error_log('Směny cron api_smeny flush selhal: ' . $e->getMessage());
+                    }
+                }
+                cb_smeny_plan_kontrola_lock_release($db, $lockName);
+            }
+        } finally {
+            if ($preserveSession) {
+                cb_smeny_plan_session_restore($snapshot);
+            }
         }
     }
 }

@@ -54,10 +54,14 @@
     });
   }
 
-  function setRefreshLocked(button, text, seconds) {
+  function setRefreshLocked(button) {
     button.disabled = true;
     button.setAttribute('aria-disabled', 'true');
-    button.title = text + ' za ' + formatDuration(seconds);
+  }
+
+  function setLockedTitle(button, refreshAt) {
+    const remaining = refreshAt - Math.floor(Date.now() / 1000);
+    button.title = 'Aktualizace bude možná za ' + formatDuration(remaining);
   }
 
   function setRefreshReady(button) {
@@ -83,9 +87,17 @@
         setRefreshReady(button);
         return true;
       }
-      setRefreshLocked(button, 'Aktualizace bude možná', remaining);
+      setRefreshLocked(button);
       return false;
     };
+
+    const updateLockedTitle = () => {
+      if (!button.disabled) return;
+      setLockedTitle(button, refreshAt);
+    };
+    button.addEventListener('mouseenter', updateLockedTitle);
+    button.addEventListener('focus', updateLockedTitle);
+    updateLockedTitle();
 
     if (!tick()) {
       const timer = w.setInterval(() => {

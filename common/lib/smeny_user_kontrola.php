@@ -20,6 +20,32 @@ if (PHP_SAPI === 'cli') {
     $PROSTREDI = 'SERVER';
 }
 
+if (!function_exists('cb_smeny_user_session_snapshot')) {
+    function cb_smeny_user_session_snapshot(): array
+    {
+        $keys = ['cb_token', 'cb_user', 'login_ok', 'cb_auth_ok', 'cb_2fa_token', 'cb_user_profile', 'cb_user_branches'];
+        $snapshot = [];
+        foreach ($keys as $key) {
+            $snapshot[$key] = array_key_exists($key, $_SESSION) ? $_SESSION[$key] : null;
+        }
+
+        return $snapshot;
+    }
+}
+
+if (!function_exists('cb_smeny_user_session_restore')) {
+    function cb_smeny_user_session_restore(array $snapshot): void
+    {
+        foreach ($snapshot as $key => $value) {
+            if ($value === null) {
+                unset($_SESSION[$key]);
+                continue;
+            }
+            $_SESSION[$key] = $value;
+        }
+    }
+}
+
 if (!function_exists('cb_smeny_user_kontrola_get_secret')) {
     function cb_smeny_user_kontrola_get_secret(string $key): string
     {
@@ -98,19 +124,27 @@ if (!function_exists('cb_smeny_user_kontrola_login')) {
 }
 
 if (!function_exists('cb_smeny_user_kontrola')) {
-    function cb_smeny_user_kontrola(): void
+    function cb_smeny_user_kontrola(bool $preserveSession = false): void
     {
-        $token = cb_smeny_user_kontrola_login();
+        $snapshot = $preserveSession ? cb_smeny_user_session_snapshot() : [];
 
-        $_SESSION['cb_token'] = $token;
-        $GLOBALS['cb_smeny_user_cron'] = true;
+        try {
+            $token = cb_smeny_user_kontrola_login();
 
-        $file = __DIR__ . '/../../provoz/inicializace/plnime_smeny_user.php';
-        if (!file_exists($file)) {
-            throw new RuntimeException('Směny cron user: soubor nenalezen plnime_smeny_user.php.');
+            $_SESSION['cb_token'] = $token;
+            $GLOBALS['cb_smeny_user_cron'] = true;
+
+            $file = __DIR__ . '/../../provoz/inicializace/plnime_smeny_user.php';
+            if (!file_exists($file)) {
+                throw new RuntimeException('Směny cron user: soubor nenalezen plnime_smeny_user.php.');
+            }
+
+            include $file;
+        } finally {
+            if ($preserveSession) {
+                cb_smeny_user_session_restore($snapshot);
+            }
         }
-
-        include $file;
     }
 }
 

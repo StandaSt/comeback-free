@@ -46,12 +46,14 @@ if (!function_exists('cb_render_blok_menu_user')) {
         }
 
         $postUrl = function_exists('cb_root_url') ? cb_root_url('index.php') : 'index.php';
-        $settingsUrl = function_exists('cb_root_url') ? cb_root_url('index.php?m=provoz&page=nastaveni') : 'index.php?m=provoz&page=nastaveni';
         $themeLevel = function_exists('cb_user_setting') ? max(0, min(6, (int)cb_user_setting('dark', 0))) : 0;
         $themeModule = defined('CB_EMBEDDED_MODULE') ? (string)constant('CB_EMBEDDED_MODULE') : (string)($GLOBALS['CURRENT_MODULE'] ?? 'provoz');
         if (!in_array($themeModule, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk'], true)) {
             $themeModule = 'provoz';
         }
+        $profileUrl = ($themeModule === 'helpdesk')
+            ? (function_exists('cb_root_url') ? cb_root_url('index.php?m=helpdesk&hd=uprava_profilu') : 'index.php?m=helpdesk&hd=uprava_profilu')
+            : (function_exists('cb_root_url') ? cb_root_url('index.php?m=' . rawurlencode($themeModule) . '&page=uprava_profilu') : 'index.php?m=' . rawurlencode($themeModule) . '&page=uprava_profilu');
         $themeReturn = (string)($_SERVER['REQUEST_URI'] ?? '');
         if ($themeReturn === '' || str_starts_with($themeReturn, '//') || preg_match('~^[a-z][a-z0-9+.-]*:~i', $themeReturn) === 1) {
             $themeReturn = function_exists('cb_root_url') ? cb_root_url('index.php?m=' . rawurlencode($themeModule)) : 'index.php?m=' . rawurlencode($themeModule);
@@ -63,10 +65,12 @@ if (!function_exists('cb_render_blok_menu_user')) {
              data-last-ts="<?= cb_blok_menu_h((string)$lastTs) ?>"
              data-logout-url="<?= cb_blok_menu_h($postUrl . '?action=logout&duvod=0') ?>"
              data-touch-url="<?= cb_blok_menu_h($postUrl) ?>">
-            <div class="blok_menu_user_name"><?= cb_blok_menu_h($userName) ?></div>
+            <div class="blok_menu_user_name">
+                <span><?= cb_blok_menu_h($userName) ?></span>
+                <a class="blok_menu_user_profile" href="<?= cb_blok_menu_h($profileUrl) ?>" title="Úprava profilu" aria-label="Úprava profilu">⚙</a>
+            </div>
             <div class="blok_menu_user_role"><?= cb_blok_menu_h($userRole) ?></div>
             <div class="blok_menu_user_settings">
-                <a class="blok_menu_user_action" href="<?= cb_blok_menu_h($settingsUrl) ?>">Nastavení</a>
                 <form class="blok_menu_theme_form" method="post" action="<?= cb_blok_menu_h($postUrl) ?>" data-cb-theme-form="1" data-theme-level="<?= cb_blok_menu_h((string)$themeLevel) ?>">
                     <input type="hidden" name="cb_theme_module" value="<?= cb_blok_menu_h($themeModule) ?>">
                     <input type="hidden" name="cb_theme_return" value="<?= cb_blok_menu_h($themeReturn) ?>">

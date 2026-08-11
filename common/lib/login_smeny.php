@@ -148,6 +148,9 @@ try {
         unset($_SESSION['cb_2fa_token']);
 
         cb_login_finalize_after_ok($token);
+        if ((string)($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL') {
+            $_SESSION['cb_local_after_login_sync'] = 1;
+        }
         $_SESSION['cb_initial_loader_text'] = 'Inicializace systému ...';
 
         header('Location: ' . cb_login_target_url());

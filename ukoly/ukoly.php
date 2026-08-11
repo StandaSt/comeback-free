@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Modulový vstup Úkoly.
+ * Sem nepatří SQL dotazy, HTML bloky, AJAX handlery ani pomocné funkce.
+ * Soubor má pouze připravit modul, předat akce dispatcheru, vybrat stránku/pohled a načíst modulový layout.
+ */
+
 require_once __DIR__ . '/../common/lib/session_boot.php';
 require_once __DIR__ . '/../common/config/secrets.php';
 require_once __DIR__ . '/../common/lib/app.php';
@@ -8,6 +14,7 @@ require_once __DIR__ . '/../common/lib/system.php';
 require_once __DIR__ . '/../common/lib/pobocky_vyber.php';
 require_once __DIR__ . '/../common/lib/handle_set_period.php';
 require_once __DIR__ . '/../common/lib/handle_set_pobocky.php';
+require_once __DIR__ . '/uk_lib/uk_pages.php';
 
 cb_session_guard_entry();
 
@@ -24,28 +31,17 @@ if (empty($_SESSION['login_ok'])) {
 
 cb_pobocky_bootstrap_session();
 
-$ukMenuItems = [
-    ['page' => 'prehled', 'label' => 'Přehled'],
-    ['page' => 'nove_zadani', 'label' => 'Nové zadání'],
-    ['page' => 'prehled_ukolu', 'label' => 'Přehled úkolů'],
-    ['page' => 'ukoly_pro_me', 'label' => 'Úkoly pro mě'],
-    ['page' => 'me_pozadavky', 'label' => 'Mé požadavky'],
-];
-$ukPage = strtolower(trim((string)($_GET['page'] ?? 'prehled')));
-$ukPageTitle = 'Přehled';
-foreach ($ukMenuItems as $ukItem) {
-    if ((string)$ukItem['page'] === $ukPage) {
-        $ukPageTitle = (string)$ukItem['label'];
-        break;
-    }
-}
-if ($ukPageTitle === 'Přehled') {
-    $ukPage = 'prehled';
-}
+$ukMenuItems = cb_ukoly_pages();
+$ukCurrentPage = cb_ukoly_current_page($ukMenuItems);
+$ukPage = $ukCurrentPage['key'];
+$ukPageTitle = $ukCurrentPage['title'];
 
 ?>
 <?php require __DIR__ . '/uk_includes/uk_menu.php'; ?>
 
+<?php if ($ukPage === 'uprava_profilu'): ?>
+    <?php require __DIR__ . '/../common/pages/uprava_profilu.php'; ?>
+<?php else: ?>
 <section class="pp ukoly_content" data-module="ukoly" data-page="<?= h($ukPage) ?>">
     <header class="pp_header">
         <h1><?= h($ukPageTitle) ?></h1>
@@ -54,3 +50,4 @@ if ($ukPageTitle === 'Přehled') {
         <p class="ukoly_placeholder_text">Modul je připravený pro další doplnění obsahu.</p>
     </div>
 </section>
+<?php endif; ?>

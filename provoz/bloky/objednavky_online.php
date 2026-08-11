@@ -187,7 +187,7 @@ declare(strict_types=1);
         return;
     }
     ?>
-    <section class="blok blok_online">
+    <section class="blok blok_online" data-cb-restia-needed="1">
         <h2 class="blok_title">Objednávky online</h2>
         <div class="provoz_prehled_online_root" data-graf="1">
             <script type="application/json" data-graf-data><?= $payloadJson ?></script>

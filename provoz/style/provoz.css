@@ -344,14 +344,24 @@
 .zr_form{
   display:flex;
   flex-direction:column;
+  width:100%;
 }
 
 .zr_layout{
   display:grid;
-  width:max-content;
+  width:100%;
   max-width:100%;
-  grid-template-columns:800px 300px;
+  grid-template-columns:minmax(0, 800px) 300px;
+  justify-content:space-between;
   align-items:start;
+}
+
+.zr_layout,
+.zr_main,
+.zr_top,
+.zr_left,
+.zr_side{
+  gap:14px;
 }
 
 .zr_main{
@@ -634,6 +644,13 @@
   text-align:right;
 }
 
+.zr_restia_head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
 .zr_restia_refresh_btn{
   display:inline-flex;
   align-items:center;
@@ -672,11 +689,13 @@
 
 .zr_restia_key{
   color:var(--cb-text-main);
+  text-align:left;
 }
 
 .zr_restia_value{
   font-weight:700;
   white-space:nowrap;
+  text-align:right;
 }
 
 .zr_submit{

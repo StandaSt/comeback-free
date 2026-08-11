@@ -14,7 +14,6 @@ $hrMenuItems = [
     ['page' => 'prohlidky', 'label' => 'Lékařské prohlídky'],
     ['page' => 'dovolene', 'label' => 'Dovolené'],
     ['page' => 'reporty', 'label' => 'Reporty'],
-    ['page' => 'nastaveni', 'label' => 'Nastavení'],
 ];
 
 $hrMenu = [];

@@ -1,8 +1,11 @@
 <?php
-// provoz.php * Verze: V25 * Aktualizace: 28.04.2026
-
-
 declare(strict_types=1);
+
+/*
+ * Modulový vstup Provoz.
+ * Sem nepatří SQL dotazy, HTML bloky, AJAX handlery ani pomocné funkce.
+ * Soubor má pouze připravit modul, předat akce dispatcheru, vybrat stránku/pohled a načíst modulový layout.
+ */
 
 require_once __DIR__ . '/../common/lib/session_boot.php';
 require_once __DIR__ . '/../common/lib/app.php';
@@ -11,6 +14,7 @@ require_once __DIR__ . '/../common/lib/system.php';
 require_once __DIR__ . '/../common/config/secrets.php';
 require_once __DIR__ . '/lib/post_prg_redirect.php';
 require_once __DIR__ . '/lib/asset_url.php';
+require_once __DIR__ . '/lib/provoz_pages.php';
 
 cb_session_guard_entry();
 
@@ -102,26 +106,12 @@ if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
     require_once __DIR__ . '/../common/lib/uloz_akci.php';
 }
 
-$cbPage = trim((string)($_GET['page'] ?? 'prehled'));
-if ($cbPage === '' || $cbPage === 'dashboard') {
-    $cbPage = 'prehled';
-}
-$cbProvozPages = [
-    'prehled' => __DIR__ . '/pages/prehled.php',
-    'denni_report' => __DIR__ . '/pages/denni_report.php',
-    'nastaveni' => __DIR__ . '/karty/user_setting.php',
-];
-$cbProvozPageTitles = [
-    'prehled' => 'Přehled',
-    'denni_report' => 'Denní report',
-    'nastaveni' => 'Nastavení',
-];
-if (!isset($cbProvozPages[$cbPage])) {
-    $cbPage = 'prehled';
-}
+$cbProvozCurrentPage = cb_provoz_current_page();
+$cbPage = $cbProvozCurrentPage['key'];
 $pageKey = $cbPage;
-$file = $cbProvozPages[$cbPage];
-$cbProvozPageTitle = $cbProvozPageTitles[$cbPage] ?? 'Přehled';
+$file = $cbProvozCurrentPage['file'];
+$cbPageExists = (bool)$cbProvozCurrentPage['exists'];
+$cbProvozPageTitle = $cbProvozCurrentPage['title'];
 
 require_once __DIR__ . '/includes/log_a_404.php';
 
@@ -214,6 +204,9 @@ if (!empty($_SESSION['login_ok']) && $cbSystemLocked) {
     ?>
     <?php require __DIR__ . '/includes/menu.php'; ?>
 
+    <?php if ($cbPage === 'uprava_profilu'): ?>
+        <?php require __DIR__ . '/../common/pages/uprava_profilu.php'; ?>
+    <?php else: ?>
     <section class="pp" data-module="provoz" data-page="<?= h($cbPage) ?>">
         <header class="pp_header">
             <h1><?= h($cbProvozPageTitle) ?></h1>
@@ -221,15 +214,10 @@ if (!empty($_SESSION['login_ok']) && $cbSystemLocked) {
         <?php
         if ($cbPageExists) {
             require $file;
-            if ($cbPage === 'nastaveni' && isset($card_max_html)) {
-                echo '<section class="blok">';
-                echo '<h2 class="blok_title">Nastavení</h2>';
-                echo $card_max_html;
-                echo '</section>';
-            }
         }
         ?>
     </section>
+    <?php endif; ?>
     <?php
 } elseif ($cb2faPending) {
     require_once __DIR__ . '/../common/modaly/modal_overeni.php';

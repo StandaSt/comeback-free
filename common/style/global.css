@@ -1066,14 +1066,41 @@ align-items:center;
 }
 
 .blok_menu_user_name{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:6px;
+  align-items:center;
   min-width:0;
-  overflow:hidden;
   color:var(--cb-text-main);
   font-size:14px;
   font-weight:700;
   line-height:1.2;
+}
+
+.blok_menu_user_name span{
+  min-width:0;
+  overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
+}
+
+.blok_menu_user_profile{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:24px;
+  height:24px;
+  border:1px solid var(--cb-border-soft);
+  border-radius:50%;
+  background:var(--cb-bg-control);
+  color:var(--cb-text-main);
+  font-size:14px;
+  line-height:1;
+  text-decoration:none;
+}
+
+.blok_menu_user_profile:hover{
+  background:var(--cb-bg-control-hover);
 }
 
 .blok_menu_user_role{

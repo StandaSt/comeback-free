@@ -14,6 +14,9 @@ if ($loginDbName === '') {
 $loginDbText = 'DB ' . $loginDbName . ($loginDbOk ? ' OK' : ' nepřístupná');
 $loginDbClass = $loginDbOk ? 'is-ok' : 'is-bad';
 $loginDisabled = $loginDbOk ? '' : ' disabled';
+$loginFlash = trim((string)($_SESSION['cb_flash'] ?? ''));
+$loginShowUrl = (string)($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL';
+unset($_SESSION['cb_flash']);
 ?>
 <div id="cb-login-overlay" class="modal-overlay" aria-modal="true" role="dialog" aria-label="Přihlášení Comeback">
   <div class="modal">
@@ -49,26 +52,21 @@ $loginDisabled = $loginDbOk ? '' : ' disabled';
                placeholder="Heslo"
                required<?= $loginDisabled ?>>
       </div>
+      <input type="hidden" name="module" value="provoz">
 
       <div class="modal-actions modal-actions-modules">
-        <button class="modal-btn primary" type="submit" name="module" value="provoz"<?= $loginDisabled ?>>
-          <span class="modal-btn-main">Provoz</span>
-          <span class="modal-btn-sub">Provozní systém</span>
-        </button>
-        <button class="modal-btn primary" type="submit" name="module" value="hr"<?= $loginDisabled ?>>
-          <span class="modal-btn-main">HR</span>
-          <span class="modal-btn-sub">Personální agenda</span>
-        </button>
-        <button class="modal-btn primary" type="submit" name="module" value="smeny"<?= $loginDisabled ?>>
-          <span class="modal-btn-main">směny</span>
-          <span class="modal-btn-sub">Plánování směn</span>
+        <button class="modal-btn primary" type="submit"<?= $loginDisabled ?>>
+          <span class="modal-btn-main">Přihlásit</span>
         </button>
       </div>
+      <p class="modal-login-status" id="cbLoginStatus" aria-live="polite"><?= h($loginFlash) ?></p>
 
-      <p class="modal-sub modal-url" style="margin-top:10px;">
+      <?php if ($loginShowUrl): ?>
+      <p class="modal-sub modal-url">
         <span class="modal-db-state <?= h($loginDbClass) ?>"><?= h($loginDbText) ?></span>
-        <span class="modal-url-main">URL: <code><?= h($aktualniUrl) ?></code></span>
+        <span class="modal-url-main">LOCAL</span>
       </p>
+      <?php endif; ?>
     </form>
   </div>
   <?php if (!empty($cbLoginBackgroundLabel)): ?>
@@ -76,3 +74,20 @@ $loginDisabled = $loginDbOk ? '' : ' disabled';
   <?php endif; ?>
   <p class="modal-login-note">Případná podoba s kýmkoliv je čistě náhodná</p>
 </div>
+<script>
+(function(){
+  'use strict';
+  var form = document.getElementById('cbLoginForm');
+  var status = document.getElementById('cbLoginStatus');
+  if (!form || !status) return;
+
+  form.addEventListener('submit', function(){
+    var button = form.querySelector('button[type="submit"]');
+    status.textContent = 'Ověřuji přihlašovací údaje ...';
+    if (button instanceof HTMLButtonElement) {
+      button.disabled = true;
+      button.classList.add('is-waiting');
+    }
+  });
+})();
+</script>

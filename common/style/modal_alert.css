@@ -502,7 +502,7 @@ code{
   .modal-login-container{
     min-height: 100vh;
     min-height: 100dvh;
-    justify-content: flex-end;
+    justify-content: center;
     align-items: center;
   }
 
@@ -511,7 +511,7 @@ code{
     width: 100%;
     min-height: 100vh;
     min-height: 100dvh;
-    justify-content: flex-end;
+    justify-content: center;
     align-items: center;
     padding: clamp(14px, 3vw, 58px);
     background: linear-gradient(90deg, rgba(0, 0, 0, 0.02) 0%, rgba(0, 0, 0, 0.12) 100%);
@@ -519,12 +519,12 @@ code{
   }
 
   .modal-login-page .modal{
-    width: min(560px, calc(100vw - 48px));
+    width: min(294px, calc(100vw - 40px));
     max-height: none;
     overflow: visible;
-    padding: clamp(28px, 3.5vw, 54px) clamp(30px, 3.8vw, 58px);
+    padding: 10px 22px 20px;
     border: 1px solid rgba(255, 255, 255, 0.52);
-    border-radius: 24px;
+    border-radius: 16px;
     background: rgba(24, 22, 18, 0.25);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.28),
@@ -539,13 +539,14 @@ code{
     display: grid;
     justify-items: center;
     text-align: center;
-    gap: 18px;
-    margin-bottom: 26px;
+    gap: 0;
+    margin-bottom: 12px;
   }
 
   .modal-login-page .modal-logo{
-    width: clamp(140px, 12vw, 176px);
-    height: clamp(140px, 12vw, 176px);
+    display: none;
+    width: 0;
+    height: 0;
     background: transparent;
     background-image: url("../../img/logo2.png");
     background-position: center;
@@ -578,7 +579,7 @@ code{
 
   .modal-login-page .modal-title::after{
     content: "Vstup do systému";
-    font-size: clamp(34px, 2.45vw, 44px);
+    font-size: 24px;
   }
 
   .modal-login-page .modal-sub{
@@ -590,7 +591,7 @@ code{
   }
 
   .modal-login-page .modal-form{
-    gap: 14px;
+    gap: 10px;
   }
 
   .modal-login-page .modal-label{
@@ -612,10 +613,10 @@ code{
   .modal-login-page .modal-field::before{
     content: "";
     position: absolute;
-    left: 16px;
+    left: 13px;
     top: 50%;
-    width: 30px;
-    height: 30px;
+    width: 22px;
+    height: 22px;
     z-index: 1;
     transform: translateY(-50%);
     background-position: center;
@@ -635,10 +636,10 @@ code{
   .modal-login-page .modal-field:nth-child(2)::after{
     content: "";
     position: absolute;
-    right: 18px;
+    right: 14px;
     top: 50%;
-    width: 30px;
-    height: 30px;
+    width: 22px;
+    height: 22px;
     z-index: 1;
     transform: translateY(-50%);
     background: url("../../img/ikona1 (3).png") center / contain no-repeat;
@@ -646,13 +647,13 @@ code{
   }
 
   .modal-login-page .modal-input{
-    min-height: 58px;
+    min-height: 22px;
     border: 1px solid rgba(255, 255, 255, 0.34);
     border-radius: 8px;
-    padding: 14px 54px 14px 60px;
+    padding: 4px 32px 4px 34px;
     background: rgba(255, 255, 255, 0.98);
     color: #111827;
-    font-size: 16px;
+    font-size: 13px;
     box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
   }
 
@@ -667,24 +668,23 @@ code{
   }
 
   .modal-login-page .modal-actions{
-    margin-top: 8px;
-    gap: 12px;
+    margin-top: 4px;
+    gap: 8px;
   }
 
   .modal-login-page .modal-actions-modules{
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
 
   .modal-login-page .modal-actions-modules .modal-btn:first-child{
-    grid-column: 1 / -1;
-    min-height: 110px;
+    min-height: 56px;
     font-size: 0;
     font-weight: 800;
   }
 
   .modal-login-page .modal-btn{
     position: relative;
-    min-height: 90px;
+    min-height: 56px;
     display: grid;
     align-content: center;
     justify-content: stretch;
@@ -695,7 +695,7 @@ code{
     color: #fff7ed;
     font-size: 0;
     font-weight: 800;
-    text-align: left;
+    text-align: center;
     overflow: hidden;
   }
 
@@ -714,17 +714,13 @@ code{
     background: linear-gradient(180deg, #f11422 0%, #b90812 100%);
   }
 
-  .modal-login-page .modal-actions-modules .modal-btn:not(:first-child){
-    background: rgba(12, 12, 12, 0.48);
-  }
-
   .modal-login-page .modal-btn::before{
     content: "";
     position: absolute;
-    left: 22px;
+    left: 18px;
     top: 50%;
-    width: 46px;
-    height: 46px;
+    width: 30px;
+    height: 30px;
     transform: translateY(-50%);
     background-position: center;
     background-repeat: no-repeat;
@@ -732,38 +728,26 @@ code{
   }
 
   .modal-login-page .modal-actions-modules .modal-btn:first-child::before{
-    width: 58px;
-    height: 58px;
-    left: 54px;
+    width: 32px;
+    height: 32px;
+    left: 18px;
     background-size: contain;
     background-image: url("../../img/ikona1 (4).png");
-  }
-
-  .modal-login-page .modal-actions-modules .modal-btn:nth-child(2)::before{
-    background-image: url("../../img/ikona1 (5).png");
-  }
-
-  .modal-login-page .modal-actions-modules .modal-btn:nth-child(3)::before{
-    background-image: url("../../img/ikona1 (6).png");
   }
 
   .modal-login-page .modal-btn-main{
     display: block;
     color: #ffffff;
-    font-size: 30px;
+    font-size: 24px;
     line-height: 1;
     font-weight: 800;
     text-transform: none;
-    padding-left: 70px;
+    padding-left: 0;
   }
 
   .modal-login-page .modal-actions-modules .modal-btn:first-child .modal-btn-main{
-    font-size: 56px;
-    padding-left: 158px;
-  }
-
-  .modal-login-page .modal-actions-modules .modal-btn:nth-child(3) .modal-btn-main{
-    text-transform: capitalize;
+    font-size: 24px;
+    padding-left: 0;
   }
 
   .modal-login-page .modal-btn-sub{
@@ -779,6 +763,16 @@ code{
   .modal-login-page .modal-actions-modules .modal-btn:first-child .modal-btn-sub{
     font-size: 15px;
     padding-left: 158px;
+  }
+
+  .modal-login-page .modal-login-status{
+    min-height: 18px;
+    margin: 6px 0 0;
+    color: #ef4444;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.35;
+    text-align: center;
   }
 
   .modal-login-page .modal-login-note,
@@ -804,11 +798,11 @@ code{
   }
 
   .modal-login-page .modal-url{
-    margin-top: 24px !important;
-    padding-top: 22px;
+    margin-top: 12px;
+    padding-top: 12px;
     border-top: 1px solid rgba(255, 255, 255, 0.24);
     color: rgba(255, 247, 237, 0.82);
-    font-size: 14px;
+    font-size: 12px;
   }
 
   .modal-login-page .modal-url code{
@@ -852,19 +846,20 @@ code{
 
 @media (min-width: 701px) and (max-height: 820px){
   .modal-login-page .modal{
-    width: min(520px, calc(100vw - 40px));
-    padding: 26px 34px;
+    width: min(294px, calc(100vw - 40px));
+    padding: 10px 20px 18px;
   }
 
   .modal-login-page .modal-head{
-    gap: 12px;
-    margin-bottom: 20px;
+    gap: 0;
+    margin-bottom: 12px;
   }
 
   .modal-login-page .modal-logo{
-    width: 150px;
-    height: 126px;
-    background-size: 188px 188px;
+    display: none;
+    width: 0;
+    height: 0;
+    background-size: contain;
   }
 
   .modal-login-page .modal-title{
@@ -872,32 +867,32 @@ code{
   }
 
   .modal-login-page .modal-title::after{
-    font-size: 36px;
+    font-size: 22px;
   }
 
   .modal-login-page .modal-input{
-    min-height: 54px;
+    min-height: 22px;
   }
 
   .modal-login-page .modal-actions-modules .modal-btn:first-child{
-    min-height: 82px;
+    min-height: 52px;
   }
 
   .modal-login-page .modal-btn{
-    min-height: 68px;
+    min-height: 52px;
   }
 
   .modal-login-page .modal-actions-modules .modal-btn:first-child .modal-btn-main{
-    font-size: 44px;
+    font-size: 22px;
   }
 
   .modal-login-page .modal-btn-main{
-    font-size: 26px;
+    font-size: 22px;
   }
 
   .modal-login-page .modal-url{
-    margin-top: 18px !important;
-    padding-top: 16px;
+    margin-top: 10px;
+    padding-top: 10px;
     font-size: 12px;
   }
 }

@@ -24,6 +24,6 @@ if ($resRozvozSazba instanceof mysqli_result) {
 $denniReportData = cb_denni_report_zadani_data($conn);
 extract($denniReportData, EXTR_SKIP);
 ?>
-<section class="blok provoz_denni_report_zadani cb-zadani-reportu" data-pp-block="denni_report_zadani">
+<section class="blok provoz_denni_report_zadani cb-zadani-reportu" data-pp-block="denni_report_zadani" data-cb-restia-needed="1">
     <?php require __DIR__ . '/../includes/denni_report_formular.php'; ?>
 </section>
