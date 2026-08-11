@@ -57,7 +57,7 @@ if ($JE_LOCAL || $IS_CLI) {
 
 // ====== BASE_PATH (neprustrelne) ======
 // 1) Primarne z URL: root projektu (funguje i kdyz se vola /lib/*.php primo)
-$CB_MODULES = ['provoz', 'hr', 'smeny'];
+$CB_MODULES = ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'];
 $scriptName = (string)($_SERVER['SCRIPT_NAME'] ?? '');
 $baseFromUrl = '';
 $CURRENT_MODULE = '';
@@ -223,7 +223,7 @@ function cb_module_url(string $module): string
     if ($module === 'is') {
         $module = 'provoz';
     }
-    if (!in_array($module, ['provoz', 'hr', 'smeny', 'helpdesk'], true)) {
+    if (!in_array($module, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'], true)) {
         $module = 'provoz';
     }
 
@@ -245,7 +245,9 @@ function cb_module_entry_file(string $module): string
     return match ($module) {
         'hr' => 'hr.php',
         'smeny' => 'smeny.php',
+        'ukoly' => 'ukoly.php',
         'helpdesk' => 'helpdesk.php',
+        'administrace' => 'administrace.php',
         default => 'provoz.php',
     };
 }
@@ -397,8 +399,6 @@ if (!function_exists('cb_user_settings_defaults')) {
             'prodleva' => 3000,
             'pismo' => 2,
             'dark' => 0,
-            'logout_limit' => null,
-            'kpi' => 1,
             'obdobi_od' => '',
             'obdobi_do' => '',
             'obdobi_mode' => 'manual',
@@ -433,20 +433,6 @@ if (!function_exists('cb_store_user_settings')) {
 
         $dark = (int)($values['dark'] ?? $data['dark']);
         $data['dark'] = max(0, min(6, $dark));
-
-        $kpi = (int)($values['kpi'] ?? $data['kpi']);
-        if (!in_array($kpi, [0, 1], true)) {
-            $kpi = 1;
-        }
-        $data['kpi'] = $kpi;
-
-        $logoutLimit = $values['logout_limit'] ?? $data['logout_limit'];
-        if ($logoutLimit === null || $logoutLimit === '') {
-            $data['logout_limit'] = null;
-        } else {
-            $logoutLimit = (int)$logoutLimit;
-            $data['logout_limit'] = in_array($logoutLimit, [30, 60, 120, 240, 480], true) ? $logoutLimit : null;
-        }
 
         $mode = trim((string)($values['obdobi_mode'] ?? $data['obdobi_mode']));
         if ($mode === 'dnes') {

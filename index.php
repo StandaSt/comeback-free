@@ -56,6 +56,11 @@ if (!empty($_SESSION['login_ok']) && (isset($_GET['helpdesk_action']) || isset($
     exit;
 }
 
+if (!empty($_SESSION['login_ok']) && isset($_SERVER['HTTP_X_COMEBACK_ADMIN_PRAVA'])) {
+    cb_modul_nacti('administrace');
+    exit;
+}
+
 if (!empty($_SESSION['login_ok']) && isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODULE'])) {
     $cbShellModule = strtolower(trim((string)($_POST['cb_shell_module'] ?? 'provoz')));
     $cbShellModule = cb_modul_normalizuj($cbShellModule);
@@ -252,6 +257,10 @@ window.CB_ENDPOINT = <?= json_encode(cb_root_url(''), JSON_UNESCAPED_SLASHES | J
     $cbUkolyCssUrl = cb_root_url('ukoly/style/ukoly.css') . '?v=' . (is_file($cbUkolyCssPath) ? (string)filemtime($cbUkolyCssPath) : '1');
     $cbHelpdeskCssPath = __DIR__ . '/helpdesk/hl_style/helpdesk.css';
     $cbHelpdeskCssUrl = cb_root_url('helpdesk/hl_style/helpdesk.css') . '?v=' . (is_file($cbHelpdeskCssPath) ? (string)filemtime($cbHelpdeskCssPath) : '1');
+    $cbAdministraceCssPath = __DIR__ . '/administrace/style/administrace.css';
+    $cbAdministraceCssUrl = cb_root_url('administrace/style/administrace.css') . '?v=' . (is_file($cbAdministraceCssPath) ? (string)filemtime($cbAdministraceCssPath) : '1');
+    $cbAdministraceJsPath = __DIR__ . '/administrace/admin_js/prava_roli.js';
+    $cbAdministraceJsUrl = cb_root_url('administrace/admin_js/prava_roli.js') . '?v=' . (is_file($cbAdministraceJsPath) ? (string)filemtime($cbAdministraceJsPath) : '1');
     $cbLoaderCssPath = __DIR__ . '/common/style/loader.css';
     $cbLoaderCssUrl = cb_public_url('style/loader.css') . '?v=' . (is_file($cbLoaderCssPath) ? (string)filemtime($cbLoaderCssPath) : '1');
     $cbLoaderJsPath = __DIR__ . '/common/js/loader.js';

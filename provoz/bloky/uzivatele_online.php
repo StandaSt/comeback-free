@@ -11,8 +11,7 @@ declare(strict_types=1);
                 u.id_user,
                 TRIM(CONCAT_WS(' ', u.jmeno, u.prijmeni)) AS cele_jmeno,
                 ul.kdy AS login_time,
-                COALESCE(ua.last_action_time, ul.kdy) AS last_action_time,
-                COALESCE(us.logout_limit, ss.system_logout, 20) AS logout_limit_min
+                COALESCE(ua.last_action_time, ul.kdy) AS last_action_time
             FROM `user` u
             INNER JOIN user_login ul ON ul.id_login = (
                 SELECT MAX(ul2.id_login)
@@ -25,11 +24,10 @@ declare(strict_types=1);
                 WHERE id_login IS NOT NULL
                 GROUP BY id_login
             ) ua ON ua.id_login = ul.id_login
-            LEFT JOIN user_set us ON us.id_user = u.id_user
             CROSS JOIN (SELECT system_logout FROM set_system WHERE id_set = 1 LIMIT 1) ss
             WHERE ul.akce = 1
               AND ul.duvod = 2
-              AND TIMESTAMPDIFF(MINUTE, COALESCE(ua.last_action_time, ul.kdy), NOW()) <= COALESCE(us.logout_limit, ss.system_logout, 20)
+              AND TIMESTAMPDIFF(MINUTE, COALESCE(ua.last_action_time, ul.kdy), NOW()) <= COALESCE(ss.system_logout, 20)
             ORDER BY last_action_time DESC, cele_jmeno ASC
             LIMIT 20
         ";

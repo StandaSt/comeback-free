@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 function cb_moduly_povolene(): array
 {
-    return ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk'];
+    return ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'];
 }
 
 function cb_modul_normalizuj(string $module, string $fallback = 'provoz'): string
@@ -22,6 +22,7 @@ function cb_modul_nacti(string $module): void
         'smeny' => $root . '/smeny/smeny.php',
         'ukoly' => $root . '/ukoly/ukoly.php',
         'helpdesk' => $root . '/helpdesk/helpdesk.php',
+        'administrace' => $root . '/administrace/administrace.php',
     ];
 
     $GLOBALS['CURRENT_MODULE'] = $module;

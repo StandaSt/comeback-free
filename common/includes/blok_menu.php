@@ -48,7 +48,7 @@ if (!function_exists('cb_render_blok_menu_user')) {
         $postUrl = function_exists('cb_root_url') ? cb_root_url('index.php') : 'index.php';
         $themeLevel = function_exists('cb_user_setting') ? max(0, min(6, (int)cb_user_setting('dark', 0))) : 0;
         $themeModule = defined('CB_EMBEDDED_MODULE') ? (string)constant('CB_EMBEDDED_MODULE') : (string)($GLOBALS['CURRENT_MODULE'] ?? 'provoz');
-        if (!in_array($themeModule, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk'], true)) {
+        if (!in_array($themeModule, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'], true)) {
             $themeModule = 'provoz';
         }
         $profileUrl = ($themeModule === 'helpdesk')
@@ -91,6 +91,17 @@ if (!function_exists('cb_render_blok_menu')) {
         $title = (string)($menu['title'] ?? '');
         $ariaLabel = (string)($menu['aria_label'] ?? $title);
         $items = is_array($menu['items'] ?? null) ? $menu['items'] : [];
+        $currentModule = defined('CB_EMBEDDED_MODULE') ? (string)constant('CB_EMBEDDED_MODULE') : (string)($GLOBALS['CURRENT_MODULE'] ?? '');
+        $user = $_SESSION['cb_user'] ?? [];
+        $roleId = is_array($user) ? (int)($user['id_role'] ?? 0) : 0;
+        if ($roleId === 1 && $currentModule !== 'administrace') {
+            $items[] = [
+                'label' => 'Administrace',
+                'url' => function_exists('cb_root_url') ? cb_root_url('index.php?m=administrace') : 'index.php?m=administrace',
+                'active' => false,
+                'module' => 'administrace',
+            ];
+        }
         ?>
         <nav class="blok_menu" aria-label="<?= cb_blok_menu_h($ariaLabel) ?>">
             <?php if ($title !== ''): ?>
@@ -111,6 +122,10 @@ if (!function_exists('cb_render_blok_menu')) {
                     $children = is_array($item['items'] ?? null) ? $item['items'] : [];
                     $isActive = !empty($item['active']);
                     $hasChildren = $children !== [];
+                    $moduleName = trim((string)($item['module'] ?? ''));
+                    $moduleAttrs = $moduleName !== ''
+                        ? ' data-cb-module-link="1" data-cb-module="' . cb_blok_menu_h($moduleName) . '"'
+                        : '';
                     $buttonClass = 'blok_menu_btn' . ($isActive ? ' is-active' : '');
                     $toggleAttr = $hasChildren
                         ? ' onclick="var i=this.closest(\'.blok_menu_item\');var m=this.closest(\'.blok_menu\');var s=i.querySelector(\'.blok_submenu\');var c=this.querySelector(\'.blok_menu_chev\');var o=s&&s.classList.contains(\'blok_submenu_open\');m.querySelectorAll(\'.blok_menu_item\').forEach(function(x){x.classList.remove(\'is-open\');var xs=x.querySelector(\'.blok_submenu\');var xc=x.querySelector(\'.blok_menu_chev\');if(xs){xs.classList.remove(\'blok_submenu_open\');}if(xc){xc.classList.remove(\'blok_menu_chev_open\');}});if(!o){i.classList.add(\'is-open\');if(s){s.classList.add(\'blok_submenu_open\');}if(c){c.classList.add(\'blok_menu_chev_open\');}}"'
@@ -118,7 +133,7 @@ if (!function_exists('cb_render_blok_menu')) {
                     ?>
                     <li class="blok_menu_item">
                         <?php if ($url !== ''): ?>
-                            <a class="<?= cb_blok_menu_h($buttonClass) ?>" href="<?= cb_blok_menu_h($url) ?>">
+                            <a class="<?= cb_blok_menu_h($buttonClass) ?>" href="<?= cb_blok_menu_h($url) ?>"<?= $moduleAttrs ?>>
                                 <span><?= cb_blok_menu_h($label) ?></span>
                                 <?php if ($hasChildren): ?>
                                     <span class="blok_menu_chev" aria-hidden="true">⌄</span>

@@ -6,12 +6,13 @@
   var shellUrl = String(config.shellUrl || window.CB_ENDPOINT || 'index.php');
   var publicShellUrl = String(config.publicShellUrl || '');
   var activeMainModule = String(config.activeMainModule || 'provoz');
-  var povoleneModuly = ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk'];
+  var povoleneModuly = ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'];
 
   window.CB_ACTIVE_MAIN_MODULE = activeMainModule;
   if (!root) return;
   history.replaceState(null, '', publicShellUrl);
   var currentShellKey = makeShellKey(activeMainModule, new URLSearchParams(window.location.search));
+  var moduleLoadRunning = false;
 
   function makeShellKey(moduleName, params){
     var normalized = new URLSearchParams();
@@ -45,6 +46,40 @@
       });
   }
 
+  function showModuleError(error){
+    if (window.CB_LOADER && typeof window.CB_LOADER.hide === 'function') {
+      window.CB_LOADER.hide();
+    }
+    root.innerHTML = '<div class="cb-module-load-error">Modul se nepodařilo načíst: ' + String(error.message || error) + '</div>';
+  }
+
+  function ensureRestiaBeforeProvoz(moduleName){
+    if (moduleName !== 'provoz') {
+      return Promise.resolve(null);
+    }
+    if (
+      !window.CB_RESTIA
+      || typeof window.CB_RESTIA.fetchState !== 'function'
+      || typeof window.CB_RESTIA.run !== 'function'
+      || typeof window.CB_RESTIA.isFresh !== 'function'
+    ) {
+      return Promise.resolve(null);
+    }
+
+    return window.CB_RESTIA.fetchState()
+      .then(function(state){
+        var running = !!(state && Number(state.active || 0) === 1);
+        if (!running && window.CB_RESTIA.isFresh(state)) {
+          return state;
+        }
+
+        return window.CB_RESTIA.run({
+          moduleName: 'provoz',
+          loaderText: 'Aktualizuji data z Restie ...'
+        });
+      });
+  }
+
   function setActive(moduleName){
     if (moduleName === 'helpdesk') return;
 
@@ -61,18 +96,20 @@
       window.CB_ACTIVE_MAIN_MODULE = activeMainModule;
     }
     var visualModule = moduleName === 'helpdesk' ? 'helpdesk' : activeMainModule;
-    root.classList.remove('cb-context--provoz', 'cb-context--hr', 'cb-context--smeny', 'cb-context--ukoly', 'cb-context--helpdesk');
+    root.classList.remove('cb-context--provoz', 'cb-context--hr', 'cb-context--smeny', 'cb-context--ukoly', 'cb-context--helpdesk', 'cb-context--administrace');
     root.classList.add('cb-context--' + visualModule);
-    document.body.classList.remove('cb-context--provoz', 'cb-context--hr', 'cb-context--smeny', 'cb-context--ukoly', 'cb-context--helpdesk');
+    document.body.classList.remove('cb-context--provoz', 'cb-context--hr', 'cb-context--smeny', 'cb-context--ukoly', 'cb-context--helpdesk', 'cb-context--administrace');
     document.body.classList.add('cb-context--' + visualModule);
   }
 
   function loadModule(moduleName, pushState, params){
     if (!moduleName) return;
+    if (moduleLoadRunning) return;
     var requestedKey = makeShellKey(moduleName, params);
     if (pushState && requestedKey === currentShellKey) {
       return;
     }
+    moduleLoadRunning = true;
 
     var body = new URLSearchParams();
     body.set('cb_shell_module', moduleName);
@@ -92,7 +129,7 @@
         window.CB_LOADER.show('Kontroluji plán směn ...');
       }
 
-      fetch(shellUrl, {
+      return fetch(shellUrl, {
         method: 'POST',
         headers: {
           'X-Comeback-Shell-Module': '1',
@@ -124,25 +161,44 @@
           if (window.CB_LOADER && typeof window.CB_LOADER.hide === 'function') {
             window.CB_LOADER.hide();
           }
-        })
-        .catch(function(error){
-          if (window.CB_LOADER && typeof window.CB_LOADER.hide === 'function') {
-            window.CB_LOADER.hide();
-          }
-          root.innerHTML = '<div class="cb-module-load-error">Modul se nepodařilo načíst: ' + String(error.message || error) + '</div>';
         });
     }
 
     if (moduleName === 'provoz' && params instanceof URLSearchParams && params.get('page') === 'denni_report') {
       fetchSmenyPlanState()
-        .then(fetchModule)
         .catch(function(){
-          fetchModule(false);
+          return false;
+        })
+        .then(function(showSmenyLoader){
+          return ensureRestiaBeforeProvoz(moduleName)
+            .then(function(){
+              return fetchModule(showSmenyLoader);
+            });
+        })
+        .catch(showModuleError)
+        .finally(function(){
+          moduleLoadRunning = false;
         });
       return;
     }
 
-    fetchModule(false);
+    if (moduleName === 'provoz') {
+      ensureRestiaBeforeProvoz(moduleName)
+        .then(function(){
+          return fetchModule(false);
+        })
+        .catch(showModuleError)
+        .finally(function(){
+          moduleLoadRunning = false;
+        });
+      return;
+    }
+
+    fetchModule(false)
+      .catch(showModuleError)
+      .finally(function(){
+        moduleLoadRunning = false;
+      });
   }
 
   window.CB_LOAD_MODULE = loadModule;
@@ -155,7 +211,13 @@
     if (!moduleName) return;
 
     event.preventDefault();
-    loadModule(moduleName, true);
+    var params = null;
+    try {
+      params = new URL(link.href, window.location.href).searchParams;
+    } catch (e) {
+      params = null;
+    }
+    loadModule(moduleName, true, params);
   });
 
   root.addEventListener('click', function(event){

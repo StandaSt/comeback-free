@@ -16,6 +16,7 @@ $cbModulyNavigaceJsUrl = cb_public_url('js/moduly_navigace.js') . '?v=' . (is_fi
   <link rel="stylesheet" href="<?= h($cbSmenyCssUrl) ?>">
   <link rel="stylesheet" href="<?= h($cbUkolyCssUrl) ?>">
   <link rel="stylesheet" href="<?= h($cbHelpdeskCssUrl) ?>">
+  <link rel="stylesheet" href="<?= h($cbAdministraceCssUrl) ?>">
   <link rel="stylesheet" href="<?= h($cbLoaderCssUrl) ?>">
 </head>
 <body class="cb-context--<?= h($cbVisualModule) ?>">
@@ -54,6 +55,7 @@ window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_
 <script src="<?= h(cb_asset_url('js/casovac_odhlaseni.js')) ?>"></script>
 <script src="<?= h($cbHrJsUrl) ?>"></script>
 <script src="<?= h(cb_root_url('helpdesk/hl_js/hl_helpdesk.js')) ?>"></script>
+<script src="<?= h($cbAdministraceJsUrl) ?>"></script>
 <script>
 window.CB_MODULY_NAVIGACE = {
   shellUrl: <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,

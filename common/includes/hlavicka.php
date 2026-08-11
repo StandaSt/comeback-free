@@ -308,7 +308,7 @@ try {
     $cbHeadAktualizaceDat = '---';
 }
 $cbCurrentModule = function_exists('cb_current_module') ? cb_current_module() : 'provoz';
-if (!in_array($cbCurrentModule, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk'], true)) {
+if (!in_array($cbCurrentModule, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'], true)) {
     $cbCurrentModule = 'provoz';
 }
 $cbHeaderPostUrl = cb_root_url('index.php');

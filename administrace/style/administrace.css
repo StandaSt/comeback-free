@@ -1,0 +1,72 @@
+.admin_pp{
+  min-width:0;
+}
+
+.admin_empty{
+  display:grid;
+  gap:6px;
+}
+
+.admin_empty p{
+  margin:0;
+  color:var(--cb-text-muted);
+  font-size:14px;
+}
+
+.admin_matrix_wrap{
+  min-width:0;
+  overflow:auto;
+  border:1px solid var(--cb-border-soft);
+  border-radius:8px;
+  background:var(--cb-bg-panel);
+}
+
+.admin_matrix{
+  width:100%;
+  min-width:780px;
+  border-collapse:collapse;
+  font-size:13px;
+}
+
+.admin_matrix th,
+.admin_matrix td{
+  padding:8px 10px;
+  border-bottom:1px solid var(--cb-border-soft);
+  text-align:left;
+  vertical-align:middle;
+}
+
+.admin_matrix thead th{
+  position:sticky;
+  top:0;
+  z-index:1;
+  background:var(--cb-bg-panel-soft);
+}
+
+.admin_matrix_group th{
+  background:var(--cb-module-soft);
+  color:var(--cb-text-main);
+  font-size:13px;
+}
+
+.admin_matrix td strong{
+  display:block;
+  color:var(--cb-text-main);
+}
+
+.admin_matrix td span{
+  display:block;
+  margin-top:2px;
+  color:var(--cb-text-muted);
+  font-size:12px;
+}
+
+.admin_matrix_check{
+  width:76px;
+  text-align:center !important;
+}
+
+.admin_matrix_check input{
+  width:16px;
+  height:16px;
+}

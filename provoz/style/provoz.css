@@ -349,10 +349,9 @@
 
 .zr_layout{
   display:grid;
-  width:100%;
-  max-width:100%;
-  grid-template-columns:minmax(0, 800px) 300px;
-  justify-content:space-between;
+  width:max-content;
+  grid-template-columns:814px 300px;
+  justify-content:start;
   align-items:start;
 }
 
@@ -372,7 +371,7 @@
 
 .zr_top{
   display:grid;
-  grid-template-columns:300px minmax(0, 1fr);
+  grid-template-columns:300px 500px;
   align-items:stretch;
 }
 
@@ -383,7 +382,7 @@
 
 .zr_left{
   display:grid;
-  grid-template-columns:minmax(0, 1fr) minmax(0, 1fr) 180px;
+  grid-template-columns:310px 310px 180px;
   align-items:start;
 }
 

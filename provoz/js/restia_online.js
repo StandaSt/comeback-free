@@ -24,8 +24,8 @@
 
   function triggerCheck(options) {
     const opts = (options && typeof options === 'object') ? options : {};
-    const activeModule = String(w.CB_ACTIVE_MAIN_MODULE || '');
-    if (activeModule !== 'provoz') {
+    const moduleName = String(opts.moduleName || w.CB_ACTIVE_MAIN_MODULE || '');
+    if (moduleName !== 'provoz') {
       return Promise.resolve({
         ok: true,
         started: 0,
@@ -36,7 +36,7 @@
 
     const headers = {
       'X-Comeback-Restia-Trigger': '1',
-      'X-Comeback-Module': activeModule,
+      'X-Comeback-Module': moduleName,
       'Accept': 'application/json'
     };
     if (opts.forceRestia === true) {
@@ -98,26 +98,8 @@
     return (Date.now() - finishedAt) < 120000;
   }
 
-  function reloadRestiaScope() {
-    if (typeof w.CB_LOAD_MODULE !== 'function') return;
-    if (String(w.CB_ACTIVE_MAIN_MODULE || '') !== 'provoz') return;
-
-    const params = new URLSearchParams();
-    const form = d.querySelector('[data-zr-form]');
-    if (form instanceof HTMLFormElement) {
-      const idPobInput = form.querySelector('input[name="id_pob"]');
-      const datumInput = form.querySelector('[name="datum_reportu"]');
-      const idPob = idPobInput instanceof HTMLInputElement ? String(idPobInput.value || '') : '';
-      const datum = datumInput instanceof HTMLInputElement || datumInput instanceof HTMLSelectElement ? String(datumInput.value || '') : '';
-      params.set('page', 'denni_report');
-      if (idPob !== '') params.set('zr_id_pob', idPob);
-      if (datum !== '') params.set('datum_reportu', datum);
-    }
-
-    w.CB_LOAD_MODULE('provoz', false, params);
-  }
-
   CB_RESTIA.fetchState = fetchState;
+  CB_RESTIA.isFresh = isFresh;
   CB_RESTIA.run = function run(options) {
     const opts = (options && typeof options === 'object') ? options : {};
     const triggerRestia = opts.triggerRestia !== false;
@@ -138,42 +120,4 @@
       }
     });
   };
-
-  function hasRestiaData(root) {
-    const scope = root && root.querySelector ? root : d;
-    return !!(scope && scope.querySelector && scope.querySelector('[data-cb-restia-needed="1"]'));
-  }
-
-  function autoRunForRestiaData() {
-    const main = d.querySelector('[data-obal-main="1"]') || d.body;
-    if (!hasRestiaData(main)) return;
-    if (main.getAttribute('data-cb-restia-auto-running') === '1') return;
-
-    main.setAttribute('data-cb-restia-auto-running', '1');
-    fetchState()
-      .then((beforeState) => {
-        if (isFresh(beforeState)) return null;
-        return CB_RESTIA.run({
-          loaderText: 'Aktualizuji data z Restie ...'
-        }).then((afterState) => {
-          if (String((afterState && afterState.konec) || '') !== String((beforeState && beforeState.konec) || '')) {
-            reloadRestiaScope();
-          }
-          return afterState;
-        });
-      })
-      .catch((err) => {
-        if (w.console && w.console.warn) w.console.warn(err);
-      })
-      .finally(() => {
-        main.removeAttribute('data-cb-restia-auto-running');
-      });
-  }
-
-  if (d.readyState === 'loading') {
-    d.addEventListener('DOMContentLoaded', autoRunForRestiaData);
-  } else {
-    autoRunForRestiaData();
-  }
-  d.addEventListener('cb:main-swapped', autoRunForRestiaData);
 })(window);

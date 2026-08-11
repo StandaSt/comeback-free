@@ -227,6 +227,11 @@ main{
   --cb-module-soft:color-mix(in srgb, var(--cb-module-accent) 16%, var(--cb-bg-control));
 }
 
+.obal_main.cb-context--administrace{
+  --cb-module-accent:#0f766e;
+  --cb-module-soft:color-mix(in srgb, var(--cb-module-accent) 16%, var(--cb-bg-control));
+}
+
 .cb-module-load-error{
   padding:12px;
   color:#b91c1c;

@@ -131,14 +131,13 @@ function cb_db_ensure_user_set(mysqli $conn, int $idUser): void
     $today = $currentWorkdayDate->setTime(6, 0, 0)->format('Y-m-d H:i:s');
     $yesterday = $currentWorkdayDate->modify('-1 day')->setTime(6, 0, 0)->format('Y-m-d H:i:s');
 
-    $nanoKde = 1;
     $prodleva = 3000;
     $pismo = 2;
     $dark = 0;
 
     $stmt = $conn->prepare(
-        'INSERT INTO user_set (id_user, nano_kde, prodleva, pismo, dark, obdobi_od, obdobi_do, obdobi_mode)
-         SELECT ?, ?, ?, ?, ?, ?, ?, ?
+        'INSERT INTO user_set (id_user, prodleva, pismo, dark, obdobi_od, obdobi_do, obdobi_mode)
+         SELECT ?, ?, ?, ?, ?, ?, ?
          FROM DUAL
          WHERE NOT EXISTS (
              SELECT 1 FROM user_set WHERE id_user = ?
@@ -149,7 +148,7 @@ function cb_db_ensure_user_set(mysqli $conn, int $idUser): void
     }
 
     $obdobiMode = 'vcera';
-    $stmt->bind_param('iiiiisssi', $idUser, $nanoKde, $prodleva, $pismo, $dark, $yesterday, $today, $obdobiMode, $idUser);
+    $stmt->bind_param('iiiisssi', $idUser, $prodleva, $pismo, $dark, $yesterday, $today, $obdobiMode, $idUser);
     $stmt->execute();
     $stmt->close();
 }
