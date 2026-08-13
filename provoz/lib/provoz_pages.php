@@ -12,6 +12,10 @@ function cb_provoz_pages(): array
             'file' => __DIR__ . '/../pages/denni_report.php',
             'title' => 'Denní report',
         ],
+        'objednavky' => [
+            'file' => __DIR__ . '/../pages/objednavky.php',
+            'title' => 'Objednávky',
+        ],
         'uprava_profilu' => [
             'file' => __DIR__ . '/../../common/pages/uprava_profilu.php',
             'title' => 'Úprava profilu',

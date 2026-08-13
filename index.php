@@ -47,6 +47,19 @@ if (!empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POS
         exit;
     }
 
+    if ($cbGnModule === 'provoz' && $cbGnPage === 'objednavky' && $cbGnBlock === 'objednavky_prehled') {
+        require_once __DIR__ . '/common/lib/pobocky_vyber.php';
+        cb_pobocky_bootstrap_session();
+
+        $GLOBALS['CURRENT_MODULE'] = 'provoz';
+        define('CB_EMBEDDED_MODULE', 'provoz');
+        header('Content-Type: text/html; charset=utf-8');
+        echo '<div class="provoz_objednavky_block" data-pp-block="objednavky_prehled" data-gn="1">';
+        require __DIR__ . '/provoz/bloky/objednavky_prehled.php';
+        echo '</div>';
+        exit;
+    }
+
     http_response_code(404);
     exit;
 }

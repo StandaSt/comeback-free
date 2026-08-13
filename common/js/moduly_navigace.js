@@ -13,6 +13,7 @@
   history.replaceState(null, '', publicShellUrl);
   var currentShellKey = makeShellKey(activeMainModule, new URLSearchParams(window.location.search));
   var moduleLoadRunning = false;
+  var pageLoaderTimer = 0;
 
   function makeShellKey(moduleName, params){
     var normalized = new URLSearchParams();
@@ -50,7 +51,77 @@
     if (window.CB_LOADER && typeof window.CB_LOADER.hide === 'function') {
       window.CB_LOADER.hide();
     }
+    stopPageLoaderTimer();
     root.innerHTML = '<div class="cb-module-load-error">Modul se nepodařilo načíst: ' + String(error.message || error) + '</div>';
+  }
+
+  function formatElapsed(ms) {
+    return (Math.max(0, ms) / 1000).toFixed(1).replace('.', ',') + ' s';
+  }
+
+  function stopPageLoaderTimer() {
+    if (pageLoaderTimer) {
+      window.clearInterval(pageLoaderTimer);
+      pageLoaderTimer = 0;
+    }
+  }
+
+  function loaderText(moduleName, params) {
+    var page = params instanceof URLSearchParams ? String(params.get('page') || '') : '';
+    if (moduleName === 'provoz') {
+      if (page === 'objednavky') return 'Načítám objednávky ...';
+      if (page === 'denni_report') return 'Načítám denní report ...';
+      if (page === 'prehled' || page === '' || page === 'dashboard') return 'Načítám přehled ...';
+      return 'Načítám Provoz ...';
+    }
+    if (moduleName === 'hr') return 'Načítám HR ...';
+    if (moduleName === 'smeny') return 'Načítám Směny ...';
+    if (moduleName === 'ukoly') return 'Načítám Úkoly ...';
+    if (moduleName === 'helpdesk') return 'Načítám Helpdesk ...';
+    if (moduleName === 'administrace') return 'Načítám Administraci ...';
+    return 'Načítám ...';
+  }
+
+  function showPageLoader(moduleName, params) {
+    stopPageLoaderTimer();
+    if (window.CB_LOADER && typeof window.CB_LOADER.hide === 'function') {
+      window.CB_LOADER.hide();
+    }
+
+    var pp = root.querySelector('.pp');
+    var text = loaderText(moduleName, params);
+    var html = ''
+      + '<div class="cb_page_loader" role="status" aria-live="polite" aria-atomic="true">'
+      + '<span class="cb_page_loader_text"></span>'
+      + '<span class="cb_page_loader_time" data-cb-page-loader-time>0,0 s</span>'
+      + '</div>';
+
+    if (pp instanceof HTMLElement) {
+      pp.classList.add('is-page-loading');
+      pp.innerHTML = html;
+      pp.setAttribute('data-module', moduleName);
+      if (params instanceof URLSearchParams && params.get('page')) {
+        pp.setAttribute('data-page', String(params.get('page') || ''));
+      }
+    } else {
+      root.innerHTML = '<section class="pp is-page-loading" data-module="' + moduleName + '">' + html + '</section>';
+      pp = root.querySelector('.pp');
+    }
+
+    var loader = pp ? pp.querySelector('.cb_page_loader') : null;
+    var textNode = loader ? loader.querySelector('.cb_page_loader_text') : null;
+    var timeNode = loader ? loader.querySelector('[data-cb-page-loader-time]') : null;
+    if (textNode instanceof HTMLElement) {
+      textNode.textContent = text;
+    }
+    var startedAt = performance.now();
+    pageLoaderTimer = window.setInterval(function () {
+      if (!(timeNode instanceof HTMLElement) || !timeNode.isConnected) {
+        stopPageLoaderTimer();
+        return;
+      }
+      timeNode.textContent = formatElapsed(performance.now() - startedAt);
+    }, 100);
   }
 
   function ensureRestiaBeforeProvoz(moduleName){
@@ -75,7 +146,7 @@
 
         return window.CB_RESTIA.run({
           moduleName: 'provoz',
-          loaderText: 'Aktualizuji data z Restie ...'
+          loaderText: ''
         });
       });
   }
@@ -88,6 +159,25 @@
       var active = link.getAttribute('data-cb-module') === moduleName;
       link.classList.toggle('is-active', active);
     });
+  }
+
+  function setClickedMenuActive(link) {
+    if (!(link instanceof HTMLElement)) return;
+
+    var menu = link.closest('.blok_menu');
+    if (menu instanceof HTMLElement) {
+      Array.prototype.slice.call(menu.querySelectorAll('.blok_menu_btn.is-active, .blok_menu_btn.active')).forEach(function(btn){
+        btn.classList.remove('is-active', 'active');
+      });
+      if (link.classList.contains('blok_menu_btn')) {
+        link.classList.add('is-active');
+      }
+      return;
+    }
+
+    if (link.getAttribute('data-cb-module-link') === '1') {
+      setActive(String(link.getAttribute('data-cb-module') || ''));
+    }
   }
 
   function setRootModule(moduleName){
@@ -110,6 +200,7 @@
       return;
     }
     moduleLoadRunning = true;
+    showPageLoader(moduleName, params);
 
     var body = new URLSearchParams();
     body.set('cb_shell_module', moduleName);
@@ -125,10 +216,6 @@
       window.CB_HELPDESK_SOURCE_MODULE = activeMainModule;
     }
     function fetchModule(showSmenyLoader){
-      if (showSmenyLoader && window.CB_LOADER && typeof window.CB_LOADER.show === 'function') {
-        window.CB_LOADER.show('Kontroluji plán směn ...');
-      }
-
       return fetch(shellUrl, {
         method: 'POST',
         headers: {
@@ -148,6 +235,7 @@
             window.__CB_HELPDESK_CLEANUP__ = null;
           }
           setRootModule(moduleName);
+          stopPageLoaderTimer();
           root.innerHTML = html;
           currentShellKey = requestedKey;
           document.dispatchEvent(new CustomEvent('cb:main-swapped'));
@@ -211,6 +299,7 @@
     if (!moduleName) return;
 
     event.preventDefault();
+    setClickedMenuActive(link);
     var params = null;
     try {
       params = new URL(link.href, window.location.href).searchParams;
@@ -240,6 +329,7 @@
     if (povoleneModuly.indexOf(moduleName) === -1) return;
 
     event.preventDefault();
+    setClickedMenuActive(link);
     loadModule(moduleName, true, url.searchParams);
   });
 })();

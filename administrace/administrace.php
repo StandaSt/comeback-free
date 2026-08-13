@@ -11,6 +11,7 @@ require_once __DIR__ . '/../common/lib/session_boot.php';
 require_once __DIR__ . '/../common/config/secrets.php';
 require_once __DIR__ . '/../common/lib/app.php';
 require_once __DIR__ . '/../common/lib/system.php';
+require_once __DIR__ . '/../common/lib/uloz_akci.php';
 require_once __DIR__ . '/admin_lib/admin_pages.php';
 require_once __DIR__ . '/admin_lib/prava_data.php';
 
@@ -57,6 +58,20 @@ if (
             (int)($_POST['id_pravo'] ?? 0),
             (int)($_POST['povoleno'] ?? 0) === 1
         );
+        cb_user_akce_zapis([
+            'id_user_akce_typ' => 14,
+            'modul' => 'administrace',
+            'objekt' => 'prava_global',
+            'id_objektu' => (int)($_POST['id_pravo'] ?? 0),
+            'pole' => 'povoleno',
+            'hodnota_new' => (string)((int)($_POST['povoleno'] ?? 0) === 1 ? 1 : 0),
+            'vysledek' => 1,
+            'zdroj' => 'administrace',
+            'detail' => [
+                'id_role' => (int)($_POST['id_role'] ?? 0),
+                'id_pravo' => (int)($_POST['id_pravo'] ?? 0),
+            ],
+        ]);
         echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
     } catch (Throwable $e) {
         http_response_code(400);

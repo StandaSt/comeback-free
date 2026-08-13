@@ -12,10 +12,6 @@ require_once __DIR__ . '/../../common/db/db_user_set_pobocka.php';
 require_once __DIR__ . '/../../common/db/db_user_role.php';
 require_once __DIR__ . '/../../common/db/db_user_slot.php';
 
-const SMENY_USER_GQL_URL = 'https://smeny.pizzacomeback.cz/graphql';
-const SMENY_USER_PAGE_LIMIT = 100;
-const SMENY_USER_LOCK_NAME = 'cb_plnime_smeny_user';
-
 if (smenyUserIsCron()) {
     smenyUserRun();
 } elseif (isset($_POST['run_smeny_user']) && (string)$_POST['run_smeny_user'] === '1') {
@@ -94,7 +90,7 @@ function smenyUserRun(): void
 
         do {
             try {
-                $page = smenyUserFetchPage($token, SMENY_USER_PAGE_LIMIT, $offset);
+                $page = smenyUserFetchPage($token, CB_SMENY_USER_PAGE_LIMIT, $offset);
             } catch (Throwable $e) {
                 throw new RuntimeException('Chyba při stažení uživatelů ze Směn: ' . $e->getMessage(), 0, $e);
             }
@@ -134,7 +130,7 @@ function smenyUserRun(): void
                 }
             }
 
-            $offset += SMENY_USER_PAGE_LIMIT;
+            $offset += CB_SMENY_USER_PAGE_LIMIT;
         } while ($total !== null && $offset < $total);
 
         smenyUserDeactivateMissingActiveUsers($db, array_values($activeUserIds));
@@ -181,7 +177,7 @@ function smenyUserAcquireLock(mysqli $db): bool
         throw new RuntimeException('DB: prepare selhal (GET_LOCK user import).');
     }
 
-    $lockName = SMENY_USER_LOCK_NAME;
+    $lockName = CB_SMENY_USER_LOCK_NAME;
     $stmt->bind_param('s', $lockName);
     $stmt->execute();
     $stmt->bind_result($locked);
@@ -198,7 +194,7 @@ function smenyUserReleaseLock(mysqli $db): void
         return;
     }
 
-    $lockName = SMENY_USER_LOCK_NAME;
+    $lockName = CB_SMENY_USER_LOCK_NAME;
     $stmt->bind_param('s', $lockName);
     $stmt->execute();
     $stmt->close();
@@ -290,7 +286,7 @@ function smenyUserFinishAktualizace(mysqli $db, int $idAktualizace, array $stats
 function smenyUserFetchPage(string $token, int $limit, int $offset): array
 {
     $data = cb_smeny_graphql(
-        SMENY_USER_GQL_URL,
+        CB_SMENY_GQL_URL,
         'query($limit:Int!, $offset:Int!, $filter: UserFilterArg){
             userPaginate{
                 totalCount(filter:$filter)

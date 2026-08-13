@@ -19,6 +19,10 @@
 
 Při auditu, hledání chyb, duplicit a dead code ignoruj složky: `vendor/`, `_kandidati/` a `admin_testy/`.
 
+## Přístup do DB
+Codex má permanentně povolený přístup do DB pro čtení struktury a obsahu. Pouze pro čtení.
+Přístupové údaje jsou v common/config/secrets.php
+
 ## Projekt
 Tento projekt je IS, informační systém Comeback. Skládá se u 5 modulů které budou všechny postavené na stejné databázi.
 Projekt obsahuje i starší části a neuklizený kód. Neber vše jako čistě navržený systém.
@@ -70,13 +74,10 @@ Při úpravách API logiky vždy nejprve najdi celý tok:
 - U JS změn ověř, na kterých stránkách se soubor načítá.
 
 ## Jak odpovídat při práci
-Pokud je zadání malé a jasné:
-- navrhni konkrétní změnu a proveď ji.
-
-Pokud je zadání širší nebo rizikové:
-1. napiš, které soubory se tématu týkají,
-2. stručně popiš plán,
-3. pak teprve navrhni změny.
+Pokud je zadání jasné - navrhni konkrétní změnu a vyčkej na schválení.
+Pokud je několik možností řešení, hledej nejefektivnější a nejjdednodušší variantu
+Pokud máš nejasnosti - zeptej se na detaily
+Důležité: Na otázky odpovídej stručně, uživatel se detaily vyžádá pokud bude chtít !!
 
 Vždy nejprve ověř realitu v kódu, ne domněnky.
 

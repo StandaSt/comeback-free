@@ -30,19 +30,21 @@ if (!function_exists('cb_render_blok_menu_user')) {
             $userRole = (string)($user['role'] ?? $user['nazev_role'] ?? $userRole);
         }
 
-        $timeoutMin = (int)($_SESSION['cb_timeout_min'] ?? 720);
-        if ($timeoutMin <= 0) {
-            $timeoutMin = 20;
-        }
-
         $nowTs = time();
         $startTs = (int)($_SESSION['cb_session_start_ts'] ?? $nowTs);
-        $lastTs = (int)($_SESSION['cb_last_activity_ts'] ?? $nowTs);
         if ($startTs <= 0 || $startTs > $nowTs) {
             $startTs = $nowTs;
         }
-        if ($lastTs <= 0 || $lastTs > $nowTs || $lastTs < $startTs) {
-            $lastTs = $nowTs;
+
+        $sessionEndTs = $startTs + (12 * 60 * 60);
+        $startDayEightTs = strtotime(date('Y-m-d 08:00:00', $startTs));
+        if ($startDayEightTs !== false) {
+            $dailyEndTs = $startTs < $startDayEightTs
+                ? $startDayEightTs
+                : strtotime('+1 day', $startDayEightTs);
+            if ($dailyEndTs !== false) {
+                $sessionEndTs = min($sessionEndTs, $dailyEndTs);
+            }
         }
 
         $postUrl = function_exists('cb_root_url') ? cb_root_url('index.php') : 'index.php';
@@ -60,27 +62,52 @@ if (!function_exists('cb_render_blok_menu_user')) {
         }
         ?>
         <div class="blok_menu_user"
-             data-timeout-min="<?= cb_blok_menu_h((string)$timeoutMin) ?>"
              data-start-ts="<?= cb_blok_menu_h((string)$startTs) ?>"
-             data-last-ts="<?= cb_blok_menu_h((string)$lastTs) ?>"
-             data-logout-url="<?= cb_blok_menu_h($postUrl . '?action=logout&duvod=0') ?>"
-             data-touch-url="<?= cb_blok_menu_h($postUrl) ?>">
+             data-session-end-ts="<?= cb_blok_menu_h((string)$sessionEndTs) ?>"
+             data-logout-url="<?= cb_blok_menu_h($postUrl . '?action=logout&duvod=0') ?>">
             <div class="blok_menu_user_name">
                 <span><?= cb_blok_menu_h($userName) ?></span>
                 <a class="blok_menu_user_profile" href="<?= cb_blok_menu_h($profileUrl) ?>" title="Úprava profilu" aria-label="Úprava profilu">⚙</a>
             </div>
-            <div class="blok_menu_user_role"><?= cb_blok_menu_h($userRole) ?></div>
-            <div class="blok_menu_user_settings">
-                <form class="blok_menu_theme_form" method="post" action="<?= cb_blok_menu_h($postUrl) ?>" data-cb-theme-form="1" data-theme-level="<?= cb_blok_menu_h((string)$themeLevel) ?>">
-                    <input type="hidden" name="cb_theme_module" value="<?= cb_blok_menu_h($themeModule) ?>">
-                    <input type="hidden" name="cb_theme_return" value="<?= cb_blok_menu_h($themeReturn) ?>">
-                    <button class="blok_menu_theme_btn" type="submit" name="cb_theme_delta" value="-1" aria-label="Zesvětlit" data-cb-theme-delta="-1"<?= $themeLevel <= 0 ? ' disabled' : '' ?>>-</button>
-                    <span class="blok_menu_theme_value" data-cb-theme-value="1"><?= cb_blok_menu_h((string)$themeLevel) ?></span>
-                    <button class="blok_menu_theme_btn" type="submit" name="cb_theme_delta" value="1" aria-label="Ztmavit" data-cb-theme-delta="1"<?= $themeLevel >= 6 ? ' disabled' : '' ?>>+</button>
-                </form>
+            <div class="blok_menu_user_role">
+                <span><?= cb_blok_menu_h($userRole) ?></span>
+                <div class="blok_menu_user_settings">
+                    <form class="blok_menu_theme_form" method="post" action="<?= cb_blok_menu_h($postUrl) ?>" data-cb-theme-form="1" data-theme-level="<?= cb_blok_menu_h((string)$themeLevel) ?>">
+                        <input type="hidden" name="cb_theme_module" value="<?= cb_blok_menu_h($themeModule) ?>">
+                        <input type="hidden" name="cb_theme_return" value="<?= cb_blok_menu_h($themeReturn) ?>">
+                        <button class="blok_menu_theme_btn" type="submit" name="cb_theme_delta" value="-1" aria-label="Zesvětlit" data-cb-theme-delta="-1"<?= $themeLevel <= 0 ? ' disabled' : '' ?>>-</button>
+                        <span class="blok_menu_theme_value" data-cb-theme-value="1"><?= cb_blok_menu_h((string)$themeLevel) ?></span>
+                        <button class="blok_menu_theme_btn" type="submit" name="cb_theme_delta" value="1" aria-label="Ztmavit" data-cb-theme-delta="1"<?= $themeLevel >= 6 ? ' disabled' : '' ?>>+</button>
+                    </form>
+                </div>
             </div>
-            <a class="blok_menu_user_action blok_menu_user_logout" href="<?= cb_blok_menu_h($postUrl . '?action=logout&duvod=1') ?>">Odhlásit</a>
+            <a class="blok_menu_btn blok_menu_user_logout" href="<?= cb_blok_menu_h($postUrl . '?action=logout&duvod=1') ?>">
+                <span>Odhlásit</span>
+            </a>
         </div>
+        <?php
+    }
+}
+
+if (!function_exists('cb_render_blok_menu_admin')) {
+    function cb_render_blok_menu_admin(): void
+    {
+        $currentModule = defined('CB_EMBEDDED_MODULE') ? (string)constant('CB_EMBEDDED_MODULE') : (string)($GLOBALS['CURRENT_MODULE'] ?? '');
+        $user = $_SESSION['cb_user'] ?? [];
+        $roleId = is_array($user) ? (int)($user['id_role'] ?? 0) : 0;
+        if ($roleId !== 1 || $currentModule === 'administrace') {
+            return;
+        }
+
+        $url = function_exists('cb_root_url') ? cb_root_url('index.php?m=administrace') : 'index.php?m=administrace';
+        ?>
+        <ul class="blok_menu_list">
+            <li class="blok_menu_item">
+                <a class="blok_menu_btn" href="<?= cb_blok_menu_h($url) ?>" data-cb-module-link="1" data-cb-module="administrace">
+                    <span>Administrace</span>
+                </a>
+            </li>
+        </ul>
         <?php
     }
 }
@@ -91,17 +118,6 @@ if (!function_exists('cb_render_blok_menu')) {
         $title = (string)($menu['title'] ?? '');
         $ariaLabel = (string)($menu['aria_label'] ?? $title);
         $items = is_array($menu['items'] ?? null) ? $menu['items'] : [];
-        $currentModule = defined('CB_EMBEDDED_MODULE') ? (string)constant('CB_EMBEDDED_MODULE') : (string)($GLOBALS['CURRENT_MODULE'] ?? '');
-        $user = $_SESSION['cb_user'] ?? [];
-        $roleId = is_array($user) ? (int)($user['id_role'] ?? 0) : 0;
-        if ($roleId === 1 && $currentModule !== 'administrace') {
-            $items[] = [
-                'label' => 'Administrace',
-                'url' => function_exists('cb_root_url') ? cb_root_url('index.php?m=administrace') : 'index.php?m=administrace',
-                'active' => false,
-                'module' => 'administrace',
-            ];
-        }
         ?>
         <nav class="blok_menu" aria-label="<?= cb_blok_menu_h($ariaLabel) ?>">
             <?php if ($title !== ''): ?>
@@ -171,7 +187,10 @@ if (!function_exists('cb_render_blok_menu')) {
                 <?php endforeach; ?>
             </ul>
 
-            <?php cb_render_blok_menu_user(); ?>
+            <div class="blok_menu_bottom">
+                <?php cb_render_blok_menu_admin(); ?>
+                <?php cb_render_blok_menu_user(); ?>
+            </div>
         </nav>
         <?php
     }

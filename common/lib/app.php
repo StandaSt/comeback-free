@@ -14,6 +14,8 @@ declare(strict_types=1);
 date_default_timezone_set('Europe/Prague');
 mb_internal_encoding('UTF-8');
 
+require_once __DIR__ . '/../config/constants.php';
+
 if (!function_exists('h')) {
     function h(mixed $v): string
     {
@@ -435,10 +437,7 @@ if (!function_exists('cb_store_user_settings')) {
         $data['dark'] = max(0, min(6, $dark));
 
         $mode = trim((string)($values['obdobi_mode'] ?? $data['obdobi_mode']));
-        if ($mode === 'dnes') {
-            $mode = 'vcera';
-        }
-        if (!in_array($mode, ['vcera', 'tyden', 'mesic', 'rok', 'manual'], true)) {
+        if (!in_array($mode, ['dnes', 'vcera', 'tyden', 'mesic', 'rok', 'vse', 'manual'], true)) {
             $mode = 'manual';
         }
         $data['obdobi_mode'] = $mode;

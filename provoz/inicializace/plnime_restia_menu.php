@@ -11,8 +11,6 @@ require_once __DIR__ . '/../../common/lib/restia_access_exist.php';
 require_once __DIR__ . '/../lib/restia_client.php';
 require_once __DIR__ . '/../db/db_api_restia.php';
 
-const CB_RESTIA_MENU_DEFAULT_ID = '762f8daa-ca39-4d8f-ae4a-d22b4d106e88';
-
 $cbRestiaMenuEmbedMode = (basename((string)($_SERVER['SCRIPT_NAME'] ?? '')) === 'provoz.php');
 
 if (!function_exists('cb_restia_menu_h')) {

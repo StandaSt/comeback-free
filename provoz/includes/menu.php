@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../common/includes/blok_menu.php';
 $provozMenuItems = [
     ['page' => 'prehled', 'label' => 'Přehled'],
     ['page' => 'denni_report', 'label' => 'Denní report'],
+    ['page' => 'objednavky', 'label' => 'Objednávky'],
 ];
 
 $provozMenu = [];

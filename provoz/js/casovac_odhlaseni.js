@@ -1,16 +1,13 @@
-// js/casovac_odhlaseni.js * Verze: V10 * Aktualizace: 28.04.2026
+// js/casovac_odhlaseni.js * Verze: V11 * Aktualizace: 12.08.2026
 'use strict';
 
 /*
- * Casovac neaktivity v user bloku menu.
+ * Casovac pevne platnosti session v user bloku menu.
  *
  * Co dela:
- * - pri aktivite uzivatele resetuje neaktivitu na plny timeout
- * - periodicky posila "touch" na server
- *
- * Zmena V10:
- * - odhlaseni se spousti podle zobrazene zbyvajici minuty
- * - jakmile Seance/zbyva ukaze 0 min, provede se logout
+ * - neposila prubezne zadne touch requesty
+ * - nesleduje aktivitu uzivatele
+ * - po konci serverove platnosti session presmeruje na logout
  */
 
 (function (w, d) {
@@ -33,7 +30,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: payload,
         keepalive: true
-      }).catch(function(){});
+      }).catch(function () {});
     } catch (e) {}
   }
   function rememberLogoutStart(reason) {
@@ -57,114 +54,16 @@
     return Math.floor(Date.now() / 1000);
   }
 
-  function clamp(v, min, max) {
-    return Math.max(min, Math.min(max, v));
-  }
-
-  const box = d.querySelector('.blok_menu_user[data-timeout-min]');
+  const box = d.querySelector('.blok_menu_user[data-session-end-ts]');
   if (!box) return;
 
-  const comboEl = box.querySelector('.cb-session-combo');
-  const thermoEl = box.querySelector('.cb-session-thermo');
-
-  const timeoutMin = toInt(box.getAttribute('data-timeout-min'));
+  const sessionEndTs = toInt(box.getAttribute('data-session-end-ts'));
   const logoutUrl = String(box.getAttribute('data-logout-url') || '').trim();
-  const touchUrl = String(box.getAttribute('data-touch-url') || '').trim();
   const logoutLink = box.querySelector('.blok_menu_user_logout');
-  const warningThresholdMin = Math.max(1, Math.ceil(timeoutMin * 0.1));
 
-  if (timeoutMin <= 0) {
-    if (comboEl) comboEl.textContent = '!';
+  if (sessionEndTs <= 0 || !logoutUrl) {
     return;
   }
-
-  let startTs = toInt(box.getAttribute('data-start-ts'));
-  let lastTs = toInt(box.getAttribute('data-last-ts'));
-  const now0 = nowTs();
-
-  if (startTs <= 0 || startTs > now0) startTs = now0;
-  if (lastTs <= 0 || lastTs > now0 || lastTs < startTs) lastTs = now0;
-
-  let lastTouchSentAt = 0;
-
-  function touchServer(force) {
-    const now = nowTs();
-    if (!force && (now - lastTouchSentAt) < 10) return;
-    lastTouchSentAt = now;
-
-    if (!touchUrl) return;
-
-    fetch(touchUrl, {
-      method: 'POST',
-      headers: {
-        'X-Comeback-Touch': '1'
-      }
-    }).catch(function () {
-      // Tichy fail, UI bezi dal.
-    });
-  }
-
-  function render() {
-    const ts = nowTs();
-
-    let runMin = Math.floor((ts - startTs) / 60);
-    if (runMin < 0) runMin = 0;
-
-    let idleSec = ts - lastTs;
-    if (idleSec < 0) idleSec = 0;
-
-    const timeoutSec = timeoutMin * 60;
-
-    // Minuty nechavame po celych minutach jako dosud.
-    let idleMin = Math.floor(idleSec / 60);
-    if (idleMin < 0) idleMin = 0;
-
-    let remainMin = timeoutMin - idleMin;
-    if (remainMin < 0) remainMin = 0;
-
-    if (comboEl) {
-      comboEl.textContent = String(runMin) + ' min/' + String(remainMin) + ' min';
-    }
-
-    // Teplomer = procento vycerpane neaktivity.
-    let thermoPct = Math.round((idleSec / timeoutSec) * 100);
-    thermoPct = clamp(thermoPct, 0, 100);
-
-    if (thermoEl) {
-      thermoEl.setAttribute('data-thermo', String(thermoPct));
-      thermoEl.style.setProperty('--thermo', String(thermoPct) + '%');
-    }
-
-    if (logoutLink) {
-      const warningOn = (remainMin > 0 && remainMin <= warningThresholdMin);
-      logoutLink.classList.toggle('is-timeout-warning', warningOn);
-    }
-
-    if (remainMin <= 0 && logoutUrl) {
-      // CB_LOGIN_TRACE_TEMP_START
-      rememberLogoutStart('idle_timer');
-      traceLogin('login_trace_logout_auto', {
-        remain_min: remainMin
-      });
-      // CB_LOGIN_TRACE_TEMP_END
-      w.location.href = logoutUrl;
-    }
-  }
-
-  function activity() {
-    lastTs = nowTs();
-    render();
-    touchServer(false);
-  }
-
-  w.cbResetIdleLogout = function () {
-    activity();
-  };
-
-  d.addEventListener('click', activity, true);
-  d.addEventListener('keydown', activity, true);
-  d.addEventListener('scroll', activity, true);
-  d.addEventListener('pointerdown', activity, true);
 
   // CB_LOGIN_TRACE_TEMP_START
   if (logoutLink) {
@@ -177,8 +76,15 @@
   }
   // CB_LOGIN_TRACE_TEMP_END
 
-  render();
-  w.setInterval(render, 1000);
+  w.setTimeout(function () {
+    // CB_LOGIN_TRACE_TEMP_START
+    rememberLogoutStart('session_expired');
+    traceLogin('login_trace_logout_auto', {
+      session_end_ts: sessionEndTs
+    });
+    // CB_LOGIN_TRACE_TEMP_END
+    w.location.href = logoutUrl;
+  }, Math.max(0, (sessionEndTs - nowTs()) * 1000));
 })(window, document);
 
-// js/casovac_odhlaseni.js * Verze: V10 * Aktualizace: 28.04.2026
+// js/casovac_odhlaseni.js * Verze: V11 * Aktualizace: 12.08.2026

@@ -350,7 +350,7 @@
 .zr_layout{
   display:grid;
   width:max-content;
-  grid-template-columns:814px 300px;
+  grid-template-columns:828px 300px;
   justify-content:start;
   align-items:start;
 }
@@ -371,7 +371,7 @@
 
 .zr_top{
   display:grid;
-  grid-template-columns:300px 500px;
+  grid-template-columns:300px 514px;
   align-items:stretch;
 }
 
@@ -717,4 +717,245 @@
   border-radius:8px;
   background:var(--cb-bg-warning);
   color:var(--cb-text-main);
+}
+
+/* Objednavky - stranka prehledu. */
+.provoz_objednavky_block{
+  position:relative;
+  min-height:90px;
+}
+
+.provoz_objednavky_page{
+  min-width:0;
+  color:var(--cb-text-main);
+}
+
+.provoz_objednavky_block.is-loading .provoz_objednavky_page{
+  opacity:.45;
+  pointer-events:none;
+}
+
+.provoz_objednavky_block.is-loading::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:20;
+  border-radius:8px;
+  background:rgba(255,255,255,.68);
+}
+
+.provoz_objednavky_loader{
+  position:absolute;
+  left:50%;
+  top:42px;
+  display:none;
+  z-index:21;
+  transform:translateX(-50%);
+  padding:8px 14px;
+  border:1px solid var(--cb-border);
+  border-radius:8px;
+  background:var(--cb-bg-panel);
+  color:var(--cb-text-main);
+  box-shadow:0 8px 24px var(--cb-shadow);
+  text-align:center;
+  white-space:nowrap;
+}
+
+.provoz_objednavky_block.is-loading .provoz_objednavky_loader{
+  display:block;
+}
+
+.provoz_objednavky_loader_text{
+  display:block;
+  font-size:var(--fs_12);
+  font-weight:700;
+}
+
+.provoz_objednavky_loader_time{
+  display:block;
+  margin-top:3px;
+  color:var(--cb-text-muted);
+  font-size:var(--fs_11);
+  font-weight:400;
+}
+
+html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
+  background:rgba(15,23,42,.62);
+}
+
+/* Objednavky - horni radek s titulkem a poctem radku. */
+.provoz_objednavky_head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  margin:0 0 10px;
+}
+
+.provoz_objednavky_meta{
+  margin:0;
+  color:var(--cb-text-muted);
+  font-size:var(--fs_11);
+}
+
+/* Objednavky - volba poctu radku. */
+.provoz_objednavky_per{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:6px;
+  color:var(--cb-text-muted);
+  font-size:var(--fs_11);
+}
+
+.provoz_objednavky_per select{
+  height:28px;
+  min-height:28px;
+  padding:2px 7px;
+  border:1px solid var(--cb-border);
+  border-radius:6px;
+  background:var(--cb-bg-control);
+  color:var(--cb-text-main);
+}
+
+/* Objednavky - obal tabulky. */
+.provoz_objednavky_table_wrap{
+  width:100%;
+  overflow:auto;
+  border:1px solid var(--cb-border);
+  border-radius:8px;
+  background:var(--cb-bg-panel);
+}
+
+.provoz_objednavky_table{
+  width:max-content;
+  min-width:0;
+  border-collapse:collapse;
+  font-size:var(--fs_11);
+  table-layout:auto;
+}
+
+.provoz_objednavky_table th,
+.provoz_objednavky_table td{
+  padding:6px 8px;
+  border-bottom:1px solid var(--cb-border-soft);
+  border-left:1px solid var(--cb-border-soft);
+  line-height:1.2;
+  text-align:left;
+  vertical-align:middle;
+  white-space:nowrap;
+}
+
+.provoz_objednavky_table th:first-child,
+.provoz_objednavky_table td:first-child{
+  border-left:0;
+}
+
+.provoz_objednavky_table thead th{
+  background:var(--cb-bg-panel-soft);
+  color:var(--cb-text-muted);
+  font-weight:700;
+  white-space:nowrap;
+}
+
+.provoz_objednavky_table tbody tr:hover td{
+  background:var(--cb-bg-info);
+}
+
+.provoz_objednavky_filter_row th{
+  padding:5px;
+}
+
+.provoz_objednavky_filter{
+  width:72px;
+  max-width:100%;
+  height:26px;
+  min-height:26px;
+  padding:2px 7px;
+  border:1px solid var(--cb-border);
+  border-radius:6px;
+  background:var(--cb-bg-control);
+  color:var(--cb-text-main);
+  font-size:var(--fs_11);
+}
+
+.provoz_objednavky_filter_datetime{
+  width:124px;
+}
+
+.provoz_objednavky_filter:focus{
+  outline:none;
+  border-color:var(--clr_modra_6);
+  box-shadow:0 0 0 3px rgba(79,141,246,.18);
+}
+
+.provoz_objednavky_sort_link{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  color:var(--cb-text-main);
+  text-decoration:none;
+}
+
+.provoz_objednavky_sort_link:hover{
+  color:var(--clr_modra_6);
+}
+
+.provoz_objednavky_nowrap{
+  white-space:nowrap;
+}
+
+.provoz_objednavky_num{
+  text-align:right;
+  white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+}
+
+.provoz_objednavky_empty{
+  padding:18px 8px;
+  color:var(--cb-text-muted);
+  text-align:center;
+}
+
+/* Objednavky - strankovani. */
+.provoz_objednavky_pager{
+  display:grid;
+  grid-template-columns:minmax(120px, 1fr) auto minmax(120px, 1fr);
+  align-items:center;
+  gap:12px;
+  margin-top:10px;
+  color:var(--cb-text-muted);
+  font-size:var(--fs_11);
+}
+
+.provoz_objednavky_pager_links{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+}
+
+.provoz_objednavky_page_link,
+.provoz_objednavky_page_current{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:28px;
+  height:28px;
+  padding:0 8px;
+  border:1px solid var(--cb-border);
+  border-radius:6px;
+  background:var(--cb-bg-control);
+  color:var(--cb-text-main);
+  text-decoration:none;
+}
+
+.provoz_objednavky_page_link:hover{
+  border-color:var(--clr_modra_6);
+  color:var(--clr_modra_6);
+}
+
+.provoz_objednavky_page_link.is-disabled{
+  opacity:.45;
+  pointer-events:none;
 }

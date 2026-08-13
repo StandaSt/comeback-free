@@ -97,7 +97,8 @@ if (
         cb_pobocky_set_mode('single', null);
         $_SESSION['cb_pobocka_id'] = $idPob;
         cb_user_akce_zapis([
-            'id_akce' => 13,
+            'id_user_akce_typ' => 4,
+            'modul' => (string)($GLOBALS['CURRENT_MODULE'] ?? 'provoz'),
             'vysledek' => 1,
             'zdroj' => 'pobocky',
             'detail' => [
@@ -210,7 +211,8 @@ if (
             cb_pobocky_set_mode('area', $selectedOblasti[0]);
             $_SESSION['selected_oblasti'] = $selectedOblasti;
             cb_user_akce_zapis([
-                'id_akce' => 13,
+                'id_user_akce_typ' => 4,
+                'modul' => (string)($GLOBALS['CURRENT_MODULE'] ?? 'provoz'),
                 'vysledek' => 1,
                 'zdroj' => 'pobocky',
                 'detail' => [
@@ -253,7 +255,8 @@ if (
         cb_pobocky_set_mode('custom', null);
         $_SESSION['selected_oblasti'] = [];
         cb_user_akce_zapis([
-            'id_akce' => 13,
+            'id_user_akce_typ' => 4,
+            'modul' => (string)($GLOBALS['CURRENT_MODULE'] ?? 'provoz'),
             'vysledek' => 1,
             'zdroj' => 'pobocky',
             'detail' => [

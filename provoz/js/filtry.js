@@ -226,7 +226,7 @@
         if (!ok) return;
 
         if (logDetail && typeof logDetail === 'object') {
-          logUserAction(logActionId || 14, form, logDetail);
+          logUserAction(logActionId || 5, form, logDetail);
         }
 
         if (focusName !== '') {
@@ -341,7 +341,7 @@
       }
       : null;
 
-    fetchAndSwap(form, prefix, null, logDetail, isPerChange ? 17 : 14);
+    fetchAndSwap(form, prefix, null, logDetail, isPerChange ? 8 : 5);
   }, true);
 
   document.addEventListener('click', (ev) => {
@@ -370,13 +370,13 @@
 
     if (isReset) {
       logDetail = { prefix: prefix };
-      logActionId = 15;
+      logActionId = 6;
     } else if (isPagination) {
       logDetail = {
         prefix: prefix,
         stranka: targetPage
       };
-      logActionId = 16;
+      logActionId = 7;
     }
 
     fetchAndSwap(form, prefix, href, logDetail, logActionId);

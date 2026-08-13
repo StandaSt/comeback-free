@@ -9,13 +9,8 @@ require_once __DIR__ . '/../../common/lib/app.php';
 require_once __DIR__ . '/../../common/config/secrets.php';
 require_once __DIR__ . '/../../common/lib/smeny_graphql.php';
 
-const GQL_URL = 'https://smeny.pizzacomeback.cz/graphql';
-const MIN_DATE = '2020-10-26';
-const REQUEST_TIMEOUT_SEC = 60;
-const SLEEP_BETWEEN_WEEKS_US = 500000;
 const LOG_DIR = __DIR__ . '/../log/smeny';
 const SKIPWEEK_FILE = LOG_DIR . '/skipweek.txt';
-const SMENY_PLAN_UPDATE_ALL_ID = -1;
 
 function out(string $text): void
 {
@@ -58,7 +53,7 @@ function calculateSkipWeeksByStartDay(string $startDay): int
 
 function oldestSkipWeeks(): int
 {
-    return calculateSkipWeeksByStartDay(MIN_DATE);
+    return calculateSkipWeeksByStartDay(CB_SMENY_PLAN_MIN_DATE);
 }
 
 function startDayBySkipWeeks(int $skipWeeks): string
@@ -181,11 +176,11 @@ function smenyPlanApiBranchMap(string $token): array
     }
 
     $response = cb_smeny_graphql(
-        GQL_URL,
+        CB_SMENY_GQL_URL,
         'query{ branchFindAll{ id name } }',
         [],
         $token,
-        REQUEST_TIMEOUT_SEC
+        CB_SMENY_PLAN_REQUEST_TIMEOUT_SEC
     );
 
     $branches = $response['branchFindAll'] ?? [];
@@ -336,14 +331,14 @@ query($branchId:Int!, $skipWeeks:Int!){
 GQL;
 
     $response = cb_smeny_graphql(
-        GQL_URL,
+        CB_SMENY_GQL_URL,
         $query,
         [
             'branchId' => $branchId,
             'skipWeeks' => $skipWeeks,
         ],
         $token,
-        REQUEST_TIMEOUT_SEC
+        CB_SMENY_PLAN_REQUEST_TIMEOUT_SEC
     );
 
     $week = $response['branchGetShiftWeek'] ?? null;
@@ -823,9 +818,9 @@ function renderSmenyPlanScreen(array $info, string $mode = 'pick'): void
           <input type="hidden" name="run_smeny_plan" value="1">
           <input type="hidden" name="cb_action" value="start" id="cb_action_field">
           <div class="displ_flex gap_8 align_items_center flex_wrap">
-            <select name="cb_id_pob" class="card_select ram_sedy txt_seda bg_bila zaobleni_8" style="min-width:260px; height:28px; margin-right:8px;" onchange="var a=document.getElementById('cb_action_field');var v=String(this.value||'');if(a){a.value=(v==='<?= h((string)SMENY_PLAN_UPDATE_ALL_ID) ?>'?'update_planned':'select_branch');}var f=this.form;if(f){var o=this.options[this.selectedIndex];var t=o?String(o.textContent||o.innerText||'').trim():'';var p=t.indexOf(' | ');if(p>=0){t=t.substring(0,p);}f.setAttribute('data-cb-loader-text',v==='<?= h((string)SMENY_PLAN_UPDATE_ALL_ID) ?>'?'Aktualizuji naplánované směny':'Připravuji směny pobočky '+t);if(f.requestSubmit){f.requestSubmit();}else{f.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));}}">
+            <select name="cb_id_pob" class="card_select ram_sedy txt_seda bg_bila zaobleni_8" style="min-width:260px; height:28px; margin-right:8px;" onchange="var a=document.getElementById('cb_action_field');var v=String(this.value||'');if(a){a.value=(v==='<?= h((string)CB_SMENY_PLAN_UPDATE_ALL_ID) ?>'?'update_planned':'select_branch');}var f=this.form;if(f){var o=this.options[this.selectedIndex];var t=o?String(o.textContent||o.innerText||'').trim():'';var p=t.indexOf(' | ');if(p>=0){t=t.substring(0,p);}f.setAttribute('data-cb-loader-text',v==='<?= h((string)CB_SMENY_PLAN_UPDATE_ALL_ID) ?>'?'Aktualizuji naplánované směny':'Připravuji směny pobočky '+t);if(f.requestSubmit){f.requestSubmit();}else{f.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));}}">
               <option value="0">Vyber pobočku</option>
-              <option value="<?= h((string)SMENY_PLAN_UPDATE_ALL_ID) ?>">Stáhni všechny pobočky</option>
+              <option value="<?= h((string)CB_SMENY_PLAN_UPDATE_ALL_ID) ?>">Stáhni všechny pobočky</option>
               <?php foreach ($branches as $branch): ?>
                 <?php
                     $branchId = (int)($branch['id_pob'] ?? 0);
@@ -979,7 +974,7 @@ function run(array $branch): array
         $skipWeeks++;
         $weeksSincePause++;
         if ($weeksSincePause >= 50) {
-            usleep(SLEEP_BETWEEN_WEEKS_US);
+            usleep(CB_SMENY_PLAN_SLEEP_BETWEEN_WEEKS_US);
             $weeksSincePause = 0;
         }
     }

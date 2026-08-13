@@ -12,8 +12,6 @@ require_once __DIR__ . '/../lib/restia_client.php';
 require_once __DIR__ . '/../db/db_api_restia.php';
 require_once __DIR__ . '/../../common/db/zapis_log_chyby.php';
 
-const CB_RESTIA_HIST_LIMIT = 200;
-
 $cbRestiaEmbedMode = (basename((string)($_SERVER['SCRIPT_NAME'] ?? '')) === 'provoz.php');
 $cbStateKey = 'cb_restia_hist_v4_state';
 $cbRowsKey = 'cb_restia_hist_v4_rows';

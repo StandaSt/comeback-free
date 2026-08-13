@@ -20,7 +20,7 @@ declare(strict_types=1);
             )
             LEFT JOIN (
                 SELECT id_login, MAX(cas) AS last_action_time
-                FROM user_akce
+                FROM user_akce_new
                 WHERE id_login IS NOT NULL
                 GROUP BY id_login
             ) ua ON ua.id_login = ul.id_login

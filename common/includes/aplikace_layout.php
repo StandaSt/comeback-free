@@ -48,6 +48,7 @@ window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_
 <script src="<?= h($cbObdobiJsUrl) ?>"></script>
 <script src="<?= h($cbSetProdlevaJsUrl) ?>"></script>
 <script src="<?= h($cbGnRefreshJsUrl) ?>"></script>
+<script src="<?= h(cb_asset_url('js/objednavky_prehled.js')) ?>"></script>
 <script src="<?= h($cbThemeJsUrl) ?>"></script>
 <script src="<?= h(cb_asset_url('js/filtry.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/prehled_smen_export.js')) ?>"></script>

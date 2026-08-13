@@ -66,11 +66,8 @@ if (
     $defaultDo = $cbCurrentWorkdayDate->setTime(6, 0, 0)->format('Y-m-d H:i:s');
     $maxDo = $cbNowPeriod->format('Y-m-d H:i:s');
 
-    $allowedModes = ['vcera', 'tyden', 'mesic', 'rok', 'manual'];
+    $allowedModes = ['dnes', 'vcera', 'tyden', 'mesic', 'rok', 'vse', 'manual'];
     $newMode = trim((string)($data['mode'] ?? 'manual'));
-    if ($newMode === 'dnes') {
-        $newMode = 'vcera';
-    }
     if (!in_array($newMode, $allowedModes, true)) {
         $newMode = 'manual';
     }
@@ -152,7 +149,7 @@ if (
             }
         }
 
-        if (in_array($newMode, ['tyden', 'mesic', 'rok'], true)) {
+        if (in_array($newMode, ['dnes', 'tyden', 'mesic', 'rok', 'vse'], true)) {
             $newDo = $maxDo;
         }
 
@@ -199,7 +196,8 @@ if (
 
         require_once __DIR__ . '/uloz_akci.php';
         cb_user_akce_zapis([
-            'id_akce' => 12,
+            'id_user_akce_typ' => 3,
+            'modul' => (string)($GLOBALS['CURRENT_MODULE'] ?? 'provoz'),
             'vysledek' => 1,
             'zdroj' => 'obdobi',
             'detail' => [

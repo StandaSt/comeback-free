@@ -1,5 +1,7 @@
 # Secrets / local config
 common/config/
+!common/config/
+!common/config/constants.php
 config/secrets.php
 
 # Logs

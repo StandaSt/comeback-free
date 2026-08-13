@@ -34,31 +34,7 @@ if (!function_exists('cb_session_validate_after_login')) {
             return false;
         }
 
-        $timeoutMinRaw = $_SESSION['cb_timeout_min'] ?? null;
-        if (!is_int($timeoutMinRaw) && !is_string($timeoutMinRaw)) {
-            return false;
-        }
-
-        $timeoutMin = filter_var($timeoutMinRaw, FILTER_VALIDATE_INT);
-        if ($timeoutMin === false || $timeoutMin <= 0) {
-            return false;
-        }
-
-        $lastActivityRaw = $_SESSION['cb_last_activity_ts'] ?? null;
-        if (!is_int($lastActivityRaw) && !is_string($lastActivityRaw)) {
-            return false;
-        }
-
-        $lastActivityTs = filter_var($lastActivityRaw, FILTER_VALIDATE_INT);
-        if ($lastActivityTs === false || $lastActivityTs <= 0) {
-            return false;
-        }
-
         $nowTs = time();
-        if ($lastActivityTs > $nowTs) {
-            return false;
-        }
-
         $sessionStartRaw = $_SESSION['cb_session_start_ts'] ?? null;
         if (!is_int($sessionStartRaw) && !is_string($sessionStartRaw)) {
             return false;
@@ -79,7 +55,7 @@ if (!function_exists('cb_session_validate_after_login')) {
             return false;
         }
 
-        return ($nowTs - $lastActivityTs) < ($timeoutMin * 60);
+        return true;
     }
 }
 
@@ -97,24 +73,6 @@ if (!function_exists('cb_session_is_internal_request')) {
 
         $requestedWith = strtolower(trim((string)($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')));
         return $requestedWith === 'xmlhttprequest';
-    }
-}
-
-if (!function_exists('cb_session_touch_activity')) {
-    /**
-     * Obnovi cas posledni skutecne aktivity uzivatele.
-     */
-    function cb_session_touch_activity(): void
-    {
-        if (empty($_SESSION['login_ok'])) {
-            return;
-        }
-
-        $nowTs = time();
-        if (!isset($_SESSION['cb_session_start_ts']) || (int)$_SESSION['cb_session_start_ts'] <= 0) {
-            $_SESSION['cb_session_start_ts'] = $nowTs;
-        }
-        $_SESSION['cb_last_activity_ts'] = $nowTs;
     }
 }
 
@@ -181,9 +139,5 @@ if (!function_exists('cb_session_guard_entry')) {
             exit;
         }
 
-        $method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
-        if ($touchValidPageRequest && $method === 'GET' && !cb_session_is_internal_request()) {
-            cb_session_touch_activity();
-        }
     }
 }

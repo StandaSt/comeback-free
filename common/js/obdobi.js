@@ -37,7 +37,7 @@
     if (!odInput || !doInput || !odCasInput || !doCasInput || !quickBtns.length) {
       return;
     }
-    if ([0, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000].indexOf(manualSaveDelayMs) === -1) {
+    if (!Number.isFinite(manualSaveDelayMs) || manualSaveDelayMs <= 0) {
       manualSaveDelayMs = 3000;
     }
 
@@ -82,10 +82,7 @@
     var defaultTime = '06:00';
     var odTimeKey = 'cb_obdobi_od_cas';
     var doTimeKey = 'cb_obdobi_do_cas';
-    var allowedModes = ['vcera', 'tyden', 'mesic', 'rok', 'manual'];
-    if (activeMode === 'dnes') {
-      activeMode = 'vcera';
-    }
+    var allowedModes = ['dnes', 'vcera', 'tyden', 'mesic', 'rok', 'vse', 'manual'];
     if (allowedModes.indexOf(activeMode) === -1) {
       activeMode = 'manual';
     }
@@ -221,6 +218,15 @@
       return fmtDate(dt);
     }
 
+    function shiftDate(value, days) {
+      var dt = parseDate(value);
+      if (!dt) {
+        return '';
+      }
+      dt.setDate(dt.getDate() + days);
+      return fmtDate(dt);
+    }
+
     function setActive(mode) {
       activeMode = mode;
       quickBtns.forEach(function (btn) {
@@ -298,28 +304,37 @@
     }
 
     function computeRange(range) {
+      var currentDayStart = getCurrentWorkingDayStart();
+      var nowMax = getNowMax();
       var finishedDayStart = getFinishedWorkingDayStart();
       var finishedDayEnd = getFinishedWorkingDayEnd();
       var from = new Date(finishedDayStart);
       var to = new Date(finishedDayEnd);
 
+      if (range === 'dnes') {
+        return { od: fmtDate(currentDayStart), do: fmtDate(nowMax), doTime: fmtTime(nowMax) };
+      }
       if (range === 'vcera') {
         return { od: fmtDate(from), do: fmtDate(to) };
       }
       if (range === 'tyden') {
-        var day = finishedDayStart.getDay();
+        var day = currentDayStart.getDay();
         var mondayShift = day === 0 ? -6 : 1 - day;
-        from.setDate(finishedDayStart.getDate() + mondayShift);
+        from = new Date(currentDayStart);
+        from.setDate(currentDayStart.getDate() + mondayShift);
         from.setHours(6, 0, 0, 0);
-        return { od: fmtDate(from), do: fmtDate(to) };
+        return { od: fmtDate(from), do: fmtDate(nowMax), doTime: fmtTime(nowMax) };
       }
       if (range === 'mesic') {
-        from = new Date(finishedDayStart.getFullYear(), finishedDayStart.getMonth(), 1, 6, 0, 0, 0);
-        return { od: fmtDate(from), do: fmtDate(to) };
+        from = new Date(currentDayStart.getFullYear(), currentDayStart.getMonth(), 1, 6, 0, 0, 0);
+        return { od: fmtDate(from), do: fmtDate(nowMax), doTime: fmtTime(nowMax) };
+      }
+      if (range === 'vse') {
+        return { od: '2000-01-01', do: fmtDate(nowMax), odTime: '00:00', doTime: fmtTime(nowMax) };
       }
 
-      from = new Date(finishedDayStart.getFullYear(), 0, 1, 6, 0, 0, 0);
-      return { od: fmtDate(from), do: fmtDate(to) };
+      from = new Date(currentDayStart.getFullYear(), 0, 1, 6, 0, 0, 0);
+      return { od: fmtDate(from), do: fmtDate(nowMax), doTime: fmtTime(nowMax) };
     }
 
     function cancelManualPeriodSave() {
@@ -335,23 +350,20 @@
         cancelManualPeriodSave();
         var range = btn.getAttribute('data-range') || 'vcera';
         var value = computeRange(range);
+        var odTime = value.odTime || defaultTime;
+        var doTime = value.doTime || defaultTime;
 
         odInput.value = value.od;
         doInput.value = value.do;
-        odCasInput.value = defaultTime;
-        doCasInput.value = defaultTime;
+        odCasInput.value = odTime;
+        doCasInput.value = doTime;
         saveTime(odTimeKey, odCasInput.value);
         saveTime(doTimeKey, doCasInput.value);
         setActive(range);
         setManualHighlight(false);
-        var doValue = periodValue(value.do, doCasInput.value);
-        if (range === 'tyden' || range === 'mesic' || range === 'rok') {
-          var nowMax = getNowMax();
-          doValue = periodValue(fmtDate(nowMax), fmtTime(nowMax));
-        }
         savePeriod({
           od: periodValue(value.od, odCasInput.value),
-          do: doValue,
+          do: periodValue(value.do, doCasInput.value),
           mode: range
         }).then(function () {
           closePeriodPanel();
@@ -364,19 +376,18 @@
     odInput.max = fmtDate(getNowMax());
     doInput.max = fmtDate(getNowMax());
 
-    function saveManualPeriod(changedField) {
-      resetManualPeriodMeter();
+    function normalizeManualPeriod(changedField) {
       var maxDate = getNowMax();
       var od = clampToMax(odInput.value, maxDate);
       var ddo = clampToMax(doInput.value, maxDate);
       if (!od || !ddo) {
-        return;
+        return null;
       }
       if (od > ddo) {
         if (changedField === 'do') {
-          od = ddo;
+          ddo = clampToMax(shiftDate(od, 1), maxDate);
         } else {
-          ddo = od;
+          od = shiftDate(ddo, -1);
         }
       }
       odInput.value = od;
@@ -402,11 +413,20 @@
 
       saveTime(odTimeKey, odCasInput.value);
       saveTime(doTimeKey, doCasInput.value);
+      return { od: od, ddo: ddo };
+    }
+
+    function saveManualPeriod(changedField) {
+      resetManualPeriodMeter();
+      var normalized = normalizeManualPeriod(changedField);
+      if (!normalized) {
+        return;
+      }
       setActive('manual');
       setManualHighlight(true);
       savePeriod({
-        od: periodValue(od, odCasInput.value),
-        do: periodValue(ddo, doCasInput.value),
+        od: periodValue(normalized.od, odCasInput.value),
+        do: periodValue(normalized.ddo, doCasInput.value),
         mode: 'manual'
       }).then(function () {
         closePeriodPanel();
@@ -417,6 +437,10 @@
       if (manualSaveTimer) {
         window.clearTimeout(manualSaveTimer);
         manualSaveTimer = null;
+      }
+      if (!normalizeManualPeriod(changedField)) {
+        resetManualPeriodMeter();
+        return;
       }
       startManualPeriodMeter();
       manualSaveTimer = window.setTimeout(function () {

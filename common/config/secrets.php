@@ -39,6 +39,20 @@ $SECRETS['restia'] = [
 ];
 
 /*
+  WEB PUSH VAPID
+*/
+
+if (!defined('CB_VAPID_SUBJECT')) {
+    define('CB_VAPID_SUBJECT', 'mailto:admin@pizzacomeback.cz');
+}
+if (!defined('CB_VAPID_PUBLIC')) {
+    define('CB_VAPID_PUBLIC', 'BGoTpm1YhMYflfQZDPMva5DpjihYquvRqtHXrN061Z5OKOAvhq41GExSZcW_-K8EyTugOl5pBYZf5Nk2FYK_CWI');
+}
+if (!defined('CB_VAPID_PRIVATE')) {
+    define('CB_VAPID_PRIVATE', 'k3_uCR9VHDc1kAUDbvE98fPKr40KffvtwUMN78n7wH0');
+}
+
+/*
   SMĚNY API
 */
 

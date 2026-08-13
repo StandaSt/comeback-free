@@ -168,10 +168,7 @@ function cb_login_load_settings_to_session(int $idUser): void
     $periodOd = $normalizePeriodDateTime((string)($rowUserSet['obdobi_od'] ?? ''));
     $periodDo = $normalizePeriodDateTime((string)($rowUserSet['obdobi_do'] ?? ''));
     $periodMode = trim((string)($rowUserSet['obdobi_mode'] ?? 'manual'));
-    if ($periodMode === 'dnes') {
-        $periodMode = 'vcera';
-    }
-    if (!in_array($periodMode, ['vcera', 'tyden', 'mesic', 'rok', 'manual'], true)) {
+    if (!in_array($periodMode, ['dnes', 'vcera', 'tyden', 'mesic', 'rok', 'vse', 'manual'], true)) {
         $periodMode = 'manual';
     }
 
@@ -293,5 +290,4 @@ function cb_login_finalize_after_ok(string $token): void
 
     $_SESSION['cb_timeout_min'] = 720;
     $_SESSION['cb_session_start_ts'] = time();
-    $_SESSION['cb_last_activity_ts'] = time();
 }

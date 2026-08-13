@@ -30,12 +30,6 @@ require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
 require_once __DIR__ . '/../db/db_api_smeny.php';
 require_once __DIR__ . '/../db/db_user.php';
 
-$GQL_URL = 'https://smeny.pizzacomeback.cz/graphql';
-
-/*
- * Timeout neaktivity (minuty) – JEDINÝ zdroj hodnoty.
- */
-
 function post_str(string $k): string
 {
     return trim((string)($_POST[$k] ?? ''));
@@ -75,7 +69,7 @@ try {
 
     try {
         $login = cb_smeny_graphql(
-            $GQL_URL,
+            CB_SMENY_GQL_URL,
             'query($email:String!,$password:String!){
                 userLogin(email:$email,password:$password){
                     accessToken
@@ -97,7 +91,7 @@ try {
 
 
     $me = cb_smeny_graphql(
-        $GQL_URL,
+        CB_SMENY_GQL_URL,
         'query{
             userGetLogged{
                 id

@@ -6,33 +6,71 @@ require_once __DIR__ . '/../db/db_user_akce.php';
 if (!function_exists('cb_user_akce_should_log')) {
     function cb_user_akce_should_log(int $idUser): bool
     {
-        if ($idUser <= 0) {
-            return false;
+        return $idUser > 0;
+    }
+}
+
+if (!function_exists('cb_user_akce_id_modul')) {
+    function cb_user_akce_id_modul(string $module): int
+    {
+        static $cache = [];
+
+        $module = strtolower(trim($module));
+        if ($module === '' && defined('CB_EMBEDDED_MODULE')) {
+            $module = strtolower((string)CB_EMBEDDED_MODULE);
+        }
+        if ($module === '') {
+            $module = strtolower((string)($GLOBALS['CURRENT_MODULE'] ?? ''));
         }
 
-        $global = (int)cb_system_setting('log_akce', 0);
-        $conn = db();
-        $stmt = $conn->prepare('SELECT log_on, log_off FROM user_akce_on_off WHERE id_user = ? LIMIT 1');
-        if (!$stmt instanceof mysqli_stmt) {
-            return ($global === 1);
+        $names = [
+            'administrace' => 'Administrace',
+            'provoz' => 'Provoz',
+            'hr' => 'HR',
+            'smeny' => 'Směny',
+            'ukoly' => 'Úkoly',
+            'helpdesk' => 'Helpdesk',
+        ];
+        $fallback = [
+            'administrace' => 1,
+            'provoz' => 2,
+            'hr' => 3,
+            'smeny' => 4,
+            'ukoly' => 5,
+            'helpdesk' => 6,
+        ];
+
+        if (!isset($names[$module])) {
+            return 0;
+        }
+        if (isset($cache[$module])) {
+            return (int)$cache[$module];
         }
 
-        $stmt->bind_param('i', $idUser);
-        $stmt->execute();
-        $stmt->bind_result($logOn, $logOff);
-        $hasRow = $stmt->fetch();
-        $stmt->close();
-
-        if ($hasRow) {
-            if ((int)$logOff === 1) {
-                return false;
+        $id = 0;
+        try {
+            $conn = db();
+            $stmt = $conn->prepare('SELECT id_modul FROM cis_moduly WHERE modul = ? AND aktivni = 1 LIMIT 1');
+            if ($stmt instanceof mysqli_stmt) {
+                $name = $names[$module];
+                $stmt->bind_param('s', $name);
+                $stmt->execute();
+                $stmt->bind_result($dbId);
+                if ($stmt->fetch()) {
+                    $id = (int)$dbId;
+                }
+                $stmt->close();
             }
-            if ((int)$logOn === 1) {
-                return true;
-            }
+        } catch (Throwable $e) {
+            $id = 0;
         }
 
-        return ($global === 1);
+        if ($id <= 0) {
+            $id = (int)$fallback[$module];
+        }
+        $cache[$module] = $id;
+
+        return $id;
     }
 }
 
@@ -48,12 +86,33 @@ if (!function_exists('cb_user_akce_zapis')) {
             return false;
         }
 
-        $idAkce = (int)($payload['id_akce'] ?? 0);
-        if (!in_array($idAkce, [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 20], true)) {
+        if (!cb_user_akce_should_log($idUser)) {
             return false;
         }
 
-        $idKarta = (int)($payload['id_karta'] ?? 0);
+        $idTyp = (int)($payload['id_user_akce_typ'] ?? ($payload['id_akce'] ?? 0));
+        if ($idTyp <= 0 || $idTyp > 20) {
+            return false;
+        }
+
+        $module = trim((string)($payload['modul'] ?? ''));
+        if ($module === '') {
+            $module = (string)($GLOBALS['CURRENT_MODULE'] ?? '');
+        }
+        $idModul = (int)($payload['id_modul'] ?? 0);
+        if ($idModul <= 0) {
+            $idModul = cb_user_akce_id_modul($module);
+        }
+        if ($idModul <= 0) {
+            return false;
+        }
+
+        $objekt = trim((string)($payload['objekt'] ?? ''));
+        $idObjektu = (int)($payload['id_objektu'] ?? 0);
+        if ($objekt === '' && isset($payload['id_karta'])) {
+            $objekt = 'karta';
+            $idObjektu = (int)$payload['id_karta'];
+        }
         $vysledek = ((int)($payload['vysledek'] ?? 1) === 1) ? 1 : 0;
         $errMsg = trim((string)($payload['err_msg'] ?? ''));
 
@@ -76,9 +135,14 @@ if (!function_exists('cb_user_akce_zapis')) {
 
         $saved = db_user_akce_insert([
             'id_user' => $idUser,
-            'id_login' => (int)($_SESSION['cb_id_login'] ?? 0),
-            'id_karta' => ($idKarta > 0) ? $idKarta : null,
-            'id_akce' => $idAkce,
+            'id_login' => ((int)($_SESSION['cb_id_login'] ?? 0) > 0) ? (int)$_SESSION['cb_id_login'] : null,
+            'id_modul' => $idModul,
+            'id_user_akce_typ' => $idTyp,
+            'objekt' => $objekt,
+            'id_objektu' => ($idObjektu > 0) ? $idObjektu : null,
+            'pole' => (string)($payload['pole'] ?? ''),
+            'hodnota_old' => array_key_exists('hodnota_old', $payload) ? (string)$payload['hodnota_old'] : null,
+            'hodnota_new' => array_key_exists('hodnota_new', $payload) ? (string)$payload['hodnota_new'] : null,
             'detail_json' => json_encode($detail, JSON_UNESCAPED_UNICODE),
             'vysledek' => $vysledek,
             'err_msg' => $errMsg,
@@ -87,10 +151,10 @@ if (!function_exists('cb_user_akce_zapis')) {
         if ($saved && function_exists('cb_tmp_measure_detail_add')) {
             cb_tmp_measure_detail_add([
                 'typ' => 'ajax',
-                'nazev' => 'user_akce_' . $idAkce,
-                'id_karta' => ($idKarta > 0) ? $idKarta : null,
+                'nazev' => 'user_akce_' . $idTyp,
+                'id_karta' => ($objekt === 'karta' && $idObjektu > 0) ? $idObjektu : null,
                 'detail' => [
-                    'id_akce' => $idAkce,
+                    'id_user_akce_typ' => $idTyp,
                     'id_user' => $idUser,
                     'id_login' => (int)($_SESSION['cb_id_login'] ?? 0),
                     'vysledek' => $vysledek,

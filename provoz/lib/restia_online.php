@@ -15,8 +15,6 @@ require_once __DIR__ . '/../lib/restia_client.php';
 require_once __DIR__ . '/../db/db_api_restia.php';
 require_once __DIR__ . '/../../common/db/zapis_log_chyby.php';
 
-const CB_RESTIA_ONLINE_LIMIT = 100;
-
 if (!empty($_SESSION['login_ok']) && !cb_session_validate_after_login()) {
     cb_session_forget_auth();
 }

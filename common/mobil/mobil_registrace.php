@@ -298,7 +298,7 @@ $pairUserName = $tokenOk ? cb_pair_user_full_name((int)($pair['id_user'] ?? 0)) 
       <p class="modal-title modal-title-center">Registrace zařízení</p>
       <?php if ($vapidPublic === '') { ?>
         <p><strong>Chybí VAPID public key.</strong></p>
-        <p class="muted">Nastav konstantu <code>CB_VAPID_PUBLIC</code> v <code>lib/system.php</code>.</p>
+        <p class="muted">Nastav konstantu <code>CB_VAPID_PUBLIC</code> v <code>config/secrets.php</code>.</p>
       <?php } elseif (!$tokenOk) { ?>
         <p><strong>Neplatný nebo expirovaný odkaz.</strong></p>
         <p class="muted">Vraťte se na PC a vygenerujte nový QR kód pro registraci zařízení.</p>

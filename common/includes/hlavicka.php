@@ -158,10 +158,7 @@ if (!in_array($cbProdlevaMs, range(1000, 10000, 1000), true)) {
     $cbProdlevaMs = 1000;
 }
 
-if ($cbObdobiMode === 'dnes') {
-    $cbObdobiMode = 'vcera';
-}
-if (!in_array($cbObdobiMode, ['vcera', 'tyden', 'mesic', 'rok', 'manual'], true)) {
+if (!in_array($cbObdobiMode, ['dnes', 'vcera', 'tyden', 'mesic', 'rok', 'vse', 'manual'], true)) {
     $cbObdobiMode = 'manual';
 }
 $sessionOd = $normalizePeriodDateTime((string)($_SESSION['cb_obdobi_od'] ?? ''));
@@ -170,10 +167,7 @@ if ($sessionOd !== '' && $sessionDo !== '' && $sessionOd <= $cbObdobiMax && $ses
     $cbObdobiOd = $sessionOd;
     $cbObdobiDo = $sessionDo;
     $sessionMode = trim((string)($_SESSION['cb_obdobi_mode'] ?? 'manual'));
-    if ($sessionMode === 'dnes') {
-        $sessionMode = 'vcera';
-    }
-    if (in_array($sessionMode, ['vcera', 'tyden', 'mesic', 'rok', 'manual'], true)) {
+    if (in_array($sessionMode, ['dnes', 'vcera', 'tyden', 'mesic', 'rok', 'vse', 'manual'], true)) {
         $cbObdobiMode = $sessionMode;
     }
 }
@@ -183,7 +177,7 @@ if (in_array($userProdleva, range(1000, 10000, 1000), true)) {
     $cbProdlevaMs = $userProdleva;
 }
 
-if (in_array($cbObdobiMode, ['tyden', 'mesic', 'rok'], true)) {
+if (in_array($cbObdobiMode, ['dnes', 'tyden', 'mesic', 'rok', 'vse'], true)) {
     $cbObdobiDo = $cbObdobiMax;
 }
 
@@ -211,27 +205,11 @@ $cbLoginTotal = (int)($cbStats['total'] ?? 0);
 $cbLoginToday = (int)($cbStats['today'] ?? 0);
 $cbLoginStatsText = 'celkem ' . $cbLoginTotal . 'x / dnes ' . $cbLoginToday . 'x';
 
-$cbTimeoutMin = (int)($_SESSION['cb_timeout_min'] ?? 720);
-if ($cbTimeoutMin <= 0) {
-    $cbTimeoutMin = 20;
-}
 $cbStartTs = (int)($_SESSION['cb_session_start_ts'] ?? time());
-$cbLastTs = (int)($_SESSION['cb_last_activity_ts'] ?? time());
 $cbNowTs = time();
 if ($cbStartTs <= 0 || $cbStartTs > $cbNowTs) {
     $cbStartTs = $cbNowTs;
 }
-if ($cbLastTs <= 0 || $cbLastTs > $cbNowTs || $cbLastTs < $cbStartTs) {
-    $cbLastTs = $cbNowTs;
-}
-
-$cbRunMin = max(0, (int)floor(($cbNowTs - $cbStartTs) / 60));
-$cbIdleMin = max(0, (int)floor(($cbNowTs - $cbLastTs) / 60));
-$cbRemainMin = max(0, $cbTimeoutMin - $cbIdleMin);
-$cbSessionText = $cbRunMin . ' min';
-$cbRemainText = $cbRemainMin . ' min';
-$cbSessionComboText = $cbSessionText . '/' . $cbRemainText;
-$cbThermoPct = (int)round(min(100, max(0, ($cbTimeoutMin > 0 ? (($cbIdleMin / $cbTimeoutMin) * 100) : 0))));
 
 // Seznam pobocek pro vyber v hlavicce.
 $cbPobocky = [];

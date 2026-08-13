@@ -63,7 +63,8 @@ try {
             <?php endforeach; ?>
           </select>
         </label>
-        <div class="head_quick gap_4 displ_flex jc_konec">
+        <div class="head_quick gap_4 displ_grid">
+          <button type="button" class="head_pill txt_c cursor_ruka ram_ovladace bg_bila zaobleni_8 text_11" data-range="dnes">Dnes</button>
           <button type="button" class="head_pill txt_c cursor_ruka ram_ovladace bg_bila zaobleni_8 text_11" data-range="vcera">Včera</button>
           <button type="button" class="head_pill txt_c cursor_ruka ram_ovladace bg_bila zaobleni_8 text_11" data-range="tyden">Týden</button>
         </div>
@@ -79,9 +80,10 @@ try {
             <?php endforeach; ?>
           </select>
         </label>
-        <div class="head_quick gap_4 displ_flex jc_konec">
+        <div class="head_quick gap_4 displ_grid">
           <button type="button" class="head_pill txt_c cursor_ruka ram_ovladace bg_bila zaobleni_8 text_11" data-range="mesic">Měsíc</button>
           <button type="button" class="head_pill txt_c cursor_ruka ram_ovladace bg_bila zaobleni_8 text_11" data-range="rok">Rok</button>
+          <button type="button" class="head_pill txt_c cursor_ruka ram_ovladace bg_bila zaobleni_8 text_11" data-range="vse">Vše</button>
         </div>
       </div>
       <div class="head_interval_meter" aria-hidden="true">

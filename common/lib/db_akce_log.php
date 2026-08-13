@@ -100,7 +100,7 @@ if (!function_exists('cb_db_akce_log_id_akce')) {
             return 0;
         }
 
-        $idAkce = (int)($data['id_akce'] ?? 0);
+        $idAkce = (int)($data['id_user_akce_typ'] ?? ($data['id_akce'] ?? 0));
         return $idAkce > 0 ? $idAkce : 0;
     }
 }
