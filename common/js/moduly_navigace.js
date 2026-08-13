@@ -66,6 +66,12 @@
     }
   }
 
+  function setPageLoaderDetail(text) {
+    var detailNode = root.querySelector('.cb_page_loader_detail');
+    if (!(detailNode instanceof HTMLElement)) return;
+    detailNode.textContent = String(text || '').trim();
+  }
+
   function loaderText(moduleName, params) {
     var page = params instanceof URLSearchParams ? String(params.get('page') || '') : '';
     if (moduleName === 'provoz') {
@@ -93,6 +99,7 @@
     var html = ''
       + '<div class="cb_page_loader" role="status" aria-live="polite" aria-atomic="true">'
       + '<span class="cb_page_loader_text"></span>'
+      + '<span class="cb_page_loader_detail"></span>'
       + '<span class="cb_page_loader_time" data-cb-page-loader-time>0,0 s</span>'
       + '</div>';
 
@@ -253,6 +260,7 @@
     }
 
     if (moduleName === 'provoz' && params instanceof URLSearchParams && params.get('page') === 'denni_report') {
+      setPageLoaderDetail('Aktualizuji objednávky ...');
       fetchSmenyPlanState()
         .catch(function(){
           return false;
@@ -260,6 +268,7 @@
         .then(function(showSmenyLoader){
           return ensureRestiaBeforeProvoz(moduleName)
             .then(function(){
+              setPageLoaderDetail(showSmenyLoader ? 'Načítám směny ...' : 'Připravuji denní report ...');
               return fetchModule(showSmenyLoader);
             });
         })

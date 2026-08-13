@@ -69,7 +69,13 @@ if (!empty($_SESSION['login_ok']) && (isset($_GET['helpdesk_action']) || isset($
     exit;
 }
 
-if (!empty($_SESSION['login_ok']) && isset($_SERVER['HTTP_X_COMEBACK_ADMIN_PRAVA'])) {
+if (
+    !empty($_SESSION['login_ok'])
+    && (
+        isset($_SERVER['HTTP_X_COMEBACK_ADMIN_PRAVA'])
+        || isset($_SERVER['HTTP_X_COMEBACK_ADMIN_INDIVIDUAL'])
+    )
+) {
     cb_modul_nacti('administrace');
     exit;
 }
@@ -272,8 +278,14 @@ window.CB_ENDPOINT = <?= json_encode(cb_root_url(''), JSON_UNESCAPED_SLASHES | J
     $cbHelpdeskCssUrl = cb_root_url('helpdesk/hl_style/helpdesk.css') . '?v=' . (is_file($cbHelpdeskCssPath) ? (string)filemtime($cbHelpdeskCssPath) : '1');
     $cbAdministraceCssPath = __DIR__ . '/administrace/style/administrace.css';
     $cbAdministraceCssUrl = cb_root_url('administrace/style/administrace.css') . '?v=' . (is_file($cbAdministraceCssPath) ? (string)filemtime($cbAdministraceCssPath) : '1');
-    $cbAdministraceJsPath = __DIR__ . '/administrace/admin_js/prava_roli.js';
-    $cbAdministraceJsUrl = cb_root_url('administrace/admin_js/prava_roli.js') . '?v=' . (is_file($cbAdministraceJsPath) ? (string)filemtime($cbAdministraceJsPath) : '1');
+    $cbAdministracePravaSaveJsPath = __DIR__ . '/administrace/admin_js/admin_prava_roli_save.js';
+    $cbAdministracePravaSaveJsUrl = cb_root_url('administrace/admin_js/admin_prava_roli_save.js') . '?v=' . (is_file($cbAdministracePravaSaveJsPath) ? (string)filemtime($cbAdministracePravaSaveJsPath) : '1');
+    $cbAdministracePravaBlocksJsPath = __DIR__ . '/administrace/admin_js/admin_prava_roli_blocks.js';
+    $cbAdministracePravaBlocksJsUrl = cb_root_url('administrace/admin_js/admin_prava_roli_blocks.js') . '?v=' . (is_file($cbAdministracePravaBlocksJsPath) ? (string)filemtime($cbAdministracePravaBlocksJsPath) : '1');
+    $cbAdministraceIndividualSearchJsPath = __DIR__ . '/administrace/admin_js/admin_individualni_prava_search.js';
+    $cbAdministraceIndividualSearchJsUrl = cb_root_url('administrace/admin_js/admin_individualni_prava_search.js') . '?v=' . (is_file($cbAdministraceIndividualSearchJsPath) ? (string)filemtime($cbAdministraceIndividualSearchJsPath) : '1');
+    $cbAdministraceIndividualSaveJsPath = __DIR__ . '/administrace/admin_js/admin_individualni_prava_save.js';
+    $cbAdministraceIndividualSaveJsUrl = cb_root_url('administrace/admin_js/admin_individualni_prava_save.js') . '?v=' . (is_file($cbAdministraceIndividualSaveJsPath) ? (string)filemtime($cbAdministraceIndividualSaveJsPath) : '1');
     $cbLoaderCssPath = __DIR__ . '/common/style/loader.css';
     $cbLoaderCssUrl = cb_public_url('style/loader.css') . '?v=' . (is_file($cbLoaderCssPath) ? (string)filemtime($cbLoaderCssPath) : '1');
     $cbLoaderJsPath = __DIR__ . '/common/js/loader.js';

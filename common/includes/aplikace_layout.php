@@ -56,7 +56,10 @@ window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_
 <script src="<?= h(cb_asset_url('js/casovac_odhlaseni.js')) ?>"></script>
 <script src="<?= h($cbHrJsUrl) ?>"></script>
 <script src="<?= h(cb_root_url('helpdesk/hl_js/hl_helpdesk.js')) ?>"></script>
-<script src="<?= h($cbAdministraceJsUrl) ?>"></script>
+<script src="<?= h($cbAdministracePravaSaveJsUrl) ?>"></script>
+<script src="<?= h($cbAdministracePravaBlocksJsUrl) ?>"></script>
+<script src="<?= h($cbAdministraceIndividualSearchJsUrl) ?>"></script>
+<script src="<?= h($cbAdministraceIndividualSaveJsUrl) ?>"></script>
 <script>
 window.CB_MODULY_NAVIGACE = {
   shellUrl: <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,

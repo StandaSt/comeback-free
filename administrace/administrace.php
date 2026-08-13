@@ -12,8 +12,10 @@ require_once __DIR__ . '/../common/config/secrets.php';
 require_once __DIR__ . '/../common/lib/app.php';
 require_once __DIR__ . '/../common/lib/system.php';
 require_once __DIR__ . '/../common/lib/uloz_akci.php';
+require_once __DIR__ . '/admin_db/admin_prava_roli_db.php';
+require_once __DIR__ . '/admin_db/admin_individualni_prava_db.php';
+require_once __DIR__ . '/admin_includes/admin_individualni_prava_detail.php';
 require_once __DIR__ . '/admin_lib/admin_pages.php';
-require_once __DIR__ . '/admin_lib/prava_data.php';
 
 cb_session_guard_entry();
 
@@ -44,6 +46,67 @@ if ($adminRoleId !== 1) {
     </section>
     <?php
     return;
+}
+
+if (
+    ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
+    && (string)($_SERVER['HTTP_X_COMEBACK_ADMIN_INDIVIDUAL'] ?? '') === '1'
+) {
+    header('Content-Type: application/json; charset=utf-8');
+
+    try {
+        $action = (string)($_POST['action'] ?? '');
+        if ($action === 'search') {
+            $users = cb_admin_individualni_prava_hledej_uzivatele((string)($_POST['q'] ?? ''));
+            $detailHtml = '';
+            if (count($users) === 1) {
+                $detailHtml = cb_admin_individualni_prava_html(
+                    cb_admin_individualni_prava_data((int)$users[0]['id_user'])
+                );
+            }
+            echo json_encode(['ok' => true, 'users' => $users, 'detail_html' => $detailHtml], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        if ($action === 'detail') {
+            $detailHtml = cb_admin_individualni_prava_html(
+                cb_admin_individualni_prava_data((int)($_POST['id_user'] ?? 0))
+            );
+            echo json_encode(['ok' => true, 'detail_html' => $detailHtml], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        if ($action === 'save') {
+            $result = cb_admin_individualni_prava_uloz(
+                (int)($_POST['id_user'] ?? 0),
+                (int)($_POST['id_pravo'] ?? 0),
+                (int)($_POST['vyjimka'] ?? 0) === 1
+            );
+            cb_user_akce_zapis([
+                'id_user_akce_typ' => 14,
+                'modul' => 'administrace',
+                'objekt' => 'prava_vyjimky',
+                'id_objektu' => (int)($_POST['id_pravo'] ?? 0),
+                'pole' => 'povoleno',
+                'hodnota_new' => $result['vyjimka'] ? (string)$result['povoleno'] : '',
+                'vysledek' => 1,
+                'zdroj' => 'administrace',
+                'detail' => [
+                    'id_user' => (int)($_POST['id_user'] ?? 0),
+                    'id_pravo' => (int)($_POST['id_pravo'] ?? 0),
+                    'vyjimka' => $result['vyjimka'] ? 1 : 0,
+                ],
+            ]);
+            echo json_encode(['ok' => true, 'result' => $result], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        throw new RuntimeException('Neznámá akce.');
+    } catch (Throwable $e) {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'err' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    }
+    exit;
 }
 
 if (

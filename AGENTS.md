@@ -22,6 +22,7 @@ Při auditu, hledání chyb, duplicit a dead code ignoruj složky: `vendor/`, `_
 ## Přístup do DB
 Codex má permanentně povolený přístup do DB pro čtení struktury a obsahu. Pouze pro čtení.
 Přístupové údaje jsou v common/config/secrets.php
+Pro čtení DB použij mysql přes uživatele codex
 
 ## Projekt
 Tento projekt je IS, informační systém Comeback. Skládá se u 5 modulů které budou všechny postavené na stejné databázi.

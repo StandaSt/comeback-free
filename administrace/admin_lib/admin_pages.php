@@ -5,11 +5,11 @@ function cb_admin_pages(): array
 {
     return [
         'prava_roli' => [
-            'file' => __DIR__ . '/../admin_pages/prava_roli.php',
+            'file' => __DIR__ . '/../admin_pages/admin_prava_roli_page.php',
             'title' => 'Práva rolí',
         ],
         'individualni_prava' => [
-            'file' => __DIR__ . '/../admin_pages/individualni_prava.php',
+            'file' => __DIR__ . '/../admin_pages/admin_individualni_prava_page.php',
             'title' => 'Individuální práva uživatele',
         ],
         'uprava_profilu' => [

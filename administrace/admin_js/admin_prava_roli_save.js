@@ -1,4 +1,4 @@
-// admin_js/prava_roli.js
+// admin_js/admin_prava_roli_save.js
 'use strict';
 
 (function () {
@@ -15,7 +15,7 @@
 
     input.disabled = true;
 
-    fetch(endpoint(), {
+    return fetch(endpoint(), {
       method: 'POST',
       headers: {
         'X-Comeback-Admin-Prava': '1',
@@ -42,8 +42,18 @@
       })
       .finally(function () {
         input.disabled = false;
+        document.dispatchEvent(new CustomEvent('cb:admin-prava-saved', {
+          detail: {
+            idRole: String(input.getAttribute('data-id-role') || '0'),
+            idModul: String(input.getAttribute('data-id-modul') || '0')
+          }
+        }));
       });
   }
+
+  window.CB_ADMIN_PRAVA_SAVE = {
+    saveCheckbox: saveCheckbox
+  };
 
   document.addEventListener('change', function (event) {
     var input = event.target && event.target.closest ? event.target.closest('input[data-admin-pravo="1"]') : null;
