@@ -200,6 +200,69 @@
     reportCalcTimers.set(root, timer);
   }
 
+  function denniReportPpUrl(form) {
+    const rawUrl = form instanceof HTMLFormElement && form.action ? form.action : (w.CB_ENDPOINT || 'index.php');
+    const url = new URL(rawUrl, w.location.href);
+    url.searchParams.set('m', 'provoz');
+    url.searchParams.set('page', 'denni_report');
+    return url.toString();
+  }
+
+  function replacePpFromHtml(html) {
+    const template = document.createElement('template');
+    template.innerHTML = String(html || '').trim();
+    const nextPp = template.content.querySelector('.pp');
+    const currentPp = document.querySelector('.pp[data-module="provoz"]');
+    if (!(nextPp instanceof HTMLElement) || !(currentPp instanceof HTMLElement)) {
+      throw new Error('Obsah PP se nepodařilo načíst.');
+    }
+    currentPp.replaceWith(nextPp);
+    document.dispatchEvent(new CustomEvent('cb:main-swapped'));
+    return nextPp;
+  }
+
+  function reloadReportPp(root) {
+    const form = getForm(root);
+    if (!(form instanceof HTMLFormElement)) {
+      return Promise.reject(new Error('Formulář denního reportu nebyl nalezen.'));
+    }
+
+    const branchSelect = form.querySelector('[name="zr_id_pob"]');
+    const branchHidden = form.querySelector('input[name="id_pob"]');
+    if (branchSelect instanceof HTMLSelectElement && branchHidden instanceof HTMLInputElement) {
+      branchHidden.value = String(branchSelect.value || '');
+    }
+
+    const pp = form.closest('.pp');
+    if (pp instanceof HTMLElement) {
+      pp.classList.add('is-page-loading');
+      pp.setAttribute('aria-busy', 'true');
+    }
+    form.setAttribute('data-zr-pp-loading', '1');
+
+    const body = new FormData(form);
+    return fetch(denniReportPpUrl(form), {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'X-Comeback-PP-Only': '1',
+        'Accept': 'text/html'
+      },
+      body
+    }).then((res) => {
+      if (!res.ok) {
+        throw new Error('HTTP ' + res.status);
+      }
+      return res.text();
+    }).then(replacePpFromHtml).finally(() => {
+      form.removeAttribute('data-zr-pp-loading');
+      if (pp instanceof HTMLElement) {
+        pp.classList.remove('is-page-loading');
+        pp.removeAttribute('aria-busy');
+      }
+    });
+  }
+
   function formatDuration(totalSeconds) {
     const safeSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
     const hours = Math.floor(safeSeconds / 3600);
@@ -344,11 +407,9 @@
             if (editFinalInput instanceof HTMLInputElement) {
               editFinalInput.value = '0';
             }
-            if (form.requestSubmit) {
-              form.requestSubmit();
-            } else {
-              form.submit();
-            }
+            reloadReportPp(root).catch((err) => {
+              if (w.alert) w.alert(err && err.message ? err.message : 'Načtení reportu selhalo.');
+            });
             return;
           }
           button.textContent = 'Report uložen';
@@ -377,11 +438,9 @@
       if (editFinalInput instanceof HTMLInputElement) {
         editFinalInput.value = '1';
       }
-      if (form.requestSubmit) {
-        form.requestSubmit();
-      } else {
-        form.submit();
-      }
+      reloadReportPp(root).catch((err) => {
+        if (w.alert) w.alert(err && err.message ? err.message : 'Načtení reportu selhalo.');
+      });
     });
   }
 
@@ -611,6 +670,9 @@
 
     const form = root.querySelector('[data-zr-form]');
     if (form instanceof HTMLFormElement) {
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+      });
       form.addEventListener('input', () => {
         syncRequiredState(root);
         syncSubmitButton(root);
@@ -619,6 +681,12 @@
         syncRequiredState(root);
         syncSubmitButton(root);
         const target = event.target;
+        if (target instanceof HTMLSelectElement && target.getAttribute('data-zr-reload-pp') === '1') {
+          reloadReportPp(root).catch((err) => {
+            if (w.alert) w.alert(err && err.message ? err.message : 'Načtení reportu selhalo.');
+          });
+          return;
+        }
         if (!(target instanceof HTMLSelectElement)) return;
         const field = String(target.getAttribute('data-zr-field') || '');
         if (field !== 'oteviral' && field !== 'zaviral') return;

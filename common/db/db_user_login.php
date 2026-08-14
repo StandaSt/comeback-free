@@ -27,6 +27,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/db_user.php';
 require_once __DIR__ . '/db_user_role.php';
 require_once __DIR__ . '/db_user_slot.php';
+require_once __DIR__ . '/db_prava.php';
 
 require_once __DIR__ . '/db_login_zapis.php';
 require_once __DIR__ . '/db_login_blok_info.php';
@@ -71,6 +72,10 @@ if (!function_exists('cb_db_user_login')) {
 
             // D) sloty (aktuální)
             $slotChanges = db_user_slot_sync($conn, $idUser, $profile);
+
+            // D2) prava do session (podle efektivni role nastavene ve stavajici logice)
+            $idRole = (int)($_SESSION['cb_user']['id_role'] ?? 0);
+            cb_db_prava_nacti_do_session($conn, $idUser, $idRole);
 
             // E) login event (akce=1) + user_spy
             $idLogin = cb_db_insert_login_and_spy($conn, $idUser);

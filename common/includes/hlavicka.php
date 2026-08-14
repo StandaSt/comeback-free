@@ -281,7 +281,7 @@ if ($cbPobocky) {
 
 $cbHeadAktualizaceDat = '---';
 try {
-    $cbHeadAktualizaceDat = (new DateTimeImmutable((string)$cbObdobiMax))->format('j.n.Y H:i');
+    $cbHeadAktualizaceDat = (new DateTimeImmutable((string)$cbObdobiMax))->format('H:i:s');
 } catch (Throwable $e) {
     $cbHeadAktualizaceDat = '---';
 }
@@ -291,12 +291,19 @@ if (!in_array($cbCurrentModule, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', '
 }
 $cbHeaderPostUrl = cb_root_url('index.php');
 $cbProvozPostUrl = cb_root_url('index.php');
+$cbHeaderNow = new DateTimeImmutable('now', new DateTimeZone('Europe/Prague'));
+$cbHeaderWeekdays = ['neděle', 'pondělí', 'úterý', 'středa', 'čtvrtek', 'pátek', 'sobota'];
+$cbHeaderDateText = $cbHeaderWeekdays[(int)$cbHeaderNow->format('w')] . ' ' . $cbHeaderNow->format('j.n.Y');
+$cbHeaderTimeText = $cbHeaderNow->format('H:i:s');
 ?>
 <header class="blok_hlavicka sirka100">
 
     <?php require __DIR__ . '/hlavicka/head_logo.php'; ?>
-    <strong class="head_title">Comeback</strong>
-    <span class="head_subtitle">informační systém</span>
+    <div class="head_brand_time" aria-label="Aktuální datum a čas">
+      <span class="head_subtitle">informační systém</span>
+      <span class="head_date_today" data-cb-head-date><?= h($cbHeaderDateText) ?></span>
+      <time class="head_time_now" datetime="<?= h($cbHeaderNow->format(DateTimeInterface::ATOM)) ?>" data-cb-head-time><?= h($cbHeaderTimeText) ?></time>
+    </div>
 
     <?php if ($cbLoginOk): ?>
       <nav class="head_module_nav" aria-label="Moduly">
@@ -324,19 +331,46 @@ $cbProvozPostUrl = cb_root_url('index.php');
       <?php require __DIR__ . '/hlavicka/head_pobocka.php'; ?>
       <?php require __DIR__ . '/hlavicka/head_obdobi.php'; ?>
 
-      <div class="head_update" aria-label="Aktualizace dat">
-        <span class="head_update_icon" aria-hidden="true">⟳</span>
-        <span>
-          <span class="head_block_label">Aktualizace dat</span>
-          <strong class="head_update_value"><?= h($cbHeadAktualizaceDat) ?></strong>
-        </span>
-      </div>
+      <?php if ($cbCurrentModule === 'provoz'): ?>
+        <div class="head_update" aria-label="Aktualizace dat" data-cb-head-update="1">
+          <span class="head_update_icon" aria-hidden="true">⟳</span>
+          <span>
+            <span class="head_block_label">Aktualizace dat</span>
+            <strong class="head_update_value"><?= h($cbHeadAktualizaceDat) ?></strong>
+          </span>
+        </div>
+      <?php endif; ?>
 
     <?php else: ?>
       <div class="head_guest ram_hlavicka bg_bila zaobleni_12"></div>
     <?php endif; ?>
 
 </header>
+<script>
+(function () {
+  var dateBox = document.querySelector('[data-cb-head-date]');
+  var timeBox = document.querySelector('[data-cb-head-time]');
+  var days = ['neděle', 'pondělí', 'úterý', 'středa', 'čtvrtek', 'pátek', 'sobota'];
+
+  function pad(value) {
+    return String(value).padStart(2, '0');
+  }
+
+  function refreshHeaderClock() {
+    var now = new Date();
+    if (dateBox instanceof HTMLElement) {
+      dateBox.textContent = days[now.getDay()] + ' ' + now.getDate() + '.' + (now.getMonth() + 1) + '.' + now.getFullYear();
+    }
+    if (timeBox instanceof HTMLElement) {
+      timeBox.textContent = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+      timeBox.setAttribute('datetime', now.toISOString());
+    }
+  }
+
+  refreshHeaderClock();
+  window.setInterval(refreshHeaderClock, 1000);
+})();
+</script>
 <?php if ($cbLoginOk): ?>
   <script>
   (function () {

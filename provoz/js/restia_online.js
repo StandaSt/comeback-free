@@ -9,17 +9,34 @@
     return String(w.location.href || (w.CB_ENDPOINT || 'index.php'));
   }
 
+  function readJson(res) {
+    if (!res.ok) {
+      throw new Error('HTTP ' + res.status);
+    }
+
+    const contentType = String(res.headers.get('Content-Type') || '').toLowerCase();
+    return res.text().then((text) => {
+      const trimmed = String(text || '').trim();
+      if (trimmed === '') {
+        throw new Error('Prázdná odpověď serveru.');
+      }
+      if (contentType.indexOf('application/json') === -1 && trimmed.charAt(0) === '<') {
+        throw new Error('Session pravděpodobně vypršela. Obnovte stránku a přihlaste se znovu.');
+      }
+      try {
+        return JSON.parse(trimmed);
+      } catch (err) {
+        throw new Error('Neplatná JSON odpověď serveru.');
+      }
+    });
+  }
+
   function fetchState() {
     return fetch(requestUrl(), {
       method: 'GET',
       headers: { 'X-Comeback-Restia-State': '1' },
       credentials: 'same-origin'
-    }).then((res) => {
-      if (!res.ok) {
-        throw new Error('HTTP ' + res.status);
-      }
-      return res.json();
-    });
+    }).then(readJson);
   }
 
   function triggerCheck(options) {
@@ -47,12 +64,7 @@
       method: 'POST',
       headers: headers,
       credentials: 'same-origin'
-    }).then((res) => {
-      if (!res.ok) {
-        throw new Error('HTTP ' + res.status);
-      }
-      return res.json();
-    });
+    }).then(readJson);
   }
 
   function waitForFinish(options) {

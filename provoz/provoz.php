@@ -49,6 +49,8 @@ foreach (array_keys($_SERVER) as $cbServerKey) {
         break;
     }
 }
+$cbPpOnly = isset($_SERVER['HTTP_X_COMEBACK_PP_ONLY'])
+    && (string)$_SERVER['HTTP_X_COMEBACK_PP_ONLY'] === '1';
 
 if (empty($_SESSION['login_ok'])) {
     if ($cbHasComebackHeader) {
@@ -174,6 +176,23 @@ if (!empty($_SESSION['login_ok']) && !$cbSystemLocked && !$cbHasComebackHeader &
     } catch (Throwable $e) {
         $cbStartupRestiaLoader = false;
     }
+}
+
+if ($cbPpOnly && !empty($_SESSION['login_ok']) && !$cbSystemLocked) {
+    header('Content-Type: text/html; charset=utf-8');
+    ?>
+    <section class="pp" data-module="provoz" data-page="<?= h($cbPage) ?>">
+        <header class="pp_header">
+            <h1><?= h($cbProvozPageTitle) ?></h1>
+        </header>
+        <?php
+        if ($cbPageExists) {
+            require $file;
+        }
+        ?>
+    </section>
+    <?php
+    exit;
 }
 ?>
 

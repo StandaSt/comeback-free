@@ -252,11 +252,11 @@ main{
   grid-area:hlavicka;
   box-sizing:border-box;
   display:grid;
-  grid-template-columns:70px 130px 270px 112px 405px 150px;
+  grid-template-columns:70px 130px 270px 112px 405px 160px;
   grid-template-rows:26px 26px;
   grid-template-areas:
-    "logo title modules todo branch update"
-    "logo subtitle modules helpdesk period update";
+    "logo brand modules todo branch update"
+    "logo brand modules helpdesk period update";
   align-items:stretch;
   column-gap:4px;
   row-gap:3px;
@@ -276,8 +276,10 @@ main{
 
 .head_logo,
 .head_logo_img,
-.head_title,
+.head_brand_time,
 .head_subtitle,
+.head_date_today,
+.head_time_now,
 .head_module_nav,
 .head_module_link,
 .head_task_btn,
@@ -396,25 +398,34 @@ main{
   object-fit:contain;
 }
 
-.head_title{
-  grid-area:title;
-  align-self:end;
-  display:block;
+.head_brand_time{
+  grid-area:brand;
+  align-self:stretch;
+  display:grid;
+  grid-template-rows:17px 17px 17px;
+  row-gap:2px;
   min-width:0;
-  color:var(--cb-text-main);
-  font-size:24px;
-  line-height:1.1;
-  font-weight:400;
 }
 
 .head_subtitle{
-  grid-area:subtitle;
-  align-self:start;
   display:block;
   min-width:0;
-  color:var(--cb-text-muted);
+  color:var(--cb-module-accent);
   font-size:14px;
   line-height:1.2;
+  font-weight:700;
+}
+
+.head_date_today,
+.head_time_now{
+  display:block;
+  min-width:0;
+  color:#404040;
+  font-size:13px;
+  line-height:1.2;
+  font-weight:400;
+  text-align:center;
+  white-space:nowrap;
 }
 
 /* ===== Rozmisteni ===== */

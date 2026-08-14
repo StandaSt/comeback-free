@@ -48,6 +48,14 @@
   line-height:1;
 }
 
+.cb_click_blocker{
+  position:fixed;
+  inset:0;
+  z-index:11000;
+  background:transparent;
+  cursor:wait;
+}
+
 @keyframes cb_loader_pulse{
   0%, 100%{
     opacity:.78;

@@ -41,6 +41,7 @@ ini_set('session.use_only_cookies', '1');
 ini_set('session.use_strict_mode', '1');
 ini_set('session.cookie_httponly', '1');
 ini_set('session.cookie_samesite', 'Lax');
+ini_set('session.gc_maxlifetime', (string)(12 * 60 * 60));
 
 $host = strtolower((string)($_SERVER['HTTP_HOST'] ?? ''));
 $host = preg_replace('/:\d+$/', '', $host) ?? $host;

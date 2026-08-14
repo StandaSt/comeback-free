@@ -89,6 +89,7 @@ if (!function_exists('cb_session_forget_auth')) {
         unset($_SESSION['cb_token']);
         unset($_SESSION['cb_user_profile']);
         unset($_SESSION['cb_user_branches']);
+        unset($_SESSION['prava']);
         unset($_SESSION['cb_id_login']);
         unset($_SESSION['cb_login_info']);
         unset($_SESSION['cb_timeout_min']);

@@ -100,6 +100,7 @@ if (!empty($_SESSION['login_ok']) && isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODUL
 
     header('Content-Type: text/html; charset=utf-8');
 
+    $GLOBALS['CURRENT_MODULE'] = $cbShellModule;
     require __DIR__ . '/common/includes/hlavicka.php';
     cb_modul_nacti($cbShellModule);
     exit;

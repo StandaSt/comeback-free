@@ -42,6 +42,7 @@ if (!function_exists('db')) {
 require_once __DIR__ . '/db_akce_log.php';
 require_once __DIR__ . '/sesn_kontrola.php';
 require_once __DIR__ . '/sesn_regenerate.php';
+require_once __DIR__ . '/prava.php';
 
 // ====== PROSTREDI ======
 $HOST = strtolower($_SERVER['HTTP_HOST'] ?? '');

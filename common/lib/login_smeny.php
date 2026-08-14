@@ -253,6 +253,7 @@ try {
     unset($_SESSION['cb_token']);
     unset($_SESSION['cb_user_profile']);
     unset($_SESSION['cb_user_branches']);
+    unset($_SESSION['prava']);
     unset($_SESSION['cb_2fa_token']);
     unset($_SESSION['cb_auth_ok']);
     unset($_SESSION['cb_system']);

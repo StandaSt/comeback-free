@@ -64,7 +64,7 @@ window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_
 window.CB_MODULY_NAVIGACE = {
   shellUrl: <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,
   publicShellUrl: <?= json_encode($cbPublicShellUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,
-  activeMainModule: <?= json_encode($cbInitialModule === 'helpdesk' ? ($_SESSION['cb_helpdesk_source_module'] ?? 'provoz') : $cbInitialModule, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>
+  activeMainModule: <?= json_encode($cbInitialModule, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>
 };
 </script>
 <script src="<?= h($cbModulyNavigaceJsUrl) ?>"></script>

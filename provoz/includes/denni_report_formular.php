@@ -127,7 +127,7 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
                     <span class="text_tucny text_14"><?= h($singleAllowedBranchName) ?></span>
                     <input type="hidden" name="zr_id_pob" value="<?= h((string)$reportBranchId) ?>">
                   <?php else: ?>
-                    <select class="zr_intro_select" name="zr_id_pob" onchange="if(this.form){this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit();}">
+                    <select class="zr_intro_select" name="zr_id_pob" data-zr-reload-pp="1">
                       <option value=""><?= h('Vyber pobočku') ?></option>
                       <?php foreach ($allowedBranches as $branchId => $allowedBranchName): ?>
                         <option value="<?= h((string)$branchId) ?>"<?= (int)$branchId === $reportBranchId ? ' selected' : '' ?>><?= h((string)$allowedBranchName) ?></option>
@@ -140,7 +140,7 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
               <tr>
                 <th class="zr_intro_label zr_req_label txt_l" data-zr-required-label="datum">Datum</th>
                 <td>
-                  <select class="zr_intro_select" name="datum_reportu" data-zr-date data-zr-required="datum" onchange="if(this.form){this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit();}">
+                  <select class="zr_intro_select" name="datum_reportu" data-zr-date data-zr-required="datum" data-zr-reload-pp="1">
                     <?php foreach (($workdayOptions ?? []) as $dayOption): ?>
                       <option value="<?= h((string)$dayOption['value']) ?>"<?= ((string)$dayOption['value'] === (string)$reportDate) ? ' selected' : '' ?><?= !empty($dayOption['missing']) ? ' style="color:#c62828;"' : '' ?>><?= h((string)$dayOption['label']) ?></option>
                     <?php endforeach; ?>
@@ -173,27 +173,27 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
             <tbody>
               <tr>
                 <th class="zr_req_label txt_l" data-zr-required-label="pokladna_hotovost">Hotovost</th>
-                <th class="zr_req_label txt_l" data-zr-required-label="pokladna_terminal">Terminal</th>
+                <th class="zr_req_label txt_l" data-zr-required-label="pokladna_terminal">Terminál</th>
                 <th class="zr_req_label txt_l" data-zr-required-label="pokladna_stravenky">Stravenky</th>
-                <th class="txt_l">Benzín</th>
+                <th class="txt_l">Suroviny</th>
               </tr>
               <tr>
                 <td><input class="zr_money_input" type="text" inputmode="numeric" name="pokladna_hotovost" value="<?= h($cashData['hotovost']) ?>" data-zr-field="pokladna_hotovost" data-zr-money="int" data-zr-required="pokladna_hotovost"<?= $zrEditableReadonlyAttr . $zrEditableDisabledAttr ?>></td>
                 <td><input class="zr_money_input" type="text" inputmode="decimal" name="pokladna_terminal" value="<?= h($cashData['terminal']) ?>" data-zr-field="pokladna_terminal" data-zr-money="decimal" data-zr-required="pokladna_terminal"<?= $zrEditableReadonlyAttr . $zrEditableDisabledAttr ?>></td>
                 <td><input class="zr_money_input" type="text" inputmode="numeric" name="pokladna_stravenky" value="<?= h($cashData['stravenky']) ?>" data-zr-field="pokladna_stravenky" data-zr-money="int" data-zr-required="pokladna_stravenky"<?= $zrEditableReadonlyAttr . $zrEditableDisabledAttr ?>></td>
-                <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_benzin" value="<?= h($cashData['vydaje_benzin']) ?>" data-zr-field="vydaje_benzin" data-zr-money="int" data-zr-required="vydaje_benzin"<?= $zrEditableReadonlyAttr . $zrEditableDisabledAttr ?>></td>
-              </tr>
-              <tr>
-                <th class="txt_l">Auta</th>
-                <th class="txt_l">Suroviny</th>
-                <th class="txt_l">Ostatní</th>
-                <th class="txt_l">PHM-soukr.</th>
-              </tr>
-              <tr>
-                <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_auta" value="<?= h($cashData['vydaje_auta']) ?>" data-zr-field="vydaje_auta" data-zr-money="int" data-zr-required="vydaje_auta"<?= $zrEditableReadonlyAttr . $zrEditableDisabledAttr ?>></td>
                 <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_suroviny" value="<?= h($cashData['vydaje_suroviny']) ?>" data-zr-field="vydaje_suroviny" data-zr-money="int" data-zr-required="vydaje_suroviny"<?= $zrEditableReadonlyAttr . $zrEditableDisabledAttr ?>></td>
-                <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_ostatni" value="<?= h($cashData['vydaje_ostatni']) ?>" data-zr-field="vydaje_ostatni" data-zr-money="int" data-zr-required="vydaje_ostatni"<?= $zrEditableReadonlyAttr . $zrEditableDisabledAttr ?>></td>
+              </tr>
+              <tr>
+                <th class="txt_l">PHM firemní auta</th>
+                <th class="txt_l">PHM výroba</th>
+                <th class="txt_l">PHM soukromé</th>
+                <th class="txt_l">Ostatní</th>
+              </tr>
+              <tr>
+                <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_benzin" value="<?= h($cashData['vydaje_benzin']) ?>" data-zr-field="vydaje_benzin" data-zr-money="int" data-zr-required="vydaje_benzin"<?= $zrEditableReadonlyAttr . $zrEditableDisabledAttr ?>></td>
+                <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_auta" value="<?= h($cashData['vydaje_auta']) ?>" data-zr-field="vydaje_auta" data-zr-money="int" data-zr-required="vydaje_auta"<?= $zrEditableReadonlyAttr . $zrEditableDisabledAttr ?>></td>
                 <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_phm_soukrome" value="<?= h($cashData['vydaje_phm_soukrome']) ?>" data-zr-field="vydaje_phm_soukrome" data-zr-money="int" data-zr-required="vydaje_phm_soukrome" readonly<?= $zrEditableDisabledAttr ?>></td>
+                <td><input class="zr_money_input" type="text" inputmode="numeric" name="vydaje_ostatni" value="<?= h($cashData['vydaje_ostatni']) ?>" data-zr-field="vydaje_ostatni" data-zr-money="int" data-zr-required="vydaje_ostatni"<?= $zrEditableReadonlyAttr . $zrEditableDisabledAttr ?>></td>
               </tr>
             </tbody>
           </table>

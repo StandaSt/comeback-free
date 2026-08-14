@@ -7,6 +7,87 @@
   var publicShellUrl = String(config.publicShellUrl || '');
   var activeMainModule = String(config.activeMainModule || 'provoz');
   var povoleneModuly = ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'];
+  var menuDefs = {
+    provoz: {
+      title: 'Provoz',
+      aria: 'Menu Provozu',
+      key: 'page',
+      defaultPage: 'prehled',
+      items: [
+        ['prehled', 'Přehled'],
+        ['denni_report', 'Denní report'],
+        ['objednavky', 'Objednávky']
+      ]
+    },
+    hr: {
+      title: 'Personalistika',
+      aria: 'Menu personalistiky',
+      key: 'page',
+      defaultPage: 'prehled',
+      items: [
+        ['prehled', 'Přehled'],
+        ['nabor', 'Nábor'],
+        ['zamestnanci', 'Zaměstnanci'],
+        ['pozadavky', 'Požadavky'],
+        ['pracovni_pomery', 'Pracovní poměry'],
+        ['dokumenty', 'Dokumenty'],
+        ['skoleni', 'Školení'],
+        ['prohlidky', 'Lékařské prohlídky'],
+        ['dovolene', 'Dovolené'],
+        ['reporty', 'Reporty']
+      ]
+    },
+    smeny: {
+      title: 'Směny',
+      aria: 'Menu směn',
+      key: 'page',
+      defaultPage: 'prehled',
+      items: [
+        ['prehled', 'Přehled'],
+        ['pozadavky', 'Požadavky'],
+        ['hodnoceni', 'Hodnocení'],
+        ['me_smeny', 'Mé směny', ['Aktuální týden', 'Týden + 1', 'Týden + 2']],
+        ['planovani_smen', 'Plánování směn', ['Aktuální týden', 'Týden + 1']],
+        ['sablony', 'Šablony'],
+        ['naplanovane_smeny', 'Naplánované směny', ['Aktuální týden', 'Týden + 1', 'Týden + 2']],
+        ['zadane_pozadavky', 'Zadané požadavky', ['Aktuální týden', 'Týden + 1', 'Týden + 2', 'Historie']],
+        ['administrace', 'Administrace']
+      ]
+    },
+    ukoly: {
+      title: 'Úkoly-požadavky',
+      aria: 'Menu úkolů',
+      key: 'page',
+      defaultPage: 'prehled',
+      items: [
+        ['prehled', 'Přehled']
+      ]
+    },
+    helpdesk: {
+      title: 'HelpDesk',
+      aria: 'HelpDesk menu',
+      key: 'hd',
+      defaultPage: 'all',
+      items: [
+        ['all', 'Přehled'],
+        ['new-ticket', 'Nový tiket'],
+        ['mine', 'Moje tikety'],
+        ['watched', 'Sledované'],
+        ['closed', 'Uzavřené'],
+        ['admin', 'Admin']
+      ]
+    },
+    administrace: {
+      title: 'Administrace',
+      aria: 'Menu administrace',
+      key: 'page',
+      defaultPage: 'prava_roli',
+      items: [
+        ['prava_roli', 'Práva rolí'],
+        ['individualni_prava', 'Individuální práva uživatele']
+      ]
+    }
+  };
 
   window.CB_ACTIVE_MAIN_MODULE = activeMainModule;
   if (!root) return;
@@ -53,6 +134,26 @@
     }
     stopPageLoaderTimer();
     root.innerHTML = '<div class="cb-module-load-error">Modul se nepodařilo načíst: ' + String(error.message || error) + '</div>';
+  }
+
+  function clickBlocker() {
+    var blocker = document.querySelector('[data-cb-click-blocker="1"]');
+    if (blocker instanceof HTMLElement) {
+      return blocker;
+    }
+
+    blocker = document.createElement('div');
+    blocker.className = 'cb_click_blocker';
+    blocker.setAttribute('data-cb-click-blocker', '1');
+    blocker.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(blocker);
+    return blocker;
+  }
+
+  function setClickBlocked(blocked) {
+    var blocker = clickBlocker();
+    blocker.hidden = !blocked;
+    document.body.classList.toggle('is-module-loading', blocked);
   }
 
   function formatElapsed(ms) {
@@ -159,13 +260,139 @@
   }
 
   function setActive(moduleName){
-    if (moduleName === 'helpdesk') return;
-
     var links = Array.prototype.slice.call(document.querySelectorAll('[data-cb-module-link="1"]'));
     links.forEach(function(link){
       var active = link.getAttribute('data-cb-module') === moduleName;
       link.classList.toggle('is-active', active);
     });
+  }
+
+  function hideHeaderUpdate() {
+    var box = root.querySelector('[data-cb-head-update="1"]');
+    if (box instanceof HTMLElement) {
+      box.hidden = true;
+    }
+  }
+
+  function moduleUrl(moduleName, pageKey, pageValue) {
+    var url = new URL(publicShellUrl || shellUrl || window.location.href, window.location.href);
+    url.search = '';
+    url.searchParams.set('m', moduleName);
+    if (pageKey && pageValue) {
+      url.searchParams.set(pageKey, pageValue);
+    }
+    return url.pathname + url.search;
+  }
+
+  function currentMenuPage(def, params) {
+    if (!(params instanceof URLSearchParams)) {
+      return def.defaultPage;
+    }
+    return String(params.get(def.key) || params.get('page') || def.defaultPage);
+  }
+
+  function updateMenuBottom(bottom, moduleName) {
+    if (!(bottom instanceof HTMLElement)) return bottom;
+    var themeInput = bottom.querySelector('input[name="cb_theme_module"]');
+    if (themeInput instanceof HTMLInputElement) {
+      themeInput.value = moduleName;
+    }
+    var profileLink = bottom.querySelector('.blok_menu_user_profile');
+    if (profileLink instanceof HTMLAnchorElement) {
+      var profileKey = moduleName === 'helpdesk' ? 'hd' : 'page';
+      profileLink.href = moduleUrl(moduleName, profileKey, 'uprava_profilu');
+    }
+    var adminLink = bottom.querySelector('[data-cb-module-link="1"][data-cb-module="administrace"]');
+    if (adminLink instanceof HTMLElement) {
+      var adminList = adminLink.closest('.blok_menu_list');
+      if (adminList instanceof HTMLElement) {
+        adminList.style.display = moduleName === 'administrace' ? 'none' : '';
+      }
+    }
+    return bottom;
+  }
+
+  function renderImmediateMenu(moduleName, params) {
+    var def = menuDefs[moduleName];
+    if (!def) return;
+
+    var oldMenu = root.querySelector('.blok_menu');
+    var oldBottom = oldMenu ? oldMenu.querySelector('.blok_menu_bottom') : null;
+    var bottom = oldBottom instanceof HTMLElement ? oldBottom.cloneNode(true) : document.createElement('div');
+    bottom.classList.add('blok_menu_bottom');
+    updateMenuBottom(bottom, moduleName);
+
+    var nav = document.createElement('nav');
+    nav.className = 'blok_menu';
+    nav.setAttribute('aria-label', def.aria);
+
+    var title = document.createElement('h2');
+    title.className = 'blok_menu_title';
+    title.textContent = def.title;
+    nav.appendChild(title);
+
+    var list = document.createElement('ul');
+    list.className = 'blok_menu_list';
+    var activePage = currentMenuPage(def, params);
+
+    def.items.forEach(function(itemDef){
+      var page = String(itemDef[0] || '');
+      var label = String(itemDef[1] || '');
+      var children = Array.isArray(itemDef[2]) ? itemDef[2] : [];
+      if (!page || !label) return;
+
+      var item = document.createElement('li');
+      item.className = 'blok_menu_item';
+
+      var link = document.createElement('a');
+      link.className = 'blok_menu_btn' + (page === activePage ? ' is-active' : '');
+      link.href = moduleUrl(moduleName, def.key, page);
+
+      var labelNode = document.createElement('span');
+      labelNode.textContent = label;
+      link.appendChild(labelNode);
+
+      if (children.length > 0) {
+        var chev = document.createElement('span');
+        chev.className = 'blok_menu_chev';
+        chev.setAttribute('aria-hidden', 'true');
+        chev.textContent = '⌄';
+        link.appendChild(chev);
+      }
+
+      item.appendChild(link);
+
+      if (children.length > 0) {
+        var submenu = document.createElement('ul');
+        submenu.className = 'blok_submenu';
+        children.forEach(function(childLabel){
+          var childItem = document.createElement('li');
+          var childButton = document.createElement('button');
+          childButton.type = 'button';
+          childButton.className = 'blok_submenu_btn';
+          childButton.textContent = String(childLabel || '');
+          childItem.appendChild(childButton);
+          submenu.appendChild(childItem);
+        });
+        item.appendChild(submenu);
+      }
+
+      list.appendChild(item);
+    });
+
+    nav.appendChild(list);
+    nav.appendChild(bottom);
+
+    if (oldMenu instanceof HTMLElement) {
+      oldMenu.replaceWith(nav);
+    } else {
+      var pp = root.querySelector('.pp');
+      if (pp instanceof HTMLElement) {
+        root.insertBefore(nav, pp);
+      } else {
+        root.appendChild(nav);
+      }
+    }
   }
 
   function setClickedMenuActive(link) {
@@ -188,11 +415,9 @@
   }
 
   function setRootModule(moduleName){
-    if (moduleName !== 'helpdesk') {
-      activeMainModule = moduleName;
-      window.CB_ACTIVE_MAIN_MODULE = activeMainModule;
-    }
-    var visualModule = moduleName === 'helpdesk' ? 'helpdesk' : activeMainModule;
+    activeMainModule = moduleName;
+    window.CB_ACTIVE_MAIN_MODULE = activeMainModule;
+    var visualModule = activeMainModule;
     root.classList.remove('cb-context--provoz', 'cb-context--hr', 'cb-context--smeny', 'cb-context--ukoly', 'cb-context--helpdesk', 'cb-context--administrace');
     root.classList.add('cb-context--' + visualModule);
     document.body.classList.remove('cb-context--provoz', 'cb-context--hr', 'cb-context--smeny', 'cb-context--ukoly', 'cb-context--helpdesk', 'cb-context--administrace');
@@ -206,7 +431,13 @@
     if (pushState && requestedKey === currentShellKey) {
       return;
     }
+    var sourceMainModule = activeMainModule;
     moduleLoadRunning = true;
+    setClickBlocked(true);
+    setRootModule(moduleName);
+    setActive(moduleName);
+    hideHeaderUpdate();
+    renderImmediateMenu(moduleName, params);
     showPageLoader(moduleName, params);
 
     var body = new URLSearchParams();
@@ -219,8 +450,11 @@
       });
     }
     if (moduleName === 'helpdesk') {
-      body.set('cb_helpdesk_source_module', activeMainModule);
-      window.CB_HELPDESK_SOURCE_MODULE = activeMainModule;
+      if (['provoz', 'hr', 'smeny', 'ukoly'].indexOf(sourceMainModule) === -1) {
+        sourceMainModule = 'provoz';
+      }
+      body.set('cb_helpdesk_source_module', sourceMainModule);
+      window.CB_HELPDESK_SOURCE_MODULE = sourceMainModule;
     }
     function fetchModule(showSmenyLoader){
       return fetch(shellUrl, {
@@ -275,11 +509,13 @@
         .catch(showModuleError)
         .finally(function(){
           moduleLoadRunning = false;
+          setClickBlocked(false);
         });
       return;
     }
 
     if (moduleName === 'provoz') {
+      setPageLoaderDetail('Aktualizuji objednávky ...');
       ensureRestiaBeforeProvoz(moduleName)
         .then(function(){
           return fetchModule(false);
@@ -287,6 +523,7 @@
         .catch(showModuleError)
         .finally(function(){
           moduleLoadRunning = false;
+          setClickBlocked(false);
         });
       return;
     }
@@ -295,6 +532,7 @@
       .catch(showModuleError)
       .finally(function(){
         moduleLoadRunning = false;
+        setClickBlocked(false);
       });
   }
 
@@ -308,6 +546,9 @@
     if (!moduleName) return;
 
     event.preventDefault();
+    if (moduleName === activeMainModule) {
+      return;
+    }
     setClickedMenuActive(link);
     var params = null;
     try {
