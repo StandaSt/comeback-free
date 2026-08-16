@@ -16,6 +16,10 @@ function cb_provoz_pages(): array
             'file' => __DIR__ . '/../pages/objednavky.php',
             'title' => 'Objednávky',
         ],
+        'prehled_hodin' => [
+            'file' => __DIR__ . '/../pages/prehled_hodin.php',
+            'title' => 'Přehled hodin',
+        ],
         'uprava_profilu' => [
             'file' => __DIR__ . '/../../common/pages/uprava_profilu.php',
             'title' => 'Úprava profilu',

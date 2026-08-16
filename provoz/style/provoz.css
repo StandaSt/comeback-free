@@ -959,3 +959,138 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   opacity:.45;
   pointer-events:none;
 }
+
+/* Prehled hodin. */
+.provoz_prehled_hodin_page{
+  min-width:0;
+  color:var(--cb-text-main);
+}
+
+.provoz_prehled_hodin_page form{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  min-width:0;
+}
+
+.provoz_prehled_hodin_page .card-max-summary{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  min-height:32px;
+  padding:8px 10px;
+  border:1px solid var(--cb-border);
+  border-radius:8px;
+  background:var(--cb-bg-panel);
+}
+
+.provoz_prehled_hodin_page .table-wrap{
+  width:100%;
+  overflow:auto;
+  border:1px solid var(--cb-border);
+  border-radius:8px;
+  background:var(--cb-bg-panel);
+}
+
+.provoz_prehled_hodin_page .card-max-table{
+  width:100%;
+  min-width:980px;
+  border-collapse:collapse;
+  table-layout:fixed;
+  background:var(--cb-bg-panel);
+}
+
+.provoz_prehled_hodin_page .card-max-table th,
+.provoz_prehled_hodin_page .card-max-table td{
+  padding:7px 8px;
+  border-bottom:1px solid var(--cb-border-soft);
+  color:var(--cb-text-main);
+  font-size:12px;
+  line-height:1.2;
+  text-align:right;
+  vertical-align:middle;
+}
+
+.provoz_prehled_hodin_page .card-max-table thead th{
+  background:var(--cb-bg-control);
+  font-weight:700;
+}
+
+.provoz_prehled_hodin_page .filter-row th{
+  padding:5px 6px;
+}
+
+.provoz_prehled_hodin_page .filter-input{
+  width:100%;
+  height:26px;
+  padding:3px 6px;
+  border:1px solid var(--cb-border);
+  border-radius:6px;
+  background:var(--cb-bg-control);
+  color:var(--cb-text-main);
+  font-size:12px;
+}
+
+.provoz_prehled_hodin_page .filter-reset-btn,
+.provoz_prehled_hodin_page .th-sort-link,
+.provoz_prehled_hodin_page .icon-btn{
+  color:var(--cb-text-main);
+  text-decoration:none;
+}
+
+.provoz_prehled_hodin_page .th-sort-link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:4px;
+}
+
+.provoz_prehled_hodin_page .filter-reset-btn:hover,
+.provoz_prehled_hodin_page .th-sort-link:hover,
+.provoz_prehled_hodin_page .icon-btn:hover{
+  color:var(--clr_modra_6);
+}
+
+.provoz_prehled_hodin_page .card-max-pagination{
+  display:grid;
+  grid-template-columns:minmax(160px, 1fr) auto minmax(160px, 1fr);
+  align-items:center;
+  gap:12px;
+  padding:8px 10px;
+  border:1px solid var(--cb-border);
+  border-radius:8px;
+  background:var(--cb-bg-panel);
+  color:var(--cb-text-muted);
+  font-size:12px;
+}
+
+.provoz_prehled_hodin_page .pagination-icon{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+}
+
+.provoz_prehled_hodin_page .icon-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:26px;
+  height:26px;
+  padding:0 7px;
+  border:1px solid var(--cb-border);
+  border-radius:6px;
+  background:var(--cb-bg-control);
+}
+
+.provoz_prehled_hodin_page .icon-btn.disabled{
+  opacity:.45;
+  pointer-events:none;
+}
+
+.provoz_prehled_hodin_page .page-current{
+  border-color:var(--clr_modra_6);
+  color:var(--clr_modra_6);
+  font-weight:700;
+}

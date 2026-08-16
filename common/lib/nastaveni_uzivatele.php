@@ -14,6 +14,10 @@ function cb_nastaveni_uzivatele_vyrid_post(): void
     if (isset($_SERVER['HTTP_X_COMEBACK_SET_PRODLEVA'])) {
         cb_nastaveni_uzivatele_uloz_prodlevu();
     }
+
+    if (isset($_SERVER['HTTP_X_COMEBACK_ACTIVE_MODULE'])) {
+        cb_nastaveni_uzivatele_uloz_aktivni_modul();
+    }
 }
 
 function cb_nastaveni_uzivatele_uloz_theme(): void
@@ -109,5 +113,57 @@ function cb_nastaveni_uzivatele_uloz_prodlevu(): void
 
     cb_store_user_settings(['prodleva' => $cbProdlevaMs]);
     echo json_encode(['ok' => true, 'prodleva' => $cbProdlevaMs, 'sec' => $cbProdlevaSec], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+function cb_nastaveni_uzivatele_uloz_aktivni_modul(): void
+{
+    header('Content-Type: application/json; charset=utf-8');
+
+    $rawModule = $_POST['module'] ?? null;
+    if ($rawModule === null) {
+        $input = json_decode((string)file_get_contents('php://input'), true);
+        if (is_array($input)) {
+            $rawModule = $input['module'] ?? null;
+        }
+    }
+
+    $module = strtolower(trim((string)$rawModule));
+    if ($module === 'is') {
+        $module = 'provoz';
+    }
+    if (!in_array($module, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'], true)) {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'err' => 'Neplatny modul'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $cbUser = $_SESSION['cb_user'] ?? null;
+    $cbIdUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
+    if ($cbIdUser <= 0) {
+        http_response_code(401);
+        echo json_encode(['ok' => false, 'err' => 'Nutne prihlaseni'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $stmt = db()->prepare('UPDATE user_set SET aktivni_modul = ? WHERE id_user = ?');
+    if (!($stmt instanceof mysqli_stmt)) {
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'err' => 'Ulozeni selhalo'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $stmt->bind_param('si', $module, $cbIdUser);
+    $saved = $stmt->execute();
+    $stmt->close();
+
+    if (!$saved) {
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'err' => 'Ulozeni selhalo'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    cb_store_user_settings(['aktivni_modul' => $module]);
+    echo json_encode(['ok' => true, 'module' => $module], JSON_UNESCAPED_UNICODE);
     exit;
 }

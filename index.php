@@ -164,7 +164,10 @@ try {
 }
 
 if (!empty($_SESSION['login_ok'])) {
-    $cbInitialModule = strtolower(trim((string)($_GET['m'] ?? 'provoz')));
+    $cbInitialModuleRaw = isset($_GET['m'])
+        ? (string)$_GET['m']
+        : (string)cb_user_setting('aktivni_modul', 'provoz');
+    $cbInitialModule = strtolower(trim($cbInitialModuleRaw));
     $cbInitialModule = cb_modul_normalizuj($cbInitialModule);
 
     $GLOBALS['CURRENT_MODULE'] = $cbInitialModule;

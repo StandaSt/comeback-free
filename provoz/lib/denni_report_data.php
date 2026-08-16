@@ -200,6 +200,63 @@ function cb_denni_report_missing_reports_summary(mysqli $conn, string $date): ar
     return $rows;
 }
 
+function cb_denni_report_month_missing_reports_summary(mysqli $conn, DateTimeImmutable $currentWorkdayDt, bool $includeCurrentWorkday): array
+{
+    $monthStartDt = $currentWorkdayDt->modify('first day of this month');
+    $monthEndDt = $includeCurrentWorkday ? $currentWorkdayDt : $currentWorkdayDt->modify('-1 day');
+    if ($monthEndDt < $monthStartDt) {
+        return [];
+    }
+
+    $monthStart = $monthStartDt->format('Y-m-d');
+    $monthEnd = $monthEndDt->format('Y-m-d');
+    $totalDays = ((int)$monthStartDt->diff($monthEndDt)->days) + 1;
+
+    $sql = "
+        SELECT
+            p.id_pob,
+            p.nazev,
+            GREATEST(0, ? - COUNT(DISTINCT r.datum_reportu)) AS missing_count
+        FROM pobocka p
+        LEFT JOIN reporty_is r
+            ON r.id_pob = p.id_pob
+           AND r.datum_reportu >= ?
+           AND r.datum_reportu <= ?
+           AND r.platny = 1
+        WHERE p.aktivni = 1
+          AND p.id_pob > 0
+        GROUP BY p.id_pob, p.nazev
+        HAVING missing_count > 0
+        ORDER BY p.id_pob ASC
+    ";
+
+    $stmt = $conn->prepare($sql);
+    $rows = [];
+    if ($stmt !== false) {
+        $stmt->bind_param('iss', $totalDays, $monthStart, $monthEnd);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($result instanceof mysqli_result) {
+            while ($row = $result->fetch_assoc()) {
+                $idPob = (int)($row['id_pob'] ?? 0);
+                $name = trim((string)($row['nazev'] ?? ''));
+                $missingCount = (int)($row['missing_count'] ?? 0);
+                if ($idPob > 0 && $missingCount > 0) {
+                    $rows[] = [
+                        'id_pob' => $idPob,
+                        'nazev' => $name !== '' ? $name : ('Pobočka ' . $idPob),
+                        'missing_count' => $missingCount,
+                    ];
+                }
+            }
+            $result->free();
+        }
+        $stmt->close();
+    }
+
+    return $rows;
+}
+
 function cb_denni_report_has_any_report(mysqli $conn, string $date): bool
 {
     if ($date === '') {
@@ -940,7 +997,8 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
     $missingReportDays = [];
     $todayDate = $currentWorkdayDt->format('Y-m-d');
     $showTodayMissingReport = cb_denni_report_has_any_report($conn, $todayDate);
-    for ($i = 0; $i <= 4; $i++) {
+    $missingReportsMonth = cb_denni_report_month_missing_reports_summary($conn, $currentWorkdayDt, $showTodayMissingReport);
+    for ($i = 0; $i <= 7; $i++) {
         if ($i === 0 && !$showTodayMissingReport) {
             continue;
         }
@@ -965,6 +1023,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
             'currentWorkdayDt' => $currentWorkdayDt,
             'workdayOptions' => $workdayOptions,
             'missingReports' => $missingReports,
+            'missingReportsMonth' => $missingReportsMonth,
         ];
     }
     $allowedWorkdayValues = array_column($workdayOptions, 'value');
@@ -1409,6 +1468,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         'currentWorkdayDt' => $currentWorkdayDt,
         'workdayOptions' => $workdayOptions,
         'missingReports' => $missingReports,
+        'missingReportsMonth' => $missingReportsMonth,
         'isCurrentWorkday' => $isCurrentWorkday,
         'reportDateDt' => $reportDateDt,
         'reportDate' => $reportDate,

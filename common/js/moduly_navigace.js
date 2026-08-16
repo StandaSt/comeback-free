@@ -16,7 +16,8 @@
       items: [
         ['prehled', 'Přehled'],
         ['denni_report', 'Denní report'],
-        ['objednavky', 'Objednávky']
+        ['objednavky', 'Objednávky'],
+        ['prehled_hodin', 'Přehled hodin']
       ]
     },
     hr: {
@@ -232,31 +233,47 @@
     }, 100);
   }
 
-  function ensureRestiaBeforeProvoz(moduleName){
-    if (moduleName !== 'provoz') {
+  function provozPageNeedsRestia(params) {
+    var page = params instanceof URLSearchParams ? String(params.get('page') || '') : '';
+    return page === '' || page === 'dashboard' || page === 'prehled' || page === 'denni_report' || page === 'objednavky';
+  }
+
+  function ensureRestiaBeforeProvoz(moduleName, params){
+    if (moduleName !== 'provoz' || !provozPageNeedsRestia(params)) {
       return Promise.resolve(null);
     }
     if (
       !window.CB_RESTIA
-      || typeof window.CB_RESTIA.fetchState !== 'function'
       || typeof window.CB_RESTIA.run !== 'function'
-      || typeof window.CB_RESTIA.isFresh !== 'function'
     ) {
       return Promise.resolve(null);
     }
 
-    return window.CB_RESTIA.fetchState()
-      .then(function(state){
-        var running = !!(state && Number(state.active || 0) === 1);
-        if (!running && window.CB_RESTIA.isFresh(state)) {
-          return state;
-        }
+    return window.CB_RESTIA.run({
+      moduleName: 'provoz',
+      loaderText: ''
+    });
+  }
 
-        return window.CB_RESTIA.run({
-          moduleName: 'provoz',
-          loaderText: ''
-        });
-      });
+  function saveActiveModule(moduleName) {
+    moduleName = String(moduleName || '').trim();
+    if (povoleneModuly.indexOf(moduleName) === -1) {
+      return;
+    }
+
+    var body = new URLSearchParams();
+    body.set('module', moduleName);
+
+    fetch(shellUrl, {
+      method: 'POST',
+      headers: {
+        'X-Comeback-Active-Module': '1',
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'Accept': 'application/json'
+      },
+      body: body.toString(),
+      credentials: 'same-origin'
+    }).catch(function(){});
   }
 
   function setActive(moduleName){
@@ -433,6 +450,7 @@
     }
     var sourceMainModule = activeMainModule;
     moduleLoadRunning = true;
+    saveActiveModule(moduleName);
     setClickBlocked(true);
     setRootModule(moduleName);
     setActive(moduleName);
@@ -500,7 +518,7 @@
           return false;
         })
         .then(function(showSmenyLoader){
-          return ensureRestiaBeforeProvoz(moduleName)
+          return ensureRestiaBeforeProvoz(moduleName, params)
             .then(function(){
               setPageLoaderDetail(showSmenyLoader ? 'Načítám směny ...' : 'Připravuji denní report ...');
               return fetchModule(showSmenyLoader);
@@ -514,9 +532,9 @@
       return;
     }
 
-    if (moduleName === 'provoz') {
+    if (moduleName === 'provoz' && provozPageNeedsRestia(params)) {
       setPageLoaderDetail('Aktualizuji objednávky ...');
-      ensureRestiaBeforeProvoz(moduleName)
+      ensureRestiaBeforeProvoz(moduleName, params)
         .then(function(){
           return fetchModule(false);
         })
@@ -582,4 +600,10 @@
     setClickedMenuActive(link);
     loadModule(moduleName, true, url.searchParams);
   });
+
+  if (config.initialAutoLoad === true) {
+    window.setTimeout(function(){
+      loadModule(activeMainModule, false, new URLSearchParams(window.location.search));
+    }, 0);
+  }
 })();

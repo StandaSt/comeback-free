@@ -7,6 +7,7 @@ $provozMenuItems = [
     ['page' => 'prehled', 'label' => 'Přehled'],
     ['page' => 'denni_report', 'label' => 'Denní report'],
     ['page' => 'objednavky', 'label' => 'Objednávky'],
+    ['page' => 'prehled_hodin', 'label' => 'Přehled hodin'],
 ];
 
 $provozMenu = [];

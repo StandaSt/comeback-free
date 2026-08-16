@@ -135,9 +135,11 @@ function cb_db_ensure_user_set(mysqli $conn, int $idUser): void
     $pismo = 2;
     $dark = 0;
 
+    $aktivniModul = 'provoz';
+
     $stmt = $conn->prepare(
-        'INSERT INTO user_set (id_user, prodleva, pismo, dark, obdobi_od, obdobi_do, obdobi_mode)
-         SELECT ?, ?, ?, ?, ?, ?, ?
+        'INSERT INTO user_set (id_user, prodleva, pismo, dark, obdobi_od, obdobi_do, obdobi_mode, aktivni_modul)
+         SELECT ?, ?, ?, ?, ?, ?, ?, ?
          FROM DUAL
          WHERE NOT EXISTS (
              SELECT 1 FROM user_set WHERE id_user = ?
@@ -148,7 +150,7 @@ function cb_db_ensure_user_set(mysqli $conn, int $idUser): void
     }
 
     $obdobiMode = 'vcera';
-    $stmt->bind_param('iiiisssi', $idUser, $prodleva, $pismo, $dark, $yesterday, $today, $obdobiMode, $idUser);
+    $stmt->bind_param('iiiissssi', $idUser, $prodleva, $pismo, $dark, $yesterday, $today, $obdobiMode, $aktivniModul, $idUser);
     $stmt->execute();
     $stmt->close();
 }

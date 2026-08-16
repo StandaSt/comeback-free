@@ -13,14 +13,17 @@ require_once __DIR__ . '/../lib/denni_report_data.php';
 
         $data = cb_denni_report_prehled_data($conn);
         $missingReports = is_array($data['missingReports'] ?? null) ? $data['missingReports'] : [];
+        $missingReportsMonth = is_array($data['missingReportsMonth'] ?? null) ? $data['missingReportsMonth'] : [];
+        $missingReportsMonthText = $missingReportsMonth !== []
+            ? implode(', ', array_map(static fn(array $row): string => (string)$row['nazev'] . ' ' . (string)((int)($row['missing_count'] ?? 0)) . 'x', $missingReportsMonth))
+            : 'OK';
     } catch (Throwable $e) {
-        echo '<section class="blok"><h2 class="blok_title">Denní report</h2><p class="txt_cervena">Data se nepodařilo načíst.</p></section>';
+        echo '<section class="blok"><h2 class="blok_title">Nezadané denní reporty</h2><p class="txt_cervena">Data se nepodařilo načíst.</p></section>';
         return;
     }
     ?>
     <section class="blok blok_denni_report">
-        <h2 class="blok_title">Denní report</h2>
-        <p class="provoz_prehled_text txt_cervena"><span class="text_tucny">Nezadané reporty</span></p>
+        <h2 class="blok_title">Nezadané denní reporty</h2>
         <table class="provoz_prehled_mini_table">
             <tbody>
                 <?php foreach ($missingReports as $missingReport): ?>
@@ -38,7 +41,8 @@ require_once __DIR__ . '/../lib/denni_report_data.php';
             </tbody>
         </table>
         <p class="provoz_prehled_text">&nbsp;</p>
-        <p class="provoz_prehled_text txt_cervena">Vypisujte prosím i tento report, je třeba odladit případné chyby. Díky</p>
+        <p class="provoz_prehled_text txt_seda">Tento měsíc chybí reporty:</p>
+        <p class="provoz_prehled_text txt_seda"><?= h($missingReportsMonthText) ?></p>
     </section>
     <?php
 })();

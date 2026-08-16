@@ -97,21 +97,7 @@
     });
   }
 
-  function parseDbTime(value) {
-    const raw = String(value || '').trim();
-    if (raw === '') return 0;
-    const parsed = Date.parse(raw.replace(' ', 'T'));
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-
-  function isFresh(state) {
-    const finishedAt = parseDbTime(state && state.konec);
-    if (finishedAt <= 0) return false;
-    return (Date.now() - finishedAt) < 120000;
-  }
-
   CB_RESTIA.fetchState = fetchState;
-  CB_RESTIA.isFresh = isFresh;
   CB_RESTIA.run = function run(options) {
     const opts = (options && typeof options === 'object') ? options : {};
     const triggerRestia = opts.triggerRestia !== false;

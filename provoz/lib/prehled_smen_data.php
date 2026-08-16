@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 /*
- * Spolecna data pro K11 Prehled smen a jeho exporty.
- * Vraci mesicni souhrn z reporty + reporty_osoby.
+ * Spolecna data pro Prehled hodin a jeho exporty.
+ * Vraci mesicni souhrn z finalne ulozenych reportu IS.
  */
 
 if (!function_exists('ps_tab_config')) {
@@ -313,8 +313,8 @@ if (!function_exists('ps_prehled_smen_data')) {
                     ro.odpracovano,
                     r.id_pob,
                     COALESCE(p.nazev, "") AS pobocka
-                FROM reporty_osoby ro
-                INNER JOIN reporty r ON r.id_reportu = ro.id_reportu
+                FROM reporty_is_osoby ro
+                INNER JOIN reporty_is r ON r.id_reportu = ro.id_reportu
                 LEFT JOIN pobocka p ON p.id_pob = r.id_pob
                 WHERE r.platny = 1
                   AND r.datum_reportu >= ?

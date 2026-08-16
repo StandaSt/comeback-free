@@ -294,11 +294,14 @@ function cb_module_asset_url(string $path, string $module = ''): string
 
 function cb_login_target_module(): string
 {
-    $module = strtolower(trim((string)($_SESSION['cb_login_target_module'] ?? 'provoz')));
+    $module = strtolower(trim((string)($_SESSION['cb_login_target_module'] ?? '')));
+    if ($module === '' || $module === 'provoz') {
+        $module = strtolower(trim((string)cb_user_setting('aktivni_modul', 'provoz')));
+    }
     if ($module === 'is') {
         $module = 'provoz';
     }
-    if (!in_array($module, ['provoz', 'hr', 'smeny', 'helpdesk'], true)) {
+    if (!in_array($module, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'], true)) {
         return 'provoz';
     }
 
@@ -405,6 +408,7 @@ if (!function_exists('cb_user_settings_defaults')) {
             'obdobi_od' => '',
             'obdobi_do' => '',
             'obdobi_mode' => 'manual',
+            'aktivni_modul' => 'provoz',
         ];
     }
 }
@@ -445,6 +449,15 @@ if (!function_exists('cb_store_user_settings')) {
 
         $data['obdobi_od'] = trim((string)($values['obdobi_od'] ?? $data['obdobi_od']));
         $data['obdobi_do'] = trim((string)($values['obdobi_do'] ?? $data['obdobi_do']));
+
+        $aktivniModul = strtolower(trim((string)($values['aktivni_modul'] ?? $data['aktivni_modul'])));
+        if ($aktivniModul === 'is') {
+            $aktivniModul = 'provoz';
+        }
+        if (!in_array($aktivniModul, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'], true)) {
+            $aktivniModul = 'provoz';
+        }
+        $data['aktivni_modul'] = $aktivniModul;
 
         $_SESSION['cb_user_settings'] = $data;
         $_SESSION['cb_timeout_min'] = 720;
