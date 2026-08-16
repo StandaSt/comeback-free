@@ -20,6 +20,10 @@ function cb_provoz_pages(): array
             'file' => __DIR__ . '/../pages/prehled_hodin.php',
             'title' => 'Přehled hodin',
         ],
+        'nastaveni_reportu' => [
+            'file' => __DIR__ . '/../pages/nastaveni_reportu.php',
+            'title' => 'Nastavení proměnných v reportu',
+        ],
         'uprava_profilu' => [
             'file' => __DIR__ . '/../../common/pages/uprava_profilu.php',
             'title' => 'Úprava profilu',

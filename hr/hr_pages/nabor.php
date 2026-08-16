@@ -26,7 +26,7 @@ $bloky = [
         'show_expiration' => true,
     ],
     [
-        'title' => 'Nové veřejné dotazníky',
+        'title' => 'Nové veřejné dotazníky - potvrzené',
         'rows' => $nabor['nove_dotazniky'],
         'date_key' => 'zadano',
         'date_label' => 'Zadáno',

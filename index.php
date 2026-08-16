@@ -26,6 +26,18 @@ if (!empty($_SESSION['login_ok'])) {
 cb_nastaveni_uzivatele_vyrid_post();
 cb_local_login_sync_vyrid();
 
+if (
+    !empty($_SESSION['login_ok'])
+    && ($_SERVER['REQUEST_METHOD'] ?? '') === 'PUT'
+    && isset($_SERVER['HTTP_X_COMEBACK_REPORT_PROMENNE'])
+) {
+    $GLOBALS['CURRENT_MODULE'] = 'provoz';
+    define('CB_EMBEDDED_MODULE', 'provoz');
+    require_once __DIR__ . '/provoz/lib/report_promenne.php';
+    cb_report_promenne_handle_json_request();
+    exit;
+}
+
 if (!empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_SERVER['HTTP_X_COMEBACK_GN_BLOCK'])) {
     $cbGnModule = strtolower(trim((string)($_POST['module'] ?? '')));
     $cbGnPage = strtolower(trim((string)($_POST['page'] ?? '')));

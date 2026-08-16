@@ -12,6 +12,11 @@ $provozMenuItems = [
 
 $provozMenu = [];
 foreach ($provozMenuItems as $item) {
+    $idPravo = (int)($item['pravo'] ?? 0);
+    if ($idPravo > 0 && (!function_exists('cb_pravo_ma') || !cb_pravo_ma($idPravo))) {
+        continue;
+    }
+
     $itemPage = (string)$item['page'];
     $provozMenu[] = [
         'label' => (string)$item['label'],

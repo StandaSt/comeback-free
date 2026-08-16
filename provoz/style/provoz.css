@@ -341,6 +341,42 @@
   overflow:auto;
 }
 
+.report_promenne_form{
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+
+.report_promenne_box{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  max-width:390px;
+  padding:14px;
+  border:1px solid var(--cb-border);
+  border-radius:8px;
+  background:var(--cb-bg-panel-soft);
+}
+
+.report_promenne_box_title{
+  font-size:17px;
+  font-weight:600;
+  color:var(--cb-text-main);
+}
+
+.report_promenne_row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:var(--cb-text-main);
+}
+
+.report_promenne_actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+}
+
 .zr_form{
   display:flex;
   flex-direction:column;

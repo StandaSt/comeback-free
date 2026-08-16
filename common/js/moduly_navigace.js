@@ -601,6 +601,65 @@
     loadModule(moduleName, true, url.searchParams);
   });
 
+  root.addEventListener('click', function(event){
+    var button = event.target.closest ? event.target.closest('[data-report-promenne-save="1"]') : null;
+    if (!(button instanceof HTMLElement)) {
+      return;
+    }
+
+    event.preventDefault();
+    var form = button.closest('[data-report-promenne-form="1"]');
+    if (!(form instanceof HTMLFormElement)) {
+      return;
+    }
+
+    var body = new URLSearchParams(new FormData(form));
+    var actionUrl = form.getAttribute('action') || moduleUrl('provoz', 'page', 'nastaveni_reportu');
+
+    button.setAttribute('disabled', 'disabled');
+    fetch(actionUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'X-Comeback-Report-Promenne': '1',
+        'Accept': 'application/json'
+      },
+      body: body.toString(),
+      credentials: 'same-origin'
+    }).then(function(response){
+      return response.json().then(function(json){
+        if (!response.ok || !json.ok) {
+          throw new Error(json && json.err ? String(json.err) : 'Uložení selhalo.');
+        }
+      });
+    }).then(function(){
+      return fetch(actionUrl, {
+        method: 'GET',
+        headers: {
+          'X-Comeback-PP-Only': '1',
+          'Accept': 'text/html'
+        },
+        credentials: 'same-origin'
+      });
+    }).then(function(response){
+      if (!response.ok) {
+        throw new Error('Načtení stránky selhalo.');
+      }
+      return response.text();
+    }).then(function(html){
+      var pp = root.querySelector('.pp');
+      var wrap = document.createElement('div');
+      wrap.innerHTML = html;
+      var nextPp = wrap.querySelector('.pp');
+      if (pp instanceof HTMLElement && nextPp instanceof HTMLElement) {
+        pp.replaceWith(nextPp);
+      }
+    }).catch(function(error){
+      button.removeAttribute('disabled');
+      window.alert(error && error.message ? error.message : 'Uložení selhalo.');
+    });
+  });
+
   if (config.initialAutoLoad === true) {
     window.setTimeout(function(){
       loadModule(activeMainModule, false, new URLSearchParams(window.location.search));

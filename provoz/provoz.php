@@ -105,6 +105,7 @@ if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
     require_once __DIR__ . '/lib/post_akce.php';
     require_once __DIR__ . '/lib/uloz_dr_pracovni.php';
     require_once __DIR__ . '/lib/uloz_reporty_is.php';
+    require_once __DIR__ . '/lib/report_promenne.php';
     require_once __DIR__ . '/../common/lib/uloz_akci.php';
 }
 
@@ -114,6 +115,10 @@ $pageKey = $cbPage;
 $file = $cbProvozCurrentPage['file'];
 $cbPageExists = (bool)$cbProvozCurrentPage['exists'];
 $cbProvozPageTitle = $cbProvozCurrentPage['title'];
+
+if (!empty($_SESSION['login_ok']) && !$cbSystemLocked && function_exists('cb_report_promenne_handle_post')) {
+    cb_report_promenne_handle_post();
+}
 
 require_once __DIR__ . '/includes/log_a_404.php';
 
@@ -184,6 +189,11 @@ if ($cbPpOnly && !empty($_SESSION['login_ok']) && !$cbSystemLocked) {
     <section class="pp" data-module="provoz" data-page="<?= h($cbPage) ?>">
         <header class="pp_header">
             <h1><?= h($cbProvozPageTitle) ?></h1>
+            <?php if ($cbPage === 'denni_report' && function_exists('cb_pravo_ma') && cb_pravo_ma(CB_REPORT_PROMENNE_PRAVO)): ?>
+                <div class="pp_header_control">
+                    <a class="head_task_btn" href="<?= h(cb_root_url('index.php?m=provoz&page=nastaveni_reportu')) ?>">Nastavení reportu</a>
+                </div>
+            <?php endif; ?>
         </header>
         <?php
         if ($cbPageExists) {
@@ -229,6 +239,11 @@ if (!empty($_SESSION['login_ok']) && $cbSystemLocked) {
     <section class="pp" data-module="provoz" data-page="<?= h($cbPage) ?>">
         <header class="pp_header">
             <h1><?= h($cbProvozPageTitle) ?></h1>
+            <?php if ($cbPage === 'denni_report' && function_exists('cb_pravo_ma') && cb_pravo_ma(CB_REPORT_PROMENNE_PRAVO)): ?>
+                <div class="pp_header_control">
+                    <a class="head_task_btn" href="<?= h(cb_root_url('index.php?m=provoz&page=nastaveni_reportu')) ?>">Nastavení reportu</a>
+                </div>
+            <?php endif; ?>
         </header>
         <?php
         if ($cbPageExists) {
