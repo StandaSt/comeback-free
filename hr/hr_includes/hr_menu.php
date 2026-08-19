@@ -1,23 +1,22 @@
 <?php
+/*
+ * Ucel souboru: Prevede datovou definici menu HR na stavajici spolecny renderer menu.
+ * Neurcuje vlastni polozky menu, layout aplikace ani obsah pracovni plochy.
+ */
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../common/includes/blok_menu.php';
+require_once __DIR__ . '/../hr_lib/hr_pages.php';
 
-$hrMenuItems = [
-    ['page' => 'prehled', 'label' => 'Přehled'],
-    ['page' => 'nabor', 'label' => 'Nábor'],
-    ['page' => 'zamestnanci', 'label' => 'Zaměstnanci'],
-    ['page' => 'pozadavky', 'label' => 'Požadavky'],
-    ['page' => 'pracovni_pomery', 'label' => 'Pracovní poměry'],
-    ['page' => 'dokumenty', 'label' => 'Dokumenty'],
-    ['page' => 'skoleni', 'label' => 'Školení'],
-    ['page' => 'prohlidky', 'label' => 'Lékařské prohlídky'],
-    ['page' => 'dovolene', 'label' => 'Dovolené'],
-    ['page' => 'reporty', 'label' => 'Reporty'],
-];
+$hrModuleConfig = cb_hr_module_config();
+$hrMenuItems = is_array($hrModuleConfig['menu'] ?? null) ? $hrModuleConfig['menu'] : [];
 
 $hrMenu = [];
 foreach ($hrMenuItems as $item) {
+    if (!is_array($item)) {
+        continue;
+    }
+
     $itemPage = (string)$item['page'];
     $hrMenu[] = [
         'label' => (string)$item['label'],
@@ -27,7 +26,7 @@ foreach ($hrMenuItems as $item) {
 }
 
 cb_render_blok_menu([
-    'title' => 'Personalistika',
+    'title' => (string)($hrModuleConfig['title'] ?? 'Personalistika'),
     'aria_label' => 'Menu personalistiky',
     'items' => $hrMenu,
 ]);

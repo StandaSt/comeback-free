@@ -1250,3 +1250,55 @@ align-items:center;
   gap:10px;
   min-width:0;
 }
+
+/* Spolecne rozlozeni bloku vykreslenych PP rendererem. */
+.pp_blocks{
+  display:grid;
+  gap:10px;
+  min-width:0;
+}
+
+.pp_blocks--stack{
+  grid-template-columns:minmax(0, 1fr);
+}
+
+.pp_blocks--grid.pp_blocks--columns-2{
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+}
+
+.pp_blocks--grid.pp_blocks--columns-3{
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+}
+
+.pp_blocks--grid.pp_blocks--columns-4{
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+}
+
+.pp_block{
+  min-width:0;
+}
+
+.pp_block--span-2{
+  grid-column:span 2;
+}
+
+.pp_block--span-3{
+  grid-column:span 3;
+}
+
+.pp_block--span-4{
+  grid-column:span 4;
+}
+
+/* Na uzkem displeji dostane kazdy blok vlastni radek. */
+@media (max-width:760px){
+  .pp_blocks--grid{
+    grid-template-columns:minmax(0, 1fr);
+  }
+
+  .pp_block--span-2,
+  .pp_block--span-3,
+  .pp_block--span-4{
+    grid-column:auto;
+  }
+}
