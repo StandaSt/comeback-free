@@ -1,4 +1,8 @@
 <?php
+/*
+ * Ucel souboru: Vykresluje drobny ovladaci prvek hledani v hlavicce HR stranky.
+ * Soubor nevytvari PP ani vlastni layout a neresi vyhledavaci logiku.
+ */
 declare(strict_types=1);
 ?>
 <div class="pp_header_control hr_topbar_actions">

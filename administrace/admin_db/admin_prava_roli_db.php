@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Nacita a meni globalni prava roli v administraci.
+ * Globalni pravo je dane existenci dvojice id_role a id_pravo.
+ */
+
 function cb_admin_prava_roli_data(): array
 {
     $db = db();
@@ -67,12 +72,12 @@ function cb_admin_prava_roli_data(): array
 
     $allowed = [];
     $globalRes = $db->query('
-        SELECT id_role, id_pravo, povoleno
+        SELECT id_role, id_pravo
         FROM prava_global
     ');
     if ($globalRes instanceof mysqli_result) {
         while ($row = $globalRes->fetch_assoc()) {
-            $allowed[(int)$row['id_role']][(int)$row['id_pravo']] = (int)$row['povoleno'] === 1;
+            $allowed[(int)$row['id_role']][(int)$row['id_pravo']] = true;
         }
         $globalRes->free();
     }
@@ -85,7 +90,7 @@ function cb_admin_prava_roli_data(): array
     ];
 }
 
-function cb_admin_prava_roli_uloz(int $idRole, int $idPravo, bool $povoleno): void
+function cb_admin_prava_roli_uloz(int $idRole, int $idPravo, bool $allowed): void
 {
     if ($idRole <= 0 || $idPravo <= 0) {
         throw new RuntimeException('Neplatné právo.');
@@ -111,17 +116,47 @@ function cb_admin_prava_roli_uloz(int $idRole, int $idPravo, bool $povoleno): vo
         throw new RuntimeException('Právo nebo role neexistuje.');
     }
 
-    $allowed = $povoleno ? 1 : 0;
-    $stmt = $db->prepare('
-        INSERT INTO prava_global (id_role, id_pravo, povoleno)
-        VALUES (?, ?, ?)
-        ON DUPLICATE KEY UPDATE povoleno = VALUES(povoleno)
-    ');
-    if ($stmt === false) {
-        throw new RuntimeException('Nelze připravit uložení práva.');
-    }
+    $db->begin_transaction();
 
-    $stmt->bind_param('iii', $idRole, $idPravo, $allowed);
-    $stmt->execute();
-    $stmt->close();
+    try {
+        if ($allowed) {
+            $stmt = $db->prepare('INSERT IGNORE INTO prava_global (id_role, id_pravo) VALUES (?, ?)');
+        } else {
+            $stmt = $db->prepare('DELETE FROM prava_global WHERE id_role = ? AND id_pravo = ?');
+        }
+        if ($stmt === false) {
+            throw new RuntimeException('Nelze připravit uložení práva.');
+        }
+
+        $stmt->bind_param('ii', $idRole, $idPravo);
+        $stmt->execute();
+        $stmt->close();
+
+        // Vyjimka zustava jen tehdy, kdyz se lisi od noveho globalniho prava.
+        $duplicateValue = $allowed ? 1 : 0;
+        $stmtExceptions = $db->prepare('
+            DELETE vyjimka
+            FROM prava_vyjimky AS vyjimka
+            INNER JOIN (
+                SELECT id_user
+                FROM user_role
+                GROUP BY id_user
+                HAVING MIN(id_role) = ?
+            ) AS efektivni_role ON efektivni_role.id_user = vyjimka.id_user
+            WHERE vyjimka.id_pravo = ?
+              AND vyjimka.povoleno = ?
+        ');
+        if ($stmtExceptions === false) {
+            throw new RuntimeException('Nelze pripravit uklid vyjimek prava.');
+        }
+
+        $stmtExceptions->bind_param('iii', $idRole, $idPravo, $duplicateValue);
+        $stmtExceptions->execute();
+        $stmtExceptions->close();
+
+        $db->commit();
+    } catch (Throwable $e) {
+        $db->rollback();
+        throw $e;
+    }
 }

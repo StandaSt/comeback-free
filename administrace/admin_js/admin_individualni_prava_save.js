@@ -1,16 +1,14 @@
-// admin_js/admin_individualni_prava_save.js
+// Uklada individualni vyjimku prava a oznami obnoveni seznamu uzivatelu.
 'use strict';
 
 (function () {
   function updateToggle(input, result) {
     var label = input.closest('.admin_exception_toggle');
-    var mark = label ? label.querySelector('span') : null;
-    if (!label || !mark) {
+    if (!label) {
       return;
     }
 
     label.classList.remove('is-plus', 'is-minus');
-    mark.textContent = '';
     if (!result || result.vyjimka !== true) {
       input.checked = false;
       return;
@@ -19,10 +17,8 @@
     input.checked = true;
     if (Number(result.povoleno) === 1) {
       label.classList.add('is-plus');
-      mark.textContent = '+';
     } else {
       label.classList.add('is-minus');
-      mark.textContent = '-';
     }
   }
 
@@ -37,6 +33,7 @@
     })
       .then(function (data) {
         updateToggle(input, data.result);
+        document.dispatchEvent(new CustomEvent('cb:admin-individual-exception-saved'));
       })
       .catch(function (error) {
         input.checked = !previous;

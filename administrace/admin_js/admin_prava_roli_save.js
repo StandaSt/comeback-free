@@ -1,4 +1,4 @@
-// admin_js/admin_prava_roli_save.js
+// Uklada stav globalniho prava role po zmene checkboxu.
 'use strict';
 
 (function () {
@@ -11,7 +11,7 @@
     var body = new URLSearchParams();
     body.set('id_role', String(input.getAttribute('data-id-role') || '0'));
     body.set('id_pravo', String(input.getAttribute('data-id-pravo') || '0'));
-    body.set('povoleno', input.checked ? '1' : '0');
+    body.set('allowed', input.checked ? '1' : '0');
 
     input.disabled = true;
 

@@ -14,9 +14,9 @@ function hr_expiruj_nepotvrzene_vd(mysqli $db): void
         UPDATE hr_vd vd
         INNER JOIN hr_vd_token t
             ON t.id_vd = vd.id_vd
-        SET vd.id_vd_stav = 13,
+        SET vd.id_vd_stav = " . HR_VD_STAV_VD_NEPOTVRZENO . ",
             vd.upraveno = NOW()
-        WHERE vd.id_vd_stav = 0
+        WHERE vd.id_vd_stav = " . HR_VD_STAV_NEPOTVRZENO . "
           AND vd.aktivni = 1
           AND t.aktivni = 1
           AND t.pouzito IS NULL

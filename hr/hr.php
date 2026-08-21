@@ -2,9 +2,9 @@
 declare(strict_types=1);
 
 /*
- * Modulový vstup HR.
- * Sem nepatří SQL dotazy, HTML bloky, AJAX handlery ani pomocné funkce.
- * Soubor má pouze připravit modul, předat akce dispatcheru, vybrat stránku/pohled a načíst modulový layout.
+ * Modulovy vstup HR.
+ * Sem nepatri SQL dotazy, HTML bloky, AJAX handlery ani pomocne funkce.
+ * Soubor ma pouze pripravit modul, predat akce dispatcheru a vybrat zpusob vykresleni stranky.
  */
 
 require_once __DIR__ . '/../common/lib/session_boot.php';
@@ -32,9 +32,8 @@ if (empty($_SESSION['login_ok'])) {
 
 $cbUser = $_SESSION['cb_user'] ?? [];
 $roleId = is_array($cbUser) ? (int)($cbUser['id_role'] ?? 0) : 0;
-$userId = is_array($cbUser) ? (int)($cbUser['id_user'] ?? 0) : 0;
 
-if (!in_array($roleId, [1, 3, 5], true) && $userId !== 57) {
+if (!cb_pravo_ma(300)) {
     require __DIR__ . '/hr_includes/pripravujeme.php';
     exit;
 }
@@ -80,16 +79,37 @@ cb_hr_request_dispatch($db, $page, $cbUser, $roleId);
 $flash = $_SESSION['hr_flash'] ?? null;
 unset($_SESSION['hr_flash']);
 
+$cbHrPageDefinition = is_array($currentPage['definition'] ?? null) ? $currentPage['definition'] : [];
+$cbHrUsesPpRenderer = is_array($cbHrPageDefinition['blocks'] ?? null) && $cbHrPageDefinition['blocks'] !== [];
+
 ?>
 <?php require __DIR__ . '/hr_includes/hr_menu.php'; ?>
 
 <?php if ($page === 'uprava_profilu'): ?>
     <?php require __DIR__ . '/../common/pages/uprava_profilu.php'; ?>
+<?php elseif ($cbHrUsesPpRenderer): ?>
+    <?php
+    require_once __DIR__ . '/../common/includes/pp_renderer.php';
+    require_once __DIR__ . '/hr_lib/hr_page_context.php';
+
+    $cbHrPpPage = $cbHrPageDefinition;
+    $cbHrPpPage['module'] = 'hr';
+    $cbHrPpPage['key'] = $page;
+    $cbHrPpPage['title'] = $pageTitle;
+
+    $cbHrPpContext = hr_page_context($cbHrPageDefinition, $db);
+    $cbHrPpFlash = hr_page_flash(is_array($flash) ? $flash : null);
+    if ($cbHrPpFlash !== null) {
+        $cbHrPpContext['flash'] = $cbHrPpFlash;
+    }
+
+    cb_render_pp($cbHrPpPage, $cbHrPpContext);
+    ?>
 <?php else: ?>
 <section class="pp hr_pp" data-module="hr" data-page="<?= h($page) ?>">
     <header class="pp_header">
         <h1><?= h($pageTitle) ?></h1>
-        <?php require __DIR__ . '/hr_includes/topbar.php'; ?>
+        <?php require __DIR__ . '/hr_includes/hr_header_hledani.php'; ?>
     </header>
     <main class="hr_content">
         <?php if (is_array($flash) && isset($flash['text'])): ?>

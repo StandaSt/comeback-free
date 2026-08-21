@@ -1,12 +1,10 @@
 <?php
 declare(strict_types=1);
 
-/**
- * Stranka s formularem pro rucni zalozeni zamestnance.
+/*
+ * Ucel souboru: Vykresluje formular pro rucni zalozeni noveho zamestnance.
+ * Pouziva data pripravena datovym poskytovatelem a nevytvari PP ani layout.
  */
-$vztahy = hr_fetch_lookup($db, 'hr_cis_pracovni_vztah_typ', 'id_pracovni_vztah_typ', 'nazev', 'id_pracovni_vztah_typ');
-$pobocky = hr_fetch_lookup($db, 'pobocka', 'id_pob', 'nazev');
-$sloty = hr_fetch_lookup($db, 'cis_slot', 'id_slot', 'slot');
 ?>
 <section class="hr_panel">
     <div class="hr_panel_header">
@@ -17,6 +15,7 @@ $sloty = hr_fetch_lookup($db, 'cis_slot', 'id_slot', 'slot');
     </div>
 
     <form class="hr_form" method="post" action="<?= h(cb_root_url('index.php?m=hr&page=novy_zamestnanec')) ?>">
+        <input type="hidden" name="cb_action" value="hr_zamestnanec_ulozit">
         <div class="hr_form_grid">
             <label class="hr_form_label">
                 <span>Jméno</span>

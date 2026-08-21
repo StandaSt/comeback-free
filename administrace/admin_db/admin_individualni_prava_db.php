@@ -1,7 +1,52 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Nacita a uklada individualni vyjimky prav uzivatelu.
+ * Vyjimka vzdy doplnuje globalni prava efektivni role uzivatele.
+ */
+
 require_once __DIR__ . '/admin_prava_roli_db.php';
+
+function cb_admin_individualni_prava_uzivatele_s_vyjimkami(): array
+{
+    $db = db();
+    $stmt = $db->prepare('
+        SELECT
+            u.id_user,
+            u.jmeno,
+            u.prijmeni,
+            u.email,
+            u.telefon,
+            SUM(CASE WHEN vyjimka.povoleno = 1 THEN 1 ELSE 0 END) AS pocet_povoleno,
+            SUM(CASE WHEN vyjimka.povoleno = 0 THEN 1 ELSE 0 END) AS pocet_zakazano
+        FROM prava_vyjimky AS vyjimka
+        INNER JOIN user AS u ON u.id_user = vyjimka.id_user
+        GROUP BY u.id_user, u.jmeno, u.prijmeni, u.email, u.telefon
+        ORDER BY u.prijmeni, u.jmeno, u.id_user
+    ');
+    if ($stmt === false) {
+        throw new RuntimeException('Nelze pripravit seznam uzivatelu s vyjimkami.');
+    }
+
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $users = [];
+    while ($row = $result->fetch_assoc()) {
+        $users[] = [
+            'id_user' => (int)$row['id_user'],
+            'jmeno' => (string)$row['jmeno'],
+            'prijmeni' => (string)$row['prijmeni'],
+            'email' => (string)$row['email'],
+            'telefon' => (string)($row['telefon'] ?? ''),
+            'pocet_povoleno' => (int)$row['pocet_povoleno'],
+            'pocet_zakazano' => (int)$row['pocet_zakazano'],
+        ];
+    }
+    $stmt->close();
+
+    return $users;
+}
 
 function cb_admin_individualni_prava_hledej_uzivatele(string $query): array
 {

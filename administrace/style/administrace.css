@@ -1,3 +1,5 @@
+/* Styly administrace, včetně spravy roli a individualnich vyjimek prav. */
+
 .admin_pp{
   min-width:0;
 }
@@ -125,6 +127,18 @@
   width:min(720px, 100%);
 }
 
+.admin_individual_exception_users{
+  display:grid;
+  gap:8px;
+  width:min(720px, 100%);
+}
+
+.admin_individual_exception_users h2{
+  margin:0;
+  color:var(--cb-text-main);
+  font-size:14px;
+}
+
 .admin_individual_results_table{
   width:100%;
   border-collapse:collapse;
@@ -167,6 +181,7 @@
 .admin_individual_detail{
   display:grid;
   gap:14px;
+  margin-top:12px;
 }
 
 .admin_individual_user{
@@ -205,18 +220,14 @@
   pointer-events:none;
 }
 
-.admin_exception_toggle span{
-  display:block;
-  margin:0;
-  color:inherit;
-  font-size:16px;
-  font-weight:800;
-  line-height:1;
+.admin_exception_toggle.is-plus{
+  border-color:#22c55e;
+  background:#4ade80;
+  color:#fff;
 }
 
-.admin_exception_toggle.is-plus,
 .admin_exception_toggle.is-minus{
-  border-color:var(--cb-module-accent);
-  background:var(--cb-module-accent);
+  border-color:#b91c1c;
+  background:#dc2626;
   color:#fff;
 }

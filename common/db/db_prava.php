@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Nacte efektivni prava prihlaseneho uzivatele do session.
+ * Globalni pravo je dane existenci dvojice role a prava.
+ */
+
 if (!function_exists('cb_db_prava_nacti_do_session')) {
     function cb_db_prava_nacti_do_session(mysqli $conn, int $idUser, int $idRole): void
     {
@@ -14,7 +19,6 @@ if (!function_exists('cb_db_prava_nacti_do_session')) {
             SELECT id_pravo
             FROM prava_global
             WHERE id_role = ?
-              AND povoleno = 1
         ');
         if ($stmtGlobal === false) {
             throw new RuntimeException('DB: prepare selhal (prava_global select).');

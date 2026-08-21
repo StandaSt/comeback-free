@@ -11,12 +11,16 @@ declare(strict_types=1);
 function hr_nacti_nabor_prehled(mysqli $db): array
 {
     return [
-        'nepotvrzene_dotazniky' => hr_nacti_vd_podle_stavu($db, [0]),
-        'nove_dotazniky' => hr_nacti_vd_podle_stavu($db, [1]),
+        'nepotvrzene_dotazniky' => hr_nacti_vd_podle_stavu($db, [HR_VD_STAV_NEPOTVRZENO]),
+        'nove_dotazniky' => hr_nacti_vd_podle_stavu($db, [
+            HR_VD_STAV_NOVY,
+            HR_VD_STAV_POHOVOR_POZDEJI,
+            HR_VD_STAV_NELZE_SE_DOVOLAT,
+        ]),
         'domluvene_pohovory' => hr_nacti_domluvene_pohovory($db),
         'ceka_na_vstupni_dotaznik' => hr_nacti_cekajici_vstupni_dotaznik($db),
-        'ceka_na_smlouvu' => hr_nacti_vd_podle_stavu($db, [9]),
-        'expirovane_dotazniky' => hr_nacti_vd_podle_stavu($db, [13]),
+        'ceka_na_smlouvu' => hr_nacti_vd_podle_stavu($db, [HR_VD_STAV_SMLUVA_ODESLANA]),
+        'expirovane_dotazniky' => hr_nacti_vd_podle_stavu($db, [HR_VD_STAV_VD_NEPOTVRZENO]),
     ];
 }
 
@@ -112,7 +116,7 @@ function hr_nacti_domluvene_pohovory(mysqli $db): array
         LEFT JOIN hr_vd_akce a
             ON a.id_vd = vd.id_vd
         WHERE vd.aktivni = 1
-          AND vd.id_vd_stav = 3
+          AND vd.id_vd_stav = " . HR_VD_STAV_POHOVOR_DOMLUVEN . "
         GROUP BY
             vd.id_vd,
             vd.jmeno,
@@ -163,7 +167,7 @@ function hr_nacti_cekajici_vstupni_dotaznik(mysqli $db): array
         LEFT JOIN hr_vd_akce a
             ON a.id_vd = vd.id_vd
         WHERE vd.aktivni = 1
-          AND vd.id_vd_stav = 7
+          AND vd.id_vd_stav = " . HR_VD_STAV_NASTUPNI_DOTAZNIK_ODESLAN . "
         GROUP BY
             vd.id_vd,
             vd.jmeno,

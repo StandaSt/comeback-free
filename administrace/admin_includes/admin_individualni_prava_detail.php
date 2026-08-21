@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Renderuje detail globalnich prav a individualnich vyjimek jednoho uzivatele.
+ * Barevny ctverecek rozlisuje povolujici a zakazujici vyjimku.
+ */
+
 function cb_admin_individualni_prava_html(array $data): string
 {
     $user = $data['user'] ?? [];
@@ -11,7 +16,7 @@ function cb_admin_individualni_prava_html(array $data): string
     ob_start();
     ?>
     <div class="admin_individual_user">
-        <strong><?= h(trim((string)($user['prijmeni'] ?? '') . ' ' . (string)($user['jmeno'] ?? ''))) ?></strong>
+        <strong>Nastavení výjimek pro: <?= h(trim((string)($user['prijmeni'] ?? '') . ' ' . (string)($user['jmeno'] ?? ''))) ?></strong>
         <span>Role: <?= h((string)($user['role'] ?? '')) ?></span>
         <span>Slot: <?= h((string)($user['slot'] ?? '')) ?></span>
     </div>
@@ -45,7 +50,6 @@ function cb_admin_individualni_prava_html(array $data): string
                             $hasException = array_key_exists($idPravo, $exceptions);
                             $exceptionValue = $hasException ? (int)$exceptions[$idPravo] : null;
                             $exceptionClass = $exceptionValue === 1 ? 'is-plus' : ($exceptionValue === 0 ? 'is-minus' : '');
-                            $exceptionMark = $exceptionValue === 1 ? '+' : ($exceptionValue === 0 ? '-' : '');
                             ?>
                             <tr>
                                 <td style="white-space:nowrap;">
@@ -72,7 +76,6 @@ function cb_admin_individualni_prava_html(array $data): string
                                             data-global="<?= h((string)$globalValue) ?>"
                                             <?= $hasException ? 'checked' : '' ?>
                                         >
-                                        <span><?= h($exceptionMark) ?></span>
                                     </label>
                                 </td>
                             </tr>

@@ -60,9 +60,9 @@ function hr_uloz_pozadavek(mysqli $db, int $idPob, int $idSlot, int $pocet, stri
 }
 
 /**
- * Zrusi otevreny HR pozadavek podle opravneni role.
+ * Zrusi otevreny HR pozadavek zadany konkretnim HR uzivatelem.
  */
-function hr_zrus_pozadavek(mysqli $db, int $idPozadavek, int $idPob, int $zrusilPerson, int $idRole): void
+function hr_zrus_pozadavek(mysqli $db, int $idPozadavek, int $zrusilPerson): void
 {
     if ($zrusilPerson <= 0) {
         throw new RuntimeException('Chybí HR osoba pro zrušení požadavku.');
@@ -75,9 +75,9 @@ function hr_zrus_pozadavek(mysqli $db, int $idPozadavek, int $idPob, int $zrusil
             uzavrel = ?
         WHERE id_pozadavek = ?
           AND id_pozadavek_stav = 1
-          AND (? = 1 OR zadal = ? OR (? = 5 AND id_pob = ?))
+          AND zadal = ?
     ");
-    $stmt->bind_param('iiiiii', $zrusilPerson, $idPozadavek, $idRole, $zrusilPerson, $idRole, $idPob);
+    $stmt->bind_param('iii', $zrusilPerson, $idPozadavek, $zrusilPerson);
     $stmt->execute();
     $stmt->close();
 }

@@ -42,6 +42,36 @@ function cb_render_pp_flash(?array $flash): void
 }
 
 /*
+ * Vykresli drobne ovladaci prvky do predem daneho slotu hlavicky PP.
+ * Slot neslouzi pro vlastni layout modulu ani pro obsah stranky.
+ */
+function cb_render_pp_header_controls(array $controls, array $context): void
+{
+    if ($controls === []) {
+        return;
+    }
+
+    echo '<div class="pp_header_controls">';
+
+    foreach ($controls as $control) {
+        if (!is_array($control)) {
+            throw new RuntimeException('Neplatna definice ovladaciho prvku PP.');
+        }
+
+        $key = trim((string)($control['key'] ?? ''));
+        $file = trim((string)($control['file'] ?? ''));
+        if ($key === '' || $file === '' || !is_file($file)) {
+            throw new RuntimeException('Neplatna definice ovladaciho prvku PP.');
+        }
+
+        extract($context, EXTR_SKIP);
+        require $file;
+    }
+
+    echo '</div>';
+}
+
+/*
  * Normalizuje obecne rozlozeni bloku stranky.
  * Stack ma vzdy jeden sloupec, grid muze mit dva az ctyri sloupce.
  */
@@ -101,7 +131,9 @@ function cb_render_pp(array $page, array $context = []): void
     $module = trim((string)($page['module'] ?? ''));
     $pageKey = trim((string)($page['key'] ?? ''));
     $title = trim((string)($page['title'] ?? ''));
+    $rootClass = trim((string)($page['root_class'] ?? ''));
     $blocks = is_array($page['blocks'] ?? null) ? $page['blocks'] : null;
+    $headerControls = is_array($page['header_controls'] ?? null) ? $page['header_controls'] : [];
 
     if ($module === '' || $pageKey === '' || $title === '' || !is_array($blocks)) {
         throw new RuntimeException('Neplatna definice stranky PP.');
@@ -109,9 +141,16 @@ function cb_render_pp(array $page, array $context = []): void
 
     $layout = cb_pp_normalize_layout($page['layout'] ?? 'stack');
     $flash = is_array($context['flash'] ?? null) ? $context['flash'] : null;
+    if ($rootClass !== '' && preg_match('/^[a-zA-Z0-9_-]+$/', $rootClass) !== 1) {
+        throw new RuntimeException('Neplatna stylisticka trida PP.');
+    }
 
-    echo '<section class="pp" data-module="' . cb_pp_h($module) . '" data-page="' . cb_pp_h($pageKey) . '">';
-    echo '<header class="pp_header"><h1>' . cb_pp_h($title) . '</h1></header>';
+    $ppClass = 'pp' . ($rootClass !== '' ? ' ' . $rootClass : '');
+
+    echo '<section class="' . cb_pp_h($ppClass) . '" data-module="' . cb_pp_h($module) . '" data-page="' . cb_pp_h($pageKey) . '">';
+    echo '<header class="pp_header"><h1>' . cb_pp_h($title) . '</h1>';
+    cb_render_pp_header_controls($headerControls, $context);
+    echo '</header>';
     cb_render_pp_flash($flash);
     echo '<div class="pp_blocks pp_blocks--' . cb_pp_h($layout['type']) . ' pp_blocks--columns-' . (string)$layout['columns'] . '">';
 

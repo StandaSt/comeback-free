@@ -5,7 +5,7 @@
  */
 declare(strict_types=1);
 ?>
-<article class="hr_panel hr_panel_wide">
+<article class="hr_panel">
     <div class="hr_panel_header">
         <h2 class="hr_panel_title">Poslední zaměstnanci</h2>
         <a class="hr_panel_link" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanci')) ?>">Zobrazit všechny</a>

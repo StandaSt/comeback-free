@@ -1,7 +1,12 @@
 <?php
+/*
+ * Ucel souboru: Zpracuje potvrzeni nebo odmitnuti verejneho dotazniku z e-mailoveho odkazu.
+ * Po zmene stavu bezpecne uzavre jednorazovy overovaci token.
+ */
 declare(strict_types=1);
 
 require_once __DIR__ . '/../common/db/db_connect.php';
+require_once __DIR__ . '/../hr/hr_lib/hr_vd_stavy.php';
 
 function e(mixed $value): string
 {
@@ -45,28 +50,24 @@ if ($token !== '' && preg_match('/^[a-f0-9]{64}$/i', $token) === 1) {
             $idVdToken = (int)$row['id_vd_token'];
             $idVd = (int)$row['id_vd'];
 
+            // Cile i puvodni stav jsou predany jako parametry, ne jako text SQL.
+            $idCilovyStav = $akce === 'odmitnout'
+                ? HR_VD_STAV_VD_NEPOTVRZENO
+                : HR_VD_STAV_NOVY;
+            $aktivni = $akce === 'odmitnout' ? 0 : 1;
+            $idPuvodniStav = HR_VD_STAV_NEPOTVRZENO;
+
             // Potvrdi VD do naboru, nebo ho vyradi pri odmitnuti odkazu.
-            if ($akce === 'odmitnout') {
-                $stmt = $db->prepare('
-                    UPDATE hr_vd
-                    SET id_vd_stav = 13,
-                        aktivni = 0,
-                        upraveno = NOW()
-                    WHERE id_vd = ?
-                      AND id_vd_stav = 0
-                      AND aktivni = 1
-                ');
-            } else {
-                $stmt = $db->prepare('
-                    UPDATE hr_vd
-                    SET id_vd_stav = 1,
-                        upraveno = NOW()
-                    WHERE id_vd = ?
-                      AND id_vd_stav = 0
-                      AND aktivni = 1
-                ');
-            }
-            $stmt->bind_param('i', $idVd);
+            $stmt = $db->prepare('
+                UPDATE hr_vd
+                SET id_vd_stav = ?,
+                    aktivni = ?,
+                    upraveno = NOW()
+                WHERE id_vd = ?
+                  AND id_vd_stav = ?
+                  AND aktivni = 1
+            ');
+            $stmt->bind_param('iiii', $idCilovyStav, $aktivni, $idVd, $idPuvodniStav);
             $stmt->execute();
             $zmeneno = $stmt->affected_rows;
             $stmt->close();

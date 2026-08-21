@@ -1251,11 +1251,44 @@ align-items:center;
   min-width:0;
 }
 
+/* Spolecny slot pro drobne ovladaci prvky v hlavicce PP. */
+.pp_header_controls{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+
 /* Spolecne rozlozeni bloku vykreslenych PP rendererem. */
 .pp_blocks{
+  flex:1 1 auto;
   display:grid;
   gap:10px;
   min-width:0;
+  min-height:0;
+}
+
+/* Spolecna flash zprava vykreslena PP rendererem. */
+.pp_flash{
+  margin:0;
+  padding:9px 12px;
+  border:1px solid var(--cb-border-soft);
+  border-radius:8px;
+  color:var(--cb-text-main);
+  background:var(--cb-bg-control);
+}
+
+.pp_flash--success{
+  border-color:#a8e4c1;
+  color:#167447;
+  background:#ddf5e8;
+}
+
+.pp_flash--error{
+  border-color:#fecdd3;
+  color:#9f1239;
+  background:#fff1f2;
 }
 
 .pp_blocks--stack{

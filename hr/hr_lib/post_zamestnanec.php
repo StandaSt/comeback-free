@@ -1,8 +1,9 @@
 <?php
 declare(strict_types=1);
 
-/**
- * Zpracuje POST formularu pro rucni zalozeni zamestnance.
+/*
+ * Ucel souboru: Zpracuje akci ulozeni noveho zamestnance do HR evidence.
+ * Provadi validaci a zapis pres HR DB logiku; neresi vyber HTTP akce ani layout.
  */
 function hr_post_zamestnanec(mysqli $db, int $roleId): void
 {
@@ -21,14 +22,14 @@ function hr_post_zamestnanec(mysqli $db, int $roleId): void
             'type' => 'hr_success',
             'text' => 'Zaměstnanec byl uložen.',
         ];
-        header('Location: ' . cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson)));
+        header('Location: ' . cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson)), true, 303);
         exit;
     } catch (Throwable $e) {
         $_SESSION['hr_flash'] = [
             'type' => 'hr_error',
             'text' => $e->getMessage(),
         ];
-        header('Location: ' . cb_root_url('index.php?m=hr&page=novy_zamestnanec'));
+        header('Location: ' . cb_root_url('index.php?m=hr&page=novy_zamestnanec'), true, 303);
         exit;
     }
 }

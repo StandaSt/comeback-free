@@ -7,8 +7,10 @@ declare(strict_types=1);
 
 // Pomocna logika bez primeho SQL.
 require_once __DIR__ . '/../hr_lib/uzivatel.php';
+require_once __DIR__ . '/../hr_lib/hr_vd_stavy.php';
 require_once __DIR__ . '/../hr_lib/post_nabor.php';
-require_once __DIR__ . '/../hr_lib/post_pozadavky.php';
+require_once __DIR__ . '/../hr_lib/hr_post_pozadavek_vytvorit.php';
+require_once __DIR__ . '/../hr_lib/hr_post_pozadavek_zrusit.php';
 require_once __DIR__ . '/../hr_lib/post_zamestnanec.php';
 require_once __DIR__ . '/../hr_lib/formatovani.php';
 require_once __DIR__ . '/../hr_lib/vd_formatovani.php';

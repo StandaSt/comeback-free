@@ -1,4 +1,4 @@
-// admin_js/admin_individualni_prava_search.js
+// Nacita seznam uzivatelu s vyjimkami, vyhledava uzivatele a otevre jejich detail prav.
 'use strict';
 
 (function () {
@@ -50,32 +50,59 @@
     return element ? element.closest('[data-admin-individual="1"]') : null;
   }
 
-  function renderResults(page, users) {
-    var results = page.querySelector('[data-admin-individual-results]');
-    if (!results) {
-      return;
-    }
-
-    if (!users.length) {
-      results.innerHTML = '<div class="admin_individual_hint">Nenalezen žádný uživatel.</div>';
-      return;
-    }
-
-    results.innerHTML = ''
+  function userTableHtml(users, emailField, telefonField, withCounts) {
+    var countHeaders = withCounts ? '<th>Povoleno</th><th>Zakazano</th>' : '';
+    return ''
       + '<table class="admin_individual_results_table">'
-      + '<thead><tr><th>Jméno</th><th>Email</th><th>Telefon</th></tr></thead>'
+      + '<thead><tr><th>Jméno</th>' + countHeaders + '<th>Email</th><th>Telefon</th></tr></thead>'
       + '<tbody>'
       + users.map(function (user) {
         var fullName = String(user.prijmeni || '') + ' ' + String(user.jmeno || '');
         return ''
           + '<tr class="admin_individual_result" data-admin-individual-user="' + escapeHtml(user.id_user) + '">'
           + '<td><strong>' + escapeHtml(fullName.trim()) + '</strong></td>'
-          + '<td>' + escapeHtml(user.email_match || '') + '</td>'
-          + '<td>' + escapeHtml(user.telefon_match || '') + '</td>'
+          + (withCounts ? '<td>' + escapeHtml(user.pocet_povoleno || 0) + '</td><td>' + escapeHtml(user.pocet_zakazano || 0) + '</td>' : '')
+          + '<td>' + escapeHtml(user[emailField] || '') + '</td>'
+          + '<td>' + escapeHtml(user[telefonField] || '') + '</td>'
           + '</tr>';
       }).join('')
       + '</tbody>'
       + '</table>';
+  }
+
+  function renderResults(page, users) {
+    var results = page.querySelector('[data-admin-individual-results]');
+    if (!results) {
+      return;
+    }
+
+    results.innerHTML = users.length
+      ? userTableHtml(users, 'email_match', 'telefon_match', false)
+      : '<div class="admin_individual_hint">Nenalezen žádný uživatel.</div>';
+  }
+
+  function renderExceptionUsers(page, users) {
+    var results = page.querySelector('[data-admin-individual-exception-users]');
+    if (!results) {
+      return;
+    }
+
+    results.innerHTML = users.length
+      ? userTableHtml(users, 'email', 'telefon', true)
+      : '<div class="admin_individual_hint">Zatim nema nikdo nastavenou vyjimku.</div>';
+  }
+
+  function loadExceptionUsers(page) {
+    post('exception_users', {})
+      .then(function (data) {
+        renderExceptionUsers(page, Array.isArray(data.users) ? data.users : []);
+      })
+      .catch(function (error) {
+        var results = page.querySelector('[data-admin-individual-exception-users]');
+        if (results) {
+          results.innerHTML = '<div class="admin_individual_hint">' + escapeHtml(error.message || 'Nacteni seznamu selhalo.') + '</div>';
+        }
+      });
   }
 
   function setDetail(page, html) {
@@ -133,10 +160,9 @@
     post('detail', { id_user: idUser })
       .then(function (data) {
         setDetail(page, data.detail_html || '');
-        var results = page.querySelector('[data-admin-individual-results]');
-        if (results) {
-          results.innerHTML = '';
-        }
+        Array.prototype.slice.call(page.querySelectorAll('[data-admin-individual-user]')).forEach(function (userRow) {
+          userRow.classList.toggle('is-active', userRow === row);
+        });
       })
       .catch(function (error) {
         window.alert(error.message || 'Načtení uživatele selhalo.');
@@ -146,6 +172,28 @@
   window.CB_ADMIN_INDIVIDUAL = {
     post: post
   };
+
+  function init(root) {
+    Array.prototype.slice.call(root.querySelectorAll('[data-admin-individual="1"]')).forEach(function (page) {
+      loadExceptionUsers(page);
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      init(document);
+    }, { once: true });
+  } else {
+    init(document);
+  }
+
+  document.addEventListener('cb:main-swapped', function () {
+    init(document);
+  });
+
+  document.addEventListener('cb:admin-individual-exception-saved', function () {
+    init(document);
+  });
 
   document.addEventListener('input', function (event) {
     var input = event.target && event.target.closest ? event.target.closest('[data-admin-individual-search]') : null;

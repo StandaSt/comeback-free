@@ -20,8 +20,8 @@ function hr_fetch_prehled(mysqli $db): array
     // Spocita verejne dotazniky podle pevnych ID stavu VD.
     $result = $db->query("
         SELECT
-            SUM(CASE WHEN id_vd_stav = 1 THEN 1 ELSE 0 END) AS novy,
-            SUM(CASE WHEN id_vd_stav IN (3,7,8,9,10) THEN 1 ELSE 0 END) AS v_procesu
+            SUM(CASE WHEN id_vd_stav IN (" . HR_VD_STAV_NOVY . ", " . HR_VD_STAV_POHOVOR_POZDEJI . ", " . HR_VD_STAV_NELZE_SE_DOVOLAT . ") THEN 1 ELSE 0 END) AS novy,
+            SUM(CASE WHEN id_vd_stav IN (" . HR_VD_STAV_POHOVOR_DOMLUVEN . ", " . HR_VD_STAV_NASTUPNI_DOTAZNIK_ODESLAN . ", " . HR_VD_STAV_NASTUPNI_DOTAZNIK_VYPLNEN . ", " . HR_VD_STAV_SMLUVA_ODESLANA . ", " . HR_VD_STAV_SMLUVA_PODEPSANA . ") THEN 1 ELSE 0 END) AS v_procesu
         FROM hr_vd
         WHERE id_person IS NULL
           AND aktivni = 1

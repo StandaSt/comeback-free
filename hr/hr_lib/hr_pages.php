@@ -1,8 +1,8 @@
 <?php
 /*
  * Ucel souboru: Resi seznam a vyber aktualni stranky modulu HR.
- * Cte stabilni nazvy stranek z hr_module.php a zachovava soucasne soubory
- * pro vykresleni obsahu. Neobsahuje HTML, DB logiku ani zpracovani formulare.
+ * Cte stabilni nazvy a definice stranek z hr_module.php. U nemigrovanych stranek
+ * zachovava soucasne soubory obsahu. Neobsahuje HTML, DB logiku ani formulare.
  */
 declare(strict_types=1);
 
@@ -29,14 +29,17 @@ function cb_hr_pages(): array
         $pageConfig = is_array($modulePages[$key] ?? null) ? $modulePages[$key] : [];
         return (string)($pageConfig['title'] ?? '');
     };
+    $pageDefinition = static function (string $key) use ($modulePages): array {
+        return is_array($modulePages[$key] ?? null) ? $modulePages[$key] : [];
+    };
 
     return [
-        'prehled' => ['file' => __DIR__ . '/../hr_pages/hr_prehled.php', 'title' => $pageTitle('prehled')],
+        'prehled' => ['title' => $pageTitle('prehled'), 'definition' => $pageDefinition('prehled')],
         'nabor' => ['file' => __DIR__ . '/../hr_pages/nabor.php', 'title' => $pageTitle('nabor')],
         'zamestnanci' => ['file' => __DIR__ . '/../hr_pages/zamestnanci.php', 'title' => $pageTitle('zamestnanci')],
         'zamestnanec' => ['file' => __DIR__ . '/../hr_pages/zamestnanec.php', 'title' => $pageTitle('zamestnanec')],
-        'novy_zamestnanec' => ['file' => __DIR__ . '/../hr_pages/novy_zamestnanec.php', 'title' => $pageTitle('novy_zamestnanec')],
-        'pozadavky' => ['file' => __DIR__ . '/../hr_pages/pozadavky.php', 'title' => $pageTitle('pozadavky')],
+        'novy_zamestnanec' => ['title' => $pageTitle('novy_zamestnanec'), 'definition' => $pageDefinition('novy_zamestnanec')],
+        'pozadavky' => ['title' => $pageTitle('pozadavky'), 'definition' => $pageDefinition('pozadavky')],
         'pracovni_pomery' => ['file' => __DIR__ . '/../hr_pages/placeholder.php', 'title' => $pageTitle('pracovni_pomery')],
         'dokumenty' => ['file' => __DIR__ . '/../hr_pages/placeholder.php', 'title' => $pageTitle('dokumenty')],
         'skoleni' => ['file' => __DIR__ . '/../hr_pages/placeholder.php', 'title' => $pageTitle('skoleni')],
@@ -60,7 +63,8 @@ function cb_hr_current_page(): array
 
     return [
         'key' => $page,
-        'file' => $pages[$page]['file'],
+        'file' => (string)($pages[$page]['file'] ?? ''),
         'title' => $pages[$page]['title'],
+        'definition' => is_array($pages[$page]['definition'] ?? null) ? $pages[$page]['definition'] : [],
     ];
 }

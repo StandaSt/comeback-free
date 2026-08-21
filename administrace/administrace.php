@@ -2,6 +2,11 @@
 declare(strict_types=1);
 
 /*
+ * Modulovy vstup administrace.
+ * Pripravi modul, preda akce dispatcheru a nacte vybrany pohled.
+ */
+
+/*
  * Modulový vstup Administrace.
  * Sem nepatří SQL dotazy, HTML bloky, AJAX handlery ani pomocné funkce.
  * Soubor má pouze připravit modul, předat akce dispatcheru, vybrat stránku/pohled a načíst modulový layout.
@@ -56,6 +61,14 @@ if (
 
     try {
         $action = (string)($_POST['action'] ?? '');
+        if ($action === 'exception_users') {
+            echo json_encode([
+                'ok' => true,
+                'users' => cb_admin_individualni_prava_uzivatele_s_vyjimkami(),
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
         if ($action === 'search') {
             $users = cb_admin_individualni_prava_hledej_uzivatele((string)($_POST['q'] ?? ''));
             $detailHtml = '';
@@ -119,15 +132,15 @@ if (
         cb_admin_prava_roli_uloz(
             (int)($_POST['id_role'] ?? 0),
             (int)($_POST['id_pravo'] ?? 0),
-            (int)($_POST['povoleno'] ?? 0) === 1
+            (int)($_POST['allowed'] ?? 0) === 1
         );
         cb_user_akce_zapis([
             'id_user_akce_typ' => 14,
             'modul' => 'administrace',
             'objekt' => 'prava_global',
             'id_objektu' => (int)($_POST['id_pravo'] ?? 0),
-            'pole' => 'povoleno',
-            'hodnota_new' => (string)((int)($_POST['povoleno'] ?? 0) === 1 ? 1 : 0),
+            'pole' => 'pristup',
+            'hodnota_new' => (string)((int)($_POST['allowed'] ?? 0) === 1 ? 1 : 0),
             'vysledek' => 1,
             'zdroj' => 'administrace',
             'detail' => [
