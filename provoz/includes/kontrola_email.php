@@ -208,7 +208,7 @@ function html_radky_kontroly(array $prehledEmailu): string
 
 function exportuj_kontrolu_pdf(array $prehledEmailu, string $kontrolaCas): void
 {
-    require_once __DIR__ . '/../../vendor/autoload.php';
+    require_once __DIR__ . '/../../../vendor/autoload.php';
 
     $html = '<!doctype html><html lang="cs"><head><meta charset="utf-8">'
         . '<style>'

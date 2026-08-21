@@ -20,7 +20,7 @@ function cb_mail_send(string $profile, string $to, string $subject, string $body
         throw new RuntimeException('Chybí SMTP konfigurace.');
     }
 
-    $autoload = __DIR__ . '/../../vendor/autoload.php';
+    $autoload = __DIR__ . '/../../../vendor/autoload.php';
     if (!is_file($autoload)) {
         throw new RuntimeException('Chybí Composer autoload pro odeslání e-mailu.');
     }

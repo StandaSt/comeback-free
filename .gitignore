@@ -1,24 +1,11 @@
 # Secrets / local config
-common/config/
-!common/config/
-!common/config/constants.php
-config/secrets.php
+/common/config/*
+!/common/config/constants.php
 
-# Logs
+# Runtime logs
 *.log
-data_smeny.txt
-log/
-www/log/
-
-# Local helper/output folders
-/vendor/
-_kandidati/
-admin_testy/
-_kandidati/node_modules/
-_kandidati/playwright-report/
-_kandidati/test-results/
-_kandidati/sandboxAI/
-
+/data_smeny.txt
+/log/
 
 # OS/editor noise
 .DS_Store
