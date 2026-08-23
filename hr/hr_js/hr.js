@@ -73,6 +73,89 @@
             updateRequestSubmit();
             slot.addEventListener('change', updateRequestSubmit);
         });
+
+        container.querySelectorAll('[data-hr-vd-action-form]').forEach((form) => {
+            if (form.dataset.hrVdActionBound === '1') {
+                return;
+            }
+            form.dataset.hrVdActionBound = '1';
+
+            const type = form.querySelector('[data-hr-vd-action-type]');
+            const result = form.querySelector('[data-hr-vd-action-result]');
+            const term = form.querySelector('[data-hr-vd-term]');
+            const date = form.querySelector('[data-hr-vd-term-date]');
+            const time = form.querySelector('[data-hr-vd-term-time]');
+            const hour = form.querySelector('[data-hr-vd-term-hour]');
+            const minute = form.querySelector('[data-hr-vd-term-minute]');
+            const timeWrap = form.querySelector('[data-hr-vd-term-time-wrap]');
+            const agreedStart = form.querySelector('[data-hr-vd-domluveny-nastup]');
+            const source = form.querySelector('[data-hr-vd-action-results]');
+            if (!type || !result || !term || !date || !time || !hour || !minute || !timeWrap || !agreedStart || !source) {
+                return;
+            }
+
+            let rows = [];
+            try {
+                rows = JSON.parse(source.textContent || '[]');
+            } catch (error) {
+                rows = [];
+            }
+
+            const syncTime = () => {
+                time.value = `${hour.value}:${minute.value}`;
+            };
+
+            const updateTerm = () => {
+                const selected = rows.find((row) => String(row.id_vd_akce_vysledek) === result.value);
+                const needsDate = selected && Number(selected.vyzaduje_termin_date) === 1;
+                const needsTime = selected && Number(selected.vyzaduje_termin_time) === 1;
+                const isAgreedStart = selected && Number(selected.id_cilovy_vd_stav) === 24;
+                term.hidden = !needsDate;
+                agreedStart.hidden = !isAgreedStart;
+                agreedStart.querySelectorAll('[data-hr-vd-podminka]').forEach((input) => {
+                    input.required = Boolean(isAgreedStart);
+                    if (!isAgreedStart) input.value = '';
+                });
+                date.required = Boolean(needsDate);
+                time.required = Boolean(needsTime);
+                timeWrap.hidden = !needsDate;
+                if (needsTime && time.value === '') {
+                    hour.value = '8';
+                    minute.value = '00';
+                    syncTime();
+                }
+                if (!needsDate) {
+                    date.value = '';
+                    time.value = '';
+                    hour.value = '8';
+                    minute.value = '00';
+                }
+            };
+
+            const updateResults = () => {
+                const typeId = type.value;
+                result.replaceChildren();
+                const placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.textContent = typeId === '' ? 'Nejprve vyberte akci' : 'Vyberte';
+                result.append(placeholder);
+
+                rows.filter((row) => String(row.id_vd_akce_typ) === typeId).forEach((row) => {
+                    const option = document.createElement('option');
+                    option.value = String(row.id_vd_akce_vysledek);
+                    option.textContent = row.vysledek;
+                    result.append(option);
+                });
+                result.disabled = typeId === '';
+                updateTerm();
+            };
+
+            type.addEventListener('change', updateResults);
+            result.addEventListener('change', updateTerm);
+            hour.addEventListener('change', syncTime);
+            minute.addEventListener('change', syncTime);
+            updateResults();
+        });
     };
 
     window.CB_HR_INIT = initHr;

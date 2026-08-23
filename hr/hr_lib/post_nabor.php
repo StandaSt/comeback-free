@@ -12,23 +12,25 @@ function hr_post_nabor(mysqli $db): void
         hr_uloz_vd_akci(
             $db,
             $idVd,
-            (int)($_POST['id_vd_stav'] ?? 0),
-            (int)($_POST['id_vd_akce_typ'] ?? 0),
-            trim((string)($_POST['akce_kdy'] ?? '')),
+            (int)($_POST['id_vd_akce_vysledek'] ?? 0),
+            trim((string)($_POST['termin_date'] ?? '')),
+            trim((string)($_POST['termin_time'] ?? '')),
             (string)($_POST['poznamka'] ?? ''),
-            hr_current_person_id($db)
+            hr_current_person_id($db),
+            $_POST
         );
         $_SESSION['hr_flash'] = [
             'type' => 'hr_success',
             'text' => 'Akce byla uložena.',
         ];
+        header('Location: ' . cb_root_url('index.php?m=hr&page=nabor'), true, 303);
     } catch (Throwable $e) {
         $_SESSION['hr_flash'] = [
             'type' => 'hr_error',
             'text' => $e->getMessage(),
         ];
+        header('Location: ' . cb_root_url('index.php?m=hr&page=nabor&id_vd=' . rawurlencode((string)$idVd)), true, 303);
     }
 
-    header('Location: ' . cb_root_url('index.php?m=hr&page=nabor&id_vd=' . rawurlencode((string)$idVd)));
     exit;
 }

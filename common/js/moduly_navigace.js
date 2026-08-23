@@ -92,8 +92,9 @@
 
   window.CB_ACTIVE_MAIN_MODULE = activeMainModule;
   if (!root) return;
+  var initialParams = new URLSearchParams(window.location.search);
   history.replaceState(null, '', publicShellUrl);
-  var currentShellKey = makeShellKey(activeMainModule, new URLSearchParams(window.location.search));
+  var currentShellKey = makeShellKey(activeMainModule, initialParams);
   var moduleLoadRunning = false;
   var pageLoaderTimer = 0;
 
@@ -662,7 +663,7 @@
 
   if (config.initialAutoLoad === true) {
     window.setTimeout(function(){
-      loadModule(activeMainModule, false, new URLSearchParams(window.location.search));
+      loadModule(activeMainModule, false, initialParams);
     }, 0);
   }
 })();

@@ -74,6 +74,13 @@ if ($userRole === '') {
     $userRole = 'Uživatel';
 }
 $db = db();
+$isNaborDetail = $page === 'nabor' && (int)($_GET['id_vd'] ?? 0) > 0;
+if ($isNaborDetail) {
+    $vdHeaderDetail = hr_nacti_vd_detail($db, (int)$_GET['id_vd']);
+    if (is_array($vdHeaderDetail)) {
+        $pageTitle = 'Náborový proces: ' . (string)$vdHeaderDetail['cele_jmeno'];
+    }
+}
 cb_hr_request_dispatch($db, $page, $cbUser, $roleId);
 
 $flash = $_SESSION['hr_flash'] ?? null;
@@ -109,7 +116,14 @@ $cbHrUsesPpRenderer = is_array($cbHrPageDefinition['blocks'] ?? null) && $cbHrPa
 <section class="pp hr_pp" data-module="hr" data-page="<?= h($page) ?>">
     <header class="pp_header">
         <h1><?= h($pageTitle) ?></h1>
-        <?php require __DIR__ . '/hr_includes/hr_header_hledani.php'; ?>
+        <?php if ($isNaborDetail && isset($vdHeaderDetail) && is_array($vdHeaderDetail)): ?>
+            <div class="pp_header_control hr_vd_header_actions">
+                <span class="hr_muted">VD č. <?= h((string)$vdHeaderDetail['id_vd']) ?> - <strong class="hr_vd_header_status"><?= h((string)$vdHeaderDetail['stav_nazev']) ?></strong></span>
+                <a class="hr_vd_close_detail" href="<?= h(cb_root_url('index.php?m=hr&page=nabor')) ?>" aria-label="Zavřít detail" title="Zavřít detail">×</a>
+            </div>
+        <?php else: ?>
+            <?php require __DIR__ . '/hr_includes/hr_header_hledani.php'; ?>
+        <?php endif; ?>
     </header>
     <main class="hr_content">
         <?php if (is_array($flash) && isset($flash['text'])): ?>

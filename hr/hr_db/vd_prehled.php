@@ -12,13 +12,9 @@ function hr_nacti_nabor_prehled(mysqli $db): array
 {
     return [
         'nepotvrzene_dotazniky' => hr_nacti_vd_podle_stavu($db, [HR_VD_STAV_NEPOTVRZENO]),
-        'nove_dotazniky' => hr_nacti_vd_podle_stavu($db, [
-            HR_VD_STAV_NOVY,
-            HR_VD_STAV_POHOVOR_POZDEJI,
-            HR_VD_STAV_NELZE_SE_DOVOLAT,
-        ]),
+        'nove_dotazniky' => hr_nacti_vd_podle_stavu($db, [HR_VD_STAV_NOVY]),
         'domluvene_pohovory' => hr_nacti_domluvene_pohovory($db),
-        'ceka_na_vstupni_dotaznik' => hr_nacti_cekajici_vstupni_dotaznik($db),
+        'domluveny_nastup' => hr_nacti_domluveny_nastup($db),
         'ceka_na_smlouvu' => hr_nacti_vd_podle_stavu($db, [HR_VD_STAV_SMLUVA_ODESLANA]),
         'expirovane_dotazniky' => hr_nacti_vd_podle_stavu($db, [HR_VD_STAV_VD_NEPOTVRZENO]),
     ];
@@ -105,7 +101,7 @@ function hr_nacti_domluvene_pohovory(mysqli $db): array
             vd.pracoviste_preference,
             vd.odeslano AS zadano,
             COALESCE(MAX(a.akce_kdy), vd.upraveno, vd.odeslano) AS posledni_aktivita,
-            MAX(CASE WHEN a.id_vd_akce_typ = 3 THEN a.akce_kdy ELSE NULL END) AS planovano_na,
+            MAX(CASE WHEN v.id_cilovy_vd_stav = " . HR_VD_STAV_POHOVOR_DOMLUVEN . " THEN CONCAT(a.termin_date, ' ', COALESCE(a.termin_time, '00:00:00')) ELSE NULL END) AS planovano_na,
             s.nazev AS stav_nazev,
             cs.slot AS pozice
         FROM hr_vd vd
@@ -115,6 +111,8 @@ function hr_nacti_domluvene_pohovory(mysqli $db): array
             ON cs.id_slot = vd.id_slot
         LEFT JOIN hr_vd_akce a
             ON a.id_vd = vd.id_vd
+        LEFT JOIN hr_cis_vd_akce_vysledek v
+            ON v.id_vd_akce_vysledek = a.id_vd_akce_vysledek
         WHERE vd.aktivni = 1
           AND vd.id_vd_stav = " . HR_VD_STAV_POHOVOR_DOMLUVEN . "
         GROUP BY
@@ -144,7 +142,7 @@ function hr_nacti_domluvene_pohovory(mysqli $db): array
 /**
  * Nacte VD, u kterych cekame na vyplneni nastupniho dotazniku.
  */
-function hr_nacti_cekajici_vstupni_dotaznik(mysqli $db): array
+function hr_nacti_domluveny_nastup(mysqli $db): array
 {
     $sql = "
         SELECT
@@ -156,7 +154,7 @@ function hr_nacti_cekajici_vstupni_dotaznik(mysqli $db): array
             vd.pracoviste_preference,
             vd.odeslano AS zadano,
             COALESCE(MAX(a.akce_kdy), vd.upraveno, vd.odeslano) AS posledni_aktivita,
-            MAX(CASE WHEN a.id_vd_akce_typ = 7 THEN a.akce_kdy ELSE NULL END) AS odeslano,
+            MAX(CASE WHEN v.id_vd_akce_typ = 12 THEN 1 ELSE 0 END) AS dotaznik_odeslan,
             s.nazev AS stav_nazev,
             cs.slot AS pozice
         FROM hr_vd vd
@@ -166,8 +164,10 @@ function hr_nacti_cekajici_vstupni_dotaznik(mysqli $db): array
             ON cs.id_slot = vd.id_slot
         LEFT JOIN hr_vd_akce a
             ON a.id_vd = vd.id_vd
+        LEFT JOIN hr_cis_vd_akce_vysledek v
+            ON v.id_vd_akce_vysledek = a.id_vd_akce_vysledek
         WHERE vd.aktivni = 1
-          AND vd.id_vd_stav = " . HR_VD_STAV_NASTUPNI_DOTAZNIK_ODESLAN . "
+          AND vd.id_vd_stav = " . HR_VD_STAV_DOMLUVEN_NASTUP . "
         GROUP BY
             vd.id_vd,
             vd.jmeno,
@@ -179,7 +179,7 @@ function hr_nacti_cekajici_vstupni_dotaznik(mysqli $db): array
             vd.upraveno,
             s.nazev,
             cs.slot
-        ORDER BY odeslano DESC, vd.id_vd DESC
+        ORDER BY dotaznik_odeslan ASC, vd.id_vd ASC
     ";
 
     $result = $db->query($sql);

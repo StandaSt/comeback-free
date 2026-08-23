@@ -141,10 +141,8 @@
 
 .hr_stat_box {
     position: relative;
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    min-height: 72px;
+    display: block;
+    min-height: 82px;
     padding: 10px 12px;
     overflow: hidden;
     text-decoration: none;
@@ -175,10 +173,35 @@
     font-weight: 700;
 }
 
+.hr_stat_metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-top: 6px;
+    min-height: 38px;
+}
+
+.hr_stat_metric {
+    display: grid;
+    min-width: 0;
+    padding: 0 7px;
+    place-content: center;
+    text-align: center;
+}
+
+.hr_stat_metric + .hr_stat_metric {
+    border-left: 1px solid var(--border);
+}
+
 .hr_stat_value {
     display: block;
-    margin: 1px 0;
+    margin: 0;
     font-size: 21px;
+}
+
+.hr_stat_metric small {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
 }
 
 .hr_stat_note {
@@ -189,7 +212,8 @@
 .hr_stat_icon {
     display: grid;
     place-items: center;
-    flex: 0 0 34px;
+    align-self: center;
+    justify-self: start;
     width: 34px;
     height: 34px;
     border-radius: 10px;
@@ -665,6 +689,130 @@
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     gap: 18px 80px;
+    margin-bottom: 20px;
+}
+
+.hr_vd_action_form {
+    display: grid;
+    grid-template-columns: minmax(360px, 1.2fr) minmax(0, 1.4fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.hr_vd_action_fields,
+.hr_vd_term {
+    display: grid;
+    gap: 12px;
+}
+
+.hr_vd_action_fields {
+    align-content: start;
+    gap: 8px;
+}
+
+.hr_vd_inline_field {
+    grid-template-columns: 140px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+}
+
+.hr_vd_term {
+    grid-template-columns: 140px minmax(120px, 1fr) auto minmax(100px, .55fr);
+    align-items: center;
+    gap: 10px;
+}
+
+.hr_vd_term .hr_vd_inline_field {
+    display: contents;
+}
+
+.hr_vd_term .hr_vd_inline_field[hidden] {
+    display: none;
+}
+
+.hr_vd_time_selects {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-width: 100px;
+    gap: 6px;
+}
+
+.hr_vd_action_note {
+    grid-template-columns: 76px minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+}
+
+.hr_vd_action_note textarea {
+    min-height: 154px;
+}
+
+.hr_vd_action_submit {
+    grid-column: 2;
+}
+
+.hr_vd_action_submit .hr_primary_button {
+    width: min(100%, 300px);
+}
+
+.hr_vd_close_detail {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border: 1px solid #efb9bf;
+    border-radius: 3px;
+    color: #c93745;
+    font-size: 18px;
+    line-height: 1;
+    text-decoration: none;
+    background: #fff3f4;
+}
+
+.hr_vd_header_actions {
+    gap: 12px;
+}
+
+.hr_vd_header_actions .hr_muted {
+    margin: 0;
+}
+
+.hr_vd_header_status {
+    color: var(--green);
+    font-size: 1.08em;
+    font-weight: 700;
+}
+
+.hr_vd_nastupni_dotaznik_placeholder {
+    display: grid;
+    gap: 6px;
+    padding: 10px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+}
+
+.hr_vd_podminky {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.hr_vd_domluveny_nastup {
+    display: grid;
+    gap: 12px;
+}
+
+.hr_vd_term[hidden],
+.hr_vd_domluveny_nastup[hidden] {
+    display: none;
+}
+
+.hr_vd_full_width {
+    grid-column: 1 / -1;
 }
 
 .hr_compact_empty_state {
@@ -777,5 +925,14 @@
 
     .hr_vd_detail_grid {
         grid-template-columns: 1fr;
+    }
+
+    .hr_vd_action_form,
+    .hr_vd_term {
+        grid-template-columns: 1fr;
+    }
+
+    .hr_vd_action_submit {
+        grid-column: 1;
     }
 }

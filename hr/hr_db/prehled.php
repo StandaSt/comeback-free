@@ -14,21 +14,24 @@ function hr_fetch_prehled(mysqli $db): array
 
     $nabor = [
         'novy' => 0,
-        'v_procesu' => 0,
+        'pohovor' => 0,
+        'nastup' => 0,
     ];
 
     // Spocita verejne dotazniky podle pevnych ID stavu VD.
     $result = $db->query("
         SELECT
-            SUM(CASE WHEN id_vd_stav IN (" . HR_VD_STAV_NOVY . ", " . HR_VD_STAV_POHOVOR_POZDEJI . ", " . HR_VD_STAV_NELZE_SE_DOVOLAT . ") THEN 1 ELSE 0 END) AS novy,
-            SUM(CASE WHEN id_vd_stav IN (" . HR_VD_STAV_POHOVOR_DOMLUVEN . ", " . HR_VD_STAV_NASTUPNI_DOTAZNIK_ODESLAN . ", " . HR_VD_STAV_NASTUPNI_DOTAZNIK_VYPLNEN . ", " . HR_VD_STAV_SMLUVA_ODESLANA . ", " . HR_VD_STAV_SMLUVA_PODEPSANA . ") THEN 1 ELSE 0 END) AS v_procesu
+            SUM(CASE WHEN id_vd_stav = " . HR_VD_STAV_NOVY . " THEN 1 ELSE 0 END) AS novy,
+            SUM(CASE WHEN id_vd_stav = " . HR_VD_STAV_POHOVOR_DOMLUVEN . " THEN 1 ELSE 0 END) AS pohovor,
+            SUM(CASE WHEN id_vd_stav IN (" . HR_VD_STAV_DOMLUVEN_NASTUP . ", " . HR_VD_STAV_SMLUVA_ODESLANA . ") THEN 1 ELSE 0 END) AS nastup
         FROM hr_vd
         WHERE id_person IS NULL
           AND aktivni = 1
     ");
     if ($row = $result->fetch_assoc()) {
         $nabor['novy'] = (int)($row['novy'] ?? 0);
-        $nabor['v_procesu'] = (int)($row['v_procesu'] ?? 0);
+        $nabor['pohovor'] = (int)($row['pohovor'] ?? 0);
+        $nabor['nastup'] = (int)($row['nastup'] ?? 0);
     }
     $result->free();
 

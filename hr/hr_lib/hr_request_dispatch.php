@@ -28,7 +28,7 @@ function cb_hr_request_dispatch(mysqli $db, string $page, array $user, int $role
         return;
     }
 
-    if ($page === 'nabor') {
+    if ($action === 'hr_nabor_ulozit_akci' && $page === 'nabor') {
         hr_post_nabor($db);
     }
 
