@@ -11,6 +11,38 @@
 (function (w) {
   const CB_AJAX = w.CB_AJAX || (w.CB_AJAX = {});
   const LOADER_MODES = ['dashboard', 'cards', 'restia'];
+  const nativeFetch = typeof w.fetch === 'function' ? w.fetch.bind(w) : null;
+  let loginRedirectStarted = false;
+
+  function isSameOriginRequest(input) {
+    try {
+      const requestUrl = input && typeof input === 'object' && typeof input.url === 'string'
+        ? input.url
+        : String(input || '');
+      return new URL(requestUrl, w.location.href).origin === w.location.origin;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function redirectToLogin() {
+    if (loginRedirectStarted) {
+      return;
+    }
+    loginRedirectStarted = true;
+    w.location.replace(new URL(String(w.CB_ENDPOINT || 'index.php'), w.location.href).toString());
+  }
+
+  if (nativeFetch) {
+    w.fetch = function (input, init) {
+      return nativeFetch(input, init).then((response) => {
+        if (response && response.status === 401 && isSameOriginRequest(input)) {
+          redirectToLogin();
+        }
+        return response;
+      });
+    };
+  }
 
   function createLoaderState() {
     return {

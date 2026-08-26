@@ -19,23 +19,25 @@ $employees = hr_fetch_employees($db);
             <table class="hr_table">
                 <thead>
                     <tr>
-                        <th class="hr_table_cell hr_table_head">Zaměstnanec</th>
-                        <th class="hr_table_cell hr_table_head">Zařazení</th>
-                        <th class="hr_table_cell hr_table_head">Pracoviště</th>
-                        <th class="hr_table_cell hr_table_head">Typ vztahu</th>
-                        <th class="hr_table_cell hr_table_head">Datum nástupu</th>
+                        <th class="hr_table_cell hr_table_head" style="width: 1%;">ID</th>
+                        <th class="hr_table_cell hr_table_head" style="width: 1%;">Zaměstnanec</th>
+                        <th class="hr_table_cell hr_table_head" style="width: 1%;">Zařazení</th>
+                        <th class="hr_table_cell hr_table_head" style="width: 1%;">Pracoviště</th>
+                        <th class="hr_table_cell hr_table_head" style="width: 1%;">Typ vztahu</th>
+                        <th class="hr_table_cell hr_table_head" style="width: 1%;">Datum nástupu</th>
                         <th class="hr_table_cell hr_table_head">Stav</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($employees as $employee): ?>
                         <tr>
-                            <td class="hr_table_cell"><a class="hr_table_link" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$employee['id_person']))) ?>"><?= h($employee['cele_jmeno']) ?></a></td>
-                            <td class="hr_table_cell"><?= h((string)($employee['zarazeni'] ?? '-')) ?></td>
-                            <td class="hr_table_cell"><?= h((string)($employee['pracoviste'] ?? '-')) ?></td>
-                            <td class="hr_table_cell"><?= h((string)($employee['vztah_kod'] ?? '-')) ?></td>
-                            <td class="hr_table_cell"><?= h(hr_format_date((string)($employee['datum_nastupu'] ?? ''))) ?></td>
-                            <td class="hr_table_cell"><span class="hr_badge <?= h($employee['stav_badge']) ?>"><?= h($employee['stav_label']) ?></span></td>
+                            <td class="hr_table_cell" style="width: 1%;"><?= h((string)$employee['id_person']) ?></td>
+                            <td class="hr_table_cell" style="width: 1%;"><a class="hr_table_link" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$employee['id_person']))) ?>"><?= h($employee['cele_jmeno']) ?></a></td>
+                            <td class="hr_table_cell" style="width: 1%;"><?= h((string)($employee['zarazeni'] ?? '-')) ?></td>
+                            <td class="hr_table_cell" style="width: 1%;"><?= h((string)($employee['pracoviste'] ?? '-')) ?></td>
+                            <td class="hr_table_cell" style="width: 1%;"><?= h((string)($employee['vztah_kod'] ?? '-')) ?></td>
+                            <td class="hr_table_cell" style="width: 1%;"><?= h(hr_format_date((string)($employee['datum_nastupu'] ?? ''))) ?></td>
+                            <td class="hr_table_cell"><span class="hr_badge <?= h($employee['stav_badge']) ?>"><?= h($employee['stav_label']) ?></span><?php if ((int)($employee['overen'] ?? 0) === 0): ?> <span class="hr_badge hr_neutral">Neověřený</span><?php endif; ?><?php if ((int)($employee['kompletni'] ?? 0) === 0): ?> <span class="hr_badge hr_neutral">Nekompletní</span><?php endif; ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>

@@ -10,6 +10,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../common/lib/session_boot.php';
 require_once __DIR__ . '/../common/config/secrets.php';
 require_once __DIR__ . '/../common/lib/app.php';
+require_once __DIR__ . '/../common/lib/form_post.php';
 require_once __DIR__ . '/../common/lib/pobocky_vyber.php';
 require_once __DIR__ . '/../common/lib/handle_set_period.php';
 require_once __DIR__ . '/../common/lib/handle_set_pobocky.php';
@@ -74,6 +75,10 @@ if ($userRole === '') {
     $userRole = 'Uživatel';
 }
 $db = db();
+$hrEmployeeHeader = null;
+if ($page === 'zamestnanec' && (int)($_GET['id'] ?? 0) > 0) {
+    $hrEmployeeHeader = hr_fetch_employee($db, (int)$_GET['id']);
+}
 $isNaborDetail = $page === 'nabor' && (int)($_GET['id_vd'] ?? 0) > 0;
 if ($isNaborDetail) {
     $vdHeaderDetail = hr_nacti_vd_detail($db, (int)$_GET['id_vd']);
@@ -83,7 +88,11 @@ if ($isNaborDetail) {
 }
 cb_hr_request_dispatch($db, $page, $cbUser, $roleId);
 
-$flash = $_SESSION['hr_flash'] ?? null;
+$formResult = $_SESSION['cb_form_result'] ?? null;
+unset($_SESSION['cb_form_result']);
+$flash = is_array($formResult)
+    ? ['type' => !empty($formResult['success']) ? 'hr_success' : 'hr_error', 'text' => (string)($formResult['message'] ?? '')]
+    : ($_SESSION['hr_flash'] ?? null);
 unset($_SESSION['hr_flash']);
 
 $cbHrPageDefinition = is_array($currentPage['definition'] ?? null) ? $currentPage['definition'] : [];
@@ -115,13 +124,33 @@ $cbHrUsesPpRenderer = is_array($cbHrPageDefinition['blocks'] ?? null) && $cbHrPa
 <?php else: ?>
 <section class="pp hr_pp" data-module="hr" data-page="<?= h($page) ?>">
     <header class="pp_header">
-        <h1><?= h($pageTitle) ?></h1>
+        <?php if ($page === 'zamestnanec'): ?>
+            <a class="hr_panel_link" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanci')) ?>">← Zpět na seznam zaměstnanců</a>
+            <?php if (is_array($hrEmployeeHeader)): ?>
+                <div class="hr_employee_profile_actions">
+                    <?php if (isset($_GET['upravit']) && (string)$_GET['upravit'] === '1'): ?>
+                        <a class="hr_secondary_button hr_panel_button_secondary" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$hrEmployeeHeader['id_person']))) ?>">Zrušit úpravy</a>
+                    <?php else: ?>
+                        <a class="hr_primary_button hr_panel_button_primary" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$hrEmployeeHeader['id_person']) . '&upravit=1')) ?>">Upravit zaměstnance</a>
+                    <?php endif; ?>
+                    <?php if ((int)($hrEmployeeHeader['overen'] ?? 0) === 0): ?>
+                        <form class="hr_row_action_form" method="post" action="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$hrEmployeeHeader['id_person']))) ?>">
+                            <input type="hidden" name="cb_action" value="hr_zamestnanec_overit">
+                            <input type="hidden" name="id_person" value="<?= h((string)$hrEmployeeHeader['id_person']) ?>">
+                            <button class="hr_secondary_button hr_panel_button_secondary hr_danger_button" type="submit">Ověřit údaje zaměstnance</button>
+                        </form>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+        <?php else: ?>
+            <h1><?= h($pageTitle) ?></h1>
+        <?php endif; ?>
         <?php if ($isNaborDetail && isset($vdHeaderDetail) && is_array($vdHeaderDetail)): ?>
             <div class="pp_header_control hr_vd_header_actions">
                 <span class="hr_muted">VD č. <?= h((string)$vdHeaderDetail['id_vd']) ?> - <strong class="hr_vd_header_status"><?= h((string)$vdHeaderDetail['stav_nazev']) ?></strong></span>
                 <a class="hr_vd_close_detail" href="<?= h(cb_root_url('index.php?m=hr&page=nabor')) ?>" aria-label="Zavřít detail" title="Zavřít detail">×</a>
             </div>
-        <?php else: ?>
+        <?php elseif ($page !== 'zamestnanec'): ?>
             <?php require __DIR__ . '/hr_includes/hr_header_hledani.php'; ?>
         <?php endif; ?>
     </header>

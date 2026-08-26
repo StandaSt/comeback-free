@@ -125,6 +125,11 @@ if (!function_exists('cb_session_guard_entry')) {
     function cb_session_guard_entry(bool $touchValidPageRequest = true): void
     {
         if (empty($_SESSION['login_ok'])) {
+            if (cb_session_is_internal_request()) {
+                http_response_code(401);
+                exit;
+            }
+
             return;
         }
 

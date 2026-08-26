@@ -12,6 +12,8 @@ require_once __DIR__ . '/../hr_lib/post_nabor.php';
 require_once __DIR__ . '/../hr_lib/hr_post_pozadavek_vytvorit.php';
 require_once __DIR__ . '/../hr_lib/hr_post_pozadavek_zrusit.php';
 require_once __DIR__ . '/../hr_lib/post_zamestnanec.php';
+require_once __DIR__ . '/../hr_lib/hr_post_zamestnanec_uprava.php';
+require_once __DIR__ . '/../hr_lib/hr_post_zamestnanec_overit.php';
 require_once __DIR__ . '/../hr_lib/formatovani.php';
 require_once __DIR__ . '/../hr_lib/vd_formatovani.php';
 
@@ -24,6 +26,7 @@ require_once __DIR__ . '/../hr_db/vd_detail.php';
 require_once __DIR__ . '/../hr_db/dokumenty_uchazecu.php';
 require_once __DIR__ . '/../hr_db/zamestnanci.php';
 require_once __DIR__ . '/../hr_db/zamestnanec_ulozeni.php';
+require_once __DIR__ . '/../hr_db/hr_zamestnanec_uprava.php';
 require_once __DIR__ . '/../hr_db/prehled.php';
 require_once __DIR__ . '/../hr_db/vd_prehled.php';
 require_once __DIR__ . '/../hr_db/pozadavky.php';

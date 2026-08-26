@@ -4,6 +4,8 @@ declare(strict_types=1);
 $cbAplikaceRoot = dirname(__DIR__, 2);
 $cbModulyNavigaceJsPath = $cbAplikaceRoot . '/common/js/moduly_navigace.js';
 $cbModulyNavigaceJsUrl = cb_public_url('js/moduly_navigace.js') . '?v=' . (is_file($cbModulyNavigaceJsPath) ? (string)filemtime($cbModulyNavigaceJsPath) : '1');
+$cbDateInputJsPath = $cbAplikaceRoot . '/common/js/date_input.js';
+$cbDateInputJsUrl = cb_public_url('js/date_input.js') . '?v=' . (is_file($cbDateInputJsPath) ? (string)filemtime($cbDateInputJsPath) : '1');
 ?><!doctype html>
 <html lang="cs" data-theme-level="<?= h((string)$cbThemeLevel) ?>">
 <head>
@@ -54,6 +56,7 @@ window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_
 <script src="<?= h(cb_asset_url('js/prehled_smen_export.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/rozbalovaci_detail.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/casovac_odhlaseni.js')) ?>"></script>
+<script src="<?= h($cbDateInputJsUrl) ?>"></script>
 <script src="<?= h($cbHrJsUrl) ?>"></script>
 <script src="<?= h(cb_root_url('helpdesk/hl_js/hl_helpdesk.js')) ?>"></script>
 <script src="<?= h($cbAdministracePravaSaveJsUrl) ?>"></script>

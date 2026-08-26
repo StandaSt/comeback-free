@@ -15,14 +15,18 @@ function hr_fetch_employees(mysqli $db, int $limit = 100): array
         SELECT
             p.id_person,
             p.osobni_cislo,
+            p.overen,
+            p.kompletni,
             CASE
                 WHEN pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE() THEN 'aktivni'
                 ELSE 'ukonceny'
             END AS stav,
             p.vytvoreno AS zadano,
             ou.jmeno,
+            ou.druhe_jmeno,
             ou.prijmeni,
             pv.datum_nastupu,
+            pv.id_pracovni_vztah,
             pob.nazev AS pracoviste,
             cs.slot AS zarazeni,
             pvt.nazev AS vztah_kod
@@ -67,6 +71,13 @@ function hr_fetch_employees(mysqli $db, int $limit = 100): array
     return $rows;
 }
 
+function hr_fetch_employee_work_relation(mysqli $db, int $idPerson): ?array
+{
+    $stmt = $db->prepare('SELECT pv.id_pracovni_vztah, pv.id_pracovni_vztah_typ, pvt.nazev AS vztah, pv.datum_nastupu, pv.datum_ukonceni, u.uvazek, u.hodin_tydne FROM hr_pracovni_vztah pv INNER JOIN hr_cis_pracovni_vztah_typ pvt ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ LEFT JOIN hr_pracovni_uvazek u ON u.id_pracovni_vztah = pv.id_pracovni_vztah AND u.platnost_od <= CURDATE() AND (u.platnost_do IS NULL OR u.platnost_do >= CURDATE()) WHERE pv.id_person = ? AND pv.platny = 1 ORDER BY pv.id_pracovni_vztah DESC, u.id_pracovni_uvazek DESC LIMIT 1');
+    $stmt->bind_param('i', $idPerson); $stmt->execute(); $row = $stmt->get_result()->fetch_assoc(); $stmt->close();
+    return is_array($row) ? $row : null;
+}
+
 /**
  * Nacte detail jednoho zamestnance podle id_person.
  */
@@ -76,16 +87,22 @@ function hr_fetch_employee(mysqli $db, int $id): ?array
         SELECT
             p.id_person,
             p.osobni_cislo,
+            p.overen,
+            p.kompletni,
             CASE
                 WHEN pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE() THEN 'aktivni'
                 ELSE 'ukonceny'
             END AS stav,
             p.vytvoreno AS zadano,
             ou.jmeno,
+            ou.druhe_jmeno,
             ou.prijmeni,
+            ou.titul_pred,
+            ou.titul_za,
             ou.datum_narozeni,
             ou.rodne_cislo,
             ou.pohlavi,
+            ou.zdr_poj,
             ou.statni_obcanstvi,
             ou.misto_narozeni,
             pv.datum_nastupu,
@@ -139,14 +156,34 @@ function hr_fetch_employee(mysqli $db, int $id): ?array
     return is_array($row) ? hr_normalize_employee_row($row) : null;
 }
 
+function hr_fetch_employee_edit_data(mysqli $db, int $idPerson): array
+{
+    $queries = [
+        'adresa_op' => 'SELECT ulice, cp, mesto, psc, stat FROM hr_adresa WHERE id_person = ? AND typ = 0 AND platny = 1 ORDER BY id_adresa DESC LIMIT 1',
+        'adresa_dorucovaci' => 'SELECT ulice, cp, mesto, psc, stat FROM hr_adresa WHERE id_person = ? AND typ = 1 AND platny = 1 ORDER BY id_adresa DESC LIMIT 1',
+        'nouzovy_kontakt' => 'SELECT jmeno, vztah, telefon, email FROM hr_nouzovy_kontakt WHERE id_person = ? AND platny = 1 AND hlavni = 1 ORDER BY id_nouzovy_kontakt DESC LIMIT 1',
+        'bankovni_ucet' => 'SELECT cislo_uctu, kod_banky, iban FROM hr_bankovni_ucet WHERE id_person = ? AND platny = 1 ORDER BY zmena DESC, id_bankovni_ucet DESC LIMIT 1',
+    ];
+    $data = [];
+    foreach ($queries as $key => $sql) {
+        $stmt = $db->prepare($sql);
+        $stmt->bind_param('i', $idPerson);
+        $stmt->execute();
+        $data[$key] = $stmt->get_result()->fetch_assoc() ?: [];
+        $stmt->close();
+    }
+    return $data;
+}
+
 /**
  * Doplni radek zamestnance o hodnoty pripravene pro zobrazeni.
  */
 function hr_normalize_employee_row(array $row): array
 {
     $jmeno = trim((string)($row['jmeno'] ?? ''));
+    $druheJmeno = trim((string)($row['druhe_jmeno'] ?? ''));
     $prijmeni = trim((string)($row['prijmeni'] ?? ''));
-    $fullName = trim($prijmeni . ' ' . $jmeno);
+    $fullName = trim($prijmeni . ' ' . trim($jmeno . ' ' . $druheJmeno));
 
     return $row + [
         'cele_jmeno' => $fullName !== '' ? $fullName : 'Bez jména',

@@ -19,6 +19,18 @@ function cb_hr_request_dispatch(mysqli $db, string $page, array $user, int $role
         hr_post_zamestnanec($db, $roleId);
         return;
     }
+    if ($action === 'hr_zamestnanec_upravit') {
+        hr_post_zamestnanec_uprava($db, $roleId, (int)($user['id_user'] ?? 0));
+        return;
+    }
+    if ($action === 'hr_pracovni_pomer_upravit') {
+        hr_post_pracovni_pomer_uprava($db, $roleId, (int)($user['id_user'] ?? 0));
+        return;
+    }
+    if ($action === 'hr_zamestnanec_overit') {
+        hr_post_zamestnanec_overit($db);
+        return;
+    }
     if ($action === 'hr_pozadavek_vytvorit') {
         hr_post_pozadavek_vytvorit($db, $user);
         return;

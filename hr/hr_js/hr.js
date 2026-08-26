@@ -30,6 +30,10 @@
             });
         });
 
+        if (typeof window.CB_DATE_INPUT_INIT === 'function') {
+            window.CB_DATE_INPUT_INIT(container);
+        }
+
         container.querySelectorAll('[data-slot-select]').forEach((select) => {
             if (select.dataset.hrSlotBound === '1') {
                 return;

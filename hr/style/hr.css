@@ -34,10 +34,18 @@
 
 .hr_primary_button,
 .hr_secondary_button {
+    box-sizing: border-box;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    height: 25px;
+    padding: 0 13px;
+    border-radius: 6px;
     text-decoration: none;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
 }
 
 /* Horni radek PP s vyhledavanim. */
@@ -78,15 +86,12 @@
 }
 
 .hr_primary_button {
-    padding: 0 13px;
     border: 1px solid var(--primary);
     color: #ffffff;
-    font-weight: 700;
     background: var(--primary);
 }
 
 .hr_secondary_button {
-    padding: 0 13px;
     border: 1px solid var(--border-strong);
     color: var(--text);
     background: var(--surface);
@@ -266,6 +271,29 @@
     font-size: 12px;
     font-weight: 700;
     text-decoration: none;
+}
+
+.pp_header > .hr_panel_link {
+    font-size: 12px;
+}
+
+/* Detail zamestnance ma vlastni, pevny horni radek. */
+.hr_pp[data-page="zamestnanec"] > .pp_header {
+    height: 32px;
+    min-height: 32px;
+    align-items: center;
+}
+
+.hr_pp[data-page="zamestnanec"] > .pp_header > .hr_panel_link,
+.hr_pp[data-page="zamestnanec"] > .pp_header .hr_employee_profile_actions {
+    box-sizing: border-box;
+    height: 25px;
+}
+
+.hr_danger_button {
+    border-color: #e8aaaa;
+    color: #9d3131;
+    background: #fff4f4;
 }
 
 .hr_panel_button_primary {
@@ -536,18 +564,20 @@
 }
 
 /* Detail zamestnance. */
-.hr_employee_profile {
+.hr_employee_overview {
     display: grid;
-    grid-template-columns: minmax(0, 1.7fr) minmax(260px, .9fr) auto;
-    gap: 16px;
-    align-items: stretch;
+    grid-template-columns: minmax(0, 1.15fr) minmax(290px, .9fr) minmax(290px, .9fr);
+    gap: 12px;
+    padding: 0;
 }
 
-.hr_employee_profile_main {
+.hr_employee_overview_identity {
     display: flex;
-    align-items: center;
-    gap: 18px;
+    align-items: flex-start;
+    gap: 20px;
     min-width: 0;
+    min-height: 218px;
+    padding: 10px 24px 22px;
 }
 
 .hr_employee_profile_info {
@@ -555,21 +585,40 @@
 }
 
 .hr_employee_profile_note {
-    margin: 4px 0 0;
+    margin: 2px 0 0;
     color: var(--primary);
     font-size: 13px;
     font-weight: 700;
 }
 
-.hr_employee_profile_side {
-    padding-left: 14px;
-    border-left: 1px solid var(--border);
+.hr_employee_statuses {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.hr_employee_overview_alerts,
+.hr_employee_overview_summary {
+    min-width: 0;
+    padding: 10px 22px 22px;
+}
+
+.hr_employee_overview_summary {
+    padding-top: 10px;
 }
 
 .hr_employee_profile_actions {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
+    justify-content: flex-end;
     gap: 8px;
+    padding: 0;
+    border: 0;
+}
+
+.pp_header .hr_employee_profile_actions {
+    margin-left: auto;
 }
 
 .hr_employee_photo {
@@ -585,11 +634,55 @@
     font-weight: 800;
 }
 
+.hr_employee_avatar_column {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    flex: 0 0 112px;
+}
+
+.hr_employee_avatar_column .hr_employee_statuses {
+    align-items: center;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 0;
+}
+
 .hr_employee_photo_large {
-    flex-basis: 96px;
-    width: 96px;
-    height: 96px;
-    font-size: 27px;
+    flex-basis: 112px;
+    width: 112px;
+    height: 112px;
+    font-size: 28px;
+}
+
+.hr_employee_avatar_placeholder {
+    position: relative;
+    overflow: hidden;
+    color: transparent;
+    background: var(--surface-strong);
+}
+
+.hr_employee_avatar_placeholder::before,
+.hr_employee_avatar_placeholder::after {
+    content: "";
+    position: absolute;
+    display: block;
+    background: var(--muted);
+    opacity: .58;
+}
+
+.hr_employee_avatar_placeholder::before {
+    top: 22px;
+    width: 31px;
+    height: 31px;
+    border-radius: 50%;
+}
+
+.hr_employee_avatar_placeholder::after {
+    bottom: -18px;
+    width: 74px;
+    height: 62px;
+    border-radius: 50% 50% 0 0;
 }
 
 .hr_employee_name_line {
@@ -599,27 +692,8 @@
 }
 
 .hr_employee_name_title {
-    font-size: 24px;
-}
-
-.hr_employee_contact_grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px 24px;
-    margin-top: 18px;
-    font-size: 13px;
-}
-
-.hr_employee_contact_item {
-    display: grid;
-    gap: 2px;
-    min-width: 0;
-}
-
-.hr_employee_contact_label {
-    color: var(--muted);
-    font-size: 11px;
-    font-weight: 700;
+    margin: 0;
+    font-size: 28px;
 }
 
 .hr_profile_facts {
@@ -650,10 +724,176 @@
     text-align: right;
 }
 
-.hr_employee_grid {
+.hr_employee_overview_identity .hr_profile_facts {
+    width: min(100%, 350px);
+    margin-top: 14px;
+}
+
+.hr_employee_empty_block {
+    margin: 0;
+    padding: 14px;
+    border: 1px dashed var(--border);
+    border-radius: 9px;
+    color: var(--muted);
+    background: var(--surface-strong);
+    font-size: 12px;
+}
+
+.hr_employee_summary_grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+}
+
+.hr_employee_summary_placeholder {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr);
+    align-items: center;
+    min-width: 0;
     gap: 10px;
+    min-height: 52px;
+    padding: 7px 10px;
+}
+
+.hr_employee_summary_placeholder:nth-child(odd) {
+    border-right: 1px solid var(--border);
+}
+
+.hr_employee_summary_placeholder > div {
+    display: grid;
+    min-width: 0;
+}
+
+.hr_employee_summary_placeholder > div > span,
+.hr_employee_summary_placeholder small {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.hr_employee_summary_placeholder strong {
+    overflow: hidden;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hr_employee_summary_icon {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    color: var(--primary);
+    background: var(--primary-soft);
+    font-size: 21px;
+    line-height: 1;
+}
+
+.hr_employee_tabs {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    padding: 2px 0 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.hr_employee_tab {
+    flex: 0 0 auto;
+    padding: 10px 9px;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.hr_employee_tab_active {
+    border-bottom-color: var(--primary);
+    color: var(--primary);
+}
+
+.hr_employee_dashboard {
+    display: grid;
+    grid-template-areas:
+        "timeline documents absence"
+        "timeline documents events"
+        "leave benefits events";
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1.15fr);
+    grid-template-rows: minmax(78px, max-content) minmax(78px, max-content) minmax(140px, max-content);
+    gap: 12px;
+}
+
+.hr_employee_dashboard .hr_panel {
+    min-height: 0;
+}
+
+.hr_employee_dashboard .hr_panel:nth-child(1) { grid-area: timeline; }
+.hr_employee_dashboard .hr_panel:nth-child(2) { grid-area: documents; }
+.hr_employee_dashboard .hr_panel:nth-child(3) { grid-area: absence; align-self: start; }
+.hr_employee_dashboard .hr_panel:nth-child(4) { grid-area: events; align-self: start; }
+.hr_employee_dashboard .hr_panel:nth-child(5) { grid-area: leave; }
+.hr_employee_dashboard .hr_panel:nth-child(6) { grid-area: benefits; }
+
+.hr_employee_dashboard .hr_panel_title,
+.hr_employee_overview .hr_panel_title {
+    font-size: 16px;
+}
+
+.hr_employee_edit_form {
+    width: 100%;
+    max-width: none;
+}
+
+.hr_employee_edit_form .hr_form_grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.hr_employee_edit_panel { margin-top: 8px; }
+
+.hr_employee_edit_subtitle { margin: 8px 0 5px; font-size: 12px; }
+
+.hr_employee_edit_header {
+    align-items: center;
+}
+
+.hr_employee_edit_header .hr_panel_title {
+    color: var(--primary);
+    font-size: 18px;
+}
+
+.hr_employee_identity_meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.hr_employee_identity_meta input {
+    width: 180px;
+}
+
+.hr_employee_edit_actions {
+    align-items: flex-end;
+    justify-content: flex-end;
+}
+
+.hr_gender_field {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.hr_gender_choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 30px;
+    align-items: center;
+}
+
+.hr_gender_choices label {
+    white-space: nowrap;
+    font-size: 12px;
 }
 
 /* Detailni seznamy udaju. */
@@ -671,7 +911,7 @@
 .hr_detail_item {
     display: grid;
     grid-template-columns: 1fr 1.4fr;
-    gap: 8px;
+    gap: 5px;
     padding-bottom: 6px;
     border-bottom: 1px solid var(--border);
 }
@@ -820,32 +1060,6 @@
     font-size: 12px;
 }
 
-.hr_quick_action_grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-}
-
-.hr_quick_action_link {
-    display: grid;
-    place-items: center;
-    min-height: 44px;
-    padding: 8px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    background: var(--surface-strong);
-    font-size: 12px;
-    font-weight: 700;
-    text-align: center;
-    text-decoration: none;
-}
-
-.hr_quick_action_link:hover {
-    color: var(--primary);
-    background: var(--surface-hover);
-}
-
 /* Placeholder stranky bez obsahu. */
 .hr_placeholder {
     display: grid;
@@ -880,13 +1094,26 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .hr_employee_profile {
-        grid-template-columns: 1fr;
+    .hr_employee_overview {
+        grid-template-columns: 1fr 1fr;
     }
 
-    .hr_employee_profile_side {
-        padding-left: 0;
-        border-left: 0;
+    .hr_employee_overview_summary {
+        padding-top: 10px;
+    }
+
+    .hr_employee_overview_summary {
+        grid-column: 1 / -1;
+    }
+
+    .hr_employee_dashboard {
+        grid-template-areas:
+            "timeline documents"
+            "timeline documents"
+            "absence events"
+            "leave benefits";
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: repeat(4, minmax(150px, auto));
     }
 
     .hr_panel_wide {
@@ -909,17 +1136,42 @@
         grid-column: auto;
     }
 
-    .hr_employee_profile_main {
-        align-items: flex-start;
-        flex-direction: column;
+    .hr_employee_overview {
+        grid-template-columns: 1fr;
     }
 
-    .hr_employee_contact_grid {
+    .hr_employee_overview_alerts,
+    .hr_employee_overview_summary {
+        border: 1px solid var(--border-strong);
+    }
+
+    .hr_employee_overview_identity {
+        align-items: flex-start;
+        padding: 18px;
+    }
+
+    .hr_employee_profile_actions {
+        align-items: stretch;
+        flex-direction: column;
+        margin: 0;
+    }
+
+    .hr_employee_dashboard {
+        grid-template-areas: none;
         grid-template-columns: 1fr;
-        margin-top: 12px;
+        grid-template-rows: none;
+    }
+
+    .hr_employee_dashboard .hr_panel {
+        grid-area: auto !important;
+        min-height: 150px;
     }
 
     .hr_form_grid {
+        grid-template-columns: 1fr;
+    }
+
+    .hr_employee_edit_form .hr_form_grid {
         grid-template-columns: 1fr;
     }
 
