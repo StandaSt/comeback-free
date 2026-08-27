@@ -1,3 +1,7 @@
+/*
+ * Ucel souboru: Definuje vzhled spolecneho loaderu aplikace.
+ * Velikosti pisma vychazeji z pevne typograficke skaly aplikace.
+ */
 .cb_loader{
   position:fixed;
   inset:0;
@@ -35,7 +39,7 @@
 .cb_loader_text{
   margin:0;
   color:#fff;
-  font-size:16px;
+  font-size:var(--cb-font-16);
   font-weight:700;
   line-height:1.25;
   text-shadow:0 2px 8px rgba(0,0,0,.32);
@@ -43,17 +47,9 @@
 
 .cb_loader_time{
   color:rgba(255,255,255,.78);
-  font-size:13px;
+  font-size:var(--cb-font-14);
   font-weight:700;
   line-height:1;
-}
-
-.cb_click_blocker{
-  position:fixed;
-  inset:0;
-  z-index:11000;
-  background:transparent;
-  cursor:wait;
 }
 
 @keyframes cb_loader_pulse{
@@ -90,7 +86,7 @@
 
 .cb_page_loader_text{
   display:block;
-  font-size:var(--fs_12);
+  font-size:var(--cb-font-12);
   font-weight:700;
 }
 
@@ -99,7 +95,7 @@
   min-height:15px;
   margin-top:2px;
   color:var(--cb-text-muted);
-  font-size:var(--fs_11);
+  font-size:var(--cb-font-11);
   font-weight:500;
 }
 
@@ -107,6 +103,6 @@
   display:block;
   margin-top:3px;
   color:var(--cb-text-muted);
-  font-size:var(--fs_11);
+  font-size:var(--cb-font-11);
   font-weight:400;
 }

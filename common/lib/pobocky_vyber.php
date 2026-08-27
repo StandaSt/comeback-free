@@ -1,9 +1,14 @@
 <?php
-// lib/pobocky_vyber.php * Verze: V1 * Aktualizace: 25.03.2026
+/*
+ * Ucel souboru: Spolecna pravidla pro povolene a vybrane pobocky uzivatele.
+ * Poskytuje data pro komponenty a udrzuje globalni vyber pobocek v session.
+ */
 declare(strict_types=1);
 
 if (!function_exists('cb_pobocky_sanitize_ids')) {
     /**
+     * Normalizuje libovolne hodnoty na serazeny seznam kladnych ID pobocek.
+     *
      * @param mixed $raw
      * @return int[]
      */
@@ -46,6 +51,9 @@ if (!function_exists('cb_pobocky_set_selected')) {
 }
 
 if (!function_exists('cb_pobocky_set_mode')) {
+    /**
+     * Ulozi zpusob globalniho vyberu pobocek do session.
+     */
     function cb_pobocky_set_mode(string $mode, ?string $oblast = null): void
     {
         $mode = trim($mode);
@@ -67,8 +75,59 @@ if (!function_exists('cb_pobocky_set_mode')) {
     }
 }
 
+if (!function_exists('cb_pobocky_get_allowed_rows_for_user')) {
+    /**
+     * Nacte povolene pobocky uzivatele vcetne nazvu a oblasti pro zobrazeni.
+     *
+     * @return array<int,array{id_pob:int,nazev:string,oblast:string}>
+     */
+    function cb_pobocky_get_allowed_rows_for_user(int $idUser): array
+    {
+        if ($idUser <= 0) {
+            return [];
+        }
+
+        $conn = db();
+        $stmt = $conn->prepare('
+            SELECT p.id_pob, p.nazev, p.oblast
+            FROM user_pobocka up
+            INNER JOIN pobocka p ON p.id_pob = up.id_pob
+            WHERE up.id_user = ?
+            ORDER BY p.nazev ASC
+        ');
+        if ($stmt === false) {
+            throw new RuntimeException('Nepodarilo se pripravit dotaz na povolene pobocky uzivatele.');
+        }
+
+        $stmt->bind_param('i', $idUser);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $rows = [];
+        if ($res instanceof mysqli_result) {
+            while ($row = $res->fetch_assoc()) {
+                $id = (int)($row['id_pob'] ?? 0);
+                $nazev = trim((string)($row['nazev'] ?? ''));
+                if ($id <= 0 || $nazev === '') {
+                    continue;
+                }
+                $oblast = trim((string)($row['oblast'] ?? ''));
+                $rows[] = [
+                    'id_pob' => $id,
+                    'nazev' => $nazev,
+                    'oblast' => $oblast !== '' ? $oblast : 'Nezarazeno',
+                ];
+            }
+            $res->close();
+        }
+        $stmt->close();
+
+        return $rows;
+    }
+}
 if (!function_exists('cb_pobocky_get_allowed_for_user')) {
     /**
+     * Vrati ID a oblasti povolenych pobocek pro kontrolu vyberu.
+     *
      * @return array{ids:int[], oblasti:array<string,int[]>}
      */
     function cb_pobocky_get_allowed_for_user(int $idUser): array
@@ -77,45 +136,17 @@ if (!function_exists('cb_pobocky_get_allowed_for_user')) {
             return ['ids' => [], 'oblasti' => []];
         }
 
-        $conn = db();
-        $sql = '
-            SELECT p.id_pob, p.oblast
-            FROM user_pobocka up
-            INNER JOIN pobocka p ON p.id_pob = up.id_pob
-            WHERE up.id_user = ?
-            ORDER BY p.id_pob ASC
-        ';
-        $stmt = $conn->prepare($sql);
-        if ($stmt === false) {
-            throw new RuntimeException('Nepodarilo se pripravit dotaz na povolene pobocky uzivatele.');
-        }
-
-        $stmt->bind_param('i', $idUser);
-        $stmt->execute();
-        $res = $stmt->get_result();
-
         $idsMap = [];
         $oblastiMap = [];
-        if ($res instanceof mysqli_result) {
-            while ($row = $res->fetch_assoc()) {
-                $id = (int)($row['id_pob'] ?? 0);
-                if ($id <= 0) {
-                    continue;
-                }
-                $idsMap[$id] = true;
-
-                $oblast = trim((string)($row['oblast'] ?? ''));
-                if ($oblast === '') {
-                    $oblast = 'Nezarazeno';
-                }
-                if (!isset($oblastiMap[$oblast])) {
-                    $oblastiMap[$oblast] = [];
-                }
-                $oblastiMap[$oblast][$id] = true;
+        foreach (cb_pobocky_get_allowed_rows_for_user($idUser) as $row) {
+            $id = (int)$row['id_pob'];
+            $idsMap[$id] = true;
+            $oblast = (string)$row['oblast'];
+            if (!isset($oblastiMap[$oblast])) {
+                $oblastiMap[$oblast] = [];
             }
-            $res->close();
+            $oblastiMap[$oblast][$id] = true;
         }
-        $stmt->close();
 
         $ids = array_keys($idsMap);
         sort($ids);
@@ -137,6 +168,8 @@ if (!function_exists('cb_pobocky_get_allowed_for_user')) {
 
 if (!function_exists('get_selected_pobocky')) {
     /**
+     * Vrati aktualni globalni vyber pobocek ze session.
+     *
      * @return int[]
      */
     function get_selected_pobocky(): array
@@ -157,6 +190,8 @@ if (!function_exists('get_selected_pobocky')) {
 
 if (!function_exists('cb_pobocky_load_selected_from_db')) {
     /**
+     * Nacte drive ulozeny globalni vyber pobocek uzivatele.
+     *
      * @return int[]
      */
     function cb_pobocky_load_selected_from_db(int $idUser): array
@@ -237,6 +272,3 @@ if (!function_exists('cb_pobocky_bootstrap_session')) {
         }
     }
 }
-
-/* lib/pobocky_vyber.php * Verze: V1 * Aktualizace: 25.03.2026 */
-// Konec souboru

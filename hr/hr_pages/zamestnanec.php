@@ -1,7 +1,10 @@
 <?php
 declare(strict_types=1);
 
-// Detail zamestnance se nacita podle id_person.
+/*
+ * Ucel souboru: Vykresli detail a editaci karty zamestnance v modulu HR.
+ * Jednotlive sekce karty pripravuji data jen pro svuj vlastni vystup.
+ */
 $idPerson = (int)($_GET['id'] ?? 0);
 $employee = isset($hrEmployeeHeader) && is_array($hrEmployeeHeader)
     ? $hrEmployeeHeader
@@ -84,9 +87,68 @@ if (!empty($editInput['datum_narozeni'])) {
         </section>
     <?php endif; ?>
 
-    <nav class="hr_employee_tabs" aria-label="Sekce karty zaměstnance"><a class="hr_employee_tab<?= $employeeSection === 'prehled' ? ' hr_employee_tab_active' : '' ?>" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . $employee['id_person'])) ?>">Přehled</a><a class="hr_employee_tab<?= $employeeSection === 'pracovni_pomer' ? ' hr_employee_tab_active' : '' ?>" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . $employee['id_person'] . '&sekce=pracovni_pomer')) ?>">Pracovní poměr</a><span class="hr_employee_tab">Docházka a dovolená</span><span class="hr_employee_tab">Dokumenty</span><span class="hr_employee_tab">Hodnocení</span><span class="hr_employee_tab">Mzda a benefity</span><span class="hr_employee_tab">Vybavení</span><span class="hr_employee_tab">Osobní údaje</span><span class="hr_employee_tab">Onboarding</span><span class="hr_employee_tab">Poznámky</span></nav>
-    <?php if ($employeeSection === 'pracovni_pomer'): $workRelation = hr_fetch_employee_work_relation($db, (int)$employee['id_person']); $workTypes = hr_fetch_lookup($db, 'hr_cis_pracovni_vztah_typ', 'id_pracovni_vztah_typ', 'nazev'); ?>
-        <section class="hr_panel"><div class="hr_panel_header"><h2 class="hr_panel_title">Pracovní poměr</h2></div><?php if ($workRelation === null): ?><p class="hr_empty_state">Aktuální pracovní poměr není evidován.</p><?php else: $workStart = DateTimeImmutable::createFromFormat('!Y-m-d', (string)$workRelation['datum_nastupu']); $workStartValue = $workStart === false ? '' : $workStart->format('d.m.Y'); ?><form class="hr_form" method="post" action="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$employee['id_person']) . '&sekce=pracovni_pomer')) ?>"><input type="hidden" name="cb_action" value="hr_pracovni_pomer_upravit"><input type="hidden" name="id_person" value="<?= h((string)$employee['id_person']) ?>"><table style="width:100%;border-collapse:collapse"><colgroup><col style="width:1%"><col style="width:1%"><col style="width:1%"><col style="width:1%"><col><col style="width:1%"></colgroup><tr><td style="padding-right:18px;white-space:nowrap"><span class="hr_form_label_text">Typ vztahu</span></td><td style="padding-right:18px;white-space:nowrap"><span class="hr_form_label_text">Datum nástupu</span></td><td style="padding-right:18px;white-space:nowrap"><span class="hr_form_label_text">Úvazek</span></td><td style="padding-right:18px;white-space:nowrap"><span class="hr_form_label_text">Hodin týdně</span></td><td></td><td rowspan="2" style="vertical-align:bottom;white-space:nowrap"><button class="hr_primary_button" type="submit">Uložit změny pracovního poměru</button></td></tr><tr><td style="padding-right:18px"><select name="id_pracovni_vztah_typ" style="width:235px"><?php foreach ($workTypes as $workType): ?><option value="<?= h((string)$workType['id']) ?>"<?= (int)$workRelation['id_pracovni_vztah_typ'] === (int)$workType['id'] ? ' selected' : '' ?>><?= h($workType['label']) ?></option><?php endforeach; ?></select></td><td style="padding-right:18px"><input name="datum_nastupu" data-cb-date style="width:135px" value="<?= h($workStartValue) ?>"></td><td style="padding-right:18px"><input type="number" name="uvazek" style="width:90px" step="0.01" min="0" value="<?= h((string)($workRelation['uvazek'] ?? '1')) ?>"></td><td style="padding-right:18px"><input type="number" name="hodin_tydne" style="width:110px" step="0.01" min="0" value="<?= h((string)($workRelation['hodin_tydne'] ?? '40')) ?>"></td><td></td></tr></table></form><?php endif; ?></section>
+    <nav class="hr_employee_tabs" aria-label="Sekce karty zaměstnance"><a class="hr_employee_tab<?= $employeeSection === 'prehled' ? ' hr_employee_tab_active' : '' ?>" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . $employee['id_person'])) ?>">Přehled</a><a class="hr_employee_tab<?= $employeeSection === 'pracovni_pomer' ? ' hr_employee_tab_active' : '' ?>" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . $employee['id_person'] . '&sekce=pracovni_pomer')) ?>">Pracovní poměr, mzda a benefity</a><span class="hr_employee_tab">Docházka a dovolená</span><span class="hr_employee_tab">Dokumenty</span><span class="hr_employee_tab">Hodnocení</span><span class="hr_employee_tab">Vybavení</span><span class="hr_employee_tab">Osobní údaje</span><span class="hr_employee_tab">Onboarding</span><span class="hr_employee_tab">Poznámky</span></nav>
+    <?php if ($employeeSection === 'pracovni_pomer'): ?>
+        <?php
+        // Data aktualniho vztahu a ciselniku pro samostatny formular pracovniho pomeru.
+        $workRelation = hr_fetch_employee_work_relation($db, (int)$employee['id_person']);
+        $workTypes = hr_fetch_lookup($db, 'hr_cis_pracovni_vztah_typ', 'id_pracovni_vztah_typ', 'nazev', "CASE nazev WHEN 'HPP' THEN 1 WHEN 'DPČ' THEN 2 WHEN 'DPP' THEN 3 ELSE 9 END, id_pracovni_vztah_typ");
+        $salaryTypes = hr_fetch_work_salary_types($db);
+        $activeBenefits = hr_fetch_active_benefits($db);
+        ?>
+        <section class="hr_panel">
+            <div class="hr_panel_header"><h2 class="hr_panel_title">Pracovní poměr</h2></div>
+            <?php if ($workRelation === null): ?>
+                <p class="hr_empty_state">Aktuální pracovní poměr není evidován.</p>
+            <?php else: ?>
+                <?php
+                $workStart = DateTimeImmutable::createFromFormat('!Y-m-d', (string)$workRelation['datum_nastupu']);
+                $workStartValue = $workStart === false ? '' : $workStart->format('d.m.Y');
+                $workTypeId = (int)$workRelation['id_pracovni_vztah_typ'];
+                $workloadCode = $workTypeId === 3 ? 0 : (int)($workRelation['uvazek'] ?? 1);
+                $workHours = $workRelation['hodin_tydne'] === null ? '' : rtrim(rtrim(number_format((float)$workRelation['hodin_tydne'], 1, '.', ''), '0'), '.');
+                $salaryTypeId = (int)($workRelation['id_mzda_typ'] ?? 1);
+                $salaryAmount = $workRelation['mzda_castka'] === null ? '' : (string)$workRelation['mzda_castka'];
+                $selectedBenefitIds = hr_fetch_employee_work_benefit_ids($db, (int)$workRelation['id_pracovni_vztah']);
+                ?>
+                <form class="hr_form" method="post" data-hr-work-relation-form data-hr-work-type-hpp="1" data-hr-work-type-dpp="2" data-hr-work-type-dpc="3" action="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$employee['id_person']) . '&sekce=pracovni_pomer')) ?>">
+                    <input type="hidden" name="cb_action" value="hr_pracovni_pomer_upravit">
+                    <input type="hidden" name="id_person" value="<?= h((string)$employee['id_person']) ?>">
+                    <table style="width:100%;border-collapse:collapse">
+                        <colgroup><col style="width:1%"><col style="width:1%"><col style="width:1%"><col style="width:1%"><col style="width:1%"><col style="width:1%"><col><col style="width:1%"></colgroup>
+                        <tr>
+                            <td style="padding-right:18px;white-space:nowrap"><span class="hr_form_label_text">Typ vztahu</span></td>
+                            <td style="padding-right:18px;white-space:nowrap"><span class="hr_form_label_text">Datum nástupu</span></td>
+                            <td data-hr-workload-kind-heading style="padding-right:18px;white-space:nowrap"><span class="hr_form_label_text">Úvazek</span></td>
+                            <td data-hr-workload-hours-heading style="padding-right:18px;white-space:nowrap"><span class="hr_form_label_text">Hodin týdně</span></td>
+                            <td data-hr-workload-dpp-heading hidden colspan="2" style="white-space:nowrap"><span class="hr_form_label_text">DPP</span></td>
+                            <td style="padding-right:18px;white-space:nowrap"><span class="hr_form_label_text">Typ mzdy</span></td>
+                            <td style="padding-right:18px;white-space:nowrap"><span class="hr_form_label_text" data-hr-salary-label>Částka Kč / hodinu</span></td>
+                            <td></td>
+                            <td rowspan="2" style="vertical-align:bottom;white-space:nowrap"><button class="hr_primary_button" type="submit">Uložit změny</button></td>
+                        </tr>
+                        <tr>
+                            <td style="padding-right:18px"><select name="id_pracovni_vztah_typ" data-hr-work-relation-type style="width:270px"><?php foreach ($workTypes as $workType): ?><option value="<?= h((string)$workType['id']) ?>"<?= $workTypeId === (int)$workType['id'] ? ' selected' : '' ?>><?= h($workType['label']) ?></option><?php endforeach; ?></select></td>
+                            <td style="padding-right:18px"><input name="datum_nastupu" data-cb-date style="width:135px" value="<?= h($workStartValue) ?>"></td>
+                            <td data-hr-workload-kind-cell style="padding-right:18px"><select name="uvazek" data-hr-workload-kind style="width:130px"><option value="1"<?= $workloadCode === 1 ? ' selected' : '' ?>>Plný</option><option value="2"<?= $workloadCode === 2 ? ' selected' : '' ?>>Poloviční</option><option value="4"<?= $workloadCode === 4 ? ' selected' : '' ?>>Čtvrtinový</option><option value="0"<?= $workloadCode === 0 ? ' selected' : '' ?>>Vlastní</option></select></td>
+                            <td data-hr-workload-hours-cell style="padding-right:18px"><input type="text" inputmode="decimal" name="hodin_tydne" data-hr-workload-hours maxlength="4" style="width:70px" value="<?= h($workHours) ?>"></td>
+                            <td data-hr-workload-dpp-cell hidden colspan="2" style="white-space:nowrap">Max. limit je 300 hod. za rok</td>
+                            <td style="padding-right:18px"><select name="id_mzda_typ" data-hr-salary-type style="width:130px"><?php foreach ($salaryTypes as $salaryType): ?><option value="<?= h((string)$salaryType['id']) ?>"<?= $salaryTypeId === (int)$salaryType['id'] ? ' selected' : '' ?>><?= h($salaryType['label']) ?></option><?php endforeach; ?></select></td>
+                            <td style="padding-right:18px"><input type="text" inputmode="numeric" pattern="[0-9]*" name="mzda_castka" data-hr-salary-amount required maxlength="10" style="width:100px" value="<?= h($salaryAmount) ?>"></td>
+                            <td></td>
+                        </tr>
+                    </table>
+                    <fieldset style="margin:14px 0 0;padding:8px 10px;border:1px solid var(--border);border-radius:6px">
+                        <legend class="hr_form_label_text" style="padding:0 4px">Benefity</legend>
+                        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px 16px">
+                            <?php foreach ($activeBenefits as $benefit): ?>
+                                <label class="hr_form_label_text" style="white-space:nowrap"><input type="checkbox" name="benefity[]" value="<?= h((string)$benefit['id']) ?>"<?= in_array((int)$benefit['id'], $selectedBenefitIds, true) ? ' checked' : '' ?>> <?= h($benefit['label']) ?></label>
+                            <?php endforeach; ?>
+                        </div>
+                    </fieldset>
+                </form>
+            <?php endif; ?>
+        </section>
     <?php else: ?>
     <section class="hr_employee_dashboard">
         <article class="hr_panel"><div class="hr_panel_header"><h2 class="hr_panel_title">Časová osa</h2></div><p class="hr_employee_empty_block">Události k zaměstnanci zatím nejsou evidované.</p></article>

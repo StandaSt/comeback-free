@@ -6,6 +6,9 @@
  */
 declare(strict_types=1);
 
+/**
+ * Preda rozpoznanou POST akci HR prislusnemu handleru.
+ */
 function cb_hr_request_dispatch(mysqli $db, string $page, array $user, int $roleId): void
 {
     $isShellRequest = isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODULE']);
@@ -24,7 +27,7 @@ function cb_hr_request_dispatch(mysqli $db, string $page, array $user, int $role
         return;
     }
     if ($action === 'hr_pracovni_pomer_upravit') {
-        hr_post_pracovni_pomer_uprava($db, $roleId, (int)($user['id_user'] ?? 0));
+        hr_post_pracovni_pomer_uprava($db);
         return;
     }
     if ($action === 'hr_zamestnanec_overit') {

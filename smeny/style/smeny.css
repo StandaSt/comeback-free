@@ -1,4 +1,7 @@
-/* Vlastni obsah smen. */
+/*
+ * Ucel souboru: Definuje vzhled vlastniho obsahu modulu Smeny.
+ * Velikosti pisma vychazeji z pevne typograficke skaly aplikace.
+ */
 
 .smeny_content{
     align-content:start;
@@ -7,6 +10,6 @@
 .smeny_content_text{
     margin:0;
     color:var(--cb-text-muted);
-    font-size:14px;
+    font-size:var(--cb-font-14);
     line-height:1.4;
 }

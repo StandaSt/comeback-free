@@ -32,21 +32,21 @@
 /* Blok prehledu - nadpis panelu. */
 .blok_title{
   margin:0 0 4px;
-  font-size:var(--fs_16);
+  font-size:var(--cb-font-16);
   line-height:1.2;
 }
 
 /* Blok prehledu - drobny popis pod nadpisem. */
 .provoz_prehled_meta{
   margin:0 0 8px;
-  font-size:var(--fs_12);
+  font-size:var(--cb-font-12);
   line-height:1.2;
 }
 
 /* Blok prehledu - bezny text. */
 .provoz_prehled_text{
   margin:0 0 6px;
-  font-size:var(--fs_13);
+  font-size:var(--cb-font-14);
   line-height:1.25;
 }
 
@@ -54,7 +54,7 @@
 .provoz_prehled_data{
   width:100%;
   border-collapse:collapse;
-  font-size:var(--fs_12);
+  font-size:var(--cb-font-12);
 }
 
 /* Tabulka prehledu - bunka s ciselnym zarovnanim vpravo. */
@@ -78,7 +78,7 @@
 .provoz_top_report_heading{
   margin:0 0 10px;
   color:var(--cb-text-muted);
-  font-size:var(--fs_11);
+  font-size:var(--cb-font-11);
   font-weight:700;
   line-height:1.1;
 }
@@ -105,7 +105,7 @@
 .provoz_top_report_label{
   overflow:hidden;
   color:var(--cb-text-main);
-  font-size:var(--fs_11);
+  font-size:var(--cb-font-11);
   line-height:1;
   text-overflow:ellipsis;
   white-space:nowrap;
@@ -133,7 +133,7 @@
 /* Top report - podil kanalu. */
 .provoz_top_report_share{
   color:var(--cb-text-muted);
-  font-size:var(--fs_11);
+  font-size:var(--cb-font-11);
   line-height:1;
   text-align:right;
   white-space:nowrap;
@@ -142,7 +142,7 @@
 /* Top report - trzba kanalu. */
 .provoz_top_report_value{
   color:var(--cb-text-main);
-  font-size:var(--fs_11);
+  font-size:var(--cb-font-11);
   line-height:1;
   text-align:right;
   white-space:nowrap;
@@ -164,7 +164,7 @@
 .provoz_prehled_mini_table{
   width:100%;
   border-collapse:collapse;
-  font-size:var(--fs_12);
+  font-size:var(--cb-font-12);
 }
 
 /* Mini tabulka prehledu - bunka. */
@@ -197,7 +197,7 @@
   justify-content:space-between;
   align-items:flex-start;
   gap:8px;
-  font-size:var(--fs_11);
+  font-size:var(--cb-font-11);
   line-height:1.15;
 }
 
@@ -285,7 +285,7 @@
 .provoz_tooltip_table{
   width:100%;
   border-collapse:collapse;
-  font-size:var(--fs_12);
+  font-size:var(--cb-font-12);
 }
 
 /* Tooltip - bunka tabulky. */
@@ -359,7 +359,7 @@
 }
 
 .report_promenne_box_title{
-  font-size:17px;
+  font-size:var(--cb-font-18);
   font-weight:600;
   color:var(--cb-text-main);
 }
@@ -446,7 +446,7 @@
 .zr_table th,
 .zr_table td{
   padding:5px 6px;
-  font-size:12px;
+  font-size:var(--cb-font-12);
   vertical-align:middle;
 }
 
@@ -471,7 +471,7 @@
   height:28px;
   min-height:28px;
   padding:2px 8px;
-  font-size:12px;
+  font-size:var(--cb-font-12);
   border:1px solid var(--cb-border);
   border-radius:8px;
   background:var(--cb-bg-control);
@@ -508,7 +508,7 @@
 .zr_cash_table th{
   padding-bottom:3px;
   color:var(--cb-text-main);
-  font-size:11px;
+  font-size:var(--cb-font-11);
 }
 
 .zr_cash_table td .zr_money_input{
@@ -543,7 +543,7 @@
 .zr_control_label{
   display:block;
   margin:0 0 8px 0;
-  font-size:15px;
+  font-size:var(--cb-font-16);
   font-weight:700;
   color:var(--cb-text-muted);
 }
@@ -551,7 +551,7 @@
 .zr_control_value{
   display:block;
   margin-top:3px;
-  font-size:22px;
+  font-size:var(--cb-font-22);
   line-height:1.1;
   font-weight:700;
   color:var(--cb-text-main);
@@ -573,7 +573,7 @@
 }
 
 .zr_person_table thead th{
-  font-size:11px;
+  font-size:var(--cb-font-11);
   color:var(--cb-text-muted);
 }
 
@@ -592,7 +592,7 @@
   border-radius:6px;
   background:var(--cb-bg-control);
   color:var(--cb-text-main);
-  font-size:12px;
+  font-size:var(--cb-font-12);
 }
 
 .zr_time_input.edit{
@@ -641,7 +641,7 @@
   border:0;
   background:transparent;
   color:var(--clr_cervena);
-  font-size:13px;
+  font-size:var(--cb-font-14);
   font-weight:700;
   line-height:1;
   vertical-align:middle;
@@ -668,12 +668,12 @@
 }
 
 .zr_metric_label{
-  font-size:12px;
+  font-size:var(--cb-font-12);
   color:var(--cb-text-muted);
 }
 
 .zr_metric_value{
-  font-size:28px;
+  font-size:var(--cb-font-28);
   line-height:1.1;
   color:var(--cb-text-main);
   text-align:right;
@@ -695,7 +695,7 @@
   border:0;
   background:transparent;
   color:var(--clr_modra_6);
-  font-size:18px;
+  font-size:var(--cb-font-18);
   font-weight:700;
   line-height:1;
   cursor:pointer;
@@ -803,7 +803,7 @@
 
 .provoz_objednavky_loader_text{
   display:block;
-  font-size:var(--fs_12);
+  font-size:var(--cb-font-12);
   font-weight:700;
 }
 
@@ -811,7 +811,7 @@
   display:block;
   margin-top:3px;
   color:var(--cb-text-muted);
-  font-size:var(--fs_11);
+  font-size:var(--cb-font-11);
   font-weight:400;
 }
 
@@ -831,7 +831,7 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
 .provoz_objednavky_meta{
   margin:0;
   color:var(--cb-text-muted);
-  font-size:var(--fs_11);
+  font-size:var(--cb-font-11);
 }
 
 /* Objednavky - volba poctu radku. */
@@ -841,7 +841,7 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   justify-content:flex-end;
   gap:6px;
   color:var(--cb-text-muted);
-  font-size:var(--fs_11);
+  font-size:var(--cb-font-11);
 }
 
 .provoz_objednavky_per select{
@@ -867,7 +867,7 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   width:max-content;
   min-width:0;
   border-collapse:collapse;
-  font-size:var(--fs_11);
+  font-size:var(--cb-font-11);
   table-layout:auto;
 }
 
@@ -912,7 +912,7 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   border-radius:6px;
   background:var(--cb-bg-control);
   color:var(--cb-text-main);
-  font-size:var(--fs_11);
+  font-size:var(--cb-font-11);
 }
 
 .provoz_objednavky_filter_datetime{
@@ -961,7 +961,7 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   gap:12px;
   margin-top:10px;
   color:var(--cb-text-muted);
-  font-size:var(--fs_11);
+  font-size:var(--cb-font-11);
 }
 
 .provoz_objednavky_pager_links{
@@ -1042,7 +1042,7 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   padding:7px 8px;
   border-bottom:1px solid var(--cb-border-soft);
   color:var(--cb-text-main);
-  font-size:12px;
+  font-size:var(--cb-font-12);
   line-height:1.2;
   text-align:right;
   vertical-align:middle;
@@ -1065,7 +1065,7 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   border-radius:6px;
   background:var(--cb-bg-control);
   color:var(--cb-text-main);
-  font-size:12px;
+  font-size:var(--cb-font-12);
 }
 
 .provoz_prehled_hodin_page .filter-reset-btn,
@@ -1098,7 +1098,7 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   border-radius:8px;
   background:var(--cb-bg-panel);
   color:var(--cb-text-muted);
-  font-size:12px;
+  font-size:var(--cb-font-12);
 }
 
 .provoz_prehled_hodin_page .pagination-icon{

@@ -1,68 +1,73 @@
 <?php
+/*
+ * Ucel souboru: Vypise konfiguraci pro prohlizec a JS soubory spolecne HTML kostry.
+ * Poradi skriptu je zavisle na soucasne aplikaci a odpovida puvodnimu rozlozeni.
+ */
 declare(strict_types=1);
-
-$cbAplikaceRoot = dirname(__DIR__, 2);
-$cbModulyNavigaceJsPath = $cbAplikaceRoot . '/common/js/moduly_navigace.js';
-$cbModulyNavigaceJsUrl = cb_public_url('js/moduly_navigace.js') . '?v=' . (is_file($cbModulyNavigaceJsPath) ? (string)filemtime($cbModulyNavigaceJsPath) : '1');
-$cbDateInputJsPath = $cbAplikaceRoot . '/common/js/date_input.js';
-$cbDateInputJsUrl = cb_public_url('js/date_input.js') . '?v=' . (is_file($cbDateInputJsPath) ? (string)filemtime($cbDateInputJsPath) : '1');
-?><!doctype html>
-<html lang="cs" data-theme-level="<?= h((string)$cbThemeLevel) ?>">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title><?= h($cbTitle) ?></title>
-  <link rel="icon" type="image/png" href="<?= h($cbFavicon) ?>">
-  <?php require_once $cbAplikaceRoot . '/provoz/lib/nacti_styly.php'; ?>
-  <link rel="stylesheet" href="<?= h($cbHrCssUrl) ?>">
-  <link rel="stylesheet" href="<?= h($cbSmenyCssUrl) ?>">
-  <link rel="stylesheet" href="<?= h($cbUkolyCssUrl) ?>">
-  <link rel="stylesheet" href="<?= h($cbHelpdeskCssUrl) ?>">
-  <link rel="stylesheet" href="<?= h($cbAdministraceCssUrl) ?>">
-  <link rel="stylesheet" href="<?= h($cbLoaderCssUrl) ?>">
-</head>
-<body class="cb-context--<?= h($cbVisualModule) ?>">
-<main id="obal_main" class="obal_main cb-context--<?= h($cbVisualModule) ?>" data-obal-main="1">
-<?php
-    require_once __DIR__ . '/hlavicka.php';
 ?>
-<?php
-    cb_modul_nacti($cbInitialModule);
-?>
-</main>
-<?php require __DIR__ . '/loader.php'; ?>
+<?php // Koncovy bod pro komunikaci klienta se spolecnym shellem. ?>
 <script>
 window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
 </script>
+<?php // Spolecny loader stranky. ?>
 <script src="<?= h($cbLoaderJsUrl) ?>"></script>
+<?php // Knihovna grafu. ?>
 <script src="<?= h(cb_asset_url('js/echarts.min.js')) ?>"></script>
+<?php // Zakladni AJAX funkce aplikace. ?>
 <script src="<?= h(cb_asset_url('js/ajax_core.js')) ?>"></script>
+<?php // Data grafu modulu Provoz. ?>
 <script src="<?= h(cb_public_url('js/data_grafu.js')) ?>"></script>
+<?php // Tooltipy modulu Provoz. ?>
 <script src="<?= h(cb_public_url('js/tooltip.js')) ?>"></script>
+<?php // Zmena velikosti grafu. ?>
 <script src="<?= h(cb_public_url('js/resize_graf.js')) ?>"></script>
+<?php // Online graf objednavek. ?>
 <script src="<?= h(cb_asset_url('js/objednavky_online_graf.js')) ?>"></script>
+<?php // Vykresleni grafu modulu Provoz. ?>
 <script src="<?= h(cb_public_url('js/vykresleni_grafu.js')) ?>"></script>
+<?php // Online data Restia. ?>
 <script src="<?= h(cb_asset_url('js/restia_online.js')) ?>"></script>
+<?php // Denni report Restia. ?>
 <script src="<?= h(cb_asset_url('js/denni_report_restia.js')) ?>"></script>
+<?php // Formular denniho reportu. ?>
 <script src="<?= h(cb_asset_url('js/denni_report_form.js')) ?>"></script>
+<?php // Osoby denniho reportu. ?>
 <script src="<?= h(cb_asset_url('js/denni_report_osoby.js')) ?>"></script>
+<?php // Vyber pobocky. ?>
 <script src="<?= h($cbSelectPobockyJsUrl) ?>"></script>
+<?php // Vyber obdobi. ?>
 <script src="<?= h($cbObdobiJsUrl) ?>"></script>
+<?php // Nastaveni prodlevy. ?>
 <script src="<?= h($cbSetProdlevaJsUrl) ?>"></script>
+<?php // Obnoveni bloku nacitanych postupne. ?>
 <script src="<?= h($cbGnRefreshJsUrl) ?>"></script>
+<?php // Prehled objednavek. ?>
 <script src="<?= h(cb_asset_url('js/objednavky_prehled.js')) ?>"></script>
+<?php // Uroven barevneho tematu. ?>
 <script src="<?= h($cbThemeJsUrl) ?>"></script>
+<?php // Filtry. ?>
 <script src="<?= h(cb_asset_url('js/filtry.js')) ?>"></script>
+<?php // Export prehledu smen. ?>
 <script src="<?= h(cb_asset_url('js/prehled_smen_export.js')) ?>"></script>
+<?php // Rozbaleni detailu. ?>
 <script src="<?= h(cb_asset_url('js/rozbalovaci_detail.js')) ?>"></script>
+<?php // Casovac odhlaseni. ?>
 <script src="<?= h(cb_asset_url('js/casovac_odhlaseni.js')) ?>"></script>
+<?php // Jednotne ovladani rucne zadanych dat. ?>
 <script src="<?= h($cbDateInputJsUrl) ?>"></script>
+<?php // Chovani modulu HR v prohlizeci. ?>
 <script src="<?= h($cbHrJsUrl) ?>"></script>
+<?php // Chovani modulu Helpdesk v prohlizeci. ?>
 <script src="<?= h(cb_root_url('helpdesk/hl_js/hl_helpdesk.js')) ?>"></script>
+<?php // Ulozeni prav role v Administraci. ?>
 <script src="<?= h($cbAdministracePravaSaveJsUrl) ?>"></script>
+<?php // Bloky prav role v Administraci. ?>
 <script src="<?= h($cbAdministracePravaBlocksJsUrl) ?>"></script>
+<?php // Vyhledani individualnich prav v Administraci. ?>
 <script src="<?= h($cbAdministraceIndividualSearchJsUrl) ?>"></script>
+<?php // Ulozeni individualnich prav v Administraci. ?>
 <script src="<?= h($cbAdministraceIndividualSaveJsUrl) ?>"></script>
+<?php // Konfigurace navigace mezi hlavni moduly. ?>
 <script>
 window.CB_MODULY_NAVIGACE = {
   shellUrl: <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,
@@ -71,6 +76,5 @@ window.CB_MODULY_NAVIGACE = {
   initialAutoLoad: true
 };
 </script>
+<?php // Klientska navigace mezi moduly. ?>
 <script src="<?= h($cbModulyNavigaceJsUrl) ?>"></script>
-</body>
-</html>

@@ -100,7 +100,7 @@ function hr_insert_employee(mysqli $db, array $data, int $zadalPerson): int
 
         // Nastavi hlavni pracoviste osoby.
         $stmt = $db->prepare('
-            INSERT INTO hr_person_pracoviste (id_person, id_pob, hlavni, platnost_od, id_person_zadal, vytvoreno, platny)
+            INSERT INTO hr_pracoviste (id_person, id_pob, hlavni, platnost_od, id_person_zadal, vytvoreno, platny)
             VALUES (?, ?, ?, ?, ?, NOW(), 1)
         ');
         $stmt->bind_param('iiisi', $idPerson, $idPob, $hlavni, $datumNastupu, $zadalPerson);
@@ -109,7 +109,7 @@ function hr_insert_employee(mysqli $db, array $data, int $zadalPerson): int
 
         // Nastavi hlavni pracovni zarazeni osoby.
         $stmt = $db->prepare('
-            INSERT INTO hr_person_zarazeni (id_person, id_slot, hlavni, platnost_od, id_person_zadal, vytvoreno, platny)
+            INSERT INTO hr_zarazeni (id_person, id_slot, hlavni, platnost_od, id_person_zadal, vytvoreno, platny)
             VALUES (?, ?, ?, ?, ?, NOW(), 1)
         ');
         $stmt->bind_param('iiisi', $idPerson, $idSlot, $hlavni, $datumNastupu, $zadalPerson);

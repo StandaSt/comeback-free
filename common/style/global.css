@@ -1,4 +1,7 @@
-/* global.css */
+/*
+ * Ucel souboru: Definuje spolecny zaklad vzhledu cele aplikace.
+ * Typografie pouziva pouze centralne urcene pevne velikosti v px.
+ */
 
 :root {
   --clr_bila:#fff;
@@ -19,7 +22,13 @@
   --clr_pruhledna_tmava_14:rgba(15,23,42,.14);
   --head-control-border:2px solid var(--cb-border);
   --clr_stin_2:rgba(148,163,184,.10);
-  --fs_11:11px;
+  --cb-font-11:11px;
+  --cb-font-12:12px;
+  --cb-font-14:14px;
+  --cb-font-16:16px;
+  --cb-font-18:18px;
+  --cb-font-22:22px;
+  --cb-font-28:28px;
   --cb-bg-page:#eef3f7;
   --cb-bg-panel:#ffffff;
   --cb-bg-panel-soft:#f8fafc;
@@ -145,7 +154,7 @@
 .odstup_vnitrni_10{ padding:10px; }
 .gap_4{ gap:4px; }
 .gap_6{ gap:6px; }
-.text_11{ font-size:var(--fs_11); }
+.text_11{ font-size:var(--cb-font-11); }
 .txt_c{ text-align:center; }
 .txt_seda{ color:var(--clr_seda_4); }
 .cursor_ruka{ cursor:pointer; }
@@ -163,6 +172,7 @@ body{
   min-height:100%;
   overflow-x:hidden;
   font-family:Arial, Helvetica, sans-serif;
+  font-size:var(--cb-font-14);
   background:var(--cb-bg-page);
   color:var(--cb-text-main);
   margin:0;
@@ -339,7 +349,7 @@ main{
 .cb-pob-area-all,
 .cb-pob-item{
   font-family:Arial, Helvetica, sans-serif;
-  font-size:14px;
+  font-size:var(--cb-font-14);
   line-height:1.2;
   color:var(--cb-text-main);
 }
@@ -411,7 +421,7 @@ main{
   display:block;
   min-width:0;
   color:var(--cb-module-accent);
-  font-size:14px;
+  font-size:var(--cb-font-14);
   line-height:1.2;
   font-weight:700;
 }
@@ -421,7 +431,7 @@ main{
   display:block;
   min-width:0;
   color:#404040;
-  font-size:13px;
+  font-size:var(--cb-font-14);
   line-height:1.2;
   font-weight:400;
   text-align:center;
@@ -448,7 +458,7 @@ main{
   min-width:0;
   padding:0 10px;
   color:var(--cb-text-main);
-  font-size:15px;
+  font-size:var(--cb-font-16);
   font-weight:400;
   line-height:1.1;
   text-decoration:none;
@@ -489,7 +499,7 @@ main{
 .head_block_label{
   display:block;
   color:var(--cb-text-main);
-  font-size:13px;
+  font-size:var(--cb-font-14);
   line-height:1.15;
   font-weight:400;
   white-space:nowrap;
@@ -501,7 +511,7 @@ main{
   display:block;
   min-width:0;
   color:var(--cb-text-main);
-  font-size:13px;
+  font-size:var(--cb-font-14);
   line-height:1.2;
   font-weight:400;
   white-space:nowrap;
@@ -512,7 +522,7 @@ main{
 .head_block_chev{
   flex:0 0 auto;
   color:var(--cb-text-muted);
-  font-size:17px;
+  font-size:var(--cb-font-18);
   line-height:1;
 }
 
@@ -685,7 +695,7 @@ main{
   justify-content:space-between;
   gap:8px;
   margin-bottom:5px;
-  font-size:11px;
+  font-size:var(--cb-font-11);
   color:var(--cb-text-muted);
 }
 
@@ -699,7 +709,7 @@ main{
   grid-template-columns:auto minmax(0,1fr) auto;
   align-items:center;
   gap:8px;
-  font-size:11px;
+  font-size:var(--cb-font-11);
   color:var(--cb-text-muted);
 }
 
@@ -832,7 +842,7 @@ main{
   border-radius:6px;
   background:var(--cb-bg-control);
   color:var(--cb-text-main);
-  font-size:13px;
+  font-size:var(--cb-font-14);
   font-weight:400;
   line-height:1;
   cursor:pointer;
@@ -862,7 +872,7 @@ main{
   border-radius:999px;
   background:#0f5fbd;
   color:var(--clr_bila);
-  font-size:11px;
+  font-size:var(--cb-font-11);
   font-weight:400;
   line-height:1;
 }
@@ -890,7 +900,7 @@ main{
 .head_update_icon{
   flex:0 0 auto;
   color:var(--cb-text-main);
-  font-size:22px;
+  font-size:var(--cb-font-22);
   line-height:1;
 }
 
@@ -898,7 +908,7 @@ main{
   display:block;
   margin-top:2px;
   color:var(--cb-text-main);
-  font-size:13px;
+  font-size:var(--cb-font-14);
   font-weight:400;
   line-height:1.2;
   white-space:nowrap;
@@ -998,7 +1008,7 @@ align-items:center;
 .blok_menu_title{
   margin:0 0 6px 0;
   color:var(--cb-text-main);
-  font-size:18px;
+  font-size:var(--cb-font-18);
   line-height:1.2;
 }
 
@@ -1022,7 +1032,7 @@ align-items:center;
   border-radius:8px;
   background:var(--cb-bg-control);
   color:var(--cb-text-main);
-  font-size:13px;
+  font-size:var(--cb-font-14);
   line-height:1.2;
   text-align:left;
   text-decoration:none;
@@ -1044,7 +1054,7 @@ align-items:center;
 .blok_menu_chev{
   flex:0 0 auto;
   color:var(--cb-module-accent);
-  font-size:13px;
+  font-size:var(--cb-font-14);
   line-height:1;
 }
 
@@ -1074,7 +1084,7 @@ align-items:center;
   border-radius:6px;
   background:var(--cb-bg-control);
   color:var(--cb-text-main);
-  font-size:13px;
+  font-size:var(--cb-font-14);
   line-height:1.2;
   text-align:left;
 }
@@ -1100,7 +1110,7 @@ align-items:center;
   align-items:center;
   min-width:0;
   color:var(--cb-text-main);
-  font-size:14px;
+  font-size:var(--cb-font-14);
   font-weight:700;
   line-height:1.2;
 }
@@ -1122,7 +1132,7 @@ align-items:center;
   border-radius:50%;
   background:var(--cb-bg-control);
   color:var(--cb-text-main);
-  font-size:14px;
+  font-size:var(--cb-font-14);
   line-height:1;
   text-decoration:none;
 }
@@ -1138,7 +1148,7 @@ align-items:center;
   align-items:center;
   min-width:0;
   color:var(--cb-text-muted);
-  font-size:12px;
+  font-size:var(--cb-font-12);
   line-height:1.2;
 }
 
@@ -1173,7 +1183,7 @@ align-items:center;
   border-radius:6px;
   background:var(--cb-bg-control);
   color:var(--cb-text-main);
-  font-size:14px;
+  font-size:var(--cb-font-14);
   line-height:1;
   cursor:pointer;
 }
@@ -1190,7 +1200,7 @@ align-items:center;
   width:24px;
   height:24px;
   color:var(--cb-text-main);
-  font-size:13px;
+  font-size:var(--cb-font-14);
   line-height:1;
 }
 
@@ -1229,7 +1239,7 @@ align-items:center;
   margin:0;
   color:var(--cb-text-main);
   font-family:Arial, Helvetica, sans-serif;
-  font-size:20px;
+  font-size:var(--cb-font-22);
   font-weight:400;
   line-height:1.2;
 }

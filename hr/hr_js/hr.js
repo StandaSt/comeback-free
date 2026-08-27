@@ -16,6 +16,28 @@
         return digits.replace(/(\d{3})(?=\d)/g, '$1 ').trim();
     };
 
+    // Overi pocet hodin: jsou povoleny jen cele hodiny nebo pulhodiny v danem rozsahu.
+    const validateWorkHours = (input, maximum) => {
+        const value = input.value.replace(',', '.').replace(/[^\d.]/g, '');
+        const parts = value.split('.');
+        const hours = parts[0] || '';
+        const decimal = (parts[1] || '').slice(0, 1);
+        input.value = decimal === '' ? hours : `${hours}.${decimal === '5' ? '5' : '0'}`;
+
+        if (input.value === '') {
+            input.setCustomValidity('Zadejte počet hodin týdně.');
+            return false;
+        }
+        const number = Number(input.value);
+        if (number <= 0 || number > maximum) {
+            input.setCustomValidity(`Zadejte počet hodin v rozsahu 0,5 až ${maximum}.`);
+            return false;
+        }
+        input.setCustomValidity('');
+        return true;
+    };
+
+    // Inicializuje chovani HR prvku v predanem obsahu stranky.
     const initHr = (scope) => {
         const container = scope instanceof Element || scope instanceof Document ? scope : document;
 
@@ -28,6 +50,109 @@
             input.addEventListener('input', () => {
                 input.value = formatCzechPhone(input.value);
             });
+        });
+
+        container.querySelectorAll('[data-hr-work-relation-form]').forEach((form) => {
+            if (form.dataset.hrWorkRelationBound === '1') {
+                return;
+            }
+            form.dataset.hrWorkRelationBound = '1';
+
+            const type = form.querySelector('[data-hr-work-relation-type]');
+            const workload = form.querySelector('[data-hr-workload-kind]');
+            const hours = form.querySelector('[data-hr-workload-hours]');
+            const salaryType = form.querySelector('[data-hr-salary-type]');
+            const salaryAmount = form.querySelector('[data-hr-salary-amount]');
+            const salaryLabel = form.querySelector('[data-hr-salary-label]');
+            const workloadParts = form.querySelectorAll('[data-hr-workload-kind-heading], [data-hr-workload-kind-cell]');
+            const hoursParts = form.querySelectorAll('[data-hr-workload-hours-heading], [data-hr-workload-hours-cell]');
+            const dppParts = form.querySelectorAll('[data-hr-workload-dpp-heading], [data-hr-workload-dpp-cell]');
+            if (!type || !workload || !hours) {
+                return;
+            }
+
+            const setHidden = (items, hidden) => items.forEach((item) => { item.hidden = hidden; });
+            const hpp = form.dataset.hrWorkTypeHpp;
+            const dpp = form.dataset.hrWorkTypeDpp;
+            const dpc = form.dataset.hrWorkTypeDpc;
+
+            // Prepne popisek castky podle hodinove nebo fixni mzdy.
+            const updateSalary = () => {
+                if (!salaryType || !salaryLabel) {
+                    return;
+                }
+                salaryLabel.textContent = salaryType.value === '2' ? 'Částka Kč / měsíc' : 'Částka Kč / hodinu';
+            };
+
+            // Prepne vstupy podle zvoleneho typu pracovniho vztahu.
+            const updateWorkload = () => {
+                const typeId = type.value;
+                const isHpp = typeId === hpp;
+                const isDpc = typeId === dpc;
+                const isDpp = typeId === dpp;
+                setHidden(workloadParts, !isHpp);
+                setHidden(hoursParts, isDpp);
+                setHidden(dppParts, !isDpp);
+
+                if (isDpp) {
+                    workload.disabled = true;
+                    hours.disabled = true;
+                    hours.required = false;
+                    hours.value = '';
+                    hours.setCustomValidity('');
+                    return;
+                }
+
+                workload.value = isDpc ? '0' : workload.value;
+                workload.disabled = !isHpp;
+                hours.disabled = false;
+                hours.required = true;
+
+                if (isHpp && workload.value !== '0') {
+                    const fixedHours = { 1: '40', 2: '20', 4: '10' };
+                    hours.value = fixedHours[workload.value] || '';
+                    hours.disabled = true;
+                    hours.required = false;
+                    hours.setCustomValidity('');
+                    return;
+                }
+
+                if (isDpc && hours.value === '') {
+                    hours.value = '20';
+                }
+                validateWorkHours(hours, isDpc ? 60 : 99.5);
+            };
+
+            type.addEventListener('change', updateWorkload);
+            workload.addEventListener('change', updateWorkload);
+            if (salaryType) {
+                salaryType.addEventListener('change', updateSalary);
+            }
+            if (salaryAmount) {
+                salaryAmount.addEventListener('input', () => {
+                    salaryAmount.value = salaryAmount.value.replace(/\D+/g, '');
+                    salaryAmount.setCustomValidity(salaryAmount.value === '' || Number(salaryAmount.value) <= 0 ? 'Zadejte částku mzdy v celých Kč.' : '');
+                });
+            }
+            hours.addEventListener('input', () => {
+                if (!hours.disabled) {
+                    validateWorkHours(hours, type.value === dpc ? 60 : 99.5);
+                }
+            });
+            hours.addEventListener('blur', () => {
+                if (!hours.disabled) {
+                    validateWorkHours(hours, type.value === dpc ? 60 : 99.5);
+                }
+            });
+            form.addEventListener('submit', (event) => {
+                updateWorkload();
+                if (!hours.disabled && !validateWorkHours(hours, type.value === dpc ? 60 : 99.5)) {
+                    event.preventDefault();
+                    hours.reportValidity();
+                }
+            });
+            updateWorkload();
+            updateSalary();
         });
 
         if (typeof window.CB_DATE_INPUT_INIT === 'function') {

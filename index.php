@@ -1,5 +1,8 @@
 <?php
-// index.php * Spolecny login Comeback
+/*
+ * Ucel souboru: Hlavni vstup aplikace. Ridi prihlaseni, session, smerovani modulu
+ * a casne zpracovani pozadavku pred jakymkoli HTML vystupem.
+ */
 declare(strict_types=1);
 
 require_once __DIR__ . '/common/lib/session_boot.php';
@@ -268,47 +271,8 @@ window.CB_ENDPOINT = <?= json_encode(cb_root_url(''), JSON_UNESCAPED_SLASHES | J
         exit;
     }
 
-    $cbTitle = 'Comeback - IS';
-    $cbFavicon = cb_module_asset_url('img/favicon_comeback.png', 'provoz');
-    $cbShellUrl = cb_root_url('index.php');
-    $cbPublicShellUrl = cb_root_url('');
-    $cbSelectPobockyJsPath = __DIR__ . '/common/js/select_pobocky.js';
-    $cbSelectPobockyJsUrl = cb_public_url('js/select_pobocky.js') . '?v=' . (is_file($cbSelectPobockyJsPath) ? (string)filemtime($cbSelectPobockyJsPath) : '1');
-    $cbObdobiJsPath = __DIR__ . '/common/js/obdobi.js';
-    $cbObdobiJsUrl = cb_public_url('js/obdobi.js') . '?v=' . (is_file($cbObdobiJsPath) ? (string)filemtime($cbObdobiJsPath) : '1');
-    $cbSetProdlevaJsPath = __DIR__ . '/common/js/set_prodleva.js';
-    $cbSetProdlevaJsUrl = cb_public_url('js/set_prodleva.js') . '?v=' . (is_file($cbSetProdlevaJsPath) ? (string)filemtime($cbSetProdlevaJsPath) : '1');
-    $cbGnRefreshJsPath = __DIR__ . '/common/js/gn_refresh.js';
-    $cbGnRefreshJsUrl = cb_public_url('js/gn_refresh.js') . '?v=' . (is_file($cbGnRefreshJsPath) ? (string)filemtime($cbGnRefreshJsPath) : '1');
-    $cbThemeJsPath = __DIR__ . '/common/js/theme_level.js';
-    $cbThemeJsUrl = cb_public_url('js/theme_level.js') . '?v=' . (is_file($cbThemeJsPath) ? (string)filemtime($cbThemeJsPath) : '1');
-    $cbHrCssPath = __DIR__ . '/hr/style/hr.css';
-    $cbHrCssUrl = cb_root_url('hr/style/hr.css') . '?v=' . (is_file($cbHrCssPath) ? (string)filemtime($cbHrCssPath) : '1');
-    $cbHrJsPath = __DIR__ . '/hr/hr_js/hr.js';
-    $cbHrJsUrl = cb_root_url('hr/hr_js/hr.js') . '?v=' . (is_file($cbHrJsPath) ? (string)filemtime($cbHrJsPath) : '1');
-    $cbSmenyCssPath = __DIR__ . '/smeny/style/smeny.css';
-    $cbSmenyCssUrl = cb_root_url('smeny/style/smeny.css') . '?v=' . (is_file($cbSmenyCssPath) ? (string)filemtime($cbSmenyCssPath) : '1');
-    $cbUkolyCssPath = __DIR__ . '/ukoly/style/ukoly.css';
-    $cbUkolyCssUrl = cb_root_url('ukoly/style/ukoly.css') . '?v=' . (is_file($cbUkolyCssPath) ? (string)filemtime($cbUkolyCssPath) : '1');
-    $cbHelpdeskCssPath = __DIR__ . '/helpdesk/hl_style/helpdesk.css';
-    $cbHelpdeskCssUrl = cb_root_url('helpdesk/hl_style/helpdesk.css') . '?v=' . (is_file($cbHelpdeskCssPath) ? (string)filemtime($cbHelpdeskCssPath) : '1');
-    $cbAdministraceCssPath = __DIR__ . '/administrace/style/administrace.css';
-    $cbAdministraceCssUrl = cb_root_url('administrace/style/administrace.css') . '?v=' . (is_file($cbAdministraceCssPath) ? (string)filemtime($cbAdministraceCssPath) : '1');
-    $cbAdministracePravaSaveJsPath = __DIR__ . '/administrace/admin_js/admin_prava_roli_save.js';
-    $cbAdministracePravaSaveJsUrl = cb_root_url('administrace/admin_js/admin_prava_roli_save.js') . '?v=' . (is_file($cbAdministracePravaSaveJsPath) ? (string)filemtime($cbAdministracePravaSaveJsPath) : '1');
-    $cbAdministracePravaBlocksJsPath = __DIR__ . '/administrace/admin_js/admin_prava_roli_blocks.js';
-    $cbAdministracePravaBlocksJsUrl = cb_root_url('administrace/admin_js/admin_prava_roli_blocks.js') . '?v=' . (is_file($cbAdministracePravaBlocksJsPath) ? (string)filemtime($cbAdministracePravaBlocksJsPath) : '1');
-    $cbAdministraceIndividualSearchJsPath = __DIR__ . '/administrace/admin_js/admin_individualni_prava_search.js';
-    $cbAdministraceIndividualSearchJsUrl = cb_root_url('administrace/admin_js/admin_individualni_prava_search.js') . '?v=' . (is_file($cbAdministraceIndividualSearchJsPath) ? (string)filemtime($cbAdministraceIndividualSearchJsPath) : '1');
-    $cbAdministraceIndividualSaveJsPath = __DIR__ . '/administrace/admin_js/admin_individualni_prava_save.js';
-    $cbAdministraceIndividualSaveJsUrl = cb_root_url('administrace/admin_js/admin_individualni_prava_save.js') . '?v=' . (is_file($cbAdministraceIndividualSaveJsPath) ? (string)filemtime($cbAdministraceIndividualSaveJsPath) : '1');
-    $cbLoaderCssPath = __DIR__ . '/common/style/loader.css';
-    $cbLoaderCssUrl = cb_public_url('style/loader.css') . '?v=' . (is_file($cbLoaderCssPath) ? (string)filemtime($cbLoaderCssPath) : '1');
-    $cbLoaderJsPath = __DIR__ . '/common/js/loader.js';
-    $cbLoaderJsUrl = cb_public_url('js/loader.js') . '?v=' . (is_file($cbLoaderJsPath) ? (string)filemtime($cbLoaderJsPath) : '1');
-    $cbVisualModule = $cbInitialModule === 'helpdesk' ? 'helpdesk' : $cbInitialModule;
-    $cbThemeLevel = max(0, min(6, (int)cb_user_setting('dark', 0)));
-    require __DIR__ . '/common/includes/aplikace_layout.php';
+    require __DIR__ . '/common/lib/priprava_kostry_stranky.php';
+    require __DIR__ . '/common/includes/kostra_stranky.php';
     exit;
 }
 

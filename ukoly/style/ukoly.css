@@ -1,4 +1,7 @@
-/* Vlastni obsah ukolu. */
+/*
+ * Ucel souboru: Definuje vzhled vlastniho obsahu modulu Ukoly.
+ * Velikosti pisma vychazeji z pevne typograficke skaly aplikace.
+ */
 
 .ukoly_content{
     align-content:start;
@@ -11,6 +14,6 @@
 .ukoly_placeholder_text{
     margin:0;
     color:var(--cb-text-muted);
-    font-size:14px;
+    font-size:var(--cb-font-14);
     line-height:1.4;
 }

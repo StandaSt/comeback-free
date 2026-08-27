@@ -1,6 +1,16 @@
-/* style/modal_alert.css */
+/*
+ * Ucel souboru: Definuje vzhled spolecnych modalnich oken a prihlasovacich stranek.
+ * Velikosti pisma vychazeji z pevne typograficke skaly aplikace.
+ */
 
 :root{
+  --cb-font-11: 11px;
+  --cb-font-12: 12px;
+  --cb-font-14: 14px;
+  --cb-font-16: 16px;
+  --cb-font-18: 18px;
+  --cb-font-22: 22px;
+  --cb-font-28: 28px;
   --cb-modal-bg: #ffffff;
   --cb-modal-border: rgba(15, 23, 42, 0.16);
   --cb-modal-text: #0f172a;
@@ -73,7 +83,7 @@
 
 .modal-login-page .modal-title{
   margin: 0 0 4px 0;
-  font-size: 20px;
+  font-size: var(--cb-font-22);
   line-height: 1.2;
   letter-spacing: 0;
   font-weight: 700;
@@ -81,7 +91,7 @@
 
 .modal-login-page .modal-sub{
   margin: 0;
-  font-size: 13px;
+  font-size: var(--cb-font-14);
   line-height: 1.35;
 }
 
@@ -128,7 +138,7 @@
   border: 1px solid rgba(220, 38, 38, 0.45);
   background: rgba(220, 38, 38, 0.08);
   color: var(--cb-modal-danger);
-  font-size: 22px;
+  font-size: var(--cb-font-22);
   line-height: 1;
   text-align: center;
   cursor: pointer;
@@ -187,7 +197,7 @@
 
 .modal-title{
   margin: 0;
-  font-size: 28px;
+  font-size: var(--cb-font-28);
   line-height: 1.2;
   letter-spacing: -0.01em;
   font-weight: 800;
@@ -196,7 +206,7 @@
 
 .modal-title-alert{
   margin: 0;
-  font-size: 18px;
+  font-size: var(--cb-font-18);
   line-height: 1.2;
   letter-spacing: -0.01em;
   font-weight: 800;
@@ -210,7 +220,7 @@
 .modal-sub{
   margin: 4px 0 0 0;
   color: var(--cb-modal-muted);
-  font-size: 14px;
+  font-size: var(--cb-font-14);
   line-height: 1.45;
 }
 
@@ -224,7 +234,7 @@
 }
 
 .modal-copy{
-  font-size: 16px;
+  font-size: var(--cb-font-16);
   line-height: 1.5;
   color: rgba(15, 23, 42, 0.9);
 }
@@ -248,7 +258,7 @@
 }
 
 .modal-label{
-  font-size: 13px;
+  font-size: var(--cb-font-14);
   color: var(--cb-modal-muted);
   margin: 0 0 6px 0;
   display: block;
@@ -269,7 +279,7 @@
   border: 1px solid rgba(15, 23, 42, 0.2);
   border-radius: 12px;
   padding: 11px 12px;
-  font-size: 16px;
+  font-size: var(--cb-font-16);
   color: var(--cb-modal-text);
   background: #fff;
   outline: 0;
@@ -288,7 +298,7 @@
 }
 
 .modal-phone{
-  font-size: 18px;
+  font-size: var(--cb-font-18);
   font-weight: 800;
   letter-spacing: .2px;
   margin: 0;
@@ -330,14 +340,14 @@
 
 .modal-instr{
   flex: 1 1 260px;
-  font-size: 14px;
+  font-size: var(--cb-font-14);
   line-height: 1.45;
   color: rgba(15, 23, 42, 0.84);
 }
 
 .modal-url{
   margin-top: 8px;
-  font-size: 12px;
+  font-size: var(--cb-font-12);
   color: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
@@ -359,7 +369,7 @@
   border: 0;
   padding: 0;
   color: inherit;
-  font-size: inherit;
+  font-size: var(--cb-font-14);
 }
 
 .modal-db-state{
@@ -395,13 +405,13 @@
 }
 
 .modal-status{
-  font-size: 14px;
+  font-size: var(--cb-font-14);
   color: var(--cb-modal-muted);
 }
 
 .modal-status-center{
   text-align: center;
-  font-size: 18px;
+  font-size: var(--cb-font-18);
   font-weight: 700;
   color: var(--cb-modal-text);
 }
@@ -411,7 +421,7 @@
   padding: 11px 14px;
   border-radius: 12px;
   border: 1px solid rgba(15, 23, 42, 0.2);
-  font-size: 15px;
+  font-size: var(--cb-font-16);
   font-weight: 600;
   cursor: pointer;
   background: #fff;
@@ -430,7 +440,7 @@
 .modal-foot .modal-btn{
   width: auto;
   padding: 10px 12px;
-  font-size: 13px;
+  font-size: var(--cb-font-14);
 }
 
 .modal-btn.primary{
@@ -472,7 +482,7 @@
 
 .muted{
   color: var(--cb-modal-muted);
-  font-size: 13px;
+  font-size: var(--cb-font-14);
 }
 
 .out{
@@ -480,7 +490,7 @@
   padding: 10px 12px;
   border-radius: 12px;
   background: var(--cb-modal-panel);
-  font-size: 13px;
+  font-size: var(--cb-font-14);
   border: 1px solid rgba(15, 23, 42, 0.1);
 }
 
@@ -579,7 +589,7 @@ code{
 
   .modal-login-page .modal-title::after{
     content: "Vstup do systému";
-    font-size: 24px;
+    font-size: var(--cb-font-22);
   }
 
   .modal-login-page .modal-sub{
@@ -653,7 +663,7 @@ code{
     padding: 4px 32px 4px 34px;
     background: rgba(255, 255, 255, 0.98);
     color: #111827;
-    font-size: 13px;
+    font-size: var(--cb-font-14);
     box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
   }
 
@@ -738,7 +748,7 @@ code{
   .modal-login-page .modal-btn-main{
     display: block;
     color: #ffffff;
-    font-size: 24px;
+    font-size: var(--cb-font-22);
     line-height: 1;
     font-weight: 800;
     text-transform: none;
@@ -746,14 +756,14 @@ code{
   }
 
   .modal-login-page .modal-actions-modules .modal-btn:first-child .modal-btn-main{
-    font-size: 24px;
+    font-size: var(--cb-font-22);
     padding-left: 0;
   }
 
   .modal-login-page .modal-btn-sub{
     display: block;
     color: rgba(255, 247, 237, 0.9);
-    font-size: 11px;
+    font-size: var(--cb-font-11);
     line-height: 1.15;
     font-weight: 700;
     text-transform: none;
@@ -761,7 +771,7 @@ code{
   }
 
   .modal-login-page .modal-actions-modules .modal-btn:first-child .modal-btn-sub{
-    font-size: 15px;
+    font-size: var(--cb-font-16);
     padding-left: 158px;
   }
 
@@ -769,7 +779,7 @@ code{
     min-height: 18px;
     margin: 6px 0 0;
     color: #ef4444;
-    font-size: 13px;
+    font-size: var(--cb-font-14);
     font-weight: 800;
     line-height: 1.35;
     text-align: center;
@@ -785,7 +795,7 @@ code{
     color: #ffffff;
     background: rgba(80, 80, 80, 0.72);
     border-radius: 4px;
-    font-size: 12px;
+    font-size: var(--cb-font-12);
     line-height: 1.2;
   }
 
@@ -802,7 +812,7 @@ code{
     padding-top: 12px;
     border-top: 1px solid rgba(255, 255, 255, 0.24);
     color: rgba(255, 247, 237, 0.82);
-    font-size: 12px;
+    font-size: var(--cb-font-12);
   }
 
   .modal-login-page .modal-url code{
@@ -867,7 +877,7 @@ code{
   }
 
   .modal-login-page .modal-title::after{
-    font-size: 22px;
+    font-size: var(--cb-font-22);
   }
 
   .modal-login-page .modal-input{
@@ -883,17 +893,17 @@ code{
   }
 
   .modal-login-page .modal-actions-modules .modal-btn:first-child .modal-btn-main{
-    font-size: 22px;
+    font-size: var(--cb-font-22);
   }
 
   .modal-login-page .modal-btn-main{
-    font-size: 22px;
+    font-size: var(--cb-font-22);
   }
 
   .modal-login-page .modal-url{
     margin-top: 10px;
     padding-top: 10px;
-    font-size: 12px;
+    font-size: var(--cb-font-12);
   }
 }
 
@@ -932,12 +942,12 @@ code{
   }
 
   .modal-title{
-    font-size: 22px;
+    font-size: var(--cb-font-22);
   }
 
   .modal-copy,
   .modal-status-center{
-    font-size: 16px;
+    font-size: var(--cb-font-16);
   }
 
   .modal-qr-main{

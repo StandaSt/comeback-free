@@ -1,300 +1,10 @@
 <?php
-// includes/hlavicka.php * Verze: V45 * Aktualizace: 27.04.2026
+/*
+ * Ucel souboru: Vykresli viditelnou hlavicku aplikace z predem pripravenych dat.
+ * Data pripravi common/lib/priprava_hlavicky.php; vybery jsou samostatne komponenty.
+ */
 declare(strict_types=1);
-require_once __DIR__ . '/../db/db_user_role.php';
-require_once __DIR__ . '/../lib/pobocky_vyber.php';
-
-// Priznak prihlaseni urcuje, zda se vykresli plna hlavicka, nebo guest varianta.
-$cbLoginOk = !empty($_SESSION['login_ok']);
-
-// Zakladni data uzivatele pro user blok vpravo.
-$cbUser = $_SESSION['cb_user'] ?? [];
-$cbUserName = 'Uzivatel';
-$cbUserRole = '-';
-$cbUserRoleLabel = '-';
-$cbUserRoleId = 0;
-
-if (is_array($cbUser)) {
-    $fullName = trim((string)($cbUser['name'] ?? '') . ' ' . (string)($cbUser['surname'] ?? ''));
-    if ($fullName !== '') {
-        $cbUserName = $fullName;
-    } else {
-        $cbUserName = (string)($cbUser['jmeno'] ?? $cbUser['email'] ?? $cbUser['login'] ?? $cbUserName);
-    }
-
-    $cbUserRole = (string)($cbUser['role'] ?? $cbUser['nazev_role'] ?? $cbUserRole);
-    $cbUserRoleLabel = $cbUserRole;
-    $cbUserRoleId = (int)($cbUser['id_role'] ?? 0);
-}
-
-if ($cbUserRole !== '-' && $cbUserRoleId > 0) {
-    $cbUserRole .= ' (' . $cbUserRoleId . ')';
-}
-
-// Stavove semafory (zatim staticky, pozdeji se napoji na realna data).
-$sysDb = 'ok';
-$sysSmeny = 'ok';
-if (!function_exists('cb_head_restia_token_is_valid')) {
-    function cb_head_restia_token_is_valid(mysqli $conn): bool
-    {
-        $stmtRestia = $conn->prepare('
-            SELECT expires_at
-            FROM restia_token
-            WHERE id_restia_token = 1
-            LIMIT 1
-        ');
-        if (!$stmtRestia) {
-            return false;
-        }
-
-        $stmtRestia->execute();
-        $stmtRestia->bind_result($restiaExpiresAt);
-        $isValid = false;
-        if ($stmtRestia->fetch()) {
-            $restiaExpiresAt = trim((string)($restiaExpiresAt ?? ''));
-            if ($restiaExpiresAt !== '') {
-                try {
-                    $restiaExp = new DateTimeImmutable($restiaExpiresAt, new DateTimeZone('UTC'));
-                    $restiaNow = new DateTimeImmutable('now', new DateTimeZone('UTC'));
-                    $isValid = ($restiaExp > $restiaNow->modify('+60 seconds'));
-                } catch (Throwable $e) {
-                    $isValid = false;
-                }
-            }
-        }
-        $stmtRestia->close();
-        return $isValid;
-    }
-}
-
-if (!function_exists('cb_head_restia_online_is_running')) {
-    function cb_head_restia_online_is_running(mysqli $conn): bool
-    {
-        $q = $conn->query('SELECT id_akce FROM online_restia WHERE aktivni = 1 LIMIT 1');
-        if (!($q instanceof mysqli_result)) {
-            return false;
-        }
-
-        $isRunning = ($q->num_rows > 0);
-        $q->free();
-
-        return $isRunning;
-    }
-}
-
-$sysRestia = 'bad';
-try {
-    $connRestia = db();
-    if (cb_head_restia_online_is_running($connRestia)) {
-        $sysRestia = 'bad';
-    } elseif (cb_head_restia_token_is_valid($connRestia)) {
-        $sysRestia = 'ok';
-    } else {
-        require_once __DIR__ . '/../lib/restia_ziskej_access.php';
-        if (cb_head_restia_online_is_running($connRestia)) {
-            $sysRestia = 'bad';
-        } else {
-            $sysRestia = cb_head_restia_token_is_valid($connRestia) ? 'ok' : 'bad';
-        }
-    }
-} catch (Throwable $e) {
-    $sysRestia = 'bad';
-}
-
-// Vychozi obdobi: vcerejsi kompletni pracovni den 06:00-06:00.
-$cbNowPeriod = new DateTimeImmutable('now');
-$cbCurrentWorkdayDate = $cbNowPeriod;
-if ((int)$cbNowPeriod->format('G') < 6) {
-    $cbCurrentWorkdayDate = $cbCurrentWorkdayDate->modify('-1 day');
-}
-$cbWorkingYesterdayDate = $cbCurrentWorkdayDate->modify('-1 day');
-$cbWorkingYesterday = $cbWorkingYesterdayDate->setTime(6, 0, 0)->format('Y-m-d H:i:s');
-$cbWorkingEnd = $cbCurrentWorkdayDate->setTime(6, 0, 0)->format('Y-m-d H:i:s');
-$cbObdobiMax = $cbNowPeriod->format('Y-m-d H:i:s');
-$cbObdobiMaxRes = db()->query('SELECT MAX(konec) AS posledni_konec FROM online_restia WHERE konec IS NOT NULL');
-if ($cbObdobiMaxRes instanceof mysqli_result) {
-    $cbObdobiMaxRow = $cbObdobiMaxRes->fetch_assoc();
-    $cbObdobiMaxRes->free();
-    $cbPosledniKonec = trim((string)($cbObdobiMaxRow['posledni_konec'] ?? ''));
-    if ($cbPosledniKonec !== '') {
-        $cbObdobiMax = $cbPosledniKonec;
-    }
-}
-$today = substr($cbWorkingYesterday, 0, 10);
-$tomorrow = substr($cbWorkingEnd, 0, 10);
-
-// Normalizace obdobi: prijima stare datum YYYY-MM-DD i nove datum+cas.
-$normalizePeriodDateTime = static function (string $v): string {
-    $v = trim(str_replace('T', ' ', $v));
-    if ($v === '') {
-        return '';
-    }
-    if (preg_match('~^(\d{4})-(\d{2})-(\d{2})$~', $v, $m) === 1) {
-        $v = $m[1] . '-' . $m[2] . '-' . $m[3] . ' 06:00:00';
-    } elseif (preg_match('~^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$~', $v, $m) === 1) {
-        $v .= ':00';
-    }
-    if (preg_match('~^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$~', $v, $m) !== 1) {
-        return '';
-    }
-    $y = (int)$m[1];
-    $mo = (int)$m[2];
-    $d = (int)$m[3];
-    $h = (int)$m[4];
-    $mi = (int)$m[5];
-    $s = (int)$m[6];
-    if (!checkdate($mo, $d, $y) || $h > 23 || $mi > 59 || $s > 59) {
-        return '';
-    }
-    return sprintf('%04d-%02d-%02d %02d:%02d:%02d', $y, $mo, $d, $h, $mi, $s);
-};
-
-// Globalni filtr obdobi (bude platit pro karty dashboardu).
-$cbObdobiOd = $cbWorkingYesterday;
-$cbObdobiDo = $cbWorkingEnd;
-$cbObdobiMode = trim((string)($_SESSION['cb_obdobi_mode'] ?? 'manual'));
-$cbProdlevaMs = (int)cb_system_setting('pauza_obdobi', 1000);
-if (!in_array($cbProdlevaMs, range(1000, 10000, 1000), true)) {
-    $cbProdlevaMs = 1000;
-}
-
-if (!in_array($cbObdobiMode, ['dnes', 'vcera', 'tyden', 'mesic', 'rok', 'vse', 'manual'], true)) {
-    $cbObdobiMode = 'manual';
-}
-$sessionOd = $normalizePeriodDateTime((string)($_SESSION['cb_obdobi_od'] ?? ''));
-$sessionDo = $normalizePeriodDateTime((string)($_SESSION['cb_obdobi_do'] ?? ''));
-if ($sessionOd !== '' && $sessionDo !== '' && $sessionOd <= $cbObdobiMax && $sessionOd <= $sessionDo && $sessionDo <= $cbObdobiMax) {
-    $cbObdobiOd = $sessionOd;
-    $cbObdobiDo = $sessionDo;
-    $sessionMode = trim((string)($_SESSION['cb_obdobi_mode'] ?? 'manual'));
-    if (in_array($sessionMode, ['dnes', 'vcera', 'tyden', 'mesic', 'rok', 'vse', 'manual'], true)) {
-        $cbObdobiMode = $sessionMode;
-    }
-}
-
-$userProdleva = (int)cb_user_setting('prodleva', $cbProdlevaMs);
-if (in_array($userProdleva, range(1000, 10000, 1000), true)) {
-    $cbProdlevaMs = $userProdleva;
-}
-
-if (in_array($cbObdobiMode, ['dnes', 'tyden', 'mesic', 'rok', 'vse'], true)) {
-    $cbObdobiDo = $cbObdobiMax;
-}
-
-$_SESSION['cb_obdobi_od'] = $cbObdobiOd;
-$_SESSION['cb_obdobi_do'] = $cbObdobiDo;
-$_SESSION['cb_obdobi_mode'] = $cbObdobiMode;
-
-// Data do user bloku.
-$cbLoginInfo = (is_array($_SESSION['cb_login_info'] ?? null)) ? $_SESSION['cb_login_info'] : [];
-$cbCurrent = (is_array($cbLoginInfo['current'] ?? null)) ? $cbLoginInfo['current'] : [];
-$cbPrev = (is_array($cbLoginInfo['prev'] ?? null)) ? $cbLoginInfo['prev'] : [];
-$cbStats = (is_array($cbLoginInfo['stats'] ?? null)) ? $cbLoginInfo['stats'] : [];
-
-$cbLastLoginRaw = (string)($cbPrev['kdy'] ?? $cbCurrent['kdy'] ?? '');
-$cbLastLoginText = '---';
-if ($cbLastLoginRaw !== '') {
-    try {
-        $cbLastLoginText = (new DateTimeImmutable($cbLastLoginRaw))->format('j.n.Y H:i');
-    } catch (Throwable $e) {
-        $cbLastLoginText = $cbLastLoginRaw;
-    }
-}
-
-$cbLoginTotal = (int)($cbStats['total'] ?? 0);
-$cbLoginToday = (int)($cbStats['today'] ?? 0);
-$cbLoginStatsText = 'celkem ' . $cbLoginTotal . 'x / dnes ' . $cbLoginToday . 'x';
-
-$cbStartTs = (int)($_SESSION['cb_session_start_ts'] ?? time());
-$cbNowTs = time();
-if ($cbStartTs <= 0 || $cbStartTs > $cbNowTs) {
-    $cbStartTs = $cbNowTs;
-}
-
-// Seznam pobocek pro vyber v hlavicce.
-$cbPobocky = [];
-$cbSelectedPobocky = get_selected_pobocky();
-$cbSelectedMode = trim((string)($_SESSION['selected_pobocky_mode'] ?? ''));
-$cbPobockaMultiFromCard = in_array($cbSelectedMode, ['area', 'custom'], true);
-$cbPobockaId = 0;
-if (!$cbPobockaMultiFromCard && !empty($cbSelectedPobocky)) {
-    $cbPobockaId = (int)$cbSelectedPobocky[0];
-}
-
-$cbHelpdeskIsRoleOne = ((int)$cbUserRoleId === 1);
-$cbHelpdeskApiUrl = cb_root_url('index.php');
-
-if ($cbLoginOk) {
-    try {
-        $conn = db();
-        $idUser = (int)($cbUser['id_user'] ?? 0);
-        if ($idUser > 0) {
-            $sql = '
-                SELECT p.id_pob, p.nazev, p.oblast
-                FROM user_pobocka up
-                INNER JOIN pobocka p ON p.id_pob = up.id_pob
-                WHERE up.id_user = ?
-                ORDER BY p.nazev ASC
-            ';
-            $stmt = $conn->prepare($sql);
-            if ($stmt) {
-                $stmt->bind_param('i', $idUser);
-                $stmt->execute();
-                $res = $stmt->get_result();
-                if ($res instanceof mysqli_result) {
-                    while ($r = $res->fetch_assoc()) {
-                        $id = (int)($r['id_pob'] ?? 0);
-                        $nazev = trim((string)($r['nazev'] ?? ''));
-                        $oblast = trim((string)($r['oblast'] ?? ''));
-                        if ($oblast === '') {
-                            $oblast = 'Nezarazeno';
-                        }
-                        if ($id > 0 && $nazev !== '') {
-                            $cbPobocky[] = ['id_pob' => $id, 'nazev' => $nazev, 'oblast' => $oblast];
-                        }
-                    }
-                    $res->close();
-                }
-                $stmt->close();
-            }
-        }
-    } catch (Throwable $e) {
-        $cbPobocky = [];
-    }
-}
-
-if ($cbPobocky) {
-    if (!$cbPobockaMultiFromCard) {
-        $exists = false;
-        foreach ($cbPobocky as $p) {
-            if ((int)$p['id_pob'] === $cbPobockaId) {
-                $exists = true;
-                break;
-            }
-        }
-        if (!$exists) {
-            $cbPobockaId = (int)$cbPobocky[0]['id_pob'];
-            cb_pobocky_set_selected([$cbPobockaId]);
-        }
-    }
-}
-
-$cbHeadAktualizaceDat = '---';
-try {
-    $cbHeadAktualizaceDat = (new DateTimeImmutable((string)$cbObdobiMax))->format('H:i:s');
-} catch (Throwable $e) {
-    $cbHeadAktualizaceDat = '---';
-}
-$cbCurrentModule = function_exists('cb_current_module') ? cb_current_module() : 'provoz';
-if (!in_array($cbCurrentModule, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'], true)) {
-    $cbCurrentModule = 'provoz';
-}
-$cbHeaderPostUrl = cb_root_url('index.php');
-$cbProvozPostUrl = cb_root_url('index.php');
-$cbHeaderNow = new DateTimeImmutable('now', new DateTimeZone('Europe/Prague'));
-$cbHeaderWeekdays = ['neděle', 'pondělí', 'úterý', 'středa', 'čtvrtek', 'pátek', 'sobota'];
-$cbHeaderDateText = $cbHeaderWeekdays[(int)$cbHeaderNow->format('w')] . ' ' . $cbHeaderNow->format('j.n.Y');
-$cbHeaderTimeText = $cbHeaderNow->format('H:i:s');
+require_once __DIR__ . '/../lib/priprava_hlavicky.php';
 ?>
 <header class="blok_hlavicka sirka100">
 
@@ -328,8 +38,8 @@ $cbHeaderTimeText = $cbHeaderNow->format('H:i:s');
         </button>
       <?php endif; ?>
 
-      <?php require __DIR__ . '/hlavicka/head_pobocka.php'; ?>
-      <?php require __DIR__ . '/hlavicka/head_obdobi.php'; ?>
+      <?php require __DIR__ . '/vyber_pobocek.php'; ?>
+      <?php require __DIR__ . '/vyber_obdobi.php'; ?>
 
       <?php if ($cbCurrentModule === 'provoz'): ?>
         <div class="head_update" aria-label="Aktualizace dat" data-cb-head-update="1">
@@ -346,16 +56,19 @@ $cbHeaderTimeText = $cbHeaderNow->format('H:i:s');
     <?php endif; ?>
 
 </header>
+<!-- Skript prubezne obnovuje datum a cas v hlavicce. -->
 <script>
 (function () {
   var dateBox = document.querySelector('[data-cb-head-date]');
   var timeBox = document.querySelector('[data-cb-head-time]');
   var days = ['neděle', 'pondělí', 'úterý', 'středa', 'čtvrtek', 'pátek', 'sobota'];
 
+  // Doplni nulu pred jednociferny casovy udaj.
   function pad(value) {
     return String(value).padStart(2, '0');
   }
 
+  // Prepise zobrazeny cas podle hodin prohlizece.
   function refreshHeaderClock() {
     var now = new Date();
     if (dateBox instanceof HTMLElement) {
@@ -372,14 +85,17 @@ $cbHeaderTimeText = $cbHeaderNow->format('H:i:s');
 })();
 </script>
 <?php if ($cbLoginOk): ?>
+  <!-- Skript nacita a zobrazuje pocty tiketu Helpdesk. -->
   <script>
   (function () {
     var apiUrl = <?= json_encode($cbHelpdeskApiUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 
+    // Najde prvek pro zadany pocet tiketu.
     function countBox(key) {
       return document.querySelector('[data-cb-helpdesk-header-count="' + key + '"]');
     }
 
+    // Prevede hodnotu na nezaporne cele cislo.
     function numberValue(value) {
       var n = Number(value || 0);
       if (!Number.isFinite(n) || n < 0) {
@@ -388,6 +104,7 @@ $cbHeaderTimeText = $cbHeaderNow->format('H:i:s');
       return Math.trunc(n);
     }
 
+    // Prepise vsechny viditelne pocty tiketu.
     function setCounts(counts) {
       var source = counts || {};
       ['all', 'new', 'active', 'resolved'].forEach(function (key) {
@@ -398,6 +115,7 @@ $cbHeaderTimeText = $cbHeaderNow->format('H:i:s');
       });
     }
 
+    // Nacte aktualni pocty tiketu z Helpdesku.
     function refresh() {
       var moduleName = window.CB_HELPDESK_SOURCE_MODULE || window.CB_ACTIVE_MAIN_MODULE || 'provoz';
       return fetch(apiUrl + '?helpdesk_action=stav_tiketu&cb_helpdesk_module=' + encodeURIComponent(String(moduleName)), {
@@ -417,6 +135,7 @@ $cbHeaderTimeText = $cbHeaderNow->format('H:i:s');
         });
     }
 
+    // Otevre Helpdesk s pozadovanym filtrem.
     function openHelpdesk(filter) {
       var filterValue = String(filter || 'all');
       if (window.CB_HELPDESK && typeof window.CB_HELPDESK.openUnreadFilter === 'function') {
@@ -431,6 +150,7 @@ $cbHeaderTimeText = $cbHeaderNow->format('H:i:s');
       }
     }
 
+    // Umiesti napovedu k polozce Helpdesku.
     function placeTooltip(root, event) {
       var panel = root.querySelector('[data-cb-helpdesk-head-tooltip="1"]');
       if (!(panel instanceof HTMLElement)) { return; }
@@ -456,6 +176,7 @@ $cbHeaderTimeText = $cbHeaderNow->format('H:i:s');
       panel.style.top = String(top) + 'px';
     }
 
+    // Skryje napovedu k polozce Helpdesku.
     function hideTooltip(root) {
       var panel = root.querySelector('[data-cb-helpdesk-head-tooltip="1"]');
       if (!(panel instanceof HTMLElement)) { return; }

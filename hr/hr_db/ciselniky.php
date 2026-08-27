@@ -48,3 +48,39 @@ function hr_fetch_health_insurers(mysqli $db): array
 
     return $rows;
 }
+
+/**
+ * Nacte aktivni benefity serazene podle poradi ciselniku.
+ */
+function hr_fetch_active_benefits(mysqli $db): array
+{
+    $result = $db->query('SELECT id_cis_benefit, nazev FROM hr_cis_benefit WHERE aktivni = 1 ORDER BY poradi, nazev');
+    $rows = [];
+    while ($row = $result->fetch_assoc()) {
+        $rows[] = [
+            'id' => (int)$row['id_cis_benefit'],
+            'label' => (string)$row['nazev'],
+        ];
+    }
+    $result->free();
+
+    return $rows;
+}
+
+/**
+ * Nacte dva povolene typy mzdy pro pracovni vztah.
+ */
+function hr_fetch_work_salary_types(mysqli $db): array
+{
+    $result = $db->query('SELECT id_mzda_typ, nazev FROM cis_mzda_typ WHERE id_mzda_typ IN (1, 2) ORDER BY id_mzda_typ');
+    $rows = [];
+    while ($row = $result->fetch_assoc()) {
+        $rows[] = [
+            'id' => (int)$row['id_mzda_typ'],
+            'label' => (string)$row['nazev'],
+        ];
+    }
+    $result->free();
+
+    return $rows;
+}

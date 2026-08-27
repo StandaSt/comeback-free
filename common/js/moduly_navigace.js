@@ -1,3 +1,7 @@
+/*
+ * Ucel souboru: Ridi klientskou navigaci mezi moduly a internimi strankami aplikace.
+ * Soubecne nacteni stejne hlida promenna moduleLoadRunning.
+ */
 (function(){
   'use strict';
 
@@ -136,26 +140,6 @@
     }
     stopPageLoaderTimer();
     root.innerHTML = '<div class="cb-module-load-error">Modul se nepodařilo načíst: ' + String(error.message || error) + '</div>';
-  }
-
-  function clickBlocker() {
-    var blocker = document.querySelector('[data-cb-click-blocker="1"]');
-    if (blocker instanceof HTMLElement) {
-      return blocker;
-    }
-
-    blocker = document.createElement('div');
-    blocker.className = 'cb_click_blocker';
-    blocker.setAttribute('data-cb-click-blocker', '1');
-    blocker.setAttribute('aria-hidden', 'true');
-    document.body.appendChild(blocker);
-    return blocker;
-  }
-
-  function setClickBlocked(blocked) {
-    var blocker = clickBlocker();
-    blocker.hidden = !blocked;
-    document.body.classList.toggle('is-module-loading', blocked);
   }
 
   function formatElapsed(ms) {
@@ -452,7 +436,6 @@
     var sourceMainModule = activeMainModule;
     moduleLoadRunning = true;
     saveActiveModule(moduleName);
-    setClickBlocked(true);
     setRootModule(moduleName);
     setActive(moduleName);
     hideHeaderUpdate();
@@ -528,7 +511,6 @@
         .catch(showModuleError)
         .finally(function(){
           moduleLoadRunning = false;
-          setClickBlocked(false);
         });
       return;
     }
@@ -542,7 +524,6 @@
         .catch(showModuleError)
         .finally(function(){
           moduleLoadRunning = false;
-          setClickBlocked(false);
         });
       return;
     }
@@ -551,7 +532,6 @@
       .catch(showModuleError)
       .finally(function(){
         moduleLoadRunning = false;
-        setClickBlocked(false);
       });
   }
 
