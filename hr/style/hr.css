@@ -391,6 +391,117 @@
     color: var(--primary);
 }
 
+/* Filtrovani, razeni a strankovani seznamu zamestnancu. */
+.hr_employee_list_table tbody .hr_table_cell {
+    cursor: default;
+}
+
+.hr_employee_list_table tbody .hr_table_link {
+    cursor: pointer;
+}
+
+.hr_employee_list_filter_row .hr_table_cell {
+    padding: 5px;
+}
+
+.hr_employee_list_filter {
+    width: 100%;
+    min-width: 72px;
+    height: 26px;
+    min-height: 26px;
+    padding: 2px 7px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface-strong);
+    color: var(--text);
+    font-size: var(--cb-font-11);
+}
+
+.hr_employee_list_filter_date {
+    min-width: 100px;
+}
+
+.hr_employee_list_filter:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+.hr_employee_list_sort_link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--text);
+    text-decoration: none;
+}
+
+.hr_employee_list_sort_link:hover {
+    color: var(--primary);
+}
+
+.hr_employee_list_empty {
+    padding: 18px 8px;
+    color: var(--muted);
+    text-align: center;
+}
+
+.hr_employee_list_pager {
+    display: grid;
+    grid-template-columns: minmax(120px, 1fr) auto minmax(120px, 1fr);
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: var(--cb-font-11);
+}
+
+.hr_employee_list_pager_links,
+.hr_employee_list_per {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.hr_employee_list_pager_links {
+    justify-content: center;
+}
+
+.hr_employee_list_per {
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.hr_employee_list_page_link,
+.hr_employee_list_page_current {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface-strong);
+    color: var(--text);
+    text-decoration: none;
+}
+
+.hr_employee_list_page_link:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.hr_employee_list_page_link.is-disabled {
+    opacity: .45;
+    pointer-events: none;
+}
+
+.hr_employee_list_per select {
+    width: auto;
+    min-height: 28px;
+    padding: 2px 7px;
+}
+
 /* Stitky stavu. */
 .hr_badge {
     display: inline-flex;
@@ -422,6 +533,43 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
+}
+
+/* Radek evidence preruseni a ukonceni pracovniho pomeru na karte zamestnance. */
+.hr_work_event_form .hr_form_grid {
+    grid-template-columns: max-content max-content max-content minmax(0, 1fr);
+    align-items: end;
+}
+
+.hr_work_event_form .hr_form_label {
+    min-width: 0;
+}
+
+.hr_work_event_form .hr_form_label:nth-child(-n+3) {
+    width: max-content;
+}
+
+.hr_work_event_form .hr_form_label:nth-child(-n+3) :is(select, input) {
+    width: auto;
+}
+
+.hr_work_event_form .hr_form_label:first-child select {
+    width: 172px;
+}
+
+.hr_work_event_form .hr_form_label:nth-child(2) input,
+.hr_work_event_form .hr_form_label:nth-child(3) input {
+    width: 135px;
+}
+
+.hr_work_event_form .hr_form_label:last-child input {
+    width: 100%;
+}
+
+.hr_work_benefits {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
 }
 
 .hr_form_label {
@@ -576,11 +724,18 @@
 
 .hr_employee_overview_identity {
     display: flex;
+    position: relative;
     align-items: flex-start;
     gap: 20px;
     min-width: 0;
     min-height: 218px;
     padding: 10px 24px 22px;
+}
+
+.hr_employee_card_id {
+    position: absolute;
+    top: 12px;
+    right: 16px;
 }
 
 .hr_employee_profile_info {
@@ -1171,6 +1326,10 @@
     }
 
     .hr_form_grid {
+        grid-template-columns: 1fr;
+    }
+
+    .hr_work_event_form .hr_form_grid {
         grid-template-columns: 1fr;
     }
 

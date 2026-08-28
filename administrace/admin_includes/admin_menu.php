@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../common/includes/blok_menu.php';
 $adminMenuItems = [
     ['page' => 'prava_roli', 'label' => 'Práva rolí'],
     ['page' => 'individualni_prava', 'label' => 'Individuální práva uživatele'],
+    ['page' => 'spousteni_scriptu', 'label' => 'Spouštění scriptů'],
 ];
 
 $adminMenu = [];

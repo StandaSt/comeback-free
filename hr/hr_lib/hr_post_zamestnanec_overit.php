@@ -15,11 +15,17 @@ function hr_post_zamestnanec_overit(mysqli $db): void
         if ($updated !== 1) {
             throw new RuntimeException('Kartu nelze ověřit nebo již byla ověřena.');
         }
-        $_SESSION['hr_flash'] = ['type' => 'hr_success', 'text' => 'Zaměstnanec byl ověřen.'];
+        cb_form_finish(
+            cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson)),
+            true,
+            'Zaměstnanec byl ověřen.'
+        );
     } catch (Throwable $e) {
-        $_SESSION['hr_flash'] = ['type' => 'hr_error', 'text' => $e->getMessage()];
+        cb_form_finish(
+            cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson)),
+            false,
+            $e->getMessage(),
+            $_POST
+        );
     }
-
-    header('Location: ' . cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson)), true, 303);
-    exit;
 }

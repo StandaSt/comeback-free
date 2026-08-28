@@ -123,8 +123,8 @@ if (!empty($_SESSION['login_ok']) && isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODUL
 
 if (!empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     $cbPostedModule = strtolower(trim((string)($_GET['m'] ?? '')));
-    if ($cbPostedModule === 'hr') {
-        cb_modul_nacti('hr');
+    if (in_array($cbPostedModule, ['hr', 'administrace'], true)) {
+        cb_modul_nacti($cbPostedModule);
         exit;
     }
 }

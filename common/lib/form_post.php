@@ -20,6 +20,18 @@ function cb_form_finish(string $fallback, bool $success, string $message, array 
         'input' => $success ? [] : $input,
         'errors' => $success ? [] : $errors,
     ];
-    header('Location: ' . cb_form_return_url($fallback), true, 303);
+
+    $returnUrl = cb_form_return_url($fallback);
+    if (isset($_SERVER['HTTP_X_COMEBACK_FORM'])) {
+        header('Content-Type: application/json; charset=UTF-8');
+        echo json_encode([
+            'success' => $success,
+            'message' => $message,
+            'redirect' => $returnUrl,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
+    header('Location: ' . $returnUrl, true, 303);
     exit;
 }

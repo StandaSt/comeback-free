@@ -22,17 +22,17 @@ function hr_post_pozadavek_zrusit(mysqli $db): void
         }
 
         hr_zrus_pozadavek($db, (int)($_POST['id_pozadavek'] ?? 0), $zrusilPerson);
-        $_SESSION['hr_flash'] = [
-            'type' => 'hr_success',
-            'text' => 'Požadavek byl zrušen.',
-        ];
+        cb_form_finish(
+            cb_root_url('index.php?m=hr&page=pozadavky'),
+            true,
+            'Požadavek byl zrušen.'
+        );
     } catch (Throwable $e) {
-        $_SESSION['hr_flash'] = [
-            'type' => 'hr_error',
-            'text' => $e->getMessage(),
-        ];
+        cb_form_finish(
+            cb_root_url('index.php?m=hr&page=pozadavky'),
+            false,
+            $e->getMessage(),
+            $_POST
+        );
     }
-
-    header('Location: ' . cb_root_url('index.php?m=hr&page=pozadavky'), true, 303);
-    exit;
 }

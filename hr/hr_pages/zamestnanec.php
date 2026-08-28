@@ -34,6 +34,7 @@ if (!empty($editInput['datum_narozeni'])) {
 <?php else: ?>
     <section class="hr_employee_overview">
         <section class="hr_employee_overview_identity hr_panel">
+            <span class="hr_employee_card_id hr_form_label_text">ID: <?= h((string)$employee['id_person']) ?></span>
             <div class="hr_employee_avatar_column">
                 <div class="hr_employee_photo hr_employee_photo_large hr_employee_avatar_placeholder" role="img" aria-label="Fotografie zaměstnance zatím není vložena"></div>
                 <span class="hr_badge <?= h($employee['stav_badge']) ?>"><?= h($employee['stav_label']) ?></span>
@@ -95,6 +96,10 @@ if (!empty($editInput['datum_narozeni'])) {
         $workTypes = hr_fetch_lookup($db, 'hr_cis_pracovni_vztah_typ', 'id_pracovni_vztah_typ', 'nazev', "CASE nazev WHEN 'HPP' THEN 1 WHEN 'DPČ' THEN 2 WHEN 'DPP' THEN 3 ELSE 9 END, id_pracovni_vztah_typ");
         $salaryTypes = hr_fetch_work_salary_types($db);
         $activeBenefits = hr_fetch_active_benefits($db);
+        $workHistory = hr_fetch_employee_work_timeline($db, (int)$employee['id_person']);
+        $interruptions = $workRelation === null ? [] : hr_fetch_employee_work_interruptions($db, (int)$workRelation['id_pracovni_vztah']);
+        $interruptionTypes = hr_fetch_employee_work_event_types($db, 'hr_cis_pracovni_preruseni_typ', 'id_pracovni_preruseni_typ');
+        $terminationTypes = hr_fetch_employee_work_event_types($db, 'hr_cis_pracovni_ukonceni_typ', 'id_pracovni_ukonceni_typ');
         ?>
         <section class="hr_panel">
             <div class="hr_panel_header"><h2 class="hr_panel_title">Pracovní poměr</h2></div>
@@ -125,7 +130,6 @@ if (!empty($editInput['datum_narozeni'])) {
                             <td style="padding-right:18px;white-space:nowrap"><span class="hr_form_label_text">Typ mzdy</span></td>
                             <td style="padding-right:18px;white-space:nowrap"><span class="hr_form_label_text" data-hr-salary-label>Částka Kč / hodinu</span></td>
                             <td></td>
-                            <td rowspan="2" style="vertical-align:bottom;white-space:nowrap"><button class="hr_primary_button" type="submit">Uložit změny</button></td>
                         </tr>
                         <tr>
                             <td style="padding-right:18px"><select name="id_pracovni_vztah_typ" data-hr-work-relation-type style="width:270px"><?php foreach ($workTypes as $workType): ?><option value="<?= h((string)$workType['id']) ?>"<?= $workTypeId === (int)$workType['id'] ? ' selected' : '' ?>><?= h($workType['label']) ?></option><?php endforeach; ?></select></td>
@@ -138,15 +142,53 @@ if (!empty($editInput['datum_narozeni'])) {
                             <td></td>
                         </tr>
                     </table>
+                    <label class="hr_form_label" style="margin-top:14px;max-width:135px"><span class="hr_form_label_text">Platí od</span><input name="platnost_od" data-cb-date required value="<?= h(date('d.m.Y')) ?>"></label>
                     <fieldset style="margin:14px 0 0;padding:8px 10px;border:1px solid var(--border);border-radius:6px">
                         <legend class="hr_form_label_text" style="padding:0 4px">Benefity</legend>
-                        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px 16px">
+                        <div class="hr_work_benefits">
                             <?php foreach ($activeBenefits as $benefit): ?>
                                 <label class="hr_form_label_text" style="white-space:nowrap"><input type="checkbox" name="benefity[]" value="<?= h((string)$benefit['id']) ?>"<?= in_array((int)$benefit['id'], $selectedBenefitIds, true) ? ' checked' : '' ?>> <?= h($benefit['label']) ?></label>
                             <?php endforeach; ?>
                         </div>
                     </fieldset>
+                    <div class="hr_form_actions"><button class="hr_primary_button" type="submit">Uložit změny</button></div>
                 </form>
+            <?php endif; ?>
+        </section>
+
+        <?php if ($workRelation !== null): ?>
+            <section class="hr_panel">
+                <div class="hr_panel_header"><h2 class="hr_panel_title">Přerušení pracovního poměru</h2></div>
+                <form class="hr_form hr_work_event_form" method="post" action="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$employee['id_person']) . '&sekce=pracovni_pomer')) ?>">
+                    <input type="hidden" name="cb_action" value="hr_pracovni_preruseni_ulozit"><input type="hidden" name="id_person" value="<?= h((string)$employee['id_person']) ?>"><input type="hidden" name="id_pracovni_vztah" value="<?= h((string)$workRelation['id_pracovni_vztah']) ?>">
+                    <div class="hr_form_grid"><label class="hr_form_label"><span class="hr_form_label_text">Typ přerušení</span><select name="id_pracovni_preruseni_typ" required><option value="">Vyberte</option><?php foreach ($interruptionTypes as $interruptionType): ?><option value="<?= h((string)$interruptionType['id']) ?>"><?= h((string)$interruptionType['label']) ?></option><?php endforeach; ?></select></label><label class="hr_form_label"><span class="hr_form_label_text">Od</span><input name="datum_od" data-cb-date required></label><label class="hr_form_label"><span class="hr_form_label_text">Do</span><input name="datum_do" data-cb-date></label><label class="hr_form_label"><span class="hr_form_label_text">Poznámka</span><input name="poznamka" maxlength="1000"></label></div>
+                    <div class="hr_form_actions"><button class="hr_secondary_button hr_panel_button_secondary" type="submit">Evidovat přerušení</button></div>
+                </form>
+                <?php if ($interruptions === []): ?><p class="hr_employee_empty_block">Přerušení zatím nejsou evidována.</p><?php else: ?><div class="hr_table_wrap"><table class="hr_table"><thead><tr><th class="hr_table_cell hr_table_head">Typ</th><th class="hr_table_cell hr_table_head">Od</th><th class="hr_table_cell hr_table_head">Do</th><th class="hr_table_cell hr_table_head">Poznámka</th><th class="hr_table_cell hr_table_head"></th></tr></thead><tbody><?php foreach ($interruptions as $interruption): ?><tr><td class="hr_table_cell"><?= h((string)$interruption['typ']) ?></td><td class="hr_table_cell"><?= h(hr_format_date((string)$interruption['datum_od'])) ?></td><td class="hr_table_cell"><?php if ($interruption['datum_do'] === null): ?><form method="post" action="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$employee['id_person']) . '&sekce=pracovni_pomer')) ?>"><input type="hidden" name="cb_action" value="hr_pracovni_preruseni_uzavrit"><input type="hidden" name="id_person" value="<?= h((string)$employee['id_person']) ?>"><input type="hidden" name="id_pracovni_preruseni" value="<?= h((string)$interruption['id_pracovni_preruseni']) ?>"><input name="datum_do" data-cb-date required placeholder="DD.MM.RRRR"><button class="hr_secondary_button" type="submit">Uzavřít</button></form><?php else: ?><?= h(hr_format_date((string)$interruption['datum_do'])) ?><?php endif; ?></td><td class="hr_table_cell"><?= h((string)($interruption['poznamka'] ?? '')) ?></td><td class="hr_table_cell"></td></tr><?php endforeach; ?></tbody></table></div><?php endif; ?>
+            </section>
+
+            <?php if (empty($workRelation['id_pracovni_ukonceni'])): ?>
+                <section class="hr_panel">
+                    <div class="hr_panel_header"><h2 class="hr_panel_title">Ukončení pracovního poměru</h2></div>
+                    <form class="hr_form hr_work_event_form" method="post" action="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$employee['id_person']) . '&sekce=pracovni_pomer')) ?>">
+                        <input type="hidden" name="cb_action" value="hr_pracovni_pomer_ukoncit"><input type="hidden" name="id_person" value="<?= h((string)$employee['id_person']) ?>"><input type="hidden" name="id_pracovni_vztah" value="<?= h((string)$workRelation['id_pracovni_vztah']) ?>">
+                        <div class="hr_form_grid"><label class="hr_form_label"><span class="hr_form_label_text">Důvod ukončení</span><select name="id_pracovni_ukonceni_typ" required><option value="">Vyberte</option><?php foreach ($terminationTypes as $terminationType): ?><option value="<?= h((string)$terminationType['id']) ?>"><?= h((string)$terminationType['label']) ?></option><?php endforeach; ?></select></label><label class="hr_form_label"><span class="hr_form_label_text">Datum oznámení</span><input name="datum_oznameni" data-cb-date></label><label class="hr_form_label"><span class="hr_form_label_text">Datum ukončení</span><input name="datum_ukonceni" data-cb-date required></label><label class="hr_form_label"><span class="hr_form_label_text">Poznámka</span><input name="poznamka" maxlength="1000"></label></div>
+                        <div class="hr_form_actions"><button class="hr_danger_button hr_secondary_button hr_panel_button_secondary" type="submit">Uložit ukončení</button></div>
+                    </form>
+                </section>
+            <?php endif; ?>
+        <?php endif; ?>
+
+        <section class="hr_panel">
+            <div class="hr_panel_header"><h2 class="hr_panel_title">Historie pracovních poměrů</h2></div>
+            <?php if ($workHistory === []): ?>
+                <p class="hr_empty_state">Historie pracovních poměrů není evidována.</p>
+            <?php else: ?>
+                <div class="hr_table_wrap"><table class="hr_table"><thead><tr><th class="hr_table_cell hr_table_head">Kdy</th><th class="hr_table_cell hr_table_head">Akce</th><th class="hr_table_cell hr_table_head">Platí od</th><th class="hr_table_cell hr_table_head">Zapsal</th><th class="hr_table_cell hr_table_head">Poznámka</th></tr></thead><tbody>
+                <?php foreach ($workHistory as $historyItem): ?>
+                    <tr><td class="hr_table_cell"><?= h(date('d. m. Y H:i', strtotime((string)$historyItem['kdy']))) ?></td><td class="hr_table_cell"><strong><?= h((string)$historyItem['akce']) ?></strong></td><td class="hr_table_cell"><?= h(hr_format_date((string)($historyItem['plati_od'] ?? ''))) ?></td><td class="hr_table_cell"><?= h(trim((string)($historyItem['zapsal'] ?? '')) ?: '—') ?></td><td class="hr_table_cell"><?= h(trim((string)($historyItem['poznamka'] ?? '')) ?: '—') ?></td></tr>
+                <?php endforeach; ?>
+                </tbody></table></div>
             <?php endif; ?>
         </section>
     <?php else: ?>

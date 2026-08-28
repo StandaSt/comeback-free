@@ -27,17 +27,17 @@ function hr_post_pozadavek_vytvorit(mysqli $db, array $user): void
         $idSlot = (int)($_POST['id_slot'] ?? 0);
         $upresneni = mb_substr(trim((string)($_POST['upresneni'] ?? '')), 0, 500);
         hr_uloz_pozadavek($db, (int)$mainPobocka['id_pob'], $idSlot, $pocet, $upresneni, $zadalPerson);
-        $_SESSION['hr_flash'] = [
-            'type' => 'hr_success',
-            'text' => 'Požadavek byl uložen.',
-        ];
+        cb_form_finish(
+            cb_root_url('index.php?m=hr&page=pozadavky'),
+            true,
+            'Požadavek byl uložen.'
+        );
     } catch (Throwable $e) {
-        $_SESSION['hr_flash'] = [
-            'type' => 'hr_error',
-            'text' => $e->getMessage(),
-        ];
+        cb_form_finish(
+            cb_root_url('index.php?m=hr&page=pozadavky'),
+            false,
+            $e->getMessage(),
+            $_POST
+        );
     }
-
-    header('Location: ' . cb_root_url('index.php?m=hr&page=pozadavky'), true, 303);
-    exit;
 }

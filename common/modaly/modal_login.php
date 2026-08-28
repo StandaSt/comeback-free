@@ -25,14 +25,14 @@ unset($_SESSION['cb_flash']);
         <img src="<?= h(cb_public_url('img/logo_comeback.png')) ?>" alt="Comeback">
       </div>
       <div>
-        <p class="modal-title">Přihlášení Comeback</p>
+        <p class="modal-title">Vstup do<br>IS Comeback</p>
         <p class="modal-sub">Použijte přihlašovací údaje ze systému Směny.</p>
       </div>
     </div>
 
     <form method="post" action="<?= h(cb_root_url('common/lib/login_smeny.php')) ?>" class="modal-form" id="cbLoginForm">
       <div class="modal-field">
-        <label class="modal-label" for="cb_email">E-mail</label>
+        <label class="modal-label" for="cb_email">Email:</label>
         <input class="modal-input"
                id="cb_email"
                name="email"
@@ -43,7 +43,7 @@ unset($_SESSION['cb_flash']);
       </div>
 
       <div class="modal-field">
-        <label class="modal-label" for="cb_pass">Heslo</label>
+        <label class="modal-label" for="cb_pass">Heslo:</label>
         <input class="modal-input"
                id="cb_pass"
                name="heslo"
@@ -54,7 +54,7 @@ unset($_SESSION['cb_flash']);
       </div>
       <input type="hidden" name="module" value="provoz">
 
-      <div class="modal-actions modal-actions-modules">
+      <div class="modal-actions">
         <button class="modal-btn primary" type="submit"<?= $loginDisabled ?>>
           <span class="modal-btn-main">Přihlásit</span>
         </button>

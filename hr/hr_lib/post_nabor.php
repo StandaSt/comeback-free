@@ -19,18 +19,17 @@ function hr_post_nabor(mysqli $db): void
             hr_current_person_id($db),
             $_POST
         );
-        $_SESSION['hr_flash'] = [
-            'type' => 'hr_success',
-            'text' => 'Akce byla uložena.',
-        ];
-        header('Location: ' . cb_root_url('index.php?m=hr&page=nabor'), true, 303);
+        cb_form_finish(
+            cb_root_url('index.php?m=hr&page=nabor'),
+            true,
+            'Akce byla uložena.'
+        );
     } catch (Throwable $e) {
-        $_SESSION['hr_flash'] = [
-            'type' => 'hr_error',
-            'text' => $e->getMessage(),
-        ];
-        header('Location: ' . cb_root_url('index.php?m=hr&page=nabor&id_vd=' . rawurlencode((string)$idVd)), true, 303);
+        cb_form_finish(
+            cb_root_url('index.php?m=hr&page=nabor&id_vd=' . rawurlencode((string)$idVd)),
+            false,
+            $e->getMessage(),
+            $_POST
+        );
     }
-
-    exit;
 }

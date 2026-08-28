@@ -641,6 +641,56 @@
     });
   });
 
+  root.addEventListener('submit', function(event){
+    var form = event.target instanceof HTMLFormElement ? event.target : null;
+    if (!form || (form.getAttribute('method') || 'get').toLowerCase() !== 'post') return;
+    if (!form.querySelector('input[name="cb_action"]')) return;
+    if (form.getAttribute('data-cb-form-pending') === '1') return;
+
+    var actionUrl;
+    try {
+      actionUrl = new URL(form.getAttribute('action') || window.location.href, window.location.href);
+    } catch (e) {
+      return;
+    }
+    if (actionUrl.origin !== window.location.origin || actionUrl.searchParams.get('m') !== 'hr') return;
+
+    event.preventDefault();
+    form.setAttribute('data-cb-form-pending', '1');
+    var submitButtons = Array.prototype.slice.call(form.querySelectorAll('button[type="submit"], input[type="submit"]'));
+    submitButtons.forEach(function(button){ button.setAttribute('disabled', 'disabled'); });
+
+    fetch(actionUrl.toString(), {
+      method: 'POST',
+      headers: {
+        'X-Comeback-Form': '1',
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'Accept': 'application/json'
+      },
+      body: new URLSearchParams(new FormData(form)).toString(),
+      credentials: 'same-origin'
+    }).then(function(response){
+      return response.json().then(function(result){
+        if (!response.ok || !result || typeof result.redirect !== 'string') {
+          throw new Error(result && result.message ? String(result.message) : 'Formulář se nepodařilo odeslat.');
+        }
+        return result;
+      });
+    }).then(function(result){
+      var redirectUrl = new URL(result.redirect, window.location.href);
+      var moduleName = redirectUrl.searchParams.get('m') || '';
+      if (povoleneModuly.indexOf(moduleName) === -1) {
+        window.location.assign(redirectUrl.toString());
+        return;
+      }
+      loadModule(moduleName, false, redirectUrl.searchParams);
+    }).catch(function(error){
+      form.removeAttribute('data-cb-form-pending');
+      submitButtons.forEach(function(button){ button.removeAttribute('disabled'); });
+      window.alert(error && error.message ? error.message : 'Formulář se nepodařilo odeslat.');
+    });
+  });
+
   if (config.initialAutoLoad === true) {
     window.setTimeout(function(){
       loadModule(activeMainModule, false, initialParams);

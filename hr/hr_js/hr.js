@@ -203,6 +203,30 @@
             slot.addEventListener('change', updateRequestSubmit);
         });
 
+        container.querySelectorAll('[data-hr-employee-filter-form]').forEach((form) => {
+            if (form.dataset.hrEmployeeFilterBound === '1') {
+                return;
+            }
+            form.dataset.hrEmployeeFilterBound = '1';
+
+            let timer = 0;
+            const submitFilters = () => {
+                window.clearTimeout(timer);
+                timer = window.setTimeout(() => {
+                    if (typeof form.requestSubmit === 'function') {
+                        form.requestSubmit();
+                    } else {
+                        form.submit();
+                    }
+                }, 650);
+            };
+
+            form.querySelectorAll('.hr_employee_list_filter').forEach((input) => {
+                input.addEventListener('input', submitFilters);
+                input.addEventListener('change', submitFilters);
+            });
+        });
+
         container.querySelectorAll('[data-hr-vd-action-form]').forEach((form) => {
             if (form.dataset.hrVdActionBound === '1') {
                 return;

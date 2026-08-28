@@ -18,18 +18,17 @@ function hr_post_zamestnanec(mysqli $db, int $roleId): void
         }
 
         $idPerson = hr_insert_employee($db, $_POST, $zadalPerson);
-        $_SESSION['hr_flash'] = [
-            'type' => 'hr_success',
-            'text' => 'Zaměstnanec byl uložen.',
-        ];
-        header('Location: ' . cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson)), true, 303);
-        exit;
+        cb_form_finish(
+            cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson)),
+            true,
+            'Zaměstnanec byl uložen.'
+        );
     } catch (Throwable $e) {
-        $_SESSION['hr_flash'] = [
-            'type' => 'hr_error',
-            'text' => $e->getMessage(),
-        ];
-        header('Location: ' . cb_root_url('index.php?m=hr&page=novy_zamestnanec'), true, 303);
-        exit;
+        cb_form_finish(
+            cb_root_url('index.php?m=hr&page=novy_zamestnanec'),
+            false,
+            $e->getMessage(),
+            $_POST
+        );
     }
 }

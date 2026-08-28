@@ -17,8 +17,8 @@ window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_
 <script src="<?= h(cb_asset_url('js/ajax_core.js')) ?>"></script>
 <?php // Data grafu modulu Provoz. ?>
 <script src="<?= h(cb_public_url('js/data_grafu.js')) ?>"></script>
-<?php // Tooltipy modulu Provoz. ?>
-<script src="<?= h(cb_public_url('js/tooltip.js')) ?>"></script>
+<?php // Spolecne tooltipy aplikace. ?>
+<script src="<?= h(cb_public_url('js/tooltip.js') . '?v=' . (is_file(__DIR__ . '/../js/tooltip.js') ? (string)filemtime(__DIR__ . '/../js/tooltip.js') : '1')) ?>"></script>
 <?php // Zmena velikosti grafu. ?>
 <script src="<?= h(cb_public_url('js/resize_graf.js')) ?>"></script>
 <?php // Online graf objednavek. ?>

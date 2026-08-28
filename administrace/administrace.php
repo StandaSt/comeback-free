@@ -55,6 +55,108 @@ if ($adminRoleId !== 1) {
 
 if (
     ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
+    && (string)($_POST['cb_action'] ?? '') === 'admin_hr_import_user'
+) {
+    $returnUrl = cb_root_url('index.php?m=administrace&page=spousteni_scriptu');
+
+    try {
+        if ((string)($_POST['admin_hr_import_confirm'] ?? '') !== '1') {
+            throw new RuntimeException('Potvrďte odstranění testovacích HR dat.');
+        }
+        if (!function_exists('proc_open')) {
+            throw new RuntimeException('Server nepovoluje spuštění importního skriptu.');
+        }
+
+        $environment = (($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL') ? 'local' : 'server';
+        $scriptPath = realpath(__DIR__ . '/../../tmp/hr_import_user_do_person.php');
+        if ($scriptPath === false) {
+            throw new RuntimeException('Importní skript nebyl nalezen.');
+        }
+
+        $phpCliName = DIRECTORY_SEPARATOR === '\\' ? 'php.exe' : 'php';
+        $phpCliCandidates = [
+            PHP_BINDIR . DIRECTORY_SEPARATOR . $phpCliName,
+            dirname(PHP_BINARY) . DIRECTORY_SEPARATOR . $phpCliName,
+            dirname(dirname(PHP_BINARY)) . DIRECTORY_SEPARATOR . 'php' . DIRECTORY_SEPARATOR . $phpCliName,
+            dirname(dirname(PHP_BINDIR)) . DIRECTORY_SEPARATOR . 'php' . DIRECTORY_SEPARATOR . $phpCliName,
+        ];
+        if ($environment === 'local') {
+            array_unshift(
+                $phpCliCandidates,
+                dirname(__DIR__, 4) . DIRECTORY_SEPARATOR . 'php' . DIRECTORY_SEPARATOR . $phpCliName
+            );
+        }
+        $phpCliPath = '';
+        foreach ($phpCliCandidates as $phpCliCandidate) {
+            if (is_file($phpCliCandidate)) {
+                $phpCliPath = $phpCliCandidate;
+                break;
+            }
+        }
+        if ($phpCliPath === '') {
+            throw new RuntimeException('CLI PHP pro spuštění importu nebylo nalezeno.');
+        }
+
+        $command = escapeshellarg($phpCliPath)
+            . ' ' . escapeshellarg($scriptPath)
+            . ' --db=' . $environment
+            . ' --reset';
+        $pipes = [];
+        $process = proc_open($command, [
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ], $pipes, dirname($scriptPath));
+
+        if (!is_resource($process)) {
+            throw new RuntimeException('Importní skript se nepodařilo spustit.');
+        }
+
+        $output = trim((string)stream_get_contents($pipes[1]));
+        fclose($pipes[1]);
+        $errorOutput = trim((string)stream_get_contents($pipes[2]));
+        fclose($pipes[2]);
+        $exitCode = proc_close($process);
+
+        if ($exitCode !== 0) {
+            throw new RuntimeException($errorOutput !== '' ? $errorOutput : 'Importní skript skončil s chybou.');
+        }
+
+        $_SESSION['cb_admin_script_result'] = [
+            'success' => true,
+            'message' => $output !== '' ? $output : 'Import byl dokončen.',
+        ];
+        cb_user_akce_zapis([
+            'id_user_akce_typ' => 14,
+            'modul' => 'administrace',
+            'objekt' => 'hr_import_user_do_person',
+            'pole' => 'spusteni',
+            'hodnota_new' => $environment,
+            'vysledek' => 1,
+            'zdroj' => 'administrace',
+        ]);
+    } catch (Throwable $e) {
+        $_SESSION['cb_admin_script_result'] = [
+            'success' => false,
+            'message' => $e->getMessage(),
+        ];
+        cb_user_akce_zapis([
+            'id_user_akce_typ' => 14,
+            'modul' => 'administrace',
+            'objekt' => 'hr_import_user_do_person',
+            'pole' => 'spusteni',
+            'vysledek' => 0,
+            'err_msg' => $e->getMessage(),
+            'zdroj' => 'administrace',
+            'detail' => ['chyba' => $e->getMessage()],
+        ]);
+    }
+
+    header('Location: ' . $returnUrl, true, 303);
+    exit;
+}
+
+if (
+    ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
     && (string)($_SERVER['HTTP_X_COMEBACK_ADMIN_INDIVIDUAL'] ?? '') === '1'
 ) {
     header('Content-Type: application/json; charset=utf-8');
