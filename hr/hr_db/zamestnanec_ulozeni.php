@@ -8,7 +8,7 @@ declare(strict_types=1);
 /**
  * Ulozi noveho zamestnance a jeho zakladni navazna HR data.
  */
-function hr_insert_employee(mysqli $db, array $data, int $zadalPerson): int
+function hr_insert_employee(mysqli $db, array $data, int $zadalPerson): array
 {
     if ($zadalPerson <= 0) {
         throw new RuntimeException('Chybí HR osoba přihlášeného uživatele.');
@@ -41,8 +41,8 @@ function hr_insert_employee(mysqli $db, array $data, int $zadalPerson): int
     if ($idVztahTyp <= 0 || $idPob <= 0 || ($idSlot <= 0 && ($slotVolba !== '__jine__' || $slotJine === ''))) {
         throw new RuntimeException('Vyberte typ vztahu, pobočku a zařazení.');
     }
-    if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
-        throw new RuntimeException('E-mail nemá platný tvar.');
+    if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+        throw new RuntimeException('Pro založení uživatelského účtu vyplňte platný e-mail.');
     }
     if ($telefon !== '' && strlen($telefon) !== 9) {
         throw new RuntimeException('Telefon musí být české číslo s 9 číslicemi.');
@@ -69,12 +69,26 @@ function hr_insert_employee(mysqli $db, array $data, int $zadalPerson): int
             $stmt->close();
         }
 
-        // Zalozi stabilni identitu zamestnance.
+        // Zalozi samostatny lokalni ucet; heslo se nastavi az pri prvnim vstupu.
+        $aktivniUser = 1;
+        $schvalenUser = 1;
+        $inSystem = 0;
+        $hesloHash = null;
         $stmt = $db->prepare('
-            INSERT INTO hr_person (osobni_cislo, zdroj, id_person_zadal, vytvoreno, aktivni)
-            VALUES (?, ?, ?, NOW(), 1)
+            INSERT INTO user (jmeno, prijmeni, email, heslo_hash, telefon, aktivni, in_system, schvalen)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ');
-        $stmt->bind_param('ssi', $osobniCisloDb, $zdroj, $zadalPerson);
+        $stmt->bind_param('sssssiii', $jmeno, $prijmeni, $email, $hesloHash, $telefon, $aktivniUser, $inSystem, $schvalenUser);
+        $stmt->execute();
+        $idUser = (int)$db->insert_id;
+        $stmt->close();
+
+        // Zalozi stabilni identitu zamestnance navazanou na jeho ucet.
+        $stmt = $db->prepare('
+            INSERT INTO hr_person (id_user, osobni_cislo, zdroj, id_person_zadal, vytvoreno, aktivni)
+            VALUES (?, ?, ?, ?, NOW(), 1)
+        ');
+        $stmt->bind_param('issi', $idUser, $osobniCisloDb, $zdroj, $zadalPerson);
         $stmt->execute();
         $idPerson = (int)$db->insert_id;
         $stmt->close();
@@ -138,8 +152,9 @@ function hr_insert_employee(mysqli $db, array $data, int $zadalPerson): int
             $stmt->close();
         }
 
+        $token = cb_prvni_vstup_vytvor_token($db, $idUser);
         $db->commit();
-        return $idPerson;
+        return ['id_person' => $idPerson, 'token' => $token, 'email' => $email, 'jmeno' => $jmeno . ' ' . $prijmeni];
     } catch (Throwable $e) {
         $db->rollback();
         throw $e;

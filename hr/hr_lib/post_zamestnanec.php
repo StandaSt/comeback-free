@@ -17,7 +17,11 @@ function hr_post_zamestnanec(mysqli $db, int $roleId): void
             $zadalPerson = 1;
         }
 
-        $idPerson = hr_insert_employee($db, $_POST, $zadalPerson);
+        $employee = hr_insert_employee($db, $_POST, $zadalPerson);
+        $idPerson = (int)$employee['id_person'];
+        $link = cb_url_abs('?prvni_vstup=' . rawurlencode((string)$employee['token']));
+        $body = '<p>Dobrý den, ' . h((string)$employee['jmeno']) . ',</p><p>pro první vstup do IS Comeback nastavte heslo zde:</p><p><a href="' . h($link) . '">První vstup do IS Comeback</a></p><p>Odkaz platí 3 dny.</p>';
+        cb_mail_send('hr', (string)$employee['email'], 'První vstup do IS Comeback', $body, 'První vstup do IS Comeback: ' . $link);
         cb_form_finish(
             cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson)),
             true,

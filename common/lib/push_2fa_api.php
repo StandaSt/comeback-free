@@ -114,6 +114,18 @@ try {
     }
 
     if ($stav === 'ok') {
+        $localUserId = (int)($_SESSION['cb_local_login_user_id'] ?? 0);
+        if ($localUserId > 0) {
+            require_once __DIR__ . '/prvni_vstup.php';
+            $localUser = cb_prvni_vstup_user($conn, $localUserId);
+            if (!is_array($localUser)) {
+                throw new RuntimeException('Lokální účet neexistuje.');
+            }
+            cb_prvni_vstup_dokonci_login($conn, $localUser);
+            $_SESSION['cb_initial_loader_text'] = 'Inicializace systému ...';
+            echo json_encode(['ok' => true, 'stav' => 'ok'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
         $loginToken = (string)($_SESSION['cb_token'] ?? '');
         if ($loginToken === '') {
             cb_2fa_cleanup_session();

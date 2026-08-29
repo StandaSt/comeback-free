@@ -63,63 +63,20 @@ if (
         if ((string)($_POST['admin_hr_import_confirm'] ?? '') !== '1') {
             throw new RuntimeException('Potvrďte odstranění testovacích HR dat.');
         }
-        if (!function_exists('proc_open')) {
-            throw new RuntimeException('Server nepovoluje spuštění importního skriptu.');
-        }
-
         $environment = (($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL') ? 'local' : 'server';
-        $scriptPath = realpath(__DIR__ . '/../../tmp/hr_import_user_do_person.php');
+        $scriptPath = realpath(__DIR__ . '/../common/tmp/hr_import_user_do_person.php');
         if ($scriptPath === false) {
             throw new RuntimeException('Importní skript nebyl nalezen.');
         }
 
-        $phpCliName = DIRECTORY_SEPARATOR === '\\' ? 'php.exe' : 'php';
-        $phpCliCandidates = [
-            PHP_BINDIR . DIRECTORY_SEPARATOR . $phpCliName,
-            dirname(PHP_BINARY) . DIRECTORY_SEPARATOR . $phpCliName,
-            dirname(dirname(PHP_BINARY)) . DIRECTORY_SEPARATOR . 'php' . DIRECTORY_SEPARATOR . $phpCliName,
-            dirname(dirname(PHP_BINDIR)) . DIRECTORY_SEPARATOR . 'php' . DIRECTORY_SEPARATOR . $phpCliName,
-        ];
-        if ($environment === 'local') {
-            array_unshift(
-                $phpCliCandidates,
-                dirname(__DIR__, 4) . DIRECTORY_SEPARATOR . 'php' . DIRECTORY_SEPARATOR . $phpCliName
-            );
+        if (!defined('CB_HR_IMPORT_DIRECT')) {
+            define('CB_HR_IMPORT_DIRECT', true);
         }
-        $phpCliPath = '';
-        foreach ($phpCliCandidates as $phpCliCandidate) {
-            if (is_file($phpCliCandidate)) {
-                $phpCliPath = $phpCliCandidate;
-                break;
-            }
-        }
-        if ($phpCliPath === '') {
-            throw new RuntimeException('CLI PHP pro spuštění importu nebylo nalezeno.');
-        }
-
-        $command = escapeshellarg($phpCliPath)
-            . ' ' . escapeshellarg($scriptPath)
-            . ' --db=' . $environment
-            . ' --reset';
-        $pipes = [];
-        $process = proc_open($command, [
-            1 => ['pipe', 'w'],
-            2 => ['pipe', 'w'],
-        ], $pipes, dirname($scriptPath));
-
-        if (!is_resource($process)) {
-            throw new RuntimeException('Importní skript se nepodařilo spustit.');
-        }
-
-        $output = trim((string)stream_get_contents($pipes[1]));
-        fclose($pipes[1]);
-        $errorOutput = trim((string)stream_get_contents($pipes[2]));
-        fclose($pipes[2]);
-        $exitCode = proc_close($process);
-
-        if ($exitCode !== 0) {
-            throw new RuntimeException($errorOutput !== '' ? $errorOutput : 'Importní skript skončil s chybou.');
-        }
+        $GLOBALS['CB_HR_IMPORT_ENVIRONMENT'] = $environment;
+        unset($GLOBALS['CB_HR_IMPORT_OUTPUT']);
+        require $scriptPath;
+        $output = trim((string)($GLOBALS['CB_HR_IMPORT_OUTPUT'] ?? ''));
+        unset($GLOBALS['CB_HR_IMPORT_ENVIRONMENT'], $GLOBALS['CB_HR_IMPORT_OUTPUT']);
 
         $_SESSION['cb_admin_script_result'] = [
             'success' => true,

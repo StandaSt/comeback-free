@@ -48,6 +48,16 @@ if ($prostredi === 'LOCAL' || $on2fa !== 1) {
 
 if ($maMobil) {
     if (empty($_SESSION['login_ok']) && !empty($_SESSION['cb_auth_ok'])) {
+        $localUserId = (int)($_SESSION['cb_local_login_user_id'] ?? 0);
+        if ($localUserId > 0) {
+            require_once __DIR__ . '/prvni_vstup.php';
+            $localUser = cb_prvni_vstup_user(db(), $localUserId);
+            if (!is_array($localUser)) {
+                throw new RuntimeException('Lokální účet neexistuje.');
+            }
+            cb_prvni_vstup_dokonci_login(db(), $localUser);
+            return;
+        }
         $loginToken = (string)($_SESSION['cb_token'] ?? '');
         $_SESSION['login_ok'] = 1;
         unset($_SESSION['cb_auth_ok']);

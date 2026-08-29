@@ -24,6 +24,7 @@ require_once __DIR__ . '/system.php';
 require_once __DIR__ . '/../config/secrets.php';
 require_once __DIR__ . '/smeny_graphql.php';
 require_once __DIR__ . '/user_bad_login.php';
+require_once __DIR__ . '/prvni_vstup.php';
 
 require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
 
@@ -65,6 +66,21 @@ try {
 
     if (cb_user_bad_login_is_blocked($email, 5, 15)) {
         throw new RuntimeException('Přihlášení se nezdařilo.');
+    }
+
+    $stmtLocal = db()->prepare('SELECT id_user, jmeno, prijmeni, email, telefon, aktivni, schvalen, id_role, heslo_hash FROM user WHERE email=? LIMIT 1');
+    $stmtLocal->bind_param('s', $email);
+    $stmtLocal->execute();
+    $localUser = $stmtLocal->get_result()->fetch_assoc();
+    $stmtLocal->close();
+    if (is_array($localUser) && trim((string)($localUser['heslo_hash'] ?? '')) !== '') {
+        if ((int)$localUser['aktivni'] !== 1 || !password_verify($heslo, (string)$localUser['heslo_hash'])) {
+            cb_user_bad_login_log($email, $heslo);
+            throw new RuntimeException('Neplatné přihlašovací údaje.');
+        }
+        cb_lokalni_login_zahaj(db(), $localUser);
+        header('Location: ' . cb_login_target_url());
+        exit;
     }
 
     try {
@@ -113,6 +129,15 @@ try {
     }
 
     $idUser = (int)$u['id'];
+
+    $legacyUser = cb_prvni_vstup_user(db(), $idUser);
+    if (!is_array($legacyUser) || strcasecmp((string)$legacyUser['email'], $email) !== 0 || trim((string)$legacyUser['heslo_hash']) !== '') {
+        cb_user_bad_login_log($email, $heslo);
+        throw new RuntimeException('Neplatné přihlašovací údaje.');
+    }
+    cb_prvni_vstup_priprav($legacyUser);
+    header('Location: ' . cb_login_url());
+    exit;
 
     cb_db_ensure_user_set(db(), $idUser);
 

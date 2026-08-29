@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../../common/lib/mailer.php';
+require_once __DIR__ . '/../../common/lib/prvni_vstup.php';
+
 /**
  * Nacita zakladni HR knihovny a databazove soubory pro stranky modulu.
  */

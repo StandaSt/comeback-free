@@ -63,7 +63,7 @@
 }
 
 .modal-login-page .modal{
-  width: min(270px, 100%);
+  width: min(338px, 100%);
   border-radius: 12px;
   box-shadow: 0 18px 50px rgba(15, 23, 42, 0.18);
 }
@@ -293,6 +293,126 @@
   gap: 12px;
 }
 
+.modal-prvni-vstup{
+  width: fit-content;
+  min-width: 320px;
+  max-width: 100%;
+}
+
+.modal-prvni-udaje{
+  display: grid;
+  gap: 6px;
+  font-size: var(--cb-font-14);
+}
+
+.modal-prvni-udaj{
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.modal-prvni-udaj span{
+  color: rgba(15, 23, 42, 0.66);
+  font-size: var(--cb-font-12);
+  flex: 0 0 92px;
+}
+
+.modal-prvni-udaj strong{
+  color: var(--cb-modal-text);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.modal-prvni-heslo{
+  display: grid;
+  gap: 5px;
+}
+
+.modal-prvni-heslo-radek{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-prvni-heslo-radek label{
+  flex: 0 0 92px;
+  color: var(--cb-modal-muted);
+  font-size: var(--cb-font-14);
+  white-space: nowrap;
+}
+
+.modal-prvni-heslo-radek .modal-input{
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.modal-password-strength{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.modal-password-strength-status{
+  flex: 0 0 92px;
+  min-height: 16px;
+  color: rgba(255, 247, 237, 0.84);
+  font-size: var(--cb-font-12);
+  line-height: 16px;
+}
+
+.modal-password-strength-status.is-weak{ color: #fca5a5; }
+.modal-password-strength-status.is-medium{ color: #fde68a; }
+.modal-password-strength-status.is-ok{ color: #86efac; }
+
+.modal-password-strength .modal-password-meter{
+  width: auto;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.modal-prvni-heslo + .modal-prvni-heslo{
+  margin-top: -6px;
+}
+
+.modal-password-rules,
+.modal-password-status{
+  margin: 0;
+  font-size: var(--cb-font-12);
+  line-height: 1.35;
+}
+
+.modal-password-rules{
+  color: var(--cb-modal-muted);
+}
+
+.modal-password-status{
+  min-height: 16px;
+  color: var(--cb-modal-muted);
+}
+
+.modal-password-status.is-ok{ color: #15803d; }
+.modal-password-status.is-error{ color: #b91c1c; }
+
+.modal-password-meter{
+  height: 7px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(15, 23, 42, 0.12);
+}
+
+.modal-password-meter span{
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: #dc2626;
+  transition: width .16s ease, background .16s ease;
+}
+
+.modal-password-meter span.is-medium{ background: #d97706; }
+.modal-password-meter span.is-strong{ background: #15803d; }
+
 .modal-input{
   width: 100%;
   border: 1px solid rgba(15, 23, 42, 0.2);
@@ -362,46 +482,6 @@
   font-size: var(--cb-font-14);
   line-height: 1.45;
   color: rgba(15, 23, 42, 0.84);
-}
-
-.modal-url{
-  margin-top: 8px;
-  font-size: var(--cb-font-12);
-  color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  text-align: left;
-  padding: 0;
-  word-break: normal;
-}
-
-.modal-url-main{
-  margin-left: auto;
-  text-align: right;
-  word-break: break-all;
-}
-
-.modal-url code{
-  background: transparent;
-  border: 0;
-  padding: 0;
-  color: inherit;
-  font-size: var(--cb-font-14);
-}
-
-.modal-db-state{
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.modal-db-state.is-ok{
-  color: #166534;
-}
-
-.modal-db-state.is-bad{
-  color: #b91c1c;
 }
 
 .modal-foot{
@@ -540,7 +620,7 @@ code{
   }
 
   .modal-login-page .modal{
-    width: min(270px, calc(100vw - 40px));
+    width: min(338px, calc(100vw - 40px));
     max-height: none;
     overflow: visible;
     padding: 10px 22px 20px;
@@ -554,6 +634,126 @@ code{
     backdrop-filter: blur(7px) saturate(1.05);
     -webkit-backdrop-filter: blur(7px) saturate(1.05);
     color: #ffffff;
+  }
+
+  .modal-login-page .modal.modal-prvni-vstup{
+    width: fit-content;
+    min-width: 320px;
+    max-width: calc(100vw - 40px);
+    padding: 20px;
+    color: #fff7ed;
+    background: rgba(24, 14, 11, 0.72);
+    border-color: rgba(255, 247, 237, 0.56);
+    box-shadow: 0 24px 56px rgba(0, 0, 0, 0.42);
+    backdrop-filter: blur(7px) saturate(1.05);
+    -webkit-backdrop-filter: blur(7px) saturate(1.05);
+  }
+
+  .modal-login-page .modal-prvni-vstup .modal-head{
+    display: flex;
+    justify-items: initial;
+    text-align: left;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .modal-login-page .modal-prvni-vstup .modal-logo{
+    display: grid;
+    width: 54px;
+    height: 54px;
+    background: #fff;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 14px;
+  }
+
+  .modal-login-page .modal-prvni-vstup .modal-logo img{
+    display: block;
+  }
+
+  .modal-login-page .modal-prvni-vstup .modal-title{
+    margin-left: 34px;
+    color: #fff7ed;
+    font-size: var(--cb-font-22);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  }
+
+  .modal-login-page .modal-prvni-vstup .modal-sub,
+  .modal-login-page .modal-prvni-vstup .modal-label,
+  .modal-login-page .modal-prvni-vstup .modal-password-rules{
+    color: rgba(255, 247, 237, 0.82);
+  }
+
+  .modal-login-page .modal-prvni-vstup .modal-head .modal-sub{
+    display: block;
+  }
+
+  .modal-login-page .modal-prvni-vstup .modal-prvni-udaj span{
+    color: rgba(255, 247, 237, 0.8);
+  }
+
+  .modal-login-page .modal-prvni-vstup .modal-prvni-udaj strong{
+    color: #fff7ed;
+  }
+
+  .modal-login-page .modal-prvni-vstup .modal-prvni-heslo-radek label,
+  .modal-login-page .modal-prvni-vstup .modal-password-status{
+    color: rgba(255, 247, 237, 0.84);
+  }
+
+  .modal-login-page .modal-prvni-vstup .modal-password-meter{
+    background: rgba(255, 247, 237, 0.32);
+  }
+
+  .modal-login-page .modal-prvni-vstup .modal-form{
+    gap: 12px;
+  }
+
+  .modal-login-page .modal-prvni-vstup .modal-input{
+    height: 30px;
+    min-height: 30px;
+    padding: 4px 8px;
+    border: 1px solid rgba(15, 23, 42, 0.2);
+    border-radius: 12px;
+    background: #fff;
+    color: #111827;
+    font-size: var(--cb-font-16);
+  }
+
+  .modal-login-page .modal-prvni-vstup .modal-actions{
+    margin-top: 4px;
+  }
+
+  .modal-login-page .modal-prvni-vstup .modal-prvni-countdown{
+    margin: 0;
+    color: rgba(255, 247, 237, 0.84);
+    font-size: var(--cb-font-12);
+    line-height: 1.35;
+    text-align: center;
+  }
+
+  .modal-login-page .modal-prvni-vstup .modal-btn{
+    min-height: 0;
+    display: block;
+    border-radius: 12px;
+    color: #fff;
+    background: linear-gradient(180deg, #c91b23 0%, #8f080e 100%);
+  }
+
+  .modal-login-page .modal-prvni-vstup .modal-btn::before{
+    content: none;
+  }
+
+  .modal-login-page .modal-prvni-vstup .modal-btn.primary{
+    background: linear-gradient(180deg, #c91b23 0%, #8f080e 100%);
+  }
+
+  .modal-login-page .modal-prvni-vstup .modal-btn.primary:hover{
+    background: linear-gradient(180deg, #df2831 0%, #a90b12 100%);
+  }
+
+  .modal-login-page .modal-prvni-vstup .modal-btn-main{
+    color: inherit;
+    font-size: var(--cb-font-16);
   }
 
   .modal-login-page .modal-head{
@@ -721,26 +921,6 @@ code{
     left: clamp(14px, 3vw, 58px);
   }
 
-  .modal-login-page .modal-url{
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid rgba(255, 255, 255, 0.24);
-    color: rgba(255, 247, 237, 0.82);
-    font-size: var(--cb-font-12);
-  }
-
-  .modal-login-page .modal-url code{
-    color: inherit;
-  }
-
-  .modal-login-page .modal-db-state.is-ok{
-    color: #86efac;
-  }
-
-  .modal-login-page .modal-db-state.is-bad{
-    color: #fecaca;
-  }
-
   /* 2FA používá stejný tmavý panel jako desktopový login.
      Barvy jsou přepsané pouze uvnitř 2FA modálu, aby text nesplýval. */
   #cb-2fa-ovl .modal-box{
@@ -770,7 +950,7 @@ code{
 
 @media (min-width: 701px) and (max-height: 820px){
   .modal-login-page .modal{
-    width: min(270px, calc(100vw - 40px));
+    width: min(338px, calc(100vw - 40px));
     padding: 10px 20px 18px;
   }
 
@@ -798,11 +978,6 @@ code{
     font-size: var(--cb-font-22);
   }
 
-  .modal-login-page .modal-url{
-    margin-top: 10px;
-    padding-top: 10px;
-    font-size: var(--cb-font-12);
-  }
 }
 
 @media (max-width: 640px){
@@ -820,6 +995,11 @@ code{
     max-height: calc(100dvh - 20px);
     padding: 14px;
     border-radius: 14px;
+  }
+
+  .modal-prvni-vstup{
+    width: 100%;
+    min-width: 0;
   }
 
   .modal-head{

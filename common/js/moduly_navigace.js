@@ -541,6 +541,11 @@
     var link = event.target.closest ? event.target.closest('[data-cb-module-link="1"]') : null;
     if (!link) return;
 
+    if (link.getAttribute('data-cb-module-disabled') === '1') {
+      event.preventDefault();
+      return;
+    }
+
     var moduleName = link.getAttribute('data-cb-module') || '';
     if (!moduleName) return;
 

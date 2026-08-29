@@ -2,7 +2,9 @@
 declare(strict_types=1);
 
 $adminScriptResult = $_SESSION['cb_admin_script_result'] ?? null;
-unset($_SESSION['cb_admin_script_result']);
+if (isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODULE'])) {
+    unset($_SESSION['cb_admin_script_result']);
+}
 ?>
 <div class="admin_script_run">
     <div class="blok admin_script_card">

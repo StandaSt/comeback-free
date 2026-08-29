@@ -7,15 +7,8 @@ cb_last_aktualizace_systemu();
 
 $aktualniUrl = cb_url_abs('');
 $loginDbOk = !empty($cbLoginDbOk);
-$loginDbName = trim((string)($cbLoginDbName ?? '---'));
-if ($loginDbName === '') {
-    $loginDbName = '---';
-}
-$loginDbText = 'DB ' . $loginDbName . ($loginDbOk ? ' OK' : ' nepřístupná');
-$loginDbClass = $loginDbOk ? 'is-ok' : 'is-bad';
 $loginDisabled = $loginDbOk ? '' : ' disabled';
 $loginFlash = trim((string)($_SESSION['cb_flash'] ?? ''));
-$loginShowUrl = (string)($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL';
 unset($_SESSION['cb_flash']);
 ?>
 <div id="cb-login-overlay" class="modal-overlay" aria-modal="true" role="dialog" aria-label="Přihlášení Comeback">
@@ -60,13 +53,6 @@ unset($_SESSION['cb_flash']);
         </button>
       </div>
       <p class="modal-login-status" id="cbLoginStatus" aria-live="polite"><?= h($loginFlash) ?></p>
-
-      <?php if ($loginShowUrl): ?>
-      <p class="modal-sub modal-url">
-        <span class="modal-db-state <?= h($loginDbClass) ?>"><?= h($loginDbText) ?></span>
-        <span class="modal-url-main">LOCAL</span>
-      </p>
-      <?php endif; ?>
     </form>
   </div>
   <?php if (!empty($cbLoginBackgroundLabel)): ?>
@@ -78,12 +64,10 @@ unset($_SESSION['cb_flash']);
 (function(){
   'use strict';
   var form = document.getElementById('cbLoginForm');
-  var status = document.getElementById('cbLoginStatus');
-  if (!form || !status) return;
+  if (!form) return;
 
   form.addEventListener('submit', function(){
     var button = form.querySelector('button[type="submit"]');
-    status.textContent = 'Ověřuji přihlašovací údaje ...';
     if (button instanceof HTMLButtonElement) {
       button.disabled = true;
       button.classList.add('is-waiting');

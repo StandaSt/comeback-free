@@ -43,9 +43,11 @@
 
     const panel = getFloatingPanel();
     const moduleRoot = target.closest('.obal_main') || d.querySelector('.obal_main');
-    const accent = moduleRoot instanceof HTMLElement
-      ? w.getComputedStyle(moduleRoot).getPropertyValue('--cb-module-accent').trim()
-      : '';
+    const accent = target.dataset.cbTooltipWarning === '1'
+      ? '#dc2626'
+      : (moduleRoot instanceof HTMLElement
+        ? w.getComputedStyle(moduleRoot).getPropertyValue('--cb-module-accent').trim()
+        : '');
 
     activeTarget = target;
     panel.textContent = text;

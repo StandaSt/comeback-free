@@ -78,7 +78,7 @@ declare(strict_types=1);
 
             <label class="hr_form_label">
                 <span>E-mail</span>
-                <input type="email" name="email" maxlength="150" autocomplete="email">
+                <input type="email" name="email" maxlength="150" autocomplete="email" required>
             </label>
         </div>
 

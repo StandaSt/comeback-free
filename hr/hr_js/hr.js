@@ -90,9 +90,19 @@
                 const isHpp = typeId === hpp;
                 const isDpc = typeId === dpc;
                 const isDpp = typeId === dpp;
-                setHidden(workloadParts, !isHpp);
+                const isUnspecified = typeId === '';
+                setHidden(workloadParts, !(isHpp || isUnspecified));
                 setHidden(hoursParts, isDpp);
                 setHidden(dppParts, !isDpp);
+
+                if (isUnspecified) {
+                    workload.disabled = false;
+                    hours.value = '';
+                    hours.disabled = true;
+                    hours.required = false;
+                    hours.setCustomValidity('');
+                    return;
+                }
 
                 if (isDpp) {
                     workload.disabled = true;

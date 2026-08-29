@@ -1036,6 +1036,21 @@ align-items:center;
   background:var(--head-module-color);
 }
 
+.head_module_link.is-disabled,
+.head_module_link.is-disabled:hover,
+.head_task_btn.is-disabled,
+.head_task_btn.is-disabled:hover{
+  cursor:not-allowed;
+  opacity:.55;
+  color:var(--cb-text-muted);
+  border-color:var(--cb-border);
+  background:var(--cb-bg-control);
+}
+
+.head_module_link.is-disabled::after{
+  display:none;
+}
+
 .blok_menu{
   grid-area:menu;
   display:flex;

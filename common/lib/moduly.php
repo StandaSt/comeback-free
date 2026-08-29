@@ -6,6 +6,24 @@ function cb_moduly_povolene(): array
     return ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'];
 }
 
+function cb_modul_vstupni_pravo(string $module): int
+{
+    return [
+        'administrace' => 100,
+        'provoz' => 200,
+        'hr' => 300,
+        'smeny' => 400,
+        'ukoly' => 500,
+        'helpdesk' => 600,
+    ][$module] ?? 0;
+}
+
+function cb_modul_ma_pristup(string $module): bool
+{
+    $idPravo = cb_modul_vstupni_pravo(strtolower(trim($module)));
+    return $idPravo > 0 && cb_pravo_ma($idPravo);
+}
+
 function cb_modul_normalizuj(string $module, string $fallback = 'provoz'): string
 {
     $module = strtolower(trim($module));
@@ -24,6 +42,13 @@ function cb_modul_nacti(string $module): void
         'helpdesk' => $root . '/helpdesk/helpdesk.php',
         'administrace' => $root . '/administrace/administrace.php',
     ];
+
+    if (!cb_modul_ma_pristup($module)) {
+        http_response_code(403);
+        $cbNepovolenyModul = $module;
+        require dirname(__DIR__) . '/includes/modul_bez_pristupu.php';
+        return;
+    }
 
     $GLOBALS['CURRENT_MODULE'] = $module;
     if (!defined('CB_EMBEDDED_MODULE')) {

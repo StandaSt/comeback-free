@@ -47,6 +47,17 @@ if (isset($_GET['action']) && (string)$_GET['action'] === 'registrace_check') {
 
     $loginPromoted = false;
     if ($paired && !$loginOk && $cbAuthOk) {
+        $localUserId = (int)($_SESSION['cb_local_login_user_id'] ?? 0);
+        if ($localUserId > 0) {
+            require_once __DIR__ . '/prvni_vstup.php';
+            $localUser = cb_prvni_vstup_user(db(), $localUserId);
+            if (!is_array($localUser)) {
+                echo json_encode(['ok' => false, 'err' => 'Lokální účet neexistuje.'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            cb_prvni_vstup_dokonci_login(db(), $localUser);
+            $loginPromoted = true;
+        } else {
         $loginToken = (string)($_SESSION['cb_token'] ?? '');
         if ($loginToken === '') {
             echo json_encode([
@@ -71,6 +82,7 @@ if (isset($_GET['action']) && (string)$_GET['action'] === 'registrace_check') {
             exit;
         }
         $loginPromoted = true;
+        }
     }
 
     echo json_encode([

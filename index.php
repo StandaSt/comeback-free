@@ -10,6 +10,7 @@ require_once __DIR__ . '/common/lib/app.php';
 require_once __DIR__ . '/common/lib/system.php';
 require_once __DIR__ . '/common/config/secrets.php';
 require_once __DIR__ . '/common/lib/json_registrace.php';
+require_once __DIR__ . '/common/lib/prvni_vstup.php';
 require_once __DIR__ . '/common/lib/moduly.php';
 require_once __DIR__ . '/common/lib/nastaveni_uzivatele.php';
 require_once __DIR__ . '/common/lib/local_login_sync.php';
@@ -28,6 +29,28 @@ if (!empty($_SESSION['login_ok'])) {
 
 cb_nastaveni_uzivatele_vyrid_post();
 cb_local_login_sync_vyrid();
+
+if (empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'] ?? '') === 'prvni_vstup_ulozit') {
+    try {
+        cb_prvni_vstup_uloz(db(), $_POST);
+        header('Location: ' . cb_login_target_url(), true, 303);
+        exit;
+    } catch (Throwable $e) {
+        $_SESSION['cb_flash'] = $e->getMessage();
+        header('Location: ' . cb_root_url(''), true, 303);
+        exit;
+    }
+}
+
+if (empty($_SESSION['login_ok']) && isset($_GET['prvni_vstup'])) {
+    if (!cb_prvni_vstup_over_token(db(), trim((string)$_GET['prvni_vstup']))) {
+        $_SESSION['cb_flash'] = 'Odkaz pro první vstup není platný nebo již vypršel.';
+        header('Location: ' . cb_root_url(''), true, 303);
+        exit;
+    }
+    header('Location: ' . cb_root_url(''), true, 303);
+    exit;
+}
 
 if (
     !empty($_SESSION['login_ok'])
@@ -301,6 +324,8 @@ if ($cbLoginBackgroundCount > 0) {
 <?php
 if ($cb2faPending) {
     require_once __DIR__ . '/common/modaly/modal_overeni.php';
+} elseif (cb_prvni_vstup_zbyva() > 0) {
+    require_once __DIR__ . '/common/modaly/modal_prvni_vstup.php';
 } elseif ($cbAuthOk) {
     require_once __DIR__ . '/common/lib/kontrola_registrace.php';
     if (!empty($_SESSION['login_ok'])) {

@@ -110,9 +110,12 @@ if (!empty($editInput['datum_narozeni'])) {
                 $workStart = DateTimeImmutable::createFromFormat('!Y-m-d', (string)$workRelation['datum_nastupu']);
                 $workStartValue = $workStart === false ? '' : $workStart->format('d.m.Y');
                 $workTypeId = (int)$workRelation['id_pracovni_vztah_typ'];
-                $workloadCode = $workTypeId === 3 ? 0 : (int)($workRelation['uvazek'] ?? 1);
+                $workTypeIsSet = in_array($workTypeId, [1, 2, 3], true);
+                $workloadCode = $workTypeId === 3
+                    ? 0
+                    : ($workRelation['uvazek'] === null ? null : (int)$workRelation['uvazek']);
                 $workHours = $workRelation['hodin_tydne'] === null ? '' : rtrim(rtrim(number_format((float)$workRelation['hodin_tydne'], 1, '.', ''), '0'), '.');
-                $salaryTypeId = (int)($workRelation['id_mzda_typ'] ?? 1);
+                $salaryTypeId = $workRelation['id_mzda_typ'] === null ? null : (int)$workRelation['id_mzda_typ'];
                 $salaryAmount = $workRelation['mzda_castka'] === null ? '' : (string)$workRelation['mzda_castka'];
                 $selectedBenefitIds = hr_fetch_employee_work_benefit_ids($db, (int)$workRelation['id_pracovni_vztah']);
                 ?>
@@ -132,12 +135,12 @@ if (!empty($editInput['datum_narozeni'])) {
                             <td></td>
                         </tr>
                         <tr>
-                            <td style="padding-right:18px"><select name="id_pracovni_vztah_typ" data-hr-work-relation-type style="width:270px"><?php foreach ($workTypes as $workType): ?><option value="<?= h((string)$workType['id']) ?>"<?= $workTypeId === (int)$workType['id'] ? ' selected' : '' ?>><?= h($workType['label']) ?></option><?php endforeach; ?></select></td>
+                            <td style="padding-right:18px"><select name="id_pracovni_vztah_typ" data-hr-work-relation-type style="width:270px"><option value=""<?= !$workTypeIsSet ? ' selected' : '' ?>>Zvolte typ prac. vztahu</option><?php foreach ($workTypes as $workType): ?><option value="<?= h((string)$workType['id']) ?>"<?= $workTypeId === (int)$workType['id'] ? ' selected' : '' ?>><?= h($workType['label']) ?></option><?php endforeach; ?></select></td>
                             <td style="padding-right:18px"><input name="datum_nastupu" data-cb-date style="width:135px" value="<?= h($workStartValue) ?>"></td>
-                            <td data-hr-workload-kind-cell style="padding-right:18px"><select name="uvazek" data-hr-workload-kind style="width:130px"><option value="1"<?= $workloadCode === 1 ? ' selected' : '' ?>>Plný</option><option value="2"<?= $workloadCode === 2 ? ' selected' : '' ?>>Poloviční</option><option value="4"<?= $workloadCode === 4 ? ' selected' : '' ?>>Čtvrtinový</option><option value="0"<?= $workloadCode === 0 ? ' selected' : '' ?>>Vlastní</option></select></td>
+                            <td data-hr-workload-kind-cell style="padding-right:18px"><select name="uvazek" data-hr-workload-kind style="width:130px"><option value=""<?= $workloadCode === null ? ' selected' : '' ?>>Nezadáno</option><option value="1"<?= $workloadCode === 1 ? ' selected' : '' ?>>Plný</option><option value="2"<?= $workloadCode === 2 ? ' selected' : '' ?>>Poloviční</option><option value="4"<?= $workloadCode === 4 ? ' selected' : '' ?>>Čtvrtinový</option><option value="0"<?= $workloadCode === 0 ? ' selected' : '' ?>>Vlastní</option></select></td>
                             <td data-hr-workload-hours-cell style="padding-right:18px"><input type="text" inputmode="decimal" name="hodin_tydne" data-hr-workload-hours maxlength="4" style="width:70px" value="<?= h($workHours) ?>"></td>
                             <td data-hr-workload-dpp-cell hidden colspan="2" style="white-space:nowrap">Max. limit je 300 hod. za rok</td>
-                            <td style="padding-right:18px"><select name="id_mzda_typ" data-hr-salary-type style="width:130px"><?php foreach ($salaryTypes as $salaryType): ?><option value="<?= h((string)$salaryType['id']) ?>"<?= $salaryTypeId === (int)$salaryType['id'] ? ' selected' : '' ?>><?= h($salaryType['label']) ?></option><?php endforeach; ?></select></td>
+                            <td style="padding-right:18px"><select name="id_mzda_typ" data-hr-salary-type style="width:130px"><option value=""<?= $salaryTypeId === null ? ' selected' : '' ?>>Nezadáno</option><?php foreach ($salaryTypes as $salaryType): ?><option value="<?= h((string)$salaryType['id']) ?>"<?= $salaryTypeId === (int)$salaryType['id'] ? ' selected' : '' ?>><?= h($salaryType['label']) ?></option><?php endforeach; ?></select></td>
                             <td style="padding-right:18px"><input type="text" inputmode="numeric" pattern="[0-9]*" name="mzda_castka" data-hr-salary-amount required maxlength="10" style="width:100px" value="<?= h($salaryAmount) ?>"></td>
                             <td></td>
                         </tr>
