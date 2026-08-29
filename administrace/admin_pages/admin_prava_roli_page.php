@@ -13,7 +13,7 @@ $adminShowBlockChecks = is_array($adminCurrentUser) && (int)($adminCurrentUser['
 ?>
 <?php if ($adminRights === []): ?>
     <div class="admin_empty blok">
-        <h2 class="blok_title">Práva rolí</h2>
+        <h2 class="blok_title">Globální práva</h2>
         <p>V tabulce cis_prava zatím nejsou žádná práva.</p>
     </div>
 <?php else: ?>
@@ -25,6 +25,7 @@ $adminShowBlockChecks = is_array($adminCurrentUser) && (int)($adminCurrentUser['
             <div class="admin_matrix_wrap">
                 <table class="admin_matrix" style="width:auto; min-width:0;">
                     <colgroup>
+                        <col style="width:54px;">
                         <col style="width:200px;">
                         <?php foreach ($adminRoles as $role): ?>
                             <col style="width:80px;">
@@ -32,6 +33,7 @@ $adminShowBlockChecks = is_array($adminCurrentUser) && (int)($adminCurrentUser['
                     </colgroup>
                     <thead>
                         <tr>
+                            <th class="admin_matrix_active_head">Aktivní</th>
                             <th style="white-space:nowrap;">Právo</th>
                             <?php foreach ($adminRoles as $role): ?>
                                 <th class="admin_matrix_role_head"><?= h($role['role']) ?></th>
@@ -40,6 +42,7 @@ $adminShowBlockChecks = is_array($adminCurrentUser) && (int)($adminCurrentUser['
                     </thead>
                     <tbody>
                         <tr class="admin_matrix_group">
+                            <th></th>
                             <th style="white-space:nowrap;"><?= h($module['modul']) ?></th>
                             <?php foreach ($adminRoles as $role): ?>
                                 <?php $idRole = (int)$role['id_role']; ?>
@@ -57,7 +60,18 @@ $adminShowBlockChecks = is_array($adminCurrentUser) && (int)($adminCurrentUser['
                             <?php endforeach; ?>
                         </tr>
                         <?php foreach ($module['rights'] as $right): ?>
-                            <tr>
+                            <?php $rightActive = !empty($right['aktivni']); ?>
+                            <tr<?= $rightActive ? '' : ' class="is-inactive"' ?>>
+                                <td class="admin_matrix_active">
+                                    <input
+                                        type="checkbox"
+                                        data-admin-pravo-aktivni="1"
+                                        data-id-pravo="<?= h((string)$right['id_pravo']) ?>"
+                                        data-pravo-nazev="<?= h((string)$right['nazev']) ?>"
+                                        <?= $rightActive ? 'checked' : '' ?>
+                                        aria-label="Hlídání práva <?= h((string)$right['nazev']) ?>"
+                                    >
+                                </td>
                                 <td style="white-space:nowrap;">
                                     <strong><?= h($right['nazev']) ?></strong>
                                     <?php if ($right['popis'] !== ''): ?>
@@ -78,6 +92,7 @@ $adminShowBlockChecks = is_array($adminCurrentUser) && (int)($adminCurrentUser['
                                             data-id-pravo="<?= h((string)$idPravo) ?>"
                                             data-id-modul="<?= h((string)$module['id_modul']) ?>"
                                             <?= $checked ? 'checked' : '' ?>
+                                            <?= $rightActive ? '' : 'disabled' ?>
                                         >
                                     </td>
                                 <?php endforeach; ?>
@@ -88,4 +103,5 @@ $adminShowBlockChecks = is_array($adminCurrentUser) && (int)($adminCurrentUser['
             </div>
         <?php endforeach; ?>
     </div>
+    <?php require __DIR__ . '/../admin_modaly/modal_pravo_aktivni.php'; ?>
 <?php endif; ?>

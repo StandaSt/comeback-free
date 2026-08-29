@@ -199,7 +199,9 @@ foreach ($items as $item) {
 }
 
 ?>
-<?php require __DIR__ . '/hl_menu.php'; ?>
+<?php if (!defined('CB_PP_ONLY') || CB_PP_ONLY !== true): ?>
+    <?php require __DIR__ . '/hl_menu.php'; ?>
+<?php endif; ?>
 <?php if ($helpdeskView === 'uprava_profilu'): ?>
     <?php require __DIR__ . '/../../common/pages/uprava_profilu.php'; ?>
     <?php return; ?>

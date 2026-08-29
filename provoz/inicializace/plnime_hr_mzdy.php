@@ -446,9 +446,9 @@ function hrMzdyRender(array $summary, array $result, bool $write): void
       <p class="card_text txt_seda"><?= hrMzdyH(implode(', ', (array)$summary['unknown_names'])) ?></p>
 
       <div class="card_actions gap_8 displ_flex odstup_horni_10">
-        <form method="post" action="<?= hrMzdyH(cb_url('/provoz.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1" data-cb-loader-text="Probíhá import HR mezd">
+        <form method="post" action="<?= hrMzdyH(cb_url('/provoz.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
           <input type="hidden" name="run_hr_mzdy" value="1">
-          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Probíhá import HR mezd">Spustit import</button>
+          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Spustit import</button>
         </form>
         <form method="post" action="<?= hrMzdyH(cb_url('/provoz.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
           <input type="hidden" name="back_admin_init" value="1">

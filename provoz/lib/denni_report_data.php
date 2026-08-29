@@ -713,6 +713,7 @@ function cb_denni_report_restia_summary_default(): array
         'docs_count' => 0,
         'orders_total' => 0,
         'own_deliveries' => 0,
+        'woltdrive_count' => 0,
         'woltdrive_late' => 0,
     ];
 }
@@ -759,6 +760,7 @@ function cb_denni_report_restia_summary(mysqli $conn, int $idPob, array $workday
                 AVG(CASE WHEN " . $notCanceled . " AND COALESCE(ca.cas_import_restia, ca.cas_vytvor) IS NOT NULL AND ca.cas_pripr_v IS NOT NULL THEN TIMESTAMPDIFF(SECOND, COALESCE(ca.cas_import_restia, ca.cas_vytvor), ca.cas_pripr_v) END) AS make_time_avg_sec,
                 COUNT(DISTINCT CASE WHEN " . $notCanceled . " THEN o.id_obj ELSE NULL END) AS orders_total,
                 COUNT(DISTINCT CASE WHEN " . $notCanceled . " AND ok.provider = 'delivery' THEN o.id_obj ELSE NULL END) AS own_deliveries,
+                COUNT(DISTINCT CASE WHEN " . $notCanceled . " AND ok.provider = 'external-delivery' THEN o.id_obj ELSE NULL END) AS woltdrive_count,
                 COUNT(DISTINCT CASE WHEN " . $notCanceled . " AND ok.provider = 'delivery' AND ca.cas_slib IS NOT NULL AND ca.cas_doruc IS NOT NULL AND TIMESTAMPDIFF(MINUTE, ca.cas_slib, ca.cas_doruc) > 5 THEN o.id_obj ELSE NULL END) AS delay_count,
                 COUNT(DISTINCT CASE WHEN " . $notCanceled . " AND ok.provider = 'external-delivery' AND ca.cas_slib IS NOT NULL AND ca.cas_doruc IS NOT NULL AND TIMESTAMPDIFF(MINUTE, ca.cas_slib, ca.cas_doruc) > 5 THEN o.id_obj ELSE NULL END) AS woltdrive_late
             FROM objednavky_restia o
@@ -828,6 +830,7 @@ function cb_denni_report_restia_summary(mysqli $conn, int $idPob, array $workday
                     'docs_count' => 0,
                     'orders_total' => (int)($summaryRow['orders_total'] ?? 0),
                     'own_deliveries' => (int)($summaryRow['own_deliveries'] ?? 0),
+                    'woltdrive_count' => (int)($summaryRow['woltdrive_count'] ?? 0),
                     'woltdrive_late' => (int)($summaryRow['woltdrive_late'] ?? 0),
                 ];
                 $summaryResult->free();
@@ -1396,6 +1399,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         $restiaSummary['docs_count'] = cb_denni_report_docs_count_from_person_rows($draftPersonRows);
         $restiaSummary['orders_total'] = (int)($historyReport['objednavky_nezrusene_ks'] ?? 0);
         $restiaSummary['own_deliveries'] = (int)($historyReport['nase_rozvozy_ks'] ?? 0);
+        $restiaSummary['woltdrive_count'] = (int)($historyReport['woltdrive_ks'] ?? 0);
         $restiaSummary['woltdrive_late'] = (int)($historyReport['woltdrive_pozde_5_min'] ?? 0);
 
         $kuryrDeliveryCountsJson = '{}';

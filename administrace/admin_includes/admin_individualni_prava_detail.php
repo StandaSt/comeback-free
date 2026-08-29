@@ -46,12 +46,13 @@ function cb_admin_individualni_prava_html(array $data): string
                         <?php foreach ($module['rights'] as $right): ?>
                             <?php
                             $idPravo = (int)$right['id_pravo'];
+                            $rightActive = !empty($right['aktivni']);
                             $globalValue = !empty($global[$idPravo]) ? 1 : 0;
                             $hasException = array_key_exists($idPravo, $exceptions);
                             $exceptionValue = $hasException ? (int)$exceptions[$idPravo] : null;
                             $exceptionClass = $exceptionValue === 1 ? 'is-plus' : ($exceptionValue === 0 ? 'is-minus' : '');
                             ?>
-                            <tr>
+                            <tr<?= $rightActive ? '' : ' class="is-inactive"' ?>>
                                 <td style="white-space:nowrap;">
                                     <strong><?= h((string)$right['nazev']) ?></strong>
                                     <?php if ((string)$right['popis'] !== ''): ?>
@@ -75,6 +76,7 @@ function cb_admin_individualni_prava_html(array $data): string
                                             data-id-pravo="<?= h((string)$idPravo) ?>"
                                             data-global="<?= h((string)$globalValue) ?>"
                                             <?= $hasException ? 'checked' : '' ?>
+                                            <?= $rightActive ? '' : 'disabled' ?>
                                         >
                                     </label>
                                 </td>

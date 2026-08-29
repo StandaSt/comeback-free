@@ -13,7 +13,9 @@
   function rightsForBlock(idRole, idModul) {
     return Array.prototype.slice.call(document.querySelectorAll(
       'input[data-admin-pravo="1"][data-id-role="' + selectorValue(idRole) + '"][data-id-modul="' + selectorValue(idModul) + '"]'
-    ));
+    )).filter(function (input) {
+      return !input.disabled;
+    });
   }
 
   function syncBlockCheckbox(idRole, idModul) {
@@ -82,6 +84,8 @@
     var detail = event.detail || {};
     syncBlockCheckbox(String(detail.idRole || '0'), String(detail.idModul || '0'));
   });
+
+  document.addEventListener('cb:admin-pravo-active-saved', syncAllBlockCheckboxes);
 
   document.addEventListener('cb:main-swapped', syncAllBlockCheckboxes);
   syncAllBlockCheckboxes();

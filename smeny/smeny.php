@@ -37,7 +37,9 @@ $smPage = $smCurrentPage['key'];
 $smPageTitle = $smCurrentPage['title'];
 
 ?>
-<?php require __DIR__ . '/sm_includes/sm_menu.php'; ?>
+<?php if (!defined('CB_PP_ONLY') || CB_PP_ONLY !== true): ?>
+    <?php require __DIR__ . '/sm_includes/sm_menu.php'; ?>
+<?php endif; ?>
 
 <?php if ($smPage === 'uprava_profilu'): ?>
     <?php require __DIR__ . '/../common/pages/uprava_profilu.php'; ?>

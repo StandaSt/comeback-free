@@ -9,8 +9,6 @@ declare(strict_types=1);
 <script>
 window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
 </script>
-<?php // Spolecny loader stranky. ?>
-<script src="<?= h($cbLoaderJsUrl) ?>"></script>
 <?php // Knihovna grafu. ?>
 <script src="<?= h(cb_asset_url('js/echarts.min.js')) ?>"></script>
 <?php // Zakladni AJAX funkce aplikace. ?>
@@ -49,6 +47,8 @@ window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_
 <script src="<?= h(cb_asset_url('js/filtry.js')) ?>"></script>
 <?php // Export prehledu smen. ?>
 <script src="<?= h(cb_asset_url('js/prehled_smen_export.js')) ?>"></script>
+<?php // E-mailovy export nezadanych dennich reportu. ?>
+<script src="<?= h(cb_asset_url('js/nezadane_reporty_export.js')) ?>"></script>
 <?php // Rozbaleni detailu. ?>
 <script src="<?= h(cb_asset_url('js/rozbalovaci_detail.js')) ?>"></script>
 <?php // Casovac odhlaseni. ?>
@@ -67,6 +67,8 @@ window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_
 <script src="<?= h($cbAdministraceIndividualSearchJsUrl) ?>"></script>
 <?php // Ulozeni individualnich prav v Administraci. ?>
 <script src="<?= h($cbAdministraceIndividualSaveJsUrl) ?>"></script>
+<?php // Pridani, editace a razeni ciselniku prav v Administraci. ?>
+<script src="<?= h($cbAdministraceEditacePravJsUrl) ?>"></script>
 <?php // Konfigurace navigace mezi hlavni moduly. ?>
 <script>
 window.CB_MODULY_NAVIGACE = {

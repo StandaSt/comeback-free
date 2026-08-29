@@ -114,7 +114,7 @@ function renderGoogleDataPreview(): void
         </p>
         <form method="post" action="<?= htmlspecialchars($actionUrl, ENT_QUOTES, 'UTF-8') ?>" class="odstup_vnejsi_0" data-cb-max-form="1">
           <input type="hidden" name="run_google_data" value="1">
-          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Probíhá import ...">Pokračovat v importu</button>
+          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Pokračovat v importu</button>
         </form>
       </div>
 

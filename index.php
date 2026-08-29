@@ -18,6 +18,16 @@ require_once __DIR__ . '/common/lib/local_login_sync.php';
 cb_session_guard_entry();
 require_once __DIR__ . '/provoz/lib/logout_handler.php';
 
+if (!empty($_SESSION['login_ok'])) {
+    require_once __DIR__ . '/common/db/db_prava.php';
+    $cbRightsUser = $_SESSION['cb_user'] ?? [];
+    cb_db_prava_nacti_do_session(
+        db(),
+        is_array($cbRightsUser) ? (int)($cbRightsUser['id_user'] ?? 0) : 0,
+        is_array($cbRightsUser) ? (int)($cbRightsUser['id_role'] ?? 0) : 0
+    );
+}
+
 $cbAuthOk = !empty($_SESSION['cb_auth_ok']);
 $cb2faPending = !empty($_SESSION['cb_2fa_token']);
 
@@ -121,6 +131,9 @@ if (
 if (!empty($_SESSION['login_ok']) && isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODULE'])) {
     $cbShellModule = strtolower(trim((string)($_POST['cb_shell_module'] ?? 'provoz')));
     $cbShellModule = cb_modul_normalizuj($cbShellModule);
+    if ((string)($_SERVER['HTTP_X_COMEBACK_PP_ONLY'] ?? '') === '1' && !defined('CB_PP_ONLY')) {
+        define('CB_PP_ONLY', true);
+    }
     foreach ($_POST as $cbShellParamKey => $cbShellParamValue) {
         $cbShellParamKey = (string)$cbShellParamKey;
         if (str_starts_with($cbShellParamKey, 'cb_shell_') || $cbShellParamKey === 'cb_helpdesk_source_module') {
@@ -139,7 +152,6 @@ if (!empty($_SESSION['login_ok']) && isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODUL
     header('Content-Type: text/html; charset=utf-8');
 
     $GLOBALS['CURRENT_MODULE'] = $cbShellModule;
-    require __DIR__ . '/common/includes/hlavicka.php';
     cb_modul_nacti($cbShellModule);
     exit;
 }
@@ -214,10 +226,9 @@ if (!empty($_SESSION['login_ok'])) {
     cb_pobocky_bootstrap_session();
 
     if ((string)($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL' && !empty($_SESSION['cb_local_after_login_sync'])) {
-        $cbLoaderCssPath = __DIR__ . '/common/style/loader.css';
-        $cbLoaderCssUrl = cb_public_url('style/loader.css') . '?v=' . (is_file($cbLoaderCssPath) ? (string)filemtime($cbLoaderCssPath) : '1');
-        $cbLoaderJsPath = __DIR__ . '/common/js/loader.js';
-        $cbLoaderJsUrl = cb_public_url('js/loader.js') . '?v=' . (is_file($cbLoaderJsPath) ? (string)filemtime($cbLoaderJsPath) : '1');
+        // Lokální synchronizace používá stejný střízlivý loader jako pracovní plocha PP.
+        $cbPageLoaderCssPath = __DIR__ . '/common/style/page_loader.css';
+        $cbPageLoaderCssUrl = cb_public_url('style/page_loader.css') . '?v=' . (is_file($cbPageLoaderCssPath) ? (string)filemtime($cbPageLoaderCssPath) : '1');
         ?><!doctype html>
 <html lang="cs">
 <head>
@@ -225,18 +236,23 @@ if (!empty($_SESSION['login_ok'])) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Comeback - načítání</title>
   <link rel="icon" type="image/png" href="<?= h(cb_public_url('img/logo_comeback.png')) ?>">
-  <link rel="stylesheet" href="<?= h($cbLoaderCssUrl) ?>">
+  <link rel="stylesheet" href="<?= h(cb_asset_url('style/global.css')) ?>">
+  <link rel="stylesheet" href="<?= h($cbPageLoaderCssUrl) ?>">
   <style>
     html,
-    body{margin:0;min-height:100%;background:#0f172a;}
+    body{margin:0;min-height:100%;background:var(--cb-bg-page);}
   </style>
 </head>
 <body>
-<?php require __DIR__ . '/common/includes/loader.php'; ?>
+<main class="pp is-page-loading" style="min-height:100vh;">
+  <div class="cb_page_loader" role="status" aria-live="polite" aria-atomic="true">
+    <span class="cb_page_loader_text">Inicializuji systém ...</span>
+    <span class="cb_page_loader_detail">Aktualizuji uživatele a data</span>
+  </div>
+</main>
 <script>
 window.CB_ENDPOINT = <?= json_encode(cb_root_url(''), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
 </script>
-<script src="<?= h($cbLoaderJsUrl) ?>"></script>
 <script src="<?= h(cb_asset_url('js/restia_online.js')) ?>"></script>
 <script>
 (function(){
@@ -265,10 +281,6 @@ window.CB_ENDPOINT = <?= json_encode(cb_root_url(''), JSON_UNESCAPED_SLASHES | J
       });
   }
 
-  if (window.CB_LOADER && typeof window.CB_LOADER.show === 'function') {
-    window.CB_LOADER.show('Aktualizuji uživatele ze Směn ...');
-  }
-
   localStep('users')
     .catch(function(error){
       if (window.console && window.console.warn) window.console.warn(error);
@@ -276,9 +288,7 @@ window.CB_ENDPOINT = <?= json_encode(cb_root_url(''), JSON_UNESCAPED_SLASHES | J
     .then(function(){
       if (window.CB_RESTIA && typeof window.CB_RESTIA.run === 'function') {
         window.CB_ACTIVE_MAIN_MODULE = 'provoz';
-        return window.CB_RESTIA.run({
-          loaderText: 'Aktualizuji data z Restie ...'
-        });
+        return window.CB_RESTIA.run();
       }
       return null;
     })

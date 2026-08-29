@@ -1,12 +1,21 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Účel souboru: Definuje povolené stránky Administrace a vybere aktuální kostru PP.
+ * Vlastní zobrazované panely zůstávají v admin_includes.
+ */
+
 function cb_admin_pages(): array
 {
     return [
         'prava_roli' => [
             'file' => __DIR__ . '/../admin_pages/admin_prava_roli_page.php',
-            'title' => 'Práva rolí',
+            'title' => 'Globální práva - oprávnění rolí',
+        ],
+        'editace_prav' => [
+            'file' => __DIR__ . '/../admin_pages/admin_editace_prav_page.php',
+            'title' => 'Editovat práva',
         ],
         'individualni_prava' => [
             'file' => __DIR__ . '/../admin_pages/admin_individualni_prava_page.php',

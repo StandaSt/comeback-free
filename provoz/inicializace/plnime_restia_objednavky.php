@@ -2518,11 +2518,6 @@ if ($selectedBranchId > 0) {
 $autoResume = (!$stopRequested && (int)($state['continue_import'] ?? 0) === 1 && $selectedBranchId > 0);
 $loaderNextDate = cb_restia_hist_normalize_ymd((string)($state['next_date'] ?? $resumeDate));
 $loaderNextDateText = $loaderNextDate !== '' ? cb_restia_hist_format_date_input_cs($loaderNextDate) : '';
-$loaderButtonText = 'API - stahuji objednávky';
-if ($loaderNextDateText !== '') {
-    $loaderButtonText .= ' od "' . $loaderNextDateText . '"';
-}
-
 $restiaStatusText = '';
 if ($autoResume) {
     $restiaStatusText = 'Dávka doběhla časovým limitem. Další dávka se spustí automaticky';
@@ -2563,7 +2558,7 @@ if (!$canStartImport) {
       <input type="hidden" name="run_restia_obj" value="1"><input type="hidden" name="cb_action" value="start" id="cb_action_field">
       <div style="display:flex; flex-wrap:wrap; align-items:flex-end; gap:12px;">
         <div style="display:flex; flex-direction:column; gap:4px;">
-          <select name="cb_id_pob" class="card_select ram_sedy txt_seda bg_bila zaobleni_8" style="min-width:280px; height:26px;" onchange="if(!this.value||this.value==='0'){return;}var a=document.getElementById('cb_action_field');if(a){a.value='select_branch';}var f=this.form;var b=document.getElementById('cb_start_import_btn');if(b){b.disabled=true;b.setAttribute('aria-disabled','true');b.textContent='Pracuji...';b.style.background='var(--clr_zelena_2)';b.style.borderColor='var(--clr_zelena_1)';b.style.color='#fff';b.style.opacity='1';b.style.cursor='wait';b.style.pointerEvents='none';}if(f){var o=this.options[this.selectedIndex];var t=o?String(o.textContent||o.innerText||'').trim():'';var p=t.indexOf(' | ');if(p>=0){t=t.substring(0,p);}f.setAttribute('data-cb-loader-text','Připravuji import '+t);if(f.requestSubmit){f.requestSubmit();}else{f.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));}}">
+          <select name="cb_id_pob" class="card_select ram_sedy txt_seda bg_bila zaobleni_8" style="min-width:280px; height:26px;" onchange="if(!this.value||this.value==='0'){return;}var a=document.getElementById('cb_action_field');if(a){a.value='select_branch';}var f=this.form;var b=document.getElementById('cb_start_import_btn');if(b){b.disabled=true;b.setAttribute('aria-disabled','true');b.textContent='Pracuji...';b.style.background='var(--clr_zelena_2)';b.style.borderColor='var(--clr_zelena_1)';b.style.color='#fff';b.style.opacity='1';b.style.cursor='wait';b.style.pointerEvents='none';}if(f){if(f.requestSubmit){f.requestSubmit();}else{f.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));}}">
             <option value="0"<?= $selectedBranchId <= 0 ? ' selected' : '' ?>>Vyber pobočku pro import</option>
             <?php foreach ($branchOptions as $branchOpt): ?>
               <?php
@@ -2591,7 +2586,7 @@ if (!$canStartImport) {
       </div>
     </form>
     <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px; width:100%;">
-      <button type="submit" form="cb_restia_import_form" id="cb_start_import_btn" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" style="<?= cb_restia_hist_h($startButtonStyle) ?>" data-cb-loader-text="<?= cb_restia_hist_h($loaderButtonText) ?>" aria-disabled="<?= $canStartImport ? 'false' : 'true' ?>"<?= $canStartImport ? '' : ' disabled' ?>>Spustit import</button>
+      <button type="submit" form="cb_restia_import_form" id="cb_start_import_btn" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" style="<?= cb_restia_hist_h($startButtonStyle) ?>" aria-disabled="<?= $canStartImport ? 'false' : 'true' ?>"<?= $canStartImport ? '' : ' disabled' ?>>Spustit import</button>
     </div>
   </div>
   <?php if ($autoResume): ?>
@@ -2605,7 +2600,6 @@ if (!$canStartImport) {
           id="cb_restia_continue_btn"
           class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex"
           style="min-width:260px;"
-          data-cb-loader-text="<?= cb_restia_hist_h($loaderButtonText) ?>"
           data-cb-restia-auto-resume="1"
           data-cb-restia-auto-resume-delay="500"
         >Pokračovat dalším cyklem</button>

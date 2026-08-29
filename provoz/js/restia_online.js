@@ -1,6 +1,11 @@
 // js/restia_online.js * Verze: V1
 'use strict';
 
+/*
+ * Účel souboru: Spouští a sleduje online aktualizaci dat Restie.
+ * Vizuální stav stránky řídí společná navigace PP, nikoli tento datový klient.
+ */
+
 (function (w) {
   const d = w.document;
   const CB_RESTIA = w.CB_RESTIA || (w.CB_RESTIA = {});
@@ -101,21 +106,11 @@
   CB_RESTIA.run = function run(options) {
     const opts = (options && typeof options === 'object') ? options : {};
     const triggerRestia = opts.triggerRestia !== false;
-    const loaderText = String(opts.loaderText || '').trim();
-    const useLoader = loaderText !== '' && w.CB_LOADER && typeof w.CB_LOADER.show === 'function' && typeof w.CB_LOADER.hide === 'function';
     const stateJob = triggerRestia ? triggerCheck(opts) : fetchState();
-
-    if (useLoader) {
-      w.CB_LOADER.show(loaderText);
-    }
 
     return stateJob.then((state) => {
       const running = !!(state && Number(state.active || 0) === 1);
       return running ? waitForFinish(opts) : state;
-    }).finally(() => {
-      if (useLoader) {
-        w.CB_LOADER.hide();
-      }
     });
   };
 })(window);

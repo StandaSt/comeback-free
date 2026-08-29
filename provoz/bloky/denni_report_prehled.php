@@ -23,7 +23,14 @@ require_once __DIR__ . '/../lib/denni_report_data.php';
     }
     ?>
     <section class="blok blok_denni_report">
-        <h2 class="blok_title">Nezadané denní reporty</h2>
+        <div class="provoz_nezadane_head">
+            <h2 class="blok_title">Nezadané denní reporty</h2>
+            <div class="provoz_nezadane_export" aria-label="Export nezadaných denních reportů">
+                <span>Export měsíce:</span>
+                <button type="button" class="provoz_nezadane_export_btn" data-nezadane-export-open="current">aktuální</button>
+                <button type="button" class="provoz_nezadane_export_btn" data-nezadane-export-open="previous">minulý</button>
+            </div>
+        </div>
         <table class="provoz_prehled_mini_table">
             <tbody>
                 <?php foreach ($missingReports as $missingReport): ?>
@@ -43,6 +50,7 @@ require_once __DIR__ . '/../lib/denni_report_data.php';
         <p class="provoz_prehled_text">&nbsp;</p>
         <p class="provoz_prehled_text txt_seda">Tento měsíc chybí reporty:</p>
         <p class="provoz_prehled_text txt_seda"><?= h($missingReportsMonthText) ?></p>
+
     </section>
     <?php
 })();

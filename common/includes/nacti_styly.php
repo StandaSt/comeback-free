@@ -26,6 +26,6 @@ declare(strict_types=1);
   <link rel="stylesheet" href="<?= h($cbHelpdeskCssUrl) ?>">
   <?php // Styly modulu Administrace. ?>
   <link rel="stylesheet" href="<?= h($cbAdministraceCssUrl) ?>">
-  <?php // Styl spolecneho loaderu. ?>
-  <link rel="stylesheet" href="<?= h($cbLoaderCssUrl) ?>">
+  <?php // Styl střízlivého loaderu uvnitř PP. ?>
+  <link rel="stylesheet" href="<?= h($cbPageLoaderCssUrl) ?>">
 </head>

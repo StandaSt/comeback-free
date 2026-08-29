@@ -14,24 +14,9 @@
   // CB_LOGIN_TRACE_TEMP_START
   const LOGOUT_TRACE_KEY = 'cb_login_trace_logout';
   function traceLogin(eventName, data) {
-    try {
-      const payload = JSON.stringify({
-        event: eventName,
-        href: w.location.href,
-        path: w.location.pathname,
-        data: data || {}
-      });
-      if (navigator.sendBeacon) {
-        navigator.sendBeacon('lib/ajax_trace.php', new Blob([payload], { type: 'application/json' }));
-        return;
-      }
-      fetch('lib/ajax_trace.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: payload,
-        keepalive: true
-      }).catch(function () {});
-    } catch (e) {}
+    if (w.CB_AJAX && typeof w.CB_AJAX.trace === 'function') {
+      w.CB_AJAX.trace(eventName, data || {});
+    }
   }
   function rememberLogoutStart(reason) {
     try {

@@ -99,7 +99,9 @@ $cbHrPageDefinition = is_array($currentPage['definition'] ?? null) ? $currentPag
 $cbHrUsesPpRenderer = is_array($cbHrPageDefinition['blocks'] ?? null) && $cbHrPageDefinition['blocks'] !== [];
 
 ?>
-<?php require __DIR__ . '/hr_includes/hr_menu.php'; ?>
+<?php if (!defined('CB_PP_ONLY') || CB_PP_ONLY !== true): ?>
+    <?php require __DIR__ . '/hr_includes/hr_menu.php'; ?>
+<?php endif; ?>
 
 <?php if ($page === 'uprava_profilu'): ?>
     <?php require __DIR__ . '/../common/pages/uprava_profilu.php'; ?>

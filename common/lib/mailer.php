@@ -7,7 +7,7 @@ use PHPMailer\PHPMailer\Exception as PHPMailerException;
 /**
  * Odesle e-mail pres SMTP konfiguraci ulozenou v secrets.php.
  */
-function cb_mail_send(string $profile, string $to, string $subject, string $body, string $altBody = ''): void
+function cb_mail_send(string $profile, string $to, string $subject, string $body, string $altBody = '', array $attachments = []): void
 {
     $to = trim($to);
     if ($to === '' || filter_var($to, FILTER_VALIDATE_EMAIL) === false) {
@@ -53,6 +53,19 @@ function cb_mail_send(string $profile, string $to, string $subject, string $body
         $mail->Body = $body;
         if ($altBody !== '') {
             $mail->AltBody = $altBody;
+        }
+
+        foreach ($attachments as $attachment) {
+            if (!is_array($attachment)) {
+                continue;
+            }
+            $content = $attachment['content'] ?? null;
+            $name = trim((string)($attachment['name'] ?? ''));
+            $type = trim((string)($attachment['type'] ?? 'application/octet-stream'));
+            if (!is_string($content) || $name === '') {
+                throw new RuntimeException('E-mailová příloha není platná.');
+            }
+            $mail->addStringAttachment($content, $name, 'base64', $type);
         }
 
         $mail->send();

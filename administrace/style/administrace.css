@@ -18,8 +18,132 @@
   font-size:var(--cb-font-14);
 }
 
+/* Stránka Editovat práva: dva samostatné panely a jejich formulářové prvky. */
+.admin_rights_editor{
+  display:grid;
+  gap:18px;
+  justify-items:start;
+}
+
+/* Atribut hidden má přednost i před rozložením formulářů a tlačítek editoru. */
+.admin_rights_editor [hidden]{
+  display:none !important;
+}
+
+.admin_rights_editor_panel{
+  display:grid;
+  gap:14px;
+  width:min(980px, 100%);
+}
+
+.admin_rights_editor_panel .blok_title{
+  margin:0;
+}
+
+.admin_rights_editor_select,
+.admin_rights_editor_add label{
+  display:grid;
+  gap:5px;
+  color:var(--cb-text-main);
+  font-size:var(--cb-font-14);
+  font-weight:700;
+}
+
+.admin_rights_editor_select{
+  width:260px;
+}
+
+.admin_rights_editor_select select,
+.admin_rights_editor_add input,
+.admin_rights_editor_matrix input{
+  min-height:34px;
+  padding:6px 8px;
+  border:1px solid var(--cb-border-soft);
+  border-radius:5px;
+  background:var(--cb-bg-panel);
+  color:var(--cb-text-main);
+  font:inherit;
+}
+
+.admin_rights_editor_add{
+  display:grid;
+  grid-template-columns:minmax(220px, 1fr) minmax(280px, 2fr) auto;
+  gap:12px;
+  align-items:end;
+  width:100%;
+}
+
+.admin_rights_editor_add button,
+.admin_rights_editor_matrix button{
+  min-height:34px;
+  padding:6px 10px;
+  border:1px solid var(--cb-border-soft);
+  border-radius:5px;
+  background:var(--cb-bg-panel-soft);
+  color:var(--cb-text-main);
+  font:inherit;
+  cursor:pointer;
+}
+
+.admin_rights_editor_add button:disabled,
+.admin_rights_editor_matrix button:disabled{
+  opacity:.45;
+  cursor:default;
+}
+
+.admin_rights_editor_status,
+.admin_rights_editor_empty{
+  min-height:18px;
+  margin:0;
+  color:var(--cb-text-muted);
+  font-size:var(--cb-font-14);
+}
+
+.admin_rights_editor_table{
+  width:100%;
+  min-height:18px;
+  color:var(--cb-text-muted);
+  font-size:var(--cb-font-14);
+}
+
+.admin_rights_editor_matrix{
+  width:100%;
+  min-width:700px;
+}
+
+.admin_rights_editor_matrix td:nth-child(2){
+  width:30%;
+}
+
+.admin_rights_editor_matrix td:nth-child(3){
+  width:50%;
+}
+
+.admin_rights_editor_matrix input{
+  width:100%;
+}
+
+.admin_rights_editor_order{
+  display:flex;
+  gap:5px;
+  white-space:nowrap;
+}
+
+.admin_rights_editor_order button{
+  width:34px;
+  padding:4px;
+  font-weight:700;
+}
+
+@media (max-width:800px){
+  .admin_rights_editor_add{
+    grid-template-columns:1fr;
+  }
+}
+
 .admin_script_run{
   display:grid;
+  gap:14px;
   justify-items:start;
 }
 
@@ -134,6 +258,16 @@
   text-align:center !important;
 }
 
+.admin_matrix_active_head,
+.admin_matrix_active{
+  text-align:center !important;
+}
+
+.admin_matrix_active input{
+  width:16px;
+  height:16px;
+}
+
 .admin_matrix_group th{
   background:var(--cb-module-soft);
   color:var(--cb-text-main);
@@ -163,6 +297,69 @@
 .admin_matrix_check input{
   width:16px;
   height:16px;
+}
+
+.admin_matrix tr.is-inactive td{
+  background:var(--cb-bg-panel-soft);
+  color:var(--cb-text-muted);
+}
+
+.admin_matrix tr.is-inactive td strong,
+.admin_matrix tr.is-inactive td span{
+  color:var(--cb-text-muted);
+}
+
+.admin_matrix tr.is-inactive .admin_matrix_check input{
+  width:9px;
+  height:9px;
+  opacity:.45;
+}
+
+.admin_confirm_dialog{
+  width:min(460px, calc(100vw - 32px));
+  padding:0;
+  border:1px solid var(--cb-border-soft);
+  border-radius:10px;
+  background:var(--cb-bg-panel);
+  color:var(--cb-text-main);
+}
+
+.admin_confirm_dialog::backdrop{
+  background:rgba(15, 23, 42, .52);
+}
+
+.admin_confirm_dialog_content{
+  padding:18px;
+}
+
+.admin_confirm_dialog_content h2{
+  margin:0 0 12px;
+  font-size:var(--cb-font-18);
+}
+
+.admin_confirm_dialog_content p{
+  margin:0;
+}
+
+.admin_confirm_dialog_actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin-top:18px;
+}
+
+.admin_confirm_dialog_actions button{
+  min-height:34px;
+  padding:6px 12px;
+  border:1px solid var(--cb-border-soft);
+  border-radius:6px;
+  cursor:pointer;
+}
+
+.admin_confirm_dialog_danger{
+  border-color:#b91c1c !important;
+  background:#dc2626;
+  color:#fff;
 }
 
 .admin_individual{

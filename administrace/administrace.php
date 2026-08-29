@@ -21,6 +21,7 @@ require_once __DIR__ . '/admin_db/admin_prava_roli_db.php';
 require_once __DIR__ . '/admin_db/admin_individualni_prava_db.php';
 require_once __DIR__ . '/admin_includes/admin_individualni_prava_detail.php';
 require_once __DIR__ . '/admin_lib/admin_pages.php';
+require_once __DIR__ . '/admin_lib/admin_smeny_plan_doplnit.php';
 
 cb_session_guard_entry();
 
@@ -53,6 +54,8 @@ if ($adminRoleId !== 1) {
     return;
 }
 
+cb_admin_smeny_plan_doplnit_handle();
+
 if (
     ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
     && (string)($_POST['cb_action'] ?? '') === 'admin_hr_import_user'
@@ -79,6 +82,7 @@ if (
         unset($GLOBALS['CB_HR_IMPORT_ENVIRONMENT'], $GLOBALS['CB_HR_IMPORT_OUTPUT']);
 
         $_SESSION['cb_admin_script_result'] = [
+            'script' => 'hr',
             'success' => true,
             'message' => $output !== '' ? $output : 'Import byl dokončen.',
         ];
@@ -93,6 +97,7 @@ if (
         ]);
     } catch (Throwable $e) {
         $_SESSION['cb_admin_script_result'] = [
+            'script' => 'hr',
             'success' => false,
             'message' => $e->getMessage(),
         ];
@@ -188,6 +193,38 @@ if (
     header('Content-Type: application/json; charset=utf-8');
 
     try {
+        $adminPravaAction = (string)($_POST['admin_prava_action'] ?? 'role');
+        if ($adminPravaAction === 'aktivni') {
+            $idPravo = (int)($_POST['id_pravo'] ?? 0);
+            $aktivni = (int)($_POST['aktivni'] ?? 0) === 1;
+            if (!$aktivni && (string)($_POST['potvrzeno'] ?? '') !== '1') {
+                throw new RuntimeException('Vypnutí hlídání práva nebylo potvrzeno.');
+            }
+
+            $result = cb_admin_pravo_aktivni_uloz($idPravo, $aktivni);
+            cb_user_akce_zapis([
+                'id_user_akce_typ' => 14,
+                'modul' => 'administrace',
+                'objekt' => 'cis_prava',
+                'id_objektu' => $idPravo,
+                'pole' => 'aktivni',
+                'hodnota_old' => !empty($result['aktivni_pred']) ? '1' : '0',
+                'hodnota_new' => $aktivni ? '1' : '0',
+                'vysledek' => 1,
+                'zdroj' => 'administrace',
+                'detail' => [
+                    'id_pravo' => $idPravo,
+                    'nazev' => (string)($result['nazev'] ?? ''),
+                ],
+            ]);
+            echo json_encode(['ok' => true, 'result' => $result], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        if ($adminPravaAction !== 'role') {
+            throw new RuntimeException('Neznámá akce globálních práv.');
+        }
+
         cb_admin_prava_roli_uloz(
             (int)($_POST['id_role'] ?? 0),
             (int)($_POST['id_pravo'] ?? 0),
@@ -221,7 +258,9 @@ $adminPageTitle = $adminCurrentPage['title'];
 $adminPageFile = $adminCurrentPage['file'];
 
 ?>
-<?php require __DIR__ . '/admin_includes/admin_menu.php'; ?>
+<?php if (!defined('CB_PP_ONLY') || CB_PP_ONLY !== true): ?>
+    <?php require __DIR__ . '/admin_includes/admin_menu.php'; ?>
+<?php endif; ?>
 
 <?php if ($adminPage === 'uprava_profilu'): ?>
     <?php require __DIR__ . '/../common/pages/uprava_profilu.php'; ?>

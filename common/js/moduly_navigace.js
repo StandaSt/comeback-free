@@ -87,9 +87,12 @@
       aria: 'Menu administrace',
       key: 'page',
       defaultPage: 'prava_roli',
+      // Stejný seznam jako serverové admin_includes/admin_menu.php zachová menu při výměně PP.
       items: [
-        ['prava_roli', 'Práva rolí'],
-        ['individualni_prava', 'Individuální práva uživatele']
+        ['prava_roli', 'Globální práva'],
+        ['editace_prav', 'Editovat práva'],
+        ['individualni_prava', 'Individuální práva uživatele'],
+        ['spousteni_scriptu', 'Spouštění scriptů']
       ]
     }
   };
@@ -135,11 +138,18 @@
   }
 
   function showModuleError(error){
-    if (window.CB_LOADER && typeof window.CB_LOADER.hide === 'function') {
-      window.CB_LOADER.hide();
-    }
     stopPageLoaderTimer();
-    root.innerHTML = '<div class="cb-module-load-error">Modul se nepodařilo načíst: ' + String(error.message || error) + '</div>';
+    var html = '<div class="cb-module-load-error">Modul se nepodařilo načíst: ' + String(error.message || error) + '</div>';
+    var pp = root.querySelector('.pp');
+    if (pp instanceof HTMLElement) {
+      pp.innerHTML = html;
+      pp.classList.remove('is-page-loading');
+      return;
+    }
+    pp = document.createElement('section');
+    pp.className = 'pp';
+    pp.innerHTML = html;
+    root.appendChild(pp);
   }
 
   function formatElapsed(ms) {
@@ -177,9 +187,6 @@
 
   function showPageLoader(moduleName, params) {
     stopPageLoaderTimer();
-    if (window.CB_LOADER && typeof window.CB_LOADER.hide === 'function') {
-      window.CB_LOADER.hide();
-    }
 
     var pp = root.querySelector('.pp');
     var text = loaderText(moduleName, params);
@@ -198,8 +205,11 @@
         pp.setAttribute('data-page', String(params.get('page') || ''));
       }
     } else {
-      root.innerHTML = '<section class="pp is-page-loading" data-module="' + moduleName + '">' + html + '</section>';
-      pp = root.querySelector('.pp');
+      pp = document.createElement('section');
+      pp.className = 'pp is-page-loading';
+      pp.setAttribute('data-module', moduleName);
+      pp.innerHTML = html;
+      root.appendChild(pp);
     }
 
     var loader = pp ? pp.querySelector('.cb_page_loader') : null;
@@ -235,8 +245,7 @@
     }
 
     return window.CB_RESTIA.run({
-      moduleName: 'provoz',
-      loaderText: ''
+      moduleName: 'provoz'
     });
   }
 
@@ -269,11 +278,27 @@
     });
   }
 
-  function hideHeaderUpdate() {
+  function syncHeader(moduleName) {
+    setActive(moduleName);
     var box = root.querySelector('[data-cb-head-update="1"]');
     if (box instanceof HTMLElement) {
-      box.hidden = true;
+      box.hidden = moduleName !== 'provoz';
     }
+  }
+
+  function replaceModuleContent(html) {
+    var template = document.createElement('template');
+    template.innerHTML = html;
+    if (!(template.content.querySelector('.pp') instanceof HTMLElement)) {
+      throw new Error('Odpověď modulu neobsahuje pracovní plochu.');
+    }
+
+    Array.prototype.slice.call(root.children).forEach(function(child){
+      if (!child.classList.contains('blok_hlavicka')) {
+        child.remove();
+      }
+    });
+    root.appendChild(template.content);
   }
 
   function moduleUrl(moduleName, pageKey, pageValue) {
@@ -401,13 +426,11 @@
     if (!(link instanceof HTMLElement)) return;
 
     var menu = link.closest('.blok_menu');
-    if (menu instanceof HTMLElement) {
+    if (menu instanceof HTMLElement && link.classList.contains('blok_menu_btn')) {
       Array.prototype.slice.call(menu.querySelectorAll('.blok_menu_btn.is-active, .blok_menu_btn.active')).forEach(function(btn){
         btn.classList.remove('is-active', 'active');
       });
-      if (link.classList.contains('blok_menu_btn')) {
-        link.classList.add('is-active');
-      }
+      link.classList.add('is-active');
       return;
     }
 
@@ -434,12 +457,14 @@
       return;
     }
     var sourceMainModule = activeMainModule;
+    var moduleChanged = moduleName !== activeMainModule;
     moduleLoadRunning = true;
-    saveActiveModule(moduleName);
-    setRootModule(moduleName);
-    setActive(moduleName);
-    hideHeaderUpdate();
-    renderImmediateMenu(moduleName, params);
+    if (moduleChanged) {
+      saveActiveModule(moduleName);
+      setRootModule(moduleName);
+      syncHeader(moduleName);
+      renderImmediateMenu(moduleName, params);
+    }
     showPageLoader(moduleName, params);
 
     var body = new URLSearchParams();
@@ -459,12 +484,16 @@
       window.CB_HELPDESK_SOURCE_MODULE = sourceMainModule;
     }
     function fetchModule(showSmenyLoader){
+      var headers = {
+        'X-Comeback-Shell-Module': '1',
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+      };
+      if (!moduleChanged) {
+        headers['X-Comeback-PP-Only'] = '1';
+      }
       return fetch(shellUrl, {
         method: 'POST',
-        headers: {
-          'X-Comeback-Shell-Module': '1',
-          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-        },
+        headers: headers,
         body: body.toString(),
         credentials: 'same-origin'
       })
@@ -479,7 +508,18 @@
           }
           setRootModule(moduleName);
           stopPageLoaderTimer();
-          root.innerHTML = html;
+          if (moduleChanged) {
+            replaceModuleContent(html);
+          } else {
+            var currentPp = root.querySelector('.pp');
+            var response = document.createElement('div');
+            response.innerHTML = html;
+            var nextPp = response.querySelector('.pp');
+            if (!(currentPp instanceof HTMLElement) || !(nextPp instanceof HTMLElement)) {
+              throw new Error('Odpověď modulu neobsahuje pracovní plochu.');
+            }
+            currentPp.replaceWith(nextPp);
+          }
           currentShellKey = requestedKey;
           document.dispatchEvent(new CustomEvent('cb:main-swapped'));
           if (moduleName === 'hr' && window.CB_HR_INIT) {
@@ -488,10 +528,7 @@
           if (moduleName === 'helpdesk' && window.CB_HELPDESK_INIT) {
             window.CB_HELPDESK_INIT(root);
           }
-          setActive(moduleName);
-          if (window.CB_LOADER && typeof window.CB_LOADER.hide === 'function') {
-            window.CB_LOADER.hide();
-          }
+          syncHeader(moduleName);
         });
     }
 

@@ -49,8 +49,8 @@ foreach (array_keys($_SERVER) as $cbServerKey) {
         break;
     }
 }
-$cbPpOnly = isset($_SERVER['HTTP_X_COMEBACK_PP_ONLY'])
-    && (string)$_SERVER['HTTP_X_COMEBACK_PP_ONLY'] === '1';
+$cbPpOnly = (defined('CB_PP_ONLY') && CB_PP_ONLY === true)
+    || (string)($_SERVER['HTTP_X_COMEBACK_PP_ONLY'] ?? '') === '1';
 
 if (empty($_SESSION['login_ok'])) {
     if ($cbHasComebackHeader) {
@@ -60,18 +60,6 @@ if (empty($_SESSION['login_ok'])) {
 
     header('Location: ' . cb_login_url());
     exit;
-}
-
-$cbStartupRestiaLoader = false;
-$cbStartupLoaderText = '';
-if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
-    $cbStartupLoaderText = trim((string)($_SESSION['cb_initial_loader_text'] ?? ''));
-    if ($cbStartupLoaderText === '') {
-        $cbStartupLoaderText = 'Aktualizuji data ...';
-    }
-}
-if (!$cbHasComebackHeader) {
-    unset($_SESSION['cb_initial_loader_text']);
 }
 
 if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
@@ -146,75 +134,32 @@ if (
     exit;
 }
 
-if (!empty($_SESSION['login_ok']) && !$cbSystemLocked && !$cbHasComebackHeader && strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'GET') {
-    try {
-        $cbRestiaConn = db();
-        $cbRestiaSetRes = $cbRestiaConn->query('SELECT restia_online FROM set_system WHERE id_set = 1 LIMIT 1');
-        $cbRestiaSetRow = ($cbRestiaSetRes instanceof mysqli_result) ? $cbRestiaSetRes->fetch_assoc() : null;
-        if ($cbRestiaSetRes instanceof mysqli_result) {
-            $cbRestiaSetRes->free();
-        }
-
-        if ((int)($cbRestiaSetRow['restia_online'] ?? 0) === 1) {
-            $cbRestiaActive = false;
-            $cbRestiaActiveRes = $cbRestiaConn->query('SELECT id_akce FROM online_restia WHERE aktivni = 1 LIMIT 1');
-            if ($cbRestiaActiveRes instanceof mysqli_result) {
-                $cbRestiaActive = ($cbRestiaActiveRes->num_rows > 0);
-                $cbRestiaActiveRes->free();
-            }
-
-            $cbRestiaFresh = false;
-            $cbRestiaLastRes = $cbRestiaConn->query('SELECT konec FROM online_restia WHERE aktivni = 0 ORDER BY konec DESC LIMIT 1');
-            if ($cbRestiaLastRes instanceof mysqli_result) {
-                $cbRestiaLastRow = $cbRestiaLastRes->fetch_assoc();
-                $cbRestiaLastRes->free();
-                $cbRestiaLast = strtotime((string)($cbRestiaLastRow['konec'] ?? ''));
-                $cbRestiaFresh = ($cbRestiaLast !== false && (time() - $cbRestiaLast) < 120);
-            }
-
-            $cbStartupRestiaLoader = ($cbRestiaActive || !$cbRestiaFresh);
-            if ($cbStartupRestiaLoader) {
-                $cbStartupLoaderText = 'Aktualizuji objednávky ...';
-                $_SESSION['cb_initial_loader_text'] = 'Inicializace systému ...';
-            }
-        }
-    } catch (Throwable $e) {
-        $cbStartupRestiaLoader = false;
-    }
-}
-
 if ($cbPpOnly && !empty($_SESSION['login_ok']) && !$cbSystemLocked) {
     header('Content-Type: text/html; charset=utf-8');
-    ?>
-    <section class="pp" data-module="provoz" data-page="<?= h($cbPage) ?>">
-        <header class="pp_header">
-            <h1><?= h($cbProvozPageTitle) ?></h1>
-            <?php if ($cbPage === 'denni_report' && function_exists('cb_pravo_ma') && cb_pravo_ma(CB_REPORT_PROMENNE_PRAVO)): ?>
-                <div class="pp_header_control">
-                    <a class="head_task_btn" href="<?= h(cb_root_url('index.php?m=provoz&page=nastaveni_reportu')) ?>">Nastavení reportu</a>
-                </div>
-            <?php endif; ?>
-        </header>
-        <?php
-        if ($cbPageExists) {
-            require $file;
-        }
+    if ($cbPage === 'uprava_profilu') {
+        require __DIR__ . '/../common/pages/uprava_profilu.php';
+    } else {
         ?>
-    </section>
-    <?php
+        <section class="pp" data-module="provoz" data-page="<?= h($cbPage) ?>">
+            <header class="pp_header">
+                <h1><?= h($cbProvozPageTitle) ?></h1>
+                <?php if ($cbPage === 'denni_report' && function_exists('cb_pravo_ma') && cb_pravo_ma(CB_REPORT_PROMENNE_PRAVO)): ?>
+                    <div class="pp_header_control">
+                        <a class="head_task_btn" href="<?= h(cb_root_url('index.php?m=provoz&page=nastaveni_reportu')) ?>">Nastavení reportu</a>
+                    </div>
+                <?php endif; ?>
+            </header>
+            <?php
+            if ($cbPageExists) {
+                require $file;
+            }
+            ?>
+        </section>
+        <?php
+    }
     exit;
 }
 ?>
-
-<?php if (!$cbEmbeddedModule && !empty($_SESSION['login_ok']) && !$cbSystemLocked && $cbStartupLoaderText !== ''): ?>
-<div id="cb-startup-loader" class="dash_box bg_modra sirka100 is-dashboard-loading" data-cb-startup-text="<?= h($cbStartupLoaderText) ?>"<?php if ($cbStartupRestiaLoader): ?> data-cb-startup-hold="1" data-cb-restia-trigger="1" data-cb-restia-text="Aktualizuji objednávky ..." data-cb-startup-next-text="Inicializace systému ..."<?php endif; ?> style="position:fixed;left:0;top:0;right:0;bottom:0;z-index:12000;padding:0 12px;background-clip:content-box;overflow:hidden;">
-  <?php require __DIR__ . '/includes/loaders/dashboard.php'; ?>
-</div>
-<script src="<?= h(cb_url('js/loader_show.js')) ?>"></script>
-<script src="<?= h(cb_url('js/loader_timer.js')) ?>"></script>
-<?php endif; ?>
-
-<?php if ($cbEmbeddedModule || !$cbStartupRestiaLoader): ?>
 <?php
 
 if (!empty($_SESSION['login_ok']) && $cbSystemLocked) {
@@ -295,13 +240,8 @@ if (!empty($_SESSION['login_ok']) && $cbSystemLocked) {
 
 ?>
 
-
-<?php elseif (!$cbEmbeddedModule): ?>
-<script src="<?= h(cb_asset_url('js/ajax_core.js')) ?>"></script>
-<?php endif; ?>
-
 <?php
-if (!$cbEmbeddedModule && !$cbStartupRestiaLoader && !empty($cbInvalidUrl)) {
+if (!$cbEmbeddedModule && !empty($cbInvalidUrl)) {
     $cbUserForAlert = $_SESSION['cb_user'] ?? [];
     $cbUserName = trim((string)($cbUserForAlert['name'] ?? ''));
     $cbUserSurname = trim((string)($cbUserForAlert['surname'] ?? ''));

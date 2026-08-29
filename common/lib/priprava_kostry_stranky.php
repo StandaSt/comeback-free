@@ -27,10 +27,9 @@ $cbModulyNavigaceJsPath = $cbAplikaceRoot . '/common/js/moduly_navigace.js';
 $cbModulyNavigaceJsUrl = cb_public_url('js/moduly_navigace.js') . '?v=' . (is_file($cbModulyNavigaceJsPath) ? (string)filemtime($cbModulyNavigaceJsPath) : '1');
 $cbDateInputJsPath = $cbAplikaceRoot . '/common/js/date_input.js';
 $cbDateInputJsUrl = cb_public_url('js/date_input.js') . '?v=' . (is_file($cbDateInputJsPath) ? (string)filemtime($cbDateInputJsPath) : '1');
-$cbLoaderCssPath = $cbAplikaceRoot . '/common/style/loader.css';
-$cbLoaderCssUrl = cb_public_url('style/loader.css') . '?v=' . (is_file($cbLoaderCssPath) ? (string)filemtime($cbLoaderCssPath) : '1');
-$cbLoaderJsPath = $cbAplikaceRoot . '/common/js/loader.js';
-$cbLoaderJsUrl = cb_public_url('js/loader.js') . '?v=' . (is_file($cbLoaderJsPath) ? (string)filemtime($cbLoaderJsPath) : '1');
+/* Střízlivý loader vkládaný pouze do pracovní plochy PP. */
+$cbPageLoaderCssPath = $cbAplikaceRoot . '/common/style/page_loader.css';
+$cbPageLoaderCssUrl = cb_public_url('style/page_loader.css') . '?v=' . (is_file($cbPageLoaderCssPath) ? (string)filemtime($cbPageLoaderCssPath) : '1');
 
 /* Modulove styly a skripty s verzi podle casu posledni zmeny souboru. */
 $cbHrCssPath = $cbAplikaceRoot . '/hr/style/hr.css';
@@ -53,6 +52,9 @@ $cbAdministraceIndividualSearchJsPath = $cbAplikaceRoot . '/administrace/admin_j
 $cbAdministraceIndividualSearchJsUrl = cb_root_url('administrace/admin_js/admin_individualni_prava_search.js') . '?v=' . (is_file($cbAdministraceIndividualSearchJsPath) ? (string)filemtime($cbAdministraceIndividualSearchJsPath) : '1');
 $cbAdministraceIndividualSaveJsPath = $cbAplikaceRoot . '/administrace/admin_js/admin_individualni_prava_save.js';
 $cbAdministraceIndividualSaveJsUrl = cb_root_url('administrace/admin_js/admin_individualni_prava_save.js') . '?v=' . (is_file($cbAdministraceIndividualSaveJsPath) ? (string)filemtime($cbAdministraceIndividualSaveJsPath) : '1');
+/* Editor číselníku práv; načítá se jednou se společnou kostrou a používá delegované události. */
+$cbAdministraceEditacePravJsPath = $cbAplikaceRoot . '/administrace/admin_js/admin_editace_prav.js';
+$cbAdministraceEditacePravJsUrl = cb_root_url('administrace/admin_js/admin_editace_prav.js') . '?v=' . (is_file($cbAdministraceEditacePravJsPath) ? (string)filemtime($cbAdministraceEditacePravJsPath) : '1');
 
 /* Hodnoty pro vizualni kontext a tema celeho shellu. */
 $cbVisualModule = $cbInitialModule === 'helpdesk' ? 'helpdesk' : $cbInitialModule;

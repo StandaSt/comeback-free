@@ -181,6 +181,7 @@ try {
         $restiaSummary['make_time_avg_sec'] = isset($historyReport['make_time_prumer_sec']) ? (int)$historyReport['make_time_prumer_sec'] : null;
         $restiaSummary['orders_total'] = (int)($historyReport['objednavky_nezrusene_ks'] ?? 0);
         $restiaSummary['own_deliveries'] = (int)($historyReport['nase_rozvozy_ks'] ?? 0);
+        $restiaSummary['woltdrive_count'] = (int)($historyReport['woltdrive_ks'] ?? 0);
         $restiaSummary['woltdrive_late'] = (int)($historyReport['woltdrive_pozde_5_min'] ?? 0);
         $idReportu = cb_db_zapis_denni_report_from_form($conn, $idPob, $datum, $currentUserId, $restiaSummary, $_POST, $rozdilForm, $colPomerForm);
         $sendJson(200, ['ok' => true, 'id_reportu' => $idReportu]);

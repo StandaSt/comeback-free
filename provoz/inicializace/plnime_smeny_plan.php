@@ -522,47 +522,53 @@ function deletePlanRows(string $startDay, int $idPob): void
 
 function saveBlocks(string $startDay, int $idPob, array $rows): int
 {
-    deletePlanRows($startDay, $idPob);
-
     if ($rows === []) {
         return 0;
     }
 
     $db = db();
-    $stmt = $db->prepare(
-        'INSERT INTO smeny_plan (start_day, datum, id_pob, id_user, id_slot, cas_od, cas_do, zdroj) VALUES (?, ?, ?, ?, ?, ?, ?, 1)'
-    );
+    $db->begin_transaction();
+    try {
+        deletePlanRows($startDay, $idPob);
 
-    if (!$stmt) {
-        throw new RuntimeException('Prepare INSERT smeny_plan selhal.');
-    }
-
-    $saved = 0;
-
-    foreach ($rows as $row) {
-        $stmt->bind_param(
-            'ssiiiss',
-            $startDay,
-            $row['datum'],
-            $row['id_pob'],
-            $row['id_user'],
-            $row['id_slot'],
-            $row['cas_od'],
-            $row['cas_do']
+        $stmt = $db->prepare(
+            'INSERT INTO smeny_plan (start_day, datum, id_pob, id_user, id_slot, cas_od, cas_do, zdroj) VALUES (?, ?, ?, ?, ?, ?, ?, 1)'
         );
 
-        if (!$stmt->execute()) {
-            $msg = $stmt->error;
-            $stmt->close();
-            throw new RuntimeException('INSERT smeny_plan selhal: ' . $msg);
+        if (!$stmt) {
+            throw new RuntimeException('Prepare INSERT smeny_plan selhal.');
         }
 
-        $saved++;
+        $saved = 0;
+        foreach ($rows as $row) {
+            $stmt->bind_param(
+                'ssiiiss',
+                $startDay,
+                $row['datum'],
+                $row['id_pob'],
+                $row['id_user'],
+                $row['id_slot'],
+                $row['cas_od'],
+                $row['cas_do']
+            );
+
+            if (!$stmt->execute()) {
+                $msg = $stmt->error;
+                $stmt->close();
+                throw new RuntimeException('INSERT smeny_plan selhal: ' . $msg);
+            }
+
+            $saved++;
+        }
+
+        $stmt->close();
+        $db->commit();
+
+        return $saved;
+    } catch (Throwable $e) {
+        $db->rollback();
+        throw $e;
     }
-
-    $stmt->close();
-
-    return $saved;
 }
 
 function saveStateRow(array $state): void
@@ -737,17 +743,29 @@ function processPlannedWeekUpdate(string $token, int $skipWeeks, int $idPob, int
 
         $startDay = normalizeMonday((string)($week['startDay'] ?? $defaultStartDay))->format('Y-m-d');
         $rows = buildBlocks($week, $idPob);
+        if ($rows === []) {
+            $note = 'API vratilo tyden bez bloku, DB ponechana beze zmen';
+            markBranchAsOk($idPob, $startDay, 0, 0, $note);
+
+            return [
+                'start_day' => $startDay,
+                'blocks' => 0,
+                'hours' => 0,
+                'status' => 'OK',
+                'note' => $note,
+            ];
+        }
+
         $blocks = saveBlocks($startDay, $idPob, $rows);
         $hours = countHours($rows);
-        $note = $rows === [] ? 'API vratilo tyden bez bloku, ulozeny tyden byl vycisten' : null;
-        markBranchAsOk($idPob, $startDay, $blocks, $hours, $note);
+        markBranchAsOk($idPob, $startDay, $blocks, $hours, null);
 
         return [
             'start_day' => $startDay,
             'blocks' => $blocks,
             'hours' => $hours,
             'status' => 'OK',
-            'note' => $note,
+            'note' => null,
         ];
     } catch (Throwable $e) {
         $message = mb_substr($e->getMessage(), 0, 1000, 'UTF-8');
@@ -818,7 +836,7 @@ function renderSmenyPlanScreen(array $info, string $mode = 'pick'): void
           <input type="hidden" name="run_smeny_plan" value="1">
           <input type="hidden" name="cb_action" value="start" id="cb_action_field">
           <div class="displ_flex gap_8 align_items_center flex_wrap">
-            <select name="cb_id_pob" class="card_select ram_sedy txt_seda bg_bila zaobleni_8" style="min-width:260px; height:28px; margin-right:8px;" onchange="var a=document.getElementById('cb_action_field');var v=String(this.value||'');if(a){a.value=(v==='<?= h((string)CB_SMENY_PLAN_UPDATE_ALL_ID) ?>'?'update_planned':'select_branch');}var f=this.form;if(f){var o=this.options[this.selectedIndex];var t=o?String(o.textContent||o.innerText||'').trim():'';var p=t.indexOf(' | ');if(p>=0){t=t.substring(0,p);}f.setAttribute('data-cb-loader-text',v==='<?= h((string)CB_SMENY_PLAN_UPDATE_ALL_ID) ?>'?'Aktualizuji naplánované směny':'Připravuji směny pobočky '+t);if(f.requestSubmit){f.requestSubmit();}else{f.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));}}">
+            <select name="cb_id_pob" class="card_select ram_sedy txt_seda bg_bila zaobleni_8" style="min-width:260px; height:28px; margin-right:8px;" onchange="var a=document.getElementById('cb_action_field');var v=String(this.value||'');if(a){a.value=(v==='<?= h((string)CB_SMENY_PLAN_UPDATE_ALL_ID) ?>'?'update_planned':'select_branch');}var f=this.form;if(f){if(f.requestSubmit){f.requestSubmit();}else{f.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));}}">
               <option value="0">Vyber pobočku</option>
               <option value="<?= h((string)CB_SMENY_PLAN_UPDATE_ALL_ID) ?>">Stáhni všechny pobočky</option>
               <?php foreach ($branches as $branch): ?>
@@ -837,11 +855,11 @@ function renderSmenyPlanScreen(array $info, string $mode = 'pick'): void
         </form>
       <?php elseif ($mode === 'confirm'): ?>
         <div class="card_actions gap_8 displ_flex odstup_horni_10">
-          <form method="post" action="<?= h(cb_url('/provoz.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1" data-cb-loader-text="Probíhá import směn">
+          <form method="post" action="<?= h(cb_url('/provoz.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
             <input type="hidden" name="run_smeny_plan" value="1">
             <input type="hidden" name="cb_action" value="start">
             <input type="hidden" name="cb_id_pob" value="<?= h((string)$selectedBranchId) ?>">
-            <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Probíhá import směn">Spustit import</button>
+            <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Spustit import</button>
           </form>
           <form method="post" action="<?= h(cb_url('/provoz.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
             <input type="hidden" name="cb_action" value="back">
@@ -1086,6 +1104,10 @@ function runPlannedUpdate(array $branches): array
         'errors' => $errors,
         'brake_exists' => skipweekBrakeExists(),
     ];
+}
+
+if (defined('CB_SMENY_PLAN_LIBRARY_ONLY') && CB_SMENY_PLAN_LIBRARY_ONLY === true) {
+    return;
 }
 
 if (!empty($GLOBALS['cb_smeny_plan_cron'])) {

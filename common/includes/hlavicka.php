@@ -49,15 +49,13 @@ $cbHeaderModuleDeniedText = 'Tento modul nyní nemáte povolen.';
       <?php require __DIR__ . '/vyber_pobocek.php'; ?>
       <?php require __DIR__ . '/vyber_obdobi.php'; ?>
 
-      <?php if ($cbCurrentModule === 'provoz'): ?>
-        <div class="head_update" aria-label="Aktualizace dat" data-cb-head-update="1">
-          <span class="head_update_icon" aria-hidden="true">⟳</span>
-          <span>
-            <span class="head_block_label">Aktualizace dat</span>
-            <strong class="head_update_value"><?= h($cbHeadAktualizaceDat) ?></strong>
-          </span>
-        </div>
-      <?php endif; ?>
+      <div class="head_update" aria-label="Aktualizace dat" data-cb-head-update="1"<?= $cbCurrentModule !== 'provoz' ? ' hidden' : '' ?>>
+        <span class="head_update_icon" aria-hidden="true">⟳</span>
+        <span>
+          <span class="head_block_label">Aktualizace dat</span>
+          <strong class="head_update_value"><?= h($cbHeadAktualizaceDat) ?></strong>
+        </span>
+      </div>
 
     <?php else: ?>
       <div class="head_guest ram_hlavicka bg_bila zaobleni_12"></div>

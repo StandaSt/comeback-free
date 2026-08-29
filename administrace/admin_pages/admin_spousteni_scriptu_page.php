@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 $adminScriptResult = $_SESSION['cb_admin_script_result'] ?? null;
+$adminScriptResultType = is_array($adminScriptResult) ? (string)($adminScriptResult['script'] ?? 'hr') : '';
 if (isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODULE'])) {
     unset($_SESSION['cb_admin_script_result']);
 }
@@ -10,7 +11,7 @@ if (isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODULE'])) {
     <div class="blok admin_script_card">
         <p class="admin_script_description">Odstranění zaměstnanců z hr tabulek a nový import z user do hr_person.</p>
 
-        <?php if (is_array($adminScriptResult)): ?>
+        <?php if (is_array($adminScriptResult) && $adminScriptResultType === 'hr'): ?>
             <p class="admin_script_result<?= empty($adminScriptResult['success']) ? ' is-error' : '' ?>">
                 <?= h((string)($adminScriptResult['message'] ?? '')) ?>
             </p>
@@ -23,6 +24,25 @@ if (isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODULE'])) {
                 <span>Rozumím, že budou odstraněna testovací personální data HR a nahrazena novým importem.</span>
             </label>
             <button class="admin_script_button" type="submit">Spustit import zaměstnanců do HR</button>
+        </form>
+    </div>
+
+    <div class="blok admin_script_card">
+        <p class="admin_script_description">Doplnění chybějících naplánovaných směn.</p>
+
+        <?php if (is_array($adminScriptResult) && $adminScriptResultType === 'smeny_plan'): ?>
+            <p class="admin_script_result<?= empty($adminScriptResult['success']) ? ' is-error' : '' ?>">
+                <?= h((string)($adminScriptResult['message'] ?? '')) ?>
+            </p>
+        <?php endif; ?>
+
+        <form class="admin_script_form" method="post" action="<?= h(cb_root_url('index.php?m=administrace&page=spousteni_scriptu')) ?>">
+            <input type="hidden" name="cb_action" value="admin_smeny_plan_doplnit">
+            <label class="admin_script_confirm">
+                <input type="checkbox" name="admin_smeny_plan_confirm" value="1" required>
+                <span>Rozumím, že budou z API Směn doplněny pouze chybějící týdny naplánovaných směn.</span>
+            </label>
+            <button class="admin_script_button" type="submit">Doplnit naplánované směny</button>
         </form>
     </div>
 </div>

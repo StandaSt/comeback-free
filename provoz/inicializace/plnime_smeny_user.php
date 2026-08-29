@@ -40,9 +40,9 @@ function smenyUserPreview(): void
       <p class="card_text txt_seda">Aktuálně v DB: <?= smenyUserH(number_format($stats['user'], 0, ',', ' ')) ?> uživatelů, <?= smenyUserH(number_format($stats['user_pobocka'], 0, ',', ' ')) ?> vazeb na pobočky, <?= smenyUserH(number_format($stats['user_role'], 0, ',', ' ')) ?> rolí, <?= smenyUserH(number_format($stats['user_slot'], 0, ',', ' ')) ?> slotů.</p>
 
       <div class="card_actions gap_8 displ_flex odstup_horni_10">
-        <form method="post" action="<?= smenyUserH(cb_url('/provoz.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1" data-cb-loader-text="Probíhá import uživatelů">
+        <form method="post" action="<?= smenyUserH(cb_url('/provoz.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
           <input type="hidden" name="run_smeny_user" value="1">
-          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex" data-cb-loader-text="Probíhá import uživatelů">Spustit import</button>
+          <button type="submit" class="card_btn cursor_ruka ram_btn bg_bila zaobleni_6 vyska_28 card_btn_primary displ_inline_flex">Spustit import</button>
         </form>
         <form method="post" action="<?= smenyUserH(cb_url('/provoz.php')) ?>" class="odstup_vnejsi_0 displ_inline_flex" data-cb-max-form="1">
           <input type="hidden" name="back_admin_init" value="1">

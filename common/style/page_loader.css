@@ -1,0 +1,48 @@
+/*
+ * Účel souboru: Definuje jediný střízlivý loader používaný při výměně obsahu PP.
+ * Loader zobrazuje pouze text, detail a uplynulý čas; neobsahuje logo ani animaci.
+ */
+
+.cb_page_loader{
+  position:absolute;
+  left:50%;
+  top:42px;
+  z-index:21;
+  transform:translateX(-50%);
+  padding:8px 14px;
+  border:1px solid var(--cb-border);
+  border-radius:8px;
+  background:var(--cb-bg-panel);
+  color:var(--cb-text-main);
+  box-shadow:0 8px 24px var(--cb-shadow);
+  text-align:center;
+  white-space:nowrap;
+}
+
+.pp.is-page-loading{
+  position:relative;
+  min-height:160px;
+}
+
+.cb_page_loader_text{
+  display:block;
+  font-size:var(--cb-font-12);
+  font-weight:700;
+}
+
+.cb_page_loader_detail{
+  display:block;
+  min-height:15px;
+  margin-top:2px;
+  color:var(--cb-text-muted);
+  font-size:var(--cb-font-11);
+  font-weight:500;
+}
+
+.cb_page_loader_time{
+  display:block;
+  margin-top:3px;
+  color:var(--cb-text-muted);
+  font-size:var(--cb-font-11);
+  font-weight:400;
+}

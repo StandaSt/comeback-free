@@ -19,9 +19,6 @@ cb_modul_nacti($cbInitialModule);
 ?>
 </main>
 <?php
-// Vykresli spolecny loader stranky.
-require __DIR__ . '/loader.php';
-
 // Vypise konfiguraci pro prohlizec a vsechny spolecne skripty.
 require __DIR__ . '/nacti_skripty.php';
 ?>

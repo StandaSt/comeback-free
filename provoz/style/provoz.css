@@ -36,6 +36,165 @@
   line-height:1.2;
 }
 
+/* Nezadane reporty - nadpis a volba exportovaneho mesice. */
+.provoz_nezadane_head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin:0 0 4px;
+}
+
+.provoz_nezadane_head .blok_title{
+  margin:0;
+}
+
+.provoz_nezadane_export{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  color:var(--cb-text-muted);
+  font-size:var(--cb-font-11);
+  white-space:nowrap;
+}
+
+.provoz_nezadane_export_btn{
+  min-height:22px;
+  padding:1px 7px;
+  border:1px solid var(--cb-border);
+  border-radius:5px;
+  background:var(--cb-bg-control);
+  color:var(--cb-text-main);
+  font:inherit;
+  cursor:pointer;
+}
+
+.provoz_nezadane_export_btn:hover:not(:disabled){
+  border-color:var(--clr_modra_6);
+  color:var(--clr_modra_6);
+}
+
+.provoz_nezadane_export_btn:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
+
+/* Nezadane reporty - vyber prijemce e-mailu. */
+.provoz_nezadane_modal{
+  position:fixed;
+  z-index:11000;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+  background:rgba(15, 23, 42, .45);
+}
+
+.provoz_nezadane_modal.is-hidden{
+  display:none;
+}
+
+.provoz_nezadane_dialog{
+  width:min(440px, 96vw);
+  padding:14px;
+  border:1px solid var(--cb-border);
+  border-radius:9px;
+  background:var(--cb-bg-panel);
+  box-shadow:0 14px 36px rgba(15, 23, 42, .25);
+}
+
+.provoz_nezadane_dialog_title{
+  margin:0 0 4px;
+  color:var(--cb-text-main);
+  font-size:var(--cb-font-16);
+}
+
+.provoz_nezadane_dialog_period{
+  margin:0 0 12px;
+  color:var(--cb-text-muted);
+  font-size:var(--cb-font-12);
+}
+
+.provoz_nezadane_dialog_label{
+  display:block;
+  margin:0 0 4px;
+  color:var(--cb-text-main);
+  font-size:var(--cb-font-12);
+  font-weight:700;
+}
+
+.provoz_nezadane_dialog_select{
+  width:100%;
+  min-height:32px;
+  padding:4px 7px;
+  border:1px solid var(--cb-border);
+  border-radius:6px;
+  background:var(--cb-bg-control);
+  color:var(--cb-text-main);
+}
+
+.provoz_nezadane_dialog_status{
+  margin:9px 0 0;
+  color:var(--clr_modra_6);
+  font-size:var(--cb-font-12);
+}
+
+.provoz_nezadane_dialog_status.is-error{
+  color:var(--clr_cervena);
+}
+
+.provoz_nezadane_dialog_status.is-success{
+  color:#15803d;
+}
+
+.provoz_nezadane_sent{
+  display:grid;
+  gap:4px;
+  margin-top:9px;
+}
+
+.provoz_nezadane_sent.is-hidden{
+  display:none;
+}
+
+.provoz_nezadane_sent_row{
+  padding:5px 7px;
+  border:1px solid #86c99a;
+  border-radius:5px;
+  background:#eefaf1;
+  color:#166534;
+  font-size:var(--cb-font-12);
+}
+
+.provoz_nezadane_dialog_actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  margin-top:12px;
+}
+
+.provoz_nezadane_dialog_btn{
+  min-height:30px;
+  padding:4px 12px;
+  border:1px solid var(--clr_modra_6);
+  border-radius:6px;
+  background:var(--clr_modra_6);
+  color:#fff;
+  cursor:pointer;
+}
+
+.provoz_nezadane_dialog_btn_back{
+  border-color:var(--cb-border);
+  background:var(--cb-bg-control);
+  color:var(--cb-text-main);
+}
+
+.provoz_nezadane_dialog_btn:disabled{
+  opacity:.55;
+  cursor:wait;
+}
+
 /* Blok prehledu - drobny popis pod nadpisem. */
 .provoz_prehled_meta{
   margin:0 0 8px;
@@ -351,7 +510,9 @@
   display:flex;
   flex-direction:column;
   gap:10px;
-  max-width:390px;
+  box-sizing:border-box;
+  width:100%;
+  max-width:820px;
   padding:14px;
   border:1px solid var(--cb-border);
   border-radius:8px;
@@ -371,10 +532,24 @@
   color:var(--cb-text-main);
 }
 
+.report_promenne_values{
+  gap:38px;
+}
+
+.report_promenne_validity{
+  flex-wrap:wrap;
+  gap:14px;
+  margin-top:8px;
+}
+
 .report_promenne_actions{
   display:flex;
   align-items:center;
   justify-content:flex-end;
+}
+
+.report_promenne_validity .report_promenne_actions{
+  margin-left:auto;
 }
 
 .zr_form{

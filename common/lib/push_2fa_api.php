@@ -122,7 +122,6 @@ try {
                 throw new RuntimeException('Lokální účet neexistuje.');
             }
             cb_prvni_vstup_dokonci_login($conn, $localUser);
-            $_SESSION['cb_initial_loader_text'] = 'Inicializace systému ...';
             echo json_encode(['ok' => true, 'stav' => 'ok'], JSON_UNESCAPED_UNICODE);
             exit;
         }
@@ -142,8 +141,6 @@ try {
             cb_2fa_cleanup_session();
             throw $e;
         }
-        $_SESSION['cb_initial_loader_text'] = 'Inicializace systému ...';
-
         $_SESSION['cb_flash'] = 'Přihlášení OK';
 
         echo json_encode(['ok' => true, 'stav' => 'ok'], JSON_UNESCAPED_UNICODE);

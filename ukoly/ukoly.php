@@ -37,7 +37,9 @@ $ukPage = $ukCurrentPage['key'];
 $ukPageTitle = $ukCurrentPage['title'];
 
 ?>
-<?php require __DIR__ . '/uk_includes/uk_menu.php'; ?>
+<?php if (!defined('CB_PP_ONLY') || CB_PP_ONLY !== true): ?>
+    <?php require __DIR__ . '/uk_includes/uk_menu.php'; ?>
+<?php endif; ?>
 
 <?php if ($ukPage === 'uprava_profilu'): ?>
     <?php require __DIR__ . '/../common/pages/uprava_profilu.php'; ?>

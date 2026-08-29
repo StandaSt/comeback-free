@@ -31,7 +31,6 @@ function cb_admin_prava_roli_data(): array
     $modRes = $db->query('
         SELECT id_modul, modul, poradi
         FROM cis_moduly
-        WHERE aktivni = 1
         ORDER BY poradi, id_modul
     ');
     if ($modRes instanceof mysqli_result) {
@@ -48,9 +47,8 @@ function cb_admin_prava_roli_data(): array
 
     $rights = [];
     $rightRes = $db->query('
-        SELECT id_pravo, id_modul, nazev, popis, poradi
+        SELECT id_pravo, id_modul, nazev, popis, poradi, aktivni
         FROM cis_prava
-        WHERE aktivni = 1
         ORDER BY id_modul, poradi, id_pravo
     ');
     if ($rightRes instanceof mysqli_result) {
@@ -61,6 +59,7 @@ function cb_admin_prava_roli_data(): array
                 'id_modul' => $idModul,
                 'nazev' => (string)$row['nazev'],
                 'popis' => (string)($row['popis'] ?? ''),
+                'aktivni' => (int)$row['aktivni'] === 1,
             ];
             $rights[] = $right;
             if (isset($modules[$idModul])) {
@@ -87,6 +86,46 @@ function cb_admin_prava_roli_data(): array
         'modules' => $modules,
         'rights' => $rights,
         'allowed' => $allowed,
+    ];
+}
+
+function cb_admin_pravo_aktivni_uloz(int $idPravo, bool $aktivni): array
+{
+    if ($idPravo <= 0) {
+        throw new RuntimeException('Neplatné ID práva.');
+    }
+
+    $db = db();
+    $stmtLoad = $db->prepare('SELECT nazev, aktivni FROM cis_prava WHERE id_pravo = ? LIMIT 1');
+    if ($stmtLoad === false) {
+        throw new RuntimeException('Nelze připravit načtení práva.');
+    }
+    $stmtLoad->bind_param('i', $idPravo);
+    $stmtLoad->execute();
+    $row = $stmtLoad->get_result()->fetch_assoc();
+    $stmtLoad->close();
+
+    if (!is_array($row)) {
+        throw new RuntimeException('Právo ID ' . $idPravo . ' neexistuje v cis_prava.');
+    }
+
+    $previous = (int)$row['aktivni'] === 1;
+    if ($previous !== $aktivni) {
+        $activeValue = $aktivni ? 1 : 0;
+        $stmtUpdate = $db->prepare('UPDATE cis_prava SET aktivni = ? WHERE id_pravo = ?');
+        if ($stmtUpdate === false) {
+            throw new RuntimeException('Nelze připravit změnu aktivity práva.');
+        }
+        $stmtUpdate->bind_param('ii', $activeValue, $idPravo);
+        $stmtUpdate->execute();
+        $stmtUpdate->close();
+    }
+
+    return [
+        'id_pravo' => $idPravo,
+        'nazev' => (string)$row['nazev'],
+        'aktivni' => $aktivni,
+        'aktivni_pred' => $previous,
     ];
 }
 

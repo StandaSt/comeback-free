@@ -2,6 +2,8 @@
 // lib/vypocet_col_rozdil.php * K10 vypocet rozdilu a COL
 declare(strict_types=1);
 
+require_once __DIR__ . '/report_promenne.php';
+
 function cb_vcr_float(mixed $value): float
 {
     if ($value === null || $value === '') {
@@ -233,6 +235,15 @@ function cb_vcr_col_phm_cost(array $cash): float
         + cb_vcr_money($cash, 'vydaje_phm_soukrome');
 }
 
+function cb_vcr_col_wolt_drive_cost(mysqli $conn, string $datumReportu, array $restiaSummary): float
+{
+    $promenne = cb_report_promenne_for_date($conn, $datumReportu);
+    $sazba = is_array($promenne) ? (float)($promenne['wolt_drive'] ?? 0) : 0.0;
+    $pocet = max(0, (int)($restiaSummary['woltdrive_count'] ?? 0));
+
+    return $pocet * $sazba;
+}
+
 function cb_vcr_col(mysqli $conn, string $datumReportu, array $restiaSummary, array $cash, array $people): ?float
 {
     $trzbaBezDph = cb_vcr_money($restiaSummary, 'trzba') / 1.12;
@@ -240,7 +251,11 @@ function cb_vcr_col(mysqli $conn, string $datumReportu, array $restiaSummary, ar
         return null;
     }
 
-    return (cb_vcr_col_cost($conn, $datumReportu, $people) + cb_vcr_col_phm_cost($cash)) / $trzbaBezDph;
+    return (
+        cb_vcr_col_cost($conn, $datumReportu, $people)
+        + cb_vcr_col_phm_cost($cash)
+        + cb_vcr_col_wolt_drive_cost($conn, $datumReportu, $restiaSummary)
+    ) / $trzbaBezDph;
 }
 
 function cb_vypocet_col_rozdil(mysqli $conn, string $datumReportu, array $restiaSummary, array $cash, array $people): array
