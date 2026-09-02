@@ -2,18 +2,24 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../common/includes/blok_menu.php';
+require_once __DIR__ . '/../lib/ai_analytik_pravidla.php';
 
 $provozMenuItems = [
     ['page' => 'prehled', 'label' => 'Přehled'],
     ['page' => 'denni_report', 'label' => 'Denní report'],
     ['page' => 'objednavky', 'label' => 'Objednávky'],
-    ['page' => 'prehled_hodin', 'label' => 'Přehled hodin'],
+    ['page' => 'prehled_hodin', 'label' => 'Přehled hodin', 'pravo' => 209],
+    ['page' => 'ai_analytik', 'label' => 'Chytrý Franta', 'pravo' => CB_AI_ANALYTIK_PRAVO],
 ];
 
 $provozMenu = [];
 foreach ($provozMenuItems as $item) {
     $idPravo = (int)($item['pravo'] ?? 0);
-    if ($idPravo > 0 && (!function_exists('cb_pravo_ma') || !cb_pravo_ma($idPravo))) {
+    if ($idPravo === CB_AI_ANALYTIK_PRAVO && !cb_ai_analytik_ma_pravo()) {
+        continue;
+    }
+    if ($idPravo > 0 && $idPravo !== CB_AI_ANALYTIK_PRAVO
+        && (!function_exists('cb_pravo_ma') || !cb_pravo_ma($idPravo))) {
         continue;
     }
 

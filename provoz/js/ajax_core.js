@@ -5,7 +5,7 @@
   const CB_AJAX = w.CB_AJAX || (w.CB_AJAX = {});
   const nativeFetch = typeof w.fetch === 'function' ? w.fetch.bind(w) : null;
   const applicationUrl = new URL(String(w.CB_ENDPOINT || 'index.php'), w.location.href);
-  const AJAX_TRACE_URL = new URL('provoz/lib/ajax_trace.php', applicationUrl).toString();
+  const AJAX_TRACE_URL = new URL('provoz/ajax/ajax_trace.php', applicationUrl).toString();
   let loginRedirectStarted = false;
 
   // Rozpoznání stejného původu brání přesměrování kvůli cizím HTTP požadavkům.

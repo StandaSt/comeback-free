@@ -16,7 +16,7 @@ function hr_fetch_prehled_documents(mysqli $db, int $limit = 5): array
             d.id_dokument,
             d.verze,
             d.vytvoreno,
-            ds.puvodni_nazev,
+            ds.ulozeny_nazev,
             dt.nazev AS typ,
             vd.jmeno AS vd_jmeno,
             vd.prijmeni AS vd_prijmeni,
@@ -53,7 +53,7 @@ function hr_fetch_prehled_documents(mysqli $db, int $limit = 5): array
         $rows[] = [
             'id_dokument' => (int)$row['id_dokument'],
             'verze' => (int)$row['verze'],
-            'nazev' => trim((string)($row['puvodni_nazev'] ?? '')) !== '' ? (string)$row['puvodni_nazev'] : 'Bez souboru',
+            'nazev' => trim((string)($row['ulozeny_nazev'] ?? '')) !== '' ? (string)$row['ulozeny_nazev'] : 'Bez souboru',
             'typ' => (string)$row['typ'],
             'osoba' => $personJmeno !== '' ? $personJmeno : ($vdJmeno !== '' ? $vdJmeno : '-'),
             'zadano' => (string)$row['vytvoreno'],

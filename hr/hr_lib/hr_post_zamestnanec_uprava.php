@@ -50,7 +50,7 @@ function hr_post_pracovni_pomer_uprava(mysqli $db): void
         $nastupInput = str_replace(',', '.', trim((string)($_POST['datum_nastupu'] ?? '')));
         $nastupDate = DateTimeImmutable::createFromFormat('!d.m.Y', $nastupInput);
         $dateErrors = DateTimeImmutable::getLastErrors();
-        if ($typ < 1 || $typ > 3 || $nastupDate === false || ($dateErrors !== false && ($dateErrors['warning_count'] > 0 || $dateErrors['error_count'] > 0)) || $nastupDate->format('d.m.Y') !== $nastupInput || $nastupDate > new DateTimeImmutable('today')) {
+        if (!in_array($typ, [1, 2, 3, 5], true) || $nastupDate === false || ($dateErrors !== false && ($dateErrors['warning_count'] > 0 || $dateErrors['error_count'] > 0)) || $nastupDate->format('d.m.Y') !== $nastupInput || $nastupDate > new DateTimeImmutable('today')) {
             throw new RuntimeException('Vyplňte platný typ vztahu a datum nástupu ve formátu DD.MM.RRRR.');
         }
         [$uvazek, $hodin] = hr_pracovni_pomer_uvazek_z_postu($typ, $_POST);

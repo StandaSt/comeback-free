@@ -69,12 +69,16 @@ window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_
 <script src="<?= h($cbAdministraceIndividualSaveJsUrl) ?>"></script>
 <?php // Pridani, editace a razeni ciselniku prav v Administraci. ?>
 <script src="<?= h($cbAdministraceEditacePravJsUrl) ?>"></script>
+<?php // AI analytik modulu Provoz. ?>
+<script src="<?= h(cb_root_url('provoz/js/ai_analytik.js') . '?v=' . (is_file(__DIR__ . '/../../provoz/js/ai_analytik.js') ? (string)filemtime(__DIR__ . '/../../provoz/js/ai_analytik.js') : '1')) ?>"></script>
 <?php // Konfigurace navigace mezi hlavni moduly. ?>
 <script>
 window.CB_MODULY_NAVIGACE = {
   shellUrl: <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,
   publicShellUrl: <?= json_encode($cbPublicShellUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,
   activeMainModule: <?= json_encode($cbInitialModule, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,
+  adminFirmaPridat: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(105) ? 'true' : 'false' ?>,
+  aiAnalytikAllowed: <?= function_exists('cb_pravo_ma') && is_array($_SESSION['prava_stav'] ?? null) && array_key_exists(210, $_SESSION['prava_stav']) && cb_pravo_ma(210) ? 'true' : 'false' ?>,
   initialAutoLoad: true
 };
 </script>

@@ -97,6 +97,13 @@
     }
   };
 
+  if (config.adminFirmaPridat === true) {
+    menuDefs.administrace.items.splice(3, 0, ['firma_pridat', 'Přidat firmu']);
+  }
+  if (config.aiAnalytikAllowed === true) {
+    menuDefs.provoz.items.push(['ai_analytik', 'Chytrý Franta']);
+  }
+
   window.CB_ACTIVE_MAIN_MODULE = activeMainModule;
   if (!root) return;
   var initialParams = new URLSearchParams(window.location.search);
@@ -139,16 +146,20 @@
 
   function showModuleError(error){
     stopPageLoaderTimer();
-    var html = '<div class="cb-module-load-error">Modul se nepodařilo načíst: ' + String(error.message || error) + '</div>';
+    var message = 'Modul se nepodařilo načíst: ' + String(error.message || error);
+    var errorBox = document.createElement('div');
+    errorBox.className = 'cb-module-load-error';
+    errorBox.textContent = message;
     var pp = root.querySelector('.pp');
     if (pp instanceof HTMLElement) {
-      pp.innerHTML = html;
+      pp.innerHTML = '';
+      pp.appendChild(errorBox);
       pp.classList.remove('is-page-loading');
       return;
     }
     pp = document.createElement('section');
     pp.className = 'pp';
-    pp.innerHTML = html;
+    pp.appendChild(errorBox);
     root.appendChild(pp);
   }
 
@@ -174,6 +185,7 @@
     if (moduleName === 'provoz') {
       if (page === 'objednavky') return 'Načítám objednávky ...';
       if (page === 'denni_report') return 'Načítám denní report ...';
+      if (page === 'ai_analytik') return 'Načítám AI analytika ...';
       if (page === 'prehled' || page === '' || page === 'dashboard') return 'Načítám přehled ...';
       return 'Načítám Provoz ...';
     }
@@ -498,8 +510,12 @@
         credentials: 'same-origin'
       })
         .then(function(response){
-          if (!response.ok) throw new Error('HTTP ' + response.status);
-          return response.text();
+          return response.text().then(function(responseText){
+            if (!response.ok) {
+              throw new Error(responseText.trim() || ('HTTP ' + response.status));
+            }
+            return responseText;
+          });
         })
         .then(function(html){
           if (typeof window.__CB_HELPDESK_CLEANUP__ === 'function') {

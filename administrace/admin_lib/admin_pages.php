@@ -21,6 +21,10 @@ function cb_admin_pages(): array
             'file' => __DIR__ . '/../admin_pages/admin_individualni_prava_page.php',
             'title' => 'Individuální práva uživatele',
         ],
+        'firma_pridat' => [
+            'file' => __DIR__ . '/../admin_pages/admin_firma_pridat_page.php',
+            'title' => 'Přidání nové firmy do IS',
+        ],
         'spousteni_scriptu' => [
             'file' => __DIR__ . '/../admin_pages/admin_spousteni_scriptu_page.php',
             'title' => 'Ruční spouštění scriptů',

@@ -93,9 +93,11 @@ if (!function_exists('cb_render_blok_menu_admin')) {
     function cb_render_blok_menu_admin(): void
     {
         $currentModule = defined('CB_EMBEDDED_MODULE') ? (string)constant('CB_EMBEDDED_MODULE') : (string)($GLOBALS['CURRENT_MODULE'] ?? '');
-        $user = $_SESSION['cb_user'] ?? [];
-        $roleId = is_array($user) ? (int)($user['id_role'] ?? 0) : 0;
-        if ($roleId !== 1 || $currentModule === 'administrace') {
+        if (
+            $currentModule === 'administrace'
+            || !function_exists('cb_pravo_ma')
+            || !cb_pravo_ma(100)
+        ) {
             return;
         }
 

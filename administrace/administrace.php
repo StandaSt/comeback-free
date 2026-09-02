@@ -19,9 +19,12 @@ require_once __DIR__ . '/../common/lib/system.php';
 require_once __DIR__ . '/../common/lib/uloz_akci.php';
 require_once __DIR__ . '/admin_db/admin_prava_roli_db.php';
 require_once __DIR__ . '/admin_db/admin_individualni_prava_db.php';
+require_once __DIR__ . '/admin_db/admin_firma_db.php';
 require_once __DIR__ . '/admin_includes/admin_individualni_prava_detail.php';
 require_once __DIR__ . '/admin_lib/admin_pages.php';
 require_once __DIR__ . '/admin_lib/admin_smeny_plan_doplnit.php';
+require_once __DIR__ . '/admin_lib/admin_firma_ares.php';
+require_once __DIR__ . '/admin_lib/admin_firma_pridat.php';
 
 cb_session_guard_entry();
 
@@ -36,9 +39,7 @@ if (empty($_SESSION['login_ok'])) {
     exit;
 }
 
-$adminUser = $_SESSION['cb_user'] ?? [];
-$adminRoleId = is_array($adminUser) ? (int)($adminUser['id_role'] ?? 0) : 0;
-if ($adminRoleId !== 1) {
+if (!function_exists('cb_pravo_ma') || !cb_pravo_ma(100)) {
     http_response_code(403);
     ?>
     <section class="pp admin_pp" data-module="administrace" data-page="zakazano">
@@ -47,13 +48,14 @@ if ($adminRoleId !== 1) {
         </header>
         <div class="blok">
             <h2 class="blok_title">Přístup zamítnut</h2>
-            <p>Administrace je dostupná pouze pro roli Admin.</p>
+            <p>Nemáte povolený přístup do modulu Administrace.</p>
         </div>
     </section>
     <?php
     return;
 }
 
+cb_admin_firma_pridat_handle();
 cb_admin_smeny_plan_doplnit_handle();
 
 if (
@@ -194,6 +196,29 @@ if (
 
     try {
         $adminPravaAction = (string)($_POST['admin_prava_action'] ?? 'role');
+        if ($adminPravaAction === 'aplikovano') {
+            $idPravo = (int)($_POST['id_pravo'] ?? 0);
+            $aplikovano = (int)($_POST['aplikovano'] ?? 0) === 1;
+            $result = cb_admin_pravo_aplikovano_uloz($idPravo, $aplikovano);
+            cb_user_akce_zapis([
+                'id_user_akce_typ' => 14,
+                'modul' => 'administrace',
+                'objekt' => 'admin_prava_on_off',
+                'id_objektu' => $idPravo,
+                'pole' => 'aplikovano',
+                'hodnota_old' => !empty($result['aplikovano_pred']) ? '1' : '0',
+                'hodnota_new' => $aplikovano ? '1' : '0',
+                'vysledek' => 1,
+                'zdroj' => 'administrace',
+                'detail' => [
+                    'id_pravo' => $idPravo,
+                    'nazev' => (string)($result['nazev'] ?? ''),
+                ],
+            ]);
+            echo json_encode(['ok' => true, 'result' => $result], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
         if ($adminPravaAction === 'aktivni') {
             $idPravo = (int)($_POST['id_pravo'] ?? 0);
             $aktivni = (int)($_POST['aktivni'] ?? 0) === 1;

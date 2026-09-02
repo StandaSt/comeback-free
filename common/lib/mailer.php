@@ -7,7 +7,15 @@ use PHPMailer\PHPMailer\Exception as PHPMailerException;
 /**
  * Odesle e-mail pres SMTP konfiguraci ulozenou v secrets.php.
  */
-function cb_mail_send(string $profile, string $to, string $subject, string $body, string $altBody = '', array $attachments = []): void
+function cb_mail_send(
+    string $profile,
+    string $to,
+    string $subject,
+    string $body,
+    string $altBody = '',
+    array $attachments = [],
+    array $sender = []
+): void
 {
     $to = trim($to);
     if ($to === '' || filter_var($to, FILTER_VALIDATE_EMAIL) === false) {
@@ -43,9 +51,17 @@ function cb_mail_send(string $profile, string $to, string $subject, string $body
         $mail->Encoding = 'base64';
 
         $from = trim((string)($cfg['from'] ?? $mail->Username));
-        $fromName = trim((string)($cfg['from_name'] ?? ''));
+        $fromName = trim((string)($sender['name'] ?? $cfg['from_name'] ?? ''));
         $mail->setFrom($from, $fromName);
         $mail->addAddress($to);
+
+        $replyTo = trim((string)($sender['email'] ?? ''));
+        if ($replyTo !== '') {
+            if (filter_var($replyTo, FILTER_VALIDATE_EMAIL) === false) {
+                throw new RuntimeException('E-mail odesílatele není platný.');
+            }
+            $mail->addReplyTo($replyTo, trim((string)($sender['name'] ?? '')));
+        }
 
         // Odesle HTML e-mail, pokud je predana textova alternativa.
         $mail->isHTML($altBody !== '');

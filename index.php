@@ -152,7 +152,26 @@ if (!empty($_SESSION['login_ok']) && isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODUL
     header('Content-Type: text/html; charset=utf-8');
 
     $GLOBALS['CURRENT_MODULE'] = $cbShellModule;
-    cb_modul_nacti($cbShellModule);
+    $cbShellOutputLevel = ob_get_level();
+    ob_start();
+    try {
+        cb_modul_nacti($cbShellModule);
+        ob_end_flush();
+    } catch (Throwable $e) {
+        while (ob_get_level() > $cbShellOutputLevel) {
+            ob_end_clean();
+        }
+
+        $cbShellError = get_class($e)
+            . ': ' . $e->getMessage()
+            . ' in ' . $e->getFile()
+            . ':' . (string)$e->getLine();
+        error_log('[shell_module] ' . $cbShellError);
+
+        http_response_code(500);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo $cbShellError;
+    }
     exit;
 }
 

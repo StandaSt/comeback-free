@@ -2,6 +2,12 @@
 // lib/request_dispatch.php * Verze: V2 * Aktualizace: 06.05.2026
 declare(strict_types=1);
 
+if (isset($_SERVER['HTTP_X_COMEBACK_AI_ANALYTIK'])
+    && (string)$_SERVER['HTTP_X_COMEBACK_AI_ANALYTIK'] === '1') {
+    require __DIR__ . '/ai_analytik_gateway.php';
+    exit;
+}
+
 $cbIsPartial = false;
 if (isset($_SERVER['HTTP_X_COMEBACK_PARTIAL'])) {
     $cbIsPartial = ((string)($_SERVER['HTTP_X_COMEBACK_PARTIAL']) === '1');

@@ -56,6 +56,49 @@
       });
   }
 
+  function saveApplied(button) {
+    var previous = button.classList.contains('is-applied');
+    var applied = !previous;
+    var body = new URLSearchParams();
+    body.set('admin_prava_action', 'aplikovano');
+    body.set('id_pravo', String(button.getAttribute('data-id-pravo') || '0'));
+    body.set('aplikovano', applied ? '1' : '0');
+    button.disabled = true;
+
+    return fetch(endpoint(), {
+      method: 'POST',
+      headers: {
+        'X-Comeback-Admin-Prava': '1',
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'Accept': 'application/json'
+      },
+      body: body.toString(),
+      credentials: 'same-origin'
+    })
+      .then(function (response) {
+        return response.json().then(function (data) {
+          if (!response.ok) {
+            throw new Error(String((data && data.err) || ('HTTP ' + response.status)));
+          }
+          return data;
+        });
+      })
+      .then(function (data) {
+        if (!data || data.ok !== true || !data.result) {
+          throw new Error(String((data && data.err) || 'Uložení označení práva selhalo.'));
+        }
+        var saved = data.result.aplikovano === true;
+        button.classList.toggle('is-applied', saved);
+        button.setAttribute('aria-pressed', saved ? 'true' : 'false');
+      })
+      .catch(function (error) {
+        window.alert((error && error.message) ? error.message : 'Uložení označení práva selhalo.');
+      })
+      .finally(function () {
+        button.disabled = false;
+      });
+  }
+
   function activeModal() {
     return document.querySelector('[data-admin-pravo-aktivni-modal]');
   }
@@ -174,6 +217,15 @@
   });
 
   document.addEventListener('click', function (event) {
+    var appliedButton = event.target && event.target.closest
+      ? event.target.closest('button[data-admin-pravo-aplikovano="1"]')
+      : null;
+    if (appliedButton) {
+      event.preventDefault();
+      saveApplied(appliedButton);
+      return;
+    }
+
     var cancel = event.target && event.target.closest
       ? event.target.closest('[data-admin-pravo-aktivni-cancel]')
       : null;

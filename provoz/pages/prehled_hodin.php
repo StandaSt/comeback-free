@@ -297,6 +297,7 @@ $psExportXlsxUrl = cb_root_url('provoz/lib/export_prehled_smen_xlsx.php') . $psE
               <option value="<?= h((string)$optPer) ?>"<?= $psPer === $optPer ? ' selected' : '' ?>><?= h((string)$optPer) ?> řádků</option>
             <?php endforeach; ?>
           </select>
+          <span>z celkem <strong><?= h((string)$psTotal) ?></strong></span>
         </div>
 
         <div class="pagination-icon gap_4 displ_inline_flex">
@@ -333,10 +334,6 @@ $psExportXlsxUrl = cb_root_url('provoz/lib/export_prehled_smen_xlsx.php') . $psE
 
           <a class="icon-btn<?= $nextDisabled ? ' disabled' : '' ?>" href="<?= $nextDisabled ? '#' : h($psBuildUrl(['ps_p' => (string)min($psPages, $psPage + 1)])) ?>">›</a>
           <a class="icon-btn<?= $nextDisabled ? ' disabled' : '' ?>" href="<?= $nextDisabled ? '#' : h($psBuildUrl(['ps_p' => (string)$psPages])) ?>">»</a>
-        </div>
-
-        <div class="per-form gap_8 right displ_inline_flex jc_konec">
-          <span>Celkem: <strong><?= h((string)$psTotal) ?></strong></span>
         </div>
       </div>
     </form>

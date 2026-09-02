@@ -557,7 +557,8 @@ function cb_push_send_admin_info(
     string $obsah,
     string $nadpis = 'Admin info',
     string $pozn = '',
-    ?int $idOdeslal = null
+    ?int $idOdeslal = null,
+    string $detailUrl = ''
 ): array {
     global $PROSTREDI;
 
@@ -662,7 +663,13 @@ function cb_push_send_admin_info(
             continue;
         }
 
-        $url = '/mobil/admin_info.php?t=' . rawurlencode($token);
+        $urlBase = trim($detailUrl);
+        if ($urlBase === '') {
+            $urlBase = '/mobil/admin_info.php';
+        }
+        $url = $urlBase
+            . (str_contains($urlBase, '?') ? '&' : '?')
+            . 't=' . rawurlencode($token);
         $payloadArr = [
             'type' => 'ADMIN_INFO',
             'title' => $nadpis,

@@ -12,11 +12,17 @@ $adminMenuItems = [
     ['page' => 'prava_roli', 'label' => 'Globální práva'],
     ['page' => 'editace_prav', 'label' => 'Editovat práva'],
     ['page' => 'individualni_prava', 'label' => 'Individuální práva uživatele'],
+    ['page' => 'firma_pridat', 'label' => 'Přidat firmu', 'pravo' => 105],
     ['page' => 'spousteni_scriptu', 'label' => 'Spouštění scriptů'],
 ];
 
 $adminMenu = [];
 foreach ($adminMenuItems as $item) {
+    $idPravo = (int)($item['pravo'] ?? 0);
+    if ($idPravo > 0 && (!function_exists('cb_pravo_ma') || !cb_pravo_ma($idPravo))) {
+        continue;
+    }
+
     $itemPage = (string)$item['page'];
     $adminMenu[] = [
         'label' => (string)$item['label'],

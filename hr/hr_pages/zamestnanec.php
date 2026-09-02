@@ -110,7 +110,7 @@ if (!empty($editInput['datum_narozeni'])) {
                 $workStart = DateTimeImmutable::createFromFormat('!Y-m-d', (string)$workRelation['datum_nastupu']);
                 $workStartValue = $workStart === false ? '' : $workStart->format('d.m.Y');
                 $workTypeId = (int)$workRelation['id_pracovni_vztah_typ'];
-                $workTypeIsSet = in_array($workTypeId, [1, 2, 3], true);
+                $workTypeIsSet = in_array($workTypeId, [1, 2, 3, 5], true);
                 $workloadCode = $workTypeId === 3
                     ? 0
                     : ($workRelation['uvazek'] === null ? null : (int)$workRelation['uvazek']);

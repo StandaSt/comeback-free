@@ -72,6 +72,17 @@ function cb_prvni_vstup_over_token(mysqli $db, string $token): bool
 function cb_prvni_vstup_dokonci_login(mysqli $db, array $user): void
 {
     $idUser = (int)$user['id_user'];
+    $stmt = $db->prepare('SELECT u.id_role, cr.role FROM user u LEFT JOIN cis_role cr ON cr.id_role=u.id_role WHERE u.id_user=? LIMIT 1');
+    $stmt->bind_param('i', $idUser);
+    $stmt->execute();
+    $roleRow = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if (!is_array($roleRow)) {
+        throw new RuntimeException('Uživatel nebyl nalezen.');
+    }
+    $idRole = (int)($roleRow['id_role'] ?? 0);
+    $role = (string)($roleRow['role'] ?? '');
+
     cb_session_regenerate_after_login();
     $_SESSION['cb_user'] = [
         'id_user' => $idUser,
@@ -83,14 +94,15 @@ function cb_prvni_vstup_dokonci_login(mysqli $db, array $user): void
         'approved' => (bool)$user['schvalen'],
         'roles' => [],
         'sloty' => [],
-        'id_role' => (int)($user['id_role'] ?? 0),
+        'id_role' => $idRole,
+        'role' => $role,
     ];
     cb_session_bind_after_login();
     require_once __DIR__ . '/../db/db_user.php';
     require_once __DIR__ . '/../db/db_prava.php';
     require_once __DIR__ . '/../db/db_login_zapis.php';
     cb_db_ensure_user_set($db, $idUser);
-    cb_db_prava_nacti_do_session($db, $idUser, (int)($user['id_role'] ?? 0));
+    cb_db_prava_nacti_do_session($db, $idUser, $idRole);
     $idLogin = cb_db_insert_login_and_spy($db, $idUser);
     require_once __DIR__ . '/../db/db_login_blok_info.php';
     cb_db_fill_login_info_session($db, $idUser, $idLogin);

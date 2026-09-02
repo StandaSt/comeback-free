@@ -278,6 +278,11 @@ if (!function_exists('ps_prehled_smen_data')) {
      */
     function ps_prehled_smen_data(array $request, bool $includeMaxData = true): array
     {
+        $viewerId = (int)($_SESSION['cb_user']['id_user'] ?? 0);
+        if ($viewerId <= 0) {
+            throw new RuntimeException('Chybí přihlášený uživatel.');
+        }
+
         $state = ps_request_state($request);
         $selectedMonth = (int)$state['selectedMonth'];
         $selectedYear = (int)$state['selectedYear'];
@@ -315,10 +320,28 @@ if (!function_exists('ps_prehled_smen_data')) {
                     COALESCE(p.nazev, "") AS pobocka
                 FROM reporty_is_osoby ro
                 INNER JOIN reporty_is r ON r.id_reportu = ro.id_reportu
+                INNER JOIN `user` viewer ON viewer.id_user = ?
+                LEFT JOIN `user` employee ON employee.id_user = ro.id_user
                 LEFT JOIN pobocka p ON p.id_pob = r.id_pob
                 WHERE r.platny = 1
+                  AND r.id_firma = viewer.id_firma
                   AND r.datum_reportu >= ?
                   AND r.datum_reportu <= ?
+                  AND (
+                        viewer.id_role NOT IN (5, 7)
+                        OR EXISTS (
+                            SELECT 1
+                            FROM user_pobocka viewer_branch
+                            WHERE viewer_branch.id_user = viewer.id_user
+                              AND viewer_branch.id_pob = r.id_pob
+                        )
+                  )
+                  AND (
+                        viewer.id_role < 5
+                        OR (viewer.id_role = 5 AND (ro.id_user = viewer.id_user OR employee.id_role IN (7, 9)))
+                        OR (viewer.id_role = 7 AND (ro.id_user = viewer.id_user OR employee.id_role = 9))
+                        OR (viewer.id_role = 9 AND ro.id_user = viewer.id_user)
+                  )
                 ORDER BY ro.prijmeni ASC, ro.jmeno ASC, ro.slot ASC, r.datum_reportu ASC
             ';
 
@@ -329,7 +352,7 @@ if (!function_exists('ps_prehled_smen_data')) {
 
             $dateFrom = ($includeMaxData ? $yearStart : $monthStart)->format('Y-m-d');
             $dateTo = ($includeMaxData ? $yearEnd : $monthEnd)->format('Y-m-d');
-            $stmt->bind_param('ss', $dateFrom, $dateTo);
+            $stmt->bind_param('iss', $viewerId, $dateFrom, $dateTo);
             if (!$stmt->execute()) {
                 throw new RuntimeException('Dotaz přehledu směn selhal.');
             }
