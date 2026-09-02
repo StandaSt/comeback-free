@@ -16,10 +16,11 @@ function cb_prvni_vstup_user(mysqli $db, int $idUser): ?array
     return is_array($row) ? $row : null;
 }
 
-function cb_prvni_vstup_priprav(array $user): void
+function cb_prvni_vstup_priprav(array $user, bool $obnoveniHesla = false): void
 {
     $_SESSION['cb_prvni_vstup_user_id'] = (int)$user['id_user'];
     $_SESSION['cb_prvni_vstup_platnost_do'] = time() + 180;
+    $_SESSION['cb_prvni_vstup_obnoveni_hesla'] = $obnoveniHesla ? 1 : 0;
 }
 
 function cb_prvni_vstup_zbyva(): int
@@ -30,7 +31,7 @@ function cb_prvni_vstup_zbyva(): int
     if ($idUser > 0 && $zbyva > 0) {
         return $zbyva;
     }
-    unset($_SESSION['cb_prvni_vstup_user_id'], $_SESSION['cb_prvni_vstup_platnost_do']);
+    unset($_SESSION['cb_prvni_vstup_user_id'], $_SESSION['cb_prvni_vstup_platnost_do'], $_SESSION['cb_prvni_vstup_obnoveni_hesla']);
     return 0;
 }
 
@@ -62,10 +63,33 @@ function cb_prvni_vstup_over_token(mysqli $db, string $token): bool
         return false;
     }
     $user = cb_prvni_vstup_user($db, (int)$row['id_user']);
-    if (!is_array($user) || (int)$user['aktivni'] !== 1 || trim((string)$user['heslo_hash']) !== '') {
+    if (!is_array($user) || (int)$user['aktivni'] !== 1) {
         return false;
     }
-    cb_prvni_vstup_priprav($user);
+    cb_prvni_vstup_priprav($user, trim((string)$user['heslo_hash']) !== '');
+    return true;
+}
+
+function cb_prvni_vstup_obnoveni_hesla_odeslat(mysqli $db, string $email): bool
+{
+    if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+        throw new RuntimeException('Zadejte platný e-mail.');
+    }
+
+    $stmt = $db->prepare('SELECT id_user, jmeno, prijmeni, email FROM user WHERE email=? AND aktivni=1 LIMIT 1');
+    $stmt->bind_param('s', $email);
+    $stmt->execute();
+    $user = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if (!is_array($user)) {
+        return false;
+    }
+
+    $token = cb_prvni_vstup_vytvor_token($db, (int)$user['id_user']);
+    $link = cb_url_abs('?prvni_vstup=' . rawurlencode($token));
+    $name = trim((string)$user['jmeno'] . ' ' . (string)$user['prijmeni']);
+    require_once __DIR__ . '/email_reset_hesla.php';
+    cb_email_reset_hesla_odeslat((string)$user['email'], $name, $link);
     return true;
 }
 
@@ -109,7 +133,7 @@ function cb_prvni_vstup_dokonci_login(mysqli $db, array $user): void
     require_once __DIR__ . '/smeny_graphql.php';
     cb_login_load_settings_to_session($idUser);
     $_SESSION['login_ok'] = 1;
-    unset($_SESSION['cb_auth_ok'], $_SESSION['cb_2fa_token'], $_SESSION['cb_token'], $_SESSION['cb_prvni_vstup_user_id'], $_SESSION['cb_prvni_vstup_platnost_do'], $_SESSION['cb_local_login_user_id']);
+    unset($_SESSION['cb_auth_ok'], $_SESSION['cb_2fa_token'], $_SESSION['cb_token'], $_SESSION['cb_prvni_vstup_user_id'], $_SESSION['cb_prvni_vstup_platnost_do'], $_SESSION['cb_prvni_vstup_obnoveni_hesla'], $_SESSION['cb_local_login_user_id']);
     $_SESSION['cb_timeout_min'] = 720;
     $_SESSION['cb_session_start_ts'] = time();
 }
@@ -157,11 +181,17 @@ function cb_prvni_vstup_uloz(mysqli $db, array $post): void
     }
     $idUser = (int)($_SESSION['cb_prvni_vstup_user_id'] ?? 0);
     $user = cb_prvni_vstup_user($db, $idUser);
+    $obnoveniHesla = !empty($_SESSION['cb_prvni_vstup_obnoveni_hesla']);
     $jmeno = trim((string)($post['jmeno'] ?? ''));
     $prijmeni = trim((string)($post['prijmeni'] ?? ''));
     $email = trim((string)($post['email'] ?? ''));
     $heslo = (string)($post['heslo'] ?? '');
     $hesloZnovu = (string)($post['heslo_znovu'] ?? '');
+    if ($obnoveniHesla && is_array($user)) {
+        $jmeno = (string)$user['jmeno'];
+        $prijmeni = (string)$user['prijmeni'];
+        $email = (string)$user['email'];
+    }
     if (!is_array($user) || $jmeno === '' || $prijmeni === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
         throw new RuntimeException('Vyplňte celé jméno a platný e-mail.');
     }
@@ -179,11 +209,12 @@ function cb_prvni_vstup_uloz(mysqli $db, array $post): void
     $hash = password_hash($heslo, PASSWORD_DEFAULT);
     $db->begin_transaction();
     try {
-        $stmt = $db->prepare('UPDATE user SET jmeno=?, prijmeni=?, email=?, heslo_hash=? WHERE id_user=? AND heslo_hash IS NULL');
+        $whereHeslo = $obnoveniHesla ? 'heslo_hash IS NOT NULL' : 'heslo_hash IS NULL';
+        $stmt = $db->prepare('UPDATE user SET jmeno=?, prijmeni=?, email=?, heslo_hash=? WHERE id_user=? AND ' . $whereHeslo);
         $stmt->bind_param('ssssi', $jmeno, $prijmeni, $email, $hash, $idUser);
         $stmt->execute();
         if ($stmt->affected_rows !== 1) {
-            throw new RuntimeException('První vstup už byl dokončen.');
+            throw new RuntimeException($obnoveniHesla ? 'Odkaz pro nastavení nového hesla už není platný.' : 'První vstup už byl dokončen.');
         }
         $stmt->close();
         $stmt = $db->prepare('UPDATE user_prvni_vstup_token SET pouzito=NOW() WHERE id_user=? AND pouzito IS NULL AND zruseno IS NULL');

@@ -52,6 +52,7 @@ unset($_SESSION['cb_flash']);
           <span class="modal-btn-main">Přihlásit</span>
         </button>
       </div>
+      <p class="modal-login-link"><a href="<?= h(cb_root_url('?zapomenute_heslo=1')) ?>">Zapomenuté heslo</a></p>
       <p class="modal-login-status" id="cbLoginStatus" aria-live="polite"><?= h($loginFlash) ?></p>
     </form>
   </div>

@@ -40,6 +40,19 @@ if (!empty($_SESSION['login_ok'])) {
 cb_nastaveni_uzivatele_vyrid_post();
 cb_local_login_sync_vyrid();
 
+if (empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'] ?? '') === 'zapomenute_heslo') {
+    try {
+        $cbResetEmailSent = cb_prvni_vstup_obnoveni_hesla_odeslat(db(), trim((string)($_POST['email'] ?? '')));
+        $_SESSION['cb_flash'] = $cbResetEmailSent
+            ? 'E-mail byl odeslán'
+            : "Neznámý E-mail,\nkontaktujte admina IS";
+    } catch (Throwable $e) {
+        $_SESSION['cb_flash'] = $e->getMessage();
+    }
+    header('Location: ' . cb_root_url('?zapomenute_heslo=1'), true, 303);
+    exit;
+}
+
 if (empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'] ?? '') === 'prvni_vstup_ulozit') {
     try {
         cb_prvni_vstup_uloz(db(), $_POST);
@@ -360,6 +373,8 @@ if ($cb2faPending) {
     if (!empty($_SESSION['login_ok'])) {
         echo '<script>window.location.href=' . json_encode(cb_login_target_url(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . ';</script>';
     }
+} elseif (isset($_GET['zapomenute_heslo'])) {
+    require_once __DIR__ . '/common/modaly/modal_ztracene_heslo.php';
 } else {
     require_once __DIR__ . '/common/modaly/modal_login.php';
 }

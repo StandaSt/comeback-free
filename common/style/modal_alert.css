@@ -114,6 +114,16 @@
   line-height: 1.35;
 }
 
+.modal-login-link{
+  margin: 0;
+  text-align: center;
+  font-size: var(--cb-font-14);
+}
+
+.modal-login-link a{
+  color: var(--cb-modal-primary);
+}
+
 .modal-overlay,
 #cb-2fa-ovl{
   position: fixed;
@@ -592,6 +602,10 @@ code{
 }
 
 @media (min-width: 701px){
+  .modal-login-link a{
+    color: #fff7ed;
+  }
+
   .modal-login-page{
     min-height: 100vh;
     min-height: 100dvh;
@@ -897,6 +911,10 @@ code{
     font-weight: 800;
     line-height: 1.35;
     text-align: center;
+  }
+
+  .modal-login-page .modal-login-status.is-result{
+    font-size: calc(var(--cb-font-14) * 1.3);
   }
 
   .modal-login-page .modal-login-note,
