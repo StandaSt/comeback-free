@@ -7,6 +7,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/../../common/lib/session_boot.php';
+require_once __DIR__ . '/../../common/lib/ochrana_crf.php';
 // DB konfigurace musí vzniknout v globálním scope dříve, než app.php zpřístupní db().
 require_once __DIR__ . '/../../common/config/secrets.php';
 require_once __DIR__ . '/../../common/lib/app.php';
@@ -31,6 +32,8 @@ if (strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? '')) !== 'POST') {
 if (empty($_SESSION['login_ok']) || !cb_session_validate_after_login()) {
     cb_ajax_trace_error(401, 'Přihlášená session není platná.');
 }
+
+cb_crf_vyzaduj();
 
 $raw = file_get_contents('php://input');
 if (!is_string($raw) || trim($raw) === '') {

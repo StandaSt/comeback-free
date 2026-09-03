@@ -7,7 +7,6 @@
  */
 
 (function (w) {
-  const d = w.document;
   const CB_RESTIA = w.CB_RESTIA || (w.CB_RESTIA = {});
 
   function requestUrl() {
@@ -110,7 +109,16 @@
 
     return stateJob.then((state) => {
       const running = !!(state && Number(state.active || 0) === 1);
-      return running ? waitForFinish(opts) : state;
+      if (!running) {
+        const completed = triggerRestia && Number(state && state.completed || 0) === 1;
+        return { state: state || {}, finished: completed };
+      }
+      return waitForFinish(opts).then((finishedState) => ({ state: finishedState || {}, finished: true }));
+    }).then((result) => {
+      if (result.finished) {
+        w.dispatchEvent(new CustomEvent('cb:restia-finished'));
+      }
+      return result.state;
     });
   };
 })(window);

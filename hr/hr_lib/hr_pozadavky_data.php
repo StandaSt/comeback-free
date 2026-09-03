@@ -17,7 +17,6 @@ function hr_pozadavky_data(mysqli $db): array
     $muzeZadat = cb_pravo_ma(312);
     $muzeZrusit = cb_pravo_ma(314);
     $mainPobocka = [];
-    $personId = 0;
     $chybaZadani = '';
 
     if ($idUser > 0 && ($muzeCistMain || $muzeZadat)) {
@@ -25,18 +24,6 @@ function hr_pozadavky_data(mysqli $db): array
             $mainPobocka = hr_nacti_hlavni_pobocku_uzivatele($db, $idUser);
         } catch (RuntimeException $e) {
             $chybaZadani = $e->getMessage();
-        }
-    }
-
-    if ($muzeZadat || $muzeZrusit) {
-        try {
-            $personId = hr_current_person_id($db);
-        } catch (RuntimeException $e) {
-            if ($muzeCistVse) {
-                $personId = 1;
-            } else {
-                $chybaZadani = $e->getMessage();
-            }
         }
     }
 
@@ -61,11 +48,11 @@ function hr_pozadavky_data(mysqli $db): array
 
     return [
         'pozadavkyMuzeCist' => $muzeCist,
-        'pozadavkyMuzeZadat' => $muzeZadat && (int)($mainPobocka['id_pob'] ?? 0) > 0 && $personId > 0,
-        'pozadavkyMuzeZrusit' => $muzeZrusit && $personId > 0,
+        'pozadavkyMuzeZadat' => $muzeZadat && (int)($mainPobocka['id_pob'] ?? 0) > 0 && $idUser > 0,
+        'pozadavkyMuzeZrusit' => $muzeZrusit && $idUser > 0,
         'pozadavkyZobraziPobocku' => $muzeCistVse,
         'pozadavkyMainPobocka' => $mainPobocka,
-        'pozadavkyPersonId' => $personId,
+        'pozadavkyUserId' => $idUser,
         'pozadavkyChybaZadani' => $chybaZadani,
         'pozadavkyRozsah' => $muzeCistVse ? 'všech poboček' : 'pobočky ' . (string)($mainPobocka['nazev'] ?? ''),
         'pozadavkyNove' => $nove,

@@ -26,6 +26,8 @@ try {
         exit;
     }
 
+    cb_crf_vyzaduj();
+
     $raw = (string)file_get_contents('php://input');
     $data = json_decode($raw, true);
     if (!is_array($data)) {

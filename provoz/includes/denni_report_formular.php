@@ -10,6 +10,7 @@ $zrFinalFullMode = !empty($isEditingFinalReport) ? '1' : '0';
 $zrRozvozSazba = max(0, (int)($zrRozvozSazba ?? 0));
 $zrCanUnlockFinalReport = !empty($canUnlockFinalReport);
 $zrIsEditingFinalReport = !empty($isEditingFinalReport);
+$zrIsArchiveView = !empty($isArchiveView);
 $zrIsCreatingMissingFinalReport = !empty($isCreatingMissingFinalReport);
 $zrMissingFinalReportDate = trim((string)($reportDateDisplay ?? $reportDate ?? ''));
 $zrSubmitReadyText = $zrIsCreatingMissingFinalReport
@@ -127,7 +128,7 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
                     <span class="text_tucny text_14"><?= h($singleAllowedBranchName) ?></span>
                     <input type="hidden" name="zr_id_pob" value="<?= h((string)$reportBranchId) ?>">
                   <?php else: ?>
-                    <select class="zr_intro_select" name="zr_id_pob" data-zr-reload-pp="1">
+                    <select class="zr_intro_select" name="zr_id_pob" data-zr-reload-pp="1"<?= $zrIsArchiveView ? ' disabled' : '' ?>>
                       <option value=""><?= h('Vyber pobočku') ?></option>
                       <?php foreach ($allowedBranches as $branchId => $allowedBranchName): ?>
                         <option value="<?= h((string)$branchId) ?>"<?= (int)$branchId === $reportBranchId ? ' selected' : '' ?>><?= h((string)$allowedBranchName) ?></option>
@@ -140,7 +141,7 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
               <tr>
                 <th class="zr_intro_label zr_req_label txt_l" data-zr-required-label="datum">Datum</th>
                 <td>
-                  <select class="zr_intro_select" name="datum_reportu" data-zr-date data-zr-required="datum" data-zr-reload-pp="1">
+                  <select class="zr_intro_select" name="datum_reportu" data-zr-date data-zr-required="datum" data-zr-reload-pp="1"<?= $zrIsArchiveView ? ' disabled' : '' ?>>
                     <?php foreach (($workdayOptions ?? []) as $dayOption): ?>
                       <option value="<?= h((string)$dayOption['value']) ?>"<?= ((string)$dayOption['value'] === (string)$reportDate) ? ' selected' : '' ?><?= !empty($dayOption['missing']) ? ' style="color:#c62828;"' : '' ?>><?= h((string)$dayOption['label']) ?></option>
                     <?php endforeach; ?>

@@ -6,6 +6,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/common/lib/session_boot.php';
+require_once __DIR__ . '/common/lib/ochrana_crf.php';
 require_once __DIR__ . '/common/lib/app.php';
 require_once __DIR__ . '/common/lib/system.php';
 require_once __DIR__ . '/common/config/secrets.php';
@@ -26,6 +27,10 @@ if (!empty($_SESSION['login_ok'])) {
         is_array($cbRightsUser) ? (int)($cbRightsUser['id_user'] ?? 0) : 0,
         is_array($cbRightsUser) ? (int)($cbRightsUser['id_role'] ?? 0) : 0
     );
+}
+
+if (!empty($_SESSION['login_ok']) && cb_crf_zapisova_metoda()) {
+    cb_crf_vyzaduj();
 }
 
 $cbAuthOk = !empty($_SESSION['cb_auth_ok']);

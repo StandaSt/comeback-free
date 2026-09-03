@@ -91,6 +91,37 @@ $cbHeaderModuleDeniedText = 'Tento modul nyní nemáte povolen.';
 })();
 </script>
 <?php if ($cbLoginOk): ?>
+<script>
+/* Po potvrzenem dokonceni Restie nacte pouze aktualni cas do hlavicky. */
+(function () {
+  function refreshRestiaTime() {
+    var value = document.querySelector('[data-cb-head-update="1"] .head_update_value');
+    if (!(value instanceof HTMLElement)) { return; }
+
+    fetch(String(window.CB_ENDPOINT || window.location.href), {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: { 'X-Comeback-Restia-Refresh-Time': '1', 'Accept': 'application/json' }
+    })
+      .then(function (response) {
+        if (!response.ok) { throw new Error('HTTP ' + response.status); }
+        return response.json();
+      })
+      .then(function (data) {
+        var time = String(data && data.time ? data.time : '');
+        if (data && data.ok === true && /^\d{2}:\d{2}:\d{2}$/.test(time)) {
+          value.textContent = time;
+        }
+      })
+      .catch(function () {
+      });
+  }
+
+  window.addEventListener('cb:restia-finished', refreshRestiaTime);
+})();
+</script>
+<?php endif; ?>
+<?php if ($cbLoginOk): ?>
   <!-- Skript nacita a zobrazuje pocty tiketu Helpdesk. -->
   <script>
   (function () {

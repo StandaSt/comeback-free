@@ -12,16 +12,7 @@ function hr_post_pozadavek_zrusit(mysqli $db): void
             throw new RuntimeException('Na zruseni pozadavku nemate pravo.');
         }
 
-        try {
-            $zrusilPerson = hr_current_person_id($db);
-        } catch (RuntimeException $e) {
-            if (!cb_pravo_ma(311)) {
-                throw $e;
-            }
-            $zrusilPerson = 1;
-        }
-
-        hr_zrus_pozadavek($db, (int)($_POST['id_pozadavek'] ?? 0), $zrusilPerson);
+        hr_zrus_pozadavek($db, (int)($_POST['id_pozadavek'] ?? 0), hr_current_user_id());
         cb_form_finish(
             cb_root_url('index.php?m=hr&page=pozadavky'),
             true,

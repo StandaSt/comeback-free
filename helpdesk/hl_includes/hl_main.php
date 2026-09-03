@@ -81,14 +81,16 @@ if (empty($_SESSION['login_ok'])) {
 $idUser = cb_helpdesk_current_user_id();
 $isAdmin = cb_helpdesk_is_admin();
 $conn = db();
-$helpdeskModuleId = cb_helpdesk_current_module_id();
+$helpdeskAreaCondition = cb_helpdesk_allowed_area_condition();
+$helpdeskCompanyCondition = 'COALESCE(h.id_firma, 1) = ' . (string)cb_helpdesk_current_company_id();
 
 $items = [];
 $scope = cb_helpdesk_visible_scope($idUser);
 
 if ($isAdmin) {
     $stmtItems = $conn->prepare('
-        SELECT h.id_helpdesk, h.id_user_zalozil, h.typ, h.stav, h.verejny, h.predmet, h.vytvoreno, h.upraveno,
+        SELECT h.id_helpdesk, h.id_user_zalozil, h.modul, h.typ, h.stav, h.verejny, h.predmet, h.vytvoreno, h.upraveno,
+               h.pocet_zobrazeni, h.pocet_unikatnich_zobrazeni, h.pocet_zprav, TIMESTAMPDIFF(MINUTE, h.vytvoreno, NOW()) AS stari_minut,
                u.jmeno, u.prijmeni, u.id_role,
                CASE
                    WHEN hr.id_helpdesk_read IS NULL THEN 1
@@ -100,18 +102,18 @@ if ($isAdmin) {
                    FROM helpdesk_sledujici sw
                    WHERE sw.id_helpdesk = h.id_helpdesk
                      AND sw.id_user = ?
-               ) AS is_watched,
-               (SELECT COUNT(*) FROM helpdesk_zprava z WHERE z.id_helpdesk = h.id_helpdesk) AS pocet_zprav
+               ) AS is_watched
         FROM helpdesk h
         LEFT JOIN `user` u ON u.id_user = h.id_user_zalozil
         LEFT JOIN helpdesk_read hr ON hr.id_helpdesk = h.id_helpdesk AND hr.id_user = ?
-        WHERE h.modul = ?
+        WHERE ' . $helpdeskAreaCondition . ' AND ' . $helpdeskCompanyCondition . '
         ORDER BY h.vytvoreno DESC, h.id_helpdesk DESC
         LIMIT 120
     ');
 } else {
     $stmtItems = $conn->prepare('
-        SELECT h.id_helpdesk, h.id_user_zalozil, h.typ, h.stav, h.verejny, h.predmet, h.vytvoreno, h.upraveno,
+        SELECT h.id_helpdesk, h.id_user_zalozil, h.modul, h.typ, h.stav, h.verejny, h.predmet, h.vytvoreno, h.upraveno,
+               h.pocet_zobrazeni, h.pocet_unikatnich_zobrazeni, h.pocet_zprav, TIMESTAMPDIFF(MINUTE, h.vytvoreno, NOW()) AS stari_minut,
                u.jmeno, u.prijmeni, u.id_role,
                CASE
                    WHEN hr.id_helpdesk_read IS NULL THEN 1
@@ -123,12 +125,11 @@ if ($isAdmin) {
                    FROM helpdesk_sledujici sw
                    WHERE sw.id_helpdesk = h.id_helpdesk
                      AND sw.id_user = ?
-               ) AS is_watched,
-               (SELECT COUNT(*) FROM helpdesk_zprava z WHERE z.id_helpdesk = h.id_helpdesk) AS pocet_zprav
+               ) AS is_watched
         FROM helpdesk h
         LEFT JOIN `user` u ON u.id_user = h.id_user_zalozil
         LEFT JOIN helpdesk_read hr ON hr.id_helpdesk = h.id_helpdesk AND hr.id_user = ?
-        WHERE h.modul = ? AND ' . $scope['sql'] . '
+        WHERE ' . $helpdeskAreaCondition . ' AND ' . $helpdeskCompanyCondition . ' AND ' . $scope['sql'] . '
         ORDER BY h.vytvoreno DESC, h.id_helpdesk DESC
         LIMIT 120
     ');
@@ -136,11 +137,11 @@ if ($isAdmin) {
 
 if ($stmtItems instanceof mysqli_stmt) {
     if ($isAdmin) {
-        $stmtItems->bind_param('iii', $idUser, $idUser, $helpdeskModuleId);
+        $stmtItems->bind_param('ii', $idUser, $idUser);
         $stmtItems->execute();
     } else {
-        $types = 'iii' . (string)$scope['types'];
-        $params = [$idUser, $idUser, $helpdeskModuleId];
+        $types = 'ii' . (string)$scope['types'];
+        $params = [$idUser, $idUser];
         foreach ((array)($scope['params'] ?? []) as $value) {
             $params[] = $value;
         }
@@ -162,8 +163,11 @@ if ($stmtItems instanceof mysqli_stmt) {
 }
 
 $helpdeskApiUrl = cb_root_url('index.php');
-$arrowIconUrl = cb_module_asset_url('img/icons/arrow-32.png', 'provoz');
 $helpdeskSourceModule = (string)($_SESSION['cb_helpdesk_source_module'] ?? 'provoz');
+$helpdeskAreas = cb_helpdesk_allowed_areas();
+if (!isset($helpdeskAreas[$helpdeskSourceModule])) {
+    $helpdeskSourceModule = (string)(array_key_first($helpdeskAreas) ?? '');
+}
 $helpdeskUser = $_SESSION['cb_user'] ?? [];
 $helpdeskUserName = trim((string)($helpdeskUser['name'] ?? '') . ' ' . (string)($helpdeskUser['surname'] ?? ''));
 if ($helpdeskUserName === '') {
@@ -176,6 +180,7 @@ if ($helpdeskUserRole === '') {
 $helpdeskCurrentView = cb_helpdesk_current_view($isAdmin);
 $helpdeskView = $helpdeskCurrentView['key'];
 $helpdeskPageTitle = $helpdeskCurrentView['title'];
+$helpdeskShowClosedToggle = $helpdeskView !== 'new-ticket' && $helpdeskView !== 'closed';
 
 $helpdeskMenuUrl = static function (string $view) use ($helpdeskSourceModule): string {
     return cb_root_url('index.php?m=helpdesk&src=' . rawurlencode($helpdeskSourceModule) . '&hd=' . rawurlencode($view));
@@ -206,9 +211,20 @@ foreach ($items as $item) {
     <?php require __DIR__ . '/../../common/pages/uprava_profilu.php'; ?>
     <?php return; ?>
 <?php endif; ?>
-<section class="pp helpdesk_module_content" data-module="helpdesk" data-page="<?= h($helpdeskView) ?>" data-cb-helpdesk-module="1" data-cb-hd-api-url="<?= h($helpdeskApiUrl) ?>" data-cb-hd-arrow-url="<?= h($arrowIconUrl) ?>" data-cb-hd-is-admin="<?= $isAdmin ? '1' : '0' ?>" data-cb-hd-author-id="<?= (int)$idUser ?>">
-<header class="pp_header">
-<h1><?= h($helpdeskPageTitle) ?></h1>
+<section class="pp helpdesk_module_content" data-module="helpdesk" data-page="<?= h($helpdeskView) ?>" data-cb-helpdesk-module="1" data-cb-hd-api-url="<?= h($helpdeskApiUrl) ?>" data-cb-hd-is-admin="<?= $isAdmin ? '1' : '0' ?>" data-cb-hd-author-id="<?= (int)$idUser ?>">
+<header class="pp_header helpdesk_page_header">
+<div class="helpdesk_list_header">
+  <h1><?= h($helpdeskPageTitle) ?></h1>
+  <?php if ($helpdeskShowClosedToggle): ?>
+    <label class="helpdesk_include_closed">
+      <input type="checkbox" data-cb-hd-include-closed="1">
+      <span>i uzavřené</span>
+    </label>
+  <?php endif; ?>
+</div>
+<?php if ($helpdeskView !== 'new-ticket'): ?>
+  <h2 class="helpdesk_detail_heading" data-cb-hd-detail-heading="1">Vyber tiket ze seznamu vlevo</h2>
+<?php endif; ?>
 </header>
 <?php if ($helpdeskView === 'new-ticket'): ?>
     <form class="helpdesk_form ram_normal zaobleni_8" method="post" action="<?= h($helpdeskCreateUrl) ?>" enctype="multipart/form-data">
@@ -224,6 +240,18 @@ foreach ($items as $item) {
           <option value="dotaz">Dotaz</option>
           <option value="navrh">Námět na vylepšení</option>
         </select>
+
+        <div class="helpdesk_form_label">Oblast</div>
+        <?php if (count($helpdeskAreas) === 1): ?>
+          <div class="helpdesk_form_static"><?= h((string)(reset($helpdeskAreas)['label'] ?? '')) ?></div>
+          <input type="hidden" name="modul" value="<?= h((string)(array_key_first($helpdeskAreas) ?? '')) ?>">
+        <?php else: ?>
+          <select class="helpdesk_form_input" id="hl-ticket-modul" name="modul" required>
+            <?php foreach ($helpdeskAreas as $areaKey => $area): ?>
+              <option value="<?= h((string)$areaKey) ?>"<?= $areaKey === $helpdeskSourceModule ? ' selected' : '' ?>><?= h((string)$area['label']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        <?php endif; ?>
 
         <label class="helpdesk_form_label" for="hl-ticket-predmet">Předmět</label>
         <input class="helpdesk_form_input" id="hl-ticket-predmet" type="text" name="predmet" maxlength="160" placeholder="Nutno vyplnit" required>
@@ -253,31 +281,48 @@ foreach ($items as $item) {
 <?php else: ?>
 <div class="helpdesk_board">
   <div class="helpdesk_list_col">
-      <section class="helpdesk_list_section" data-cb-hd-filter-value="all">
+      <section class="helpdesk_list_section" data-cb-hd-filter-value="all" data-cb-hd-include-closed="<?= $helpdeskShowClosedToggle ? '0' : '1' ?>">
         <div class="helpdesk_scroll">
           <div class="helpdesk_ticket_list" data-cb-hd-list="1">
             <?php if ($visibleItems === []): ?>
               <div class="helpdesk_empty ram_normal zaobleni_10" data-cb-hd-empty="1">Zatím bez záznamu.</div>
             <?php else: ?>
               <?php foreach ($visibleItems as $item): ?>
-                <article class="helpdesk_ticket_item ram_normal zaobleni_10" data-hd-item="<?= cb_helpdesk_ticket_h((string)(int)$item['id_helpdesk']) ?>" data-hd-owner-id="<?= (int)($item['id_user_zalozil'] ?? 0) ?>" data-hd-watched="<?= (int)($item['is_watched'] ?? 0) === 1 ? '1' : '0' ?>" data-hd-stav="<?= cb_helpdesk_ticket_h((string)$item['stav']) ?>" data-hd-filtr="<?= cb_helpdesk_ticket_h((string)$item['stav'] === 'vyřešeno' ? 'uzavřené' : (trim((string)$item['stav']) === 'řeší se' ? 'řeší se' : 'nový')) ?>" data-hd-has-new-reply="<?= (int)($item['has_new_reply'] ?? 0) === 1 ? '1' : '0' ?>">
+                <?php
+                $ticketAgeMinutes = max(0, (int)($item['stari_minut'] ?? 0));
+                $ticketAgeLabel = $ticketAgeMinutes < 1440
+                    ? intdiv($ticketAgeMinutes, 60) . ':' . str_pad((string)($ticketAgeMinutes % 60), 2, '0', STR_PAD_LEFT)
+                    : intdiv($ticketAgeMinutes, 1440) . ' d';
+                $ticketViewCount = max(0, (int)($item['pocet_zobrazeni'] ?? 0));
+                $ticketUniqueViewCount = max(0, (int)($item['pocet_unikatnich_zobrazeni'] ?? 0));
+                ?>
+                <article class="helpdesk_ticket_item helpdesk_ticket_area_<?= cb_helpdesk_ticket_h((string)(int)$item['modul']) ?> ram_normal zaobleni_10" data-hd-item="<?= cb_helpdesk_ticket_h((string)(int)$item['id_helpdesk']) ?>" data-hd-owner-id="<?= (int)($item['id_user_zalozil'] ?? 0) ?>" data-hd-watched="<?= (int)($item['is_watched'] ?? 0) === 1 ? '1' : '0' ?>" data-hd-stav="<?= cb_helpdesk_ticket_h((string)$item['stav']) ?>" data-hd-filtr="<?= cb_helpdesk_ticket_h((string)$item['stav'] === 'vyřešeno' ? 'uzavřené' : (trim((string)$item['stav']) === 'řeší se' ? 'řeší se' : 'nový')) ?>" data-hd-has-new-reply="<?= (int)($item['has_new_reply'] ?? 0) === 1 ? '1' : '0' ?>">
                   <div class="helpdesk_ticket_row">
                     <div class="helpdesk_ticket_body">
                       <div class="helpdesk_ticket_head">
-                        <strong class="helpdesk_ticket_number"><?= cb_helpdesk_ticket_h('Tiket č.: ' . (string)(int)$item['id_helpdesk']) ?></strong>
+                        <div class="helpdesk_ticket_title_group">
+                          <strong class="helpdesk_ticket_number"><?= cb_helpdesk_ticket_h('Tiket č.: ' . (string)(int)$item['id_helpdesk']) ?></strong>
+                          <strong class="helpdesk_ticket_subject"><?= cb_helpdesk_ticket_h((string)$item['predmet']) ?></strong>
+                        </div>
                         <div class="helpdesk_ticket_meta">
                           <strong class="helpdesk_ticket_author <?= cb_helpdesk_ticket_h(cb_helpdesk_ticket_author_class($item)) ?>"><?= cb_helpdesk_ticket_h(cb_helpdesk_ticket_author($item)) ?></strong>
+                          <div class="helpdesk_ticket_metrics">
+                            <span class="helpdesk_ticket_age" title="Stáří tiketu"><?= cb_helpdesk_ticket_h($ticketAgeLabel) ?></span>
+                            <span class="helpdesk_ticket_unique_views" title="Počet unikátních uživatelů, kteří otevřeli detail" aria-label="Unikátní uživatelé: <?= $ticketUniqueViewCount ?>">👤 <span data-hd-unique-view-count="1"><?= $ticketUniqueViewCount ?></span></span>
+                            <span class="helpdesk_ticket_views" title="Celkový počet otevření detailu" aria-label="Celkový počet otevření detailu: <?= $ticketViewCount ?>"><span data-hd-view-count="1"><?= $ticketViewCount ?></span></span>
+                          </div>
                           <span class="helpdesk_ticket_counter">
-                            <span class="helpdesk_ticket_bell_wrap" data-hd-bell-wrap="1"><?= (int)($item['has_new_reply'] ?? 0) === 1 ? '<span class="helpdesk_ticket_bell helpdesk_state_unread" data-hd-bell="1" title="Nová reakce" aria-label="Nová reakce">!</span>' : '<span class="helpdesk_ticket_bell" data-hd-bell="0" title="Bez nové reakce" aria-label="Bez nové reakce">!</span>' ?></span>
+                            <span class="helpdesk_ticket_bell_wrap" data-hd-bell-wrap="1"><?= (int)($item['has_new_reply'] ?? 0) === 1 ? '<span class="helpdesk_ticket_bell helpdesk_state_unread" data-hd-bell="1" title="Nová reakce" aria-label="Nová reakce"></span>' : '<span class="helpdesk_ticket_bell" data-hd-bell="0" title="Bez nové reakce" aria-label="Bez nové reakce"></span>' ?></span>
                             <span class="helpdesk_ticket_count"><?= cb_helpdesk_ticket_h((string)max(1, (int)($item['pocet_zprav'] ?? 0))) ?></span>
                           </span>
                         </div>
                       </div>
                       <div class="helpdesk_ticket_desc">
-                        <div class="helpdesk_ticket_desc_text">
-                          <?= cb_helpdesk_ticket_h((string)$item['predmet']) ?> | Stav: <span data-hd-state-text="1"><?= cb_helpdesk_ticket_h((string)$item['stav']) ?></span>
-                          | Typ: <?= cb_helpdesk_ticket_h(cb_helpdesk_ticket_type_label((string)$item['typ'])) ?>
-                          | Určení: <?= cb_helpdesk_ticket_h(cb_helpdesk_ticket_visibility_label((int)$item['verejny'])) ?>
+                        <div class="helpdesk_ticket_badges">
+                          <span class="helpdesk_ticket_badge helpdesk_ticket_badge_status"><span data-hd-state-text="1"><?= cb_helpdesk_ticket_h((string)$item['stav']) ?></span></span>
+                          <span class="helpdesk_ticket_badge"><?= cb_helpdesk_ticket_h(cb_helpdesk_area_label((int)$item['modul'])) ?></span>
+                          <span class="helpdesk_ticket_badge"><?= cb_helpdesk_ticket_h(cb_helpdesk_ticket_type_label((string)$item['typ'])) ?></span>
+                          <span class="helpdesk_ticket_badge"><?= cb_helpdesk_ticket_h(cb_helpdesk_ticket_visibility_label((int)$item['verejny'])) ?></span>
                         </div>
                       </div>
                     </div>
@@ -288,11 +333,6 @@ foreach ($items as $item) {
           </div>
         </div>
       </section>
-  </div>
-  <div class="helpdesk_marker_col">
-      <div class="helpdesk_marker_wrap">
-        <div class="helpdesk_marker" data-cb-hd-detail-marker="1"></div>
-      </div>
   </div>
   <div class="helpdesk_detail_col">
       <div class="helpdesk_scroll helpdesk_detail_scroll">

@@ -191,7 +191,7 @@ if (!function_exists('cb_restia_online_kontrola_notify_admin')) {
 }
 
 if (!function_exists('cb_restia_online_kontrola')) {
-    function cb_restia_online_kontrola(bool $force = false)
+    function cb_restia_online_kontrola(bool $force = false): bool
     {
         $db = db();
 
@@ -208,7 +208,7 @@ if (!function_exists('cb_restia_online_kontrola')) {
             if (!empty($row['konec'])) {
                 $last = strtotime((string)$row['konec']);
                 if ($last !== false && (time() - $last) < 120) {
-                    return;
+                    return false;
                 }
             }
         } elseif ($q instanceof mysqli_result) {
@@ -228,13 +228,13 @@ if (!function_exists('cb_restia_online_kontrola')) {
         } catch (mysqli_sql_exception $e) {
             $stmt->close();
             if ((int)$e->getCode() === 1062) {
-                return;
+                return false;
             }
             throw $e;
         }
         if ($stmt->errno === 1062) {
             $stmt->close();
-            return;
+            return false;
         }
         if ($stmt->errno !== 0) {
             $error = $stmt->error;
@@ -302,6 +302,7 @@ if (!function_exists('cb_restia_online_kontrola')) {
 
         cb_restia_online_kontrola_update_row($db, $idAkce, $zapisy, $aktualizace, $ignore, 0);
         cb_restia_online_kontrola_notify_admin($db, $idAkce, $zapisy, $aktualizace, $ignore);
+        return true;
     }
 }
 

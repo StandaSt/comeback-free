@@ -239,6 +239,12 @@
       pp.setAttribute('aria-busy', 'true');
     }
     form.setAttribute('data-zr-pp-loading', '1');
+    const pageBusy = w.CB_PAGE_BUSY && typeof w.CB_PAGE_BUSY.start === 'function' && typeof w.CB_PAGE_BUSY.stop === 'function'
+      ? w.CB_PAGE_BUSY
+      : null;
+    const pageBusyHandle = pageBusy
+      ? pageBusy.start('Načítám denní report ...', 'Připravuji data reportu')
+      : null;
 
     const body = new FormData(form);
     return fetch(denniReportPpUrl(form), {
@@ -255,6 +261,9 @@
       }
       return res.text();
     }).then(replacePpFromHtml).finally(() => {
+      if (pageBusy) {
+        pageBusy.stop(pageBusyHandle);
+      }
       form.removeAttribute('data-zr-pp-loading');
       if (pp instanceof HTMLElement) {
         pp.classList.remove('is-page-loading');

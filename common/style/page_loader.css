@@ -19,6 +19,26 @@
   white-space:nowrap;
 }
 
+body.cb-page-busy{
+  cursor:wait;
+}
+
+body.cb-page-busy::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:2147483000;
+  background:transparent;
+  pointer-events:auto;
+  touch-action:none;
+  cursor:wait;
+}
+
+.cb_page_loader--floating{
+  position:fixed;
+  z-index:2147483001;
+}
+
 .pp.is-page-loading{
   position:relative;
   min-height:160px;

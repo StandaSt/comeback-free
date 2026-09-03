@@ -32,8 +32,6 @@ if (empty($_SESSION['login_ok'])) {
 }
 
 $cbUser = $_SESSION['cb_user'] ?? [];
-$roleId = is_array($cbUser) ? (int)($cbUser['id_role'] ?? 0) : 0;
-
 if (!cb_pravo_ma(300)) {
     require __DIR__ . '/hr_includes/pripravujeme.php';
     exit;
@@ -86,7 +84,7 @@ if ($isNaborDetail) {
         $pageTitle = 'Náborový proces: ' . (string)$vdHeaderDetail['cele_jmeno'];
     }
 }
-cb_hr_request_dispatch($db, $page, $cbUser, $roleId);
+cb_hr_request_dispatch($db, $page, $cbUser);
 
 $formResult = $_SESSION['cb_form_result'] ?? null;
 unset($_SESSION['cb_form_result']);
@@ -152,8 +150,6 @@ $cbHrUsesPpRenderer = is_array($cbHrPageDefinition['blocks'] ?? null) && $cbHrPa
                 <span class="hr_muted">VD č. <?= h((string)$vdHeaderDetail['id_vd']) ?> - <strong class="hr_vd_header_status"><?= h((string)$vdHeaderDetail['stav_nazev']) ?></strong></span>
                 <a class="hr_vd_close_detail" href="<?= h(cb_root_url('index.php?m=hr&page=nabor')) ?>" aria-label="Zavřít detail" title="Zavřít detail">×</a>
             </div>
-        <?php elseif ($page !== 'zamestnanec'): ?>
-            <?php require __DIR__ . '/hr_includes/hr_header_hledani.php'; ?>
         <?php endif; ?>
     </header>
     <main class="hr_content">

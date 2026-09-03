@@ -23,13 +23,13 @@
     const edgeGap = 8;
     const targetGap = 10;
     let left = targetRect.left + ((targetRect.width - panelRect.width) / 2);
-    let top = targetRect.bottom + targetGap;
-    let placement = 'bottom';
+    let top = targetRect.top - panelRect.height - targetGap;
+    let placement = 'top';
 
     left = Math.max(edgeGap, Math.min(left, w.innerWidth - panelRect.width - edgeGap));
-    if (top + panelRect.height > w.innerHeight - edgeGap) {
-      top = targetRect.top - panelRect.height - targetGap;
-      placement = 'top';
+    if (top < edgeGap) {
+      top = targetRect.bottom + targetGap;
+      placement = 'bottom';
     }
 
     panel.style.left = `${Math.round(left)}px`;

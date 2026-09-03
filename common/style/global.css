@@ -242,6 +242,11 @@ main{
   --cb-module-soft:color-mix(in srgb, var(--cb-module-accent) 16%, var(--cb-bg-control));
 }
 
+.cb_pravo_skryte{
+  visibility:hidden !important;
+  pointer-events:none !important;
+}
+
 .cb_tooltip{
   --cb-tooltip-accent:#2563eb;
   position:fixed;
@@ -942,6 +947,10 @@ main{
   border:var(--head-control-border);
   border-radius:6px;
   background:var(--cb-bg-control);
+}
+
+.head_update[hidden]{
+  display:none;
 }
 
 .head_update_icon{

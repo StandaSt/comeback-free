@@ -34,12 +34,6 @@ return [
                 'type' => 'grid',
                 'columns' => 3,
             ],
-            'header_controls' => [
-                [
-                    'key' => 'hr_header_hledani',
-                    'file' => __DIR__ . '/hr_includes/hr_header_hledani.php',
-                ],
-            ],
             /*
              * Poskytovatel vraci pouze data pro bloky prehledu.
              * Neni soucasti layoutu ani spolecneho PP rendereru.
@@ -79,19 +73,13 @@ return [
                 ],
             ],
         ],
-        'nabor' => ['title' => 'Nábor'],
+        'nabor' => ['title' => 'Evidence uchazečů o zaměstnání'],
         'zamestnanci' => ['title' => 'Zaměstnanci'],
         'zamestnanec' => ['title' => 'Karta zaměstnance'],
         'novy_zamestnanec' => [
             'title' => 'Nový zaměstnanec',
             'root_class' => 'hr_pp',
             'layout' => 'stack',
-            'header_controls' => [
-                [
-                    'key' => 'hr_header_hledani',
-                    'file' => __DIR__ . '/hr_includes/hr_header_hledani.php',
-                ],
-            ],
             'context_provider' => 'hr_novy_zamestnanec_data',
             'context_file' => __DIR__ . '/hr_lib/hr_novy_zamestnanec_data.php',
             'blocks' => [
@@ -106,12 +94,6 @@ return [
             'title' => 'Požadavky',
             'root_class' => 'hr_pp',
             'layout' => 'stack',
-            'header_controls' => [
-                [
-                    'key' => 'hr_header_hledani',
-                    'file' => __DIR__ . '/hr_includes/hr_header_hledani.php',
-                ],
-            ],
             'context_provider' => 'hr_pozadavky_data',
             'context_file' => __DIR__ . '/hr_lib/hr_pozadavky_data.php',
             'blocks' => [

@@ -6,7 +6,7 @@ require_once __DIR__ . '/../../common/includes/blok_menu.php';
 $hlMenuItems = [
     [
         'view' => 'all',
-        'label' => 'Přehled',
+        'label' => 'Přehled tiketů',
     ],
     [
         'view' => 'new-ticket',

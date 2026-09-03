@@ -439,6 +439,80 @@ function cb_denni_report_history_load(mysqli $conn, int $idPob, string $reportDa
     ];
 }
 
+function cb_denni_report_google_history_load(mysqli $conn, int $idPob, string $reportDate): ?array
+{
+    if ($idPob <= 0 || $reportDate === '') {
+        return null;
+    }
+
+    $stmt = $conn->prepare('
+        SELECT
+            r.id_reportu, r.datum_reportu, r.id_pob, r.oteviral, r.zaviral,
+            r.oteviral_text, r.zaviral_text, r.poznamka,
+            pk.hotovost, pk.terminal, pk.stravenky, pk.rozdil,
+            pk.vydaje_benzin, pk.vydaje_auta, pk.vydaje_suroviny,
+            pk.vydaje_ostatni, pk.vydaje_phm_soukrome,
+            ri.trzba, ri.wolt, NULL AS wolt_obj, ri.bolt, NULL AS bolt_obj,
+            ri.damejidlo, NULL AS damejidlo_obj, ri.web, NULL AS web_obj,
+            ri.wolt_cash, NULL AS wolt_cash_obj, ri.dj_cash, NULL AS dj_cash_obj,
+            ri.col_pomer, ri.zrusene_obj_ks, ri.zrusene_obj_kc,
+            ri.zpozdene_rozvozy_5_min, ri.make_time_prumer_sec,
+            ri.objednavky_nezrusene_ks, ri.nase_rozvozy_ks, ri.woltdrive_ks,
+            ri.woltdrive_pozde_5_min, ri.woltdrive_pozde_nase_vina,
+            ri.nase_rozvozy_pozde_pomer, ri.woltdrive_zpozdene_ks,
+            ri.doruceno_vcas_pomer, ri.woltdrive_zpozdene_pomer
+        FROM reporty r
+        LEFT JOIN reporty_pokladna pk ON pk.id_reportu = r.id_reportu
+        LEFT JOIN reporty_restia ri ON ri.id_reportu = r.id_reportu
+        WHERE r.id_pob = ? AND r.datum_reportu = ? AND r.platny = 1 AND r.zdroj = 1
+        ORDER BY r.id_reportu DESC
+        LIMIT 1
+    ');
+    if ($stmt === false) {
+        return null;
+    }
+    $stmt->bind_param('is', $idPob, $reportDate);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $reportRow = ($result instanceof mysqli_result) ? ($result->fetch_assoc() ?: null) : null;
+    if ($result instanceof mysqli_result) {
+        $result->free();
+    }
+    $stmt->close();
+    if (!is_array($reportRow)) {
+        return null;
+    }
+
+    $idReportu = (int)($reportRow['id_reportu'] ?? 0);
+    if ($idReportu <= 0) {
+        return null;
+    }
+    $stmtPeople = $conn->prepare('
+        SELECT 0 AS id_dr_osoby, id_user, slot AS id_slot, jmeno, prijmeni,
+            smena_od, smena_do, pauza, odpracovano, rozvozu_manual,
+            vlastni_vuz, vyplatit_phm, rozvozu_restia
+        FROM reporty_osoby
+        WHERE id_reportu = ?
+        ORDER BY slot ASC, COALESCE(smena_od, "00:00:00") ASC,
+            COALESCE(smena_do, "00:00:00") ASC, prijmeni ASC, jmeno ASC
+    ');
+    $peopleRows = [];
+    if ($stmtPeople !== false) {
+        $stmtPeople->bind_param('i', $idReportu);
+        $stmtPeople->execute();
+        $peopleResult = $stmtPeople->get_result();
+        if ($peopleResult instanceof mysqli_result) {
+            while ($row = $peopleResult->fetch_assoc()) {
+                $peopleRows[] = $row;
+            }
+            $peopleResult->free();
+        }
+        $stmtPeople->close();
+    }
+
+    return ['report' => $reportRow, 'people_rows' => $peopleRows];
+}
+
 function cb_denni_report_previous_note_from_history(mysqli $conn, int $idPob, DateTimeImmutable $reportDateDt): string
 {
     if ($idPob <= 0) {
@@ -997,27 +1071,23 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
     $tz = new DateTimeZone('Europe/Prague');
     $currentWorkdayDt = cb_denni_report_current_workday_date();
     $workdayOptions = cb_denni_report_workday_options($currentWorkdayDt);
-    $missingReportDays = [];
     $todayDate = $currentWorkdayDt->format('Y-m-d');
     $showTodayMissingReport = cb_denni_report_has_any_report($conn, $todayDate);
     $missingReportsMonth = cb_denni_report_month_missing_reports_summary($conn, $currentWorkdayDt, $showTodayMissingReport);
-    for ($i = 0; $i <= 7; $i++) {
-        if ($i === 0 && !$showTodayMissingReport) {
-            continue;
-        }
-        $missingReportDays[] = $currentWorkdayDt->modify('-' . $i . ' day');
-    }
     $missingReports = [];
-    foreach ($missingReportDays as $dayDt) {
+    $firstDayOffset = $showTodayMissingReport ? 0 : 1;
+    for ($i = $firstDayOffset; $i < $firstDayOffset + 40; $i++) {
+        $dayDt = $currentWorkdayDt->modify('-' . $i . ' day');
         $dayDate = $dayDt->format('Y-m-d');
         $missingBranches = cb_denni_report_missing_reports_summary($conn, $dayDate);
+        if ($missingBranches === []) {
+            continue;
+        }
         $missingReports[] = [
             'date' => $dayDate,
             'label' => cb_dt_weekday_date_label_cs($dayDt, true),
             'branches' => $missingBranches,
-            'branches_text' => $missingBranches !== []
-                ? implode(', ', array_map(static fn(array $row): string => (string)$row['nazev'], $missingBranches))
-                : 'OK',
+            'branches_text' => implode(', ', array_map(static fn(array $row): string => (string)$row['nazev'], $missingBranches)),
         ];
     }
     if (!$isZadani) {
@@ -1031,6 +1101,23 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
     }
     $allowedWorkdayValues = array_column($workdayOptions, 'value');
     $requestedReportDate = trim((string)($_POST['datum_reportu'] ?? $_GET['datum_reportu'] ?? ''));
+    $isArchiveOpen = ((string)($_GET['zr_archive'] ?? '') === '1');
+    $isGoogleArchiveView = $isArchiveOpen && ((string)($_GET['zr_google'] ?? '') === '1');
+    $isArchiveView = $isGoogleArchiveView || ($isArchiveOpen && ((string)($_GET['zr_archive_edit'] ?? '') !== '1'));
+    $requestedArchiveDate = DateTimeImmutable::createFromFormat('!Y-m-d', $requestedReportDate, $tz);
+    if (
+        $isArchiveOpen
+        && $requestedArchiveDate instanceof DateTimeImmutable
+        && $requestedArchiveDate->format('Y-m-d') === $requestedReportDate
+        && $requestedArchiveDate <= $currentWorkdayDt
+        && !in_array($requestedReportDate, $allowedWorkdayValues, true)
+    ) {
+        $workdayOptions[] = [
+            'value' => $requestedReportDate,
+            'label' => cb_dt_weekday_date_label_cs($requestedArchiveDate, true),
+        ];
+        $allowedWorkdayValues[] = $requestedReportDate;
+    }
     if (!in_array($requestedReportDate, $allowedWorkdayValues, true)) {
         $requestedReportDate = $currentWorkdayDt->format('Y-m-d');
     }
@@ -1188,15 +1275,17 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
     $historyReportId = 0;
     $historyReportExists = false;
     if ($reportBranchId > 0) {
-        $historyData = cb_denni_report_history_load($conn, $reportBranchId, $reportDate);
+        $historyData = $isGoogleArchiveView
+            ? cb_denni_report_google_history_load($conn, $reportBranchId, $reportDate)
+            : cb_denni_report_history_load($conn, $reportBranchId, $reportDate);
         if (is_array($historyData)) {
             $historyReportId = (int)($historyData['report']['id_reportu'] ?? 0);
             $historyReportExists = ($historyReportId > 0);
         }
     }
     $preferFinalReportData = $historyReportExists && is_array($historyData);
-    $requestedFinalEdit = ((int)($_POST['zr_edit_final'] ?? $_GET['zr_edit_final'] ?? 0)) === 1;
-    $canUnlockFinalReport = ($hasRole5 && $mainBranchId > 0 && $mainBranchId === $reportBranchId);
+    $requestedFinalEdit = !$isGoogleArchiveView && ((int)($_POST['zr_edit_final'] ?? $_GET['zr_edit_final'] ?? 0)) === 1;
+    $canUnlockFinalReport = !$isArchiveView && ($hasRole5 && $mainBranchId > 0 && $mainBranchId === $reportBranchId);
     $isCreatingMissingFinalReport = (!$isCurrentWorkday && !$historyReportExists && $canUnlockFinalReport);
     $isEditingFinalReport = $canUnlockFinalReport && ($requestedFinalEdit || $isCreatingMissingFinalReport);
     $canEditHistory = (!$isCurrentWorkday && $canUnlockFinalReport);
@@ -1214,7 +1303,9 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
     }
     $missingHistoryReport = (!$isCurrentWorkday && !$historyReportExists && $reportBranchId > 0);
     $readonlyInfoText = '';
-    if ($missingHistoryReport) {
+    if ($isGoogleArchiveView) {
+        $readonlyInfoText = 'Report zobrazuje data z Google disku';
+    } elseif ($missingHistoryReport) {
         $readonlyInfoText = '';
     }
 
@@ -1497,6 +1588,8 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         'historyData' => $historyData,
         'historyReportId' => $historyReportId,
         'historyReportExists' => $historyReportExists,
+        'isArchiveView' => $isArchiveView,
+        'isGoogleArchiveView' => $isGoogleArchiveView,
         'canUnlockFinalReport' => $canUnlockFinalReport,
         'requestedFinalEdit' => $requestedFinalEdit,
         'isCreatingMissingFinalReport' => $isCreatingMissingFinalReport,

@@ -27,6 +27,8 @@ try {
         exit;
     }
 
+    cb_crf_vyzaduj();
+
     $raw = (string)file_get_contents('php://input');
     $data = json_decode($raw, true);
     if (!is_array($data)) {
@@ -97,9 +99,9 @@ try {
     }
 
     if ($uzavrit) {
-        $stmtU = $conn->prepare('UPDATE helpdesk SET stav = ?, upraveno = NOW(), posledni_zprava = NOW(), uzavreno = NOW() WHERE id_helpdesk = ? LIMIT 1');
+        $stmtU = $conn->prepare('UPDATE helpdesk SET stav = ?, upraveno = NOW(), posledni_zprava = NOW(), uzavreno = NOW(), pocet_zprav = pocet_zprav + 1 WHERE id_helpdesk = ? LIMIT 1');
     } else {
-        $stmtU = $conn->prepare('UPDATE helpdesk SET stav = ?, upraveno = NOW(), posledni_zprava = NOW(), uzavreno = NULL WHERE id_helpdesk = ? LIMIT 1');
+        $stmtU = $conn->prepare('UPDATE helpdesk SET stav = ?, upraveno = NOW(), posledni_zprava = NOW(), uzavreno = NULL, pocet_zprav = pocet_zprav + 1 WHERE id_helpdesk = ? LIMIT 1');
     }
     if ($stmtU instanceof mysqli_stmt) {
         if ($uzavrit || ($novyStav !== '' && $novyStav !== $stavPred)) {
@@ -108,7 +110,7 @@ try {
             $stmtU->close();
         } else {
             $stmtU->close();
-            $stmtU = $conn->prepare('UPDATE helpdesk SET upraveno = NOW(), posledni_zprava = NOW() WHERE id_helpdesk = ? LIMIT 1');
+            $stmtU = $conn->prepare('UPDATE helpdesk SET upraveno = NOW(), posledni_zprava = NOW(), pocet_zprav = pocet_zprav + 1 WHERE id_helpdesk = ? LIMIT 1');
             if ($stmtU instanceof mysqli_stmt) {
                 $stmtU->bind_param('i', $idHelpdesk);
                 $stmtU->execute();

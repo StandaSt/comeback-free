@@ -401,23 +401,23 @@ function hr_fetch_employee_work_timeline(mysqli $db, int $idPerson): array
 {
     $sql = '
         SELECT * FROM (
-            SELECT pv.vytvoreno AS kdy, CONCAT("Nástup / změna vztahu: ", pvt.nazev) AS akce, pv.datum_nastupu AS plati_od, CONCAT(ao.prijmeni, " ", ao.jmeno) AS zapsal, pv.poznamka
+            SELECT pv.vytvoreno AS kdy, CONCAT("Nástup / změna vztahu: ", pvt.nazev) AS akce, pv.datum_nastupu AS plati_od, CONCAT(uu.prijmeni, " ", uu.jmeno) AS zapsal, pv.poznamka
             FROM hr_pracovni_vztah pv
             INNER JOIN hr_cis_pracovni_vztah_typ pvt ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ
-            LEFT JOIN hr_osobni_udaje ao ON ao.id_person = pv.id_person_zadal AND ao.platny = 1
+            LEFT JOIN user uu ON uu.id_user = pv.id_user_zadal
             WHERE pv.id_person = ?
             UNION ALL
-            SELECT m.vytvoreno, CONCAT("Změna mzdy: ", m.castka, " Kč / ", mt.nazev), m.platnost_od, CONCAT(ao.prijmeni, " ", ao.jmeno), NULL
-            FROM hr_mzda m INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = m.id_pracovni_vztah INNER JOIN cis_mzda_typ mt ON mt.id_mzda_typ = m.id_mzda_typ LEFT JOIN hr_osobni_udaje ao ON ao.id_person = m.zadal AND ao.platny = 1 WHERE pv.id_person = ?
+            SELECT m.vytvoreno, CONCAT("Změna mzdy: ", m.castka, " Kč / ", mt.nazev), m.platnost_od, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL
+            FROM hr_mzda m INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = m.id_pracovni_vztah INNER JOIN cis_mzda_typ mt ON mt.id_mzda_typ = m.id_mzda_typ LEFT JOIN user uu ON uu.id_user = m.id_user_zadal WHERE pv.id_person = ?
             UNION ALL
-            SELECT u.vytvoreno, CONCAT("Změna úvazku: ", u.hodin_tydne, " h/týdně"), u.platnost_od, CONCAT(ao.prijmeni, " ", ao.jmeno), NULL
-            FROM hr_pracovni_uvazek u INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = u.id_pracovni_vztah LEFT JOIN hr_osobni_udaje ao ON ao.id_person = u.zadal AND ao.platny = 1 WHERE pv.id_person = ?
+            SELECT u.vytvoreno, CONCAT("Změna úvazku: ", u.hodin_tydne, " h/týdně"), u.platnost_od, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL
+            FROM hr_pracovni_uvazek u INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = u.id_pracovni_vztah LEFT JOIN user uu ON uu.id_user = u.id_user_zadal WHERE pv.id_person = ?
             UNION ALL
-            SELECT b.vytvoreno, CONCAT("Přidán benefit: ", cb.nazev), b.platnost_od, CONCAT(ao.prijmeni, " ", ao.jmeno), NULL
-            FROM hr_benefit b INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = b.id_pracovni_vztah INNER JOIN hr_cis_benefit cb ON cb.id_cis_benefit = b.id_cis_benefit LEFT JOIN hr_osobni_udaje ao ON ao.id_person = b.zadal AND ao.platny = 1 WHERE pv.id_person = ?
+            SELECT b.vytvoreno, CONCAT("Přidán benefit: ", cb.nazev), b.platnost_od, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL
+            FROM hr_benefit b INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = b.id_pracovni_vztah INNER JOIN hr_cis_benefit cb ON cb.id_cis_benefit = b.id_cis_benefit LEFT JOIN user uu ON uu.id_user = b.id_user_zadal WHERE pv.id_person = ?
             UNION ALL
-            SELECT b.zruseno, CONCAT("Odebrán benefit: ", cb.nazev), b.platnost_do, CONCAT(ao.prijmeni, " ", ao.jmeno), NULL
-            FROM hr_benefit b INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = b.id_pracovni_vztah INNER JOIN hr_cis_benefit cb ON cb.id_cis_benefit = b.id_cis_benefit LEFT JOIN hr_osobni_udaje ao ON ao.id_person = b.id_person_zrusil AND ao.platny = 1 WHERE pv.id_person = ? AND b.zruseno IS NOT NULL
+            SELECT b.zruseno, CONCAT("Odebrán benefit: ", cb.nazev), b.platnost_do, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL
+            FROM hr_benefit b INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = b.id_pracovni_vztah INNER JOIN hr_cis_benefit cb ON cb.id_cis_benefit = b.id_cis_benefit LEFT JOIN user uu ON uu.id_user = b.id_user_zrusil WHERE pv.id_person = ? AND b.zruseno IS NOT NULL
             UNION ALL
             SELECT pp.vytvoreno, CONCAT("Přerušení: ", pt.nazev), pp.datum_od, CONCAT(uu.prijmeni, " ", uu.jmeno), pp.poznamka
             FROM hr_pracovni_preruseni pp INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = pp.id_pracovni_vztah INNER JOIN hr_cis_pracovni_preruseni_typ pt ON pt.id_pracovni_preruseni_typ = pp.id_pracovni_preruseni_typ LEFT JOIN user uu ON uu.id_user = pp.id_user_zadal WHERE pv.id_person = ?

@@ -26,13 +26,6 @@ try {
     }
 
     $conn = db();
-    $idModule = cb_helpdesk_current_module_id();
-    if (!cb_helpdesk_ticket_in_module($conn, $idHelpdesk, $idModule)) {
-        http_response_code(404);
-        echo json_encode(['ok' => false, 'err' => 'Požadavek v tomto modulu neexistuje.'], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-
     if (!cb_helpdesk_can_view($conn, $idHelpdesk, $idUser)) {
         http_response_code(403);
         echo json_encode(['ok' => false, 'err' => 'Nemáte přístup k požadavku.'], JSON_UNESCAPED_UNICODE);
@@ -40,8 +33,8 @@ try {
     }
 
     $stmt = $conn->prepare('
-        SELECT h.id_helpdesk, h.id_user_zalozil, h.typ, h.stav, h.verejny, h.predmet, h.popis,
-               h.vytvoreno, h.upraveno, h.uzavreno, u.jmeno, u.prijmeni
+        SELECT h.id_helpdesk, h.id_user_zalozil, h.modul, h.typ, h.stav, h.verejny, h.predmet, h.popis,
+               h.vytvoreno, h.upraveno, h.uzavreno, h.pocet_zobrazeni, h.pocet_unikatnich_zobrazeni, u.jmeno, u.prijmeni
         FROM helpdesk h
         LEFT JOIN `user` u ON u.id_user = h.id_user_zalozil
         WHERE h.id_helpdesk = ?
@@ -62,6 +55,37 @@ try {
 
     if (!is_array($ticket)) {
         throw new RuntimeException('Požadavek nenalezen.');
+    }
+
+    $stmtView = $conn->prepare('UPDATE helpdesk SET pocet_zobrazeni = pocet_zobrazeni + 1 WHERE id_helpdesk = ? LIMIT 1');
+    if ($stmtView instanceof mysqli_stmt) {
+        $stmtView->bind_param('i', $idHelpdesk);
+        if ($stmtView->execute()) {
+            $ticket['pocet_zobrazeni'] = (int)($ticket['pocet_zobrazeni'] ?? 0) + 1;
+        }
+        $stmtView->close();
+    }
+
+    $stmtUnique = $conn->prepare('
+        INSERT IGNORE INTO helpdesk_zobrazeni
+        (id_helpdesk, id_user, prvni_zobrazeni, posledni_zobrazeni)
+        VALUES (?, ?, NOW(), NOW())
+    ');
+    if ($stmtUnique instanceof mysqli_stmt) {
+        $stmtUnique->bind_param('ii', $idHelpdesk, $idUser);
+        $stmtUnique->execute();
+        $isFirstView = $stmtUnique->affected_rows === 1;
+        $stmtUnique->close();
+        if ($isFirstView) {
+            $stmtUniqueCount = $conn->prepare('UPDATE helpdesk SET pocet_unikatnich_zobrazeni = pocet_unikatnich_zobrazeni + 1 WHERE id_helpdesk = ? LIMIT 1');
+            if ($stmtUniqueCount instanceof mysqli_stmt) {
+                $stmtUniqueCount->bind_param('i', $idHelpdesk);
+                if ($stmtUniqueCount->execute()) {
+                    $ticket['pocet_unikatnich_zobrazeni'] = (int)($ticket['pocet_unikatnich_zobrazeni'] ?? 0) + 1;
+                }
+                $stmtUniqueCount->close();
+            }
+        }
     }
 
     cb_helpdesk_mark_read($conn, $idHelpdesk, $idUser);

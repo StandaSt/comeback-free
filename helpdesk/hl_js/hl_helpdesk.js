@@ -11,7 +11,6 @@
     }
 
     var apiUrl = container.getAttribute('data-cb-hd-api-url') || window.CB_ENDPOINT || 'index.php';
-    var arrowIconUrl = container.getAttribute('data-cb-hd-arrow-url') || '';
     var isAdmin = container.getAttribute('data-cb-hd-is-admin') === '1';
     var authorId = Number(container.getAttribute('data-cb-hd-author-id') || '0');
 
@@ -44,10 +43,10 @@
 
   function buildBellHtml(hasNewReply) {
     if (hasNewReplyValue(hasNewReply) === '1') {
-      return '<span class="helpdesk_ticket_bell helpdesk_state_unread" data-hd-bell="1" title="Nová reakce" aria-label="Nová reakce">!</span>';
+      return '<span class="helpdesk_ticket_bell helpdesk_state_unread" data-hd-bell="1" title="Nová reakce" aria-label="Nová reakce"></span>';
     }
 
-    return '<span class="helpdesk_ticket_bell" data-hd-bell="0" title="Bez nové reakce" aria-label="Bez nové reakce">!</span>';
+    return '<span class="helpdesk_ticket_bell" data-hd-bell="0" title="Bez nové reakce" aria-label="Bez nové reakce"></span>';
   }
 
   function formatMessageDateTime(raw) {
@@ -117,6 +116,22 @@
     return textValue;
   }
 
+  function areaText(value) {
+    var areaId = Number(value || 0);
+    if (areaId === 1) { return 'Provoz'; }
+    if (areaId === 2) { return 'HR'; }
+    if (areaId === 3) { return 'Směny'; }
+    if (areaId === 4) { return 'Úkoly'; }
+    return 'Nezařazeno';
+  }
+
+  function visibilityText(value) {
+    var visibility = Number(value || 0);
+    if (visibility === 1) { return 'Všichni mohou reagovat'; }
+    if (visibility === 2) { return 'Všichni mohou číst'; }
+    return 'Pouze pro admina';
+  }
+
   function getRoot() {
     var roots = document.querySelectorAll('.helpdesk_module_content');
     for (var i = 0; i < roots.length; i++) {
@@ -151,17 +166,19 @@
     return box instanceof HTMLElement ? box : null;
   }
 
+  function setDetailHeading(value) {
+    var expanded = getExpandedBox();
+    if (!(expanded instanceof HTMLElement)) { return; }
+    var heading = expanded.querySelector('[data-cb-hd-detail-heading="1"]');
+    if (heading instanceof HTMLElement) {
+      heading.textContent = text(value);
+    }
+  }
+
   function getDetailScrollBox() {
     var panel = getDetailPanelBox();
     if (!(panel instanceof HTMLElement)) { return null; }
     var box = panel.parentElement;
-    return box instanceof HTMLElement ? box : null;
-  }
-
-  function getDetailMarkerBox() {
-    var expanded = getExpandedBox();
-    if (!(expanded instanceof HTMLElement)) { return null; }
-    var box = expanded.querySelector('[data-cb-hd-detail-marker]');
     return box instanceof HTMLElement ? box : null;
   }
 
@@ -180,6 +197,32 @@
     var bellWrap = row.querySelector('[data-hd-bell-wrap="1"]');
     if (bellWrap instanceof HTMLElement) {
       bellWrap.innerHTML = buildBellHtml(hasNewReply);
+    }
+  }
+
+  function updateRowViewCount(id, viewCount, uniqueViewCount) {
+    var row = getItemRow(id);
+    if (!(row instanceof HTMLElement)) { return; }
+
+    var count = Math.max(0, Math.trunc(Number(viewCount || 0)));
+    var viewCountBox = row.querySelector('[data-hd-view-count="1"]');
+    if (viewCountBox instanceof HTMLElement) {
+      viewCountBox.textContent = String(count);
+    }
+
+    var viewBox = row.querySelector('.helpdesk_ticket_views');
+    if (viewBox instanceof HTMLElement) {
+      viewBox.setAttribute('aria-label', 'Celkový počet otevření detailu: ' + String(count));
+    }
+
+    var uniqueCount = Math.max(0, Math.trunc(Number(uniqueViewCount || 0)));
+    var uniqueCountBox = row.querySelector('[data-hd-unique-view-count="1"]');
+    if (uniqueCountBox instanceof HTMLElement) {
+      uniqueCountBox.textContent = String(uniqueCount);
+    }
+    var uniqueViewBox = row.querySelector('.helpdesk_ticket_unique_views');
+    if (uniqueViewBox instanceof HTMLElement) {
+      uniqueViewBox.setAttribute('aria-label', 'Unikátní uživatelé: ' + String(uniqueCount));
     }
   }
 
@@ -205,6 +248,11 @@
   function getUnreadOnlyValue() {
     var expanded = getExpandedBox();
     return expanded instanceof HTMLElement && expanded.getAttribute('data-cb-hd-unread-only') === '1';
+  }
+
+  function getIncludeClosedValue() {
+    var expanded = getExpandedBox();
+    return expanded instanceof HTMLElement && expanded.getAttribute('data-cb-hd-include-closed') === '1';
   }
 
   function setFilterValue(value, unreadOnly) {
@@ -242,9 +290,9 @@
   function renderEmptyDetailPanel() {
     var box = getDetailPanelBox();
     if (!(box instanceof HTMLElement)) { return; }
+    setDetailHeading('Vyber tiket ze seznamu vlevo');
     box.innerHTML = '<div class="helpdesk_detail_notice ram_normal zaobleni_10">'
-      + '<div class="helpdesk_detail_notice_title">Vyber tiket vlevo</div>'
-      + '<div class="helpdesk_detail_notice_text">Tady se otevře pracovní panel vybraného tiketu.</div>'
+      + '<div class="helpdesk_detail_notice_text">Není co zobrazit,<br>ale vlevo je seznam všech problémů které admin řeší dnem i nocí.<br>Tak si vyber které neštěstí tě zajímá a hned ti to ukážu :-)<br><br>Pokud máš sám nějaký problém s tímto skromným informačním systémem, v menu je tlačítko &quot;Nový tiket&quot;.<br>Říkám to nerad, ale klidně ho použij, snad to přežiju.</div>'
       + '</div>';
   }
 
@@ -262,23 +310,6 @@
       });
     }
 
-    var marker = getDetailMarkerBox();
-    if (!(marker instanceof HTMLElement)) { return; }
-    if (activeDetailId === '') {
-      marker.classList.remove('helpdesk_state_visible');
-      marker.innerHTML = '';
-      return;
-    }
-
-    var row = getItemRow(activeDetailId);
-    if (!(row instanceof HTMLElement) || row.classList.contains('helpdesk_state_hidden')) {
-      marker.classList.remove('helpdesk_state_visible');
-      marker.innerHTML = '';
-      return;
-    }
-
-    marker.classList.add('helpdesk_state_visible');
-    marker.innerHTML = '<div class="helpdesk_marker_arrow"><img class="helpdesk_marker_arrow_img" src="' + esc(arrowIconUrl) + '" alt=""></div>';
   }
 
   function closeActiveDetail() {
@@ -427,10 +458,18 @@
     if (!(detailBox instanceof HTMLElement)) { return; }
 
     var id = text(ticket.id_helpdesk || '');
+    setDetailHeading('Detail vybraného tiketu');
     detailBox.setAttribute('data-cb-hd-owner-id', text(ticket.id_user_zalozil || '0'));
     detailBox.setAttribute('data-cb-hd-current-user-id', text(data && data.current_user_id ? data.current_user_id : 0));
     var html = '<div class="helpdesk_detail_stack">';
+    html += '<header class="helpdesk_detail_header">';
     html += '<div class="helpdesk_detail_title">#' + esc(id) + ' ' + esc(text(ticket.predmet || '')) + '</div>';
+    html += '<div class="helpdesk_detail_badges">';
+    html += '<span class="helpdesk_detail_badge">Stav: ' + esc(text(ticket.stav || '')) + '</span>';
+    html += '<span class="helpdesk_detail_badge">Oblast: ' + esc(areaText(ticket.modul)) + '</span>';
+    html += '<span class="helpdesk_detail_badge">Typ: ' + esc(typeText(ticket.typ)) + '</span>';
+    html += '<span class="helpdesk_detail_badge">Určení: ' + esc(visibilityText(ticket.verejny)) + '</span>';
+    html += '</div></header>';
     html += renderAttachments(data && data.prilohy ? data.prilohy : []);
     html += renderMessages(data && data.zpravy ? data.zpravy : []);
     html += '<div>' + renderReplyActions(id, ticket, data || {}) + '</div>';
@@ -439,6 +478,7 @@
     detailBox.innerHTML = html;
     activeDetailId = text(ticket.id_helpdesk || row.getAttribute('data-hd-item') || '');
     updateRowHasNewReply(activeDetailId, data && data.has_new_reply ? data.has_new_reply : 0);
+    updateRowViewCount(activeDetailId, ticket.pocet_zobrazeni, ticket.pocet_unikatnich_zobrazeni);
     if (getUnreadOnlyValue() && row instanceof HTMLElement) {
       row.classList.add('helpdesk_state_hidden');
     }
@@ -511,6 +551,7 @@
   function applyFilter() {
     var value = getCurrentFilterValue();
     var unreadOnly = getUnreadOnlyValue();
+    var includeClosed = getIncludeClosedValue();
     var list = getListBox();
     if (!(list instanceof HTMLElement)) { return; }
 
@@ -518,7 +559,8 @@
       if (!(row instanceof HTMLElement)) { return; }
       var rowState = text(row.getAttribute('data-hd-stav') || '');
       var rowUnread = row.getAttribute('data-hd-has-new-reply') === '1';
-      row.classList.toggle('helpdesk_state_hidden', !(filterMatchesState(value, rowState, row) && (!unreadOnly || rowUnread)));
+      var rowClosed = rowState === 'vyřešeno';
+      row.classList.toggle('helpdesk_state_hidden', !(filterMatchesState(value, rowState, row) && (!unreadOnly || rowUnread) && (includeClosed || !rowClosed)));
     });
 
     var activeRow = getItemRow(activeDetailId);
@@ -646,10 +688,21 @@
     }
   }
 
+  function handleChange(e) {
+    var target = e.target;
+    if (!(target instanceof HTMLInputElement) || !target.matches('[data-cb-hd-include-closed="1"]')) { return; }
+
+    var expanded = getExpandedBox();
+    if (!(expanded instanceof HTMLElement)) { return; }
+    expanded.setAttribute('data-cb-hd-include-closed', target.checked ? '1' : '0');
+    applyFilter();
+  }
+
   container.addEventListener('click', handleClick);
+  container.addEventListener('change', handleChange);
 
   renderEmptyDetailPanel();
-  refreshActiveRowUi();
+  applyFilter();
   pollTimerId = window.setInterval(pollTicketStates, 15000);
 
   window.CB_HELPDESK = {
@@ -661,8 +714,9 @@
       window.CB_HELPDESK_PENDING_FILTER = '';
     }
 
-    window.__CB_HELPDESK_CLEANUP__ = function () {
+  window.__CB_HELPDESK_CLEANUP__ = function () {
       container.removeEventListener('click', handleClick);
+      container.removeEventListener('change', handleChange);
       if (pollTimerId) {
         window.clearInterval(pollTimerId);
         pollTimerId = 0;

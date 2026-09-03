@@ -252,6 +252,9 @@
             const minute = form.querySelector('[data-hr-vd-term-minute]');
             const timeWrap = form.querySelector('[data-hr-vd-term-time-wrap]');
             const agreedStart = form.querySelector('[data-hr-vd-domluveny-nastup]');
+            const agreedInputs = Array.from(form.querySelectorAll('[data-hr-vd-podminka]'));
+            const agreedRequiredInputs = Array.from(form.querySelectorAll('[data-hr-vd-podminka-required]'));
+            const agreedAreas = Array.from(form.querySelectorAll('[data-hr-vd-oblast]'));
             const source = form.querySelector('[data-hr-vd-action-results]');
             if (!type || !result || !term || !date || !time || !hour || !minute || !timeWrap || !agreedStart || !source) {
                 return;
@@ -268,6 +271,13 @@
                 time.value = `${hour.value}:${minute.value}`;
             };
 
+            const syncAgreedAreas = (isAgreedStart) => {
+                const hasCheckedArea = agreedAreas.some((input) => input.checked);
+                agreedAreas.forEach((input, index) => {
+                    input.required = Boolean(isAgreedStart && !hasCheckedArea && index === 0);
+                });
+            };
+
             const updateTerm = () => {
                 const selected = rows.find((row) => String(row.id_vd_akce_vysledek) === result.value);
                 const needsDate = selected && Number(selected.vyzaduje_termin_date) === 1;
@@ -275,10 +285,19 @@
                 const isAgreedStart = selected && Number(selected.id_cilovy_vd_stav) === 24;
                 term.hidden = !needsDate;
                 agreedStart.hidden = !isAgreedStart;
-                agreedStart.querySelectorAll('[data-hr-vd-podminka]').forEach((input) => {
+                agreedRequiredInputs.forEach((input) => {
                     input.required = Boolean(isAgreedStart);
-                    if (!isAgreedStart) input.value = '';
                 });
+                if (!isAgreedStart) {
+                    agreedInputs.forEach((input) => {
+                        if (input instanceof HTMLInputElement && (input.type === 'checkbox' || input.type === 'radio')) {
+                            input.checked = false;
+                        } else {
+                            input.value = '';
+                        }
+                    });
+                }
+                syncAgreedAreas(isAgreedStart);
                 date.required = Boolean(needsDate);
                 time.required = Boolean(needsTime);
                 timeWrap.hidden = !needsDate;
@@ -315,6 +334,9 @@
 
             type.addEventListener('change', updateResults);
             result.addEventListener('change', updateTerm);
+            agreedAreas.forEach((input) => {
+                input.addEventListener('change', () => syncAgreedAreas(!agreedStart.hidden));
+            });
             hour.addEventListener('change', syncTime);
             minute.addEventListener('change', syncTime);
             updateResults();

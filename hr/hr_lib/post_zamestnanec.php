@@ -5,19 +5,10 @@ declare(strict_types=1);
  * Ucel souboru: Zpracuje akci ulozeni noveho zamestnance do HR evidence.
  * Provadi validaci a zapis pres HR DB logiku; neresi vyber HTTP akce ani layout.
  */
-function hr_post_zamestnanec(mysqli $db, int $roleId): void
+function hr_post_zamestnanec(mysqli $db, int $idUser): void
 {
     try {
-        try {
-            $zadalPerson = hr_current_person_id($db);
-        } catch (RuntimeException $e) {
-            if ($roleId !== 1) {
-                throw $e;
-            }
-            $zadalPerson = 1;
-        }
-
-        $employee = hr_insert_employee($db, $_POST, $zadalPerson);
+        $employee = hr_insert_employee($db, $_POST, $idUser);
         $idPerson = (int)$employee['id_person'];
         $link = cb_url_abs('?prvni_vstup=' . rawurlencode((string)$employee['token']));
         $body = '<p>Dobrý den, ' . h((string)$employee['jmeno']) . ',</p><p>pro první vstup do IS Comeback nastavte heslo zde:</p><p><a href="' . h($link) . '">První vstup do IS Comeback</a></p><p>Odkaz platí 3 dny.</p>';

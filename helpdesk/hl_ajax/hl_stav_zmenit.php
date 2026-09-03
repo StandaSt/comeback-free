@@ -32,6 +32,8 @@ try {
         exit;
     }
 
+    cb_crf_vyzaduj();
+
     $raw = (string)file_get_contents('php://input');
     $data = json_decode($raw, true);
     if (!is_array($data)) {
@@ -55,6 +57,11 @@ try {
     }
 
     $conn = db();
+    if (!cb_helpdesk_can_view($conn, $idHelpdesk, $idUser)) {
+        http_response_code(403);
+        echo json_encode(['ok' => false, 'err' => 'Nemáte přístup k požadavku.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
     $sql = '
         UPDATE helpdesk
         SET stav = ?, upraveno = NOW(), posledni_zprava = NOW(), uzavreno = ' . $uzavrenoSql . '

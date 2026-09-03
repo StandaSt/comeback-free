@@ -69,6 +69,14 @@ if (
             throw new RuntimeException('Potvrďte odstranění testovacích HR dat.');
         }
         $environment = (($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL') ? 'local' : 'server';
+        $resetScope = $environment === 'local'
+            ? (string)($_POST['admin_hr_reset_scope'] ?? '')
+            : 'all';
+        $importUsers = $environment === 'server'
+            || (string)($_POST['admin_hr_import_users'] ?? '') === '1';
+        if (!in_array($resetScope, ['all', 'vd', 'nd_employees'], true)) {
+            throw new RuntimeException('Vyberte rozsah resetu HR dat.');
+        }
         $scriptPath = realpath(__DIR__ . '/../common/tmp/hr_import_user_do_person.php');
         if ($scriptPath === false) {
             throw new RuntimeException('Importní skript nebyl nalezen.');
@@ -78,10 +86,17 @@ if (
             define('CB_HR_IMPORT_DIRECT', true);
         }
         $GLOBALS['CB_HR_IMPORT_ENVIRONMENT'] = $environment;
+        $GLOBALS['CB_HR_RESET_SCOPE'] = $resetScope;
+        $GLOBALS['CB_HR_IMPORT_USERS'] = $importUsers;
         unset($GLOBALS['CB_HR_IMPORT_OUTPUT']);
         require $scriptPath;
         $output = trim((string)($GLOBALS['CB_HR_IMPORT_OUTPUT'] ?? ''));
-        unset($GLOBALS['CB_HR_IMPORT_ENVIRONMENT'], $GLOBALS['CB_HR_IMPORT_OUTPUT']);
+        unset(
+            $GLOBALS['CB_HR_IMPORT_ENVIRONMENT'],
+            $GLOBALS['CB_HR_RESET_SCOPE'],
+            $GLOBALS['CB_HR_IMPORT_USERS'],
+            $GLOBALS['CB_HR_IMPORT_OUTPUT']
+        );
 
         $_SESSION['cb_admin_script_result'] = [
             'script' => 'hr',
@@ -93,7 +108,7 @@ if (
             'modul' => 'administrace',
             'objekt' => 'hr_import_user_do_person',
             'pole' => 'spusteni',
-            'hodnota_new' => $environment,
+            'hodnota_new' => $environment . ':' . $resetScope . ':' . ($importUsers ? 'import' : 'bez_importu'),
             'vysledek' => 1,
             'zdroj' => 'administrace',
         ]);

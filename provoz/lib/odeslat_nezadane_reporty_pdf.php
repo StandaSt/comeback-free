@@ -23,6 +23,11 @@ if (empty($_SESSION['login_ok'])) {
     echo json_encode(['ok' => false, 'message' => 'Nutné přihlášení.'], JSON_UNESCAPED_UNICODE);
     exit;
 }
+if (!cb_nezadane_reporty_export_ma_pravo()) {
+    http_response_code(403);
+    echo json_encode(['ok' => false, 'message' => 'Nemáte právo exportovat nezadané reporty.'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
 if (strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'POST') {
     http_response_code(405);
     echo json_encode(['ok' => false, 'message' => 'Neplatný požadavek.'], JSON_UNESCAPED_UNICODE);

@@ -224,7 +224,7 @@ function cb_helpdesk_notifikace_pridat(mysqli $conn, int $idHelpdesk, ?int $idZp
 
 function cb_helpdesk_notifikace_adminum(mysqli $conn, int $idHelpdesk, ?int $idZprava, int $idAutor, string $typ, string $text): void
 {
-    $admins = cb_helpdesk_admin_ids($conn);
+    $admins = cb_helpdesk_admin_ids($conn, cb_helpdesk_ticket_company_id($conn, $idHelpdesk));
     foreach ($admins as $idAdmin) {
         if ((int)$idAdmin === $idAutor) {
             continue;

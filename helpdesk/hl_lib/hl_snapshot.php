@@ -18,26 +18,26 @@ function cb_helpdesk_snapshot_load_user(mysqli $conn, int $idUser): array
 {
     $data = [
         'jmeno' => '',
-        'email' => '',
         'role' => null,
         'role_nazev' => null,
     ];
 
     $stmt = $conn->prepare('
-        SELECT u.jmeno, u.prijmeni, u.email, u.id_role
+        SELECT u.jmeno, u.prijmeni, u.id_role, cr.role
         FROM `user` u
+        LEFT JOIN cis_role cr ON cr.id_role = u.id_role
         WHERE u.id_user = ?
         LIMIT 1
     ');
     if ($stmt instanceof mysqli_stmt) {
         $stmt->bind_param('i', $idUser);
         $stmt->execute();
-        $stmt->bind_result($jmeno, $prijmeni, $email, $role);
+        $stmt->bind_result($jmeno, $prijmeni, $role, $roleNazev);
         if ($stmt->fetch()) {
             $celeJmeno = trim((string)$jmeno . ' ' . (string)$prijmeni);
             $data['jmeno'] = $celeJmeno;
-            $data['email'] = (string)$email;
             $data['role'] = (int)$role;
+            $data['role_nazev'] = (string)$roleNazev;
         }
         $stmt->close();
     }
@@ -126,35 +126,18 @@ function cb_helpdesk_snapshot_zapis(mysqli $conn, int $idHelpdesk, int $idZprava
     $user = cb_helpdesk_snapshot_load_user($conn, $idUser);
     $pobocky = cb_helpdesk_snapshot_load_pobocky($conn, $idUser);
     $sloty = cb_helpdesk_snapshot_load_sloty($conn, $idUser);
-    $karty = [];
     $obdobi = cb_helpdesk_snapshot_load_obdobi();
 
-    $sessionSafe = [
-        'cb_user' => $_SESSION['cb_user'] ?? null,
-        'cb_user_profile' => $_SESSION['cb_user_profile'] ?? null,
-        'cb_user_branches' => $_SESSION['cb_user_branches'] ?? null,
-        'cb_user_settings' => $_SESSION['cb_user_settings'] ?? null,
-        'cb_system' => $_SESSION['cb_system'] ?? null,
-    ];
-
-    $raw = [
-        'server' => [
-            'request_uri' => (string)($_SERVER['REQUEST_URI'] ?? ''),
-            'script_name' => (string)($_SERVER['SCRIPT_NAME'] ?? ''),
-            'http_referer' => (string)($_SERVER['HTTP_REFERER'] ?? ''),
-        ],
-    ];
-
     $jmeno = (string)$user['jmeno'];
-    $email = (string)$user['email'];
+    $email = '';
     $role = $user['role'];
     $roleNazev = $user['role_nazev'];
     $pobockyJson = cb_helpdesk_json($pobocky);
     $slotyJson = cb_helpdesk_json($sloty);
-    $kartyJson = cb_helpdesk_json($karty);
+    $kartyJson = '[]';
     $obdobiJson = cb_helpdesk_json($obdobi);
-    $sessionJson = cb_helpdesk_json($sessionSafe);
-    $rawJson = cb_helpdesk_json($raw);
+    $sessionJson = '{}';
+    $rawJson = '{}';
     $urlStranky = (string)($_SERVER['HTTP_REFERER'] ?? $_SERVER['REQUEST_URI'] ?? '');
     $userAgent = (string)($_SERVER['HTTP_USER_AGENT'] ?? '');
     $ipAdresa = (string)($_SERVER['REMOTE_ADDR'] ?? '');

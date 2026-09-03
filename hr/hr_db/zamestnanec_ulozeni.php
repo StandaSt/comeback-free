@@ -8,10 +8,10 @@ declare(strict_types=1);
 /**
  * Ulozi noveho zamestnance a jeho zakladni navazna HR data.
  */
-function hr_insert_employee(mysqli $db, array $data, int $zadalPerson): array
+function hr_insert_employee(mysqli $db, array $data, int $zadalUser): array
 {
-    if ($zadalPerson <= 0) {
-        throw new RuntimeException('Chybí HR osoba přihlášeného uživatele.');
+    if ($zadalUser <= 0) {
+        throw new RuntimeException('Chybí přihlášený uživatel.');
     }
 
     $jmeno = trim((string)($data['jmeno'] ?? ''));
@@ -85,10 +85,10 @@ function hr_insert_employee(mysqli $db, array $data, int $zadalPerson): array
 
         // Zalozi stabilni identitu zamestnance navazanou na jeho ucet.
         $stmt = $db->prepare('
-            INSERT INTO hr_person (id_user, osobni_cislo, zdroj, id_person_zadal, vytvoreno, aktivni)
+            INSERT INTO hr_person (id_user, osobni_cislo, zdroj, id_user_zadal, vytvoreno, aktivni)
             VALUES (?, ?, ?, ?, NOW(), 1)
         ');
-        $stmt->bind_param('issi', $idUser, $osobniCisloDb, $zdroj, $zadalPerson);
+        $stmt->bind_param('issi', $idUser, $osobniCisloDb, $zdroj, $zadalUser);
         $stmt->execute();
         $idPerson = (int)$db->insert_id;
         $stmt->close();
@@ -96,47 +96,47 @@ function hr_insert_employee(mysqli $db, array $data, int $zadalPerson): array
         // Ulozi zakladni osobni udaje jako aktualni platny zaznam.
         $pohlavi = 'neuvedeno';
         $stmt = $db->prepare('
-            INSERT INTO hr_osobni_udaje (id_person, jmeno, prijmeni, pohlavi, id_person_zadal, vytvoreno, platny)
+            INSERT INTO hr_osobni_udaje (id_person, jmeno, prijmeni, pohlavi, id_user_zadal, vytvoreno, platny)
             VALUES (?, ?, ?, ?, ?, NOW(), 1)
         ');
-        $stmt->bind_param('isssi', $idPerson, $jmeno, $prijmeni, $pohlavi, $zadalPerson);
+        $stmt->bind_param('isssi', $idPerson, $jmeno, $prijmeni, $pohlavi, $zadalUser);
         $stmt->execute();
         $stmt->close();
 
         // Zalozi aktualni pracovni vztah osoby.
         $stmt = $db->prepare('
-            INSERT INTO hr_pracovni_vztah (id_person, id_pracovni_vztah_typ, datum_nastupu, id_person_zadal, vytvoreno, platny)
+            INSERT INTO hr_pracovni_vztah (id_person, id_pracovni_vztah_typ, datum_nastupu, id_user_zadal, vytvoreno, platny)
             VALUES (?, ?, ?, ?, NOW(), 1)
         ');
-        $stmt->bind_param('iisi', $idPerson, $idVztahTyp, $datumNastupu, $zadalPerson);
+        $stmt->bind_param('iisi', $idPerson, $idVztahTyp, $datumNastupu, $zadalUser);
         $stmt->execute();
         $stmt->close();
 
         // Nastavi hlavni pracoviste osoby.
         $stmt = $db->prepare('
-            INSERT INTO hr_pracoviste (id_person, id_pob, hlavni, platnost_od, id_person_zadal, vytvoreno, platny)
+            INSERT INTO hr_pracoviste (id_person, id_pob, hlavni, platnost_od, id_user_zadal, vytvoreno, platny)
             VALUES (?, ?, ?, ?, ?, NOW(), 1)
         ');
-        $stmt->bind_param('iiisi', $idPerson, $idPob, $hlavni, $datumNastupu, $zadalPerson);
+        $stmt->bind_param('iiisi', $idPerson, $idPob, $hlavni, $datumNastupu, $zadalUser);
         $stmt->execute();
         $stmt->close();
 
         // Nastavi hlavni pracovni zarazeni osoby.
         $stmt = $db->prepare('
-            INSERT INTO hr_zarazeni (id_person, id_slot, hlavni, platnost_od, id_person_zadal, vytvoreno, platny)
+            INSERT INTO hr_zarazeni (id_person, id_slot, hlavni, platnost_od, id_user_zadal, vytvoreno, platny)
             VALUES (?, ?, ?, ?, ?, NOW(), 1)
         ');
-        $stmt->bind_param('iiisi', $idPerson, $idSlot, $hlavni, $datumNastupu, $zadalPerson);
+        $stmt->bind_param('iiisi', $idPerson, $idSlot, $hlavni, $datumNastupu, $zadalUser);
         $stmt->execute();
         $stmt->close();
 
         if ($telefon !== '') {
             // Ulozi hlavni telefon, pokud byl vyplnen.
             $stmt = $db->prepare('
-                INSERT INTO hr_telefon (id_person, id_telefon_typ, telefon, hlavni, id_person_zadal, vytvoreno, platny)
+                INSERT INTO hr_telefon (id_person, id_telefon_typ, telefon, hlavni, id_user_zadal, vytvoreno, platny)
                 VALUES (?, ?, ?, ?, ?, NOW(), ?)
             ');
-            $stmt->bind_param('iisiii', $idPerson, $telefonTyp, $telefon, $hlavni, $zadalPerson, $platny);
+            $stmt->bind_param('iisiii', $idPerson, $telefonTyp, $telefon, $hlavni, $zadalUser, $platny);
             $stmt->execute();
             $stmt->close();
         }
@@ -144,10 +144,10 @@ function hr_insert_employee(mysqli $db, array $data, int $zadalPerson): array
         if ($email !== '') {
             // Ulozi hlavni e-mail, pokud byl vyplnen.
             $stmt = $db->prepare('
-                INSERT INTO hr_email (id_person, id_email_typ, email, hlavni, id_person_zadal, vytvoreno, platny)
+                INSERT INTO hr_email (id_person, id_email_typ, email, hlavni, id_user_zadal, vytvoreno, platny)
                 VALUES (?, ?, ?, ?, ?, NOW(), ?)
             ');
-            $stmt->bind_param('iisiii', $idPerson, $emailTyp, $email, $hlavni, $zadalPerson, $platny);
+            $stmt->bind_param('iisiii', $idPerson, $emailTyp, $email, $hlavni, $zadalUser, $platny);
             $stmt->execute();
             $stmt->close();
         }

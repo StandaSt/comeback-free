@@ -9,7 +9,7 @@ declare(strict_types=1);
 /**
  * Preda rozpoznanou POST akci HR prislusnemu handleru.
  */
-function cb_hr_request_dispatch(mysqli $db, string $page, array $user, int $roleId): void
+function cb_hr_request_dispatch(mysqli $db, string $page, array $user): void
 {
     $isShellRequest = isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODULE']);
     $isFormPost = ($_SERVER['REQUEST_METHOD'] === 'POST') && !$isShellRequest;
@@ -19,11 +19,11 @@ function cb_hr_request_dispatch(mysqli $db, string $page, array $user, int $role
 
     $action = trim((string)($_POST['cb_action'] ?? ''));
     if ($action === 'hr_zamestnanec_ulozit') {
-        hr_post_zamestnanec($db, $roleId);
+        hr_post_zamestnanec($db, (int)($user['id_user'] ?? 0));
         return;
     }
     if ($action === 'hr_zamestnanec_upravit') {
-        hr_post_zamestnanec_uprava($db, $roleId, (int)($user['id_user'] ?? 0));
+        hr_post_zamestnanec_uprava($db, (int)($user['id_user'] ?? 0));
         return;
     }
     if ($action === 'hr_pracovni_pomer_upravit') {

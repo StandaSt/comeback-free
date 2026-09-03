@@ -9,19 +9,11 @@ declare(strict_types=1);
 /**
  * Ulozi vsechny editovane zakladni udaje jedne karty zamestnance.
  */
-function hr_post_zamestnanec_uprava(mysqli $db, int $roleId, int $zadalUser): void
+function hr_post_zamestnanec_uprava(mysqli $db, int $zadalUser): void
 {
     $idPerson = (int)($_POST['id_person'] ?? 0);
     try {
-        try {
-            $zadalPerson = hr_current_person_id($db);
-        } catch (RuntimeException $e) {
-            if ($roleId !== 1) {
-                throw $e;
-            }
-            $zadalPerson = 1;
-        }
-        hr_update_employee_basic_data($db, $idPerson, $_POST, $zadalPerson, $zadalUser);
+        hr_update_employee_basic_data($db, $idPerson, $_POST, $zadalUser);
         cb_form_finish(
             cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson) . '&upravit=1'),
             true,
@@ -45,7 +37,10 @@ function hr_post_pracovni_pomer_uprava(mysqli $db): void
 {
     $idPerson = (int)($_POST['id_person'] ?? 0);
     try {
-        $zadalPerson = hr_current_person_id($db);
+        $zadalUser = hr_current_user_id();
+        if ($zadalUser <= 0) {
+            throw new RuntimeException('Chybí přihlášený uživatel.');
+        }
         $typ = (int)($_POST['id_pracovni_vztah_typ'] ?? 0);
         $nastupInput = str_replace(',', '.', trim((string)($_POST['datum_nastupu'] ?? '')));
         $nastupDate = DateTimeImmutable::createFromFormat('!d.m.Y', $nastupInput);
@@ -73,8 +68,8 @@ function hr_post_pracovni_pomer_uprava(mysqli $db): void
             $stmt->execute();
             $stmt->close();
 
-            $stmt = $db->prepare('INSERT INTO hr_pracovni_vztah (id_person, id_pracovni_vztah_typ, datum_nastupu, id_person_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, NOW(), 1)');
-            $stmt->bind_param('iisi', $idPerson, $typ, $nastup, $zadalPerson);
+            $stmt = $db->prepare('INSERT INTO hr_pracovni_vztah (id_person, id_pracovni_vztah_typ, datum_nastupu, id_user_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, NOW(), 1)');
+            $stmt->bind_param('iisi', $idPerson, $typ, $nastup, $zadalUser);
             $stmt->execute();
             $relationId = (int)$db->insert_id;
             $stmt->close();
@@ -89,13 +84,13 @@ function hr_post_pracovni_pomer_uprava(mysqli $db): void
             || $relationId !== (int)$current['id_pracovni_vztah'];
 
         if ($workloadChanged) {
-            $stmt = $db->prepare('UPDATE hr_pracovni_uvazek SET platny = 0, platnost_do = ?, zruseno = NOW(), id_person_zrusil = ? WHERE id_pracovni_vztah = ? AND platny = 1');
-            $stmt->bind_param('sii', $platnostOd, $zadalPerson, $relationId);
+            $stmt = $db->prepare('UPDATE hr_pracovni_uvazek SET platny = 0, platnost_do = ?, zruseno = NOW(), id_user_zrusil = ? WHERE id_pracovni_vztah = ? AND platny = 1');
+            $stmt->bind_param('sii', $platnostOd, $zadalUser, $relationId);
             $stmt->execute();
             $stmt->close();
 
-            $stmt = $db->prepare('INSERT INTO hr_pracovni_uvazek (id_pracovni_vztah, uvazek, hodin_tydne, platnost_od, zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, ?, NOW(), 1)');
-            $stmt->bind_param('iddsi', $relationId, $uvazek, $hodin, $platnostOd, $zadalPerson);
+            $stmt = $db->prepare('INSERT INTO hr_pracovni_uvazek (id_pracovni_vztah, uvazek, hodin_tydne, platnost_od, id_user_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, ?, NOW(), 1)');
+            $stmt->bind_param('iddsi', $relationId, $uvazek, $hodin, $platnostOd, $zadalUser);
             $stmt->execute();
             $stmt->close();
         }
@@ -106,13 +101,13 @@ function hr_post_pracovni_pomer_uprava(mysqli $db): void
             || $currentSalaryAmount !== $mzdaCastka
             || $relationId !== (int)$current['id_pracovni_vztah'];
         if ($salaryChanged) {
-            $stmt = $db->prepare('UPDATE hr_mzda SET platny = 0, platnost_do = ?, zruseno = NOW(), id_person_zrusil = ? WHERE id_pracovni_vztah = ? AND platny = 1');
-            $stmt->bind_param('sii', $platnostOd, $zadalPerson, $relationId);
+            $stmt = $db->prepare('UPDATE hr_mzda SET platny = 0, platnost_do = ?, zruseno = NOW(), id_user_zrusil = ? WHERE id_pracovni_vztah = ? AND platny = 1');
+            $stmt->bind_param('sii', $platnostOd, $zadalUser, $relationId);
             $stmt->execute();
             $stmt->close();
 
-            $stmt = $db->prepare('INSERT INTO hr_mzda (id_pracovni_vztah, id_mzda_typ, castka, platnost_od, zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, ?, NOW(), 1)');
-            $stmt->bind_param('iiisi', $relationId, $mzdaTyp, $mzdaCastka, $platnostOd, $zadalPerson);
+            $stmt = $db->prepare('INSERT INTO hr_mzda (id_pracovni_vztah, id_mzda_typ, castka, platnost_od, id_user_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, ?, NOW(), 1)');
+            $stmt->bind_param('iiisi', $relationId, $mzdaTyp, $mzdaCastka, $platnostOd, $zadalUser);
             $stmt->execute();
             $stmt->close();
         }
@@ -123,17 +118,17 @@ function hr_post_pracovni_pomer_uprava(mysqli $db): void
             $odebrane = array_values(array_diff($currentBenefits, $benefity));
             $pridane = array_values(array_diff($benefity, $currentBenefits));
             if ($odebrane !== []) {
-                $stmt = $db->prepare('UPDATE hr_benefit SET platny = 0, platnost_do = ?, zruseno = NOW(), id_person_zrusil = ? WHERE id_pracovni_vztah = ? AND id_cis_benefit = ? AND platny = 1');
+                $stmt = $db->prepare('UPDATE hr_benefit SET platny = 0, platnost_do = ?, zruseno = NOW(), id_user_zrusil = ? WHERE id_pracovni_vztah = ? AND id_cis_benefit = ? AND platny = 1');
                 foreach ($odebrane as $idBenefit) {
-                    $stmt->bind_param('siii', $platnostOd, $zadalPerson, $relationId, $idBenefit);
+                    $stmt->bind_param('siii', $platnostOd, $zadalUser, $relationId, $idBenefit);
                     $stmt->execute();
                 }
                 $stmt->close();
             }
             if ($pridane !== []) {
-                $stmt = $db->prepare('INSERT INTO hr_benefit (id_pracovni_vztah, id_cis_benefit, platnost_od, zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, NOW(), 1)');
+                $stmt = $db->prepare('INSERT INTO hr_benefit (id_pracovni_vztah, id_cis_benefit, platnost_od, id_user_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, NOW(), 1)');
                 foreach ($pridane as $idBenefit) {
-                    $stmt->bind_param('iisi', $relationId, $idBenefit, $platnostOd, $zadalPerson);
+                    $stmt->bind_param('iisi', $relationId, $idBenefit, $platnostOd, $zadalUser);
                     $stmt->execute();
                 }
                 $stmt->close();

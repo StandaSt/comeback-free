@@ -4,7 +4,7 @@ declare(strict_types=1);
 /**
  * Vrati id_user aktualne prihlaseneho uzivatele.
  *
- * V HR se id_user pouziva jen pro overeni vstupu do modulu.
+ * id_user identifikuje uzivatele pri pristupu, kontrole prav i zapisu akci.
  */
 function hr_current_user_id(): int
 {
@@ -13,16 +13,15 @@ function hr_current_user_id(): int
 }
 
 /**
- * Vrati id_person navazane na aktualne prihlaseneho uzivatele.
+ * Vrati id_person navazane na aktualne prihlaseneho uzivatele, pokud existuje.
  */
-function hr_current_person_id(mysqli $db): int
+function hr_current_person_id(mysqli $db): ?int
 {
     $idUser = hr_current_user_id();
     if ($idUser <= 0) {
         throw new RuntimeException('Chybí přihlášený uživatel.');
     }
 
-    // HR data se zapisují pres id_person, id_user slouzi jen pro prihlaseni.
     $stmt = $db->prepare('
         SELECT id_person
         FROM hr_person
@@ -35,9 +34,6 @@ function hr_current_person_id(mysqli $db): int
     $row = $stmt->get_result()->fetch_assoc();
     $stmt->close();
 
-    if (!is_array($row) || (int)($row['id_person'] ?? 0) <= 0) {
-        throw new RuntimeException('Přihlášený uživatel nemá navázanou HR osobu.');
-    }
-
-    return (int)$row['id_person'];
+    $idPerson = is_array($row) ? (int)($row['id_person'] ?? 0) : 0;
+    return $idPerson > 0 ? $idPerson : null;
 }

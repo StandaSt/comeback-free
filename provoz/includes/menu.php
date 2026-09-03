@@ -7,6 +7,7 @@ require_once __DIR__ . '/../lib/ai_analytik_pravidla.php';
 $provozMenuItems = [
     ['page' => 'prehled', 'label' => 'Přehled'],
     ['page' => 'denni_report', 'label' => 'Denní report'],
+    ['page' => 'archiv_reportu', 'label' => 'Archiv reportů', 'pravo' => 202],
     ['page' => 'objednavky', 'label' => 'Objednávky'],
     ['page' => 'prehled_hodin', 'label' => 'Přehled hodin', 'pravo' => 209],
     ['page' => 'ai_analytik', 'label' => 'Chytrý Franta', 'pravo' => CB_AI_ANALYTIK_PRAVO],

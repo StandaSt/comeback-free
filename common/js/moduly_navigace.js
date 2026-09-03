@@ -111,6 +111,9 @@
   var currentShellKey = makeShellKey(activeMainModule, initialParams);
   var moduleLoadRunning = false;
   var pageLoaderTimer = 0;
+  var pageBusyHandles = [];
+  var pageBusyHandleSequence = 0;
+  var pageBusyLoaderTimer = 0;
 
   function makeShellKey(moduleName, params){
     var normalized = new URLSearchParams();
@@ -173,6 +176,90 @@
       pageLoaderTimer = 0;
     }
   }
+
+  function stopPageBusyLoaderTimer() {
+    if (pageBusyLoaderTimer) {
+      window.clearInterval(pageBusyLoaderTimer);
+      pageBusyLoaderTimer = 0;
+    }
+  }
+
+  function removePageBusyLoader() {
+    stopPageBusyLoaderTimer();
+    var loader = root.querySelector('.cb_page_loader--floating');
+    if (loader instanceof HTMLElement) {
+      loader.remove();
+    }
+  }
+
+  function showPageBusyLoader(text, detail) {
+    removePageBusyLoader();
+    var loader = document.createElement('div');
+    loader.className = 'cb_page_loader cb_page_loader--floating';
+    loader.setAttribute('role', 'status');
+    loader.setAttribute('aria-live', 'polite');
+    loader.setAttribute('aria-atomic', 'true');
+
+    var textNode = document.createElement('span');
+    textNode.className = 'cb_page_loader_text';
+    textNode.textContent = String(text || 'Načítám ...');
+    loader.appendChild(textNode);
+
+    var detailNode = document.createElement('span');
+    detailNode.className = 'cb_page_loader_detail';
+    detailNode.textContent = String(detail || '');
+    loader.appendChild(detailNode);
+
+    var timeNode = document.createElement('span');
+    timeNode.className = 'cb_page_loader_time';
+    timeNode.textContent = '0,0 s';
+    loader.appendChild(timeNode);
+    root.appendChild(loader);
+
+    var startedAt = performance.now();
+    pageBusyLoaderTimer = window.setInterval(function () {
+      if (!timeNode.isConnected) {
+        stopPageBusyLoaderTimer();
+        return;
+      }
+      timeNode.textContent = formatElapsed(performance.now() - startedAt);
+    }, 100);
+  }
+
+  function startPageBusy(text, detail) {
+    var handle = ++pageBusyHandleSequence;
+    pageBusyHandles.push(handle);
+    document.body.classList.add('cb-page-busy');
+    root.setAttribute('aria-busy', 'true');
+    if (String(text || '').trim() !== '') {
+      showPageBusyLoader(text, detail);
+    }
+    return handle;
+  }
+
+  function stopPageBusy(handle) {
+    var index = pageBusyHandles.indexOf(handle);
+    if (index === -1) return;
+    pageBusyHandles.splice(index, 1);
+    if (pageBusyHandles.length > 0) return;
+    document.body.classList.remove('cb-page-busy');
+    root.removeAttribute('aria-busy');
+    removePageBusyLoader();
+  }
+
+  window.CB_PAGE_BUSY = {
+    start: startPageBusy,
+    stop: stopPageBusy
+  };
+
+  function blockPageBusyEvent(event) {
+    if (pageBusyHandles.length === 0) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }
+
+  document.addEventListener('pointerdown', blockPageBusyEvent, true);
+  document.addEventListener('click', blockPageBusyEvent, true);
 
   function setPageLoaderDetail(text) {
     var detailNode = root.querySelector('.cb_page_loader_detail');
@@ -471,6 +558,7 @@
     var sourceMainModule = activeMainModule;
     var moduleChanged = moduleName !== activeMainModule;
     moduleLoadRunning = true;
+    var pageBusyHandle = startPageBusy();
     if (moduleChanged) {
       saveActiveModule(moduleName);
       setRootModule(moduleName);
@@ -489,6 +577,10 @@
       });
     }
     if (moduleName === 'helpdesk') {
+      var requestedSourceModule = params instanceof URLSearchParams ? String(params.get('src') || '') : '';
+      if (['provoz', 'hr', 'smeny', 'ukoly'].indexOf(requestedSourceModule) !== -1) {
+        sourceMainModule = requestedSourceModule;
+      }
       if (['provoz', 'hr', 'smeny', 'ukoly'].indexOf(sourceMainModule) === -1) {
         sourceMainModule = 'provoz';
       }
@@ -564,6 +656,7 @@
         .catch(showModuleError)
         .finally(function(){
           moduleLoadRunning = false;
+          stopPageBusy(pageBusyHandle);
         });
       return;
     }
@@ -577,6 +670,7 @@
         .catch(showModuleError)
         .finally(function(){
           moduleLoadRunning = false;
+          stopPageBusy(pageBusyHandle);
         });
       return;
     }
@@ -585,6 +679,7 @@
       .catch(showModuleError)
       .finally(function(){
         moduleLoadRunning = false;
+        stopPageBusy(pageBusyHandle);
       });
   }
 
@@ -603,6 +698,9 @@
     if (!moduleName) return;
 
     event.preventDefault();
+    if (pageBusyHandles.length > 0) {
+      return;
+    }
     if (moduleName === activeMainModule) {
       return;
     }
@@ -636,6 +734,9 @@
     if (povoleneModuly.indexOf(moduleName) === -1) return;
 
     event.preventDefault();
+    if (pageBusyHandles.length > 0) {
+      return;
+    }
     setClickedMenuActive(link);
     loadModule(moduleName, true, url.searchParams);
   });

@@ -8,7 +8,10 @@ declare(strict_types=1);
 <?php // Koncovy bod pro komunikaci klienta se spolecnym shellem. ?>
 <script>
 window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+window.CB_CRF_TOKEN = <?= json_encode(function_exists('cb_crf_token') ? cb_crf_token() : '', JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
 </script>
+<?php // Jednotná ochrana zápisových požadavků. ?>
+<script src="<?= h(cb_public_url('js/ochrana_crf.js') . '?v=' . (is_file(__DIR__ . '/../js/ochrana_crf.js') ? (string)filemtime(__DIR__ . '/../js/ochrana_crf.js') : '1')) ?>"></script>
 <?php // Knihovna grafu. ?>
 <script src="<?= h(cb_asset_url('js/echarts.min.js')) ?>"></script>
 <?php // Zakladni AJAX funkce aplikace. ?>
@@ -58,7 +61,7 @@ window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_
 <?php // Chovani modulu HR v prohlizeci. ?>
 <script src="<?= h($cbHrJsUrl) ?>"></script>
 <?php // Chovani modulu Helpdesk v prohlizeci. ?>
-<script src="<?= h(cb_root_url('helpdesk/hl_js/hl_helpdesk.js')) ?>"></script>
+<script src="<?= h(cb_root_url('helpdesk/hl_js/hl_helpdesk.js') . '?v=' . (is_file(__DIR__ . '/../../helpdesk/hl_js/hl_helpdesk.js') ? (string)filemtime(__DIR__ . '/../../helpdesk/hl_js/hl_helpdesk.js') : '1')) ?>"></script>
 <?php // Ulozeni prav role v Administraci. ?>
 <script src="<?= h($cbAdministracePravaSaveJsUrl) ?>"></script>
 <?php // Bloky prav role v Administraci. ?>

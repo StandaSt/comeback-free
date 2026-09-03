@@ -51,41 +51,9 @@
     cursor: pointer;
 }
 
-/* Horni radek PP s vyhledavanim. */
-.hr_topbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    padding: 0;
-}
-
-.hr_topbar_actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.hr_search {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: min(420px, 34vw);
-    height: 24px;
-    min-height: 24px;
-    padding: 0 10px;
-    border: 1px solid var(--border);
-    border-radius: 9px;
-    background: var(--surface);
-}
-
-.hr_search_input {
-    width: 100%;
-    height: 30px;
-    border: 0;
-    outline: 0;
-    color: var(--text);
-    background: transparent;
+.hr_pp[data-page="nabor"] > .pp_header > h1 {
+    margin-left: 22px;
+    color: var(--primary);
 }
 
 .hr_primary_button {
@@ -365,6 +333,62 @@
     border-collapse: collapse;
     font-size: var(--cb-font-12);
     line-height: 1.25;
+}
+
+.hr_nabor_table {
+    table-layout: fixed;
+}
+
+.hr_nabor_overview_panel .hr_panel_header {
+    padding-left: 8px;
+}
+
+.hr_nabor_table tbody .hr_table_cell:first-child {
+    font-weight: 700;
+}
+
+.hr_nabor_col_uchazec {
+    width: 125px;
+}
+
+.hr_nabor_col_telefon {
+    width: 105px;
+}
+
+.hr_nabor_col_email {
+    width: 195px;
+}
+
+.hr_nabor_col_pozice {
+    width: 90px;
+}
+
+.hr_nabor_col_pracoviste {
+    width: 110px;
+}
+
+.hr_nabor_col_datum {
+    width: 105px;
+}
+
+.hr_nabor_col_info {
+    width: 180px;
+}
+
+.hr_nabor_table .hr_table_cell:nth-child(n+4) {
+    padding-left: 16px;
+}
+
+.hr_nabor_table .hr_table_cell:last-child {
+    white-space: normal;
+}
+
+.hr_nabor_table .hr_table_cell:last-child .hr_badge {
+    display: inline-block;
+    max-width: 100%;
+    line-height: 1.2;
+    text-align: center;
+    white-space: normal;
 }
 
 .hr_table_cell{
@@ -1182,25 +1206,72 @@
     font-weight: 700;
 }
 
-.hr_vd_nastupni_dotaznik_placeholder {
-    display: grid;
-    gap: 6px;
-    padding: 10px;
-    border: 1px dashed var(--border);
-    border-radius: 8px;
-}
-
 .hr_vd_podminky {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
+    min-width: 0;
+    margin: 0;
     padding: 12px;
     border: 1px solid var(--border);
     border-radius: 8px;
+    background: var(--surface-strong);
+}
+
+.hr_vd_podminky legend {
+    padding: 0 6px;
+    color: var(--text);
+    font-weight: 700;
+}
+
+.hr_vd_oblasti_choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    min-height: 36px;
+    align-items: center;
+}
+
+.hr_vd_podminky_summary {
+    display: grid;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-strong);
+}
+
+.hr_vd_podminky_title {
+    margin: 0;
+    font-size: var(--cb-font-16);
+}
+
+.hr_vd_podminky_summary_grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0;
+}
+
+.hr_vd_podminky_summary_grid div {
+    min-width: 0;
+}
+
+.hr_vd_podminky_summary_grid dt {
+    color: var(--muted);
+    font-size: var(--cb-font-12);
+}
+
+.hr_vd_podminky_summary_grid dd {
+    margin: 3px 0 0;
+    color: var(--text);
+    font-weight: 700;
 }
 
 .hr_vd_domluveny_nastup {
     display: grid;
+    grid-column: 1 / -1;
     gap: 12px;
 }
 
@@ -1280,16 +1351,6 @@
 }
 
 @media (max-width: 820px) {
-    .hr_topbar {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    .hr_topbar_actions,
-    .hr_search {
-        width: 100%;
-    }
-
     .hr_panel_wide {
         grid-column: auto;
     }
@@ -1348,5 +1409,10 @@
 
     .hr_vd_action_submit {
         grid-column: 1;
+    }
+
+    .hr_vd_podminky,
+    .hr_vd_podminky_summary_grid {
+        grid-template-columns: 1fr;
     }
 }

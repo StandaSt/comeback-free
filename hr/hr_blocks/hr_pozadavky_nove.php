@@ -37,7 +37,7 @@ if (!$pozadavkyMuzeCist) {
                             <td class="hr_table_cell"><?= h(hr_format_date((string)$pozadavek['zadano'])) ?></td>
                             <?php if ($pozadavkyMuzeZrusit): ?>
                                 <td class="hr_table_cell">
-                                    <?php if ((int)$pozadavek['zadal'] === $pozadavkyPersonId): ?>
+                                    <?php if ((int)$pozadavek['id_user_zadal'] === $pozadavkyUserId): ?>
                                         <form method="post" action="<?= h(cb_root_url('index.php?m=hr&page=pozadavky')) ?>" class="hr_row_action_form">
                                             <input type="hidden" name="cb_action" value="hr_pozadavek_zrusit">
                                             <input type="hidden" name="id_pozadavek" value="<?= h($pozadavek['id_pozadavek']) ?>">

@@ -27,6 +27,8 @@ try {
         exit;
     }
 
+    cb_crf_vyzaduj();
+
     $idUser = cb_helpdesk_current_user_id();
     $idHelpdesk = (int)($_POST['id_helpdesk'] ?? 0);
     $idZprava = (int)($_POST['id_helpdesk_zprava'] ?? 0);
@@ -47,6 +49,21 @@ try {
         http_response_code(403);
         echo json_encode(['ok' => false, 'err' => 'Nemáte právo nahrát přílohu.'], JSON_UNESCAPED_UNICODE);
         exit;
+    }
+
+    if ($idZpravaDb !== null) {
+        $stmtMessage = $conn->prepare('SELECT 1 FROM helpdesk_zprava WHERE id_helpdesk_zprava = ? AND id_helpdesk = ? LIMIT 1');
+        if (!($stmtMessage instanceof mysqli_stmt)) {
+            throw new RuntimeException('Nepodařilo se ověřit zprávu přílohy.');
+        }
+        $stmtMessage->bind_param('ii', $idZpravaDb, $idHelpdesk);
+        $stmtMessage->execute();
+        $stmtMessage->store_result();
+        $messageExists = $stmtMessage->num_rows === 1;
+        $stmtMessage->close();
+        if (!$messageExists) {
+            throw new RuntimeException('Zvolená zpráva nepatří k tomuto tiketu.');
+        }
     }
 
     if (!array_key_exists('soubor', $_FILES) || !is_array($_FILES['soubor'])) {

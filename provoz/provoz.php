@@ -103,6 +103,63 @@ $pageKey = $cbPage;
 $file = $cbProvozCurrentPage['file'];
 $cbPageExists = (bool)$cbProvozCurrentPage['exists'];
 $cbProvozPageTitle = $cbProvozCurrentPage['title'];
+$cbArchiveBackUrl = '';
+
+if (
+    (($cbPage === 'denni_report' && (string)($_GET['zr_archive'] ?? '') === '1') || $cbPage === 'porovnani_reportu')
+) {
+    $cbArchiveBackParams = [
+        'm' => 'provoz',
+        'page' => 'archiv_reportu',
+    ];
+    foreach (['ar_month', 'ar_year', 'ar_branch', 'ar_status', 'ar_sort', 'ar_dir', 'ar_p'] as $cbArchiveBackKey) {
+        if (isset($_GET[$cbArchiveBackKey]) && is_scalar($_GET[$cbArchiveBackKey])) {
+            $cbArchiveBackParams[$cbArchiveBackKey] = (string)$_GET[$cbArchiveBackKey];
+        }
+    }
+    $cbArchiveBackUrl = cb_root_url('index.php') . '?' . http_build_query($cbArchiveBackParams, '', '&', PHP_QUERY_RFC3986);
+}
+
+if (
+    ($cbPage === 'denni_report' && (string)($_GET['zr_archive'] ?? '') === '1' && (string)($_GET['zr_archive_edit'] ?? '') !== '1')
+    || $cbPage === 'porovnani_reportu'
+) {
+    $isComparisonReport = $cbPage === 'porovnani_reportu';
+    $archiveBranchId = (int)($_GET[$isComparisonReport ? 'compare_branch' : 'zr_id_pob'] ?? 0);
+    $archiveDateRaw = trim((string)($_GET[$isComparisonReport ? 'compare_date' : 'datum_reportu'] ?? ''));
+    $archiveDate = DateTimeImmutable::createFromFormat('!Y-m-d', $archiveDateRaw, new DateTimeZone('Europe/Prague'));
+    $archiveUser = $_SESSION['cb_user'] ?? [];
+    $archiveUserId = is_array($archiveUser) ? (int)($archiveUser['id_user'] ?? 0) : 0;
+    if (
+        $archiveBranchId > 0
+        && $archiveUserId > 0
+        && $archiveDate instanceof DateTimeImmutable
+        && $archiveDate->format('Y-m-d') === $archiveDateRaw
+    ) {
+        $archiveBranchName = '';
+        $archiveTitleStmt = db()->prepare('
+            SELECT p.nazev
+            FROM user_pobocka up
+            INNER JOIN pobocka p ON p.id_pob = up.id_pob
+            WHERE up.id_user = ? AND p.id_pob = ? AND p.aktivni = 1
+            LIMIT 1
+        ');
+        if ($archiveTitleStmt !== false) {
+            $archiveTitleStmt->bind_param('ii', $archiveUserId, $archiveBranchId);
+            $archiveTitleStmt->execute();
+            $archiveTitleResult = $archiveTitleStmt->get_result();
+            $archiveTitleRow = $archiveTitleResult instanceof mysqli_result ? ($archiveTitleResult->fetch_assoc() ?: []) : [];
+            if ($archiveTitleResult instanceof mysqli_result) {
+                $archiveTitleResult->free();
+            }
+            $archiveTitleStmt->close();
+            $archiveBranchName = trim((string)($archiveTitleRow['nazev'] ?? ''));
+        }
+        if ($archiveBranchName !== '') {
+            $cbProvozPageTitle = ($isComparisonReport ? 'Porovnání reportu ' : 'Detail reportu ') . $archiveBranchName . ' ' . $archiveDate->format('j.n.Y');
+        }
+    }
+}
 
 if (!empty($_SESSION['login_ok']) && !$cbSystemLocked && function_exists('cb_report_promenne_handle_post')) {
     cb_report_promenne_handle_post();
@@ -142,7 +199,11 @@ if ($cbPpOnly && !empty($_SESSION['login_ok']) && !$cbSystemLocked) {
         ?>
         <section class="pp" data-module="provoz" data-page="<?= h($cbPage) ?>">
             <header class="pp_header">
-                <h1><?= h($cbProvozPageTitle) ?></h1>
+                <?php if ($cbArchiveBackUrl !== ''): ?>
+                    <div class="provoz_archive_header_title"><a class="provoz_archive_back_btn" href="<?= h($cbArchiveBackUrl) ?>" title="Zpět do archivu" aria-label="Zpět do archivu">←</a><h1><?= h($cbProvozPageTitle) ?></h1></div>
+                <?php else: ?>
+                    <h1><?= h($cbProvozPageTitle) ?></h1>
+                <?php endif; ?>
                 <?php if ($cbPage === 'denni_report' && function_exists('cb_pravo_ma') && cb_pravo_ma(CB_REPORT_PROMENNE_PRAVO)): ?>
                     <div class="pp_header_control">
                         <a class="head_task_btn" href="<?= h(cb_root_url('index.php?m=provoz&page=nastaveni_reportu')) ?>">Nastavení reportu</a>
@@ -183,7 +244,11 @@ if (!empty($_SESSION['login_ok']) && $cbSystemLocked) {
     <?php else: ?>
     <section class="pp" data-module="provoz" data-page="<?= h($cbPage) ?>">
         <header class="pp_header">
-            <h1><?= h($cbProvozPageTitle) ?></h1>
+            <?php if ($cbArchiveBackUrl !== ''): ?>
+                <div class="provoz_archive_header_title"><a class="provoz_archive_back_btn" href="<?= h($cbArchiveBackUrl) ?>" title="Zpět do archivu" aria-label="Zpět do archivu">←</a><h1><?= h($cbProvozPageTitle) ?></h1></div>
+            <?php else: ?>
+                <h1><?= h($cbProvozPageTitle) ?></h1>
+            <?php endif; ?>
             <?php if ($cbPage === 'denni_report' && function_exists('cb_pravo_ma') && cb_pravo_ma(CB_REPORT_PROMENNE_PRAVO)): ?>
                 <div class="pp_header_control">
                     <a class="head_task_btn" href="<?= h(cb_root_url('index.php?m=provoz&page=nastaveni_reportu')) ?>">Nastavení reportu</a>

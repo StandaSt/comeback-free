@@ -18,6 +18,11 @@ if (isset($_SERVER['HTTP_X_COMEBACK_RESTIA_STATE'])) {
     $cbIsRestiaState = ((string)($_SERVER['HTTP_X_COMEBACK_RESTIA_STATE']) === '1');
 }
 
+$cbIsRestiaRefreshTime = false;
+if (isset($_SERVER['HTTP_X_COMEBACK_RESTIA_REFRESH_TIME'])) {
+    $cbIsRestiaRefreshTime = ((string)($_SERVER['HTTP_X_COMEBACK_RESTIA_REFRESH_TIME']) === '1');
+}
+
 $cbIsRestiaTrigger = false;
 if (isset($_SERVER['HTTP_X_COMEBACK_RESTIA_TRIGGER'])) {
     $cbIsRestiaTrigger = ((string)($_SERVER['HTTP_X_COMEBACK_RESTIA_TRIGGER']) === '1');
@@ -179,8 +184,9 @@ if ($cbIsRestiaTrigger) {
     $forceRestia = ((string)($_SERVER['HTTP_X_COMEBACK_RESTIA_FORCE'] ?? '') === '1');
 
     require_once __DIR__ . '/restia_online_kontrola.php';
+    $completed = false;
     if (function_exists('cb_restia_online_kontrola')) {
-        cb_restia_online_kontrola($forceRestia);
+        $completed = cb_restia_online_kontrola($forceRestia);
     }
 
     $stateAfter = $readState($db, $stateSql);
@@ -188,6 +194,7 @@ if ($cbIsRestiaTrigger) {
     echo json_encode([
         'ok' => true,
         'started' => $started,
+        'completed' => $completed ? 1 : 0,
         'enabled' => 1,
     ] + $stateAfter, JSON_UNESCAPED_UNICODE);
     exit;
@@ -226,6 +233,23 @@ if ($cbIsRestiaState) {
         'zapisy' => (int)($row['zapisy'] ?? 0),
         'aktualizace' => (int)($row['aktualizace'] ?? 0),
         'ignore' => (int)($row['ignore'] ?? 0),
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if ($cbIsRestiaRefreshTime) {
+    if (empty($_SESSION['login_ok'])) {
+        http_response_code(401);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok' => false, 'err' => 'Nutne prihlaseni'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    require_once __DIR__ . '/aktualizace_casu_restia.php';
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'ok' => true,
+        'time' => cb_aktualizace_casu_restia(db()),
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }

@@ -20,16 +20,15 @@ function hr_nacti_vd_akce(mysqli $db, int $idVd): array
             a.poznamka,
             v.vysledek,
             t.nazev AS akce_typ_nazev,
-            ou.jmeno AS zadal_jmeno,
-            ou.prijmeni AS zadal_prijmeni
+            u.jmeno AS zadal_jmeno,
+            u.prijmeni AS zadal_prijmeni
         FROM hr_vd_akce a
         INNER JOIN hr_cis_vd_akce_vysledek v
             ON v.id_vd_akce_vysledek = a.id_vd_akce_vysledek
         INNER JOIN hr_cis_vd_akce_typ t
             ON t.id_vd_akce_typ = v.id_vd_akce_typ
-        LEFT JOIN hr_osobni_udaje ou
-            ON ou.id_person = a.id_person_zadal
-           AND ou.platny = 1
+        LEFT JOIN user u
+            ON u.id_user = a.id_user_zadal
         WHERE a.id_vd = ?
         ORDER BY a.akce_kdy DESC, a.id_vd_akce DESC
     ');
@@ -50,13 +49,59 @@ function hr_nacti_vd_akce(mysqli $db, int $idVd): array
     return $rows;
 }
 
-function hr_uloz_vd_akci(mysqli $db, int $idVd, int $idVdAkceVysledek, string $terminDate, string $terminTime, string $poznamka, int $idPersonZadal, array $podminky): void
+/**
+ * Prevede jednu nebo vice povolenych oblasti na masku jejich aktivnich pobocek.
+ */
+function hr_vd_pobocky_mask_z_oblasti(mysqli $db, mixed $rawOblasti): int
+{
+    if (!is_array($rawOblasti)) {
+        throw new RuntimeException('Vyberte alespoň jednu oblast pracoviště.');
+    }
+
+    $vybraneOblasti = [];
+    foreach ($rawOblasti as $rawOblast) {
+        $oblast = trim((string)$rawOblast);
+        if ($oblast !== '') {
+            $vybraneOblasti[$oblast] = true;
+        }
+    }
+    if ($vybraneOblasti === []) {
+        throw new RuntimeException('Vyberte alespoň jednu oblast pracoviště.');
+    }
+
+    $pobockyPodleOblasti = [];
+    $result = $db->query("SELECT id_pob, oblast FROM pobocka WHERE aktivni = 1 AND id_pob > 0 AND oblast <> '' ORDER BY id_pob");
+    while ($row = $result->fetch_assoc()) {
+        $idPob = (int)$row['id_pob'];
+        $oblast = trim((string)$row['oblast']);
+        if ($idPob > 62) {
+            $result->free();
+            throw new RuntimeException('Pobočku nelze uložit do současného formátu pracovních podmínek.');
+        }
+        $pobockyPodleOblasti[$oblast][] = $idPob;
+    }
+    $result->free();
+
+    $pobockyMask = 0;
+    foreach (array_keys($vybraneOblasti) as $oblast) {
+        if (!isset($pobockyPodleOblasti[$oblast])) {
+            throw new RuntimeException('Vybraná oblast pracoviště není platná.');
+        }
+        foreach ($pobockyPodleOblasti[$oblast] as $idPob) {
+            $pobockyMask |= 1 << $idPob;
+        }
+    }
+
+    return $pobockyMask;
+}
+
+function hr_uloz_vd_akci(mysqli $db, int $idVd, int $idVdAkceVysledek, string $terminDate, string $terminTime, string $poznamka, int $idUserZadal, array $podminky): void
 {
     if ($idVd <= 0 || $idVdAkceVysledek <= 0) {
         throw new RuntimeException('Chybí povinné údaje pro uložení akce.');
     }
-    if ($idPersonZadal <= 0) {
-        throw new RuntimeException('Chybí HR osoba přihlášeného uživatele.');
+    if ($idUserZadal <= 0) {
+        throw new RuntimeException('Chybí přihlášený uživatel.');
     }
 
     $terminDate = trim($terminDate);
@@ -136,31 +181,44 @@ function hr_uloz_vd_akci(mysqli $db, int $idVd, int $idVdAkceVysledek, string $t
 
         if ((int)($vysledek['id_cilovy_vd_stav'] ?? 0) === 24) {
             $idVztah = (int)($podminky['id_pracovni_vztah_typ'] ?? 0);
-            $idPob = (int)($podminky['id_pob'] ?? 0);
             $idSlot = (int)($podminky['id_slot'] ?? 0);
             $datumNastupu = trim((string)($podminky['datum_nastupu'] ?? ''));
             $mzda = trim((string)($podminky['mzda'] ?? ''));
-            $fixni = (int)($podminky['mzda_fixni'] ?? 0) === 1;
-            if ($idVztah <= 0 || $idPob <= 0 || $idSlot <= 0 || $datumNastupu === '' || strtotime($datumNastupu) === false || $mzda === '' || preg_match('/^\d+$/', $mzda) !== 1 || strlen($mzda) > 10 || (strlen($mzda) === 10 && $mzda > '2147483647')) {
-                throw new RuntimeException('Vyplňte pracovní vztah, pobočku, pozici, datum nástupu a mzdu.');
+            $mzdaTyp = trim((string)($podminky['mzda_typ'] ?? ''));
+            $datum = DateTimeImmutable::createFromFormat('!Y-m-d', $datumNastupu);
+            $datumChyby = DateTimeImmutable::getLastErrors();
+            if (
+                $idVztah <= 0
+                || $idSlot <= 0
+                || $idSlot > 62
+                || $datum === false
+                || ($datumChyby !== false && ($datumChyby['warning_count'] > 0 || $datumChyby['error_count'] > 0))
+                || $datum->format('Y-m-d') !== $datumNastupu
+                || !in_array($mzdaTyp, ['mesicni', 'hodinova'], true)
+                || $mzda === ''
+                || preg_match('/^\d+$/', $mzda) !== 1
+                || strlen($mzda) > 10
+                || (strlen($mzda) === 10 && $mzda > '2147483647')
+            ) {
+                throw new RuntimeException('Vyplňte pracovní vztah, oblast, pozici, datum nástupu a mzdu.');
             }
 
-            $pobockyMask = 1 << $idPob;
+            $pobockyMask = hr_vd_pobocky_mask_z_oblasti($db, $podminky['pracoviste_oblasti'] ?? null);
             $slotyMask = 1 << $idSlot;
-            $mzdaFixni = $fixni ? $mzda : null;
-            $mzdaHodinova = $fixni ? null : $mzda;
+            $mzdaFixni = $mzdaTyp === 'mesicni' ? $mzda : null;
+            $mzdaHodinova = $mzdaTyp === 'hodinova' ? $mzda : null;
             $stmt = $db->prepare('
                 INSERT INTO hr_vd_podminky
-                    (id_vd, pobocky_mask, sloty_mask, id_pracovni_vztah_typ, datum_nastupu, mzda_mesicni_fix, mzda_hodinova, id_person_zadal, vytvoreno, platny)
+                    (id_vd, pobocky_mask, sloty_mask, id_pracovni_vztah_typ, datum_nastupu, mzda_mesicni_fix, mzda_hodinova, id_user_zadal, vytvoreno, platny)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1)
             ');
-            $stmt->bind_param('iiiisssi', $idVd, $pobockyMask, $slotyMask, $idVztah, $datumNastupu, $mzdaFixni, $mzdaHodinova, $idPersonZadal);
+            $stmt->bind_param('iiiisssi', $idVd, $pobockyMask, $slotyMask, $idVztah, $datumNastupu, $mzdaFixni, $mzdaHodinova, $idUserZadal);
             $stmt->execute();
             $stmt->close();
         }
 
-        $stmt = $db->prepare("\n            INSERT INTO hr_vd_akce\n                (id_vd, id_vd_akce_vysledek, id_person_zadal, termin_date, termin_time, poznamka)\n            VALUES (?, ?, ?, NULLIF(?, ''), NULLIF(?, ''), ?)\n        ");
-        $stmt->bind_param('iiisss', $idVd, $idVdAkceVysledek, $idPersonZadal, $terminDate, $terminTime, $poznamkaDb);
+        $stmt = $db->prepare("\n            INSERT INTO hr_vd_akce\n                (id_vd, id_vd_akce_vysledek, id_user_zadal, termin_date, termin_time, poznamka)\n            VALUES (?, ?, ?, NULLIF(?, ''), NULLIF(?, ''), ?)\n        ");
+        $stmt->bind_param('iiisss', $idVd, $idVdAkceVysledek, $idUserZadal, $terminDate, $terminTime, $poznamkaDb);
         $stmt->execute();
         $stmt->close();
 

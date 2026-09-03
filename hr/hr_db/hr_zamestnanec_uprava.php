@@ -5,10 +5,10 @@ declare(strict_types=1);
  * Historicky zapis zakladnich osobnich a kontaktnich udaju zamestnance.
  */
 
-function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, int $zadalPerson, int $zadalUser): void
+function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, int $zadalUser): void
 {
-    if ($idPerson <= 0 || $zadalPerson <= 0) {
-        throw new RuntimeException('Chybí zaměstnanec nebo zapisující HR osoba.');
+    if ($idPerson <= 0 || $zadalUser <= 0) {
+        throw new RuntimeException('Chybí zaměstnanec nebo přihlášený uživatel.');
     }
 
     $jmeno = trim((string)($data['jmeno'] ?? ''));
@@ -110,9 +110,9 @@ function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, i
             $statniObcanstviDb = $statniObcanstvi !== '' ? $statniObcanstvi : null;
             $zdrPojDb = $zdrPoj > 0 ? $zdrPoj : null;
             $pohlaviDb = $pohlavi !== '' ? $pohlavi : null;
-            $stmt = $db->prepare('INSERT INTO hr_osobni_udaje (id_person, titul_pred, jmeno, druhe_jmeno, prijmeni, rodne_prijmeni, titul_za, foto, datum_narozeni, rodne_cislo, cislo_obcanskeho_prukazu, zdr_poj, statni_obcanstvi, misto_narozeni, pohlavi, poznamka, id_person_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1)');
+            $stmt = $db->prepare('INSERT INTO hr_osobni_udaje (id_person, titul_pred, jmeno, druhe_jmeno, prijmeni, rodne_prijmeni, titul_za, foto, datum_narozeni, rodne_cislo, cislo_obcanskeho_prukazu, zdr_poj, statni_obcanstvi, misto_narozeni, pohlavi, poznamka, id_user_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1)');
             $types = 'i' . str_repeat('s', 10) . 'i' . str_repeat('s', 4) . 'i';
-            $stmt->bind_param($types, $idPerson, $titulPred, $jmeno, $druheJmeno, $prijmeni, $rodnePrijmeni, $titulZa, $foto, $datumNarozeniDb, $rodneCisloDb, $cisloObcanskehoPrukazuDb, $zdrPojDb, $statniObcanstviDb, $mistoNarozeniDb, $pohlaviDb, $poznamka, $zadalPerson);
+            $stmt->bind_param($types, $idPerson, $titulPred, $jmeno, $druheJmeno, $prijmeni, $rodnePrijmeni, $titulZa, $foto, $datumNarozeniDb, $rodneCisloDb, $cisloObcanskehoPrukazuDb, $zdrPojDb, $statniObcanstviDb, $mistoNarozeniDb, $pohlaviDb, $poznamka, $zadalUser);
             $stmt->execute();
             $stmt->close();
         }
@@ -123,12 +123,12 @@ function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, i
         $stmt->execute();
         $stmt->close();
 
-        hr_update_employee_main_phone($db, $idPerson, $telefon, $zadalPerson);
-        hr_update_employee_main_email($db, $idPerson, $email, $zadalPerson);
-        hr_update_employee_address($db, $idPerson, $data, $zadalPerson, 0, 'adresa_');
-        hr_update_employee_address($db, $idPerson, $data, $zadalPerson, 1, 'dorucovaci_');
+        hr_update_employee_main_phone($db, $idPerson, $telefon, $zadalUser);
+        hr_update_employee_main_email($db, $idPerson, $email, $zadalUser);
+        hr_update_employee_address($db, $idPerson, $data, $zadalUser, 0, 'adresa_');
+        hr_update_employee_address($db, $idPerson, $data, $zadalUser, 1, 'dorucovaci_');
         hr_update_employee_emergency_contact($db, $idPerson, $data, $zadalUser);
-        hr_update_employee_bank_account($db, $idPerson, $data, $zadalPerson);
+        hr_update_employee_bank_account($db, $idPerson, $data, $zadalUser);
 
         $db->commit();
     } catch (Throwable $e) {
@@ -137,7 +137,7 @@ function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, i
     }
 }
 
-function hr_update_employee_address(mysqli $db, int $idPerson, array $data, int $zadalPerson, int $typ, string $prefix): void
+function hr_update_employee_address(mysqli $db, int $idPerson, array $data, int $zadalUser, int $typ, string $prefix): void
 {
     $address = [
         'ulice' => trim((string)($data[$prefix . 'ulice'] ?? '')),
@@ -153,8 +153,8 @@ function hr_update_employee_address(mysqli $db, int $idPerson, array $data, int 
     if ($same) { return; }
     if (is_array($current)) { $id = (int)$current['id_adresa']; $stmt = $db->prepare('UPDATE hr_adresa SET platny = 0, zruseno = NOW() WHERE id_adresa = ?'); $stmt->bind_param('i', $id); $stmt->execute(); $stmt->close(); }
     if (!array_filter($address, static fn(string $value): bool => $value !== '')) { return; }
-    $stmt = $db->prepare('INSERT INTO hr_adresa (id_person, ulice, cp, mesto, psc, stat, typ, zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1)');
-    $stmt->bind_param('isssssii', $idPerson, $address['ulice'], $address['cp'], $address['mesto'], $address['psc'], $address['stat'], $typ, $zadalPerson); $stmt->execute(); $stmt->close();
+    $stmt = $db->prepare('INSERT INTO hr_adresa (id_person, ulice, cp, mesto, psc, stat, typ, id_user_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1)');
+    $stmt->bind_param('isssssii', $idPerson, $address['ulice'], $address['cp'], $address['mesto'], $address['psc'], $address['stat'], $typ, $zadalUser); $stmt->execute(); $stmt->close();
 }
 
 function hr_update_employee_emergency_contact(mysqli $db, int $idPerson, array $data, int $zadalUser): void
@@ -171,17 +171,17 @@ function hr_update_employee_emergency_contact(mysqli $db, int $idPerson, array $
     $stmt->bind_param('issssii', $idPerson, $contact['jmeno'], $contact['vztah'], $contact['telefon'], $contact['email'], $hlavni, $zadalUser); $stmt->execute(); $stmt->close();
 }
 
-function hr_update_employee_bank_account(mysqli $db, int $idPerson, array $data, int $zadalPerson): void
+function hr_update_employee_bank_account(mysqli $db, int $idPerson, array $data, int $zadalUser): void
 {
     $account = ['cislo_uctu' => trim((string)($data['ucet_cislo'] ?? '')), 'kod_banky' => trim((string)($data['ucet_kod_banky'] ?? '')), 'iban' => trim((string)($data['ucet_iban'] ?? ''))];
     if (array_filter($account, static fn(string $value): bool => $value !== '') && $account['cislo_uctu'] === '') { throw new RuntimeException('U bankovního účtu vyplňte číslo účtu.'); }
     $stmt = $db->prepare('SELECT id_bankovni_ucet, cislo_uctu, kod_banky, iban FROM hr_bankovni_ucet WHERE id_person = ? AND platny = 1 ORDER BY zmena DESC, id_bankovni_ucet DESC LIMIT 1');
     $stmt->bind_param('i', $idPerson); $stmt->execute(); $current = $stmt->get_result()->fetch_assoc(); $stmt->close();
     $same = is_array($current); foreach ($account as $key => $value) { $same = $same && trim((string)($current[$key] ?? '')) === $value; } if ($same) { return; }
-    $stmt = $db->prepare('UPDATE hr_bankovni_ucet SET platny = 0, zmena = NOW(), zadal = ? WHERE id_person = ? AND platny = 1'); $stmt->bind_param('ii', $zadalPerson, $idPerson); $stmt->execute(); $stmt->close();
+    $stmt = $db->prepare('UPDATE hr_bankovni_ucet SET platny = 0, zmena = NOW(), id_user_zadal = ? WHERE id_person = ? AND platny = 1'); $stmt->bind_param('ii', $zadalUser, $idPerson); $stmt->execute(); $stmt->close();
     if ($account['cislo_uctu'] === '') { return; }
-    $hlavni = 1; $stmt = $db->prepare('INSERT INTO hr_bankovni_ucet (id_person, cislo_uctu, kod_banky, iban, hlavni, zadal, zadano, zmena, platny) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW(), 1)');
-    $stmt->bind_param('isssii', $idPerson, $account['cislo_uctu'], $account['kod_banky'], $account['iban'], $hlavni, $zadalPerson); $stmt->execute(); $stmt->close();
+    $hlavni = 1; $stmt = $db->prepare('INSERT INTO hr_bankovni_ucet (id_person, cislo_uctu, kod_banky, iban, hlavni, id_user_zadal, zadano, zmena, platny) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW(), 1)');
+    $stmt->bind_param('isssii', $idPerson, $account['cislo_uctu'], $account['kod_banky'], $account['iban'], $hlavni, $zadalUser); $stmt->execute(); $stmt->close();
 }
 
 function hr_employee_parse_birth_date(string $value): string
@@ -200,7 +200,7 @@ function hr_employee_parse_birth_date(string $value): string
     return $date->format('Y-m-d');
 }
 
-function hr_update_employee_main_phone(mysqli $db, int $idPerson, string $telefon, int $zadalPerson): void
+function hr_update_employee_main_phone(mysqli $db, int $idPerson, string $telefon, int $zadalUser): void
 {
     $stmt = $db->prepare('SELECT id_telefon, id_telefon_typ, telefon FROM hr_telefon WHERE id_person = ? AND platny = 1 AND hlavni = 1 ORDER BY id_telefon DESC LIMIT 1');
     $stmt->bind_param('i', $idPerson);
@@ -220,14 +220,14 @@ function hr_update_employee_main_phone(mysqli $db, int $idPerson, string $telefo
     if ($telefon !== '') {
         $typ = is_array($current) ? (int)$current['id_telefon_typ'] : 1;
         $hlavni = 1;
-        $stmt = $db->prepare('INSERT INTO hr_telefon (id_person, id_telefon_typ, telefon, telefon_normalizovany, hlavni, id_person_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, ?, ?, NOW(), 1)');
-        $stmt->bind_param('iissii', $idPerson, $typ, $telefon, $telefon, $hlavni, $zadalPerson);
+        $stmt = $db->prepare('INSERT INTO hr_telefon (id_person, id_telefon_typ, telefon, telefon_normalizovany, hlavni, id_user_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, ?, ?, NOW(), 1)');
+        $stmt->bind_param('iissii', $idPerson, $typ, $telefon, $telefon, $hlavni, $zadalUser);
         $stmt->execute();
         $stmt->close();
     }
 }
 
-function hr_update_employee_main_email(mysqli $db, int $idPerson, string $email, int $zadalPerson): void
+function hr_update_employee_main_email(mysqli $db, int $idPerson, string $email, int $zadalUser): void
 {
     $stmt = $db->prepare('SELECT id_email, id_email_typ, email FROM hr_email WHERE id_person = ? AND platny = 1 AND hlavni = 1 ORDER BY id_email DESC LIMIT 1');
     $stmt->bind_param('i', $idPerson);
@@ -247,8 +247,8 @@ function hr_update_employee_main_email(mysqli $db, int $idPerson, string $email,
     if ($email !== '') {
         $typ = is_array($current) ? (int)$current['id_email_typ'] : 1;
         $hlavni = 1;
-        $stmt = $db->prepare('INSERT INTO hr_email (id_person, id_email_typ, email, hlavni, id_person_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, ?, NOW(), 1)');
-        $stmt->bind_param('iisii', $idPerson, $typ, $email, $hlavni, $zadalPerson);
+        $stmt = $db->prepare('INSERT INTO hr_email (id_person, id_email_typ, email, hlavni, id_user_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, ?, NOW(), 1)');
+        $stmt->bind_param('iisii', $idPerson, $typ, $email, $hlavni, $zadalUser);
         $stmt->execute();
         $stmt->close();
     }

@@ -7,6 +7,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/../../common/lib/session_boot.php';
+require_once __DIR__ . '/../../common/lib/ochrana_crf.php';
 // DB konfigurace musí být načtena v globálním rozsahu stejně jako v hlavním index.php.
 require_once __DIR__ . '/../../common/config/secrets.php';
 require_once __DIR__ . '/../../common/lib/app.php';
@@ -30,6 +31,8 @@ function cb_admin_ajax_spustit(callable $action): never
             http_response_code(401);
             throw new RuntimeException('Přihlášení vypršelo.');
         }
+
+        cb_crf_vyzaduj();
 
         $user = $_SESSION['cb_user'] ?? [];
         if (!is_array($user) || (int)($user['id_role'] ?? 0) !== 1) {

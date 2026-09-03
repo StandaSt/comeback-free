@@ -117,6 +117,12 @@
         setRefreshReady(button);
         return;
       }
+      const pageBusy = w.CB_PAGE_BUSY && typeof w.CB_PAGE_BUSY.start === 'function' && typeof w.CB_PAGE_BUSY.stop === 'function'
+        ? w.CB_PAGE_BUSY
+        : null;
+      const pageBusyHandle = pageBusy
+        ? pageBusy.start('Aktualizuji objednávky ...', 'Načítám nová data Restie')
+        : null;
       w.CB_RESTIA.run({
           forceRestia: true
         })
@@ -125,6 +131,9 @@
           w.alert((err && err.message) ? err.message : 'Aktualizace Restie selhala.');
         })
         .finally(() => {
+          if (pageBusy) {
+            pageBusy.stop(pageBusyHandle);
+          }
           button.classList.remove('is-loading');
           setRefreshReady(button);
           bindRestiaRefresh(form);

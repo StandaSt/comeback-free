@@ -326,6 +326,18 @@
   font-size:var(--cb-font-12);
 }
 
+.provoz_nezadane_table_scroll{
+  height:148px;
+  overflow-y:auto;
+  scrollbar-gutter:stable;
+}
+
+.provoz_nezadane_table_scroll .provoz_prehled_mini_cell{
+  box-sizing:border-box;
+  height:21px;
+  line-height:14px;
+}
+
 /* Mini tabulka prehledu - bunka. */
 .provoz_prehled_mini_cell{
   padding:3px 5px;
@@ -493,11 +505,202 @@
 
 /* Zadani denniho reportu */
 .provoz_denni_report_page{
+  width:1164px;
+  max-width:100%;
   min-width:0;
 }
 
 .provoz_denni_report_zadani{
+  box-sizing:border-box;
+  width:100%;
   overflow:auto;
+}
+
+.pp[data-page="denni_report"] > .pp_header{
+  align-self:flex-start;
+  width:1164px;
+  max-width:100%;
+}
+
+.provoz_archive_header_title{
+  display:flex;
+  align-items:center;
+  gap:20px;
+  min-width:0;
+}
+
+.provoz_archive_back_btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 auto;
+  width:24px;
+  height:24px;
+  border:1px solid var(--cb-module-accent);
+  border-radius:5px;
+  background:var(--cb-module-soft);
+  color:var(--cb-text-main);
+  font-size:18px;
+  line-height:1;
+  text-decoration:none;
+}
+
+.provoz_archive_back_btn:hover{
+  border-color:var(--cb-module-accent);
+  background:var(--cb-bg-control-hover);
+}
+
+.provoz_report_comparison{
+  display:flex;
+  align-items:flex-start;
+  gap:14px;
+  width:max-content;
+  max-width:100%;
+}
+
+.provoz_report_comparison_group{
+  width:max-content;
+  max-width:100%;
+}
+
+.provoz_report_comparison_title{
+  margin:0 0 8px;
+  font-size:var(--cb-font-14);
+  line-height:1.2;
+}
+
+.provoz_report_comparison .provoz_objednavky_table th:not(:first-child),
+.provoz_report_comparison .provoz_objednavky_table td:not(:first-child){
+  text-align:right;
+}
+
+@media (max-width:760px){
+  .provoz_report_comparison{
+    flex-direction:column;
+  }
+}
+
+/* Archiv denních reportů. */
+.provoz_archiv_reportu_page{
+  min-width:0;
+}
+
+.provoz_archiv_reportu_page .archiv_reportu_filters{
+  display:grid;
+  grid-template-columns:120px 77px 77px;
+  gap:0;
+  margin-bottom:12px;
+}
+
+.provoz_archiv_reportu_page .archiv_reportu_filter_period{
+  display:flex;
+  gap:5px;
+}
+
+.provoz_archiv_reportu_page .archiv_reportu_filter--month{
+  width:48px;
+}
+
+.provoz_archiv_reportu_page .archiv_reportu_filter--year{
+  width:62px;
+}
+
+.provoz_archiv_reportu_page .archiv_reportu_filter{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.provoz_archiv_reportu_page .archiv_reportu_filter label{
+  font-size:var(--cb-font-12);
+  font-weight:600;
+  color:var(--cb-text-muted);
+}
+
+.archiv_reportu_status--saved{
+  color:#2e7d32;
+  font-weight:700;
+}
+
+.provoz_archiv_reportu_page .provoz_objednavky_table tbody tr.archiv_reportu_row--missing td{
+  background:#fff1f1;
+}
+
+.provoz_archiv_reportu_page .provoz_objednavky_table tbody tr.archiv_reportu_row--missing:hover td{
+  background:#ffe5e5;
+}
+
+.archiv_reportu_action_badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:22px;
+  padding:2px 7px;
+  border:1px solid rgba(37,99,235,.28);
+  border-radius:999px;
+  background:var(--cb-bg-info);
+  color:#1d4ed8;
+  font-size:var(--cb-font-11);
+  line-height:1.2;
+  white-space:nowrap;
+  text-decoration:none;
+}
+
+.archiv_reportu_action_badge:hover,
+.archiv_reportu_action_badge:focus-visible{
+  color:#1d4ed8;
+  text-decoration:none;
+}
+
+.archiv_reportu_action_badge--entry,
+.archiv_reportu_action_badge--entry:hover,
+.archiv_reportu_action_badge--entry:focus-visible{
+  border-color:rgba(220,38,38,.3);
+  background:#fee2e2;
+  color:#b91c1c;
+}
+
+.provoz_archiv_reportu_page .provoz_objednavky_table_wrap{
+  display:inline-block;
+  width:auto;
+  max-width:100%;
+}
+
+.provoz_archiv_reportu_page .provoz_objednavky_table{
+  width:max-content;
+  min-width:max-content;
+}
+
+.provoz_archiv_reportu_page .provoz_objednavky_table th,
+.provoz_archiv_reportu_page .provoz_objednavky_table td{
+  width:auto;
+}
+
+.provoz_archiv_reportu_page .provoz_objednavky_table th:first-child,
+.provoz_archiv_reportu_page .provoz_objednavky_table td:first-child{
+  min-width:120px;
+}
+
+.provoz_archiv_reportu_page .provoz_objednavky_table th:nth-child(2),
+.provoz_archiv_reportu_page .provoz_objednavky_table td:nth-child(2){
+  min-width:77px;
+}
+
+.provoz_archiv_reportu_page .provoz_objednavky_table th:nth-child(3),
+.provoz_archiv_reportu_page .provoz_objednavky_table td:nth-child(3){
+  min-width:77px;
+}
+
+.provoz_archiv_reportu_page .provoz_objednavky_table thead th{
+  text-align:center;
+}
+
+.provoz_archiv_reportu_page .provoz_objednavky_table tbody td{
+  text-align:right;
+}
+
+.provoz_archiv_reportu_page .provoz_objednavky_table tbody td:last-child{
+  text-align:left;
 }
 
 .report_promenne_form{
@@ -750,6 +953,11 @@
 .zr_person_table thead th{
   font-size:var(--cb-font-11);
   color:var(--cb-text-muted);
+}
+
+.zr_person_table th:not(:first-child),
+.zr_person_table td:not(:first-child){
+  text-align:center;
 }
 
 .zr_person_table tbody tr{

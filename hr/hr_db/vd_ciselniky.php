@@ -69,16 +69,19 @@ function hr_nacti_vd_akce_vysledky(mysqli $db, int $idVdStav): array
 
 function hr_nacti_vd_podminky_ciselniky(mysqli $db): array
 {
-    $pobocky = [];
-    $result = $db->query('SELECT id_pob AS id, nazev AS label FROM pobocka WHERE aktivni = 1 AND id_pob > 0 ORDER BY id_pob');
+    $oblasti = [];
+    $result = $db->query("SELECT DISTINCT oblast FROM pobocka WHERE aktivni = 1 AND id_pob > 0 AND oblast <> '' ORDER BY CASE WHEN oblast = 'Praha' THEN 0 WHEN oblast = 'Plzeň' THEN 1 ELSE 2 END, oblast");
     while ($row = $result->fetch_assoc()) {
-        $pobocky[] = $row;
+        $oblast = trim((string)$row['oblast']);
+        if ($oblast !== '') {
+            $oblasti[] = ['id' => $oblast, 'label' => $oblast];
+        }
     }
     $result->free();
 
     return [
         'vztahy' => hr_fetch_lookup($db, 'hr_cis_pracovni_vztah_typ', 'id_pracovni_vztah_typ', 'nazev', 'id_pracovni_vztah_typ'),
-        'pobocky' => $pobocky,
+        'oblasti' => $oblasti,
         'sloty' => hr_fetch_lookup($db, 'cis_slot', 'id_slot', 'slot', 'CASE WHEN id_slot = 1 THEN 0 WHEN id_slot = 2 THEN 1 WHEN id_slot = 0 THEN 3 ELSE 2 END, id_slot'),
     ];
 }

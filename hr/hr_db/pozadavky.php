@@ -37,22 +37,22 @@ function hr_nacti_hlavni_pobocku_uzivatele(mysqli $db, int $idUser): array
 /**
  * Ulozi HR pozadavek na tolik radku, kolik zamestnancu je pozadovano.
  */
-function hr_uloz_pozadavek(mysqli $db, int $idPob, int $idSlot, int $pocet, string $upresneni, int $zadalPerson): void
+function hr_uloz_pozadavek(mysqli $db, int $idPob, int $idSlot, int $pocet, string $upresneni, int $zadalUser): void
 {
-    if ($zadalPerson <= 0) {
-        throw new RuntimeException('Chybí HR osoba zadavatele požadavku.');
+    if ($zadalUser <= 0) {
+        throw new RuntimeException('Chybí přihlášený uživatel.');
     }
     if ($idPob <= 0 || $idSlot <= 0 || $pocet <= 0) {
         throw new RuntimeException('Chybí povinné údaje požadavku.');
     }
 
     $stmt = $db->prepare("
-        INSERT INTO hr_pozadavek (id_pob, id_slot, id_pozadavek_stav, upresneni, zadal, zadano)
+        INSERT INTO hr_pozadavek (id_pob, id_slot, id_pozadavek_stav, upresneni, id_user_zadal, zadano)
         VALUES (?, ?, 1, ?, ?, NOW())
     ");
 
     for ($i = 0; $i < $pocet; $i++) {
-        $stmt->bind_param('iisi', $idPob, $idSlot, $upresneni, $zadalPerson);
+        $stmt->bind_param('iisi', $idPob, $idSlot, $upresneni, $zadalUser);
         $stmt->execute();
     }
 
@@ -62,22 +62,22 @@ function hr_uloz_pozadavek(mysqli $db, int $idPob, int $idSlot, int $pocet, stri
 /**
  * Zrusi otevreny HR pozadavek zadany konkretnim HR uzivatelem.
  */
-function hr_zrus_pozadavek(mysqli $db, int $idPozadavek, int $zrusilPerson): void
+function hr_zrus_pozadavek(mysqli $db, int $idPozadavek, int $zrusilUser): void
 {
-    if ($zrusilPerson <= 0) {
-        throw new RuntimeException('Chybí HR osoba pro zrušení požadavku.');
+    if ($zrusilUser <= 0) {
+        throw new RuntimeException('Chybí přihlášený uživatel.');
     }
 
     $stmt = $db->prepare("
         UPDATE hr_pozadavek
         SET id_pozadavek_stav = 4,
             uzavreno = NOW(),
-            uzavrel = ?
+            id_user_uzavrel = ?
         WHERE id_pozadavek = ?
           AND id_pozadavek_stav = 1
-          AND zadal = ?
+          AND id_user_zadal = ?
     ");
-    $stmt->bind_param('iii', $zrusilPerson, $idPozadavek, $zrusilPerson);
+    $stmt->bind_param('iii', $zrusilUser, $idPozadavek, $zrusilUser);
     $stmt->execute();
     $stmt->close();
 }
@@ -92,7 +92,7 @@ function hr_nacti_pozadavky_pobocky_podle_stavu(mysqli $db, int $idPob, int $sta
             hp.id_pozadavek,
             hp.id_slot,
             hp.upresneni,
-            hp.zadal,
+            hp.id_user_zadal,
             hp.zadano,
             hp.id_pob,
             cs.slot
@@ -128,7 +128,7 @@ function hr_nacti_pozadavky_podle_stavu(mysqli $db, int $stav): array
             hp.id_pozadavek,
             hp.id_slot,
             hp.upresneni,
-            hp.zadal,
+            hp.id_user_zadal,
             hp.zadano,
             hp.id_pob,
             cs.slot,

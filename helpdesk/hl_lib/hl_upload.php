@@ -32,8 +32,8 @@ function cb_helpdesk_upload_priloha(mysqli $conn, int $idHelpdesk, ?int $idZprav
     if ($size <= 0) {
         throw new RuntimeException('Soubor je prázdný.');
     }
-    if ($size > 5242880) {
-        throw new RuntimeException('Soubor je větší než 5 MB.');
+    if ($size > 3145728) {
+        throw new RuntimeException('Soubor je větší než 3 MB.');
     }
 
     $original = trim((string)($file['name'] ?? 'soubor'));
@@ -70,21 +70,39 @@ function cb_helpdesk_upload_priloha(mysqli $conn, int $idHelpdesk, ?int $idZprav
         finfo_close($info);
     }
 
-    $cesta = cb_helpdesk_upload_web_path($stored);
-
-    $stmt = $conn->prepare('
-        INSERT INTO helpdesk_priloha
-        (id_helpdesk, id_helpdesk_zprava, id_user, puvodni_nazev, ulozeny_nazev, cesta, mime_typ, velikost_b, vytvoreno)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
-    ');
-    if (!($stmt instanceof mysqli_stmt)) {
-        throw new RuntimeException('Příloha se nepodařila zapsat do DB.');
+    $allowedMime = [
+        'png' => ['image/png'],
+        'jpg' => ['image/jpeg'],
+        'jpeg' => ['image/jpeg'],
+        'webp' => ['image/webp'],
+        'gif' => ['image/gif'],
+        'pdf' => ['application/pdf'],
+    ];
+    if (!in_array($mime, $allowedMime[$ext], true)) {
+        @unlink($target);
+        throw new RuntimeException('Skutečný typ souboru neodpovídá jeho příponě.');
     }
 
-    $stmt->bind_param('iiissssi', $idHelpdesk, $idZprava, $idUser, $original, $stored, $cesta, $mime, $size);
-    $stmt->execute();
-    $idPriloha = (int)$stmt->insert_id;
-    $stmt->close();
+    $cesta = cb_helpdesk_upload_web_path($stored);
+
+    try {
+        $stmt = $conn->prepare('
+            INSERT INTO helpdesk_priloha
+            (id_helpdesk, id_helpdesk_zprava, id_user, puvodni_nazev, ulozeny_nazev, cesta, mime_typ, velikost_b, vytvoreno)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        ');
+        if (!($stmt instanceof mysqli_stmt)) {
+            throw new RuntimeException('Příloha se nepodařila zapsat do DB.');
+        }
+
+        $stmt->bind_param('iiissssi', $idHelpdesk, $idZprava, $idUser, $original, $stored, $cesta, $mime, $size);
+        $stmt->execute();
+        $idPriloha = (int)$stmt->insert_id;
+        $stmt->close();
+    } catch (Throwable $e) {
+        @unlink($target);
+        throw $e;
+    }
 
     return [
         'id_helpdesk_priloha' => $idPriloha,
@@ -94,6 +112,14 @@ function cb_helpdesk_upload_priloha(mysqli $conn, int $idHelpdesk, ?int $idZprav
         'mime_typ' => $mime,
         'velikost_b' => $size,
     ];
+}
+
+function cb_helpdesk_upload_smazat(array $priloha): void
+{
+    $stored = basename((string)($priloha['ulozeny_nazev'] ?? ''));
+    if ($stored !== '') {
+        @unlink(cb_helpdesk_upload_dir() . '/' . $stored);
+    }
 }
 
 // helpdesk/hl_lib/hl_upload.php * Verze: V1 * Aktualizace: 20.06.2026

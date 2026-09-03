@@ -4,7 +4,7 @@ declare(strict_types=1);
 function cb_helpdesk_views(): array
 {
     return [
-        'all' => 'Přehled',
+        'all' => 'Přehled tiketů',
         'new-ticket' => 'Nový tiket',
         'mine' => 'Moje tikety',
         'watched' => 'Sledované',

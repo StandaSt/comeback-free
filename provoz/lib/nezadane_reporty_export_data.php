@@ -4,6 +4,13 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/format_datum_cas.php';
 
+const CB_NEZADANE_REPORTY_EXPORT_PRAVO = 211;
+
+function cb_nezadane_reporty_export_ma_pravo(): bool
+{
+    return function_exists('cb_pravo_ma') && cb_pravo_ma(CB_NEZADANE_REPORTY_EXPORT_PRAVO);
+}
+
 function cb_nezadane_reporty_export_period(string $scope): array
 {
     $currentWorkday = cb_dt_workday_start(null, 6);

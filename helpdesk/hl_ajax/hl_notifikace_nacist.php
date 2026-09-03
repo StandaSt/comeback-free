@@ -25,10 +25,16 @@ try {
     }
 
     $conn = db();
+    $idFirma = cb_helpdesk_current_company_id();
     $pocet = 0;
-    $stmtC = $conn->prepare('SELECT COUNT(*) FROM helpdesk_notifikace WHERE id_user = ? AND precteno IS NULL');
+    $stmtC = $conn->prepare('
+        SELECT COUNT(*)
+        FROM helpdesk_notifikace n
+        INNER JOIN helpdesk h ON h.id_helpdesk = n.id_helpdesk
+        WHERE n.id_user = ? AND n.precteno IS NULL AND COALESCE(h.id_firma, 1) = ?
+    ');
     if ($stmtC instanceof mysqli_stmt) {
-        $stmtC->bind_param('i', $idUser);
+        $stmtC->bind_param('ii', $idUser, $idFirma);
         $stmtC->execute();
         $stmtC->bind_result($pocetDb);
         if ($stmtC->fetch()) {
@@ -39,14 +45,15 @@ try {
 
     $notifikace = [];
     $stmt = $conn->prepare('
-        SELECT id_helpdesk_notifikace, id_helpdesk, id_helpdesk_zprava, typ, text, vytvoreno, precteno
-        FROM helpdesk_notifikace
-        WHERE id_user = ?
-        ORDER BY vytvoreno DESC, id_helpdesk_notifikace DESC
+        SELECT n.id_helpdesk_notifikace, n.id_helpdesk, n.id_helpdesk_zprava, n.typ, n.text, n.vytvoreno, n.precteno
+        FROM helpdesk_notifikace n
+        INNER JOIN helpdesk h ON h.id_helpdesk = n.id_helpdesk
+        WHERE n.id_user = ? AND COALESCE(h.id_firma, 1) = ?
+        ORDER BY n.vytvoreno DESC, n.id_helpdesk_notifikace DESC
         LIMIT 20
     ');
     if ($stmt instanceof mysqli_stmt) {
-        $stmt->bind_param('i', $idUser);
+        $stmt->bind_param('ii', $idUser, $idFirma);
         $stmt->execute();
         $res = $stmt->get_result();
         if ($res instanceof mysqli_result) {

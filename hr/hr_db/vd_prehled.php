@@ -43,6 +43,15 @@ function hr_nacti_vd_podle_stavu(mysqli $db, array $stavy): array
             MAX(t.platnost_do) AS platnost_do,
             COALESCE(MAX(a.akce_kdy), vd.upraveno, vd.odeslano) AS posledni_aktivita,
             COALESCE(s.nazev, CASE WHEN vd.id_vd_stav = 0 THEN 'Nepotvrzeno' ELSE '-' END) AS stav_nazev,
+            (
+                SELECT CASE WHEN posledni_vysledek.id_cilovy_vd_stav IS NULL THEN posledni_vysledek.vysledek ELSE NULL END
+                FROM hr_vd_akce posledni_akce
+                INNER JOIN hr_cis_vd_akce_vysledek posledni_vysledek
+                    ON posledni_vysledek.id_vd_akce_vysledek = posledni_akce.id_vd_akce_vysledek
+                WHERE posledni_akce.id_vd = vd.id_vd
+                ORDER BY posledni_akce.akce_kdy DESC, posledni_akce.id_vd_akce DESC
+                LIMIT 1
+            ) AS stav_doplnek,
             cs.slot AS pozice
         FROM hr_vd vd
         LEFT JOIN hr_cis_vd_stav s
@@ -103,6 +112,15 @@ function hr_nacti_domluvene_pohovory(mysqli $db): array
             COALESCE(MAX(a.akce_kdy), vd.upraveno, vd.odeslano) AS posledni_aktivita,
             MAX(CASE WHEN v.id_cilovy_vd_stav = " . HR_VD_STAV_POHOVOR_DOMLUVEN . " THEN CONCAT(a.termin_date, ' ', COALESCE(a.termin_time, '00:00:00')) ELSE NULL END) AS planovano_na,
             s.nazev AS stav_nazev,
+            (
+                SELECT CASE WHEN posledni_vysledek.id_cilovy_vd_stav IS NULL THEN posledni_vysledek.vysledek ELSE NULL END
+                FROM hr_vd_akce posledni_akce
+                INNER JOIN hr_cis_vd_akce_vysledek posledni_vysledek
+                    ON posledni_vysledek.id_vd_akce_vysledek = posledni_akce.id_vd_akce_vysledek
+                WHERE posledni_akce.id_vd = vd.id_vd
+                ORDER BY posledni_akce.akce_kdy DESC, posledni_akce.id_vd_akce DESC
+                LIMIT 1
+            ) AS stav_doplnek,
             cs.slot AS pozice
         FROM hr_vd vd
         INNER JOIN hr_cis_vd_stav s
@@ -156,6 +174,15 @@ function hr_nacti_domluveny_nastup(mysqli $db): array
             COALESCE(MAX(a.akce_kdy), vd.upraveno, vd.odeslano) AS posledni_aktivita,
             MAX(CASE WHEN v.id_vd_akce_typ = 12 THEN 1 ELSE 0 END) AS dotaznik_odeslan,
             s.nazev AS stav_nazev,
+            (
+                SELECT CASE WHEN posledni_vysledek.id_cilovy_vd_stav IS NULL THEN posledni_vysledek.vysledek ELSE NULL END
+                FROM hr_vd_akce posledni_akce
+                INNER JOIN hr_cis_vd_akce_vysledek posledni_vysledek
+                    ON posledni_vysledek.id_vd_akce_vysledek = posledni_akce.id_vd_akce_vysledek
+                WHERE posledni_akce.id_vd = vd.id_vd
+                ORDER BY posledni_akce.akce_kdy DESC, posledni_akce.id_vd_akce DESC
+                LIMIT 1
+            ) AS stav_doplnek,
             cs.slot AS pozice
         FROM hr_vd vd
         INNER JOIN hr_cis_vd_stav s

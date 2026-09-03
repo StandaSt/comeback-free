@@ -24,6 +24,8 @@ try {
         exit;
     }
 
+    cb_crf_vyzaduj();
+
     $data = $_POST;
 
     $idUser = cb_helpdesk_current_user_id();
@@ -44,7 +46,12 @@ try {
         'cist' => 2,
         default => 1,
     };
-    $modul = cb_helpdesk_module_id($data['modul'] ?? $data['module'] ?? $_SESSION['cb_helpdesk_source_module'] ?? 'provoz');
+    $modulKey = strtolower(trim((string)($data['modul'] ?? $_SESSION['cb_helpdesk_source_module'] ?? '')));
+    $allowedAreas = cb_helpdesk_allowed_areas();
+    if (!isset($allowedAreas[$modulKey])) {
+        throw new RuntimeException('Zvolená oblast není dostupná.');
+    }
+    $modul = cb_helpdesk_area_id($modulKey);
 
     if ($predmet === '') {
         throw new RuntimeException('Chybí předmět.');
@@ -57,18 +64,20 @@ try {
     }
 
     $conn = db();
+    $uploadedAttachments = [];
     $conn->begin_transaction();
 
     $stmt = $conn->prepare('
         INSERT INTO helpdesk
-        (id_user_zalozil, modul, typ, stav, verejny, predmet, popis, vytvoreno, upraveno, posledni_zprava)
-        VALUES (?, ?, ?, \'nový\', ?, ?, ?, NOW(), NOW(), NOW())
+        (id_firma, id_user_zalozil, modul, typ, stav, verejny, predmet, popis, pocet_zprav, vytvoreno, upraveno, posledni_zprava)
+        VALUES (?, ?, ?, ?, \'nový\', ?, ?, ?, 1, NOW(), NOW(), NOW())
     ');
     if (!($stmt instanceof mysqli_stmt)) {
         throw new RuntimeException('Nepodařilo se připravit založení požadavku.');
     }
 
-    $stmt->bind_param('iisiss', $idUser, $modul, $typ, $verejny, $predmet, $popis);
+    $idFirma = cb_helpdesk_current_company_id();
+    $stmt->bind_param('iiisiss', $idFirma, $idUser, $modul, $typ, $verejny, $predmet, $popis);
     $stmt->execute();
     $idHelpdesk = (int)$stmt->insert_id;
     $stmt->close();
@@ -123,7 +132,7 @@ try {
                 'error' => (int)$error,
                 'size' => (int)($files['size'][$index] ?? 0),
             ];
-            cb_helpdesk_upload_priloha($conn, $idHelpdesk, $idZprava, $idUser, $file);
+            $uploadedAttachments[] = cb_helpdesk_upload_priloha($conn, $idHelpdesk, $idZprava, $idUser, $file);
         }
     }
 
@@ -136,6 +145,9 @@ try {
 } catch (Throwable $e) {
     if (isset($conn) && $conn instanceof mysqli) {
         $conn->rollback();
+    }
+    foreach (($uploadedAttachments ?? []) as $uploadedAttachment) {
+        cb_helpdesk_upload_smazat($uploadedAttachment);
     }
     header('Location: ' . $redirectBase . '&hd=new-ticket&err=save');
 }

@@ -16,7 +16,7 @@ function hr_post_nabor(mysqli $db): void
             trim((string)($_POST['termin_date'] ?? '')),
             trim((string)($_POST['termin_time'] ?? '')),
             (string)($_POST['poznamka'] ?? ''),
-            hr_current_person_id($db),
+            hr_current_user_id(),
             $_POST
         );
         cb_form_finish(
