@@ -14,6 +14,8 @@ session_set_cookie_params([
 ]);
 session_start();
 
+require_once __DIR__ . '/../common/lib/session_boot.php';
+
 require_once __DIR__ . '/../common/db/db_connect.php';
 require_once __DIR__ . '/../common/config/secrets.php';
 require_once __DIR__ . '/../common/lib/mailer.php';

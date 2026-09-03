@@ -10,27 +10,16 @@ function cb_ai_analytik_agent_tools(): array
     return [
         [
             'type' => 'function',
-            'name' => 'find_schema',
-            'description' => 'Vyhledá tabulky a view podle názvu tabulky, sloupce nebo komentáře. Prázdné hledání vrátí seznam všech dostupných objektů.',
-            'strict' => true,
-            'parameters' => [
-                'type' => 'object',
-                'properties' => ['search' => ['type' => 'string']],
-                'required' => ['search'],
-                'additionalProperties' => false,
-            ],
-        ],
-        [
-            'type' => 'function',
-            'name' => 'describe_schema',
-            'description' => 'Vrátí povolené sloupce, datové typy a cizí klíče vybraných tabulek nebo view.',
+            'name' => 'inspect_schema',
+            'description' => 'V jednom kroku najde a popíše povolené tabulky nebo view: vrátí sloupce, datové typy a cizí klíče. Když pravděpodobný název tabulky znáš, předej jej v tables. Pro neznámou oblast předej více výrazů v searches. Prázdná pole vrátí stručný seznam všech dostupných objektů.',
             'strict' => true,
             'parameters' => [
                 'type' => 'object',
                 'properties' => [
+                    'searches' => ['type' => 'array', 'items' => ['type' => 'string']],
                     'tables' => ['type' => 'array', 'items' => ['type' => 'string']],
                 ],
-                'required' => ['tables'],
+                'required' => ['searches', 'tables'],
                 'additionalProperties' => false,
             ],
         ],
@@ -52,7 +41,7 @@ function cb_ai_analytik_agent_tools(): array
     ];
 }
 
-function cb_ai_analytik_agent_output_format(): array
+function cb_ai_analytik_agent_output_format(array $requestedOutput): array
 {
     $cell = [
         'anyOf' => [
@@ -62,77 +51,88 @@ function cb_ai_analytik_agent_output_format(): array
             ['type' => 'null'],
         ],
     ];
+    $properties = [];
+    $required = [];
+    if ($requestedOutput['text']) {
+        $properties['text'] = ['type' => 'string'];
+        $required[] = 'text';
+    }
+    if ($requestedOutput['tabulka']) {
+        $properties['table'] = [
+            'anyOf' => [
+                [
+                    'type' => 'object',
+                    'properties' => [
+                        'title' => ['type' => 'string'],
+                        'columns' => [
+                            'type' => 'array',
+                            'items' => [
+                                'type' => 'object',
+                                'properties' => [
+                                    'key' => ['type' => 'string'],
+                                    'label' => ['type' => 'string'],
+                                    'type' => ['type' => 'string', 'enum' => ['text', 'number', 'currency', 'date', 'datetime']],
+                                ],
+                                'required' => ['key', 'label', 'type'],
+                                'additionalProperties' => false,
+                            ],
+                        ],
+                        'rows' => [
+                            'type' => 'array',
+                            'items' => ['type' => 'array', 'items' => $cell],
+                        ],
+                    ],
+                    'required' => ['title', 'columns', 'rows'],
+                    'additionalProperties' => false,
+                ],
+                ['type' => 'null'],
+            ],
+        ];
+        $required[] = 'table';
+    }
+    if ($requestedOutput['graf']) {
+        $properties['chart'] = [
+            'anyOf' => [
+                [
+                    'type' => 'object',
+                    'properties' => [
+                        'title' => ['type' => 'string'],
+                        'type' => ['type' => 'string', 'enum' => ['bar', 'line', 'pie']],
+                        'labels' => ['type' => 'array', 'items' => ['type' => 'string']],
+                        'series' => [
+                            'type' => 'array',
+                            'items' => [
+                                'type' => 'object',
+                                'properties' => [
+                                    'name' => ['type' => 'string'],
+                                    'unit' => ['type' => 'string'],
+                                    'data' => [
+                                        'type' => 'array',
+                                        'items' => ['anyOf' => [['type' => 'number'], ['type' => 'null']]],
+                                    ],
+                                ],
+                                'required' => ['name', 'unit', 'data'],
+                                'additionalProperties' => false,
+                            ],
+                        ],
+                    ],
+                    'required' => ['title', 'type', 'labels', 'series'],
+                    'additionalProperties' => false,
+                ],
+                ['type' => 'null'],
+            ],
+        ];
+        $required[] = 'chart';
+    }
+
     return [
         'type' => 'json_schema',
         'name' => 'ai_analytik_vysledek',
         'strict' => true,
         'schema' => [
             'type' => 'object',
-            'properties' => [
-                'text' => ['type' => 'string'],
-                'table' => [
-                    'anyOf' => [
-                        [
-                            'type' => 'object',
-                            'properties' => [
-                                'title' => ['type' => 'string'],
-                                'columns' => [
-                                    'type' => 'array',
-                                    'items' => [
-                                        'type' => 'object',
-                                        'properties' => [
-                                            'key' => ['type' => 'string'],
-                                            'label' => ['type' => 'string'],
-                                            'type' => ['type' => 'string', 'enum' => ['text', 'number', 'currency', 'date', 'datetime']],
-                                        ],
-                                        'required' => ['key', 'label', 'type'],
-                                        'additionalProperties' => false,
-                                    ],
-                                ],
-                                'rows' => [
-                                    'type' => 'array',
-                                    'items' => ['type' => 'array', 'items' => $cell],
-                                ],
-                            ],
-                            'required' => ['title', 'columns', 'rows'],
-                            'additionalProperties' => false,
-                        ],
-                        ['type' => 'null'],
-                    ],
-                ],
-                'chart' => [
-                    'anyOf' => [
-                        [
-                            'type' => 'object',
-                            'properties' => [
-                                'title' => ['type' => 'string'],
-                                'type' => ['type' => 'string', 'enum' => ['bar', 'line', 'pie']],
-                                'labels' => ['type' => 'array', 'items' => ['type' => 'string']],
-                                'series' => [
-                                    'type' => 'array',
-                                    'items' => [
-                                        'type' => 'object',
-                                        'properties' => [
-                                            'name' => ['type' => 'string'],
-                                            'unit' => ['type' => 'string'],
-                                            'data' => [
-                                                'type' => 'array',
-                                                'items' => ['anyOf' => [['type' => 'number'], ['type' => 'null']]],
-                                            ],
-                                        ],
-                                        'required' => ['name', 'unit', 'data'],
-                                        'additionalProperties' => false,
-                                    ],
-                                ],
-                            ],
-                            'required' => ['title', 'type', 'labels', 'series'],
-                            'additionalProperties' => false,
-                        ],
-                        ['type' => 'null'],
-                    ],
-                ],
-            ],
-            'required' => ['text', 'table', 'chart'],
+            'properties' => $properties,
+            'required' => $required,
             'additionalProperties' => false,
         ],
     ];
@@ -220,10 +220,48 @@ function cb_ai_analytik_agent_normalizovat_vysledek(array $raw, array $requested
     return ['text' => $text, 'columns' => $columns, 'rows' => $rows, 'chart' => $chart];
 }
 
+function cb_ai_analytik_agent_objekt_v_oblasti(string $object, string $area): bool
+{
+    $prefixes = match ($area) {
+        'ops' => ['obj_', 'objednavky_', 'online_restia', 'res_', 'v_ai_provoz_', 'cis_obj_', 'cis_poloz', 'pob_'],
+        'shifts' => ['smeny_', 'dr_pracovni', 'reporty_is'],
+        'hr' => ['hr_'],
+        'help' => ['helpdesk'],
+        default => [],
+    };
+    foreach ($prefixes as $prefix) {
+        if (str_starts_with($object, $prefix)) {
+            return true;
+        }
+    }
+
+    $shared = match ($area) {
+        'ops' => ['pobocka', 'firma'],
+        'shifts' => ['user', 'user_role', 'user_pobocka', 'user_pobocka_set', 'user_slot', 'pobocka', 'firma', 'cis_slot', 'cis_mzda_typ', 'hr_sazby'],
+        'hr' => ['user', 'user_role', 'user_pobocka', 'pobocka', 'firma', 'cis_role', 'cis_prac_zarazeni', 'cis_mzda_typ'],
+        'help' => ['user', 'user_role', 'cis_role'],
+        default => [],
+    };
+    return in_array($object, $shared, true);
+}
+
+function cb_ai_analytik_agent_oblast_popis(array $areas): string
+{
+    $labels = cb_ai_analytik_povolene_oblasti();
+    $selected = [];
+    foreach ($areas as $area) {
+        if (isset($labels[$area])) {
+            $selected[] = $labels[$area];
+        }
+    }
+    return implode(', ', $selected);
+}
+
 function cb_ai_analytik_agent_spustit(
     int $idAudit,
     string $model,
     string $prompt,
+    array $areas,
     array $requestedOutput,
     callable $progress
 ): array {
@@ -231,16 +269,44 @@ function cb_ai_analytik_agent_spustit(
     $outputText = $requestedOutput['text'] ? 'ano' : 'ne';
     $outputTable = $requestedOutput['tabulka'] ? 'ano' : 'ne';
     $outputChart = $requestedOutput['graf'] ? 'ano' : 'ne';
+    $schemaIndex = cb_ai_analytik_schema_hledat('');
+    $allObjects = [];
+    foreach (is_array($schemaIndex['tables'] ?? null) ? $schemaIndex['tables'] : [] as $schemaObject) {
+        if (is_array($schemaObject) && trim((string)($schemaObject['name'] ?? '')) !== '') {
+            $allObjects[] = (string)$schemaObject['name'];
+        }
+    }
+    $availableObjects = [];
+    if (in_array('all', $areas, true)) {
+        $availableObjects = $allObjects;
+    } else {
+        foreach ($allObjects as $object) {
+            foreach ($areas as $area) {
+                if (cb_ai_analytik_agent_objekt_v_oblasti($object, (string)$area)) {
+                    $availableObjects[] = $object;
+                    break;
+                }
+            }
+        }
+    }
+    if ($availableObjects === []) {
+        $availableObjects = $allObjects;
+    }
+    $availableObjectsText = implode(', ', $availableObjects);
+    $areaDescription = cb_ai_analytik_agent_oblast_popis($areas);
     $instructions = <<<TEXT
 Jsi interní AI analytik vedení společnosti Comeback. Dnes je {$today} (Europe/Prague).
 Máš globální read-only přístup k povoleným datům všech firem a všech poboček v informačním systému.
 Nejsi omezen na žádnou obchodní oblast. Můžeš analyzovat provoz, objednávky, tržby, HR, mzdy, směny, uživatele i technická provozní data.
-Nástroje find_schema a describe_schema použij jen tehdy, když skutečně neznáš potřebnou tabulku, view, sloupec nebo vazbu. Nedělej povinné průzkumné ani kontrolní dotazy před každou analýzou.
+Uživatel jako výchozí kontext zvolil oblasti: {$areaDescription}.
+Pravděpodobně relevantní databázové objekty: {$availableObjectsText}
+Výběr oblastí je pomůcka, nikoli omezení přístupu. Z tohoto aktuálního seznamu nejprve vyber pravděpodobně relevantní objekty. Nástroj inspect_schema použij jen tehdy, když neznáš jejich sloupce nebo vazby. Vyžádej všechny pravděpodobně potřebné objekty najednou v tables. Searches použij jako doplňkové hledání v celém povoleném schématu, pokud vhodný název v seznamu nerozpoznáš nebo potřebuješ data mimo zvolené oblasti. Po jediném neúspěšném hledání netvrď, že data neexistují. Nedělej povinné kontrolní dotazy před každou analýzou.
 Připraveným view v_ai_* důvěřuj a nespojuj je znovu s jejich zdrojovými tabulkami jen kvůli ověření. Pokud je dotaz jasný, použij co nejméně SQL dotazů, ideálně jeden výsledný agregační SELECT. Neopakuj samostatný součtový dotaz, pokud lze součet získat z již vráceného výsledku.
 SQL nikdy nesmí měnit data. Dotazy formuluj úsporně, filtruj období přímo ve čteném objektu a agreguj v databázi; neposílej si zbytečně každý zdrojový řádek, pokud uživatel požaduje souhrn.
+Rozlišuj všechny uložené záznamy od aktivních, schválených nebo skutečně používaných záznamů podle stavových sloupců. Výraz „registrovaný uživatel v systému“ znamená v tabulce user podmínku in_system = 1; všechny řádky tabulky user počítej jen tehdy, když uživatel výslovně žádá všechny evidované účty. Použitou definici stručně uveď v odpovědi.
 Odpověz česky pouze z ověřených výsledků nástrojů. Pokud data nestačí nebo je dotaz nejednoznačný, popiš přesně proč.
 Požadované části výstupu: text={$outputText}, tabulka={$outputTable}, graf={$outputChart}.
-Nevyžádanou část vrať jako prázdný text nebo null. Graf vytvoř jen tehdy, když je pro výsledek věcně vhodný. Řádky tabulky vrať jako pole hodnot přesně ve stejném pořadí jako columns.
+Vrať pouze požadované části výstupu. Graf vytvoř jen tehdy, když je pro výsledek věcně vhodný. Řádky tabulky vrať jako pole hodnot přesně ve stejném pořadí jako columns.
 TEXT;
 
     $conversation = [['role' => 'user', 'content' => $prompt]];
@@ -267,6 +333,7 @@ TEXT;
         $response = cb_ai_analytik_openai_request([
             'model' => $model,
             'store' => false,
+            'prompt_cache_key' => 'ai-analytik-v3-' . $model . '-' . implode('-', $areas),
             'reasoning' => ['effort' => 'low'],
             'include' => ['reasoning.encrypted_content'],
             'instructions' => $instructions,
@@ -274,7 +341,7 @@ TEXT;
             'tools' => cb_ai_analytik_agent_tools(),
             'tool_choice' => 'auto',
             'parallel_tool_calls' => false,
-            'text' => ['format' => cb_ai_analytik_agent_output_format()],
+            'text' => ['format' => cb_ai_analytik_agent_output_format($requestedOutput)],
         ]);
         cb_ai_analytik_usage_zapsat($idAudit, 'agent_' . $apiCalls, $response);
         cb_ai_analytik_agent_usage_add($usageTotal, $response);
@@ -319,24 +386,23 @@ TEXT;
                 throw new RuntimeException('AI předala neplatné volání nástroje.');
             }
 
-            if ($name === 'find_schema') {
-                $search = trim((string)($arguments['search'] ?? ''));
-                $message = $search === ''
-                    ? 'Načítám seznam dostupných tabulek a view.'
-                    : 'Hledám v DB schématu: „' . $search . '“.';
-                $progress('schema', $message, ['api_calls' => $apiCalls, 'sql_count' => $sqlCalls]);
-                $toolResult = cb_ai_analytik_schema_hledat($search);
-                $nextOpenAiMessage = 'AI vyhodnocuje nalezené tabulky a vybírá potřebné sloupce.';
-            } elseif ($name === 'describe_schema') {
+            if ($name === 'inspect_schema') {
+                $searches = is_array($arguments['searches'] ?? null) ? $arguments['searches'] : [];
                 $tables = is_array($arguments['tables'] ?? null) ? $arguments['tables'] : [];
+                $searchTerms = array_values(array_filter(array_map('strval', $searches), static fn(string $search): bool => trim($search) !== ''));
                 $tableNames = array_values(array_filter(array_map('strval', $tables), static fn(string $table): bool => $table !== ''));
-                $message = $tableNames === []
-                    ? 'Čtu sloupce a vazby vybraných tabulek.'
-                    : 'Čtu sloupce a vazby tabulek: ' . implode(', ', $tableNames) . '.';
+                $parts = [];
+                if ($tableNames !== []) {
+                    $parts[] = 'tabulky: ' . implode(', ', $tableNames);
+                }
+                if ($searchTerms !== []) {
+                    $parts[] = 'hledané výrazy: ' . implode(', ', $searchTerms);
+                }
+                $message = $parts === []
+                    ? 'Načítám seznam dostupných tabulek a view.'
+                    : 'V jednom kroku zkoumám DB schéma – ' . implode('; ', $parts) . '.';
                 $progress('schema', $message, ['api_calls' => $apiCalls, 'sql_count' => $sqlCalls]);
-                $toolResult = cb_ai_analytik_schema_popsat(
-                    $tables
-                );
+                $toolResult = cb_ai_analytik_schema_prozkoumat($searches, $tables);
                 $nextOpenAiMessage = 'AI vyhodnocuje schéma a připravuje datový SQL dotaz.';
             } elseif ($name === 'run_readonly_sql') {
                 $sqlCalls++;

@@ -153,6 +153,149 @@ function cb_ai_analytik_schema_popsat(array $requestedTables): array
     }
 }
 
+function cb_ai_analytik_schema_prozkoumat(array $searches, array $requestedTables): array
+{
+    $conn = cb_ai_analytik_db();
+    try {
+        $available = [];
+        $result = $conn->query(
+            "SELECT TABLE_NAME, TABLE_TYPE, TABLE_COMMENT
+             FROM information_schema.TABLES
+             WHERE TABLE_SCHEMA = DATABASE()
+             ORDER BY TABLE_NAME"
+        );
+        while ($row = $result->fetch_assoc()) {
+            $name = (string)$row['TABLE_NAME'];
+            $available[$name] = [
+                'name' => $name,
+                'type' => (string)$row['TABLE_TYPE'],
+                'comment' => (string)$row['TABLE_COMMENT'],
+            ];
+        }
+        $result->free();
+
+        $normalizedSearches = [];
+        foreach ($searches as $search) {
+            $search = trim((string)$search);
+            if ($search !== '' && !in_array($search, $normalizedSearches, true)) {
+                $normalizedSearches[] = $search;
+            }
+        }
+
+        $selected = [];
+        foreach ($requestedTables as $requestedTable) {
+            $table = trim((string)$requestedTable);
+            if (isset($available[$table])) {
+                $selected[$table] = $available[$table];
+            }
+        }
+
+        $matches = [];
+        if ($normalizedSearches !== []) {
+            $stmt = $conn->prepare(
+                "SELECT DISTINCT t.TABLE_NAME
+                 FROM information_schema.TABLES t
+                 LEFT JOIN information_schema.COLUMNS c
+                   ON c.TABLE_SCHEMA = t.TABLE_SCHEMA AND c.TABLE_NAME = t.TABLE_NAME
+                 WHERE t.TABLE_SCHEMA = DATABASE()
+                   AND (t.TABLE_NAME LIKE ? OR t.TABLE_COMMENT LIKE ? OR c.COLUMN_NAME LIKE ? OR c.COLUMN_COMMENT LIKE ?)
+                 ORDER BY CASE WHEN t.TABLE_NAME = ? THEN 0 WHEN t.TABLE_NAME LIKE ? THEN 1 ELSE 2 END,
+                          t.TABLE_NAME"
+            );
+            foreach ($normalizedSearches as $search) {
+                $like = '%' . $search . '%';
+                $prefix = $search . '%';
+                $stmt->bind_param('ssssss', $like, $like, $like, $like, $search, $prefix);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $matches[$search] = [];
+                while ($row = $result->fetch_assoc()) {
+                    $table = (string)$row['TABLE_NAME'];
+                    $matches[$search][] = $table;
+                    $selected[$table] = $available[$table];
+                }
+                $result->free();
+            }
+            $stmt->close();
+        }
+
+        if ($selected === []) {
+            return [
+                'searches' => $normalizedSearches,
+                'matches' => $matches,
+                'available_tables' => array_values($available),
+                'tables' => [],
+            ];
+        }
+
+        $tables = [];
+        $stmt = $conn->prepare(
+            "SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_KEY, COLUMN_COMMENT
+             FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+             ORDER BY ORDINAL_POSITION"
+        );
+        foreach ($selected as $table => $metadata) {
+            $stmt->bind_param('s', $table);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $columns = [];
+            while ($row = $result->fetch_assoc()) {
+                $columns[] = [
+                    'name' => (string)$row['COLUMN_NAME'],
+                    'type' => (string)$row['COLUMN_TYPE'],
+                    'nullable' => (string)$row['IS_NULLABLE'] === 'YES',
+                    'key' => (string)$row['COLUMN_KEY'],
+                    'comment' => (string)$row['COLUMN_COMMENT'],
+                ];
+            }
+            $result->free();
+            $tables[$table] = $metadata + ['columns' => $columns, 'relations' => []];
+        }
+        $stmt->close();
+
+        if ($tables !== []) {
+            $stmt = $conn->prepare(
+                "SELECT TABLE_NAME, COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME
+                 FROM information_schema.KEY_COLUMN_USAGE
+                 WHERE TABLE_SCHEMA = DATABASE()
+                   AND REFERENCED_TABLE_NAME IS NOT NULL
+                   AND (TABLE_NAME = ? OR REFERENCED_TABLE_NAME = ?)"
+            );
+            foreach (array_keys($tables) as $table) {
+                $stmt->bind_param('ss', $table, $table);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                while ($row = $result->fetch_assoc()) {
+                    $owner = (string)$row['TABLE_NAME'];
+                    if (!isset($tables[$owner])) {
+                        continue;
+                    }
+                    $relation = [
+                        'column' => (string)$row['COLUMN_NAME'],
+                        'references_table' => (string)$row['REFERENCED_TABLE_NAME'],
+                        'references_column' => (string)$row['REFERENCED_COLUMN_NAME'],
+                    ];
+                    if (!in_array($relation, $tables[$owner]['relations'], true)) {
+                        $tables[$owner]['relations'][] = $relation;
+                    }
+                }
+                $result->free();
+            }
+            $stmt->close();
+        }
+
+        return [
+            'searches' => $normalizedSearches,
+            'matches' => $matches,
+            'available_tables' => [],
+            'tables' => array_values($tables),
+        ];
+    } finally {
+        $conn->close();
+    }
+}
+
 function cb_ai_analytik_sql_typ(int $mysqliType): string
 {
     return match ($mysqliType) {

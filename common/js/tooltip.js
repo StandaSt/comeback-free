@@ -51,6 +51,7 @@
 
     activeTarget = target;
     panel.textContent = text;
+    panel.classList.toggle('cb_tooltip_multiline', target.dataset.cbTooltipMultiline === '1');
     panel.style.setProperty('--cb-tooltip-accent', accent || '#2563eb');
     panel.classList.add('cb_tooltip_visible');
     positionFloatingPanel(target, panel);

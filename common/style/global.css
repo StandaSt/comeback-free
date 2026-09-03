@@ -294,6 +294,10 @@ main{
   transform:translateY(0);
 }
 
+.cb_tooltip.cb_tooltip_multiline{
+  white-space:pre-line;
+}
+
 .cb-module-load-error{
   padding:12px;
   color:#b91c1c;

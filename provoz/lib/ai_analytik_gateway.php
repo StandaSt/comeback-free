@@ -106,12 +106,17 @@ function cb_ai_analytik_gateway(): never
     $modelRaw = array_key_exists('model', $input) ? $input['model'] : CB_AI_ANALYTIK_VYCHOZI_MODEL;
     $model = is_string($modelRaw) ? trim($modelRaw) : '';
     $modelProAudit = mb_substr($model !== '' ? $model : '[neplatný formát]', 0, 64);
+    $areasRaw = $input['oblasti'] ?? [CB_AI_ANALYTIK_VYCHOZI_OBLAST];
+    $areasForAudit = is_array($areasRaw)
+        ? implode(',', array_map(static fn(mixed $area): string => is_string($area) ? $area : '?', $areasRaw))
+        : '[neplatné]';
+    $areasForAudit = mb_substr($areasForAudit !== '' ? $areasForAudit : '[prázdné]', 0, 20);
     $idUser = (int)($_SESSION['cb_user']['id_user'] ?? 0);
     $idLogin = (int)($_SESSION['cb_id_login'] ?? 0);
     $isAdmin = (int)($_SESSION['cb_user']['id_role'] ?? 0) === 1;
 
     try {
-        $idAudit = cb_ai_analytik_audit_start($idUser, $idLogin, $modelProAudit, $prompt);
+        $idAudit = cb_ai_analytik_audit_start($idUser, $idLogin, $modelProAudit, $prompt, $areasForAudit);
     } catch (Throwable $error) {
         error_log('AI analytik: audit nelze zahájit: ' . $error->getMessage());
         cb_ai_analytik_json(503, [
@@ -140,6 +145,16 @@ function cb_ai_analytik_gateway(): never
             'ok' => false,
             'error' => 'Přístup k AI analytikovi byl zablokován kvůli pokusu použít nepovolený model.',
         ]);
+    }
+
+    try {
+        $areas = cb_ai_analytik_normalizovat_oblasti($areasRaw);
+    } catch (Throwable $error) {
+        $audit['duration_ms'] = (int)((hrtime(true) - $startedAt) / 1_000_000);
+        $audit['status'] = 'rejected_request';
+        $audit['error_message'] = $error->getMessage();
+        cb_ai_analytik_audit_finish($idAudit, $audit);
+        cb_ai_analytik_json(422, ['ok' => false, 'error' => $error->getMessage() . ' · Audit #' . $idAudit]);
     }
 
     try {
@@ -172,7 +187,7 @@ function cb_ai_analytik_gateway(): never
             cb_ai_analytik_audit_status($idAudit, $stage);
             cb_ai_analytik_stream('progress', ['stage' => $stage, 'message' => $message, 'meta' => $meta]);
         };
-        $result = cb_ai_analytik_agent_spustit($idAudit, $model, $prompt, $requestedOutput, $progress);
+        $result = cb_ai_analytik_agent_spustit($idAudit, $model, $prompt, $areas, $requestedOutput, $progress);
         $durationMs = (int)((hrtime(true) - $startedAt) / 1_000_000);
         $audit['openai_summary_response_id'] = (string)$result['last_response_id'];
         $audit['row_count'] = count($result['rows']);
@@ -205,7 +220,7 @@ function cb_ai_analytik_gateway(): never
             'meta' => [
                 'model' => $model,
                 'vystup' => $requestedOutput,
-                'scope' => 'global',
+                'scope' => implode(',', $areas),
                 'usage' => $result['usage'],
                 'duration_ms' => $durationMs,
                 'api_calls' => (int)$result['api_calls'],

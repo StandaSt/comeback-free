@@ -7,6 +7,7 @@
   const applicationUrl = new URL(String(w.CB_ENDPOINT || 'index.php'), w.location.href);
   const AJAX_TRACE_URL = new URL('provoz/ajax/ajax_trace.php', applicationUrl).toString();
   let loginRedirectStarted = false;
+  let maintenanceRedirectStarted = false;
 
   // Rozpoznání stejného původu brání přesměrování kvůli cizím HTTP požadavkům.
   function isSameOriginRequest(input) {
@@ -29,9 +30,21 @@
     w.location.replace(applicationUrl.toString());
   }
 
+  // Údržba musí převést asynchronní odpověď na celostránkovou navigaci se stejnou URL.
+  function redirectToMaintenance() {
+    if (maintenanceRedirectStarted) {
+      return;
+    }
+    maintenanceRedirectStarted = true;
+    w.location.replace(w.location.href);
+  }
+
   if (nativeFetch) {
     w.fetch = function (input, init) {
       return nativeFetch(input, init).then((response) => {
+        if (response && response.headers.get('X-Comeback-Maintenance') === '1' && isSameOriginRequest(input)) {
+          redirectToMaintenance();
+        }
         if (response && response.status === 401 && isSameOriginRequest(input)) {
           redirectToLogin();
         }

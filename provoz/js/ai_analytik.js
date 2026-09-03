@@ -407,6 +407,32 @@
     return read();
   }
 
+  document.addEventListener('change', function(event){
+    var changed = event.target instanceof Element ? event.target.closest('[data-ai-analytik-oblast]') : null;
+    if (!(changed instanceof HTMLInputElement) || !changed.checked) return;
+    var form = changed.closest('[data-ai-analytik-form]');
+    if (!(form instanceof HTMLFormElement)) return;
+    var areas = Array.prototype.slice.call(form.querySelectorAll('[data-ai-analytik-oblast]'));
+    if (changed.value === 'all') {
+      areas.forEach(function(area){
+        if (area !== changed && area instanceof HTMLInputElement) area.checked = false;
+      });
+      return;
+    }
+    areas.forEach(function(area){
+      if (area instanceof HTMLInputElement && area.value === 'all') area.checked = false;
+    });
+  });
+
+  document.addEventListener('input', function(event){
+    var prompt = event.target instanceof Element ? event.target.closest('[data-ai-analytik-prompt]') : null;
+    if (!(prompt instanceof HTMLTextAreaElement)) return;
+    var form = prompt.closest('[data-ai-analytik-form]');
+    if (!(form instanceof HTMLFormElement)) return;
+    var submit = form.querySelector('[data-ai-analytik-submit]');
+    if (submit instanceof HTMLButtonElement) submit.classList.toggle('is-ready', prompt.value.trim() !== '');
+  });
+
   document.addEventListener('submit', function(event){
     var form = event.target instanceof Element ? event.target.closest('[data-ai-analytik-form]') : null;
     if (!(form instanceof HTMLFormElement)) return;
@@ -414,12 +440,12 @@
     var root = form.closest('[data-ai-analytik]');
     if (!(root instanceof HTMLElement) || form.dataset.running === '1') return;
     var promptNode = form.querySelector('[data-ai-analytik-prompt]');
-    var modelNode = form.querySelector('[data-ai-analytik-model]');
+    var modelNode = form.querySelector('[data-ai-analytik-model]:checked');
     var textOutputNode = form.querySelector('[data-ai-analytik-vystup="text"]');
     var tableOutputNode = form.querySelector('[data-ai-analytik-vystup="tabulka"]');
     var chartOutputNode = form.querySelector('[data-ai-analytik-vystup="graf"]');
     var submit = form.querySelector('[data-ai-analytik-submit]');
-    if (!(promptNode instanceof HTMLTextAreaElement) || !(modelNode instanceof HTMLSelectElement)
+    if (!(promptNode instanceof HTMLTextAreaElement) || !(modelNode instanceof HTMLInputElement)
       || !(textOutputNode instanceof HTMLInputElement) || !(tableOutputNode instanceof HTMLInputElement)
       || !(chartOutputNode instanceof HTMLInputElement)) return;
 
@@ -436,6 +462,13 @@
     };
     if (!requestedOutput.text && !requestedOutput.tabulka && !requestedOutput.graf) {
       renderSingleError(root, 'Vyberte alespoň jeden požadovaný výstup.');
+      return;
+    }
+    var selectedAreas = Array.prototype.slice.call(form.querySelectorAll('[data-ai-analytik-oblast]:checked')).map(function(area){
+      return String(area.value || '');
+    }).filter(Boolean);
+    if (selectedAreas.length === 0) {
+      renderSingleError(root, 'Vyberte alespoň jednu oblast analýzy.');
       return;
     }
 
@@ -459,6 +492,7 @@
       body: JSON.stringify({
         prompt: prompt,
         model: modelNode.value,
+        oblasti: selectedAreas,
         vystup: requestedOutput,
         csrf: String(root.dataset.csrf || '')
       })

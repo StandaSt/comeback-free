@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 const CB_AI_ANALYTIK_PRAVO = 210;
 const CB_AI_ANALYTIK_VYCHOZI_MODEL = 'gpt-5.6-terra';
+const CB_AI_ANALYTIK_VYCHOZI_OBLAST = 'ops';
 
 function cb_ai_analytik_povolene_modely(): array
 {
@@ -16,6 +17,46 @@ function cb_ai_analytik_povolene_modely(): array
 function cb_ai_analytik_model_je_povoleny(string $model): bool
 {
     return in_array($model, cb_ai_analytik_povolene_modely(), true);
+}
+
+function cb_ai_analytik_povolene_oblasti(): array
+{
+    return [
+        'ops' => 'Objednávky a reporty',
+        'hr' => 'HR a lidé',
+        'shifts' => 'Směny a odpracované hodiny',
+        'help' => 'Helpdesk',
+        'all' => 'Dotaz nad celou databází',
+    ];
+}
+
+function cb_ai_analytik_normalizovat_oblasti(mixed $raw): array
+{
+    if (!is_array($raw)) {
+        throw new CbAiAnalytikUzivatelskaChyba('Vyberte alespoň jednu oblast analýzy.');
+    }
+
+    $selected = [];
+    foreach ($raw as $value) {
+        if (!is_string($value) || !array_key_exists($value, cb_ai_analytik_povolene_oblasti())) {
+            throw new CbAiAnalytikUzivatelskaChyba('Vybraná oblast analýzy není povolena.');
+        }
+        $selected[$value] = true;
+    }
+    if ($selected === []) {
+        throw new CbAiAnalytikUzivatelskaChyba('Vyberte alespoň jednu oblast analýzy.');
+    }
+    if (isset($selected[CB_AI_ANALYTIK_VYCHOZI_OBLAST])) {
+        return [CB_AI_ANALYTIK_VYCHOZI_OBLAST];
+    }
+
+    $normalized = [];
+    foreach (array_keys(cb_ai_analytik_povolene_oblasti()) as $area) {
+        if ($area !== CB_AI_ANALYTIK_VYCHOZI_OBLAST && isset($selected[$area])) {
+            $normalized[] = $area;
+        }
+    }
+    return $normalized;
 }
 
 function cb_ai_analytik_ceny_modelu(string $model): array

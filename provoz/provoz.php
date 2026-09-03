@@ -104,6 +104,61 @@ $file = $cbProvozCurrentPage['file'];
 $cbPageExists = (bool)$cbProvozCurrentPage['exists'];
 $cbProvozPageTitle = $cbProvozCurrentPage['title'];
 $cbArchiveBackUrl = '';
+$cbAiAnalytikPristup = [];
+
+if ($cbPage === 'ai_analytik' && $cbPageExists) {
+    require_once __DIR__ . '/lib/ai_analytik_pravidla.php';
+    require_once __DIR__ . '/db/db_ai_analytik_audit.php';
+    try {
+        if (cb_ai_analytik_ma_pravo()) {
+            $cbAiAnalytikPristup = cb_ai_analytik_prehled_pristupu(db());
+        }
+    } catch (Throwable $error) {
+        $cbAiAnalytikPristup = [];
+    }
+}
+
+$cbAiAnalytikPristupRender = static function (array $rows): void {
+    if ($rows === []) {
+        return;
+    }
+    ?>
+    <details class="ai_analytik_access">
+        <summary>Kdo má přístup</summary>
+        <div class="ai_analytik_access_panel">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Jméno</th>
+                        <th>Počet promptů</th>
+                        <th>Využitý čas</th>
+                        <th>Spotřeba tokenů</th>
+                        <th>Cena</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($rows as $row): ?>
+                        <?php
+                        $seconds = (int)round(((int)$row['duration_ms']) / 1000);
+                        $duration = $seconds >= 3600
+                            ? intdiv($seconds, 3600) . ' h ' . intdiv($seconds % 3600, 60) . ' min'
+                            : ($seconds >= 60 ? intdiv($seconds, 60) . ' min ' . ($seconds % 60) . ' s' : $seconds . ' s');
+                        $cost = (float)$row['cost_usd'];
+                        ?>
+                        <tr>
+                            <td><?= h((string)$row['jmeno']) ?></td>
+                            <td><?= number_format((int)$row['prompty'], 0, ',', "\u{00A0}") ?></td>
+                            <td><?= h($duration) ?></td>
+                            <td><?= number_format((int)$row['total_tokens'], 0, ',', "\u{00A0}") ?></td>
+                            <td>$<?= number_format($cost, $cost < 0.01 ? 6 : 4, '.', '') ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </details>
+    <?php
+};
 
 if (
     (($cbPage === 'denni_report' && (string)($_GET['zr_archive'] ?? '') === '1') || $cbPage === 'porovnani_reportu')
@@ -209,6 +264,7 @@ if ($cbPpOnly && !empty($_SESSION['login_ok']) && !$cbSystemLocked) {
                         <a class="head_task_btn" href="<?= h(cb_root_url('index.php?m=provoz&page=nastaveni_reportu')) ?>">Nastavení reportu</a>
                     </div>
                 <?php endif; ?>
+                <?php $cbAiAnalytikPristupRender($cbAiAnalytikPristup); ?>
             </header>
             <?php
             if ($cbPageExists) {
@@ -254,6 +310,7 @@ if (!empty($_SESSION['login_ok']) && $cbSystemLocked) {
                     <a class="head_task_btn" href="<?= h(cb_root_url('index.php?m=provoz&page=nastaveni_reportu')) ?>">Nastavení reportu</a>
                 </div>
             <?php endif; ?>
+            <?php $cbAiAnalytikPristupRender($cbAiAnalytikPristup); ?>
         </header>
         <?php
         if ($cbPageExists) {
