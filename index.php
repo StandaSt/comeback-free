@@ -24,8 +24,7 @@ if (!empty($_SESSION['login_ok'])) {
     $cbRightsUser = $_SESSION['cb_user'] ?? [];
     cb_db_prava_nacti_do_session(
         db(),
-        is_array($cbRightsUser) ? (int)($cbRightsUser['id_user'] ?? 0) : 0,
-        is_array($cbRightsUser) ? (int)($cbRightsUser['id_role'] ?? 0) : 0
+        is_array($cbRightsUser) ? (int)($cbRightsUser['id_user'] ?? 0) : 0
     );
 }
 

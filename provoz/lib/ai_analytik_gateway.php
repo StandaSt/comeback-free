@@ -113,7 +113,7 @@ function cb_ai_analytik_gateway(): never
     $areasForAudit = mb_substr($areasForAudit !== '' ? $areasForAudit : '[prázdné]', 0, 20);
     $idUser = (int)($_SESSION['cb_user']['id_user'] ?? 0);
     $idLogin = (int)($_SESSION['cb_id_login'] ?? 0);
-    $isAdmin = (int)($_SESSION['cb_user']['id_role'] ?? 0) === 1;
+    $isAdmin = cb_user_ma_roli(1);
 
     try {
         $idAudit = cb_ai_analytik_audit_start($idUser, $idLogin, $modelProAudit, $prompt, $areasForAudit);

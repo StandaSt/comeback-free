@@ -1770,6 +1770,7 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   padding:14px 16px;
   border:1px solid var(--cb-border);
   border-left:4px solid var(--cb-module-accent);
+  border-right:4px solid var(--cb-module-accent);
   border-radius:8px;
   background:var(--cb-bg-panel);
 }
@@ -1802,6 +1803,11 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   font-weight:700;
 }
 
+.pp[data-page="ai_analytik"] > .pp_header{
+  width:100%;
+  max-width:800px;
+}
+
 .ai_analytik_access{
   position:relative;
   margin-left:auto;
@@ -1830,10 +1836,10 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   width:max-content;
   max-width:min(760px, calc(100vw - 24px));
   overflow:auto;
-  border:1px solid var(--cb-border);
+  border:2px solid var(--cb-module-accent);
   border-radius:8px;
-  background:var(--cb-bg-panel);
-  box-shadow:0 10px 24px var(--cb-shadow);
+  background:var(--cb-bg-control);
+  box-shadow:0 12px 28px rgba(20, 55, 95, .24);
 }
 
 .ai_analytik_access table{
@@ -1851,8 +1857,13 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
 }
 
 .ai_analytik_access th{
-  background:var(--cb-bg-control);
+  background:var(--cb-module-accent);
+  color:var(--clr_bila);
   font-weight:700;
+}
+
+.ai_analytik_access tbody tr:nth-child(even){
+  background:var(--cb-module-soft);
 }
 
 .ai_analytik_access td:not(:first-child){

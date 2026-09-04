@@ -68,28 +68,6 @@ function cb_helpdesk_current_user_id(): int
     return 0;
 }
 
-function cb_helpdesk_current_user_role(): int
-{
-    $idUser = cb_helpdesk_current_user_id();
-    if ($idUser <= 0) {
-        return 0;
-    }
-
-    $role = 0;
-    $stmt = db()->prepare('SELECT id_role FROM `user` WHERE id_user = ? LIMIT 1');
-    if ($stmt instanceof mysqli_stmt) {
-        $stmt->bind_param('i', $idUser);
-        $stmt->execute();
-        $stmt->bind_result($roleDb);
-        if ($stmt->fetch()) {
-            $role = (int)$roleDb;
-        }
-        $stmt->close();
-    }
-
-    return $role;
-}
-
 function cb_helpdesk_current_company_id(): int
 {
     $idUser = cb_helpdesk_current_user_id();
@@ -331,13 +309,19 @@ function cb_helpdesk_admin_ids(mysqli $conn, int $idFirma): array
         SELECT u.id_user
         FROM `user` u
         INNER JOIN cis_prava cp ON cp.id_pravo = 604 AND cp.aktivni = 1
-        LEFT JOIN prava_global pg ON pg.id_role = u.id_role AND pg.id_pravo = 604
         LEFT JOIN prava_vyjimky pv ON pv.id_user = u.id_user AND pv.id_pravo = 604
         WHERE u.aktivni = 1
           AND COALESCE(u.id_firma, 1) = ?
           AND CASE
               WHEN pv.povoleno IS NOT NULL THEN pv.povoleno = 1
-              ELSE pg.id_pravo IS NOT NULL
+              ELSE EXISTS (
+                  SELECT 1
+                  FROM user_role ur
+                  INNER JOIN prava_global pg
+                      ON pg.id_role = ur.id_role
+                     AND pg.id_pravo = 604
+                  WHERE ur.id_user = u.id_user
+              )
           END
         ORDER BY u.id_user ASC
     ';

@@ -546,7 +546,7 @@ function zkontroluj_nedorucenky(mysqli $db): array
 $db = db_connect();
 
 // Správa odesílání je dostupná pouze přihlášenému administrátorovi.
-if (empty($_SESSION['login_ok']) || (int)($_SESSION['cb_user']['id_role'] ?? 0) !== 1) {
+if (empty($_SESSION['login_ok']) || !cb_user_ma_roli(1)) {
     http_response_code(403);
     exit('Přístup je povolen pouze administrátorovi.');
 }

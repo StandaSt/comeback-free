@@ -35,11 +35,11 @@ function cb_nezadane_reporty_export_period(string $scope): array
 function cb_nezadane_reporty_export_recipients(mysqli $conn): array
 {
     $result = $conn->query("
-        SELECT id_user, jmeno, prijmeni, email
-        FROM user
-        WHERE id_role < 4
-          AND TRIM(email) <> ''
-        ORDER BY id_role ASC, prijmeni ASC, jmeno ASC, id_user ASC
+        SELECT DISTINCT u.id_user, u.jmeno, u.prijmeni, u.email
+        FROM user AS u
+        INNER JOIN user_role AS ur ON ur.id_user = u.id_user AND ur.id_role < 4
+        WHERE TRIM(u.email) <> ''
+        ORDER BY u.prijmeni ASC, u.jmeno ASC, u.id_user ASC
     ");
 
     $recipients = [];
@@ -68,11 +68,13 @@ function cb_nezadane_reporty_export_recipient(mysqli $conn, int $idUser): ?array
     }
 
     $stmt = $conn->prepare("
-        SELECT id_user, jmeno, prijmeni, email
-        FROM user
-        WHERE id_user = ?
-          AND id_role < 4
-          AND TRIM(email) <> ''
+        SELECT u.id_user, u.jmeno, u.prijmeni, u.email
+        FROM user AS u
+        WHERE u.id_user = ?
+          AND TRIM(u.email) <> ''
+          AND EXISTS (
+              SELECT 1 FROM user_role ur WHERE ur.id_user = u.id_user AND ur.id_role < 4
+          )
         LIMIT 1
     ");
     if ($stmt === false) {

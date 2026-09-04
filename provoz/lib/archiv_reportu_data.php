@@ -172,10 +172,6 @@ function cb_archiv_reportu_data(mysqli $conn, array $input): array
     }
 
     $roleIds = [];
-    $roleId = is_array($user) ? (int)($user['id_role'] ?? 0) : 0;
-    if ($roleId > 0) {
-        $roleIds[$roleId] = true;
-    }
     $roleStmt = $conn->prepare('SELECT id_role FROM user_role WHERE id_user = ?');
     if ($roleStmt !== false) {
         $roleStmt->bind_param('i', $userId);

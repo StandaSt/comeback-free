@@ -375,7 +375,8 @@
     usageNode.textContent = 'Zpracoval model: ' + String(responseMeta.model || '')
       + ' za ' + duration.toFixed(1).replace('.', ',') + ' s. Spotřeba: '
       + numberFormatter.format(Number(usage.total_tokens || 0))
-      + ' tokenů cena $' + cost.toFixed(cost < 0.01 ? 6 : 4);
+      + ' tokenů cena $' + cost.toFixed(cost < 0.01 ? 6 : 4)
+      + ' (' + currencyFormatter.format(cost * 20.8) + ')';
     result.appendChild(usageNode);
 
     results.prepend(result);
@@ -431,6 +432,14 @@
     if (!(form instanceof HTMLFormElement)) return;
     var submit = form.querySelector('[data-ai-analytik-submit]');
     if (submit instanceof HTMLButtonElement) submit.classList.toggle('is-ready', prompt.value.trim() !== '');
+  });
+
+  document.addEventListener('click', function(event){
+    var target = event.target instanceof Node ? event.target : null;
+    document.querySelectorAll('.ai_analytik_access[open]').forEach(function(access){
+      if (target && access.contains(target)) return;
+      access.open = false;
+    });
   });
 
   document.addEventListener('submit', function(event){

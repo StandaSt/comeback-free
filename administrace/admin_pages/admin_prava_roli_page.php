@@ -8,8 +8,7 @@ $adminRoles = $adminPravaData['roles'];
 $adminModules = $adminPravaData['modules'];
 $adminRights = $adminPravaData['rights'];
 $adminAllowed = $adminPravaData['allowed'];
-$adminCurrentUser = $_SESSION['cb_user'] ?? [];
-$adminShowBlockChecks = is_array($adminCurrentUser) && (int)($adminCurrentUser['id_role'] ?? 0) === 1;
+$adminShowBlockChecks = function_exists('cb_user_ma_roli') && cb_user_ma_roli(1);
 $adminCanToggleApplied = function_exists('cb_pravo_ma') && cb_pravo_ma(106);
 ?>
 <?php if ($adminRights === []): ?>

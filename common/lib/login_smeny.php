@@ -68,7 +68,7 @@ try {
         throw new RuntimeException('Přihlášení se nezdařilo.');
     }
 
-    $stmtLocal = db()->prepare('SELECT id_user, jmeno, prijmeni, email, telefon, aktivni, schvalen, id_role, heslo_hash FROM user WHERE email=? LIMIT 1');
+    $stmtLocal = db()->prepare('SELECT id_user, jmeno, prijmeni, email, telefon, aktivni, schvalen, heslo_hash FROM user WHERE email=? LIMIT 1');
     $stmtLocal->bind_param('s', $email);
     $stmtLocal->execute();
     $localUser = $stmtLocal->get_result()->fetch_assoc();

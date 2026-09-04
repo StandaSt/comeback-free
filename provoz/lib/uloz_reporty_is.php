@@ -46,10 +46,6 @@ $isCurrentWorkday = ($datum === $currentWorkday);
 $requestedFinalEdit = ((int)($_POST['zr_edit_final'] ?? 0)) === 1;
 
 $roleIds = [];
-$roleId = is_array($currentUser) ? (int)($currentUser['id_role'] ?? 0) : 0;
-if ($roleId > 0) {
-    $roleIds[$roleId] = true;
-}
 $stmtRoles = $conn->prepare('SELECT id_role FROM user_role WHERE id_user = ?');
 if ($stmtRoles !== false) {
     $stmtRoles->bind_param('i', $currentUserId);

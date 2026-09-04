@@ -321,14 +321,22 @@ if (!function_exists('ps_prehled_smen_data')) {
                 FROM reporty_is_osoby ro
                 INNER JOIN reporty_is r ON r.id_reportu = ro.id_reportu
                 INNER JOIN `user` viewer ON viewer.id_user = ?
-                LEFT JOIN `user` employee ON employee.id_user = ro.id_user
                 LEFT JOIN pobocka p ON p.id_pob = r.id_pob
                 WHERE r.platny = 1
                   AND r.id_firma = viewer.id_firma
                   AND r.datum_reportu >= ?
                   AND r.datum_reportu <= ?
                   AND (
-                        viewer.id_role NOT IN (5, 7)
+                        EXISTS (
+                            SELECT 1 FROM user_role viewer_global_role
+                            WHERE viewer_global_role.id_user = viewer.id_user
+                              AND viewer_global_role.id_role < 5
+                        )
+                        OR NOT EXISTS (
+                            SELECT 1 FROM user_role viewer_branch_role
+                            WHERE viewer_branch_role.id_user = viewer.id_user
+                              AND viewer_branch_role.id_role IN (5, 7)
+                        )
                         OR EXISTS (
                             SELECT 1
                             FROM user_pobocka viewer_branch
@@ -337,10 +345,49 @@ if (!function_exists('ps_prehled_smen_data')) {
                         )
                   )
                   AND (
-                        viewer.id_role < 5
-                        OR (viewer.id_role = 5 AND (ro.id_user = viewer.id_user OR employee.id_role IN (7, 9)))
-                        OR (viewer.id_role = 7 AND (ro.id_user = viewer.id_user OR employee.id_role = 9))
-                        OR (viewer.id_role = 9 AND ro.id_user = viewer.id_user)
+                        EXISTS (
+                            SELECT 1 FROM user_role viewer_global_role
+                            WHERE viewer_global_role.id_user = viewer.id_user
+                              AND viewer_global_role.id_role < 5
+                        )
+                        OR (
+                            EXISTS (
+                                SELECT 1 FROM user_role viewer_role_5
+                                WHERE viewer_role_5.id_user = viewer.id_user
+                                  AND viewer_role_5.id_role = 5
+                            )
+                            AND (
+                                ro.id_user = viewer.id_user
+                                OR EXISTS (
+                                    SELECT 1 FROM user_role employee_role_5
+                                    WHERE employee_role_5.id_user = ro.id_user
+                                      AND employee_role_5.id_role IN (7, 9)
+                                )
+                            )
+                        )
+                        OR (
+                            EXISTS (
+                                SELECT 1 FROM user_role viewer_role_7
+                                WHERE viewer_role_7.id_user = viewer.id_user
+                                  AND viewer_role_7.id_role = 7
+                            )
+                            AND (
+                                ro.id_user = viewer.id_user
+                                OR EXISTS (
+                                    SELECT 1 FROM user_role employee_role_7
+                                    WHERE employee_role_7.id_user = ro.id_user
+                                      AND employee_role_7.id_role = 9
+                                )
+                            )
+                        )
+                        OR (
+                            EXISTS (
+                                SELECT 1 FROM user_role viewer_role_9
+                                WHERE viewer_role_9.id_user = viewer.id_user
+                                  AND viewer_role_9.id_role = 9
+                            )
+                            AND ro.id_user = viewer.id_user
+                        )
                   )
                 ORDER BY ro.prijmeni ASC, ro.jmeno ASC, ro.slot ASC, r.datum_reportu ASC
             ';

@@ -16,9 +16,6 @@ function cb_ai_analytik_prehled_pristupu(mysqli $conn): array
          INNER JOIN cis_prava AS pravo
             ON pravo.id_pravo = ?
            AND pravo.aktivni = 1
-         LEFT JOIN prava_global AS globalni
-            ON globalni.id_role = u.id_role
-           AND globalni.id_pravo = pravo.id_pravo
          LEFT JOIN prava_vyjimky AS vyjimka
             ON vyjimka.id_user = u.id_user
            AND vyjimka.id_pravo = pravo.id_pravo
@@ -45,7 +42,14 @@ function cb_ai_analytik_prehled_pristupu(mysqli $conn): array
          WHERE u.aktivni = 1
            AND u.in_system = 1
            AND (
-                (globalni.id_pravo IS NOT NULL AND (vyjimka.povoleno IS NULL OR vyjimka.povoleno = 1))
+                (EXISTS (
+                    SELECT 1
+                    FROM user_role AS ur
+                    INNER JOIN prava_global AS globalni
+                        ON globalni.id_role = ur.id_role
+                       AND globalni.id_pravo = pravo.id_pravo
+                    WHERE ur.id_user = u.id_user
+                ) AND (vyjimka.povoleno IS NULL OR vyjimka.povoleno = 1))
                 OR vyjimka.povoleno = 1
            )
          ORDER BY u.prijmeni ASC, u.jmeno ASC, u.id_user ASC'

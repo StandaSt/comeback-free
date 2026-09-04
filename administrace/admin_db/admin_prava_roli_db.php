@@ -236,25 +236,29 @@ function cb_admin_prava_roli_uloz(int $idRole, int $idPravo, bool $allowed): voi
         $stmt->execute();
         $stmt->close();
 
-        // Vyjimka zustava jen tehdy, kdyz se lisi od noveho globalniho prava.
+        // Výjimka zůstává jen tehdy, když se liší od sjednoceného práva všech rolí uživatele.
         $duplicateValue = $allowed ? 1 : 0;
         $stmtExceptions = $db->prepare('
             DELETE vyjimka
             FROM prava_vyjimky AS vyjimka
-            INNER JOIN (
-                SELECT id_user
-                FROM user_role
-                GROUP BY id_user
-                HAVING MIN(id_role) = ?
-            ) AS efektivni_role ON efektivni_role.id_user = vyjimka.id_user
             WHERE vyjimka.id_pravo = ?
               AND vyjimka.povoleno = ?
+              AND (
+                    CASE WHEN EXISTS (
+                        SELECT 1
+                        FROM user_role AS ur
+                        INNER JOIN prava_global AS pg
+                            ON pg.id_role = ur.id_role
+                           AND pg.id_pravo = vyjimka.id_pravo
+                        WHERE ur.id_user = vyjimka.id_user
+                    ) THEN 1 ELSE 0 END
+                  ) = ?
         ');
         if ($stmtExceptions === false) {
             throw new RuntimeException('Nelze pripravit uklid vyjimek prava.');
         }
 
-        $stmtExceptions->bind_param('iii', $idRole, $idPravo, $duplicateValue);
+        $stmtExceptions->bind_param('iii', $idPravo, $duplicateValue, $duplicateValue);
         $stmtExceptions->execute();
         $stmtExceptions->close();
 

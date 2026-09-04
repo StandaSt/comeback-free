@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /*
  * Nacita a uklada individualni vyjimky prav uzivatelu.
- * Vyjimka vzdy doplnuje globalni prava efektivni role uzivatele.
+ * Výjimka vždy doplňuje sjednocená globální práva všech rolí uživatele.
  */
 
 require_once __DIR__ . '/admin_prava_roli_db.php';
@@ -64,7 +64,6 @@ function cb_admin_individualni_prava_hledej_uzivatele(string $query): array
             u.prijmeni,
             u.email,
             u.telefon,
-            MIN(ur.id_role) AS id_role,
             GROUP_CONCAT(DISTINCT cr.role ORDER BY ur.id_role SEPARATOR ", ") AS role,
             GROUP_CONCAT(DISTINCT cs.slot ORDER BY us.id_slot SEPARATOR ", ") AS slot
         FROM user u
@@ -104,7 +103,6 @@ function cb_admin_individualni_prava_hledej_uzivatele(string $query): array
             'telefon' => $telefon,
             'email_match' => mb_stripos($email, $query, 0, 'UTF-8') !== false ? $email : '',
             'telefon_match' => mb_stripos($telefon, $query, 0, 'UTF-8') !== false ? $telefon : '',
-            'id_role' => (int)($row['id_role'] ?? 0),
             'role' => (string)($row['role'] ?? ''),
             'slot' => (string)($row['slot'] ?? ''),
         ];
@@ -127,7 +125,7 @@ function cb_admin_individualni_prava_data(int $idUser): array
             u.jmeno,
             u.prijmeni,
             u.email,
-            MIN(ur.id_role) AS id_role,
+            COUNT(DISTINCT ur.id_role) AS role_count,
             GROUP_CONCAT(DISTINCT cr.role ORDER BY ur.id_role SEPARATOR ", ") AS role,
             GROUP_CONCAT(DISTINCT cs.slot ORDER BY us.id_slot SEPARATOR ", ") AS slot
         FROM user u
@@ -152,12 +150,30 @@ function cb_admin_individualni_prava_data(int $idUser): array
         throw new RuntimeException('Uživatel neexistuje.');
     }
 
-    $idRole = (int)($user['id_role'] ?? 0);
-    if ($idRole <= 0) {
+    if ((int)($user['role_count'] ?? 0) <= 0) {
         throw new RuntimeException('Uživatel nemá roli.');
     }
 
     $base = cb_admin_prava_roli_data();
+
+    $global = [];
+    $stmtGlobal = $db->prepare('
+        SELECT DISTINCT pg.id_pravo
+        FROM user_role AS ur
+        INNER JOIN prava_global AS pg ON pg.id_role = ur.id_role
+        INNER JOIN cis_prava AS cp ON cp.id_pravo = pg.id_pravo AND cp.aktivni = 1
+        WHERE ur.id_user = ?
+    ');
+    if ($stmtGlobal === false) {
+        throw new RuntimeException('Nelze načíst globální práva uživatele.');
+    }
+    $stmtGlobal->bind_param('i', $idUser);
+    $stmtGlobal->execute();
+    $resultGlobal = $stmtGlobal->get_result();
+    while ($row = $resultGlobal->fetch_assoc()) {
+        $global[(int)$row['id_pravo']] = true;
+    }
+    $stmtGlobal->close();
 
     $exceptions = [];
     $stmtExceptions = $db->prepare('
@@ -183,12 +199,11 @@ function cb_admin_individualni_prava_data(int $idUser): array
             'jmeno' => (string)$user['jmeno'],
             'prijmeni' => (string)$user['prijmeni'],
             'email' => (string)$user['email'],
-            'id_role' => $idRole,
             'role' => (string)($user['role'] ?? ''),
             'slot' => (string)($user['slot'] ?? ''),
         ],
         'modules' => $base['modules'],
-        'global' => $base['allowed'][$idRole] ?? [],
+        'global' => $global,
         'exceptions' => $exceptions,
     ];
 }

@@ -27,14 +27,14 @@ if (!function_exists('cb_helpdesk_ticket_author')) {
 if (!function_exists('cb_helpdesk_ticket_author_class')) {
     function cb_helpdesk_ticket_author_class(array $row): string
     {
-        $idRole = (int)($row['id_role'] ?? 0);
-        if ($idRole > 0 && $idRole <= 1) {
+        $roleIds = array_fill_keys(array_map('intval', array_filter(explode(',', (string)($row['role_ids'] ?? '')))), true);
+        if (isset($roleIds[1])) {
             return 'helpdesk_state_role_admin';
         }
-        if ($idRole === 2 || $idRole === 3) {
+        if (isset($roleIds[2]) || isset($roleIds[3])) {
             return 'helpdesk_state_role_manager';
         }
-        if ($idRole >= 4 && $idRole <= 7) {
+        if (isset($roleIds[4]) || isset($roleIds[5]) || isset($roleIds[7])) {
             return 'helpdesk_state_role_branch';
         }
 
@@ -91,7 +91,8 @@ if ($isAdmin) {
     $stmtItems = $conn->prepare('
         SELECT h.id_helpdesk, h.id_user_zalozil, h.modul, h.typ, h.stav, h.verejny, h.predmet, h.vytvoreno, h.upraveno,
                h.pocet_zobrazeni, h.pocet_unikatnich_zobrazeni, h.pocet_zprav, TIMESTAMPDIFF(MINUTE, h.vytvoreno, NOW()) AS stari_minut,
-               u.jmeno, u.prijmeni, u.id_role,
+               u.jmeno, u.prijmeni,
+               (SELECT GROUP_CONCAT(ur.id_role ORDER BY ur.id_role) FROM user_role ur WHERE ur.id_user = u.id_user) AS role_ids,
                CASE
                    WHEN hr.id_helpdesk_read IS NULL THEN 1
                    WHEN h.posledni_zprava IS NOT NULL AND h.posledni_zprava > hr.precteno THEN 1
@@ -114,7 +115,8 @@ if ($isAdmin) {
     $stmtItems = $conn->prepare('
         SELECT h.id_helpdesk, h.id_user_zalozil, h.modul, h.typ, h.stav, h.verejny, h.predmet, h.vytvoreno, h.upraveno,
                h.pocet_zobrazeni, h.pocet_unikatnich_zobrazeni, h.pocet_zprav, TIMESTAMPDIFF(MINUTE, h.vytvoreno, NOW()) AS stari_minut,
-               u.jmeno, u.prijmeni, u.id_role,
+               u.jmeno, u.prijmeni,
+               (SELECT GROUP_CONCAT(ur.id_role ORDER BY ur.id_role) FROM user_role ur WHERE ur.id_user = u.id_user) AS role_ids,
                CASE
                    WHEN hr.id_helpdesk_read IS NULL THEN 1
                    WHEN h.posledni_zprava IS NOT NULL AND h.posledni_zprava > hr.precteno THEN 1

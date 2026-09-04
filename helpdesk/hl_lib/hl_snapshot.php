@@ -23,20 +23,25 @@ function cb_helpdesk_snapshot_load_user(mysqli $conn, int $idUser): array
     ];
 
     $stmt = $conn->prepare('
-        SELECT u.jmeno, u.prijmeni, u.id_role, cr.role
+        SELECT
+            u.jmeno,
+            u.prijmeni,
+            GROUP_CONCAT(DISTINCT cr.role ORDER BY ur.id_role SEPARATOR ', ') AS role_nazev
         FROM `user` u
-        LEFT JOIN cis_role cr ON cr.id_role = u.id_role
+        LEFT JOIN user_role ur ON ur.id_user = u.id_user
+        LEFT JOIN cis_role cr ON cr.id_role = ur.id_role
         WHERE u.id_user = ?
+        GROUP BY u.id_user, u.jmeno, u.prijmeni
         LIMIT 1
     ');
     if ($stmt instanceof mysqli_stmt) {
         $stmt->bind_param('i', $idUser);
         $stmt->execute();
-        $stmt->bind_result($jmeno, $prijmeni, $role, $roleNazev);
+        $stmt->bind_result($jmeno, $prijmeni, $roleNazev);
         if ($stmt->fetch()) {
             $celeJmeno = trim((string)$jmeno . ' ' . (string)$prijmeni);
             $data['jmeno'] = $celeJmeno;
-            $data['role'] = (int)$role;
+            $data['role'] = null;
             $data['role_nazev'] = (string)$roleNazev;
         }
         $stmt->close();

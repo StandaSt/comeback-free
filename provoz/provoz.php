@@ -26,8 +26,7 @@ if (!$cbEmbeddedModule) {
 $cbAuthOk = !empty($_SESSION['cb_auth_ok']);
 $cb2faPending = !empty($_SESSION['cb_2fa_token']);
 $cbSystemLocked = false;
-$cbUserRoleId = (int)($_SESSION['cb_user']['id_role'] ?? 0);
-if (!empty($_SESSION['login_ok']) && (int)($_SESSION['cb_system']['zamek'] ?? 0) === 1 && $cbUserRoleId !== 1) {
+if (!empty($_SESSION['login_ok']) && (int)($_SESSION['cb_system']['zamek'] ?? 0) === 1 && !cb_user_ma_roli(1)) {
     try {
         $cbLockConn = db();
         $cbLockRes = $cbLockConn->query('SELECT zamek FROM set_system WHERE id_set = 1 LIMIT 1');
@@ -150,7 +149,7 @@ $cbAiAnalytikPristupRender = static function (array $rows): void {
                             <td><?= number_format((int)$row['prompty'], 0, ',', "\u{00A0}") ?></td>
                             <td><?= h($duration) ?></td>
                             <td><?= number_format((int)$row['total_tokens'], 0, ',', "\u{00A0}") ?></td>
-                            <td>$<?= number_format($cost, $cost < 0.01 ? 6 : 4, '.', '') ?></td>
+                            <td>$<?= number_format($cost, 4, '.', '') ?> (<?= number_format($cost * 20.8, 2, ',', "\u{00A0}") ?> Kč)</td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>

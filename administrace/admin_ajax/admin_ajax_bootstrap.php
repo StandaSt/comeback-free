@@ -12,6 +12,7 @@ require_once __DIR__ . '/../../common/lib/ochrana_crf.php';
 require_once __DIR__ . '/../../common/config/secrets.php';
 require_once __DIR__ . '/../../common/lib/app.php';
 require_once __DIR__ . '/../../common/lib/uloz_akci.php';
+require_once __DIR__ . '/../../common/db/db_prava.php';
 
 cb_session_guard_entry();
 
@@ -35,7 +36,9 @@ function cb_admin_ajax_spustit(callable $action): never
         cb_crf_vyzaduj();
 
         $user = $_SESSION['cb_user'] ?? [];
-        if (!is_array($user) || (int)($user['id_role'] ?? 0) !== 1) {
+        $idUser = is_array($user) ? (int)($user['id_user'] ?? 0) : 0;
+        $roles = cb_db_user_role_data(db(), $idUser);
+        if (!array_key_exists(1, $roles)) {
             http_response_code(403);
             throw new RuntimeException('Editace práv je dostupná pouze roli Admin.');
         }

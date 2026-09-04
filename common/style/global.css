@@ -455,12 +455,14 @@ main{
   height:55px;
   aspect-ratio:1 / 1;
   align-items:center;
-  overflow:visible;
+  overflow:hidden;
+  border-radius:6px;
   text-decoration:none;
 }
 
 .head_logo_img{
   height:100%;
+  border-radius:inherit;
   object-fit:contain;
 }
 

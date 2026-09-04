@@ -1164,8 +1164,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
     ];
     $currentUser = $_SESSION['cb_user'] ?? [];
     $currentUserId = is_array($currentUser) ? (int)($currentUser['id_user'] ?? 0) : 0;
-    $currentUserRoleId = is_array($currentUser) ? (int)($currentUser['id_role'] ?? 0) : 0;
-    $currentUserRoleIds = $currentUserRoleId > 0 ? [$currentUserRoleId => true] : [];
+    $currentUserRoleIds = [];
     if ($currentUserId > 0) {
         $stmtUserRoles = $conn->prepare('SELECT id_role FROM user_role WHERE id_user = ?');
         if ($stmtUserRoles !== false) {
@@ -1574,7 +1573,6 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         'reportEndColumns' => $reportEndColumns,
         'currentUser' => $currentUser,
         'currentUserId' => $currentUserId,
-        'currentUserRoleId' => $currentUserRoleId,
         'currentUserRoleIds' => $currentUserRoleIds,
         'mainBranchId' => $mainBranchId,
         'canSaveReport' => $canSaveReport,

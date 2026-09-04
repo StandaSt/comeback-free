@@ -73,9 +73,8 @@ if (!function_exists('cb_db_user_login')) {
             // D) sloty (aktuální)
             $slotChanges = db_user_slot_sync($conn, $idUser, $profile);
 
-            // D2) prava do session (podle efektivni role nastavene ve stavajici logice)
-            $idRole = (int)($_SESSION['cb_user']['id_role'] ?? 0);
-            cb_db_prava_nacti_do_session($conn, $idUser, $idRole);
+            // D2) práva do session jako sjednocení všech rolí uživatele
+            cb_db_prava_nacti_do_session($conn, $idUser);
 
             // E) login event (akce=1) + user_spy
             $idLogin = cb_db_insert_login_and_spy($conn, $idUser);

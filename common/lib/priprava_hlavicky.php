@@ -56,16 +56,11 @@ $cbUser = $_SESSION['cb_user'] ?? [];
 $cbUserName = 'Uzivatel';
 $cbUserRole = '-';
 $cbUserRoleLabel = '-';
-$cbUserRoleId = 0;
 if (is_array($cbUser)) {
     $fullName = trim((string)($cbUser['name'] ?? '') . ' ' . (string)($cbUser['surname'] ?? ''));
     $cbUserName = $fullName !== '' ? $fullName : (string)($cbUser['jmeno'] ?? $cbUser['email'] ?? $cbUser['login'] ?? $cbUserName);
     $cbUserRole = (string)($cbUser['role'] ?? $cbUser['nazev_role'] ?? $cbUserRole);
     $cbUserRoleLabel = $cbUserRole;
-    $cbUserRoleId = (int)($cbUser['id_role'] ?? 0);
-}
-if ($cbUserRole !== '-' && $cbUserRoleId > 0) {
-    $cbUserRole .= ' (' . $cbUserRoleId . ')';
 }
 
 // Pripravi stavove semafory sluzeb zobrazenych v hlavicce.
@@ -116,7 +111,7 @@ if ($cbStartTs <= 0 || $cbStartTs > $cbNowTs) {
 }
 
 // Pripravi kontext aktualniho modulu, aktualizace dat a aktualni cas.
-$cbHelpdeskIsRoleOne = $cbUserRoleId === 1;
+$cbHelpdeskIsRoleOne = function_exists('cb_user_ma_roli') && cb_user_ma_roli(1);
 $cbHelpdeskApiUrl = cb_root_url('index.php');
 try {
     $cbHeadAktualizaceDat = (new DateTimeImmutable((string)$cbObdobiMax))->format('H:i:s');

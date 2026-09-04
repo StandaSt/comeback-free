@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../../common/db/db_prava.php';
+
 const CB_AI_ANALYTIK_EXPORT_PLATNOST_SEKUND = 1800;
 
 function cb_ai_analytik_export_base64url_encode(string $value): string
@@ -51,10 +53,11 @@ function cb_ai_analytik_export_overit(string $payload, string $signature, string
 function cb_ai_analytik_export_prijemci(mysqli $conn): array
 {
     $result = $conn->query(
-        "SELECT id_user, jmeno, prijmeni, email
-         FROM user
-         WHERE id_role < 4 AND TRIM(email) <> ''
-         ORDER BY id_role ASC, prijmeni ASC, jmeno ASC, id_user ASC"
+        "SELECT DISTINCT u.id_user, u.jmeno, u.prijmeni, u.email
+         FROM user AS u
+         INNER JOIN user_role AS ur ON ur.id_user = u.id_user AND ur.id_role < 4
+         WHERE TRIM(u.email) <> ''
+         ORDER BY u.prijmeni ASC, u.jmeno ASC, u.id_user ASC"
     );
     $rows = [];
     while ($row = $result->fetch_assoc()) {
@@ -75,9 +78,13 @@ function cb_ai_analytik_export_prijemci(mysqli $conn): array
 function cb_ai_analytik_export_prijemce(mysqli $conn, int $idUser): ?array
 {
     $stmt = $conn->prepare(
-        "SELECT id_user, jmeno, prijmeni, email
-         FROM user
-         WHERE id_user = ? AND id_role < 4 AND TRIM(email) <> ''
+        "SELECT u.id_user, u.jmeno, u.prijmeni, u.email
+         FROM user AS u
+         WHERE u.id_user = ?
+           AND TRIM(u.email) <> ''
+           AND EXISTS (
+               SELECT 1 FROM user_role ur WHERE ur.id_user = u.id_user AND ur.id_role < 4
+           )
          LIMIT 1"
     );
     $stmt->bind_param('i', $idUser);
@@ -253,7 +260,7 @@ function cb_ai_analytik_export_pdf(array $data): array
 
 function cb_ai_analytik_export_chyba(Throwable $error): string
 {
-    return (int)($_SESSION['cb_user']['id_role'] ?? 0) === 1
+    return cb_user_ma_roli(1)
         ? get_class($error) . ': ' . $error->getMessage() . ' v ' . $error->getFile() . ':' . $error->getLine()
         : 'Export se nepodařilo vytvořit.';
 }

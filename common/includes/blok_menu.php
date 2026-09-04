@@ -28,6 +28,22 @@ if (!function_exists('cb_render_blok_menu_user')) {
             }
 
             $userRole = (string)($user['role'] ?? $user['nazev_role'] ?? $userRole);
+            $roles = $user['roles'] ?? [];
+            if (is_array($roles)) {
+                $lowestRoleId = null;
+                foreach ($roles as $role) {
+                    if (!is_array($role)) {
+                        continue;
+                    }
+                    $roleId = (int)($role['id_role'] ?? 0);
+                    $roleName = trim((string)($role['name'] ?? ''));
+                    if ($roleId <= 0 || $roleName === '' || ($lowestRoleId !== null && $roleId >= $lowestRoleId)) {
+                        continue;
+                    }
+                    $lowestRoleId = $roleId;
+                    $userRole = $roleName;
+                }
+            }
         }
 
         $nowTs = time();
