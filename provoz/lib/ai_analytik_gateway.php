@@ -110,7 +110,7 @@ function cb_ai_analytik_gateway(): never
     $areasForAudit = is_array($areasRaw)
         ? implode(',', array_map(static fn(mixed $area): string => is_string($area) ? $area : '?', $areasRaw))
         : '[neplatné]';
-    $areasForAudit = mb_substr($areasForAudit !== '' ? $areasForAudit : '[prázdné]', 0, 20);
+    $areasForAudit = mb_substr($areasForAudit !== '' ? $areasForAudit : '[prázdné]', 0, 255);
     $idUser = (int)($_SESSION['cb_user']['id_user'] ?? 0);
     $idLogin = (int)($_SESSION['cb_id_login'] ?? 0);
     $isAdmin = cb_user_ma_roli(1);
@@ -128,19 +128,41 @@ function cb_ai_analytik_gateway(): never
     }
 
     $startedAt = hrtime(true);
-    $audit = ['status' => 'error', 'error_message' => '', 'row_count' => 0];
+    $auditFinished = false;
+    register_shutdown_function(static function () use ($idAudit, $startedAt, &$auditFinished): void {
+        if ($auditFinished) {
+            return;
+        }
+        $lastError = error_get_last();
+        if (!is_array($lastError) || !in_array((int)$lastError['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+            return;
+        }
+        cb_ai_analytik_audit_finish($idAudit, [
+            'status' => 'fatal_error',
+            'duration_ms' => (int)((hrtime(true) - $startedAt) / 1_000_000),
+            'error_type' => 'PHP_FATAL_' . (int)$lastError['type'],
+            'error_code' => (string)$lastError['type'],
+            'error_message' => mb_substr((string)$lastError['message'], 0, 1000),
+        ]);
+        $auditFinished = true;
+    });
+    $audit = ['status' => 'error', 'error_message' => '', 'error_type' => '', 'error_code' => '', 'row_count' => 0];
     if (!cb_ai_analytik_model_je_povoleny($model)) {
         try {
             cb_ai_analytik_zablokovat_pravo($idUser);
             $audit['status'] = 'security_block';
             $audit['error_message'] = 'Podvržený model mimo serverový whitelist: ' . $model;
+            $audit['error_type'] = 'model_whitelist_violation';
         } catch (Throwable $error) {
             unset($_SESSION['prava'][CB_AI_ANALYTIK_PRAVO]);
             $audit['status'] = 'security_block_error';
             $audit['error_message'] = 'Blokace podvrženého modelu selhala: ' . $error->getMessage();
+            $audit['error_type'] = get_class($error);
+            $audit['error_code'] = (string)$error->getCode();
         }
         $audit['duration_ms'] = (int)((hrtime(true) - $startedAt) / 1_000_000);
         cb_ai_analytik_audit_finish($idAudit, $audit);
+        $auditFinished = true;
         cb_ai_analytik_json(403, [
             'ok' => false,
             'error' => 'Přístup k AI analytikovi byl zablokován kvůli pokusu použít nepovolený model.',
@@ -152,8 +174,11 @@ function cb_ai_analytik_gateway(): never
     } catch (Throwable $error) {
         $audit['duration_ms'] = (int)((hrtime(true) - $startedAt) / 1_000_000);
         $audit['status'] = 'rejected_request';
+        $audit['error_type'] = get_class($error);
+        $audit['error_code'] = (string)$error->getCode();
         $audit['error_message'] = $error->getMessage();
         cb_ai_analytik_audit_finish($idAudit, $audit);
+        $auditFinished = true;
         cb_ai_analytik_json(422, ['ok' => false, 'error' => $error->getMessage() . ' · Audit #' . $idAudit]);
     }
 
@@ -164,10 +189,15 @@ function cb_ai_analytik_gateway(): never
     } catch (Throwable $error) {
         $audit['duration_ms'] = (int)((hrtime(true) - $startedAt) / 1_000_000);
         $audit['status'] = 'rejected_request';
+        $audit['error_type'] = get_class($error);
+        $audit['error_code'] = (string)$error->getCode();
         $audit['error_message'] = $error->getMessage();
         cb_ai_analytik_audit_finish($idAudit, $audit);
+        $auditFinished = true;
         cb_ai_analytik_json(422, ['ok' => false, 'error' => $error->getMessage() . ' · Audit #' . $idAudit]);
     }
+
+    cb_ai_analytik_audit_request($idAudit, $areas, $requestedOutput);
 
     if (empty($_SESSION['ai_analytik_export_secret'])) {
         $_SESSION['ai_analytik_export_secret'] = bin2hex(random_bytes(32));
@@ -194,6 +224,7 @@ function cb_ai_analytik_gateway(): never
         $audit['duration_ms'] = $durationMs;
         $audit['status'] = 'completed';
         cb_ai_analytik_audit_finish($idAudit, $audit);
+        $auditFinished = true;
 
         $export = cb_ai_analytik_export_podepsat([
             'version' => 1,
@@ -230,9 +261,17 @@ function cb_ai_analytik_gateway(): never
         ]]);
     } catch (Throwable $error) {
         $audit['duration_ms'] = (int)((hrtime(true) - $startedAt) / 1_000_000);
-        $audit['status'] = $error instanceof CbAiAnalytikUzivatelskaChyba ? 'rejected_request' : 'error';
+        $audit['status'] = match (true) {
+            $error instanceof CbAiAnalytikUzivatelskaChyba => 'rejected_request',
+            $error instanceof CbAiAnalytikAgentLimitChyba => 'limit_exceeded',
+            $error instanceof CbAiAnalytikSqlBezpecnostniChyba => 'security_rejected',
+            default => 'error',
+        };
+        $audit['error_type'] = get_class($error);
+        $audit['error_code'] = (string)$error->getCode();
         $audit['error_message'] = mb_substr($error->getMessage(), 0, 1000);
         cb_ai_analytik_audit_finish($idAudit, $audit);
+        $auditFinished = true;
         error_log('AI analytik audit #' . $idAudit . ': ' . get_class($error) . ': ' . $error->getMessage());
         cb_ai_analytik_stream('error', [
             'message' => cb_ai_analytik_chyba_pro_uzivatele($error, $isAdmin, $idAudit),

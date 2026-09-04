@@ -88,6 +88,24 @@ function cb_ai_analytik_audit_start(int $idUser, int $idLogin, string $model, st
     return $idAudit;
 }
 
+function cb_ai_analytik_audit_request(int $idAudit, array $areas, array $requestedOutput): void
+{
+    $scopeNormalized = implode(',', $areas);
+    $outputJson = json_encode(
+        $requestedOutput,
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+    );
+    $conn = db();
+    $stmt = $conn->prepare(
+        'UPDATE ai_analytik_audit
+         SET scope_normalized = ?, requested_output_json = ?
+         WHERE id_ai_analytik_audit = ?'
+    );
+    $stmt->bind_param('ssi', $scopeNormalized, $outputJson, $idAudit);
+    $stmt->execute();
+    $stmt->close();
+}
+
 function cb_ai_analytik_audit_status(int $idAudit, string $status): void
 {
     if ($idAudit <= 0) {
@@ -134,7 +152,8 @@ function cb_ai_analytik_audit_finish(int $idAudit, array $data): void
              SET completed_at = NOW(3), datum_od = NULLIF(?, \'\'), datum_do = NULLIF(?, \'\'),
                  sql_text = NULLIF(?, \'\'), sql_params_json = NULLIF(?, \'\'), row_count = ?,
                  openai_plan_response_id = NULLIF(?, \'\'), openai_summary_response_id = NULLIF(?, \'\'),
-                 duration_ms = ?, status = ?, error_message = NULLIF(?, \'\')
+                  duration_ms = ?, status = ?, error_type = NULLIF(?, \'\'), error_code = NULLIF(?, \'\'),
+                  error_message = NULLIF(?, \'\')
              WHERE id_ai_analytik_audit = ?'
         );
 
@@ -147,10 +166,12 @@ function cb_ai_analytik_audit_finish(int $idAudit, array $data): void
         $summaryId = (string)($data['openai_summary_response_id'] ?? '');
         $durationMs = (int)($data['duration_ms'] ?? 0);
         $status = substr((string)($data['status'] ?? 'error'), 0, 30);
+        $errorType = substr((string)($data['error_type'] ?? ''), 0, 100);
+        $errorCode = substr((string)($data['error_code'] ?? ''), 0, 50);
         $error = mb_substr((string)($data['error_message'] ?? ''), 0, 1000);
 
         $stmt->bind_param(
-            'ssssississi',
+            'ssssississssi',
             $datumOd,
             $datumDo,
             $sqlText,
@@ -160,6 +181,8 @@ function cb_ai_analytik_audit_finish(int $idAudit, array $data): void
             $summaryId,
             $durationMs,
             $status,
+            $errorType,
+            $errorCode,
             $error,
             $idAudit
         );
@@ -168,4 +191,45 @@ function cb_ai_analytik_audit_finish(int $idAudit, array $data): void
     } catch (Throwable $e) {
         error_log('AI analytik: audit dokončení selhalo.');
     }
+}
+
+function cb_ai_analytik_tool_audit_start(int $idAudit, int $poradi, string $tool, array $arguments): int
+{
+    $argumentsJson = json_encode(
+        $arguments,
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+    );
+    $conn = db();
+    $stmt = $conn->prepare(
+        'INSERT INTO ai_analytik_tool_audit
+            (id_ai_analytik_audit, poradi, tool_name, started_at, arguments_json, status)
+         VALUES (?, ?, ?, NOW(3), ?, \'started\')'
+    );
+    $stmt->bind_param('iiss', $idAudit, $poradi, $tool, $argumentsJson);
+    $stmt->execute();
+    $id = (int)$conn->insert_id;
+    $stmt->close();
+    return $id;
+}
+
+function cb_ai_analytik_tool_audit_finish(int $idToolAudit, array $data): void
+{
+    if ($idToolAudit <= 0) {
+        return;
+    }
+    $conn = db();
+    $stmt = $conn->prepare(
+        'UPDATE ai_analytik_tool_audit
+         SET completed_at = NOW(3), duration_ms = ?, result_count = ?, status = ?,
+             error_type = NULLIF(?, \'\'), error_message = NULLIF(?, \'\')
+         WHERE id_ai_analytik_tool_audit = ?'
+    );
+    $durationMs = (int)($data['duration_ms'] ?? 0);
+    $resultCount = (int)($data['result_count'] ?? 0);
+    $status = substr((string)($data['status'] ?? 'error'), 0, 30);
+    $errorType = substr((string)($data['error_type'] ?? ''), 0, 100);
+    $errorMessage = mb_substr((string)($data['error_message'] ?? ''), 0, 1000);
+    $stmt->bind_param('iisssi', $durationMs, $resultCount, $status, $errorType, $errorMessage, $idToolAudit);
+    $stmt->execute();
+    $stmt->close();
 }

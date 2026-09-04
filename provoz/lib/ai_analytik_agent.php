@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/ai_analytik_openai.php';
 require_once __DIR__ . '/../db/db_ai_analytik.php';
+require_once __DIR__ . '/../db/db_ai_analytik_audit.php';
 require_once __DIR__ . '/../db/db_ai_analytik_usage.php';
 
 function cb_ai_analytik_agent_tools(): array
@@ -26,7 +27,7 @@ function cb_ai_analytik_agent_tools(): array
         [
             'type' => 'function',
             'name' => 'run_readonly_sql',
-            'description' => 'Po serverové bezpečnostní kontrole spustí jeden read-only SELECT nebo WITH...SELECT a vrátí jeho výsledek.',
+            'description' => 'Po serverové bezpečnostní kontrole spustí jeden read-only SELECT nebo WITH...SELECT. Databáze může zpracovat libovolný objem zdrojových dat. Pokud je výsledných dat příliš mnoho pro bezpečný přenos do AI, nástroj vrátí result_too_large a dotaz musíš agregovat, seskupit nebo zpřesnit.',
             'strict' => true,
             'parameters' => [
                 'type' => 'object',
@@ -269,11 +270,35 @@ function cb_ai_analytik_agent_spustit(
     $outputText = $requestedOutput['text'] ? 'ano' : 'ne';
     $outputTable = $requestedOutput['tabulka'] ? 'ano' : 'ne';
     $outputChart = $requestedOutput['graf'] ? 'ano' : 'ne';
-    $schemaIndex = cb_ai_analytik_schema_hledat('');
+    $toolOrder = 0;
+    $schemaStartedAt = hrtime(true);
+    $idSchemaAudit = cb_ai_analytik_tool_audit_start($idAudit, $toolOrder, 'schema_index', []);
+    try {
+        $schemaIndex = cb_ai_analytik_schema_hledat('');
+        cb_ai_analytik_tool_audit_finish($idSchemaAudit, [
+            'status' => 'completed',
+            'duration_ms' => (int)((hrtime(true) - $schemaStartedAt) / 1_000_000),
+            'result_count' => count(is_array($schemaIndex['tables'] ?? null) ? $schemaIndex['tables'] : []),
+        ]);
+    } catch (Throwable $error) {
+        cb_ai_analytik_tool_audit_finish($idSchemaAudit, [
+            'status' => 'error',
+            'duration_ms' => (int)((hrtime(true) - $schemaStartedAt) / 1_000_000),
+            'error_type' => get_class($error),
+            'error_message' => $error->getMessage(),
+        ]);
+        throw $error;
+    }
     $allObjects = [];
+    $objectDescriptions = [];
     foreach (is_array($schemaIndex['tables'] ?? null) ? $schemaIndex['tables'] : [] as $schemaObject) {
         if (is_array($schemaObject) && trim((string)($schemaObject['name'] ?? '')) !== '') {
-            $allObjects[] = (string)$schemaObject['name'];
+            $object = (string)$schemaObject['name'];
+            $allObjects[] = $object;
+            $comment = trim((string)($schemaObject['comment'] ?? ''));
+            if ($comment !== '' && strcasecmp($comment, 'VIEW') !== 0) {
+                $objectDescriptions[$object] = $comment;
+            }
         }
     }
     $availableObjects = [];
@@ -292,7 +317,12 @@ function cb_ai_analytik_agent_spustit(
     if ($availableObjects === []) {
         $availableObjects = $allObjects;
     }
-    $availableObjectsText = implode(', ', $availableObjects);
+    $availableObjectsText = implode(', ', array_map(
+        static fn(string $object): string => isset($objectDescriptions[$object])
+            ? $object . ' — ' . $objectDescriptions[$object]
+            : $object,
+        $availableObjects
+    ));
     $areaDescription = cb_ai_analytik_agent_oblast_popis($areas);
     $instructions = <<<TEXT
 Jsi interní AI analytik vedení společnosti Comeback. Dnes je {$today} (Europe/Prague).
@@ -321,6 +351,9 @@ TEXT;
     ];
     $apiCalls = 0;
     $sqlCalls = 0;
+    $sqlErrorsTotal = 0;
+    $sqlErrorsConsecutive = 0;
+    $failedSqlHashes = [];
     $lastResponseId = '';
     $nextOpenAiMessage = 'AI analyzuje zadání a určuje, která data potřebuje.';
 
@@ -328,22 +361,38 @@ TEXT;
         if (connection_aborted()) {
             throw new RuntimeException('Uživatel ukončil spojení během zpracování dotazu.');
         }
+        if ($apiCalls >= CB_AI_ANALYTIK_MAX_OPENAI_VOLANI) {
+            throw new CbAiAnalytikAgentLimitChyba(
+                'Analýza překročila havarijní limit ' . CB_AI_ANALYTIK_MAX_OPENAI_VOLANI . ' OpenAI volání.'
+            );
+        }
         $apiCalls++;
         $progress('openai', $nextOpenAiMessage, ['api_calls' => $apiCalls, 'sql_count' => $sqlCalls]);
-        $response = cb_ai_analytik_openai_request([
-            'model' => $model,
-            'store' => false,
-            'prompt_cache_key' => 'ai-analytik-v3-' . $model . '-' . implode('-', $areas),
-            'reasoning' => ['effort' => 'low'],
-            'include' => ['reasoning.encrypted_content'],
-            'instructions' => $instructions,
-            'input' => $conversation,
-            'tools' => cb_ai_analytik_agent_tools(),
-            'tool_choice' => 'auto',
-            'parallel_tool_calls' => false,
-            'text' => ['format' => cb_ai_analytik_agent_output_format($requestedOutput)],
-        ]);
-        cb_ai_analytik_usage_zapsat($idAudit, 'agent_' . $apiCalls, $response);
+        $idUsage = cb_ai_analytik_usage_start($idAudit, 'agent_' . $apiCalls, $model);
+        $openAiStartedAt = hrtime(true);
+        try {
+            $response = cb_ai_analytik_openai_request([
+                'model' => $model,
+                'store' => false,
+                'prompt_cache_key' => 'ai-analytik-v3-' . $model . '-' . implode('-', $areas),
+                'reasoning' => ['effort' => 'low'],
+                'include' => ['reasoning.encrypted_content'],
+                'instructions' => $instructions,
+                'input' => $conversation,
+                'tools' => cb_ai_analytik_agent_tools(),
+                'tool_choice' => 'auto',
+                'parallel_tool_calls' => false,
+                'text' => ['format' => cb_ai_analytik_agent_output_format($requestedOutput)],
+            ]);
+            cb_ai_analytik_usage_finish($idUsage, $response);
+        } catch (Throwable $error) {
+            cb_ai_analytik_usage_error(
+                $idUsage,
+                $error,
+                (int)((hrtime(true) - $openAiStartedAt) / 1_000_000)
+            );
+            throw $error;
+        }
         cb_ai_analytik_agent_usage_add($usageTotal, $response);
         $lastResponseId = (string)$response['id'];
 
@@ -386,6 +435,7 @@ TEXT;
                 throw new RuntimeException('AI předala neplatné volání nástroje.');
             }
 
+            $pendingLimitError = '';
             if ($name === 'inspect_schema') {
                 $searches = is_array($arguments['searches'] ?? null) ? $arguments['searches'] : [];
                 $tables = is_array($arguments['tables'] ?? null) ? $arguments['tables'] : [];
@@ -402,9 +452,37 @@ TEXT;
                     ? 'Načítám seznam dostupných tabulek a view.'
                     : 'V jednom kroku zkoumám DB schéma – ' . implode('; ', $parts) . '.';
                 $progress('schema', $message, ['api_calls' => $apiCalls, 'sql_count' => $sqlCalls]);
-                $toolResult = cb_ai_analytik_schema_prozkoumat($searches, $tables);
+                $toolOrder++;
+                $schemaStartedAt = hrtime(true);
+                $idSchemaAudit = cb_ai_analytik_tool_audit_start(
+                    $idAudit,
+                    $toolOrder,
+                    'inspect_schema',
+                    ['searches' => $searchTerms, 'tables' => $tableNames]
+                );
+                try {
+                    $toolResult = cb_ai_analytik_schema_prozkoumat($searches, $tables);
+                    cb_ai_analytik_tool_audit_finish($idSchemaAudit, [
+                        'status' => 'completed',
+                        'duration_ms' => (int)((hrtime(true) - $schemaStartedAt) / 1_000_000),
+                        'result_count' => count(is_array($toolResult['tables'] ?? null) ? $toolResult['tables'] : []),
+                    ]);
+                } catch (Throwable $error) {
+                    cb_ai_analytik_tool_audit_finish($idSchemaAudit, [
+                        'status' => 'error',
+                        'duration_ms' => (int)((hrtime(true) - $schemaStartedAt) / 1_000_000),
+                        'error_type' => get_class($error),
+                        'error_message' => $error->getMessage(),
+                    ]);
+                    throw $error;
+                }
                 $nextOpenAiMessage = 'AI vyhodnocuje schéma a připravuje datový SQL dotaz.';
             } elseif ($name === 'run_readonly_sql') {
+                if ($sqlCalls >= CB_AI_ANALYTIK_MAX_SQL_DOTAZU) {
+                    throw new CbAiAnalytikAgentLimitChyba(
+                        'Analýza překročila havarijní limit ' . CB_AI_ANALYTIK_MAX_SQL_DOTAZU . ' SQL dotazů.'
+                    );
+                }
                 $sqlCalls++;
                 $purpose = trim((string)($arguments['purpose'] ?? ''));
                 if ($purpose === '') {
@@ -415,19 +493,49 @@ TEXT;
                     'Ověřuji a spouštím SQL dotaz č. ' . $sqlCalls . ': ' . $purpose . '.',
                     ['api_calls' => $apiCalls, 'sql_count' => $sqlCalls]
                 );
+                $sql = (string)($arguments['sql'] ?? '');
+                $sqlHash = hash('sha256', trim($sql));
                 $toolResult = cb_ai_analytik_sql_spustit(
                     $idAudit,
                     $sqlCalls,
                     $purpose,
-                    (string)($arguments['sql'] ?? '')
+                    $sql
                 );
-                $progress(
-                    'sql_done',
-                    'SQL dotaz dokončen: ' . (int)$toolResult['row_count'] . ' řádků za '
-                        . number_format(((int)$toolResult['duration_ms']) / 1000, 1, ',', ' ') . ' s.',
-                    ['api_calls' => $apiCalls, 'sql_count' => $sqlCalls]
-                );
-                $nextOpenAiMessage = 'AI vyhodnocuje výsledek SQL a rozhoduje, zda potřebuje další data.';
+                if (($toolResult['ok'] ?? false) === true) {
+                    $sqlErrorsConsecutive = 0;
+                    $progress(
+                        'sql_done',
+                        'SQL dotaz dokončen: ' . (int)$toolResult['row_count'] . ' řádků za '
+                            . number_format(((int)$toolResult['duration_ms']) / 1000, 1, ',', ' ') . ' s.',
+                        ['api_calls' => $apiCalls, 'sql_count' => $sqlCalls]
+                    );
+                    $nextOpenAiMessage = 'AI vyhodnocuje výsledek SQL a rozhoduje, zda potřebuje další data.';
+                } elseif (($toolResult['error_type'] ?? '') === 'sql_error') {
+                    $sqlErrorsTotal++;
+                    $sqlErrorsConsecutive++;
+                    $failedSqlHashes[$sqlHash] = (int)($failedSqlHashes[$sqlHash] ?? 0) + 1;
+                    $progress(
+                        'sql_error',
+                        'SQL dotaz obsahuje opravitelnou chybu. AI dostane chybu a může dotaz opravit.',
+                        ['api_calls' => $apiCalls, 'sql_count' => $sqlCalls]
+                    );
+                    $nextOpenAiMessage = 'AI opravuje SQL podle vrácené chyby; podle potřeby znovu ověří schéma.';
+                    if ($failedSqlHashes[$sqlHash] >= 2) {
+                        $pendingLimitError = 'AI zopakovala stejný již chybný SQL dotaz.';
+                    } elseif ($sqlErrorsConsecutive >= CB_AI_ANALYTIK_MAX_SQL_CHYB_V_RADE) {
+                        $pendingLimitError = 'Analýza dosáhla limitu SQL chyb za sebou.';
+                    } elseif ($sqlErrorsTotal >= CB_AI_ANALYTIK_MAX_SQL_CHYB_CELKEM) {
+                        $pendingLimitError = 'Analýza dosáhla celkového limitu SQL chyb.';
+                    }
+                } else {
+                    $sqlErrorsConsecutive = 0;
+                    $progress(
+                        'sql_too_large',
+                        'Výsledek SQL je příliš velký pro přenos. AI musí dotaz agregovat nebo zpřesnit.',
+                        ['api_calls' => $apiCalls, 'sql_count' => $sqlCalls]
+                    );
+                    $nextOpenAiMessage = 'AI upravuje příliš rozsáhlý SQL výsledek pomocí agregace nebo přesnějšího filtru.';
+                }
             } else {
                 throw new RuntimeException('AI požádala o neznámý nástroj: ' . $name);
             }
@@ -437,6 +545,9 @@ TEXT;
                 'call_id' => $callId,
                 'output' => json_encode($toolResult, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
             ];
+            if ($pendingLimitError !== '') {
+                throw new CbAiAnalytikAgentLimitChyba($pendingLimitError);
+            }
         }
     }
 }

@@ -4,6 +4,11 @@ declare(strict_types=1);
 const CB_AI_ANALYTIK_PRAVO = 210;
 const CB_AI_ANALYTIK_VYCHOZI_MODEL = 'gpt-5.6-terra';
 const CB_AI_ANALYTIK_VYCHOZI_OBLAST = 'ops';
+const CB_AI_ANALYTIK_MAX_OPENAI_VOLANI = 20;
+const CB_AI_ANALYTIK_MAX_SQL_DOTAZU = 10;
+const CB_AI_ANALYTIK_MAX_SQL_CHYB_V_RADE = 3;
+const CB_AI_ANALYTIK_MAX_SQL_CHYB_CELKEM = 5;
+const CB_AI_ANALYTIK_MAX_TOOL_RESULT_BYTES = 1048576;
 
 function cb_ai_analytik_povolene_modely(): array
 {
@@ -46,13 +51,13 @@ function cb_ai_analytik_normalizovat_oblasti(mixed $raw): array
     if ($selected === []) {
         throw new CbAiAnalytikUzivatelskaChyba('Vyberte alespoň jednu oblast analýzy.');
     }
-    if (isset($selected[CB_AI_ANALYTIK_VYCHOZI_OBLAST])) {
-        return [CB_AI_ANALYTIK_VYCHOZI_OBLAST];
+    if (isset($selected['all'])) {
+        return ['all'];
     }
 
     $normalized = [];
     foreach (array_keys(cb_ai_analytik_povolene_oblasti()) as $area) {
-        if ($area !== CB_AI_ANALYTIK_VYCHOZI_OBLAST && isset($selected[$area])) {
+        if ($area !== 'all' && isset($selected[$area])) {
             $normalized[] = $area;
         }
     }
@@ -75,6 +80,10 @@ function cb_ai_analytik_ceny_modelu(string $model): array
 }
 
 final class CbAiAnalytikUzivatelskaChyba extends RuntimeException
+{
+}
+
+final class CbAiAnalytikAgentLimitChyba extends RuntimeException
 {
 }
 

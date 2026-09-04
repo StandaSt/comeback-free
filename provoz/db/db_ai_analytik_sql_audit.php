@@ -16,7 +16,7 @@ function cb_ai_analytik_sql_audit_start(int $idAudit, int $poradi, string $ucel,
     return $id;
 }
 
-function cb_ai_analytik_sql_audit_finish(int $idSqlAudit, string $status, int $durationMs, int $rowCount, string $error = ''): void
+function cb_ai_analytik_sql_audit_finish(int $idSqlAudit, array $data): void
 {
     if ($idSqlAudit <= 0) {
         return;
@@ -24,11 +24,31 @@ function cb_ai_analytik_sql_audit_finish(int $idSqlAudit, string $status, int $d
     $conn = db();
     $stmt = $conn->prepare(
         'UPDATE ai_analytik_sql_audit
-         SET completed_at = NOW(3), duration_ms = ?, row_count = ?, status = ?, error_message = NULLIF(?, \'\')
+         SET completed_at = NOW(3), duration_ms = ?, row_count = ?, result_bytes = ?, status = ?,
+             error_type = NULLIF(?, \'\'), error_code = NULLIF(?, \'\'), `sqlstate` = NULLIF(?, \'\'),
+             error_message = NULLIF(?, \'\')
          WHERE id_ai_analytik_sql_audit = ?'
     );
-    $error = mb_substr($error, 0, 2000);
-    $stmt->bind_param('iissi', $durationMs, $rowCount, $status, $error, $idSqlAudit);
+    $durationMs = (int)($data['duration_ms'] ?? 0);
+    $rowCount = (int)($data['row_count'] ?? 0);
+    $resultBytes = (int)($data['result_bytes'] ?? 0);
+    $status = substr((string)($data['status'] ?? 'error'), 0, 30);
+    $errorType = substr((string)($data['error_type'] ?? ''), 0, 100);
+    $errorCode = substr((string)($data['error_code'] ?? ''), 0, 50);
+    $sqlState = substr((string)($data['sqlstate'] ?? ''), 0, 10);
+    $error = mb_substr((string)($data['error_message'] ?? ''), 0, 2000);
+    $stmt->bind_param(
+        'iiisssssi',
+        $durationMs,
+        $rowCount,
+        $resultBytes,
+        $status,
+        $errorType,
+        $errorCode,
+        $sqlState,
+        $error,
+        $idSqlAudit
+    );
     $stmt->execute();
     $stmt->close();
 }

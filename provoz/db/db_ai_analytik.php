@@ -2,7 +2,27 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../lib/ai_analytik_sql.php';
+require_once __DIR__ . '/../lib/ai_analytik_pravidla.php';
 require_once __DIR__ . '/db_ai_analytik_sql_audit.php';
+
+function cb_ai_analytik_schema_popisy(mysqli $conn): array
+{
+    $result = $conn->query(
+        'SELECT object_name, column_name, description FROM ai_analytik_schema_popis'
+    );
+    $descriptions = [];
+    while ($row = $result->fetch_assoc()) {
+        $descriptions[(string)$row['object_name']][(string)$row['column_name']] = (string)$row['description'];
+    }
+    $result->free();
+    return $descriptions;
+}
+
+function cb_ai_analytik_schema_komentar(array $descriptions, string $object, string $column, string $fallback): string
+{
+    $description = trim((string)($descriptions[$object][$column] ?? ''));
+    return $description !== '' ? $description : $fallback;
+}
 
 function cb_ai_analytik_db(): mysqli
 {
@@ -33,6 +53,7 @@ function cb_ai_analytik_schema_hledat(string $search): array
 {
     $conn = cb_ai_analytik_db();
     try {
+        $descriptions = cb_ai_analytik_schema_popisy($conn);
         $search = trim($search);
         if ($search === '') {
             $result = $conn->query(
@@ -48,11 +69,14 @@ function cb_ai_analytik_schema_hledat(string $search): array
                  FROM information_schema.TABLES t
                  LEFT JOIN information_schema.COLUMNS c
                    ON c.TABLE_SCHEMA = t.TABLE_SCHEMA AND c.TABLE_NAME = t.TABLE_NAME
+                 LEFT JOIN ai_analytik_schema_popis d
+                   ON d.object_name = t.TABLE_NAME
                  WHERE t.TABLE_SCHEMA = DATABASE()
-                   AND (t.TABLE_NAME LIKE ? OR t.TABLE_COMMENT LIKE ? OR c.COLUMN_NAME LIKE ? OR c.COLUMN_COMMENT LIKE ?)
+                   AND (t.TABLE_NAME LIKE ? OR t.TABLE_COMMENT LIKE ? OR c.COLUMN_NAME LIKE ? OR c.COLUMN_COMMENT LIKE ?
+                        OR d.description LIKE ?)
                  ORDER BY t.TABLE_NAME"
             );
-            $stmt->bind_param('ssss', $like, $like, $like, $like);
+            $stmt->bind_param('sssss', $like, $like, $like, $like, $like);
             $stmt->execute();
             $result = $stmt->get_result();
         }
@@ -62,7 +86,12 @@ function cb_ai_analytik_schema_hledat(string $search): array
             $tables[] = [
                 'name' => (string)$row['TABLE_NAME'],
                 'type' => (string)$row['TABLE_TYPE'],
-                'comment' => (string)$row['TABLE_COMMENT'],
+                'comment' => cb_ai_analytik_schema_komentar(
+                    $descriptions,
+                    (string)$row['TABLE_NAME'],
+                    '',
+                    (string)$row['TABLE_COMMENT']
+                ),
             ];
         }
         $result->free();
@@ -79,13 +108,24 @@ function cb_ai_analytik_schema_popsat(array $requestedTables): array
 {
     $conn = cb_ai_analytik_db();
     try {
+        $descriptions = cb_ai_analytik_schema_popisy($conn);
         $available = [];
         $result = $conn->query(
-            "SELECT TABLE_NAME FROM information_schema.TABLES
+            "SELECT TABLE_NAME, TABLE_TYPE, TABLE_COMMENT FROM information_schema.TABLES
              WHERE TABLE_SCHEMA = DATABASE()"
         );
         while ($row = $result->fetch_assoc()) {
-            $available[(string)$row['TABLE_NAME']] = true;
+            $table = (string)$row['TABLE_NAME'];
+            $available[$table] = [
+                'name' => $table,
+                'type' => (string)$row['TABLE_TYPE'],
+                'comment' => cb_ai_analytik_schema_komentar(
+                    $descriptions,
+                    $table,
+                    '',
+                    (string)$row['TABLE_COMMENT']
+                ),
+            ];
         }
         $result->free();
 
@@ -111,12 +151,21 @@ function cb_ai_analytik_schema_popsat(array $requestedTables): array
                     'type' => (string)$row['COLUMN_TYPE'],
                     'nullable' => (string)$row['IS_NULLABLE'] === 'YES',
                     'key' => (string)$row['COLUMN_KEY'],
-                    'comment' => (string)$row['COLUMN_COMMENT'],
+                    'comment' => cb_ai_analytik_schema_komentar(
+                        $descriptions,
+                        $table,
+                        (string)$row['COLUMN_NAME'],
+                        (string)$row['COLUMN_COMMENT']
+                    ),
                 ];
             }
             $result->free();
             $stmt->close();
-            $tables[$table] = ['name' => $table, 'columns' => $columns, 'relations' => []];
+            $tables[$table] = $available[$table] + [
+                'columns' => $columns,
+                'relations' => [],
+                'referenced_by' => [],
+            ];
         }
 
         if ($tables !== []) {
@@ -133,14 +182,27 @@ function cb_ai_analytik_schema_popsat(array $requestedTables): array
                 $result = $stmt->get_result();
                 while ($row = $result->fetch_assoc()) {
                     $owner = (string)$row['TABLE_NAME'];
-                    if (!isset($tables[$owner])) {
-                        continue;
+                    $referenced = (string)$row['REFERENCED_TABLE_NAME'];
+                    if (isset($tables[$owner])) {
+                        $relation = [
+                            'column' => (string)$row['COLUMN_NAME'],
+                            'references_table' => $referenced,
+                            'references_column' => (string)$row['REFERENCED_COLUMN_NAME'],
+                        ];
+                        if (!in_array($relation, $tables[$owner]['relations'], true)) {
+                            $tables[$owner]['relations'][] = $relation;
+                        }
                     }
-                    $tables[$owner]['relations'][] = [
-                        'column' => (string)$row['COLUMN_NAME'],
-                        'references_table' => (string)$row['REFERENCED_TABLE_NAME'],
-                        'references_column' => (string)$row['REFERENCED_COLUMN_NAME'],
-                    ];
+                    if (isset($tables[$referenced])) {
+                        $incoming = [
+                            'table' => $owner,
+                            'column' => (string)$row['COLUMN_NAME'],
+                            'references_column' => (string)$row['REFERENCED_COLUMN_NAME'],
+                        ];
+                        if (!in_array($incoming, $tables[$referenced]['referenced_by'], true)) {
+                            $tables[$referenced]['referenced_by'][] = $incoming;
+                        }
+                    }
                 }
                 $result->free();
             }
@@ -157,6 +219,7 @@ function cb_ai_analytik_schema_prozkoumat(array $searches, array $requestedTable
 {
     $conn = cb_ai_analytik_db();
     try {
+        $descriptions = cb_ai_analytik_schema_popisy($conn);
         $available = [];
         $result = $conn->query(
             "SELECT TABLE_NAME, TABLE_TYPE, TABLE_COMMENT
@@ -169,7 +232,12 @@ function cb_ai_analytik_schema_prozkoumat(array $searches, array $requestedTable
             $available[$name] = [
                 'name' => $name,
                 'type' => (string)$row['TABLE_TYPE'],
-                'comment' => (string)$row['TABLE_COMMENT'],
+                'comment' => cb_ai_analytik_schema_komentar(
+                    $descriptions,
+                    $name,
+                    '',
+                    (string)$row['TABLE_COMMENT']
+                ),
             ];
         }
         $result->free();
@@ -197,15 +265,18 @@ function cb_ai_analytik_schema_prozkoumat(array $searches, array $requestedTable
                  FROM information_schema.TABLES t
                  LEFT JOIN information_schema.COLUMNS c
                    ON c.TABLE_SCHEMA = t.TABLE_SCHEMA AND c.TABLE_NAME = t.TABLE_NAME
+                 LEFT JOIN ai_analytik_schema_popis d
+                   ON d.object_name = t.TABLE_NAME
                  WHERE t.TABLE_SCHEMA = DATABASE()
-                   AND (t.TABLE_NAME LIKE ? OR t.TABLE_COMMENT LIKE ? OR c.COLUMN_NAME LIKE ? OR c.COLUMN_COMMENT LIKE ?)
+                   AND (t.TABLE_NAME LIKE ? OR t.TABLE_COMMENT LIKE ? OR c.COLUMN_NAME LIKE ? OR c.COLUMN_COMMENT LIKE ?
+                        OR d.description LIKE ?)
                  ORDER BY CASE WHEN t.TABLE_NAME = ? THEN 0 WHEN t.TABLE_NAME LIKE ? THEN 1 ELSE 2 END,
                           t.TABLE_NAME"
             );
             foreach ($normalizedSearches as $search) {
                 $like = '%' . $search . '%';
                 $prefix = $search . '%';
-                $stmt->bind_param('ssssss', $like, $like, $like, $like, $search, $prefix);
+                $stmt->bind_param('sssssss', $like, $like, $like, $like, $like, $search, $prefix);
                 $stmt->execute();
                 $result = $stmt->get_result();
                 $matches[$search] = [];
@@ -246,11 +317,16 @@ function cb_ai_analytik_schema_prozkoumat(array $searches, array $requestedTable
                     'type' => (string)$row['COLUMN_TYPE'],
                     'nullable' => (string)$row['IS_NULLABLE'] === 'YES',
                     'key' => (string)$row['COLUMN_KEY'],
-                    'comment' => (string)$row['COLUMN_COMMENT'],
+                    'comment' => cb_ai_analytik_schema_komentar(
+                        $descriptions,
+                        $table,
+                        (string)$row['COLUMN_NAME'],
+                        (string)$row['COLUMN_COMMENT']
+                    ),
                 ];
             }
             $result->free();
-            $tables[$table] = $metadata + ['columns' => $columns, 'relations' => []];
+            $tables[$table] = $metadata + ['columns' => $columns, 'relations' => [], 'referenced_by' => []];
         }
         $stmt->close();
 
@@ -268,16 +344,26 @@ function cb_ai_analytik_schema_prozkoumat(array $searches, array $requestedTable
                 $result = $stmt->get_result();
                 while ($row = $result->fetch_assoc()) {
                     $owner = (string)$row['TABLE_NAME'];
-                    if (!isset($tables[$owner])) {
-                        continue;
+                    $referenced = (string)$row['REFERENCED_TABLE_NAME'];
+                    if (isset($tables[$owner])) {
+                        $relation = [
+                            'column' => (string)$row['COLUMN_NAME'],
+                            'references_table' => $referenced,
+                            'references_column' => (string)$row['REFERENCED_COLUMN_NAME'],
+                        ];
+                        if (!in_array($relation, $tables[$owner]['relations'], true)) {
+                            $tables[$owner]['relations'][] = $relation;
+                        }
                     }
-                    $relation = [
-                        'column' => (string)$row['COLUMN_NAME'],
-                        'references_table' => (string)$row['REFERENCED_TABLE_NAME'],
-                        'references_column' => (string)$row['REFERENCED_COLUMN_NAME'],
-                    ];
-                    if (!in_array($relation, $tables[$owner]['relations'], true)) {
-                        $tables[$owner]['relations'][] = $relation;
+                    if (isset($tables[$referenced])) {
+                        $incoming = [
+                            'table' => $owner,
+                            'column' => (string)$row['COLUMN_NAME'],
+                            'references_column' => (string)$row['REFERENCED_COLUMN_NAME'],
+                        ];
+                        if (!in_array($incoming, $tables[$referenced]['referenced_by'], true)) {
+                            $tables[$referenced]['referenced_by'][] = $incoming;
+                        }
                     }
                 }
                 $result->free();
@@ -308,18 +394,54 @@ function cb_ai_analytik_sql_typ(int $mysqliType): string
     };
 }
 
+function cb_ai_analytik_php_limit_bytes(string $value): int
+{
+    $value = trim($value);
+    if ($value === '' || $value === '-1') {
+        return 0;
+    }
+    $unit = strtolower(substr($value, -1));
+    $number = (float)$value;
+    return match ($unit) {
+        'g' => (int)($number * 1024 * 1024 * 1024),
+        'm' => (int)($number * 1024 * 1024),
+        'k' => (int)($number * 1024),
+        default => (int)$number,
+    };
+}
+
+function cb_ai_analytik_sql_result_budget_bytes(): int
+{
+    $budget = CB_AI_ANALYTIK_MAX_TOOL_RESULT_BYTES;
+    $memoryLimit = cb_ai_analytik_php_limit_bytes((string)ini_get('memory_limit'));
+    if ($memoryLimit <= 0) {
+        return $budget;
+    }
+    $available = $memoryLimit - memory_get_usage(true);
+    if ($available < 262144) {
+        throw new RuntimeException('PHP nemá dostatek volné paměti pro bezpečné načtení výsledku SQL.');
+    }
+    return min($budget, max(65536, (int)floor($available * 0.20)));
+}
+
+function cb_ai_analytik_sql_state(mysqli_sql_exception $error): string
+{
+    return method_exists($error, 'getSqlState') ? (string)$error->getSqlState() : '';
+}
+
 function cb_ai_analytik_sql_spustit(int $idAudit, int $poradi, string $ucel, string $sql): array
 {
-    $sql = cb_ai_analytik_sql_overit($sql);
     $idSqlAudit = cb_ai_analytik_sql_audit_start($idAudit, $poradi, $ucel, $sql);
     $startedAt = hrtime(true);
     $rowCount = 0;
-    $conn = cb_ai_analytik_db();
+    $resultBytes = 0;
+    $conn = null;
     try {
+        $sql = cb_ai_analytik_sql_overit($sql);
+        $budgetBytes = cb_ai_analytik_sql_result_budget_bytes();
+        $conn = cb_ai_analytik_db();
         $conn->query('START TRANSACTION READ ONLY');
-        $stmt = $conn->prepare($sql);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        $result = $conn->query($sql, MYSQLI_USE_RESULT);
         if (!$result instanceof mysqli_result) {
             throw new RuntimeException('Read-only SQL nevrátilo tabulkový výsledek.');
         }
@@ -331,32 +453,143 @@ function cb_ai_analytik_sql_spustit(int $idAudit, int $poradi, string $ucel, str
                 'type' => cb_ai_analytik_sql_typ((int)$field->type),
             ];
         }
+        $resultBytes = strlen(json_encode($columns, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
         $rows = [];
+        $tooLarge = false;
         while ($row = $result->fetch_assoc()) {
+            $rowCount++;
+            $rowBytes = strlen(json_encode($row, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+            if ($resultBytes + $rowBytes > $budgetBytes) {
+                $resultBytes += $rowBytes;
+                $tooLarge = true;
+                break;
+            }
+            $resultBytes += $rowBytes;
             $rows[] = $row;
         }
-        $rowCount = count($rows);
         $result->free();
-        $stmt->close();
         $conn->rollback();
 
         $durationMs = (int)((hrtime(true) - $startedAt) / 1_000_000);
-        cb_ai_analytik_sql_audit_finish($idSqlAudit, 'completed', $durationMs, $rowCount);
+        if ($tooLarge) {
+            $message = 'Výsledek SQL je příliš velký pro bezpečný přenos do AI. Dotaz agreguj, seskup, zpřesni filtrem nebo rozumně stránkuj.';
+            cb_ai_analytik_sql_audit_finish($idSqlAudit, [
+                'status' => 'result_too_large',
+                'duration_ms' => $durationMs,
+                'row_count' => $rowCount,
+                'result_bytes' => $resultBytes,
+                'error_type' => 'result_too_large',
+                'error_message' => $message,
+            ]);
+            return [
+                'ok' => false,
+                'error_type' => 'result_too_large',
+                'message' => $message,
+                'columns' => $columns,
+                'rows_read_at_least' => $rowCount,
+                'result_bytes_at_least' => $resultBytes,
+                'byte_limit' => $budgetBytes,
+                'duration_ms' => $durationMs,
+            ];
+        }
+        cb_ai_analytik_sql_audit_finish($idSqlAudit, [
+            'status' => 'completed',
+            'duration_ms' => $durationMs,
+            'row_count' => $rowCount,
+            'result_bytes' => $resultBytes,
+        ]);
         return [
+            'ok' => true,
             'columns' => $columns,
             'rows' => $rows,
             'row_count' => $rowCount,
+            'result_bytes' => $resultBytes,
             'duration_ms' => $durationMs,
         ];
-    } catch (Throwable $error) {
-        try {
-            $conn->rollback();
-        } catch (Throwable $rollbackError) {
+    } catch (CbAiAnalytikSqlOpravitelnaChyba $error) {
+        $durationMs = (int)((hrtime(true) - $startedAt) / 1_000_000);
+        cb_ai_analytik_sql_audit_finish($idSqlAudit, [
+            'status' => 'sql_error',
+            'duration_ms' => $durationMs,
+            'row_count' => $rowCount,
+            'result_bytes' => $resultBytes,
+            'error_type' => get_class($error),
+            'error_code' => (string)$error->getCode(),
+            'error_message' => $error->getMessage(),
+        ]);
+        return [
+            'ok' => false,
+            'error_type' => 'sql_error',
+            'message' => $error->getMessage(),
+            'error_code' => $error->getCode(),
+            'sqlstate' => '',
+            'suggestion' => 'Oprav formát nebo syntaxi SQL a spusť opravený dotaz.',
+            'duration_ms' => $durationMs,
+        ];
+    } catch (CbAiAnalytikSqlBezpecnostniChyba $error) {
+        $durationMs = (int)((hrtime(true) - $startedAt) / 1_000_000);
+        cb_ai_analytik_sql_audit_finish($idSqlAudit, [
+            'status' => 'security_rejected',
+            'duration_ms' => $durationMs,
+            'row_count' => $rowCount,
+            'result_bytes' => $resultBytes,
+            'error_type' => get_class($error),
+            'error_code' => (string)$error->getCode(),
+            'error_message' => $error->getMessage(),
+        ]);
+        throw $error;
+    } catch (mysqli_sql_exception $error) {
+        if ($conn instanceof mysqli) {
+            try {
+                $conn->rollback();
+            } catch (Throwable $rollbackError) {
+            }
         }
         $durationMs = (int)((hrtime(true) - $startedAt) / 1_000_000);
-        cb_ai_analytik_sql_audit_finish($idSqlAudit, 'error', $durationMs, $rowCount, $error->getMessage());
+        $repairable = cb_ai_analytik_sql_chyba_je_opravitelna($error);
+        cb_ai_analytik_sql_audit_finish($idSqlAudit, [
+            'status' => $repairable ? 'sql_error' : 'error',
+            'duration_ms' => $durationMs,
+            'row_count' => $rowCount,
+            'result_bytes' => $resultBytes,
+            'error_type' => get_class($error),
+            'error_code' => (string)$error->getCode(),
+            'sqlstate' => cb_ai_analytik_sql_state($error),
+            'error_message' => $error->getMessage(),
+        ]);
+        if ($repairable) {
+            return [
+                'ok' => false,
+                'error_type' => 'sql_error',
+                'message' => mb_substr($error->getMessage(), 0, 1000),
+                'error_code' => $error->getCode(),
+                'sqlstate' => cb_ai_analytik_sql_state($error),
+                'suggestion' => 'Použij inspect_schema, oprav názvy objektů, sloupců, aliasů nebo syntaxi a spusť opravený dotaz.',
+                'duration_ms' => $durationMs,
+            ];
+        }
+        throw $error;
+    } catch (Throwable $error) {
+        if ($conn instanceof mysqli) {
+            try {
+                $conn->rollback();
+            } catch (Throwable $rollbackError) {
+            }
+        }
+        $durationMs = (int)((hrtime(true) - $startedAt) / 1_000_000);
+        cb_ai_analytik_sql_audit_finish($idSqlAudit, [
+            'status' => 'error',
+            'duration_ms' => $durationMs,
+            'row_count' => $rowCount,
+            'result_bytes' => $resultBytes,
+            'error_type' => get_class($error),
+            'error_code' => (string)$error->getCode(),
+            'error_message' => $error->getMessage(),
+        ]);
         throw $error;
     } finally {
-        $conn->close();
+        if ($conn instanceof mysqli) {
+            $conn->close();
+        }
     }
 }
