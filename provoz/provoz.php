@@ -124,6 +124,24 @@ $cbAiAnalytikPristupRender = static function (array $rows, bool $showGuide = fal
     ?>
     <div class="ai_analytik_header_controls">
         <?php if ($showGuide): ?>
+            <div class="ai_analytik_header_prompts_actions">
+                <button
+                    type="button"
+                    class="ai_analytik_my_prompts_toggle"
+                    aria-controls="ai_analytik_my_prompts"
+                    aria-expanded="false"
+                    data-ai-analytik-my-prompts-toggle
+                    data-ai-analytik-prompt-filter="saved"
+                >Moje prompty</button>
+                <button
+                    type="button"
+                    class="ai_analytik_my_prompts_toggle"
+                    aria-controls="ai_analytik_my_prompts"
+                    aria-expanded="false"
+                    data-ai-analytik-my-prompts-toggle
+                    data-ai-analytik-prompt-filter="all"
+                >ALL</button>
+            </div>
             <button
                 type="button"
                 class="ai_analytik_header_guide_toggle"

@@ -108,10 +108,30 @@ function cb_ai_analytik_gateway(): never
         cb_ai_analytik_json(403, ['ok' => false, 'error' => 'Neplatné zabezpečení formuláře. Obnovte stránku.']);
     }
 
-    if (($input['action'] ?? '') === 'cancel') {
+    $action = (string)($input['action'] ?? '');
+    $idUser = (int)($_SESSION['cb_user']['id_user'] ?? 0);
+    if ($idUser <= 0) {
+        cb_ai_analytik_json(401, ['ok' => false, 'error' => 'Platnost přihlášení vypršela.']);
+    }
+
+    if ($action === 'prompt_list') {
+        cb_ai_analytik_json(200, [
+            'ok' => true,
+            'prompts' => cb_ai_analytik_audit_prompty_uzivatele($idUser, ($input['filter'] ?? '') !== 'all'),
+        ]);
+    }
+
+    if ($action === 'save_prompt') {
         $idAudit = (int)($input['audit_id'] ?? 0);
-        $idUser = (int)($_SESSION['cb_user']['id_user'] ?? 0);
-        if ($idAudit <= 0 || $idUser <= 0) {
+        if (!cb_ai_analytik_audit_ulozit_prompt($idAudit, $idUser)) {
+            cb_ai_analytik_json(404, ['ok' => false, 'error' => 'Prompt nelze uložit.']);
+        }
+        cb_ai_analytik_json(200, ['ok' => true]);
+    }
+
+    if ($action === 'cancel') {
+        $idAudit = (int)($input['audit_id'] ?? 0);
+        if ($idAudit <= 0) {
             cb_ai_analytik_json(422, ['ok' => false, 'error' => 'Nelze určit běžící analýzu.']);
         }
         try {
@@ -128,10 +148,9 @@ function cb_ai_analytik_gateway(): never
         }
     }
 
-    $idUser = (int)($_SESSION['cb_user']['id_user'] ?? 0);
     $idLogin = (int)($_SESSION['cb_id_login'] ?? 0);
     $isAdmin = cb_user_ma_roli(1);
-    $isContinuation = ($input['action'] ?? '') === 'continue';
+    $isContinuation = $action === 'continue';
     $resumeState = null;
     $clarificationAnswer = '';
     $previousDurationMs = 0;

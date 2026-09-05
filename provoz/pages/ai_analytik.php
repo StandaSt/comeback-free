@@ -232,7 +232,9 @@ try {
 
         <div class="ai_analytik_prompt_row">
             <div class="ai_analytik_prompt_field">
-                <label for="ai_analytik_prompt">Dotaz</label>
+                <div class="ai_analytik_prompt_label_row">
+                    <label for="ai_analytik_prompt">Dotaz</label>
+                </div>
                 <textarea
                     id="ai_analytik_prompt"
                     name="prompt"
@@ -244,6 +246,7 @@ try {
             </div>
             <button type="submit" class="head_task_btn" data-ai-analytik-submit>Odeslat</button>
         </div>
+        <div id="ai_analytik_my_prompts" class="ai_analytik_my_prompts" hidden data-ai-analytik-my-prompts></div>
     </form>
 
     <dialog class="ai_analytik_astra_dialog" data-ai-analytik-astra-dialog>

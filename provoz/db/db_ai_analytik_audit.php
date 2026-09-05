@@ -211,6 +211,120 @@ function cb_ai_analytik_audit_request(int $idAudit, array $requestedOutput, arra
     $stmt->close();
 }
 
+function cb_ai_analytik_audit_ulozit_prompt(int $idAudit, int $idUser): bool
+{
+    if ($idAudit <= 0 || $idUser <= 0) {
+        return false;
+    }
+
+    $conn = db();
+    $stmt = $conn->prepare(
+        'UPDATE ai_analytik_audit
+         SET ulozeno = 1
+         WHERE id_ai_analytik_audit = ?
+           AND id_user = ?
+           AND requested_output_json IS NOT NULL'
+    );
+    $stmt->bind_param('ii', $idAudit, $idUser);
+    $stmt->execute();
+    $matched = $stmt->affected_rows === 1;
+    $stmt->close();
+
+    if ($matched) {
+        return true;
+    }
+
+    $stmt = $conn->prepare(
+        'SELECT ulozeno
+         FROM ai_analytik_audit
+         WHERE id_ai_analytik_audit = ?
+           AND id_user = ?
+           AND requested_output_json IS NOT NULL
+         LIMIT 1'
+    );
+    $stmt->bind_param('ii', $idAudit, $idUser);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    return (int)($row['ulozeno'] ?? 0) === 1;
+}
+
+function cb_ai_analytik_audit_prompty_uzivatele(int $idUser, bool $pouzeUlozene): array
+{
+    if ($idUser <= 0) {
+        return [];
+    }
+
+    $sql = 'SELECT audit.id_ai_analytik_audit, audit.created_at, audit.model, audit.prompt, audit.ulozeno,
+                   audit.duration_ms, audit.requested_output_json,
+                   COALESCE(usage_summary.total_tokens, 0) AS total_tokens
+            FROM ai_analytik_audit AS audit
+            LEFT JOIN (
+                SELECT id_ai_analytik_audit, SUM(total_tokens) AS total_tokens
+                FROM ai_analytik_openai_usage
+                GROUP BY id_ai_analytik_audit
+            ) AS usage_summary ON usage_summary.id_ai_analytik_audit = audit.id_ai_analytik_audit
+            WHERE id_user = ?
+              AND requested_output_json IS NOT NULL
+              AND TRIM(prompt) <> \'\'';
+    if ($pouzeUlozene) {
+        $sql .= ' AND ulozeno = 1';
+    }
+    $sql .= ' ORDER BY id_ai_analytik_audit DESC LIMIT 100';
+
+    $conn = db();
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param('i', $idUser);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $prompty = [];
+
+    while ($row = $result->fetch_assoc()) {
+        try {
+            $nastaveni = json_decode((string)$row['requested_output_json'], true, 32, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            continue;
+        }
+        if (!is_array($nastaveni) || !is_array($nastaveni['output'] ?? null)
+            || !is_array($nastaveni['years'] ?? null)) {
+            continue;
+        }
+        $output = $nastaveni['output'];
+        if (!is_bool($output['text'] ?? null) || !is_bool($output['tabulka'] ?? null)
+            || !is_bool($output['graf'] ?? null)) {
+            continue;
+        }
+        $years = array_values(array_unique(array_filter(
+            array_map(static fn ($year): int => (int)$year, $nastaveni['years']),
+            static fn (int $year): bool => $year >= 2000 && $year <= 2100
+        )));
+        $ambiguityMode = (string)($nastaveni['ambiguity_mode'] ?? 'varianty');
+        if ($years === [] || !in_array($ambiguityMode, ['varianty', 'upresnit'], true)) {
+            continue;
+        }
+        $prompty[] = [
+            'id' => (int)$row['id_ai_analytik_audit'],
+            'created_at' => (string)$row['created_at'],
+            'model' => (string)$row['model'],
+            'prompt' => (string)$row['prompt'],
+            'ulozeno' => (int)$row['ulozeno'] === 1,
+            'duration_ms' => (int)$row['duration_ms'],
+            'total_tokens' => (int)$row['total_tokens'],
+            'output' => [
+                'text' => $output['text'],
+                'tabulka' => $output['tabulka'],
+                'graf' => $output['graf'],
+            ],
+            'years' => $years,
+            'ambiguity_mode' => $ambiguityMode,
+        ];
+    }
+    $stmt->close();
+
+    return $prompty;
+}
+
 function cb_ai_analytik_audit_status(int $idAudit, string $status): void
 {
     if ($idAudit <= 0) {

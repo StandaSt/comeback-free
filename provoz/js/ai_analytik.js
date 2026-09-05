@@ -173,7 +173,20 @@
       var message = document.createElement('span');
       var body = document.createElement('div');
       body.className = 'ai_analytik_status_step_body';
-      message.textContent = String(item.message || '');
+      var text = String(item.message || '');
+      if (text.indexOf('Vaše upřesnění: ') === 0) {
+        var clarificationLabel = document.createElement('strong');
+        clarificationLabel.className = 'ai_analytik_clarification_label';
+        clarificationLabel.textContent = 'Vaše upřesnění:';
+        var clarificationText = document.createElement('span');
+        clarificationText.className = 'ai_analytik_clarification_text';
+        clarificationText.textContent = text.slice('Vaše upřesnění: '.length);
+        message.appendChild(clarificationLabel);
+        message.appendChild(document.createTextNode(' '));
+        message.appendChild(clarificationText);
+      } else {
+        message.textContent = text;
+      }
       row.appendChild(time);
       body.appendChild(message);
       appendProgressDetails(body, item.meta);
@@ -517,17 +530,50 @@
     }
 
     var usage = responseMeta.usage || {};
+    var usageRow = document.createElement('div');
+    usageRow.className = 'ai_analytik_usage_row';
     var usageNode = document.createElement('p');
     usageNode.className = 'ai_analytik_usage';
     var cost = Number(usage.cost_usd || 0);
     var duration = Number(responseMeta.duration_ms || 0) / 1000;
-    usageNode.textContent = (isClarification ? 'Dosavadní zpracování – model: ' : 'Zpracoval model: ')
-      + String(responseMeta.model || '')
-      + ' za ' + duration.toFixed(1).replace('.', ',') + ' s. Spotřeba: '
-      + numberFormatter.format(Number(usage.total_tokens || 0))
-      + ' tokenů cena $' + cost.toFixed(cost < 0.01 ? 6 : 4)
-      + ' (' + currencyFormatter.format(cost * 20.8) + ')';
-    result.appendChild(usageNode);
+    usageNode.textContent = (isClarification ? 'Dosavadní zpracování' : 'Model')
+      + ': ' + String(responseMeta.model || '')
+      + ' · ' + duration.toFixed(1).replace('.', ',') + ' s'
+      + ' · ' + numberFormatter.format(Number(usage.total_tokens || 0)) + ' tokenů'
+      + ' · ' + currencyFormatter.format(cost * 20.8);
+    usageRow.appendChild(usageNode);
+    if (!isClarification && Number(responseMeta.audit_id || 0) > 0) {
+      var savePrompt = document.createElement('button');
+      savePrompt.type = 'button';
+      savePrompt.className = 'head_task_btn ai_analytik_save_prompt';
+      savePrompt.textContent = 'Prompt uložit pro další použití';
+      savePrompt.addEventListener('click', function(){
+        if (savePrompt.disabled) return;
+        savePrompt.disabled = true;
+        fetch(String(root.dataset.endpoint || window.CB_ENDPOINT || 'index.php'), {
+          method: 'POST', credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json', 'Accept': 'application/json',
+            'X-Comeback-AI-Analytik': '1'
+          },
+          body: JSON.stringify({
+            action: 'save_prompt', audit_id: Number(responseMeta.audit_id),
+            csrf: String(root.dataset.csrf || '')
+          })
+        }).then(function(response){
+          if (!response.ok) return responseError(response);
+          return response.json();
+        }).then(function(data){
+          if (!data.ok) throw new Error(String(data.error || 'Prompt nelze uložit.'));
+          savePrompt.textContent = 'Prompt uložen';
+        }).catch(function(error){
+          savePrompt.disabled = false;
+          savePrompt.textContent = String(error.message || 'Prompt nelze uložit.');
+        });
+      });
+      usageRow.appendChild(savePrompt);
+    }
+    result.appendChild(usageRow);
 
     results.prepend(result);
     if (hasChart && window.CB_GRAFY_RENDER && typeof window.CB_GRAFY_RENDER.renderOne === 'function') {
@@ -566,6 +612,140 @@
     if (!(form instanceof HTMLFormElement)) return;
     var submit = form.querySelector('[data-ai-analytik-submit]');
     if (submit instanceof HTMLButtonElement) submit.classList.toggle('is-ready', prompt.value.trim() !== '');
+  });
+
+  function setPromptSubmitState(form){
+    var prompt = form.querySelector('[data-ai-analytik-prompt]');
+    var submit = form.querySelector('[data-ai-analytik-submit]');
+    if (prompt instanceof HTMLTextAreaElement && submit instanceof HTMLButtonElement) {
+      submit.classList.toggle('is-ready', prompt.value.trim() !== '');
+    }
+  }
+
+  function closeMyPrompts(root){
+    var panel = root.querySelector('[data-ai-analytik-my-prompts]');
+    if (panel instanceof HTMLElement) panel.hidden = true;
+    document.querySelectorAll('[data-ai-analytik-my-prompts-toggle]').forEach(function(toggle){
+      if (toggle instanceof HTMLButtonElement) toggle.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  function formatPromptDate(value){
+    var match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!match) return '';
+    return Number(match[3]) + '.' + Number(match[2]) + '.' + match[1];
+  }
+
+  function formatPromptDuration(value){
+    var seconds = Math.max(0, Math.round(Number(value || 0) / 1000));
+    if (seconds < 60) return seconds + ' s';
+    return Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0') + ' min.';
+  }
+
+  function restorePrompt(form, prompt){
+    var promptNode = form.querySelector('[data-ai-analytik-prompt]');
+    if (!(promptNode instanceof HTMLTextAreaElement)) return;
+    promptNode.value = String(prompt.prompt || '');
+    Array.prototype.slice.call(form.querySelectorAll('[data-ai-analytik-year]')).forEach(function(node){
+      if (node instanceof HTMLInputElement) node.checked = Array.isArray(prompt.years) && prompt.years.indexOf(Number(node.value)) >= 0;
+    });
+    Array.prototype.slice.call(form.querySelectorAll('[data-ai-analytik-model]')).some(function(node){
+      if (!(node instanceof HTMLInputElement) || node.value !== String(prompt.model || '')) return false;
+      node.checked = true;
+      return true;
+    });
+    ['text', 'tabulka', 'graf'].forEach(function(key){
+      var node = form.querySelector('[data-ai-analytik-vystup="' + key + '"]');
+      if (node instanceof HTMLInputElement) node.checked = !!(prompt.output && prompt.output[key]);
+    });
+    Array.prototype.slice.call(form.querySelectorAll('[data-ai-analytik-ambiguity]')).some(function(node){
+      if (!(node instanceof HTMLInputElement) || node.value !== String(prompt.ambiguity_mode || '')) return false;
+      node.checked = true;
+      return true;
+    });
+    setPromptSubmitState(form);
+    promptNode.focus();
+  }
+
+  function renderMyPrompts(root, panel, prompts, filter){
+    panel.replaceChildren();
+    var list = document.createElement('div');
+    list.className = 'ai_analytik_my_prompt_list';
+    if (!Array.isArray(prompts) || prompts.length === 0) {
+      var empty = document.createElement('p');
+      empty.className = 'ai_analytik_my_prompts_empty';
+      empty.textContent = filter === 'saved' ? 'Nemáte žádné uložené prompty.' : 'Nemáte žádné předchozí prompty.';
+      list.appendChild(empty);
+    } else {
+      prompts.forEach(function(prompt){
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'ai_analytik_my_prompt';
+        var text = document.createElement('span');
+        text.textContent = String(prompt.prompt || '');
+        var meta = document.createElement('small');
+        meta.textContent = 'Použito ' + formatPromptDate(prompt.created_at)
+          + ' · model ' + String(prompt.model || '')
+          + ' · využil ' + numberFormatter.format(Number(prompt.total_tokens || 0)) + ' tokenů'
+          + ' · zpracování ' + formatPromptDuration(prompt.duration_ms);
+        button.appendChild(text);
+        button.appendChild(meta);
+        button.addEventListener('click', function(){
+          var form = root.querySelector('[data-ai-analytik-form]');
+          if (form instanceof HTMLFormElement) restorePrompt(form, prompt);
+          closeMyPrompts(root);
+        });
+        list.appendChild(button);
+      });
+    }
+    panel.appendChild(list);
+  }
+
+  function loadMyPrompts(root, filter){
+    var panel = root.querySelector('[data-ai-analytik-my-prompts]');
+    if (!(panel instanceof HTMLElement)) return;
+    panel.hidden = false;
+    panel.dataset.aiAnalytikPromptFilter = filter;
+    panel.textContent = 'Načítám prompty…';
+    fetch(String(root.dataset.endpoint || window.CB_ENDPOINT || 'index.php'), {
+      method: 'POST', credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json', 'Accept': 'application/json',
+        'X-Comeback-AI-Analytik': '1'
+      },
+      body: JSON.stringify({
+        action: 'prompt_list', filter: filter, csrf: String(root.dataset.csrf || '')
+      })
+    }).then(function(response){
+      if (!response.ok) return responseError(response);
+      return response.json();
+    }).then(function(data){
+      if (!data.ok) throw new Error(String(data.error || 'Prompty nelze načíst.'));
+      renderMyPrompts(root, panel, data.prompts || [], filter);
+    }).catch(function(error){
+      panel.textContent = String(error.message || 'Prompty nelze načíst.');
+    });
+  }
+
+  document.addEventListener('click', function(event){
+    var target = event.target instanceof Element ? event.target : null;
+    if (!target) return;
+    var toggle = target.closest('[data-ai-analytik-my-prompts-toggle]');
+    if (toggle instanceof HTMLButtonElement) {
+      var root = document.querySelector('[data-ai-analytik]');
+      if (!(root instanceof HTMLElement)) return;
+      var panel = root.querySelector('[data-ai-analytik-my-prompts]');
+      if (!(panel instanceof HTMLElement)) return;
+      var filterName = String(toggle.dataset.aiAnalytikPromptFilter || 'saved');
+      if (!panel.hidden && panel.dataset.aiAnalytikPromptFilter === filterName) {
+        closeMyPrompts(root);
+        return;
+      }
+      document.querySelectorAll('[data-ai-analytik-my-prompts-toggle]').forEach(function(button){
+        if (button instanceof HTMLButtonElement) button.setAttribute('aria-expanded', button === toggle ? 'true' : 'false');
+      });
+      loadMyPrompts(root, filterName);
+    }
   });
 
   function closeInfoPanels(except){
