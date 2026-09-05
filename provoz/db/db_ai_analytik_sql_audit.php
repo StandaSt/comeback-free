@@ -52,3 +52,20 @@ function cb_ai_analytik_sql_audit_finish(int $idSqlAudit, array $data): void
     $stmt->execute();
     $stmt->close();
 }
+
+/** Uloží serverové ID spojení běžícího analytického SELECTu pro bezpečné KILL QUERY. */
+function cb_ai_analytik_sql_audit_connection(int $idSqlAudit, int $connectionId): void
+{
+    if ($idSqlAudit <= 0 || $connectionId <= 0) {
+        return;
+    }
+    $conn = db();
+    $stmt = $conn->prepare(
+        'UPDATE ai_analytik_sql_audit
+         SET connection_id = ?
+         WHERE id_ai_analytik_sql_audit = ? AND completed_at IS NULL'
+    );
+    $stmt->bind_param('ii', $connectionId, $idSqlAudit);
+    $stmt->execute();
+    $stmt->close();
+}

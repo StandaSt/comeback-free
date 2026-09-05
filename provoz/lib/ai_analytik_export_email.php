@@ -72,9 +72,12 @@ try {
     $pdf = cb_ai_analytik_export_pdf($data);
     $subject = 'Výsledek AI analytika';
     $prompt = trim((string)($data['prompt'] ?? ''));
+    $yearsText = cb_ai_analytik_export_roky_text($data);
     $body = '<p>V příloze je výsledek AI analytika.</p><p><strong>Dotaz:</strong> '
-        . cb_ai_analytik_export_h($prompt) . '</p>';
-    $altBody = "V příloze je výsledek AI analytika.\n\nDotaz: " . $prompt;
+        . cb_ai_analytik_export_h($prompt) . '</p><p><strong>Zpracované roky:</strong> '
+        . cb_ai_analytik_export_h($yearsText) . '</p>';
+    $altBody = "V příloze je výsledek AI analytika.\n\nDotaz: " . $prompt
+        . "\nZpracované roky: " . $yearsText;
 
     cb_mail_send('ai', $recipientEmail, $subject, $body, $altBody, [[
         'content' => (string)$pdf['content'],
@@ -126,4 +129,3 @@ try {
         'message' => cb_ai_analytik_export_chyba($error),
     ], JSON_UNESCAPED_UNICODE);
 }
-

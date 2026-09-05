@@ -117,45 +117,31 @@ if ($cbPage === 'ai_analytik' && $cbPageExists) {
     }
 }
 
-$cbAiAnalytikPristupRender = static function (array $rows): void {
-    if ($rows === []) {
+$cbAiAnalytikPristupRender = static function (array $rows, bool $showGuide = false): void {
+    if ($rows === [] && !$showGuide) {
         return;
     }
     ?>
-    <details class="ai_analytik_access">
-        <summary>Kdo má přístup</summary>
-        <div class="ai_analytik_access_panel">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Jméno</th>
-                        <th>Počet promptů</th>
-                        <th>Využitý čas</th>
-                        <th>Spotřeba tokenů</th>
-                        <th>Cena</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($rows as $row): ?>
-                        <?php
-                        $seconds = (int)round(((int)$row['duration_ms']) / 1000);
-                        $duration = $seconds >= 3600
-                            ? intdiv($seconds, 3600) . ' h ' . intdiv($seconds % 3600, 60) . ' min'
-                            : ($seconds >= 60 ? intdiv($seconds, 60) . ' min ' . ($seconds % 60) . ' s' : $seconds . ' s');
-                        $cost = (float)$row['cost_usd'];
-                        ?>
-                        <tr>
-                            <td><?= h((string)$row['jmeno']) ?></td>
-                            <td><?= number_format((int)$row['prompty'], 0, ',', "\u{00A0}") ?></td>
-                            <td><?= h($duration) ?></td>
-                            <td><?= number_format((int)$row['total_tokens'], 0, ',', "\u{00A0}") ?></td>
-                            <td>$<?= number_format($cost, 4, '.', '') ?> (<?= number_format($cost * 20.8, 2, ',', "\u{00A0}") ?> Kč)</td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </details>
+    <div class="ai_analytik_header_controls">
+        <?php if ($showGuide): ?>
+            <button
+                type="button"
+                class="ai_analytik_header_guide_toggle"
+                aria-controls="ai_analytik_guide"
+                aria-expanded="false"
+                data-ai-analytik-guide-toggle
+            >AI analytik</button>
+        <?php endif; ?>
+        <?php if ($rows !== []): ?>
+            <button
+                type="button"
+                class="ai_analytik_header_access_toggle"
+                aria-controls="ai_analytik_access"
+                aria-expanded="false"
+                data-ai-analytik-access-toggle
+            >Kdo má přístup</button>
+        <?php endif; ?>
+    </div>
     <?php
 };
 
@@ -263,7 +249,7 @@ if ($cbPpOnly && !empty($_SESSION['login_ok']) && !$cbSystemLocked) {
                         <a class="head_task_btn" href="<?= h(cb_root_url('index.php?m=provoz&page=nastaveni_reportu')) ?>">Nastavení reportu</a>
                     </div>
                 <?php endif; ?>
-                <?php $cbAiAnalytikPristupRender($cbAiAnalytikPristup); ?>
+                <?php $cbAiAnalytikPristupRender($cbAiAnalytikPristup, $cbPage === 'ai_analytik'); ?>
             </header>
             <?php
             if ($cbPageExists) {
@@ -309,7 +295,7 @@ if (!empty($_SESSION['login_ok']) && $cbSystemLocked) {
                     <a class="head_task_btn" href="<?= h(cb_root_url('index.php?m=provoz&page=nastaveni_reportu')) ?>">Nastavení reportu</a>
                 </div>
             <?php endif; ?>
-            <?php $cbAiAnalytikPristupRender($cbAiAnalytikPristup); ?>
+            <?php $cbAiAnalytikPristupRender($cbAiAnalytikPristup, $cbPage === 'ai_analytik'); ?>
         </header>
         <?php
         if ($cbPageExists) {

@@ -7,7 +7,7 @@ require_once __DIR__ . '/ai_analytik_pravidla.php';
  * Jedno nízkoúrovňové volání Responses API.
  * Funkce záměrně nevyžaduje text: mezikrok agenta může obsahovat pouze function_call.
  */
-function cb_ai_analytik_openai_request(array $payload): array
+function cb_ai_analytik_openai_request(array $payload, ?callable $watchdog = null): array
 {
     $apiKey = trim((string)getenv('AI_ANALYTIK_OPENAI_API_KEY'));
     if ($apiKey === '') {
@@ -20,11 +20,15 @@ function cb_ai_analytik_openai_request(array $payload): array
     if ($curl === false) {
         throw new RuntimeException('OpenAI API nelze inicializovat.');
     }
+    $timeoutRaw = trim((string)getenv('AI_ANALYTIK_OPENAI_TIMEOUT_SECONDS'));
+    $timeoutSeconds = $timeoutRaw !== '' ? (int)$timeoutRaw : 300;
+    $timeoutSeconds = max(30, min(1800, $timeoutSeconds));
 
     curl_setopt_array($curl, [
         CURLOPT_POST => true,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_TIMEOUT => $timeoutSeconds,
         CURLOPT_HTTPHEADER => [
             'Authorization: Bearer ' . $apiKey,
             'Content-Type: application/json',
@@ -32,12 +36,43 @@ function cb_ai_analytik_openai_request(array $payload): array
         CURLOPT_POSTFIELDS => $json,
     ]);
 
+    $multi = curl_multi_init();
+    if ($multi === false) {
+        curl_close($curl);
+        throw new RuntimeException('OpenAI API nelze inicializovat.');
+    }
+
     $startedAt = hrtime(true);
-    $body = curl_exec($curl);
+    try {
+        if (curl_multi_add_handle($multi, $curl) !== CURLM_OK) {
+            throw new RuntimeException('OpenAI API nelze spustit.');
+        }
+        $running = null;
+        do {
+            $status = curl_multi_exec($multi, $running);
+            if ($status !== CURLM_OK) {
+                throw new RuntimeException('OpenAI API není dostupné: chyba přenosu.');
+            }
+            if ($running > 0) {
+                $selected = curl_multi_select($multi, 1.0);
+                if ($selected === -1) {
+                    usleep(100000);
+                }
+                if ($watchdog !== null) {
+                    $watchdog();
+                }
+            }
+        } while ($running > 0);
+
+        $body = curl_multi_getcontent($curl);
+        $curlError = curl_error($curl);
+        $httpStatus = (int)curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
+    } finally {
+        curl_multi_remove_handle($multi, $curl);
+        curl_multi_close($multi);
+        curl_close($curl);
+    }
     $durationMs = (int)((hrtime(true) - $startedAt) / 1_000_000);
-    $curlError = curl_error($curl);
-    $httpStatus = (int)curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
-    curl_close($curl);
 
     if (!is_string($body)) {
         throw new RuntimeException('OpenAI API není dostupné: ' . ($curlError !== '' ? $curlError : 'síťová chyba.'));

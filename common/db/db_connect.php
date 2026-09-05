@@ -44,14 +44,15 @@ if (!function_exists('db_connect')) {
         $user = (string)($cfg['user'] ?? '');
         $pass = (string)($cfg['pass'] ?? '');
         $name = (string)($cfg['name'] ?? '');
+        $port = (int)($cfg['port'] ?? 3306);
 
-        if ($host === '' || $user === '' || $name === '') {
+        if ($host === '' || $user === '' || $name === '' || $port <= 0) {
             throw new RuntimeException('Neúplné DB přihlašovací údaje');
         }
 
         mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
-        $conn = new mysqli($host, $user, $pass, $name);
+        $conn = new mysqli($host, $user, $pass, $name, $port);
         $conn->set_charset('utf8mb4');
         if (function_exists('cb_db_akce_log_init')) {
             cb_db_akce_log_init($conn);

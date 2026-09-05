@@ -76,6 +76,14 @@ function cb_ai_analytik_prehled_pristupu(mysqli $conn): array
 function cb_ai_analytik_audit_start(int $idUser, int $idLogin, string $model, string $prompt, string $scope): int
 {
     $conn = db();
+    $conn->query(
+        "UPDATE ai_analytik_audit
+         SET completed_at = NOW(3), status = 'clarification_expired', continuation_state_json = NULL,
+             continuation_token_hash = NULL, continuation_expires_at = NULL
+         WHERE completed_at IS NULL
+           AND status = 'awaiting_clarification'
+           AND continuation_expires_at < NOW(3)"
+    );
     $stmt = $conn->prepare(
         'INSERT INTO ai_analytik_audit
             (created_at, id_user, id_login, model, prompt, scope, status)
@@ -88,11 +96,108 @@ function cb_ai_analytik_audit_start(int $idUser, int $idLogin, string $model, st
     return $idAudit;
 }
 
-function cb_ai_analytik_audit_request(int $idAudit, array $areas, array $requestedOutput): void
+function cb_ai_analytik_audit_ulozit_pokracovani(int $idAudit, int $idUser, array $state): string
 {
-    $scopeNormalized = implode(',', $areas);
+    if ($idAudit <= 0 || $idUser <= 0) {
+        throw new RuntimeException('Rozpracovanou analýzu nelze uložit.');
+    }
+    $token = bin2hex(random_bytes(32));
+    $tokenHash = hash('sha256', $token);
+    $stateJson = json_encode(
+        $state,
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+    );
+    $conn = db();
+    $stmt = $conn->prepare(
+        "UPDATE ai_analytik_audit
+         SET status = 'awaiting_clarification', continuation_token_hash = ?,
+             continuation_state_json = ?, continuation_expires_at = DATE_ADD(NOW(3), INTERVAL 3 MINUTE)
+         WHERE id_ai_analytik_audit = ? AND id_user = ? AND completed_at IS NULL"
+    );
+    $stmt->bind_param('ssii', $tokenHash, $stateJson, $idAudit, $idUser);
+    $stmt->execute();
+    $updated = $stmt->affected_rows;
+    $stmt->close();
+    if ($updated !== 1) {
+        throw new RuntimeException('Rozpracovanou analýzu nelze uložit.');
+    }
+    return $token;
+}
+
+function cb_ai_analytik_audit_nacist_pokracovani(int $idAudit, int $idUser, string $token): array
+{
+    if ($idAudit <= 0 || $idUser <= 0 || !preg_match('/^[a-f0-9]{64}$/', $token)) {
+        throw new CbAiAnalytikUzivatelskaChyba('Odkaz na rozpracovanou analýzu není platný.');
+    }
+    $conn = db();
+    $conn->begin_transaction();
+    try {
+        $stmt = $conn->prepare(
+            "SELECT continuation_token_hash, continuation_state_json,
+                    continuation_expires_at > NOW(3) AS is_valid
+             FROM ai_analytik_audit
+             WHERE id_ai_analytik_audit = ? AND id_user = ? AND completed_at IS NULL
+               AND status = 'awaiting_clarification'
+             LIMIT 1
+             FOR UPDATE"
+        );
+        $stmt->bind_param('ii', $idAudit, $idUser);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if (!is_array($row)
+            || (int)($row['is_valid'] ?? 0) !== 1
+            || !hash_equals((string)($row['continuation_token_hash'] ?? ''), hash('sha256', $token))) {
+            $conn->rollback();
+            throw new CbAiAnalytikUzivatelskaChyba('Upřesnění už nelze použít. Spusťte zadání znovu.');
+        }
+        $state = json_decode((string)$row['continuation_state_json'], true, 512, JSON_THROW_ON_ERROR);
+        if (!is_array($state) || (int)($state['version'] ?? 0) !== 1) {
+            $conn->rollback();
+            throw new RuntimeException('Uložený stav analýzy není platný.');
+        }
+        $stmt = $conn->prepare(
+            "UPDATE ai_analytik_audit
+             SET status = 'resuming'
+             WHERE id_ai_analytik_audit = ?"
+        );
+        $stmt->bind_param('i', $idAudit);
+        $stmt->execute();
+        $stmt->close();
+        $conn->commit();
+        return $state;
+    } catch (Throwable $error) {
+        try {
+            $conn->rollback();
+        } catch (Throwable) {
+        }
+        throw $error;
+    }
+}
+
+function cb_ai_analytik_audit_obnovit_cekani(int $idAudit, int $idUser): void
+{
+    $conn = db();
+    $stmt = $conn->prepare(
+        "UPDATE ai_analytik_audit
+         SET status = 'awaiting_clarification'
+         WHERE id_ai_analytik_audit = ? AND id_user = ? AND completed_at IS NULL
+           AND status = 'resuming' AND continuation_expires_at > NOW(3)"
+    );
+    $stmt->bind_param('ii', $idAudit, $idUser);
+    $stmt->execute();
+    $stmt->close();
+}
+
+function cb_ai_analytik_audit_request(int $idAudit, array $requestedOutput, array $context): void
+{
+    $scopeNormalized = 'global';
     $outputJson = json_encode(
-        $requestedOutput,
+        [
+            'output' => $requestedOutput,
+            'years' => array_values($context['years']),
+            'ambiguity_mode' => (string)$context['ambiguity_mode'],
+        ],
         JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
     );
     $conn = db();
@@ -119,6 +224,89 @@ function cb_ai_analytik_audit_status(int $idAudit, string $status): void
     $stmt->bind_param('si', $status, $idAudit);
     $stmt->execute();
     $stmt->close();
+}
+
+function cb_ai_analytik_audit_je_zruseni_pozadovano(int $idAudit): bool
+{
+    if ($idAudit <= 0) {
+        return false;
+    }
+    $conn = db();
+    $stmt = $conn->prepare(
+        'SELECT cancel_requested_at IS NOT NULL AS cancelled
+         FROM ai_analytik_audit
+         WHERE id_ai_analytik_audit = ? AND completed_at IS NULL'
+    );
+    $stmt->bind_param('i', $idAudit);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    return (int)($row['cancelled'] ?? 0) === 1;
+}
+
+/**
+ * Požádá o ukončení pouze vlastního nedokončeného auditu a vrátí ID právě běžícího SQL spojení.
+ * ID spojení nikdy nepřichází od klienta, ale jen z interního SQL auditu.
+ */
+function cb_ai_analytik_audit_pozadat_o_zruseni(int $idAudit, int $idUser): int
+{
+    if ($idAudit <= 0 || $idUser <= 0) {
+        return 0;
+    }
+    $conn = db();
+    $conn->begin_transaction();
+    try {
+        $stmt = $conn->prepare(
+            'SELECT audit.id_ai_analytik_audit, sql_audit.connection_id
+             FROM ai_analytik_audit AS audit
+             LEFT JOIN ai_analytik_sql_audit AS sql_audit
+               ON sql_audit.id_ai_analytik_audit = audit.id_ai_analytik_audit
+              AND sql_audit.completed_at IS NULL
+             WHERE audit.id_ai_analytik_audit = ?
+               AND audit.id_user = ?
+               AND audit.completed_at IS NULL
+             ORDER BY sql_audit.id_ai_analytik_sql_audit DESC
+             LIMIT 1
+             FOR UPDATE'
+        );
+        $stmt->bind_param('ii', $idAudit, $idUser);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if (!is_array($row)) {
+            $conn->rollback();
+            return 0;
+        }
+
+        $stmt = $conn->prepare(
+            'UPDATE ai_analytik_audit
+             SET cancel_requested_at = COALESCE(cancel_requested_at, NOW(3))
+             WHERE id_ai_analytik_audit = ?'
+        );
+        $stmt->bind_param('i', $idAudit);
+        $stmt->execute();
+        $stmt->close();
+        $conn->commit();
+        return max(0, (int)($row['connection_id'] ?? 0));
+    } catch (Throwable $error) {
+        $conn->rollback();
+        throw $error;
+    }
+}
+
+/** Přeruší výhradně aktuální SQL dotaz známého auditního spojení. */
+function cb_ai_analytik_sql_prerusit_dotaz(int $connectionId): bool
+{
+    if ($connectionId <= 0) {
+        return false;
+    }
+    try {
+        $conn = db();
+        return $conn->query('KILL QUERY ' . $connectionId) === true;
+    } catch (Throwable $error) {
+        error_log('AI analytik: SQL dotaz nelze přerušit: ' . $error->getMessage());
+        return false;
+    }
 }
 
 function cb_ai_analytik_audit_sql(
@@ -149,7 +337,9 @@ function cb_ai_analytik_audit_finish(int $idAudit, array $data): void
         $conn = db();
         $stmt = $conn->prepare(
             'UPDATE ai_analytik_audit
-             SET completed_at = NOW(3), datum_od = NULLIF(?, \'\'), datum_do = NULLIF(?, \'\'),
+             SET completed_at = NOW(3), cancelled_at = IF(? = \'cancelled\', NOW(3), cancelled_at),
+                 continuation_token_hash = NULL, continuation_state_json = NULL, continuation_expires_at = NULL,
+                 datum_od = NULLIF(?, \'\'), datum_do = NULLIF(?, \'\'),
                  sql_text = NULLIF(?, \'\'), sql_params_json = NULLIF(?, \'\'), row_count = ?,
                  openai_plan_response_id = NULLIF(?, \'\'), openai_summary_response_id = NULLIF(?, \'\'),
                   duration_ms = ?, status = ?, error_type = NULLIF(?, \'\'), error_code = NULLIF(?, \'\'),
@@ -171,7 +361,8 @@ function cb_ai_analytik_audit_finish(int $idAudit, array $data): void
         $error = mb_substr((string)($data['error_message'] ?? ''), 0, 1000);
 
         $stmt->bind_param(
-            'ssssississssi',
+            'sssssississssi',
+            $status,
             $datumOd,
             $datumDo,
             $sqlText,

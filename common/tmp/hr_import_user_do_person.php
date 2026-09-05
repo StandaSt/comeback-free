@@ -67,9 +67,10 @@ if (!isset($SECRETS['db'][$environment]) || !is_array($SECRETS['db'][$environmen
     exit(1);
 }
 
-/** @var array{host:string,user:string,pass:string,name:string} $config */
+/** @var array{host:string,user:string,pass:string,name:string,port?:int} $config */
 $config = $SECRETS['db'][$environment];
-$db = new mysqli($config['host'], $config['user'], $config['pass'], $config['name']);
+$dbPort = (int)($config['port'] ?? 3306);
+$db = new mysqli($config['host'], $config['user'], $config['pass'], $config['name'], $dbPort);
 
 if ($db->connect_errno !== 0) {
     if ($directRun) {

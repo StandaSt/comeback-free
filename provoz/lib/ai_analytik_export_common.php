@@ -207,6 +207,18 @@ function cb_ai_analytik_export_tabulka_html(array $columns, array $rows): string
         . '</tbody></table></section>';
 }
 
+function cb_ai_analytik_export_roky_text(array $data): string
+{
+    $years = [];
+    foreach (is_array($data['years'] ?? null) ? $data['years'] : [] as $rawYear) {
+        $year = (int)$rawYear;
+        if ($year > 0) {
+            $years[] = (string)$year;
+        }
+    }
+    return implode(', ', $years);
+}
+
 function cb_ai_analytik_export_pdf(array $data): array
 {
     $text = trim((string)($data['text'] ?? ''));
@@ -220,6 +232,10 @@ function cb_ai_analytik_export_pdf(array $data): array
     $usage = is_array($data['usage'] ?? null) ? $data['usage'] : [];
     $duration = ((int)($data['duration_ms'] ?? 0)) / 1000;
     $cost = (float)($usage['cost_usd'] ?? 0);
+    $yearsText = cb_ai_analytik_export_roky_text($data);
+    $yearsHtml = $yearsText !== ''
+        ? '<p><span class="label">Zpracované roky:</span> ' . cb_ai_analytik_export_h($yearsText) . '</p>'
+        : '';
     $footer = 'Zpracoval model: ' . (string)($data['model'] ?? '') . ' za '
         . number_format($duration, 1, ',', ' ') . ' s. Spotřeba: '
         . cb_ai_analytik_export_cislo((float)($usage['total_tokens'] ?? 0)) . ' tokenů cena $'
@@ -241,6 +257,7 @@ function cb_ai_analytik_export_pdf(array $data): array
         . '.bar i{display:block;height:9px;background:#2563eb}'
         . '</style></head><body><h1>AI analytik</h1>'
         . '<p><span class="label">Dotaz:</span> ' . cb_ai_analytik_export_h((string)($data['prompt'] ?? '')) . '</p>'
+        . $yearsHtml
         . $summary . $chart . $table
         . '<p class="footer">' . cb_ai_analytik_export_h($footer) . '</p>'
         . '</body></html>';

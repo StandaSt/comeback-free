@@ -1,7 +1,6 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/../lib/ai_analytik_sql.php';
 require_once __DIR__ . '/../lib/ai_analytik_pravidla.php';
 require_once __DIR__ . '/db_ai_analytik_sql_audit.php';
 
@@ -45,6 +44,10 @@ function cb_ai_analytik_db(): mysqli
         $conn->close();
         throw new RuntimeException('Read-only databáze AI analytika nepodporuje požadované kódování.');
     }
+    $timeoutRaw = trim((string)getenv('AI_ANALYTIK_SQL_TIMEOUT_SECONDS'));
+    $timeoutSeconds = $timeoutRaw !== '' ? (int)$timeoutRaw : 60;
+    $timeoutSeconds = max(1, min(3600, $timeoutSeconds));
+    $conn->query('SET SESSION max_statement_time = ' . $timeoutSeconds);
 
     return $conn;
 }
@@ -412,16 +415,15 @@ function cb_ai_analytik_php_limit_bytes(string $value): int
 
 function cb_ai_analytik_sql_result_budget_bytes(): int
 {
-    $budget = CB_AI_ANALYTIK_MAX_TOOL_RESULT_BYTES;
     $memoryLimit = cb_ai_analytik_php_limit_bytes((string)ini_get('memory_limit'));
     if ($memoryLimit <= 0) {
-        return $budget;
+        throw new RuntimeException('PHP pro AI analytika musí mít nastavený konečný memory_limit.');
     }
     $available = $memoryLimit - memory_get_usage(true);
     if ($available < 262144) {
         throw new RuntimeException('PHP nemá dostatek volné paměti pro bezpečné načtení výsledku SQL.');
     }
-    return min($budget, max(65536, (int)floor($available * 0.20)));
+    return max(65536, (int)floor($available * 0.35));
 }
 
 function cb_ai_analytik_sql_state(mysqli_sql_exception $error): string
@@ -429,7 +431,13 @@ function cb_ai_analytik_sql_state(mysqli_sql_exception $error): string
     return method_exists($error, 'getSqlState') ? (string)$error->getSqlState() : '';
 }
 
-function cb_ai_analytik_sql_spustit(int $idAudit, int $poradi, string $ucel, string $sql): array
+function cb_ai_analytik_sql_spustit(
+    int $idAudit,
+    int $poradi,
+    string $ucel,
+    string $sql,
+    ?callable $watchdog = null
+): array
 {
     $idSqlAudit = cb_ai_analytik_sql_audit_start($idAudit, $poradi, $ucel, $sql);
     $startedAt = hrtime(true);
@@ -437,11 +445,32 @@ function cb_ai_analytik_sql_spustit(int $idAudit, int $poradi, string $ucel, str
     $resultBytes = 0;
     $conn = null;
     try {
-        $sql = cb_ai_analytik_sql_overit($sql);
         $budgetBytes = cb_ai_analytik_sql_result_budget_bytes();
         $conn = cb_ai_analytik_db();
+        cb_ai_analytik_sql_audit_connection($idSqlAudit, (int)$conn->thread_id);
         $conn->query('START TRANSACTION READ ONLY');
-        $result = $conn->query($sql, MYSQLI_USE_RESULT);
+        if ($watchdog !== null) {
+            $watchdog();
+        }
+        if (!$conn->query($sql, MYSQLI_ASYNC | MYSQLI_USE_RESULT)) {
+            throw new RuntimeException('Read-only SQL nelze spustit.');
+        }
+        while (true) {
+            $read = [$conn];
+            $errors = [];
+            $reject = [];
+            $ready = mysqli_poll($read, $errors, $reject, 1, 0);
+            if ($ready === false) {
+                throw new RuntimeException('Read-only SQL nelze sledovat.');
+            }
+            if ($ready > 0) {
+                $result = $conn->reap_async_query();
+                break;
+            }
+            if ($watchdog !== null) {
+                $watchdog();
+            }
+        }
         if (!$result instanceof mysqli_result) {
             throw new RuntimeException('Read-only SQL nevrátilo tabulkový výsledek.');
         }
@@ -458,6 +487,9 @@ function cb_ai_analytik_sql_spustit(int $idAudit, int $poradi, string $ucel, str
         $tooLarge = false;
         while ($row = $result->fetch_assoc()) {
             $rowCount++;
+            if (($rowCount % 100) === 0 && $watchdog !== null) {
+                $watchdog();
+            }
             $rowBytes = strlen(json_encode($row, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
             if ($resultBytes + $rowBytes > $budgetBytes) {
                 $resultBytes += $rowBytes;
@@ -506,7 +538,16 @@ function cb_ai_analytik_sql_spustit(int $idAudit, int $poradi, string $ucel, str
             'result_bytes' => $resultBytes,
             'duration_ms' => $durationMs,
         ];
-    } catch (CbAiAnalytikSqlOpravitelnaChyba $error) {
+    } catch (mysqli_sql_exception $error) {
+        if ($conn instanceof mysqli) {
+            try {
+                $conn->rollback();
+            } catch (Throwable $rollbackError) {
+            }
+        }
+        if ($watchdog !== null) {
+            $watchdog();
+        }
         $durationMs = (int)((hrtime(true) - $startedAt) / 1_000_000);
         cb_ai_analytik_sql_audit_finish($idSqlAudit, [
             'status' => 'sql_error',
@@ -515,60 +556,17 @@ function cb_ai_analytik_sql_spustit(int $idAudit, int $poradi, string $ucel, str
             'result_bytes' => $resultBytes,
             'error_type' => get_class($error),
             'error_code' => (string)$error->getCode(),
+            'sqlstate' => cb_ai_analytik_sql_state($error),
             'error_message' => $error->getMessage(),
         ]);
         return [
             'ok' => false,
             'error_type' => 'sql_error',
-            'message' => $error->getMessage(),
+            'message' => mb_substr($error->getMessage(), 0, 1000),
             'error_code' => $error->getCode(),
-            'sqlstate' => '',
-            'suggestion' => 'Oprav formát nebo syntaxi SQL a spusť opravený dotaz.',
+            'sqlstate' => cb_ai_analytik_sql_state($error),
             'duration_ms' => $durationMs,
         ];
-    } catch (CbAiAnalytikSqlBezpecnostniChyba $error) {
-        $durationMs = (int)((hrtime(true) - $startedAt) / 1_000_000);
-        cb_ai_analytik_sql_audit_finish($idSqlAudit, [
-            'status' => 'security_rejected',
-            'duration_ms' => $durationMs,
-            'row_count' => $rowCount,
-            'result_bytes' => $resultBytes,
-            'error_type' => get_class($error),
-            'error_code' => (string)$error->getCode(),
-            'error_message' => $error->getMessage(),
-        ]);
-        throw $error;
-    } catch (mysqli_sql_exception $error) {
-        if ($conn instanceof mysqli) {
-            try {
-                $conn->rollback();
-            } catch (Throwable $rollbackError) {
-            }
-        }
-        $durationMs = (int)((hrtime(true) - $startedAt) / 1_000_000);
-        $repairable = cb_ai_analytik_sql_chyba_je_opravitelna($error);
-        cb_ai_analytik_sql_audit_finish($idSqlAudit, [
-            'status' => $repairable ? 'sql_error' : 'error',
-            'duration_ms' => $durationMs,
-            'row_count' => $rowCount,
-            'result_bytes' => $resultBytes,
-            'error_type' => get_class($error),
-            'error_code' => (string)$error->getCode(),
-            'sqlstate' => cb_ai_analytik_sql_state($error),
-            'error_message' => $error->getMessage(),
-        ]);
-        if ($repairable) {
-            return [
-                'ok' => false,
-                'error_type' => 'sql_error',
-                'message' => mb_substr($error->getMessage(), 0, 1000),
-                'error_code' => $error->getCode(),
-                'sqlstate' => cb_ai_analytik_sql_state($error),
-                'suggestion' => 'Použij inspect_schema, oprav názvy objektů, sloupců, aliasů nebo syntaxi a spusť opravený dotaz.',
-                'duration_ms' => $durationMs,
-            ];
-        }
-        throw $error;
     } catch (Throwable $error) {
         if ($conn instanceof mysqli) {
             try {
