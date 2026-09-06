@@ -235,7 +235,6 @@
     if (normalized === 'uzavřené' || normalized === 'uzavrene' || normalized === 'closed') { return 'closed'; }
     if (normalized === 'mine' || normalized === 'moje') { return 'mine'; }
     if (normalized === 'watched' || normalized === 'sledovane' || normalized === 'sledované') { return 'watched'; }
-    if (normalized === 'admin') { return 'admin'; }
     return 'all';
   }
 
@@ -544,7 +543,6 @@
     if (filterValue === 'closed') { return state === 'vyřešeno'; }
     if (filterValue === 'mine') { return row instanceof HTMLElement && Number(row.getAttribute('data-hd-owner-id') || '0') === authorId; }
     if (filterValue === 'watched') { return row instanceof HTMLElement && row.getAttribute('data-hd-watched') === '1'; }
-    if (filterValue === 'admin') { return true; }
     return true;
   }
 

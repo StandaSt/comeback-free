@@ -590,3 +590,8 @@ button.admin_matrix_right_id:disabled{
   background:#dc2626;
   color:#fff;
 }
+
+.admin_exception_toggle.is-parent-denied{
+  cursor:not-allowed;
+  opacity:.7;
+}

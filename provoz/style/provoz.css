@@ -2233,6 +2233,26 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   border-bottom:0;
 }
 
+.ai_analytik_api_payment_link{
+  display:inline-flex;
+  align-items:center;
+  margin-left:6px;
+  padding:2px 6px;
+  border:1px solid var(--cb-module-accent);
+  border-radius:5px;
+  background:var(--cb-module-soft);
+  color:var(--cb-module-accent);
+  font-size:var(--cb-font-11);
+  font-weight:700;
+  line-height:1.2;
+  text-decoration:none;
+}
+
+.ai_analytik_api_payment_link:hover{
+  background:var(--cb-module-accent);
+  color:#fff;
+}
+
 .ai_analytik_export_actions{
   display:flex;
   flex-wrap:wrap;

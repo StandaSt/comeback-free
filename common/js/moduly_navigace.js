@@ -74,12 +74,11 @@
       key: 'hd',
       defaultPage: 'all',
       items: [
-        ['all', 'Přehled'],
+        ['all', 'Přehled tiketů'],
         ['new-ticket', 'Nový tiket'],
         ['mine', 'Moje tikety'],
         ['watched', 'Sledované'],
-        ['closed', 'Uzavřené'],
-        ['admin', 'Admin']
+        ['closed', 'Uzavřené']
       ]
     },
     administrace: {
@@ -96,6 +95,10 @@
       ]
     }
   };
+
+  menuDefs.helpdesk.items = menuDefs.helpdesk.items.filter(function (item) {
+    return Array.isArray(config.helpdeskAllowedViews) && config.helpdeskAllowedViews.indexOf(item[0]) !== -1;
+  });
 
   if (config.adminFirmaPridat === true) {
     menuDefs.administrace.items.splice(3, 0, ['firma_pridat', 'Přidat firmu']);

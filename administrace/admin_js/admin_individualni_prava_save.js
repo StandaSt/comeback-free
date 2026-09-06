@@ -33,6 +33,11 @@
     })
       .then(function (data) {
         updateToggle(input, data.result);
+        var page = input.closest('[data-admin-individual="1"]');
+        var detail = page ? page.querySelector('[data-admin-individual-detail]') : null;
+        if (detail && data.detail_html) {
+          detail.innerHTML = data.detail_html;
+        }
         document.dispatchEvent(new CustomEvent('cb:admin-individual-exception-saved'));
       })
       .catch(function (error) {

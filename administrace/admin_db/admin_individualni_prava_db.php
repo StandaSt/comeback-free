@@ -112,6 +112,23 @@ function cb_admin_individualni_prava_hledej_uzivatele(string $query): array
     return $users;
 }
 
+function cb_admin_individualni_pravo_efektivni(array $global, array $exceptions, int $idPravo): bool
+{
+    $idVstupnihoPrava = cb_pravo_vstupni_pravo($idPravo);
+    if ($idVstupnihoPrava !== 0 && $idVstupnihoPrava !== $idPravo) {
+        $vstupniPravoPovoleno = array_key_exists($idVstupnihoPrava, $exceptions)
+            ? (int)$exceptions[$idVstupnihoPrava] === 1
+            : !empty($global[$idVstupnihoPrava]);
+        if (!$vstupniPravoPovoleno) {
+            return false;
+        }
+    }
+
+    return array_key_exists($idPravo, $exceptions)
+        ? (int)$exceptions[$idPravo] === 1
+        : !empty($global[$idPravo]);
+}
+
 function cb_admin_individualni_prava_data(int $idUser): array
 {
     if ($idUser <= 0) {
@@ -193,6 +210,12 @@ function cb_admin_individualni_prava_data(int $idUser): array
     }
     $stmtExceptions->close();
 
+    $effective = [];
+    foreach ($base['rights'] as $right) {
+        $idPravo = (int)$right['id_pravo'];
+        $effective[$idPravo] = cb_admin_individualni_pravo_efektivni($global, $exceptions, $idPravo);
+    }
+
     return [
         'user' => [
             'id_user' => (int)$user['id_user'],
@@ -205,6 +228,7 @@ function cb_admin_individualni_prava_data(int $idUser): array
         'modules' => $base['modules'],
         'global' => $global,
         'exceptions' => $exceptions,
+        'effective' => $effective,
     ];
 }
 
@@ -228,6 +252,12 @@ function cb_admin_individualni_prava_uloz(int $idUser, int $idPravo, bool $vyjim
     $stmtRight->close();
     if ((int)($rightRow['c'] ?? 0) !== 1) {
         throw new RuntimeException('Právo neexistuje.');
+    }
+
+    $idVstupnihoPrava = cb_pravo_vstupni_pravo($idPravo);
+    if ($vyjimka && !$global && $idVstupnihoPrava !== 0 && $idVstupnihoPrava !== $idPravo
+        && empty($data['effective'][$idVstupnihoPrava])) {
+        throw new RuntimeException('Nejprve povolte vstupní právo modulu (' . $idVstupnihoPrava . ').');
     }
 
     if (!$vyjimka) {

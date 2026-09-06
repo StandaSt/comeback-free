@@ -14,7 +14,7 @@
     return Array.prototype.slice.call(document.querySelectorAll(
       'input[data-admin-pravo="1"][data-id-role="' + selectorValue(idRole) + '"][data-id-modul="' + selectorValue(idModul) + '"]'
     )).filter(function (input) {
-      return !input.disabled;
+      return input.getAttribute('data-right-active') === '1';
     });
   }
 
@@ -56,12 +56,33 @@
 
     input.disabled = true;
 
-    Promise.all(changedRights.map(function (rightInput) {
-      rightInput.checked = targetChecked;
-      return window.CB_ADMIN_PRAVA_SAVE.saveCheckbox(rightInput);
-    }))
+    changedRights.sort(function (a, b) {
+      var aParent = a.getAttribute('data-vstupni-pravo') === '1';
+      var bParent = b.getAttribute('data-vstupni-pravo') === '1';
+      if (aParent === bParent) {
+        return 0;
+      }
+      return targetChecked ? (aParent ? -1 : 1) : (aParent ? 1 : -1);
+    });
+
+    changedRights.reduce(function (chain, rightInput) {
+      return chain.then(function () {
+        rightInput.checked = targetChecked;
+        return window.CB_ADMIN_PRAVA_SAVE.saveCheckbox(rightInput).then(function (saved) {
+          if (saved !== true) {
+            throw new Error('Uložení bloku práv selhalo.');
+          }
+        });
+      });
+    }, Promise.resolve())
+      .catch(function () {
+        // Jednotlivé ukládání už zobrazilo konkrétní chybu a vrátilo stav checkboxu zpět.
+      })
       .finally(function () {
         input.disabled = false;
+        if (window.CB_ADMIN_PRAVA_SAVE && typeof window.CB_ADMIN_PRAVA_SAVE.syncAllDependentRights === 'function') {
+          window.CB_ADMIN_PRAVA_SAVE.syncAllDependentRights();
+        }
         syncBlockCheckbox(idRole, idModul);
       });
   }

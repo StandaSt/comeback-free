@@ -191,7 +191,10 @@ if (
                     'vyjimka' => $result['vyjimka'] ? 1 : 0,
                 ],
             ]);
-            echo json_encode(['ok' => true, 'result' => $result], JSON_UNESCAPED_UNICODE);
+            $detailHtml = cb_admin_individualni_prava_html(
+                cb_admin_individualni_prava_data((int)($_POST['id_user'] ?? 0))
+            );
+            echo json_encode(['ok' => true, 'result' => $result, 'detail_html' => $detailHtml], JSON_UNESCAPED_UNICODE);
             exit;
         }
 

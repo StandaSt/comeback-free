@@ -12,6 +12,7 @@ function cb_admin_individualni_prava_html(array $data): string
     $modules = $data['modules'] ?? [];
     $global = $data['global'] ?? [];
     $exceptions = $data['exceptions'] ?? [];
+    $effective = $data['effective'] ?? [];
 
     ob_start();
     ?>
@@ -50,7 +51,18 @@ function cb_admin_individualni_prava_html(array $data): string
                             $globalValue = !empty($global[$idPravo]) ? 1 : 0;
                             $hasException = array_key_exists($idPravo, $exceptions);
                             $exceptionValue = $hasException ? (int)$exceptions[$idPravo] : null;
-                            $exceptionClass = $exceptionValue === 1 ? 'is-plus' : ($exceptionValue === 0 ? 'is-minus' : '');
+                            $idVstupnihoPrava = (int)($right['vstupni_pravo'] ?? 0);
+                            $blokovanoVstupnimPravem = $idVstupnihoPrava > 0
+                                && $idVstupnihoPrava !== $idPravo
+                                && empty($effective[$idVstupnihoPrava]);
+                            $exceptionClass = $blokovanoVstupnimPravem
+                                ? 'is-minus is-parent-denied'
+                                : ($exceptionValue === 1 ? 'is-plus' : ($exceptionValue === 0 ? 'is-minus' : ''));
+                            $exceptionChecked = $blokovanoVstupnimPravem || $hasException;
+                            $exceptionDisabled = !$rightActive || $blokovanoVstupnimPravem;
+                            $exceptionTitle = $blokovanoVstupnimPravem
+                                ? 'Zakázáno vstupním právem modulu (' . $idVstupnihoPrava . ').'
+                                : '';
                             ?>
                             <tr<?= $rightActive ? '' : ' class="is-inactive"' ?>>
                                 <td style="white-space:nowrap;">
@@ -75,8 +87,9 @@ function cb_admin_individualni_prava_html(array $data): string
                                             data-id-user="<?= h((string)($user['id_user'] ?? 0)) ?>"
                                             data-id-pravo="<?= h((string)$idPravo) ?>"
                                             data-global="<?= h((string)$globalValue) ?>"
-                                            <?= $hasException ? 'checked' : '' ?>
-                                            <?= $rightActive ? '' : 'disabled' ?>
+                                            <?= $exceptionChecked ? 'checked' : '' ?>
+                                            <?= $exceptionDisabled ? 'disabled' : '' ?>
+                                            <?= $exceptionTitle !== '' ? 'title="' . h($exceptionTitle) . '"' : '' ?>
                                         >
                                     </label>
                                 </td>

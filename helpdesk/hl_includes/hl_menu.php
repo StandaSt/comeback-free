@@ -26,16 +26,12 @@ $hlMenuItems = [
     ],
 ];
 
-if ($isAdmin) {
-    $hlMenuItems[] = [
-        'view' => 'admin',
-        'label' => 'Admin',
-    ];
-}
-
 $hlMenu = [];
 foreach ($hlMenuItems as $item) {
     $itemView = (string)$item['view'];
+    if (!cb_helpdesk_view_allowed($itemView)) {
+        continue;
+    }
     $hlMenu[] = [
         'label' => (string)$item['label'],
         'url' => $helpdeskMenuUrl($itemView),

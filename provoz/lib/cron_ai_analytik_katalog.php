@@ -398,4 +398,3 @@ echo 'OK: katalogy vygenerovány pro ' . $environment . ', generace ' . $generat
 foreach ($manifestCatalogs as $catalog) {
     echo '- ' . $catalog['label'] . ': ' . $catalog['object_count'] . ' objektů' . PHP_EOL;
 }
-

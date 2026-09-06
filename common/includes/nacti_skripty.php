@@ -4,6 +4,7 @@
  * Poradi skriptu je zavisle na soucasne aplikaci a odpovida puvodnimu rozlozeni.
  */
 declare(strict_types=1);
+require_once __DIR__ . '/../../helpdesk/hl_lib/hl_pages.php';
 ?>
 <?php // Koncovy bod pro komunikaci klienta se spolecnym shellem. ?>
 <script>
@@ -80,6 +81,7 @@ window.CB_MODULY_NAVIGACE = {
   shellUrl: <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,
   publicShellUrl: <?= json_encode($cbPublicShellUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,
   activeMainModule: <?= json_encode($cbInitialModule, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,
+  helpdeskAllowedViews: <?= json_encode(array_values(array_filter(array_keys(cb_helpdesk_views()), 'cb_helpdesk_view_allowed')), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,
   adminFirmaPridat: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(105) ? 'true' : 'false' ?>,
   aiAnalytikAllowed: <?= function_exists('cb_pravo_ma') && is_array($_SESSION['prava_stav'] ?? null) && array_key_exists(210, $_SESSION['prava_stav']) && cb_pravo_ma(210) ? 'true' : 'false' ?>,
   initialAutoLoad: true

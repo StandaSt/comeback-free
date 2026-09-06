@@ -8,7 +8,7 @@ $adminRoles = $adminPravaData['roles'];
 $adminModules = $adminPravaData['modules'];
 $adminRights = $adminPravaData['rights'];
 $adminAllowed = $adminPravaData['allowed'];
-$adminShowBlockChecks = function_exists('cb_user_ma_roli') && cb_user_ma_roli(1);
+$adminShowBlockChecks = function_exists('cb_pravo_ma') && cb_pravo_ma(101);
 $adminCanToggleApplied = function_exists('cb_pravo_ma') && cb_pravo_ma(106);
 ?>
 <?php if ($adminRights === []): ?>
@@ -95,6 +95,14 @@ $adminCanToggleApplied = function_exists('cb_pravo_ma') && cb_pravo_ma(106);
                                     $idRole = (int)$role['id_role'];
                                     $idPravo = (int)$right['id_pravo'];
                                     $checked = !empty($adminAllowed[$idRole][$idPravo]);
+                                    $idVstupnihoPrava = (int)($right['vstupni_pravo'] ?? 0);
+                                    $jeVstupniPravo = $idVstupnihoPrava === $idPravo;
+                                    $jePodrizenePravo = $idVstupnihoPrava > 0 && !$jeVstupniPravo;
+                                    $maVstupniPravo = !empty($adminAllowed[$idRole][$idVstupnihoPrava]);
+                                    $disabled = !$rightActive || ($jePodrizenePravo && !$maVstupniPravo);
+                                    $title = $jePodrizenePravo && !$maVstupniPravo
+                                        ? 'Nejprve povolte vstupní právo modulu (' . $idVstupnihoPrava . ').'
+                                        : '';
                                     ?>
                                     <td class="admin_matrix_check">
                                         <input
@@ -103,8 +111,12 @@ $adminCanToggleApplied = function_exists('cb_pravo_ma') && cb_pravo_ma(106);
                                             data-id-role="<?= h((string)$idRole) ?>"
                                             data-id-pravo="<?= h((string)$idPravo) ?>"
                                             data-id-modul="<?= h((string)$module['id_modul']) ?>"
+                                            data-vstupni-pravo="<?= $jeVstupniPravo ? '1' : '0' ?>"
+                                            data-parent-pravo="<?= h((string)$idVstupnihoPrava) ?>"
+                                            data-right-active="<?= $rightActive ? '1' : '0' ?>"
                                             <?= $checked ? 'checked' : '' ?>
-                                            <?= $rightActive ? '' : 'disabled' ?>
+                                            <?= $disabled ? 'disabled' : '' ?>
+                                            <?= $title !== '' ? 'title="' . h($title) . '"' : '' ?>
                                         >
                                     </td>
                                 <?php endforeach; ?>

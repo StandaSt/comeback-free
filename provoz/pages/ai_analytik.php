@@ -94,7 +94,17 @@ try {
                             $cost = (float)$row['cost_usd'];
                             ?>
                             <tr>
-                                <td><?= h((string)$row['jmeno']) ?></td>
+                                <td>
+                                    <?= h((string)$row['jmeno']) ?>
+                                    <?php if ((int)($row['id_user'] ?? 0) === 57): ?>
+                                        <a
+                                            class="ai_analytik_api_payment_link"
+                                            href="https://platform.openai.com/settings/organization/billing/overview"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                        >Platba API</a>
+                                    <?php endif; ?>
+                                </td>
                                 <td><?= number_format((int)$row['prompty'], 0, ',', "\u{00A0}") ?></td>
                                 <td><?= h($duration) ?></td>
                                 <td><?= number_format((int)$row['total_tokens'], 0, ',', "\u{00A0}") ?></td>

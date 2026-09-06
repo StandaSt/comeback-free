@@ -8,6 +8,30 @@
     return String(window.CB_ENDPOINT || 'index.php');
   }
 
+  function syncDependentRights(idRole, idModul) {
+    var parent = document.querySelector(
+      'input[data-admin-pravo="1"][data-id-role="' + idRole + '"][data-id-modul="' + idModul + '"][data-vstupni-pravo="1"]'
+    );
+    var parentAllowed = Boolean(parent && parent.checked && parent.getAttribute('data-right-active') === '1');
+
+    Array.prototype.forEach.call(document.querySelectorAll(
+      'input[data-admin-pravo="1"][data-id-role="' + idRole + '"][data-id-modul="' + idModul + '"][data-vstupni-pravo="0"]'
+    ), function (input) {
+      var enabled = input.getAttribute('data-right-active') === '1' && parentAllowed;
+      input.disabled = !enabled;
+      input.title = enabled ? '' : 'Nejprve povolte vstupní právo modulu (' + String(input.getAttribute('data-parent-pravo') || '') + ').';
+    });
+  }
+
+  function syncAllDependentRights() {
+    Array.prototype.forEach.call(document.querySelectorAll('input[data-admin-pravo="1"][data-vstupni-pravo="1"]'), function (input) {
+      syncDependentRights(
+        String(input.getAttribute('data-id-role') || '0'),
+        String(input.getAttribute('data-id-modul') || '0')
+      );
+    });
+  }
+
   function saveCheckbox(input) {
     var previous = !input.checked;
     var body = new URLSearchParams();
@@ -40,13 +64,19 @@
         if (!data || data.ok !== true) {
           throw new Error(String((data && data.err) || 'Uložení práva selhalo.'));
         }
+        return true;
       })
       .catch(function (error) {
         input.checked = previous;
         window.alert((error && error.message) ? error.message : 'Uložení práva selhalo.');
+        return false;
       })
       .finally(function () {
         input.disabled = false;
+        syncDependentRights(
+          String(input.getAttribute('data-id-role') || '0'),
+          String(input.getAttribute('data-id-modul') || '0')
+        );
         document.dispatchEvent(new CustomEvent('cb:admin-prava-saved', {
           detail: {
             idRole: String(input.getAttribute('data-id-role') || '0'),
@@ -130,6 +160,7 @@
     Array.prototype.forEach.call(row.querySelectorAll('input[data-admin-pravo="1"]'), function (roleInput) {
       roleInput.disabled = !active;
     });
+    syncAllDependentRights();
     document.dispatchEvent(new CustomEvent('cb:admin-pravo-active-saved'));
   }
 
@@ -176,7 +207,8 @@
   }
 
   window.CB_ADMIN_PRAVA_SAVE = {
-    saveCheckbox: saveCheckbox
+    saveCheckbox: saveCheckbox,
+    syncAllDependentRights: syncAllDependentRights
   };
 
   document.addEventListener('change', function (event) {
@@ -253,4 +285,6 @@
       cancelDeactivate();
     }
   }, true);
+
+  syncAllDependentRights();
 })();

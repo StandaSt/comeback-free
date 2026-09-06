@@ -7,6 +7,7 @@ if (!defined('CB_HELPDESK_DISPATCH_INTERNAL')) {
     require_once __DIR__ . '/../../common/lib/app.php';
 }
 require_once __DIR__ . '/../hl_lib/hl_prava.php';
+require_once __DIR__ . '/../hl_lib/hl_pages.php';
 require_once __DIR__ . '/../hl_lib/hl_snapshot.php';
 require_once __DIR__ . '/../hl_lib/hl_notifikace.php';
 require_once __DIR__ . '/../hl_lib/hl_upload.php';
@@ -16,6 +17,12 @@ $redirectBase = cb_root_url('index.php?m=helpdesk&src=' . rawurlencode((string)(
 try {
     if (empty($_SESSION['login_ok'])) {
         header('Location: ' . cb_root_url('index.php'));
+        exit;
+    }
+
+    if (!cb_helpdesk_view_allowed('new-ticket')) {
+        http_response_code(403);
+        echo 'Nemáte oprávnění vytvořit tiket.';
         exit;
     }
 

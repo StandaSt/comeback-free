@@ -78,6 +78,14 @@ if (empty($_SESSION['login_ok'])) {
     return;
 }
 
+$helpdeskCurrentView = cb_helpdesk_current_view();
+$helpdeskView = $helpdeskCurrentView['key'];
+if (!cb_helpdesk_view_allowed($helpdeskView)) {
+    http_response_code(403);
+    echo '<p>Nemáte oprávnění k této stránce HelpDesku.</p>';
+    return;
+}
+
 $idUser = cb_helpdesk_current_user_id();
 $isAdmin = cb_helpdesk_is_admin();
 $conn = db();
@@ -179,8 +187,6 @@ $helpdeskUserRole = trim((string)($helpdeskUser['role'] ?? $helpdeskUser['nazev_
 if ($helpdeskUserRole === '') {
     $helpdeskUserRole = '-';
 }
-$helpdeskCurrentView = cb_helpdesk_current_view($isAdmin);
-$helpdeskView = $helpdeskCurrentView['key'];
 $helpdeskPageTitle = $helpdeskCurrentView['title'];
 $helpdeskShowClosedToggle = $helpdeskView !== 'new-ticket' && $helpdeskView !== 'closed';
 

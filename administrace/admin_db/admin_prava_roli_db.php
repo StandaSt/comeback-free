@@ -66,6 +66,7 @@ function cb_admin_prava_roli_data(): array
             $right = [
                 'id_pravo' => (int)$row['id_pravo'],
                 'id_modul' => $idModul,
+                'vstupni_pravo' => cb_pravo_vstupni_pravo((int)$row['id_pravo']),
                 'nazev' => (string)$row['nazev'],
                 'popis' => (string)($row['popis'] ?? ''),
                 'aktivni' => (int)$row['aktivni'] === 1,
@@ -218,6 +219,46 @@ function cb_admin_prava_roli_uloz(int $idRole, int $idPravo, bool $allowed): voi
 
     if ((int)($row['role_ok'] ?? 0) !== 1 || (int)($row['pravo_ok'] ?? 0) !== 1) {
         throw new RuntimeException('Právo nebo role neexistuje.');
+    }
+
+    $idVstupnihoPrava = cb_pravo_vstupni_pravo($idPravo);
+    if ($idVstupnihoPrava === 0) {
+        throw new RuntimeException('Právo nepatří do podporované skupiny modulu.');
+    }
+
+    if ($allowed && $idVstupnihoPrava !== $idPravo) {
+        $stmtParent = $db->prepare('SELECT COUNT(*) AS c FROM prava_global WHERE id_role = ? AND id_pravo = ?');
+        if ($stmtParent === false) {
+            throw new RuntimeException('Nelze ověřit vstupní právo modulu.');
+        }
+        $stmtParent->bind_param('ii', $idRole, $idVstupnihoPrava);
+        $stmtParent->execute();
+        $parentRow = $stmtParent->get_result()->fetch_assoc();
+        $stmtParent->close();
+        if ((int)($parentRow['c'] ?? 0) !== 1) {
+            throw new RuntimeException('Nejprve povolte vstupní právo modulu (' . $idVstupnihoPrava . ').');
+        }
+    }
+
+    if (!$allowed && $idVstupnihoPrava === $idPravo) {
+        $stmtChildren = $db->prepare('
+            SELECT COUNT(*) AS c
+            FROM prava_global AS globalni
+            INNER JOIN cis_prava AS pravo ON pravo.id_pravo = globalni.id_pravo
+            WHERE globalni.id_role = ?
+              AND pravo.id_modul = (SELECT id_modul FROM cis_prava WHERE id_pravo = ? LIMIT 1)
+              AND globalni.id_pravo <> ?
+        ');
+        if ($stmtChildren === false) {
+            throw new RuntimeException('Nelze ověřit podřízená práva modulu.');
+        }
+        $stmtChildren->bind_param('iii', $idRole, $idPravo, $idPravo);
+        $stmtChildren->execute();
+        $childrenRow = $stmtChildren->get_result()->fetch_assoc();
+        $stmtChildren->close();
+        if ((int)($childrenRow['c'] ?? 0) > 0) {
+            throw new RuntimeException('Nejprve odeberte podřízená práva tohoto modulu.');
+        }
     }
 
     $db->begin_transaction();

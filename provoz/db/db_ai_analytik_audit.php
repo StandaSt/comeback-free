@@ -61,6 +61,7 @@ function cb_ai_analytik_prehled_pristupu(mysqli $conn): array
     $rows = [];
     while ($row = $result->fetch_assoc()) {
         $rows[] = [
+            'id_user' => (int)$row['id_user'],
             'jmeno' => trim((string)$row['jmeno'] . ' ' . (string)$row['prijmeni']),
             'prompty' => (int)$row['prompty'],
             'duration_ms' => (int)$row['duration_ms'],
