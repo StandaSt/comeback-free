@@ -52,6 +52,11 @@
   resize:vertical;
 }
 
+.helpdesk_form_description{
+  display:grid;
+  gap:6px;
+}
+
 .helpdesk_form_radio_group{
   display:grid;
   gap:8px;
@@ -430,27 +435,25 @@
   gap:4px;
 }
 
-.helpdesk_ticket_badge{
-  display:flex;
+.helpdesk_ticket_badge,
+.helpdesk_detail_badge{
+  display:inline-flex;
   align-items:center;
   justify-content:center;
   min-height:22px;
-  padding:2px 7px;
+  padding:4px 8px;
   border:1px solid var(--cb-border-soft);
   border-radius:999px;
   background:var(--cb-bg-control);
   color:var(--cb-text-muted);
-  font-size:var(--cb-font-11);
+  font-size:var(--cb-font-12);
   line-height:1.2;
+}
+
+.helpdesk_ticket_badge{
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
-}
-
-.helpdesk_ticket_badge_status{
-  border-color:rgba(37,99,235,.28);
-  background:var(--cb-bg-info);
-  color:#1d4ed8;
 }
 
 .helpdesk_detail_col{
@@ -517,21 +520,6 @@
   gap:10px;
 }
 
-.helpdesk_detail_header{
-  padding:14px 16px;
-  border-left:5px solid var(--cb-module-accent);
-  background:var(--cb-bg-panel);
-  border-radius:10px;
-}
-
-.helpdesk_detail_title{
-  font-size:var(--cb-font-18);
-  font-weight:700;
-  line-height:1.2;
-  color:var(--cb-text-main);
-  padding-top:2px;
-}
-
 .helpdesk_attachments{
   display:flex;
   align-items:flex-start;
@@ -543,21 +531,11 @@
 }
 
 .helpdesk_detail_badges{
+  grid-column:2;
   display:flex;
   flex-wrap:wrap;
   gap:6px;
-  margin-top:10px;
-}
-
-.helpdesk_detail_badge{
-  display:inline-flex;
-  padding:4px 8px;
-  border-radius:999px;
-  background:var(--cb-bg-control);
-  border:1px solid var(--cb-border-soft);
-  color:var(--cb-text-muted);
-  font-size:var(--cb-font-12);
-  line-height:1.2;
+  margin-top:0;
 }
 
 .helpdesk_attachments_label{
@@ -640,8 +618,12 @@
   display:grid;
   grid-template-columns:150px minmax(0, 1fr) 150px;
   gap:30px;
-  align-items:center;
+  align-items:stretch;
   margin-top:10px;
+}
+
+.helpdesk_detail_actions > .helpdesk_action_btn{
+  height:100%;
 }
 
 .helpdesk_detail_note{
@@ -688,4 +670,23 @@
 
 .helpdesk_action_btn_primary:hover{
   background:var(--cb-module-accent);
+}
+
+.helpdesk_form_submit{
+  border-color:#2563eb;
+  background:#2563eb;
+  color:#fff;
+}
+
+.helpdesk_form_submit:hover{
+  background:#1d4ed8;
+}
+
+.helpdesk_form_submit:disabled,
+.helpdesk_form_submit:disabled:hover{
+  border-color:#dc2626;
+  background:#dc2626;
+  color:#fff;
+  cursor:not-allowed;
+  opacity:.7;
 }

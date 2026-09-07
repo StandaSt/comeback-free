@@ -11,9 +11,12 @@ function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, i
         throw new RuntimeException('Chybí zaměstnanec nebo přihlášený uživatel.');
     }
 
+    $titulPred = trim((string)($data['titul_pred'] ?? ''));
     $jmeno = trim((string)($data['jmeno'] ?? ''));
     $druheJmeno = trim((string)($data['druhe_jmeno'] ?? ''));
     $prijmeni = trim((string)($data['prijmeni'] ?? ''));
+    $rodnePrijmeni = trim((string)($data['rodne_prijmeni'] ?? ''));
+    $titulZa = trim((string)($data['titul_za'] ?? ''));
     $osobniCislo = trim((string)($data['osobni_cislo'] ?? ''));
     $datumNarozeni = hr_employee_parse_birth_date((string)($data['datum_narozeni'] ?? ''));
     $rodneCislo = trim((string)($data['rodne_cislo'] ?? ''));
@@ -22,13 +25,14 @@ function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, i
     $statniObcanstvi = trim((string)($data['statni_obcanstvi'] ?? ''));
     $zdrPoj = (int)($data['zdr_poj'] ?? 0);
     $pohlavi = trim((string)($data['pohlavi'] ?? ''));
+    $poznamka = trim((string)($data['poznamka'] ?? ''));
     $telefon = preg_replace('/\D+/', '', (string)($data['telefon'] ?? '')) ?? '';
     $email = trim((string)($data['email'] ?? ''));
 
     if ($jmeno === '' || $prijmeni === '') {
         throw new RuntimeException('Vyplňte jméno a příjmení.');
     }
-    if (!in_array($pohlavi, ['muž', 'žena', 'jiné'], true)) {
+    if (!in_array($pohlavi, ['muž', 'žena', 'jiné', 'neuvedeno'], true)) {
         throw new RuntimeException('Vyberte pohlaví.');
     }
     if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
@@ -78,16 +82,20 @@ function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, i
         $stmt->close();
 
         $samePersonal = is_array($currentPersonal)
+            && trim((string)($currentPersonal['titul_pred'] ?? '')) === $titulPred
             && trim((string)$currentPersonal['jmeno']) === $jmeno
             && trim((string)($currentPersonal['druhe_jmeno'] ?? '')) === $druheJmeno
             && trim((string)$currentPersonal['prijmeni']) === $prijmeni
+            && trim((string)($currentPersonal['rodne_prijmeni'] ?? '')) === $rodnePrijmeni
+            && trim((string)($currentPersonal['titul_za'] ?? '')) === $titulZa
             && (string)($currentPersonal['datum_narozeni'] ?? '') === $datumNarozeni
             && trim((string)($currentPersonal['rodne_cislo'] ?? '')) === $rodneCislo
             && trim((string)($currentPersonal['cislo_obcanskeho_prukazu'] ?? '')) === $cisloObcanskehoPrukazu
             && trim((string)($currentPersonal['misto_narozeni'] ?? '')) === $mistoNarozeni
             && trim((string)($currentPersonal['statni_obcanstvi'] ?? '')) === $statniObcanstvi
             && (int)($currentPersonal['zdr_poj'] ?? 0) === $zdrPoj
-            && trim((string)($currentPersonal['pohlavi'] ?? '')) === $pohlavi;
+            && trim((string)($currentPersonal['pohlavi'] ?? '')) === $pohlavi
+            && trim((string)($currentPersonal['poznamka'] ?? '')) === $poznamka;
 
         if (!$samePersonal) {
             if (is_array($currentPersonal)) {
@@ -98,11 +106,7 @@ function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, i
                 $stmt->close();
             }
 
-            $titulPred = is_array($currentPersonal) ? $currentPersonal['titul_pred'] : null;
-            $rodnePrijmeni = is_array($currentPersonal) ? $currentPersonal['rodne_prijmeni'] : null;
-            $titulZa = is_array($currentPersonal) ? $currentPersonal['titul_za'] : null;
             $foto = is_array($currentPersonal) ? $currentPersonal['foto'] : null;
-            $poznamka = is_array($currentPersonal) ? $currentPersonal['poznamka'] : null;
             $datumNarozeniDb = $datumNarozeni !== '' ? $datumNarozeni : null;
             $rodneCisloDb = $rodneCislo !== '' ? $rodneCislo : null;
             $cisloObcanskehoPrukazuDb = $cisloObcanskehoPrukazu !== '' ? $cisloObcanskehoPrukazu : null;

@@ -20,9 +20,9 @@ try {
         exit;
     }
 
-    if (!cb_helpdesk_is_admin()) {
+    if (!cb_pravo_ma(602)) {
         http_response_code(403);
-        echo json_encode(['ok' => false, 'err' => 'Jen admin může měnit stav.'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'err' => 'Nemáte právo měnit stav tiketu.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 

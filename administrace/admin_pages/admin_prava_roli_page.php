@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+/* Ucel souboru: Zobrazi globalni prava roli a stav jejich skutecne funkcnosti. */
+
 require_once __DIR__ . '/../admin_db/admin_prava_roli_db.php';
 
 $adminPravaData = cb_admin_prava_roli_data();
@@ -9,7 +11,6 @@ $adminModules = $adminPravaData['modules'];
 $adminRights = $adminPravaData['rights'];
 $adminAllowed = $adminPravaData['allowed'];
 $adminShowBlockChecks = function_exists('cb_pravo_ma') && cb_pravo_ma(101);
-$adminCanToggleApplied = function_exists('cb_pravo_ma') && cb_pravo_ma(106);
 ?>
 <?php if ($adminRights === []): ?>
     <div class="admin_empty blok">
@@ -63,18 +64,7 @@ $adminCanToggleApplied = function_exists('cb_pravo_ma') && cb_pravo_ma(106);
                             <?php $rightActive = !empty($right['aktivni']); ?>
                             <tr<?= $rightActive ? '' : ' class="is-inactive"' ?>>
                                 <td class="admin_matrix_active">
-                                    <?php if ($adminCanToggleApplied): ?>
-                                        <button
-                                            class="admin_matrix_right_id<?= !empty($right['aplikovano']) ? ' is-applied' : '' ?>"
-                                            type="button"
-                                            data-admin-pravo-aplikovano="1"
-                                            data-id-pravo="<?= h((string)$right['id_pravo']) ?>"
-                                            aria-pressed="<?= !empty($right['aplikovano']) ? 'true' : 'false' ?>"
-                                            title="Změnit označení aplikace práva"
-                                        ><?= h((string)$right['id_pravo']) ?></button>
-                                    <?php else: ?>
-                                        <span class="admin_matrix_right_id<?= !empty($right['aplikovano']) ? ' is-applied' : '' ?>"><?= h((string)$right['id_pravo']) ?></span>
-                                    <?php endif; ?>
+                                    <span class="admin_matrix_right_id<?= !empty($right['aplikovano']) ? ' is-applied' : '' ?>"><?= h((string)$right['id_pravo']) ?></span>
                                     <input
                                         type="checkbox"
                                         data-admin-pravo-aktivni="1"

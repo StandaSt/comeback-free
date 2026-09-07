@@ -50,6 +50,27 @@ function hr_fetch_health_insurers(mysqli $db): array
 }
 
 /**
+ * Nacte tituly pro pozici pred nebo za jmenem.
+ */
+function hr_fetch_employee_titles(mysqli $db, int $placement): array
+{
+    $stmt = $db->prepare('SELECT id_titul, zkratka FROM hr_cis_tituly WHERE umisteni = ? ORDER BY zkratka');
+    $stmt->bind_param('i', $placement);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $rows = [];
+    while ($row = $result->fetch_assoc()) {
+        $rows[] = [
+            'id' => (int)$row['id_titul'],
+            'label' => (string)$row['zkratka'],
+        ];
+    }
+    $stmt->close();
+
+    return $rows;
+}
+
+/**
  * Nacte aktivni benefity serazene podle poradi ciselniku.
  */
 function hr_fetch_active_benefits(mysqli $db): array

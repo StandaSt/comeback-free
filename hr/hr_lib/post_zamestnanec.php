@@ -8,7 +8,7 @@ declare(strict_types=1);
 function hr_post_zamestnanec(mysqli $db, int $idUser): void
 {
     try {
-        $employee = hr_insert_employee($db, $_POST, $idUser);
+        $employee = hr_insert_employee($db, $_POST, $_FILES, $idUser);
         $idPerson = (int)$employee['id_person'];
         $link = cb_url_abs('?prvni_vstup=' . rawurlencode((string)$employee['token']));
         $body = '<p>Dobrý den, ' . h((string)$employee['jmeno']) . ',</p><p>pro první vstup do IS Comeback nastavte heslo zde:</p><p><a href="' . h($link) . '">První vstup do IS Comeback</a></p><p>Odkaz platí 3 dny.</p>';

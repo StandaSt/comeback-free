@@ -1,5 +1,5 @@
 <?php
-// lib/push_2fa_api.php * Verze: V1 * Aktualizace: 26.2.2026
+// lib/push_2fa_api.php * Verze: V2 * Aktualizace: 07.09.2026
 declare(strict_types=1);
 
 /*
@@ -25,8 +25,31 @@ header('Content-Type: application/json; charset=utf-8');
 function cb_2fa_cleanup_session(): void
 {
     cb_session_forget_auth();
+    unset($_SESSION['cb_2fa_error_admin_token']);
 }
 
+function cb_2fa_notify_error_admin_once(string $token): void
+{
+    if ($token === '' || (string)($_SESSION['cb_2fa_error_admin_token'] ?? '') === $token) {
+        return;
+    }
+
+    $_SESSION['cb_2fa_error_admin_token'] = $token;
+
+    try {
+        require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
+        cb_push_send_error_admin(
+            '2FA: chyba při kontrole schválení přihlášení.',
+            __FILE__,
+            __LINE__,
+            1
+        );
+    } catch (Throwable $eNotify) {
+        // Oznámení administrátorovi nesmí zhoršit průběh přihlášení.
+    }
+}
+
+$token = '';
 try {
     $token = (string)($_SESSION['cb_2fa_token'] ?? '');
     if ($token === '') {
@@ -159,10 +182,11 @@ try {
     exit;
 
 } catch (Throwable $e) {
+    cb_2fa_notify_error_admin_once($token);
     http_response_code(500);
     echo json_encode(['ok' => false, 'err' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-// lib/push_2fa_api.php * Verze: V1 * Aktualizace: 26.2.2026 * Počet řádků: 152
+// lib/push_2fa_api.php * Verze: V2 * Aktualizace: 07.09.2026
 // Konec souboru

@@ -12,6 +12,9 @@ $zrCanUnlockFinalReport = !empty($canUnlockFinalReport);
 $zrIsEditingFinalReport = !empty($isEditingFinalReport);
 $zrIsArchiveView = !empty($isArchiveView);
 $zrIsCreatingMissingFinalReport = !empty($isCreatingMissingFinalReport);
+$zrManualDifferenceRows = (array)($zrManualDifferenceRows ?? []);
+$zrManualDifferenceDates = (array)($zrManualDifferenceDates ?? []);
+$zrHasManualDifferences = $zrManualDifferenceRows !== [];
 $zrMissingFinalReportDate = trim((string)($reportDateDisplay ?? $reportDate ?? ''));
 $zrSubmitReadyText = $zrIsCreatingMissingFinalReport
     ? 'Uložit report pro den ' . $zrMissingFinalReportDate
@@ -22,6 +25,28 @@ $zrSubmitLockedText = $zrIsCreatingMissingFinalReport
 $zrRemoveButtonHtml = !empty($isReadOnlyForm)
     ? ''
     : '<button type="button" class="zr_row_remove" data-zr-remove-row title="Odebrat" aria-label="Odebrat">×</button>';
+
+$zrDifferenceFormat = static function ($value, string $format): string {
+    if ($value === null || $value === '') {
+        return '—';
+    }
+    if ($format === 'text') {
+        return (string)$value;
+    }
+    if ($format === 'money') {
+        return number_format((float)$value, 2, ',', ' ') . ' Kč';
+    }
+    if ($format === 'hours') {
+        $minutes = (int)round((float)$value * 60);
+        $prefix = $minutes < 0 ? '-' : '';
+        $minutes = abs($minutes);
+        return $prefix . intdiv($minutes, 60) . ':' . str_pad((string)($minutes % 60), 2, '0', STR_PAD_LEFT) . ' hod.';
+    }
+    if ($format === 'integer') {
+        return number_format((float)$value, 0, ',', ' ');
+    }
+    return number_format((float)$value, 2, ',', ' ');
+};
 
 $renderUserSelectOptions = static function (array $options, int $selectedId, string $placeholder, array $excludeIds = []): string {
     $html = '<option value="">' . h($placeholder) . '</option>';
@@ -143,7 +168,9 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
                 <td>
                   <select class="zr_intro_select" name="datum_reportu" data-zr-date data-zr-required="datum" data-zr-reload-pp="1"<?= $zrIsArchiveView ? ' disabled' : '' ?>>
                     <?php foreach (($workdayOptions ?? []) as $dayOption): ?>
-                      <option value="<?= h((string)$dayOption['value']) ?>"<?= ((string)$dayOption['value'] === (string)$reportDate) ? ' selected' : '' ?><?= !empty($dayOption['missing']) ? ' style="color:#c62828;"' : '' ?>><?= h((string)$dayOption['label']) ?></option>
+                      <?php $zrDayValue = (string)($dayOption['value'] ?? ''); ?>
+                      <?php $zrDayHasDifference = !empty($zrManualDifferenceDates[$zrDayValue]); ?>
+                      <option value="<?= h($zrDayValue) ?>"<?= $zrDayValue === (string)$reportDate ? ' selected' : '' ?><?= !empty($dayOption['missing']) || $zrDayHasDifference ? ' style="color:#c62828;"' : '' ?>><?= h((string)$dayOption['label']) ?><?= $zrDayHasDifference ? ' · rozdíl' : '' ?></option>
                     <?php endforeach; ?>
                   </select>
                 </td>
@@ -204,7 +231,7 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
       <div class="zr_left gap_14">
         <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_instor_section">
           <h4 class="card_section_title txt_seda">Instor</h4>
-          <div style="width:220px;margin-bottom:6px;">
+          <div style="width:220px;margin-bottom:3px;">
             <select data-zr-add-person="instor"<?= $zrEditableDisabledAttr ?>>
               <?= $renderUserSelectOptions($instorOptions, 0, 'Vyber zaměstnance', $usedInstorIds) ?>
             </select>
@@ -243,7 +270,7 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
 
         <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_kuryr_section">
           <h4 class="card_section_title txt_seda">Kurýr</h4>
-          <div style="width:220px;margin-bottom:6px;">
+          <div style="width:220px;margin-bottom:3px;">
             <select data-zr-add-person="kuryr"<?= $zrEditableDisabledAttr ?>>
               <?= $renderUserSelectOptions($kuryrOptions, 0, 'Vyber kurýra', $usedKuryrIds) ?>
             </select>
@@ -367,4 +394,15 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
       </section>
     </aside>
   </div>
+  <?php if ($zrHasManualDifferences): ?>
+    <section class="zr_manual_differences" aria-label="Informace o rozdílech oproti Google reportu">
+      <strong>Informace o rozdílech</strong>
+      <div class="zr_manual_differences_rows">
+        <?php foreach ($zrManualDifferenceRows as $zrDifferenceRow): ?>
+          <?php $zrDifferenceFormatType = (string)($zrDifferenceRow['format'] ?? 'number'); ?>
+          <span><b><?= h((string)($zrDifferenceRow['item'] ?? '')) ?></b>: IS <?= h($zrDifferenceFormat($zrDifferenceRow['is'] ?? null, $zrDifferenceFormatType)) ?> · Google <?= h($zrDifferenceFormat($zrDifferenceRow['google'] ?? null, $zrDifferenceFormatType)) ?></span>
+        <?php endforeach; ?>
+      </div>
+    </section>
+  <?php endif; ?>
 </form>

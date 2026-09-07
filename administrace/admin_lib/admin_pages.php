@@ -29,6 +29,10 @@ function cb_admin_pages(): array
             'file' => __DIR__ . '/../admin_pages/admin_spousteni_scriptu_page.php',
             'title' => 'Ruční spouštění scriptů',
         ],
+        'log_chyby' => [
+            'file' => __DIR__ . '/../admin_pages/admin_log_chyby_page.php',
+            'title' => 'Přehled chyb',
+        ],
         'uprava_profilu' => [
             'file' => __DIR__ . '/../../common/pages/uprava_profilu.php',
             'title' => 'Úprava profilu',

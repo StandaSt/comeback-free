@@ -232,6 +232,7 @@ foreach ($items as $item) {
 </div>
 <?php if ($helpdeskView !== 'new-ticket'): ?>
   <h2 class="helpdesk_detail_heading" data-cb-hd-detail-heading="1">Vyber tiket ze seznamu vlevo</h2>
+  <div class="helpdesk_detail_badges" data-cb-hd-detail-badges="1" hidden></div>
 <?php endif; ?>
 </header>
 <?php if ($helpdeskView === 'new-ticket'): ?>
@@ -272,7 +273,10 @@ foreach ($items as $item) {
         </div>
 
         <label class="helpdesk_form_label" for="hl-ticket-popis">Popis</label>
-        <textarea class="helpdesk_form_input helpdesk_form_textarea" id="hl-ticket-popis" name="popis" rows="8" minlength="25" placeholder="Minimální délka zprávy je 25 znaků" required></textarea>
+        <div class="helpdesk_form_description">
+          <div class="helpdesk_form_hint" data-cb-hd-description-counter="1" aria-live="polite">Ještě chybí 25 znaků.</div>
+          <textarea class="helpdesk_form_input helpdesk_form_textarea" id="hl-ticket-popis" name="popis" rows="8" minlength="25" placeholder="Minimální délka zprávy je 25 znaků" required></textarea>
+        </div>
 
         <label class="helpdesk_form_label" for="hl-ticket-prilohy">Přílohy</label>
         <div class="helpdesk_form_files">
@@ -283,7 +287,7 @@ foreach ($items as $item) {
 
       <div class="helpdesk_form_actions">
         <a class="helpdesk_action_btn" href="<?= h($helpdeskMenuUrl('all')) ?>">Zpět</a>
-        <button type="submit" class="helpdesk_action_btn helpdesk_action_btn_primary">Odeslat</button>
+        <button type="submit" class="helpdesk_action_btn helpdesk_form_submit" data-cb-hd-submit-ticket="1" disabled>Odeslat</button>
       </div>
     </form>
 <?php else: ?>
@@ -327,7 +331,7 @@ foreach ($items as $item) {
                       </div>
                       <div class="helpdesk_ticket_desc">
                         <div class="helpdesk_ticket_badges">
-                          <span class="helpdesk_ticket_badge helpdesk_ticket_badge_status"><span data-hd-state-text="1"><?= cb_helpdesk_ticket_h((string)$item['stav']) ?></span></span>
+                          <span class="helpdesk_ticket_badge"><span data-hd-state-text="1"><?= cb_helpdesk_ticket_h((string)$item['stav']) ?></span></span>
                           <span class="helpdesk_ticket_badge"><?= cb_helpdesk_ticket_h(cb_helpdesk_area_label((int)$item['modul'])) ?></span>
                           <span class="helpdesk_ticket_badge"><?= cb_helpdesk_ticket_h(cb_helpdesk_ticket_type_label((string)$item['typ'])) ?></span>
                           <span class="helpdesk_ticket_badge"><?= cb_helpdesk_ticket_h(cb_helpdesk_ticket_visibility_label((int)$item['verejny'])) ?></span>

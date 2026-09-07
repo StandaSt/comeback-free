@@ -54,6 +54,10 @@ if ($cb2faToken !== '') {
       (function(){
         var st = document.getElementById('cb2faStatus');
         var btnX = document.getElementById('cb2faClose');
+        var kontrolaInterval = null;
+        var obnoveniDo = 0;
+        var obnoveniTimeout = null;
+        var kontrolaZastavena = false;
 
         function fmt(sec){
           if (typeof sec !== 'number' || sec < 0) sec = 0;
@@ -64,6 +68,35 @@ if ($cb2faToken !== '') {
 
         function setTxt(t){
           if (st) st.textContent = t;
+        }
+
+        function ukonciObnoveni(){
+          obnoveniDo = 0;
+          if (obnoveniTimeout !== null) {
+            clearTimeout(obnoveniTimeout);
+            obnoveniTimeout = null;
+          }
+        }
+
+        function ukonciKontroluPoChybe(){
+          kontrolaZastavena = true;
+          if (kontrolaInterval !== null) {
+            clearInterval(kontrolaInterval);
+            kontrolaInterval = null;
+          }
+          setTxt('Přihlášení selhalo, zkuste to později. Administrátor byl o chybě informován.');
+        }
+
+        function zobrazObnoveniKontroly(){
+          if (kontrolaZastavena) return;
+
+          if (obnoveniDo === 0) {
+            obnoveniDo = Date.now() + 30000;
+            obnoveniTimeout = setTimeout(ukonciKontroluPoChybe, 30000);
+          }
+
+          var zbyva = Math.max(0, Math.ceil((obnoveniDo - Date.now()) / 1000));
+          setTxt('Došlo k chybě při kontrole stavu schválení přihlášení. Vydržte, pokouším se o opakované přihlášení. Zbývá: ' + fmt(zbyva));
         }
 
         try {
@@ -80,13 +113,17 @@ if ($cb2faToken !== '') {
         } catch (e) {}
 
         function kontrola2fa(){
+          if (kontrolaZastavena) return;
+
           fetch('<?= h($checkUrl) ?>', { cache: 'no-store' })
             .then(function(r){ return r.json(); })
             .then(function(j){
+              if (kontrolaZastavena) return;
               if (!j || j.ok !== true) {
-                setTxt('Chyba kontroly. Zkuste to znovu.');
+                zobrazObnoveniKontroly();
                 return;
               }
+              ukonciObnoveni();
               if (j.stav === 'ok') {
                 setTxt('Přístup schválen - načítám modul');
                 setTimeout(function(){
@@ -111,7 +148,7 @@ if ($cb2faToken !== '') {
               setTxt('Na potvrzení přihlášení zbývá: --:--');
             })
             .catch(function(){
-              setTxt('Chyba kontroly. Zkuste to znovu.');
+              zobrazObnoveniKontroly();
             });
         }
 
@@ -124,7 +161,7 @@ if ($cb2faToken !== '') {
         }
 
         kontrola2fa();
-        setInterval(kontrola2fa, <?= (int)$pollMs ?>);
+        kontrolaInterval = setInterval(kontrola2fa, <?= (int)$pollMs ?>);
       })();
     </script>
     </div>

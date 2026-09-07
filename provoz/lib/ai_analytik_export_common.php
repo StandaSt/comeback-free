@@ -277,7 +277,7 @@ function cb_ai_analytik_export_pdf(array $data): array
 
 function cb_ai_analytik_export_chyba(Throwable $error): string
 {
-    return cb_user_ma_roli(1)
+    return cb_pravo_ma(102)
         ? get_class($error) . ': ' . $error->getMessage() . ' v ' . $error->getFile() . ':' . $error->getLine()
         : 'Export se nepodařilo vytvořit.';
 }

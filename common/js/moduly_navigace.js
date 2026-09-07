@@ -103,6 +103,9 @@
   if (config.adminFirmaPridat === true) {
     menuDefs.administrace.items.splice(3, 0, ['firma_pridat', 'Přidat firmu']);
   }
+  if (config.adminLogChyby === true) {
+    menuDefs.administrace.items.push(['log_chyby', 'Přehled chyb']);
+  }
   if (config.aiAnalytikAllowed === true) {
     menuDefs.provoz.items.push(['ai_analytik', 'Chytrý Franta']);
   }

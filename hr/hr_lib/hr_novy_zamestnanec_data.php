@@ -16,5 +16,8 @@ function hr_novy_zamestnanec_data(mysqli $db): array
         'vztahy' => hr_fetch_lookup($db, 'hr_cis_pracovni_vztah_typ', 'id_pracovni_vztah_typ', 'nazev', 'id_pracovni_vztah_typ'),
         'pobocky' => hr_fetch_lookup($db, 'pobocka', 'id_pob', 'nazev'),
         'sloty' => hr_fetch_lookup($db, 'cis_slot', 'id_slot', 'slot'),
+        'healthInsurers' => hr_fetch_health_insurers($db),
+        'titulyPred' => hr_fetch_employee_titles($db, 1),
+        'titulyZa' => hr_fetch_employee_titles($db, 2),
     ];
 }

@@ -806,10 +806,14 @@
 }
 
 .zr_section{
-  padding:12px 14px;
+  padding:6px 14px;
   border-color:var(--cb-border);
   border-radius:8px;
   box-shadow:0 10px 24px var(--cb-shadow);
+}
+
+.zr_section .card_section_title{
+  margin:0 0 4px;
 }
 
 .zr_intro_section .zr_intro_label{
@@ -823,7 +827,7 @@
 
 .zr_table th,
 .zr_table td{
-  padding:5px 6px;
+  padding:3px 6px;
   font-size:var(--cb-font-12);
   vertical-align:middle;
 }
@@ -846,8 +850,8 @@
 .zr_form input,
 .zr_form select{
   width:100%;
-  height:28px;
-  min-height:28px;
+  height:26px;
+  min-height:26px;
   padding:2px 8px;
   font-size:var(--cb-font-12);
   border:1px solid var(--cb-border);
@@ -879,12 +883,12 @@
 
 .zr_cash_table th,
 .zr_cash_table td{
-  padding:4px 6px;
+  padding:2px 6px;
   background:transparent;
 }
 
 .zr_cash_table th{
-  padding-bottom:3px;
+  padding-bottom:2px;
   color:var(--cb-text-main);
   font-size:var(--cb-font-11);
 }
@@ -909,7 +913,7 @@
 }
 
 .zr_control_metric{
-  padding:8px 0;
+  padding:5px 0;
   border-top:1px solid var(--cb-border-soft);
 }
 
@@ -920,7 +924,7 @@
 
 .zr_control_label{
   display:block;
-  margin:0 0 8px 0;
+  margin:0 0 4px 0;
   font-size:var(--cb-font-16);
   font-weight:700;
   color:var(--cb-text-muted);
@@ -946,7 +950,7 @@
 
 .zr_person_table th,
 .zr_person_table td{
-  padding:3px 4px;
+  padding:2px 4px;
   vertical-align:middle;
 }
 
@@ -1032,7 +1036,7 @@
 
 .zr_saved_value{
   display:inline-block;
-  line-height:28px;
+  line-height:26px;
   font-weight:600;
   color:var(--cb-text-main);
 }
@@ -1043,8 +1047,8 @@
   align-items:baseline;
   justify-content:space-between;
   gap:10px;
-  padding:12px 14px;
-  margin-bottom:10px;
+  padding:7px 14px;
+  margin-bottom:6px;
   border:1px solid rgba(79,141,246,.25);
   border-radius:8px;
   background:var(--cb-bg-info);
@@ -1095,7 +1099,7 @@
 
 .zr_restia_table th,
 .zr_restia_table td{
-  padding:7px 8px;
+  padding:4px 8px;
   border:1px solid var(--cb-border-soft);
   background:var(--cb-bg-control);
   line-height:1.15;
@@ -1136,6 +1140,27 @@
   border-radius:8px;
   background:var(--cb-bg-warning);
   color:var(--cb-text-main);
+}
+
+.zr_manual_differences{
+  padding:8px 10px;
+  border:1px solid #ef9a9a;
+  border-radius:8px;
+  background:#fff8f8;
+  color:var(--cb-text-main);
+  font-size:var(--cb-font-12);
+  line-height:1.35;
+}
+
+.zr_manual_differences > strong{
+  color:#b71c1c;
+}
+
+.zr_manual_differences_rows{
+  display:flex;
+  flex-wrap:wrap;
+  gap:2px 14px;
+  margin-top:3px;
 }
 
 /* Objednavky - stranka prehledu. */

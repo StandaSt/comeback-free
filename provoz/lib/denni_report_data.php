@@ -831,7 +831,7 @@ function cb_denni_report_restia_summary(mysqli $conn, int $idPob, array $workday
                 COUNT(DISTINCT CASE WHEN " . $otherCondition . " THEN o.id_obj ELSE NULL END) AS other_count,
                 SUM(CASE WHEN COALESCE(s.nazev, '') IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted') THEN 1 ELSE 0 END) AS cancel_count,
                 SUM(CASE WHEN COALESCE(s.nazev, '') IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted') THEN COALESCE(c.cena_celk, 0) ELSE 0 END) AS cancel_value,
-                AVG(CASE WHEN " . $notCanceled . " AND COALESCE(ca.cas_import_restia, ca.cas_vytvor) IS NOT NULL AND ca.cas_pripr_v IS NOT NULL THEN TIMESTAMPDIFF(SECOND, COALESCE(ca.cas_import_restia, ca.cas_vytvor), ca.cas_pripr_v) END) AS make_time_avg_sec,
+                AVG(CASE WHEN " . $notCanceled . " AND ca.cas_pripravy IS NOT NULL THEN ca.cas_pripravy * 60 END) AS make_time_avg_sec,
                 COUNT(DISTINCT CASE WHEN " . $notCanceled . " THEN o.id_obj ELSE NULL END) AS orders_total,
                 COUNT(DISTINCT CASE WHEN " . $notCanceled . " AND ok.provider = 'delivery' THEN o.id_obj ELSE NULL END) AS own_deliveries,
                 COUNT(DISTINCT CASE WHEN " . $notCanceled . " AND ok.provider = 'external-delivery' THEN o.id_obj ELSE NULL END) AS woltdrive_count,

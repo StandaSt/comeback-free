@@ -250,7 +250,7 @@ function cb_helpdesk_can_write(mysqli $conn, int $idHelpdesk, int $idUser): bool
         return false;
     }
 
-    return true;
+    return cb_pravo_ma(605);
 }
 
 function cb_helpdesk_visible_scope(int $idUser): array

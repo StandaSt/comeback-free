@@ -111,7 +111,6 @@ if ($cbStartTs <= 0 || $cbStartTs > $cbNowTs) {
 }
 
 // Pripravi kontext aktualniho modulu, aktualizace dat a aktualni cas.
-$cbHelpdeskIsRoleOne = function_exists('cb_user_ma_roli') && cb_user_ma_roli(1);
 $cbHelpdeskApiUrl = cb_root_url('index.php');
 try {
     $cbHeadAktualizaceDat = (new DateTimeImmutable((string)$cbObdobiMax))->format('H:i:s');

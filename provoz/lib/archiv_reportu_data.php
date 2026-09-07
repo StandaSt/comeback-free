@@ -43,12 +43,12 @@ function cb_archiv_reportu_comparison_rows(mysqli $conn, int $idPob, string $rep
     }
 
     $personSummary = static function (array $people): array {
-        $result = ['Instor odpracováno' => 0.0, 'Kurýr odpracováno' => 0.0, 'Ruční rozvozy' => 0, 'Vlastní vůz' => 0, 'PHM kurýrů' => 0.0];
+        $result = ['Instor odpracováno' => 0.0, 'Kurýr odpracováno' => 0.0, 'Rozvozy celkem' => 0, 'Vlastní vůz' => 0, 'PHM kurýrů' => 0.0];
         foreach ($people as $person) {
             $isInstor = (int)($person['id_slot'] ?? 0) === 1;
             $result[$isInstor ? 'Instor odpracováno' : 'Kurýr odpracováno'] += (float)($person['odpracovano'] ?? 0);
             if (!$isInstor) {
-                $result['Ruční rozvozy'] += (int)($person['rozvozu_manual'] ?? 0);
+                $result['Rozvozy celkem'] += (int)($person['rozvozu_restia'] ?? 0) + (int)($person['rozvozu_manual'] ?? 0);
                 $result['Vlastní vůz'] += (int)((int)($person['vlastni_vuz'] ?? 0) === 1);
                 $result['PHM kurýrů'] += (float)($person['vyplatit_phm'] ?? 0);
             }
@@ -57,7 +57,7 @@ function cb_archiv_reportu_comparison_rows(mysqli $conn, int $idPob, string $rep
     };
     $isPeople = $personSummary((array)($isData['people_rows'] ?? []));
     $googlePeople = $personSummary((array)($googleData['people_rows'] ?? []));
-    $personFormats = ['Instor odpracováno' => 'hours', 'Kurýr odpracováno' => 'hours', 'Ruční rozvozy' => 'integer', 'Vlastní vůz' => 'integer', 'PHM kurýrů' => 'money'];
+    $personFormats = ['Instor odpracováno' => 'hours', 'Kurýr odpracováno' => 'hours', 'Rozvozy celkem' => 'integer', 'Vlastní vůz' => 'integer', 'PHM kurýrů' => 'money'];
     foreach ($personFormats as $item => $format) {
         $isValue = $isPeople[$item] ?? null;
         $googleValue = $googlePeople[$item] ?? null;
@@ -65,6 +65,88 @@ function cb_archiv_reportu_comparison_rows(mysqli $conn, int $idPob, string $rep
             $comparison['entry'][] = ['item' => $item, 'is' => $isValue, 'google' => $googleValue, 'format' => $format];
         }
     }
+
+    $deliveryPeople = static function (array $people): array {
+        $result = [];
+        foreach ($people as $person) {
+            if ((int)($person['id_slot'] ?? 0) !== 2) {
+                continue;
+            }
+            $name = trim((string)($person['jmeno'] ?? '') . ' ' . (string)($person['prijmeni'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+            $key = mb_strtolower($name, 'UTF-8');
+            if (!isset($result[$key])) {
+                $result[$key] = ['name' => $name, 'deliveries' => 0];
+            }
+            $result[$key]['deliveries'] += (int)($person['rozvozu_restia'] ?? 0) + (int)($person['rozvozu_manual'] ?? 0);
+        }
+        ksort($result, SORT_NATURAL | SORT_FLAG_CASE);
+
+        return $result;
+    };
+    $isDeliveryPeople = $deliveryPeople((array)($isData['people_rows'] ?? []));
+    $googleDeliveryPeople = $deliveryPeople((array)($googleData['people_rows'] ?? []));
+    $deliveryPeopleKeys = array_unique(array_merge(array_keys($isDeliveryPeople), array_keys($googleDeliveryPeople)));
+    sort($deliveryPeopleKeys, SORT_NATURAL | SORT_FLAG_CASE);
+    foreach ($deliveryPeopleKeys as $deliveryPersonKey) {
+        $isDeliveryPerson = (array)($isDeliveryPeople[$deliveryPersonKey] ?? []);
+        $googleDeliveryPerson = (array)($googleDeliveryPeople[$deliveryPersonKey] ?? []);
+        $isDeliveries = (int)($isDeliveryPerson['deliveries'] ?? 0);
+        $googleDeliveries = (int)($googleDeliveryPerson['deliveries'] ?? 0);
+        if ($isDeliveries === $googleDeliveries) {
+            continue;
+        }
+        $name = trim((string)($isDeliveryPerson['name'] ?? $googleDeliveryPerson['name'] ?? ''));
+        if ($name !== '') {
+            $comparison['entry'][] = ['item' => 'Rozvozy — ' . $name, 'is' => $isDeliveries, 'google' => $googleDeliveries, 'format' => 'integer'];
+        }
+    }
+
+    $carPeople = static function (array $people): array {
+        $result = [];
+        foreach ($people as $person) {
+            if ((int)($person['id_slot'] ?? 0) !== 2) {
+                continue;
+            }
+            $name = trim((string)($person['jmeno'] ?? '') . ' ' . (string)($person['prijmeni'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+            $key = mb_strtolower($name, 'UTF-8');
+            if (!isset($result[$key])) {
+                $result[$key] = ['name' => $name, 'has_own_car' => false];
+            }
+            $result[$key]['has_own_car'] = !empty($result[$key]['has_own_car']) || (int)($person['vlastni_vuz'] ?? 0) === 1;
+        }
+        ksort($result, SORT_NATURAL | SORT_FLAG_CASE);
+
+        return $result;
+    };
+    $isCarPeople = $carPeople((array)($isData['people_rows'] ?? []));
+    $googleCarPeople = $carPeople((array)($googleData['people_rows'] ?? []));
+    $carPeopleKeys = array_unique(array_merge(array_keys($isCarPeople), array_keys($googleCarPeople)));
+    sort($carPeopleKeys, SORT_NATURAL | SORT_FLAG_CASE);
+    foreach ($carPeopleKeys as $carPersonKey) {
+        $isCarPerson = (array)($isCarPeople[$carPersonKey] ?? []);
+        $googleCarPerson = (array)($googleCarPeople[$carPersonKey] ?? []);
+        $isHasOwnCar = !empty($isCarPerson['has_own_car']);
+        $googleHasOwnCar = !empty($googleCarPerson['has_own_car']);
+        if ($isHasOwnCar === $googleHasOwnCar) {
+            continue;
+        }
+        $name = trim((string)($isCarPerson['name'] ?? $googleCarPerson['name'] ?? ''));
+        if ($name !== '') {
+            $comparison['entry'][] = [
+                'item' => 'Vlastní vůz — ' . $name,
+                'is' => $isHasOwnCar ? 'ano' : 'ne',
+                'google' => $googleHasOwnCar ? 'ano' : 'ne',
+                'format' => 'text',
+            ];
+        }
+    }
+
     return $comparison;
 }
 

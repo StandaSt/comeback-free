@@ -20,9 +20,11 @@ require_once __DIR__ . '/../common/lib/uloz_akci.php';
 require_once __DIR__ . '/admin_db/admin_prava_roli_db.php';
 require_once __DIR__ . '/admin_db/admin_individualni_prava_db.php';
 require_once __DIR__ . '/admin_db/admin_firma_db.php';
+require_once __DIR__ . '/admin_db/admin_log_chyby_db.php';
 require_once __DIR__ . '/admin_includes/admin_individualni_prava_detail.php';
 require_once __DIR__ . '/admin_lib/admin_pages.php';
 require_once __DIR__ . '/admin_lib/admin_smeny_plan_doplnit.php';
+require_once __DIR__ . '/admin_lib/admin_google_reporty_import.php';
 require_once __DIR__ . '/admin_lib/admin_firma_ares.php';
 require_once __DIR__ . '/admin_lib/admin_firma_pridat.php';
 
@@ -57,6 +59,34 @@ if (!function_exists('cb_pravo_ma') || !cb_pravo_ma(100)) {
 
 cb_admin_firma_pridat_handle();
 cb_admin_smeny_plan_doplnit_handle();
+cb_admin_google_reporty_import_handle();
+
+if (
+    ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
+    && (string)($_POST['cb_action'] ?? '') === 'admin_log_chyby_delete'
+) {
+    $returnUrl = cb_root_url('index.php?m=administrace&page=log_chyby');
+
+    try {
+        if (!function_exists('cb_pravo_ma') || !cb_pravo_ma(106)) {
+            throw new RuntimeException('Nemáte právo odstranit záznam chyby.');
+        }
+
+        $smazano = cb_admin_log_chyby_smazat(db(), (int)($_POST['id_log_chyby'] ?? 0));
+        $_SESSION['cb_admin_log_chyby_notice'] = [
+            'success' => $smazano,
+            'message' => $smazano ? 'Záznam chyby byl odstraněn.' : 'Záznam chyby už neexistuje.',
+        ];
+    } catch (Throwable $e) {
+        $_SESSION['cb_admin_log_chyby_notice'] = [
+            'success' => false,
+            'message' => $e->getMessage(),
+        ];
+    }
+
+    header('Location: ' . $returnUrl, true, 303);
+    exit;
+}
 
 if (
     ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
@@ -77,7 +107,7 @@ if (
         if (!in_array($resetScope, ['all', 'vd', 'nd_employees'], true)) {
             throw new RuntimeException('Vyberte rozsah resetu HR dat.');
         }
-        $scriptPath = realpath(__DIR__ . '/../common/tmp/hr_import_user_do_person.php');
+        $scriptPath = realpath(__DIR__ . '/../common/scripts/hr_import_user_do_person.php');
         if ($scriptPath === false) {
             throw new RuntimeException('Importní skript nebyl nalezen.');
         }
@@ -214,29 +244,6 @@ if (
 
     try {
         $adminPravaAction = (string)($_POST['admin_prava_action'] ?? 'role');
-        if ($adminPravaAction === 'aplikovano') {
-            $idPravo = (int)($_POST['id_pravo'] ?? 0);
-            $aplikovano = (int)($_POST['aplikovano'] ?? 0) === 1;
-            $result = cb_admin_pravo_aplikovano_uloz($idPravo, $aplikovano);
-            cb_user_akce_zapis([
-                'id_user_akce_typ' => 14,
-                'modul' => 'administrace',
-                'objekt' => 'admin_prava_on_off',
-                'id_objektu' => $idPravo,
-                'pole' => 'aplikovano',
-                'hodnota_old' => !empty($result['aplikovano_pred']) ? '1' : '0',
-                'hodnota_new' => $aplikovano ? '1' : '0',
-                'vysledek' => 1,
-                'zdroj' => 'administrace',
-                'detail' => [
-                    'id_pravo' => $idPravo,
-                    'nazev' => (string)($result['nazev'] ?? ''),
-                ],
-            ]);
-            echo json_encode(['ok' => true, 'result' => $result], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-
         if ($adminPravaAction === 'aktivni') {
             $idPravo = (int)($_POST['id_pravo'] ?? 0);
             $aktivni = (int)($_POST['aktivni'] ?? 0) === 1;

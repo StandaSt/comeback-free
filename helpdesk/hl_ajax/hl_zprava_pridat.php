@@ -38,7 +38,7 @@ try {
     $idUser = cb_helpdesk_current_user_id();
     $idHelpdesk = (int)($data['id_helpdesk'] ?? 0);
     $zprava = trim((string)($data['zprava'] ?? ''));
-    $jeAdmin = cb_helpdesk_is_admin();
+    $jeResitel = cb_pravo_ma(602);
     $uzavrit = (int)($data['uzavrit'] ?? 0) === 1;
 
     if ($idUser <= 0) {
@@ -50,8 +50,8 @@ try {
     if ($zprava === '') {
         throw new RuntimeException('Zpráva je prázdná.');
     }
-    if ($uzavrit && !$jeAdmin) {
-        throw new RuntimeException('Jen admin může uzavřít tiket.');
+    if ($uzavrit && !$jeResitel) {
+        throw new RuntimeException('Nemáte právo vyřešit tiket.');
     }
 
     $conn = db();
@@ -61,7 +61,7 @@ try {
         exit;
     }
 
-    $typAutora = $jeAdmin ? 'admin' : 'user';
+    $typAutora = $jeResitel ? 'admin' : 'user';
 
     $conn->begin_transaction();
 
@@ -94,7 +94,7 @@ try {
     $novyStav = $stavPred;
     if ($uzavrit) {
         $novyStav = 'vyřešeno';
-    } elseif ($jeAdmin) {
+    } elseif ($jeResitel) {
         $novyStav = 'řeší se';
     }
 
@@ -135,7 +135,7 @@ try {
 
     cb_helpdesk_snapshot_zapis($conn, $idHelpdesk, $idZprava, $idUser);
 
-    if ($jeAdmin) {
+    if ($jeResitel) {
         if ($uzavrit) {
             cb_helpdesk_notifikace_sledujicim_o_admin_odpovedi(
                 $conn,

@@ -4,7 +4,10 @@ declare(strict_types=1);
 /*
  * Nacita a meni globalni prava roli v administraci.
  * Globalni pravo je dane existenci dvojice id_role a id_pravo.
+ * Stav funkcnosti prava cte z common/lib/prava_funkcni.php.
  */
+
+require_once __DIR__ . '/../../common/lib/prava_funkcni.php';
 
 function cb_admin_prava_roli_data(): array
 {
@@ -53,11 +56,8 @@ function cb_admin_prava_roli_data(): array
             pravo.nazev,
             pravo.popis,
             pravo.poradi,
-            pravo.aktivni,
-            oznaceni.id_pravo AS id_pravo_aplikovano
+            pravo.aktivni
         FROM cis_prava AS pravo
-        LEFT JOIN admin_prava_on_off AS oznaceni
-            ON oznaceni.id_pravo = pravo.id_pravo
         ORDER BY pravo.id_modul, pravo.poradi, pravo.id_pravo
     ');
     if ($rightRes instanceof mysqli_result) {
@@ -70,7 +70,7 @@ function cb_admin_prava_roli_data(): array
                 'nazev' => (string)$row['nazev'],
                 'popis' => (string)($row['popis'] ?? ''),
                 'aktivni' => (int)$row['aktivni'] === 1,
-                'aplikovano' => $row['id_pravo_aplikovano'] !== null,
+                'aplikovano' => cb_pravo_je_funkcni((int)$row['id_pravo']),
             ];
             $rights[] = $right;
             if (isset($modules[$idModul])) {
@@ -97,61 +97,6 @@ function cb_admin_prava_roli_data(): array
         'modules' => $modules,
         'rights' => $rights,
         'allowed' => $allowed,
-    ];
-}
-
-function cb_admin_pravo_aplikovano_uloz(int $idPravo, bool $aplikovano): array
-{
-    if (!function_exists('cb_pravo_ma') || !cb_pravo_ma(106)) {
-        throw new RuntimeException('Nemáte právo označit aplikaci práva.');
-    }
-    if ($idPravo <= 0) {
-        throw new RuntimeException('Neplatné ID práva.');
-    }
-
-    $db = db();
-    $stmtLoad = $db->prepare('
-        SELECT
-            pravo.nazev,
-            CASE WHEN oznaceni.id_pravo IS NULL THEN 0 ELSE 1 END AS aplikovano
-        FROM cis_prava AS pravo
-        LEFT JOIN admin_prava_on_off AS oznaceni
-            ON oznaceni.id_pravo = pravo.id_pravo
-        WHERE pravo.id_pravo = ?
-        LIMIT 1
-    ');
-    if ($stmtLoad === false) {
-        throw new RuntimeException('Nelze připravit načtení označení práva.');
-    }
-    $stmtLoad->bind_param('i', $idPravo);
-    $stmtLoad->execute();
-    $row = $stmtLoad->get_result()->fetch_assoc();
-    $stmtLoad->close();
-
-    if (!is_array($row)) {
-        throw new RuntimeException('Právo ID ' . $idPravo . ' neexistuje v cis_prava.');
-    }
-
-    $previous = (int)$row['aplikovano'] === 1;
-    if ($previous !== $aplikovano) {
-        if ($aplikovano) {
-            $stmtSave = $db->prepare('INSERT IGNORE INTO admin_prava_on_off (id_pravo) VALUES (?)');
-        } else {
-            $stmtSave = $db->prepare('DELETE FROM admin_prava_on_off WHERE id_pravo = ?');
-        }
-        if ($stmtSave === false) {
-            throw new RuntimeException('Nelze připravit uložení označení práva.');
-        }
-        $stmtSave->bind_param('i', $idPravo);
-        $stmtSave->execute();
-        $stmtSave->close();
-    }
-
-    return [
-        'id_pravo' => $idPravo,
-        'nazev' => (string)$row['nazev'],
-        'aplikovano' => $aplikovano,
-        'aplikovano_pred' => $previous,
     ];
 }
 

@@ -11,7 +11,7 @@ function cb_ai_analytik_katalog_soubor(string $filename): string
     if ($filename === '' || basename($filename) !== $filename) {
         throw new RuntimeException('Katalog má neplatný název souboru.');
     }
-    return dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . $filename;
+    return dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'ai_analytik' . DIRECTORY_SEPARATOR . $filename;
 }
 
 function cb_ai_analytik_katalog_nacist_json(string $filename): array

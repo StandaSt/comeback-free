@@ -25,22 +25,6 @@ if (!$cbEmbeddedModule) {
 }
 $cbAuthOk = !empty($_SESSION['cb_auth_ok']);
 $cb2faPending = !empty($_SESSION['cb_2fa_token']);
-$cbSystemLocked = false;
-if (!empty($_SESSION['login_ok']) && (int)($_SESSION['cb_system']['zamek'] ?? 0) === 1 && !cb_user_ma_roli(1)) {
-    try {
-        $cbLockConn = db();
-        $cbLockRes = $cbLockConn->query('SELECT zamek FROM set_system WHERE id_set = 1 LIMIT 1');
-        if ($cbLockRes instanceof mysqli_result) {
-            $cbLockRow = $cbLockRes->fetch_assoc();
-            $cbLockRes->free();
-            $_SESSION['cb_system']['zamek'] = ((int)($cbLockRow['zamek'] ?? 0) === 1) ? 1 : 0;
-        }
-    } catch (Throwable $e) {
-    }
-    if ((int)($_SESSION['cb_system']['zamek'] ?? 0) === 1) {
-        $cbSystemLocked = true;
-    }
-}
 $cbHasComebackHeader = false;
 foreach (array_keys($_SERVER) as $cbServerKey) {
     if (strncmp((string)$cbServerKey, 'HTTP_X_COMEBACK_', 16) === 0) {
@@ -61,7 +45,7 @@ if (empty($_SESSION['login_ok'])) {
     exit;
 }
 
-if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
+if (!empty($_SESSION['login_ok'])) {
     require_once __DIR__ . '/../common/lib/pobocky_vyber.php';
     require_once __DIR__ . '/../common/lib/handle_set_period.php';
     require_once __DIR__ . '/../common/lib/handle_set_pobocky.php';
@@ -71,24 +55,7 @@ if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
 
 require_once __DIR__ . '/lib/detektuj_neplatnou_url.php';
 require_once __DIR__ . '/../common/lib/json_registrace.php';
-if (!empty($_SESSION['login_ok']) && $cbSystemLocked && isset($_GET['cb_lock_check']) && (string)$_GET['cb_lock_check'] === '1') {
-    header('Content-Type: application/json; charset=utf-8');
-    $cbLockedNow = 1;
-    try {
-        $cbLockConn = db();
-        $cbLockRes = $cbLockConn->query('SELECT zamek FROM set_system WHERE id_set = 1 LIMIT 1');
-        if ($cbLockRes instanceof mysqli_result) {
-            $cbLockRow = $cbLockRes->fetch_assoc();
-            $cbLockRes->free();
-            $cbLockedNow = ((int)($cbLockRow['zamek'] ?? 0) === 1) ? 1 : 0;
-            $_SESSION['cb_system']['zamek'] = $cbLockedNow;
-        }
-    } catch (Throwable $e) {
-    }
-    echo json_encode(['ok' => true, 'locked' => $cbLockedNow], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
+if (!empty($_SESSION['login_ok'])) {
     require_once __DIR__ . '/lib/post_akce.php';
     require_once __DIR__ . '/lib/uloz_dr_pracovni.php';
     require_once __DIR__ . '/lib/uloz_reporty_is.php';
@@ -219,13 +186,13 @@ if (
     }
 }
 
-if (!empty($_SESSION['login_ok']) && !$cbSystemLocked && function_exists('cb_report_promenne_handle_post')) {
+if (!empty($_SESSION['login_ok']) && function_exists('cb_report_promenne_handle_post')) {
     cb_report_promenne_handle_post();
 }
 
 require_once __DIR__ . '/includes/log_a_404.php';
 
-if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
+if (!empty($_SESSION['login_ok'])) {
     require_once __DIR__ . '/lib/request_dispatch.php';
 } elseif ($cbHasComebackHeader) {
     http_response_code(401);
@@ -234,7 +201,6 @@ if (!empty($_SESSION['login_ok']) && !$cbSystemLocked) {
 
 if (
     !empty($_SESSION['login_ok'])
-    && !$cbSystemLocked
     && isset($_REQUEST['open_kontrola_email'])
     && (string)$_REQUEST['open_kontrola_email'] === '1'
     && (
@@ -249,7 +215,7 @@ if (
     exit;
 }
 
-if ($cbPpOnly && !empty($_SESSION['login_ok']) && !$cbSystemLocked) {
+if ($cbPpOnly && !empty($_SESSION['login_ok'])) {
     header('Content-Type: text/html; charset=utf-8');
     if ($cbPage === 'uprava_profilu') {
         require __DIR__ . '/../common/pages/uprava_profilu.php';
@@ -282,13 +248,7 @@ if ($cbPpOnly && !empty($_SESSION['login_ok']) && !$cbSystemLocked) {
 ?>
 <?php
 
-if (!empty($_SESSION['login_ok']) && $cbSystemLocked) {
-    ?>
-    <div style="width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;background:#0f172a;overflow:hidden;">
-      <img src="<?= h(cb_url('img/udrzba.png')) ?>" alt="Údržba systému" style="width:100vw;height:100vh;object-fit:contain;display:block;">
-    </div>
-      <?php
-  } elseif (!empty($_SESSION['login_ok'])) {
+if (!empty($_SESSION['login_ok'])) {
     if (!$cbEmbeddedModule) {
         require_once __DIR__ . '/../common/includes/hlavicka.php';
     }

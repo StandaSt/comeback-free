@@ -124,8 +124,9 @@ $archivHourLabel = static function (float $value): string {
                   <td>
                     <?php if (!empty($row['saved'])): ?>
                       <a class="archiv_reportu_action_badge" href="<?= h($reportUrl) ?>">Detail</a>
-                    <?php elseif (!empty($row['google_available'])): ?>
-                      <a class="archiv_reportu_action_badge" href="<?= h($googleReportUrl) ?>">Zobrazit report z Google disku</a>
+                    <?php endif; ?>
+                    <?php if (!empty($row['google_report_available'])): ?>
+                      <a class="archiv_reportu_action_badge" href="<?= h($googleReportUrl) ?>">Google</a>
                     <?php endif; ?>
                     <?php if (empty($row['saved']) && !empty($row['can_complete'])): ?>
                       <a class="archiv_reportu_action_badge" href="<?= h($reportUrl) ?>">Doplnit</a>

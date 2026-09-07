@@ -26,6 +26,31 @@
   var btnBaseClass = 'helpdesk_action_btn';
   var btnPrimaryClass = btnBaseClass + ' helpdesk_action_btn_primary';
 
+  function initNewTicketForm() {
+    var description = container.querySelector('#hl-ticket-popis');
+    var counter = container.querySelector('[data-cb-hd-description-counter="1"]');
+    var submit = container.querySelector('[data-cb-hd-submit-ticket="1"]');
+    if (!(description instanceof HTMLTextAreaElement) || !(counter instanceof HTMLElement) || !(submit instanceof HTMLButtonElement)) {
+      return function () {};
+    }
+
+    var minimum = Number(description.getAttribute('minlength') || '0');
+    function refreshDescriptionState() {
+      var length = Array.from(description.value.trim()).length;
+      var remaining = Math.max(0, minimum - length);
+      submit.disabled = remaining > 0;
+      counter.textContent = remaining > 0
+        ? 'Ještě chybí ' + remaining + (remaining === 1 ? ' znak.' : ' znaků.')
+        : 'Minimální délka je splněna.';
+    }
+
+    description.addEventListener('input', refreshDescriptionState);
+    refreshDescriptionState();
+    return function () {
+      description.removeEventListener('input', refreshDescriptionState);
+    };
+  }
+
   function text(v) {
     if (v === null || v === undefined) { return ''; }
     return String(v);
@@ -175,6 +200,23 @@
     }
   }
 
+  function setDetailBadges(ticket) {
+    var expanded = getExpandedBox();
+    if (!(expanded instanceof HTMLElement)) { return; }
+    var badges = expanded.querySelector('[data-cb-hd-detail-badges="1"]');
+    if (!(badges instanceof HTMLElement)) { return; }
+    if (!ticket) {
+      badges.hidden = true;
+      badges.innerHTML = '';
+      return;
+    }
+    badges.hidden = false;
+    badges.innerHTML = '<span class="helpdesk_detail_badge">' + esc(text(ticket.stav || '')) + '</span>'
+      + '<span class="helpdesk_detail_badge">' + esc(areaText(ticket.modul)) + '</span>'
+      + '<span class="helpdesk_detail_badge">' + esc(typeText(ticket.typ)) + '</span>'
+      + '<span class="helpdesk_detail_badge">' + esc(visibilityText(ticket.verejny)) + '</span>';
+  }
+
   function getDetailScrollBox() {
     var panel = getDetailPanelBox();
     if (!(panel instanceof HTMLElement)) { return null; }
@@ -290,6 +332,7 @@
     var box = getDetailPanelBox();
     if (!(box instanceof HTMLElement)) { return; }
     setDetailHeading('Vyber tiket ze seznamu vlevo');
+    setDetailBadges(null);
     box.innerHTML = '<div class="helpdesk_detail_notice ram_normal zaobleni_10">'
       + '<div class="helpdesk_detail_notice_text">Není co zobrazit,<br>ale vlevo je seznam všech problémů které admin řeší dnem i nocí.<br>Tak si vyber které neštěstí tě zajímá a hned ti to ukážu :-)<br><br>Pokud máš sám nějaký problém s tímto skromným informačním systémem, v menu je tlačítko &quot;Nový tiket&quot;.<br>Říkám to nerad, ale klidně ho použij, snad to přežiju.</div>'
       + '</div>';
@@ -417,6 +460,7 @@
 
   function renderReplyActions(id, ticket, data) {
     var canWrite = Number(data && data.can_write ? data.can_write : 0) === 1;
+    var canResolve = Number(data && data.can_resolve ? data.can_resolve : 0) === 1;
     var currentUserId = Number(data && data.current_user_id ? data.current_user_id : 0);
     var ownerId = Number(ticket && ticket.id_user_zalozil ? ticket.id_user_zalozil : 0);
     var isResolved = filterStatusValue(ticket && ticket.stav ? ticket.stav : '') === 'uzavřené';
@@ -432,10 +476,10 @@
       if (!isAdmin && ownerId !== currentUserId) {
         html += '<button type="button" class="' + esc(btnBaseClass) + ' helpdesk_action_btn_small" data-cb-hd-follow="' + esc(id) + '">Mám stejný problém</button>';
       }
-      if (isAdmin) {
+      if (canResolve) {
         html += '<button type="button" class="' + esc(btnBaseClass) + ' helpdesk_action_btn_wide" data-cb-hd-send-reply="' + esc(id) + '" data-cb-hd-resolve="1">Odeslat - tiket vyřešen</button>';
       }
-      html += '<button type="button" class="' + esc(btnPrimaryClass) + ' helpdesk_action_btn_wide" data-cb-hd-send-reply="' + esc(id) + '">Odeslat odpověď</button>';
+      html += '<button type="button" class="' + esc(btnPrimaryClass) + ' helpdesk_action_btn_wide" data-cb-hd-send-reply="' + esc(id) + '">' + (canResolve ? 'Odeslat reakci admina' : 'Přidat komentář') + '</button>';
       html += '<button type="button" class="' + esc(btnBaseClass) + ' helpdesk_action_btn_small" data-cb-hd-close-detail="1">Zpět</button>';
       html += '</div>';
     } else {
@@ -457,18 +501,11 @@
     if (!(detailBox instanceof HTMLElement)) { return; }
 
     var id = text(ticket.id_helpdesk || '');
-    setDetailHeading('Detail vybraného tiketu');
+    setDetailHeading('Detail tiketu: ' + text(ticket.predmet || ''));
+    setDetailBadges(ticket);
     detailBox.setAttribute('data-cb-hd-owner-id', text(ticket.id_user_zalozil || '0'));
     detailBox.setAttribute('data-cb-hd-current-user-id', text(data && data.current_user_id ? data.current_user_id : 0));
     var html = '<div class="helpdesk_detail_stack">';
-    html += '<header class="helpdesk_detail_header">';
-    html += '<div class="helpdesk_detail_title">#' + esc(id) + ' ' + esc(text(ticket.predmet || '')) + '</div>';
-    html += '<div class="helpdesk_detail_badges">';
-    html += '<span class="helpdesk_detail_badge">Stav: ' + esc(text(ticket.stav || '')) + '</span>';
-    html += '<span class="helpdesk_detail_badge">Oblast: ' + esc(areaText(ticket.modul)) + '</span>';
-    html += '<span class="helpdesk_detail_badge">Typ: ' + esc(typeText(ticket.typ)) + '</span>';
-    html += '<span class="helpdesk_detail_badge">Určení: ' + esc(visibilityText(ticket.verejny)) + '</span>';
-    html += '</div></header>';
     html += renderAttachments(data && data.prilohy ? data.prilohy : []);
     html += renderMessages(data && data.zpravy ? data.zpravy : []);
     html += '<div>' + renderReplyActions(id, ticket, data || {}) + '</div>';
@@ -696,6 +733,7 @@
     applyFilter();
   }
 
+  var cleanupNewTicketForm = initNewTicketForm();
   container.addEventListener('click', handleClick);
   container.addEventListener('change', handleChange);
 
@@ -713,6 +751,7 @@
     }
 
   window.__CB_HELPDESK_CLEANUP__ = function () {
+      cleanupNewTicketForm();
       container.removeEventListener('click', handleClick);
       container.removeEventListener('change', handleChange);
       if (pollTimerId) {

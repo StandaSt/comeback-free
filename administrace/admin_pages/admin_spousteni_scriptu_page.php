@@ -64,4 +64,50 @@ if (isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODULE'])) {
             <button class="admin_script_button" type="submit">Doplnit naplánované směny</button>
         </form>
     </div>
+
+    <div class="blok admin_script_card">
+        <p class="admin_script_description">Import denních reportů ze složky <code>data/google_data/Pobočky</code>. Je-li přítomný <code>Pobočky.zip</code>, nejdřív složku nahradí jeho obsahem.</p>
+
+        <?php if (is_array($adminScriptResult) && $adminScriptResultType === 'google_reporty'): ?>
+            <p class="admin_script_result<?= empty($adminScriptResult['success']) ? ' is-error' : '' ?>">
+                <?= h((string)($adminScriptResult['message'] ?? '')) ?>
+            </p>
+        <?php endif; ?>
+
+        <?php if (is_array($adminScriptResult) && $adminScriptResultType === 'google_reporty_preview'): ?>
+            <p class="admin_script_result<?= empty($adminScriptResult['success']) ? ' is-error' : '' ?>">
+                <?= h((string)($adminScriptResult['message'] ?? '')) ?>
+            </p>
+            <?php if (!empty($adminScriptResult['success'])): ?>
+                <?php $adminGooglePreviewBranches = $adminScriptResult['branches'] ?? []; ?>
+                <?php if (is_array($adminGooglePreviewBranches) && $adminGooglePreviewBranches !== []): ?>
+                    <ul class="admin_script_options">
+                        <?php foreach ($adminGooglePreviewBranches as $adminGooglePreviewBranch): ?>
+                            <li>
+                                <strong><?= h((string)($adminGooglePreviewBranch['name'] ?? '')) ?></strong>:
+                                <?= h((string)($adminGooglePreviewBranch['from'] ?? '')) ?> až <?= h((string)($adminGooglePreviewBranch['until'] ?? '')) ?>
+                                — <?= h(implode(', ', (array)($adminGooglePreviewBranch['workbooks'] ?? []))) ?>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php else: ?>
+                    <p class="admin_script_result">Není co importovat.</p>
+                <?php endif; ?>
+            <?php endif; ?>
+        <?php endif; ?>
+
+        <form class="admin_script_form" method="post" action="<?= h(cb_root_url('index.php?m=administrace&page=spousteni_scriptu')) ?>">
+            <input type="hidden" name="cb_action" value="admin_google_reporty_preview">
+            <button class="admin_script_button" type="submit">Ukaž co se bude importovat</button>
+        </form>
+
+        <form class="admin_script_form" method="post" action="<?= h(cb_root_url('index.php?m=administrace&page=spousteni_scriptu')) ?>">
+            <input type="hidden" name="cb_action" value="admin_google_reporty_import">
+            <label class="admin_script_confirm">
+                <input type="checkbox" name="admin_google_reporty_confirm" value="1" required>
+                <span>Rozumím, že při přítomnosti ZIPu bude složka Pobočky nahrazena a následně se importují chybějící reporty do databáze.</span>
+            </label>
+            <button class="admin_script_button" type="submit">Načíst reporty Google</button>
+        </form>
+    </div>
 </div>

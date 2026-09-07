@@ -1,5 +1,7 @@
 <?php
 // ===== INVALID URL DETEKCE =====
+// Zapisuje pouze neplatnou navigaci přihlášeného uživatele.
+// Interní požadavky aplikace a existující veřejné endpointy nejsou chybou.
 $cbInvalidUrl = false;
 $reqUri = (string)($_SERVER['REQUEST_URI'] ?? '');
 $reqPath = (string)(parse_url($reqUri, PHP_URL_PATH) ?? '');
@@ -30,8 +32,22 @@ if ($modulePath !== '/' && ($appPath === $modulePath || str_starts_with($appPath
 }
 
 $isAssetPath = (bool)preg_match('/\.(css|js|map|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|eot)$/i', $appPath);
+$isAsyncRequest = function_exists('cb_session_je_asynchronni_pozadavek')
+    && cb_session_je_asynchronni_pozadavek();
+$publicRoot = realpath(__DIR__ . '/../..');
+$publicFile = $publicRoot !== false
+    ? $publicRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, ltrim($appPath, '/'))
+    : '';
+$isExistingPublicEndpoint = $publicFile !== '' && is_file($publicFile);
+$isAuthenticatedUser = !empty($_SESSION['login_ok']);
 $allowedPaths = ['/', '/index.php', '/provoz.php'];
-if (!$isAssetPath && !in_array($appPath, $allowedPaths, true)) {
+if (
+    $isAuthenticatedUser
+    && !$isAsyncRequest
+    && !$isAssetPath
+    && !$isExistingPublicEndpoint
+    && !in_array($appPath, $allowedPaths, true)
+) {
     $cbInvalidUrl = true;
 
     require_once __DIR__ . '/../../common/db/zapis_log_chyby.php';

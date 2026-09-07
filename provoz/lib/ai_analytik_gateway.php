@@ -6,6 +6,7 @@ require_once __DIR__ . '/ai_analytik_agent.php';
 require_once __DIR__ . '/ai_analytik_export_common.php';
 require_once __DIR__ . '/../db/db_ai_analytik_audit.php';
 require_once __DIR__ . '/../db/db_ai_analytik_bezpecnost.php';
+require_once __DIR__ . '/../../common/notifikace/notifikace_2fa.php';
 
 set_time_limit(0);
 
@@ -54,7 +55,7 @@ function cb_ai_analytik_normalizovat_vystup(array $vystup): array
     return ['text' => $vystup['text'], 'tabulka' => $vystup['tabulka'], 'graf' => $vystup['graf']];
 }
 
-function cb_ai_analytik_chyba_pro_uzivatele(Throwable $error, bool $isAdmin, int $idAudit): string
+function cb_ai_analytik_chyba_pro_uzivatele(Throwable $error, bool $maPravoTechnickeDiagnostiky, int $idAudit): string
 {
     $reference = 'Audit #' . $idAudit;
     if ($error instanceof CbAiAnalytikZrusenoUzivatelem) {
@@ -63,7 +64,7 @@ function cb_ai_analytik_chyba_pro_uzivatele(Throwable $error, bool $isAdmin, int
     if ($error instanceof CbAiAnalytikSpojeniPreruseno) {
         return 'Spojení s prohlížečem bylo ukončeno; analýza byla zastavena. · ' . $reference;
     }
-    if ($isAdmin) {
+    if ($maPravoTechnickeDiagnostiky) {
         return get_class($error) . ': ' . $error->getMessage()
             . ' v ' . $error->getFile() . ':' . $error->getLine() . ' · ' . $reference;
     }
@@ -78,6 +79,41 @@ function cb_ai_analytik_chyba_pro_uzivatele(Throwable $error, bool $isAdmin, int
         return 'Datový zdroj je momentálně nedostupný. · ' . $reference;
     }
     return 'Dotaz se nepodařilo zpracovat. · ' . $reference;
+}
+
+function cb_ai_analytik_oznam_chybu_adminovi(Throwable $error, int $idUser, int $idAudit): void
+{
+    if ($idUser <= 0 || $idUser === 1) {
+        return;
+    }
+
+    $jmeno = trim((string)($_SESSION['cb_user']['jmeno'] ?? '') . ' ' . (string)($_SESSION['cb_user']['prijmeni'] ?? ''));
+    $uzivatel = $jmeno !== '' ? $jmeno . ' (ID ' . $idUser . ')' : 'ID ' . $idUser;
+    $obsah = implode("\n", [
+        'Uživatel: ' . $uzivatel,
+        'Audit: #' . $idAudit,
+        'Typ chyby: ' . get_class($error),
+        'Chyba: ' . $error->getMessage(),
+        'Soubor: ' . $error->getFile() . ':' . $error->getLine(),
+    ]);
+    $pozn = json_encode([
+        'id_user' => $idUser,
+        'audit_id' => $idAudit,
+        'error_type' => get_class($error),
+        'error_code' => (string)$error->getCode(),
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+    try {
+        cb_push_send_admin_info(
+            [1],
+            'ai_analytik_error',
+            $obsah,
+            'Chyba AI analytika',
+            is_string($pozn) ? $pozn : ''
+        );
+    } catch (Throwable $notificationError) {
+        error_log('AI analytik: push notifikaci chyby se nepodařilo odeslat: ' . $notificationError->getMessage());
+    }
 }
 
 function cb_ai_analytik_gateway(): never
@@ -149,7 +185,7 @@ function cb_ai_analytik_gateway(): never
     }
 
     $idLogin = (int)($_SESSION['cb_id_login'] ?? 0);
-    $isAdmin = cb_user_ma_roli(1);
+    $maPravoTechnickeDiagnostiky = cb_pravo_ma(102);
     $isContinuation = $action === 'continue';
     $resumeState = null;
     $clarificationAnswer = '';
@@ -198,11 +234,14 @@ function cb_ai_analytik_gateway(): never
             $idAudit = cb_ai_analytik_audit_start($idUser, $idLogin, $modelProAudit, $prompt, 'global');
         } catch (Throwable $error) {
             error_log('AI analytik: audit nelze zahájit: ' . $error->getMessage());
+            if (!$maPravoTechnickeDiagnostiky) {
+                cb_ai_analytik_oznam_chybu_adminovi($error, $idUser, 0);
+            }
             cb_ai_analytik_json(503, [
                 'ok' => false,
-                'error' => $isAdmin
-                    ? get_class($error) . ': ' . $error->getMessage() . ' v ' . $error->getFile() . ':' . $error->getLine()
-                    : 'Audit AI analytika není dostupný. Dotaz nebyl spuštěn.',
+            'error' => $maPravoTechnickeDiagnostiky
+                ? get_class($error) . ': ' . $error->getMessage() . ' v ' . $error->getFile() . ':' . $error->getLine()
+                : 'Audit AI analytika není dostupný. Dotaz nebyl spuštěn.',
             ]);
         }
     }
@@ -409,8 +448,16 @@ function cb_ai_analytik_gateway(): never
         }
         $auditFinished = true;
         error_log('AI analytik audit #' . $idAudit . ': ' . get_class($error) . ': ' . $error->getMessage());
+        if (
+            !$maPravoTechnickeDiagnostiky
+            && !($error instanceof CbAiAnalytikZrusenoUzivatelem)
+            && !($error instanceof CbAiAnalytikSpojeniPreruseno)
+            && !($error instanceof CbAiAnalytikUzivatelskaChyba)
+        ) {
+            cb_ai_analytik_oznam_chybu_adminovi($error, $idUser, $idAudit);
+        }
         cb_ai_analytik_stream('error', [
-            'message' => cb_ai_analytik_chyba_pro_uzivatele($error, $isAdmin, $idAudit),
+            'message' => cb_ai_analytik_chyba_pro_uzivatele($error, $maPravoTechnickeDiagnostiky, $idAudit),
             'audit_id' => $idAudit,
         ]);
     }

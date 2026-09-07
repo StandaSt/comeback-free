@@ -296,6 +296,113 @@
   background:var(--cb-bg-panel-soft);
 }
 
+/* Přehled chyb používá společný vzor filtrování a stránkování IS. */
+.admin_log_chyby .admin_matrix_wrap{
+  width:100%;
+}
+
+.admin_log_chyby .admin_matrix{
+  width:100%;
+  min-width:1080px;
+}
+
+.admin_log_chyby_filter_row th{
+  padding:6px;
+}
+
+.admin_log_chyby_filter_row .filter-input{
+  width:100%;
+  min-width:0;
+  height:28px;
+  box-sizing:border-box;
+  border:1px solid var(--cb-border-soft);
+  border-radius:6px;
+  background:var(--cb-bg-panel);
+  color:var(--cb-text-main);
+}
+
+.admin_log_chyby_sort a{
+  display:flex;
+  gap:6px;
+  align-items:center;
+  justify-content:space-between;
+  color:inherit;
+  text-decoration:none;
+  white-space:nowrap;
+}
+
+.admin_log_chyby_sort.is-active a{
+  font-weight:700;
+}
+
+.admin_log_chyby_action_head,
+.admin_log_chyby_action{
+  text-align:center !important;
+  white-space:nowrap;
+}
+
+.admin_log_chyby_delete{
+  min-height:28px;
+  padding:3px 8px;
+  border:1px solid #dc2626;
+  border-radius:6px;
+  background:transparent;
+  color:#dc2626;
+  cursor:pointer;
+}
+
+.admin_log_chyby_pagination{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-top:12px;
+}
+
+.admin_log_chyby_pagination .per-form,
+.admin_log_chyby_pagination .pagination-icon{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.admin_log_chyby_pagination select{
+  height:28px;
+  border:1px solid var(--cb-border-soft);
+  border-radius:6px;
+  background:var(--cb-bg-panel);
+  color:var(--cb-text-main);
+}
+
+.admin_log_chyby_pagination .icon-btn{
+  min-width:28px;
+  height:28px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid var(--cb-border-soft);
+  border-radius:6px;
+  color:inherit;
+  text-decoration:none;
+}
+
+.admin_log_chyby_pagination .icon-btn.disabled{
+  opacity:.45;
+  pointer-events:none;
+}
+
+.admin_log_chyby_pagination .page-current{
+  padding:0 8px;
+  background:var(--cb-bg-panel-soft);
+}
+
+@media (max-width:700px){
+  .admin_log_chyby_pagination{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+}
+
 [data-page="prava_roli"] .admin_matrix thead th{
   font-weight:400;
 }

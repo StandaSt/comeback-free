@@ -367,7 +367,7 @@ $manifest = [
     'generated_at' => $generatedAt,
 ];
 
-$dataDirectory = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'data';
+$dataDirectory = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'ai_analytik';
 if (!is_dir($dataDirectory) || !is_writable($dataDirectory)) {
     throw new RuntimeException('Adresář data pro katalogy neexistuje nebo do něj nelze zapisovat.');
 }

@@ -559,6 +559,261 @@
     gap: 10px;
 }
 
+/* Kompaktní alternativa založení zaměstnance mimo VD/ND. */
+.hr_new_employee_form {
+    width: 1050px;
+    max-width: 100%;
+    gap: 14px;
+}
+
+.hr_new_employee_section {
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-strong);
+}
+
+.hr_new_employee_section .hr_employee_edit_subtitle {
+    margin: 0;
+}
+
+.hr_new_employee_table {
+    width: auto;
+    border-collapse: separate;
+    border-spacing: 16px 8px;
+    justify-self: start;
+}
+
+.hr_new_employee_table td {
+    padding: 0;
+    vertical-align: bottom;
+}
+
+.hr_new_employee_table :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.hr_new_employee_table :is(input[type="checkbox"], input[type="radio"]) {
+    width: auto;
+    margin: 0;
+}
+
+.hr_new_employee_field--title { width: 90px; }
+.hr_new_employee_field--name { width: 180px; }
+.hr_new_employee_field--second-name { width: 150px; }
+.hr_new_employee_field--surname { width: 180px; }
+.hr_new_employee_field--maiden { width: 180px; }
+.hr_new_employee_field--date { width: 130px; }
+.hr_new_employee_field--birthplace { width: 180px; }
+.hr_new_employee_field--birth-number { width: 130px; }
+.hr_new_employee_field--nationality { width: 160px; }
+.hr_new_employee_field--id-card { width: 180px; }
+.hr_new_employee_field--insurer { width: 180px; }
+.hr_new_employee_field--note { width: 320px; }
+.hr_new_employee_field--note textarea { min-height: 68px; resize: vertical; }
+.hr_new_employee_field--personal-number { width: 105px; }
+.hr_new_employee_field--relation { width: auto; }
+.hr_new_employee_field--start { width: 130px; }
+.hr_new_employee_field--branches { width: auto; }
+.hr_new_employee_field--main-branch { width: auto; }
+.hr_new_employee_field--email { width: 260px; }
+.hr_new_employee_field--phone { width: 120px; }
+
+.hr_new_employee_detail_groups {
+    display: grid;
+    gap: 8px;
+}
+
+.hr_new_employee_detail_group {
+    min-width: 0;
+    margin: 0;
+    padding: 7px 8px 8px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+}
+
+.hr_new_employee_detail_group legend {
+    padding: 0 4px;
+    font-size: var(--cb-font-12);
+    font-weight: 700;
+}
+
+.hr_new_employee_detail_grid {
+    display: grid;
+    gap: 10px;
+}
+
+.hr_new_employee_detail_grid--address {
+    grid-template-columns: 200px 100px 160px 90px 120px;
+}
+
+.hr_new_employee_detail_grid--emergency {
+    grid-template-columns: 190px 130px 130px 200px;
+}
+
+.hr_new_employee_photo {
+    display: flex;
+    align-items: end;
+    gap: 8px;
+}
+
+.hr_new_employee_photo input[type="file"] {
+    font-size: var(--cb-font-12);
+}
+
+.hr_photo_crop_trigger {
+    display: none;
+    min-height: 26px;
+    padding: 3px 8px;
+    color: var(--cb-text-main);
+    font: inherit;
+    background: var(--cb-bg-control);
+    border: var(--head-control-border);
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.hr_photo_crop_trigger.is-visible {
+    display: inline-flex;
+    align-items: center;
+}
+
+.hr_new_employee_photo_preview {
+    width: 82px;
+    height: 82px;
+    margin: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+}
+
+.hr_new_employee_photo_preview img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.hr_photo_crop_dialog {
+    width: min(760px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px);
+    padding: 0;
+    overflow: auto;
+    color: var(--cb-text-main);
+    background: var(--surface-strong);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 18px 48px rgb(0 0 0 / 28%);
+}
+
+.hr_photo_crop_dialog::backdrop {
+    background: rgb(0 0 0 / 45%);
+}
+
+.hr_photo_crop_dialog_content {
+    padding: 16px;
+}
+
+.hr_photo_crop_dialog h3,
+.hr_photo_crop_dialog p {
+    margin: 0 0 8px;
+}
+
+.hr_photo_crop_surface {
+    position: relative;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto;
+    overflow: hidden;
+    user-select: none;
+    touch-action: none;
+    background: #111;
+}
+
+.hr_photo_crop_surface img {
+    display: block;
+    max-width: min(700px, calc(100vw - 64px));
+    max-height: min(520px, calc(100vh - 230px));
+}
+
+.hr_photo_crop_selection {
+    position: absolute;
+    display: block;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 9999px rgb(0 0 0 / 48%);
+    pointer-events: none;
+}
+
+.hr_photo_crop_actions {
+    display: flex;
+    justify-content: end;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.hr_employee_branch_picker {
+    position: relative;
+}
+
+.hr_employee_branch_button {
+    width: max-content;
+    min-width: 150px;
+    min-height: 26px;
+    padding: 3px 8px;
+    overflow: hidden;
+    color: var(--cb-text-main);
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    background: var(--cb-bg-control);
+    border: var(--head-control-border);
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.hr_employee_branch_panel {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 4px);
+    left: 0;
+    width: max-content;
+    min-width: 230px;
+    max-width: 360px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    box-shadow: 0 6px 18px rgb(0 0 0 / 18%);
+}
+
+.hr_employee_branch_panel label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 0;
+    white-space: nowrap;
+}
+
+.hr_new_employee_field--main-branch select,
+.hr_new_employee_field--relation select {
+    width: max-content;
+    min-width: 150px;
+    max-width: 290px;
+}
+
+.hr_new_employee_field--slot .hr_slot_choice select {
+    width: max-content;
+    max-width: 260px;
+}
+
+.hr_new_employee_field--slot .hr_slot_choice_input:disabled {
+    display: none;
+}
+
 /* Radek evidence preruseni a ukonceni pracovniho pomeru na karte zamestnance. */
 .hr_work_event_form .hr_form_grid {
     grid-template-columns: max-content max-content max-content minmax(0, 1fr);
@@ -609,7 +864,7 @@
 
 .hr_slot_choice {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 140px 1fr;
     gap: 8px;
 }
 
@@ -1351,6 +1606,13 @@
 }
 
 @media (max-width: 820px) {
+    .hr_new_employee_table {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto;
+        border-spacing: 10px 8px;
+    }
+
     .hr_panel_wide {
         grid-column: auto;
     }

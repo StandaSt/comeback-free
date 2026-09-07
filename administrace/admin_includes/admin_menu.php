@@ -14,6 +14,7 @@ $adminMenuItems = [
     ['page' => 'individualni_prava', 'label' => 'Individuální práva uživatele'],
     ['page' => 'firma_pridat', 'label' => 'Přidat firmu', 'pravo' => 105],
     ['page' => 'spousteni_scriptu', 'label' => 'Spouštění scriptů'],
+    ['page' => 'log_chyby', 'label' => 'Přehled chyb', 'pravo' => 106],
 ];
 
 $adminMenu = [];

@@ -5,8 +5,8 @@ declare(strict_types=1);
  * Jednoúčelový reset testovacích HR dat a volitelný import uživatelů do HR.
  *
  * Spuštění:
- *   php _www/common/tmp/hr_import_user_do_person.php --db=local --reset --scope=all|vd|nd_employees --import-users=0|1
- *   php _www/common/tmp/hr_import_user_do_person.php --db=server --reset
+ *   php www/common/scripts/hr_import_user_do_person.php --db=local --reset --scope=all|vd|nd_employees --import-users=0|1
+ *   php www/common/scripts/hr_import_user_do_person.php --db=server --reset
  *
  * Na serveru je povolen pouze první kompletní běh, když je hr_person prázdná.
  * Číselníky hr_cis_*, hr_mzdy_mesic, hr_sazby a uživatelská data IS zachovává.
@@ -41,8 +41,8 @@ if (
     || !in_array($resetScope, ['all', 'vd', 'nd_employees'], true)
     || !in_array($importUsersRaw, ['0', '1'], true)
 ) {
-    fwrite(STDERR, "Použití: php common/tmp/hr_import_user_do_person.php --db=local --reset --scope=all|vd|nd_employees --import-users=0|1\n");
-    fwrite(STDERR, "         php common/tmp/hr_import_user_do_person.php --db=server --reset\n");
+    fwrite(STDERR, "Použití: php common/scripts/hr_import_user_do_person.php --db=local --reset --scope=all|vd|nd_employees --import-users=0|1\n");
+    fwrite(STDERR, "         php common/scripts/hr_import_user_do_person.php --db=server\n");
     exit(1);
 }
 

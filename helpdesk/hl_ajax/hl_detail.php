@@ -140,6 +140,7 @@ try {
         'admin' => cb_helpdesk_is_admin() ? 1 : 0,
         'current_user_id' => $idUser,
         'can_write' => cb_helpdesk_can_write($conn, $idHelpdesk, $idUser) ? 1 : 0,
+        'can_resolve' => cb_pravo_ma(602) ? 1 : 0,
         'has_new_reply' => 0,
     ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {

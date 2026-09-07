@@ -37,6 +37,45 @@
         return true;
     };
 
+    // Overi pouze syntaxi ceskeho rodneho cisla, ne jeho prirazeni konkretni osobe.
+    const validateBirthNumber = (input) => {
+        const value = input.value.trim();
+        if (value === '') {
+            input.setCustomValidity('');
+            return true;
+        }
+
+        const number = value.replace(/[\s/]/g, '');
+        if (!/^\d{9}(?:\d)?$/.test(number) || /^(\d)\1+$/.test(number)) {
+            input.setCustomValidity('Zadejte platné rodné číslo ve tvaru YYMMDD/XXX(X).');
+            return false;
+        }
+
+        const yearPart = Number(number.slice(0, 2));
+        let month = Number(number.slice(2, 4));
+        const day = Number(number.slice(4, 6));
+        if (month >= 71 && month <= 82) {
+            month -= 70;
+        } else if (month >= 51 && month <= 62) {
+            month -= 50;
+        } else if (month >= 21 && month <= 32) {
+            month -= 20;
+        }
+        const year = number.length === 10 && yearPart <= new Date().getFullYear() % 100 ? 2000 + yearPart : 1900 + yearPart;
+        const date = new Date(year, month - 1, day);
+        if (month < 1 || month > 12 || date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+            input.setCustomValidity('Rodné číslo neobsahuje platné datum narození.');
+            return false;
+        }
+        if (number.length === 10 && Number(number) % 11 !== 0) {
+            input.setCustomValidity('Rodné číslo není dělitelné 11.');
+            return false;
+        }
+
+        input.setCustomValidity('');
+        return true;
+    };
+
     // Inicializuje chovani HR prvku v predanem obsahu stranky.
     const initHr = (scope) => {
         const container = scope instanceof Element || scope instanceof Document ? scope : document;
@@ -50,6 +89,232 @@
             input.addEventListener('input', () => {
                 input.value = formatCzechPhone(input.value);
             });
+        });
+
+        container.querySelectorAll('[data-photo-input]').forEach((input) => {
+            if (input.dataset.hrPhotoBound === '1') {
+                return;
+            }
+            input.dataset.hrPhotoBound = '1';
+
+            const form = input.closest('form');
+            const row = input.closest('.hr_new_employee_photo_row');
+            const preview = row?.querySelector('[data-photo-preview]');
+            const image = preview?.querySelector('img');
+            const cropOpen = row?.querySelector('[data-photo-crop-open]');
+            const dialog = form?.closest('.hr_panel')?.querySelector('[data-photo-crop-dialog]');
+            const cropSurface = dialog?.querySelector('[data-photo-crop-surface]');
+            const cropImage = dialog?.querySelector('[data-photo-crop-image]');
+            const selection = dialog?.querySelector('[data-photo-crop-selection]');
+            const cropApply = dialog?.querySelector('[data-photo-crop-apply]');
+            const cropCancel = dialog?.querySelector('[data-photo-crop-cancel]');
+            if (!preview || !image || !cropOpen || !dialog || !cropSurface || !cropImage || !selection || !cropApply || !cropCancel) {
+                return;
+            }
+
+            let selectedFile = null;
+            let cropUrl = '';
+            let selecting = null;
+
+            const showPreview = (file) => {
+                const previousUrl = image.dataset.previewUrl;
+                if (previousUrl) {
+                    URL.revokeObjectURL(previousUrl);
+                    delete image.dataset.previewUrl;
+                }
+
+                const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+                if (!file || !allowedTypes.includes(file.type)) {
+                    image.removeAttribute('src');
+                    preview.hidden = true;
+                    cropOpen.disabled = true;
+                    cropOpen.classList.remove('is-visible');
+                    input.setCustomValidity(file ? 'Fotografie musí být JPEG, PNG nebo WebP.' : '');
+                    return;
+                }
+
+                input.setCustomValidity('');
+                const previewUrl = URL.createObjectURL(file);
+                image.src = previewUrl;
+                image.dataset.previewUrl = previewUrl;
+                preview.hidden = false;
+                cropOpen.disabled = false;
+                cropOpen.classList.add('is-visible');
+            };
+
+            const setSelection = (left, top, width, height) => {
+                const box = cropImage.getBoundingClientRect();
+                const safeLeft = Math.max(0, Math.min(left, box.width - 1));
+                const safeTop = Math.max(0, Math.min(top, box.height - 1));
+                const safeWidth = Math.max(1, Math.min(width, box.width - safeLeft));
+                const safeHeight = Math.max(1, Math.min(height, box.height - safeTop));
+                selection.style.left = `${safeLeft}px`;
+                selection.style.top = `${safeTop}px`;
+                selection.style.width = `${safeWidth}px`;
+                selection.style.height = `${safeHeight}px`;
+            };
+
+            const startSelection = () => {
+                const box = cropImage.getBoundingClientRect();
+                const size = Math.min(box.width, box.height) * .7;
+                setSelection((box.width - size) / 2, (box.height - size) / 2, size, size);
+            };
+
+            const closeCropDialog = () => {
+                if (dialog.open) {
+                    dialog.close();
+                }
+                if (cropUrl) {
+                    URL.revokeObjectURL(cropUrl);
+                    cropUrl = '';
+                }
+                cropImage.removeAttribute('src');
+                selecting = null;
+            };
+
+            input.addEventListener('change', () => {
+                selectedFile = input.files?.[0] ?? null;
+                showPreview(selectedFile);
+            });
+
+            cropOpen.addEventListener('click', () => {
+                if (!selectedFile) {
+                    return;
+                }
+                if (cropUrl) {
+                    URL.revokeObjectURL(cropUrl);
+                }
+                cropUrl = URL.createObjectURL(selectedFile);
+                cropImage.src = cropUrl;
+                dialog.showModal();
+            });
+
+            cropImage.addEventListener('load', startSelection);
+            cropCancel.addEventListener('click', closeCropDialog);
+            dialog.addEventListener('cancel', (event) => {
+                event.preventDefault();
+                closeCropDialog();
+            });
+
+            cropSurface.addEventListener('pointerdown', (event) => {
+                const box = cropImage.getBoundingClientRect();
+                const x = Math.max(0, Math.min(event.clientX - box.left, box.width));
+                const y = Math.max(0, Math.min(event.clientY - box.top, box.height));
+                selecting = { x, y };
+                cropSurface.setPointerCapture(event.pointerId);
+                setSelection(x, y, 1, 1);
+            });
+
+            cropSurface.addEventListener('pointermove', (event) => {
+                if (!selecting) {
+                    return;
+                }
+                const box = cropImage.getBoundingClientRect();
+                const x = Math.max(0, Math.min(event.clientX - box.left, box.width));
+                const y = Math.max(0, Math.min(event.clientY - box.top, box.height));
+                setSelection(Math.min(selecting.x, x), Math.min(selecting.y, y), Math.abs(x - selecting.x), Math.abs(y - selecting.y));
+            });
+
+            cropSurface.addEventListener('pointerup', () => {
+                selecting = null;
+            });
+
+            cropApply.addEventListener('click', () => {
+                const imageBox = cropImage.getBoundingClientRect();
+                const selectionBox = selection.getBoundingClientRect();
+                const scaleX = cropImage.naturalWidth / imageBox.width;
+                const scaleY = cropImage.naturalHeight / imageBox.height;
+                const sourceX = Math.round((selectionBox.left - imageBox.left) * scaleX);
+                const sourceY = Math.round((selectionBox.top - imageBox.top) * scaleY);
+                const sourceWidth = Math.round(selectionBox.width * scaleX);
+                const sourceHeight = Math.round(selectionBox.height * scaleY);
+                if (sourceWidth < 1 || sourceHeight < 1) {
+                    return;
+                }
+
+                const targetScale = Math.min(1, 1200 / Math.max(sourceWidth, sourceHeight));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.max(1, Math.round(sourceWidth * targetScale));
+                canvas.height = Math.max(1, Math.round(sourceHeight * targetScale));
+                const context = canvas.getContext('2d');
+                if (!context) {
+                    return;
+                }
+                context.drawImage(cropImage, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
+                canvas.toBlob((blob) => {
+                    if (!blob) {
+                        return;
+                    }
+                    const croppedFile = new File([blob], 'fotografie-vyrez.jpg', { type: 'image/jpeg' });
+                    const transfer = new DataTransfer();
+                    transfer.items.add(croppedFile);
+                    input.files = transfer.files;
+                    selectedFile = croppedFile;
+                    showPreview(croppedFile);
+                    closeCropDialog();
+                }, 'image/jpeg', .9);
+            });
+        });
+
+        container.querySelectorAll('[data-birth-number]').forEach((input) => {
+            if (input.dataset.hrBirthNumberBound === '1') {
+                return;
+            }
+            input.dataset.hrBirthNumberBound = '1';
+            validateBirthNumber(input);
+            input.addEventListener('input', () => validateBirthNumber(input));
+            input.addEventListener('blur', () => validateBirthNumber(input));
+        });
+
+        container.querySelectorAll('[data-hr-branch-picker]').forEach((picker) => {
+            if (picker.dataset.hrBranchBound === '1') {
+                return;
+            }
+            picker.dataset.hrBranchBound = '1';
+
+            const form = picker.closest('form');
+            const toggle = picker.querySelector('[data-hr-branch-toggle]');
+            const panel = picker.querySelector('[data-hr-branch-panel]');
+            const branchInputs = [...picker.querySelectorAll('[data-hr-branch-option]')];
+            const mainBranch = form?.querySelector('[data-hr-main-branch]');
+            if (!form || !toggle || !panel || !mainBranch || branchInputs.length === 0) {
+                return;
+            }
+
+            const updateBranches = () => {
+                const selected = branchInputs.filter((input) => input.checked);
+                branchInputs[0].required = selected.length === 0;
+                const previousMain = mainBranch.value;
+                mainBranch.replaceChildren();
+
+                if (selected.length === 0) {
+                    mainBranch.disabled = true;
+                    mainBranch.add(new Option('Nejprve vyberte pobočky', ''));
+                    toggle.textContent = 'Vyberte pobočky';
+                    return;
+                }
+
+                mainBranch.disabled = false;
+                mainBranch.add(new Option('Vyberte', ''));
+                selected.forEach((input) => {
+                    mainBranch.add(new Option(input.dataset.hrBranchName || '', input.value));
+                });
+                mainBranch.value = selected.some((input) => input.value === previousMain) ? previousMain : selected[0].value;
+
+                const names = selected.map((input) => input.dataset.hrBranchName || '');
+                toggle.textContent = names.length <= 2 ? names.join(', ') : `${names.slice(0, 2).join(', ')} +${names.length - 2}`;
+            };
+
+            toggle.addEventListener('click', () => {
+                panel.hidden = !panel.hidden;
+            });
+            branchInputs.forEach((input) => input.addEventListener('change', updateBranches));
+            form.addEventListener('submit', () => {
+                if (branchInputs.every((input) => !input.checked)) {
+                    branchInputs[0].required = true;
+                }
+            });
+            updateBranches();
         });
 
         container.querySelectorAll('[data-hr-work-relation-form]').forEach((form) => {
