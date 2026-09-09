@@ -3,6 +3,11 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../common/lib/mailer.php';
 require_once __DIR__ . '/../../common/lib/prvni_vstup.php';
+require_once __DIR__ . '/../../common/lib/user_spojeni.php';
+require_once __DIR__ . '/../../common/lib/email_zmena.php';
+require_once __DIR__ . '/../../common/lib/email_zmena_oznameni.php';
+require_once __DIR__ . '/../../common/lib/firemni_pristup.php';
+require_once __DIR__ . '/../../common/lib/uloz_akci.php';
 
 /**
  * Nacita zakladni HR knihovny a databazove soubory pro stranky modulu.

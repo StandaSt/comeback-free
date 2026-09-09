@@ -221,6 +221,7 @@ if (!function_exists('cb_db_akce_log_init')) {
                 $idUserAkceDb = db_user_akce_db_insert($conn, [
                     'cas_start' => cb_db_akce_log_datetime($startTime),
                     'id_user' => $idUser,
+                    'id_login' => (int)($_SESSION['cb_id_login'] ?? 0),
                     'id_akce' => $idAkce,
                     'request_uri' => cb_db_akce_log_request_uri(),
                     'metoda' => (string)($_SERVER['REQUEST_METHOD'] ?? ''),

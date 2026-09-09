@@ -13,11 +13,29 @@ function hr_post_zamestnanec_uprava(mysqli $db, int $zadalUser): void
 {
     $idPerson = (int)($_POST['id_person'] ?? 0);
     try {
-        hr_update_employee_basic_data($db, $idPerson, $_POST, $zadalUser);
+        if (!cb_pravo_ma(307)) {
+            throw new RuntimeException('Nemáte právo upravit zaměstnance.');
+        }
+        cb_firemni_pristup_vyzaduj_osobu($db, $zadalUser, $idPerson);
+        $emailZmena = hr_update_employee_basic_data($db, $idPerson, $_POST, $zadalUser);
+        $message = 'Karta zaměstnance byla uložena.';
+        if (is_array($emailZmena)) {
+            try {
+                $odkaz = cb_url_abs('?potvrdit_email=' . rawurlencode((string)$emailZmena['token']));
+                cb_email_zmena_oznameni_odeslat(
+                    (string)$emailZmena['stary_email'],
+                    (string)$emailZmena['novy_email'],
+                    $odkaz
+                );
+                $message .= ' Potvrzení změny přihlašovacího e-mailu bylo odesláno uživateli.';
+            } catch (Throwable $mailError) {
+                $message .= ' ' . $mailError->getMessage();
+            }
+        }
         cb_form_finish(
             cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson) . '&upravit=1'),
             true,
-            'Karta zaměstnance byla uložena.'
+            $message
         );
     } catch (Throwable $e) {
         $_SESSION['hr_edit_input'] = $_POST;
@@ -41,6 +59,10 @@ function hr_post_pracovni_pomer_uprava(mysqli $db): void
         if ($zadalUser <= 0) {
             throw new RuntimeException('Chybí přihlášený uživatel.');
         }
+        if (!cb_pravo_ma(307)) {
+            throw new RuntimeException('Nemáte právo upravit pracovní poměr.');
+        }
+        cb_firemni_pristup_vyzaduj_osobu($db, $zadalUser, $idPerson);
         $typ = (int)($_POST['id_pracovni_vztah_typ'] ?? 0);
         $nastupInput = str_replace(',', '.', trim((string)($_POST['datum_nastupu'] ?? '')));
         $nastupDate = DateTimeImmutable::createFromFormat('!d.m.Y', $nastupInput);
@@ -232,6 +254,10 @@ function hr_post_pracovni_preruseni_ulozit(mysqli $db, int $zadalUser): void
 {
     $idPerson = (int)($_POST['id_person'] ?? 0);
     try {
+        if (!cb_pravo_ma(307)) {
+            throw new RuntimeException('Nemáte právo upravit pracovní poměr.');
+        }
+        cb_firemni_pristup_vyzaduj_osobu($db, $zadalUser, $idPerson);
         $idVztah = hr_pracovni_vztah_z_postu($db, $idPerson);
         $idTyp = (int)($_POST['id_pracovni_preruseni_typ'] ?? 0);
         $datumOd = hr_pracovni_pomer_datum_z_postu((string)($_POST['datum_od'] ?? ''), 'datum začátku přerušení');
@@ -272,6 +298,10 @@ function hr_post_pracovni_preruseni_uzavrit(mysqli $db, int $zadalUser): void
 {
     $idPerson = (int)($_POST['id_person'] ?? 0);
     try {
+        if (!cb_pravo_ma(307)) {
+            throw new RuntimeException('Nemáte právo upravit pracovní poměr.');
+        }
+        cb_firemni_pristup_vyzaduj_osobu($db, $zadalUser, $idPerson);
         $idPreruseni = (int)($_POST['id_pracovni_preruseni'] ?? 0);
         $datumDo = hr_pracovni_pomer_datum_z_postu((string)($_POST['datum_do'] ?? ''), 'datum konce přerušení');
         $stmt = $db->prepare('SELECT pp.datum_od FROM hr_pracovni_preruseni pp INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = pp.id_pracovni_vztah WHERE pp.id_pracovni_preruseni = ? AND pv.id_person = ? AND pp.datum_do IS NULL LIMIT 1');
@@ -297,6 +327,10 @@ function hr_post_pracovni_pomer_ukoncit(mysqli $db, int $zadalUser): void
 {
     $idPerson = (int)($_POST['id_person'] ?? 0);
     try {
+        if (!cb_pravo_ma(307)) {
+            throw new RuntimeException('Nemáte právo ukončit pracovní poměr.');
+        }
+        cb_firemni_pristup_vyzaduj_osobu($db, $zadalUser, $idPerson);
         $idVztah = hr_pracovni_vztah_z_postu($db, $idPerson);
         $idTyp = (int)($_POST['id_pracovni_ukonceni_typ'] ?? 0);
         $datumOznameniInput = trim((string)($_POST['datum_oznameni'] ?? ''));
@@ -331,7 +365,13 @@ function hr_post_pracovni_pomer_ukoncit(mysqli $db, int $zadalUser): void
         $stmt->bind_param('si', $datumUkonceni, $idVztah);
         $stmt->execute();
         $stmt->close();
+        $stmt = $db->prepare('UPDATE hr_pracoviste SET platnost_do = ? WHERE id_person = ? AND platny = 1');
+        $stmt->bind_param('si', $datumUkonceni, $idPerson);
+        $stmt->execute();
+        $stmt->close();
         $db->commit();
+        require_once __DIR__ . '/../../common/lib/hr_user_sync.php';
+        cb_hr_user_sync_ukoncene($db);
         cb_form_finish(hr_pracovni_pomer_url($idPerson), true, 'Ukončení pracovního poměru bylo uloženo.');
     } catch (Throwable $e) {
         try { $db->rollback(); } catch (Throwable $ignored) {}

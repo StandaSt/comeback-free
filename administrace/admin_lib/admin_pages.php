@@ -9,6 +9,10 @@ declare(strict_types=1);
 function cb_admin_pages(): array
 {
     return [
+        'uzivatele' => [
+            'file' => __DIR__ . '/../admin_pages/admin_uzivatele_page.php',
+            'title' => 'Správa uživatelů',
+        ],
         'prava_roli' => [
             'file' => __DIR__ . '/../admin_pages/admin_prava_roli_page.php',
             'title' => 'Globální práva - oprávnění rolí',

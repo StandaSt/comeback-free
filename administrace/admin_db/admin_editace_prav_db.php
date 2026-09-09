@@ -71,8 +71,8 @@ function cb_admin_editace_prav_texty(string $nazev, string $popis): array
     if ($nazev === '') {
         throw new RuntimeException('Název práva nesmí být prázdný.');
     }
-    if (mb_strlen($nazev) > 100) {
-        throw new RuntimeException('Název práva může mít nejvýše 100 znaků.');
+    if (mb_strlen($nazev) > 33) {
+        throw new RuntimeException('Název práva může mít nejvýše 33 znaků.');
     }
     if (mb_strlen($popis) > 255) {
         throw new RuntimeException('Popis práva může mít nejvýše 255 znaků.');

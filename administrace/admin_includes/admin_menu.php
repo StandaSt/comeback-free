@@ -9,6 +9,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../common/includes/blok_menu.php';
 
 $adminMenuItems = [
+    ['page' => 'uzivatele', 'label' => 'Uživatelé', 'pravo' => 107],
     ['page' => 'prava_roli', 'label' => 'Globální práva'],
     ['page' => 'editace_prav', 'label' => 'Editovat práva'],
     ['page' => 'individualni_prava', 'label' => 'Individuální práva uživatele'],

@@ -162,6 +162,9 @@ if ($cbIsRestiaTrigger) {
             'zapisy' => (int)($row['zapisy'] ?? 0),
             'aktualizace' => (int)($row['aktualizace'] ?? 0),
             'ignore' => (int)($row['ignore'] ?? 0),
+            'manual_refresh_after_ts' => (($lastFinished = strtotime(trim((string)($row['konec'] ?? '')))) !== false)
+                ? ($lastFinished + 30)
+                : 0,
         ];
     };
 
@@ -182,11 +185,13 @@ if ($cbIsRestiaTrigger) {
     }
 
     $forceRestia = ((string)($_SERVER['HTTP_X_COMEBACK_RESTIA_FORCE'] ?? '') === '1');
+    $manualOrdersRefresh = ((string)($_SERVER['HTTP_X_COMEBACK_RESTIA_ORDERS_REFRESH'] ?? '') === '1');
+    $minimalniIntervalSekund = $manualOrdersRefresh ? 30 : 120;
 
     require_once __DIR__ . '/restia_online_kontrola.php';
     $completed = false;
     if (function_exists('cb_restia_online_kontrola')) {
-        $completed = cb_restia_online_kontrola($forceRestia);
+        $completed = cb_restia_online_kontrola($forceRestia, $minimalniIntervalSekund);
     }
 
     $stateAfter = $readState($db, $stateSql);
@@ -223,6 +228,7 @@ if ($cbIsRestiaState) {
         $res->free();
     }
 
+    $lastFinished = strtotime(trim((string)($row['konec'] ?? '')));
     echo json_encode([
         'ok' => true,
         'active' => ((int)($row['aktivni'] ?? 0) === 1) ? 1 : 0,
@@ -233,6 +239,7 @@ if ($cbIsRestiaState) {
         'zapisy' => (int)($row['zapisy'] ?? 0),
         'aktualizace' => (int)($row['aktualizace'] ?? 0),
         'ignore' => (int)($row['ignore'] ?? 0),
+        'manual_refresh_after_ts' => ($lastFinished !== false) ? ($lastFinished + 30) : 0,
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }

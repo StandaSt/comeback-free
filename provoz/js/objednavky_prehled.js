@@ -2,7 +2,6 @@
 (function () {
   'use strict';
 
-  var refreshStart = 0;
   var loaderTimers = [];
 
   function formatElapsed(ms) {
@@ -68,60 +67,118 @@
     startLoaderTimers();
   }
 
-  function setClientTime(root) {
-    var target = root.querySelector('[data-objednavky-client-time]');
-    if (!(target instanceof HTMLElement)) {
-      return;
-    }
-
-    window.requestAnimationFrame(function () {
-      window.requestAnimationFrame(function () {
-        var ms = refreshStart > 0 ? Math.round(performance.now() - refreshStart) : Math.round(performance.now());
-        target.textContent = String(ms) + ' ms';
-        refreshStart = 0;
-      });
-    });
-  }
-
   function initRoot(root) {
     if (!(root instanceof HTMLElement) || root.getAttribute('data-objednavky-ready') === '1') {
       return;
     }
     root.setAttribute('data-objednavky-ready', '1');
+  }
 
-    setClientTime(root);
-
-    var form = root.querySelector('[data-objednavky-filter-form="1"]');
-    if (!(form instanceof HTMLFormElement)) {
+  function bindRestiaRefresh(scope) {
+    var root = scope instanceof HTMLElement ? scope : document;
+    var button = root.querySelector('[data-objednavky-restia-refresh]');
+    if (!(button instanceof HTMLButtonElement) || button.getAttribute('data-objednavky-restia-bound') === '1') {
       return;
     }
+    button.setAttribute('data-objednavky-restia-bound', '1');
 
-    var timer = 0;
-    Array.prototype.slice.call(form.querySelectorAll('.provoz_objednavky_filter')).forEach(function (input) {
-      input.addEventListener('input', function () {
-        window.clearTimeout(timer);
-        timer = window.setTimeout(function () {
-          startLoaderForRoot(root);
-          if (typeof form.requestSubmit === 'function') {
-            form.requestSubmit();
-          } else {
-            form.submit();
-          }
-        }, 650);
-      });
-    });
+    function setButtonReady() {
+      button.disabled = false;
+      button.classList.remove('is-loading');
+      button.removeAttribute('aria-disabled');
+      button.textContent = 'Aktualizace objednávek';
+      button.title = 'Aktualizovat objednávky z Restie';
+    }
 
-    var perForm = root.querySelector('[data-objednavky-per-form="1"]');
-    if (perForm instanceof HTMLFormElement) {
-      perForm.addEventListener('submit', function () {
-        startLoaderForRoot(root);
-      });
-      Array.prototype.slice.call(perForm.querySelectorAll('select')).forEach(function (select) {
-        select.addEventListener('change', function () {
-          startLoaderForRoot(root);
-        });
+    function setButtonLocked(text, title) {
+      button.disabled = true;
+      button.setAttribute('aria-disabled', 'true');
+      button.textContent = text;
+      button.title = title;
+    }
+
+    function syncRefreshState() {
+      if (!window.CB_RESTIA || typeof window.CB_RESTIA.fetchState !== 'function' || !button.isConnected) {
+        return;
+      }
+      window.CB_RESTIA.fetchState().then(function (state) {
+        if (!button.isConnected) {
+          return;
+        }
+        if (Number(state && state.active || 0) === 1) {
+          setButtonLocked('Aktualizace objednávek (probíhá)', 'Aktualizace Restie právě běží.');
+          window.setTimeout(syncRefreshState, 1000);
+          return;
+        }
+
+        var refreshAfter = Number(state && state.manual_refresh_after_ts || 0);
+        var remaining = refreshAfter - Math.floor(Date.now() / 1000);
+        if (remaining <= 0) {
+          setButtonReady();
+          return;
+        }
+
+        setButtonLocked('Aktualizace objednávek (možno za ' + remaining + ' s.)', 'Aktualizace bude možná za ' + remaining + ' s.');
+        window.setTimeout(syncRefreshState, 1000);
+      }).catch(function () {
+        if (button.isConnected) {
+          setButtonReady();
+        }
       });
     }
+
+    syncRefreshState();
+
+    button.addEventListener('click', function () {
+      if (button.disabled) {
+        return;
+      }
+      if (!window.CB_RESTIA || typeof window.CB_RESTIA.run !== 'function') {
+        window.alert('Aktualizace Restie není dostupná.');
+        return;
+      }
+
+      button.disabled = true;
+      button.classList.add('is-loading');
+      var originalText = button.textContent;
+      button.textContent = 'Aktualizuji…';
+      var pageBusy = window.CB_PAGE_BUSY && typeof window.CB_PAGE_BUSY.start === 'function' && typeof window.CB_PAGE_BUSY.stop === 'function'
+        ? window.CB_PAGE_BUSY
+        : null;
+      var pageBusyHandle = pageBusy
+        ? pageBusy.start('Aktualizuji objednávky ...', 'Načítám nová data Restie')
+        : null;
+
+      window.CB_RESTIA.run({
+        moduleName: 'provoz',
+        manualOrdersRefresh: true
+      }).then(function () {
+        var params = new URLSearchParams();
+        params.set('page', 'objednavky');
+        var form = document.querySelector('[data-objednavky-prehled="1"] form[method="get"]');
+        if (form instanceof HTMLFormElement) {
+          new FormData(form).forEach(function (value, key) {
+            if (key !== 'm') {
+              params.set(key, String(value));
+            }
+          });
+        }
+
+        if (typeof window.CB_LOAD_MODULE === 'function') {
+          window.CB_LOAD_MODULE('provoz', false, params);
+          return;
+        }
+        window.location.assign('index.php?m=provoz&' + params.toString());
+      }).catch(function (error) {
+        window.alert(error && error.message ? error.message : 'Aktualizace Restie selhala.');
+        button.textContent = originalText;
+        syncRefreshState();
+      }).finally(function () {
+        if (pageBusy) {
+          pageBusy.stop(pageBusyHandle);
+        }
+      });
+    });
   }
 
   function initAll(scope) {
@@ -130,10 +187,10 @@
     if (rootScope instanceof HTMLElement && rootScope.matches('[data-objednavky-prehled="1"]')) {
       initRoot(rootScope);
     }
+    bindRestiaRefresh(document);
   }
 
   document.addEventListener('cb:gn-changed', function () {
-    refreshStart = performance.now();
     startLoaderTimers();
   });
 

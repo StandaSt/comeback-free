@@ -15,6 +15,59 @@ if (!function_exists('cb_session_client_fingerprint')) {
     }
 }
 
+if (!function_exists('cb_session_multiple_logins_allowed')) {
+    function cb_session_multiple_logins_allowed(): bool
+    {
+        if (!function_exists('cb_pravo_ma')) {
+            return false;
+        }
+
+        try {
+            return cb_pravo_ma(108);
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+}
+
+if (!function_exists('cb_session_login_is_current')) {
+    /**
+     * Overi, ze login v session je stale aktivni a u bezneho usera take posledni.
+     */
+    function cb_session_login_is_current(): bool
+    {
+        $user = $_SESSION['cb_user'] ?? null;
+        $idUser = is_array($user) ? (int)($user['id_user'] ?? 0) : 0;
+        $idLogin = (int)($_SESSION['cb_id_login'] ?? 0);
+        if ($idUser <= 0 || $idLogin <= 0 || !function_exists('db')) {
+            return false;
+        }
+
+        try {
+            $conn = db();
+            if (cb_session_multiple_logins_allowed()) {
+                $stmt = $conn->prepare(
+                    'SELECT id_login FROM user_login WHERE id_login = ? AND id_user = ? AND akce = 1 AND duvod = 2 LIMIT 1'
+                );
+                $stmt->bind_param('ii', $idLogin, $idUser);
+            } else {
+                $stmt = $conn->prepare(
+                    'SELECT id_login FROM user_login WHERE id_user = ? AND akce = 1 AND duvod = 2 ORDER BY kdy DESC, id_login DESC LIMIT 1'
+                );
+                $stmt->bind_param('i', $idUser);
+            }
+
+            $stmt->execute();
+            $row = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            return is_array($row) && (int)($row['id_login'] ?? 0) === $idLogin;
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+}
+
 if (!function_exists('cb_session_validate_after_login')) {
     /**
      * Overi, ze prihlasena session porad patri stejnemu klientovi a neni prosla.
@@ -55,7 +108,7 @@ if (!function_exists('cb_session_validate_after_login')) {
             return false;
         }
 
-        return true;
+        return cb_session_login_is_current();
     }
 }
 

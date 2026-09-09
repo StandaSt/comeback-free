@@ -11,8 +11,9 @@ if (isset($_GET['action']) && (string)$_GET['action'] === 'logout') {
     $idUser = 0;
     if (is_array($cbUser) && !empty($cbUser['id_user'])) {
         $idUser = (int)$cbUser['id_user'];
+        $idLogin = (int)($_SESSION['cb_id_login'] ?? 0);
         $conn = db();
-        cb_db_clear_online_login_flags($conn, $idUser);
+        cb_db_clear_online_login_flags($conn, $idUser, $idLogin);
         cb_db_insert_login_event($conn, $idUser, 0, $cbLogoutReason);
     }
 

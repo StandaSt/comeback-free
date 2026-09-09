@@ -7,6 +7,11 @@ function hr_post_zamestnanec_overit(mysqli $db): void
 {
     $idPerson = (int)($_POST['id_person'] ?? 0);
     try {
+        $idUser = hr_current_user_id();
+        if (!cb_pravo_ma(307)) {
+            throw new RuntimeException('Nemáte právo upravit zaměstnance.');
+        }
+        cb_firemni_pristup_vyzaduj_osobu($db, $idUser, $idPerson);
         $stmt = $db->prepare('UPDATE hr_person SET overen = 1 WHERE id_person = ? AND aktivni = 1 AND overen = 0');
         $stmt->bind_param('i', $idPerson);
         $stmt->execute();

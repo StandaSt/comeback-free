@@ -5,6 +5,55 @@ declare(strict_types=1);
  * DB operace pro historii a ukladani akci u verejneho dotazniku.
  */
 
+/**
+ * Zapise kazde otevreni detailu VD do jeho domenove historie.
+ */
+function hr_zapis_vd_otevreni(mysqli $db, int $idVd, int $idUser): bool
+{
+    if ($idVd <= 0 || $idUser <= 0) {
+        return false;
+    }
+
+    try {
+        $stmt = $db->prepare('
+            SELECT v.id_vd_akce_vysledek
+            FROM hr_cis_vd_akce_vysledek v
+            INNER JOIN hr_cis_vd_akce_typ t
+                ON t.id_vd_akce_typ = v.id_vd_akce_typ
+               AND t.aktivni = 1
+            WHERE t.id_vd_akce_typ = 2
+            ORDER BY v.id_vd_akce_vysledek ASC
+            LIMIT 1
+        ');
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        $idVysledek = is_array($row) ? (int)($row['id_vd_akce_vysledek'] ?? 0) : 0;
+        if ($idVysledek <= 0) {
+            error_log('HR: Pro akci Otevření VD chybí výsledek v hr_cis_vd_akce_vysledek.');
+            return false;
+        }
+
+        $stmt = $db->prepare('
+            INSERT INTO hr_vd_akce
+                (id_vd, id_vd_akce_vysledek, id_user_zadal)
+            SELECT vd.id_vd, ?, ?
+            FROM hr_vd vd
+            WHERE vd.id_vd = ?
+              AND vd.aktivni = 1
+        ');
+        $stmt->bind_param('iii', $idVysledek, $idUser, $idVd);
+        $stmt->execute();
+        $ulozeno = $stmt->affected_rows === 1;
+        $stmt->close();
+
+        return $ulozeno;
+    } catch (Throwable $e) {
+        error_log('HR: Zápis otevření VD selhal: ' . $e->getMessage());
+        return false;
+    }
+}
+
 function hr_nacti_vd_akce(mysqli $db, int $idVd): array
 {
     if ($idVd <= 0) {
@@ -45,6 +94,167 @@ function hr_nacti_vd_akce(mysqli $db, int $idVd): array
         ];
     }
     $stmt->close();
+
+    $stmt = $db->prepare('
+        SELECT odeslano
+        FROM hr_vd
+        WHERE id_vd = ?
+        LIMIT 1
+    ');
+    $stmt->bind_param('i', $idVd);
+    $stmt->execute();
+    $vd = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if (is_array($vd) && trim((string)($vd['odeslano'] ?? '')) !== '') {
+        $rows[] = [
+            'id_vd_akce' => 0,
+            'akce_kdy' => (string)$vd['odeslano'],
+            'termin_date' => null,
+            'termin_time' => null,
+            'poznamka' => '-',
+            'vysledek' => 'Přijat do IS',
+            'akce_typ_nazev' => 'Veřejný dotazník',
+            'zadal_label' => 'Systém',
+        ];
+    }
+
+    $stmt = $db->prepare('
+        SELECT pouzito
+        FROM hr_vd_token
+        WHERE id_vd = ?
+          AND pouzito IS NOT NULL
+        ORDER BY pouzito ASC, id_vd_token ASC
+    ');
+    $stmt->bind_param('i', $idVd);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
+        $rows[] = [
+            'id_vd_akce' => 0,
+            'akce_kdy' => (string)$row['pouzito'],
+            'termin_date' => null,
+            'termin_time' => null,
+            'poznamka' => '-',
+            'vysledek' => 'Potvrzeno uchazečem',
+            'akce_typ_nazev' => 'Potvrzení e-mailu',
+            'zadal_label' => 'Systém',
+        ];
+    }
+    $stmt->close();
+
+    $stmt = $db->prepare('
+        SELECT id_nd, odeslano, vyplneno
+        FROM hr_nd
+        WHERE id_vd = ?
+          AND aktivni = 1
+        ORDER BY id_nd ASC
+    ');
+    $stmt->bind_param('i', $idVd);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
+        if (trim((string)($row['odeslano'] ?? '')) !== '') {
+            $rows[] = [
+                'id_vd_akce' => 0,
+                'akce_kdy' => (string)$row['odeslano'],
+                'termin_date' => null,
+                'termin_time' => null,
+                'poznamka' => '-',
+                'vysledek' => 'Odeslán uchazeči',
+                'akce_typ_nazev' => 'Nástupní dotazník',
+                'zadal_label' => 'Systém',
+            ];
+        }
+        if (trim((string)($row['vyplneno'] ?? '')) !== '') {
+            $rows[] = [
+                'id_vd_akce' => 0,
+                'akce_kdy' => (string)$row['vyplneno'],
+                'termin_date' => null,
+                'termin_time' => null,
+                'poznamka' => '-',
+                'vysledek' => 'Přijat do IS',
+                'akce_typ_nazev' => 'Nástupní dotazník',
+                'zadal_label' => 'Systém',
+            ];
+        }
+    }
+    $stmt->close();
+
+    $stmt = $db->prepare('
+        SELECT
+            d.id_dokument,
+            d.nazev,
+            dt.nazev AS typ_nazev,
+            d.vytvoreno,
+            d.podpis_odeslano,
+            d.podpis_podepsano,
+            u.jmeno,
+            u.prijmeni
+        FROM hr_dokument d
+        INNER JOIN hr_cis_dokument_typ dt
+            ON dt.id_dokument_typ = d.id_dokument_typ
+        LEFT JOIN user u
+            ON u.id_user = d.id_user_zadal
+        WHERE d.id_vd = ?
+          AND d.platny = 1
+        ORDER BY d.vytvoreno ASC, d.id_dokument ASC
+    ');
+    $stmt->bind_param('i', $idVd);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
+        $zadal = trim((string)($row['prijmeni'] ?? '') . ' ' . (string)($row['jmeno'] ?? ''));
+        $nazev = trim((string)($row['nazev'] ?? ''));
+        $typ = trim((string)($row['typ_nazev'] ?? ''));
+        $detailDokumentu = $nazev !== '' ? $nazev : ($typ !== '' ? $typ : 'Dokument');
+        if (trim((string)($row['vytvoreno'] ?? '')) !== '') {
+            $rows[] = [
+                'id_vd_akce' => 0,
+                'akce_kdy' => (string)$row['vytvoreno'],
+                'termin_date' => null,
+                'termin_time' => null,
+                'poznamka' => $detailDokumentu,
+                'vysledek' => 'Vytvořen',
+                'akce_typ_nazev' => $typ !== '' ? $typ : 'Dokument',
+                'zadal_label' => $zadal !== '' ? $zadal : 'Systém',
+            ];
+        }
+        if (trim((string)($row['podpis_odeslano'] ?? '')) !== '') {
+            $rows[] = [
+                'id_vd_akce' => 0,
+                'akce_kdy' => (string)$row['podpis_odeslano'],
+                'termin_date' => null,
+                'termin_time' => null,
+                'poznamka' => $detailDokumentu,
+                'vysledek' => 'Odeslán k podpisu',
+                'akce_typ_nazev' => 'Podpis dokumentu',
+                'zadal_label' => 'Systém',
+            ];
+        }
+        if (trim((string)($row['podpis_podepsano'] ?? '')) !== '') {
+            $rows[] = [
+                'id_vd_akce' => 0,
+                'akce_kdy' => (string)$row['podpis_podepsano'],
+                'termin_date' => null,
+                'termin_time' => null,
+                'poznamka' => $detailDokumentu,
+                'vysledek' => 'Podepsán',
+                'akce_typ_nazev' => 'Podpis dokumentu',
+                'zadal_label' => 'Systém',
+            ];
+        }
+    }
+    $stmt->close();
+
+    usort($rows, static function (array $a, array $b): int {
+        $casA = strtotime((string)($a['akce_kdy'] ?? '')) ?: 0;
+        $casB = strtotime((string)($b['akce_kdy'] ?? '')) ?: 0;
+        if ($casA !== $casB) {
+            return $casB <=> $casA;
+        }
+
+        return (int)($b['id_vd_akce'] ?? 0) <=> (int)($a['id_vd_akce'] ?? 0);
+    });
 
     return $rows;
 }

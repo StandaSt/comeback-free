@@ -74,6 +74,22 @@ if ($userRole === '') {
 }
 $db = db();
 $hrEmployeeHeader = null;
+$cbHrIdUser = is_array($cbUser) ? (int)($cbUser['id_user'] ?? 0) : 0;
+if (in_array($page, ['zamestnanci', 'zamestnanec'], true) && !cb_pravo_ma(306)) {
+    http_response_code(403);
+    require __DIR__ . '/hr_includes/pripravujeme.php';
+    exit;
+}
+if ($page === 'novy_zamestnanec' && !cb_pravo_ma(305)) {
+    http_response_code(403);
+    require __DIR__ . '/hr_includes/pripravujeme.php';
+    exit;
+}
+if ($page === 'zamestnanec' && (int)($_GET['id'] ?? 0) > 0 && !cb_firemni_pristup_muze_osobu($db, $cbHrIdUser, (int)$_GET['id'])) {
+    http_response_code(403);
+    require __DIR__ . '/hr_includes/pripravujeme.php';
+    exit;
+}
 if ($page === 'zamestnanec' && (int)($_GET['id'] ?? 0) > 0) {
     $hrEmployeeHeader = hr_fetch_employee($db, (int)$_GET['id']);
 }
@@ -147,7 +163,7 @@ $cbHrUsesPpRenderer = is_array($cbHrPageDefinition['blocks'] ?? null) && $cbHrPa
         <?php endif; ?>
         <?php if ($isNaborDetail && isset($vdHeaderDetail) && is_array($vdHeaderDetail)): ?>
             <div class="pp_header_control hr_vd_header_actions">
-                <span class="hr_muted">VD č. <?= h((string)$vdHeaderDetail['id_vd']) ?> - <strong class="hr_vd_header_status"><?= h((string)$vdHeaderDetail['stav_nazev']) ?></strong></span>
+                <span class="hr_muted">VD č. <?= h((string)$vdHeaderDetail['id_vd']) ?> - <strong class="hr_vd_header_status"><?= h((string)$vdHeaderDetail['stav_nazev']) ?><?php if ((int)$vdHeaderDetail['id_vd_stav'] === HR_VD_STAV_POHOVOR_DOMLUVEN && trim((string)($vdHeaderDetail['pohovor_termin'] ?? '')) !== ''): ?>, <?= h(date('j. n. Y H:i', strtotime((string)$vdHeaderDetail['pohovor_termin']))) ?><?php endif; ?></strong></span>
                 <a class="hr_vd_close_detail" href="<?= h(cb_root_url('index.php?m=hr&page=nabor')) ?>" aria-label="Zavřít detail" title="Zavřít detail">×</a>
             </div>
         <?php endif; ?>

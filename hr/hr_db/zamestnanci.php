@@ -11,6 +11,13 @@ declare(strict_types=1);
 function hr_fetch_employees(mysqli $db, int $limit = 100): array
 {
     $limit = max(1, min($limit, 500));
+    $cbUser = $_SESSION['cb_user'] ?? [];
+    $idUser = is_array($cbUser) ? (int)($cbUser['id_user'] ?? 0) : 0;
+    $allowedFirmy = cb_firemni_pristup_firmy($db, $idUser);
+    if ($allowedFirmy === []) {
+        return [];
+    }
+    $allowedFirmySql = implode(',', array_map('intval', $allowedFirmy));
     $sql = "
         SELECT
             p.id_person,
@@ -53,6 +60,7 @@ function hr_fetch_employees(mysqli $db, int $limit = 100): array
         LEFT JOIN cis_slot cs
             ON cs.id_slot = pz.id_slot
         WHERE p.aktivni = 1
+          AND p.id_firma IN ({$allowedFirmySql})
         ORDER BY p.id_person DESC
         LIMIT ?
     ";
@@ -180,7 +188,11 @@ function hr_fetch_employee_list(mysqli $db): array
             ON pz.id_person = p.id_person
     ";
 
-    $where = [];
+    $cbUser = $_SESSION['cb_user'] ?? [];
+    $idUser = is_array($cbUser) ? (int)($cbUser['id_user'] ?? 0) : 0;
+    $allowedFirmy = cb_firemni_pristup_firmy($db, $idUser);
+    $allowedFirmySql = $allowedFirmy === [] ? '0' : implode(',', array_map('intval', $allowedFirmy));
+    $where = ['p.id_firma IN (' . $allowedFirmySql . ')'];
     $filterSqlMap = [
         'id' => 'CAST(p.id_person AS CHAR)',
         'zamestnanec' => "TRIM(CONCAT(COALESCE(ou.prijmeni, ''), ' ', COALESCE(ou.jmeno, ''), ' ', COALESCE(ou.druhe_jmeno, '')))",
@@ -258,9 +270,9 @@ function hr_fetch_employee_list(mysqli $db): array
     }
 
     $optionQueries = [
-        'zarazeni' => "SELECT DISTINCT cs.slot AS value FROM hr_zarazeni pz INNER JOIN cis_slot cs ON cs.id_slot = pz.id_slot WHERE pz.platny = 1 AND cs.slot <> '' ORDER BY cs.slot",
-        'pracoviste' => "SELECT DISTINCT pob.nazev AS value FROM hr_pracoviste pp INNER JOIN pobocka pob ON pob.id_pob = pp.id_pob WHERE pp.platny = 1 AND pob.nazev <> '' ORDER BY pob.nazev",
-        'vztah' => "SELECT DISTINCT pvt.nazev AS value FROM hr_pracovni_vztah pv INNER JOIN hr_cis_pracovni_vztah_typ pvt ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ WHERE pv.platny = 1 AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE()) AND pvt.nazev <> '' ORDER BY pvt.nazev",
+        'zarazeni' => "SELECT DISTINCT cs.slot AS value FROM hr_zarazeni pz INNER JOIN hr_person p ON p.id_person = pz.id_person INNER JOIN cis_slot cs ON cs.id_slot = pz.id_slot WHERE pz.platny = 1 AND p.id_firma IN ({$allowedFirmySql}) AND cs.slot <> '' ORDER BY cs.slot",
+        'pracoviste' => "SELECT DISTINCT pob.nazev AS value FROM hr_pracoviste pp INNER JOIN hr_person p ON p.id_person = pp.id_person INNER JOIN pobocka pob ON pob.id_pob = pp.id_pob WHERE pp.platny = 1 AND p.id_firma IN ({$allowedFirmySql}) AND pob.nazev <> '' ORDER BY pob.nazev",
+        'vztah' => "SELECT DISTINCT pvt.nazev AS value FROM hr_pracovni_vztah pv INNER JOIN hr_person p ON p.id_person = pv.id_person INNER JOIN hr_cis_pracovni_vztah_typ pvt ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ WHERE pv.platny = 1 AND p.id_firma IN ({$allowedFirmySql}) AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE()) AND pvt.nazev <> '' ORDER BY pvt.nazev",
     ];
     $filterOptions = [];
     foreach ($optionQueries as $key => $sql) {
@@ -495,6 +507,11 @@ function hr_fetch_employee_work_benefit_ids(mysqli $db, int $idPracovniVztah): a
  */
 function hr_fetch_employee(mysqli $db, int $id): ?array
 {
+    $cbUser = $_SESSION['cb_user'] ?? [];
+    $idUser = is_array($cbUser) ? (int)($cbUser['id_user'] ?? 0) : 0;
+    if (!cb_firemni_pristup_muze_osobu($db, $idUser, $id)) {
+        return null;
+    }
     $sql = "
         SELECT
             p.id_person,
@@ -582,6 +599,7 @@ function hr_fetch_employee_edit_data(mysqli $db, int $idPerson): array
         'adresa_dorucovaci' => 'SELECT ulice, cp, mesto, psc, stat FROM hr_adresa WHERE id_person = ? AND typ = 1 AND platny = 1 ORDER BY id_adresa DESC LIMIT 1',
         'nouzovy_kontakt' => 'SELECT jmeno, vztah, telefon, email FROM hr_nouzovy_kontakt WHERE id_person = ? AND platny = 1 AND hlavni = 1 ORDER BY id_nouzovy_kontakt DESC LIMIT 1',
         'bankovni_ucet' => 'SELECT cislo_uctu, kod_banky, iban FROM hr_bankovni_ucet WHERE id_person = ? AND platny = 1 ORDER BY zmena DESC, id_bankovni_ucet DESC LIMIT 1',
+        'user_role' => 'SELECT ur.id_role FROM hr_person p INNER JOIN user_role ur ON ur.id_user = p.id_user WHERE p.id_person = ? AND ur.id_role IN (3, 5, 7, 9) ORDER BY FIELD(ur.id_role, 3, 5, 7, 9) LIMIT 1',
     ];
     $data = [];
     foreach ($queries as $key => $sql) {

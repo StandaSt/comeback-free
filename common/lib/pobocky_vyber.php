@@ -5,6 +5,8 @@
  */
 declare(strict_types=1);
 
+require_once __DIR__ . '/../db/db_user_pobocka.php';
+
 if (!function_exists('cb_pobocky_sanitize_ids')) {
     /**
      * Normalizuje libovolne hodnoty na serazeny seznam kladnych ID pobocek.
@@ -87,39 +89,20 @@ if (!function_exists('cb_pobocky_get_allowed_rows_for_user')) {
             return [];
         }
 
-        $conn = db();
-        $stmt = $conn->prepare('
-            SELECT p.id_pob, p.nazev, p.oblast
-            FROM user_pobocka up
-            INNER JOIN pobocka p ON p.id_pob = up.id_pob
-            WHERE up.id_user = ?
-            ORDER BY p.nazev ASC
-        ');
-        if ($stmt === false) {
-            throw new RuntimeException('Nepodarilo se pripravit dotaz na povolene pobocky uzivatele.');
-        }
-
-        $stmt->bind_param('i', $idUser);
-        $stmt->execute();
-        $res = $stmt->get_result();
         $rows = [];
-        if ($res instanceof mysqli_result) {
-            while ($row = $res->fetch_assoc()) {
-                $id = (int)($row['id_pob'] ?? 0);
-                $nazev = trim((string)($row['nazev'] ?? ''));
-                if ($id <= 0 || $nazev === '') {
-                    continue;
-                }
-                $oblast = trim((string)($row['oblast'] ?? ''));
-                $rows[] = [
-                    'id_pob' => $id,
-                    'nazev' => $nazev,
-                    'oblast' => $oblast !== '' ? $oblast : 'Nezarazeno',
-                ];
+        foreach (cb_db_user_pobocky(db(), $idUser) as $row) {
+            $id = (int)($row['id_pob'] ?? 0);
+            $nazev = trim((string)($row['nazev'] ?? ''));
+            if ($id <= 0 || $nazev === '') {
+                continue;
             }
-            $res->close();
+            $oblast = trim((string)($row['oblast'] ?? ''));
+            $rows[] = [
+                'id_pob' => $id,
+                'nazev' => $nazev,
+                'oblast' => $oblast !== '' ? $oblast : 'Nezarazeno',
+            ];
         }
-        $stmt->close();
 
         return $rows;
     }

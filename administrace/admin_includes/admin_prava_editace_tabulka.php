@@ -41,7 +41,7 @@ function cb_admin_prava_editace_tabulka_html(array $rights): string
                             <input
                                 type="text"
                                 value="<?= h((string)$right['nazev']) ?>"
-                                maxlength="100"
+                                maxlength="33"
                                 data-admin-pravo-nazev
                             >
                         </td>

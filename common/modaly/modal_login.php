@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Ucel souboru: Zobrazeni prihlasovaciho formulare a predani identity
+ * aktualni push registrace serveru pro rozpoznani registrovaneho mobilu.
+ */
+
 require_once __DIR__ . '/../funkce/last_aktualizace_systemu.php';
 
 cb_last_aktualizace_systemu();
@@ -19,7 +24,6 @@ unset($_SESSION['cb_flash']);
       </div>
       <div>
         <p class="modal-title">Vstup do<br>IS Comeback</p>
-        <p class="modal-sub">Použijte přihlašovací údaje ze systému Směny.</p>
       </div>
     </div>
 
@@ -46,6 +50,7 @@ unset($_SESSION['cb_flash']);
                required<?= $loginDisabled ?>>
       </div>
       <input type="hidden" name="module" value="provoz">
+      <input type="hidden" name="device_endpoint" id="cbDeviceEndpoint" value="">
 
       <div class="modal-actions">
         <button class="modal-btn primary" type="submit"<?= $loginDisabled ?>>
@@ -64,11 +69,49 @@ unset($_SESSION['cb_flash']);
 <script>
 (function(){
   'use strict';
+
+  /* Ucel funkce: Pripravi identitu push registrace pred povolenim prihlaseni. */
   var form = document.getElementById('cbLoginForm');
+  var endpointInput = document.getElementById('cbDeviceEndpoint');
   if (!form) return;
 
+  var button = form.querySelector('button[type="submit"]');
+  var loginPovolen = button instanceof HTMLButtonElement && !button.disabled;
+  if (loginPovolen) {
+    button.disabled = true;
+    button.classList.add('is-waiting');
+  }
+
+  var pripravaZarizeni = Promise.resolve();
+  if ('serviceWorker' in navigator && 'PushManager' in window && endpointInput instanceof HTMLInputElement) {
+    pripravaZarizeni = navigator.serviceWorker
+      .getRegistration(<?= json_encode(cb_root_url(''), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>)
+      .then(function(registrace){
+        /* Ucel funkce: Nacte existujici subscription bez vytvareni nove. */
+        return registrace ? registrace.pushManager.getSubscription() : null;
+      })
+      .then(function(subscription){
+        /* Ucel funkce: Preda serveru pouze endpoint aktualni subscription. */
+        if (subscription && typeof subscription.endpoint === 'string') {
+          endpointInput.value = subscription.endpoint;
+        }
+      })
+      .catch(function(){
+        /* Ucel funkce: Pri nedostupne subscription zachova standardni 2FA tok. */
+        endpointInput.value = '';
+      });
+  }
+
+  pripravaZarizeni.finally(function(){
+    /* Ucel funkce: Povoli nativni prihlaseni po priprave identity zarizeni. */
+    if (loginPovolen && button instanceof HTMLButtonElement) {
+      button.disabled = false;
+      button.classList.remove('is-waiting');
+    }
+  });
+
   form.addEventListener('submit', function(){
-    var button = form.querySelector('button[type="submit"]');
+    /* Ucel funkce: Po nativnim odeslani zabrani opakovanemu kliknuti. */
     if (button instanceof HTMLButtonElement) {
       button.disabled = true;
       button.classList.add('is-waiting');

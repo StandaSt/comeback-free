@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+/* Jednotná obsluha filtrů je provoz/js/filtry.js. */
+
 if (!function_exists('hr_employee_list_url')) {
     function hr_employee_list_url(array $params): string
     {
@@ -38,34 +40,32 @@ $lastRow = (int)$employeeList['last_row'];
 $filterOptions = $employeeList['filter_options'];
 ?>
 <section class="hr_panel">
-    <div class="hr_panel_header">
+    <form class="hr_employee_list_filter_form" method="get" action="<?= h(cb_root_url('index.php')) ?>">
+        <div class="hr_panel_header">
         <div>
             <h2 class="hr_panel_title">Seznam zaměstnanců</h2>
-            <p class="hr_muted"><?= h((string)$totalRows) ?> záznamů</p>
+            <p class="hr_muted filter-summary"><?= h((string)$totalRows) ?> záznamů</p>
         </div>
-        <a class="hr_primary_button hr_panel_button_primary" href="<?= h(cb_root_url('index.php?m=hr&page=novy_zamestnanec')) ?>">+ Nový zaměstnanec</a>
-    </div>
-
-    <form class="hr_employee_list_filter_form" data-hr-employee-filter-form method="get" action="<?= h(cb_root_url('index.php')) ?>">
+        <a class="hr_primary_button hr_panel_button_primary" data-cb-filter-ignore="1" href="<?= h(cb_root_url('index.php?m=hr&page=novy_zamestnanec')) ?>">+ Nový zaměstnanec</a>
+        </div>
         <input type="hidden" name="m" value="hr">
         <input type="hidden" name="page" value="zamestnanci">
         <input type="hidden" name="hr_emp_sort" value="<?= h($sort) ?>">
         <input type="hidden" name="hr_emp_dir" value="<?= h($dir) ?>">
-        <input type="hidden" name="hr_emp_per" value="<?= h((string)$perPage) ?>">
         <input type="hidden" name="hr_emp_p" value="1">
-        <div class="hr_table_wrap">
+        <div class="hr_table_wrap table-wrap">
             <table class="hr_table hr_employee_list_table">
                 <thead>
                     <tr class="hr_employee_list_filter_row">
-                        <th class="hr_table_cell" style="width: 6ch;"><input class="hr_employee_list_filter" style="width: 6ch; min-width: 6ch;" type="search" name="hr_emp_f[id]" value="<?= h($filters['id']) ?>" aria-label="Filtrovat ID"></th>
-                        <th class="hr_table_cell"><input class="hr_employee_list_filter" type="search" name="hr_emp_f[zamestnanec]" value="<?= h($filters['zamestnanec']) ?>" aria-label="Filtrovat zaměstnance"></th>
-                        <th class="hr_table_cell"><select class="hr_employee_list_filter" name="hr_emp_f[zarazeni]" aria-label="Filtrovat zařazení"><option value="">Vše</option><?php foreach ($filterOptions['zarazeni'] as $option): ?><option value="<?= h($option) ?>" <?= $option === $filters['zarazeni'] ? 'selected' : '' ?>><?= h($option) ?></option><?php endforeach; ?></select></th>
-                        <th class="hr_table_cell"><select class="hr_employee_list_filter" name="hr_emp_f[pracoviste]" aria-label="Filtrovat pracoviště"><option value="">Vše</option><?php foreach ($filterOptions['pracoviste'] as $option): ?><option value="<?= h($option) ?>" <?= $option === $filters['pracoviste'] ? 'selected' : '' ?>><?= h($option) ?></option><?php endforeach; ?></select></th>
-                        <th class="hr_table_cell"><select class="hr_employee_list_filter" name="hr_emp_f[vztah]" aria-label="Filtrovat typ vztahu"><option value="">Vše</option><?php foreach ($filterOptions['vztah'] as $option): ?><option value="<?= h($option) ?>" <?= $option === $filters['vztah'] ? 'selected' : '' ?>><?= h($option) ?></option><?php endforeach; ?></select></th>
-                        <th class="hr_table_cell"><input class="hr_employee_list_filter hr_employee_list_filter_date" type="search" name="hr_emp_f[nastup]" value="<?= h($filters['nastup']) ?>" aria-label="Filtrovat datum nástupu"></th>
-                        <th class="hr_table_cell"><select class="hr_employee_list_filter" name="hr_emp_f[stav]" aria-label="Filtrovat stav"><option value="aktivni" <?= $filters['stav'] === 'aktivni' ? 'selected' : '' ?>>Aktivní</option><option value="neaktivni" <?= $filters['stav'] === 'neaktivni' ? 'selected' : '' ?>>Neaktivní</option><option value="vse" <?= $filters['stav'] === 'vse' ? 'selected' : '' ?>>Vše</option></select></th>
-                        <th class="hr_table_cell"><select class="hr_employee_list_filter" name="hr_emp_f[overen]" aria-label="Filtrovat ověření"><option value="overeny" <?= $filters['overen'] === 'overeny' ? 'selected' : '' ?>>Ověřený</option><option value="neovereny" <?= $filters['overen'] === 'neovereny' ? 'selected' : '' ?>>Neověřený</option><option value="vse" <?= $filters['overen'] === 'vse' ? 'selected' : '' ?>>Vše</option></select></th>
-                        <th class="hr_table_cell"><select class="hr_employee_list_filter" name="hr_emp_f[kompletni]" aria-label="Filtrovat kompletnost"><option value="kompletni" <?= $filters['kompletni'] === 'kompletni' ? 'selected' : '' ?>>Kompletní</option><option value="nekompletni" <?= $filters['kompletni'] === 'nekompletni' ? 'selected' : '' ?>>Nekompletní</option><option value="vse" <?= $filters['kompletni'] === 'vse' ? 'selected' : '' ?>>Vše</option></select></th>
+                        <th class="hr_table_cell" style="width: 6ch;"><input class="hr_employee_list_filter filter-input" style="width: 6ch; min-width: 6ch;" type="search" name="hr_emp_f[id]" value="<?= h($filters['id']) ?>" aria-label="Filtrovat ID"></th>
+                        <th class="hr_table_cell"><input class="hr_employee_list_filter filter-input" type="search" name="hr_emp_f[zamestnanec]" value="<?= h($filters['zamestnanec']) ?>" aria-label="Filtrovat zaměstnance"></th>
+                        <th class="hr_table_cell"><select class="hr_employee_list_filter filter-input" name="hr_emp_f[zarazeni]" aria-label="Filtrovat zařazení"><option value="">Vše</option><?php foreach ($filterOptions['zarazeni'] as $option): ?><option value="<?= h($option) ?>" <?= $option === $filters['zarazeni'] ? 'selected' : '' ?>><?= h($option) ?></option><?php endforeach; ?></select></th>
+                        <th class="hr_table_cell"><select class="hr_employee_list_filter filter-input" name="hr_emp_f[pracoviste]" aria-label="Filtrovat pracoviště"><option value="">Vše</option><?php foreach ($filterOptions['pracoviste'] as $option): ?><option value="<?= h($option) ?>" <?= $option === $filters['pracoviste'] ? 'selected' : '' ?>><?= h($option) ?></option><?php endforeach; ?></select></th>
+                        <th class="hr_table_cell"><select class="hr_employee_list_filter filter-input" name="hr_emp_f[vztah]" aria-label="Filtrovat typ vztahu"><option value="">Vše</option><?php foreach ($filterOptions['vztah'] as $option): ?><option value="<?= h($option) ?>" <?= $option === $filters['vztah'] ? 'selected' : '' ?>><?= h($option) ?></option><?php endforeach; ?></select></th>
+                        <th class="hr_table_cell"><input class="hr_employee_list_filter hr_employee_list_filter_date filter-input" type="search" name="hr_emp_f[nastup]" value="<?= h($filters['nastup']) ?>" aria-label="Filtrovat datum nástupu"></th>
+                        <th class="hr_table_cell"><select class="hr_employee_list_filter filter-input" name="hr_emp_f[stav]" aria-label="Filtrovat stav"><option value="aktivni" <?= $filters['stav'] === 'aktivni' ? 'selected' : '' ?>>Aktivní</option><option value="neaktivni" <?= $filters['stav'] === 'neaktivni' ? 'selected' : '' ?>>Neaktivní</option><option value="vse" <?= $filters['stav'] === 'vse' ? 'selected' : '' ?>>Vše</option></select></th>
+                        <th class="hr_table_cell"><select class="hr_employee_list_filter filter-input" name="hr_emp_f[overen]" aria-label="Filtrovat ověření"><option value="overeny" <?= $filters['overen'] === 'overeny' ? 'selected' : '' ?>>Ověřený</option><option value="neovereny" <?= $filters['overen'] === 'neovereny' ? 'selected' : '' ?>>Neověřený</option><option value="vse" <?= $filters['overen'] === 'vse' ? 'selected' : '' ?>>Vše</option></select></th>
+                        <th class="hr_table_cell"><select class="hr_employee_list_filter filter-input" name="hr_emp_f[kompletni]" aria-label="Filtrovat kompletnost"><option value="kompletni" <?= $filters['kompletni'] === 'kompletni' ? 'selected' : '' ?>>Kompletní</option><option value="nekompletni" <?= $filters['kompletni'] === 'nekompletni' ? 'selected' : '' ?>>Nekompletní</option><option value="vse" <?= $filters['kompletni'] === 'vse' ? 'selected' : '' ?>>Vše</option></select></th>
                     </tr>
                     <tr>
                         <th class="hr_table_cell hr_table_head" style="width: 6ch;"><?= hr_employee_list_order_link('id', 'ID', $sort, $dir, $activeFilters, $perPage) ?></th>
@@ -95,7 +95,7 @@ $filterOptions = $employeeList['filter_options'];
                             ?>
                             <tr>
                                 <td class="hr_table_cell" style="width: 6ch;"><?= h((string)$employee['id_person']) ?></td>
-                                <td class="hr_table_cell"><a class="hr_table_link" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$employee['id_person']))) ?>"><?= h($employee['cele_jmeno']) ?></a></td>
+                                <td class="hr_table_cell"><a class="hr_table_link" data-cb-filter-ignore="1" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$employee['id_person']))) ?>"><?= h($employee['cele_jmeno']) ?></a></td>
                                 <td class="hr_table_cell"><?= h((string)($employee['zarazeni'] ?? '-')) ?></td>
                                 <td class="hr_table_cell"<?= $hiddenWorkplaces !== [] ? ' title="' . h(implode(', ', $hiddenWorkplaces)) . '"' : '' ?>>
                                     <?php if ($visibleWorkplaces === []): ?>
@@ -116,9 +116,7 @@ $filterOptions = $employeeList['filter_options'];
                 </tbody>
             </table>
         </div>
-    </form>
-
-    <div class="hr_employee_list_pager">
+        <div class="hr_employee_list_pager list-bottom">
         <span><?= h((string)$firstRow) ?>-<?= h((string)$lastRow) ?> / <?= h((string)$totalRows) ?></span>
         <div class="hr_employee_list_pager_links">
             <?php $pagerParams = ['hr_emp_sort' => $sort, 'hr_emp_dir' => $dir, 'hr_emp_per' => $perPage]; if ($activeFilters !== []) { $pagerParams['hr_emp_f'] = $activeFilters; } ?>
@@ -128,14 +126,10 @@ $filterOptions = $employeeList['filter_options'];
             <a class="hr_employee_list_page_link <?= $pageNum >= $totalPages ? 'is-disabled' : '' ?>" href="<?= h(hr_employee_list_url(array_merge($pagerParams, ['hr_emp_p' => min($totalPages, $pageNum + 1)]))) ?>">›</a>
             <a class="hr_employee_list_page_link <?= $pageNum >= $totalPages ? 'is-disabled' : '' ?>" href="<?= h(hr_employee_list_url(array_merge($pagerParams, ['hr_emp_p' => $totalPages]))) ?>">»</a>
         </div>
-        <form class="hr_employee_list_per" data-hr-employee-per-form method="get" action="<?= h(cb_root_url('index.php')) ?>">
-            <input type="hidden" name="m" value="hr">
-            <input type="hidden" name="page" value="zamestnanci">
-            <input type="hidden" name="hr_emp_sort" value="<?= h($sort) ?>">
-            <input type="hidden" name="hr_emp_dir" value="<?= h($dir) ?>">
-            <?php foreach ($activeFilters as $key => $value): ?><input type="hidden" name="hr_emp_f[<?= h($key) ?>]" value="<?= h($value) ?>"><?php endforeach; ?>
+        <div class="hr_employee_list_per">
             <label for="hr_emp_per">Řádků</label>
-            <select id="hr_emp_per" name="hr_emp_per" onchange="this.form.submit()"><?php foreach ($perOptions as $option): ?><option value="<?= h((string)$option) ?>" <?= $option === $perPage ? 'selected' : '' ?>><?= h((string)$option) ?></option><?php endforeach; ?></select>
-        </form>
-    </div>
+            <select id="hr_emp_per" name="hr_emp_per" class="filter-input"><?php foreach ($perOptions as $option): ?><option value="<?= h((string)$option) ?>" <?= $option === $perPage ? 'selected' : '' ?>><?= h((string)$option) ?></option><?php endforeach; ?></select>
+        </div>
+        </div>
+    </form>
 </section>

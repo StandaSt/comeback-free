@@ -6,6 +6,9 @@ declare(strict_types=1);
  * Resi pouze overeni pozvanky, ulozeni lokalniho hesla a pripravu identity.
  */
 
+require_once __DIR__ . '/duveryhodne_zarizeni.php';
+
+/* Nacte lokalniho uzivatele podle jeho id. */
 function cb_prvni_vstup_user(mysqli $db, int $idUser): ?array
 {
     $stmt = $db->prepare('SELECT id_user, jmeno, prijmeni, email, telefon, aktivni, schvalen, heslo_hash FROM user WHERE id_user=? LIMIT 1');
@@ -16,13 +19,14 @@ function cb_prvni_vstup_user(mysqli $db, int $idUser): ?array
     return is_array($row) ? $row : null;
 }
 
-function cb_prvni_vstup_priprav(array $user, bool $obnoveniHesla = false): void
+/* Pripravi kratkou session vyhradne pro prvni vstup. */
+function cb_prvni_vstup_priprav(array $user): void
 {
     $_SESSION['cb_prvni_vstup_user_id'] = (int)$user['id_user'];
     $_SESSION['cb_prvni_vstup_platnost_do'] = time() + 180;
-    $_SESSION['cb_prvni_vstup_obnoveni_hesla'] = $obnoveniHesla ? 1 : 0;
 }
 
+/* Vrati zbyvajici platnost prvniho vstupu v sekundach. */
 function cb_prvni_vstup_zbyva(): int
 {
     $idUser = (int)($_SESSION['cb_prvni_vstup_user_id'] ?? 0);
@@ -31,10 +35,11 @@ function cb_prvni_vstup_zbyva(): int
     if ($idUser > 0 && $zbyva > 0) {
         return $zbyva;
     }
-    unset($_SESSION['cb_prvni_vstup_user_id'], $_SESSION['cb_prvni_vstup_platnost_do'], $_SESSION['cb_prvni_vstup_obnoveni_hesla']);
+    unset($_SESSION['cb_prvni_vstup_user_id'], $_SESSION['cb_prvni_vstup_platnost_do']);
     return 0;
 }
 
+/* Vytvori jednorazovy token prvniho vstupu a ulozi jeho hash. */
 function cb_prvni_vstup_vytvor_token(mysqli $db, int $idUser): string
 {
     $token = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
@@ -49,6 +54,7 @@ function cb_prvni_vstup_vytvor_token(mysqli $db, int $idUser): string
     return $token;
 }
 
+/* Overi jednorazovy token a pripravi session prvniho vstupu. */
 function cb_prvni_vstup_over_token(mysqli $db, string $token): bool
 {
     if (strlen($token) < 40) {
@@ -63,36 +69,14 @@ function cb_prvni_vstup_over_token(mysqli $db, string $token): bool
         return false;
     }
     $user = cb_prvni_vstup_user($db, (int)$row['id_user']);
-    if (!is_array($user) || (int)$user['aktivni'] !== 1) {
+    if (!is_array($user) || (int)$user['aktivni'] !== 1 || trim((string)$user['heslo_hash']) !== '') {
         return false;
     }
-    cb_prvni_vstup_priprav($user, trim((string)$user['heslo_hash']) !== '');
+    cb_prvni_vstup_priprav($user);
     return true;
 }
 
-function cb_prvni_vstup_obnoveni_hesla_odeslat(mysqli $db, string $email): bool
-{
-    if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
-        throw new RuntimeException('Zadejte platný e-mail.');
-    }
-
-    $stmt = $db->prepare('SELECT id_user, jmeno, prijmeni, email FROM user WHERE email=? AND aktivni=1 LIMIT 1');
-    $stmt->bind_param('s', $email);
-    $stmt->execute();
-    $user = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
-    if (!is_array($user)) {
-        return false;
-    }
-
-    $token = cb_prvni_vstup_vytvor_token($db, (int)$user['id_user']);
-    $link = cb_url_abs('?prvni_vstup=' . rawurlencode($token));
-    $name = trim((string)$user['jmeno'] . ' ' . (string)$user['prijmeni']);
-    require_once __DIR__ . '/email_reset_hesla.php';
-    cb_email_reset_hesla_odeslat((string)$user['email'], $name, $link);
-    return true;
-}
-
+/* Dokonci lokalni prihlaseni a vytvori plnohodnotnou session. */
 function cb_prvni_vstup_dokonci_login(mysqli $db, array $user): void
 {
     $idUser = (int)$user['id_user'];
@@ -120,12 +104,13 @@ function cb_prvni_vstup_dokonci_login(mysqli $db, array $user): void
     require_once __DIR__ . '/smeny_graphql.php';
     cb_login_load_settings_to_session($idUser);
     $_SESSION['login_ok'] = 1;
-    unset($_SESSION['cb_auth_ok'], $_SESSION['cb_2fa_token'], $_SESSION['cb_token'], $_SESSION['cb_prvni_vstup_user_id'], $_SESSION['cb_prvni_vstup_platnost_do'], $_SESSION['cb_prvni_vstup_obnoveni_hesla'], $_SESSION['cb_local_login_user_id']);
+    unset($_SESSION['cb_auth_ok'], $_SESSION['cb_2fa_token'], $_SESSION['cb_token'], $_SESSION['cb_prvni_vstup_user_id'], $_SESSION['cb_prvni_vstup_platnost_do'], $_SESSION['cb_local_login_user_id']);
     $_SESSION['cb_timeout_min'] = 720;
     $_SESSION['cb_session_start_ts'] = time();
 }
 
-function cb_lokalni_login_zahaj(mysqli $db, array $user): void
+/* Zahaji lokalni login a vrati prime presmerovani pro overeni na stejnem mobilu. */
+function cb_lokalni_login_zahaj(mysqli $db, array $user, string $deviceEndpoint = ''): ?string
 {
     $idUser = (int)$user['id_user'];
     $_SESSION['cb_user'] = ['id_user' => $idUser, 'name' => (string)$user['jmeno'], 'surname' => (string)$user['prijmeni'], 'email' => (string)$user['email'], 'telefon' => (string)($user['telefon'] ?? ''), 'active' => true, 'approved' => (bool)$user['schvalen'], 'roles' => [], 'sloty' => []];
@@ -138,29 +123,43 @@ function cb_lokalni_login_zahaj(mysqli $db, array $user): void
     if (is_array($row)) { $on2fa = (int)$row['on_2fa']; }
     if ((string)($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL' || $on2fa !== 1) {
         cb_prvni_vstup_dokonci_login($db, $user);
-        return;
+        return null;
     }
-    $stmt = $db->prepare('SELECT id FROM push_zarizeni WHERE id_user=? AND aktivni=1 LIMIT 1');
-    $stmt->bind_param('i', $idUser);
-    $stmt->execute();
-    $stmt->store_result();
-    $hasDevice = $stmt->num_rows > 0;
-    $stmt->close();
-    if (!$hasDevice) { return; }
+
+    $idZarizeni = cb_duveryhodne_zarizeni_aktivni_id($db, $idUser);
+    if ($idZarizeni <= 0) {
+        return null;
+    }
+
+    if (cb_duveryhodne_zarizeni_cookie_id($db, $idUser) === $idZarizeni) {
+        cb_prvni_vstup_dokonci_login($db, $user);
+        $_SESSION['cb_duveryhodne_zarizeni_nacitam'] = 1;
+        return cb_login_url();
+    }
+
+    $idAktualnihoZarizeni = cb_duveryhodne_zarizeni_podle_endpointu($db, $idUser, $deviceEndpoint);
+    $stejneZarizeni = ($idAktualnihoZarizeni === $idZarizeni);
     $token = bin2hex(random_bytes(32));
     $ip = trim((string)($_SERVER['REMOTE_ADDR'] ?? '')) ?: 'UNKNOWN';
     $ua = trim((string)($_SERVER['HTTP_USER_AGENT'] ?? '')) ?: null;
-    $limit = defined('CB_2FA_LIMIT_SEC') ? max(1, (int)CB_2FA_LIMIT_SEC) : 300;
-    $stmt = $db->prepare("INSERT INTO push_login_2fa (id_user, token, stav, ip, prohlizec, vytvoreno, vyprsi, rozhodnuto, id_zarizeni) VALUES (?, ?, 'ceka', ?, ?, NOW(), (NOW() + INTERVAL ? SECOND), NULL, NULL)");
-    $stmt->bind_param('isssi', $idUser, $token, $ip, $ua, $limit);
+    $limit = defined('CB_2FA_LIMIT_SEC') ? max(1, (int)CB_2FA_LIMIT_SEC) : 60;
+    $stmt = $db->prepare("INSERT INTO push_login_2fa (id_user, token, stav, ip, prohlizec, vytvoreno, vyprsi, rozhodnuto, id_zarizeni) VALUES (?, ?, 'ceka', ?, ?, NOW(), (NOW() + INTERVAL ? SECOND), NULL, ?)");
+    $stmt->bind_param('isssii', $idUser, $token, $ip, $ua, $limit, $idZarizeni);
     $stmt->execute();
     $stmt->close();
     $_SESSION['cb_2fa_token'] = $token;
     unset($_SESSION['cb_auth_ok']);
+
+    if ($stejneZarizeni) {
+        return cb_module_url('provoz') . 'mobil/mobil_overeni.php?t=' . rawurlencode($token);
+    }
+
     require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
     cb_push_send_2fa($idUser, $token);
+    return null;
 }
 
+/* Ulozi udaje a heslo zadane pri prvnim vstupu. */
 function cb_prvni_vstup_uloz(mysqli $db, array $post): void
 {
     if (cb_prvni_vstup_zbyva() <= 0) {
@@ -168,17 +167,11 @@ function cb_prvni_vstup_uloz(mysqli $db, array $post): void
     }
     $idUser = (int)($_SESSION['cb_prvni_vstup_user_id'] ?? 0);
     $user = cb_prvni_vstup_user($db, $idUser);
-    $obnoveniHesla = !empty($_SESSION['cb_prvni_vstup_obnoveni_hesla']);
     $jmeno = trim((string)($post['jmeno'] ?? ''));
     $prijmeni = trim((string)($post['prijmeni'] ?? ''));
     $email = trim((string)($post['email'] ?? ''));
     $heslo = (string)($post['heslo'] ?? '');
     $hesloZnovu = (string)($post['heslo_znovu'] ?? '');
-    if ($obnoveniHesla && is_array($user)) {
-        $jmeno = (string)$user['jmeno'];
-        $prijmeni = (string)$user['prijmeni'];
-        $email = (string)$user['email'];
-    }
     if (!is_array($user) || $jmeno === '' || $prijmeni === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
         throw new RuntimeException('Vyplňte celé jméno a platný e-mail.');
     }
@@ -196,12 +189,11 @@ function cb_prvni_vstup_uloz(mysqli $db, array $post): void
     $hash = password_hash($heslo, PASSWORD_DEFAULT);
     $db->begin_transaction();
     try {
-        $whereHeslo = $obnoveniHesla ? 'heslo_hash IS NOT NULL' : 'heslo_hash IS NULL';
-        $stmt = $db->prepare('UPDATE user SET jmeno=?, prijmeni=?, email=?, heslo_hash=? WHERE id_user=? AND ' . $whereHeslo);
+        $stmt = $db->prepare('UPDATE user SET jmeno=?, prijmeni=?, email=?, heslo_hash=? WHERE id_user=? AND heslo_hash IS NULL');
         $stmt->bind_param('ssssi', $jmeno, $prijmeni, $email, $hash, $idUser);
         $stmt->execute();
         if ($stmt->affected_rows !== 1) {
-            throw new RuntimeException($obnoveniHesla ? 'Odkaz pro nastavení nového hesla už není platný.' : 'První vstup už byl dokončen.');
+            throw new RuntimeException('První vstup už byl dokončen.');
         }
         $stmt->close();
         $stmt = $db->prepare('UPDATE user_prvni_vstup_token SET pouzito=NOW() WHERE id_user=? AND pouzito IS NULL AND zruseno IS NULL');

@@ -12,3 +12,7 @@
 Thumbs.db
 .vscode/
 .idea/
+
+# Runtime temporary files
+/common/tmp/*
+!/common/tmp/.htaccess

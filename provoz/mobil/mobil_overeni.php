@@ -1,48 +1,52 @@
 <?php
-// mobil/mobil_overeni.php * Verze: V8 * Aktualizace: 07.03.2026
+// mobil/mobil_overeni.php * Verze: V9 * Aktualizace: 09.09.2026
 declare(strict_types=1);
 
 /*
- * 2FA – schválení přihlášení (mobilní stránka)
+ * 2FA - SCHVALENI PRIHLASENI NA MOBILU
  *
  * URL:
  * - mobil/mobil_overeni.php?t=<token>
  *
- * Co dělá:
- * - načte 2FA požadavek z DB tabulky push_login_2fa podle tokenu
- * - zobrazí informace o pokusu o přihlášení
- * - umožní rozhodnout: ok / ne (jen pokud stav=ceka a nevypršelo)
- * - po povolení ukáže velké potvrzení a po chvíli odejde na prázdnou stránku
- * - po zamítnutí ukáže varování a nabídne zavření okna
+ * Ucel souboru:
+ * - nacist 2FA pozadavek podle tokenu
+ * - zobrazit udaje o prihlaseni a tlacitka pro rozhodnuti
+ * - pri schvaleni ulozit cookie duveryhodneho zarizeni
+ * - pri stejne prihlasovaci session dokoncit login a otevrit IS
  *
- * Pozn.:
- * - toto je stránka pro mobil, NE API pro PC polling (to řeší lib/push_2fa_api.php)
+ * Poznamka:
+ * - polling pocitace resi samostatny common/lib/push_2fa_api.php
  */
 require_once __DIR__ . '/../../common/lib/session_boot.php';
 
 require_once __DIR__ . '/../../common/lib/app.php';
 require_once __DIR__ . '/../../common/lib/system.php';
 require_once __DIR__ . '/../../common/config/secrets.php';
-/* Limit pro odpočet v UI (sekundy). Hodnota je i v DB (vyprsi), UI je jen zobrazení. */
-$limitSecPhp = 300;
+require_once __DIR__ . '/../../common/lib/duveryhodne_zarizeni.php';
+/* Limit pro odpocet v UI. Rozhodujici expirace je ulozena v databazi. */
+$limitSecPhp = 60;
 if (defined('CB_2FA_LIMIT_SEC')) {
     $limitSecPhp = (int)CB_2FA_LIMIT_SEC;
     if ($limitSecPhp <= 0) {
-        $limitSecPhp = 300;
+        $limitSecPhp = 60;
     }
 }
 
 /* Token z URL */
 $token = (string)($_GET['t'] ?? '');
 $token = trim($token);
+$sessionToken = (string)($_SESSION['cb_2fa_token'] ?? '');
+$sameLoginSession = ($token !== '' && $sessionToken !== '' && hash_equals($sessionToken, $token));
+$checkUrl = cb_root_url('common/lib/push_2fa_api.php?check=1');
+$targetUrl = cb_login_target_url();
 
-/* HTML escape (ochrana proti vložení HTML do stránky) */
+/* Bezpecne escapuje text pro HTML vystup. */
 function h1(string $s): string
 {
     return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
-/* Načtení řádku 2FA z DB podle tokenu */
+/* Nacte radek 2FA z databaze podle tokenu. */
 function cb_fetch_2fa(string $token): ?array
 {
     if ($token === '') {
@@ -50,7 +54,7 @@ function cb_fetch_2fa(string $token): ?array
     }
 
     $stmt = db()->prepare('
-        SELECT id, id_user, stav, ip, prohlizec, vytvoreno, vyprsi, TIMESTAMPDIFF(SECOND, NOW(), vyprsi) AS zbyva_sec
+        SELECT id, id_user, stav, ip, prohlizec, vytvoreno, vyprsi, id_zarizeni, TIMESTAMPDIFF(SECOND, NOW(), vyprsi) AS zbyva_sec
         FROM push_login_2fa
         WHERE token=?
         LIMIT 1
@@ -62,7 +66,7 @@ function cb_fetch_2fa(string $token): ?array
     $stmt->bind_param('s', $token);
     $stmt->execute();
 
-    $stmt->bind_result($id, $idUser, $stav, $ip, $prohlizec, $vytvoreno, $vyprsi, $zbyvaSec);
+    $stmt->bind_result($id, $idUser, $stav, $ip, $prohlizec, $vytvoreno, $vyprsi, $idZarizeni, $zbyvaSec);
     $ok = $stmt->fetch();
     $stmt->close();
 
@@ -78,11 +82,12 @@ function cb_fetch_2fa(string $token): ?array
         'prohlizec' => (string)($prohlizec ?? ''),
         'vytvoreno' => (string)$vytvoreno,
         'vyprsi' => (string)$vyprsi,
+        'id_zarizeni' => (int)($idZarizeni ?? 0),
         'zbyva_sec' => (int)$zbyvaSec,
     ];
 }
 
-/* Načtení jména a emailu uživatele */
+/* Nacte jmeno a email uzivatele pro schvalovaci obrazovku. */
 function cb_fetch_user_info(int $idUser): array
 {
     if ($idUser <= 0) {
@@ -117,7 +122,7 @@ function cb_fetch_user_info(int $idUser): array
     ];
 }
 
-/* Zapsání rozhodnutí (ok/ne) do DB – jen když stav=ceka a vyprsi > NOW() */
+/* Zapise rozhodnuti pouze do platne cekajici 2FA vyzvy. */
 function cb_set_2fa_decision(string $token, string $decision): bool
 {
     if ($token === '') {
@@ -140,26 +145,32 @@ function cb_set_2fa_decision(string $token, string $decision): bool
     return $changed;
 }
 
-/* Zpracování POST (klik na tlačítko) */
+/* Zpracuje rozhodnuti odeslane tlacitkem. */
 $didPost = (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST');
 $decision = '';
+$decisionSaved = false;
 
 if ($didPost) {
     $decision = (string)($_POST['decision'] ?? '');
     $decision = trim($decision);
 
     if ($decision === 'ok' || $decision === 'ne') {
-        cb_set_2fa_decision($token, $decision);
+        $decisionSaved = cb_set_2fa_decision($token, $decision);
     }
 }
 
-/* Načti aktuální stav z DB (po případném POSTu) */
+/* Nacte aktualni stav po pripadnem ulozeni rozhodnuti. */
 $row = cb_fetch_2fa($token);
 
 $stav = is_array($row) ? (string)($row['stav'] ?? '') : '';
 $ip = is_array($row) ? (string)($row['ip'] ?? '') : '';
 $zbyvaSec = is_array($row) ? (int)($row['zbyva_sec'] ?? 0) : 0;
 $idUser = is_array($row) ? (int)($row['id_user'] ?? 0) : 0;
+$idZarizeni = is_array($row) ? (int)($row['id_zarizeni'] ?? 0) : 0;
+
+if ($decisionSaved && $decision === 'ok' && $idUser > 0 && $idZarizeni > 0) {
+    cb_duveryhodne_zarizeni_uloz_cookie(db(), $idUser, $idZarizeni);
+}
 
 $userInfo = cb_fetch_user_info($idUser);
 $celeJmeno = (string)($userInfo['cele_jmeno'] ?? '');
@@ -179,7 +190,7 @@ if ($ipDisplay !== '---' && strlen($ipDisplay) > 24) {
     $ipDisplay = substr($ipDisplay, 0, 24) . '...';
 }
 
-/* Čas rozhodnutí */
+/* Pripravi cas rozhodnuti pro text uzivateli. */
 $kdyRozhodnuto = date('j. n. Y \v H:i') . ' hod.';
 
 /* Texty do UI podle stavu */
@@ -190,7 +201,7 @@ if (!is_array($row)) {
     $info = 'Neplatný nebo neznámý požadavek.';
 } else {
     if ($stav === 'ok') {
-        $info = 'Přístup byl povolen';
+        $info = $sameLoginSession ? 'Přístup schválen – vstupuji do IS…' : 'Přístup byl povolen';
     } elseif ($stav === 'ne') {
         $info = 'Zamítl/a jste přihlášení pro uživatele „' . $celeJmeno . '“ dne ' . $kdyRozhodnuto . '.';
     } elseif ($stav === 'exp' || $zbyvaSec <= 0) {
@@ -200,7 +211,7 @@ if (!is_array($row)) {
     }
 }
 
-/* Rozhodování je povolené jen v okně platnosti */
+/* Rozhodovani je povolene jen v okne platnosti. */
 $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
 
 ?>
@@ -332,7 +343,7 @@ $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
             dne <?= h1($kdyRozhodnuto) ?>.
           </p>
         <?php } else { ?>
-          <p class="<?= ($stav === 'ok' ? 'done-big' : 'modal-sub') ?>"><?= h1($info) ?></p>
+          <p class="<?= ($stav === 'ok' ? 'done-big' : 'modal-sub') ?>" id="approvalInfo"><?= h1($info) ?></p>
         <?php } ?>
       </div>
     </div>
@@ -377,6 +388,8 @@ $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
       <div class="modal-spacer"></div>
 
       <button class="modal-btn btn-danger" type="button" id="btnClose">Zavři okno</button>
+    <?php } elseif ($stav === 'ok' && $sameLoginSession) { ?>
+      <button class="modal-btn" type="button" id="btnEnter">Vstoupit do IS</button>
     <?php } else { ?>
       <button class="modal-btn" type="button" id="btnClose">Zavři okno</button>
     <?php } ?>
@@ -385,6 +398,7 @@ $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
 
 <script>
 (function(){
+  /* Ucel funkce: Ridit schvaleni 2FA na mobilu a dokoncit prihlaseni. */
   var rowOk = <?= json_encode(is_array($row), JSON_UNESCAPED_UNICODE) ?>;
   if (!rowOk) {
     var btnClose0 = document.getElementById('btnClose');
@@ -396,12 +410,42 @@ $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
 
   var canDecide = <?= json_encode($canDecide, JSON_UNESCAPED_UNICODE) ?>;
   var stav = <?= json_encode($stav, JSON_UNESCAPED_UNICODE) ?>;
+  var sameLoginSession = <?= json_encode($sameLoginSession, JSON_UNESCAPED_UNICODE) ?>;
   var zbyva = <?= (int)$zbyvaSec ?>;
+  var vstupBezi = false;
+  var approvalInfo = document.getElementById('approvalInfo');
 
+  /* Zavre samostatnou schvalovaci stranku. */
   function finish(){
     location.replace('about:blank');
   }
 
+  /* Dokonci stejnou prihlasovaci session a otevre cilovy modul. */
+  function vstupDoIs(){
+    if (!sameLoginSession || vstupBezi) return;
+    vstupBezi = true;
+
+    fetch(<?= json_encode($checkUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>, {
+      cache: 'no-store',
+      credentials: 'same-origin'
+    })
+      .then(function(response){ return response.json(); })
+      .then(function(result){
+        if (result && result.ok === true && (result.stav === 'ok' || result.stav === 'exp')) {
+          location.replace(<?= json_encode($targetUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
+          return;
+        }
+        throw new Error('Dokončení přihlášení se nezdařilo.');
+      })
+      .catch(function(){
+        vstupBezi = false;
+        if (approvalInfo) {
+          approvalInfo.textContent = 'Přístup je schválen. Klepněte na „Vstoupit do IS“.';
+        }
+      });
+  }
+
+  /* Prevede sekundy na citelny odpocet. */
   function fmt(sec){
     if (sec < 0) sec = 0;
     var m = Math.floor(sec / 60);
@@ -411,6 +455,7 @@ $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
 
   var countTxt = document.getElementById('countTxt');
 
+  /* Prekresli zbyvajici cas pro rozhodnuti. */
   function render(){
     if (countTxt && canDecide) {
       countTxt.textContent = 'Na rozhodnutí zbývá: ' + fmt(zbyva) + ' min.';
@@ -426,8 +471,17 @@ $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
     }, 1000);
   } else {
     if (stav === 'ok') {
-      setTimeout(finish, 2000);
+      if (sameLoginSession) {
+        vstupDoIs();
+      } else {
+        setTimeout(finish, 2000);
+      }
     }
+  }
+
+  var btnEnter = document.getElementById('btnEnter');
+  if (btnEnter) {
+    btnEnter.addEventListener('click', vstupDoIs);
   }
 
   var btnClose = document.getElementById('btnClose');
@@ -445,6 +499,5 @@ $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
 </body>
 </html>
 <?php
-/* mobil/mobil_overeni.php * Verze: V8 * Aktualizace: 07.03.2026 * Počet řádků: 434 */
-/* Předchozí počet řádků: 327 */
+/* mobil/mobil_overeni.php * Verze: V9 * Aktualizace: 09.09.2026 */
 // Konec souboru

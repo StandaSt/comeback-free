@@ -17,13 +17,15 @@ require_once __DIR__ . '/../common/config/secrets.php';
 require_once __DIR__ . '/../common/lib/app.php';
 require_once __DIR__ . '/../common/lib/system.php';
 require_once __DIR__ . '/../common/lib/uloz_akci.php';
+require_once __DIR__ . '/../common/lib/user_spojeni.php';
 require_once __DIR__ . '/admin_db/admin_prava_roli_db.php';
 require_once __DIR__ . '/admin_db/admin_individualni_prava_db.php';
 require_once __DIR__ . '/admin_db/admin_firma_db.php';
 require_once __DIR__ . '/admin_db/admin_log_chyby_db.php';
+require_once __DIR__ . '/admin_db/admin_uzivatele_db.php';
 require_once __DIR__ . '/admin_includes/admin_individualni_prava_detail.php';
+require_once __DIR__ . '/admin_includes/admin_uzivatel_detail.php';
 require_once __DIR__ . '/admin_lib/admin_pages.php';
-require_once __DIR__ . '/admin_lib/admin_smeny_plan_doplnit.php';
 require_once __DIR__ . '/admin_lib/admin_google_reporty_import.php';
 require_once __DIR__ . '/admin_lib/admin_firma_ares.php';
 require_once __DIR__ . '/admin_lib/admin_firma_pridat.php';
@@ -58,8 +60,87 @@ if (!function_exists('cb_pravo_ma') || !cb_pravo_ma(100)) {
 }
 
 cb_admin_firma_pridat_handle();
-cb_admin_smeny_plan_doplnit_handle();
 cb_admin_google_reporty_import_handle();
+
+if (
+    ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET'
+    && (string)($_SERVER['HTTP_X_COMEBACK_ADMIN_USER_DETAIL'] ?? '') === '1'
+) {
+    header('Content-Type: application/json; charset=utf-8');
+
+    try {
+        if (!cb_pravo_ma(107)) {
+            throw new RuntimeException('Nemáte právo spravovat uživatele.');
+        }
+        $detail = cb_admin_uzivatel_detail(db(), (int)($_GET['usr_id'] ?? 0));
+        if (!is_array($detail)) {
+            throw new RuntimeException('Uživatel neexistuje.');
+        }
+        $lists = cb_admin_uzivatele_ciselniky(db());
+        echo json_encode([
+            'ok' => true,
+            'id_user' => (int)$detail['id_user'],
+            'detail_html' => cb_admin_uzivatel_detail_html($detail, $lists),
+            'form_html' => cb_admin_uzivatel_edit_form_html((int)$detail['id_user'], $_GET),
+        ], JSON_UNESCAPED_UNICODE);
+    } catch (Throwable $e) {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'err' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    }
+    exit;
+}
+
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'] ?? '') === 'admin_uzivatel_vytvorit') {
+    try {
+        if (!cb_pravo_ma(107)) {
+            throw new RuntimeException('Nemáte právo spravovat uživatele.');
+        }
+        $idUser = cb_admin_uzivatele_vytvor(db(), $_POST);
+        cb_user_akce_zapis([
+            'id_user_akce_typ' => 14,
+            'modul' => 'administrace',
+            'objekt' => 'user',
+            'id_objektu' => $idUser,
+            'pole' => 'zalozeni',
+            'hodnota_new' => 'zdroj=2',
+            'vysledek' => 1,
+            'zdroj' => 'administrace',
+            'detail' => ['akce' => 'vytvoreni_uzivatele'],
+        ]);
+        $_SESSION['cb_admin_uzivatele_notice'] = ['success' => true, 'message' => 'Uživatel ID ' . $idUser . ' byl založen a pozvánka odeslána.'];
+    } catch (Throwable $e) {
+        $_SESSION['cb_admin_uzivatele_notice'] = ['success' => false, 'message' => $e->getMessage()];
+    }
+    header('Location: ' . cb_root_url('index.php?m=administrace&page=uzivatele'), true, 303);
+    exit;
+}
+
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'] ?? '') === 'admin_uzivatel_ulozit') {
+    $returnUrl = cb_admin_uzivatele_navrat_url($_GET);
+    try {
+        if (!cb_pravo_ma(107)) {
+            throw new RuntimeException('Nemáte právo spravovat uživatele.');
+        }
+        $result = cb_admin_uzivatel_uloz(db(), $_POST);
+        cb_user_akce_zapis([
+            'id_user_akce_typ' => 14,
+            'modul' => 'administrace',
+            'objekt' => 'user',
+            'id_objektu' => (int)$result['id_user'],
+            'pole' => 'uprava_uctu',
+            'hodnota_old' => json_encode($result['before'], JSON_UNESCAPED_UNICODE),
+            'hodnota_new' => json_encode($result['after'], JSON_UNESCAPED_UNICODE),
+            'vysledek' => 1,
+            'zdroj' => 'administrace',
+            'detail' => ['akce' => 'uprava_uzivatele'],
+        ]);
+        $_SESSION['cb_admin_uzivatele_notice'] = ['success' => true, 'message' => 'Účet uživatele byl uložen.'];
+    } catch (Throwable $e) {
+        $_SESSION['cb_admin_uzivatele_notice'] = ['success' => false, 'message' => $e->getMessage()];
+    }
+    header('Location: ' . $returnUrl, true, 303);
+    exit;
+}
 
 if (
     ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
@@ -315,11 +396,11 @@ $adminPageFile = $adminCurrentPage['file'];
 <?php if ($adminPage === 'uprava_profilu'): ?>
     <?php require __DIR__ . '/../common/pages/uprava_profilu.php'; ?>
 <?php else: ?>
-<section class="pp admin_pp" data-module="administrace" data-page="<?= h($adminPage) ?>">
+<section class="pp admin_pp<?= $adminPage === 'uzivatele' ? ' cb_table_page' : '' ?>" data-module="administrace" data-page="<?= h($adminPage) ?>">
     <header class="pp_header">
         <h1><?= h($adminPageTitle) ?></h1>
     </header>
-    <main class="admin_content">
+    <main class="admin_content<?= $adminPage === 'uzivatele' ? ' cb_table_page_body' : '' ?>">
         <?php require $adminPageFile; ?>
     </main>
 </section>

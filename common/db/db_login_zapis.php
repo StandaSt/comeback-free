@@ -41,6 +41,22 @@ if (!function_exists('cb_db_insert_login_and_spy')) {
      */
     function cb_db_insert_login_and_spy(mysqli $conn, int $idUser): int
     {
+        $viceLoginuPovoleno = false;
+        if (function_exists('cb_pravo_ma')) {
+            try {
+                $viceLoginuPovoleno = cb_pravo_ma(108);
+            } catch (Throwable $e) {
+                $viceLoginuPovoleno = false;
+            }
+        }
+
+        if (!$viceLoginuPovoleno) {
+            if (!function_exists('cb_db_clear_online_login_flags')) {
+                throw new RuntimeException('Chybí funkce pro ukončení předchozího přihlášení.');
+            }
+            cb_db_clear_online_login_flags($conn, $idUser);
+        }
+
         // IP adresa – může být prázdná nebo chybět (např. CLI).
         $ip = $_SERVER['REMOTE_ADDR'] ?? null;
         if (is_string($ip)) {

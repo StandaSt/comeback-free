@@ -13,6 +13,11 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
     if ($zadalUser <= 0) {
         throw new RuntimeException('Chybí přihlášený uživatel.');
     }
+    $firemniUzivatel = cb_firemni_pristup_uzivatel($db, $zadalUser);
+    $idFirma = (int)$firemniUzivatel['id_firma'];
+    if ($idFirma <= 0) {
+        throw new RuntimeException('Zaměstnance nelze založit bez zvolené firmy.');
+    }
 
     $titulPred = trim((string)($data['titul_pred'] ?? ''));
     $jmeno = trim((string)($data['jmeno'] ?? ''));
@@ -45,6 +50,7 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
         $telefon = substr($telefon, 5);
     }
     $email = trim((string)($data['email'] ?? ''));
+    $idRoleHr = (int)($data['id_role_hr'] ?? 9);
 
     if ($jmeno === '' || $prijmeni === '') {
         throw new RuntimeException('Vyplňte jméno a příjmení.');
@@ -57,11 +63,22 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
     if ($datumNastupu === '' || strtotime($datumNastupu) === false) {
         throw new RuntimeException('Vyplňte datum nástupu.');
     }
-    if ($idVztahTyp <= 0 || $idPobocky === [] || !in_array($idPobHlavni, $idPobocky, true) || ($idSlot <= 0 && ($slotVolba !== '__jine__' || $slotJine === ''))) {
+    if (
+        $idVztahTyp <= 0
+        || $idPobocky === []
+        || ($idPobHlavni > 0 && !in_array($idPobHlavni, $idPobocky, true))
+        || ($idSlot <= 0 && ($slotVolba !== '__jine__' || $slotJine === ''))
+    ) {
         throw new RuntimeException('Vyberte typ vztahu, pobočku a zařazení.');
     }
     if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
         throw new RuntimeException('Pro založení uživatelského účtu vyplňte platný e-mail.');
+    }
+    if (!in_array($idRoleHr, [3, 5, 7, 9], true)) {
+        throw new RuntimeException('Vyberte povolenou pracovní roli.');
+    }
+    if ($idRoleHr === 3 && !cb_pravo_ma(316)) {
+        throw new RuntimeException('Nemáte právo přidělit roli Manager.');
     }
     if ($telefon !== '' && strlen($telefon) !== 9) {
         throw new RuntimeException('Telefon musí být české číslo s 9 číslicemi.');
@@ -99,6 +116,20 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
         $photoPath = hr_store_employee_photo($files['foto'] ?? null);
         $db->begin_transaction();
         $transactionStarted = true;
+        $marks = implode(',', array_fill(0, count($idPobocky), '?'));
+        $types = 'i' . str_repeat('i', count($idPobocky));
+        $stmt = $db->prepare('SELECT COUNT(*) AS pocet FROM pobocka WHERE id_firma = ? AND aktivni = 1 AND id_pob IN (' . $marks . ')');
+        $bind = [&$types, &$idFirma];
+        foreach ($idPobocky as $index => $idPob) {
+            $bind[] = &$idPobocky[$index];
+        }
+        call_user_func_array([$stmt, 'bind_param'], $bind);
+        $stmt->execute();
+        $platnePobocky = (int)($stmt->get_result()->fetch_assoc()['pocet'] ?? 0);
+        $stmt->close();
+        if ($platnePobocky !== count($idPobocky)) {
+            throw new RuntimeException('Vybrané pobočky nepatří do firmy personalisty.');
+        }
         if ($zdrPoj > 0) {
             $stmt = $db->prepare('SELECT id_pojistovna FROM hr_cis_pojistovny WHERE kod = ? AND aktivni = 1 LIMIT 1');
             $stmt->bind_param('i', $zdrPoj);
@@ -121,26 +152,40 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
             $stmt->close();
         }
 
-        // Zalozi samostatny lokalni ucet; heslo se nastavi az pri prvnim vstupu.
+        // Zalozi samostatny lokalni ucet; SPOJENÍ jej pozve až po kompletní přípravě.
         $aktivniUser = 1;
         $schvalenUser = 1;
         $inSystem = 0;
+        $zdrojUser = 2;
         $hesloHash = null;
         $stmt = $db->prepare('
-            INSERT INTO user (jmeno, prijmeni, email, heslo_hash, telefon, aktivni, in_system, schvalen)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO user (id_firma, jmeno, prijmeni, email, heslo_hash, telefon, aktivni, in_system, schvalen, zdroj)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ');
-        $stmt->bind_param('sssssiii', $jmeno, $prijmeni, $email, $hesloHash, $telefon, $aktivniUser, $inSystem, $schvalenUser);
+        $stmt->bind_param('isssssiiii', $idFirma, $jmeno, $prijmeni, $email, $hesloHash, $telefon, $aktivniUser, $inSystem, $schvalenUser, $zdrojUser);
         $stmt->execute();
         $idUser = (int)$db->insert_id;
         $stmt->close();
 
+        $stmt = $db->prepare('INSERT INTO user_role (id_user, id_role) VALUES (?, ?)');
+        $stmt->bind_param('ii', $idUser, $idRoleHr);
+        $stmt->execute();
+        $stmt->close();
+
+        $stmt = $db->prepare('INSERT INTO user_pobocka (id_user, id_pob, main) VALUES (?, ?, ?)');
+        foreach ($idPobocky as $idPob) {
+            $hlavniPobocka = $idPobHlavni > 0 && $idPob === $idPobHlavni ? 1 : 0;
+            $stmt->bind_param('iii', $idUser, $idPob, $hlavniPobocka);
+            $stmt->execute();
+        }
+        $stmt->close();
+
         // Zalozi stabilni identitu zamestnance navazanou na jeho ucet.
         $stmt = $db->prepare('
-            INSERT INTO hr_person (id_user, osobni_cislo, zdroj, id_user_zadal, vytvoreno, aktivni)
-            VALUES (?, ?, ?, ?, NOW(), 1)
+            INSERT INTO hr_person (id_firma, id_user, osobni_cislo, zdroj, id_user_zadal, vytvoreno, aktivni)
+            VALUES (?, ?, ?, ?, ?, NOW(), 1)
         ');
-        $stmt->bind_param('issi', $idUser, $osobniCisloDb, $zdroj, $zadalUser);
+        $stmt->bind_param('iissi', $idFirma, $idUser, $osobniCisloDb, $zdroj, $zadalUser);
         $stmt->execute();
         $idPerson = (int)$db->insert_id;
         $stmt->close();
@@ -170,7 +215,7 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
             VALUES (?, ?, ?, ?, ?, NOW(), 1)
         ');
         foreach ($idPobocky as $idPob) {
-            $hlavniPobocka = $idPob === $idPobHlavni ? 1 : 0;
+            $hlavniPobocka = $idPobHlavni > 0 && $idPob === $idPobHlavni ? 1 : 0;
             $stmt->bind_param('iiisi', $idPerson, $idPob, $hlavniPobocka, $datumNastupu, $zadalUser);
             $stmt->execute();
         }
@@ -221,10 +266,9 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
         hr_update_employee_address($db, $idPerson, $data, $zadalUser, 1, 'dorucovaci_');
         hr_update_employee_emergency_contact($db, $idPerson, $data, $zadalUser);
 
-        $token = cb_prvni_vstup_vytvor_token($db, $idUser);
         $db->commit();
         $transactionStarted = false;
-        return ['id_person' => $idPerson, 'token' => $token, 'email' => $email, 'jmeno' => $jmeno . ' ' . $prijmeni];
+        return ['id_person' => $idPerson, 'id_user' => $idUser];
     } catch (Throwable $e) {
         if ($transactionStarted) {
             $db->rollback();

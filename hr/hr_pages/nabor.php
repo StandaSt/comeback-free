@@ -3,6 +3,16 @@ declare(strict_types=1);
 
 $idVd = (int)($_GET['id_vd'] ?? 0);
 $vdDetail = $idVd > 0 ? hr_nacti_vd_detail($db, $idVd) : null;
+if ($vdDetail !== null && strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'GET') {
+    hr_zapis_vd_otevreni($db, $idVd, hr_current_user_id());
+    cb_user_akce_zapis([
+        'id_user_akce_typ' => 17,
+        'modul' => 'hr',
+        'objekt' => 'hr_vd',
+        'id_objektu' => $idVd,
+        'zdroj' => 'nabor',
+    ]);
+}
 $vdAkce = $vdDetail !== null ? hr_nacti_vd_akce($db, $idVd) : [];
 $vdPodminky = $vdDetail !== null ? hr_nacti_vd_podminky($db, $idVd) : null;
 $vdAkceTypy = $vdDetail !== null ? hr_nacti_vd_akce_typy($db, (int)$vdDetail['id_vd_stav']) : [];
@@ -83,9 +93,9 @@ $bloky = [
                 </dl>
 
                 <dl class="hr_detail_list hr_compact_detail_list">
-                    <div class="hr_detail_item"><dt class="hr_detail_term">Pracoviště</dt><dd class="hr_detail_value"><?= h($vdDetail['pracoviste_preference']) ?></dd></div>
-                    <div class="hr_detail_item"><dt class="hr_detail_term">Pozice</dt><dd class="hr_detail_value"><?= h($vdDetail['pozice']) ?></dd></div>
-                    <div class="hr_detail_item"><dt class="hr_detail_term">Očekávaná mzda</dt><dd class="hr_detail_value"><?= h((string)($vdDetail['ocekavana_mzda'] ?? '-')) ?></dd></div>
+                    <div class="hr_detail_item"><dt class="hr_detail_term">Má zájem o pracoviště:</dt><dd class="hr_detail_value"><?= h($vdDetail['pracoviste_preference']) ?></dd></div>
+                    <div class="hr_detail_item"><dt class="hr_detail_term">Má zájem o pozici:</dt><dd class="hr_detail_value"><?= h($vdDetail['pozice']) ?></dd></div>
+                    <div class="hr_detail_item"><dt class="hr_detail_term">Očekává mzdu:</dt><dd class="hr_detail_value"><?= h((string)($vdDetail['ocekavana_mzda'] ?? '-')) ?></dd></div>
                 </dl>
 
                 <dl class="hr_detail_list hr_compact_detail_list">
@@ -208,7 +218,7 @@ $bloky = [
                         <tbody>
                             <?php foreach ($vdAkce as $akce): ?>
                                 <tr>
-                                    <td class="hr_table_cell"><?= h(hr_format_date((string)$akce['akce_kdy'])) ?></td>
+                                    <td class="hr_table_cell"><?= h($formatDateTime((string)$akce['akce_kdy'])) ?></td>
                                     <td class="hr_table_cell"><?= h((string)$akce['akce_typ_nazev']) ?></td>
                                     <td class="hr_table_cell"><?= h((string)$akce['vysledek']) ?></td>
                                     <td class="hr_table_cell"><?= h(trim((string)($akce['termin_date'] ?? '') . ' ' . substr((string)($akce['termin_time'] ?? ''), 0, 5)) ?: '-') ?></td>
@@ -224,32 +234,7 @@ $bloky = [
     <?php endif; ?>
 <?php endif; ?>
 
-<?php if ($idVd > 0 && $vdDetail !== null): ?>
-    <section class="hr_panel hr_vd_full_width">
-        <div class="hr_panel_header">
-            <h2 class="hr_panel_title">Domluvené pohovory</h2>
-            <span class="hr_panel_header_count"><?= h(hr_pocet_uchazecu_text(count($nabor['domluvene_pohovory']))) ?></span>
-        </div>
-        <?php if ($nabor['domluvene_pohovory'] === []): ?>
-            <p class="hr_empty_state">Aktuálně žádný domluvený pohovor.</p>
-        <?php else: ?>
-            <div class="hr_table_wrap">
-                <table class="hr_table">
-                    <thead><tr><th class="hr_table_cell hr_table_head">Pohovor</th><th class="hr_table_cell hr_table_head">Uchazeč</th><th class="hr_table_cell hr_table_head">Pozice</th></tr></thead>
-                    <tbody>
-                        <?php foreach ($nabor['domluvene_pohovory'] as $uchazec): ?>
-                            <tr>
-                                <td class="hr_table_cell"><?= h($formatDateTime((string)($uchazec['planovano_na'] ?? ''))) ?></td>
-                                <td class="hr_table_cell"><a href="<?= h(cb_root_url('index.php?m=hr&page=nabor&id_vd=' . rawurlencode((string)$uchazec['id_vd']))) ?>"><?= h($uchazec['cele_jmeno']) ?></a></td>
-                                <td class="hr_table_cell"><?= h($uchazec['pozice']) ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        <?php endif; ?>
-    </section>
-<?php else: ?>
+<?php if ($idVd <= 0): ?>
 <?php foreach ($bloky as $blok): ?>
     <section class="hr_panel hr_nabor_overview_panel">
         <div class="hr_panel_header">

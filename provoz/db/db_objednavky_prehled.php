@@ -36,6 +36,45 @@ function cb_db_objednavky_prehled_filter(string $key): string
     return trim((string)($filters[$key] ?? ''));
 }
 
+/**
+ * Vrati volby selectu filtru bez dalsich dotazu nad objednavkami.
+ * Pobočky respektuji aktualni vyber pobocek uzivatele, ostatni hodnoty jsou
+ * stabilni ciselniky pouzivane pri zobrazeni objednavky.
+ *
+ * @param array<int, int> $selectedPobocky
+ * @return array<string, array<int, string>>
+ */
+function cb_db_objednavky_prehled_filter_options(mysqli $db, array $selectedPobocky): array
+{
+    $queries = [
+        'pobocka' => 'SELECT nazev AS value FROM pobocka WHERE nazev <> \'\'',
+        'stav' => 'SELECT nazev AS value FROM cis_obj_stav WHERE nazev <> \'\'',
+        'typ' => 'SELECT nazev AS value FROM cis_doruceni WHERE nazev <> \'\'',
+        'platba' => 'SELECT nazev AS value FROM cis_obj_platby WHERE nazev <> \'\'',
+    ];
+    if ($selectedPobocky !== []) {
+        $queries['pobocka'] .= ' AND id_pob IN (' . implode(',', $selectedPobocky) . ')';
+    }
+
+    $options = [];
+    foreach ($queries as $key => $sql) {
+        $result = $db->query($sql . ' ORDER BY value');
+        $values = [];
+        if ($result instanceof mysqli_result) {
+            while ($row = $result->fetch_assoc()) {
+                $value = trim((string)($row['value'] ?? ''));
+                if ($value !== '') {
+                    $values[] = $value;
+                }
+            }
+            $result->free();
+        }
+        $options[$key] = $values;
+    }
+
+    return $options;
+}
+
 function cb_db_objednavky_prehled_nacti(): array
 {
     $db = db();
@@ -55,6 +94,7 @@ function cb_db_objednavky_prehled_nacti(): array
     if ($selectedPobocky === [] && (int)($_SESSION['cb_pobocka_id'] ?? 0) > 0) {
         $selectedPobocky[] = (int)$_SESSION['cb_pobocka_id'];
     }
+    $filterOptions = cb_db_objednavky_prehled_filter_options($db, $selectedPobocky);
 
     $perOptions = [20, 50, 100, 500];
     $perPage = (int)($queryParams['obj_per'] ?? 20);
@@ -216,6 +256,7 @@ function cb_db_objednavky_prehled_nacti(): array
         'sort' => $sort,
         'dir' => $dir,
         'filters' => $filters,
+        'filter_options' => $filterOptions,
         'active_filters' => $activeFilters,
         'rows' => $rows,
         'total_rows' => $totalRows,

@@ -11,7 +11,8 @@
  * Nova filtrovana tabulka ma pouzit jeden prefix, napriklad "zak".
  * Povinna struktura: form method="get", hidden input "zak_p", filtry
  * "zak_f[nazev_sloupce]" s tridou filter-input, volitelne "zak_per",
- * tabulka v .table-wrap a spodni lista v .list-bottom.
+ * tabulka v .table-wrap a spodni lista v .list-bottom. Souhrn filtrovaneho
+ * vysledku patri do .filter-summary uvnitr stejneho formulare.
  * Nevymyslet vlastni JS pro kazdou tabulku; tento soubor je spolecny.
  */
 
@@ -34,7 +35,7 @@
 
   function getCardFilterPrefix(form) {
     if (!(form instanceof HTMLFormElement)) return '';
-    const el = form.querySelector('input.filter-input[name*="_f["]');
+    const el = form.querySelector('.filter-input[name*="_f["]');
     return el ? getPrefixFromName(el.name) : '';
   }
 
@@ -146,6 +147,15 @@
       curForm.insertBefore(newSummary, curTable);
     }
 
+    const curFilterSummaries = Array.from(curForm.querySelectorAll('.filter-summary'));
+    const newFilterSummaries = Array.from(newForm.querySelectorAll('.filter-summary'));
+    curFilterSummaries.forEach((summary, index) => {
+      const replacement = newFilterSummaries[index];
+      if (replacement) {
+        summary.replaceWith(replacement);
+      }
+    });
+
     curTable.replaceWith(newTable);
     if (curBottom && newBottom) {
       curBottom.replaceWith(newBottom);
@@ -181,6 +191,7 @@
       : null;
 
     const reqUrl = String(buildUrlFromForm(form, reqUrlOverride));
+    const requestStartedAt = performance.now();
     const cardId = getCardIdFromForm(form);
     const request = cardId > 0
       ? fetch(reqUrl, {
@@ -214,9 +225,23 @@
 
         const doc = new DOMParser().parseFromString(String(html || ''), 'text/html');
         const newForm = findResponseForm(doc, prefix);
-        if (!newForm) return;
+        if (!newForm) {
+          w.location.assign(reqUrl);
+          return;
+        }
         const ok = swapFormParts(form, newForm);
-        if (!ok) return;
+        if (!ok) {
+          w.location.assign(reqUrl);
+          return;
+        }
+
+        document.dispatchEvent(new CustomEvent('cb:filters-swapped', {
+          detail: {
+            form: form,
+            prefix: prefix,
+            elapsedMs: Math.round(performance.now() - requestStartedAt)
+          }
+        }));
 
         if (logDetail && typeof logDetail === 'object') {
           logUserAction(logActionId || 5, form, logDetail);
@@ -238,6 +263,7 @@
       .catch((err) => {
         if (err && err.name === 'AbortError') return;
         controllers.delete(form);
+        w.location.assign(reqUrl);
       });
   }
 
@@ -347,6 +373,7 @@
     if (href === '' || href === '#') return;
 
     ev.preventDefault();
+    ev.stopPropagation();
     const isReset = a.classList.contains('filter-reset-btn') || (
       a.classList.contains('icon-x') && a.closest('.filter-actions')
     );

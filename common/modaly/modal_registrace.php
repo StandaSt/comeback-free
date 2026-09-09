@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Modal registrace zarizeni.
+ * Vytvori parovaci pozadavek, zobrazi QR kod a automaticky sleduje jeho stav.
+ */
+
 $loginOk = !empty($_SESSION['login_ok']);
 $cbAuthOk = !empty($_SESSION['cb_auth_ok']);
 $cbUser = $_SESSION['cb_user'] ?? null;
@@ -54,9 +59,9 @@ if (($loginOk || $cbAuthOk) && $idUser > 0) {
 
     <div class="modal-box" style="background:#eff6ff; border-color:#bfdbfe;">
       <div class="modal-copy">
-        Načtěte tento kód pomocí zařízení, které budete používat při vstupu do Comeback systému.
+        Při vstupu do IS Comeback se provádí ověřování pomocí registrovaného zařízení. Ideálně mobilním telefonem.<br><br>
+        Načtěte tedy tento QR kód Vaším mobilním telefonem a při vstupu do IS Comeback jej mějte u sebe.
       </div>
-      <p class="modal-sub">Doporučené zařízení je mobilní telefon.</p>
       <p class="modal-sub">Po načtení QR kódu se řiďte pokyny na zařízení.</p>
     </div>
 
@@ -69,7 +74,6 @@ if (($loginOk || $cbAuthOk) && $idUser > 0) {
 
     <div class="modal-foot">
       <div class="modal-status" id="cbPrvniStatus">Čekám na spárování zařízení…</div>
-      <button type="button" class="modal-btn" id="cbPrvniReload" style="background:#eff6ff; border-color:#bfdbfe;">Zkontrolovat</button>
     </div>
   </div>
 </div>
@@ -77,11 +81,11 @@ if (($loginOk || $cbAuthOk) && $idUser > 0) {
 <script src="<?= h(cb_public_url('js/qrcode.min.js')) ?>"></script>
 <script>
 (function(){
-  var btn = document.getElementById('cbPrvniReload');
   var st = document.getElementById('cbPrvniStatus');
   var x = document.getElementById('cbPrvniClose');
   var touchRegister = document.getElementById('cbPrvniTouchRegister');
 
+  /* Pozna mobilni nebo jine dotykove zarizeni. */
   function isTouchDevice(){
     if (navigator && Number(navigator.maxTouchPoints || 0) > 0) {
       return true;
@@ -92,29 +96,26 @@ if (($loginOk || $cbAuthOk) && $idUser > 0) {
     return false;
   }
 
+  /* Zapise aktualni stav parovani do modalu. */
   function setTxt(t){
     if (st) {
       st.textContent = t;
     }
   }
 
+  /* Zrusi rozpracovane parovani a vrati uzivatele na login. */
   function doAbort(){
     fetch('<?= h(cb_url('?action=registrace_abort')) ?>', { cache: 'no-store' })
       .then(function(){ window.location.href = '<?= h($loginUrl) ?>'; })
       .catch(function(){ window.location.href = '<?= h($loginUrl) ?>'; });
   }
 
-  function checkNow(showProgress){
-    if (showProgress) {
-      setTxt('Kontroluji stav párování…');
-    }
+  /* Jednorazove nacte stav parovani; opakovani ridi casovac nize. */
+  function checkNow(){
     fetch('<?= h(cb_url('?action=registrace_check')) ?>', { cache: 'no-store' })
       .then(function(r){ return r.json(); })
       .then(function(j){
         if (!j || j.ok !== true) {
-          if (showProgress) {
-            setTxt('Chyba kontroly. Zkuste to znovu.');
-          }
           return;
         }
         if (j.paired === true) {
@@ -122,20 +123,10 @@ if (($loginOk || $cbAuthOk) && $idUser > 0) {
           window.location.href = '<?= h($targetUrl) ?>';
           return;
         }
-        if (showProgress) {
-          setTxt('Zařízení zatím není spárováno.');
-        }
       })
-      .catch(function(){
-        if (showProgress) {
-          setTxt('Chyba kontroly. Zkuste to znovu.');
-        }
-      });
+      .catch(function(){});
   }
 
-  if (btn) {
-    btn.addEventListener('click', function(){ checkNow(true); });
-  }
   if (x) {
     x.addEventListener('click', doAbort);
   }
@@ -158,7 +149,7 @@ if (($loginOk || $cbAuthOk) && $idUser > 0) {
     }
   } catch (e) {}
 
-  setInterval(function(){ checkNow(false); }, 2500);
+  setInterval(checkNow, 2500);
   setTimeout(function(){ doAbort(); }, 300000);
 })();
 </script>

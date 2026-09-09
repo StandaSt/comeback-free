@@ -27,7 +27,7 @@ $adminShowBlockChecks = function_exists('cb_pravo_ma') && cb_pravo_ma(101);
                 <table class="admin_matrix" style="width:auto; min-width:0;">
                     <colgroup>
                         <col style="width:72px;">
-                        <col style="width:200px;">
+                        <col style="width:225px;">
                         <?php foreach ($adminRoles as $role): ?>
                             <col style="width:80px;">
                         <?php endforeach; ?>
@@ -62,6 +62,12 @@ $adminShowBlockChecks = function_exists('cb_pravo_ma') && cb_pravo_ma(101);
                         </tr>
                         <?php foreach ($module['rights'] as $right): ?>
                             <?php $rightActive = !empty($right['aktivni']); ?>
+                            <?php
+                            $rightDescription = (string)$right['popis'];
+                            $rightDescriptionShort = mb_strlen($rightDescription, 'UTF-8') > 33
+                                ? mb_substr($rightDescription, 0, 30, 'UTF-8') . '...'
+                                : $rightDescription;
+                            ?>
                             <tr<?= $rightActive ? '' : ' class="is-inactive"' ?>>
                                 <td class="admin_matrix_active">
                                     <span class="admin_matrix_right_id<?= !empty($right['aplikovano']) ? ' is-applied' : '' ?>"><?= h((string)$right['id_pravo']) ?></span>
@@ -76,8 +82,8 @@ $adminShowBlockChecks = function_exists('cb_pravo_ma') && cb_pravo_ma(101);
                                 </td>
                                 <td style="white-space:nowrap;">
                                     <strong><?= h($right['nazev']) ?></strong>
-                                    <?php if ($right['popis'] !== ''): ?>
-                                        <span><?= h($right['popis']) ?></span>
+                                    <?php if ($rightDescription !== ''): ?>
+                                        <span<?= $rightDescription !== $rightDescriptionShort ? ' title="' . h($rightDescription) . '"' : '' ?>><?= h($rightDescriptionShort) ?></span>
                                     <?php endif; ?>
                                 </td>
                                 <?php foreach ($adminRoles as $role): ?>

@@ -9,7 +9,7 @@ const CB_DEFAULT_PAGE_GUEST = 'uvod_demo_rotace';
 const CB_DEFAULT_PAGE_USER = 'uvod';
 
 // Limit pro potvrzeni 2FA prihlaseni v sekundach.
-const CB_2FA_LIMIT_SEC = 300;
+const CB_2FA_LIMIT_SEC = 60;
 
 // Interval kontroly 2FA stavu v milisekundach.
 const CB_2FA_POLL_MS = 2000;

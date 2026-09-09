@@ -70,7 +70,7 @@ function cb_db_upsert_user(mysqli $conn, array $p, bool $inSystem = true): void
         $inSystemValue = $inSystem ? 1 : 0;
         $stmt = $conn->prepare(
             'INSERT INTO user (id_user,jmeno,prijmeni,email,telefon,aktivni,in_system,schvalen,vytvoren_smeny,visit_smeny)
-             VALUES (?,?,?,?,?,?,?,?,?,?)'
+             VALUES (?,?,?,?,?,?,?,?,?,?,1)'
         );
 
         $stmt->bind_param(
@@ -94,8 +94,8 @@ function cb_db_upsert_user(mysqli $conn, array $p, bool $inSystem = true): void
     $inSystemSql = $inSystem ? 'in_system=1,' : '';
     $stmt = $conn->prepare(
         'UPDATE user
-         SET jmeno=?, prijmeni=?, email=?, telefon=?, aktivni=?, ' . $inSystemSql . ' schvalen=?, vytvoren_smeny=?, visit_smeny=?
-         WHERE id_user=?'
+         SET jmeno=?, prijmeni=?, email=?, telefon=?, aktivni=?, ' . $inSystemSql . ' schvalen=?, vytvoren_smeny=?, visit_smeny=?, zdroj=1
+         WHERE id_user=? AND zdroj=1'
     );
 
     $stmt->bind_param(
@@ -167,12 +167,17 @@ function cb_db_insert_login_event(mysqli $conn, int $idUser, int $akce, int $duv
 }
 
 /**
- * Zrusi online priznak vsech otevrenych loginu uzivatele.
+ * Zrusi online priznak konkretniho loginu, nebo vsech loginu uzivatele.
  */
-function cb_db_clear_online_login_flags(mysqli $conn, int $idUser): void
+function cb_db_clear_online_login_flags(mysqli $conn, int $idUser, int $idLogin = 0): void
 {
-    $stmt = $conn->prepare('UPDATE user_login SET duvod = 0 WHERE id_user = ? AND akce = 1 AND duvod = 2');
-    $stmt->bind_param('i', $idUser);
+    if ($idLogin > 0) {
+        $stmt = $conn->prepare('UPDATE user_login SET duvod = 0 WHERE id_user = ? AND id_login = ? AND akce = 1 AND duvod = 2');
+        $stmt->bind_param('ii', $idUser, $idLogin);
+    } else {
+        $stmt = $conn->prepare('UPDATE user_login SET duvod = 0 WHERE id_user = ? AND akce = 1 AND duvod = 2');
+        $stmt->bind_param('i', $idUser);
+    }
     $stmt->execute();
     $stmt->close();
 }

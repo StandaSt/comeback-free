@@ -1410,6 +1410,176 @@ align-items:center;
   grid-column:span 4;
 }
 
+/* Běžná datová tabulka; filtry a spodní lišta zůstávají samostatnými částmi seznamu. */
+.cb_table_page{
+  overflow:hidden;
+}
+
+.cb_table_page_body,
+.cb_table_panel,
+.cb_table_view{
+  min-width:0;
+  min-height:0;
+}
+
+.cb_table_page_body,
+.cb_table_panel,
+.cb_table_view{
+  display:flex;
+  flex:1 1 auto;
+  flex-direction:column;
+}
+
+.cb_table_wrap{
+  flex:1 1 auto;
+  align-self:flex-start;
+  width:max-content;
+  max-width:100%;
+  min-width:0;
+  min-height:0;
+  overflow:auto;
+  border:1px solid var(--cb-border-soft);
+  border-radius:8px;
+  background:var(--cb-bg-panel);
+}
+
+.cb_table{
+  width:auto;
+  table-layout:auto;
+  border-collapse:collapse;
+  font-size:var(--cb-font-14);
+}
+
+.cb_table th,
+.cb_table td{
+  padding:8px 10px;
+  border-bottom:1px solid var(--cb-border-soft);
+  text-align:left;
+  vertical-align:middle;
+  white-space:nowrap;
+}
+
+.cb_table thead th{
+  position:sticky;
+  top:0;
+  z-index:1;
+  background:var(--cb-bg-panel-soft);
+}
+
+.cb_table .filter-row th{
+  top:0;
+  z-index:3;
+  height:40px;
+  padding:0;
+}
+
+.cb_table .filter-row + tr th{
+  top:40px;
+  z-index:2;
+}
+
+.cb_table .filter-input{
+  position:absolute;
+  inset:6px;
+  width:auto;
+  min-width:0;
+  min-height:28px;
+  box-sizing:border-box;
+  border:1px solid var(--cb-border-soft);
+  border-radius:6px;
+  background:var(--cb-bg-panel);
+  color:var(--cb-text-main);
+}
+
+.cb_table tbody tr:hover > td{
+  background:var(--cb-bg-control-hover);
+}
+
+.cb_table tbody tr.is-active > td{
+  background:var(--cb-module-soft);
+}
+
+.cb_table_number{
+  text-align:right !important;
+}
+
+.cb_table_footer{
+  flex:0 0 auto;
+  display:grid;
+  grid-template-columns:minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-areas:"summary pagination size";
+  align-items:center;
+  gap:12px;
+  padding-top:12px;
+}
+
+.cb_table_footer_summary{
+  grid-area:summary;
+  justify-self:start;
+  white-space:nowrap;
+}
+
+.cb_table_footer .pagination-icon{
+  grid-area:pagination;
+  justify-self:center;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.cb_table_footer_size{
+  grid-area:size;
+  justify-self:end;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  white-space:nowrap;
+}
+
+.cb_table_footer select{
+  height:28px;
+  border:1px solid var(--cb-border-soft);
+  border-radius:6px;
+  background:var(--cb-bg-panel);
+  color:var(--cb-text-main);
+}
+
+.cb_table_footer .icon-btn{
+  min-width:28px;
+  height:28px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid var(--cb-border-soft);
+  border-radius:6px;
+  color:inherit;
+  text-decoration:none;
+}
+
+.cb_table_footer .icon-btn.disabled{
+  opacity:.45;
+  pointer-events:none;
+}
+
+.cb_table_footer .page-current{
+  padding:0 8px;
+  background:var(--cb-bg-panel-soft);
+}
+
+@media (max-width:700px){
+  .cb_table th,
+  .cb_table td{
+    padding:7px 8px;
+  }
+
+  .cb_table_footer{
+    grid-template-columns:minmax(0, 1fr) auto;
+    grid-template-areas:
+      "summary size"
+      "pagination pagination";
+  }
+}
+
 /* Na uzkem displeji dostane kazdy blok vlastni radek. */
 @media (max-width:760px){
   .pp_blocks--grid{

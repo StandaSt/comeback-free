@@ -1387,6 +1387,11 @@
     gap: 8px;
 }
 
+.hr_vd_action_fields > .hr_vd_inline_field > select {
+    width: 50%;
+    min-width: 180px;
+}
+
 .hr_vd_inline_field {
     grid-template-columns: 140px minmax(0, 1fr);
     align-items: center;
@@ -1667,6 +1672,11 @@
     .hr_vd_action_form,
     .hr_vd_term {
         grid-template-columns: 1fr;
+    }
+
+    .hr_vd_action_fields > .hr_vd_inline_field > select {
+        width: 100%;
+        min-width: 0;
     }
 
     .hr_vd_action_submit {

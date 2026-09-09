@@ -63,6 +63,9 @@
     if (opts.forceRestia === true) {
       headers['X-Comeback-Restia-Force'] = '1';
     }
+    if (opts.manualOrdersRefresh === true) {
+      headers['X-Comeback-Restia-Orders-Refresh'] = '1';
+    }
 
     return fetch(requestUrl(), {
       method: 'POST',

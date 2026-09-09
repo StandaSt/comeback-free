@@ -194,6 +194,36 @@
   font-weight:700;
 }
 
+.admin_script_preview_wrap{
+  width:min(760px, 100%);
+  overflow-x:auto;
+}
+
+.admin_script_preview_table{
+  width:100%;
+  border-collapse:collapse;
+  color:var(--cb-text-main);
+  font-size:var(--cb-font-14);
+}
+
+.admin_script_preview_table th,
+.admin_script_preview_table td{
+  padding:5px 16px 5px 0;
+  border:0;
+  text-align:left;
+  vertical-align:top;
+}
+
+.admin_script_preview_table th{
+  color:var(--cb-text-muted);
+  font-weight:700;
+}
+
+.admin_script_preview_table th:nth-child(2),
+.admin_script_preview_table td:nth-child(2){
+  white-space:nowrap;
+}
+
 .admin_script_choice{
   display:flex;
   gap:8px;
@@ -242,6 +272,11 @@
 
 .admin_script_button:hover{
   background:#b91c1c;
+}
+
+.admin_script_button:disabled{
+  opacity:.55;
+  cursor:not-allowed;
 }
 
 .admin_script_result{
@@ -294,6 +329,68 @@
   top:0;
   z-index:1;
   background:var(--cb-bg-panel-soft);
+}
+
+/* Správa uživatelů: formuláře, filtry a rozbalený detail řádku. */
+.admin_users{
+  flex:1 1 auto;
+  min-width:0;
+  min-height:0;
+  gap:14px;
+}
+
+.admin_users_form{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:end;
+  gap:10px 14px;
+  padding:10px 0;
+}
+
+.admin_users_form > label,
+.admin_users_form fieldset{
+  display:grid;
+  gap:5px;
+  margin:0;
+  color:var(--cb-text-main);
+  font-size:var(--cb-font-14);
+}
+
+.admin_users_form input:not([type="checkbox"]),
+.admin_users_form select{
+  min-height:30px;
+  box-sizing:border-box;
+  border:1px solid var(--cb-border-soft);
+  border-radius:5px;
+  background:var(--cb-bg-panel);
+  color:var(--cb-text-main);
+  font:inherit;
+}
+
+.admin_users_form fieldset{
+  min-width:260px;
+  padding:8px 10px;
+  border:1px solid var(--cb-border-soft);
+  border-radius:6px;
+}
+
+.admin_users_form legend{ padding:0 4px; }
+
+.admin_users_table thead a{ display:flex; align-items:center; justify-content:space-between; gap:6px; color:inherit; text-decoration:none; white-space:nowrap; }
+.admin_user_detail_row > td{ padding:0; background:var(--cb-bg-panel-soft); }
+.admin_user_detail_row .admin_users_form{ padding:14px; }
+.admin_user_detail_transition{ width:100%; max-height:0; overflow:hidden; opacity:0; contain:inline-size; box-sizing:border-box; transition:max-height .18s ease,opacity .18s ease; }
+.admin_user_detail_row.is-open .admin_user_detail_transition{ max-height:900px; opacity:1; }
+
+.admin_user_branch_picker{ display:grid; gap:8px; min-width:250px; }
+.admin_user_branch_all{ font-weight:700; }
+.admin_user_branch_choices{ display:flex; flex-wrap:wrap; gap:8px 12px; }
+.admin_user_branch_choices > div{ display:flex; flex-wrap:wrap; gap:8px 12px; }
+.admin_user_branch_choices label{ display:inline-flex; align-items:center; gap:4px; font-weight:400; }
+
+@media (max-width:700px){
+  .admin_users_form{ align-items:stretch; }
+  .admin_users_form > label,.admin_users_form fieldset{ width:100%; }
 }
 
 /* Přehled chyb používá společný vzor filtrování a stránkování IS. */

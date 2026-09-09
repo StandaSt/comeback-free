@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Ucel souboru: Zobrazit cekani na 2FA schvaleni pro prihlaseni
+ * z pocitace nebo z neznameho zarizeni. QR kod patri pouze na PC.
+ */
+
 if (!empty($_SESSION['login_ok'])) {
     return;
 }
@@ -41,10 +46,12 @@ if ($cb2faToken !== '') {
 
           <div class="modal-divider"></div>
 
-          <p class="modal-sub modal-copy-wide">
-            Pokud jste neobdržel/a notifikaci na registrované zařízení, načtěte tento QR kód.
-          </p>
-          <div class="modal-qr modal-qr-main" id="cb2faQr"></div>
+          <div class="cb-2fa-qr-only-pc">
+            <p class="modal-sub modal-copy-wide">
+              Pokud jste neobdržel/a notifikaci na registrované zařízení, načtěte tento QR kód.
+            </p>
+            <div class="modal-qr modal-qr-main" id="cb2faQr"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -52,6 +59,7 @@ if ($cb2faToken !== '') {
     <script src="<?= h(cb_public_url('js/qrcode.min.js')) ?>"></script>
     <script>
       (function(){
+        /* Ucel funkce: Ridit cekani na vysledek 2FA a nasledne presmerovani. */
         var st = document.getElementById('cb2faStatus');
         var btnX = document.getElementById('cb2faClose');
         var kontrolaInterval = null;
@@ -59,6 +67,7 @@ if ($cb2faToken !== '') {
         var obnoveniTimeout = null;
         var kontrolaZastavena = false;
 
+        /* Prevede pocet sekund na zapis mm:ss. */
         function fmt(sec){
           if (typeof sec !== 'number' || sec < 0) sec = 0;
           var m = Math.floor(sec / 60);
@@ -66,10 +75,12 @@ if ($cb2faToken !== '') {
           return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
         }
 
+        /* Zapise aktualni stav do cekaciho modalu. */
         function setTxt(t){
           if (st) st.textContent = t;
         }
 
+        /* Ukonci docasny rezim opakovane kontroly. */
         function ukonciObnoveni(){
           obnoveniDo = 0;
           if (obnoveniTimeout !== null) {
@@ -78,6 +89,7 @@ if ($cb2faToken !== '') {
           }
         }
 
+        /* Zastavi kontrolu po vyprseni obnovovaciho intervalu. */
         function ukonciKontroluPoChybe(){
           kontrolaZastavena = true;
           if (kontrolaInterval !== null) {
@@ -87,6 +99,7 @@ if ($cb2faToken !== '') {
           setTxt('Přihlášení selhalo, zkuste to později. Administrátor byl o chybě informován.');
         }
 
+        /* Zobrazi odpocet behem opakovane kontroly po chybe. */
         function zobrazObnoveniKontroly(){
           if (kontrolaZastavena) return;
 
@@ -100,7 +113,9 @@ if ($cb2faToken !== '') {
         }
 
         try {
-          if (typeof QRCode !== 'undefined') {
+          /* QR se vytvari jen na zarizeni s presnym ukazatelem, tedy na PC. */
+          var jePocitac = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+          if (jePocitac && typeof QRCode !== 'undefined') {
             var el = document.getElementById('cb2faQr');
             if (el) {
               new QRCode(el, {
@@ -112,6 +127,7 @@ if ($cb2faToken !== '') {
           }
         } catch (e) {}
 
+        /* Nacte aktualni stav 2FA a zpracuje jeho vysledek. */
         function kontrola2fa(){
           if (kontrolaZastavena) return;
 

@@ -225,12 +225,16 @@ if ($cbPpOnly && !empty($_SESSION['login_ok'])) {
             <header class="pp_header">
                 <?php if ($cbArchiveBackUrl !== ''): ?>
                     <div class="provoz_archive_header_title"><a class="provoz_archive_back_btn" href="<?= h($cbArchiveBackUrl) ?>" title="Zpět do archivu" aria-label="Zpět do archivu">←</a><h1><?= h($cbProvozPageTitle) ?></h1></div>
+                <?php elseif ($cbPage === 'objednavky'): ?>
+                    <div class="provoz_objednavky_header_title"><h1><?= h($cbProvozPageTitle) ?></h1><button type="button" class="head_task_btn head_task_btn--restia-refresh" data-objednavky-restia-refresh>Aktualizace objednávek</button></div>
                 <?php else: ?>
                     <h1><?= h($cbProvozPageTitle) ?></h1>
                 <?php endif; ?>
                 <?php if ($cbPage === 'denni_report' && function_exists('cb_pravo_ma') && cb_pravo_ma(CB_REPORT_PROMENNE_PRAVO)): ?>
-                    <div class="pp_header_control">
+                    <div class="pp_header_controls">
+                    <?php if ($cbPage === 'denni_report' && function_exists('cb_pravo_ma') && cb_pravo_ma(CB_REPORT_PROMENNE_PRAVO)): ?>
                         <a class="head_task_btn" href="<?= h(cb_root_url('index.php?m=provoz&page=nastaveni_reportu')) ?>">Nastavení reportu</a>
+                    <?php endif; ?>
                     </div>
                 <?php endif; ?>
                 <?php $cbAiAnalytikPristupRender($cbAiAnalytikPristup, $cbPage === 'ai_analytik'); ?>
@@ -265,12 +269,16 @@ if (!empty($_SESSION['login_ok'])) {
         <header class="pp_header">
             <?php if ($cbArchiveBackUrl !== ''): ?>
                 <div class="provoz_archive_header_title"><a class="provoz_archive_back_btn" href="<?= h($cbArchiveBackUrl) ?>" title="Zpět do archivu" aria-label="Zpět do archivu">←</a><h1><?= h($cbProvozPageTitle) ?></h1></div>
+            <?php elseif ($cbPage === 'objednavky'): ?>
+                <div class="provoz_objednavky_header_title"><h1><?= h($cbProvozPageTitle) ?></h1><button type="button" class="head_task_btn head_task_btn--restia-refresh" data-objednavky-restia-refresh>Aktualizace objednávek</button></div>
             <?php else: ?>
                 <h1><?= h($cbProvozPageTitle) ?></h1>
             <?php endif; ?>
             <?php if ($cbPage === 'denni_report' && function_exists('cb_pravo_ma') && cb_pravo_ma(CB_REPORT_PROMENNE_PRAVO)): ?>
-                <div class="pp_header_control">
+                <div class="pp_header_controls">
+                <?php if ($cbPage === 'denni_report' && function_exists('cb_pravo_ma') && cb_pravo_ma(CB_REPORT_PROMENNE_PRAVO)): ?>
                     <a class="head_task_btn" href="<?= h(cb_root_url('index.php?m=provoz&page=nastaveni_reportu')) ?>">Nastavení reportu</a>
+                <?php endif; ?>
                 </div>
             <?php endif; ?>
             <?php $cbAiAnalytikPristupRender($cbAiAnalytikPristup, $cbPage === 'ai_analytik'); ?>

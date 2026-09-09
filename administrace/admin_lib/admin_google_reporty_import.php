@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /*
  * Jednoúčelové spuštění ručně stažených reportů Google z administrace.
- * Je-li přítomný ZIP, má přednost a aktualizuje pracovní složku Pobočky.
+ * Nejnovější ZIP Pobočky-YYYYMMDD*.zip se rozbalí do pracovní složky jen pro import.
  */
 
 function cb_admin_google_reporty_import_handle(): void
@@ -31,9 +31,15 @@ function cb_admin_google_reporty_import_handle(): void
         }
 
         $prepared = cb_admin_google_reporty_priprav_zdroj();
-        $output = cb_admin_google_reporty_spust_import();
-        $summary = cb_admin_google_reporty_shrnuti_importu($output);
+        $importResult = cb_admin_google_reporty_spust_import();
+        $summary = cb_admin_google_reporty_shrnuti_importu(
+            (string)($importResult['output'] ?? ''),
+            (array)($importResult['days'] ?? [])
+        );
         $success = $summary['errors'] === 0;
+        if ($success) {
+            cb_admin_google_reporty_smaz_pracovni_zdroj();
+        }
 
         $_SESSION['cb_admin_script_result'] = [
             'script' => 'google_reporty',
@@ -101,27 +107,21 @@ function cb_admin_google_reporty_preview_handle(): void
 function cb_admin_google_reporty_priprav_zdroj(): array
 {
     $googleDataDir = dirname(__DIR__, 3) . '/data/google_data';
-    $zipPath = $googleDataDir . '/Pobočky.zip';
-    $workingDir = $googleDataDir . '/Pobočky';
+    $zipFiles = cb_admin_google_reporty_najdi_zipy($googleDataDir);
+    $zipPath = (string)($zipFiles[0]['path'] ?? '');
+    $runtimeDir = dirname(__DIR__, 2) . '/common/tmp/google_reporty';
+    $workingDir = $runtimeDir . '/Pobočky';
 
-    if (!is_file($zipPath)) {
-        $xlsxCount = count(glob($workingDir . '/*/Databaze *.xlsx') ?: []);
-        if (!is_dir($workingDir) || $xlsxCount === 0) {
-            throw new RuntimeException('Chybí data/google_data/Pobočky.zip i rozbalená složka Pobočky s XLSX sešity.');
-        }
-
-        return [
-            'xlsx_count' => $xlsxCount,
-            'message' => 'Použita existující složka Pobočky (' . $xlsxCount . ' XLSX).',
-        ];
+    if ($zipPath === '') {
+        throw new RuntimeException('Nebyl nalezen ZIP Pobočky-YYYYMMDD*.zip.');
     }
 
     if (!class_exists('ZipArchive')) {
         throw new RuntimeException('Na tomto serveru není dostupná podpora ZIP (ZipArchive).');
     }
 
-    $stageDir = $googleDataDir . '/.Pobočky_rozbaleni';
-    $backupDir = $googleDataDir . '/.Pobočky_predchozi';
+    $stageDir = $runtimeDir . '/.Pobočky_rozbaleni';
+    $backupDir = $runtimeDir . '/.Pobočky_predchozi';
 
     cb_admin_google_reporty_smaz_strom($stageDir);
     cb_admin_google_reporty_smaz_strom($backupDir);
@@ -132,7 +132,7 @@ function cb_admin_google_reporty_priprav_zdroj(): array
     $zip = new ZipArchive();
     if ($zip->open($zipPath) !== true) {
         cb_admin_google_reporty_smaz_strom($stageDir);
-        throw new RuntimeException('Soubor Pobočky.zip nelze otevřít.');
+        throw new RuntimeException('Soubor ' . basename($zipPath) . ' nelze otevřít.');
     }
 
     try {
@@ -178,20 +178,28 @@ function cb_admin_google_reporty_priprav_zdroj(): array
         throw $e;
     }
 
+    $removedZipCount = cb_admin_google_reporty_smaz_starsi_zipy($zipFiles, $zipPath);
+
     return [
         'xlsx_count' => $xlsxCount,
-        'message' => 'ZIP nahradil složku Pobočky (' . $xlsxCount . ' XLSX).',
+        'message' => 'Použit ZIP ' . basename($zipPath) . ' (' . $xlsxCount . ' XLSX).'
+            . ($removedZipCount > 0 ? ' Odstraněno starších ZIPů: ' . $removedZipCount . '.' : ''),
     ];
 }
 
-function cb_admin_google_reporty_spust_import(): string
+function cb_admin_google_reporty_spust_import(): array
 {
     cb_admin_google_reporty_nacti_importer();
 
     ob_start();
     try {
-        main();
-        return (string)ob_get_clean();
+        $result = main();
+        $output = (string)ob_get_clean();
+
+        return [
+            'output' => $output,
+            'days' => (array)($result['days'] ?? []),
+        ];
     } catch (Throwable $e) {
         ob_end_clean();
         throw $e;
@@ -241,9 +249,180 @@ function cb_admin_google_reporty_nahled_importu(): array
     return $branches;
 }
 
+function cb_admin_google_reporty_stav_zdroje(): string
+{
+    $googleDataDir = dirname(__DIR__, 3) . '/data/google_data';
+    $zipFiles = cb_admin_google_reporty_najdi_zipy($googleDataDir);
+    $zipPath = (string)($zipFiles[0]['path'] ?? '');
+    $zipDate = (string)($zipFiles[0]['date'] ?? '');
+    if ($zipPath === '' || $zipDate === '') {
+        return 'ZIP nebyl nalezen.';
+    }
+
+    $date = DateTimeImmutable::createFromFormat('!Ymd', $zipDate);
+    $message = $date instanceof DateTimeImmutable
+        ? 'Nalezen ZIP ze dne ' . $date->format('j. n. Y')
+        : 'Nalezen ZIP';
+
+    try {
+        cb_admin_google_reporty_nacti_importer();
+        $lastReportDate = cb_admin_google_reporty_posledni_datum_zipu($zipPath);
+
+        if ($lastReportDate !== '') {
+            $lastDate = DateTimeImmutable::createFromFormat('Y-m-d', $lastReportDate);
+            $message .= ' s reporty do '
+                . ($lastDate instanceof DateTimeImmutable ? $lastDate->format('j. n. Y') : $lastReportDate)
+                . '.';
+        } else {
+            $message .= '. V ZIPu nebyly nalezeny reporty.';
+        }
+    } catch (Throwable $e) {
+        $message .= '. Datum reportů se nepodařilo načíst.';
+    }
+
+    return $message;
+}
+
+function cb_admin_google_reporty_posledni_datum_zipu(string $zipPath): string
+{
+    if (!class_exists('ZipArchive')) {
+        throw new RuntimeException('Na tomto serveru není dostupná podpora ZIP (ZipArchive).');
+    }
+
+    $tmpRoot = dirname(__DIR__, 2) . '/common/tmp';
+    if (!is_dir($tmpRoot) && !mkdir($tmpRoot, 0775, true) && !is_dir($tmpRoot)) {
+        throw new RuntimeException('Nelze vytvořit pomocnou složku pro kontrolu ZIPu.');
+    }
+
+    $tmpDir = $tmpRoot . '/google_reporty_zip_stav_' . bin2hex(random_bytes(8));
+    if (!mkdir($tmpDir, 0775, true) && !is_dir($tmpDir)) {
+        throw new RuntimeException('Nelze vytvořit pomocnou složku pro kontrolu ZIPu.');
+    }
+
+    $zip = new ZipArchive();
+    $opened = false;
+    try {
+        if ($zip->open($zipPath) !== true) {
+            throw new RuntimeException('ZIP nelze otevřít.');
+        }
+        $opened = true;
+
+        $xlsxEntries = [];
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $name = str_replace('\\', '/', (string)$zip->getNameIndex($i));
+            if (preg_match('#^Pobočky/[^/]+/Databaze [^/]+ [0-9]{4}\.xlsx$#iu', $name) === 1) {
+                $xlsxEntries[] = $name;
+            }
+        }
+        if ($xlsxEntries === [] || !$zip->extractTo($tmpDir, $xlsxEntries)) {
+            throw new RuntimeException('ZIP neobsahuje očekávané sešity Databaze poboček.');
+        }
+
+        return cb_admin_google_reporty_posledni_datum_adresare($tmpDir . '/Pobočky');
+    } finally {
+        if ($opened) {
+            $zip->close();
+        }
+        cb_admin_google_reporty_smaz_strom($tmpDir);
+    }
+}
+
+function cb_admin_google_reporty_posledni_datum_adresare(string $baseDir): string
+{
+    $lastReportDate = '';
+    foreach (orderBranchesForPreview(getBranchFolders($baseDir)) as $branchName => $branchPath) {
+        if (!isset(GOOGLE_BRANCH_MAP[$branchName])) {
+            continue;
+        }
+
+        $workbooks = findWorkbooksForBranch($branchPath, $branchName);
+        for ($i = count($workbooks) - 1; $i >= 0; $i--) {
+            $workbook = (string)$workbooks[$i];
+            $year = extractYearFromWorkbookName(basename($workbook), $branchName);
+            if ($year === null) {
+                continue;
+            }
+
+            $branchLastDate = '';
+            $sheetTargets = getWorkbookSheetTargetsByCalendar($workbook);
+            foreach (getRelevantWorkbookSheets($workbook, $year) as $sheetName) {
+                $sheetPath = (string)($sheetTargets[$sheetName] ?? '');
+                if ($sheetPath === '') {
+                    continue;
+                }
+                foreach (getSheetRows($workbook, $sheetPath) as $row) {
+                    $reportDate = normalizeDate((string)($row['A'] ?? ''));
+                    if ($reportDate !== null && $reportDate > $branchLastDate) {
+                        $branchLastDate = $reportDate;
+                    }
+                }
+            }
+
+            if ($branchLastDate !== '') {
+                if ($branchLastDate > $lastReportDate) {
+                    $lastReportDate = $branchLastDate;
+                }
+                break;
+            }
+        }
+    }
+
+    return $lastReportDate;
+}
+
+function cb_admin_google_reporty_najdi_zipy(string $googleDataDir): array
+{
+    $zipFiles = [];
+    foreach (glob($googleDataDir . '/Pobočky-*.zip') ?: [] as $path) {
+        $name = basename($path);
+        if (!is_file($path) || preg_match('/^Pobočky-(\d{8}).*\.zip$/u', $name, $matches) !== 1) {
+            continue;
+        }
+
+        $date = DateTimeImmutable::createFromFormat('!Ymd', $matches[1]);
+        if (!$date instanceof DateTimeImmutable || $date->format('Ymd') !== $matches[1]) {
+            continue;
+        }
+
+        $zipFiles[] = [
+            'path' => $path,
+            'name' => $name,
+            'date' => $matches[1],
+        ];
+    }
+
+    usort($zipFiles, static function (array $a, array $b): int {
+        return [$b['date'], $b['name']] <=> [$a['date'], $a['name']];
+    });
+
+    return $zipFiles;
+}
+
+function cb_admin_google_reporty_smaz_starsi_zipy(array $zipFiles, string $selectedZipPath): int
+{
+    $removed = 0;
+    foreach ($zipFiles as $zipFile) {
+        $path = (string)($zipFile['path'] ?? '');
+        if ($path === '' || $path === $selectedZipPath) {
+            continue;
+        }
+        if (is_file($path) && !unlink($path)) {
+            throw new RuntimeException('Nelze odstranit starší ZIP ' . basename($path) . '.');
+        }
+        $removed++;
+    }
+
+    return $removed;
+}
+
+function cb_admin_google_reporty_smaz_pracovni_zdroj(): void
+{
+    cb_admin_google_reporty_smaz_strom(dirname(__DIR__, 2) . '/common/tmp/google_reporty/Pobočky');
+}
+
 function cb_admin_google_reporty_nacti_importer(): void
 {
-    $scriptPath = dirname(__DIR__, 3) . '/data/google_data/google_data.php';
+    $scriptPath = __DIR__ . '/admin_google_reporty_importer.php';
     if (!is_file($scriptPath)) {
         throw new RuntimeException('Importní skript Google reportů nebyl nalezen.');
     }
@@ -254,16 +433,32 @@ function cb_admin_google_reporty_nacti_importer(): void
     require_once $scriptPath;
 }
 
-function cb_admin_google_reporty_shrnuti_importu(string $output): array
+function cb_admin_google_reporty_shrnuti_importu(string $output, array $days): array
 {
     $reports = cb_admin_google_reporty_cislo_z_vystupu($output, 'ulozene reporty');
     $errors = cb_admin_google_reporty_cislo_z_vystupu($output, 'pocet chyb');
-    $days = cb_admin_google_reporty_cislo_z_vystupu($output, 'zpracovane dny');
+    $dayLines = [];
+    foreach ($days as $day) {
+        $dateValue = (string)($day['date'] ?? '');
+        $date = DateTimeImmutable::createFromFormat('!Y-m-d', $dateValue);
+        $dateLabel = $date instanceof DateTimeImmutable && $date->format('Y-m-d') === $dateValue
+            ? $date->format('j. n. Y')
+            : $dateValue;
+        $branches = array_values(array_filter(array_map('strval', (array)($day['branches'] ?? []))));
+        if ($dateLabel !== '' && $branches !== []) {
+            $dayLines[] = $dateLabel . ' – ' . implode(', ', $branches);
+        }
+    }
+
+    $message = 'Zpracované dny: ' . count($dayLines) . ', uloženo reportů: ' . $reports . ', chyb: ' . $errors . '.';
+    if ($dayLines !== []) {
+        $message .= "\n" . implode("\n", $dayLines);
+    }
 
     return [
         'reports' => $reports,
         'errors' => $errors,
-        'message' => 'Zpracováno dnů: ' . $days . ', uloženo reportů: ' . $reports . ', chyb: ' . $errors . '.',
+        'message' => $message,
     ];
 }
 

@@ -1,23 +1,20 @@
 <?php
-// mobil/mobil_registrace.php * Verze: V7 * Aktualizace: 07.03.2026 * Počet řádků: 376
-// Předchozí počet řádků: 393
+// mobil/mobil_registrace.php * Verze: V8 * Aktualizace: 09.09.2026
 declare(strict_types=1);
 
 /*
- * REGISTRACE ZAŘÍZENÍ (mobilní stránka)
+ * REGISTRACE ZARIZENI
  *
- * Co dělá:
- * - jede BEZ session: identifikace uživatele je přes token v URL (?t=...)
- * - vyžádá povolení notifikací
+ * Ucel souboru:
+ * - identifikovat uzivatele jednorazovym tokenem v URL
+ * - vyzadat povoleni notifikaci
  * - zaregistruje Service Worker z verejneho rootu
- * - vytvoří Push subscription (VAPID public)
- * - odešle subscription + token na server (POST)
- * - server ověří token v tabulce push_parovani (hash, aktivní, neexpirace, nepoužitý)
- * - pravidlo: vždy jen 1 aktivní zařízení (ostatní deaktivuje)
- * - uloží subscription do DB do push_zarizeni a označí token jako použitý
+ * - vytvorit a ulozit Push subscription
+ * - deaktivovat predchozi zarizeni uzivatele
+ * - ulozit podepsanou cookie duveryhodneho zarizeni
  *
  * CSS:
- * - používá jednotné třídy z style/modal_alert.css (modal-page, modal, modal-btn, atd.)
+ * - pouziva jednotne tridy z style/modal_alert.css
  */
 require_once __DIR__ . '/../lib/session_boot.php';
 
@@ -25,6 +22,7 @@ require_once __DIR__ . '/../lib/app.php';
 require_once __DIR__ . '/../lib/system.php';
 require_once __DIR__ . '/../config/secrets.php';
 require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
+require_once __DIR__ . '/../lib/duveryhodne_zarizeni.php';
 header('X-Robots-Tag: noindex, nofollow');
 
 $vapidPublic = defined('CB_VAPID_PUBLIC') ? (string)CB_VAPID_PUBLIC : '';
@@ -34,6 +32,7 @@ if (isset($_GET['t'])) {
     $token = trim((string)$_GET['t']);
 }
 
+/* Overi parovaci token a vrati uzivatele, kteremu patri. */
 function cb_find_pair_token(string $token): ?array
 {
     if ($token === '' || strlen($token) < 20) {
@@ -76,6 +75,7 @@ function cb_find_pair_token(string $token): ?array
     ];
 }
 
+/* Nacte zobrazovane jmeno uzivatele pro potvrzeni registrace. */
 function cb_pair_user_full_name(int $idUser): string
 {
     if ($idUser <= 0) {
@@ -198,6 +198,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         }
         $stmt->bind_param('isssss', $idUser, $endpoint, $endpoint, $p256dh, $auth, $nazev);
         $stmt->execute();
+        $idZarizeni = (int)$conn->insert_id;
         $stmt->close();
 
         $stmt = $conn->prepare('
@@ -215,10 +216,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
 
         $conn->commit();
 
+        cb_duveryhodne_zarizeni_uloz_cookie($conn, $idUser, $idZarizeni);
+
         try {
             cb_push_send_first_entry_admin(cb_pair_user_full_name($idUser), 1);
         } catch (Throwable $eNotify) {
-            // Notifikace adminovi nesmí zrušit úspěšnou registraci zařízení.
+            // Notifikace adminovi nesmi zrusit uspesnou registraci zarizeni.
         }
 
         echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
@@ -320,7 +323,7 @@ $pairUserName = $tokenOk ? cb_pair_user_full_name((int)($pair['id_user'] ?? 0)) 
           <strong><?= h($pairUserName !== '' ? $pairUserName : 'uživatel') ?></strong>
           <div>byla úspěšná.</div>
           <div class="success-note">
-            <span class="success-remember">Pamatujte:</span> Právě zaregistrované zařízení budete potřebovat při každém vstupu do Comeback systému z důvodu dvoufázového ověření 2FA.
+            <span class="success-remember">Hotovo:</span> Toto zařízení je připravené pro bezpečný vstup do IS Comeback.
           </div>
         </div>
       <?php } ?>
@@ -332,6 +335,7 @@ $pairUserName = $tokenOk ? cb_pair_user_full_name((int)($pair['id_user'] ?? 0)) 
 <?php if ($vapidPublic !== '' && $tokenOk) { ?>
 <script>
 (function(){
+  /* Ucel funkce: Ridit registraci push zarizeni a zobrazit jeji stav. */
   var out = document.getElementById('out');
   var btnPerm = document.getElementById('btnPerm');
   var btnPair = document.getElementById('btnPair');
@@ -344,10 +348,12 @@ $pairUserName = $tokenOk ? cb_pair_user_full_name((int)($pair['id_user'] ?? 0)) 
   var countdownTimer = null;
   var pairUserName = <?php echo json_encode($pairUserName !== '' ? $pairUserName : 'uživatel', JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
 
+  /* Doplni nulu do dvouciferneho casoveho udaje. */
   function pad(n){
     return String(n).padStart(2, '0');
   }
 
+  /* Prekresli odpocet platnosti registracniho tokenu. */
   function renderCountdown(){
     if (!countdownTxt) {
       return;
@@ -362,18 +368,21 @@ $pairUserName = $tokenOk ? cb_pair_user_full_name((int)($pair['id_user'] ?? 0)) 
     countdownTxt.textContent = 'Na zaregistrování zařízení zbývá: ' + pad(min) + ':' + pad(rest);
   }
 
+  /* Zobrazi aktualni stav registrace uzivateli. */
   function log(msg){
     if (out) {
       out.textContent = 'Stav: ' + msg;
     }
   }
 
+  /* Zobrazi informaci o povolenych notifikacich. */
   function showAllowedText(){
     if (registerIntro) {
       registerIntro.innerHTML = 'Notifikace jsou povoleny,<br>nyní je třeba zaregistrovat zařízení.';
     }
   }
 
+  /* Zobrazi tlacitko pro dokonceni registrace zarizeni. */
   function showPairButton(){
     showAllowedText();
     if (btnPerm) {
@@ -388,6 +397,7 @@ $pairUserName = $tokenOk ? cb_pair_user_full_name((int)($pair['id_user'] ?? 0)) 
     }
   }
 
+  /* Zobrazi potvrzeni uspesne registrace. */
   function showDone(){
     if (countdownTimer) {
       clearInterval(countdownTimer);
@@ -416,10 +426,10 @@ $pairUserName = $tokenOk ? cb_pair_user_full_name((int)($pair['id_user'] ?? 0)) 
       note.className = 'success-note';
       var remember = document.createElement('span');
       remember.className = 'success-remember';
-      remember.textContent = 'Pamatujte:';
+      remember.textContent = 'Hotovo:';
 
       note.appendChild(remember);
-      note.appendChild(document.createTextNode(' Právě zaregistrované zařízení budete potřebovat při každém vstupu do Comeback systému z důvodu dvoufázového ověření 2FA.'));
+      note.appendChild(document.createTextNode(' Toto zařízení je připravené pro bezpečný vstup do IS Comeback.'));
 
       done.appendChild(lineUser);
       done.appendChild(userName);
@@ -470,6 +480,7 @@ $pairUserName = $tokenOk ? cb_pair_user_full_name((int)($pair['id_user'] ?? 0)) 
   var vapidPublic = <?php echo json_encode($vapidPublic, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
   var token = <?php echo json_encode($token, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
 
+  /* Prevede verejny VAPID klic do formatu pro Push API. */
   function b64UrlToUint8Array(base64Url){
     var padding = '='.repeat((4 - (base64Url.length % 4)) % 4);
     var base64 = (base64Url + padding).replace(/-/g, '+').replace(/_/g, '/');

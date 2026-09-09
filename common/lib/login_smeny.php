@@ -1,21 +1,18 @@
 <?php
-// lib/login_smeny.php * Verze: V25 * Aktualizace: 31.03.2026
+// lib/login_smeny.php * Verze: V26 * Aktualizace: 09.09.2026
 declare(strict_types=1);
 
 /*
- * PŘIHLÁŠENÍ PŘES SMĚNY (GraphQL API) + 2FA (schválení na mobilu)
+ * PRIHLASENI PRES SMENY NEBO LOKALNI HESLO + 2FA
  *
- * Co to dělá:
- * - ověří email/heslo přes Směny (GraphQL)
- * - načte jen základní profil pro modál registrace / 2FA
- * - uloží minimální data do session (bez login_ok)
- * - při prvním loginu bez aktivního zařízení přeskočí 2FA a pustí uživatele do párování mobilu
- * - při dalším loginu připraví 2FA výzvu do DB (push_login_2fa) a odešle notifikaci na spárované zařízení (push_zarizeni)
- * - redirect na úvod (index.php zobrazí čekací modál nebo modál párování)
+ * Ucel souboru:
+ * - overit email a heslo proti lokalnimu uctu nebo API Smeny
+ * - predat push endpoint aktualniho prohlizece lokalnimu login toku
+ * - presmerovat na prime mobilni schvaleni, cekaci 2FA nebo cilovy modul
  *
- * Důležité:
- * - login_ok se nastaví AŽ po schválení 2FA (mobil), nebo hned při LOCAL / prvním loginu bez zařízení
- * - LOCAL: 2FA lze vypnout přes set_system.on_2fa (notifikace z LOCAL nechodí)
+ * Dulezite:
+ * - bez platneho hesla se zarizeni nikdy nevyhodnocuje
+ * - lokalni vyvoj preskakuje 2FA podle stavajiciho pravidla prostredi
  */
 require_once __DIR__ . '/session_boot.php';
 
@@ -31,11 +28,13 @@ require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
 require_once __DIR__ . '/../db/db_api_smeny.php';
 require_once __DIR__ . '/../db/db_user.php';
 
+/* Vrati orezanou textovou hodnotu z prihlasovaciho formulare. */
 function post_str(string $k): string
 {
     return trim((string)($_POST[$k] ?? ''));
 }
 
+/* Vrati povoleny cilovy modul po uspesnem prihlaseni. */
 function post_module(): string
 {
     $module = strtolower(post_str('module'));
@@ -57,6 +56,7 @@ try {
 
     $email = post_str('email');
     $heslo = post_str('heslo');
+    $deviceEndpoint = post_str('device_endpoint');
     $_SESSION['cb_login_target_module'] = post_module();
 
     if ($email === '' || $heslo === '') {
@@ -78,8 +78,8 @@ try {
             cb_user_bad_login_log($email, $heslo);
             throw new RuntimeException('Neplatné přihlašovací údaje.');
         }
-        cb_lokalni_login_zahaj(db(), $localUser);
-        header('Location: ' . cb_login_target_url());
+        $primePresmerovani = cb_lokalni_login_zahaj(db(), $localUser, $deviceEndpoint);
+        header('Location: ' . ($primePresmerovani ?? cb_login_target_url()));
         exit;
     }
 
@@ -157,7 +157,7 @@ try {
 
     $_SESSION['cb_auth_ok'] = 1;
 
-    // LOCAL: 2FA se přeskočí jen když je vypnuto v set_system.on_2fa
+    // LOCAL: 2FA se preskoci jen kdyz je vypnuto v set_system.on_2fa
     cb_login_load_settings_to_session($idUser);
     $on2fa = (int)cb_system_setting('on_2fa', 1);
 
@@ -167,14 +167,11 @@ try {
         unset($_SESSION['cb_2fa_token']);
 
         cb_login_finalize_after_ok($token);
-        if ((string)($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL') {
-            $_SESSION['cb_local_after_login_sync'] = 1;
-        }
         header('Location: ' . cb_login_target_url());
         exit;
     }
 
-    // SERVER: bez aktivního zařízení je to první login => přeskoč 2FA a pusť párování
+    // SERVER: bez aktivniho zarizeni je to prvni login a pokracuje parovani
     $maAktivniZarizeni = false;
 
     $stmtDevice = db()->prepare('
@@ -201,16 +198,16 @@ try {
         exit;
     }
 
-    // ====== 2FA: vytvoř výzvu a čekej na schválení ======
-    $limitSec = 300;
+    // 2FA: vytvor vyzvu a cekej na schvaleni
+    $limitSec = 60;
     if (defined('CB_2FA_LIMIT_SEC')) {
         $limitSec = (int)CB_2FA_LIMIT_SEC;
         if ($limitSec <= 0) {
-            $limitSec = 300;
+            $limitSec = 60;
         }
     }
 
-    // token je 64 hex znaků (32 bytes)
+    // Token ma 64 hex znaku, tedy 32 nahodnych bajtu
     $token2fa = bin2hex(random_bytes(32));
 
     $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '');
@@ -239,14 +236,14 @@ try {
     $stmt->execute();
     $stmt->close();
 
-    // Ulož do session jen identifikátor aktuální 2FA výzvy
+    // Do session se uklada jen identifikator aktualni 2FA vyzvy
     $_SESSION['cb_2fa_token'] = $token2fa;
 
-    // login_ok zatím NEEXISTUJE
+    // login_ok pred schvalenim neexistuje
     unset($_SESSION['login_ok']);
     unset($_SESSION['cb_auth_ok']);
 
-    // ====== Odeslání Web Push notifikace ======
+    // Odeslani Web Push notifikace
 
     $sent = cb_push_send_2fa($idUser, $token2fa);
 
@@ -260,9 +257,9 @@ try {
 } catch (Throwable $e) {
 
     /*
-     * Neúspěšný login / chyba:
-     * - zapíšeme log volání Směn i bez id_user a id_login (NULL)
-     * - nic z toho nesmí shodit redirect ani chování loginu
+         * Neuspesny login nebo chyba:
+         * - zapiseme log volani Smen i bez id_user a id_login
+         * - logovani nesmi zmenit presmerovani ani chovani loginu
      */
     try {
         db_api_smeny_flush(db(), null, null);
@@ -294,5 +291,5 @@ try {
 }
 
 // lib/login_smeny.php * Verze: V25 * Aktualizace: 30.03.2026
-// Počet řádků: 359
+// Pocet radku: 359
 // Konec souboru

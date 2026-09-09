@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+/* Jednotná obsluha filtrů je provoz/js/filtry.js. */
+
 require_once __DIR__ . '/../lib/prehled_smen_data.php';
 
 if (!function_exists('ps_num_or_dash')) {

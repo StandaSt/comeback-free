@@ -191,9 +191,16 @@ if (!function_exists('cb_restia_online_kontrola_notify_admin')) {
 }
 
 if (!function_exists('cb_restia_online_kontrola')) {
-    function cb_restia_online_kontrola(bool $force = false): bool
+    /**
+     * Spusti jeden beh online aktualizace Restie.
+     *
+     * Automatika pouziva vychozi interval 120 sekund. Rucni akce smi predat
+     * vlastni minimalni interval, nikdy vsak neobchazi evidenci aktivniho behu.
+     */
+    function cb_restia_online_kontrola(bool $force = false, int $minimalniIntervalSekund = 120): bool
     {
         $db = db();
+        $minimalniIntervalSekund = max(0, $minimalniIntervalSekund);
 
         $cbUser = $_SESSION['cb_user'] ?? null;
         $idUserRaw = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
@@ -207,7 +214,7 @@ if (!function_exists('cb_restia_online_kontrola')) {
             $q->free();
             if (!empty($row['konec'])) {
                 $last = strtotime((string)$row['konec']);
-                if ($last !== false && (time() - $last) < 120) {
+                if ($last !== false && (time() - $last) < $minimalniIntervalSekund) {
                     return false;
                 }
             }

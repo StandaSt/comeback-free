@@ -12,14 +12,45 @@ require_once __DIR__ . '/common/lib/system.php';
 require_once __DIR__ . '/common/config/secrets.php';
 require_once __DIR__ . '/common/lib/json_registrace.php';
 require_once __DIR__ . '/common/lib/prvni_vstup.php';
+require_once __DIR__ . '/common/lib/obnoveni_hesla.php';
+require_once __DIR__ . '/common/lib/email_zmena.php';
+require_once __DIR__ . '/common/lib/hr_user_sync.php';
 require_once __DIR__ . '/common/lib/moduly.php';
 require_once __DIR__ . '/common/lib/nastaveni_uzivatele.php';
-require_once __DIR__ . '/common/lib/local_login_sync.php';
 
 cb_session_guard_entry();
 require_once __DIR__ . '/provoz/lib/logout_handler.php';
 
+/* Jednorazove zobrazi potvrzeni rychleho vstupu z duveryhodneho zarizeni. */
+if (!empty($_SESSION['login_ok']) && !empty($_SESSION['cb_duveryhodne_zarizeni_nacitam'])) {
+    unset($_SESSION['cb_duveryhodne_zarizeni_nacitam']);
+    $cbDuveryhodneZarizeniTarget = cb_login_target_url();
+    require __DIR__ . '/common/modaly/modal_nacitani_duveryhodneho_zarizeni.php';
+    exit;
+}
+
+if (isset($_GET['potvrdit_email'])) {
+    require __DIR__ . '/common/pages/potvrzeni_emailu.php';
+    exit;
+}
+
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'] ?? '') === 'potvrdit_email') {
+    try {
+        $cbEmailZmena = cb_email_zmena_potvrd(db(), trim((string)($_POST['token'] ?? '')));
+        $cbSessionUser = $_SESSION['cb_user'] ?? null;
+        if (is_array($cbSessionUser) && (int)($cbSessionUser['id_user'] ?? 0) === (int)$cbEmailZmena['id_user']) {
+            $_SESSION['cb_user']['email'] = (string)$cbEmailZmena['novy_email'];
+        }
+        $_SESSION['cb_flash'] = 'Přihlašovací e-mail byl změněn.';
+    } catch (Throwable $e) {
+        $_SESSION['cb_flash'] = $e->getMessage();
+    }
+    header('Location: ' . cb_root_url(''), true, 303);
+    exit;
+}
+
 if (!empty($_SESSION['login_ok'])) {
+    cb_hr_user_sync_ukoncene(db());
     require_once __DIR__ . '/common/db/db_prava.php';
     $cbRightsUser = $_SESSION['cb_user'] ?? [];
     cb_db_prava_nacti_do_session(
@@ -42,11 +73,10 @@ if (!empty($_SESSION['login_ok'])) {
 }
 
 cb_nastaveni_uzivatele_vyrid_post();
-cb_local_login_sync_vyrid();
 
 if (empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'] ?? '') === 'zapomenute_heslo') {
     try {
-        $cbResetEmailSent = cb_prvni_vstup_obnoveni_hesla_odeslat(db(), trim((string)($_POST['email'] ?? '')));
+        $cbResetEmailSent = cb_obnoveni_hesla_odeslat(db(), trim((string)($_POST['email'] ?? '')));
         $_SESSION['cb_flash'] = $cbResetEmailSent
             ? 'E-mail byl odeslán'
             : "Neznámý E-mail,\nkontaktujte admina IS";
@@ -54,6 +84,18 @@ if (empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST
         $_SESSION['cb_flash'] = $e->getMessage();
     }
     header('Location: ' . cb_root_url('?zapomenute_heslo=1'), true, 303);
+    exit;
+}
+
+/* Ulozi obnovene heslo a vrati uzivatele k beznemu prihlaseni. */
+if (empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'] ?? '') === 'obnoveni_hesla_ulozit') {
+    try {
+        cb_obnoveni_hesla_uloz(db(), $_POST);
+        $_SESSION['cb_flash'] = 'Nové heslo bylo uloženo. Nyní se přihlaste.';
+    } catch (Throwable $e) {
+        $_SESSION['cb_flash'] = $e->getMessage();
+    }
+    header('Location: ' . cb_root_url(''), true, 303);
     exit;
 }
 
@@ -67,6 +109,17 @@ if (empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST
         header('Location: ' . cb_root_url(''), true, 303);
         exit;
     }
+}
+
+/* Overi odkaz obnoveni hesla bez zahajeni prihlasovaciho toku. */
+if (empty($_SESSION['login_ok']) && isset($_GET['obnoveni_hesla'])) {
+    if (!cb_obnoveni_hesla_over_token(db(), trim((string)$_GET['obnoveni_hesla']))) {
+        $_SESSION['cb_flash'] = 'Odkaz pro nastavení nového hesla není platný nebo již vypršel.';
+        header('Location: ' . cb_root_url('?zapomenute_heslo=1'), true, 303);
+        exit;
+    }
+    header('Location: ' . cb_root_url(''), true, 303);
+    exit;
 }
 
 if (empty($_SESSION['login_ok']) && isset($_GET['prvni_vstup'])) {
@@ -139,6 +192,7 @@ if (
     && (
         isset($_SERVER['HTTP_X_COMEBACK_ADMIN_PRAVA'])
         || isset($_SERVER['HTTP_X_COMEBACK_ADMIN_INDIVIDUAL'])
+        || isset($_SERVER['HTTP_X_COMEBACK_ADMIN_USER_DETAIL'])
     )
 ) {
     cb_modul_nacti('administrace');
@@ -209,10 +263,12 @@ if (!empty($_SESSION['login_ok'])) {
         }
     }
 
-    $cbIsProvozRequest = $cbHasAsyncHeader;
-
-    if ($cbIsProvozRequest) {
-        cb_modul_nacti('provoz');
+    if ($cbHasAsyncHeader) {
+        $cbAsyncModule = 'provoz';
+        if ((string)($_SERVER['HTTP_X_COMEBACK_PARTIAL'] ?? '') === '1') {
+            $cbAsyncModule = cb_modul_normalizuj(strtolower(trim((string)($_GET['m'] ?? 'provoz'))));
+        }
+        cb_modul_nacti($cbAsyncModule);
         exit;
     }
 }
@@ -261,85 +317,6 @@ if (!empty($_SESSION['login_ok'])) {
     require_once __DIR__ . '/common/lib/pobocky_vyber.php';
     cb_pobocky_bootstrap_session();
 
-    if ((string)($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL' && !empty($_SESSION['cb_local_after_login_sync'])) {
-        // Lokální synchronizace používá stejný střízlivý loader jako pracovní plocha PP.
-        $cbPageLoaderCssPath = __DIR__ . '/common/style/page_loader.css';
-        $cbPageLoaderCssUrl = cb_public_url('style/page_loader.css') . '?v=' . (is_file($cbPageLoaderCssPath) ? (string)filemtime($cbPageLoaderCssPath) : '1');
-        ?><!doctype html>
-<html lang="cs">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Comeback - načítání</title>
-  <link rel="icon" type="image/png" href="<?= h(cb_public_url('img/logo_comeback.png')) ?>">
-  <link rel="stylesheet" href="<?= h(cb_asset_url('style/global.css')) ?>">
-  <link rel="stylesheet" href="<?= h($cbPageLoaderCssUrl) ?>">
-  <style>
-    html,
-    body{margin:0;min-height:100%;background:var(--cb-bg-page);}
-  </style>
-</head>
-<body>
-<main class="pp is-page-loading" style="min-height:100vh;">
-  <div class="cb_page_loader" role="status" aria-live="polite" aria-atomic="true">
-    <span class="cb_page_loader_text">Inicializuji systém ...</span>
-    <span class="cb_page_loader_detail">Aktualizuji uživatele a data</span>
-  </div>
-</main>
-<script>
-window.CB_ENDPOINT = <?= json_encode(cb_root_url(''), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
-</script>
-<script src="<?= h(cb_asset_url('js/restia_online.js')) ?>"></script>
-<script>
-(function(){
-  'use strict';
-  var targetUrl = <?= json_encode(cb_login_target_url(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
-
-  function localStep(name){
-    return fetch(window.CB_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'X-Comeback-Local-Login-Sync': name,
-        'Accept': 'application/json'
-      },
-      credentials: 'same-origin'
-    }).then(function(response){
-      if (!response.ok) throw new Error('HTTP ' + response.status);
-      return response.json();
-    });
-  }
-
-  function finish(){
-    localStep('done')
-      .catch(function(){})
-      .finally(function(){
-        window.location.replace(targetUrl);
-      });
-  }
-
-  localStep('users')
-    .catch(function(error){
-      if (window.console && window.console.warn) window.console.warn(error);
-    })
-    .then(function(){
-      if (window.CB_RESTIA && typeof window.CB_RESTIA.run === 'function') {
-        window.CB_ACTIVE_MAIN_MODULE = 'provoz';
-        return window.CB_RESTIA.run();
-      }
-      return null;
-    })
-    .catch(function(error){
-      if (window.console && window.console.warn) window.console.warn(error);
-    })
-    .finally(finish);
-})();
-</script>
-</body>
-</html>
-<?php
-        exit;
-    }
-
     require __DIR__ . '/common/lib/priprava_kostry_stranky.php';
     require __DIR__ . '/common/includes/kostra_stranky.php';
     exit;
@@ -370,6 +347,8 @@ if ($cbLoginBackgroundCount > 0) {
 <?php
 if ($cb2faPending) {
     require_once __DIR__ . '/common/modaly/modal_overeni.php';
+} elseif (cb_obnoveni_hesla_zbyva() > 0) {
+    require_once __DIR__ . '/common/modaly/modal_obnoveni_hesla.php';
 } elseif (cb_prvni_vstup_zbyva() > 0) {
     require_once __DIR__ . '/common/modaly/modal_prvni_vstup.php';
 } elseif ($cbAuthOk) {

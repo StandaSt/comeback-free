@@ -11,6 +11,10 @@ if (!function_exists('db_user_akce_db_insert')) {
         if ($idUser <= 0) {
             return 0;
         }
+        $idLogin = (int)($row['id_login'] ?? 0);
+        if ($idLogin <= 0) {
+            $idLogin = null;
+        }
         $idAkce = (int)($row['id_akce'] ?? 0);
         if ($idAkce < 0) {
             $idAkce = 0;
@@ -51,13 +55,13 @@ if (!function_exists('db_user_akce_db_insert')) {
         $sql = '
             INSERT INTO user_akce_db
                 (
-                    cas_start, id_user, id_akce, request_uri, metoda,
+                    cas_start, id_user, id_login, id_akce, request_uri, metoda,
                     request_ms, sql_count, sql_total_ms, sql_max_ms,
                     rows_returned, rows_affected, bytes_received, bytes_sent,
                     status, err_msg
                 )
             VALUES
-                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ';
         $stmt = $conn->prepare($sql);
         if (!$stmt instanceof mysqli_stmt) {
@@ -65,9 +69,10 @@ if (!function_exists('db_user_akce_db_insert')) {
         }
 
         $stmt->bind_param(
-            'siissdiddiiiiss',
+            'siiissdiddiiiiss',
             $casStart,
             $idUser,
+            $idLogin,
             $idAkce,
             $requestUri,
             $metoda,

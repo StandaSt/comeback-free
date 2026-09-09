@@ -1227,21 +1227,6 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   background:rgba(15,23,42,.62);
 }
 
-/* Objednavky - horni radek s titulkem a poctem radku. */
-.provoz_objednavky_head{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:16px;
-  margin:0 0 10px;
-}
-
-.provoz_objednavky_meta{
-  margin:0;
-  color:var(--cb-text-muted);
-  font-size:var(--cb-font-11);
-}
-
 /* Objednavky - volba poctu radku. */
 .provoz_objednavky_per{
   display:flex;
@@ -1262,9 +1247,26 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   color:var(--cb-text-main);
 }
 
+.provoz_objednavky_list{
+  display:inline-block;
+  max-width:100%;
+}
+
+.provoz_objednavky_header_title{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+
+.provoz_objednavky_header_title h1{
+  margin:0;
+}
+
 /* Objednavky - obal tabulky. */
 .provoz_objednavky_table_wrap{
-  width:100%;
+  width:auto;
+  max-width:100%;
   overflow:auto;
   border:1px solid var(--cb-border);
   border-radius:8px;
@@ -1285,7 +1287,7 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   border-bottom:1px solid var(--cb-border-soft);
   border-left:1px solid var(--cb-border-soft);
   line-height:1.2;
-  text-align:left;
+  text-align:right;
   vertical-align:middle;
   white-space:nowrap;
 }
@@ -1306,6 +1308,14 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   background:var(--cb-bg-info);
 }
 
+.provoz_objednavky_table tbody tr.provoz_objednavky_row--cancelled td{
+  background:#fff1f1;
+}
+
+.provoz_objednavky_table tbody tr.provoz_objednavky_row--cancelled:hover td{
+  background:#ffe5e5;
+}
+
 .provoz_objednavky_filter_row th{
   padding:5px;
 }
@@ -1321,6 +1331,7 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   background:var(--cb-bg-control);
   color:var(--cb-text-main);
   font-size:var(--cb-font-11);
+  text-align:right;
 }
 
 .provoz_objednavky_filter_datetime{
@@ -1336,6 +1347,7 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
 .provoz_objednavky_sort_link{
   display:inline-flex;
   align-items:center;
+  justify-content:flex-end;
   gap:4px;
   color:var(--cb-text-main);
   text-decoration:none;
@@ -1370,6 +1382,24 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   margin-top:10px;
   color:var(--cb-text-muted);
   font-size:var(--cb-font-11);
+}
+
+.head_task_btn--restia-refresh{
+  justify-content:center;
+  background:var(--clr_modra_6);
+  border-color:var(--clr_modra_6);
+  color:var(--clr_bila);
+}
+
+.head_task_btn--restia-refresh:hover:not(:disabled){
+  background:#3c78d8;
+  border-color:#3c78d8;
+}
+
+.head_task_btn--restia-refresh:disabled{
+  background:var(--cb-bg-control);
+  border-color:var(--cb-border);
+  color:var(--cb-text-muted);
 }
 
 .provoz_objednavky_pager_links{

@@ -33,7 +33,18 @@ function hr_nacti_vd_detail(mysqli $db, int $idVd): ?array
             vd.upraveno,
             s.nazev AS stav_nazev,
             z.nazev AS zdroj_nazev,
-            cs.slot AS pozice
+            cs.slot AS pozice,
+            (
+                SELECT CONCAT(a.termin_date, ' ', COALESCE(a.termin_time, '00:00:00'))
+                FROM hr_vd_akce a
+                INNER JOIN hr_cis_vd_akce_vysledek av
+                    ON av.id_vd_akce_vysledek = a.id_vd_akce_vysledek
+                WHERE a.id_vd = vd.id_vd
+                  AND av.id_cilovy_vd_stav = " . HR_VD_STAV_POHOVOR_DOMLUVEN . "
+                  AND a.termin_date IS NOT NULL
+                ORDER BY a.akce_kdy DESC, a.id_vd_akce DESC
+                LIMIT 1
+            ) AS pohovor_termin
         FROM hr_vd vd
         INNER JOIN hr_cis_vd_stav s
             ON s.id_vd_stav = vd.id_vd_stav

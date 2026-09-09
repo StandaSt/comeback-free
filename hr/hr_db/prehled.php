@@ -61,6 +61,29 @@ function hr_fetch_prehled(mysqli $db): array
     }
     $result->free();
 
+    $pozadavky = [
+        'celkem' => 0,
+        'instor' => 0,
+        'kuryr' => 0,
+    ];
+
+    $result = $db->query("
+        SELECT
+            COUNT(*) AS celkem,
+            SUM(CASE WHEN cs.slot = 'Instor' THEN 1 ELSE 0 END) AS instor,
+            SUM(CASE WHEN cs.slot = 'Kurýr' THEN 1 ELSE 0 END) AS kuryr
+        FROM hr_pozadavek hp
+        INNER JOIN cis_slot cs
+            ON cs.id_slot = hp.id_slot
+        WHERE hp.id_pozadavek_stav = 1
+    ");
+    if ($row = $result->fetch_assoc()) {
+        $pozadavky['celkem'] = (int)($row['celkem'] ?? 0);
+        $pozadavky['instor'] = (int)($row['instor'] ?? 0);
+        $pozadavky['kuryr'] = (int)($row['kuryr'] ?? 0);
+    }
+    $result->free();
+
     $kReseni = [
         'koncici_smlouvy' => 0,
         'zdravotni_prohlidky' => 0,
@@ -82,11 +105,7 @@ function hr_fetch_prehled(mysqli $db): array
     return [
         'nabor' => $nabor,
         'zamestnanci' => $zamestnanci,
-        'pozadavky' => [
-            'celkem' => 0,
-            'instor' => 0,
-            'kuryr' => 0,
-        ],
+        'pozadavky' => $pozadavky,
         'k_reseni' => $kReseni,
         'dokumenty' => hr_fetch_prehled_documents($db, 5),
         'lekarske_prohlidky' => [],

@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+/* Jednotná obsluha filtrů je provoz/js/filtry.js. */
+
 /* Standardní filtrovaný přehled záznamů log_chyby; mazání obsluhuje administrace.php. */
 
 if (!function_exists('cb_pravo_ma') || !cb_pravo_ma(106)) {

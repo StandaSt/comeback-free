@@ -73,6 +73,8 @@ window.CB_CRF_TOKEN = <?= json_encode(function_exists('cb_crf_token') ? cb_crf_t
 <script src="<?= h($cbAdministraceIndividualSaveJsUrl) ?>"></script>
 <?php // Pridani, editace a razeni ciselniku prav v Administraci. ?>
 <script src="<?= h($cbAdministraceEditacePravJsUrl) ?>"></script>
+<?php // Správa uživatelů v Administraci. ?>
+<script src="<?= h($cbAdministraceUzivateleJsUrl) ?>"></script>
 <?php // AI analytik modulu Provoz. ?>
 <script src="<?= h(cb_root_url('provoz/js/ai_analytik.js') . '?v=' . (is_file(__DIR__ . '/../../provoz/js/ai_analytik.js') ? (string)filemtime(__DIR__ . '/../../provoz/js/ai_analytik.js') : '1')) ?>"></script>
 <?php // Konfigurace navigace mezi hlavni moduly. ?>
@@ -84,6 +86,7 @@ window.CB_MODULY_NAVIGACE = {
   helpdeskAllowedViews: <?= json_encode(array_values(array_filter(array_keys(cb_helpdesk_views()), 'cb_helpdesk_view_allowed')), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,
   adminFirmaPridat: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(105) ? 'true' : 'false' ?>,
   adminLogChyby: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(106) ? 'true' : 'false' ?>,
+  adminUzivatele: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(107) ? 'true' : 'false' ?>,
   aiAnalytikAllowed: <?= function_exists('cb_pravo_ma') && is_array($_SESSION['prava_stav'] ?? null) && array_key_exists(210, $_SESSION['prava_stav']) && cb_pravo_ma(210) ? 'true' : 'false' ?>,
   initialAutoLoad: true
 };

@@ -88,6 +88,7 @@
       defaultPage: 'prava_roli',
       // Stejný seznam jako serverové admin_includes/admin_menu.php zachová menu při výměně PP.
       items: [
+        ['uzivatele', 'Uživatelé'],
         ['prava_roli', 'Globální práva'],
         ['editace_prav', 'Editovat práva'],
         ['individualni_prava', 'Individuální práva uživatele'],
@@ -99,6 +100,9 @@
   menuDefs.helpdesk.items = menuDefs.helpdesk.items.filter(function (item) {
     return Array.isArray(config.helpdeskAllowedViews) && config.helpdeskAllowedViews.indexOf(item[0]) !== -1;
   });
+  if (config.adminUzivatele !== true) {
+    menuDefs.administrace.items = menuDefs.administrace.items.filter(function (item) { return item[0] !== 'uzivatele'; });
+  }
 
   if (config.adminFirmaPridat === true) {
     menuDefs.administrace.items.splice(3, 0, ['firma_pridat', 'Přidat firmu']);
