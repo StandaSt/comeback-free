@@ -74,6 +74,11 @@ if ($userRole === '') {
 }
 $db = db();
 $hrEmployeeHeader = null;
+$mzdovyFirmaNazev = '';
+if ($page === 'mzdovy_prehled') {
+    require_once __DIR__ . '/hr_lib/hr_mzdovy_prehled_data.php';
+    $mzdovyFirmaNazev = hr_mzdovy_prehled_nazev_firmy($db);
+}
 $cbHrIdUser = is_array($cbUser) ? (int)($cbUser['id_user'] ?? 0) : 0;
 if (in_array($page, ['zamestnanci', 'zamestnanec'], true) && !cb_pravo_ma(306)) {
     http_response_code(403);
@@ -84,6 +89,25 @@ if ($page === 'novy_zamestnanec' && !cb_pravo_ma(305)) {
     http_response_code(403);
     require __DIR__ . '/hr_includes/pripravujeme.php';
     exit;
+}
+if ($page === 'mzdovy_prehled' && !cb_hr_mzdovy_prehled_ma_pravo()) {
+    http_response_code(403);
+    require __DIR__ . '/hr_includes/pripravujeme.php';
+    exit;
+}
+if ($page === 'nastaveni' && !cb_hr_nastaveni_ma_pravo()) {
+    http_response_code(403);
+    require __DIR__ . '/hr_includes/pripravujeme.php';
+    exit;
+}
+if ($page === 'mzdovy_prehled') {
+    try {
+        $mzdovyPrehled = hr_mzdovy_prehled_data($db, $_GET);
+        $mzdovyError = '';
+    } catch (Throwable $error) {
+        $mzdovyPrehled = ['period' => '', 'period_label' => '', 'branches' => [], 'branch' => '', 'rows' => [], 'total_hours' => 0.0];
+        $mzdovyError = 'Mzdový přehled nyní nelze načíst.';
+    }
 }
 if ($page === 'zamestnanec' && (int)($_GET['id'] ?? 0) > 0 && !cb_firemni_pristup_muze_osobu($db, $cbHrIdUser, (int)$_GET['id'])) {
     http_response_code(403);
@@ -159,7 +183,22 @@ $cbHrUsesPpRenderer = is_array($cbHrPageDefinition['blocks'] ?? null) && $cbHrPa
                 </div>
             <?php endif; ?>
         <?php else: ?>
-            <h1><?= h($pageTitle) ?></h1>
+            <?php if ($page === 'mzdovy_prehled'): ?>
+                <div class="hr_mzdovy_header_title">
+                    <h1><?= h($pageTitle) ?></h1>
+                    <form class="hr_mzdovy_controls" method="get" action="<?= h(cb_root_url('index.php')) ?>">
+                        <label class="hr_mzdovy_period" for="mzd_obdobi">Období <input id="mzd_obdobi" type="month" name="mzd_obdobi" value="<?= h((string)$mzdovyPrehled['period']) ?>" onchange="this.form.submit()"></label>
+                        <label class="hr_mzdovy_filter" for="mzd_pobocka">Pobočka <select id="mzd_pobocka" name="mzd_pobocka" onchange="this.form.submit()"><option value="">Všechny pobočky</option><?php foreach ($mzdovyPrehled['branches'] as $branch): ?><option value="<?= h((string)$branch['id_pob']) ?>"<?= $mzdovyPrehled['branch'] === (string)$branch['id_pob'] ? ' selected' : '' ?>><?= h((string)$branch['name']) ?></option><?php endforeach; ?></select></label>
+                        <input type="hidden" name="m" value="hr">
+                        <input type="hidden" name="page" value="mzdovy_prehled">
+                    </form>
+                </div>
+            <?php else: ?>
+                <h1><?= h($pageTitle) ?></h1>
+            <?php endif; ?>
+            <?php if ($mzdovyFirmaNazev !== ''): ?>
+                <div class="pp_header_control"><span class="hr_muted hr_mzdovy_company"><?= h($mzdovyFirmaNazev) ?></span></div>
+            <?php endif; ?>
         <?php endif; ?>
         <?php if ($isNaborDetail && isset($vdHeaderDetail) && is_array($vdHeaderDetail)): ?>
             <div class="pp_header_control hr_vd_header_actions">

@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+/* Tabulka archivů zobrazuje hodnoty přes cb_format(); data pro URL a řazení zůstávají syrová. */
 require_once __DIR__ . '/../lib/format_datum_cas.php';
 require_once __DIR__ . '/../lib/denni_report_data.php';
 require_once __DIR__ . '/../lib/archiv_reportu_data.php';
@@ -104,12 +105,12 @@ $archivHourLabel = static function (float $value): string {
                 ]), '', '&', PHP_QUERY_RFC3986);
                 ?>
                 <tr<?= empty($row['saved']) ? ' class="archiv_reportu_row--missing"' : '' ?>>
-                  <td><?= h((string)$row['date_label']) ?></td>
+                  <td><?= h(cb_format('d', $row['date'])) ?></td>
                   <td><?= h((string)$row['branch_name']) ?></td>
                   <td class="<?= !empty($row['saved']) ? 'archiv_reportu_status--saved' : '' ?>"><?= !empty($row['saved']) ? 'Zadaný' : 'Chybí' ?></td>
-                  <td class="txt_r"><?= !empty($row['saved']) ? h(number_format((float)$row['revenue'], 0, ',', ' ') . ' Kč') : '—' ?></td>
+                  <td class="txt_r"><?= !empty($row['saved']) ? h(cb_format('p', $row['revenue'])) : '—' ?></td>
                   <td class="txt_r"><?= !empty($row['saved']) && $row['col'] !== null ? h(cb_denni_report_format_percent((float)$row['col'])) : '—' ?></td>
-                  <td class="txt_r"><?= !empty($row['saved']) && $row['difference'] !== null ? h(cb_denni_report_format_money_whole((float)$row['difference'])) : '—' ?></td>
+                  <td class="txt_r"><?= !empty($row['saved']) && $row['difference'] !== null ? h(cb_format('p', $row['difference'])) : '—' ?></td>
                   <td class="txt_r"><?= !empty($row['saved']) ? h($archivHourLabel((float)$row['hours_total']) . ' (' . $archivHourLabel((float)$row['hours_instor']) . ' / ' . $archivHourLabel((float)$row['hours_kuryr']) . ')') : '—' ?></td>
                   <td><?= !empty($row['saved']) ? h((string)$row['opening']) : '—' ?></td>
                   <td><?= !empty($row['saved']) ? h((string)$row['closing']) : '—' ?></td>

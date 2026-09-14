@@ -612,6 +612,10 @@ main{
   grid-area:period;
 }
 
+.head_filters{
+  display:contents;
+}
+
 .head_period_btn{
   display:flex;
   align-items:center;
@@ -985,6 +989,218 @@ main{
 
 /* ===== Responsive ===== */
 
+.cb_orientation_notice{
+  position:fixed;
+  inset:0;
+  z-index:1000;
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:28px;
+  color:var(--cb-text-main);
+  text-align:center;
+  background:var(--cb-bg-page);
+}
+
+.cb_orientation_notice strong{
+  font-size:var(--cb-font-22);
+}
+
+.cb_orientation_notice span{
+  max-width:360px;
+  color:var(--cb-text-muted);
+  font-size:var(--cb-font-14);
+}
+
+.cb_menu_toggle,
+.cb_menu_backdrop{
+  display:none;
+}
+
+@media (max-width:1359px){
+  .obal_main{
+    grid-template-rows:96px minmax(0,1fr);
+  }
+
+  .blok_hlavicka{
+    grid-template-columns:70px 130px minmax(210px,1fr) 112px 160px;
+    grid-template-rows:26px 26px 26px;
+    grid-template-areas:
+      "logo brand modules todo update"
+      "logo brand modules helpdesk update"
+      "filters filters filters filters filters";
+    height:96px;
+    min-height:96px;
+  }
+
+  .head_filters{
+    grid-area:filters;
+    display:flex;
+    align-items:stretch;
+    gap:4px;
+    min-width:0;
+  }
+
+  .head_filters .head_select--branch{
+    flex:0 1 360px;
+    min-width:230px;
+    max-width:360px;
+  }
+
+  .head_filters .head_select--period{
+    flex:0 1 480px;
+    min-width:360px;
+    max-width:480px;
+  }
+
+  .head_select--period .head_period_panel{
+    right:0;
+    left:auto;
+  }
+}
+
+@media (max-width:899px){
+  .obal_main{
+    grid-template-columns:minmax(0,1fr);
+    grid-template-areas:
+      "hlavicka"
+      "pp";
+  }
+
+  .blok_hlavicka{
+    grid-template-columns:70px 44px minmax(260px,1fr) 112px 160px;
+    grid-template-areas:
+      "logo menu_toggle modules todo update"
+      "logo menu_toggle modules helpdesk update"
+      "filters filters filters filters filters";
+  }
+
+  .head_brand_time{
+    display:none;
+  }
+
+  .cb_menu_toggle{
+    grid-area:menu_toggle;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    min-width:0;
+    border:1px solid var(--cb-border-soft);
+    border-radius:7px;
+    background:var(--cb-bg-control);
+    color:var(--cb-text-main);
+    font:700 18px/1 Arial, Helvetica, sans-serif;
+    cursor:pointer;
+  }
+
+  .cb_menu_toggle:hover,
+  .cb_menu_toggle[aria-expanded="true"]{
+    border-color:var(--cb-module-accent);
+    background:var(--cb-module-soft);
+  }
+
+  .cb_menu_backdrop{
+    position:fixed;
+    inset:96px 0 0;
+    z-index:190;
+    display:block;
+    border:0;
+    padding:0;
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+    background:var(--clr_pruhledna_cerna_18);
+    transition:opacity .18s ease, visibility .18s ease;
+  }
+
+  .obal_main.is-menu-open .cb_menu_backdrop{
+    opacity:1;
+    visibility:visible;
+    pointer-events:auto;
+  }
+}
+
+@media (max-width:767px){
+  .blok_hlavicka{
+    grid-template-columns:55px 44px repeat(4,minmax(0,1fr));
+    grid-template-areas:
+      "logo menu_toggle modules modules modules modules"
+      "logo todo todo helpdesk update update"
+      "filters filters filters filters filters filters";
+  }
+
+  .head_module_nav{
+    height:26px;
+    min-height:26px;
+  }
+
+  .head_module_link{
+    padding:0 5px;
+    font-size:var(--cb-font-14);
+  }
+
+  .head_update{
+    justify-content:center;
+    height:26px;
+    min-height:26px;
+    padding:3px 7px;
+  }
+
+  .head_update_icon,
+  .head_update .head_block_label{
+    display:none;
+  }
+
+  .head_update_value{
+    margin:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+}
+
+@media (max-width:619px) and (orientation:landscape){
+  .obal_main{
+    grid-template-rows:125px minmax(0,1fr);
+  }
+
+  .blok_hlavicka{
+    grid-template-rows:26px 26px 55px;
+    height:125px;
+    min-height:125px;
+  }
+
+  .head_filters{
+    flex-direction:column;
+    gap:3px;
+  }
+
+  .head_filters .head_select--branch,
+  .head_filters .head_select--period{
+    flex:0 0 26px;
+    width:100%;
+    min-width:0;
+    max-width:none;
+  }
+
+  .cb_menu_backdrop{
+    inset-block-start:125px;
+  }
+}
+
+.obal_main.is-small-portrait .cb_orientation_notice{
+  display:flex;
+}
+
+@media (max-width:767px) and (orientation:portrait){
+  .cb_orientation_notice{
+    display:flex;
+  }
+}
+
 /* =========================
    PATICKA
    ========================= */
@@ -1082,6 +1298,63 @@ align-items:center;
   border-radius:10px;
 }
 
+.blok_menu_mobile_head{
+  display:none;
+}
+
+@media (max-width:899px){
+  .blok_menu{
+    position:fixed;
+    inset:96px auto 0 0;
+    z-index:200;
+    width:min(300px,86vw);
+    height:auto;
+    border-radius:0 10px 10px 0;
+    box-shadow:8px 0 24px var(--cb-shadow);
+    transform:translateX(calc(-100% - 12px));
+    visibility:hidden;
+    transition:transform .2s ease, visibility .2s ease;
+  }
+
+  .obal_main.is-menu-open .blok_menu{
+    transform:translateX(0);
+    visibility:visible;
+  }
+
+  .blok_menu_mobile_head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    min-height:32px;
+    padding:0 0 5px;
+    border-bottom:1px solid var(--cb-border-soft);
+    color:var(--cb-text-main);
+    font-size:var(--cb-font-16);
+  }
+
+  .blok_menu_close{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:32px;
+    height:32px;
+    padding:0;
+    border:1px solid var(--cb-border-soft);
+    border-radius:7px;
+    background:var(--cb-bg-control);
+    color:var(--cb-text-main);
+    font-size:24px;
+    line-height:1;
+    cursor:pointer;
+  }
+}
+
+@media (max-width:619px) and (orientation:landscape){
+  .blok_menu{
+    inset-block-start:125px;
+  }
+}
+
 .blok_menu_title{
   margin:0 0 6px 0;
   color:var(--cb-text-main);
@@ -1170,6 +1443,21 @@ align-items:center;
   display:grid;
   gap:4px;
   margin-top:auto;
+}
+
+.blok_menu_admin{
+  margin-top:36px;
+}
+
+.blok_menu_admin .blok_menu_btn{
+  border-color:var(--clr_modra_6);
+  background:var(--clr_modra_1);
+  color:var(--cb-text-main);
+}
+
+.blok_menu_admin .blok_menu_btn:hover{
+  border-color:var(--clr_modra_6);
+  background:var(--clr_modra_2);
 }
 
 .blok_menu_user{

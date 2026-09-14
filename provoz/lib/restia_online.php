@@ -423,15 +423,18 @@ if (!function_exists('cb_restia_online_lookup_res_polozka_id')) {
         $stmt = $conn->prepare('
             SELECT id_res_polozka AS id
             FROM res_polozky
-            WHERE id_pob = ? AND pos_code = ?
-            ORDER BY id_res_polozka DESC
+            WHERE id_pob = ?
+              AND aktivni = 1
+              AND platnost_do IS NULL
+              AND (pos_code = ? OR restia_polozka_id = ?)
+            ORDER BY CASE WHEN pos_code = ? THEN 0 ELSE 1 END, id_res_polozka DESC
             LIMIT 1
         ');
         if ($stmt === false) {
             throw new RuntimeException('DB prepare selhal: res_polozky lookup.');
         }
 
-        $stmt->bind_param('is', $idPob, $restiaItemId);
+        $stmt->bind_param('isss', $idPob, $restiaItemId, $restiaItemId, $restiaItemId);
         $stmt->execute();
         $res = $stmt->get_result();
         $row = ($res instanceof mysqli_result) ? $res->fetch_assoc() : null;
@@ -464,10 +467,22 @@ if (!function_exists('cb_restia_online_existing_order_map')) {
         }
 
         $sql = '
-            SELECT o.restia_id_obj, o.id_obj, c.cas_uzavreni, c.cas_status_zmena
+            SELECT
+                o.restia_id_obj,
+                o.id_obj,
+                c.cas_uzavreni,
+                c.cas_status_zmena,
+                COUNT(p.id_obj_polozka) AS pocet_polozek,
+                COALESCE(SUM(CASE
+                    WHEN p.id_obj_polozka IS NOT NULL
+                     AND NULLIF(TRIM(p.restia_nazev), \'\') IS NULL
+                    THEN 1 ELSE 0
+                END), 0) AS chybi_nazev
             FROM objednavky_restia o
             LEFT JOIN obj_casy c ON c.id_obj = o.id_obj
+            LEFT JOIN obj_polozky p ON p.id_obj = o.id_obj
             WHERE o.restia_id_obj IN (' . implode(',', $quoted) . ')
+            GROUP BY o.restia_id_obj, o.id_obj, c.cas_uzavreni, c.cas_status_zmena
         ';
         $res = $conn->query($sql);
         if (!($res instanceof mysqli_result)) {
@@ -483,6 +498,8 @@ if (!function_exists('cb_restia_online_existing_order_map')) {
                     'id_obj' => $idObj,
                     'cas_uzavreni' => trim((string)($row['cas_uzavreni'] ?? '')),
                     'cas_status_zmena' => trim((string)($row['cas_status_zmena'] ?? '')),
+                    'pocet_polozek' => (int)($row['pocet_polozek'] ?? 0),
+                    'chybi_nazev' => (int)($row['chybi_nazev'] ?? 0),
                 ];
             }
         }
@@ -591,6 +608,32 @@ if (!function_exists('cb_restia_online_import_dates')) {
         $startDate = cb_restia_online_last_imported_workday_date($conn, $idPob);
         if ($startDate === '' || strcmp($startDate, $currentDate) > 0) {
             $startDate = $currentDate;
+        }
+
+        $previousDate = (new DateTimeImmutable($currentDate))->modify('-1 day')->format('Y-m-d');
+        $stmt = $conn->prepare("
+            SELECT 1
+            FROM objednavky_restia o
+            INNER JOIN obj_casy c ON c.id_obj = o.id_obj
+            INNER JOIN obj_polozky p ON p.id_obj = o.id_obj
+            WHERE o.id_pob = ?
+              AND c.report = ?
+              AND NULLIF(TRIM(p.restia_nazev), '') IS NULL
+            LIMIT 1
+        ");
+        if ($stmt === false) {
+            throw new RuntimeException('DB prepare selhal: kontrola chybejicich nazvu polozek.');
+        }
+        $stmt->bind_param('is', $idPob, $previousDate);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $previousDayNeedsNames = $result instanceof mysqli_result && $result->num_rows > 0;
+        if ($result instanceof mysqli_result) {
+            $result->free();
+        }
+        $stmt->close();
+        if ($previousDayNeedsNames && strcmp($previousDate, $startDate) < 0) {
+            $startDate = $previousDate;
         }
 
         $dates = [];
@@ -830,7 +873,12 @@ if (!function_exists('cb_restia_online_sync_children')) {
             if (!is_array($item)) { continue; }
             $poradi++;
 
-            $restiaItemId = (string)($item['posId'] ?? ($item['id'] ?? ''));
+            $restiaItemId = trim((string)($item['posId'] ?? ''));
+            if ($restiaItemId === '') {
+                $restiaItemId = trim((string)($item['id'] ?? ''));
+            }
+            $restiaNazev = trim((string)($item['label'] ?? ($item['name'] ?? '')));
+            $restiaNazev = $restiaNazev === '' ? null : $restiaNazev;
             $poznamka = isset($item['note']) ? (string)$item['note'] : null;
             $mnozstvi = isset($item['count']) ? (int)$item['count'] : 1;
             if ($mnozstvi <= 0) { $mnozstvi = 1; }
@@ -841,8 +889,8 @@ if (!function_exists('cb_restia_online_sync_children')) {
             if ($idResPolozka <= 0) {
                  $idResPolozka = null;
             }
-            $stmtItem = cb_restia_online_stmt($conn, 'obj_polozky_insert', 'INSERT INTO obj_polozky (id_obj, id_res_polozka, res_item, poznamka, poradi, mnozstvi, cena_ks, cena_celk, je_extra, zadano) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3))', 'obj_polozky');
-            $stmtItem->bind_param('iissiiddi', $idObj, $idResPolozka, $restiaItemId, $poznamka, $poradi, $mnozstvi, $cenaKs, $cenaCelk, $jeExtra);
+            $stmtItem = cb_restia_online_stmt($conn, 'obj_polozky_insert', 'INSERT INTO obj_polozky (id_obj, id_res_polozka, res_item, restia_nazev, poznamka, poradi, mnozstvi, cena_ks, cena_celk, je_extra, zadano) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3))', 'obj_polozky');
+            $stmtItem->bind_param('iisssiiddi', $idObj, $idResPolozka, $restiaItemId, $restiaNazev, $poznamka, $poradi, $mnozstvi, $cenaKs, $cenaCelk, $jeExtra);
             $stmtItem->execute();
             $idObjPolozka = (int)$conn->insert_id;
 
@@ -1276,8 +1324,10 @@ if (!function_exists('cb_restia_online_import_day')) {
                         $existingIdObj = (int)($existingInfo['id_obj'] ?? 0);
                         $existingClosedAt = trim((string)($existingInfo['cas_uzavreni'] ?? ''));
                         $existingStatusChangedAt = substr(trim((string)($existingInfo['cas_status_zmena'] ?? '')), 0, 19);
+                        $needsItemNames = (int)($existingInfo['pocet_polozek'] ?? 0) > 0
+                            && (int)($existingInfo['chybi_nazev'] ?? 0) > 0;
 
-                        if ($existingIdObj > 0 && $existingClosedAt !== '') {
+                        if ($existingIdObj > 0 && $existingClosedAt !== '' && !$needsItemNames) {
                             $pocetObj++;
                             $pocetIgnore++;
                             continue;
@@ -1286,7 +1336,7 @@ if (!function_exists('cb_restia_online_import_day')) {
                         if ($existingIdObj > 0) {
                             $restiaStatusChangedAt = cb_restia_online_restia_to_local_nullable($order['statusUpdatedAt'] ?? null);
                             $restiaStatusChangedAt = substr(trim((string)($restiaStatusChangedAt ?? '')), 0, 19);
-                            if ($restiaStatusChangedAt !== '' && $existingStatusChangedAt !== '' && $restiaStatusChangedAt === $existingStatusChangedAt) {
+                            if (!$needsItemNames && $restiaStatusChangedAt !== '' && $existingStatusChangedAt !== '' && $restiaStatusChangedAt === $existingStatusChangedAt) {
                                 $pocetObj++;
                                 $pocetIgnore++;
                                 continue;

@@ -147,7 +147,7 @@ function cb_admin_uzivatele_nacti(mysqli $db, array $source): array
 function cb_admin_uzivatel_detail(mysqli $db, int $idUser): ?array
 {
     if ($idUser <= 0) { return null; }
-    $stmt = $db->prepare('SELECT id_user,id_firma,jmeno,prijmeni,email,telefon,aktivni,schvalen,zdroj,heslo_hash FROM user WHERE id_user=? LIMIT 1');
+    $stmt = $db->prepare('SELECT id_user,id_firma,jmeno,prijmeni,email,telefon,aktivni,schvalen,zdroj FROM user WHERE id_user=? LIMIT 1');
     $stmt->bind_param('i', $idUser); $stmt->execute(); $user=$stmt->get_result()->fetch_assoc(); $stmt->close();
     if (!is_array($user)) { return null; }
     $stmt=$db->prepare('SELECT id_role FROM user_role WHERE id_user=? ORDER BY id_role'); $stmt->bind_param('i',$idUser); $stmt->execute(); $res=$stmt->get_result(); $roles=[]; while($row=$res->fetch_assoc()){$roles[]=(int)$row['id_role'];}$stmt->close();

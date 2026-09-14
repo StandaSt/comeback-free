@@ -460,7 +460,22 @@
 
     var nav = document.createElement('nav');
     nav.className = 'blok_menu';
+    nav.id = 'cb-main-menu';
     nav.setAttribute('aria-label', def.aria);
+
+    var mobileHead = document.createElement('div');
+    mobileHead.className = 'blok_menu_mobile_head';
+    var mobileTitle = document.createElement('strong');
+    mobileTitle.textContent = 'Menu';
+    var mobileClose = document.createElement('button');
+    mobileClose.type = 'button';
+    mobileClose.className = 'blok_menu_close';
+    mobileClose.setAttribute('data-cb-menu-close', '1');
+    mobileClose.setAttribute('aria-label', 'Zavřít menu');
+    mobileClose.textContent = '×';
+    mobileHead.appendChild(mobileTitle);
+    mobileHead.appendChild(mobileClose);
+    nav.appendChild(mobileHead);
 
     var title = document.createElement('h2');
     title.className = 'blok_menu_title';

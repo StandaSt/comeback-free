@@ -67,11 +67,31 @@
     startLoaderTimers();
   }
 
+  function bindOrderDetails(root) {
+    Array.prototype.forEach.call(root.querySelectorAll('[data-provoz-objednavky-toggle]'), function (button) {
+      if (!(button instanceof HTMLButtonElement) || button.getAttribute('data-provoz-objednavky-toggle-bound') === '1') {
+        return;
+      }
+      button.setAttribute('data-provoz-objednavky-toggle-bound', '1');
+      button.addEventListener('click', function () {
+        var detailId = String(button.getAttribute('aria-controls') || '');
+        var detail = detailId !== '' ? document.getElementById(detailId) : null;
+        if (!(detail instanceof HTMLTableRowElement)) {
+          return;
+        }
+        var willOpen = detail.hidden;
+        detail.hidden = !willOpen;
+        button.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      });
+    });
+  }
+
   function initRoot(root) {
     if (!(root instanceof HTMLElement) || root.getAttribute('data-objednavky-ready') === '1') {
       return;
     }
     root.setAttribute('data-objednavky-ready', '1');
+    bindOrderDetails(root);
   }
 
   function bindRestiaRefresh(scope) {

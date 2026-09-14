@@ -56,7 +56,6 @@ if (!empty($_SESSION['login_ok'])) {
 require_once __DIR__ . '/lib/detektuj_neplatnou_url.php';
 require_once __DIR__ . '/../common/lib/json_registrace.php';
 if (!empty($_SESSION['login_ok'])) {
-    require_once __DIR__ . '/lib/post_akce.php';
     require_once __DIR__ . '/lib/uloz_dr_pracovni.php';
     require_once __DIR__ . '/lib/uloz_reporty_is.php';
     require_once __DIR__ . '/lib/report_promenne.php';

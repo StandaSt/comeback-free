@@ -9,6 +9,9 @@ declare(strict_types=1);
  * - BASE_PATH: urcene na ROOT projektu (kvuli primemu volani /lib/*.php)
  * - cb_url() vraci absolutni URL od rootu webu
  * - cb_header_info(): jedno misto pro technicka data do hlavicky (bez HTML)
+ * - cb_format(): jednotny format hodnot urcenych pro zobrazeni uzivateli
+ * - cb_format(): jednotny format hodnot urcenych pro zobrazeni uzivateli
+ * - cb_format(): jednotny format hodnot urcenych pro zobrazeni uzivateli
  */
 
 date_default_timezone_set('Europe/Prague');
@@ -40,6 +43,8 @@ if (!function_exists('db')) {
 }
 
 require_once __DIR__ . '/db_akce_log.php';
+require_once __DIR__ . '/format.php';
+require_once __DIR__ . '/objednavka_cislo.php';
 require_once __DIR__ . '/sesn_kontrola.php';
 require_once __DIR__ . '/sesn_regenerate.php';
 require_once __DIR__ . '/prava.php';

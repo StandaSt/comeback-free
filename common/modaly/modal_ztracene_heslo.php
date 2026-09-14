@@ -11,16 +11,18 @@ $loginFlash = trim((string)($_SESSION['cb_flash'] ?? ''));
 $forgotPasswordSent = $loginFlash === 'E-mail byl odeslán';
 $forgotPasswordUnknown = $loginFlash === "Neznámý E-mail,\nkontaktujte admina IS";
 $forgotPasswordRedirect = $forgotPasswordSent || $forgotPasswordUnknown;
+$resetEmailPrefill = trim((string)($_SESSION['cb_password_reset_email_prefill'] ?? ''));
 unset($_SESSION['cb_flash']);
+unset($_SESSION['cb_password_reset_email_prefill']);
 ?>
-<div id="cb-login-overlay" class="modal-overlay" aria-modal="true" role="dialog" aria-label="Ztracené heslo do Comeback">
+<div id="cb-login-overlay" class="modal-overlay" aria-modal="true" role="dialog" aria-label="Nastavení nového hesla pro IS Comeback">
   <div class="modal">
     <div class="modal-head">
       <div class="modal-logo" aria-hidden="true">
         <img src="<?= h(cb_public_url('img/logo_comeback.png')) ?>" alt="Comeback">
       </div>
       <div>
-        <p class="modal-title">Ztracené heslo<br>pro IS Comeback</p>
+        <p class="modal-title">Nastavení nového hesla<br>pro IS Comeback</p>
       </div>
     </div>
 
@@ -29,7 +31,7 @@ unset($_SESSION['cb_flash']);
       <p class="modal-sub">Zadejte Váš e-mail pro přihlášení do IS.<br>Poté zkontrolujte Vaší emailovou schránku,<br>najdete tam odkaz pro nastavení nového hesla.</p>
       <div class="modal-field">
         <label class="modal-label" for="cb_email">Email:</label>
-        <input class="modal-input" id="cb_email" name="email" type="email" autocomplete="email" placeholder="Email" required<?= $loginDisabled ?>>
+        <input class="modal-input" id="cb_email" name="email" type="email" autocomplete="email" placeholder="Email" value="<?= h($resetEmailPrefill) ?>" required<?= $loginDisabled ?>>
       </div>
       <div class="modal-actions">
         <button class="modal-btn primary" type="submit"<?= $loginDisabled ?>><span class="modal-btn-main">Resetovat heslo</span></button>

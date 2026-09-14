@@ -68,11 +68,6 @@
       }
 
       const body = JSON.stringify(payload);
-      if (w.navigator && typeof w.navigator.sendBeacon === 'function') {
-        w.navigator.sendBeacon(AJAX_TRACE_URL, new Blob([body], { type: 'application/json' }));
-        return;
-      }
-
       w.fetch(AJAX_TRACE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

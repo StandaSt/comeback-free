@@ -415,6 +415,170 @@
     color: var(--primary);
 }
 
+/* První čtecí verze mzdového přehledu. */
+.hr_mzdovy_prehled{
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.hr_pp[data-page="mzdovy_prehled"]{
+    display: flex;
+    overflow: hidden;
+}
+
+.hr_pp[data-page="mzdovy_prehled"] .hr_content{
+    grid-template-rows: minmax(0, 1fr);
+}
+
+.hr_mzdovy_table{
+    min-width: 2450px;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.hr_mzdovy_company{
+    color: var(--text);
+    font-size: var(--cb-font-14);
+    font-weight: 700;
+}
+
+.hr_mzdovy_header_title{
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    min-width: 0;
+}
+
+.hr_mzdovy_header_title h1,
+.hr_mzdovy_header_title .hr_mzdovy_controls{
+    margin: 0;
+}
+
+/* Mřížka a střídání celých skupin: 2., 4., 6. a 8. blok z devíti. */
+.hr_mzdovy_table tr > .hr_table_cell{
+    border-right: 1px solid var(--border);
+}
+
+.hr_mzdovy_table tr > .hr_table_cell:first-child{
+    border-left: 1px solid var(--border);
+}
+
+.hr_mzdovy_table tr > .hr_table_cell:nth-child(9),
+.hr_mzdovy_table tr > .hr_table_cell:nth-child(10),
+.hr_mzdovy_table tr > .hr_table_cell:nth-child(16),
+.hr_mzdovy_table tr > .hr_table_cell:nth-child(17),
+.hr_mzdovy_table tr > .hr_table_cell:nth-child(18),
+.hr_mzdovy_table tr > .hr_table_cell:nth-child(23),
+.hr_mzdovy_table tr > .hr_table_cell:nth-child(24),
+.hr_mzdovy_table tr > .hr_table_cell:nth-child(25),
+.hr_mzdovy_table tr > .hr_table_cell:nth-child(28),
+.hr_mzdovy_table tr > .hr_table_cell:nth-child(29){
+    background: color-mix(in srgb, var(--surface) 92%, var(--border-strong));
+}
+
+.hr_mzdovy_table tr > .hr_table_cell:nth-child(9),
+.hr_mzdovy_table tr > .hr_table_cell:nth-child(16),
+.hr_mzdovy_table tr > .hr_table_cell:nth-child(23),
+.hr_mzdovy_table tr > .hr_table_cell:nth-child(28){
+    border-left: 2px solid var(--border-strong);
+}
+
+.hr_mzdovy_table .hr_mzdovy_group_row > .hr_table_cell:nth-child(even){
+    background: color-mix(in srgb, var(--surface-strong) 88%, var(--border-strong));
+}
+
+.hr_mzdovy_prehled .hr_table_wrap{
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+}
+
+.hr_mzdovy_table thead .hr_table_cell{
+    position: sticky;
+    z-index: 2;
+    top: 28px;
+    background: var(--surface);
+}
+
+.hr_mzdovy_table thead .hr_mzdovy_group_row .hr_table_cell{
+    z-index: 3;
+    top: 0;
+    height: 28px;
+    color: var(--text);
+    background: var(--surface-strong);
+    font-size: var(--cb-font-11);
+    font-weight: 700;
+    text-align: center;
+}
+
+.hr_mzdovy_total_row .hr_table_cell{
+    border-top: 2px solid var(--border-strong);
+    font-weight: 700;
+}
+
+.hr_mzdovy_period,
+.hr_mzdovy_filter{
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--muted);
+    font-size: var(--cb-font-12);
+    font-weight: 700;
+}
+
+.hr_mzdovy_controls{
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.hr_mzdovy_period input,
+.hr_mzdovy_filter select{
+    min-height: 28px;
+    padding: 3px 7px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    background: var(--surface);
+    font: inherit;
+}
+
+.hr_mzdovy_summary{
+    margin: 0 0 9px;
+    color: var(--muted);
+    font-size: var(--cb-font-12);
+}
+
+.hr_mzdovy_num{
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* Na nízkém mobilním displeji patří dostupná výška především tabulce. */
+@media (max-width: 899px) and (max-height: 520px) {
+    .hr_pp[data-page="mzdovy_prehled"]{
+        gap: 0;
+        padding: 4px;
+    }
+
+    .hr_pp[data-page="mzdovy_prehled"] > .pp_header,
+    .hr_mzdovy_prehled .hr_panel_header .hr_muted,
+    .hr_mzdovy_summary{
+        display: none;
+    }
+
+    .hr_mzdovy_prehled{
+        padding: 5px 7px;
+    }
+
+    .hr_mzdovy_prehled .hr_panel_header{
+        margin-bottom: 4px;
+    }
+}
+
 /* Filtrovani, razeni a strankovani seznamu zamestnancu. */
 .hr_employee_list_table tbody .hr_table_cell {
     cursor: default;
@@ -816,7 +980,7 @@
 
 /* Radek evidence preruseni a ukonceni pracovniho pomeru na karte zamestnance. */
 .hr_work_event_form .hr_form_grid {
-    grid-template-columns: max-content max-content max-content minmax(0, 1fr);
+    grid-template-columns: max-content max-content max-content minmax(220px, 420px) minmax(0, 1fr);
     align-items: end;
 }
 
@@ -841,14 +1005,47 @@
     width: 135px;
 }
 
-.hr_work_event_form .hr_form_label:last-child input {
+.hr_work_event_form .hr_work_event_note input {
     width: 100%;
+}
+
+.hr_work_event_form .hr_form_grid > button {
+    align-self: end;
+    justify-self: end;
+    white-space: nowrap;
+}
+
+.hr_work_relation_table {
+    width: auto;
+    max-width: 100%;
+    border-collapse: collapse;
+    justify-self: start;
+}
+
+.hr_work_relation_table td {
+    vertical-align: bottom;
+}
+
+.hr_work_benefits_fieldset {
+    margin: 10px 0 0;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+}
+
+.hr_work_benefits_fieldset legend {
+    margin-bottom: 6px;
+    padding: 0;
 }
 
 .hr_work_benefits {
     display: flex;
     flex-wrap: wrap;
     gap: 6px 12px;
+}
+
+.hr_work_benefits .hr_form_label_text {
+    font-weight: 400;
 }
 
 .hr_form_label {
@@ -1174,6 +1371,71 @@
     color: var(--muted);
     background: var(--surface-strong);
     font-size: var(--cb-font-12);
+}
+
+.hr_employee_empty_block--plain {
+    background: transparent;
+}
+
+.hr_employee_missing {
+    padding: 10px 12px;
+    border: 1px solid #e6c476;
+    border-radius: 8px;
+    color: var(--text);
+    background: #fff6dc;
+    font-size: var(--cb-font-12);
+}
+
+.hr_employee_missing ul {
+    display: grid;
+    gap: 3px;
+    margin: 6px 0 0;
+    padding-left: 18px;
+}
+
+.hr_employee_incomplete_status {
+    color: var(--red);
+    font-size: var(--cb-font-12);
+    font-weight: 700;
+}
+
+.hr_pp[data-page="zamestnanec"] .hr_content > section.hr_panel:nth-of-type(even) {
+    background: var(--surface-strong);
+}
+
+.hr_assignment_history_table,
+.hr_work_history_table {
+    display: table;
+    max-width: 100%;
+    table-layout: auto;
+}
+
+.hr_assignment_history_table {
+    width: 620px;
+}
+
+.hr_work_history_table {
+    width: 900px;
+}
+
+.hr_compact_table_wrap {
+    display: inline-block;
+    width: auto;
+    max-width: 100%;
+    vertical-align: top;
+}
+
+.hr_assignment_history_table .hr_table_cell {
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.hr_work_history_table .hr_table_cell:first-child,
+.hr_work_history_table .hr_table_cell:nth-child(2),
+.hr_work_history_table .hr_table_cell:nth-child(3),
+.hr_work_history_table .hr_table_cell:nth-child(4) {
+    width: 1%;
+    white-space: nowrap;
 }
 
 .hr_employee_summary_grid {
@@ -1549,6 +1811,143 @@
     font-size: var(--cb-font-12);
 }
 
+.hr_settings_grid {
+    display: grid;
+    grid-template-columns: minmax(300px, 0.8fr) minmax(600px, 2fr);
+    gap: 14px;
+    align-items: start;
+}
+
+.hr_settings_add {
+    display: flex;
+    gap: 10px;
+    align-items: end;
+    margin-bottom: 14px;
+}
+
+.hr_settings_add .hr_form_label {
+    flex: 1 1 auto;
+}
+
+.hr_settings_branch_form {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: start;
+    gap: 8px 10px;
+}
+
+.hr_settings_branch_form .hr_form_label {
+    flex: 0 0 auto;
+}
+
+.hr_settings_branch_form .hr_form_label :is(input, select) {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+}
+
+.hr_settings_branch_form .hr_primary_button {
+    align-self: end;
+    justify-self: start;
+    white-space: nowrap;
+}
+
+.hr_settings_branch_form .hr_settings_branch_company {
+    width: 200px;
+}
+
+.hr_settings_branch_form .hr_settings_branch_code {
+    width: 80px;
+}
+
+.hr_settings_branch_form .hr_settings_branch_name {
+    width: 160px;
+}
+
+.hr_settings_branch_form .hr_settings_branch_street {
+    width: 210px;
+}
+
+.hr_settings_branch_form .hr_settings_branch_city {
+    width: 140px;
+}
+
+.hr_settings_branch_form .hr_settings_branch_area {
+    width: 110px;
+}
+
+.hr_settings_branch_form .hr_settings_branch_postcode {
+    width: 70px;
+}
+
+.hr_settings_branch_table_wrap {
+    display: inline-block;
+    width: auto;
+    max-width: 100%;
+    vertical-align: top;
+}
+
+.hr_settings_branch_table {
+    width: auto;
+    max-width: 100%;
+    table-layout: auto;
+}
+
+.hr_settings_branch_table :is(th, td) {
+    padding: 6px 12px 6px 8px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.hr_settings_branch_table :is(th, td):nth-child(5) {
+    max-width: 360px;
+    white-space: normal;
+}
+
+.hr_assignments_grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    align-items: stretch;
+}
+
+.hr_assignment_form {
+    display: flex;
+    gap: 12px;
+    align-items: end;
+    margin-bottom: 8px;
+}
+
+.hr_assignment_form select {
+    width: auto;
+    max-width: 100%;
+}
+
+.hr_assignment_form > .hr_primary_button {
+    margin-left: auto;
+    white-space: nowrap;
+}
+
+.hr_assignment_form--position > .hr_primary_button {
+    margin-left: 0;
+}
+
+.hr_assignment_form--branches {
+    gap: 8px;
+}
+
+.hr_assignment_form--branches .hr_employee_branch_button {
+    min-width: 125px;
+}
+
+.hr_assignment_form--branches select[data-hr-main-branch] {
+    width: 150px;
+}
+
+.hr_assignment_form--branches input[name="platnost_od"] {
+    width: 135px;
+}
+
 /* Placeholder stranky bez obsahu. */
 .hr_placeholder {
     display: grid;
@@ -1578,7 +1977,17 @@
 }
 
 /* Responzivni upravy HR. */
+@media (max-width: 1500px) {
+    .hr_assignments_grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 1180px) {
+    .hr_settings_grid {
+        grid-template-columns: 1fr;
+    }
+
     .hr_stats_grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -1611,6 +2020,17 @@
 }
 
 @media (max-width: 820px) {
+    .hr_settings_add,
+    .hr_settings_branch_form,
+    .hr_assignment_form {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .hr_settings_branch_form .hr_form_label {
+        width: 100%;
+    }
+
     .hr_new_employee_table {
         display: block;
         max-width: 100%;

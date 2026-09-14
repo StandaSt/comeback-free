@@ -1,4 +1,5 @@
 <?php
+// Souhrn online objednávek; tooltip používá společné formátování uživatelských částek.
 declare(strict_types=1);
 
 (static function (): void {
@@ -228,7 +229,7 @@ declare(strict_types=1);
                                         <td class="provoz_tooltip_table_cell provoz_tooltip_num"><?= h((string)(int)$branch['vyrabi_se']) ?></td>
                                         <td class="provoz_tooltip_table_cell provoz_tooltip_num"><?= h((string)(int)$branch['objednavky']) ?></td>
                                         <td class="provoz_tooltip_table_cell provoz_tooltip_num"><?= h((string)(int)$branch['zruseno']) ?></td>
-                                        <td class="provoz_tooltip_table_cell provoz_tooltip_num"><?= h(number_format((float)$branch['trzba'], 0, ',', ' ')) ?> Kč</td>
+                                        <td class="provoz_tooltip_table_cell provoz_tooltip_num"><?= h(cb_format('p', $branch['trzba'] ?? 0)) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <tr>
@@ -239,7 +240,7 @@ declare(strict_types=1);
                                     <th class="provoz_tooltip_table_cell provoz_tooltip_num"><?= h((string)$sumVyrabiSe) ?></th>
                                     <th class="provoz_tooltip_table_cell provoz_tooltip_num"><?= h((string)$sumObjednavky) ?></th>
                                     <th class="provoz_tooltip_table_cell provoz_tooltip_num"><?= h((string)$sumZruseno) ?></th>
-                                    <th class="provoz_tooltip_table_cell provoz_tooltip_num"><?= h(number_format($sumTrzba, 0, ',', ' ')) ?> Kč</th>
+                                    <th class="provoz_tooltip_table_cell provoz_tooltip_num"><?= h(cb_format('p', $sumTrzba)) ?></th>
                                 </tr>
                             </tbody>
                         </table>

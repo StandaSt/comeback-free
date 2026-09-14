@@ -45,9 +45,26 @@ function cb_hr_pages(): array
         'skoleni' => ['file' => __DIR__ . '/../hr_pages/placeholder.php', 'title' => $pageTitle('skoleni')],
         'prohlidky' => ['file' => __DIR__ . '/../hr_pages/placeholder.php', 'title' => $pageTitle('prohlidky')],
         'dovolene' => ['file' => __DIR__ . '/../hr_pages/placeholder.php', 'title' => $pageTitle('dovolene')],
+        'mzdovy_prehled' => ['file' => __DIR__ . '/../hr_pages/mzdovy_prehled.php', 'title' => $pageTitle('mzdovy_prehled')],
         'reporty' => ['file' => __DIR__ . '/../hr_pages/placeholder.php', 'title' => $pageTitle('reporty')],
+        'nastaveni' => ['file' => __DIR__ . '/../hr_pages/nastaveni.php', 'title' => $pageTitle('nastaveni')],
         'uprava_profilu' => ['file' => __DIR__ . '/../../common/pages/uprava_profilu.php', 'title' => $pageTitle('uprava_profilu')],
     ];
+}
+
+function cb_hr_nastaveni_ma_pravo(): bool
+{
+    return cb_pravo_ma(307);
+}
+
+function cb_hr_mzdovy_prehled_ma_pravo(): bool
+{
+    $stavy = $_SESSION['prava_stav'] ?? null;
+    if (!is_array($stavy) || !array_key_exists(318, $stavy)) {
+        return false;
+    }
+
+    return cb_pravo_ma(318);
 }
 
 function cb_hr_current_page(): array

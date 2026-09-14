@@ -4,18 +4,6 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/vypocet_col_rozdil.php';
 
-function cb_denni_report_format_money(float $value): string
-{
-    $rounded = round($value, 2);
-    $decimals = (abs($rounded - round($rounded)) < 0.001) ? 0 : 2;
-    return number_format($rounded, $decimals, ',', ' ') . ' Kč';
-}
-
-function cb_denni_report_format_money_whole(float $value): string
-{
-    return number_format(round($value), 0, ',', ' ') . ' Kč';
-}
-
 function cb_denni_report_format_input_number(float $value): string
 {
     $rounded = round($value, 2);
@@ -25,20 +13,7 @@ function cb_denni_report_format_input_number(float $value): string
 
 function cb_denni_report_format_percent(?float $value): string
 {
-    return $value === null ? '-- %' : number_format($value * 100, 2, ',', ' ') . ' %';
-}
-
-function cb_denni_report_format_time(?string $value): string
-{
-    $raw = trim((string)$value);
-    if ($raw === '') {
-        return '';
-    }
-    if (preg_match('/^(\d{1,2}):(\d{2})(?::\d{2})?$/', $raw, $m) === 1) {
-        return sprintf('%02d:%s', (int)$m[1], $m[2]);
-    }
-
-    return cb_dt_time_hm($raw);
+    return $value === null ? '-- %' : cb_format('pr', $value);
 }
 
 function cb_denni_report_person_full_name(?string $jmeno, ?string $prijmeni = null): string
@@ -792,6 +767,102 @@ function cb_denni_report_restia_summary_default(): array
     ];
 }
 
+/**
+ * Načte surové hodnoty stornovaných objednávek a jejich položky pro denní report.
+ * Zobrazení čísla objednávky, času a ceny patří až šabloně přes společné formátování.
+ */
+function cb_denni_report_storno_rows(mysqli $conn, int $idPob, array $workdayRange): array
+{
+    if ($idPob <= 0) {
+        return [];
+    }
+
+    $sql = "
+        SELECT
+            o.id_obj,
+            o.restia_order_number,
+            o.short_code,
+            o.seriove_cislo,
+            o.restia_id_obj,
+            DATE_FORMAT(COALESCE(ca.cas_vytvor, o.restia_created_at, o.restia_imported_at), '%H:%i') AS cas_vytvor,
+            DATE_FORMAT(ca.cas_dokonc, '%H:%i') AS cas_dokonc,
+            DATE_FORMAT(COALESCE(ca.cas_status_zmena, ca.cas_uzavreni), '%H:%i') AS cas_storna,
+            TRIM(CONCAT(COALESCE(z.jmeno, ''), ' ', COALESCE(z.prijmeni, ''))) AS zakaznik_jmeno,
+            COALESCE(c.cena_celk, 0) AS cena_celk,
+            COALESCE(c.sleva, 0) AS sleva,
+            COALESCE(os.poznamka, '') AS poznamka
+        FROM objednavky_restia o
+        INNER JOIN obj_casy ca ON ca.id_obj = o.id_obj
+        INNER JOIN cis_obj_stav s ON s.id_stav = o.id_stav
+        LEFT JOIN zakaznik z ON z.id_zak = o.id_zak
+        LEFT JOIN obj_ceny c ON c.id_obj = o.id_obj
+        LEFT JOIN obj_storno os ON os.id_obj = o.id_obj
+        WHERE o.id_pob = ?
+          AND ca.report >= DATE(?)
+          AND ca.report < DATE(?)
+          AND s.nazev IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted')
+        ORDER BY COALESCE(ca.cas_status_zmena, ca.cas_uzavreni, ca.cas_vytvor) ASC, o.id_obj ASC
+    ";
+    $stmt = $conn->prepare($sql);
+    if ($stmt === false) {
+        return [];
+    }
+
+    $fromDb = (string)($workdayRange['from_db'] ?? '');
+    $toDb = (string)($workdayRange['to_db'] ?? '');
+    $stmt->bind_param('iss', $idPob, $fromDb, $toDb);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $rows = [];
+    if ($result instanceof mysqli_result) {
+        while ($row = $result->fetch_assoc()) {
+            $row['polozky'] = [];
+            $rows[] = $row;
+        }
+        $result->free();
+    }
+    $stmt->close();
+
+    $rowIndexes = [];
+    foreach ($rows as $index => $row) {
+        $idObj = (int)($row['id_obj'] ?? 0);
+        if ($idObj > 0) {
+            $rowIndexes[$idObj] = $index;
+        }
+    }
+    if ($rowIndexes !== []) {
+        $itemSql = "
+            SELECT
+                p.id_obj,
+                COALESCE(
+                    NULLIF(TRIM(p.restia_nazev), ''),
+                    NULLIF(TRIM(r.nazev), ''),
+                    CONCAT('Položka ', NULLIF(TRIM(p.res_item), '')),
+                    'Položka'
+                ) AS nazev,
+                p.mnozstvi,
+                p.cena_celk,
+                COALESCE(p.poznamka, '') AS poznamka
+            FROM obj_polozky p
+            LEFT JOIN res_polozky r ON r.id_res_polozka = p.id_res_polozka
+            WHERE p.id_obj IN (" . implode(',', array_keys($rowIndexes)) . ")
+            ORDER BY p.id_obj ASC, p.poradi ASC, p.id_obj_polozka ASC
+        ";
+        $itemResult = $conn->query($itemSql);
+        if ($itemResult instanceof mysqli_result) {
+            while ($itemRow = $itemResult->fetch_assoc()) {
+                $idObj = (int)($itemRow['id_obj'] ?? 0);
+                if (isset($rowIndexes[$idObj])) {
+                    $rows[$rowIndexes[$idObj]]['polozky'][] = $itemRow;
+                }
+            }
+            $itemResult->free();
+        }
+    }
+
+    return $rows;
+}
+
 function cb_denni_report_restia_summary(mysqli $conn, int $idPob, array $workdayRange): array
 {
     $restiaSummary = cb_denni_report_restia_summary_default();
@@ -990,7 +1061,7 @@ function cb_denni_report_control_values(mysqli $conn, string $datumReportu, arra
 
     return [
         'make_time_label' => $makeTimeLabel,
-        'difference_label' => $reportDifference === null ? '-- Kč' : cb_denni_report_format_money_whole((float)$reportDifference),
+        'difference_label' => $reportDifference === null ? '-- Kč' : cb_format('p', $reportDifference),
         'difference_value' => $reportDifference === null ? '' : number_format((float)$reportDifference, 2, '.', ''),
         'col_label' => cb_denni_report_format_percent($reportCol),
         'col_value' => $reportCol === null ? '' : number_format((float)$reportCol, 6, '.', ''),
@@ -1012,8 +1083,9 @@ function cb_denni_report_person_rows(array $draftPersonRows): array
             'id_user' => (int)($row['id_user'] ?? 0),
             'name' => cb_denni_report_person_display_name($row['jmeno'] ?? '', $row['prijmeni'] ?? ''),
             'restia_name' => cb_denni_report_person_full_name($row['jmeno'] ?? '', $row['prijmeni'] ?? ''),
-            'start' => cb_denni_report_format_time((string)($row['smena_od'] ?? '')),
-            'end' => cb_denni_report_format_time((string)($row['smena_do'] ?? '')),
+            // Čas je určený pro zobrazení vstupu; zdrojová hodnota směny zůstává beze změny.
+            'start' => cb_format('t', $row['smena_od'] ?? null),
+            'end' => cb_format('t', $row['smena_do'] ?? null),
             'break' => $row['pauza'] === null ? '' : cb_denni_report_format_input_number((float)$row['pauza']),
             'hours' => $row['odpracovano'] === null ? '0' : cb_denni_report_format_input_number((float)$row['odpracovano']),
             'delivery_restia' => (int)($row['rozvozu_restia'] ?? 0),
@@ -1458,6 +1530,9 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
     $cashData = cb_denni_report_cash_data($draftRow);
     
     $draftNote = trim((string)($draftRow['poznamka'] ?? ''));
+    $stornoRows = $isGoogleArchiveView
+        ? []
+        : cb_denni_report_storno_rows($conn, $reportBranchId, $workdayRange);
     $previousNote = $isCurrentWorkday
         ? cb_denni_report_previous_note($conn, $reportBranchId, $reportDateDt)
         : cb_denni_report_previous_note_from_history($conn, $reportBranchId, $reportDateDt);
@@ -1496,7 +1571,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         $controlValues = cb_denni_report_control_values($conn, $reportDate, $restiaSummary, $draftRow, $draftPersonRows);
         if (array_key_exists('rozdil', $historyReport)) {
             $savedRozdil = $historyReport['rozdil'];
-            $controlValues['difference_label'] = $savedRozdil === null ? '-- KÄŤ' : cb_denni_report_format_money_whole((float)$savedRozdil);
+            $controlValues['difference_label'] = $savedRozdil === null ? '-- KÄŤ' : cb_format('p', $savedRozdil);
             $controlValues['difference_value'] = $savedRozdil === null ? '' : number_format((float)$savedRozdil, 2, '.', '');
         }
         if (array_key_exists('col_pomer', $historyReport)) {
@@ -1533,7 +1608,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         $controlValues = cb_denni_report_control_values($conn, $reportDate, $restiaSummary, $draftRow, $draftPersonRows);
         if (array_key_exists('rozdil', $historyReport)) {
             $savedRozdil = $historyReport['rozdil'];
-            $controlValues['difference_label'] = $savedRozdil === null ? '-- Kč' : cb_denni_report_format_money_whole((float)$savedRozdil);
+            $controlValues['difference_label'] = $savedRozdil === null ? '-- Kč' : cb_format('p', $savedRozdil);
             $controlValues['difference_value'] = $savedRozdil === null ? '' : number_format((float)$savedRozdil, 2, '.', '');
         }
         if (array_key_exists('col_pomer', $historyReport)) {
@@ -1619,6 +1694,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         'closingName' => $closingName,
         'cashData' => $cashData,
         'draftNote' => $draftNote,
+        'stornoRows' => $stornoRows,
         'previousNote' => $previousNote,
         'restiaSummary' => $restiaSummary,
         'kuryrDeliveryData' => $kuryrDeliveryData,

@@ -14,6 +14,7 @@ $aktualniUrl = cb_url_abs('');
 $loginDbOk = !empty($cbLoginDbOk);
 $loginDisabled = $loginDbOk ? '' : ' disabled';
 $loginFlash = trim((string)($_SESSION['cb_flash'] ?? ''));
+$loginEmailPrefill = trim((string)($_SESSION['cb_password_reset_email_prefill'] ?? ''));
 unset($_SESSION['cb_flash']);
 ?>
 <div id="cb-login-overlay" class="modal-overlay" aria-modal="true" role="dialog" aria-label="Přihlášení Comeback">
@@ -36,6 +37,7 @@ unset($_SESSION['cb_flash']);
                type="email"
                autocomplete="username"
                placeholder="Email"
+               value="<?= h($loginEmailPrefill) ?>"
                required<?= $loginDisabled ?>>
       </div>
 
@@ -57,7 +59,7 @@ unset($_SESSION['cb_flash']);
           <span class="modal-btn-main">Přihlásit</span>
         </button>
       </div>
-      <p class="modal-login-link"><a href="<?= h(cb_root_url('?zapomenute_heslo=1')) ?>">Zapomenuté heslo</a></p>
+      <p class="modal-login-link"><a href="<?= h(cb_root_url('?zapomenute_heslo=1')) ?>">Nastavit nové heslo</a></p>
       <p class="modal-login-status" id="cbLoginStatus" aria-live="polite"><?= h($loginFlash) ?></p>
     </form>
   </div>

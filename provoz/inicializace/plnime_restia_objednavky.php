@@ -1133,15 +1133,18 @@ if (!function_exists('cb_restia_hist_lookup_res_polozka_id')) {
         $stmt = $conn->prepare('
             SELECT id_res_polozka AS id
             FROM res_polozky
-            WHERE id_pob = ? AND pos_code = ?
-            ORDER BY id_res_polozka DESC
+            WHERE id_pob = ?
+              AND aktivni = 1
+              AND platnost_do IS NULL
+              AND (pos_code = ? OR restia_polozka_id = ?)
+            ORDER BY CASE WHEN pos_code = ? THEN 0 ELSE 1 END, id_res_polozka DESC
             LIMIT 1
         ');
         if ($stmt === false) {
             throw new RuntimeException('DB prepare selhal: res_polozky lookup.');
         }
 
-        $stmt->bind_param('is', $idPob, $restiaItemId);
+        $stmt->bind_param('isss', $idPob, $restiaItemId, $restiaItemId, $restiaItemId);
         $stmt->execute();
         $res = $stmt->get_result();
         $row = ($res instanceof mysqli_result) ? $res->fetch_assoc() : null;
@@ -1560,7 +1563,12 @@ if (!function_exists('cb_restia_hist_sync_children')) {
             if (!is_array($item)) { continue; }
             $poradi++;
 
-            $restiaItemId = (string)($item['posId'] ?? ($item['id'] ?? ''));
+            $restiaItemId = trim((string)($item['posId'] ?? ''));
+            if ($restiaItemId === '') {
+                $restiaItemId = trim((string)($item['id'] ?? ''));
+            }
+            $restiaNazev = trim((string)($item['label'] ?? ($item['name'] ?? '')));
+            $restiaNazev = $restiaNazev === '' ? null : $restiaNazev;
             $poznamka = isset($item['note']) ? (string)$item['note'] : null;
             $mnozstvi = isset($item['count']) ? (int)$item['count'] : 1;
             if ($mnozstvi <= 0) { $mnozstvi = 1; }
@@ -1571,8 +1579,8 @@ if (!function_exists('cb_restia_hist_sync_children')) {
             if ($idResPolozka <= 0) {
                  $idResPolozka = null;
             }
-            $stmtItem = cb_restia_hist_stmt($conn, 'obj_polozky_insert', 'INSERT INTO obj_polozky (id_obj, id_res_polozka, res_item, poznamka, poradi, mnozstvi, cena_ks, cena_celk, je_extra, zadano) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3))', 'obj_polozky');
-            $stmtItem->bind_param('iissiiddi', $idObj, $idResPolozka, $restiaItemId, $poznamka, $poradi, $mnozstvi, $cenaKs, $cenaCelk, $jeExtra);
+            $stmtItem = cb_restia_hist_stmt($conn, 'obj_polozky_insert', 'INSERT INTO obj_polozky (id_obj, id_res_polozka, res_item, restia_nazev, poznamka, poradi, mnozstvi, cena_ks, cena_celk, je_extra, zadano) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3))', 'obj_polozky');
+            $stmtItem->bind_param('iisssiiddi', $idObj, $idResPolozka, $restiaItemId, $restiaNazev, $poznamka, $poradi, $mnozstvi, $cenaKs, $cenaCelk, $jeExtra);
             $stmtItem->execute();
             $idObjPolozka = (int)$conn->insert_id;
 

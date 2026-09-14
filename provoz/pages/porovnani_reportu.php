@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+/* Porovnání počítá rozdíly ze syrových hodnot; cb_format() upravuje až hodnoty pro tabulku. */
 require_once __DIR__ . '/../lib/format_datum_cas.php';
 require_once __DIR__ . '/../lib/denni_report_data.php';
 require_once __DIR__ . '/../lib/archiv_reportu_data.php';
@@ -28,17 +29,8 @@ $comparisonBackUrl = cb_root_url('index.php') . '?' . http_build_query($comparis
 $comparisonFormat = static function ($value, string $format): string {
     if ($value === null || $value === '') { return '—'; }
     if ($format === 'text') { return (string)$value; }
-    if ($format === 'money') { return number_format((float)$value, 2, ',', ' ') . ' Kč'; }
-    if ($format === 'percent') { return number_format((float)$value * 100, 2, ',', ' ') . ' %'; }
-    if ($format === 'minutes') { return number_format((float)$value / 60, 1, ',', ' ') . ' min.'; }
-    if ($format === 'hours') {
-        $minutes = (int)round((float)$value * 60);
-        $prefix = $minutes < 0 ? '-' : '';
-        $minutes = abs($minutes);
-        return $prefix . intdiv($minutes, 60) . ':' . str_pad((string)($minutes % 60), 2, '0', STR_PAD_LEFT) . ' hod.';
-    }
-    if ($format === 'integer') { return number_format((float)$value, 0, ',', ' '); }
-    return number_format((float)$value, 2, ',', ' ');
+    $formatTypes = ['money' => 'p', 'percent' => 'pr', 'minutes' => 'm', 'hours' => 'h', 'integer' => 'i', 'number' => 'n'];
+    return cb_format($formatTypes[$format] ?? 'n', $value);
 };
 $comparisonDifference = static function ($isValue, $googleValue, string $format) use ($comparisonFormat): string {
     if (!is_numeric($isValue) || !is_numeric($googleValue)) { return ''; }

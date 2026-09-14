@@ -16,6 +16,17 @@ $cbHeaderModuleDeniedText = 'Tento modul nyní nemáte povolen.';
 ?>
 <header class="blok_hlavicka sirka100">
 
+    <?php if ($cbLoginOk): ?>
+      <div class="cb_orientation_notice" role="status" aria-live="polite">
+        <strong>Otočte zařízení na šířku</strong>
+        <span>Pro pohodlné používání informačního systému je potřeba širší pracovní plocha.</span>
+      </div>
+      <button type="button" class="cb_menu_toggle" data-cb-menu-toggle="1" aria-controls="cb-main-menu" aria-expanded="false" aria-label="Otevřít menu">
+        <span aria-hidden="true">☰</span>
+      </button>
+      <button type="button" class="cb_menu_backdrop" data-cb-menu-backdrop="1" aria-label="Zavřít menu" tabindex="-1"></button>
+    <?php endif; ?>
+
     <?php require __DIR__ . '/hlavicka/head_logo.php'; ?>
     <div class="head_brand_time" aria-label="Aktuální datum a čas">
       <span class="head_subtitle">informační systém</span>
@@ -39,8 +50,10 @@ $cbHeaderModuleDeniedText = 'Tento modul nyní nemáte povolen.';
         <strong class="head_task_count" data-cb-helpdesk-header-count="all">0</strong>
       </button>
 
-      <?php require __DIR__ . '/vyber_pobocek.php'; ?>
-      <?php require __DIR__ . '/vyber_obdobi.php'; ?>
+      <div class="head_filters">
+        <?php require __DIR__ . '/vyber_pobocek.php'; ?>
+        <?php require __DIR__ . '/vyber_obdobi.php'; ?>
+      </div>
 
       <div class="head_update" aria-label="Aktualizace dat" data-cb-head-update="1"<?= $cbCurrentModule !== 'provoz' ? ' hidden' : '' ?>>
         <span class="head_update_icon" aria-hidden="true">⟳</span>

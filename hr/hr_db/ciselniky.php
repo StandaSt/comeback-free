@@ -18,6 +18,9 @@ function hr_fetch_lookup(mysqli $db, string $table, string $idColumn, string $la
     if ($table === 'hr_cis_pracovni_vztah_typ') {
         $where = ' WHERE aktivni = 1';
     }
+    if ($table === 'pobocka' || $table === 'cis_slot') {
+        $where = ' WHERE aktivni = 1';
+    }
 
     $rows = [];
     $result = $db->query("SELECT {$idColumn} AS id, {$labelColumn} AS label FROM {$table}{$where} ORDER BY {$orderBy}");

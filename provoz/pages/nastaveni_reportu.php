@@ -1,4 +1,5 @@
 <?php
+// Nastavení sazeb denního reportu; zobrazené částky používají společné formátování.
 declare(strict_types=1);
 
 require_once __DIR__ . '/../lib/report_promenne.php';
@@ -24,9 +25,9 @@ try {
 }
 
 $currentWoltDrive = is_array($current) ? (float)($current['wolt_drive'] ?? 0) : null;
-$currentWoltDriveLabel = $currentWoltDrive === null ? 'není nastaveno' : number_format($currentWoltDrive, 2, ',', ' ') . ' Kč';
+$currentWoltDriveLabel = $currentWoltDrive === null ? 'není nastaveno' : cb_format('p2', $currentWoltDrive);
 $currentPhmSoukrome = is_array($current) ? (int)($current['phm_soukrome'] ?? 0) : null;
-$currentPhmSoukromeLabel = $currentPhmSoukrome === null ? 'není nastaveno' : number_format($currentPhmSoukrome, 0, ',', ' ') . ' Kč';
+$currentPhmSoukromeLabel = $currentPhmSoukrome === null ? 'není nastaveno' : cb_format('p', $currentPhmSoukrome);
 $token = cb_report_promenne_token();
 ?>
 <section class="provoz_prehled_block">

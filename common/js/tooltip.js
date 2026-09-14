@@ -1,4 +1,4 @@
-// js/tooltip.js * Verze: V1
+// js/tooltip.js * Verze: V2
 'use strict';
 
 (function (w, d) {
@@ -63,6 +63,23 @@
     activeTarget = null;
   }
 
+  function hideAllTooltips() {
+    const focused = d.activeElement;
+    hideFloatingPanel();
+    d.querySelectorAll('.provoz_tooltip_panel_visible').forEach((panel) => {
+      panel.classList.remove('provoz_tooltip_panel_visible');
+    });
+    if (
+      focused instanceof HTMLElement
+      && (
+        focused.dataset.cbTooltipReady === '1'
+        || focused.matches('[data-tooltip="1"], .provoz_tooltip')
+      )
+    ) {
+      focused.blur();
+    }
+  }
+
   function initNativeTitles(scope) {
     const titles = Array.from(scope.querySelectorAll('[title]')).filter((node) => node instanceof HTMLElement);
     if (scope instanceof HTMLElement && scope.hasAttribute('title')) titles.unshift(scope);
@@ -106,14 +123,26 @@
   }
 
   CB_TOOLTIP.init = init;
+  CB_TOOLTIP.hideAll = hideAllTooltips;
 
-  d.addEventListener('cb:main-swapped', () => init(d));
+  d.addEventListener('pointerdown', (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target || !target.closest('[data-cb-tooltip-ready="1"], [data-tooltip="1"], .provoz_tooltip')) {
+      hideAllTooltips();
+    }
+  }, true);
+  d.addEventListener('cb:main-swapped', () => {
+    hideAllTooltips();
+    init(d);
+  });
   d.addEventListener('cb:gn-block-refreshed', (event) => {
     const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : null;
+    hideAllTooltips();
     init(detail && detail.block instanceof HTMLElement ? detail.block : d);
   });
-  w.addEventListener('scroll', () => hideFloatingPanel(), true);
-  w.addEventListener('resize', () => hideFloatingPanel());
+  w.addEventListener('scroll', hideAllTooltips, true);
+  w.addEventListener('resize', hideAllTooltips);
+  w.addEventListener('pagehide', hideAllTooltips);
 
   if (d.readyState === 'loading') {
     d.addEventListener('DOMContentLoaded', () => init(d), { once: true });

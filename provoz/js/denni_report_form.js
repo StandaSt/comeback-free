@@ -601,6 +601,41 @@
     });
   }
 
+  function bindStornoNotes(root) {
+    root.querySelectorAll('[data-zr-storno-note]').forEach((input) => {
+      if (!(input instanceof HTMLInputElement) || input.getAttribute('data-zr-storno-note-bound') === '1') {
+        return;
+      }
+      input.setAttribute('data-zr-storno-note-bound', '1');
+
+      input.addEventListener('blur', () => {
+        if (!usesDraftPersistence(root)) return;
+        saveDraftAction(root, 'update_storno_note', {
+          id_obj: String(input.getAttribute('data-id-obj') || ''),
+          value: String(input.value || '').trim()
+        }).catch((err) => {
+          if (w.alert) w.alert(err && err.message ? err.message : 'Uložení poznámky ke stornu selhalo.');
+        });
+      });
+    });
+
+    root.querySelectorAll('[data-zr-storno-toggle]').forEach((button) => {
+      if (!(button instanceof HTMLButtonElement) || button.getAttribute('data-zr-storno-toggle-bound') === '1') {
+        return;
+      }
+      button.setAttribute('data-zr-storno-toggle-bound', '1');
+
+      button.addEventListener('click', () => {
+        const detailId = String(button.getAttribute('aria-controls') || '');
+        const detail = detailId !== '' ? document.getElementById(detailId) : null;
+        if (!(detail instanceof HTMLTableRowElement)) return;
+        const willOpen = detail.hidden;
+        detail.hidden = !willOpen;
+        button.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      });
+    });
+  }
+
   function bindEnterNavigation(root) {
     const form = root.querySelector('[data-zr-form]');
     if (!(form instanceof HTMLFormElement) || form.getAttribute('data-zr-enter-bound') === '1') {
@@ -655,6 +690,7 @@
 
     bindMoneyInputs(root);
     bindNoteInput(root);
+    bindStornoNotes(root);
     bindEnterNavigation(root);
     bindSubmitCountdown(root);
     bindFinalSubmit(root);

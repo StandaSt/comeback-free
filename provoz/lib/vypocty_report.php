@@ -50,14 +50,8 @@ function cb_report_refresh_at_ts(int $reportSaveAtTs, int $offsetSeconds = 300):
 
 function cb_report_make_time_label(?int $seconds): string
 {
-    if ($seconds === null || $seconds <= 0) {
-        return '0 min 00 s';
-    }
-
-    $minutes = intdiv($seconds, 60);
-    $restSeconds = $seconds % 60;
-
-    return $minutes . ' min ' . sprintf('%02d', $restSeconds) . ' s';
+    // Denní report používá čitelný zápis minuty a sekundy ze společného formátování.
+    return cb_format('ms', $seconds ?? 0);
 }
 
 function cb_report_money_value(?array $row, string $key): float

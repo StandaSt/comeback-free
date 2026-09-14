@@ -33,19 +33,8 @@ $zrDifferenceFormat = static function ($value, string $format): string {
     if ($format === 'text') {
         return (string)$value;
     }
-    if ($format === 'money') {
-        return number_format((float)$value, 2, ',', ' ') . ' Kč';
-    }
-    if ($format === 'hours') {
-        $minutes = (int)round((float)$value * 60);
-        $prefix = $minutes < 0 ? '-' : '';
-        $minutes = abs($minutes);
-        return $prefix . intdiv($minutes, 60) . ':' . str_pad((string)($minutes % 60), 2, '0', STR_PAD_LEFT) . ' hod.';
-    }
-    if ($format === 'integer') {
-        return number_format((float)$value, 0, ',', ' ');
-    }
-    return number_format((float)$value, 2, ',', ' ');
+    $formatTypes = ['money' => 'p', 'percent' => 'pr', 'minutes' => 'm', 'hours' => 'h', 'integer' => 'i', 'number' => 'n'];
+    return cb_format($formatTypes[$format] ?? 'n', $value);
 };
 
 $renderUserSelectOptions = static function (array $options, int $selectedId, string $placeholder, array $excludeIds = []): string {
@@ -124,7 +113,7 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
         . '<input type="hidden" name="kuryr_pocet_rozvozu[]" value="' . h((string)$deliveryTotal) . '" data-zr-delivery-total>'
         . '</td>'
         . '<td class="txt_c" style="width:34px;"><span class="zr_chk txt_c zr_person_cell_car zr_person_cell_car_inline"><input type="checkbox" value="1"' . ($car === 1 ? ' checked' : '') . ' data-zr-editor-field="car" data-zr-car-check' . $zrEditableDisabledAttr . '></span><input type="hidden" name="kuryr_vlastni_vuz[]" value="' . h((string)$car) . '" data-zr-car-hidden></td>'
-        . '<td><strong class="zr_saved_value" data-zr-phm-value>' . h(cb_denni_report_format_money($phm)) . '</strong><input type="hidden" name="kuryr_vyplatit_phm[]" value="' . h(number_format($phm, 2, '.', '')) . '" data-zr-phm-hidden></td>'
+        . '<td><strong class="zr_saved_value" data-zr-phm-value>' . h(cb_format('p', $phm)) . '</strong><input type="hidden" name="kuryr_vyplatit_phm[]" value="' . h(number_format($phm, 2, '.', '')) . '" data-zr-phm-hidden></td>'
         . '</tr>';
 };
 
@@ -354,7 +343,7 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
         </div>
         <div class="zr_restia_total gap_4">
           <span class="zr_metric_label">Tržba</span>
-          <strong class="zr_metric_value" data-zr-restia-trzba data-zr-value="<?= h(number_format((float)$restiaSummary['trzba'], 2, '.', '')) ?>"><?= h(cb_denni_report_format_money_whole((float)$restiaSummary['trzba'])) ?></strong>
+          <strong class="zr_metric_value" data-zr-restia-trzba data-zr-value="<?= h(number_format((float)$restiaSummary['trzba'], 2, '.', '')) ?>"><?= h(cb_format('p', $restiaSummary['trzba'])) ?></strong>
         </div>
         <table class="zr_table zr_restia_table">
           <thead>
@@ -365,14 +354,14 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
             </tr>
           </thead>
           <tbody>
-            <tr><td class="zr_restia_key">Wolt</td><td class="zr_restia_value txt_r"><?= h((string)($restiaSummary['wolt_count'] ?? 0)) ?></td><td class="zr_restia_value txt_r"><strong data-zr-restia-wolt data-zr-value="<?= h(number_format((float)$restiaSummary['wolt'], 2, '.', '')) ?>"><?= h(cb_denni_report_format_money_whole((float)$restiaSummary['wolt'])) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Bolt</td><td class="zr_restia_value txt_r"><?= h((string)($restiaSummary['bolt_count'] ?? 0)) ?></td><td class="zr_restia_value txt_r"><strong data-zr-restia-bolt data-zr-value="<?= h(number_format((float)$restiaSummary['bolt'], 2, '.', '')) ?>"><?= h(cb_denni_report_format_money_whole((float)$restiaSummary['bolt'])) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Foodora</td><td class="zr_restia_value txt_r"><?= h((string)($restiaSummary['dj_count'] ?? 0)) ?></td><td class="zr_restia_value txt_r"><strong data-zr-restia-dj data-zr-value="<?= h(number_format((float)$restiaSummary['dj'], 2, '.', '')) ?>"><?= h(cb_denni_report_format_money_whole((float)$restiaSummary['dj'])) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Web</td><td class="zr_restia_value txt_r"><?= h((string)($restiaSummary['web_count'] ?? 0)) ?></td><td class="zr_restia_value txt_r"><strong data-zr-restia-web data-zr-value="<?= h(number_format((float)$restiaSummary['web'], 2, '.', '')) ?>"><?= h(cb_denni_report_format_money_whole((float)$restiaSummary['web'])) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Wolt drive cash</td><td class="zr_restia_value txt_r"><?= h((string)($restiaSummary['wolt_cash_count'] ?? 0)) ?></td><td class="zr_restia_value txt_r"><strong data-zr-restia-wolt-cash data-zr-value="<?= h(number_format((float)$restiaSummary['wolt_cash'], 2, '.', '')) ?>"><?= h(cb_denni_report_format_money_whole((float)$restiaSummary['wolt_cash'])) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">DJ cash</td><td class="zr_restia_value txt_r"><?= h((string)($restiaSummary['dj_cash_count'] ?? 0)) ?></td><td class="zr_restia_value txt_r"><strong data-zr-restia-dj-cash data-zr-value="<?= h(number_format((float)$restiaSummary['dj_cash'], 2, '.', '')) ?>"><?= h(cb_denni_report_format_money_whole((float)$restiaSummary['dj_cash'])) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Ostatní</td><td class="zr_restia_value txt_r"><?= h((string)($restiaSummary['other_count'] ?? 0)) ?></td><td class="zr_restia_value txt_r"><strong><?= h(cb_denni_report_format_money_whole((float)($restiaSummary['other'] ?? 0))) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Kontrola</td><td class="zr_restia_value txt_r"><?= h((string)($restiaSummary['control_count'] ?? 0)) ?></td><td class="zr_restia_value txt_r"><strong><?= h(cb_denni_report_format_money_whole((float)($restiaSummary['control_amount'] ?? 0))) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Wolt</td><td class="zr_restia_value txt_r"><?= h(cb_format('i', $restiaSummary['wolt_count'] ?? 0)) ?></td><td class="zr_restia_value txt_r"><strong data-zr-restia-wolt data-zr-value="<?= h(number_format((float)$restiaSummary['wolt'], 2, '.', '')) ?>"><?= h(cb_format('p', $restiaSummary['wolt'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Bolt</td><td class="zr_restia_value txt_r"><?= h(cb_format('i', $restiaSummary['bolt_count'] ?? 0)) ?></td><td class="zr_restia_value txt_r"><strong data-zr-restia-bolt data-zr-value="<?= h(number_format((float)$restiaSummary['bolt'], 2, '.', '')) ?>"><?= h(cb_format('p', $restiaSummary['bolt'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Foodora</td><td class="zr_restia_value txt_r"><?= h(cb_format('i', $restiaSummary['dj_count'] ?? 0)) ?></td><td class="zr_restia_value txt_r"><strong data-zr-restia-dj data-zr-value="<?= h(number_format((float)$restiaSummary['dj'], 2, '.', '')) ?>"><?= h(cb_format('p', $restiaSummary['dj'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Web</td><td class="zr_restia_value txt_r"><?= h(cb_format('i', $restiaSummary['web_count'] ?? 0)) ?></td><td class="zr_restia_value txt_r"><strong data-zr-restia-web data-zr-value="<?= h(number_format((float)$restiaSummary['web'], 2, '.', '')) ?>"><?= h(cb_format('p', $restiaSummary['web'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Wolt drive cash</td><td class="zr_restia_value txt_r"><?= h(cb_format('i', $restiaSummary['wolt_cash_count'] ?? 0)) ?></td><td class="zr_restia_value txt_r"><strong data-zr-restia-wolt-cash data-zr-value="<?= h(number_format((float)$restiaSummary['wolt_cash'], 2, '.', '')) ?>"><?= h(cb_format('p', $restiaSummary['wolt_cash'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">DJ cash</td><td class="zr_restia_value txt_r"><?= h(cb_format('i', $restiaSummary['dj_cash_count'] ?? 0)) ?></td><td class="zr_restia_value txt_r"><strong data-zr-restia-dj data-zr-value="<?= h(number_format((float)$restiaSummary['dj'], 2, '.', '')) ?>"><?= h(cb_format('p', $restiaSummary['dj'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Ostatní</td><td class="zr_restia_value txt_r"><?= h(cb_format('i', $restiaSummary['other_count'] ?? 0)) ?></td><td class="zr_restia_value txt_r"><strong><?= h(cb_format('p', $restiaSummary['other'] ?? 0)) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Kontrola</td><td class="zr_restia_value txt_r"><?= h(cb_format('i', $restiaSummary['control_count'] ?? 0)) ?></td><td class="zr_restia_value txt_r"><strong><?= h(cb_format('p', $restiaSummary['control_amount'] ?? 0)) ?></strong></td></tr>
           </tbody>
         </table>
       </section>
@@ -381,18 +370,98 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
         <h4 class="card_section_title txt_seda">Operativa a kontrola</h4>
         <table class="zr_table zr_restia_table">
           <tbody>
-            <tr><td class="zr_restia_key">Zrušené obj. ks</td><td class="zr_restia_value txt_r"><strong data-zr-cancel-count><?= h((string)$restiaSummary['cancel_count']) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Zrušené obj. Kč</td><td class="zr_restia_value txt_r"><strong data-zr-cancel-value><?= h(cb_denni_report_format_money_whole((float)$restiaSummary['cancel_value'])) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Zpožděné rozvozy +5 min</td><td class="zr_restia_value txt_r"><strong data-zr-delay-count><?= h((string)$restiaSummary['delay_count']) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Zrušené obj. ks</td><td class="zr_restia_value txt_r"><strong data-zr-cancel-count><?= h(cb_format('i', $restiaSummary['cancel_count'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Zrušené obj. Kč</td><td class="zr_restia_value txt_r"><strong data-zr-cancel-value><?= h(cb_format('p', $restiaSummary['cancel_value'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Zpožděné rozvozy +5 min</td><td class="zr_restia_value txt_r"><strong data-zr-delay-count><?= h(cb_format('i', $restiaSummary['delay_count'])) ?></strong></td></tr>
             <tr><td class="zr_restia_key">Průměrný make time</td><td class="zr_restia_value txt_r"><strong data-zr-make-time><?= h($makeTimeLabel) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Výdajové doklady</td><td class="zr_restia_value txt_r"><strong data-zr-docs-count><?= h((string)$restiaSummary['docs_count']) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Nezrušené celkem</td><td class="zr_restia_value txt_r"><strong data-zr-orders-total><?= h((string)$restiaSummary['orders_total']) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Naše rozvozy</td><td class="zr_restia_value txt_r"><strong data-zr-own-deliveries><?= h((string)$restiaSummary['own_deliveries']) ?></strong></td></tr>
-            <tr><td class="zr_restia_key">Pozdě WoltDrive 5+</td><td class="zr_restia_value txt_r"><strong data-zr-woltdrive-late><?= h((string)$restiaSummary['woltdrive_late']) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Výdajové doklady</td><td class="zr_restia_value txt_r"><strong data-zr-docs-count><?= h(cb_format('i', $restiaSummary['docs_count'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Nezrušené celkem</td><td class="zr_restia_value txt_r"><strong data-zr-orders-total><?= h(cb_format('i', $restiaSummary['orders_total'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Naše rozvozy</td><td class="zr_restia_value txt_r"><strong data-zr-own-deliveries><?= h(cb_format('i', $restiaSummary['own_deliveries'])) ?></strong></td></tr>
+            <tr><td class="zr_restia_key">Pozdě WoltDrive 5+</td><td class="zr_restia_value txt_r"><strong data-zr-woltdrive-late><?= h(cb_format('i', $restiaSummary['woltdrive_late'])) ?></strong></td></tr>
           </tbody>
         </table>
       </section>
     </aside>
+    <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_storno_section">
+    <h4 class="card_section_title txt_seda">Stornované objednávky</h4>
+    <?php if ((array)($stornoRows ?? []) === []): ?>
+      <div class="txt_seda text_12">Žádné stornované objednávky.</div>
+    <?php else: ?>
+      <table class="zr_table zr_storno_table">
+        <thead>
+          <tr>
+            <th class="txt_r zr_storno_col_order">Č. obj.</th>
+            <th class="txt_r zr_storno_col_customer">Zákazník</th>
+            <th class="txt_r zr_storno_col_time">Vytvořena</th>
+            <th class="txt_r zr_storno_col_time">Vyrobena</th>
+            <th class="txt_r zr_storno_col_time">Stornována</th>
+            <th class="txt_r zr_storno_col_price">Cena</th>
+            <th class="txt_l">Důvod stornování</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ((array)$stornoRows as $stornoRow): ?>
+            <?php
+              // id_obj je technický klíč pro poznámku a rozbalení; uživateli se ukazuje
+              // pouze společně připravené číslo objednávky.
+              $zrStornoIdObj = (int)($stornoRow['id_obj'] ?? 0);
+              $zrStornoCislo = cb_objednavka_cislo($stornoRow);
+              $zrStornoSleva = abs((float)($stornoRow['sleva'] ?? 0));
+              $zrStornoDetailId = 'zr_storno_detail_' . $zrStornoIdObj;
+              $zrStornoCasDokonc = cb_format('t', $stornoRow['cas_dokonc'] ?? null);
+            ?>
+            <tr>
+              <td class="txt_r"<?= $zrStornoCislo['tooltip'] !== '' ? ' title="' . h($zrStornoCislo['tooltip']) . '"' : '' ?>>
+                <button type="button" class="zr_storno_toggle" data-zr-storno-toggle aria-expanded="false" aria-controls="<?= h($zrStornoDetailId) ?>"><?= h($zrStornoCislo['zkracene']) ?></button>
+              </td>
+              <td class="txt_r"><?= h((string)($stornoRow['zakaznik_jmeno'] ?? '')) ?></td>
+              <td class="txt_r"><?= h(cb_format('t', $stornoRow['cas_vytvor'] ?? null)) ?></td>
+              <td class="txt_r"><?= h($zrStornoCasDokonc !== '' ? $zrStornoCasDokonc : '–') ?></td>
+              <td class="txt_r"><?= h(cb_format('t', $stornoRow['cas_storna'] ?? null)) ?></td>
+              <td class="txt_r"><?= h(cb_format('p', $stornoRow['cena_celk'] ?? 0)) ?></td>
+              <td>
+                <input
+                  type="text"
+                  maxlength="255"
+                  value="<?= h((string)($stornoRow['poznamka'] ?? '')) ?>"
+                  data-zr-storno-note
+                  data-id-obj="<?= h((string)$zrStornoIdObj) ?>"
+                  <?= empty($usesDraftPersistence) ? ' readonly' : '' ?>
+                >
+              </td>
+            </tr>
+            <tr id="<?= h($zrStornoDetailId) ?>" data-zr-storno-detail hidden>
+              <td colspan="7" class="zr_storno_detail_cell">
+                <?php if ((array)($stornoRow['polozky'] ?? []) === []): ?>
+                  <span class="txt_seda">Položky objednávky nejsou dostupné.</span>
+                <?php else: ?>
+                  <div class="zr_storno_items_title">Položky v objednávce: <?= h($zrStornoCislo['cele']) ?></div>
+                  <table class="zr_storno_items">
+                    <tbody>
+                      <?php foreach ((array)$stornoRow['polozky'] as $stornoItem): ?>
+                        <tr>
+                          <td class="zr_storno_item_qty"><?= h((string)($stornoItem['mnozstvi'] ?? 0)) ?>×</td>
+                          <td><?= h((string)($stornoItem['nazev'] ?? 'Položka')) ?><?= trim((string)($stornoItem['poznamka'] ?? '')) !== '' ? ' — ' . h((string)$stornoItem['poznamka']) : '' ?></td>
+                          <td class="txt_r"><?= h(cb_format('p', $stornoItem['cena_celk'] ?? 0)) ?></td>
+                        </tr>
+                      <?php endforeach; ?>
+                      <?php if ($zrStornoSleva > 0): ?>
+                        <tr>
+                          <td></td>
+                          <td>Sleva</td>
+                          <td class="txt_r zr_storno_item_discount_value">−<?= h(cb_format('p', $zrStornoSleva)) ?></td>
+                        </tr>
+                      <?php endif; ?>
+                    </tbody>
+                  </table>
+                <?php endif; ?>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    <?php endif; ?>
+    </section>
   </div>
   <?php if ($zrHasManualDifferences): ?>
     <section class="zr_manual_differences" aria-label="Informace o rozdílech oproti Google reportu">

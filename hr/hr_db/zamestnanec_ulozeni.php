@@ -37,10 +37,12 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
     $datumNastupu = trim((string)($data['datum_nastupu'] ?? ''));
     $idVztahTyp = (int)($data['id_pracovni_vztah_typ'] ?? 0);
     $idPobocky = hr_employee_normalize_branch_ids($data['id_pob'] ?? []);
-    $idPobHlavni = (int)($data['id_pob_hlavni'] ?? 0);
-    $slotVolba = (string)($data['id_slot'] ?? '');
-    $idSlot = (int)$slotVolba;
-    $slotJine = trim((string)($data['slot_jine'] ?? ''));
+    $hlavniPobockaVolba = trim((string)($data['id_pob_hlavni'] ?? ''));
+    $maHlavniPobocku = preg_match('/^\d+$/', $hlavniPobockaVolba) === 1;
+    $idPobHlavni = $maHlavniPobocku ? (int)$hlavniPobockaVolba : -1;
+    $slotVolba = trim((string)($data['id_slot'] ?? ''));
+    $maPozici = preg_match('/^\d+$/', $slotVolba) === 1;
+    $idSlot = $maPozici ? (int)$slotVolba : -1;
     $telefon = preg_replace('/\D+/', '', (string)($data['telefon'] ?? '')) ?? '';
     $telefonZahranicni = trim((string)($data['telefon_zahranicni'] ?? ''));
     if (strlen($telefon) === 12 && str_starts_with($telefon, '420')) {
@@ -66,10 +68,11 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
     if (
         $idVztahTyp <= 0
         || $idPobocky === []
-        || ($idPobHlavni > 0 && !in_array($idPobHlavni, $idPobocky, true))
-        || ($idSlot <= 0 && ($slotVolba !== '__jine__' || $slotJine === ''))
+        || !$maHlavniPobocku
+        || !in_array($idPobHlavni, $idPobocky, true)
+        || !$maPozici
     ) {
-        throw new RuntimeException('Vyberte typ vztahu, pobočku a zařazení.');
+        throw new RuntimeException('Vyberte typ vztahu, alespoň jednu pobočku, hlavní pobočku a pozici.');
     }
     if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
         throw new RuntimeException('Pro založení uživatelského účtu vyplňte platný e-mail.');
@@ -140,16 +143,13 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
                 throw new RuntimeException('Vyberte platnou zdravotní pojišťovnu.');
             }
         }
-        if ($slotVolba === '__jine__') {
-            // Doplni novou polozku do ciselniku zarazeni.
-            $stmt = $db->prepare('
-                INSERT INTO cis_slot (slot)
-                VALUES (?)
-            ');
-            $stmt->bind_param('s', $slotJine);
-            $stmt->execute();
-            $idSlot = (int)$db->insert_id;
-            $stmt->close();
+        $stmt = $db->prepare('SELECT id_slot FROM cis_slot WHERE id_slot = ? AND aktivni = 1 LIMIT 1');
+        $stmt->bind_param('i', $idSlot);
+        $stmt->execute();
+        $platnaPozice = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if (!is_array($platnaPozice)) {
+            throw new RuntimeException('Vyberte aktivní pozici.');
         }
 
         // Zalozi samostatny lokalni ucet; SPOJENÍ jej pozve až po kompletní přípravě.
@@ -174,7 +174,7 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
 
         $stmt = $db->prepare('INSERT INTO user_pobocka (id_user, id_pob, main) VALUES (?, ?, ?)');
         foreach ($idPobocky as $idPob) {
-            $hlavniPobocka = $idPobHlavni > 0 && $idPob === $idPobHlavni ? 1 : 0;
+            $hlavniPobocka = $idPob === $idPobHlavni ? 1 : 0;
             $stmt->bind_param('iii', $idUser, $idPob, $hlavniPobocka);
             $stmt->execute();
         }
@@ -215,7 +215,7 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
             VALUES (?, ?, ?, ?, ?, NOW(), 1)
         ');
         foreach ($idPobocky as $idPob) {
-            $hlavniPobocka = $idPobHlavni > 0 && $idPob === $idPobHlavni ? 1 : 0;
+            $hlavniPobocka = $idPob === $idPobHlavni ? 1 : 0;
             $stmt->bind_param('iiisi', $idPerson, $idPob, $hlavniPobocka, $datumNastupu, $zadalUser);
             $stmt->execute();
         }
@@ -292,8 +292,12 @@ function hr_employee_normalize_branch_ids(mixed $raw): array
 
     $ids = [];
     foreach ($raw as $value) {
-        $id = (int)$value;
-        if ($id > 0) {
+        $text = trim((string)$value);
+        if (preg_match('/^\d+$/', $text) !== 1) {
+            continue;
+        }
+        $id = (int)$text;
+        if ($id >= 0) {
             $ids[$id] = true;
         }
     }

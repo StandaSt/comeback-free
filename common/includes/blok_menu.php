@@ -119,7 +119,7 @@ if (!function_exists('cb_render_blok_menu_admin')) {
 
         $url = function_exists('cb_root_url') ? cb_root_url('index.php?m=administrace') : 'index.php?m=administrace';
         ?>
-        <ul class="blok_menu_list">
+        <ul class="blok_menu_list blok_menu_admin">
             <li class="blok_menu_item">
                 <a class="blok_menu_btn" href="<?= cb_blok_menu_h($url) ?>" data-cb-module-link="1" data-cb-module="administrace">
                     <span>Administrace</span>
@@ -137,7 +137,11 @@ if (!function_exists('cb_render_blok_menu')) {
         $ariaLabel = (string)($menu['aria_label'] ?? $title);
         $items = is_array($menu['items'] ?? null) ? $menu['items'] : [];
         ?>
-        <nav class="blok_menu" aria-label="<?= cb_blok_menu_h($ariaLabel) ?>">
+        <nav id="cb-main-menu" class="blok_menu" aria-label="<?= cb_blok_menu_h($ariaLabel) ?>">
+            <div class="blok_menu_mobile_head">
+                <strong>Menu</strong>
+                <button type="button" class="blok_menu_close" data-cb-menu-close="1" aria-label="Zavřít menu">×</button>
+            </div>
             <?php if ($title !== ''): ?>
                 <h2 class="blok_menu_title"><?= cb_blok_menu_h($title) ?></h2>
             <?php endif; ?>

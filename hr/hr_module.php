@@ -24,7 +24,9 @@ return [
         ['page' => 'skoleni', 'label' => 'Školení'],
         ['page' => 'prohlidky', 'label' => 'Lékařské prohlídky'],
         ['page' => 'dovolene', 'label' => 'Dovolené'],
+        ['page' => 'mzdovy_prehled', 'label' => 'Mzdový přehled'],
         ['page' => 'reporty', 'label' => 'Reporty'],
+        ['page' => 'nastaveni', 'label' => 'Nastavení'],
     ],
     'pages' => [
         'prehled' => [
@@ -129,7 +131,9 @@ return [
         'skoleni' => ['title' => 'Školení'],
         'prohlidky' => ['title' => 'Lékařské prohlídky'],
         'dovolene' => ['title' => 'Dovolené'],
+        'mzdovy_prehled' => ['title' => 'Mzdový přehled'],
         'reporty' => ['title' => 'Reporty'],
+        'nastaveni' => ['title' => 'Nastavení HR'],
         'uprava_profilu' => ['title' => 'Úprava profilu'],
     ],
     'actions' => [

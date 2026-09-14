@@ -34,7 +34,7 @@
     var level = value === '' ? 0 : (valid ? 4 : (points <= 1 ? 1 : (points === 2 ? 2 : 3)));
     meter.style.width = String(level * 25) + '%';
     meter.className = valid ? 'is-strong' : (level >= 3 ? 'is-medium' : 'is-weak');
-    var strength = value === '' ? 'Síla hesla' : (level === 1 ? 'Velmi slabé' : (level === 2 ? 'Slabé' : (level === 3 ? 'Málo bezpečné' : 'OK')));
+    var strength = value === '' ? 'Síla hesla' : (level === 1 ? 'Velmi slabé' : (level === 2 ? 'Slabé' : (level === 3 ? 'Málo bezpečné' : '')));
     status.textContent = strength;
     status.className = 'modal-password-strength-status ' + (valid ? 'is-ok' : (level <= 1 ? 'is-weak' : 'is-medium'));
     var same = confirmation.value !== '' && value === confirmation.value;

@@ -2,6 +2,11 @@
 // db/db_objednavky_prehled.php * Prehled objednavek v PP
 declare(strict_types=1);
 
+function cb_db_objednavky_prehled_cancel_statuses(): array
+{
+    return ['canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted'];
+}
+
 function cb_db_objednavky_prehled_period(): array
 {
     $odRaw = trim((string)($_SESSION['cb_obdobi_od'] ?? ''));
@@ -72,6 +77,20 @@ function cb_db_objednavky_prehled_filter_options(mysqli $db, array $selectedPobo
         $options[$key] = $values;
     }
 
+    $statusOptions = [];
+    $hasCancelled = false;
+    foreach ($options['stav'] as $status) {
+        if (in_array($status, cb_db_objednavky_prehled_cancel_statuses(), true)) {
+            $hasCancelled = true;
+            continue;
+        }
+        $statusOptions[] = $status;
+    }
+    if ($hasCancelled) {
+        $statusOptions[] = '__storno__';
+    }
+    $options['stav'] = $statusOptions;
+
     return $options;
 }
 
@@ -96,6 +115,20 @@ function cb_db_objednavky_prehled_nacti(): array
     }
     $filterOptions = cb_db_objednavky_prehled_filter_options($db, $selectedPobocky);
 
+    // Vyhledávání a řazení pracuje se všemi syrovými identifikátory Restie.
+    // Jejich uživatelské složení provádí až cb_format('o') ve výstupní vrstvě.
+    $orderNumberSearchSql = "CONCAT_WS(' ',
+        NULLIF(TRIM(o.restia_order_number), ''),
+        NULLIF(TRIM(o.short_code), ''),
+        NULLIF(TRIM(o.seriove_cislo), ''),
+        NULLIF(TRIM(o.restia_id_obj), '')
+    )";
+    $orderNumberSortSql = "COALESCE(
+        NULLIF(TRIM(o.restia_order_number), ''),
+        NULLIF(TRIM(o.short_code), ''),
+        NULLIF(TRIM(o.restia_id_obj), '')
+    )";
+
     $perOptions = [20, 50, 100, 500];
     $perPage = (int)($queryParams['obj_per'] ?? 20);
     if (!in_array($perPage, $perOptions, true)) {
@@ -104,7 +137,7 @@ function cb_db_objednavky_prehled_nacti(): array
 
     $pageNum = max(1, (int)($queryParams['obj_p'] ?? 1));
     $sortMap = [
-        'cislo' => 'o.restia_order_number',
+        'cislo' => $orderNumberSortSql,
         'vytvoreno' => 'vytvoreno',
         'pobocka' => 'pobocka_nazev',
         'stav' => 'stav_nazev',
@@ -129,6 +162,9 @@ function cb_db_objednavky_prehled_nacti(): array
         'zakaznik' => cb_db_objednavky_prehled_filter('zakaznik'),
         'cena' => cb_db_objednavky_prehled_filter('cena'),
     ];
+    if (in_array($filters['stav'], cb_db_objednavky_prehled_cancel_statuses(), true)) {
+        $filters['stav'] = '__storno__';
+    }
     $activeFilters = array_filter($filters, static fn (string $value): bool => $value !== '');
 
     $where = [];
@@ -137,7 +173,7 @@ function cb_db_objednavky_prehled_nacti(): array
     }
 
     $filterSqlMap = [
-        'cislo' => "COALESCE(o.restia_order_number, '')",
+        'cislo' => $orderNumberSearchSql,
         'vytvoreno' => "COALESCE(DATE_FORMAT(COALESCE((SELECT MIN(ca_vytvor.cas_vytvor) FROM obj_casy ca_vytvor WHERE ca_vytvor.id_obj = o.id_obj), o.restia_created_at, o.restia_imported_at), '%d.%m.%Y %H:%i:%s'), '')",
         'pobocka' => "COALESCE(pb.nazev, '')",
         'stav' => "COALESCE(s.nazev, '')",
@@ -149,6 +185,14 @@ function cb_db_objednavky_prehled_nacti(): array
 
     foreach ($activeFilters as $key => $value) {
         if (!isset($filterSqlMap[$key])) {
+            continue;
+        }
+        if ($key === 'stav' && $value === '__storno__') {
+            $cancelStatuses = array_map(
+                static fn(string $status): string => "'" . $db->real_escape_string($status) . "'",
+                cb_db_objednavky_prehled_cancel_statuses()
+            );
+            $where[] = 's.nazev IN (' . implode(',', $cancelStatuses) . ')';
             continue;
         }
         $safeValue = $db->real_escape_string($value);
@@ -222,6 +266,9 @@ function cb_db_objednavky_prehled_nacti(): array
         SELECT
             o.id_obj,
             o.restia_order_number,
+            o.short_code,
+            o.seriove_cislo,
+            o.restia_id_obj,
             COALESCE(
                 (SELECT MIN(ca_sort.cas_vytvor) FROM obj_casy ca_sort WHERE ca_sort.id_obj = o.id_obj),
                 o.restia_created_at,
@@ -232,7 +279,8 @@ function cb_db_objednavky_prehled_nacti(): array
             d.nazev AS typ_nazev,
             pl.nazev AS platba_nazev,
             TRIM(CONCAT(COALESCE(z.jmeno, ''), ' ', COALESCE(z.prijmeni, ''))) AS zakaznik_jmeno,
-            (SELECT MAX(cena.cena_celk) FROM obj_ceny cena WHERE cena.id_obj = o.id_obj) AS cena_celk
+            (SELECT MAX(cena.cena_celk) FROM obj_ceny cena WHERE cena.id_obj = o.id_obj) AS cena_celk,
+            (SELECT MAX(cena.sleva) FROM obj_ceny cena WHERE cena.id_obj = o.id_obj) AS sleva
         {$fromSql}
         {$whereSql}
         ORDER BY {$orderSql}
@@ -242,9 +290,47 @@ function cb_db_objednavky_prehled_nacti(): array
     $rows = [];
     if ($dataRes instanceof mysqli_result) {
         while ($row = $dataRes->fetch_assoc()) {
+            $row['polozky'] = [];
             $rows[] = $row;
         }
         $dataRes->free();
+    }
+
+    $rowIndexes = [];
+    foreach ($rows as $index => $row) {
+        $idObj = (int)($row['id_obj'] ?? 0);
+        if ($idObj > 0) {
+            $rowIndexes[$idObj] = $index;
+        }
+    }
+    if ($rowIndexes !== []) {
+        $itemsSql = "
+            SELECT
+                op.id_obj,
+                COALESCE(
+                    NULLIF(TRIM(op.restia_nazev), ''),
+                    NULLIF(TRIM(rp.nazev), ''),
+                    CONCAT('Položka ', NULLIF(TRIM(op.res_item), '')),
+                    'Položka'
+                ) AS nazev,
+                op.mnozstvi,
+                op.cena_celk,
+                COALESCE(op.poznamka, '') AS poznamka
+            FROM obj_polozky op
+            LEFT JOIN res_polozky rp ON rp.id_res_polozka = op.id_res_polozka
+            WHERE op.id_obj IN (" . implode(',', array_keys($rowIndexes)) . ")
+            ORDER BY op.id_obj ASC, op.poradi ASC, op.id_obj_polozka ASC
+        ";
+        $itemsResult = $db->query($itemsSql);
+        if ($itemsResult instanceof mysqli_result) {
+            while ($item = $itemsResult->fetch_assoc()) {
+                $idObj = (int)($item['id_obj'] ?? 0);
+                if (isset($rowIndexes[$idObj])) {
+                    $rows[$rowIndexes[$idObj]]['polozky'][] = $item;
+                }
+            }
+            $itemsResult->free();
+        }
     }
 
     return [

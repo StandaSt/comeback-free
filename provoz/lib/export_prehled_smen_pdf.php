@@ -35,14 +35,6 @@ $month = sprintf('%04d-%02d', (int)$data['selectedYear'], (int)$data['selectedMo
 $scope = (string)($_GET['ps_scope'] ?? 'summary') === 'detail' ? 'detail' : 'summary';
 $filename = 'prehled_smen_' . ($scope === 'detail' ? 'detail_' : '') . $month . '.pdf';
 
-if (!function_exists('ps_pdf_date')) {
-    function ps_pdf_date(string $date): string
-    {
-        $dt = DateTimeImmutable::createFromFormat('Y-m-d', $date);
-        return $dt instanceof DateTimeImmutable ? $dt->format('j.n.Y') : $date;
-    }
-}
-
 if (!function_exists('ps_pdf_num_dash')) {
     function ps_pdf_num_dash(float $value): string
     {
@@ -107,7 +99,7 @@ if (!function_exists('ps_pdf_detail_blocks')) {
                         $branchName = 'ID ' . (string)(int)$detailRow['id_pob'];
                     }
                     $html .= '<tr>'
-                        . '<td class="txt_l">' . h(ps_pdf_date((string)($detailRow['datum'] ?? ''))) . '</td>'
+                        . '<td class="txt_l">' . h(cb_format('d', $detailRow['datum'] ?? null)) . '</td>'
                         . '<td class="txt_l">' . h($branchName !== '' ? $branchName : '-') . '</td>'
                         . '<td class="txt_l">' . h(ps_slot_label((int)($detailRow['slot'] ?? 0))) . '</td>'
                         . '<td>' . h(ps_pdf_num_dash((float)($detailRow['celkem'] ?? 0.0))) . '</td>'

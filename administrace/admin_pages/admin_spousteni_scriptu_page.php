@@ -141,4 +141,25 @@ if (isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODULE'])) {
             <button class="admin_script_button" type="submit">Načíst reporty Google</button>
         </form>
     </div>
+
+    <div class="blok admin_script_card">
+        <p class="admin_script_description">Načte aktuální katalog všech provozních poboček z Restie a zachová předchozí verze položek a cen.</p>
+
+        <?php $adminRestiaHasResult = is_array($adminScriptResult) && $adminScriptResultType === 'restia_katalog'; ?>
+        <p
+            class="admin_script_result<?= $adminRestiaHasResult && empty($adminScriptResult['success']) ? ' is-error' : '' ?>"
+            data-admin-restia-katalog-prubeh
+            aria-live="polite"
+            <?= $adminRestiaHasResult ? '' : 'hidden' ?>
+        ><?= $adminRestiaHasResult ? h((string)($adminScriptResult['message'] ?? '')) : '' ?></p>
+
+        <form class="admin_script_form" method="post" action="<?= h(cb_root_url('index.php?m=administrace&page=spousteni_scriptu')) ?>" data-admin-restia-katalog-form>
+            <input type="hidden" name="cb_action" value="admin_restia_katalog">
+            <label class="admin_script_confirm">
+                <input type="checkbox" name="admin_restia_katalog_confirm" value="1" required>
+                <span>Načíst katalog ze všech provozních poboček a uložit případné změny jako nové verze.</span>
+            </label>
+            <button class="admin_script_button" type="submit" data-admin-restia-katalog-button>Načtení položek z Restie</button>
+        </form>
+    </div>
 </div>

@@ -27,6 +27,7 @@ require_once __DIR__ . '/admin_includes/admin_individualni_prava_detail.php';
 require_once __DIR__ . '/admin_includes/admin_uzivatel_detail.php';
 require_once __DIR__ . '/admin_lib/admin_pages.php';
 require_once __DIR__ . '/admin_lib/admin_google_reporty_import.php';
+require_once __DIR__ . '/admin_lib/admin_restia_katalog.php';
 require_once __DIR__ . '/admin_lib/admin_firma_ares.php';
 require_once __DIR__ . '/admin_lib/admin_firma_pridat.php';
 
@@ -61,6 +62,7 @@ if (!function_exists('cb_pravo_ma') || !cb_pravo_ma(100)) {
 
 cb_admin_firma_pridat_handle();
 cb_admin_google_reporty_import_handle();
+cb_admin_restia_katalog_handle();
 
 if (
     ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET'

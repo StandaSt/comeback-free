@@ -51,12 +51,16 @@ function hr_fetch_employees(mysqli $db, int $limit = 100): array
             ON pp.id_person = p.id_person
            AND pp.platny = 1
            AND pp.hlavni = 1
+           AND (pp.platnost_od IS NULL OR pp.platnost_od <= CURDATE())
+           AND (pp.platnost_do IS NULL OR pp.platnost_do >= CURDATE())
         LEFT JOIN pobocka pob
             ON pob.id_pob = pp.id_pob
         LEFT JOIN hr_zarazeni pz
             ON pz.id_person = p.id_person
            AND pz.platny = 1
            AND pz.hlavni = 1
+           AND (pz.platnost_od IS NULL OR pz.platnost_od <= CURDATE())
+           AND (pz.platnost_do IS NULL OR pz.platnost_do >= CURDATE())
         LEFT JOIN cis_slot cs
             ON cs.id_slot = pz.id_slot
         WHERE p.aktivni = 1
@@ -172,6 +176,8 @@ function hr_fetch_employee_list(mysqli $db): array
             INNER JOIN pobocka pob
                 ON pob.id_pob = hp.id_pob
             WHERE hp.platny = 1
+              AND (hp.platnost_od IS NULL OR hp.platnost_od <= CURDATE())
+              AND (hp.platnost_do IS NULL OR hp.platnost_do >= CURDATE())
             GROUP BY hp.id_person
         ) pp
             ON pp.id_person = p.id_person
@@ -183,6 +189,8 @@ function hr_fetch_employee_list(mysqli $db): array
             INNER JOIN cis_slot cs
                 ON cs.id_slot = pz.id_slot
             WHERE pz.platny = 1
+              AND (pz.platnost_od IS NULL OR pz.platnost_od <= CURDATE())
+              AND (pz.platnost_do IS NULL OR pz.platnost_do >= CURDATE())
             GROUP BY pz.id_person
         ) pz
             ON pz.id_person = p.id_person
@@ -270,8 +278,8 @@ function hr_fetch_employee_list(mysqli $db): array
     }
 
     $optionQueries = [
-        'zarazeni' => "SELECT DISTINCT cs.slot AS value FROM hr_zarazeni pz INNER JOIN hr_person p ON p.id_person = pz.id_person INNER JOIN cis_slot cs ON cs.id_slot = pz.id_slot WHERE pz.platny = 1 AND p.id_firma IN ({$allowedFirmySql}) AND cs.slot <> '' ORDER BY cs.slot",
-        'pracoviste' => "SELECT DISTINCT pob.nazev AS value FROM hr_pracoviste pp INNER JOIN hr_person p ON p.id_person = pp.id_person INNER JOIN pobocka pob ON pob.id_pob = pp.id_pob WHERE pp.platny = 1 AND p.id_firma IN ({$allowedFirmySql}) AND pob.nazev <> '' ORDER BY pob.nazev",
+        'zarazeni' => "SELECT DISTINCT cs.slot AS value FROM hr_zarazeni pz INNER JOIN hr_person p ON p.id_person = pz.id_person INNER JOIN cis_slot cs ON cs.id_slot = pz.id_slot WHERE pz.platny = 1 AND (pz.platnost_od IS NULL OR pz.platnost_od <= CURDATE()) AND (pz.platnost_do IS NULL OR pz.platnost_do >= CURDATE()) AND p.id_firma IN ({$allowedFirmySql}) AND cs.slot <> '' ORDER BY cs.slot",
+        'pracoviste' => "SELECT DISTINCT pob.nazev AS value FROM hr_pracoviste pp INNER JOIN hr_person p ON p.id_person = pp.id_person INNER JOIN pobocka pob ON pob.id_pob = pp.id_pob WHERE pp.platny = 1 AND (pp.platnost_od IS NULL OR pp.platnost_od <= CURDATE()) AND (pp.platnost_do IS NULL OR pp.platnost_do >= CURDATE()) AND p.id_firma IN ({$allowedFirmySql}) AND pob.nazev <> '' ORDER BY pob.nazev",
         'vztah' => "SELECT DISTINCT pvt.nazev AS value FROM hr_pracovni_vztah pv INNER JOIN hr_person p ON p.id_person = pv.id_person INNER JOIN hr_cis_pracovni_vztah_typ pvt ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ WHERE pv.platny = 1 AND p.id_firma IN ({$allowedFirmySql}) AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE()) AND pvt.nazev <> '' ORDER BY pvt.nazev",
     ];
     $filterOptions = [];
@@ -413,28 +421,28 @@ function hr_fetch_employee_work_timeline(mysqli $db, int $idPerson): array
 {
     $sql = '
         SELECT * FROM (
-            SELECT pv.vytvoreno AS kdy, CONCAT("Nástup / změna vztahu: ", pvt.nazev) AS akce, pv.datum_nastupu AS plati_od, CONCAT(uu.prijmeni, " ", uu.jmeno) AS zapsal, pv.poznamka
+            SELECT pv.vytvoreno AS kdy, CONCAT("Nástup / změna vztahu: ", pvt.nazev) AS akce, pv.datum_nastupu AS plati_od, pv.datum_ukonceni AS plati_do, CONCAT(uu.prijmeni, " ", uu.jmeno) AS zapsal, pv.poznamka
             FROM hr_pracovni_vztah pv
             INNER JOIN hr_cis_pracovni_vztah_typ pvt ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ
             LEFT JOIN user uu ON uu.id_user = pv.id_user_zadal
             WHERE pv.id_person = ?
             UNION ALL
-            SELECT m.vytvoreno, CONCAT("Změna mzdy: ", m.castka, " Kč / ", mt.nazev), m.platnost_od, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL
+            SELECT m.vytvoreno, CONCAT("Změna mzdy: ", m.castka, " Kč / ", mt.nazev), m.platnost_od, m.platnost_do, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL
             FROM hr_mzda m INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = m.id_pracovni_vztah INNER JOIN cis_mzda_typ mt ON mt.id_mzda_typ = m.id_mzda_typ LEFT JOIN user uu ON uu.id_user = m.id_user_zadal WHERE pv.id_person = ?
             UNION ALL
-            SELECT u.vytvoreno, CONCAT("Změna úvazku: ", u.hodin_tydne, " h/týdně"), u.platnost_od, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL
+            SELECT u.vytvoreno, CONCAT("Změna úvazku: ", u.hodin_tydne, " h/týdně"), u.platnost_od, u.platnost_do, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL
             FROM hr_pracovni_uvazek u INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = u.id_pracovni_vztah LEFT JOIN user uu ON uu.id_user = u.id_user_zadal WHERE pv.id_person = ?
             UNION ALL
-            SELECT b.vytvoreno, CONCAT("Přidán benefit: ", cb.nazev), b.platnost_od, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL
+            SELECT b.vytvoreno, CONCAT("Přidán benefit: ", cb.nazev), b.platnost_od, b.platnost_do, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL
             FROM hr_benefit b INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = b.id_pracovni_vztah INNER JOIN hr_cis_benefit cb ON cb.id_cis_benefit = b.id_cis_benefit LEFT JOIN user uu ON uu.id_user = b.id_user_zadal WHERE pv.id_person = ?
             UNION ALL
-            SELECT b.zruseno, CONCAT("Odebrán benefit: ", cb.nazev), b.platnost_do, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL
+            SELECT b.zruseno, CONCAT("Odebrán benefit: ", cb.nazev), b.platnost_do, NULL, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL
             FROM hr_benefit b INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = b.id_pracovni_vztah INNER JOIN hr_cis_benefit cb ON cb.id_cis_benefit = b.id_cis_benefit LEFT JOIN user uu ON uu.id_user = b.id_user_zrusil WHERE pv.id_person = ? AND b.zruseno IS NOT NULL
             UNION ALL
-            SELECT pp.vytvoreno, CONCAT("Přerušení: ", pt.nazev), pp.datum_od, CONCAT(uu.prijmeni, " ", uu.jmeno), pp.poznamka
+            SELECT pp.vytvoreno, CONCAT("Přerušení: ", pt.nazev), pp.datum_od, pp.datum_do, CONCAT(uu.prijmeni, " ", uu.jmeno), pp.poznamka
             FROM hr_pracovni_preruseni pp INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = pp.id_pracovni_vztah INNER JOIN hr_cis_pracovni_preruseni_typ pt ON pt.id_pracovni_preruseni_typ = pp.id_pracovni_preruseni_typ LEFT JOIN user uu ON uu.id_user = pp.id_user_zadal WHERE pv.id_person = ?
             UNION ALL
-            SELECT pu.vytvoreno, CONCAT("Ukončení: ", put.nazev), pu.datum_ukonceni, CONCAT(uu.prijmeni, " ", uu.jmeno), pu.poznamka
+            SELECT pu.vytvoreno, CONCAT("Ukončení: ", put.nazev), pu.datum_ukonceni, pu.datum_ukonceni, CONCAT(uu.prijmeni, " ", uu.jmeno), pu.poznamka
             FROM hr_pracovni_ukonceni pu INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = pu.id_pracovni_vztah INNER JOIN hr_cis_pracovni_ukonceni_typ put ON put.id_pracovni_ukonceni_typ = pu.id_pracovni_ukonceni_typ LEFT JOIN user uu ON uu.id_user = pu.id_user_zadal WHERE pv.id_person = ?
         ) timeline
         ORDER BY kdy DESC
@@ -445,6 +453,38 @@ function hr_fetch_employee_work_timeline(mysqli $db, int $idPerson): array
     $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
     return $rows;
+}
+
+/** @return string[] */
+function hr_fetch_employee_missing_required_data(mysqli $db, int $idPerson): array
+{
+    $missing = [];
+    $relation = hr_fetch_employee_work_relation($db, $idPerson);
+    if ($relation === null || trim((string)($relation['vztah'] ?? '')) === '' || str_contains((string)$relation['vztah'], 'Doplnit')) {
+        $missing[] = 'typ pracovního vztahu';
+    }
+    if ($relation === null || $relation['uvazek'] === null || $relation['hodin_tydne'] === null) {
+        $missing[] = 'úvazek a hodiny týdně';
+    }
+    if ($relation === null || $relation['id_mzda_typ'] === null || $relation['mzda_castka'] === null) {
+        $missing[] = 'typ a výše mzdy';
+    }
+
+    $stmt = $db->prepare('SELECT (SELECT COUNT(*) FROM hr_zarazeni WHERE id_person = ? AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS pozic, (SELECT COUNT(*) FROM hr_pracoviste WHERE id_person = ? AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS pobocek, (SELECT COUNT(*) FROM hr_pracoviste WHERE id_person = ? AND platny = 1 AND hlavni = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS hlavnich');
+    $stmt->bind_param('iii', $idPerson, $idPerson, $idPerson);
+    $stmt->execute();
+    $counts = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if ((int)($counts['pozic'] ?? 0) !== 1) {
+        $missing[] = (int)($counts['pozic'] ?? 0) === 0 ? 'pozice' : 'jednoznačná pozice';
+    }
+    if ((int)($counts['pobocek'] ?? 0) < 1) {
+        $missing[] = 'pobočka';
+    }
+    if ((int)($counts['hlavnich'] ?? 0) !== 1) {
+        $missing[] = 'jedna hlavní pobočka';
+    }
+    return $missing;
 }
 
 /** Nacte evidovana preruseni jednoho pracovniho pomeru. */
@@ -559,12 +599,16 @@ function hr_fetch_employee(mysqli $db, int $id): ?array
             ON pp.id_person = p.id_person
            AND pp.platny = 1
            AND pp.hlavni = 1
+           AND (pp.platnost_od IS NULL OR pp.platnost_od <= CURDATE())
+           AND (pp.platnost_do IS NULL OR pp.platnost_do >= CURDATE())
         LEFT JOIN pobocka pob
             ON pob.id_pob = pp.id_pob
         LEFT JOIN hr_zarazeni pz
             ON pz.id_person = p.id_person
            AND pz.platny = 1
            AND pz.hlavni = 1
+           AND (pz.platnost_od IS NULL OR pz.platnost_od <= CURDATE())
+           AND (pz.platnost_do IS NULL OR pz.platnost_do >= CURDATE())
         LEFT JOIN cis_slot cs
             ON cs.id_slot = pz.id_slot
         LEFT JOIN hr_telefon tel

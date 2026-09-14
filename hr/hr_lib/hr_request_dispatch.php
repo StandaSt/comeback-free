@@ -54,6 +54,30 @@ function cb_hr_request_dispatch(mysqli $db, string $page, array $user): void
         hr_post_pozadavek_zrusit($db);
         return;
     }
+    if ($action === 'hr_pozice_pridat') {
+        hr_post_pozice_pridat($db);
+        return;
+    }
+    if ($action === 'hr_pozice_zmenit_stav') {
+        hr_post_pozice_zmenit_stav($db);
+        return;
+    }
+    if ($action === 'hr_pobocka_pridat') {
+        hr_post_pobocka_pridat($db, (int)($user['id_user'] ?? 0));
+        return;
+    }
+    if ($action === 'hr_pobocka_zmenit_stav') {
+        hr_post_pobocka_zmenit_stav($db, (int)($user['id_user'] ?? 0));
+        return;
+    }
+    if ($action === 'hr_zamestnanec_pozice_zmenit') {
+        hr_post_zamestnanec_pozice_zmenit($db, (int)($user['id_user'] ?? 0));
+        return;
+    }
+    if ($action === 'hr_zamestnanec_pobocky_zmenit') {
+        hr_post_zamestnanec_pobocky_zmenit($db, (int)($user['id_user'] ?? 0));
+        return;
+    }
 
     if ($action === 'hr_nabor_ulozit_akci' && $page === 'nabor') {
         hr_post_nabor($db);

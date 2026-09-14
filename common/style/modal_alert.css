@@ -1010,37 +1010,32 @@ code{
 
 }
 
-/* Mobil na vysku zobrazuje stejny login otoceny nalezato. */
+/* Mobil na vysku zobrazuje prihlaseni prirozene bez nuceneho otoceni. */
 @media (max-width: 700px) and (orientation: portrait){
   .modal-login-page{
     width: 100vw;
-    height: 100vh;
-    height: 100dvh;
-    overflow: hidden;
-    background: #000;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
   }
 
   .modal-login-page .modal-login-container{
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vh;
-    width: 100dvh;
-    height: 100vw;
-    min-height: 0;
-    transform: translateX(100vw) rotate(90deg);
-    transform-origin: top left;
-    background: var(--cb-login-bg, url("../../img/login_pozadi.png")) center / cover no-repeat;
+    position: static;
+    width: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+    transform: none;
   }
 
   .modal-login-page .modal-overlay{
     width: 100%;
-    min-height: 100%;
-    padding: 14px;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 18px 14px;
   }
 
   .modal-login-page .modal{
-    width: min(338px, calc(100dvh - 40px));
+    width: min(338px, calc(100vw - 28px));
   }
 }
 

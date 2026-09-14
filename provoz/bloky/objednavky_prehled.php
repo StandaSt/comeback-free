@@ -1,7 +1,11 @@
 <?php
 declare(strict_types=1);
 
-/* Jednotná obsluha filtrů je provoz/js/filtry.js. */
+/*
+ * Jednotná obsluha filtrů je provoz/js/filtry.js.
+ * Viditelné datumy a částky formátuje cb_format(); do data-* atributů a URL
+ * zůstávají původní technické hodnoty.
+ */
 
 require_once __DIR__ . '/../db/db_objednavky_prehled.php';
 
@@ -39,36 +43,6 @@ if (!function_exists('cb_provoz_objednavky_order_link')) {
     }
 }
 
-if (!function_exists('cb_provoz_objednavky_format_datetime')) {
-    function cb_provoz_objednavky_format_datetime(mixed $value): string
-    {
-        $raw = trim((string)$value);
-        if ($raw === '') {
-            return '';
-        }
-
-        try {
-            $dt = new DateTimeImmutable($raw);
-        } catch (Throwable $e) {
-            return $raw;
-        }
-
-        return $dt->format('d.m.Y H:i:s');
-    }
-}
-
-if (!function_exists('cb_provoz_objednavky_shorten')) {
-    function cb_provoz_objednavky_shorten(mixed $value, int $maxLength = 14): string
-    {
-        $text = trim((string)$value);
-        if ($text === '' || strlen($text) <= $maxLength) {
-            return $text;
-        }
-
-        return substr($text, 0, $maxLength) . '...';
-    }
-}
-
 if (!function_exists('cb_provoz_objednavky_stav_label')) {
     /**
      * Vrati cesky popisek stavu; interni kod zustava beze zmeny pro filtr i DB.
@@ -77,6 +51,7 @@ if (!function_exists('cb_provoz_objednavky_stav_label')) {
     {
         $status = trim((string)$value);
         $labels = [
+            '__storno__' => 'Storno',
             'new' => 'Nová objednávka',
             'accepted' => 'Přijato',
             'not_accepted' => 'Nepřijato',
@@ -97,7 +72,7 @@ if (!function_exists('cb_provoz_objednavky_stav_label')) {
 if (!function_exists('cb_provoz_objednavky_is_cancelled')) {
     function cb_provoz_objednavky_is_cancelled(mixed $value): bool
     {
-        return in_array(trim((string)$value), ['canceled', 'cancel_accepted'], true);
+        return in_array(trim((string)$value), cb_db_objednavky_prehled_cancel_statuses(), true);
     }
 }
 
@@ -156,15 +131,50 @@ $lastRow = (int)$data['last_row'];
                         </tr>
                     <?php else: ?>
                         <?php foreach ($rows as $row): ?>
+                            <?php
+                            $objednavkyIdObj = (int)($row['id_obj'] ?? 0);
+                            $objednavkyCislo = cb_objednavka_cislo($row);
+                            $objednavkySleva = abs((float)($row['sleva'] ?? 0));
+                            $objednavkyDetailId = 'provoz_objednavky_detail_' . $objednavkyIdObj;
+                            ?>
                             <tr<?= cb_provoz_objednavky_is_cancelled($row['stav_nazev'] ?? '') ? ' class="provoz_objednavky_row--cancelled"' : '' ?>>
-                                <td title="<?= h((string)($row['restia_order_number'] ?? '')) ?>"><?= h(cb_provoz_objednavky_shorten($row['restia_order_number'] ?? '')) ?></td>
-                                <td class="provoz_objednavky_nowrap"><?= h(cb_provoz_objednavky_format_datetime($row['vytvoreno'] ?? '')) ?></td>
+                                <td<?= $objednavkyCislo['tooltip'] !== '' ? ' title="' . h($objednavkyCislo['tooltip']) . '"' : '' ?>>
+                                    <button type="button" class="provoz_objednavky_toggle" data-provoz-objednavky-toggle aria-expanded="false" aria-controls="<?= h($objednavkyDetailId) ?>"><?= h($objednavkyCislo['zkracene']) ?></button>
+                                </td>
+                                <td class="provoz_objednavky_nowrap"><?= h(cb_format('dcs', $row['vytvoreno'] ?? '')) ?></td>
                                 <td><?= h((string)($row['pobocka_nazev'] ?? '')) ?></td>
                                 <td><?= h(cb_provoz_objednavky_stav_label($row['stav_nazev'] ?? '')) ?></td>
                                 <td><?= h((string)($row['typ_nazev'] ?? '')) ?></td>
                                 <td><?= h((string)($row['platba_nazev'] ?? '')) ?></td>
                                 <td><?= h((string)($row['zakaznik_jmeno'] ?? '')) ?></td>
-                                <td class="provoz_objednavky_num"><?= h(number_format((float)($row['cena_celk'] ?? 0), 0, ',', ' ')) ?> Kč</td>
+                                <td class="provoz_objednavky_num"><?= h(cb_format('p', $row['cena_celk'] ?? 0)) ?></td>
+                            </tr>
+                            <tr id="<?= h($objednavkyDetailId) ?>" data-provoz-objednavky-detail hidden>
+                                <td colspan="8" class="zr_storno_detail_cell">
+                                    <?php if ((array)($row['polozky'] ?? []) === []): ?>
+                                        <span class="txt_seda">Položky objednávky nejsou dostupné.</span>
+                                    <?php else: ?>
+                                        <div class="zr_storno_items_title">Položky v objednávce: <?= h($objednavkyCislo['cele']) ?></div>
+                                        <table class="zr_storno_items">
+                                            <tbody>
+                                            <?php foreach ((array)$row['polozky'] as $objednavkyItem): ?>
+                                                <tr>
+                                                    <td class="zr_storno_item_qty"><?= h((string)($objednavkyItem['mnozstvi'] ?? 0)) ?>×</td>
+                                                    <td><?= h((string)($objednavkyItem['nazev'] ?? 'Položka')) ?><?= trim((string)($objednavkyItem['poznamka'] ?? '')) !== '' ? ' — ' . h((string)$objednavkyItem['poznamka']) : '' ?></td>
+                                                    <td class="txt_r"><?= h(cb_format('p', $objednavkyItem['cena_celk'] ?? 0)) ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                            <?php if ($objednavkySleva > 0): ?>
+                                                <tr>
+                                                    <td></td>
+                                                    <td>Sleva</td>
+                                                    <td class="txt_r zr_storno_item_discount_value">−<?= h(cb_format('p', $objednavkySleva)) ?></td>
+                                                </tr>
+                                            <?php endif; ?>
+                                            </tbody>
+                                        </table>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>

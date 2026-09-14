@@ -74,6 +74,19 @@ if (!empty($_SESSION['login_ok'])) {
 
 cb_nastaveni_uzivatele_vyrid_post();
 
+/* Otevre formular noveho hesla s jednorazove predvyplnenym emailem bez udaje v URL. */
+if (empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'] ?? '') === 'nove_heslo_formular') {
+    $cbResetPrefillEmail = trim((string)($_POST['email'] ?? ''));
+    if (filter_var($cbResetPrefillEmail, FILTER_VALIDATE_EMAIL) !== false) {
+        $_SESSION['cb_password_reset_email_prefill'] = $cbResetPrefillEmail;
+    } else {
+        unset($_SESSION['cb_password_reset_email_prefill']);
+    }
+    unset($_SESSION['cb_2fa_token'], $_SESSION['cb_auth_ok']);
+    header('Location: ' . cb_root_url('?zapomenute_heslo=1'), true, 303);
+    exit;
+}
+
 if (empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'] ?? '') === 'zapomenute_heslo') {
     try {
         $cbResetEmailSent = cb_obnoveni_hesla_odeslat(db(), trim((string)($_POST['email'] ?? '')));

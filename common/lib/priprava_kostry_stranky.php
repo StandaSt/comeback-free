@@ -57,6 +57,8 @@ $cbAdministraceEditacePravJsPath = $cbAplikaceRoot . '/administrace/admin_js/adm
 $cbAdministraceEditacePravJsUrl = cb_root_url('administrace/admin_js/admin_editace_prav.js') . '?v=' . (is_file($cbAdministraceEditacePravJsPath) ? (string)filemtime($cbAdministraceEditacePravJsPath) : '1');
 $cbAdministraceUzivateleJsPath = $cbAplikaceRoot . '/administrace/admin_js/admin_uzivatele.js';
 $cbAdministraceUzivateleJsUrl = cb_root_url('administrace/admin_js/admin_uzivatele.js') . '?v=' . (is_file($cbAdministraceUzivateleJsPath) ? (string)filemtime($cbAdministraceUzivateleJsPath) : '1');
+$cbAdministraceRestiaKatalogJsPath = $cbAplikaceRoot . '/administrace/admin_js/admin_restia_katalog.js';
+$cbAdministraceRestiaKatalogJsUrl = cb_root_url('administrace/admin_js/admin_restia_katalog.js') . '?v=' . (is_file($cbAdministraceRestiaKatalogJsPath) ? (string)filemtime($cbAdministraceRestiaKatalogJsPath) : '1');
 
 /* Hodnoty pro vizualni kontext a tema celeho shellu. */
 $cbVisualModule = $cbInitialModule === 'helpdesk' ? 'helpdesk' : $cbInitialModule;

@@ -105,9 +105,9 @@ try {
         $sendJson(200, [
             'ok' => true,
             'rozdil' => $rozdil === null ? null : round((float)$rozdil, 2),
-            'rozdil_label' => $rozdil === null ? '-- Kč' : cb_denni_report_format_money_whole((float)$rozdil),
+            'rozdil_label' => $rozdil === null ? '-- Kč' : cb_format('p', $rozdil),
             'col_pomer' => $colPomer === null ? null : round((float)$colPomer, 6),
-            'col_label' => $colPomer === null ? '-- %' : number_format((float)$colPomer * 100, 2, ',', ' ') . ' %',
+            'col_label' => $colPomer === null ? '-- %' : cb_format('pr', $colPomer),
         ]);
     }
 
@@ -166,6 +166,62 @@ try {
         $value = trim((string)($_POST['value'] ?? ''));
         cb_db_dr_pracovni_update_note($conn, $idDr, $value, $currentUserId);
         $sendJson(200, ['ok' => true, 'id_dr' => $idDr]);
+    }
+
+    if ($action === 'update_storno_note') {
+        $idObj = (int)($_POST['id_obj'] ?? 0);
+        $value = trim((string)($_POST['value'] ?? ''));
+        if ($idObj <= 0) {
+            $sendJson(422, ['ok' => false, 'err' => 'Neplatna objednavka']);
+        }
+        if (function_exists('mb_substr')) {
+            $value = mb_substr($value, 0, 255, 'UTF-8');
+        } else {
+            $value = substr($value, 0, 255);
+        }
+
+        $workdayRange = cb_dt_workday_range_utc($datum);
+        $fromDb = (string)$workdayRange['from_db'];
+        $toDb = (string)$workdayRange['to_db'];
+        $stmtOrder = $conn->prepare("
+            SELECT 1
+            FROM objednavky_restia o
+            INNER JOIN obj_casy ca ON ca.id_obj = o.id_obj
+            INNER JOIN cis_obj_stav s ON s.id_stav = o.id_stav
+            WHERE o.id_obj = ?
+              AND o.id_pob = ?
+              AND ca.report >= DATE(?)
+              AND ca.report < DATE(?)
+              AND s.nazev IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted')
+            LIMIT 1
+        ");
+        if ($stmtOrder === false) {
+            $sendJson(500, ['ok' => false, 'err' => 'Nelze overit objednavku']);
+        }
+        $stmtOrder->bind_param('iiss', $idObj, $idPob, $fromDb, $toDb);
+        $stmtOrder->execute();
+        $orderResult = $stmtOrder->get_result();
+        $orderExists = $orderResult instanceof mysqli_result && $orderResult->num_rows > 0;
+        if ($orderResult instanceof mysqli_result) {
+            $orderResult->free();
+        }
+        $stmtOrder->close();
+        if (!$orderExists) {
+            $sendJson(403, ['ok' => false, 'err' => 'Objednavka nepatri k reportu']);
+        }
+
+        $stmtSave = $conn->prepare('
+            INSERT INTO obj_storno (id_obj, poznamka)
+            VALUES (?, ?)
+            ON DUPLICATE KEY UPDATE poznamka = VALUES(poznamka)
+        ');
+        if ($stmtSave === false) {
+            $sendJson(500, ['ok' => false, 'err' => 'Nelze ulozit poznamku']);
+        }
+        $stmtSave->bind_param('is', $idObj, $value);
+        $stmtSave->execute();
+        $stmtSave->close();
+        $sendJson(200, ['ok' => true, 'id_obj' => $idObj]);
     }
 
     if (in_array($action, ['add_person', 'delete_person', 'update_time', 'update_kuryr'], true)) {

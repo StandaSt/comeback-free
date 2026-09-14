@@ -58,9 +58,10 @@ if (!function_exists('ps_slot_label')) {
 }
 
 if (!function_exists('ps_num')) {
+    // Všechny souhrny hodin a exporty přebírají stejný uživatelský numerický formát.
     function ps_num(float $value): string
     {
-        return number_format($value, 2, ',', ' ');
+        return cb_format('n', $value);
     }
 }
 

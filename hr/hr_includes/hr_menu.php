@@ -18,6 +18,12 @@ foreach ($hrMenuItems as $item) {
     }
 
     $itemPage = (string)$item['page'];
+    if ($itemPage === 'mzdovy_prehled' && !cb_hr_mzdovy_prehled_ma_pravo()) {
+        continue;
+    }
+    if ($itemPage === 'nastaveni' && !cb_hr_nastaveni_ma_pravo()) {
+        continue;
+    }
     $hrMenu[] = [
         'label' => (string)$item['label'],
         'url' => cb_root_url('index.php?m=hr&page=' . rawurlencode($itemPage)),

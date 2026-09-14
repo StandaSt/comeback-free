@@ -201,8 +201,8 @@ $psExportXlsxUrl = cb_root_url('provoz/lib/export_prehled_smen_xlsx.php') . $psE
                 if ((float)$row['svatek'] > 0.0 && isset($row['svatek_detail']) && is_array($row['svatek_detail'])) {
                     $svatekLines = [];
                     foreach ($row['svatek_detail'] as $detail) {
-                        $detailDate = DateTimeImmutable::createFromFormat('Y-m-d', (string)($detail['date'] ?? ''));
-                        $detailDateText = $detailDate instanceof DateTimeImmutable ? $detailDate->format('j.n.Y') : (string)($detail['date'] ?? '');
+                        // Datum svátku je čistě výstup pro tooltip, proto používá společný český formát.
+                        $detailDateText = cb_format('d', $detail['date'] ?? null);
                         $detailName = trim((string)($detail['name'] ?? ''));
                         $detailHours = ps_num((float)($detail['hours'] ?? 0.0));
                         if ($detailDateText !== '' && $detailName !== '') {
@@ -248,8 +248,7 @@ $psExportXlsxUrl = cb_root_url('provoz/lib/export_prehled_smen_xlsx.php') . $psE
                 <?php else: ?>
                   <?php foreach ($detailRows as $detailRow): ?>
                     <?php
-                    $detailDate = DateTimeImmutable::createFromFormat('Y-m-d', (string)($detailRow['datum'] ?? ''));
-                    $detailDateText = $detailDate instanceof DateTimeImmutable ? $detailDate->format('j.n.Y') : (string)($detailRow['datum'] ?? '');
+                    $detailDateText = cb_format('d', $detailRow['datum'] ?? null);
                     $branchName = trim((string)($detailRow['pobocka'] ?? ''));
                     if ($branchName === '' && (int)($detailRow['id_pob'] ?? 0) > 0) {
                         $branchName = 'ID ' . (string)(int)$detailRow['id_pob'];
@@ -258,8 +257,7 @@ $psExportXlsxUrl = cb_root_url('provoz/lib/export_prehled_smen_xlsx.php') . $psE
                     if ((float)($detailRow['svatek'] ?? 0.0) > 0.0 && isset($detailRow['svatek_detail']) && is_array($detailRow['svatek_detail'])) {
                         $detailSvatekLines = [];
                         foreach ($detailRow['svatek_detail'] as $svatekDetail) {
-                            $svatekDate = DateTimeImmutable::createFromFormat('Y-m-d', (string)($svatekDetail['date'] ?? ''));
-                            $svatekDateText = $svatekDate instanceof DateTimeImmutable ? $svatekDate->format('j.n.Y') : (string)($svatekDetail['date'] ?? '');
+                            $svatekDateText = cb_format('d', $svatekDetail['date'] ?? null);
                             $svatekName = trim((string)($svatekDetail['name'] ?? ''));
                             $svatekHours = ps_num((float)($svatekDetail['hours'] ?? 0.0));
                             if ($svatekDateText !== '' && $svatekName !== '') {

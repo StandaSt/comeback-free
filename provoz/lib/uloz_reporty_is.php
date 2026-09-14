@@ -169,9 +169,9 @@ try {
         $sendJson(200, [
             'ok' => true,
             'rozdil' => $rozdil === null ? null : round((float)$rozdil, 2),
-            'rozdil_label' => $rozdil === null ? '-- Kč' : cb_denni_report_format_money_whole((float)$rozdil),
+            'rozdil_label' => $rozdil === null ? '-- Kč' : cb_format('p', $rozdil),
             'col_pomer' => $colPomer === null ? null : round((float)$colPomer, 6),
-            'col_label' => $colPomer === null ? '-- %' : number_format((float)$colPomer * 100, 2, ',', ' ') . ' %',
+            'col_label' => $colPomer === null ? '-- %' : cb_format('pr', $colPomer),
         ]);
     }
 

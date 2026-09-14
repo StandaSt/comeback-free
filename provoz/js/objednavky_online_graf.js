@@ -1,4 +1,4 @@
-// js/objednavky_online_graf.js * Verze: V1
+// Graf online objednávek; všechny uživatelské číselné údaje skládá ve stejném českém formátu.
 'use strict';
 
 (function (w) {
@@ -17,6 +17,10 @@
   function formatInt(value) {
     const intValue = Math.round(Number(value) || 0);
     return String(intValue).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  }
+
+  function formatMoney(value) {
+    return formatInt(value) + ' Kč';
   }
 
   function escapeHtml(value) {
@@ -155,7 +159,7 @@
             + '<tr><td class="provoz_tooltip_table_cell">Vyrábí se</td><td class="provoz_tooltip_table_cell provoz_tooltip_num">' + formatInt(vyrabiSe[index] ?? 0) + '</td></tr>'
             + '<tr><td class="provoz_tooltip_table_cell">Zrušeno</td><td class="provoz_tooltip_table_cell provoz_tooltip_num">' + formatInt(zruseno[index] ?? 0) + '</td></tr>'
             + '<tr><th class="provoz_tooltip_table_cell">Objednávky</th><th class="provoz_tooltip_table_cell provoz_tooltip_num">' + formatInt(objednavky[index] ?? 0) + '</th></tr>'
-            + '<tr><th class="provoz_tooltip_table_cell">Tržba</th><th class="provoz_tooltip_table_cell provoz_tooltip_num">' + formatInt(trzba[index] ?? 0) + ' Kč</th></tr>'
+            + '<tr><th class="provoz_tooltip_table_cell">Tržba</th><th class="provoz_tooltip_table_cell provoz_tooltip_num">' + formatMoney(trzba[index] ?? 0) + '</th></tr>'
             + '</tbody>'
             + '</table>'
             + '</div>';

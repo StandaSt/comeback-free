@@ -1,5 +1,5 @@
 <?php
-// mobil/mobil_overeni.php * Verze: V9 * Aktualizace: 09.09.2026
+// mobil/mobil_overeni.php * Verze: V11 * Aktualizace: 12.09.2026
 declare(strict_types=1);
 
 /*
@@ -203,7 +203,7 @@ if (!is_array($row)) {
     if ($stav === 'ok') {
         $info = $sameLoginSession ? 'Přístup schválen – vstupuji do IS…' : 'Přístup byl povolen';
     } elseif ($stav === 'ne') {
-        $info = 'Zamítl/a jste přihlášení pro uživatele „' . $celeJmeno . '“ dne ' . $kdyRozhodnuto . '.';
+        $title = 'Přihlášení zamítnuto';
     } elseif ($stav === 'exp' || $zbyvaSec <= 0) {
         $info = 'Tento požadavek vypršel.';
     } else {
@@ -268,7 +268,7 @@ $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
     .approve-label{
       font-size:13px;
       color:rgba(15,23,42,.70);
-      margin:0 0 6px 0;
+      margin:0 0 3px 0;
     }
     .approve-value{
       margin:0;
@@ -286,16 +286,17 @@ $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
       word-break:break-word;
     }
     .approve-time{
-      margin-top:12px;
+      margin:12px 0 10px;
       font-size:14px;
       font-weight:700;
       color:#0f172a;
-    }
-    .login-denied-head{
       text-align:center;
     }
+    .login-denied-head{
+      text-align:left;
+    }
     .login-denied-status{
-      margin-top:2px;
+      margin:0;
       color:#c00;
     }
     .login-denied-info{
@@ -314,11 +315,74 @@ $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
       color:#fff;
       font-weight:700;
     }
+    .approval-layout{
+      display:block;
+    }
+    @media (orientation:landscape) and (max-height:520px){
+      body{
+        padding:10px;
+      }
+      .modal{
+        width:min(680px, 100%);
+        max-height:calc(100dvh - 20px);
+        padding:14px 18px;
+        overflow:auto;
+      }
+      .modal-head{
+        margin-bottom:8px;
+      }
+      .approval-layout{
+        display:grid;
+        grid-template-columns:minmax(0, 1fr) minmax(220px, .8fr);
+        gap:14px;
+        align-items:center;
+      }
+      .approve-box{
+        margin-top:0;
+      }
+      .approval-actions{
+        display:flex;
+        flex-direction:column;
+        justify-content:center;
+      }
+      .approval-actions .approve-time{
+        margin:0 0 10px;
+      }
+      .approval-actions .modal-spacer{
+        height:8px;
+      }
+      .login-denied-modal{
+        display:grid;
+        grid-template-columns:minmax(0, 1fr) minmax(280px, 1.15fr);
+        column-gap:14px;
+        row-gap:8px;
+        align-items:center;
+      }
+      .login-denied-modal > .modal-head{
+        grid-column:1;
+        grid-row:1 / span 3;
+        margin-bottom:0;
+      }
+      .login-denied-modal > .warn-box{
+        grid-column:2;
+        grid-row:1;
+        margin-top:0;
+      }
+      .login-denied-modal > .modal-spacer{
+        grid-column:2;
+        grid-row:2;
+        height:0;
+      }
+      .login-denied-modal > .login-denied-reset-form{
+        grid-column:2;
+        grid-row:3;
+      }
+    }
   </style>
 </head>
 <body class="modal-page">
 
-  <div class="modal" role="dialog" aria-modal="true" aria-label="Schválení přihlášení">
+  <div class="modal<?= $stav === 'ne' ? ' login-denied-modal' : '' ?>" role="dialog" aria-modal="true" aria-label="Schválení přihlášení">
 
     <?php if ($canDecide) { ?>
       <form method="post">
@@ -334,60 +398,63 @@ $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
         <img src="<?= h1(cb_public_url('img/logo_comeback.png')) ?>" alt="Comeback">
       </div>
       <div<?= $stav === 'ne' ? ' class="login-denied-head"' : '' ?>>
-        <p class="modal-title"><?= h1($title) ?></p>
         <?php if ($stav === 'ne') { ?>
-          <p class="modal-title login-denied-status">zamítnuto</p>
-          <p class="modal-sub login-denied-info">
-            Zamítl/a jste přihlášení<br>
-            pro uživatele „<?= h1($celeJmeno) ?>“<br>
-            dne <?= h1($kdyRozhodnuto) ?>.
-          </p>
+          <p class="modal-title login-denied-status"><?= h1($title) ?></p>
         <?php } else { ?>
+          <p class="modal-title"><?= h1($title) ?></p>
           <p class="<?= ($stav === 'ok' ? 'done-big' : 'modal-sub') ?>" id="approvalInfo"><?= h1($info) ?></p>
         <?php } ?>
       </div>
     </div>
 
     <?php if ($canDecide) { ?>
-      <div class="approve-box">
-        <p class="approve-label">Přihlašuje se uživatel:</p>
-        <p class="approve-value"><?= h1($celeJmeno) ?></p>
+      <div class="approval-layout">
+        <div class="approval-details">
+          <div class="approve-box">
+            <p class="approve-label">Přihlašuje se uživatel:</p>
+            <p class="approve-value"><?= h1($celeJmeno) ?></p>
 
-        <div class="modal-spacer"></div>
+            <div class="modal-spacer"></div>
 
-        <p class="approve-label">Email použitý k přihlášení:</p>
-        <p class="approve-email"><?= h1($email) ?></p>
+            <p class="approve-label">Email použitý k přihlášení:</p>
+            <p class="approve-email"><?= h1($email) ?></p>
 
-        <div class="modal-spacer"></div>
+            <div class="modal-spacer"></div>
 
-        <p class="approve-label">Přihlášení z IP:</p>
-        <p class="approve-email"><?= h1($ipDisplay) ?></p>
+            <p class="approve-label">Přihlášení z IP:</p>
+            <p class="approve-email"><?= h1($ipDisplay) ?></p>
+          </div>
+
+        </div>
+
+        <div class="approval-actions">
+          <div class="approve-time" id="countTxt">Na rozhodnutí zbývá: --:-- min.</div>
+
+          <form method="post">
+            <input type="hidden" name="decision" value="ok">
+            <button class="modal-btn btn-ok" type="submit">Ano, jsem to já</button>
+          </form>
+
+          <div class="modal-spacer"></div>
+
+          <form method="post">
+            <input type="hidden" name="decision" value="ne">
+            <button class="modal-btn btn-danger" type="submit">Zamítnout přístup</button>
+          </form>
+        </div>
       </div>
-
-      <div class="approve-time" id="countTxt">Na rozhodnutí zbývá: --:-- min.</div>
-
-      <div class="modal-spacer"></div>
-
-      <form method="post">
-        <input type="hidden" name="decision" value="ok">
-        <button class="modal-btn btn-ok" type="submit">Ano, jsem to já</button>
-      </form>
-
-      <div class="modal-spacer"></div>
-
-      <form method="post">
-        <input type="hidden" name="decision" value="ne">
-        <button class="modal-btn btn-danger" type="submit">Zamítnout přístup</button>
-      </form>
     <?php } elseif ($stav === 'ne') { ?>
       <div class="warn-box">
-        Pokud máte podezření na zneužití Vašich přihlašovacích údajů do systému „Směny“ společnosti Comeback, změňte si co nejdříve heslo.<br><br>
-        <a href="https://smeny.pizzacomeback.cz/" target="_blank" rel="noopener noreferrer">https://smeny.pizzacomeback.cz/</a>
+        Pokud máte podezření na zneužití Vašich přihlašovacích údajů do IS Comeback, změňte si co nejdříve heslo.
       </div>
 
       <div class="modal-spacer"></div>
 
-      <button class="modal-btn btn-danger" type="button" id="btnClose">Zavři okno</button>
+      <form class="login-denied-reset-form" method="post" action="<?= h1(cb_root_url('')) ?>">
+        <input type="hidden" name="cb_action" value="nove_heslo_formular">
+        <input type="hidden" name="email" value="<?= h1($email === '---' ? '' : $email) ?>">
+        <button class="modal-btn btn-danger" type="submit">Nastavit nové heslo</button>
+      </form>
     <?php } elseif ($stav === 'ok' && $sameLoginSession) { ?>
       <button class="modal-btn" type="button" id="btnEnter">Vstoupit do IS</button>
     <?php } else { ?>
@@ -499,5 +566,5 @@ $canDecide = (is_array($row) && $stav === 'ceka' && $zbyvaSec > 0);
 </body>
 </html>
 <?php
-/* mobil/mobil_overeni.php * Verze: V9 * Aktualizace: 09.09.2026 */
+/* mobil/mobil_overeni.php * Verze: V11 * Aktualizace: 12.09.2026 */
 // Konec souboru

@@ -1,5 +1,5 @@
 <?php
-// lib/login_smeny.php * Verze: V26 * Aktualizace: 09.09.2026
+// lib/login_smeny.php * Verze: V28 * Aktualizace: 12.09.2026
 declare(strict_types=1);
 
 /*
@@ -23,10 +23,7 @@ require_once __DIR__ . '/smeny_graphql.php';
 require_once __DIR__ . '/user_bad_login.php';
 require_once __DIR__ . '/prvni_vstup.php';
 
-require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
-
 require_once __DIR__ . '/../db/db_api_smeny.php';
-require_once __DIR__ . '/../db/db_user.php';
 
 /* Vrati orezanou textovou hodnotu z prihlasovaciho formulare. */
 function post_str(string $k): string
@@ -57,6 +54,7 @@ try {
     $email = post_str('email');
     $heslo = post_str('heslo');
     $deviceEndpoint = post_str('device_endpoint');
+    unset($_SESSION['cb_password_reset_email_prefill']);
     $_SESSION['cb_login_target_module'] = post_module();
 
     if ($email === '' || $heslo === '') {
@@ -139,121 +137,6 @@ try {
     header('Location: ' . cb_login_url());
     exit;
 
-    cb_db_ensure_user_set(db(), $idUser);
-
-    $_SESSION['cb_token'] = $token;
-
-    $_SESSION['cb_user'] = [
-        'id_user'   => $idUser,
-        'name'      => (string)($u['name'] ?? ''),
-        'surname'   => (string)($u['surname'] ?? ''),
-        'email'     => (string)($u['email'] ?? ''),
-        'telefon'   => (string)($u['phoneNumber'] ?? ''),
-        'active'    => (bool)($u['active'] ?? false),
-        'approved'  => (bool)($u['approved'] ?? false),
-        'roles'     => [],
-        'sloty'     => [],
-    ];
-
-    $_SESSION['cb_auth_ok'] = 1;
-
-    // LOCAL: 2FA se preskoci jen kdyz je vypnuto v set_system.on_2fa
-    cb_login_load_settings_to_session($idUser);
-    $on2fa = (int)cb_system_setting('on_2fa', 1);
-
-    if ((string)($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL' || $on2fa !== 1) {
-        $_SESSION['login_ok'] = 1;
-        unset($_SESSION['cb_auth_ok']);
-        unset($_SESSION['cb_2fa_token']);
-
-        cb_login_finalize_after_ok($token);
-        header('Location: ' . cb_login_target_url());
-        exit;
-    }
-
-    // SERVER: bez aktivniho zarizeni je to prvni login a pokracuje parovani
-    $maAktivniZarizeni = false;
-
-    $stmtDevice = db()->prepare('
-        SELECT id
-        FROM push_zarizeni
-        WHERE id_user=? AND aktivni=1
-        LIMIT 1
-    ');
-
-    if ($stmtDevice) {
-        $stmtDevice->bind_param('i', $idUser);
-        $stmtDevice->execute();
-        $stmtDevice->store_result();
-        $maAktivniZarizeni = ($stmtDevice->num_rows > 0);
-        $stmtDevice->close();
-    }
-
-    if (!$maAktivniZarizeni) {
-        unset($_SESSION['login_ok']);
-        unset($_SESSION['cb_2fa_token']);
-
-
-        header('Location: ' . cb_login_url());
-        exit;
-    }
-
-    // 2FA: vytvor vyzvu a cekej na schvaleni
-    $limitSec = 60;
-    if (defined('CB_2FA_LIMIT_SEC')) {
-        $limitSec = (int)CB_2FA_LIMIT_SEC;
-        if ($limitSec <= 0) {
-            $limitSec = 60;
-        }
-    }
-
-    // Token ma 64 hex znaku, tedy 32 nahodnych bajtu
-    $token2fa = bin2hex(random_bytes(32));
-
-    $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '');
-    if ($ip === '') {
-        $ip = 'UNKNOWN';
-    }
-
-    $ua = (string)($_SERVER['HTTP_USER_AGENT'] ?? '');
-    $ua = trim($ua);
-    if ($ua === '') {
-        $ua = null;
-    }
-
-    $conn = db();
-    $stmt = $conn->prepare('
-        INSERT INTO push_login_2fa
-        (id_user, token, stav, ip, prohlizec, vytvoreno, vyprsi, rozhodnuto, id_zarizeni)
-        VALUES
-        (?, ?, \'ceka\', ?, ?, NOW(), (NOW() + INTERVAL ? SECOND), NULL, NULL)
-    ');
-    if (!$stmt) {
-        throw new RuntimeException('2FA: DB prepare selhal.');
-    }
-
-    $stmt->bind_param('isssi', $idUser, $token2fa, $ip, $ua, $limitSec);
-    $stmt->execute();
-    $stmt->close();
-
-    // Do session se uklada jen identifikator aktualni 2FA vyzvy
-    $_SESSION['cb_2fa_token'] = $token2fa;
-
-    // login_ok pred schvalenim neexistuje
-    unset($_SESSION['login_ok']);
-    unset($_SESSION['cb_auth_ok']);
-
-    // Odeslani Web Push notifikace
-
-    $sent = cb_push_send_2fa($idUser, $token2fa);
-
-
-    $_SESSION['cb_flash'] = 'Čekám na schválení přihlášení na mobilu';
-
-
-    header('Location: ' . cb_login_url());
-    exit;
-
 } catch (Throwable $e) {
 
     /*
@@ -284,12 +167,15 @@ try {
     unset($_SESSION['cb_last_activity_ts']);
 
     $_SESSION['cb_flash'] = $e->getMessage();
+    $cbLoginFailedEmail = post_str('email');
+    if (filter_var($cbLoginFailedEmail, FILTER_VALIDATE_EMAIL) !== false) {
+        $_SESSION['cb_password_reset_email_prefill'] = $cbLoginFailedEmail;
+    }
 
 
     header('Location: ' . cb_login_url());
     exit;
 }
 
-// lib/login_smeny.php * Verze: V25 * Aktualizace: 30.03.2026
-// Pocet radku: 359
+// lib/login_smeny.php * Verze: V28 * Aktualizace: 12.09.2026
 // Konec souboru

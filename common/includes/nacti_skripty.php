@@ -75,6 +75,8 @@ window.CB_CRF_TOKEN = <?= json_encode(function_exists('cb_crf_token') ? cb_crf_t
 <script src="<?= h($cbAdministraceEditacePravJsUrl) ?>"></script>
 <?php // Správa uživatelů v Administraci. ?>
 <script src="<?= h($cbAdministraceUzivateleJsUrl) ?>"></script>
+<?php // Průběh ručního načítání katalogu Restia v Administraci. ?>
+<script src="<?= h($cbAdministraceRestiaKatalogJsUrl) ?>"></script>
 <?php // AI analytik modulu Provoz. ?>
 <script src="<?= h(cb_root_url('provoz/js/ai_analytik.js') . '?v=' . (is_file(__DIR__ . '/../../provoz/js/ai_analytik.js') ? (string)filemtime(__DIR__ . '/../../provoz/js/ai_analytik.js') : '1')) ?>"></script>
 <?php // Konfigurace navigace mezi hlavni moduly. ?>
@@ -93,3 +95,5 @@ window.CB_MODULY_NAVIGACE = {
 </script>
 <?php // Klientska navigace mezi moduly. ?>
 <script src="<?= h($cbModulyNavigaceJsUrl) ?>"></script>
+<?php // Responzivni chovani spolecne hlavicky a menu. ?>
+<script src="<?= h(cb_public_url('js/responzivni_shell.js') . '?v=' . (is_file(__DIR__ . '/../js/responzivni_shell.js') ? (string)filemtime(__DIR__ . '/../js/responzivni_shell.js') : '1')) ?>"></script>

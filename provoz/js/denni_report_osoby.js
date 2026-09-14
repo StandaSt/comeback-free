@@ -1,4 +1,4 @@
-// js/denni_report_osoby.js * Verze: V2 * Aktualizace: 12.05.2026
+// Správa řádků instorů a kurýrů denního reportu včetně klientských přepočtů.
 'use strict';
 
 (function (w) {
@@ -180,9 +180,23 @@
     }
   }
 
+  // Jediný převod celé částky PHM pro existující i nově vložené řádky kurýrů.
   function formatWholeMoney(value) {
     const numeric = Math.max(0, Math.round(Number(value) || 0));
     return String(numeric).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' Kč';
+  }
+
+  // Jediný převod odpracovaných hodin pro obrazovku i ukládanou technickou hodnotu řádku.
+  function formatWorkedHours(value) {
+    const numeric = Number(value);
+    const stored = Number.isFinite(numeric)
+      ? numeric.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1')
+      : '0';
+
+    return {
+      stored,
+      label: stored + ' hod.'
+    };
   }
 
   function syncPrivateFuelExpense(root, persist) {
@@ -365,9 +379,9 @@
       totalHours = 0;
     }
 
-    const formatted = totalHours.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
-    hoursEl.textContent = formatted + ' hod.';
-    hoursHiddenEl.value = formatted;
+    const hours = formatWorkedHours(totalHours);
+    hoursEl.textContent = hours.label;
+    hoursHiddenEl.value = hours.stored;
   }
 
   function syncKuryrExtras(row) {
@@ -406,7 +420,7 @@
         restiaValueEl.textContent = String(restia);
       }
       if (phmValueEl instanceof HTMLElement) {
-        phmValueEl.textContent = String(phm).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' Kč';
+        phmValueEl.textContent = formatWholeMoney(phm);
       }
       if (phmHiddenEl instanceof HTMLInputElement) {
         phmHiddenEl.value = String(phm);
@@ -499,7 +513,7 @@
     const hoursValue = document.createElement('strong');
     hoursValue.className = 'zr_saved_value';
     hoursValue.setAttribute('data-zr-hours', '');
-    hoursValue.textContent = '0 hod.';
+    hoursValue.textContent = formatWorkedHours(0).label;
     hoursCell.appendChild(hoursValue);
     const hoursHidden = buildHidden(type + '_hodiny[]', '0');
     hoursHidden.setAttribute('data-zr-hours-hidden', '');
@@ -557,7 +571,7 @@
       const phmValueEl = document.createElement('strong');
       phmValueEl.className = 'zr_hours_value';
       phmValueEl.setAttribute('data-zr-phm-value', '');
-      phmValueEl.textContent = String(phmValue).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' Kč';
+      phmValueEl.textContent = formatWholeMoney(phmValue);
       phmCell.appendChild(phmValueEl);
       const phmHidden = buildHidden('kuryr_vyplatit_phm[]', phmValue);
       phmHidden.setAttribute('data-zr-phm-hidden', '');

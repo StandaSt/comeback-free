@@ -1,4 +1,5 @@
 <?php
+// Souhrn tržeb podle kanálů; viditelné částky používají společné formátování.
 declare(strict_types=1);
 
 (static function (): void {
@@ -170,14 +171,14 @@ declare(strict_types=1);
                             <span class="provoz_top_report_bar"></span>
                         </span>
                         <span class="provoz_top_report_share"><?= h(number_format($share, 1, ',', ' ')) ?> %</span>
-                        <span class="provoz_top_report_value"><?= h(number_format($sales, 0, ',', ' ')) ?> Kč</span>
+                        <span class="provoz_top_report_value"><?= h(cb_format('p', $sales)) ?></span>
                     </div>
                 <?php endforeach; ?>
                 <div class="provoz_top_report_total">
                     <strong class="provoz_top_report_label">Celkem</strong>
                     <span class="provoz_top_report_total_space"></span>
                     <strong class="provoz_top_report_share"></strong>
-                    <strong class="provoz_top_report_value"><?= h(number_format($totalSales, 0, ',', ' ')) ?> Kč</strong>
+                    <strong class="provoz_top_report_value"><?= h(cb_format('p', $totalSales)) ?></strong>
                 </div>
             </div>
         <?php endif; ?>

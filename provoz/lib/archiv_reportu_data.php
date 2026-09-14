@@ -42,11 +42,68 @@ function cb_archiv_reportu_comparison_rows(mysqli $conn, int $idPob, string $rep
         }
     }
 
+    $workPeople = static function (array $people): array {
+        $result = [];
+        foreach ($people as $person) {
+            $slot = (int)($person['id_slot'] ?? 0);
+            if (!in_array($slot, [1, 2], true)) {
+                continue;
+            }
+            $idUser = (int)($person['id_user'] ?? 0);
+            $name = trim((string)($person['jmeno'] ?? '') . ' ' . (string)($person['prijmeni'] ?? ''));
+            $key = $idUser > 0
+                ? 'user:' . $idUser . ':slot:' . $slot
+                : 'name:' . mb_strtolower($name, 'UTF-8') . ':slot:' . $slot;
+            if (!isset($result[$key])) {
+                $result[$key] = ['name' => $name, 'slot' => $slot, 'hours' => 0.0];
+            }
+            $result[$key]['hours'] += (float)($person['odpracovano'] ?? 0);
+        }
+
+        return $result;
+    };
+    $isWorkPeople = $workPeople((array)($isData['people_rows'] ?? []));
+    $googleWorkPeople = $workPeople((array)($googleData['people_rows'] ?? []));
+    $workPeopleKeys = array_unique(array_merge(array_keys($isWorkPeople), array_keys($googleWorkPeople)));
+    usort($workPeopleKeys, static function (string $leftKey, string $rightKey) use ($isWorkPeople, $googleWorkPeople): int {
+        $left = (array)($isWorkPeople[$leftKey] ?? $googleWorkPeople[$leftKey] ?? []);
+        $right = (array)($isWorkPeople[$rightKey] ?? $googleWorkPeople[$rightKey] ?? []);
+        $slotComparison = (int)($left['slot'] ?? 0) <=> (int)($right['slot'] ?? 0);
+        if ($slotComparison !== 0) {
+            return $slotComparison;
+        }
+
+        return strnatcasecmp((string)($left['name'] ?? ''), (string)($right['name'] ?? ''));
+    });
+    foreach ($workPeopleKeys as $workPersonKey) {
+        $isPresent = isset($isWorkPeople[$workPersonKey]);
+        $googlePresent = isset($googleWorkPeople[$workPersonKey]);
+        $isPerson = (array)($isWorkPeople[$workPersonKey] ?? []);
+        $googlePerson = (array)($googleWorkPeople[$workPersonKey] ?? []);
+        $isHours = (float)($isPerson['hours'] ?? 0);
+        $googleHours = (float)($googlePerson['hours'] ?? 0);
+        if ($isPresent && $googlePresent && abs($isHours - $googleHours) < 0.0001) {
+            continue;
+        }
+        $person = $isPresent ? $isPerson : $googlePerson;
+        $role = (int)($person['slot'] ?? 0) === 1 ? 'Instor' : 'Kurýr';
+        $name = trim((string)($person['name'] ?? ''));
+        if ($name === '') {
+            $name = 'Neznámý zaměstnanec';
+        }
+        $item = $role . ' — ' . $name;
+        if (!$isPresent) {
+            $item .= ' (v IS není zadán)';
+        } elseif (!$googlePresent) {
+            $item .= ' (v Google reportu není zadán)';
+        }
+        $comparison['entry'][] = ['item' => $item, 'is' => $isHours, 'google' => $googleHours, 'format' => 'hours'];
+    }
+
     $personSummary = static function (array $people): array {
-        $result = ['Instor odpracováno' => 0.0, 'Kurýr odpracováno' => 0.0, 'Rozvozy celkem' => 0, 'Vlastní vůz' => 0, 'PHM kurýrů' => 0.0];
+        $result = ['Rozvozy celkem' => 0, 'Vlastní vůz' => 0, 'PHM kurýrů' => 0.0];
         foreach ($people as $person) {
             $isInstor = (int)($person['id_slot'] ?? 0) === 1;
-            $result[$isInstor ? 'Instor odpracováno' : 'Kurýr odpracováno'] += (float)($person['odpracovano'] ?? 0);
             if (!$isInstor) {
                 $result['Rozvozy celkem'] += (int)($person['rozvozu_restia'] ?? 0) + (int)($person['rozvozu_manual'] ?? 0);
                 $result['Vlastní vůz'] += (int)((int)($person['vlastni_vuz'] ?? 0) === 1);
@@ -57,7 +114,7 @@ function cb_archiv_reportu_comparison_rows(mysqli $conn, int $idPob, string $rep
     };
     $isPeople = $personSummary((array)($isData['people_rows'] ?? []));
     $googlePeople = $personSummary((array)($googleData['people_rows'] ?? []));
-    $personFormats = ['Instor odpracováno' => 'hours', 'Kurýr odpracováno' => 'hours', 'Rozvozy celkem' => 'integer', 'Vlastní vůz' => 'integer', 'PHM kurýrů' => 'money'];
+    $personFormats = ['Rozvozy celkem' => 'integer', 'Vlastní vůz' => 'integer', 'PHM kurýrů' => 'money'];
     foreach ($personFormats as $item => $format) {
         $isValue = $isPeople[$item] ?? null;
         $googleValue = $googlePeople[$item] ?? null;

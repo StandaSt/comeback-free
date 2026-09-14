@@ -912,6 +912,88 @@
   grid-column:1 / -1;
 }
 
+.zr_storno_section{
+  grid-column:1 / -1;
+  width:auto;
+  box-sizing:border-box;
+}
+
+.zr_storno_table{
+  width:100%;
+  table-layout:fixed;
+}
+
+.zr_storno_col_order{
+  width:200px;
+}
+
+.zr_storno_col_customer{
+  width:180px;
+}
+
+.zr_storno_col_time{
+  width:80px;
+  white-space:nowrap;
+}
+
+.zr_storno_col_price{
+  width:90px;
+}
+
+.zr_storno_table td{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.zr_storno_table td input{
+  width:100%;
+}
+
+.zr_storno_toggle{
+  max-width:100%;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:var(--cb-link);
+  font:inherit;
+  text-decoration:underline;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  cursor:pointer;
+}
+
+.zr_storno_detail_cell{
+  padding:6px 12px 8px 28px !important;
+  background:var(--cb-bg-panel-soft);
+  white-space:normal !important;
+}
+
+.zr_storno_items{
+  width:100%;
+  border-collapse:collapse;
+}
+
+.zr_storno_items_title{
+  margin:0 6px 4px;
+  font-weight:700;
+}
+
+.zr_storno_items td{
+  padding:2px 6px;
+  border:0;
+}
+
+.zr_storno_item_qty{
+  width:45px;
+}
+
+.zr_storno_item_discount_value{
+  color:var(--clr_modra_6);
+  font-weight:700;
+}
+
 .zr_control_metric{
   padding:5px 0;
   border-top:1px solid var(--cb-border-soft);
@@ -1334,6 +1416,10 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   text-align:right;
 }
 
+.provoz_objednavky_filter_row th:first-child .provoz_objednavky_filter{
+  width:108px;
+}
+
 .provoz_objednavky_filter_datetime{
   width:124px;
 }
@@ -1365,6 +1451,41 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   text-align:right;
   white-space:nowrap;
   font-variant-numeric:tabular-nums;
+}
+
+.provoz_objednavky_toggle{
+  max-width:100%;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:var(--cb-link);
+  font:inherit;
+  text-decoration:underline;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  cursor:pointer;
+}
+
+.provoz_objednavky_table td.zr_storno_detail_cell{
+  text-align:left;
+  white-space:normal;
+}
+
+.provoz_objednavky_table .zr_storno_items{
+  width:100%;
+}
+
+.provoz_objednavky_table .zr_storno_items td{
+  padding:2px 6px;
+  border:0;
+  text-align:left;
+  white-space:normal;
+}
+
+.provoz_objednavky_table .zr_storno_items td:last-child{
+  text-align:right;
+  white-space:nowrap;
 }
 
 .provoz_objednavky_empty{
