@@ -191,6 +191,19 @@ if (!empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POS
         exit;
     }
 
+    if ($cbGnModule === 'provoz' && $cbGnPage === 'kontrola_reportu' && $cbGnBlock === 'kontrola_reportu') {
+        $GLOBALS['CURRENT_MODULE'] = 'provoz';
+        define('CB_EMBEDDED_MODULE', 'provoz');
+        require_once __DIR__ . '/provoz/lib/kontrola_reportu_data.php';
+        $cbKontrolaGnSource = strtolower(trim((string)($_POST['source'] ?? '')));
+        $cbKontrolaPouzitGlobalniObdobi = $cbKontrolaGnSource === 'obdobi'
+            || (string)($_SESSION['cb_kontrola_reportu_period_source'] ?? '') === 'global';
+        $cbKontrolaPozadovanaPobocka = (int)($_SESSION['cb_kontrola_reportu_id_pob'] ?? 0);
+        header('Content-Type: text/html; charset=utf-8');
+        require __DIR__ . '/provoz/bloky/kontrola_reportu.php';
+        exit;
+    }
+
     http_response_code(404);
     exit;
 }
@@ -223,7 +236,11 @@ if (!empty($_SESSION['login_ok']) && isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODUL
         if (str_starts_with($cbShellParamKey, 'cb_shell_') || $cbShellParamKey === 'cb_helpdesk_source_module') {
             continue;
         }
-        if (is_scalar($cbShellParamValue) || $cbShellParamValue === null) {
+        if (is_array($cbShellParamValue)) {
+            // Parametry odkazu typu filtr[nazev] PHP rozbalí do pole. Při interní
+            // navigaci musí zůstat stejné jako při běžném GET požadavku.
+            $_GET[$cbShellParamKey] = $cbShellParamValue;
+        } elseif (is_scalar($cbShellParamValue) || $cbShellParamValue === null) {
             $_GET[$cbShellParamKey] = (string)$cbShellParamValue;
         }
     }

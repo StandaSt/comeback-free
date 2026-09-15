@@ -340,7 +340,7 @@ function smenyUserDeactivateMissingActiveUsers(mysqli $db, array $activeUserIds)
     $activeUserIds = array_values(array_filter($activeUserIds, static fn (int $id): bool => $id > 0));
 
     if ($activeUserIds === []) {
-        $stmt = $db->prepare('UPDATE user SET aktivni = 0 WHERE aktivni = 1 AND zdroj = 1');
+        $stmt = $db->prepare("UPDATE user SET aktivni = 0, duvod_neaktivni = 'nenalezen_aktivni_ve_smenach' WHERE aktivni = 1 AND zdroj = 1");
         if ($stmt === false) {
             throw new RuntimeException('DB: prepare selhal (deaktivace vsech useru).');
         }
@@ -354,7 +354,7 @@ function smenyUserDeactivateMissingActiveUsers(mysqli $db, array $activeUserIds)
     }
 
     $placeholders = implode(',', array_fill(0, count($activeUserIds), '?'));
-    $sql = 'UPDATE user SET aktivni = 0 WHERE aktivni = 1 AND zdroj = 1 AND id_user NOT IN (' . $placeholders . ')';
+    $sql = "UPDATE user SET aktivni = 0, duvod_neaktivni = 'nenalezen_aktivni_ve_smenach' WHERE aktivni = 1 AND zdroj = 1 AND id_user NOT IN (" . $placeholders . ')';
     $stmt = $db->prepare($sql);
     if ($stmt === false) {
         throw new RuntimeException('DB: prepare selhal (deaktivace nepritomnych useru).');

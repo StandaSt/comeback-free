@@ -18,6 +18,7 @@ $data = cb_admin_uzivatele_nacti(db(), $source);
 $lists = cb_admin_uzivatele_ciselniky(db());
 $detail = $detailId > 0 ? cb_admin_uzivatel_detail(db(), $detailId) : null;
 $roleOptions = $lists['role'];
+$csrfToken = cb_admin_uzivatele_csrf_token();
 $pobockyByFirma = [];
 foreach ($lists['pobocky'] as $pobocka) {
     $pobockyByFirma[(int)$pobocka['id_firma']][] = $pobocka;
@@ -59,7 +60,7 @@ $sortUrl = static function (string $key) use ($url, $data): string {
         <input type="hidden" name="usr_p" value="1">
         <div class="cb_table_wrap table-wrap">
             <table class="cb_table admin_users_table">
-                <colgroup><col style="width:72px"><col span="7"></colgroup>
+                <colgroup><col style="width:72px"><col span="7"><col style="width:110px"></colgroup>
                 <thead>
                     <tr class="admin_users_filter_row filter-row">
                         <th><input class="filter-input" name="usr_f[id]" value="<?= h($data['filters']['id']) ?>" aria-label="Filtrovat ID"></th>
@@ -69,20 +70,32 @@ $sortUrl = static function (string $key) use ($url, $data): string {
                         <th><select class="filter-input" name="usr_f[role]"><option value="0">Vše</option><?php foreach ($roleOptions as $role): ?><option value="<?= h((string)$role['id']) ?>"<?= (int)$data['filters']['role'] === (int)$role['id'] ? ' selected' : '' ?>><?= h((string)$role['nazev']) ?></option><?php endforeach; ?></select></th>
                         <th><select class="filter-input" name="usr_f[pobocka]"><option value="-1">Vše</option><?php foreach ($lists['pobocky'] as $pobocka): ?><option value="<?= h((string)$pobocka['id_pob']) ?>"<?= (int)$data['filters']['pobocka'] === (int)$pobocka['id_pob'] ? ' selected' : '' ?>><?= h((string)$pobocka['nazev']) ?></option><?php endforeach; ?></select></th>
                         <th><select class="filter-input" name="usr_f[zdroj]"><option value="vse">Vše</option><option value="1"<?= $data['filters']['zdroj'] === '1' ? ' selected' : '' ?>>Směny</option><option value="2"<?= $data['filters']['zdroj'] === '2' ? ' selected' : '' ?>>Manuál</option></select></th>
-                        <th><select class="filter-input" name="usr_f[stav]"><option value="vse">Vše</option><option value="aktivni"<?= $data['filters']['stav'] === 'aktivni' ? ' selected' : '' ?>>Aktivní</option><option value="ceka"<?= $data['filters']['stav'] === 'ceka' ? ' selected' : '' ?>>Nemá hash</option><option value="neaktivni"<?= $data['filters']['stav'] === 'neaktivni' ? ' selected' : '' ?>>Neaktivní</option></select></th>
+                        <th><select class="filter-input" name="usr_f[stav]"><option value="vse">Vše</option><option value="aktivni"<?= $data['filters']['stav'] === 'aktivni' ? ' selected' : '' ?>>Aktivní</option><option value="ceka"<?= $data['filters']['stav'] === 'ceka' ? ' selected' : '' ?>>Aktivní – bez hesla</option><option value="neaktivni"<?= $data['filters']['stav'] === 'neaktivni' ? ' selected' : '' ?>>Neaktivní</option></select></th>
+                        <th aria-label="Akce"></th>
                     </tr>
                     <tr>
                         <?php foreach (['id'=>'ID','uzivatel'=>'Uživatel','kontakt'=>'Kontakt','firma'=>'Firma','role'=>'Role','pobocky'=>'Pobočky','zdroj'=>'Zdroj','stav'=>'Stav'] as $key => $label): $arrow = $data['sort'] === $key ? ($data['dir'] === 'asc' ? '↑' : '↓') : '↕'; ?>
                             <th<?= $key === 'id' ? ' class="cb_table_number"' : '' ?>><a href="<?= h($sortUrl($key)) ?>"><?= h($label) ?> <span><?= h($arrow) ?></span></a></th>
                         <?php endforeach; ?>
+                        <th>Akce</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($data['rows'] as $user):
                         $isDetail = is_array($detail) && (int)$detail['id_user'] === (int)$user['id_user'];
-                        $branchNames = array_values(array_filter(array_map('trim', explode(',', (string)$user['pobocky'])), static fn (string $name): bool => $name !== ''));
-                        $branchText = implode(', ', array_slice($branchNames, 0, 2));
-                        if (count($branchNames) > 2) { $branchText .= ' +' . (count($branchNames) - 2); }
+                        $mainBranch = trim((string)$user['pobocka_main']);
+                        $branchCount = max(0, (int)$user['pobocky_pocet']);
+                        if ($mainBranch !== '') {
+                            $branchText = $mainBranch;
+                            $otherBranches = max(0, $branchCount - 1);
+                            if ($otherBranches > 0) { $branchText .= ' + ' . $otherBranches; }
+                        } else {
+                            $branchText = 'MAIN není + ' . $branchCount;
+                        }
+                        $inactiveReason = (string)($user['duvod_neaktivni'] ?? '');
+                        $inactiveTitle = $inactiveReason === 'nenalezen_aktivni_ve_smenach'
+                            ? 'Uživatel nebyl při poslední synchronizaci nalezen mezi aktivními uživateli Směn.'
+                            : ($inactiveReason === 'rucni_deaktivace' ? 'Uživatele ručně deaktivoval administrátor.' : '');
                     ?>
                         <tr data-admin-user-row="<?= h((string)$user['id_user']) ?>">
                             <td class="cb_table_number"><?= h((string)$user['id_user']) ?></td>
@@ -90,15 +103,16 @@ $sortUrl = static function (string $key) use ($url, $data): string {
                             <td><?= h((string)$user['email']) ?><br><?= h((string)$user['telefon']) ?></td>
                             <td><?= h((string)$user['obchodni_jmeno']) ?></td>
                             <td><?= h((string)$user['role']) ?></td>
-                            <td><span<?= count($branchNames) > 2 ? ' title="' . h(implode(', ', $branchNames)) . '"' : '' ?>><?= !empty($user['pob_all']) ? 'Všechny pobočky firmy' : h($branchText) ?></span></td>
+                            <td><?= h($branchText) ?></td>
                             <td><?= (int)$user['zdroj'] === 2 ? 'Manuál' : 'Směny' ?></td>
-                            <td><?= !empty($user['aktivni']) ? (!empty($user['ma_heslo']) ? 'Aktivní' : 'Nemá hash') : 'Neaktivní' ?></td>
+                            <td<?= $inactiveTitle !== '' ? ' title="' . h($inactiveTitle) . '"' : '' ?>><?= !empty($user['aktivni']) ? (!empty($user['ma_heslo']) ? 'Aktivní' : 'Aktivní – bez hesla') : 'Neaktivní' ?></td>
+                            <td class="admin_users_action_cell"><?php if (empty($user['aktivni'])): ?><button type="submit" form="admin_user_activate" formaction="<?= h($url()) ?>" name="id_user" value="<?= h((string)$user['id_user']) ?>" class="admin_users_activate_button" data-admin-user-activate>Aktivovat</button><?php else: ?>—<?php endif; ?></td>
                         </tr>
                         <?php if ($isDetail): ?>
-                            <tr class="admin_user_detail_row is-open" data-admin-user-detail-row="<?= h((string)$detail['id_user']) ?>"><td colspan="8"><?= cb_admin_uzivatel_detail_html($detail, $lists) ?></td></tr>
+                            <tr class="admin_user_detail_row is-open" data-admin-user-detail-row="<?= h((string)$detail['id_user']) ?>"><td colspan="9"><?= cb_admin_uzivatel_detail_html($detail, $lists) ?></td></tr>
                         <?php endif; ?>
                     <?php endforeach; ?>
-                    <?php if ($data['rows'] === []): ?><tr><td colspan="8">Žádný uživatel neodpovídá zvolenému filtru.</td></tr><?php endif; ?>
+                    <?php if ($data['rows'] === []): ?><tr><td colspan="9">Žádný uživatel neodpovídá zvolenému filtru.</td></tr><?php endif; ?>
                 </tbody>
             </table>
         </div>
@@ -113,5 +127,6 @@ $sortUrl = static function (string $key) use ($url, $data): string {
             <label class="cb_table_footer_size">Zobrazovat <select name="usr_per" class="filter-input"><?php foreach ($data['per_options'] as $option): ?><option value="<?= h((string)$option) ?>"<?= $data['per_page'] === $option ? ' selected' : '' ?>><?= h((string)$option) ?> řádků</option><?php endforeach; ?></select></label>
         </div>
     </form>
+    <form id="admin_user_activate" method="post" action="<?= h($url()) ?>" class="admin_users_action_form"><input type="hidden" name="cb_action" value="admin_uzivatel_aktivovat"><input type="hidden" name="csrf_token" value="<?= h($csrfToken) ?>"></form>
     <?php if (is_array($detail)): ?><?= cb_admin_uzivatel_edit_form_html((int)$detail['id_user'], $source) ?><?php endif; ?>
 </section>

@@ -24,6 +24,24 @@
     return (field instanceof HTMLInputElement || field instanceof HTMLSelectElement) ? String(field.value || '').trim() : '';
   }
 
+  function syncControlReportLink(root) {
+    const form = getForm(root);
+    const pp = form instanceof HTMLFormElement ? form.closest('.pp[data-page="denni_report"]') : null;
+    const link = pp instanceof HTMLElement ? pp.querySelector('[data-zr-kontrola-link]') : null;
+    if (!(form instanceof HTMLFormElement) || !(link instanceof HTMLAnchorElement)) return;
+
+    const branchId = getReportValue(form, '[name="zr_id_pob"]');
+    const reportDate = getReportValue(form, '[name="datum_reportu"]');
+    const url = new URL(link.getAttribute('href') || '', w.location.href);
+    url.searchParams.set('zr_id_pob', branchId);
+    if (reportDate !== '') {
+      url.searchParams.set('datum_reportu', reportDate);
+    } else {
+      url.searchParams.delete('datum_reportu');
+    }
+    link.setAttribute('href', url.pathname + url.search + url.hash);
+  }
+
   function usesDraftPersistence(root) {
     const form = getForm(root);
     return form instanceof HTMLFormElement && String(form.getAttribute('data-zr-draft-mode') || '0') === '1';
@@ -687,6 +705,7 @@
     root.setAttribute('data-zr-form-init', '1');
     const modeForm = getForm(root);
     const formMode = modeForm instanceof HTMLFormElement ? String(modeForm.getAttribute('data-zr-form-mode') || '') : '';
+    syncControlReportLink(root);
 
     bindMoneyInputs(root);
     bindNoteInput(root);

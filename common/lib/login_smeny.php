@@ -45,6 +45,28 @@ function post_module(): string
     return $module;
 }
 
+/* Vrátí uživateli konkrétní a pravdivé vysvětlení neaktivního lokálního účtu. */
+function cb_login_neaktivni_zprava(array $user): string
+{
+    $duvod = (string)($user['duvod_neaktivni'] ?? '');
+    if ($duvod === 'nenalezen_aktivni_ve_smenach') {
+        return 'Váš účet je v IS neaktivní, protože při poslední synchronizaci nebyl ve Směnách nalezen mezi aktivními uživateli. Obraťte se prosím na vedoucího.';
+    }
+    if ($duvod === 'rucni_deaktivace') {
+        return 'Váš účet v IS deaktivoval administrátor. Obraťte se prosím na vedoucího.';
+    }
+    return 'Váš účet v IS není aktivní. Obraťte se prosím na vedoucího.';
+}
+
+/* Vysvětlí selhání prvního vstupu účtu, který se ještě ověřuje ve Směnách. */
+function cb_login_smeny_selhalo_zprava(?array $user): string
+{
+    if (is_array($user) && (int)($user['zdroj'] ?? 0) === 1 && trim((string)($user['heslo_hash'] ?? '')) === '') {
+        return 'Účet je v IS aktivní, ale přihlášení přes Směny se nezdařilo. Zkontrolujte heslo a ověřte, že je váš účet ve Směnách veden jako aktivní.';
+    }
+    return 'Neplatné přihlašovací údaje.';
+}
+
 try {
 
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
@@ -66,19 +88,26 @@ try {
         throw new RuntimeException('Přihlášení se nezdařilo.');
     }
 
-    $stmtLocal = db()->prepare('SELECT id_user, jmeno, prijmeni, email, telefon, aktivni, schvalen, heslo_hash FROM user WHERE email=? LIMIT 1');
+    $stmtLocal = db()->prepare('SELECT id_user, jmeno, prijmeni, email, telefon, aktivni, duvod_neaktivni, schvalen, heslo_hash, zdroj FROM user WHERE email=? LIMIT 1');
     $stmtLocal->bind_param('s', $email);
     $stmtLocal->execute();
     $localUser = $stmtLocal->get_result()->fetch_assoc();
     $stmtLocal->close();
     if (is_array($localUser) && trim((string)($localUser['heslo_hash'] ?? '')) !== '') {
-        if ((int)$localUser['aktivni'] !== 1 || !password_verify($heslo, (string)$localUser['heslo_hash'])) {
+        if (!password_verify($heslo, (string)$localUser['heslo_hash'])) {
             cb_user_bad_login_log($email, $heslo);
             throw new RuntimeException('Neplatné přihlašovací údaje.');
+        }
+        if ((int)$localUser['aktivni'] !== 1) {
+            throw new RuntimeException(cb_login_neaktivni_zprava($localUser));
         }
         $primePresmerovani = cb_lokalni_login_zahaj(db(), $localUser, $deviceEndpoint);
         header('Location: ' . ($primePresmerovani ?? cb_login_target_url()));
         exit;
+    }
+
+    if (is_array($localUser) && (int)$localUser['aktivni'] !== 1) {
+        throw new RuntimeException(cb_login_neaktivni_zprava($localUser));
     }
 
     try {
@@ -93,13 +122,13 @@ try {
         );
     } catch (Throwable $e) {
         cb_user_bad_login_log($email, $heslo);
-        throw new RuntimeException('Neplatné přihlašovací údaje.');
+        throw new RuntimeException(cb_login_smeny_selhalo_zprava($localUser));
     }
 
     $token = $login['userLogin']['accessToken'] ?? null;
     if (!is_string($token) || $token === '') {
         cb_user_bad_login_log($email, $heslo);
-        throw new RuntimeException('Neplatné přihlašovací údaje.');
+        throw new RuntimeException(cb_login_smeny_selhalo_zprava($localUser));
     }
 
 

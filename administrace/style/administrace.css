@@ -295,6 +295,132 @@
   color:#b91c1c !important;
 }
 
+/* Export DB: výběr pouze předem definovaných skupin tabulek. */
+.admin_db_export{
+  display:grid;
+  gap:14px;
+  justify-items:start;
+}
+
+.admin_db_export_card{
+  display:grid;
+  gap:14px;
+  width:min(900px, 100%);
+}
+
+.admin_db_export_card p{
+  margin:0;
+  color:var(--cb-text-muted);
+  font-size:var(--cb-font-14);
+}
+
+.admin_db_export_title{
+  margin:0;
+  color:var(--cb-text-main);
+  font-size:var(--cb-font-18);
+}
+
+.admin_db_export_table_list{
+  color:var(--cb-text-muted);
+  font-size:var(--cb-font-12);
+}
+
+.admin_db_export_table_list summary{
+  width:max-content;
+  cursor:pointer;
+}
+
+.admin_db_export_table_list p{
+  max-width:760px;
+  margin-top:6px;
+  line-height:1.5;
+  overflow-wrap:anywhere;
+}
+
+.admin_db_export_description{
+  font-weight:700;
+}
+
+.admin_db_export_target strong{
+  color:var(--cb-text-main);
+}
+
+.admin_db_export_form{
+  display:grid;
+  gap:14px;
+  justify-items:start;
+  width:100%;
+}
+
+.admin_db_export_groups{
+  display:grid;
+  gap:12px;
+  width:min(760px, 100%);
+  margin:0;
+  padding:14px;
+  border:1px solid var(--cb-border-soft);
+  border-radius:6px;
+}
+
+.admin_db_export_groups legend{
+  padding:0 5px;
+  color:var(--cb-text-main);
+  font-size:var(--cb-font-14);
+  font-weight:700;
+}
+
+.admin_db_export_group{
+  display:grid;
+  gap:5px;
+}
+
+.admin_db_export_group label{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  color:var(--cb-text-main);
+  font-size:var(--cb-font-14);
+  font-weight:700;
+}
+
+.admin_db_export_group input{
+  width:16px;
+  height:16px;
+  margin:0;
+}
+
+.admin_db_export_group details{
+  margin-left:24px;
+  color:var(--cb-text-muted);
+  font-size:var(--cb-font-12);
+}
+
+.admin_db_export_group summary{
+  width:max-content;
+  cursor:pointer;
+}
+
+.admin_db_export_group details p{
+  max-width:720px;
+  margin-top:6px;
+  line-height:1.5;
+  overflow-wrap:anywhere;
+}
+
+.admin_db_export_button{
+  padding:9px 12px;
+  border:1px solid var(--cb-module-accent);
+  border-radius:6px;
+  background:var(--cb-module-accent);
+  color:#fff;
+  font:inherit;
+  cursor:pointer;
+}
+
+.admin_db_export_button:hover{
+  filter:brightness(.94);
+}
+
 .admin_matrix_blocks{
   display:grid;
   gap:20px;
@@ -377,6 +503,19 @@
 .admin_users_form legend{ padding:0 4px; }
 
 .admin_users_table thead a{ display:flex; align-items:center; justify-content:space-between; gap:6px; color:inherit; text-decoration:none; white-space:nowrap; }
+.admin_users_action_cell{ text-align:center; white-space:nowrap; }
+.admin_users_action_form{ display:none; }
+.admin_users_activate_button{
+  min-height:30px;
+  padding:4px 10px;
+  border:1px solid var(--cb-module-accent);
+  border-radius:5px;
+  background:var(--cb-module-accent);
+  color:#fff;
+  font:inherit;
+  cursor:pointer;
+}
+.admin_users_activate_button:hover{ filter:brightness(.94); }
 .admin_user_detail_row > td{ padding:0; background:var(--cb-bg-panel-soft); }
 .admin_user_detail_row .admin_users_form{ padding:14px; }
 .admin_user_detail_transition{ width:100%; max-height:0; overflow:hidden; opacity:0; contain:inline-size; box-sizing:border-box; transition:max-height .18s ease,opacity .18s ease; }

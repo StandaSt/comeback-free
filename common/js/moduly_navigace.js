@@ -92,7 +92,8 @@
         ['prava_roli', 'Globální práva'],
         ['editace_prav', 'Editovat práva'],
         ['individualni_prava', 'Individuální práva uživatele'],
-        ['spousteni_scriptu', 'Spouštění scriptů']
+        ['spousteni_scriptu', 'Spouštění scriptů'],
+        ['export_db', 'Export DB']
       ]
     }
   };
@@ -102,6 +103,9 @@
   });
   if (config.adminUzivatele !== true) {
     menuDefs.administrace.items = menuDefs.administrace.items.filter(function (item) { return item[0] !== 'uzivatele'; });
+  }
+  if (config.adminExportDb !== true) {
+    menuDefs.administrace.items = menuDefs.administrace.items.filter(function (item) { return item[0] !== 'export_db'; });
   }
 
   if (config.adminFirmaPridat === true) {

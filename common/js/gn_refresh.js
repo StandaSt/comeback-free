@@ -17,7 +17,7 @@
     return String(new URL(window.location.href).searchParams.get('page') || 'prehled');
   }
 
-  function refreshBlock(block) {
+  function refreshBlock(block, changeSource) {
     if (!(block instanceof HTMLElement)) {
       return Promise.resolve();
     }
@@ -33,6 +33,7 @@
     body.set('module', currentModule(block));
     body.set('page', currentPage(block));
     body.set('block', blockName);
+    body.set('source', String(changeSource || ''));
 
     return fetch(window.CB_ENDPOINT || 'index.php', {
       method: 'POST',
@@ -69,19 +70,22 @@
       });
   }
 
-  function refreshGnBlocks() {
+  function refreshGnBlocks(changeSource) {
     var blocks = Array.prototype.slice.call(document.querySelectorAll('[data-gn="1"][data-pp-block]'));
     if (blocks.length === 0) {
       return Promise.resolve();
     }
-    return Promise.all(blocks.map(refreshBlock));
+    return Promise.all(blocks.map(function (block) {
+      return refreshBlock(block, changeSource);
+    }));
   }
 
   window.CB_GN_REFRESH = {
     refresh: refreshGnBlocks
   };
 
-  document.addEventListener('cb:gn-changed', function () {
-    refreshGnBlocks();
+  document.addEventListener('cb:gn-changed', function (event) {
+    var detail = event && event.detail ? event.detail : {};
+    refreshGnBlocks(detail.source || '');
   });
 }());

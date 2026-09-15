@@ -26,6 +26,95 @@ function cb_denni_report_person_display_name(?string $jmeno, ?string $prijmeni =
     return trim(trim((string)$prijmeni) . ' ' . trim((string)$jmeno));
 }
 
+function cb_denni_report_person_name_match_key(string $name): string
+{
+    $name = mb_strtolower(trim($name), 'UTF-8');
+    $name = strtr($name, [
+        'á' => 'a', 'ä' => 'a', 'č' => 'c', 'ď' => 'd', 'é' => 'e', 'ě' => 'e',
+        'ë' => 'e', 'í' => 'i', 'ľ' => 'l', 'ĺ' => 'l', 'ň' => 'n', 'ó' => 'o',
+        'ö' => 'o', 'ř' => 'r', 'ŕ' => 'r', 'š' => 's', 'ť' => 't', 'ú' => 'u',
+        'ů' => 'u', 'ü' => 'u', 'ý' => 'y', 'ž' => 'z',
+    ]);
+    $name = preg_replace('/[^a-z0-9]+/u', ' ', $name) ?? '';
+
+    return trim(preg_replace('/\s+/u', ' ', $name) ?? '');
+}
+
+/**
+ * @param array<string,int> $restiaCounts
+ * @param array<int,array<string,mixed>> $kuryrOptions
+ * @return array{counts:array<string,int>,mismatches:array<int,array{restia:string,is:string}>}
+ */
+function cb_denni_report_match_courier_names(array $restiaCounts, array $kuryrOptions): array
+{
+    $options = [];
+    foreach ($kuryrOptions as $option) {
+        $idUser = (int)($option['id_user'] ?? 0);
+        $isName = trim((string)($option['restia_name'] ?? ''));
+        $displayName = trim((string)($option['name'] ?? ''));
+        if ($idUser <= 0 || $isName === '') {
+            continue;
+        }
+        $options[$idUser] = [
+            'id_user' => $idUser,
+            'is_name' => $isName,
+            'keys' => array_values(array_unique(array_filter([
+                cb_denni_report_person_name_match_key($isName),
+                cb_denni_report_person_name_match_key($displayName),
+            ]))),
+        ];
+    }
+
+    $counts = [];
+    $mismatches = [];
+    foreach ($restiaCounts as $restiaNameRaw => $countRaw) {
+        $restiaName = trim((string)$restiaNameRaw);
+        if ($restiaName === '') {
+            continue;
+        }
+
+        $exactCandidates = [];
+        foreach ($options as $idUser => $option) {
+            if ($restiaName === (string)$option['is_name']) {
+                $exactCandidates[$idUser] = $option;
+            }
+        }
+
+        $candidates = $exactCandidates;
+        $usedNormalizedMatch = false;
+        if (count($candidates) !== 1) {
+            $candidates = [];
+            $restiaKey = cb_denni_report_person_name_match_key($restiaName);
+            if ($restiaKey !== '') {
+                foreach ($options as $idUser => $option) {
+                    if (in_array($restiaKey, (array)$option['keys'], true)) {
+                        $candidates[$idUser] = $option;
+                    }
+                }
+            }
+            $usedNormalizedMatch = true;
+        }
+
+        if (count($candidates) !== 1) {
+            continue;
+        }
+
+        $matched = reset($candidates);
+        $isName = trim((string)($matched['is_name'] ?? ''));
+        if ($isName === '') {
+            continue;
+        }
+        $counts[$isName] = (int)($counts[$isName] ?? 0) + max(0, (int)$countRaw);
+        if ($usedNormalizedMatch || $restiaName !== $isName) {
+            $mismatches[] = ['restia' => $restiaName, 'is' => $isName];
+        }
+    }
+
+    usort($mismatches, static fn(array $a, array $b): int => strcasecmp($a['restia'], $b['restia']));
+
+    return ['counts' => $counts, 'mismatches' => $mismatches];
+}
+
 function cb_denni_report_user_full_name_by_id(mysqli $conn, ?int $idUser): string
 {
     if ($idUser === null || $idUser <= 0) {
@@ -988,9 +1077,9 @@ function cb_denni_report_restia_summary(mysqli $conn, int $idPob, array $workday
     return $restiaSummary;
 }
 
-function cb_denni_report_kuryr_delivery_data(mysqli $conn, int $idPob, array $workdayRange, array $kuryrRows): array
+function cb_denni_report_kuryr_delivery_data(mysqli $conn, int $idPob, array $workdayRange, array $kuryrRows, array $kuryrOptions = []): array
 {
-    $kuryrDeliveryCounts = [];
+    $restiaDeliveryCounts = [];
 
     if ($idPob > 0) {
         $deliverySql = "
@@ -1020,7 +1109,7 @@ function cb_denni_report_kuryr_delivery_data(mysqli $conn, int $idPob, array $wo
                 while ($row = $deliveriesResult->fetch_assoc()) {
                     $courierName = trim((string)($row['kuryr_name'] ?? ''));
                     if ($courierName !== '') {
-                        $kuryrDeliveryCounts[$courierName] = (int)($row['rozvozu'] ?? 0);
+                        $restiaDeliveryCounts[$courierName] = (int)($row['rozvozu'] ?? 0);
                     }
                 }
                 $deliveriesResult->free();
@@ -1028,6 +1117,17 @@ function cb_denni_report_kuryr_delivery_data(mysqli $conn, int $idPob, array $wo
             $stmtDeliveries->close();
         }
     }
+
+    $matchOptions = $kuryrOptions;
+    foreach ($kuryrRows as $kuryrRow) {
+        $matchOptions[] = [
+            'id_user' => (int)($kuryrRow['id_user'] ?? 0),
+            'name' => trim((string)($kuryrRow['name'] ?? '')),
+            'restia_name' => trim((string)($kuryrRow['restia_name'] ?? '')),
+        ];
+    }
+    $nameMatches = cb_denni_report_match_courier_names($restiaDeliveryCounts, $matchOptions);
+    $kuryrDeliveryCounts = $nameMatches['counts'];
 
     foreach ($kuryrRows as &$kuryrRow) {
         $kuryrName = trim((string)($kuryrRow['restia_name'] ?? $kuryrRow['name'] ?? ''));
@@ -1043,7 +1143,11 @@ function cb_denni_report_kuryr_delivery_data(mysqli $conn, int $idPob, array $wo
         $countsJson = '{}';
     }
 
-    return ['kuryr_rows' => $kuryrRows, 'counts_json' => $countsJson];
+    return [
+        'kuryr_rows' => $kuryrRows,
+        'counts_json' => $countsJson,
+        'name_mismatches' => $nameMatches['mismatches'],
+    ];
 }
 
 function cb_denni_report_control_values(mysqli $conn, string $datumReportu, array $restiaSummary, ?array $draftRow, array $draftPersonRows): array
@@ -1583,12 +1687,13 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         $kuryrDeliveryData = [
             'kuryr_rows' => $kuryrRows,
             'counts_json' => $kuryrDeliveryCountsJson,
+            'name_mismatches' => [],
         ];
     } elseif ($isCurrentWorkday) {
         $restiaSummary = cb_denni_report_restia_summary($conn, $reportBranchId, $workdayRange);
         $restiaSummary['docs_count'] = cb_denni_report_docs_count_from_person_rows($draftPersonRows);
         
-        $kuryrDeliveryData = cb_denni_report_kuryr_delivery_data($conn, $reportBranchId, $workdayRange, $kuryrRows);
+        $kuryrDeliveryData = cb_denni_report_kuryr_delivery_data($conn, $reportBranchId, $workdayRange, $kuryrRows, $kuryrOptions);
         $kuryrRows = $kuryrDeliveryData['kuryr_rows'];
         $kuryrDeliveryCountsJson = $kuryrDeliveryData['counts_json'];
         
@@ -1599,7 +1704,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         $restiaSummary['docs_count'] = cb_denni_report_docs_count_from_person_rows($draftPersonRows);
 
         if ($isCreatingMissingFinalReport) {
-            $kuryrDeliveryData = cb_denni_report_kuryr_delivery_data($conn, $reportBranchId, $workdayRange, $kuryrRows);
+            $kuryrDeliveryData = cb_denni_report_kuryr_delivery_data($conn, $reportBranchId, $workdayRange, $kuryrRows, $kuryrOptions);
             $kuryrRows = $kuryrDeliveryData['kuryr_rows'];
             $kuryrDeliveryCountsJson = $kuryrDeliveryData['counts_json'];
         } else {
@@ -1621,9 +1726,11 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
             $kuryrDeliveryData = [
                 'kuryr_rows' => $kuryrRows,
                 'counts_json' => $kuryrDeliveryCountsJson,
+                'name_mismatches' => [],
             ];
         }
     }
+    $kuryrNameMismatches = (array)($kuryrDeliveryData['name_mismatches'] ?? []);
     $makeTimeLabel = $controlValues['make_time_label'];
     $reportDifferenceLabel = $controlValues['difference_label'];
     $reportDifferenceValue = $controlValues['difference_value'];
@@ -1699,6 +1806,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         'restiaSummary' => $restiaSummary,
         'kuryrDeliveryData' => $kuryrDeliveryData,
         'kuryrDeliveryCountsJson' => $kuryrDeliveryCountsJson,
+        'kuryrNameMismatches' => $kuryrNameMismatches,
         'controlValues' => $controlValues,
         'makeTimeLabel' => $makeTimeLabel,
         'reportDifferenceLabel' => $reportDifferenceLabel,

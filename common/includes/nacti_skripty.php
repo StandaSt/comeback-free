@@ -89,6 +89,7 @@ window.CB_MODULY_NAVIGACE = {
   adminFirmaPridat: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(105) ? 'true' : 'false' ?>,
   adminLogChyby: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(106) ? 'true' : 'false' ?>,
   adminUzivatele: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(107) ? 'true' : 'false' ?>,
+  adminExportDb: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(109) ? 'true' : 'false' ?>,
   aiAnalytikAllowed: <?= function_exists('cb_pravo_ma') && is_array($_SESSION['prava_stav'] ?? null) && array_key_exists(210, $_SESSION['prava_stav']) && cb_pravo_ma(210) ? 'true' : 'false' ?>,
   initialAutoLoad: true
 };

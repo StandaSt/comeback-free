@@ -1,4 +1,4 @@
-// js/filtry.js * Verze: V8 * Aktualizace: 03.06.2026
+// js/filtry.js * Verze: V9 * Aktualizace: 15.09.2026
 'use strict';
 
 /*
@@ -17,9 +17,28 @@
  */
 
 (function (w) {
-  const CB_AJAX = w.CB_AJAX || null;
   const timers = new WeakMap();
   const controllers = new WeakMap();
+
+  function fetchText(url, headers, signal) {
+    if (w.CB_AJAX && typeof w.CB_AJAX.fetchText === 'function') {
+      return w.CB_AJAX.fetchText(url, headers, signal);
+    }
+    if (typeof w.fetch !== 'function') {
+      return null;
+    }
+    return w.fetch(String(url || ''), {
+      method: 'GET',
+      headers: headers && typeof headers === 'object' ? headers : {},
+      signal: signal,
+      credentials: 'same-origin'
+    }).then((response) => {
+      if (!response.ok) {
+        throw new Error('HTTP ' + response.status);
+      }
+      return response.text();
+    });
+  }
 
   function getPrefixFromName(name) {
     const s = String(name || '');
@@ -33,15 +52,35 @@
     return m ? String(m[1] || '').trim() : '';
   }
 
+  function getControlForm(control) {
+    if (!(control instanceof HTMLElement)) return null;
+    if ('form' in control && control.form instanceof HTMLFormElement) {
+      return control.form;
+    }
+    const form = control.closest('form');
+    return form instanceof HTMLFormElement ? form : null;
+  }
+
+  function getNamedFormElement(form, name) {
+    if (!(form instanceof HTMLFormElement) || !name) return null;
+    const element = form.elements.namedItem(name);
+    return element instanceof HTMLElement ? element : null;
+  }
+
   function getCardFilterPrefix(form) {
     if (!(form instanceof HTMLFormElement)) return '';
-    const el = form.querySelector('.filter-input[name*="_f["]');
+    const el = Array.from(form.elements).find((element) => (
+      element instanceof HTMLElement
+      && element.classList.contains('filter-input')
+      && String(element.getAttribute('name') || '').indexOf('_f[') !== -1
+    ));
     return el ? getPrefixFromName(el.name) : '';
   }
 
   function getPageInput(form, prefix) {
     if (!(form instanceof HTMLFormElement) || !prefix) return null;
-    return form.querySelector('input[name="' + prefix + '_p"]');
+    const input = getNamedFormElement(form, prefix + '_p');
+    return input instanceof HTMLInputElement ? input : null;
   }
 
   function getCardIdFromForm(form) {
@@ -95,10 +134,10 @@
 
     const defaults = {};
     if (prefix) {
-      defaults[prefix + '_p'] = '1';
-      defaults[prefix + '_per'] = '20';
-      defaults[prefix + '_sort'] = 'id';
-      defaults[prefix + '_dir'] = 'DESC';
+      defaults[prefix + '_p'] = String(form.getAttribute('data-cb-filter-default-page') || '1');
+      defaults[prefix + '_per'] = String(form.getAttribute('data-cb-filter-default-per') || '20');
+      defaults[prefix + '_sort'] = String(form.getAttribute('data-cb-filter-default-sort') || 'id');
+      defaults[prefix + '_dir'] = String(form.getAttribute('data-cb-filter-default-dir') || 'DESC');
       if (prefix === 'uz') defaults.uz_akt = '1';
       if (prefix === 'zak') defaults.zak_blk = '0';
     }
@@ -139,6 +178,21 @@
 
     if (!curTable || !newTable) return false;
 
+    Array.from(newForm.elements).forEach((newElement) => {
+      const curElement = getNamedFormElement(curForm, newElement.name);
+      if (newElement instanceof HTMLInputElement && newElement.type === 'hidden'
+        && curElement instanceof HTMLInputElement && curElement.type === 'hidden') {
+        curElement.value = newElement.value;
+        return;
+      }
+      if (newElement instanceof HTMLSelectElement
+        && newElement.getAttribute('data-cb-filter-refresh-options') === '1'
+        && curElement instanceof HTMLSelectElement) {
+        curElement.replaceChildren(...Array.from(newElement.options).map((option) => option.cloneNode(true)));
+        curElement.value = newElement.value;
+      }
+    });
+
     if (curSummary && newSummary) {
       curSummary.replaceWith(newSummary);
     } else if (curSummary && !newSummary) {
@@ -170,10 +224,6 @@
 
   function fetchAndSwap(form, prefix, reqUrlOverride, logDetail, logActionId) {
     if (!(form instanceof HTMLFormElement) || !prefix) return;
-    if (!CB_AJAX || typeof CB_AJAX.fetchText !== 'function') {
-      form.submit();
-      return;
-    }
 
     const oldCtrl = controllers.get(form);
     if (oldCtrl) oldCtrl.abort();
@@ -193,8 +243,9 @@
     const reqUrl = String(buildUrlFromForm(form, reqUrlOverride));
     const requestStartedAt = performance.now();
     const cardId = getCardIdFromForm(form);
-    const request = cardId > 0
-      ? fetch(reqUrl, {
+    let request;
+    if (cardId > 0) {
+      request = fetch(reqUrl, {
         method: 'GET',
         headers: {
           'X-Comeback-Card-Max': '1',
@@ -216,8 +267,15 @@
           throw new Error('Filtrovana karta vratila neplatny obsah.');
         }
         return data.maxHtml;
-      }))
-      : CB_AJAX.fetchText(reqUrl, { 'X-Comeback-Partial': '1' }, ctrl.signal);
+      }));
+    } else {
+      request = fetchText(reqUrl, { 'X-Comeback-Partial': '1' }, ctrl.signal);
+      if (!request) {
+        controllers.delete(form);
+        w.location.assign(reqUrl);
+        return;
+      }
+    }
 
     request.then((html) => {
         if (controllers.get(form) !== ctrl) return;
@@ -248,7 +306,7 @@
         }
 
         if (focusName !== '') {
-          const nextInput = form.querySelector('input[name="' + CSS.escape(focusName) + '"]');
+          const nextInput = getNamedFormElement(form, focusName);
           if (nextInput instanceof HTMLInputElement) {
             nextInput.focus();
             if (selStart !== null && selEnd !== null) {
@@ -296,7 +354,7 @@
     const prefix = getPrefixFromName(t.name);
     if (!prefix) return;
 
-    const form = t.closest('form');
+    const form = getControlForm(t);
     if (!(form instanceof HTMLFormElement)) return;
 
     const p = getPageInput(form, prefix);
@@ -335,7 +393,7 @@
     const t = ev.target;
     if (!(t instanceof HTMLInputElement) && !(t instanceof HTMLSelectElement)) return;
 
-    const form = t.closest('form');
+    const form = getControlForm(t);
     if (!(form instanceof HTMLFormElement)) return;
 
     const prefix = getCardFilterPrefix(form);

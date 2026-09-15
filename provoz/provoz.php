@@ -15,6 +15,7 @@ require_once __DIR__ . '/../common/config/secrets.php';
 require_once __DIR__ . '/lib/post_prg_redirect.php';
 require_once __DIR__ . '/lib/asset_url.php';
 require_once __DIR__ . '/lib/provoz_pages.php';
+require_once __DIR__ . '/lib/kontrola_reportu_data.php';
 
 cb_session_guard_entry();
 
@@ -69,7 +70,49 @@ $file = $cbProvozCurrentPage['file'];
 $cbPageExists = (bool)$cbProvozCurrentPage['exists'];
 $cbProvozPageTitle = $cbProvozCurrentPage['title'];
 $cbArchiveBackUrl = '';
+$cbArchiveBackTitle = 'Zpět do archivu';
 $cbAiAnalytikPristup = [];
+$cbKontrolaReportuAllowed = false;
+$cbReportPromenneAllowed = false;
+try {
+    $cbKontrolaReportuAllowed = cb_kontrola_reportu_ma_pravo();
+} catch (Throwable $e) {
+    $cbKontrolaReportuAllowed = false;
+}
+try {
+    $cbReportPromenneAllowed = function_exists('cb_pravo_ma') && cb_pravo_ma(CB_REPORT_PROMENNE_PRAVO);
+} catch (Throwable $e) {
+    $cbReportPromenneAllowed = false;
+}
+$cbReportBranchParam = max(0, (int)($_POST['zr_id_pob'] ?? $_GET['zr_id_pob'] ?? 0));
+$cbReportDateParam = trim((string)($_POST['datum_reportu'] ?? $_GET['datum_reportu'] ?? ''));
+if (cb_kontrola_reportu_valid_date($cbReportDateParam) === '') {
+    $cbReportDateParam = '';
+}
+$cbKontrolaReportParams = [
+    'm' => 'provoz',
+    'page' => 'kontrola_reportu',
+    'zr_id_pob' => $cbReportBranchParam,
+];
+if ($cbReportDateParam !== '') {
+    $cbKontrolaReportParams['datum_reportu'] = $cbReportDateParam;
+}
+$cbKontrolaReportUrl = cb_root_url('index.php') . '?' . http_build_query($cbKontrolaReportParams, '', '&', PHP_QUERY_RFC3986);
+
+if ($cbPage === 'kontrola_reportu') {
+    $cbKontrolaBackParams = [
+        'm' => 'provoz',
+        'page' => 'denni_report',
+    ];
+    if ($cbReportBranchParam > 0) {
+        $cbKontrolaBackParams['zr_id_pob'] = $cbReportBranchParam;
+    }
+    if ($cbReportDateParam !== '') {
+        $cbKontrolaBackParams['datum_reportu'] = $cbReportDateParam;
+    }
+    $cbArchiveBackUrl = cb_root_url('index.php') . '?' . http_build_query($cbKontrolaBackParams, '', '&', PHP_QUERY_RFC3986);
+    $cbArchiveBackTitle = 'Zpět do denního reportu';
+}
 
 if ($cbPage === 'ai_analytik' && $cbPageExists) {
     require_once __DIR__ . '/lib/ai_analytik_pravidla.php';
@@ -223,15 +266,18 @@ if ($cbPpOnly && !empty($_SESSION['login_ok'])) {
         <section class="pp" data-module="provoz" data-page="<?= h($cbPage) ?>">
             <header class="pp_header">
                 <?php if ($cbArchiveBackUrl !== ''): ?>
-                    <div class="provoz_archive_header_title"><a class="provoz_archive_back_btn" href="<?= h($cbArchiveBackUrl) ?>" title="Zpět do archivu" aria-label="Zpět do archivu">←</a><h1><?= h($cbProvozPageTitle) ?></h1></div>
+                    <div class="provoz_archive_header_title"><a class="provoz_archive_back_btn" href="<?= h($cbArchiveBackUrl) ?>" title="<?= h($cbArchiveBackTitle) ?>" aria-label="<?= h($cbArchiveBackTitle) ?>">←</a><h1><?= h($cbProvozPageTitle) ?></h1></div>
                 <?php elseif ($cbPage === 'objednavky'): ?>
                     <div class="provoz_objednavky_header_title"><h1><?= h($cbProvozPageTitle) ?></h1><button type="button" class="head_task_btn head_task_btn--restia-refresh" data-objednavky-restia-refresh>Aktualizace objednávek</button></div>
                 <?php else: ?>
                     <h1><?= h($cbProvozPageTitle) ?></h1>
                 <?php endif; ?>
-                <?php if ($cbPage === 'denni_report' && function_exists('cb_pravo_ma') && cb_pravo_ma(CB_REPORT_PROMENNE_PRAVO)): ?>
+                <?php if ($cbPage === 'denni_report' && ($cbKontrolaReportuAllowed || $cbReportPromenneAllowed)): ?>
                     <div class="pp_header_controls">
-                    <?php if ($cbPage === 'denni_report' && function_exists('cb_pravo_ma') && cb_pravo_ma(CB_REPORT_PROMENNE_PRAVO)): ?>
+                    <?php if ($cbKontrolaReportuAllowed): ?>
+                        <a class="head_task_btn" href="<?= h($cbKontrolaReportUrl) ?>" data-zr-kontrola-link>Kontrola</a>
+                    <?php endif; ?>
+                    <?php if ($cbReportPromenneAllowed): ?>
                         <a class="head_task_btn" href="<?= h(cb_root_url('index.php?m=provoz&page=nastaveni_reportu')) ?>">Nastavení reportu</a>
                     <?php endif; ?>
                     </div>
@@ -267,15 +313,18 @@ if (!empty($_SESSION['login_ok'])) {
     <section class="pp" data-module="provoz" data-page="<?= h($cbPage) ?>">
         <header class="pp_header">
             <?php if ($cbArchiveBackUrl !== ''): ?>
-                <div class="provoz_archive_header_title"><a class="provoz_archive_back_btn" href="<?= h($cbArchiveBackUrl) ?>" title="Zpět do archivu" aria-label="Zpět do archivu">←</a><h1><?= h($cbProvozPageTitle) ?></h1></div>
+                <div class="provoz_archive_header_title"><a class="provoz_archive_back_btn" href="<?= h($cbArchiveBackUrl) ?>" title="<?= h($cbArchiveBackTitle) ?>" aria-label="<?= h($cbArchiveBackTitle) ?>">←</a><h1><?= h($cbProvozPageTitle) ?></h1></div>
             <?php elseif ($cbPage === 'objednavky'): ?>
                 <div class="provoz_objednavky_header_title"><h1><?= h($cbProvozPageTitle) ?></h1><button type="button" class="head_task_btn head_task_btn--restia-refresh" data-objednavky-restia-refresh>Aktualizace objednávek</button></div>
             <?php else: ?>
                 <h1><?= h($cbProvozPageTitle) ?></h1>
             <?php endif; ?>
-            <?php if ($cbPage === 'denni_report' && function_exists('cb_pravo_ma') && cb_pravo_ma(CB_REPORT_PROMENNE_PRAVO)): ?>
+            <?php if ($cbPage === 'denni_report' && ($cbKontrolaReportuAllowed || $cbReportPromenneAllowed)): ?>
                 <div class="pp_header_controls">
-                <?php if ($cbPage === 'denni_report' && function_exists('cb_pravo_ma') && cb_pravo_ma(CB_REPORT_PROMENNE_PRAVO)): ?>
+                <?php if ($cbKontrolaReportuAllowed): ?>
+                    <a class="head_task_btn" href="<?= h($cbKontrolaReportUrl) ?>" data-zr-kontrola-link>Kontrola</a>
+                <?php endif; ?>
+                <?php if ($cbReportPromenneAllowed): ?>
                     <a class="head_task_btn" href="<?= h(cb_root_url('index.php?m=provoz&page=nastaveni_reportu')) ?>">Nastavení reportu</a>
                 <?php endif; ?>
                 </div>

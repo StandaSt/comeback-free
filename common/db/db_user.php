@@ -54,6 +54,7 @@ function cb_db_upsert_user(mysqli $conn, array $p, bool $inSystem = true): void
     if (!empty($p['approved'])) {
         $schvalen = 1;
     }
+    $duvodNeaktivni = $aktivni === 1 ? null : 'nenalezen_aktivni_ve_smenach';
 
     $vytvoren = cb_db_dt_or_null($p['createTime'] ?? null);
     $visit = cb_db_dt_or_null($p['lastLoginTime'] ?? null);
@@ -94,17 +95,18 @@ function cb_db_upsert_user(mysqli $conn, array $p, bool $inSystem = true): void
     $inSystemSql = $inSystem ? 'in_system=1,' : '';
     $stmt = $conn->prepare(
         'UPDATE user
-         SET jmeno=?, prijmeni=?, email=?, telefon=?, aktivni=?, ' . $inSystemSql . ' schvalen=?, vytvoren_smeny=?, visit_smeny=?, zdroj=1
+         SET jmeno=?, prijmeni=?, email=?, telefon=?, aktivni=?, duvod_neaktivni=?, ' . $inSystemSql . ' schvalen=?, vytvoren_smeny=?, visit_smeny=?, zdroj=1
          WHERE id_user=? AND zdroj=1'
     );
 
     $stmt->bind_param(
-        'ssssiissi',
+        'ssssisissi',
         $jmeno,
         $prijmeni,
         $email,
         $telefon,
         $aktivni,
+        $duvodNeaktivni,
         $schvalen,
         $vytvoren,
         $visit,

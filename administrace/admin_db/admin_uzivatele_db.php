@@ -3,6 +3,24 @@ declare(strict_types=1);
 
 /* Datové operace pro správu lokálních uživatelů Administrace. */
 
+function cb_admin_uzivatele_csrf_token(): string
+{
+    $token = $_SESSION['cb_admin_uzivatele_csrf'] ?? null;
+    if (!is_string($token) || strlen($token) < 32) {
+        $token = bin2hex(random_bytes(32));
+        $_SESSION['cb_admin_uzivatele_csrf'] = $token;
+    }
+    return $token;
+}
+
+function cb_admin_uzivatele_csrf_over(array $post): void
+{
+    $token = (string)($post['csrf_token'] ?? '');
+    if ($token === '' || !hash_equals(cb_admin_uzivatele_csrf_token(), $token)) {
+        throw new RuntimeException('Platnost formuláře vypršela. Obnovte stránku a zkuste akci znovu.');
+    }
+}
+
 function cb_admin_uzivatele_ciselniky(mysqli $db): array
 {
     $out = ['firmy' => [], 'role' => [], 'pobocky' => []];
@@ -99,7 +117,7 @@ function cb_admin_uzivatele_nacti(mysqli $db, array $source): array
     $perPage = (int)($source['usr_per'] ?? 50);
     if (!in_array($perPage, $perOptions, true)) { $perPage = 50; }
     $page = max(1, (int)($source['usr_p'] ?? 1));
-    $sortMap = ['id' => 'u.id_user', 'uzivatel' => 'u.prijmeni,u.jmeno', 'kontakt' => 'u.email,u.telefon', 'firma' => 'f.obchodni_jmeno', 'role' => 'role', 'pobocky' => 'pobocky', 'zdroj' => 'u.zdroj', 'stav' => 'u.aktivni'];
+    $sortMap = ['id' => 'u.id_user', 'uzivatel' => 'u.prijmeni,u.jmeno', 'kontakt' => 'u.email,u.telefon', 'firma' => 'f.obchodni_jmeno', 'role' => 'role', 'pobocky' => 'pobocka_main', 'zdroj' => 'u.zdroj', 'stav' => 'u.aktivni'];
     $sort = (string)($source['usr_sort'] ?? 'uzivatel');
     if (!isset($sortMap[$sort])) { $sort = 'uzivatel'; }
     $dir = strtolower((string)($source['usr_dir'] ?? 'asc')) === 'desc' ? 'desc' : 'asc';
@@ -122,19 +140,29 @@ function cb_admin_uzivatele_nacti(mysqli $db, array $source): array
     $count->execute(); $total = (int)($count->get_result()->fetch_assoc()['c'] ?? 0); $count->close();
     $pages = max(1, (int)ceil($total / $perPage)); $page = min($page, $pages); $offset = ($page - 1) * $perPage;
     $stmt = $db->prepare('
-        SELECT u.id_user,u.jmeno,u.prijmeni,u.email,u.telefon,u.aktivni,u.zdroj,f.obchodni_jmeno,
-               GROUP_CONCAT(DISTINCT r.role ORDER BY r.role SEPARATOR ", ") AS role,
-               GROUP_CONCAT(DISTINCT p.nazev ORDER BY p.nazev SEPARATOR ", ") AS pobocky,
-               MAX(up.pob_all) AS pob_all, MAX(up.main) AS ma_main,
+        SELECT u.id_user,u.jmeno,u.prijmeni,u.email,u.telefon,u.aktivni,u.duvod_neaktivni,u.zdroj,f.obchodni_jmeno,
+               COALESCE((
+                   SELECT cr.role
+                   FROM user_role ur_top
+                   INNER JOIN cis_role cr ON cr.id_role=ur_top.id_role
+                   WHERE ur_top.id_user=u.id_user AND cr.aktivni=1
+                   ORDER BY ur_top.id_role ASC
+                   LIMIT 1
+               ), "") AS role,
+               MAX(CASE WHEN up.main=1 THEN p.nazev ELSE NULL END) AS pobocka_main,
+               CASE
+                   WHEN MAX(COALESCE(up.pob_all,0))=1 THEN (
+                       SELECT COUNT(*) FROM pobocka p_all WHERE p_all.id_firma=u.id_firma AND p_all.aktivni=1
+                   )
+                   ELSE COUNT(DISTINCT up.id_pob)
+               END AS pobocky_pocet,
                MAX(CASE WHEN u.heslo_hash IS NULL OR u.heslo_hash="" THEN 0 ELSE 1 END) AS ma_heslo
         FROM user u
         LEFT JOIN firma f ON f.id_firma=u.id_firma
-        LEFT JOIN user_role ur ON ur.id_user=u.id_user
-        LEFT JOIN cis_role r ON r.id_role=ur.id_role
         LEFT JOIN user_pobocka up ON up.id_user=u.id_user
         LEFT JOIN pobocka p ON p.id_pob=up.id_pob
         ' . $whereSql . '
-        GROUP BY u.id_user,u.jmeno,u.prijmeni,u.email,u.telefon,u.aktivni,u.zdroj,f.obchodni_jmeno
+        GROUP BY u.id_user,u.jmeno,u.prijmeni,u.email,u.telefon,u.aktivni,u.duvod_neaktivni,u.zdroj,u.id_firma,f.obchodni_jmeno
         ORDER BY ' . $sortMap[$sort] . ' ' . strtoupper($dir) . ', u.id_user DESC LIMIT ? OFFSET ?
     ');
     $bindParams = $params; $bindParams[] = $perPage; $bindParams[] = $offset;
@@ -147,7 +175,7 @@ function cb_admin_uzivatele_nacti(mysqli $db, array $source): array
 function cb_admin_uzivatel_detail(mysqli $db, int $idUser): ?array
 {
     if ($idUser <= 0) { return null; }
-    $stmt = $db->prepare('SELECT id_user,id_firma,jmeno,prijmeni,email,telefon,aktivni,schvalen,zdroj FROM user WHERE id_user=? LIMIT 1');
+    $stmt = $db->prepare('SELECT id_user,id_firma,jmeno,prijmeni,email,telefon,aktivni,duvod_neaktivni,schvalen,zdroj FROM user WHERE id_user=? LIMIT 1');
     $stmt->bind_param('i', $idUser); $stmt->execute(); $user=$stmt->get_result()->fetch_assoc(); $stmt->close();
     if (!is_array($user)) { return null; }
     $stmt=$db->prepare('SELECT id_role FROM user_role WHERE id_user=? ORDER BY id_role'); $stmt->bind_param('i',$idUser); $stmt->execute(); $res=$stmt->get_result(); $roles=[]; while($row=$res->fetch_assoc()){$roles[]=(int)$row['id_role'];}$stmt->close();
@@ -175,7 +203,8 @@ function cb_admin_uzivatel_uloz(mysqli $db, array $post): array
         if (!$okFirma || !$okRole) { throw new RuntimeException('Firma nebo role není aktivní.'); }
         $marks=implode(',', array_fill(0,count($pobocky),'?')); $types='i'.str_repeat('i',count($pobocky)); $stmt=$db->prepare('SELECT COUNT(*) AS c FROM pobocka WHERE aktivni=1 AND id_firma=? AND id_pob IN ('.$marks.')'); $bind=[&$types,&$idFirma]; foreach($pobocky as $index=>$value){$bind[]=&$pobocky[$index];} call_user_func_array([$stmt,'bind_param'],$bind); $stmt->execute(); $validPob=(int)($stmt->get_result()->fetch_assoc()['c']??0);$stmt->close();
         if($validPob!==count($pobocky)){throw new RuntimeException('Vybrané pobočky musí patřit vybrané firmě a být aktivní.');}
-        $stmt=$db->prepare('UPDATE user SET id_firma=?,jmeno=?,prijmeni=?,email=?,telefon=?,aktivni=? WHERE id_user=?'); $stmt->bind_param('issssii',$idFirma,$jmeno,$prijmeni,$email,$telefon,$aktivni,$idUser);$stmt->execute();$stmt->close();
+        $duvodNeaktivni = $aktivni === 1 ? null : 'rucni_deaktivace';
+        $stmt=$db->prepare('UPDATE user SET id_firma=?,jmeno=?,prijmeni=?,email=?,telefon=?,aktivni=?,duvod_neaktivni=? WHERE id_user=?'); $stmt->bind_param('issssisi',$idFirma,$jmeno,$prijmeni,$email,$telefon,$aktivni,$duvodNeaktivni,$idUser);$stmt->execute();$stmt->close();
         $stmt=$db->prepare('DELETE FROM user_role WHERE id_user=?');$stmt->bind_param('i',$idUser);$stmt->execute();$stmt->close();
         $stmt=$db->prepare('INSERT INTO user_role (id_user,id_role) VALUES (?,?)');$stmt->bind_param('ii',$idUser,$idRole);$stmt->execute();$stmt->close();
         $stmt=$db->prepare('DELETE FROM user_pobocka WHERE id_user=?');$stmt->bind_param('i',$idUser);$stmt->execute();$stmt->close();
@@ -183,4 +212,44 @@ function cb_admin_uzivatel_uloz(mysqli $db, array $post): array
         $db->commit();
     } catch (Throwable $e) { $db->rollback(); throw $e; }
     return ['id_user'=>$idUser,'before'=>$before,'after'=>cb_admin_uzivatel_detail($db,$idUser)];
+}
+
+function cb_admin_uzivatel_aktivovat(mysqli $db, int $idUser): array
+{
+    if ($idUser <= 0) {
+        throw new RuntimeException('Neplatný uživatel.');
+    }
+
+    $db->begin_transaction();
+    try {
+        $stmt = $db->prepare('SELECT id_user,aktivni,duvod_neaktivni,zdroj FROM user WHERE id_user=? LIMIT 1 FOR UPDATE');
+        $stmt->bind_param('i', $idUser);
+        $stmt->execute();
+        $before = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if (!is_array($before)) {
+            throw new RuntimeException('Uživatel neexistuje.');
+        }
+        if ((int)$before['aktivni'] === 1) {
+            throw new RuntimeException('Uživatel je již aktivní.');
+        }
+
+        $stmt = $db->prepare('UPDATE user SET aktivni=1,duvod_neaktivni=NULL WHERE id_user=? AND aktivni=0');
+        $stmt->bind_param('i', $idUser);
+        $stmt->execute();
+        if ($stmt->affected_rows !== 1) {
+            throw new RuntimeException('Uživatele se nepodařilo aktivovat.');
+        }
+        $stmt->close();
+        $db->commit();
+    } catch (Throwable $e) {
+        $db->rollback();
+        throw $e;
+    }
+
+    return [
+        'id_user' => $idUser,
+        'before' => $before,
+        'after' => ['aktivni' => 1, 'duvod_neaktivni' => null, 'zdroj' => (int)$before['zdroj']],
+    ];
 }

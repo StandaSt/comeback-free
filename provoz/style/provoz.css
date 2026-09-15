@@ -505,7 +505,7 @@
 
 /* Zadani denniho reportu */
 .provoz_denni_report_page{
-  width:1164px;
+  width:1142px;
   max-width:100%;
   min-width:0;
 }
@@ -513,13 +513,217 @@
 .provoz_denni_report_zadani{
   box-sizing:border-box;
   width:100%;
+  height:auto;
   overflow:auto;
+  padding:0;
+  border:0;
+  background:transparent;
 }
 
 .pp[data-page="denni_report"] > .pp_header{
   align-self:flex-start;
-  width:1164px;
+  width:1142px;
   max-width:100%;
+}
+
+.provoz_kontrola_reportu{
+  box-sizing:border-box;
+  width:1142px;
+  max-width:100%;
+  overflow:auto;
+  padding:0;
+  border:0;
+  background:transparent;
+}
+
+.pp[data-page="kontrola_reportu"] > .pp_header{
+  align-self:flex-start;
+  width:1142px;
+  max-width:100%;
+}
+
+.zr_layout.kontrola_reportu_layout{
+  width:100%;
+  grid-template-columns:minmax(0, 1fr) 300px;
+  gap:14px;
+}
+
+.kontrola_reportu_layout .zr_top{
+  grid-template-columns:200px 330px minmax(0, 1fr);
+}
+
+.kontrola_reportu_finance{
+  min-height:100%;
+}
+
+.kontrola_reportu_values{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:5px 14px;
+  font-size:var(--cb-font-12);
+  color:var(--cb-text-muted);
+}
+
+.kontrola_reportu_values span{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  min-width:0;
+}
+
+.kontrola_reportu_values strong{
+  color:var(--cb-text-main);
+  white-space:nowrap;
+}
+
+.kontrola_reportu_missing{
+  padding:7px 12px;
+  border:1px solid #f2b8b5;
+  border-radius:8px;
+  background:#fff1f1;
+  color:#b42318;
+  font-size:var(--cb-font-12);
+  font-weight:600;
+}
+
+.kontrola_reportu_people{
+  width:100%;
+}
+
+.kontrola_reportu_people_grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:14px;
+  align-items:start;
+}
+
+.kontrola_reportu_people_head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+}
+
+.kontrola_reportu_people_head > strong{
+  color:var(--cb-text-main);
+  font-size:var(--cb-font-12);
+  white-space:nowrap;
+}
+
+.zr_table.kontrola_reportu_people_table,
+.zr_table.kontrola_reportu_metric_table{
+  width:100%;
+}
+
+.zr_table.kontrola_reportu_people_table{
+  table-layout:fixed;
+}
+
+.kontrola_reportu_col_days{
+  width:64px;
+}
+
+.kontrola_reportu_col_hours{
+  width:94px;
+}
+
+.kontrola_reportu_col_deliveries{
+  width:76px;
+}
+
+.kontrola_reportu_people_table thead th{
+  border-bottom:1px solid var(--cb-border-soft);
+  text-align:right;
+}
+
+.kontrola_reportu_people_table thead th:first-child{
+  text-align:left;
+}
+
+.kontrola_reportu_people_table tfoot th,
+.kontrola_reportu_people_table tfoot td{
+  border-top:2px solid var(--cb-border-soft);
+  font-weight:700;
+}
+
+.kontrola_reportu_people_table tbody tr + tr td,
+.kontrola_reportu_metric_table tbody tr + tr td{
+  border-top:1px solid var(--cb-border-soft);
+}
+
+.kontrola_reportu_people_table th:not(:first-child),
+.kontrola_reportu_people_table td:not(:first-child){
+  text-align:right;
+  white-space:nowrap;
+}
+
+.kontrola_reportu_empty{
+  color:var(--cb-text-muted);
+  font-style:italic;
+}
+
+.kontrola_reportu_total{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin:4px 0 6px;
+  padding:8px 10px;
+  border:1px solid var(--cb-border-soft);
+  border-radius:7px;
+  background:var(--cb-bg-info);
+  color:var(--cb-text-main);
+  font-size:var(--cb-font-13);
+}
+
+.kontrola_reportu_total strong{
+  font-size:var(--cb-font-18);
+  white-space:nowrap;
+}
+
+.kontrola_reportu_metric_table td{
+  padding:4px 6px;
+}
+
+.kontrola_reportu_metric_table td:last-child{
+  width:96px;
+  font-weight:700;
+  text-align:right;
+  white-space:nowrap;
+}
+
+.kontrola_reportu_name_mismatches{
+  margin-top:14px;
+}
+
+.kontrola_reportu_name_layout{
+  display:grid;
+  grid-template-columns:minmax(0, 1fr) 430px;
+  gap:28px;
+  align-items:start;
+}
+
+.kontrola_reportu_name_list > strong{
+  display:block;
+  margin-bottom:5px;
+  color:#b71c1c;
+}
+
+.kontrola_reportu_name_date{
+  padding-right:18px !important;
+  color:var(--cb-text-muted);
+  font-weight:700;
+}
+
+.kontrola_reportu_name_help{
+  padding-top:2px;
+  font-size:var(--cb-font-14);
+  font-weight:600;
+  line-height:1.45;
+}
+
+.kontrola_reportu_name_help strong{
+  color:#b71c1c;
 }
 
 .provoz_archive_header_title{
@@ -807,8 +1011,9 @@
 
 .zr_section{
   padding:6px 14px;
-  border-color:var(--cb-border);
+  border:1px solid var(--cb-border);
   border-radius:8px;
+  background:var(--cb-bg-panel-soft);
   box-shadow:0 10px 24px var(--cb-shadow);
 }
 
@@ -916,6 +1121,27 @@
   grid-column:1 / -1;
   width:auto;
   box-sizing:border-box;
+}
+
+@media (max-width:1400px){
+  .pp[data-page="denni_report"] .zr_layout{
+    width:100%;
+    grid-template-columns:minmax(0, 1fr) 290px;
+  }
+
+  .pp[data-page="denni_report"] .zr_top{
+    grid-template-columns:275px minmax(0, 1fr);
+  }
+
+  .pp[data-page="denni_report"] .zr_left{
+    grid-template-columns:minmax(0, 1fr) minmax(0, 1fr) 180px;
+  }
+
+  .pp[data-page="denni_report"] .zr_intro_section,
+  .pp[data-page="denni_report"] .zr_cash_section{
+    padding-right:10px;
+    padding-left:10px;
+  }
 }
 
 .zr_storno_table{
@@ -1133,11 +1359,11 @@
   margin-bottom:6px;
   border:1px solid rgba(79,141,246,.25);
   border-radius:8px;
-  background:var(--cb-bg-info);
+  background:var(--cb-module-soft);
 }
 
 .zr_metric_label{
-  font-size:var(--cb-font-12);
+  font-size:var(--cb-font-18);
   color:var(--cb-text-muted);
 }
 
@@ -1243,6 +1469,45 @@
   flex-wrap:wrap;
   gap:2px 14px;
   margin-top:3px;
+}
+
+.zr_restia_name_mismatches{
+  grid-column:1 / -1;
+  width:100%;
+  box-sizing:border-box;
+  padding:8px 10px;
+  border:1px solid var(--cb-border);
+  border-radius:8px;
+  background:var(--cb-bg-info);
+  color:var(--cb-text-main);
+  font-size:var(--cb-font-12);
+}
+
+.zr_restia_name_mismatches > strong{
+  display:block;
+  margin-bottom:5px;
+  color:#b71c1c;
+}
+
+.zr_restia_name_table{
+  width:auto;
+  border-collapse:collapse;
+}
+
+.zr_restia_name_table td{
+  padding:1px 5px 1px 0;
+  border:0;
+  white-space:nowrap;
+}
+
+.zr_restia_name_table .zr_restia_name_label{
+  font-weight:700;
+}
+
+.zr_restia_name_table .zr_restia_name_vs{
+  padding-right:5px;
+  padding-left:7px;
+  color:var(--cb-text-muted);
 }
 
 /* Objednavky - stranka prehledu. */

@@ -15,6 +15,7 @@ $zrIsCreatingMissingFinalReport = !empty($isCreatingMissingFinalReport);
 $zrManualDifferenceRows = (array)($zrManualDifferenceRows ?? []);
 $zrManualDifferenceDates = (array)($zrManualDifferenceDates ?? []);
 $zrHasManualDifferences = $zrManualDifferenceRows !== [];
+$zrKuryrNameMismatches = (array)($kuryrNameMismatches ?? []);
 $zrMissingFinalReportDate = trim((string)($reportDateDisplay ?? $reportDate ?? ''));
 $zrSubmitReadyText = $zrIsCreatingMissingFinalReport
     ? 'Uložit report pro den ' . $zrMissingFinalReportDate
@@ -303,6 +304,24 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
             style="width:100%;margin-top:4px;"
           >
         </section>
+        <?php if ($zrKuryrNameMismatches !== []): ?>
+          <section class="zr_restia_name_mismatches" aria-label="Nesrovnalosti ve jménech kurýrů">
+            <strong>Nesrovnalosti ve jménech kurýrů:</strong>
+            <table class="zr_restia_name_table">
+              <tbody>
+                <?php foreach ($zrKuryrNameMismatches as $zrNameMismatch): ?>
+                  <tr>
+                    <td class="zr_restia_name_label">Restia:</td>
+                    <td><?= h((string)($zrNameMismatch['restia'] ?? '')) ?></td>
+                    <td class="zr_restia_name_vs">vs</td>
+                    <td class="zr_restia_name_label">IS:</td>
+                    <td><?= h((string)($zrNameMismatch['is'] ?? '')) ?></td>
+                  </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          </section>
+        <?php endif; ?>
         <?php if ($zrCanUnlockFinalReport && !$zrIsEditingFinalReport && ($formMode ?? '') === 'final_readonly' && $reportBranchId > 0): ?>
           <button
             type="button"

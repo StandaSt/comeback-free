@@ -33,6 +33,10 @@ function cb_admin_pages(): array
             'file' => __DIR__ . '/../admin_pages/admin_spousteni_scriptu_page.php',
             'title' => 'Ruční spouštění scriptů',
         ],
+        'export_db' => [
+            'file' => __DIR__ . '/../admin_pages/admin_export_db_page.php',
+            'title' => 'Export DB',
+        ],
         'log_chyby' => [
             'file' => __DIR__ . '/../admin_pages/admin_log_chyby_page.php',
             'title' => 'Přehled chyb',

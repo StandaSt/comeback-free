@@ -424,6 +424,14 @@
     overflow: hidden;
 }
 
+.hr_mzdovy_filter_form{
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+}
+
 .hr_pp[data-page="mzdovy_prehled"]{
     display: flex;
     overflow: hidden;
@@ -447,9 +455,14 @@
 
 .hr_mzdovy_header_title{
     display: inline-flex;
+    flex: 1 1 auto;
     align-items: center;
-    gap: 16px;
+    gap: 30px;
     min-width: 0;
+}
+
+.hr_mzdovy_header_title h1{
+    flex: 0 0 auto;
 }
 
 .hr_mzdovy_header_title h1,
@@ -522,28 +535,79 @@
 .hr_mzdovy_period,
 .hr_mzdovy_filter{
     display: inline-flex;
+    flex: 0 0 auto;
+    flex-direction: column;
     align-items: center;
-    gap: 7px;
-    color: var(--muted);
-    font-size: var(--cb-font-12);
-    font-weight: 700;
+    gap: 2px;
+    color: var(--text);
+    font-size: 9px;
+    font-weight: 400;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
 }
 
 .hr_mzdovy_controls{
     display: inline-flex;
+    flex: 1 1 auto;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+    min-width: 0;
 }
 
-.hr_mzdovy_period input,
+.hr_mzdovy_period select,
+.hr_mzdovy_filter input,
 .hr_mzdovy_filter select{
-    min-height: 28px;
-    padding: 3px 7px;
+    height: 22px;
+    min-height: 22px;
+    padding: 1px 4px;
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: 5px;
     color: var(--text);
     background: var(--surface);
-    font: inherit;
+    font-family: inherit;
+    font-size: var(--cb-font-11);
+    font-weight: 400;
+    line-height: normal;
+}
+
+.hr_mzdovy_period--month select{ width: 76px; }
+.hr_mzdovy_period--year select{ width: 58px; }
+.hr_mzdovy_filter--id input{ width: 48px; }
+.hr_mzdovy_filter--name input{ width: 72px; }
+.hr_mzdovy_filter--surname input{ width: 88px; }
+.hr_mzdovy_filter--branch select{ width: 78px; }
+.hr_mzdovy_filter--position select{ width: 76px; }
+.hr_mzdovy_filter--workload select{ width: 104px; }
+
+@media (pointer: coarse){
+    .hr_mzdovy_period select{
+        height: 36px;
+        min-height: 36px;
+    }
+}
+
+.hr_mzdovy_sort_link{
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    color: inherit;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.hr_mzdovy_sort_link:hover{
+    color: var(--primary);
+}
+
+.hr_mzdovy_sort_link span{
+    font-size: 1.15em;
+    line-height: 1;
+}
+
+.hr_mzdovy_footer{
+    padding: 7px 4px 0;
+    font-size: var(--cb-font-12);
 }
 
 .hr_mzdovy_summary{

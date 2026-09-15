@@ -7,22 +7,123 @@ declare(strict_types=1);
  * Tato vrstva neprovádí uzávěrku, nepřijímá ruční bonusy ani do DB nezapisuje.
  */
 
-function hr_mzdovy_prehled_nazev_firmy(mysqli $db): string
+function hr_mzdovy_prehled_id_firmy(mysqli $db, int $idUser): int
 {
-    $result = $db->query("SELECT GROUP_CONCAT(obchodni_jmeno ORDER BY id_firma SEPARATOR ' · ') AS obchodni_jmeno FROM firma WHERE aktivni = 1 AND platnost_do IS NULL");
-    if (!$result instanceof mysqli_result) {
+    if ($idUser <= 0) {
+        return 0;
+    }
+    $stmt = $db->prepare('SELECT id_firma FROM user WHERE id_user = ? AND aktivni = 1 LIMIT 1');
+    $stmt->bind_param('i', $idUser);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    return is_array($row) ? (int)($row['id_firma'] ?? 0) : 0;
+}
+
+function hr_mzdovy_prehled_nazev_firmy(mysqli $db, int $idUser): string
+{
+    $idFirma = hr_mzdovy_prehled_id_firmy($db, $idUser);
+    if ($idFirma <= 0) {
         return '';
     }
-
-    $row = $result->fetch_assoc();
+    $stmt = $db->prepare('SELECT obchodni_jmeno FROM firma WHERE id_firma = ? AND aktivni = 1 AND platnost_do IS NULL LIMIT 1');
+    $stmt->bind_param('i', $idFirma);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
     return trim((string)($row['obchodni_jmeno'] ?? ''));
 }
 
-function hr_mzdovy_prehled_data(mysqli $db, array $request): array
+function hr_mzdovy_prehled_uvazek_text(array $row): string
 {
-    $rawPeriod = trim((string)($request['mzd_obdobi'] ?? ''));
-    if (preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $rawPeriod) !== 1) {
-        $rawPeriod = (new DateTimeImmutable('first day of last month'))->format('Y-m');
+    $text = trim((string)($row['pracovni_vztah'] ?? ''));
+    if ($row['uvazek'] !== null) {
+        $text .= ($text === '' ? '' : ' ') . cb_format('n', (float)$row['uvazek']);
+    }
+    return trim($text);
+}
+
+function hr_mzdovy_prehled_dostupna_obdobi(mysqli $db, int $idFirma): array
+{
+    $stmt = $db->prepare('
+        SELECT YEAR(datum_reportu) AS rok, MONTH(datum_reportu) AS mesic, MAX(datum_reportu) AS posledni_datum
+        FROM reporty_is
+        WHERE id_firma = ? AND platny = 1 AND datum_reportu IS NOT NULL
+        GROUP BY YEAR(datum_reportu), MONTH(datum_reportu)
+        ORDER BY rok DESC, mesic ASC
+    ');
+    $stmt->bind_param('i', $idFirma);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $years = [];
+    $monthsByYear = [];
+    $latestDate = '';
+    while ($row = $result->fetch_assoc()) {
+        $year = (int)($row['rok'] ?? 0);
+        $month = (int)($row['mesic'] ?? 0);
+        if ($year < 1000 || $year > 9999 || $month < 1 || $month > 12) {
+            continue;
+        }
+        if (!isset($monthsByYear[$year])) {
+            $years[] = $year;
+            $monthsByYear[$year] = [];
+        }
+        $monthsByYear[$year][] = $month;
+        $rowLatestDate = (string)($row['posledni_datum'] ?? '');
+        if ($rowLatestDate > $latestDate) {
+            $latestDate = $rowLatestDate;
+        }
+    }
+    $result->free();
+    $stmt->close();
+
+    return ['years' => $years, 'months_by_year' => $monthsByYear, 'latest_date' => $latestDate];
+}
+
+function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
+{
+    $idFirma = hr_mzdovy_prehled_id_firmy($db, $idUser);
+    if ($idFirma <= 0) {
+        throw new RuntimeException('Uživatel nemá přiřazenou aktivní firmu.');
+    }
+
+    $availablePeriods = hr_mzdovy_prehled_dostupna_obdobi($db, $idFirma);
+    $periodYears = $availablePeriods['years'];
+    $periodMonthsByYear = $availablePeriods['months_by_year'];
+    if ($periodYears === []) {
+        throw new RuntimeException('Pro firmu nejsou dostupná žádná mzdová období.');
+    }
+
+    $defaultPeriod = new DateTimeImmutable('first day of last month');
+    $defaultYear = (int)$defaultPeriod->format('Y');
+    $defaultMonth = (int)$defaultPeriod->format('n');
+    if (!in_array($defaultMonth, $periodMonthsByYear[$defaultYear] ?? [], true)) {
+        $latestPeriod = DateTimeImmutable::createFromFormat('!Y-m-d', (string)$availablePeriods['latest_date']);
+        if (!$latestPeriod instanceof DateTimeImmutable) {
+            throw new RuntimeException('Poslední dostupné mzdové období je neplatné.');
+        }
+        $defaultPeriod = $latestPeriod->modify('first day of this month');
+    }
+
+    $requestedYear = is_scalar($request['mzd_rok'] ?? null) ? (int)$request['mzd_rok'] : 0;
+    $requestedMonth = is_scalar($request['mzd_mesic'] ?? null) ? (int)$request['mzd_mesic'] : 0;
+    $rawPeriod = '';
+    if (in_array($requestedYear, $periodYears, true)) {
+        $availableMonths = $periodMonthsByYear[$requestedYear] ?? [];
+        if (in_array($requestedMonth, $availableMonths, true)) {
+            $rawPeriod = sprintf('%04d-%02d', $requestedYear, $requestedMonth);
+        } elseif ($availableMonths !== []) {
+            $rawPeriod = sprintf('%04d-%02d', $requestedYear, max($availableMonths));
+        }
+    } else {
+        $legacyPeriod = is_scalar($request['mzd_obdobi'] ?? null) ? trim((string)$request['mzd_obdobi']) : '';
+        if (preg_match('/^(\d{4})-(0[1-9]|1[0-2])$/', $legacyPeriod, $legacyMatch) === 1
+            && in_array((int)$legacyMatch[2], $periodMonthsByYear[(int)$legacyMatch[1]] ?? [], true)) {
+            $rawPeriod = $legacyPeriod;
+        }
+    }
+    if ($rawPeriod === '') {
+        $rawPeriod = $defaultPeriod->format('Y-m');
     }
 
     $periodStart = DateTimeImmutable::createFromFormat('!Y-m-d', $rawPeriod . '-01');
@@ -116,11 +217,12 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request): array
             SELECT ro.id_user, SUM(ro.odpracovano) AS odpracovano
             FROM reporty_is_osoby ro
             INNER JOIN reporty_is r ON r.id_reportu = ro.id_reportu
-            WHERE r.platny = 1 AND r.datum_reportu BETWEEN ? AND ?
+            WHERE r.platny = 1 AND r.datum_reportu BETWEEN ? AND ? AND r.id_firma = ?
             GROUP BY ro.id_user
         ) hodiny ON hodiny.id_user = hp.id_user
         INNER JOIN firma f ON f.id_firma = hp.id_firma AND f.aktivni = 1 AND f.platnost_do IS NULL
         WHERE u.aktivni = 1
+          AND hp.id_firma = ?
           AND EXISTS (
               SELECT 1 FROM hr_pracovni_vztah pv
               WHERE pv.id_person = hp.id_person AND pv.platny = 1
@@ -135,8 +237,8 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request): array
         throw new RuntimeException('Mzdový přehled se nepodařilo připravit.');
     }
     $stmt->bind_param(
-        'ssssssssssssssssss',
-        $to, $from, $to, $from, $to, $from, $to, $from, $to, $from, $to, $from, $to, $from, $from, $to, $to, $from
+        'ssssssssssssssssiiss',
+        $to, $from, $to, $from, $to, $from, $to, $from, $to, $from, $to, $from, $to, $from, $from, $to, $idFirma, $idFirma, $to, $from
     );
     $stmt->execute();
     $result = $stmt->get_result();
@@ -147,12 +249,16 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request): array
             $row['cele_jmeno'] = 'Zaměstnanec #' . (string)(int)$row['id_person'];
         }
         $row['odpracovano'] = (float)($row['odpracovano'] ?? 0);
+        $row['uvazek_text'] = hr_mzdovy_prehled_uvazek_text($row);
         $rows[] = $row;
     }
     $stmt->close();
 
     $branches = [];
-    $result = $db->query('SELECT p.id_pob, p.nazev, f.obchodni_jmeno AS firma FROM pobocka p INNER JOIN firma f ON f.id_firma = p.id_firma WHERE p.aktivni = 1 AND f.aktivni = 1 AND f.platnost_do IS NULL ORDER BY p.id_pob');
+    $branchStmt = $db->prepare('SELECT p.id_pob, p.nazev, f.obchodni_jmeno AS firma FROM pobocka p INNER JOIN firma f ON f.id_firma = p.id_firma WHERE p.id_firma = ? AND p.aktivni = 1 AND f.aktivni = 1 AND f.platnost_do IS NULL ORDER BY p.id_pob');
+    $branchStmt->bind_param('i', $idFirma);
+    $branchStmt->execute();
+    $result = $branchStmt->get_result();
     while ($branch = $result->fetch_assoc()) {
         $branches[] = [
             'id_pob' => (int)$branch['id_pob'],
@@ -161,30 +267,134 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request): array
         ];
     }
     $result->free();
+    $branchStmt->close();
 
-    $selectedBranch = trim((string)($request['mzd_pobocka'] ?? ''));
+    $mzdFilterRequest = is_array($request['mzd_f'] ?? null) ? $request['mzd_f'] : [];
+    $filterValue = static function (string $key, string $legacyKey) use ($mzdFilterRequest, $request): string {
+        $value = $mzdFilterRequest[$key] ?? ($request[$legacyKey] ?? '');
+        return is_scalar($value) ? trim((string)$value) : '';
+    };
+
+    $selectedBranch = $filterValue('pobocka', 'mzd_pobocka');
     $branchIds = array_map(static fn(array $branch): string => (string)$branch['id_pob'], $branches);
     if ($selectedBranch !== '' && !in_array($selectedBranch, $branchIds, true)) {
         $selectedBranch = '';
     }
-    if ($selectedBranch !== '') {
-        $rows = array_values(array_filter(
-            $rows,
-            static fn(array $row): bool => (string)($row['id_pob'] ?? '') === $selectedBranch
-        ));
+
+    $positionOptions = array_values(array_unique(array_filter(
+        array_map(static fn(array $row): string => trim((string)($row['zarazeni'] ?? '')), $rows),
+        static fn(string $value): bool => $value !== ''
+    )));
+    $workloadOptions = array_values(array_unique(array_filter(
+        array_map(static fn(array $row): string => trim((string)($row['uvazek_text'] ?? '')), $rows),
+        static fn(string $value): bool => $value !== ''
+    )));
+    sort($positionOptions, SORT_NATURAL | SORT_FLAG_CASE);
+    sort($workloadOptions, SORT_NATURAL | SORT_FLAG_CASE);
+
+    $filters = [
+        'id' => mb_substr($filterValue('id', 'mzd_id'), 0, 20),
+        'jmeno' => mb_substr($filterValue('jmeno', 'mzd_jmeno'), 0, 100),
+        'prijmeni' => mb_substr($filterValue('prijmeni', 'mzd_prijmeni'), 0, 100),
+        'pobocka' => $selectedBranch,
+        'pozice' => $filterValue('pozice', 'mzd_pozice'),
+        'uvazek' => $filterValue('uvazek', 'mzd_uvazek'),
+    ];
+    if (!in_array($filters['pozice'], $positionOptions, true)) {
+        $filters['pozice'] = '';
     }
+    if (!in_array($filters['uvazek'], $workloadOptions, true)) {
+        $filters['uvazek'] = '';
+    }
+
+    foreach ($rows as $index => &$row) {
+        $row['_poradi'] = $index;
+    }
+    unset($row);
+    $textContains = static fn(string $haystack, string $needle): bool => $needle === '' || mb_stripos($haystack, $needle) !== false;
+    $rows = array_values(array_filter($rows, static function (array $row) use ($filters, $textContains): bool {
+        return ($filters['id'] === '' || str_contains((string)(int)$row['id_person'], $filters['id']))
+            && $textContains((string)($row['jmeno'] ?? ''), $filters['jmeno'])
+            && $textContains((string)($row['prijmeni'] ?? ''), $filters['prijmeni'])
+            && ($filters['pobocka'] === '' || (string)($row['id_pob'] ?? '') === $filters['pobocka'])
+            && ($filters['pozice'] === '' || (string)($row['zarazeni'] ?? '') === $filters['pozice'])
+            && ($filters['uvazek'] === '' || (string)($row['uvazek_text'] ?? '') === $filters['uvazek']);
+    }));
+
+    $sortFields = [
+        'id' => 'id_person', 'jmeno' => 'jmeno', 'prijmeni' => 'prijmeni', 'pobocka' => 'pobocka',
+        'pozice' => 'zarazeni', 'uvazek' => 'uvazek_text', 'mzda' => 'mzda_castka', 'prumer' => 'prumer',
+        'osatne' => 'osatne', 'stravenkovy_pausal' => 'stravenkovy_pausal', 'celkem' => 'odpracovano',
+        'nocni' => 'nocni', 'svatek' => 'svatek', 'svatek_noc' => 'svatek_noc', 'vikend' => 'vikend',
+        'dovolena_pocatecni' => 'dovolena_pocatecni', 'dovolena_cerpano' => 'dovolena_cerpano',
+        'dovolena_zustatek' => 'dovolena_zustatek', 'noc_kc' => 'noc_kc', 'svatek_kc' => 'svatek_kc',
+        'svatek_noc_kc' => 'svatek_noc_kc', 'vikend_kc' => 'vikend_kc', 'bonus_isk_procento' => 'bonus_isk_procento',
+        'bonus_isk_kc' => 'bonus_isk_kc', 'bonus_trzba' => 'bonus_trzba', 'prescas_h' => 'prescas_h',
+        'prescas_kc' => 'prescas_kc', 'hruba_mzda' => 'hruba_mzda', 'cista_mzda' => 'cista_mzda', 'zsp' => 'zsp',
+    ];
+    $numericSorts = ['id', 'mzda', 'prumer', 'osatne', 'stravenkovy_pausal', 'celkem', 'nocni', 'svatek', 'svatek_noc', 'vikend', 'dovolena_pocatecni', 'dovolena_cerpano', 'dovolena_zustatek', 'noc_kc', 'svatek_kc', 'svatek_noc_kc', 'vikend_kc', 'bonus_isk_procento', 'bonus_isk_kc', 'bonus_trzba', 'prescas_h', 'prescas_kc', 'hruba_mzda', 'cista_mzda', 'zsp'];
+    $sort = trim((string)($request['mzd_sort'] ?? 'prijmeni'));
+    if (!isset($sortFields[$sort])) {
+        $sort = 'prijmeni';
+    }
+    $dir = strtolower((string)($request['mzd_dir'] ?? 'asc')) === 'desc' ? 'desc' : 'asc';
+    $sortField = $sortFields[$sort];
+    usort($rows, static function (array $a, array $b) use ($sort, $sortField, $dir, $numericSorts): int {
+        $aValue = $a[$sortField] ?? null;
+        $bValue = $b[$sortField] ?? null;
+        $aEmpty = $aValue === null || $aValue === '';
+        $bEmpty = $bValue === null || $bValue === '';
+        if ($aEmpty !== $bEmpty) {
+            return $aEmpty ? 1 : -1;
+        }
+        $comparison = in_array($sort, $numericSorts, true)
+            ? ((float)$aValue <=> (float)$bValue)
+            : strnatcasecmp((string)$aValue, (string)$bValue);
+        if ($comparison !== 0 && $dir === 'desc') {
+            $comparison *= -1;
+        }
+        return $comparison !== 0 ? $comparison : ((int)$a['_poradi'] <=> (int)$b['_poradi']);
+    });
 
     $totalHours = 0.0;
     foreach ($rows as $row) {
         $totalHours += (float)$row['odpracovano'];
     }
 
+    $perOptions = [20, 50, 100, 500];
+    $perPage = (int)($request['mzd_per'] ?? 100);
+    if (!in_array($perPage, $perOptions, true)) {
+        $perPage = 100;
+    }
+    $totalRows = count($rows);
+    $totalPages = max(1, (int)ceil($totalRows / $perPage));
+    $pageNum = max(1, min((int)($request['mzd_p'] ?? 1), $totalPages));
+    $offset = ($pageNum - 1) * $perPage;
+    $pagedRows = array_slice($rows, $offset, $perPage);
+
     return [
+        'id_firma' => $idFirma,
         'period' => $rawPeriod,
+        'period_year' => (int)$periodStart->format('Y'),
+        'period_month' => (int)$periodStart->format('n'),
+        'period_years' => $periodYears,
+        'period_months' => $periodMonthsByYear[(int)$periodStart->format('Y')] ?? [],
         'period_label' => $periodStart->format('m/Y'),
         'branches' => $branches,
-        'branch' => $selectedBranch,
-        'rows' => $rows,
+        'position_options' => $positionOptions,
+        'workload_options' => $workloadOptions,
+        'filters' => $filters,
+        'active_filters' => array_filter($filters, static fn(string $value): bool => $value !== ''),
+        'sort' => $sort,
+        'dir' => $dir,
+        'per_options' => $perOptions,
+        'per_page' => $perPage,
+        'page_num' => $pageNum,
+        'total_rows' => $totalRows,
+        'total_pages' => $totalPages,
+        'first_row' => $totalRows === 0 ? 0 : $offset + 1,
+        'last_row' => $totalRows === 0 ? 0 : $offset + count($pagedRows),
+        'rows' => $pagedRows,
         'total_hours' => $totalHours,
     ];
 }

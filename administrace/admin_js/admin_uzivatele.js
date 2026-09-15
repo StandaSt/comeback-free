@@ -59,7 +59,58 @@
     if (section instanceof HTMLElement) section.appendChild(form);
   }
 
+  function showNotice(message, success) {
+    var section = document.querySelector('.admin_users');
+    if (!(section instanceof HTMLElement)) return;
+    var notice = section.querySelector('[data-admin-user-activation-notice]');
+    if (!(notice instanceof HTMLParagraphElement)) {
+      notice = document.createElement('p');
+      notice.setAttribute('data-admin-user-activation-notice', '');
+      section.insertBefore(notice, section.firstChild);
+    }
+    notice.className = 'admin_script_result' + (success ? '' : ' is-error');
+    notice.textContent = message;
+  }
+
   document.addEventListener('click', function (event) {
+    var activate = event.target instanceof Element ? event.target.closest('[data-admin-user-activate]') : null;
+    if (activate instanceof HTMLButtonElement) {
+      event.preventDefault();
+      event.stopPropagation();
+      var activationForm = activate.form;
+      if (!(activationForm instanceof HTMLFormElement)) return;
+      var body = new URLSearchParams(new FormData(activationForm));
+      body.set(activate.name, activate.value);
+      activate.disabled = true;
+      fetch(activate.formAction || activationForm.action, {
+        method: 'POST',
+        headers: {
+          'X-Comeback-Admin-User-Activate': '1',
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'Accept': 'application/json'
+        },
+        body: body.toString(),
+        credentials: 'same-origin'
+      }).then(function (response) {
+        return response.json().then(function (payload) {
+          if (!response.ok || !payload || payload.ok !== true) {
+            throw new Error(payload && payload.message ? String(payload.message) : 'Uživatele se nepodařilo aktivovat.');
+          }
+          return payload;
+        });
+      }).then(function (payload) {
+        showNotice(String(payload.message || 'Uživatel byl aktivován.'), true);
+        var filterForm = document.querySelector('.admin_users .cb_table_view');
+        if (filterForm instanceof HTMLFormElement) {
+          filterForm.requestSubmit();
+        }
+      }).catch(function (error) {
+        activate.disabled = false;
+        showNotice(error && error.message ? error.message : 'Uživatele se nepodařilo aktivovat.', false);
+      });
+      return;
+    }
+
     var target = event.target instanceof Element ? event.target.closest('[data-admin-user-detail]') : null;
     if (!(target instanceof HTMLAnchorElement)) return;
     event.preventDefault();
@@ -85,7 +136,7 @@
         var detailRow = document.createElement('tr');
         detailRow.className = 'admin_user_detail_row';
         detailRow.setAttribute('data-admin-user-detail-row', String(payload.id_user));
-        detailRow.innerHTML = '<td colspan="8">' + payload.detail_html + '</td>';
+        detailRow.innerHTML = '<td colspan="9">' + payload.detail_html + '</td>';
         row.insertAdjacentElement('afterend', detailRow);
         appendForm(payload.form_html);
         target.setAttribute('aria-expanded', 'true');
