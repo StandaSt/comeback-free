@@ -52,6 +52,7 @@ function cb_denni_report_match_courier_names(array $restiaCounts, array $kuryrOp
         $idUser = (int)($option['id_user'] ?? 0);
         $isName = trim((string)($option['restia_name'] ?? ''));
         $displayName = trim((string)($option['name'] ?? ''));
+        $alternateName = trim((string)($option['match_name'] ?? $displayName));
         if ($idUser <= 0 || $isName === '') {
             continue;
         }
@@ -60,7 +61,7 @@ function cb_denni_report_match_courier_names(array $restiaCounts, array $kuryrOp
             'is_name' => $isName,
             'keys' => array_values(array_unique(array_filter([
                 cb_denni_report_person_name_match_key($isName),
-                cb_denni_report_person_name_match_key($displayName),
+                cb_denni_report_person_name_match_key($alternateName),
             ]))),
         ];
     }
@@ -665,8 +666,9 @@ function cb_denni_report_branch_slot_user_options(mysqli $conn, int $idPob, int 
                 if ($idUser > 0 && $name !== '') {
                     $users[$idUser] = [
                         'id_user' => $idUser,
-                        'name' => $displayName !== '' ? $displayName : $name,
+                        'name' => $name,
                         'restia_name' => $name,
+                        'match_name' => $displayName,
                     ];
                 }
             }
@@ -1124,6 +1126,7 @@ function cb_denni_report_kuryr_delivery_data(mysqli $conn, int $idPob, array $wo
             'id_user' => (int)($kuryrRow['id_user'] ?? 0),
             'name' => trim((string)($kuryrRow['name'] ?? '')),
             'restia_name' => trim((string)($kuryrRow['restia_name'] ?? '')),
+            'match_name' => trim((string)($kuryrRow['match_name'] ?? '')),
         ];
     }
     $nameMatches = cb_denni_report_match_courier_names($restiaDeliveryCounts, $matchOptions);
@@ -1182,11 +1185,15 @@ function cb_denni_report_person_rows(array $draftPersonRows): array
             continue;
         }
 
+        $idSlot = (int)($row['id_slot'] ?? 0);
+        $fullName = cb_denni_report_person_full_name($row['jmeno'] ?? '', $row['prijmeni'] ?? '');
+        $displayName = cb_denni_report_person_display_name($row['jmeno'] ?? '', $row['prijmeni'] ?? '');
         $personRow = [
             'id_dr_osoby' => (int)($row['id_dr_osoby'] ?? 0),
             'id_user' => (int)($row['id_user'] ?? 0),
-            'name' => cb_denni_report_person_display_name($row['jmeno'] ?? '', $row['prijmeni'] ?? ''),
-            'restia_name' => cb_denni_report_person_full_name($row['jmeno'] ?? '', $row['prijmeni'] ?? ''),
+            'name' => $fullName,
+            'restia_name' => $fullName,
+            'match_name' => $displayName,
             // Čas je určený pro zobrazení vstupu; zdrojová hodnota směny zůstává beze změny.
             'start' => cb_format('t', $row['smena_od'] ?? null),
             'end' => cb_format('t', $row['smena_do'] ?? null),
@@ -1199,9 +1206,9 @@ function cb_denni_report_person_rows(array $draftPersonRows): array
             'phm' => (float)($row['vyplatit_phm'] ?? 0),
         ];
 
-        if ((int)($row['id_slot'] ?? 0) === 2) {
+        if ($idSlot === 2) {
             $kuryrRows[] = $personRow;
-        } elseif ((int)($row['id_slot'] ?? 0) === 1) {
+        } elseif ($idSlot === 1) {
             $instorRows[] = $personRow;
         }
     }

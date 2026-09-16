@@ -207,9 +207,13 @@ try {
         $sendJson(409, ['ok' => false, 'err' => cb_db_zapis_denni_report_already_saved_message()]);
     }
 
-    if ($e instanceof RuntimeException && $message !== '') {
+    if ($e instanceof CbUserVisibleException && $message !== '') {
         $sendJson(500, ['ok' => false, 'err' => $message]);
     }
 
-    $sendJson(500, ['ok' => false, 'err' => 'Ulozeni finalniho reportu selhalo']);
+    cb_chyba_oznam($e, [
+        'module' => 'PROVOZ',
+        'action' => 'Uložení denního reportu',
+    ]);
+    $sendJson(500, ['ok' => false, 'err' => cb_chyba_verejna_zprava()]);
 }

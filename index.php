@@ -43,7 +43,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'
         }
         $_SESSION['cb_flash'] = 'Přihlašovací e-mail byl změněn.';
     } catch (Throwable $e) {
-        $_SESSION['cb_flash'] = $e->getMessage();
+        $_SESSION['cb_flash'] = cb_chyba_uzivatel($e, [
+            'module' => 'SYSTEM',
+            'action' => 'Potvrzení změny e-mailu',
+            'allow_runtime_message' => true,
+        ]);
     }
     header('Location: ' . cb_root_url(''), true, 303);
     exit;
@@ -94,7 +98,12 @@ if (empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST
             ? 'E-mail byl odeslán'
             : "Neznámý E-mail,\nkontaktujte admina IS";
     } catch (Throwable $e) {
-        $_SESSION['cb_flash'] = $e->getMessage();
+        $_SESSION['cb_flash'] = cb_chyba_uzivatel($e, [
+            'module' => 'LOGIN',
+            'action' => 'Odeslání obnovy hesla',
+            'actor' => trim((string)($_POST['email'] ?? '')),
+            'allow_runtime_message' => true,
+        ]);
     }
     header('Location: ' . cb_root_url('?zapomenute_heslo=1'), true, 303);
     exit;
@@ -106,7 +115,11 @@ if (empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST
         cb_obnoveni_hesla_uloz(db(), $_POST);
         $_SESSION['cb_flash'] = 'Nové heslo bylo uloženo. Nyní se přihlaste.';
     } catch (Throwable $e) {
-        $_SESSION['cb_flash'] = $e->getMessage();
+        $_SESSION['cb_flash'] = cb_chyba_uzivatel($e, [
+            'module' => 'LOGIN',
+            'action' => 'Uložení nového hesla',
+            'allow_runtime_message' => true,
+        ]);
     }
     header('Location: ' . cb_root_url(''), true, 303);
     exit;
@@ -118,7 +131,11 @@ if (empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST
         header('Location: ' . cb_login_target_url(), true, 303);
         exit;
     } catch (Throwable $e) {
-        $_SESSION['cb_flash'] = $e->getMessage();
+        $_SESSION['cb_flash'] = cb_chyba_uzivatel($e, [
+            'module' => 'LOGIN',
+            'action' => 'Dokončení prvního vstupu',
+            'allow_runtime_message' => true,
+        ]);
         header('Location: ' . cb_root_url(''), true, 303);
         exit;
     }
@@ -263,15 +280,14 @@ if (!empty($_SESSION['login_ok']) && isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODUL
             ob_end_clean();
         }
 
-        $cbShellError = get_class($e)
-            . ': ' . $e->getMessage()
-            . ' in ' . $e->getFile()
-            . ':' . (string)$e->getLine();
-        error_log('[shell_module] ' . $cbShellError);
+        cb_chyba_oznam($e, [
+            'module' => $cbShellModule,
+            'action' => 'Načtení modulu',
+        ]);
 
         http_response_code(500);
         header('Content-Type: text/plain; charset=utf-8');
-        echo $cbShellError;
+        echo cb_chyba_verejna_zprava();
     }
     exit;
 }

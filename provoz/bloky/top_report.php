@@ -142,7 +142,11 @@ declare(strict_types=1);
         }
         $stmt->close();
     } catch (Throwable $e) {
-        echo '<section class="blok"><h2 class="blok_title">Top report</h2><p class="txt_cervena">Chyba Top reportu: ' . h($e->getMessage()) . '</p></section>';
+        cb_chyba_oznam($e, [
+            'module' => 'PROVOZ',
+            'action' => 'Načtení Top reportu',
+        ]);
+        echo '<section class="blok"><h2 class="blok_title">Top report</h2><p class="txt_cervena">' . h(cb_chyba_verejna_zprava()) . '</p></section>';
         return;
     }
     ?>

@@ -97,7 +97,7 @@ function cb_db_reporty_is_acquire_lock(mysqli $conn, int $idPob, string $datumRe
     $stmt->close();
 
     if ((int)($row['lock_ok'] ?? 0) !== 1) {
-        throw new RuntimeException('Ulozeni tohoto reportu uz prave probiha. Zkus to prosim za chvili znovu.');
+        throw new CbUserVisibleException('Ulozeni tohoto reportu uz prave probiha. Zkus to prosim za chvili znovu.');
     }
 
     return $lockName;
@@ -247,19 +247,19 @@ function cb_db_zapis_denni_report_validate(mysqli $conn, int $idPob, string $dat
     $oteviral = (int)($post['oteviral'] ?? 0);
     $zaviral = (int)($post['zaviral'] ?? 0);
     if ($oteviral <= 0 || $zaviral <= 0) {
-        throw new RuntimeException('Vyberte, kdo oteviral a zaviral pobocku.');
+        throw new CbUserVisibleException('Vyberte, kdo oteviral a zaviral pobocku.');
     }
     $oteviralAllowed = cb_db_zapis_denni_report_user_allowed($conn, $idPob, $oteviral, 1)
         || ($allowExistingReportUsers && cb_db_zapis_denni_report_user_in_active_report($conn, $idPob, $datumReportu, $oteviral, 1, 'oteviral'));
     $zaviralAllowed = cb_db_zapis_denni_report_user_allowed($conn, $idPob, $zaviral, 1)
         || ($allowExistingReportUsers && cb_db_zapis_denni_report_user_in_active_report($conn, $idPob, $datumReportu, $zaviral, 1, 'zaviral'));
     if (!$oteviralAllowed || !$zaviralAllowed) {
-        throw new RuntimeException('Otevirajici nebo zavirajici nepatri mezi pracovniky pobocky.');
+        throw new CbUserVisibleException('Otevirajici nebo zavirajici nepatri mezi pracovniky pobocky.');
     }
 
     foreach (['pokladna_hotovost', 'pokladna_terminal', 'pokladna_stravenky'] as $field) {
         if (trim((string)($post[$field] ?? '')) === '') {
-            throw new RuntimeException('Vyplnte vsechny povinne hodnoty pokladny.');
+            throw new CbUserVisibleException('Vyplnte vsechny povinne hodnoty pokladny.');
         }
     }
 
@@ -270,19 +270,19 @@ function cb_db_zapis_denni_report_validate(mysqli $conn, int $idPob, string $dat
         $start = trim((string)($row['smena_od'] ?? ''));
         $end = trim((string)($row['smena_do'] ?? ''));
         if ($idUser <= 0 || !in_array($slot, [1, 2], true)) {
-            throw new RuntimeException('Report obsahuje neplatneho pracovnika.');
+            throw new CbUserVisibleException('Report obsahuje neplatneho pracovnika.');
         }
         if (!cb_db_zapis_denni_report_valid_time($start) || !cb_db_zapis_denni_report_valid_time($end)) {
-            throw new RuntimeException('U kazdeho pracovnika vyplnte platny zacatek a konec smeny.');
+            throw new CbUserVisibleException('U kazdeho pracovnika vyplnte platny zacatek a konec smeny.');
         }
         $personAllowed = cb_db_zapis_denni_report_user_allowed($conn, $idPob, $idUser, $slot)
             || ($allowExistingReportUsers && cb_db_zapis_denni_report_user_in_active_report($conn, $idPob, $datumReportu, $idUser, $slot, 'person'));
         if (!$personAllowed) {
-            throw new RuntimeException('Pracovnik nepatri do vybrane pobocky nebo typu smeny.');
+            throw new CbUserVisibleException('Pracovnik nepatri do vybrane pobocky nebo typu smeny.');
         }
         $personKey = $slot . ':' . $idUser;
         if (isset($seen[$personKey])) {
-            throw new RuntimeException('Stejny pracovnik je v reportu uveden vicekrat.');
+            throw new CbUserVisibleException('Stejny pracovnik je v reportu uveden vicekrat.');
         }
         $seen[$personKey] = true;
     }
@@ -315,7 +315,7 @@ function cb_db_zapis_denni_report_from_form(mysqli $conn, int $idPob, string $da
         $conn->begin_transaction();
         $activeReportId = cb_db_reporty_is_find_active_id($conn, $idPob, $datumReportu);
         if ($activeReportId > 0 && !$invalidateExistingActive) {
-            throw new RuntimeException(cb_db_zapis_denni_report_already_saved_message());
+            throw new CbUserVisibleException(cb_db_zapis_denni_report_already_saved_message());
         }
         if ($activeReportId > 0 && $invalidateExistingActive) {
             cb_db_reporty_is_mark_invalid($conn, $activeReportId);
@@ -335,7 +335,7 @@ function cb_db_zapis_denni_report_from_form(mysqli $conn, int $idPob, string $da
         } catch (Throwable $e) {
             $stmtReport->close();
             if (!$invalidateExistingActive && cb_db_zapis_denni_report_is_duplicate_error($e, 'uq_reporty_is_pob_datum')) {
-                throw new RuntimeException(cb_db_zapis_denni_report_already_saved_message(), 0, $e);
+                throw new CbUserVisibleException(cb_db_zapis_denni_report_already_saved_message(), 0, $e);
             }
             throw $e;
         }

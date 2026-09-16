@@ -450,7 +450,7 @@ function cb_kontrola_reportu_missing_dates(mysqli $conn, int $branchId, string $
 function cb_kontrola_reportu_data(mysqli $conn, bool $useGlobalPeriod, int $requestedBranchId = 0): array
 {
     if (!cb_kontrola_reportu_ma_pravo()) {
-        throw new RuntimeException('Nemáte právo zobrazit Kontrolu denních reportů.');
+        throw new CbUserVisibleException('Nemáte právo zobrazit Kontrolu denních reportů.');
     }
 
     $userId = cb_kontrola_reportu_user_id();

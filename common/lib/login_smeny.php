@@ -70,7 +70,7 @@ function cb_login_smeny_selhalo_zprava(?array $user): string
 try {
 
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-        throw new RuntimeException('Neplatný požadavek.');
+        throw new CbUserVisibleException('Neplatný požadavek.');
     }
 
     $email = post_str('email');
@@ -80,12 +80,12 @@ try {
     $_SESSION['cb_login_target_module'] = post_module();
 
     if ($email === '' || $heslo === '') {
-        throw new RuntimeException('Vyplň email a heslo.');
+        throw new CbUserVisibleException('Vyplň email a heslo.');
     }
 
 
     if (cb_user_bad_login_is_blocked($email, 5, 15)) {
-        throw new RuntimeException('Přihlášení se nezdařilo.');
+        throw new CbUserVisibleException('Přihlášení se nezdařilo.');
     }
 
     $stmtLocal = db()->prepare('SELECT id_user, jmeno, prijmeni, email, telefon, aktivni, duvod_neaktivni, schvalen, heslo_hash, zdroj FROM user WHERE email=? LIMIT 1');
@@ -96,10 +96,10 @@ try {
     if (is_array($localUser) && trim((string)($localUser['heslo_hash'] ?? '')) !== '') {
         if (!password_verify($heslo, (string)$localUser['heslo_hash'])) {
             cb_user_bad_login_log($email, $heslo);
-            throw new RuntimeException('Neplatné přihlašovací údaje.');
+            throw new CbUserVisibleException('Neplatné přihlašovací údaje.');
         }
         if ((int)$localUser['aktivni'] !== 1) {
-            throw new RuntimeException(cb_login_neaktivni_zprava($localUser));
+            throw new CbUserVisibleException(cb_login_neaktivni_zprava($localUser));
         }
         $primePresmerovani = cb_lokalni_login_zahaj(db(), $localUser, $deviceEndpoint);
         header('Location: ' . ($primePresmerovani ?? cb_login_target_url()));
@@ -107,7 +107,7 @@ try {
     }
 
     if (is_array($localUser) && (int)$localUser['aktivni'] !== 1) {
-        throw new RuntimeException(cb_login_neaktivni_zprava($localUser));
+        throw new CbUserVisibleException(cb_login_neaktivni_zprava($localUser));
     }
 
     try {
@@ -122,13 +122,13 @@ try {
         );
     } catch (Throwable $e) {
         cb_user_bad_login_log($email, $heslo);
-        throw new RuntimeException(cb_login_smeny_selhalo_zprava($localUser));
+        throw new CbUserVisibleException(cb_login_smeny_selhalo_zprava($localUser));
     }
 
     $token = $login['userLogin']['accessToken'] ?? null;
     if (!is_string($token) || $token === '') {
         cb_user_bad_login_log($email, $heslo);
-        throw new RuntimeException(cb_login_smeny_selhalo_zprava($localUser));
+        throw new CbUserVisibleException(cb_login_smeny_selhalo_zprava($localUser));
     }
 
 
@@ -152,7 +152,7 @@ try {
 
     $u = $me['userGetLogged'] ?? null;
     if (!is_array($u) || empty($u['id']) || empty($u['email'])) {
-        throw new RuntimeException('Nepodařilo se načíst profil uživatele.');
+        throw new CbUserVisibleException('Nepodařilo se načíst profil uživatele.');
     }
 
     $idUser = (int)$u['id'];
@@ -160,13 +160,21 @@ try {
     $legacyUser = cb_prvni_vstup_user(db(), $idUser);
     if (!is_array($legacyUser) || strcasecmp((string)$legacyUser['email'], $email) !== 0 || trim((string)$legacyUser['heslo_hash']) !== '') {
         cb_user_bad_login_log($email, $heslo);
-        throw new RuntimeException('Neplatné přihlašovací údaje.');
+        throw new CbUserVisibleException('Neplatné přihlašovací údaje.');
     }
     cb_prvni_vstup_priprav($legacyUser);
     header('Location: ' . cb_login_url());
     exit;
 
 } catch (Throwable $e) {
+
+    $cbLoginFailedEmail = post_str('email');
+    $cbLoginErrorMessage = cb_chyba_uzivatel($e, [
+        'module' => 'LOGIN',
+        'action' => 'Přihlášení',
+        'actor' => filter_var($cbLoginFailedEmail, FILTER_VALIDATE_EMAIL) !== false ? $cbLoginFailedEmail : '',
+        'table' => 'user',
+    ]);
 
     /*
          * Neuspesny login nebo chyba:
@@ -195,8 +203,7 @@ try {
     unset($_SESSION['cb_session_start_ts']);
     unset($_SESSION['cb_last_activity_ts']);
 
-    $_SESSION['cb_flash'] = $e->getMessage();
-    $cbLoginFailedEmail = post_str('email');
+    $_SESSION['cb_flash'] = $cbLoginErrorMessage;
     if (filter_var($cbLoginFailedEmail, FILTER_VALIDATE_EMAIL) !== false) {
         $_SESSION['cb_password_reset_email_prefill'] = $cbLoginFailedEmail;
     }

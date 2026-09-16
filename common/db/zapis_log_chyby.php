@@ -26,7 +26,8 @@ if (!function_exists('db_zapis_log_chyby')) {
         ?string $url,
         ?string $dataJson,
         int $vyreseno = 0,
-        ?string $poznamka = null
+        ?string $poznamka = null,
+        bool $sendPush = true
     ): void {
 
         $stmt = $conn->prepare(
@@ -59,8 +60,10 @@ if (!function_exists('db_zapis_log_chyby')) {
         $stmt->close();
 
         try {
-            require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
-            cb_push_send_error_admin($zprava, $soubor, $radek, 1);
+            if ($sendPush) {
+                require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
+                cb_push_send_error_admin($zprava, $soubor, $radek, 1);
+            }
         } catch (Throwable $e) {
         }
     }

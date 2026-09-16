@@ -43,6 +43,7 @@ if (!function_exists('db')) {
 }
 
 require_once __DIR__ . '/db_akce_log.php';
+require_once __DIR__ . '/chyby.php';
 require_once __DIR__ . '/format.php';
 require_once __DIR__ . '/objednavka_cislo.php';
 require_once __DIR__ . '/sesn_kontrola.php';

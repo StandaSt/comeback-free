@@ -21,7 +21,10 @@ try {
         $current = cb_report_promenne_active(db());
     }
 } catch (Throwable $e) {
-    $loadError = $e->getMessage();
+    $loadError = cb_chyba_uzivatel($e, [
+        'module' => 'PROVOZ',
+        'action' => 'Načtení nastavení reportu',
+    ]);
 }
 
 $currentWoltDrive = is_array($current) ? (float)($current['wolt_drive'] ?? 0) : null;

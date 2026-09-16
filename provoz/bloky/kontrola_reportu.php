@@ -15,7 +15,10 @@ try {
         $cbKontrolaPozadovanaPobocka
     );
 } catch (Throwable $e) {
-    $cbKontrolaError = $e->getMessage();
+    $cbKontrolaError = cb_chyba_uzivatel($e, [
+        'module' => 'PROVOZ',
+        'action' => 'Načtení kontroly reportů',
+    ]);
     if (!cb_kontrola_reportu_ma_pravo()) {
         http_response_code(403);
     }

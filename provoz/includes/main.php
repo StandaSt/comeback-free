@@ -29,17 +29,13 @@ declare(strict_types=1);
         try {
             require $file;
         } catch (Throwable $e) {
-            try {
-                require_once __DIR__ . '/../../common/notifikace/notifikace_2fa.php';
-                cb_push_send_error_admin($e->getMessage(), $e->getFile(), $e->getLine(), 1);
-            } catch (Throwable $pushError) {
-            }
+            cb_chyba_oznam($e, [
+                'module' => 'PROVOZ',
+                'action' => 'Načtení obsahu stránky',
+            ]);
 
             echo '<section class="card_box ram_normal bg_bila zaobleni_12 odstup_vnitrni_14">';
-            echo '<p class="card_text txt_cervena text_tucny odstup_vnejsi_0">Chyba načtení obsahu</p>';
-            echo '<p class="card_text txt_cervena odstup_vnejsi_0">' . h($e->getMessage()) . '</p>';
-            echo '<p class="card_text txt_seda odstup_vnejsi_0">Soubor: ' . h($e->getFile()) . '</p>';
-            echo '<p class="card_text txt_seda odstup_vnejsi_0">Řádek: ' . h((string)$e->getLine()) . '</p>';
+            echo '<p class="card_text txt_cervena text_tucny odstup_vnejsi_0">' . h(cb_chyba_verejna_zprava()) . '</p>';
             echo '</section>';
         }
     } else {

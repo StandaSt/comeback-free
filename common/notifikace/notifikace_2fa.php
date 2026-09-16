@@ -372,8 +372,8 @@ function cb_push_send_error_admin(string $message, ?string $file = null, ?int $l
     if ($message === '') {
         $message = 'Neznámá chyba IS';
     }
-    if (mb_strlen($message, 'UTF-8') > 140) {
-        $message = mb_substr($message, 0, 137, 'UTF-8') . '...';
+    if (mb_strlen($message, 'UTF-8') > 220) {
+        $message = mb_substr($message, 0, 217, 'UTF-8') . '...';
     }
 
     $fileText = trim((string)$file);
