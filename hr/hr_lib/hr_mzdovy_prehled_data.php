@@ -91,7 +91,7 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
     $periodYears = $availablePeriods['years'];
     $periodMonthsByYear = $availablePeriods['months_by_year'];
     if ($periodYears === []) {
-        throw new RuntimeException('Pro firmu nejsou dostupná žádná mzdová období.');
+        throw new CbUserVisibleException('Pro firmu zatím nejsou dostupná žádná mzdová období.');
     }
 
     $defaultPeriod = new DateTimeImmutable('first day of last month');
@@ -128,7 +128,7 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
 
     $periodStart = DateTimeImmutable::createFromFormat('!Y-m-d', $rawPeriod . '-01');
     if (!$periodStart instanceof DateTimeImmutable) {
-        throw new RuntimeException('Neplatné mzdové období.');
+        throw new CbUserVisibleException('Vyberte platné mzdové období.');
     }
     $periodEnd = $periodStart->modify('last day of this month');
     $from = $periodStart->format('Y-m-d');

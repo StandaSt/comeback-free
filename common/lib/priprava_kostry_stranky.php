@@ -13,6 +13,8 @@ $cbPublicShellUrl = cb_root_url('');
 $cbAplikaceRoot = dirname(__DIR__, 2);
 
 /* Spolecne skripty s verzi podle casu posledni zmeny souboru. */
+$cbChybyJsPath = $cbAplikaceRoot . '/common/js/chyby.js';
+$cbChybyJsUrl = cb_public_url('js/chyby.js') . '?v=' . (is_file($cbChybyJsPath) ? (string)filemtime($cbChybyJsPath) : '1');
 $cbSelectPobockyJsPath = $cbAplikaceRoot . '/common/js/select_pobocky.js';
 $cbSelectPobockyJsUrl = cb_public_url('js/select_pobocky.js') . '?v=' . (is_file($cbSelectPobockyJsPath) ? (string)filemtime($cbSelectPobockyJsPath) : '1');
 $cbObdobiJsPath = $cbAplikaceRoot . '/common/js/obdobi.js';
@@ -46,6 +48,8 @@ $cbAdministraceCssPath = $cbAplikaceRoot . '/administrace/style/administrace.css
 $cbAdministraceCssUrl = cb_root_url('administrace/style/administrace.css') . '?v=' . (is_file($cbAdministraceCssPath) ? (string)filemtime($cbAdministraceCssPath) : '1');
 $cbAdministracePravaSaveJsPath = $cbAplikaceRoot . '/administrace/admin_js/admin_prava_roli_save.js';
 $cbAdministracePravaSaveJsUrl = cb_root_url('administrace/admin_js/admin_prava_roli_save.js') . '?v=' . (is_file($cbAdministracePravaSaveJsPath) ? (string)filemtime($cbAdministracePravaSaveJsPath) : '1');
+$cbAdministraceChybyJsPath = $cbAplikaceRoot . '/administrace/admin_js/admin_chyby.js';
+$cbAdministraceChybyJsUrl = cb_root_url('administrace/admin_js/admin_chyby.js') . '?v=' . (is_file($cbAdministraceChybyJsPath) ? (string)filemtime($cbAdministraceChybyJsPath) : '1');
 $cbAdministracePravaBlocksJsPath = $cbAplikaceRoot . '/administrace/admin_js/admin_prava_roli_blocks.js';
 $cbAdministracePravaBlocksJsUrl = cb_root_url('administrace/admin_js/admin_prava_roli_blocks.js') . '?v=' . (is_file($cbAdministracePravaBlocksJsPath) ? (string)filemtime($cbAdministracePravaBlocksJsPath) : '1');
 $cbAdministraceIndividualSearchJsPath = $cbAplikaceRoot . '/administrace/admin_js/admin_individualni_prava_search.js';
@@ -59,6 +63,8 @@ $cbAdministraceUzivateleJsPath = $cbAplikaceRoot . '/administrace/admin_js/admin
 $cbAdministraceUzivateleJsUrl = cb_root_url('administrace/admin_js/admin_uzivatele.js') . '?v=' . (is_file($cbAdministraceUzivateleJsPath) ? (string)filemtime($cbAdministraceUzivateleJsPath) : '1');
 $cbAdministraceRestiaKatalogJsPath = $cbAplikaceRoot . '/administrace/admin_js/admin_restia_katalog.js';
 $cbAdministraceRestiaKatalogJsUrl = cb_root_url('administrace/admin_js/admin_restia_katalog.js') . '?v=' . (is_file($cbAdministraceRestiaKatalogJsPath) ? (string)filemtime($cbAdministraceRestiaKatalogJsPath) : '1');
+$cbAdministraceHrImportJsPath = $cbAplikaceRoot . '/administrace/admin_js/admin_hr_kompletni_import.js';
+$cbAdministraceHrImportJsUrl = cb_root_url('administrace/admin_js/admin_hr_kompletni_import.js') . '?v=' . (is_file($cbAdministraceHrImportJsPath) ? (string)filemtime($cbAdministraceHrImportJsPath) : '1');
 
 /* Hodnoty pro vizualni kontext a tema celeho shellu. */
 $cbVisualModule = $cbInitialModule === 'helpdesk' ? 'helpdesk' : $cbInitialModule;

@@ -212,7 +212,7 @@ function cb_admin_firma_uloz(mysqli $db, array $firma, int $hlavniJednatel, int 
     } catch (Throwable $e) {
         $db->rollback();
         if ($e instanceof mysqli_sql_exception && $e->getCode() === 1062) {
-            throw new RuntimeException('Firma se stejným IČO již v systému existuje.', 0, $e);
+            throw new CbUserVisibleException('Firma se stejným IČO již v systému existuje.', 0, $e);
         }
         throw $e;
     }

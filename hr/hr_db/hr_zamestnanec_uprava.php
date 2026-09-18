@@ -11,7 +11,7 @@ declare(strict_types=1);
 function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, int $zadalUser): ?array
 {
     if ($idPerson <= 0 || $zadalUser <= 0) {
-        throw new RuntimeException('Chybí zaměstnanec nebo přihlášený uživatel.');
+        throw new CbUserVisibleException('Chybí zaměstnanec nebo platné přihlášení. Obnovte stránku a zkuste to znovu.');
     }
 
     $titulPred = trim((string)($data['titul_pred'] ?? ''));
@@ -34,22 +34,22 @@ function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, i
     $idRoleHr = (int)($data['id_role_hr'] ?? 9);
 
     if ($jmeno === '' || $prijmeni === '') {
-        throw new RuntimeException('Vyplňte jméno a příjmení.');
+        throw new CbUserVisibleException('Vyplňte jméno a příjmení.');
     }
     if (!in_array($pohlavi, ['muž', 'žena', 'jiné', 'neuvedeno'], true)) {
-        throw new RuntimeException('Vyberte pohlaví.');
+        throw new CbUserVisibleException('Vyberte pohlaví.');
     }
     if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
-        throw new RuntimeException('E-mail nemá platný tvar.');
+        throw new CbUserVisibleException('E-mail nemá platný tvar.');
     }
     if ($telefon !== '' && strlen($telefon) !== 9) {
-        throw new RuntimeException('Telefon musí být české číslo s 9 číslicemi.');
+        throw new CbUserVisibleException('Telefon musí být české číslo s 9 číslicemi.');
     }
     if (!in_array($idRoleHr, [3, 5, 7, 9], true)) {
-        throw new RuntimeException('Vyberte povolenou pracovní roli.');
+        throw new CbUserVisibleException('Vyberte povolenou pracovní roli.');
     }
     if ($idRoleHr === 3 && !cb_pravo_ma(316)) {
-        throw new RuntimeException('Nemáte právo přidělit roli Manager.');
+        throw new CbUserVisibleException('Nemáte právo přidělit roli Manager.');
     }
 
     $db->begin_transaction();
@@ -60,11 +60,11 @@ function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, i
         $person = $stmt->get_result()->fetch_assoc();
         $stmt->close();
         if (!is_array($person)) {
-            throw new RuntimeException('Zaměstnanec nebyl nalezen.');
+            throw new CbUserVisibleException('Zaměstnanec nebyl nalezen.');
         }
         $idUser = (int)($person['id_user'] ?? 0);
         if ($idUser > 0 && $email === '') {
-            throw new RuntimeException('U osoby s uživatelským účtem nesmí být hlavní e-mail prázdný.');
+            throw new CbUserVisibleException('U osoby s uživatelským účtem nesmí být hlavní e-mail prázdný.');
         }
 
         if ($osobniCislo !== '') {
@@ -74,7 +74,7 @@ function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, i
             $duplicate = $stmt->get_result()->fetch_assoc();
             $stmt->close();
             if (is_array($duplicate)) {
-                throw new RuntimeException('Osobní číslo již patří jinému zaměstnanci.');
+                throw new CbUserVisibleException('Osobní číslo již patří jinému zaměstnanci.');
             }
         }
 
@@ -85,7 +85,7 @@ function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, i
             $healthInsurer = $stmt->get_result()->fetch_assoc();
             $stmt->close();
             if (!is_array($healthInsurer)) {
-                throw new RuntimeException('Vyberte platnou zdravotní pojišťovnu.');
+                throw new CbUserVisibleException('Vyberte platnou zdravotní pojišťovnu.');
             }
         }
 
@@ -157,7 +157,7 @@ function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, i
             $melRoliManager = $stmt->get_result()->fetch_row() !== null;
             $stmt->close();
             if ($melRoliManager && $idRoleHr !== 3 && !cb_pravo_ma(316)) {
-                throw new RuntimeException('Nemáte právo odebrat roli Manager.');
+                throw new CbUserVisibleException('Nemáte právo odebrat roli Manager.');
             }
             $stmt = $db->prepare('DELETE FROM user_role WHERE id_user = ? AND id_role IN (3, 5, 7, 9)');
             $stmt->bind_param('i', $idUser);
@@ -204,8 +204,8 @@ function hr_update_employee_address(mysqli $db, int $idPerson, array $data, int 
 function hr_update_employee_emergency_contact(mysqli $db, int $idPerson, array $data, int $zadalUser): void
 {
     $contact = ['jmeno' => trim((string)($data['nouzovy_jmeno'] ?? '')), 'vztah' => trim((string)($data['nouzovy_vztah'] ?? '')), 'telefon' => trim((string)($data['nouzovy_telefon'] ?? '')), 'email' => trim((string)($data['nouzovy_email'] ?? ''))];
-    if (array_filter($contact, static fn(string $value): bool => $value !== '') && $contact['jmeno'] === '') { throw new RuntimeException('U nouzového kontaktu vyplňte jméno.'); }
-    if ($contact['email'] !== '' && filter_var($contact['email'], FILTER_VALIDATE_EMAIL) === false) { throw new RuntimeException('E-mail nouzového kontaktu nemá platný tvar.'); }
+    if (array_filter($contact, static fn(string $value): bool => $value !== '') && $contact['jmeno'] === '') { throw new CbUserVisibleException('U nouzového kontaktu vyplňte jméno.'); }
+    if ($contact['email'] !== '' && filter_var($contact['email'], FILTER_VALIDATE_EMAIL) === false) { throw new CbUserVisibleException('E-mail nouzového kontaktu nemá platný tvar.'); }
     $stmt = $db->prepare('SELECT id_nouzovy_kontakt, jmeno, vztah, telefon, email FROM hr_nouzovy_kontakt WHERE id_person = ? AND platny = 1 AND hlavni = 1 ORDER BY id_nouzovy_kontakt DESC LIMIT 1');
     $stmt->bind_param('i', $idPerson); $stmt->execute(); $current = $stmt->get_result()->fetch_assoc(); $stmt->close();
     $same = is_array($current); foreach ($contact as $key => $value) { $same = $same && trim((string)($current[$key] ?? '')) === $value; } if ($same) { return; }
@@ -218,7 +218,7 @@ function hr_update_employee_emergency_contact(mysqli $db, int $idPerson, array $
 function hr_update_employee_bank_account(mysqli $db, int $idPerson, array $data, int $zadalUser): void
 {
     $account = ['cislo_uctu' => trim((string)($data['ucet_cislo'] ?? '')), 'kod_banky' => trim((string)($data['ucet_kod_banky'] ?? '')), 'iban' => trim((string)($data['ucet_iban'] ?? ''))];
-    if (array_filter($account, static fn(string $value): bool => $value !== '') && $account['cislo_uctu'] === '') { throw new RuntimeException('U bankovního účtu vyplňte číslo účtu.'); }
+    if (array_filter($account, static fn(string $value): bool => $value !== '') && $account['cislo_uctu'] === '') { throw new CbUserVisibleException('U bankovního účtu vyplňte číslo účtu.'); }
     $stmt = $db->prepare('SELECT id_bankovni_ucet, cislo_uctu, kod_banky, iban FROM hr_bankovni_ucet WHERE id_person = ? AND platny = 1 ORDER BY zmena DESC, id_bankovni_ucet DESC LIMIT 1');
     $stmt->bind_param('i', $idPerson); $stmt->execute(); $current = $stmt->get_result()->fetch_assoc(); $stmt->close();
     $same = is_array($current); foreach ($account as $key => $value) { $same = $same && trim((string)($current[$key] ?? '')) === $value; } if ($same) { return; }
@@ -238,7 +238,7 @@ function hr_employee_parse_birth_date(string $value): string
     $date = DateTimeImmutable::createFromFormat('!d.m.Y', $value);
     $errors = DateTimeImmutable::getLastErrors();
     if ($date === false || ($errors !== false && ($errors['warning_count'] > 0 || $errors['error_count'] > 0)) || $date->format('d.m.Y') !== $value || $date > new DateTimeImmutable('today')) {
-        throw new RuntimeException('Datum narození zadejte ve formátu DD.MM.RRRR.');
+        throw new CbUserVisibleException('Datum narození zadejte ve formátu DD.MM.RRRR.');
     }
 
     return $date->format('Y-m-d');

@@ -28,7 +28,7 @@ if (!function_exists('db_zapis_log_chyby')) {
         int $vyreseno = 0,
         ?string $poznamka = null,
         bool $sendPush = true
-    ): void {
+    ): bool {
 
         $stmt = $conn->prepare(
             'INSERT INTO log_chyby
@@ -59,12 +59,16 @@ if (!function_exists('db_zapis_log_chyby')) {
         $stmt->execute();
         $stmt->close();
 
+        if (!$sendPush) {
+            return true;
+        }
+
         try {
-            if ($sendPush) {
-                require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
-                cb_push_send_error_admin($zprava, $soubor, $radek, 1);
-            }
+            require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
+            return cb_push_send_error_admin($zprava, $soubor, $radek, 1);
         } catch (Throwable $e) {
+            error_log('[cb_error_push_failed] ' . get_class($e) . ': ' . $e->getMessage());
+            return false;
         }
     }
 

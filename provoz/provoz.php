@@ -141,7 +141,7 @@ $cbAiAnalytikPristupRender = static function (array $rows, bool $showGuide = fal
                     aria-expanded="false"
                     data-ai-analytik-my-prompts-toggle
                     data-ai-analytik-prompt-filter="saved"
-                >Moje prompty</button>
+                >Moje uložené prompty</button>
                 <button
                     type="button"
                     class="ai_analytik_my_prompts_toggle"

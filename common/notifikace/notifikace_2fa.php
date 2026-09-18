@@ -403,6 +403,7 @@ function cb_push_send_error_admin(string $message, ?string $file = null, ?int $l
 
     $payload = json_encode($payloadArr, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
+    $delivered = false;
     foreach ($devices as $d) {
         $sub = Minishlink\WebPush\Subscription::create([
             'endpoint' => $d['endpoint'],
@@ -421,6 +422,8 @@ function cb_push_send_error_admin(string $message, ?string $file = null, ?int $l
                 $ok = $report->isSuccess();
                 if (!$ok) {
                     $stav = 'fail';
+                } else {
+                    $delivered = true;
                 }
 
                 $code = $report->getResponse() ? $report->getResponse()->getStatusCode() : null;
@@ -451,7 +454,7 @@ function cb_push_send_error_admin(string $message, ?string $file = null, ?int $l
         );
     }
 
-    return true;
+    return $delivered;
 }
 
 function cb_push_send_first_entry_admin(string $fullName, int $adminUserId = 1): bool

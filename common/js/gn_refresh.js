@@ -46,7 +46,7 @@
     })
       .then(function (response) {
         if (!response.ok) {
-          throw new Error('HTTP ' + response.status);
+          throw new Error(window.CB_CHYBY.responseMessage(response, {}, 'Aktualizace části stránky se nepodařila.'));
         }
         return response.text();
       })

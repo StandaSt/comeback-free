@@ -17,7 +17,7 @@ function cb_admin_uzivatele_csrf_over(array $post): void
 {
     $token = (string)($post['csrf_token'] ?? '');
     if ($token === '' || !hash_equals(cb_admin_uzivatele_csrf_token(), $token)) {
-        throw new RuntimeException('Platnost formuláře vypršela. Obnovte stránku a zkuste akci znovu.');
+        throw new CbUserVisibleException('Platnost formuláře vypršela. Obnovte stránku a zkuste akci znovu.');
     }
 }
 
@@ -52,31 +52,31 @@ function cb_admin_uzivatele_vytvor(mysqli $db, array $post): int
     $pobAll = (int)($post['pob_all'] ?? 0) === 1;
 
     if ($idFirma <= 0 || $jmeno === '' || $prijmeni === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
-        throw new RuntimeException('Vyplňte firmu, jméno, příjmení a platný e-mail.');
+        throw new CbUserVisibleException('Vyplňte firmu, jméno, příjmení a platný e-mail.');
     }
     if ($idRole <= 0 || $pobocky === []) {
-        throw new RuntimeException('Vyberte roli a alespoň jednu pobočku.');
+        throw new CbUserVisibleException('Vyberte roli a alespoň jednu pobočku.');
     }
     if ($idPobHlavni >= 0 && !in_array($idPobHlavni, $pobocky, true)) {
-        throw new RuntimeException('Hlavní pobočka musí být mezi vybranými pobočkami.');
+        throw new CbUserVisibleException('Hlavní pobočka musí být mezi vybranými pobočkami.');
     }
 
     $db->begin_transaction();
     try {
         $stmt = $db->prepare('SELECT 1 FROM firma WHERE id_firma=? AND aktivni=1 LIMIT 1');
         $stmt->bind_param('i', $idFirma); $stmt->execute(); $okFirma = $stmt->get_result()->fetch_row() !== null; $stmt->close();
-        if (!$okFirma) { throw new RuntimeException('Vybraná firma není aktivní.'); }
+        if (!$okFirma) { throw new CbUserVisibleException('Vybraná firma není aktivní.'); }
 
         $stmt = $db->prepare('SELECT 1 FROM cis_role WHERE aktivni=1 AND id_role=? LIMIT 1');
         $stmt->bind_param('i', $idRole); $stmt->execute(); $validRole = $stmt->get_result()->fetch_row() !== null; $stmt->close();
-        if (!$validRole) { throw new RuntimeException('Vybraná role není aktivní.'); }
+        if (!$validRole) { throw new CbUserVisibleException('Vybraná role není aktivní.'); }
 
         $marks = implode(',', array_fill(0, count($pobocky), '?'));
         $types = 'i' . str_repeat('i', count($pobocky));
         $stmt = $db->prepare('SELECT COUNT(*) AS c FROM pobocka WHERE aktivni=1 AND id_firma=? AND id_pob IN (' . $marks . ')');
         $bind = [&$types, &$idFirma]; foreach ($pobocky as $i => $value) { $bind[] = &$pobocky[$i]; }
         call_user_func_array([$stmt, 'bind_param'], $bind); $stmt->execute(); $validPob = (int)($stmt->get_result()->fetch_assoc()['c'] ?? 0); $stmt->close();
-        if ($validPob !== count($pobocky)) { throw new RuntimeException('Vybrané pobočky musí být aktivní a patřit vybrané firmě.'); }
+        if ($validPob !== count($pobocky)) { throw new CbUserVisibleException('Vybrané pobočky musí být aktivní a patřit vybrané firmě.'); }
 
         $aktivni = 1; $schvalen = 1; $inSystem = 0; $zdroj = 2; $hash = null;
         $stmt = $db->prepare('INSERT INTO user (id_firma,jmeno,prijmeni,email,heslo_hash,telefon,aktivni,in_system,schvalen,zdroj) VALUES (?,?,?,?,?,?,?,?,?,?)');
@@ -187,22 +187,22 @@ function cb_admin_uzivatel_uloz(mysqli $db, array $post): array
 {
     $idUser = (int)($post['id_user'] ?? 0);
     $before = cb_admin_uzivatel_detail($db, $idUser);
-    if (!is_array($before)) { throw new RuntimeException('Uživatel neexistuje.'); }
+    if (!is_array($before)) { throw new CbUserVisibleException('Uživatel neexistuje.'); }
     $idFirma = (int)($post['id_firma'] ?? 0); $idRole = (int)($post['id_role'] ?? 0);
     $jmeno = trim((string)($post['jmeno'] ?? '')); $prijmeni = trim((string)($post['prijmeni'] ?? ''));
     $email = trim((string)($post['email'] ?? '')); $telefon = trim((string)($post['telefon'] ?? ''));
     $aktivni = (int)($post['aktivni'] ?? 0) === 1 ? 1 : 0;
     $pobocky = array_values(array_unique(array_filter(array_map('intval', (array)($post['id_pob'] ?? [])), static fn (int $id): bool => $id >= 0)));
     $idPobHlavni = (int)($post['id_pob_hlavni'] ?? -1); $pobAll = (int)($post['pob_all'] ?? 0) === 1;
-    if ($idFirma <= 0 || $idRole <= 0 || $jmeno === '' || $prijmeni === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false || $pobocky === []) { throw new RuntimeException('Vyplňte firmu, jméno, příjmení, platný e-mail, roli a pobočku.'); }
-    if ($idPobHlavni >= 0 && !in_array($idPobHlavni, $pobocky, true)) { throw new RuntimeException('Hlavní pobočka musí být mezi vybranými pobočkami.'); }
+    if ($idFirma <= 0 || $idRole <= 0 || $jmeno === '' || $prijmeni === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false || $pobocky === []) { throw new CbUserVisibleException('Vyplňte firmu, jméno, příjmení, platný e-mail, roli a pobočku.'); }
+    if ($idPobHlavni >= 0 && !in_array($idPobHlavni, $pobocky, true)) { throw new CbUserVisibleException('Hlavní pobočka musí být mezi vybranými pobočkami.'); }
     $db->begin_transaction();
     try {
         $stmt=$db->prepare('SELECT 1 FROM firma WHERE id_firma=? AND aktivni=1 LIMIT 1'); $stmt->bind_param('i',$idFirma); $stmt->execute(); $okFirma=$stmt->get_result()->fetch_row()!==null; $stmt->close();
         $stmt=$db->prepare('SELECT 1 FROM cis_role WHERE id_role=? AND aktivni=1 LIMIT 1'); $stmt->bind_param('i',$idRole); $stmt->execute(); $okRole=$stmt->get_result()->fetch_row()!==null; $stmt->close();
-        if (!$okFirma || !$okRole) { throw new RuntimeException('Firma nebo role není aktivní.'); }
+        if (!$okFirma || !$okRole) { throw new CbUserVisibleException('Firma nebo role není aktivní.'); }
         $marks=implode(',', array_fill(0,count($pobocky),'?')); $types='i'.str_repeat('i',count($pobocky)); $stmt=$db->prepare('SELECT COUNT(*) AS c FROM pobocka WHERE aktivni=1 AND id_firma=? AND id_pob IN ('.$marks.')'); $bind=[&$types,&$idFirma]; foreach($pobocky as $index=>$value){$bind[]=&$pobocky[$index];} call_user_func_array([$stmt,'bind_param'],$bind); $stmt->execute(); $validPob=(int)($stmt->get_result()->fetch_assoc()['c']??0);$stmt->close();
-        if($validPob!==count($pobocky)){throw new RuntimeException('Vybrané pobočky musí patřit vybrané firmě a být aktivní.');}
+        if($validPob!==count($pobocky)){throw new CbUserVisibleException('Vybrané pobočky musí patřit vybrané firmě a být aktivní.');}
         $duvodNeaktivni = $aktivni === 1 ? null : 'rucni_deaktivace';
         $stmt=$db->prepare('UPDATE user SET id_firma=?,jmeno=?,prijmeni=?,email=?,telefon=?,aktivni=?,duvod_neaktivni=? WHERE id_user=?'); $stmt->bind_param('issssisi',$idFirma,$jmeno,$prijmeni,$email,$telefon,$aktivni,$duvodNeaktivni,$idUser);$stmt->execute();$stmt->close();
         $stmt=$db->prepare('DELETE FROM user_role WHERE id_user=?');$stmt->bind_param('i',$idUser);$stmt->execute();$stmt->close();
@@ -217,7 +217,7 @@ function cb_admin_uzivatel_uloz(mysqli $db, array $post): array
 function cb_admin_uzivatel_aktivovat(mysqli $db, int $idUser): array
 {
     if ($idUser <= 0) {
-        throw new RuntimeException('Neplatný uživatel.');
+        throw new CbUserVisibleException('Vyberte platného uživatele.');
     }
 
     $db->begin_transaction();
@@ -228,10 +228,10 @@ function cb_admin_uzivatel_aktivovat(mysqli $db, int $idUser): array
         $before = $stmt->get_result()->fetch_assoc();
         $stmt->close();
         if (!is_array($before)) {
-            throw new RuntimeException('Uživatel neexistuje.');
+            throw new CbUserVisibleException('Uživatel neexistuje.');
         }
         if ((int)$before['aktivni'] === 1) {
-            throw new RuntimeException('Uživatel je již aktivní.');
+            throw new CbUserVisibleException('Uživatel je již aktivní.');
         }
 
         $stmt = $db->prepare('UPDATE user SET aktivni=1,duvod_neaktivni=NULL WHERE id_user=? AND aktivni=0');

@@ -45,23 +45,11 @@ $currentWorkday = cb_denni_report_current_workday_date()->format('Y-m-d');
 $isCurrentWorkday = ($datum === $currentWorkday);
 $requestedFinalEdit = ((int)($_POST['zr_edit_final'] ?? 0)) === 1;
 
-$roleIds = [];
-$stmtRoles = $conn->prepare('SELECT id_role FROM user_role WHERE id_user = ?');
-if ($stmtRoles !== false) {
-    $stmtRoles->bind_param('i', $currentUserId);
-    $stmtRoles->execute();
-    $rolesResult = $stmtRoles->get_result();
-    if ($rolesResult instanceof mysqli_result) {
-        while ($row = $rolesResult->fetch_assoc()) {
-            $idRole = (int)($row['id_role'] ?? 0);
-            if ($idRole > 0) {
-                $roleIds[$idRole] = true;
-            }
-        }
-        $rolesResult->free();
-    }
-    $stmtRoles->close();
+if (!cb_denni_report_ma_pravo(CB_DENNI_REPORT_ZOBRAZIT_PRAVO)) {
+    $sendJson(403, ['ok' => false, 'err' => 'Nemate pravo zobrazit denni report']);
 }
+$canCloseReport = cb_denni_report_ma_pravo(CB_DENNI_REPORT_UZAVRIT_PRAVO);
+$canEditSavedReport = cb_denni_report_ma_pravo(CB_DENNI_REPORT_EDITOVAT_PRAVO);
 
 $stmtAllowed = $conn->prepare('SELECT 1 FROM user_pobocka WHERE id_user = ? AND id_pob = ? LIMIT 1');
 if ($stmtAllowed === false) {
@@ -96,9 +84,10 @@ $historyData = (!$isCurrentWorkday) ? cb_denni_report_history_load($conn, $idPob
 $historyReportExists = is_array($historyData) && (int)(($historyData['report']['id_reportu'] ?? 0)) > 0;
 $activeCurrentReportId = $isCurrentWorkday ? cb_db_reporty_is_find_active_id($conn, $idPob, $datum) : 0;
 $currentFinalExists = $activeCurrentReportId > 0;
-$canFinalizeCurrentNew = $isCurrentWorkday && !$currentFinalExists && (isset($roleIds[5]) || isset($roleIds[7]));
-$canFinalizeCurrentEdit = $isCurrentWorkday && $currentFinalExists && $requestedFinalEdit && isset($roleIds[5]) && $isMainBranch;
-$canFinalizeHistory = !$isCurrentWorkday && $requestedFinalEdit && isset($roleIds[5]) && $isMainBranch;
+$canFinalizeCurrentNew = $isCurrentWorkday && !$currentFinalExists && $canCloseReport;
+$canFinalizeCurrentEdit = $isCurrentWorkday && $currentFinalExists && $requestedFinalEdit && $canEditSavedReport && $isMainBranch;
+$canFinalizeHistoryNew = !$isCurrentWorkday && !$historyReportExists && $canCloseReport;
+$canFinalizeHistoryEdit = !$isCurrentWorkday && $historyReportExists && $requestedFinalEdit && $canEditSavedReport && $isMainBranch;
 
 $rozdilFormRaw = trim((string)($_POST['rozdil'] ?? ''));
 $colPomerFormRaw = trim((string)($_POST['col_pomer'] ?? ''));
@@ -145,7 +134,7 @@ try {
             $workdayRange = cb_dt_workday_range_utc($datum);
             $restiaSummary = cb_denni_report_restia_summary($conn, $idPob, $workdayRange);
         } else {
-            if (!$canFinalizeHistory) {
+            if (!$canFinalizeHistoryNew && !$canFinalizeHistoryEdit) {
                 $sendJson(403, ['ok' => false, 'err' => 'Nemate pravo prepocitat report']);
             }
             if ($historyReportExists) {
@@ -185,8 +174,8 @@ try {
         $sendJson(200, ['ok' => true, 'id_reportu' => $idReportu]);
     }
 
-    if (!$canFinalizeHistory) {
-        $sendJson(403, ['ok' => false, 'err' => 'Nemate pravo upravit historicky report']);
+    if (!$canFinalizeHistoryNew && !$canFinalizeHistoryEdit) {
+        $sendJson(403, ['ok' => false, 'err' => 'Nemate pravo ulozit historicky report']);
     }
 
     if ($historyReportExists) {

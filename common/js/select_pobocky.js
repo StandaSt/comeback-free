@@ -185,11 +185,12 @@
           body: JSON.stringify(payload),
           credentials: 'same-origin'
         })
-          .then(function (r) { return r.json().catch(function () { return {}; }); })
-          .then(function (json) {
-            console.log(json);
-            if (!json || json.ok !== true) {
-              alert((json && json.err) ? json.err : 'Uložení výběru selhalo.');
+          .then(function (response) {
+            return window.CB_CHYBY.readJson(response, 'Uložení výběru poboček se nepodařilo.');
+          })
+          .then(function (result) {
+            if (!result.ok) {
+              alert(result.message);
               if (panel) {
                 panel.classList.remove('is-hidden');
               }
@@ -203,8 +204,8 @@
               detail: { source: 'pobocky' }
             }));
           })
-          .catch(function () {
-            alert('Uložení výběru selhalo.');
+          .catch(function (error) {
+            alert(window.CB_CHYBY.errorMessage(error));
             if (panel) {
               panel.classList.remove('is-hidden');
             }

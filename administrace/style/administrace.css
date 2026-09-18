@@ -532,14 +532,93 @@
   .admin_users_form > label,.admin_users_form fieldset{ width:100%; }
 }
 
-/* Přehled chyb používá společný vzor filtrování a stránkování IS. */
+/*
+ * Prehled chyb: kategorie, tabulky a stavove karty.
+ * Kazda kategorie se nacita samostatne a sdili pouze tento vzhled.
+ */
+.admin_chyby_tabs{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-bottom:10px;
+}
+
+.admin_chyby_tab{
+  padding:7px 12px;
+  border:1px solid var(--cb-border-soft);
+  border-radius:7px;
+  color:inherit;
+  background:var(--cb-bg-panel);
+  text-decoration:none;
+}
+
+.admin_chyby_tab.is-active{
+  border-color:var(--cb-module-accent);
+  background:var(--cb-module-accent);
+  color:#fff;
+  font-weight:700;
+}
+
+.admin_chyby_description,
+.admin_chyby_note{
+  margin:0 0 12px;
+  color:var(--cb-text-muted);
+}
+
+.admin_chyby_limit{
+  display:flex;
+  justify-content:flex-end;
+  margin:0 0 10px;
+}
+
+.admin_chyby_limit label{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.admin_chyby_limit select{
+  min-height:30px;
+  border:1px solid var(--cb-border-soft);
+  border-radius:6px;
+  background:var(--cb-bg-panel);
+  color:var(--cb-text-main);
+}
+
 .admin_log_chyby .admin_matrix_wrap{
   width:100%;
 }
 
 .admin_log_chyby .admin_matrix{
   width:100%;
-  min-width:1080px;
+  min-width:1180px;
+}
+
+.admin_log_chyby_app_table{
+  table-layout:fixed;
+}
+
+.admin_log_chyby_app_table .admin_chyby_col_id{ width:4%; }
+.admin_log_chyby_app_table .admin_chyby_col_datetime{ width:14%; }
+.admin_log_chyby_app_table .admin_chyby_col_module{ width:13%; }
+.admin_log_chyby_app_table .admin_chyby_col_action_name{ width:12%; }
+.admin_log_chyby_app_table .admin_chyby_col_message{ width:27%; }
+.admin_log_chyby_app_table .admin_chyby_col_user{ width:13%; }
+.admin_log_chyby_app_table .admin_chyby_col_status{ width:9%; }
+.admin_log_chyby_app_table .admin_chyby_col_actions{ width:8%; }
+
+.admin_log_chyby_datetime span,
+.admin_log_chyby_datetime small{
+  display:block;
+  white-space:nowrap;
+}
+
+.admin_log_chyby_datetime small{
+  margin-top:2px;
+}
+
+.admin_log_chyby .admin_chyby_simple_table{
+  min-width:960px;
 }
 
 .admin_log_chyby_filter_row th{
@@ -631,6 +710,89 @@
   padding:0 8px;
   background:var(--cb-bg-panel-soft);
 }
+
+.admin_chyby_badge{
+  display:inline-block;
+  max-width:220px;
+  padding:4px 7px;
+  border-radius:999px;
+  background:var(--cb-bg-panel-soft);
+  line-height:1.25;
+}
+
+.admin_chyby_badge.is-preklep,
+.admin_chyby_badge.is-znamy{
+  color:#166534;
+  background:#dcfce7;
+}
+
+.admin_chyby_badge.is-nove,
+.admin_chyby_badge.is-nepotvrzeno{
+  color:#854d0e;
+  background:#fef9c3;
+}
+
+.admin_chyby_badge.is-podezrele{
+  color:#991b1b;
+  background:#fee2e2;
+}
+
+.admin_chyby_health_summary{
+  margin-bottom:12px;
+  padding:11px 14px;
+  border:1px solid var(--cb-border-soft);
+  border-left-width:6px;
+  border-radius:7px;
+  background:var(--cb-bg-panel);
+}
+
+.admin_chyby_health_grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:12px;
+  margin-bottom:14px;
+}
+
+.admin_chyby_health_card{
+  padding:12px;
+  border:1px solid var(--cb-border-soft);
+  border-top-width:5px;
+  border-radius:7px;
+  background:var(--cb-bg-panel);
+}
+
+.admin_chyby_health_card h3,
+.admin_chyby_health_card p{
+  margin:0 0 8px;
+}
+
+.admin_chyby_health_card dl{
+  margin:10px 0;
+}
+
+.admin_chyby_health_card dl div{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.admin_chyby_health_card dd{
+  margin:0;
+  font-weight:700;
+}
+
+.admin_chyby_health_card code{
+  overflow-wrap:anywhere;
+}
+
+.admin_chyby_health_summary.is-ok,
+.admin_chyby_health_card.is-ok{ border-color:#16a34a; }
+.admin_chyby_health_summary.is-warning,
+.admin_chyby_health_card.is-warning,
+.admin_chyby_health_summary.is-unknown,
+.admin_chyby_health_card.is-unknown{ border-color:#ca8a04; }
+.admin_chyby_health_summary.is-error,
+.admin_chyby_health_card.is-error{ border-color:#dc2626; }
 
 @media (max-width:700px){
   .admin_log_chyby_pagination{

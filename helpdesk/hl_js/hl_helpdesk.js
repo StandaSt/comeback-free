@@ -29,12 +29,21 @@
   function initNewTicketForm() {
     var description = container.querySelector('#hl-ticket-popis');
     var counter = container.querySelector('[data-cb-hd-description-counter="1"]');
+    var attachments = container.querySelector('#hl-ticket-prilohy');
+    var attachmentError = container.querySelector('[data-cb-hd-file-error="1"]');
     var submit = container.querySelector('[data-cb-hd-submit-ticket="1"]');
-    if (!(description instanceof HTMLTextAreaElement) || !(counter instanceof HTMLElement) || !(submit instanceof HTMLButtonElement)) {
+    if (
+      !(description instanceof HTMLTextAreaElement)
+      || !(counter instanceof HTMLElement)
+      || !(attachments instanceof HTMLInputElement)
+      || !(attachmentError instanceof HTMLElement)
+      || !(submit instanceof HTMLButtonElement)
+    ) {
       return function () {};
     }
 
     var minimum = Number(description.getAttribute('minlength') || '0');
+    var maximumFileSize = Number(attachments.getAttribute('data-cb-hd-max-file-size') || '0');
     function refreshDescriptionState() {
       var length = Array.from(description.value.trim()).length;
       var remaining = Math.max(0, minimum - length);
@@ -44,16 +53,68 @@
         : 'Minimální délka je splněna.';
     }
 
+    function refreshAttachmentState() {
+      var files = Array.from(attachments.files || []);
+      var rejected = files.filter(function (file) {
+        return maximumFileSize > 0 && Number(file.size || 0) > maximumFileSize;
+      });
+
+      if (!rejected.length) {
+        attachmentError.textContent = '';
+        attachmentError.hidden = true;
+        return;
+      }
+
+      var valid = files.filter(function (file) {
+        return rejected.indexOf(file) === -1;
+      });
+      var validFilesPreserved = false;
+      try {
+        var transfer = new DataTransfer();
+        valid.forEach(function (file) { transfer.items.add(file); });
+        attachments.files = transfer.files;
+        validFilesPreserved = true;
+      } catch (error) {
+        attachments.value = '';
+      }
+
+      attachmentError.textContent = rejected.length === 1
+        ? 'Soubor „' + rejected[0].name + '“ je větší než povolených 5 MB. Vyberte menší soubor.'
+        : 'Některé vybrané soubory jsou větší než povolených 5 MB. Vyberte menší soubory.';
+      if (!validFilesPreserved && valid.length) {
+        attachmentError.textContent += ' Ostatní soubory vyberte znovu.';
+      }
+      attachmentError.hidden = false;
+    }
+
     description.addEventListener('input', refreshDescriptionState);
+    attachments.addEventListener('change', refreshAttachmentState);
     refreshDescriptionState();
     return function () {
       description.removeEventListener('input', refreshDescriptionState);
+      attachments.removeEventListener('change', refreshAttachmentState);
     };
   }
 
   function text(v) {
     if (v === null || v === undefined) { return ''; }
     return String(v);
+  }
+
+  function responseErrorMessage(status, data, fallback) {
+    if (data && typeof data.err === 'string' && data.err.trim() !== '') {
+      return data.err.trim();
+    }
+    if (Number(status) === 401) {
+      return 'Platnost přihlášení vypršela. Přihlaste se prosím znovu.';
+    }
+    if (Number(status) === 403) {
+      return 'K této akci nemáte oprávnění.';
+    }
+    if (Number(status) >= 500) {
+      return 'Je nám líto, vyskytla se chyba, admin již byl informován.';
+    }
+    return fallback;
   }
 
   function esc(v) {
@@ -389,8 +450,17 @@
       body: JSON.stringify(data)
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (json) {
-        return {ok: r.ok, data: json};
+        if (!r.ok && (!json || typeof json.err !== 'string' || json.err.trim() === '')) {
+          json = {ok: false, err: responseErrorMessage(r.status, json, 'Požadavek se nepodařilo dokončit.')};
+        }
+        return {ok: r.ok, status: r.status, data: json};
       });
+    }).catch(function () {
+      return {
+        ok: false,
+        status: 0,
+        data: {ok: false, err: 'Spojení se serverem se nezdařilo. Zkontrolujte připojení a zkuste to znovu.'}
+      };
     });
   }
 
@@ -554,10 +624,16 @@
         'X-Comeback-Helpdesk': '1'
       }
     })
-      .then(function (r) { return r.json().catch(function () { return {}; }); })
-      .then(function (data) {
+      .then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (data) {
+          return {response: r, data: data};
+        });
+      })
+      .then(function (result) {
+        var data = result.data;
         if (!data || data.ok !== true) {
-          detailBox.innerHTML = '<div class="helpdesk_detail_notice helpdesk_state_error ram_normal zaobleni_10">Detail se nepodařilo načíst.</div>';
+          var message = responseErrorMessage(result.response.status, data, 'Detail se nepodařilo načíst.');
+          detailBox.innerHTML = '<div class="helpdesk_detail_notice helpdesk_state_error ram_normal zaobleni_10">' + esc(message) + '</div>';
           activeDetailId = '';
           refreshActiveRowUi();
           return;
@@ -565,7 +641,7 @@
         renderDetail(data, row);
       })
       .catch(function () {
-        detailBox.innerHTML = '<div class="helpdesk_detail_notice helpdesk_state_error ram_normal zaobleni_10">Detail se nepodařilo načíst.</div>';
+        detailBox.innerHTML = '<div class="helpdesk_detail_notice helpdesk_state_error ram_normal zaobleni_10">Spojení se serverem se nezdařilo. Zkontrolujte připojení a zkuste to znovu.</div>';
         activeDetailId = '';
         refreshActiveRowUi();
       });

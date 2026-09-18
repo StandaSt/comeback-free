@@ -37,6 +37,11 @@
     if (sekundy < 1) sekundy = 1;
     if (sekundy > 10) sekundy = 10;
     var milisekundy = sekundy * 1000;
+    var puvodniMilisekundy = parseInt(String(root.getAttribute('data-manual-save-delay-ms') || '3000'), 10);
+    if (!Number.isFinite(puvodniMilisekundy) || puvodniMilisekundy < 1000 || puvodniMilisekundy > 10000) {
+      puvodniMilisekundy = 3000;
+    }
+    var puvodniSekundy = Math.max(1, Math.min(10, Math.round(puvodniMilisekundy / 1000)));
 
     input.value = String(sekundy);
     root.setAttribute('data-manual-save-delay-ms', String(milisekundy));
@@ -52,18 +57,21 @@
       credentials: 'same-origin'
     })
       .then(function (response) {
-        return response.json().catch(function () {
-          return {};
-        }).then(function (json) {
-          if (!response.ok || !json || json.ok !== true) {
-            throw new Error('Ulozeni prodlevy selhalo');
-          }
-        });
+        return window.CB_CHYBY.readJson(response, 'Uložení prodlevy se nepodařilo.');
+      })
+      .then(function (result) {
+        if (!result.ok) {
+          throw new Error(result.message);
+        }
       })
       .then(function () {
         obnovObdobi(root);
       })
-      .catch(function () {
+      .catch(function (error) {
+        input.value = String(puvodniSekundy);
+        root.setAttribute('data-manual-save-delay-ms', String(puvodniMilisekundy));
+        nastavPopisek(panel, puvodniSekundy);
+        window.alert(window.CB_CHYBY.errorMessage(error));
         obnovObdobi(root);
       });
   }

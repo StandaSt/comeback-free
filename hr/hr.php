@@ -16,6 +16,7 @@ require_once __DIR__ . '/../common/lib/handle_set_period.php';
 require_once __DIR__ . '/../common/lib/handle_set_pobocky.php';
 require_once __DIR__ . '/hr_includes/hr_data.php';
 require_once __DIR__ . '/hr_lib/hr_pages.php';
+require_once __DIR__ . '/hr_lib/hr_chyby.php';
 require_once __DIR__ . '/hr_lib/hr_request_dispatch.php';
 
 cb_session_guard_entry();
@@ -95,6 +96,11 @@ if ($page === 'mzdovy_prehled' && !cb_hr_mzdovy_prehled_ma_pravo()) {
     require __DIR__ . '/hr_includes/pripravujeme.php';
     exit;
 }
+if ($page === 'dokumenty' && !cb_pravo_ma(301)) {
+    http_response_code(403);
+    require __DIR__ . '/hr_includes/pripravujeme.php';
+    exit;
+}
 if ($page === 'nastaveni' && !cb_hr_nastaveni_ma_pravo()) {
     http_response_code(403);
     require __DIR__ . '/hr_includes/pripravujeme.php';
@@ -113,7 +119,11 @@ if ($page === 'mzdovy_prehled') {
             'per_page' => 100, 'page_num' => 1, 'total_rows' => 0, 'total_pages' => 1, 'first_row' => 0,
             'last_row' => 0, 'rows' => [], 'total_hours' => 0.0,
         ];
-        $mzdovyError = 'Mzdový přehled nyní nelze načíst.';
+        $mzdovyError = cb_hr_chyba_text(
+            $error,
+            'Načtení mzdového přehledu',
+            ['table' => 'hr_person']
+        );
     }
 }
 if ($page === 'zamestnanec' && (int)($_GET['id'] ?? 0) > 0 && !cb_firemni_pristup_muze_osobu($db, $cbHrIdUser, (int)$_GET['id'])) {

@@ -27,9 +27,11 @@ require_once __DIR__ . '/admin_includes/admin_individualni_prava_detail.php';
 require_once __DIR__ . '/admin_includes/admin_uzivatel_detail.php';
 require_once __DIR__ . '/admin_lib/admin_pages.php';
 require_once __DIR__ . '/admin_lib/admin_google_reporty_import.php';
+require_once __DIR__ . '/admin_lib/admin_hr_kompletni_import.php';
 require_once __DIR__ . '/admin_lib/admin_restia_katalog.php';
 require_once __DIR__ . '/admin_lib/admin_firma_ares.php';
 require_once __DIR__ . '/admin_lib/admin_firma_pridat.php';
+require_once __DIR__ . '/admin_lib/admin_chyby.php';
 
 cb_session_guard_entry();
 
@@ -61,6 +63,7 @@ if (!function_exists('cb_pravo_ma') || !cb_pravo_ma(100)) {
 }
 
 cb_admin_firma_pridat_handle();
+cb_admin_hr_kompletni_import_handle();
 cb_admin_google_reporty_import_handle();
 cb_admin_restia_katalog_handle();
 
@@ -72,11 +75,12 @@ if (
 
     try {
         if (!cb_pravo_ma(107)) {
-            throw new RuntimeException('Nemáte právo spravovat uživatele.');
+            http_response_code(403);
+            throw new CbUserVisibleException('Nemáte právo spravovat uživatele.');
         }
         $detail = cb_admin_uzivatel_detail(db(), (int)($_GET['usr_id'] ?? 0));
         if (!is_array($detail)) {
-            throw new RuntimeException('Uživatel neexistuje.');
+            throw new CbUserVisibleException('Uživatel neexistuje.');
         }
         $lists = cb_admin_uzivatele_ciselniky(db());
         echo json_encode([
@@ -86,8 +90,7 @@ if (
             'form_html' => cb_admin_uzivatel_edit_form_html((int)$detail['id_user'], $_GET),
         ], JSON_UNESCAPED_UNICODE);
     } catch (Throwable $e) {
-        http_response_code(400);
-        echo json_encode(['ok' => false, 'err' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+        cb_admin_json_chyba($e, 'Načtení detailu uživatele', ['table' => 'user']);
     }
     exit;
 }
@@ -95,7 +98,7 @@ if (
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'] ?? '') === 'admin_uzivatel_vytvorit') {
     try {
         if (!cb_pravo_ma(107)) {
-            throw new RuntimeException('Nemáte právo spravovat uživatele.');
+            throw new CbUserVisibleException('Nemáte právo spravovat uživatele.');
         }
         $idUser = cb_admin_uzivatele_vytvor(db(), $_POST);
         cb_user_akce_zapis([
@@ -111,7 +114,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'
         ]);
         $_SESSION['cb_admin_uzivatele_notice'] = ['success' => true, 'message' => 'Uživatel ID ' . $idUser . ' byl založen a pozvánka odeslána.'];
     } catch (Throwable $e) {
-        $_SESSION['cb_admin_uzivatele_notice'] = ['success' => false, 'message' => $e->getMessage()];
+        $_SESSION['cb_admin_uzivatele_notice'] = [
+            'success' => false,
+            'message' => cb_admin_chyba_text($e, 'Založení uživatele', ['table' => 'user']),
+        ];
     }
     header('Location: ' . cb_root_url('index.php?m=administrace&page=uzivatele'), true, 303);
     exit;
@@ -122,7 +128,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'
     $ajaxActivation = (string)($_SERVER['HTTP_X_COMEBACK_ADMIN_USER_ACTIVATE'] ?? '') === '1';
     try {
         if (!cb_pravo_ma(107)) {
-            throw new RuntimeException('Nemáte právo spravovat uživatele.');
+            throw new CbUserVisibleException('Nemáte právo spravovat uživatele.');
         }
         cb_admin_uzivatele_csrf_over($_POST);
         $result = cb_admin_uzivatel_aktivovat(db(), (int)($_POST['id_user'] ?? 0));
@@ -144,12 +150,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'
         }
         $activationNotice = ['success' => true, 'message' => $message];
     } catch (Throwable $e) {
-        $activationNotice = ['success' => false, 'message' => $e->getMessage()];
+        $activationNotice = [
+            'success' => false,
+            'message' => cb_admin_chyba_text($e, 'Aktivace uživatele', ['table' => 'user']),
+            'status' => cb_admin_chyba_status($e),
+        ];
     }
     if ($ajaxActivation) {
         header('Content-Type: application/json; charset=utf-8');
         if (empty($activationNotice['success'])) {
-            http_response_code(400);
+            http_response_code((int)($activationNotice['status'] ?? 422));
         }
         echo json_encode([
             'ok' => !empty($activationNotice['success']),
@@ -166,7 +176,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'
     $returnUrl = cb_admin_uzivatele_navrat_url($_GET);
     try {
         if (!cb_pravo_ma(107)) {
-            throw new RuntimeException('Nemáte právo spravovat uživatele.');
+            throw new CbUserVisibleException('Nemáte právo spravovat uživatele.');
         }
         $result = cb_admin_uzivatel_uloz(db(), $_POST);
         cb_user_akce_zapis([
@@ -183,7 +193,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'
         ]);
         $_SESSION['cb_admin_uzivatele_notice'] = ['success' => true, 'message' => 'Účet uživatele byl uložen.'];
     } catch (Throwable $e) {
-        $_SESSION['cb_admin_uzivatele_notice'] = ['success' => false, 'message' => $e->getMessage()];
+        $_SESSION['cb_admin_uzivatele_notice'] = [
+            'success' => false,
+            'message' => cb_admin_chyba_text($e, 'Uložení uživatele', ['table' => 'user']),
+        ];
     }
     header('Location: ' . $returnUrl, true, 303);
     exit;
@@ -193,12 +206,14 @@ if (
     ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
     && (string)($_POST['cb_action'] ?? '') === 'admin_log_chyby_delete'
 ) {
-    $returnUrl = cb_root_url('index.php?m=administrace&page=log_chyby');
+    $returnUrl = cb_root_url('index.php?m=administrace&page=log_chyby&cat=aplikace');
 
     try {
         if (!function_exists('cb_pravo_ma') || !cb_pravo_ma(106)) {
-            throw new RuntimeException('Nemáte právo odstranit záznam chyby.');
+            throw new CbUserVisibleException('Nemáte právo odstranit záznam chyby.');
         }
+        // Kazde smazani konkretni chyby musi potvrdit token aktualni session.
+        cb_crf_vyzaduj();
 
         $smazano = cb_admin_log_chyby_smazat(db(), (int)($_POST['id_log_chyby'] ?? 0));
         $_SESSION['cb_admin_log_chyby_notice'] = [
@@ -208,84 +223,8 @@ if (
     } catch (Throwable $e) {
         $_SESSION['cb_admin_log_chyby_notice'] = [
             'success' => false,
-            'message' => $e->getMessage(),
+            'message' => cb_admin_chyba_text($e, 'Odstranění záznamu chyby', ['table' => 'log_chyby']),
         ];
-    }
-
-    header('Location: ' . $returnUrl, true, 303);
-    exit;
-}
-
-if (
-    ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
-    && (string)($_POST['cb_action'] ?? '') === 'admin_hr_import_user'
-) {
-    $returnUrl = cb_root_url('index.php?m=administrace&page=spousteni_scriptu');
-
-    try {
-        if ((string)($_POST['admin_hr_import_confirm'] ?? '') !== '1') {
-            throw new RuntimeException('Potvrďte odstranění testovacích HR dat.');
-        }
-        $environment = (($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL') ? 'local' : 'server';
-        $resetScope = $environment === 'local'
-            ? (string)($_POST['admin_hr_reset_scope'] ?? '')
-            : 'all';
-        $importUsers = $environment === 'server'
-            || (string)($_POST['admin_hr_import_users'] ?? '') === '1';
-        if (!in_array($resetScope, ['all', 'vd', 'nd_employees'], true)) {
-            throw new RuntimeException('Vyberte rozsah resetu HR dat.');
-        }
-        $scriptPath = realpath(__DIR__ . '/../common/scripts/hr_import_user_do_person.php');
-        if ($scriptPath === false) {
-            throw new RuntimeException('Importní skript nebyl nalezen.');
-        }
-
-        if (!defined('CB_HR_IMPORT_DIRECT')) {
-            define('CB_HR_IMPORT_DIRECT', true);
-        }
-        $GLOBALS['CB_HR_IMPORT_ENVIRONMENT'] = $environment;
-        $GLOBALS['CB_HR_RESET_SCOPE'] = $resetScope;
-        $GLOBALS['CB_HR_IMPORT_USERS'] = $importUsers;
-        unset($GLOBALS['CB_HR_IMPORT_OUTPUT']);
-        require $scriptPath;
-        $output = trim((string)($GLOBALS['CB_HR_IMPORT_OUTPUT'] ?? ''));
-        unset(
-            $GLOBALS['CB_HR_IMPORT_ENVIRONMENT'],
-            $GLOBALS['CB_HR_RESET_SCOPE'],
-            $GLOBALS['CB_HR_IMPORT_USERS'],
-            $GLOBALS['CB_HR_IMPORT_OUTPUT']
-        );
-
-        $_SESSION['cb_admin_script_result'] = [
-            'script' => 'hr',
-            'success' => true,
-            'message' => $output !== '' ? $output : 'Import byl dokončen.',
-        ];
-        cb_user_akce_zapis([
-            'id_user_akce_typ' => 14,
-            'modul' => 'administrace',
-            'objekt' => 'hr_import_user_do_person',
-            'pole' => 'spusteni',
-            'hodnota_new' => $environment . ':' . $resetScope . ':' . ($importUsers ? 'import' : 'bez_importu'),
-            'vysledek' => 1,
-            'zdroj' => 'administrace',
-        ]);
-    } catch (Throwable $e) {
-        $_SESSION['cb_admin_script_result'] = [
-            'script' => 'hr',
-            'success' => false,
-            'message' => $e->getMessage(),
-        ];
-        cb_user_akce_zapis([
-            'id_user_akce_typ' => 14,
-            'modul' => 'administrace',
-            'objekt' => 'hr_import_user_do_person',
-            'pole' => 'spusteni',
-            'vysledek' => 0,
-            'err_msg' => $e->getMessage(),
-            'zdroj' => 'administrace',
-            'detail' => ['chyba' => $e->getMessage()],
-        ]);
     }
 
     header('Location: ' . $returnUrl, true, 303);
@@ -356,10 +295,9 @@ if (
             exit;
         }
 
-        throw new RuntimeException('Neznámá akce.');
+        throw new CbUserVisibleException('Požadovaná akce není platná. Obnovte stránku a zkuste to znovu.');
     } catch (Throwable $e) {
-        http_response_code(400);
-        echo json_encode(['ok' => false, 'err' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+        cb_admin_json_chyba($e, 'Individuální práva uživatele', ['table' => 'prava_vyjimky']);
     }
     exit;
 }
@@ -376,7 +314,7 @@ if (
             $idPravo = (int)($_POST['id_pravo'] ?? 0);
             $aktivni = (int)($_POST['aktivni'] ?? 0) === 1;
             if (!$aktivni && (string)($_POST['potvrzeno'] ?? '') !== '1') {
-                throw new RuntimeException('Vypnutí hlídání práva nebylo potvrzeno.');
+                throw new CbUserVisibleException('Vypnutí hlídání práva nebylo potvrzeno.');
             }
 
             $result = cb_admin_pravo_aktivni_uloz($idPravo, $aktivni);
@@ -400,7 +338,7 @@ if (
         }
 
         if ($adminPravaAction !== 'role') {
-            throw new RuntimeException('Neznámá akce globálních práv.');
+            throw new CbUserVisibleException('Požadovaná akce globálních práv není platná.');
         }
 
         cb_admin_prava_roli_uloz(
@@ -424,8 +362,7 @@ if (
         ]);
         echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
     } catch (Throwable $e) {
-        http_response_code(400);
-        echo json_encode(['ok' => false, 'err' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+        cb_admin_json_chyba($e, 'Globální práva', ['table' => 'prava_global']);
     }
     exit;
 }

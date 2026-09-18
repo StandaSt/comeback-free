@@ -41,7 +41,7 @@ function cb_hr_pages(): array
         'novy_zamestnanec' => ['title' => $pageTitle('novy_zamestnanec'), 'definition' => $pageDefinition('novy_zamestnanec')],
         'pozadavky' => ['title' => $pageTitle('pozadavky'), 'definition' => $pageDefinition('pozadavky')],
         'pracovni_pomery' => ['file' => __DIR__ . '/../hr_pages/placeholder.php', 'title' => $pageTitle('pracovni_pomery')],
-        'dokumenty' => ['file' => __DIR__ . '/../hr_pages/placeholder.php', 'title' => $pageTitle('dokumenty')],
+        'dokumenty' => ['file' => __DIR__ . '/../hr_pages/dokumenty.php', 'title' => $pageTitle('dokumenty')],
         'skoleni' => ['file' => __DIR__ . '/../hr_pages/placeholder.php', 'title' => $pageTitle('skoleni')],
         'prohlidky' => ['file' => __DIR__ . '/../hr_pages/placeholder.php', 'title' => $pageTitle('prohlidky')],
         'dovolene' => ['file' => __DIR__ . '/../hr_pages/placeholder.php', 'title' => $pageTitle('dovolene')],

@@ -7,6 +7,7 @@ if (!defined('CB_HELPDESK_DISPATCH_INTERNAL')) {
     require_once __DIR__ . '/../../common/lib/app.php';
 }
 require_once __DIR__ . '/../hl_lib/hl_prava.php';
+require_once __DIR__ . '/../hl_lib/hl_chyby.php';
 require_once __DIR__ . '/../hl_lib/hl_pages.php';
 require_once __DIR__ . '/../hl_lib/hl_snapshot.php';
 require_once __DIR__ . '/../hl_lib/hl_notifikace.php';
@@ -27,7 +28,8 @@ try {
     }
 
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-        header('Location: ' . $redirectBase . '&hd=new-ticket&err=method');
+        $_SESSION['cb_helpdesk_flash'] = 'Formulář odešlete tlačítkem „Založit požadavek“.';
+        header('Location: ' . $redirectBase . '&hd=new-ticket');
         exit;
     }
 
@@ -56,18 +58,18 @@ try {
     $modulKey = strtolower(trim((string)($data['modul'] ?? $_SESSION['cb_helpdesk_source_module'] ?? '')));
     $allowedAreas = cb_helpdesk_allowed_areas();
     if (!isset($allowedAreas[$modulKey])) {
-        throw new RuntimeException('Zvolená oblast není dostupná.');
+        throw new CbUserVisibleException('Vyberte oblast, ke které máte přístup.');
     }
     $modul = cb_helpdesk_area_id($modulKey);
 
     if ($predmet === '') {
-        throw new RuntimeException('Chybí předmět.');
+        throw new CbUserVisibleException('Doplňte předmět požadavku.');
     }
     if ($popis === '') {
-        throw new RuntimeException('Chybí popis.');
+        throw new CbUserVisibleException('Doplňte popis požadavku.');
     }
     if (mb_strlen($popis, 'UTF-8') < 25) {
-        throw new RuntimeException('Popis je příliš krátký.');
+        throw new CbUserVisibleException('Popis musí mít alespoň 25 znaků.');
     }
 
     $conn = db();
@@ -151,12 +153,21 @@ try {
     header('Location: ' . $redirectBase . '&hd=mine&created=' . (string)$idHelpdesk);
 } catch (Throwable $e) {
     if (isset($conn) && $conn instanceof mysqli) {
-        $conn->rollback();
+        try {
+            $conn->rollback();
+        } catch (Throwable $rollbackError) {
+            error_log('[helpdesk_rollback_failed] ' . $rollbackError->getMessage());
+        }
     }
     foreach (($uploadedAttachments ?? []) as $uploadedAttachment) {
         cb_helpdesk_upload_smazat($uploadedAttachment);
     }
-    header('Location: ' . $redirectBase . '&hd=new-ticket&err=save');
+    $_SESSION['cb_helpdesk_flash'] = cb_helpdesk_form_chyba(
+        $e,
+        'Založení tiketu',
+        ['table' => 'helpdesk']
+    );
+    header('Location: ' . $redirectBase . '&hd=new-ticket');
 }
 
 // helpdesk/hl_ajax/hl_vytvorit.php * Verze: V1 * Aktualizace: 20.06.2026

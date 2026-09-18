@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/denni_report_prava.php';
+
 function cb_provoz_pages(): array
 {
     return [
@@ -11,6 +13,7 @@ function cb_provoz_pages(): array
         'denni_report' => [
             'file' => __DIR__ . '/../pages/denni_report.php',
             'title' => 'Denní report',
+            'pravo' => CB_DENNI_REPORT_ZOBRAZIT_PRAVO,
         ],
         'kontrola_reportu' => [
             'file' => __DIR__ . '/../pages/kontrola_reportu.php',
@@ -55,6 +58,10 @@ function cb_provoz_current_page(): array
         $page = 'prehled';
     }
     if (!isset($pages[$page])) {
+        $page = 'prehled';
+    }
+    $idPravo = (int)($pages[$page]['pravo'] ?? 0);
+    if ($idPravo > 0 && !cb_denni_report_ma_pravo($idPravo)) {
         $page = 'prehled';
     }
 

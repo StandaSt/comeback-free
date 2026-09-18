@@ -2,6 +2,11 @@
 // lib/restia_online.php * Verze: V5 * Aktualizace: 28.04.2026
 declare(strict_types=1);
 
+/*
+ * Online import objednavek Restia pro modul Provoz.
+ * Nacita objednavky po pobockach a dnech, uklada je do IS a eviduje technicke chyby.
+ */
+
 if (empty($GLOBALS['cb_restia_online_session_ready'])) {
     require_once __DIR__ . '/../../common/lib/session_boot.php';
 }
@@ -472,14 +477,21 @@ if (!function_exists('cb_restia_online_existing_order_map')) {
                 o.id_obj,
                 c.cas_uzavreni,
                 c.cas_status_zmena,
-                COUNT(p.id_obj_polozka) AS pocet_polozek,
-                COALESCE(SUM(CASE
+                COUNT(DISTINCT k.id_obj_kuryr) AS pocet_kuryru,
+                MAX(k.provider) AS kuryr_provider,
+                MAX(k.externi_id) AS kuryr_externi_id,
+                MAX(k.poradi) AS kuryr_poradi,
+                MAX(k.jmeno) AS kuryr_jmeno,
+                MAX(k.telefon) AS kuryr_telefon,
+                COUNT(DISTINCT p.id_obj_polozka) AS pocet_polozek,
+                COUNT(DISTINCT CASE
                     WHEN p.id_obj_polozka IS NOT NULL
                      AND NULLIF(TRIM(p.restia_nazev), \'\') IS NULL
-                    THEN 1 ELSE 0
-                END), 0) AS chybi_nazev
+                    THEN p.id_obj_polozka ELSE NULL
+                END) AS chybi_nazev
             FROM objednavky_restia o
             LEFT JOIN obj_casy c ON c.id_obj = o.id_obj
+            LEFT JOIN obj_kuryr k ON k.id_obj = o.id_obj
             LEFT JOIN obj_polozky p ON p.id_obj = o.id_obj
             WHERE o.restia_id_obj IN (' . implode(',', $quoted) . ')
             GROUP BY o.restia_id_obj, o.id_obj, c.cas_uzavreni, c.cas_status_zmena
@@ -498,6 +510,12 @@ if (!function_exists('cb_restia_online_existing_order_map')) {
                     'id_obj' => $idObj,
                     'cas_uzavreni' => trim((string)($row['cas_uzavreni'] ?? '')),
                     'cas_status_zmena' => trim((string)($row['cas_status_zmena'] ?? '')),
+                    'pocet_kuryru' => (int)($row['pocet_kuryru'] ?? 0),
+                    'kuryr_provider' => trim((string)($row['kuryr_provider'] ?? '')),
+                    'kuryr_externi_id' => trim((string)($row['kuryr_externi_id'] ?? '')),
+                    'kuryr_poradi' => $row['kuryr_poradi'] === null ? null : (int)$row['kuryr_poradi'],
+                    'kuryr_jmeno' => trim((string)($row['kuryr_jmeno'] ?? '')),
+                    'kuryr_telefon' => trim((string)($row['kuryr_telefon'] ?? '')),
                     'pocet_polozek' => (int)($row['pocet_polozek'] ?? 0),
                     'chybi_nazev' => (int)($row['chybi_nazev'] ?? 0),
                 ];
@@ -506,6 +524,35 @@ if (!function_exists('cb_restia_online_existing_order_map')) {
         $res->free();
 
         return $map;
+    }
+}
+
+if (!function_exists('cb_restia_online_courier_needs_sync')) {
+    function cb_restia_online_courier_needs_sync(array $existingInfo, array $order): bool
+    {
+        $courier = (isset($order['courierData']) && is_array($order['courierData']))
+            ? $order['courierData']
+            : null;
+        $existingCount = (int)($existingInfo['pocet_kuryru'] ?? 0);
+
+        if ($courier === null) {
+            return $existingCount !== 0;
+        }
+        if ($existingCount !== 1) {
+            return true;
+        }
+
+        $restiaOrder = isset($order['courierOrder']) ? (int)$order['courierOrder'] : null;
+        $existingOrder = array_key_exists('kuryr_poradi', $existingInfo)
+            && $existingInfo['kuryr_poradi'] !== null
+            ? (int)$existingInfo['kuryr_poradi']
+            : null;
+
+        return trim((string)($existingInfo['kuryr_provider'] ?? '')) !== trim((string)($order['deliveryType'] ?? ''))
+            || trim((string)($existingInfo['kuryr_externi_id'] ?? '')) !== trim((string)($courier['id'] ?? ''))
+            || $existingOrder !== $restiaOrder
+            || trim((string)($existingInfo['kuryr_jmeno'] ?? '')) !== trim((string)($courier['name'] ?? ''))
+            || trim((string)($existingInfo['kuryr_telefon'] ?? '')) !== trim((string)($courier['phone'] ?? ''));
     }
 }
 
@@ -1326,8 +1373,10 @@ if (!function_exists('cb_restia_online_import_day')) {
                         $existingStatusChangedAt = substr(trim((string)($existingInfo['cas_status_zmena'] ?? '')), 0, 19);
                         $needsItemNames = (int)($existingInfo['pocet_polozek'] ?? 0) > 0
                             && (int)($existingInfo['chybi_nazev'] ?? 0) > 0;
+                        $needsCourierSync = $existingIdObj > 0
+                            && cb_restia_online_courier_needs_sync($existingInfo, $order);
 
-                        if ($existingIdObj > 0 && $existingClosedAt !== '' && !$needsItemNames) {
+                        if ($existingIdObj > 0 && $existingClosedAt !== '' && !$needsItemNames && !$needsCourierSync) {
                             $pocetObj++;
                             $pocetIgnore++;
                             continue;
@@ -1336,7 +1385,7 @@ if (!function_exists('cb_restia_online_import_day')) {
                         if ($existingIdObj > 0) {
                             $restiaStatusChangedAt = cb_restia_online_restia_to_local_nullable($order['statusUpdatedAt'] ?? null);
                             $restiaStatusChangedAt = substr(trim((string)($restiaStatusChangedAt ?? '')), 0, 19);
-                            if (!$needsItemNames && $restiaStatusChangedAt !== '' && $existingStatusChangedAt !== '' && $restiaStatusChangedAt === $existingStatusChangedAt) {
+                            if (!$needsItemNames && !$needsCourierSync && $restiaStatusChangedAt !== '' && $existingStatusChangedAt !== '' && $restiaStatusChangedAt === $existingStatusChangedAt) {
                                 $pocetObj++;
                                 $pocetIgnore++;
                                 continue;
@@ -1402,8 +1451,8 @@ if (!function_exists('cb_restia_online_import_day')) {
                 db_zapis_log_chyby(
                     $conn,
                     null,
-                    'RESTIA',
-                    'IMPORT_DN',
+                    'PROVOZ',
+                    'RESTIA_IMPORT_DN',
                     'FATAL_STEP',
                     $e->getMessage(),
                     $fatalLine,

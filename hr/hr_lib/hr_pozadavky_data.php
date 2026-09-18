@@ -22,8 +22,8 @@ function hr_pozadavky_data(mysqli $db): array
     if ($idUser > 0 && ($muzeCistMain || $muzeZadat)) {
         try {
             $mainPobocka = hr_nacti_hlavni_pobocku_uzivatele($db, $idUser);
-        } catch (RuntimeException $e) {
-            $chybaZadani = $e->getMessage();
+        } catch (Throwable $e) {
+            $chybaZadani = cb_hr_chyba_text($e, 'Načtení hlavní pobočky pro HR požadavky', ['table' => 'user_pobocky']);
         }
     }
 

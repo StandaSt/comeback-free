@@ -42,7 +42,7 @@ function hr_pracoviste_zmenit(mysqli $db, int $idPerson, array $idPobocky, int $
 {
     cb_firemni_pristup_vyzaduj_osobu($db, $idUser, $idPerson);
     if ($idPobocky === [] || !in_array($idPobHlavni, $idPobocky, true)) {
-        throw new RuntimeException('Vyberte alespoň jednu pobočku a jednu z nich jako hlavní.');
+        throw new CbUserVisibleException('Vyberte alespoň jednu pobočku a jednu z nich jako hlavní.');
     }
     $stmt = $db->prepare('SELECT id_firma FROM hr_person WHERE id_person = ? LIMIT 1');
     $stmt->bind_param('i', $idPerson);
@@ -59,7 +59,7 @@ function hr_pracoviste_zmenit(mysqli $db, int $idPerson, array $idPobocky, int $
     $pocet = (int)($stmt->get_result()->fetch_assoc()['pocet'] ?? 0);
     $stmt->close();
     if ($pocet !== count($idPobocky)) {
-        throw new RuntimeException('Vyberte pouze aktivní pobočky zaměstnancovy firmy.');
+        throw new CbUserVisibleException('Vyberte pouze aktivní pobočky zaměstnancovy firmy.');
     }
 
     $denPred = (new DateTimeImmutable($platiOd))->modify('-1 day')->format('Y-m-d');

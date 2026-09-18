@@ -30,7 +30,10 @@ function hr_zapis_vd_otevreni(mysqli $db, int $idVd, int $idUser): bool
         $stmt->close();
         $idVysledek = is_array($row) ? (int)($row['id_vd_akce_vysledek'] ?? 0) : 0;
         if ($idVysledek <= 0) {
-            error_log('HR: Pro akci Otevření VD chybí výsledek v hr_cis_vd_akce_vysledek.');
+            cb_chyba_oznam(
+                new RuntimeException('Pro akci Otevření VD chybí výsledek v číselníku.'),
+                ['module' => 'HR', 'action' => 'Zápis otevření VD', 'table' => 'hr_cis_vd_akce_vysledek']
+            );
             return false;
         }
 
@@ -49,7 +52,7 @@ function hr_zapis_vd_otevreni(mysqli $db, int $idVd, int $idUser): bool
 
         return $ulozeno;
     } catch (Throwable $e) {
-        error_log('HR: Zápis otevření VD selhal: ' . $e->getMessage());
+        cb_chyba_oznam($e, ['module' => 'HR', 'action' => 'Zápis otevření VD', 'table' => 'hr_vd_akce']);
         return false;
     }
 }
@@ -265,7 +268,7 @@ function hr_nacti_vd_akce(mysqli $db, int $idVd): array
 function hr_vd_pobocky_mask_z_oblasti(mysqli $db, mixed $rawOblasti): int
 {
     if (!is_array($rawOblasti)) {
-        throw new RuntimeException('Vyberte alespoň jednu oblast pracoviště.');
+        throw new CbUserVisibleException('Vyberte alespoň jednu oblast pracoviště.');
     }
 
     $vybraneOblasti = [];
@@ -276,7 +279,7 @@ function hr_vd_pobocky_mask_z_oblasti(mysqli $db, mixed $rawOblasti): int
         }
     }
     if ($vybraneOblasti === []) {
-        throw new RuntimeException('Vyberte alespoň jednu oblast pracoviště.');
+        throw new CbUserVisibleException('Vyberte alespoň jednu oblast pracoviště.');
     }
 
     $pobockyPodleOblasti = [];
@@ -286,7 +289,7 @@ function hr_vd_pobocky_mask_z_oblasti(mysqli $db, mixed $rawOblasti): int
         $oblast = trim((string)$row['oblast']);
         if ($idPob > 62) {
             $result->free();
-            throw new RuntimeException('Pobočku nelze uložit do současného formátu pracovních podmínek.');
+            throw new CbUserVisibleException('Vybranou pobočku nelze uložit do současného formátu pracovních podmínek.');
         }
         $pobockyPodleOblasti[$oblast][] = $idPob;
     }
@@ -295,7 +298,7 @@ function hr_vd_pobocky_mask_z_oblasti(mysqli $db, mixed $rawOblasti): int
     $pobockyMask = 0;
     foreach (array_keys($vybraneOblasti) as $oblast) {
         if (!isset($pobockyPodleOblasti[$oblast])) {
-            throw new RuntimeException('Vybraná oblast pracoviště není platná.');
+            throw new CbUserVisibleException('Vybraná oblast pracoviště není platná.');
         }
         foreach ($pobockyPodleOblasti[$oblast] as $idPob) {
             $pobockyMask |= 1 << $idPob;
@@ -308,10 +311,10 @@ function hr_vd_pobocky_mask_z_oblasti(mysqli $db, mixed $rawOblasti): int
 function hr_uloz_vd_akci(mysqli $db, int $idVd, int $idVdAkceVysledek, string $terminDate, string $terminTime, string $poznamka, int $idUserZadal, array $podminky): void
 {
     if ($idVd <= 0 || $idVdAkceVysledek <= 0) {
-        throw new RuntimeException('Chybí povinné údaje pro uložení akce.');
+        throw new CbUserVisibleException('Doplňte povinné údaje náborové akce.');
     }
     if ($idUserZadal <= 0) {
-        throw new RuntimeException('Chybí přihlášený uživatel.');
+        throw new CbUserVisibleException('Přihlášení vypršelo. Přihlaste se prosím znovu.');
     }
 
     $terminDate = trim($terminDate);
@@ -332,31 +335,31 @@ function hr_uloz_vd_akci(mysqli $db, int $idVd, int $idVdAkceVysledek, string $t
         $vysledek = $stmt->get_result()->fetch_assoc();
         $stmt->close();
         if (!is_array($vysledek)) {
-            throw new RuntimeException('Zvolený výsledek akce není povolený.');
+            throw new CbUserVisibleException('Zvolený výsledek akce není povolený.');
         }
 
         $vyzadujeDate = (int)$vysledek['vyzaduje_termin_date'] === 1;
         $vyzadujeTime = (int)$vysledek['vyzaduje_termin_time'] === 1;
         if ($terminDate !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $terminDate) !== 1) {
-            throw new RuntimeException('Datum termínu nemá platný formát.');
+            throw new CbUserVisibleException('Datum termínu nemá platný formát.');
         }
         if ($terminTime !== '') {
             if (preg_match('/^(\d{1,2}):(\d{2})$/', $terminTime, $cas) !== 1 || (int)$cas[1] < 8 || (int)$cas[1] > 20 || !in_array((int)$cas[2], [0, 15, 30, 45], true)) {
-                throw new RuntimeException('Čas termínu musí být od 8:00 do 20:45 po 15 minutách.');
+                throw new CbUserVisibleException('Čas termínu musí být od 8:00 do 20:45 po 15 minutách.');
             }
             $terminTime = str_pad((string)(int)$cas[1], 2, '0', STR_PAD_LEFT) . ':' . $cas[2];
         }
         if ($vyzadujeDate && $terminDate === '') {
-            throw new RuntimeException('Vyplňte datum dalšího termínu.');
+            throw new CbUserVisibleException('Vyplňte datum dalšího termínu.');
         }
         if ($vyzadujeTime && $terminTime === '') {
-            throw new RuntimeException('Vyplňte čas dalšího termínu.');
+            throw new CbUserVisibleException('Vyplňte čas dalšího termínu.');
         }
         if (!$vyzadujeDate && ($terminDate !== '' || $terminTime !== '')) {
-            throw new RuntimeException('Pro zvolený výsledek se termín nezadává.');
+            throw new CbUserVisibleException('Pro zvolený výsledek se termín nezadává.');
         }
         if ($terminTime !== '' && $terminDate === '') {
-            throw new RuntimeException('Čas termínu lze uložit pouze s datem.');
+            throw new CbUserVisibleException('Čas termínu lze uložit pouze s datem.');
         }
 
         $stmt = $db->prepare('
@@ -371,10 +374,10 @@ function hr_uloz_vd_akci(mysqli $db, int $idVd, int $idVdAkceVysledek, string $t
         $vd = $stmt->get_result()->fetch_assoc();
         $stmt->close();
         if (!is_array($vd)) {
-            throw new RuntimeException('Veřejný dotazník nebyl nalezen.');
+            throw new CbUserVisibleException('Veřejný dotazník nebyl nalezen.');
         }
         if ($vysledek['id_vychozi_vd_stav'] !== null && (int)$vysledek['id_vychozi_vd_stav'] !== (int)$vd['id_vd_stav']) {
-            throw new RuntimeException('Zvolená akce není v aktuálním stavu VD povolená.');
+            throw new CbUserVisibleException('Zvolená akce není v aktuálním stavu VD povolená.');
         }
 
         if ($vysledek['id_cilovy_vd_stav'] !== null) {
@@ -410,7 +413,7 @@ function hr_uloz_vd_akci(mysqli $db, int $idVd, int $idVdAkceVysledek, string $t
                 || strlen($mzda) > 10
                 || (strlen($mzda) === 10 && $mzda > '2147483647')
             ) {
-                throw new RuntimeException('Vyplňte pracovní vztah, oblast, pozici, datum nástupu a mzdu.');
+                throw new CbUserVisibleException('Vyplňte pracovní vztah, oblast, pozici, datum nástupu a mzdu.');
             }
 
             $pobockyMask = hr_vd_pobocky_mask_z_oblasti($db, $podminky['pracoviste_oblasti'] ?? null);

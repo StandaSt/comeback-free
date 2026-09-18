@@ -7,6 +7,7 @@ if (!defined('CB_HELPDESK_DISPATCH_INTERNAL')) {
     require_once __DIR__ . '/../../common/lib/app.php';
 }
 require_once __DIR__ . '/../hl_lib/hl_prava.php';
+require_once __DIR__ . '/../hl_lib/hl_chyby.php';
 require_once __DIR__ . '/../hl_lib/hl_upload.php';
 require_once __DIR__ . '/../hl_lib/hl_notifikace.php';
 
@@ -41,7 +42,7 @@ try {
         throw new RuntimeException('Neznámý uživatel.');
     }
     if ($idHelpdesk <= 0) {
-        throw new RuntimeException('Chybí id_helpdesk.');
+        throw new CbUserVisibleException('Chybí číslo požadavku.');
     }
 
     $conn = db();
@@ -62,12 +63,12 @@ try {
         $messageExists = $stmtMessage->num_rows === 1;
         $stmtMessage->close();
         if (!$messageExists) {
-            throw new RuntimeException('Zvolená zpráva nepatří k tomuto tiketu.');
+            throw new CbUserVisibleException('Zvolená zpráva nepatří k tomuto tiketu.');
         }
     }
 
     if (!array_key_exists('soubor', $_FILES) || !is_array($_FILES['soubor'])) {
-        throw new RuntimeException('Chybí soubor.');
+        throw new CbUserVisibleException('Vyberte soubor, který chcete nahrát.');
     }
 
     $priloha = cb_helpdesk_upload_priloha($conn, $idHelpdesk, $idZpravaDb, $idUser, $_FILES['soubor']);
@@ -83,8 +84,7 @@ try {
         'priloha' => $priloha,
     ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
-    http_response_code(400);
-    echo json_encode(['ok' => false, 'err' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    cb_helpdesk_json_chyba($e, 'Nahrání přílohy tiketu', ['table' => 'helpdesk_priloha']);
 }
 
 // helpdesk/hl_ajax/hl_priloha_nahrat.php * Verze: V1 * Aktualizace: 20.06.2026

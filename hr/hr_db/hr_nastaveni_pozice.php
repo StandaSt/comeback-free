@@ -17,7 +17,7 @@ function hr_nastaveni_pozice_pridat(mysqli $db, string $nazev): void
 {
     $nazev = trim($nazev);
     if ($nazev === '' || mb_strlen($nazev, 'UTF-8') > 100) {
-        throw new RuntimeException('Zadejte název pozice v délce nejvýše 100 znaků.');
+        throw new CbUserVisibleException('Zadejte název pozice v délce nejvýše 100 znaků.');
     }
     $result = $db->query('SELECT id_slot FROM cis_slot ORDER BY id_slot');
     $used = [];
@@ -33,7 +33,7 @@ function hr_nastaveni_pozice_pridat(mysqli $db, string $nazev): void
         }
     }
     if ($idSlot === null) {
-        throw new RuntimeException('Nelze přidat další pozici.');
+        throw new CbUserVisibleException('Nelze přidat další pozici.');
     }
     $aktivni = 1;
     $stmt = $db->prepare('INSERT INTO cis_slot (id_slot, slot, aktivni) VALUES (?, ?, ?)');
@@ -45,7 +45,7 @@ function hr_nastaveni_pozice_pridat(mysqli $db, string $nazev): void
 function hr_nastaveni_pozice_zmenit_stav(mysqli $db, int $idSlot, bool $aktivni): void
 {
     if ($idSlot < 0 || $idSlot > 62) {
-        throw new RuntimeException('Neplatná pozice.');
+        throw new CbUserVisibleException('Vyberte platnou pozici.');
     }
     $stav = $aktivni ? 1 : 0;
     $stmt = $db->prepare('UPDATE cis_slot SET aktivni = ? WHERE id_slot = ?');

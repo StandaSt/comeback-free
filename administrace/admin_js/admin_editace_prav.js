@@ -27,9 +27,9 @@
       body: body.toString(),
       credentials: 'same-origin'
     }).then(function (response) {
-      return response.json().then(function (data) {
+      return response.json().catch(function () { return {}; }).then(function (data) {
         if (!response.ok || !data || data.ok !== true) {
-          throw new Error(String((data && data.err) || ('HTTP ' + response.status)));
+          throw new Error(window.cbAdminResponseError(response.status, data, 'Akci práv se nepodařilo dokončit.'));
         }
         return data;
       });
@@ -52,8 +52,9 @@
       })
       .catch(function (error) {
         // Konkrétní chyba zůstane viditelná v panelu i po zavření upozornění.
-        target.textContent = error.message || 'Práva modulu se nepodařilo načíst.';
-        window.alert(error.message || 'Práva modulu se nepodařilo načíst.');
+        var message = window.cbAdminErrorMessage(error, 'Práva modulu se nepodařilo načíst.');
+        target.textContent = message;
+        window.alert(message);
       });
   }
 
@@ -121,7 +122,7 @@
       }
       return null;
     }).catch(function (error) {
-      window.alert(error.message || 'Právo se nepodařilo uložit.');
+      window.alert(window.cbAdminErrorMessage(error, 'Právo se nepodařilo uložit.'));
     }).finally(function () {
       if (submit) submit.disabled = false;
     });
@@ -150,7 +151,7 @@
       row.setAttribute('data-puvodni-popis', description.value);
       updateDirtyState(row);
     }).catch(function (error) {
-      window.alert(error.message || 'Změny práva se nepodařilo uložit.');
+      window.alert(window.cbAdminErrorMessage(error, 'Změny práva se nepodařilo uložit.'));
     }).finally(function () {
       save.disabled = false;
     });
@@ -174,7 +175,7 @@
       return loadTable(root, select.value);
     }).catch(function (error) {
       button.disabled = false;
-      window.alert(error.message || 'Pořadí práv se nepodařilo změnit.');
+      window.alert(window.cbAdminErrorMessage(error, 'Pořadí práv se nepodařilo změnit.'));
     });
   });
 })();

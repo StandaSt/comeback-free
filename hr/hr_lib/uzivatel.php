@@ -19,7 +19,7 @@ function hr_current_person_id(mysqli $db): ?int
 {
     $idUser = hr_current_user_id();
     if ($idUser <= 0) {
-        throw new RuntimeException('Chybí přihlášený uživatel.');
+        throw new CbUserVisibleException('Přihlášení vypršelo. Přihlaste se prosím znovu.');
     }
 
     $stmt = $db->prepare('

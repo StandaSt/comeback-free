@@ -5,6 +5,7 @@
  */
 declare(strict_types=1);
 
+require_once __DIR__ . '/common/lib/chyby_bootstrap.php';
 require_once __DIR__ . '/common/lib/session_boot.php';
 require_once __DIR__ . '/common/lib/ochrana_crf.php';
 require_once __DIR__ . '/common/lib/app.php';

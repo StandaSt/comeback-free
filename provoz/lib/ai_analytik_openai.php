@@ -3,16 +3,22 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/ai_analytik_pravidla.php';
 
+function cb_ai_analytik_openai_api_key(): string
+{
+    $apiKey = trim((string)getenv('AI_ANALYTIK_OPENAI_API_KEY'));
+    if ($apiKey === '') {
+        throw new RuntimeException('OpenAI API není na serveru nakonfigurováno.');
+    }
+    return $apiKey;
+}
+
 /**
  * Jedno nízkoúrovňové volání Responses API.
  * Funkce záměrně nevyžaduje text: mezikrok agenta může obsahovat pouze function_call.
  */
 function cb_ai_analytik_openai_request(array $payload, ?callable $watchdog = null): array
 {
-    $apiKey = trim((string)getenv('AI_ANALYTIK_OPENAI_API_KEY'));
-    if ($apiKey === '') {
-        throw new RuntimeException('OpenAI API není na serveru nakonfigurováno.');
-    }
+    $apiKey = cb_ai_analytik_openai_api_key();
 
     $payload['service_tier'] = 'default';
     $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
@@ -148,4 +154,140 @@ function cb_ai_analytik_openai_request(array $payload, ?callable $watchdog = nul
         'prices' => $prices,
         'cost_usd' => $costUsd,
     ];
+}
+
+/**
+ * Nahraje jeden dočasný uživatelský soubor do OpenAI Files API.
+ * Obsah se v Comebacku nearchivuje; OpenAI soubor má zároveň nouzovou expiraci.
+ */
+function cb_ai_analytik_openai_soubor_nahrat(
+    string $tmpPath,
+    string $filename,
+    string $mimeType,
+    int $expiresAfterSeconds = 3600
+): array {
+    $apiKey = cb_ai_analytik_openai_api_key();
+    $curl = curl_init('https://api.openai.com/v1/files');
+    if ($curl === false) {
+        throw new RuntimeException('OpenAI API nelze inicializovat.');
+    }
+
+    curl_setopt_array($curl, [
+        CURLOPT_POST => true,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_TIMEOUT => 180,
+        CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $apiKey],
+        CURLOPT_POSTFIELDS => [
+            'purpose' => 'user_data',
+            'expires_after[anchor]' => 'created_at',
+            'expires_after[seconds]' => (string)max(3600, $expiresAfterSeconds),
+            'file' => new CURLFile($tmpPath, $mimeType, $filename),
+        ],
+    ]);
+
+    try {
+        $body = curl_exec($curl);
+        $curlError = curl_error($curl);
+        $httpStatus = (int)curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
+    } finally {
+        curl_close($curl);
+    }
+
+    if (!is_string($body)) {
+        throw new RuntimeException('OpenAI API není dostupné: ' . ($curlError !== '' ? $curlError : 'síťová chyba.'));
+    }
+    $response = json_decode($body, true);
+    if ($httpStatus < 200 || $httpStatus >= 300 || !is_array($response)) {
+        $message = is_array($response) ? trim((string)($response['error']['message'] ?? '')) : '';
+        throw new RuntimeException(
+            'OpenAI API HTTP ' . $httpStatus . ($message !== '' ? ': ' . mb_substr($message, 0, 1000) : '.')
+        );
+    }
+    $fileId = trim((string)($response['id'] ?? ''));
+    if ($fileId === '') {
+        throw new RuntimeException('OpenAI API nevrátilo identifikátor nahraného souboru.');
+    }
+    return [
+        'id' => $fileId,
+        'filename' => (string)($response['filename'] ?? $filename),
+        'bytes' => (int)($response['bytes'] ?? 0),
+        'expires_at' => (int)($response['expires_at'] ?? 0),
+    ];
+}
+
+function cb_ai_analytik_openai_spocitat_vstup(array $payload): int
+{
+    $apiKey = cb_ai_analytik_openai_api_key();
+    $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+    $curl = curl_init('https://api.openai.com/v1/responses/input_tokens');
+    if ($curl === false) {
+        throw new RuntimeException('OpenAI API nelze inicializovat.');
+    }
+
+    curl_setopt_array($curl, [
+        CURLOPT_POST => true,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_TIMEOUT => 180,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $apiKey,
+            'Content-Type: application/json',
+        ],
+        CURLOPT_POSTFIELDS => $json,
+    ]);
+
+    try {
+        $body = curl_exec($curl);
+        $curlError = curl_error($curl);
+        $httpStatus = (int)curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
+    } finally {
+        curl_close($curl);
+    }
+
+    if (!is_string($body)) {
+        throw new RuntimeException('OpenAI API není dostupné: ' . ($curlError !== '' ? $curlError : 'síťová chyba.'));
+    }
+    $response = json_decode($body, true);
+    if ($httpStatus < 200 || $httpStatus >= 300 || !is_array($response)) {
+        $message = is_array($response) ? trim((string)($response['error']['message'] ?? '')) : '';
+        throw new RuntimeException(
+            'OpenAI API HTTP ' . $httpStatus . ($message !== '' ? ': ' . mb_substr($message, 0, 1000) : '.')
+        );
+    }
+    $tokens = (int)($response['input_tokens'] ?? -1);
+    if ($tokens < 0) {
+        throw new RuntimeException('OpenAI API nevrátilo počet vstupních tokenů.');
+    }
+    return $tokens;
+}
+
+function cb_ai_analytik_openai_soubor_smazat(string $fileId): bool
+{
+    if (!preg_match('/^file-[A-Za-z0-9_-]+$/', $fileId)) {
+        return false;
+    }
+    try {
+        $apiKey = cb_ai_analytik_openai_api_key();
+    } catch (Throwable $error) {
+        return false;
+    }
+    $curl = curl_init('https://api.openai.com/v1/files/' . rawurlencode($fileId));
+    if ($curl === false) {
+        return false;
+    }
+    curl_setopt_array($curl, [
+        CURLOPT_CUSTOMREQUEST => 'DELETE',
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $apiKey],
+    ]);
+    try {
+        curl_exec($curl);
+        $httpStatus = (int)curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
+    } finally {
+        curl_close($curl);
+    }
+    return $httpStatus >= 200 && $httpStatus < 300;
 }

@@ -7,6 +7,7 @@ if (!defined('CB_HELPDESK_DISPATCH_INTERNAL')) {
     require_once __DIR__ . '/../../common/lib/app.php';
 }
 require_once __DIR__ . '/../hl_lib/hl_prava.php';
+require_once __DIR__ . '/../hl_lib/hl_chyby.php';
 require_once __DIR__ . '/../hl_lib/hl_snapshot.php';
 require_once __DIR__ . '/../hl_lib/hl_notifikace.php';
 
@@ -32,7 +33,7 @@ try {
     $raw = (string)file_get_contents('php://input');
     $data = json_decode($raw, true);
     if (!is_array($data)) {
-        throw new RuntimeException('Neplatná data.');
+        throw new CbUserVisibleException('Požadavek nemá platná data. Obnovte stránku a zkuste to znovu.');
     }
 
     $idUser = cb_helpdesk_current_user_id();
@@ -45,13 +46,13 @@ try {
         throw new RuntimeException('Neznámý uživatel.');
     }
     if ($idHelpdesk <= 0) {
-        throw new RuntimeException('Chybí id_helpdesk.');
+        throw new CbUserVisibleException('Chybí číslo požadavku.');
     }
     if ($zprava === '') {
-        throw new RuntimeException('Zpráva je prázdná.');
+        throw new CbUserVisibleException('Doplňte text zprávy.');
     }
     if ($uzavrit && !$jeResitel) {
-        throw new RuntimeException('Nemáte právo vyřešit tiket.');
+        throw new CbUserVisibleException('Nemáte právo označit tiket jako vyřešený.');
     }
 
     $conn = db();
@@ -176,10 +177,13 @@ try {
     ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     if (isset($conn) && $conn instanceof mysqli) {
-        $conn->rollback();
+        try {
+            $conn->rollback();
+        } catch (Throwable $rollbackError) {
+            error_log('[cb_helpdesk_rollback_failed] ' . $rollbackError->getMessage());
+        }
     }
-    http_response_code(400);
-    echo json_encode(['ok' => false, 'err' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    cb_helpdesk_json_chyba($e, 'Přidání zprávy k tiketu', ['table' => 'helpdesk_zprava']);
 }
 
 // helpdesk/hl_ajax/hl_zprava_pridat.php * Verze: V1 * Aktualizace: 24.06.2026

@@ -12,7 +12,7 @@ if (
     $idUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
     if ($idUser <= 0) {
         http_response_code(401);
-        echo json_encode(['ok' => false, 'err' => 'Nutne prihlaseni'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'err' => 'Platnost přihlášení vypršela. Přihlaste se prosím znovu.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -20,7 +20,7 @@ if (
     $data = json_decode($raw, true);
     if (!is_array($data)) {
         http_response_code(400);
-        echo json_encode(['ok' => false, 'err' => 'Neplatny JSON'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'err' => 'Požadavek nemá platný formát. Obnovte stránku a zkuste to znovu.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -28,7 +28,7 @@ if (
     $hasDo = array_key_exists('do', $data);
     if (!$hasOd && !$hasDo) {
         http_response_code(422);
-        echo json_encode(['ok' => false, 'err' => 'Chybi od/do'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'err' => 'Vyberte začátek nebo konec období.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -95,9 +95,7 @@ if (
         $stmtCur->close();
 
         if (!$hasRow) {
-            http_response_code(422);
-            echo json_encode(['ok' => false, 'err' => 'Nenalezen user_set'], JSON_UNESCAPED_UNICODE);
-            exit;
+            throw new RuntimeException('Pro uživatele chybí řádek nastavení období.');
         }
 
         $currentOd = $normalizePeriodDateTime((string)($dbOd ?? ''));
@@ -129,7 +127,7 @@ if (
             $newOd = $normalizePeriodDateTime((string)($data['od'] ?? ''));
             if ($newOd === '') {
                 http_response_code(422);
-                echo json_encode(['ok' => false, 'err' => 'Neplatne od'], JSON_UNESCAPED_UNICODE);
+                echo json_encode(['ok' => false, 'err' => 'Začátek období nemá platné datum a čas.'], JSON_UNESCAPED_UNICODE);
                 exit;
             }
             if ($newOd > $maxDo) {
@@ -141,7 +139,7 @@ if (
             $newDo = $normalizePeriodDateTime((string)($data['do'] ?? ''));
             if ($newDo === '') {
                 http_response_code(422);
-                echo json_encode(['ok' => false, 'err' => 'Neplatne do'], JSON_UNESCAPED_UNICODE);
+                echo json_encode(['ok' => false, 'err' => 'Konec období nemá platné datum a čas.'], JSON_UNESCAPED_UNICODE);
                 exit;
             }
             if ($newDo > $maxDo) {
@@ -155,7 +153,7 @@ if (
 
         if ($newOd > $newDo) {
             http_response_code(422);
-            echo json_encode(['ok' => false, 'err' => 'Neplatne poradi dat'], JSON_UNESCAPED_UNICODE);
+            echo json_encode(['ok' => false, 'err' => 'Začátek období nesmí být později než jeho konec.'], JSON_UNESCAPED_UNICODE);
             exit;
         }
 
@@ -213,8 +211,10 @@ if (
         ], JSON_UNESCAPED_UNICODE);
         exit;
     } catch (Throwable $e) {
-        http_response_code(500);
-        echo json_encode(['ok' => false, 'err' => 'Ulozeni obdobi selhalo'], JSON_UNESCAPED_UNICODE);
-        exit;
+        cb_chyba_json_odesli($e, [
+            'module' => 'SYSTEM',
+            'action' => 'Uložení období uživatele',
+            'table' => 'user_set',
+        ]);
     }
 }

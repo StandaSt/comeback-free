@@ -16,7 +16,7 @@ function cb_admin_firma_csrf_token(): string
 function cb_admin_firma_pravo_vyzaduj(): void
 {
     if (!function_exists('cb_pravo_ma') || !cb_pravo_ma(105)) {
-        throw new RuntimeException('Nemáte právo přidat firmu.');
+        throw new CbUserVisibleException('Nemáte právo přidat firmu.');
     }
 }
 
@@ -51,13 +51,13 @@ function cb_admin_firma_pridat_handle(): void
         cb_admin_firma_pravo_vyzaduj();
         $token = (string)($_POST['csrf_token'] ?? '');
         if ($token === '' || !hash_equals(cb_admin_firma_csrf_token(), $token)) {
-            throw new RuntimeException('Platnost formuláře vypršela. Obnovte stránku a zkuste to znovu.');
+            throw new CbUserVisibleException('Platnost formuláře vypršela. Obnovte stránku a zkuste to znovu.');
         }
 
         if ($action === 'admin_firma_ares_nacist') {
             $ico = cb_admin_firma_ico_normalizuj($ico);
             if (cb_admin_firma_ico_existuje(db(), $ico)) {
-                throw new RuntimeException('Firma se zadaným IČO již v systému existuje.');
+                throw new CbUserVisibleException('Firma se zadaným IČO již v systému existuje.');
             }
             $data = cb_admin_firma_ares_nacti($ico);
             $_SESSION['cb_admin_firma_ares'] = [
@@ -71,12 +71,12 @@ function cb_admin_firma_pridat_handle(): void
         $stav = $_SESSION['cb_admin_firma_ares'] ?? null;
         $nonce = (string)($_POST['ares_nonce'] ?? '');
         if (!is_array($stav) || !is_array($stav['data'] ?? null) || $nonce === '' || !hash_equals((string)($stav['nonce'] ?? ''), $nonce)) {
-            throw new RuntimeException('Načtené údaje ARES již nejsou platné. Načtěte firmu znovu.');
+            throw new CbUserVisibleException('Načtené údaje ARES již nejsou platné. Načtěte firmu znovu.');
         }
 
         $hlavniJednatel = filter_var($_POST['hlavni_jednatel'] ?? null, FILTER_VALIDATE_INT);
         if ($hlavniJednatel === false) {
-            throw new RuntimeException('Vyberte hlavního jednatele firmy.');
+            throw new CbUserVisibleException('Vyberte hlavního jednatele firmy.');
         }
         $user = $_SESSION['cb_user'] ?? [];
         $idUser = is_array($user) ? (int)($user['id_user'] ?? 0) : 0;
@@ -96,7 +96,7 @@ function cb_admin_firma_pridat_handle(): void
         ]);
         cb_admin_firma_redirect();
     } catch (Throwable $e) {
-        cb_admin_firma_flash('chyba', $e->getMessage(), $ico);
+        cb_admin_firma_flash('chyba', cb_admin_chyba_text($e, 'Přidání firmy', ['table' => 'firma']), $ico);
         cb_admin_firma_redirect();
     }
 }

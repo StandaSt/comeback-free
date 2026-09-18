@@ -58,14 +58,14 @@ if (
     $data = json_decode($raw, true);
     if (!is_array($data)) {
         http_response_code(400);
-        echo json_encode(['ok' => false, 'err' => 'Neplatny JSON'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'err' => 'Požadavek nemá platný formát. Obnovte stránku a zkuste to znovu.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
     $idPob = (int)($data['id_pob'] ?? 0);
     if ($idPob <= 0) {
         http_response_code(422);
-        echo json_encode(['ok' => false, 'err' => 'Neplatna pobocka'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'err' => 'Vyberte platnou pobočku.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -73,21 +73,22 @@ if (
     $idUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
     if ($idUser <= 0) {
         http_response_code(401);
-        echo json_encode(['ok' => false, 'err' => 'Nutne prihlaseni'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'err' => 'Platnost přihlášení vypršela. Přihlaste se prosím znovu.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
     try {
         $allowed = cb_pobocky_get_allowed_for_user($idUser);
     } catch (Throwable $e) {
-        http_response_code(500);
-        echo json_encode(['ok' => false, 'err' => 'Nelze nacist povolene pobocky'], JSON_UNESCAPED_UNICODE);
-        exit;
+        cb_chyba_json_odesli($e, [
+            'module' => 'SYSTEM',
+            'action' => 'Načtení povolených poboček',
+        ]);
     }
     $allowedIds = $allowed['ids'];
     if (!in_array($idPob, $allowedIds, true)) {
         http_response_code(403);
-        echo json_encode(['ok' => false, 'err' => 'Pobocka neni uzivateli povolena'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'err' => 'K vybrané pobočce nemáte oprávnění.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -109,9 +110,11 @@ if (
         echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
         exit;
     } catch (Throwable $e) {
-        http_response_code(500);
-        echo json_encode(['ok' => false, 'err' => 'Ulozeni vyberu pobocky selhalo'], JSON_UNESCAPED_UNICODE);
-        exit;
+        cb_chyba_json_odesli($e, [
+            'module' => 'SYSTEM',
+            'action' => 'Uložení vybrané pobočky',
+            'table' => 'user_pobocka_set',
+        ]);
     }
 }
 
@@ -128,7 +131,7 @@ if (
     $idUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
     if ($idUser <= 0) {
         http_response_code(401);
-        echo json_encode(['ok' => false, 'err' => 'Nutne prihlaseni'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'err' => 'Platnost přihlášení vypršela. Přihlaste se prosím znovu.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -150,9 +153,10 @@ if (
     try {
         $allowed = cb_pobocky_get_allowed_for_user($idUser);
     } catch (Throwable $e) {
-        http_response_code(500);
-        echo json_encode(['ok' => false, 'err' => 'Nelze načíst povolené pobočky'], JSON_UNESCAPED_UNICODE);
-        exit;
+        cb_chyba_json_odesli($e, [
+            'module' => 'SYSTEM',
+            'action' => 'Načtení povolených poboček',
+        ]);
     }
 
     $allowedIds = $allowed['ids'];
@@ -223,9 +227,11 @@ if (
             echo json_encode(['ok' => true, 'count' => count($ids), 'oblasti' => $selectedOblasti], JSON_UNESCAPED_UNICODE);
             exit;
         } catch (Throwable $e) {
-            http_response_code(500);
-            echo json_encode(['ok' => false, 'err' => 'Ulozeni vyberu pobocek selhalo'], JSON_UNESCAPED_UNICODE);
-            exit;
+            cb_chyba_json_odesli($e, [
+                'module' => 'SYSTEM',
+                'action' => 'Uložení poboček podle oblasti',
+                'table' => 'user_pobocka_set',
+            ]);
         }
     }
 
@@ -267,8 +273,10 @@ if (
         echo json_encode(['ok' => true, 'count' => count($valid)], JSON_UNESCAPED_UNICODE);
         exit;
     } catch (Throwable $e) {
-        http_response_code(500);
-        echo json_encode(['ok' => false, 'err' => 'Ulozeni vyberu pobocek selhalo'], JSON_UNESCAPED_UNICODE);
-        exit;
+        cb_chyba_json_odesli($e, [
+            'module' => 'SYSTEM',
+            'action' => 'Uložení vlastního výběru poboček',
+            'table' => 'user_pobocka_set',
+        ]);
     }
 }

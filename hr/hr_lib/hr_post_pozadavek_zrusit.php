@@ -9,7 +9,7 @@ function hr_post_pozadavek_zrusit(mysqli $db): void
 {
     try {
         if (!cb_pravo_ma(314)) {
-            throw new RuntimeException('Na zruseni pozadavku nemate pravo.');
+            throw new CbUserVisibleException('Nemáte právo zrušit HR požadavek.');
         }
 
         hr_zrus_pozadavek($db, (int)($_POST['id_pozadavek'] ?? 0), hr_current_user_id());
@@ -22,7 +22,7 @@ function hr_post_pozadavek_zrusit(mysqli $db): void
         cb_form_finish(
             cb_root_url('index.php?m=hr&page=pozadavky'),
             false,
-            $e->getMessage(),
+            cb_hr_chyba_text($e, 'Zrušení HR požadavku', ['table' => 'hr_pozadavky']),
             $_POST
         );
     }

@@ -91,7 +91,7 @@ function cb_admin_db_export_group_overview(array $availableTables): array
 function cb_admin_db_export_selected_groups(mixed $selectedGroups): array
 {
     if (!is_array($selectedGroups)) {
-        throw new RuntimeException('Vyberte alespoň jednu skupinu tabulek.');
+        throw new CbUserVisibleException('Vyberte alespoň jednu skupinu tabulek.');
     }
 
     $allowed = cb_admin_db_export_group_definitions();
@@ -99,13 +99,13 @@ function cb_admin_db_export_selected_groups(mixed $selectedGroups): array
     foreach ($selectedGroups as $group) {
         $key = trim((string)$group);
         if ($key === '' || !isset($allowed[$key])) {
-            throw new RuntimeException('Požadavek obsahuje nepovolenou skupinu tabulek.');
+            throw new CbUserVisibleException('Požadavek obsahuje nepovolenou skupinu tabulek.');
         }
         $selected[$key] = true;
     }
 
     if ($selected === []) {
-        throw new RuntimeException('Vyberte alespoň jednu skupinu tabulek.');
+        throw new CbUserVisibleException('Vyberte alespoň jednu skupinu tabulek.');
     }
 
     return array_keys($selected);
@@ -121,7 +121,7 @@ function cb_admin_db_export_resolve_tables(array $selectedGroups, array $overvie
     $tables = [];
     foreach ($selectedGroups as $group) {
         if (!isset($overview[$group])) {
-            throw new RuntimeException('Vybraná skupina tabulek není dostupná.');
+            throw new CbUserVisibleException('Vybraná skupina tabulek není dostupná.');
         }
         foreach ($overview[$group]['tables'] as $table) {
             $tables[$table] = true;
@@ -131,7 +131,7 @@ function cb_admin_db_export_resolve_tables(array $selectedGroups, array $overvie
     $tableNames = array_keys($tables);
     sort($tableNames, SORT_STRING);
     if ($tableNames === []) {
-        throw new RuntimeException('Vybrané skupiny neobsahují žádné existující tabulky.');
+        throw new CbUserVisibleException('Vybrané skupiny neobsahují žádné existující tabulky.');
     }
 
     return $tableNames;

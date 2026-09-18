@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/denni_report_prava.php';
+
 function cb_archiv_reportu_date(string $value, DateTimeZone $tz, DateTimeImmutable $fallback): DateTimeImmutable
 {
     $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value, $tz);
@@ -310,23 +312,8 @@ function cb_archiv_reportu_data(mysqli $conn, array $input): array
         $filters['branch'] = 0;
     }
 
-    $roleIds = [];
-    $roleStmt = $conn->prepare('SELECT id_role FROM user_role WHERE id_user = ?');
-    if ($roleStmt !== false) {
-        $roleStmt->bind_param('i', $userId);
-        $roleStmt->execute();
-        $roleResult = $roleStmt->get_result();
-        if ($roleResult instanceof mysqli_result) {
-            while ($roleRow = $roleResult->fetch_assoc()) {
-                $idRole = (int)($roleRow['id_role'] ?? 0);
-                if ($idRole > 0) {
-                    $roleIds[$idRole] = true;
-                }
-            }
-            $roleResult->free();
-        }
-        $roleStmt->close();
-    }
+    $canCompleteReport = cb_denni_report_ma_pravo(CB_DENNI_REPORT_ZOBRAZIT_PRAVO)
+        && cb_denni_report_ma_pravo(CB_DENNI_REPORT_UZAVRIT_PRAVO);
 
     $reportStmt = $conn->prepare('
         SELECT
@@ -432,7 +419,7 @@ function cb_archiv_reportu_data(mysqli $conn, array $input): array
                 'closing' => $isSaved ? trim((string)($saved['zaviral_text'] ?? '')) : '',
                 'google_available' => !$isSaved && isset($googleByKey[$date . ':' . $idBranch]),
                 'google_report_available' => isset($googleByKey[$date . ':' . $idBranch]),
-                'can_complete' => !$isSaved && isset($roleIds[5]) && !empty($branch['main']),
+                'can_complete' => !$isSaved && $canCompleteReport,
             ];
         }
     }

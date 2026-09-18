@@ -14,7 +14,7 @@ function hr_post_zamestnanec_uprava(mysqli $db, int $zadalUser): void
     $idPerson = (int)($_POST['id_person'] ?? 0);
     try {
         if (!cb_pravo_ma(307)) {
-            throw new RuntimeException('Nemáte právo upravit zaměstnance.');
+            throw new CbUserVisibleException('Nemáte právo upravit zaměstnance.');
         }
         cb_firemni_pristup_vyzaduj_osobu($db, $zadalUser, $idPerson);
         $emailZmena = hr_update_employee_basic_data($db, $idPerson, $_POST, $zadalUser);
@@ -29,7 +29,8 @@ function hr_post_zamestnanec_uprava(mysqli $db, int $zadalUser): void
                 );
                 $message .= ' Potvrzení změny přihlašovacího e-mailu bylo odesláno uživateli.';
             } catch (Throwable $mailError) {
-                $message .= ' ' . $mailError->getMessage();
+                cb_hr_chyba_text($mailError, 'Odeslání potvrzení změny e-mailu');
+                $message .= ' Potvrzení změny e-mailu se nepodařilo odeslat, admin byl informován.';
             }
         }
         cb_form_finish(
@@ -42,7 +43,7 @@ function hr_post_zamestnanec_uprava(mysqli $db, int $zadalUser): void
         cb_form_finish(
             cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson) . '&upravit=1'),
             false,
-            $e->getMessage(),
+            cb_hr_chyba_text($e, 'Uložení karty zaměstnance', ['table' => 'hr_person']),
             $_POST
         );
     }
@@ -57,10 +58,10 @@ function hr_post_pracovni_pomer_uprava(mysqli $db): void
     try {
         $zadalUser = hr_current_user_id();
         if ($zadalUser <= 0) {
-            throw new RuntimeException('Chybí přihlášený uživatel.');
+            throw new CbUserVisibleException('Přihlášení vypršelo. Přihlaste se prosím znovu.');
         }
         if (!cb_pravo_ma(307)) {
-            throw new RuntimeException('Nemáte právo upravit pracovní poměr.');
+            throw new CbUserVisibleException('Nemáte právo upravit pracovní poměr.');
         }
         cb_firemni_pristup_vyzaduj_osobu($db, $zadalUser, $idPerson);
         $typ = (int)($_POST['id_pracovni_vztah_typ'] ?? 0);
@@ -68,7 +69,7 @@ function hr_post_pracovni_pomer_uprava(mysqli $db): void
         $nastupDate = DateTimeImmutable::createFromFormat('!d.m.Y', $nastupInput);
         $dateErrors = DateTimeImmutable::getLastErrors();
         if (!in_array($typ, [1, 2, 3, 5], true) || $nastupDate === false || ($dateErrors !== false && ($dateErrors['warning_count'] > 0 || $dateErrors['error_count'] > 0)) || $nastupDate->format('d.m.Y') !== $nastupInput || $nastupDate > new DateTimeImmutable('today')) {
-            throw new RuntimeException('Vyplňte platný typ vztahu a datum nástupu ve formátu DD.MM.RRRR.');
+            throw new CbUserVisibleException('Vyplňte platný typ vztahu a datum nástupu ve formátu DD.MM.RRRR.');
         }
         [$uvazek, $hodin] = hr_pracovni_pomer_uvazek_z_postu($typ, $_POST);
         [$mzdaTyp, $mzdaCastka] = hr_pracovni_pomer_mzda_z_postu($_POST);
@@ -76,12 +77,12 @@ function hr_post_pracovni_pomer_uprava(mysqli $db): void
         $nastup = $nastupDate->format('Y-m-d');
         $platnostOd = hr_pracovni_pomer_datum_z_postu((string)($_POST['platnost_od'] ?? ''), 'datum platnosti');
         if ($platnostOd < $nastup) {
-            throw new RuntimeException('Datum platnosti nesmí být před datem nástupu.');
+            throw new CbUserVisibleException('Datum platnosti nesmí být před datem nástupu.');
         }
         $db->begin_transaction();
         $current = hr_fetch_employee_work_relation($db, $idPerson);
         if (!is_array($current)) {
-            throw new RuntimeException('Aktuální pracovní poměr nebyl nalezen.');
+            throw new CbUserVisibleException('Aktuální pracovní poměr nebyl nalezen.');
         }
         if ((int)$current['id_pracovni_vztah_typ'] !== $typ || (string)$current['datum_nastupu'] !== $nastup) {
             $oldRelationId = (int)$current['id_pracovni_vztah'];
@@ -160,7 +161,7 @@ function hr_post_pracovni_pomer_uprava(mysqli $db): void
         cb_form_finish(cb_root_url('index.php?m=hr&page=zamestnanec&id='.rawurlencode((string)$idPerson).'&sekce=pracovni_pomer'), true, 'Pracovní poměr byl uložen.');
     } catch (Throwable $e) {
         try { $db->rollback(); } catch (Throwable $ignored) {}
-        cb_form_finish(cb_root_url('index.php?m=hr&page=zamestnanec&id='.rawurlencode((string)$idPerson).'&sekce=pracovni_pomer'), false, $e->getMessage(), $_POST);
+        cb_form_finish(cb_root_url('index.php?m=hr&page=zamestnanec&id='.rawurlencode((string)$idPerson).'&sekce=pracovni_pomer'), false, cb_hr_chyba_text($e, 'Uložení pracovního poměru', ['table' => 'hr_pracovni_vztah']), $_POST);
     }
 }
 
@@ -182,7 +183,7 @@ function hr_pracovni_pomer_uvazek_z_postu(int $typ, array $input): array
         return [$uvazek, $pevneHodiny[$uvazek]];
     }
     if ($uvazek !== 0) {
-        throw new RuntimeException('Vyberte platný úvazek.');
+        throw new CbUserVisibleException('Vyberte platný úvazek.');
     }
     return [0, hr_pracovni_pomer_hodiny_z_postu($input, 99.5)];
 }
@@ -194,11 +195,11 @@ function hr_pracovni_pomer_hodiny_z_postu(array $input, float $maximum): float
 {
     $hodin = str_replace(',', '.', trim((string)($input['hodin_tydne'] ?? '')));
     if (!preg_match('/^\d+(?:\.[05])?$/', $hodin)) {
-        throw new RuntimeException('Počet hodin týdně musí být celý nebo půlhodinový.');
+        throw new CbUserVisibleException('Počet hodin týdně musí být celý nebo půlhodinový.');
     }
     $value = (float)$hodin;
     if ($value <= 0 || $value > $maximum) {
-        throw new RuntimeException('Počet hodin týdně musí být vyšší než 0 a nejvýše ' . str_replace('.', ',', (string)$maximum) . '.');
+        throw new CbUserVisibleException('Počet hodin týdně musí být vyšší než 0 a nejvýše ' . str_replace('.', ',', (string)$maximum) . '.');
     }
     return $value;
 }
@@ -211,7 +212,7 @@ function hr_pracovni_pomer_mzda_z_postu(array $input): array
     $typ = (int)($input['id_mzda_typ'] ?? 0);
     $castka = trim((string)($input['mzda_castka'] ?? ''));
     if (!in_array($typ, [1, 2], true) || !ctype_digit($castka) || $castka === '0' || strlen($castka) > 10 || (strlen($castka) === 10 && $castka > '4294967295')) {
-        throw new RuntimeException('Vyplňte platný typ mzdy a částku v celých Kč.');
+        throw new CbUserVisibleException('Vyplňte platný typ mzdy a částku v celých Kč.');
     }
     return [$typ, (int)$castka];
 }
@@ -223,13 +224,13 @@ function hr_pracovni_pomer_benefity_z_postu(mysqli $db, array $input): array
 {
     $benefity = $input['benefity'] ?? [];
     if (!is_array($benefity)) {
-        throw new RuntimeException('Výběr benefitů není platný.');
+        throw new CbUserVisibleException('Výběr benefitů není platný.');
     }
 
     $selected = [];
     foreach ($benefity as $benefit) {
         if (!is_scalar($benefit) || !ctype_digit((string)$benefit) || (int)$benefit <= 0) {
-            throw new RuntimeException('Výběr benefitů není platný.');
+            throw new CbUserVisibleException('Výběr benefitů není platný.');
         }
         $selected[(int)$benefit] = true;
     }
@@ -242,7 +243,7 @@ function hr_pracovni_pomer_benefity_z_postu(mysqli $db, array $input): array
     }
     foreach ($ids as $idBenefit) {
         if (!isset($allowed[$idBenefit])) {
-            throw new RuntimeException('Vybraný benefit již není aktivní.');
+            throw new CbUserVisibleException('Vybraný benefit již není aktivní.');
         }
     }
 
@@ -255,7 +256,7 @@ function hr_post_pracovni_preruseni_ulozit(mysqli $db, int $zadalUser): void
     $idPerson = (int)($_POST['id_person'] ?? 0);
     try {
         if (!cb_pravo_ma(307)) {
-            throw new RuntimeException('Nemáte právo upravit pracovní poměr.');
+            throw new CbUserVisibleException('Nemáte právo upravit pracovní poměr.');
         }
         cb_firemni_pristup_vyzaduj_osobu($db, $zadalUser, $idPerson);
         $idVztah = hr_pracovni_vztah_z_postu($db, $idPerson);
@@ -265,7 +266,7 @@ function hr_post_pracovni_preruseni_ulozit(mysqli $db, int $zadalUser): void
         $datumDo = $datumDoInput === '' ? null : hr_pracovni_pomer_datum_z_postu($datumDoInput, 'datum konce přerušení');
         $poznamka = trim((string)($_POST['poznamka'] ?? ''));
         if ($datumDo !== null && $datumDo < $datumOd) {
-            throw new RuntimeException('Datum konce přerušení nesmí být před datem začátku.');
+            throw new CbUserVisibleException('Datum konce přerušení nesmí být před datem začátku.');
         }
         $stmt = $db->prepare('SELECT id_pracovni_preruseni_typ FROM hr_cis_pracovni_preruseni_typ WHERE id_pracovni_preruseni_typ = ? AND aktivni = 1 LIMIT 1');
         $stmt->bind_param('i', $idTyp);
@@ -273,7 +274,7 @@ function hr_post_pracovni_preruseni_ulozit(mysqli $db, int $zadalUser): void
         $typ = $stmt->get_result()->fetch_assoc();
         $stmt->close();
         if (!is_array($typ)) {
-            throw new RuntimeException('Vyberte platný typ přerušení.');
+            throw new CbUserVisibleException('Vyberte platný typ přerušení.');
         }
         $stmt = $db->prepare('SELECT id_pracovni_preruseni FROM hr_pracovni_preruseni WHERE id_pracovni_vztah = ? AND (datum_do IS NULL OR datum_do >= ?) AND (? IS NULL OR datum_od <= ?) LIMIT 1');
         $stmt->bind_param('isss', $idVztah, $datumOd, $datumDo, $datumDo);
@@ -281,7 +282,7 @@ function hr_post_pracovni_preruseni_ulozit(mysqli $db, int $zadalUser): void
         $overlap = $stmt->get_result()->fetch_assoc();
         $stmt->close();
         if (is_array($overlap)) {
-            throw new RuntimeException('Přerušení se nesmí překrývat s již evidovaným přerušením.');
+            throw new CbUserVisibleException('Přerušení se nesmí překrývat s již evidovaným přerušením.');
         }
         $stmt = $db->prepare('INSERT INTO hr_pracovni_preruseni (id_pracovni_vztah, id_pracovni_preruseni_typ, datum_od, datum_do, poznamka, id_user_zadal, vytvoreno) VALUES (?, ?, ?, ?, ?, ?, NOW())');
         $stmt->bind_param('iisssi', $idVztah, $idTyp, $datumOd, $datumDo, $poznamka, $zadalUser);
@@ -289,7 +290,7 @@ function hr_post_pracovni_preruseni_ulozit(mysqli $db, int $zadalUser): void
         $stmt->close();
         cb_form_finish(hr_pracovni_pomer_url($idPerson), true, 'Přerušení pracovního poměru bylo uloženo.');
     } catch (Throwable $e) {
-        cb_form_finish(hr_pracovni_pomer_url($idPerson), false, $e->getMessage(), $_POST);
+        cb_form_finish(hr_pracovni_pomer_url($idPerson), false, cb_hr_chyba_text($e, 'Uložení přerušení pracovního poměru', ['table' => 'hr_pracovni_preruseni']), $_POST);
     }
 }
 
@@ -299,7 +300,7 @@ function hr_post_pracovni_preruseni_uzavrit(mysqli $db, int $zadalUser): void
     $idPerson = (int)($_POST['id_person'] ?? 0);
     try {
         if (!cb_pravo_ma(307)) {
-            throw new RuntimeException('Nemáte právo upravit pracovní poměr.');
+            throw new CbUserVisibleException('Nemáte právo upravit pracovní poměr.');
         }
         cb_firemni_pristup_vyzaduj_osobu($db, $zadalUser, $idPerson);
         $idPreruseni = (int)($_POST['id_pracovni_preruseni'] ?? 0);
@@ -310,7 +311,7 @@ function hr_post_pracovni_preruseni_uzavrit(mysqli $db, int $zadalUser): void
         $preruseni = $stmt->get_result()->fetch_assoc();
         $stmt->close();
         if (!is_array($preruseni) || $datumDo < (string)$preruseni['datum_od']) {
-            throw new RuntimeException('Datum konce přerušení není platný.');
+            throw new CbUserVisibleException('Datum konce přerušení není platný.');
         }
         $stmt = $db->prepare('UPDATE hr_pracovni_preruseni SET datum_do = ?, id_user_zadal = ? WHERE id_pracovni_preruseni = ?');
         $stmt->bind_param('sii', $datumDo, $zadalUser, $idPreruseni);
@@ -318,7 +319,7 @@ function hr_post_pracovni_preruseni_uzavrit(mysqli $db, int $zadalUser): void
         $stmt->close();
         cb_form_finish(hr_pracovni_pomer_url($idPerson), true, 'Přerušení pracovního poměru bylo uzavřeno.');
     } catch (Throwable $e) {
-        cb_form_finish(hr_pracovni_pomer_url($idPerson), false, $e->getMessage(), $_POST);
+        cb_form_finish(hr_pracovni_pomer_url($idPerson), false, cb_hr_chyba_text($e, 'Uzavření přerušení pracovního poměru', ['table' => 'hr_pracovni_preruseni']), $_POST);
     }
 }
 
@@ -328,7 +329,7 @@ function hr_post_pracovni_pomer_ukoncit(mysqli $db, int $zadalUser): void
     $idPerson = (int)($_POST['id_person'] ?? 0);
     try {
         if (!cb_pravo_ma(307)) {
-            throw new RuntimeException('Nemáte právo ukončit pracovní poměr.');
+            throw new CbUserVisibleException('Nemáte právo ukončit pracovní poměr.');
         }
         cb_firemni_pristup_vyzaduj_osobu($db, $zadalUser, $idPerson);
         $idVztah = hr_pracovni_vztah_z_postu($db, $idPerson);
@@ -343,10 +344,10 @@ function hr_post_pracovni_pomer_ukoncit(mysqli $db, int $zadalUser): void
         $vztah = $stmt->get_result()->fetch_assoc();
         $stmt->close();
         if (!is_array($vztah) || $datumUkonceni < (string)$vztah['datum_nastupu']) {
-            throw new RuntimeException('Datum ukončení musí být v den nástupu nebo později.');
+            throw new CbUserVisibleException('Datum ukončení musí být v den nástupu nebo později.');
         }
         if ($datumOznameni !== null && $datumOznameni > $datumUkonceni) {
-            throw new RuntimeException('Datum oznámení nesmí být po datu ukončení.');
+            throw new CbUserVisibleException('Datum oznámení nesmí být po datu ukončení.');
         }
         $stmt = $db->prepare('SELECT id_pracovni_ukonceni_typ FROM hr_cis_pracovni_ukonceni_typ WHERE id_pracovni_ukonceni_typ = ? AND aktivni = 1 LIMIT 1');
         $stmt->bind_param('i', $idTyp);
@@ -354,7 +355,7 @@ function hr_post_pracovni_pomer_ukoncit(mysqli $db, int $zadalUser): void
         $typ = $stmt->get_result()->fetch_assoc();
         $stmt->close();
         if (!is_array($typ)) {
-            throw new RuntimeException('Vyberte platný důvod ukončení.');
+            throw new CbUserVisibleException('Vyberte platný důvod ukončení.');
         }
         $db->begin_transaction();
         $stmt = $db->prepare('INSERT INTO hr_pracovni_ukonceni (id_pracovni_vztah, id_pracovni_ukonceni_typ, datum_oznameni, datum_ukonceni, poznamka, id_user_zadal, vytvoreno) VALUES (?, ?, ?, ?, ?, ?, NOW())');
@@ -375,7 +376,7 @@ function hr_post_pracovni_pomer_ukoncit(mysqli $db, int $zadalUser): void
         cb_form_finish(hr_pracovni_pomer_url($idPerson), true, 'Ukončení pracovního poměru bylo uloženo.');
     } catch (Throwable $e) {
         try { $db->rollback(); } catch (Throwable $ignored) {}
-        cb_form_finish(hr_pracovni_pomer_url($idPerson), false, $e->getMessage(), $_POST);
+        cb_form_finish(hr_pracovni_pomer_url($idPerson), false, cb_hr_chyba_text($e, 'Ukončení pracovního poměru', ['table' => 'hr_pracovni_ukonceni']), $_POST);
     }
 }
 
@@ -388,7 +389,7 @@ function hr_pracovni_vztah_z_postu(mysqli $db, int $idPerson): int
     $vztah = $stmt->get_result()->fetch_assoc();
     $stmt->close();
     if (!is_array($vztah)) {
-        throw new RuntimeException('Pracovní poměr nebyl nalezen.');
+        throw new CbUserVisibleException('Pracovní poměr nebyl nalezen.');
     }
     return $idVztah;
 }
@@ -399,7 +400,7 @@ function hr_pracovni_pomer_datum_z_postu(string $value, string $label): string
     $date = DateTimeImmutable::createFromFormat('!d.m.Y', $value);
     $errors = DateTimeImmutable::getLastErrors();
     if ($date === false || ($errors !== false && ($errors['warning_count'] > 0 || $errors['error_count'] > 0)) || $date->format('d.m.Y') !== $value) {
-        throw new RuntimeException('Vyplňte platné ' . $label . ' ve formátu DD.MM.RRRR.');
+        throw new CbUserVisibleException('Vyplňte platné ' . $label . ' ve formátu DD.MM.RRRR.');
     }
     return $date->format('Y-m-d');
 }

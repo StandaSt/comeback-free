@@ -42,7 +42,7 @@
       })
       .catch(function (error) {
         input.checked = !previous;
-        window.alert(error.message || 'Uložení výjimky selhalo.');
+        window.alert(window.cbAdminErrorMessage(error, 'Uložení výjimky se nepodařilo.'));
       })
       .finally(function () {
         input.disabled = false;

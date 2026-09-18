@@ -1081,6 +1081,15 @@
   width:160px;
 }
 
+.zr_intro_select:required:invalid,
+.zr_intro_select option[value=""]{
+  color:var(--clr_cervena_1, #c62828);
+}
+
+.zr_intro_select option:not([value=""]){
+  color:var(--cb-text-main);
+}
+
 .zr_cash_table{
   width:100%;
   table-layout:fixed;
@@ -1141,6 +1150,45 @@
   .pp[data-page="denni_report"] .zr_cash_section{
     padding-right:10px;
     padding-left:10px;
+  }
+}
+
+/* Denni report: na uzsim desktopu dostanou formulare plnou sirku a bocni prehledy se presunou pod ne. */
+@media (max-width:1199px){
+  .pp[data-page="denni_report"] .zr_layout{
+    grid-template-columns:minmax(0, 1fr);
+  }
+
+  .pp[data-page="denni_report"] .zr_left{
+    grid-template-columns:minmax(0, 1fr) 180px;
+  }
+
+  .pp[data-page="denni_report"] .zr_instor_section{
+    grid-column:1;
+  }
+
+  .pp[data-page="denni_report"] .zr_control_section{
+    grid-column:2;
+  }
+
+  .pp[data-page="denni_report"] .zr_side{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    align-items:start;
+  }
+}
+
+/* Denni report: v uzkem landscape rezimu uz se zadne dva obsahove bloky nesnazi sdilet radek. */
+@media (max-width:760px){
+  .pp[data-page="denni_report"] .zr_top,
+  .pp[data-page="denni_report"] .zr_left,
+  .pp[data-page="denni_report"] .zr_side{
+    grid-template-columns:minmax(0, 1fr);
+  }
+
+  .pp[data-page="denni_report"] .zr_instor_section,
+  .pp[data-page="denni_report"] .zr_control_section{
+    grid-column:1;
   }
 }
 
@@ -1441,7 +1489,8 @@
 }
 
 .zr_readonly_info,
-.zr_missing_report_bar{
+.zr_missing_report_bar,
+.zr_delivery_status_info{
   margin:0 0 10px 0;
   padding:8px 10px;
   border:1px solid var(--cb-border);
@@ -2119,6 +2168,71 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   gap:10px;
 }
 
+.ai_analytik_attachments_control{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px 12px;
+}
+
+.ai_analytik_attachment_add{
+  min-height:34px;
+  padding:6px 12px;
+  cursor:pointer;
+}
+
+.ai_analytik_attachment_add input{
+  position:absolute;
+  width:1px;
+  height:1px;
+  overflow:hidden;
+  clip:rect(0 0 0 0);
+  white-space:nowrap;
+  clip-path:inset(50%);
+}
+
+.ai_analytik_attachments_control small,
+.ai_analytik_attachment_item small{
+  color:var(--cb-text-muted);
+  font-size:var(--cb-font-12);
+}
+
+.ai_analytik_attachments{
+  display:grid;
+  gap:6px;
+}
+
+.ai_analytik_attachment_item{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+  padding:6px 8px;
+  border:1px solid var(--cb-border);
+  border-radius:7px;
+  background:var(--cb-bg-panel);
+}
+
+.ai_analytik_attachment_name{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.ai_analytik_attachment_remove{
+  margin-left:auto;
+  border:0;
+  background:transparent;
+  color:var(--cb-text-muted);
+  cursor:pointer;
+  font-weight:700;
+}
+
+.ai_analytik_attachment_remove:hover{
+  color:var(--cb-danger, #b42318);
+}
+
 .ai_analytik_prompt_label_row,
 .ai_analytik_usage_row{
   display:flex;
@@ -2202,6 +2316,20 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
 .ai_analytik_my_prompts_empty{
   color:var(--cb-text-muted);
   font-size:var(--cb-font-12);
+}
+
+.ai_analytik_my_prompt_meta{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:baseline;
+  gap:3px 12px;
+}
+
+.ai_analytik_my_prompt_user{
+  margin-left:auto;
+  color:var(--cb-text-main);
+  font-weight:700;
+  white-space:nowrap;
 }
 
 .ai_analytik_prompt_field > label,
@@ -2361,6 +2489,34 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   justify-content:center;
   height:132px;
   min-height:132px;
+}
+
+.ai_analytik_prompt_row .ai_analytik_attachment_add{
+  height:auto;
+  min-height:34px;
+}
+
+.ai_analytik_submit{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  text-align:center;
+  white-space:normal;
+}
+
+.ai_analytik_submit_estimate_value{
+  font-size:var(--cb-font-14);
+  font-weight:700;
+}
+
+.ai_analytik_submit_action{
+  margin-top:5px;
+  font-size:var(--cb-font-14);
+  font-weight:700;
+}
+
+.ai_analytik_submit.is-estimated{
+  border-color:var(--cb-module-accent);
 }
 
 .ai_analytik_prompt_row .head_task_btn.is-ready{
@@ -2560,12 +2716,22 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
 }
 
 .ai_analytik_clarification_form textarea{
-  min-height:68px;
+  min-height:82px;
 }
 
-.ai_analytik_clarification_form .head_task_btn{
+.ai_analytik_continuation_actions{
+  display:grid;
+  gap:8px;
+}
+
+.ai_analytik_continuation_actions .head_task_btn{
   justify-content:center;
-  min-height:68px;
+  min-height:37px;
+}
+
+.ai_analytik_continuation_finished{
+  grid-column:1 / -1;
+  color:var(--cb-module-accent);
 }
 
 .ai_analytik_usage{
@@ -2672,6 +2838,12 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
 
 .ai_analytik_access tr:last-child td{
   border-bottom:0;
+}
+
+.ai_analytik_access_total td{
+  border-top:2px solid var(--cb-border);
+  background:var(--ai-analytik-info-bg);
+  font-weight:700;
 }
 
 .ai_analytik_api_payment_link{
@@ -2791,6 +2963,11 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   .ai_analytik_prompt_row .head_task_btn{
     height:78px;
     min-height:78px;
+  }
+
+  .ai_analytik_prompt_row .ai_analytik_attachment_add{
+    height:auto;
+    min-height:34px;
   }
 
   .ai_analytik_export_actions select{

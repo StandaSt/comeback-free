@@ -61,19 +61,17 @@
       cache: 'no-store'
     })
       .then(function (response) {
-        if (!response.ok) {
-          throw new Error('HTTP ' + response.status);
-        }
-        return response.json();
+        return window.CB_CHYBY.readJson(response, 'Uložení barevného motivu se nepodařilo.');
       })
-      .then(function (data) {
-        if (!data || data.ok !== true) {
-          throw new Error((data && data.err) || 'Ulozeni selhalo');
+      .then(function (result) {
+        if (!result.ok) {
+          throw new Error(result.message);
         }
-        setFormLevel(form, data.dark);
+        setFormLevel(form, result.data.dark);
       })
-      .catch(function () {
+      .catch(function (error) {
         setFormLevel(form, previousLevel);
+        window.alert(window.CB_CHYBY.errorMessage(error));
       })
       .finally(function () {
         form.setAttribute('data-cb-theme-pending', '0');

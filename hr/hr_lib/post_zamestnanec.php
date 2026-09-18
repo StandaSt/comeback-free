@@ -9,7 +9,7 @@ function hr_post_zamestnanec(mysqli $db, int $idUser): void
 {
     try {
         if (!cb_pravo_ma(305)) {
-            throw new RuntimeException('Nemáte právo založit zaměstnance.');
+            throw new CbUserVisibleException('Nemáte právo založit zaměstnance.');
         }
         $employee = hr_insert_employee($db, $_POST, $_FILES, $idUser);
         $idPerson = (int)$employee['id_person'];
@@ -23,7 +23,7 @@ function hr_post_zamestnanec(mysqli $db, int $idUser): void
         cb_form_finish(
             cb_root_url('index.php?m=hr&page=novy_zamestnanec'),
             false,
-            $e->getMessage(),
+            cb_hr_chyba_text($e, 'Založení zaměstnance', ['table' => 'hr_person']),
             $_POST
         );
     }

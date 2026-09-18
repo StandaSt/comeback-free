@@ -91,6 +91,13 @@
   line-height:1.35;
 }
 
+.helpdesk_form_file_error{
+  color:#b91c1c;
+  font-size:var(--cb-font-12);
+  font-weight:700;
+  line-height:1.35;
+}
+
 .helpdesk_form_actions{
   display:flex;
   justify-content:flex-end;

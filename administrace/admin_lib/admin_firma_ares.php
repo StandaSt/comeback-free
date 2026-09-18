@@ -7,7 +7,7 @@ function cb_admin_firma_ico_normalizuj(string $ico): string
 {
     $ico = preg_replace('/\s+/u', '', trim($ico)) ?? '';
     if (preg_match('/^\d{8}$/D', $ico) !== 1) {
-        throw new RuntimeException('IČO musí obsahovat přesně 8 číslic.');
+        throw new CbUserVisibleException('IČO musí obsahovat přesně 8 číslic.');
     }
 
     $soucet = 0;
@@ -21,7 +21,7 @@ function cb_admin_firma_ico_normalizuj(string $ico): string
         $kontrola = 1;
     }
     if ((int)$ico[7] !== $kontrola) {
-        throw new RuntimeException('IČO nemá platný kontrolní součet.');
+        throw new CbUserVisibleException('IČO nemá platný kontrolní součet.');
     }
 
     return $ico;
@@ -55,7 +55,7 @@ function cb_admin_firma_ares_json(string $cesta): array
     }
 
     if ($status === 404) {
-        throw new RuntimeException('ARES pro zadané IČO nenašel ekonomický subjekt.');
+        throw new CbUserVisibleException('ARES pro zadané IČO nenašel ekonomický subjekt.');
     }
     if ($status !== 200) {
         throw new RuntimeException('ARES vrátil neočekávaný stav HTTP ' . $status . '.');

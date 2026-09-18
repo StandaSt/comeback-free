@@ -132,7 +132,7 @@ function cb_admin_individualni_pravo_efektivni(array $global, array $exceptions,
 function cb_admin_individualni_prava_data(int $idUser): array
 {
     if ($idUser <= 0) {
-        throw new RuntimeException('Neplatný uživatel.');
+        throw new CbUserVisibleException('Vyberte platného uživatele.');
     }
 
     $db = db();
@@ -164,11 +164,11 @@ function cb_admin_individualni_prava_data(int $idUser): array
     $stmtUser->close();
 
     if (!is_array($user)) {
-        throw new RuntimeException('Uživatel neexistuje.');
+        throw new CbUserVisibleException('Vybraný uživatel neexistuje.');
     }
 
     if ((int)($user['role_count'] ?? 0) <= 0) {
-        throw new RuntimeException('Uživatel nemá roli.');
+        throw new CbUserVisibleException('Vybraný uživatel nemá přiřazenou roli.');
     }
 
     $base = cb_admin_prava_roli_data();
@@ -235,7 +235,7 @@ function cb_admin_individualni_prava_data(int $idUser): array
 function cb_admin_individualni_prava_uloz(int $idUser, int $idPravo, bool $vyjimka): array
 {
     if ($idPravo <= 0) {
-        throw new RuntimeException('Neplatné právo.');
+        throw new CbUserVisibleException('Vyberte platné právo.');
     }
 
     $data = cb_admin_individualni_prava_data($idUser);
@@ -251,13 +251,13 @@ function cb_admin_individualni_prava_uloz(int $idUser, int $idPravo, bool $vyjim
     $rightRow = $stmtRight->get_result()->fetch_assoc();
     $stmtRight->close();
     if ((int)($rightRow['c'] ?? 0) !== 1) {
-        throw new RuntimeException('Právo neexistuje.');
+        throw new CbUserVisibleException('Vybrané právo neexistuje.');
     }
 
     $idVstupnihoPrava = cb_pravo_vstupni_pravo($idPravo);
     if ($vyjimka && !$global && $idVstupnihoPrava !== 0 && $idVstupnihoPrava !== $idPravo
         && empty($data['effective'][$idVstupnihoPrava])) {
-        throw new RuntimeException('Nejprve povolte vstupní právo modulu (' . $idVstupnihoPrava . ').');
+        throw new CbUserVisibleException('Nejprve povolte vstupní právo modulu (' . $idVstupnihoPrava . ').');
     }
 
     if (!$vyjimka) {

@@ -11,20 +11,13 @@ declare(strict_types=1);
             <h2 class="hr_panel_title">Dokumenty</h2>
             <a class="hr_panel_link" href="<?= h(cb_root_url('index.php?m=hr&page=dokumenty')) ?>">Zobrazit</a>
         </div>
-        <?php if ($dokumenty === []): ?>
-            <p class="hr_empty_state">Zatím nejsou evidované žádné nové dokumenty.</p>
-        <?php else: ?>
-            <ul class="hr_activity_list">
-                <?php foreach ($dokumenty as $dokument): ?>
-                    <li class="hr_activity_item">
-                        <span class="hr_dot hr_blue"></span>
-                        <strong class="hr_activity_name"><?= h($dokument['osoba']) ?></strong>
-                        <span><?= h($dokument['typ']) ?> · <?= h($dokument['nazev']) ?></span>
-                        <time class="hr_activity_time"><?= h(hr_format_date((string)$dokument['zadano'])) ?></time>
-                    </li>
-                <?php endforeach; ?>
-            </ul>
-        <?php endif; ?>
+        <dl class="hr_document_summary">
+            <div><dt>Aktivních zaměstnanců</dt><dd><?= h((string)$dokumenty['aktivnich_zamestnancu']) ?></dd></div>
+            <div><dt>Pracovní smlouva <small>ano / ne</small></dt><dd><span><?= h((string)$dokumenty['se_smlouvou']) ?></span> / <span class="hr_document_summary_no"><?= h((string)$dokumenty['chybi_smlouva']) ?></span></dd></div>
+            <div><dt>Osobní doklad <small>ano / ne</small></dt><dd><span><?= h((string)$dokumenty['s_osobnim_dokladem']) ?></span> / <span class="hr_document_summary_no"><?= h((string)$dokumenty['chybi_osobni_doklad']) ?></span></dd></div>
+            <div><dt>Kartička zdrav. pojišťovny <small>ano / ne</small></dt><dd><span><?= h((string)$dokumenty['s_kartickou_pojistovny']) ?></span> / <span class="hr_document_summary_no"><?= h((string)$dokumenty['chybi_karticka_pojistovny']) ?></span></dd></div>
+        </dl>
+        <p class="hr_document_summary_note">Celkem <?= h((string)$dokumenty['dokumentu_celkem']) ?> dokumentů pro <?= h((string)$dokumenty['osob_s_dokumenty']) ?> osob; z toho <?= h((string)$dokumenty['dokumentu_mimo_aktivni']) ?> dokumentů u <?= h((string)$dokumenty['osob_mimo_aktivni']) ?> osob bez aktuálního vztahu.</p>
     </article>
 
     <article class="hr_panel">

@@ -94,6 +94,8 @@ $helpdeskCompanyCondition = 'COALESCE(h.id_firma, 1) = ' . (string)cb_helpdesk_c
 
 $items = [];
 $scope = cb_helpdesk_visible_scope($idUser);
+$helpdeskFlash = trim((string)($_SESSION['cb_helpdesk_flash'] ?? ''));
+unset($_SESSION['cb_helpdesk_flash']);
 
 if ($isAdmin) {
     $stmtItems = $conn->prepare('
@@ -235,6 +237,9 @@ foreach ($items as $item) {
   <div class="helpdesk_detail_badges" data-cb-hd-detail-badges="1" hidden></div>
 <?php endif; ?>
 </header>
+<?php if ($helpdeskFlash !== ''): ?>
+  <p class="helpdesk_detail_notice helpdesk_state_error ram_normal zaobleni_10" role="alert"><?= h($helpdeskFlash) ?></p>
+<?php endif; ?>
 <?php if ($helpdeskView === 'new-ticket'): ?>
     <form class="helpdesk_form ram_normal zaobleni_8" method="post" action="<?= h($helpdeskCreateUrl) ?>" enctype="multipart/form-data">
       <h3 class="helpdesk_form_title">Zadání nového tiketu</h3>
@@ -280,8 +285,9 @@ foreach ($items as $item) {
 
         <label class="helpdesk_form_label" for="hl-ticket-prilohy">Přílohy</label>
         <div class="helpdesk_form_files">
-          <input class="helpdesk_form_input" id="hl-ticket-prilohy" type="file" name="prilohy[]" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.pdf">
+          <input class="helpdesk_form_input" id="hl-ticket-prilohy" type="file" name="prilohy[]" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.pdf" data-cb-hd-max-file-size="5242880">
           <div class="helpdesk_form_hint">Povolené typy: PNG, JPG, WEBP, GIF, PDF. Maximálně 5 MB na soubor.</div>
+          <div class="helpdesk_form_file_error" data-cb-hd-file-error="1" role="alert" aria-live="assertive" hidden></div>
         </div>
       </div>
 

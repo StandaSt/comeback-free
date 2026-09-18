@@ -1,12 +1,17 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * HTTP a streamovaci brana AI analytika.
+ * Overuje vstup, ridi audit, spousti agenta a vraci NDJSON udalosti klientovi.
+ */
+
 require_once __DIR__ . '/ai_analytik_pravidla.php';
 require_once __DIR__ . '/ai_analytik_agent.php';
+require_once __DIR__ . '/ai_analytik_prilohy.php';
 require_once __DIR__ . '/ai_analytik_export_common.php';
 require_once __DIR__ . '/../db/db_ai_analytik_audit.php';
 require_once __DIR__ . '/../db/db_ai_analytik_bezpecnost.php';
-require_once __DIR__ . '/../../common/notifikace/notifikace_2fa.php';
 
 set_time_limit(0);
 
@@ -81,39 +86,15 @@ function cb_ai_analytik_chyba_pro_uzivatele(Throwable $error, bool $maPravoTechn
     return 'Dotaz se nepodařilo zpracovat. · ' . $reference;
 }
 
-function cb_ai_analytik_oznam_chybu_adminovi(Throwable $error, int $idUser, int $idAudit): void
+/** Zapise neocekavanou technickou chybu AI do centralniho logu a push toku. */
+function cb_ai_analytik_oznam_chybu_adminovi(Throwable $error, int $idAudit): void
 {
-    if ($idUser <= 0 || $idUser === 1) {
-        return;
-    }
-
-    $jmeno = trim((string)($_SESSION['cb_user']['jmeno'] ?? '') . ' ' . (string)($_SESSION['cb_user']['prijmeni'] ?? ''));
-    $uzivatel = $jmeno !== '' ? $jmeno . ' (ID ' . $idUser . ')' : 'ID ' . $idUser;
-    $obsah = implode("\n", [
-        'Uživatel: ' . $uzivatel,
-        'Audit: #' . $idAudit,
-        'Typ chyby: ' . get_class($error),
-        'Chyba: ' . $error->getMessage(),
-        'Soubor: ' . $error->getFile() . ':' . $error->getLine(),
+    // Technicka chyba AI patri do centralniho logu; detailni prubeh zustava v auditni tabulce.
+    cb_chyba_oznam($error, [
+        'module' => 'AI_ANALYTIK',
+        'action' => $idAudit > 0 ? 'AI audit ID ' . $idAudit : 'Zahájení AI auditu',
+        'table' => 'ai_analytik_audit',
     ]);
-    $pozn = json_encode([
-        'id_user' => $idUser,
-        'audit_id' => $idAudit,
-        'error_type' => get_class($error),
-        'error_code' => (string)$error->getCode(),
-    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-
-    try {
-        cb_push_send_admin_info(
-            [1],
-            'ai_analytik_error',
-            $obsah,
-            'Chyba AI analytika',
-            is_string($pozn) ? $pozn : ''
-        );
-    } catch (Throwable $notificationError) {
-        error_log('AI analytik: push notifikaci chyby se nepodařilo odeslat: ' . $notificationError->getMessage());
-    }
 }
 
 function cb_ai_analytik_gateway(): never
@@ -129,10 +110,15 @@ function cb_ai_analytik_gateway(): never
         cb_ai_analytik_json(403, ['ok' => false, 'error' => 'K AI analytikovi nemáte oprávnění.']);
     }
 
-    try {
-        $input = json_decode((string)file_get_contents('php://input'), true, 32, JSON_THROW_ON_ERROR);
-    } catch (JsonException $error) {
-        cb_ai_analytik_json(400, ['ok' => false, 'error' => 'Požadavek nemá platný formát.']);
+    $contentType = mb_strtolower(trim((string)($_SERVER['CONTENT_TYPE'] ?? '')));
+    if (str_starts_with($contentType, 'multipart/form-data')) {
+        $input = $_POST;
+    } else {
+        try {
+            $input = json_decode((string)file_get_contents('php://input'), true, 32, JSON_THROW_ON_ERROR);
+        } catch (JsonException $error) {
+            cb_ai_analytik_json(400, ['ok' => false, 'error' => 'Požadavek nemá platný formát.']);
+        }
     }
     if (!is_array($input)) {
         cb_ai_analytik_json(400, ['ok' => false, 'error' => 'Požadavek nemá platný formát.']);
@@ -150,10 +136,98 @@ function cb_ai_analytik_gateway(): never
         cb_ai_analytik_json(401, ['ok' => false, 'error' => 'Platnost přihlášení vypršela.']);
     }
 
+    if ($action === 'attachment_upload') {
+        try {
+            $upload = $_FILES['attachment'] ?? null;
+            if (!is_array($upload)) {
+                throw new CbAiAnalytikUzivatelskaChyba('Vyberte přílohu.');
+            }
+            cb_ai_analytik_json(200, ['ok' => true] + cb_ai_analytik_prilohy_nahrat(
+                $upload,
+                $idUser,
+                trim((string)($input['attachment_token'] ?? ''))
+            ));
+        } catch (CbAiAnalytikUzivatelskaChyba $error) {
+            cb_ai_analytik_json(422, ['ok' => false, 'error' => $error->getMessage()]);
+        } catch (Throwable $error) {
+            error_log('AI analytik: upload přílohy selhal: ' . $error->getMessage());
+            cb_ai_analytik_oznam_chybu_adminovi($error, 0);
+            cb_ai_analytik_json(503, ['ok' => false, 'error' => 'Přílohu se nepodařilo bezpečně připravit.']);
+        }
+    }
+
+    if ($action === 'attachment_estimate') {
+        $model = trim((string)($input['model'] ?? ''));
+        if (!cb_ai_analytik_model_je_povoleny($model) || !cb_ai_analytik_model_ma_pravo($model)) {
+            cb_ai_analytik_json(403, ['ok' => false, 'error' => 'K vybranému modelu nemáte oprávnění.']);
+        }
+        try {
+            $estimate = cb_ai_analytik_prilohy_odhadnout(
+                trim((string)($input['attachment_token'] ?? '')),
+                $idUser,
+                $model,
+                trim((string)($input['prompt'] ?? ''))
+            );
+            cb_ai_analytik_json(200, ['ok' => true, 'estimate' => $estimate]);
+        } catch (CbAiAnalytikUzivatelskaChyba $error) {
+            cb_ai_analytik_json(422, ['ok' => false, 'error' => $error->getMessage()]);
+        } catch (Throwable $error) {
+            error_log('AI analytik: odhad příloh selhal: ' . $error->getMessage());
+            cb_ai_analytik_oznam_chybu_adminovi($error, 0);
+            cb_ai_analytik_json(503, ['ok' => false, 'error' => 'Odhad nákladů na přílohy se nepodařilo získat.']);
+        }
+    }
+
+    if ($action === 'attachment_discard') {
+        cb_ai_analytik_json(200, [
+            'ok' => cb_ai_analytik_prilohy_zahodit(
+                trim((string)($input['attachment_token'] ?? '')),
+                $idUser
+            ),
+        ]);
+    }
+
+    if ($action === 'continuation_finish') {
+        $idAudit = (int)($input['audit_id'] ?? 0);
+        $stored = null;
+        try {
+            $stored = cb_ai_analytik_audit_nacist_pokracovani(
+                $idAudit,
+                $idUser,
+                (string)($input['continuation_token'] ?? '')
+            );
+            $auditData = is_array($stored['audit'] ?? null) ? $stored['audit'] : [];
+            $auditData['status'] = 'completed';
+            cb_ai_analytik_audit_finish($idAudit, $auditData);
+            $agentState = is_array($stored['agent_state'] ?? null) ? $stored['agent_state'] : [];
+            cb_ai_analytik_prilohy_smazat_openai(
+                is_array($agentState['attachment_file_ids'] ?? null)
+                    ? $agentState['attachment_file_ids']
+                    : []
+            );
+            cb_ai_analytik_json(200, ['ok' => true]);
+        } catch (CbAiAnalytikUzivatelskaChyba $error) {
+            cb_ai_analytik_json(422, ['ok' => false, 'error' => $error->getMessage()]);
+        } catch (Throwable $error) {
+            if (is_array($stored)) {
+                cb_ai_analytik_audit_obnovit_cekani(
+                    $idAudit,
+                    $idUser,
+                    (string)($stored['continuation_kind'] ?? 'followup')
+                );
+            }
+            error_log('AI analytik: ukončení pokračování auditu #' . $idAudit . ' selhalo: ' . $error->getMessage());
+            cb_ai_analytik_oznam_chybu_adminovi($error, $idAudit);
+            cb_ai_analytik_json(503, ['ok' => false, 'error' => 'Konverzaci se nepodařilo ukončit. Zkuste to znovu.']);
+        }
+    }
+
     if ($action === 'prompt_list') {
+        $pouzeUlozene = ($input['filter'] ?? '') !== 'all';
+        $vsechnyUzivatele = !$pouzeUlozene && cb_ai_analytik_uzivatel_je_admin(db(), $idUser);
         cb_ai_analytik_json(200, [
             'ok' => true,
-            'prompts' => cb_ai_analytik_audit_prompty_uzivatele($idUser, ($input['filter'] ?? '') !== 'all'),
+            'prompts' => cb_ai_analytik_audit_prompty_uzivatele($idUser, $pouzeUlozene, $vsechnyUzivatele),
         ]);
     }
 
@@ -190,6 +264,8 @@ function cb_ai_analytik_gateway(): never
     $resumeState = null;
     $clarificationAnswer = '';
     $previousDurationMs = 0;
+    $attachments = [];
+    $continuationKind = 'clarification';
 
     if ($isContinuation) {
         $idAudit = (int)($input['audit_id'] ?? 0);
@@ -197,6 +273,7 @@ function cb_ai_analytik_gateway(): never
         if ($clarificationAnswer === '') {
             cb_ai_analytik_json(422, ['ok' => false, 'error' => 'Napište odpověď pro AI analytika.']);
         }
+        $stored = null;
         try {
             $stored = cb_ai_analytik_audit_nacist_pokracovani(
                 $idAudit,
@@ -215,11 +292,33 @@ function cb_ai_analytik_gateway(): never
             $ambiguityMode = cb_ai_analytik_normalizovat_nejasnost($stored['context']['ambiguity_mode'] ?? null);
             $analysisContext = ['years' => $years, 'ambiguity_mode' => $ambiguityMode];
             $resumeState = is_array($stored['agent_state'] ?? null) ? $stored['agent_state'] : null;
+            $continuationKind = (string)($stored['continuation_kind'] ?? 'clarification');
             $previousDurationMs = max(0, (int)($stored['duration_ms'] ?? 0));
             if ($prompt === '' || $resumeState === null) {
                 throw new RuntimeException('Uložený stav analýzy není úplný.');
             }
+            if ((int)($resumeState['followup_count'] ?? 0) >= CB_AI_ANALYTIK_MAX_NAVAZANI) {
+                $finishedAudit = is_array($stored['audit'] ?? null) ? $stored['audit'] : [];
+                $finishedAudit['status'] = 'completed';
+                cb_ai_analytik_audit_finish($idAudit, $finishedAudit);
+                cb_ai_analytik_prilohy_smazat_openai(
+                    is_array($resumeState['attachment_file_ids'] ?? null)
+                        ? $resumeState['attachment_file_ids']
+                        : []
+                );
+                cb_ai_analytik_json(422, [
+                    'ok' => false,
+                    'error' => 'Byl vyčerpán limit navazujících upřesnění. Spusťte nový prompt.',
+                ]);
+            }
         } catch (Throwable $error) {
+            if (is_array($stored)) {
+                cb_ai_analytik_audit_obnovit_cekani(
+                    $idAudit,
+                    $idUser,
+                    (string)($stored['continuation_kind'] ?? 'clarification')
+                );
+            }
             cb_ai_analytik_json(422, ['ok' => false, 'error' => $error->getMessage()]);
         }
     } else {
@@ -234,9 +333,7 @@ function cb_ai_analytik_gateway(): never
             $idAudit = cb_ai_analytik_audit_start($idUser, $idLogin, $modelProAudit, $prompt, 'global');
         } catch (Throwable $error) {
             error_log('AI analytik: audit nelze zahájit: ' . $error->getMessage());
-            if (!$maPravoTechnickeDiagnostiky) {
-                cb_ai_analytik_oznam_chybu_adminovi($error, $idUser, 0);
-            }
+            cb_ai_analytik_oznam_chybu_adminovi($error, 0);
             cb_ai_analytik_json(503, [
                 'ok' => false,
             'error' => $maPravoTechnickeDiagnostiky
@@ -278,6 +375,7 @@ function cb_ai_analytik_gateway(): never
             $audit['error_message'] = 'Blokace podvrženého modelu selhala: ' . $error->getMessage();
             $audit['error_type'] = get_class($error);
             $audit['error_code'] = (string)$error->getCode();
+            cb_ai_analytik_oznam_chybu_adminovi($error, $idAudit);
         }
         $audit['duration_ms'] = $previousDurationMs + (int)((hrtime(true) - $startedAt) / 1_000_000);
         cb_ai_analytik_audit_finish($idAudit, $audit);
@@ -306,6 +404,11 @@ function cb_ai_analytik_gateway(): never
             $years = cb_ai_analytik_normalizovat_roky($input['roky'] ?? null, $availableYears);
             $ambiguityMode = cb_ai_analytik_normalizovat_nejasnost($input['nejistota'] ?? null);
             $analysisContext = ['years' => $years, 'ambiguity_mode' => $ambiguityMode];
+            $attachments = cb_ai_analytik_prilohy_pouzit(
+                trim((string)($input['attachment_token'] ?? '')),
+                $idUser,
+                $model
+            );
         } catch (Throwable $error) {
             $audit['duration_ms'] = (int)((hrtime(true) - $startedAt) / 1_000_000);
             $audit['status'] = 'rejected_request';
@@ -314,7 +417,13 @@ function cb_ai_analytik_gateway(): never
             $audit['error_message'] = $error->getMessage();
             cb_ai_analytik_audit_finish($idAudit, $audit);
             $auditFinished = true;
-            cb_ai_analytik_json(422, ['ok' => false, 'error' => $error->getMessage() . ' · Audit #' . $idAudit]);
+            if (!($error instanceof CbAiAnalytikUzivatelskaChyba)) {
+                cb_ai_analytik_oznam_chybu_adminovi($error, $idAudit);
+            }
+            cb_ai_analytik_json(422, [
+                'ok' => false,
+                'error' => cb_ai_analytik_chyba_pro_uzivatele($error, $maPravoTechnickeDiagnostiky, $idAudit),
+            ]);
         }
         cb_ai_analytik_audit_request($idAudit, $requestedOutput, $analysisContext);
     }
@@ -323,6 +432,17 @@ function cb_ai_analytik_gateway(): never
         $_SESSION['ai_analytik_export_secret'] = bin2hex(random_bytes(32));
     }
     $exportSecret = (string)$_SESSION['ai_analytik_export_secret'];
+    $activeAttachmentFileIds = $isContinuation
+        ? array_values(array_filter(array_map(
+            'strval',
+            is_array($resumeState['attachment_file_ids'] ?? null)
+                ? $resumeState['attachment_file_ids']
+                : []
+        )))
+        : array_values(array_filter(array_map(
+            static fn(array $attachment): string => trim((string)($attachment['file_id'] ?? '')),
+            array_filter($attachments, 'is_array')
+        )));
     session_write_close();
     ignore_user_abort(true);
 
@@ -356,7 +476,8 @@ function cb_ai_analytik_gateway(): never
             $analysisContext,
             $progress,
             $resumeState,
-            $clarificationAnswer
+            $clarificationAnswer,
+            $attachments
         );
         $durationMs = $previousDurationMs + (int)((hrtime(true) - $startedAt) / 1_000_000);
         $audit['openai_summary_response_id'] = (string)$result['last_response_id'];
@@ -365,26 +486,7 @@ function cb_ai_analytik_gateway(): never
 
         $export = null;
         $continuation = null;
-        if ($result['response_type'] === 'clarification') {
-            $continuationToken = cb_ai_analytik_audit_ulozit_pokracovani($idAudit, $idUser, [
-                'version' => 1,
-                'prompt' => $prompt,
-                'model' => $model,
-                'requested_output' => $requestedOutput,
-                'context' => $analysisContext,
-                'agent_state' => $result['continuation_state'],
-                'duration_ms' => $durationMs,
-            ]);
-            $continuation = [
-                'audit_id' => $idAudit,
-                'token' => $continuationToken,
-                'expires_in_seconds' => 180,
-            ];
-            $auditFinished = true;
-        } else {
-            $audit['status'] = 'completed';
-            cb_ai_analytik_audit_finish($idAudit, $audit);
-            $auditFinished = true;
+        if ($result['response_type'] !== 'clarification') {
             $export = cb_ai_analytik_export_podepsat([
                 'version' => 1,
                 'id_user' => $idUser,
@@ -400,6 +502,49 @@ function cb_ai_analytik_gateway(): never
                 'usage' => $result['usage'],
                 'duration_ms' => $durationMs,
             ], $exportSecret);
+        }
+
+        $continuationState = is_array($result['continuation_state'] ?? null)
+            ? $result['continuation_state']
+            : [];
+        $followupCount = max(0, (int)($continuationState['followup_count'] ?? 0));
+        $canContinue = $followupCount < CB_AI_ANALYTIK_MAX_NAVAZANI;
+        if ($result['response_type'] === 'clarification' && !$canContinue) {
+            throw new CbAiAnalytikAgentLimitChyba(
+                'AI požádala o další upřesnění po vyčerpání povoleného limitu.'
+            );
+        }
+        if ($canContinue) {
+            $nextContinuationKind = $result['response_type'] === 'clarification' ? 'clarification' : 'followup';
+            $continuationToken = cb_ai_analytik_audit_ulozit_pokracovani($idAudit, $idUser, [
+                'version' => 1,
+                'continuation_kind' => $nextContinuationKind,
+                'prompt' => $prompt,
+                'model' => $model,
+                'requested_output' => $requestedOutput,
+                'context' => $analysisContext,
+                'agent_state' => $continuationState,
+                'duration_ms' => $durationMs,
+                'audit' => $audit,
+            ]);
+            $continuation = [
+                'audit_id' => $idAudit,
+                'token' => $continuationToken,
+                'kind' => $nextContinuationKind,
+                'expires_in_seconds' => CB_AI_ANALYTIK_POKRACOVANI_PLATNOST_SEKUND,
+                'followup_count' => $followupCount,
+                'remaining_followups' => CB_AI_ANALYTIK_MAX_NAVAZANI - $followupCount,
+            ];
+            $auditFinished = true;
+        } else {
+            $audit['status'] = 'completed';
+            cb_ai_analytik_audit_finish($idAudit, $audit);
+            $auditFinished = true;
+            cb_ai_analytik_prilohy_smazat_openai(
+                is_array($result['attachment_file_ids'] ?? null)
+                    ? $result['attachment_file_ids']
+                    : $activeAttachmentFileIds
+            );
         }
 
         cb_ai_analytik_stream('result', ['data' => [
@@ -442,19 +587,19 @@ function cb_ai_analytik_gateway(): never
             && !($error instanceof CbAiAnalytikUzivatelskaChyba)
             && !($error instanceof CbAiAnalytikAgentLimitChyba);
         if ($canRetryContinuation) {
-            cb_ai_analytik_audit_obnovit_cekani($idAudit, $idUser);
+            cb_ai_analytik_audit_obnovit_cekani($idAudit, $idUser, $continuationKind);
         } else {
             cb_ai_analytik_audit_finish($idAudit, $audit);
+            cb_ai_analytik_prilohy_smazat_openai($activeAttachmentFileIds);
         }
         $auditFinished = true;
         error_log('AI analytik audit #' . $idAudit . ': ' . get_class($error) . ': ' . $error->getMessage());
         if (
-            !$maPravoTechnickeDiagnostiky
-            && !($error instanceof CbAiAnalytikZrusenoUzivatelem)
+            !($error instanceof CbAiAnalytikZrusenoUzivatelem)
             && !($error instanceof CbAiAnalytikSpojeniPreruseno)
             && !($error instanceof CbAiAnalytikUzivatelskaChyba)
         ) {
-            cb_ai_analytik_oznam_chybu_adminovi($error, $idUser, $idAudit);
+            cb_ai_analytik_oznam_chybu_adminovi($error, $idAudit);
         }
         cb_ai_analytik_stream('error', [
             'message' => cb_ai_analytik_chyba_pro_uzivatele($error, $maPravoTechnickeDiagnostiky, $idAudit),

@@ -25,7 +25,7 @@ function hr_nacti_hlavni_pobocku_uzivatele(mysqli $db, int $idUser): array
     $stmt->close();
 
     if (!is_array($row)) {
-        throw new RuntimeException('Chybí hlavní pobočka uživatele.');
+        throw new CbUserVisibleException('Nemáte nastavenou hlavní pobočku. Obraťte se na administrátora.');
     }
 
     return [
@@ -40,10 +40,10 @@ function hr_nacti_hlavni_pobocku_uzivatele(mysqli $db, int $idUser): array
 function hr_uloz_pozadavek(mysqli $db, int $idPob, int $idSlot, int $pocet, string $upresneni, int $zadalUser): void
 {
     if ($zadalUser <= 0) {
-        throw new RuntimeException('Chybí přihlášený uživatel.');
+        throw new CbUserVisibleException('Přihlášení vypršelo. Přihlaste se prosím znovu.');
     }
     if ($idPob <= 0 || $idSlot <= 0 || $pocet <= 0) {
-        throw new RuntimeException('Chybí povinné údaje požadavku.');
+        throw new CbUserVisibleException('Doplňte počet a požadovanou pozici.');
     }
 
     $stmt = $db->prepare("
@@ -65,7 +65,7 @@ function hr_uloz_pozadavek(mysqli $db, int $idPob, int $idSlot, int $pocet, stri
 function hr_zrus_pozadavek(mysqli $db, int $idPozadavek, int $zrusilUser): void
 {
     if ($zrusilUser <= 0) {
-        throw new RuntimeException('Chybí přihlášený uživatel.');
+        throw new CbUserVisibleException('Přihlášení vypršelo. Přihlaste se prosím znovu.');
     }
 
     $stmt = $db->prepare("

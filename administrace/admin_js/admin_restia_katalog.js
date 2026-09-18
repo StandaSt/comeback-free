@@ -18,9 +18,9 @@
       body: body.toString(),
       credentials: 'same-origin'
     }).then(function (response) {
-      return response.json().then(function (data) {
+      return response.json().catch(function () { return {}; }).then(function (data) {
         if (!response.ok || !data || data.ok !== true) {
-          throw new Error(String((data && data.chyba) || ('HTTP ' + response.status)));
+          throw new Error(window.cbAdminResponseError(response.status, data, 'Načtení katalogu se nepodařilo.'));
         }
         return data;
       });
@@ -66,7 +66,7 @@
       })
       .catch(function (error) {
         status.classList.add('is-error');
-        status.textContent = 'Chyba: ' + String((error && error.message) || 'Načítání katalogu selhalo.');
+        status.textContent = window.cbAdminErrorMessage(error, 'Načítání katalogu se nepodařilo.');
       })
       .finally(function () {
         button.disabled = false;

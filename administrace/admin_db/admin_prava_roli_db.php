@@ -103,7 +103,7 @@ function cb_admin_prava_roli_data(): array
 function cb_admin_pravo_aktivni_uloz(int $idPravo, bool $aktivni): array
 {
     if ($idPravo <= 0) {
-        throw new RuntimeException('Neplatné ID práva.');
+        throw new CbUserVisibleException('Vyberte platné právo.');
     }
 
     $db = db();
@@ -117,7 +117,7 @@ function cb_admin_pravo_aktivni_uloz(int $idPravo, bool $aktivni): array
     $stmtLoad->close();
 
     if (!is_array($row)) {
-        throw new RuntimeException('Právo ID ' . $idPravo . ' neexistuje v cis_prava.');
+        throw new CbUserVisibleException('Vybrané právo neexistuje.');
     }
 
     $previous = (int)$row['aktivni'] === 1;
@@ -143,7 +143,7 @@ function cb_admin_pravo_aktivni_uloz(int $idPravo, bool $aktivni): array
 function cb_admin_prava_roli_uloz(int $idRole, int $idPravo, bool $allowed): void
 {
     if ($idRole <= 0 || $idPravo <= 0) {
-        throw new RuntimeException('Neplatné právo.');
+        throw new CbUserVisibleException('Vyberte platné právo.');
     }
 
     $db = db();
@@ -163,12 +163,12 @@ function cb_admin_prava_roli_uloz(int $idRole, int $idPravo, bool $allowed): voi
     $check->close();
 
     if ((int)($row['role_ok'] ?? 0) !== 1 || (int)($row['pravo_ok'] ?? 0) !== 1) {
-        throw new RuntimeException('Právo nebo role neexistuje.');
+        throw new CbUserVisibleException('Vybrané právo nebo role neexistuje.');
     }
 
     $idVstupnihoPrava = cb_pravo_vstupni_pravo($idPravo);
     if ($idVstupnihoPrava === 0) {
-        throw new RuntimeException('Právo nepatří do podporované skupiny modulu.');
+        throw new CbUserVisibleException('Právo nepatří do podporované skupiny modulu.');
     }
 
     if ($allowed && $idVstupnihoPrava !== $idPravo) {
@@ -181,7 +181,7 @@ function cb_admin_prava_roli_uloz(int $idRole, int $idPravo, bool $allowed): voi
         $parentRow = $stmtParent->get_result()->fetch_assoc();
         $stmtParent->close();
         if ((int)($parentRow['c'] ?? 0) !== 1) {
-            throw new RuntimeException('Nejprve povolte vstupní právo modulu (' . $idVstupnihoPrava . ').');
+            throw new CbUserVisibleException('Nejprve povolte vstupní právo modulu (' . $idVstupnihoPrava . ').');
         }
     }
 
@@ -202,7 +202,7 @@ function cb_admin_prava_roli_uloz(int $idRole, int $idPravo, bool $allowed): voi
         $childrenRow = $stmtChildren->get_result()->fetch_assoc();
         $stmtChildren->close();
         if ((int)($childrenRow['c'] ?? 0) > 0) {
-            throw new RuntimeException('Nejprve odeberte podřízená práva tohoto modulu.');
+            throw new CbUserVisibleException('Nejprve odeberte podřízená práva tohoto modulu.');
         }
     }
 

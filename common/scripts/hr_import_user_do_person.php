@@ -2,14 +2,14 @@
 declare(strict_types=1);
 
 /*
- * Jednoúčelový reset testovacích HR dat a volitelný import uživatelů do HR.
+ * Interní část kompletního prvního naplnění HR: reset a import USER -> PERSON.
  *
  * Spuštění:
  *   php www/common/scripts/hr_import_user_do_person.php --db=local --reset --scope=all|vd|nd_employees --import-users=0|1
  *   php www/common/scripts/hr_import_user_do_person.php --db=server --reset
  *
  * Na serveru je povolen pouze první kompletní běh, když je hr_person prázdná.
- * Číselníky hr_cis_*, hr_mzdy_mesic, hr_sazby a uživatelská data IS zachovává.
+ * Číselníky hr_cis_* a uživatelská data IS zachovává.
  */
 
 $directRun = defined('CB_HR_IMPORT_DIRECT') && CB_HR_IMPORT_DIRECT === true;
@@ -118,6 +118,7 @@ $deleteAllQueries = [
     'DELETE FROM hr_vd_token',
     'DELETE FROM hr_dokument_podpis',
     'DELETE FROM hr_cinnost',
+    'DELETE FROM hr_dokument_udaje',
     'DELETE FROM hr_dokument_soubor',
     'DELETE FROM hr_prohlidka',
     'DELETE FROM hr_skoleni',
@@ -135,6 +136,7 @@ $deleteAllQueries = [
     'DELETE FROM hr_poznamka',
     'DELETE FROM hr_adresa',
     'DELETE FROM hr_bankovni_ucet',
+    'DELETE FROM hr_zdravotni_pojisteni',
     'DELETE FROM hr_email',
     'DELETE FROM hr_telefon',
     'DELETE FROM hr_osobni_udaje',
@@ -142,6 +144,8 @@ $deleteAllQueries = [
     'DELETE FROM hr_zarazeni',
     'DELETE FROM hr_pracovni_vztah',
     'DELETE FROM hr_dokument',
+    'DELETE FROM hr_sazby',
+    'DELETE FROM hr_mzdy_mesic',
     'DELETE FROM hr_nd',
     'DELETE FROM hr_vd_podminky',
     'DELETE FROM hr_vd_akce',

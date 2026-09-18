@@ -27,7 +27,7 @@ function cb_admin_restia_katalog_handle(): void
     $returnUrl = cb_root_url('index.php?m=administrace&page=spousteni_scriptu');
     try {
         if ((string)($_POST['admin_restia_katalog_confirm'] ?? '') !== '1') {
-            throw new RuntimeException('Potvrďte načtení katalogu z Restie.');
+            throw new CbUserVisibleException('Potvrďte načtení katalogu z Restie.');
         }
         require_once __DIR__ . '/../../provoz/lib/restia_katalog.php';
         $user = $_SESSION['cb_user'] ?? null;
@@ -89,33 +89,38 @@ function cb_admin_restia_katalog_handle(): void
             'zdroj' => 'administrace',
         ]);
     } catch (Throwable $error) {
+        $publicMessage = cb_admin_chyba_text($error, 'Synchronizace katalogu Restia');
         if ($isAjax) {
-            cb_user_akce_zapis([
-                'id_user_akce_typ' => 14,
-                'modul' => 'administrace',
-                'objekt' => 'restia_katalog',
-                'id_objektu' => (int)($_POST['id_pob'] ?? 0),
-                'pole' => 'synchronizace_pobocky',
-                'vysledek' => 0,
-                'err_msg' => $error->getMessage(),
-                'zdroj' => 'administrace',
-            ]);
-            cb_admin_restia_katalog_json(['ok' => false, 'chyba' => $error->getMessage()], 400);
+            cb_admin_chyba_audit(static function () use ($error): void {
+                cb_user_akce_zapis([
+                    'id_user_akce_typ' => 14,
+                    'modul' => 'administrace',
+                    'objekt' => 'restia_katalog',
+                    'id_objektu' => (int)($_POST['id_pob'] ?? 0),
+                    'pole' => 'synchronizace_pobocky',
+                    'vysledek' => 0,
+                    'err_msg' => $error->getMessage(),
+                    'zdroj' => 'administrace',
+                ]);
+            });
+            cb_admin_restia_katalog_json(['ok' => false, 'chyba' => $publicMessage], cb_admin_chyba_status($error));
         }
         $_SESSION['cb_admin_script_result'] = [
             'script' => 'restia_katalog',
             'success' => false,
-            'message' => $error->getMessage(),
+            'message' => $publicMessage,
         ];
-        cb_user_akce_zapis([
-            'id_user_akce_typ' => 14,
-            'modul' => 'administrace',
-            'objekt' => 'restia_katalog',
-            'pole' => 'synchronizace',
-            'vysledek' => 0,
-            'err_msg' => $error->getMessage(),
-            'zdroj' => 'administrace',
-        ]);
+        cb_admin_chyba_audit(static function () use ($error): void {
+            cb_user_akce_zapis([
+                'id_user_akce_typ' => 14,
+                'modul' => 'administrace',
+                'objekt' => 'restia_katalog',
+                'pole' => 'synchronizace',
+                'vysledek' => 0,
+                'err_msg' => $error->getMessage(),
+                'zdroj' => 'administrace',
+            ]);
+        });
     }
     header('Location: ' . $returnUrl, true, 303);
     exit;

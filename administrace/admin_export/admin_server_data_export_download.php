@@ -13,6 +13,7 @@ require_once __DIR__ . '/../../common/lib/app.php';
 require_once __DIR__ . '/../../common/lib/uloz_akci.php';
 require_once __DIR__ . '/../../common/db/db_prava.php';
 require_once __DIR__ . '/../admin_lib/admin_server_data_export.php';
+require_once __DIR__ . '/../admin_lib/admin_chyby.php';
 
 cb_session_guard_entry();
 
@@ -35,22 +36,24 @@ function cb_admin_server_data_export_download_error(Throwable $error, int $statu
     http_response_code($status);
     header('Content-Type: text/plain; charset=utf-8');
     header('Cache-Control: no-store');
-    echo 'Export dat ze serveru na lokál se nepodařilo vytvořit: ' . $error->getMessage();
+    echo cb_admin_chyba_text($error, 'Export serverových dat');
     exit;
 }
 
 try {
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-        throw new RuntimeException('Export lze spustit pouze odesláním formuláře.');
+        throw new CbUserVisibleException('Export spusťte tlačítkem na stránce Export DB.');
     }
     if (($GLOBALS['PROSTREDI'] ?? '') !== 'SERVER') {
-        throw new RuntimeException('Tento export je dostupný pouze na serveru.');
+        http_response_code(403);
+        throw new CbUserVisibleException('Tento export je dostupný pouze na serveru.');
     }
     if (!empty($_SESSION['login_ok']) && !cb_session_validate_after_login()) {
         cb_session_forget_auth();
     }
     if (empty($_SESSION['login_ok'])) {
-        throw new RuntimeException('Přihlášení vypršelo.');
+        http_response_code(401);
+        throw new CbUserVisibleException('Přihlášení vypršelo. Přihlaste se prosím znovu.');
     }
 
     cb_crf_vyzaduj();
@@ -59,7 +62,8 @@ try {
     $idUser = is_array($user) ? (int)($user['id_user'] ?? 0) : 0;
     cb_db_prava_nacti_do_session(db(), $idUser);
     if (!function_exists('cb_pravo_ma') || !cb_pravo_ma(109)) {
-        throw new RuntimeException('Nemáte právo exportovat databázi.');
+        http_response_code(403);
+        throw new CbUserVisibleException('Nemáte právo exportovat databázi.');
     }
 
     $downloadName = 'export_server_data_pro_lokal.sql';
@@ -70,7 +74,7 @@ try {
 
     $lockHandle = fopen($tempDirectory . '/db_export.lock', 'c');
     if ($lockHandle === false || !flock($lockHandle, LOCK_EX | LOCK_NB)) {
-        throw new RuntimeException('Jiný export databáze právě probíhá. Zkuste to znovu po jeho dokončení.');
+        throw new CbUserVisibleException('Jiný export databáze právě probíhá. Zkuste to znovu po jeho dokončení.');
     }
 
     $tempPath = tempnam($tempDirectory, 'server_data_export_');
@@ -125,9 +129,7 @@ try {
     } catch (Throwable) {
         // Selhání pomocného auditu nesmí překrýt skutečnou chybu exportu.
     }
-    $forbidden = str_contains($e->getMessage(), 'právo')
-        || str_contains($e->getMessage(), 'pouze na serveru');
-    cb_admin_server_data_export_download_error($e, $forbidden ? 403 : 400);
+    cb_admin_server_data_export_download_error($e, cb_admin_chyba_status($e));
 }
 
 exit;

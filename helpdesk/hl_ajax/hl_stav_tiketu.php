@@ -7,6 +7,7 @@ if (!defined('CB_HELPDESK_DISPATCH_INTERNAL')) {
     require_once __DIR__ . '/../../common/lib/app.php';
 }
 require_once __DIR__ . '/../hl_lib/hl_prava.php';
+require_once __DIR__ . '/../hl_lib/hl_chyby.php';
 
 if (!headers_sent()) {
     header('Content-Type: application/json; charset=utf-8');
@@ -156,8 +157,7 @@ try {
         'tickets' => $tickets,
     ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
-    http_response_code(400);
-    echo json_encode(['ok' => false, 'err' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    cb_helpdesk_json_chyba($e, 'Načtení stavů tiketů', ['table' => 'helpdesk']);
 }
 
 // helpdesk/hl_ajax/hl_stav_tiketu.php * Verze: V1 * Aktualizace: 24.06.2026

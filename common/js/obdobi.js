@@ -260,19 +260,20 @@
         credentials: 'same-origin'
       })
         .then(function (response) {
-          return response.json().catch(function () {
-            return {};
-          });
+          return window.CB_CHYBY.readJson(response, 'Uložení období se nepodařilo.');
         })
-        .then(function (json) {
-          if (json && json.ok === true) {
-            syncSummaryFromJson(json);
-            document.dispatchEvent(new CustomEvent('cb:gn-changed', {
-              detail: { source: 'obdobi' }
-            }));
+        .then(function (result) {
+          if (!result.ok) {
+            window.alert(result.message);
+            return;
           }
+          syncSummaryFromJson(result.data);
+          document.dispatchEvent(new CustomEvent('cb:gn-changed', {
+            detail: { source: 'obdobi' }
+          }));
         })
-        .catch(function () {
+        .catch(function (error) {
+          window.alert(window.CB_CHYBY.errorMessage(error));
         })
         .finally(function () {
           isSaving = false;

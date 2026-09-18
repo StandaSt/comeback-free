@@ -27,7 +27,7 @@ function cb_admin_google_reporty_import_handle(): void
 
     try {
         if ((string)($_POST['admin_google_reporty_confirm'] ?? '') !== '1') {
-            throw new RuntimeException('Potvrďte přípravu zdroje a import reportů.');
+            throw new CbUserVisibleException('Potvrďte přípravu zdroje a import reportů.');
         }
 
         $prepared = cb_admin_google_reporty_priprav_zdroj();
@@ -58,21 +58,24 @@ function cb_admin_google_reporty_import_handle(): void
             'zdroj' => 'administrace',
         ]);
     } catch (Throwable $e) {
+        $publicMessage = cb_admin_chyba_text($e, 'Import Google reportů');
         $_SESSION['cb_admin_script_result'] = [
             'script' => 'google_reporty',
             'success' => false,
-            'message' => $e->getMessage(),
+            'message' => $publicMessage,
         ];
-        cb_user_akce_zapis([
-            'id_user_akce_typ' => 14,
-            'modul' => 'administrace',
-            'objekt' => 'google_reporty_import',
-            'pole' => 'spusteni',
-            'vysledek' => 0,
-            'err_msg' => $e->getMessage(),
-            'zdroj' => 'administrace',
-            'detail' => ['chyba' => $e->getMessage()],
-        ]);
+        cb_admin_chyba_audit(static function () use ($e): void {
+            cb_user_akce_zapis([
+                'id_user_akce_typ' => 14,
+                'modul' => 'administrace',
+                'objekt' => 'google_reporty_import',
+                'pole' => 'spusteni',
+                'vysledek' => 0,
+                'err_msg' => $e->getMessage(),
+                'zdroj' => 'administrace',
+                'detail' => ['chyba' => $e->getMessage()],
+            ]);
+        });
     }
 
     header('Location: ' . $returnUrl, true, 303);
@@ -96,7 +99,7 @@ function cb_admin_google_reporty_preview_handle(): void
         $_SESSION['cb_admin_script_result'] = [
             'script' => 'google_reporty_preview',
             'success' => false,
-            'message' => $e->getMessage(),
+            'message' => cb_admin_chyba_text($e, 'Náhled importu Google reportů'),
         ];
     }
 

@@ -100,6 +100,6 @@ function cb_firemni_pristup_muze_osobu(mysqli $db, int $idUser, int $idPerson): 
 function cb_firemni_pristup_vyzaduj_osobu(mysqli $db, int $idUser, int $idPerson): void
 {
     if (!cb_firemni_pristup_muze_osobu($db, $idUser, $idPerson)) {
-        throw new RuntimeException('Nemáte oprávnění pracovat s touto osobou.');
+        throw new CbUserVisibleException('Nemáte oprávnění pracovat s touto osobou.');
     }
 }

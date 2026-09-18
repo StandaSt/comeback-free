@@ -1,8 +1,12 @@
 <?php
 declare(strict_types=1);
 
-/* Dotazy a mazání jednotlivých záznamů přehledu systémových chyb pro Administraci. */
+/*
+ * Datova vrstva kategorie Aplikacni chyby v Administraci.
+ * Cte log_chyby, doplnuje popis z cis_chyby a maze pouze zvoleny zaznam.
+ */
 
+/** Normalizuje filtry, strankovani a razeni prijate z URL. */
 function cb_admin_log_chyby_filtry(array $source): array
 {
     $rawFilters = isset($source['err_f']) && is_array($source['err_f']) ? $source['err_f'] : [];
@@ -31,6 +35,7 @@ function cb_admin_log_chyby_filtry(array $source): array
 
     return [
         'filtry' => [
+            'id' => $textFilter('id'),
             'kdy' => $textFilter('kdy'),
             'modul' => $textFilter('modul'),
             'akce' => $textFilter('akce'),
@@ -45,9 +50,11 @@ function cb_admin_log_chyby_filtry(array $source): array
     ];
 }
 
+/** Vrati povolene sloupce pro bezpecne SQL razeni. */
 function cb_admin_log_chyby_razeni(): array
 {
     return [
+        'id' => 'l.id_log_chyby',
         'kdy' => 'l.kdy',
         'modul' => 'l.modul',
         'akce' => 'l.akce',
@@ -57,6 +64,20 @@ function cb_admin_log_chyby_razeni(): array
     ];
 }
 
+/** Prelozi interni zdroj chyby na srozumitelny modul nebo oblast IS. */
+function cb_admin_log_chyby_modul_label(string $modul): string
+{
+    $modul = trim($modul);
+    return match (strtoupper($modul)) {
+        'RESTIA' => 'Provoz / Restia',
+        'AI_ANALYTIK' => 'Provoz / AI analytik',
+        'PROVOZ' => 'Provoz',
+        'ADMINISTRACE' => 'Administrace',
+        default => $modul !== '' ? $modul : '—',
+    };
+}
+
+/** Nacte seznam modulu pouzity ve filtru aplikacnich chyb. */
 function cb_admin_log_chyby_moduly(mysqli $db): array
 {
     $result = $db->query('SELECT DISTINCT modul FROM log_chyby WHERE modul <> \'\' ORDER BY modul ASC');
@@ -76,9 +97,11 @@ function cb_admin_log_chyby_moduly(mysqli $db): array
     return $moduly;
 }
 
+/** Nacte jednu stranku aplikacnich chyb vcetne metadat z ciselniku. */
 function cb_admin_log_chyby_nacti(mysqli $db, array $nastaveni): array
 {
     $filtry = is_array($nastaveni['filtry'] ?? null) ? $nastaveni['filtry'] : [];
+    $id = (string)($filtry['id'] ?? '');
     $kdy = (string)($filtry['kdy'] ?? '');
     $modul = (string)($filtry['modul'] ?? '');
     $akce = (string)($filtry['akce'] ?? '');
@@ -97,7 +120,8 @@ function cb_admin_log_chyby_nacti(mysqli $db, array $nastaveni): array
     $orderBy = ($razeni[$sort] ?? $razeni['kdy']) . ($dir === 'ASC' ? ' ASC' : ' DESC') . ', l.id_log_chyby DESC';
 
     $where = "
-        WHERE (? = '' OR DATE_FORMAT(l.kdy, '%d.%m.%Y %H:%i:%s') LIKE CONCAT('%', ?, '%'))
+        WHERE (? = '' OR CAST(l.id_log_chyby AS CHAR) LIKE CONCAT('%', ?, '%'))
+          AND (? = '' OR DATE_FORMAT(l.kdy, '%d.%m.%Y %H:%i:%s') LIKE CONCAT('%', ?, '%'))
           AND (? = '' OR l.modul LIKE CONCAT('%', ?, '%'))
           AND (? = '' OR l.akce LIKE CONCAT('%', ?, '%'))
           AND (? = '' OR CONCAT_WS(' ', l.zprava, l.kod) LIKE CONCAT('%', ?, '%'))
@@ -109,7 +133,7 @@ function cb_admin_log_chyby_nacti(mysqli $db, array $nastaveni): array
     if ($countStmt === false) {
         throw new RuntimeException('Nelze připravit počet chyb.');
     }
-    $countStmt->bind_param('ssssssssssii', $kdy, $kdy, $modul, $modul, $akce, $akce, $zprava, $zprava, $uzivatel, $uzivatel, $stav, $stav);
+    $countStmt->bind_param('ssssssssssssii', $id, $id, $kdy, $kdy, $modul, $modul, $akce, $akce, $zprava, $zprava, $uzivatel, $uzivatel, $stav, $stav);
     $countStmt->execute();
     $countRow = $countStmt->get_result()->fetch_assoc();
     $countStmt->close();
@@ -122,9 +146,12 @@ function cb_admin_log_chyby_nacti(mysqli $db, array $nastaveni): array
         SELECT
             l.id_log_chyby, l.kdy, l.id_user, l.modul, l.akce, l.kod, l.zprava,
             l.detail, l.soubor, l.radek, l.url, l.data_json, l.vyreseno, l.poznamka,
+            c.uroven AS cis_uroven, c.oblast AS cis_oblast,
+            c.popis AS cis_popis, c.hint AS cis_hint,
             u.jmeno AS user_jmeno, u.prijmeni AS user_prijmeni, u.email AS user_email
         FROM log_chyby l
         LEFT JOIN user u ON u.id_user = l.id_user
+        LEFT JOIN cis_chyby c ON c.kod = l.kod AND c.aktivni = 1
         ' . $where . '
         ORDER BY ' . $orderBy . '
         LIMIT ? OFFSET ?
@@ -132,7 +159,7 @@ function cb_admin_log_chyby_nacti(mysqli $db, array $nastaveni): array
     if ($stmt === false) {
         throw new RuntimeException('Nelze načíst přehled chyb.');
     }
-    $stmt->bind_param('ssssssssssiiii', $kdy, $kdy, $modul, $modul, $akce, $akce, $zprava, $zprava, $uzivatel, $uzivatel, $stav, $stav, $perPage, $offset);
+    $stmt->bind_param('ssssssssssssiiii', $id, $id, $kdy, $kdy, $modul, $modul, $akce, $akce, $zprava, $zprava, $uzivatel, $uzivatel, $stav, $stav, $perPage, $offset);
     $stmt->execute();
     $result = $stmt->get_result();
     $chyby = [];
@@ -152,10 +179,11 @@ function cb_admin_log_chyby_nacti(mysqli $db, array $nastaveni): array
     ];
 }
 
+/** Smaze jeden konkretni zaznam aplikacni chyby podle jeho ID. */
 function cb_admin_log_chyby_smazat(mysqli $db, int $idLogChyby): bool
 {
     if ($idLogChyby < 1) {
-        throw new InvalidArgumentException('Chybí platný záznam chyby pro odstranění.');
+        throw new CbUserVisibleException('Vyberte platný záznam chyby pro odstranění.');
     }
     $stmt = $db->prepare('DELETE FROM log_chyby WHERE id_log_chyby = ? LIMIT 1');
     if ($stmt === false) {

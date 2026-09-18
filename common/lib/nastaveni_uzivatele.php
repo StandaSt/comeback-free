@@ -8,16 +8,57 @@ function cb_nastaveni_uzivatele_vyrid_post(): void
     }
 
     if (isset($_POST['cb_theme_delta'])) {
-        cb_nastaveni_uzivatele_uloz_theme();
+        try {
+            cb_nastaveni_uzivatele_uloz_theme();
+        } catch (Throwable $error) {
+            $context = [
+                'module' => 'SYSTEM',
+                'action' => 'Uložení barevného motivu',
+                'table' => 'user_set',
+            ];
+            if (isset($_SERVER['HTTP_X_COMEBACK_THEME'])) {
+                cb_chyba_json_odesli($error, $context);
+            }
+            $_SESSION['cb_flash'] = cb_chyba_uzivatel($error, $context);
+            header('Location: ' . cb_nastaveni_uzivatele_theme_navrat());
+            exit;
+        }
     }
 
     if (isset($_SERVER['HTTP_X_COMEBACK_SET_PRODLEVA'])) {
-        cb_nastaveni_uzivatele_uloz_prodlevu();
+        try {
+            cb_nastaveni_uzivatele_uloz_prodlevu();
+        } catch (Throwable $error) {
+            cb_chyba_json_odesli($error, [
+                'module' => 'SYSTEM',
+                'action' => 'Uložení prodlevy období',
+                'table' => 'user_set',
+            ]);
+        }
     }
 
     if (isset($_SERVER['HTTP_X_COMEBACK_ACTIVE_MODULE'])) {
-        cb_nastaveni_uzivatele_uloz_aktivni_modul();
+        try {
+            cb_nastaveni_uzivatele_uloz_aktivni_modul();
+        } catch (Throwable $error) {
+            cb_chyba_json_odesli($error, [
+                'module' => 'SYSTEM',
+                'action' => 'Uložení aktivního modulu',
+                'table' => 'user_set',
+            ]);
+        }
     }
+}
+
+function cb_nastaveni_uzivatele_theme_navrat(): string
+{
+    $module = cb_modul_normalizuj(strtolower(trim((string)($_POST['cb_theme_module'] ?? 'provoz'))));
+    $returnUrl = trim((string)($_POST['cb_theme_return'] ?? ''));
+    if ($returnUrl === '' || str_starts_with($returnUrl, '//') || preg_match('~^[a-z][a-z0-9+.-]*:~i', $returnUrl) === 1) {
+        return cb_root_url('index.php?m=' . rawurlencode($module));
+    }
+
+    return $returnUrl;
 }
 
 function cb_nastaveni_uzivatele_uloz_theme(): void
@@ -33,39 +74,33 @@ function cb_nastaveni_uzivatele_uloz_theme(): void
         $cbThemeDelta = $cbThemeDelta < 0 ? -1 : ($cbThemeDelta > 0 ? 1 : 0);
         $cbThemeLevel = max(0, min(6, $cbThemeLevel + $cbThemeDelta));
         $cbThemeStmt = db()->prepare('UPDATE user_set SET dark = ? WHERE id_user = ?');
-        if ($cbThemeStmt instanceof mysqli_stmt) {
-            $cbThemeStmt->bind_param('ii', $cbThemeLevel, $cbIdUser);
-            $cbThemeSaved = $cbThemeStmt->execute();
-            $cbThemeStmt->close();
-            if ($cbThemeSaved) {
-                cb_store_user_settings(['dark' => $cbThemeLevel]);
-            }
+        if (!($cbThemeStmt instanceof mysqli_stmt)) {
+            throw new RuntimeException('Nepodařilo se připravit uložení barevného motivu.');
         }
+        $cbThemeStmt->bind_param('ii', $cbThemeLevel, $cbIdUser);
+        $cbThemeSaved = $cbThemeStmt->execute();
+        $cbThemeStmt->close();
+        if (!$cbThemeSaved) {
+            throw new RuntimeException('Nepodařilo se uložit barevný motiv.');
+        }
+        cb_store_user_settings(['dark' => $cbThemeLevel]);
     } elseif ($cbThemeAjax) {
         header('Content-Type: application/json; charset=utf-8');
         http_response_code(401);
-        echo json_encode(['ok' => false, 'err' => 'Nutne prihlaseni'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'err' => 'Platnost přihlášení vypršela. Přihlaste se prosím znovu.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
     if ($cbThemeAjax) {
         header('Content-Type: application/json; charset=utf-8');
         if (!$cbThemeSaved) {
-            http_response_code(500);
-            echo json_encode(['ok' => false, 'err' => 'Ulozeni selhalo'], JSON_UNESCAPED_UNICODE);
-            exit;
+            throw new RuntimeException('Barevný motiv nebyl uložen.');
         }
         echo json_encode(['ok' => true, 'dark' => $cbThemeLevel], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
-    $cbThemeModule = strtolower(trim((string)($_POST['cb_theme_module'] ?? 'provoz')));
-    $cbThemeModule = cb_modul_normalizuj($cbThemeModule);
-    $cbThemeReturn = trim((string)($_POST['cb_theme_return'] ?? ''));
-    if ($cbThemeReturn === '' || str_starts_with($cbThemeReturn, '//') || preg_match('~^[a-z][a-z0-9+.-]*:~i', $cbThemeReturn) === 1) {
-        $cbThemeReturn = cb_root_url('index.php?m=' . rawurlencode($cbThemeModule));
-    }
-    header('Location: ' . $cbThemeReturn);
+    header('Location: ' . cb_nastaveni_uzivatele_theme_navrat());
     exit;
 }
 
@@ -84,7 +119,7 @@ function cb_nastaveni_uzivatele_uloz_prodlevu(): void
     $cbProdlevaSec = (int)$cbProdlevaRaw;
     if ($cbProdlevaSec < 1 || $cbProdlevaSec > 10) {
         http_response_code(422);
-        echo json_encode(['ok' => false, 'err' => 'Neplatna prodleva'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'err' => 'Prodleva musí být v rozsahu 1 až 10 sekund.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -93,22 +128,19 @@ function cb_nastaveni_uzivatele_uloz_prodlevu(): void
     $cbIdUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
     if ($cbIdUser <= 0) {
         http_response_code(401);
-        echo json_encode(['ok' => false, 'err' => 'Nutne prihlaseni'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'err' => 'Platnost přihlášení vypršela. Přihlaste se prosím znovu.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
-    $cbProdlevaSaved = false;
     $cbProdlevaStmt = db()->prepare('UPDATE user_set SET prodleva = ? WHERE id_user = ?');
-    if ($cbProdlevaStmt instanceof mysqli_stmt) {
-        $cbProdlevaStmt->bind_param('ii', $cbProdlevaMs, $cbIdUser);
-        $cbProdlevaSaved = $cbProdlevaStmt->execute();
-        $cbProdlevaStmt->close();
+    if (!($cbProdlevaStmt instanceof mysqli_stmt)) {
+        throw new RuntimeException('Nepodařilo se připravit uložení prodlevy.');
     }
-
+    $cbProdlevaStmt->bind_param('ii', $cbProdlevaMs, $cbIdUser);
+    $cbProdlevaSaved = $cbProdlevaStmt->execute();
+    $cbProdlevaStmt->close();
     if (!$cbProdlevaSaved) {
-        http_response_code(500);
-        echo json_encode(['ok' => false, 'err' => 'Ulozeni selhalo'], JSON_UNESCAPED_UNICODE);
-        exit;
+        throw new RuntimeException('Nepodařilo se uložit prodlevu.');
     }
 
     cb_store_user_settings(['prodleva' => $cbProdlevaMs]);
@@ -134,7 +166,7 @@ function cb_nastaveni_uzivatele_uloz_aktivni_modul(): void
     }
     if (!in_array($module, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'], true)) {
         http_response_code(422);
-        echo json_encode(['ok' => false, 'err' => 'Neplatny modul'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'err' => 'Vybraný modul není platný.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -142,15 +174,13 @@ function cb_nastaveni_uzivatele_uloz_aktivni_modul(): void
     $cbIdUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
     if ($cbIdUser <= 0) {
         http_response_code(401);
-        echo json_encode(['ok' => false, 'err' => 'Nutne prihlaseni'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'err' => 'Platnost přihlášení vypršela. Přihlaste se prosím znovu.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
     $stmt = db()->prepare('UPDATE user_set SET aktivni_modul = ? WHERE id_user = ?');
     if (!($stmt instanceof mysqli_stmt)) {
-        http_response_code(500);
-        echo json_encode(['ok' => false, 'err' => 'Ulozeni selhalo'], JSON_UNESCAPED_UNICODE);
-        exit;
+        throw new RuntimeException('Nepodařilo se připravit uložení aktivního modulu.');
     }
 
     $stmt->bind_param('si', $module, $cbIdUser);
@@ -158,9 +188,7 @@ function cb_nastaveni_uzivatele_uloz_aktivni_modul(): void
     $stmt->close();
 
     if (!$saved) {
-        http_response_code(500);
-        echo json_encode(['ok' => false, 'err' => 'Ulozeni selhalo'], JSON_UNESCAPED_UNICODE);
-        exit;
+        throw new RuntimeException('Nepodařilo se uložit aktivní modul.');
     }
 
     cb_store_user_settings(['aktivni_modul' => $module]);

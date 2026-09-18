@@ -36,6 +36,15 @@ if (is_array($employee) && trim((string)($employee['pohlavi'] ?? '')) === '') {
 if (is_array($employee) && trim((string)($employee['email'] ?? '')) === '') {
     $missingRequiredData[] = 'e-mail';
 }
+$employeeDocuments = is_array($employee) && cb_pravo_ma(301)
+    ? hr_fetch_employee_documents($db, hr_current_user_id(), (int)$employee['id_person'], 20)
+    : [];
+$employeeDocumentOpenUrl = static function (array $document): string {
+    return cb_root_url('hr/hr_download/hr_dokument.php?' . http_build_query([
+        'id_dokument' => (int)$document['id_dokument'],
+        'verze' => (int)$document['verze'],
+    ]));
+};
 ?>
 <?php if ($employee === null): ?>
     <section class="hr_panel"><div class="hr_panel_header"><h2 class="hr_panel_title">Karta zaměstnance</h2></div><p class="hr_empty_state">Zaměstnanec nebyl nalezen.</p></section>
@@ -80,13 +89,10 @@ if (is_array($employee) && trim((string)($employee['email'] ?? '')) === '') {
             <?php endif; ?>
         </section>
         <section class="hr_employee_overview_summary hr_panel" aria-labelledby="hr-employee-summary-title">
-            <div class="hr_panel_header"><h3 id="hr-employee-summary-title" class="hr_panel_title">Rychlý přehled</h3></div>
+            <div class="hr_panel_header"><h3 id="hr-employee-summary-title" class="hr_panel_title">Stav evidence</h3></div>
             <div class="hr_employee_summary_grid">
-                <div class="hr_employee_summary_placeholder"><span class="hr_employee_summary_icon" aria-hidden="true">☀</span><div><span>Zůstatek dovolené</span><strong>18 dní</strong><small>z 25 dní</small></div></div>
-                <div class="hr_employee_summary_placeholder"><span class="hr_employee_summary_icon" aria-hidden="true">▣</span><div><span>Absence (letos)</span><strong>3 dny</strong><small>z toho 2 PN</small></div></div>
-                <div class="hr_employee_summary_placeholder"><span class="hr_employee_summary_icon" aria-hidden="true">☆</span><div><span>Poslední hodnocení</span><strong>15. 2. 2024</strong><small>(PDM 2023)</small></div></div>
-                <div class="hr_employee_summary_placeholder"><span class="hr_employee_summary_icon" aria-hidden="true">¤</span><div><span>Aktuální mzda</span><strong>45 000 Kč</strong><small>Hrubá mzda</small></div></div>
-                <div class="hr_employee_summary_placeholder"><span class="hr_employee_summary_icon" aria-hidden="true">◷</span><div><span>Úvazek</span><strong>1,0</strong><small>(40 h/týdně)</small></div></div>
+                <div class="hr_employee_summary_placeholder"><span class="hr_employee_summary_icon" aria-hidden="true">✓</span><div><span>Kontrola údajů</span><strong><?= (int)($employee['overen'] ?? 0) === 1 ? 'Ověřeno' : 'Čeká na ověření' ?></strong><small><?= (int)($employee['kompletni'] ?? 0) === 1 ? 'Karta je kompletní' : 'Kartu je třeba doplnit' ?></small></div></div>
+                <div class="hr_employee_summary_placeholder"><span class="hr_employee_summary_icon" aria-hidden="true">◇</span><div><span>Dokumenty</span><strong><?= h((string)count($employeeDocuments)) ?></strong><small>evidovaných souborů</small></div></div>
             </div>
         </section>
     </section>
@@ -108,7 +114,7 @@ if (is_array($employee) && trim((string)($employee['email'] ?? '')) === '') {
         </section>
     <?php endif; ?>
 
-    <nav class="hr_employee_tabs" aria-label="Sekce karty zaměstnance"><a class="hr_employee_tab<?= $employeeSection === 'prehled' ? ' hr_employee_tab_active' : '' ?>" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . $employee['id_person'])) ?>">Přehled</a><a class="hr_employee_tab<?= $employeeSection === 'pracovni_pomer' ? ' hr_employee_tab_active' : '' ?>" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . $employee['id_person'] . '&sekce=pracovni_pomer')) ?>">Pracovní poměr</a><span class="hr_employee_tab">Docházka a dovolená</span><span class="hr_employee_tab">Dokumenty</span><span class="hr_employee_tab">Hodnocení</span><span class="hr_employee_tab">Vybavení</span><span class="hr_employee_tab">Osobní údaje</span><span class="hr_employee_tab">Onboarding</span><span class="hr_employee_tab">Poznámky</span></nav>
+    <nav class="hr_employee_tabs" aria-label="Sekce karty zaměstnance"><a class="hr_employee_tab<?= $employeeSection === 'prehled' ? ' hr_employee_tab_active' : '' ?>" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . $employee['id_person'])) ?>">Přehled</a><a class="hr_employee_tab<?= $employeeSection === 'pracovni_pomer' ? ' hr_employee_tab_active' : '' ?>" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . $employee['id_person'] . '&sekce=pracovni_pomer')) ?>">Pracovní poměr</a><span class="hr_employee_tab">Docházka a dovolená</span><a class="hr_employee_tab" href="#hr-employee-documents">Dokumenty</a><span class="hr_employee_tab">Hodnocení</span><span class="hr_employee_tab">Vybavení</span><span class="hr_employee_tab">Osobní údaje</span><span class="hr_employee_tab">Onboarding</span><span class="hr_employee_tab">Poznámky</span></nav>
     <?php if ($employeeSection === 'pracovni_pomer'): ?>
         <?php
         // Data aktualniho vztahu a ciselniku pro samostatny formular pracovniho pomeru.
@@ -249,7 +255,7 @@ if (is_array($employee) && trim((string)($employee['email'] ?? '')) === '') {
     <?php else: ?>
     <section class="hr_employee_dashboard">
         <article class="hr_panel"><div class="hr_panel_header"><h2 class="hr_panel_title">Časová osa</h2></div><p class="hr_employee_empty_block">Události k zaměstnanci zatím nejsou evidované.</p></article>
-        <article class="hr_panel"><div class="hr_panel_header"><h2 class="hr_panel_title">Poslední dokumenty</h2></div><p class="hr_employee_empty_block">Zatím nejsou evidované žádné dokumenty.</p></article>
+        <article class="hr_panel" id="hr-employee-documents"><div class="hr_panel_header"><h2 class="hr_panel_title">Dokumenty</h2><?php if ($employeeDocuments !== []): ?><a class="hr_panel_link" href="<?= h(cb_root_url('index.php?m=hr&page=dokumenty')) ?>">Zobrazit všechny</a><?php endif; ?></div><?php if ($employeeDocuments === []): ?><p class="hr_employee_empty_block">Zatím nejsou evidované žádné dokumenty.</p><?php else: ?><ul class="hr_activity_list"><?php foreach ($employeeDocuments as $document): ?><li class="hr_activity_item"><span class="hr_dot hr_blue"></span><strong class="hr_activity_name"><?= h((string)$document['typ']) ?></strong><a class="hr_table_link" href="<?= h($employeeDocumentOpenUrl($document)) ?>" target="_blank" rel="noopener"><?= h($document['ulozeny_nazev'] !== '' ? $document['ulozeny_nazev'] : $document['nazev']) ?></a><time class="hr_activity_time"><?= h(hr_format_date($document['vytvoreno'])) ?></time></li><?php endforeach; ?></ul><?php endif; ?></article>
         <article class="hr_panel"><div class="hr_panel_header"><h2 class="hr_panel_title">Nepřítomnosti</h2></div><p class="hr_employee_empty_block">Zatím není evidovaná žádná nepřítomnost.</p></article>
         <article class="hr_panel"><div class="hr_panel_header"><h2 class="hr_panel_title">Připravované události</h2></div><p class="hr_employee_empty_block">Zatím nejsou evidované žádné události.</p></article>
         <article class="hr_panel"><div class="hr_panel_header"><h2 class="hr_panel_title">Schválené dovolené</h2></div><p class="hr_employee_empty_block">Zatím nejsou evidované žádné dovolené.</p></article>

@@ -7,6 +7,7 @@ if (!defined('CB_HELPDESK_DISPATCH_INTERNAL')) {
     require_once __DIR__ . '/../../common/lib/app.php';
 }
 require_once __DIR__ . '/../hl_lib/hl_prava.php';
+require_once __DIR__ . '/../hl_lib/hl_chyby.php';
 
 if (!headers_sent()) {
     header('Content-Type: application/json; charset=utf-8');
@@ -71,8 +72,7 @@ try {
         'notifikace' => $notifikace,
     ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
-    http_response_code(400);
-    echo json_encode(['ok' => false, 'err' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    cb_helpdesk_json_chyba($e, 'Načtení notifikací', ['table' => 'helpdesk_notifikace']);
 }
 
 // helpdesk/hl_ajax/hl_notifikace_nacist.php * Verze: V1 * Aktualizace: 20.06.2026

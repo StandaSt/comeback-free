@@ -13,6 +13,7 @@ require_once __DIR__ . '/../../common/config/secrets.php';
 require_once __DIR__ . '/../../common/lib/app.php';
 require_once __DIR__ . '/../../common/lib/uloz_akci.php';
 require_once __DIR__ . '/../../common/db/db_prava.php';
+require_once __DIR__ . '/../admin_lib/admin_chyby.php';
 
 cb_session_guard_entry();
 
@@ -23,14 +24,14 @@ function cb_admin_ajax_spustit(callable $action): never
 
     try {
         if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-            throw new RuntimeException('AJAX endpoint přijímá pouze POST.');
+            throw new CbUserVisibleException('Tuto akci nelze otevřít přímo. Obnovte stránku a zkuste ji znovu.');
         }
         if ((string)($_SERVER['HTTP_X_COMEBACK_ADMIN_EDITACE_PRAV'] ?? '') !== '1') {
-            throw new RuntimeException('Chybí hlavička požadavku pro editaci práv.');
+            throw new CbUserVisibleException('Požadavek není platný. Obnovte stránku a zkuste akci znovu.');
         }
         if (empty($_SESSION['login_ok'])) {
             http_response_code(401);
-            throw new RuntimeException('Přihlášení vypršelo.');
+            throw new CbUserVisibleException('Přihlášení vypršelo. Přihlaste se prosím znovu.');
         }
 
         cb_crf_vyzaduj();
@@ -40,18 +41,13 @@ function cb_admin_ajax_spustit(callable $action): never
         $roles = cb_db_user_role_data(db(), $idUser);
         if (!array_key_exists(1, $roles)) {
             http_response_code(403);
-            throw new RuntimeException('Editace práv je dostupná pouze roli Admin.');
+            throw new CbUserVisibleException('K editaci práv nemáte oprávnění.');
         }
 
         $result = $action();
         echo json_encode(['ok' => true] + (is_array($result) ? $result : []), JSON_UNESCAPED_UNICODE);
     } catch (Throwable $e) {
-        // Chyba se neskrývá: klient dostane konkrétní text a server jej současně zapíše do error logu.
-        error_log('[admin_editace_prav] ' . $e->getMessage());
-        if (http_response_code() < 400) {
-            http_response_code(400);
-        }
-        echo json_encode(['ok' => false, 'err' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+        cb_admin_json_chyba($e, 'Editace práv');
     }
     exit;
 }

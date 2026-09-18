@@ -9,7 +9,7 @@ function hr_post_pozadavek_vytvorit(mysqli $db, array $user): void
 {
     try {
         if (!cb_pravo_ma(312)) {
-            throw new RuntimeException('Na zadani pozadavku nemate pravo.');
+            throw new CbUserVisibleException('Nemáte právo zadat HR požadavek.');
         }
 
         $idUser = (int)($user['id_user'] ?? 0);
@@ -27,7 +27,7 @@ function hr_post_pozadavek_vytvorit(mysqli $db, array $user): void
         cb_form_finish(
             cb_root_url('index.php?m=hr&page=pozadavky'),
             false,
-            $e->getMessage(),
+            cb_hr_chyba_text($e, 'Založení HR požadavku', ['table' => 'hr_pozadavky']),
             $_POST
         );
     }

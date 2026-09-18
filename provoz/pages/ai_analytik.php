@@ -45,6 +45,24 @@ try {
 } catch (Throwable $error) {
     $aiAnalytikPrijemci = [];
 }
+$aiAnalytikFormatDuration = static function (int $durationMs): string {
+    $seconds = (int)round($durationMs / 1000);
+    return $seconds >= 3600
+        ? intdiv($seconds, 3600) . ' h ' . intdiv($seconds % 3600, 60) . ' min'
+        : ($seconds >= 60 ? intdiv($seconds, 60) . ' min ' . ($seconds % 60) . ' s' : $seconds . ' s');
+};
+$aiAnalytikPristupTotaly = [
+    'prompty' => 0,
+    'duration_ms' => 0,
+    'total_tokens' => 0,
+    'cost_usd' => 0.0,
+];
+foreach (($cbAiAnalytikPristup ?? []) as $row) {
+    $aiAnalytikPristupTotaly['prompty'] += (int)$row['prompty'];
+    $aiAnalytikPristupTotaly['duration_ms'] += (int)$row['duration_ms'];
+    $aiAnalytikPristupTotaly['total_tokens'] += (int)$row['total_tokens'];
+    $aiAnalytikPristupTotaly['cost_usd'] += (float)$row['cost_usd'];
+}
 ?>
 <div
     class="ai_analytik"
@@ -64,8 +82,8 @@ try {
             <h2>Jak Frantu používat</h2>
             <p>Napište běžnou češtinou, co chcete nad daty informačního systému zjistit. Čím přesnější bude zadání, tím přesnější může být výsledek.</p>
             <p>Franta si podle dotazu sám vybere potřebné databázové katalogy a podle potřeby zkombinuje více částí systému.</p>
-            <p>Vyberte roky, se kterými má analytik pracovat. U nejasného zadání může ukázat nejvýše tři relevantní varianty, nebo vás požádat o upřesnění.</p>
-            <p>Model ovlivňuje rychlost, cenu a schopnost řešit složité zadání. Terra je doporučená běžná volba. Požadovaný výstup určuje, zda má Franta připravit text, tabulku nebo graf.</p>
+            <p>Vyberte roky, se kterými má analytik pracovat. Berte v úvahu, že ne všechna data jsou k dispozici od roku 2023.</p>
+            <p>Model ovlivňuje rychlost, cenu a schopnost řešit složité zadání. Terra je doporučená běžná volba. Požadovaný výstup určuje, zda má Franta připravit text, tabulku, graf nebo jejich libovolnou kombinaci.</p>
         </div>
     </details>
 
@@ -87,10 +105,7 @@ try {
                     <tbody>
                         <?php foreach ($cbAiAnalytikPristup as $row): ?>
                             <?php
-                            $seconds = (int)round(((int)$row['duration_ms']) / 1000);
-                            $duration = $seconds >= 3600
-                                ? intdiv($seconds, 3600) . ' h ' . intdiv($seconds % 3600, 60) . ' min'
-                                : ($seconds >= 60 ? intdiv($seconds, 60) . ' min ' . ($seconds % 60) . ' s' : $seconds . ' s');
+                            $duration = $aiAnalytikFormatDuration((int)$row['duration_ms']);
                             $cost = (float)$row['cost_usd'];
                             ?>
                             <tr>
@@ -112,6 +127,15 @@ try {
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
+                    <tfoot>
+                        <tr class="ai_analytik_access_total">
+                            <td>Celkem</td>
+                            <td><?= number_format($aiAnalytikPristupTotaly['prompty'], 0, ',', "\u{00A0}") ?></td>
+                            <td><?= h($aiAnalytikFormatDuration($aiAnalytikPristupTotaly['duration_ms'])) ?></td>
+                            <td><?= number_format($aiAnalytikPristupTotaly['total_tokens'], 0, ',', "\u{00A0}") ?></td>
+                            <td>$<?= number_format($aiAnalytikPristupTotaly['cost_usd'], 4, '.', '') ?> (<?= number_format($aiAnalytikPristupTotaly['cost_usd'] * 20.8, 2, ',', "\u{00A0}") ?> Kč)</td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         </details>
@@ -253,8 +277,28 @@ try {
                     required
                     data-ai-analytik-prompt
                 ></textarea>
+                <div class="ai_analytik_attachments_control">
+                    <label class="head_task_btn ai_analytik_attachment_add">
+                        Přidat přílohy
+                        <input
+                            type="file"
+                            accept=".pdf,.docx,.xlsx,.csv,.jpg,.jpeg,.png,.webp,.gif"
+                            multiple
+                            data-ai-analytik-attachments
+                        >
+                    </label>
+                    <small>PDF, DOCX, XLSX, CSV nebo obrázky · nejvýše 5 souborů · 20 MB na soubor</small>
+                </div>
+                <div
+                    class="ai_analytik_attachments"
+                    aria-live="polite"
+                    hidden
+                    data-ai-analytik-attachments-list
+                ></div>
             </div>
-            <button type="submit" class="head_task_btn" data-ai-analytik-submit>Odeslat</button>
+            <button type="submit" class="head_task_btn ai_analytik_submit" data-ai-analytik-submit>
+                <span data-ai-analytik-submit-main>Odeslat prompt</span>
+            </button>
         </div>
         <div id="ai_analytik_my_prompts" class="ai_analytik_my_prompts" hidden data-ai-analytik-my-prompts></div>
     </form>

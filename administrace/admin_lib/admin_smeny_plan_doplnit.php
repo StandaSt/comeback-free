@@ -16,7 +16,7 @@ function cb_admin_smeny_plan_doplnit_handle(): void
 
     try {
         if ((string)($_POST['admin_smeny_plan_confirm'] ?? '') !== '1') {
-            throw new RuntimeException('Potvrďte doplnění chybějících naplánovaných směn.');
+            throw new CbUserVisibleException('Potvrďte doplnění chybějících naplánovaných směn.');
         }
 
         $scriptPath = realpath(__DIR__ . '/../../provoz/inicializace/doplnit_smeny_plan.php');
@@ -62,24 +62,26 @@ function cb_admin_smeny_plan_doplnit_handle(): void
             $GLOBALS['CB_SMENY_PLAN_DOPLNIT_OUTPUT'],
             $GLOBALS['CB_SMENY_PLAN_DOPLNIT_COUNTS']
         );
+        $publicMessage = cb_admin_chyba_text($e, 'Doplnění naplánovaných směn');
         $_SESSION['cb_admin_script_result'] = [
             'script' => 'smeny_plan',
             'success' => false,
-            'message' => $e->getMessage(),
+            'message' => $publicMessage,
         ];
-        cb_user_akce_zapis([
-            'id_user_akce_typ' => 15,
-            'modul' => 'administrace',
-            'objekt' => 'doplnit_smeny_plan',
-            'pole' => 'spusteni',
-            'vysledek' => 0,
-            'err_msg' => $e->getMessage(),
-            'zdroj' => 'administrace',
-            'detail' => ['chyba' => $e->getMessage()],
-        ]);
+        cb_admin_chyba_audit(static function () use ($e): void {
+            cb_user_akce_zapis([
+                'id_user_akce_typ' => 15,
+                'modul' => 'administrace',
+                'objekt' => 'doplnit_smeny_plan',
+                'pole' => 'spusteni',
+                'vysledek' => 0,
+                'err_msg' => $e->getMessage(),
+                'zdroj' => 'administrace',
+                'detail' => ['chyba' => $e->getMessage()],
+            ]);
+        });
     }
 
     header('Location: ' . $returnUrl, true, 303);
     exit;
 }
-

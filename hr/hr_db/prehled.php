@@ -107,7 +107,7 @@ function hr_fetch_prehled(mysqli $db): array
         'zamestnanci' => $zamestnanci,
         'pozadavky' => $pozadavky,
         'k_reseni' => $kReseni,
-        'dokumenty' => hr_fetch_prehled_documents($db, 5),
+        'dokumenty' => hr_fetch_prehled_document_summary($db),
         'lekarske_prohlidky' => [],
         'skoleni' => [],
         'dovolene' => [],

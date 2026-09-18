@@ -7,6 +7,7 @@ if (!defined('CB_HELPDESK_DISPATCH_INTERNAL')) {
     require_once __DIR__ . '/../../common/lib/app.php';
 }
 require_once __DIR__ . '/../hl_lib/hl_prava.php';
+require_once __DIR__ . '/../hl_lib/hl_chyby.php';
 require_once __DIR__ . '/../hl_lib/hl_notifikace.php';
 
 if (!headers_sent()) {
@@ -31,7 +32,7 @@ try {
     $raw = (string)file_get_contents('php://input');
     $data = json_decode($raw, true);
     if (!is_array($data)) {
-        throw new RuntimeException('Neplatná data.');
+        throw new CbUserVisibleException('Požadavek nemá platná data. Obnovte stránku a zkuste to znovu.');
     }
 
     $idUser = cb_helpdesk_current_user_id();
@@ -45,7 +46,7 @@ try {
         throw new RuntimeException('Neznámý uživatel.');
     }
     if ($idHelpdesk <= 0) {
-        throw new RuntimeException('Chybí id_helpdesk.');
+        throw new CbUserVisibleException('Chybí číslo požadavku.');
     }
 
     $conn = db();
@@ -75,8 +76,7 @@ try {
 
     echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
-    http_response_code(400);
-    echo json_encode(['ok' => false, 'err' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    cb_helpdesk_json_chyba($e, 'Přidání sledujícího k tiketu', ['table' => 'helpdesk_sledujici']);
 }
 
 // helpdesk/hl_ajax/hl_sledovat.php * Verze: V1 * Aktualizace: 20.06.2026

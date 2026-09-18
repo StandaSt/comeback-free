@@ -33,14 +33,17 @@
       credentials: 'same-origin'
     })
       .then(function (response) {
-        if (!response.ok) {
-          throw new Error('HTTP ' + response.status);
-        }
-        return response.json();
+        return response.json().catch(function () { return {}; }).then(function (data) {
+          return {response: response, data: data};
+        });
       })
-      .then(function (data) {
+      .then(function (result) {
+        var data = result.data;
+        if (!result.response.ok) {
+          throw new Error(window.cbAdminResponseError(result.response.status, data, 'Akci individuálních práv se nepodařilo dokončit.'));
+        }
         if (!data || data.ok !== true) {
-          throw new Error(String((data && data.err) || 'Akce selhala.'));
+          throw new Error(window.cbAdminResponseError(result.response.status, data, 'Akce individuálních práv se nepodařila.'));
         }
         return data;
       });
@@ -100,7 +103,7 @@
       .catch(function (error) {
         var results = page.querySelector('[data-admin-individual-exception-users]');
         if (results) {
-          results.innerHTML = '<div class="admin_individual_hint">' + escapeHtml(error.message || 'Nacteni seznamu selhalo.') + '</div>';
+          results.innerHTML = '<div class="admin_individual_hint">' + escapeHtml(window.cbAdminErrorMessage(error, 'Načtení seznamu se nepodařilo.')) + '</div>';
         }
       });
   }
@@ -145,7 +148,7 @@
         setDetail(page, '');
         var results = page.querySelector('[data-admin-individual-results]');
         if (results) {
-          results.innerHTML = '<div class="admin_individual_hint">' + escapeHtml(error.message || 'Hledání selhalo.') + '</div>';
+          results.innerHTML = '<div class="admin_individual_hint">' + escapeHtml(window.cbAdminErrorMessage(error, 'Hledání se nepodařilo.')) + '</div>';
         }
       });
   }
@@ -165,7 +168,7 @@
         });
       })
       .catch(function (error) {
-        window.alert(error.message || 'Načtení uživatele selhalo.');
+        window.alert(window.cbAdminErrorMessage(error, 'Načtení uživatele se nepodařilo.'));
       });
   }
 

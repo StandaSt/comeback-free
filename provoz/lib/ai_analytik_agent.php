@@ -2,6 +2,8 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/ai_analytik_openai.php';
+require_once __DIR__ . '/ai_analytik_prilohy.php';
+require_once __DIR__ . '/ai_analytik_pravidla.php';
 require_once __DIR__ . '/../db/db_ai_analytik.php';
 require_once __DIR__ . '/../db/db_ai_analytik_audit.php';
 require_once __DIR__ . '/../db/db_ai_analytik_usage.php';
@@ -92,9 +94,12 @@ function cb_ai_analytik_agent_instructions(
     $outputTable = $requestedOutput['tabulka'] ? 'ano' : 'ne';
     $outputChart = $requestedOutput['graf'] ? 'ano' : 'ne';
     $yearsText = implode(', ', array_map('strval', $context['years']));
-    $ambiguityInstruction = $context['ambiguity_mode'] === 'upresnit'
+    $continuationLimitReached = !empty($context['continuation_limit_reached']);
+    $ambiguityInstruction = $continuationLimitReached
+        ? 'Toto je poslední povolené navazující upřesnění. Vrať nejlepší možnou hotovou odpověď s response_type=answer; další doplňující otázku už nepokládej.'
+        : ($context['ambiguity_mode'] === 'upresnit'
         ? 'Pokud má zadání více rozumných výkladů, které mohou vést k podstatně jinému výsledku, nehádej. Vrať response_type=clarification a polož jednu krátkou konkrétní doplňující otázku. Pro takovou otázku nemusíš spouštět SQL.'
-        : 'Pokud má zadání více rozumných výkladů, zpracuj nejvýše tři nejrelevantnější a věcně odlišné varianty. Jasně je pojmenuj a neuváděj okrajové nebo samoúčelné možnosti.';
+        : 'Pokud má zadání více rozumných výkladů, zpracuj nejvýše tři nejrelevantnější a věcně odlišné varianty. Jasně je pojmenuj a neuváděj okrajové nebo samoúčelné možnosti.');
 
     return <<<TEXT
 Jsi interní AI analytik vedení společnosti Comeback. Sám rozhoduješ, jak zadání vyřešit, která data potřebuješ a kolik SQL kroků použiješ.
@@ -103,6 +108,7 @@ Gateway pouze technicky vykonává tvoje nástroje; neposuzuje obchodní význam
 Pro Objednávky a tržby, HR nebo Směny si podle promptu načti jeden nebo více katalogů nástrojem load_catalog. Pro objekty mimo katalogy nebo nově přidané části DB použij inspect_schema.
 Katalogy jsou technický popis, nikoli omezení přístupu. Můžeš kombinovat libovolné tabulky a view dostupné read-only účtu.
 SQL formuluj účelně. Pokud je výsledek příliš velký, můžeš jej v dalším kroku agregovat, filtrovat nebo stránkovat.
+Když SQL vybírá konkrétní entitu pro možné další zpracování, vrať vedle uživatelsky zobrazovaných údajů také její stabilní interní primární nebo spojovací klíč, i když jej ve výsledné odpovědi uživateli nezobrazíš. V navazujících požadavcích znovu použij dřívější výsledky nástrojů, již načtené katalogy a nalezené interní klíče. Neopakuj stejné hledání, nenačítej znovu již načtený katalog a nefiltruj podle zobrazovaného čísla nebo názvu, pokud katalog výslovně nepotvrzuje jeho jednoznačnost. Následný SQL dotaz omez přímo stabilním klíčem. Pokud úspěšný cílený dotaz již obsahuje požadovaná data, odpověz z něj; další ověřovací varianty spouštěj jen při konkrétní chybě, rozporu nebo nejednoznačnosti.
 Odpověz česky pouze z výsledků nástrojů.
 V textové části odpovědi nepoužívej Markdown ani jeho značky, například `**`, `#` nebo markdownové seznamy.
 {$loadedText}
@@ -391,7 +397,8 @@ function cb_ai_analytik_agent_spustit(
     array $context,
     callable $progress,
     ?array $resumeState = null,
-    string $clarificationAnswer = ''
+    string $clarificationAnswer = '',
+    array $attachments = []
 ): array {
     $lastHeartbeatAt = 0;
     $watchdog = static function () use ($idAudit, $progress, &$lastHeartbeatAt, &$apiCalls, &$sqlCalls): void {
@@ -417,7 +424,16 @@ function cb_ai_analytik_agent_spustit(
     $manifestRaw = rtrim((string)$manifestFile['raw']);
     $loadedCatalogs = [];
     $toolOrder = 0;
-    $conversation = [['role' => 'user', 'content' => $prompt]];
+    $conversation = [[
+        'role' => 'user',
+        'content' => $attachments === []
+            ? $prompt
+            : cb_ai_analytik_prilohy_user_content($prompt, $attachments),
+    ]];
+    $attachmentFileIds = array_values(array_filter(array_map(
+        static fn(array $attachment): string => trim((string)($attachment['file_id'] ?? '')),
+        array_filter($attachments, 'is_array')
+    )));
     $usageTotal = [
         'input_tokens' => 0,
         'cached_input_tokens' => 0,
@@ -429,6 +445,7 @@ function cb_ai_analytik_agent_spustit(
     ];
     $apiCalls = 0;
     $sqlCalls = 0;
+    $followupCount = 0;
     $lastResponseId = '';
     $nextOpenAiMessage = 'AI analyzuje zadání a určuje, která data potřebuje.';
 
@@ -453,8 +470,18 @@ function cb_ai_analytik_agent_spustit(
         }
         $apiCalls = max(0, (int)($resumeState['api_calls'] ?? 0));
         $sqlCalls = max(0, (int)($resumeState['sql_count'] ?? 0));
+        $followupCount = max(0, (int)($resumeState['followup_count'] ?? 0)) + 1;
+        if ($followupCount > CB_AI_ANALYTIK_MAX_NAVAZANI) {
+            throw new CbAiAnalytikUzivatelskaChyba('Byl vyčerpán limit navazujících upřesnění. Spusťte nový prompt.');
+        }
         $toolOrder = max(0, (int)($resumeState['tool_order'] ?? 0));
         $lastResponseId = (string)($resumeState['last_response_id'] ?? '');
+        $attachmentFileIds = array_values(array_filter(array_map(
+            'strval',
+            is_array($resumeState['attachment_file_ids'] ?? null)
+                ? $resumeState['attachment_file_ids']
+                : []
+        )));
         $nextOpenAiMessage = 'AI navazuje na rozpracovanou analýzu podle upřesnění uživatele.';
     }
 
@@ -464,12 +491,14 @@ function cb_ai_analytik_agent_spustit(
         $progress('openai', $nextOpenAiMessage, ['api_calls' => $apiCalls, 'sql_count' => $sqlCalls]);
         $idUsage = cb_ai_analytik_usage_start($idAudit, 'agent_' . $apiCalls, $model);
         $openAiStartedAt = hrtime(true);
+        $instructionContext = $context;
+        $instructionContext['continuation_limit_reached'] = $followupCount >= CB_AI_ANALYTIK_MAX_NAVAZANI;
         $instructions = cb_ai_analytik_agent_instructions(
             $manifestRaw,
             $loadedCatalogs,
             $today,
             $requestedOutput,
-            $context
+            $instructionContext
         );
         $cacheCatalogs = $loadedCatalogs === [] ? 'manifest' : implode('-', array_keys($loadedCatalogs));
         $cacheEnvironment = strtolower((string)($manifest['environment'] ?? 'unknown'));
@@ -538,19 +567,20 @@ function cb_ai_analytik_agent_spustit(
                 'sql_count' => $sqlCalls,
                 'catalogs' => array_keys($loadedCatalogs),
                 'last_response_id' => $lastResponseId,
+                'attachment_file_ids' => $attachmentFileIds,
             ];
-            if ($normalized['response_type'] === 'clarification') {
-                $result['continuation_state'] = [
-                    'version' => 1,
-                    'conversation' => $conversation,
-                    'catalogs' => array_keys($loadedCatalogs),
-                    'usage' => $usageTotal,
-                    'api_calls' => $apiCalls,
-                    'sql_count' => $sqlCalls,
-                    'tool_order' => $toolOrder,
-                    'last_response_id' => $lastResponseId,
-                ];
-            }
+            $result['continuation_state'] = [
+                'version' => 1,
+                'conversation' => $conversation,
+                'catalogs' => array_keys($loadedCatalogs),
+                'usage' => $usageTotal,
+                'api_calls' => $apiCalls,
+                'sql_count' => $sqlCalls,
+                'tool_order' => $toolOrder,
+                'last_response_id' => $lastResponseId,
+                'attachment_file_ids' => $attachmentFileIds,
+                'followup_count' => $followupCount,
+            ];
             return $result;
         }
 

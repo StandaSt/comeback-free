@@ -2,6 +2,11 @@
 // inicializace/plnime_restia_objednavky.php * Verze: V5 * Aktualizace: 10.04.2026
 declare(strict_types=1);
 
+/*
+ * Historicky import objednavek Restia do modulu Provoz.
+ * Ridici funkce zpracovava pobocky a dny, loguje prubeh a uklada vysledek importu.
+ */
+
 require_once __DIR__ . '/../../common/lib/session_boot.php';
 
 require_once __DIR__ . '/../../common/lib/app.php';
@@ -2169,8 +2174,8 @@ if (!function_exists('cb_restia_hist_import_day')) {
                 db_zapis_log_chyby(
                     $conn,
                     null,
-                    'RESTIA',
-                    'IMPORT_DN',
+                    'PROVOZ',
+                    'RESTIA_IMPORT_DN',
                     'FATAL_STEP',
                     $e->getMessage(),
                     $fatalLine,

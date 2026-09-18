@@ -11,12 +11,12 @@ declare(strict_types=1);
 function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUser): array
 {
     if ($zadalUser <= 0) {
-        throw new RuntimeException('Chybí přihlášený uživatel.');
+        throw new CbUserVisibleException('Přihlášení vypršelo. Přihlaste se prosím znovu.');
     }
     $firemniUzivatel = cb_firemni_pristup_uzivatel($db, $zadalUser);
     $idFirma = (int)$firemniUzivatel['id_firma'];
     if ($idFirma <= 0) {
-        throw new RuntimeException('Zaměstnance nelze založit bez zvolené firmy.');
+        throw new CbUserVisibleException('Vyberte firmu nového zaměstnance.');
     }
 
     $titulPred = trim((string)($data['titul_pred'] ?? ''));
@@ -55,15 +55,15 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
     $idRoleHr = (int)($data['id_role_hr'] ?? 9);
 
     if ($jmeno === '' || $prijmeni === '') {
-        throw new RuntimeException('Vyplňte jméno a příjmení.');
+        throw new CbUserVisibleException('Vyplňte jméno a příjmení.');
     }
     hr_employee_validate_title($db, $titulPred, 1);
     hr_employee_validate_title($db, $titulZa, 2);
     if (!in_array($pohlavi, ['muž', 'žena', 'jiné', 'neuvedeno'], true)) {
-        throw new RuntimeException('Vyberte pohlaví.');
+        throw new CbUserVisibleException('Vyberte pohlaví.');
     }
     if ($datumNastupu === '' || strtotime($datumNastupu) === false) {
-        throw new RuntimeException('Vyplňte datum nástupu.');
+        throw new CbUserVisibleException('Vyplňte datum nástupu.');
     }
     if (
         $idVztahTyp <= 0
@@ -72,22 +72,22 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
         || !in_array($idPobHlavni, $idPobocky, true)
         || !$maPozici
     ) {
-        throw new RuntimeException('Vyberte typ vztahu, alespoň jednu pobočku, hlavní pobočku a pozici.');
+        throw new CbUserVisibleException('Vyberte typ vztahu, alespoň jednu pobočku, hlavní pobočku a pozici.');
     }
     if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
-        throw new RuntimeException('Pro založení uživatelského účtu vyplňte platný e-mail.');
+        throw new CbUserVisibleException('Pro založení uživatelského účtu vyplňte platný e-mail.');
     }
     if (!in_array($idRoleHr, [3, 5, 7, 9], true)) {
-        throw new RuntimeException('Vyberte povolenou pracovní roli.');
+        throw new CbUserVisibleException('Vyberte povolenou pracovní roli.');
     }
     if ($idRoleHr === 3 && !cb_pravo_ma(316)) {
-        throw new RuntimeException('Nemáte právo přidělit roli Manager.');
+        throw new CbUserVisibleException('Nemáte právo přidělit roli Manager.');
     }
     if ($telefon !== '' && strlen($telefon) !== 9) {
-        throw new RuntimeException('Telefon musí být české číslo s 9 číslicemi.');
+        throw new CbUserVisibleException('Telefon musí být české číslo s 9 číslicemi.');
     }
     if (mb_strlen($telefonZahranicni, 'UTF-8') > 30) {
-        throw new RuntimeException('Zahraniční telefon je příliš dlouhý.');
+        throw new CbUserVisibleException('Zahraniční telefon je příliš dlouhý.');
     }
 
     $limits = [
@@ -98,7 +98,7 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
     ];
     foreach ($limits as $label => [$value, $limit]) {
         if (mb_strlen($value, 'UTF-8') > $limit) {
-            throw new RuntimeException($label . ' je příliš dlouhé.');
+            throw new CbUserVisibleException($label . ' je příliš dlouhé.');
         }
     }
 
@@ -131,7 +131,7 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
         $platnePobocky = (int)($stmt->get_result()->fetch_assoc()['pocet'] ?? 0);
         $stmt->close();
         if ($platnePobocky !== count($idPobocky)) {
-            throw new RuntimeException('Vybrané pobočky nepatří do firmy personalisty.');
+            throw new CbUserVisibleException('Vybrané pobočky nepatří do firmy personalisty.');
         }
         if ($zdrPoj > 0) {
             $stmt = $db->prepare('SELECT id_pojistovna FROM hr_cis_pojistovny WHERE kod = ? AND aktivni = 1 LIMIT 1');
@@ -140,7 +140,7 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
             $healthInsurer = $stmt->get_result()->fetch_assoc();
             $stmt->close();
             if (!is_array($healthInsurer)) {
-                throw new RuntimeException('Vyberte platnou zdravotní pojišťovnu.');
+                throw new CbUserVisibleException('Vyberte platnou zdravotní pojišťovnu.');
             }
         }
         $stmt = $db->prepare('SELECT id_slot FROM cis_slot WHERE id_slot = ? AND aktivni = 1 LIMIT 1');
@@ -149,7 +149,7 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
         $platnaPozice = $stmt->get_result()->fetch_assoc();
         $stmt->close();
         if (!is_array($platnaPozice)) {
-            throw new RuntimeException('Vyberte aktivní pozici.');
+            throw new CbUserVisibleException('Vyberte aktivní pozici.');
         }
 
         // Zalozi samostatny lokalni ucet; SPOJENÍ jej pozve až po kompletní přípravě.
@@ -317,7 +317,7 @@ function hr_employee_validate_title(mysqli $db, string $title, int $placement): 
     $valid = $stmt->get_result()->fetch_row() !== null;
     $stmt->close();
     if (!$valid) {
-        throw new RuntimeException('Vyberte platný titul.');
+        throw new CbUserVisibleException('Vyberte platný titul.');
     }
 }
 
@@ -328,7 +328,7 @@ function hr_employee_validate_birth_number(string $value): string
         return '';
     }
     if (!preg_match('/^\d{9,10}$/', $number) || preg_match('/^(\d)\1+$/', $number)) {
-        throw new RuntimeException('Zadejte platné rodné číslo ve tvaru YYMMDD/XXX(X).');
+        throw new CbUserVisibleException('Zadejte platné rodné číslo ve tvaru YYMMDD/XXX(X).');
     }
 
     $yearPart = (int)substr($number, 0, 2);
@@ -346,10 +346,10 @@ function hr_employee_validate_birth_number(string $value): string
         $year += 100;
     }
     if ($month < 1 || $month > 12 || !checkdate($month, $day, $year)) {
-        throw new RuntimeException('Rodné číslo neobsahuje platné datum narození.');
+        throw new CbUserVisibleException('Rodné číslo neobsahuje platné datum narození.');
     }
     if (strlen($number) === 10 && (int)$number % 11 !== 0) {
-        throw new RuntimeException('Rodné číslo není dělitelné 11.');
+        throw new CbUserVisibleException('Rodné číslo není dělitelné 11.');
     }
 
     return substr($number, 0, 6) . '/' . substr($number, 6);
@@ -361,22 +361,22 @@ function hr_store_employee_photo(mixed $upload): ?string
         return null;
     }
     if ((int)($upload['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
-        throw new RuntimeException('Fotografii se nepodařilo nahrát.');
+        throw new CbUserVisibleException('Fotografii se nepodařilo přijmout. Vyberte ji znovu.');
     }
     if ((int)($upload['size'] ?? 0) < 1 || (int)$upload['size'] > 2 * 1024 * 1024) {
-        throw new RuntimeException('Fotografie může mít nejvýše 2 MB.');
+        throw new CbUserVisibleException('Fotografie může mít nejvýše 2 MB.');
     }
     $temporaryFile = (string)($upload['tmp_name'] ?? '');
     if ($temporaryFile === '' || !is_uploaded_file($temporaryFile)) {
-        throw new RuntimeException('Nahraný soubor fotografie není platný.');
+        throw new CbUserVisibleException('Nahraný soubor fotografie není platný.');
     }
     $mime = (new finfo(FILEINFO_MIME_TYPE))->file($temporaryFile);
     $extensions = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
     if (!isset($extensions[$mime])) {
-        throw new RuntimeException('Fotografie musí být JPEG, PNG nebo WebP.');
+        throw new CbUserVisibleException('Fotografie musí být JPEG, PNG nebo WebP.');
     }
     if (@getimagesize($temporaryFile) === false) {
-        throw new RuntimeException('Nahraný soubor není čitelný obrázek.');
+        throw new CbUserVisibleException('Nahraný soubor není čitelný obrázek.');
     }
     $directory = dirname(__DIR__) . '/img/zamestnanci';
     if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {

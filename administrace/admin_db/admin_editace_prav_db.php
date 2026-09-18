@@ -32,7 +32,7 @@ function cb_admin_editace_prav_moduly(): array
 function cb_admin_editace_prav_prava_modulu(int $idModul): array
 {
     if ($idModul <= 0) {
-        throw new RuntimeException('Neplatné ID modulu.');
+        throw new CbUserVisibleException('Vyberte platný modul.');
     }
 
     $stmt = db()->prepare('
@@ -69,13 +69,13 @@ function cb_admin_editace_prav_texty(string $nazev, string $popis): array
     $popis = trim($popis);
 
     if ($nazev === '') {
-        throw new RuntimeException('Název práva nesmí být prázdný.');
+        throw new CbUserVisibleException('Doplňte název práva.');
     }
     if (mb_strlen($nazev) > 33) {
-        throw new RuntimeException('Název práva může mít nejvýše 33 znaků.');
+        throw new CbUserVisibleException('Název práva může mít nejvýše 33 znaků.');
     }
     if (mb_strlen($popis) > 255) {
-        throw new RuntimeException('Popis práva může mít nejvýše 255 znaků.');
+        throw new CbUserVisibleException('Popis práva může mít nejvýše 255 znaků.');
     }
 
     return ['nazev' => $nazev, 'popis' => $popis];
@@ -88,7 +88,7 @@ function cb_admin_editace_prav_texty(string $nazev, string $popis): array
 function cb_admin_editace_prav_pridat(int $idModul, string $nazev, string $popis): array
 {
     if ($idModul <= 0) {
-        throw new RuntimeException('Neplatné ID modulu.');
+        throw new CbUserVisibleException('Vyberte platný modul.');
     }
     $texts = cb_admin_editace_prav_texty($nazev, $popis);
     $db = db();
@@ -106,7 +106,7 @@ function cb_admin_editace_prav_pridat(int $idModul, string $nazev, string $popis
         $module = $stmtModule->get_result()->fetch_assoc();
         $stmtModule->close();
         if (!is_array($module)) {
-            throw new RuntimeException('Vybraný modul neexistuje nebo není aktivní.');
+            throw new CbUserVisibleException('Vybraný modul neexistuje nebo není aktivní.');
         }
 
         $stmtMax = $db->prepare('
@@ -124,7 +124,7 @@ function cb_admin_editace_prav_pridat(int $idModul, string $nazev, string $popis
         $maxId = (int)($max['max_id'] ?? 0);
         $idPravo = $maxId > 0 ? $maxId + 1 : $blockStart;
         if ($idPravo < $blockStart || $idPravo > $blockEnd) {
-            throw new RuntimeException('Pro modul již není volné ID v jeho číselném bloku.');
+            throw new CbUserVisibleException('Pro modul již není volné ID v jeho číselném bloku.');
         }
         $poradi = (int)($max['max_poradi'] ?? 0) + 1;
         $dbNazev = (string)$texts['nazev'];
@@ -158,7 +158,7 @@ function cb_admin_editace_prav_pridat(int $idModul, string $nazev, string $popis
 function cb_admin_editace_prav_upravit(int $idPravo, string $nazev, string $popis): array
 {
     if ($idPravo <= 0) {
-        throw new RuntimeException('Neplatné ID práva.');
+        throw new CbUserVisibleException('Vyberte platné právo.');
     }
     $texts = cb_admin_editace_prav_texty($nazev, $popis);
     $db = db();
@@ -174,7 +174,7 @@ function cb_admin_editace_prav_upravit(int $idPravo, string $nazev, string $popi
     $old = $stmtLoad->get_result()->fetch_assoc();
     $stmtLoad->close();
     if (!is_array($old)) {
-        throw new RuntimeException('Právo ID ' . $idPravo . ' neexistuje.');
+        throw new CbUserVisibleException('Vybrané právo neexistuje.');
     }
 
     $dbNazev = (string)$texts['nazev'];
@@ -198,7 +198,7 @@ function cb_admin_editace_prav_upravit(int $idPravo, string $nazev, string $popi
 function cb_admin_editace_prav_posunout(int $idPravo, string $smer): array
 {
     if ($idPravo <= 0 || !in_array($smer, ['nahoru', 'dolu'], true)) {
-        throw new RuntimeException('Neplatný požadavek na změnu pořadí.');
+        throw new CbUserVisibleException('Požadavek na změnu pořadí není platný.');
     }
 
     $db = db();
@@ -216,7 +216,7 @@ function cb_admin_editace_prav_posunout(int $idPravo, string $smer): array
         $current = $stmtCurrent->get_result()->fetch_assoc();
         $stmtCurrent->close();
         if (!is_array($current)) {
-            throw new RuntimeException('Právo ID ' . $idPravo . ' neexistuje.');
+            throw new CbUserVisibleException('Vybrané právo neexistuje.');
         }
 
         $idModul = (int)$current['id_modul'];
@@ -236,7 +236,7 @@ function cb_admin_editace_prav_posunout(int $idPravo, string $smer): array
         $neighbour = $stmtNeighbour->get_result()->fetch_assoc();
         $stmtNeighbour->close();
         if (!is_array($neighbour)) {
-            throw new RuntimeException($smer === 'nahoru' ? 'Právo už je první.' : 'Právo už je poslední.');
+            throw new CbUserVisibleException($smer === 'nahoru' ? 'Právo už je první.' : 'Právo už je poslední.');
         }
 
         $idNeighbour = (int)$neighbour['id_pravo'];

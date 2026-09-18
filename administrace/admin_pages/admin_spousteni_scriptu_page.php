@@ -4,29 +4,6 @@ declare(strict_types=1);
 $adminScriptResult = $_SESSION['cb_admin_script_result'] ?? null;
 $adminScriptResultType = is_array($adminScriptResult) ? (string)($adminScriptResult['script'] ?? 'hr') : '';
 $adminHrLocal = (($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL');
-$adminHrServerCanRun = true;
-$adminHrServerStatus = '';
-$adminHrServerButtonLabel = 'Spustit jednorázový import HR';
-if (!$adminHrLocal) {
-    try {
-        $adminHrServerResult = db()->query('SELECT 1 FROM hr_person LIMIT 1');
-        if (!$adminHrServerResult instanceof mysqli_result) {
-            throw new RuntimeException('Kontrola tabulky hr_person selhala.');
-        }
-        $adminHrServerCanRun = $adminHrServerResult->fetch_row() === null;
-        $adminHrServerResult->free();
-        $adminHrServerStatus = $adminHrServerCanRun
-            ? 'Tabulka hr_person je prázdná - import lze spustit.'
-            : 'Tabulka hr_person obsahuje data. Tento script nelze spustit.';
-        if (!$adminHrServerCanRun) {
-            $adminHrServerButtonLabel = 'Script nelze spustit, hr_person obsahuje data';
-        }
-    } catch (Throwable) {
-        $adminHrServerCanRun = false;
-        $adminHrServerStatus = 'Stav tabulky hr_person se nepodařilo ověřit. Tento script nelze spustit.';
-        $adminHrServerButtonLabel = 'Script nelze spustit, stav hr_person není ověřen';
-    }
-}
 $adminGoogleSourceStatus = cb_admin_google_reporty_stav_zdroje();
 $adminGoogleDateCz = static function (string $value): string {
     $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
@@ -41,48 +18,45 @@ if (isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODULE'])) {
 ?>
 <div class="admin_script_run">
     <div class="blok admin_script_card">
-        <p class="admin_script_description"><?= $adminHrLocal
-            ? 'Reset testovacích HR dat s volitelným importem uživatelů.'
-            : 'Jednorázový kompletní reset HR a import uživatelů na serveru.' ?></p>
+        <p class="admin_script_description">První kompletní naplnění HR z <code>data/google_data/HR.zip</code>. Nejprve zkontroluje podklady, teprve po potvrzení vyprázdní HR a provede celý import.</p>
 
-        <?php if (!$adminHrLocal): ?>
-            <p class="admin_script_server_notice"><strong>Toto je verze pro server!</strong></p>
-        <?php endif; ?>
-
-        <?php if (is_array($adminScriptResult) && $adminScriptResultType === 'hr'): ?>
+        <?php if (is_array($adminScriptResult) && in_array($adminScriptResultType, ['hr_kompletni_preview', 'hr_kompletni_import'], true)): ?>
             <p class="admin_script_result<?= empty($adminScriptResult['success']) ? ' is-error' : '' ?>">
-                <?= h((string)($adminScriptResult['message'] ?? '')) ?>
+                <?= nl2br(h((string)($adminScriptResult['message'] ?? ''))) ?>
             </p>
         <?php endif; ?>
 
-        <form class="admin_script_form admin_script_form--hr" method="post" action="<?= h(cb_root_url('index.php?m=administrace&page=spousteni_scriptu')) ?>">
-            <input type="hidden" name="cb_action" value="admin_hr_import_user">
+        <?php if ($adminHrLocal): ?>
+            <p class="admin_script_result" data-admin-hr-import-progress aria-live="polite" hidden></p>
+            <form class="admin_script_form admin_script_form--hr" method="post" action="<?= h(cb_root_url('index.php?m=administrace&page=spousteni_scriptu')) ?>" data-admin-hr-preview-form>
+                <input type="hidden" name="cb_action" value="admin_hr_kompletni_preview">
+                <button class="admin_script_button" type="submit" data-admin-hr-preview-button>Zkontrolovat podklady pro import HR</button>
+            </form>
 
-            <?php if ($adminHrLocal): ?>
-                <fieldset class="admin_script_options">
-                    <legend>Rozsah resetu</legend>
-                    <label class="admin_script_choice"><input type="radio" name="admin_hr_reset_scope" value="all" required> Kompletní reset VD, ND, uchazečů a zaměstnanců</label>
-                    <label class="admin_script_choice"><input type="radio" name="admin_hr_reset_scope" value="vd"> Pouze VD a uchazeči</label>
-                    <label class="admin_script_choice"><input type="radio" name="admin_hr_reset_scope" value="nd_employees"> Pouze ND a zaměstnanci</label>
-                </fieldset>
-                <label class="admin_script_choice">
-                    <input type="checkbox" name="admin_hr_import_users" value="1">
-                    Po resetu importovat chybějící uživatele do HR
-                </label>
-            <?php else: ?>
-                <p class="admin_script_server_notice"><?= h($adminHrServerStatus) ?></p>
-            <?php endif; ?>
+            <?php if (is_array($adminScriptResult) && $adminScriptResultType === 'hr_kompletni_preview' && !empty($adminScriptResult['success'])): ?>
+                <?php $adminHrPreview = (array)($adminScriptResult['preview'] ?? []); ?>
+                <div class="admin_script_preview_wrap">
+                    <table class="admin_script_preview_table">
+                        <tbody>
+                            <tr><th>Formulář</th><td><?= h((string)($adminHrPreview['formular'] ?? '')) ?></td></tr>
+                            <tr><th>Mzdy</th><td><?= h((string)($adminHrPreview['mzdy'] ?? '')) ?></td></tr>
+                            <tr><th>Dokumenty</th><td><?= h((string)($adminHrPreview['dokumenty'] ?? '')) ?></td></tr>
+                        </tbody>
+                    </table>
+                </div>
 
-            <?php if ($adminHrLocal || $adminHrServerCanRun): ?>
-                <label class="admin_script_confirm">
-                    <input type="checkbox" name="admin_hr_import_confirm" value="1" required>
-                    <span>Rozumím, že zvolená testovací HR data budou nevratně odstraněna.</span>
-                </label>
+                <form class="admin_script_form admin_script_form--hr" method="post" action="<?= h(cb_root_url('index.php?m=administrace&page=spousteni_scriptu')) ?>">
+                    <input type="hidden" name="cb_action" value="admin_hr_kompletni_import">
+                    <label class="admin_script_confirm">
+                        <input type="checkbox" name="admin_hr_kompletni_confirm" value="1" required>
+                        <span>Opravdu kompletně vyprázdnit HR, importovat USER → PERSON a následně doplnit všechna dostupná zaměstnanecká data, mzdy, sazby a dokumenty?</span>
+                    </label>
+                    <button class="admin_script_button" type="submit">Vyprázdnit HR a provést kompletní import</button>
+                </form>
             <?php endif; ?>
-            <button class="admin_script_button" type="submit"<?= !$adminHrLocal && !$adminHrServerCanRun ? ' disabled' : '' ?>><?= $adminHrLocal
-                ? 'Spustit zvolený reset'
-                : $adminHrServerButtonLabel ?></button>
-        </form>
+        <?php else: ?>
+            <p class="admin_script_server_notice">Kompletní naplnění HR je dostupné pouze v lokálním prostředí.</p>
+        <?php endif; ?>
     </div>
 
     <div class="blok admin_script_card">

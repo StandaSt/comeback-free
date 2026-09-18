@@ -3,10 +3,11 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../common/includes/blok_menu.php';
 require_once __DIR__ . '/../lib/ai_analytik_pravidla.php';
+require_once __DIR__ . '/../lib/denni_report_prava.php';
 
 $provozMenuItems = [
     ['page' => 'prehled', 'label' => 'Přehled'],
-    ['page' => 'denni_report', 'label' => 'Denní report'],
+    ['page' => 'denni_report', 'label' => 'Denní report', 'pravo' => CB_DENNI_REPORT_ZOBRAZIT_PRAVO],
     ['page' => 'archiv_reportu', 'label' => 'Archiv reportů', 'pravo' => 202],
     ['page' => 'objednavky', 'label' => 'Objednávky'],
     ['page' => 'prehled_hodin', 'label' => 'Přehled hodin', 'pravo' => 209],

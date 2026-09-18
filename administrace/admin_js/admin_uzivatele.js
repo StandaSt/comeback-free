@@ -92,9 +92,9 @@
         body: body.toString(),
         credentials: 'same-origin'
       }).then(function (response) {
-        return response.json().then(function (payload) {
+        return response.json().catch(function () { return {}; }).then(function (payload) {
           if (!response.ok || !payload || payload.ok !== true) {
-            throw new Error(payload && payload.message ? String(payload.message) : 'Uživatele se nepodařilo aktivovat.');
+            throw new Error(window.cbAdminResponseError(response.status, payload, 'Uživatele se nepodařilo aktivovat.'));
           }
           return payload;
         });
@@ -106,7 +106,7 @@
         }
       }).catch(function (error) {
         activate.disabled = false;
-        showNotice(error && error.message ? error.message : 'Uživatele se nepodařilo aktivovat.', false);
+        showNotice(window.cbAdminErrorMessage(error, 'Uživatele se nepodařilo aktivovat.'), false);
       });
       return;
     }
@@ -127,8 +127,12 @@
     var currentRequest = ++requestNumber;
     fetch(target.href, { headers: { 'X-Comeback-Admin-User-Detail': '1' }, credentials: 'same-origin' })
       .then(function (response) {
-        if (!response.ok) throw new Error('Detail uživatele se nepodařilo načíst.');
-        return response.json();
+        return response.json().catch(function () { return {}; }).then(function (payload) {
+          if (!response.ok || !payload || payload.ok !== true) {
+            throw new Error(window.cbAdminResponseError(response.status, payload, 'Detail uživatele se nepodařilo načíst.'));
+          }
+          return payload;
+        });
       })
       .then(function (payload) {
         if (currentRequest !== requestNumber || !payload || payload.ok !== true) return;

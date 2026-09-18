@@ -44,6 +44,169 @@ function cb_chyba_uzivatel(Throwable $error, array $context = []): string
 }
 
 /** @param array<string,mixed> $context */
+function cb_chyba_http_status(Throwable $error, array $context = []): int
+{
+    if (cb_chyba_je_neocekavana($error, $context)) {
+        return 500;
+    }
+
+    $current = http_response_code();
+    if (in_array($current, [400, 401, 403, 404, 409, 422], true)) {
+        return $current;
+    }
+
+    return 422;
+}
+
+/** @param array<string,mixed> $context */
+function cb_chyba_json_odesli(Throwable $error, array $context = []): never
+{
+    http_response_code(cb_chyba_http_status($error, $context));
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'ok' => false,
+        'err' => cb_chyba_uzivatel($error, $context),
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
+function cb_chyba_globalni_format(): string
+{
+    foreach (headers_list() as $header) {
+        $lower = strtolower($header);
+        if (str_starts_with($lower, 'content-type: application/json')) {
+            return 'json';
+        }
+        if (
+            str_starts_with($lower, 'content-type: text/plain')
+            || str_starts_with($lower, 'content-disposition: attachment')
+        ) {
+            return 'text';
+        }
+    }
+
+    $jsonHeaders = [
+        'HTTP_X_COMEBACK_SET_PERIOD',
+        'HTTP_X_COMEBACK_SET_BRANCH',
+        'HTTP_X_COMEBACK_SET_BRANCHES',
+        'HTTP_X_COMEBACK_SET_PRODLEVA',
+        'HTTP_X_COMEBACK_ACTIVE_MODULE',
+        'HTTP_X_COMEBACK_THEME',
+        'HTTP_X_COMEBACK_HELPDESK',
+        'HTTP_X_COMEBACK_ADMIN_EDITACE_PRAV',
+        'HTTP_X_COMEBACK_ADMIN_USER_ACTIVATE',
+        'HTTP_X_COMEBACK_REPORT_PROMENNE',
+        'HTTP_X_COMEBACK_SMENY_PLAN_STATE',
+    ];
+    foreach ($jsonHeaders as $header) {
+        if (isset($_SERVER[$header])) {
+            return 'json';
+        }
+    }
+
+    $accept = strtolower((string)($_SERVER['HTTP_ACCEPT'] ?? ''));
+    $uri = strtolower((string)($_SERVER['REQUEST_URI'] ?? ''));
+    if (
+        str_contains($accept, 'application/json')
+        || isset($_SERVER['HTTP_X_REQUESTED_WITH'])
+        || str_contains($uri, '/ajax/')
+        || str_contains($uri, 'helpdesk_action=')
+    ) {
+        return 'json';
+    }
+
+    return 'html';
+}
+
+/** @param array<string,mixed> $context */
+function cb_chyba_globalni_vystup(Throwable $error, array $context = []): void
+{
+    if (!empty($GLOBALS['CB_CHYBA_GLOBALNE_VYRIZENA'])) {
+        return;
+    }
+    $GLOBALS['CB_CHYBA_GLOBALNE_VYRIZENA'] = true;
+
+    try {
+        $context += [
+            'module' => (string)($GLOBALS['CURRENT_MODULE'] ?? 'SYSTEM'),
+            'action' => 'Nezachycená chyba webového požadavku',
+        ];
+        $message = cb_chyba_uzivatel($error, $context);
+        $status = cb_chyba_http_status($error, $context);
+        $format = cb_chyba_globalni_format();
+
+        if (!headers_sent()) {
+            http_response_code($status);
+            header('Cache-Control: no-store');
+            if ($format === 'json') {
+                header('Content-Type: application/json; charset=utf-8');
+            } elseif ($format === 'text') {
+                header('Content-Type: text/plain; charset=utf-8');
+            } else {
+                header('Content-Type: text/html; charset=utf-8');
+            }
+        }
+
+        if ($format === 'json') {
+            echo json_encode(['ok' => false, 'err' => $message], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            return;
+        }
+        if ($format === 'text') {
+            echo $message;
+            return;
+        }
+
+        echo '<section role="alert" style="margin:16px;padding:14px;border:1px solid #dc2626;border-radius:8px;color:#991b1b;background:#fff1f2;font:600 14px/1.45 sans-serif">'
+            . htmlspecialchars($message, ENT_QUOTES, 'UTF-8')
+            . '</section>';
+    } catch (Throwable $handlerError) {
+        error_log('[cb_global_error_handler_failed] ' . get_class($handlerError) . ': ' . $handlerError->getMessage());
+        if (!headers_sent()) {
+            http_response_code(500);
+            header('Content-Type: text/plain; charset=utf-8');
+        }
+        echo cb_chyba_verejna_zprava();
+    }
+}
+
+function cb_chyba_globalni_exception(Throwable $error): void
+{
+    cb_chyba_globalni_vystup($error);
+}
+
+function cb_chyba_globalni_shutdown(): void
+{
+    if (!empty($GLOBALS['CB_CHYBA_GLOBALNE_VYRIZENA'])) {
+        return;
+    }
+    $last = error_get_last();
+    if (!is_array($last) || !in_array((int)($last['type'] ?? 0), [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true)) {
+        return;
+    }
+
+    $error = new ErrorException(
+        (string)($last['message'] ?? 'Fatální chyba aplikace.'),
+        0,
+        (int)($last['type'] ?? E_ERROR),
+        (string)($last['file'] ?? ''),
+        (int)($last['line'] ?? 0)
+    );
+    cb_chyba_globalni_vystup($error, ['action' => 'Fatální chyba webového požadavku']);
+}
+
+function cb_chyba_web_bootstrap(): void
+{
+    if (PHP_SAPI === 'cli' || !empty($GLOBALS['CB_CHYBA_WEB_BOOTSTRAP'])) {
+        return;
+    }
+    $GLOBALS['CB_CHYBA_WEB_BOOTSTRAP'] = true;
+    $GLOBALS['CB_CHYBA_GLOBALNE_VYRIZENA'] = false;
+    ini_set('display_errors', '0');
+    set_exception_handler('cb_chyba_globalni_exception');
+    register_shutdown_function('cb_chyba_globalni_shutdown');
+}
+
+/** @param array<string,mixed> $context */
 function cb_chyba_iniciator(array $context = []): array
 {
     $sessionUser = $_SESSION['cb_user'] ?? null;
@@ -128,6 +291,38 @@ function cb_chyba_admin_popis(Throwable $error, array $context = []): string
     return get_class($error) . ': ' . ($message !== '' ? $message : 'neočekávaná chyba aplikace.');
 }
 
+/** Vrátí pouze bezpečnou část URL; tokeny ani libovolný query string se nelogují. */
+function cb_chyba_bezpecna_url(string $requestUri): string
+{
+    $path = parse_url($requestUri, PHP_URL_PATH);
+    if (!is_string($path) || $path === '') {
+        return '';
+    }
+
+    $query = parse_url($requestUri, PHP_URL_QUERY);
+    if (!is_string($query) || $query === '') {
+        return $path;
+    }
+
+    parse_str($query, $params);
+    $allowedKeys = ['m', 'page', 'hd', 'helpdesk_action', 'cb_helpdesk_module'];
+    $safe = [];
+    foreach ($allowedKeys as $key) {
+        $value = $params[$key] ?? null;
+        if (!is_scalar($value)) {
+            continue;
+        }
+        $value = trim((string)$value);
+        if ($value !== '') {
+            $safe[$key] = mb_substr($value, 0, 80, 'UTF-8');
+        }
+    }
+
+    return $safe === []
+        ? $path
+        : $path . '?' . http_build_query($safe, '', '&', PHP_QUERY_RFC3986);
+}
+
 /** @param array<string,mixed> $context */
 function cb_chyba_oznam(Throwable $error, array $context = []): void
 {
@@ -152,7 +347,7 @@ function cb_chyba_oznam(Throwable $error, array $context = []): void
         if (mb_strlen($adminMessage, 'UTF-8') > 255) {
             $adminMessage = mb_substr($adminMessage, 0, 252, 'UTF-8') . '...';
         }
-        $url = (string)($_SERVER['REQUEST_URI'] ?? '');
+        $url = cb_chyba_bezpecna_url((string)($_SERVER['REQUEST_URI'] ?? ''));
         $code = 'UNEXPECTED_' . strtoupper((new ReflectionClass($error))->getShortName());
         if ($error instanceof mysqli_sql_exception && $error->getCode() !== 0) {
             $code .= '_' . (string)$error->getCode();
@@ -196,7 +391,7 @@ function cb_chyba_oznam(Throwable $error, array $context = []): void
             ];
             $dataJson = json_encode($safeContext, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-            db_zapis_log_chyby(
+            $pushDelivered = db_zapis_log_chyby(
                 $conn,
                 $actor['id_user'],
                 $module,
@@ -214,6 +409,9 @@ function cb_chyba_oznam(Throwable $error, array $context = []): void
             );
             $dbLogCompleted = true;
             $pushSuppressedAsDuplicate = !$sendPush;
+            if ($sendPush && !$pushDelivered) {
+                error_log('[cb_error_push_not_delivered] ' . $adminMessage);
+            }
         } catch (Throwable $logError) {
             error_log('[cb_error_report_failed] ' . get_class($logError) . ': ' . $logError->getMessage());
         }
@@ -223,7 +421,10 @@ function cb_chyba_oznam(Throwable $error, array $context = []): void
             // cesta může při úplném výpadku DB selhat, nesmí však vyvolat rekurzi.
             try {
                 require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
-                cb_push_send_error_admin($adminMessage, $error->getFile(), $error->getLine(), 1);
+                $pushDelivered = cb_push_send_error_admin($adminMessage, $error->getFile(), $error->getLine(), 1);
+                if (!$pushDelivered) {
+                    error_log('[cb_error_push_not_delivered] ' . $adminMessage);
+                }
             } catch (Throwable $pushError) {
                 error_log('[cb_error_push_failed] ' . get_class($pushError) . ': ' . $pushError->getMessage());
             }

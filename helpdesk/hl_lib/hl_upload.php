@@ -15,25 +15,25 @@ function cb_helpdesk_upload_web_path(string $fileName): string
 function cb_helpdesk_upload_priloha(mysqli $conn, int $idHelpdesk, ?int $idZprava, int $idUser, array $file): array
 {
     if ($idHelpdesk <= 0 || $idUser <= 0) {
-        throw new RuntimeException('Neplatný požadavek.');
+        throw new CbUserVisibleException('Přílohu nelze přiřadit k požadavku. Obnovte stránku a zkuste to znovu.');
     }
 
     $err = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
     if ($err !== UPLOAD_ERR_OK) {
-        throw new RuntimeException('Soubor se nepodařilo nahrát.');
+        throw new CbUserVisibleException('Soubor se nepodařilo přijmout. Vyberte jej znovu.');
     }
 
     $tmp = (string)($file['tmp_name'] ?? '');
     if ($tmp === '' || !is_uploaded_file($tmp)) {
-        throw new RuntimeException('Neplatný upload.');
+        throw new CbUserVisibleException('Nahraný soubor není platný. Vyberte jej znovu.');
     }
 
     $size = (int)($file['size'] ?? 0);
     if ($size <= 0) {
-        throw new RuntimeException('Soubor je prázdný.');
+        throw new CbUserVisibleException('Vybraný soubor je prázdný.');
     }
-    if ($size > 3145728) {
-        throw new RuntimeException('Soubor je větší než 3 MB.');
+    if ($size > 5242880) {
+        throw new CbUserVisibleException('Soubor je větší než povolených 5 MB.');
     }
 
     $original = trim((string)($file['name'] ?? 'soubor'));
@@ -44,7 +44,7 @@ function cb_helpdesk_upload_priloha(mysqli $conn, int $idHelpdesk, ?int $idZprav
     $ext = strtolower((string)pathinfo($original, PATHINFO_EXTENSION));
     $allowed = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'pdf'];
     if (!in_array($ext, $allowed, true)) {
-        throw new RuntimeException('Nepovolený typ souboru.');
+        throw new CbUserVisibleException('Povolené přílohy jsou PNG, JPG, WEBP, GIF a PDF.');
     }
 
     $dir = cb_helpdesk_upload_dir();
@@ -80,7 +80,7 @@ function cb_helpdesk_upload_priloha(mysqli $conn, int $idHelpdesk, ?int $idZprav
     ];
     if (!in_array($mime, $allowedMime[$ext], true)) {
         @unlink($target);
-        throw new RuntimeException('Skutečný typ souboru neodpovídá jeho příponě.');
+        throw new CbUserVisibleException('Obsah souboru neodpovídá jeho příponě. Vyberte platný soubor.');
     }
 
     $cesta = cb_helpdesk_upload_web_path($stored);

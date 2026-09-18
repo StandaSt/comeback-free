@@ -13,6 +13,7 @@ require_once __DIR__ . '/../../common/lib/app.php';
 require_once __DIR__ . '/../../common/lib/uloz_akci.php';
 require_once __DIR__ . '/../../common/db/db_prava.php';
 require_once __DIR__ . '/../admin_lib/admin_db_export.php';
+require_once __DIR__ . '/../admin_lib/admin_chyby.php';
 
 cb_session_guard_entry();
 
@@ -35,19 +36,20 @@ function cb_admin_db_export_download_error(Throwable $error, int $status = 400):
     http_response_code($status);
     header('Content-Type: text/plain; charset=utf-8');
     header('Cache-Control: no-store');
-    echo 'Export databáze se nepodařilo vytvořit: ' . $error->getMessage();
+    echo cb_admin_chyba_text($error, 'Export databáze');
     exit;
 }
 
 try {
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-        throw new RuntimeException('Export lze spustit pouze odesláním formuláře.');
+        throw new CbUserVisibleException('Export spusťte tlačítkem na stránce Export DB.');
     }
     if (!empty($_SESSION['login_ok']) && !cb_session_validate_after_login()) {
         cb_session_forget_auth();
     }
     if (empty($_SESSION['login_ok'])) {
-        throw new RuntimeException('Přihlášení vypršelo.');
+        http_response_code(401);
+        throw new CbUserVisibleException('Přihlášení vypršelo. Přihlaste se prosím znovu.');
     }
 
     cb_crf_vyzaduj();
@@ -56,7 +58,8 @@ try {
     $idUser = is_array($user) ? (int)($user['id_user'] ?? 0) : 0;
     cb_db_prava_nacti_do_session(db(), $idUser);
     if (!function_exists('cb_pravo_ma') || !cb_pravo_ma(109)) {
-        throw new RuntimeException('Nemáte právo exportovat databázi.');
+        http_response_code(403);
+        throw new CbUserVisibleException('Nemáte právo exportovat databázi.');
     }
 
     $selectedGroups = cb_admin_db_export_selected_groups($_POST['groups'] ?? null);
@@ -69,7 +72,7 @@ try {
 
     $lockHandle = fopen($tempDirectory . '/db_export.lock', 'c');
     if ($lockHandle === false || !flock($lockHandle, LOCK_EX | LOCK_NB)) {
-        throw new RuntimeException('Jiný export databáze právě probíhá. Zkuste to znovu po jeho dokončení.');
+        throw new CbUserVisibleException('Jiný export databáze právě probíhá. Zkuste to znovu po jeho dokončení.');
     }
 
     $tempPath = tempnam($tempDirectory, 'db_export_');
@@ -132,7 +135,7 @@ try {
         flock($lockHandle, LOCK_UN);
         fclose($lockHandle);
     }
-    cb_admin_db_export_download_error($e, str_contains($e->getMessage(), 'právo') ? 403 : 400);
+    cb_admin_db_export_download_error($e, cb_admin_chyba_status($e));
 }
 
 if ($tempPath !== '' && is_file($tempPath)) {

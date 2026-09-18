@@ -35,7 +35,7 @@ function hr_zarazeni_zmenit(mysqli $db, int $idPerson, int $idSlot, string $plat
     $exists = $stmt->get_result()->fetch_row() !== null;
     $stmt->close();
     if (!$exists) {
-        throw new RuntimeException('Vyberte aktivní pozici.');
+        throw new CbUserVisibleException('Vyberte aktivní pozici.');
     }
     $denPred = (new DateTimeImmutable($platiOd))->modify('-1 day')->format('Y-m-d');
     $db->begin_transaction();

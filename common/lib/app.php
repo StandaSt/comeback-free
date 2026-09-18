@@ -17,6 +17,7 @@ declare(strict_types=1);
 date_default_timezone_set('Europe/Prague');
 mb_internal_encoding('UTF-8');
 
+require_once __DIR__ . '/chyby_bootstrap.php';
 require_once __DIR__ . '/../config/constants.php';
 
 if (!function_exists('h')) {
@@ -43,7 +44,6 @@ if (!function_exists('db')) {
 }
 
 require_once __DIR__ . '/db_akce_log.php';
-require_once __DIR__ . '/chyby.php';
 require_once __DIR__ . '/format.php';
 require_once __DIR__ . '/objednavka_cislo.php';
 require_once __DIR__ . '/sesn_kontrola.php';

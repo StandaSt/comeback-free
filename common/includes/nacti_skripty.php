@@ -13,6 +13,8 @@ window.CB_CRF_TOKEN = <?= json_encode(function_exists('cb_crf_token') ? cb_crf_t
 </script>
 <?php // Jednotná ochrana zápisových požadavků. ?>
 <script src="<?= h(cb_public_url('js/ochrana_crf.js') . '?v=' . (is_file(__DIR__ . '/../js/ochrana_crf.js') ? (string)filemtime(__DIR__ . '/../js/ochrana_crf.js') : '1')) ?>"></script>
+<?php // Jednotné zpracování chybových odpovědí v prohlížeči. ?>
+<script src="<?= h($cbChybyJsUrl) ?>"></script>
 <?php // Knihovna grafu. ?>
 <script src="<?= h(cb_asset_url('js/echarts.min.js')) ?>"></script>
 <?php // Zakladni AJAX funkce aplikace. ?>
@@ -63,6 +65,8 @@ window.CB_CRF_TOKEN = <?= json_encode(function_exists('cb_crf_token') ? cb_crf_t
 <script src="<?= h($cbHrJsUrl) ?>"></script>
 <?php // Chovani modulu Helpdesk v prohlizeci. ?>
 <script src="<?= h(cb_root_url('helpdesk/hl_js/hl_helpdesk.js') . '?v=' . (is_file(__DIR__ . '/../../helpdesk/hl_js/hl_helpdesk.js') ? (string)filemtime(__DIR__ . '/../../helpdesk/hl_js/hl_helpdesk.js') : '1')) ?>"></script>
+<?php // Jednotné uživatelské texty chyb Administrace. ?>
+<script src="<?= h($cbAdministraceChybyJsUrl) ?>"></script>
 <?php // Ulozeni prav role v Administraci. ?>
 <script src="<?= h($cbAdministracePravaSaveJsUrl) ?>"></script>
 <?php // Bloky prav role v Administraci. ?>
@@ -77,6 +81,8 @@ window.CB_CRF_TOKEN = <?= json_encode(function_exists('cb_crf_token') ? cb_crf_t
 <script src="<?= h($cbAdministraceUzivateleJsUrl) ?>"></script>
 <?php // Průběh ručního načítání katalogu Restia v Administraci. ?>
 <script src="<?= h($cbAdministraceRestiaKatalogJsUrl) ?>"></script>
+<?php // Průběh kontroly podkladů kompletního HR importu. ?>
+<script src="<?= h($cbAdministraceHrImportJsUrl) ?>"></script>
 <?php // AI analytik modulu Provoz. ?>
 <script src="<?= h(cb_root_url('provoz/js/ai_analytik.js') . '?v=' . (is_file(__DIR__ . '/../../provoz/js/ai_analytik.js') ? (string)filemtime(__DIR__ . '/../../provoz/js/ai_analytik.js') : '1')) ?>"></script>
 <?php // Konfigurace navigace mezi hlavni moduly. ?>

@@ -53,9 +53,9 @@
       credentials: 'same-origin'
     })
       .then(function (response) {
-        return response.json().then(function (data) {
+        return response.json().catch(function () { return {}; }).then(function (data) {
           if (!response.ok) {
-            throw new Error(String((data && data.err) || ('HTTP ' + response.status)));
+            throw new Error(window.cbAdminResponseError(response.status, data, 'Uložení práva se nepodařilo.'));
           }
           return data;
         });
@@ -68,7 +68,7 @@
       })
       .catch(function (error) {
         input.checked = previous;
-        window.alert((error && error.message) ? error.message : 'Uložení práva selhalo.');
+        window.alert(window.cbAdminErrorMessage(error, 'Uložení práva se nepodařilo.'));
         return false;
       })
       .finally(function () {
@@ -141,9 +141,9 @@
       credentials: 'same-origin'
     })
       .then(function (response) {
-        return response.json().then(function (data) {
+        return response.json().catch(function () { return {}; }).then(function (data) {
           if (!response.ok) {
-            throw new Error(String((data && data.err) || ('HTTP ' + response.status)));
+            throw new Error(window.cbAdminResponseError(response.status, data, 'Změna aktivity práva se nepodařila.'));
           }
           return data;
         });
@@ -156,7 +156,7 @@
       })
       .catch(function (error) {
         input.checked = previous;
-        window.alert((error && error.message) ? error.message : 'Změna aktivity práva selhala.');
+        window.alert(window.cbAdminErrorMessage(error, 'Změna aktivity práva se nepodařila.'));
       })
       .finally(function () {
         input.disabled = false;

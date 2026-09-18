@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/vypocet_col_rozdil.php';
+require_once __DIR__ . '/denni_report_prava.php';
 
 function cb_denni_report_format_input_number(float $value): string
 {
@@ -219,6 +220,61 @@ function cb_denni_report_has_active_branch_report(mysqli $conn, int $idPob, stri
     $stmt->close();
 
     return $exists;
+}
+
+function cb_denni_report_missing_notice_dates(
+    mysqli $conn,
+    int $idPob,
+    DateTimeImmutable $currentWorkdayDt
+): array {
+    if ($idPob <= 0) {
+        return [];
+    }
+
+    $fromDt = $currentWorkdayDt->modify('last day of previous month')->modify('-9 days');
+    $toDt = $currentWorkdayDt->modify('-1 day');
+    if ($toDt < $fromDt) {
+        return [];
+    }
+
+    $from = $fromDt->format('Y-m-d');
+    $to = $toDt->format('Y-m-d');
+    $savedDates = [];
+    $stmt = $conn->prepare('
+        SELECT DISTINCT datum_reportu
+        FROM reporty_is
+        WHERE id_pob = ?
+          AND datum_reportu >= ?
+          AND datum_reportu <= ?
+          AND platny = 1
+    ');
+    if ($stmt === false) {
+        return [];
+    }
+
+    $stmt->bind_param('iss', $idPob, $from, $to);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result instanceof mysqli_result) {
+        while ($row = $result->fetch_assoc()) {
+            $savedDate = trim((string)($row['datum_reportu'] ?? ''));
+            if ($savedDate !== '') {
+                $savedDates[$savedDate] = true;
+            }
+        }
+        $result->free();
+    }
+    $stmt->close();
+
+    $missingDates = [];
+    for ($dateDt = $fromDt; $dateDt <= $toDt; $dateDt = $dateDt->modify('+1 day')) {
+        $date = $dateDt->format('Y-m-d');
+        if (!isset($savedDates[$date])) {
+            $missingDates[] = $date;
+        }
+    }
+
+    return $missingDates;
 }
 
 function cb_denni_report_missing_reports_summary(mysqli $conn, string $date): array
@@ -680,6 +736,63 @@ function cb_denni_report_branch_slot_user_options(mysqli $conn, int $idPob, int 
     return array_values($users);
 }
 
+function cb_denni_report_prioritize_planned_users(
+    mysqli $conn,
+    array $options,
+    int $idPob,
+    int $idSlot,
+    string $date
+): array {
+    if ($options === [] || $idPob <= 0 || $idSlot <= 0 || $date === '') {
+        return $options;
+    }
+
+    $optionsById = [];
+    foreach ($options as $option) {
+        $idUser = (int)($option['id_user'] ?? 0);
+        if ($idUser > 0) {
+            $optionsById[$idUser] = $option;
+        }
+    }
+
+    $plannedOptions = [];
+    $stmt = $conn->prepare('
+        SELECT sp.id_user
+        FROM smeny_plan sp
+        WHERE sp.id_pob = ?
+          AND sp.id_slot = ?
+          AND sp.datum = ?
+        GROUP BY sp.id_user
+        ORDER BY MIN(sp.cas_od) ASC, MIN(sp.cas_do) ASC, sp.id_user ASC
+    ');
+    if ($stmt !== false) {
+        $stmt->bind_param('iis', $idPob, $idSlot, $date);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($result instanceof mysqli_result) {
+            while ($row = $result->fetch_assoc()) {
+                $idUser = (int)($row['id_user'] ?? 0);
+                if ($idUser > 0 && isset($optionsById[$idUser])) {
+                    $plannedOptions[] = $optionsById[$idUser];
+                    unset($optionsById[$idUser]);
+                }
+            }
+            $result->free();
+        }
+        $stmt->close();
+    }
+
+    foreach ($options as $option) {
+        $idUser = (int)($option['id_user'] ?? 0);
+        if ($idUser > 0 && isset($optionsById[$idUser])) {
+            $plannedOptions[] = $option;
+            unset($optionsById[$idUser]);
+        }
+    }
+
+    return $plannedOptions;
+}
+
 function cb_denni_report_shift_plan_people_rows(mysqli $conn, int $idPob, string $date): array
 {
     if ($idPob <= 0 || $date === '') {
@@ -725,66 +838,6 @@ function cb_denni_report_shift_plan_people_rows(mysqli $conn, int $idPob, string
     }
 
     return $rows;
-}
-
-function cb_denni_report_planned_instor_defaults(mysqli $conn, int $idPob, string $date): array
-{
-    if ($idPob <= 0 || $date === '') {
-        return ['opening' => '', 'closing' => ''];
-    }
-
-    $sql = "
-        SELECT
-            sp.id_user,
-            TRIM(CONCAT_WS(' ', u.jmeno, u.prijmeni)) AS full_name,
-            CONCAT(sp.datum, ' ', sp.cas_od) AS start_dt,
-            DATE_ADD(CONCAT(sp.datum, ' ', sp.cas_do), INTERVAL CASE WHEN sp.cas_do <= sp.cas_od THEN 1 ELSE 0 END DAY) AS end_dt
-        FROM smeny_plan sp
-        INNER JOIN user u ON u.id_user = sp.id_user
-        WHERE sp.id_pob = ?
-          AND sp.id_slot = 1
-          AND sp.datum = ?
-        HAVING full_name <> ''
-        ORDER BY start_dt ASC, end_dt DESC, full_name ASC
-    ";
-
-    $stmt = $conn->prepare($sql);
-    $openingName = '';
-    $openingId = null;
-    $openingStart = '';
-    $closingName = '';
-    $closingId = null;
-    $closingEnd = '';
-
-    if ($stmt !== false) {
-        $stmt->bind_param('is', $idPob, $date);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        if ($result instanceof mysqli_result) {
-            while ($row = $result->fetch_assoc()) {
-                $name = trim((string)($row['full_name'] ?? ''));
-                $startDt = trim((string)($row['start_dt'] ?? ''));
-                $endDt = trim((string)($row['end_dt'] ?? ''));
-                if ($name === '') {
-                    continue;
-                }
-                if ($openingName === '' || ($startDt !== '' && strcmp($startDt, $openingStart) < 0)) {
-                    $openingName = $name;
-                    $openingId = (int)($row['id_user'] ?? 0);
-                    $openingStart = $startDt;
-                }
-                if ($closingName === '' || ($endDt !== '' && strcmp($endDt, $closingEnd) > 0)) {
-                    $closingName = $name;
-                    $closingId = (int)($row['id_user'] ?? 0);
-                    $closingEnd = $endDt;
-                }
-            }
-            $result->free();
-        }
-        $stmt->close();
-    }
-
-    return ['opening' => $openingName, 'opening_id' => $openingId, 'closing' => $closingName, 'closing_id' => $closingId];
 }
 
 function cb_denni_report_cash_data(?array $row): array
@@ -853,6 +906,8 @@ function cb_denni_report_restia_summary_default(): array
         'docs_count' => 0,
         'orders_total' => 0,
         'own_deliveries' => 0,
+        'own_deliveries_without_confirmation' => 0,
+        'delivery_orders_without_courier' => 0,
         'woltdrive_count' => 0,
         'woltdrive_late' => 0,
     ];
@@ -974,6 +1029,7 @@ function cb_denni_report_restia_summary(mysqli $conn, int $idPob, array $workday
             . $woltCashCondition . ") OR ("
             . $djCashCondition . "))";
 
+        // Vlastní rozvoz je výkon kurýra od okamžiku přiřazení; konečný stav předání jej neruší.
         $summarySql = "
             SELECT
                 SUM(CASE WHEN COALESCE(s.nazev, '') IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted') THEN 0 ELSE COALESCE(c.cena_celk, 0) END) AS trzba,
@@ -995,7 +1051,9 @@ function cb_denni_report_restia_summary(mysqli $conn, int $idPob, array $workday
                 SUM(CASE WHEN COALESCE(s.nazev, '') IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted') THEN COALESCE(c.cena_celk, 0) ELSE 0 END) AS cancel_value,
                 AVG(CASE WHEN " . $notCanceled . " AND ca.cas_pripravy IS NOT NULL THEN ca.cas_pripravy * 60 END) AS make_time_avg_sec,
                 COUNT(DISTINCT CASE WHEN " . $notCanceled . " THEN o.id_obj ELSE NULL END) AS orders_total,
-                COUNT(DISTINCT CASE WHEN " . $notCanceled . " AND ok.provider = 'delivery' THEN o.id_obj ELSE NULL END) AS own_deliveries,
+                COUNT(DISTINCT CASE WHEN ok.provider = 'delivery' THEN o.id_obj ELSE NULL END) AS own_deliveries,
+                COUNT(DISTINCT CASE WHEN ok.provider = 'delivery' AND ca.cas_doruc IS NULL THEN o.id_obj ELSE NULL END) AS own_deliveries_without_confirmation,
+                COUNT(DISTINCT CASE WHEN " . $notCanceled . " AND d.nazev = 'delivery' AND COALESCE(ok.provider, '') = '' THEN o.id_obj ELSE NULL END) AS delivery_orders_without_courier,
                 COUNT(DISTINCT CASE WHEN " . $notCanceled . " AND ok.provider = 'external-delivery' THEN o.id_obj ELSE NULL END) AS woltdrive_count,
                 COUNT(DISTINCT CASE WHEN " . $notCanceled . " AND ok.provider = 'delivery' AND ca.cas_slib IS NOT NULL AND ca.cas_doruc IS NOT NULL AND TIMESTAMPDIFF(MINUTE, ca.cas_slib, ca.cas_doruc) > 5 THEN o.id_obj ELSE NULL END) AS delay_count,
                 COUNT(DISTINCT CASE WHEN " . $notCanceled . " AND ok.provider = 'external-delivery' AND ca.cas_slib IS NOT NULL AND ca.cas_doruc IS NOT NULL AND TIMESTAMPDIFF(MINUTE, ca.cas_slib, ca.cas_doruc) > 5 THEN o.id_obj ELSE NULL END) AS woltdrive_late
@@ -1066,6 +1124,8 @@ function cb_denni_report_restia_summary(mysqli $conn, int $idPob, array $workday
                     'docs_count' => 0,
                     'orders_total' => (int)($summaryRow['orders_total'] ?? 0),
                     'own_deliveries' => (int)($summaryRow['own_deliveries'] ?? 0),
+                    'own_deliveries_without_confirmation' => (int)($summaryRow['own_deliveries_without_confirmation'] ?? 0),
+                    'delivery_orders_without_courier' => (int)($summaryRow['delivery_orders_without_courier'] ?? 0),
                     'woltdrive_count' => (int)($summaryRow['woltdrive_count'] ?? 0),
                     'woltdrive_late' => (int)($summaryRow['woltdrive_late'] ?? 0),
                 ];
@@ -1084,19 +1144,18 @@ function cb_denni_report_kuryr_delivery_data(mysqli $conn, int $idPob, array $wo
     $restiaDeliveryCounts = [];
 
     if ($idPob > 0) {
+        // Rozpis kurýrů musí používat stejné pravidlo jako souhrnné „Naše rozvozy“.
         $deliverySql = "
             SELECT
                 TRIM(ok.jmeno) AS kuryr_name,
                 COUNT(DISTINCT o.id_obj) AS rozvozu
             FROM objednavky_restia o
             INNER JOIN obj_kuryr ok ON ok.id_obj = o.id_obj
-            LEFT JOIN cis_obj_stav s ON s.id_stav = o.id_stav
             LEFT JOIN obj_casy ca ON ca.id_obj = o.id_obj
             WHERE o.id_pob = ?
               AND ca.report >= DATE(?)
               AND ca.report < DATE(?)
               AND ok.provider = 'delivery'
-              AND COALESCE(s.nazev, '') NOT IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted')
             GROUP BY kuryr_name
             HAVING kuryr_name <> ''
         ";
@@ -1347,27 +1406,8 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
     ];
     $currentUser = $_SESSION['cb_user'] ?? [];
     $currentUserId = is_array($currentUser) ? (int)($currentUser['id_user'] ?? 0) : 0;
-    $currentUserRoleIds = [];
-    if ($currentUserId > 0) {
-        $stmtUserRoles = $conn->prepare('SELECT id_role FROM user_role WHERE id_user = ?');
-        if ($stmtUserRoles !== false) {
-            $stmtUserRoles->bind_param('i', $currentUserId);
-            $stmtUserRoles->execute();
-            $userRolesResult = $stmtUserRoles->get_result();
-            if ($userRolesResult instanceof mysqli_result) {
-                while ($row = $userRolesResult->fetch_assoc()) {
-                    $idRole = (int)($row['id_role'] ?? 0);
-                    if ($idRole > 0) {
-                        $currentUserRoleIds[$idRole] = true;
-                    }
-                }
-                $userRolesResult->free();
-            }
-            $stmtUserRoles->close();
-        }
-    }
-    $canSaveReport = isset($currentUserRoleIds[5]) || isset($currentUserRoleIds[7]);
-    $hasRole5 = isset($currentUserRoleIds[5]);
+    $canCloseReport = cb_denni_report_ma_pravo(CB_DENNI_REPORT_UZAVRIT_PRAVO);
+    $canEditSavedReport = cb_denni_report_ma_pravo(CB_DENNI_REPORT_EDITOVAT_PRAVO);
     $allowedBranches = [];
     if ($currentUserId > 0) {
         $stmtAllowedBranches = $conn->prepare("
@@ -1423,7 +1463,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         }
     }
     
-    if ($reportBranchId <= 0 && $canSaveReport && $currentUserId > 0 && $isCurrentWorkday) {
+    if ($reportBranchId <= 0 && $canCloseReport && $currentUserId > 0 && $isCurrentWorkday) {
         $nowLocal = (new DateTimeImmutable('now', $tz))->format('Y-m-d H:i:s');
         $dateFrom = $currentWorkdayDt->modify('-1 day')->format('Y-m-d');
         $dateTo = $currentWorkdayDt->format('Y-m-d');
@@ -1452,6 +1492,15 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
             $stmtCurrentShift->close();
         }
     }
+
+    $missingReportNoticeDates = [];
+    if ($reportBranchId > 0) {
+        $missingReportNoticeDates = cb_denni_report_missing_notice_dates(
+            $conn,
+            $reportBranchId,
+            $currentWorkdayDt
+        );
+    }
     
     $historyData = null;
     $historyReportId = 0;
@@ -1467,10 +1516,13 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
     }
     $preferFinalReportData = $historyReportExists && is_array($historyData);
     $requestedFinalEdit = !$isGoogleArchiveView && ((int)($_POST['zr_edit_final'] ?? $_GET['zr_edit_final'] ?? 0)) === 1;
-    $canUnlockFinalReport = !$isArchiveView && ($hasRole5 && $mainBranchId > 0 && $mainBranchId === $reportBranchId);
-    $isCreatingMissingFinalReport = (!$isCurrentWorkday && !$historyReportExists && $canUnlockFinalReport);
-    $isEditingFinalReport = $canUnlockFinalReport && ($requestedFinalEdit || $isCreatingMissingFinalReport);
-    $canEditHistory = (!$isCurrentWorkday && $canUnlockFinalReport);
+    $canUnlockFinalReport = !$isArchiveView
+        && $canEditSavedReport
+        && $mainBranchId > 0
+        && $mainBranchId === $reportBranchId;
+    $isCreatingMissingFinalReport = !$isCurrentWorkday && !$historyReportExists && !$isArchiveView && $canCloseReport;
+    $isEditingFinalReport = $historyReportExists && $canUnlockFinalReport && $requestedFinalEdit;
+    $canEditHistory = !$isCurrentWorkday && $historyReportExists && $canUnlockFinalReport;
 
     if ($historyReportExists) {
         $canEditReport = $isEditingFinalReport;
@@ -1478,7 +1530,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         $isReadOnlyForm = !$isEditingFinalReport;
         $formMode = $isEditingFinalReport ? 'final_edit' : 'final_readonly';
     } else {
-        $canEditReport = $isCurrentWorkday ? $canSaveReport : $isCreatingMissingFinalReport;
+        $canEditReport = $isCurrentWorkday ? $canCloseReport : $isCreatingMissingFinalReport;
         $usesDraftPersistence = $isCurrentWorkday && $canEditReport;
         $isReadOnlyForm = !$canEditReport;
         $formMode = $isCurrentWorkday ? 'workday' : ($isCreatingMissingFinalReport ? 'final_edit' : 'history_readonly');
@@ -1492,7 +1544,13 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
     }
 
     $instorOptions = cb_denni_report_branch_slot_user_options($conn, $reportBranchId, 1);
-    $plannedInstorDefaults = cb_denni_report_planned_instor_defaults($conn, $reportBranchId, $reportDate);
+    $openCloseInstorOptions = cb_denni_report_prioritize_planned_users(
+        $conn,
+        $instorOptions,
+        $reportBranchId,
+        1,
+        $reportDate
+    );
     $kuryrOptions = cb_denni_report_branch_slot_user_options($conn, $reportBranchId, 2);
     $reportBranchName = $reportBranchId > 0 ? trim((string)($allowedBranches[$reportBranchId] ?? '')) : '';
     if ($reportBranchName === '' && $singleAllowedBranchName !== '') {
@@ -1534,8 +1592,8 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
             $reportBranchId,
             $reportDate,
             $currentUserId,
-            isset($plannedInstorDefaults['opening_id']) ? (int)$plannedInstorDefaults['opening_id'] : null,
-            isset($plannedInstorDefaults['closing_id']) ? (int)$plannedInstorDefaults['closing_id'] : null
+            null,
+            null
         );
         $draftRow = cb_db_dr_pracovni_find($conn, $reportBranchId, $reportDate);
         if (!is_array($draftRow) && $idDr > 0) {
@@ -1627,16 +1685,8 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
     if ($closingName === '' && $historyReportExists) {
         $closingName = trim((string)($draftRow['zaviral_text'] ?? ''));
     }
-    if ($openingName === '') {
-        $openingName = (string)($plannedInstorDefaults['opening'] ?? '');
-        $openingId = (int)($plannedInstorDefaults['opening_id'] ?? 0);
-    }
-    if ($closingName === '') {
-        $closingName = (string)($plannedInstorDefaults['closing'] ?? '');
-        $closingId = (int)($plannedInstorDefaults['closing_id'] ?? 0);
-    }
-    $instorOptions = cb_denni_report_ensure_user_option($instorOptions, $openingId, $openingName);
-    $instorOptions = cb_denni_report_ensure_user_option($instorOptions, $closingId, $closingName);
+    $openCloseInstorOptions = cb_denni_report_ensure_user_option($openCloseInstorOptions, $openingId, $openingName);
+    $openCloseInstorOptions = cb_denni_report_ensure_user_option($openCloseInstorOptions, $closingId, $closingName);
     
     $cashData = cb_denni_report_cash_data($draftRow);
     
@@ -1752,6 +1802,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         'workdayOptions' => $workdayOptions,
         'missingReports' => $missingReports,
         'missingReportsMonth' => $missingReportsMonth,
+        'missingReportNoticeDates' => $missingReportNoticeDates,
         'isCurrentWorkday' => $isCurrentWorkday,
         'reportDateDt' => $reportDateDt,
         'reportDate' => $reportDate,
@@ -1762,10 +1813,9 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         'reportEndColumns' => $reportEndColumns,
         'currentUser' => $currentUser,
         'currentUserId' => $currentUserId,
-        'currentUserRoleIds' => $currentUserRoleIds,
         'mainBranchId' => $mainBranchId,
-        'canSaveReport' => $canSaveReport,
-        'hasRole5' => $hasRole5,
+        'canCloseReport' => $canCloseReport,
+        'canEditSavedReport' => $canEditSavedReport,
         'allowedBranches' => $allowedBranches,
         'allowedBranchIds' => $allowedBranchIds,
         'requestedBranchId' => $requestedBranchId,
@@ -1790,7 +1840,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         'missingHistoryReportText' => $missingHistoryReportText,
         'readonlyInfoText' => $readonlyInfoText,
         'instorOptions' => $instorOptions,
-        'plannedInstorDefaults' => $plannedInstorDefaults,
+        'openCloseInstorOptions' => $openCloseInstorOptions,
         'kuryrOptions' => $kuryrOptions,
         'draftRow' => $draftRow,
         'idDr' => $idDr,

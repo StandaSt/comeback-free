@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * Zobrazi jednoduchou stranku pro uzivatele bez pristupu do HR.
+ * Zobrazí pravdivou informaci uživateli bez oprávnění k požadované části HR.
  */
 ?><!DOCTYPE html>
 <html lang="cs">
@@ -65,11 +65,18 @@ body {
     justify-content: center;
 }
 
-.container img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
+.access-denied {
+    max-width: 560px;
+    padding: 28px;
+    text-align: center;
+    background: #ffffff;
+    border: 1px solid #dcdcdc;
+    border-radius: 10px;
+}
+
+.access-denied h1 {
+    margin-top: 0;
+    color: #b42318;
 }
 </style>
 </head>
@@ -82,7 +89,11 @@ body {
 </div>
 
 <div class="container">
-    <img src="pripravujeme_hr.png" alt="HR se připravuje">
+    <section class="access-denied" role="alert">
+        <h1>Přístup zamítnut</h1>
+        <p>K této části HR nemáte oprávnění.</p>
+        <p>Pokud ji potřebujete pro svou práci, obraťte se na administrátora IS.</p>
+    </section>
 </div>
 
 </body>

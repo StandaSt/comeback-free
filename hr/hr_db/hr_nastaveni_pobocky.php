@@ -43,7 +43,7 @@ function hr_nastaveni_pobocka_pridat(mysqli $db, array $data, int $idUser): void
 {
     $idFirma = (int)($data['id_firma'] ?? 0);
     if (!cb_firemni_pristup_ma_firmu($db, $idUser, $idFirma)) {
-        throw new RuntimeException('Nemáte oprávnění přidat pobočku této firmě.');
+        throw new CbUserVisibleException('Nemáte oprávnění přidat pobočku této firmě.');
     }
     $kod = trim((string)($data['kod'] ?? ''));
     $nazev = trim((string)($data['nazev'] ?? ''));
@@ -52,10 +52,10 @@ function hr_nastaveni_pobocka_pridat(mysqli $db, array $data, int $idUser): void
     $oblast = trim((string)($data['oblast'] ?? ''));
     $pscText = preg_replace('/\s+/', '', (string)($data['psc'] ?? '')) ?? '';
     if ($kod === '' || $nazev === '' || $mesto === '' || !preg_match('/^\d{5}$/', $pscText)) {
-        throw new RuntimeException('Vyplňte kód, název, město a pětimístné PSČ.');
+        throw new CbUserVisibleException('Vyplňte kód, název, město a pětimístné PSČ.');
     }
     if (mb_strlen($kod, 'UTF-8') > 20 || mb_strlen($nazev, 'UTF-8') > 100 || mb_strlen($ulice, 'UTF-8') > 150 || mb_strlen($mesto, 'UTF-8') > 100 || mb_strlen($oblast, 'UTF-8') > 50) {
-        throw new RuntimeException('Některý údaj pobočky je příliš dlouhý.');
+        throw new CbUserVisibleException('Některý údaj pobočky je příliš dlouhý.');
     }
     $psc = (int)$pscText;
     $stmt = $db->prepare("INSERT INTO pobocka (id_firma, kod, nazev, ulice, mesto, oblast, psc, zadal, aktivni, pob_color) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, '#808080')");
@@ -72,7 +72,7 @@ function hr_nastaveni_pobocka_zmenit_stav(mysqli $db, int $idPob, bool $aktivni,
     $row = $stmt->get_result()->fetch_assoc();
     $stmt->close();
     if (!is_array($row) || !cb_firemni_pristup_ma_firmu($db, $idUser, (int)$row['id_firma'])) {
-        throw new RuntimeException('Nemáte oprávnění změnit tuto pobočku.');
+        throw new CbUserVisibleException('Nemáte oprávnění změnit tuto pobočku.');
     }
     if (!$aktivni) {
         $stmt = $db->prepare('SELECT COUNT(*) AS pocet FROM hr_pracoviste WHERE id_pob = ? AND platny = 1 AND (platnost_do IS NULL OR platnost_do >= CURDATE())');
@@ -81,7 +81,7 @@ function hr_nastaveni_pobocka_zmenit_stav(mysqli $db, int $idPob, bool $aktivni,
         $pocet = (int)($stmt->get_result()->fetch_assoc()['pocet'] ?? 0);
         $stmt->close();
         if ($pocet > 0) {
-            throw new RuntimeException('Pobočku nelze deaktivovat, dokud je přiřazena zaměstnancům. Nejprve jim nastavte jinou pobočku s platností od požadovaného data.');
+            throw new CbUserVisibleException('Pobočku nelze deaktivovat, dokud je přiřazena zaměstnancům. Nejprve jim nastavte jinou pobočku s platností od požadovaného data.');
         }
     }
     $stav = $aktivni ? 1 : 0;

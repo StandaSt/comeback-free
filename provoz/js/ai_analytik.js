@@ -461,58 +461,6 @@
       result.appendChild(summary);
     }
 
-    if (isClarification && data.continuation && typeof data.continuation === 'object') {
-      var clarificationForm = document.createElement('form');
-      clarificationForm.className = 'ai_analytik_clarification_form';
-      clarificationForm.setAttribute('data-ai-analytik-clarification-form', '');
-      clarificationForm.dataset.auditId = String(data.continuation.audit_id || '');
-      clarificationForm.dataset.token = String(data.continuation.token || '');
-      clarificationForm._aiProcessingState = processingState;
-      clarificationForm._aiOriginalPrompt = prompt;
-      clarificationForm._aiDurationMs = Number(responseMeta.duration_ms || 0);
-      clarificationForm._aiExpiresAt = Date.now()
-        + Math.max(0, Number(data.continuation.expires_in_seconds || 0)) * 1000;
-      var clarificationLabel = document.createElement('label');
-      clarificationLabel.textContent = 'Vaše odpověď';
-      var clarificationCountdown = document.createElement('strong');
-      clarificationCountdown.className = 'ai_analytik_clarification_countdown';
-      var clarificationInput = document.createElement('textarea');
-      clarificationInput.rows = 2;
-      clarificationInput.required = true;
-      clarificationInput.placeholder = 'Napište upřesnění a pokračujte ve stejné analýze.';
-      clarificationInput.setAttribute('data-ai-analytik-clarification-answer', '');
-      var clarificationButton = document.createElement('button');
-      clarificationButton.type = 'submit';
-      clarificationButton.className = 'head_task_btn';
-      clarificationButton.textContent = 'Pokračovat v analýze';
-      clarificationForm.appendChild(clarificationLabel);
-      clarificationForm.appendChild(clarificationCountdown);
-      clarificationForm.appendChild(clarificationInput);
-      clarificationForm.appendChild(clarificationButton);
-      result.appendChild(clarificationForm);
-      function updateClarificationCountdown(){
-        var seconds = Math.max(0, Math.ceil((clarificationForm._aiExpiresAt - Date.now()) / 1000));
-        var minutes = Math.floor(seconds / 60);
-        var rest = String(seconds % 60).padStart(2, '0');
-        clarificationCountdown.textContent = seconds > 0
-          ? 'Na zadání odpovědi zbývá: ' + minutes + ':' + rest + ' min.'
-          : 'Čas na odpověď vypršel. Spusťte prompt znovu.';
-        if (seconds === 0) {
-          window.clearInterval(clarificationForm._aiCountdownTimer);
-          clarificationInput.disabled = true;
-          clarificationButton.disabled = true;
-          clarificationButton.textContent = 'Čas vypršel';
-        }
-      }
-      clarificationForm._aiUpdateCountdown = updateClarificationCountdown;
-      updateClarificationCountdown();
-      clarificationForm._aiCountdownTimer = window.setInterval(updateClarificationCountdown, 1000);
-      window.setTimeout(function(){
-        clarificationForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        clarificationInput.focus();
-      }, 0);
-    }
-
     var hasChart = false;
     if (!isClarification) {
       var chart = document.createElement('div');
@@ -527,6 +475,118 @@
         result.appendChild(table);
       }
       renderExportActions(root, result, data.export);
+    }
+
+    if (data.continuation && typeof data.continuation === 'object') {
+      var clarificationForm = document.createElement('form');
+      clarificationForm.className = 'ai_analytik_clarification_form';
+      clarificationForm.setAttribute('data-ai-analytik-clarification-form', '');
+      clarificationForm.dataset.auditId = String(data.continuation.audit_id || '');
+      clarificationForm.dataset.token = String(data.continuation.token || '');
+      clarificationForm._aiProcessingState = processingState;
+      clarificationForm._aiOriginalPrompt = prompt;
+      clarificationForm._aiDurationMs = Number(responseMeta.duration_ms || 0);
+      clarificationForm._aiExpiresAt = Date.now()
+        + Math.max(0, Number(data.continuation.expires_in_seconds || 0)) * 1000;
+      clarificationForm._aiRemainingFollowups = Math.max(
+        0,
+        Number(data.continuation.remaining_followups || 0)
+      );
+      var clarificationLabel = document.createElement('label');
+      clarificationLabel.textContent = isClarification
+        ? 'Vaše odpověď'
+        : 'Je tento výsledek dostačující, nebo ho chcete upřesnit?';
+      var clarificationCountdown = document.createElement('strong');
+      clarificationCountdown.className = 'ai_analytik_clarification_countdown';
+      var clarificationInput = document.createElement('textarea');
+      clarificationInput.rows = 2;
+      clarificationInput.required = true;
+      clarificationInput.placeholder = isClarification
+        ? 'Napište odpověď a pokračujte ve stejné analýze.'
+        : 'Napište, co doplnit, jinak porovnat nebo upřesnit.';
+      clarificationInput.setAttribute('data-ai-analytik-clarification-answer', '');
+      var continuationActions = document.createElement('div');
+      continuationActions.className = 'ai_analytik_continuation_actions';
+      var clarificationButton = document.createElement('button');
+      clarificationButton.type = 'submit';
+      clarificationButton.className = 'head_task_btn';
+      clarificationButton.textContent = isClarification
+        ? 'Pokračovat v analýze'
+        : 'Pokračovat se stejnými daty';
+      var finishButton = document.createElement('button');
+      finishButton.type = 'button';
+      finishButton.className = 'head_task_btn secondary';
+      var finishButtonLabel = isClarification ? 'Ukončit analýzu' : 'Ano, ukončit';
+      finishButton.textContent = finishButtonLabel;
+      continuationActions.appendChild(clarificationButton);
+      continuationActions.appendChild(finishButton);
+      clarificationForm.appendChild(clarificationLabel);
+      clarificationForm.appendChild(clarificationCountdown);
+      clarificationForm.appendChild(clarificationInput);
+      clarificationForm.appendChild(continuationActions);
+      result.appendChild(clarificationForm);
+      function updateClarificationCountdown(){
+        var seconds = Math.max(0, Math.ceil((clarificationForm._aiExpiresAt - Date.now()) / 1000));
+        var minutes = Math.floor(seconds / 60);
+        var rest = String(seconds % 60).padStart(2, '0');
+        clarificationCountdown.textContent = seconds > 0
+          ? 'Na pokračování zbývá: ' + minutes + ':' + rest + ' min. · Zbývající upřesnění: '
+            + numberFormatter.format(clarificationForm._aiRemainingFollowups)
+          : 'Čas na pokračování vypršel. Spusťte nový prompt.';
+        if (seconds === 0) {
+          window.clearInterval(clarificationForm._aiCountdownTimer);
+          clarificationInput.disabled = true;
+          clarificationButton.disabled = true;
+          finishButton.disabled = true;
+          clarificationButton.textContent = 'Čas vypršel';
+        }
+      }
+      clarificationForm._aiUpdateCountdown = updateClarificationCountdown;
+      updateClarificationCountdown();
+      clarificationForm._aiCountdownTimer = window.setInterval(updateClarificationCountdown, 1000);
+      finishButton.addEventListener('click', function(){
+        if (finishButton.disabled || root.dataset.aiRunning === '1') return;
+        clarificationInput.disabled = true;
+        clarificationButton.disabled = true;
+        finishButton.disabled = true;
+        finishButton.textContent = 'Ukončuji…';
+        fetch(String(root.dataset.endpoint || window.CB_ENDPOINT || 'index.php'), {
+          method: 'POST', credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json', 'Accept': 'application/json',
+            'X-Comeback-AI-Analytik': '1'
+          },
+          body: JSON.stringify({
+            action: 'continuation_finish',
+            audit_id: Number(clarificationForm.dataset.auditId || 0),
+            continuation_token: String(clarificationForm.dataset.token || ''),
+            csrf: String(root.dataset.csrf || '')
+          })
+        }).then(function(response){
+          if (!response.ok) return responseError(response);
+          return response.json();
+        }).then(function(finishData){
+          if (!finishData.ok) throw new Error(String(finishData.error || 'Konverzaci se nepodařilo ukončit.'));
+          window.clearInterval(clarificationForm._aiCountdownTimer);
+          clarificationForm.replaceChildren();
+          var finished = document.createElement('strong');
+          finished.className = 'ai_analytik_continuation_finished';
+          finished.textContent = 'Výsledek byl označen jako dostačující. Konverzace je ukončena.';
+          clarificationForm.appendChild(finished);
+        }).catch(function(error){
+          clarificationInput.disabled = false;
+          clarificationButton.disabled = false;
+          finishButton.disabled = false;
+          finishButton.textContent = finishButtonLabel;
+          clarificationCountdown.textContent = String(error.message || error);
+        });
+      });
+      if (isClarification) {
+        window.setTimeout(function(){
+          clarificationForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          clarificationInput.focus();
+        }, 0);
+      }
     }
 
     var usage = responseMeta.usage || {};
@@ -605,21 +665,261 @@
     return read();
   }
 
+  function attachmentFiles(form){
+    return Array.isArray(form._aiAttachmentFiles) ? form._aiAttachmentFiles : [];
+  }
+
+  function renderSubmitButton(form){
+    var submit = form.querySelector('[data-ai-analytik-submit]');
+    var prompt = form.querySelector('[data-ai-analytik-prompt]');
+    if (!(submit instanceof HTMLButtonElement)) return;
+    submit.replaceChildren();
+    submit.classList.toggle('is-estimated', false);
+
+    function line(text, className){
+      var span = document.createElement('span');
+      span.textContent = text;
+      if (className) span.className = className;
+      submit.appendChild(span);
+    }
+
+    if (form._aiAttachmentEstimateBusy) {
+      line(String(form._aiAttachmentBusyText || 'Odhaduji náklady na přílohy…'));
+    } else if (attachmentFiles(form).length === 0) {
+      line('Odeslat prompt');
+    } else if (form._aiAttachmentEstimate && typeof form._aiAttachmentEstimate === 'object') {
+      line(
+        'Hrubý odhad ' + numberFormatter.format(Number(form._aiAttachmentEstimate.attachment_tokens || 0)) + ' tokenů',
+        'ai_analytik_submit_estimate_value'
+      );
+      line(
+        'Cena asi ' + currencyFormatter.format(Number(form._aiAttachmentEstimate.cost_czk || 0)),
+        'ai_analytik_submit_estimate_value'
+      );
+      line('Odeslat prompt', 'ai_analytik_submit_action');
+      submit.classList.add('is-estimated');
+    } else {
+      line('Odhadnout náklady na přílohy');
+    }
+    submit.classList.toggle(
+      'is-ready',
+      prompt instanceof HTMLTextAreaElement && prompt.value.trim() !== ''
+    );
+  }
+
+  function discardAttachmentToken(form){
+    var token = String(form._aiAttachmentToken || '');
+    form._aiAttachmentToken = '';
+    form._aiAttachmentEstimate = null;
+    if (token === '') return;
+    var root = form.closest('[data-ai-analytik]');
+    if (!(root instanceof HTMLElement)) return;
+    fetch(String(root.dataset.endpoint || window.CB_ENDPOINT || 'index.php'), {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Comeback-AI-Analytik': '1'
+      },
+      body: JSON.stringify({
+        action: 'attachment_discard',
+        attachment_token: token,
+        csrf: String(root.dataset.csrf || '')
+      })
+    }).catch(function(){});
+  }
+
+  function renderAttachments(form){
+    var list = form.querySelector('[data-ai-analytik-attachments-list]');
+    if (!(list instanceof HTMLElement)) return;
+    var files = attachmentFiles(form);
+    list.replaceChildren();
+    list.hidden = files.length === 0;
+    files.forEach(function(file, index){
+      var item = document.createElement('div');
+      item.className = 'ai_analytik_attachment_item';
+      var name = document.createElement('span');
+      name.className = 'ai_analytik_attachment_name';
+      name.textContent = String(file.name || 'Příloha');
+      name.title = String(file.name || 'Příloha');
+      var size = document.createElement('small');
+      size.textContent = formatBytes(file.size);
+      var remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'ai_analytik_attachment_remove';
+      remove.textContent = 'Odebrat';
+      remove.disabled = !!form._aiAttachmentEstimateBusy;
+      remove.setAttribute('aria-label', 'Odebrat přílohu ' + String(file.name || ''));
+      remove.addEventListener('click', function(){
+        discardAttachmentToken(form);
+        form._aiAttachmentFiles.splice(index, 1);
+        renderAttachments(form);
+        renderSubmitButton(form);
+      });
+      item.appendChild(name);
+      item.appendChild(size);
+      item.appendChild(remove);
+      list.appendChild(item);
+    });
+  }
+
+  function attachmentRequest(root, body, multipart){
+    var headers = {
+      'Accept': 'application/json',
+      'X-Comeback-AI-Analytik': '1'
+    };
+    if (!multipart) headers['Content-Type'] = 'application/json';
+    return fetch(String(root.dataset.endpoint || window.CB_ENDPOINT || 'index.php'), {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: headers,
+      body: multipart ? body : JSON.stringify(body)
+    }).then(function(response){
+      if (!response.ok) return responseError(response);
+      return response.json();
+    }).then(function(data){
+      if (!data || !data.ok) throw new Error(String(data && data.error || 'Požadavek se nepodařilo dokončit.'));
+      return data;
+    });
+  }
+
+  function estimateAttachments(form, reuseUploadedFiles){
+    var root = form.closest('[data-ai-analytik]');
+    var promptNode = form.querySelector('[data-ai-analytik-prompt]');
+    var modelNode = form.querySelector('[data-ai-analytik-model]:checked');
+    var files = attachmentFiles(form);
+    if (!(root instanceof HTMLElement) || !(promptNode instanceof HTMLTextAreaElement)
+      || !(modelNode instanceof HTMLInputElement) || files.length === 0
+      || form._aiAttachmentEstimateBusy || root.dataset.aiRunning === '1') return Promise.resolve(false);
+    if (promptNode.value.trim() === '') {
+      renderSingleError(root, 'Napište dotaz.');
+      promptNode.focus();
+      return Promise.resolve(false);
+    }
+
+    var selectedModel = modelNode.value;
+    var token = reuseUploadedFiles ? String(form._aiAttachmentToken || '') : '';
+    form._aiAttachmentEstimate = null;
+    form._aiAttachmentEstimateBusy = true;
+    form._aiAttachmentBusyText = token === '' ? 'Nahrávám přílohy…' : 'Přepočítávám náklady…';
+    var attachmentInput = form.querySelector('[data-ai-analytik-attachments]');
+    if (attachmentInput instanceof HTMLInputElement) attachmentInput.disabled = true;
+    renderAttachments(form);
+    renderSubmitButton(form);
+
+    var chain = Promise.resolve();
+    if (token === '') {
+      files.forEach(function(file, index){
+        chain = chain.then(function(){
+          form._aiAttachmentBusyText = 'Nahrávám přílohu ' + (index + 1) + ' z ' + files.length + '…';
+          renderSubmitButton(form);
+          var data = new FormData();
+          data.append('action', 'attachment_upload');
+          data.append('csrf', String(root.dataset.csrf || ''));
+          data.append('attachment_token', token);
+          data.append('attachment', file, file.name);
+          return attachmentRequest(root, data, true).then(function(response){
+            token = String(response.token || '');
+            form._aiAttachmentToken = token;
+          });
+        });
+      });
+    }
+
+    return chain.then(function(){
+      form._aiAttachmentBusyText = 'Počítám odhad tokenů…';
+      renderSubmitButton(form);
+      return attachmentRequest(root, {
+        action: 'attachment_estimate',
+        attachment_token: token,
+        model: selectedModel,
+        prompt: promptNode.value.trim(),
+        csrf: String(root.dataset.csrf || '')
+      }, false);
+    }).then(function(response){
+      form._aiAttachmentToken = token;
+      form._aiAttachmentEstimate = response.estimate || null;
+      var currentModel = form.querySelector('[data-ai-analytik-model]:checked');
+      if (currentModel instanceof HTMLInputElement && currentModel.value !== selectedModel) {
+        form._aiAttachmentEstimateBusy = false;
+        return estimateAttachments(form, true);
+      }
+      return true;
+    }).catch(function(error){
+      form._aiAttachmentEstimate = null;
+      renderSingleError(root, String(error.message || error));
+      return false;
+    }).finally(function(){
+      form._aiAttachmentEstimateBusy = false;
+      form._aiAttachmentBusyText = '';
+      if (attachmentInput instanceof HTMLInputElement) attachmentInput.disabled = false;
+      renderAttachments(form);
+      renderSubmitButton(form);
+    });
+  }
+
+  document.addEventListener('change', function(event){
+    var input = event.target instanceof Element
+      ? event.target.closest('[data-ai-analytik-attachments]') : null;
+    if (input instanceof HTMLInputElement) {
+      var form = input.closest('[data-ai-analytik-form]');
+      var root = input.closest('[data-ai-analytik]');
+      if (!(form instanceof HTMLFormElement) || !(root instanceof HTMLElement)) return;
+      var files = attachmentFiles(form);
+      form._aiAttachmentFiles = files;
+      var selected = Array.prototype.slice.call(input.files || []);
+      var error = '';
+      selected.some(function(file){
+        if (files.length >= 5) {
+          error = 'K jednomu dotazu lze přiložit nejvýše 5 souborů.';
+          return true;
+        }
+        if (Number(file.size || 0) > 20 * 1024 * 1024) {
+          error = 'Jedna příloha může mít nejvýše 20 MB.';
+          return true;
+        }
+        if (!/\.(pdf|docx|xlsx|csv|jpe?g|png|webp|gif)$/i.test(String(file.name || ''))) {
+          error = 'Povolené přílohy jsou PDF, DOCX, XLSX, CSV a obrázky JPG, PNG, WEBP nebo GIF.';
+          return true;
+        }
+        var duplicate = files.some(function(existing){
+          return existing.name === file.name && existing.size === file.size && existing.lastModified === file.lastModified;
+        });
+        if (!duplicate) files.push(file);
+        return false;
+      });
+      input.value = '';
+      discardAttachmentToken(form);
+      renderAttachments(form);
+      renderSubmitButton(form);
+      if (error) renderSingleError(root, error);
+      return;
+    }
+
+    var model = event.target instanceof Element
+      ? event.target.closest('[data-ai-analytik-model]') : null;
+    if (model instanceof HTMLInputElement) {
+      var modelForm = model.closest('[data-ai-analytik-form]');
+      if (!(modelForm instanceof HTMLFormElement)) return;
+      if (attachmentFiles(modelForm).length > 0 && modelForm._aiAttachmentToken) {
+        estimateAttachments(modelForm, true);
+      } else {
+        renderSubmitButton(modelForm);
+      }
+    }
+  });
+
   document.addEventListener('input', function(event){
     var prompt = event.target instanceof Element ? event.target.closest('[data-ai-analytik-prompt]') : null;
     if (!(prompt instanceof HTMLTextAreaElement)) return;
     var form = prompt.closest('[data-ai-analytik-form]');
     if (!(form instanceof HTMLFormElement)) return;
-    var submit = form.querySelector('[data-ai-analytik-submit]');
-    if (submit instanceof HTMLButtonElement) submit.classList.toggle('is-ready', prompt.value.trim() !== '');
+    renderSubmitButton(form);
   });
 
   function setPromptSubmitState(form){
-    var prompt = form.querySelector('[data-ai-analytik-prompt]');
-    var submit = form.querySelector('[data-ai-analytik-submit]');
-    if (prompt instanceof HTMLTextAreaElement && submit instanceof HTMLButtonElement) {
-      submit.classList.toggle('is-ready', prompt.value.trim() !== '');
-    }
+    renderSubmitButton(form);
   }
 
   function closeMyPrompts(root){
@@ -646,24 +946,36 @@
     var promptNode = form.querySelector('[data-ai-analytik-prompt]');
     if (!(promptNode instanceof HTMLTextAreaElement)) return;
     promptNode.value = String(prompt.prompt || '');
-    Array.prototype.slice.call(form.querySelectorAll('[data-ai-analytik-year]')).forEach(function(node){
-      if (node instanceof HTMLInputElement) node.checked = Array.isArray(prompt.years) && prompt.years.indexOf(Number(node.value)) >= 0;
-    });
+    if (Array.isArray(prompt.years) && prompt.years.length > 0) {
+      Array.prototype.slice.call(form.querySelectorAll('[data-ai-analytik-year]')).forEach(function(node){
+        if (node instanceof HTMLInputElement) node.checked = prompt.years.indexOf(Number(node.value)) >= 0;
+      });
+    }
     Array.prototype.slice.call(form.querySelectorAll('[data-ai-analytik-model]')).some(function(node){
       if (!(node instanceof HTMLInputElement) || node.value !== String(prompt.model || '')) return false;
       node.checked = true;
       return true;
     });
-    ['text', 'tabulka', 'graf'].forEach(function(key){
-      var node = form.querySelector('[data-ai-analytik-vystup="' + key + '"]');
-      if (node instanceof HTMLInputElement) node.checked = !!(prompt.output && prompt.output[key]);
-    });
-    Array.prototype.slice.call(form.querySelectorAll('[data-ai-analytik-ambiguity]')).some(function(node){
-      if (!(node instanceof HTMLInputElement) || node.value !== String(prompt.ambiguity_mode || '')) return false;
-      node.checked = true;
-      return true;
-    });
+    if (prompt.output && typeof prompt.output === 'object') {
+      ['text', 'tabulka', 'graf'].forEach(function(key){
+        var node = form.querySelector('[data-ai-analytik-vystup="' + key + '"]');
+        if (node instanceof HTMLInputElement) node.checked = !!prompt.output[key];
+      });
+    }
+    if (String(prompt.ambiguity_mode || '') !== '') {
+      Array.prototype.slice.call(form.querySelectorAll('[data-ai-analytik-ambiguity]')).some(function(node){
+        if (!(node instanceof HTMLInputElement) || node.value !== String(prompt.ambiguity_mode)) return false;
+        node.checked = true;
+        return true;
+      });
+    }
     setPromptSubmitState(form);
+    var selectedModel = form.querySelector('[data-ai-analytik-model]:checked');
+    if (attachmentFiles(form).length > 0 && form._aiAttachmentToken
+      && selectedModel instanceof HTMLInputElement
+      && (!form._aiAttachmentEstimate || String(form._aiAttachmentEstimate.model || '') !== selectedModel.value)) {
+      estimateAttachments(form, true);
+    }
     promptNode.focus();
   }
 
@@ -684,11 +996,21 @@
         var text = document.createElement('span');
         text.textContent = String(prompt.prompt || '');
         var meta = document.createElement('small');
-        meta.textContent = 'Použito ' + formatPromptDate(prompt.created_at)
+        meta.className = 'ai_analytik_my_prompt_meta';
+        var metaDetails = document.createElement('span');
+        metaDetails.textContent = 'Použito ' + formatPromptDate(prompt.created_at)
           + ' · model ' + String(prompt.model || '')
           + ' · využil ' + numberFormatter.format(Number(prompt.total_tokens || 0)) + ' tokenů'
+          + ' · ' + currencyFormatter.format(Number(prompt.cost_usd || 0) * 20.8)
           + ' · zpracování ' + formatPromptDuration(prompt.duration_ms);
         button.appendChild(text);
+        meta.appendChild(metaDetails);
+        if (String(prompt.user_name || '').trim() !== '') {
+          var userName = document.createElement('span');
+          userName.className = 'ai_analytik_my_prompt_user';
+          userName.textContent = String(prompt.user_name);
+          meta.appendChild(userName);
+        }
         button.appendChild(meta);
         button.addEventListener('click', function(){
           var form = root.querySelector('[data-ai-analytik-form]');
@@ -848,6 +1170,7 @@
     }, 1000);
     var finalData = null;
     var streamError = null;
+    var completedSuccessfully = false;
 
     fetch(String(root.dataset.endpoint || window.CB_ENDPOINT || 'index.php'), {
       method: 'POST',
@@ -903,6 +1226,7 @@
       renderResult(root, finalData, prompt, state);
       if (previousResult instanceof HTMLElement) previousResult.remove();
       renderProgress(root, null);
+      completedSuccessfully = true;
     }).catch(function(error){
       addProgress(state, String(error.message || error), true);
       renderProgress(root, state);
@@ -910,7 +1234,7 @@
       window.clearInterval(timer);
       delete root.dataset.aiRunning;
       if (cancel instanceof HTMLButtonElement) cancel.hidden = true;
-      if (typeof onFinished === 'function') onFinished();
+      if (typeof onFinished === 'function') onFinished(completedSuccessfully);
     });
 
     if (cancel instanceof HTMLButtonElement) {
@@ -973,13 +1297,21 @@
     addProgress(state, 'Vaše upřesnění: ' + answer, false);
     if (button instanceof HTMLButtonElement) button.disabled = true;
     answerNode.disabled = true;
+    clarificationForm.hidden = true;
+    renderProgress(root, state);
+    var liveProgress = statusNode(root);
+    if (liveProgress instanceof HTMLElement) {
+      liveProgress.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
     runAnalysis(root, {
       action: 'continue',
       audit_id: Number(clarificationForm.dataset.auditId || 0),
       continuation_token: String(clarificationForm.dataset.token || ''),
       answer: answer,
       csrf: String(root.dataset.csrf || '')
-    }, state, String(clarificationForm._aiOriginalPrompt || ''), clarificationForm.closest('.ai_analytik_result'), function(){
+    }, state, String(clarificationForm._aiOriginalPrompt || ''), clarificationForm.closest('.ai_analytik_result'), function(succeeded){
+      if (succeeded) return;
+      clarificationForm.hidden = false;
       if (button instanceof HTMLButtonElement) button.disabled = false;
       answerNode.disabled = false;
       if (clarificationForm.isConnected && typeof clarificationForm._aiUpdateCountdown === 'function') {
@@ -1031,6 +1363,12 @@
       renderSingleError(root, 'Vyberte alespoň jeden rok.');
       return;
     }
+    var files = attachmentFiles(form);
+    var estimate = form._aiAttachmentEstimate;
+    if (files.length > 0 && (!estimate || String(estimate.model || '') !== modelNode.value)) {
+      estimateAttachments(form, String(form._aiAttachmentToken || '') !== '');
+      return;
+    }
     var astraConfirmed = form.dataset.aiAstraConfirmed === '1';
     delete form.dataset.aiAstraConfirmed;
     if (modelNode.value === 'gpt-6-astra' && !astraConfirmed) {
@@ -1053,9 +1391,13 @@
       roky: years,
       nejistota: ambiguityNode.value,
       vystup: requestedOutput,
+      attachment_token: files.length > 0 ? String(form._aiAttachmentToken || '') : '',
       csrf: String(root.dataset.csrf || '')
     }, state, prompt, null, function(){
       if (submit instanceof HTMLButtonElement) submit.disabled = false;
+      form._aiAttachmentToken = '';
+      form._aiAttachmentEstimate = null;
+      renderSubmitButton(form);
     });
   });
 })();

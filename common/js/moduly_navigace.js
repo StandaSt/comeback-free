@@ -153,8 +153,12 @@
       credentials: 'same-origin'
     })
       .then(function(response){
-        if (!response.ok) throw new Error('HTTP ' + response.status);
-        return response.json();
+        return response.json().catch(function(){ return {}; }).then(function(state){
+          if (!response.ok) {
+            throw new Error(window.CB_CHYBY.responseMessage(response, state, 'Stav plánovaných směn se nepodařilo načíst.'));
+          }
+          return state;
+        });
       })
       .then(function(state){
         return !!(state && Number(state.should_run || 0) === 1);
@@ -163,7 +167,10 @@
 
   function showModuleError(error){
     stopPageLoaderTimer();
-    var message = 'Modul se nepodařilo načíst: ' + String(error.message || error);
+    var detail = String(error && error.message ? error.message : error || '');
+    var message = detail === window.CB_CHYBY.publicMessage
+      ? detail
+      : 'Modul se nepodařilo načíst: ' + (detail || 'Zkuste stránku obnovit.');
     var errorBox = document.createElement('div');
     errorBox.className = 'cb-module-load-error';
     errorBox.textContent = message;
@@ -633,7 +640,7 @@
         .then(function(response){
           return response.text().then(function(responseText){
             if (!response.ok) {
-              throw new Error(responseText.trim() || ('HTTP ' + response.status));
+              throw new Error(window.CB_CHYBY.responseMessage(response, {}, 'Modul se nepodařilo načíst.'));
             }
             return responseText;
           });
@@ -796,9 +803,9 @@
       body: body.toString(),
       credentials: 'same-origin'
     }).then(function(response){
-      return response.json().then(function(json){
+      return response.json().catch(function(){ return {}; }).then(function(json){
         if (!response.ok || !json.ok) {
-          throw new Error(json && json.err ? String(json.err) : 'Uložení selhalo.');
+          throw new Error(window.CB_CHYBY.responseMessage(response, json, 'Uložení nastavení reportu se nepodařilo.'));
         }
       });
     }).then(function(){
@@ -858,9 +865,10 @@
       body: new URLSearchParams(new FormData(form)).toString(),
       credentials: 'same-origin'
     }).then(function(response){
-      return response.json().then(function(result){
+      return response.json().catch(function(){ return {}; }).then(function(result){
         if (!response.ok || !result || typeof result.redirect !== 'string') {
-          throw new Error(result && result.message ? String(result.message) : 'Formulář se nepodařilo odeslat.');
+          var data = result && typeof result.message === 'string' ? {err: result.message} : result;
+          throw new Error(window.CB_CHYBY.responseMessage(response, data, 'Formulář se nepodařilo odeslat.'));
         }
         return result;
       });

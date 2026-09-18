@@ -28,7 +28,7 @@ function hr_post_nabor(mysqli $db): void
         cb_form_finish(
             cb_root_url('index.php?m=hr&page=nabor&id_vd=' . rawurlencode((string)$idVd)),
             false,
-            $e->getMessage(),
+            cb_hr_chyba_text($e, 'Uložení náborové akce', ['table' => 'hr_vd_akce']),
             $_POST
         );
     }

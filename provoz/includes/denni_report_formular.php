@@ -16,6 +16,11 @@ $zrManualDifferenceRows = (array)($zrManualDifferenceRows ?? []);
 $zrManualDifferenceDates = (array)($zrManualDifferenceDates ?? []);
 $zrHasManualDifferences = $zrManualDifferenceRows !== [];
 $zrKuryrNameMismatches = (array)($kuryrNameMismatches ?? []);
+$zrOwnDeliveryCount = max(0, (int)($restiaSummary['own_deliveries'] ?? 0));
+$zrOwnDeliveryWithoutConfirmationCount = max(0, (int)($restiaSummary['own_deliveries_without_confirmation'] ?? 0));
+$zrDeliveryWithoutCourierCount = max(0, (int)($restiaSummary['delivery_orders_without_courier'] ?? 0));
+$zrShowOwnDeliveryNotice = (!empty($usesDraftPersistence) || $zrIsCreatingMissingFinalReport)
+    && ($zrOwnDeliveryWithoutConfirmationCount > 0 || $zrDeliveryWithoutCourierCount > 0);
 $zrMissingFinalReportDate = trim((string)($reportDateDisplay ?? $reportDate ?? ''));
 $zrSubmitReadyText = $zrIsCreatingMissingFinalReport
     ? 'Uložit report pro den ' . $zrMissingFinalReportDate
@@ -168,16 +173,16 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
               <tr>
                 <th class="zr_intro_label zr_req_label txt_l" data-zr-required-label="oteviral">Otevíral</th>
                 <td>
-                  <select class="zr_intro_select" name="oteviral" data-zr-field="oteviral" data-zr-required="oteviral"<?= $zrEditableDisabledAttr ?>>
-                    <?= $renderUserSelectOptions($instorOptions, $openingId, 'Vyber jméno') ?>
+                  <select class="zr_intro_select" name="oteviral" data-zr-field="oteviral" data-zr-required="oteviral" required<?= $zrEditableDisabledAttr ?>>
+                    <?= $renderUserSelectOptions($openCloseInstorOptions, $openingId, 'Doplň') ?>
                   </select>
                 </td>
               </tr>
               <tr>
                 <th class="zr_intro_label zr_req_label txt_l" data-zr-required-label="zaviral">Zavíral</th>
                 <td>
-                  <select class="zr_intro_select" name="zaviral" data-zr-field="zaviral" data-zr-required="zaviral"<?= $zrEditableDisabledAttr ?>>
-                    <?= $renderUserSelectOptions($instorOptions, $closingId, 'Vyber jméno') ?>
+                  <select class="zr_intro_select" name="zaviral" data-zr-field="zaviral" data-zr-required="zaviral" required<?= $zrEditableDisabledAttr ?>>
+                    <?= $renderUserSelectOptions($openCloseInstorOptions, $closingId, 'Doplň') ?>
                   </select>
                 </td>
               </tr>
@@ -260,6 +265,17 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
 
         <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_kuryr_section">
           <h4 class="card_section_title txt_seda">Kurýr</h4>
+          <?php if ($zrShowOwnDeliveryNotice): ?>
+            <div class="zr_delivery_status_info">
+              Započteno <?= h(cb_format('i', $zrOwnDeliveryCount)) ?> rozvozů.
+              <?php if ($zrOwnDeliveryWithoutConfirmationCount > 0): ?>
+                Bez potvrzeného doručení v Restii: <?= h(cb_format('i', $zrOwnDeliveryWithoutConfirmationCount)) ?>.
+              <?php endif; ?>
+              <?php if ($zrDeliveryWithoutCourierCount > 0): ?>
+                <strong>Bez přiřazeného kurýra v Restii: <?= h(cb_format('i', $zrDeliveryWithoutCourierCount)) ?>.</strong>
+              <?php endif; ?>
+            </div>
+          <?php endif; ?>
           <div style="width:220px;margin-bottom:3px;">
             <select data-zr-add-person="kuryr"<?= $zrEditableDisabledAttr ?>>
               <?= $renderUserSelectOptions($kuryrOptions, 0, 'Vyber kurýra', $usedKuryrIds) ?>

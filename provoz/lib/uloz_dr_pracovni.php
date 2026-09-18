@@ -49,22 +49,11 @@ if (method_exists($conn, 'set_charset')) {
 $currentWorkday = cb_denni_report_current_workday_date()->format('Y-m-d');
 $isCurrentWorkday = ($datum === $currentWorkday);
 
-$roleIds = [];
-$stmtRoles = $conn->prepare('SELECT id_role FROM user_role WHERE id_user = ?');
-if ($stmtRoles !== false) {
-    $stmtRoles->bind_param('i', $currentUserId);
-    $stmtRoles->execute();
-    $rolesResult = $stmtRoles->get_result();
-    if ($rolesResult instanceof mysqli_result) {
-        while ($row = $rolesResult->fetch_assoc()) {
-            $idRole = (int)($row['id_role'] ?? 0);
-            if ($idRole > 0) {
-                $roleIds[$idRole] = true;
-            }
-        }
-        $rolesResult->free();
-    }
-    $stmtRoles->close();
+if (
+    !cb_denni_report_ma_pravo(CB_DENNI_REPORT_ZOBRAZIT_PRAVO)
+    || !cb_denni_report_ma_pravo(CB_DENNI_REPORT_UZAVRIT_PRAVO)
+) {
+    $sendJson(403, ['ok' => false, 'err' => 'Nemate pravo zapisovat denni report']);
 }
 
 $stmtAllowed = $conn->prepare('SELECT 1 FROM user_pobocka WHERE id_user = ? AND id_pob = ? LIMIT 1');

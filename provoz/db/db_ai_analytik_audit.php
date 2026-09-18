@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../lib/ai_analytik_pravidla.php';
+
 function cb_ai_analytik_prehled_pristupu(mysqli $conn): array
 {
     $stmt = $conn->prepare(
@@ -79,10 +81,12 @@ function cb_ai_analytik_audit_start(int $idUser, int $idLogin, string $model, st
     $conn = db();
     $conn->query(
         "UPDATE ai_analytik_audit
-         SET completed_at = NOW(3), status = 'clarification_expired', continuation_state_json = NULL,
+         SET completed_at = NOW(3),
+             status = IF(status = 'awaiting_followup', 'completed', 'clarification_expired'),
+             continuation_state_json = NULL,
              continuation_token_hash = NULL, continuation_expires_at = NULL
          WHERE completed_at IS NULL
-           AND status = 'awaiting_clarification'
+           AND status IN ('awaiting_clarification', 'awaiting_followup')
            AND continuation_expires_at < NOW(3)"
     );
     $stmt = $conn->prepare(
@@ -108,14 +112,33 @@ function cb_ai_analytik_audit_ulozit_pokracovani(int $idAudit, int $idUser, arra
         $state,
         JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
     );
+    $continuationKind = (string)($state['continuation_kind'] ?? 'clarification');
+    $waitingStatus = $continuationKind === 'followup' ? 'awaiting_followup' : 'awaiting_clarification';
+    $audit = is_array($state['audit'] ?? null) ? $state['audit'] : [];
+    $durationMs = max(0, (int)($audit['duration_ms'] ?? 0));
+    $rowCount = max(0, (int)($audit['row_count'] ?? 0));
+    $summaryResponseId = (string)($audit['openai_summary_response_id'] ?? '');
+    $ttlSeconds = CB_AI_ANALYTIK_POKRACOVANI_PLATNOST_SEKUND;
     $conn = db();
     $stmt = $conn->prepare(
         "UPDATE ai_analytik_audit
-         SET status = 'awaiting_clarification', continuation_token_hash = ?,
-             continuation_state_json = ?, continuation_expires_at = DATE_ADD(NOW(3), INTERVAL 3 MINUTE)
+         SET status = ?, continuation_token_hash = ?, continuation_state_json = ?,
+             continuation_expires_at = DATE_ADD(NOW(3), INTERVAL {$ttlSeconds} SECOND),
+             duration_ms = ?, row_count = ?,
+             openai_summary_response_id = NULLIF(?, '')
          WHERE id_ai_analytik_audit = ? AND id_user = ? AND completed_at IS NULL"
     );
-    $stmt->bind_param('ssii', $tokenHash, $stateJson, $idAudit, $idUser);
+    $stmt->bind_param(
+        'sssiisii',
+        $waitingStatus,
+        $tokenHash,
+        $stateJson,
+        $durationMs,
+        $rowCount,
+        $summaryResponseId,
+        $idAudit,
+        $idUser
+    );
     $stmt->execute();
     $updated = $stmt->affected_rows;
     $stmt->close();
@@ -138,7 +161,7 @@ function cb_ai_analytik_audit_nacist_pokracovani(int $idAudit, int $idUser, stri
                     continuation_expires_at > NOW(3) AS is_valid
              FROM ai_analytik_audit
              WHERE id_ai_analytik_audit = ? AND id_user = ? AND completed_at IS NULL
-               AND status = 'awaiting_clarification'
+               AND status IN ('awaiting_clarification', 'awaiting_followup')
              LIMIT 1
              FOR UPDATE"
         );
@@ -150,7 +173,7 @@ function cb_ai_analytik_audit_nacist_pokracovani(int $idAudit, int $idUser, stri
             || (int)($row['is_valid'] ?? 0) !== 1
             || !hash_equals((string)($row['continuation_token_hash'] ?? ''), hash('sha256', $token))) {
             $conn->rollback();
-            throw new CbAiAnalytikUzivatelskaChyba('Upřesnění už nelze použít. Spusťte zadání znovu.');
+            throw new CbAiAnalytikUzivatelskaChyba('Na tuto analýzu už nelze navázat. Spusťte nový prompt.');
         }
         $state = json_decode((string)$row['continuation_state_json'], true, 512, JSON_THROW_ON_ERROR);
         if (!is_array($state) || (int)($state['version'] ?? 0) !== 1) {
@@ -176,16 +199,17 @@ function cb_ai_analytik_audit_nacist_pokracovani(int $idAudit, int $idUser, stri
     }
 }
 
-function cb_ai_analytik_audit_obnovit_cekani(int $idAudit, int $idUser): void
+function cb_ai_analytik_audit_obnovit_cekani(int $idAudit, int $idUser, string $continuationKind): void
 {
+    $waitingStatus = $continuationKind === 'followup' ? 'awaiting_followup' : 'awaiting_clarification';
     $conn = db();
     $stmt = $conn->prepare(
         "UPDATE ai_analytik_audit
-         SET status = 'awaiting_clarification'
+         SET status = ?
          WHERE id_ai_analytik_audit = ? AND id_user = ? AND completed_at IS NULL
            AND status = 'resuming' AND continuation_expires_at > NOW(3)"
     );
-    $stmt->bind_param('ii', $idAudit, $idUser);
+    $stmt->bind_param('sii', $waitingStatus, $idAudit, $idUser);
     $stmt->execute();
     $stmt->close();
 }
@@ -251,60 +275,73 @@ function cb_ai_analytik_audit_ulozit_prompt(int $idAudit, int $idUser): bool
     return (int)($row['ulozeno'] ?? 0) === 1;
 }
 
-function cb_ai_analytik_audit_prompty_uzivatele(int $idUser, bool $pouzeUlozene): array
+function cb_ai_analytik_uzivatel_je_admin(mysqli $conn, int $idUser): bool
+{
+    if ($idUser <= 0) {
+        return false;
+    }
+
+    $stmt = $conn->prepare(
+        'SELECT 1
+         FROM user_role
+         WHERE id_user = ? AND id_role = 1
+         LIMIT 1'
+    );
+    $stmt->bind_param('i', $idUser);
+    $stmt->execute();
+    $isAdmin = $stmt->get_result()->fetch_row() !== null;
+    $stmt->close();
+
+    return $isAdmin;
+}
+
+function cb_ai_analytik_audit_prompty_uzivatele(
+    int $idUser,
+    bool $pouzeUlozene,
+    bool $vsechnyUzivatele = false
+): array
 {
     if ($idUser <= 0) {
         return [];
     }
 
+    // Uložené prompty jsou vždy osobní. Seznam všech uživatelů je určen pouze pro administrátorské ALL.
+    $vsechnyUzivatele = $vsechnyUzivatele && !$pouzeUlozene;
     $sql = 'SELECT audit.id_ai_analytik_audit, audit.created_at, audit.model, audit.prompt, audit.ulozeno,
                    audit.duration_ms, audit.requested_output_json,
-                   COALESCE(usage_summary.total_tokens, 0) AS total_tokens
+                   audit.id_user,
+                   TRIM(CONCAT_WS(\' \', u.jmeno, u.prijmeni)) AS user_name,
+                   COALESCE(usage_summary.total_tokens, 0) AS total_tokens,
+                   COALESCE(usage_summary.cost_usd, 0) AS cost_usd
             FROM ai_analytik_audit AS audit
+            LEFT JOIN `user` AS u ON u.id_user = audit.id_user
             LEFT JOIN (
-                SELECT id_ai_analytik_audit, SUM(total_tokens) AS total_tokens
+                SELECT id_ai_analytik_audit,
+                       SUM(total_tokens) AS total_tokens,
+                       SUM(cost_usd) AS cost_usd
                 FROM ai_analytik_openai_usage
                 GROUP BY id_ai_analytik_audit
             ) AS usage_summary ON usage_summary.id_ai_analytik_audit = audit.id_ai_analytik_audit
-            WHERE id_user = ?
-              AND requested_output_json IS NOT NULL
-              AND TRIM(prompt) <> \'\'';
-    if ($pouzeUlozene) {
-        $sql .= ' AND ulozeno = 1';
+            WHERE TRIM(audit.prompt) <> \'\'';
+    if (!$vsechnyUzivatele) {
+        $sql .= ' AND audit.id_user = ?';
     }
-    $sql .= ' ORDER BY id_ai_analytik_audit DESC LIMIT 100';
+    if ($pouzeUlozene) {
+        $sql .= ' AND audit.ulozeno = 1';
+    }
+    $sql .= ' ORDER BY audit.id_ai_analytik_audit DESC';
 
     $conn = db();
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param('i', $idUser);
+    if (!$vsechnyUzivatele) {
+        $stmt->bind_param('i', $idUser);
+    }
     $stmt->execute();
     $result = $stmt->get_result();
     $prompty = [];
 
     while ($row = $result->fetch_assoc()) {
-        try {
-            $nastaveni = json_decode((string)$row['requested_output_json'], true, 32, JSON_THROW_ON_ERROR);
-        } catch (JsonException) {
-            continue;
-        }
-        if (!is_array($nastaveni) || !is_array($nastaveni['output'] ?? null)
-            || !is_array($nastaveni['years'] ?? null)) {
-            continue;
-        }
-        $output = $nastaveni['output'];
-        if (!is_bool($output['text'] ?? null) || !is_bool($output['tabulka'] ?? null)
-            || !is_bool($output['graf'] ?? null)) {
-            continue;
-        }
-        $years = array_values(array_unique(array_filter(
-            array_map(static fn ($year): int => (int)$year, $nastaveni['years']),
-            static fn (int $year): bool => $year >= 2000 && $year <= 2100
-        )));
-        $ambiguityMode = (string)($nastaveni['ambiguity_mode'] ?? 'varianty');
-        if ($years === [] || !in_array($ambiguityMode, ['varianty', 'upresnit'], true)) {
-            continue;
-        }
-        $prompty[] = [
+        $promptItem = [
             'id' => (int)$row['id_ai_analytik_audit'],
             'created_at' => (string)$row['created_at'],
             'model' => (string)$row['model'],
@@ -312,14 +349,51 @@ function cb_ai_analytik_audit_prompty_uzivatele(int $idUser, bool $pouzeUlozene)
             'ulozeno' => (int)$row['ulozeno'] === 1,
             'duration_ms' => (int)$row['duration_ms'],
             'total_tokens' => (int)$row['total_tokens'],
-            'output' => [
+            'cost_usd' => (float)$row['cost_usd'],
+        ];
+
+        $nastaveni = null;
+        $nastaveniJson = trim((string)$row['requested_output_json']);
+        if ($nastaveniJson !== '') {
+            try {
+                $decoded = json_decode($nastaveniJson, true, 32, JSON_THROW_ON_ERROR);
+                $nastaveni = is_array($decoded) ? $decoded : null;
+            } catch (JsonException) {
+                $nastaveni = null;
+            }
+        }
+        $output = is_array($nastaveni['output'] ?? null) ? $nastaveni['output'] : null;
+        $years = is_array($nastaveni['years'] ?? null)
+            ? array_values(array_unique(array_filter(
+                array_map(static fn ($year): int => (int)$year, $nastaveni['years']),
+                static fn (int $year): bool => $year >= 2000 && $year <= 2100
+            )))
+            : [];
+        $ambiguityMode = (string)($nastaveni['ambiguity_mode'] ?? '');
+        $maNastaveni = is_array($output)
+            && is_bool($output['text'] ?? null)
+            && is_bool($output['tabulka'] ?? null)
+            && is_bool($output['graf'] ?? null)
+            && $years !== []
+            && in_array($ambiguityMode, ['varianty', 'upresnit'], true);
+        if ($maNastaveni) {
+            $promptItem['output'] = [
                 'text' => $output['text'],
                 'tabulka' => $output['tabulka'],
                 'graf' => $output['graf'],
-            ],
-            'years' => $years,
-            'ambiguity_mode' => $ambiguityMode,
-        ];
+            ];
+            $promptItem['years'] = $years;
+            $promptItem['ambiguity_mode'] = $ambiguityMode;
+        } elseif ($pouzeUlozene) {
+            continue;
+        }
+        if ($vsechnyUzivatele) {
+            $userName = trim((string)$row['user_name']);
+            $promptItem['user_name'] = $userName !== ''
+                ? $userName
+                : 'Uživatel #' . (int)$row['id_user'];
+        }
+        $prompty[] = $promptItem;
     }
     $stmt->close();
 

@@ -4,6 +4,8 @@ declare(strict_types=1);
 const CB_AI_ANALYTIK_PRAVO = 210;
 const CB_AI_ANALYTIK_VYCHOZI_MODEL = 'gpt-5.6-terra';
 const CB_AI_ANALYTIK_VYCHOZI_NEJASNOST = 'varianty';
+const CB_AI_ANALYTIK_POKRACOVANI_PLATNOST_SEKUND = 1800;
+const CB_AI_ANALYTIK_MAX_NAVAZANI = 5;
 
 function cb_ai_analytik_model_prava(): array
 {
