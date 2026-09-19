@@ -61,7 +61,7 @@ if ($scope === 'detail') {
             }
             $sheet->fromArray([
                 (string)$row['cele_jmeno'],
-                ps_slot_label((int)$row['slot']),
+                ps_slot_label((int)$row['slot'], (array)$data['slotLabels']),
                 (string)($detailRow['datum'] ?? ''),
                 $branchName !== '' ? $branchName : '-',
                 (float)($detailRow['celkem'] ?? 0.0),
@@ -79,7 +79,7 @@ if ($scope === 'detail') {
             (int)$row['mesic'],
             (int)$row['rok'],
             (string)$row['cele_jmeno'],
-            ps_slot_label((int)$row['slot']),
+            ps_slot_label((int)$row['slot'], (array)$data['slotLabels']),
             (float)$row['celkem'],
             (float)$row['den'],
             (float)$row['noc'],

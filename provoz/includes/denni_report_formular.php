@@ -16,11 +16,18 @@ $zrManualDifferenceRows = (array)($zrManualDifferenceRows ?? []);
 $zrManualDifferenceDates = (array)($zrManualDifferenceDates ?? []);
 $zrHasManualDifferences = $zrManualDifferenceRows !== [];
 $zrKuryrNameMismatches = (array)($kuryrNameMismatches ?? []);
+$zrKuryrUnmatchedNames = (array)($kuryrUnmatchedNames ?? []);
 $zrOwnDeliveryCount = max(0, (int)($restiaSummary['own_deliveries'] ?? 0));
 $zrOwnDeliveryWithoutConfirmationCount = max(0, (int)($restiaSummary['own_deliveries_without_confirmation'] ?? 0));
 $zrDeliveryWithoutCourierCount = max(0, (int)($restiaSummary['delivery_orders_without_courier'] ?? 0));
-$zrShowOwnDeliveryNotice = (!empty($usesDraftPersistence) || $zrIsCreatingMissingFinalReport)
-    && ($zrOwnDeliveryWithoutConfirmationCount > 0 || $zrDeliveryWithoutCourierCount > 0);
+$zrDeliveryIssues = (array)($restiaSummary['delivery_issues'] ?? []);
+$zrDeliveryWarningAtTs = max(0, (int)($deliveryWarningAtTs ?? 0));
+$zrDeliveryWarningEligible = !empty($usesDraftPersistence) || $zrIsCreatingMissingFinalReport;
+$zrDeliveryWarningReady = $zrIsCreatingMissingFinalReport
+    || ($zrDeliveryWarningAtTs > 0 && time() >= $zrDeliveryWarningAtTs);
+$zrShowOwnDeliveryNotice = $zrDeliveryWarningEligible
+    && $zrDeliveryWarningReady
+    && ($zrOwnDeliveryWithoutConfirmationCount > 0 || $zrDeliveryWithoutCourierCount > 0 || $zrDeliveryIssues !== []);
 $zrMissingFinalReportDate = trim((string)($reportDateDisplay ?? $reportDate ?? ''));
 $zrSubmitReadyText = $zrIsCreatingMissingFinalReport
     ? 'Uložit report pro den ' . $zrMissingFinalReportDate
@@ -225,7 +232,7 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
 
       <div class="zr_left gap_14">
         <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_instor_section">
-          <h4 class="card_section_title txt_seda">Instor</h4>
+          <h4 class="card_section_title txt_seda"><?= h($slotLabels[1] ?? 'Slot 1') ?></h4>
           <div style="width:220px;margin-bottom:3px;">
             <select data-zr-add-person="instor"<?= $zrEditableDisabledAttr ?>>
               <?= $renderUserSelectOptions($instorOptions, 0, 'Vyber zaměstnance', $usedInstorIds) ?>
@@ -234,7 +241,7 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
           <table class="zr_table zr_person_table" style="width:100%;" data-zr-people-list="instor">
             <thead>
               <tr>
-                <th class="zr_req_label txt_l" style="width:220px;white-space:nowrap;" data-zr-required-label="instor_jmeno">Instor</th>
+                <th class="zr_req_label txt_l" style="width:220px;white-space:nowrap;" data-zr-required-label="instor_jmeno"><?= h($slotLabels[1] ?? 'Slot 1') ?></th>
                 <th class="zr_req_label txt_l" style="width:58px;white-space:nowrap;" data-zr-required-label="instor_zacatek">Směna od</th>
                 <th class="zr_req_label txt_l" style="width:58px;white-space:nowrap;" data-zr-required-label="instor_konec">Směna do</th>
                 <th class="txt_l" style="width:44px;white-space:nowrap;">Pauza</th>
@@ -264,16 +271,54 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
         </section>
 
         <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_kuryr_section">
-          <h4 class="card_section_title txt_seda">Kurýr</h4>
-          <?php if ($zrShowOwnDeliveryNotice): ?>
+          <h4 class="card_section_title txt_seda"><?= h($slotLabels[2] ?? 'Slot 2') ?></h4>
+          <?php if ($zrDeliveryWarningEligible): ?>
+            <div
+              data-zr-delivery-warning-host
+              data-zr-delivery-warning-at="<?= h((string)$zrDeliveryWarningAtTs) ?>"
+              data-zr-delivery-warning-ready="<?= $zrDeliveryWarningReady ? '1' : '0' ?>"
+              <?= $zrShowOwnDeliveryNotice ? '' : 'hidden' ?>
+            >
+            <?php if ($zrShowOwnDeliveryNotice): ?>
             <div class="zr_delivery_status_info">
-              Započteno <?= h(cb_format('i', $zrOwnDeliveryCount)) ?> rozvozů.
-              <?php if ($zrOwnDeliveryWithoutConfirmationCount > 0): ?>
-                Bez potvrzeného doručení v Restii: <?= h(cb_format('i', $zrOwnDeliveryWithoutConfirmationCount)) ?>.
+              <div class="zr_delivery_status_summary">
+                Započteno <?= h(cb_format('i', $zrOwnDeliveryCount)) ?> rozvozů.
+                <?php if ($zrOwnDeliveryWithoutConfirmationCount > 0): ?>
+                  Bez potvrzeného doručení v Restii: <?= h(cb_format('i', $zrOwnDeliveryWithoutConfirmationCount)) ?>.
+                <?php endif; ?>
+                <?php if ($zrDeliveryWithoutCourierCount > 0): ?>
+                  <strong>Bez přiřazeného kurýra v Restii: <?= h(cb_format('i', $zrDeliveryWithoutCourierCount)) ?>.</strong>
+                <?php endif; ?>
+              </div>
+              <?php if ($zrDeliveryIssues !== []): ?>
+                <div class="zr_delivery_issue_list">
+                  <?php foreach ($zrDeliveryIssues as $zrDeliveryIssue): ?>
+                    <?php
+                    $zrIssueCouriers = array_values(array_filter(array_map('trim', (array)($zrDeliveryIssue['couriers'] ?? []))));
+                    $zrIssueCourierLabel = !empty($zrDeliveryIssue['without_courier'])
+                        ? 'kurýr nepřiřazen'
+                        : ($zrIssueCouriers !== [] ? implode(' / ', $zrIssueCouriers) : 'kurýr neuveden');
+                    $zrIssueStatusLabel = trim((string)($zrDeliveryIssue['status_label'] ?? 'Neznámý stav'));
+                    $zrIssueMinutes = $zrDeliveryIssue['minutes_in_status'] ?? null;
+                    $zrIssueFlags = [];
+                    if (!empty($zrDeliveryIssue['multiple_couriers'])) {
+                        $zrIssueFlags[] = 'více kurýrů';
+                    }
+                    if (!empty($zrDeliveryIssue['without_delivery_confirmation'])) {
+                        $zrIssueFlags[] = 'dosud nedoručeno';
+                    }
+                    ?>
+                    <div class="zr_delivery_issue_row">
+                      <strong>Obj. <?= h((string)($zrDeliveryIssue['order_number'] ?? '')) ?></strong>
+                      <span>· <?= h($zrIssueCourierLabel) ?></span>
+                      <span>· <?= h($zrIssueStatusLabel) ?><?= is_int($zrIssueMinutes) ? ' ' . h(cb_format('i', $zrIssueMinutes)) . ' min' : '' ?></span>
+                      <?php if ($zrIssueFlags !== []): ?><span>· <?= h(implode(', ', $zrIssueFlags)) ?></span><?php endif; ?>
+                    </div>
+                  <?php endforeach; ?>
+                </div>
               <?php endif; ?>
-              <?php if ($zrDeliveryWithoutCourierCount > 0): ?>
-                <strong>Bez přiřazeného kurýra v Restii: <?= h(cb_format('i', $zrDeliveryWithoutCourierCount)) ?>.</strong>
-              <?php endif; ?>
+            </div>
+            <?php endif; ?>
             </div>
           <?php endif; ?>
           <div style="width:220px;margin-bottom:3px;">
@@ -284,7 +329,7 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
           <table class="zr_table zr_person_table" style="width:100%;" data-zr-people-list="kuryr" data-zr-delivery-counts="<?= h($kuryrDeliveryCountsJson) ?>">
             <thead>
               <tr>
-                <th class="txt_l" style="width:220px;white-space:nowrap;">Kurýr</th>
+                <th class="txt_l" style="width:220px;white-space:nowrap;"><?= h($slotLabels[2] ?? 'Slot 2') ?></th>
                 <th class="txt_l" style="width:58px;white-space:nowrap;">Směna od</th>
                 <th class="txt_l" style="width:58px;white-space:nowrap;">Směna do</th>
                 <th class="txt_l" style="width:44px;white-space:nowrap;">Pauza</th>
@@ -338,25 +383,23 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
             </table>
           </section>
         <?php endif; ?>
-        <?php if ($zrCanUnlockFinalReport && !$zrIsEditingFinalReport && ($formMode ?? '') === 'final_readonly' && $reportBranchId > 0): ?>
-          <button
-            type="button"
-            class="zr_submit"
-            data-zr-edit-final-button
-            style="background:#c62828;border-color:#b71c1c;color:#fff;cursor:pointer;opacity:1;"
-          >Editovat tento report</button>
-        <?php elseif (!empty($canEditReport) && $reportBranchId > 0): ?>
-          <button
-            type="button"
-            class="zr_submit"
-            disabled
-            data-zr-submit
-            data-zr-submit-locked-text="<?= h($zrSubmitLockedText) ?>"
-            data-zr-submit-ready-text="<?= h($zrSubmitReadyText) ?>"
-            data-zr-submit-missing-text="Vyplň všechna povinná data reportu"
-            data-zr-submit-at="<?= h((string)($zrIsEditingFinalReport ? 0 : $reportSaveAtTs)) ?>"
-            <?php if ($zrIsEditingFinalReport): ?>style="background:#2e7d32;border-color:#1b5e20;color:#fff;cursor:pointer;opacity:1;"<?php else: ?>style="background:#d9dee8;border-color:#c1c9d6;color:#5f6b7a;cursor:not-allowed;opacity:1;"<?php endif; ?>
-          ><?= h($zrIsEditingFinalReport ? $zrSubmitReadyText : 'Report bude možné uložit za 0:00:00') ?></button>
+        <?php if ($zrKuryrUnmatchedNames !== []): ?>
+          <section class="zr_restia_name_mismatches" aria-label="Nespárovaná jména kurýrů">
+            <strong>Nespárovaná jména kurýrů v Restii:</strong>
+            <table class="zr_restia_name_table">
+              <tbody>
+                <?php foreach ($zrKuryrUnmatchedNames as $zrUnmatchedName): ?>
+                  <tr>
+                    <td class="zr_restia_name_label">Restia:</td>
+                    <td><?= h((string)($zrUnmatchedName['restia'] ?? '')) ?></td>
+                    <td class="zr_restia_name_vs">—</td>
+                    <td><?= (string)($zrUnmatchedName['reason'] ?? '') === 'nejednoznačný' ? 'více možných uživatelů' : 'uživatel nenalezen' ?></td>
+                    <td>(<?= h(cb_format('i', (int)($zrUnmatchedName['count'] ?? 0))) ?> rozvozů)</td>
+                  </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          </section>
         <?php endif; ?>
       </div>
     </div>
@@ -417,6 +460,26 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
         </table>
       </section>
     </aside>
+    <?php if ($zrCanUnlockFinalReport && !$zrIsEditingFinalReport && ($formMode ?? '') === 'final_readonly' && $reportBranchId > 0): ?>
+      <button
+        type="button"
+        class="zr_submit"
+        data-zr-edit-final-button
+        style="background:#c62828;border-color:#b71c1c;color:#fff;cursor:pointer;opacity:1;"
+      >Editovat tento report</button>
+    <?php elseif (!empty($canEditReport) && $reportBranchId > 0): ?>
+      <button
+        type="button"
+        class="zr_submit"
+        disabled
+        data-zr-submit
+        data-zr-submit-locked-text="<?= h($zrSubmitLockedText) ?>"
+        data-zr-submit-ready-text="<?= h($zrSubmitReadyText) ?>"
+        data-zr-submit-missing-text="Vyplň všechna povinná data reportu"
+        data-zr-submit-at="<?= h((string)($zrIsEditingFinalReport ? 0 : $reportSaveAtTs)) ?>"
+        <?php if ($zrIsEditingFinalReport): ?>style="background:#2e7d32;border-color:#1b5e20;color:#fff;cursor:pointer;opacity:1;"<?php else: ?>style="background:#d9dee8;border-color:#c1c9d6;color:#5f6b7a;cursor:not-allowed;opacity:1;"<?php endif; ?>
+      ><?= h($zrIsEditingFinalReport ? $zrSubmitReadyText : 'Report bude možné uložit za 0:00:00') ?></button>
+    <?php endif; ?>
     <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_storno_section">
     <h4 class="card_section_title txt_seda">Stornované objednávky</h4>
     <?php if ((array)($stornoRows ?? []) === []): ?>

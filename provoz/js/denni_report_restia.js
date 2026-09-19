@@ -10,7 +10,7 @@
     return hours + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
   }
 
-  function refreshRightSide(form) {
+  function refreshReportParts(form) {
     const idPobInput = form.querySelector('input[name="id_pob"]');
     const datumInput = form.querySelector('[name="datum_reportu"]');
     const idPob = idPobInput instanceof HTMLInputElement ? String(idPobInput.value || '') : '';
@@ -43,6 +43,11 @@
       const currentSide = form.querySelector('.zr_side');
       if (nextSide instanceof HTMLElement && currentSide instanceof HTMLElement) {
         currentSide.replaceWith(nextSide);
+        const nextWarning = wrap.querySelector('[data-zr-delivery-warning-host]');
+        const currentWarning = form.querySelector('[data-zr-delivery-warning-host]');
+        if (nextWarning instanceof HTMLElement && currentWarning instanceof HTMLElement) {
+          currentWarning.replaceWith(nextWarning);
+        }
         if (typeof w.cbPrepocetReportValues === 'function') {
           w.cbPrepocetReportValues(form).catch((err) => {
             if (w.console && w.console.warn) w.console.warn(err);
@@ -126,7 +131,7 @@
       w.CB_RESTIA.run({
           forceRestia: true
         })
-        .then(() => refreshRightSide(form))
+        .then(() => refreshReportParts(form))
         .catch((err) => {
           w.alert((err && err.message) ? err.message : 'Aktualizace Restie selhala.');
         })
@@ -137,12 +142,37 @@
           button.classList.remove('is-loading');
           setRefreshReady(button);
           bindRestiaRefresh(form);
+          bindDeliveryWarning(form);
         });
     });
   }
 
+  function bindDeliveryWarning(root) {
+    const form = root instanceof HTMLFormElement ? root : root.querySelector('[data-zr-form]');
+    if (!(form instanceof HTMLFormElement)) return;
+
+    const host = form.querySelector('[data-zr-delivery-warning-host]');
+    if (!(host instanceof HTMLElement) || host.getAttribute('data-zr-delivery-warning-bound') === '1') return;
+    host.setAttribute('data-zr-delivery-warning-bound', '1');
+
+    const warningAt = Number.parseInt(String(host.getAttribute('data-zr-delivery-warning-at') || '0'), 10) || 0;
+    const ready = host.getAttribute('data-zr-delivery-warning-ready') === '1';
+    const delay = (warningAt * 1000) - Date.now();
+    if (ready || warningAt <= 0 || delay <= 0) return;
+
+    w.setTimeout(() => {
+      if (!d.body.contains(host)) return;
+      refreshReportParts(form)
+        .then(() => bindDeliveryWarning(form))
+        .catch((err) => {
+          if (w.console && w.console.warn) w.console.warn(err);
+        });
+    }, Math.min(delay, 2147483647));
+  }
+
   function init(event) {
     bindRestiaRefresh(d);
+    bindDeliveryWarning(d);
   }
 
   if (d.readyState === 'loading') {

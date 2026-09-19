@@ -836,6 +836,69 @@
     });
   });
 
+  root.addEventListener('click', function(event){
+    var button = event.target.closest ? event.target.closest('[data-pobocka-provoz-save="1"]') : null;
+    if (!(button instanceof HTMLElement)) {
+      return;
+    }
+
+    event.preventDefault();
+    var confirmation = String(button.getAttribute('data-confirm') || '');
+    if (confirmation !== '' && !window.confirm(confirmation)) {
+      return;
+    }
+    var form = button.closest('[data-pobocka-provoz-form="1"]');
+    if (!(form instanceof HTMLFormElement) || !form.reportValidity()) {
+      return;
+    }
+
+    var body = new URLSearchParams(new FormData(form));
+    var actionUrl = form.getAttribute('action') || moduleUrl('provoz', 'page', 'nastaveni_reportu');
+    button.setAttribute('disabled', 'disabled');
+    fetch(actionUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'X-Comeback-Pobocka-Provoz': '1',
+        'Accept': 'application/json'
+      },
+      body: body.toString(),
+      credentials: 'same-origin'
+    }).then(function(response){
+      return response.json().catch(function(){ return {}; }).then(function(json){
+        if (!response.ok || !json.ok) {
+          throw new Error(window.CB_CHYBY.responseMessage(response, json, 'Uložení nastavení provozu se nepodařilo.'));
+        }
+      });
+    }).then(function(){
+      return fetch(actionUrl, {
+        method: 'GET',
+        headers: {
+          'X-Comeback-PP-Only': '1',
+          'Accept': 'text/html'
+        },
+        credentials: 'same-origin'
+      });
+    }).then(function(response){
+      if (!response.ok) {
+        throw new Error('Načtení stránky selhalo.');
+      }
+      return response.text();
+    }).then(function(html){
+      var pp = root.querySelector('.pp');
+      var wrap = document.createElement('div');
+      wrap.innerHTML = html;
+      var nextPp = wrap.querySelector('.pp');
+      if (!(pp instanceof HTMLElement) || !(nextPp instanceof HTMLElement)) {
+        throw new Error('Obnovená stránka nemá platný obsah.');
+      }
+      pp.replaceWith(nextPp);
+    }).catch(function(error){
+      button.removeAttribute('disabled');
+      window.alert(error && error.message ? error.message : 'Uložení selhalo.');
+    });
+  });
+
   root.addEventListener('submit', function(event){
     var form = event.target instanceof HTMLFormElement ? event.target : null;
     if (!form || (form.getAttribute('method') || 'get').toLowerCase() !== 'post') return;

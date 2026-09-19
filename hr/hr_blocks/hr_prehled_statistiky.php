@@ -31,8 +31,8 @@ declare(strict_types=1);
         <div class="hr_stat_metrics">
             <div class="hr_stat_icon">P</div>
             <span class="hr_stat_metric"><strong class="hr_stat_value"><?= h($pozadavky['celkem']) ?></strong><small>Celkem</small></span>
-            <span class="hr_stat_metric"><strong class="hr_stat_value"><?= h($pozadavky['instor']) ?></strong><small>Instor</small></span>
-            <span class="hr_stat_metric"><strong class="hr_stat_value"><?= h($pozadavky['kuryr']) ?></strong><small>Kurýr</small></span>
+            <span class="hr_stat_metric"><strong class="hr_stat_value"><?= h($pozadavky['instor']) ?></strong><small><?= h($slotLabels[1] ?? 'Slot 1') ?></small></span>
+            <span class="hr_stat_metric"><strong class="hr_stat_value"><?= h($pozadavky['kuryr']) ?></strong><small><?= h($slotLabels[2] ?? 'Slot 2') ?></small></span>
         </div>
     </a>
 

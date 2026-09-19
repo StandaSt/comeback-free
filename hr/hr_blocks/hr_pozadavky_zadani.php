@@ -24,8 +24,9 @@ declare(strict_types=1);
             <span class="hr_request_text">zaměstnance na pozici</span>
             <select class="hr_request_select" name="id_slot" data-hr-request-slot required>
                 <option value="">Vyber</option>
-                <option value="1">instor</option>
-                <option value="2">kurýr</option>
+                <?php foreach ($pozadavkySloty as $idSlot => $nazevSlotu): ?>
+                    <option value="<?= h((string)$idSlot) ?>"><?= h($nazevSlotu) ?></option>
+                <?php endforeach; ?>
             </select>
             <span class="hr_request_text">pro pobočku <?= h((string)$pozadavkyMainPobocka['nazev']) ?>.</span>
             <span class="hr_request_text">Poznámka:</span>

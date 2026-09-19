@@ -235,13 +235,11 @@ function nacti_ciselniky(mysqli $db): array
 {
     $pozice = [];
 
-    $result = $db->query("SELECT id_slot, slot FROM cis_slot WHERE LOWER(slot) IN ('instor', 'instore', 'kurýr', 'kuryr') ORDER BY id_slot");
+    $result = $db->query('SELECT id_slot, slot FROM cis_slot WHERE id_slot IN (1, 2) AND aktivni = 1 ORDER BY id_slot');
     while ($row = $result->fetch_assoc()) {
-        $nazev = (string)$row['slot'];
-        $kod = mb_strtolower($nazev);
         $pozice[] = [
             'id' => (int)$row['id_slot'],
-            'nazev' => str_contains($kod, 'kur') ? 'Kurýr' : 'Instor',
+            'nazev' => (string)$row['slot'],
         ];
     }
     $result->free();
@@ -555,7 +553,7 @@ $vybranaMesta = post_allowed_values('mesto', ['Praha', 'Plzeň']);
                         <legend>O jakou pozici máte zájem?</legend>
                         <div class="position-grid">
                             <?php foreach ($pozice as $polozka): ?>
-                                <?php $jeKuryr = $polozka['nazev'] === 'Kurýr'; ?>
+                                <?php $jeKuryr = (int)$polozka['id'] === 2; ?>
                                 <label class="position-card">
                                     <span class="position-main">
                                         <input type="checkbox" name="pozice[]" value="<?= $polozka['id'] ?>" <?= in_array($polozka['id'], $vybranePozice, true) ? 'checked' : '' ?>>

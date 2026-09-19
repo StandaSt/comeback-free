@@ -11,13 +11,7 @@ function cb_admin_uzivatele_sloty_text(string $rawSlots): string
         if ($slot === '') {
             continue;
         }
-        $normalized = mb_strtolower($slot, 'UTF-8');
-        $label = match ($normalized) {
-            'instor', 'instore' => 'Instor (pizzař)',
-            'kurýr', 'kuryr' => 'Kurýr',
-            default => $slot,
-        };
-        $labels[$label] = true;
+        $labels[$slot] = true;
     }
 
     return implode(', ', array_keys($labels));

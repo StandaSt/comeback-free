@@ -48,7 +48,7 @@ $zrWorkdayOptionValues = array_map(
 );
 ?>
 <?php if ($zrMissingReportNoticeDates !== []): ?>
-    <p class="card_text txt_cervena" style="color:var(--clr_cervena)">
+    <p class="card_text txt_cervena provoz_missing_report_notice" style="color:var(--clr_cervena)">
         Chybějící reporty
         <?php foreach ($zrMissingReportNoticeDates as $zrMissingReportNoticeIndex => $zrMissingReportNoticeDate): ?>
             <?php

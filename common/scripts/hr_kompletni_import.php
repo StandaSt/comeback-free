@@ -10,6 +10,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 require_once dirname(__DIR__, 3) . '/vendor/autoload.php';
+require_once dirname(__DIR__) . '/db/db_cis_slot.php';
 
 function cb_hr_kompletni_import_preview(mysqli $db): array
 {
@@ -85,6 +86,7 @@ function cb_hr_kompletni_over_schema(mysqli $db): void
         'hr_zdravotni_pojisteni' => ['id_person', 'platnost_od', 'platnost_do', 'platny'],
         'hr_dokument_udaje' => ['id_dokument', 'verze'],
         'hr_osobni_udaje' => ['vzdelani', 'cizinec', 'zahranicni_identifikator', 'prvni_zamestnani_cr'],
+        'hr_mzdy_mesic' => ['id_slot'],
     ];
     foreach ($required as $table => $columns) {
         $safeTable = str_replace('`', '``', $table);
@@ -425,6 +427,7 @@ function cb_hr_kompletni_nacti_mzdy(mysqli $db, string $path): array
 {
     $maps = cb_hr_kompletni_user_mapy($db);
     $aliases = cb_hr_kompletni_mzdove_aliasy($db);
+    $sloty = cb_hr_kompletni_mzdove_sloty($db);
     $book = cb_hr_kompletni_nacti_excel($path);
     $out = [];
     foreach ($book->getWorksheetIterator() as $sheet) {
@@ -432,20 +435,17 @@ function cb_hr_kompletni_nacti_mzdy(mysqli $db, string $path): array
         if ($period === null) {
             continue;
         }
-        $newFormat = cb_hr_kompletni_plain((string)cb_hr_kompletni_cell_value($sheet->getCell('T4'))) === 'instore';
-        $slot = null;
+        $newFormat = isset($sloty[cb_hr_kompletni_slot_klic((string)cb_hr_kompletni_cell_value($sheet->getCell('T4')))]);
+        $idSlot = null;
         for ($row = 4; $row <= $sheet->getHighestDataRow(); $row++) {
             $name = trim((string)cb_hr_kompletni_cell_value($sheet->getCell('B' . $row)));
             $header = cb_hr_kompletni_plain($name);
-            if (in_array($header, ['instore', 'instor'], true)) {
-                $slot = 'instor';
+            $headerSlotKey = cb_hr_kompletni_slot_klic($name);
+            if (isset($sloty[$headerSlotKey])) {
+                $idSlot = $sloty[$headerSlotKey];
                 continue;
             }
-            if ($header === 'kuryr') {
-                $slot = 'kuryr';
-                continue;
-            }
-            if ($slot === null || cb_hr_kompletni_mzdovy_nadpis($header) || !cb_hr_kompletni_je_jmeno($name)) {
+            if ($idSlot === null || cb_hr_kompletni_mzdovy_nadpis($header, $sloty) || !cb_hr_kompletni_je_jmeno($name, $sloty)) {
                 continue;
             }
             $ids = (array)($maps['name'][cb_hr_kompletni_name_key($name)] ?? []);
@@ -460,7 +460,7 @@ function cb_hr_kompletni_nacti_mzdy(mysqli $db, string $path): array
                 'id_user' => $idUser, 'import_jmeno' => $idUser === null ? $name : null,
                 'rok' => (int)substr($period['from'], 0, 4), 'mesic' => (int)substr($period['from'], 5, 2),
                 'datum_od' => $period['from'], 'datum_do' => $period['to'], 'mzda_typ' => $isFix ? 'fix' : 'hodinova',
-                'slot' => $slot, 'hodiny' => cb_hr_kompletni_decimal(cb_hr_kompletni_cell_value($sheet->getCell(($newFormat ? 'U' : 'M') . $row))),
+                'id_slot' => $idSlot, 'hodiny' => cb_hr_kompletni_decimal(cb_hr_kompletni_cell_value($sheet->getCell(($newFormat ? 'U' : 'M') . $row))),
                 'hodinova_sazba' => $isFix ? null : $h, 'mesicni_fix' => $isFix ? $h : null,
                 'isk' => cb_hr_kompletni_decimal(cb_hr_kompletni_cell_value($sheet->getCell('I' . $row))),
                 'bonus_1' => cb_hr_kompletni_decimal(cb_hr_kompletni_cell_value($sheet->getCell('J' . $row))),
@@ -719,10 +719,29 @@ function cb_hr_kompletni_mzdove_aliasy(mysqli $db): array
     return $out;
 }
 
-function cb_hr_kompletni_mzdovy_nadpis(string $plain): bool
+/** @return array<string,int> */
+function cb_hr_kompletni_mzdove_sloty(mysqli $db): array
+{
+    $sloty = [];
+    foreach (cb_cis_slot_nazvy($db, true) as $idSlot => $nazev) {
+        $klic = cb_hr_kompletni_slot_klic($nazev);
+        if ($klic !== '') {
+            $sloty[$klic] = $idSlot;
+        }
+    }
+
+    if (isset($sloty['pizzar'])) {
+        $sloty['instor'] = $sloty['pizzar'];
+        $sloty['instore'] = $sloty['pizzar'];
+    }
+
+    return $sloty;
+}
+
+function cb_hr_kompletni_mzdovy_nadpis(string $plain, array $sloty): bool
 {
     $compact = str_replace(' ', '', $plain);
-    return preg_match('/^(celkem|suma)( |$)/', $plain) === 1 || in_array($compact, ['kuryr', 'instor', 'instore'], true);
+    return preg_match('/^(celkem|suma)( |$)/', $plain) === 1 || isset($sloty[$compact]);
 }
 
 function cb_hr_kompletni_mzdovy_mesic($sheet): ?array
@@ -885,6 +904,11 @@ function cb_hr_kompletni_plain(string $value): string
     return trim((string)preg_replace('/[^a-z0-9]+/', ' ', (string)$ascii));
 }
 
+function cb_hr_kompletni_slot_klic(string $value): string
+{
+    return str_replace(' ', '', cb_hr_kompletni_plain($value));
+}
+
 function cb_hr_kompletni_digits(string $value): string
 {
     $digits = preg_replace('/\D+/', '', $value) ?? '';
@@ -975,10 +999,15 @@ function cb_hr_kompletni_decimal(mixed $value): ?float
     return $text !== '' && is_numeric($text) ? (float)$text : null;
 }
 
-function cb_hr_kompletni_je_jmeno(string $value): bool
+function cb_hr_kompletni_je_jmeno(string $value, array $sloty): bool
 {
     $plain = cb_hr_kompletni_plain($value);
-    return $plain !== '' && count(preg_split('/\s+/', $plain) ?: []) >= 2 && !in_array($plain, ['instore', 'instor', 'kuryr'], true);
+    $compact = str_replace(' ', '', $plain);
+
+    return $plain !== ''
+        && count(preg_split('/\s+/', $plain) ?: []) >= 2
+        && !isset($sloty[$plain])
+        && !isset($sloty[$compact]);
 }
 
 function cb_hr_kompletni_smaz_strom(string $path): void

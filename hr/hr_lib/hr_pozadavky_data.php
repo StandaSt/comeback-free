@@ -5,6 +5,8 @@
  */
 declare(strict_types=1);
 
+require_once __DIR__ . '/../../common/db/db_cis_slot.php';
+
 /*
  * Vraci data pozadavku podle prav prihlaseneho uzivatele.
  */
@@ -32,6 +34,8 @@ function hr_pozadavky_data(mysqli $db): array
     $vyresene = [];
     $expirovane = [];
     $zrusene = [];
+    $sloty = cb_cis_slot_nazvy($db, true);
+    unset($sloty[0]);
 
     if ($muzeCistVse) {
         $nove = hr_nacti_pozadavky_podle_stavu($db, 1);
@@ -59,5 +63,6 @@ function hr_pozadavky_data(mysqli $db): array
         'pozadavkyVyresene' => $vyresene,
         'pozadavkyExpirovane' => $expirovane,
         'pozadavkyZrusene' => $zrusene,
+        'pozadavkySloty' => $sloty,
     ];
 }

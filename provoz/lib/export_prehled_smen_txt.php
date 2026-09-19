@@ -48,7 +48,7 @@ if ($scope === 'detail') {
             }
             echo implode("\t", [
                 (string)$row['cele_jmeno'],
-                ps_slot_label((int)$row['slot']),
+                ps_slot_label((int)$row['slot'], (array)$data['slotLabels']),
                 (string)($detailRow['datum'] ?? ''),
                 $branchName !== '' ? $branchName : '-',
                 ps_num((float)($detailRow['celkem'] ?? 0.0)),
@@ -66,7 +66,7 @@ if ($scope === 'detail') {
             (string)$row['mesic'],
             (string)$row['rok'],
             (string)$row['cele_jmeno'],
-            ps_slot_label((int)$row['slot']),
+            ps_slot_label((int)$row['slot'], (array)$data['slotLabels']),
             ps_num((float)$row['celkem']),
             ps_num((float)$row['den']),
             ps_num((float)$row['noc']),

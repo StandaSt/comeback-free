@@ -175,6 +175,18 @@ if (
     exit;
 }
 
+if (
+    !empty($_SESSION['login_ok'])
+    && ($_SERVER['REQUEST_METHOD'] ?? '') === 'PUT'
+    && isset($_SERVER['HTTP_X_COMEBACK_POBOCKA_PROVOZ'])
+) {
+    $GLOBALS['CURRENT_MODULE'] = 'provoz';
+    define('CB_EMBEDDED_MODULE', 'provoz');
+    require_once __DIR__ . '/provoz/lib/pobocka_provoz.php';
+    cb_pobocka_provoz_handle_json_request();
+    exit;
+}
+
 if (!empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_SERVER['HTTP_X_COMEBACK_GN_BLOCK'])) {
     $cbGnModule = strtolower(trim((string)($_POST['module'] ?? '')));
     $cbGnPage = strtolower(trim((string)($_POST['page'] ?? '')));

@@ -505,9 +505,29 @@
 
 /* Zadani denniho reportu */
 .provoz_denni_report_page{
+  position:relative;
   width:1142px;
   max-width:100%;
   min-width:0;
+}
+
+.provoz_missing_report_notice{
+  position:absolute;
+  z-index:1;
+  top:-36px;
+  left:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  height:26px;
+  margin:0;
+  line-height:1.2;
+  pointer-events:none;
+}
+
+.provoz_missing_report_notice a{
+  pointer-events:auto;
 }
 
 .provoz_denni_report_zadani{
@@ -957,6 +977,86 @@
 
 .report_promenne_validity .report_promenne_actions{
   margin-left:auto;
+}
+
+.pobocka_provoz_hours_row{
+  display:flex;
+  align-items:flex-end;
+  gap:12px;
+  width:100%;
+}
+
+.pobocka_provoz_hours{
+  display:grid;
+  grid-template-columns:repeat(7, 76px);
+  gap:6px;
+}
+
+.pobocka_provoz_hours label{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.pobocka_provoz_hours select{
+  width:100%;
+  height:26px;
+  box-sizing:border-box;
+}
+
+.pobocka_provoz_hours_save{
+  flex:0 0 auto;
+  margin-left:auto;
+}
+
+.pobocka_provoz_closed_add,
+.pobocka_provoz_closed_list form{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.pobocka_provoz_closed_add{
+  width:100%;
+}
+
+.pobocka_provoz_closed_add > .head_task_btn{
+  margin-left:auto;
+}
+
+.pobocka_provoz_closed_add select{
+  height:26px;
+}
+
+.pobocka_provoz_closed_list{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  max-width:360px;
+}
+
+.pobocka_provoz_closed_list form{
+  justify-content:space-between;
+}
+
+@media (max-width:900px){
+  .pobocka_provoz_hours_row{
+    align-items:stretch;
+    flex-direction:column;
+  }
+
+  .pobocka_provoz_hours{
+    grid-template-columns:repeat(2, 96px);
+  }
+
+  .pobocka_provoz_hours_save{
+    align-self:flex-start;
+    margin-left:0;
+  }
+
+  .pobocka_provoz_closed_add > .head_task_btn{
+    margin-left:0;
+  }
 }
 
 .zr_form{
@@ -1497,6 +1597,25 @@
   border-radius:8px;
   background:var(--cb-bg-warning);
   color:var(--cb-text-main);
+}
+
+.zr_delivery_status_summary{
+  line-height:1.35;
+}
+
+.zr_delivery_issue_list{
+  display:grid;
+  gap:2px;
+  margin-top:5px;
+  padding-top:5px;
+  border-top:1px solid var(--cb-border);
+}
+
+.zr_delivery_issue_row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:0 4px;
+  line-height:1.35;
 }
 
 .zr_manual_differences{

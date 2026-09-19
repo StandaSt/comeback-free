@@ -20,16 +20,23 @@ if (PHP_SAPI !== 'cli') {
 require_once __DIR__ . '/../../common/lib/app.php';
 require_once __DIR__ . '/../../common/config/secrets.php';
 require_once __DIR__ . '/format_datum_cas.php';
+require_once __DIR__ . '/pobocka_provoz.php';
 require_once __DIR__ . '/../../common/notifikace/notifikace_2fa.php';
 
 $PROSTREDI = 'SERVER';
 
-function cb_cron_nezadane_reporty_dates(): array
+function cb_cron_nezadane_reporty_dates(mysqli $conn): array
 {
     $currentWorkday = cb_dt_workday_start(null, 6);
+    $from = $currentWorkday->modify('-3 days')->format('Y-m-d');
+    $to = $currentWorkday->modify('-1 day')->format('Y-m-d');
+    $closedDates = cb_pobocka_provoz_closed_date_set($conn, $from, $to);
     $dates = [];
     for ($dayOffset = 1; $dayOffset <= 3; $dayOffset++) {
-        $dates[] = $currentWorkday->modify('-' . $dayOffset . ' day')->format('Y-m-d');
+        $date = $currentWorkday->modify('-' . $dayOffset . ' day')->format('Y-m-d');
+        if (!isset($closedDates[$date])) {
+            $dates[] = $date;
+        }
     }
     sort($dates);
 
@@ -62,20 +69,22 @@ function cb_cron_nezadane_reporty_branches(mysqli $conn): array
 function cb_cron_nezadane_reporty_submitted(mysqli $conn, array $dates): array
 {
     $submitted = [];
-    if (count($dates) !== 3) {
+    if ($dates === []) {
         return $submitted;
     }
 
+    $placeholders = implode(', ', array_fill(0, count($dates), '?'));
     $stmt = $conn->prepare("
         SELECT datum_reportu, id_pob
         FROM reporty_is
         WHERE platny = 1
-          AND datum_reportu IN (?, ?, ?)
+          AND datum_reportu IN ($placeholders)
     ");
     if ($stmt === false) {
         throw new RuntimeException('Nepodarilo se pripravit kontrolu platnych reportu.');
     }
-    $stmt->bind_param('sss', $dates[0], $dates[1], $dates[2]);
+    $types = str_repeat('s', count($dates));
+    $stmt->bind_param($types, ...$dates);
     $stmt->execute();
     $result = $stmt->get_result();
     if ($result instanceof mysqli_result) {
@@ -92,10 +101,11 @@ function cb_cron_nezadane_reporty_submitted(mysqli $conn, array $dates): array
 function cb_cron_nezadane_reporty_closers(mysqli $conn, array $dates): array
 {
     $closers = [];
-    if (count($dates) !== 3) {
+    if ($dates === []) {
         return $closers;
     }
 
+    $placeholders = implode(', ', array_fill(0, count($dates), '?'));
     $stmt = $conn->prepare("
         SELECT
             sp.datum,
@@ -108,13 +118,14 @@ function cb_cron_nezadane_reporty_closers(mysqli $conn, array $dates): array
         FROM smeny_plan sp
         INNER JOIN `user` u ON u.id_user = sp.id_user AND u.aktivni = 1
         WHERE sp.id_slot = 1
-          AND sp.datum IN (?, ?, ?)
+          AND sp.datum IN ($placeholders)
         ORDER BY sp.datum ASC, sp.id_pob ASC, end_dt DESC, sp.id_user ASC
     ");
     if ($stmt === false) {
         throw new RuntimeException('Nepodarilo se pripravit vyber zavirajicich instoru.');
     }
-    $stmt->bind_param('sss', $dates[0], $dates[1], $dates[2]);
+    $types = str_repeat('s', count($dates));
+    $stmt->bind_param($types, ...$dates);
     $stmt->execute();
     $result = $stmt->get_result();
     if ($result instanceof mysqli_result) {
@@ -190,7 +201,7 @@ function cb_cron_nezadane_reporty_add_alert(
 
 try {
     $conn = db();
-    $dates = cb_cron_nezadane_reporty_dates();
+    $dates = cb_cron_nezadane_reporty_dates($conn);
     $branches = cb_cron_nezadane_reporty_branches($conn);
     $submitted = cb_cron_nezadane_reporty_submitted($conn, $dates);
     $closers = cb_cron_nezadane_reporty_closers($conn, $dates);

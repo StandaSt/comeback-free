@@ -43,7 +43,7 @@ if (!function_exists('ps_pdf_num_dash')) {
 }
 
 if (!function_exists('ps_pdf_summary_rows')) {
-    function ps_pdf_summary_rows(array $rows): string
+    function ps_pdf_summary_rows(array $rows, array $slotLabels): string
     {
         $rowsHtml = '';
         foreach ($rows as $row) {
@@ -51,7 +51,7 @@ if (!function_exists('ps_pdf_summary_rows')) {
                 . '<td>' . h((string)$row['mesic']) . '</td>'
                 . '<td>' . h((string)$row['rok']) . '</td>'
                 . '<td class="txt_l">' . h((string)$row['cele_jmeno']) . '</td>'
-                . '<td class="txt_l">' . h(ps_slot_label((int)$row['slot'])) . '</td>'
+                . '<td class="txt_l">' . h(ps_slot_label((int)$row['slot'], $slotLabels)) . '</td>'
                 . '<td>' . h(ps_num((float)$row['celkem'])) . '</td>'
                 . '<td>' . h(ps_num((float)$row['den'])) . '</td>'
                 . '<td>' . h(ps_num((float)$row['noc'])) . '</td>'
@@ -65,7 +65,7 @@ if (!function_exists('ps_pdf_summary_rows')) {
 }
 
 if (!function_exists('ps_pdf_detail_blocks')) {
-    function ps_pdf_detail_blocks(array $rows): string
+    function ps_pdf_detail_blocks(array $rows, array $slotLabels): string
     {
         if ($rows === []) {
             return '<p>Žádná data</p>';
@@ -77,7 +77,7 @@ if (!function_exists('ps_pdf_detail_blocks')) {
             $html .= '<section class="user-block">'
                 . '<table class="summary-table"><tbody><tr>'
                 . '<td class="txt_l name">' . h((string)$row['cele_jmeno']) . '</td>'
-                . '<td class="txt_l">' . h(ps_slot_label((int)$row['slot'])) . '</td>'
+                . '<td class="txt_l">' . h(ps_slot_label((int)$row['slot'], $slotLabels)) . '</td>'
                 . '<td>' . h(ps_num((float)$row['celkem'])) . '</td>'
                 . '<td>' . h(ps_num((float)$row['den'])) . '</td>'
                 . '<td>' . h(ps_num((float)$row['noc'])) . '</td>'
@@ -101,7 +101,7 @@ if (!function_exists('ps_pdf_detail_blocks')) {
                     $html .= '<tr>'
                         . '<td class="txt_l">' . h(cb_format('d', $detailRow['datum'] ?? null)) . '</td>'
                         . '<td class="txt_l">' . h($branchName !== '' ? $branchName : '-') . '</td>'
-                        . '<td class="txt_l">' . h(ps_slot_label((int)($detailRow['slot'] ?? 0))) . '</td>'
+                        . '<td class="txt_l">' . h(ps_slot_label((int)($detailRow['slot'] ?? 0), $slotLabels)) . '</td>'
                         . '<td>' . h(ps_pdf_num_dash((float)($detailRow['celkem'] ?? 0.0))) . '</td>'
                         . '<td>' . h(ps_pdf_num_dash((float)($detailRow['den'] ?? 0.0))) . '</td>'
                         . '<td>' . h(ps_pdf_num_dash((float)($detailRow['noc'] ?? 0.0))) . '</td>'
@@ -120,12 +120,12 @@ if (!function_exists('ps_pdf_detail_blocks')) {
 
 $bodyHtml = '';
 if ($scope === 'detail') {
-    $bodyHtml = '<div class="detail-export">' . ps_pdf_detail_blocks((array)$data['filteredRows']) . '</div>';
+    $bodyHtml = '<div class="detail-export">' . ps_pdf_detail_blocks((array)$data['filteredRows'], (array)$data['slotLabels']) . '</div>';
 } else {
     $bodyHtml = '<table><thead><tr>'
         . '<th>měsíc</th><th>rok</th><th class="txt_l">celé jméno</th><th class="txt_l">slot</th>'
         . '<th>odpracováno</th><th>6-22</th><th>22-6</th><th>So+Ne</th><th>svátek</th>'
-        . '</tr></thead><tbody>' . ps_pdf_summary_rows((array)$data['filteredRows']) . '</tbody></table>';
+        . '</tr></thead><tbody>' . ps_pdf_summary_rows((array)$data['filteredRows'], (array)$data['slotLabels']) . '</tbody></table>';
 }
 
 $html = '<!doctype html><html lang="cs"><head><meta charset="utf-8">'

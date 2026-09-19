@@ -2,6 +2,8 @@
 // db/db_zapis_denni_report.php * K10 finalni zapis denniho reportu
 declare(strict_types=1);
 
+require_once __DIR__ . '/../../common/db/db_cis_slot.php';
+
 function cb_db_zapis_denni_report_already_saved_message(): string
 {
     return 'Report je již uložen. Opakovaný pokus o uložení byl zablokován.';
@@ -244,7 +246,7 @@ function cb_db_zapis_denni_report_user_access_error(mysqli $conn, int $idPob, in
 
     $user = cb_db_zapis_denni_report_user_label($conn, $idUser);
     $branch = cb_db_zapis_denni_report_branch_label($conn, $idPob);
-    $workType = $slot === 2 ? 'kurýr' : 'instor';
+    $workType = cb_cis_slot_nazev($conn, $slot);
     $hasBranch = (int)($row['has_branch'] ?? 0) === 1;
     $hasSlot = (int)($row['has_slot'] ?? 0) === 1;
 
@@ -356,7 +358,7 @@ function cb_db_zapis_denni_report_validate(mysqli $conn, int $idPob, string $dat
         }
         $personKey = $slot . ':' . $idUser;
         if (isset($seen[$personKey])) {
-            throw new CbUserVisibleException($userLabel . ' je v reportu uveden vícekrát jako ' . ($slot === 2 ? 'kurýr' : 'instor') . '.');
+            throw new CbUserVisibleException($userLabel . ' je v reportu uveden vícekrát jako ' . cb_cis_slot_nazev($conn, $slot) . '.');
         }
         $seen[$personKey] = true;
     }

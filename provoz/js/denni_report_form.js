@@ -28,18 +28,26 @@
     const form = getForm(root);
     const pp = form instanceof HTMLFormElement ? form.closest('.pp[data-page="denni_report"]') : null;
     const link = pp instanceof HTMLElement ? pp.querySelector('[data-zr-kontrola-link]') : null;
-    if (!(form instanceof HTMLFormElement) || !(link instanceof HTMLAnchorElement)) return;
+    const settingsLink = pp instanceof HTMLElement ? pp.querySelector('[data-zr-nastaveni-link]') : null;
+    if (!(form instanceof HTMLFormElement)) return;
 
     const branchId = getReportValue(form, '[name="zr_id_pob"]');
     const reportDate = getReportValue(form, '[name="datum_reportu"]');
-    const url = new URL(link.getAttribute('href') || '', w.location.href);
-    url.searchParams.set('zr_id_pob', branchId);
-    if (reportDate !== '') {
-      url.searchParams.set('datum_reportu', reportDate);
-    } else {
-      url.searchParams.delete('datum_reportu');
+    if (link instanceof HTMLAnchorElement) {
+      const url = new URL(link.getAttribute('href') || '', w.location.href);
+      url.searchParams.set('zr_id_pob', branchId);
+      if (reportDate !== '') {
+        url.searchParams.set('datum_reportu', reportDate);
+      } else {
+        url.searchParams.delete('datum_reportu');
+      }
+      link.setAttribute('href', url.pathname + url.search + url.hash);
     }
-    link.setAttribute('href', url.pathname + url.search + url.hash);
+    if (settingsLink instanceof HTMLAnchorElement) {
+      const settingsUrl = new URL(settingsLink.getAttribute('href') || '', w.location.href);
+      settingsUrl.searchParams.set('zr_id_pob', branchId);
+      settingsLink.setAttribute('href', settingsUrl.pathname + settingsUrl.search + settingsUrl.hash);
+    }
   }
 
   function usesDraftPersistence(root) {

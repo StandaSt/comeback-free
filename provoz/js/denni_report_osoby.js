@@ -446,6 +446,21 @@
     }
   }
 
+  function sortPersonOptions(select) {
+    if (!(select instanceof HTMLSelectElement)) return;
+    const placeholder = Array.from(select.options).find((option) => option.value === '') || null;
+    const options = Array.from(select.options).filter((option) => option.value !== '');
+    const collator = new Intl.Collator('cs', { sensitivity: 'base', numeric: true });
+    options.sort((left, right) => {
+      const byName = collator.compare(String(left.textContent || '').trim(), String(right.textContent || '').trim());
+      if (byName !== 0) return byName;
+      return (Number.parseInt(left.value, 10) || 0) - (Number.parseInt(right.value, 10) || 0);
+    });
+    if (placeholder instanceof HTMLOptionElement) select.appendChild(placeholder);
+    options.forEach((option) => select.appendChild(option));
+    if (placeholder instanceof HTMLOptionElement) select.insertBefore(placeholder, select.firstChild);
+  }
+
   function addOption(select, idUser, name, restiaName) {
     if (!(select instanceof HTMLSelectElement) || !idUser || String(name || '').trim() === '') return;
     if (select.querySelector('option[value="' + String(idUser).replace(/"/g, '') + '"]')) return;
@@ -456,6 +471,7 @@
       option.setAttribute('data-zr-restia-name', String(restiaName || '').trim());
     }
     select.appendChild(option);
+    sortPersonOptions(select);
   }
 
   function removeOption(select, idUser) {

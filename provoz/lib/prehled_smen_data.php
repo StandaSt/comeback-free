@@ -2,6 +2,8 @@
 // lib/prehled_smen_data.php * Verze: V2 * Aktualizace: 04.06.2026
 declare(strict_types=1);
 
+require_once __DIR__ . '/../../common/db/db_cis_slot.php';
+
 /*
  * Spolecna data pro Prehled hodin a jeho exporty.
  * Vraci mesicni souhrn z finalne ulozenych reportu IS.
@@ -46,14 +48,9 @@ if (!function_exists('ps_cols')) {
 }
 
 if (!function_exists('ps_slot_label')) {
-    function ps_slot_label(int $slot): string
+    function ps_slot_label(int $slot, array $slotLabels): string
     {
-        return match ($slot) {
-            1 => 'instor',
-            2 => 'kurýr',
-            3 => 'výroba',
-            default => '-',
-        };
+        return $slotLabels[$slot] ?? ('Slot ' . $slot);
     }
 }
 
@@ -228,7 +225,7 @@ if (!function_exists('ps_request_state')) {
             }
             $filters['cele_jmeno'] = trim((string)($request['ps_f']['cele_jmeno'] ?? ''));
             $slotRaw = trim((string)($request['ps_f']['slot'] ?? ''));
-            if (in_array($slotRaw, ['', '1', '2', '3'], true)) {
+            if ($slotRaw === '' || (ctype_digit($slotRaw) && (int)$slotRaw >= 0)) {
                 $filters['slot'] = $slotRaw;
             }
         }
@@ -297,6 +294,7 @@ if (!function_exists('ps_prehled_smen_data')) {
         $totalHours = 0.0;
         $filteredHours = 0.0;
         $error = '';
+        $slotLabels = [];
 
         $yearStart = (new DateTimeImmutable($selectedYear . '-01-01'))->setTime(0, 0);
         $yearEnd = $yearStart->modify('last day of december')->setTime(23, 59, 59);
@@ -306,6 +304,7 @@ if (!function_exists('ps_prehled_smen_data')) {
         try {
             $conn = db();
             $conn->set_charset('utf8mb4');
+            $slotLabels = cb_cis_slot_nazvy($conn);
 
             $sql = '
                 SELECT
@@ -538,6 +537,7 @@ if (!function_exists('ps_prehled_smen_data')) {
             'totalHours' => $totalHours,
             'filteredHours' => $filteredHours,
             'monthLabel' => ps_czech_month($selectedMonth) . ' ' . (string)$selectedYear,
+            'slotLabels' => $slotLabels,
             'error' => $error,
         ];
     }

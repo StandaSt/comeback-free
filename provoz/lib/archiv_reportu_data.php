@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/denni_report_prava.php';
+require_once __DIR__ . '/../../common/db/db_cis_slot.php';
 
 function cb_archiv_reportu_date(string $value, DateTimeZone $tz, DateTimeImmutable $fallback): DateTimeImmutable
 {
@@ -12,6 +13,7 @@ function cb_archiv_reportu_date(string $value, DateTimeZone $tz, DateTimeImmutab
 
 function cb_archiv_reportu_comparison_rows(mysqli $conn, int $idPob, string $reportDate): array
 {
+    $slotLabels = cb_cis_slot_nazvy($conn);
     $isData = cb_denni_report_history_load($conn, $idPob, $reportDate);
     $googleData = cb_denni_report_google_history_load($conn, $idPob, $reportDate);
     if (!is_array($isData) || !is_array($googleData)) {
@@ -88,7 +90,8 @@ function cb_archiv_reportu_comparison_rows(mysqli $conn, int $idPob, string $rep
             continue;
         }
         $person = $isPresent ? $isPerson : $googlePerson;
-        $role = (int)($person['slot'] ?? 0) === 1 ? 'Instor' : 'Kurýr';
+        $idSlot = (int)($person['slot'] ?? 0);
+        $role = $slotLabels[$idSlot] ?? ('Slot ' . $idSlot);
         $name = trim((string)($person['name'] ?? ''));
         if ($name === '') {
             $name = 'Neznámý zaměstnanec';

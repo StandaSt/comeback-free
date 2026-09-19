@@ -1,7 +1,10 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/pobocka_provoz.php';
+
 require_once __DIR__ . '/denni_report_data.php';
+require_once __DIR__ . '/../../common/db/db_cis_slot.php';
 
 /*
  * Read-only souhrn uzavrenych dennich reportu pro jednu pobocku.
@@ -358,6 +361,7 @@ function cb_kontrola_reportu_name_mismatches(mysqli $conn, int $branchId, string
           AND r.platny = 1
           AND r.datum_reportu BETWEEN ? AND ?
           AND ok.provider = \'delivery\'
+          AND TRIM(COALESCE(ok.jmeno, \'\')) <> \'Wolt Kurýr\'
           AND COALESCE(s.nazev, \'\') NOT IN (\'canceled\', \'rejected\', \'expired\', \'not_accepted\', \'cancel_accepted\')
         GROUP BY r.datum_reportu, kuryr_name
         HAVING kuryr_name <> \'\'
@@ -429,13 +433,14 @@ function cb_kontrola_reportu_missing_dates(mysqli $conn, int $branchId, string $
     }
     $stmt->close();
 
+    $closedDates = cb_pobocka_provoz_closed_date_set($conn, $from, $to);
     $missing = [];
     $tz = new DateTimeZone('Europe/Prague');
     $cursor = new DateTimeImmutable($from, $tz);
     $last = new DateTimeImmutable($to, $tz);
     while ($cursor <= $last) {
         $date = $cursor->format('Y-m-d');
-        if (!isset($present[$date])) {
+        if (!isset($present[$date]) && !isset($closedDates[$date])) {
             $missing[] = $date;
         }
         $cursor = $cursor->modify('+1 day');
@@ -475,6 +480,7 @@ function cb_kontrola_reportu_data(mysqli $conn, bool $useGlobalPeriod, int $requ
         'period' => $period,
         'totals' => $totals,
         'people' => $people,
+        'slot_labels' => cb_cis_slot_nazvy($conn),
         'name_mismatches' => $nameMismatches,
         'missing_dates' => $missingDates,
     ];

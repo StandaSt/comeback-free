@@ -66,6 +66,7 @@ $cbKontrolaPeriodDateLabel = static function (string $date): string {
     $period = (array)$cbKontrolaData['period'];
     $totals = (array)$cbKontrolaData['totals'];
     $people = (array)$cbKontrolaData['people'];
+    $slotLabels = (array)$cbKontrolaData['slot_labels'];
     $nameMismatches = (array)$cbKontrolaData['name_mismatches'];
     $missingDates = (array)$cbKontrolaData['missing_dates'];
     ?>
@@ -116,7 +117,7 @@ $cbKontrolaPeriodDateLabel = static function (string $date): string {
             <div class="kontrola_reportu_people_grid">
             <section class="card_section bg_bila zaobleni_10 zr_section kontrola_reportu_people">
                 <div class="kontrola_reportu_people_head">
-                    <h2 class="card_section_title">Instor</h2>
+                    <h2 class="card_section_title"><?= h($slotLabels[1] ?? 'Slot 1') ?></h2>
                 </div>
                 <table class="zr_table kontrola_reportu_people_table">
                     <colgroup><col><col class="kontrola_reportu_col_days"><col class="kontrola_reportu_col_hours"></colgroup>
@@ -138,7 +139,7 @@ $cbKontrolaPeriodDateLabel = static function (string $date): string {
 
             <section class="card_section bg_bila zaobleni_10 zr_section kontrola_reportu_people">
                 <div class="kontrola_reportu_people_head">
-                    <h2 class="card_section_title">Kurýr</h2>
+                    <h2 class="card_section_title"><?= h($slotLabels[2] ?? 'Slot 2') ?></h2>
                 </div>
                 <table class="zr_table kontrola_reportu_people_table">
                     <colgroup><col><col class="kontrola_reportu_col_days"><col class="kontrola_reportu_col_hours"><col class="kontrola_reportu_col_deliveries"></colgroup>

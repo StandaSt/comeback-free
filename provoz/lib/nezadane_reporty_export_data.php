@@ -2,6 +2,8 @@
 // lib/nezadane_reporty_export_data.php * Data pro e-mailovy export nezadanych dennich reportu
 declare(strict_types=1);
 
+require_once __DIR__ . '/pobocka_provoz.php';
+
 require_once __DIR__ . '/format_datum_cas.php';
 
 const CB_NEZADANE_REPORTY_EXPORT_PRAVO = 211;
@@ -111,6 +113,7 @@ function cb_nezadane_reporty_export_rows(mysqli $conn, string $scope): array
     $period = cb_nezadane_reporty_export_period($scope);
     $from = (string)$period['from'];
     $to = (string)$period['to'];
+    $closedDates = cb_pobocka_provoz_closed_date_set($conn, $from, $to);
 
     $branches = [];
     $branchResult = $conn->query("
@@ -208,6 +211,10 @@ function cb_nezadane_reporty_export_rows(mysqli $conn, string $scope): array
 
     while ($day <= $lastDay) {
         $date = $day->format('Y-m-d');
+        if (isset($closedDates[$date])) {
+            $day = $day->modify('+1 day');
+            continue;
+        }
         foreach ($branches as $idPob => $branchName) {
             $key = $date . ':' . $idPob;
             if (isset($submitted[$key])) {

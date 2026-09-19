@@ -98,6 +98,14 @@ if ($cbReportDateParam !== '') {
     $cbKontrolaReportParams['datum_reportu'] = $cbReportDateParam;
 }
 $cbKontrolaReportUrl = cb_root_url('index.php') . '?' . http_build_query($cbKontrolaReportParams, '', '&', PHP_QUERY_RFC3986);
+$cbNastaveniReportParams = [
+    'm' => 'provoz',
+    'page' => 'nastaveni_reportu',
+];
+if ($cbReportBranchParam > 0) {
+    $cbNastaveniReportParams['zr_id_pob'] = $cbReportBranchParam;
+}
+$cbNastaveniReportUrl = cb_root_url('index.php') . '?' . http_build_query($cbNastaveniReportParams, '', '&', PHP_QUERY_RFC3986);
 
 if ($cbPage === 'kontrola_reportu') {
     $cbKontrolaBackParams = [
@@ -278,7 +286,7 @@ if ($cbPpOnly && !empty($_SESSION['login_ok'])) {
                         <a class="head_task_btn" href="<?= h($cbKontrolaReportUrl) ?>" data-zr-kontrola-link>Kontrola</a>
                     <?php endif; ?>
                     <?php if ($cbReportPromenneAllowed): ?>
-                        <a class="head_task_btn" href="<?= h(cb_root_url('index.php?m=provoz&page=nastaveni_reportu')) ?>">Nastavení reportu</a>
+                        <a class="head_task_btn" href="<?= h($cbNastaveniReportUrl) ?>" data-zr-nastaveni-link>Nastavení reportu</a>
                     <?php endif; ?>
                     </div>
                 <?php endif; ?>
@@ -325,7 +333,7 @@ if (!empty($_SESSION['login_ok'])) {
                     <a class="head_task_btn" href="<?= h($cbKontrolaReportUrl) ?>" data-zr-kontrola-link>Kontrola</a>
                 <?php endif; ?>
                 <?php if ($cbReportPromenneAllowed): ?>
-                    <a class="head_task_btn" href="<?= h(cb_root_url('index.php?m=provoz&page=nastaveni_reportu')) ?>">Nastavení reportu</a>
+                    <a class="head_task_btn" href="<?= h($cbNastaveniReportUrl) ?>" data-zr-nastaveni-link>Nastavení reportu</a>
                 <?php endif; ?>
                 </div>
             <?php endif; ?>

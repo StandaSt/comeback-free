@@ -18,6 +18,7 @@ function hr_prehled_data(mysqli $db): array
         'nabor' => $prehled['nabor'],
         'zamestnanci' => $prehled['zamestnanci'],
         'pozadavky' => $prehled['pozadavky'],
+        'slotLabels' => $prehled['slot_labels'],
         'kReseni' => $prehled['k_reseni'],
         'dokumenty' => $prehled['dokumenty'],
         'lekarskeProhlidky' => $prehled['lekarske_prohlidky'],

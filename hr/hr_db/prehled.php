@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../../common/db/db_cis_slot.php';
+
 /**
  * DB dotazy pro hlavni prehled HR modulu.
  */
@@ -70,8 +72,8 @@ function hr_fetch_prehled(mysqli $db): array
     $result = $db->query("
         SELECT
             COUNT(*) AS celkem,
-            SUM(CASE WHEN cs.slot = 'Instor' THEN 1 ELSE 0 END) AS instor,
-            SUM(CASE WHEN cs.slot = 'Kurýr' THEN 1 ELSE 0 END) AS kuryr
+            SUM(CASE WHEN hp.id_slot = 1 THEN 1 ELSE 0 END) AS instor,
+            SUM(CASE WHEN hp.id_slot = 2 THEN 1 ELSE 0 END) AS kuryr
         FROM hr_pozadavek hp
         INNER JOIN cis_slot cs
             ON cs.id_slot = hp.id_slot
@@ -106,6 +108,7 @@ function hr_fetch_prehled(mysqli $db): array
         'nabor' => $nabor,
         'zamestnanci' => $zamestnanci,
         'pozadavky' => $pozadavky,
+        'slot_labels' => cb_cis_slot_nazvy($db),
         'k_reseni' => $kReseni,
         'dokumenty' => hr_fetch_prehled_document_summary($db),
         'lekarske_prohlidky' => [],

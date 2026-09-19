@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/vypocet_col_rozdil.php';
 require_once __DIR__ . '/denni_report_prava.php';
+require_once __DIR__ . '/../../common/db/db_cis_slot.php';
+require_once __DIR__ . '/../../common/lib/objednavka_cislo.php';
+require_once __DIR__ . '/pobocka_provoz.php';
 
 function cb_denni_report_format_input_number(float $value): string
 {
@@ -41,10 +44,45 @@ function cb_denni_report_person_name_match_key(string $name): string
     return trim(preg_replace('/\s+/u', ' ', $name) ?? '');
 }
 
+function cb_denni_report_person_name_unordered_key(string $name): string
+{
+    $key = cb_denni_report_person_name_match_key($name);
+    if ($key === '') {
+        return '';
+    }
+
+    $parts = array_values(array_filter(explode(' ', $key), static fn(string $part): bool => $part !== ''));
+    sort($parts, SORT_STRING);
+
+    return implode(' ', $parts);
+}
+
+/** @param array<int,array<string,mixed>> $options */
+function cb_denni_report_sort_user_options(array $options): array
+{
+    usort($options, static function (array $left, array $right): int {
+        $leftName = cb_denni_report_person_name_match_key((string)($left['name'] ?? ''));
+        $rightName = cb_denni_report_person_name_match_key((string)($right['name'] ?? ''));
+        $nameComparison = $leftName <=> $rightName;
+        if ($nameComparison !== 0) {
+            return $nameComparison;
+        }
+
+        return (int)($left['id_user'] ?? 0) <=> (int)($right['id_user'] ?? 0);
+    });
+
+    return $options;
+}
+
 /**
  * @param array<string,int> $restiaCounts
  * @param array<int,array<string,mixed>> $kuryrOptions
- * @return array{counts:array<string,int>,mismatches:array<int,array{restia:string,is:string}>}
+ * @return array{
+ *   counts:array<string,int>,
+ *   mismatches:array<int,array{restia:string,is:string}>,
+ *   unmatched:array<int,array{restia:string,count:int,reason:string}>,
+ *   matches:array<string,array{id_user:int,is_name:string,display_name:string}>
+ * }
  */
 function cb_denni_report_match_courier_names(array $restiaCounts, array $kuryrOptions): array
 {
@@ -60,15 +98,22 @@ function cb_denni_report_match_courier_names(array $restiaCounts, array $kuryrOp
         $options[$idUser] = [
             'id_user' => $idUser,
             'is_name' => $isName,
+            'display_name' => $displayName !== '' ? $displayName : $isName,
             'keys' => array_values(array_unique(array_filter([
                 cb_denni_report_person_name_match_key($isName),
                 cb_denni_report_person_name_match_key($alternateName),
+            ]))),
+            'unordered_keys' => array_values(array_unique(array_filter([
+                cb_denni_report_person_name_unordered_key($isName),
+                cb_denni_report_person_name_unordered_key($alternateName),
             ]))),
         ];
     }
 
     $counts = [];
     $mismatches = [];
+    $unmatched = [];
+    $matches = [];
     foreach ($restiaCounts as $restiaNameRaw => $countRaw) {
         $restiaName = trim((string)$restiaNameRaw);
         if ($restiaName === '') {
@@ -98,6 +143,24 @@ function cb_denni_report_match_courier_names(array $restiaCounts, array $kuryrOp
         }
 
         if (count($candidates) !== 1) {
+            $candidates = [];
+            $restiaUnorderedKey = cb_denni_report_person_name_unordered_key($restiaName);
+            if ($restiaUnorderedKey !== '') {
+                foreach ($options as $idUser => $option) {
+                    if (in_array($restiaUnorderedKey, (array)$option['unordered_keys'], true)) {
+                        $candidates[$idUser] = $option;
+                    }
+                }
+            }
+            $usedNormalizedMatch = true;
+        }
+
+        if (count($candidates) !== 1) {
+            $unmatched[] = [
+                'restia' => $restiaName,
+                'count' => max(0, (int)$countRaw),
+                'reason' => $candidates === [] ? 'nenalezen' : 'nejednoznačný',
+            ];
             continue;
         }
 
@@ -107,14 +170,23 @@ function cb_denni_report_match_courier_names(array $restiaCounts, array $kuryrOp
             continue;
         }
         $counts[$isName] = (int)($counts[$isName] ?? 0) + max(0, (int)$countRaw);
+        $matches[$restiaName] = [
+            'id_user' => (int)($matched['id_user'] ?? 0),
+            'is_name' => $isName,
+            'display_name' => trim((string)($matched['display_name'] ?? $isName)),
+        ];
         if ($usedNormalizedMatch || $restiaName !== $isName) {
-            $mismatches[] = ['restia' => $restiaName, 'is' => $isName];
+            $mismatches[] = [
+                'restia' => $restiaName,
+                'is' => trim((string)($matched['display_name'] ?? $isName)),
+            ];
         }
     }
 
     usort($mismatches, static fn(array $a, array $b): int => strcasecmp($a['restia'], $b['restia']));
+    usort($unmatched, static fn(array $a, array $b): int => strcasecmp($a['restia'], $b['restia']));
 
-    return ['counts' => $counts, 'mismatches' => $mismatches];
+    return ['counts' => $counts, 'mismatches' => $mismatches, 'unmatched' => $unmatched, 'matches' => $matches];
 }
 
 function cb_denni_report_user_full_name_by_id(mysqli $conn, ?int $idUser): string
@@ -266,10 +338,11 @@ function cb_denni_report_missing_notice_dates(
     }
     $stmt->close();
 
+    $closedDates = cb_pobocka_provoz_closed_date_set($conn, $from, $to);
     $missingDates = [];
     for ($dateDt = $fromDt; $dateDt <= $toDt; $dateDt = $dateDt->modify('+1 day')) {
         $date = $dateDt->format('Y-m-d');
-        if (!isset($savedDates[$date])) {
+        if (!isset($savedDates[$date]) && !isset($closedDates[$date])) {
             $missingDates[] = $date;
         }
     }
@@ -280,6 +353,9 @@ function cb_denni_report_missing_notice_dates(
 function cb_denni_report_missing_reports_summary(mysqli $conn, string $date): array
 {
     if ($date === '') {
+        return [];
+    }
+    if (cb_pobocka_provoz_is_closed_date($conn, $date)) {
         return [];
     }
 
@@ -331,7 +407,11 @@ function cb_denni_report_month_missing_reports_summary(mysqli $conn, DateTimeImm
 
     $monthStart = $monthStartDt->format('Y-m-d');
     $monthEnd = $monthEndDt->format('Y-m-d');
-    $totalDays = ((int)$monthStartDt->diff($monthEndDt)->days) + 1;
+    $closedDates = cb_pobocka_provoz_closed_date_set($conn, $monthStart, $monthEnd);
+    $totalDays = max(0, ((int)$monthStartDt->diff($monthEndDt)->days) + 1 - count($closedDates));
+    if ($totalDays === 0) {
+        return [];
+    }
 
     $sql = "
         SELECT
@@ -344,6 +424,12 @@ function cb_denni_report_month_missing_reports_summary(mysqli $conn, DateTimeImm
            AND r.datum_reportu >= ?
            AND r.datum_reportu <= ?
            AND r.platny = 1
+           AND NOT EXISTS (
+               SELECT 1
+               FROM pobocka_zavreno z
+               WHERE z.mesic = MONTH(r.datum_reportu)
+                 AND z.den = DAY(r.datum_reportu)
+           )
         WHERE p.aktivni = 1
           AND p.id_pob > 0
         GROUP BY p.id_pob, p.nazev
@@ -682,9 +768,10 @@ function cb_denni_report_ensure_user_option(array $options, int $selectedId, str
         'id_user' => $selectedId,
         'name' => $selectedName,
         'restia_name' => $selectedName,
+        'match_name' => $selectedName,
     ]);
 
-    return $options;
+    return cb_denni_report_sort_user_options($options);
 }
 
 function cb_denni_report_branch_slot_user_options(mysqli $conn, int $idPob, int $idSlot): array
@@ -722,7 +809,7 @@ function cb_denni_report_branch_slot_user_options(mysqli $conn, int $idPob, int 
                 if ($idUser > 0 && $name !== '') {
                     $users[$idUser] = [
                         'id_user' => $idUser,
-                        'name' => $name,
+                        'name' => $displayName !== '' ? $displayName : $name,
                         'restia_name' => $name,
                         'match_name' => $displayName,
                     ];
@@ -733,64 +820,7 @@ function cb_denni_report_branch_slot_user_options(mysqli $conn, int $idPob, int 
         $stmt->close();
     }
 
-    return array_values($users);
-}
-
-function cb_denni_report_prioritize_planned_users(
-    mysqli $conn,
-    array $options,
-    int $idPob,
-    int $idSlot,
-    string $date
-): array {
-    if ($options === [] || $idPob <= 0 || $idSlot <= 0 || $date === '') {
-        return $options;
-    }
-
-    $optionsById = [];
-    foreach ($options as $option) {
-        $idUser = (int)($option['id_user'] ?? 0);
-        if ($idUser > 0) {
-            $optionsById[$idUser] = $option;
-        }
-    }
-
-    $plannedOptions = [];
-    $stmt = $conn->prepare('
-        SELECT sp.id_user
-        FROM smeny_plan sp
-        WHERE sp.id_pob = ?
-          AND sp.id_slot = ?
-          AND sp.datum = ?
-        GROUP BY sp.id_user
-        ORDER BY MIN(sp.cas_od) ASC, MIN(sp.cas_do) ASC, sp.id_user ASC
-    ');
-    if ($stmt !== false) {
-        $stmt->bind_param('iis', $idPob, $idSlot, $date);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        if ($result instanceof mysqli_result) {
-            while ($row = $result->fetch_assoc()) {
-                $idUser = (int)($row['id_user'] ?? 0);
-                if ($idUser > 0 && isset($optionsById[$idUser])) {
-                    $plannedOptions[] = $optionsById[$idUser];
-                    unset($optionsById[$idUser]);
-                }
-            }
-            $result->free();
-        }
-        $stmt->close();
-    }
-
-    foreach ($options as $option) {
-        $idUser = (int)($option['id_user'] ?? 0);
-        if ($idUser > 0 && isset($optionsById[$idUser])) {
-            $plannedOptions[] = $option;
-            unset($optionsById[$idUser]);
-        }
-    }
-
-    return $plannedOptions;
+    return cb_denni_report_sort_user_options(array_values($users));
 }
 
 function cb_denni_report_shift_plan_people_rows(mysqli $conn, int $idPob, string $date): array
@@ -909,6 +939,7 @@ function cb_denni_report_restia_summary_default(): array
         'own_deliveries' => 0,
         'own_deliveries_without_confirmation' => 0,
         'delivery_orders_without_courier' => 0,
+        'delivery_issues' => [],
         'woltdrive_count' => 0,
         'woltdrive_late' => 0,
     ];
@@ -1022,6 +1053,8 @@ function cb_denni_report_restia_summary(mysqli $conn, int $idPob, array $workday
         $webCondition = $notCanceled . " AND cp.kod = 'generic' AND COALESCE(p.nazev, '') = 'online'";
         $woltCashCondition = $notCanceled . " AND cp.kod = 'generic' AND COALESCE(d.nazev, '') = 'delivery' AND COALESCE(p.nazev, '') = 'cash' AND COALESCE(ok.is_wolt_kuryr, 0) = 1";
         $djCashCondition = $notCanceled . " AND cp.kod IN ('foodora', 'damejidlo') AND COALESCE(p.nazev, '') = 'cash'";
+        $ownCourierCondition = "ok.provider = 'delivery' AND COALESCE(ok.is_wolt_kuryr, 0) = 0";
+        $woltDriveCondition = "ok.provider = 'delivery' AND COALESCE(ok.is_wolt_kuryr, 0) = 1";
         $otherCondition = $notCanceled . " AND NOT (("
             . $woltCondition . ") OR ("
             . $boltCondition . ") OR ("
@@ -1030,6 +1063,7 @@ function cb_denni_report_restia_summary(mysqli $conn, int $idPob, array $workday
             . $woltCashCondition . ") OR ("
             . $djCashCondition . "))";
 
+        // Restia posílá delivery i pro Wolt Drive. O skutečném vlastním kurýrovi proto rozhoduje také jméno.
         // Vlastní rozvoz je výkon kurýra od okamžiku přiřazení; konečný stav předání jej neruší.
         $summarySql = "
             SELECT
@@ -1052,12 +1086,12 @@ function cb_denni_report_restia_summary(mysqli $conn, int $idPob, array $workday
                 SUM(CASE WHEN COALESCE(s.nazev, '') IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted') THEN COALESCE(c.cena_celk, 0) ELSE 0 END) AS cancel_value,
                 AVG(CASE WHEN " . $notCanceled . " AND ca.cas_pripravy IS NOT NULL THEN ca.cas_pripravy * 60 END) AS make_time_avg_sec,
                 COUNT(DISTINCT CASE WHEN " . $notCanceled . " THEN o.id_obj ELSE NULL END) AS orders_total,
-                COUNT(DISTINCT CASE WHEN ok.provider = 'delivery' THEN o.id_obj ELSE NULL END) AS own_deliveries,
-                COUNT(DISTINCT CASE WHEN ok.provider = 'delivery' AND ca.cas_doruc IS NULL THEN o.id_obj ELSE NULL END) AS own_deliveries_without_confirmation,
+                COUNT(DISTINCT CASE WHEN " . $ownCourierCondition . " THEN o.id_obj ELSE NULL END) AS own_deliveries,
+                COUNT(DISTINCT CASE WHEN " . $ownCourierCondition . " AND ca.cas_doruc IS NULL THEN o.id_obj ELSE NULL END) AS own_deliveries_without_confirmation,
                 COUNT(DISTINCT CASE WHEN " . $notCanceled . " AND d.nazev = 'delivery' AND COALESCE(ok.provider, '') = '' THEN o.id_obj ELSE NULL END) AS delivery_orders_without_courier,
-                COUNT(DISTINCT CASE WHEN " . $notCanceled . " AND ok.provider = 'external-delivery' THEN o.id_obj ELSE NULL END) AS woltdrive_count,
-                COUNT(DISTINCT CASE WHEN " . $notCanceled . " AND ok.provider = 'delivery' AND ca.cas_slib IS NOT NULL AND ca.cas_doruc IS NOT NULL AND TIMESTAMPDIFF(MINUTE, ca.cas_slib, ca.cas_doruc) > 5 THEN o.id_obj ELSE NULL END) AS delay_count,
-                COUNT(DISTINCT CASE WHEN " . $notCanceled . " AND ok.provider = 'external-delivery' AND ca.cas_slib IS NOT NULL AND ca.cas_doruc IS NOT NULL AND TIMESTAMPDIFF(MINUTE, ca.cas_slib, ca.cas_doruc) > 5 THEN o.id_obj ELSE NULL END) AS woltdrive_late
+                COUNT(DISTINCT CASE WHEN " . $notCanceled . " AND " . $woltDriveCondition . " THEN o.id_obj ELSE NULL END) AS woltdrive_count,
+                COUNT(DISTINCT CASE WHEN " . $notCanceled . " AND " . $ownCourierCondition . " AND ca.cas_slib IS NOT NULL AND ca.cas_doruc IS NOT NULL AND TIMESTAMPDIFF(MINUTE, ca.cas_slib, ca.cas_doruc) > 5 THEN o.id_obj ELSE NULL END) AS delay_count,
+                COUNT(DISTINCT CASE WHEN " . $notCanceled . " AND " . $woltDriveCondition . " AND ca.cas_slib IS NOT NULL AND ca.cas_doruc IS NOT NULL AND TIMESTAMPDIFF(MINUTE, ca.cas_slib, ca.cas_doruc) > 5 THEN o.id_obj ELSE NULL END) AS woltdrive_late
             FROM objednavky_restia o
             LEFT JOIN cis_obj_platforma cp ON cp.id_platforma = o.id_platforma
             LEFT JOIN cis_doruceni d ON d.id_doruceni = o.id_doruceni
@@ -1140,6 +1174,140 @@ function cb_denni_report_restia_summary(mysqli $conn, int $idPob, array $workday
     return $restiaSummary;
 }
 
+/**
+ * @param array<int,array<string,mixed>> $kuryrOptions
+ * @return array<int,array<string,mixed>>
+ */
+function cb_denni_report_delivery_issue_rows(mysqli $conn, int $idPob, array $workdayRange, array $kuryrOptions): array
+{
+    if ($idPob <= 0) {
+        return [];
+    }
+
+    $notCanceled = "COALESCE(s.nazev, '') NOT IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted')";
+    $sql = "
+        SELECT
+            o.id_obj,
+            o.restia_order_number,
+            o.short_code,
+            o.seriove_cislo,
+            o.restia_id_obj,
+            COALESCE(s.nazev, '') AS stav,
+            ca.cas_vytvor,
+            ca.cas_status_zmena,
+            ca.cas_doruc,
+            COALESCE(k.pocet_kuryru, 0) AS pocet_kuryru,
+            COALESCE(k.ma_vlastniho_kuryra, 0) AS ma_vlastniho_kuryra,
+            COALESCE(k.pocet_jmen_vlastnich_kuryru, 0) AS pocet_jmen_vlastnich_kuryru,
+            COALESCE(k.jmena_vlastnich_kuryru, '') AS jmena_vlastnich_kuryru,
+            CASE WHEN " . $notCanceled . " AND d.nazev = 'delivery' AND COALESCE(k.pocet_kuryru, 0) = 0 THEN 1 ELSE 0 END AS bez_kuryra
+        FROM objednavky_restia o
+        INNER JOIN obj_casy ca ON ca.id_obj = o.id_obj
+        LEFT JOIN cis_obj_stav s ON s.id_stav = o.id_stav
+        LEFT JOIN cis_doruceni d ON d.id_doruceni = o.id_doruceni
+        LEFT JOIN (
+            SELECT
+                id_obj,
+                COUNT(*) AS pocet_kuryru,
+                MAX(CASE WHEN provider = 'delivery' AND TRIM(COALESCE(jmeno, '')) <> 'Wolt Kurýr' THEN 1 ELSE 0 END) AS ma_vlastniho_kuryra,
+                COUNT(DISTINCT CASE WHEN provider = 'delivery' AND TRIM(COALESCE(jmeno, '')) <> 'Wolt Kurýr' THEN NULLIF(TRIM(jmeno), '') ELSE NULL END) AS pocet_jmen_vlastnich_kuryru,
+                GROUP_CONCAT(DISTINCT CASE WHEN provider = 'delivery' AND TRIM(COALESCE(jmeno, '')) <> 'Wolt Kurýr' THEN NULLIF(TRIM(jmeno), '') ELSE NULL END ORDER BY NULLIF(TRIM(jmeno), '') SEPARATOR '||') AS jmena_vlastnich_kuryru
+            FROM obj_kuryr
+            GROUP BY id_obj
+        ) k ON k.id_obj = o.id_obj
+        WHERE o.id_pob = ?
+          AND ca.report >= DATE(?)
+          AND ca.report < DATE(?)
+          AND (
+              (COALESCE(k.ma_vlastniho_kuryra, 0) = 1 AND ca.cas_doruc IS NULL)
+              OR (" . $notCanceled . " AND d.nazev = 'delivery' AND COALESCE(k.pocet_kuryru, 0) = 0)
+              OR COALESCE(k.pocet_jmen_vlastnich_kuryru, 0) > 1
+          )
+        ORDER BY COALESCE(ca.cas_vytvor, ca.cas_status_zmena) ASC, o.id_obj ASC
+    ";
+
+    $stmt = $conn->prepare($sql);
+    if ($stmt === false) {
+        return [];
+    }
+    $fromDb = (string)($workdayRange['from_db'] ?? '');
+    $toDb = (string)($workdayRange['to_db'] ?? '');
+    $stmt->bind_param('iss', $idPob, $fromDb, $toDb);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if (!$result instanceof mysqli_result) {
+        $stmt->close();
+        return [];
+    }
+
+    $statusLabels = [
+        'new' => 'Nová objednávka',
+        'accepted' => 'Přijato',
+        'ready_pickup' => 'Připraveno',
+        'dispatched' => 'Na cestě',
+        'arrived_customer' => 'U zákazníka',
+        'delivered' => 'Doručeno',
+        'canceled' => 'Storno',
+        'rejected' => 'Odmítnuto',
+        'expired' => 'Expirováno',
+        'not_accepted' => 'Nepřijato',
+        'cancel_accepted' => 'Storno přijato',
+    ];
+    $now = new DateTimeImmutable('now', new DateTimeZone('Europe/Prague'));
+    $rows = [];
+    while ($row = $result->fetch_assoc()) {
+        $restiaNames = array_values(array_filter(array_map('trim', explode('||', (string)($row['jmena_vlastnich_kuryru'] ?? '')))));
+        $nameCounts = [];
+        foreach ($restiaNames as $restiaName) {
+            $nameCounts[$restiaName] = 1;
+        }
+        $nameMatches = cb_denni_report_match_courier_names($nameCounts, $kuryrOptions);
+        $displayNames = [];
+        foreach ($restiaNames as $restiaName) {
+            $matched = $nameMatches['matches'][$restiaName] ?? null;
+            $displayNames[] = is_array($matched) && trim((string)($matched['display_name'] ?? '')) !== ''
+                ? trim((string)$matched['display_name'])
+                : 'Restia: ' . $restiaName;
+        }
+
+        $status = trim((string)($row['stav'] ?? ''));
+        $referenceRaw = trim((string)($row['cas_status_zmena'] ?? ''));
+        if ($referenceRaw === '') {
+            $referenceRaw = trim((string)($row['cas_vytvor'] ?? ''));
+        }
+        $minutes = null;
+        if ($referenceRaw !== '') {
+            try {
+                $reference = new DateTimeImmutable($referenceRaw, new DateTimeZone('Europe/Prague'));
+                $minutes = max(0, (int)floor(($now->getTimestamp() - $reference->getTimestamp()) / 60));
+            } catch (Throwable $e) {
+                $minutes = null;
+            }
+        }
+
+        $orderNumber = cb_objednavka_cislo($row);
+        $withoutCourier = (int)($row['bez_kuryra'] ?? 0) === 1;
+        $withoutDeliveryConfirmation = (int)($row['ma_vlastniho_kuryra'] ?? 0) === 1
+            && trim((string)($row['cas_doruc'] ?? '')) === '';
+        $multipleCouriers = (int)($row['pocet_jmen_vlastnich_kuryru'] ?? 0) > 1;
+        $rows[] = [
+            'id_obj' => (int)($row['id_obj'] ?? 0),
+            'order_number' => (string)($orderNumber['cele'] ?? ''),
+            'couriers' => $displayNames,
+            'status' => $status,
+            'status_label' => $statusLabels[$status] ?? ($status !== '' ? $status : 'Neznámý stav'),
+            'minutes_in_status' => $minutes,
+            'without_courier' => $withoutCourier,
+            'without_delivery_confirmation' => $withoutDeliveryConfirmation,
+            'multiple_couriers' => $multipleCouriers,
+        ];
+    }
+    $result->free();
+    $stmt->close();
+
+    return $rows;
+}
+
 function cb_denni_report_kuryr_delivery_data(mysqli $conn, int $idPob, array $workdayRange, array $kuryrRows, array $kuryrOptions = []): array
 {
     $restiaDeliveryCounts = [];
@@ -1157,6 +1325,7 @@ function cb_denni_report_kuryr_delivery_data(mysqli $conn, int $idPob, array $wo
               AND ca.report >= DATE(?)
               AND ca.report < DATE(?)
               AND ok.provider = 'delivery'
+              AND TRIM(COALESCE(ok.jmeno, '')) <> 'Wolt Kurýr'
             GROUP BY kuryr_name
             HAVING kuryr_name <> ''
         ";
@@ -1210,6 +1379,7 @@ function cb_denni_report_kuryr_delivery_data(mysqli $conn, int $idPob, array $wo
         'kuryr_rows' => $kuryrRows,
         'counts_json' => $countsJson,
         'name_mismatches' => $nameMatches['mismatches'],
+        'unmatched_names' => $nameMatches['unmatched'],
     ];
 }
 
@@ -1251,7 +1421,7 @@ function cb_denni_report_person_rows(array $draftPersonRows): array
         $personRow = [
             'id_dr_osoby' => (int)($row['id_dr_osoby'] ?? 0),
             'id_user' => (int)($row['id_user'] ?? 0),
-            'name' => $fullName,
+            'name' => $displayName !== '' ? $displayName : $fullName,
             'restia_name' => $fullName,
             'match_name' => $displayName,
             // Čas je určený pro zobrazení vstupu; zdrojová hodnota směny zůstává beze změny.
@@ -1310,10 +1480,31 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
 {
     $typ = trim($typ);
     $isZadani = ($typ === 'zadani');
+    $slotLabels = cb_cis_slot_nazvy($conn);
 
     $tz = new DateTimeZone('Europe/Prague');
     $currentWorkdayDt = cb_denni_report_current_workday_date();
     $workdayOptions = cb_denni_report_workday_options($currentWorkdayDt);
+    $workdayOptionValues = array_values(array_filter(array_map(
+        static fn(array $option): string => (string)($option['value'] ?? ''),
+        $workdayOptions
+    )));
+    $closedWorkdayDates = [];
+    if ($workdayOptionValues !== []) {
+        sort($workdayOptionValues, SORT_STRING);
+        $closedWorkdayDates = cb_pobocka_provoz_closed_date_set(
+            $conn,
+            (string)$workdayOptionValues[0],
+            (string)$workdayOptionValues[count($workdayOptionValues) - 1]
+        );
+        foreach ($workdayOptions as $optionIndex => $option) {
+            $optionDate = (string)($option['value'] ?? '');
+            if ($optionDate !== '' && isset($closedWorkdayDates[$optionDate])) {
+                $workdayOptions[$optionIndex]['closed'] = true;
+                $workdayOptions[$optionIndex]['label'] = (string)($option['label'] ?? $optionDate) . ' (zavřeno)';
+            }
+        }
+    }
     $todayDate = $currentWorkdayDt->format('Y-m-d');
     $showTodayMissingReport = cb_denni_report_has_any_report($conn, $todayDate);
     $missingReportsMonth = cb_denni_report_month_missing_reports_summary($conn, $currentWorkdayDt, $showTodayMissingReport);
@@ -1371,6 +1562,8 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         $reportDate = $reportDateDt->format('Y-m-d');
     }
     $isCurrentWorkday = ($reportDate === $currentWorkdayDt->format('Y-m-d'));
+    $isClosedReportDay = isset($closedWorkdayDates[$reportDate])
+        || cb_pobocka_provoz_is_closed_date($conn, $reportDate);
     $reportDateDisplay = cb_dt_weekday_date_label_cs($reportDateDt, true);
     $workdayRange = cb_dt_workday_range_utc($reportDate);
     $reportSaveMinutes = 5;
@@ -1457,6 +1650,9 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
             if ($dayValue === '' || $dayValue === $currentWorkdayDt->format('Y-m-d')) {
                 continue;
             }
+            if (!empty($dayOption['closed']) || isset($closedWorkdayDates[$dayValue])) {
+                continue;
+            }
             if (!cb_denni_report_has_active_branch_report($conn, $reportBranchId, $dayValue)) {
                 $workdayOptions[$dayOptionIndex]['missing'] = true;
                 $workdayOptions[$dayOptionIndex]['label'] = (string)($dayOption['label'] ?? $dayValue) . ' (nezadán)';
@@ -1521,7 +1717,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         && $canEditSavedReport
         && $mainBranchId > 0
         && $mainBranchId === $reportBranchId;
-    $isCreatingMissingFinalReport = !$isCurrentWorkday && !$historyReportExists && !$isArchiveView && $canCloseReport;
+    $isCreatingMissingFinalReport = !$isCurrentWorkday && !$historyReportExists && !$isArchiveView && $canCloseReport && !$isClosedReportDay;
     $isEditingFinalReport = $historyReportExists && $canUnlockFinalReport && $requestedFinalEdit;
     $canEditHistory = !$isCurrentWorkday && $historyReportExists && $canUnlockFinalReport;
 
@@ -1530,28 +1726,29 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         $usesDraftPersistence = false;
         $isReadOnlyForm = !$isEditingFinalReport;
         $formMode = $isEditingFinalReport ? 'final_edit' : 'final_readonly';
+    } elseif ($isClosedReportDay) {
+        $canEditReport = false;
+        $usesDraftPersistence = false;
+        $isReadOnlyForm = true;
+        $formMode = 'closed_day';
     } else {
         $canEditReport = $isCurrentWorkday ? $canCloseReport : $isCreatingMissingFinalReport;
         $usesDraftPersistence = $isCurrentWorkday && $canEditReport;
         $isReadOnlyForm = !$canEditReport;
         $formMode = $isCurrentWorkday ? 'workday' : ($isCreatingMissingFinalReport ? 'final_edit' : 'history_readonly');
     }
-    $missingHistoryReport = (!$isCurrentWorkday && !$historyReportExists && $reportBranchId > 0);
+    $missingHistoryReport = (!$isCurrentWorkday && !$historyReportExists && $reportBranchId > 0 && !$isClosedReportDay);
     $readonlyInfoText = '';
     if ($isGoogleArchiveView) {
         $readonlyInfoText = 'Report zobrazuje data z Google disku';
+    } elseif ($isClosedReportDay && !$historyReportExists) {
+        $readonlyInfoText = 'Restaurace jsou tento den zavřené. Denní report se nevyžaduje.';
     } elseif ($missingHistoryReport) {
         $readonlyInfoText = '';
     }
 
     $instorOptions = cb_denni_report_branch_slot_user_options($conn, $reportBranchId, 1);
-    $openCloseInstorOptions = cb_denni_report_prioritize_planned_users(
-        $conn,
-        $instorOptions,
-        $reportBranchId,
-        1,
-        $reportDate
-    );
+    $openCloseInstorOptions = $instorOptions;
     $kuryrOptions = cb_denni_report_branch_slot_user_options($conn, $reportBranchId, 2);
     $reportBranchName = $reportBranchId > 0 ? trim((string)($allowedBranches[$reportBranchId] ?? '')) : '';
     if ($reportBranchName === '' && $singleAllowedBranchName !== '') {
@@ -1566,6 +1763,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
     $instorRows = [];
     $kuryrRows = [];
     $reportSaveAtTs = 0;
+    $reportCloseAtTs = 0;
     
     if ($reportBranchId > 0 && $isCurrentWorkday) {
         $endColumn = $reportEndColumns[(int)$reportDateDt->format('N')] ?? '';
@@ -1581,10 +1779,13 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
                 }
                 $stmtEnd->close();
     
-                $reportSaveAtTs = cb_report_save_at_ts($reportDateDt, (string)($endRow['end_time'] ?? ''), $reportSaveMinutes, 6);
+                $branchEndTime = (string)($endRow['end_time'] ?? '');
+                $reportCloseAtTs = cb_report_save_at_ts($reportDateDt, $branchEndTime, 0, 6);
+                $reportSaveAtTs = cb_report_save_at_ts($reportDateDt, $branchEndTime, $reportSaveMinutes, 6);
             }
         }
     }
+    $deliveryWarningAtTs = $reportCloseAtTs > 0 ? $reportCloseAtTs - 600 : 0;
     $reportRefreshAtTs = cb_report_refresh_at_ts($reportSaveAtTs, 300);
     
     if ($reportBranchId > 0 && $usesDraftPersistence) {
@@ -1678,8 +1879,10 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
     
     $openingId = isset($draftRow['oteviral']) ? (int)$draftRow['oteviral'] : 0;
     $closingId = isset($draftRow['zaviral']) ? (int)$draftRow['zaviral'] : 0;
-    $openingName = cb_denni_report_user_full_name_by_id($conn, $openingId > 0 ? $openingId : null);
-    $closingName = cb_denni_report_user_full_name_by_id($conn, $closingId > 0 ? $closingId : null);
+    $openingParts = cb_denni_report_user_name_parts_by_id($conn, $openingId > 0 ? $openingId : null);
+    $closingParts = cb_denni_report_user_name_parts_by_id($conn, $closingId > 0 ? $closingId : null);
+    $openingName = cb_denni_report_person_display_name($openingParts['jmeno'] ?? '', $openingParts['prijmeni'] ?? '');
+    $closingName = cb_denni_report_person_display_name($closingParts['jmeno'] ?? '', $closingParts['prijmeni'] ?? '');
     if ($openingName === '' && $historyReportExists) {
         $openingName = trim((string)($draftRow['oteviral_text'] ?? ''));
     }
@@ -1688,6 +1891,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
     }
     $openCloseInstorOptions = cb_denni_report_ensure_user_option($openCloseInstorOptions, $openingId, $openingName);
     $openCloseInstorOptions = cb_denni_report_ensure_user_option($openCloseInstorOptions, $closingId, $closingName);
+    $openCloseInstorOptions = cb_denni_report_sort_user_options($openCloseInstorOptions);
     
     $cashData = cb_denni_report_cash_data($draftRow);
     
@@ -1746,6 +1950,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
             'kuryr_rows' => $kuryrRows,
             'counts_json' => $kuryrDeliveryCountsJson,
             'name_mismatches' => [],
+            'unmatched_names' => [],
         ];
     } elseif ($isCurrentWorkday) {
         $restiaSummary = cb_denni_report_restia_summary($conn, $reportBranchId, $workdayRange);
@@ -1785,10 +1990,20 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
                 'kuryr_rows' => $kuryrRows,
                 'counts_json' => $kuryrDeliveryCountsJson,
                 'name_mismatches' => [],
+                'unmatched_names' => [],
             ];
         }
     }
+    if (($isCurrentWorkday || $isCreatingMissingFinalReport) && $reportBranchId > 0) {
+        $restiaSummary['delivery_issues'] = cb_denni_report_delivery_issue_rows(
+            $conn,
+            $reportBranchId,
+            $workdayRange,
+            $kuryrOptions
+        );
+    }
     $kuryrNameMismatches = (array)($kuryrDeliveryData['name_mismatches'] ?? []);
+    $kuryrUnmatchedNames = (array)($kuryrDeliveryData['unmatched_names'] ?? []);
     $makeTimeLabel = $controlValues['make_time_label'];
     $reportDifferenceLabel = $controlValues['difference_label'];
     $reportDifferenceValue = $controlValues['difference_value'];
@@ -1804,6 +2019,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         'missingReports' => $missingReports,
         'missingReportsMonth' => $missingReportsMonth,
         'missingReportNoticeDates' => $missingReportNoticeDates,
+        'isClosedReportDay' => $isClosedReportDay,
         'isCurrentWorkday' => $isCurrentWorkday,
         'reportDateDt' => $reportDateDt,
         'reportDate' => $reportDate,
@@ -1848,10 +2064,13 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         'instorRows' => $instorRows,
         'kuryrRows' => $kuryrRows,
         'reportSaveAtTs' => $reportSaveAtTs,
+        'reportCloseAtTs' => $reportCloseAtTs,
+        'deliveryWarningAtTs' => $deliveryWarningAtTs,
         'reportRefreshAtTs' => $reportRefreshAtTs,
         'draftPersonRows' => $draftPersonRows,
         'reportPersonRows' => $reportPersonRows,
         'usedInstorIds' => $usedInstorIds,
+        'slotLabels' => $slotLabels,
         'usedKuryrIds' => $usedKuryrIds,
         'openingId' => $openingId,
         'closingId' => $closingId,
@@ -1865,6 +2084,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         'kuryrDeliveryData' => $kuryrDeliveryData,
         'kuryrDeliveryCountsJson' => $kuryrDeliveryCountsJson,
         'kuryrNameMismatches' => $kuryrNameMismatches,
+        'kuryrUnmatchedNames' => $kuryrUnmatchedNames,
         'controlValues' => $controlValues,
         'makeTimeLabel' => $makeTimeLabel,
         'reportDifferenceLabel' => $reportDifferenceLabel,

@@ -41,6 +41,7 @@ $psFilteredHours = (float)$psData['filteredHours'];
 $psTotal = (int)$psData['totalRows'];
 $psError = (string)$psData['error'];
 $psMonthLabel = (string)$psData['monthLabel'];
+$psSlotLabels = (array)$psData['slotLabels'];
 
 $psPages = max(1, (int)ceil($psTotal / $psPer));
 if ($psPage > $psPages) {
@@ -146,9 +147,9 @@ $psExportXlsxUrl = cb_root_url('provoz/lib/export_prehled_smen_xlsx.php') . $psE
               <th class="txt_r" style="white-space:nowrap;">
                 <select class="filter-input txt_r" name="ps_f[slot]">
                   <option value=""<?= $psFilters['slot'] === '' ? ' selected' : '' ?>>slot</option>
-                  <option value="1"<?= $psFilters['slot'] === '1' ? ' selected' : '' ?>>instor</option>
-                  <option value="2"<?= $psFilters['slot'] === '2' ? ' selected' : '' ?>>kurýr</option>
-                  <option value="3"<?= $psFilters['slot'] === '3' ? ' selected' : '' ?>>výroba</option>
+                  <?php foreach ($psSlotLabels as $idSlot => $nazevSlotu): ?>
+                    <option value="<?= h((string)$idSlot) ?>"<?= $psFilters['slot'] === (string)$idSlot ? ' selected' : '' ?>><?= h($nazevSlotu) ?></option>
+                  <?php endforeach; ?>
                 </select>
               </th>
               <th class="txt_r" style="white-space:nowrap;"></th>
@@ -216,7 +217,7 @@ $psExportXlsxUrl = cb_root_url('provoz/lib/export_prehled_smen_xlsx.php') . $psE
                   <td class="txt_r" style="white-space:nowrap;"><?= h((string)$row['mesic']) ?></td>
                   <td class="txt_r" style="white-space:nowrap;"><?= h((string)$row['rok']) ?></td>
                   <td class="txt_r" style="white-space:nowrap;"><?= h((string)$row['cele_jmeno']) ?></td>
-                  <td class="txt_r" style="white-space:nowrap;"><?= h(ps_slot_label((int)$row['slot'])) ?></td>
+                  <td class="txt_r" style="white-space:nowrap;"><?= h(ps_slot_label((int)$row['slot'], $psSlotLabels)) ?></td>
                   <td class="txt_r" style="white-space:nowrap;"><?= h(ps_num_or_dash((float)$row['celkem'])) ?></td>
                   <td class="txt_r" style="white-space:nowrap;"><?= h(ps_num_or_dash((float)$row['den'])) ?></td>
                   <td class="txt_r" style="white-space:nowrap;"><?= h(ps_num_or_dash((float)$row['noc'])) ?></td>
@@ -270,7 +271,7 @@ $psExportXlsxUrl = cb_root_url('provoz/lib/export_prehled_smen_xlsx.php') . $psE
                     <tr data-row-detail="<?= $detailId ?>" hidden>
                       <td class="txt_r" colspan="2" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;"><?= h($detailDateText) ?></td>
                       <td class="txt_r" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;"><?= h($branchName !== '' ? $branchName : '-') ?></td>
-                      <td class="txt_r" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;"><?= h(ps_slot_label((int)($detailRow['slot'] ?? 0))) ?></td>
+                      <td class="txt_r" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;"><?= h(ps_slot_label((int)($detailRow['slot'] ?? 0), $psSlotLabels)) ?></td>
                       <td class="txt_r" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;"><?= h(ps_num_or_dash((float)($detailRow['celkem'] ?? 0.0))) ?></td>
                       <td class="txt_r" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;"><?= h(ps_num_or_dash((float)($detailRow['den'] ?? 0.0))) ?></td>
                       <td class="txt_r" style="white-space:nowrap;background:<?= h($psDetailBg) ?>;"><?= h(ps_num_or_dash((float)($detailRow['noc'] ?? 0.0))) ?></td>
