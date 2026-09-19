@@ -816,6 +816,7 @@ function cb_denni_report_shift_plan_people_rows(mysqli $conn, int $idPob, string
             0 AS rozvozu_restia
         FROM smeny_plan sp
         INNER JOIN user u ON u.id_user = sp.id_user
+        INNER JOIN user_slot us ON us.id_user = sp.id_user AND us.id_slot = sp.id_slot
         WHERE sp.id_pob = ?
           AND sp.datum = ?
           AND sp.id_slot IN (1, 2)

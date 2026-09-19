@@ -196,6 +196,68 @@ function cb_db_zapis_denni_report_user_allowed(mysqli $conn, int $idPob, int $id
     return $allowed;
 }
 
+function cb_db_zapis_denni_report_user_label(mysqli $conn, int $idUser): string
+{
+    $name = cb_denni_report_user_full_name_by_id($conn, $idUser);
+    $label = $name !== '' ? $name : 'Neznámý uživatel';
+
+    return $label . ' (ID ' . $idUser . ')';
+}
+
+function cb_db_zapis_denni_report_branch_label(mysqli $conn, int $idPob): string
+{
+    $stmt = $conn->prepare('SELECT nazev FROM pobocka WHERE id_pob = ? LIMIT 1');
+    if ($stmt === false) {
+        return 'ID ' . $idPob;
+    }
+    $stmt->bind_param('i', $idPob);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result instanceof mysqli_result ? ($result->fetch_assoc() ?: null) : null;
+    if ($result instanceof mysqli_result) {
+        $result->free();
+    }
+    $stmt->close();
+
+    $name = is_array($row) ? trim((string)($row['nazev'] ?? '')) : '';
+    return $name !== '' ? $name . ' (ID ' . $idPob . ')' : 'ID ' . $idPob;
+}
+
+function cb_db_zapis_denni_report_user_access_error(mysqli $conn, int $idPob, int $idUser, int $slot): string
+{
+    $stmt = $conn->prepare('
+        SELECT
+            EXISTS(SELECT 1 FROM user_pobocka WHERE id_user = ? AND id_pob = ?) AS has_branch,
+            EXISTS(SELECT 1 FROM user_slot WHERE id_user = ? AND id_slot = ?) AS has_slot
+    ');
+    if ($stmt === false) {
+        throw new RuntimeException('Nelze zjistit důvod nepovoleného pracovníka reportu.');
+    }
+    $stmt->bind_param('iiii', $idUser, $idPob, $idUser, $slot);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result instanceof mysqli_result ? ($result->fetch_assoc() ?: []) : [];
+    if ($result instanceof mysqli_result) {
+        $result->free();
+    }
+    $stmt->close();
+
+    $user = cb_db_zapis_denni_report_user_label($conn, $idUser);
+    $branch = cb_db_zapis_denni_report_branch_label($conn, $idPob);
+    $workType = $slot === 2 ? 'kurýr' : 'instor';
+    $hasBranch = (int)($row['has_branch'] ?? 0) === 1;
+    $hasSlot = (int)($row['has_slot'] ?? 0) === 1;
+
+    if (!$hasBranch && !$hasSlot) {
+        return $user . ' není přiřazen k pobočce ' . $branch . ' ani veden jako ' . $workType . '.';
+    }
+    if (!$hasBranch) {
+        return $user . ' není přiřazen k pobočce ' . $branch . '.';
+    }
+
+    return $user . ' není veden jako ' . $workType . '.';
+}
+
 function cb_db_zapis_denni_report_user_in_active_report(mysqli $conn, int $idPob, string $datumReportu, int $idUser, int $slot, string $usage): bool
 {
     if ($usage === 'oteviral' || $usage === 'zaviral') {
@@ -246,20 +308,31 @@ function cb_db_zapis_denni_report_validate(mysqli $conn, int $idPob, string $dat
 {
     $oteviral = (int)($post['oteviral'] ?? 0);
     $zaviral = (int)($post['zaviral'] ?? 0);
-    if ($oteviral <= 0 || $zaviral <= 0) {
-        throw new CbUserVisibleException('Vyberte, kdo oteviral a zaviral pobocku.');
+    if ($oteviral <= 0) {
+        throw new CbUserVisibleException('Není vybráno, kdo otevíral pobočku.');
+    }
+    if ($zaviral <= 0) {
+        throw new CbUserVisibleException('Není vybráno, kdo zavíral pobočku.');
     }
     $oteviralAllowed = cb_db_zapis_denni_report_user_allowed($conn, $idPob, $oteviral, 1)
         || ($allowExistingReportUsers && cb_db_zapis_denni_report_user_in_active_report($conn, $idPob, $datumReportu, $oteviral, 1, 'oteviral'));
     $zaviralAllowed = cb_db_zapis_denni_report_user_allowed($conn, $idPob, $zaviral, 1)
         || ($allowExistingReportUsers && cb_db_zapis_denni_report_user_in_active_report($conn, $idPob, $datumReportu, $zaviral, 1, 'zaviral'));
-    if (!$oteviralAllowed || !$zaviralAllowed) {
-        throw new CbUserVisibleException('Otevirajici nebo zavirajici nepatri mezi pracovniky pobocky.');
+    if (!$oteviralAllowed) {
+        throw new CbUserVisibleException('Otevírající: ' . cb_db_zapis_denni_report_user_access_error($conn, $idPob, $oteviral, 1));
+    }
+    if (!$zaviralAllowed) {
+        throw new CbUserVisibleException('Zavírající: ' . cb_db_zapis_denni_report_user_access_error($conn, $idPob, $zaviral, 1));
     }
 
-    foreach (['pokladna_hotovost', 'pokladna_terminal', 'pokladna_stravenky'] as $field) {
+    $cashFields = [
+        'pokladna_hotovost' => 'hotovost',
+        'pokladna_terminal' => 'terminál',
+        'pokladna_stravenky' => 'stravenky',
+    ];
+    foreach ($cashFields as $field => $label) {
         if (trim((string)($post[$field] ?? '')) === '') {
-            throw new CbUserVisibleException('Vyplnte vsechny povinne hodnoty pokladny.');
+            throw new CbUserVisibleException('V pokladně chybí hodnota: ' . $label . '.');
         }
     }
 
@@ -270,19 +343,20 @@ function cb_db_zapis_denni_report_validate(mysqli $conn, int $idPob, string $dat
         $start = trim((string)($row['smena_od'] ?? ''));
         $end = trim((string)($row['smena_do'] ?? ''));
         if ($idUser <= 0 || !in_array($slot, [1, 2], true)) {
-            throw new CbUserVisibleException('Report obsahuje neplatneho pracovnika.');
+            throw new CbUserVisibleException('Report obsahuje neplatného pracovníka (ID ' . $idUser . ', typ směny ' . $slot . ').');
         }
+        $userLabel = cb_db_zapis_denni_report_user_label($conn, $idUser);
         if (!cb_db_zapis_denni_report_valid_time($start) || !cb_db_zapis_denni_report_valid_time($end)) {
-            throw new CbUserVisibleException('U kazdeho pracovnika vyplnte platny zacatek a konec smeny.');
+            throw new CbUserVisibleException($userLabel . ' má neplatný čas směny: začátek „' . $start . '“, konec „' . $end . '“.');
         }
         $personAllowed = cb_db_zapis_denni_report_user_allowed($conn, $idPob, $idUser, $slot)
             || ($allowExistingReportUsers && cb_db_zapis_denni_report_user_in_active_report($conn, $idPob, $datumReportu, $idUser, $slot, 'person'));
         if (!$personAllowed) {
-            throw new CbUserVisibleException('Pracovnik nepatri do vybrane pobocky nebo typu smeny.');
+            throw new CbUserVisibleException(cb_db_zapis_denni_report_user_access_error($conn, $idPob, $idUser, $slot));
         }
         $personKey = $slot . ':' . $idUser;
         if (isset($seen[$personKey])) {
-            throw new CbUserVisibleException('Stejny pracovnik je v reportu uveden vicekrat.');
+            throw new CbUserVisibleException($userLabel . ' je v reportu uveden vícekrát jako ' . ($slot === 2 ? 'kurýr' : 'instor') . '.');
         }
         $seen[$personKey] = true;
     }

@@ -3,6 +3,26 @@ declare(strict_types=1);
 
 /* Datové operace pro správu lokálních uživatelů Administrace. */
 
+function cb_admin_uzivatele_sloty_text(string $rawSlots): string
+{
+    $labels = [];
+    foreach (explode('||', $rawSlots) as $rawSlot) {
+        $slot = trim($rawSlot);
+        if ($slot === '') {
+            continue;
+        }
+        $normalized = mb_strtolower($slot, 'UTF-8');
+        $label = match ($normalized) {
+            'instor', 'instore' => 'Instor (pizzař)',
+            'kurýr', 'kuryr' => 'Kurýr',
+            default => $slot,
+        };
+        $labels[$label] = true;
+    }
+
+    return implode(', ', array_keys($labels));
+}
+
 function cb_admin_uzivatele_csrf_token(): string
 {
     $token = $_SESSION['cb_admin_uzivatele_csrf'] ?? null;
@@ -23,10 +43,11 @@ function cb_admin_uzivatele_csrf_over(array $post): void
 
 function cb_admin_uzivatele_ciselniky(mysqli $db): array
 {
-    $out = ['firmy' => [], 'role' => [], 'pobocky' => []];
+    $out = ['firmy' => [], 'role' => [], 'sloty' => [], 'pobocky' => []];
     $queries = [
         'firmy' => 'SELECT id_firma AS id, obchodni_jmeno AS nazev FROM firma WHERE aktivni=1 ORDER BY obchodni_jmeno',
         'role' => 'SELECT id_role AS id, role AS nazev FROM cis_role WHERE aktivni=1 ORDER BY role',
+        'sloty' => 'SELECT id_slot AS id, slot AS nazev FROM cis_slot ORDER BY id_slot',
         'pobocky' => 'SELECT id_pob, id_firma, nazev FROM pobocka WHERE aktivni=1 ORDER BY nazev',
     ];
     foreach ($queries as $key => $sql) {
@@ -47,6 +68,7 @@ function cb_admin_uzivatele_vytvor(mysqli $db, array $post): int
     $email = trim((string)($post['email'] ?? ''));
     $telefon = trim((string)($post['telefon'] ?? ''));
     $idRole = (int)($post['id_role'] ?? 0);
+    $sloty = array_values(array_unique(array_filter(array_map('intval', (array)($post['id_slot'] ?? [])), static fn (int $id): bool => $id > 0)));
     $pobocky = array_values(array_unique(array_filter(array_map('intval', (array)($post['id_pob'] ?? [])), static fn (int $id): bool => $id >= 0)));
     $idPobHlavni = (int)($post['id_pob_hlavni'] ?? -1);
     $pobAll = (int)($post['pob_all'] ?? 0) === 1;
@@ -71,6 +93,15 @@ function cb_admin_uzivatele_vytvor(mysqli $db, array $post): int
         $stmt->bind_param('i', $idRole); $stmt->execute(); $validRole = $stmt->get_result()->fetch_row() !== null; $stmt->close();
         if (!$validRole) { throw new CbUserVisibleException('Vybraná role není aktivní.'); }
 
+        if ($sloty !== []) {
+            $slotMarks = implode(',', array_fill(0, count($sloty), '?'));
+            $slotTypes = str_repeat('i', count($sloty));
+            $stmt = $db->prepare('SELECT COUNT(*) AS c FROM cis_slot WHERE id_slot IN (' . $slotMarks . ')');
+            $slotBind = [&$slotTypes]; foreach ($sloty as $i => $value) { $slotBind[] = &$sloty[$i]; }
+            call_user_func_array([$stmt, 'bind_param'], $slotBind); $stmt->execute(); $validSloty = (int)($stmt->get_result()->fetch_assoc()['c'] ?? 0); $stmt->close();
+            if ($validSloty !== count($sloty)) { throw new CbUserVisibleException('Vybraný slot neexistuje.'); }
+        }
+
         $marks = implode(',', array_fill(0, count($pobocky), '?'));
         $types = 'i' . str_repeat('i', count($pobocky));
         $stmt = $db->prepare('SELECT COUNT(*) AS c FROM pobocka WHERE aktivni=1 AND id_firma=? AND id_pob IN (' . $marks . ')');
@@ -85,6 +116,12 @@ function cb_admin_uzivatele_vytvor(mysqli $db, array $post): int
 
         $stmt = $db->prepare('INSERT INTO user_role (id_user,id_role) VALUES (?,?)');
         $stmt->bind_param('ii', $idUser, $idRole); $stmt->execute(); $stmt->close();
+
+        if ($sloty !== []) {
+            $stmt = $db->prepare('INSERT INTO user_slot (id_user,id_slot) VALUES (?,?)');
+            foreach ($sloty as $idSlot) { $stmt->bind_param('ii', $idUser, $idSlot); $stmt->execute(); }
+            $stmt->close();
+        }
 
         $stmt = $db->prepare('INSERT INTO user_pobocka (id_user,id_pob,main,pob_all) VALUES (?,?,?,?)');
         $saved = $pobAll ? [$idPobHlavni >= 0 ? $idPobHlavni : reset($pobocky)] : $pobocky;
@@ -104,9 +141,10 @@ function cb_admin_uzivatele_filtry(array $source): array
     return [
         'id' => $text('id'), 'uzivatel' => $text('uzivatel'), 'kontakt' => $text('kontakt'),
         'firma' => (string)(int)($raw['firma'] ?? 0), 'role' => (string)(int)($raw['role'] ?? 0),
+        'slot' => (string)max(-1, (int)($raw['slot'] ?? -1)),
         'pobocka' => (string)(int)($raw['pobocka'] ?? -1),
-        'zdroj' => in_array((string)($raw['zdroj'] ?? 'vse'), ['1', '2', 'vse'], true) ? (string)($raw['zdroj'] ?? 'vse') : 'vse',
-        'stav' => in_array((string)($raw['stav'] ?? 'vse'), ['aktivni', 'ceka', 'neaktivni', 'vse'], true) ? (string)($raw['stav'] ?? 'vse') : 'vse',
+        'zdroj' => in_array((string)($raw['zdroj'] ?? 'vse'), ['1', '2', '3', 'vse'], true) ? (string)($raw['zdroj'] ?? 'vse') : 'vse',
+        'stav' => in_array((string)($raw['stav'] ?? 'vse'), ['aktivni', 'neaktivni', 'vse'], true) ? (string)($raw['stav'] ?? 'vse') : 'vse',
     ];
 }
 
@@ -117,7 +155,7 @@ function cb_admin_uzivatele_nacti(mysqli $db, array $source): array
     $perPage = (int)($source['usr_per'] ?? 50);
     if (!in_array($perPage, $perOptions, true)) { $perPage = 50; }
     $page = max(1, (int)($source['usr_p'] ?? 1));
-    $sortMap = ['id' => 'u.id_user', 'uzivatel' => 'u.prijmeni,u.jmeno', 'kontakt' => 'u.email,u.telefon', 'firma' => 'f.obchodni_jmeno', 'role' => 'role', 'pobocky' => 'pobocka_main', 'zdroj' => 'u.zdroj', 'stav' => 'u.aktivni'];
+    $sortMap = ['id' => 'u.id_user', 'uzivatel' => 'u.prijmeni,u.jmeno', 'kontakt' => 'u.email,u.telefon', 'firma' => 'f.obchodni_jmeno', 'role' => 'role', 'slot' => 'slot', 'pobocky' => 'pobocka_main', 'zdroj' => 'u.zdroj', 'stav' => 'u.aktivni'];
     $sort = (string)($source['usr_sort'] ?? 'uzivatel');
     if (!isset($sortMap[$sort])) { $sort = 'uzivatel'; }
     $dir = strtolower((string)($source['usr_dir'] ?? 'asc')) === 'desc' ? 'desc' : 'asc';
@@ -129,10 +167,10 @@ function cb_admin_uzivatele_nacti(mysqli $db, array $source): array
     $addLike('CONCAT_WS(" ",u.email,u.telefon)', $filters['kontakt']);
     if ((int)$filters['firma'] > 0) { $where[] = 'u.id_firma=?'; $params[] = (int)$filters['firma']; }
     if ((int)$filters['role'] > 0) { $where[] = 'EXISTS (SELECT 1 FROM user_role urf WHERE urf.id_user=u.id_user AND urf.id_role=?)'; $params[] = (int)$filters['role']; }
+    if ((int)$filters['slot'] >= 0) { $where[] = 'EXISTS (SELECT 1 FROM user_slot usf WHERE usf.id_user=u.id_user AND usf.id_slot=?)'; $params[] = (int)$filters['slot']; }
     if ((int)$filters['pobocka'] >= 0) { $where[] = 'EXISTS (SELECT 1 FROM user_pobocka upf WHERE upf.id_user=u.id_user AND (upf.id_pob=? OR upf.pob_all=1))'; $params[] = (int)$filters['pobocka']; }
     if ($filters['zdroj'] !== 'vse') { $where[] = 'u.zdroj=?'; $params[] = (int)$filters['zdroj']; }
-    if ($filters['stav'] === 'aktivni') { $where[] = 'u.aktivni=1 AND u.heslo_hash IS NOT NULL AND u.heslo_hash<>""'; }
-    if ($filters['stav'] === 'ceka') { $where[] = 'u.aktivni=1 AND (u.heslo_hash IS NULL OR u.heslo_hash="")'; }
+    if ($filters['stav'] === 'aktivni') { $where[] = 'u.aktivni=1'; }
     if ($filters['stav'] === 'neaktivni') { $where[] = 'u.aktivni=0'; }
     $whereSql = $where === [] ? '' : ' WHERE ' . implode(' AND ', $where);
     $count = $db->prepare('SELECT COUNT(*) AS c FROM user u' . $whereSql);
@@ -149,6 +187,12 @@ function cb_admin_uzivatele_nacti(mysqli $db, array $source): array
                    ORDER BY ur_top.id_role ASC
                    LIMIT 1
                ), "") AS role,
+               COALESCE((
+                   SELECT GROUP_CONCAT(DISTINCT cs.slot ORDER BY us.id_slot SEPARATOR "||")
+                   FROM user_slot us
+                   INNER JOIN cis_slot cs ON cs.id_slot=us.id_slot
+                   WHERE us.id_user=u.id_user
+               ), "") AS slot,
                MAX(CASE WHEN up.main=1 THEN p.nazev ELSE NULL END) AS pobocka_main,
                CASE
                    WHEN MAX(COALESCE(up.pob_all,0))=1 THEN (
@@ -168,7 +212,10 @@ function cb_admin_uzivatele_nacti(mysqli $db, array $source): array
     $bindParams = $params; $bindParams[] = $perPage; $bindParams[] = $offset;
     $types = implode('', array_map(static fn ($value): string => is_int($value) ? 'i' : 's', $bindParams)); $bind = [&$types]; foreach ($bindParams as $index => $value) { $bind[] = &$bindParams[$index]; } call_user_func_array([$stmt, 'bind_param'], $bind);
     $stmt->execute(); $res=$stmt->get_result(); $rows=[];
-    while ($row=$res->fetch_assoc()) { $rows[]=$row; } $stmt->close();
+    while ($row=$res->fetch_assoc()) {
+        $row['slot'] = cb_admin_uzivatele_sloty_text((string)($row['slot'] ?? ''));
+        $rows[]=$row;
+    } $stmt->close();
     return ['rows'=>$rows,'total'=>$total,'page'=>$page,'pages'=>$pages,'per_page'=>$perPage,'per_options'=>$perOptions,'filters'=>$filters,'sort'=>$sort,'dir'=>$dir,'first_row'=>$total === 0 ? 0 : $offset + 1,'last_row'=>min($offset + $perPage, $total)];
 }
 
@@ -179,8 +226,9 @@ function cb_admin_uzivatel_detail(mysqli $db, int $idUser): ?array
     $stmt->bind_param('i', $idUser); $stmt->execute(); $user=$stmt->get_result()->fetch_assoc(); $stmt->close();
     if (!is_array($user)) { return null; }
     $stmt=$db->prepare('SELECT id_role FROM user_role WHERE id_user=? ORDER BY id_role'); $stmt->bind_param('i',$idUser); $stmt->execute(); $res=$stmt->get_result(); $roles=[]; while($row=$res->fetch_assoc()){$roles[]=(int)$row['id_role'];}$stmt->close();
+    $stmt=$db->prepare('SELECT us.id_slot,cs.slot FROM user_slot us INNER JOIN cis_slot cs ON cs.id_slot=us.id_slot WHERE us.id_user=? ORDER BY us.id_slot'); $stmt->bind_param('i',$idUser); $stmt->execute(); $res=$stmt->get_result(); $slotIds=[]; $slotNames=[]; while($row=$res->fetch_assoc()){$slotIds[]=(int)$row['id_slot'];$slotNames[]=(string)$row['slot'];}$stmt->close();
     $stmt=$db->prepare('SELECT id_pob,main,pob_all FROM user_pobocka WHERE id_user=? ORDER BY id_pob'); $stmt->bind_param('i',$idUser); $stmt->execute(); $res=$stmt->get_result(); $pob=[]; $pobAll=false; $main=-1; while($row=$res->fetch_assoc()){ $pob[]=(int)$row['id_pob']; $pobAll=$pobAll || (int)$row['pob_all']===1; if((int)$row['main']===1){$main=(int)$row['id_pob'];}} $stmt->close();
-    $user['role']=$roles; $user['pobocky']=$pob; $user['pob_all']=$pobAll; $user['id_pob_hlavni']=$main; return $user;
+    $user['role']=$roles; $user['slot_ids']=$slotIds; $user['slot']=cb_admin_uzivatele_sloty_text(implode('||',$slotNames)); $user['pobocky']=$pob; $user['pob_all']=$pobAll; $user['id_pob_hlavni']=$main; return $user;
 }
 
 function cb_admin_uzivatel_uloz(mysqli $db, array $post): array
@@ -189,6 +237,7 @@ function cb_admin_uzivatel_uloz(mysqli $db, array $post): array
     $before = cb_admin_uzivatel_detail($db, $idUser);
     if (!is_array($before)) { throw new CbUserVisibleException('Uživatel neexistuje.'); }
     $idFirma = (int)($post['id_firma'] ?? 0); $idRole = (int)($post['id_role'] ?? 0);
+    $sloty = array_values(array_unique(array_filter(array_map('intval', (array)($post['id_slot'] ?? [])), static fn (int $id): bool => $id > 0)));
     $jmeno = trim((string)($post['jmeno'] ?? '')); $prijmeni = trim((string)($post['prijmeni'] ?? ''));
     $email = trim((string)($post['email'] ?? '')); $telefon = trim((string)($post['telefon'] ?? ''));
     $aktivni = (int)($post['aktivni'] ?? 0) === 1 ? 1 : 0;
@@ -201,12 +250,18 @@ function cb_admin_uzivatel_uloz(mysqli $db, array $post): array
         $stmt=$db->prepare('SELECT 1 FROM firma WHERE id_firma=? AND aktivni=1 LIMIT 1'); $stmt->bind_param('i',$idFirma); $stmt->execute(); $okFirma=$stmt->get_result()->fetch_row()!==null; $stmt->close();
         $stmt=$db->prepare('SELECT 1 FROM cis_role WHERE id_role=? AND aktivni=1 LIMIT 1'); $stmt->bind_param('i',$idRole); $stmt->execute(); $okRole=$stmt->get_result()->fetch_row()!==null; $stmt->close();
         if (!$okFirma || !$okRole) { throw new CbUserVisibleException('Firma nebo role není aktivní.'); }
+        if ($sloty !== []) {
+            $slotMarks=implode(',',array_fill(0,count($sloty),'?')); $slotTypes=str_repeat('i',count($sloty)); $stmt=$db->prepare('SELECT COUNT(*) AS c FROM cis_slot WHERE id_slot IN ('.$slotMarks.')'); $slotBind=[&$slotTypes]; foreach($sloty as $index=>$value){$slotBind[]=&$sloty[$index];} call_user_func_array([$stmt,'bind_param'],$slotBind); $stmt->execute(); $validSloty=(int)($stmt->get_result()->fetch_assoc()['c']??0); $stmt->close();
+            if($validSloty!==count($sloty)){throw new CbUserVisibleException('Vybraný slot neexistuje.');}
+        }
         $marks=implode(',', array_fill(0,count($pobocky),'?')); $types='i'.str_repeat('i',count($pobocky)); $stmt=$db->prepare('SELECT COUNT(*) AS c FROM pobocka WHERE aktivni=1 AND id_firma=? AND id_pob IN ('.$marks.')'); $bind=[&$types,&$idFirma]; foreach($pobocky as $index=>$value){$bind[]=&$pobocky[$index];} call_user_func_array([$stmt,'bind_param'],$bind); $stmt->execute(); $validPob=(int)($stmt->get_result()->fetch_assoc()['c']??0);$stmt->close();
         if($validPob!==count($pobocky)){throw new CbUserVisibleException('Vybrané pobočky musí patřit vybrané firmě a být aktivní.');}
         $duvodNeaktivni = $aktivni === 1 ? null : 'rucni_deaktivace';
         $stmt=$db->prepare('UPDATE user SET id_firma=?,jmeno=?,prijmeni=?,email=?,telefon=?,aktivni=?,duvod_neaktivni=? WHERE id_user=?'); $stmt->bind_param('issssisi',$idFirma,$jmeno,$prijmeni,$email,$telefon,$aktivni,$duvodNeaktivni,$idUser);$stmt->execute();$stmt->close();
         $stmt=$db->prepare('DELETE FROM user_role WHERE id_user=?');$stmt->bind_param('i',$idUser);$stmt->execute();$stmt->close();
         $stmt=$db->prepare('INSERT INTO user_role (id_user,id_role) VALUES (?,?)');$stmt->bind_param('ii',$idUser,$idRole);$stmt->execute();$stmt->close();
+        $stmt=$db->prepare('DELETE FROM user_slot WHERE id_user=?');$stmt->bind_param('i',$idUser);$stmt->execute();$stmt->close();
+        if($sloty!==[]){$stmt=$db->prepare('INSERT INTO user_slot (id_user,id_slot) VALUES (?,?)');foreach($sloty as $idSlot){$stmt->bind_param('ii',$idUser,$idSlot);$stmt->execute();}$stmt->close();}
         $stmt=$db->prepare('DELETE FROM user_pobocka WHERE id_user=?');$stmt->bind_param('i',$idUser);$stmt->execute();$stmt->close();
         $stmt=$db->prepare('INSERT INTO user_pobocka (id_user,id_pob,main,pob_all) VALUES (?,?,?,?)'); $saved=$pobAll?[$idPobHlavni>=0?$idPobHlavni:reset($pobocky)]:$pobocky; foreach($saved as $idPob){$main=$idPobHlavni>=0&&$idPob===$idPobHlavni?1:0;$all=$pobAll?1:0;$stmt->bind_param('iiii',$idUser,$idPob,$main,$all);$stmt->execute();}$stmt->close();
         $db->commit();

@@ -156,7 +156,7 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
         $aktivniUser = 1;
         $schvalenUser = 1;
         $inSystem = 0;
-        $zdrojUser = 2;
+        $zdrojUser = 3;
         $hesloHash = null;
         $stmt = $db->prepare('
             INSERT INTO user (id_firma, jmeno, prijmeni, email, heslo_hash, telefon, aktivni, in_system, schvalen, zdroj)

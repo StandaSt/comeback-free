@@ -213,7 +213,7 @@ try {
         $sendJson(200, ['ok' => true, 'id_obj' => $idObj]);
     }
 
-    if (in_array($action, ['add_person', 'delete_person', 'update_time', 'update_kuryr'], true)) {
+    if (in_array($action, ['add_person', 'update_time', 'update_kuryr'], true)) {
         $assertReportUser($idUser, $idSlot);
     }
 
@@ -262,6 +262,7 @@ try {
     }
 
     if ($action === 'delete_person') {
+        $assertPersonRow();
         cb_db_dr_pracovni_osoby_delete($conn, $idDr, $idUser, $idSlot);
         $sendJson(200, ['ok' => true, 'id_dr' => $idDr]);
     }

@@ -5,7 +5,7 @@ declare(strict_types=1);
 
 function cb_admin_uzivatele_navrat_url(array $source): string
 {
-    $sortKeys = ['id', 'uzivatel', 'kontakt', 'firma', 'role', 'pobocky', 'zdroj', 'stav'];
+    $sortKeys = ['id', 'uzivatel', 'kontakt', 'firma', 'role', 'slot', 'pobocky', 'zdroj', 'stav'];
     $perOptions = [20, 50, 100, 500];
     $perPage = (int)($source['usr_per'] ?? 50);
     $params = [
@@ -54,6 +54,20 @@ function cb_admin_uzivatel_pobocky_html(array $pobockyByFirma, ?array $user = nu
     return (string)ob_get_clean();
 }
 
+function cb_admin_uzivatel_sloty_html(array $slotOptions, array $selectedIds = [], string $formId = ''): string
+{
+    $selected = array_flip(array_map('intval', $selectedIds));
+    ob_start();
+    ?>
+    <div class="admin_user_slot_picker">
+        <?php foreach ($slotOptions as $slot): $idSlot = (int)($slot['id'] ?? 0); ?>
+            <label><input type="checkbox" name="id_slot[]" value="<?= h((string)$idSlot) ?>"<?= $formId !== '' ? ' form="' . h($formId) . '"' : '' ?><?= isset($selected[$idSlot]) ? ' checked' : '' ?>> <?= h(cb_admin_uzivatele_sloty_text((string)($slot['nazev'] ?? ''))) ?></label>
+        <?php endforeach; ?>
+    </div>
+    <?php
+    return (string)ob_get_clean();
+}
+
 function cb_admin_uzivatel_detail_html(array $detail, array $lists): string
 {
     $pobockyByFirma = [];
@@ -71,6 +85,7 @@ function cb_admin_uzivatel_detail_html(array $detail, array $lists): string
         <label>Jméno: <input form="<?= h($editFormId) ?>" name="jmeno" maxlength="60" value="<?= h((string)$detail['jmeno']) ?>" required></label><label>Příjmení: <input form="<?= h($editFormId) ?>" name="prijmeni" maxlength="80" value="<?= h((string)$detail['prijmeni']) ?>" required></label>
         <label>E-mail: <input form="<?= h($editFormId) ?>" type="email" name="email" maxlength="150" value="<?= h((string)$detail['email']) ?>" required></label><label>Telefon: <input form="<?= h($editFormId) ?>" name="telefon" maxlength="30" value="<?= h((string)$detail['telefon']) ?>"></label>
         <label>Role: <select form="<?= h($editFormId) ?>" name="id_role" required><?php foreach ($lists['role'] as $role): ?><option value="<?= h((string)$role['id']) ?>"<?= $selectedRole === (int)$role['id'] ? ' selected' : '' ?>><?= h((string)$role['nazev']) ?></option><?php endforeach; ?></select></label>
+        <fieldset><legend>Sloty:</legend><?= cb_admin_uzivatel_sloty_html($lists['sloty'], (array)($detail['slot_ids'] ?? []), $editFormId) ?></fieldset>
         <label><input form="<?= h($editFormId) ?>" type="checkbox" name="aktivni" value="1"<?= !empty($detail['aktivni']) ? ' checked' : '' ?>> Aktivní účet</label>
         <fieldset><legend>Pobočky:</legend><?= cb_admin_uzivatel_pobocky_html($pobockyByFirma, $detail, $editFormId) ?></fieldset><button form="<?= h($editFormId) ?>" type="submit">Uložit změny</button>
     </div></div>
