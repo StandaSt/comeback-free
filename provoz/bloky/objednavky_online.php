@@ -48,7 +48,7 @@ declare(strict_types=1);
         $conn->set_charset('utf8mb4');
 
         $branchSql = '
-            SELECT p.id_pob, p.nazev, p.pob_color
+            SELECT p.id_pob, p.nazev
             FROM pobocka p
             WHERE p.restia_activePosId IS NOT NULL
               AND p.restia_activePosId <> ""
@@ -65,7 +65,6 @@ declare(strict_types=1);
             $branches[$idPob] = [
                 'id_pob' => $idPob,
                 'nazev' => $name,
-                'barva' => trim((string)($row['pob_color'] ?? '')),
                 'dokonceno' => 0,
                 'na_ceste' => 0,
                 'osobni_odber' => 0,
@@ -133,7 +132,6 @@ declare(strict_types=1);
         $stmt->close();
 
         $labels = [];
-        $barvy = [];
         $dokoncenoData = [];
         $naCesteData = [];
         $osobniOdberData = [];
@@ -152,7 +150,6 @@ declare(strict_types=1);
             $trzba = (float)$branch['trzba'];
 
             $labels[] = (string)$branch['nazev'];
-            $barvy[] = (string)$branch['barva'];
             $dokoncenoData[] = $dokonceno;
             $naCesteData[] = $naCeste;
             $osobniOdberData[] = $osobniOdber;
@@ -174,7 +171,7 @@ declare(strict_types=1);
             'kind' => 'online_stavy',
             'labels' => $labels,
             'series' => [
-                ['id' => 'dokonceno', 'name' => 'Dokončeno', 'data' => $dokoncenoData, 'colors' => $barvy],
+                ['id' => 'dokonceno', 'name' => 'Dokončeno', 'data' => $dokoncenoData],
                 ['id' => 'na_ceste', 'name' => 'Na cestě', 'data' => $naCesteData],
                 ['id' => 'osobni_odber', 'name' => 'Osobní odběr', 'data' => $osobniOdberData],
                 ['id' => 'vyrabi_se', 'name' => 'Vyrábí se', 'data' => $vyrabiSeData],
@@ -193,16 +190,16 @@ declare(strict_types=1);
         <div class="provoz_prehled_online_root" data-graf="1">
             <script type="application/json" data-graf-data><?= $payloadJson ?></script>
 
-            <div class="provoz_prehled_online_summary" data-tooltip-boundary="1">
+            <div class="provoz_prehled_online_summary provoz_prehled_online_legend" data-tooltip-boundary="1">
                 <span class="provoz_prehled_online_states">
-                    <span><strong class="provoz_prehled_online_state_ok"><?= h((string)$sumDokonceno) ?></strong> OK</span>
-                    <span><strong class="provoz_prehled_online_state_road"><?= h((string)$sumNaCeste) ?></strong> na cestě</span>
-                    <span><strong class="provoz_prehled_online_state_pickup"><?= h((string)$sumOsobniOdber) ?></strong> os. odběr</span>
-                    <span><strong class="provoz_prehled_online_state_work"><?= h((string)$sumVyrabiSe) ?></strong> vyrábí se</span>
-                    <span><strong class="provoz_prehled_online_state_cancel"><?= h((string)$sumZruseno) ?></strong> zrušeno</span>
+                    <span class="provoz_prehled_online_badge provoz_prehled_online_state_ok"><strong><?= h((string)$sumDokonceno) ?></strong> OK</span>
+                    <span class="provoz_prehled_online_badge provoz_prehled_online_state_road"><strong><?= h((string)$sumNaCeste) ?></strong> na cestě</span>
+                    <span class="provoz_prehled_online_badge provoz_prehled_online_state_pickup"><strong><?= h((string)$sumOsobniOdber) ?></strong> os. odběr</span>
+                    <span class="provoz_prehled_online_badge provoz_prehled_online_state_work"><strong><?= h((string)$sumVyrabiSe) ?></strong> vyrábí se</span>
+                    <span class="provoz_prehled_online_badge provoz_prehled_online_state_cancel"><strong><?= h((string)$sumZruseno) ?></strong> zrušeno</span>
                 </span>
 
-                <span class="provoz_tooltip" tabindex="0" aria-label="Souhrn online objednávek" data-tooltip="1">
+                <span class="provoz_tooltip" tabindex="0" aria-label="Souhrn online objednávek" data-tooltip="1" data-tooltip-position="chart-right">
                     <span>detail</span>
                     <span class="provoz_tooltip_panel provoz_tooltip_card" data-tooltip-panel="1">
                         <span class="provoz_tooltip_title">Online objednávky podle poboček</span>

@@ -17,6 +17,44 @@
     return floatingPanel;
   }
 
+  function positionOutsideRect(boundaryRect, panelWidth, panelHeight) {
+    const gap = 12;
+    const extraRightOffset = 15;
+    const width = Number(panelWidth) || 0;
+    const height = Number(panelHeight) || 0;
+    const viewWidth = w.innerWidth || d.documentElement.clientWidth || 0;
+    const viewHeight = w.innerHeight || d.documentElement.clientHeight || 0;
+    let left = boundaryRect.right + gap + extraRightOffset;
+    if (left + width + gap > viewWidth) {
+      left = boundaryRect.left - width - gap;
+    }
+
+    let top = boundaryRect.top + gap;
+    if (top + height + gap > viewHeight) {
+      top = viewHeight - height - gap;
+    }
+
+    return [
+      Math.max(gap, Math.min(left, Math.max(gap, viewWidth - width - gap))),
+      Math.max(gap, Math.min(top, Math.max(gap, viewHeight - height - gap)))
+    ];
+  }
+
+  function positionChartSidePanel(target, panel) {
+    if (target.dataset.tooltipPosition !== 'chart-right') return;
+
+    const root = target.closest('.provoz_prehled_online_root');
+    const canvas = root instanceof HTMLElement ? root.querySelector('[data-graf-canvas="1"]') : null;
+    if (!(canvas instanceof HTMLElement)) return;
+
+    panel.style.position = 'fixed';
+    panel.style.right = 'auto';
+    const panelRect = panel.getBoundingClientRect();
+    const position = positionOutsideRect(canvas.getBoundingClientRect(), panelRect.width, panelRect.height);
+    panel.style.left = `${Math.round(position[0])}px`;
+    panel.style.top = `${Math.round(position[1])}px`;
+  }
+
   function positionFloatingPanel(target, panel) {
     const targetRect = target.getBoundingClientRect();
     const panelRect = panel.getBoundingClientRect();
@@ -112,7 +150,10 @@
       const panel = tooltip.querySelector('[data-tooltip-panel="1"], .provoz_tooltip_panel');
       if (!(panel instanceof HTMLElement)) return;
 
-      const showPanel = () => panel.classList.add('provoz_tooltip_panel_visible');
+      const showPanel = () => {
+        panel.classList.add('provoz_tooltip_panel_visible');
+        positionChartSidePanel(tooltip, panel);
+      };
       const hidePanel = () => panel.classList.remove('provoz_tooltip_panel_visible');
 
       tooltip.addEventListener('mouseenter', showPanel);
@@ -124,6 +165,7 @@
 
   CB_TOOLTIP.init = init;
   CB_TOOLTIP.hideAll = hideAllTooltips;
+  CB_TOOLTIP.positionOutsideRect = positionOutsideRect;
 
   d.addEventListener('pointerdown', (event) => {
     const target = event.target instanceof Element ? event.target : null;

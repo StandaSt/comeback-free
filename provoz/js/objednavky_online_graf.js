@@ -32,53 +32,20 @@
       .replace(/'/g, '&#039;');
   }
 
-  function lightenColor(color, amount) {
-    const raw = String(color || '').trim();
-    const match = raw.match(/^#([0-9a-f]{6})$/i);
-    if (!match) return '#cbd5e1';
-
-    const hex = match[1];
-    const ratio = Math.max(0, Math.min(1, Number(amount) || 0));
-    const mix = (offset) => {
-      const base = parseInt(hex.slice(offset, offset + 2), 16);
-      const next = Math.round(base + ((255 - base) * ratio));
-      return String(next.toString(16)).padStart(2, '0');
-    };
-
-    return '#' + mix(0) + mix(2) + mix(4);
-  }
-
   function positionTooltipOutsideBlock(canvas) {
     return (point, params, dom, rect, size) => {
       const contentSize = size && Array.isArray(size.contentSize) ? size.contentSize : [0, 0];
-      const gap = 12;
-      const extraRightOffset = 15;
       const width = Number(contentSize[0]) || 0;
       const height = Number(contentSize[1]) || 0;
-      const viewWidth = w.innerWidth || document.documentElement.clientWidth || 0;
-      const viewHeight = w.innerHeight || document.documentElement.clientHeight || 0;
-      const boundary = canvas instanceof HTMLElement ? canvas.closest('[data-tooltip-boundary="1"]') : null;
-      const boundaryRect = boundary instanceof HTMLElement
-        ? boundary.getBoundingClientRect()
-        : (canvas instanceof HTMLElement ? canvas.getBoundingClientRect() : { left: 0, right: 0, top: 0 });
+      const boundaryRect = canvas instanceof HTMLElement ? canvas.getBoundingClientRect() : { left: 0, right: 0, top: 0 };
       const canvasRect = canvas instanceof HTMLElement ? canvas.getBoundingClientRect() : { left: 0, top: 0 };
-
-      let viewportX = boundaryRect.right + gap + extraRightOffset;
-      if (viewportX + width + gap > viewWidth) {
-        viewportX = boundaryRect.left - width - gap;
-      }
-
-      let viewportY = boundaryRect.top + gap;
-      if (viewportY + height + gap > viewHeight) {
-        viewportY = viewHeight - height - gap;
-      }
-
-      viewportX = Math.max(gap, Math.min(viewportX, Math.max(gap, viewWidth - width - gap)));
-      viewportY = Math.max(gap, Math.min(viewportY, Math.max(gap, viewHeight - height - gap)));
+      const position = w.CB_TOOLTIP && typeof w.CB_TOOLTIP.positionOutsideRect === 'function'
+        ? w.CB_TOOLTIP.positionOutsideRect(boundaryRect, width, height)
+        : [boundaryRect.right + 27, boundaryRect.top + 12];
 
       return [
-        viewportX - canvasRect.left,
-        viewportY - canvasRect.top
+        position[0] - canvasRect.left,
+        position[1] - canvasRect.top
       ];
     };
   }
@@ -102,11 +69,6 @@
     return item && Array.isArray(item.data) ? item.data : [];
   }
 
-  function getSeriesColors(payload, seriesId, fallbackIndex) {
-    const item = getSeriesItem(payload, seriesId, fallbackIndex);
-    return item && Array.isArray(item.colors) ? item.colors.map((value) => String(value || '')) : [];
-  }
-
   CB_GRAFY.register('online_stavy', function objednavkyOnlineGraf(payload, canvas) {
     const labels = Array.isArray(payload.labels) ? payload.labels.map((item) => String(item)) : [];
     const dokoncenoRaw = getSeriesData(payload, 'dokonceno', 0);
@@ -116,7 +78,6 @@
     const zrusenoRaw = getSeriesData(payload, 'zruseno', 4);
     const objednavkyRaw = getSeriesData(payload, 'objednavky', 5);
     const trzbaRaw = getSeriesData(payload, 'trzba', 6);
-    const colorsRaw = getSeriesColors(payload, 'dokonceno', 0);
     const dokonceno = dokoncenoRaw.map((item) => Number(item) || 0);
     const naCeste = naCesteRaw.map((item) => Number(item) || 0);
     const osobniOdber = osobniOdberRaw.map((item) => Number(item) || 0);
@@ -128,8 +89,6 @@
       return payloadValue > 0 ? payloadValue : stackValue;
     });
     const trzba = labels.map((label, index) => Number(trzbaRaw[index] || 0) || 0);
-    const colors = colorsRaw.map((item) => String(item || ''));
-
     return {
       grid: MINI_SLOUPEC_GRID,
       tooltip: {
@@ -196,10 +155,9 @@
           stack: 'online',
           barGap: '25%',
           barMaxWidth: MINI_SLOUPEC_BAR_MAX_WIDTH,
-          data: labels.map((label, index) => ({
-            value: dokonceno[index] ?? 0,
-            itemStyle: { color: colors[index] || '#16a34a' }
-          }))
+          itemStyle: { color: '#7bdca5' },
+          emphasis: { disabled: true },
+          data: dokonceno
         },
         {
           name: 'Na cestě',
@@ -208,6 +166,7 @@
           stack: 'online',
           barMaxWidth: MINI_SLOUPEC_BAR_MAX_WIDTH,
           itemStyle: { color: '#f59e0b' },
+          emphasis: { disabled: true },
           data: naCeste
         },
         {
@@ -217,6 +176,7 @@
           stack: 'online',
           barMaxWidth: MINI_SLOUPEC_BAR_MAX_WIDTH,
           itemStyle: { color: '#0ea5e9' },
+          emphasis: { disabled: true },
           data: osobniOdber
         },
         {
@@ -226,6 +186,7 @@
           stack: 'online',
           barMaxWidth: MINI_SLOUPEC_BAR_MAX_WIDTH,
           itemStyle: { color: '#dc2626' },
+          emphasis: { disabled: true },
           data: vyrabiSe
         },
         {
@@ -235,6 +196,7 @@
           stack: 'online',
           barMaxWidth: MINI_SLOUPEC_BAR_MAX_WIDTH,
           itemStyle: { color: '#64748b' },
+          emphasis: { disabled: true },
           data: zruseno
         },
         {
@@ -263,14 +225,12 @@
           yAxisIndex: 1,
           barWidth: 5,
           barMaxWidth: 5,
-          data: labels.map((label, index) => ({
-            value: trzba[index] ?? 0,
-            itemStyle: {
-              color: lightenColor(colors[index] || '#16a34a', 0.45),
-              borderColor: colors[index] || '#16a34a',
-              borderWidth: 1
-            }
-          })),
+          itemStyle: {
+            color: '#cbd5e1',
+            borderColor: '#64748b',
+            borderWidth: 1
+          },
+          data: trzba,
           label: {
             show: false
           }

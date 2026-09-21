@@ -368,8 +368,14 @@
   justify-content:space-between;
   align-items:flex-start;
   gap:8px;
-  font-size:var(--cb-font-11);
   line-height:1.15;
+}
+
+/* Objednavky online - jednotna velikost celeho radku legendy vcetne detailu. */
+.provoz_prehled_online_legend,
+.provoz_prehled_online_legend .provoz_prehled_online_states,
+.provoz_prehled_online_legend .provoz_tooltip{
+  font-size:var(--cb-font-12);
 }
 
 /* Objednavky online - seznam stavu. */
@@ -379,29 +385,56 @@
   gap:8px;
 }
 
-/* Objednavky online - barva stavu OK. */
+/* Objednavky online - stavovy stitek legendy. */
+.provoz_prehled_online_badge{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:3px 8px;
+  border:1px solid #94a3b8;
+  border-radius:999px;
+  background:#f8fafc;
+  color:#0f172a;
+  line-height:1.2;
+  white-space:nowrap;
+}
+
+.provoz_prehled_online_badge::before{
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  background:var(--provoz-online-state-color);
+  content:"";
+  flex:0 0 14px;
+}
+
+.provoz_prehled_online_badge strong{
+  color:#0f172a;
+}
+
+/* Objednavky online - barva stavu OK shodna s grafem. */
 .provoz_prehled_online_state_ok{
-  color:#16a34a;
+  --provoz-online-state-color:#7bdca5;
 }
 
-/* Objednavky online - barva stavu na ceste. */
+/* Objednavky online - barva stavu na ceste shodna s grafem. */
 .provoz_prehled_online_state_road{
-  color:#f59e0b;
+  --provoz-online-state-color:#f59e0b;
 }
 
-/* Objednavky online - barva stavu osobni odber. */
+/* Objednavky online - barva stavu osobni odber shodna s grafem. */
 .provoz_prehled_online_state_pickup{
-  color:#0ea5e9;
+  --provoz-online-state-color:#0ea5e9;
 }
 
-/* Objednavky online - barva stavu vyrabi se. */
+/* Objednavky online - barva stavu vyrabi se shodna s grafem. */
 .provoz_prehled_online_state_work{
-  color:#dc2626;
+  --provoz-online-state-color:#dc2626;
 }
 
-/* Objednavky online - barva stavu zruseno. */
+/* Objednavky online - barva stavu zruseno shodna s grafem. */
 .provoz_prehled_online_state_cancel{
-  color:#64748b;
+  --provoz-online-state-color:#64748b;
 }
 
 /* Objednavky online - plocha grafu. */
@@ -497,10 +530,22 @@
 
 .provoz_tooltip_card,
 .provoz_chart_tooltip{
-  background:var(--cb-bg-panel);
-  border-color:var(--cb-border);
+  background:color-mix(in srgb, var(--cb-module-accent) 9%, var(--cb-bg-panel));
+  border-width:2px;
+  border-color:color-mix(in srgb, var(--cb-module-accent) 72%, var(--cb-border));
   color:var(--cb-text-main);
-  box-shadow:0 8px 24px var(--cb-shadow);
+  box-shadow:
+    0 14px 32px color-mix(in srgb, #000 32%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--cb-module-accent) 18%, transparent);
+}
+
+.provoz_tooltip_card .provoz_tooltip_title,
+.provoz_chart_tooltip .provoz_tooltip_title{
+  margin:-8px -8px 7px;
+  padding:6px 8px;
+  border-radius:6px 6px 0 0;
+  background:var(--cb-module-accent);
+  color:#fff;
 }
 
 /* Zadani denniho reportu */

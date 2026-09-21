@@ -16,9 +16,10 @@ require_once __DIR__ . '/../lib/nezadane_reporty_export_data.php';
         $data = cb_denni_report_prehled_data($conn);
         $missingReports = is_array($data['missingReports'] ?? null) ? $data['missingReports'] : [];
         $missingReportsMonth = is_array($data['missingReportsMonth'] ?? null) ? $data['missingReportsMonth'] : [];
-        $missingReportsMonthText = $missingReportsMonth !== []
-            ? implode(', ', array_map(static fn(array $row): string => (string)$row['nazev'] . ' ' . (string)((int)($row['missing_count'] ?? 0)) . 'x', $missingReportsMonth))
-            : 'OK';
+        $missingReportsMonthText = implode(', ', array_map(
+            static fn(array $row): string => (string)$row['nazev'] . ' ' . (string)((int)($row['missing_count'] ?? 0)) . 'x',
+            $missingReportsMonth
+        ));
     } catch (Throwable $e) {
         echo '<section class="blok"><h2 class="blok_title">Nezadané denní reporty</h2><p class="txt_cervena">Data se nepodařilo načíst.</p></section>';
         return;
@@ -52,8 +53,12 @@ require_once __DIR__ . '/../lib/nezadane_reporty_export_data.php';
             </table>
         </div>
         <p class="provoz_prehled_text">&nbsp;</p>
-        <p class="provoz_prehled_text txt_seda">Tento měsíc chybí reporty:</p>
-        <p class="provoz_prehled_text txt_seda"><?= h($missingReportsMonthText) ?></p>
+        <?php if ($missingReportsMonth !== []): ?>
+            <p class="provoz_prehled_text txt_seda">Tento měsíc chybí reporty:</p>
+            <p class="provoz_prehled_text txt_seda"><?= h($missingReportsMonthText) ?></p>
+        <?php else: ?>
+            <p class="provoz_prehled_text txt_seda">Tento měsíc jsou zadány všechny reporty.</p>
+        <?php endif; ?>
 
     </section>
     <?php
