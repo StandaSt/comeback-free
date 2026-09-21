@@ -25,7 +25,7 @@ function cb_admin_prihlaseni_pokusy(mysqli $db, int $limit): array
         SELECT
             b.id_bad_login, b.email, b.ip, b.user_agent, b.screen_w, b.screen_h,
             b.is_touch, b.kdy,
-            u.id_user, u.jmeno, u.prijmeni, u.aktivni,
+            u.id_user, u.jmeno, u.prijmeni, hp.aktivni,
             (
                 SELECT ul.kdy
                 FROM user_login ul
@@ -89,6 +89,7 @@ function cb_admin_prihlaseni_pokusy(mysqli $db, int $limit): array
             LIMIT ' . $limit . '
         ) b
         LEFT JOIN user u ON LOWER(u.email) = LOWER(b.email)
+        LEFT JOIN hr_person hp ON hp.id_user = u.id_user
         ORDER BY b.kdy DESC, b.id_bad_login DESC
     ';
     $result = $db->query($sql);
@@ -156,4 +157,3 @@ function cb_admin_prihlaseni_2fa(mysqli $db, int $limit): array
     $result->free();
     return $rows;
 }
-

@@ -10,6 +10,7 @@ require_once __DIR__ . '/../../helpdesk/hl_lib/hl_pages.php';
 <script>
 window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
 window.CB_CRF_TOKEN = <?= json_encode(function_exists('cb_crf_token') ? cb_crf_token() : '', JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+window.CB_PC_SESSION_TOKEN = <?= json_encode((string)($_SESSION['cb_pc_session_token'] ?? ''), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
 </script>
 <?php // Jednotná ochrana zápisových požadavků. ?>
 <script src="<?= h(cb_public_url('js/ochrana_crf.js') . '?v=' . (is_file(__DIR__ . '/../js/ochrana_crf.js') ? (string)filemtime(__DIR__ . '/../js/ochrana_crf.js') : '1')) ?>"></script>
@@ -19,6 +20,8 @@ window.CB_CRF_TOKEN = <?= json_encode(function_exists('cb_crf_token') ? cb_crf_t
 <script src="<?= h(cb_asset_url('js/echarts.min.js')) ?>"></script>
 <?php // Zakladni AJAX funkce aplikace. ?>
 <script src="<?= h(cb_asset_url('js/ajax_core.js')) ?>"></script>
+<?php // Pravidelne potvrzeni zive session tohoto okna. ?>
+<script src="<?= h(cb_public_url('js/pc_session.js') . '?v=' . (is_file(__DIR__ . '/../js/pc_session.js') ? (string)filemtime(__DIR__ . '/../js/pc_session.js') : '1')) ?>"></script>
 <?php // Data grafu modulu Provoz. ?>
 <script src="<?= h(cb_public_url('js/data_grafu.js')) ?>"></script>
 <?php // Spolecne tooltipy aplikace. ?>

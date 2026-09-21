@@ -116,7 +116,8 @@ function cb_cron_nezadane_reporty_closers(mysqli $conn, array $dates): array
                 INTERVAL CASE WHEN sp.cas_do <= sp.cas_od THEN 1 ELSE 0 END DAY
             ) AS end_dt
         FROM smeny_plan sp
-        INNER JOIN `user` u ON u.id_user = sp.id_user AND u.aktivni = 1
+        INNER JOIN `user` u ON u.id_user = sp.id_user
+        INNER JOIN hr_person hp ON hp.id_user = u.id_user AND hp.aktivni = 1
         WHERE sp.id_slot = 1
           AND sp.datum IN ($placeholders)
         ORDER BY sp.datum ASC, sp.id_pob ASC, end_dt DESC, sp.id_user ASC
@@ -157,7 +158,8 @@ function cb_cron_nezadane_reporty_leaders(mysqli $conn): array
     $result = $conn->query("
         SELECT DISTINCT up.id_pob, u.id_user
         FROM user_pobocka up
-        INNER JOIN `user` u ON u.id_user = up.id_user AND u.aktivni = 1
+        INNER JOIN `user` u ON u.id_user = up.id_user
+        INNER JOIN hr_person hp ON hp.id_user = u.id_user AND hp.aktivni = 1
         INNER JOIN user_role ur ON ur.id_user = u.id_user AND ur.id_role = 5
         WHERE up.main = 1
         ORDER BY up.id_pob ASC, u.id_user ASC

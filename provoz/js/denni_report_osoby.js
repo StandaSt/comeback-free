@@ -141,7 +141,9 @@
     const type = getRowType(row);
     const idUser = getRowUserId(row);
     const idDrOsoby = getRowPersonId(row);
-    if (type === '' || idUser <= 0 || idDrOsoby <= 0) return Promise.resolve({ ok: true });
+    if (type === '' || idUser <= 0 || idDrOsoby <= 0 || row.getAttribute('data-zr-time-valid') !== '1') {
+      return Promise.resolve({ ok: true });
+    }
 
     return savePersonAction(root, 'update_time', type, idUser, {
       id_dr_osoby: idDrOsoby,
@@ -341,7 +343,7 @@
   }
 
   function syncHoursForRow(row) {
-    if (!(row instanceof HTMLElement)) return;
+    if (!(row instanceof HTMLElement)) return false;
 
     const startEl = row.querySelector('[data-zr-start]');
     const endEl = row.querySelector('[data-zr-end]');
@@ -350,38 +352,48 @@
     const hoursHiddenEl = row.querySelector('[data-zr-hours-hidden]');
 
     if (!(startEl instanceof HTMLInputElement) || !(endEl instanceof HTMLInputElement) || !(breakEl instanceof HTMLInputElement) || !(hoursEl instanceof HTMLElement) || !(hoursHiddenEl instanceof HTMLInputElement)) {
-      return;
+      return false;
     }
+
+    const invalidate = (input) => {
+      row.setAttribute('data-zr-time-valid', '0');
+      hoursEl.textContent = '—';
+      hoursHiddenEl.value = '';
+      if (input instanceof HTMLInputElement) {
+        input.classList.add('err');
+      }
+      return false;
+    };
 
     const startParsed = parseTimeValue(startEl.value);
     const endParsed = parseTimeValue(endEl.value);
     const breakRaw = String(breakEl.value || '').replace(',', '.');
 
     if (startParsed === null || endParsed === null) {
-      return;
+      return invalidate(startParsed === null ? startEl : endEl);
     }
 
     const startMin = workdayMinutes(startParsed.minutes);
     const endMin = workdayMinutes(endParsed.minutes);
     if (endMin <= startMin) {
-      markTimeInput(endEl, 'err');
-      return;
+      return invalidate(endEl);
     }
     markTimeInput(startEl, startEl.value !== startEl.defaultValue ? 'edit' : '');
     markTimeInput(endEl, endEl.value !== endEl.defaultValue ? 'edit' : '');
+    breakEl.classList.remove('err');
 
     let totalHours = (endMin - startMin) / 60;
     const pauseHours = parseFloat(breakRaw);
-    if (!Number.isNaN(pauseHours)) {
-      totalHours -= pauseHours;
+    if (Number.isNaN(pauseHours) || pauseHours < 0 || pauseHours >= totalHours) {
+      return invalidate(breakEl);
     }
-    if (totalHours < 0) {
-      totalHours = 0;
-    }
+    totalHours -= pauseHours;
 
     const hours = formatWorkedHours(totalHours);
     hoursEl.textContent = hours.label;
     hoursHiddenEl.value = hours.stored;
+    row.setAttribute('data-zr-time-valid', '1');
+    return true;
   }
 
   function syncKuryrExtras(row) {
@@ -697,11 +709,13 @@
         if (!row) return;
 
         if (normalized) {
-          syncHoursForRow(row);
+          const timeValid = syncHoursForRow(row);
           sortPersonRows(list);
-          saveTimeForRow(root, row).catch((err) => {
-            if (w.alert) w.alert(err && err.message ? err.message : 'Uložení času selhalo.');
-          });
+          if (timeValid) {
+            saveTimeForRow(root, row).catch((err) => {
+              if (w.alert) w.alert(err && err.message ? err.message : 'Uložení času selhalo.');
+            });
+          }
         }
         syncReportState(root);
       });
@@ -714,10 +728,13 @@
         if (!(row instanceof HTMLElement)) return;
 
         if (target.hasAttribute('data-zr-break')) {
-          syncHoursForRow(row);
-          saveTimeForRow(root, row).catch((err) => {
-            if (w.alert) w.alert(err && err.message ? err.message : 'Uložení pauzy selhalo.');
-          });
+          const timeValid = syncHoursForRow(row);
+          if (timeValid) {
+            saveTimeForRow(root, row).catch((err) => {
+              if (w.alert) w.alert(err && err.message ? err.message : 'Uložení pauzy selhalo.');
+            });
+          }
+          syncReportState(root);
           return;
         }
 

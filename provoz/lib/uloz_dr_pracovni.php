@@ -13,6 +13,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../db/db_dr_pracovni.php';
 require_once __DIR__ . '/../db/db_dr_pracovni_osoby.php';
+require_once __DIR__ . '/../db/db_zapis_denni_report.php';
 require_once __DIR__ . '/format_datum_cas.php';
 require_once __DIR__ . '/vypocty_report.php';
 require_once __DIR__ . '/vypocet_col_rozdil.php';
@@ -108,10 +109,10 @@ try {
         $stmtPerson = $conn->prepare('
             SELECT 1
             FROM user u
+            INNER JOIN hr_person hp ON hp.id_user = u.id_user AND hp.aktivni = 1
             INNER JOIN user_pobocka up ON up.id_user = u.id_user AND up.id_pob = ?
             INNER JOIN user_slot us ON us.id_user = u.id_user AND us.id_slot = ?
             WHERE u.id_user = ?
-              AND u.aktivni = 1
             LIMIT 1
         ');
         if ($stmtPerson === false) {
@@ -272,7 +273,6 @@ try {
         $smenaOd = trim((string)($_POST['smena_od'] ?? ''));
         $smenaDo = trim((string)($_POST['smena_do'] ?? ''));
         $pauzaRaw = str_replace(',', '.', trim((string)($_POST['pauza'] ?? '')));
-        $odpracovanoRaw = str_replace(',', '.', trim((string)($_POST['odpracovano'] ?? '')));
 
         if ($smenaOd !== '' && !preg_match('/^\d{2}:\d{2}$/', $smenaOd)) {
             $sendJson(422, ['ok' => false, 'err' => 'Neplatny cas od']);
@@ -280,8 +280,20 @@ try {
         if ($smenaDo !== '' && !preg_match('/^\d{2}:\d{2}$/', $smenaDo)) {
             $sendJson(422, ['ok' => false, 'err' => 'Neplatny cas do']);
         }
-        $pauza = $pauzaRaw === '' ? null : (float)$pauzaRaw;
-        $odpracovano = $odpracovanoRaw === '' ? null : (float)$odpracovanoRaw;
+        if ($pauzaRaw !== '' && !is_numeric($pauzaRaw)) {
+            $sendJson(422, ['ok' => false, 'err' => 'Pauza musí být číslo.']);
+        }
+        $pauza = $pauzaRaw === '' ? 0.0 : (float)$pauzaRaw;
+        $workedHours = cb_db_zapis_denni_report_worked_hours($smenaOd, $smenaDo, $pauza);
+        if (empty($workedHours['ok'])) {
+            $personName = cb_denni_report_user_full_name_by_id($conn, $idUser);
+            $personLabel = $personName !== '' ? $personName : 'Pracovník ID ' . $idUser;
+            $sendJson(422, [
+                'ok' => false,
+                'err' => $personLabel . ' má neplatnou směnu ' . $smenaOd . '–' . $smenaDo . '. ' . (string)($workedHours['reason'] ?? ''),
+            ]);
+        }
+        $odpracovano = (float)$workedHours['hours'];
 
         cb_db_dr_pracovni_osoby_update_time(
             $conn,

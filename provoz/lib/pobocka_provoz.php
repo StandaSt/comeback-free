@@ -24,8 +24,8 @@ function cb_pobocka_provoz_closing_time_options(): array
 {
     $options = [];
     foreach ([20, 21, 22, 23, 0, 1, 2, 3, 4] as $hour) {
-        foreach ([0, 30] as $minute) {
-            if ($hour === 4 && $minute === 30) {
+        foreach ([0, 15, 30, 45] as $minute) {
+            if ($hour === 4 && $minute > 0) {
                 continue;
             }
             $options[] = sprintf('%02d:%02d', $hour, $minute);
@@ -172,7 +172,7 @@ function cb_pobocka_provoz_valid_time(string $value, string $label): string
 {
     $value = trim($value);
     if (!in_array($value, cb_pobocka_provoz_closing_time_options(), true)) {
-        throw new CbUserVisibleException('Čas pro den ' . $label . ' musí být mezi 20:00 a 04:00 po 30 minutách.');
+        throw new CbUserVisibleException('Čas pro den ' . $label . ' musí být mezi 20:00 a 04:00 po 15 minutách.');
     }
 
     return $value . ':00';

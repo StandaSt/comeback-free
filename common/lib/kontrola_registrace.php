@@ -58,19 +58,7 @@ if ($maMobil) {
             cb_prvni_vstup_dokonci_login(db(), $localUser);
             return;
         }
-        $loginToken = (string)($_SESSION['cb_token'] ?? '');
-        $_SESSION['login_ok'] = 1;
-        unset($_SESSION['cb_auth_ok']);
-        if ($loginToken !== '') {
-            require_once __DIR__ . '/smeny_graphql.php';
-            try {
-                cb_login_finalize_after_ok($loginToken);
-            } catch (Throwable $e) {
-                unset($_SESSION['login_ok']);
-                $_SESSION['cb_auth_ok'] = 1;
-                throw $e;
-            }
-        }
+        throw new RuntimeException('Přihlášení není navázáno na lokální účet. Přihlaste se znovu.');
     }
     return;
 }

@@ -157,6 +157,15 @@ function hr_post_pracovni_pomer_uprava(mysqli $db): void
                 $stmt->close();
             }
         }
+
+        $novyPracovniPomer = $relationId !== (int)$current['id_pracovni_vztah'];
+        $puvodniUkonceni = trim((string)($current['datum_ukonceni'] ?? ''));
+        if ($novyPracovniPomer || $puvodniUkonceni === '' || $puvodniUkonceni >= date('Y-m-d')) {
+            $stmt = $db->prepare('UPDATE hr_person SET aktivni = 1 WHERE id_person = ?');
+            $stmt->bind_param('i', $idPerson);
+            $stmt->execute();
+            $stmt->close();
+        }
         $db->commit();
         cb_form_finish(cb_root_url('index.php?m=hr&page=zamestnanec&id='.rawurlencode((string)$idPerson).'&sekce=pracovni_pomer'), true, 'Pracovní poměr byl uložen.');
     } catch (Throwable $e) {

@@ -108,6 +108,30 @@ function cb_admin_uzivatele_vytvor(mysqli $db, array $post): int
         $stmt->bind_param('isssssiiii', $idFirma, $jmeno, $prijmeni, $email, $hash, $telefon, $aktivni, $inSystem, $schvalen, $zdroj);
         $stmt->execute(); $idUser = (int)$db->insert_id; $stmt->close();
 
+        // Každý účet má osobu v HR; hr_person.aktivni je jediný zdroj stavu přístupu.
+        $zadalUser = (int)(($_SESSION['cb_user']['id_user'] ?? 0));
+        $zdrojPerson = 'administrace';
+        $stmt = $db->prepare('INSERT INTO hr_person (id_firma,id_user,zdroj,id_user_zadal,vytvoreno,aktivni,overen,kompletni) VALUES (?,?,?,?,NOW(),1,0,0)');
+        $stmt->bind_param('iisi', $idFirma, $idUser, $zdrojPerson, $zadalUser);
+        $stmt->execute(); $idPerson = (int)$db->insert_id; $stmt->close();
+
+        $stmt = $db->prepare('INSERT INTO hr_osobni_udaje (id_person,jmeno,prijmeni,id_user_zadal,vytvoreno,platny) VALUES (?,?,?,?,NOW(),1)');
+        $stmt->bind_param('issi', $idPerson, $jmeno, $prijmeni, $zadalUser);
+        $stmt->execute(); $stmt->close();
+
+        $hlavni = 1; $emailTyp = 1;
+        $stmt = $db->prepare('INSERT INTO hr_email (id_person,id_email_typ,email,hlavni,id_user_zadal,vytvoreno,platny) VALUES (?,?,?,?,?,NOW(),1)');
+        $stmt->bind_param('iisii', $idPerson, $emailTyp, $email, $hlavni, $zadalUser);
+        $stmt->execute(); $stmt->close();
+
+        if ($telefon !== '') {
+            $telefonTyp = 1;
+            $telefonNormalizovany = preg_replace('/\D+/', '', $telefon) ?? '';
+            $stmt = $db->prepare('INSERT INTO hr_telefon (id_person,id_telefon_typ,telefon,telefon_normalizovany,hlavni,id_user_zadal,vytvoreno,platny) VALUES (?,?,?,?,?,?,NOW(),1)');
+            $stmt->bind_param('iissii', $idPerson, $telefonTyp, $telefon, $telefonNormalizovany, $hlavni, $zadalUser);
+            $stmt->execute(); $stmt->close();
+        }
+
         $stmt = $db->prepare('INSERT INTO user_role (id_user,id_role) VALUES (?,?)');
         $stmt->bind_param('ii', $idUser, $idRole); $stmt->execute(); $stmt->close();
 
@@ -149,7 +173,7 @@ function cb_admin_uzivatele_nacti(mysqli $db, array $source): array
     $perPage = (int)($source['usr_per'] ?? 50);
     if (!in_array($perPage, $perOptions, true)) { $perPage = 50; }
     $page = max(1, (int)($source['usr_p'] ?? 1));
-    $sortMap = ['id' => 'u.id_user', 'uzivatel' => 'u.prijmeni,u.jmeno', 'kontakt' => 'u.email,u.telefon', 'firma' => 'f.obchodni_jmeno', 'role' => 'role', 'slot' => 'slot', 'pobocky' => 'pobocka_main', 'zdroj' => 'u.zdroj', 'stav' => 'u.aktivni'];
+    $sortMap = ['id' => 'u.id_user', 'uzivatel' => 'u.prijmeni,u.jmeno', 'kontakt' => 'u.email,u.telefon', 'firma' => 'f.obchodni_jmeno', 'role' => 'role', 'slot' => 'slot', 'pobocky' => 'pobocka_main', 'zdroj' => 'u.zdroj', 'stav' => 'hp.aktivni'];
     $sort = (string)($source['usr_sort'] ?? 'uzivatel');
     if (!isset($sortMap[$sort])) { $sort = 'uzivatel'; }
     $dir = strtolower((string)($source['usr_dir'] ?? 'asc')) === 'desc' ? 'desc' : 'asc';
@@ -164,15 +188,15 @@ function cb_admin_uzivatele_nacti(mysqli $db, array $source): array
     if ((int)$filters['slot'] >= 0) { $where[] = 'EXISTS (SELECT 1 FROM user_slot usf WHERE usf.id_user=u.id_user AND usf.id_slot=?)'; $params[] = (int)$filters['slot']; }
     if ((int)$filters['pobocka'] >= 0) { $where[] = 'EXISTS (SELECT 1 FROM user_pobocka upf WHERE upf.id_user=u.id_user AND (upf.id_pob=? OR upf.pob_all=1))'; $params[] = (int)$filters['pobocka']; }
     if ($filters['zdroj'] !== 'vse') { $where[] = 'u.zdroj=?'; $params[] = (int)$filters['zdroj']; }
-    if ($filters['stav'] === 'aktivni') { $where[] = 'u.aktivni=1'; }
-    if ($filters['stav'] === 'neaktivni') { $where[] = 'u.aktivni=0'; }
+    if ($filters['stav'] === 'aktivni') { $where[] = 'hp.aktivni=1'; }
+    if ($filters['stav'] === 'neaktivni') { $where[] = 'hp.aktivni=0'; }
     $whereSql = $where === [] ? '' : ' WHERE ' . implode(' AND ', $where);
-    $count = $db->prepare('SELECT COUNT(*) AS c FROM user u' . $whereSql);
+    $count = $db->prepare('SELECT COUNT(*) AS c FROM user u INNER JOIN hr_person hp ON hp.id_user=u.id_user' . $whereSql);
     if ($params !== []) { $types = implode('', array_map(static fn ($value): string => is_int($value) ? 'i' : 's', $params)); $bind = [&$types]; foreach ($params as $index => $value) { $bind[] = &$params[$index]; } call_user_func_array([$count, 'bind_param'], $bind); }
     $count->execute(); $total = (int)($count->get_result()->fetch_assoc()['c'] ?? 0); $count->close();
     $pages = max(1, (int)ceil($total / $perPage)); $page = min($page, $pages); $offset = ($page - 1) * $perPage;
     $stmt = $db->prepare('
-        SELECT u.id_user,u.jmeno,u.prijmeni,u.email,u.telefon,u.aktivni,u.duvod_neaktivni,u.zdroj,f.obchodni_jmeno,
+        SELECT u.id_user,u.jmeno,u.prijmeni,u.email,u.telefon,hp.aktivni,u.zdroj,f.obchodni_jmeno,
                COALESCE((
                    SELECT cr.role
                    FROM user_role ur_top
@@ -196,11 +220,12 @@ function cb_admin_uzivatele_nacti(mysqli $db, array $source): array
                END AS pobocky_pocet,
                MAX(CASE WHEN u.heslo_hash IS NULL OR u.heslo_hash="" THEN 0 ELSE 1 END) AS ma_heslo
         FROM user u
+        INNER JOIN hr_person hp ON hp.id_user=u.id_user
         LEFT JOIN firma f ON f.id_firma=u.id_firma
         LEFT JOIN user_pobocka up ON up.id_user=u.id_user
         LEFT JOIN pobocka p ON p.id_pob=up.id_pob
         ' . $whereSql . '
-        GROUP BY u.id_user,u.jmeno,u.prijmeni,u.email,u.telefon,u.aktivni,u.duvod_neaktivni,u.zdroj,u.id_firma,f.obchodni_jmeno
+        GROUP BY u.id_user,u.jmeno,u.prijmeni,u.email,u.telefon,hp.aktivni,u.zdroj,u.id_firma,f.obchodni_jmeno
         ORDER BY ' . $sortMap[$sort] . ' ' . strtoupper($dir) . ', u.id_user DESC LIMIT ? OFFSET ?
     ');
     $bindParams = $params; $bindParams[] = $perPage; $bindParams[] = $offset;
@@ -216,7 +241,7 @@ function cb_admin_uzivatele_nacti(mysqli $db, array $source): array
 function cb_admin_uzivatel_detail(mysqli $db, int $idUser): ?array
 {
     if ($idUser <= 0) { return null; }
-    $stmt = $db->prepare('SELECT id_user,id_firma,jmeno,prijmeni,email,telefon,aktivni,duvod_neaktivni,schvalen,zdroj FROM user WHERE id_user=? LIMIT 1');
+    $stmt = $db->prepare('SELECT u.id_user,u.id_firma,u.jmeno,u.prijmeni,u.email,u.telefon,p.aktivni,u.schvalen,u.zdroj FROM user u INNER JOIN hr_person p ON p.id_user=u.id_user WHERE u.id_user=? LIMIT 1');
     $stmt->bind_param('i', $idUser); $stmt->execute(); $user=$stmt->get_result()->fetch_assoc(); $stmt->close();
     if (!is_array($user)) { return null; }
     $stmt=$db->prepare('SELECT id_role FROM user_role WHERE id_user=? ORDER BY id_role'); $stmt->bind_param('i',$idUser); $stmt->execute(); $res=$stmt->get_result(); $roles=[]; while($row=$res->fetch_assoc()){$roles[]=(int)$row['id_role'];}$stmt->close();
@@ -234,7 +259,6 @@ function cb_admin_uzivatel_uloz(mysqli $db, array $post): array
     $sloty = array_values(array_unique(array_filter(array_map('intval', (array)($post['id_slot'] ?? [])), static fn (int $id): bool => $id > 0)));
     $jmeno = trim((string)($post['jmeno'] ?? '')); $prijmeni = trim((string)($post['prijmeni'] ?? ''));
     $email = trim((string)($post['email'] ?? '')); $telefon = trim((string)($post['telefon'] ?? ''));
-    $aktivni = (int)($post['aktivni'] ?? 0) === 1 ? 1 : 0;
     $pobocky = array_values(array_unique(array_filter(array_map('intval', (array)($post['id_pob'] ?? [])), static fn (int $id): bool => $id >= 0)));
     $idPobHlavni = (int)($post['id_pob_hlavni'] ?? -1); $pobAll = (int)($post['pob_all'] ?? 0) === 1;
     if ($idFirma <= 0 || $idRole <= 0 || $jmeno === '' || $prijmeni === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false || $pobocky === []) { throw new CbUserVisibleException('Vyplňte firmu, jméno, příjmení, platný e-mail, roli a pobočku.'); }
@@ -250,8 +274,7 @@ function cb_admin_uzivatel_uloz(mysqli $db, array $post): array
         }
         $marks=implode(',', array_fill(0,count($pobocky),'?')); $types='i'.str_repeat('i',count($pobocky)); $stmt=$db->prepare('SELECT COUNT(*) AS c FROM pobocka WHERE aktivni=1 AND id_firma=? AND id_pob IN ('.$marks.')'); $bind=[&$types,&$idFirma]; foreach($pobocky as $index=>$value){$bind[]=&$pobocky[$index];} call_user_func_array([$stmt,'bind_param'],$bind); $stmt->execute(); $validPob=(int)($stmt->get_result()->fetch_assoc()['c']??0);$stmt->close();
         if($validPob!==count($pobocky)){throw new CbUserVisibleException('Vybrané pobočky musí patřit vybrané firmě a být aktivní.');}
-        $duvodNeaktivni = $aktivni === 1 ? null : 'rucni_deaktivace';
-        $stmt=$db->prepare('UPDATE user SET id_firma=?,jmeno=?,prijmeni=?,email=?,telefon=?,aktivni=?,duvod_neaktivni=? WHERE id_user=?'); $stmt->bind_param('issssisi',$idFirma,$jmeno,$prijmeni,$email,$telefon,$aktivni,$duvodNeaktivni,$idUser);$stmt->execute();$stmt->close();
+        $stmt=$db->prepare('UPDATE user SET id_firma=?,jmeno=?,prijmeni=?,email=?,telefon=? WHERE id_user=?'); $stmt->bind_param('issssi',$idFirma,$jmeno,$prijmeni,$email,$telefon,$idUser);$stmt->execute();$stmt->close();
         $stmt=$db->prepare('DELETE FROM user_role WHERE id_user=?');$stmt->bind_param('i',$idUser);$stmt->execute();$stmt->close();
         $stmt=$db->prepare('INSERT INTO user_role (id_user,id_role) VALUES (?,?)');$stmt->bind_param('ii',$idUser,$idRole);$stmt->execute();$stmt->close();
         $stmt=$db->prepare('DELETE FROM user_slot WHERE id_user=?');$stmt->bind_param('i',$idUser);$stmt->execute();$stmt->close();
@@ -261,44 +284,4 @@ function cb_admin_uzivatel_uloz(mysqli $db, array $post): array
         $db->commit();
     } catch (Throwable $e) { $db->rollback(); throw $e; }
     return ['id_user'=>$idUser,'before'=>$before,'after'=>cb_admin_uzivatel_detail($db,$idUser)];
-}
-
-function cb_admin_uzivatel_aktivovat(mysqli $db, int $idUser): array
-{
-    if ($idUser <= 0) {
-        throw new CbUserVisibleException('Vyberte platného uživatele.');
-    }
-
-    $db->begin_transaction();
-    try {
-        $stmt = $db->prepare('SELECT id_user,aktivni,duvod_neaktivni,zdroj FROM user WHERE id_user=? LIMIT 1 FOR UPDATE');
-        $stmt->bind_param('i', $idUser);
-        $stmt->execute();
-        $before = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-        if (!is_array($before)) {
-            throw new CbUserVisibleException('Uživatel neexistuje.');
-        }
-        if ((int)$before['aktivni'] === 1) {
-            throw new CbUserVisibleException('Uživatel je již aktivní.');
-        }
-
-        $stmt = $db->prepare('UPDATE user SET aktivni=1,duvod_neaktivni=NULL WHERE id_user=? AND aktivni=0');
-        $stmt->bind_param('i', $idUser);
-        $stmt->execute();
-        if ($stmt->affected_rows !== 1) {
-            throw new RuntimeException('Uživatele se nepodařilo aktivovat.');
-        }
-        $stmt->close();
-        $db->commit();
-    } catch (Throwable $e) {
-        $db->rollback();
-        throw $e;
-    }
-
-    return [
-        'id_user' => $idUser,
-        'before' => $before,
-        'after' => ['aktivni' => 1, 'duvod_neaktivni' => null, 'zdroj' => (int)$before['zdroj']],
-    ];
 }

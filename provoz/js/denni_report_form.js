@@ -359,12 +359,27 @@
         || !(end instanceof HTMLInputElement)
         || String(start.value || '').trim() === ''
         || String(end.value || '').trim() === ''
+        || row.getAttribute('data-zr-time-valid') !== '1'
       ) {
         return false;
       }
     }
 
     return true;
+  }
+
+  function personRowsValidationError(root) {
+    const personRows = root.querySelectorAll('[data-zr-person-row="instor"], [data-zr-person-row="kuryr"]');
+    for (const row of personRows) {
+      if (!(row instanceof HTMLElement) || row.getAttribute('data-zr-time-valid') === '1') {
+        continue;
+      }
+      const name = String(row.querySelector('td:first-child .zr_saved_value')?.textContent || 'Pracovník').trim();
+      const start = String(row.querySelector('[data-zr-start]')?.value || '').trim() || '—';
+      const end = String(row.querySelector('[data-zr-end]')?.value || '').trim() || '—';
+      return name + ' má neplatnou směnu ' + start + '–' + end + '. Opravte čas nebo pauzu.';
+    }
+    return '';
   }
 
   function syncSubmitButton(root) {
@@ -384,6 +399,12 @@
     const readyText = String(button.getAttribute('data-zr-submit-ready-text') || (isFinalEdit ? 'Chci uložit opravený report' : 'Report je zkontrolovaný, uložit'));
     const missingText = String(button.getAttribute('data-zr-submit-missing-text') || 'Vyplň povinná pole');
     const remaining = targetTs - Math.floor(Date.now() / 1000);
+
+    const personError = personRowsValidationError(root);
+    if (personError !== '') {
+      setSubmitMissing(button, personError);
+      return false;
+    }
 
     if (remaining > 0) {
       setSubmitLocked(button, lockedText + ' ' + formatDuration(remaining));
@@ -778,7 +799,10 @@
     document.querySelectorAll('.cb-zadani-reportu, [data-zr-form]').forEach(initOne);
   }
 
-  w.cbSyncReportFormState = syncRequiredState;
+  w.cbSyncReportFormState = function (root) {
+    syncRequiredState(root);
+    syncSubmitButton(root);
+  };
   w.cbPrepocetReportValues = function (root) {
     const target = root instanceof HTMLElement ? root : document.querySelector('[data-zr-form]');
     return target instanceof HTMLElement ? requestReportCalculation(target) : Promise.resolve(null);

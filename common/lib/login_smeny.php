@@ -45,24 +45,17 @@ function post_module(): string
     return $module;
 }
 
-/* Vrátí uživateli konkrétní a pravdivé vysvětlení neaktivního lokálního účtu. */
+/* Vysvetli, ze o pristupu do IS rozhoduje aktivni osoba v HR. */
 function cb_login_neaktivni_zprava(array $user): string
 {
-    $duvod = (string)($user['duvod_neaktivni'] ?? '');
-    if ($duvod === 'nenalezen_aktivni_ve_smenach') {
-        return 'Váš účet je v IS neaktivní, protože při poslední synchronizaci nebyl ve Směnách nalezen mezi aktivními uživateli. Obraťte se prosím na vedoucího.';
-    }
-    if ($duvod === 'rucni_deaktivace') {
-        return 'Váš účet v IS deaktivoval administrátor. Obraťte se prosím na vedoucího.';
-    }
-    return 'Váš účet v IS není aktivní. Obraťte se prosím na vedoucího.';
+    return 'Vaše osoba je v HR neaktivní, proto se nemůžete přihlásit do IS. Obraťte se prosím na vedoucího.';
 }
 
-/* Vysvětlí selhání prvního vstupu účtu, který se ještě ověřuje ve Směnách. */
+/* Vysvetli selhani jednorazoveho overeni prvniho vstupu ve Smenach. */
 function cb_login_smeny_selhalo_zprava(?array $user): string
 {
-    if (is_array($user) && (int)($user['zdroj'] ?? 0) === 1 && trim((string)($user['heslo_hash'] ?? '')) === '') {
-        return 'Účet je v IS aktivní, ale přihlášení přes Směny se nezdařilo. Zkontrolujte heslo a ověřte, že je váš účet ve Směnách veden jako aktivní.';
+    if (is_array($user) && trim((string)($user['heslo_hash'] ?? '')) === '') {
+        return 'První vstup se nepodařilo ověřit. Zkontrolujte heslo používané ve Směnách.';
     }
     return 'Neplatné přihlašovací údaje.';
 }
@@ -88,11 +81,29 @@ try {
         throw new CbUserVisibleException('Přihlášení se nezdařilo.');
     }
 
-    $stmtLocal = db()->prepare('SELECT id_user, jmeno, prijmeni, email, telefon, aktivni, duvod_neaktivni, schvalen, heslo_hash, zdroj FROM user WHERE email=? LIMIT 1');
+    $stmtLocal = db()->prepare('
+        SELECT
+            u.id_user,
+            u.jmeno,
+            u.prijmeni,
+            u.email,
+            u.telefon,
+            p.aktivni,
+            u.schvalen,
+            u.heslo_hash
+        FROM user u
+        INNER JOIN hr_person p ON p.id_user = u.id_user
+        WHERE u.email = ?
+        LIMIT 1
+    ');
     $stmtLocal->bind_param('s', $email);
     $stmtLocal->execute();
     $localUser = $stmtLocal->get_result()->fetch_assoc();
     $stmtLocal->close();
+    if (!is_array($localUser)) {
+        cb_user_bad_login_log($email, $heslo);
+        throw new CbUserVisibleException('Neplatné přihlašovací údaje.');
+    }
     if (is_array($localUser) && trim((string)($localUser['heslo_hash'] ?? '')) !== '') {
         if (!password_verify($heslo, (string)$localUser['heslo_hash'])) {
             cb_user_bad_login_log($email, $heslo);
@@ -106,7 +117,7 @@ try {
         exit;
     }
 
-    if (is_array($localUser) && (int)$localUser['aktivni'] !== 1) {
+    if ((int)$localUser['aktivni'] !== 1) {
         throw new CbUserVisibleException(cb_login_neaktivni_zprava($localUser));
     }
 
@@ -125,44 +136,12 @@ try {
         throw new CbUserVisibleException(cb_login_smeny_selhalo_zprava($localUser));
     }
 
-    $token = $login['userLogin']['accessToken'] ?? null;
-    if (!is_string($token) || $token === '') {
+    $overeniToken = $login['userLogin']['accessToken'] ?? null;
+    if (!is_string($overeniToken) || $overeniToken === '') {
         cb_user_bad_login_log($email, $heslo);
         throw new CbUserVisibleException(cb_login_smeny_selhalo_zprava($localUser));
     }
-
-
-
-    $me = cb_smeny_graphql(
-        CB_SMENY_GQL_URL,
-        'query{
-            userGetLogged{
-                id
-                name
-                surname
-                email
-                phoneNumber
-                active
-                approved
-            }
-        }',
-        [],
-        $token
-    );
-
-    $u = $me['userGetLogged'] ?? null;
-    if (!is_array($u) || empty($u['id']) || empty($u['email'])) {
-        throw new CbUserVisibleException('Nepodařilo se načíst profil uživatele.');
-    }
-
-    $idUser = (int)$u['id'];
-
-    $legacyUser = cb_prvni_vstup_user(db(), $idUser);
-    if (!is_array($legacyUser) || strcasecmp((string)$legacyUser['email'], $email) !== 0 || trim((string)$legacyUser['heslo_hash']) !== '') {
-        cb_user_bad_login_log($email, $heslo);
-        throw new CbUserVisibleException('Neplatné přihlašovací údaje.');
-    }
-    cb_prvni_vstup_priprav($legacyUser);
+    cb_prvni_vstup_priprav($localUser);
     header('Location: ' . cb_login_url());
     exit;
 

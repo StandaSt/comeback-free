@@ -86,7 +86,7 @@ function cb_admin_uzivatel_detail_html(array $detail, array $lists): string
         <label>E-mail: <input form="<?= h($editFormId) ?>" type="email" name="email" maxlength="150" value="<?= h((string)$detail['email']) ?>" required></label><label>Telefon: <input form="<?= h($editFormId) ?>" name="telefon" maxlength="30" value="<?= h((string)$detail['telefon']) ?>"></label>
         <label>Role: <select form="<?= h($editFormId) ?>" name="id_role" required><?php foreach ($lists['role'] as $role): ?><option value="<?= h((string)$role['id']) ?>"<?= $selectedRole === (int)$role['id'] ? ' selected' : '' ?>><?= h((string)$role['nazev']) ?></option><?php endforeach; ?></select></label>
         <fieldset><legend>Sloty:</legend><?= cb_admin_uzivatel_sloty_html($lists['sloty'], (array)($detail['slot_ids'] ?? []), $editFormId) ?></fieldset>
-        <label><input form="<?= h($editFormId) ?>" type="checkbox" name="aktivni" value="1"<?= !empty($detail['aktivni']) ? ' checked' : '' ?>> Aktivní účet</label>
+        <p>Stav přístupu: <strong><?= !empty($detail['aktivni']) ? 'aktivní osoba v HR' : 'neaktivní osoba v HR' ?></strong></p>
         <fieldset><legend>Pobočky:</legend><?= cb_admin_uzivatel_pobocky_html($pobockyByFirma, $detail, $editFormId) ?></fieldset><button form="<?= h($editFormId) ?>" type="submit">Uložit změny</button>
     </div></div>
     <?php

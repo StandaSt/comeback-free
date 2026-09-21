@@ -123,55 +123,6 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'
     exit;
 }
 
-if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'] ?? '') === 'admin_uzivatel_aktivovat') {
-    $returnUrl = cb_admin_uzivatele_navrat_url($_GET);
-    $ajaxActivation = (string)($_SERVER['HTTP_X_COMEBACK_ADMIN_USER_ACTIVATE'] ?? '') === '1';
-    try {
-        if (!cb_pravo_ma(107)) {
-            throw new CbUserVisibleException('Nemáte právo spravovat uživatele.');
-        }
-        cb_admin_uzivatele_csrf_over($_POST);
-        $result = cb_admin_uzivatel_aktivovat(db(), (int)($_POST['id_user'] ?? 0));
-        cb_user_akce_zapis([
-            'id_user_akce_typ' => 14,
-            'modul' => 'administrace',
-            'objekt' => 'user',
-            'id_objektu' => (int)$result['id_user'],
-            'pole' => 'aktivni',
-            'hodnota_old' => '0',
-            'hodnota_new' => '1',
-            'vysledek' => 1,
-            'zdroj' => 'administrace',
-            'detail' => ['akce' => 'rucni_aktivace_uzivatele'],
-        ]);
-        $message = 'Uživatel ID ' . (int)$result['id_user'] . ' byl aktivován.';
-        if ((int)$result['after']['zdroj'] === 1) {
-            $message .= ' Pokud není aktivní ve Směnách, další synchronizace jej znovu deaktivuje.';
-        }
-        $activationNotice = ['success' => true, 'message' => $message];
-    } catch (Throwable $e) {
-        $activationNotice = [
-            'success' => false,
-            'message' => cb_admin_chyba_text($e, 'Aktivace uživatele', ['table' => 'user']),
-            'status' => cb_admin_chyba_status($e),
-        ];
-    }
-    if ($ajaxActivation) {
-        header('Content-Type: application/json; charset=utf-8');
-        if (empty($activationNotice['success'])) {
-            http_response_code((int)($activationNotice['status'] ?? 422));
-        }
-        echo json_encode([
-            'ok' => !empty($activationNotice['success']),
-            'message' => (string)$activationNotice['message'],
-        ], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-    $_SESSION['cb_admin_uzivatele_notice'] = $activationNotice;
-    header('Location: ' . $returnUrl, true, 303);
-    exit;
-}
-
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'] ?? '') === 'admin_uzivatel_ulozit') {
     $returnUrl = cb_admin_uzivatele_navrat_url($_GET);
     try {

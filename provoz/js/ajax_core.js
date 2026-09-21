@@ -8,6 +8,7 @@
   const AJAX_TRACE_URL = new URL('provoz/ajax/ajax_trace.php', applicationUrl).toString();
   let loginRedirectStarted = false;
   let maintenanceRedirectStarted = false;
+  let replacedSessionShown = false;
 
   // Rozpoznání stejného původu brání přesměrování kvůli cizím HTTP požadavkům.
   function isSameOriginRequest(input) {
@@ -39,11 +40,26 @@
     w.location.replace(w.location.href);
   }
 
+  function showReplacedSession() {
+    if (replacedSessionShown) {
+      return;
+    }
+    replacedSessionShown = true;
+    w.document.body.innerHTML = '<main style="min-height:100vh;display:grid;place-items:center;background:#111827;color:#fff;font-family:Arial,sans-serif;padding:24px;box-sizing:border-box">'
+      + '<section style="max-width:520px;text-align:center">'
+      + '<h1 style="font-size:28px;margin:0 0 18px">Přihlášení v tomto okně skončilo</h1>'
+      + '<p style="font-size:18px;line-height:1.5;margin:0">Na tomto zařízení se přihlásil jiný uživatel. Toto staré okno můžete zavřít.</p>'
+      + '</section></main>';
+  }
+
   if (nativeFetch) {
     w.fetch = function (input, init) {
       return nativeFetch(input, init).then((response) => {
         if (response && response.headers.get('X-Comeback-Maintenance') === '1' && isSameOriginRequest(input)) {
           redirectToMaintenance();
+        }
+        if (response && response.headers.get('X-Comeback-Session-Replaced') === '1' && isSameOriginRequest(input)) {
+          showReplacedSession();
         }
         if (response && response.status === 401 && isSameOriginRequest(input)) {
           redirectToLogin();

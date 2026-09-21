@@ -5,7 +5,6 @@
  */
 declare(strict_types=1);
 
-require_once __DIR__ . '/../db/db_user_role.php';
 require_once __DIR__ . '/obdobi_vyber.php';
 
 if (!function_exists('cb_head_restia_token_is_valid')) {

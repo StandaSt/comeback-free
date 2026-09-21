@@ -54,7 +54,7 @@ function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, i
 
     $db->begin_transaction();
     try {
-        $stmt = $db->prepare('SELECT id_person, id_user FROM hr_person WHERE id_person = ? AND aktivni = 1 LIMIT 1 FOR UPDATE');
+        $stmt = $db->prepare('SELECT id_person, id_user FROM hr_person WHERE id_person = ? LIMIT 1 FOR UPDATE');
         $stmt->bind_param('i', $idPerson);
         $stmt->execute();
         $person = $stmt->get_result()->fetch_assoc();

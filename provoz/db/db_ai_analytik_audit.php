@@ -41,7 +41,8 @@ function cb_ai_analytik_prehled_pristupu(mysqli $conn): array
             GROUP BY audit.id_user
          ) AS stat
             ON stat.id_user = u.id_user
-         WHERE u.aktivni = 1
+         INNER JOIN hr_person hp ON hp.id_user = u.id_user AND hp.aktivni = 1
+         WHERE 1 = 1
            AND u.in_system = 1
            AND (
                 (EXISTS (

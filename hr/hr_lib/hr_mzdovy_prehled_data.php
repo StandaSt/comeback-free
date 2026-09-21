@@ -12,7 +12,7 @@ function hr_mzdovy_prehled_id_firmy(mysqli $db, int $idUser): int
     if ($idUser <= 0) {
         return 0;
     }
-    $stmt = $db->prepare('SELECT id_firma FROM user WHERE id_user = ? AND aktivni = 1 LIMIT 1');
+    $stmt = $db->prepare('SELECT p.id_firma FROM hr_person p WHERE p.id_user = ? AND p.aktivni = 1 LIMIT 1');
     $stmt->bind_param('i', $idUser);
     $stmt->execute();
     $row = $stmt->get_result()->fetch_assoc();
@@ -221,7 +221,7 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
             GROUP BY ro.id_user
         ) hodiny ON hodiny.id_user = hp.id_user
         INNER JOIN firma f ON f.id_firma = hp.id_firma AND f.aktivni = 1 AND f.platnost_do IS NULL
-        WHERE u.aktivni = 1
+        WHERE hp.aktivni = 1
           AND hp.id_firma = ?
           AND EXISTS (
               SELECT 1 FROM hr_pracovni_vztah pv

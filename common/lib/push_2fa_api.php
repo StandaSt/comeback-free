@@ -19,7 +19,6 @@ require_once __DIR__ . '/session_boot.php';
 require_once __DIR__ . '/app.php';
 require_once __DIR__ . '/system.php';
 require_once __DIR__ . '/../config/secrets.php';
-require_once __DIR__ . '/smeny_graphql.php';
 header('Content-Type: application/json; charset=utf-8');
 
 function cb_2fa_cleanup_session(): void
@@ -148,25 +147,8 @@ try {
             echo json_encode(['ok' => true, 'stav' => 'ok'], JSON_UNESCAPED_UNICODE);
             exit;
         }
-        $loginToken = (string)($_SESSION['cb_token'] ?? '');
-        if ($loginToken === '') {
-            cb_2fa_cleanup_session();
-            echo json_encode(['ok' => true, 'stav' => 'exp'], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-
-        // login_ok vzniká až tady
-        $_SESSION['login_ok'] = 1;
-        unset($_SESSION['cb_2fa_token']);
-        try {
-            cb_login_finalize_after_ok($loginToken);
-        } catch (Throwable $e) {
-            cb_2fa_cleanup_session();
-            throw $e;
-        }
-        $_SESSION['cb_flash'] = 'Přihlášení OK';
-
-        echo json_encode(['ok' => true, 'stav' => 'ok'], JSON_UNESCAPED_UNICODE);
+        cb_2fa_cleanup_session();
+        echo json_encode(['ok' => false, 'stav' => 'exp', 'err' => 'Přihlášení není navázáno na lokální účet.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 

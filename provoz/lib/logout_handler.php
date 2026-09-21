@@ -4,6 +4,7 @@
    ========================= */
 if (isset($_GET['action']) && (string)$_GET['action'] === 'logout') {
     require_once __DIR__ . '/../../common/db/db_user.php';
+    require_once __DIR__ . '/../../common/lib/pc_session.php';
 
     $cbLogoutReasonRaw = trim((string)($_GET['duvod'] ?? '1'));
     $cbLogoutReason = ($cbLogoutReasonRaw === '0') ? 0 : 1;
@@ -15,6 +16,10 @@ if (isset($_GET['action']) && (string)$_GET['action'] === 'logout') {
         $conn = db();
         cb_db_clear_online_login_flags($conn, $idUser, $idLogin);
         cb_db_insert_login_event($conn, $idUser, 0, $cbLogoutReason);
+    }
+
+    if (isset($conn) && $conn instanceof mysqli) {
+        cb_pc_session_revoke_current($conn, $cbLogoutReason === 1 ? 'logout_manual' : 'logout_auto');
     }
 
     if (function_exists('cb_session_forget_auth')) {

@@ -7,11 +7,13 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/prvni_vstup.php';
+require_once __DIR__ . '/pc_session.php';
 require_once __DIR__ . '/../db/db_obnoveni_hesla_log.php';
 
 /* Ukonci rozpracovany login a pripravi kratkou session vyhradne pro obnoveni hesla. */
 function cb_obnoveni_hesla_priprav(array $user): void
 {
+    cb_pc_session_revoke_current(db(), 'reset_hesla');
     cb_session_invalidate_auth();
     unset($_SESSION['cb_prvni_vstup_user_id'], $_SESSION['cb_prvni_vstup_platnost_do']);
     $_SESSION['cb_obnoveni_hesla_user_id'] = (int)$user['id_user'];
@@ -38,7 +40,7 @@ function cb_obnoveni_hesla_odeslat(mysqli $db, string $email): bool
         throw new RuntimeException('Zadejte platný e-mail.');
     }
 
-    $stmt = $db->prepare('SELECT id_user, jmeno, prijmeni, email FROM user WHERE email=? AND aktivni=1 AND heslo_hash IS NOT NULL LIMIT 1');
+    $stmt = $db->prepare('SELECT u.id_user, u.jmeno, u.prijmeni, u.email FROM user u INNER JOIN hr_person p ON p.id_user = u.id_user AND p.aktivni = 1 WHERE u.email = ? AND u.heslo_hash IS NOT NULL LIMIT 1');
     $stmt->bind_param('s', $email);
     $stmt->execute();
     $user = $stmt->get_result()->fetch_assoc();

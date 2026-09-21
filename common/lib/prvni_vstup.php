@@ -7,11 +7,27 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/duveryhodne_zarizeni.php';
+require_once __DIR__ . '/login_nastaveni.php';
+require_once __DIR__ . '/pc_session.php';
 
 /* Nacte lokalniho uzivatele podle jeho id. */
 function cb_prvni_vstup_user(mysqli $db, int $idUser): ?array
 {
-    $stmt = $db->prepare('SELECT id_user, jmeno, prijmeni, email, telefon, aktivni, schvalen, heslo_hash FROM user WHERE id_user=? LIMIT 1');
+    $stmt = $db->prepare('
+        SELECT
+            u.id_user,
+            u.jmeno,
+            u.prijmeni,
+            u.email,
+            u.telefon,
+            p.aktivni,
+            u.schvalen,
+            u.heslo_hash
+        FROM user u
+        INNER JOIN hr_person p ON p.id_user = u.id_user
+        WHERE u.id_user = ?
+        LIMIT 1
+    ');
     $stmt->bind_param('i', $idUser);
     $stmt->execute();
     $row = $stmt->get_result()->fetch_assoc();
@@ -79,6 +95,9 @@ function cb_prvni_vstup_over_token(mysqli $db, string $token): bool
 /* Dokonci lokalni prihlaseni a vytvori plnohodnotnou session. */
 function cb_prvni_vstup_dokonci_login(mysqli $db, array $user): void
 {
+    if ((int)($user['aktivni'] ?? 0) !== 1) {
+        throw new RuntimeException('Osoba je v HR neaktivní a nemůže se přihlásit do IS.');
+    }
     $idUser = (int)$user['id_user'];
     cb_session_regenerate_after_login();
     $_SESSION['cb_user'] = [
@@ -99,9 +118,14 @@ function cb_prvni_vstup_dokonci_login(mysqli $db, array $user): void
     cb_db_ensure_user_set($db, $idUser);
     cb_db_prava_nacti_do_session($db, $idUser);
     $idLogin = cb_db_insert_login_and_spy($db, $idUser);
+    try {
+        cb_pc_session_activate($db, $idUser, $idLogin);
+    } catch (Throwable $e) {
+        cb_db_clear_online_login_flags($db, $idUser, $idLogin);
+        throw $e;
+    }
     require_once __DIR__ . '/../db/db_login_blok_info.php';
     cb_db_fill_login_info_session($db, $idUser, $idLogin);
-    require_once __DIR__ . '/smeny_graphql.php';
     cb_login_load_settings_to_session($idUser);
     $_SESSION['login_ok'] = 1;
     unset($_SESSION['cb_auth_ok'], $_SESSION['cb_2fa_token'], $_SESSION['cb_token'], $_SESSION['cb_prvni_vstup_user_id'], $_SESSION['cb_prvni_vstup_platnost_do'], $_SESSION['cb_local_login_user_id']);
@@ -112,6 +136,9 @@ function cb_prvni_vstup_dokonci_login(mysqli $db, array $user): void
 /* Zahaji lokalni login a vrati prime presmerovani pro overeni na stejnem mobilu. */
 function cb_lokalni_login_zahaj(mysqli $db, array $user, string $deviceEndpoint = ''): ?string
 {
+    if ((int)($user['aktivni'] ?? 0) !== 1) {
+        throw new RuntimeException('Osoba je v HR neaktivní a nemůže se přihlásit do IS.');
+    }
     $idUser = (int)$user['id_user'];
     $_SESSION['cb_user'] = ['id_user' => $idUser, 'name' => (string)$user['jmeno'], 'surname' => (string)$user['prijmeni'], 'email' => (string)$user['email'], 'telefon' => (string)($user['telefon'] ?? ''), 'active' => true, 'approved' => (bool)$user['schvalen'], 'roles' => [], 'sloty' => []];
     $_SESSION['cb_auth_ok'] = 1;

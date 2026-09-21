@@ -122,6 +122,18 @@ if ($cbPage === 'kontrola_reportu') {
     $cbArchiveBackTitle = 'Zpět do denního reportu';
 }
 
+if ($cbPage === 'nastaveni_reportu') {
+    $cbNastaveniBackParams = [
+        'm' => 'provoz',
+        'page' => 'denni_report',
+    ];
+    if ($cbReportBranchParam > 0) {
+        $cbNastaveniBackParams['zr_id_pob'] = $cbReportBranchParam;
+    }
+    $cbArchiveBackUrl = cb_root_url('index.php') . '?' . http_build_query($cbNastaveniBackParams, '', '&', PHP_QUERY_RFC3986);
+    $cbArchiveBackTitle = 'Zpět do denního reportu';
+}
+
 if ($cbPage === 'ai_analytik' && $cbPageExists) {
     require_once __DIR__ . '/lib/ai_analytik_pravidla.php';
     require_once __DIR__ . '/db/db_ai_analytik_audit.php';

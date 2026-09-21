@@ -6,7 +6,8 @@
   'use strict';
 
   var token = String(window.CB_CRF_TOKEN || '');
-  if (token === '') return;
+  var pcSessionToken = String(window.CB_PC_SESSION_TOKEN || '');
+  if (token === '' && pcSessionToken === '') return;
 
   function isWriteMethod(method) {
     return ['POST', 'PUT', 'PATCH', 'DELETE'].indexOf(String(method || 'GET').toUpperCase()) !== -1;
@@ -33,6 +34,17 @@
       form.appendChild(input);
     }
     input.value = token;
+
+    if (pcSessionToken !== '') {
+      var pcInput = form.querySelector('input[name="cb_pc_session"]');
+      if (!(pcInput instanceof HTMLInputElement)) {
+        pcInput = document.createElement('input');
+        pcInput.type = 'hidden';
+        pcInput.name = 'cb_pc_session';
+        form.appendChild(pcInput);
+      }
+      pcInput.value = pcSessionToken;
+    }
   }, true);
 
   var nativeFetch = window.fetch;
@@ -41,12 +53,17 @@
   window.fetch = function (input, init) {
     var options = init || {};
     var method = options.method || (input instanceof Request ? input.method : 'GET');
-    if (!isWriteMethod(method) || !isSameOrigin(input)) {
+    if (!isSameOrigin(input)) {
       return nativeFetch.call(window, input, options);
     }
 
     var headers = new Headers(options.headers || (input instanceof Request ? input.headers : undefined));
-    headers.set('X-Comeback-Crf', token);
+    if (isWriteMethod(method) && token !== '') {
+      headers.set('X-Comeback-Crf', token);
+    }
+    if (pcSessionToken !== '') {
+      headers.set('X-Comeback-Pc-Session', pcSessionToken);
+    }
     var next = Object.assign({}, options, { headers: headers });
     return nativeFetch.call(window, input, next);
   };

@@ -2,6 +2,8 @@
 // lib/sesn_kontrola.php * Verze: V2 * Aktualizace: 18.07.2026
 declare(strict_types=1);
 
+require_once __DIR__ . '/pc_session.php';
+
 if (!function_exists('cb_session_client_fingerprint')) {
     /**
      * Vrati jednoduchy otisk klienta pro navazani session.
@@ -30,6 +32,31 @@ if (!function_exists('cb_session_multiple_logins_allowed')) {
     }
 }
 
+if (!function_exists('cb_session_reject_replaced_request')) {
+    /**
+     * Ukonci pouze pozadavek stareho okna. Sdilenou PHP session noveho usera nemeni.
+     */
+    function cb_session_reject_replaced_request(): void
+    {
+        http_response_code(409);
+        header('X-Comeback-Session-Replaced: 1');
+        if (cb_session_is_internal_request()) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'ok' => false,
+                'err' => 'Na tomto zařízení se přihlásil jiný uživatel.',
+            ], JSON_UNESCAPED_UNICODE);
+        } else {
+            header('Content-Type: text/html; charset=utf-8');
+            echo '<!doctype html><html lang="cs"><meta charset="utf-8"><title>Přihlášení skončilo</title>'
+                . '<body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#111827;color:#fff;font-family:Arial,sans-serif;padding:24px;box-sizing:border-box">'
+                . '<main style="max-width:520px;text-align:center"><h1>Přihlášení v tomto okně skončilo</h1>'
+                . '<p style="font-size:18px;line-height:1.5">Na tomto zařízení se přihlásil jiný uživatel. Toto staré okno můžete zavřít.</p></main></body></html>';
+        }
+        exit;
+    }
+}
+
 if (!function_exists('cb_session_login_is_current')) {
     /**
      * Overi, ze login v session je stale aktivni a u bezneho usera take posledni.
@@ -45,14 +72,26 @@ if (!function_exists('cb_session_login_is_current')) {
 
         try {
             $conn = db();
+            if (!cb_pc_session_is_current($conn, $idUser, $idLogin)) {
+                return false;
+            }
             if (cb_session_multiple_logins_allowed()) {
                 $stmt = $conn->prepare(
-                    'SELECT id_login FROM user_login WHERE id_login = ? AND id_user = ? AND akce = 1 AND duvod = 2 LIMIT 1'
+                    'SELECT ul.id_login
+                     FROM user_login ul
+                     INNER JOIN hr_person p ON p.id_user = ul.id_user AND p.aktivni = 1
+                     WHERE ul.id_login = ? AND ul.id_user = ? AND ul.akce = 1 AND ul.duvod = 2
+                     LIMIT 1'
                 );
                 $stmt->bind_param('ii', $idLogin, $idUser);
             } else {
                 $stmt = $conn->prepare(
-                    'SELECT id_login FROM user_login WHERE id_user = ? AND akce = 1 AND duvod = 2 ORDER BY kdy DESC, id_login DESC LIMIT 1'
+                    'SELECT ul.id_login
+                     FROM user_login ul
+                     INNER JOIN hr_person p ON p.id_user = ul.id_user AND p.aktivni = 1
+                     WHERE ul.id_user = ? AND ul.akce = 1 AND ul.duvod = 2
+                     ORDER BY ul.kdy DESC, ul.id_login DESC
+                     LIMIT 1'
                 );
                 $stmt->bind_param('i', $idUser);
             }
@@ -76,6 +115,10 @@ if (!function_exists('cb_session_validate_after_login')) {
     {
         if (empty($_SESSION['login_ok'])) {
             return true;
+        }
+
+        if (!cb_pc_request_matches_session()) {
+            cb_session_reject_replaced_request();
         }
 
         $stored = trim((string)($_SESSION['cb_session_fingerprint'] ?? ''));
@@ -154,6 +197,8 @@ if (!function_exists('cb_session_forget_auth')) {
         unset($_SESSION['cb_session_bound_at']);
         unset($_SESSION['cb_session_bound_id']);
         unset($_SESSION['cb_session_fingerprint']);
+        unset($_SESSION['cb_pc_token']);
+        unset($_SESSION['cb_pc_session_token']);
     }
 }
 
@@ -184,6 +229,10 @@ if (!function_exists('cb_session_guard_entry')) {
             }
 
             return;
+        }
+
+        if (!cb_pc_request_matches_session()) {
+            cb_session_reject_replaced_request();
         }
 
         if (!cb_session_validate_after_login()) {

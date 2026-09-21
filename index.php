@@ -19,8 +19,21 @@ require_once __DIR__ . '/common/lib/hr_user_sync.php';
 require_once __DIR__ . '/common/lib/moduly.php';
 require_once __DIR__ . '/common/lib/nastaveni_uzivatele.php';
 
-cb_session_guard_entry();
+if (!isset($_GET['obnoveni_hesla'])) {
+    cb_session_guard_entry();
+}
 require_once __DIR__ . '/provoz/lib/logout_handler.php';
+
+/* Heartbeat potvrzuje, ze prihlasene okno je stale otevrene a patri aktualni session zarizeni. */
+if (
+    !empty($_SESSION['login_ok'])
+    && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
+    && isset($_SERVER['HTTP_X_COMEBACK_HEARTBEAT'])
+) {
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['ok' => true, 'server_ts' => time()], JSON_UNESCAPED_UNICODE);
+    exit;
+}
 
 /* Jednorazove zobrazi potvrzeni rychleho vstupu z duveryhodneho zarizeni. */
 if (!empty($_SESSION['login_ok']) && !empty($_SESSION['cb_duveryhodne_zarizeni_nacitam'])) {
@@ -143,7 +156,7 @@ if (empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST
 }
 
 /* Overi odkaz obnoveni hesla bez zahajeni prihlasovaciho toku. */
-if (empty($_SESSION['login_ok']) && isset($_GET['obnoveni_hesla'])) {
+if (isset($_GET['obnoveni_hesla'])) {
     if (!cb_obnoveni_hesla_over_token(db(), trim((string)$_GET['obnoveni_hesla']))) {
         $_SESSION['cb_flash'] = 'Odkaz pro nastavení nového hesla není platný nebo již vypršel.';
         header('Location: ' . cb_root_url('?zapomenute_heslo=1'), true, 303);
@@ -195,15 +208,19 @@ if (!empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POS
         $cbGnPage = 'prehled';
     }
 
-    if ($cbGnModule === 'provoz' && $cbGnPage === 'prehled' && $cbGnBlock === 'top_report') {
+    if (
+        $cbGnModule === 'provoz'
+        && $cbGnPage === 'prehled'
+        && in_array($cbGnBlock, ['top_report', 'objednavky_online', 'uzivatele_online'], true)
+    ) {
         require_once __DIR__ . '/common/lib/pobocky_vyber.php';
         cb_pobocky_bootstrap_session();
 
         $GLOBALS['CURRENT_MODULE'] = 'provoz';
         define('CB_EMBEDDED_MODULE', 'provoz');
         header('Content-Type: text/html; charset=utf-8');
-        echo '<div class="provoz_prehled_cell" data-pp-block="top_report" data-gn="1">';
-        require __DIR__ . '/provoz/bloky/top_report.php';
+        echo '<div class="provoz_prehled_cell" data-pp-block="' . h($cbGnBlock) . '" data-gn="1">';
+        require __DIR__ . '/provoz/bloky/' . $cbGnBlock . '.php';
         echo '</div>';
         exit;
     }

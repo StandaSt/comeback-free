@@ -24,10 +24,7 @@ function hr_fetch_employees(mysqli $db, int $limit = 100): array
             p.osobni_cislo,
             p.overen,
             p.kompletni,
-            CASE
-                WHEN pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE() THEN 'aktivni'
-                ELSE 'ukonceny'
-            END AS stav,
+            CASE WHEN p.aktivni = 1 THEN 'aktivni' ELSE 'neaktivni' END AS stav,
             p.vytvoreno AS zadano,
             ou.jmeno,
             ou.druhe_jmeno,
@@ -558,10 +555,7 @@ function hr_fetch_employee(mysqli $db, int $id): ?array
             p.osobni_cislo,
             p.overen,
             p.kompletni,
-            CASE
-                WHEN pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE() THEN 'aktivni'
-                ELSE 'ukonceny'
-            END AS stav,
+            CASE WHEN p.aktivni = 1 THEN 'aktivni' ELSE 'neaktivni' END AS stav,
             p.vytvoreno AS zadano,
             ou.jmeno,
             ou.druhe_jmeno,
@@ -620,7 +614,6 @@ function hr_fetch_employee(mysqli $db, int $id): ?array
            AND em.platny = 1
            AND em.hlavni = 1
         WHERE p.id_person = ?
-          AND p.aktivni = 1
         LIMIT 1
     ";
 

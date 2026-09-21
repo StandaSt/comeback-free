@@ -1080,8 +1080,9 @@ function getUserMap(mysqli $db): array
 {
     $usersById = [];
     $result = $db->query('
-        SELECT u.id_user, u.jmeno, u.prijmeni, u.aktivni, up.id_pob
+        SELECT u.id_user, u.jmeno, u.prijmeni, hp.aktivni, up.id_pob
         FROM `user` u
+        INNER JOIN hr_person hp ON hp.id_user = u.id_user
         LEFT JOIN user_pobocka up ON up.id_user = u.id_user
         ORDER BY u.id_user
     ');

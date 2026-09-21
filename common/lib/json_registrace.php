@@ -58,30 +58,8 @@ if (isset($_GET['action']) && (string)$_GET['action'] === 'registrace_check') {
             cb_prvni_vstup_dokonci_login(db(), $localUser);
             $loginPromoted = true;
         } else {
-        $loginToken = (string)($_SESSION['cb_token'] ?? '');
-        if ($loginToken === '') {
-            echo json_encode([
-                'ok' => false,
-                'err' => 'Chybí token pro dokončení přihlášení.',
-            ], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-
-        $_SESSION['login_ok'] = 1;
-        unset($_SESSION['cb_auth_ok']);
-        require_once __DIR__ . '/smeny_graphql.php';
-        try {
-            cb_login_finalize_after_ok($loginToken);
-        } catch (Throwable $e) {
-            unset($_SESSION['login_ok']);
-            $_SESSION['cb_auth_ok'] = 1;
-            echo json_encode([
-                'ok' => false,
-                'err' => $e->getMessage(),
-            ], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-        $loginPromoted = true;
+        echo json_encode(['ok' => false, 'err' => 'Přihlášení není navázáno na lokální účet. Přihlaste se znovu.'], JSON_UNESCAPED_UNICODE);
+        exit;
         }
     }
 

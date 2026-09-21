@@ -94,10 +94,7 @@ $sortUrl = static function (string $key) use ($url, $data): string {
                         } else {
                             $branchText = 'MAIN není + ' . $branchCount;
                         }
-                        $inactiveReason = (string)($user['duvod_neaktivni'] ?? '');
-                        $inactiveTitle = $inactiveReason === 'nenalezen_aktivni_ve_smenach'
-                            ? 'Uživatel nebyl při poslední synchronizaci nalezen mezi aktivními uživateli Směn.'
-                            : ($inactiveReason === 'rucni_deaktivace' ? 'Uživatele ručně deaktivoval administrátor.' : '');
+                        $inactiveTitle = empty($user['aktivni']) ? 'Osoba je v HR neaktivní a nemůže se přihlásit do IS.' : '';
                     ?>
                         <tr data-admin-user-row="<?= h((string)$user['id_user']) ?>">
                             <td class="cb_table_number"><?= h((string)$user['id_user']) ?></td>
@@ -109,7 +106,7 @@ $sortUrl = static function (string $key) use ($url, $data): string {
                             <td><?= h($branchText) ?></td>
                             <td><?= match ((int)$user['zdroj']) { 2 => 'Manuál', 3 => 'HR', default => 'Směny' } ?></td>
                             <td<?= $inactiveTitle !== '' ? ' title="' . h($inactiveTitle) . '"' : '' ?>><?= !empty($user['aktivni']) ? (!empty($user['ma_heslo']) ? 'Aktivní' : 'Aktivní – bez hesla') : 'Neaktivní' ?></td>
-                            <td class="admin_users_action_cell"><?php if (empty($user['aktivni'])): ?><button type="submit" form="admin_user_activate" formaction="<?= h($url()) ?>" name="id_user" value="<?= h((string)$user['id_user']) ?>" class="admin_users_activate_button" data-admin-user-activate>Aktivovat</button><?php else: ?>—<?php endif; ?></td>
+                            <td class="admin_users_action_cell">—</td>
                         </tr>
                         <?php if ($isDetail): ?>
                             <tr class="admin_user_detail_row is-open" data-admin-user-detail-row="<?= h((string)$detail['id_user']) ?>"><td colspan="10"><?= cb_admin_uzivatel_detail_html($detail, $lists) ?></td></tr>
@@ -130,6 +127,5 @@ $sortUrl = static function (string $key) use ($url, $data): string {
             <label class="cb_table_footer_size">Zobrazovat <select name="usr_per" class="filter-input"><?php foreach ($data['per_options'] as $option): ?><option value="<?= h((string)$option) ?>"<?= $data['per_page'] === $option ? ' selected' : '' ?>><?= h((string)$option) ?> řádků</option><?php endforeach; ?></select></label>
         </div>
     </form>
-    <form id="admin_user_activate" method="post" action="<?= h($url()) ?>" class="admin_users_action_form"><input type="hidden" name="cb_action" value="admin_uzivatel_aktivovat"><input type="hidden" name="csrf_token" value="<?= h($csrfToken) ?>"></form>
     <?php if (is_array($detail)): ?><?= cb_admin_uzivatel_edit_form_html((int)$detail['id_user'], $source) ?><?php endif; ?>
 </section>

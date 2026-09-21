@@ -67,12 +67,12 @@ function cb_admin_individualni_prava_hledej_uzivatele(string $query): array
             GROUP_CONCAT(DISTINCT cr.role ORDER BY ur.id_role SEPARATOR ", ") AS role,
             GROUP_CONCAT(DISTINCT cs.slot ORDER BY us.id_slot SEPARATOR ", ") AS slot
         FROM user u
+        INNER JOIN hr_person hp ON hp.id_user = u.id_user AND hp.aktivni = 1
         LEFT JOIN user_role ur ON ur.id_user = u.id_user
         LEFT JOIN cis_role cr ON cr.id_role = ur.id_role
         LEFT JOIN user_slot us ON us.id_user = u.id_user
         LEFT JOIN cis_slot cs ON cs.id_slot = us.id_slot
-        WHERE u.aktivni = 1
-          AND (
+        WHERE (
               u.jmeno LIKE ?
               OR u.prijmeni LIKE ?
               OR u.email LIKE ?

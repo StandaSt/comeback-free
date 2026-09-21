@@ -308,10 +308,10 @@ function cb_helpdesk_admin_ids(mysqli $conn, int $idFirma): array
     $sql = '
         SELECT u.id_user
         FROM `user` u
+        INNER JOIN hr_person hp ON hp.id_user = u.id_user AND hp.aktivni = 1
         INNER JOIN cis_prava cp ON cp.id_pravo = 604 AND cp.aktivni = 1
         LEFT JOIN prava_vyjimky pv ON pv.id_user = u.id_user AND pv.id_pravo = 604
-        WHERE u.aktivni = 1
-          AND COALESCE(u.id_firma, 1) = ?
+        WHERE COALESCE(u.id_firma, 1) = ?
           AND CASE
               WHEN pv.povoleno IS NOT NULL THEN pv.povoleno = 1
               ELSE EXISTS (

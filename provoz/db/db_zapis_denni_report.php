@@ -129,7 +129,6 @@ function cb_db_zapis_denni_report_people_from_post(array $post, string $type): a
     $starts = $post[$prefix . '_zacatek'] ?? [];
     $ends = $post[$prefix . '_konec'] ?? [];
     $breaks = $post[$prefix . '_pauza_hod'] ?? [];
-    $hours = $post[$prefix . '_hodiny'] ?? [];
     $restias = $post[$prefix . '_pocet_rozvozu_restia'] ?? [];
     $manuals = $post[$prefix . '_pocet_rozvozu_manual'] ?? [];
     $cars = $post[$prefix . '_vlastni_vuz'] ?? [];
@@ -145,13 +144,15 @@ function cb_db_zapis_denni_report_people_from_post(array $post, string $type): a
         if ($idUser <= 0) {
             continue;
         }
+        $pauseRaw = str_replace(',', '.', trim((string)($breaks[$index] ?? '0')));
         $rows[] = [
             'id_user' => $idUser,
             'slot' => $slot,
             'smena_od' => trim((string)($starts[$index] ?? '')),
             'smena_do' => trim((string)($ends[$index] ?? '')),
-            'pauza' => cb_vcr_float($breaks[$index] ?? 0),
-            'odpracovano' => cb_vcr_float($hours[$index] ?? 0),
+            'pauza' => $pauseRaw === '' ? 0.0 : (float)$pauseRaw,
+            'pauza_validni' => $pauseRaw === '' || is_numeric($pauseRaw),
+            'odpracovano' => 0.0,
             'rozvozu_restia' => ($type === 'kuryr') ? max(0, (int)($restias[$index] ?? 0)) : 0,
             'rozvozu_manual' => ($type === 'kuryr') ? max(0, (int)($manuals[$index] ?? 0)) : 0,
             'vlastni_vuz' => ($type === 'kuryr' && (int)($cars[$index] ?? 0) === 1) ? 1 : 0,
@@ -169,6 +170,36 @@ function cb_db_zapis_denni_report_valid_time(string $value): bool
     }
 
     return true;
+}
+
+function cb_db_zapis_denni_report_worked_hours(string $start, string $end, float $pause): array
+{
+    $parse = static function (string $value): ?float {
+        if (!preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/', $value)) {
+            return null;
+        }
+        $parts = array_map('intval', explode(':', $value));
+        return ($parts[0] * 60) + $parts[1] + (($parts[2] ?? 0) / 60);
+    };
+
+    $startMinutes = $parse($start);
+    $endMinutes = $parse($end);
+    if ($startMinutes === null || $endMinutes === null) {
+        return ['ok' => false, 'hours' => null, 'reason' => 'Čas musí být ve formátu HH:MM.'];
+    }
+
+    $startWorkdayMinutes = $startMinutes < 360 ? $startMinutes + 1440 : $startMinutes;
+    $endWorkdayMinutes = $endMinutes < 360 ? $endMinutes + 1440 : $endMinutes;
+    if ($endWorkdayMinutes <= $startWorkdayMinutes) {
+        return ['ok' => false, 'hours' => null, 'reason' => 'Konec směny musí být po začátku.'];
+    }
+
+    $durationHours = ($endWorkdayMinutes - $startWorkdayMinutes) / 60;
+    if (!is_finite($pause) || $pause < 0 || $pause >= $durationHours) {
+        return ['ok' => false, 'hours' => null, 'reason' => 'Pauza musí být kratší než směna.'];
+    }
+
+    return ['ok' => true, 'hours' => round($durationHours - $pause, 2), 'reason' => ''];
 }
 
 function cb_db_zapis_denni_report_user_allowed(mysqli $conn, int $idPob, int $idUser, int $slot): bool
@@ -306,7 +337,7 @@ function cb_db_zapis_denni_report_user_in_active_report(mysqli $conn, int $idPob
     return $exists;
 }
 
-function cb_db_zapis_denni_report_validate(mysqli $conn, int $idPob, string $datumReportu, array $post, array $personRows, bool $allowExistingReportUsers): void
+function cb_db_zapis_denni_report_validate(mysqli $conn, int $idPob, string $datumReportu, array $post, array &$personRows, bool $allowExistingReportUsers): void
 {
     $oteviral = (int)($post['oteviral'] ?? 0);
     $zaviral = (int)($post['zaviral'] ?? 0);
@@ -339,7 +370,7 @@ function cb_db_zapis_denni_report_validate(mysqli $conn, int $idPob, string $dat
     }
 
     $seen = [];
-    foreach ($personRows as $row) {
+    foreach ($personRows as $rowIndex => $row) {
         $idUser = (int)($row['id_user'] ?? 0);
         $slot = (int)($row['slot'] ?? 0);
         $start = trim((string)($row['smena_od'] ?? ''));
@@ -351,6 +382,14 @@ function cb_db_zapis_denni_report_validate(mysqli $conn, int $idPob, string $dat
         if (!cb_db_zapis_denni_report_valid_time($start) || !cb_db_zapis_denni_report_valid_time($end)) {
             throw new CbUserVisibleException($userLabel . ' má neplatný čas směny: začátek „' . $start . '“, konec „' . $end . '“.');
         }
+        $workedHours = cb_db_zapis_denni_report_worked_hours($start, $end, (float)($row['pauza'] ?? 0));
+        if (empty($row['pauza_validni'])) {
+            throw new CbUserVisibleException($userLabel . ' má neplatnou pauzu.');
+        }
+        if (empty($workedHours['ok'])) {
+            throw new CbUserVisibleException($userLabel . ' má neplatnou směnu ' . $start . '–' . $end . '. ' . (string)($workedHours['reason'] ?? ''));
+        }
+        $personRows[$rowIndex]['odpracovano'] = (float)$workedHours['hours'];
         $personAllowed = cb_db_zapis_denni_report_user_allowed($conn, $idPob, $idUser, $slot)
             || ($allowExistingReportUsers && cb_db_zapis_denni_report_user_in_active_report($conn, $idPob, $datumReportu, $idUser, $slot, 'person'));
         if (!$personAllowed) {

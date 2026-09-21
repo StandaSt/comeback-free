@@ -20,7 +20,7 @@ function hr_post_zamestnanec_overit(mysqli $db): void
         if ((int)($zarazeni['pozic'] ?? 0) !== 1 || (int)($zarazeni['pobocek'] ?? 0) < 1 || (int)($zarazeni['hlavnich'] ?? 0) !== 1) {
             throw new CbUserVisibleException('Před ověřením nastavte právě jednu aktuální pozici, alespoň jednu pobočku a právě jednu hlavní pobočku.');
         }
-        $stmt = $db->prepare('UPDATE hr_person SET overen = 1 WHERE id_person = ? AND aktivni = 1 AND overen = 0');
+        $stmt = $db->prepare('UPDATE hr_person SET overen = 1 WHERE id_person = ? AND overen = 0');
         $stmt->bind_param('i', $idPerson);
         $stmt->execute();
         $updated = $stmt->affected_rows;

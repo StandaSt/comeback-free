@@ -786,10 +786,10 @@ function cb_denni_report_branch_slot_user_options(mysqli $conn, int $idPob, int 
             TRIM(CONCAT_WS(' ', u.jmeno, u.prijmeni)) AS full_name,
             TRIM(CONCAT_WS(' ', u.prijmeni, u.jmeno)) AS display_name
         FROM user u
+        INNER JOIN hr_person hp ON hp.id_user = u.id_user AND hp.aktivni = 1
         INNER JOIN user_pobocka up ON up.id_user = u.id_user
         INNER JOIN user_slot us ON us.id_user = u.id_user
-        WHERE u.aktivni = 1
-          AND up.id_pob = ?
+        WHERE up.id_pob = ?
           AND us.id_slot = ?
         HAVING full_name <> ''
         ORDER BY display_name ASC

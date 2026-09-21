@@ -80,12 +80,57 @@
     }));
   }
 
+  function refreshNamedBlock(blockName, changeSource) {
+    var selector = '[data-gn="1"][data-pp-block="' + String(blockName || '') + '"]';
+    return refreshBlock(document.querySelector(selector), changeSource);
+  }
+
   window.CB_GN_REFRESH = {
-    refresh: refreshGnBlocks
+    refresh: refreshGnBlocks,
+    refreshBlock: refreshNamedBlock
   };
 
   document.addEventListener('cb:gn-changed', function (event) {
     var detail = event && event.detail ? event.detail : {};
     refreshGnBlocks(detail.source || '');
+  });
+
+  var periodicBlocks = {
+    uzivatele_online: { interval: 30 * 1000, lastRefresh: Date.now(), running: false },
+    objednavky_online: { interval: 10 * 60 * 1000, lastRefresh: Date.now(), running: false }
+  };
+
+  function refreshPeriodicBlock(blockName, force) {
+    var state = periodicBlocks[blockName];
+    var block = document.querySelector('[data-gn="1"][data-pp-block="' + blockName + '"]');
+    var now = Date.now();
+    if (!state || !(block instanceof HTMLElement) || state.running) {
+      return;
+    }
+    if (!force && (now - state.lastRefresh) < state.interval) {
+      return;
+    }
+
+    state.running = true;
+    state.lastRefresh = now;
+    refreshBlock(block, 'auto_' + blockName).finally(function () {
+      state.running = false;
+    });
+  }
+
+  window.setInterval(function () {
+    if (document.visibilityState !== 'hidden') {
+      Object.keys(periodicBlocks).forEach(function (blockName) {
+        refreshPeriodicBlock(blockName, false);
+      });
+    }
+  }, 5000);
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') {
+      Object.keys(periodicBlocks).forEach(function (blockName) {
+        refreshPeriodicBlock(blockName, false);
+      });
+    }
   });
 }());
