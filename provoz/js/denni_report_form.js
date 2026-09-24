@@ -377,7 +377,8 @@
       const name = String(row.querySelector('td:first-child .zr_saved_value')?.textContent || 'Pracovník').trim();
       const start = String(row.querySelector('[data-zr-start]')?.value || '').trim() || '—';
       const end = String(row.querySelector('[data-zr-end]')?.value || '').trim() || '—';
-      return name + ' má neplatnou směnu ' + start + '–' + end + '. Opravte čas nebo pauzu.';
+      const reason = String(row.getAttribute('data-zr-time-error') || 'Zkontrolujte začátek, konec a pauzu směny.').trim();
+      return name + ': ' + reason + ' Zadaná směna: ' + start + '–' + end + '.';
     }
     return '';
   }

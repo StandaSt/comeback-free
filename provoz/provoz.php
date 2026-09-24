@@ -74,6 +74,8 @@ $cbArchiveBackTitle = 'Zpět do archivu';
 $cbAiAnalytikPristup = [];
 $cbKontrolaReportuAllowed = false;
 $cbReportPromenneAllowed = false;
+$cbKontrolaGoogleCompareActive = false;
+$cbKontrolaGoogleCompareUrl = '';
 try {
     $cbKontrolaReportuAllowed = cb_kontrola_reportu_ma_pravo();
 } catch (Throwable $e) {
@@ -120,6 +122,21 @@ if ($cbPage === 'kontrola_reportu') {
     }
     $cbArchiveBackUrl = cb_root_url('index.php') . '?' . http_build_query($cbKontrolaBackParams, '', '&', PHP_QUERY_RFC3986);
     $cbArchiveBackTitle = 'Zpět do denního reportu';
+    $cbKontrolaGoogleCompareActive = (string)($_POST['zr_google_compare'] ?? $_GET['zr_google_compare'] ?? '') === '1';
+    $cbKontrolaGoogleCompareParams = [
+        'm' => 'provoz',
+        'page' => 'kontrola_reportu',
+    ];
+    if ($cbReportBranchParam > 0) {
+        $cbKontrolaGoogleCompareParams['zr_id_pob'] = $cbReportBranchParam;
+    }
+    if ($cbReportDateParam !== '') {
+        $cbKontrolaGoogleCompareParams['datum_reportu'] = $cbReportDateParam;
+    }
+    if (!$cbKontrolaGoogleCompareActive) {
+        $cbKontrolaGoogleCompareParams['zr_google_compare'] = '1';
+    }
+    $cbKontrolaGoogleCompareUrl = cb_root_url('index.php') . '?' . http_build_query($cbKontrolaGoogleCompareParams, '', '&', PHP_QUERY_RFC3986);
 }
 
 if ($cbPage === 'nastaveni_reportu') {
@@ -302,6 +319,11 @@ if ($cbPpOnly && !empty($_SESSION['login_ok'])) {
                     <?php endif; ?>
                     </div>
                 <?php endif; ?>
+                <?php if ($cbPage === 'kontrola_reportu' && $cbKontrolaGoogleCompareUrl !== ''): ?>
+                    <div class="pp_header_controls">
+                        <a class="head_task_btn kontrola_reportu_google_toggle<?= $cbKontrolaGoogleCompareActive ? ' kontrola_reportu_google_toggle--active' : '' ?>" href="<?= h($cbKontrolaGoogleCompareUrl) ?>" aria-pressed="<?= $cbKontrolaGoogleCompareActive ? 'true' : 'false' ?>"><?= $cbKontrolaGoogleCompareActive ? 'Skrýt Google reporty' : 'Porovnat s Google reporty' ?></a>
+                    </div>
+                <?php endif; ?>
                 <?php $cbAiAnalytikPristupRender($cbAiAnalytikPristup, $cbPage === 'ai_analytik'); ?>
             </header>
             <?php
@@ -347,6 +369,11 @@ if (!empty($_SESSION['login_ok'])) {
                 <?php if ($cbReportPromenneAllowed): ?>
                     <a class="head_task_btn" href="<?= h($cbNastaveniReportUrl) ?>" data-zr-nastaveni-link>Nastavení reportu</a>
                 <?php endif; ?>
+                </div>
+            <?php endif; ?>
+            <?php if ($cbPage === 'kontrola_reportu' && $cbKontrolaGoogleCompareUrl !== ''): ?>
+                <div class="pp_header_controls">
+                    <a class="head_task_btn kontrola_reportu_google_toggle<?= $cbKontrolaGoogleCompareActive ? ' kontrola_reportu_google_toggle--active' : '' ?>" href="<?= h($cbKontrolaGoogleCompareUrl) ?>" aria-pressed="<?= $cbKontrolaGoogleCompareActive ? 'true' : 'false' ?>"><?= $cbKontrolaGoogleCompareActive ? 'Skrýt Google reporty' : 'Porovnat s Google reporty' ?></a>
                 </div>
             <?php endif; ?>
             <?php $cbAiAnalytikPristupRender($cbAiAnalytikPristup, $cbPage === 'ai_analytik'); ?>

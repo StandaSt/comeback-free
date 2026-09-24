@@ -355,8 +355,9 @@
       return false;
     }
 
-    const invalidate = (input) => {
+    const invalidate = (input, reason) => {
       row.setAttribute('data-zr-time-valid', '0');
+      row.setAttribute('data-zr-time-error', String(reason || 'Zkontrolujte začátek, konec a pauzu směny.'));
       hoursEl.textContent = '—';
       hoursHiddenEl.value = '';
       if (input instanceof HTMLInputElement) {
@@ -370,22 +371,35 @@
     const breakRaw = String(breakEl.value || '').replace(',', '.');
 
     if (startParsed === null || endParsed === null) {
-      return invalidate(startParsed === null ? startEl : endEl);
+      if (startParsed === null) {
+        return invalidate(startEl, String(startEl.value || '').trim() === ''
+          ? 'Chybí začátek směny.'
+          : 'Začátek směny není platný čas.');
+      }
+      return invalidate(endEl, String(endEl.value || '').trim() === ''
+        ? 'Chybí konec směny.'
+        : 'Konec směny není platný čas.');
     }
 
     const startMin = workdayMinutes(startParsed.minutes);
     const endMin = workdayMinutes(endParsed.minutes);
     if (endMin <= startMin) {
-      return invalidate(endEl);
+      return invalidate(endEl, 'Konec směny musí být později než začátek směny.');
     }
     markTimeInput(startEl, startEl.value !== startEl.defaultValue ? 'edit' : '');
     markTimeInput(endEl, endEl.value !== endEl.defaultValue ? 'edit' : '');
     breakEl.classList.remove('err');
 
     let totalHours = (endMin - startMin) / 60;
-    const pauseHours = parseFloat(breakRaw);
-    if (Number.isNaN(pauseHours) || pauseHours < 0 || pauseHours >= totalHours) {
-      return invalidate(breakEl);
+    const pauseHours = breakRaw === '' ? 0 : parseFloat(breakRaw);
+    if (Number.isNaN(pauseHours)) {
+      return invalidate(breakEl, 'Pauza musí být číslo, například 0 nebo 0,5.');
+    }
+    if (pauseHours < 0) {
+      return invalidate(breakEl, 'Pauza nesmí být záporná.');
+    }
+    if (pauseHours >= totalHours) {
+      return invalidate(breakEl, 'Pauza musí být kratší než celá směna.');
     }
     totalHours -= pauseHours;
 
@@ -393,6 +407,7 @@
     hoursEl.textContent = hours.label;
     hoursHiddenEl.value = hours.stored;
     row.setAttribute('data-zr-time-valid', '1');
+    row.removeAttribute('data-zr-time-error');
     return true;
   }
 
@@ -765,7 +780,9 @@
           const restiaName = String(row.getAttribute('data-zr-restia-name') || '').trim();
           const nameEl = row.querySelector('.zr_saved_value');
           const name = nameEl instanceof HTMLElement ? String(nameEl.textContent || '').trim() : '';
-          savePersonAction(root, 'delete_person', type, idUser).then(() => {
+          savePersonAction(root, 'delete_person', type, idUser, {
+            id_dr_osoby: getRowPersonId(row)
+          }).then(() => {
             row.remove();
             addOption(root.querySelector('[data-zr-add-person="' + type + '"]'), idUser, name, restiaName);
             syncPrivateFuelExpense(root, true).catch((err) => {

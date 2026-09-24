@@ -13,6 +13,7 @@ if (!is_file($dbConnectPath)) {
     throw new RuntimeException('Nenalezen společný soubor db_connect.php pro import Google reportů.');
 }
 require_once $dbConnectPath;
+require_once __DIR__ . '/../../common/lib/person_name_match.php';
 
 const BASE_DIR = __DIR__ . '/../../common/tmp/google_reporty/Pobočky';
 const REPORT_LOG_FILE = __DIR__ . '/../../provoz/log/google_reporty.txt';
@@ -20,6 +21,35 @@ const REPORT_IMPORT_LOG_FILE = __DIR__ . '/../../provoz/log/reporty_import.txt';
 const REPORT_IMPORT_MATCH_LOG_FILE = __DIR__ . '/../../provoz/log/reporty_import_match.txt';
 const REPORT_OPEN_CLOSE_LOG_FILE = __DIR__ . '/../../provoz/log/reporty_open_close.txt';
 const GOOGLE_SOURCE = 1;
+// Rucne potvrzene identity pro zapisy v historickych Google reportech.
+// Neznamym jmenum bez potvrzeneho id_user se zadna identita neodhaduje.
+const GOOGLE_REPORT_USER_OVERRIDES = [
+    'Bušek Pavel' => 604,
+    'Dočekal Tomáš' => 531,
+    'Jáklová Dominika' => 466,
+    'Kináč Jozef' => 601,
+    'Pešta Milan' => 512,
+    'Dittmar Nicol Cecile' => 647,
+    'Eszenyiová Patrície' => 493,
+    'Filip Leon Kvapil' => 367,
+    'Kvapil Filip Leon' => 367,
+    'Hofmanová Jana' => 37,
+    'Jan Přibyl' => 582,
+    'Přibyl Jan' => 582,
+    'Kinkorova' => 415,
+    'Pechová Barbora' => 431,
+    'Pekárková' => 408,
+    'Pekárková Milena' => 408,
+    'Polavková Hana' => 500,
+    'Roth Stanislav ml,' => 3,
+    'Roth Stanislav ml.' => 3,
+    'Rothová Anastasia' => 234,
+    'Strauss' => 477,
+    'Viktoria Ahurieva' => 320,
+    'Vojta Fux' => 9,
+    'chlubna' => 475,
+    'Čonka Ludovít' => 611,
+];
 const MONTHS_LOOKUP = [
     'january' => 1,
     'february' => 2,
@@ -465,7 +495,7 @@ function createProductionPersonRecord(array $row, array $userMap, string $datum,
         $worked = '0.00';
     }
 
-    $resolved = resolveUserName($fullName, $userMap, $idPob);
+    $resolved = resolveUserName($fullName, $userMap);
     logMissingReportUser($datum, $idPob, 'vyroba', $resolved);
     logReportUserMatch($datum, $idPob, 'vyroba', $resolved);
 
@@ -594,7 +624,7 @@ function applySummaryRow(array &$report, array $row, array $userMap): void
     $report['zaviral_raw_empty'] = $zaviralRaw === '';
 
     if ($oteviralRaw !== '') {
-        $oteviral = resolveUserName($oteviralRaw, $userMap, $idPob);
+        $oteviral = resolveUserName($oteviralRaw, $userMap);
         $report['oteviral'] = $oteviral['id_user'];
         $report['oteviral_text'] = $oteviral['full_name'];
         logMissingReportUser($datum, $idPob, 'oteviral', $oteviral);
@@ -605,7 +635,7 @@ function applySummaryRow(array &$report, array $row, array $userMap): void
     }
 
     if ($zaviralRaw !== '') {
-        $zaviral = resolveUserName($zaviralRaw, $userMap, $idPob);
+        $zaviral = resolveUserName($zaviralRaw, $userMap);
         $report['zaviral'] = $zaviral['id_user'];
         $report['zaviral_text'] = $zaviral['full_name'];
         logMissingReportUser($datum, $idPob, 'zaviral', $zaviral);
@@ -805,7 +835,7 @@ function createPersonRecord(array $row, string $slot, array $userMap, string $da
         $worked = '0.00';
     }
 
-    $resolved = resolveUserName($fullName, $userMap, $idPob);
+    $resolved = resolveUserName($fullName, $userMap);
     logMissingReportUser($datum, $idPob, $slot, $resolved);
     logReportUserMatch($datum, $idPob, $slot, $resolved);
 
@@ -1080,10 +1110,9 @@ function getUserMap(mysqli $db): array
 {
     $usersById = [];
     $result = $db->query('
-        SELECT u.id_user, u.jmeno, u.prijmeni, hp.aktivni, up.id_pob
+        SELECT u.id_user, u.jmeno, u.prijmeni, hp.aktivni
         FROM `user` u
         INNER JOIN hr_person hp ON hp.id_user = u.id_user
-        LEFT JOIN user_pobocka up ON up.id_user = u.id_user
         ORDER BY u.id_user
     ');
     if (!$result instanceof mysqli_result) {
@@ -1094,7 +1123,6 @@ function getUserMap(mysqli $db): array
         $idUser = (int)($row['id_user'] ?? 0);
         $jmeno = (string)($row['jmeno'] ?? '');
         $prijmeni = (string)($row['prijmeni'] ?? '');
-        $idPob = (int)($row['id_pob'] ?? 0);
         if ($idUser <= 0 || $jmeno === '' || $prijmeni === '') {
             continue;
         }
@@ -1105,63 +1133,46 @@ function getUserMap(mysqli $db): array
                 'jmeno' => $jmeno,
                 'prijmeni' => $prijmeni,
                 'aktivni' => (int)($row['aktivni'] ?? 0),
-                'pobocky' => [],
             ];
-        }
-        if ($idPob > 0) {
-            $usersById[$idUser]['pobocky'][$idPob] = true;
         }
     }
     $result->free();
 
-    $map = [
-        'exact' => [],
-        'plain' => [],
-        'surname' => [],
-        'surname_plain' => [],
-    ];
+    $index = cb_person_name_index(array_values($usersById));
+    $approvedKeys = [];
+    foreach (GOOGLE_REPORT_USER_OVERRIDES as $googleName => $approvedId) {
+        $key = cb_person_name_match_key($googleName);
+        if ($key === '' || (isset($approvedKeys[$key]) && $approvedKeys[$key] !== $approvedId)) {
+            throw new RuntimeException('Konflikt v ručně potvrzených jménech Google reportů.');
+        }
+        $approvedKeys[$key] = $approvedId;
 
-    foreach ($usersById as $user) {
-        $fullPrijmeniJmeno = (string)$user['prijmeni'] . ' ' . (string)$user['jmeno'];
-        addUserMapCandidate($map['exact'], $fullPrijmeniJmeno, $user);
-        addUserMapCandidate($map['plain'], plainNameKey($fullPrijmeniJmeno), $user);
-        addUserMapCandidate($map['surname'], (string)$user['prijmeni'], $user);
-        addUserMapCandidate($map['surname_plain'], plainNameKey((string)$user['prijmeni']), $user);
+        $user = $usersById[$approvedId] ?? null;
+        if (!is_array($user)) {
+            throw new RuntimeException('Potvrzené id_user Google reportu neexistuje v user/hr_person: ' . $approvedId);
+        }
+        $canonicalKey = cb_person_name_match_key($user['jmeno'] . ' ' . $user['prijmeni']);
+        $candidate = $index[$canonicalKey][$approvedId] ?? null;
+        if (!is_array($candidate)) {
+            throw new RuntimeException('Potvrzené id_user Google reportu nemá úplné jméno: ' . $approvedId);
+        }
+        $candidate['google_approved'] = true;
+        $index[$key] = [$approvedId => $candidate];
     }
 
-    return $map;
+    return $index;
 }
 
-function addUserMapCandidate(array &$index, string $key, array $user): void
-{
-    if ($key === '') {
-        return;
-    }
-    if (!isset($index[$key])) {
-        $index[$key] = [];
-    }
-    $index[$key][(int)$user['id_user']] = $user;
-}
-
-function resolveUserName(string $fullName, array $userMap, int $idPob): array
+function resolveUserName(string $fullName, array $userMap): array
 {
     if ($fullName === '') {
         return ['id_user' => null, 'jmeno' => null, 'prijmeni' => null, 'full_name' => null];
     }
 
-    $attempts = buildUserResolveAttempts($fullName);
-    $alias = reportUserNameAlias($fullName);
-    if ($alias !== null) {
-        $attempts = array_merge($attempts, buildUserResolveAttempts($alias));
-    }
-
-    foreach ($attempts as $attempt) {
-        $index = $userMap[(string)$attempt['index']] ?? [];
-        $matches = $index[(string)$attempt['key']] ?? [];
-        $selected = selectUserCandidate(array_values($matches), $idPob, (string)$attempt['code']);
-        if ($selected !== null) {
-            return resolvedUserFromCandidate($fullName, $selected['user'], (string)$selected['code']);
-        }
+    $match = cb_person_name_resolve($fullName, $userMap);
+    if (is_array($match['user'])) {
+        $matchCode = !empty($match['user']['google_approved']) ? 'M' : (string)$match['match_code'];
+        return resolvedUserFromCandidate($fullName, $match['user'], $matchCode);
     }
 
     $split = splitNameFallback($fullName);
@@ -1171,85 +1182,6 @@ function resolveUserName(string $fullName, array $userMap, int $idPob): array
         'prijmeni' => $split['prijmeni'],
         'full_name' => $fullName,
     ];
-}
-
-function reportUserNameAlias(string $fullName): ?string
-{
-    static $aliases = [
-        'Čonka Ludovít' => 'Čonka Ludovíd',
-        'Chyský David' => 'Chyský žl David',
-        'Hofmanová Jana' => 'Hofmanová žl Jana',
-    ];
-
-    return $aliases[$fullName] ?? null;
-}
-
-function buildUserResolveAttempts(string $fullName): array
-{
-    $attempts = [
-        ['index' => 'exact', 'key' => $fullName, 'code' => ''],
-        ['index' => 'plain', 'key' => plainNameKey($fullName), 'code' => '2'],
-    ];
-
-    $swapped = swapFirstLastName($fullName);
-    if ($swapped !== null) {
-        $attempts[] = ['index' => 'exact', 'key' => $swapped, 'code' => '3'];
-        $attempts[] = ['index' => 'plain', 'key' => plainNameKey($swapped), 'code' => '4'];
-    }
-
-    foreach (surnameCandidatesFromReportName($fullName) as $surname) {
-        $attempts[] = ['index' => 'surname', 'key' => $surname, 'code' => '5'];
-        $attempts[] = ['index' => 'surname_plain', 'key' => plainNameKey($surname), 'code' => '6'];
-    }
-
-    $out = [];
-    $seen = [];
-    foreach ($attempts as $attempt) {
-        $key = (string)$attempt['index'] . "\t" . (string)$attempt['key'] . "\t" . (string)$attempt['code'];
-        if ((string)$attempt['key'] === '' || isset($seen[$key])) {
-            continue;
-        }
-        $seen[$key] = true;
-        $out[] = $attempt;
-    }
-    return $out;
-}
-
-function selectUserCandidate(array $matches, int $idPob, string $baseCode): ?array
-{
-    if (count($matches) === 0) {
-        return null;
-    }
-
-    if (count($matches) === 1) {
-        return ['user' => $matches[0], 'code' => $baseCode];
-    }
-
-    $active = [];
-    foreach ($matches as $m) {
-        if ((int)($m['aktivni'] ?? 0) === 1) {
-            $active[] = $m;
-        }
-    }
-    if (count($active) === 1) {
-        return ['user' => $active[0], 'code' => $baseCode === '' ? '1' : $baseCode . 'A'];
-    }
-
-    $pool = count($active) > 0 ? $active : $matches;
-    if ($idPob > 0) {
-        $branchMatches = [];
-        foreach ($pool as $m) {
-            $pobocky = $m['pobocky'] ?? [];
-            if (is_array($pobocky) && isset($pobocky[$idPob])) {
-                $branchMatches[] = $m;
-            }
-        }
-        if (count($branchMatches) === 1) {
-            return ['user' => $branchMatches[0], 'code' => ($baseCode === '' ? 'P' : $baseCode . 'P')];
-        }
-    }
-
-    return null;
 }
 
 function resolvedUserFromCandidate(string $fullName, array $user, string $matchCode): array
@@ -1262,36 +1194,6 @@ function resolvedUserFromCandidate(string $fullName, array $user, string $matchC
         'match_code' => $matchCode,
         'user_full_name' => (string)$user['jmeno'] . ' ' . (string)$user['prijmeni'],
     ];
-}
-
-function swapFirstLastName(string $fullName): ?string
-{
-    $parts = preg_split('/\s+/u', $fullName) ?: [];
-    if (count($parts) < 2) {
-        return null;
-    }
-
-    $last = (string)array_pop($parts);
-    return $last . ' ' . implode(' ', $parts);
-}
-
-function surnameCandidatesFromReportName(string $fullName): array
-{
-    $parts = preg_split('/\s+/u', $fullName) ?: [];
-    if (count($parts) < 1) {
-        return [];
-    }
-
-    $candidates = [];
-    $first = (string)reset($parts);
-    $last = (string)end($parts);
-    if ($first !== '') {
-        $candidates[$first] = true;
-    }
-    if ($last !== '') {
-        $candidates[$last] = true;
-    }
-    return array_keys($candidates);
 }
 
 function splitNameFallback(string $fullName): array
@@ -1308,22 +1210,6 @@ function splitNameFallback(string $fullName): array
         'jmeno' => mb_substr($jmeno, 0, 50, 'UTF-8'),
         'prijmeni' => mb_substr($prijmeni, 0, 50, 'UTF-8'),
     ];
-}
-
-function plainNameKey(string $value): string
-{
-    $value = mb_strtolower($value, 'UTF-8');
-    $value = strtr($value, [
-        'á' => 'a', 'č' => 'c', 'ď' => 'd', 'é' => 'e', 'ě' => 'e', 'í' => 'i',
-        'ň' => 'n', 'ó' => 'o', 'ř' => 'r', 'š' => 's', 'ť' => 't', 'ú' => 'u',
-        'ů' => 'u', 'ý' => 'y', 'ž' => 'z',
-        'Á' => 'a', 'Č' => 'c', 'Ď' => 'd', 'É' => 'e', 'Ě' => 'e', 'Í' => 'i',
-        'Ň' => 'n', 'Ó' => 'o', 'Ř' => 'r', 'Š' => 's', 'Ť' => 't', 'Ú' => 'u',
-        'Ů' => 'u', 'Ý' => 'y', 'Ž' => 'z',
-        'ä' => 'a', 'ö' => 'o', 'ő' => 'o', 'ü' => 'u', 'ű' => 'u',
-        'Ä' => 'a', 'Ö' => 'o', 'Ő' => 'o', 'Ü' => 'u', 'Ű' => 'u',
-    ]);
-    return $value;
 }
 
 function normalizeDate(string $value): ?string

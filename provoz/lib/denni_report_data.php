@@ -6,6 +6,7 @@ require_once __DIR__ . '/vypocet_col_rozdil.php';
 require_once __DIR__ . '/denni_report_prava.php';
 require_once __DIR__ . '/../../common/db/db_cis_slot.php';
 require_once __DIR__ . '/../../common/lib/objednavka_cislo.php';
+require_once __DIR__ . '/../../common/lib/person_name_match.php';
 require_once __DIR__ . '/pobocka_provoz.php';
 
 function cb_denni_report_format_input_number(float $value): string
@@ -32,29 +33,7 @@ function cb_denni_report_person_display_name(?string $jmeno, ?string $prijmeni =
 
 function cb_denni_report_person_name_match_key(string $name): string
 {
-    $name = mb_strtolower(trim($name), 'UTF-8');
-    $name = strtr($name, [
-        'á' => 'a', 'ä' => 'a', 'č' => 'c', 'ď' => 'd', 'é' => 'e', 'ě' => 'e',
-        'ë' => 'e', 'í' => 'i', 'ľ' => 'l', 'ĺ' => 'l', 'ň' => 'n', 'ó' => 'o',
-        'ö' => 'o', 'ř' => 'r', 'ŕ' => 'r', 'š' => 's', 'ť' => 't', 'ú' => 'u',
-        'ů' => 'u', 'ü' => 'u', 'ý' => 'y', 'ž' => 'z',
-    ]);
-    $name = preg_replace('/[^a-z0-9]+/u', ' ', $name) ?? '';
-
-    return trim(preg_replace('/\s+/u', ' ', $name) ?? '');
-}
-
-function cb_denni_report_person_name_unordered_key(string $name): string
-{
-    $key = cb_denni_report_person_name_match_key($name);
-    if ($key === '') {
-        return '';
-    }
-
-    $parts = array_values(array_filter(explode(' ', $key), static fn(string $part): bool => $part !== ''));
-    sort($parts, SORT_STRING);
-
-    return implode(' ', $parts);
+    return cb_person_name_match_key($name);
 }
 
 /** @param array<int,array<string,mixed>> $options */
@@ -91,24 +70,21 @@ function cb_denni_report_match_courier_names(array $restiaCounts, array $kuryrOp
         $idUser = (int)($option['id_user'] ?? 0);
         $isName = trim((string)($option['restia_name'] ?? ''));
         $displayName = trim((string)($option['name'] ?? ''));
-        $alternateName = trim((string)($option['match_name'] ?? $displayName));
-        if ($idUser <= 0 || $isName === '') {
+        $firstName = trim((string)($option['jmeno'] ?? $option['first_name'] ?? ''));
+        $lastName = trim((string)($option['prijmeni'] ?? $option['last_name'] ?? ''));
+        if ($idUser <= 0 || $isName === '' || $firstName === '' || $lastName === '') {
             continue;
         }
         $options[$idUser] = [
             'id_user' => $idUser,
             'is_name' => $isName,
             'display_name' => $displayName !== '' ? $displayName : $isName,
-            'keys' => array_values(array_unique(array_filter([
-                cb_denni_report_person_name_match_key($isName),
-                cb_denni_report_person_name_match_key($alternateName),
-            ]))),
-            'unordered_keys' => array_values(array_unique(array_filter([
-                cb_denni_report_person_name_unordered_key($isName),
-                cb_denni_report_person_name_unordered_key($alternateName),
-            ]))),
+            'aktivni' => max((int)($options[$idUser]['aktivni'] ?? 0), (int)($option['aktivni'] ?? 0)),
+            'jmeno' => $firstName,
+            'prijmeni' => $lastName,
         ];
     }
+    $nameIndex = cb_person_name_index(array_values($options));
 
     $counts = [];
     $mismatches = [];
@@ -120,51 +96,17 @@ function cb_denni_report_match_courier_names(array $restiaCounts, array $kuryrOp
             continue;
         }
 
-        $exactCandidates = [];
-        foreach ($options as $idUser => $option) {
-            if ($restiaName === (string)$option['is_name']) {
-                $exactCandidates[$idUser] = $option;
-            }
-        }
-
-        $candidates = $exactCandidates;
-        $usedNormalizedMatch = false;
-        if (count($candidates) !== 1) {
-            $candidates = [];
-            $restiaKey = cb_denni_report_person_name_match_key($restiaName);
-            if ($restiaKey !== '') {
-                foreach ($options as $idUser => $option) {
-                    if (in_array($restiaKey, (array)$option['keys'], true)) {
-                        $candidates[$idUser] = $option;
-                    }
-                }
-            }
-            $usedNormalizedMatch = true;
-        }
-
-        if (count($candidates) !== 1) {
-            $candidates = [];
-            $restiaUnorderedKey = cb_denni_report_person_name_unordered_key($restiaName);
-            if ($restiaUnorderedKey !== '') {
-                foreach ($options as $idUser => $option) {
-                    if (in_array($restiaUnorderedKey, (array)$option['unordered_keys'], true)) {
-                        $candidates[$idUser] = $option;
-                    }
-                }
-            }
-            $usedNormalizedMatch = true;
-        }
-
-        if (count($candidates) !== 1) {
+        $match = cb_person_name_resolve($restiaName, $nameIndex);
+        if (!is_array($match['user'])) {
             $unmatched[] = [
                 'restia' => $restiaName,
                 'count' => max(0, (int)$countRaw),
-                'reason' => $candidates === [] ? 'nenalezen' : 'nejednoznačný',
+                'reason' => $match['status'] === 'nejednoznacny' ? 'nejednoznačný' : 'nenalezen',
             ];
             continue;
         }
 
-        $matched = reset($candidates);
+        $matched = $match['user'];
         $isName = trim((string)($matched['is_name'] ?? ''));
         if ($isName === '') {
             continue;
@@ -175,7 +117,7 @@ function cb_denni_report_match_courier_names(array $restiaCounts, array $kuryrOp
             'is_name' => $isName,
             'display_name' => trim((string)($matched['display_name'] ?? $isName)),
         ];
-        if ($usedNormalizedMatch || $restiaName !== $isName) {
+        if ($restiaName !== $isName) {
             $mismatches[] = [
                 'restia' => $restiaName,
                 'is' => trim((string)($matched['display_name'] ?? $isName)),
@@ -695,13 +637,15 @@ function cb_denni_report_google_history_load(mysqli $conn, int $idPob, string $r
         return null;
     }
     $stmtPeople = $conn->prepare('
-        SELECT 0 AS id_dr_osoby, id_user, slot AS id_slot, jmeno, prijmeni,
-            smena_od, smena_do, pauza, odpracovano, rozvozu_manual,
-            vlastni_vuz, vyplatit_phm, rozvozu_restia
-        FROM reporty_osoby
-        WHERE id_reportu = ?
-        ORDER BY slot ASC, COALESCE(smena_od, "00:00:00") ASC,
-            COALESCE(smena_do, "00:00:00") ASC, prijmeni ASC, jmeno ASC
+        SELECT 0 AS id_dr_osoby, ro.id_user, ro.slot AS id_slot, ro.jmeno, ro.prijmeni,
+            ro.smena_od, ro.smena_do, ro.pauza, ro.odpracovano, ro.rozvozu_manual,
+            ro.vlastni_vuz, ro.vyplatit_phm, ro.rozvozu_restia,
+            COALESCE(hp.aktivni, 0) AS aktivni
+        FROM reporty_osoby ro
+        LEFT JOIN hr_person hp ON hp.id_user = ro.id_user
+        WHERE ro.id_reportu = ?
+        ORDER BY ro.slot ASC, COALESCE(ro.smena_od, "00:00:00") ASC,
+            COALESCE(ro.smena_do, "00:00:00") ASC, ro.prijmeni ASC, ro.jmeno ASC
     ');
     $peopleRows = [];
     if ($stmtPeople !== false) {
@@ -769,6 +713,7 @@ function cb_denni_report_ensure_user_option(array $options, int $selectedId, str
         'name' => $selectedName,
         'restia_name' => $selectedName,
         'match_name' => $selectedName,
+        'aktivni' => 0,
     ]);
 
     return cb_denni_report_sort_user_options($options);
@@ -783,6 +728,8 @@ function cb_denni_report_branch_slot_user_options(mysqli $conn, int $idPob, int 
     $sql = "
         SELECT DISTINCT
             u.id_user,
+            u.jmeno,
+            u.prijmeni,
             TRIM(CONCAT_WS(' ', u.jmeno, u.prijmeni)) AS full_name,
             TRIM(CONCAT_WS(' ', u.prijmeni, u.jmeno)) AS display_name
         FROM user u
@@ -812,6 +759,9 @@ function cb_denni_report_branch_slot_user_options(mysqli $conn, int $idPob, int 
                         'name' => $displayName !== '' ? $displayName : $name,
                         'restia_name' => $name,
                         'match_name' => $displayName,
+                        'aktivni' => 1,
+                        'jmeno' => (string)($row['jmeno'] ?? ''),
+                        'prijmeni' => (string)($row['prijmeni'] ?? ''),
                     ];
                 }
             }
@@ -1356,6 +1306,9 @@ function cb_denni_report_kuryr_delivery_data(mysqli $conn, int $idPob, array $wo
             'name' => trim((string)($kuryrRow['name'] ?? '')),
             'restia_name' => trim((string)($kuryrRow['restia_name'] ?? '')),
             'match_name' => trim((string)($kuryrRow['match_name'] ?? '')),
+            'aktivni' => (int)($kuryrRow['aktivni'] ?? 0),
+            'jmeno' => trim((string)($kuryrRow['jmeno'] ?? '')),
+            'prijmeni' => trim((string)($kuryrRow['prijmeni'] ?? '')),
         ];
     }
     $nameMatches = cb_denni_report_match_courier_names($restiaDeliveryCounts, $matchOptions);
@@ -1424,6 +1377,9 @@ function cb_denni_report_person_rows(array $draftPersonRows): array
             'name' => $displayName !== '' ? $displayName : $fullName,
             'restia_name' => $fullName,
             'match_name' => $displayName,
+            'jmeno' => trim((string)($row['jmeno'] ?? '')),
+            'prijmeni' => trim((string)($row['prijmeni'] ?? '')),
+            'aktivni' => (int)($row['aktivni'] ?? 0),
             // Čas je určený pro zobrazení vstupu; zdrojová hodnota směny zůstává beze změny.
             'start' => cb_format('t', $row['smena_od'] ?? null),
             'end' => cb_format('t', $row['smena_do'] ?? null),

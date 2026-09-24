@@ -34,6 +34,9 @@
     body.set('page', currentPage(block));
     body.set('block', blockName);
     body.set('source', String(changeSource || ''));
+    if (block.getAttribute('data-google-compare') === '1') {
+      body.set('zr_google_compare', '1');
+    }
 
     return fetch(window.CB_ENDPOINT || 'index.php', {
       method: 'POST',

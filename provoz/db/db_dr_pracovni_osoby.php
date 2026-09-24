@@ -20,9 +20,10 @@ function cb_db_dr_pracovni_osoby_list(mysqli $conn, int $idDr): array
         SELECT dpo.id_dr_osoby, dpo.id_dr, dpo.id_user, dpo.id_slot,
                dpo.smena_od, dpo.smena_do, dpo.pauza, dpo.odpracovano,
                dpo.rozvozu_manual, dpo.vlastni_vuz, dpo.vyplatit_phm, dpo.poradi,
-               u.jmeno, u.prijmeni
+               u.jmeno, u.prijmeni, COALESCE(hp.aktivni, 0) AS aktivni
         FROM dr_pracovni_osoby dpo
         INNER JOIN user u ON u.id_user = dpo.id_user
+        LEFT JOIN hr_person hp ON hp.id_user = u.id_user
         WHERE dpo.id_dr = ?
         ORDER BY dpo.id_slot ASC, COALESCE(dpo.smena_od, "00:00:00") ASC, COALESCE(dpo.smena_do, "00:00:00") ASC, u.jmeno ASC, u.prijmeni ASC
     ');

@@ -138,7 +138,8 @@ function cb_archiv_reportu_comparison_rows(mysqli $conn, int $idPob, string $rep
             if ($name === '') {
                 continue;
             }
-            $key = mb_strtolower($name, 'UTF-8');
+            $idUser = (int)($person['id_user'] ?? 0);
+            $key = $idUser > 0 ? 'user:' . $idUser : 'name:' . mb_strtolower($name, 'UTF-8');
             if (!isset($result[$key])) {
                 $result[$key] = ['name' => $name, 'deliveries' => 0];
             }
@@ -176,7 +177,8 @@ function cb_archiv_reportu_comparison_rows(mysqli $conn, int $idPob, string $rep
             if ($name === '') {
                 continue;
             }
-            $key = mb_strtolower($name, 'UTF-8');
+            $idUser = (int)($person['id_user'] ?? 0);
+            $key = $idUser > 0 ? 'user:' . $idUser : 'name:' . mb_strtolower($name, 'UTF-8');
             if (!isset($result[$key])) {
                 $result[$key] = ['name' => $name, 'has_own_car' => false];
             }
