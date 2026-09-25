@@ -5,6 +5,17 @@
  */
 declare(strict_types=1);
 require_once __DIR__ . '/../../helpdesk/hl_lib/hl_pages.php';
+$cbNavUser = $_SESSION['cb_user'] ?? [];
+$cbNavUserId = is_array($cbNavUser) ? (int)($cbNavUser['id_user'] ?? 0) : 0;
+$cbNavMainBranchId = 0;
+if ($cbNavUserId > 0) {
+    $cbNavMainBranchStmt = db()->prepare('SELECT id_pob FROM hr_pracoviste WHERE id_person = ? AND hlavni = 1 AND platny = 1 LIMIT 1');
+    $cbNavMainBranchStmt->bind_param('i', $cbNavUserId);
+    $cbNavMainBranchStmt->execute();
+    $cbNavMainBranchRow = $cbNavMainBranchStmt->get_result()->fetch_assoc();
+    $cbNavMainBranchId = (int)($cbNavMainBranchRow['id_pob'] ?? 0);
+    $cbNavMainBranchStmt->close();
+}
 ?>
 <?php // Koncovy bod pro komunikaci klienta se spolecnym shellem. ?>
 <script>
@@ -40,6 +51,8 @@ window.CB_PC_SESSION_TOKEN = <?= json_encode((string)($_SESSION['cb_pc_session_t
 <script src="<?= h(cb_asset_url('js/denni_report_form.js')) ?>"></script>
 <?php // Osoby denniho reportu. ?>
 <script src="<?= h(cb_asset_url('js/denni_report_osoby.js')) ?>"></script>
+<?php // Směny ve formuláři denního reportu výroby sdílí formát času s reportem restaurace. ?>
+<script src="<?= h(cb_asset_url('js/denni_report_vyroba.js')) ?>"></script>
 <?php // Vyber pobocky. ?>
 <script src="<?= h($cbSelectPobockyJsUrl) ?>"></script>
 <?php // Vyber obdobi. ?>
@@ -68,6 +81,8 @@ window.CB_PC_SESSION_TOKEN = <?= json_encode((string)($_SESSION['cb_pc_session_t
 <script src="<?= h($cbHrJsUrl) ?>"></script>
 <?php // Chovani modulu Helpdesk v prohlizeci. ?>
 <script src="<?= h(cb_root_url('helpdesk/hl_js/hl_helpdesk.js') . '?v=' . (is_file(__DIR__ . '/../../helpdesk/hl_js/hl_helpdesk.js') ? (string)filemtime(__DIR__ . '/../../helpdesk/hl_js/hl_helpdesk.js') : '1')) ?>"></script>
+<?php // Ovládání týdenních požadavků v modulu Směny. ?>
+<script src="<?= h(cb_root_url('smeny/js/pozadavky.js') . '?v=' . (is_file(__DIR__ . '/../../smeny/js/pozadavky.js') ? (string)filemtime(__DIR__ . '/../../smeny/js/pozadavky.js') : '1')) ?>"></script>
 <?php // Jednotné uživatelské texty chyb Administrace. ?>
 <script src="<?= h($cbAdministraceChybyJsUrl) ?>"></script>
 <?php // Ulozeni prav role v Administraci. ?>
@@ -84,8 +99,8 @@ window.CB_PC_SESSION_TOKEN = <?= json_encode((string)($_SESSION['cb_pc_session_t
 <script src="<?= h($cbAdministraceUzivateleJsUrl) ?>"></script>
 <?php // Průběh ručního načítání katalogu Restia v Administraci. ?>
 <script src="<?= h($cbAdministraceRestiaKatalogJsUrl) ?>"></script>
-<?php // Průběh kontroly podkladů kompletního HR importu. ?>
-<script src="<?= h($cbAdministraceHrImportJsUrl) ?>"></script>
+<?php // Průběh jednorázového převodu historických Google reportů. ?>
+<script src="<?= h($cbAdministraceGoogleHistorieJsUrl) ?>"></script>
 <?php // AI analytik modulu Provoz. ?>
 <script src="<?= h(cb_root_url('provoz/js/ai_analytik.js') . '?v=' . (is_file(__DIR__ . '/../../provoz/js/ai_analytik.js') ? (string)filemtime(__DIR__ . '/../../provoz/js/ai_analytik.js') : '1')) ?>"></script>
 <?php // Konfigurace navigace mezi hlavni moduly. ?>
@@ -94,7 +109,9 @@ window.CB_MODULY_NAVIGACE = {
   shellUrl: <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,
   publicShellUrl: <?= json_encode($cbPublicShellUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,
   activeMainModule: <?= json_encode($cbInitialModule, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,
+  denniReportMainBranchId: <?= $cbNavMainBranchId ?>,
   helpdeskAllowedViews: <?= json_encode(array_values(array_filter(array_keys(cb_helpdesk_views()), 'cb_helpdesk_view_allowed')), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,
+  smenyNastaveni: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(407) ? 'true' : 'false' ?>,
   adminFirmaPridat: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(105) ? 'true' : 'false' ?>,
   adminLogChyby: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(106) ? 'true' : 'false' ?>,
   adminUzivatele: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(107) ? 'true' : 'false' ?>,

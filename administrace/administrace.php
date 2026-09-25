@@ -27,7 +27,7 @@ require_once __DIR__ . '/admin_includes/admin_individualni_prava_detail.php';
 require_once __DIR__ . '/admin_includes/admin_uzivatel_detail.php';
 require_once __DIR__ . '/admin_lib/admin_pages.php';
 require_once __DIR__ . '/admin_lib/admin_google_reporty_import.php';
-require_once __DIR__ . '/admin_lib/admin_hr_kompletni_import.php';
+require_once __DIR__ . '/admin_lib/admin_google_historie_import.php';
 require_once __DIR__ . '/admin_lib/admin_restia_katalog.php';
 require_once __DIR__ . '/admin_lib/admin_firma_ares.php';
 require_once __DIR__ . '/admin_lib/admin_firma_pridat.php';
@@ -63,8 +63,8 @@ if (!function_exists('cb_pravo_ma') || !cb_pravo_ma(100)) {
 }
 
 cb_admin_firma_pridat_handle();
-cb_admin_hr_kompletni_import_handle();
 cb_admin_google_reporty_import_handle();
+cb_admin_google_historie_handle();
 cb_admin_restia_katalog_handle();
 
 if (
@@ -87,7 +87,6 @@ if (
             'ok' => true,
             'id_user' => (int)$detail['id_user'],
             'detail_html' => cb_admin_uzivatel_detail_html($detail, $lists),
-            'form_html' => cb_admin_uzivatel_edit_form_html((int)$detail['id_user'], $_GET),
         ], JSON_UNESCAPED_UNICODE);
     } catch (Throwable $e) {
         cb_admin_json_chyba($e, 'Načtení detailu uživatele', ['table' => 'user']);
@@ -95,61 +94,19 @@ if (
     exit;
 }
 
-if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'] ?? '') === 'admin_uzivatel_vytvorit') {
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && in_array((string)($_POST['cb_action'] ?? ''), ['admin_uzivatel_vytvorit', 'admin_uzivatel_ulozit'], true)) {
     try {
         if (!cb_pravo_ma(107)) {
             throw new CbUserVisibleException('Nemáte právo spravovat uživatele.');
         }
-        $idUser = cb_admin_uzivatele_vytvor(db(), $_POST);
-        cb_user_akce_zapis([
-            'id_user_akce_typ' => 14,
-            'modul' => 'administrace',
-            'objekt' => 'user',
-            'id_objektu' => $idUser,
-            'pole' => 'zalozeni',
-            'hodnota_new' => 'zdroj=2',
-            'vysledek' => 1,
-            'zdroj' => 'administrace',
-            'detail' => ['akce' => 'vytvoreni_uzivatele'],
-        ]);
-        $_SESSION['cb_admin_uzivatele_notice'] = ['success' => true, 'message' => 'Uživatel ID ' . $idUser . ' byl založen a pozvánka odeslána.'];
+        throw new CbUserVisibleException('Osoby a jejich profily se zakládají a upravují v HR.');
     } catch (Throwable $e) {
         $_SESSION['cb_admin_uzivatele_notice'] = [
             'success' => false,
-            'message' => cb_admin_chyba_text($e, 'Založení uživatele', ['table' => 'user']),
+            'message' => cb_admin_chyba_text($e, 'Starý formulář uživatele', ['table' => 'user']),
         ];
     }
     header('Location: ' . cb_root_url('index.php?m=administrace&page=uzivatele'), true, 303);
-    exit;
-}
-
-if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'] ?? '') === 'admin_uzivatel_ulozit') {
-    $returnUrl = cb_admin_uzivatele_navrat_url($_GET);
-    try {
-        if (!cb_pravo_ma(107)) {
-            throw new CbUserVisibleException('Nemáte právo spravovat uživatele.');
-        }
-        $result = cb_admin_uzivatel_uloz(db(), $_POST);
-        cb_user_akce_zapis([
-            'id_user_akce_typ' => 14,
-            'modul' => 'administrace',
-            'objekt' => 'user',
-            'id_objektu' => (int)$result['id_user'],
-            'pole' => 'uprava_uctu',
-            'hodnota_old' => json_encode($result['before'], JSON_UNESCAPED_UNICODE),
-            'hodnota_new' => json_encode($result['after'], JSON_UNESCAPED_UNICODE),
-            'vysledek' => 1,
-            'zdroj' => 'administrace',
-            'detail' => ['akce' => 'uprava_uzivatele'],
-        ]);
-        $_SESSION['cb_admin_uzivatele_notice'] = ['success' => true, 'message' => 'Účet uživatele byl uložen.'];
-    } catch (Throwable $e) {
-        $_SESSION['cb_admin_uzivatele_notice'] = [
-            'success' => false,
-            'message' => cb_admin_chyba_text($e, 'Uložení uživatele', ['table' => 'user']),
-        ];
-    }
-    header('Location: ' . $returnUrl, true, 303);
     exit;
 }
 

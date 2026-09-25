@@ -40,7 +40,7 @@ function cb_obnoveni_hesla_odeslat(mysqli $db, string $email): bool
         throw new RuntimeException('Zadejte platný e-mail.');
     }
 
-    $stmt = $db->prepare('SELECT u.id_user, u.jmeno, u.prijmeni, u.email FROM user u INNER JOIN hr_person p ON p.id_user = u.id_user AND p.aktivni = 1 WHERE u.email = ? AND u.heslo_hash IS NOT NULL LIMIT 1');
+    $stmt = $db->prepare('SELECT u.id_user, ou.jmeno, ou.prijmeni, u.email FROM user u INNER JOIN hr_person p ON p.id_person = u.id_user AND p.aktivni = 1 INNER JOIN hr_osobni_udaje ou ON ou.id_person = p.id_person AND ou.platny = 1 WHERE u.email = ? AND u.heslo_hash IS NOT NULL LIMIT 1');
     $stmt->bind_param('s', $email);
     $stmt->execute();
     $user = $stmt->get_result()->fetch_assoc();

@@ -101,8 +101,8 @@ if ($isAdmin) {
     $stmtItems = $conn->prepare('
         SELECT h.id_helpdesk, h.id_user_zalozil, h.modul, h.typ, h.stav, h.verejny, h.predmet, h.vytvoreno, h.upraveno,
                h.pocet_zobrazeni, h.pocet_unikatnich_zobrazeni, h.pocet_zprav, TIMESTAMPDIFF(MINUTE, h.vytvoreno, NOW()) AS stari_minut,
-               u.jmeno, u.prijmeni,
-               (SELECT GROUP_CONCAT(ur.id_role ORDER BY ur.id_role) FROM user_role ur WHERE ur.id_user = u.id_user) AS role_ids,
+               ou.jmeno, ou.prijmeni,
+               (SELECT GROUP_CONCAT(ur.id_role ORDER BY ur.id_role) FROM hr_pristupovy_profil ur WHERE ur.id_person = h.id_user_zalozil) AS role_ids,
                CASE
                    WHEN hr.id_helpdesk_read IS NULL THEN 1
                    WHEN h.posledni_zprava IS NOT NULL AND h.posledni_zprava > hr.precteno THEN 1
@@ -115,7 +115,7 @@ if ($isAdmin) {
                      AND sw.id_user = ?
                ) AS is_watched
         FROM helpdesk h
-        LEFT JOIN `user` u ON u.id_user = h.id_user_zalozil
+        LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje = (SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2 WHERE ou2.id_person = h.id_user_zalozil AND ou2.platny = 1)
         LEFT JOIN helpdesk_read hr ON hr.id_helpdesk = h.id_helpdesk AND hr.id_user = ?
         WHERE ' . $helpdeskAreaCondition . ' AND ' . $helpdeskCompanyCondition . '
         ORDER BY h.vytvoreno DESC, h.id_helpdesk DESC
@@ -125,8 +125,8 @@ if ($isAdmin) {
     $stmtItems = $conn->prepare('
         SELECT h.id_helpdesk, h.id_user_zalozil, h.modul, h.typ, h.stav, h.verejny, h.predmet, h.vytvoreno, h.upraveno,
                h.pocet_zobrazeni, h.pocet_unikatnich_zobrazeni, h.pocet_zprav, TIMESTAMPDIFF(MINUTE, h.vytvoreno, NOW()) AS stari_minut,
-               u.jmeno, u.prijmeni,
-               (SELECT GROUP_CONCAT(ur.id_role ORDER BY ur.id_role) FROM user_role ur WHERE ur.id_user = u.id_user) AS role_ids,
+               ou.jmeno, ou.prijmeni,
+               (SELECT GROUP_CONCAT(ur.id_role ORDER BY ur.id_role) FROM hr_pristupovy_profil ur WHERE ur.id_person = h.id_user_zalozil) AS role_ids,
                CASE
                    WHEN hr.id_helpdesk_read IS NULL THEN 1
                    WHEN h.posledni_zprava IS NOT NULL AND h.posledni_zprava > hr.precteno THEN 1
@@ -139,7 +139,7 @@ if ($isAdmin) {
                      AND sw.id_user = ?
                ) AS is_watched
         FROM helpdesk h
-        LEFT JOIN `user` u ON u.id_user = h.id_user_zalozil
+        LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje = (SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2 WHERE ou2.id_person = h.id_user_zalozil AND ou2.platny = 1)
         LEFT JOIN helpdesk_read hr ON hr.id_helpdesk = h.id_helpdesk AND hr.id_user = ?
         WHERE ' . $helpdeskAreaCondition . ' AND ' . $helpdeskCompanyCondition . ' AND ' . $scope['sql'] . '
         ORDER BY h.vytvoreno DESC, h.id_helpdesk DESC

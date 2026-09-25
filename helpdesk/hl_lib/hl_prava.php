@@ -76,7 +76,7 @@ function cb_helpdesk_current_company_id(): int
     }
 
     $idFirma = 1;
-    $stmt = db()->prepare('SELECT COALESCE(id_firma, 1) FROM `user` WHERE id_user = ? LIMIT 1');
+    $stmt = db()->prepare('SELECT COALESCE(id_firma, 1) FROM hr_person WHERE id_person = ? LIMIT 1');
     if ($stmt instanceof mysqli_stmt) {
         $stmt->bind_param('i', $idUser);
         $stmt->execute();
@@ -308,19 +308,19 @@ function cb_helpdesk_admin_ids(mysqli $conn, int $idFirma): array
     $sql = '
         SELECT u.id_user
         FROM `user` u
-        INNER JOIN hr_person hp ON hp.id_user = u.id_user AND hp.aktivni = 1
+        INNER JOIN hr_person hp ON hp.id_person = u.id_user AND hp.aktivni = 1
         INNER JOIN cis_prava cp ON cp.id_pravo = 604 AND cp.aktivni = 1
         LEFT JOIN prava_vyjimky pv ON pv.id_user = u.id_user AND pv.id_pravo = 604
-        WHERE COALESCE(u.id_firma, 1) = ?
+        WHERE hp.id_firma = ?
           AND CASE
               WHEN pv.povoleno IS NOT NULL THEN pv.povoleno = 1
               ELSE EXISTS (
                   SELECT 1
-                  FROM user_role ur
+                  FROM hr_pristupovy_profil ur
                   INNER JOIN prava_global pg
                       ON pg.id_role = ur.id_role
                      AND pg.id_pravo = 604
-                  WHERE ur.id_user = u.id_user
+                  WHERE ur.id_person = hp.id_person
               )
           END
         ORDER BY u.id_user ASC

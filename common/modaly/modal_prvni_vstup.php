@@ -23,8 +23,6 @@ unset($_SESSION['cb_flash']);
         <div class="modal-prvni-udaj"><span>Příjmení:</span><strong><?= h((string)$cbPrvniUser['prijmeni']) ?></strong></div>
         <div class="modal-prvni-udaj"><span>E-mail:</span><strong><?= h((string)$cbPrvniUser['email']) ?></strong></div>
       </div>
-      <input type="hidden" name="jmeno" value="<?= h((string)$cbPrvniUser['jmeno']) ?>">
-      <input type="hidden" name="prijmeni" value="<?= h((string)$cbPrvniUser['prijmeni']) ?>">
       <input type="hidden" name="email" value="<?= h((string)$cbPrvniUser['email']) ?>">
       <div class="modal-prvni-heslo"><div class="modal-prvni-heslo-radek"><label for="cb_pass">Nové heslo:</label><input class="modal-input" id="cb_pass" name="heslo" type="password" autocomplete="new-password" required aria-describedby="cb-password-rules cb-password-status"></div></div>
       <div class="modal-password-strength"><span class="modal-password-strength-status" id="cb-password-status" aria-live="polite">Síla hesla</span><div class="modal-password-meter" aria-hidden="true"><span id="cb-password-meter-fill"></span></div></div>

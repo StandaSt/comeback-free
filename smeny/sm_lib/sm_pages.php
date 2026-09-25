@@ -3,17 +3,21 @@ declare(strict_types=1);
 
 function cb_smeny_pages(): array
 {
-    return [
+    $pages = [
         ['page' => 'prehled', 'label' => 'Přehled'],
         ['page' => 'pozadavky', 'label' => 'Požadavky'],
-        ['page' => 'hodnoceni', 'label' => 'Hodnocení'],
         ['page' => 'me_smeny', 'label' => 'Mé směny', 'items' => ['Aktuální týden', 'Týden + 1', 'Týden + 2']],
         ['page' => 'planovani_smen', 'label' => 'Plánování směn', 'items' => ['Aktuální týden', 'Týden + 1']],
         ['page' => 'sablony', 'label' => 'Šablony'],
         ['page' => 'naplanovane_smeny', 'label' => 'Naplánované směny', 'items' => ['Aktuální týden', 'Týden + 1', 'Týden + 2']],
         ['page' => 'zadane_pozadavky', 'label' => 'Zadané požadavky', 'items' => ['Aktuální týden', 'Týden + 1', 'Týden + 2', 'Historie']],
-        ['page' => 'administrace', 'label' => 'Administrace'],
     ];
+
+    if (function_exists('cb_smeny_nastaveni_ma_pravo') && cb_smeny_nastaveni_ma_pravo()) {
+        $pages[] = ['page' => 'nastaveni', 'label' => 'Nastavení'];
+    }
+
+    return $pages;
 }
 
 function cb_smeny_current_page(array $pages): array

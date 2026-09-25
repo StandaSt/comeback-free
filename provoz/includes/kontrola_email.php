@@ -93,7 +93,7 @@ function nacti_prehled_emailu(mysqli $db): array
                 e.odeslano,
                 e.potvrzeno
          FROM aaa_email_overeni e
-         LEFT JOIN user u ON u.id_user = e.id_user
+         LEFT JOIN hr_osobni_udaje u ON u.id_person = e.id_user AND u.platny = 1
          WHERE e.id = (
              SELECT MAX(e2.id)
              FROM aaa_email_overeni e2
@@ -143,15 +143,16 @@ function nacti_aktivni_emaily(mysqli $db): array
 {
     $rows = [];
     $result = $db->query(
-        "SELECT id_user, jmeno, prijmeni, LOWER(TRIM(email)) AS email
-         FROM user
-         WHERE email IS NOT NULL
-           AND TRIM(email) <> ''
-           AND aktivni = 1
+        "SELECT u.id_user, ou.jmeno, ou.prijmeni, LOWER(TRIM(u.email)) AS email
+         FROM user u
+         INNER JOIN hr_person hp ON hp.id_person = u.id_user AND hp.aktivni = 1
+         INNER JOIN hr_osobni_udaje ou ON ou.id_person = hp.id_person AND ou.platny = 1
+         WHERE u.email IS NOT NULL
+           AND TRIM(u.email) <> ''
            AND NOT EXISTS (
                SELECT 1
                FROM aaa_email_overeni e
-               WHERE e.email = LOWER(TRIM(user.email))
+               WHERE e.email = LOWER(TRIM(u.email))
            )
          ORDER BY email"
     );
@@ -655,11 +656,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && trim((string)($_POST['ak
                 $idUser = 0;
                 $celeJmeno = '';
                 $stmt = $db->prepare(
-                    "SELECT id_user, jmeno, prijmeni
-                     FROM user
-                     WHERE LOWER(TRIM(email)) = ?
-                       AND aktivni = 1
-                     ORDER BY id_user
+                    "SELECT u.id_user, ou.jmeno, ou.prijmeni
+                     FROM user u
+                     INNER JOIN hr_person hp ON hp.id_person = u.id_user AND hp.aktivni = 1
+                     INNER JOIN hr_osobni_udaje ou ON ou.id_person = hp.id_person AND ou.platny = 1
+                     WHERE LOWER(TRIM(u.email)) = ?
+                     ORDER BY u.id_user
                      LIMIT 1"
                 );
                 $stmt->bind_param('s', $email);
@@ -681,15 +683,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && trim((string)($_POST['ak
                 }
             }
         } elseif ($akce === 'vsem') {
-            $sql = "SELECT id_user, jmeno, prijmeni, LOWER(TRIM(email)) AS email
-                    FROM user
-                    WHERE email IS NOT NULL
-                      AND TRIM(email) <> ''
-                      AND aktivni = 1
+            $sql = "SELECT u.id_user, ou.jmeno, ou.prijmeni, LOWER(TRIM(u.email)) AS email
+                    FROM user u
+                    INNER JOIN hr_person hp ON hp.id_person = u.id_user AND hp.aktivni = 1
+                    INNER JOIN hr_osobni_udaje ou ON ou.id_person = hp.id_person AND ou.platny = 1
+                    WHERE u.email IS NOT NULL
+                      AND TRIM(u.email) <> ''
                       AND NOT EXISTS (
                           SELECT 1
                           FROM aaa_email_overeni e
-                          WHERE e.email = LOWER(TRIM(user.email))
+                          WHERE e.email = LOWER(TRIM(u.email))
                       )
                     ORDER BY email";
 

@@ -813,6 +813,9 @@
     document.querySelectorAll('.cb-zadani-reportu, [data-zr-form]').forEach(initOne);
   }
 
+  // Stejný převod času a formát hodin používá také samostatný report Výroby.
+  w.CB_DENNI_REPORT_TIME = Object.freeze({ parseTimeValue, formatWorkedHours });
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initDenniReportOsoby);
   } else {

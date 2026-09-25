@@ -63,8 +63,8 @@ $cbAdministraceUzivateleJsPath = $cbAplikaceRoot . '/administrace/admin_js/admin
 $cbAdministraceUzivateleJsUrl = cb_root_url('administrace/admin_js/admin_uzivatele.js') . '?v=' . (is_file($cbAdministraceUzivateleJsPath) ? (string)filemtime($cbAdministraceUzivateleJsPath) : '1');
 $cbAdministraceRestiaKatalogJsPath = $cbAplikaceRoot . '/administrace/admin_js/admin_restia_katalog.js';
 $cbAdministraceRestiaKatalogJsUrl = cb_root_url('administrace/admin_js/admin_restia_katalog.js') . '?v=' . (is_file($cbAdministraceRestiaKatalogJsPath) ? (string)filemtime($cbAdministraceRestiaKatalogJsPath) : '1');
-$cbAdministraceHrImportJsPath = $cbAplikaceRoot . '/administrace/admin_js/admin_hr_kompletni_import.js';
-$cbAdministraceHrImportJsUrl = cb_root_url('administrace/admin_js/admin_hr_kompletni_import.js') . '?v=' . (is_file($cbAdministraceHrImportJsPath) ? (string)filemtime($cbAdministraceHrImportJsPath) : '1');
+$cbAdministraceGoogleHistorieJsPath = $cbAplikaceRoot . '/administrace/admin_js/admin_google_historie.js';
+$cbAdministraceGoogleHistorieJsUrl = cb_root_url('administrace/admin_js/admin_google_historie.js') . '?v=' . (is_file($cbAdministraceGoogleHistorieJsPath) ? (string)filemtime($cbAdministraceGoogleHistorieJsPath) : '1');
 
 /* Hodnoty pro vizualni kontext a tema celeho shellu. */
 $cbVisualModule = $cbInitialModule === 'helpdesk' ? 'helpdesk' : $cbInitialModule;

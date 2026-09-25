@@ -17,22 +17,8 @@ function hr_post_zamestnanec_uprava(mysqli $db, int $zadalUser): void
             throw new CbUserVisibleException('Nemáte právo upravit zaměstnance.');
         }
         cb_firemni_pristup_vyzaduj_osobu($db, $zadalUser, $idPerson);
-        $emailZmena = hr_update_employee_basic_data($db, $idPerson, $_POST, $zadalUser);
+        hr_update_employee_basic_data($db, $idPerson, $_POST, $zadalUser);
         $message = 'Karta zaměstnance byla uložena.';
-        if (is_array($emailZmena)) {
-            try {
-                $odkaz = cb_url_abs('?potvrdit_email=' . rawurlencode((string)$emailZmena['token']));
-                cb_email_zmena_oznameni_odeslat(
-                    (string)$emailZmena['stary_email'],
-                    (string)$emailZmena['novy_email'],
-                    $odkaz
-                );
-                $message .= ' Potvrzení změny přihlašovacího e-mailu bylo odesláno uživateli.';
-            } catch (Throwable $mailError) {
-                cb_hr_chyba_text($mailError, 'Odeslání potvrzení změny e-mailu');
-                $message .= ' Potvrzení změny e-mailu se nepodařilo odeslat, admin byl informován.';
-            }
-        }
         cb_form_finish(
             cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson) . '&upravit=1'),
             true,

@@ -15,6 +15,13 @@ require_once __DIR__ . '/../common/lib/pobocky_vyber.php';
 require_once __DIR__ . '/../common/lib/handle_set_period.php';
 require_once __DIR__ . '/../common/lib/handle_set_pobocky.php';
 require_once __DIR__ . '/sm_lib/sm_pages.php';
+require_once __DIR__ . '/sm_lib/sm_nastaveni_pravo.php';
+require_once __DIR__ . '/sm_lib/sm_pozadavky_osoba.php';
+require_once __DIR__ . '/sm_lib/sm_pozadavky_tydny.php';
+require_once __DIR__ . '/sm_lib/sm_pozadavky_nacteni.php';
+require_once __DIR__ . '/sm_lib/sm_pozadavky_kopie.php';
+require_once __DIR__ . '/sm_lib/sm_audit_zapis.php';
+require_once __DIR__ . '/sm_lib/sm_pozadavky_ulozeni.php';
 
 cb_session_guard_entry();
 
@@ -36,6 +43,27 @@ $smCurrentPage = cb_smeny_current_page($smMenuItems);
 $smPage = $smCurrentPage['key'];
 $smPageTitle = $smCurrentPage['title'];
 
+if ($smPage === 'pozadavky') {
+    $smDb = db();
+    $smPerson = cb_smeny_pozadavky_osoba($smDb);
+    $smWeeks = cb_smeny_pozadavky_tydny();
+    $smWeekIndex = cb_smeny_pozadavky_index($smWeeks);
+    $smWeek = $smWeeks[$smWeekIndex];
+    try {
+        cb_smeny_pozadavky_ulozit($smDb, $smPerson, $smWeeks);
+    } catch (Throwable $e) {
+        cb_smeny_pozadavky_flash('error', cb_chyba_uzivatel($e, [
+            'module' => 'smeny',
+            'action' => 'Uložení požadavků na směny',
+            'table' => 'smeny_pozadavek',
+        ]));
+        $postedWeek = filter_var($_POST['week'] ?? $smWeekIndex, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 3]]);
+        $postedWeek = $postedWeek === false ? $smWeekIndex : $postedWeek;
+        header('Location: ' . cb_root_url('index.php?m=smeny&page=pozadavky&week=' . $postedWeek));
+        exit;
+    }
+}
+
 ?>
 <?php if (!defined('CB_PP_ONLY') || CB_PP_ONLY !== true): ?>
     <?php require __DIR__ . '/sm_includes/sm_menu.php'; ?>
@@ -43,6 +71,10 @@ $smPageTitle = $smCurrentPage['title'];
 
 <?php if ($smPage === 'uprava_profilu'): ?>
     <?php require __DIR__ . '/../common/pages/uprava_profilu.php'; ?>
+<?php elseif ($smPage === 'pozadavky'): ?>
+    <?php require __DIR__ . '/sm_pages/pozadavky.php'; ?>
+<?php elseif ($smPage === 'nastaveni'): ?>
+    <?php require __DIR__ . '/sm_pages/nastaveni.php'; ?>
 <?php else: ?>
 <section class="pp smeny_content" data-module="smeny" data-page="<?= h($smPage) ?>">
     <header class="pp_header">

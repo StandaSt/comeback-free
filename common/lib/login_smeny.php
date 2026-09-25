@@ -84,15 +84,15 @@ try {
     $stmtLocal = db()->prepare('
         SELECT
             u.id_user,
-            u.jmeno,
-            u.prijmeni,
+            osobni.jmeno,
+            osobni.prijmeni,
             u.email,
-            u.telefon,
+            (SELECT t.telefon FROM hr_telefon t WHERE t.id_person = p.id_person AND t.platny = 1 AND t.hlavni = 1 ORDER BY t.id_telefon DESC LIMIT 1) AS telefon,
             p.aktivni,
-            u.schvalen,
             u.heslo_hash
         FROM user u
-        INNER JOIN hr_person p ON p.id_user = u.id_user
+        INNER JOIN hr_person p ON p.id_person = u.id_user AND p.id_user = u.id_user
+        INNER JOIN hr_osobni_udaje osobni ON osobni.id_person = p.id_person AND osobni.platny = 1
         WHERE u.email = ?
         LIMIT 1
     ');

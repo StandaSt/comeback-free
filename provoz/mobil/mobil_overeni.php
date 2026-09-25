@@ -95,9 +95,10 @@ function cb_fetch_user_info(int $idUser): array
     }
 
     $stmt = db()->prepare('
-        SELECT jmeno, prijmeni, email
-        FROM user
-        WHERE id_user=?
+        SELECT ou.jmeno, ou.prijmeni, u.email
+        FROM user u
+        INNER JOIN hr_osobni_udaje ou ON ou.id_person = u.id_user AND ou.platny = 1
+        WHERE u.id_user=?
         LIMIT 1
     ');
     if (!$stmt) {

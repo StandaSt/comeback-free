@@ -421,26 +421,26 @@ function hr_fetch_employee_work_timeline(mysqli $db, int $idPerson): array
             SELECT pv.vytvoreno AS kdy, CONCAT("Nástup / změna vztahu: ", pvt.nazev) AS akce, pv.datum_nastupu AS plati_od, pv.datum_ukonceni AS plati_do, CONCAT(uu.prijmeni, " ", uu.jmeno) AS zapsal, pv.poznamka
             FROM hr_pracovni_vztah pv
             INNER JOIN hr_cis_pracovni_vztah_typ pvt ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ
-            LEFT JOIN user uu ON uu.id_user = pv.id_user_zadal
+            LEFT JOIN hr_osobni_udaje uu ON uu.id_person = pv.id_user_zadal AND uu.platny = 1
             WHERE pv.id_person = ?
             UNION ALL
             SELECT m.vytvoreno, CONCAT("Změna mzdy: ", m.castka, " Kč / ", mt.nazev), m.platnost_od, m.platnost_do, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL
-            FROM hr_mzda m INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = m.id_pracovni_vztah INNER JOIN cis_mzda_typ mt ON mt.id_mzda_typ = m.id_mzda_typ LEFT JOIN user uu ON uu.id_user = m.id_user_zadal WHERE pv.id_person = ?
+            FROM hr_mzda m INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = m.id_pracovni_vztah INNER JOIN cis_mzda_typ mt ON mt.id_mzda_typ = m.id_mzda_typ LEFT JOIN hr_osobni_udaje uu ON uu.id_person = m.id_user_zadal AND uu.platny = 1 WHERE pv.id_person = ?
             UNION ALL
             SELECT u.vytvoreno, CONCAT("Změna úvazku: ", u.hodin_tydne, " h/týdně"), u.platnost_od, u.platnost_do, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL
-            FROM hr_pracovni_uvazek u INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = u.id_pracovni_vztah LEFT JOIN user uu ON uu.id_user = u.id_user_zadal WHERE pv.id_person = ?
+            FROM hr_pracovni_uvazek u INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = u.id_pracovni_vztah LEFT JOIN hr_osobni_udaje uu ON uu.id_person = u.id_user_zadal AND uu.platny = 1 WHERE pv.id_person = ?
             UNION ALL
             SELECT b.vytvoreno, CONCAT("Přidán benefit: ", cb.nazev), b.platnost_od, b.platnost_do, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL
-            FROM hr_benefit b INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = b.id_pracovni_vztah INNER JOIN hr_cis_benefit cb ON cb.id_cis_benefit = b.id_cis_benefit LEFT JOIN user uu ON uu.id_user = b.id_user_zadal WHERE pv.id_person = ?
+            FROM hr_benefit b INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = b.id_pracovni_vztah INNER JOIN hr_cis_benefit cb ON cb.id_cis_benefit = b.id_cis_benefit LEFT JOIN hr_osobni_udaje uu ON uu.id_person = b.id_user_zadal AND uu.platny = 1 WHERE pv.id_person = ?
             UNION ALL
             SELECT b.zruseno, CONCAT("Odebrán benefit: ", cb.nazev), b.platnost_do, NULL, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL
-            FROM hr_benefit b INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = b.id_pracovni_vztah INNER JOIN hr_cis_benefit cb ON cb.id_cis_benefit = b.id_cis_benefit LEFT JOIN user uu ON uu.id_user = b.id_user_zrusil WHERE pv.id_person = ? AND b.zruseno IS NOT NULL
+            FROM hr_benefit b INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = b.id_pracovni_vztah INNER JOIN hr_cis_benefit cb ON cb.id_cis_benefit = b.id_cis_benefit LEFT JOIN hr_osobni_udaje uu ON uu.id_person = b.id_user_zrusil AND uu.platny = 1 WHERE pv.id_person = ? AND b.zruseno IS NOT NULL
             UNION ALL
             SELECT pp.vytvoreno, CONCAT("Přerušení: ", pt.nazev), pp.datum_od, pp.datum_do, CONCAT(uu.prijmeni, " ", uu.jmeno), pp.poznamka
-            FROM hr_pracovni_preruseni pp INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = pp.id_pracovni_vztah INNER JOIN hr_cis_pracovni_preruseni_typ pt ON pt.id_pracovni_preruseni_typ = pp.id_pracovni_preruseni_typ LEFT JOIN user uu ON uu.id_user = pp.id_user_zadal WHERE pv.id_person = ?
+            FROM hr_pracovni_preruseni pp INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = pp.id_pracovni_vztah INNER JOIN hr_cis_pracovni_preruseni_typ pt ON pt.id_pracovni_preruseni_typ = pp.id_pracovni_preruseni_typ LEFT JOIN hr_osobni_udaje uu ON uu.id_person = pp.id_user_zadal AND uu.platny = 1 WHERE pv.id_person = ?
             UNION ALL
             SELECT pu.vytvoreno, CONCAT("Ukončení: ", put.nazev), pu.datum_ukonceni, pu.datum_ukonceni, CONCAT(uu.prijmeni, " ", uu.jmeno), pu.poznamka
-            FROM hr_pracovni_ukonceni pu INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = pu.id_pracovni_vztah INNER JOIN hr_cis_pracovni_ukonceni_typ put ON put.id_pracovni_ukonceni_typ = pu.id_pracovni_ukonceni_typ LEFT JOIN user uu ON uu.id_user = pu.id_user_zadal WHERE pv.id_person = ?
+            FROM hr_pracovni_ukonceni pu INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = pu.id_pracovni_vztah INNER JOIN hr_cis_pracovni_ukonceni_typ put ON put.id_pracovni_ukonceni_typ = pu.id_pracovni_ukonceni_typ LEFT JOIN hr_osobni_udaje uu ON uu.id_person = pu.id_user_zadal AND uu.platny = 1 WHERE pv.id_person = ?
         ) timeline
         ORDER BY kdy DESC
     ';
@@ -636,7 +636,7 @@ function hr_fetch_employee_edit_data(mysqli $db, int $idPerson): array
         'adresa_dorucovaci' => 'SELECT ulice, cp, mesto, psc, stat FROM hr_adresa WHERE id_person = ? AND typ = 1 AND platny = 1 ORDER BY id_adresa DESC LIMIT 1',
         'nouzovy_kontakt' => 'SELECT jmeno, vztah, telefon, email FROM hr_nouzovy_kontakt WHERE id_person = ? AND platny = 1 AND hlavni = 1 ORDER BY id_nouzovy_kontakt DESC LIMIT 1',
         'bankovni_ucet' => 'SELECT cislo_uctu, kod_banky, iban FROM hr_bankovni_ucet WHERE id_person = ? AND platny = 1 ORDER BY zmena DESC, id_bankovni_ucet DESC LIMIT 1',
-        'user_role' => 'SELECT ur.id_role FROM hr_person p INNER JOIN user_role ur ON ur.id_user = p.id_user WHERE p.id_person = ? AND ur.id_role IN (3, 5, 7, 9) ORDER BY FIELD(ur.id_role, 3, 5, 7, 9) LIMIT 1',
+        'user_role' => 'SELECT pr.id_role FROM hr_pristupovy_profil pr WHERE pr.id_person = ? AND pr.id_role IN (3, 5, 7, 9) ORDER BY FIELD(pr.id_role, 3, 5, 7, 9) LIMIT 1',
     ];
     $data = [];
     foreach ($queries as $key => $sql) {

@@ -69,6 +69,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'
 
 if (!empty($_SESSION['login_ok'])) {
     cb_hr_user_sync_ukoncene(db());
+    $cbIdentityId = (int)($_SESSION['cb_user']['id_user'] ?? 0);
+    if (!cb_hr_session_profile_refresh(db(), $cbIdentityId)) {
+        cb_session_invalidate_auth();
+        if (cb_session_is_internal_request()) {
+            http_response_code(401);
+            exit;
+        }
+        header('Location: ' . cb_root_url(''));
+        exit;
+    }
     require_once __DIR__ . '/common/db/db_prava.php';
     $cbRightsUser = $_SESSION['cb_user'] ?? [];
     cb_db_prava_nacti_do_session(
@@ -324,7 +334,7 @@ if (!empty($_SESSION['login_ok']) && isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODUL
 
 if (!empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     $cbPostedModule = strtolower(trim((string)($_GET['m'] ?? '')));
-    if (in_array($cbPostedModule, ['hr', 'administrace'], true)) {
+    if (in_array($cbPostedModule, ['hr', 'smeny', 'administrace'], true)) {
         cb_modul_nacti($cbPostedModule);
         exit;
     }

@@ -1,121 +1,13 @@
 <?php
-// db/db_user.php * Verze: V4 * Aktualizace: 02.04.2026 * Počet řádků: 161
+// db/db_user.php * Nastavení lokálního přihlašovacího účtu.
 declare(strict_types=1);
 
 /*
- * DB: user + user_login
+ * DB: user_set + user_login
  *
  * Účel:
- * - malé, jednoučelové funkce pro práci s tabulkou user a user_login
+ * - malé, jednoučelové funkce pro nastavení účtu a jeho přihlášení
  */
-/**
- * Převod hodnoty na DATETIME string pro MySQL, nebo null.
- */
-function cb_db_dt_or_null(mixed $v): ?string
-{
-    if ($v === null) {
-        return null;
-    }
-    $s = trim((string)$v);
-    if ($s === '') {
-        return null;
-    }
-
-    $ts = strtotime($s);
-    if (!$ts) {
-        return null;
-    }
-
-    return date('Y-m-d H:i:s', $ts);
-}
-
-/**
- * Upsert do tabulky user podle id_user (Směny).
- * - INSERT pokud neexistuje
- * - jinak UPDATE na aktuální hodnoty ze Směn
- *
- * @param array $p  plný profil ze Směn (userGetLogged)
- */
-function cb_db_upsert_user(mysqli $conn, array $p, bool $inSystem = true): void
-{
-    $idUser = (int)$p['id'];
-
-    $jmeno = (string)($p['name'] ?? '');
-    $prijmeni = (string)($p['surname'] ?? '');
-    $email = (string)($p['email'] ?? '');
-    $telefon = (string)($p['phoneNumber'] ?? '');
-
-    $aktivni = 0;
-    if (!empty($p['active'])) {
-        $aktivni = 1;
-    }
-
-    $schvalen = 0;
-    if (!empty($p['approved'])) {
-        $schvalen = 1;
-    }
-    $duvodNeaktivni = $aktivni === 1 ? null : 'nenalezen_aktivni_ve_smenach';
-
-    $vytvoren = cb_db_dt_or_null($p['createTime'] ?? null);
-    $visit = cb_db_dt_or_null($p['lastLoginTime'] ?? null);
-
-    // existuje?
-    $stmt = $conn->prepare('SELECT id_user FROM user WHERE id_user=? LIMIT 1');
-    $stmt->bind_param('i', $idUser);
-    $stmt->execute();
-    $stmt->store_result();
-    $exists = ($stmt->num_rows > 0);
-    $stmt->close();
-
-    if (!$exists) {
-        $inSystemValue = $inSystem ? 1 : 0;
-        $stmt = $conn->prepare(
-            'INSERT INTO user (id_user,jmeno,prijmeni,email,telefon,aktivni,in_system,schvalen,vytvoren_smeny,visit_smeny)
-             VALUES (?,?,?,?,?,?,?,?,?,?,1)'
-        );
-
-        $stmt->bind_param(
-            'issssiiiss',
-            $idUser,
-            $jmeno,
-            $prijmeni,
-            $email,
-            $telefon,
-            $aktivni,
-            $inSystemValue,
-            $schvalen,
-            $vytvoren,
-            $visit
-        );
-        $stmt->execute();
-        $stmt->close();
-        return;
-    }
-
-    $inSystemSql = $inSystem ? 'in_system=1,' : '';
-    $stmt = $conn->prepare(
-        'UPDATE user
-         SET jmeno=?, prijmeni=?, email=?, telefon=?, aktivni=?, duvod_neaktivni=?, ' . $inSystemSql . ' schvalen=?, vytvoren_smeny=?, visit_smeny=?, zdroj=1
-         WHERE id_user=? AND zdroj=1'
-    );
-
-    $stmt->bind_param(
-        'ssssisissi',
-        $jmeno,
-        $prijmeni,
-        $email,
-        $telefon,
-        $aktivni,
-        $duvodNeaktivni,
-        $schvalen,
-        $vytvoren,
-        $visit,
-        $idUser
-    );
-    $stmt->execute();
-    $stmt->close();
-}
-
 /**
  * Zajisti vychozi zaznam v user_set pro uzivatele po prvnim loginu.
  */

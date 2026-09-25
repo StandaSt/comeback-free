@@ -16,15 +16,15 @@ function cb_prvni_vstup_user(mysqli $db, int $idUser): ?array
     $stmt = $db->prepare('
         SELECT
             u.id_user,
-            u.jmeno,
-            u.prijmeni,
+            osobni.jmeno,
+            osobni.prijmeni,
             u.email,
-            u.telefon,
+            (SELECT t.telefon FROM hr_telefon t WHERE t.id_person = p.id_person AND t.platny = 1 AND t.hlavni = 1 ORDER BY t.id_telefon DESC LIMIT 1) AS telefon,
             p.aktivni,
-            u.schvalen,
             u.heslo_hash
         FROM user u
-        INNER JOIN hr_person p ON p.id_user = u.id_user
+        INNER JOIN hr_person p ON p.id_person = u.id_user AND p.id_user = u.id_user
+        INNER JOIN hr_osobni_udaje osobni ON osobni.id_person = p.id_person AND osobni.platny = 1
         WHERE u.id_user = ?
         LIMIT 1
     ');
@@ -107,7 +107,6 @@ function cb_prvni_vstup_dokonci_login(mysqli $db, array $user): void
         'email' => (string)$user['email'],
         'telefon' => (string)($user['telefon'] ?? ''),
         'active' => (bool)$user['aktivni'],
-        'approved' => (bool)$user['schvalen'],
         'roles' => [],
         'sloty' => [],
     ];
@@ -140,7 +139,7 @@ function cb_lokalni_login_zahaj(mysqli $db, array $user, string $deviceEndpoint 
         throw new RuntimeException('Osoba je v HR neaktivní a nemůže se přihlásit do IS.');
     }
     $idUser = (int)$user['id_user'];
-    $_SESSION['cb_user'] = ['id_user' => $idUser, 'name' => (string)$user['jmeno'], 'surname' => (string)$user['prijmeni'], 'email' => (string)$user['email'], 'telefon' => (string)($user['telefon'] ?? ''), 'active' => true, 'approved' => (bool)$user['schvalen'], 'roles' => [], 'sloty' => []];
+    $_SESSION['cb_user'] = ['id_user' => $idUser, 'name' => (string)$user['jmeno'], 'surname' => (string)$user['prijmeni'], 'email' => (string)$user['email'], 'telefon' => (string)($user['telefon'] ?? ''), 'active' => true, 'roles' => [], 'sloty' => []];
     $_SESSION['cb_auth_ok'] = 1;
     $_SESSION['cb_local_login_user_id'] = $idUser;
     require_once __DIR__ . '/../db/db_user.php';
@@ -194,13 +193,11 @@ function cb_prvni_vstup_uloz(mysqli $db, array $post): void
     }
     $idUser = (int)($_SESSION['cb_prvni_vstup_user_id'] ?? 0);
     $user = cb_prvni_vstup_user($db, $idUser);
-    $jmeno = trim((string)($post['jmeno'] ?? ''));
-    $prijmeni = trim((string)($post['prijmeni'] ?? ''));
     $email = trim((string)($post['email'] ?? ''));
     $heslo = (string)($post['heslo'] ?? '');
     $hesloZnovu = (string)($post['heslo_znovu'] ?? '');
-    if (!is_array($user) || $jmeno === '' || $prijmeni === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
-        throw new RuntimeException('Vyplňte celé jméno a platný e-mail.');
+    if (!is_array($user) || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+        throw new RuntimeException('Vyplňte platný přihlašovací e-mail.');
     }
     if (
         strlen($heslo) < 8
@@ -216,8 +213,8 @@ function cb_prvni_vstup_uloz(mysqli $db, array $post): void
     $hash = password_hash($heslo, PASSWORD_DEFAULT);
     $db->begin_transaction();
     try {
-        $stmt = $db->prepare('UPDATE user SET jmeno=?, prijmeni=?, email=?, heslo_hash=? WHERE id_user=? AND heslo_hash IS NULL');
-        $stmt->bind_param('ssssi', $jmeno, $prijmeni, $email, $hash, $idUser);
+        $stmt = $db->prepare('UPDATE user SET email=?, heslo_hash=? WHERE id_user=? AND heslo_hash IS NULL');
+        $stmt->bind_param('ssi', $email, $hash, $idUser);
         $stmt->execute();
         if ($stmt->affected_rows !== 1) {
             throw new RuntimeException('První vstup už byl dokončen.');

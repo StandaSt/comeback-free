@@ -350,7 +350,7 @@ function cb_helpdesk_notifikace_sledujicim_o_admin_odpovedi(mysqli $conn, int $i
         return;
     }
 
-    $stmtUser = $conn->prepare('SELECT jmeno, prijmeni FROM `user` WHERE id_user = ? LIMIT 1');
+    $stmtUser = $conn->prepare('SELECT jmeno, prijmeni FROM hr_osobni_udaje WHERE id_person = ? AND platny = 1 ORDER BY id_osobni_udaje DESC LIMIT 1');
 
     foreach ($users as $idUser) {
         $idUser = (int)$idUser;

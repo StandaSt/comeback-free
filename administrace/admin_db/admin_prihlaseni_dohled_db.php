@@ -25,7 +25,7 @@ function cb_admin_prihlaseni_pokusy(mysqli $db, int $limit): array
         SELECT
             b.id_bad_login, b.email, b.ip, b.user_agent, b.screen_w, b.screen_h,
             b.is_touch, b.kdy,
-            u.id_user, u.jmeno, u.prijmeni, hp.aktivni,
+            u.id_user, ou.jmeno, ou.prijmeni, hp.aktivni,
             (
                 SELECT ul.kdy
                 FROM user_login ul
@@ -89,7 +89,8 @@ function cb_admin_prihlaseni_pokusy(mysqli $db, int $limit): array
             LIMIT ' . $limit . '
         ) b
         LEFT JOIN user u ON LOWER(u.email) = LOWER(b.email)
-        LEFT JOIN hr_person hp ON hp.id_user = u.id_user
+        LEFT JOIN hr_person hp ON hp.id_person = u.id_user
+        LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje = (SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2 WHERE ou2.id_person = hp.id_person AND ou2.platny = 1)
         ORDER BY b.kdy DESC, b.id_bad_login DESC
     ';
     $result = $db->query($sql);
@@ -140,9 +141,10 @@ function cb_admin_prihlaseni_2fa(mysqli $db, int $limit): array
     $result = $db->query('
         SELECT p.id, p.id_user, p.stav, p.ip, p.prohlizec, p.vytvoreno,
                p.vyprsi, p.rozhodnuto, p.id_zarizeni,
-               u.jmeno, u.prijmeni, u.email
+               ou.jmeno, ou.prijmeni, u.email
         FROM push_login_2fa p
         LEFT JOIN user u ON u.id_user = p.id_user
+        LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje = (SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2 WHERE ou2.id_person = p.id_user AND ou2.platny = 1)
         ORDER BY p.vytvoreno DESC, p.id DESC
         LIMIT ' . $limit
     );

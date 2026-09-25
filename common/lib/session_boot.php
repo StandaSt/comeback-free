@@ -1,5 +1,5 @@
 <?php
-// lib/session_boot.php * Verze: V1 * Aktualizace: 08.06.2026
+// lib/session_boot.php * Verze: V2 * Aktualizace: 24.09.2026
 
 declare(strict_types=1);
 
@@ -68,9 +68,32 @@ function cb_session_ukonci_pro_udrzbu(): void
     session_destroy();
 }
 
+/* Behem udrzby smi do IS jen plne prihlaseny Admin (role 1). */
+function cb_session_admin_pro_udrzbu(): bool
+{
+    if (empty($_SESSION['login_ok']) || (int)($_SESSION['cb_user']['id_user'] ?? 0) <= 0) {
+        return false;
+    }
+
+    $roles = $_SESSION['cb_user']['roles'] ?? [];
+    if (!is_array($roles)) {
+        return false;
+    }
+    foreach ($roles as $role) {
+        if (is_array($role) && (int)($role['id_role'] ?? 0) === 1) {
+            return true;
+        }
+    }
+    return false;
+}
+
 function cb_session_kontrola_udrzby(): void
 {
     if (cb_session_je_lokalni_host() || !is_file(__DIR__ . '/../udrzba_on.php')) {
+        return;
+    }
+
+    if (cb_session_admin_pro_udrzbu()) {
         return;
     }
 

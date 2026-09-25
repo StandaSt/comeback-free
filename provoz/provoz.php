@@ -57,6 +57,7 @@ if (!empty($_SESSION['login_ok'])) {
 require_once __DIR__ . '/lib/detektuj_neplatnou_url.php';
 require_once __DIR__ . '/../common/lib/json_registrace.php';
 if (!empty($_SESSION['login_ok'])) {
+    require_once __DIR__ . '/lib/uloz_report_vyroba.php';
     require_once __DIR__ . '/lib/uloz_dr_pracovni.php';
     require_once __DIR__ . '/lib/uloz_reporty_is.php';
     require_once __DIR__ . '/lib/report_promenne.php';
@@ -88,6 +89,13 @@ try {
 }
 $cbReportBranchParam = max(0, (int)($_POST['zr_id_pob'] ?? $_GET['zr_id_pob'] ?? 0));
 $cbReportDateParam = trim((string)($_POST['datum_reportu'] ?? $_GET['datum_reportu'] ?? ''));
+$cbIsVyrobaReport = false;
+if ($cbPage === 'denni_report') {
+    require_once __DIR__ . '/lib/denni_report_vyroba.php';
+    $cbVyrobaSessionUser = $_SESSION['cb_user'] ?? [];
+    $cbVyrobaActorId = is_array($cbVyrobaSessionUser) ? (int)($cbVyrobaSessionUser['id_user'] ?? 0) : 0;
+    $cbIsVyrobaReport = cb_vyroba_should_render(db(), $cbVyrobaActorId);
+}
 if (cb_kontrola_reportu_valid_date($cbReportDateParam) === '') {
     $cbReportDateParam = '';
 }
@@ -243,13 +251,15 @@ if (
         $archiveBranchName = '';
         $archiveTitleStmt = db()->prepare('
             SELECT p.nazev
-            FROM user_pobocka up
-            INNER JOIN pobocka p ON p.id_pob = up.id_pob
-            WHERE up.id_user = ? AND p.id_pob = ? AND p.aktivni = 1
+            FROM hr_person hp
+            INNER JOIN pobocka p ON p.id_pob = ? AND p.aktivni = 1
+            WHERE hp.id_person = ? AND (hp.pristup_vsechny_pobocky = 1 OR EXISTS (
+                SELECT 1 FROM hr_pracoviste prac WHERE prac.id_person = hp.id_person AND prac.id_pob = p.id_pob AND prac.platny = 1
+            ))
             LIMIT 1
         ');
         if ($archiveTitleStmt !== false) {
-            $archiveTitleStmt->bind_param('ii', $archiveUserId, $archiveBranchId);
+            $archiveTitleStmt->bind_param('ii', $archiveBranchId, $archiveUserId);
             $archiveTitleStmt->execute();
             $archiveTitleResult = $archiveTitleStmt->get_result();
             $archiveTitleRow = $archiveTitleResult instanceof mysqli_result ? ($archiveTitleResult->fetch_assoc() ?: []) : [];
@@ -309,7 +319,7 @@ if ($cbPpOnly && !empty($_SESSION['login_ok'])) {
                 <?php else: ?>
                     <h1><?= h($cbProvozPageTitle) ?></h1>
                 <?php endif; ?>
-                <?php if ($cbPage === 'denni_report' && ($cbKontrolaReportuAllowed || $cbReportPromenneAllowed)): ?>
+                <?php if ($cbPage === 'denni_report' && !$cbIsVyrobaReport && ($cbKontrolaReportuAllowed || $cbReportPromenneAllowed)): ?>
                     <div class="pp_header_controls">
                     <?php if ($cbKontrolaReportuAllowed): ?>
                         <a class="head_task_btn" href="<?= h($cbKontrolaReportUrl) ?>" data-zr-kontrola-link>Kontrola</a>
@@ -361,7 +371,7 @@ if (!empty($_SESSION['login_ok'])) {
             <?php else: ?>
                 <h1><?= h($cbProvozPageTitle) ?></h1>
             <?php endif; ?>
-            <?php if ($cbPage === 'denni_report' && ($cbKontrolaReportuAllowed || $cbReportPromenneAllowed)): ?>
+            <?php if ($cbPage === 'denni_report' && !$cbIsVyrobaReport && ($cbKontrolaReportuAllowed || $cbReportPromenneAllowed)): ?>
                 <div class="pp_header_controls">
                 <?php if ($cbKontrolaReportuAllowed): ?>
                     <a class="head_task_btn" href="<?= h($cbKontrolaReportUrl) ?>" data-zr-kontrola-link>Kontrola</a>

@@ -4,6 +4,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/denni_report_prava.php';
 require_once __DIR__ . '/../../common/db/db_cis_slot.php';
 
+const CB_ARCHIV_REPORTU_PER_OPTIONS = [20, 50, 100, 500];
+
 function cb_archiv_reportu_date(string $value, DateTimeZone $tz, DateTimeImmutable $fallback): DateTimeImmutable
 {
     $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value, $tz);
@@ -224,7 +226,7 @@ function cb_archiv_reportu_data(mysqli $conn, array $input): array
     $defaultFrom = $archiveEnd->modify('first day of this month');
     $user = $_SESSION['cb_user'] ?? [];
     $userId = is_array($user) ? (int)($user['id_user'] ?? 0) : 0;
-    $filters = ['month' => $defaultMonth, 'year' => $defaultYear, 'from' => $defaultFrom->format('Y-m-d'), 'to' => $archiveEnd->format('Y-m-d'), 'branch' => 0, 'status' => 'all', 'page' => 1];
+    $filters = ['month' => $defaultMonth, 'year' => $defaultYear, 'from' => $defaultFrom->format('Y-m-d'), 'to' => $archiveEnd->format('Y-m-d'), 'branch' => 0, 'status' => 'all', 'page' => 1, 'per' => 50];
 
     if ($userId <= 0) {
         return ['filters' => $filters, 'branches' => [], 'rows' => [], 'total' => 0, 'error' => 'Pro zobrazení archivu je nutné přihlášení.'];
@@ -251,6 +253,10 @@ function cb_archiv_reportu_data(mysqli $conn, array $input): array
         $filters['status'] = 'all';
     }
     $filters['page'] = max(1, (int)($input['ar_p'] ?? 1));
+    $filters['per'] = (int)($input['ar_per'] ?? 50);
+    if (!in_array($filters['per'], CB_ARCHIV_REPORTU_PER_OPTIONS, true)) {
+        $filters['per'] = 50;
+    }
     $filters['sort'] = trim((string)($input['ar_sort'] ?? 'date'));
     $filters['dir'] = strtolower(trim((string)($input['ar_dir'] ?? 'desc')));
     if (!in_array($filters['sort'], ['date', 'branch', 'status', 'revenue', 'col', 'difference', 'hours', 'opening', 'closing'], true)) {
@@ -262,10 +268,10 @@ function cb_archiv_reportu_data(mysqli $conn, array $input): array
 
     $branches = [];
     $branchStmt = $conn->prepare('
-        SELECT p.id_pob, p.nazev, up.main
-        FROM user_pobocka up
-        INNER JOIN pobocka p ON p.id_pob = up.id_pob
-        WHERE up.id_user = ? AND p.aktivni = 1
+        SELECT p.id_pob, p.nazev, COALESCE((SELECT MAX(prac.hlavni) FROM hr_pracoviste prac WHERE prac.id_person=hp.id_person AND prac.id_pob=p.id_pob AND prac.platny=1), 0) AS main
+        FROM hr_person hp
+        INNER JOIN pobocka p ON p.id_firma=hp.id_firma AND p.aktivni=1
+        WHERE hp.id_person = ? AND (hp.pristup_vsechny_pobocky=1 OR EXISTS (SELECT 1 FROM hr_pracoviste prac WHERE prac.id_person=hp.id_person AND prac.id_pob=p.id_pob AND prac.platny=1))
         ORDER BY p.id_pob ASC
     ');
     if ($branchStmt === false) {
@@ -293,12 +299,12 @@ function cb_archiv_reportu_data(mysqli $conn, array $input): array
         FROM (
             SELECT r.datum_reportu AS first_date
             FROM reporty_is r
-            INNER JOIN user_pobocka up ON up.id_pob = r.id_pob AND up.id_user = ?
+            INNER JOIN hr_person hp ON hp.id_person = ? AND (hp.pristup_vsechny_pobocky=1 OR EXISTS (SELECT 1 FROM hr_pracoviste prac WHERE prac.id_person=hp.id_person AND prac.id_pob=r.id_pob AND prac.platny=1))
             WHERE r.platny = 1
             UNION ALL
             SELECT r.datum_reportu AS first_date
             FROM reporty r
-            INNER JOIN user_pobocka up ON up.id_pob = r.id_pob AND up.id_user = ?
+            INNER JOIN hr_person hp ON hp.id_person = ? AND (hp.pristup_vsechny_pobocky=1 OR EXISTS (SELECT 1 FROM hr_pracoviste prac WHERE prac.id_person=hp.id_person AND prac.id_pob=r.id_pob AND prac.platny=1))
             WHERE r.platny = 1 AND r.zdroj = 1
         ) report_dates
     ');
@@ -323,10 +329,11 @@ function cb_archiv_reportu_data(mysqli $conn, array $input): array
     $reportStmt = $conn->prepare('
         SELECT
             r.id_reportu,
+            r.zdroj,
             r.id_pob,
             r.datum_reportu,
-            r.oteviral_text,
-            r.zaviral_text,
+            COALESCE(NULLIF(TRIM(CONCAT_WS(" ", open_ou.jmeno, open_ou.prijmeni)), ""), r.oteviral_text) AS oteviral_text,
+            COALESCE(NULLIF(TRIM(CONCAT_WS(" ", close_ou.jmeno, close_ou.prijmeni)), ""), r.zaviral_text) AS zaviral_text,
             ri.trzba,
             ri.col_pomer,
             pk.rozdil,
@@ -334,7 +341,9 @@ function cb_archiv_reportu_data(mysqli $conn, array $input): array
             people.hodiny_instor,
             people.hodiny_kuryr
         FROM reporty_is r
-        INNER JOIN user_pobocka up ON up.id_pob = r.id_pob AND up.id_user = ?
+        INNER JOIN hr_person hp ON hp.id_person = ? AND hp.id_firma=r.id_firma AND (hp.pristup_vsechny_pobocky=1 OR EXISTS (SELECT 1 FROM hr_pracoviste prac WHERE prac.id_person=hp.id_person AND prac.id_pob=r.id_pob AND prac.platny=1))
+        LEFT JOIN hr_osobni_udaje open_ou ON open_ou.id_osobni_udaje=(SELECT MAX(ou.id_osobni_udaje) FROM hr_osobni_udaje ou WHERE ou.id_person=r.oteviral AND ou.platny=1)
+        LEFT JOIN hr_osobni_udaje close_ou ON close_ou.id_osobni_udaje=(SELECT MAX(ou.id_osobni_udaje) FROM hr_osobni_udaje ou WHERE ou.id_person=r.zaviral AND ou.platny=1)
         LEFT JOIN reporty_is_restia ri ON ri.id_reportu = r.id_reportu
         LEFT JOIN reporty_is_pokladna pk ON pk.id_reportu = r.id_reportu
         LEFT JOIN (
@@ -373,7 +382,8 @@ function cb_archiv_reportu_data(mysqli $conn, array $input): array
     $googleStmt = $conn->prepare('
         SELECT r.id_pob, r.datum_reportu
         FROM reporty r
-        INNER JOIN user_pobocka up ON up.id_pob = r.id_pob AND up.id_user = ?
+        INNER JOIN pobocka report_branch ON report_branch.id_pob=r.id_pob
+        INNER JOIN hr_person hp ON hp.id_person = ? AND hp.id_firma=report_branch.id_firma AND (hp.pristup_vsechny_pobocky=1 OR EXISTS (SELECT 1 FROM hr_pracoviste prac WHERE prac.id_person=hp.id_person AND prac.id_pob=r.id_pob AND prac.platny=1))
         WHERE r.platny = 1
           AND r.zdroj = 1
           AND r.datum_reportu BETWEEN ? AND ?
@@ -414,6 +424,7 @@ function cb_archiv_reportu_data(mysqli $conn, array $input): array
                 'branch_id' => $idBranch,
                 'branch_name' => (string)$branch['name'],
                 'saved' => $isSaved,
+                'source' => $isSaved ? (int)($saved['zdroj'] ?? 2) : null,
                 'revenue' => $isSaved ? (float)($saved['trzba'] ?? 0) : null,
                 'col' => $isSaved && ($saved['col_pomer'] ?? null) !== null ? (float)$saved['col_pomer'] : null,
                 'difference' => $isSaved && ($saved['rozdil'] ?? null) !== null ? (float)$saved['rozdil'] : null,

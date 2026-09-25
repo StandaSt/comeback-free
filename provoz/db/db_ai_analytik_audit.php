@@ -8,8 +8,8 @@ function cb_ai_analytik_prehled_pristupu(mysqli $conn): array
     $stmt = $conn->prepare(
         'SELECT
             u.id_user,
-            u.jmeno,
-            u.prijmeni,
+            ou.jmeno,
+            ou.prijmeni,
             COALESCE(stat.prompty, 0) AS prompty,
             COALESCE(stat.duration_ms, 0) AS duration_ms,
             COALESCE(stat.total_tokens, 0) AS total_tokens,
@@ -41,21 +41,20 @@ function cb_ai_analytik_prehled_pristupu(mysqli $conn): array
             GROUP BY audit.id_user
          ) AS stat
             ON stat.id_user = u.id_user
-         INNER JOIN hr_person hp ON hp.id_user = u.id_user AND hp.aktivni = 1
-         WHERE 1 = 1
-           AND u.in_system = 1
-           AND (
+         INNER JOIN hr_person hp ON hp.id_person = u.id_user AND hp.aktivni = 1
+         INNER JOIN hr_osobni_udaje ou ON ou.id_person = hp.id_person AND ou.platny = 1
+         WHERE (
                 (EXISTS (
                     SELECT 1
-                    FROM user_role AS ur
+                    FROM hr_pristupovy_profil AS ur
                     INNER JOIN prava_global AS globalni
                         ON globalni.id_role = ur.id_role
                        AND globalni.id_pravo = pravo.id_pravo
-                    WHERE ur.id_user = u.id_user
+                    WHERE ur.id_person = u.id_user
                 ) AND (vyjimka.povoleno IS NULL OR vyjimka.povoleno = 1))
                 OR vyjimka.povoleno = 1
            )
-         ORDER BY u.prijmeni ASC, u.jmeno ASC, u.id_user ASC'
+         ORDER BY ou.prijmeni ASC, ou.jmeno ASC, u.id_user ASC'
     );
     $pravo = CB_AI_ANALYTIK_PRAVO;
     $stmt->bind_param('i', $pravo);
@@ -284,8 +283,8 @@ function cb_ai_analytik_uzivatel_je_admin(mysqli $conn, int $idUser): bool
 
     $stmt = $conn->prepare(
         'SELECT 1
-         FROM user_role
-         WHERE id_user = ? AND id_role = 1
+         FROM hr_pristupovy_profil
+         WHERE id_person = ? AND id_role = 1
          LIMIT 1'
     );
     $stmt->bind_param('i', $idUser);
@@ -311,11 +310,11 @@ function cb_ai_analytik_audit_prompty_uzivatele(
     $sql = 'SELECT audit.id_ai_analytik_audit, audit.created_at, audit.model, audit.prompt, audit.ulozeno,
                    audit.duration_ms, audit.requested_output_json,
                    audit.id_user,
-                   TRIM(CONCAT_WS(\' \', u.jmeno, u.prijmeni)) AS user_name,
+                   TRIM(CONCAT_WS(\' \', ou.jmeno, ou.prijmeni)) AS user_name,
                    COALESCE(usage_summary.total_tokens, 0) AS total_tokens,
                    COALESCE(usage_summary.cost_usd, 0) AS cost_usd
             FROM ai_analytik_audit AS audit
-            LEFT JOIN `user` AS u ON u.id_user = audit.id_user
+            LEFT JOIN hr_osobni_udaje AS ou ON ou.id_osobni_udaje = (SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2 WHERE ou2.id_person = audit.id_user AND ou2.platny = 1)
             LEFT JOIN (
                 SELECT id_ai_analytik_audit,
                        SUM(total_tokens) AS total_tokens,

@@ -66,15 +66,17 @@ function cb_pobocka_provoz_branch(mysqli $conn, int $idPob, int $idUser): ?array
 
     $stmt = $conn->prepare('
         SELECT p.id_pob, p.nazev, p.end_po, p.end_ut, p.end_st, p.end_ct, p.end_pa, p.end_so, p.end_ne
-        FROM user_pobocka up
-        INNER JOIN pobocka p ON p.id_pob = up.id_pob
-        WHERE up.id_user = ? AND p.id_pob = ? AND p.aktivni = 1
+        FROM hr_person hp
+        INNER JOIN pobocka p ON p.id_pob = ? AND p.aktivni = 1
+        WHERE hp.id_person = ? AND (hp.pristup_vsechny_pobocky = 1 OR EXISTS (
+            SELECT 1 FROM hr_pracoviste prac WHERE prac.id_person = hp.id_person AND prac.id_pob = p.id_pob AND prac.platny = 1
+        ))
         LIMIT 1
     ');
     if ($stmt === false) {
         throw new RuntimeException('Nelze připravit načtení pobočky.');
     }
-    $stmt->bind_param('ii', $idUser, $idPob);
+    $stmt->bind_param('ii', $idPob, $idUser);
     $stmt->execute();
     $result = $stmt->get_result();
     $row = $result instanceof mysqli_result ? $result->fetch_assoc() : null;

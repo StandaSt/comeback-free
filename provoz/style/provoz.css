@@ -1110,6 +1110,11 @@
   color:#b91c1c;
 }
 
+.provoz_archiv_reportu_page .archiv_reportu_results{
+  width:max-content;
+  max-width:100%;
+}
+
 .provoz_archiv_reportu_page .provoz_objednavky_table_wrap{
   display:inline-block;
   width:auto;
@@ -3327,5 +3332,207 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
 
   .ai_analytik_usage_row .ai_analytik_save_prompt{
     justify-self:start;
+  }
+}
+
+/* Výroba sdílí kompaktní vizuální jazyk denního reportu, bez restaurančních dat. */
+.vyroba_report{
+  width:min(828px, 100%);
+  min-width:0;
+}
+
+.vyroba_report_grid{
+  display:grid;
+  grid-template-columns:minmax(0, 300px) minmax(0, 514px);
+  gap:14px;
+  align-items:start;
+}
+
+.vyroba_report_form{
+  display:contents;
+}
+
+.vyroba_report_filters{
+  grid-column:1;
+  grid-row:1;
+  display:grid;
+  align-content:start;
+  gap:6px;
+  width:min(300px, 100%);
+  box-sizing:border-box;
+  min-height:100%;
+}
+
+.vyroba_report_filters label{
+  display:grid;
+  grid-template-columns:95px minmax(0, 1fr);
+  align-items:center;
+  gap:6px;
+  font-size:var(--cb-font-12);
+}
+
+.vyroba_report_expense_section{
+  grid-column:2;
+  grid-row:1;
+  min-height:100%;
+}
+
+.vyroba_report_people_section,
+.vyroba_report_note_section,
+.vyroba_report_notice,
+.vyroba_report_form > .zr_submit{
+  grid-column:1 / -1;
+}
+
+.vyroba_report_expenses{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:8px;
+}
+
+.vyroba_report_expenses label,
+.vyroba_report_expenses--readonly > span{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  min-width:0;
+  text-align:center;
+  font-size:var(--cb-font-11);
+  font-weight:600;
+}
+
+.vyroba_report_expenses input{
+  width:100%;
+  text-align:right;
+}
+
+.vyroba_report_expenses--readonly strong{
+  font-size:var(--cb-font-12);
+}
+
+.vyroba_report input:not([type="hidden"]),
+.vyroba_report select,
+.vyroba_report textarea{
+  box-sizing:border-box;
+  height:26px;
+  min-height:26px;
+  padding:2px 8px;
+  border:1px solid var(--cb-border);
+  border-radius:8px;
+  background:var(--cb-bg-control);
+  color:var(--cb-text-main);
+  font-size:var(--cb-font-12);
+  box-shadow:inset 0 1px 1px rgba(15,23,42,.08);
+}
+
+.vyroba_report input:focus,
+.vyroba_report select:focus,
+.vyroba_report textarea:focus{
+  outline:none;
+  border-color:var(--clr_modra_6);
+  box-shadow:0 0 0 3px rgba(79,141,246,.18);
+}
+
+.vyroba_report_filters select,
+.vyroba_report_filters input{
+  width:100%;
+}
+
+.vyroba_report_table_wrap{
+  overflow-x:auto;
+  max-width:100%;
+}
+
+.vyroba_report_table{
+  width:100%;
+  min-width:450px;
+  table-layout:fixed;
+}
+
+.vyroba_report_table th{
+  white-space:nowrap;
+}
+
+.vyroba_report_table th:first-child,
+.vyroba_report_table td:first-child{
+  width:220px;
+  text-align:left;
+}
+
+.vyroba_report_person_picker{
+  width:220px;
+  margin-bottom:3px;
+}
+
+.vyroba_report_person_picker select{
+  width:100%;
+}
+
+.vyroba_report_table :is(th, td):nth-child(2),
+.vyroba_report_table :is(th, td):nth-child(3){
+  width:58px;
+}
+
+.vyroba_report_table :is(th, td):nth-child(4){
+  width:44px;
+}
+
+.vyroba_report_table :is(th, td):nth-child(5){
+  width:70px;
+}
+
+.vyroba_report input.zr_time_input{
+  width:100%;
+  height:24px;
+  min-height:24px;
+  padding:2px 4px;
+  border-radius:6px;
+  text-align:center;
+}
+
+.vyroba_report input.zr_time_input.edit{
+  border-color:var(--clr_modra_6);
+  background:var(--clr_modra_1);
+}
+
+.vyroba_report input.zr_time_input.err{
+  border-color:var(--clr_cervena);
+  background:#fee2e2;
+}
+
+.vyroba_report_table input[name="vyroba_pauza[]"]{
+  width:100%;
+  height:24px;
+  min-height:24px;
+  text-align:center;
+}
+
+.vyroba_report_note_section label{
+  display:block;
+  margin-bottom:4px;
+  font-size:var(--cb-font-12);
+}
+
+.vyroba_report textarea{
+  display:block;
+  width:100%;
+  height:36px;
+  resize:vertical;
+}
+
+@media (max-width:900px){
+  .vyroba_report_grid{
+    grid-template-columns:minmax(0, 1fr);
+  }
+
+  .vyroba_report_filters,
+  .vyroba_report_expense_section{
+    grid-column:1;
+    grid-row:auto;
+    min-height:0;
+  }
+
+  .vyroba_report_expenses{
+    grid-template-columns:minmax(0, 1fr);
   }
 }

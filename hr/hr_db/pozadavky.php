@@ -12,11 +12,11 @@ function hr_nacti_hlavni_pobocku_uzivatele(mysqli $db, int $idUser): array
 {
     $stmt = $db->prepare("
         SELECT p.id_pob, p.nazev
-        FROM user_pobocka up
+        FROM hr_pracoviste up
         INNER JOIN pobocka p
             ON p.id_pob = up.id_pob
-        WHERE up.id_user = ?
-          AND up.main = 1
+        WHERE up.id_person = ?
+          AND up.hlavni = 1 AND up.platny = 1
         LIMIT 1
     ");
     $stmt->bind_param('i', $idUser);

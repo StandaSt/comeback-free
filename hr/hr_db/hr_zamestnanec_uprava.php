@@ -6,9 +6,8 @@ declare(strict_types=1);
  */
 
 /**
- * @return null|array{token:string,id_user:int,stary_email:string,novy_email:string}
  */
-function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, int $zadalUser): ?array
+function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, int $zadalUser): void
 {
     if ($idPerson <= 0 || $zadalUser <= 0) {
         throw new CbUserVisibleException('Chybí zaměstnanec nebo platné přihlášení. Obnovte stránku a zkuste to znovu.');
@@ -143,38 +142,29 @@ function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, i
 
         hr_update_employee_main_phone($db, $idPerson, $telefon, $zadalUser);
         hr_update_employee_main_email($db, $idPerson, $email, $zadalUser);
-        $emailZmena = null;
-        if ($idUser > 0) {
-            $stmt = $db->prepare('UPDATE user SET telefon = ? WHERE id_user = ?');
-            $telefonDb = $telefon !== '' ? $telefon : null;
-            $stmt->bind_param('si', $telefonDb, $idUser);
-            $stmt->execute();
-            $stmt->close();
-            $emailZmena = cb_email_zmena_priprav($db, $idUser, $idPerson, $email, $zadalUser);
-            $stmt = $db->prepare('SELECT 1 FROM user_role WHERE id_user = ? AND id_role = 3 LIMIT 1');
-            $stmt->bind_param('i', $idUser);
-            $stmt->execute();
-            $melRoliManager = $stmt->get_result()->fetch_row() !== null;
-            $stmt->close();
-            if ($melRoliManager && $idRoleHr !== 3 && !cb_pravo_ma(316)) {
-                throw new CbUserVisibleException('Nemáte právo odebrat roli Manager.');
-            }
-            $stmt = $db->prepare('DELETE FROM user_role WHERE id_user = ? AND id_role IN (3, 5, 7, 9)');
-            $stmt->bind_param('i', $idUser);
-            $stmt->execute();
-            $stmt->close();
-            $stmt = $db->prepare('INSERT INTO user_role (id_user, id_role) VALUES (?, ?)');
-            $stmt->bind_param('ii', $idUser, $idRoleHr);
-            $stmt->execute();
-            $stmt->close();
+        $stmt = $db->prepare('SELECT 1 FROM hr_pristupovy_profil WHERE id_person = ? AND id_role = 3 LIMIT 1');
+        $stmt->bind_param('i', $idPerson);
+        $stmt->execute();
+        $melRoliManager = $stmt->get_result()->fetch_row() !== null;
+        $stmt->close();
+        if ($melRoliManager && $idRoleHr !== 3 && !cb_pravo_ma(316)) {
+            throw new CbUserVisibleException('Nemáte právo odebrat roli Manager.');
         }
+        $stmt = $db->prepare('DELETE FROM hr_pristupovy_profil WHERE id_person = ? AND id_role IN (3, 5, 7, 9)');
+        $stmt->bind_param('i', $idPerson);
+        $stmt->execute();
+        $stmt->close();
+        $stmt = $db->prepare('INSERT INTO hr_pristupovy_profil (id_person, id_role, id_person_zadal) VALUES (?, ?, ?)');
+        $stmt->bind_param('iii', $idPerson, $idRoleHr, $zadalUser);
+        $stmt->execute();
+        $stmt->close();
         hr_update_employee_address($db, $idPerson, $data, $zadalUser, 0, 'adresa_');
         hr_update_employee_address($db, $idPerson, $data, $zadalUser, 1, 'dorucovaci_');
         hr_update_employee_emergency_contact($db, $idPerson, $data, $zadalUser);
         hr_update_employee_bank_account($db, $idPerson, $data, $zadalUser);
 
         $db->commit();
-        return $emailZmena;
+        return;
     } catch (Throwable $e) {
         $db->rollback();
         throw $e;

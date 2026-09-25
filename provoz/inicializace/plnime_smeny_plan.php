@@ -516,7 +516,7 @@ function countHours(array $rows): int
 function deletePlanRows(string $startDay, int $idPob): void
 {
     $db = db();
-    $sql = "DELETE FROM smeny_plan WHERE start_day='" . $db->real_escape_string($startDay) . "' AND id_pob=" . (int)$idPob;
+    $sql = "DELETE FROM smeny_plan WHERE start_day='" . $db->real_escape_string($startDay) . "' AND id_pob=" . (int)$idPob . ' AND zdroj=1';
     $db->query($sql);
 }
 

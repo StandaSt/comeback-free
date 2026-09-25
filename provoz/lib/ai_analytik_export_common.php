@@ -53,11 +53,12 @@ function cb_ai_analytik_export_overit(string $payload, string $signature, string
 function cb_ai_analytik_export_prijemci(mysqli $conn): array
 {
     $result = $conn->query(
-        "SELECT DISTINCT u.id_user, u.jmeno, u.prijmeni, u.email
+        "SELECT DISTINCT u.id_user, ou.jmeno, ou.prijmeni, u.email
          FROM user AS u
-         INNER JOIN user_role AS ur ON ur.id_user = u.id_user AND ur.id_role < 4
+         INNER JOIN hr_pristupovy_profil AS ur ON ur.id_person = u.id_user AND ur.id_role < 4
+         INNER JOIN hr_osobni_udaje ou ON ou.id_person = u.id_user AND ou.platny = 1
          WHERE TRIM(u.email) <> ''
-         ORDER BY u.prijmeni ASC, u.jmeno ASC, u.id_user ASC"
+         ORDER BY ou.prijmeni ASC, ou.jmeno ASC, u.id_user ASC"
     );
     $rows = [];
     while ($row = $result->fetch_assoc()) {
@@ -78,12 +79,13 @@ function cb_ai_analytik_export_prijemci(mysqli $conn): array
 function cb_ai_analytik_export_prijemce(mysqli $conn, int $idUser): ?array
 {
     $stmt = $conn->prepare(
-        "SELECT u.id_user, u.jmeno, u.prijmeni, u.email
+        "SELECT u.id_user, ou.jmeno, ou.prijmeni, u.email
          FROM user AS u
+         INNER JOIN hr_osobni_udaje ou ON ou.id_person = u.id_user AND ou.platny = 1
          WHERE u.id_user = ?
            AND TRIM(u.email) <> ''
            AND EXISTS (
-               SELECT 1 FROM user_role ur WHERE ur.id_user = u.id_user AND ur.id_role < 4
+               SELECT 1 FROM hr_pristupovy_profil ur WHERE ur.id_person = u.id_user AND ur.id_role < 4
            )
          LIMIT 1"
     );

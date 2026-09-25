@@ -79,8 +79,8 @@ function hr_nacti_vd_akce(mysqli $db, int $idVd): array
             ON v.id_vd_akce_vysledek = a.id_vd_akce_vysledek
         INNER JOIN hr_cis_vd_akce_typ t
             ON t.id_vd_akce_typ = v.id_vd_akce_typ
-        LEFT JOIN user u
-            ON u.id_user = a.id_user_zadal
+        LEFT JOIN hr_osobni_udaje u
+            ON u.id_person = a.id_user_zadal AND u.platny = 1
         WHERE a.id_vd = ?
         ORDER BY a.akce_kdy DESC, a.id_vd_akce DESC
     ');
@@ -196,8 +196,8 @@ function hr_nacti_vd_akce(mysqli $db, int $idVd): array
         FROM hr_dokument d
         INNER JOIN hr_cis_dokument_typ dt
             ON dt.id_dokument_typ = d.id_dokument_typ
-        LEFT JOIN user u
-            ON u.id_user = d.id_user_zadal
+        LEFT JOIN hr_osobni_udaje u
+            ON u.id_person = d.id_user_zadal AND u.platny = 1
         WHERE d.id_vd = ?
           AND d.platny = 1
         ORDER BY d.vytvoreno ASC, d.id_dokument ASC

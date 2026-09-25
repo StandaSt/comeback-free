@@ -232,11 +232,11 @@ function cb_admin_prava_roli_uloz(int $idRole, int $idPravo, bool $allowed): voi
               AND (
                     CASE WHEN EXISTS (
                         SELECT 1
-                        FROM user_role AS ur
+                        FROM hr_pristupovy_profil AS ur
                         INNER JOIN prava_global AS pg
                             ON pg.id_role = ur.id_role
                            AND pg.id_pravo = vyjimka.id_pravo
-                        WHERE ur.id_user = vyjimka.id_user
+                        WHERE ur.id_person = vyjimka.id_user
                     ) THEN 1 ELSE 0 END
                   ) = ?
         ');

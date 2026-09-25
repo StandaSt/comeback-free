@@ -2,9 +2,14 @@
 declare(strict_types=1);
 
 $adminScriptResult = $_SESSION['cb_admin_script_result'] ?? null;
-$adminScriptResultType = is_array($adminScriptResult) ? (string)($adminScriptResult['script'] ?? 'hr') : '';
-$adminHrLocal = (($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL');
+$adminScriptResultType = is_array($adminScriptResult) ? (string)($adminScriptResult['script'] ?? '') : '';
 $adminGoogleSourceStatus = cb_admin_google_reporty_stav_zdroje();
+$adminGoogleZipFiles = cb_admin_google_reporty_najdi_zipy(dirname(__DIR__, 3) . '/data/google_data');
+$adminGoogleNewestZipName = (string)($adminGoogleZipFiles[0]['name'] ?? '');
+$adminGoogleHistoryDates = cb_admin_google_historie_vychozi_data(db());
+if ($adminScriptResultType === 'google_historie' && !empty($adminScriptResult['success']) && is_array($adminScriptResult['data'] ?? null)) {
+    $adminGoogleHistoryDates = $adminScriptResult['data'];
+}
 $adminGoogleDateCz = static function (string $value): string {
     $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
 
@@ -17,48 +22,6 @@ if (isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODULE'])) {
 }
 ?>
 <div class="admin_script_run">
-    <div class="blok admin_script_card">
-        <p class="admin_script_description">První kompletní naplnění HR z <code>data/google_data/HR.zip</code>. Nejprve zkontroluje podklady, teprve po potvrzení vyprázdní HR a provede celý import.</p>
-
-        <?php if (is_array($adminScriptResult) && in_array($adminScriptResultType, ['hr_kompletni_preview', 'hr_kompletni_import'], true)): ?>
-            <p class="admin_script_result<?= empty($adminScriptResult['success']) ? ' is-error' : '' ?>">
-                <?= nl2br(h((string)($adminScriptResult['message'] ?? ''))) ?>
-            </p>
-        <?php endif; ?>
-
-        <?php if ($adminHrLocal): ?>
-            <p class="admin_script_result" data-admin-hr-import-progress aria-live="polite" hidden></p>
-            <form class="admin_script_form admin_script_form--hr" method="post" action="<?= h(cb_root_url('index.php?m=administrace&page=spousteni_scriptu')) ?>" data-admin-hr-preview-form>
-                <input type="hidden" name="cb_action" value="admin_hr_kompletni_preview">
-                <button class="admin_script_button" type="submit" data-admin-hr-preview-button>Zkontrolovat podklady pro import HR</button>
-            </form>
-
-            <?php if (is_array($adminScriptResult) && $adminScriptResultType === 'hr_kompletni_preview' && !empty($adminScriptResult['success'])): ?>
-                <?php $adminHrPreview = (array)($adminScriptResult['preview'] ?? []); ?>
-                <div class="admin_script_preview_wrap">
-                    <table class="admin_script_preview_table">
-                        <tbody>
-                            <tr><th>Formulář</th><td><?= h((string)($adminHrPreview['formular'] ?? '')) ?></td></tr>
-                            <tr><th>Mzdy</th><td><?= h((string)($adminHrPreview['mzdy'] ?? '')) ?></td></tr>
-                            <tr><th>Dokumenty</th><td><?= h((string)($adminHrPreview['dokumenty'] ?? '')) ?></td></tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <form class="admin_script_form admin_script_form--hr" method="post" action="<?= h(cb_root_url('index.php?m=administrace&page=spousteni_scriptu')) ?>">
-                    <input type="hidden" name="cb_action" value="admin_hr_kompletni_import">
-                    <label class="admin_script_confirm">
-                        <input type="checkbox" name="admin_hr_kompletni_confirm" value="1" required>
-                        <span>Opravdu kompletně vyprázdnit HR, importovat USER → PERSON a následně doplnit všechna dostupná zaměstnanecká data, mzdy, sazby a dokumenty?</span>
-                    </label>
-                    <button class="admin_script_button" type="submit">Vyprázdnit HR a provést kompletní import</button>
-                </form>
-            <?php endif; ?>
-        <?php else: ?>
-            <p class="admin_script_server_notice">Kompletní naplnění HR je dostupné pouze v lokálním prostředí.</p>
-        <?php endif; ?>
-    </div>
-
     <div class="blok admin_script_card">
         <p class="admin_script_description"><?= h($adminGoogleSourceStatus) ?></p>
 
@@ -114,6 +77,64 @@ if (isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODULE'])) {
             </label>
             <button class="admin_script_button" type="submit">Načíst reporty Google</button>
         </form>
+    </div>
+
+    <div class="blok admin_script_card">
+        <p class="admin_script_description">Převod Google reportů do společné historie IS. Zvolte poslední den zvlášť pro restaurace a pro Výrobu. Platné reporty z IS mají přednost a zůstanou beze změny.</p>
+        <p>Zdroj tohoto převodu je tabulka <code>reporty</code>, nikoli přímo ZIP. Nejnovější dostupný soubor: <strong><?= $adminGoogleNewestZipName !== '' ? h($adminGoogleNewestZipName) : 'nenalezen' ?></strong>. Pokud chcete převést jeho data, nejprve použijte horní „Načíst reporty Google“. Při přípravě nového ZIPu se po ověření odstraní starší ZIPy.</p>
+        <p>Převod běží po pobočkách. Po spuštění se níže zobrazí právě zpracovávaná pobočka a dokončené kroky. Nechte stránku otevřenou až do výsledku.</p>
+
+        <form class="admin_script_form admin_script_form--history-preview" method="post" action="<?= h(cb_root_url('index.php?m=administrace&page=spousteni_scriptu')) ?>">
+            <input type="hidden" name="cb_action" value="admin_google_historie_preview">
+            <input type="hidden" name="cb_crf" value="<?= h(cb_crf_token()) ?>">
+            <label class="admin_script_date_field">Restaurace do včetně
+                <input type="date" name="google_historie_do_restaurace" value="<?= h((string)$adminGoogleHistoryDates['restaurace']) ?>" required>
+            </label>
+            <label class="admin_script_date_field">Výroba do včetně
+                <input type="date" name="google_historie_do_vyroba" value="<?= h((string)$adminGoogleHistoryDates['vyroba']) ?>" required>
+            </label>
+            <button class="admin_script_button" type="submit">Ukázat reporty k převodu</button>
+        </form>
+
+        <?php if (is_array($adminScriptResult) && $adminScriptResultType === 'google_historie'): ?>
+            <p class="admin_script_result<?= empty($adminScriptResult['success']) ? ' is-error' : '' ?>">
+                <?= h((string)($adminScriptResult['message'] ?? '')) ?>
+            </p>
+            <?php $adminHistoryPreview = !empty($adminScriptResult['success']) ? (array)($adminScriptResult['preview'] ?? []) : []; ?>
+            <?php if (!empty($adminHistoryPreview['branches'])): ?>
+                <div class="admin_script_preview_wrap">
+                    <table class="admin_script_preview_table">
+                        <thead><tr><th>Pobočka</th><th>Počet reportů</th><th>Období</th></tr></thead>
+                        <tbody>
+                            <?php foreach ($adminHistoryPreview['branches'] as $adminHistoryBranch): ?>
+                                <tr>
+                                    <td><?= h((string)$adminHistoryBranch['nazev']) ?></td>
+                                    <td><?= h((string)$adminHistoryBranch['pocet']) ?></td>
+                                    <td><?= h($adminGoogleDateCz((string)$adminHistoryBranch['od'])) ?> až <?= h($adminGoogleDateCz((string)$adminHistoryBranch['do'])) ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <form class="admin_script_form" method="post" action="<?= h(cb_root_url('index.php?m=administrace&page=spousteni_scriptu')) ?>" data-admin-google-historie-form>
+                    <input type="hidden" name="cb_action" value="admin_google_historie_import">
+                    <input type="hidden" name="cb_crf" value="<?= h(cb_crf_token()) ?>">
+                    <input type="hidden" name="google_historie_do_restaurace" value="<?= h((string)$adminGoogleHistoryDates['restaurace']) ?>">
+                    <input type="hidden" name="google_historie_do_vyroba" value="<?= h((string)$adminGoogleHistoryDates['vyroba']) ?>">
+                    <label class="admin_script_confirm">
+                        <input type="checkbox" name="admin_google_historie_confirm" value="1" required>
+                        <span>Rozumím, že převedu uvedené reporty do reporty_is podle zvolených koncových dat. Sazby se doplní později z HR.</span>
+                    </label>
+                    <button class="admin_script_button" type="submit" data-admin-google-historie-button>Převést Google reporty do IS</button>
+                </form>
+                <div class="admin_script_progress" data-admin-google-historie-progress hidden>
+                    <p class="admin_script_result" data-admin-google-historie-status role="status" aria-live="polite"></p>
+                    <progress data-admin-google-historie-bar value="0" max="1"></progress>
+                    <ol data-admin-google-historie-branches></ol>
+                </div>
+            <?php endif; ?>
+        <?php endif; ?>
+
     </div>
 
     <div class="blok admin_script_card">

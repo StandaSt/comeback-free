@@ -263,9 +263,10 @@ function cb_admin_google_reporty_stav_zdroje(): string
     }
 
     $date = DateTimeImmutable::createFromFormat('!Ymd', $zipDate);
-    $message = $date instanceof DateTimeImmutable
-        ? 'Nalezen ZIP ze dne ' . $date->format('j. n. Y')
-        : 'Nalezen ZIP';
+    $message = 'Nejnovější ZIP ' . basename($zipPath);
+    if ($date instanceof DateTimeImmutable) {
+        $message .= ' ze dne ' . $date->format('j. n. Y');
+    }
 
     try {
         cb_admin_google_reporty_nacti_importer();

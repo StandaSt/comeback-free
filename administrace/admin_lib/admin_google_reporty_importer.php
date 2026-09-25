@@ -71,7 +71,7 @@ const GOOGLE_BRANCH_MAP = [
     'Prosek' => 4,
     'Libuš' => 5,
     'Bolevec' => 6,
-    'Výroba' => 0,
+    'Výroba' => 7,
 ];
 
 if (!defined('CB_GOOGLE_DATA_LIBRARY')) {
@@ -246,7 +246,7 @@ function main(): array
                 if ($rows === []) {
                     fail('Nepodařilo se načíst řádky listu ' . $sheetName . ' v sešitu: ' . $workbookName . '. Import nesmí potichu přeskočit část historie.');
                 }
-                $reports = $idPob === 0
+                $reports = $idPob === 7
                     ? createProductionReportsFromRows($rows, $idPob, $userMap)
                     : createReportsFromRows($rows, $idPob, $userMap);
                 $ulozenoMesic = 0;
@@ -1110,9 +1110,10 @@ function getUserMap(mysqli $db): array
 {
     $usersById = [];
     $result = $db->query('
-        SELECT u.id_user, u.jmeno, u.prijmeni, hp.aktivni
+        SELECT u.id_user, ou.jmeno, ou.prijmeni, hp.aktivni
         FROM `user` u
-        INNER JOIN hr_person hp ON hp.id_user = u.id_user
+        INNER JOIN hr_person hp ON hp.id_person = u.id_user
+        INNER JOIN hr_osobni_udaje ou ON ou.id_person = hp.id_person AND ou.platny = 1
         ORDER BY u.id_user
     ');
     if (!$result instanceof mysqli_result) {

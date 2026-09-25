@@ -57,7 +57,7 @@ if (
     $sendJson(403, ['ok' => false, 'err' => 'Nemate pravo zapisovat denni report']);
 }
 
-$stmtAllowed = $conn->prepare('SELECT 1 FROM user_pobocka WHERE id_user = ? AND id_pob = ? LIMIT 1');
+$stmtAllowed = $conn->prepare('SELECT 1 FROM hr_person hp WHERE hp.id_person = ? AND (hp.pristup_vsechny_pobocky = 1 OR EXISTS (SELECT 1 FROM hr_pracoviste prac WHERE prac.id_person = hp.id_person AND prac.id_pob = ? AND prac.platny = 1)) LIMIT 1');
 if ($stmtAllowed === false) {
     $sendJson(500, ['ok' => false, 'err' => 'Nelze overit pobocku']);
 }
@@ -108,11 +108,10 @@ try {
 
         $stmtPerson = $conn->prepare('
             SELECT 1
-            FROM user u
-            INNER JOIN hr_person hp ON hp.id_user = u.id_user AND hp.aktivni = 1
-            INNER JOIN user_pobocka up ON up.id_user = u.id_user AND up.id_pob = ?
-            INNER JOIN user_slot us ON us.id_user = u.id_user AND us.id_slot = ?
-            WHERE u.id_user = ?
+            FROM hr_person hp
+            INNER JOIN hr_pracoviste prac ON prac.id_person = hp.id_person AND prac.id_pob = ? AND prac.platny = 1
+            INNER JOIN hr_zarazeni z ON z.id_person = hp.id_person AND z.id_slot = ? AND z.platny = 1
+            WHERE hp.id_person = ? AND hp.aktivni = 1
             LIMIT 1
         ');
         if ($stmtPerson === false) {

@@ -156,13 +156,12 @@ function cb_cron_nezadane_reporty_leaders(mysqli $conn): array
 {
     $leaders = [];
     $result = $conn->query("
-        SELECT DISTINCT up.id_pob, u.id_user
-        FROM user_pobocka up
-        INNER JOIN `user` u ON u.id_user = up.id_user
-        INNER JOIN hr_person hp ON hp.id_user = u.id_user AND hp.aktivni = 1
-        INNER JOIN user_role ur ON ur.id_user = u.id_user AND ur.id_role = 5
-        WHERE up.main = 1
-        ORDER BY up.id_pob ASC, u.id_user ASC
+        SELECT DISTINCT prac.id_pob, hp.id_person AS id_user
+        FROM hr_pracoviste prac
+        INNER JOIN hr_person hp ON hp.id_person = prac.id_person AND hp.aktivni = 1
+        INNER JOIN hr_pristupovy_profil pr ON pr.id_person = hp.id_person AND pr.id_role = 5
+        WHERE prac.hlavni = 1 AND prac.platny = 1
+        ORDER BY prac.id_pob ASC, hp.id_person ASC
     ");
     if ($result instanceof mysqli_result) {
         while ($row = $result->fetch_assoc()) {

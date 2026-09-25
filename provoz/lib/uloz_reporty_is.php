@@ -51,7 +51,7 @@ if (!cb_denni_report_ma_pravo(CB_DENNI_REPORT_ZOBRAZIT_PRAVO)) {
 $canCloseReport = cb_denni_report_ma_pravo(CB_DENNI_REPORT_UZAVRIT_PRAVO);
 $canEditSavedReport = cb_denni_report_ma_pravo(CB_DENNI_REPORT_EDITOVAT_PRAVO);
 
-$stmtAllowed = $conn->prepare('SELECT 1 FROM user_pobocka WHERE id_user = ? AND id_pob = ? LIMIT 1');
+$stmtAllowed = $conn->prepare('SELECT 1 FROM hr_person hp WHERE hp.id_person = ? AND (hp.pristup_vsechny_pobocky = 1 OR EXISTS (SELECT 1 FROM hr_pracoviste prac WHERE prac.id_person = hp.id_person AND prac.id_pob = ? AND prac.platny = 1)) LIMIT 1');
 if ($stmtAllowed === false) {
     $sendJson(500, ['ok' => false, 'err' => 'Nelze overit pobocku']);
 }
@@ -68,7 +68,7 @@ if (!$isAllowed) {
 }
 
 $isMainBranch = false;
-$stmtMainBranch = $conn->prepare('SELECT 1 FROM user_pobocka WHERE id_user = ? AND id_pob = ? AND main = 1 LIMIT 1');
+$stmtMainBranch = $conn->prepare('SELECT 1 FROM hr_pracoviste WHERE id_person = ? AND id_pob = ? AND hlavni = 1 AND platny = 1 LIMIT 1');
 if ($stmtMainBranch !== false) {
     $stmtMainBranch->bind_param('ii', $currentUserId, $idPob);
     $stmtMainBranch->execute();

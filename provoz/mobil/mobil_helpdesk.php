@@ -50,10 +50,10 @@ function cb_mobil_helpdesk_fetch(string $token): ?array
             uz.prijmeni AS zprava_prijmeni
         FROM helpdesk_notifikace n
         INNER JOIN helpdesk h ON h.id_helpdesk = n.id_helpdesk
-        LEFT JOIN `user` u ON u.id_user = h.id_user_zalozil
-        LEFT JOIN `user` ur ON ur.id_user = n.id_user
+        LEFT JOIN hr_osobni_udaje u ON u.id_person = h.id_user_zalozil AND u.platny = 1
+        LEFT JOIN hr_osobni_udaje ur ON ur.id_person = n.id_user AND ur.platny = 1
         LEFT JOIN helpdesk_zprava hz ON hz.id_helpdesk_zprava = n.id_helpdesk_zprava
-        LEFT JOIN `user` uz ON uz.id_user = hz.id_user
+        LEFT JOIN hr_osobni_udaje uz ON uz.id_person = hz.id_user AND uz.platny = 1
         WHERE n.id_helpdesk_notifikace = ? AND n.id_user = ?
         LIMIT 1
     ');

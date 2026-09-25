@@ -2,13 +2,12 @@
 declare(strict_types=1);
 
 /*
- * Interní část kompletního prvního naplnění HR: reset a import USER -> PERSON.
+ * Starý reset HR. Import USER -> PERSON a reset zaměstnanců byly nahrazeny
+ * potvrzenými kroky v Administraci.
  *
- * Spuštění:
- *   php www/common/scripts/hr_import_user_do_person.php --db=local --reset --scope=all|vd|nd_employees --import-users=0|1
- *   php www/common/scripts/hr_import_user_do_person.php --db=server --reset
+ * Nyní je povolen pouze lokální reset VD bez importu zaměstnanců:
+ *   php www/common/scripts/hr_import_user_do_person.php --db=local --reset --scope=vd --import-users=0
  *
- * Na serveru je povolen pouze první kompletní běh, když je hr_person prázdná.
  * Číselníky hr_cis_* a uživatelská data IS zachovává.
  */
 
@@ -47,6 +46,15 @@ if (
 }
 
 $importUsers = $importUsersRaw === '1';
+
+if ($resetScope !== 'vd' || $importUsers) {
+    $message = 'Starý reset zaměstnanců je vypnutý: přiděloval by jiná id_person. Použijte jednorázovou migraci v Administraci.';
+    if ($directRun) {
+        throw new RuntimeException($message);
+    }
+    fwrite(STDERR, $message . PHP_EOL);
+    exit(1);
+}
 
 $secretsPath = __DIR__ . '/../config/secrets.php';
 if (!is_file($secretsPath)) {

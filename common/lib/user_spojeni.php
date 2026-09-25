@@ -12,7 +12,7 @@ require_once __DIR__ . '/email_prvni_vstup.php';
 function cb_user_spojeni_odeslat(mysqli $db, int $idUser): void
 {
     $user = cb_prvni_vstup_user($db, $idUser);
-    if (!is_array($user) || (int)$user['aktivni'] !== 1 || (int)$user['schvalen'] !== 1) {
+    if (!is_array($user) || (int)$user['aktivni'] !== 1) {
         throw new RuntimeException('Účet není připraven pro první vstup.');
     }
     if (trim((string)$user['heslo_hash']) !== '') {

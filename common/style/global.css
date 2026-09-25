@@ -340,6 +340,16 @@ main{
   color:var(--cb-text-main);
 }
 
+.blok_hlavicka.cb-maintenance-active{
+  background:var(--clr_ruzova_2);
+  border-bottom-color:var(--clr_cervena);
+  box-shadow:0 0 0 2px var(--clr_cervena), 0 4px 14px var(--cb-shadow);
+}
+
+.blok_hlavicka.cb-maintenance-active .head_subtitle{
+  color:var(--clr_cervena);
+}
+
 .head_logo,
 .head_logo_img,
 .head_brand_time,
@@ -980,6 +990,26 @@ main{
   white-space:nowrap;
 }
 
+.head_update.head_maintenance_status{
+  justify-content:center;
+  border:2px solid var(--clr_cervena);
+  background:var(--clr_cervena);
+  color:var(--clr_bila);
+  text-align:center;
+}
+
+.head_maintenance_long,
+.head_maintenance_short{
+  color:inherit;
+  font-size:var(--cb-font-14);
+  line-height:1.1;
+  white-space:nowrap;
+}
+
+.head_maintenance_short{
+  display:none;
+}
+
 /* ===== Guest ===== */
 .head_guest{
   grid-column:2 / span 2;
@@ -1159,6 +1189,15 @@ main{
     overflow:hidden;
     text-overflow:ellipsis;
     white-space:nowrap;
+  }
+
+  .head_maintenance_long{
+    display:none;
+  }
+
+  .head_maintenance_short{
+    display:block;
+    font-size:var(--cb-font-12);
   }
 }
 

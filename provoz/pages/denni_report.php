@@ -1,6 +1,14 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../lib/denni_report_vyroba.php';
+$vyrobaCurrentUser = $_SESSION['cb_user'] ?? [];
+$vyrobaCurrentId = is_array($vyrobaCurrentUser) ? (int)($vyrobaCurrentUser['id_user'] ?? 0) : 0;
+if (cb_vyroba_should_render(db(), $vyrobaCurrentId)) {
+    require __DIR__ . '/../bloky/denni_report_vyroba.php';
+    return;
+}
+
 if ((string)($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL') {
     try {
         $db = db();

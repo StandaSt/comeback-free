@@ -137,9 +137,9 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
     $sql = '
         SELECT
             hp.id_person,
-            u.jmeno,
-            u.prijmeni,
-            TRIM(CONCAT(COALESCE(u.prijmeni, ""), " ", COALESCE(u.jmeno, ""))) AS cele_jmeno,
+            ou.jmeno,
+            ou.prijmeni,
+            TRIM(CONCAT(COALESCE(ou.prijmeni, ""), " ", COALESCE(ou.jmeno, ""))) AS cele_jmeno,
             (
                 SELECT CASE WHEN prac.id_pob = 0 THEN \'Výroba\' ELSE p.nazev END
                 FROM hr_pracoviste prac
@@ -212,7 +212,7 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
             ) AS mzda_castka,
             COALESCE(hodiny.odpracovano, 0) AS odpracovano
         FROM hr_person hp
-        INNER JOIN user u ON u.id_user = hp.id_user
+        INNER JOIN hr_osobni_udaje ou ON ou.id_person = hp.id_person AND ou.platny = 1
         LEFT JOIN (
             SELECT ro.id_user, SUM(ro.odpracovano) AS odpracovano
             FROM reporty_is_osoby ro
@@ -229,7 +229,7 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
                 AND pv.datum_nastupu <= ?
                 AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= ?)
           )
-        ORDER BY u.prijmeni ASC, u.jmeno ASC, hp.id_person ASC
+        ORDER BY ou.prijmeni ASC, ou.jmeno ASC, hp.id_person ASC
     ';
 
     $stmt = $db->prepare($sql);

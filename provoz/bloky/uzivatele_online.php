@@ -9,20 +9,20 @@ declare(strict_types=1);
         $timeout = function_exists('cb_pc_session_timeout_sec') ? cb_pc_session_timeout_sec() : 150;
         $sql = "
             SELECT
-                u.id_user,
-                TRIM(CONCAT_WS(' ', u.jmeno, u.prijmeni)) AS cele_jmeno,
+                p.id_person AS id_user,
+                TRIM(CONCAT_WS(' ', ou.jmeno, ou.prijmeni)) AS cele_jmeno,
                 MIN(ps.vytvoreno) AS login_time,
                 MAX(ps.last_seen) AS last_seen
             FROM user_pc_session ps
-            INNER JOIN `user` u ON u.id_user = ps.id_user
-            INNER JOIN hr_person p ON p.id_user = ps.id_user AND p.aktivni = 1
+            INNER JOIN hr_person p ON p.id_person = ps.id_user AND p.aktivni = 1
+            INNER JOIN hr_osobni_udaje ou ON ou.id_person = p.id_person AND ou.platny = 1
             INNER JOIN user_login ul ON ul.id_login = ps.id_login
                 AND ul.id_user = ps.id_user
                 AND ul.akce = 1
                 AND ul.duvod = 2
             WHERE ps.zruseno IS NULL
               AND ps.last_seen >= (NOW() - INTERVAL " . (int)$timeout . " SECOND)
-            GROUP BY u.id_user, u.jmeno, u.prijmeni
+            GROUP BY p.id_person, ou.jmeno, ou.prijmeni
             ORDER BY last_seen DESC, cele_jmeno ASC
             LIMIT 20
         ";

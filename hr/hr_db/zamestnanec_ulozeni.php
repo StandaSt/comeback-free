@@ -152,42 +152,40 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
             throw new CbUserVisibleException('Vyberte aktivní pozici.');
         }
 
-        // Zalozi samostatny lokalni ucet; SPOJENÍ jej pozve až po kompletní přípravě.
-        $aktivniUser = 1;
-        $schvalenUser = 1;
-        $inSystem = 0;
-        $zdrojUser = 3;
+        // Při souběhu lokální a serverové migrace musí založení osoby fungovat
+        // před i po odstranění historických profilových sloupců z user.
         $hesloHash = null;
-        $stmt = $db->prepare('
-            INSERT INTO user (id_firma, jmeno, prijmeni, email, heslo_hash, telefon, aktivni, in_system, schvalen, zdroj)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ');
-        $stmt->bind_param('isssssiiii', $idFirma, $jmeno, $prijmeni, $email, $hesloHash, $telefon, $aktivniUser, $inSystem, $schvalenUser, $zdrojUser);
+        $hasLegacyProfile = $db->query("SHOW COLUMNS FROM user LIKE 'jmeno'")->num_rows > 0;
+        if ($hasLegacyProfile) {
+            $stmt = $db->prepare("INSERT INTO user (id_firma, jmeno, prijmeni, email, heslo_hash, aktivni, in_system, schvalen, zdroj) VALUES (?, '', '', ?, ?, 1, 0, 1, 3)");
+            $stmt->bind_param('iss', $idFirma, $email, $hesloHash);
+        } else {
+            $stmt = $db->prepare('INSERT INTO user (email, heslo_hash) VALUES (?, ?)');
+            $stmt->bind_param('ss', $email, $hesloHash);
+        }
         $stmt->execute();
         $idUser = (int)$db->insert_id;
         $stmt->close();
 
-        $stmt = $db->prepare('INSERT INTO user_role (id_user, id_role) VALUES (?, ?)');
-        $stmt->bind_param('ii', $idUser, $idRoleHr);
-        $stmt->execute();
-        $stmt->close();
-
-        $stmt = $db->prepare('INSERT INTO user_pobocka (id_user, id_pob, main) VALUES (?, ?, ?)');
-        foreach ($idPobocky as $idPob) {
-            $hlavniPobocka = $idPob === $idPobHlavni ? 1 : 0;
-            $stmt->bind_param('iii', $idUser, $idPob, $hlavniPobocka);
-            $stmt->execute();
-        }
-        $stmt->close();
-
-        // Zalozi stabilni identitu zamestnance navazanou na jeho ucet.
+        // Jedine ID osoby i prihlasovaciho uctu; vazby a profil patri do HR.
         $stmt = $db->prepare('
-            INSERT INTO hr_person (id_firma, id_user, osobni_cislo, zdroj, id_user_zadal, vytvoreno, aktivni)
-            VALUES (?, ?, ?, ?, ?, NOW(), 1)
+            INSERT INTO hr_person (id_person, id_firma, id_user, osobni_cislo, zdroj, id_user_zadal, vytvoreno, aktivni)
+            VALUES (?, ?, ?, ?, ?, ?, NOW(), 1)
         ');
-        $stmt->bind_param('iissi', $idFirma, $idUser, $osobniCisloDb, $zdroj, $zadalUser);
+        $stmt->bind_param('iiissi', $idUser, $idFirma, $idUser, $osobniCisloDb, $zdroj, $zadalUser);
         $stmt->execute();
-        $idPerson = (int)$db->insert_id;
+        $idPerson = $idUser;
+        $stmt->close();
+
+        $stmt = $db->prepare('INSERT INTO hr_pristupovy_profil (id_person, id_role, id_person_zadal) VALUES (?, ?, ?)');
+        $stmt->bind_param('iii', $idPerson, $idRoleHr, $zadalUser);
+        $stmt->execute();
+        $stmt->close();
+
+        $idOrgFunkce = match ($idRoleHr) { 3 => 5, 5 => 4, 7 => 2, default => 1 };
+        $stmt = $db->prepare('INSERT INTO hr_org_funkce (id_person, id_org_funkce, hlavni, platnost_od, id_person_zadal, platny) VALUES (?, ?, 1, ?, ?, 1)');
+        $stmt->bind_param('iisi', $idPerson, $idOrgFunkce, $datumNastupu, $zadalUser);
+        $stmt->execute();
         $stmt->close();
 
         // Ulozi kompletní osobní údaje jako aktuální platný záznam.

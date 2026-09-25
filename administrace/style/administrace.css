@@ -171,10 +171,25 @@
   width:100%;
 }
 
-.admin_script_form--hr{
+.admin_script_form--history-preview{
+  flex-wrap:wrap;
+}
+
+.admin_script_date_field{
   display:grid;
-  gap:12px;
-  align-items:start;
+  gap:4px;
+  color:var(--cb-text-main);
+  font-size:var(--cb-font-14);
+}
+
+.admin_script_date_field input{
+  min-height:34px;
+  padding:4px 8px;
+  border:1px solid var(--cb-border-soft);
+  border-radius:6px;
+  background:#fff;
+  color:var(--cb-text-main);
+  font:inherit;
 }
 
 .admin_script_options{
@@ -293,6 +308,32 @@
 .admin_script_result.is-error{
   border-color:#dc2626;
   color:#b91c1c !important;
+}
+
+.admin_script_progress{
+  display:grid;
+  gap:10px;
+  width:min(760px, 100%);
+}
+
+.admin_script_progress[hidden]{
+  display:none;
+}
+
+.admin_script_progress progress{
+  width:100%;
+  height:16px;
+}
+
+.admin_script_progress ol{
+  margin:0;
+  padding-left:24px;
+  color:var(--cb-text-main);
+  font-size:var(--cb-font-14);
+}
+
+.admin_script_progress li{
+  padding:2px 0;
 }
 
 /* Export DB: výběr pouze předem definovaných skupin tabulek. */

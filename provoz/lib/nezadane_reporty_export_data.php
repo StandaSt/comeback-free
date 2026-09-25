@@ -37,11 +37,12 @@ function cb_nezadane_reporty_export_period(string $scope): array
 function cb_nezadane_reporty_export_recipients(mysqli $conn): array
 {
     $result = $conn->query("
-        SELECT DISTINCT u.id_user, u.jmeno, u.prijmeni, u.email
+        SELECT DISTINCT u.id_user, ou.jmeno, ou.prijmeni, u.email
         FROM user AS u
-        INNER JOIN user_role AS ur ON ur.id_user = u.id_user AND ur.id_role < 4
+        INNER JOIN hr_pristupovy_profil AS ur ON ur.id_person = u.id_user AND ur.id_role < 4
+        INNER JOIN hr_osobni_udaje ou ON ou.id_person = u.id_user AND ou.platny = 1
         WHERE TRIM(u.email) <> ''
-        ORDER BY u.prijmeni ASC, u.jmeno ASC, u.id_user ASC
+        ORDER BY ou.prijmeni ASC, ou.jmeno ASC, u.id_user ASC
     ");
 
     $recipients = [];
@@ -70,12 +71,13 @@ function cb_nezadane_reporty_export_recipient(mysqli $conn, int $idUser): ?array
     }
 
     $stmt = $conn->prepare("
-        SELECT u.id_user, u.jmeno, u.prijmeni, u.email
+        SELECT u.id_user, ou.jmeno, ou.prijmeni, u.email
         FROM user AS u
+        INNER JOIN hr_osobni_udaje ou ON ou.id_person = u.id_user AND ou.platny = 1
         WHERE u.id_user = ?
           AND TRIM(u.email) <> ''
           AND EXISTS (
-              SELECT 1 FROM user_role ur WHERE ur.id_user = u.id_user AND ur.id_role < 4
+              SELECT 1 FROM hr_pristupovy_profil ur WHERE ur.id_person = u.id_user AND ur.id_role < 4
           )
         LIMIT 1
     ");
@@ -159,13 +161,13 @@ function cb_nezadane_reporty_export_rows(mysqli $conn, string $scope): array
         SELECT
             sp.datum,
             sp.id_pob,
-            TRIM(CONCAT_WS(' ', u.jmeno, u.prijmeni)) AS full_name,
+            TRIM(CONCAT_WS(' ', ou.jmeno, ou.prijmeni)) AS full_name,
             DATE_ADD(
                 CONCAT(sp.datum, ' ', sp.cas_do),
                 INTERVAL CASE WHEN sp.cas_do <= sp.cas_od THEN 1 ELSE 0 END DAY
             ) AS end_dt
         FROM smeny_plan sp
-        INNER JOIN user u ON u.id_user = sp.id_user
+        INNER JOIN hr_osobni_udaje ou ON ou.id_person = sp.id_user AND ou.platny = 1
         WHERE sp.id_slot = 1
           AND sp.datum >= ?
           AND sp.datum <= ?

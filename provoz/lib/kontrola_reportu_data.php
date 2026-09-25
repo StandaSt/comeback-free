@@ -138,15 +138,15 @@ function cb_kontrola_reportu_branch(mysqli $conn, int $userId, int $requestedBra
 
     $stmt = $conn->prepare('
         SELECT p.id_pob, p.nazev
-        FROM user_pobocka up
-        INNER JOIN pobocka p ON p.id_pob = up.id_pob
-        WHERE up.id_user = ? AND up.id_pob = ? AND p.aktivni = 1
+        FROM hr_person hp
+        INNER JOIN pobocka p ON p.id_pob = ? AND p.aktivni = 1
+        WHERE hp.id_person = ? AND (hp.pristup_vsechny_pobocky = 1 OR EXISTS (SELECT 1 FROM hr_pracoviste prac WHERE prac.id_person = hp.id_person AND prac.id_pob = p.id_pob AND prac.platny = 1))
         LIMIT 1
     ');
     if ($stmt === false) {
         throw new RuntimeException('Nelze ověřit pobočku pro Kontrolu reportů.');
     }
-    $stmt->bind_param('ii', $userId, $requestedBranchId);
+    $stmt->bind_param('ii', $requestedBranchId, $userId);
     $stmt->execute();
     $result = $stmt->get_result();
     $row = $result instanceof mysqli_result ? ($result->fetch_assoc() ?: null) : null;
@@ -450,7 +450,7 @@ function cb_kontrola_reportu_google_people_comparison(mysqli $conn, int $branchI
                 COALESCE(SUM(o.rozvozu_celkem), 0) AS deliveries_count
             FROM ' . $reportTable . ' r
             INNER JOIN ' . $peopleTable . ' o ON o.id_reportu = r.id_reportu
-            LEFT JOIN user u ON u.id_user = o.id_user
+            LEFT JOIN hr_osobni_udaje u ON u.id_person = o.id_user AND u.platny = 1
             WHERE r.id_pob = ?
               AND r.platny = 1
               AND r.datum_reportu BETWEEN ? AND ?
@@ -690,7 +690,7 @@ function cb_kontrola_reportu_google_daily_differences(mysqli $conn, int $branchI
                 COALESCE(SUM(o.odpracovano), 0) AS hours_count
             FROM ' . $reportTable . ' r
             INNER JOIN ' . $peopleTable . ' o ON o.id_reportu = r.id_reportu
-            LEFT JOIN user u ON u.id_user = o.id_user
+            LEFT JOIN hr_osobni_udaje u ON u.id_person = o.id_user AND u.platny = 1
             WHERE r.id_pob = ? AND r.platny = 1
               AND r.datum_reportu BETWEEN ? AND ?
               AND o.slot IN (1, 2)' . $sourceCondition . '
@@ -967,7 +967,7 @@ function cb_kontrola_reportu_name_mismatches(mysqli $conn, int $branchId, string
     $unmatched = [];
     foreach ($countsByDate as $date => $counts) {
         $options = (array)($optionsByDate[$date] ?? []);
-        $matches = cb_denni_report_match_courier_names($counts, $options);
+        $matches = cb_denni_report_match_courier_names($counts, $options, true);
         $optionsByUser = [];
         foreach ($options as $option) {
             $optionsByUser[(int)($option['id_user'] ?? 0)] = $option;

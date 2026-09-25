@@ -17,7 +17,10 @@
   }
 
   function setMenuOpen(open) {
-    var shouldOpen = open === true && narrowMenu.matches && !root.classList.contains('is-small-portrait');
+    var portraitAllowed = root.classList.contains('cb-context--smeny');
+    var shouldOpen = open === true
+      && narrowMenu.matches
+      && (!root.classList.contains('is-small-portrait') || portraitAllowed);
     root.classList.toggle('is-menu-open', shouldOpen);
     document.body.classList.toggle('cb-menu-open', shouldOpen);
 

@@ -15,7 +15,6 @@ $zrIsCreatingMissingFinalReport = !empty($isCreatingMissingFinalReport);
 $zrManualDifferenceRows = (array)($zrManualDifferenceRows ?? []);
 $zrManualDifferenceDates = (array)($zrManualDifferenceDates ?? []);
 $zrHasManualDifferences = $zrManualDifferenceRows !== [];
-$zrKuryrNameMismatches = (array)($kuryrNameMismatches ?? []);
 $zrKuryrUnmatchedNames = (array)($kuryrUnmatchedNames ?? []);
 $zrOwnDeliveryCount = max(0, (int)($restiaSummary['own_deliveries'] ?? 0));
 $zrOwnDeliveryWithoutConfirmationCount = max(0, (int)($restiaSummary['own_deliveries_without_confirmation'] ?? 0));
@@ -365,24 +364,6 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
             style="width:100%;margin-top:4px;"
           >
         </section>
-        <?php if ($zrKuryrNameMismatches !== []): ?>
-          <section class="zr_restia_name_mismatches" aria-label="Nesrovnalosti ve jménech kurýrů">
-            <strong>Nesrovnalosti ve jménech kurýrů:</strong>
-            <table class="zr_restia_name_table">
-              <tbody>
-                <?php foreach ($zrKuryrNameMismatches as $zrNameMismatch): ?>
-                  <tr>
-                    <td class="zr_restia_name_label">Restia:</td>
-                    <td><?= h((string)($zrNameMismatch['restia'] ?? '')) ?></td>
-                    <td class="zr_restia_name_vs">vs</td>
-                    <td class="zr_restia_name_label">IS:</td>
-                    <td><?= h((string)($zrNameMismatch['is'] ?? '')) ?></td>
-                  </tr>
-                <?php endforeach; ?>
-              </tbody>
-            </table>
-          </section>
-        <?php endif; ?>
         <?php if ($zrKuryrUnmatchedNames !== []): ?>
           <section class="zr_restia_name_mismatches" aria-label="Nespárovaná jména kurýrů">
             <strong>Nespárovaná jména kurýrů v Restii:</strong>

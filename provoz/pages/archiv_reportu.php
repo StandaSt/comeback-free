@@ -13,15 +13,17 @@ $archivYears = (array)($archivData['years'] ?? []);
 $archivRows = (array)($archivData['rows'] ?? []);
 $archivTotal = (int)($archivData['total'] ?? 0);
 $archivError = trim((string)($archivData['error'] ?? ''));
-$archivPerPage = 50;
+$archivPerPage = (int)($archivFilters['per'] ?? 50);
 $archivPage = max(1, (int)($archivFilters['page'] ?? 1));
 $archivPages = max(1, (int)ceil($archivTotal / $archivPerPage));
 $archivPage = min($archivPage, $archivPages);
+$archivFirstRow = $archivTotal > 0 ? ($archivPage - 1) * $archivPerPage + 1 : 0;
+$archivLastRow = min($archivTotal, $archivPage * $archivPerPage);
 $archivDisplayRows = array_slice($archivRows, ($archivPage - 1) * $archivPerPage, $archivPerPage);
 foreach ($archivDisplayRows as &$archivDisplayRow) {
     $archivDisplayRow['has_entry_difference'] = false;
     $archivDisplayRow['has_calculation_difference'] = false;
-    if (!empty($archivDisplayRow['saved']) && !empty($archivDisplayRow['google_report_available'])) {
+    if ((int)($archivDisplayRow['branch_id'] ?? 0) !== 7 && !empty($archivDisplayRow['saved']) && (int)($archivDisplayRow['source'] ?? 2) === 2 && !empty($archivDisplayRow['google_report_available'])) {
         $archivComparison = cb_archiv_reportu_comparison_rows(db(), (int)$archivDisplayRow['branch_id'], (string)$archivDisplayRow['date']);
         $archivDisplayRow['has_entry_difference'] = !empty($archivComparison['entry']);
         $archivDisplayRow['has_calculation_difference'] = !empty($archivComparison['calculation']);
@@ -38,6 +40,7 @@ $archivBaseParams = [
     'ar_sort' => (string)($archivFilters['sort'] ?? 'date'),
     'ar_dir' => (string)($archivFilters['dir'] ?? 'desc'),
     'ar_p' => (string)$archivPage,
+    'ar_per' => (string)$archivPerPage,
 ];
 $archivUrl = static function (array $extra = []) use ($archivBaseParams): string {
     return cb_root_url('index.php') . '?' . http_build_query(array_merge($archivBaseParams, $extra), '', '&', PHP_QUERY_RFC3986);
@@ -73,6 +76,7 @@ $archivHourLabel = static function (float $value): string {
           <select class="provoz_objednavky_filter" name="ar_branch" aria-label="Pobočka" onchange="this.form.submit()"><option value="0">Vše</option><?php foreach ($archivBranches as $branch): ?><option value="<?= h((string)$branch['id']) ?>"<?= (int)$archivFilters['branch'] === (int)$branch['id'] ? ' selected' : '' ?>><?= h((string)$branch['name']) ?></option><?php endforeach; ?></select>
           <select class="provoz_objednavky_filter" name="ar_status" aria-label="Stav" onchange="this.form.submit()"><option value="all">Vše</option><option value="saved"<?= $archivFilters['status'] === 'saved' ? ' selected' : '' ?>>Zadané</option><option value="missing"<?= $archivFilters['status'] === 'missing' ? ' selected' : '' ?>>Chybějící</option></select>
         </div>
+        <div class="archiv_reportu_results">
         <div class="provoz_objednavky_table_wrap">
         <table class="provoz_objednavky_table">
           <thead>
@@ -84,6 +88,7 @@ $archivHourLabel = static function (float $value): string {
             <?php else: ?>
               <?php foreach ($archivDisplayRows as $row): ?>
                 <?php
+                $archivIsVyroba = (int)$row['branch_id'] === 7;
                 $reportParams = array_merge($archivBaseParams, ['m' => 'provoz', 'page' => 'denni_report', 'zr_id_pob' => (string)$row['branch_id'], 'datum_reportu' => (string)$row['date'], 'zr_archive' => '1']);
                 if (empty($row['saved']) && !empty($row['can_complete'])) {
                     $reportParams['zr_archive_edit'] = '1';
@@ -107,13 +112,13 @@ $archivHourLabel = static function (float $value): string {
                 <tr<?= empty($row['saved']) ? ' class="archiv_reportu_row--missing"' : '' ?>>
                   <td><?= h(cb_format('d', $row['date'])) ?></td>
                   <td><?= h((string)$row['branch_name']) ?></td>
-                  <td class="<?= !empty($row['saved']) ? 'archiv_reportu_status--saved' : '' ?>"><?= !empty($row['saved']) ? 'Zadaný' : 'Chybí' ?></td>
-                  <td class="txt_r"><?= !empty($row['saved']) ? h(cb_format('p', $row['revenue'])) : '—' ?></td>
-                  <td class="txt_r"><?= !empty($row['saved']) && $row['col'] !== null ? h(cb_denni_report_format_percent((float)$row['col'])) : '—' ?></td>
-                  <td class="txt_r"><?= !empty($row['saved']) && $row['difference'] !== null ? h(cb_format('p', $row['difference'])) : '—' ?></td>
-                  <td class="txt_r"><?= !empty($row['saved']) ? h($archivHourLabel((float)$row['hours_total']) . ' (' . $archivHourLabel((float)$row['hours_instor']) . ' / ' . $archivHourLabel((float)$row['hours_kuryr']) . ')') : '—' ?></td>
-                  <td><?= !empty($row['saved']) ? h((string)$row['opening']) : '—' ?></td>
-                  <td><?= !empty($row['saved']) ? h((string)$row['closing']) : '—' ?></td>
+                  <td class="<?= !empty($row['saved']) ? 'archiv_reportu_status--saved' : '' ?>"><?= empty($row['saved']) ? 'Chybí' : ((int)($row['source'] ?? 2) === 1 ? 'Google' : 'Zadaný') ?></td>
+                  <td class="txt_r"><?= !$archivIsVyroba && !empty($row['saved']) ? h(cb_format('p', $row['revenue'])) : '—' ?></td>
+                  <td class="txt_r"><?= !$archivIsVyroba && !empty($row['saved']) && $row['col'] !== null ? h(cb_denni_report_format_percent((float)$row['col'])) : '—' ?></td>
+                  <td class="txt_r"><?= !$archivIsVyroba && !empty($row['saved']) && $row['difference'] !== null ? h(cb_format('p', $row['difference'])) : '—' ?></td>
+                  <td class="txt_r"><?= !empty($row['saved']) ? h($archivIsVyroba ? $archivHourLabel((float)$row['hours_total']) : $archivHourLabel((float)$row['hours_total']) . ' (' . $archivHourLabel((float)$row['hours_instor']) . ' / ' . $archivHourLabel((float)$row['hours_kuryr']) . ')') : '—' ?></td>
+                  <td><?= !$archivIsVyroba && !empty($row['saved']) ? h((string)$row['opening']) : '—' ?></td>
+                  <td><?= !$archivIsVyroba && !empty($row['saved']) ? h((string)$row['closing']) : '—' ?></td>
                   <td>
                     <?php if (!empty($row['saved'])): ?>
                       <?php if (!empty($row['has_calculation_difference'])): ?><a class="archiv_reportu_action_badge" href="<?= h($comparisonUrl) ?>#rozdily-vypocet">Výpočet</a><?php endif; ?>
@@ -126,7 +131,7 @@ $archivHourLabel = static function (float $value): string {
                     <?php if (!empty($row['saved'])): ?>
                       <a class="archiv_reportu_action_badge" href="<?= h($reportUrl) ?>">Detail</a>
                     <?php endif; ?>
-                    <?php if (!empty($row['google_report_available'])): ?>
+                    <?php if (!$archivIsVyroba && !empty($row['google_report_available']) && (int)($row['source'] ?? 2) !== 1): ?>
                       <a class="archiv_reportu_action_badge" href="<?= h($googleReportUrl) ?>">Google</a>
                     <?php endif; ?>
                     <?php if (empty($row['saved']) && !empty($row['can_complete'])): ?>
@@ -138,16 +143,22 @@ $archivHourLabel = static function (float $value): string {
             <?php endif; ?>
           </tbody>
         </table></div>
-      </form>
-
-      <?php if ($archivPages > 1): ?>
-        <div class="provoz_objednavky_pager">
-          <div>Zobrazuji <?= h((string)count($archivDisplayRows)) ?> z <?= h((string)$archivTotal) ?></div>
+        <div class="provoz_objednavky_pager list-bottom">
+          <span><?= h((string)$archivFirstRow) ?>-<?= h((string)$archivLastRow) ?> / <?= h((string)$archivTotal) ?></span>
           <div class="provoz_objednavky_pager_links">
-            <a class="provoz_objednavky_page_link<?= $archivPage <= 1 ? ' is-disabled' : '' ?>" href="<?= h($archivUrl(['ar_p' => '1'])) ?>">«</a><a class="provoz_objednavky_page_link<?= $archivPage <= 1 ? ' is-disabled' : '' ?>" href="<?= h($archivUrl(['ar_p' => (string)($archivPage - 1)])) ?>">‹</a><span class="provoz_objednavky_page_current"><?= h((string)$archivPage) ?> / <?= h((string)$archivPages) ?></span><a class="provoz_objednavky_page_link<?= $archivPage >= $archivPages ? ' is-disabled' : '' ?>" href="<?= h($archivUrl(['ar_p' => (string)($archivPage + 1)])) ?>">›</a><a class="provoz_objednavky_page_link<?= $archivPage >= $archivPages ? ' is-disabled' : '' ?>" href="<?= h($archivUrl(['ar_p' => (string)$archivPages])) ?>">»</a>
+            <a class="provoz_objednavky_page_link<?= $archivPage <= 1 ? ' is-disabled' : '' ?>" href="<?= h($archivUrl(['ar_p' => '1'])) ?>">«</a><a class="provoz_objednavky_page_link<?= $archivPage <= 1 ? ' is-disabled' : '' ?>" href="<?= h($archivUrl(['ar_p' => (string)max(1, $archivPage - 1)])) ?>">‹</a><span class="provoz_objednavky_page_current"><?= h((string)$archivPage) ?> / <?= h((string)$archivPages) ?></span><a class="provoz_objednavky_page_link<?= $archivPage >= $archivPages ? ' is-disabled' : '' ?>" href="<?= h($archivUrl(['ar_p' => (string)min($archivPages, $archivPage + 1)])) ?>">›</a><a class="provoz_objednavky_page_link<?= $archivPage >= $archivPages ? ' is-disabled' : '' ?>" href="<?= h($archivUrl(['ar_p' => (string)$archivPages])) ?>">»</a>
+          </div>
+          <div class="provoz_objednavky_per">
+            <label for="ar_per">Řádků</label>
+            <select id="ar_per" name="ar_per" class="filter-input" onchange="this.form.submit()">
+              <?php foreach (CB_ARCHIV_REPORTU_PER_OPTIONS as $option): ?>
+                <option value="<?= h((string)$option) ?>"<?= $option === $archivPerPage ? ' selected' : '' ?>><?= h((string)$option) ?></option>
+              <?php endforeach; ?>
+            </select>
           </div>
         </div>
-      <?php endif; ?>
+        </div>
+      </form>
     </section>
   <?php endif; ?>
 </div>

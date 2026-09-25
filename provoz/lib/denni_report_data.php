@@ -63,7 +63,7 @@ function cb_denni_report_sort_user_options(array $options): array
  *   matches:array<string,array{id_user:int,is_name:string,display_name:string}>
  * }
  */
-function cb_denni_report_match_courier_names(array $restiaCounts, array $kuryrOptions): array
+function cb_denni_report_match_courier_names(array $restiaCounts, array $kuryrOptions, bool $collectNameMismatches = false): array
 {
     $options = [];
     foreach ($kuryrOptions as $option) {
@@ -117,7 +117,7 @@ function cb_denni_report_match_courier_names(array $restiaCounts, array $kuryrOp
             'is_name' => $isName,
             'display_name' => trim((string)($matched['display_name'] ?? $isName)),
         ];
-        if ($restiaName !== $isName) {
+        if ($collectNameMismatches && $restiaName !== $isName) {
             $mismatches[] = [
                 'restia' => $restiaName,
                 'is' => trim((string)($matched['display_name'] ?? $isName)),
@@ -137,7 +137,7 @@ function cb_denni_report_user_full_name_by_id(mysqli $conn, ?int $idUser): strin
         return '';
     }
 
-    $stmt = $conn->prepare('SELECT jmeno, prijmeni FROM user WHERE id_user = ? LIMIT 1');
+    $stmt = $conn->prepare('SELECT jmeno, prijmeni FROM hr_osobni_udaje WHERE id_person = ? AND platny = 1 ORDER BY id_osobni_udaje DESC LIMIT 1');
     if ($stmt === false) {
         return '';
     }
@@ -159,7 +159,7 @@ function cb_denni_report_user_name_parts_by_id(mysqli $conn, ?int $idUser): arra
         return ['jmeno' => '', 'prijmeni' => ''];
     }
 
-    $stmt = $conn->prepare('SELECT jmeno, prijmeni FROM user WHERE id_user = ? LIMIT 1');
+    $stmt = $conn->prepare('SELECT jmeno, prijmeni FROM hr_osobni_udaje WHERE id_person = ? AND platny = 1 ORDER BY id_osobni_udaje DESC LIMIT 1');
     if ($stmt === false) {
         return ['jmeno' => '', 'prijmeni' => ''];
     }
@@ -443,9 +443,9 @@ function cb_denni_report_user_main_branch_id(mysqli $conn, int $idUser): int
 
     $stmt = $conn->prepare('
         SELECT id_pob
-        FROM user_pobocka
-        WHERE id_user = ?
-          AND main = 1
+        FROM hr_pracoviste
+        WHERE id_person = ?
+          AND hlavni = 1 AND platny = 1
         LIMIT 1
     ');
     if ($stmt === false) {
@@ -473,6 +473,7 @@ function cb_denni_report_history_load(mysqli $conn, int $idPob, string $reportDa
     $stmt = $conn->prepare('
         SELECT
             r.id_reportu,
+            r.zdroj,
             r.datum_reportu,
             r.id_pob,
             r.oteviral,
@@ -552,21 +553,29 @@ function cb_denni_report_history_load(mysqli $conn, int $idPob, string $reportDa
     $stmtPeople = $conn->prepare('
         SELECT
             0 AS id_dr_osoby,
-            id_user,
-            slot AS id_slot,
-            jmeno,
-            prijmeni,
-            smena_od,
-            smena_do,
-            pauza,
-            odpracovano,
-            rozvozu_manual,
-            vlastni_vuz,
-            vyplatit_phm,
-            rozvozu_restia
-        FROM reporty_is_osoby
-        WHERE id_reportu = ?
-        ORDER BY slot ASC, COALESCE(smena_od, "00:00:00") ASC, COALESCE(smena_do, "00:00:00") ASC, prijmeni ASC, jmeno ASC
+            osoba.id_user,
+            osoba.slot AS id_slot,
+            COALESCE(udaje.jmeno, osoba.jmeno) AS jmeno,
+            COALESCE(udaje.prijmeni, osoba.prijmeni) AS prijmeni,
+            osoba.smena_od,
+            osoba.smena_do,
+            osoba.pauza,
+            osoba.odpracovano,
+            osoba.rozvozu_manual,
+            osoba.vlastni_vuz,
+            osoba.vyplatit_phm,
+            osoba.rozvozu_restia
+        FROM reporty_is_osoby osoba
+        LEFT JOIN hr_osobni_udaje udaje ON udaje.id_osobni_udaje = (
+            SELECT MAX(nove.id_osobni_udaje)
+            FROM hr_osobni_udaje nove
+            WHERE nove.id_person = osoba.id_user AND nove.platny = 1
+        )
+        WHERE osoba.id_reportu = ?
+        ORDER BY osoba.slot ASC, COALESCE(osoba.smena_od, "00:00:00") ASC,
+            COALESCE(osoba.smena_do, "00:00:00") ASC,
+            COALESCE(udaje.prijmeni, osoba.prijmeni) ASC,
+            COALESCE(udaje.jmeno, osoba.jmeno) ASC
     ');
     $peopleRows = [];
     if ($stmtPeople !== false) {
@@ -728,16 +737,17 @@ function cb_denni_report_branch_slot_user_options(mysqli $conn, int $idPob, int 
     $sql = "
         SELECT DISTINCT
             u.id_user,
-            u.jmeno,
-            u.prijmeni,
-            TRIM(CONCAT_WS(' ', u.jmeno, u.prijmeni)) AS full_name,
-            TRIM(CONCAT_WS(' ', u.prijmeni, u.jmeno)) AS display_name
-        FROM user u
-        INNER JOIN hr_person hp ON hp.id_user = u.id_user AND hp.aktivni = 1
-        INNER JOIN user_pobocka up ON up.id_user = u.id_user
-        INNER JOIN user_slot us ON us.id_user = u.id_user
-        WHERE up.id_pob = ?
-          AND us.id_slot = ?
+            ou.jmeno,
+            ou.prijmeni,
+            TRIM(CONCAT_WS(' ', ou.jmeno, ou.prijmeni)) AS full_name,
+            TRIM(CONCAT_WS(' ', ou.prijmeni, ou.jmeno)) AS display_name
+        FROM hr_person hp
+        INNER JOIN user u ON u.id_user = hp.id_person
+        INNER JOIN hr_osobni_udaje ou ON ou.id_person = hp.id_person AND ou.platny = 1
+        INNER JOIN hr_pracoviste prac ON prac.id_person = hp.id_person AND prac.platny = 1
+        INNER JOIN hr_zarazeni z ON z.id_person = hp.id_person AND z.platny = 1
+        WHERE hp.aktivni = 1 AND prac.id_pob = ?
+          AND z.id_slot = ?
         HAVING full_name <> ''
         ORDER BY display_name ASC
     ";
@@ -784,8 +794,8 @@ function cb_denni_report_shift_plan_people_rows(mysqli $conn, int $idPob, string
             0 AS id_dr_osoby,
             sp.id_user,
             sp.id_slot,
-            u.jmeno,
-            u.prijmeni,
+            ou.jmeno,
+            ou.prijmeni,
             sp.cas_od AS smena_od,
             sp.cas_do AS smena_do,
             0 AS pauza,
@@ -796,11 +806,11 @@ function cb_denni_report_shift_plan_people_rows(mysqli $conn, int $idPob, string
             0 AS rozvozu_restia
         FROM smeny_plan sp
         INNER JOIN user u ON u.id_user = sp.id_user
-        INNER JOIN user_slot us ON us.id_user = sp.id_user AND us.id_slot = sp.id_slot
+        INNER JOIN hr_osobni_udaje ou ON ou.id_person = sp.id_user AND ou.platny = 1
         WHERE sp.id_pob = ?
           AND sp.datum = ?
           AND sp.id_slot IN (1, 2)
-        ORDER BY sp.id_slot ASC, sp.cas_od ASC, u.jmeno ASC, u.prijmeni ASC
+        ORDER BY sp.id_slot ASC, sp.cas_od ASC, ou.jmeno ASC, ou.prijmeni ASC
     ";
 
     $stmtShiftPlan = $conn->prepare($sqlShiftPlan);
@@ -1331,7 +1341,6 @@ function cb_denni_report_kuryr_delivery_data(mysqli $conn, int $idPob, array $wo
     return [
         'kuryr_rows' => $kuryrRows,
         'counts_json' => $countsJson,
-        'name_mismatches' => $nameMatches['mismatches'],
         'unmatched_names' => $nameMatches['unmatched'],
     ];
 }
@@ -1562,10 +1571,13 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
     if ($currentUserId > 0) {
         $stmtAllowedBranches = $conn->prepare("
             SELECT p.id_pob, p.nazev
-            FROM user_pobocka up
-            INNER JOIN pobocka p ON p.id_pob = up.id_pob
-            WHERE up.id_user = ?
-              AND p.aktivni = 1
+            FROM hr_person hp
+            INNER JOIN pobocka p ON p.aktivni = 1
+            WHERE hp.id_person = ? AND hp.aktivni = 1
+              AND (hp.pristup_vsechny_pobocky = 1 OR EXISTS (
+                  SELECT 1 FROM hr_pracoviste prac
+                  WHERE prac.id_person = hp.id_person AND prac.id_pob = p.id_pob AND prac.platny = 1
+              ))
             ORDER BY p.id_pob ASC
         ");
         if ($stmtAllowedBranches !== false) {
@@ -1905,7 +1917,6 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         $kuryrDeliveryData = [
             'kuryr_rows' => $kuryrRows,
             'counts_json' => $kuryrDeliveryCountsJson,
-            'name_mismatches' => [],
             'unmatched_names' => [],
         ];
     } elseif ($isCurrentWorkday) {
@@ -1945,7 +1956,6 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
             $kuryrDeliveryData = [
                 'kuryr_rows' => $kuryrRows,
                 'counts_json' => $kuryrDeliveryCountsJson,
-                'name_mismatches' => [],
                 'unmatched_names' => [],
             ];
         }
@@ -1958,7 +1968,6 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
             $kuryrOptions
         );
     }
-    $kuryrNameMismatches = (array)($kuryrDeliveryData['name_mismatches'] ?? []);
     $kuryrUnmatchedNames = (array)($kuryrDeliveryData['unmatched_names'] ?? []);
     $makeTimeLabel = $controlValues['make_time_label'];
     $reportDifferenceLabel = $controlValues['difference_label'];
@@ -2039,7 +2048,6 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         'restiaSummary' => $restiaSummary,
         'kuryrDeliveryData' => $kuryrDeliveryData,
         'kuryrDeliveryCountsJson' => $kuryrDeliveryCountsJson,
-        'kuryrNameMismatches' => $kuryrNameMismatches,
         'kuryrUnmatchedNames' => $kuryrUnmatchedNames,
         'controlValues' => $controlValues,
         'makeTimeLabel' => $makeTimeLabel,

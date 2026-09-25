@@ -59,7 +59,7 @@ function cb_admin_log_chyby_razeni(): array
         'modul' => 'l.modul',
         'akce' => 'l.akce',
         'zprava' => 'l.zprava',
-        'uzivatel' => "CONCAT_WS(' ', u.jmeno, u.prijmeni, u.email, l.id_user)",
+        'uzivatel' => "CONCAT_WS(' ', ou.jmeno, ou.prijmeni, u.email, l.id_user)",
         'stav' => 'l.vyreseno',
     ];
 }
@@ -125,11 +125,12 @@ function cb_admin_log_chyby_nacti(mysqli $db, array $nastaveni): array
           AND (? = '' OR l.modul LIKE CONCAT('%', ?, '%'))
           AND (? = '' OR l.akce LIKE CONCAT('%', ?, '%'))
           AND (? = '' OR CONCAT_WS(' ', l.zprava, l.kod) LIKE CONCAT('%', ?, '%'))
-          AND (? = '' OR CONCAT_WS(' ', u.jmeno, u.prijmeni, u.email, l.id_user) LIKE CONCAT('%', ?, '%'))
+          AND (? = '' OR CONCAT_WS(' ', ou.jmeno, ou.prijmeni, u.email, l.id_user) LIKE CONCAT('%', ?, '%'))
           AND (? < 0 OR l.vyreseno = ?)
     ";
 
-    $countStmt = $db->prepare('SELECT COUNT(*) AS celkem FROM log_chyby l LEFT JOIN user u ON u.id_user = l.id_user' . $where);
+    $fromSql = ' FROM log_chyby l LEFT JOIN user u ON u.id_user = l.id_user LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje = (SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2 WHERE ou2.id_person = l.id_user AND ou2.platny = 1)';
+    $countStmt = $db->prepare('SELECT COUNT(*) AS celkem' . $fromSql . $where);
     if ($countStmt === false) {
         throw new RuntimeException('Nelze připravit počet chyb.');
     }
@@ -148,9 +149,8 @@ function cb_admin_log_chyby_nacti(mysqli $db, array $nastaveni): array
             l.detail, l.soubor, l.radek, l.url, l.data_json, l.vyreseno, l.poznamka,
             c.uroven AS cis_uroven, c.oblast AS cis_oblast,
             c.popis AS cis_popis, c.hint AS cis_hint,
-            u.jmeno AS user_jmeno, u.prijmeni AS user_prijmeni, u.email AS user_email
-        FROM log_chyby l
-        LEFT JOIN user u ON u.id_user = l.id_user
+            ou.jmeno AS user_jmeno, ou.prijmeni AS user_prijmeni, u.email AS user_email
+        ' . $fromSql . '
         LEFT JOIN cis_chyby c ON c.kod = l.kod AND c.aktivni = 1
         ' . $where . '
         ORDER BY ' . $orderBy . '

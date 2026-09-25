@@ -12,7 +12,7 @@ function cb_firemni_pristup_uzivatel(mysqli $db, int $idUser): array
     if ($idUser <= 0) {
         return ['id_firma' => 0, 'admin' => false, 'top_management' => false];
     }
-    $stmt = $db->prepare('SELECT u.id_firma, MAX(CASE WHEN ur.id_role = 1 THEN 1 ELSE 0 END) AS admin, MAX(CASE WHEN ur.id_role = 2 THEN 1 ELSE 0 END) AS top_management FROM user u LEFT JOIN user_role ur ON ur.id_user = u.id_user WHERE u.id_user = ? GROUP BY u.id_user, u.id_firma LIMIT 1');
+    $stmt = $db->prepare('SELECT p.id_firma, MAX(CASE WHEN pr.id_role = 1 THEN 1 ELSE 0 END) AS admin, MAX(CASE WHEN pr.id_role = 2 THEN 1 ELSE 0 END) AS top_management FROM hr_person p LEFT JOIN hr_pristupovy_profil pr ON pr.id_person = p.id_person WHERE p.id_person = ? GROUP BY p.id_person, p.id_firma LIMIT 1');
     $stmt->bind_param('i', $idUser);
     $stmt->execute();
     $row = $stmt->get_result()->fetch_assoc();

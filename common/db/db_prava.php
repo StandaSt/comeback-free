@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /*
  * Nacte prava prihlaseneho uzivatele do session.
- * Globalni prava jsou sjednocenim prav vsech jeho roli v user_role.
+ * Globalni prava jsou sjednocenim pristupovych profilu osoby v HR.
  */
 
 if (!function_exists('cb_db_user_role_data')) {
@@ -16,9 +16,9 @@ if (!function_exists('cb_db_user_role_data')) {
 
         $stmt = $conn->prepare('
             SELECT ur.id_role, cr.role
-            FROM user_role AS ur
+            FROM hr_pristupovy_profil AS ur
             INNER JOIN cis_role AS cr ON cr.id_role = ur.id_role
-            WHERE ur.id_user = ?
+            WHERE ur.id_person = ?
               AND cr.aktivni = 1
             ORDER BY ur.id_role ASC
         ');
@@ -94,13 +94,13 @@ if (!function_exists('cb_db_prava_nacti_do_session')) {
 
         $stmtGlobal = $conn->prepare('
             SELECT DISTINCT globalni.id_pravo
-            FROM user_role AS uzivatelska_role
+            FROM hr_pristupovy_profil AS uzivatelska_role
             INNER JOIN prava_global AS globalni
                 ON globalni.id_role = uzivatelska_role.id_role
             INNER JOIN cis_prava AS pravo
                 ON pravo.id_pravo = globalni.id_pravo
                AND pravo.aktivni = 1
-            WHERE uzivatelska_role.id_user = ?
+            WHERE uzivatelska_role.id_person = ?
         ');
         if ($stmtGlobal === false) {
             throw new RuntimeException('DB: prepare selhal (prava_global select).');

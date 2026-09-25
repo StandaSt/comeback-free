@@ -50,13 +50,12 @@
       items: [
         ['prehled', 'Přehled'],
         ['pozadavky', 'Požadavky'],
-        ['hodnoceni', 'Hodnocení'],
         ['me_smeny', 'Mé směny', ['Aktuální týden', 'Týden + 1', 'Týden + 2']],
         ['planovani_smen', 'Plánování směn', ['Aktuální týden', 'Týden + 1']],
         ['sablony', 'Šablony'],
         ['naplanovane_smeny', 'Naplánované směny', ['Aktuální týden', 'Týden + 1', 'Týden + 2']],
         ['zadane_pozadavky', 'Zadané požadavky', ['Aktuální týden', 'Týden + 1', 'Týden + 2', 'Historie']],
-        ['administrace', 'Administrace']
+        ['nastaveni', 'Nastavení']
       ]
     },
     ukoly: {
@@ -101,6 +100,9 @@
   menuDefs.helpdesk.items = menuDefs.helpdesk.items.filter(function (item) {
     return Array.isArray(config.helpdeskAllowedViews) && config.helpdeskAllowedViews.indexOf(item[0]) !== -1;
   });
+  if (config.smenyNastaveni !== true) {
+    menuDefs.smeny.items = menuDefs.smeny.items.filter(function (item) { return item[0] !== 'nastaveni'; });
+  }
   if (config.adminUzivatele !== true) {
     menuDefs.administrace.items = menuDefs.administrace.items.filter(function (item) { return item[0] !== 'uzivatele'; });
   }
@@ -348,8 +350,15 @@
     }, 100);
   }
 
+  function isProductionDailyReport(params) {
+    if (!(params instanceof URLSearchParams) || params.get('page') !== 'denni_report') return false;
+    var requestedBranch = Number(params.get('zr_id_pob') || 0);
+    return requestedBranch > 0 ? requestedBranch === 7 : Number(config.denniReportMainBranchId || 0) === 7;
+  }
+
   function provozPageNeedsRestia(params) {
     var page = params instanceof URLSearchParams ? String(params.get('page') || '') : '';
+    if (page === 'denni_report' && isProductionDailyReport(params)) return false;
     return page === '' || page === 'dashboard' || page === 'prehled' || page === 'denni_report' || page === 'objednavky';
   }
 
@@ -676,7 +685,7 @@
         });
     }
 
-    if (moduleName === 'provoz' && params instanceof URLSearchParams && params.get('page') === 'denni_report') {
+    if (moduleName === 'provoz' && params instanceof URLSearchParams && params.get('page') === 'denni_report' && !isProductionDailyReport(params)) {
       setPageLoaderDetail('Aktualizuji objednávky ...');
       fetchSmenyPlanState()
         .catch(function(){

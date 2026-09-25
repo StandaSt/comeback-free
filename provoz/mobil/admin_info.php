@@ -24,7 +24,7 @@ function cb_admin_info_fetch(string $token): ?array
                u.jmeno, u.prijmeni
         FROM admin_info_user aiu
         INNER JOIN admin_info ai ON ai.id_admin_info = aiu.id_admin_info
-        LEFT JOIN `user` u ON u.id_user = ai.id_odeslal
+        LEFT JOIN hr_osobni_udaje u ON u.id_person = ai.id_odeslal AND u.platny = 1
         WHERE aiu.token = ?
         LIMIT 1
     ');

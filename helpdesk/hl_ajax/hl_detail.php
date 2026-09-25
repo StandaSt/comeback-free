@@ -35,9 +35,9 @@ try {
 
     $stmt = $conn->prepare('
         SELECT h.id_helpdesk, h.id_user_zalozil, h.modul, h.typ, h.stav, h.verejny, h.predmet, h.popis,
-               h.vytvoreno, h.upraveno, h.uzavreno, h.pocet_zobrazeni, h.pocet_unikatnich_zobrazeni, u.jmeno, u.prijmeni
+               h.vytvoreno, h.upraveno, h.uzavreno, h.pocet_zobrazeni, h.pocet_unikatnich_zobrazeni, ou.jmeno, ou.prijmeni
         FROM helpdesk h
-        LEFT JOIN `user` u ON u.id_user = h.id_user_zalozil
+        LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje = (SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2 WHERE ou2.id_person = h.id_user_zalozil AND ou2.platny = 1)
         WHERE h.id_helpdesk = ?
         LIMIT 1
     ');
@@ -94,9 +94,9 @@ try {
     $zpravy = [];
     $stmtZ = $conn->prepare('
         SELECT z.id_helpdesk_zprava, z.id_helpdesk, z.id_user, z.typ_autora, z.zprava, z.systemova, z.vytvoreno,
-               u.jmeno, u.prijmeni
+               ou.jmeno, ou.prijmeni
         FROM helpdesk_zprava z
-        LEFT JOIN `user` u ON u.id_user = z.id_user
+        LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje = (SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2 WHERE ou2.id_person = z.id_user AND ou2.platny = 1)
         WHERE z.id_helpdesk = ?
         ORDER BY z.vytvoreno ASC, z.id_helpdesk_zprava ASC
     ');

@@ -24,14 +24,15 @@ function cb_helpdesk_snapshot_load_user(mysqli $conn, int $idUser): array
 
     $stmt = $conn->prepare('
         SELECT
-            u.jmeno,
-            u.prijmeni,
+            ou.jmeno,
+            ou.prijmeni,
             GROUP_CONCAT(DISTINCT cr.role ORDER BY ur.id_role SEPARATOR ', ') AS role_nazev
-        FROM `user` u
-        LEFT JOIN user_role ur ON ur.id_user = u.id_user
+        FROM hr_person hp
+        LEFT JOIN hr_osobni_udaje ou ON ou.id_person = hp.id_person AND ou.platny = 1
+        LEFT JOIN hr_pristupovy_profil ur ON ur.id_person = hp.id_person
         LEFT JOIN cis_role cr ON cr.id_role = ur.id_role
-        WHERE u.id_user = ?
-        GROUP BY u.id_user, u.jmeno, u.prijmeni
+        WHERE hp.id_person = ?
+        GROUP BY hp.id_person, ou.jmeno, ou.prijmeni
         LIMIT 1
     ');
     if ($stmt instanceof mysqli_stmt) {
@@ -54,11 +55,11 @@ function cb_helpdesk_snapshot_load_pobocky(mysqli $conn, int $idUser): array
 {
     $out = [];
     $stmt = $conn->prepare('
-        SELECT up.id_pob, up.`main`, p.kod, p.nazev
-        FROM user_pobocka up
+        SELECT up.id_pob, up.hlavni AS `main`, p.kod, p.nazev
+        FROM hr_pracoviste up
         LEFT JOIN pobocka p ON p.id_pob = up.id_pob
-        WHERE up.id_user = ?
-        ORDER BY up.`main` DESC, p.nazev ASC, up.id_pob ASC
+        WHERE up.id_person = ? AND up.platny = 1
+        ORDER BY up.hlavni DESC, p.nazev ASC, up.id_pob ASC
     ');
     if ($stmt instanceof mysqli_stmt) {
         $stmt->bind_param('i', $idUser);
@@ -81,9 +82,9 @@ function cb_helpdesk_snapshot_load_sloty(mysqli $conn, int $idUser): array
     $out = [];
     $stmt = $conn->prepare('
         SELECT us.id_slot, cs.slot
-        FROM user_slot us
+        FROM hr_zarazeni us
         LEFT JOIN cis_slot cs ON cs.id_slot = us.id_slot
-        WHERE us.id_user = ?
+        WHERE us.id_person = ? AND us.platny = 1
         ORDER BY us.id_slot ASC
     ');
     if ($stmt instanceof mysqli_stmt) {

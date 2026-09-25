@@ -4,8 +4,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/../lib/firemni_pristup.php';
 
 /*
- * Účel souboru: Jednotné vyhodnocení přístupu usera k pobočkám.
- * pob_all=1 na jedné vazbě znamená všechny aktivní pobočky stejné firmy.
+ * Účel souboru: Jednotné vyhodnocení přístupu osoby k pobočkám podle HR.
+ * pristup_vsechny_pobocky=1 znamená všechny aktivní pobočky firmy osoby.
  */
 
 function cb_db_user_ma_pobocku(mysqli $db, int $idUser, int $idPob): bool
@@ -29,12 +29,15 @@ function cb_db_user_ma_pobocku(mysqli $db, int $idUser, int $idPob): bool
     }
     $stmt = $db->prepare('
         SELECT 1
-        FROM user u
+        FROM hr_person osoba
         INNER JOIN pobocka cil ON cil.id_pob = ? AND cil.aktivni = 1
-        LEFT JOIN user_pobocka prima ON prima.id_user = u.id_user AND prima.id_pob = cil.id_pob
-        LEFT JOIN user_pobocka vse ON vse.id_user = u.id_user AND vse.pob_all = 1
-        WHERE u.id_user = ?
-          AND (prima.id_pob IS NOT NULL OR (vse.id_user IS NOT NULL AND cil.id_firma = u.id_firma))
+        WHERE osoba.id_person = ?
+          AND (EXISTS (
+              SELECT 1 FROM hr_pracoviste prima
+              WHERE prima.id_person = osoba.id_person AND prima.id_pob = cil.id_pob
+                AND prima.platny = 1 AND (prima.platnost_od IS NULL OR prima.platnost_od <= CURRENT_DATE())
+                AND (prima.platnost_do IS NULL OR prima.platnost_do >= CURRENT_DATE())
+          ) OR (osoba.pristup_vsechny_pobocky = 1 AND cil.id_firma = osoba.id_firma))
         LIMIT 1
     ');
     if ($stmt === false) {
@@ -74,14 +77,16 @@ function cb_db_user_pobocky(mysqli $db, int $idUser): array
         return $out;
     }
     $stmt = $db->prepare('
-        SELECT p.id_pob, p.nazev, p.oblast, MAX(CASE WHEN up_main.main = 1 THEN 1 ELSE 0 END) AS main
-        FROM user u
-        INNER JOIN pobocka p ON p.id_firma = u.id_firma AND p.aktivni = 1
-        LEFT JOIN user_pobocka up_main ON up_main.id_user = u.id_user AND up_main.id_pob = p.id_pob
-        WHERE u.id_user = ?
+        SELECT p.id_pob, p.nazev, p.oblast, MAX(CASE WHEN prac.hlavni = 1 THEN 1 ELSE 0 END) AS main
+        FROM hr_person osoba
+        INNER JOIN pobocka p ON p.id_firma = osoba.id_firma AND p.aktivni = 1
+        LEFT JOIN hr_pracoviste prac ON prac.id_person = osoba.id_person AND prac.id_pob = p.id_pob
+            AND prac.platny = 1 AND (prac.platnost_od IS NULL OR prac.platnost_od <= CURRENT_DATE())
+            AND (prac.platnost_do IS NULL OR prac.platnost_do >= CURRENT_DATE())
+        WHERE osoba.id_person = ?
           AND (
-              up_main.id_pob IS NOT NULL
-              OR EXISTS (SELECT 1 FROM user_pobocka up_all WHERE up_all.id_user = u.id_user AND up_all.pob_all = 1)
+              prac.id_pob IS NOT NULL
+              OR osoba.pristup_vsechny_pobocky = 1
           )
         GROUP BY p.id_pob, p.nazev, p.oblast
         ORDER BY p.nazev ASC

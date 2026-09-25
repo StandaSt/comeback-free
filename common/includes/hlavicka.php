@@ -13,8 +13,12 @@ $cbHeaderModuleAllowed = [
     'helpdesk' => cb_modul_ma_pristup('helpdesk'),
 ];
 $cbHeaderModuleDeniedText = 'Tento modul nyní nemáte povolen.';
+$cbHeaderMaintenanceActive = $cbLoginOk
+    && is_file(__DIR__ . '/../udrzba_on.php')
+    && function_exists('cb_session_admin_pro_udrzbu')
+    && cb_session_admin_pro_udrzbu();
 ?>
-<header class="blok_hlavicka sirka100">
+<header class="blok_hlavicka sirka100<?= $cbHeaderMaintenanceActive ? ' cb-maintenance-active' : '' ?>">
 
     <?php if ($cbLoginOk): ?>
       <div class="cb_orientation_notice" role="status" aria-live="polite">
@@ -29,7 +33,7 @@ $cbHeaderModuleDeniedText = 'Tento modul nyní nemáte povolen.';
 
     <?php require __DIR__ . '/hlavicka/head_logo.php'; ?>
     <div class="head_brand_time" aria-label="Aktuální datum a čas">
-      <span class="head_subtitle">informační systém</span>
+      <span class="head_subtitle"><?= $cbHeaderMaintenanceActive ? 'ÚDRŽBA ZAPNUTA' : 'informační systém' ?></span>
       <span class="head_date_today" data-cb-head-date><?= h($cbHeaderDateText) ?></span>
       <time class="head_time_now" datetime="<?= h($cbHeaderNow->format(DateTimeInterface::ATOM)) ?>" data-cb-head-time><?= h($cbHeaderTimeText) ?></time>
     </div>
@@ -55,13 +59,20 @@ $cbHeaderModuleDeniedText = 'Tento modul nyní nemáte povolen.';
         <?php require __DIR__ . '/vyber_obdobi.php'; ?>
       </div>
 
-      <div class="head_update" aria-label="Aktualizace dat" data-cb-head-update="1"<?= $cbCurrentModule !== 'provoz' ? ' hidden' : '' ?>>
-        <span class="head_update_icon" aria-hidden="true">⟳</span>
-        <span>
-          <span class="head_block_label">Aktualizace dat</span>
-          <strong class="head_update_value"><?= h($cbHeadAktualizaceDat) ?></strong>
-        </span>
-      </div>
+      <?php if ($cbHeaderMaintenanceActive): ?>
+        <div class="head_update head_maintenance_status" role="status" aria-label="Údržba IS je zapnutá">
+          <strong class="head_maintenance_long">ÚDRŽBA ZAPNUTA</strong>
+          <strong class="head_maintenance_short">ÚDRŽBA</strong>
+        </div>
+      <?php else: ?>
+        <div class="head_update" aria-label="Aktualizace dat" data-cb-head-update="1"<?= $cbCurrentModule !== 'provoz' ? ' hidden' : '' ?>>
+          <span class="head_update_icon" aria-hidden="true">⟳</span>
+          <span>
+            <span class="head_block_label">Aktualizace dat</span>
+            <strong class="head_update_value"><?= h($cbHeadAktualizaceDat) ?></strong>
+          </span>
+        </div>
+      <?php endif; ?>
 
     <?php else: ?>
       <div class="head_guest ram_hlavicka bg_bila zaobleni_12"></div>
