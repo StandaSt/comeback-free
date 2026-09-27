@@ -70,6 +70,7 @@ $pageKey = $cbPage;
 $file = $cbProvozCurrentPage['file'];
 $cbPageExists = (bool)$cbProvozCurrentPage['exists'];
 $cbProvozPageTitle = $cbProvozCurrentPage['title'];
+$cbProvozPageSubtitle = '';
 $cbArchiveBackUrl = '';
 $cbArchiveBackTitle = 'Zpět do archivu';
 $cbAiAnalytikPristup = [];
@@ -77,6 +78,26 @@ $cbKontrolaReportuAllowed = false;
 $cbReportPromenneAllowed = false;
 $cbKontrolaGoogleCompareActive = false;
 $cbKontrolaGoogleCompareUrl = '';
+
+// Standardni formulare spravy pobocek se zpracovavaji pred prvnim HTML vystupem.
+if ($cbPage === 'nastaveni_pobocky') {
+    require_once __DIR__ . '/lib/nastaveni_pobocky.php';
+    cb_provoz_nastaveni_pobocky_handle_post();
+    $cbNastaveniPobocky = cb_provoz_nastaveni_pobocky_data(db(), cb_provoz_nastaveni_user_id());
+    $cbNastaveniFirmy = [];
+    foreach ($cbNastaveniPobocky['pobocky'] as $cbNastaveniPobocka) {
+        $cbNastaveniFirma = trim((string)($cbNastaveniPobocka['firma'] ?? ''));
+        if ($cbNastaveniFirma !== '') {
+            $cbNastaveniFirmy[$cbNastaveniFirma] = true;
+        }
+    }
+    // Firma patri do hlavniho titulku, aby se neopakovala u kazde pobocky.
+    if (count($cbNastaveniFirmy) === 1) {
+        $cbProvozPageSubtitle = 'společnost ' . (string)array_key_first($cbNastaveniFirmy);
+    } elseif (count($cbNastaveniFirmy) > 1) {
+        $cbProvozPageSubtitle = 'společnosti ' . implode(', ', array_keys($cbNastaveniFirmy));
+    }
+}
 try {
     $cbKontrolaReportuAllowed = cb_kontrola_reportu_ma_pravo();
 } catch (Throwable $e) {
@@ -157,6 +178,12 @@ if ($cbPage === 'nastaveni_reportu') {
     }
     $cbArchiveBackUrl = cb_root_url('index.php') . '?' . http_build_query($cbNastaveniBackParams, '', '&', PHP_QUERY_RFC3986);
     $cbArchiveBackTitle = 'Zpět do denního reportu';
+}
+
+// Detail pobocek se vraci do spolecneho rozcestniku nastaveni Provozu.
+if ($cbPage === 'nastaveni_pobocky') {
+    $cbArchiveBackUrl = cb_root_url('index.php?m=provoz&page=nastaveni');
+    $cbArchiveBackTitle = 'Zpět do nastavení';
 }
 
 if ($cbPage === 'ai_analytik' && $cbPageExists) {
@@ -313,7 +340,7 @@ if ($cbPpOnly && !empty($_SESSION['login_ok'])) {
         <section class="pp" data-module="provoz" data-page="<?= h($cbPage) ?>">
             <header class="pp_header">
                 <?php if ($cbArchiveBackUrl !== ''): ?>
-                    <div class="provoz_archive_header_title"><a class="provoz_archive_back_btn" href="<?= h($cbArchiveBackUrl) ?>" title="<?= h($cbArchiveBackTitle) ?>" aria-label="<?= h($cbArchiveBackTitle) ?>">←</a><h1><?= h($cbProvozPageTitle) ?></h1></div>
+                    <div class="provoz_archive_header_title"><a class="provoz_archive_back_btn" href="<?= h($cbArchiveBackUrl) ?>" title="<?= h($cbArchiveBackTitle) ?>" aria-label="<?= h($cbArchiveBackTitle) ?>">←</a><h1><?= h($cbProvozPageTitle) ?><?php if ($cbProvozPageSubtitle !== ''): ?> <small class="provoz_page_title_meta">· <?= h($cbProvozPageSubtitle) ?></small><?php endif; ?></h1></div>
                 <?php elseif ($cbPage === 'objednavky'): ?>
                     <div class="provoz_objednavky_header_title"><h1><?= h($cbProvozPageTitle) ?></h1><button type="button" class="head_task_btn head_task_btn--restia-refresh" data-objednavky-restia-refresh>Aktualizace objednávek</button></div>
                 <?php else: ?>
@@ -365,7 +392,7 @@ if (!empty($_SESSION['login_ok'])) {
     <section class="pp" data-module="provoz" data-page="<?= h($cbPage) ?>">
         <header class="pp_header">
             <?php if ($cbArchiveBackUrl !== ''): ?>
-                <div class="provoz_archive_header_title"><a class="provoz_archive_back_btn" href="<?= h($cbArchiveBackUrl) ?>" title="<?= h($cbArchiveBackTitle) ?>" aria-label="<?= h($cbArchiveBackTitle) ?>">←</a><h1><?= h($cbProvozPageTitle) ?></h1></div>
+                <div class="provoz_archive_header_title"><a class="provoz_archive_back_btn" href="<?= h($cbArchiveBackUrl) ?>" title="<?= h($cbArchiveBackTitle) ?>" aria-label="<?= h($cbArchiveBackTitle) ?>">←</a><h1><?= h($cbProvozPageTitle) ?><?php if ($cbProvozPageSubtitle !== ''): ?> <small class="provoz_page_title_meta">· <?= h($cbProvozPageSubtitle) ?></small><?php endif; ?></h1></div>
             <?php elseif ($cbPage === 'objednavky'): ?>
                 <div class="provoz_objednavky_header_title"><h1><?= h($cbProvozPageTitle) ?></h1><button type="button" class="head_task_btn head_task_btn--restia-refresh" data-objednavky-restia-refresh>Aktualizace objednávek</button></div>
             <?php else: ?>

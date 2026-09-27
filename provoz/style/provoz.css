@@ -1,5 +1,21 @@
 /* Modul Provoz: styly pouze pro pracovni plochu Provozu. */
 
+/* Rozcestnik a formulare nastaveni pobocek pod pravem 217. */
+.provoz_settings_hub{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,320px));gap:10px;padding:10px}
+.provoz_settings_tile{display:flex;flex-direction:column;gap:4px;padding:14px;border:1px solid var(--cb-border);border-radius:8px;background:var(--cb-bg-panel);color:var(--cb-text-main);text-decoration:none}
+.provoz_settings_tile:hover{border-color:var(--clr_modra_6)}
+.provoz_page_title_meta{font-size:.68em;font-weight:400;color:var(--cb-text-muted)}
+.provoz_settings_tile span,.provoz_branch_card summary small,.provoz_branch_hours small{color:var(--cb-text-muted);font-size:var(--cb-font-11)}
+.provoz_settings_flash{margin:10px;padding:8px 10px;border-radius:6px}.provoz_settings_flash.is-success{background:#e7f6ea;color:#17652b}.provoz_settings_flash.is-error{background:#fdeaea;color:#9b1c1c}
+.provoz_branch_add,.provoz_branch_card{margin:7px 10px;border:1px solid var(--cb-border);border-radius:7px;background:var(--cb-bg-panel)}
+.provoz_branch_add>summary,.provoz_branch_card>summary{padding:7px 10px;cursor:pointer}.provoz_branch_add>form,.provoz_branch_card>form{padding:0 10px 7px}
+.provoz_branch_card>summary{display:flex;align-items:center;justify-content:space-between;gap:10px}.provoz_branch_card>summary em{font-style:normal;font-size:var(--cb-font-11);color:#17652b}.provoz_branch_card.is-inactive{opacity:.72}.provoz_branch_card.is-inactive>summary em{color:var(--cb-text-muted)}
+.provoz_branch_company{display:flex;flex-direction:column;gap:2px;max-width:420px;margin-bottom:6px}.provoz_branch_fields{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:5px 7px}.provoz_branch_fields label{display:flex;flex-direction:column;gap:2px;min-width:0}.provoz_branch_field_code{grid-column:span 2}.provoz_branch_field_name{grid-column:span 3}.provoz_branch_field_street{grid-column:span 4}.provoz_branch_field_city{grid-column:span 3}.provoz_branch_field_area,.provoz_branch_field_postcode{grid-column:span 2}.provoz_branch_field_contacts{grid-column:span 4}.provoz_branch_fields>label>input,.provoz_branch_company select,.provoz_branch_hours select{box-sizing:border-box;width:100%;min-height:26px;padding:3px 5px;border:1px solid var(--cb-border);border-radius:4px;background:var(--cb-bg-control);color:var(--cb-text-main);font:inherit}
+.provoz_branch_contact_tags{display:flex;align-items:center;gap:4px;min-height:26px;overflow-x:auto}.provoz_branch_contact_tag{box-sizing:border-box;width:150px;min-width:120px;height:26px;padding:2px 8px;border:1px solid var(--cb-border);border-radius:13px;background:var(--cb-bg-control);color:var(--cb-text-main);font:inherit}.provoz_branch_contact_tag.is-email{width:215px}.provoz_branch_contact_tag.is-new{border-style:dashed;color:var(--cb-text-muted)}
+.provoz_branch_hours{margin:6px 0;padding:4px 6px;border:1px solid var(--cb-border);border-radius:5px}.provoz_branch_hours legend{padding:0 4px}.provoz_branch_hours>label{display:inline-flex;flex-direction:column;gap:2px;min-width:106px;margin:2px}.provoz_branch_time{display:flex;align-items:center;gap:2px}.provoz_branch_time b{font-weight:400}.provoz_branch_actions{display:flex;justify-content:space-between;gap:8px}.provoz_settings_primary,.provoz_settings_secondary{padding:4px 8px;border:1px solid var(--cb-border);border-radius:4px;cursor:pointer}.provoz_settings_primary{background:var(--clr_modra_6);color:#fff}.provoz_settings_secondary{background:var(--cb-bg-control);color:var(--cb-text-main)}
+@media (max-width:900px){.provoz_branch_field_code,.provoz_branch_field_postcode{grid-column:span 3}.provoz_branch_field_name,.provoz_branch_field_city,.provoz_branch_field_area{grid-column:span 4}.provoz_branch_field_street{grid-column:span 5}.provoz_branch_field_contacts{grid-column:span 6}}
+@media (max-width:760px){.provoz_branch_fields{grid-template-columns:1fr}.provoz_branch_fields>label{grid-column:auto}.provoz_branch_hours>label{min-width:calc(50% - 10px)}}
+
 /* Prehled 2x2 - rastr ctyr hlavnich bloku. */
 .provoz_prehled_grid{
   display:grid;
@@ -17,6 +33,28 @@
   min-width:0;
   min-height:0;
   padding:0;
+}
+
+/* Pravy horni blok sklada mensi reporty a online uzivatele do puvodni vysky jedne bunky. */
+.provoz_prehled_cell_stack{
+  display:grid;
+  grid-template-rows:minmax(105px, 1fr) minmax(170px, 2fr);
+  gap:10px;
+}
+
+.provoz_prehled_stack_item{
+  min-width:0;
+  min-height:0;
+}
+
+.provoz_prehled_stack_item>.blok{
+  box-sizing:border-box;
+  height:100%;
+}
+
+/* Ctvrta bunka zustava vedome prazdna pro budouci obsah. */
+.provoz_prehled_cell_reserved{
+  visibility:hidden;
 }
 
 /* Blok prehledu - panel uvnitr rastru. */
@@ -327,7 +365,7 @@
 }
 
 .provoz_nezadane_table_scroll{
-  height:148px;
+  max-height:72px;
   overflow-y:auto;
   scrollbar-gutter:stable;
 }
@@ -351,6 +389,11 @@
 .blok_online{
   display:flex;
   flex-direction:column;
+  position:relative;
+}
+
+.blok_online>.blok_title{
+  padding-right:58px;
 }
 
 /* Objednavky online - vnitrni sloupec se souhrnem a grafem. */
@@ -371,11 +414,20 @@
   line-height:1.15;
 }
 
-/* Objednavky online - jednotna velikost celeho radku legendy vcetne detailu. */
+/* Objednavky online - jednotna velikost radku stavovych stitku. */
 .provoz_prehled_online_legend,
-.provoz_prehled_online_legend .provoz_prehled_online_states,
-.provoz_prehled_online_legend .provoz_tooltip{
+.provoz_prehled_online_legend .provoz_prehled_online_states{
   font-size:var(--cb-font-12);
+}
+
+/* Objednavky online - odkaz detailu je vpravo v radku hlavniho nadpisu. */
+.blok_online .provoz_prehled_online_detail{
+  position:absolute;
+  top:11px;
+  right:10px;
+  font-size:13px;
+  font-weight:600;
+  line-height:1.2;
 }
 
 /* Objednavky online - seznam stavu. */

@@ -14,6 +14,8 @@ require_once __DIR__ . '/../common/lib/system.php';
 require_once __DIR__ . '/../common/lib/pobocky_vyber.php';
 require_once __DIR__ . '/../common/lib/handle_set_period.php';
 require_once __DIR__ . '/../common/lib/handle_set_pobocky.php';
+require_once __DIR__ . '/sm_lib/sm_pozadavky_pravo.php';
+require_once __DIR__ . '/sm_lib/sm_sablony_pravo.php';
 require_once __DIR__ . '/sm_lib/sm_pages.php';
 require_once __DIR__ . '/sm_lib/sm_nastaveni_pravo.php';
 require_once __DIR__ . '/sm_lib/sm_pozadavky_osoba.php';
@@ -22,6 +24,12 @@ require_once __DIR__ . '/sm_lib/sm_pozadavky_nacteni.php';
 require_once __DIR__ . '/sm_lib/sm_pozadavky_kopie.php';
 require_once __DIR__ . '/sm_lib/sm_audit_zapis.php';
 require_once __DIR__ . '/sm_lib/sm_pozadavky_ulozeni.php';
+require_once __DIR__ . '/sm_lib/sm_sablony_flash.php';
+require_once __DIR__ . '/sm_lib/sm_sablony_kontext.php';
+require_once __DIR__ . '/sm_lib/sm_sablony_nacteni.php';
+require_once __DIR__ . '/sm_lib/sm_sablona_ulozeni.php';
+require_once __DIR__ . '/sm_lib/sm_sablona_tyden_ulozeni.php';
+require_once __DIR__ . '/sm_lib/sm_sablony_akce.php';
 
 cb_session_guard_entry();
 
@@ -42,6 +50,10 @@ $smMenuItems = cb_smeny_pages();
 $smCurrentPage = cb_smeny_current_page($smMenuItems);
 $smPage = $smCurrentPage['key'];
 $smPageTitle = $smCurrentPage['title'];
+
+if ($smPage === 'bez_prava') {
+    http_response_code(403);
+}
 
 if ($smPage === 'pozadavky') {
     $smDb = db();
@@ -64,6 +76,12 @@ if ($smPage === 'pozadavky') {
     }
 }
 
+if ($smPage === 'sablony') {
+    $smDb = db();
+    $smTemplateBranches = cb_smeny_sablony_pobocky($smDb);
+    cb_smeny_sablony_akce($smDb, $smTemplateBranches);
+}
+
 ?>
 <?php if (!defined('CB_PP_ONLY') || CB_PP_ONLY !== true): ?>
     <?php require __DIR__ . '/sm_includes/sm_menu.php'; ?>
@@ -71,8 +89,12 @@ if ($smPage === 'pozadavky') {
 
 <?php if ($smPage === 'uprava_profilu'): ?>
     <?php require __DIR__ . '/../common/pages/uprava_profilu.php'; ?>
+<?php elseif ($smPage === 'bez_prava'): ?>
+    <?php require __DIR__ . '/sm_pages/bez_prava.php'; ?>
 <?php elseif ($smPage === 'pozadavky'): ?>
     <?php require __DIR__ . '/sm_pages/pozadavky.php'; ?>
+<?php elseif ($smPage === 'sablony'): ?>
+    <?php require __DIR__ . '/sm_pages/sablony.php'; ?>
 <?php elseif ($smPage === 'nastaveni'): ?>
     <?php require __DIR__ . '/sm_pages/nastaveni.php'; ?>
 <?php else: ?>

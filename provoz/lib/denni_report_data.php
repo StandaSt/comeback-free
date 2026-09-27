@@ -1,5 +1,5 @@
 <?php
-// lib/denni_report_data.php * K10 pomocna priprava dat denniho reportu
+// Pripravuje data formularu, prehledu a historie dennich reportu vcetne vypoctu chybejicich reportu.
 declare(strict_types=1);
 
 require_once __DIR__ . '/vypocet_col_rozdil.php';
@@ -292,6 +292,8 @@ function cb_denni_report_missing_notice_dates(
     return $missingDates;
 }
 
+// Vrati aktivni pobocky, kterym pro dany provozni den chybi povinny report.
+// Respektuje globalni zavrene dny i provozni vyjimky jednotlivych pobocek.
 function cb_denni_report_missing_reports_summary(mysqli $conn, string $date): array
 {
     if ($date === '') {
@@ -324,7 +326,7 @@ function cb_denni_report_missing_reports_summary(mysqli $conn, string $date): ar
             while ($row = $result->fetch_assoc()) {
                 $idPob = (int)($row['id_pob'] ?? 0);
                 $name = trim((string)($row['nazev'] ?? ''));
-                if ($idPob >= 0) {
+                if ($idPob > 0 && cb_pobocka_provoz_report_required($idPob, $date)) {
                     $rows[] = [
                         'id_pob' => $idPob,
                         'nazev' => $name !== '' ? $name : ('Pobočka ' . $idPob),
@@ -339,6 +341,8 @@ function cb_denni_report_missing_reports_summary(mysqli $conn, string $date): ar
     return $rows;
 }
 
+// Spocita chybejici povinne reporty po pobockach pro aktualni mesic.
+// Vyroba ma vlastni pocet pracovnich dnu, protoze nedele se do jejiho ocekavaneho poctu nezahrnuji.
 function cb_denni_report_month_missing_reports_summary(mysqli $conn, DateTimeImmutable $currentWorkdayDt, bool $includeCurrentWorkday): array
 {
     $monthStartDt = $currentWorkdayDt->modify('first day of this month');
@@ -354,18 +358,34 @@ function cb_denni_report_month_missing_reports_summary(mysqli $conn, DateTimeImm
     if ($totalDays === 0) {
         return [];
     }
+    $vyrobaIdPob = CB_POBOCKA_PROVOZ_VYROBA_ID_POB;
+    $vyrobaRequiredDays = 0;
+    // Samostatny ocekavany pocet zabrani tomu, aby nedele umelo zvysovaly mesicni chyby Vyroby.
+    for ($dateDt = $monthStartDt; $dateDt <= $monthEndDt; $dateDt = $dateDt->modify('+1 day')) {
+        $date = $dateDt->format('Y-m-d');
+        if (
+            !isset($closedDates[$date])
+            && cb_pobocka_provoz_report_required($vyrobaIdPob, $date)
+        ) {
+            $vyrobaRequiredDays++;
+        }
+    }
 
     $sql = "
         SELECT
             p.id_pob,
             p.nazev,
-            GREATEST(0, ? - COUNT(DISTINCT r.datum_reportu)) AS missing_count
+            GREATEST(
+                0,
+                CASE WHEN p.id_pob = ? THEN ? ELSE ? END - COUNT(DISTINCT r.datum_reportu)
+            ) AS missing_count
         FROM pobocka p
         LEFT JOIN reporty_is r
             ON r.id_pob = p.id_pob
            AND r.datum_reportu >= ?
            AND r.datum_reportu <= ?
            AND r.platny = 1
+           AND (p.id_pob <> ? OR DAYOFWEEK(r.datum_reportu) <> 1)
            AND NOT EXISTS (
                SELECT 1
                FROM pobocka_zavreno z
@@ -382,7 +402,15 @@ function cb_denni_report_month_missing_reports_summary(mysqli $conn, DateTimeImm
     $stmt = $conn->prepare($sql);
     $rows = [];
     if ($stmt !== false) {
-        $stmt->bind_param('iss', $totalDays, $monthStart, $monthEnd);
+        $stmt->bind_param(
+            'iiissi',
+            $vyrobaIdPob,
+            $vyrobaRequiredDays,
+            $totalDays,
+            $monthStart,
+            $monthEnd,
+            $vyrobaIdPob
+        );
         $stmt->execute();
         $result = $stmt->get_result();
         if ($result instanceof mysqli_result) {

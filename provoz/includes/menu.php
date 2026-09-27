@@ -1,9 +1,11 @@
 <?php
+// Sestavi leve menu Provozu a skryje polozky, ke kterym uzivatel nema pravo.
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../common/includes/blok_menu.php';
 require_once __DIR__ . '/../lib/ai_analytik_pravidla.php';
 require_once __DIR__ . '/../lib/denni_report_prava.php';
+require_once __DIR__ . '/../lib/nastaveni_prava.php';
 
 $provozMenuItems = [
     ['page' => 'prehled', 'label' => 'Přehled'],
@@ -12,6 +14,7 @@ $provozMenuItems = [
     ['page' => 'objednavky', 'label' => 'Objednávky'],
     ['page' => 'prehled_hodin', 'label' => 'Přehled hodin', 'pravo' => 209],
     ['page' => 'ai_analytik', 'label' => 'Chytrý Franta', 'pravo' => CB_AI_ANALYTIK_PRAVO],
+    ['page' => 'nastaveni', 'label' => 'Nastavení', 'pravo' => CB_PROVOZ_NASTAVENI_PRAVO],
 ];
 
 $provozMenu = [];
@@ -29,7 +32,7 @@ foreach ($provozMenuItems as $item) {
     $provozMenu[] = [
         'label' => (string)$item['label'],
         'url' => cb_root_url('index.php?m=provoz&page=' . rawurlencode($itemPage)),
-        'active' => $cbPage === $itemPage,
+        'active' => $cbPage === $itemPage || ($itemPage === 'nastaveni' && $cbPage === 'nastaveni_pobocky'),
     ];
 }
 

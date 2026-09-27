@@ -1,10 +1,11 @@
 <?php
-// lib/cron_nezadane_reporty.php * Kontrola chybejicich dennich reportu pro CRON
+// CRON vyhleda chybejici povinne denni reporty, slouci je podle prijemce a odesle push upozorneni.
 declare(strict_types=1);
 
 /*
  * Spousteni: denne v 08:00 a 20:00 pres PHP CLI.
  * Kontroluje tri predchozi provozni dny (provozni den zacina v 06:00).
+ * Povinnost reportu urcuje spolecne pravidlo provozu pobocky; Vyroba v nedeli report nema.
  *
  * $test = 1: vsechny zpravy dostane pouze id_user=1.
  * $test = 0: prijemci se urci podle zavirajicich instoru, vedoucich pobocky
@@ -209,8 +210,12 @@ try {
     $leaders = cb_cron_nezadane_reporty_leaders($conn);
 
     $missingByBranch = [];
+    // Provozni vyjimky se vyradi pred prirazenim prijemcu, aby kvuli nim push vubec nevznikl.
     foreach ($branches as $idPob => $branchName) {
         foreach ($dates as $date) {
+            if (!cb_pobocka_provoz_report_required((int)$idPob, (string)$date)) {
+                continue;
+            }
             if (!isset($submitted[$date . ':' . $idPob])) {
                 $missingByBranch[$idPob][] = $date;
             }

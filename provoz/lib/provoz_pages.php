@@ -1,8 +1,11 @@
 <?php
+// Mapa stran modulu Provoz a centralni kontrola pristupovych prav k trasam.
 declare(strict_types=1);
 
 require_once __DIR__ . '/denni_report_prava.php';
+require_once __DIR__ . '/nastaveni_prava.php';
 
+// Vrati povolene klice stran, jejich soubory, titulky a pripadna prava.
 function cb_provoz_pages(): array
 {
     return [
@@ -43,6 +46,16 @@ function cb_provoz_pages(): array
             'file' => __DIR__ . '/../pages/nastaveni_reportu.php',
             'title' => 'Nastavení proměnných v reportu',
         ],
+        'nastaveni' => [
+            'file' => __DIR__ . '/../pages/nastaveni.php',
+            'title' => 'Nastavení',
+            'pravo' => CB_PROVOZ_NASTAVENI_PRAVO,
+        ],
+        'nastaveni_pobocky' => [
+            'file' => __DIR__ . '/../pages/nastaveni_pobocky.php',
+            'title' => 'Nastavení poboček',
+            'pravo' => CB_PROVOZ_NASTAVENI_PRAVO,
+        ],
         'uprava_profilu' => [
             'file' => __DIR__ . '/../../common/pages/uprava_profilu.php',
             'title' => 'Úprava profilu',
@@ -50,6 +63,7 @@ function cb_provoz_pages(): array
     ];
 }
 
+// Vybere platnou dostupnou stranku, jinak bezpecne vrati prehled Provozu.
 function cb_provoz_current_page(): array
 {
     $pages = cb_provoz_pages();

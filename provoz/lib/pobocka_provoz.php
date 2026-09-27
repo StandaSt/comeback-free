@@ -1,9 +1,27 @@
 <?php
-// Nastavení zavírací doby poboček a globálních dnů bez provozu.
+// Pravidla provozu pobocek: zaviraci casy, globalni dny bez provozu a povinnost dennich reportu.
 declare(strict_types=1);
 
 require_once __DIR__ . '/report_promenne.php';
 require_once __DIR__ . '/../../common/lib/uloz_akci.php';
+
+const CB_POBOCKA_PROVOZ_VYROBA_ID_POB = 7;
+
+// Vrati, zda ma dana pobocka pro konkretni datum odevzdat denni report.
+// Vyroba v nedeli nepracuje, a proto se od ni nedelni report nevyzaduje.
+function cb_pobocka_provoz_report_required(int $idPob, string $date): bool
+{
+    $validDate = cb_pobocka_provoz_valid_date($date);
+    if ($idPob <= 0 || $validDate === '') {
+        return false;
+    }
+    if ($idPob !== CB_POBOCKA_PROVOZ_VYROBA_ID_POB) {
+        return true;
+    }
+
+    $dateValue = new DateTimeImmutable($validDate, new DateTimeZone('Europe/Prague'));
+    return (int)$dateValue->format('N') !== 7;
+}
 
 /** @return array<int,array{key:string,label:string}> */
 function cb_pobocka_provoz_weekdays(): array

@@ -5,13 +5,25 @@ function cb_smeny_pages(): array
 {
     $pages = [
         ['page' => 'prehled', 'label' => 'Přehled'],
-        ['page' => 'pozadavky', 'label' => 'Požadavky'],
         ['page' => 'me_smeny', 'label' => 'Mé směny', 'items' => ['Aktuální týden', 'Týden + 1', 'Týden + 2']],
         ['page' => 'planovani_smen', 'label' => 'Plánování směn', 'items' => ['Aktuální týden', 'Týden + 1']],
-        ['page' => 'sablony', 'label' => 'Šablony'],
         ['page' => 'naplanovane_smeny', 'label' => 'Naplánované směny', 'items' => ['Aktuální týden', 'Týden + 1', 'Týden + 2']],
         ['page' => 'zadane_pozadavky', 'label' => 'Zadané požadavky', 'items' => ['Aktuální týden', 'Týden + 1', 'Týden + 2', 'Historie']],
     ];
+
+    if (function_exists('cb_smeny_sablony_ma_pravo') && cb_smeny_sablony_ma_pravo()) {
+        array_splice($pages, 3, 0, [[
+            'page' => 'sablony',
+            'label' => 'Šablony',
+        ]]);
+    }
+
+    if (function_exists('cb_smeny_pozadavky_ma_pravo') && cb_smeny_pozadavky_ma_pravo()) {
+        array_splice($pages, 1, 0, [[
+            'page' => 'pozadavky',
+            'label' => 'Požadavky',
+        ]]);
+    }
 
     if (function_exists('cb_smeny_nastaveni_ma_pravo') && cb_smeny_nastaveni_ma_pravo()) {
         $pages[] = ['page' => 'nastaveni', 'label' => 'Nastavení'];
@@ -30,6 +42,12 @@ function cb_smeny_current_page(array $pages): array
     }
     if ($page === 'uprava_profilu') {
         return ['key' => 'uprava_profilu', 'title' => 'Úprava profilu'];
+    }
+    if ($page === 'pozadavky') {
+        return ['key' => 'bez_prava', 'title' => 'Přístup k požadavkům'];
+    }
+    if ($page === 'sablony') {
+        return ['key' => 'bez_prava', 'title' => 'Přístup k šablonám'];
     }
 
     return ['key' => 'prehled', 'title' => 'Přehled'];

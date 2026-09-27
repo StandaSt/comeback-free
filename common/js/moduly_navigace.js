@@ -100,6 +100,12 @@
   menuDefs.helpdesk.items = menuDefs.helpdesk.items.filter(function (item) {
     return Array.isArray(config.helpdeskAllowedViews) && config.helpdeskAllowedViews.indexOf(item[0]) !== -1;
   });
+  if (config.smenyPozadavky !== true) {
+    menuDefs.smeny.items = menuDefs.smeny.items.filter(function (item) { return item[0] !== 'pozadavky'; });
+  }
+  if (config.smenySablony !== true) {
+    menuDefs.smeny.items = menuDefs.smeny.items.filter(function (item) { return item[0] !== 'sablony'; });
+  }
   if (config.smenyNastaveni !== true) {
     menuDefs.smeny.items = menuDefs.smeny.items.filter(function (item) { return item[0] !== 'nastaveni'; });
   }

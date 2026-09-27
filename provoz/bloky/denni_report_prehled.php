@@ -1,10 +1,12 @@
 <?php
+// Kompaktni prehled chybejicich dennich reportu vcetne mesicniho souhrnu a exportu.
 declare(strict_types=1);
 
 require_once __DIR__ . '/../lib/format_datum_cas.php';
 require_once __DIR__ . '/../lib/denni_report_data.php';
 require_once __DIR__ . '/../lib/nezadane_reporty_export_data.php';
 
+// Nacte chybejici reporty a vykresli panel bez zasahu do jejich dat.
 (static function (): void {
     $exportAllowed = cb_nezadane_reporty_export_ma_pravo();
     try {
@@ -52,7 +54,6 @@ require_once __DIR__ . '/../lib/nezadane_reporty_export_data.php';
                 </tbody>
             </table>
         </div>
-        <p class="provoz_prehled_text">&nbsp;</p>
         <?php if ($missingReportsMonth !== []): ?>
             <p class="provoz_prehled_text txt_seda">Tento měsíc chybí reporty:</p>
             <p class="provoz_prehled_text txt_seda"><?= h($missingReportsMonthText) ?></p>

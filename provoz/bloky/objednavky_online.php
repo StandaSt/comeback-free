@@ -2,6 +2,7 @@
 // Souhrn online objednávek; tooltip používá společné formátování uživatelských částek.
 declare(strict_types=1);
 
+// Nacte souhrn objednavek a vykresli stavove stitky, graf a detail po pobockach.
 (static function (): void {
     $json = static function (array $payload): string {
         $encoded = json_encode(
@@ -199,7 +200,7 @@ declare(strict_types=1);
                     <span class="provoz_prehled_online_badge provoz_prehled_online_state_cancel"><strong><?= h((string)$sumZruseno) ?></strong> zrušeno</span>
                 </span>
 
-                <span class="provoz_tooltip" tabindex="0" aria-label="Souhrn online objednávek" data-tooltip="1" data-tooltip-position="chart-right">
+                <span class="provoz_tooltip provoz_prehled_online_detail" tabindex="0" aria-label="Souhrn online objednávek" data-tooltip="1" data-tooltip-position="chart-right">
                     <span>detail</span>
                     <span class="provoz_tooltip_panel provoz_tooltip_card" data-tooltip-panel="1">
                         <span class="provoz_tooltip_title">Online objednávky podle poboček</span>

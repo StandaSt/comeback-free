@@ -62,14 +62,6 @@ function cb_hr_request_dispatch(mysqli $db, string $page, array $user): void
         hr_post_pozice_zmenit_stav($db);
         return;
     }
-    if ($action === 'hr_pobocka_pridat') {
-        hr_post_pobocka_pridat($db, (int)($user['id_user'] ?? 0));
-        return;
-    }
-    if ($action === 'hr_pobocka_zmenit_stav') {
-        hr_post_pobocka_zmenit_stav($db, (int)($user['id_user'] ?? 0));
-        return;
-    }
     if ($action === 'hr_zamestnanec_pozice_zmenit') {
         hr_post_zamestnanec_pozice_zmenit($db, (int)($user['id_user'] ?? 0));
         return;
