@@ -49,7 +49,6 @@ $cbVyberObdobiSaveUrl = cb_root_url('index.php');
       <span class="head_block_label head_block_label_inline">Období:</span>
       <span class="head_block_value" data-cb-period-summary="1"><?= h($cbObdobiSummary) ?></span>
     </span>
-    <span class="head_block_chev" aria-hidden="true">⌄</span>
   </button>
   <div class="head_period_panel ram_normal bg_bila zaobleni_10 odstup_vnitrni_10 is-hidden" data-cb-period-panel="1">
     <div class="head_interval gap_4 displ_flex flex_sloupec jc_stred" aria-label="Nastavení období">

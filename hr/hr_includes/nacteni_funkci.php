@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+/* Ucel souboru: Nacte vsechny HR handlery a datove funkce pouzivane vstupem modulu. */
+
 require_once __DIR__ . '/../../common/lib/mailer.php';
 require_once __DIR__ . '/../../common/lib/prvni_vstup.php';
 require_once __DIR__ . '/../../common/lib/user_spojeni.php';
@@ -25,6 +27,7 @@ require_once __DIR__ . '/../hr_lib/hr_post_zamestnanec_overit.php';
 require_once __DIR__ . '/../hr_lib/hr_post_pozice_pridat.php';
 require_once __DIR__ . '/../hr_lib/hr_post_pozice_zmenit_stav.php';
 require_once __DIR__ . '/../hr_lib/hr_post_zamestnanec_pozice_zmenit.php';
+require_once __DIR__ . '/../hr_lib/hr_post_zamestnanec_funkce_zmenit.php';
 require_once __DIR__ . '/../hr_lib/hr_post_zamestnanec_pobocky_zmenit.php';
 require_once __DIR__ . '/../hr_lib/formatovani.php';
 require_once __DIR__ . '/../hr_lib/vd_formatovani.php';
@@ -44,4 +47,5 @@ require_once __DIR__ . '/../hr_db/vd_prehled.php';
 require_once __DIR__ . '/../hr_db/pozadavky.php';
 require_once __DIR__ . '/../hr_db/hr_nastaveni_pozice.php';
 require_once __DIR__ . '/../hr_db/hr_zarazeni_historie.php';
+require_once __DIR__ . '/../hr_db/hr_funkce_historie.php';
 require_once __DIR__ . '/../hr_db/hr_pracoviste_historie.php';

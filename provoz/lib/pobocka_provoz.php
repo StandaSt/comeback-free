@@ -8,19 +8,14 @@ require_once __DIR__ . '/../../common/lib/uloz_akci.php';
 const CB_POBOCKA_PROVOZ_VYROBA_ID_POB = 7;
 
 // Vrati, zda ma dana pobocka pro konkretni datum odevzdat denni report.
-// Vyroba v nedeli nepracuje, a proto se od ni nedelni report nevyzaduje.
+// Vyroba nema restauracni denni report, proto se mezi chybejici reporty nikdy nezarazuje.
 function cb_pobocka_provoz_report_required(int $idPob, string $date): bool
 {
     $validDate = cb_pobocka_provoz_valid_date($date);
     if ($idPob <= 0 || $validDate === '') {
         return false;
     }
-    if ($idPob !== CB_POBOCKA_PROVOZ_VYROBA_ID_POB) {
-        return true;
-    }
-
-    $dateValue = new DateTimeImmutable($validDate, new DateTimeZone('Europe/Prague'));
-    return (int)$dateValue->format('N') !== 7;
+    return $idPob !== CB_POBOCKA_PROVOZ_VYROBA_ID_POB;
 }
 
 /** @return array<int,array{key:string,label:string}> */

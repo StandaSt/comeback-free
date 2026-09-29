@@ -1,7 +1,8 @@
+// Společný převod serverových a síťových chyb na konkrétní zprávy pro uživatele.
 (function () {
   'use strict';
 
-  var PUBLIC_ERROR = 'Je nám líto, vyskytla se chyba, admin již byl informován.';
+  var PUBLIC_ERROR = 'Server vrátil chybu bez konkrétního chybového popisu.';
   var NETWORK_ERROR = 'Spojení se serverem se nezdařilo. Zkontrolujte připojení a zkuste to znovu.';
 
   function responseMessage(response, data, fallback) {
@@ -16,7 +17,7 @@
       return 'K této akci nemáte oprávnění.';
     }
     if (status >= 500) {
-      return PUBLIC_ERROR;
+      return 'Server vrátil chybu HTTP ' + status + ' bez konkrétního chybového popisu.';
     }
     return String(fallback || 'Požadavek se nepodařilo dokončit.');
   }

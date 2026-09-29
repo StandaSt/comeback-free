@@ -1,6 +1,10 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Ucel souboru: Nacita historii pracovist a uklada zmeny pobocky vcetne hlavniho pracoviste.
+ */
+
 /** @return array{pobocky:array<int,array{id_pob:int,nazev:string}>,historie:array<int,array<string,mixed>>} */
 function hr_pracoviste_historie(mysqli $db, int $idPerson, int $idUser): array
 {
@@ -80,6 +84,8 @@ function hr_pracoviste_zmenit(mysqli $db, int $idPerson, array $idPobocky, int $
             $stmt->execute();
         }
         $stmt->close();
+        // Pracoviste a jedna hlavni pobocka jsou soucasti kontroly kompletnosti.
+        hr_update_employee_completeness($db, $idPerson);
         $db->commit();
     } catch (Throwable $e) {
         $db->rollback();

@@ -1,16 +1,16 @@
 <?php
-// lib/chyby.php * Jednotne zpracovani neocekavanych chyb IS
+// lib/chyby.php * Jednotne zpracovani a konkretni popis neocekavanych chyb IS
 declare(strict_types=1);
 
 /*
- * Verejny vystup nikdy neprozrazuje technicky detail.
- * Admin dostane bezpecny popis pres stavajici log_chyby a Web Push.
+ * Uživatel dostane konkrétní příčinu chyby a informaci o oznámení adminovi.
+ * Admin dostane stejnou příčinu přes stávající log_chyby a Web Push.
  * Chybove hlaseni nesmi samo shodit puvodni pozadavek ani vytvorit rekurzi.
  */
 
 function cb_chyba_verejna_zprava(): string
 {
-    return 'Je nám líto, vyskytla se chyba, admin již byl informován.';
+    return 'Serverová chyba nemá dostupný konkrétní popis, admin byl informován.';
 }
 
 final class CbUserVisibleException extends RuntimeException
@@ -40,7 +40,7 @@ function cb_chyba_uzivatel(Throwable $error, array $context = []): string
     }
 
     cb_chyba_oznam($error, $context);
-    return cb_chyba_verejna_zprava();
+    return cb_chyba_verejny_popis($error, $context);
 }
 
 /** @param array<string,mixed> $context */
@@ -291,6 +291,41 @@ function cb_chyba_admin_popis(Throwable $error, array $context = []): string
     return get_class($error) . ': ' . ($message !== '' ? $message : 'neočekávaná chyba aplikace.');
 }
 
+/**
+ * Převede technickou výjimku na konkrétní text pro uživatele. Známé systémové
+ * stavy mají lidský překlad; ostatní zachovají skutečný typ a popis chyby.
+ *
+ * @param array<string,mixed> $context
+ */
+function cb_chyba_konkretni_popis(Throwable $error, array $context = []): string
+{
+    $message = trim($error->getMessage());
+    if (preg_match('/^Právo ID ([0-9]+) neexistuje v cis_prava\.?$/u', $message, $match) === 1) {
+        return 'Chybí deklarace práva ' . (string)$match[1];
+    }
+    if ($message === 'Číselník práv není načtený.') {
+        return 'Číselník práv není načtený';
+    }
+
+    $description = trim(cb_chyba_admin_popis($error, $context));
+    $description = preg_replace('/[\r\n\t]+/u', ' ', $description) ?? $description;
+    $description = rtrim($description, " .\t\n\r\0\x0B");
+    if ($description === '') {
+        return 'Serverová chyba nemá dostupný konkrétní popis';
+    }
+    if (mb_strlen($description, 'UTF-8') > 300) {
+        $description = mb_substr($description, 0, 297, 'UTF-8') . '...';
+    }
+
+    return $description;
+}
+
+/** @param array<string,mixed> $context */
+function cb_chyba_verejny_popis(Throwable $error, array $context = []): string
+{
+    return cb_chyba_konkretni_popis($error, $context) . ', admin byl informován.';
+}
+
 /** Vrátí pouze bezpečnou část URL; tokeny ani libovolný query string se nelogují. */
 function cb_chyba_bezpecna_url(string $requestUri): string
 {
@@ -342,12 +377,22 @@ function cb_chyba_oznam(Throwable $error, array $context = []): void
         if (mb_strlen($action, 'UTF-8') > 60) {
             $action = mb_substr($action, 0, 57, 'UTF-8') . '...';
         }
-        $adminDescription = cb_chyba_admin_popis($error, $context);
-        $adminMessage = $action . ' | uživatel: ' . (string)$actor['label'] . ' | ' . $adminDescription;
+        $concreteDescription = cb_chyba_konkretni_popis($error, $context);
+        // Push začíná příčinou, aby byl konkrétní i ve zkráceném mobilním náhledu.
+        $adminMessage = $concreteDescription . ' | akce: ' . $action . ' | uživatel: ' . (string)$actor['label'];
         if (mb_strlen($adminMessage, 'UTF-8') > 255) {
             $adminMessage = mb_substr($adminMessage, 0, 252, 'UTF-8') . '...';
         }
         $url = cb_chyba_bezpecna_url((string)($_SERVER['REQUEST_URI'] ?? ''));
+        // Konkrétní hranice může dát pushi srozumitelný titul; technický detail zůstává v modálu.
+        $pushTitle = trim((string)($context['push_title'] ?? ''));
+        $pushType = strtoupper(trim((string)($context['push_type'] ?? 'SYSTEM_ERROR_ADMIN')));
+        if ($pushTitle === '') {
+            $pushTitle = 'Chyba IS';
+        }
+        if (preg_match('/^[A-Z0-9_]+$/', $pushType) !== 1) {
+            $pushType = 'SYSTEM_ERROR_ADMIN';
+        }
         $code = 'UNEXPECTED_' . strtoupper((new ReflectionClass($error))->getShortName());
         if ($error instanceof mysqli_sql_exception && $error->getCode() !== 0) {
             $code .= '_' . (string)$error->getCode();
@@ -405,7 +450,9 @@ function cb_chyba_oznam(Throwable $error, array $context = []): void
                 is_string($dataJson) ? $dataJson : null,
                 0,
                 null,
-                $sendPush
+                $sendPush,
+                $pushTitle,
+                $pushType
             );
             $dbLogCompleted = true;
             $pushSuppressedAsDuplicate = !$sendPush;
@@ -421,7 +468,14 @@ function cb_chyba_oznam(Throwable $error, array $context = []): void
             // cesta může při úplném výpadku DB selhat, nesmí však vyvolat rekurzi.
             try {
                 require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
-                $pushDelivered = cb_push_send_error_admin($adminMessage, $error->getFile(), $error->getLine(), 1);
+                $pushDelivered = cb_push_send_error_admin(
+                    $adminMessage,
+                    $error->getFile(),
+                    $error->getLine(),
+                    1,
+                    $pushTitle,
+                    $pushType
+                );
                 if (!$pushDelivered) {
                     error_log('[cb_error_push_not_delivered] ' . $adminMessage);
                 }

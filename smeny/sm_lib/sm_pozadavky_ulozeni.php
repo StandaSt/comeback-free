@@ -78,7 +78,7 @@ function cb_smeny_pozadavky_ulozit(mysqli $db, array $person, array $weeks): voi
             throw new CbUserVisibleException('Vybraný den volna nepatří do ukládaného týdne.');
         }
         if ($dayOff !== '' && ((int)$person['id_pob'] <= 0 || (int)$person['id_slot'] <= 0)) {
-            throw new CbUserVisibleException('Pro volbu volna musí být v HR nastavena hlavní pobočka i hlavní pozice.');
+            throw new CbUserVisibleException('Pro volbu volna musí být v HR nastavena hlavní pobočka i hlavní pracovní slot.');
         }
     } else {
         $postedBlocks = $_POST['blocks'] ?? [];

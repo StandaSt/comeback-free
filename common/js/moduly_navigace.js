@@ -106,6 +106,9 @@
   if (config.smenySablony !== true) {
     menuDefs.smeny.items = menuDefs.smeny.items.filter(function (item) { return item[0] !== 'sablony'; });
   }
+  if (config.smenyPlanovani !== true) {
+    menuDefs.smeny.items = menuDefs.smeny.items.filter(function (item) { return item[0] !== 'planovani_smen'; });
+  }
   if (config.smenyNastaveni !== true) {
     menuDefs.smeny.items = menuDefs.smeny.items.filter(function (item) { return item[0] !== 'nastaveni'; });
   }

@@ -1,5 +1,5 @@
 <?php
-// db/zapis_log_chyby.php * Verze: V2 * Aktualizace: 24.03.2026
+// Zapisuje technickou chybu do log_chyby a podle zadání předá konkrétní adminskou push notifikaci.
 declare(strict_types=1);
 
 /*
@@ -27,7 +27,9 @@ if (!function_exists('db_zapis_log_chyby')) {
         ?string $dataJson,
         int $vyreseno = 0,
         ?string $poznamka = null,
-        bool $sendPush = true
+        bool $sendPush = true,
+        ?string $pushTitle = null,
+        string $pushType = 'SYSTEM_ERROR_ADMIN'
     ): bool {
 
         $stmt = $conn->prepare(
@@ -65,7 +67,14 @@ if (!function_exists('db_zapis_log_chyby')) {
 
         try {
             require_once __DIR__ . '/../notifikace/notifikace_2fa.php';
-            return cb_push_send_error_admin($zprava, $soubor, $radek, 1);
+            return cb_push_send_error_admin(
+                $zprava,
+                $soubor,
+                $radek,
+                1,
+                $pushTitle ?? 'Chyba IS',
+                $pushType
+            );
         } catch (Throwable $e) {
             error_log('[cb_error_push_failed] ' . get_class($e) . ': ' . $e->getMessage());
             return false;

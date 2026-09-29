@@ -21,13 +21,10 @@ $nezadaneExportUrl = $nezadaneExportAllowed ? cb_root_url('provoz/lib/odeslat_ne
 ?>
 <div class="provoz_prehled_grid" aria-label="Přehled Provozu">
     <div class="provoz_prehled_cell" data-pp-block="objednavky_online" data-gn="1"><?php require __DIR__ . '/../bloky/objednavky_online.php'; ?></div>
-    <div class="provoz_prehled_cell provoz_prehled_cell_stack">
-        <div class="provoz_prehled_stack_item provoz_prehled_stack_reports" data-pp-block="denni_report_prehled"><?php require __DIR__ . '/../bloky/denni_report_prehled.php'; ?></div>
-        <div class="provoz_prehled_stack_item provoz_prehled_stack_users" data-pp-block="uzivatele_online" data-gn="1"><?php require __DIR__ . '/../bloky/uzivatele_online.php'; ?></div>
-    </div>
+    <div class="provoz_prehled_cell" data-pp-block="denni_report_prehled"><?php require __DIR__ . '/../bloky/denni_report_prehled.php'; ?></div>
     <div class="provoz_prehled_cell" data-pp-block="top_report" data-gn="1"><?php require __DIR__ . '/../bloky/top_report.php'; ?></div>
-    <?php // Rezervovane misto pro budouci ctvrty blok prehledu. ?>
-    <div class="provoz_prehled_cell provoz_prehled_cell_reserved" aria-hidden="true"></div>
+    <?php // Online uzivatele jsou znovu ve ctvrte bunce vedle Top reportu. ?>
+    <div class="provoz_prehled_cell" data-pp-block="uzivatele_online" data-gn="1"><?php require __DIR__ . '/../bloky/uzivatele_online.php'; ?></div>
 </div>
 <?php if ($nezadaneExportAllowed): ?>
     <?php require __DIR__ . '/../modaly/modal_nezadane_reporty_export.php'; ?>

@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+/* Ucel souboru: Nacita ciselnik pracovnich slotu pro nastaveni HR. */
+
 /** @return array<int,array{id_slot:int,slot:string,aktivni:int}> */
 function hr_nastaveni_pozice(mysqli $db): array
 {
@@ -17,7 +19,7 @@ function hr_nastaveni_pozice_pridat(mysqli $db, string $nazev): void
 {
     $nazev = trim($nazev);
     if ($nazev === '' || mb_strlen($nazev, 'UTF-8') > 100) {
-        throw new CbUserVisibleException('Zadejte název pozice v délce nejvýše 100 znaků.');
+        throw new CbUserVisibleException('Zadejte název slotu v délce nejvýše 100 znaků.');
     }
     $result = $db->query('SELECT id_slot FROM cis_slot ORDER BY id_slot');
     $used = [];

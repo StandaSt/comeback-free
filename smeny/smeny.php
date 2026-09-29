@@ -16,6 +16,7 @@ require_once __DIR__ . '/../common/lib/handle_set_period.php';
 require_once __DIR__ . '/../common/lib/handle_set_pobocky.php';
 require_once __DIR__ . '/sm_lib/sm_pozadavky_pravo.php';
 require_once __DIR__ . '/sm_lib/sm_sablony_pravo.php';
+require_once __DIR__ . '/sm_lib/sm_planovani_pravo.php';
 require_once __DIR__ . '/sm_lib/sm_pages.php';
 require_once __DIR__ . '/sm_lib/sm_nastaveni_pravo.php';
 require_once __DIR__ . '/sm_lib/sm_pozadavky_osoba.php';
@@ -30,6 +31,9 @@ require_once __DIR__ . '/sm_lib/sm_sablony_nacteni.php';
 require_once __DIR__ . '/sm_lib/sm_sablona_ulozeni.php';
 require_once __DIR__ . '/sm_lib/sm_sablona_tyden_ulozeni.php';
 require_once __DIR__ . '/sm_lib/sm_sablony_akce.php';
+require_once __DIR__ . '/sm_lib/sm_planovani_data.php';
+require_once __DIR__ . '/sm_lib/sm_planovani_obsazeni.php';
+require_once __DIR__ . '/sm_lib/sm_planovani_akce.php';
 
 cb_session_guard_entry();
 
@@ -82,6 +86,13 @@ if ($smPage === 'sablony') {
     cb_smeny_sablony_akce($smDb, $smTemplateBranches);
 }
 
+if ($smPage === 'planovani_smen') {
+    $smDb = db();
+    $smPlanBranches = cb_smeny_sablony_pobocky($smDb);
+    $smPlanWeeks = cb_smeny_pozadavky_tydny();
+    cb_smeny_planovani_akce($smDb, $smPlanBranches, $smPlanWeeks);
+}
+
 ?>
 <?php if (!defined('CB_PP_ONLY') || CB_PP_ONLY !== true): ?>
     <?php require __DIR__ . '/sm_includes/sm_menu.php'; ?>
@@ -95,6 +106,8 @@ if ($smPage === 'sablony') {
     <?php require __DIR__ . '/sm_pages/pozadavky.php'; ?>
 <?php elseif ($smPage === 'sablony'): ?>
     <?php require __DIR__ . '/sm_pages/sablony.php'; ?>
+<?php elseif ($smPage === 'planovani_smen'): ?>
+    <?php require __DIR__ . '/sm_pages/planovani_smen.php'; ?>
 <?php elseif ($smPage === 'nastaveni'): ?>
     <?php require __DIR__ . '/sm_pages/nastaveni.php'; ?>
 <?php else: ?>

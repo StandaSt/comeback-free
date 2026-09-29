@@ -8,7 +8,7 @@ declare(strict_types=1);
 $mzdovyColumns = [
     ['key' => 'id', 'label' => 'ID'], ['key' => 'jmeno', 'label' => 'Jméno'],
     ['key' => 'prijmeni', 'label' => 'Příjmení'], ['key' => 'pobocka', 'label' => 'Pobočka'],
-    ['key' => 'pozice', 'label' => 'Pozice'], ['key' => 'uvazek', 'label' => 'Typ úvazku'],
+    ['key' => 'pozice', 'label' => 'Pracovní slot'], ['key' => 'uvazek', 'label' => 'Typ úvazku'],
     ['key' => 'mzda', 'label' => 'Mzda', 'numeric' => true],
     ['key' => 'prumer', 'label' => 'Průměrný výdělek za h.', 'numeric' => true],
     ['key' => 'osatne', 'label' => 'Ošatné', 'numeric' => true],

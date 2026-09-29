@@ -204,10 +204,11 @@ function cb_db_zapis_denni_report_worked_hours(string $start, string $end, float
 
 function cb_db_zapis_denni_report_user_allowed(mysqli $conn, int $idPob, int $idUser, int $slot): bool
 {
+    $slotTable = cb_hr_schema_table($conn, 'slot');
     $stmt = $conn->prepare('
         SELECT 1
         FROM hr_pracoviste prac
-        INNER JOIN hr_zarazeni z ON z.id_person = prac.id_person AND z.platny = 1
+        INNER JOIN ' . $slotTable . ' z ON z.id_person = prac.id_person AND z.platny = 1
         WHERE prac.id_pob = ?
           AND prac.id_person = ?
           AND prac.platny = 1
@@ -259,10 +260,11 @@ function cb_db_zapis_denni_report_branch_label(mysqli $conn, int $idPob): string
 
 function cb_db_zapis_denni_report_user_access_error(mysqli $conn, int $idPob, int $idUser, int $slot): string
 {
+    $slotTable = cb_hr_schema_table($conn, 'slot');
     $stmt = $conn->prepare('
         SELECT
             EXISTS(SELECT 1 FROM hr_pracoviste WHERE id_person = ? AND id_pob = ? AND platny = 1) AS has_branch,
-            EXISTS(SELECT 1 FROM hr_zarazeni WHERE id_person = ? AND id_slot = ? AND platny = 1) AS has_slot
+            EXISTS(SELECT 1 FROM ' . $slotTable . ' WHERE id_person = ? AND id_slot = ? AND platny = 1) AS has_slot
     ');
     if ($stmt === false) {
         throw new RuntimeException('Nelze zjistit důvod nepovoleného pracovníka reportu.');

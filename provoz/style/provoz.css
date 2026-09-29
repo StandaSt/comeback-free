@@ -1848,6 +1848,21 @@
   width:100%;
 }
 
+/* Kompaktni metadata finalniho ulozeni patri k titulku; autor je dostupny nad casem. */
+.zr_final_saved_header{
+  margin-left:12px;
+  color:var(--cb-text-muted);
+  font-size:var(--cb-font-12);
+  font-weight:400;
+  white-space:nowrap;
+}
+
+.zr_final_saved_header_time[title]{
+  cursor:help;
+  text-decoration:underline dotted;
+  text-underline-offset:2px;
+}
+
 .zr_restia_key{
   color:var(--cb-text-main);
   text-align:left;

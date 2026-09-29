@@ -1,9 +1,10 @@
-// js/denni_report_form.js * Verze: V1 * Aktualizace: 11.03.2026
+// Řídí formulář denního reportu, průběžné ukládání, finální odeslání a metadata u titulku.
 'use strict';
 
 (function (w) {
   const FORM_CONTROL_SELECTOR = 'input, select, button';
   const reportCalcTimers = new WeakMap();
+  const stornoSaveStates = new WeakMap();
 
   function getFieldValue(root, selector) {
     const field = root.querySelector(selector);
@@ -47,6 +48,38 @@
       const settingsUrl = new URL(settingsLink.getAttribute('href') || '', w.location.href);
       settingsUrl.searchParams.set('zr_id_pob', branchId);
       settingsLink.setAttribute('href', settingsUrl.pathname + settingsUrl.search + settingsUrl.hash);
+    }
+  }
+
+  // U finalniho reportu presune cas ulozeni k titulku; autora ponecha v tooltipu casu.
+  function syncFinalSavedHeader(root) {
+    const form = getForm(root);
+    const pp = form instanceof HTMLFormElement ? form.closest('.pp[data-page="denni_report"]') : null;
+    const title = pp instanceof HTMLElement ? pp.querySelector(':scope > .pp_header h1') : null;
+    if (!(title instanceof HTMLHeadingElement)) return;
+
+    title.querySelector('[data-zr-final-saved-header]')?.remove();
+    const source = form.querySelector('[data-zr-final-saved-source]');
+    const savedAt = source instanceof HTMLElement ? String(source.getAttribute('data-zr-saved-at') || '').trim() : '';
+    const savedBy = source instanceof HTMLElement ? String(source.getAttribute('data-zr-saved-by') || '').trim() : '';
+    if (savedAt === '') return;
+
+    const meta = document.createElement('small');
+    meta.className = 'zr_final_saved_header';
+    meta.setAttribute('data-zr-final-saved-header', '1');
+    meta.append(document.createTextNode('uloženo: '));
+
+    const time = document.createElement('span');
+    time.className = 'zr_final_saved_header_time';
+    time.textContent = savedAt;
+    if (savedBy !== '') {
+      time.title = 'Uložil: ' + savedBy;
+    }
+    meta.append(time);
+    title.append(meta);
+    // Dynamicky vlozeny cas se musi dodatecne napojit na spolecny tooltip nad prvkem.
+    if (w.CB_TOOLTIP && typeof w.CB_TOOLTIP.init === 'function') {
+      w.CB_TOOLTIP.init(meta);
     }
   }
 
@@ -453,10 +486,12 @@
       setSubmitBusy(root, true);
       button.disabled = true;
       button.textContent = 'Ukládám report';
-      saveDraftAction(root, 'final_save', {
-        rozdil: getReportValue(root, '[data-zr-report-rozdil-value]'),
-        col_pomer: getReportValue(root, '[data-zr-report-col-value]')
-      })
+      // Nejdříve dokončíme rozpracovaná uložení storen, aby je finální report nepředběhl.
+      saveAllStornoNotes(root)
+        .then(() => saveDraftAction(root, 'final_save', {
+          rozdil: getReportValue(root, '[data-zr-report-rozdil-value]'),
+          col_pomer: getReportValue(root, '[data-zr-report-col-value]')
+        }))
         .then(() => {
           const form = getForm(root);
           if (form instanceof HTMLFormElement) {
@@ -649,6 +684,84 @@
     });
   }
 
+  // Krátký stav u pole potvrzuje obsluze, zda je důvod uložený, nebo čeká na finální report.
+  function setStornoNoteStatus(input, text) {
+    const cell = input.parentElement;
+    const status = cell instanceof HTMLElement ? cell.querySelector('[data-zr-storno-status]') : null;
+    if (!(status instanceof HTMLElement)) return;
+    status.textContent = text;
+    status.hidden = text === '';
+  }
+
+  // Uložení jednoho důvodu se řadí za předchozí požadavek, aby starší odpověď nepřepsala novější text.
+  function saveStornoNote(root, input) {
+    const value = String(input.value || '').trim();
+    let state = stornoSaveStates.get(input);
+    if (!state) {
+      state = {
+        savedValue: String(input.getAttribute('data-zr-storno-saved-value') || '').trim(),
+        pendingValue: '',
+        pending: null
+      };
+      stornoSaveStates.set(input, state);
+    }
+
+    if (!usesDraftPersistence(root)) {
+      if (!isReadOnlyForm(root) && value !== state.savedValue) {
+        setStornoNoteStatus(input, 'Uloží se s reportem');
+      }
+      return Promise.resolve({ ok: true });
+    }
+
+    if (state.pending && state.pendingValue === value) {
+      return state.pending;
+    }
+    if (!state.pending && state.savedValue === value) {
+      return Promise.resolve({ ok: true });
+    }
+
+    setStornoNoteStatus(input, 'Ukládám…');
+    const previous = state.pending ? state.pending.catch(() => ({ ok: false })) : Promise.resolve({ ok: true });
+    const pending = previous
+      .then(() => saveDraftAction(root, 'update_storno_note', {
+        id_obj: String(input.getAttribute('data-id-obj') || ''),
+        value
+      }))
+      .then((result) => {
+        state.savedValue = value;
+        input.setAttribute('data-zr-storno-saved-value', value);
+        if (String(input.value || '').trim() === value) {
+          setStornoNoteStatus(input, 'Uloženo');
+        }
+        return result;
+      })
+      .catch((err) => {
+        if (String(input.value || '').trim() === value) {
+          setStornoNoteStatus(input, 'Uložení selhalo');
+        }
+        throw err;
+      })
+      .finally(() => {
+        if (state.pending === pending) {
+          state.pending = null;
+          state.pendingValue = '';
+        }
+      });
+
+    state.pendingValue = value;
+    state.pending = pending;
+    return pending;
+  }
+
+  // Finální uložení čeká na všechny právě zapisované důvody storna.
+  function saveAllStornoNotes(root) {
+    if (!usesDraftPersistence(root)) return Promise.resolve([]);
+    const saves = Array.from(root.querySelectorAll('[data-zr-storno-note]'))
+      .filter((input) => input instanceof HTMLInputElement)
+      .map((input) => saveStornoNote(root, input));
+    return Promise.all(saves);
+  }
+
   function bindStornoNotes(root) {
     root.querySelectorAll('[data-zr-storno-note]').forEach((input) => {
       if (!(input instanceof HTMLInputElement) || input.getAttribute('data-zr-storno-note-bound') === '1') {
@@ -657,13 +770,17 @@
       input.setAttribute('data-zr-storno-note-bound', '1');
 
       input.addEventListener('blur', () => {
-        if (!usesDraftPersistence(root)) return;
-        saveDraftAction(root, 'update_storno_note', {
-          id_obj: String(input.getAttribute('data-id-obj') || ''),
-          value: String(input.value || '').trim()
-        }).catch((err) => {
+        saveStornoNote(root, input).catch((err) => {
           if (w.alert) w.alert(err && err.message ? err.message : 'Uložení poznámky ke stornu selhalo.');
         });
+      });
+
+      input.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' || event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) return;
+        // Pole je v tabulce poslední; Enter proto musí vyvolat blur a tím i skutečné uložení.
+        event.preventDefault();
+        event.stopPropagation();
+        input.blur();
       });
     });
 
@@ -736,6 +853,7 @@
     const modeForm = getForm(root);
     const formMode = modeForm instanceof HTMLFormElement ? String(modeForm.getAttribute('data-zr-form-mode') || '') : '';
     syncControlReportLink(root);
+    syncFinalSavedHeader(root);
 
     bindMoneyInputs(root);
     bindNoteInput(root);

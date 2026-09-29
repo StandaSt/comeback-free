@@ -1,3 +1,4 @@
+// Ovládání HelpDesku včetně filtrů seznamu, formuláře a konkrétního zobrazení serverových chyb.
 (function () {
   'use strict';
 
@@ -112,7 +113,7 @@
       return 'K této akci nemáte oprávnění.';
     }
     if (Number(status) >= 500) {
-      return 'Je nám líto, vyskytla se chyba, admin již byl informován.';
+      return 'Server vrátil chybu HTTP ' + Number(status) + ' bez konkrétního chybového popisu.';
     }
     return fallback;
   }
@@ -234,6 +235,14 @@
     return getRoot();
   }
 
+  // Stav filtrů patří k seznamu tiketů; kořen modulu jej nenese na všech stránkách.
+  function getListStateBox() {
+    var expanded = getExpandedBox();
+    if (!(expanded instanceof HTMLElement)) { return null; }
+    var listState = expanded.querySelector('.helpdesk_list_section');
+    return listState instanceof HTMLElement ? listState : expanded;
+  }
+
   function getListBox() {
     var expanded = getExpandedBox();
     if (!(expanded instanceof HTMLElement)) { return null; }
@@ -342,27 +351,27 @@
   }
 
   function getCurrentFilterValue() {
-    var expanded = getExpandedBox();
-    if (!(expanded instanceof HTMLElement)) { return 'all'; }
-    return normalizeFilterValue(expanded.getAttribute('data-cb-hd-filter-value') || 'all');
+    var listState = getListStateBox();
+    if (!(listState instanceof HTMLElement)) { return 'all'; }
+    return normalizeFilterValue(listState.getAttribute('data-cb-hd-filter-value') || 'all');
   }
 
   function getUnreadOnlyValue() {
-    var expanded = getExpandedBox();
-    return expanded instanceof HTMLElement && expanded.getAttribute('data-cb-hd-unread-only') === '1';
+    var listState = getListStateBox();
+    return listState instanceof HTMLElement && listState.getAttribute('data-cb-hd-unread-only') === '1';
   }
 
   function getIncludeClosedValue() {
-    var expanded = getExpandedBox();
-    return expanded instanceof HTMLElement && expanded.getAttribute('data-cb-hd-include-closed') === '1';
+    var listState = getListStateBox();
+    return listState instanceof HTMLElement && listState.getAttribute('data-cb-hd-include-closed') === '1';
   }
 
   function setFilterValue(value, unreadOnly) {
-    var expanded = getExpandedBox();
-    if (!(expanded instanceof HTMLElement)) { return; }
-    expanded.setAttribute('data-cb-hd-filter-value', normalizeFilterValue(value));
+    var listState = getListStateBox();
+    if (!(listState instanceof HTMLElement)) { return; }
+    listState.setAttribute('data-cb-hd-filter-value', normalizeFilterValue(value));
     if (arguments.length > 1) {
-      expanded.setAttribute('data-cb-hd-unread-only', unreadOnly ? '1' : '0');
+      listState.setAttribute('data-cb-hd-unread-only', unreadOnly ? '1' : '0');
     }
     applyFilter();
   }
@@ -803,9 +812,9 @@
     var target = e.target;
     if (!(target instanceof HTMLInputElement) || !target.matches('[data-cb-hd-include-closed="1"]')) { return; }
 
-    var expanded = getExpandedBox();
-    if (!(expanded instanceof HTMLElement)) { return; }
-    expanded.setAttribute('data-cb-hd-include-closed', target.checked ? '1' : '0');
+    var listState = getListStateBox();
+    if (!(listState instanceof HTMLElement)) { return; }
+    listState.setAttribute('data-cb-hd-include-closed', target.checked ? '1' : '0');
     applyFilter();
   }
 

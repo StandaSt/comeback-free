@@ -1,5 +1,4 @@
-// sw.js * Verze: V2 * Aktualizace: 26.2.2026
-// Service Worker – Web Push + test notifikací
+// Service Worker zobrazuje Web Push a otevírá pouze URL určenou konkrétním typem oznámení.
 
 const CB_SW_ROOT = new URL('./', self.registration.scope);
 const CB_LOGO_URL = new URL('common/img/logo_comeback.png', CB_SW_ROOT).toString();
@@ -48,6 +47,7 @@ self.addEventListener('push', (event) => {
   let title = 'Comeback';
   let body = 'Notifikace';
   let url = '/';
+  let type = '';
 
   if (data && typeof data === 'object') {
     if (typeof data.title === 'string' && data.title !== '') {
@@ -59,6 +59,17 @@ self.addEventListener('push', (event) => {
     if (typeof data.url === 'string' && data.url !== '') {
       url = data.url;
     }
+    if (typeof data.type === 'string') {
+      type = data.type;
+    }
+  }
+
+  // Technická chyba na zamčené obrazovce neprozrazuje uživatele ani detail; ten zobrazí tokenizovaný modál.
+  if (type === 'SYSTEM_ERROR_ADMIN' || type === 'HELPDESK_CREATE_ERROR_ADMIN') {
+    if (type === 'SYSTEM_ERROR_ADMIN') {
+      title = 'Chyba v IS';
+    }
+    body = '';
   }
 
   event.waitUntil(
@@ -68,7 +79,7 @@ self.addEventListener('push', (event) => {
       badge: CB_LOGO_URL,
       tag: 'cb-push',
       renotify: true,
-      data: { url: url }
+      data: { url: url, type: type }
     })
   );
 });
@@ -97,5 +108,4 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-// sw.js * Verze: V2 * Aktualizace: 26.2.2026 * Počet řádků: 100
 // Konec souboru

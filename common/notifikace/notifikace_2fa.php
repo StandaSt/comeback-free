@@ -1,5 +1,5 @@
 <?php
-// notifikace/notifikace_2fa.php * Verze: V2 * Aktualizace: 07.03.2026
+// Odesila Web Push notifikace a pro administratorske zpravy pripravuje bezpecny tokenizovany detail.
 declare(strict_types=1);
 
 /*
@@ -342,7 +342,14 @@ function cb_push_system_enabled(string $key): bool
     return false;
 }
 
-function cb_push_send_error_admin(string $message, ?string $file = null, ?int $line = null, int $adminUserId = 1): bool
+function cb_push_send_error_admin(
+    string $message,
+    ?string $file = null,
+    ?int $line = null,
+    int $adminUserId = 1,
+    string $notificationTitle = 'Chyba IS',
+    string $notificationType = 'SYSTEM_ERROR_ADMIN'
+): bool
 {
     if (!cb_push_system_enabled('notif_chyby')) {
         return false;
@@ -372,18 +379,60 @@ function cb_push_send_error_admin(string $message, ?string $file = null, ?int $l
     if ($message === '') {
         $message = 'Neznámá chyba IS';
     }
-    if (mb_strlen($message, 'UTF-8') > 220) {
-        $message = mb_substr($message, 0, 217, 'UTF-8') . '...';
+    // Specializovaná chyba má vlastní rozpoznatelný titulek, detail zůstává až v tokenizovaném modálu.
+    $notificationTitle = trim($notificationTitle);
+    if ($notificationTitle === '') {
+        $notificationTitle = 'Chyba IS';
     }
-
+    if (mb_strlen($notificationTitle, 'UTF-8') > 90) {
+        $notificationTitle = mb_substr($notificationTitle, 0, 87, 'UTF-8') . '...';
+    }
+    $notificationType = strtoupper(trim($notificationType));
+    if (preg_match('/^[A-Z0-9_]+$/', $notificationType) !== 1) {
+        $notificationType = 'SYSTEM_ERROR_ADMIN';
+    }
     $fileText = trim((string)$file);
     $lineText = ($line !== null && $line > 0) ? ':' . (string)$line : '';
 
-    $body = 'Chyba IS: ' . $message;
+    // Přesný popis zůstává pouze v tokenizovaném modálu, aby nebyl vidět na zamčené obrazovce.
+    $detail = "IS zaznamenal neočekávanou technickou chybu.\n\n" . $message;
     if ($fileText !== '') {
-        $body .= ' (' . basename($fileText) . $lineText . ')';
+        $detail .= "\nMísto v kódu: " . basename($fileText) . $lineText;
     }
 
+    $conn = db();
+    $infoType = 'system_error_admin';
+    $infoTitle = $notificationTitle;
+    $infoNote = 'Automaticky detail administratorske push notifikace.';
+    $infoSender = null;
+    $stmtInfo = $conn->prepare('
+        INSERT INTO admin_info (typ, nadpis, obsah, pozn, id_odeslal, vytvoreno)
+        VALUES (?, ?, ?, ?, ?, NOW())
+    ');
+    if (!$stmtInfo) {
+        return false;
+    }
+    $stmtInfo->bind_param('ssssi', $infoType, $infoTitle, $detail, $infoNote, $infoSender);
+    $stmtInfo->execute();
+    $idAdminInfo = (int)$stmtInfo->insert_id;
+    $stmtInfo->close();
+    if ($idAdminInfo <= 0) {
+        return false;
+    }
+
+    $token = bin2hex(random_bytes(32));
+    $stmtUser = $conn->prepare('
+        INSERT INTO admin_info_user (id_admin_info, id_user, token)
+        VALUES (?, ?, ?)
+    ');
+    if (!$stmtUser) {
+        return false;
+    }
+    $stmtUser->bind_param('iis', $idAdminInfo, $adminUserId, $token);
+    $stmtUser->execute();
+    $stmtUser->close();
+
+    $modalUrl = cb_module_url('provoz') . 'mobil/admin_info.php?t=' . rawurlencode($token);
     $auth = [
         'VAPID' => [
             'subject' => (string)CB_VAPID_SUBJECT,
@@ -395,10 +444,10 @@ function cb_push_send_error_admin(string $message, ?string $file = null, ?int $l
     $webPush = new Minishlink\WebPush\WebPush($auth);
 
     $payloadArr = [
-        'type' => 'SYSTEM_ERROR_ADMIN',
-        'title' => 'Comeback',
-        'body' => $body,
-        'url' => cb_url_abs(''),
+        'type' => $notificationType,
+        'title' => $notificationTitle,
+        'body' => '',
+        'url' => $modalUrl,
     ];
 
     $payload = json_encode($payloadArr, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -452,6 +501,18 @@ function cb_push_send_error_admin(string $message, ?string $file = null, ?int $l
             $httpStatus,
             $chyba
         );
+    }
+
+    $stmtSent = $conn->prepare('
+        UPDATE admin_info_user
+        SET odeslano = NOW()
+        WHERE id_admin_info = ? AND id_user = ?
+        LIMIT 1
+    ');
+    if ($stmtSent) {
+        $stmtSent->bind_param('ii', $idAdminInfo, $adminUserId);
+        $stmtSent->execute();
+        $stmtSent->close();
     }
 
     return $delivered;
@@ -745,6 +806,4 @@ function cb_push_send_admin_info(
     return ['ok' => 1, 'id_admin_info' => $idAdminInfo, 'odeslano' => $odeslano];
 }
 
-// notifikace/notifikace_2fa.php * Verze: V2 * Aktualizace: 07.03.2026 * Počet řádků: 206
-// Předchozí počet řádků: 202
 // Konec souboru

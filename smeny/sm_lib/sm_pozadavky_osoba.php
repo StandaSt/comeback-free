@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /*
- * Načte pracovní kontext přihlášené osoby pro zadávání požadavků na směny.
+ * Nacte hlavni slot a pobocku prihlasene osoby pro pozadavky na smeny v obou fazich HR migrace.
  */
 
 /** @return array<string,mixed>|null */
@@ -14,6 +14,8 @@ function cb_smeny_pozadavky_osoba(mysqli $db): ?array
         return null;
     }
 
+    $slotTable = cb_hr_schema_table($db, 'slot');
+    $slotPk = cb_hr_slot_pk($db);
     $sql = '
         SELECT
             hp.id_person,
@@ -57,10 +59,10 @@ function cb_smeny_pozadavky_osoba(mysqli $db): ?array
                 AND (pr2.platnost_do IS NULL OR pr2.platnost_do >= CURDATE())
           )
         LEFT JOIN pobocka pob ON pob.id_pob = pracoviste.id_pob
-        LEFT JOIN hr_zarazeni zarazeni
-          ON zarazeni.id_zarazeni = (
-              SELECT MAX(za2.id_zarazeni)
-              FROM hr_zarazeni za2
+        LEFT JOIN ' . $slotTable . ' zarazeni
+          ON zarazeni.' . $slotPk . ' = (
+              SELECT MAX(za2.' . $slotPk . ')
+              FROM ' . $slotTable . ' za2
               WHERE za2.id_person = hp.id_person
                 AND za2.hlavni = 1
                 AND za2.platny = 1

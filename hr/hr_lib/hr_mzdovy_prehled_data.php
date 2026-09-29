@@ -82,6 +82,8 @@ function hr_mzdovy_prehled_dostupna_obdobi(mysqli $db, int $idFirma): array
 
 function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
 {
+    $slotTable = cb_hr_schema_table($db, 'slot');
+    $slotPk = cb_hr_slot_pk($db);
     $idFirma = hr_mzdovy_prehled_id_firmy($db, $idUser);
     if ($idFirma <= 0) {
         throw new RuntimeException('Uživatel nemá přiřazenou aktivní firmu.');
@@ -161,12 +163,12 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
             ) AS id_pob,
             (
                 SELECT cs.slot
-                FROM hr_zarazeni z
+                FROM ' . $slotTable . ' z
                 INNER JOIN cis_slot cs ON cs.id_slot = z.id_slot
                 WHERE z.id_person = hp.id_person AND z.platny = 1
                   AND (z.platnost_od IS NULL OR z.platnost_od <= ?)
                   AND (z.platnost_do IS NULL OR z.platnost_do >= ?)
-                ORDER BY z.hlavni DESC, COALESCE(z.platnost_od, \'1000-01-01\') DESC, z.id_zarazeni DESC
+                ORDER BY z.hlavni DESC, COALESCE(z.platnost_od, \'1000-01-01\') DESC, z.' . $slotPk . ' DESC
                 LIMIT 1
             ) AS zarazeni,
             (

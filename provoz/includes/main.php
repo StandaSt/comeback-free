@@ -1,5 +1,5 @@
 <?php
-// includes/main.php * Verze: V7 * Aktualizace: 03.06.2026
+// includes/main.php * Kostra obsahu a konkrétní zobrazení chyby načítané stránky
 // Počet řádků: 36
 // Předchozí počet řádků: 36
 
@@ -29,13 +29,13 @@ declare(strict_types=1);
         try {
             require $file;
         } catch (Throwable $e) {
-            cb_chyba_oznam($e, [
+            $errorMessage = cb_chyba_uzivatel($e, [
                 'module' => 'PROVOZ',
                 'action' => 'Načtení obsahu stránky',
             ]);
 
             echo '<section class="card_box ram_normal bg_bila zaobleni_12 odstup_vnitrni_14">';
-            echo '<p class="card_text txt_cervena text_tucny odstup_vnejsi_0">' . h(cb_chyba_verejna_zprava()) . '</p>';
+            echo '<p class="card_text txt_cervena text_tucny odstup_vnejsi_0">' . h($errorMessage) . '</p>';
             echo '</section>';
         }
     } else {

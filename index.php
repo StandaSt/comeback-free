@@ -320,14 +320,14 @@ if (!empty($_SESSION['login_ok']) && isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODUL
             ob_end_clean();
         }
 
-        cb_chyba_oznam($e, [
+        $cbShellError = cb_chyba_uzivatel($e, [
             'module' => $cbShellModule,
             'action' => 'Načtení modulu',
         ]);
 
         http_response_code(500);
         header('Content-Type: text/plain; charset=utf-8');
-        echo cb_chyba_verejna_zprava();
+        echo $cbShellError;
     }
     exit;
 }

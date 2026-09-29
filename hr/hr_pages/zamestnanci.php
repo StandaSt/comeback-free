@@ -70,7 +70,7 @@ $filterOptions = $employeeList['filter_options'];
                     <tr>
                         <th class="hr_table_cell hr_table_head" style="width: 6ch;"><?= hr_employee_list_order_link('id', 'ID', $sort, $dir, $activeFilters, $perPage) ?></th>
                         <th class="hr_table_cell hr_table_head"><?= hr_employee_list_order_link('zamestnanec', 'Zaměstnanec', $sort, $dir, $activeFilters, $perPage) ?></th>
-                        <th class="hr_table_cell hr_table_head"><?= hr_employee_list_order_link('zarazeni', 'Zařazení', $sort, $dir, $activeFilters, $perPage) ?></th>
+                        <th class="hr_table_cell hr_table_head"><?= hr_employee_list_order_link('zarazeni', 'Pracovní sloty', $sort, $dir, $activeFilters, $perPage) ?></th>
                         <th class="hr_table_cell hr_table_head"><?= hr_employee_list_order_link('pracoviste', 'Pracoviště', $sort, $dir, $activeFilters, $perPage) ?></th>
                         <th class="hr_table_cell hr_table_head"><?= hr_employee_list_order_link('vztah', 'Typ vztahu', $sort, $dir, $activeFilters, $perPage) ?></th>
                         <th class="hr_table_cell hr_table_head"><?= hr_employee_list_order_link('nastup', 'Datum nástupu', $sort, $dir, $activeFilters, $perPage) ?></th>

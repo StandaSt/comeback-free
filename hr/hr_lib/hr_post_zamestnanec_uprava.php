@@ -20,14 +20,14 @@ function hr_post_zamestnanec_uprava(mysqli $db, int $zadalUser): void
         hr_update_employee_basic_data($db, $idPerson, $_POST, $zadalUser);
         $message = 'Karta zaměstnance byla uložena.';
         cb_form_finish(
-            cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson) . '&upravit=1'),
+            cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson) . '&sekce=osobni_udaje'),
             true,
             $message
         );
     } catch (Throwable $e) {
         $_SESSION['hr_edit_input'] = $_POST;
         cb_form_finish(
-            cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson) . '&upravit=1'),
+            cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson) . '&sekce=osobni_udaje&upravit=1'),
             false,
             cb_hr_chyba_text($e, 'Uložení karty zaměstnance', ['table' => 'hr_person']),
             $_POST
@@ -152,6 +152,8 @@ function hr_post_pracovni_pomer_uprava(mysqli $db): void
             $stmt->execute();
             $stmt->close();
         }
+        // Pracovni vztah, uvazek a mzda patri mezi povinne casti kompletni karty.
+        hr_update_employee_completeness($db, $idPerson);
         $db->commit();
         cb_form_finish(cb_root_url('index.php?m=hr&page=zamestnanec&id='.rawurlencode((string)$idPerson).'&sekce=pracovni_pomer'), true, 'Pracovní poměr byl uložen.');
     } catch (Throwable $e) {

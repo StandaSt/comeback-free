@@ -63,7 +63,7 @@ if ((string)$smData['saved_at'] !== '') {
         <div class="smeny_requests_meta">
             <span><strong><?= h((string)($smPerson['jmeno'] ?: 'Pracovník')) ?></strong></span>
             <span>Hlavní pobočka: <strong><?= h((string)($smPerson['pobocka'] ?: 'není nastavena')) ?></strong></span>
-            <span>Pozice: <strong><?= h((string)($smPerson['pozice'] ?: 'není nastavena')) ?></strong></span>
+            <span>Pracovní slot: <strong><?= h((string)($smPerson['pozice'] ?: 'není nastaven')) ?></strong></span>
             <span>Termín: <strong>středa <?= h($smWeek['deadline']->format('j. n. Y')) ?> ve 20:00</strong></span>
             <?php if ($smCopiedWeek !== null): ?>
                 <span class="smeny_request_state smeny_request_state--changed" data-smeny-save-state>Požadavky byly převzaty z týdne <?= h($smCopiedWeek['source_label']) ?> a zatím nejsou uložené.</span>
@@ -89,7 +89,7 @@ if ((string)$smData['saved_at'] !== '') {
                     <span>Vyberte nejvýše jeden celý den. Den, který už zvolil jiný HPP pracovník na stejné pobočce a pozici, nelze vybrat.</span>
                 </div>
                 <?php if (!$smHasHppSetup): ?>
-                    <p class="smeny_notice smeny_notice--error">V HR chybí hlavní pobočka nebo hlavní pozice. Bez nich nelze den volna uložit.</p>
+                    <p class="smeny_notice smeny_notice--error">V HR chybí hlavní pobočka nebo hlavní pracovní slot. Bez nich nelze den volna uložit.</p>
                 <?php endif; ?>
                 <div class="smeny_hpp_days">
                     <label class="smeny_hpp_day smeny_hpp_day--none">

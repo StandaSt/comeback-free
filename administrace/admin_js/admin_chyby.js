@@ -1,3 +1,4 @@
+// Společný konkrétní popis chybových odpovědí administračních požadavků.
 'use strict';
 
 (function () {
@@ -13,7 +14,7 @@
       return 'K této akci nemáte oprávnění.';
     }
     if (Number(status) >= 500) {
-      return 'Je nám líto, vyskytla se chyba, admin již byl informován.';
+      return 'Server vrátil chybu HTTP ' + Number(status) + ' bez konkrétního chybového popisu.';
     }
     return String(fallback || 'Požadavek se nepodařilo dokončit.');
   };

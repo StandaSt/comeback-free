@@ -125,7 +125,6 @@ $cbPobockySelectSaveUrl = cb_root_url('index.php');
         <span class="head_block_label head_block_label_inline">Pobočky:</span>
         <span class="head_block_value"><?= h($cbPobLabel) ?></span>
       </span>
-      <span class="head_block_chev" aria-hidden="true">⌄</span>
     </span>
   <?php else: ?>
     <button
@@ -139,7 +138,6 @@ $cbPobockySelectSaveUrl = cb_root_url('index.php');
         <span class="head_block_label head_block_label_inline">Pobočky:</span>
         <span class="head_block_value"><?= h($cbPobLabel) ?></span>
       </span>
-      <span class="head_block_chev" aria-hidden="true">⌄</span>
     </button>
     <div class="head_branch_panel ram_normal bg_bila zaobleni_10 odstup_vnitrni_10 is-hidden" data-cb-pob-panel="1">
       <div class="head_branch_panel_grid<?= $cbCanUseArea ? '' : ' is-single-col' ?> displ_grid">

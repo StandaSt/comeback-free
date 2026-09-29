@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * DB zapis noveho zamestnance a jeho zakladnich navaznych zaznamu.
+ * DB zapis noveho zamestnance, pracovnich slotu a volitelne firemni funkce.
  */
 
 /**
@@ -41,8 +41,12 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
     $maHlavniPobocku = preg_match('/^\d+$/', $hlavniPobockaVolba) === 1;
     $idPobHlavni = $maHlavniPobocku ? (int)$hlavniPobockaVolba : -1;
     $slotVolba = trim((string)($data['id_slot'] ?? ''));
-    $maPozici = preg_match('/^\d+$/', $slotVolba) === 1;
-    $idSlot = $maPozici ? (int)$slotVolba : -1;
+    $maSlot = preg_match('/^\d+$/', $slotVolba) === 1;
+    $idSlot = $maSlot ? (int)$slotVolba : -1;
+    $funkceVolba = trim((string)($data['id_funkce'] ?? ''));
+    $maFunkci = preg_match('/^\d+$/', $funkceVolba) === 1;
+    $idFunkce = $maFunkci ? (int)$funkceVolba : -1;
+    $vTreninku = isset($data['v_treninku']) ? 1 : 0;
     $telefon = preg_replace('/\D+/', '', (string)($data['telefon'] ?? '')) ?? '';
     $telefonZahranicni = trim((string)($data['telefon_zahranicni'] ?? ''));
     if (strlen($telefon) === 12 && str_starts_with($telefon, '420')) {
@@ -52,7 +56,6 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
         $telefon = substr($telefon, 5);
     }
     $email = trim((string)($data['email'] ?? ''));
-    $idRoleHr = (int)($data['id_role_hr'] ?? 9);
 
     if ($jmeno === '' || $prijmeni === '') {
         throw new CbUserVisibleException('Vyplňte jméno a příjmení.');
@@ -70,18 +73,12 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
         || $idPobocky === []
         || !$maHlavniPobocku
         || !in_array($idPobHlavni, $idPobocky, true)
-        || !$maPozici
+        || (!$maSlot && !$maFunkci)
     ) {
-        throw new CbUserVisibleException('Vyberte typ vztahu, alespoň jednu pobočku, hlavní pobočku a pozici.');
+        throw new CbUserVisibleException('Vyberte typ vztahu, alespoň jednu pobočku, hlavní pobočku a alespoň jeden slot nebo funkci.');
     }
     if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
         throw new CbUserVisibleException('Pro založení uživatelského účtu vyplňte platný e-mail.');
-    }
-    if (!in_array($idRoleHr, [3, 5, 7, 9], true)) {
-        throw new CbUserVisibleException('Vyberte povolenou pracovní roli.');
-    }
-    if ($idRoleHr === 3 && !cb_pravo_ma(316)) {
-        throw new CbUserVisibleException('Nemáte právo přidělit roli Manager.');
     }
     if ($telefon !== '' && strlen($telefon) !== 9) {
         throw new CbUserVisibleException('Telefon musí být české číslo s 9 číslicemi.');
@@ -100,6 +97,16 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
         if (mb_strlen($value, 'UTF-8') > $limit) {
             throw new CbUserVisibleException($label . ' je příliš dlouhé.');
         }
+    }
+
+    // Duplicitni e-mail je ocekavatelna validacni chyba, ne technicka havarie IS.
+    $stmt = $db->prepare('SELECT id_user FROM user WHERE email = ? LIMIT 1');
+    $stmt->bind_param('s', $email);
+    $stmt->execute();
+    $existingUser = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if (is_array($existingUser)) {
+        throw new CbUserVisibleException('Tento e-mail už je v IS použitý u jiného uživatele. Zaměstnance nelze založit.');
     }
 
     $osobniCisloDb = $osobniCislo !== '' ? $osobniCislo : null;
@@ -143,13 +150,30 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
                 throw new CbUserVisibleException('Vyberte platnou zdravotní pojišťovnu.');
             }
         }
-        $stmt = $db->prepare('SELECT id_slot FROM cis_slot WHERE id_slot = ? AND aktivni = 1 LIMIT 1');
-        $stmt->bind_param('i', $idSlot);
-        $stmt->execute();
-        $platnaPozice = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-        if (!is_array($platnaPozice)) {
-            throw new CbUserVisibleException('Vyberte aktivní pozici.');
+        if ($maSlot) {
+            $stmt = $db->prepare('SELECT id_slot FROM cis_slot WHERE id_slot = ? AND aktivni = 1 LIMIT 1');
+            $stmt->bind_param('i', $idSlot);
+            $stmt->execute();
+            $platnySlot = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+            if (!is_array($platnySlot)) {
+                throw new CbUserVisibleException('Vyberte aktivní pracovní slot.');
+            }
+        }
+        if ($maFunkci) {
+            $catalogTable = cb_hr_schema_table($db, 'cis_funkce');
+            $catalogPk = cb_hr_cis_funkce_pk($db);
+            $stmt = $db->prepare("SELECT id_role FROM {$catalogTable} WHERE {$catalogPk} = ? AND aktivni = 1 AND {$catalogPk} NOT IN (1, 5, 6) LIMIT 1");
+            $stmt->bind_param('i', $idFunkce);
+            $stmt->execute();
+            $platnaFunkce = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+            if (!is_array($platnaFunkce)) {
+                throw new CbUserVisibleException('Vyberte platnou funkci.');
+            }
+            if ((int)$platnaFunkce['id_role'] === 3 && !cb_pravo_ma(316)) {
+                throw new CbUserVisibleException('Nemáte právo přidělit manažerskou funkci.');
+            }
         }
 
         // Při souběhu lokální a serverové migrace musí založení osoby fungovat
@@ -163,7 +187,16 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
             $stmt = $db->prepare('INSERT INTO user (email, heslo_hash) VALUES (?, ?)');
             $stmt->bind_param('ss', $email, $hesloHash);
         }
-        $stmt->execute();
+        try {
+            $stmt->execute();
+        } catch (mysqli_sql_exception $e) {
+            // Soubezne zalozeni stejneho e-mailu musi skoncit stejnou srozumitelnou hlaskou.
+            if ((int)$e->getCode() === 1062) {
+                $stmt->close();
+                throw new CbUserVisibleException('Tento e-mail už je v IS použitý u jiného uživatele. Zaměstnance nelze založit.');
+            }
+            throw $e;
+        }
         $idUser = (int)$db->insert_id;
         $stmt->close();
 
@@ -177,16 +210,14 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
         $idPerson = $idUser;
         $stmt->close();
 
-        $stmt = $db->prepare('INSERT INTO hr_pristupovy_profil (id_person, id_role, id_person_zadal) VALUES (?, ?, ?)');
-        $stmt->bind_param('iii', $idPerson, $idRoleHr, $zadalUser);
-        $stmt->execute();
-        $stmt->close();
-
-        $idOrgFunkce = match ($idRoleHr) { 3 => 5, 5 => 4, 7 => 2, default => 1 };
-        $stmt = $db->prepare('INSERT INTO hr_org_funkce (id_person, id_org_funkce, hlavni, platnost_od, id_person_zadal, platny) VALUES (?, ?, 1, ?, ?, 1)');
-        $stmt->bind_param('iisi', $idPerson, $idOrgFunkce, $datumNastupu, $zadalUser);
-        $stmt->execute();
-        $stmt->close();
+        if ($maFunkci) {
+            $functionTable = cb_hr_schema_table($db, 'funkce');
+            $functionFk = cb_hr_funkce_fk($db);
+            $stmt = $db->prepare("INSERT INTO {$functionTable} (id_person, {$functionFk}, hlavni, v_treninku, platnost_od, id_person_zadal, platny) VALUES (?, ?, 1, ?, ?, ?, 1)");
+            $stmt->bind_param('iiisi', $idPerson, $idFunkce, $vTreninku, $datumNastupu, $zadalUser);
+            $stmt->execute();
+            $stmt->close();
+        }
 
         // Ulozi kompletní osobní údaje jako aktuální platný záznam.
         $stmt = $db->prepare('
@@ -219,14 +250,17 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
         }
         $stmt->close();
 
-        // Nastavi hlavni pracovni zarazeni osoby.
-        $stmt = $db->prepare('
-            INSERT INTO hr_zarazeni (id_person, id_slot, hlavni, platnost_od, id_user_zadal, vytvoreno, platny)
-            VALUES (?, ?, ?, ?, ?, NOW(), 1)
-        ');
-        $stmt->bind_param('iiisi', $idPerson, $idSlot, $hlavni, $datumNastupu, $zadalUser);
-        $stmt->execute();
-        $stmt->close();
+        if ($maSlot) {
+            // Prvni zvoleny slot je hlavni; dalsi lze pridat na karte pracovního pomeru.
+            $slotTable = cb_hr_schema_table($db, 'slot');
+            $stmt = $db->prepare("INSERT INTO {$slotTable} (id_person, id_slot, hlavni, platnost_od, id_user_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, ?, NOW(), 1)");
+            $stmt->bind_param('iiisi', $idPerson, $idSlot, $hlavni, $datumNastupu, $zadalUser);
+            $stmt->execute();
+            $stmt->close();
+        }
+
+        // Prihlasovaci role se nikdy nevybira rucne; plyne z jedine funkce.
+        hr_pristupovy_profil_synchronizovat($db, $idPerson, $zadalUser);
 
         if ($telefon !== '') {
             // Ulozi hlavni telefon, pokud byl vyplnen.
@@ -263,6 +297,8 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
         hr_update_employee_address($db, $idPerson, $data, $zadalUser, 0, 'adresa_');
         hr_update_employee_address($db, $idPerson, $data, $zadalUser, 1, 'dorucovaci_');
         hr_update_employee_emergency_contact($db, $idPerson, $data, $zadalUser);
+        // Nova karta ma mit kompletni=1 jen tehdy, pokud jsou opravdu splneny vsechny podminky.
+        hr_update_employee_completeness($db, $idPerson);
 
         $db->commit();
         $transactionStarted = false;

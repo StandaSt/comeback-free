@@ -66,6 +66,10 @@ function cb_hr_request_dispatch(mysqli $db, string $page, array $user): void
         hr_post_zamestnanec_pozice_zmenit($db, (int)($user['id_user'] ?? 0));
         return;
     }
+    if ($action === 'hr_zamestnanec_funkce_zmenit') {
+        hr_post_zamestnanec_funkce_zmenit($db, (int)($user['id_user'] ?? 0));
+        return;
+    }
     if ($action === 'hr_zamestnanec_pobocky_zmenit') {
         hr_post_zamestnanec_pobocky_zmenit($db, (int)($user['id_user'] ?? 0));
         return;

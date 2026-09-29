@@ -85,6 +85,8 @@ window.CB_PC_SESSION_TOKEN = <?= json_encode((string)($_SESSION['cb_pc_session_t
 <script src="<?= h(cb_root_url('smeny/js/pozadavky.js') . '?v=' . (is_file(__DIR__ . '/../../smeny/js/pozadavky.js') ? (string)filemtime(__DIR__ . '/../../smeny/js/pozadavky.js') : '1')) ?>"></script>
 <?php // Ovládání editoru šablon směn. ?>
 <script src="<?= h(cb_root_url('smeny/js/sablony.js') . '?v=' . (is_file(__DIR__ . '/../../smeny/js/sablony.js') ? (string)filemtime(__DIR__ . '/../../smeny/js/sablony.js') : '1')) ?>"></script>
+<?php // Klikací plánování zaměstnanců do směn. ?>
+<script src="<?= h(cb_root_url('smeny/js/planovani.js') . '?v=' . (is_file(__DIR__ . '/../../smeny/js/planovani.js') ? (string)filemtime(__DIR__ . '/../../smeny/js/planovani.js') : '1')) ?>"></script>
 <?php // Jednotné uživatelské texty chyb Administrace. ?>
 <script src="<?= h($cbAdministraceChybyJsUrl) ?>"></script>
 <?php // Ulozeni prav role v Administraci. ?>
@@ -115,6 +117,7 @@ window.CB_MODULY_NAVIGACE = {
   helpdeskAllowedViews: <?= json_encode(array_values(array_filter(array_keys(cb_helpdesk_views()), 'cb_helpdesk_view_allowed')), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,
   smenyPozadavky: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(405) ? 'true' : 'false' ?>,
   smenySablony: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(404) ? 'true' : 'false' ?>,
+  smenyPlanovani: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(403) ? 'true' : 'false' ?>,
   smenyNastaveni: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(407) ? 'true' : 'false' ?>,
   adminFirmaPridat: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(105) ? 'true' : 'false' ?>,
   adminLogChyby: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(106) ? 'true' : 'false' ?>,

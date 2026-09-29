@@ -1,5 +1,5 @@
 <?php
-// Pripravuje data formularu, prehledu a historie dennich reportu vcetne vypoctu chybejicich reportu.
+// Pripravuje data formulare, prehledu a historie dennich reportu vcetne informace o finalnim ulozeni.
 declare(strict_types=1);
 
 require_once __DIR__ . '/vypocet_col_rozdil.php';
@@ -509,6 +509,8 @@ function cb_denni_report_history_load(mysqli $conn, int $idPob, string $reportDa
             r.oteviral_text,
             r.zaviral_text,
             r.poznamka,
+            r.zadal,
+            r.zadano,
             pk.hotovost,
             pk.terminal,
             pk.stravenky,
@@ -762,6 +764,7 @@ function cb_denni_report_branch_slot_user_options(mysqli $conn, int $idPob, int 
         return [];
     }
 
+    $slotTable = cb_hr_schema_table($conn, 'slot');
     $sql = "
         SELECT DISTINCT
             u.id_user,
@@ -773,7 +776,7 @@ function cb_denni_report_branch_slot_user_options(mysqli $conn, int $idPob, int 
         INNER JOIN user u ON u.id_user = hp.id_person
         INNER JOIN hr_osobni_udaje ou ON ou.id_person = hp.id_person AND ou.platny = 1
         INNER JOIN hr_pracoviste prac ON prac.id_person = hp.id_person AND prac.platny = 1
-        INNER JOIN hr_zarazeni z ON z.id_person = hp.id_person AND z.platny = 1
+        INNER JOIN {$slotTable} z ON z.id_person = hp.id_person AND z.platny = 1
         WHERE hp.aktivni = 1 AND prac.id_pob = ?
           AND z.id_slot = ?
         HAVING full_name <> ''
@@ -1698,6 +1701,8 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
     $historyData = null;
     $historyReportId = 0;
     $historyReportExists = false;
+    $finalSavedAtLabel = '';
+    $finalSavedByName = '';
     if ($reportBranchId > 0) {
         $historyData = $isGoogleArchiveView
             ? cb_denni_report_google_history_load($conn, $reportBranchId, $reportDate)
@@ -1705,6 +1710,24 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         if (is_array($historyData)) {
             $historyReportId = (int)($historyData['report']['id_reportu'] ?? 0);
             $historyReportExists = ($historyReportId > 0);
+        }
+    }
+
+    // Autor a cas patri pouze k finalni verzi reportu, nikoli k rozpracovanemu formulari.
+    if ($historyReportExists && !$isGoogleArchiveView) {
+        $savedReport = (array)($historyData['report'] ?? []);
+        $savedById = (int)($savedReport['zadal'] ?? 0);
+        $savedAtRaw = trim((string)($savedReport['zadano'] ?? ''));
+        $savedByParts = cb_denni_report_user_name_parts_by_id($conn, $savedById > 0 ? $savedById : null);
+        $savedByName = cb_denni_report_person_full_name($savedByParts['jmeno'] ?? '', $savedByParts['prijmeni'] ?? '');
+        if ($savedByName === '' && $savedById > 0) {
+            $savedByName = 'ID ' . $savedById;
+        }
+        $savedAt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $savedAtRaw);
+        if ($savedByName !== '' && $savedAt instanceof DateTimeImmutable) {
+            // Cas je viditelny u titulku, autor zustava v tooltipu nad casem.
+            $finalSavedAtLabel = $savedAt->format('j. n. Y H:i');
+            $finalSavedByName = $savedByName;
         }
     }
     $preferFinalReportData = $historyReportExists && is_array($historyData);
@@ -2035,6 +2058,8 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         'historyData' => $historyData,
         'historyReportId' => $historyReportId,
         'historyReportExists' => $historyReportExists,
+        'finalSavedAtLabel' => $finalSavedAtLabel,
+        'finalSavedByName' => $finalSavedByName,
         'isArchiveView' => $isArchiveView,
         'isGoogleArchiveView' => $isGoogleArchiveView,
         'canUnlockFinalReport' => $canUnlockFinalReport,

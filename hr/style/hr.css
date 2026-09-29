@@ -1657,7 +1657,105 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+/* Kompaktni osobni karta drzi kratka pole uzka a seskupuje souvisejici udaje do radku. */
+.hr_employee_basic_fields {
+    display: grid;
+    gap: 10px;
+}
+
+.hr_employee_basic_row {
+    display: grid;
+    column-gap: 12px;
+    row-gap: 8px;
+    align-items: end;
+    justify-content: start;
+}
+
+.hr_employee_basic_row--identity {
+    grid-template-columns: 72px 120px 105px 130px 130px 72px 250px;
+}
+
+.hr_employee_basic_row--registry {
+    grid-template-columns: 140px 105px 150px 120px 150px;
+}
+
+.hr_employee_basic_row--contact {
+    grid-template-columns: 140px 220px 155px 220px;
+}
+
+.hr_employee_edit_form .hr_employee_contact_grid {
+    grid-template-columns: 200px 140px 180px 260px;
+    gap: 12px;
+    justify-content: start;
+}
+
+.hr_employee_edit_form .hr_employee_address_grid {
+    grid-template-columns: 220px 90px 180px 90px 130px;
+    gap: 12px;
+    justify-content: start;
+}
+
+.hr_employee_edit_form .hr_employee_bank_grid {
+    grid-template-columns: 190px 90px 260px;
+    gap: 12px;
+    justify-content: start;
+}
+
+.hr_employee_basic_row > *,
+.hr_employee_contact_grid > *,
+.hr_employee_address_grid > *,
+.hr_employee_bank_grid > * {
+    min-width: 0;
+}
+
+/* Vsechny ovladaci prvky osobni karty maji stejne ploche provedeni a respektuji sirku sveho sloupce. */
+.hr_employee_edit_form :is(input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]), select, textarea) {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 27px;
+    padding: 3px 7px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    box-shadow: none;
+    color: var(--text);
+    background: var(--surface-strong);
+    font: inherit;
+}
+
+.hr_employee_edit_form .hr_phone_field {
+    min-height: 27px;
+    border-radius: 5px;
+    box-shadow: none;
+}
+
+.hr_employee_edit_form .hr_phone_input {
+    min-height: 25px;
+    border: 0;
+    border-radius: 0;
+}
+
 .hr_employee_edit_panel { margin-top: 8px; }
+
+/* Stejny skelet formulare slouzi ke cteni i editaci; v citacim rezimu se meni jen vzhled uzamcenych prvku. */
+.hr_employee_mode_fields {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.hr_employee_read_mode :is(input, select, textarea):disabled {
+    opacity: 1;
+    color: var(--text);
+    -webkit-text-fill-color: var(--text);
+    background: var(--surface-strong);
+    border-color: var(--border);
+    cursor: default;
+}
+
+.hr_employee_read_mode :is(input[type="radio"], input[type="checkbox"]):disabled {
+    accent-color: var(--primary);
+}
 
 .hr_employee_edit_subtitle { margin: 8px 0 5px; font-size: var(--cb-font-12); }
 
@@ -2095,6 +2193,13 @@
 }
 
 @media (max-width: 1180px) {
+    .hr_employee_basic_row,
+    .hr_employee_edit_form .hr_employee_contact_grid,
+    .hr_employee_edit_form .hr_employee_address_grid,
+    .hr_employee_edit_form .hr_employee_bank_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .hr_settings_grid {
         grid-template-columns: 1fr;
     }
@@ -2131,6 +2236,13 @@
 }
 
 @media (max-width: 820px) {
+    .hr_employee_basic_row,
+    .hr_employee_edit_form .hr_employee_contact_grid,
+    .hr_employee_edit_form .hr_employee_address_grid,
+    .hr_employee_edit_form .hr_employee_bank_grid {
+        grid-template-columns: 1fr;
+    }
+
     .hr_settings_add,
     .hr_settings_branch_form,
     .hr_assignment_form {

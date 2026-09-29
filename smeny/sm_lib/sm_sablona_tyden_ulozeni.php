@@ -31,7 +31,7 @@ function cb_smeny_sablona_tyden_post_bloky(array $postedBlocks, array $branch): 
             $from = trim((string)($postedBlock['cas_od'] ?? ''));
             $to = trim((string)($postedBlock['cas_do'] ?? ''));
             if (!isset($positions[$idSlot])) {
-                throw new CbUserVisibleException('Vybraná pozice není pro tuto pobočku povolená.');
+                throw new CbUserVisibleException('Vybraný pracovní slot není pro tuto pobočku povolený.');
             }
             if ($idBlock > 0 && isset($usedIds[$idBlock])) {
                 throw new CbUserVisibleException('Stejný slot byl odeslán vícekrát. Obnovte stránku.');

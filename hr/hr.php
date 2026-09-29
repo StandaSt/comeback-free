@@ -134,6 +134,14 @@ if ($page === 'zamestnanec' && (int)($_GET['id'] ?? 0) > 0 && !cb_firemni_pristu
 if ($page === 'zamestnanec' && (int)($_GET['id'] ?? 0) > 0) {
     $hrEmployeeHeader = hr_fetch_employee($db, (int)$_GET['id']);
 }
+$hrEmployeeSection = (string)($_GET['sekce'] ?? 'prehled');
+$hrEmployeeSections = ['prehled', 'pracovni_pomer', 'dochazka', 'dokumenty', 'hodnoceni', 'vybaveni', 'osobni_udaje', 'onboarding', 'poznamky'];
+if (!in_array($hrEmployeeSection, $hrEmployeeSections, true)) {
+    $hrEmployeeSection = 'prehled';
+}
+// Tlacitko upravy zachova prave otevrenou cast karty; formular se nesmi samovolne prepnout jinam.
+$hrEmployeeEditSection = $hrEmployeeSection;
+$hrEmployeeCanEditSection = in_array($hrEmployeeSection, ['pracovni_pomer', 'osobni_udaje'], true);
 $isNaborDetail = $page === 'nabor' && (int)($_GET['id_vd'] ?? 0) > 0;
 if ($isNaborDetail) {
     $vdHeaderDetail = hr_nacti_vd_detail($db, (int)$_GET['id_vd']);
@@ -206,6 +214,10 @@ $cbHrUsesPpRenderer = is_array($cbHrPageDefinition['blocks'] ?? null) && $cbHrPa
     $cbHrPpPage['title'] = $pageTitle;
 
     $cbHrPpContext = hr_page_context($cbHrPageDefinition, $db);
+    // Po neuspesnem zalozeni zamestnance vrati formular bezpecne zpet zadane hodnoty.
+    if ($page === 'novy_zamestnanec' && is_array($formResult) && empty($formResult['success'])) {
+        $cbHrPpContext['formInput'] = is_array($formResult['input'] ?? null) ? $formResult['input'] : [];
+    }
     $cbHrPpFlash = hr_page_flash(is_array($flash) ? $flash : null);
     if ($cbHrPpFlash !== null) {
         $cbHrPpContext['flash'] = $cbHrPpFlash;
@@ -220,10 +232,10 @@ $cbHrUsesPpRenderer = is_array($cbHrPageDefinition['blocks'] ?? null) && $cbHrPa
             <a class="hr_panel_link" href="<?= h($hrEmployeeBackUrl) ?>">← <?= h($hrEmployeeBackLabel) ?></a>
             <?php if (is_array($hrEmployeeHeader)): ?>
                 <div class="hr_employee_profile_actions">
-                    <?php if (isset($_GET['upravit']) && (string)$_GET['upravit'] === '1'): ?>
-                        <a class="hr_secondary_button hr_panel_button_secondary" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$hrEmployeeHeader['id_person']))) ?>">Zrušit úpravy</a>
-                    <?php else: ?>
-                        <a class="hr_primary_button hr_panel_button_primary" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$hrEmployeeHeader['id_person']) . '&upravit=1')) ?>">Upravit zaměstnance</a>
+                    <?php if ($hrEmployeeCanEditSection && isset($_GET['upravit']) && (string)$_GET['upravit'] === '1'): ?>
+                        <a class="hr_secondary_button hr_panel_button_secondary" href="<?= h(cb_root_url('index.php?' . http_build_query(['m' => 'hr', 'page' => 'zamestnanec', 'id' => (int)$hrEmployeeHeader['id_person'], 'sekce' => $hrEmployeeSection]))) ?>">Zrušit úpravy</a>
+                    <?php elseif ($hrEmployeeCanEditSection): ?>
+                        <a class="hr_primary_button hr_panel_button_primary" href="<?= h(cb_root_url('index.php?' . http_build_query(['m' => 'hr', 'page' => 'zamestnanec', 'id' => (int)$hrEmployeeHeader['id_person'], 'sekce' => $hrEmployeeEditSection, 'upravit' => 1]))) ?>">Upravit zaměstnance</a>
                     <?php endif; ?>
                     <?php if ((int)($hrEmployeeHeader['overen'] ?? 0) === 0): ?>
                         <form class="hr_row_action_form" method="post" action="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$hrEmployeeHeader['id_person']))) ?>">
@@ -246,7 +258,7 @@ $cbHrUsesPpRenderer = is_array($cbHrPageDefinition['blocks'] ?? null) && $cbHrPa
                         <label class="hr_mzdovy_filter hr_mzdovy_filter--name" for="mzd_jmeno">Jméno <input id="mzd_jmeno" class="filter-input" form="hr-mzdovy-filter-form" type="search" name="mzd_f[jmeno]" value="<?= h((string)$mzdovyPrehled['filters']['jmeno']) ?>"></label>
                         <label class="hr_mzdovy_filter hr_mzdovy_filter--surname" for="mzd_prijmeni">Příjmení <input id="mzd_prijmeni" class="filter-input" form="hr-mzdovy-filter-form" type="search" name="mzd_f[prijmeni]" value="<?= h((string)$mzdovyPrehled['filters']['prijmeni']) ?>"></label>
                         <label class="hr_mzdovy_filter hr_mzdovy_filter--branch" for="mzd_pobocka">Pobočka <select id="mzd_pobocka" class="filter-input" form="hr-mzdovy-filter-form" name="mzd_f[pobocka]"><option value="">Vše</option><?php foreach ($mzdovyPrehled['branches'] as $branch): ?><option value="<?= h((string)$branch['id_pob']) ?>"<?= $mzdovyPrehled['filters']['pobocka'] === (string)$branch['id_pob'] ? ' selected' : '' ?>><?= h((string)$branch['name']) ?></option><?php endforeach; ?></select></label>
-                        <label class="hr_mzdovy_filter hr_mzdovy_filter--position" for="mzd_pozice">Pozice <select id="mzd_pozice" class="filter-input" form="hr-mzdovy-filter-form" name="mzd_f[pozice]"><option value="">Vše</option><?php foreach ($mzdovyPrehled['position_options'] as $option): ?><option value="<?= h($option) ?>"<?= $mzdovyPrehled['filters']['pozice'] === $option ? ' selected' : '' ?>><?= h($option) ?></option><?php endforeach; ?></select></label>
+                        <label class="hr_mzdovy_filter hr_mzdovy_filter--position" for="mzd_pozice">Pracovní slot <select id="mzd_pozice" class="filter-input" form="hr-mzdovy-filter-form" name="mzd_f[pozice]"><option value="">Vše</option><?php foreach ($mzdovyPrehled['position_options'] as $option): ?><option value="<?= h($option) ?>"<?= $mzdovyPrehled['filters']['pozice'] === $option ? ' selected' : '' ?>><?= h($option) ?></option><?php endforeach; ?></select></label>
                         <label class="hr_mzdovy_filter hr_mzdovy_filter--workload" for="mzd_uvazek">Úvazek <select id="mzd_uvazek" class="filter-input" form="hr-mzdovy-filter-form" name="mzd_f[uvazek]"><option value="">Vše</option><?php foreach ($mzdovyPrehled['workload_options'] as $option): ?><option value="<?= h($option) ?>"<?= $mzdovyPrehled['filters']['uvazek'] === $option ? ' selected' : '' ?>><?= h($option) ?></option><?php endforeach; ?></select></label>
                     </div>
                 </div>

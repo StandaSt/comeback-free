@@ -1,5 +1,5 @@
 <?php
-// Souhrn tržeb podle kanálů; viditelné částky používají společné formátování.
+// Souhrn tržeb podle kanálů; částky i případná chyba mají konkrétní společný výstup.
 declare(strict_types=1);
 
 (static function (): void {
@@ -142,11 +142,11 @@ declare(strict_types=1);
         }
         $stmt->close();
     } catch (Throwable $e) {
-        cb_chyba_oznam($e, [
+        $errorMessage = cb_chyba_uzivatel($e, [
             'module' => 'PROVOZ',
             'action' => 'Načtení Top reportu',
         ]);
-        echo '<section class="blok"><h2 class="blok_title">Top report</h2><p class="txt_cervena">' . h(cb_chyba_verejna_zprava()) . '</p></section>';
+        echo '<section class="blok"><h2 class="blok_title">Top report</h2><p class="txt_cervena">' . h($errorMessage) . '</p></section>';
         return;
     }
     ?>

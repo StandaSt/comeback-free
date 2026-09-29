@@ -106,11 +106,12 @@ try {
             $sendJson(422, ['ok' => false, 'err' => 'Neplatna osoba']);
         }
 
+        $slotTable = cb_hr_schema_table($conn, 'slot');
         $stmtPerson = $conn->prepare('
             SELECT 1
             FROM hr_person hp
             INNER JOIN hr_pracoviste prac ON prac.id_person = hp.id_person AND prac.id_pob = ? AND prac.platny = 1
-            INNER JOIN hr_zarazeni z ON z.id_person = hp.id_person AND z.id_slot = ? AND z.platny = 1
+            INNER JOIN ' . $slotTable . ' z ON z.id_person = hp.id_person AND z.id_slot = ? AND z.platny = 1
             WHERE hp.id_person = ? AND hp.aktivni = 1
             LIMIT 1
         ');

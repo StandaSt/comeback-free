@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-/* Datové operace pro správu lokálních uživatelů Administrace. */
+/* Datove operace pro spravu uzivatelu vcetne slotu z aktualni faze HR migrace. */
 
 function cb_admin_uzivatele_sloty_text(string $rawSlots): string
 {
@@ -69,6 +69,7 @@ function cb_admin_uzivatele_filtry(array $source): array
 
 function cb_admin_uzivatele_nacti(mysqli $db, array $source): array
 {
+    $slotTable = cb_hr_schema_table($db, 'slot');
     $filters = cb_admin_uzivatele_filtry($source);
     $perOptions = [20, 50, 100, 500];
     $perPage = (int)($source['usr_per'] ?? 50);
@@ -86,7 +87,7 @@ function cb_admin_uzivatele_nacti(mysqli $db, array $source): array
     $addLike('CONCAT_WS(" ",u.email,(SELECT t.telefon FROM hr_telefon t WHERE t.id_person=hp.id_person AND t.platny=1 AND t.hlavni=1 ORDER BY t.id_telefon DESC LIMIT 1))', $filters['kontakt']);
     if ((int)$filters['firma'] > 0) { $where[] = 'hp.id_firma=?'; $params[] = (int)$filters['firma']; }
     if ((int)$filters['role'] > 0) { $where[] = 'EXISTS (SELECT 1 FROM hr_pristupovy_profil prf WHERE prf.id_person=hp.id_person AND prf.id_role=?)'; $params[] = (int)$filters['role']; }
-    if ((int)$filters['slot'] >= 0) { $where[] = 'EXISTS (SELECT 1 FROM hr_zarazeni zf WHERE zf.id_person=hp.id_person AND zf.id_slot=? AND zf.platny=1)'; $params[] = (int)$filters['slot']; }
+    if ((int)$filters['slot'] >= 0) { $where[] = "EXISTS (SELECT 1 FROM {$slotTable} zf WHERE zf.id_person=hp.id_person AND zf.id_slot=? AND zf.platny=1)"; $params[] = (int)$filters['slot']; }
     if ((int)$filters['pobocka'] >= 0) { $where[] = '(hp.pristup_vsechny_pobocky=1 OR EXISTS (SELECT 1 FROM hr_pracoviste pf WHERE pf.id_person=hp.id_person AND pf.id_pob=? AND pf.platny=1))'; $params[] = (int)$filters['pobocka']; }
     if ($filters['stav'] === 'aktivni') { $where[] = 'hp.aktivni=1'; }
     if ($filters['stav'] === 'neaktivni') { $where[] = 'hp.aktivni=0'; }
@@ -110,7 +111,7 @@ function cb_admin_uzivatele_nacti(mysqli $db, array $source): array
                ), "") AS role,
                COALESCE((
                    SELECT GROUP_CONCAT(DISTINCT cs.slot ORDER BY z.id_slot SEPARATOR "||")
-                   FROM hr_zarazeni z
+                   FROM ' . $slotTable . ' z
                    INNER JOIN cis_slot cs ON cs.id_slot=z.id_slot
                    WHERE z.id_person=hp.id_person AND z.platny=1
                ), "") AS slot,

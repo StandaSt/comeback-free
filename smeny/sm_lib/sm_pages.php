@@ -6,10 +6,13 @@ function cb_smeny_pages(): array
     $pages = [
         ['page' => 'prehled', 'label' => 'Přehled'],
         ['page' => 'me_smeny', 'label' => 'Mé směny', 'items' => ['Aktuální týden', 'Týden + 1', 'Týden + 2']],
-        ['page' => 'planovani_smen', 'label' => 'Plánování směn', 'items' => ['Aktuální týden', 'Týden + 1']],
         ['page' => 'naplanovane_smeny', 'label' => 'Naplánované směny', 'items' => ['Aktuální týden', 'Týden + 1', 'Týden + 2']],
         ['page' => 'zadane_pozadavky', 'label' => 'Zadané požadavky', 'items' => ['Aktuální týden', 'Týden + 1', 'Týden + 2', 'Historie']],
     ];
+
+    if (function_exists('cb_smeny_planovani_vidi') && cb_smeny_planovani_vidi()) {
+        array_splice($pages, 2, 0, [['page' => 'planovani_smen', 'label' => 'Plánování směn']]);
+    }
 
     if (function_exists('cb_smeny_sablony_ma_pravo') && cb_smeny_sablony_ma_pravo()) {
         array_splice($pages, 3, 0, [[
@@ -48,6 +51,9 @@ function cb_smeny_current_page(array $pages): array
     }
     if ($page === 'sablony') {
         return ['key' => 'bez_prava', 'title' => 'Přístup k šablonám'];
+    }
+    if ($page === 'planovani_smen') {
+        return ['key' => 'bez_prava', 'title' => 'Přístup k plánování směn'];
     }
 
     return ['key' => 'prehled', 'title' => 'Přehled'];

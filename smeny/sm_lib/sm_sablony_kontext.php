@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-/* Účel souboru: Připraví povolené pobočky, osobu a pozice pro práci se šablonami. */
+/* Účel souboru: Připraví povolené pobočky, osobu a pracovní sloty pro práci se šablonami. */
 
 /** @return array<int,array<string,mixed>> */
 function cb_smeny_sablony_pobocky(mysqli $db): array
@@ -69,7 +69,7 @@ function cb_smeny_sablony_pozice(array $branch): array
 function cb_smeny_sablony_nazev_pozice(array $branch, int $idSlot, string $fallback = ''): string
 {
     $positions = cb_smeny_sablony_pozice($branch);
-    return $positions[$idSlot] ?? ($fallback !== '' ? $fallback : 'Pozice #' . $idSlot);
+    return $positions[$idSlot] ?? ($fallback !== '' ? $fallback : 'Slot #' . $idSlot);
 }
 
 function cb_smeny_sablony_zaviraci_cas(array $branch, int $day): string

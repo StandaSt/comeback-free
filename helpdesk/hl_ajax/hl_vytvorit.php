@@ -1,5 +1,5 @@
 <?php
-// helpdesk/hl_ajax/hl_vytvorit.php * Verze: V1 * Aktualizace: 20.06.2026
+// Založí tiket v jedné transakci a při technickém selhání připraví konkrétní adminskou notifikaci.
 declare(strict_types=1);
 
 if (!defined('CB_HELPDESK_DISPATCH_INTERNAL')) {
@@ -165,7 +165,11 @@ try {
     $_SESSION['cb_helpdesk_flash'] = cb_helpdesk_form_chyba(
         $e,
         'Založení tiketu',
-        ['table' => 'helpdesk']
+        [
+            'table' => 'helpdesk',
+            'push_title' => 'Neúspěšný pokus o založení tiketu',
+            'push_type' => 'HELPDESK_CREATE_ERROR_ADMIN',
+        ]
     );
     header('Location: ' . $redirectBase . '&hd=new-ticket');
 }

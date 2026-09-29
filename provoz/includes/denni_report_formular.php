@@ -1,5 +1,5 @@
 <?php
-// includes/denni_report_formular.php * K10 formular denniho reportu
+// Vykresluje denní report včetně průběžných polí, storen a údajů o finálním uložení.
 declare(strict_types=1);
 
 $zrEditableDisabledAttr = !empty($isReadOnlyForm) ? ' disabled' : '';
@@ -139,6 +139,8 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
   </div>
 <?php endif; ?>
 <form class="zr_form gap_14" autocomplete="off" method="post" action="<?= h(cb_root_url('index.php')) ?>" data-zr-form data-zr-draft-mode="<?= h($zrUsesDraftMode) ?>" data-zr-final-full="<?= h($zrFinalFullMode) ?>" data-zr-form-mode="<?= h((string)($formMode ?? 'workday')) ?>" data-zr-readonly="<?= !empty($isReadOnlyForm) ? '1' : '0' ?>" data-zr-rozvoz-sazba="<?= h((string)$zrRozvozSazba) ?>" data-cb-max-form="1" style="position:relative;">
+  <?php // Skryty zdroj dovoli JS zobrazit metadata u titulku i po AJAX zmene reportu. ?>
+  <span hidden data-zr-final-saved-source data-zr-saved-at="<?= h((string)($finalSavedAtLabel ?? '')) ?>" data-zr-saved-by="<?= h((string)($finalSavedByName ?? '')) ?>"></span>
   <input type="hidden" name="dr_id" value="<?= h((string)$idDr) ?>" data-zr-dr-id>
   <input type="hidden" name="zr_edit_final" value="<?= $zrIsEditingFinalReport ? '1' : '0' ?>" data-zr-edit-final>
   <div class="zr_layout gap_14">
@@ -501,12 +503,15 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
               <td>
                 <input
                   type="text"
+                  name="storno_poznamka[<?= h((string)$zrStornoIdObj) ?>]"
                   maxlength="255"
                   value="<?= h((string)($stornoRow['poznamka'] ?? '')) ?>"
                   data-zr-storno-note
                   data-id-obj="<?= h((string)$zrStornoIdObj) ?>"
-                  <?= empty($usesDraftPersistence) ? ' readonly' : '' ?>
+                  data-zr-storno-saved-value="<?= h((string)($stornoRow['poznamka'] ?? '')) ?>"
+                  <?= $zrEditableReadonlyAttr ?>
                 >
+                <span class="txt_seda text_11" data-zr-storno-status aria-live="polite" hidden></span>
               </td>
             </tr>
             <tr id="<?= h($zrStornoDetailId) ?>" data-zr-storno-detail hidden>

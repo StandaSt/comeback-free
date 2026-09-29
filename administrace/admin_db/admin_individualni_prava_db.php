@@ -58,6 +58,7 @@ function cb_admin_individualni_prava_hledej_uzivatele(string $query): array
     }
 
     $db = db();
+    $slotTable = cb_hr_schema_table($db, 'slot');
     $like = '%' . $query . '%';
     $stmt = $db->prepare('
         SELECT
@@ -74,7 +75,7 @@ function cb_admin_individualni_prava_hledej_uzivatele(string $query): array
         LEFT JOIN hr_telefon t ON t.id_telefon = (SELECT MAX(t2.id_telefon) FROM hr_telefon t2 WHERE t2.id_person = hp.id_person AND t2.platny = 1 AND t2.hlavni = 1)
         LEFT JOIN hr_pristupovy_profil ur ON ur.id_person = hp.id_person
         LEFT JOIN cis_role cr ON cr.id_role = ur.id_role
-        LEFT JOIN hr_zarazeni us ON us.id_person = hp.id_person AND us.platny = 1
+        LEFT JOIN ' . $slotTable . ' us ON us.id_person = hp.id_person AND us.platny = 1
         LEFT JOIN cis_slot cs ON cs.id_slot = us.id_slot
         WHERE (
               ou.jmeno LIKE ?
@@ -140,6 +141,7 @@ function cb_admin_individualni_prava_data(int $idUser): array
     }
 
     $db = db();
+    $slotTable = cb_hr_schema_table($db, 'slot');
     $stmtUser = $db->prepare('
         SELECT
             u.id_user,
@@ -153,7 +155,7 @@ function cb_admin_individualni_prava_data(int $idUser): array
         LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje = (SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2 WHERE ou2.id_person = u.id_user AND ou2.platny = 1)
         LEFT JOIN hr_pristupovy_profil ur ON ur.id_person = u.id_user
         LEFT JOIN cis_role cr ON cr.id_role = ur.id_role
-        LEFT JOIN hr_zarazeni us ON us.id_person = u.id_user AND us.platny = 1
+        LEFT JOIN ' . $slotTable . ' us ON us.id_person = u.id_user AND us.platny = 1
         LEFT JOIN cis_slot cs ON cs.id_slot = us.id_slot
         WHERE u.id_user = ?
         GROUP BY u.id_user, ou.jmeno, ou.prijmeni, u.email

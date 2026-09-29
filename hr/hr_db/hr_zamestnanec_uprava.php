@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /*
- * Historicky zapis zakladnich osobnich a kontaktnich udaju zamestnance.
+ * Ucel souboru: Uklada osobni a kontaktni udaje zamestnance; pristupovou roli zde nikdy nemeni.
  */
 
 /**
@@ -30,7 +30,6 @@ function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, i
     $poznamka = trim((string)($data['poznamka'] ?? ''));
     $telefon = preg_replace('/\D+/', '', (string)($data['telefon'] ?? '')) ?? '';
     $email = trim((string)($data['email'] ?? ''));
-    $idRoleHr = (int)($data['id_role_hr'] ?? 9);
 
     if ($jmeno === '' || $prijmeni === '') {
         throw new CbUserVisibleException('Vyplňte jméno a příjmení.');
@@ -43,12 +42,6 @@ function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, i
     }
     if ($telefon !== '' && strlen($telefon) !== 9) {
         throw new CbUserVisibleException('Telefon musí být české číslo s 9 číslicemi.');
-    }
-    if (!in_array($idRoleHr, [3, 5, 7, 9], true)) {
-        throw new CbUserVisibleException('Vyberte povolenou pracovní roli.');
-    }
-    if ($idRoleHr === 3 && !cb_pravo_ma(316)) {
-        throw new CbUserVisibleException('Nemáte právo přidělit roli Manager.');
     }
 
     $db->begin_transaction();
@@ -142,26 +135,12 @@ function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, i
 
         hr_update_employee_main_phone($db, $idPerson, $telefon, $zadalUser);
         hr_update_employee_main_email($db, $idPerson, $email, $zadalUser);
-        $stmt = $db->prepare('SELECT 1 FROM hr_pristupovy_profil WHERE id_person = ? AND id_role = 3 LIMIT 1');
-        $stmt->bind_param('i', $idPerson);
-        $stmt->execute();
-        $melRoliManager = $stmt->get_result()->fetch_row() !== null;
-        $stmt->close();
-        if ($melRoliManager && $idRoleHr !== 3 && !cb_pravo_ma(316)) {
-            throw new CbUserVisibleException('Nemáte právo odebrat roli Manager.');
-        }
-        $stmt = $db->prepare('DELETE FROM hr_pristupovy_profil WHERE id_person = ? AND id_role IN (3, 5, 7, 9)');
-        $stmt->bind_param('i', $idPerson);
-        $stmt->execute();
-        $stmt->close();
-        $stmt = $db->prepare('INSERT INTO hr_pristupovy_profil (id_person, id_role, id_person_zadal) VALUES (?, ?, ?)');
-        $stmt->bind_param('iii', $idPerson, $idRoleHr, $zadalUser);
-        $stmt->execute();
-        $stmt->close();
         hr_update_employee_address($db, $idPerson, $data, $zadalUser, 0, 'adresa_');
         hr_update_employee_address($db, $idPerson, $data, $zadalUser, 1, 'dorucovaci_');
         hr_update_employee_emergency_contact($db, $idPerson, $data, $zadalUser);
         hr_update_employee_bank_account($db, $idPerson, $data, $zadalUser);
+        // Priznak kompletnosti se meni spolu s osobnimi a kontaktnimi udaji.
+        hr_update_employee_completeness($db, $idPerson);
 
         $db->commit();
         return;

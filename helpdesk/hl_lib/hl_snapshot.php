@@ -1,5 +1,5 @@
 <?php
-// helpdesk/hl_lib/hl_snapshot.php * Verze: V1 * Aktualizace: 20.06.2026
+// Ucel souboru: Sestavuje HelpDesk snapshot uzivatele vcetne aktualnich HR slotu.
 declare(strict_types=1);
 
 require_once __DIR__ . '/hl_prava.php';
@@ -80,9 +80,10 @@ function cb_helpdesk_snapshot_load_pobocky(mysqli $conn, int $idUser): array
 function cb_helpdesk_snapshot_load_sloty(mysqli $conn, int $idUser): array
 {
     $out = [];
+    $slotTable = cb_hr_schema_table($conn, 'slot');
     $stmt = $conn->prepare('
         SELECT us.id_slot, cs.slot
-        FROM hr_zarazeni us
+        FROM ' . $slotTable . ' us
         LEFT JOIN cis_slot cs ON cs.id_slot = us.id_slot
         WHERE us.id_person = ? AND us.platny = 1
         ORDER BY us.id_slot ASC

@@ -19,7 +19,7 @@ declare(strict_types=1);
                     <tr>
                         <th class="hr_table_cell hr_table_head">Zaměstnanec</th>
                         <th class="hr_table_cell hr_table_head">Pracoviště</th>
-                        <th class="hr_table_cell hr_table_head">Zařazení</th>
+                        <th class="hr_table_cell hr_table_head">Pracovní sloty</th>
                         <th class="hr_table_cell hr_table_head">Datum nástupu</th>
                         <th class="hr_table_cell hr_table_head">Typ vztahu</th>
                         <th class="hr_table_cell hr_table_head">Stav</th>

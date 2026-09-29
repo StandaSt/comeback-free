@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * DB dotazy pro seznam a detail zamestnancu v HR.
+ * DB dotazy pro seznam, detail a kontrolu kompletnosti zamestnancu v HR.
  */
 
 /**
@@ -10,6 +10,7 @@ declare(strict_types=1);
  */
 function hr_fetch_employees(mysqli $db, int $limit = 100): array
 {
+    $slotTable = cb_hr_schema_table($db, 'slot');
     $limit = max(1, min($limit, 500));
     $cbUser = $_SESSION['cb_user'] ?? [];
     $idUser = is_array($cbUser) ? (int)($cbUser['id_user'] ?? 0) : 0;
@@ -32,7 +33,15 @@ function hr_fetch_employees(mysqli $db, int $limit = 100): array
             pv.datum_nastupu,
             pv.id_pracovni_vztah,
             pob.nazev AS pracoviste,
-            cs.slot AS zarazeni,
+            (
+                SELECT GROUP_CONCAT(DISTINCT cs2.slot ORDER BY hz2.hlavni DESC, cs2.slot SEPARATOR ', ')
+                FROM {$slotTable} hz2
+                INNER JOIN cis_slot cs2 ON cs2.id_slot = hz2.id_slot
+                WHERE hz2.id_person = p.id_person
+                  AND hz2.platny = 1
+                  AND (hz2.platnost_od IS NULL OR hz2.platnost_od <= CURDATE())
+                  AND (hz2.platnost_do IS NULL OR hz2.platnost_do >= CURDATE())
+            ) AS zarazeni,
             pvt.nazev AS vztah_kod
         FROM hr_person p
         LEFT JOIN hr_osobni_udaje ou
@@ -52,14 +61,6 @@ function hr_fetch_employees(mysqli $db, int $limit = 100): array
            AND (pp.platnost_do IS NULL OR pp.platnost_do >= CURDATE())
         LEFT JOIN pobocka pob
             ON pob.id_pob = pp.id_pob
-        LEFT JOIN hr_zarazeni pz
-            ON pz.id_person = p.id_person
-           AND pz.platny = 1
-           AND pz.hlavni = 1
-           AND (pz.platnost_od IS NULL OR pz.platnost_od <= CURDATE())
-           AND (pz.platnost_do IS NULL OR pz.platnost_do >= CURDATE())
-        LEFT JOIN cis_slot cs
-            ON cs.id_slot = pz.id_slot
         WHERE p.aktivni = 1
           AND p.id_firma IN ({$allowedFirmySql})
         ORDER BY p.id_person DESC
@@ -100,6 +101,7 @@ function hr_employee_list_filter(string $key): string
  */
 function hr_fetch_employee_list(mysqli $db): array
 {
+    $slotTable = cb_hr_schema_table($db, 'slot');
     $queryParams = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' ? $_POST : $_GET;
     foreach (['hr_emp_f', 'hr_emp_per', 'hr_emp_p', 'hr_emp_sort', 'hr_emp_dir'] as $key) {
         if (array_key_exists($key, $queryParams)) {
@@ -182,7 +184,7 @@ function hr_fetch_employee_list(mysqli $db): array
             SELECT
                 pz.id_person,
                 GROUP_CONCAT(DISTINCT cs.slot ORDER BY cs.slot SEPARATOR ', ') AS zarazeni
-            FROM hr_zarazeni pz
+            FROM {$slotTable} pz
             INNER JOIN cis_slot cs
                 ON cs.id_slot = pz.id_slot
             WHERE pz.platny = 1
@@ -275,7 +277,7 @@ function hr_fetch_employee_list(mysqli $db): array
     }
 
     $optionQueries = [
-        'zarazeni' => "SELECT DISTINCT cs.slot AS value FROM hr_zarazeni pz INNER JOIN hr_person p ON p.id_person = pz.id_person INNER JOIN cis_slot cs ON cs.id_slot = pz.id_slot WHERE pz.platny = 1 AND (pz.platnost_od IS NULL OR pz.platnost_od <= CURDATE()) AND (pz.platnost_do IS NULL OR pz.platnost_do >= CURDATE()) AND p.id_firma IN ({$allowedFirmySql}) AND cs.slot <> '' ORDER BY cs.slot",
+        'zarazeni' => "SELECT DISTINCT cs.slot AS value FROM {$slotTable} pz INNER JOIN hr_person p ON p.id_person = pz.id_person INNER JOIN cis_slot cs ON cs.id_slot = pz.id_slot WHERE pz.platny = 1 AND (pz.platnost_od IS NULL OR pz.platnost_od <= CURDATE()) AND (pz.platnost_do IS NULL OR pz.platnost_do >= CURDATE()) AND p.id_firma IN ({$allowedFirmySql}) AND cs.slot <> '' ORDER BY cs.slot",
         'pracoviste' => "SELECT DISTINCT pob.nazev AS value FROM hr_pracoviste pp INNER JOIN hr_person p ON p.id_person = pp.id_person INNER JOIN pobocka pob ON pob.id_pob = pp.id_pob WHERE pp.platny = 1 AND (pp.platnost_od IS NULL OR pp.platnost_od <= CURDATE()) AND (pp.platnost_do IS NULL OR pp.platnost_do >= CURDATE()) AND p.id_firma IN ({$allowedFirmySql}) AND pob.nazev <> '' ORDER BY pob.nazev",
         'vztah' => "SELECT DISTINCT pvt.nazev AS value FROM hr_pracovni_vztah pv INNER JOIN hr_person p ON p.id_person = pv.id_person INNER JOIN hr_cis_pracovni_vztah_typ pvt ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ WHERE pv.platny = 1 AND p.id_firma IN ({$allowedFirmySql}) AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE()) AND pvt.nazev <> '' ORDER BY pvt.nazev",
     ];
@@ -455,6 +457,9 @@ function hr_fetch_employee_work_timeline(mysqli $db, int $idPerson): array
 /** @return string[] */
 function hr_fetch_employee_missing_required_data(mysqli $db, int $idPerson): array
 {
+    $slotTable = cb_hr_schema_table($db, 'slot');
+    $functionTable = cb_hr_schema_table($db, 'funkce');
+    $functionFk = cb_hr_funkce_fk($db);
     $missing = [];
     $relation = hr_fetch_employee_work_relation($db, $idPerson);
     if ($relation === null || trim((string)($relation['vztah'] ?? '')) === '' || str_contains((string)$relation['vztah'], 'Doplnit')) {
@@ -467,13 +472,14 @@ function hr_fetch_employee_missing_required_data(mysqli $db, int $idPerson): arr
         $missing[] = 'typ a výše mzdy';
     }
 
-    $stmt = $db->prepare('SELECT (SELECT COUNT(*) FROM hr_zarazeni WHERE id_person = ? AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS pozic, (SELECT COUNT(*) FROM hr_pracoviste WHERE id_person = ? AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS pobocek, (SELECT COUNT(*) FROM hr_pracoviste WHERE id_person = ? AND platny = 1 AND hlavni = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS hlavnich');
-    $stmt->bind_param('iii', $idPerson, $idPerson, $idPerson);
+    $stmt = $db->prepare("SELECT (SELECT COUNT(*) FROM {$slotTable} WHERE id_person = ? AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS slotu, (SELECT COUNT(*) FROM {$functionTable} WHERE id_person = ? AND {$functionFk} <> 1 AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS funkci, (SELECT COUNT(*) FROM hr_pracoviste WHERE id_person = ? AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS pobocek, (SELECT COUNT(*) FROM hr_pracoviste WHERE id_person = ? AND platny = 1 AND hlavni = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS hlavnich");
+    $stmt->bind_param('iiii', $idPerson, $idPerson, $idPerson, $idPerson);
     $stmt->execute();
     $counts = $stmt->get_result()->fetch_assoc();
     $stmt->close();
-    if ((int)($counts['pozic'] ?? 0) !== 1) {
-        $missing[] = (int)($counts['pozic'] ?? 0) === 0 ? 'pozice' : 'jednoznačná pozice';
+    // Karta musi mit alespon jeden skutecny slot nebo jednu firemni funkci.
+    if ((int)($counts['slotu'] ?? 0) < 1 && (int)($counts['funkci'] ?? 0) < 1) {
+        $missing[] = 'slot nebo funkce';
     }
     if ((int)($counts['pobocek'] ?? 0) < 1) {
         $missing[] = 'pobočka';
@@ -481,7 +487,32 @@ function hr_fetch_employee_missing_required_data(mysqli $db, int $idPerson): arr
     if ((int)($counts['hlavnich'] ?? 0) !== 1) {
         $missing[] = 'jedna hlavní pobočka';
     }
+    $stmt = $db->prepare("SELECT (SELECT COUNT(*) FROM hr_osobni_udaje WHERE id_person = ? AND platny = 1 AND pohlavi IS NOT NULL AND TRIM(pohlavi) <> '') AS pohlavi, (SELECT COUNT(*) FROM hr_email WHERE id_person = ? AND platny = 1 AND hlavni = 1 AND TRIM(email) <> '') AS email");
+    $stmt->bind_param('ii', $idPerson, $idPerson);
+    $stmt->execute();
+    $personal = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if ((int)($personal['pohlavi'] ?? 0) < 1) {
+        $missing[] = 'pohlaví';
+    }
+    if ((int)($personal['email'] ?? 0) < 1) {
+        $missing[] = 'e-mail';
+    }
     return $missing;
+}
+
+/**
+ * Udrzuje ulozeny priznak kompletnosti ve shode se stejnou kontrolou, kterou vidi personalista.
+ */
+function hr_update_employee_completeness(mysqli $db, int $idPerson): bool
+{
+    $complete = hr_fetch_employee_missing_required_data($db, $idPerson) === [] ? 1 : 0;
+    $stmt = $db->prepare('UPDATE hr_person SET kompletni = ? WHERE id_person = ? AND kompletni <> ?');
+    $stmt->bind_param('iii', $complete, $idPerson, $complete);
+    $stmt->execute();
+    $changed = $stmt->affected_rows === 1;
+    $stmt->close();
+    return $changed;
 }
 
 /** Nacte evidovana preruseni jednoho pracovniho pomeru. */
@@ -544,6 +575,7 @@ function hr_fetch_employee_work_benefit_ids(mysqli $db, int $idPracovniVztah): a
  */
 function hr_fetch_employee(mysqli $db, int $id): ?array
 {
+    $slotTable = cb_hr_schema_table($db, 'slot');
     $cbUser = $_SESSION['cb_user'] ?? [];
     $idUser = is_array($cbUser) ? (int)($cbUser['id_user'] ?? 0) : 0;
     if (!cb_firemni_pristup_muze_osobu($db, $idUser, $id)) {
@@ -575,7 +607,15 @@ function hr_fetch_employee(mysqli $db, int $id): ?array
             pv.datum_nastupu,
             pv.datum_ukonceni,
             pob.nazev AS pracoviste,
-            cs.slot AS zarazeni,
+            (
+                SELECT GROUP_CONCAT(DISTINCT cs2.slot ORDER BY hz2.hlavni DESC, cs2.slot SEPARATOR ', ')
+                FROM {$slotTable} hz2
+                INNER JOIN cis_slot cs2 ON cs2.id_slot = hz2.id_slot
+                WHERE hz2.id_person = p.id_person
+                  AND hz2.platny = 1
+                  AND (hz2.platnost_od IS NULL OR hz2.platnost_od <= CURDATE())
+                  AND (hz2.platnost_do IS NULL OR hz2.platnost_do >= CURDATE())
+            ) AS zarazeni,
             pvt.nazev AS vztah_kod,
             pvt.nazev AS vztah_nazev,
             tel.telefon,
@@ -597,14 +637,6 @@ function hr_fetch_employee(mysqli $db, int $id): ?array
            AND (pp.platnost_do IS NULL OR pp.platnost_do >= CURDATE())
         LEFT JOIN pobocka pob
             ON pob.id_pob = pp.id_pob
-        LEFT JOIN hr_zarazeni pz
-            ON pz.id_person = p.id_person
-           AND pz.platny = 1
-           AND pz.hlavni = 1
-           AND (pz.platnost_od IS NULL OR pz.platnost_od <= CURDATE())
-           AND (pz.platnost_do IS NULL OR pz.platnost_do >= CURDATE())
-        LEFT JOIN cis_slot cs
-            ON cs.id_slot = pz.id_slot
         LEFT JOIN hr_telefon tel
             ON tel.id_person = p.id_person
            AND tel.platny = 1

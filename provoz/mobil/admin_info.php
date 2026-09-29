@@ -1,5 +1,5 @@
 <?php
-// mobil/admin_info.php * Verze: V1 * Aktualizace: 05.06.2026
+// Verejny tokenizovany modal zobrazuje detail administratorske nebo systemove push zpravy bez prihlaseni do IS.
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../common/lib/session_boot.php';
@@ -20,7 +20,7 @@ function cb_admin_info_fetch(string $token): ?array
     }
 
     $stmt = db()->prepare('
-        SELECT aiu.id_admin_info_user, ai.id_admin_info, ai.nadpis, ai.obsah, ai.vytvoreno, ai.id_odeslal,
+        SELECT aiu.id_admin_info_user, ai.id_admin_info, ai.typ, ai.nadpis, ai.obsah, ai.vytvoreno, ai.id_odeslal,
                u.jmeno, u.prijmeni
         FROM admin_info_user aiu
         INNER JOIN admin_info ai ON ai.id_admin_info = aiu.id_admin_info
@@ -34,7 +34,7 @@ function cb_admin_info_fetch(string $token): ?array
 
     $stmt->bind_param('s', $token);
     $stmt->execute();
-    $stmt->bind_result($idAdminInfoUser, $idAdminInfo, $nadpis, $obsah, $vytvoreno, $idOdeslal, $jmeno, $prijmeni);
+    $stmt->bind_result($idAdminInfoUser, $idAdminInfo, $typ, $nadpis, $obsah, $vytvoreno, $idOdeslal, $jmeno, $prijmeni);
     $ok = $stmt->fetch();
     $stmt->close();
 
@@ -45,6 +45,7 @@ function cb_admin_info_fetch(string $token): ?array
     return [
         'id_admin_info_user' => (int)$idAdminInfoUser,
         'id_admin_info' => (int)$idAdminInfo,
+        'typ' => (string)$typ,
         'nadpis' => (string)$nadpis,
         'obsah' => (string)$obsah,
         'vytvoreno' => (string)$vytvoreno,
@@ -128,9 +129,14 @@ if (is_array($row)) {
     cb_admin_info_seen((int)$row['id_admin_info_user']);
 }
 
-$title = 'Admin info';
+$title = is_array($row) ? trim((string)($row['nadpis'] ?? '')) : '';
+if ($title === '') {
+    $title = 'Admin info';
+}
 $sentAt = is_array($row) ? cb_admin_info_format_datetime((string)($row['vytvoreno'] ?? '')) : cb_admin_info_format_datetime('');
 $content = is_array($row) ? (string)($row['obsah'] ?? '') : 'Zpráva nebyla nalezena nebo už není dostupná.';
+$isSystemError = is_array($row) && (string)($row['typ'] ?? '') === 'system_error_admin';
+$subtitle = ($isSystemError ? 'Technická chyba IS' : 'Systémové oznámení') . ' · ' . $sentAt;
 $sender = 'systém';
 if (is_array($row) && (int)($row['id_odeslal'] ?? 0) > 0) {
     $sender = trim((string)($row['odeslal'] ?? ''));
@@ -207,7 +213,7 @@ if (is_array($row) && (int)($row['id_odeslal'] ?? 0) > 0) {
       </div>
       <div>
         <p class="modal-title"><?= cb_admin_info_h($title) ?></p>
-        <p class="modal-sub">Spuštěn CRON</p>
+        <p class="modal-sub"><?= cb_admin_info_h($subtitle) ?></p>
       </div>
     </div>
 
@@ -229,5 +235,4 @@ if (is_array($row) && (int)($row['id_odeslal'] ?? 0) > 0) {
 </body>
 </html>
 <?php
-// mobil/admin_info.php * Verze: V1 * Aktualizace: 05.06.2026
 // Konec souboru

@@ -1,5 +1,5 @@
 <?php
-// lib/uloz_reporty_is.php * K10 finalni ulozeni reportu do reporty_is*
+// Ukládá finální denní report včetně důvodů storen a vrací klientovi konkrétní bezpečnou odpověď.
 declare(strict_types=1);
 
 if (
@@ -125,6 +125,81 @@ $historyRestiaSummary = static function (array $historyReport): array {
     return $restiaSummary;
 };
 
+// Důvody storen ověříme proti stejné pobočce a provoznímu dni, aby nešlo podvrhnout cizí objednávku.
+$saveStornoNotes = static function (array $notes) use ($conn, $idPob, $datum): void {
+    if ($notes === []) {
+        return;
+    }
+    if (count($notes) > 100) {
+        throw new CbUserVisibleException('Report obsahuje příliš mnoho důvodů stornovaných objednávek.');
+    }
+
+    $workdayRange = cb_dt_workday_range_utc($datum);
+    $fromDb = (string)$workdayRange['from_db'];
+    $toDb = (string)$workdayRange['to_db'];
+    $stmtOrder = $conn->prepare("
+        SELECT os.id_obj AS saved_id
+        FROM objednavky_restia o
+        INNER JOIN obj_casy ca ON ca.id_obj = o.id_obj
+        INNER JOIN cis_obj_stav s ON s.id_stav = o.id_stav
+        LEFT JOIN obj_storno os ON os.id_obj = o.id_obj
+        WHERE o.id_obj = ?
+          AND o.id_pob = ?
+          AND ca.report >= DATE(?)
+          AND ca.report < DATE(?)
+          AND s.nazev IN ('canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted')
+        LIMIT 1
+    ");
+    $stmtSave = $conn->prepare('
+        INSERT INTO obj_storno (id_obj, poznamka)
+        VALUES (?, ?)
+        ON DUPLICATE KEY UPDATE poznamka = VALUES(poznamka)
+    ');
+    if ($stmtOrder === false || $stmtSave === false) {
+        if ($stmtOrder instanceof mysqli_stmt) {
+            $stmtOrder->close();
+        }
+        if ($stmtSave instanceof mysqli_stmt) {
+            $stmtSave->close();
+        }
+        throw new RuntimeException('Nelze připravit uložení důvodů storen.');
+    }
+
+    try {
+        foreach ($notes as $rawIdObj => $rawValue) {
+            $idObj = (int)$rawIdObj;
+            if ($idObj <= 0 || is_array($rawValue)) {
+                throw new CbUserVisibleException('Důvod storna obsahuje neplatnou objednávku.');
+            }
+            $value = trim((string)$rawValue);
+            $value = function_exists('mb_substr')
+                ? mb_substr($value, 0, 255, 'UTF-8')
+                : substr($value, 0, 255);
+
+            $stmtOrder->bind_param('iiss', $idObj, $idPob, $fromDb, $toDb);
+            $stmtOrder->execute();
+            $orderResult = $stmtOrder->get_result();
+            $orderRow = $orderResult instanceof mysqli_result ? ($orderResult->fetch_assoc() ?: null) : null;
+            if ($orderResult instanceof mysqli_result) {
+                $orderResult->free();
+            }
+            if (!is_array($orderRow)) {
+                throw new CbUserVisibleException('Stornovaná objednávka nepatří k tomuto reportu.');
+            }
+
+            // Prázdný nový důvod nemusí vytvářet zbytečný řádek; prázdná hodnota ale umí smazat starý text.
+            if ($value === '' && $orderRow['saved_id'] === null) {
+                continue;
+            }
+            $stmtSave->bind_param('is', $idObj, $value);
+            $stmtSave->execute();
+        }
+    } finally {
+        $stmtOrder->close();
+        $stmtSave->close();
+    }
+};
+
 try {
     if ($action === 'prepocet_col_rozdil') {
         if ($isCurrentWorkday) {
@@ -170,6 +245,7 @@ try {
         }
         $workdayRange = cb_dt_workday_range_utc($datum);
         $restiaSummary = cb_denni_report_restia_summary($conn, $idPob, $workdayRange);
+        $saveStornoNotes(is_array($_POST['storno_poznamka'] ?? null) ? $_POST['storno_poznamka'] : []);
         $idReportu = cb_db_zapis_denni_report_from_form($conn, $idPob, $datum, $currentUserId, $restiaSummary, $_POST, $rozdilForm, $colPomerForm, $canFinalizeCurrentEdit);
         $sendJson(200, ['ok' => true, 'id_reportu' => $idReportu]);
     }
@@ -185,6 +261,7 @@ try {
         $workdayRange = cb_dt_workday_range_utc($datum);
         $restiaSummary = cb_denni_report_restia_summary($conn, $idPob, $workdayRange);
     }
+    $saveStornoNotes(is_array($_POST['storno_poznamka'] ?? null) ? $_POST['storno_poznamka'] : []);
     $idReportu = cb_db_zapis_denni_report_from_form($conn, $idPob, $datum, $currentUserId, $restiaSummary, $_POST, $rozdilForm, $colPomerForm, $historyReportExists);
     $sendJson(200, ['ok' => true, 'id_reportu' => $idReportu]);
 } catch (Throwable $e) {
@@ -200,9 +277,9 @@ try {
         $sendJson(500, ['ok' => false, 'err' => $message]);
     }
 
-    cb_chyba_oznam($e, [
+    $errorMessage = cb_chyba_uzivatel($e, [
         'module' => 'PROVOZ',
         'action' => 'Uložení denního reportu',
     ]);
-    $sendJson(500, ['ok' => false, 'err' => cb_chyba_verejna_zprava()]);
+    $sendJson(500, ['ok' => false, 'err' => $errorMessage]);
 }

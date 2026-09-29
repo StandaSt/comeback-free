@@ -2,7 +2,8 @@
 declare(strict_types=1);
 
 /*
- * Starý reset HR. Import USER -> PERSON a reset zaměstnanců byly nahrazeny
+ * Stary reset HR. Import USER -> PERSON a reset zamestnancu byly nahrazeny;
+ * zbyla obsluha aktualniho nazvu tabulky slotu pro omezeny lokalni reset.
  * potvrzenými kroky v Administraci.
  *
  * Nyní je povolen pouze lokální reset VD bez importu zaměstnanců:
@@ -79,6 +80,9 @@ if (!isset($SECRETS['db'][$environment]) || !is_array($SECRETS['db'][$environmen
 $config = $SECRETS['db'][$environment];
 $dbPort = (int)($config['port'] ?? 3306);
 $db = new mysqli($config['host'], $config['user'], $config['pass'], $config['name'], $dbPort);
+$db->set_charset('utf8mb4');
+require_once __DIR__ . '/../lib/hr_schema.php';
+$slotTable = cb_hr_schema_table($db, 'slot');
 
 if ($db->connect_errno !== 0) {
     if ($directRun) {
@@ -149,7 +153,7 @@ $deleteAllQueries = [
     'DELETE FROM hr_telefon',
     'DELETE FROM hr_osobni_udaje',
     'DELETE FROM hr_pracoviste',
-    'DELETE FROM hr_zarazeni',
+    'DELETE FROM ' . $slotTable,
     'DELETE FROM hr_pracovni_vztah',
     'DELETE FROM hr_dokument',
     'DELETE FROM hr_sazby',
@@ -211,7 +215,7 @@ $deleteNdEmployeesQueries = [
     'DELETE FROM hr_telefon',
     'DELETE FROM hr_osobni_udaje',
     'DELETE FROM hr_pracoviste',
-    'DELETE FROM hr_zarazeni',
+    'DELETE FROM ' . $slotTable,
     'DELETE FROM hr_pracovni_vztah',
     "DELETE FROM hr_dokument WHERE id_person IS NOT NULL OR id_nd IS NOT NULL OR (id_vd IS NOT NULL AND id_dokument_typ IN (SELECT id_dokument_typ FROM hr_cis_dokument_typ WHERE kod_souboru IN ('dotaznik', 'smlouva')))",
     'DELETE FROM hr_person',
@@ -230,6 +234,8 @@ $deleteQueries = match ($resetScope) {
  */
 function hr_import_users(mysqli $db): array
 {
+    // Nazev tabulky resime uvnitr funkce, aby import fungoval i po finalizaci migrace.
+    $slotTable = cb_hr_schema_table($db, 'slot');
     $source = $db->prepare('
         SELECT u.id_user, u.jmeno, u.prijmeni, u.email, u.telefon, u.aktivni,
                DATE(u.vytvoren_smeny) AS datum_nastupu
@@ -305,7 +311,7 @@ function hr_import_users(mysqli $db): array
         ORDER BY id_slot
     ');
     $insertAssignment = $db->prepare('
-        INSERT INTO hr_zarazeni (id_person, id_slot, hlavni, platnost_od, id_user_zadal, vytvoreno, platny)
+        INSERT INTO ' . $slotTable . ' (id_person, id_slot, hlavni, platnost_od, id_user_zadal, vytvoreno, platny)
         VALUES (?, ?, 0, ?, NULL, NOW(), 1)
     ');
 
