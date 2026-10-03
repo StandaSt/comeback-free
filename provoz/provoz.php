@@ -79,10 +79,9 @@ $cbReportPromenneAllowed = false;
 $cbKontrolaGoogleCompareActive = false;
 $cbKontrolaGoogleCompareUrl = '';
 
-// Standardni formulare spravy pobocek se zpracovavaji pred prvnim HTML vystupem.
+// POST spravy pobocek vyrizuje spolecny index pred HTML; zde pripravime pouze zobrazeni.
 if ($cbPage === 'nastaveni_pobocky') {
     require_once __DIR__ . '/lib/nastaveni_pobocky.php';
-    cb_provoz_nastaveni_pobocky_handle_post();
     $cbNastaveniPobocky = cb_provoz_nastaveni_pobocky_data(db(), cb_provoz_nastaveni_user_id());
     $cbNastaveniFirmy = [];
     foreach ($cbNastaveniPobocky['pobocky'] as $cbNastaveniPobocka) {

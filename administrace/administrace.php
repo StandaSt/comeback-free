@@ -146,6 +146,11 @@ if (
     header('Content-Type: application/json; charset=utf-8');
 
     try {
+        // Pravo 103 chrani vsechny akce sekce, vcetne cteni, pred pristupem k datum.
+        if (!cb_pravo_ma(103)) {
+            http_response_code(403);
+            throw new CbUserVisibleException('Nemáte právo spravovat individuální práva uživatelů (103).');
+        }
         $action = (string)($_POST['action'] ?? '');
         if ($action === 'exception_users') {
             echo json_encode([

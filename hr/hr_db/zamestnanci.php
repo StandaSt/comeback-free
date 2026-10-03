@@ -3,7 +3,10 @@ declare(strict_types=1);
 
 /**
  * DB dotazy pro seznam, detail a kontrolu kompletnosti zamestnancu v HR.
+ * Cteni respektuje firemni pristup a hlavni pobocku vedouciho.
  */
+
+require_once __DIR__ . '/hr_zamestnanci_pristup.php';
 
 /**
  * Nacte seznam aktivnich zamestnancu.
@@ -14,6 +17,7 @@ function hr_fetch_employees(mysqli $db, int $limit = 100): array
     $limit = max(1, min($limit, 500));
     $cbUser = $_SESSION['cb_user'] ?? [];
     $idUser = is_array($cbUser) ? (int)($cbUser['id_user'] ?? 0) : 0;
+    $branchScopeSql = hr_zamestnanci_pobocka_sql($db, $idUser);
     $allowedFirmy = cb_firemni_pristup_firmy($db, $idUser);
     if ($allowedFirmy === []) {
         return [];
@@ -62,7 +66,7 @@ function hr_fetch_employees(mysqli $db, int $limit = 100): array
         LEFT JOIN pobocka pob
             ON pob.id_pob = pp.id_pob
         WHERE p.aktivni = 1
-          AND p.id_firma IN ({$allowedFirmySql})
+          AND p.id_firma IN ({$allowedFirmySql}) AND {$branchScopeSql}
         ORDER BY p.id_person DESC
         LIMIT ?
     ";
@@ -197,9 +201,10 @@ function hr_fetch_employee_list(mysqli $db): array
 
     $cbUser = $_SESSION['cb_user'] ?? [];
     $idUser = is_array($cbUser) ? (int)($cbUser['id_user'] ?? 0) : 0;
+    $branchScopeSql = hr_zamestnanci_pobocka_sql($db, $idUser);
     $allowedFirmy = cb_firemni_pristup_firmy($db, $idUser);
     $allowedFirmySql = $allowedFirmy === [] ? '0' : implode(',', array_map('intval', $allowedFirmy));
-    $where = ['p.id_firma IN (' . $allowedFirmySql . ')'];
+    $where = ['p.id_firma IN (' . $allowedFirmySql . ')', $branchScopeSql];
     $filterSqlMap = [
         'id' => 'CAST(p.id_person AS CHAR)',
         'zamestnanec' => "TRIM(CONCAT(COALESCE(ou.prijmeni, ''), ' ', COALESCE(ou.jmeno, ''), ' ', COALESCE(ou.druhe_jmeno, '')))",
@@ -277,9 +282,9 @@ function hr_fetch_employee_list(mysqli $db): array
     }
 
     $optionQueries = [
-        'zarazeni' => "SELECT DISTINCT cs.slot AS value FROM {$slotTable} pz INNER JOIN hr_person p ON p.id_person = pz.id_person INNER JOIN cis_slot cs ON cs.id_slot = pz.id_slot WHERE pz.platny = 1 AND (pz.platnost_od IS NULL OR pz.platnost_od <= CURDATE()) AND (pz.platnost_do IS NULL OR pz.platnost_do >= CURDATE()) AND p.id_firma IN ({$allowedFirmySql}) AND cs.slot <> '' ORDER BY cs.slot",
-        'pracoviste' => "SELECT DISTINCT pob.nazev AS value FROM hr_pracoviste pp INNER JOIN hr_person p ON p.id_person = pp.id_person INNER JOIN pobocka pob ON pob.id_pob = pp.id_pob WHERE pp.platny = 1 AND (pp.platnost_od IS NULL OR pp.platnost_od <= CURDATE()) AND (pp.platnost_do IS NULL OR pp.platnost_do >= CURDATE()) AND p.id_firma IN ({$allowedFirmySql}) AND pob.nazev <> '' ORDER BY pob.nazev",
-        'vztah' => "SELECT DISTINCT pvt.nazev AS value FROM hr_pracovni_vztah pv INNER JOIN hr_person p ON p.id_person = pv.id_person INNER JOIN hr_cis_pracovni_vztah_typ pvt ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ WHERE pv.platny = 1 AND p.id_firma IN ({$allowedFirmySql}) AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE()) AND pvt.nazev <> '' ORDER BY pvt.nazev",
+        'zarazeni' => "SELECT DISTINCT cs.slot AS value FROM {$slotTable} pz INNER JOIN hr_person p ON p.id_person = pz.id_person INNER JOIN cis_slot cs ON cs.id_slot = pz.id_slot WHERE pz.platny = 1 AND (pz.platnost_od IS NULL OR pz.platnost_od <= CURDATE()) AND (pz.platnost_do IS NULL OR pz.platnost_do >= CURDATE()) AND p.id_firma IN ({$allowedFirmySql}) AND {$branchScopeSql} AND cs.slot <> '' ORDER BY cs.slot",
+        'pracoviste' => "SELECT DISTINCT pob.nazev AS value FROM hr_pracoviste pp INNER JOIN hr_person p ON p.id_person = pp.id_person INNER JOIN pobocka pob ON pob.id_pob = pp.id_pob WHERE pp.platny = 1 AND (pp.platnost_od IS NULL OR pp.platnost_od <= CURDATE()) AND (pp.platnost_do IS NULL OR pp.platnost_do >= CURDATE()) AND p.id_firma IN ({$allowedFirmySql}) AND {$branchScopeSql} AND pob.nazev <> '' ORDER BY pob.nazev",
+        'vztah' => "SELECT DISTINCT pvt.nazev AS value FROM hr_pracovni_vztah pv INNER JOIN hr_person p ON p.id_person = pv.id_person INNER JOIN hr_cis_pracovni_vztah_typ pvt ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ WHERE pv.platny = 1 AND p.id_firma IN ({$allowedFirmySql}) AND {$branchScopeSql} AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE()) AND pvt.nazev <> '' ORDER BY pvt.nazev",
     ];
     $filterOptions = [];
     foreach ($optionQueries as $key => $sql) {
@@ -578,7 +583,7 @@ function hr_fetch_employee(mysqli $db, int $id): ?array
     $slotTable = cb_hr_schema_table($db, 'slot');
     $cbUser = $_SESSION['cb_user'] ?? [];
     $idUser = is_array($cbUser) ? (int)($cbUser['id_user'] ?? 0) : 0;
-    if (!cb_firemni_pristup_muze_osobu($db, $idUser, $id)) {
+    if (!hr_zamestnanci_muze_osobu($db, $idUser, $id)) {
         return null;
     }
     $sql = "

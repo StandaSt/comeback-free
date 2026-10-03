@@ -22,7 +22,8 @@ function cb_helpdesk_snapshot_load_user(mysqli $conn, int $idUser): array
         'role_nazev' => null,
     ];
 
-    $stmt = $conn->prepare('
+    // Nazvy roli spojujeme do jednoho textu; SQL oddelovac musi zustat uvnitr jednoho PHP retezce.
+    $stmt = $conn->prepare("
         SELECT
             ou.jmeno,
             ou.prijmeni,
@@ -34,7 +35,7 @@ function cb_helpdesk_snapshot_load_user(mysqli $conn, int $idUser): array
         WHERE hp.id_person = ?
         GROUP BY hp.id_person, ou.jmeno, ou.prijmeni
         LIMIT 1
-    ');
+    ");
     if ($stmt instanceof mysqli_stmt) {
         $stmt->bind_param('i', $idUser);
         $stmt->execute();

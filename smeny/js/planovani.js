@@ -1,7 +1,8 @@
-/* Účel souboru: Ovládá tříkrokové plánování kliknutím na začátek, zaměstnance a konec směny. */
+/* Účel: Ovládá tříkrokové plánování V2 a zobrazuje intervaly, Kdykoliv i volno HPP. */
 (function () {
   'use strict';
 
+  // Inicializace funguje i po výměně obsahu společnou navigací IS.
   function init(root) {
     (root || document).querySelectorAll('[data-smeny-planner]').forEach(function (planner) {
       if (!(planner instanceof HTMLElement) || planner.dataset.ready === '1') return;
@@ -51,11 +52,13 @@
           button.type = 'button';
           button.className = 'smeny_planner_person';
           button.dataset.person = String(person.id_person);
-          var request = person.pozadavek_od ? 'požadavek ' + person.pozadavek_od + '–' + person.pozadavek_do : (Number(person.je_hpp) === 1 ? 'HPP – bez volna' : 'bez požadavku');
+          var request = Number(person.je_hpp) === 1
+            ? (Number(person.ma_volno) === 1 ? 'HPP – požadované volno' : 'HPP – bez volna')
+            : (person.pozadavek_od ? (person.rezim === 'kdykoliv' ? 'Kdykoliv ' : 'požadavek ') + person.pozadavek_od + '–' + person.pozadavek_do : 'bez požadavku');
           button.innerHTML = '<strong></strong><span></span><small></small>';
           button.querySelector('strong').textContent = person.jmeno || ('Osoba #' + person.id_person);
           button.querySelector('span').textContent = request;
-          button.querySelector('small').textContent = String(person.hodin_tyden).replace('.', ',') + ' h tento týden · ' + person.hlavni_pobocka;
+          button.querySelector('small').textContent = String(person.hodin_tyden).replace('.', ',') + ' h tento týden v IS · ' + person.hlavni_pobocka;
           peopleList.appendChild(button);
         });
       }
@@ -95,7 +98,11 @@
         form.elements.bez_ohledu.value = ignore instanceof HTMLInputElement && ignore.checked ? '1' : '0';
         form.submit();
       });
-      if (ignore instanceof HTMLInputElement) ignore.addEventListener('change', renderPeople);
+      // Po změně filtru je nutné vybrat člověka znovu, aby nezůstal skrytý výběr.
+      if (ignore instanceof HTMLInputElement) ignore.addEventListener('change', function () {
+        if (selection) selection.person = null;
+        renderPeople();
+      });
     });
   }
 

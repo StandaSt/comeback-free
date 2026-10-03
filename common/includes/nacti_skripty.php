@@ -87,6 +87,8 @@ window.CB_PC_SESSION_TOKEN = <?= json_encode((string)($_SESSION['cb_pc_session_t
 <script src="<?= h(cb_root_url('smeny/js/sablony.js') . '?v=' . (is_file(__DIR__ . '/../../smeny/js/sablony.js') ? (string)filemtime(__DIR__ . '/../../smeny/js/sablony.js') : '1')) ?>"></script>
 <?php // Klikací plánování zaměstnanců do směn. ?>
 <script src="<?= h(cb_root_url('smeny/js/planovani.js') . '?v=' . (is_file(__DIR__ . '/../../smeny/js/planovani.js') ? (string)filemtime(__DIR__ . '/../../smeny/js/planovani.js') : '1')) ?>"></script>
+<?php // Otevření oznámení směn a souhlasu v modálu. ?>
+<script src="<?= h(cb_root_url('smeny/js/oznameni.js') . '?v=' . (string)filemtime(__DIR__ . '/../../smeny/js/oznameni.js')) ?>"></script>
 <?php // Jednotné uživatelské texty chyb Administrace. ?>
 <script src="<?= h($cbAdministraceChybyJsUrl) ?>"></script>
 <?php // Ulozeni prav role v Administraci. ?>
@@ -122,6 +124,7 @@ window.CB_MODULY_NAVIGACE = {
   adminFirmaPridat: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(105) ? 'true' : 'false' ?>,
   adminLogChyby: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(106) ? 'true' : 'false' ?>,
   adminUzivatele: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(107) ? 'true' : 'false' ?>,
+  adminIndividualniPrava: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(103) ? 'true' : 'false' ?>,
   adminExportDb: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(109) ? 'true' : 'false' ?>,
   aiAnalytikAllowed: <?= function_exists('cb_pravo_ma') && is_array($_SESSION['prava_stav'] ?? null) && array_key_exists(210, $_SESSION['prava_stav']) && cb_pravo_ma(210) ? 'true' : 'false' ?>,
   initialAutoLoad: true

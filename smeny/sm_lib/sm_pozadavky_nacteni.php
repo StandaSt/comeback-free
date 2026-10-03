@@ -1,62 +1,61 @@
 <?php
 declare(strict_types=1);
 
-/*
- * Načte dříve uložené požadavky osoby a obsazené dny volna HPP.
- */
+/* Účel: Načte uložený týden dostupnosti V2, volbu Kdykoliv a rezervace volna HPP. */
 
-/** @return array{blocks:array<string,array{od:string,do:string}>,own_day:string,occupied:array<string,bool>,saved:bool,saved_at:string} */
+/** Vrátí jednotný prázdný stav pro formulář i osobu bez uloženého týdne. */
+function cb_smeny_pozadavky_prazdne(): array
+{
+    return ['blocks' => [], 'own_day' => '', 'occupied' => [], 'saved' => false,
+        'saved_at' => '', 'saved_by' => '', 'anytime' => false];
+}
+
+/** Kalendářní data se odvozují od týdne; v DB stačí číslo dne 1–7. */
 function cb_smeny_pozadavky_nacist(mysqli $db, array $person, array $week): array
 {
-    $data = ['blocks' => [], 'own_day' => '', 'occupied' => [], 'saved' => false, 'saved_at' => ''];
-    $idFirma = (int)$person['id_firma'];
+    $data = cb_smeny_pozadavky_prazdne();
     $idPerson = (int)$person['id_person'];
     $startDay = (string)$week['start_day'];
-
-    $stmt = $db->prepare('
-        SELECT sp.id_smeny_pozadavek, DATE_FORMAT(sp.odeslano, "%Y-%m-%d %H:%i:%s") AS odeslano
-        FROM smeny_tyden st
-        INNER JOIN smeny_pozadavek sp ON sp.id_smeny_tyden = st.id_smeny_tyden
-        WHERE st.id_firma = ? AND st.start_day = ? AND sp.id_person = ?
-        LIMIT 1
-    ');
-    $stmt->bind_param('isi', $idFirma, $startDay, $idPerson);
+    $stmt = $db->prepare('SELECT p.id_smeny_pozadavek, p.rezim, p.volno_datum, p.ulozeno,
+        TRIM(CONCAT_WS(" ", ou.prijmeni, ou.jmeno)) AS ulozil
+        FROM smeny_pozadavek p
+        LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje=(
+            SELECT MAX(o.id_osobni_udaje) FROM hr_osobni_udaje o
+            WHERE o.id_person=p.ulozil_id_person AND o.platny=1)
+        WHERE p.id_person=? AND p.tyden_od=? LIMIT 1');
+    $stmt->bind_param('is', $idPerson, $startDay);
     $stmt->execute();
-    $requestRow = $stmt->get_result()->fetch_assoc() ?: [];
-    $idRequest = (int)($requestRow['id_smeny_pozadavek'] ?? 0);
+    $row = $stmt->get_result()->fetch_assoc();
     $stmt->close();
-
-    if ($idRequest > 0) {
+    if ($row !== null) {
         $data['saved'] = true;
-        $data['saved_at'] = (string)($requestRow['odeslano'] ?? '');
-        $stmt = $db->prepare('SELECT datum, TIME_FORMAT(cas_od, "%H:%i") AS cas_od, TIME_FORMAT(cas_do, "%H:%i") AS cas_do FROM smeny_pozadavek_blok WHERE id_smeny_pozadavek = ? ORDER BY datum, cas_od');
+        $data['saved_at'] = (string)$row['ulozeno'];
+        $data['saved_by'] = (string)$row['ulozil'];
+        $data['anytime'] = $row['rezim'] === 'kdykoliv';
+        $data['own_day'] = (string)($row['volno_datum'] ?? '');
+        $idRequest = (int)$row['id_smeny_pozadavek'];
+        $stmt = $db->prepare('SELECT den_tydne, TIME_FORMAT(cas_od,"%H:%i") cas_od,
+            TIME_FORMAT(cas_do,"%H:%i") cas_do FROM smeny_pozadavek_den
+            WHERE id_smeny_pozadavek=? ORDER BY den_tydne');
         $stmt->bind_param('i', $idRequest);
         $stmt->execute();
         $result = $stmt->get_result();
-        while ($row = $result->fetch_assoc()) {
-            $data['blocks'][(string)$row['datum']] = ['od' => (string)$row['cas_od'], 'do' => (string)$row['cas_do']];
+        while ($block = $result->fetch_assoc()) {
+            $date = $week['start']->modify('+' . ((int)$block['den_tydne'] - 1) . ' days')->format('Y-m-d');
+            $data['blocks'][$date] = ['od' => (string)$block['cas_od'], 'do' => (string)$block['cas_do']];
         }
         $stmt->close();
-
-        $stmt = $db->prepare('SELECT datum FROM smeny_hpp_volno WHERE id_smeny_pozadavek = ? LIMIT 1');
-        $stmt->bind_param('i', $idRequest);
-        $stmt->execute();
-        $data['own_day'] = (string)($stmt->get_result()->fetch_assoc()['datum'] ?? '');
-        $stmt->close();
     }
-
     if ((int)$person['je_hpp'] === 1 && (int)$person['id_pob'] > 0 && (int)$person['id_slot'] > 0) {
-        $endDay = $week['end']->format('Y-m-d');
-        $idPob = (int)$person['id_pob'];
+        $idBranch = (int)$person['id_pob'];
         $idSlot = (int)$person['id_slot'];
-        $stmt = $db->prepare('SELECT datum, id_person FROM smeny_hpp_volno WHERE id_pob = ? AND id_slot = ? AND datum BETWEEN ? AND ?');
-        $stmt->bind_param('iiss', $idPob, $idSlot, $startDay, $endDay);
+        $stmt = $db->prepare('SELECT volno_datum FROM smeny_pozadavek
+            WHERE volno_id_pob=? AND volno_id_slot=? AND tyden_od=? AND id_person<>?');
+        $stmt->bind_param('iisi', $idBranch, $idSlot, $startDay, $idPerson);
         $stmt->execute();
         $result = $stmt->get_result();
         while ($row = $result->fetch_assoc()) {
-            if ((int)$row['id_person'] !== $idPerson) {
-                $data['occupied'][(string)$row['datum']] = true;
-            }
+            $data['occupied'][(string)$row['volno_datum']] = true;
         }
         $stmt->close();
     }

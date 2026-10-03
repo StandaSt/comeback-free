@@ -1,123 +1,88 @@
 <?php
 declare(strict_types=1);
+/* Účel: Načte rozpis V2, nezávislý otisk potřeby a pracovní směny. Zveřejněné verze zachovává. */
 
-/* Účel souboru: Načte nebo založí konkrétní týdenní rozpis a spravuje jeho otisk vybrané šablony. */
-
-function cb_smeny_planovani_tyden_id(mysqli $db, array $branch, array $week, int $idPerson): int
+/** Plánovač potřebuje i právě probíhající týden kvůli pozdějším změnám směn. */
+function cb_smeny_planovani_tydny(?DateTimeImmutable $now = null): array
 {
-    $idFirma = (int)$branch['id_firma'];
-    $start = (string)$week['start_day'];
-    $deadline = $week['deadline']->format('Y-m-d H:i:s');
-    $stmt = $db->prepare('INSERT INTO smeny_tyden (id_firma, start_day, pozadavky_deadline, stav, vytvoril_id_person) VALUES (?, ?, ?, "uzavreny", ?) ON DUPLICATE KEY UPDATE id_smeny_tyden = LAST_INSERT_ID(id_smeny_tyden)');
-    $stmt->bind_param('issi', $idFirma, $start, $deadline, $idPerson);
-    $stmt->execute();
-    $idWeek = (int)$db->insert_id;
-    $stmt->close();
-    if ($idWeek <= 0) {
-        $stmt = $db->prepare('SELECT id_smeny_tyden FROM smeny_tyden WHERE id_firma = ? AND start_day = ? LIMIT 1');
-        $stmt->bind_param('is', $idFirma, $start);
-        $stmt->execute();
-        $idWeek = (int)($stmt->get_result()->fetch_assoc()['id_smeny_tyden'] ?? 0);
-        $stmt->close();
-    }
-    return $idWeek;
+    $now ??= new DateTimeImmutable('now',new DateTimeZone('Europe/Prague'));
+    $weeks = cb_smeny_pozadavky_tydny($now->modify('-7 days'));
+    $future = cb_smeny_pozadavky_tydny($now);
+    $weeks[] = $future[3];
+    foreach ($weeks as $index => &$week) { $week['index'] = $index; $week['open'] = $now <= $week['deadline']; }
+    unset($week);
+    return $weeks;
 }
 
-/** @return array<string,mixed>|null */
+/** Odvozený stav slouží UI; autoritou jsou čísla verzí a příznak připravenosti. */
+function cb_smeny_planovani_stav(array $plan): string
+{
+    return $plan['pracovni_verze'] === null ? 'zverejneny' : ((int)$plan['pripraveno'] === 1 ? 'pripraveny' : 'rozpracovany');
+}
+
+/** Načte hlavičku a obsah z jedné verze, nikdy nespojuje pracovní a veřejné směny. */
 function cb_smeny_planovani_nacist(mysqli $db, int $idBranch, string $startDay): ?array
 {
-    $stmt = $db->prepare('SELECT r.*, t.start_day, s.nazev AS sablona_nazev FROM smeny_rozpis r INNER JOIN smeny_tyden t ON t.id_smeny_tyden = r.id_smeny_tyden LEFT JOIN smeny_sablona s ON s.id_smeny_sablona = r.id_smeny_sablona WHERE r.id_pob = ? AND t.start_day = ? AND r.stav <> "zruseny" ORDER BY r.verze DESC LIMIT 1');
-    $stmt->bind_param('is', $idBranch, $startDay);
-    $stmt->execute();
-    $plan = $stmt->get_result()->fetch_assoc() ?: null;
-    $stmt->close();
-    if (!is_array($plan)) return null;
-    $plan['blocks'] = [];
-    $stmt = $db->prepare('SELECT b.*, o.id_smeny_obsazeni, o.id_person, TRIM(CONCAT_WS(" ", u.jmeno, u.prijmeni)) AS pracovnik FROM smeny_rozpis_blok b LEFT JOIN smeny_obsazeni o ON o.id_smeny_rozpis_blok=b.id_smeny_rozpis_blok AND o.stav="prirazeno" LEFT JOIN hr_osobni_udaje u ON u.id_osobni_udaje=(SELECT MAX(u2.id_osobni_udaje) FROM hr_osobni_udaje u2 WHERE u2.id_person=o.id_person AND u2.platny=1) WHERE b.id_smeny_rozpis=? AND b.stav<>"zruseny" ORDER BY b.datum,b.poradi,b.id_smeny_rozpis_blok');
+    $stmt = cb_smeny_planovani_sql($db, 'SELECT r.*,p.id_firma FROM smeny_rozpis r JOIN pobocka p ON p.id_pob=r.id_pob WHERE r.id_pob=? AND r.tyden_od=?', 'is', [$idBranch,$startDay]);
+    $plan = $stmt->get_result()->fetch_assoc(); $stmt->close();
+    if ($plan === null) return null;
+    $plan['stav'] = cb_smeny_planovani_stav($plan);
+    $plan['start_day'] = $plan['tyden_od'];
+    $plan['verze'] = (int)($plan['pracovni_verze'] ?? $plan['zverejnena_verze']);
     $idPlan = (int)$plan['id_smeny_rozpis'];
-    $stmt->bind_param('i', $idPlan);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    while ($row = $result->fetch_assoc()) $plan['blocks'][] = $row;
-    $stmt->close();
+    $stmt = cb_smeny_planovani_sql($db, 'SELECT * FROM smeny_rozpis_potreba WHERE id_smeny_rozpis=? ORDER BY den_tydne,poradi,id_smeny_rozpis_potreba', 'i', [$idPlan]);
+    $plan['potreba'] = $stmt->get_result()->fetch_all(MYSQLI_ASSOC); $stmt->close();
+    // Začátky po půlnoci do 04:00 stále patří k předchozímu provoznímu dni.
+    $stmt = cb_smeny_planovani_sql($db, 'SELECT s.*,DATE(DATE_SUB(s.zacatek,INTERVAL 6 HOUR)) datum,TIME_FORMAT(s.zacatek,"%H:%i") cas_od,TIME_FORMAT(s.konec,"%H:%i") cas_do,TRIM(CONCAT_WS(" ",ou.prijmeni,ou.jmeno)) pracovnik FROM smeny_smena s LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje=(SELECT MAX(o.id_osobni_udaje) FROM hr_osobni_udaje o WHERE o.id_person=s.id_person AND o.platny=1) WHERE s.id_smeny_rozpis=? AND s.verze=? ORDER BY s.zacatek,s.id_slot,s.id_smeny_smena', 'ii', [$idPlan,$plan['verze']]);
+    $plan['blocks'] = $stmt->get_result()->fetch_all(MYSQLI_ASSOC); $stmt->close();
     return $plan;
 }
 
+/** Založení probíhá v transakci se zámkem pobočky; šablona může být záměrně vynechána. */
 function cb_smeny_planovani_zalozit(mysqli $db, array $branch, array $week, int $idTemplate, int $idPerson): int
 {
-    $template = cb_smeny_sablona_nacist($db, $idTemplate, [(int)$branch['id_pob'] => $branch]);
-    if ($template === null) throw new CbUserVisibleException('Vybraná šablona nepatří k této pobočce.');
-    $db->begin_transaction();
-    try {
-        $idWeek = cb_smeny_planovani_tyden_id($db, $branch, $week, $idPerson);
-        $idFirma=(int)$branch['id_firma']; $idBranch=(int)$branch['id_pob'];
-        $stmt=$db->prepare('INSERT INTO smeny_rozpis (id_smeny_tyden,id_firma,id_pob,id_smeny_sablona,vytvoril_id_person) VALUES (?,?,?,?,?)');
-        $stmt->bind_param('iiiii',$idWeek,$idFirma,$idBranch,$idTemplate,$idPerson); $stmt->execute();
-        $idPlan=(int)$db->insert_id; $stmt->close();
-        cb_smeny_planovani_vlozit_sablonu($db, $idPlan, $template, $week);
-        cb_smeny_audit_zapis($db,$idPerson,'zalozen','rozpis',$idPlan,null,['id_smeny_sablona'=>$idTemplate,'start_day'=>$week['start_day']]);
-        $db->commit(); return $idPlan;
-    } catch (Throwable $e) { $db->rollback(); throw $e; }
+    $idBranch = (int)$branch['id_pob'];
+    $stmt = cb_smeny_planovani_sql($db, 'INSERT INTO smeny_rozpis (id_pob,tyden_od,vytvoril_id_person) VALUES (?,?,?)', 'isi', [$idBranch,$week['start_day'],$idPerson]);
+    $idPlan = (int)$db->insert_id; $stmt->close();
+    if ($idTemplate > 0) cb_smeny_planovani_sablonu_obnovit($db,$idPlan,$branch,$week,$idTemplate,$idPerson);
+    cb_smeny_audit_zapis($db,$idPerson,'zalozen','rozpis',$idPlan,null,['tyden_od'=>$week['start_day']]);
+    return $idPlan;
 }
 
-/** Vloží aktuální obsah šablony jako samostatný otisk do rozpisu. */
-function cb_smeny_planovani_vlozit_sablonu(mysqli $db, int $idPlan, array $template, array $week): void
+/** Zkopíruje jen hodnoty potřeby. Žádný cizí klíč nespojuje rozpis se šablonou. */
+function cb_smeny_planovani_vlozit_sablonu(mysqli $db, int $idPlan, array $template): void
 {
-    $stmt = $db->prepare('INSERT INTO smeny_rozpis_blok (id_smeny_rozpis,id_smeny_sablona_blok,datum,id_slot,cas_od,cas_do,poradi) VALUES (?,?,?,?,?,?,?)');
-    foreach ($template['blocks'] as $day => $blocks) {
-        $date = $week['start']->modify('+' . ($day - 1) . ' days')->format('Y-m-d');
-        foreach ($blocks as $block) {
-            $idSource = (int)$block['id_smeny_sablona_blok'];
-            $idSlot = (int)$block['id_slot'];
-            $from = (string)$block['cas_od'];
-            $to = (string)$block['cas_do'];
-            $order = (int)$block['poradi'];
-            $stmt->bind_param('iisissi', $idPlan, $idSource, $date, $idSlot, $from, $to, $order);
-            $stmt->execute();
-        }
+    foreach ($template['blocks'] as $day => $blocks) foreach ($blocks as $block) {
+        cb_smeny_planovani_sql($db, 'INSERT INTO smeny_rozpis_potreba (id_smeny_rozpis,den_tydne,id_slot,cas_od,cas_do,poradi) VALUES (?,?,?,?,?,?)', 'iiissi', [$idPlan,$day,(int)$block['id_slot'],$block['cas_od'],$block['cas_do'],(int)$block['poradi']])->close();
     }
-    $stmt->close();
 }
 
-/** Znovu načte šablonu pouze do rozpisu, ve kterém ještě není žádný pracovník. */
+/** Ruční nahrazení pomůcky je dovoleno jen před prvním obsazením a první publikací. */
 function cb_smeny_planovani_sablonu_obnovit(mysqli $db, int $idPlan, array $branch, array $week, int $idTemplate, int $idPerson): void
 {
-    $template = cb_smeny_sablona_nacist($db, $idTemplate, [(int)$branch['id_pob'] => $branch]);
-    if ($template === null) {
-        throw new CbUserVisibleException('Vybraná šablona nepatří k této pobočce.');
+    $plan = cb_smeny_planovani_nacist($db,(int)$branch['id_pob'],(string)$week['start_day']);
+    if ($plan === null || (int)$plan['id_smeny_rozpis'] !== $idPlan || $plan['stav'] !== 'rozpracovany' || $plan['zverejnena_verze'] !== null || $plan['blocks'] !== []) {
+        throw new CbUserVisibleException('Šablonu lze změnit jen v rozpracovaném týdnu před přidáním prvního zaměstnance a před zveřejněním.');
     }
-    $stmt = $db->prepare('SELECT COUNT(*) AS pocet FROM smeny_obsazeni o INNER JOIN smeny_rozpis_blok b ON b.id_smeny_rozpis_blok=o.id_smeny_rozpis_blok WHERE b.id_smeny_rozpis=? AND o.stav="prirazeno"');
-    $stmt->bind_param('i', $idPlan);
-    $stmt->execute();
-    $assigned = (int)($stmt->get_result()->fetch_assoc()['pocet'] ?? 0);
-    $stmt->close();
-    if ($assigned > 0) {
-        throw new CbUserVisibleException('Šablonu lze změnit jen před přidáním prvního zaměstnance.');
-    }
-    $stmt = $db->prepare('SELECT stav FROM smeny_rozpis WHERE id_smeny_rozpis=? LIMIT 1');
-    $stmt->bind_param('i', $idPlan);
-    $stmt->execute();
-    $planState = (string)($stmt->get_result()->fetch_assoc()['stav'] ?? '');
-    $stmt->close();
-    if ($planState !== 'rozpracovany') {
-        throw new CbUserVisibleException('Šablonu lze načíst pouze do rozpracovaného týdne.');
-    }
+    cb_smeny_planovani_sql($db, 'SELECT id_smeny_sablona FROM smeny_sablona WHERE id_smeny_sablona=? FOR UPDATE', 'i', [$idTemplate])->close();
+    $template = cb_smeny_sablona_nacist($db,$idTemplate,[(int)$branch['id_pob']=>$branch]);
+    if ($template === null) throw new CbUserVisibleException('Vybraná šablona nepatří k této pobočce.');
+    cb_smeny_planovani_sql($db, 'DELETE FROM smeny_rozpis_potreba WHERE id_smeny_rozpis=?', 'i', [$idPlan])->close();
+    cb_smeny_planovani_sql($db, 'UPDATE smeny_rozpis SET sablona_nazev=? WHERE id_smeny_rozpis=?', 'si', [$template['nazev'],$idPlan])->close();
+    cb_smeny_planovani_vlozit_sablonu($db,$idPlan,$template);
+    cb_smeny_audit_zapis($db,$idPerson,'obnovena_sablona','rozpis',$idPlan,null,['nazev'=>$template['nazev'],'bloky'=>$template['blocks']]);
+}
 
-    $db->begin_transaction();
-    try {
-        $stmt = $db->prepare('UPDATE smeny_rozpis_blok SET stav="zruseny" WHERE id_smeny_rozpis=? AND stav<>"zruseny"');
-        $stmt->bind_param('i', $idPlan);
-        $stmt->execute();
-        $stmt->close();
-        $stmt = $db->prepare('UPDATE smeny_rozpis SET id_smeny_sablona=? WHERE id_smeny_rozpis=? AND stav="rozpracovany"');
-        $stmt->bind_param('ii', $idTemplate, $idPlan);
-        $stmt->execute();
-        $stmt->close();
-        cb_smeny_planovani_vlozit_sablonu($db, $idPlan, $template, $week);
-        cb_smeny_audit_zapis($db, $idPerson, 'obnovena_sablona', 'rozpis', $idPlan, null, ['id_smeny_sablona' => $idTemplate]);
-        $db->commit();
-    } catch (Throwable $e) {
-        $db->rollback();
-        throw $e;
+/** Otevře úpravy; veřejné řádky zůstanou nedotčené a stabilní klíče se přenesou do kopie. */
+function cb_smeny_planovani_upravit(mysqli $db, array $plan, int $idPerson): void
+{
+    $idPlan = (int)$plan['id_smeny_rozpis'];
+    if ($plan['pracovni_verze'] === null) {
+        $version = (int)$plan['posledni_verze'] + 1;
+        cb_smeny_planovani_sql($db, 'INSERT INTO smeny_smena (id_smeny_rozpis,verze,klic_smeny,id_person,id_slot,zacatek,konec,bez_ohledu_na_pozadavky,ulozil_id_person) SELECT id_smeny_rozpis,?,klic_smeny,id_person,id_slot,zacatek,konec,bez_ohledu_na_pozadavky,? FROM smeny_smena WHERE id_smeny_rozpis=? AND verze=?', 'iiii', [$version,$idPerson,$idPlan,(int)$plan['zverejnena_verze']])->close();
+        cb_smeny_planovani_sql($db, 'UPDATE smeny_rozpis SET posledni_verze=?,pracovni_verze=?,pripraveno=0 WHERE id_smeny_rozpis=?', 'iii', [$version,$version,$idPlan])->close();
+    } else {
+        cb_smeny_planovani_sql($db, 'UPDATE smeny_rozpis SET pripraveno=0 WHERE id_smeny_rozpis=?', 'i', [$idPlan])->close();
     }
+    cb_smeny_audit_zapis($db,$idPerson,'otevreny_upravy','rozpis',$idPlan,null,null);
 }

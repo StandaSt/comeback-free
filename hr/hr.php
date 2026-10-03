@@ -126,7 +126,7 @@ if ($page === 'mzdovy_prehled') {
         );
     }
 }
-if ($page === 'zamestnanec' && (int)($_GET['id'] ?? 0) > 0 && !cb_firemni_pristup_muze_osobu($db, $cbHrIdUser, (int)$_GET['id'])) {
+if ($page === 'zamestnanec' && (int)($_GET['id'] ?? 0) > 0 && !hr_zamestnanci_muze_osobu($db, $cbHrIdUser, (int)$_GET['id'])) {
     http_response_code(403);
     require __DIR__ . '/hr_includes/pripravujeme.php';
     exit;

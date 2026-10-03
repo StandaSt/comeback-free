@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-/* Účel souboru: Vytvoří šablonu nebo změní její název. */
+/* Účel souboru: Vytvoří šablonu V2 pro pobočku nebo změní její název. Firma plyne z pobočky. */
 
 /** @return array<int,array{den_tydne:int,id_slot:int,cas_od:string,cas_do:string,poradi:int}> */
 function cb_smeny_sablona_vychozi_bloky(array $branch): array
@@ -32,6 +32,7 @@ function cb_smeny_sablona_vychozi_bloky(array $branch): array
     return $blocks;
 }
 
+/** Hlavičku a výchozí bloky ukládá společně, aby nikdy nevznikla neúplná šablona. */
 function cb_smeny_sablona_ulozit(mysqli $db, array $branches): int
 {
     $idTemplate = max(0, (int)($_POST['id_smeny_sablona'] ?? 0));
@@ -51,9 +52,8 @@ function cb_smeny_sablona_ulozit(mysqli $db, array $branches): int
     $db->begin_transaction();
     try {
         if ($idTemplate <= 0) {
-            $idCompany = (int)$branches[$idBranch]['id_firma'];
-            $stmt = $db->prepare('INSERT INTO smeny_sablona (id_firma, id_pob, nazev, vytvoril_id_person) VALUES (?, ?, ?, ?)');
-            $stmt->bind_param('iisi', $idCompany, $idBranch, $name, $idPerson);
+            $stmt = $db->prepare('INSERT INTO smeny_sablona (id_pob, nazev, vytvoril_id_person) VALUES (?, ?, ?)');
+            $stmt->bind_param('isi', $idBranch, $name, $idPerson);
             $stmt->execute();
             $idTemplate = (int)$db->insert_id;
             $stmt->close();

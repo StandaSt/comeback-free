@@ -209,6 +209,7 @@
     if (areaId === 2) { return 'HR'; }
     if (areaId === 3) { return 'Směny'; }
     if (areaId === 4) { return 'Úkoly'; }
+    if (areaId === 5) { return 'Obecný problém'; }
     return 'Nezařazeno';
   }
 

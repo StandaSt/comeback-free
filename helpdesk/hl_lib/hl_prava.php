@@ -1,5 +1,5 @@
 <?php
-// helpdesk/hl_lib/hl_prava.php * Verze: V1 * Aktualizace: 20.06.2026
+// Ucel souboru: Spravuje oblasti HelpDesku a overuje pristup k tiketum podle firmy, autora a prav k modulum.
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../common/lib/moduly.php';
@@ -12,14 +12,21 @@ function cb_helpdesk_areas(): array
         'hr' => ['id' => 2, 'label' => 'HR'],
         'smeny' => ['id' => 3, 'label' => 'Směny'],
         'ukoly' => ['id' => 4, 'label' => 'Úkoly'],
+        'obecne' => ['id' => 5, 'label' => 'Obecný problém'],
     ];
 }
 
 function cb_helpdesk_allowed_areas(): array
 {
+    // HelpDesk admin musi spravovat vsechny oblasti i bez samostatnych vstupnich prav k jejich modulum.
+    if (cb_helpdesk_is_admin()) {
+        return cb_helpdesk_areas();
+    }
+
     $areas = [];
     foreach (cb_helpdesk_areas() as $key => $area) {
-        if (cb_modul_ma_pristup($key)) {
+        // Obecna oblast patri vsem; modulove oblasti se nadale ridi vstupnimi pravy uzivatele.
+        if ($key === 'obecne' || cb_modul_ma_pristup($key)) {
             $areas[$key] = $area;
         }
     }
@@ -55,7 +62,14 @@ function cb_helpdesk_allowed_area_condition(string $tableAlias = 'h'): string
         return '0 = 1';
     }
 
-    return $tableAlias . '.modul IN (' . implode(', ', $ids) . ')';
+    $condition = $tableAlias . '.modul IN (' . implode(', ', $ids) . ')';
+    $idUser = cb_helpdesk_current_user_id();
+    if ($idUser > 0) {
+        // Autor musi videt vlastni tiket i tehdy, kdyz jej zaradil do modulu bez sveho vstupniho prava.
+        $condition = '(' . $condition . ' OR ' . $tableAlias . '.id_user_zalozil = ' . (string)$idUser . ')';
+    }
+
+    return $condition;
 }
 
 function cb_helpdesk_current_user_id(): int
@@ -137,6 +151,7 @@ function cb_helpdesk_module_id(mixed $value): int
         'hr' => 2,
         'smeny' => 3,
         'ukoly' => 4,
+        'obecne' => 5,
         default => 1,
     };
 }
@@ -177,16 +192,16 @@ function cb_helpdesk_can_view(mysqli $conn, int $idHelpdesk, int $idUser): bool
         return false;
     }
 
-    if (!in_array((int)$modul, array_column(cb_helpdesk_allowed_areas(), 'id'), true)) {
-        return false;
-    }
-
     if (cb_helpdesk_is_admin()) {
         return true;
     }
 
     if ((int)$idZalozil === $idUser) {
         return true;
+    }
+
+    if (!in_array((int)$modul, array_column(cb_helpdesk_allowed_areas(), 'id'), true)) {
+        return false;
     }
 
     $visibility = cb_helpdesk_visibility_value($verejny);

@@ -1,5 +1,5 @@
 <?php
-// Založí tiket v jedné transakci a při technickém selhání připraví konkrétní adminskou notifikaci.
+// Založí tiket ve zvolené oblasti v jedné transakci a při technickém selhání připraví konkrétní adminskou notifikaci.
 declare(strict_types=1);
 
 if (!defined('CB_HELPDESK_DISPATCH_INTERNAL')) {
@@ -56,9 +56,9 @@ try {
         default => 1,
     };
     $modulKey = strtolower(trim((string)($data['modul'] ?? $_SESSION['cb_helpdesk_source_module'] ?? '')));
-    $allowedAreas = cb_helpdesk_allowed_areas();
-    if (!isset($allowedAreas[$modulKey])) {
-        throw new CbUserVisibleException('Vyberte oblast, ke které máte přístup.');
+    $ticketAreas = cb_helpdesk_areas();
+    if (!isset($ticketAreas[$modulKey])) {
+        throw new CbUserVisibleException('Vyberte platnou oblast požadavku.');
     }
     $modul = cb_helpdesk_area_id($modulKey);
 

@@ -2,15 +2,16 @@
 declare(strict_types=1);
 
 /*
- * Desktopová stránka pro zadání požadavků jednoho pracovníka na celý týden.
+ * Desktopový formulář týdenní dostupnosti V2: intervaly, Kdykoliv nebo den volna HPP.
  */
 
 $smFlash = $_SESSION['cb_smeny_pozadavky_flash'] ?? null;
 unset($_SESSION['cb_smeny_pozadavky_flash']);
-$smData = $smPerson ? cb_smeny_pozadavky_nacist($smDb, $smPerson, $smWeek) : ['blocks' => [], 'own_day' => '', 'occupied' => [], 'saved' => false, 'saved_at' => ''];
+$smData = $smPerson ? cb_smeny_pozadavky_nacist($smDb, $smPerson, $smWeek) : cb_smeny_pozadavky_prazdne();
 $smCopiedWeek = cb_smeny_pozadavky_kopie($smDb, $smPerson, $smWeeks, $smWeekIndex);
 if ($smCopiedWeek !== null) {
     $smData['blocks'] = $smCopiedWeek['blocks'];
+    $smData['anytime'] = $smCopiedWeek['anytime'];
 }
 $smHasMainBranch = $smPerson !== null && (int)$smPerson['id_pob'] > 0;
 $smHasHppSetup = $smHasMainBranch && (int)$smPerson['id_slot'] > 0;
@@ -25,10 +26,11 @@ if ($smPerson !== null && $smWeekIndex < 3) {
 $smCanCopyWeek = $smPerson !== null
     && (int)$smPerson['je_hpp'] !== 1
     && !empty($smData['saved'])
-    && $smData['blocks'] !== []
     && $smWeekIndex < 3
     && !empty($smWeeks[$smWeekIndex + 1]['open'])
     && !$smNextWeekSaved;
+// I prázdný týden nebo HPP bez volna musí jít poprvé výslovně odeslat.
+$smNeedsSave = empty($smData['saved']) || $smCopiedWeek !== null;
 $smSavedAtLabel = '';
 if ((string)$smData['saved_at'] !== '') {
     $smSavedAt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', (string)$smData['saved_at'], new DateTimeZone('Europe/Prague'));
@@ -64,11 +66,11 @@ if ((string)$smData['saved_at'] !== '') {
             <span><strong><?= h((string)($smPerson['jmeno'] ?: 'Pracovník')) ?></strong></span>
             <span>Hlavní pobočka: <strong><?= h((string)($smPerson['pobocka'] ?: 'není nastavena')) ?></strong></span>
             <span>Pracovní slot: <strong><?= h((string)($smPerson['pozice'] ?: 'není nastaven')) ?></strong></span>
-            <span>Termín: <strong>středa <?= h($smWeek['deadline']->format('j. n. Y')) ?> ve 20:00</strong></span>
+            <span>Termín: <strong>středa <?= h($smWeek['deadline']->format('j. n. Y')) ?> v <?= h($smWeek['deadline']->format('H:i')) ?></strong></span>
             <?php if ($smCopiedWeek !== null): ?>
                 <span class="smeny_request_state smeny_request_state--changed" data-smeny-save-state>Požadavky byly převzaty z týdne <?= h($smCopiedWeek['source_label']) ?> a zatím nejsou uložené.</span>
             <?php elseif (!empty($smData['saved'])): ?>
-                <span class="smeny_request_state smeny_request_state--saved" data-smeny-save-state>Uložil <strong><?= h((string)($smPerson['jmeno'] ?: 'Pracovník')) ?></strong> dne <strong><?= h($smSavedAtLabel) ?></strong>.</span>
+                <span class="smeny_request_state smeny_request_state--saved" data-smeny-save-state>Uložil <strong><?= h((string)($smData['saved_by'] ?: 'Pracovník')) ?></strong> dne <strong><?= h($smSavedAtLabel) ?></strong>.</span>
             <?php else: ?>
                 <span class="smeny_request_state" data-smeny-save-state>Požadavky pro tento týden zatím nejsou uložené.</span>
             <?php endif; ?>
@@ -81,6 +83,7 @@ if ((string)$smData['saved_at'] !== '') {
         <form method="post" action="<?= h(cb_root_url('index.php?m=smeny&page=pozadavky&week=' . $smWeekIndex)) ?>" class="smeny_requests_form" data-smeny-requests-form data-smeny-saved="<?= !empty($smData['saved']) ? '1' : '0' ?>">
             <input type="hidden" name="action" value="smeny_pozadavky_ulozit">
             <input type="hidden" name="week" value="<?= $smWeekIndex ?>">
+            <input type="hidden" name="tyden_od" value="<?= h((string)$smWeek['start_day']) ?>">
             <input type="hidden" name="cb_crf" value="<?= h(cb_crf_token()) ?>">
 
             <?php if ((int)$smPerson['je_hpp'] === 1): ?>
@@ -108,16 +111,18 @@ if ((string)$smData['saved_at'] !== '') {
             <?php else: ?>
                 <div class="smeny_requests_help">
                     <strong>Nastavte pouze dny, kdy chcete pracovat</strong>
+                    <label><input type="checkbox" name="kdykoliv" value="1" data-smeny-anytime<?= $smData['anytime'] ? ' checked' : '' ?><?= !$smCanSave ? ' disabled' : '' ?>> Kdykoliv – celý týden po celou otevírací dobu hlavní pobočky</label>
                 </div>
                 <?php if (!$smHasMainBranch): ?>
                     <p class="smeny_notice smeny_notice--error">V HR chybí hlavní pobočka. Bez ní nelze požadavky uložit ani určit výchozí konec pracovní doby.</p>
                 <?php endif; ?>
-                <div class="smeny_request_days">
+                <fieldset class="smeny_request_days smeny_request_intervals" data-smeny-intervals<?= $smData['anytime'] ? ' hidden disabled' : '' ?>>
                     <?php foreach ($smWeek['days'] as $smDayIndex => $smDay): ?>
                         <?php
                         $smBlock = $smData['blocks'][$smDay['date']] ?? null;
                         $smOpeningIndex = cb_smeny_pozadavky_cas_na_index('10:00');
-                        $smRangeStep = 2;
+                        // Čtyři patnáctiminutové indexy tvoří hodinový krok posuvníku.
+                        $smRangeStep = 4;
                         $smMinimumDuration = 12;
                         $smClosing = trim((string)($smPerson[$smDay['closing_key']] ?? ''));
                         $smClosingLabel = $smClosing !== '' ? substr($smClosing, 0, 5) : 'není nastaven';
@@ -158,8 +163,8 @@ if ((string)$smData['saved_at'] !== '') {
                                     <span><?= h($smClosingLabel) ?></span>
                                 </div>
                                 <div class="smeny_request_range_track" data-smeny-range-track style="--smeny-range-start:<?= h(number_format($smStartPercent, 3, '.', '')) ?>%;--smeny-range-end:<?= h(number_format($smEndPercent, 3, '.', '')) ?>%">
-                                    <input type="range" min="<?= $smOpeningIndex ?>" max="<?= $smClosingIndex ?>" step="2" value="<?= $smStartIndex ?>" aria-label="Začátek požadavku" data-smeny-start<?= !$smDayAvailable ? ' disabled' : '' ?>>
-                                    <input type="range" min="<?= $smOpeningIndex ?>" max="<?= $smClosingIndex ?>" step="2" value="<?= $smEndIndex ?>" aria-label="Konec požadavku" data-smeny-end<?= !$smDayAvailable ? ' disabled' : '' ?>>
+                                    <input type="range" min="<?= $smOpeningIndex ?>" max="<?= $smClosingIndex ?>" step="<?= $smRangeStep ?>" value="<?= $smStartIndex ?>" aria-label="Začátek požadavku" data-smeny-start<?= !$smDayAvailable ? ' disabled' : '' ?>>
+                                    <input type="range" min="<?= $smOpeningIndex ?>" max="<?= $smClosingIndex ?>" step="<?= $smRangeStep ?>" value="<?= $smEndIndex ?>" aria-label="Konec požadavku" data-smeny-end<?= !$smDayAvailable ? ' disabled' : '' ?>>
                                 </div>
                                 <input type="hidden" name="blocks[<?= h($smDay['date']) ?>][od]" value="<?= $smBlock ? h($smStartTime) : '' ?>" data-smeny-start-value>
                                 <input type="hidden" name="blocks[<?= h($smDay['date']) ?>][do]" value="<?= $smBlock ? h($smEndTime) : '' ?>" data-smeny-end-value>
@@ -167,16 +172,16 @@ if ((string)$smData['saved_at'] !== '') {
                             <button type="button" class="smeny_request_clear" data-smeny-clear<?= (!$smBlock || !$smDayAvailable) ? ' disabled' : '' ?>>Vymazat den</button>
                         </article>
                     <?php endforeach; ?>
-                </div>
+                </fieldset>
             <?php endif; ?>
 
             <?php if ($smCanSave || $smCanCopyWeek): ?>
-                <div class="smeny_requests_actions" data-smeny-actions<?= (!$smCanCopyWeek && $smCopiedWeek === null) ? ' hidden' : '' ?>>
+                <div class="smeny_requests_actions" data-smeny-actions<?= (!$smCanCopyWeek && !$smNeedsSave) ? ' hidden' : '' ?>>
                     <?php if ($smCanCopyWeek): ?>
                         <a class="smeny_requests_copy_week" data-smeny-copy-week href="<?= h(cb_root_url('index.php?m=smeny&page=pozadavky&week=' . ($smWeekIndex + 1) . '&copy_from=' . rawurlencode((string)$smWeek['start_day']))) ?>">Použít pro další týden</a>
                     <?php endif; ?>
                     <?php if ($smCanSave): ?>
-                        <button type="submit" class="smeny_requests_save" data-smeny-save<?= $smCopiedWeek === null ? ' hidden' : '' ?>><?= !empty($smData['saved']) ? 'Uložit upravené požadavky' : 'Uložit celý týden' ?></button>
+                        <button type="submit" class="smeny_requests_save" data-smeny-save<?= !$smNeedsSave ? ' hidden' : '' ?>><?= !empty($smData['saved']) ? 'Uložit upravené požadavky' : 'Uložit celý týden' ?></button>
                     <?php endif; ?>
                 </div>
             <?php endif; ?>

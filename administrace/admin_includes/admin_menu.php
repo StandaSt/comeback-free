@@ -12,7 +12,7 @@ $adminMenuItems = [
     ['page' => 'uzivatele', 'label' => 'Uživatelé', 'pravo' => 107],
     ['page' => 'prava_roli', 'label' => 'Globální práva'],
     ['page' => 'editace_prav', 'label' => 'Editovat práva'],
-    ['page' => 'individualni_prava', 'label' => 'Individuální práva uživatele'],
+    ['page' => 'individualni_prava', 'label' => 'Individuální práva uživatele', 'pravo' => 103],
     ['page' => 'firma_pridat', 'label' => 'Přidat firmu', 'pravo' => 105],
     ['page' => 'spousteni_scriptu', 'label' => 'Spouštění scriptů'],
     ['page' => 'export_db', 'label' => 'Export DB', 'pravo' => 109],

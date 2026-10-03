@@ -1,6 +1,8 @@
 <?php
 // Pripravuje data formulare, prehledu a historie dennich reportu vcetne informace o finalnim ulozeni.
 declare(strict_types=1);
+/* Veřejný zdroj směn respektuje publikaci celého týdne pobočky a mapování HR osoby. */
+require_once __DIR__ . '/../../common/lib/smeny_verejny_zdroj.php';
 
 require_once __DIR__ . '/vypocet_col_rozdil.php';
 require_once __DIR__ . '/denni_report_prava.php';
@@ -814,6 +816,7 @@ function cb_denni_report_branch_slot_user_options(mysqli $conn, int $idPob, int 
     return cb_denni_report_sort_user_options(array_values($users));
 }
 
+/** Předvyplnění reportu používá jediný veřejný plán a skutečné HR identity. */
 function cb_denni_report_shift_plan_people_rows(mysqli $conn, int $idPob, string $date): array
 {
     if ($idPob <= 0 || $date === '') {
@@ -830,14 +833,14 @@ function cb_denni_report_shift_plan_people_rows(mysqli $conn, int $idPob, string
             sp.cas_od AS smena_od,
             sp.cas_do AS smena_do,
             0 AS pauza,
-            TIMESTAMPDIFF(MINUTE, CONCAT(sp.datum, ' ', sp.cas_od), DATE_ADD(CONCAT(sp.datum, ' ', sp.cas_do), INTERVAL CASE WHEN sp.cas_do < sp.cas_od THEN 1 ELSE 0 END DAY)) / 60 AS odpracovano,
+            TIMESTAMPDIFF(MINUTE, sp.zacatek, sp.konec) / 60 AS odpracovano,
             0 AS rozvozu_manual,
             0 AS vlastni_vuz,
             0 AS vyplatit_phm,
             0 AS rozvozu_restia
-        FROM smeny_plan sp
+        FROM (" . cb_smeny_verejny_zdroj_sql() . ") sp
         INNER JOIN user u ON u.id_user = sp.id_user
-        INNER JOIN hr_osobni_udaje ou ON ou.id_person = sp.id_user AND ou.platny = 1
+        INNER JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje=(SELECT MAX(o2.id_osobni_udaje) FROM hr_osobni_udaje o2 WHERE o2.id_person=sp.id_person AND o2.platny=1)
         WHERE sp.id_pob = ?
           AND sp.datum = ?
           AND sp.id_slot IN (1, 2)
@@ -1660,16 +1663,17 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
     }
     
     if ($reportBranchId <= 0 && $canCloseReport && $currentUserId > 0 && $isCurrentWorkday) {
+        // Výběr aktuální pobočky respektuje publikovaný plán a přesné datum nočního začátku.
         $nowLocal = (new DateTimeImmutable('now', $tz))->format('Y-m-d H:i:s');
         $dateFrom = $currentWorkdayDt->modify('-1 day')->format('Y-m-d');
         $dateTo = $currentWorkdayDt->format('Y-m-d');
         $stmtCurrentShift = $conn->prepare("
             SELECT sp.id_pob
-            FROM smeny_plan sp
+            FROM (" . cb_smeny_verejny_zdroj_sql() . ") sp
             WHERE sp.id_user = ?
               AND sp.datum BETWEEN ? AND ?
-              AND ? >= CONCAT(sp.datum, ' ', sp.cas_od)
-              AND ? < DATE_ADD(CONCAT(sp.datum, ' ', sp.cas_do), INTERVAL CASE WHEN sp.cas_do <= sp.cas_od THEN 1 ELSE 0 END DAY)
+              AND ? >= sp.zacatek
+              AND ? < sp.konec
             ORDER BY sp.id_slot = 1 DESC, sp.cas_od ASC
             LIMIT 1
         ");

@@ -1,6 +1,8 @@
 <?php
 // CRON vyhleda chybejici povinne denni reporty, slouci je podle prijemce a odesle push upozorneni.
 declare(strict_types=1);
+/* Zveřejněný interní týden má přednost před externími směnami pro celou pobočku. */
+require_once __DIR__ . '/../../common/lib/smeny_verejny_zdroj.php';
 
 /*
  * Spousteni: denne v 08:00 a 20:00 pres PHP CLI.
@@ -99,6 +101,7 @@ function cb_cron_nezadane_reporty_submitted(mysqli $conn, array $dates): array
     return $submitted;
 }
 
+/** Zavírající pracovníky určí podle veřejné verze, nikoliv rozpracovaných změn. */
 function cb_cron_nezadane_reporty_closers(mysqli $conn, array $dates): array
 {
     $closers = [];
@@ -112,11 +115,8 @@ function cb_cron_nezadane_reporty_closers(mysqli $conn, array $dates): array
             sp.datum,
             sp.id_pob,
             sp.id_user,
-            DATE_ADD(
-                CONCAT(sp.datum, ' ', sp.cas_do),
-                INTERVAL CASE WHEN sp.cas_do <= sp.cas_od THEN 1 ELSE 0 END DAY
-            ) AS end_dt
-        FROM smeny_plan sp
+            sp.konec AS end_dt
+        FROM (" . cb_smeny_verejny_zdroj_sql() . ") sp
         INNER JOIN `user` u ON u.id_user = sp.id_user
         INNER JOIN hr_person hp ON hp.id_user = u.id_user AND hp.aktivni = 1
         WHERE sp.id_slot = 1

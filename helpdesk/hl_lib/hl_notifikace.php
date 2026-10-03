@@ -1,5 +1,5 @@
 <?php
-// helpdesk/hl_lib/hl_notifikace.php * Verze: V1 * Aktualizace: 24.06.2026
+// Ucel souboru: Uklada HelpDesk notifikace a odesila push s podepsanym odkazem na detail tiketu.
 declare(strict_types=1);
 
 require_once __DIR__ . '/hl_prava.php';
@@ -134,7 +134,8 @@ function cb_helpdesk_push_odeslat(int $idUser, int $idNotifikace, string $typ, s
         'type' => 'HELPDESK',
         'title' => 'Comeback',
         'body' => cb_helpdesk_push_body($typ, $text),
-        'url' => cb_url_abs('mobil/mobil_helpdesk.php?t=' . rawurlencode($token)),
+        // Mobilni detail je fyzicky v modulu Provoz; aktualni modul HelpDesk by vytvoril neexistujici cestu.
+        'url' => cb_module_url('provoz') . 'mobil/mobil_helpdesk.php?t=' . rawurlencode($token),
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     if (!is_string($payload) || $payload === '') {
         return;

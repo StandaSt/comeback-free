@@ -1,3 +1,4 @@
+// Ovladani HR formularu vcetne rozpracovaneho seznamu pobocek; data uklada az odeslani formulare.
 (() => {
     'use strict';
 
@@ -264,6 +265,49 @@
             validateBirthNumber(input);
             input.addEventListener('input', () => validateBirthNumber(input));
             input.addEventListener('blur', () => validateBirthNumber(input));
+        });
+
+        // Pridani pobocky meni pouze formular a zachovava uzivatelem zvolenou hlavni pobocku.
+        container.querySelectorAll('[data-hr-branch-add]').forEach((add) => {
+            if (add.dataset.hrBound === '1') return;
+            const form = add.closest('form');
+            const list = form?.querySelector('[data-hr-branch-list]');
+            const main = form?.querySelector('[data-hr-selected-main]');
+            if (!list || !main) return;
+            add.dataset.hrBound = '1';
+            const sync = () => {
+                const previous = main.value;
+                const selected = [...list.querySelectorAll('input:checked')];
+                main.replaceChildren(new Option('Vyberte', ''));
+                selected.forEach(input => main.add(new Option(input.dataset.hrBranchName, input.value)));
+                main.value = selected.some(input => input.value === previous) ? previous : '';
+                [...add.options].forEach(option => {
+                    option.disabled = selected.some(input => input.value === option.value);
+                });
+            };
+            add.addEventListener('change', () => {
+                if (!add.value) return;
+                const option = add.selectedOptions[0];
+                const existing = [...list.querySelectorAll('input')].find(input => input.value === add.value);
+                if (existing) {
+                    existing.checked = true;
+                } else {
+                    const label = document.createElement('label');
+                    const input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.name = 'id_pob[]';
+                    input.value = add.value;
+                    input.checked = true;
+                    input.dataset.hrSelectedBranch = '';
+                    input.dataset.hrBranchName = option.textContent;
+                    label.append(input, document.createTextNode(' ' + option.textContent));
+                    list.append(label);
+                }
+                add.value = '';
+                sync();
+            });
+            list.addEventListener('change', sync);
+            sync();
         });
 
         container.querySelectorAll('[data-hr-branch-picker]').forEach((picker) => {

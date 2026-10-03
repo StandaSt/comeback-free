@@ -437,8 +437,9 @@
 }
 
 .helpdesk_ticket_badges{
-  display:grid;
-  grid-template-columns:58px 50px 80px minmax(100px, 1fr);
+  /* Cely text kazdeho stitku zustava citelny; pri nedostatku mista se zalomi cely stitek. */
+  display:flex;
+  flex-wrap:wrap;
   gap:4px;
 }
 
@@ -459,8 +460,6 @@
 
 .helpdesk_ticket_badge{
   white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
 }
 
 .helpdesk_detail_col{

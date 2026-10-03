@@ -20,7 +20,7 @@ function cb_smeny_pozadavky_osoba(mysqli $db): ?array
         SELECT
             hp.id_person,
             hp.id_firma,
-            TRIM(CONCAT_WS(" ", ou.jmeno, ou.prijmeni)) AS jmeno,
+            TRIM(CONCAT_WS(" ", ou.prijmeni, ou.jmeno)) AS jmeno,
             pracoviste.id_pob,
             pob.nazev AS pobocka,
             pob.end_po,

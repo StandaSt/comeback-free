@@ -1,6 +1,7 @@
 /*
  * Ucel souboru: Ridi klientskou navigaci mezi moduly a internimi strankami aplikace.
  * Soubecne nacteni stejne hlida promenna moduleLoadRunning.
+ * Podmenu čtecích přehledů Směn zachovává funkční odkazy na aktuální týdny i po AJAX výměně menu.
  */
 (function(){
   'use strict';
@@ -51,10 +52,11 @@
         ['prehled', 'Přehled'],
         ['pozadavky', 'Požadavky'],
         ['me_smeny', 'Mé směny', ['Aktuální týden', 'Týden + 1', 'Týden + 2']],
+        ['historie_smen', 'Historie směn'],
         ['planovani_smen', 'Plánování směn', ['Aktuální týden', 'Týden + 1']],
         ['sablony', 'Šablony'],
         ['naplanovane_smeny', 'Naplánované směny', ['Aktuální týden', 'Týden + 1', 'Týden + 2']],
-        ['zadane_pozadavky', 'Zadané požadavky', ['Aktuální týden', 'Týden + 1', 'Týden + 2', 'Historie']],
+        ['zadane_pozadavky', 'Zadané požadavky', ['Aktuální týden', 'Týden + 1', 'Týden + 2']],
         ['nastaveni', 'Nastavení']
       ]
     },
@@ -107,13 +109,20 @@
     menuDefs.smeny.items = menuDefs.smeny.items.filter(function (item) { return item[0] !== 'sablony'; });
   }
   if (config.smenyPlanovani !== true) {
-    menuDefs.smeny.items = menuDefs.smeny.items.filter(function (item) { return item[0] !== 'planovani_smen'; });
+    // Vedoucí přehledy používají stejné právo jako plánování; server přístup kontroluje znovu.
+    menuDefs.smeny.items = menuDefs.smeny.items.filter(function (item) {
+      return ['planovani_smen', 'naplanovane_smeny', 'zadane_pozadavky'].indexOf(item[0]) === -1;
+    });
   }
   if (config.smenyNastaveni !== true) {
     menuDefs.smeny.items = menuDefs.smeny.items.filter(function (item) { return item[0] !== 'nastaveni'; });
   }
   if (config.adminUzivatele !== true) {
     menuDefs.administrace.items = menuDefs.administrace.items.filter(function (item) { return item[0] !== 'uzivatele'; });
+  }
+  // Klientske menu respektuje pravo 103 stejne jako serverova stranka a jeji akce.
+  if (config.adminIndividualniPrava !== true) {
+    menuDefs.administrace.items = menuDefs.administrace.items.filter(function (item) { return item[0] !== 'individualni_prava'; });
   }
   if (config.adminExportDb !== true) {
     menuDefs.administrace.items = menuDefs.administrace.items.filter(function (item) { return item[0] !== 'export_db'; });
@@ -545,10 +554,16 @@
       if (children.length > 0) {
         var submenu = document.createElement('ul');
         submenu.className = 'blok_submenu';
-        children.forEach(function(childLabel){
+        children.forEach(function(childLabel, childIndex){
           var childItem = document.createElement('li');
-          var childButton = document.createElement('button');
-          childButton.type = 'button';
+          // Odkazy odpovídají serverovému menu Směn; ostatní moduly ponechávají vlastní obsluhu.
+          var shiftWeekLink = moduleName === 'smeny' && ['me_smeny', 'naplanovane_smeny', 'zadane_pozadavky'].indexOf(page) !== -1;
+          var childButton = document.createElement(shiftWeekLink ? 'a' : 'button');
+          if (shiftWeekLink) {
+            childButton.href = moduleUrl(moduleName, def.key, page) + '&week=' + childIndex;
+          } else {
+            childButton.type = 'button';
+          }
           childButton.className = 'blok_submenu_btn';
           childButton.textContent = String(childLabel || '');
           childItem.appendChild(childButton);

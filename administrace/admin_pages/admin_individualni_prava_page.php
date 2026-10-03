@@ -1,5 +1,11 @@
 <?php
+// Vyhledani osob a sprava individualnich vyjimek prav jsou dostupne pouze s pravem 103.
 declare(strict_types=1);
+if (!function_exists('cb_pravo_ma') || !cb_pravo_ma(103)) {
+    http_response_code(403);
+    echo '<section class="blok"><h2 class="blok_title">Přístup zamítnut</h2><p>Nemáte právo spravovat individuální práva uživatelů (103).</p></section>';
+    return;
+}
 ?>
 <!-- Stranka pro vyhledani uzivatele a spravu jeho individualnich vyjimek prav. -->
 <div class="admin_individual" data-admin-individual="1">

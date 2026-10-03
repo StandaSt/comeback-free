@@ -23,6 +23,6 @@ if (!cb_smeny_nastaveni_ma_pravo()) {
     <div class="smeny_intro">
         <strong>Pevná pravidla</strong>
         <p>Požadavky se uzavírají vždy ve středu ve 20:00.</p>
-        <p>Pobočka začne používat interní směny automaticky ve chvíli, kdy je v IS naplánuje. Není nutné nastavovat testovací pobočky.</p>
+        <p>Pobočka začne používat interní směny automaticky ve chvíli, kdy v IS zveřejní rozpis daného týdne. Rozpracovaný plán externí směny nenahrazuje. Není nutné nastavovat testovací pobočky.</p>
     </div>
 </section>

@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Zobrazuje pouze formular pro nastaveni noveho hesla a neprovadi prihlaseni.
  */
 
-$cbObnoveniUser = cb_prvni_vstup_user(db(), (int)($_SESSION['cb_obnoveni_hesla_user_id'] ?? 0));
+$cbObnoveniUser = cb_obnoveni_hesla_user_podle_id(db(), (int)($_SESSION['cb_obnoveni_hesla_user_id'] ?? 0));
 if (!is_array($cbObnoveniUser)) { throw new RuntimeException('Obnovení hesla již není platné.'); }
 $cbObnoveniZbyva = cb_obnoveni_hesla_zbyva();
 if ($cbObnoveniZbyva <= 0) { throw new RuntimeException('Čas pro nastavení hesla vypršel.'); }

@@ -1,3 +1,4 @@
+/* Účel: Ovládá časové požadavky, kopírování dnů a přepínání dostupnosti Kdykoliv bez zápisu do DB. */
 (function () {
     'use strict';
 
@@ -125,6 +126,15 @@
 
     document.addEventListener('change', function (event) {
         var target = event.target;
+        // Skrytím intervalů se jejich rozpracované hodnoty neztratí; volba se ukládá až formulářem.
+        if (target instanceof HTMLInputElement && target.matches('[data-smeny-anytime]')) {
+            var form = target.closest('[data-smeny-requests-form]');
+            var intervals = form.querySelector('[data-smeny-intervals]');
+            intervals.hidden = target.checked;
+            intervals.disabled = target.checked;
+            markFormDirty(form);
+            return;
+        }
         if (!(target instanceof HTMLInputElement) || target.type !== 'radio' || !target.closest('[data-smeny-requests-form]')) return;
         markFormDirty(target.closest('[data-smeny-requests-form]'));
     });

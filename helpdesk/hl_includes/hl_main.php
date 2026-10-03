@@ -1,5 +1,5 @@
 <?php
-// helpdesk/hl_includes/hl_main.php * Verze: V1 * Aktualizace: 23.06.2026
+// Ucel souboru: Sestavuje seznam, detailni plochu a formular HelpDesku vcetne vsech oblasti pro novy tiket.
 declare(strict_types=1);
 
 require_once __DIR__ . '/../hl_lib/hl_prava.php';
@@ -176,7 +176,7 @@ if ($stmtItems instanceof mysqli_stmt) {
 
 $helpdeskApiUrl = cb_root_url('index.php');
 $helpdeskSourceModule = (string)($_SESSION['cb_helpdesk_source_module'] ?? 'provoz');
-$helpdeskAreas = cb_helpdesk_allowed_areas();
+$helpdeskAreas = cb_helpdesk_areas();
 if (!isset($helpdeskAreas[$helpdeskSourceModule])) {
     $helpdeskSourceModule = (string)(array_key_first($helpdeskAreas) ?? '');
 }
@@ -339,7 +339,6 @@ foreach ($items as $item) {
                         <div class="helpdesk_ticket_badges">
                           <span class="helpdesk_ticket_badge"><span data-hd-state-text="1"><?= cb_helpdesk_ticket_h((string)$item['stav']) ?></span></span>
                           <span class="helpdesk_ticket_badge"><?= cb_helpdesk_ticket_h(cb_helpdesk_area_label((int)$item['modul'])) ?></span>
-                          <span class="helpdesk_ticket_badge"><?= cb_helpdesk_ticket_h(cb_helpdesk_ticket_type_label((string)$item['typ'])) ?></span>
                           <span class="helpdesk_ticket_badge"><?= cb_helpdesk_ticket_h(cb_helpdesk_ticket_visibility_label((int)$item['verejny'])) ?></span>
                         </div>
                       </div>

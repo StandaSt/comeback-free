@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /* Účel souboru: Načte seznam šablon a detail jedné šablony s jejími sloty. */
 
-/** @return array<int,array<string,mixed>> */
+/** Načte šablony dostupných poboček a součet potřebných hodin. @return array<int,array<string,mixed>> */
 function cb_smeny_sablony_seznam(mysqli $db, array $branches): array
 {
     if ($branches === []) {
@@ -11,7 +11,7 @@ function cb_smeny_sablony_seznam(mysqli $db, array $branches): array
     }
     $ids = implode(',', array_map('intval', array_keys($branches)));
     $result = $db->query('
-        SELECT s.id_smeny_sablona, s.id_firma, s.id_pob, s.nazev, s.zmeneno
+        SELECT s.id_smeny_sablona, s.id_pob, s.nazev, s.zmeneno
         FROM smeny_sablona s
         WHERE s.aktivni = 1 AND s.id_pob IN (' . $ids . ')
         ORDER BY s.id_pob, s.nazev
@@ -19,7 +19,7 @@ function cb_smeny_sablony_seznam(mysqli $db, array $branches): array
     $templates = [];
     $templateIndexes = [];
     while ($row = $result->fetch_assoc()) {
-        foreach (['id_smeny_sablona', 'id_firma', 'id_pob'] as $key) {
+        foreach (['id_smeny_sablona', 'id_pob'] as $key) {
             $row[$key] = (int)$row[$key];
         }
         $positionIds = array_keys(cb_smeny_sablony_pozice($branches[$row['id_pob']]));
@@ -66,13 +66,13 @@ function cb_smeny_sablony_seznam(mysqli $db, array $branches): array
     return $templates;
 }
 
-/** @return array<string,mixed>|null */
+/** Ověří dostupnost pobočky a načte bloky vybrané šablony. @return array<string,mixed>|null */
 function cb_smeny_sablona_nacist(mysqli $db, int $idTemplate, array $branches): ?array
 {
     if ($idTemplate <= 0 || $branches === []) {
         return null;
     }
-    $stmt = $db->prepare('SELECT id_smeny_sablona, id_firma, id_pob, nazev, zmeneno FROM smeny_sablona WHERE id_smeny_sablona = ? AND aktivni = 1 LIMIT 1');
+    $stmt = $db->prepare('SELECT id_smeny_sablona, id_pob, nazev, zmeneno FROM smeny_sablona WHERE id_smeny_sablona = ? AND aktivni = 1 LIMIT 1');
     $stmt->bind_param('i', $idTemplate);
     $stmt->execute();
     $template = $stmt->get_result()->fetch_assoc();
@@ -80,7 +80,7 @@ function cb_smeny_sablona_nacist(mysqli $db, int $idTemplate, array $branches): 
     if (!is_array($template) || !isset($branches[(int)$template['id_pob']])) {
         return null;
     }
-    foreach (['id_smeny_sablona', 'id_firma', 'id_pob'] as $key) {
+    foreach (['id_smeny_sablona', 'id_pob'] as $key) {
         $template[$key] = (int)$template[$key];
     }
     $template['blocks'] = array_fill(1, 7, []);

@@ -1,4 +1,4 @@
-// Service Worker zobrazuje Web Push a otevírá pouze URL určenou konkrétním typem oznámení.
+// Service Worker zobrazuje Web Push; změny směn mají samostatný tag, aby se vzájemně nepřepisovaly.
 
 const CB_SW_ROOT = new URL('./', self.registration.scope);
 const CB_LOGO_URL = new URL('common/img/logo_comeback.png', CB_SW_ROOT).toString();
@@ -77,7 +77,7 @@ self.addEventListener('push', (event) => {
       body,
       icon: CB_LOGO_URL,
       badge: CB_LOGO_URL,
-      tag: 'cb-push',
+      tag: type === 'SMENY' && /^cb-smeny-[0-9]+$/.test(data.tag || '') ? data.tag : 'cb-push',
       renotify: true,
       data: { url: url, type: type }
     })

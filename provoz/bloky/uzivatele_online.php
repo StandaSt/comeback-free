@@ -2,8 +2,9 @@
 declare(strict_types=1);
 
 /*
- * Ucel souboru: Zobrazit prihlasene uzivatele a cas jejich posledni skutecne
- * zaznamenane akce. Technicky heartbeat zarizeni neni uzivatelska aktivita.
+ * Ucel souboru: Zobrazit dnes aktivni uzivatele a cas jejich posledni skutecne
+ * zaznamenane akce. Prihlasovaci den zacina po rannim odhlaseni v 08:00.
+ * Technicky heartbeat zarizeni neni uzivatelska aktivita.
  */
 
 (static function (): void {
@@ -11,6 +12,11 @@ declare(strict_types=1);
 
     try {
         $conn = db();
+        // Hranice 08:00 odpovida dennimu odhlaseni; pred osmou jeste bezi predchozi prihlasovaci den.
+        $now = new DateTimeImmutable('now', new DateTimeZone('Europe/Prague'));
+        $todayStart = $now->setTime(8, 0, 0);
+        $loginDayStart = ($now < $todayStart ? $todayStart->modify('-1 day') : $todayStart)
+            ->format('Y-m-d H:i:s');
         $sql = "
             SELECT
                 p.id_person AS id_user,
@@ -26,24 +32,32 @@ declare(strict_types=1);
                 AND ul.duvod = 2
             LEFT JOIN user_akce_new ua ON ua.id_login = ps.id_login AND ua.id_user = ps.id_user
             WHERE ps.zruseno IS NULL
+                AND ps.vytvoreno >= ?
             GROUP BY p.id_person, ou.jmeno, ou.prijmeni
             ORDER BY COALESCE(MAX(ua.cas), MIN(ps.vytvoreno)) DESC, cele_jmeno ASC
             LIMIT 20
         ";
-        $result = $conn->query($sql);
+        $stmt = $conn->prepare($sql);
+        if (!($stmt instanceof mysqli_stmt)) {
+            throw new RuntimeException('Nepodařilo se připravit přehled dnešních uživatelů.');
+        }
+        $stmt->bind_param('s', $loginDayStart);
+        $stmt->execute();
+        $result = $stmt->get_result();
         while ($result instanceof mysqli_result && ($row = $result->fetch_assoc())) {
             $rows[] = $row;
         }
         if ($result instanceof mysqli_result) {
             $result->free();
         }
+        $stmt->close();
     } catch (Throwable $e) {
-        echo '<section class="blok"><h2 class="blok_title">Poslední přihlášení uživatelé</h2><p class="txt_cervena">Data se nepodařilo načíst.</p></section>';
+        echo '<section class="blok"><h2 class="blok_title">Dnes aktivní uživatelé</h2><p class="txt_cervena">Data se nepodařilo načíst.</p></section>';
         return;
     }
     ?>
     <section class="blok">
-        <h2 class="blok_title">Poslední přihlášení uživatelé</h2>
+        <h2 class="blok_title">Dnes aktivní uživatelé</h2>
         <table class="provoz_prehled_data">
             <thead><tr><th class="provoz_prehled_data_cell provoz_prehled_data_cell_left provoz_prehled_data_head">Uživatel</th><th class="provoz_prehled_data_cell provoz_prehled_data_head">Přihlášení</th><th class="provoz_prehled_data_cell provoz_prehled_data_head">Poslední akce</th></tr></thead>
             <tbody>

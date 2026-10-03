@@ -2,30 +2,40 @@
 declare(strict_types=1);
 
 /**
- * DB operace pro HR pozadavky pobocky.
+ * DB operace pro HR pozadavky pobocky a vyber aktualni hlavni pobocky pro HR pristup.
  */
 
 /**
- * Nacte hlavni pobocku uzivatele pro zadani HR pozadavku.
+ * Nacte jedinou dnes platnou hlavni pobocku pro HR pozadavky a rozsah zamestnancu.
  */
 function hr_nacti_hlavni_pobocku_uzivatele(mysqli $db, int $idUser): array
 {
     $stmt = $db->prepare("
-        SELECT p.id_pob, p.nazev
+        SELECT DISTINCT p.id_pob, p.nazev
         FROM hr_pracoviste up
         INNER JOIN pobocka p
             ON p.id_pob = up.id_pob
         WHERE up.id_person = ?
           AND up.hlavni = 1 AND up.platny = 1
-        LIMIT 1
+          AND up.zruseno IS NULL
+          AND (up.platnost_od IS NULL OR up.platnost_od <= CURDATE())
+          AND (up.platnost_do IS NULL OR up.platnost_do >= CURDATE())
+        LIMIT 2
     ");
     $stmt->bind_param('i', $idUser);
     $stmt->execute();
-    $row = $stmt->get_result()->fetch_assoc();
+    $result = $stmt->get_result();
+    $count = $result->num_rows;
+    $row = $result->fetch_assoc();
     $stmt->close();
 
     if (!is_array($row)) {
         throw new CbUserVisibleException('Nemáte nastavenou hlavní pobočku. Obraťte se na administrátora.');
+    }
+
+    // Historicka ani nejednoznacna hlavni pobocka nesmi rozhodovat o opravneni.
+    if ($count !== 1) {
+        throw new CbUserVisibleException('Máte více platných hlavních poboček. Obraťte se na administrátora.');
     }
 
     return [

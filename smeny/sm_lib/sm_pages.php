@@ -1,17 +1,19 @@
 <?php
 declare(strict_types=1);
+/* Účel: Definuje stránky modulu Směny a skrývá vedoucí přehledy uživatelům bez příslušného práva. */
 
 function cb_smeny_pages(): array
 {
     $pages = [
         ['page' => 'prehled', 'label' => 'Přehled'],
         ['page' => 'me_smeny', 'label' => 'Mé směny', 'items' => ['Aktuální týden', 'Týden + 1', 'Týden + 2']],
-        ['page' => 'naplanovane_smeny', 'label' => 'Naplánované směny', 'items' => ['Aktuální týden', 'Týden + 1', 'Týden + 2']],
-        ['page' => 'zadane_pozadavky', 'label' => 'Zadané požadavky', 'items' => ['Aktuální týden', 'Týden + 1', 'Týden + 2', 'Historie']],
+        ['page' => 'historie_smen', 'label' => 'Historie směn'],
     ];
 
     if (function_exists('cb_smeny_planovani_vidi') && cb_smeny_planovani_vidi()) {
-        array_splice($pages, 2, 0, [['page' => 'planovani_smen', 'label' => 'Plánování směn']]);
+        $pages[] = ['page' => 'planovani_smen', 'label' => 'Plánování směn'];
+        $pages[] = ['page' => 'naplanovane_smeny', 'label' => 'Naplánované směny', 'items' => ['Aktuální týden', 'Týden + 1', 'Týden + 2']];
+        $pages[] = ['page' => 'zadane_pozadavky', 'label' => 'Zadané požadavky', 'items' => ['Aktuální týden', 'Týden + 1', 'Týden + 2']];
     }
 
     if (function_exists('cb_smeny_sablony_ma_pravo') && cb_smeny_sablony_ma_pravo()) {
@@ -54,6 +56,9 @@ function cb_smeny_current_page(array $pages): array
     }
     if ($page === 'planovani_smen') {
         return ['key' => 'bez_prava', 'title' => 'Přístup k plánování směn'];
+    }
+    if (in_array($page, ['naplanovane_smeny','zadane_pozadavky'], true)) {
+        return ['key' => 'bez_prava', 'title' => 'Přístup k přehledu směn'];
     }
 
     return ['key' => 'prehled', 'title' => 'Přehled'];

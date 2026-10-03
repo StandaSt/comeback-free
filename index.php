@@ -18,11 +18,16 @@ require_once __DIR__ . '/common/lib/email_zmena.php';
 require_once __DIR__ . '/common/lib/hr_user_sync.php';
 require_once __DIR__ . '/common/lib/moduly.php';
 require_once __DIR__ . '/common/lib/nastaveni_uzivatele.php';
+// ID push oznámení uchováme i tehdy, když kontrola session přesměruje prošlé přihlášení.
+require_once __DIR__ . '/smeny/sm_lib/sm_oznameni_navrat.php';
+cb_smeny_oznameni_zapamatovat();
 
 if (!isset($_GET['obnoveni_hesla'])) {
     cb_session_guard_entry();
 }
 require_once __DIR__ . '/provoz/lib/logout_handler.php';
+// Odkaz z push směn přežije přihlášení i mezikrok důvěryhodného zařízení.
+cb_smeny_oznameni_navrat();
 
 /* Heartbeat potvrzuje, ze prihlasene okno je stale otevrene a patri aktualni session zarizeni. */
 if (
@@ -334,6 +339,20 @@ if (!empty($_SESSION['login_ok']) && isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODUL
 
 if (!empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     $cbPostedModule = strtolower(trim((string)($_GET['m'] ?? '')));
+    // Spravu pobocek vyridime pred HTML i starym PRG Provozu, aby se POST skutecne ulozil.
+    if ($cbPostedModule === 'provoz' && (string)($_GET['page'] ?? '') === 'nastaveni_pobocky') {
+        if (!cb_modul_ma_pristup('provoz')) {
+            http_response_code(403);
+            $cbNepovolenyModul = 'provoz';
+            require __DIR__ . '/common/includes/modul_bez_pristupu.php';
+            exit;
+        }
+        $GLOBALS['CURRENT_MODULE'] = 'provoz';
+        define('CB_EMBEDDED_MODULE', 'provoz');
+        require_once __DIR__ . '/provoz/lib/nastaveni_pobocky.php';
+        cb_provoz_nastaveni_pobocky_handle_post();
+        exit;
+    }
     if (in_array($cbPostedModule, ['hr', 'smeny', 'administrace'], true)) {
         cb_modul_nacti($cbPostedModule);
         exit;
@@ -431,7 +450,9 @@ if ($cbLoginBackgroundCount > 0) {
 <body class="modal-page modal-login-page" style="--cb-login-bg: url('<?= h($cbLoginBackgroundUrl) ?>');">
 <div class="modal-login-container">
 <?php
-if ($cb2faPending) {
+if (!empty($_SESSION['cb_login_email_odeslan'])) {
+    require_once __DIR__ . '/common/modaly/modal_login_email_odeslan.php';
+} elseif ($cb2faPending) {
     require_once __DIR__ . '/common/modaly/modal_overeni.php';
 } elseif (cb_obnoveni_hesla_zbyva() > 0) {
     require_once __DIR__ . '/common/modaly/modal_obnoveni_hesla.php';

@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+/* Účel: Sestaví menu směn a funkční odkazy na aktuální týdny; historie má vlastní stránku. */
 
 require_once __DIR__ . '/../../common/includes/blok_menu.php';
 
@@ -17,6 +18,13 @@ foreach ($smMenuItems as $item) {
     ];
     if (isset($item['items']) && is_array($item['items'])) {
         $smMenuItem['items'] = $item['items'];
+        if (in_array($itemPage, ['me_smeny','naplanovane_smeny','zadane_pozadavky'], true)) {
+            // Indexy odpovídají aktuálnímu týdnu a následujícím týdnům veřejného přehledu.
+            $smMenuItem['items'] = [];
+            foreach ($item['items'] as $index => $label) {
+                $smMenuItem['items'][] = ['label'=>$label,'url'=>cb_root_url('index.php?m=smeny&page='.$itemPage.'&week='.$index)];
+            }
+        }
     }
     $smMenu[] = $smMenuItem;
 }

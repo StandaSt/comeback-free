@@ -2,12 +2,13 @@
 declare(strict_types=1);
 
 /*
- * Připraví uložené bloky předchozího týdne k ručnímu uložení v následujícím týdnu.
+ * Připraví intervaly nebo volbu Kdykoliv z předchozího týdne k ručnímu uložení v dalším týdnu.
  */
 
 /**
  * @param array<int,array<string,mixed>> $weeks
- * @return array{blocks:array<string,array{od:string,do:string}>,source_label:string}|null
+ * Kopie nic nezapisuje; cílový týden musí uživatel zkontrolovat a uložit.
+ * @return array{blocks:array<string,array{od:string,do:string}>,anytime:bool,source_label:string}|null
  */
 function cb_smeny_pozadavky_kopie(mysqli $db, ?array $person, array $weeks, int $targetIndex): ?array
 {
@@ -27,7 +28,7 @@ function cb_smeny_pozadavky_kopie(mysqli $db, ?array $person, array $weeks, int 
     }
 
     $sourceData = cb_smeny_pozadavky_nacist($db, $person, $sourceWeek);
-    if (empty($sourceData['saved']) || $sourceData['blocks'] === []) {
+    if (empty($sourceData['saved'])) {
         return null;
     }
 
@@ -43,6 +44,7 @@ function cb_smeny_pozadavky_kopie(mysqli $db, ?array $person, array $weeks, int 
 
     return [
         'blocks' => $blocks,
+        'anytime' => $sourceData['anytime'],
         'source_label' => $sourceWeek['start']->format('j. n.') . '–' . $sourceWeek['end']->format('j. n. Y'),
     ];
 }

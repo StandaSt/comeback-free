@@ -1,6 +1,8 @@
 /*
  * Ucel souboru: Definuje vzhled spolecnych modalnich oken a prihlasovacich stranek.
  * Velikosti pisma vychazeji z pevne typograficke skaly aplikace.
+ * Prihlasovaci volby mobil/e-mail maji vlastni ikony primo v popisku.
+ * Samostatny stav odeslaneho prihlasovaciho e-mailu zobrazuje pouze text.
  */
 
 :root{
@@ -507,6 +509,33 @@
   margin-top: 4px;
   display: grid;
   gap: 10px;
+}
+
+/* Dve volby prihlaseni pouzivaji vlastni ikony misto spolecneho obrazku tlacitka. */
+#cbLoginForm .cb-login-mobile::before,
+#cbLoginForm .cb-login-email::before{
+  display: none;
+}
+#cbLoginForm .modal-btn-main{
+  line-height: 1.2;
+  white-space: normal;
+}
+#cbLoginForm .cb-login-email .modal-btn-main{
+  font-size: var(--cb-font-18);
+}
+
+/* Informace po odeslani odkazu je samostatny modal bez tlacitek a dalsich akci. */
+.modal-login-page .modal-login-email-sent{
+  padding: 24px;
+}
+.modal-login-page .modal-login-email-sent p{
+  margin: 0;
+  color: #fff7ed;
+  font-size: var(--cb-font-18);
+  line-height: 1.5;
+  font-weight: 700;
+  text-align: center;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
 }
 
 .modal-status{

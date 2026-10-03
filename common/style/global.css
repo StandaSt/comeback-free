@@ -1060,7 +1060,7 @@ main{
     grid-template-areas:
       "logo brand modules todo update"
       "logo brand modules helpdesk update"
-      "filters filters filters filters filters";
+      ". . filters filters filters";
     height:96px;
     min-height:96px;
   }
@@ -1104,7 +1104,7 @@ main{
     grid-template-areas:
       "logo menu_toggle modules todo update"
       "logo menu_toggle modules helpdesk update"
-      "filters filters filters filters filters";
+      ". . filters filters filters";
   }
 
   .head_brand_time{
@@ -1159,7 +1159,7 @@ main{
     grid-template-areas:
       "logo menu_toggle modules modules modules modules"
       "logo todo todo helpdesk update update"
-      "filters filters filters filters filters filters";
+      ". . filters filters filters filters";
   }
 
   .head_module_nav{

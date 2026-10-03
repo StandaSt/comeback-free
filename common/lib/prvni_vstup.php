@@ -73,7 +73,8 @@ function cb_prvni_vstup_vytvor_token(mysqli $db, int $idUser): string
 /* Overi jednorazovy token a pripravi session prvniho vstupu. */
 function cb_prvni_vstup_over_token(mysqli $db, string $token): bool
 {
-    if (strlen($token) < 40) {
+    // Prefix reset. obsahuje znak mimo base64url pozvanky a nesmi otevrit tok prvniho vstupu.
+    if (strlen($token) < 40 || str_starts_with($token, 'reset.')) {
         return false;
     }
     $stmt = $db->prepare('SELECT id_user FROM user_prvni_vstup_token WHERE token_hash=UNHEX(SHA2(?,256)) AND pouzito IS NULL AND zruseno IS NULL AND platnost_do>NOW() LIMIT 1');

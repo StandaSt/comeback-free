@@ -2,14 +2,16 @@
 declare(strict_types=1);
 
 /*
- * Uloží celý týden požadavků jedné osoby jako jedinou transakci.
+ * Ověří a transakčně uloží týden požadavků V2, Kdykoliv nebo volno HPP.
  */
 
+/** Přenese výsledek uložení do dalšího zobrazení formuláře. */
 function cb_smeny_pozadavky_flash(string $type, string $text): void
 {
     $_SESSION['cb_smeny_pozadavky_flash'] = ['type' => $type, 'text' => $text];
 }
 
+/** Převádí noční časy na souvislou časovou osu provozního dne. */
 function cb_smeny_pozadavky_cas_overit(string $time, bool $isEnd): int
 {
     if (preg_match('~^(\d{2}):(\d{2})$~', $time, $match) !== 1) {
@@ -31,38 +33,9 @@ function cb_smeny_pozadavky_cas_overit(string $time, bool $isEnd): int
     return $value;
 }
 
-/** @param array<int,array<string,mixed>> $weeks */
-function cb_smeny_pozadavky_ulozit(mysqli $db, array $person, array $weeks): void
+/** Připraví data bez zápisu; HPP ani Kdykoliv neukládají nadbytečné denní intervaly. */
+function cb_smeny_pozadavky_pripravit(array $person, array $week, array $post): array
 {
-    if (strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'POST'
-        || (string)($_POST['action'] ?? '') !== 'smeny_pozadavky_ulozit') {
-        return;
-    }
-    if (!cb_crf_platny()) {
-        throw new CbUserVisibleException('Platnost stránky vypršela. Obnovte ji a požadavky uložte znovu.');
-    }
-    if ($person === null) {
-        throw new CbUserVisibleException('Přihlášený účet není propojený s aktivní osobou v HR.');
-    }
-
-    $weekIndex = filter_var($_POST['week'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 3]]);
-    if ($weekIndex === false || !isset($weeks[$weekIndex])) {
-        throw new CbUserVisibleException('Vybraný týden už není možné uložit. Obnovte stránku.');
-    }
-    $week = $weeks[$weekIndex];
-    if (empty($week['open'])) {
-        throw new CbUserVisibleException('Termín pro zadání požadavků skončil ve středu ve 20:00.');
-    }
-    if ((int)$person['id_firma'] <= 0) {
-        throw new CbUserVisibleException('Osoba nemá v HR přiřazenou firmu.');
-    }
-    if ((int)$person['id_pob'] <= 0) {
-        throw new CbUserVisibleException('Osoba nemá v HR nastavenou hlavní pobočku.');
-    }
-    if ((int)$person['je_hpp'] === 1 && (int)$person['id_slot'] <= 0) {
-        throw new CbUserVisibleException('HPP pracovník nemá v HR nastavenou hlavní pozici.');
-    }
-
     $allowedDates = [];
     foreach ($week['days'] as $day) {
         $allowedDates[(string)$day['date']] = [
@@ -73,22 +46,22 @@ function cb_smeny_pozadavky_ulozit(mysqli $db, array $person, array $weeks): voi
     $blocks = [];
     $dayOff = '';
     if ((int)$person['je_hpp'] === 1) {
-        $dayOff = trim((string)($_POST['datum_volna'] ?? ''));
+        $dayOff = trim((string)($post['datum_volna'] ?? ''));
         if ($dayOff !== '' && !isset($allowedDates[$dayOff])) {
             throw new CbUserVisibleException('Vybraný den volna nepatří do ukládaného týdne.');
         }
         if ($dayOff !== '' && ((int)$person['id_pob'] <= 0 || (int)$person['id_slot'] <= 0)) {
             throw new CbUserVisibleException('Pro volbu volna musí být v HR nastavena hlavní pobočka i hlavní pracovní slot.');
         }
-    } else {
-        $postedBlocks = $_POST['blocks'] ?? [];
+    } elseif (empty($post['kdykoliv'])) {
+        $postedBlocks = $post['blocks'] ?? [];
         if (!is_array($postedBlocks)) {
             throw new CbUserVisibleException('Odeslané požadavky nemají správný formát.');
         }
         foreach ($postedBlocks as $date => $postedBlock) {
             $date = (string)$date;
             if (!isset($allowedDates[$date]) || !is_array($postedBlock)) {
-                continue;
+                throw new CbUserVisibleException('Odeslaný den požadavku nepatří do týdne nebo nemá správný formát.');
             }
             $from = trim((string)($postedBlock['od'] ?? ''));
             $to = trim((string)($postedBlock['do'] ?? ''));
@@ -121,77 +94,97 @@ function cb_smeny_pozadavky_ulozit(mysqli $db, array $person, array $weeks): voi
         }
     }
 
+
+    return ['rezim' => (int)$person['je_hpp'] === 1 ? 'hpp' : (!empty($post['kdykoliv']) ? 'kdykoliv' : 'intervaly'),
+        'volno' => $dayOff === '' ? null : $dayOff, 'blocks' => $blocks];
+}
+
+/** Ověří právo, uzávěrku a konkrétní týden před atomickým přepsáním požadavků osoby. */
+function cb_smeny_pozadavky_ulozit(mysqli $db, ?array $person, array $weeks): void
+{
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST'
+        || (string)($_POST['action'] ?? '') !== 'smeny_pozadavky_ulozit') {
+        return;
+    }
+    if (!cb_smeny_pozadavky_ma_pravo() || !cb_crf_platny()) {
+        throw new CbUserVisibleException('Nemáte právo zadat požadavky nebo vypršela platnost stránky.');
+    }
+    if ($person === null) {
+        throw new CbUserVisibleException('Přihlášený účet není propojený s aktivní osobou v HR.');
+    }
+    $weekIndex = filter_var($_POST['week'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 3]]);
+    if ($weekIndex === false || !isset($weeks[$weekIndex])
+        || (string)($_POST['tyden_od'] ?? '') !== (string)$weeks[$weekIndex]['start_day']) {
+        throw new CbUserVisibleException('Vybraný týden už není aktuální. Obnovte stránku.');
+    }
+    $week = $weeks[$weekIndex];
+    if (empty($week['open'])) {
+        throw new CbUserVisibleException('Termín pro zadání požadavků skončil ' . $week['deadline']->format('j. n. Y v H:i') . '.');
+    }
+    if ((int)$person['id_pob'] <= 0 || ((int)$person['je_hpp'] === 1 && (int)$person['id_slot'] <= 0)) {
+        throw new CbUserVisibleException('V HR chybí hlavní pobočka nebo hlavní pozice HPP pracovníka.');
+    }
+    $data = cb_smeny_pozadavky_pripravit($person, $week, $_POST);
     $idPerson = (int)$person['id_person'];
-    $idFirma = (int)$person['id_firma'];
     $startDay = (string)$week['start_day'];
-    $deadline = $week['deadline']->format('Y-m-d H:i:s');
+    $mode = $data['rezim'];
+    $dayOff = $data['volno'];
+    $idBranch = $dayOff === null ? null : (int)$person['id_pob'];
+    $idSlot = $dayOff === null ? null : (int)$person['id_slot'];
 
     $db->begin_transaction();
     try {
-        $stmt = $db->prepare('SELECT id_smeny_tyden FROM smeny_tyden WHERE id_firma = ? AND start_day = ? LIMIT 1 FOR UPDATE');
-        $stmt->bind_param('is', $idFirma, $startDay);
+        // Stabilní rodičovský řádek serializuje i první uložení, kdy hlavička ještě neexistuje.
+        $stmt = $db->prepare('SELECT id_person FROM hr_person WHERE id_person=? AND aktivni=1 FOR UPDATE');
+        $stmt->bind_param('i', $idPerson);
         $stmt->execute();
-        $idWeek = (int)($stmt->get_result()->fetch_assoc()['id_smeny_tyden'] ?? 0);
+        $active = $stmt->get_result()->fetch_assoc();
         $stmt->close();
-        if ($idWeek <= 0) {
-            $state = 'otevreny';
-            $stmt = $db->prepare('INSERT INTO smeny_tyden (id_firma, start_day, pozadavky_od, pozadavky_deadline, stav, vytvoril_id_person) VALUES (?, ?, NOW(), ?, ?, ?)');
-            $stmt->bind_param('isssi', $idFirma, $startDay, $deadline, $state, $idPerson);
-            $stmt->execute();
-            $idWeek = (int)$db->insert_id;
-            $stmt->close();
+        if ($active === null) {
+            throw new CbUserVisibleException('Osoba už není v HR aktivní.');
         }
-
-        $stmt = $db->prepare('SELECT id_smeny_pozadavek FROM smeny_pozadavek WHERE id_smeny_tyden = ? AND id_person = ? LIMIT 1 FOR UPDATE');
-        $stmt->bind_param('ii', $idWeek, $idPerson);
+        if (new DateTimeImmutable('now', new DateTimeZone('Europe/Prague')) > $week['deadline']) {
+            throw new CbUserVisibleException('Během ukládání skončila uzávěrka požadavků.');
+        }
+        $stmt = $db->prepare('SELECT id_smeny_pozadavek FROM smeny_pozadavek WHERE id_person=? AND tyden_od=? FOR UPDATE');
+        $stmt->bind_param('is', $idPerson, $startDay);
         $stmt->execute();
         $idRequest = (int)($stmt->get_result()->fetch_assoc()['id_smeny_pozadavek'] ?? 0);
         $stmt->close();
-        if ($idRequest <= 0) {
-            $state = 'odeslany';
-            $stmt = $db->prepare('INSERT INTO smeny_pozadavek (id_smeny_tyden, id_person, stav, odeslano) VALUES (?, ?, ?, NOW())');
-            $stmt->bind_param('iis', $idWeek, $idPerson, $state);
+        // Nepoužít upsert: druhý unikátní klíč rezervuje HPP volno jiného pracovníka.
+        if ($idRequest === 0) {
+            $stmt = $db->prepare('INSERT INTO smeny_pozadavek
+                (id_person,tyden_od,rezim,volno_datum,volno_id_pob,volno_id_slot,ulozil_id_person)
+                VALUES (?,?,?,?,?,?,?)');
+            $stmt->bind_param('isssiii', $idPerson, $startDay, $mode, $dayOff, $idBranch, $idSlot, $idPerson);
             $stmt->execute();
             $idRequest = (int)$db->insert_id;
-            $stmt->close();
         } else {
-            $stmt = $db->prepare('UPDATE smeny_pozadavek SET stav = "odeslany", odeslano = NOW(), uzavreno = NULL WHERE id_smeny_pozadavek = ?');
-            $stmt->bind_param('i', $idRequest);
+            $stmt = $db->prepare('UPDATE smeny_pozadavek SET rezim=?,volno_datum=?,volno_id_pob=?,
+                volno_id_slot=?,ulozil_id_person=?,ulozeno=NOW() WHERE id_smeny_pozadavek=?');
+            $stmt->bind_param('ssiiii', $mode, $dayOff, $idBranch, $idSlot, $idPerson, $idRequest);
             $stmt->execute();
-            $stmt->close();
         }
-
-        $stmt = $db->prepare('DELETE FROM smeny_pozadavek_blok WHERE id_smeny_pozadavek = ?');
+        $stmt->close();
+        $stmt = $db->prepare('DELETE FROM smeny_pozadavek_den WHERE id_smeny_pozadavek=?');
         $stmt->bind_param('i', $idRequest);
         $stmt->execute();
         $stmt->close();
-        $stmt = $db->prepare('DELETE FROM smeny_hpp_volno WHERE id_smeny_pozadavek = ?');
-        $stmt->bind_param('i', $idRequest);
-        $stmt->execute();
-        $stmt->close();
-
-        if ((int)$person['je_hpp'] === 1 && $dayOff !== '') {
-            $idPob = (int)$person['id_pob'];
-            $idSlot = (int)$person['id_slot'];
-            $stmt = $db->prepare('INSERT INTO smeny_hpp_volno (id_smeny_pozadavek, id_person, id_pob, id_slot, datum) VALUES (?, ?, ?, ?, ?)');
-            $stmt->bind_param('iiiis', $idRequest, $idPerson, $idPob, $idSlot, $dayOff);
-            $stmt->execute();
-            $stmt->close();
-        } elseif ((int)$person['je_hpp'] !== 1 && $blocks !== []) {
-            $stmt = $db->prepare('INSERT INTO smeny_pozadavek_blok (id_smeny_pozadavek, datum, cas_od, cas_do) VALUES (?, ?, ?, ?)');
-            foreach ($blocks as $date => $block) {
+        if ($mode === 'intervaly' && $data['blocks'] !== []) {
+            $stmt = $db->prepare('INSERT INTO smeny_pozadavek_den (id_smeny_pozadavek,den_tydne,cas_od,cas_do) VALUES (?,?,?,?)');
+            foreach ($data['blocks'] as $date => $block) {
+                $day = (int)(new DateTimeImmutable($date))->format('N');
                 $from = $block['od'];
                 $to = $block['do'];
-                $stmt->bind_param('isss', $idRequest, $date, $from, $to);
+                $stmt->bind_param('iiss', $idRequest, $day, $from, $to);
                 $stmt->execute();
             }
             $stmt->close();
         }
-
         $db->commit();
     } catch (mysqli_sql_exception $e) {
         $db->rollback();
-        if ((int)$e->getCode() === 1062 && (int)$person['je_hpp'] === 1) {
+        if ((int)$e->getCode() === 1062 && $mode === 'hpp') {
             throw new CbUserVisibleException('Tento den si mezitím zvolil jiný HPP pracovník se stejnou pobočkou a pozicí. Vyberte jiný den.');
         }
         throw $e;
@@ -199,7 +192,6 @@ function cb_smeny_pozadavky_ulozit(mysqli $db, array $person, array $weeks): voi
         $db->rollback();
         throw $e;
     }
-
     cb_smeny_pozadavky_flash('success', 'Požadavky na celý týden byly uloženy.');
     header('Location: ' . cb_root_url('index.php?m=smeny&page=pozadavky&week=' . $weekIndex));
     exit;

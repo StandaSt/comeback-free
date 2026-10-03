@@ -1,6 +1,8 @@
 <?php
 // lib/nezadane_reporty_export_data.php * Data pro e-mailovy export nezadanych dennich reportu
 declare(strict_types=1);
+/* Zveřejněný interní týden má přednost před externími směnami pro celou pobočku. */
+require_once __DIR__ . '/../../common/lib/smeny_verejny_zdroj.php';
 
 require_once __DIR__ . '/pobocka_provoz.php';
 
@@ -110,6 +112,7 @@ function cb_nezadane_reporty_export_recipient(mysqli $conn, int $idUser): ?array
     ];
 }
 
+/** Export sdílí pravidlo veřejných směn s reportem a jeho notifikačním cronem. */
 function cb_nezadane_reporty_export_rows(mysqli $conn, string $scope): array
 {
     $period = cb_nezadane_reporty_export_period($scope);
@@ -162,12 +165,9 @@ function cb_nezadane_reporty_export_rows(mysqli $conn, string $scope): array
             sp.datum,
             sp.id_pob,
             TRIM(CONCAT_WS(' ', ou.jmeno, ou.prijmeni)) AS full_name,
-            DATE_ADD(
-                CONCAT(sp.datum, ' ', sp.cas_do),
-                INTERVAL CASE WHEN sp.cas_do <= sp.cas_od THEN 1 ELSE 0 END DAY
-            ) AS end_dt
-        FROM smeny_plan sp
-        INNER JOIN hr_osobni_udaje ou ON ou.id_person = sp.id_user AND ou.platny = 1
+            sp.konec AS end_dt
+        FROM (" . cb_smeny_verejny_zdroj_sql() . ") sp
+        INNER JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje = (SELECT MAX(o2.id_osobni_udaje) FROM hr_osobni_udaje o2 WHERE o2.id_person = sp.id_person AND o2.platny = 1)
         WHERE sp.id_slot = 1
           AND sp.datum >= ?
           AND sp.datum <= ?

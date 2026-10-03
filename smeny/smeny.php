@@ -32,8 +32,22 @@ require_once __DIR__ . '/sm_lib/sm_sablona_ulozeni.php';
 require_once __DIR__ . '/sm_lib/sm_sablona_tyden_ulozeni.php';
 require_once __DIR__ . '/sm_lib/sm_sablony_akce.php';
 require_once __DIR__ . '/sm_lib/sm_planovani_data.php';
+require_once __DIR__ . '/sm_lib/sm_planovani_zamek.php';
 require_once __DIR__ . '/sm_lib/sm_planovani_obsazeni.php';
 require_once __DIR__ . '/sm_lib/sm_planovani_akce.php';
+require_once __DIR__ . '/sm_lib/sm_publikace.php';
+require_once __DIR__ . '/sm_lib/sm_verejne.php';
+require_once __DIR__ . '/sm_lib/sm_verejne_filtry.php';
+require_once __DIR__ . '/sm_lib/sm_historie.php';
+require_once __DIR__ . '/sm_lib/sm_oznameni_detail.php';
+require_once __DIR__ . '/sm_lib/sm_oznameni_potvrzeni.php';
+require_once __DIR__ . '/sm_lib/sm_prehled_tyden.php';
+require_once __DIR__ . '/sm_lib/sm_zadane_pozadavky.php';
+require_once __DIR__ . '/sm_lib/sm_prehled_data.php';
+require_once __DIR__ . '/sm_lib/sm_zruseni_nacteni.php';
+require_once __DIR__ . '/sm_lib/sm_zruseni_zadost.php';
+require_once __DIR__ . '/sm_lib/sm_zruseni_vyrizeni.php';
+require_once __DIR__ . '/sm_lib/sm_zruseni_publikace.php';
 
 cb_session_guard_entry();
 
@@ -57,6 +71,14 @@ $smPageTitle = $smCurrentPage['title'];
 
 if ($smPage === 'bez_prava') {
     http_response_code(403);
+}
+
+// Čtecí přehledy smějí do historie, ale zápisové týdny plánovače se tím nemění.
+if (in_array($smPage, ['prehled','zadane_pozadavky'], true)) {
+    $smDb = db();
+    $smReadWeeks = cb_smeny_planovani_tydny();
+    $smReadWeek = cb_smeny_prehled_tyden($smReadWeeks, $_GET);
+    $smReadBranches = cb_smeny_planovani_vidi() ? cb_smeny_sablony_pobocky($smDb) : [];
 }
 
 if ($smPage === 'pozadavky') {
@@ -89,8 +111,27 @@ if ($smPage === 'sablony') {
 if ($smPage === 'planovani_smen') {
     $smDb = db();
     $smPlanBranches = cb_smeny_sablony_pobocky($smDb);
-    $smPlanWeeks = cb_smeny_pozadavky_tydny();
+    $smPlanWeeks = cb_smeny_planovani_tydny();
     cb_smeny_planovani_akce($smDb, $smPlanBranches, $smPlanWeeks);
+}
+
+if (in_array($smPage, ['me_smeny','naplanovane_smeny'], true)) {
+    $smDb = db();
+    $smPublicPerson = cb_smeny_sablony_id_person($smDb);
+    $smPublicWeeks = cb_smeny_planovani_tydny();
+    $smPublicBranches = $smPage === 'naplanovane_smeny' && cb_smeny_planovani_vidi() ? cb_smeny_sablony_pobocky($smDb) : [];
+    if ($smPage === 'me_smeny') {
+        cb_smeny_verejne_potvrdit($smDb, $smPublicPerson);
+        cb_smeny_zruseni_zadost($smDb, $smPublicPerson);
+    }
+}
+
+// Historie má vlastní jednoduchý výběr pobočky a záměrně nereaguje na globální výběr v hlavičce.
+if ($smPage === 'historie_smen') {
+    $smDb = db();
+    $smHistoryWeeks = cb_smeny_historie_tydny();
+    $smHistoryWeek = cb_smeny_historie_tyden($smHistoryWeeks, $_GET);
+    $smHistoryContext = cb_smeny_historie_kontext($smDb, $smHistoryWeek['start_day'], $_GET);
 }
 
 ?>
@@ -98,7 +139,13 @@ if ($smPage === 'planovani_smen') {
     <?php require __DIR__ . '/sm_includes/sm_menu.php'; ?>
 <?php endif; ?>
 
-<?php if ($smPage === 'uprava_profilu'): ?>
+<?php if ($smPage === 'prehled'): ?>
+    <?php require __DIR__ . '/sm_pages/prehled.php'; ?>
+<?php elseif ($smPage === 'zadane_pozadavky'): ?>
+    <?php require __DIR__ . '/sm_pages/zadane_pozadavky.php'; ?>
+<?php elseif ($smPage === 'historie_smen'): ?>
+    <?php require __DIR__ . '/sm_pages/historie_smen.php'; ?>
+<?php elseif ($smPage === 'uprava_profilu'): ?>
     <?php require __DIR__ . '/../common/pages/uprava_profilu.php'; ?>
 <?php elseif ($smPage === 'bez_prava'): ?>
     <?php require __DIR__ . '/sm_pages/bez_prava.php'; ?>
@@ -110,6 +157,8 @@ if ($smPage === 'planovani_smen') {
     <?php require __DIR__ . '/sm_pages/planovani_smen.php'; ?>
 <?php elseif ($smPage === 'nastaveni'): ?>
     <?php require __DIR__ . '/sm_pages/nastaveni.php'; ?>
+<?php elseif (in_array($smPage, ['me_smeny','naplanovane_smeny'], true)): ?>
+    <?php require __DIR__ . '/sm_pages/verejne_smeny.php'; ?>
 <?php else: ?>
 <section class="pp smeny_content" data-module="smeny" data-page="<?= h($smPage) ?>">
     <header class="pp_header">

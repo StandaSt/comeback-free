@@ -4,6 +4,7 @@ declare(strict_types=1);
 /*
  * Ucel souboru: Vykresli kartu zamestnance po samostatnych sekcich nejprve pouze ke cteni.
  * Citaci a editacni rezim sdileji stejny skelet, aby udaje zustaly stale na stejnem miste.
+ * Zmena pobocek zacina platnymi pracovisti a hlavni pobockou; vyber zustava do odeslani ve formulari.
  */
 $idPerson = (int)($_GET['id'] ?? 0);
 $employee = isset($hrEmployeeHeader) && is_array($hrEmployeeHeader)
@@ -169,6 +170,23 @@ $employeeDocumentOpenUrl = static function (array $document): string {
         $positionData = hr_zarazeni_historie($db, (int)$employee['id_person']);
         $functionData = $employeeFunctionData;
         $workplaceData = hr_pracoviste_historie($db, (int)$employee['id_person'], $cbHrIdUser);
+        // Vychozi sada vychazi jen z dnes platnych pracovist, nikoli z minulych ci budoucich zaznamu.
+        $branchToday = date('Y-m-d');
+        $selectedWorkplaces = [];
+        $mainWorkplaces = [];
+        foreach ($workplaceData['historie'] as $workplace) {
+            if ((int)$workplace['platny'] !== 1 || !empty($workplace['zruseno'])
+                || (!empty($workplace['platnost_od']) && $workplace['platnost_od'] > $branchToday)
+                || (!empty($workplace['platnost_do']) && $workplace['platnost_do'] < $branchToday)) {
+                continue;
+            }
+            $selectedWorkplaces[(int)$workplace['id_pob']] = (string)$workplace['nazev'];
+            if ((int)$workplace['hlavni'] === 1) {
+                $mainWorkplaces[(int)$workplace['id_pob']] = true;
+            }
+        }
+        // Pri nejednoznacnych datech hlavni pobocku neodhadujeme; uzivatel ji zvoli.
+        $selectedMainWorkplace = count($mainWorkplaces) === 1 ? (int)array_key_first($mainWorkplaces) : 0;
         ?>
         <section class="hr_panel">
             <div class="hr_panel_header"><h2 class="hr_panel_title">Pracovní poměr</h2><?php if ($isEdit && $workRelation !== null): ?><button class="hr_primary_button" type="submit" form="hr-work-relation-form">Uložit změny</button><?php endif; ?></div>
@@ -277,8 +295,9 @@ $employeeDocumentOpenUrl = static function (array $document): string {
             <?php if ($isEdit && cb_pravo_ma(307)): ?>
                 <form class="hr_form hr_assignment_form hr_assignment_form--branches" method="post" action="<?= h(hr_pracovni_pomer_url((int)$employee['id_person'])) ?>">
                     <input type="hidden" name="cb_action" value="hr_zamestnanec_pobocky_zmenit"><input type="hidden" name="id_person" value="<?= h((string)$employee['id_person']) ?>">
-                    <div class="hr_form_label"><span class="hr_form_label_text">Nové pobočky</span><div class="hr_employee_branch_picker" data-hr-branch-picker><button class="hr_employee_branch_button" type="button" data-hr-branch-toggle>Vyberte pobočky</button><div class="hr_employee_branch_panel" data-hr-branch-panel hidden><?php foreach ($workplaceData['pobocky'] as $pobocka): ?><label><input type="checkbox" name="id_pob[]" value="<?= h((string)$pobocka['id_pob']) ?>" data-hr-branch-option data-hr-branch-name="<?= h($pobocka['nazev']) ?>"> <?= h($pobocka['nazev']) ?></label><?php endforeach; ?></div></div></div>
-                    <label class="hr_form_label"><span class="hr_form_label_text">Hlavní pobočka</span><select name="id_pob_hlavni" required disabled data-hr-main-branch><option value="">Nejprve vyberte pobočky</option></select></label>
+                    <label class="hr_form_label"><span class="hr_form_label_text">Přidat pobočku</span><select data-hr-branch-add><option value="">Vyberte pobočku</option><?php foreach ($workplaceData['pobocky'] as $pobocka): ?><option value="<?= h((string)$pobocka['id_pob']) ?>"<?= isset($selectedWorkplaces[(int)$pobocka['id_pob']]) ? ' disabled' : '' ?>><?= h($pobocka['nazev']) ?></option><?php endforeach; ?></select></label>
+                    <div class="hr_form_label"><span class="hr_form_label_text">Vybrané pobočky</span><div data-hr-branch-list><?php foreach ($selectedWorkplaces as $branchId => $branchName): ?><label><input type="checkbox" name="id_pob[]" value="<?= h((string)$branchId) ?>" data-hr-selected-branch data-hr-branch-name="<?= h($branchName) ?>" checked> <?= h($branchName) ?></label><?php endforeach; ?></div></div>
+                    <label class="hr_form_label"><span class="hr_form_label_text">Hlavní pobočka</span><select name="id_pob_hlavni" required data-hr-selected-main><option value="">Vyberte</option><?php foreach ($selectedWorkplaces as $branchId => $branchName): ?><option value="<?= h((string)$branchId) ?>"<?= $branchId === $selectedMainWorkplace ? ' selected' : '' ?>><?= h($branchName) ?></option><?php endforeach; ?></select></label>
                     <label class="hr_form_label"><span class="hr_form_label_text">Platí od</span><input name="platnost_od" data-cb-date required value="<?= h(date('d.m.Y')) ?>"></label>
                     <button class="hr_primary_button" type="submit">Uložit změnu poboček</button>
                 </form>

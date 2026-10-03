@@ -9,6 +9,7 @@ declare(strict_types=1);
  * - overit email a heslo proti lokalnimu uctu nebo API Smeny
  * - predat push endpoint aktualniho prohlizece lokalnimu login toku
  * - presmerovat na prime mobilni schvaleni, cekaci 2FA nebo cilovy modul
+ * - na vyzadani odeslat po overeni lokalniho hesla prihlasovaci e-mail
  *
  * Dulezite:
  * - bez platneho hesla se zarizeni nikdy nevyhodnocuje
@@ -22,6 +23,7 @@ require_once __DIR__ . '/../config/secrets.php';
 require_once __DIR__ . '/smeny_graphql.php';
 require_once __DIR__ . '/user_bad_login.php';
 require_once __DIR__ . '/prvni_vstup.php';
+require_once __DIR__ . '/ochrana_crf.php';
 
 require_once __DIR__ . '/../db/db_api_smeny.php';
 
@@ -69,6 +71,10 @@ try {
     $email = post_str('email');
     $heslo = post_str('heslo');
     $deviceEndpoint = post_str('device_endpoint');
+    $emailLogin = post_str('login_metoda') === 'email' || post_str('login_volba') === 'email';
+    if ($emailLogin && !cb_crf_platny()) {
+        throw new CbUserVisibleException('Platnost formuláře vypršela. Obnovte stránku a přihlášení zopakujte.');
+    }
     unset($_SESSION['cb_password_reset_email_prefill']);
     $_SESSION['cb_login_target_module'] = post_module();
 
@@ -111,6 +117,17 @@ try {
         }
         if ((int)$localUser['aktivni'] !== 1) {
             throw new CbUserVisibleException(cb_login_neaktivni_zprava($localUser));
+        }
+        if ($emailLogin) {
+            require_once __DIR__ . '/login_email.php';
+            cb_login_email_odeslat(db(), $localUser, post_module());
+            cb_session_forget_auth();
+            unset($_SESSION['cb_local_login_user_id'], $_SESSION['cb_prvni_vstup_user_id'], $_SESSION['cb_obnoveni_hesla_user_id']);
+            // Uspech zobrazi samostatny informacni modal, nikoli stav pod prihlasovacim formularem.
+            unset($_SESSION['cb_flash']);
+            $_SESSION['cb_login_email_odeslan'] = 1;
+            header('Location: ' . cb_login_url(), true, 303);
+            exit;
         }
         $primePresmerovani = cb_lokalni_login_zahaj(db(), $localUser, $deviceEndpoint);
         header('Location: ' . ($primePresmerovani ?? cb_login_target_url()));

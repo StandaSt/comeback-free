@@ -4,9 +4,11 @@ declare(strict_types=1);
 /*
  * Ucel souboru: Zobrazeni prihlasovaciho formulare a predani identity
  * aktualni push registrace serveru pro rozpoznani registrovaneho mobilu.
+ * Nabizi take prihlaseni jednorazovym e-mailovym odkazem po overeni hesla.
  */
 
 require_once __DIR__ . '/../funkce/last_aktualizace_systemu.php';
+require_once __DIR__ . '/../lib/ochrana_crf.php';
 
 cb_last_aktualizace_systemu();
 
@@ -53,10 +55,15 @@ unset($_SESSION['cb_flash']);
       </div>
       <input type="hidden" name="module" value="provoz">
       <input type="hidden" name="device_endpoint" id="cbDeviceEndpoint" value="">
+      <input type="hidden" name="cb_crf" value="<?= h(cb_crf_token()) ?>">
+      <input type="hidden" name="login_metoda" id="cbLoginMetoda" value="mobil">
 
       <div class="modal-actions">
-        <button class="modal-btn primary" type="submit"<?= $loginDisabled ?>>
-          <span class="modal-btn-main">Přihlásit</span>
+        <button class="modal-btn primary cb-login-mobile" type="submit" data-login-metoda="mobil"<?= $loginDisabled ?>>
+          <span class="modal-btn-main"><span aria-hidden="true">📱</span> Přihlásit</span>
+        </button>
+        <button class="modal-btn cb-login-email" type="submit" name="login_volba" value="email" data-login-metoda="email"<?= $loginDisabled ?>>
+          <span class="modal-btn-main"><span aria-hidden="true">✉</span> Přihlásit bez mobilu</span>
         </button>
       </div>
       <p class="modal-login-link"><a href="<?= h(cb_root_url('?zapomenute_heslo=1')) ?>">Nastavit nové heslo</a></p>
@@ -78,6 +85,8 @@ unset($_SESSION['cb_flash']);
   if (!form) return;
 
   var button = form.querySelector('button[type="submit"]');
+  var buttons = form.querySelectorAll('button[type="submit"]');
+  var odeslano = false;
   var loginPovolen = button instanceof HTMLButtonElement && !button.disabled;
   if (loginPovolen) {
     button.disabled = true;
@@ -106,18 +115,21 @@ unset($_SESSION['cb_flash']);
 
   pripravaZarizeni.finally(function(){
     /* Ucel funkce: Povoli nativni prihlaseni po priprave identity zarizeni. */
-    if (loginPovolen && button instanceof HTMLButtonElement) {
+    if (!odeslano && loginPovolen && button instanceof HTMLButtonElement) {
       button.disabled = false;
       button.classList.remove('is-waiting');
     }
   });
 
-  form.addEventListener('submit', function(){
-    /* Ucel funkce: Po nativnim odeslani zabrani opakovanemu kliknuti. */
-    if (button instanceof HTMLButtonElement) {
-      button.disabled = true;
-      button.classList.add('is-waiting');
-    }
+  form.addEventListener('submit', function(event){
+    odeslano = true;
+    /* Metodu uchova skryte pole i po zakazani tlacitek; Enter zachova mobilni vstup. */
+    document.getElementById('cbLoginMetoda').value = event.submitter
+      ? event.submitter.getAttribute('data-login-metoda') : 'mobil';
+    buttons.forEach(function(item){
+      item.disabled = true;
+      item.classList.add('is-waiting');
+    });
   });
 })();
 </script>
