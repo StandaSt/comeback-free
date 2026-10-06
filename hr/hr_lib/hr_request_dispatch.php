@@ -18,6 +18,11 @@ function cb_hr_request_dispatch(mysqli $db, string $page, array $user): void
     }
 
     $action = trim((string)($_POST['cb_action'] ?? ''));
+    // Centralni sprava slotu a funkci ma vlastni kontrolu prava 319 v DB vrstve.
+    if ($action === 'hr_ciselnik_ulozit') {
+        hr_post_ciselnik_ulozit($db);
+        return;
+    }
     if ($action === 'hr_zamestnanec_ulozit') {
         hr_post_zamestnanec($db, (int)($user['id_user'] ?? 0));
         return;

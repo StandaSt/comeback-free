@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+// MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
+require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
+
 /*
  * Nacte hlavni slot a pobocku prihlasene osoby pro pozadavky na smeny v obou fazich HR migrace.
  */
@@ -48,13 +51,13 @@ function cb_smeny_pozadavky_osoba(mysqli $db): ?array
               FROM hr_osobni_udaje ou2
               WHERE ou2.id_person = hp.id_person AND ou2.platny = 1
           )
-        LEFT JOIN hr_pracoviste pracoviste
+        LEFT JOIN ' . cb_hr_main_sql($db) . ' pracoviste
           ON pracoviste.id_pracoviste = (
               SELECT MAX(pr2.id_pracoviste)
-              FROM hr_pracoviste pr2
+              FROM ' . cb_hr_main_sql($db) . ' pr2
               WHERE pr2.id_person = hp.id_person
                 AND pr2.hlavni = 1
-                AND pr2.platny = 1
+                AND pr2.platny = 1 AND pr2.zruseno IS NULL
                 AND (pr2.platnost_od IS NULL OR pr2.platnost_od <= CURDATE())
                 AND (pr2.platnost_do IS NULL OR pr2.platnost_do >= CURDATE())
           )

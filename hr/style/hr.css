@@ -1,6 +1,9 @@
 /*
  * Ucel souboru: Definuje vzhled interniho HR modulu.
  * Velikosti pisma vychazeji z pevne typograficke skaly aplikace.
+ * Karta zamestnance ma kompaktni prazdne stavy a souhrn pobocek vedle titulku.
+ * Zmensene svisle odstupy pracovniho pomeru plati jen uvnitr jeho vlastniho obalu.
+ * Sprava ciselniku ma sirky podle obsahu a jedine podminene ulozeni zmen v kazdem bloku.
  */
 
 /* Promenne pro barvy a zakladni rozmery. */
@@ -1488,6 +1491,91 @@
     background: transparent;
 }
 
+/* Strucne informace v pracovnim pomeru nepotrebuji dalsi ramecek ani vnitrni vypln. */
+.hr_employee_compact_note {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: var(--cb-font-12);
+}
+
+/* Pobocky navazuji na titulek; pri nedostatku sirky se prirozene zalomi. */
+.hr_employee_branches_header {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+}
+
+/* Schvalene svisle rozmery se tykaji pouze sekce Pracovni pomer, vcetne editace. */
+.hr_employee_work_compact {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+.hr_employee_work_compact .hr_assignments_grid {
+    row-gap: 6px;
+}
+
+.hr_employee_work_compact .hr_panel {
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
+.hr_employee_work_compact .hr_panel_header {
+    margin-bottom: 4px;
+}
+
+.hr_employee_work_compact .hr_table_cell {
+    padding-top: 3px;
+    padding-bottom: 3px;
+}
+
+.hr_employee_work_compact .hr_work_benefits {
+    row-gap: 3px;
+}
+
+.hr_employee_work_compact .hr_work_benefits_fieldset {
+    margin-top: 6px;
+}
+
+/* Sirky sloupcu JS meri podle nejdelsiho nazvu a role, nikoli podle sirky panelu. */
+.hr_catalog_row, .hr_catalog_head, .hr_catalog_new {
+    display: grid;
+    grid-template-columns: minmax(0, var(--hr-catalog-name-width, 12ch)) auto;
+    align-items: center;
+    gap: 6px 10px;
+    padding: 4px 0;
+    font-size: var(--cb-font-12);
+}
+
+[data-type="funkce"] :is(.hr_catalog_row, .hr_catalog_head, .hr_catalog_new) {
+    grid-template-columns: minmax(0, var(--hr-catalog-name-width, 12ch)) var(--hr-catalog-role-width, max-content) auto;
+}
+
+.hr_catalog_row { border-bottom: 1px solid var(--border); }
+.hr_catalog_head { font-weight: 700; color: var(--muted); }
+.hr_catalog_new { margin-bottom: 6px; }
+.hr_catalog_row :is(input:not([type="checkbox"]),select),
+.hr_catalog_new :is(input:not([type="hidden"]),select) {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+.hr_catalog_save { margin-top: 6px; }
+.hr_catalog_status { margin: 6px 0 0; font-size: var(--cb-font-12); }
+.hr_catalog_save[hidden], .hr_catalog_status[hidden] { display: none; }
+
+/* Oba bloky zabiraji jen prostor potrebny pro sve sloupce. */
+.hr_settings_grid.hr_settings_grid--catalog {
+    grid-template-columns: repeat(2, minmax(0, max-content));
+    max-width: 100%;
+}
+@media (max-width: 900px) {
+    .hr_settings_grid.hr_settings_grid--catalog { grid-template-columns: minmax(0, 1fr); }
+}
+
 .hr_employee_missing {
     padding: 10px 12px;
     border: 1px solid #e6c476;
@@ -2143,6 +2231,43 @@
 
 .hr_assignment_form--branches {
     gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* Povolene pobocky tvori jeden prehledny radek; checkbox se neodtrhne od nazvu. */
+.hr_assignment_form--branches > div.hr_form_label {
+    flex-basis: 100%;
+}
+
+.hr_assignment_form--branches [data-hr-branch-list] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+}
+
+.hr_assignment_form--branches [data-hr-branch-list] label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+}
+
+/* MAIN ma vlastni datum ucinnosti; stejna sirka obou dat zachova citelny formular. */
+.hr_assignment_form--branches select[data-hr-selected-main] {
+    width: 150px;
+}
+
+.hr_assignment_form--branches input[name="main_platnost_od"] {
+    width: 135px;
+}
+
+.hr_assignment_form--branches > .hr_empty_state {
+    flex-basis: 100%;
+}
+
+.hr_assignment_form--branches > button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .hr_assignment_form--branches .hr_employee_branch_button {

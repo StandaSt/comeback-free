@@ -1,4 +1,4 @@
-// Ovladani HR formularu vcetne rozpracovaneho seznamu pobocek; data uklada az odeslani formulare.
+// Ovladani HR formularu a ciselniku; davkove ulozeni zachovava rozepsany druhy blok a meri sirky podle obsahu.
 (() => {
     'use strict';
 
@@ -80,6 +80,93 @@
     // Inicializuje chovani HR prvku v predanem obsahu stranky.
     const initHr = (scope) => {
         const container = scope instanceof Element || scope instanceof Document ? scope : document;
+
+        // Kazdy ciselnik ma vlastni vychozi hodnoty a vlastni ulozeni bez navigace cele stranky.
+        container.querySelectorAll('[data-hr-catalog-block]').forEach((block) => {
+            if (block.dataset.hrCatalogBound === '1') return;
+            block.dataset.hrCatalogBound = '1';
+            const edit = block.querySelector('[data-hr-catalog-edit]');
+            const add = block.querySelector('[data-hr-catalog-add]');
+            const save = block.querySelector('[data-hr-catalog-save]');
+            const status = block.querySelector('[data-hr-catalog-status]');
+            const baseline = new Map();
+            let busy = false;
+            // Porovnavame skutecne hodnoty, takze vraceni zmeny znovu skryje tlacitko.
+            const values = (row) => ({
+                id: Number(row.dataset.id),
+                nazev: row.querySelector('[data-field="nazev"]').value,
+                aktivni: row.querySelector('[data-field="aktivni"]').checked ? 1 : 0,
+                id_role: Number(row.querySelector('[data-field="id_role"]')?.value || 0)
+            });
+            const rows = () => Array.from(edit.querySelectorAll('[data-hr-catalog-row]'));
+            rows().forEach((row) => baseline.set(Number(row.dataset.id), JSON.stringify(values(row))));
+            const changes = () => rows().filter((row) => !row.querySelector('[data-field="nazev"]').disabled)
+                .map(values).filter((value) => JSON.stringify(value) !== baseline.get(value.id));
+            // Pro sirku se meri i rozepsany novy nazev a vsechny volitelne role.
+            const resize = () => {
+                const context = document.createElement('canvas').getContext('2d');
+                if (!context) return;
+                const names = Array.from(block.querySelectorAll('[data-field="nazev"],input[name="nazev"]'));
+                context.font = getComputedStyle(names[0]).font;
+                const nameWidth = Math.ceil(Math.max(...names.map((input) => context.measureText(input.value || input.placeholder || 'Název').width)) + 24);
+                block.style.setProperty('--hr-catalog-name-width', `${nameWidth}px`);
+                const role = block.querySelector('select');
+                if (role) {
+                    context.font = getComputedStyle(role).font;
+                    const roleWidth = Math.ceil(Math.max(...Array.from(block.querySelectorAll('select option')).map((option) => context.measureText(option.textContent).width)) + 36);
+                    block.style.setProperty('--hr-catalog-role-width', `${roleWidth}px`);
+                }
+            };
+            const update = () => { save.hidden = changes().length === 0; resize(); };
+            block.addEventListener('input', update);
+            block.addEventListener('change', update);
+            // Pouzije stavajici JSON protokol; druhy blok ani jeho hodnoty se neprekresluji.
+            const submit = async (event, adding) => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (busy) return;
+                const form = adding ? add : edit;
+                if (!form.reportValidity()) return;
+                const pending = changes();
+                if (!adding && pending.length === 0) return;
+                const body = new URLSearchParams(new FormData(form));
+                body.set('catalog_async', '1');
+                if (!adding) body.set('rows', JSON.stringify(pending));
+                busy = true;
+                const controls = Array.from(block.querySelectorAll('input,select,button')).filter((control) => !control.disabled);
+                controls.forEach((control) => { control.disabled = true; });
+                status.hidden = false; status.textContent = 'Ukládám…';
+                try {
+                    const response = await fetch(form.action, {method:'POST',credentials:'same-origin',headers:{'X-Comeback-Form':'1','Accept':'application/json'},body});
+                    const result = await response.json();
+                    if (!response.ok || result.success !== true || !Array.isArray(result.items)) throw new Error(result.message || 'Změny se nepodařilo uložit.');
+                    result.items.forEach((item) => {
+                        let row = rows().find((entry) => Number(entry.dataset.id) === Number(item.id));
+                        if (!row) {
+                            row = block.querySelector('[data-hr-catalog-template]').content.firstElementChild.cloneNode(true);
+                            row.dataset.id = String(item.id);
+                            edit.querySelector('[data-hr-catalog-rows]').append(row);
+                        }
+                        row.querySelector('[data-field="nazev"]').value = item.nazev;
+                        row.querySelector('[data-field="aktivni"]').checked = Number(item.aktivni) === 1;
+                        const role = row.querySelector('[data-field="id_role"]');
+                        if (role) role.value = String(item.id_role);
+                        baseline.set(Number(item.id), JSON.stringify(values(row)));
+                    });
+                    if (adding) add.reset();
+                    status.textContent = result.message;
+                } catch (error) {
+                    // Chyba ponecha vsechny rozepsane hodnoty i puvodni porovnavaci stav.
+                    status.textContent = error.message || 'Uložení selhalo. Zadané změny zůstaly zachované.';
+                } finally {
+                    controls.forEach((control) => { control.disabled = false; });
+                    busy = false; update();
+                }
+            };
+            edit.addEventListener('submit', (event) => submit(event, false));
+            add.addEventListener('submit', (event) => submit(event, true));
+            update();
+        });
 
         container.querySelectorAll('[data-phone-cz]').forEach((input) => {
             if (input.dataset.hrPhoneBound === '1') {
@@ -267,47 +354,34 @@
             input.addEventListener('blur', () => validateBirthNumber(input));
         });
 
-        // Pridani pobocky meni pouze formular a zachovava uzivatelem zvolenou hlavni pobocku.
-        container.querySelectorAll('[data-hr-branch-add]').forEach((add) => {
-            if (add.dataset.hrBound === '1') return;
-            const form = add.closest('form');
-            const list = form?.querySelector('[data-hr-branch-list]');
-            const main = form?.querySelector('[data-hr-selected-main]');
-            if (!list || !main) return;
-            add.dataset.hrBound = '1';
+        // MAIN nabizi jen zaskrtnute pobocky; odebrani MAIN vyzaduje vedomou volbu nahrady.
+        container.querySelectorAll('[data-hr-branch-list]').forEach((list) => {
+            if (list.dataset.hrBound === '1') return;
+            const main = list.closest('form')?.querySelector('[data-hr-selected-main]');
+            if (!main) return;
+            list.dataset.hrBound = '1';
+            // Obnova nabidky zachova existujici volbu, ale nikdy neurcuje MAIN automaticky.
             const sync = () => {
                 const previous = main.value;
                 const selected = [...list.querySelectorAll('input:checked')];
                 main.replaceChildren(new Option('Vyberte', ''));
                 selected.forEach(input => main.add(new Option(input.dataset.hrBranchName, input.value)));
                 main.value = selected.some(input => input.value === previous) ? previous : '';
-                [...add.options].forEach(option => {
-                    option.disabled = selected.some(input => input.value === option.value);
-                });
             };
-            add.addEventListener('change', () => {
-                if (!add.value) return;
-                const option = add.selectedOptions[0];
-                const existing = [...list.querySelectorAll('input')].find(input => input.value === add.value);
-                if (existing) {
-                    existing.checked = true;
-                } else {
-                    const label = document.createElement('label');
-                    const input = document.createElement('input');
-                    input.type = 'checkbox';
-                    input.name = 'id_pob[]';
-                    input.value = add.value;
-                    input.checked = true;
-                    input.dataset.hrSelectedBranch = '';
-                    input.dataset.hrBranchName = option.textContent;
-                    label.append(input, document.createTextNode(' ' + option.textContent));
-                    list.append(label);
-                }
-                add.value = '';
-                sync();
-            });
             list.addEventListener('change', sync);
             sync();
+        });
+        // Historie nema vliv na rozpracovany formular a neodesila zadna data.
+        container.querySelectorAll('[data-hr-history-toggle]').forEach((button) => {
+            if (button.dataset.hrBound === '1') return;
+            const panel = container.querySelector('[data-hr-branch-history]');
+            if (!panel) return;
+            button.dataset.hrBound = '1';
+            button.addEventListener('click', () => {
+                panel.hidden = !panel.hidden;
+                button.setAttribute('aria-expanded', String(!panel.hidden));
+                button.textContent = panel.hidden ? 'Zobrazit historii poboček uživatele' : 'Skrýt historii poboček uživatele';
+            });
         });
 
         container.querySelectorAll('[data-hr-branch-picker]').forEach((picker) => {

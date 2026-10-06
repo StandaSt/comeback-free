@@ -68,7 +68,7 @@ if (!$isAllowed) {
 }
 
 $isMainBranch = false;
-$stmtMainBranch = $conn->prepare('SELECT 1 FROM hr_pracoviste WHERE id_person = ? AND id_pob = ? AND hlavni = 1 AND platny = 1 LIMIT 1');
+$stmtMainBranch = $conn->prepare('SELECT 1 FROM ' . cb_hr_main_sql($conn) . ' m WHERE id_person = ? AND id_pob = ? AND hlavni = 1 AND platny = 1 AND zruseno IS NULL AND (platnost_od IS NULL OR platnost_od<=CURDATE()) AND (platnost_do IS NULL OR platnost_do>=CURDATE()) LIMIT 1');
 if ($stmtMainBranch !== false) {
     $stmtMainBranch->bind_param('ii', $currentUserId, $idPob);
     $stmtMainBranch->execute();

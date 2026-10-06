@@ -4,17 +4,15 @@
  * Poradi skriptu je zavisle na soucasne aplikaci a odpovida puvodnimu rozlozeni.
  */
 declare(strict_types=1);
+
+// MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
+require_once __DIR__ . '/../lib/hr_pracoviste_main.php';
 require_once __DIR__ . '/../../helpdesk/hl_lib/hl_pages.php';
 $cbNavUser = $_SESSION['cb_user'] ?? [];
 $cbNavUserId = is_array($cbNavUser) ? (int)($cbNavUser['id_user'] ?? 0) : 0;
 $cbNavMainBranchId = 0;
 if ($cbNavUserId > 0) {
-    $cbNavMainBranchStmt = db()->prepare('SELECT id_pob FROM hr_pracoviste WHERE id_person = ? AND hlavni = 1 AND platny = 1 LIMIT 1');
-    $cbNavMainBranchStmt->bind_param('i', $cbNavUserId);
-    $cbNavMainBranchStmt->execute();
-    $cbNavMainBranchRow = $cbNavMainBranchStmt->get_result()->fetch_assoc();
-    $cbNavMainBranchId = (int)($cbNavMainBranchRow['id_pob'] ?? 0);
-    $cbNavMainBranchStmt->close();
+    $cbNavMainBranchId = cb_hr_main_id(db(), $cbNavUserId);
 }
 ?>
 <?php // Koncovy bod pro komunikaci klienta se spolecnym shellem. ?>

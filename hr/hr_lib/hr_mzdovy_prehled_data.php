@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+// Mzdove obdobi pouziva samostatnou historii MAIN k datu vybraneho obdobi.
+require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
+
 /*
  * Data první čtecí verze mzdového přehledu. Všechny hodnoty jsou načítané
  * z existující evidence HR a z finálně uložených denních reportů IS.
@@ -144,7 +147,7 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
             TRIM(CONCAT(COALESCE(ou.prijmeni, ""), " ", COALESCE(ou.jmeno, ""))) AS cele_jmeno,
             (
                 SELECT CASE WHEN prac.id_pob = 0 THEN \'Výroba\' ELSE p.nazev END
-                FROM hr_pracoviste prac
+                FROM ' . cb_hr_main_sql($db) . ' prac
                 LEFT JOIN pobocka p ON p.id_pob = prac.id_pob
                 WHERE prac.id_person = hp.id_person AND prac.platny = 1
                   AND (prac.platnost_od IS NULL OR prac.platnost_od <= ?)
@@ -154,7 +157,7 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
             ) AS pobocka,
             (
                 SELECT prac.id_pob
-                FROM hr_pracoviste prac
+                FROM ' . cb_hr_main_sql($db) . ' prac
                 WHERE prac.id_person = hp.id_person AND prac.platny = 1
                   AND (prac.platnost_od IS NULL OR prac.platnost_od <= ?)
                   AND (prac.platnost_do IS NULL OR prac.platnost_do >= ?)

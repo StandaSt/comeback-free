@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+// MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
+// Pridelovani funkce s roli Admin je vyhrazeno existujicimu Adminovi.
+require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
+require_once __DIR__ . '/hr_nastaveni_ciselniky.php';
+
 /**
  * DB zapis noveho zamestnance, pracovnich slotu a volitelne firemni funkce.
  */
@@ -13,6 +18,7 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
     if ($zadalUser <= 0) {
         throw new CbUserVisibleException('Přihlášení vypršelo. Přihlaste se prosím znovu.');
     }
+    cb_hr_main_vyzaduj($db);
     $firemniUzivatel = cb_firemni_pristup_uzivatel($db, $zadalUser);
     $idFirma = (int)$firemniUzivatel['id_firma'];
     if ($idFirma <= 0) {
@@ -171,6 +177,7 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
             if (!is_array($platnaFunkce)) {
                 throw new CbUserVisibleException('Vyberte platnou funkci.');
             }
+            hr_funkce_roli_vyzaduj($db, (int)$platnaFunkce['id_role']);
             if ((int)$platnaFunkce['id_role'] === 3 && !cb_pravo_ma(316)) {
                 throw new CbUserVisibleException('Nemáte právo přidělit manažerskou funkci.');
             }
@@ -238,17 +245,18 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
         $stmt->execute();
         $stmt->close();
 
-        // Ulozi vsechna zvolena pracoviste a jedno z nich oznaci jako hlavni.
+        // Povolenym pobockam se MAIN nepripisuje; ma vlastni casovy zaznam.
         $stmt = $db->prepare('
             INSERT INTO hr_pracoviste (id_person, id_pob, hlavni, platnost_od, id_user_zadal, vytvoreno, platny)
             VALUES (?, ?, ?, ?, ?, NOW(), 1)
         ');
         foreach ($idPobocky as $idPob) {
-            $hlavniPobocka = $idPob === $idPobHlavni ? 1 : 0;
+            $hlavniPobocka = 0;
             $stmt->bind_param('iiisi', $idPerson, $idPob, $hlavniPobocka, $datumNastupu, $zadalUser);
             $stmt->execute();
         }
         $stmt->close();
+        cb_hr_main_vlozit($db, $idPerson, $idPobHlavni, $datumNastupu, $zadalUser);
 
         if ($maSlot) {
             // Prvni zvoleny slot je hlavni; dalsi lze pridat na karte pracovního pomeru.

@@ -1,11 +1,32 @@
 <?php
+// Zobrazuje hodiny a odkazy na exporty pouze s pravy na Provoz a Prehled hodin.
 declare(strict_types=1);
+// Overeni relace a prav pred nactenim dat chrani i prime otevreni souboru.
+require_once __DIR__ . '/../../common/lib/session_boot.php';
+require_once __DIR__ . '/../../common/config/secrets.php';
+require_once __DIR__ . '/../../common/lib/app.php';
+if (!empty($_SESSION['login_ok']) && !cb_session_validate_after_login()) {
+    cb_session_forget_auth();
+}
+if (empty($_SESSION['login_ok'])) {
+    http_response_code(401);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo 'Nutné přihlášení';
+    exit;
+}
+if (!cb_pravo_ma(200) || !cb_pravo_ma(209)) {
+    http_response_code(403);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo 'Přístup odepřen';
+    exit;
+}
 
 /* Jednotná obsluha filtrů je provoz/js/filtry.js. */
 
 require_once __DIR__ . '/../lib/prehled_smen_data.php';
 
 if (!function_exists('ps_num_or_dash')) {
+    // Nulovou hodnotu v tabulce zobrazi pomlckou.
     function ps_num_or_dash(float $value): string
     {
         return abs($value) < 0.005 ? '-' : ps_num($value);
@@ -13,6 +34,7 @@ if (!function_exists('ps_num_or_dash')) {
 }
 
 if (!function_exists('ps_num_with_info')) {
+    // K nenulove hodnote pripoji vysvetlujici napovedu.
     function ps_num_with_info(float $value, string $title): string
     {
         $text = h(ps_num_or_dash($value));

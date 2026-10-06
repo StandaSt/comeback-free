@@ -1,5 +1,18 @@
 <?php
+// Zobrazuje rozdily IS a Google reportu pouze v povolenem rozsahu Archivu.
 declare(strict_types=1);
+
+// Prime otevreni souboru nesmi obejit prihlaseni ani pravo na Archiv.
+require_once __DIR__ . '/../../common/lib/session_boot.php';
+require_once __DIR__ . '/../../common/config/secrets.php';
+require_once __DIR__ . '/../../common/lib/app.php';
+if (!empty($_SESSION['login_ok']) && !cb_session_validate_after_login()) { cb_session_forget_auth(); }
+if (empty($_SESSION['login_ok']) || !cb_pravo_ma(202)) {
+    http_response_code(empty($_SESSION['login_ok']) ? 401 : 403);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo 'Přístup odepřen';
+    exit;
+}
 
 /* Porovnání počítá rozdíly ze syrových hodnot; cb_format() upravuje až hodnoty pro tabulku. */
 require_once __DIR__ . '/../lib/format_datum_cas.php';
@@ -12,8 +25,16 @@ $comparisonFilters = (array)($comparisonArchiveData['filters'] ?? []);
 $comparisonBranchId = (int)($_GET['compare_branch'] ?? 0);
 $comparisonDate = trim((string)($_GET['compare_date'] ?? ''));
 $comparisonRows = ['entry' => [], 'calculation' => []];
+$comparisonError = (string)($comparisonArchiveData['error'] ?? '');
 if (isset($comparisonBranches[$comparisonBranchId]) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $comparisonDate) === 1) {
-    $comparisonRows = cb_archiv_reportu_comparison_rows(db(), $comparisonBranchId, $comparisonDate);
+    // Datum se overuje zvlast: pobocka vlastni vypomoci nedava pristup k dalsim reportum.
+    try {
+        $comparisonRows = cb_archiv_reportu_comparison_rows(db(), $comparisonBranchId, $comparisonDate);
+    } catch (CbUserVisibleException $e) {
+        $comparisonError = $e->getMessage();
+    }
+} elseif ($comparisonError === '') {
+    $comparisonError = 'K tomuto archivnímu reportu nemáte přístup nebo není platné datum.';
 }
 $comparisonBackParams = [
     'm' => 'provoz', 'page' => 'archiv_reportu',
@@ -26,18 +47,23 @@ $comparisonBackParams = [
     'ar_p' => (string)(int)($comparisonFilters['page'] ?? 1),
 ];
 $comparisonBackUrl = cb_root_url('index.php') . '?' . http_build_query($comparisonBackParams, '', '&', PHP_QUERY_RFC3986);
+// Surove hodnoty formatuje jen pro zobrazeni v tabulce rozdilu.
 $comparisonFormat = static function ($value, string $format): string {
     if ($value === null || $value === '') { return '—'; }
     if ($format === 'text') { return (string)$value; }
     $formatTypes = ['money' => 'p', 'percent' => 'pr', 'minutes' => 'm', 'hours' => 'h', 'integer' => 'i', 'number' => 'n'];
     return cb_format($formatTypes[$format] ?? 'n', $value);
 };
+// Ciselny rozdil zachovava presny vypocet a az vysledek formatuje.
 $comparisonDifference = static function ($isValue, $googleValue, string $format) use ($comparisonFormat): string {
     if (!is_numeric($isValue) || !is_numeric($googleValue)) { return ''; }
     return $comparisonFormat((float)$isValue - (float)$googleValue, $format);
 };
 ?>
 <section class="provoz_report_comparison">
+  <?php if ($comparisonError !== ''): ?>
+    <p class="txt_cervena"><?= h($comparisonError) ?></p>
+  <?php endif; ?>
   <?php foreach (['entry' => 'Rozdíly v zadání', 'calculation' => 'Rozdíly ve výpočtech'] as $comparisonGroup => $comparisonTitle): ?>
     <?php $comparisonGroupRows = (array)($comparisonRows[$comparisonGroup] ?? []); ?>
     <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 provoz_report_comparison_group" id="rozdily-<?= $comparisonGroup === 'entry' ? 'zadani' : 'vypocet' ?>">

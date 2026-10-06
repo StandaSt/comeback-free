@@ -3,6 +3,7 @@
  * Ucel souboru: Resi seznam a vyber aktualni stranky modulu HR.
  * Cte stabilni nazvy a definice stranek z hr_module.php. U nemigrovanych stranek
  * zachovava soucasne soubory obsahu. Neobsahuje HTML, DB logiku ani formulare.
+ * Sprava ciselniku HR je vyhrazena explicitnimu pravu 319.
  */
 declare(strict_types=1);
 
@@ -54,7 +55,8 @@ function cb_hr_pages(): array
 
 function cb_hr_nastaveni_ma_pravo(): bool
 {
-    return cb_pravo_ma(307);
+    // Nezavedene pravo nesmi vyuzit obecne vychozi povoleni aplikace.
+    return isset($_SESSION['prava_stav'][319]) && cb_pravo_ma(319);
 }
 
 function cb_hr_mzdovy_prehled_ma_pravo(): bool

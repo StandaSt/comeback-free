@@ -1,11 +1,14 @@
 <?php
+// Pripravuje archiv a porovnani reportu s rozsahem podle role, MAIN a vlastniho autorstvi.
 declare(strict_types=1);
 
 require_once __DIR__ . '/denni_report_prava.php';
+require_once __DIR__ . '/reporty_pristup.php';
 require_once __DIR__ . '/../../common/db/db_cis_slot.php';
 
 const CB_ARCHIV_REPORTU_PER_OPTIONS = [20, 50, 100, 500];
 
+// Overi datum filtru a pri neplatne hodnote zachova bezpecny vychozi den.
 function cb_archiv_reportu_date(string $value, DateTimeZone $tz, DateTimeImmutable $fallback): DateTimeImmutable
 {
     $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value, $tz);
@@ -13,8 +16,13 @@ function cb_archiv_reportu_date(string $value, DateTimeZone $tz, DateTimeImmutab
     return $date instanceof DateTimeImmutable && $date->format('Y-m-d') === $value ? $date : $fallback;
 }
 
+// Porovna ulozene a Google hodnoty pouze u reportu dostupneho prihlasene osobe.
 function cb_archiv_reportu_comparison_rows(mysqli $conn, int $idPob, string $reportDate): array
 {
+    $scope = cb_reporty_pristup_nacti($conn, (int)($_SESSION['cb_user']['id_user'] ?? 0));
+    if (!cb_denni_report_ma_pravo(202) || !cb_reporty_archiv_muze_cist($conn, $scope, $idPob, $reportDate)) {
+        throw new CbUserVisibleException('K tomuto reportu nemáte přístup.');
+    }
     $slotLabels = cb_cis_slot_nazvy($conn);
     $isData = cb_denni_report_history_load($conn, $idPob, $reportDate);
     $googleData = cb_denni_report_google_history_load($conn, $idPob, $reportDate);
@@ -216,6 +224,7 @@ function cb_archiv_reportu_comparison_rows(mysqli $conn, int $idPob, string $rep
     return $comparison;
 }
 
+// Sestavi jen povolene radky, roky a pobocky vcetne jednotlivych vlastnich vypomoci.
 function cb_archiv_reportu_data(mysqli $conn, array $input): array
 {
     $tz = new DateTimeZone('Europe/Prague');
@@ -266,147 +275,83 @@ function cb_archiv_reportu_data(mysqli $conn, array $input): array
         $filters['dir'] = 'desc';
     }
 
-    $branches = [];
-    $branchStmt = $conn->prepare('
-        SELECT p.id_pob, p.nazev, COALESCE((SELECT MAX(prac.hlavni) FROM hr_pracoviste prac WHERE prac.id_person=hp.id_person AND prac.id_pob=p.id_pob AND prac.platny=1), 0) AS main
-        FROM hr_person hp
-        INNER JOIN pobocka p ON p.id_firma=hp.id_firma AND p.aktivni=1
-        WHERE hp.id_person = ? AND (hp.pristup_vsechny_pobocky=1 OR EXISTS (SELECT 1 FROM hr_pracoviste prac WHERE prac.id_person=hp.id_person AND prac.id_pob=p.id_pob AND prac.platny=1))
-        ORDER BY p.id_pob ASC
-    ');
-    if ($branchStmt === false) {
-        return ['filters' => $filters, 'branches' => [], 'rows' => [], 'total' => 0, 'error' => 'Nepodařilo se načíst pobočky pro archiv reportů.'];
+    try {
+        $scope = cb_reporty_pristup_nacti($conn, $userId);
+    } catch (CbUserVisibleException $e) {
+        return ['filters' => $filters, 'branches' => [], 'rows' => [], 'total' => 0, 'error' => $e->getMessage()];
     }
-    $branchStmt->bind_param('i', $userId);
-    $branchStmt->execute();
-    $branchResult = $branchStmt->get_result();
-    if ($branchResult instanceof mysqli_result) {
-        while ($branchRow = $branchResult->fetch_assoc()) {
-            $idBranch = (int)($branchRow['id_pob'] ?? 0);
-            if ($idBranch > 0) {
-                $branches[$idBranch] = ['id' => $idBranch, 'name' => trim((string)($branchRow['nazev'] ?? '')), 'main' => ((int)($branchRow['main'] ?? 0) === 1)];
+    $branches = $scope['branches'];
+    // Ve filtru jsou i pobocky vlastnich reportu, jejich ostatni dny se ale nesmi odkryt.
+    if ($scope['own_reports']) {
+        $stmt = $conn->prepare('SELECT DISTINCT p.id_pob, p.nazev FROM reporty_is r
+            INNER JOIN pobocka p ON p.id_pob=r.id_pob WHERE r.platny=1 AND r.zadal=?');
+        $stmt->bind_param('i', $userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($branch = $result->fetch_assoc()) {
+            $id = (int)$branch['id_pob'];
+            if (!isset($branches[$id])) {
+                $branches[$id] = ['id' => $id, 'name' => (string)$branch['nazev'], 'main' => false];
             }
         }
-        $branchResult->free();
+        $stmt->close();
     }
-    $branchStmt->close();
-    if ($branches === []) {
-        return ['filters' => $filters, 'branches' => [], 'rows' => [], 'total' => 0, 'error' => 'Nemáte přiřazenou žádnou aktivní pobočku.'];
-    }
+    $archiveWhere = cb_reporty_archiv_sql($scope);
+    $googleWhere = cb_reporty_archiv_sql($scope, true);
     $years = [];
-    $yearStmt = $conn->prepare('
-        SELECT MIN(first_date) AS first_date
-        FROM (
-            SELECT r.datum_reportu AS first_date
-            FROM reporty_is r
-            INNER JOIN hr_person hp ON hp.id_person = ? AND (hp.pristup_vsechny_pobocky=1 OR EXISTS (SELECT 1 FROM hr_pracoviste prac WHERE prac.id_person=hp.id_person AND prac.id_pob=r.id_pob AND prac.platny=1))
-            WHERE r.platny = 1
-            UNION ALL
-            SELECT r.datum_reportu AS first_date
-            FROM reporty r
-            INNER JOIN hr_person hp ON hp.id_person = ? AND (hp.pristup_vsechny_pobocky=1 OR EXISTS (SELECT 1 FROM hr_pracoviste prac WHERE prac.id_person=hp.id_person AND prac.id_pob=r.id_pob AND prac.platny=1))
-            WHERE r.platny = 1 AND r.zdroj = 1
-        ) report_dates
-    ');
-    if ($yearStmt !== false) {
-        $yearStmt->bind_param('ii', $userId, $userId);
-        $yearStmt->execute();
-        $yearResult = $yearStmt->get_result();
-        $yearRow = $yearResult instanceof mysqli_result ? ($yearResult->fetch_assoc() ?: []) : [];
-        if ($yearResult instanceof mysqli_result) { $yearResult->free(); }
-        $yearStmt->close();
-        $firstYear = (int)substr((string)($yearRow['first_date'] ?? ''), 0, 4);
-        for ($year = $defaultYear; $year >= max(2000, $firstYear ?: $defaultYear); $year--) { $years[] = $year; }
-    }
-    if ($years === []) { $years[] = $defaultYear; }
-    if ($filters['branch'] > 0 && !isset($branches[$filters['branch']])) {
-        $filters['branch'] = 0;
-    }
-
+    // Nabidka roku vychazi ze stejneho rozsahu jako reporty, nikoli z cele firmy.
+    $yearStmt = $conn->prepare('SELECT MIN(first_date) AS first_date FROM (
+        SELECT r.datum_reportu AS first_date FROM reporty_is r WHERE r.platny=1 AND ' . $archiveWhere . '
+        UNION ALL
+        SELECT r.datum_reportu AS first_date FROM reporty r WHERE r.platny=1 AND r.zdroj=1 AND ' . $googleWhere . '
+        ) report_dates');
+    $yearStmt->execute();
+    $firstYear = (int)substr((string)($yearStmt->get_result()->fetch_assoc()['first_date'] ?? ''), 0, 4);
+    $yearStmt->close();
+    for ($year = $defaultYear; $year >= max(2000, $firstYear ?: $defaultYear); $year--) { $years[] = $year; }
+    if ($filters['branch'] > 0 && !isset($branches[$filters['branch']])) { $filters['branch'] = 0; }
     $canCompleteReport = cb_denni_report_ma_pravo(CB_DENNI_REPORT_ZOBRAZIT_PRAVO)
         && cb_denni_report_ma_pravo(CB_DENNI_REPORT_UZAVRIT_PRAVO);
-
     $reportStmt = $conn->prepare('
-        SELECT
-            r.id_reportu,
-            r.zdroj,
-            r.id_pob,
-            r.datum_reportu,
+        SELECT r.id_reportu, r.zdroj, r.id_pob, r.datum_reportu,
             COALESCE(NULLIF(TRIM(CONCAT_WS(" ", open_ou.jmeno, open_ou.prijmeni)), ""), r.oteviral_text) AS oteviral_text,
             COALESCE(NULLIF(TRIM(CONCAT_WS(" ", close_ou.jmeno, close_ou.prijmeni)), ""), r.zaviral_text) AS zaviral_text,
-            ri.trzba,
-            ri.col_pomer,
-            pk.rozdil,
-            people.hodiny_celkem,
-            people.hodiny_instor,
-            people.hodiny_kuryr
+            ri.trzba, ri.col_pomer, pk.rozdil,
+            people.hodiny_celkem, people.hodiny_instor, people.hodiny_kuryr
         FROM reporty_is r
-        INNER JOIN hr_person hp ON hp.id_person = ? AND hp.id_firma=r.id_firma AND (hp.pristup_vsechny_pobocky=1 OR EXISTS (SELECT 1 FROM hr_pracoviste prac WHERE prac.id_person=hp.id_person AND prac.id_pob=r.id_pob AND prac.platny=1))
         LEFT JOIN hr_osobni_udaje open_ou ON open_ou.id_osobni_udaje=(SELECT MAX(ou.id_osobni_udaje) FROM hr_osobni_udaje ou WHERE ou.id_person=r.oteviral AND ou.platny=1)
         LEFT JOIN hr_osobni_udaje close_ou ON close_ou.id_osobni_udaje=(SELECT MAX(ou.id_osobni_udaje) FROM hr_osobni_udaje ou WHERE ou.id_person=r.zaviral AND ou.platny=1)
-        LEFT JOIN reporty_is_restia ri ON ri.id_reportu = r.id_reportu
-        LEFT JOIN reporty_is_pokladna pk ON pk.id_reportu = r.id_reportu
+        LEFT JOIN reporty_is_restia ri ON ri.id_reportu=r.id_reportu
+        LEFT JOIN reporty_is_pokladna pk ON pk.id_reportu=r.id_reportu
         LEFT JOIN (
-            SELECT
-                id_reportu,
-                SUM(COALESCE(odpracovano, 0)) AS hodiny_celkem,
-                SUM(CASE WHEN slot = 1 THEN COALESCE(odpracovano, 0) ELSE 0 END) AS hodiny_instor,
-                SUM(CASE WHEN slot = 2 THEN COALESCE(odpracovano, 0) ELSE 0 END) AS hodiny_kuryr
-            FROM reporty_is_osoby
-            GROUP BY id_reportu
-        ) people ON people.id_reportu = r.id_reportu
-        WHERE r.platny = 1 AND r.datum_reportu BETWEEN ? AND ?
-        ORDER BY r.datum_reportu DESC, r.id_reportu DESC
-    ');
+            SELECT id_reportu, SUM(COALESCE(odpracovano,0)) AS hodiny_celkem,
+                SUM(CASE WHEN slot=1 THEN COALESCE(odpracovano,0) ELSE 0 END) AS hodiny_instor,
+                SUM(CASE WHEN slot=2 THEN COALESCE(odpracovano,0) ELSE 0 END) AS hodiny_kuryr
+            FROM reporty_is_osoby GROUP BY id_reportu
+        ) people ON people.id_reportu=r.id_reportu
+        WHERE r.platny=1 AND r.datum_reportu BETWEEN ? AND ? AND ' . $archiveWhere . '
+        ORDER BY r.datum_reportu DESC, r.id_reportu DESC');
+    $fromValue = $filters['from'];
+    $toValue = $filters['to'];
+    $reportStmt->bind_param('ss', $fromValue, $toValue);
+    $reportStmt->execute();
+    $result = $reportStmt->get_result();
     $savedByKey = [];
-    if ($reportStmt !== false) {
-        $fromValue = $filters['from'];
-        $toValue = $filters['to'];
-        $reportStmt->bind_param('iss', $userId, $fromValue, $toValue);
-        $reportStmt->execute();
-        $reportResult = $reportStmt->get_result();
-        if ($reportResult instanceof mysqli_result) {
-            while ($reportRow = $reportResult->fetch_assoc()) {
-                $idBranch = (int)($reportRow['id_pob'] ?? 0);
-                $date = trim((string)($reportRow['datum_reportu'] ?? ''));
-                $key = $date . ':' . $idBranch;
-                if ($idBranch > 0 && isset($branches[$idBranch]) && $date !== '' && !isset($savedByKey[$key])) {
-                    $savedByKey[$key] = $reportRow;
-                }
-            }
-            $reportResult->free();
-        }
+    while ($report = $result->fetch_assoc()) {
+        $key = (string)$report['datum_reportu'] . ':' . (int)$report['id_pob'];
+        if (isset($branches[(int)$report['id_pob']]) && !isset($savedByKey[$key])) { $savedByKey[$key] = $report; }
+    }
     $reportStmt->close();
-
     $googleByKey = [];
-    $googleStmt = $conn->prepare('
-        SELECT r.id_pob, r.datum_reportu
-        FROM reporty r
-        INNER JOIN pobocka report_branch ON report_branch.id_pob=r.id_pob
-        INNER JOIN hr_person hp ON hp.id_person = ? AND hp.id_firma=report_branch.id_firma AND (hp.pristup_vsechny_pobocky=1 OR EXISTS (SELECT 1 FROM hr_pracoviste prac WHERE prac.id_person=hp.id_person AND prac.id_pob=r.id_pob AND prac.platny=1))
-        WHERE r.platny = 1
-          AND r.zdroj = 1
-          AND r.datum_reportu BETWEEN ? AND ?
-    ');
-    if ($googleStmt !== false) {
-        $fromValue = $filters['from'];
-        $toValue = $filters['to'];
-        $googleStmt->bind_param('iss', $userId, $fromValue, $toValue);
-        $googleStmt->execute();
-        $googleResult = $googleStmt->get_result();
-        if ($googleResult instanceof mysqli_result) {
-            while ($googleRow = $googleResult->fetch_assoc()) {
-                $idBranch = (int)($googleRow['id_pob'] ?? 0);
-                $date = trim((string)($googleRow['datum_reportu'] ?? ''));
-                if ($idBranch > 0 && isset($branches[$idBranch]) && $date !== '') {
-                    $googleByKey[$date . ':' . $idBranch] = true;
-                }
-            }
-            $googleResult->free();
-        }
-        $googleStmt->close();
+    $googleStmt = $conn->prepare('SELECT r.id_pob, r.datum_reportu FROM reporty r
+        WHERE r.platny=1 AND r.zdroj=1 AND r.datum_reportu BETWEEN ? AND ? AND ' . $googleWhere);
+    $googleStmt->bind_param('ss', $fromValue, $toValue);
+    $googleStmt->execute();
+    $result = $googleStmt->get_result();
+    while ($report = $result->fetch_assoc()) {
+        $googleByKey[(string)$report['datum_reportu'] . ':' . (int)$report['id_pob']] = true;
     }
-    }
+    $googleStmt->close();
 
     $visibleBranches = $filters['branch'] > 0 ? [$filters['branch'] => $branches[$filters['branch']]] : $branches;
     $rows = [];
@@ -415,6 +360,8 @@ function cb_archiv_reportu_data(mysqli $conn, array $input): array
         foreach ($visibleBranches as $idBranch => $branch) {
             $saved = $savedByKey[$date . ':' . $idBranch] ?? null;
             $isSaved = is_array($saved);
+            // Vedlejsi vypomoc ukazuje pouze vlastni ulozeny report; nedelni Vyroba neni chybejici.
+            if (!cb_reporty_archiv_radek_viditelny($scope, (int)$idBranch, $day, $isSaved)) { continue; }
             if (($filters['status'] === 'saved' && !$isSaved) || ($filters['status'] === 'missing' && $isSaved)) {
                 continue;
             }

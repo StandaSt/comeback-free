@@ -4,7 +4,11 @@ declare(strict_types=1);
 /*
  * Ucel souboru: Vykresli kartu zamestnance po samostatnych sekcich nejprve pouze ke cteni.
  * Citaci a editacni rezim sdileji stejny skelet, aby udaje zustaly stale na stejnem miste.
- * Zmena pobocek zacina platnymi pracovisti a hlavni pobockou; vyber zustava do odeslani ve formulari.
+ * Checkboxy povolenych pobocek a samostatna MAIN historie zachovavaji data nezmenenych prirazeni.
+ * Aktualni povolene pobocky jsou viditelne i bez rozbaleni historie; MAIN je zvyraznena tucne.
+ * Prazdne stavy a souhrn pobocek pouzivaji kompaktni zobrazeni bez vnitrnich ramecku.
+ * Samostatny obal pracovniho pomeru omezuje zmensene odstupy pouze na tuto sekci.
+ * Odkazy na spravu ciselniku vyzaduji pravo 319; pridelovani Admin funkce existujiciho Admina.
  */
 $idPerson = (int)($_GET['id'] ?? 0);
 $employee = isset($hrEmployeeHeader) && is_array($hrEmployeeHeader)
@@ -181,13 +185,19 @@ $employeeDocumentOpenUrl = static function (array $document): string {
                 continue;
             }
             $selectedWorkplaces[(int)$workplace['id_pob']] = (string)$workplace['nazev'];
-            if ((int)$workplace['hlavni'] === 1) {
-                $mainWorkplaces[(int)$workplace['id_pob']] = true;
-            }
         }
         // Pri nejednoznacnych datech hlavni pobocku neodhadujeme; uzivatel ji zvoli.
+        // Vychozi MAIN vychazi z vlastni casove evidence, nezavisle na povolenych pobockach.
+        foreach ($workplaceData['main_historie'] as $mainRow) {
+            if ((int)$mainRow['platny'] !== 1 || !empty($mainRow['zruseno'])
+                || (!empty($mainRow['platnost_od']) && $mainRow['platnost_od'] > $branchToday)
+                || (!empty($mainRow['platnost_do']) && $mainRow['platnost_do'] < $branchToday)) continue;
+            $mainWorkplaces[(int)$mainRow['id_pob']] = true;
+        }
         $selectedMainWorkplace = count($mainWorkplaces) === 1 ? (int)array_key_first($mainWorkplaces) : 0;
         ?>
+        <?php // Obal sjednocuje kompaktni odstupy v prohlizeni i editaci pracovniho pomeru. ?>
+        <div class="hr_employee_work_compact">
         <section class="hr_panel">
             <div class="hr_panel_header"><h2 class="hr_panel_title">Pracovní poměr</h2><?php if ($isEdit && $workRelation !== null): ?><button class="hr_primary_button" type="submit" form="hr-work-relation-form">Uložit změny</button><?php endif; ?></div>
             <?php if ($workRelation === null): ?>
@@ -253,14 +263,14 @@ $employeeDocumentOpenUrl = static function (array $document): string {
                     <input type="hidden" name="cb_action" value="hr_pracovni_preruseni_ulozit"><input type="hidden" name="id_person" value="<?= h((string)$employee['id_person']) ?>"><input type="hidden" name="id_pracovni_vztah" value="<?= h((string)$workRelation['id_pracovni_vztah']) ?>">
                     <div class="hr_form_grid"><label class="hr_form_label"><span class="hr_form_label_text">Typ přerušení</span><select name="id_pracovni_preruseni_typ" required><option value="">Vyberte</option><?php foreach ($interruptionTypes as $interruptionType): ?><option value="<?= h((string)$interruptionType['id']) ?>"><?= h((string)$interruptionType['label']) ?></option><?php endforeach; ?></select></label><label class="hr_form_label"><span class="hr_form_label_text">Od</span><input name="datum_od" data-cb-date required></label><label class="hr_form_label"><span class="hr_form_label_text">Do</span><input name="datum_do" data-cb-date></label><label class="hr_form_label hr_work_event_note"><span class="hr_form_label_text">Poznámka</span><input name="poznamka" maxlength="1000"></label><button class="hr_primary_button" type="submit">Evidovat přerušení</button></div>
                 </form><?php endif; ?>
-                <?php if ($interruptions === []): ?><p class="hr_employee_empty_block hr_employee_empty_block--plain">Přerušení zatím nejsou evidována.</p><?php else: ?><div class="hr_table_wrap"><table class="hr_table"><thead><tr><th class="hr_table_cell hr_table_head">Typ</th><th class="hr_table_cell hr_table_head">Od</th><th class="hr_table_cell hr_table_head">Do</th><th class="hr_table_cell hr_table_head">Poznámka</th><th class="hr_table_cell hr_table_head"></th></tr></thead><tbody><?php foreach ($interruptions as $interruption): ?><tr><td class="hr_table_cell"><?= h((string)$interruption['typ']) ?></td><td class="hr_table_cell"><?= h(hr_format_date((string)$interruption['datum_od'])) ?></td><td class="hr_table_cell"><?php if ($interruption['datum_do'] === null && $isEdit): ?><form method="post" action="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$employee['id_person']) . '&sekce=pracovni_pomer&upravit=1')) ?>"><input type="hidden" name="cb_action" value="hr_pracovni_preruseni_uzavrit"><input type="hidden" name="id_person" value="<?= h((string)$employee['id_person']) ?>"><input type="hidden" name="id_pracovni_preruseni" value="<?= h((string)$interruption['id_pracovni_preruseni']) ?>"><input name="datum_do" data-cb-date required placeholder="DD.MM.RRRR"><button class="hr_secondary_button" type="submit">Uzavřít</button></form><?php elseif ($interruption['datum_do'] === null): ?>Trvá<?php else: ?><?= h(hr_format_date((string)$interruption['datum_do'])) ?><?php endif; ?></td><td class="hr_table_cell"><?= h((string)($interruption['poznamka'] ?? '')) ?></td><td class="hr_table_cell"></td></tr><?php endforeach; ?></tbody></table></div><?php endif; ?>
+                <?php if ($interruptions === []): ?><p class="hr_employee_compact_note">Zaměstnanec neměl žádné přerušení</p><?php else: ?><div class="hr_table_wrap"><table class="hr_table"><thead><tr><th class="hr_table_cell hr_table_head">Typ</th><th class="hr_table_cell hr_table_head">Od</th><th class="hr_table_cell hr_table_head">Do</th><th class="hr_table_cell hr_table_head">Poznámka</th><th class="hr_table_cell hr_table_head"></th></tr></thead><tbody><?php foreach ($interruptions as $interruption): ?><tr><td class="hr_table_cell"><?= h((string)$interruption['typ']) ?></td><td class="hr_table_cell"><?= h(hr_format_date((string)$interruption['datum_od'])) ?></td><td class="hr_table_cell"><?php if ($interruption['datum_do'] === null && $isEdit): ?><form method="post" action="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$employee['id_person']) . '&sekce=pracovni_pomer&upravit=1')) ?>"><input type="hidden" name="cb_action" value="hr_pracovni_preruseni_uzavrit"><input type="hidden" name="id_person" value="<?= h((string)$employee['id_person']) ?>"><input type="hidden" name="id_pracovni_preruseni" value="<?= h((string)$interruption['id_pracovni_preruseni']) ?>"><input name="datum_do" data-cb-date required placeholder="DD.MM.RRRR"><button class="hr_secondary_button" type="submit">Uzavřít</button></form><?php elseif ($interruption['datum_do'] === null): ?>Trvá<?php else: ?><?= h(hr_format_date((string)$interruption['datum_do'])) ?><?php endif; ?></td><td class="hr_table_cell"><?= h((string)($interruption['poznamka'] ?? '')) ?></td><td class="hr_table_cell"></td></tr><?php endforeach; ?></tbody></table></div><?php endif; ?>
             </section>
 
         <?php endif; ?>
 
         <div class="hr_assignments_grid">
         <section class="hr_panel">
-            <div class="hr_panel_header"><h2 class="hr_panel_title">Pracovní sloty</h2></div>
+            <div class="hr_panel_header"><h2 class="hr_panel_title">Pracovní sloty</h2><?php if (cb_hr_nastaveni_ma_pravo()): ?><a class="hr_panel_link" href="<?= h(cb_root_url('index.php?m=hr&page=nastaveni&navrat_person=' . (int)$employee['id_person'] . '#hr-settings-slot')) ?>">Spravovat sloty</a><?php endif; ?></div>
             <?php if ($isEdit && cb_pravo_ma(307)): ?>
                 <form class="hr_form hr_assignment_form hr_assignment_form--position" method="post" action="<?= h(hr_pracovni_pomer_url((int)$employee['id_person'])) ?>">
                     <input type="hidden" name="cb_action" value="hr_zamestnanec_pozice_zmenit"><input type="hidden" name="id_person" value="<?= h((string)$employee['id_person']) ?>">
@@ -269,17 +279,17 @@ $employeeDocumentOpenUrl = static function (array $document): string {
                     <button class="hr_primary_button" type="submit">Přidat slot</button>
                 </form>
             <?php endif; ?>
-            <?php if ($positionData['historie'] === []): ?><p class="hr_empty_state">Historie slotů není evidována.</p><?php else: ?>
+            <?php if ($positionData['historie'] === []): ?><p class="hr_employee_compact_note">Zaměstnanec nemá přidělen slot</p><?php else: ?>
                 <div class="hr_table_wrap hr_compact_table_wrap"><table class="hr_table hr_assignment_history_table"><thead><tr><th class="hr_table_cell hr_table_head">Slot</th><th class="hr_table_cell hr_table_head">Hlavní</th><th class="hr_table_cell hr_table_head">Od</th><th class="hr_table_cell hr_table_head">Do</th><th class="hr_table_cell hr_table_head">Stav záznamu</th></tr></thead><tbody><?php foreach ($positionData['historie'] as $polozka): ?><tr><td class="hr_table_cell"><strong><?= h((string)$polozka['slot']) ?></strong></td><td class="hr_table_cell"><?= (int)$polozka['hlavni'] === 1 ? 'Ano' : 'Ne' ?></td><td class="hr_table_cell"><?= h(hr_format_date((string)($polozka['platnost_od'] ?? ''))) ?></td><td class="hr_table_cell"><?= h(hr_format_date((string)($polozka['platnost_do'] ?? ''))) ?></td><td class="hr_table_cell"><?= (int)$polozka['platny'] === 1 ? 'Platný' : 'Ukončený' ?></td></tr><?php endforeach; ?></tbody></table></div>
             <?php endif; ?>
         </section>
 
         <section class="hr_panel">
-            <div class="hr_panel_header"><h2 class="hr_panel_title">Funkce</h2></div>
+            <div class="hr_panel_header"><h2 class="hr_panel_title">Funkce</h2><?php if (cb_hr_nastaveni_ma_pravo()): ?><a class="hr_panel_link" href="<?= h(cb_root_url('index.php?m=hr&page=nastaveni&navrat_person=' . (int)$employee['id_person'] . '#hr-settings-funkce')) ?>">Spravovat funkce</a><?php endif; ?></div>
             <?php if ($isEdit && cb_pravo_ma(307)): ?>
                 <form class="hr_form hr_assignment_form" method="post" action="<?= h(hr_pracovni_pomer_url((int)$employee['id_person'])) ?>">
                     <input type="hidden" name="cb_action" value="hr_zamestnanec_funkce_zmenit"><input type="hidden" name="id_person" value="<?= h((string)$employee['id_person']) ?>">
-                    <label class="hr_form_label"><span class="hr_form_label_text">Funkce</span><select name="id_funkce"><option value="">Bez funkce</option><?php foreach ($functionData['funkce'] as $funkce): ?><?php if ((int)$funkce['id_role'] !== 3 || cb_pravo_ma(316)): ?><option value="<?= h((string)$funkce['id_funkce']) ?>"><?= h($funkce['nazev']) ?></option><?php endif; ?><?php endforeach; ?></select></label>
+                    <label class="hr_form_label"><span class="hr_form_label_text">Funkce</span><select name="id_funkce"><option value="">Bez funkce</option><?php foreach ($functionData['funkce'] as $funkce): ?><?php if (((int)$funkce['id_role'] !== 3 || cb_pravo_ma(316)) && ((int)$funkce['id_role'] !== 1 || hr_ciselnik_je_admin($db))): ?><option value="<?= h((string)$funkce['id_funkce']) ?>"><?= h($funkce['nazev']) ?></option><?php endif; ?><?php endforeach; ?></select></label>
                     <label class="hr_form_label"><span class="hr_form_label_text"><input type="checkbox" name="v_treninku" value="1"> V tréninku</span></label>
                     <label class="hr_form_label"><span class="hr_form_label_text">Platí od</span><input name="platnost_od" data-cb-date required value="<?= h(date('d.m.Y')) ?>"></label>
                     <button class="hr_primary_button" type="submit">Uložit funkci</button>
@@ -291,20 +301,39 @@ $employeeDocumentOpenUrl = static function (array $document): string {
         </section>
 
         <section class="hr_panel">
-            <div class="hr_panel_header"><h2 class="hr_panel_title">Pobočky</h2></div>
+            <div class="hr_panel_header hr_employee_branches_header"><h2 class="hr_panel_title">Povolené pobočky</h2>
+            <?php // Souhrn pouziva stejnou aktualni sadu jako checkboxy; minula prirazeni zustavaji v historii. ?>
+            <?php if ($selectedWorkplaces === []): ?>
+                <span class="hr_employee_compact_note">Zaměstnanec nemá povolenou žádnou pobočku</span>
+            <?php else: ?>
+                <span data-hr-current-branches><?php $branchSeparator = ''; foreach ($selectedWorkplaces as $branchId => $branchName): ?><?= $branchSeparator ?><?php if ($branchId === $selectedMainWorkplace): ?><strong><?= h($branchName) ?></strong><?php else: ?><?= h($branchName) ?><?php endif; ?><?php $branchSeparator = ', '; endforeach; ?></span>
+            <?php endif; ?>
+            </div>
             <?php if ($isEdit && cb_pravo_ma(307)): ?>
                 <form class="hr_form hr_assignment_form hr_assignment_form--branches" method="post" action="<?= h(hr_pracovni_pomer_url((int)$employee['id_person'])) ?>">
                     <input type="hidden" name="cb_action" value="hr_zamestnanec_pobocky_zmenit"><input type="hidden" name="id_person" value="<?= h((string)$employee['id_person']) ?>">
-                    <label class="hr_form_label"><span class="hr_form_label_text">Přidat pobočku</span><select data-hr-branch-add><option value="">Vyberte pobočku</option><?php foreach ($workplaceData['pobocky'] as $pobocka): ?><option value="<?= h((string)$pobocka['id_pob']) ?>"<?= isset($selectedWorkplaces[(int)$pobocka['id_pob']]) ? ' disabled' : '' ?>><?= h($pobocka['nazev']) ?></option><?php endforeach; ?></select></label>
-                    <div class="hr_form_label"><span class="hr_form_label_text">Vybrané pobočky</span><div data-hr-branch-list><?php foreach ($selectedWorkplaces as $branchId => $branchName): ?><label><input type="checkbox" name="id_pob[]" value="<?= h((string)$branchId) ?>" data-hr-selected-branch data-hr-branch-name="<?= h($branchName) ?>" checked> <?= h($branchName) ?></label><?php endforeach; ?></div></div>
+                    <div class="hr_form_label"><span class="hr_form_label_text">Povolené pobočky</span><div data-hr-branch-list><?php foreach ($workplaceData['pobocky'] as $pobocka): ?><label><input type="checkbox" name="id_pob[]" value="<?= h((string)$pobocka['id_pob']) ?>" data-hr-selected-branch data-hr-branch-name="<?= h($pobocka['nazev']) ?>"<?= isset($selectedWorkplaces[(int)$pobocka['id_pob']]) ? ' checked' : '' ?>> <?= h($pobocka['nazev']) ?></label><?php endforeach; ?></div></div>
                     <label class="hr_form_label"><span class="hr_form_label_text">Hlavní pobočka</span><select name="id_pob_hlavni" required data-hr-selected-main><option value="">Vyberte</option><?php foreach ($selectedWorkplaces as $branchId => $branchName): ?><option value="<?= h((string)$branchId) ?>"<?= $branchId === $selectedMainWorkplace ? ' selected' : '' ?>><?= h($branchName) ?></option><?php endforeach; ?></select></label>
-                    <label class="hr_form_label"><span class="hr_form_label_text">Platí od</span><input name="platnost_od" data-cb-date required value="<?= h(date('d.m.Y')) ?>"></label>
-                    <button class="hr_primary_button" type="submit">Uložit změnu poboček</button>
+                    <label class="hr_form_label"><span class="hr_form_label_text">Pobočky platí od</span><input name="platnost_od" data-cb-date required value="<?= h(date('d.m.Y')) ?>"></label>
+                    <label class="hr_form_label"><span class="hr_form_label_text">MAIN platí od</span><input name="main_platnost_od" data-cb-date required value="<?= h(date('d.m.Y')) ?>"></label>
+                    <button class="hr_primary_button" type="submit"<?= !$workplaceData['main_pripraveno'] ? ' disabled' : '' ?>>Uložit změnu poboček</button>
+                    <?php if (!$workplaceData['main_pripraveno']): ?><p class="hr_empty_state">Ukládání vyžaduje spuštění připravené SQL migrace historie MAIN.</p><?php endif; ?>
                 </form>
             <?php endif; ?>
-            <?php if ($workplaceData['historie'] === []): ?><p class="hr_empty_state">Historie poboček není evidována.</p><?php else: ?>
-                <div class="hr_table_wrap hr_compact_table_wrap"><table class="hr_table hr_assignment_history_table"><thead><tr><th class="hr_table_cell hr_table_head">Pobočka</th><th class="hr_table_cell hr_table_head">Hlavní</th><th class="hr_table_cell hr_table_head">Od</th><th class="hr_table_cell hr_table_head">Do</th><th class="hr_table_cell hr_table_head">Stav záznamu</th></tr></thead><tbody><?php foreach ($workplaceData['historie'] as $polozka): ?><tr><td class="hr_table_cell"><strong><?= h((string)$polozka['nazev']) ?></strong></td><td class="hr_table_cell"><?= (int)$polozka['hlavni'] === 1 ? 'Ano' : 'Ne' ?></td><td class="hr_table_cell"><?= h(hr_format_date((string)($polozka['platnost_od'] ?? ''))) ?></td><td class="hr_table_cell"><?= h(hr_format_date((string)($polozka['platnost_do'] ?? ''))) ?></td><td class="hr_table_cell"><?= (int)$polozka['platny'] === 1 ? 'Platný' : 'Zrušený plán' ?></td></tr><?php endforeach; ?></tbody></table></div>
-            <?php endif; ?>
+            <?php // Historie je oddelena od ovladani aktualniho vyberu a rozbali se pouze na zadost. ?>
+            <button type="button" class="hr_secondary_button" data-hr-history-toggle aria-expanded="false" aria-controls="hr-branch-history">Zobrazit historii poboček uživatele</button>
+            <div id="hr-branch-history" data-hr-branch-history hidden>
+                <h3>Historie povolených poboček</h3>
+                <?php if ($workplaceData['historie'] === []): ?><p class="hr_empty_state">Historie poboček není evidována.</p><?php else: ?>
+                <div class="hr_table_wrap hr_compact_table_wrap"><table class="hr_table hr_assignment_history_table"><thead><tr><th class="hr_table_cell hr_table_head">Pobočka</th><th class="hr_table_cell hr_table_head">Od</th><th class="hr_table_cell hr_table_head">Do</th><th class="hr_table_cell hr_table_head">Stav záznamu</th></tr></thead><tbody>
+                <?php foreach ($workplaceData['historie'] as $polozka): ?><tr><td class="hr_table_cell"><strong><?= h((string)$polozka['nazev']) ?></strong></td><td class="hr_table_cell"><?= h(hr_format_date((string)($polozka['platnost_od'] ?? ''))) ?></td><td class="hr_table_cell"><?= h(hr_format_date((string)($polozka['platnost_do'] ?? ''))) ?></td><td class="hr_table_cell"><?= (int)$polozka['platny'] !== 1 || !empty($polozka['zruseno']) ? 'Zrušený plán' : ((!empty($polozka['platnost_do']) && $polozka['platnost_do'] < date('Y-m-d')) ? 'Ukončený' : ((!empty($polozka['platnost_od']) && $polozka['platnost_od'] > date('Y-m-d')) ? 'Plánovaný' : 'Aktuální')) ?></td></tr><?php endforeach; ?>
+                </tbody></table></div><?php endif; ?>
+                <h3>Historie MAIN pobočky</h3>
+                <?php if ($workplaceData['main_historie'] === []): ?><p class="hr_empty_state">Historie MAIN není evidována.</p><?php else: ?>
+                <div class="hr_table_wrap hr_compact_table_wrap"><table class="hr_table hr_assignment_history_table"><thead><tr><th class="hr_table_cell hr_table_head">MAIN pobočka</th><th class="hr_table_cell hr_table_head">Od</th><th class="hr_table_cell hr_table_head">Do</th><th class="hr_table_cell hr_table_head">Stav záznamu</th></tr></thead><tbody>
+                <?php foreach ($workplaceData['main_historie'] as $polozka): ?><tr><td class="hr_table_cell"><strong><?= h((string)$polozka['nazev']) ?></strong></td><td class="hr_table_cell"><?= h(hr_format_date((string)($polozka['platnost_od'] ?? ''))) ?></td><td class="hr_table_cell"><?= h(hr_format_date((string)($polozka['platnost_do'] ?? ''))) ?></td><td class="hr_table_cell"><?= (int)$polozka['platny'] !== 1 || !empty($polozka['zruseno']) ? 'Zrušený plán' : ((!empty($polozka['platnost_do']) && $polozka['platnost_do'] < date('Y-m-d')) ? 'Ukončený' : ((!empty($polozka['platnost_od']) && $polozka['platnost_od'] > date('Y-m-d')) ? 'Plánovaný' : 'Aktuální')) ?></td></tr><?php endforeach; ?>
+                </tbody></table></div><?php endif; ?>
+            </div>
         </section>
         </div>
 
@@ -330,6 +359,7 @@ $employeeDocumentOpenUrl = static function (array $document): string {
                 </tbody></table></div>
             <?php endif; ?>
         </section>
+        </div>
     <?php elseif ($employeeSection === 'dokumenty'): ?>
         <section class="hr_panel" id="hr-employee-documents"><div class="hr_panel_header"><h2 class="hr_panel_title">Dokumenty</h2><?php if ($employeeDocuments !== []): ?><a class="hr_panel_link" href="<?= h(cb_root_url('index.php?m=hr&page=dokumenty')) ?>">Zobrazit všechny</a><?php endif; ?></div><?php if ($employeeDocuments === []): ?><p class="hr_employee_empty_block">Zatím nejsou evidované žádné dokumenty.</p><?php else: ?><ul class="hr_activity_list"><?php foreach ($employeeDocuments as $document): ?><li class="hr_activity_item"><span class="hr_dot hr_blue"></span><strong class="hr_activity_name"><?= h((string)$document['typ']) ?></strong><a class="hr_table_link" href="<?= h($employeeDocumentOpenUrl($document)) ?>" target="_blank" rel="noopener"><?= h($document['ulozeny_nazev'] !== '' ? $document['ulozeny_nazev'] : $document['nazev']) ?></a><time class="hr_activity_time"><?= h(hr_format_date($document['vytvoreno'])) ?></time></li><?php endforeach; ?></ul><?php endif; ?></section>
     <?php elseif (in_array($employeeSection, ['dochazka', 'hodnoceni', 'vybaveni', 'onboarding', 'poznamky'], true)): ?>

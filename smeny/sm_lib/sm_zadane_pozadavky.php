@@ -1,5 +1,8 @@
 <?php
 declare(strict_types=1);
+
+// MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
+require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 /* Účel: Načte týdenní dostupnost pracovníků oprávněných poboček, včetně těch, kteří nic nevyplnili. */
 
 /** Jediný dotaz vrací hlavičky i dny. Oprávnění poboček ověřujeme přes pracovní zařazení v daném týdnu. */
@@ -13,7 +16,7 @@ function cb_smeny_zadane_pozadavky(mysqli $db, array $branches, string $week): a
         EXISTS(SELECT 1 FROM hr_pracovni_vztah pv WHERE pv.id_person=hp.id_person AND pv.platny=1 AND pv.id_pracovni_vztah_typ=1 AND (pv.datum_nastupu IS NULL OR pv.datum_nastupu<=DATE_ADD(?,INTERVAL 6 DAY)) AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni>=?)) je_hpp
         FROM hr_person hp
         LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje=(SELECT MAX(x.id_osobni_udaje) FROM hr_osobni_udaje x WHERE x.id_person=hp.id_person AND x.platny=1)
-        LEFT JOIN hr_pracoviste main ON main.id_pracoviste=(SELECT MAX(x.id_pracoviste) FROM hr_pracoviste x WHERE x.id_person=hp.id_person AND x.platny=1 AND x.hlavni=1 AND (x.platnost_od IS NULL OR x.platnost_od<=DATE_ADD(?,INTERVAL 6 DAY)) AND (x.platnost_do IS NULL OR x.platnost_do>=?))
+        LEFT JOIN ' . cb_hr_main_sql($db) . ' main ON main.id_pracoviste=(SELECT MAX(x.id_pracoviste) FROM ' . cb_hr_main_sql($db) . ' x WHERE x.id_person=hp.id_person AND x.platny=1 AND x.zruseno IS NULL AND x.hlavni=1 AND (x.platnost_od IS NULL OR x.platnost_od<=DATE_ADD(?,INTERVAL 6 DAY)) AND (x.platnost_do IS NULL OR x.platnost_do>=?))
         LEFT JOIN pobocka p ON p.id_pob=main.id_pob
         LEFT JOIN smeny_pozadavek q ON q.id_person=hp.id_person AND q.tyden_od=?
         LEFT JOIN smeny_pozadavek_den d ON d.id_smeny_pozadavek=q.id_smeny_pozadavek

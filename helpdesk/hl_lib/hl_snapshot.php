@@ -2,6 +2,9 @@
 // Ucel souboru: Sestavuje HelpDesk snapshot uzivatele vcetne aktualnich HR slotu.
 declare(strict_types=1);
 
+// MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
+require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
+
 require_once __DIR__ . '/hl_prava.php';
 
 function cb_helpdesk_json(array $data): string
@@ -57,9 +60,9 @@ function cb_helpdesk_snapshot_load_pobocky(mysqli $conn, int $idUser): array
     $out = [];
     $stmt = $conn->prepare('
         SELECT up.id_pob, up.hlavni AS `main`, p.kod, p.nazev
-        FROM hr_pracoviste up
+        FROM ' . cb_hr_pracoviste_sql($conn) . ' up
         LEFT JOIN pobocka p ON p.id_pob = up.id_pob
-        WHERE up.id_person = ? AND up.platny = 1
+        WHERE up.id_person = ? AND up.platny = 1 AND up.zruseno IS NULL AND (up.platnost_od IS NULL OR up.platnost_od<=CURDATE()) AND (up.platnost_do IS NULL OR up.platnost_do>=CURDATE())
         ORDER BY up.hlavni DESC, p.nazev ASC, up.id_pob ASC
     ');
     if ($stmt instanceof mysqli_stmt) {

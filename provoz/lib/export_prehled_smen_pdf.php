@@ -1,4 +1,5 @@
 <?php
+// Vytvari PDF export hodin pouze s pravy na Provoz a Prehled hodin.
 // lib/export_prehled_smen_pdf.php * Verze: V2 * Aktualizace: 04.06.2026
 declare(strict_types=1);
 
@@ -23,6 +24,14 @@ if (empty($_SESSION['login_ok'])) {
     exit;
 }
 
+// Prime stazeni musi mit stejna prava jako stranka, jeste pred nactenim dat.
+if (!cb_pravo_ma(200) || !cb_pravo_ma(209)) {
+    http_response_code(403);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo 'Přístup odepřen';
+    exit;
+}
+
 $data = ps_prehled_smen_data($_GET);
 if ((string)$data['error'] !== '') {
     http_response_code(500);
@@ -36,6 +45,7 @@ $scope = (string)($_GET['ps_scope'] ?? 'summary') === 'detail' ? 'detail' : 'sum
 $filename = 'prehled_smen_' . ($scope === 'detail' ? 'detail_' : '') . $month . '.pdf';
 
 if (!function_exists('ps_pdf_num_dash')) {
+    // Nulovou hodnotu v PDF zobrazi pomlckou.
     function ps_pdf_num_dash(float $value): string
     {
         return abs($value) < 0.005 ? '-' : ps_num($value);
@@ -43,6 +53,7 @@ if (!function_exists('ps_pdf_num_dash')) {
 }
 
 if (!function_exists('ps_pdf_summary_rows')) {
+    // Sestavi radky souhrnne tabulky hodin pro PDF.
     function ps_pdf_summary_rows(array $rows, array $slotLabels): string
     {
         $rowsHtml = '';
@@ -65,6 +76,7 @@ if (!function_exists('ps_pdf_summary_rows')) {
 }
 
 if (!function_exists('ps_pdf_detail_blocks')) {
+    // Sestavi podrobne bloky smen jednotlivych zamestnancu pro PDF.
     function ps_pdf_detail_blocks(array $rows, array $slotLabels): string
     {
         if ($rows === []) {

@@ -1,5 +1,25 @@
 <?php
+// Zobrazuje archiv reportu s filtry a detaily pouze s pravy na Provoz a Archiv.
 declare(strict_types=1);
+// Overeni relace a prav pred nactenim dat chrani i prime otevreni souboru.
+require_once __DIR__ . '/../../common/lib/session_boot.php';
+require_once __DIR__ . '/../../common/config/secrets.php';
+require_once __DIR__ . '/../../common/lib/app.php';
+if (!empty($_SESSION['login_ok']) && !cb_session_validate_after_login()) {
+    cb_session_forget_auth();
+}
+if (empty($_SESSION['login_ok'])) {
+    http_response_code(401);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo 'Nutné přihlášení';
+    exit;
+}
+if (!cb_pravo_ma(200) || !cb_pravo_ma(202)) {
+    http_response_code(403);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo 'Přístup odepřen';
+    exit;
+}
 
 /* Tabulka archivů zobrazuje hodnoty přes cb_format(); data pro URL a řazení zůstávají syrová. */
 require_once __DIR__ . '/../lib/format_datum_cas.php';

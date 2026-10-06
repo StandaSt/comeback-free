@@ -1,5 +1,8 @@
 <?php
 declare(strict_types=1);
+
+// MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
+require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 /* Účel: Načte dostupnost a ukládá i upravuje směny V2; změna času zachová klíč pro adresné oznámení. */
 
 /** Kandidáti se řídí HR k datu směny; Kdykoliv vychází z provozní doby hlavní pobočky. */
@@ -16,7 +19,7 @@ function cb_smeny_planovani_kandidati(mysqli $db, array $plan, string $date, int
         COALESCE((SELECT ROUND(SUM(TIMESTAMPDIFF(MINUTE,s.zacatek,s.konec))/60,1) FROM smeny_smena s JOIN smeny_rozpis r ON r.id_smeny_rozpis=s.id_smeny_rozpis WHERE s.id_person=hp.id_person AND r.tyden_od=? AND s.verze=COALESCE(r.pracovni_verze,r.zverejnena_verze)),0) hodin_tyden
         FROM hr_person hp
         LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje=(SELECT MAX(o.id_osobni_udaje) FROM hr_osobni_udaje o WHERE o.id_person=hp.id_person AND o.platny=1)
-        LEFT JOIN hr_pracoviste pr ON pr.id_pracoviste=(SELECT MAX(x.id_pracoviste) FROM hr_pracoviste x WHERE x.id_person=hp.id_person AND x.hlavni=1 AND x.platny=1 AND (x.platnost_od IS NULL OR x.platnost_od<=?) AND (x.platnost_do IS NULL OR x.platnost_do>=?))
+        LEFT JOIN ' . cb_hr_main_sql($db) . ' pr ON pr.id_pracoviste=(SELECT MAX(x.id_pracoviste) FROM ' . cb_hr_main_sql($db) . ' x WHERE x.id_person=hp.id_person AND x.hlavni=1 AND x.platny=1 AND x.zruseno IS NULL AND (x.platnost_od IS NULL OR x.platnost_od<=?) AND (x.platnost_do IS NULL OR x.platnost_do>=?))
         LEFT JOIN pobocka p ON p.id_pob=pr.id_pob
         LEFT JOIN smeny_pozadavek sp ON sp.id_person=hp.id_person AND sp.tyden_od=?
         LEFT JOIN smeny_pozadavek_den pd ON pd.id_smeny_pozadavek=sp.id_smeny_pozadavek AND pd.den_tydne=?

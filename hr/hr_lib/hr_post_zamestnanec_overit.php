@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+// MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
+require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
+
 /* Zpracuje overeni karty; podminkou je alespon jeden slot nebo jedna funkce. */
 
 function hr_post_zamestnanec_overit(mysqli $db): void
@@ -15,7 +18,7 @@ function hr_post_zamestnanec_overit(mysqli $db): void
         $slotTable = cb_hr_schema_table($db, 'slot');
         $functionTable = cb_hr_schema_table($db, 'funkce');
         $functionFk = cb_hr_funkce_fk($db);
-        $stmt = $db->prepare("SELECT (SELECT COUNT(*) FROM {$slotTable} WHERE id_person = ? AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS slotu, (SELECT COUNT(*) FROM {$functionTable} WHERE id_person = ? AND {$functionFk} <> 1 AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS funkci, (SELECT COUNT(*) FROM hr_pracoviste WHERE id_person = ? AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS pobocek, (SELECT COUNT(*) FROM hr_pracoviste WHERE id_person = ? AND platny = 1 AND hlavni = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS hlavnich");
+        $stmt = $db->prepare("SELECT (SELECT COUNT(*) FROM {$slotTable} WHERE id_person = ? AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS slotu, (SELECT COUNT(*) FROM {$functionTable} WHERE id_person = ? AND {$functionFk} <> 1 AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS funkci, (SELECT COUNT(*) FROM hr_pracoviste WHERE id_person = ? AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS pobocek, (SELECT COUNT(*) FROM " . cb_hr_main_sql($db) . " m WHERE id_person = ? AND platny = 1 AND zruseno IS NULL AND hlavni = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS hlavnich");
         $stmt->bind_param('iiii', $idPerson, $idPerson, $idPerson, $idPerson);
         $stmt->execute();
         $zarazeni = $stmt->get_result()->fetch_assoc();

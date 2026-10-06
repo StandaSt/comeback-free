@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+// MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
+require_once __DIR__ . '/../lib/hr_pracoviste_main.php';
+
 require_once __DIR__ . '/../lib/firemni_pristup.php';
 
 /*
@@ -80,7 +83,7 @@ function cb_db_user_pobocky(mysqli $db, int $idUser): array
         SELECT p.id_pob, p.nazev, p.oblast, MAX(CASE WHEN prac.hlavni = 1 THEN 1 ELSE 0 END) AS main
         FROM hr_person osoba
         INNER JOIN pobocka p ON p.id_firma = osoba.id_firma AND p.aktivni = 1
-        LEFT JOIN hr_pracoviste prac ON prac.id_person = osoba.id_person AND prac.id_pob = p.id_pob
+        LEFT JOIN ' . cb_hr_pracoviste_sql($db) . ' prac ON prac.id_person = osoba.id_person AND prac.id_pob = p.id_pob
             AND prac.platny = 1 AND (prac.platnost_od IS NULL OR prac.platnost_od <= CURRENT_DATE())
             AND (prac.platnost_do IS NULL OR prac.platnost_do >= CURRENT_DATE())
         WHERE osoba.id_person = ?

@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+// MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
+require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
+
 /*
  * Ucel souboru: Zpracuje ulozeni zakladnich udaju a pracovniho pomeru zamestnance.
  * Soubor nema HTML vystup a po zpracovani vraci uzivatele zpet na kartu zamestnance.
@@ -363,10 +366,17 @@ function hr_post_pracovni_pomer_ukoncit(mysqli $db, int $zadalUser): void
         $stmt->bind_param('si', $datumUkonceni, $idVztah);
         $stmt->execute();
         $stmt->close();
-        $stmt = $db->prepare('UPDATE hr_pracoviste SET platnost_do = ? WHERE id_person = ? AND platny = 1');
-        $stmt->bind_param('si', $datumUkonceni, $idPerson);
-        $stmt->execute();
-        $stmt->close();
+        // Ukoncime jen presahujici prirazeni; budouci plan po konci pomeru zrusime.
+        foreach (cb_hr_main_pripraveno($db) ? ['hr_pracoviste', 'hr_pracoviste_main'] : ['hr_pracoviste'] as $tabulka) {
+            $stmt = $db->prepare("UPDATE {$tabulka} SET platny=0,zruseno=NOW() WHERE id_person=? AND platny=1 AND platnost_od>?");
+            $stmt->bind_param('is', $idPerson, $datumUkonceni);
+            $stmt->execute();
+            $stmt->close();
+            $stmt = $db->prepare("UPDATE {$tabulka} SET platnost_do=? WHERE id_person=? AND platny=1 AND zruseno IS NULL AND (platnost_do IS NULL OR platnost_do>?)");
+            $stmt->bind_param('sis', $datumUkonceni, $idPerson, $datumUkonceni);
+            $stmt->execute();
+            $stmt->close();
+        }
         $db->commit();
         require_once __DIR__ . '/../../common/lib/hr_user_sync.php';
         cb_hr_user_sync_ukoncene($db);

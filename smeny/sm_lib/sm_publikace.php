@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Kmenovi prijemci publikace se urcuji ze samostatne MAIN historie v danem tydnu.
+require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 /* Účel: Atomicky zveřejní verzi, dokončí dotčené žádosti o zrušení a uloží neměnná oznámení. Nic neodesílá. */
 
 /** Do potvrzované zprávy patří pouze význam směny, nikoliv technické ID kopie či čas uložení. */
@@ -49,7 +51,7 @@ function cb_smeny_publikace_zverejnit(mysqli $db,array $plan,int $publisher): vo
         $events=cb_smeny_publikace_zmeny($old,$plan['blocks']);
     } else {
         // První týden dostanou i kmenoví pracovníci bez směn; cizí pracovníci pouze pokud mají směnu.
-        $stmt=cb_smeny_planovani_sql($db,'SELECT DISTINCT hp.id_person FROM hr_person hp JOIN hr_pracoviste pr ON pr.id_person=hp.id_person WHERE hp.aktivni=1 AND pr.id_pob=? AND pr.hlavni=1 AND pr.platny=1 AND (pr.platnost_od IS NULL OR pr.platnost_od<=DATE_ADD(?,INTERVAL 6 DAY)) AND (pr.platnost_do IS NULL OR pr.platnost_do>=?)','iss',[(int)$plan['id_pob'],$plan['tyden_od'],$plan['tyden_od']]);
+        $stmt=cb_smeny_planovani_sql($db,'SELECT DISTINCT hp.id_person FROM hr_person hp JOIN ' . cb_hr_main_sql($db) . ' pr ON pr.id_person=hp.id_person WHERE hp.aktivni=1 AND pr.id_pob=? AND pr.hlavni=1 AND pr.platny=1 AND (pr.platnost_od IS NULL OR pr.platnost_od<=DATE_ADD(?,INTERVAL 6 DAY)) AND (pr.platnost_do IS NULL OR pr.platnost_do>=?)','iss',[(int)$plan['id_pob'],$plan['tyden_od'],$plan['tyden_od']]);
         foreach($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $row)$people[]=(int)$row['id_person'];$stmt->close();
         // Převzetí externího týdne oznámíme i člověku, který v novém interním plánu směnu nemá.
         $stmt=cb_smeny_planovani_sql($db,'SELECT DISTINCT hp.id_person FROM smeny_plan e JOIN hr_person hp ON hp.id_user=e.id_user WHERE e.id_pob=? AND e.start_day=? AND e.zdroj=1','is',[(int)$plan['id_pob'],$plan['tyden_od']]);

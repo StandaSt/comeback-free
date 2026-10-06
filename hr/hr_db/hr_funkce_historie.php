@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 /*
  * Ucel souboru: Nacita a meni jedinou firemni funkci zamestnance a z ni synchronizuje roli v IS.
+ * Funkci s roli Admin smi pridelit pouze existujici Admin.
  */
+require_once __DIR__ . '/hr_nastaveni_ciselniky.php';
 
 /** @return array{funkce:array<int,array{id_funkce:int,nazev:string,id_role:int}>,historie:array<int,array<string,mixed>>} */
 function hr_funkce_historie(mysqli $db, int $idPerson): array
@@ -70,6 +72,7 @@ function hr_funkce_zmenit(mysqli $db, int $idPerson, ?int $idFunkce, bool $vTren
         if (!is_array($catalog)) {
             throw new CbUserVisibleException('Vyberte platnou funkci.');
         }
+        hr_funkce_roli_vyzaduj($db, (int)$catalog['id_role']);
         if ((int)$catalog['id_role'] === 3 && !cb_pravo_ma(316)) {
             throw new CbUserVisibleException('Nemáte právo přidělit manažerskou funkci.');
         }

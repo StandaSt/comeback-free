@@ -1,6 +1,9 @@
 <?php
 // CRON vyhleda chybejici povinne denni reporty, slouci je podle prijemce a odesle push upozorneni.
 declare(strict_types=1);
+
+// MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
+require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 /* Zveřejněný interní týden má přednost před externími směnami pro celou pobočku. */
 require_once __DIR__ . '/../../common/lib/smeny_verejny_zdroj.php';
 
@@ -158,10 +161,10 @@ function cb_cron_nezadane_reporty_leaders(mysqli $conn): array
     $leaders = [];
     $result = $conn->query("
         SELECT DISTINCT prac.id_pob, hp.id_person AS id_user
-        FROM hr_pracoviste prac
+        FROM " . cb_hr_main_sql($conn) . " prac
         INNER JOIN hr_person hp ON hp.id_person = prac.id_person AND hp.aktivni = 1
         INNER JOIN hr_pristupovy_profil pr ON pr.id_person = hp.id_person AND pr.id_role = 5
-        WHERE prac.hlavni = 1 AND prac.platny = 1
+        WHERE prac.hlavni = 1 AND prac.platny = 1 AND prac.zruseno IS NULL AND (prac.platnost_od IS NULL OR prac.platnost_od<=CURDATE()) AND (prac.platnost_do IS NULL OR prac.platnost_do>=CURDATE())
         ORDER BY prac.id_pob ASC, hp.id_person ASC
     ");
     if ($result instanceof mysqli_result) {

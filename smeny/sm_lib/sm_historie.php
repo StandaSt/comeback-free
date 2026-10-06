@@ -1,5 +1,8 @@
 <?php
 declare(strict_types=1);
+
+// MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
+require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 /* Účel: Připraví dokončené týdny a samostatný výběr pobočky pro stránku Historie směn. */
 
 require_once __DIR__.'/../../common/lib/smeny_verejny_zdroj.php';
@@ -73,8 +76,7 @@ function cb_smeny_historie_osobni_pobocky(mysqli $db,string $week,int $idPerson)
 function cb_smeny_historie_hlavni_pobocka(mysqli $db,int $idPerson): int
 {
     if($idPerson<=0)return 0;
-    $stmt=$db->prepare('SELECT id_pob FROM hr_pracoviste WHERE id_person=? AND hlavni=1 AND platny=1 AND (platnost_od IS NULL OR platnost_od<=CURDATE()) AND (platnost_do IS NULL OR platnost_do>=CURDATE()) ORDER BY id_pracoviste DESC LIMIT 1');
-    $stmt->bind_param('i',$idPerson);$stmt->execute();$id=(int)($stmt->get_result()->fetch_assoc()['id_pob']??0);$stmt->close();return $id;
+    return cb_hr_main_id($db, $idPerson);
 }
 
 /** Sestaví místní výběr historie, který je nezávislý na globální pobočce v hlavičce. */

@@ -1,4 +1,5 @@
 <?php
+// Vytvari XLSX export hodin pouze s pravy na Provoz a Prehled hodin.
 // lib/export_prehled_smen_xlsx.php * Verze: V2 * Aktualizace: 04.06.2026
 declare(strict_types=1);
 
@@ -22,6 +23,14 @@ if (empty($_SESSION['login_ok'])) {
     http_response_code(401);
     header('Content-Type: text/plain; charset=utf-8');
     echo 'Nutné přihlášení';
+    exit;
+}
+
+// Prime stazeni musi mit stejna prava jako stranka, jeste pred nactenim dat.
+if (!cb_pravo_ma(200) || !cb_pravo_ma(209)) {
+    http_response_code(403);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo 'Přístup odepřen';
     exit;
 }
 

@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+// MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
+require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
+
 /**
  * DB operace pro HR pozadavky pobocky a vyber aktualni hlavni pobocky pro HR pristup.
  */
@@ -12,7 +15,7 @@ function hr_nacti_hlavni_pobocku_uzivatele(mysqli $db, int $idUser): array
 {
     $stmt = $db->prepare("
         SELECT DISTINCT p.id_pob, p.nazev
-        FROM hr_pracoviste up
+        FROM " . cb_hr_main_sql($db) . " up
         INNER JOIN pobocka p
             ON p.id_pob = up.id_pob
         WHERE up.id_person = ?

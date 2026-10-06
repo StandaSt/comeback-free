@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+// Ucel: Overi pravo a samostatna data ucinnosti povolenych pobocek a MAIN, pote ulozi rozdily.
+
+// Odeslany formular ulozi atomicky; pouhe zaskrtnuti nikdy nic nezapisuje.
 function hr_post_zamestnanec_pobocky_zmenit(mysqli $db, int $idUser): void
 {
     $idPerson = (int)($_POST['id_person'] ?? 0);
@@ -14,8 +17,9 @@ function hr_post_zamestnanec_pobocky_zmenit(mysqli $db, int $idUser): void
             throw new CbUserVisibleException('Vyberte zaměstnance, pobočky a hlavní pobočku.');
         }
         $platiOd = hr_pracovni_pomer_datum_z_postu((string)($_POST['platnost_od'] ?? ''), 'Platí od');
-        hr_pracoviste_zmenit($db, $idPerson, $pobocky, (int)$hlavniText, $platiOd, $idUser);
-        cb_form_finish(hr_pracovni_pomer_url($idPerson), true, 'Pobočky byly změněny s platností od zadaného data.');
+        $mainOd = hr_pracovni_pomer_datum_z_postu((string)($_POST['main_platnost_od'] ?? ''), 'MAIN platí od');
+        hr_pracoviste_zmenit($db, $idPerson, $pobocky, (int)$hlavniText, $platiOd, $idUser, $mainOd);
+        cb_form_finish(hr_pracovni_pomer_url($idPerson), true, 'Povolené pobočky a MAIN byly uloženy. Nezměněné záznamy zůstaly zachované.');
     } catch (Throwable $e) {
         cb_form_finish(hr_pracovni_pomer_url($idPerson), false, cb_hr_chyba_text($e, 'Změna poboček zaměstnance', ['table' => 'hr_pracoviste']));
     }

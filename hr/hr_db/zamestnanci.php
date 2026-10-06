@@ -7,6 +7,8 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/hr_zamestnanci_pristup.php';
+// Seznam, detail i kontrola kompletnosti sdili samostatnou historii MAIN.
+require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
 /**
  * Nacte seznam aktivnich zamestnancu.
@@ -57,7 +59,7 @@ function hr_fetch_employees(mysqli $db, int $limit = 100): array
            AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE())
         LEFT JOIN hr_cis_pracovni_vztah_typ pvt
             ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ
-        LEFT JOIN hr_pracoviste pp
+        LEFT JOIN " . cb_hr_main_sql($db) . " pp
             ON pp.id_person = p.id_person
            AND pp.platny = 1
            AND pp.hlavni = 1
@@ -175,7 +177,7 @@ function hr_fetch_employee_list(mysqli $db): array
                 hp.id_person,
                 GROUP_CONCAT(DISTINCT pob.nazev ORDER BY hp.hlavni DESC, pob.nazev SEPARATOR ', ') AS pracoviste,
                 MAX(CASE WHEN hp.hlavni = 1 THEN pob.nazev END) AS pracoviste_hlavni
-            FROM hr_pracoviste hp
+            FROM " . cb_hr_pracoviste_sql($db) . " hp
             INNER JOIN pobocka pob
                 ON pob.id_pob = hp.id_pob
             WHERE hp.platny = 1
@@ -477,7 +479,7 @@ function hr_fetch_employee_missing_required_data(mysqli $db, int $idPerson): arr
         $missing[] = 'typ a výše mzdy';
     }
 
-    $stmt = $db->prepare("SELECT (SELECT COUNT(*) FROM {$slotTable} WHERE id_person = ? AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS slotu, (SELECT COUNT(*) FROM {$functionTable} WHERE id_person = ? AND {$functionFk} <> 1 AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS funkci, (SELECT COUNT(*) FROM hr_pracoviste WHERE id_person = ? AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS pobocek, (SELECT COUNT(*) FROM hr_pracoviste WHERE id_person = ? AND platny = 1 AND hlavni = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS hlavnich");
+    $stmt = $db->prepare("SELECT (SELECT COUNT(*) FROM {$slotTable} WHERE id_person = ? AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS slotu, (SELECT COUNT(*) FROM {$functionTable} WHERE id_person = ? AND {$functionFk} <> 1 AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS funkci, (SELECT COUNT(*) FROM hr_pracoviste WHERE id_person = ? AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS pobocek, (SELECT COUNT(*) FROM " . cb_hr_main_sql($db) . " m WHERE id_person = ? AND platny = 1 AND hlavni = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS hlavnich");
     $stmt->bind_param('iiii', $idPerson, $idPerson, $idPerson, $idPerson);
     $stmt->execute();
     $counts = $stmt->get_result()->fetch_assoc();
@@ -634,7 +636,7 @@ function hr_fetch_employee(mysqli $db, int $id): ?array
            AND pv.platny = 1
         LEFT JOIN hr_cis_pracovni_vztah_typ pvt
             ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ
-        LEFT JOIN hr_pracoviste pp
+        LEFT JOIN " . cb_hr_main_sql($db) . " pp
             ON pp.id_person = p.id_person
            AND pp.platny = 1
            AND pp.hlavni = 1

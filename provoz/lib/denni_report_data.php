@@ -1,11 +1,12 @@
 <?php
-// Pripravuje data formulare, prehledu a historie dennich reportu vcetne informace o finalnim ulozeni.
+// Pripravuje denni reporty a jejich historii; archivni detail chrani podle role, MAIN a autora.
 declare(strict_types=1);
 /* Veřejný zdroj směn respektuje publikaci celého týdne pobočky a mapování HR osoby. */
 require_once __DIR__ . '/../../common/lib/smeny_verejny_zdroj.php';
 
 require_once __DIR__ . '/vypocet_col_rozdil.php';
 require_once __DIR__ . '/denni_report_prava.php';
+require_once __DIR__ . '/reporty_pristup.php';
 require_once __DIR__ . '/../../common/db/db_cis_slot.php';
 require_once __DIR__ . '/../../common/lib/objednavka_cislo.php';
 require_once __DIR__ . '/../../common/lib/person_name_match.php';
@@ -465,33 +466,10 @@ function cb_denni_report_has_any_report(mysqli $conn, string $date): bool
     return $hasRow;
 }
 
+// Vychozi MAIN je jedina dnes platna pobocka ze samostatne historie.
 function cb_denni_report_user_main_branch_id(mysqli $conn, int $idUser): int
 {
-    if ($idUser <= 0) {
-        return 0;
-    }
-
-    $stmt = $conn->prepare('
-        SELECT id_pob
-        FROM hr_pracoviste
-        WHERE id_person = ?
-          AND hlavni = 1 AND platny = 1
-        LIMIT 1
-    ');
-    if ($stmt === false) {
-        return 0;
-    }
-
-    $stmt->bind_param('i', $idUser);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $row = ($result instanceof mysqli_result) ? ($result->fetch_assoc() ?: null) : null;
-    if ($result instanceof mysqli_result) {
-        $result->free();
-    }
-    $stmt->close();
-
-    return is_array($row) ? (int)($row['id_pob'] ?? 0) : 0;
+    return $idUser > 0 ? cb_hr_main_id($conn, $idUser) : 0;
 }
 
 function cb_denni_report_history_load(mysqli $conn, int $idPob, string $reportDate): ?array
@@ -1475,6 +1453,7 @@ function cb_denni_report_zadani_data(mysqli $conn): array
     return cb_denni_report_prepare_data($conn, 'zadani');
 }
 
+// Pripravi formular nebo prehled; ulozenou archivni historii overi pred jejim nactenim.
 function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): array
 {
     $typ = trim($typ);
@@ -1629,6 +1608,31 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
                 $allowedBranchesResult->free();
             }
             $stmtAllowedBranches->close();
+        }
+    }
+    // Ulozeny starsi report je archiv i bez priznaku v URL; jeho odstraneni nesmi obejit rozsah.
+    $archiveRequestedBranch = (int)($_POST['zr_id_pob'] ?? $_GET['zr_id_pob'] ?? 0);
+    $archiveAccessRequired = $isArchiveOpen || (!$isCurrentWorkday && $archiveRequestedBranch > 0
+        && cb_denni_report_has_active_branch_report($conn, $archiveRequestedBranch, $reportDate));
+    if ($archiveAccessRequired) {
+        if (!cb_denni_report_ma_pravo(202)) {
+            throw new CbUserVisibleException('Nemáte právo zobrazit archiv reportů.');
+        }
+        $archiveScope = cb_reporty_pristup_nacti($conn, $currentUserId);
+        $allowedBranches = array_map(static fn (array $branch): string => (string)$branch['name'], $archiveScope['branches']);
+        if ($archiveRequestedBranch > 0) {
+            if (!cb_reporty_archiv_muze_cist($conn, $archiveScope, $archiveRequestedBranch, $reportDate)) {
+                throw new CbUserVisibleException('K tomuto archivnímu reportu nemáte přístup.');
+            }
+            // Vlastni vypomoc povoli jen pozadovany report, ne ostatni reporty pobocky.
+            if (!isset($allowedBranches[$archiveRequestedBranch])) {
+                $branchStmt = $conn->prepare('SELECT nazev FROM pobocka WHERE id_pob=?');
+                $branchStmt->bind_param('i', $archiveRequestedBranch);
+                $branchStmt->execute();
+                $branchRow = $branchStmt->get_result()->fetch_assoc();
+                $branchStmt->close();
+                if (is_array($branchRow)) { $allowedBranches[$archiveRequestedBranch] = (string)$branchRow['nazev']; }
+            }
         }
     }
     $allowedBranchIds = array_map('intval', array_keys($allowedBranches));

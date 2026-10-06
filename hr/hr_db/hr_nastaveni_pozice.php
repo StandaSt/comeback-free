@@ -1,61 +1,27 @@
 <?php
 declare(strict_types=1);
+/* Kompatibilni obsluha starsich akci slotu pouziva centralni spravu a pravo 319. */
 
-/* Ucel souboru: Nacita ciselnik pracovnich slotu pro nastaveni HR. */
-
-/** @return array<int,array{id_slot:int,slot:string,aktivni:int}> */
+// Vrati pouze skutecne pracovni sloty; historicke IT a Management se nespravuji.
 function hr_nastaveni_pozice(mysqli $db): array
 {
-    $result = $db->query('SELECT id_slot, slot, aktivni FROM cis_slot ORDER BY aktivni DESC, slot, id_slot');
-    $rows = [];
-    while ($row = $result->fetch_assoc()) {
-        $rows[] = ['id_slot' => (int)$row['id_slot'], 'slot' => (string)$row['slot'], 'aktivni' => (int)$row['aktivni']];
-    }
-    $result->free();
-    return $rows;
+    return $db->query('SELECT id_slot,slot,aktivni FROM cis_slot WHERE id_slot NOT IN (0,9) ORDER BY aktivni DESC,slot')->fetch_all(MYSQLI_ASSOC);
 }
 
+// Starsi formular pridani je chranen stejne jako nova centralni sprava.
 function hr_nastaveni_pozice_pridat(mysqli $db, string $nazev): void
 {
-    $nazev = trim($nazev);
-    if ($nazev === '' || mb_strlen($nazev, 'UTF-8') > 100) {
-        throw new CbUserVisibleException('Zadejte název slotu v délce nejvýše 100 znaků.');
-    }
-    $result = $db->query('SELECT id_slot FROM cis_slot ORDER BY id_slot');
-    $used = [];
-    while ($row = $result->fetch_assoc()) {
-        $used[(int)$row['id_slot']] = true;
-    }
-    $result->free();
-    $idSlot = null;
-    for ($id = 0; $id <= 62; $id++) {
-        if (!isset($used[$id])) {
-            $idSlot = $id;
-            break;
-        }
-    }
-    if ($idSlot === null) {
-        throw new CbUserVisibleException('Nelze přidat další pozici.');
-    }
-    $aktivni = 1;
-    $stmt = $db->prepare('INSERT INTO cis_slot (id_slot, slot, aktivni) VALUES (?, ?, ?)');
-    $stmt->bind_param('isi', $idSlot, $nazev, $aktivni);
-    $stmt->execute();
-    $stmt->close();
+    hr_ciselnik_ulozit($db, 'slot', 0, $nazev, true, 0);
 }
 
+// Historicke sloty nelze aktivovat ani pres drivejsi POST akci.
 function hr_nastaveni_pozice_zmenit_stav(mysqli $db, int $idSlot, bool $aktivni): void
 {
-    if ($idSlot < 0 || $idSlot > 62) {
-        throw new CbUserVisibleException('Vyberte platnou pozici.');
+    if (!cb_hr_nastaveni_ma_pravo() || in_array($idSlot, [0,9], true) || $idSlot < 1) {
+        throw new CbUserVisibleException('Nemáte právo upravit tento pracovní slot.');
     }
-    $stav = $aktivni ? 1 : 0;
-    $stmt = $db->prepare('UPDATE cis_slot SET aktivni = ? WHERE id_slot = ?');
-    $stmt->bind_param('ii', $stav, $idSlot);
-    $stmt->execute();
-    if ($stmt->affected_rows < 1) {
-        $stmt->close();
-        throw new RuntimeException('Pozici se nepodařilo změnit.');
-    }
-    $stmt->close();
+    $stmt=$db->prepare('SELECT slot FROM cis_slot WHERE id_slot=?');
+    $stmt->bind_param('i',$idSlot); $stmt->execute(); $row=$stmt->get_result()->fetch_assoc(); $stmt->close();
+    if (!$row) throw new CbUserVisibleException('Pracovní slot nebyl nalezen.');
+    hr_ciselnik_ulozit($db, 'slot', $idSlot, (string)$row['slot'], $aktivni, 0);
 }

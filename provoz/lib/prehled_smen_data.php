@@ -1,8 +1,10 @@
 <?php
+// Pripravuje hodiny, souhrny a exportni data v rozsahu role, MAIN pobocky nebo vlastni fransizy.
 // lib/prehled_smen_data.php * Verze: V2 * Aktualizace: 04.06.2026
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../common/db/db_cis_slot.php';
+require_once __DIR__ . '/reporty_pristup.php';
 
 /*
  * Spolecna data pro Prehled hodin a jeho exporty.
@@ -274,6 +276,7 @@ if (!function_exists('ps_prehled_smen_data')) {
      * @param bool $includeMaxData
      * @return array<string,mixed>
      */
+    // Nacte povolene hodiny a z nich vypocte mesicni i rocni souhrny a detaily.
     function ps_prehled_smen_data(array $request, bool $includeMaxData = true): array
     {
         $viewerId = (int)($_SESSION['cb_user']['id_user'] ?? 0);
@@ -304,6 +307,8 @@ if (!function_exists('ps_prehled_smen_data')) {
         try {
             $conn = db();
             $conn->set_charset('utf8mb4');
+            // Rozsah se uplatni v SQL pred soucty, a je proto shodny pro stranku i exporty.
+            $scope = cb_reporty_pristup_nacti($conn, $viewerId);
             $slotLabels = cb_cis_slot_nazvy($conn);
 
             $sql = '
@@ -320,79 +325,17 @@ if (!function_exists('ps_prehled_smen_data')) {
                     COALESCE(p.nazev, "") AS pobocka
                 FROM reporty_is_osoby ro
                 INNER JOIN reporty_is r ON r.id_reportu = ro.id_reportu
-                INNER JOIN hr_person viewer ON viewer.id_person = ?
+
                 LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje = (
                     SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2
                     WHERE ou2.id_person = ro.id_user AND ou2.platny = 1
                 )
                 LEFT JOIN pobocka p ON p.id_pob = r.id_pob
                 WHERE r.platny = 1
-                  AND r.id_firma = viewer.id_firma
+
                   AND r.datum_reportu >= ?
                   AND r.datum_reportu <= ?
-                  AND (
-                        EXISTS (
-                            SELECT 1 FROM hr_pristupovy_profil viewer_global_role
-                            WHERE viewer_global_role.id_person = viewer.id_person
-                              AND viewer_global_role.id_role < 5
-                        )
-                        OR NOT EXISTS (
-                            SELECT 1 FROM hr_pristupovy_profil viewer_branch_role
-                            WHERE viewer_branch_role.id_person = viewer.id_person
-                              AND viewer_branch_role.id_role IN (5, 7)
-                        )
-                        OR EXISTS (
-                            SELECT 1
-                            FROM hr_pracoviste viewer_branch
-                            WHERE viewer_branch.id_person = viewer.id_person AND viewer_branch.platny = 1
-                              AND viewer_branch.id_pob = r.id_pob
-                        )
-                  )
-                  AND (
-                        EXISTS (
-                            SELECT 1 FROM hr_pristupovy_profil viewer_global_role
-                            WHERE viewer_global_role.id_person = viewer.id_person
-                              AND viewer_global_role.id_role < 5
-                        )
-                        OR (
-                            EXISTS (
-                                SELECT 1 FROM hr_pristupovy_profil viewer_role_5
-                                WHERE viewer_role_5.id_person = viewer.id_person
-                                  AND viewer_role_5.id_role = 5
-                            )
-                            AND (
-                                ro.id_user = viewer.id_person
-                                OR EXISTS (
-                                    SELECT 1 FROM hr_pristupovy_profil employee_role_5
-                                    WHERE employee_role_5.id_person = ro.id_user
-                                      AND employee_role_5.id_role IN (7, 9)
-                                )
-                            )
-                        )
-                        OR (
-                            EXISTS (
-                                SELECT 1 FROM hr_pristupovy_profil viewer_role_7
-                                WHERE viewer_role_7.id_person = viewer.id_person
-                                  AND viewer_role_7.id_role = 7
-                            )
-                            AND (
-                                ro.id_user = viewer.id_person
-                                OR EXISTS (
-                                    SELECT 1 FROM hr_pristupovy_profil employee_role_7
-                                    WHERE employee_role_7.id_person = ro.id_user
-                                      AND employee_role_7.id_role = 9
-                                )
-                            )
-                        )
-                        OR (
-                            EXISTS (
-                                SELECT 1 FROM hr_pristupovy_profil viewer_role_9
-                                WHERE viewer_role_9.id_person = viewer.id_person
-                                  AND viewer_role_9.id_role = 9
-                            )
-                            AND ro.id_user = viewer.id_person
-                        )
-                  )
+                  AND ' . cb_reporty_hodiny_sql($scope) . '
                 ORDER BY COALESCE(NULLIF(ou.prijmeni, ""), ro.prijmeni) ASC,
                          COALESCE(NULLIF(ou.jmeno, ""), ro.jmeno) ASC,
                          ro.slot ASC, r.datum_reportu ASC
@@ -405,7 +348,7 @@ if (!function_exists('ps_prehled_smen_data')) {
 
             $dateFrom = ($includeMaxData ? $yearStart : $monthStart)->format('Y-m-d');
             $dateTo = ($includeMaxData ? $yearEnd : $monthEnd)->format('Y-m-d');
-            $stmt->bind_param('iss', $viewerId, $dateFrom, $dateTo);
+            $stmt->bind_param('ss', $dateFrom, $dateTo);
             if (!$stmt->execute()) {
                 throw new RuntimeException('Dotaz přehledu směn selhal.');
             }

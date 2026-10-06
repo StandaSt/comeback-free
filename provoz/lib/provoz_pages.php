@@ -25,10 +25,14 @@ function cb_provoz_pages(): array
         'archiv_reportu' => [
             'file' => __DIR__ . '/../pages/archiv_reportu.php',
             'title' => 'Archiv reportů',
+            // Stejne pravo jako v menu plati i pri zadani prime adresy.
+            'pravo' => 202,
         ],
         'porovnani_reportu' => [
             'file' => __DIR__ . '/../pages/porovnani_reportu.php',
             'title' => 'Porovnání reportů',
+            // Porovnani je detail archivu a vyzaduje stejne pravo.
+            'pravo' => 202,
         ],
         'objednavky' => [
             'file' => __DIR__ . '/../pages/objednavky.php',
@@ -37,6 +41,8 @@ function cb_provoz_pages(): array
         'prehled_hodin' => [
             'file' => __DIR__ . '/../pages/prehled_hodin.php',
             'title' => 'Přehled hodin',
+            // Stejne pravo jako v menu plati i pri zadani prime adresy.
+            'pravo' => 209,
         ],
         'ai_analytik' => [
             'file' => __DIR__ . '/../pages/ai_analytik.php',

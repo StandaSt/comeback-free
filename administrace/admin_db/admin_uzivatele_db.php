@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+// MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
+require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
+
 /* Datove operace pro spravu uzivatelu vcetne slotu z aktualni faze HR migrace. */
 
 function cb_admin_uzivatele_sloty_text(string $rawSlots): string
@@ -115,7 +118,7 @@ function cb_admin_uzivatele_nacti(mysqli $db, array $source): array
                    INNER JOIN cis_slot cs ON cs.id_slot=z.id_slot
                    WHERE z.id_person=hp.id_person AND z.platny=1
                ), "") AS slot,
-               (SELECT p.nazev FROM hr_pracoviste prac INNER JOIN pobocka p ON p.id_pob=prac.id_pob WHERE prac.id_person=hp.id_person AND prac.platny=1 AND prac.hlavni=1 ORDER BY prac.id_pracoviste DESC LIMIT 1) AS pobocka_main,
+               (SELECT p.nazev FROM ' . cb_hr_main_sql($db) . ' prac INNER JOIN pobocka p ON p.id_pob=prac.id_pob WHERE prac.id_person=hp.id_person AND prac.platny=1 AND prac.zruseno IS NULL AND prac.hlavni=1 AND (prac.platnost_od IS NULL OR prac.platnost_od<=CURDATE()) AND (prac.platnost_do IS NULL OR prac.platnost_do>=CURDATE()) ORDER BY prac.id_pracoviste DESC LIMIT 1) AS pobocka_main,
                CASE
                    WHEN hp.pristup_vsechny_pobocky=1 THEN (
                        SELECT COUNT(*) FROM pobocka p_all WHERE p_all.id_firma=hp.id_firma AND p_all.aktivni=1
