@@ -9,8 +9,10 @@ declare(strict_types=1);
  * Prazdne stavy a souhrn pobocek pouzivaji kompaktni zobrazeni bez vnitrnich ramecku.
  * Samostatny obal pracovniho pomeru omezuje zmensene odstupy pouze na tuto sekci.
  * Odkazy na spravu ciselniku vyzaduji pravo 319; pridelovani Admin funkce existujiciho Admina.
+ * Dokumenty ukazuji importni podpisy, jednotlive casti a upozorneni k doreseni.
  */
 $idPerson = (int)($_GET['id'] ?? 0);
+require_once __DIR__ . '/../hr_includes/hr_dokument_import_detail.php';
 $employee = isset($hrEmployeeHeader) && is_array($hrEmployeeHeader)
     ? $hrEmployeeHeader
     : ($idPerson > 0 ? hr_fetch_employee($db, $idPerson) : null);
@@ -53,8 +55,9 @@ foreach ($employeeFunctionData['historie'] as $employeeFunctionRow) {
 }
 $currentSlotsText = is_array($employee) ? trim((string)($employee['zarazeni'] ?? '')) : '';
 $currentAssignmentText = implode(' · ', array_values(array_filter([$currentSlotsText, $currentFunctionName], static fn(string $value): bool => $value !== '' && $value !== '-')));
+// Karta po hromadnem importu ukaze take starsi podklady, nikoli pouze poslednich dvacet.
 $employeeDocuments = is_array($employee) && cb_pravo_ma(301)
-    ? hr_fetch_employee_documents($db, hr_current_user_id(), (int)$employee['id_person'], 20)
+    ? hr_fetch_employee_documents($db, hr_current_user_id(), (int)$employee['id_person'])
     : [];
 $employeeDocumentOpenUrl = static function (array $document): string {
     return cb_root_url('hr/hr_download/hr_dokument.php?' . http_build_query([
@@ -361,14 +364,29 @@ $employeeDocumentOpenUrl = static function (array $document): string {
         </section>
         </div>
     <?php elseif ($employeeSection === 'dokumenty'): ?>
-        <section class="hr_panel" id="hr-employee-documents"><div class="hr_panel_header"><h2 class="hr_panel_title">Dokumenty</h2><?php if ($employeeDocuments !== []): ?><a class="hr_panel_link" href="<?= h(cb_root_url('index.php?m=hr&page=dokumenty')) ?>">Zobrazit všechny</a><?php endif; ?></div><?php if ($employeeDocuments === []): ?><p class="hr_employee_empty_block">Zatím nejsou evidované žádné dokumenty.</p><?php else: ?><ul class="hr_activity_list"><?php foreach ($employeeDocuments as $document): ?><li class="hr_activity_item"><span class="hr_dot hr_blue"></span><strong class="hr_activity_name"><?= h((string)$document['typ']) ?></strong><a class="hr_table_link" href="<?= h($employeeDocumentOpenUrl($document)) ?>" target="_blank" rel="noopener"><?= h($document['ulozeny_nazev'] !== '' ? $document['ulozeny_nazev'] : $document['nazev']) ?></a><time class="hr_activity_time"><?= h(hr_format_date($document['vytvoreno'])) ?></time></li><?php endforeach; ?></ul><?php endif; ?></section>
+        <section class="hr_panel" id="hr-employee-documents"><div class="hr_panel_header"><h2 class="hr_panel_title">Dokumenty</h2><?php if ($employeeDocuments !== []): ?><a class="hr_panel_link" href="<?= h(cb_root_url('index.php?m=hr&page=dokumenty')) ?>">Zobrazit všechny</a><?php endif; ?></div><?php if ($employeeDocuments === []): ?><p class="hr_employee_empty_block">Zatím nejsou evidované žádné dokumenty.</p><?php else: ?><ul class="hr_activity_list"><?php foreach ($employeeDocuments as $document): ?><li class="hr_activity_item"><span class="hr_dot hr_blue"></span><strong class="hr_activity_name"><?= h((string)$document['typ']) ?></strong><a class="hr_table_link" href="<?= h($employeeDocumentOpenUrl($document)) ?>" target="_blank" rel="noopener"><?= h($document['ulozeny_nazev'] !== '' ? $document['ulozeny_nazev'] : $document['nazev']) ?></a><?php hr_document_import_detail($document, $employeeDocumentOpenUrl($document)); ?><time class="hr_activity_time"><?= h(hr_format_date($document['vytvoreno'])) ?></time></li><?php endforeach; ?></ul><?php endif; ?></section>
     <?php elseif (in_array($employeeSection, ['dochazka', 'hodnoceni', 'vybaveni', 'onboarding', 'poznamky'], true)): ?>
         <?php $sectionTitles = ['dochazka' => 'Docházka a dovolená', 'hodnoceni' => 'Hodnocení', 'vybaveni' => 'Vybavení', 'onboarding' => 'Onboarding', 'poznamky' => 'Poznámky']; ?>
         <section class="hr_panel"><div class="hr_panel_header"><h2 class="hr_panel_title"><?= h($sectionTitles[$employeeSection]) ?></h2></div><p class="hr_employee_empty_block">Tato část karty zatím nemá vlastní evidenci.</p></section>
     <?php else: ?>
         <section class="hr_employee_dashboard">
             <article class="hr_panel"><div class="hr_panel_header"><h2 class="hr_panel_title">Časová osa</h2></div><p class="hr_employee_empty_block">Události k zaměstnanci zatím nejsou evidované.</p></article>
-            <article class="hr_panel"><div class="hr_panel_header"><h2 class="hr_panel_title">Dokumenty</h2></div><p class="hr_employee_empty_block"><?= $employeeDocuments === [] ? 'Zatím nejsou evidované žádné dokumenty.' : h((string)count($employeeDocuments)) . ' evidovaných dokumentů' ?></p></article>
+            <article class="hr_panel"><div class="hr_panel_header"><h2 class="hr_panel_title">Dokumenty</h2></div>
+                <?php if ($employeeDocuments === []): ?><p class="hr_employee_empty_block">Zatím nejsou evidované žádné dokumenty.</p>
+                <?php else: ?><ul>
+                    <?php foreach ($employeeDocuments as $document): ?>
+                        <?php $documentParts = (array)($document['import_meta']['casti'] ?? []); ?>
+                        <?php if ($documentParts === []): ?>
+                            <li><a class="hr_table_link" target="_blank" rel="noopener" href="<?= h($employeeDocumentOpenUrl($document)) ?>"><?= h($document['typ']) ?></a></li>
+                        <?php else: ?>
+                            <?php /* Balik obsahuje vice dokumentu; kazdy odkaz miri na jeho prvni stranu. */ ?>
+                            <?php foreach ($documentParts as $part): ?>
+                                <li><a class="hr_table_link" target="_blank" rel="noopener" href="<?= h($employeeDocumentOpenUrl($document).'#page='.(int)$part['strana_od']) ?>"><?= h((string)$part['typ']) ?></a></li>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </ul><?php endif; ?>
+            </article>
             <article class="hr_panel"><div class="hr_panel_header"><h2 class="hr_panel_title">Nepřítomnosti</h2></div><p class="hr_employee_empty_block">Přejděte na záložku Docházka a dovolená.</p></article>
             <article class="hr_panel"><div class="hr_panel_header"><h2 class="hr_panel_title">Benefity</h2></div><p class="hr_employee_empty_block">Přejděte na záložku Pracovní poměr.</p></article>
         </section>

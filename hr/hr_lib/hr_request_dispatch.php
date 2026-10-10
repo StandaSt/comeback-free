@@ -3,6 +3,7 @@
  * Ucel souboru: Predava POST akce HR spravnemu modulovemu handleru.
  * Nova akce se vybira podle cb_action; starsi stranky zustavaji beze zmeny
  * do sve samostatne migrace.
+ * Akce na testovaci osoby odmita pred predanim zapisovacimu handleru.
  */
 declare(strict_types=1);
 
@@ -18,6 +19,15 @@ function cb_hr_request_dispatch(mysqli $db, string $page, array $user): void
     }
 
     $action = trim((string)($_POST['cb_action'] ?? ''));
+    // Skryti testovaci osoby plati i pro rucne odeslany formular, nejen pro seznam.
+    $employeeAction = str_starts_with($action, 'hr_zamestnanec_')
+        || in_array($action, ['hr_pracovni_pomer_upravit', 'hr_pracovni_preruseni_ulozit',
+            'hr_pracovni_preruseni_uzavrit', 'hr_pracovni_pomer_ukoncit'], true);
+    if ($employeeAction && hr_zamestnanci_je_testovaci($db, (int)($_POST['id_person'] ?? 0))) {
+        cb_form_finish(cb_root_url('index.php?m=hr&page=zamestnanci'), false,
+            'Testovací účet není vedený jako zaměstnanec v HR.');
+        return;
+    }
     // Centralni sprava slotu a funkci ma vlastni kontrolu prava 319 v DB vrstve.
     if ($action === 'hr_ciselnik_ulozit') {
         hr_post_ciselnik_ulozit($db);

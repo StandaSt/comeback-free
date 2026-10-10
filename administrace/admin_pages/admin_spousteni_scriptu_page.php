@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+/* Ucel souboru: Rucni spousteni jednoucelovych skriptu; HR dokumenty a HR udaje maji samostatnou kontrolu, potvrzeni a prubeh. */
+
 $adminScriptResult = $_SESSION['cb_admin_script_result'] ?? null;
 $adminScriptResultType = is_array($adminScriptResult) ? (string)($adminScriptResult['script'] ?? '') : '';
 $adminGoogleSourceStatus = cb_admin_google_reporty_stav_zdroje();
@@ -22,6 +24,26 @@ if (isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODULE'])) {
 }
 ?>
 <div class="admin_script_run">
+    <div class="blok admin_script_card">
+        <h2 class="blok_title">Doplnění údajů zaměstnanců do HR</h2>
+        <p>Druhý krok po importu smluv a dokladů. Doplní osobní údaje, smluvní mzdy, vztahy a zkušební dobu, adresy, kontakty, účty, pojištění a dohledanou historii. HR se nemaže. Testovací účty, děti a hotovostní výplata se nezpracovávají.</p>
+        <p>Kontrola ukáže konkrétní změny a upozornění pro personalistu. Teprve potom nabídne potvrzení zápisu.</p>
+        <form class="admin_script_form" method="post" target="_blank" action="<?= h(cb_root_url('index.php?m=administrace&page=spousteni_scriptu')) ?>">
+            <input type="hidden" name="cb_action" value="admin_hr_udaje_preview">
+            <input type="hidden" name="cb_crf" value="<?= h(cb_crf_token()) ?>">
+            <button class="admin_script_button" type="submit">Zkontrolovat údaje pro doplnění HR</button>
+        </form>
+    </div>
+    <div class="blok admin_script_card">
+        <h2 class="blok_title">Doplnění smluv a dokladů do HR</h2>
+        <p>Zdroj: <code>data/google_data/smlouvy_all.zip</code> a schválený importní plán. Doplní dokumenty a schválené údaje bez resetu HR. Sporné údaje a chybějící podpisy zůstanou viditelně označené k dořešení.</p>
+        <p>Kontrola se otevře v samostatné kartě a průběžně vypisuje čtené soubory. Po kontrole ukáže přesný počet nových souborů a zaměstnanců a nabídne potvrzení importu.</p>
+        <form class="admin_script_form" method="post" target="_blank" action="<?= h(cb_root_url('index.php?m=administrace&page=spousteni_scriptu')) ?>">
+            <input type="hidden" name="cb_action" value="admin_hr_smlouvy_preview">
+            <input type="hidden" name="cb_crf" value="<?= h(cb_crf_token()) ?>">
+            <button class="admin_script_button" type="submit">Zkontrolovat podklady smluv pro HR</button>
+        </form>
+    </div>
     <div class="blok admin_script_card">
         <p class="admin_script_description"><?= h($adminGoogleSourceStatus) ?></p>
 

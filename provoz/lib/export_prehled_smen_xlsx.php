@@ -1,5 +1,5 @@
 <?php
-// Vytvari XLSX export hodin pouze s pravy na Provoz a Prehled hodin.
+// Vytvari XLSX souhrn, detail i pracovniky po pobockach ze stavajicich hodin s kontrolou prav.
 // lib/export_prehled_smen_xlsx.php * Verze: V2 * Aktualizace: 04.06.2026
 declare(strict_types=1);
 
@@ -43,12 +43,15 @@ if ((string)$data['error'] !== '') {
 }
 
 $month = sprintf('%04d-%02d', (int)$data['selectedYear'], (int)$data['selectedMonth']);
-$scope = (string)($_GET['ps_scope'] ?? 'summary') === 'detail' ? 'detail' : 'summary';
-$filename = 'prehled_smen_' . ($scope === 'detail' ? 'detail_' : '') . $month . '.xlsx';
+$scope = (string)($_GET['ps_scope'] ?? 'summary');
+if (!in_array($scope, ['summary', 'detail', 'branches'], true)) $scope = 'summary';
+$expanded = (string)($_GET['ps_variant'] ?? 'brief') === 'expanded';
+$prefix = $scope === 'branches' ? 'pobocky_' . ($expanded ? 'rozsirene_' : 'strucne_') : ($scope === 'detail' ? 'detail_' : '');
+$filename = 'prehled_smen_' . $prefix . $month . '.xlsx';
 
 $spreadsheet = new Spreadsheet();
 $sheet = $spreadsheet->getActiveSheet();
-$sheet->setTitle($scope === 'detail' ? 'Detail směn' : 'Přehled směn');
+$sheet->setTitle($scope === 'branches' ? 'Pracovníci po pobočkách' : ($scope === 'detail' ? 'Detail směn' : 'Přehled směn'));
 
 $sheet->setCellValue('A1', 'Přehled za ' . (string)$data['monthLabel']);
 $sheet->setCellValue('A2', 'Celkem hodin');
@@ -57,10 +60,23 @@ $sheet->setCellValue('B2', (float)$data['filteredHours']);
 $headers = $scope === 'detail'
     ? ['celé jméno', 'slot', 'datum', 'pobočka', 'odpracováno', '6-22', '22-6', 'So+Ne', 'svátek']
     : ['měsíc', 'rok', 'celé jméno', 'slot', 'odpracováno', '6-22', '22-6', 'So+Ne', 'svátek'];
+if ($scope === 'branches') {
+    $headers = ['zaměstnanec', 'pobočka', 'odpracováno'];
+    if ($expanded) $headers = array_merge($headers, ['6-22', '22-6', 'So+Ne', 'svátek']);
+}
 $sheet->fromArray($headers, null, 'A4');
 
 $rowNum = 5;
-if ($scope === 'detail') {
+if ($scope === 'branches') {
+    // Hodiny zustavaji ciselne i v nove variante, aby bylo mozne s exportem dale pocitat.
+    $columns = $expanded ? ['celkem', 'den', 'noc', 'vikend', 'svatek'] : ['celkem'];
+    foreach (ps_pracovnici_pobocky((array)$data['filteredRows']) as $row) {
+        $values = [$row['cele_jmeno'], $row['pobocka']];
+        foreach ($columns as $column) $values[] = (float)$row[$column];
+        $sheet->fromArray($values, null, 'A' . (string)$rowNum, true);
+        $rowNum++;
+    }
+} elseif ($scope === 'detail') {
     foreach ((array)$data['filteredRows'] as $row) {
         $detailRows = isset($row['detail_rows']) && is_array($row['detail_rows']) ? $row['detail_rows'] : [];
         foreach ($detailRows as $detailRow) {
@@ -100,16 +116,21 @@ if ($scope === 'detail') {
 }
 
 $lastRow = max(4, $rowNum - 1);
-$sheet->mergeCells('A1:I1');
+// Rozmery a formaty tabulky odpovidaji skutecnemu poctu sloupcu vybraneho vystupu.
+$lastColumn = chr(ord('A') + count($headers) - 1);
+$sheet->mergeCells('A1:' . $lastColumn . '1');
 $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
-$sheet->getStyle('A4:I4')->getFont()->setBold(true);
-$sheet->getStyle('A4:I' . (string)$lastRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
-$sheet->getStyle('A4:I' . (string)$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-$sheet->getStyle(($scope === 'detail' ? 'A4:D' : 'C4:D') . (string)$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+$sheet->getStyle('A4:' . $lastColumn . '4')->getFont()->setBold(true);
+$sheet->getStyle('A4:' . $lastColumn . (string)$lastRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+$sheet->getStyle('A4:' . $lastColumn . (string)$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+$textRange = $scope === 'branches' ? 'A4:B' : ($scope === 'detail' ? 'A4:D' : 'C4:D');
+$sheet->getStyle($textRange . (string)$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
 $sheet->getStyle('B2')->getNumberFormat()->setFormatCode('# ##0.00');
-$sheet->getStyle('E5:I' . (string)$lastRow)->getNumberFormat()->setFormatCode('# ##0.00');
+if ($lastRow >= 5) {
+    $sheet->getStyle(($scope === 'branches' ? 'C5:' : 'E5:') . $lastColumn . (string)$lastRow)->getNumberFormat()->setFormatCode('# ##0.00');
+}
 
-foreach (range('A', 'I') as $column) {
+foreach (range('A', $lastColumn) as $column) {
     $sheet->getColumnDimension($column)->setAutoSize(true);
 }
 

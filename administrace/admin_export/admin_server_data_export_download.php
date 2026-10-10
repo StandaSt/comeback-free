@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /*
  * Účel souboru: Ověří serverový požadavek, vytvoří dočasný SQL export
- * provozních dat a nabídne jej přihlášenému uživateli přes Uložit jako.
+ * provozních dat ve www/common/tmp a nabídne jej přihlášenému uživateli přes Uložit jako.
  */
 
 require_once __DIR__ . '/../../common/lib/session_boot.php';
@@ -67,9 +67,10 @@ try {
     }
 
     $downloadName = 'export_server_data_pro_lokal.sql';
-    $tempDirectory = dirname(__DIR__, 3) . '/data/tmp';
+    // Oba exporty pouzivaji stejne provozni uloziste a zamek proti soubeznemu spusteni.
+    $tempDirectory = dirname(__DIR__, 2) . '/common/tmp';
     if (!is_dir($tempDirectory) && !mkdir($tempDirectory, 0770, true) && !is_dir($tempDirectory)) {
-        throw new RuntimeException('Adresář data/tmp nelze vytvořit.');
+        throw new RuntimeException('Adresář common/tmp nelze vytvořit.');
     }
 
     $lockHandle = fopen($tempDirectory . '/db_export.lock', 'c');

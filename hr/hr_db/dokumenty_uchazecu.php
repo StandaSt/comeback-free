@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 /**
  * DB dotazy pro dokumenty zobrazovane v HR prehledu.
+ * Testovaci osoby vynechava ze souctu, seznamu i primeho otevreni dokumentu.
+ * U importovanych smluv vraci take podpisy, casti a konkretni upozorneni pro personalistu.
+ * Word otevre jako odvozeny PDF nahled; puvodni soubor zustava beze zmeny.
  */
 
 /**
@@ -14,8 +17,8 @@ function hr_fetch_prehled_document_summary(mysqli $db): array
 {
     $result = $db->query("
         SELECT
-            (SELECT COUNT(*) FROM hr_dokument d WHERE d.platny = 1) AS dokumentu_celkem,
-            (SELECT COUNT(DISTINCT d.id_person) FROM hr_dokument d WHERE d.platny = 1) AS osob_s_dokumenty,
+            (SELECT COUNT(*) FROM hr_dokument d INNER JOIN hr_person dp ON dp.id_person = d.id_person AND dp.testovaci = 0 WHERE d.platny = 1) AS dokumentu_celkem,
+            (SELECT COUNT(DISTINCT d.id_person) FROM hr_dokument d INNER JOIN hr_person dp ON dp.id_person = d.id_person AND dp.testovaci = 0 WHERE d.platny = 1) AS osob_s_dokumenty,
             COUNT(*) AS aktivnich_zamestnancu,
             COALESCE(SUM(EXISTS(
                 SELECT 1
@@ -40,6 +43,7 @@ function hr_fetch_prehled_document_summary(mysqli $db): array
             )), 0) AS s_kartickou_pojistovny,
             (SELECT COUNT(*)
              FROM hr_dokument d
+             INNER JOIN hr_person dp ON dp.id_person = d.id_person AND dp.testovaci = 0
              LEFT JOIN (
                  SELECT DISTINCT p2.id_person
                  FROM hr_person p2
@@ -48,10 +52,12 @@ function hr_fetch_prehled_document_summary(mysqli $db): array
                     AND pv2.platny = 1
                     AND (pv2.datum_ukonceni IS NULL OR pv2.datum_ukonceni >= CURDATE())
                  WHERE p2.aktivni = 1
+                   AND p2.testovaci = 0
              ) a2 ON a2.id_person = d.id_person
              WHERE d.platny = 1 AND a2.id_person IS NULL) AS dokumentu_mimo_aktivni,
             (SELECT COUNT(DISTINCT d.id_person)
              FROM hr_dokument d
+             INNER JOIN hr_person dp ON dp.id_person = d.id_person AND dp.testovaci = 0
              LEFT JOIN (
                  SELECT DISTINCT p3.id_person
                  FROM hr_person p3
@@ -60,6 +66,7 @@ function hr_fetch_prehled_document_summary(mysqli $db): array
                     AND pv3.platny = 1
                     AND (pv3.datum_ukonceni IS NULL OR pv3.datum_ukonceni >= CURDATE())
                  WHERE p3.aktivni = 1
+                   AND p3.testovaci = 0
              ) a3 ON a3.id_person = d.id_person
              WHERE d.platny = 1 AND a3.id_person IS NULL) AS osob_mimo_aktivni
         FROM (
@@ -70,6 +77,7 @@ function hr_fetch_prehled_document_summary(mysqli $db): array
                AND pv.platny = 1
                AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE())
             WHERE p.aktivni = 1
+              AND p.testovaci = 0
         ) aktivni
     ");
     $row = $result->fetch_assoc() ?: [];
@@ -98,9 +106,10 @@ function hr_fetch_prehled_document_summary(mysqli $db): array
 /**
  * Nacte aktualni dokumenty zamestnancu, ktere smi prihlaseny uzivatel videt.
  */
-function hr_fetch_employee_documents(mysqli $db, int $idUser, ?int $idPerson = null, int $limit = 200): array
+function hr_fetch_employee_documents(mysqli $db, int $idUser, ?int $idPerson = null, int $limit = 2000): array
 {
-    $limit = max(1, min($limit, 500));
+    // Hromadny prvni import presahuje200souboru; seznam nesmi skryvat vetsinu podkladu.
+    $limit = max(1, min($limit, 5000));
     if ($idPerson !== null && !cb_firemni_pristup_muze_osobu($db, $idUser, $idPerson)) {
         return [];
     }
@@ -121,12 +130,15 @@ function hr_fetch_employee_documents(mysqli $db, int $idUser, ?int $idPerson = n
             ds.puvodni_nazev,
             ds.ulozeny_nazev,
             ds.mime_typ,
-            ds.velikost
+            ds.velikost,
+            du.poznamka AS import_poznamka,
+            du.ocr_text AS import_udaje
         FROM hr_dokument d
         INNER JOIN hr_cis_dokument_typ dt
             ON dt.id_dokument_typ = d.id_dokument_typ
         INNER JOIN hr_person p
             ON p.id_person = d.id_person
+           AND p.testovaci = 0
         INNER JOIN hr_osobni_udaje ou
             ON ou.id_person = p.id_person
            AND ou.platny = 1
@@ -134,6 +146,8 @@ function hr_fetch_employee_documents(mysqli $db, int $idUser, ?int $idPerson = n
             ON ds.id_dokument = d.id_dokument
            AND ds.verze = d.verze
            AND ds.poradi = 1
+        LEFT JOIN hr_dokument_udaje du
+            ON du.id_dokument = d.id_dokument AND du.verze = d.verze
         WHERE d.platny = 1
           AND d.id_person IS NOT NULL
           {$wherePerson}
@@ -155,6 +169,9 @@ function hr_fetch_employee_documents(mysqli $db, int $idUser, ?int $idPerson = n
         if (!cb_firemni_pristup_muze_osobu($db, $idUser, $rowPerson)) {
             continue;
         }
+        // Stare OCR poznamky nejsou importnim JSON; rozlisi je jednoznacny marker.
+        $importMeta = json_decode((string)($row['import_poznamka'] ?? ''), true);
+        $importMeta = is_array($importMeta) && ($importMeta['hr_import_smlouvy'] ?? 0) === 1 ? $importMeta : [];
         $rows[] = [
             'id_dokument' => (int)$row['id_dokument'],
             'verze' => (int)$row['verze'],
@@ -169,6 +186,8 @@ function hr_fetch_employee_documents(mysqli $db, int $idUser, ?int $idPerson = n
             'ulozeny_nazev' => (string)($row['ulozeny_nazev'] ?? ''),
             'mime_typ' => (string)($row['mime_typ'] ?? ''),
             'velikost' => $row['velikost'] === null ? null : (int)$row['velikost'],
+            'import_meta' => $importMeta,
+            'import_udaje' => $importMeta !== [] ? (string)($row['import_udaje'] ?? '') : '',
         ];
     }
     $stmt->close();
@@ -182,8 +201,9 @@ function hr_fetch_employee_documents(mysqli $db, int $idUser, ?int $idPerson = n
 function hr_stream_employee_document(mysqli $db, int $idUser, int $idDocument, int $version): never
 {
     $stmt = $db->prepare('
-        SELECT d.id_person, ds.relativni_cesta, ds.puvodni_nazev, ds.mime_typ
+        SELECT d.id_person, ds.relativni_cesta, ds.puvodni_nazev, ds.mime_typ, ds.sha256
         FROM hr_dokument d
+        INNER JOIN hr_person p ON p.id_person = d.id_person AND p.testovaci = 0
         INNER JOIN hr_dokument_soubor ds
             ON ds.id_dokument = d.id_dokument
            AND ds.verze = d.verze
@@ -227,6 +247,18 @@ function hr_stream_employee_document(mysqli $db, int $idUser, int $idDocument, i
         'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     ];
     $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    if (in_array($extension, ['doc','docx'], true)) {
+        require_once __DIR__.'/../hr_includes/hr_word_nahled.php';
+        try {
+            $path=hr_word_preview($path,(string)$row['sha256']);
+        } catch (Throwable $error) {
+            http_response_code(422);
+            header('Content-Type: text/html; charset=utf-8');
+            echo '<!doctype html><html lang="cs"><meta charset="utf-8"><title>Náhled dokumentu</title><h1>Dokument nelze zobrazit</h1><p>PDF náhled chybí nebo jeho kontrola selhala. Správce musí zkontrolovat balík hr_word_nahledy.zip a zapisovatelnost adresáře HR dokumentů.</p></html>';
+            exit;
+        }
+        $extension='pdf'; $name=basename($path);
+    }
     $mime = $mimeByExtension[$extension] ?? trim((string)($row['mime_typ'] ?? ''));
     if ($mime === '' || preg_match('#^[a-z0-9.+-]+/[a-z0-9.+-]+$#i', $mime) !== 1) {
         $mime = 'application/octet-stream';

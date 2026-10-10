@@ -1684,7 +1684,22 @@
 }
 
 .zr_control_label_col{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:6px;
   color:var(--clr_modra_6);
+}
+
+/* Maly stitek otevre spolecny tooltip s vysvetlenim vypoctu COL. */
+.zr_col_calculation{
+  padding:2px 5px;
+  border:1px solid var(--cb-border);
+  border-radius:4px;
+  font-size:var(--cb-font-11);
+  font-weight:400;
+  color:var(--cb-text-muted);
+  cursor:help;
 }
 
 .zr_person_table th,

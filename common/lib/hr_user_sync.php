@@ -2,19 +2,27 @@
 declare(strict_types=1);
 
 /*
- * Promítne účinné ukončení posledního pracovního poměru do hr_person.aktivni.
+ * Obnovuje profil session a zpracuje výslovné ukončení konkrétního zaměstnance.
+ * Samotný konec smlouvy ani načtení IS aktivitu zaměstnance nemění.
  * Osoba zůstává ve své firmě a její historické role, pobočky a kontakty se nemažou.
  */
 
-function cb_hr_user_sync_ukoncene(mysqli $db): int
+/** Deaktivuje jen danou osobu po výslovném ukončení, pokud nemá další otevřený vztah. */
+function cb_hr_user_sync_ukoncene(mysqli $db, int $idPerson): int
 {
+    if ($idPerson <= 0) {
+        return 0;
+    }
     $stmt = $db->prepare('
         UPDATE hr_person p
         SET p.aktivni = 0
-        WHERE p.aktivni = 1
+        WHERE p.id_person = ? AND p.aktivni = 1
           AND EXISTS (
               SELECT 1
               FROM hr_pracovni_vztah pv
+              INNER JOIN hr_pracovni_ukonceni u
+                  ON u.id_pracovni_vztah = pv.id_pracovni_vztah
+                 AND u.datum_ukonceni = pv.datum_ukonceni
               WHERE pv.id_person = p.id_person
                 AND pv.platny = 1
                 AND pv.datum_ukonceni IS NOT NULL
@@ -28,6 +36,7 @@ function cb_hr_user_sync_ukoncene(mysqli $db): int
                 AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE())
           )
     ');
+    $stmt->bind_param('i', $idPerson);
     $stmt->execute();
     $changed = (int)$stmt->affected_rows;
     $stmt->close();

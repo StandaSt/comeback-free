@@ -1,4 +1,5 @@
 <?php
+// Nabizi format, rozsah a strucnou nebo rozsirenou variantu exportu pracovniku po pobockach.
 // modaly/modal_prehled_smen_export.php * Verze: V6 * Aktualizace: 04.06.2026
 declare(strict_types=1);
 
@@ -7,7 +8,7 @@ $psExportTxtUrl = (string)($psExportTxtUrl ?? '');
 $psExportXlsxUrl = (string)($psExportXlsxUrl ?? '');
 ?>
 <div id="psExportModal" class="cb_cardmode_modal is-hidden" data-ps-export-modal="1" data-pdf-url="<?= h($psExportPdfUrl) ?>" data-txt-url="<?= h($psExportTxtUrl) ?>" data-xlsx-url="<?= h($psExportXlsxUrl) ?>" aria-hidden="true">
-  <div class="cb_cardmode_dialog" role="dialog" aria-modal="true" aria-labelledby="psExportTitle" style="width:min(365px,96vw);padding:10px 12px 10px;">
+  <div class="cb_cardmode_dialog" role="dialog" aria-modal="true" aria-labelledby="psExportTitle" style="width:min(620px,96vw);padding:10px 12px 10px;">
     <div class="cb_cardmode_head">
       <div class="cb_cardmode_head_text" style="padding-top:0;">
         <h4 id="psExportTitle" class="cb_cardmode_title" style="color:var(--clr_modra_5);margin-bottom:8px;">Export přehledu směn</h4>
@@ -19,10 +20,17 @@ $psExportXlsxUrl = (string)($psExportXlsxUrl ?? '');
               <label style="display:inline-flex;align-items:center;gap:5px;"><input type="radio" name="ps_export_format" value="xlsx"> XLSX</label>
               <label style="display:inline-flex;align-items:center;gap:5px;"><input type="radio" name="ps_export_format" value="txt"> TXT</label>
             </div>
-            <div style="display:flex;align-items:center;gap:12px;border:1px solid var(--clr_seda_2);border-radius:8px;padding:5px 9px;white-space:nowrap;">
+            <?php // Sirsi dialog udrzi cely rozsah na jednom radku; na uzkem displeji lze radek posunout. ?>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:nowrap;white-space:nowrap;overflow-x:auto;border:1px solid var(--clr_seda_2);border-radius:8px;padding:5px 9px;">
               <strong style="min-width:54px;color:var(--clr_seda_4);">Rozsah</strong>
               <label style="display:inline-flex;align-items:center;gap:5px;"><input type="radio" name="ps_export_scope" value="summary" checked> měsíční souhrn</label>
               <label style="display:inline-flex;align-items:center;gap:5px;"><input type="radio" name="ps_export_scope" value="detail"> detailní přehled</label>
+              <label style="display:inline-flex;align-items:center;gap:5px;"><input type="radio" name="ps_export_scope" value="branches"> pracovníci po pobočkách</label>
+            </div>
+            <div class="is-hidden" data-ps-export-variant style="border:1px solid var(--clr_seda_2);border-radius:8px;padding:5px 9px;">
+              <strong style="display:inline-block;min-width:54px;color:var(--clr_seda_4);">Varianta</strong>
+              <label style="display:inline-flex;align-items:center;gap:5px;margin-right:12px;"><input type="radio" name="ps_export_variant" value="brief" checked> stručná</label>
+              <label style="display:inline-flex;align-items:center;gap:5px;"><input type="radio" name="ps_export_variant" value="expanded"> rozšířená</label>
             </div>
           </div>
         </div>

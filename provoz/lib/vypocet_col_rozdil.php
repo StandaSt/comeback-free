@@ -1,8 +1,9 @@
 <?php
-// lib/vypocet_col_rozdil.php * K10 vypocet rozdilu a COL
+// Pocita rozdil pokladny a COL; fixni mzdy zahrnuje denne podle MAIN pobocky i bez smeny.
 declare(strict_types=1);
 
 require_once __DIR__ . '/report_promenne.php';
+require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
 function cb_vcr_float(mixed $value): float
 {
@@ -148,7 +149,8 @@ function cb_vcr_cash_from_draft(?array $draft): array
     ];
 }
 
-function cb_vcr_col_cost(mysqli $conn, string $datumReportu, array $people): float
+// Fix patri denne na MAIN platnou k datu reportu, hodinove naklady pouze do odpracovanych smen.
+function cb_vcr_col_cost(mysqli $conn, string $datumReportu, array $people, int $idPob): float
 {
     $ids = [];
     foreach ($people as $person) {
@@ -157,35 +159,40 @@ function cb_vcr_col_cost(mysqli $conn, string $datumReportu, array $people): flo
             $ids[$idUser] = true;
         }
     }
-    if ($ids === []) {
-        return 0.0;
-    }
-
     $date = DateTimeImmutable::createFromFormat('Y-m-d', $datumReportu);
     if (!$date instanceof DateTimeImmutable) {
         return 0.0;
     }
     $monthStart = $date->modify('first day of this month')->format('Y-m-d');
 
-    $idList = implode(',', array_map('intval', array_keys($ids)));
+    $idList = $ids === [] ? '0' : implode(',', array_map('intval', array_keys($ids)));
+    $mainSql = cb_hr_main_sql($conn);
     $sql = '
         SELECT s.id_user, s.id_mzda_typ, s.naklad_col_hod, s.naklad_col_den
         FROM hr_sazby s
         INNER JOIN (
             SELECT id_user, MAX(platnost_od) AS platnost_od
             FROM hr_sazby
-            WHERE id_user IN (' . $idList . ')
-              AND platnost_od <= ?
+            WHERE platnost_od <= ?
               AND (platnost_do IS NULL OR platnost_do >= ?)
             GROUP BY id_user
         ) x ON x.id_user = s.id_user AND x.platnost_od = s.platnost_od
+        WHERE (s.id_mzda_typ <> 2 AND s.id_user IN (' . $idList . '))
+           OR (s.id_mzda_typ = 2 AND EXISTS (
+               SELECT 1 FROM hr_person p
+               INNER JOIN ' . $mainSql . ' m ON m.id_person = p.id_person
+               WHERE p.id_user = s.id_user AND m.id_pob = ?
+                 AND m.platny = 1 AND m.zruseno IS NULL
+                 AND (m.platnost_od IS NULL OR m.platnost_od <= ?)
+                 AND (m.platnost_do IS NULL OR m.platnost_do >= ?)
+           ))
     ';
 
     $stmt = $conn->prepare($sql);
     if ($stmt === false) {
         return 0.0;
     }
-    $stmt->bind_param('ss', $monthStart, $monthStart);
+    $stmt->bind_param('ssiss', $monthStart, $monthStart, $idPob, $datumReportu, $datumReportu);
     $stmt->execute();
     $result = $stmt->get_result();
     $rates = [];
@@ -205,7 +212,12 @@ function cb_vcr_col_cost(mysqli $conn, string $datumReportu, array $people): flo
     $stmt->close();
 
     $cost = 0.0;
-    $fixedAdded = [];
+    // Fixni sazby se sectou jednou i pri prazdnem reportu; smeny je uz nepricitaji.
+    foreach ($rates as $rate) {
+        if ((int)$rate['type'] === 2) {
+            $cost += (float)$rate['day'];
+        }
+    }
     foreach ($people as $person) {
         $idUser = (int)($person['id_user'] ?? 0);
         $hours = cb_vcr_float($person['hours'] ?? 0);
@@ -214,10 +226,6 @@ function cb_vcr_col_cost(mysqli $conn, string $datumReportu, array $people): flo
         }
 
         if ((int)$rates[$idUser]['type'] === 2) {
-            if (!isset($fixedAdded[$idUser])) {
-                $cost += (float)$rates[$idUser]['day'];
-                $fixedAdded[$idUser] = true;
-            }
             continue;
         }
 
@@ -244,7 +252,8 @@ function cb_vcr_col_wolt_drive_cost(mysqli $conn, string $datumReportu, array $r
     return $pocet * $sazba;
 }
 
-function cb_vcr_col(mysqli $conn, string $datumReportu, array $restiaSummary, array $cash, array $people): ?float
+// COL vztahuje mzdove naklady pobocky, PHM a Wolt Drive k trzbe bez DPH.
+function cb_vcr_col(mysqli $conn, string $datumReportu, array $restiaSummary, array $cash, array $people, int $idPob): ?float
 {
     $trzbaBezDph = cb_vcr_money($restiaSummary, 'trzba') / 1.12;
     if ($trzbaBezDph <= 0) {
@@ -252,16 +261,17 @@ function cb_vcr_col(mysqli $conn, string $datumReportu, array $restiaSummary, ar
     }
 
     return (
-        cb_vcr_col_cost($conn, $datumReportu, $people)
+        cb_vcr_col_cost($conn, $datumReportu, $people, $idPob)
         + cb_vcr_col_phm_cost($cash)
         + cb_vcr_col_wolt_drive_cost($conn, $datumReportu, $restiaSummary)
     ) / $trzbaBezDph;
 }
 
-function cb_vypocet_col_rozdil(mysqli $conn, string $datumReportu, array $restiaSummary, array $cash, array $people): array
+// Sdileny vypocet pro zobrazeni, prubezny prepocet i finalni ulozeni reportu.
+function cb_vypocet_col_rozdil(mysqli $conn, string $datumReportu, array $restiaSummary, array $cash, array $people, int $idPob): array
 {
     $rozdil = cb_vcr_rozdil($restiaSummary, $cash);
-    $col = cb_vcr_col($conn, $datumReportu, $restiaSummary, $cash, $people);
+    $col = cb_vcr_col($conn, $datumReportu, $restiaSummary, $cash, $people, $idPob);
 
     return [
         'rozdil' => $rozdil,

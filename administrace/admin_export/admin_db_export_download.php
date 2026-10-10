@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /*
  * Účel souboru: Ověří požadavek na export DB, vytvoří dočasný SQL soubor
- * a nabídne jej přihlášenému uživateli ke stažení.
+ * ve www/common/tmp a nabídne jej přihlášenému uživateli ke stažení.
  */
 
 require_once __DIR__ . '/../../common/lib/session_boot.php';
@@ -65,9 +65,10 @@ try {
     $selectedGroups = cb_admin_db_export_selected_groups($_POST['groups'] ?? null);
     $environment = (($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL') ? 'local' : 'server';
     $downloadName = 'export_' . $environment . '.sql';
-    $tempDirectory = dirname(__DIR__, 3) . '/data/tmp';
+    // Docasny export i sdileny zamek patri do provozniho uloziste aplikace.
+    $tempDirectory = dirname(__DIR__, 2) . '/common/tmp';
     if (!is_dir($tempDirectory) && !mkdir($tempDirectory, 0770, true) && !is_dir($tempDirectory)) {
-        throw new RuntimeException('Adresář data/tmp nelze vytvořit.');
+        throw new RuntimeException('Adresář common/tmp nelze vytvořit.');
     }
 
     $lockHandle = fopen($tempDirectory . '/db_export.lock', 'c');

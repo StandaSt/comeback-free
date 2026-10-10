@@ -8,6 +8,7 @@ require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
  * Data první čtecí verze mzdového přehledu. Všechny hodnoty jsou načítané
  * z existující evidence HR a z finálně uložených denních reportů IS.
  * Tato vrstva neprovádí uzávěrku, nepřijímá ruční bonusy ani do DB nezapisuje.
+ * Testovaci osoby vynechava ze mzdovych radku, nikoli z urceni firmy prihlaseneho uctu.
  */
 
 function hr_mzdovy_prehled_id_firmy(mysqli $db, int $idUser): int
@@ -227,6 +228,7 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
         ) hodiny ON hodiny.id_user = hp.id_user
         INNER JOIN firma f ON f.id_firma = hp.id_firma AND f.aktivni = 1 AND f.platnost_do IS NULL
         WHERE hp.aktivni = 1
+          AND hp.testovaci = 0
           AND hp.id_firma = ?
           AND EXISTS (
               SELECT 1 FROM hr_pracovni_vztah pv

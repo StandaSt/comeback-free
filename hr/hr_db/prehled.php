@@ -5,6 +5,7 @@ require_once __DIR__ . '/../../common/db/db_cis_slot.php';
 
 /**
  * DB dotazy pro hlavni prehled HR modulu.
+ * Testovaci ucty nezahrnuje do zamestnancu ani upozorneni na smlouvy.
  */
 
 /**
@@ -55,6 +56,7 @@ function hr_fetch_prehled(mysqli $db): array
            AND pv.platny = 1
            AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE())
         WHERE p.aktivni = 1
+          AND p.testovaci = 0
     ");
     if ($row = $result->fetch_assoc()) {
         $zamestnanci['HPP'] = (int)($row['HPP'] ?? 0);
@@ -94,10 +96,11 @@ function hr_fetch_prehled(mysqli $db): array
 
     $result = $db->query("
         SELECT COUNT(*) AS cnt
-        FROM hr_pracovni_vztah
-        WHERE platny = 1
-          AND datum_ukonceni IS NOT NULL
-          AND datum_ukonceni BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+        FROM hr_pracovni_vztah pv
+        INNER JOIN hr_person p ON p.id_person = pv.id_person AND p.testovaci = 0
+        WHERE pv.platny = 1
+          AND pv.datum_ukonceni IS NOT NULL
+          AND pv.datum_ukonceni BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
     ");
     if ($row = $result->fetch_assoc()) {
         $kReseni['koncici_smlouvy'] = (int)$row['cnt'];

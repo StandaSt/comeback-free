@@ -4,6 +4,7 @@ declare(strict_types=1);
 /**
  * DB dotazy pro seznam, detail a kontrolu kompletnosti zamestnancu v HR.
  * Cteni respektuje firemni pristup a hlavni pobocku vedouciho.
+ * Tabulkovy seznam shrnuje pracovni vztahy do jednoho radku za osobu.
  */
 
 require_once __DIR__ . '/hr_zamestnanci_pristup.php';
@@ -161,17 +162,24 @@ function hr_fetch_employee_list(mysqli $db): array
     }
     $activeFilters = array_filter($filters, static fn (string $value): bool => $value !== '' && $value !== 'vse');
 
+    // Soubihajici DPP/DPC patri na jednu kartu; agregace pred JOINem chrani i pocet a strankovani.
     $fromSql = "
         FROM hr_person p
         LEFT JOIN hr_osobni_udaje ou
             ON ou.id_person = p.id_person
            AND ou.platny = 1
-        LEFT JOIN hr_pracovni_vztah pv
-            ON pv.id_person = p.id_person
-           AND pv.platny = 1
-           AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE())
-        LEFT JOIN hr_cis_pracovni_vztah_typ pvt
-            ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ
+        LEFT JOIN (
+            SELECT v.id_person, MIN(v.datum_nastupu) AS datum_nastupu,
+                MAX(v.id_pracovni_vztah) AS id_pracovni_vztah,
+                GROUP_CONCAT(DISTINCT t.nazev ORDER BY t.nazev SEPARATOR ', ') AS vztah_kod
+            FROM hr_pracovni_vztah v
+            LEFT JOIN hr_cis_pracovni_vztah_typ t
+                ON t.id_pracovni_vztah_typ = v.id_pracovni_vztah_typ
+            WHERE v.platny = 1
+              AND v.datum_nastupu <= CURDATE()
+              AND (v.datum_ukonceni IS NULL OR v.datum_ukonceni >= CURDATE())
+            GROUP BY v.id_person
+        ) pv ON pv.id_person = p.id_person
         LEFT JOIN (
             SELECT
                 hp.id_person,
@@ -212,7 +220,7 @@ function hr_fetch_employee_list(mysqli $db): array
         'zamestnanec' => "TRIM(CONCAT(COALESCE(ou.prijmeni, ''), ' ', COALESCE(ou.jmeno, ''), ' ', COALESCE(ou.druhe_jmeno, '')))",
         'zarazeni' => "COALESCE(pz.zarazeni, '')",
         'pracoviste' => "COALESCE(pp.pracoviste, '')",
-        'vztah' => "COALESCE(pvt.nazev, '')",
+        'vztah' => "COALESCE(pv.vztah_kod, '')",
         'nastup' => "COALESCE(DATE_FORMAT(pv.datum_nastupu, '%d.%m.%Y'), '')",
     ];
     foreach ($filterSqlMap as $key => $expression) {
@@ -268,7 +276,7 @@ function hr_fetch_employee_list(mysqli $db): array
             pp.pracoviste,
             pp.pracoviste_hlavni,
             pz.zarazeni,
-            pvt.nazev AS vztah_kod
+            pv.vztah_kod
         {$fromSql}
         {$whereSql}
         ORDER BY {$orderSql}

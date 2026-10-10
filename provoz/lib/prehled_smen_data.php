@@ -1,5 +1,5 @@
 <?php
-// Pripravuje hodiny, souhrny a exportni data v rozsahu role, MAIN pobocky nebo vlastni fransizy.
+// Pripravuje hodiny a souhrny podle opravneni; export po pobockach sklada ze stavajicich detailu.
 // lib/prehled_smen_data.php * Verze: V2 * Aktualizace: 04.06.2026
 declare(strict_types=1);
 
@@ -371,6 +371,7 @@ if (!function_exists('ps_prehled_smen_data')) {
                     $rows[$key] = [
                         'rok' => $rowYear,
                         'mesic' => $rowMonth,
+                        'id_user' => $idUser,
                         'jmeno' => $jmeno,
                         'prijmeni' => $prijmeni,
                         'cele_jmeno' => trim($prijmeni . ' ' . $jmeno),
@@ -489,6 +490,39 @@ if (!function_exists('ps_prehled_smen_data')) {
             'slotLabels' => $slotLabels,
             'error' => $error,
         ];
+    }
+}
+
+if (!function_exists('ps_pracovnici_pobocky')) {
+    // Secte existujici detaily za zamestnance a pobocku napric sloty, bez dalsiho nacitani dat.
+    function ps_pracovnici_pobocky(array $rows): array
+    {
+        $groups = [];
+        foreach ($rows as $row) {
+            $userId = (int)($row['id_user'] ?? 0);
+            $personKey = $userId > 0 ? 'u:' . $userId : 'n:' . mb_strtolower((string)$row['cele_jmeno'], 'UTF-8');
+            foreach ((array)($row['detail_rows'] ?? []) as $detail) {
+                $branchId = (int)($detail['id_pob'] ?? 0);
+                $key = $personKey . '|p:' . $branchId;
+                if (!isset($groups[$key])) {
+                    $branchName = trim((string)($detail['pobocka'] ?? ''));
+                    $groups[$key] = [
+                        'cele_jmeno' => (string)$row['cele_jmeno'],
+                        'pobocka' => $branchName !== '' ? $branchName : ($branchId > 0 ? 'ID ' . $branchId : '-'),
+                        'celkem' => 0.0, 'den' => 0.0, 'noc' => 0.0, 'vikend' => 0.0, 'svatek' => 0.0,
+                    ];
+                }
+                foreach (['celkem', 'den', 'noc', 'vikend', 'svatek'] as $column) {
+                    $groups[$key][$column] += (float)($detail[$column] ?? 0.0);
+                }
+            }
+        }
+        // Zamestnanec zustane pohromade i pri puvodnim razeni prehledu podle hodin nebo slotu.
+        usort($groups, static function (array $a, array $b): int {
+            return [mb_strtolower($a['cele_jmeno'], 'UTF-8'), mb_strtolower($a['pobocka'], 'UTF-8')]
+                <=> [mb_strtolower($b['cele_jmeno'], 'UTF-8'), mb_strtolower($b['pobocka'], 'UTF-8')];
+        });
+        return $groups;
     }
 }
 

@@ -1,3 +1,4 @@
+// Ovlada dialog a stazeni exportu hodin vcetne variant pracovniku po pobockach.
 // js/prehled_smen_export.js * Verze: V4 * Aktualizace: 04.06.2026
 'use strict';
 
@@ -16,6 +17,9 @@
     const summary = modal.querySelector('input[name="ps_export_scope"][value="summary"]');
     if (pdf instanceof HTMLInputElement) pdf.checked = true;
     if (summary instanceof HTMLInputElement) summary.checked = true;
+    const brief = modal.querySelector('input[name="ps_export_variant"][value="brief"]');
+    if (brief instanceof HTMLInputElement) brief.checked = true;
+    updateVariant(modal);
 
     const submit = modal.querySelector('[data-ps-export-submit]');
     if (submit instanceof HTMLElement) submit.focus();
@@ -66,11 +70,20 @@
     return String(modal.getAttribute('data-pdf-url') || '');
   }
 
-  function addScope(url, scope) {
+  // Volba varianty patri jen k novemu rozsahu; ostatni exporty zustavaji beze zmeny.
+  function updateVariant(modal) {
+    const variant = modal.querySelector('[data-ps-export-variant]');
+    if (variant instanceof HTMLElement) {
+      variant.classList.toggle('is-hidden', selectedValue(modal, 'ps_export_scope') !== 'branches');
+    }
+  }
+
+  function addScope(url, scope, variant) {
     if (url === '') return '';
 
     const separator = url.indexOf('?') === -1 ? '?' : '&';
-    return url + separator + 'ps_scope=' + encodeURIComponent(scope);
+    return url + separator + 'ps_scope=' + encodeURIComponent(scope)
+      + (scope === 'branches' ? '&ps_variant=' + encodeURIComponent(variant) : '');
   }
 
   function filenameFromDisposition(disposition) {
@@ -120,6 +133,13 @@
     }
   }
 
+  // Po zmene rozsahu zobrazime pouze souvisejici volbu strucneho nebo rozsireneho vystupu.
+  document.addEventListener('change', function (event) {
+    if (!(event.target instanceof HTMLInputElement) || event.target.name !== 'ps_export_scope') return;
+    const modal = event.target.closest('[data-ps-export-modal]');
+    if (modal instanceof HTMLElement) updateVariant(modal);
+  });
+
   document.addEventListener('click', function (event) {
     const opener = event.target instanceof Element
       ? event.target.closest('[data-ps-export-open]')
@@ -153,8 +173,10 @@
       if (!(modal instanceof HTMLElement)) return;
 
       event.preventDefault();
-      const scope = selectedValue(modal, 'ps_export_scope') === 'detail' ? 'detail' : 'summary';
-      const url = addScope(exportUrl(modal, selectedValue(modal, 'ps_export_format')), scope);
+      const selectedScope = selectedValue(modal, 'ps_export_scope');
+      const scope = ['summary', 'detail', 'branches'].includes(selectedScope) ? selectedScope : 'summary';
+      const variant = selectedValue(modal, 'ps_export_variant') === 'expanded' ? 'expanded' : 'brief';
+      const url = addScope(exportUrl(modal, selectedValue(modal, 'ps_export_format')), scope, variant);
       if (url !== '') {
         downloadExport(modal, url);
       }

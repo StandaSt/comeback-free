@@ -4,9 +4,21 @@ declare(strict_types=1);
 /**
  * Omezuje cteni zamestnancu vedoucimu pobocky podle jeho aktualni hlavni pobocky.
  * Firemni rozsah zustava dalsi samostatnou podminkou pristupu.
+ * Testovaci identity ponechava pro prihlaseni, ale nezpristupnuje je jako zamestnance.
  */
 require_once __DIR__ . '/pozadavky.php';
 require_once __DIR__ . '/../../common/lib/firemni_pristup.php';
+
+/** Pozna testovaci cil HR akce bez zmeny prihlaseni nebo prav tohoto uctu. */
+function hr_zamestnanci_je_testovaci(mysqli $db, int $idPerson): bool
+{
+    $stmt = $db->prepare('SELECT 1 FROM hr_person WHERE id_person = ? AND testovaci = 1 LIMIT 1');
+    $stmt->bind_param('i', $idPerson);
+    $stmt->execute();
+    $testovaci = $stmt->get_result()->num_rows > 0;
+    $stmt->close();
+    return $testovaci;
+}
 
 /** Vrati SQL podminku pro osobu s aliasem p; vyssi role zachovaji svuj dosavadni rozsah. */
 function hr_zamestnanci_pobocka_sql(mysqli $db, int $idUser): string
@@ -20,7 +32,7 @@ function hr_zamestnanci_pobocka_sql(mysqli $db, int $idUser): string
     $role = (int)($stmt->get_result()->fetch_assoc()['role_id'] ?? 0);
     $stmt->close();
     if ($role !== 5) {
-        return '1 = 1';
+        return 'p.testovaci = 0';
     }
 
     // Bez jednoznacne platne hlavni pobocky nesmi vedouci ziskat sirsi pristup.
@@ -31,7 +43,7 @@ function hr_zamestnanci_pobocka_sql(mysqli $db, int $idUser): string
     }
     $idPob = (int)$pobocka['id_pob'];
     // Zamestnanci staci vedlejsi pobocka; rozhoduje jeji platnost k dnesnimu dni.
-    return "EXISTS (SELECT 1 FROM hr_pracoviste hr_scope
+    return "p.testovaci = 0 AND EXISTS (SELECT 1 FROM hr_pracoviste hr_scope
         WHERE hr_scope.id_person = p.id_person AND hr_scope.id_pob = {$idPob}
           AND hr_scope.platny = 1 AND hr_scope.zruseno IS NULL
           AND (hr_scope.platnost_od IS NULL OR hr_scope.platnost_od <= CURDATE())

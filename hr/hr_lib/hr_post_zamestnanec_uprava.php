@@ -379,7 +379,8 @@ function hr_post_pracovni_pomer_ukoncit(mysqli $db, int $zadalUser): void
         }
         $db->commit();
         require_once __DIR__ . '/../../common/lib/hr_user_sync.php';
-        cb_hr_user_sync_ukoncene($db);
+        // Vyslovne ukonceni se tyka jen teto osoby, nikoliv ostatnich historickych smluv.
+        cb_hr_user_sync_ukoncene($db, $idPerson);
         cb_form_finish(hr_pracovni_pomer_url($idPerson), true, 'Ukončení pracovního poměru bylo uloženo.');
     } catch (Throwable $e) {
         try { $db->rollback(); } catch (Throwable $ignored) {}

@@ -1,5 +1,5 @@
 <?php
-// Vytvari PDF export hodin pouze s pravy na Provoz a Prehled hodin.
+// Vytvari PDF souhrn, detail i pracovniky po pobockach ze stavajicich hodin s kontrolou prav.
 // lib/export_prehled_smen_pdf.php * Verze: V2 * Aktualizace: 04.06.2026
 declare(strict_types=1);
 
@@ -41,8 +41,11 @@ if ((string)$data['error'] !== '') {
 }
 
 $month = sprintf('%04d-%02d', (int)$data['selectedYear'], (int)$data['selectedMonth']);
-$scope = (string)($_GET['ps_scope'] ?? 'summary') === 'detail' ? 'detail' : 'summary';
-$filename = 'prehled_smen_' . ($scope === 'detail' ? 'detail_' : '') . $month . '.pdf';
+$scope = (string)($_GET['ps_scope'] ?? 'summary');
+if (!in_array($scope, ['summary', 'detail', 'branches'], true)) $scope = 'summary';
+$expanded = (string)($_GET['ps_variant'] ?? 'brief') === 'expanded';
+$prefix = $scope === 'branches' ? 'pobocky_' . ($expanded ? 'rozsirene_' : 'strucne_') : ($scope === 'detail' ? 'detail_' : '');
+$filename = 'prehled_smen_' . $prefix . $month . '.pdf';
 
 if (!function_exists('ps_pdf_num_dash')) {
     // Nulovou hodnotu v PDF zobrazi pomlckou.
@@ -131,7 +134,20 @@ if (!function_exists('ps_pdf_detail_blocks')) {
 }
 
 $bodyHtml = '';
-if ($scope === 'detail') {
+if ($scope === 'branches') {
+    // Jedna tabulka spojuje zamestnance a pobocku; rozsirena varianta prida existujici rozpad hodin.
+    $columns = $expanded ? ['celkem', 'den', 'noc', 'vikend', 'svatek'] : ['celkem'];
+    $bodyHtml = '<table><thead><tr><th class="txt_l">zaměstnanec</th><th class="txt_l">pobočka</th><th>odpracováno</th>'
+        . ($expanded ? '<th>6-22</th><th>22-6</th><th>So+Ne</th><th>svátek</th>' : '') . '</tr></thead><tbody>';
+    $branchRows = ps_pracovnici_pobocky((array)$data['filteredRows']);
+    foreach ($branchRows as $row) {
+        $bodyHtml .= '<tr><td class="txt_l">' . h($row['cele_jmeno']) . '</td><td class="txt_l">' . h($row['pobocka']) . '</td>';
+        foreach ($columns as $column) $bodyHtml .= '<td>' . h(ps_num((float)$row[$column])) . '</td>';
+        $bodyHtml .= '</tr>';
+    }
+    if ($branchRows === []) $bodyHtml .= '<tr><td colspan="' . (count($columns) + 2) . '" class="txt_l">Žádná data</td></tr>';
+    $bodyHtml .= '</tbody></table>';
+} elseif ($scope === 'detail') {
     $bodyHtml = '<div class="detail-export">' . ps_pdf_detail_blocks((array)$data['filteredRows'], (array)$data['slotLabels']) . '</div>';
 } else {
     $bodyHtml = '<table><thead><tr>'
@@ -157,7 +173,7 @@ $html = '<!doctype html><html lang="cs"><head><meta charset="utf-8">'
     . '.detail-table th,.detail-table td{padding:2px 4px;}'
     . '.detail-table th{background:#eef7ff;}'
     . '</style></head><body>'
-    . '<h1>' . ($scope === 'detail' ? 'Detailní přehled za ' : 'Přehled za ') . h((string)$data['monthLabel']) . '</h1>'
+    . '<h1>' . ($scope === 'branches' ? 'Pracovníci po pobočkách za ' : ($scope === 'detail' ? 'Detailní přehled za ' : 'Přehled za ')) . h((string)$data['monthLabel']) . '</h1>'
     . '<p>Celkem: <strong>' . h(ps_num((float)$data['filteredHours'])) . '</strong> hodin</p>'
     . $bodyHtml
     . '</body></html>';

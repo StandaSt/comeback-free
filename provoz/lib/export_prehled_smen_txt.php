@@ -1,5 +1,5 @@
 <?php
-// Vytvari TXT export hodin pouze s pravy na Provoz a Prehled hodin.
+// Vytvari TXT souhrn, detail i pracovniky po pobockach ze stavajicich hodin s kontrolou prav.
 // lib/export_prehled_smen_txt.php * Verze: V2 * Aktualizace: 04.06.2026
 declare(strict_types=1);
 
@@ -37,8 +37,11 @@ if ((string)$data['error'] !== '') {
 }
 
 $month = sprintf('%04d-%02d', (int)$data['selectedYear'], (int)$data['selectedMonth']);
-$scope = (string)($_GET['ps_scope'] ?? 'summary') === 'detail' ? 'detail' : 'summary';
-$filename = 'prehled_smen_' . ($scope === 'detail' ? 'detail_' : '') . $month . '.txt';
+$scope = (string)($_GET['ps_scope'] ?? 'summary');
+if (!in_array($scope, ['summary', 'detail', 'branches'], true)) $scope = 'summary';
+$expanded = (string)($_GET['ps_variant'] ?? 'brief') === 'expanded';
+$prefix = $scope === 'branches' ? 'pobocky_' . ($expanded ? 'rozsirene_' : 'strucne_') : ($scope === 'detail' ? 'detail_' : '');
+$filename = 'prehled_smen_' . $prefix . $month . '.txt';
 
 header('Content-Type: text/plain; charset=utf-8');
 header('Content-Disposition: attachment; filename="' . $filename . '"');
@@ -46,7 +49,18 @@ header('X-Content-Type-Options: nosniff');
 
 echo 'Přehled za ' . (string)$data['monthLabel'] . ', celkem: ' . ps_num((float)$data['filteredHours']) . " hodin\n\n";
 
-if ($scope === 'detail') {
+if ($scope === 'branches') {
+    // Oba vystupy pouzivaji stejne soucty existujicich detailu; lisi se jen poctem sloupcu.
+    $headers = ['zaměstnanec', 'pobočka', 'odpracováno'];
+    $columns = $expanded ? ['celkem', 'den', 'noc', 'vikend', 'svatek'] : ['celkem'];
+    if ($expanded) $headers = array_merge($headers, ['6-22', '22-6', 'So+Ne', 'svátek']);
+    echo implode("\t", $headers) . "\n";
+    foreach (ps_pracovnici_pobocky((array)$data['filteredRows']) as $row) {
+        $values = [$row['cele_jmeno'], $row['pobocka']];
+        foreach ($columns as $column) $values[] = ps_num((float)$row[$column]);
+        echo implode("\t", $values) . "\n";
+    }
+} elseif ($scope === 'detail') {
     echo "celé jméno\tslot\tdatum\tpobočka\todpracováno\t6-22\t22-6\tSo+Ne\tsvátek\n";
     foreach ((array)$data['filteredRows'] as $row) {
         $detailRows = isset($row['detail_rows']) && is_array($row['detail_rows']) ? $row['detail_rows'] : [];

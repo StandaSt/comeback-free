@@ -1,5 +1,5 @@
 <?php
-// Vykresluje denní report včetně průběžných polí, storen a údajů o finálním uložení.
+// Vykresluje denní report včetně průběžných polí, storen, vysvětlení COL a údajů o finálním uložení.
 declare(strict_types=1);
 
 $zrEditableDisabledAttr = !empty($isReadOnlyForm) ? ' disabled' : '';
@@ -182,7 +182,7 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
                 <th class="zr_intro_label zr_req_label txt_l" data-zr-required-label="oteviral">Otevíral</th>
                 <td>
                   <select class="zr_intro_select" name="oteviral" data-zr-field="oteviral" data-zr-required="oteviral" required<?= $zrEditableDisabledAttr ?>>
-                    <?= $renderUserSelectOptions($openCloseInstorOptions, $openingId, 'Doplň') ?>
+                    <?= $renderUserSelectOptions($openingInstorOptions, $openingId, 'Doplň') ?>
                   </select>
                 </td>
               </tr>
@@ -190,7 +190,7 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
                 <th class="zr_intro_label zr_req_label txt_l" data-zr-required-label="zaviral">Zavíral</th>
                 <td>
                   <select class="zr_intro_select" name="zaviral" data-zr-field="zaviral" data-zr-required="zaviral" required<?= $zrEditableDisabledAttr ?>>
-                    <?= $renderUserSelectOptions($openCloseInstorOptions, $closingId, 'Doplň') ?>
+                    <?= $renderUserSelectOptions($closingInstorOptions, $closingId, 'Doplň') ?>
                   </select>
                 </td>
               </tr>
@@ -265,7 +265,8 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
             <input type="hidden" name="rozdil" value="<?= h($reportDifferenceValue) ?>" data-zr-report-rozdil-value>
           </div>
           <div class="zr_control_metric zr_control_metric_col">
-            <strong class="zr_control_label zr_control_label_col">COL</strong>
+            <?php // Vysvetleni odlisnych nakladu a sazeb pomaha porovnat COL s Google reportem. ?>
+            <strong class="zr_control_label zr_control_label_col">COL <span class="zr_col_calculation" tabindex="0" data-cb-tooltip-multiline="1" title="COL = náklady / tržba bez DPH (tržba / 1,12) × 100 %.&#10;&#10;IS: denní náklady všech lidí s fixní mzdou na hlavní pobočce i bez směny + hodinové náklady podle odpracovaných hodin + PHM firemních i soukromých aut + náklady Wolt Drive. Mzdové sazby se berou z HR IS.&#10;&#10;Google: hodinové náklady podle směn + denní náklady všech manažerů hlavní pobočky i bez směny + PHM soukromých aut + náklady Wolt Drive. PHM firemních aut nezahrnuje.&#10;&#10;Rozdíl může způsobit také jiná sazba zaměstnance v HR IS a v Googlu.">Výpočet</span></strong>
             <strong class="zr_control_value zr_control_value_col" data-zr-report-col><?= h($reportColLabel) ?></strong>
             <input type="hidden" name="col_pomer" value="<?= h($reportColValue) ?>" data-zr-report-col-value>
           </div>

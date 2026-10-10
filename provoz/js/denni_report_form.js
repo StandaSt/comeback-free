@@ -1,4 +1,4 @@
-// Řídí formulář denního reportu, průběžné ukládání, finální odeslání a metadata u titulku.
+// Řídí formulář denního reportu a jeho ukládání; při načítání zachovává konkrétní důvod chyby.
 'use strict';
 
 (function (w) {
@@ -280,6 +280,7 @@
     return nextPp;
   }
 
+  // Přepnutí pobočky používá společné čtení chyb, aby se neztratil popis vrácený serverem.
   function reloadReportPp(root) {
     const form = getForm(root);
     if (!(form instanceof HTMLFormElement)) {
@@ -314,12 +315,10 @@
         'Accept': 'text/html'
       },
       body
-    }).then((res) => {
-      if (!res.ok) {
-        throw new Error('HTTP ' + res.status);
-      }
-      return res.text();
-    }).then(replacePpFromHtml).finally(() => {
+    }).then((res) => w.CB_CHYBY.readHtml(res, 'Denní report se nepodařilo načíst.'))
+      .then(replacePpFromHtml).catch((error) => {
+        throw new Error(w.CB_CHYBY.errorMessage(error, 'Denní report se nepodařilo načíst.'));
+      }).finally(() => {
       if (pageBusy) {
         pageBusy.stop(pageBusyHandle);
       }

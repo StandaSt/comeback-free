@@ -1,5 +1,5 @@
 <?php
-// Pripravuje archiv a porovnani reportu s rozsahem podle role, MAIN a vlastniho autorstvi.
+// Pripravuje archiv a porovnani podle role, MAIN a autorstvi; nedostupne doplnkove porovnani denniho reportu preskoci.
 declare(strict_types=1);
 
 require_once __DIR__ . '/denni_report_prava.php';
@@ -16,12 +16,23 @@ function cb_archiv_reportu_date(string $value, DateTimeZone $tz, DateTimeImmutab
     return $date instanceof DateTimeImmutable && $date->format('Y-m-d') === $value ? $date : $fallback;
 }
 
-// Porovna ulozene a Google hodnoty pouze u reportu dostupneho prihlasene osobe.
-function cb_archiv_reportu_comparison_rows(mysqli $conn, int $idPob, string $reportDate): array
+// Volitelne porovnani v dennim formulari nesmi blokovat praci kvuli rozsahu archivu.
+// Samostatny archiv zustava prisny; skutecne DB chyby se vzdy predaji obsluze chyb.
+function cb_archiv_reportu_comparison_rows(mysqli $conn, int $idPob, string $reportDate, bool $optional = false): array
 {
-    $scope = cb_reporty_pristup_nacti($conn, (int)($_SESSION['cb_user']['id_user'] ?? 0));
-    if (!cb_denni_report_ma_pravo(202) || !cb_reporty_archiv_muze_cist($conn, $scope, $idPob, $reportDate)) {
-        throw new CbUserVisibleException('K tomuto reportu nemáte přístup.');
+    try {
+        if (!cb_denni_report_ma_pravo(202)) {
+            throw new CbUserVisibleException('Nemáte právo zobrazit archiv reportů.');
+        }
+        $scope = cb_reporty_pristup_nacti($conn, (int)($_SESSION['cb_user']['id_user'] ?? 0));
+        if (!cb_reporty_archiv_muze_cist($conn, $scope, $idPob, $reportDate)) {
+            throw new CbUserVisibleException('K tomuto reportu nemáte přístup.');
+        }
+    } catch (CbUserVisibleException $error) {
+        if (!$optional) {
+            throw $error;
+        }
+        return ['entry' => [], 'calculation' => []];
     }
     $slotLabels = cb_cis_slot_nazvy($conn);
     $isData = cb_denni_report_history_load($conn, $idPob, $reportDate);

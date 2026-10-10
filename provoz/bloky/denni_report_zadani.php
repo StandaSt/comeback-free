@@ -1,5 +1,5 @@
 <?php
-// bloky/denni_report_zadani.php * Blok zadani denniho reportu
+// Blok zadani denniho reportu; doplnkove porovnani zobrazuje jen dostupne archivni dny.
 declare(strict_types=1);
 
 require_once __DIR__ . '/../lib/format_datum_cas.php';
@@ -25,7 +25,8 @@ if (empty($isGoogleArchiveView) && $reportBranchId > 0) {
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $workdayDate) !== 1) {
             continue;
         }
-        $zrComparisonRows = cb_archiv_reportu_comparison_rows($conn, (int)$reportBranchId, $workdayDate);
+        // Rozsah archivu nesmi zablokovat denni report na jine povolene pobocce.
+        $zrComparisonRows = cb_archiv_reportu_comparison_rows($conn, (int)$reportBranchId, $workdayDate, true);
         $workdayDifferenceRows = (array)($zrComparisonRows['entry'] ?? []);
         if ($workdayDifferenceRows === []) {
             continue;

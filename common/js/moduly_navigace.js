@@ -2,6 +2,7 @@
  * Ucel souboru: Ridi klientskou navigaci mezi moduly a internimi strankami aplikace.
  * Soubecne nacteni stejne hlida promenna moduleLoadRunning.
  * Podmenu čtecích přehledů Směn zachovává funkční odkazy na aktuální týdny i po AJAX výměně menu.
+ * Chybové odpovědi načítání modulů čte společná knihovna, aby se neztratil konkrétní důvod.
  */
 (function(){
   'use strict';
@@ -187,7 +188,8 @@
 
   function showModuleError(error){
     stopPageLoaderTimer();
-    var detail = String(error && error.message ? error.message : error || '');
+    // Síťový výpadek má stejně srozumitelný popis jako chyba vrácená serverem.
+    var detail = window.CB_CHYBY.errorMessage(error, 'Modul se nepodařilo načíst.');
     var message = detail === window.CB_CHYBY.publicMessage
       ? detail
       : 'Modul se nepodařilo načíst: ' + (detail || 'Zkuste stránku obnovit.');
@@ -671,12 +673,8 @@
         credentials: 'same-origin'
       })
         .then(function(response){
-          return response.text().then(function(responseText){
-            if (!response.ok) {
-              throw new Error(window.CB_CHYBY.responseMessage(response, {}, 'Modul se nepodařilo načíst.'));
-            }
-            return responseText;
-          });
+          // Stejný převod jako při přepnutí reportu zachová JSON i HTML popis chyby.
+          return window.CB_CHYBY.readHtml(response, 'Modul se nepodařilo načíst.');
         })
         .then(function(html){
           if (typeof window.__CB_HELPDESK_CLEANUP__ === 'function') {
@@ -851,10 +849,8 @@
         credentials: 'same-origin'
       });
     }).then(function(response){
-      if (!response.ok) {
-        throw new Error('Načtení stránky selhalo.');
-      }
-      return response.text();
+      // Také obnovení stránky po uložení musí zachovat důvod případné chyby.
+      return window.CB_CHYBY.readHtml(response, 'Načtení stránky selhalo.');
     }).then(function(html){
       var pp = root.querySelector('.pp');
       var wrap = document.createElement('div');
@@ -913,10 +909,8 @@
         credentials: 'same-origin'
       });
     }).then(function(response){
-      if (!response.ok) {
-        throw new Error('Načtení stránky selhalo.');
-      }
-      return response.text();
+      // Také obnovení stránky po uložení musí zachovat důvod případné chyby.
+      return window.CB_CHYBY.readHtml(response, 'Načtení stránky selhalo.');
     }).then(function(html){
       var pp = root.querySelector('.pp');
       var wrap = document.createElement('div');

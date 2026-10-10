@@ -73,7 +73,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'
 }
 
 if (!empty($_SESSION['login_ok'])) {
-    cb_hr_user_sync_ukoncene(db());
+    // Pri nacteni IS pouze cteme stav osoby; konec smlouvy nesmi vypnout ucet.
     $cbIdentityId = (int)($_SESSION['cb_user']['id_user'] ?? 0);
     if (!cb_hr_session_profile_refresh(db(), $cbIdentityId)) {
         cb_session_invalidate_auth();

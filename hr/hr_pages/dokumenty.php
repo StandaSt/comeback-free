@@ -3,9 +3,10 @@ declare(strict_types=1);
 
 /*
  * Ucel souboru: Zobrazi dokumenty zamestnancu dostupne prihlasenemu uzivateli.
- * Samotne soubory odesila chraneny handler v modulu HR.
+ * Samotne soubory odesila chraneny handler v modulu HR; importovane podklady ukazuji podpisy a upozorneni.
  */
 $hrDocuments = hr_fetch_employee_documents($db, $cbHrIdUser);
+require_once __DIR__ . '/../hr_includes/hr_dokument_import_detail.php';
 $hrDocumentOpenUrl = static function (array $document): string {
     return cb_root_url('hr/hr_download/hr_dokument.php?' . http_build_query([
         'id_dokument' => (int)$document['id_dokument'],
@@ -36,7 +37,7 @@ $hrDocumentOpenUrl = static function (array $document): string {
                     <?php foreach ($hrDocuments as $document): ?>
                         <tr>
                             <td class="hr_table_cell"><a class="hr_table_link" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$document['id_person']))) ?>"><?= h($document['osoba']) ?></a></td>
-                            <td class="hr_table_cell"><?= h($document['typ']) ?></td>
+                            <td class="hr_table_cell"><?= h($document['typ']) ?><?php hr_document_import_detail($document, $hrDocumentOpenUrl($document)); ?></td>
                             <td class="hr_table_cell"><a class="hr_table_link" href="<?= h($hrDocumentOpenUrl($document)) ?>" target="_blank" rel="noopener"><?= h($document['ulozeny_nazev'] !== '' ? $document['ulozeny_nazev'] : $document['nazev']) ?></a></td>
                             <td class="hr_table_cell"><?= h(hr_format_date((string)($document['platnost_do'] ?? ''))) ?></td>
                             <td class="hr_table_cell"><?= h(hr_format_date($document['vytvoreno'])) ?></td>

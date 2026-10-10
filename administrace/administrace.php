@@ -29,6 +29,8 @@ require_once __DIR__ . '/admin_lib/admin_pages.php';
 require_once __DIR__ . '/admin_lib/admin_google_reporty_import.php';
 require_once __DIR__ . '/admin_lib/admin_google_historie_import.php';
 require_once __DIR__ . '/admin_lib/admin_restia_katalog.php';
+require_once __DIR__ . '/admin_lib/admin_hr_smlouvy_import.php';
+require_once __DIR__ . '/admin_lib/admin_hr_udaje_import.php';
 require_once __DIR__ . '/admin_lib/admin_firma_ares.php';
 require_once __DIR__ . '/admin_lib/admin_firma_pridat.php';
 require_once __DIR__ . '/admin_lib/admin_chyby.php';
@@ -66,6 +68,8 @@ cb_admin_firma_pridat_handle();
 cb_admin_google_reporty_import_handle();
 cb_admin_google_historie_handle();
 cb_admin_restia_katalog_handle();
+cb_admin_hr_smlouvy_handle();
+cb_admin_hr_udaje_handle();
 
 if (
     ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET'

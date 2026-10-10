@@ -843,6 +843,47 @@ function cb_denni_report_shift_plan_people_rows(mysqli $conn, int $idPob, string
     return $rows;
 }
 
+// Nabizi otevirajiciho a zavirajiciho podle verejnych smen, ale nikoho automaticky nevybira.
+function cb_denni_report_open_close_options(mysqli $conn, int $idPob, string $date, array $options): array
+{
+    $stmt = $conn->prepare('SELECT sp.id_user, sp.zacatek, sp.konec
+        FROM (' . cb_smeny_verejny_zdroj_sql() . ') sp
+        WHERE sp.id_pob = ? AND sp.datum = ? AND sp.id_slot = 1
+        ORDER BY sp.zacatek, sp.id_user');
+    $stmt->bind_param('is', $idPob, $date);
+    $stmt->execute();
+    $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+
+    $allowed = array_column($options, null, 'id_user');
+    $opening = 0;
+    $closing = 0;
+    $latestEnd = '';
+    foreach ($rows as $row) {
+        $id = (int)$row['id_user'];
+        if (!isset($allowed[$id])) {
+            continue;
+        }
+        if ($opening === 0) {
+            $opening = $id;
+        }
+        // Plne datum konce spravne porovna i smeny koncici po pulnoci.
+        if ((string)$row['konec'] > $latestEnd) {
+            $closing = $id;
+            $latestEnd = (string)$row['konec'];
+        }
+    }
+    // Presun pouze existujici povolene jmeno dopredu, zbytek ponech abecedne a bez duplicit.
+    $prioritize = static function (int $id) use ($options, $allowed): array {
+        if ($id === 0) {
+            return $options;
+        }
+        return array_merge([$allowed[$id]], array_values(array_filter($options,
+            static fn(array $option): bool => (int)$option['id_user'] !== $id)));
+    };
+    return ['opening' => $prioritize($opening), 'closing' => $prioritize($closing)];
+}
+
 function cb_denni_report_cash_data(?array $row): array
 {
     $value = static function (?array $row, string $key): string {
@@ -1023,7 +1064,8 @@ function cb_denni_report_restia_summary(mysqli $conn, int $idPob, array $workday
         $boltCondition = $notCanceled . " AND cp.kod = 'bolt'";
         $djCondition = $notCanceled . " AND cp.kod IN ('foodora', 'damejidlo') AND COALESCE(p.nazev, '') <> 'cash'";
         $webCondition = $notCanceled . " AND cp.kod = 'generic' AND COALESCE(p.nazev, '') = 'online'";
-        $woltCashCondition = $notCanceled . " AND cp.kod = 'generic' AND COALESCE(d.nazev, '') = 'delivery' AND COALESCE(p.nazev, '') = 'cash' AND COALESCE(ok.is_wolt_kuryr, 0) = 1";
+        // Wolt Drive vybira hotovost i u rucne zadanych objednavek, nejen u objednavek z vlastniho webu.
+        $woltCashCondition = $notCanceled . " AND cp.kod IN ('generic', 'manual') AND COALESCE(d.nazev, '') = 'delivery' AND COALESCE(p.nazev, '') = 'cash' AND COALESCE(ok.is_wolt_kuryr, 0) = 1";
         $djCashCondition = $notCanceled . " AND cp.kod IN ('foodora', 'damejidlo') AND COALESCE(p.nazev, '') = 'cash'";
         $ownCourierCondition = "ok.provider = 'delivery' AND COALESCE(ok.is_wolt_kuryr, 0) = 0";
         $woltDriveCondition = "ok.provider = 'delivery' AND COALESCE(ok.is_wolt_kuryr, 0) = 1";
@@ -1357,7 +1399,8 @@ function cb_denni_report_kuryr_delivery_data(mysqli $conn, int $idPob, array $wo
     ];
 }
 
-function cb_denni_report_control_values(mysqli $conn, string $datumReportu, array $restiaSummary, ?array $draftRow, array $draftPersonRows): array
+// Kontrolni hodnoty pouzivaji i MAIN pobocku pro denni naklady fixnich mezd.
+function cb_denni_report_control_values(mysqli $conn, string $datumReportu, array $restiaSummary, ?array $draftRow, array $draftPersonRows, int $idPob): array
 {
     $makeTimeLabel = cb_report_make_time_label(is_int($restiaSummary['make_time_avg_sec']) ? (int)$restiaSummary['make_time_avg_sec'] : null);
     $values = cb_vypocet_col_rozdil(
@@ -1365,7 +1408,8 @@ function cb_denni_report_control_values(mysqli $conn, string $datumReportu, arra
         $datumReportu,
         $restiaSummary,
         cb_vcr_cash_from_draft($draftRow),
-        cb_vcr_people_from_rows($draftPersonRows)
+        cb_vcr_people_from_rows($draftPersonRows),
+        $idPob
     );
     $reportDifference = $values['rozdil'];
     $reportCol = $values['col_pomer'];
@@ -1919,6 +1963,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
     $openCloseInstorOptions = cb_denni_report_ensure_user_option($openCloseInstorOptions, $openingId, $openingName);
     $openCloseInstorOptions = cb_denni_report_ensure_user_option($openCloseInstorOptions, $closingId, $closingName);
     $openCloseInstorOptions = cb_denni_report_sort_user_options($openCloseInstorOptions);
+    $openCloseOptions = cb_denni_report_open_close_options($conn, $reportBranchId, $reportDate, $openCloseInstorOptions);
     
     $cashData = cb_denni_report_cash_data($draftRow);
     
@@ -1961,7 +2006,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         $restiaSummary['woltdrive_late'] = (int)($historyReport['woltdrive_pozde_5_min'] ?? 0);
 
         $kuryrDeliveryCountsJson = '{}';
-        $controlValues = cb_denni_report_control_values($conn, $reportDate, $restiaSummary, $draftRow, $draftPersonRows);
+        $controlValues = cb_denni_report_control_values($conn, $reportDate, $restiaSummary, $draftRow, $draftPersonRows, $reportBranchId);
         if (array_key_exists('rozdil', $historyReport)) {
             $savedRozdil = $historyReport['rozdil'];
             $controlValues['difference_label'] = $savedRozdil === null ? '-- KÄŤ' : cb_format('p', $savedRozdil);
@@ -1986,7 +2031,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         $kuryrRows = $kuryrDeliveryData['kuryr_rows'];
         $kuryrDeliveryCountsJson = $kuryrDeliveryData['counts_json'];
         
-        $controlValues = cb_denni_report_control_values($conn, $reportDate, $restiaSummary, $draftRow, $draftPersonRows);
+        $controlValues = cb_denni_report_control_values($conn, $reportDate, $restiaSummary, $draftRow, $draftPersonRows, $reportBranchId);
     } else {
         $historyReport = is_array($historyData) ? (array)$historyData['report'] : [];
         $restiaSummary = cb_denni_report_restia_summary($conn, $reportBranchId, $workdayRange);
@@ -1999,7 +2044,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         } else {
             $kuryrDeliveryCountsJson = '{}';
         }
-        $controlValues = cb_denni_report_control_values($conn, $reportDate, $restiaSummary, $draftRow, $draftPersonRows);
+        $controlValues = cb_denni_report_control_values($conn, $reportDate, $restiaSummary, $draftRow, $draftPersonRows, $reportBranchId);
         if (array_key_exists('rozdil', $historyReport)) {
             $savedRozdil = $historyReport['rozdil'];
             $controlValues['difference_label'] = $savedRozdil === null ? '-- Kč' : cb_format('p', $savedRozdil);
@@ -2084,6 +2129,8 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         'readonlyInfoText' => $readonlyInfoText,
         'instorOptions' => $instorOptions,
         'openCloseInstorOptions' => $openCloseInstorOptions,
+        'openingInstorOptions' => $openCloseOptions['opening'],
+        'closingInstorOptions' => $openCloseOptions['closing'],
         'kuryrOptions' => $kuryrOptions,
         'draftRow' => $draftRow,
         'idDr' => $idDr,

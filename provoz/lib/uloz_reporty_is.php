@@ -226,7 +226,8 @@ try {
             $datum,
             $restiaSummary,
             cb_vcr_cash_from_post($_POST),
-            cb_vcr_people_from_post($_POST)
+            cb_vcr_people_from_post($_POST),
+            $idPob
         );
         $rozdil = $values['rozdil'];
         $colPomer = $values['col_pomer'];
