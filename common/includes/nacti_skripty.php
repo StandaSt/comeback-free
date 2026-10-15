@@ -2,6 +2,7 @@
 /*
  * Ucel souboru: Vypise konfiguraci pro prohlizec a JS soubory spolecne HTML kostry.
  * Poradi skriptu je zavisle na soucasne aplikaci a odpovida puvodnimu rozlozeni.
+ * Historie Franty ma oddelenou obsluhu zobrazeni a navratu do stranky.
  */
 declare(strict_types=1);
 
@@ -64,6 +65,8 @@ window.CB_PC_SESSION_TOKEN = <?= json_encode((string)($_SESSION['cb_pc_session_t
 <?php // Uroven barevneho tematu. ?>
 <script src="<?= h($cbThemeJsUrl) ?>"></script>
 <?php // Filtry. ?>
+<?php // Kontrola trzeb se inicializuje i po vymene pracovni plochy Provozu. ?>
+<script src="<?= h(cb_module_asset_url('js/kontrola_trzeb.js', 'provoz') . '?v=' . (string)filemtime(__DIR__ . '/../../provoz/js/kontrola_trzeb.js')) ?>"></script>
 <script src="<?= h(cb_asset_url('js/filtry.js')) ?>"></script>
 <?php // Export prehledu smen. ?>
 <script src="<?= h(cb_asset_url('js/prehled_smen_export.js')) ?>"></script>
@@ -106,7 +109,12 @@ window.CB_PC_SESSION_TOKEN = <?= json_encode((string)($_SESSION['cb_pc_session_t
 <?php // Průběh jednorázového převodu historických Google reportů. ?>
 <script src="<?= h($cbAdministraceGoogleHistorieJsUrl) ?>"></script>
 <?php // AI analytik modulu Provoz. ?>
+<?php // Puvodni zadani a upresneni patri do jednoho vizualniho bloku se stejnym cislem. ?>
+<script src="<?= h(cb_root_url('provoz/js/ai_analytik_vysledky.js') . '?v=' . filemtime(__DIR__ . '/../../provoz/js/ai_analytik_vysledky.js')) ?>"></script>
 <script src="<?= h(cb_root_url('provoz/js/ai_analytik.js') . '?v=' . (is_file(__DIR__ . '/../../provoz/js/ai_analytik.js') ? (string)filemtime(__DIR__ . '/../../provoz/js/ai_analytik.js') : '1')) ?>"></script>
+<?php // Historie Franty sdili renderer; stav pro navrat se inicializuje az po nacteni obou. ?>
+<script src="<?= h(cb_root_url('provoz/js/ai_analytik_historie.js') . '?v=' . filemtime(__DIR__ . '/../../provoz/js/ai_analytik_historie.js')) ?>"></script>
+<script src="<?= h(cb_root_url('provoz/js/ai_analytik_historie_stav.js') . '?v=' . filemtime(__DIR__ . '/../../provoz/js/ai_analytik_historie_stav.js')) ?>"></script>
 <?php // Konfigurace navigace mezi hlavni moduly. ?>
 <script>
 window.CB_MODULY_NAVIGACE = {

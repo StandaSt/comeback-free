@@ -13,6 +13,7 @@ require_once __DIR__ . '/common/lib/system.php';
 require_once __DIR__ . '/common/config/secrets.php';
 require_once __DIR__ . '/common/lib/json_registrace.php';
 require_once __DIR__ . '/common/lib/prvni_vstup.php';
+require_once __DIR__ . '/common/lib/prebrani_prav_handler.php';
 require_once __DIR__ . '/common/lib/obnoveni_hesla.php';
 require_once __DIR__ . '/common/lib/email_zmena.php';
 require_once __DIR__ . '/common/lib/hr_user_sync.php';
@@ -95,6 +96,8 @@ if (!empty($_SESSION['login_ok'])) {
 if (!empty($_SESSION['login_ok']) && cb_crf_zapisova_metoda()) {
     cb_crf_vyzaduj();
 }
+// Opusteni testu musi fungovat i bez prevzatych prav na modul Administrace.
+cb_prebrani_prav_handle(db());
 
 $cbAuthOk = !empty($_SESSION['cb_auth_ok']);
 $cb2faPending = !empty($_SESSION['cb_2fa_token']);
@@ -339,6 +342,11 @@ if (!empty($_SESSION['login_ok']) && isset($_SERVER['HTTP_X_COMEBACK_SHELL_MODUL
 
 if (!empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     $cbPostedModule = strtolower(trim((string)($_GET['m'] ?? '')));
+    // Kontrolu trzeb ulozime pred HTML i starsim presmerovanim POST v Provozu.
+    if ($cbPostedModule === 'provoz' && (string)($_GET['page'] ?? '') === 'kontrola_trzeb') {
+        require_once __DIR__ . '/provoz/lib/kontrola_trzeb_ulozeni.php';
+        cb_kt_handle_post();
+    }
     // Spravu pobocek vyridime pred HTML i starym PRG Provozu, aby se POST skutecne ulozil.
     if ($cbPostedModule === 'provoz' && (string)($_GET['page'] ?? '') === 'nastaveni_pobocky') {
         if (!cb_modul_ma_pristup('provoz')) {

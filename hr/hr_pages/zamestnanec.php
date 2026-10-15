@@ -10,6 +10,8 @@ declare(strict_types=1);
  * Samostatny obal pracovniho pomeru omezuje zmensene odstupy pouze na tuto sekci.
  * Odkazy na spravu ciselniku vyzaduji pravo 319; pridelovani Admin funkce existujiciho Admina.
  * Dokumenty ukazuji importni podpisy, jednotlive casti a upozorneni k doreseni.
+ * Volby pohlavi se nacitaji z ciselniku a formular prenasi ciselna ID.
+ * Casova osa ukazuje zapis vlevo, ucinnost pouze v rozbalenych podrobnostech.
  */
 $idPerson = (int)($_GET['id'] ?? 0);
 require_once __DIR__ . '/../hr_includes/hr_dokument_import_detail.php';
@@ -24,6 +26,7 @@ if (!in_array($employeeSection, $employeeSections, true)) {
     $employeeSection = 'prehled';
 }
 $healthInsurers = $employeeSection === 'osobni_udaje' ? hr_fetch_health_insurers($db) : [];
+$genders = $employeeSection === 'osobni_udaje' ? hr_fetch_genders($db) : [];
 $titlesBefore = $employeeSection === 'osobni_udaje' ? hr_fetch_employee_titles($db, 1) : [];
 $titlesAfter = $employeeSection === 'osobni_udaje' ? hr_fetch_employee_titles($db, 2) : [];
 $editData = is_array($employee) && $employeeSection === 'osobni_udaje'
@@ -140,7 +143,7 @@ $employeeDocumentOpenUrl = static function (array $document): string {
                             <label class="hr_form_label"><span class="hr_form_label_text">Příjmení</span><input name="prijmeni" required maxlength="80" value="<?= h((string)($employee['prijmeni'] ?? '')) ?>" autocomplete="family-name"></label>
                             <label class="hr_form_label"><span class="hr_form_label_text">Rodné příjmení</span><input name="rodne_prijmeni" maxlength="80" value="<?= h((string)($employee['rodne_prijmeni'] ?? '')) ?>"></label>
                             <label class="hr_form_label"><span class="hr_form_label_text">Titul za jménem</span><select name="titul_za"><option value=""></option><?php foreach ($titlesAfter as $title): ?><option value="<?= h((string)$title['label']) ?>"<?= (string)($employee['titul_za'] ?? '') === (string)$title['label'] ? ' selected' : '' ?>><?= h((string)$title['label']) ?></option><?php endforeach; ?></select></label>
-                            <fieldset class="hr_form_label hr_gender_field"><legend class="hr_form_label_text">Pohlaví</legend><span class="hr_gender_choices"><label><input type="radio" name="pohlavi" value="muž" required<?= (string)($employee['pohlavi'] ?? '') === 'muž' ? ' checked' : '' ?>> Muž</label><label><input type="radio" name="pohlavi" value="žena"<?= (string)($employee['pohlavi'] ?? '') === 'žena' ? ' checked' : '' ?>> Žena</label><label><input type="radio" name="pohlavi" value="jiné"<?= (string)($employee['pohlavi'] ?? '') === 'jiné' ? ' checked' : '' ?>> Jiné</label><label><input type="radio" name="pohlavi" value="neuvedeno"<?= (string)($employee['pohlavi'] ?? '') === 'neuvedeno' ? ' checked' : '' ?>> Neuvedeno</label></span></fieldset>
+                            <fieldset class="hr_form_label hr_gender_field"><legend class="hr_form_label_text">Pohlaví</legend><span class="hr_gender_choices"><?php foreach ($genders as $gender): ?><label><input type="radio" name="pohlavi" value="<?= h((string)$gender['id']) ?>" required<?= (string)($employee['pohlavi'] ?? '') === (string)$gender['id'] ? ' checked' : '' ?>> <?= h($gender['label']) ?></label><?php endforeach; ?></span></fieldset>
                         </div>
                         <div class="hr_employee_basic_row hr_employee_basic_row--registry">
                             <label class="hr_form_label"><span class="hr_form_label_text">Číslo občanského průkazu</span><input name="cislo_obcanskeho_prukazu" maxlength="30" value="<?= h((string)($employee['cislo_obcanskeho_prukazu'] ?? '')) ?>"></label>
@@ -369,8 +372,44 @@ $employeeDocumentOpenUrl = static function (array $document): string {
         <?php $sectionTitles = ['dochazka' => 'Docházka a dovolená', 'hodnoceni' => 'Hodnocení', 'vybaveni' => 'Vybavení', 'onboarding' => 'Onboarding', 'poznamky' => 'Poznámky']; ?>
         <section class="hr_panel"><div class="hr_panel_header"><h2 class="hr_panel_title"><?= h($sectionTitles[$employeeSection]) ?></h2></div><p class="hr_employee_empty_block">Tato část karty zatím nemá vlastní evidenci.</p></section>
     <?php else: ?>
+        <?php
+        $employeeTimeline = hr_fetch_employee_timeline($db, (int)$employee['id_person'], $employeeDocuments);
+        // Stejny vykreslovac pro prvnich deset udalosti i rozbaleny zbytek, bez dalsiho dotazu.
+        $renderTimeline = static function (array $items, int $start = 1) use ($employeeDocumentOpenUrl): void {
+            ?>
+            <ol class="hr_employee_timeline" start="<?= $start ?>">
+            <?php foreach ($items as $item): ?>
+                <?php $effectiveDate = trim((string)($item['plati_od'] ?? '')); ?>
+                <li class="hr_employee_timeline_item">
+                    <div class="hr_employee_timeline_date">
+                        <span>Zapsáno</span>
+                        <time><?= h(hr_format_date((string)$item['datum'])) ?></time>
+                    </div>
+                    <div class="hr_employee_timeline_content">
+                        <strong><?= h((string)$item['akce']) ?></strong>
+                        <?php if (trim((string)($item['zapsal'] ?? '')) !== ''): ?><div class="hr_employee_timeline_meta"><?= h((string)$item['zapsal']) ?></div><?php endif; ?>
+                        <?php if (!empty($item['dokument'])): ?><a class="hr_table_link" href="<?= h($employeeDocumentOpenUrl($item['dokument'])) ?>" target="_blank" rel="noopener">Otevřít dokument</a><?php endif; ?>
+                        <?php if ($effectiveDate !== '' || !empty($item['plati_do']) || trim((string)($item['poznamka'] ?? '')) !== ''): ?>
+                            <details class="hr_employee_timeline_note"><summary>Podrobnosti</summary>
+                                <?php if ($effectiveDate !== '' || !empty($item['plati_do'])): ?><p><?php if ($effectiveDate !== ''): ?>Platí od <?= h(hr_format_date($effectiveDate)) ?><?php endif; ?><?php if (!empty($item['plati_do'])): ?> do <?= h(hr_format_date((string)$item['plati_do'])) ?><?php endif; ?></p><?php endif; ?>
+                                <?php if (trim((string)($item['poznamka'] ?? '')) !== ''): ?><p><?= nl2br(h((string)$item['poznamka'])) ?></p><?php endif; ?>
+                            </details>
+                        <?php endif; ?>
+                    </div>
+                </li>
+            <?php endforeach; ?>
+            </ol>
+            <?php
+        };
+        ?>
         <section class="hr_employee_dashboard">
-            <article class="hr_panel"><div class="hr_panel_header"><h2 class="hr_panel_title">Časová osa</h2></div><p class="hr_employee_empty_block">Události k zaměstnanci zatím nejsou evidované.</p></article>
+            <article class="hr_panel hr_employee_timeline_panel"><div class="hr_panel_header"><h2 class="hr_panel_title">Časová osa</h2></div>
+                <?php if ($employeeTimeline === []): ?><p class="hr_employee_empty_block">Události k zaměstnanci zatím nejsou evidované.</p>
+                <?php else: ?>
+                    <?php $renderTimeline(array_slice($employeeTimeline, 0, 10)); ?>
+                    <?php if (count($employeeTimeline) > 10): ?><details class="hr_employee_timeline_more"><summary>Zobrazit všechny (<?= count($employeeTimeline) ?>)</summary><?php $renderTimeline(array_slice($employeeTimeline, 10), 11); ?></details><?php endif; ?>
+                <?php endif; ?>
+            </article>
             <article class="hr_panel"><div class="hr_panel_header"><h2 class="hr_panel_title">Dokumenty</h2></div>
                 <?php if ($employeeDocuments === []): ?><p class="hr_employee_empty_block">Zatím nejsou evidované žádné dokumenty.</p>
                 <?php else: ?><ul>

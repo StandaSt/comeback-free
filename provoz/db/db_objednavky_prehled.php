@@ -1,5 +1,5 @@
 <?php
-// db/db_objednavky_prehled.php * Prehled objednavek v PP
+// Prehled objednavek v PP s filtry tabulky a volitelnym omezenim na provozni den.
 declare(strict_types=1);
 
 function cb_db_objednavky_prehled_cancel_statuses(): array
@@ -39,6 +39,22 @@ function cb_db_objednavky_prehled_filter(string $key): string
     }
 
     return trim((string)($filters[$key] ?? ''));
+}
+
+// Provozni den je dalsi filtr; pri obnove GN bloku zachovame posledni volbu v session.
+function cb_db_objednavky_prehled_report_filter(): string
+{
+    $params = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' ? $_POST : $_GET;
+    $filters = is_array($params['obj_f'] ?? null) ? $params['obj_f'] : [];
+    $value = trim((string)($filters['report'] ?? (isset($_SERVER['HTTP_X_COMEBACK_GN_BLOCK']) ? ($_SESSION['cb_objednavky_report_filter'] ?? '') : '')));
+    if ($value !== '') {
+        $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+        if (!$date || $date->format('Y-m-d') !== $value) {
+            throw new CbUserVisibleException('Provozní den není platné datum. Vyberte datum v kalendáři.');
+        }
+    }
+    $_SESSION['cb_objednavky_report_filter'] = $value;
+    return $value;
 }
 
 /**
@@ -94,6 +110,7 @@ function cb_db_objednavky_prehled_filter_options(mysqli $db, array $selectedPobo
     return $options;
 }
 
+// Nacte stranku objednavek jako prunik horniho obdobi, pobocek a vsech vyplnenych filtru.
 function cb_db_objednavky_prehled_nacti(): array
 {
     $db = db();
@@ -153,6 +170,7 @@ function cb_db_objednavky_prehled_nacti(): array
     $dir = strtolower((string)($queryParams['obj_dir'] ?? 'desc')) === 'asc' ? 'asc' : 'desc';
 
     $filters = [
+        'report' => cb_db_objednavky_prehled_report_filter(),
         'cislo' => cb_db_objednavky_prehled_filter('cislo'),
         'vytvoreno' => cb_db_objednavky_prehled_filter('vytvoreno'),
         'pobocka' => cb_db_objednavky_prehled_filter('pobocka'),
@@ -170,6 +188,11 @@ function cb_db_objednavky_prehled_nacti(): array
     $where = [];
     if ($selectedPobocky !== []) {
         $where[] = 'o.id_pob IN (' . implode(',', $selectedPobocky) . ')';
+    }
+
+    // Ulozeny provozni den pouze zuzuje stavajici obdobi i ostatni filtry.
+    if ($filters['report'] !== '') {
+        $where[] = "o.report = '" . $db->real_escape_string($filters['report']) . "'";
     }
 
     $filterSqlMap = [

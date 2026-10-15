@@ -4,8 +4,10 @@ declare(strict_types=1);
 /*
  * Ucel souboru: Nacita a meni jedinou firemni funkci zamestnance a z ni synchronizuje roli v IS.
  * Funkci s roli Admin smi pridelit pouze existujici Admin.
+ * Cil zmeny kontroluje podle jednotneho osobniho rozsahu HR.
  */
 require_once __DIR__ . '/hr_nastaveni_ciselniky.php';
+require_once __DIR__ . '/hr_zamestnanci_pristup.php';
 
 /** @return array{funkce:array<int,array{id_funkce:int,nazev:string,id_role:int}>,historie:array<int,array<string,mixed>>} */
 function hr_funkce_historie(mysqli $db, int $idPerson): array
@@ -45,7 +47,7 @@ function hr_funkce_historie(mysqli $db, int $idPerson): array
  */
 function hr_funkce_zmenit(mysqli $db, int $idPerson, ?int $idFunkce, bool $vTreninku, string $platiOd, int $idUser): void
 {
-    cb_firemni_pristup_vyzaduj_osobu($db, $idUser, $idPerson);
+    hr_zamestnanci_vyzaduj_osobu($db, $idUser, $idPerson);
     $catalogTable = cb_hr_schema_table($db, 'cis_funkce');
     $catalogPk = cb_hr_cis_funkce_pk($db);
     $functionTable = cb_hr_schema_table($db, 'funkce');

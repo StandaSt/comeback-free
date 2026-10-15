@@ -3,7 +3,8 @@ declare(strict_types=1);
 
 // MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
-/* Účel: Připraví dokončené týdny a samostatný výběr pobočky pro stránku Historie směn. */
+/* Účel: Připraví dokončené týdny a povolene pobocky Historie smen, vcetne snimku prebranych prav. */
+require_once __DIR__ . '/../../common/lib/prebrani_prav.php';
 
 require_once __DIR__.'/../../common/lib/smeny_verejny_zdroj.php';
 
@@ -36,6 +37,10 @@ function cb_smeny_historie_tyden(array $weeks, array $query): array
 /** Vyšší vedení začíná nad rolí Vedoucí pobočky, do které patří Restaurant manager. */
 function cb_smeny_historie_vidi_vsechny_pobocky(mysqli $db,int $idPerson): bool
 {
+    // V testu rozhoduje prevzata role, ne skutecna adminova DB role.
+    if (function_exists('cb_prebrani_prav_profil') && ($profile=cb_prebrani_prav_profil($idPerson))!==null) {
+        return $profile['role_id']>0 && $profile['role_id']<5;
+    }
     if($idPerson<=0)return false;
     $stmt=$db->prepare('SELECT MIN(id_role) id_role FROM hr_pristupovy_profil WHERE id_person=?');
     $stmt->bind_param('i',$idPerson);$stmt->execute();
@@ -61,6 +66,9 @@ function cb_smeny_historie_osobni_pobocky(mysqli $db,string $week,int $idPerson)
     $stmt=$db->prepare('SELECT p.id_pob FROM hr_person osoba JOIN pobocka p ON p.id_firma=osoba.id_firma AND p.aktivni=1 LEFT JOIN hr_pracoviste prac ON prac.id_person=osoba.id_person AND prac.id_pob=p.id_pob AND prac.platny=1 AND (prac.platnost_od IS NULL OR prac.platnost_od<=CURDATE()) AND (prac.platnost_do IS NULL OR prac.platnost_do>=CURDATE()) WHERE osoba.id_person=? AND (prac.id_pob IS NOT NULL OR osoba.pristup_vsechny_pobocky=1) GROUP BY p.id_pob');
     $stmt->bind_param('i',$idPerson);$stmt->execute();$result=$stmt->get_result();$allowed=[];
     while($row=$result->fetch_assoc()){$allowed[(int)$row['id_pob']]=true;}$stmt->close();
+    if (($profile=cb_prebrani_prav_profil($idPerson))!==null) {
+        $allowed=array_fill_keys(array_map('intval',array_column($profile['pobocky'],'id_pob')),true);
+    }
     if($allowed===[])return [];
     $stmt=$db->prepare('SELECT DISTINCT v.id_pob FROM ('.cb_smeny_verejny_zdroj_sql().') v WHERE v.start_day=? AND v.id_person=?');
     $stmt->bind_param('si',$week,$idPerson);$stmt->execute();$result=$stmt->get_result();$worked=[];
@@ -75,6 +83,9 @@ function cb_smeny_historie_osobni_pobocky(mysqli $db,string $week,int $idPerson)
 /** Hlavní pobočka slouží jen jako výchozí volba; při chybějícím záznamu se použije první dostupná. */
 function cb_smeny_historie_hlavni_pobocka(mysqli $db,int $idPerson): int
 {
+    if (($profile=cb_prebrani_prav_profil($idPerson))!==null) {
+        return (int)($profile['main']['id_pob']??0);
+    }
     if($idPerson<=0)return 0;
     return cb_hr_main_id($db, $idPerson);
 }

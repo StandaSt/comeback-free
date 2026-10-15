@@ -1,3 +1,4 @@
+/* Ridic formulare Franty a streamu; historii a seskupovani kol vysledku obsluhuji samostatne moduly. */
 (function(){
   'use strict';
 
@@ -428,11 +429,24 @@
     result.appendChild(actions);
   }
 
-  function renderResult(root, data, prompt, processingState){
-    var results = root.querySelector('[data-ai-analytik-results]');
+  // Stejny renderer pouziva i historie; cil muze byt samostatny detail starsiho vysledku.
+  function renderResult(root, data, prompt, processingState, target){
+    var results = target || root.querySelector('[data-ai-analytik-results]');
     if (!(results instanceof HTMLElement)) return null;
     var result = document.createElement('section');
     result.className = 'ai_analytik_result';
+    var isClarification = String(data.response_type || 'answer') === 'clarification';
+    // I starsi archivovane odpovedi maji jasny konec prubehu; ulozeny zaznam nemenime.
+    if (!isClarification && processingState && !processingState.error) {
+      var history = (processingState.history || []).slice();
+      var lastStep = history[history.length - 1];
+      if (lastStep && lastStep.message === 'Zpracování dokončeno.') history.pop();
+      if (!lastStep || lastStep.message !== 'Zpracování dotazu ukončeno') {
+        history.push({ message: 'Zpracování dotazu ukončeno', error: false,
+          elapsed: Math.max(Number(lastStep && lastStep.elapsed || 0), Math.floor(Number(data.meta && data.meta.duration_ms || 0) / 1000)) });
+      }
+      processingState = Object.assign({}, processingState, { history: history });
+    }
     result.appendChild(createProcessingDetails(processingState));
     var question = document.createElement('p');
     question.className = 'ai_analytik_question';
@@ -443,7 +457,6 @@
     var years = Array.isArray(responseMeta.years) ? responseMeta.years.map(Number).filter(function(year){
       return Number.isInteger(year) && year > 0;
     }) : [];
-    var isClarification = String(data.response_type || 'answer') === 'clarification';
     if (years.length > 0) {
       var period = document.createElement('p');
       period.className = 'ai_analytik_period';
@@ -484,7 +497,7 @@
       clarificationForm.dataset.auditId = String(data.continuation.audit_id || '');
       clarificationForm.dataset.token = String(data.continuation.token || '');
       clarificationForm._aiProcessingState = processingState;
-      clarificationForm._aiOriginalPrompt = prompt;
+      clarificationForm._aiOriginalPrompt = String(responseMeta.original_prompt || prompt);
       clarificationForm._aiDurationMs = Number(responseMeta.duration_ms || 0);
       clarificationForm._aiExpiresAt = Date.now()
         + Math.max(0, Number(data.continuation.expires_in_seconds || 0)) * 1000;
@@ -513,13 +526,7 @@
       clarificationButton.textContent = isClarification
         ? 'Pokračovat v analýze'
         : 'Pokračovat se stejnými daty';
-      var finishButton = document.createElement('button');
-      finishButton.type = 'button';
-      finishButton.className = 'head_task_btn secondary';
-      var finishButtonLabel = isClarification ? 'Ukončit analýzu' : 'Ano, ukončit';
-      finishButton.textContent = finishButtonLabel;
       continuationActions.appendChild(clarificationButton);
-      continuationActions.appendChild(finishButton);
       clarificationForm.appendChild(clarificationLabel);
       clarificationForm.appendChild(clarificationCountdown);
       clarificationForm.appendChild(clarificationInput);
@@ -537,50 +544,12 @@
           window.clearInterval(clarificationForm._aiCountdownTimer);
           clarificationInput.disabled = true;
           clarificationButton.disabled = true;
-          finishButton.disabled = true;
           clarificationButton.textContent = 'Čas vypršel';
         }
       }
       clarificationForm._aiUpdateCountdown = updateClarificationCountdown;
       updateClarificationCountdown();
       clarificationForm._aiCountdownTimer = window.setInterval(updateClarificationCountdown, 1000);
-      finishButton.addEventListener('click', function(){
-        if (finishButton.disabled || root.dataset.aiRunning === '1') return;
-        clarificationInput.disabled = true;
-        clarificationButton.disabled = true;
-        finishButton.disabled = true;
-        finishButton.textContent = 'Ukončuji…';
-        fetch(String(root.dataset.endpoint || window.CB_ENDPOINT || 'index.php'), {
-          method: 'POST', credentials: 'same-origin',
-          headers: {
-            'Content-Type': 'application/json', 'Accept': 'application/json',
-            'X-Comeback-AI-Analytik': '1'
-          },
-          body: JSON.stringify({
-            action: 'continuation_finish',
-            audit_id: Number(clarificationForm.dataset.auditId || 0),
-            continuation_token: String(clarificationForm.dataset.token || ''),
-            csrf: String(root.dataset.csrf || '')
-          })
-        }).then(function(response){
-          if (!response.ok) return responseError(response);
-          return response.json();
-        }).then(function(finishData){
-          if (!finishData.ok) throw new Error(String(finishData.error || 'Konverzaci se nepodařilo ukončit.'));
-          window.clearInterval(clarificationForm._aiCountdownTimer);
-          clarificationForm.replaceChildren();
-          var finished = document.createElement('strong');
-          finished.className = 'ai_analytik_continuation_finished';
-          finished.textContent = 'Výsledek byl označen jako dostačující. Konverzace je ukončena.';
-          clarificationForm.appendChild(finished);
-        }).catch(function(error){
-          clarificationInput.disabled = false;
-          clarificationButton.disabled = false;
-          finishButton.disabled = false;
-          finishButton.textContent = finishButtonLabel;
-          clarificationCountdown.textContent = String(error.message || error);
-        });
-      });
       if (isClarification) {
         window.setTimeout(function(){
           clarificationForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -602,7 +571,7 @@
       + ' · ' + numberFormatter.format(Number(usage.total_tokens || 0)) + ' tokenů'
       + ' · ' + currencyFormatter.format(cost * 20.8);
     usageRow.appendChild(usageNode);
-    if (!isClarification && Number(responseMeta.audit_id || 0) > 0) {
+    if (!isClarification && Number(responseMeta.audit_id || 0) > 0 && responseMeta.can_save_prompt !== false) {
       var savePrompt = document.createElement('button');
       savePrompt.type = 'button';
       savePrompt.className = 'head_task_btn ai_analytik_save_prompt';
@@ -635,7 +604,10 @@
     }
     result.appendChild(usageRow);
 
-    results.prepend(result);
+    result.dataset.auditId = String(responseMeta.audit_id || '');
+    result.dataset.historyId = String(responseMeta.history_id || '');
+    if (window.CB_AI_RESULT_GROUP) window.CB_AI_RESULT_GROUP.insert(results, result, responseMeta, prompt);
+    else results.prepend(result);
     if (hasChart && window.CB_GRAFY_RENDER && typeof window.CB_GRAFY_RENDER.renderOne === 'function') {
       window.CB_GRAFY_RENDER.renderOne(chart, 0);
     }
@@ -942,10 +914,12 @@
     return Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0') + ' min.';
   }
 
+  // Obnovi nastaveni a puvod promptu; zmenu textu znovu overuje server pred pripojenim historie.
   function restorePrompt(form, prompt){
     var promptNode = form.querySelector('[data-ai-analytik-prompt]');
     if (!(promptNode instanceof HTMLTextAreaElement)) return;
     promptNode.value = String(prompt.prompt || '');
+    form.dataset.sourceAuditId = String(prompt.id || '');
     if (Array.isArray(prompt.years) && prompt.years.length > 0) {
       Array.prototype.slice.call(form.querySelectorAll('[data-ai-analytik-year]')).forEach(function(node){
         if (node instanceof HTMLInputElement) node.checked = prompt.years.indexOf(Number(node.value)) >= 0;
@@ -979,6 +953,7 @@
     promptNode.focus();
   }
 
+  // Seznam oddeluje opakovane pouziti zadani od cteni jeho drivejsich vysledku.
   function renderMyPrompts(root, panel, prompts, filter){
     panel.replaceChildren();
     var list = document.createElement('div');
@@ -990,11 +965,21 @@
       list.appendChild(empty);
     } else {
       prompts.forEach(function(prompt){
-        var button = document.createElement('button');
-        button.type = 'button';
+        var button = document.createElement('div');
         button.className = 'ai_analytik_my_prompt';
         var text = document.createElement('span');
         text.textContent = String(prompt.prompt || '');
+        // Cislo pochazi z globalni rady auditu, ne z poradi nebo filtru konkretniho uzivatele.
+        var heading = document.createElement('div');
+        heading.className = 'ai_analytik_my_prompt_heading';
+        heading.appendChild(text);
+        var identity = document.createElement('div');
+        identity.className = 'ai_analytik_my_prompt_identity';
+        var promptNumber = document.createElement('small');
+        promptNumber.textContent = String(prompt.id);
+        promptNumber.title = 'Číslo promptu';
+        identity.appendChild(promptNumber);
+        heading.appendChild(identity);
         var meta = document.createElement('small');
         meta.className = 'ai_analytik_my_prompt_meta';
         var metaDetails = document.createElement('span');
@@ -1003,20 +988,30 @@
           + ' · využil ' + numberFormatter.format(Number(prompt.total_tokens || 0)) + ' tokenů'
           + ' · ' + currencyFormatter.format(Number(prompt.cost_usd || 0) * 20.8)
           + ' · zpracování ' + formatPromptDuration(prompt.duration_ms);
-        button.appendChild(text);
+        button.appendChild(heading);
         meta.appendChild(metaDetails);
         if (String(prompt.user_name || '').trim() !== '') {
           var userName = document.createElement('span');
           userName.className = 'ai_analytik_my_prompt_user';
           userName.textContent = String(prompt.user_name);
-          meta.appendChild(userName);
+          identity.appendChild(userName);
         }
         button.appendChild(meta);
-        button.addEventListener('click', function(){
+        var useButton = document.createElement('button');
+        useButton.type = 'button';
+        useButton.className = 'head_task_btn';
+        useButton.textContent = 'Použít';
+        useButton.addEventListener('click', function(){
           var form = root.querySelector('[data-ai-analytik-form]');
           if (form instanceof HTMLFormElement) restorePrompt(form, prompt);
           closeMyPrompts(root);
+          if (window.CB_AI_HISTORY_STATE) window.CB_AI_HISTORY_STATE.saveDraft(root);
         });
+        var actions = document.createElement('div');
+        actions.className = 'ai_historie_actions';
+        actions.appendChild(useButton);
+        if (window.CB_AI_HISTORY) actions.appendChild(window.CB_AI_HISTORY.button(root, prompt));
+        button.appendChild(actions);
         list.appendChild(button);
       });
     }
@@ -1150,8 +1145,10 @@
     form.requestSubmit();
   });
 
+  // Zpracuje nove kolo a zachova predchozi odpoved; trvaly zaznam uklada server pred vysledkem.
   function runAnalysis(root, payload, state, prompt, previousResult, onFinished){
     if (root.dataset.aiRunning === '1') return;
+    root.dataset.aiViewChanged = '1';
     root.dataset.aiRunning = '1';
     var cancel = root.querySelector('[data-ai-analytik-cancel]');
     if (cancel instanceof HTMLButtonElement) {
@@ -1160,6 +1157,17 @@
       cancel.textContent = 'Zastavit analýzu';
     }
     renderProgress(root, state);
+    // Smazeme jen odeslane hlavni zadani po prijeti serverem, nikoli nove rozepsany text nebo upresneni.
+    function clearAcceptedPrompt(){
+      if (payload.action === 'continue') return;
+      var form = root.querySelector('[data-ai-analytik-form]');
+      var input = form && form.querySelector('[data-ai-analytik-prompt]');
+      if (!(input instanceof HTMLTextAreaElement) || input.value.trim() !== String(payload.prompt || '').trim()) return;
+      input.value = '';
+      delete form.dataset.sourceAuditId;
+      setPromptSubmitState(form);
+      if (window.CB_AI_HISTORY_STATE) window.CB_AI_HISTORY_STATE.saveDraft(root);
+    }
     function updateCancelButton(){
       if (!(cancel instanceof HTMLButtonElement)) return;
       cancel.hidden = !state.cancelRequested && state.auditId <= 0;
@@ -1194,7 +1202,11 @@
         if (message.event === 'progress') {
           state.apiCalls = Number(message.meta && message.meta.api_calls || 0);
           state.sqlCount = Number(message.meta && message.meta.sql_count || 0);
-          if (message.meta && message.meta.audit_id) state.auditId = Number(message.meta.audit_id || 0);
+          if (message.meta && message.meta.audit_id) {
+            state.auditId = Number(message.meta.audit_id || 0);
+            clearAcceptedPrompt();
+            if (window.CB_AI_HISTORY_STATE) window.CB_AI_HISTORY_STATE.remember(root, state.auditId);
+          }
           addProgress(
             state,
             String(message.message || 'Pracuji…'),
@@ -1213,19 +1225,28 @@
     }).then(function(){
       if (streamError) throw streamError;
       if (!finalData || !finalData.ok) throw new Error('Server nevrátil výsledek dotazu.');
+      clearAcceptedPrompt();
       state.completedAt = Date.now();
       state.activeMessage = '';
       var isClarification = String(finalData.response_type || 'answer') === 'clarification';
       addProgress(
         state,
-        isClarification ? 'Analýza čeká na vaše upřesnění.' : 'Zpracování dokončeno.',
+        isClarification ? 'Analýza čeká na vaše upřesnění.' : 'Zpracování dotazu ukončeno',
         false,
         false,
         finalData.meta || {}
       );
-      renderResult(root, finalData, prompt, state);
-      if (previousResult instanceof HTMLElement) previousResult.remove();
+      var displayedResult = renderResult(root, finalData, String(finalData.meta && finalData.meta.turn_prompt || prompt), state);
+      // Starsi odpoved zustava viditelna; pouze jeji formular navazani uz neni aktivni.
+      if (previousResult instanceof HTMLElement) previousResult.dataset.superseded = '1';
+      if (window.CB_AI_HISTORY_STATE) window.CB_AI_HISTORY_STATE.remember(root,
+        Number(finalData.meta && finalData.meta.audit_id || 0), finalData.continuation || null);
       renderProgress(root, null);
+      // Po dokonceni ukazeme nejnovejsi vysledek, i kdyz user mezitim sjel ke starsim odpovedim.
+      if (root.isConnected && displayedResult instanceof HTMLElement) {
+        (displayedResult.closest('.ai_analytik_prompt_group') || displayedResult)
+          .scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
       completedSuccessfully = true;
     }).catch(function(error){
       addProgress(state, String(error.message || error), true);
@@ -1387,6 +1408,7 @@
     addProgress(state, 'Odesílám dotaz…', false);
     runAnalysis(root, {
       prompt: prompt,
+      source_audit_id: Number(form.dataset.sourceAuditId || 0),
       model: modelNode.value,
       roky: years,
       nejistota: ambiguityNode.value,
@@ -1400,4 +1422,6 @@
       renderSubmitButton(form);
     });
   });
+  // Verejne rozhrani sdili skutecny renderer; historie netvori druhou verzi tabulek a grafu.
+  window.CB_AI_ANALYTIK = { renderResult: renderResult };
 })();

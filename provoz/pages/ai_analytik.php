@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+/* Stranka Franty: formular, informace a prostor pro vysledky i trvalou historii promptu. */
 
 require_once __DIR__ . '/../lib/ai_analytik_pravidla.php';
 require_once __DIR__ . '/../lib/ai_analytik_export_common.php';
@@ -71,6 +72,8 @@ foreach (($cbAiAnalytikPristup ?? []) as $row) {
     data-pdf-endpoint="<?= h($aiAnalytikPdfEndpoint) ?>"
     data-email-endpoint="<?= h($aiAnalytikEmailEndpoint) ?>"
     data-csrf="<?= h($aiAnalytikCsrf) ?>"
+    data-history-user="<?= (int)($_SESSION['cb_user']['id_user'] ?? 0) ?>"
+    data-history-login="<?= (int)($_SESSION['cb_id_login'] ?? 0) ?>"
 >
     <script type="application/json" data-ai-analytik-prijemci><?= json_encode(
         $aiAnalytikPrijemci,
@@ -324,5 +327,6 @@ foreach (($cbAiAnalytikPristup ?? []) as $row) {
     <div class="ai_analytik_status" role="status" aria-live="polite" data-ai-analytik-status hidden></div>
     <button type="button" class="head_task_btn ai_analytik_cancel" data-ai-analytik-cancel hidden>Zastavit analýzu</button>
 
+    <section class="ai_historie_panel" aria-live="polite" data-ai-history-panel hidden></section>
     <div class="ai_analytik_results" aria-live="polite" data-ai-analytik-results></div>
 </div>

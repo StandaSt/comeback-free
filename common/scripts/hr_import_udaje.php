@@ -2,9 +2,11 @@
 /* Ucel: Samostatny doplnovaci HR import osobnich udaju, smluvnich podminek a historie.
  * Stejny planovac pro nahled i zapis chrani pozdejsi rucni zmeny, validuje hodnoty podle DB a zachovava neplatne zaznamy.
  * Nacteni nic nespousti; puvodni import dokumentu zustava samostatny.
+ * Starsi texty pohlavi z manifestu prevadi na ID aktualniho HR ciselniku.
  */
 declare(strict_types=1);
 require_once __DIR__.'/hr_import_smlouvy.php';
+require_once __DIR__.'/../../hr/hr_db/ciselniky.php';
 class HrUdajeImportException extends RuntimeException {}
 
 /** Pevny seznam tabulek/sloupcu je hranici importu; manifest nesmi obsahovat libovolne SQL. */
@@ -332,16 +334,33 @@ function hru_redirect(HrUdajePlanner $p, mysqli $db): void
     }
 }
 
-/** Osobni opravy se nepropisuji do historie pracovnich pomeru. */
-function hru_personal(HrUdajePlanner $p): void
+/** Prevede stare nazvy pohlavi z manifestu na ID, bez odhadu neznanych hodnot. */
+function hru_gender_id(mixed $value, array $genders): ?int
+{
+    if ($value === null) return null;
+    if (!is_string($value) && !is_int($value)) throw new HrUdajeImportException('Pohlaví v plánu nemá platnou hodnotu.');
+    // Normalizace je jen pro stare zdrojove texty; formulare uz posilaji ciselne ID.
+    $normalize = static fn(string $s): string => strtr(mb_strtolower(trim($s), 'UTF-8'), ['ž' => 'z', 'é' => 'e']);
+    $text = trim((string)$value);
+    foreach ($genders as $gender) {
+        if ((preg_match('/^\d+$/D', $text) && $text === (string)$gender['id'])
+            || $normalize($text) === $normalize($gender['label'])) return $gender['id'];
+    }
+    throw new HrUdajeImportException('Pohlaví „' . $text . '“ není v aktivním číselníku. Opravte importní plán.');
+}
+
+/** Osobni opravy se nepropisuji do historie pracovnich pomeru; pohlavi pouziva ID. */
+function hru_personal(HrUdajePlanner $p, mysqli $db): void
 {
     $allowed=explode(',',hru_tables()['hr_osobni_udaje']);
+    $genders=hr_fetch_genders($db);
     foreach ($p->plan['personal'] as $change) {
         $pid=(int)$change['id_person']; $field=$change['pole'];
         if (!in_array($field,$allowed,true) || in_array($field,['id_person','id_osobni_udaje','platny','zruseno','id_user_zadal','poznamka'],true)) throw new HrUdajeImportException('Nepovolené osobní pole plánu.');
         $rows=$p->find('hr_osobni_udaje',['id_person'=>$pid,'platny'=>1]);
         if (count($rows)!==1) { $p->warn($pid,'Osobní údaje nemají jediný platný záznam; nutné dořešit.'); continue; }
         $row=$rows[0]; $value=$change['navrh'];
+        if ($field==='pohlavi') $value=hru_gender_id($value,$genders);
         // Obrana i proti starsimu manifestu: URL prilohy neni typ pobytu.
         if ($field==='pobyt_cr_typ' && preg_match('~https?://~i',(string)$value)) {
             $p->warn($pid,'Nutné dořešit: příloha dotazníku neurčuje typ pobytu; odkaz nebyl zapsán jako typ pobytu.');
@@ -349,7 +368,10 @@ function hru_personal(HrUdajePlanner $p): void
         }
         if (hru_equal($row[$field] ?? null,$value)) continue;
         $ok=false;
-        foreach ($change['allowed_old'] as $old) if (hru_equal($row[$field] ?? null,$old)) $ok=true;
+        foreach ($change['allowed_old'] as $old) {
+            if ($field==='pohlavi') $old=hru_gender_id($old,$genders);
+            if (hru_equal($row[$field] ?? null,$old)) $ok=true;
+        }
         if (!$ok) { $p->warn($pid,'Osobní údaj '.$field.' byl mezitím změněn. Navrženo: '.(string)$value); continue; }
         $p->update('hr_osobni_udaje',$row,[$field=>$value],$pid);
     }
@@ -547,7 +569,7 @@ function hru_run(mysqli $db, int $user, bool $write=false, ?callable $progress=n
         $fingerprint=hash('sha256',json_encode($p->rows,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR));
         if ($write && (!$expectedFingerprint || !hash_equals($expectedFingerprint,$fingerprint))) throw new HrUdajeImportException('HR data se od náhledu změnila. Zopakujte kontrolu.');
         $progress && $progress('Oprava schváleného přiřazení a osobní údaje.');
-        hru_redirect($p,$db); hru_personal($p);
+        hru_redirect($p,$db); hru_personal($p,$db);
         $progress && $progress('Smlouvy, zkušební doba, úvazky a smluvní mzdy.');
         hru_contracts($p,$db);
         $progress && $progress('Adresy, kontakty, účty, pojištění, zařazení a historické měsíce.');

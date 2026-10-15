@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /*
  * Samostatny vystup souboru HR dokumentu bez vykresleni spolecneho HTML obalu.
- * Pred odeslanim vzdy overi prihlaseni, prava a firemni pristup k zamestnanci.
+ * Pred odeslanim vzdy overi prihlaseni, prava a jednotny osobni rozsah HR.
  */
 
 require_once __DIR__ . '/../../common/lib/session_boot.php';

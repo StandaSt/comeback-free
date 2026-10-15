@@ -1,5 +1,6 @@
 <?php
 // lib/sesn_kontrola.php * Verze: V2 * Aktualizace: 18.07.2026
+/* Overuje vazbu a platnost prihlaseni; pri jeho zruseni odstrani i testovaci prebrani prav. */
 declare(strict_types=1);
 
 require_once __DIR__ . '/pc_session.php';
@@ -178,6 +179,8 @@ if (!function_exists('cb_session_forget_auth')) {
      */
     function cb_session_forget_auth(): void
     {
+        // Jednorazove prebrani prav neprezije logout, expiraci ani zneplatneni session.
+        unset($_SESSION['cb_prebrani_prav']);
         unset($_SESSION['login_ok']);
         unset($_SESSION['cb_auth_ok']);
         unset($_SESSION['cb_2fa_token']);

@@ -1,11 +1,15 @@
 <?php
 declare(strict_types=1);
 
-/* Spravuje ciselniky pod pravem 319, jednotlive i davkove v jedne transakci, zachovava historii a role. */
+/* Spravuje ciselniky pod pravem 319, zachovava historii a role; test prava nesmi pouzit skutecnou adminskou roli. */
+require_once __DIR__ . '/../../common/lib/prebrani_prav.php';
 
 // Admina overujeme podle aktualni DB role, nikoli podle individualniho opravneni.
 function hr_ciselnik_je_admin(mysqli $db): bool
 {
+    if (($profile = cb_prebrani_prav_profil()) !== null) {
+        return in_array(1, array_column($profile['roles'], 'id_role'), true);
+    }
     $idUser = hr_current_user_id();
     $stmt = $db->prepare('SELECT 1 FROM hr_person p JOIN hr_pristupovy_profil r ON r.id_person=p.id_person WHERE p.id_user=? AND p.aktivni=1 AND r.id_role=1 LIMIT 1');
     $stmt->bind_param('i', $idUser);

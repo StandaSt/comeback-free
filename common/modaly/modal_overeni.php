@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /*
  * Ucel souboru: Zobrazit cekani na 2FA schvaleni pro prihlaseni
- * z pocitace nebo z neznameho zarizeni. QR kod patri pouze na PC.
+ * z pocitace nebo z neznameho zarizeni. QR zaloha je dostupna bez ohledu na typ ovladani.
  */
 
 if (!empty($_SESSION['login_ok'])) {
@@ -46,7 +46,7 @@ if ($cb2faToken !== '') {
 
           <div class="modal-divider"></div>
 
-          <div class="cb-2fa-qr-only-pc">
+          <div>
             <p class="modal-sub modal-copy-wide">
               Pokud jste neobdržel/a notifikaci na registrované zařízení, načtěte tento QR kód.
             </p>
@@ -113,9 +113,8 @@ if ($cb2faToken !== '') {
         }
 
         try {
-          /* QR se vytvari jen na zarizeni s presnym ukazatelem, tedy na PC. */
-          var jePocitac = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-          if (jePocitac && typeof QRCode !== 'undefined') {
+          /* QR zaloha musi fungovat i na dotykovem PC, ktere nema presny ukazatel. */
+          if (typeof QRCode !== 'undefined') {
             var el = document.getElementById('cb2faQr');
             if (el) {
               new QRCode(el, {

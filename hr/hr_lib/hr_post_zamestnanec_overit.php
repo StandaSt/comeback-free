@@ -4,7 +4,8 @@ declare(strict_types=1);
 // MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
-/* Zpracuje overeni karty; podminkou je alespon jeden slot nebo jedna funkce. */
+/* Zpracuje overeni karty v povolenem rozsahu HR; podminkou je alespon jeden slot nebo funkce. */
+require_once __DIR__ . '/../hr_db/hr_zamestnanci_pristup.php';
 
 function hr_post_zamestnanec_overit(mysqli $db): void
 {
@@ -14,7 +15,7 @@ function hr_post_zamestnanec_overit(mysqli $db): void
         if (!cb_pravo_ma(307)) {
             throw new CbUserVisibleException('Nemáte právo upravit zaměstnance.');
         }
-        cb_firemni_pristup_vyzaduj_osobu($db, $idUser, $idPerson);
+        hr_zamestnanci_vyzaduj_osobu($db, $idUser, $idPerson);
         $slotTable = cb_hr_schema_table($db, 'slot');
         $functionTable = cb_hr_schema_table($db, 'funkce');
         $functionFk = cb_hr_funkce_fk($db);

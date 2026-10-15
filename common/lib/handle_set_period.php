@@ -1,5 +1,6 @@
 <?php
 // lib/handle_set_period.php * Verze: V2 * Aktualizace: 27.04.2026
+/* Ulozi vybrane obdobi; v rezimu prebranych prav meni pouze session, ne trvale nastaveni admina. */
 declare(strict_types=1);
 
 if (
@@ -157,7 +158,9 @@ if (
             exit;
         }
 
-        if ($hasOd && $hasDo) {
+        if (cb_prebrani_prav_profil($idUser) !== null) {
+            // Testovaci filtry plati jen do odhlaseni.
+        } elseif ($hasOd && $hasDo) {
             $stmtUpd = $conn->prepare('UPDATE user_set SET obdobi_od = ?, obdobi_do = ?, obdobi_mode = ? WHERE id_user = ?');
             if (!$stmtUpd) {
                 throw new RuntimeException('prepare update failed');

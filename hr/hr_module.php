@@ -1,7 +1,7 @@
 <?php
 /*
- * Ucel souboru: Pripravna deklarace modulu HR pro budouci jednotnou architekturu.
- * Soubor popisuje data modulu, ale v tomto kroku jej aplikace jeste nenacita.
+ * Ucel souboru: Konfigurace stranek a menu modulu HR nacitana pres cb_hr_module_config.
+ * Nazev polozky menu muze byt odlisny od titulku samotne stranky.
  * Neobsahuje HTML, DB logiku, layout, hlavicku, PP ani zpracovani pozadavku.
  */
 declare(strict_types=1);
@@ -24,7 +24,7 @@ return [
         ['page' => 'skoleni', 'label' => 'Školení'],
         ['page' => 'prohlidky', 'label' => 'Lékařské prohlídky'],
         ['page' => 'dovolene', 'label' => 'Dovolené'],
-        ['page' => 'mzdovy_prehled', 'label' => 'Mzdový přehled'],
+        ['page' => 'mzdovy_prehled', 'label' => 'Zde je Lukášovo'],
         ['page' => 'reporty', 'label' => 'Reporty'],
         ['page' => 'nastaveni', 'label' => 'Nastavení'],
     ],

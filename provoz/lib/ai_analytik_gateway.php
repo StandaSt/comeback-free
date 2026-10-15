@@ -4,6 +4,7 @@ declare(strict_types=1);
 /*
  * HTTP a streamovaci brana AI analytika.
  * Overuje vstup, ridi audit, spousti agenta a vraci NDJSON udalosti klientovi.
+ * Zapis a cteni trvale historie deleguje samostatnym souborum historie.
  */
 
 require_once __DIR__ . '/ai_analytik_pravidla.php';
@@ -12,6 +13,7 @@ require_once __DIR__ . '/ai_analytik_prilohy.php';
 require_once __DIR__ . '/ai_analytik_export_common.php';
 require_once __DIR__ . '/../db/db_ai_analytik_audit.php';
 require_once __DIR__ . '/../db/db_ai_analytik_bezpecnost.php';
+require_once __DIR__ . '/ai_analytik_historie.php';
 
 set_time_limit(0);
 
@@ -97,6 +99,7 @@ function cb_ai_analytik_oznam_chybu_adminovi(Throwable $error, int $idAudit): vo
     ]);
 }
 
+/** Overi pozadavek a smeruje historii nebo nove zpracovani s trvalym zaznamem kola. */
 function cb_ai_analytik_gateway(): never
 {
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
@@ -135,6 +138,8 @@ function cb_ai_analytik_gateway(): never
     if ($idUser <= 0) {
         cb_ai_analytik_json(401, ['ok' => false, 'error' => 'Platnost přihlášení vypršela.']);
     }
+
+    cb_ai_historie_http($action, $input, $idUser);
 
     if ($action === 'attachment_upload') {
         try {
@@ -331,6 +336,7 @@ function cb_ai_analytik_gateway(): never
         $modelProAudit = mb_substr($model !== '' ? $model : '[neplatný formát]', 0, 64);
         try {
             $idAudit = cb_ai_analytik_audit_start($idUser, $idLogin, $modelProAudit, $prompt, 'global');
+            cb_ai_historie_pripojit($idAudit, (int)($input['source_audit_id'] ?? 0), $idUser, $prompt);
         } catch (Throwable $error) {
             error_log('AI analytik: audit nelze zahájit: ' . $error->getMessage());
             cb_ai_analytik_oznam_chybu_adminovi($error, 0);
@@ -345,8 +351,9 @@ function cb_ai_analytik_gateway(): never
 
     $startedAt = hrtime(true);
     $auditFinished = false;
-    register_shutdown_function(static function () use ($idAudit, $startedAt, $previousDurationMs, &$auditFinished): void {
-        if ($auditFinished) {
+    $historyId = 0;
+    register_shutdown_function(static function () use ($idAudit, $startedAt, $previousDurationMs, &$auditFinished, &$historyId): void {
+        if ($auditFinished && $historyId === 0) {
             return;
         }
         $lastError = error_get_last();
@@ -361,6 +368,9 @@ function cb_ai_analytik_gateway(): never
             'error_message' => mb_substr((string)$lastError['message'], 0, 1000),
         ]);
         $auditFinished = true;
+        try {
+            cb_ai_historie_dokoncit($historyId, 'preruseno', null, 'Zpracování bylo přerušeno chybou serveru.');
+        } catch (Throwable $error) { error_log('Franta: zápis přerušení historie selhal.'); }
     });
     $audit = ['status' => 'error', 'error_message' => '', 'error_type' => '', 'error_code' => '', 'row_count' => 0];
     if (!cb_ai_analytik_model_je_povoleny($model)) {
@@ -428,6 +438,21 @@ function cb_ai_analytik_gateway(): never
         cb_ai_analytik_audit_request($idAudit, $requestedOutput, $analysisContext);
     }
 
+    // Bez ulozitelneho kola historii neslibujeme ani nezahajujeme placenou analyzu.
+    try {
+        $historyId = cb_ai_historie_zacit($idAudit, $idUser,
+            $isContinuation ? ($continuationKind === 'followup' ? 'navazani' : 'upresneni') : 'prompt',
+            $isContinuation ? $clarificationAnswer : $prompt, $model,
+            ['output' => $requestedOutput, 'years' => $years, 'ambiguity_mode' => $ambiguityMode,
+             'attachments' => array_map(static fn(array $file): array => array_intersect_key($file,
+                 array_flip(['name', 'size', 'mime'])), $attachments)]);
+    } catch (Throwable $error) {
+        if ($isContinuation) { cb_ai_analytik_audit_obnovit_cekani($idAudit, $idUser, $continuationKind); }
+        else { cb_ai_analytik_audit_finish($idAudit, ['status' => 'error', 'error_message' => 'Historie není dostupná.']); }
+        $auditFinished = true;
+        cb_ai_analytik_json(503, ['ok' => false, 'error' => 'Historii výsledků nelze uložit. Analýza nebyla spuštěna.']);
+    }
+
     if (empty($_SESSION['ai_analytik_export_secret'])) {
         $_SESSION['ai_analytik_export_secret'] = bin2hex(random_bytes(32));
     }
@@ -463,9 +488,14 @@ function cb_ai_analytik_gateway(): never
         ],
     ]);
 
+    $historyProgress = [];
     try {
-        $progress = static function (string $stage, string $message, array $meta) use ($idAudit): void {
+        $progress = static function (string $stage, string $message, array $meta) use ($idAudit, $startedAt, &$historyProgress): void {
             cb_ai_analytik_audit_status($idAudit, $stage);
+            if (empty($meta['heartbeat'])) {
+                $historyProgress[] = ['message' => $message, 'meta' => $meta, 'error' => false,
+                    'elapsed' => (int)((hrtime(true) - $startedAt) / 1_000_000_000)];
+            }
             cb_ai_analytik_stream('progress', ['stage' => $stage, 'message' => $message, 'meta' => $meta]);
         };
         $result = cb_ai_analytik_agent_spustit(
@@ -547,7 +577,7 @@ function cb_ai_analytik_gateway(): never
             );
         }
 
-        cb_ai_analytik_stream('result', ['data' => [
+        $responseData = [
             'ok' => true,
             'response_type' => $result['response_type'],
             'clarification' => $result['clarification'],
@@ -568,8 +598,13 @@ function cb_ai_analytik_gateway(): never
                 'api_calls' => (int)$result['api_calls'],
                 'sql_count' => (int)$result['sql_count'],
                 'audit_id' => $idAudit,
+                'history_id' => $historyId,
+                'original_prompt' => $prompt,
+                'turn_prompt' => $isContinuation ? $clarificationAnswer : $prompt,
             ],
-        ]]);
+        ];
+        cb_ai_historie_dokoncit($historyId, 'hotovo', cb_ai_historie_snimek($responseData, $historyProgress));
+        cb_ai_analytik_stream('result', ['data' => $responseData]);
     } catch (Throwable $error) {
         $audit['duration_ms'] = $previousDurationMs + (int)((hrtime(true) - $startedAt) / 1_000_000);
         $audit['status'] = match (true) {
@@ -601,6 +636,14 @@ function cb_ai_analytik_gateway(): never
         ) {
             cb_ai_analytik_oznam_chybu_adminovi($error, $idAudit);
         }
+        // Chyba tohoto kola zachova predchozi uspesne odpovedi a jejich poradi.
+        try {
+            cb_ai_historie_dokoncit($historyId,
+                $error instanceof CbAiAnalytikZrusenoUzivatelem ? 'zruseno'
+                    : ($error instanceof CbAiAnalytikSpojeniPreruseno ? 'preruseno' : 'chyba'),
+                null, $error instanceof CbAiAnalytikUzivatelskaChyba || $error instanceof CbAiAnalytikZrusenoUzivatelem
+                    ? $error->getMessage() : 'Zpracování se nezdařilo. · Audit #' . $idAudit);
+        } catch (Throwable $historyError) { error_log('Franta: dokončení historie selhalo.'); }
         cb_ai_analytik_stream('error', [
             'message' => cb_ai_analytik_chyba_pro_uzivatele($error, $maPravoTechnickeDiagnostiky, $idAudit),
             'audit_id' => $idAudit,

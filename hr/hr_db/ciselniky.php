@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 /**
  * DB helper pro nacitani povolenych ciselniku pouzivanych v HR formularich.
+ * Pohlavi se vybira a overuje podle ID; Neuvedeno (ID 0) se nabizi posledni.
  */
 
 /**
@@ -15,7 +16,7 @@ function hr_fetch_lookup(mysqli $db, string $table, string $idColumn, string $la
     if ($table === 'hr_cis_pracovni_vztah_typ' && $labelColumn === 'nazev') {
         $labelColumn = "CONCAT(nazev, ' – ', CASE nazev WHEN 'HPP' THEN 'hlavní pracovní poměr' WHEN 'DPP' THEN 'dohoda o provedení práce' WHEN 'DPČ' THEN 'dohoda o pracovní činnosti' ELSE nazev END)";
     }
-    if ($table === 'hr_cis_pracovni_vztah_typ') {
+    if ($table === 'hr_cis_pracovni_vztah_typ' || $table === 'hr_cis_pohlavi') {
         $where = ' WHERE aktivni = 1';
     }
     if ($table === 'pobocka' || $table === 'cis_slot') {
@@ -50,6 +51,25 @@ function hr_fetch_health_insurers(mysqli $db): array
     $result->free();
 
     return $rows;
+}
+
+/** Nacte aktivni pohlavi; ID 0 je vyhrazena volba Neuvedeno, nikoli chybejici hodnota. */
+function hr_fetch_genders(mysqli $db): array
+{
+    return hr_fetch_lookup($db, 'hr_cis_pohlavi', 'id_pohlavi', 'nazev', '(id_pohlavi = 0), id_pohlavi');
+}
+
+/** Overi ciselne ID z formulare proti aktivnimu ciselniku, vcetne platne nuly. */
+function hr_employee_gender_id(mysqli $db, mixed $value): int
+{
+    if ((!is_string($value) && !is_int($value)) || !preg_match('/^\d+$/D', (string)$value) || (float)$value > 4294967295) {
+        throw new CbUserVisibleException('Vyberte pohlaví z číselníku.');
+    }
+    $id = (int)$value;
+    foreach (hr_fetch_genders($db) as $gender) {
+        if ($gender['id'] === $id) return $id;
+    }
+    throw new CbUserVisibleException('Vybrané pohlaví není aktivní v číselníku.');
 }
 
 /**

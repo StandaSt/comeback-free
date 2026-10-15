@@ -19,6 +19,7 @@ function hr_novy_zamestnanec_data(mysqli $db): array
         'sloty' => hr_fetch_lookup($db, 'cis_slot', 'id_slot', 'slot'),
         'funkce' => $funkce,
         'healthInsurers' => hr_fetch_health_insurers($db),
+        'genders' => hr_fetch_genders($db),
         'titulyPred' => hr_fetch_employee_titles($db, 1),
         'titulyZa' => hr_fetch_employee_titles($db, 2),
     ];

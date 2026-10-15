@@ -1,4 +1,7 @@
-/* Modul Provoz: styly pouze pro pracovni plochu Provozu. */
+/* Modul Provoz: styly pracovni plochy; role barvi jmena pouze v bloku dnes aktivnich uzivatelu.
+ * Franta rozlisuje bloky promptu globalnim cislem a zarovnava odeslani k poli zadani. */
+/* Historie Franty ma vlastni jednoúčelovy styl. */
+@import url("ai_analytik_historie.css");
 
 /* Rozcestnik a formulare nastaveni pobocek pod pravem 217. */
 .provoz_settings_hub{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,320px));gap:10px;padding:10px}
@@ -559,6 +562,14 @@
 }
 
 /* Barvy prehledu - spolecne promenne. */
+/* Barvy roli jsou omezeny na tento panel, ne na vsechna jmena nebo odkazy v IS. */
+.provoz_aktivni_uzivatele .provoz_aktivni_jmeno--cervena,
+.provoz_aktivni_uzivatele .provoz_aktivni_jmeno--zelena,
+.provoz_aktivni_uzivatele .provoz_aktivni_jmeno--modra{font-weight:700;}
+.provoz_aktivni_uzivatele .provoz_aktivni_jmeno--cervena{color:var(--clr_cervena);}
+.provoz_aktivni_uzivatele .provoz_aktivni_jmeno--zelena{color:var(--clr_zelena);}
+.provoz_aktivni_uzivatele .provoz_aktivni_jmeno--modra{color:#1d4ed8;}
+
 .blok{
   background:var(--cb-bg-panel);
   border-color:var(--cb-border);
@@ -2082,7 +2093,9 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
 }
 
 .provoz_objednavky_header_title{
-  display:flex;
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  width:100%;
   align-items:center;
   gap:10px;
   min-width:0;
@@ -2090,6 +2103,30 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
 
 .provoz_objednavky_header_title h1{
   margin:0;
+}
+
+/* Provozni den patri do stejneho formulare jako filtry tabulky. */
+.provoz_objednavky_report_filter{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  white-space:nowrap;
+}
+.provoz_objednavky_report_filter input{
+  padding:4px 7px;
+  border:1px solid var(--cb-border);
+  border-radius:5px;
+  background:var(--cb-bg-control);
+  color:var(--cb-text-main);
+  font:inherit;
+}
+.provoz_objednavky_header_title .head_task_btn--restia-refresh{
+  justify-self:end;
+}
+@media(max-width:700px){
+  .provoz_objednavky_header_title{grid-template-columns:1fr auto}
+  .provoz_objednavky_report_filter{grid-row:2;grid-column:1 / -1;justify-self:center}
+  .provoz_objednavky_header_title .head_task_btn--restia-refresh{grid-row:1;grid-column:2}
 }
 
 /* Objednavky - obal tabulky. */
@@ -2591,15 +2628,21 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
 .ai_analytik_prompt_row{
   display:grid;
   grid-template-columns:minmax(0, 1fr) 220px;
-  align-items:end;
-  gap:12px;
+  align-items:stretch;
+  gap:10px 12px;
   width:100%;
   max-width:800px;
 }
 
 .ai_analytik_prompt_field{
-  gap:10px;
+  /* Sdilene radky drzi tlacitko presne u textarea, nezavisle na vysce priloh a resize pole. */
+  display:contents;
 }
+.ai_analytik_prompt_field>.ai_analytik_prompt_label_row{grid-column:1;grid-row:1}
+.ai_analytik_prompt_field>textarea{grid-column:1;grid-row:2}
+.ai_analytik_prompt_field>.ai_analytik_attachments_control{grid-column:1;grid-row:3}
+.ai_analytik_prompt_field>.ai_analytik_attachments{grid-column:1;grid-row:4}
+.ai_analytik_prompt_row>.ai_analytik_submit{grid-column:2;grid-row:2;height:auto;min-height:132px}
 
 .ai_analytik_attachments_control{
   display:flex;
@@ -2737,9 +2780,15 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   text-align:left;
   border:1px solid var(--cb-border);
   border-radius:6px;
-  background:var(--cb-bg-control);
+  /* Svetlejsi modrosede pozadi oddeli karty od panelu i bez bile vyplne. */
+  background:color-mix(in srgb, var(--cb-bg-control) 65%, #dbeafe 35%);
   color:var(--cb-text-main);
 }
+
+/* Identita zustava vpravo: globalni cislo promptu je nad jmenem autora. */
+.ai_analytik_my_prompt_heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.ai_analytik_my_prompt_heading>span{min-width:0;overflow-wrap:anywhere}
+.ai_analytik_my_prompt_identity{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
 
 .ai_analytik_my_prompt:hover{
   border-color:var(--cb-module-accent);
@@ -2920,7 +2969,7 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
 
 .ai_analytik_prompt_row .head_task_btn{
   justify-content:center;
-  height:132px;
+  height:auto;
   min-height:132px;
 }
 
@@ -2988,10 +3037,11 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   margin-top:8px;
 }
 
+/* Kompaktni prubeh setri misto i pri otevrenych SQL detailech. */
 .ai_analytik_status_log{
   display:grid;
-  gap:6px;
-  margin:6px 0 0;
+  gap:2px;
+  margin:4px 0 0;
   padding:0;
   list-style:none;
 }
@@ -3001,12 +3051,12 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   grid-template-columns:52px minmax(0, 1fr);
   gap:10px;
   align-items:start;
-  line-height:1.45;
+  line-height:1.25;
 }
 
 .ai_analytik_status_step_body{
   display:grid;
-  gap:5px;
+  gap:2px;
   min-width:0;
 }
 
@@ -3118,6 +3168,15 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   white-space:pre-wrap;
 }
 
+/* Odpoved ma samostatnou vyrazne svetlejsi, ale nebile modrosedou plochu. */
+.ai_analytik_summary:not(.is-clarification){
+  padding:12px 14px;
+  border:1px solid var(--cb-border);
+  border-radius:6px;
+  background:#e8f1fc;
+  color:#0f172a;
+}
+
 .ai_analytik_summary.is-clarification{
   padding:10px 12px;
   border:1px solid color-mix(in srgb, var(--cb-module-accent) 45%, var(--cb-border));
@@ -3154,6 +3213,7 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
 
 .ai_analytik_continuation_actions{
   display:grid;
+  align-content:start;
   gap:8px;
 }
 
@@ -3179,8 +3239,12 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
 
 .ai_analytik_usage_row{
   display:grid;
-  grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);
-  width:min(100%, 960px);
+  /* Stejna prava hrana a sirka jako tlacitko navazani uvnitr panelu (14px vypln + 2px okraj). */
+  grid-template-columns:minmax(0, 1fr) 220px;
+  gap:12px;
+  padding-inline:16px;
+  box-sizing:border-box;
+  width:100%;
 }
 
 .ai_analytik_usage_row .ai_analytik_usage{
@@ -3190,6 +3254,9 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
 
 .ai_analytik_usage_row .ai_analytik_save_prompt{
   justify-self:end;
+  width:100%;
+  min-height:37px;
+  justify-content:center;
 }
 
 .pp[data-page="ai_analytik"] > .pp_header h1{
@@ -3397,6 +3464,8 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
     height:78px;
     min-height:78px;
   }
+  /* Na uzke obrazovce je odeslani pod zadanim a prilohami, ne v druhem sloupci. */
+  .ai_analytik_prompt_row>.ai_analytik_submit{grid-column:1;grid-row:5;min-height:78px}
 
   .ai_analytik_prompt_row .ai_analytik_attachment_add{
     height:auto;

@@ -6,13 +6,18 @@ require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
 /*
  * Nacte hlavni slot a pobocku prihlasene osoby pro pozadavky na smeny v obou fazich HR migrace.
+ * Test prava prevezme pracovni profil, ale osoba a autor zadani zustanou USER 1.
  */
 
 /** @return array<string,mixed>|null */
-function cb_smeny_pozadavky_osoba(mysqli $db): ?array
+function cb_smeny_pozadavky_osoba(mysqli $db, ?int $idUser = null): ?array
 {
     $sessionUser = $_SESSION['cb_user'] ?? [];
-    $idUser = is_array($sessionUser) ? (int)($sessionUser['id_user'] ?? 0) : 0;
+    $idUser ??= is_array($sessionUser) ? (int)($sessionUser['id_user'] ?? 0) : 0;
+    if (function_exists('cb_prebrani_prav_profil') && ($profile = cb_prebrani_prav_profil($idUser)) !== null) {
+        return $profile['smeny_osoba'] === null ? null : array_replace($profile['smeny_osoba'],
+            ['id_person'=>1, 'jmeno'=>trim(($sessionUser['surname'] ?? '') . ' ' . ($sessionUser['name'] ?? ''))]);
+    }
     if ($idUser <= 0) {
         return null;
     }

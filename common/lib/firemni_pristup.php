@@ -4,11 +4,17 @@ declare(strict_types=1);
 /*
  * Účel souboru: Jednotně určuje firemní rozsah uživatele podle jeho domovské
  * firmy, role a stromu firem. Neřeší HTML ani změny pracovních poměrů.
+ * Pri vyvojovem prebrani prav cte rozsah ze snimku session, identitu nemeni.
  */
+require_once __DIR__ . '/prebrani_prav.php';
 
 /** @return array{id_firma:int,admin:bool,top_management:bool} */
 function cb_firemni_pristup_uzivatel(mysqli $db, int $idUser): array
 {
+    if (($profile = cb_prebrani_prav_profil($idUser)) !== null) {
+        $roles = array_column($profile['roles'], 'id_role');
+        return ['id_firma'=>$profile['id_firma'], 'admin'=>in_array(1,$roles,true), 'top_management'=>in_array(2,$roles,true)];
+    }
     if ($idUser <= 0) {
         return ['id_firma' => 0, 'admin' => false, 'top_management' => false];
     }
@@ -30,6 +36,9 @@ function cb_firemni_pristup_uzivatel(mysqli $db, int $idUser): array
 /** @return int[] */
 function cb_firemni_pristup_firmy(mysqli $db, int $idUser): array
 {
+    if (($profile = cb_prebrani_prav_profil($idUser)) !== null) {
+        return $profile['firmy'];
+    }
     $user = cb_firemni_pristup_uzivatel($db, $idUser);
     $result = $db->query('SELECT id_firma, id_firma_nadrazena FROM firma WHERE aktivni = 1 AND platnost_do IS NULL ORDER BY id_firma');
     $parents = [];

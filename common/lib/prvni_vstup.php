@@ -4,11 +4,13 @@ declare(strict_types=1);
 /*
  * Prvni vstup do IS.
  * Resi pouze overeni pozvanky, ulozeni lokalniho hesla a pripravu identity.
+ * Dokonceni loginu muze jednorazove aktivovat vyvojove prebrani prav USER 1.
  */
 
 require_once __DIR__ . '/duveryhodne_zarizeni.php';
 require_once __DIR__ . '/login_nastaveni.php';
 require_once __DIR__ . '/pc_session.php';
+require_once __DIR__ . '/prebrani_prav.php';
 
 /* Nacte lokalniho uzivatele podle jeho id. */
 function cb_prvni_vstup_user(mysqli $db, int $idUser): ?array
@@ -96,6 +98,7 @@ function cb_prvni_vstup_over_token(mysqli $db, string $token): bool
 /* Dokonci lokalni prihlaseni a vytvori plnohodnotnou session. */
 function cb_prvni_vstup_dokonci_login(mysqli $db, array $user): void
 {
+    unset($_SESSION['cb_prebrani_prav']);
     if ((int)($user['aktivni'] ?? 0) !== 1) {
         throw new RuntimeException('Osoba je v HR neaktivní a nemůže se přihlásit do IS.');
     }
@@ -131,6 +134,15 @@ function cb_prvni_vstup_dokonci_login(mysqli $db, array $user): void
     unset($_SESSION['cb_auth_ok'], $_SESSION['cb_2fa_token'], $_SESSION['cb_token'], $_SESSION['cb_prvni_vstup_user_id'], $_SESSION['cb_prvni_vstup_platnost_do'], $_SESSION['cb_local_login_user_id']);
     $_SESSION['cb_timeout_min'] = 720;
     $_SESSION['cb_session_start_ts'] = time();
+    try {
+        cb_prebrani_prav_po_loginu($db, $idUser);
+    } catch (Throwable $error) {
+        // Chybne prevzeti nesmi nechat otevrenou session s plnymi adminskymi pravy.
+        cb_db_clear_online_login_flags($db, $idUser, $idLogin);
+        cb_pc_session_revoke_current($db, 'prebrani_prav_chyba');
+        cb_session_forget_auth();
+        throw $error;
+    }
 }
 
 /* Zahaji lokalni login a vrati prime presmerovani pro overeni na stejnem mobilu. */

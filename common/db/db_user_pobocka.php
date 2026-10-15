@@ -9,10 +9,14 @@ require_once __DIR__ . '/../lib/firemni_pristup.php';
 /*
  * Účel souboru: Jednotné vyhodnocení přístupu osoby k pobočkám podle HR.
  * pristup_vsechny_pobocky=1 znamená všechny aktivní pobočky firmy osoby.
+ * Prebrani prav pouziva zachycene pobocky zdrojoveho profilu, nikoli adminovu DB roli.
  */
 
 function cb_db_user_ma_pobocku(mysqli $db, int $idUser, int $idPob): bool
 {
+    if (($profile = cb_prebrani_prav_profil($idUser)) !== null) {
+        return in_array($idPob, array_map('intval', array_column($profile['pobocky'], 'id_pob')), true);
+    }
     if ($idUser <= 0 || $idPob < 0) {
         return false;
     }
@@ -56,6 +60,9 @@ function cb_db_user_ma_pobocku(mysqli $db, int $idUser, int $idPob): bool
 /** @return array<int,array{id_pob:int,nazev:string,oblast:string,main:int}> */
 function cb_db_user_pobocky(mysqli $db, int $idUser): array
 {
+    if (($profile = cb_prebrani_prav_profil($idUser)) !== null) {
+        return $profile['pobocky'];
+    }
     if ($idUser <= 0) {
         return [];
     }

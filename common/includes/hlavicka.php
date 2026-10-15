@@ -2,9 +2,11 @@
 /*
  * Ucel souboru: Vykresli viditelnou hlavicku aplikace z predem pripravenych dat.
  * Data pripravi common/lib/priprava_hlavicky.php; vybery jsou samostatne komponenty.
+ * Pruh prebranych prav je soucasti trvale hlavicky, aby nezmizel pri vymene modulu.
  */
 declare(strict_types=1);
 require_once __DIR__ . '/../lib/priprava_hlavicky.php';
+require_once __DIR__ . '/../lib/prebrani_prav.php';
 $cbHeaderModuleAllowed = [
     'provoz' => cb_modul_ma_pristup('provoz'),
     'hr' => cb_modul_ma_pristup('hr'),
@@ -78,6 +80,17 @@ $cbHeaderMaintenanceActive = $cbLoginOk
       <div class="head_guest ram_hlavicka bg_bila zaobleni_12"></div>
     <?php endif; ?>
 
+<?php if (($cbTestProfile = cb_prebrani_prav_profil()) !== null): ?>
+<aside class="cb_prebrani_prav_notice" role="status">
+    <strong>Přebraná práva: <?= h($cbTestProfile['jmeno']) ?> (ID <?= h((string)$cbTestProfile['id_user_zdroj']) ?>)</strong>
+    <span>Přihlášený uživatel a autor změn: <?= h((string)($_SESSION['cb_user']['name'] ?? '')) ?> — ID 1.</span>
+    <form method="post" action="<?= h(cb_root_url('index.php')) ?>">
+        <input type="hidden" name="cb_action" value="admin_prebrani_prav_opustit">
+        <input type="hidden" name="cb_crf" value="<?= h(cb_crf_token()) ?>">
+        <button type="submit">Opustit přebrání práv a odhlásit</button>
+    </form>
+</aside>
+<?php endif; ?>
 </header>
 <!-- Skript prubezne obnovuje datum a cas v hlavicce. -->
 <script>

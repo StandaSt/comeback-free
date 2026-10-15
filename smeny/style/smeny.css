@@ -7,6 +7,12 @@
     align-content:start;
 }
 
+/* Nastaveni uzaverky zustava kompaktni i s vysvetlujicim textem. */
+.smeny_settings { width:fit-content; max-width:min(100%, 650px); box-sizing:border-box; }
+.smeny_settings_form { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:6px 0; }
+.smeny_settings_form label { display:flex; align-items:center; gap:5px; }
+.smeny_settings_form select, .smeny_settings_form button { font:inherit; padding:2px 6px; }
+
 /* Samostatný modál zůstává čitelný na telefonu a dlouhý rozpis roluje uvnitř okna. */
 .smeny_oznameni_modal{width:min(32rem,calc(100vw - 2rem));max-height:85vh;overflow:auto;box-sizing:border-box;border:1px solid #888;border-radius:12px;padding:1.25rem;color:var(--cb-text-main,#222);background:var(--cb-bg-panel,#fff);}
 .smeny_oznameni_modal::backdrop{background:rgba(0,0,0,.55);}

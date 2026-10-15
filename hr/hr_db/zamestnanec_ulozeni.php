@@ -8,6 +8,7 @@ require_once __DIR__ . '/hr_nastaveni_ciselniky.php';
 
 /**
  * DB zapis noveho zamestnance, pracovnich slotu a volitelne firemni funkce.
+ * Osobni pohlavi se overuje a uklada jako ID z ciselniku, nikoliv text.
  */
 
 /**
@@ -36,7 +37,7 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
     $statniObcanstvi = trim((string)($data['statni_obcanstvi'] ?? ''));
     $rodneCislo = hr_employee_validate_birth_number((string)($data['rodne_cislo'] ?? ''));
     $cisloObcanskehoPrukazu = trim((string)($data['cislo_obcanskeho_prukazu'] ?? ''));
-    $pohlavi = trim((string)($data['pohlavi'] ?? ''));
+    $pohlavi = hr_employee_gender_id($db, $data['pohlavi'] ?? null);
     $zdrPoj = (int)($data['zdr_poj'] ?? 0);
     $poznamka = trim((string)($data['poznamka'] ?? ''));
     $osobniCislo = trim((string)($data['osobni_cislo'] ?? ''));
@@ -68,9 +69,6 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
     }
     hr_employee_validate_title($db, $titulPred, 1);
     hr_employee_validate_title($db, $titulZa, 2);
-    if (!in_array($pohlavi, ['muž', 'žena', 'jiné', 'neuvedeno'], true)) {
-        throw new CbUserVisibleException('Vyberte pohlaví.');
-    }
     if ($datumNastupu === '' || strtotime($datumNastupu) === false) {
         throw new CbUserVisibleException('Vyplňte datum nástupu.');
     }
@@ -231,7 +229,7 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
             INSERT INTO hr_osobni_udaje (id_person, titul_pred, jmeno, druhe_jmeno, prijmeni, rodne_prijmeni, titul_za, foto, datum_narozeni, rodne_cislo, cislo_obcanskeho_prukazu, zdr_poj, statni_obcanstvi, misto_narozeni, pohlavi, poznamka, id_user_zadal, vytvoreno, platny)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1)
         ');
-        $types = 'i' . str_repeat('s', 10) . 'i' . str_repeat('s', 4) . 'i';
+        $types = 'i' . str_repeat('s', 10) . 'i' . str_repeat('s', 2) . 'isi';
         $stmt->bind_param($types, $idPerson, $titulPred, $jmeno, $druheJmeno, $prijmeni, $rodnePrijmeni, $titulZa, $photoPath, $datumNarozeniDb, $rodneCisloDb, $cisloObcanskehoPrukazuDb, $zdrPojDb, $statniObcanstvi, $mistoNarozeni, $pohlavi, $poznamka, $zadalUser);
         $stmt->execute();
         $stmt->close();

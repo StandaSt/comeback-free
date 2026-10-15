@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
 /**
  * DB operace pro HR pozadavky pobocky a vyber aktualni hlavni pobocky pro HR pristup.
+ * Pri prebrani prav pouziva MAIN ze snimku profilu, autor pozadavku zustava vlastni.
  */
 
 /**
@@ -13,6 +14,13 @@ require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
  */
 function hr_nacti_hlavni_pobocku_uzivatele(mysqli $db, int $idUser): array
 {
+    // Pri testu prava pouzije prevzatou MAIN, autor pozadavku ale zustava USER 1.
+    if (function_exists('cb_prebrani_prav_profil') && ($profile = cb_prebrani_prav_profil($idUser)) !== null) {
+        if ($profile['main'] === null) {
+            throw new CbUserVisibleException('Testovaný profil nemá jednoznačnou aktuální MAIN.');
+        }
+        return ['id_pob'=>(int)$profile['main']['id_pob'], 'nazev'=>(string)$profile['main']['nazev']];
+    }
     $stmt = $db->prepare("
         SELECT DISTINCT p.id_pob, p.nazev
         FROM " . cb_hr_main_sql($db) . " up

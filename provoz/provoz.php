@@ -341,7 +341,7 @@ if ($cbPpOnly && !empty($_SESSION['login_ok'])) {
                 <?php if ($cbArchiveBackUrl !== ''): ?>
                     <div class="provoz_archive_header_title"><a class="provoz_archive_back_btn" href="<?= h($cbArchiveBackUrl) ?>" title="<?= h($cbArchiveBackTitle) ?>" aria-label="<?= h($cbArchiveBackTitle) ?>">←</a><h1><?= h($cbProvozPageTitle) ?><?php if ($cbProvozPageSubtitle !== ''): ?> <small class="provoz_page_title_meta">· <?= h($cbProvozPageSubtitle) ?></small><?php endif; ?></h1></div>
                 <?php elseif ($cbPage === 'objednavky'): ?>
-                    <div class="provoz_objednavky_header_title"><h1><?= h($cbProvozPageTitle) ?></h1><button type="button" class="head_task_btn head_task_btn--restia-refresh" data-objednavky-restia-refresh>Aktualizace objednávek</button></div>
+                    <?php require __DIR__ . '/bloky/objednavky_titulek.php'; ?>
                 <?php else: ?>
                     <h1><?= h($cbProvozPageTitle) ?></h1>
                 <?php endif; ?>
@@ -393,7 +393,7 @@ if (!empty($_SESSION['login_ok'])) {
             <?php if ($cbArchiveBackUrl !== ''): ?>
                 <div class="provoz_archive_header_title"><a class="provoz_archive_back_btn" href="<?= h($cbArchiveBackUrl) ?>" title="<?= h($cbArchiveBackTitle) ?>" aria-label="<?= h($cbArchiveBackTitle) ?>">←</a><h1><?= h($cbProvozPageTitle) ?><?php if ($cbProvozPageSubtitle !== ''): ?> <small class="provoz_page_title_meta">· <?= h($cbProvozPageSubtitle) ?></small><?php endif; ?></h1></div>
             <?php elseif ($cbPage === 'objednavky'): ?>
-                <div class="provoz_objednavky_header_title"><h1><?= h($cbProvozPageTitle) ?></h1><button type="button" class="head_task_btn head_task_btn--restia-refresh" data-objednavky-restia-refresh>Aktualizace objednávek</button></div>
+                <?php require __DIR__ . '/bloky/objednavky_titulek.php'; ?>
             <?php else: ?>
                 <h1><?= h($cbProvozPageTitle) ?></h1>
             <?php endif; ?>

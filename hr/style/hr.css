@@ -4,7 +4,22 @@
  * Karta zamestnance ma kompaktni prazdne stavy a souhrn pobocek vedle titulku.
  * Zmensene svisle odstupy pracovniho pomeru plati jen uvnitr jeho vlastniho obalu.
  * Sprava ciselniku ma sirky podle obsahu a jedine podminene ulozeni zmen v kazdem bloku.
+ * Casova osa karty oddeluje datum udalosti od jejiho pozdejsiho zapisu a rozbaluje historii.
  */
+
+/* Kompaktni casova osa v prehledu osoby; dlouhe poznamky nesmi roztahovat panel. */
+.hr_employee_timeline { list-style: none; margin: 0; padding: 0; }
+.hr_employee_timeline_item { display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--cb-bg-panel-soft); }
+.hr_employee_timeline_item:last-child { border-bottom: 0; }
+.hr_employee_timeline_date { display: flex; flex-direction: column; font-size: 11px; color: var(--text); }
+.hr_employee_timeline_date span, .hr_employee_timeline_meta { font-size: 11px; opacity: .7; }
+.hr_employee_timeline_content { min-width: 0; overflow-wrap: anywhere; font-size: 12px; }
+.hr_employee_timeline_content strong { display: block; }
+.hr_employee_timeline_note { margin-top: 4px; }
+.hr_employee_timeline_note summary, .hr_employee_timeline_more > summary { cursor: pointer; font-size: 12px; }
+.hr_employee_timeline_note p { white-space: normal; margin: 5px 0 0; }
+.hr_employee_timeline_more { margin-top: 8px; }
+.hr_employee_timeline_more:not([open]) > .hr_employee_timeline { display: none; }
 
 /* Promenne pro barvy a zakladni rozmery. */
 .hr_pp {

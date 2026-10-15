@@ -19,6 +19,7 @@ require_once __DIR__ . '/sm_lib/sm_sablony_pravo.php';
 require_once __DIR__ . '/sm_lib/sm_planovani_pravo.php';
 require_once __DIR__ . '/sm_lib/sm_pages.php';
 require_once __DIR__ . '/sm_lib/sm_nastaveni_pravo.php';
+require_once __DIR__ . '/sm_lib/sm_nastaveni_ulozeni.php';
 require_once __DIR__ . '/sm_lib/sm_pozadavky_osoba.php';
 require_once __DIR__ . '/sm_lib/sm_pozadavky_tydny.php';
 require_once __DIR__ . '/sm_lib/sm_pozadavky_nacteni.php';
@@ -63,6 +64,8 @@ if (empty($_SESSION['login_ok'])) {
 }
 
 cb_pobocky_bootstrap_session();
+// Ulozeni nastaveni musi probehnout pred vyberem stranky i pred HTML vystupem.
+cb_smeny_nastaveni_ulozit();
 
 $smMenuItems = cb_smeny_pages();
 $smCurrentPage = cb_smeny_current_page($smMenuItems);

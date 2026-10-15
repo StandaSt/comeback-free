@@ -3,6 +3,7 @@
  * Velikosti pisma vychazeji z pevne typograficke skaly aplikace.
  * Prihlasovaci volby mobil/e-mail maji vlastni ikony primo v popisku.
  * Samostatny stav odeslaneho prihlasovaciho e-mailu zobrazuje pouze text.
+ * QR zaloha schvaleni prihlaseni zustava viditelna i na dotykovych zarizenich.
  */
 
 :root{
@@ -628,13 +629,6 @@ code{
   background: rgba(15, 23, 42, 0.08);
   padding: 2px 6px;
   border-radius: 8px;
-}
-
-/* QR zaloha pro 2FA se na dotykovem mobilnim zarizeni nezobrazuje. */
-@media (hover: none) and (pointer: coarse){
-  .cb-2fa-qr-only-pc{
-    display: none;
-  }
 }
 
 /* Prihlasovaci stranka pouziva jedinou grafickou variantu na vsech obrazovkach. */

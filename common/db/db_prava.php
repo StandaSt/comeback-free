@@ -4,12 +4,17 @@ declare(strict_types=1);
 /*
  * Nacte prava prihlaseneho uzivatele do session.
  * Globalni prava jsou sjednocenim pristupovych profilu osoby v HR.
+ * Prebrana prava USER 1 zachovava jako snimek platny do odhlaseni.
  */
+require_once __DIR__ . '/../lib/prebrani_prav.php';
 
 if (!function_exists('cb_db_user_role_data')) {
     /** @return array<int,string> Role uživatele indexované podle id_role. */
     function cb_db_user_role_data(mysqli $conn, int $idUser): array
     {
+        if (($profile = cb_prebrani_prav_profil($idUser)) !== null) {
+            return array_column($profile['roles'], 'name', 'id_role');
+        }
         if ($idUser <= 0) {
             return [];
         }
@@ -59,6 +64,14 @@ if (!function_exists('cb_user_ma_roli')) {
 if (!function_exists('cb_db_prava_nacti_do_session')) {
     function cb_db_prava_nacti_do_session(mysqli $conn, int $idUser): void
     {
+        // Index i prime downloady volaji stejnou obnovu; test nesmi obnovit adminska prava.
+        if (($profile = cb_prebrani_prav_profil($idUser)) !== null) {
+            $_SESSION['prava'] = $profile['prava'];
+            $_SESSION['prava_stav'] = $profile['prava_stav'];
+            $_SESSION['cb_user']['roles'] = $profile['roles'];
+            $_SESSION['cb_user']['role'] = $profile['role'];
+            return;
+        }
         $_SESSION['prava'] = [];
         $_SESSION['prava_stav'] = [];
 

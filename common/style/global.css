@@ -1,6 +1,7 @@
 /*
  * Ucel souboru: Definuje spolecny zaklad vzhledu cele aplikace.
  * Typografie pouziva pouze centralne urcene pevne velikosti v px.
+ * Vyvojove prebrani prav oznacuje pevnym upozornenim bez zmeny bezneho layoutu.
  */
 
 :root {
@@ -1018,6 +1019,25 @@ main{
 }
 
 /* ===== Responsive ===== */
+
+/* Testovaci profil musi byt viditelny i pri rolove omezenem menu. */
+.cb_prebrani_prav_notice{
+  position:fixed;
+  bottom:12px;
+  left:12px;
+  right:12px;
+  z-index:950;
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:12px;
+  padding:12px;
+  color:#422006;
+  background:#fef3c7;
+  border:2px solid #d97706;
+  border-radius:8px;
+}
+.cb_prebrani_prav_notice form{margin-left:auto;}
 
 .cb_orientation_notice{
   position:fixed;

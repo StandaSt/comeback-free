@@ -1,4 +1,4 @@
-// js/objednavky_prehled.js * Prehled objednavek v PP
+// Prehled objednavek v PP: rozbalovani polozek i po vymene tabulky a aktualizace Restie.
 (function () {
   'use strict';
 
@@ -67,6 +67,7 @@
     startLoaderTimers();
   }
 
+  // Kazde tlacitko navazeme jen jednou; nove radky po filtrovani potrebuji vlastni obsluhu.
   function bindOrderDetails(root) {
     Array.prototype.forEach.call(root.querySelectorAll('[data-provoz-objednavky-toggle]'), function (button) {
       if (!(button instanceof HTMLButtonElement) || button.getAttribute('data-provoz-objednavky-toggle-bound') === '1') {
@@ -86,8 +87,9 @@
     });
   }
 
+  // Kontejner zustava pri filtrovani stejny, ale jeho tlacitka se meni.
   function initRoot(root) {
-    if (!(root instanceof HTMLElement) || root.getAttribute('data-objednavky-ready') === '1') {
+    if (!(root instanceof HTMLElement)) {
       return;
     }
     root.setAttribute('data-objednavky-ready', '1');
@@ -222,6 +224,15 @@
   document.addEventListener('cb:main-swapped', function () {
     stopLoaderTimers();
     initAll(document);
+  });
+
+  // Spolecne filtry meni jen tabulku; obsluhu detailu obnovime v jejim formulari.
+  document.addEventListener('cb:filters-swapped', function (event) {
+    var form = event.detail && event.detail.form;
+    var root = form instanceof HTMLFormElement ? form.closest('[data-objednavky-prehled="1"]') : null;
+    if (root instanceof HTMLElement) {
+      initRoot(root);
+    }
   });
 
   if (document.readyState === 'loading') {

@@ -2,8 +2,10 @@
 declare(strict_types=1);
 
 /*
- * Vytváří čtyři automaticky dostupné budoucí týdny a jejich pevné deadliny.
+ * Vytvari ctyri budouci tydny s uzaverkou podle dne a cele hodiny ze set_system.
  */
+
+require_once __DIR__ . '/sm_uzaverka.php';
 
 /** @return array<int,array<string,mixed>> */
 function cb_smeny_pozadavky_tydny(?DateTimeImmutable $now = null): array
@@ -14,10 +16,11 @@ function cb_smeny_pozadavky_tydny(?DateTimeImmutable $now = null): array
     $names = ['Pondělí', 'Úterý', 'Středa', 'Čtvrtek', 'Pátek', 'Sobota', 'Neděle'];
     $closingKeys = ['end_po', 'end_ut', 'end_st', 'end_ct', 'end_pa', 'end_so', 'end_ne'];
     $weeks = [];
+    $uzaverka = cb_smeny_uzaverka_nacti(db());
 
     for ($index = 0; $index < 4; $index++) {
         $start = $thisMonday->modify('+' . ($index + 1) . ' weeks');
-        $deadline = $start->modify('-5 days')->setTime(20, 0);
+        $deadline = cb_smeny_uzaverka_datum($start, $uzaverka);
         $days = [];
         for ($day = 0; $day < 7; $day++) {
             $date = $start->modify('+' . $day . ' days');

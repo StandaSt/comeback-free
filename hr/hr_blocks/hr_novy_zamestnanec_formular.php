@@ -1,7 +1,8 @@
 <?php
 declare(strict_types=1);
 
-/* Formulář alternativního založení zaměstnance; role v IS se odvozuje z volitelné funkce. */
+/* Formulář alternativního založení zaměstnance; role v IS se odvozuje z volitelné funkce.
+ * Pohlavi pouziva nazvy a ciselna ID ze spolecneho HR ciselniku. */
 // Funkce s roli Admin jsou v nabidce pouze existujicimu Adminovi.
 
 $formInput = is_array($formInput ?? null) ? $formInput : [];
@@ -44,7 +45,7 @@ $mainBranchValue = $formValue('id_pob_hlavni');
                 <tr>
                     <td class="hr_new_employee_field hr_new_employee_field--id-card"><label class="hr_form_label"><span>Číslo občanského průkazu</span><input name="cislo_obcanskeho_prukazu" maxlength="30" value="<?= h($formValue('cislo_obcanskeho_prukazu')) ?>"></label></td>
                     <td class="hr_new_employee_field hr_new_employee_field--insurer"><label class="hr_form_label"><span>Zdravotní pojišťovna</span><select name="zdr_poj"><option value="">Vyberte</option><?php foreach ($healthInsurers as $healthInsurer): ?><option value="<?= h((string)$healthInsurer['kod']) ?>"<?= $formValue('zdr_poj') === (string)$healthInsurer['kod'] ? ' selected' : '' ?>><?= h($healthInsurer['label']) ?></option><?php endforeach; ?></select></label></td>
-                    <td colspan="3"><fieldset class="hr_form_label hr_gender_field"><legend>Pohlaví</legend><span class="hr_gender_choices"><label><input type="radio" name="pohlavi" value="muž" required<?= $formValue('pohlavi') === 'muž' ? ' checked' : '' ?>> Muž</label><label><input type="radio" name="pohlavi" value="žena"<?= $formValue('pohlavi') === 'žena' ? ' checked' : '' ?>> Žena</label><label><input type="radio" name="pohlavi" value="jiné"<?= $formValue('pohlavi') === 'jiné' ? ' checked' : '' ?>> Jiné</label><label><input type="radio" name="pohlavi" value="neuvedeno"<?= $formValue('pohlavi') === 'neuvedeno' ? ' checked' : '' ?>> Neuvedeno</label></span></fieldset></td>
+                    <td colspan="3"><fieldset class="hr_form_label hr_gender_field"><legend>Pohlaví</legend><span class="hr_gender_choices"><?php foreach ($genders as $gender): ?><label><input type="radio" name="pohlavi" value="<?= h((string)$gender['id']) ?>" required<?= $formValue('pohlavi') === (string)$gender['id'] ? ' checked' : '' ?>> <?= h($gender['label']) ?></label><?php endforeach; ?></span></fieldset></td>
                 </tr>
                 <tr><td colspan="5"><div class="hr_new_employee_detail_groups">
                     <fieldset class="hr_new_employee_detail_group"><legend>Bydliště dle OP</legend><div class="hr_new_employee_detail_grid hr_new_employee_detail_grid--address"><label class="hr_form_label"><span>Ulice</span><input name="adresa_ulice" maxlength="120" autocomplete="street-address" value="<?= h($formValue('adresa_ulice')) ?>"></label><label class="hr_form_label"><span>Číslo popisné</span><input name="adresa_cp" maxlength="20" value="<?= h($formValue('adresa_cp')) ?>"></label><label class="hr_form_label"><span>Město</span><input name="adresa_mesto" maxlength="100" autocomplete="address-level2" value="<?= h($formValue('adresa_mesto')) ?>"></label><label class="hr_form_label"><span>PSČ</span><input name="adresa_psc" maxlength="20" autocomplete="postal-code" value="<?= h($formValue('adresa_psc')) ?>"></label><label class="hr_form_label"><span>Stát</span><input name="adresa_stat" maxlength="100" autocomplete="country-name" value="<?= h($formValue('adresa_stat')) ?>"></label></div></fieldset>

@@ -1,6 +1,7 @@
 /*
  * Ucel souboru: Definuje vzhled administrace, spravy roli a individualnich vyjimek prav.
  * Velikosti pisma vychazeji z pevne typograficke skaly aplikace.
+ * Vyvojovy vyber Prebrani prav ma vysku podle obsahu, ne podle tabulkoveho panelu.
  */
 
 .admin_pp{
@@ -505,6 +506,14 @@
   min-height:0;
   gap:14px;
 }
+
+/* Spolecna .blok ma height:100%; tento ovladaci panel nesmi spotrebovat misto tabulky. */
+.admin_prebrani_prav{
+  flex:0 0 auto;
+  height:auto;
+  padding:8px 10px;
+}
+.admin_prebrani_prav p{margin:6px 0;}
 
 .admin_users_form{
   display:flex;

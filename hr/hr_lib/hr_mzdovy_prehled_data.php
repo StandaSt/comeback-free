@@ -3,16 +3,22 @@ declare(strict_types=1);
 
 // Mzdove obdobi pouziva samostatnou historii MAIN k datu vybraneho obdobi.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
+require_once __DIR__ . '/../hr_db/hr_zamestnanci_pristup.php';
 
 /*
  * Data první čtecí verze mzdového přehledu. Všechny hodnoty jsou načítané
  * z existující evidence HR a z finálně uložených denních reportů IS.
  * Tato vrstva neprovádí uzávěrku, nepřijímá ruční bonusy ani do DB nezapisuje.
  * Testovaci osoby vynechava ze mzdovych radku, nikoli z urceni firmy prihlaseneho uctu.
+ * Osoby filtruje jednotnym rozsahem HR, nikoliv samotnou firmou prihlaseneho.
  */
 
 function hr_mzdovy_prehled_id_firmy(mysqli $db, int $idUser): int
 {
+    // Titulek a obdobi v testu odpovidaji firme profilu, ne firme skutecneho autora.
+    if (($profile = cb_prebrani_prav_profil($idUser)) !== null) {
+        return $profile['id_firma'];
+    }
     if ($idUser <= 0) {
         return 0;
     }
@@ -47,16 +53,16 @@ function hr_mzdovy_prehled_uvazek_text(array $row): string
     return trim($text);
 }
 
-function hr_mzdovy_prehled_dostupna_obdobi(mysqli $db, int $idFirma): array
+function hr_mzdovy_prehled_dostupna_obdobi(mysqli $db, int $idFirma, ?array $firmy = null): array
 {
+    $firmySql = implode(',', array_map('intval', $firmy ?? [$idFirma])) ?: '0';
     $stmt = $db->prepare('
         SELECT YEAR(datum_reportu) AS rok, MONTH(datum_reportu) AS mesic, MAX(datum_reportu) AS posledni_datum
         FROM reporty_is
-        WHERE id_firma = ? AND platny = 1 AND datum_reportu IS NOT NULL
+        WHERE id_firma IN (' . $firmySql . ') AND platny = 1 AND datum_reportu IS NOT NULL
         GROUP BY YEAR(datum_reportu), MONTH(datum_reportu)
         ORDER BY rok DESC, mesic ASC
     ');
-    $stmt->bind_param('i', $idFirma);
     $stmt->execute();
     $result = $stmt->get_result();
     $years = [];
@@ -93,7 +99,10 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
         throw new RuntimeException('Uživatel nemá přiřazenou aktivní firmu.');
     }
 
-    $availablePeriods = hr_mzdovy_prehled_dostupna_obdobi($db, $idFirma);
+    $firmy = hr_zamestnanci_firmy($db, $idUser);
+    $firmySql = implode(',', $firmy) ?: '0';
+    $scope = hr_zamestnanci_pobocka_sql($db, $idUser, 'hp');
+    $availablePeriods = hr_mzdovy_prehled_dostupna_obdobi($db, $idFirma, $firmy);
     $periodYears = $availablePeriods['years'];
     $periodMonthsByYear = $availablePeriods['months_by_year'];
     if ($periodYears === []) {
@@ -223,13 +232,13 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
             SELECT ro.id_user, SUM(ro.odpracovano) AS odpracovano
             FROM reporty_is_osoby ro
             INNER JOIN reporty_is r ON r.id_reportu = ro.id_reportu
-            WHERE r.platny = 1 AND r.datum_reportu BETWEEN ? AND ? AND r.id_firma = ?
+            WHERE r.platny = 1 AND r.datum_reportu BETWEEN ? AND ? AND r.id_firma IN (' . $firmySql . ')
             GROUP BY ro.id_user
         ) hodiny ON hodiny.id_user = hp.id_user
         INNER JOIN firma f ON f.id_firma = hp.id_firma AND f.aktivni = 1 AND f.platnost_do IS NULL
         WHERE hp.aktivni = 1
           AND hp.testovaci = 0
-          AND hp.id_firma = ?
+          AND (' . $scope . ')
           AND EXISTS (
               SELECT 1 FROM hr_pracovni_vztah pv
               WHERE pv.id_person = hp.id_person AND pv.platny = 1
@@ -244,8 +253,8 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
         throw new RuntimeException('Mzdový přehled se nepodařilo připravit.');
     }
     $stmt->bind_param(
-        'ssssssssssssssssiiss',
-        $to, $from, $to, $from, $to, $from, $to, $from, $to, $from, $to, $from, $to, $from, $from, $to, $idFirma, $idFirma, $to, $from
+        'ssssssssssssssssss',
+        $to, $from, $to, $from, $to, $from, $to, $from, $to, $from, $to, $from, $to, $from, $from, $to, $to, $from
     );
     $stmt->execute();
     $result = $stmt->get_result();
@@ -262,8 +271,8 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
     $stmt->close();
 
     $branches = [];
-    $branchStmt = $db->prepare('SELECT p.id_pob, p.nazev, f.obchodni_jmeno AS firma FROM pobocka p INNER JOIN firma f ON f.id_firma = p.id_firma WHERE p.id_firma = ? AND p.aktivni = 1 AND f.aktivni = 1 AND f.platnost_do IS NULL ORDER BY p.id_pob');
-    $branchStmt->bind_param('i', $idFirma);
+    $branchIdsSql = implode(',', hr_zamestnanci_pobocky($db, $idUser)) ?: '-1';
+    $branchStmt = $db->prepare('SELECT p.id_pob, p.nazev, f.obchodni_jmeno AS firma FROM pobocka p INNER JOIN firma f ON f.id_firma = p.id_firma WHERE p.id_pob IN (' . $branchIdsSql . ') AND p.aktivni = 1 AND f.aktivni = 1 AND f.platnost_do IS NULL ORDER BY p.id_pob');
     $branchStmt->execute();
     $result = $branchStmt->get_result();
     while ($branch = $result->fetch_assoc()) {

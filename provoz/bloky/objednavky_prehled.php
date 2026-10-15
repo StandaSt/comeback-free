@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 /*
  * Jednotná obsluha filtrů je provoz/js/filtry.js.
+ * Filtr provozniho dne v titulku je pres atribut form soucasti stejneho formulare.
  * Viditelné datumy a částky formátuje cb_format(); do data-* atributů a URL
  * zůstávají původní technické hodnoty.
  */
@@ -92,7 +93,7 @@ $firstRow = (int)$data['first_row'];
 $lastRow = (int)$data['last_row'];
 ?>
 <div class="provoz_objednavky_page" data-objednavky-prehled="1">
-    <form method="get" action="<?= h(cb_root_url('index.php')) ?>">
+    <form id="provoz_objednavky_form" method="get" action="<?= h(cb_root_url('index.php')) ?>">
         <input type="hidden" name="m" value="provoz">
         <input type="hidden" name="page" value="objednavky">
         <input type="hidden" name="obj_sort" value="<?= h($sort) ?>">

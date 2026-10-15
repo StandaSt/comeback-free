@@ -3,8 +3,9 @@ declare(strict_types=1);
 
 /**
  * DB dotazy pro seznam, detail a kontrolu kompletnosti zamestnancu v HR.
- * Cteni respektuje firemni pristup a hlavni pobocku vedouciho.
+ * Seznam, detail i volby filtru respektuji jednotny osobni rozsah HR podle role.
  * Tabulkovy seznam shrnuje pracovni vztahy do jednoho radku za osobu.
+ * Prehledova casova osa spojuje HR historie podle zapisu; ucinnost zachovava v detailech.
  */
 
 require_once __DIR__ . '/hr_zamestnanci_pristup.php';
@@ -21,7 +22,7 @@ function hr_fetch_employees(mysqli $db, int $limit = 100): array
     $cbUser = $_SESSION['cb_user'] ?? [];
     $idUser = is_array($cbUser) ? (int)($cbUser['id_user'] ?? 0) : 0;
     $branchScopeSql = hr_zamestnanci_pobocka_sql($db, $idUser);
-    $allowedFirmy = cb_firemni_pristup_firmy($db, $idUser);
+    $allowedFirmy = hr_zamestnanci_firmy($db, $idUser);
     if ($allowedFirmy === []) {
         return [];
     }
@@ -212,7 +213,7 @@ function hr_fetch_employee_list(mysqli $db): array
     $cbUser = $_SESSION['cb_user'] ?? [];
     $idUser = is_array($cbUser) ? (int)($cbUser['id_user'] ?? 0) : 0;
     $branchScopeSql = hr_zamestnanci_pobocka_sql($db, $idUser);
-    $allowedFirmy = cb_firemni_pristup_firmy($db, $idUser);
+    $allowedFirmy = hr_zamestnanci_firmy($db, $idUser);
     $allowedFirmySql = $allowedFirmy === [] ? '0' : implode(',', array_map('intval', $allowedFirmy));
     $where = ['p.id_firma IN (' . $allowedFirmySql . ')', $branchScopeSql];
     $filterSqlMap = [
@@ -467,6 +468,54 @@ function hr_fetch_employee_work_timeline(mysqli $db, int $idPerson): array
     $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
     return $rows;
+}
+
+/** Spoji historii pomeru, prirazeni, poznamky a jiz autorizovane dokumenty karty. */
+function hr_fetch_employee_timeline(mysqli $db, int $idPerson, array $documents): array
+{
+    $events = hr_fetch_employee_work_timeline($db, $idPerson);
+    $sql = '
+        SELECT s.vytvoreno AS kdy, CONCAT("Slot: ", c.slot) AS akce,
+               s.platnost_od AS plati_od, s.platnost_do AS plati_do,
+               NULL AS zapsal, NULL AS poznamka, s.platny
+        FROM hr_slot s JOIN cis_slot c ON c.id_slot=s.id_slot WHERE s.id_person=?
+        UNION ALL
+        SELECT f.vytvoreno, CONCAT("Funkce: ", c.nazev, IF(f.v_treninku=1," – v tréninku","")),
+               f.platnost_od, f.platnost_do, NULL, NULL, f.platny
+        FROM hr_funkce f JOIN cis_funkce c ON c.id_funkce=f.id_funkce WHERE f.id_person=?
+        UNION ALL
+        SELECT m.vytvoreno, CONCAT("Hlavní pobočka: ", p.nazev),
+               m.platnost_od, m.platnost_do, NULL, NULL, m.platny
+        FROM hr_pracoviste_main m JOIN pobocka p ON p.id_pob=m.id_pob WHERE m.id_person=?
+        UNION ALL
+        SELECT n.vytvoreno, "Přidána poznámka", NULL, NULL, NULL, n.text_poznamky, 1
+        FROM hr_poznamka n WHERE n.id_person=?
+    ';
+    $stmt = $db->prepare($sql);
+    $stmt->bind_param('iiii', $idPerson, $idPerson, $idPerson, $idPerson);
+    $stmt->execute();
+    foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $row) {
+        if ((int)$row['platny'] !== 1) $row['akce'] .= ' (neplatný záznam)';
+        $events[] = $row;
+    }
+    $stmt->close();
+    // Dokumenty se znovu nedotazuji: seznam karty uz respektuje prava a firemni pristup.
+    foreach ($documents as $document) {
+        $events[] = [
+            'kdy' => $document['vytvoreno'], 'akce' => '+ ' . $document['typ'],
+            'plati_od' => null, 'plati_do' => null, 'zapsal' => null, 'poznamka' => null,
+            'dokument' => $document,
+        ];
+    }
+    foreach ($events as $index => &$event) {
+        // Sloupec Zapsano i razeni pouzivaji jen datum zapisu; ucinnost je v podrobnostech.
+        $event['datum'] = (string)($event['kdy'] ?? '');
+        $event['poradi'] = $index;
+    }
+    unset($event);
+    usort($events, static fn(array $a, array $b): int => strcmp($b['datum'], $a['datum'])
+        ?: strcmp((string)$b['kdy'], (string)$a['kdy']) ?: ($a['poradi'] <=> $b['poradi']));
+    return $events;
 }
 
 /** @return string[] */

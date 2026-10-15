@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/denni_report_prava.php';
 require_once __DIR__ . '/nastaveni_prava.php';
+require_once __DIR__ . '/kontrola_trzeb_pristup.php';
 
 // Vrati povolene klice stran, jejich soubory, titulky a pripadna prava.
 function cb_provoz_pages(): array
@@ -33,6 +34,16 @@ function cb_provoz_pages(): array
             'title' => 'Porovnání reportů',
             // Porovnani je detail archivu a vyzaduje stejne pravo.
             'pravo' => 202,
+        ],
+        'kontrola_trzeb' => [
+            'file' => __DIR__ . '/../pages/kontrola_trzeb.php',
+            'title' => 'Kontrola tržeb',
+            'pravo' => CB_KT_ZOBRAZIT,
+        ],
+        'archiv_kontrol_trzeb' => [
+            'file' => __DIR__ . '/../pages/archiv_kontrol_trzeb.php',
+            'title' => 'Archiv kontrol tržeb',
+            'pravo' => CB_KT_ZOBRAZIT,
         ],
         'objednavky' => [
             'file' => __DIR__ . '/../pages/objednavky.php',
@@ -81,7 +92,8 @@ function cb_provoz_current_page(): array
         $page = 'prehled';
     }
     $idPravo = (int)($pages[$page]['pravo'] ?? 0);
-    if ($idPravo > 0 && !cb_denni_report_ma_pravo($idPravo)) {
+    // Nove pravo pred obnovou ciselniku relace zustava bezpecne nepristupne.
+    if ($idPravo > 0 && !($idPravo === CB_KT_ZOBRAZIT ? cb_kt_ma_pravo() : cb_denni_report_ma_pravo($idPravo))) {
         $page = 'prehled';
     }
 

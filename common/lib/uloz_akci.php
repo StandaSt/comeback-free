@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+/* Zapisuje skutecneho autora akce; pri testu prav doplni zdrojovy profil do detailu logu. */
+require_once __DIR__ . '/prebrani_prav.php';
+
 require_once __DIR__ . '/../db/db_user_akce.php';
 
 if (!function_exists('cb_user_akce_should_log')) {
@@ -133,6 +136,9 @@ if (!function_exists('cb_user_akce_zapis')) {
             }
         }
 
+        if (($profile = cb_prebrani_prav_profil($idUser)) !== null) {
+            $detail['prebrani_prav_id_user'] = (int)$profile['id_user_zdroj'];
+        }
         $saved = db_user_akce_insert([
             'id_user' => $idUser,
             'id_login' => ((int)($_SESSION['cb_id_login'] ?? 0) > 0) ? (int)$_SESSION['cb_id_login'] : null,

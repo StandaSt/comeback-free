@@ -1,4 +1,5 @@
 <?php
+/* Vyber pobocek; pri prebrani prav zustava testovaci vyber jen v session a nemeni ulozene volby admina. */
 require_once __DIR__ . '/pobocky_vyber.php';
 require_once __DIR__ . '/uloz_akci.php';
 
@@ -8,6 +9,9 @@ if (!function_exists('cb_pobocky_save_selection_to_db')) {
      */
     function cb_pobocky_save_selection_to_db(int $idUser, array $ids): void
     {
+        if (cb_prebrani_prav_profil($idUser) !== null) {
+            return;
+        }
         $clean = cb_pobocky_sanitize_ids($ids);
         if ($idUser <= 0 || !$clean) {
             throw new RuntimeException('Neplatny vyber pobocky pro DB ulozeni.');

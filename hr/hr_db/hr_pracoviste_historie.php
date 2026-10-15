@@ -4,14 +4,16 @@ declare(strict_types=1);
 /*
  * Ucel souboru: Nacita oddelene historie povolenych pobocek a MAIN a uklada pouze skutecne rozdily.
  * Nezmenena prirazeni zachovavaji puvodni platnost.
+ * Cteni i zmeny chrani jednotny osobni rozsah HR.
  */
 
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
+require_once __DIR__ . '/hr_zamestnanci_pristup.php';
 
 /** @return array{pobocky:array<int,array{id_pob:int,nazev:string}>,historie:array<int,array<string,mixed>>} */
 function hr_pracoviste_historie(mysqli $db, int $idPerson, int $idUser): array
 {
-    cb_firemni_pristup_vyzaduj_osobu($db, $idUser, $idPerson);
+    hr_zamestnanci_vyzaduj_osobu($db, $idUser, $idPerson);
     $stmt = $db->prepare('SELECT id_firma FROM hr_person WHERE id_person = ? LIMIT 1');
     $stmt->bind_param('i', $idPerson);
     $stmt->execute();
@@ -93,7 +95,7 @@ function hr_pracoviste_rozdily(array $rows, array $idPobocky, int $idPobHlavni, 
 /** Ulozi pouze skutecne zmeny prirazeni. @param int[] $idPobocky */
 function hr_pracoviste_zmenit(mysqli $db, int $idPerson, array $idPobocky, int $idPobHlavni, string $platiOd, int $idUser, string $mainOd): void
 {
-    cb_firemni_pristup_vyzaduj_osobu($db, $idUser, $idPerson);
+    hr_zamestnanci_vyzaduj_osobu($db, $idUser, $idPerson);
     cb_hr_main_vyzaduj($db);
     if ($idPobocky === [] || !in_array($idPobHlavni, $idPobocky, true)) {
         throw new CbUserVisibleException('Vyberte alespoň jednu pobočku a jednu z nich jako hlavní.');

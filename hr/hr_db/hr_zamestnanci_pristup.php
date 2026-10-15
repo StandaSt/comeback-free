@@ -2,8 +2,9 @@
 declare(strict_types=1);
 
 /**
- * Omezuje cteni zamestnancu vedoucimu pobocky podle jeho aktualni hlavni pobocky.
- * Firemni rozsah zustava dalsi samostatnou podminkou pristupu.
+ * Jednotny rozsah osob v HR podle role, firmy a aktualni MAIN pobocky.
+ * Stejnou podminku pouziva cteni, dokumenty i kontrola cile zapisove akce.
+ * Pri prebrani prav zachova vlastni osobu USER 1 a prevezme jen rozsah zdrojoveho profilu.
  * Testovaci identity ponechava pro prihlaseni, ale nezpristupnuje je jako zamestnance.
  */
 require_once __DIR__ . '/pozadavky.php';
@@ -20,42 +21,141 @@ function hr_zamestnanci_je_testovaci(mysqli $db, int $idPerson): bool
     return $testovaci;
 }
 
-/** Vrati SQL podminku pro osobu s aliasem p; vyssi role zachovaji svuj dosavadni rozsah. */
-function hr_zamestnanci_pobocka_sql(mysqli $db, int $idUser): string
+/** Nacte skutecnou person prihlaseneho USER; nezamenuje obe identifikace. */
+function hr_zamestnanci_divak(mysqli $db, int $idUser): array
 {
-    if ($idUser <= 0) {
-        return '1 = 0';
+    if (($profile = cb_prebrani_prav_profil($idUser)) !== null) {
+        return ['id_person'=>1, 'id_firma'=>$profile['id_firma'], 'role_id'=>$profile['role_id']];
     }
-    $stmt = $db->prepare('SELECT MIN(id_role) AS role_id FROM hr_pristupovy_profil WHERE id_person = ?');
+    $stmt = $db->prepare('SELECT p.id_person, p.id_firma, MIN(pr.id_role) AS role_id
+        FROM hr_person p LEFT JOIN hr_pristupovy_profil pr ON pr.id_person = p.id_person
+        WHERE p.id_user = ? GROUP BY p.id_person, p.id_firma');
     $stmt->bind_param('i', $idUser);
     $stmt->execute();
-    $role = (int)($stmt->get_result()->fetch_assoc()['role_id'] ?? 0);
+    $result = $stmt->get_result();
+    $row = $result->num_rows === 1 ? $result->fetch_assoc() : [];
     $stmt->close();
-    if ($role !== 5) {
-        return 'p.testovaci = 0';
-    }
+    return $row ?? [];
+}
 
-    // Bez jednoznacne platne hlavni pobocky nesmi vedouci ziskat sirsi pristup.
-    try {
-        $pobocka = hr_nacti_hlavni_pobocku_uzivatele($db, $idUser);
-    } catch (CbUserVisibleException $error) {
+/** HR firmy: admin a top manager maji vsechny, ostatni pouze vlastni firmu. */
+function hr_zamestnanci_firmy(mysqli $db, int $idUser): array
+{
+    if (($profile = cb_prebrani_prav_profil($idUser)) !== null) {
+        // Vlastni karta zustava dostupna i pri testu profilu jine firmy; SQL scope stale chrani ostatni.
+        $own = $db->query('SELECT id_firma FROM hr_person WHERE id_user=1')->fetch_assoc();
+        return array_values(array_unique(array_merge($profile['hr_firmy'], [(int)($own['id_firma'] ?? 0)])));
+    }
+    $viewer = hr_zamestnanci_divak($db, $idUser);
+    if (in_array((int)($viewer['role_id'] ?? 0), [1, 2], true)) {
+        $rows = $db->query('SELECT id_firma FROM firma')->fetch_all(MYSQLI_ASSOC);
+        return array_map(static fn(array $row): int => (int)$row['id_firma'], $rows);
+    }
+    $firm = (int)($viewer['id_firma'] ?? 0);
+    return $firm > 0 ? [$firm] : [];
+}
+
+/** Vrati kompletni SQL rozsah osob; alias je pouze interni SQL identifikator. */
+function hr_zamestnanci_pobocka_sql(mysqli $db, int $idUser, string $alias = 'p'): string
+{
+    if (preg_match('/^[a-zA-Z][a-zA-Z0-9_]*$/D', $alias) !== 1) {
+        throw new InvalidArgumentException('Neplatny alias rozsahu HR.');
+    }
+    $viewer = hr_zamestnanci_divak($db, $idUser);
+    $person = (int)($viewer['id_person'] ?? 0);
+    $firm = (int)($viewer['id_firma'] ?? 0);
+    $role = (int)($viewer['role_id'] ?? 0);
+    if ($idUser <= 0 || $person <= 0 || !in_array($role, [1, 2, 3, 4, 5, 7, 9], true)) {
         return '1 = 0';
     }
-    $idPob = (int)$pobocka['id_pob'];
-    // Zamestnanci staci vedlejsi pobocka; rozhoduje jeji platnost k dnesnimu dni.
-    return "p.testovaci = 0 AND EXISTS (SELECT 1 FROM hr_pracoviste hr_scope
-        WHERE hr_scope.id_person = p.id_person AND hr_scope.id_pob = {$idPob}
+    $base = "{$alias}.testovaci = 0";
+    // Self vzdy znamena skutecneho aktéra, nikoli zdrojovy ucet profilu.
+    if (($profile = cb_prebrani_prav_profil($idUser)) !== null) {
+        $own = "{$alias}.id_person = 1";
+        if (in_array($role, [7, 9], true)) {
+            return "{$base} AND {$own}";
+        }
+        if ($role === 3 || $role === 5) {
+            $ids = $role === 5 ? ($profile['main'] !== null ? [(int)$profile['main']['id_pob']] : []) : $profile['hr_pobocky'];
+            $idsSql = implode(',', array_map('intval', $ids)) ?: '-1';
+            $target = $role === 5 ? cb_hr_main_sql($db) : 'hr_pracoviste';
+            return "{$base} AND ({$own} OR ({$alias}.id_firma = {$firm} AND EXISTS (
+                SELECT 1 FROM {$target} hr_scope WHERE hr_scope.id_person={$alias}.id_person
+                AND hr_scope.id_pob IN ({$idsSql}) AND hr_scope.platny=1 AND hr_scope.zruseno IS NULL
+                AND (hr_scope.platnost_od IS NULL OR hr_scope.platnost_od<=CURDATE())
+                AND (hr_scope.platnost_do IS NULL OR hr_scope.platnost_do>=CURDATE()))))";
+        }
+    }
+    if (in_array($role, [1, 2], true)) {
+        return $base;
+    }
+    $base .= " AND {$alias}.id_firma = {$firm}";
+    if ($role === 4) {
+        return $base;
+    }
+    $own = "{$alias}.id_person = {$person}";
+    if (in_array($role, [7, 9], true)) {
+        return "{$base} AND {$own}";
+    }
+    if ($role === 5) {
+        try {
+            $main = (int)hr_nacti_hlavni_pobocku_uzivatele($db, $person)['id_pob'];
+        } catch (CbUserVisibleException $error) {
+            return "{$base} AND {$own}";
+        }
+        $mainTable = cb_hr_main_sql($db);
+        return "{$base} AND ({$own} OR EXISTS (SELECT 1 FROM {$mainTable} hr_scope
+            WHERE hr_scope.id_person = {$alias}.id_person AND hr_scope.id_pob = {$main}
+              AND hr_scope.platny = 1 AND hr_scope.zruseno IS NULL
+              AND (hr_scope.platnost_od IS NULL OR hr_scope.platnost_od <= CURDATE())
+              AND (hr_scope.platnost_do IS NULL OR hr_scope.platnost_do >= CURDATE())))";
+    }
+    // Manager se ridi prunikem platnych povolenych pobocek, nezavisle na MAIN.
+    $branches = "EXISTS (SELECT 1 FROM hr_pracoviste hr_scope
+        INNER JOIN hr_pracoviste hr_view ON hr_view.id_pob = hr_scope.id_pob
+        WHERE hr_scope.id_person = {$alias}.id_person AND hr_view.id_person = {$person}
           AND hr_scope.platny = 1 AND hr_scope.zruseno IS NULL
+          AND hr_view.platny = 1 AND hr_view.zruseno IS NULL
           AND (hr_scope.platnost_od IS NULL OR hr_scope.platnost_od <= CURDATE())
-          AND (hr_scope.platnost_do IS NULL OR hr_scope.platnost_do >= CURDATE()))";
+          AND (hr_scope.platnost_do IS NULL OR hr_scope.platnost_do >= CURDATE())
+          AND (hr_view.platnost_od IS NULL OR hr_view.platnost_od <= CURDATE())
+          AND (hr_view.platnost_do IS NULL OR hr_view.platnost_do >= CURDATE()))";
+    return "{$base} AND ({$own} OR {$branches})";
+}
+
+/** Rozsah pobocek pro soucty pozadavku a volby; nizsi role nemaji personalni rozsah. */
+function hr_zamestnanci_pobocky(mysqli $db, int $idUser): array
+{
+    if (($profile = cb_prebrani_prav_profil($idUser)) !== null) {
+        return $profile['hr_scope_pobocky'];
+    }
+    $viewer = hr_zamestnanci_divak($db, $idUser);
+    $role = (int)($viewer['role_id'] ?? 0);
+    $person = (int)($viewer['id_person'] ?? 0);
+    if (!in_array($role, [1, 2, 3, 4, 5], true)) {
+        return [];
+    }
+    if ($role === 5) {
+        try {
+            return [(int)hr_nacti_hlavni_pobocku_uzivatele($db, $person)['id_pob']];
+        } catch (CbUserVisibleException $error) {
+            return [];
+        }
+    }
+    $firms = implode(',', hr_zamestnanci_firmy($db, $idUser)) ?: '0';
+    $sql = "SELECT b.id_pob FROM pobocka b WHERE b.id_firma IN ({$firms})";
+    if ($role === 3) {
+        $sql .= " AND EXISTS (SELECT 1 FROM hr_pracoviste v WHERE v.id_person = {$person}
+            AND v.id_pob = b.id_pob AND v.platny = 1 AND v.zruseno IS NULL
+            AND (v.platnost_od IS NULL OR v.platnost_od <= CURDATE())
+            AND (v.platnost_do IS NULL OR v.platnost_do >= CURDATE()))";
+    }
+    return array_map('intval', array_column($db->query($sql)->fetch_all(MYSQLI_ASSOC), 'id_pob'));
 }
 
 /** Kontroluje stejny rozsah i pri otevreni detailu primym odkazem. */
 function hr_zamestnanci_muze_osobu(mysqli $db, int $idUser, int $idPerson): bool
 {
-    if (!cb_firemni_pristup_muze_osobu($db, $idUser, $idPerson)) {
-        return false;
-    }
     $scope = hr_zamestnanci_pobocka_sql($db, $idUser);
     $stmt = $db->prepare("SELECT p.id_person FROM hr_person p WHERE p.id_person = ? AND {$scope}");
     $stmt->bind_param('i', $idPerson);
@@ -63,4 +163,12 @@ function hr_zamestnanci_muze_osobu(mysqli $db, int $idUser, int $idPerson): bool
     $allowed = $stmt->get_result()->num_rows > 0;
     $stmt->close();
     return $allowed;
+}
+
+/** Zapisovy handler musi kontrolovat stejnou osobu jako seznam a prime odkazy. */
+function hr_zamestnanci_vyzaduj_osobu(mysqli $db, int $idUser, int $idPerson): void
+{
+    if (!hr_zamestnanci_muze_osobu($db, $idUser, $idPerson)) {
+        throw new CbUserVisibleException('K tomuto zaměstnanci nemáte přístup v HR.');
+    }
 }

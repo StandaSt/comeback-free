@@ -8,6 +8,7 @@ declare(strict_types=1);
  * - nastaví cookie parametry před session_start()
  * - spustí session pouze pokud ještě neběží
  * - na CLI session nespouští, jen připraví prázdné $_SESSION
+ * - pro pristup pri udrzbe rozlisuje skutecneho admina od jeho testovaciho profilu
  */
 
 function cb_session_je_lokalni_host(): bool
@@ -71,6 +72,11 @@ function cb_session_ukonci_pro_udrzbu(): void
 /* Behem udrzby smi do IS jen plne prihlaseny Admin (role 1). */
 function cb_session_admin_pro_udrzbu(): bool
 {
+    // Udrzba overuje skutecne prihlaseni, ne omezeny testovaci profil.
+    if (!empty($_SESSION['login_ok']) && (int)($_SESSION['cb_user']['id_user'] ?? 0) === 1
+        && isset($_SESSION['cb_prebrani_prav'])) {
+        return true;
+    }
     if (empty($_SESSION['login_ok']) || (int)($_SESSION['cb_user']['id_user'] ?? 0) <= 0) {
         return false;
     }

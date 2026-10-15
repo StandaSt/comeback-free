@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /**
  * DB dotazy pro dokumenty zobrazovane v HR prehledu.
- * Testovaci osoby vynechava ze souctu, seznamu i primeho otevreni dokumentu.
+ * Soucty, seznam a prime otevreni omezuje jednotnym osobnim rozsahem HR.
  * U importovanych smluv vraci take podpisy, casti a konkretni upozorneni pro personalistu.
  * Word otevre jako odvozeny PDF nahled; puvodni soubor zustava beze zmeny.
  */
@@ -13,12 +13,17 @@ declare(strict_types=1);
  * Aktivni zamestnanec se pocita stejne jako v hornim prehledu: ma aktivni
  * osobu a alespon jeden aktualni pracovni vztah.
  */
+require_once __DIR__ . '/hr_zamestnanci_pristup.php';
+
 function hr_fetch_prehled_document_summary(mysqli $db): array
 {
+    $idUser = (int)($_SESSION['cb_user']['id_user'] ?? 0);
+    $scope = hr_zamestnanci_pobocka_sql($db, $idUser);
+    $documentScope = hr_zamestnanci_pobocka_sql($db, $idUser, 'dp');
     $result = $db->query("
         SELECT
-            (SELECT COUNT(*) FROM hr_dokument d INNER JOIN hr_person dp ON dp.id_person = d.id_person AND dp.testovaci = 0 WHERE d.platny = 1) AS dokumentu_celkem,
-            (SELECT COUNT(DISTINCT d.id_person) FROM hr_dokument d INNER JOIN hr_person dp ON dp.id_person = d.id_person AND dp.testovaci = 0 WHERE d.platny = 1) AS osob_s_dokumenty,
+            (SELECT COUNT(*) FROM hr_dokument d INNER JOIN hr_person dp ON dp.id_person = d.id_person WHERE d.platny = 1 AND {$documentScope}) AS dokumentu_celkem,
+            (SELECT COUNT(DISTINCT d.id_person) FROM hr_dokument d INNER JOIN hr_person dp ON dp.id_person = d.id_person WHERE d.platny = 1 AND {$documentScope}) AS osob_s_dokumenty,
             COUNT(*) AS aktivnich_zamestnancu,
             COALESCE(SUM(EXISTS(
                 SELECT 1
@@ -54,7 +59,7 @@ function hr_fetch_prehled_document_summary(mysqli $db): array
                  WHERE p2.aktivni = 1
                    AND p2.testovaci = 0
              ) a2 ON a2.id_person = d.id_person
-             WHERE d.platny = 1 AND a2.id_person IS NULL) AS dokumentu_mimo_aktivni,
+             WHERE d.platny = 1 AND a2.id_person IS NULL AND {$documentScope}) AS dokumentu_mimo_aktivni,
             (SELECT COUNT(DISTINCT d.id_person)
              FROM hr_dokument d
              INNER JOIN hr_person dp ON dp.id_person = d.id_person AND dp.testovaci = 0
@@ -68,7 +73,7 @@ function hr_fetch_prehled_document_summary(mysqli $db): array
                  WHERE p3.aktivni = 1
                    AND p3.testovaci = 0
              ) a3 ON a3.id_person = d.id_person
-             WHERE d.platny = 1 AND a3.id_person IS NULL) AS osob_mimo_aktivni
+             WHERE d.platny = 1 AND a3.id_person IS NULL AND {$documentScope}) AS osob_mimo_aktivni
         FROM (
             SELECT DISTINCT p.id_person
             FROM hr_person p
@@ -77,7 +82,7 @@ function hr_fetch_prehled_document_summary(mysqli $db): array
                AND pv.platny = 1
                AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE())
             WHERE p.aktivni = 1
-              AND p.testovaci = 0
+              AND {$scope}
         ) aktivni
     ");
     $row = $result->fetch_assoc() ?: [];
@@ -110,11 +115,13 @@ function hr_fetch_employee_documents(mysqli $db, int $idUser, ?int $idPerson = n
 {
     // Hromadny prvni import presahuje200souboru; seznam nesmi skryvat vetsinu podkladu.
     $limit = max(1, min($limit, 5000));
-    if ($idPerson !== null && !cb_firemni_pristup_muze_osobu($db, $idUser, $idPerson)) {
+    if ($idPerson !== null && !hr_zamestnanci_muze_osobu($db, $idUser, $idPerson)) {
         return [];
     }
 
     $wherePerson = $idPerson !== null ? ' AND d.id_person = ?' : '';
+    // Rozsah se filtruje pred LIMITem, aby cizi soubory nevytlacily vlastni dokumenty.
+    $scope = hr_zamestnanci_pobocka_sql($db, $idUser);
     $sql = "
         SELECT
             d.id_dokument,
@@ -151,6 +158,7 @@ function hr_fetch_employee_documents(mysqli $db, int $idUser, ?int $idPerson = n
         WHERE d.platny = 1
           AND d.id_person IS NOT NULL
           {$wherePerson}
+          AND {$scope}
         ORDER BY d.vytvoreno DESC, d.id_dokument DESC
         LIMIT ?
     ";
@@ -166,9 +174,6 @@ function hr_fetch_employee_documents(mysqli $db, int $idUser, ?int $idPerson = n
     $rows = [];
     while ($row = $result->fetch_assoc()) {
         $rowPerson = (int)$row['id_person'];
-        if (!cb_firemni_pristup_muze_osobu($db, $idUser, $rowPerson)) {
-            continue;
-        }
         // Stare OCR poznamky nejsou importnim JSON; rozlisi je jednoznacny marker.
         $importMeta = json_decode((string)($row['import_poznamka'] ?? ''), true);
         $importMeta = is_array($importMeta) && ($importMeta['hr_import_smlouvy'] ?? 0) === 1 ? $importMeta : [];
@@ -219,7 +224,7 @@ function hr_stream_employee_document(mysqli $db, int $idUser, int $idDocument, i
     $stmt->close();
 
     $idPerson = is_array($row) ? (int)($row['id_person'] ?? 0) : 0;
-    if ($idPerson <= 0 || !cb_firemni_pristup_muze_osobu($db, $idUser, $idPerson)) {
+    if ($idPerson <= 0 || !hr_zamestnanci_muze_osobu($db, $idUser, $idPerson)) {
         http_response_code(404);
         exit;
     }

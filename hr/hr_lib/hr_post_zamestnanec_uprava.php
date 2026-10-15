@@ -7,7 +7,9 @@ require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 /*
  * Ucel souboru: Zpracuje ulozeni zakladnich udaju a pracovniho pomeru zamestnance.
  * Soubor nema HTML vystup a po zpracovani vraci uzivatele zpet na kartu zamestnance.
+ * Pred kazdym ulozenim kontroluje cil podle jednotneho osobniho rozsahu HR.
  */
+require_once __DIR__ . '/../hr_db/hr_zamestnanci_pristup.php';
 
 /**
  * Ulozi vsechny editovane zakladni udaje jedne karty zamestnance.
@@ -19,7 +21,7 @@ function hr_post_zamestnanec_uprava(mysqli $db, int $zadalUser): void
         if (!cb_pravo_ma(307)) {
             throw new CbUserVisibleException('Nemáte právo upravit zaměstnance.');
         }
-        cb_firemni_pristup_vyzaduj_osobu($db, $zadalUser, $idPerson);
+        hr_zamestnanci_vyzaduj_osobu($db, $zadalUser, $idPerson);
         hr_update_employee_basic_data($db, $idPerson, $_POST, $zadalUser);
         $message = 'Karta zaměstnance byla uložena.';
         cb_form_finish(
@@ -52,7 +54,7 @@ function hr_post_pracovni_pomer_uprava(mysqli $db): void
         if (!cb_pravo_ma(307)) {
             throw new CbUserVisibleException('Nemáte právo upravit pracovní poměr.');
         }
-        cb_firemni_pristup_vyzaduj_osobu($db, $zadalUser, $idPerson);
+        hr_zamestnanci_vyzaduj_osobu($db, $zadalUser, $idPerson);
         $typ = (int)($_POST['id_pracovni_vztah_typ'] ?? 0);
         $nastupInput = str_replace(',', '.', trim((string)($_POST['datum_nastupu'] ?? '')));
         $nastupDate = DateTimeImmutable::createFromFormat('!d.m.Y', $nastupInput);
@@ -258,7 +260,7 @@ function hr_post_pracovni_preruseni_ulozit(mysqli $db, int $zadalUser): void
         if (!cb_pravo_ma(307)) {
             throw new CbUserVisibleException('Nemáte právo upravit pracovní poměr.');
         }
-        cb_firemni_pristup_vyzaduj_osobu($db, $zadalUser, $idPerson);
+        hr_zamestnanci_vyzaduj_osobu($db, $zadalUser, $idPerson);
         $idVztah = hr_pracovni_vztah_z_postu($db, $idPerson);
         $idTyp = (int)($_POST['id_pracovni_preruseni_typ'] ?? 0);
         $datumOd = hr_pracovni_pomer_datum_z_postu((string)($_POST['datum_od'] ?? ''), 'datum začátku přerušení');
@@ -302,7 +304,7 @@ function hr_post_pracovni_preruseni_uzavrit(mysqli $db, int $zadalUser): void
         if (!cb_pravo_ma(307)) {
             throw new CbUserVisibleException('Nemáte právo upravit pracovní poměr.');
         }
-        cb_firemni_pristup_vyzaduj_osobu($db, $zadalUser, $idPerson);
+        hr_zamestnanci_vyzaduj_osobu($db, $zadalUser, $idPerson);
         $idPreruseni = (int)($_POST['id_pracovni_preruseni'] ?? 0);
         $datumDo = hr_pracovni_pomer_datum_z_postu((string)($_POST['datum_do'] ?? ''), 'datum konce přerušení');
         $stmt = $db->prepare('SELECT pp.datum_od FROM hr_pracovni_preruseni pp INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = pp.id_pracovni_vztah WHERE pp.id_pracovni_preruseni = ? AND pv.id_person = ? AND pp.datum_do IS NULL LIMIT 1');
@@ -331,7 +333,7 @@ function hr_post_pracovni_pomer_ukoncit(mysqli $db, int $zadalUser): void
         if (!cb_pravo_ma(307)) {
             throw new CbUserVisibleException('Nemáte právo ukončit pracovní poměr.');
         }
-        cb_firemni_pristup_vyzaduj_osobu($db, $zadalUser, $idPerson);
+        hr_zamestnanci_vyzaduj_osobu($db, $zadalUser, $idPerson);
         $idVztah = hr_pracovni_vztah_z_postu($db, $idPerson);
         $idTyp = (int)($_POST['id_pracovni_ukonceni_typ'] ?? 0);
         $datumOznameniInput = trim((string)($_POST['datum_oznameni'] ?? ''));

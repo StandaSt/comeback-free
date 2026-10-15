@@ -1,13 +1,20 @@
 <?php
-// Určuje rozsah Archivu a Přehledu hodin podle HR role, platné MAIN pobočky a autora reportu.
+// Určuje rozsah Archivu a Přehledu hodin podle HR profilu nebo jeho testovacího snímku; autor zůstává vlastní.
 declare(strict_types=1);
 
 // MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
+require_once __DIR__ . '/../../common/lib/prebrani_prav.php';
 
 // Načte osobu přes účet; historická ani zrušená pracoviště nerozhodují o dnešním přístupu.
 function cb_reporty_pristup_nacti(mysqli $conn, int $idUser): array
 {
+    if (($profile = cb_prebrani_prav_profil($idUser)) !== null) {
+        if ($profile['reporty'] === null) {
+            throw new CbUserVisibleException($profile['reporty_chyba']);
+        }
+        return array_replace($profile['reporty'], ['user_id'=>1, 'person_id'=>1]);
+    }
     // Porovnavani vice radku v jednom pozadavku znovu nenacita stejnou HR osobu a pobocky.
     static $cache = [];
     $cacheKey = spl_object_id($conn) . ':' . $idUser;

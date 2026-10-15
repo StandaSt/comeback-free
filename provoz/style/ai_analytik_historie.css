@@ -1,0 +1,17 @@
+/* Styly historie Franty a spolecneho bloku promptu se vsemi jeho navazujicimi koly. */
+.ai_historie_actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.ai_historie_panel{margin:14px 0;padding:12px;border:1px solid var(--cb-border);border-radius:8px;background:var(--cb-bg-panel);overflow-wrap:anywhere}
+.ai_historie_panel[hidden]{display:none}
+.ai_historie_panel h2{font-size:var(--cb-font-16);margin:0 0 10px}
+.ai_historie_usage{margin:10px 0;border-top:1px solid var(--cb-border);padding-top:8px}
+.ai_historie_usage>summary{cursor:pointer;padding:6px 0;font-weight:700}
+.ai_historie_usage h4{margin:12px 0 6px}
+.ai_historie_usage .ai_analytik_result{margin:6px 0}
+/* Jediny obal a cislo oznacuji prompt; vnitrni kola oddeluje pouze delici cara. */
+.ai_analytik_prompt_group{border:1px solid var(--cb-border);border-inline:4px solid var(--cb-module-accent);border-radius:8px;background:var(--cb-bg-panel);overflow:hidden}
+.ai_analytik_prompt_group_heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px 16px 0}
+.ai_analytik_prompt_group_heading h3{margin:0;font-size:var(--cb-font-14);overflow-wrap:anywhere}
+.ai_analytik_prompt_group_heading small{font-weight:700;color:var(--cb-text-muted)}
+.ai_analytik_prompt_turns{display:grid}
+.ai_analytik_prompt_group .ai_analytik_result{border:0;border-radius:0;background:transparent}
+.ai_analytik_prompt_group .ai_analytik_result+.ai_analytik_result{border-top:1px solid var(--cb-border)}

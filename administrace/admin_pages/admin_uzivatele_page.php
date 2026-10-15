@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /* Jednotná obsluha filtrů je provoz/js/filtry.js. */
 
-/* Přehled, založení a editace účtů user. Údaje person se zde nikdy nemění. */
+/* Přehled účtů user a vyvojovy vyber Prebrani prav. Údaje person se zde nikdy nemění. */
 if (!function_exists('cb_pravo_ma') || !cb_pravo_ma(107)) {
     http_response_code(403);
     echo '<section class="blok"><h2 class="blok_title">Přístup zamítnut</h2><p>Nemáte právo spravovat uživatele.</p></section>';
@@ -29,6 +29,7 @@ $sortUrl = static function (string $key) use ($url, $data): string {
 };
 ?>
 <section class="blok admin_users cb_table_panel">
+    <?php require __DIR__ . '/../admin_includes/admin_prebrani_prav.php'; ?>
     <?php if (is_array($notice)): ?><p class="admin_script_result<?= !empty($notice['success']) ? '' : ' is-error' ?>"><?= h((string)$notice['message']) ?></p><?php endif; ?>
 
     <p><a href="<?= h(cb_root_url('index.php?m=hr&page=novy_zamestnanec')) ?>">+ Přidat osobu v HR</a></p>

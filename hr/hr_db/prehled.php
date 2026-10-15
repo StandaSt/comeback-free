@@ -2,10 +2,11 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../common/db/db_cis_slot.php';
+require_once __DIR__ . '/hr_zamestnanci_pristup.php';
 
 /**
  * DB dotazy pro hlavni prehled HR modulu.
- * Testovaci ucty nezahrnuje do zamestnancu ani upozorneni na smlouvy.
+ * Zamestnance, smlouvy a pozadavky scita jen v povolenem osobnim/pobockovem rozsahu HR.
  */
 
 /**
@@ -14,6 +15,9 @@ require_once __DIR__ . '/../../common/db/db_cis_slot.php';
 function hr_fetch_prehled(mysqli $db): array
 {
     hr_expiruj_nepotvrzene_vd($db);
+    $idUser = (int)($_SESSION['cb_user']['id_user'] ?? 0);
+    $scope = hr_zamestnanci_pobocka_sql($db, $idUser);
+    $branchIds = implode(',', hr_zamestnanci_pobocky($db, $idUser)) ?: '-1';
 
     $nabor = [
         'novy' => 0,
@@ -57,6 +61,7 @@ function hr_fetch_prehled(mysqli $db): array
            AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE())
         WHERE p.aktivni = 1
           AND p.testovaci = 0
+          AND {$scope}
     ");
     if ($row = $result->fetch_assoc()) {
         $zamestnanci['HPP'] = (int)($row['HPP'] ?? 0);
@@ -80,6 +85,7 @@ function hr_fetch_prehled(mysqli $db): array
         INNER JOIN cis_slot cs
             ON cs.id_slot = hp.id_slot
         WHERE hp.id_pozadavek_stav = 1
+          AND hp.id_pob IN ({$branchIds})
     ");
     if ($row = $result->fetch_assoc()) {
         $pozadavky['celkem'] = (int)($row['celkem'] ?? 0);
@@ -99,6 +105,7 @@ function hr_fetch_prehled(mysqli $db): array
         FROM hr_pracovni_vztah pv
         INNER JOIN hr_person p ON p.id_person = pv.id_person AND p.testovaci = 0
         WHERE pv.platny = 1
+          AND {$scope}
           AND pv.datum_ukonceni IS NOT NULL
           AND pv.datum_ukonceni BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
     ");

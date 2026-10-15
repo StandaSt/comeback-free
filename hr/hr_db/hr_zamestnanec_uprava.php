@@ -3,7 +3,10 @@ declare(strict_types=1);
 
 /*
  * Ucel souboru: Uklada osobni a kontaktni udaje zamestnance; pristupovou roli zde nikdy nemeni.
+ * Pohlavi overuje proti ciselniku a uklada jeho ID, vcetne volby Neuvedeno (0).
+ * Cil ulozeni musi spadat do jednotneho osobniho rozsahu HR.
  */
+require_once __DIR__ . '/hr_zamestnanci_pristup.php';
 
 /**
  */
@@ -12,6 +15,7 @@ function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, i
     if ($idPerson <= 0 || $zadalUser <= 0) {
         throw new CbUserVisibleException('Chybí zaměstnanec nebo platné přihlášení. Obnovte stránku a zkuste to znovu.');
     }
+    hr_zamestnanci_vyzaduj_osobu($db, $zadalUser, $idPerson);
 
     $titulPred = trim((string)($data['titul_pred'] ?? ''));
     $jmeno = trim((string)($data['jmeno'] ?? ''));
@@ -26,16 +30,13 @@ function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, i
     $mistoNarozeni = trim((string)($data['misto_narozeni'] ?? ''));
     $statniObcanstvi = trim((string)($data['statni_obcanstvi'] ?? ''));
     $zdrPoj = (int)($data['zdr_poj'] ?? 0);
-    $pohlavi = trim((string)($data['pohlavi'] ?? ''));
+    $pohlavi = hr_employee_gender_id($db, $data['pohlavi'] ?? null);
     $poznamka = trim((string)($data['poznamka'] ?? ''));
     $telefon = preg_replace('/\D+/', '', (string)($data['telefon'] ?? '')) ?? '';
     $email = trim((string)($data['email'] ?? ''));
 
     if ($jmeno === '' || $prijmeni === '') {
         throw new CbUserVisibleException('Vyplňte jméno a příjmení.');
-    }
-    if (!in_array($pohlavi, ['muž', 'žena', 'jiné', 'neuvedeno'], true)) {
-        throw new CbUserVisibleException('Vyberte pohlaví.');
     }
     if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
         throw new CbUserVisibleException('E-mail nemá platný tvar.');
@@ -100,7 +101,7 @@ function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, i
             && trim((string)($currentPersonal['misto_narozeni'] ?? '')) === $mistoNarozeni
             && trim((string)($currentPersonal['statni_obcanstvi'] ?? '')) === $statniObcanstvi
             && (int)($currentPersonal['zdr_poj'] ?? 0) === $zdrPoj
-            && trim((string)($currentPersonal['pohlavi'] ?? '')) === $pohlavi
+            && (int)($currentPersonal['pohlavi'] ?? -1) === $pohlavi
             && trim((string)($currentPersonal['poznamka'] ?? '')) === $poznamka;
 
         if (!$samePersonal) {
@@ -119,9 +120,9 @@ function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, i
             $mistoNarozeniDb = $mistoNarozeni !== '' ? $mistoNarozeni : null;
             $statniObcanstviDb = $statniObcanstvi !== '' ? $statniObcanstvi : null;
             $zdrPojDb = $zdrPoj > 0 ? $zdrPoj : null;
-            $pohlaviDb = $pohlavi !== '' ? $pohlavi : null;
+            $pohlaviDb = $pohlavi;
             $stmt = $db->prepare('INSERT INTO hr_osobni_udaje (id_person, titul_pred, jmeno, druhe_jmeno, prijmeni, rodne_prijmeni, titul_za, foto, datum_narozeni, rodne_cislo, cislo_obcanskeho_prukazu, zdr_poj, statni_obcanstvi, misto_narozeni, pohlavi, poznamka, id_user_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1)');
-            $types = 'i' . str_repeat('s', 10) . 'i' . str_repeat('s', 4) . 'i';
+            $types = 'i' . str_repeat('s', 10) . 'i' . str_repeat('s', 2) . 'isi';
             $stmt->bind_param($types, $idPerson, $titulPred, $jmeno, $druheJmeno, $prijmeni, $rodnePrijmeni, $titulZa, $foto, $datumNarozeniDb, $rodneCisloDb, $cisloObcanskehoPrukazuDb, $zdrPojDb, $statniObcanstviDb, $mistoNarozeniDb, $pohlaviDb, $poznamka, $zadalUser);
             $stmt->execute();
             $stmt->close();

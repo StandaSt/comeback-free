@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 /*
  * Ucel souboru: Nacita historii pracovnich slotu a pridava soubezne sloty zamestnance.
+ * Cil zmeny musi spadat do jednotneho osobniho rozsahu HR.
  */
+require_once __DIR__ . '/hr_zamestnanci_pristup.php';
 
 /** @return array{pozice:array<int,array{id_slot:int,slot:string}>,historie:array<int,array<string,mixed>>} */
 function hr_zarazeni_historie(mysqli $db, int $idPerson): array
@@ -35,7 +37,7 @@ function hr_zarazeni_historie(mysqli $db, int $idPerson): array
 function hr_zarazeni_zmenit(mysqli $db, int $idPerson, int $idSlot, string $platiOd, int $idUser): void
 {
     $slotTable = cb_hr_schema_table($db, 'slot');
-    cb_firemni_pristup_vyzaduj_osobu($db, $idUser, $idPerson);
+    hr_zamestnanci_vyzaduj_osobu($db, $idUser, $idPerson);
     $stmt = $db->prepare('SELECT 1 FROM cis_slot WHERE id_slot = ? AND aktivni = 1 LIMIT 1');
     $stmt->bind_param('i', $idSlot);
     $stmt->execute();

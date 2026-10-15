@@ -66,7 +66,7 @@ if ((string)$smData['saved_at'] !== '') {
             <span><strong><?= h((string)($smPerson['jmeno'] ?: 'Pracovník')) ?></strong></span>
             <span>Hlavní pobočka: <strong><?= h((string)($smPerson['pobocka'] ?: 'není nastavena')) ?></strong></span>
             <span>Pracovní slot: <strong><?= h((string)($smPerson['pozice'] ?: 'není nastaven')) ?></strong></span>
-            <span>Termín: <strong>středa <?= h($smWeek['deadline']->format('j. n. Y')) ?> v <?= h($smWeek['deadline']->format('H:i')) ?></strong></span>
+            <span>Termín: <strong><?= h(cb_smeny_uzaverka_dny()[(int)$smWeek['deadline']->format('N')]) ?> <?= h($smWeek['deadline']->format('j. n. Y')) ?> v <?= h($smWeek['deadline']->format('H:i')) ?></strong></span>
             <?php if ($smCopiedWeek !== null): ?>
                 <span class="smeny_request_state smeny_request_state--changed" data-smeny-save-state>Požadavky byly převzaty z týdne <?= h($smCopiedWeek['source_label']) ?> a zatím nejsou uložené.</span>
             <?php elseif (!empty($smData['saved'])): ?>
