@@ -100,7 +100,7 @@ if (
 
 $notificationTitle = is_array($notification) ? trim((string)($notification['nadpis'] ?? '')) : '';
 if ($notificationTitle === '') {
-    $notificationTitle = 'Kritická chyba !';
+    $notificationTitle = 'Comeback: chybí denní report';
 }
 $notificationContent = is_array($notification)
     ? (string)($notification['obsah'] ?? '')

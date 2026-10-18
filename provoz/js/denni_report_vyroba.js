@@ -1,4 +1,4 @@
-// js/denni_report_vyroba.js * Ovládání pobočky, data a směn v reportu Výroby.
+// Ovladani reportu Vyroby vcetne jedne casove prestavky; validaci sdili s pobockami.
 'use strict';
 
 (function (w) {
@@ -6,6 +6,7 @@
     return w.CB_DENNI_REPORT_TIME;
   }
 
+  // Pouziva stejnou validaci prestavky jako pobocky a zobrazuje odvozeny pocet hodin.
   function updateHours(row) {
     const start = row.querySelector('[data-vyroba-start]');
     const end = row.querySelector('[data-vyroba-end]');
@@ -17,8 +18,13 @@
 
     const startTime = tools.parseTimeValue(start.value);
     const endTime = tools.parseTimeValue(end.value);
-    const pauseText = String(pause.value || '').replace(',', '.').trim();
-    const pauseHours = pauseText === '' ? 0 : Number(pauseText);
+    const pauseStart = row.querySelector('[data-vyroba-pause-start]');
+    const pauseEnd = row.querySelector('[data-vyroba-pause-end]');
+    if (!pauseStart || !pauseEnd) return;
+    pauseStart.classList.remove('err');
+    pauseEnd.classList.remove('err');
+    const interval = tools.pauseHoursForShift(start.value, end.value, pauseStart.value, pauseEnd.value, pause.getAttribute('data-pause-legacy') || 0);
+    const pauseHours = interval.hours;
     output.textContent = '—';
     row.setAttribute('data-vyroba-time-valid', '0');
     start.classList.toggle('err', startTime === null && (start.value !== '' || start.classList.contains('err')));
@@ -33,10 +39,11 @@
       end.classList.add('err');
       return;
     }
-    if (!Number.isFinite(pauseHours) || pauseHours < 0 || pauseHours >= shiftHours) {
-      pause.classList.add('err');
+    if (!interval.ok || pauseHours >= shiftHours) {
+      pauseEnd.classList.add('err');
       return;
     }
+    pause.value = tools.formatWorkedHours(pauseHours).stored;
     output.textContent = tools.formatWorkedHours(shiftHours - pauseHours).label;
     row.setAttribute('data-vyroba-time-valid', '1');
   }
@@ -44,6 +51,10 @@
   function normalizeTime(input) {
     const tools = timeTools();
     if (!tools) return;
+    if ((input.hasAttribute('data-vyroba-pause-start') || input.hasAttribute('data-vyroba-pause-end')) && input.value.trim() === '') {
+      input.classList.remove('err');
+      return;
+    }
     const parsed = tools.parseTimeValue(input.value);
     if (!parsed) {
       input.value = input.defaultValue;
@@ -135,6 +146,11 @@
     normalizeTime(input);
     const row = input.closest('[data-vyroba-row]');
     if (row instanceof HTMLElement) {
+      if ((input.hasAttribute('data-vyroba-pause-start') || input.hasAttribute('data-vyroba-pause-end')) && input.value !== input.defaultValue) {
+        row.querySelector('[data-vyroba-pause]').setAttribute('data-pause-legacy', '0');
+        const label = row.querySelector('[data-vyroba-legacy-label]');
+        if (label) label.hidden = true;
+      }
       updateHours(row);
       sortRows(row.parentElement);
     }

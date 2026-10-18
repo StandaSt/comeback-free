@@ -2,7 +2,7 @@
 declare(strict_types=1);
 // Kmenovi prijemci publikace se urcuji ze samostatne MAIN historie v danem tydnu.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
-/* Účel: Atomicky zveřejní verzi, dokončí dotčené žádosti o zrušení a uloží neměnná oznámení. Nic neodesílá. */
+/* Účel: Atomicky zveřejní verzi rozpisu a uloží neměnná oznámení o směnách. Nic neodesílá. */
 
 /** Do potvrzované zprávy patří pouze význam směny, nikoliv technické ID kopie či čas uložení. */
 function cb_smeny_publikace_otisk(array $shift): array
@@ -62,8 +62,6 @@ function cb_smeny_publikace_zverejnit(mysqli $db,array $plan,int $publisher): vo
             $events[]=['id_person'=>$person,'typ'=>'tyden','klic'=>'tyden','obsah'=>['smeny'=>array_map('cb_smeny_publikace_otisk',$shifts)]];
         }
     }
-    // Zrušení žádostí je součástí stejné transakce jako publikace a oznámení zaměstnancům.
-    cb_smeny_zruseni_publikovat($db,$plan,$publisher);
     $roles=[];
     $result=$db->query('SELECT id_slot,slot FROM cis_slot');
     while($row=$result->fetch_assoc())$roles[(int)$row['id_slot']]=$row['slot'];$result->close();

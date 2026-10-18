@@ -1,5 +1,5 @@
 <?php
-// modaly/modal_nezadane_reporty.php * Upozorneni na chybejici denni reporty
+// Zobrazi chybejici denni reporty a jediny skutecny duvod doruceni podle ulozenych roli prijemce.
 declare(strict_types=1);
 
 if (!function_exists('cb_nezadane_reporty_h')) {
@@ -10,6 +10,18 @@ if (!function_exists('cb_nezadane_reporty_h')) {
 $contentLines = preg_split('/\R/u', trim((string)$notificationContent));
 if (!is_array($contentLines)) {
     $contentLines = [(string)$notificationContent];
+}
+// Stejné pořadí jako v cronu vybere jeden důvod i ze starších zpráv s více rolemi.
+$notificationReason = '';
+foreach ([
+    'manager' => 'jste odpovědný manažer',
+    'shift' => 'jste daný den zavíral/a',
+    'leader' => 'jste restaurant manažer',
+] as $reason => $label) {
+    if (in_array($reason, (array)($notificationData['reasons'] ?? []), true)) {
+        $notificationReason = $label;
+        break;
+    }
 }
 ?>
 <!doctype html>
@@ -41,7 +53,8 @@ if (!is_array($contentLines)) {
       font-size:26px;
       font-weight:900;
       line-height:1.1;
-      white-space:nowrap;
+      white-space:normal;
+      overflow-wrap:anywhere;
     }
     .report-alert-box{
       margin-top:12px;
@@ -112,10 +125,9 @@ if (!is_array($contentLines)) {
         <?php } ?>
 
         <div class="report-alert-footer">
-          <div class="report-alert-line">Tuto informaci jste dostal/a, protože:</div>
-          <div class="report-alert-line">- jste měl/a daný den směnu</div>
-          <div class="report-alert-line">- jste vedoucí pobočky</div>
-          <div class="report-alert-line">- jste odpovědný manager</div>
+          <?php if ($notificationReason !== '') { ?>
+            <div class="report-alert-line">Tuto informaci jste dostal/a, protože <?= cb_nezadane_reporty_h($notificationReason) ?>.</div>
+          <?php } ?>
           <div class="report-alert-gap"></div>
           <div class="report-alert-line">Zajistěte, aby se reporty opravdu zadávaly každý den.</div>
         </div>

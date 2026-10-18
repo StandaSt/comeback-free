@@ -1,4 +1,4 @@
-/* Účel: Ovládá časové požadavky, kopírování dnů a přepínání dostupnosti Kdykoliv bez zápisu do DB. */
+/* Účel: Ovládá požadavky a kopírování dnů; Kdykoliv předvyplní upravitelné dny a Reset vyprázdní celý rozpracovaný týden. */
 (function () {
     'use strict';
 
@@ -17,6 +17,7 @@
         return minimum + (Math.floor((value - minimum) / step) * step);
     }
 
+    // Rozpracování zpřístupní uložení a skryje původní stav; samostatnou hlášku o změnách nezobrazujeme.
     function markFormDirty(form) {
         if (!form) return;
         var actions = form.querySelector('[data-smeny-actions]');
@@ -32,12 +33,23 @@
         if (copyWeek) copyWeek.hidden = true;
         var state = document.querySelector('[data-smeny-save-state]');
         if (state) {
-            state.textContent = 'Požadavky obsahují neuložené změny.';
-            state.classList.remove('smeny_request_state--saved');
-            state.classList.add('smeny_request_state--changed');
+            state.hidden = true;
         }
     }
 
+    // Zaškrtnutí odpovídá sedmi plným dnům; zkrácení nebo vymazání dne vypne souhrnnou volbu.
+    function syncAnytime(form) {
+        var anytime = form && form.querySelector('[data-smeny-anytime]');
+        if (!anytime) return;
+        var days = Array.from(form.querySelectorAll('[data-smeny-request-day]'));
+        anytime.checked = days.length === 7 && days.every(function (day) {
+            var start=day.querySelector('[data-smeny-start]'), end=day.querySelector('[data-smeny-end]');
+            return day.classList.contains('smeny_request_day--active') && start.value === start.min && end.value === end.max;
+        });
+        anytime.dispatchEvent(new CustomEvent('cb:smeny-anytime-synced',{bubbles:true}));
+    }
+
+    // Sladí posuvníky, přesný interval, modré označení a souhrnnou volbu bez ukládání formuláře.
     function updateDay(day, activate, changedInput) {
         var start = day.querySelector('[data-smeny-start]');
         var end = day.querySelector('[data-smeny-end]');
@@ -46,6 +58,10 @@
         var minimum = Number(start.min);
         var maximum = Number(start.max);
         var step = Number(start.step) || 1;
+        // Konec drží původní hodinový krok a navíc přesné zavření, i když končí např. v 01:15.
+        var snappedEnd = Math.min(maximum, minimum + Math.round((endIndex-minimum)/step)*step);
+        endIndex = Math.abs(maximum-endIndex) < Math.abs(snappedEnd-endIndex) ? maximum : snappedEnd;
+        end.value = String(endIndex);
         var minimumDuration = 12;
         var length = Math.max(1, maximum - minimum);
 
@@ -84,6 +100,7 @@
             day.querySelector('[data-smeny-clear]').disabled = false;
             var copyButton = day.querySelector('[data-smeny-copy-next]');
             if (copyButton) copyButton.disabled = false;
+            syncAnytime(day.closest('[data-smeny-requests-form]'));
         }
     }
 
@@ -100,6 +117,7 @@
         if (copyButton) copyButton.disabled = true;
         day.classList.remove('smeny_request_day--active');
         updateDay(day, false, null);
+        syncAnytime(day.closest('[data-smeny-requests-form]'));
     }
 
     document.addEventListener('pointerdown', function (event) {
@@ -124,14 +142,38 @@
         }
     });
 
+    // Klávesnice prochází stejné body jako myš; jemný HTML krok slouží pouze přesnému zavření.
+    document.addEventListener('keydown', function (event) {
+        var end=event.target;
+        if (!(end instanceof HTMLInputElement) || !end.matches('[data-smeny-end]') || end.disabled) return;
+        if (!['ArrowLeft','ArrowDown','ArrowRight','ArrowUp','Home','End','PageUp','PageDown'].includes(event.key)) return;
+        var day=dayFor(end), start=day.querySelector('[data-smeny-start]');
+        var min=Number(end.min), max=Number(end.max), step=Number(start.step)||1, old=Number(end.value);
+        var down=['ArrowLeft','ArrowDown','PageDown'].includes(event.key);
+        var next=down ? min+(Math.ceil((old-min)/step)-1)*step : min+(Math.floor((old-min)/step)+1)*step;
+        if(event.key==='Home') next=min;
+        if(event.key==='End') next=max;
+        event.preventDefault(); end.value=String(Math.max(min,Math.min(max,next)));
+        end.dispatchEvent(new Event('input',{bubbles:true}));
+        end.dispatchEvent(new Event('change',{bubbles:true}));
+    });
+
     document.addEventListener('change', function (event) {
         var target = event.target;
-        // Skrytím intervalů se jejich rozpracované hodnoty neztratí; volba se ukládá až formulářem.
+        // Hromadná volba je jen předvyplnění. Odškrtnutí hodnoty nemaže a intervaly se nikdy neschovávají.
         if (target instanceof HTMLInputElement && target.matches('[data-smeny-anytime]')) {
             var form = target.closest('[data-smeny-requests-form]');
-            var intervals = form.querySelector('[data-smeny-intervals]');
-            intervals.hidden = target.checked;
-            intervals.disabled = target.checked;
+            if (target.checked) {
+                form.querySelectorAll('[data-smeny-request-day]').forEach(function (day) {
+                    var start=day.querySelector('[data-smeny-start]'), end=day.querySelector('[data-smeny-end]');
+                    if (start.disabled || end.disabled) return;
+                    start.value=start.min; end.value=end.max;
+                    updateDay(day,true,null);
+                });
+                syncAnytime(form);
+                // Historie od této chvíle porovnává ruční editace s právě předvyplněnými časy.
+                form.dispatchEvent(new CustomEvent('cb:smeny-request-prefilled',{bubbles:true}));
+            }
             markFormDirty(form);
             return;
         }
@@ -141,6 +183,16 @@
 
     document.addEventListener('click', function (event) {
         if (!(event.target instanceof Element)) return;
+
+        // Reset je rozpracovaná změna stejná jako sedm vymazání dne; uloží se až s celým týdnem.
+        var reset = event.target.closest('[data-smeny-reset-week]');
+        if (reset && !reset.disabled) {
+            var form=reset.closest('[data-smeny-requests-form]');
+            form.querySelectorAll('[data-smeny-request-day]').forEach(clearDay);
+            markFormDirty(form);
+            form.dispatchEvent(new CustomEvent('cb:smeny-request-prefilled',{bubbles:true}));
+            return;
+        }
 
         var copyButton = event.target.closest('[data-smeny-copy-next]');
         if (copyButton && !copyButton.disabled) {

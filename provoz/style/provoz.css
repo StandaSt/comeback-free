@@ -1,4 +1,4 @@
-/* Modul Provoz: styly pracovni plochy; role barvi jmena pouze v bloku dnes aktivnich uzivatelu.
+/* Modul Provoz: styly pracovni plochy vcetne dvojice casu jedne prestavky; role barvi jmena pouze v bloku dnes aktivnich uzivatelu.
  * Franta rozlisuje bloky promptu globalnim cislem a zarovnava odeslani k poli zadani. */
 /* Historie Franty ma vlastni jednoúčelovy styl. */
 @import url("ai_analytik_historie.css");
@@ -1729,6 +1729,11 @@
   text-align:center;
 }
 
+/* Nadpis osoby zacina na stejne svislici jako jmena, za pripadnym krizkem odebrani. */
+[data-zr-form] .zr_person_table th:first-child{text-align:left;}
+[data-zr-form] .zr_person_table:has(.zr_row_remove) th:first-child{padding-left:30px;}
+[data-zr-form] .zr_person_table .zr_row_remove{box-sizing:border-box;width:20px;padding:0;}
+
 .zr_person_table tbody tr{
   border-top:1px solid var(--cb-border-soft);
 }
@@ -1738,6 +1743,12 @@
 }
 
 .zr_time_input{
+  /* Vsechny casy smeny i prestavky maji stejnou vnejsi sirku vcetne okraje. */
+  box-sizing:border-box;
+  width:50px!important;
+  min-width:50px;
+  max-width:50px;
+  flex:0 0 50px;
   height:24px;
   padding:2px 4px;
   border:1px solid var(--cb-border);
@@ -1764,6 +1775,25 @@
   padding-left:4px;
   padding-right:4px;
 }
+
+/* Dvojice casu prestavky pouziva stejnou pevnou sirku jako casy smeny. */
+[data-zr-form] .zr_person_table :is(th,td):nth-child(2),
+[data-zr-form] .zr_person_table :is(th,td):nth-child(3){
+  width:60px!important;
+  padding-left:5px;
+  padding-right:5px;
+}
+/* Stejna desetipixelova mezera v obou dvojicich, vetsi odstup mezi smenou a pauzou. */
+[data-zr-form] .zr_person_table :is(.zr_person_cell_break,.zr_pause_heading){
+  width:130px!important;
+  padding-left:15px;
+  padding-right:5px;
+}
+.zr_pause_pair{display:grid;grid-template-columns:50px 50px;gap:10px;width:110px;text-align:center;}
+.zr_pause_pair > span{white-space:nowrap;}
+.zr_time_label{display:block;width:50px;margin:0 auto;text-align:center;white-space:nowrap;}
+.zr_person_cell_break small{display:block;font-size:10px;line-height:1.2;}
+.zr_person_cell_break small[hidden]{display:none;}
 
 .zr_delivery_input{
   height:24px;
@@ -3625,7 +3655,7 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
 }
 
 .vyroba_report_table :is(th, td):nth-child(4){
-  width:44px;
+  width:126px;
 }
 
 .vyroba_report_table :is(th, td):nth-child(5){

@@ -1,4 +1,4 @@
-/* Účel: Otevře a zavře modál oznámení směn, také po načtení stránky společnou AJAX navigací. */
+/* Účel: Otevře a zavře modál oznámení směn i po AJAX navigaci a oznámí otevření historii činnosti. */
 (function () {
   'use strict';
   // Každý nově vykreslený dialog otevřeme jen jednou; zavření nic nepotvrzuje.
@@ -10,6 +10,7 @@
         dialog.close();
       });
       dialog.showModal();
+      dialog.dispatchEvent(new CustomEvent('cb:smeny-editor-opened',{bubbles:true}));
     });
   }
   document.addEventListener('DOMContentLoaded', init);

@@ -1,8 +1,10 @@
 /*
  * Ucel souboru: Ridi klientskou navigaci mezi moduly a internimi strankami aplikace.
  * Soubecne nacteni stejne hlida promenna moduleLoadRunning.
- * Podmenu čtecích přehledů Směn zachovává funkční odkazy na aktuální týdny i po AJAX výměně menu.
+ * Výběr týdnů je přímo ve stránkách Směn; navigace zachovává jejich parametry i po AJAX výměně obsahu.
  * Chybové odpovědi načítání modulů čte společná knihovna, aby se neztratil konkrétní důvod.
+ * Události navigace umožňují historii rozlišit požadavek, dokončené zobrazení i klik bez přechodu.
+ * Kompletní menu připravuje PHP podle práv; přepnutí používá hotové šablony a obsah ani Restia menu nepřepisují.
  */
 (function(){
   'use strict';
@@ -13,132 +15,6 @@
   var publicShellUrl = String(config.publicShellUrl || '');
   var activeMainModule = String(config.activeMainModule || 'provoz');
   var povoleneModuly = ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'];
-  var menuDefs = {
-    provoz: {
-      title: 'Provoz',
-      aria: 'Menu Provozu',
-      key: 'page',
-      defaultPage: 'prehled',
-      items: [
-        ['prehled', 'Přehled'],
-        ['denni_report', 'Denní report'],
-        ['objednavky', 'Objednávky'],
-        ['prehled_hodin', 'Přehled hodin']
-      ]
-    },
-    hr: {
-      title: 'Personalistika',
-      aria: 'Menu personalistiky',
-      key: 'page',
-      defaultPage: 'prehled',
-      items: [
-        ['prehled', 'Přehled'],
-        ['nabor', 'Nábor'],
-        ['zamestnanci', 'Zaměstnanci'],
-        ['pozadavky', 'Požadavky'],
-        ['pracovni_pomery', 'Pracovní poměry'],
-        ['dokumenty', 'Dokumenty'],
-        ['skoleni', 'Školení'],
-        ['prohlidky', 'Lékařské prohlídky'],
-        ['dovolene', 'Dovolené'],
-        ['reporty', 'Reporty']
-      ]
-    },
-    smeny: {
-      title: 'Směny',
-      aria: 'Menu směn',
-      key: 'page',
-      defaultPage: 'prehled',
-      items: [
-        ['prehled', 'Přehled'],
-        ['pozadavky', 'Požadavky'],
-        ['me_smeny', 'Mé směny', ['Aktuální týden', 'Týden + 1', 'Týden + 2']],
-        ['historie_smen', 'Historie směn'],
-        ['planovani_smen', 'Plánování směn', ['Aktuální týden', 'Týden + 1']],
-        ['sablony', 'Šablony'],
-        ['naplanovane_smeny', 'Naplánované směny', ['Aktuální týden', 'Týden + 1', 'Týden + 2']],
-        ['zadane_pozadavky', 'Zadané požadavky', ['Aktuální týden', 'Týden + 1', 'Týden + 2']],
-        ['nastaveni', 'Nastavení']
-      ]
-    },
-    ukoly: {
-      title: 'Úkoly-požadavky',
-      aria: 'Menu úkolů',
-      key: 'page',
-      defaultPage: 'prehled',
-      items: [
-        ['prehled', 'Přehled']
-      ]
-    },
-    helpdesk: {
-      title: 'HelpDesk',
-      aria: 'HelpDesk menu',
-      key: 'hd',
-      defaultPage: 'all',
-      items: [
-        ['all', 'Přehled tiketů'],
-        ['new-ticket', 'Nový tiket'],
-        ['mine', 'Moje tikety'],
-        ['watched', 'Sledované'],
-        ['closed', 'Uzavřené']
-      ]
-    },
-    administrace: {
-      title: 'Administrace',
-      aria: 'Menu administrace',
-      key: 'page',
-      defaultPage: 'prava_roli',
-      // Stejný seznam jako serverové admin_includes/admin_menu.php zachová menu při výměně PP.
-      items: [
-        ['uzivatele', 'Uživatelé'],
-        ['prava_roli', 'Globální práva'],
-        ['editace_prav', 'Editovat práva'],
-        ['individualni_prava', 'Individuální práva uživatele'],
-        ['spousteni_scriptu', 'Spouštění scriptů'],
-        ['export_db', 'Export DB']
-      ]
-    }
-  };
-
-  menuDefs.helpdesk.items = menuDefs.helpdesk.items.filter(function (item) {
-    return Array.isArray(config.helpdeskAllowedViews) && config.helpdeskAllowedViews.indexOf(item[0]) !== -1;
-  });
-  if (config.smenyPozadavky !== true) {
-    menuDefs.smeny.items = menuDefs.smeny.items.filter(function (item) { return item[0] !== 'pozadavky'; });
-  }
-  if (config.smenySablony !== true) {
-    menuDefs.smeny.items = menuDefs.smeny.items.filter(function (item) { return item[0] !== 'sablony'; });
-  }
-  if (config.smenyPlanovani !== true) {
-    // Vedoucí přehledy používají stejné právo jako plánování; server přístup kontroluje znovu.
-    menuDefs.smeny.items = menuDefs.smeny.items.filter(function (item) {
-      return ['planovani_smen', 'naplanovane_smeny', 'zadane_pozadavky'].indexOf(item[0]) === -1;
-    });
-  }
-  if (config.smenyNastaveni !== true) {
-    menuDefs.smeny.items = menuDefs.smeny.items.filter(function (item) { return item[0] !== 'nastaveni'; });
-  }
-  if (config.adminUzivatele !== true) {
-    menuDefs.administrace.items = menuDefs.administrace.items.filter(function (item) { return item[0] !== 'uzivatele'; });
-  }
-  // Klientske menu respektuje pravo 103 stejne jako serverova stranka a jeji akce.
-  if (config.adminIndividualniPrava !== true) {
-    menuDefs.administrace.items = menuDefs.administrace.items.filter(function (item) { return item[0] !== 'individualni_prava'; });
-  }
-  if (config.adminExportDb !== true) {
-    menuDefs.administrace.items = menuDefs.administrace.items.filter(function (item) { return item[0] !== 'export_db'; });
-  }
-
-  if (config.adminFirmaPridat === true) {
-    menuDefs.administrace.items.splice(3, 0, ['firma_pridat', 'Přidat firmu']);
-  }
-  if (config.adminLogChyby === true) {
-    menuDefs.administrace.items.push(['log_chyby', 'Přehled chyb']);
-  }
-  if (config.aiAnalytikAllowed === true) {
-    menuDefs.provoz.items.push(['ai_analytik', 'Chytrý Franta']);
-  }
-
   window.CB_ACTIVE_MAIN_MODULE = activeMainModule;
   if (!root) return;
   var initialParams = new URLSearchParams(window.location.search);
@@ -435,19 +311,23 @@
     }
   }
 
-  function replaceModuleContent(html) {
-    var template = document.createElement('template');
-    template.innerHTML = html;
-    if (!(template.content.querySelector('.pp') instanceof HTMLElement)) {
-      throw new Error('Odpověď modulu neobsahuje pracovní plochu.');
+  // Obsah modulu může obsahovat i dialogy; kopie menu z odpovědi nikdy nenahradí již zobrazené menu.
+  function replaceModuleContent(html, moduleChanged) {
+    var response=document.createElement('template'); response.innerHTML=html;
+    var nextPp=response.content.querySelector('.pp');
+    if (!(nextPp instanceof HTMLElement)) throw new Error('Odpověď modulu neobsahuje pracovní plochu.');
+    if (moduleChanged) {
+      response.content.querySelectorAll('.blok_menu').forEach(function (menu) { menu.remove(); });
+      Array.from(root.children).forEach(function (child) {
+        if (!child.classList.contains('blok_hlavicka') && !child.classList.contains('blok_menu')) child.remove();
+      });
+      root.appendChild(response.content);
+    } else {
+      var currentPp=root.querySelector('.pp');
+      if (!(currentPp instanceof HTMLElement)) throw new Error('Chybí pracovní plocha aplikace.');
+      currentPp.replaceWith(nextPp);
     }
-
-    Array.prototype.slice.call(root.children).forEach(function(child){
-      if (!child.classList.contains('blok_hlavicka')) {
-        child.remove();
-      }
-    });
-    root.appendChild(template.content);
+    return nextPp;
   }
 
   function moduleUrl(moduleName, pageKey, pageValue) {
@@ -460,136 +340,43 @@
     return url.pathname + url.search;
   }
 
-  function currentMenuPage(def, params) {
-    if (!(params instanceof URLSearchParams)) {
-      return def.defaultPage;
-    }
-    return String(params.get(def.key) || params.get('page') || def.defaultPage);
-  }
-
-  function updateMenuBottom(bottom, moduleName) {
-    if (!(bottom instanceof HTMLElement)) return bottom;
-    var themeInput = bottom.querySelector('input[name="cb_theme_module"]');
-    if (themeInput instanceof HTMLInputElement) {
-      themeInput.value = moduleName;
-    }
-    var profileLink = bottom.querySelector('.blok_menu_user_profile');
-    if (profileLink instanceof HTMLAnchorElement) {
-      var profileKey = moduleName === 'helpdesk' ? 'hd' : 'page';
-      profileLink.href = moduleUrl(moduleName, profileKey, 'uprava_profilu');
-    }
-    var adminLink = bottom.querySelector('[data-cb-module-link="1"][data-cb-module="administrace"]');
-    if (adminLink instanceof HTMLElement) {
-      var adminList = adminLink.closest('.blok_menu_list');
-      if (adminList instanceof HTMLElement) {
-        adminList.style.display = moduleName === 'administrace' ? 'none' : '';
-      }
-    }
-    return bottom;
-  }
-
-  function renderImmediateMenu(moduleName, params) {
-    var def = menuDefs[moduleName];
-    if (!def) return;
-
-    var oldMenu = root.querySelector('.blok_menu');
-    var oldBottom = oldMenu ? oldMenu.querySelector('.blok_menu_bottom') : null;
-    var bottom = oldBottom instanceof HTMLElement ? oldBottom.cloneNode(true) : document.createElement('div');
-    bottom.classList.add('blok_menu_bottom');
-    updateMenuBottom(bottom, moduleName);
-
-    var nav = document.createElement('nav');
-    nav.className = 'blok_menu';
-    nav.id = 'cb-main-menu';
-    nav.setAttribute('aria-label', def.aria);
-
-    var mobileHead = document.createElement('div');
-    mobileHead.className = 'blok_menu_mobile_head';
-    var mobileTitle = document.createElement('strong');
-    mobileTitle.textContent = 'Menu';
-    var mobileClose = document.createElement('button');
-    mobileClose.type = 'button';
-    mobileClose.className = 'blok_menu_close';
-    mobileClose.setAttribute('data-cb-menu-close', '1');
-    mobileClose.setAttribute('aria-label', 'Zavřít menu');
-    mobileClose.textContent = '×';
-    mobileHead.appendChild(mobileTitle);
-    mobileHead.appendChild(mobileClose);
-    nav.appendChild(mobileHead);
-
-    var title = document.createElement('h2');
-    title.className = 'blok_menu_title';
-    title.textContent = def.title;
-    nav.appendChild(title);
-
-    var list = document.createElement('ul');
-    list.className = 'blok_menu_list';
-    var activePage = currentMenuPage(def, params);
-
-    def.items.forEach(function(itemDef){
-      var page = String(itemDef[0] || '');
-      var label = String(itemDef[1] || '');
-      var children = Array.isArray(itemDef[2]) ? itemDef[2] : [];
-      if (!page || !label) return;
-
-      var item = document.createElement('li');
-      item.className = 'blok_menu_item';
-
-      var link = document.createElement('a');
-      link.className = 'blok_menu_btn' + (page === activePage ? ' is-active' : '');
-      link.href = moduleUrl(moduleName, def.key, page);
-
-      var labelNode = document.createElement('span');
-      labelNode.textContent = label;
-      link.appendChild(labelNode);
-
-      if (children.length > 0) {
-        var chev = document.createElement('span');
-        chev.className = 'blok_menu_chev';
-        chev.setAttribute('aria-hidden', 'true');
-        chev.textContent = '⌄';
-        link.appendChild(chev);
-      }
-
-      item.appendChild(link);
-
-      if (children.length > 0) {
-        var submenu = document.createElement('ul');
-        submenu.className = 'blok_submenu';
-        children.forEach(function(childLabel, childIndex){
-          var childItem = document.createElement('li');
-          // Odkazy odpovídají serverovému menu Směn; ostatní moduly ponechávají vlastní obsluhu.
-          var shiftWeekLink = moduleName === 'smeny' && ['me_smeny', 'naplanovane_smeny', 'zadane_pozadavky'].indexOf(page) !== -1;
-          var childButton = document.createElement(shiftWeekLink ? 'a' : 'button');
-          if (shiftWeekLink) {
-            childButton.href = moduleUrl(moduleName, def.key, page) + '&week=' + childIndex;
-          } else {
-            childButton.type = 'button';
-          }
-          childButton.className = 'blok_submenu_btn';
-          childButton.textContent = String(childLabel || '');
-          childItem.appendChild(childButton);
-          submenu.appendChild(childItem);
-        });
-        item.appendChild(submenu);
-      }
-
-      list.appendChild(item);
+  // Označení vychází z metadat stejné serverové definice, včetně detailů patřících pod společnou položku.
+  function activateMenuPage(menu, page) {
+    if (!menu) return;
+    menu.querySelectorAll('[data-menu-pages]').forEach(function (item) {
+      var pages=JSON.parse(item.dataset.menuPages), link=item.querySelector('.blok_menu_btn');
+      if (link) link.classList.toggle('is-active',pages.indexOf(page)!==-1);
     });
+  }
 
-    nav.appendChild(list);
-    nav.appendChild(bottom);
-
-    if (oldMenu instanceof HTMLElement) {
-      oldMenu.replaceWith(nav);
-    } else {
-      var pp = root.querySelector('.pp');
-      if (pp instanceof HTMLElement) {
-        root.insertBefore(nav, pp);
-      } else {
-        root.appendChild(nav);
-      }
+  // Kompletní menu je v dokumentu před kliknutím; žádná položka ani pravidlo práv se zde nevytváří.
+  function renderModuleMenu(moduleName, params, sourceModule) {
+    var template=document.querySelector('template[data-cb-module-menu="'+moduleName+'"]');
+    if (!(template instanceof HTMLTemplateElement)) throw new Error('Menu tohoto modulu není pro aktuální profil dostupné. Obnovte stránku.');
+    var nav=template.content.querySelector('.blok_menu').cloneNode(true);
+    var page=params instanceof URLSearchParams ? params.get(nav.dataset.menuKey)||params.get('page') : '';
+    activateMenuPage(nav,page||nav.dataset.menuDefault);
+    // HelpDesk zachová zdroj, ze kterého byl otevřen; jde pouze o kontext odkazů, nikoli o definici menu.
+    if (moduleName==='helpdesk') {
+      var source=params instanceof URLSearchParams ? params.get('src') : '';
+      if (['provoz','hr','smeny','ukoly'].indexOf(source)===-1) source=sourceModule;
+      if (['provoz','hr','smeny','ukoly'].indexOf(source)===-1) source='provoz';
+      nav.querySelectorAll('a[href]').forEach(function (link) {
+        var url=new URL(link.href,window.location.href);
+        if (url.searchParams.get('m')==='helpdesk') { url.searchParams.set('src',source); link.href=url.pathname+url.search; }
+      });
     }
+    // Barva se mohla změnit od načtení šablon; zápatí musí převzít současný odstín.
+    var theme=nav.querySelector('[data-cb-theme-form]'), level=Number(document.documentElement.dataset.themeLevel||0);
+    if (theme) {
+      theme.dataset.themeLevel=String(level);
+      theme.querySelector('[data-cb-theme-value]').textContent=String(level);
+      theme.querySelector('[data-cb-theme-delta="-1"]').disabled=level<=0;
+      theme.querySelector('[data-cb-theme-delta="1"]').disabled=level>=6;
+      theme.querySelector('[name="cb_theme_return"]').value=moduleUrl(moduleName,nav.dataset.menuKey,page||nav.dataset.menuDefault);
+    }
+    var oldMenu=root.querySelector('.blok_menu');
+    if (oldMenu) oldMenu.replaceWith(nav); else root.insertBefore(nav,root.querySelector('.pp'));
   }
 
   function setClickedMenuActive(link) {
@@ -624,8 +411,16 @@
     if (moduleLoadRunning) return;
     var requestedKey = makeShellKey(moduleName, params);
     if (pushState && requestedKey === currentShellKey) {
+      document.dispatchEvent(new CustomEvent('cb:menu-no-effect',{detail:{module:moduleName}}));
       return;
     }
+    // Zastaralá nebo nepovolená adresa nesmí přepnout kontext a ponechat načítání zablokované.
+    if (moduleName!==activeMainModule && !document.querySelector('template[data-cb-module-menu="'+moduleName+'"]')) {
+      showModuleError(new Error('Tento modul není pro aktuální profil dostupný. Obnovte stránku.'));
+      return;
+    }
+    // Stránka plánovače uvolní svůj zámek před nahrazením obsahu navigací.
+    document.dispatchEvent(new CustomEvent('cb:main-before-load', { detail: { module: moduleName, params: params instanceof URLSearchParams ? params.toString() : '' } }));
     var sourceMainModule = activeMainModule;
     var moduleChanged = moduleName !== activeMainModule;
     moduleLoadRunning = true;
@@ -634,7 +429,7 @@
       saveActiveModule(moduleName);
       setRootModule(moduleName);
       syncHeader(moduleName);
-      renderImmediateMenu(moduleName, params);
+      renderModuleMenu(moduleName, params, sourceMainModule);
     }
     showPageLoader(moduleName, params);
 
@@ -683,18 +478,8 @@
           }
           setRootModule(moduleName);
           stopPageLoaderTimer();
-          if (moduleChanged) {
-            replaceModuleContent(html);
-          } else {
-            var currentPp = root.querySelector('.pp');
-            var response = document.createElement('div');
-            response.innerHTML = html;
-            var nextPp = response.querySelector('.pp');
-            if (!(currentPp instanceof HTMLElement) || !(nextPp instanceof HTMLElement)) {
-              throw new Error('Odpověď modulu neobsahuje pracovní plochu.');
-            }
-            currentPp.replaceWith(nextPp);
-          }
+          var nextPp=replaceModuleContent(html,moduleChanged);
+          activateMenuPage(root.querySelector('.blok_menu'),nextPp.dataset.page||'');
           currentShellKey = requestedKey;
           document.dispatchEvent(new CustomEvent('cb:main-swapped'));
           if (moduleName === 'hr' && window.CB_HR_INIT) {

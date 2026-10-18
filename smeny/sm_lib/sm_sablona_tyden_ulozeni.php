@@ -1,7 +1,13 @@
 <?php
 declare(strict_types=1);
 
-/* Účel souboru: Uloží název a všechny sloty jednoho týdne šablony v jediné transakci. */
+/* Účel souboru: Uloží týden šablony v transakci, ověří souběžnou změnu a vrátí ID slotů pro automatické ukládání. */
+
+// Otisk dat brání přepsání šablony, kterou od načtení změnil jiný editor.
+function cb_smeny_sablona_otisk(array $template): string
+{
+    return hash('sha256', json_encode([$template['nazev'], $template['blocks']], JSON_THROW_ON_ERROR));
+}
 
 /** @return array<int,array<int,array<string,mixed>>> */
 function cb_smeny_sablona_tyden_post_bloky(array $postedBlocks, array $branch): array
@@ -58,7 +64,7 @@ function cb_smeny_sablona_tyden_post_bloky(array $postedBlocks, array $branch): 
     return $blocks;
 }
 
-function cb_smeny_sablona_tyden_ulozit(mysqli $db, array $branches): int
+function cb_smeny_sablona_tyden_ulozit(mysqli $db, array $branches, ?array &$savedBlocks = null, ?string &$savedFingerprint = null): int
 {
     $idTemplate = (int)($_POST['id_smeny_sablona'] ?? 0);
     $idBranch = (int)($_POST['id_pob'] ?? 0);
@@ -97,6 +103,10 @@ function cb_smeny_sablona_tyden_ulozit(mysqli $db, array $branches): int
         $lockedTemplate = cb_smeny_sablona_nacist($db, $idTemplate, $branches);
         if ($lockedTemplate === null) {
             throw new CbUserVisibleException('Šablonu se nepodařilo znovu načíst. Obnovte stránku.');
+        }
+        $expected = trim((string)($_POST['otisk'] ?? ''));
+        if ($expected !== '' && !hash_equals(cb_smeny_sablona_otisk($lockedTemplate), $expected)) {
+            throw new CbUserVisibleException('Šablonu mezitím změnil jiný uživatel. Obnovte stránku před další úpravou.');
         }
         $existing = [];
         foreach ($lockedTemplate['blocks'] as $dayBlocks) {
@@ -158,7 +168,10 @@ function cb_smeny_sablona_tyden_ulozit(mysqli $db, array $branches): int
             'nazev' => $name,
             'bloky' => $newAuditBlocks,
         ]);
+        // Odpověď popisuje právě naši transakci, nikoli případný pozdější zápis jiného uživatele.
+        $savedFingerprint = cb_smeny_sablona_otisk(cb_smeny_sablona_nacist($db, $idTemplate, $branches));
         $db->commit();
+        $savedBlocks = $newAuditBlocks;
     } catch (mysqli_sql_exception $e) {
         $db->rollback();
         if ((int)$e->getCode() === 1062) {

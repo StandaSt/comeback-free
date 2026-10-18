@@ -1,14 +1,16 @@
 /*
- * Ucel souboru: Definuje vzhled obsahu modulu Smeny vcetne modalu pro souhlas se smenami.
+ * Ucel souboru: Sjednocuje obal Smen, stabilni mrizku s uzavrenymi bloky prijmeni a jmena, vyber pracovniku a detail; zdrojovy planovac skryva behem pripravy pohledu.
  * Velikosti pisma vychazeji z pevne typograficke skaly aplikace.
  */
 
 .smeny_content{
     align-content:start;
 }
+/* Visibility zachová měřitelné rozměry pro výpočet tabulky, ale nenechá probliknout zdrojový týdenní rozpis. */
+.smeny_content[data-smeny-view-pending]{visibility:hidden;}
 
 /* Nastaveni uzaverky zustava kompaktni i s vysvetlujicim textem. */
-.smeny_settings { width:fit-content; max-width:min(100%, 650px); box-sizing:border-box; }
+.smeny_settings_form { max-width:650px; box-sizing:border-box; }
 .smeny_settings_form { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:6px 0; }
 .smeny_settings_form label { display:flex; align-items:center; gap:5px; }
 .smeny_settings_form select, .smeny_settings_form button { font:inherit; padding:2px 6px; }
@@ -28,22 +30,11 @@
 .smeny_request_intervals{border:0;padding:0;margin:0;min-width:0;}
 .smeny_request_intervals[hidden]{display:none;}
 
-.smeny_requests{
-    width:min(100%, 1280px);
-    justify-self:start;
-}
-
 .smeny_content_text{
     margin:0;
     color:var(--cb-text-muted);
     font-size:var(--cb-font-14);
     line-height:1.4;
-}
-
-.smeny_templates{
-    width:fit-content;
-    max-width:100%;
-    justify-self:start;
 }
 
 .smeny_templates_header,
@@ -120,8 +111,8 @@
 
 .smeny_primary_button,
 .smeny_secondary_button{
-    min-height:34px;
-    padding:7px 13px;
+    min-height:32px;
+    padding:4px 9px;
     border:1px solid #28723a;
     border-radius:7px;
     background:#2f8545;
@@ -150,6 +141,7 @@
 }
 
 .smeny_template_card{
+    position:relative;
     display:grid;
     gap:7px;
     padding:8px 10px;
@@ -166,8 +158,17 @@
 
 .smeny_template_card_title{
     display:flex;
+    align-items:baseline;
     gap:5px;
 }
+.smeny_template_card_row{display:flex;align-items:baseline;gap:6px 12px;flex-wrap:wrap;}
+/* Jediný skutečný odkaz pokryje kartu v obou stavech; tlačítko souhrnu zůstane nad ním. */
+.smeny_template_card_title::after{content:"";position:absolute;inset:0;border-radius:9px;cursor:pointer;}
+.smeny_template_card_title{color:inherit;text-decoration:none;}
+.smeny_template_card_title:hover{text-decoration:underline;}
+.smeny_template_week_totals{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:var(--cb-font-14);}
+.smeny_template_card_row>button{position:relative;z-index:1;margin-left:auto;flex:0 0 auto;}
+.smeny_template_card.is-open .smeny_template_week_totals{display:none;}
 
 .smeny_template_card_title span{
     font-weight:400;
@@ -179,8 +180,8 @@
 }
 
 .smeny_template_card_day{
-    display:grid;
-    grid-template-columns:92px repeat(2, minmax(0, 1fr));
+    display:flex;
+    flex-wrap:wrap;
     align-items:baseline;
     gap:10px;
     min-height:20px;
@@ -191,6 +192,8 @@
 .smeny_template_card_day:nth-child(odd){
     background:var(--cb-bg-panel-soft);
 }
+.smeny_template_card_day>strong{flex:0 0 92px;}
+.smeny_template_card_total{flex:1 0 120px;}
 
 .smeny_template_card_total{
     display:flex;
@@ -208,6 +211,7 @@
 
 .smeny_template_editor{
     display:grid;
+    grid-template-columns:minmax(0,1fr);
     gap:8px;
     width:fit-content;
     max-width:100%;
@@ -215,17 +219,23 @@
 
 .smeny_template_name{
     display:grid;
-    grid-template-columns:110px 300px;
+    grid-template-columns:88px minmax(120px,200px);
     align-items:center;
     gap:8px;
     width:fit-content;
-    padding:7px 10px;
-    border:1px solid var(--cb-border);
-    border-radius:8px;
-    background:var(--cb-bg-panel);
+    padding:0;
+    border:0;
+    background:transparent;
     color:var(--cb-text-muted);
     font-size:var(--cb-font-12);
 }
+
+/* Název a den sdílejí lištu; na telefonu se zalomí bez natahování samotných ovladačů. */
+.smeny_template_toolbar{display:flex;align-items:center;gap:6px 8px;flex-wrap:wrap;max-width:100%;}
+.smeny_template_toolbar .smeny_day_navigation select{width:auto;flex:0 0 auto;}
+.smeny_template_day_header{display:flex;align-items:center;justify-content:space-between;gap:6px;grid-column:1/-1;margin-bottom:6px;}
+.smeny_template_day_header .smeny_template_day_name{margin:0;padding:0;}
+.smeny_template_day_header .smeny_classic_tools{margin:0;justify-content:flex-end;}
 
 .smeny_template_name input{
     min-height:24px;
@@ -233,7 +243,7 @@
 
 .smeny_template_day{
     display:grid;
-    grid-template-columns:84px 496px max-content;
+    grid-template-columns:minmax(0,1fr);
     align-items:start;
     gap:8px;
     width:fit-content;
@@ -342,13 +352,13 @@
 
 .smeny_notice,
 .smeny_intro{
-    margin:0 0 14px;
-    padding:12px 14px;
+    margin:0;
+    padding:6px 8px;
     border:1px solid var(--cb-border);
     border-radius:10px;
     background:var(--cb-bg-panel);
     font-size:var(--cb-font-14);
-    line-height:1.45;
+    line-height:1.3;
 }
 
 .smeny_notice--success{
@@ -378,14 +388,14 @@
 }
 
 .smeny_requests_header{
-    justify-content:space-between;
-    gap:20px;
+    justify-content:flex-start;
+    gap:8px;
 }
 
 .smeny_week_navigation{
     display:flex;
     align-items:center;
-    gap:12px;
+    gap:6px;
     font-size:var(--cb-font-16);
 }
 
@@ -409,9 +419,9 @@
 
 .smeny_requests_meta{
     flex-wrap:wrap;
-    gap:8px 22px;
-    margin:0 0 14px;
-    padding:10px 14px;
+    gap:4px 14px;
+    margin:0;
+    padding:6px 8px;
     border:1px solid var(--cb-border);
     border-radius:10px;
     background:var(--cb-bg-panel);
@@ -446,7 +456,7 @@
     align-items:flex-start;
     flex-direction:column;
     gap:3px;
-    margin-bottom:10px;
+    margin-bottom:6px;
     color:var(--cb-text-muted);
     font-size:var(--cb-font-14);
 }
@@ -455,18 +465,24 @@
     color:var(--cb-text-main);
 }
 
+/* Hromadné volby sdílejí řádek; na telefonu se text zalomí a Reset zůstává u pravého okraje. */
+.smeny_requests_help{width:100%;}
+.smeny_requests_bulk{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;}
+.smeny_requests_bulk label{flex:1;min-width:0;}
+.smeny_requests_bulk button{flex:0 0 auto;}
+
 .smeny_request_days,
 .smeny_hpp_days{
     display:grid;
-    gap:8px;
+    gap:4px;
 }
 
 .smeny_request_day{
     display:grid;
-    grid-template-columns:150px minmax(360px, 1fr) 104px;
-    gap:18px;
-    min-height:76px;
-    padding:10px 14px;
+    grid-template-columns:140px minmax(220px, 1fr) 90px;
+    gap:10px;
+    min-height:56px;
+    padding:5px 8px;
     border:1px solid var(--cb-border);
     border-radius:10px;
     background:var(--cb-bg-panel);
@@ -653,9 +669,9 @@
 }
 
 .smeny_hpp_day{
-    gap:12px;
-    min-height:54px;
-    padding:8px 14px;
+    gap:8px;
+    min-height:36px;
+    padding:4px 8px;
     border:1px solid var(--cb-border);
     border-radius:10px;
     background:var(--cb-bg-panel);
@@ -689,12 +705,12 @@
     display:flex;
     align-items:center;
     justify-content:flex-end;
-    gap:10px;
-    margin-top:16px;
+    gap:6px;
+    margin-top:6px;
 }
 
 .smeny_requests_copy_week{
-    padding:10px 18px;
+    padding:6px 10px;
     border:1px solid var(--cb-border);
     border-radius:8px;
     color:var(--cb-text-main);
@@ -706,7 +722,7 @@
 
 .smeny_requests_save{
     min-width:190px;
-    padding:10px 18px;
+    padding:6px 10px;
     border:1px solid #28723a;
     border-radius:8px;
     background:#2f8545;
@@ -723,21 +739,37 @@
 }
 
 /* Plánování používá klikací půlhodinovou osu a boční seznam dostupných pracovníků. */
-.smeny_planning{display:grid;gap:10px;width:min(100%,1440px);max-width:100%;}
-.smeny_planning_filters,.smeny_planning_meta,.smeny_planning_actions{display:flex;align-items:end;gap:10px;flex-wrap:wrap;}
-.smeny_planning_filters label,.smeny_planning_empty label,.smeny_planning_template_reload label{display:grid;gap:4px;color:var(--cb-text-muted);font-size:var(--cb-font-12);}
-.smeny_planning_filters select,.smeny_planning_empty select,.smeny_planning_template_reload select{min-height:34px;padding:5px 8px;border:1px solid var(--cb-border);border-radius:7px;background:var(--cb-bg-main);color:var(--cb-text-main);}
-.smeny_planning_empty,.smeny_planning_meta,.smeny_planning_days article{padding:10px;border:1px solid var(--cb-border);border-radius:8px;background:var(--cb-bg-panel);}
+/* Výběr pobočky a nastavení sdílejí řádek; zahájení plánování patří do záhlaví stránky. */
+.smeny_planning_top{display:flex;align-items:end;gap:8px;flex-wrap:wrap;max-width:100%;}
+.smeny_planning_top .smeny_planning_lock{margin:0;max-width:100%;}
+.smeny_planning_top .smeny_planning_lock p{margin:0;}
+.smeny_planning_top form{margin:0;}
+/* Volba plánování kdykoliv je vpravo u uzávěrky a na úzké obrazovce se zalomí. */
+.smeny_planning_availability{display:flex;align-items:center;justify-content:space-between;gap:6px 12px;flex-wrap:wrap;width:100%;padding:6px 8px;border:1px solid var(--cb-border);border-radius:8px;background:var(--cb-bg-panel);}
+.smeny_planning_availability p{margin:0;}
+.smeny_planning_availability form{margin:0 0 0 auto;}
+.smeny_planning_availability label{display:flex;align-items:center;gap:6px;white-space:nowrap;}
+.smeny_planning{display:grid;}
+.smeny_planning_filters,.smeny_planning_actions{display:flex;align-items:end;gap:6px 8px;flex-wrap:wrap;}
+.smeny_planning_filters label,.smeny_planning_empty label{display:grid;gap:4px;color:var(--cb-text-muted);font-size:var(--cb-font-12);}
+.smeny_planning_filters select,.smeny_planning_empty select{min-height:34px;padding:5px 8px;border:1px solid var(--cb-border);border-radius:7px;background:var(--cb-bg-main);color:var(--cb-text-main);}
+.smeny_planning_empty,.smeny_planning_days article{padding:6px 8px;border:1px solid var(--cb-border);border-radius:8px;background:var(--cb-bg-panel);}
+.smeny_planning_empty>p{margin:0;}
 .smeny_planning_empty form{display:flex;align-items:end;gap:8px;}
-.smeny_planning_meta{justify-content:space-between;}
+/* Podklad navazuje na rozlišení osy; šířku výběru určuje název šablony. */
+.smeny_planning_template_select{margin:0;max-width:100%;}
+.smeny_planning_template_select label{display:flex;align-items:center;gap:6px;}
+.smeny_planning_template_select select{width:auto;max-width:100%;min-width:0;min-height:28px;padding:2px 6px;border:1px solid var(--cb-border);border-radius:5px;background:var(--cb-bg-main);color:var(--cb-text-main);font:inherit;}
 .smeny_planning_days{display:grid;gap:6px;}
 .smeny_planning_days article{display:grid;grid-template-columns:150px 1fr;gap:6px;align-items:start;}
 .smeny_planning_block{grid-column:2;display:grid;grid-template-columns:90px 150px 1fr;gap:8px;padding:4px 7px;border-radius:5px;background:var(--cb-bg-panel-soft);}
-.smeny_history_week{display:flex;gap:6px;flex-wrap:wrap;}
+.smeny_history_week{display:flex;gap:6px;flex-wrap:wrap;flex:0 1 auto;max-width:100%;min-width:0;}
+.smeny_content[data-page=historie_smen]>.pp_header{justify-content:flex-start;}
 .smeny_history_week select{max-width:100%;min-height:30px;padding:3px 7px;border:1px solid var(--cb-border);border-radius:7px;background:var(--cb-bg-main);color:var(--cb-text-main);font:inherit;}
 /* Historie šetří šířku krátkým názvem dne a ikonou místo opakovaných názvů pozic. */
 .smeny_history_days{display:grid;gap:4px;}
-.smeny_history_days article{display:grid;grid-template-columns:76px repeat(2,minmax(190px,1fr));align-items:start;gap:5px;padding:5px 7px;border:1px solid var(--cb-border);border-radius:7px;background:var(--cb-bg-panel);}
+.smeny_history_days article{display:grid;grid-template-columns:76px minmax(0,1fr);align-items:start;gap:5px;padding:5px 7px;border:1px solid var(--cb-border);border-radius:7px;background:var(--cb-bg-panel);}
+.smeny_history_positions{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:4px;min-width:0;}
 .smeny_history_day_name{padding:3px 2px;}
 .smeny_history_position{display:grid;align-content:start;gap:2px;min-width:0;}
 .smeny_history_position>div{display:grid;grid-template-columns:22px 84px minmax(0,1fr);align-items:center;gap:4px;min-width:0;padding:2px 5px;border-radius:5px;background:var(--cb-bg-panel-soft);line-height:1.15;}
@@ -745,10 +777,8 @@
 .smeny_history_icon{font-size:15px;line-height:1;text-align:center;}
 .smeny_history_position small{display:grid;grid-template-columns:22px 1fr;gap:4px;padding:2px 5px;color:var(--cb-text-muted);}
 /* Na úzkém displeji zůstane den vlevo a oba druhy směn se řadí pod sebe bez vodorovného posuvu. */
-@media(max-width:760px){.smeny_history_days article{grid-template-columns:64px minmax(0,1fr);gap:3px;padding:4px}.smeny_history_position{grid-column:2}.smeny_history_day_name{grid-row:1 / span 2}.smeny_history_position>div{grid-template-columns:20px 80px minmax(0,1fr);gap:3px;padding:2px 3px}}
+@media(max-width:760px){.smeny_history_days article{grid-template-columns:64px minmax(0,1fr);gap:3px;padding:4px}.smeny_history_positions{grid-template-columns:minmax(0,1fr)}.smeny_history_position>div{grid-template-columns:20px 80px minmax(0,1fr);gap:3px;padding:2px 3px}}
 .smeny_planning_actions{justify-content:flex-end;}
-.smeny_planning_template_reload{display:flex;align-items:end;gap:8px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--cb-border);border-radius:8px;background:var(--cb-bg-panel);}
-.smeny_planning_template_reload small{align-self:center;color:var(--cb-text-muted);font-size:var(--cb-font-12);}
 /* Zámek je výslovná akce plánovače, samostatná od uložení či zveřejnění týdne. */
 .smeny_planning_lock{display:grid;gap:6px;}
 .smeny_planning_lock p{margin:0;}
@@ -758,10 +788,9 @@
 .smeny_shift_edit{display:grid;gap:5px;padding:5px 0;}
 .smeny_shift_edit label{display:flex;gap:4px;align-items:center;flex-wrap:wrap;}
 .smeny_shift_edit input[type=time]{max-width:100%;min-width:0;}
-.smeny_planning_help{margin:0;padding:8px 10px;border:1px solid #8dbce8;border-radius:8px;background:#eff7ff;font-size:var(--cb-font-14);}
-.smeny_planner{display:grid;grid-template-columns:minmax(0,1fr) 310px;align-items:start;gap:10px;}
-.smeny_planner_days{display:grid;gap:8px;min-width:0;}
-.smeny_planner_day{min-width:0;padding:8px;border:1px solid var(--cb-border);border-radius:9px;background:var(--cb-bg-panel);}
+.smeny_planner{display:grid;grid-template-columns:minmax(0,1fr);align-items:start;gap:10px;width:fit-content;max-width:100%;}
+.smeny_planner_days{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;min-width:0;}
+.smeny_planner_day{width:fit-content;max-width:100%;min-width:0;padding:8px;border:1px solid var(--cb-border);border-radius:9px;background:var(--cb-bg-panel);}
 .smeny_planner_day>header{display:flex;justify-content:space-between;gap:10px;margin-bottom:6px;}
 .smeny_planner_day>header small{color:var(--cb-text-muted);}
 .smeny_planner_row{display:grid;grid-template-columns:150px minmax(0,1fr);align-items:stretch;border-top:1px solid var(--cb-border);}
@@ -781,18 +810,18 @@
 .smeny_planner_people>header button{width:28px;height:28px;border:0;border-radius:5px;background:transparent;font-size:22px;cursor:pointer;}
 .smeny_planner_ignore{display:flex;align-items:center;gap:7px;margin:10px 0;padding:8px;border:1px solid #d39b39;border-radius:7px;background:#fff7e7;font-weight:700;cursor:pointer;}
 .smeny_planner_people p{margin:6px 0;color:var(--cb-text-muted);font-size:var(--cb-font-12);}
-.smeny_planner_people_group{display:block;margin:10px 0 4px;color:var(--cb-text-muted);font-size:var(--cb-font-12);text-transform:uppercase;}
-.smeny_planner_person{display:grid;width:100%;gap:2px;margin:3px 0;padding:7px 8px;border:1px solid var(--cb-border);border-radius:7px;background:var(--cb-bg-main);color:var(--cb-text-main);text-align:left;cursor:pointer;}
+/* Krátké červené nadpisy oddělují skupiny; běžná velikost písmen šetří šířku panelu. */
+.smeny_planner_people_group{display:block;margin:8px 0 3px;color:#b42318;font-size:var(--cb-font-12);line-height:1.2;}
+.smeny_planner_person{display:grid;width:100%;gap:1px;margin:3px 0;padding:4px 7px;line-height:1.15;border:1px solid var(--cb-border);border-radius:7px;background:var(--cb-bg-main);color:var(--cb-text-main);text-align:left;cursor:pointer;}
 .smeny_planner_person span,.smeny_planner_person small{font-size:var(--cb-font-12);}
 .smeny_planner_person small{color:var(--cb-text-muted);}
-.smeny_planner_person.is-selected{border-color:#1683e8;background:#e6f3ff;box-shadow:inset 0 0 0 1px #1683e8;}
 .smeny_planner_no_people{padding:8px;border-radius:7px;background:var(--cb-bg-panel-soft);}
-@media(max-width:980px){.smeny_planner{grid-template-columns:1fr}.smeny_planner_people{position:static;max-height:none}.smeny_planner_row{grid-template-columns:115px minmax(0,1fr)}}
+@media(max-width:980px){.smeny_planner{grid-template-columns:minmax(0,1fr)}.smeny_planner_people{position:static;max-height:none}.smeny_planner_row{grid-template-columns:115px minmax(0,1fr)}}
 
 /* Čtecí přehledy zůstávají kompaktní; široký týden roluje uvnitř tabulky i na telefonu. */
 .smeny_table_scroll{max-width:100%;overflow-x:auto;}
-.smeny_overview_table{width:100%;border-collapse:collapse;}
-.smeny_overview_table th,.smeny_overview_table td{text-align:left;vertical-align:top;padding:.6rem;border-bottom:1px solid var(--cb-border,#8885);}
+.smeny_overview_table{width:100%;border-collapse:collapse;line-height:1.2;}
+.smeny_overview_table th,.smeny_overview_table td{text-align:left;vertical-align:top;padding:4px 7px;border-bottom:1px solid var(--cb-border,#8885);}
 .smeny_overview_table small{display:block;color:var(--cb-text-muted,#666);font-weight:normal;}
 /* Směny používají společný tabulkový filtr; menší výška řádků drží dlouhý týdenní rozpis kompaktní. */
 .smeny_shift_table_view,.smeny_shift_table_view .cb_table_wrap{width:100%;}
@@ -805,6 +834,249 @@
 .smeny_shift_table .filter-reset-btn{display:grid;width:24px;height:24px;place-items:center;border:1px solid var(--cb-border);border-radius:5px;color:var(--cb-text-main);background:var(--cb-bg-panel);font-size:18px;line-height:1;text-decoration:none;}
 .smeny_shift_table th:nth-child(1),.smeny_shift_table td:nth-child(1){width:180px;}
 .smeny_shift_table th:nth-child(2),.smeny_shift_table td:nth-child(2){white-space:nowrap;}
-.smeny_cancel_form{display:flex;flex-wrap:wrap;gap:.65rem;align-items:end;margin:.5rem 0;}
-.smeny_cancel_form label{display:grid;gap:.25rem;}
-.smeny_cancel_form textarea{max-width:100%;box-sizing:border-box;}
+/* Všech osm stránek má stejný rámec. Šířku obsahu uvnitř určuje jeho význam, nikoliv obvod panelu. */
+.pp.smeny_content{width:100%;max-width:100%;min-width:0;box-sizing:border-box;justify-self:stretch;align-content:start;align-items:start;gap:6px;overflow-wrap:anywhere;}
+.smeny_content{grid-template-columns:minmax(0,1fr);justify-items:start;}
+.smeny_content>.pp_header{width:100%;gap:6px 12px;flex-wrap:wrap;margin:0;}
+.smeny_content>p{margin:0;line-height:1.3;}
+.smeny_content>h2{margin:8px 0 0;font-size:18px;line-height:1.2;}
+.smeny_content>h3{margin:6px 0 0;font-size:16px;line-height:1.2;}
+.smeny_content>.smeny_notice{max-width:100%;}
+.smeny_content>.smeny_table_scroll{max-width:100%;}
+/* Dostupnost má dost místa pro posuvníky; přehled dne nemusí natahovat krátká jména přes celou obrazovku. */
+.smeny_requests>[data-smeny-requests-form]{width:min(100%,900px);}
+.smeny_requests>.smeny_requests_meta{width:min(100%,900px);}
+/* Volba týdne končí u pravého okraje formuláře; na mobilu se může přesunout pod nadpis. */
+.smeny_requests>.smeny_requests_header{width:min(100%,900px);justify-content:space-between;}
+.smeny_history_days{width:min(100%,1000px);}
+.smeny_content [hidden]{display:none!important;}
+.smeny_content :is(form,fieldset,article,section,div){min-width:0;box-sizing:border-box;}
+.smeny_content :is(input,select,textarea){max-width:100%;box-sizing:border-box;}
+.smeny_content :is(button,summary,a,input,select){touch-action:manipulation;}
+.smeny_content :is(button,a,input,select,summary):focus-visible{outline:3px solid #176cba;outline-offset:2px;}
+.smeny_content>.smeny_overview_header{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:6px 12px;}
+.smeny_style_switch{grid-column:2;justify-self:center;width:max-content;max-width:100%;margin:0;}
+.smeny_style_switch fieldset{display:flex;gap:4px;margin:0;padding:3px;border:1px solid var(--cb-border);border-radius:9px;}
+.smeny_style_switch legend{font-size:var(--cb-font-12);padding:0 4px;}
+.smeny_style_switch label{display:flex;align-items:center;gap:6px;min-height:28px;padding:2px 8px;border-radius:6px;cursor:pointer;}
+.smeny_style_switch label:has(input:checked){background:var(--cb-module-soft,#e8f1fb);font-weight:700;}
+.smeny_style_switch [role=status]{display:block;min-height:1em;font-size:var(--cb-font-12);text-align:center;}
+.smeny_style_switch [role=status]:empty{display:none;}
+.smeny_style--classic .smeny_overview_table thead{background:var(--cb-module-soft,#e3edfa);}
+.smeny_style--new .smeny_planner_assigned{padding:6px;border:1px solid var(--cb-border);border-radius:7px;background:var(--cb-bg-panel-soft);}
+/* Nový týdenní editor se přizpůsobí i užší pracovní ploše vedle hlavního menu. */
+.smeny_style--new .smeny_template_editor{width:fit-content;max-width:100%;}
+.smeny_style--new .smeny_template_day{width:fit-content;grid-template-columns:minmax(0,1fr);}
+.smeny_style--new .smeny_template_columns{grid-template-columns:repeat(auto-fit,minmax(min(100%,244px),1fr));}
+.smeny_style--new .smeny_template_closing{grid-column:1;}
+.smeny_day_navigation{display:flex;align-items:center;gap:5px;grid-column:1/-1;width:fit-content;max-width:100%;}
+.smeny_day_navigation select{width:280px;min-width:0;max-width:100%;min-height:32px;padding:3px 6px;border:1px solid var(--cb-border);border-radius:7px;background:var(--cb-bg-panel);color:var(--cb-text-main);font:inherit;}
+.smeny_day_navigation button{min-width:32px;min-height:32px;border:1px solid var(--cb-border);border-radius:7px;background:var(--cb-bg-panel);color:var(--cb-text-main);font-size:22px;}
+
+/* Klasický pohled: čas je svisle, každé souběžné místo má vlastní sloupec. */
+.smeny_style--classic .smeny_planner{grid-template-columns:minmax(0,1fr);}
+.smeny_grid_ready>.smeny_planner_row{display:none;}
+.smeny_classic_scroll{width:fit-content;max-width:100%;max-height:72vh;max-height:72dvh;overflow:auto;overscroll-behavior:contain;border:1px solid var(--cb-border);border-radius:8px;background:var(--cb-bg-panel,#fff);}
+.smeny_classic_grid{display:grid;width:max-content;grid-template-columns:56px repeat(var(--smeny-columns),125px);align-items:stretch;}
+/* Název dne nemění šířku stejně obsazených dní; místo pro datum zůstává stejné i při změně měsíce. */
+.smeny_style--classic .smeny_planner_day>header>strong{flex:0 0 24ch;white-space:nowrap;}
+/* Křížek 24 px, odsazení a spodní linka se vejdou do stejného záhlaví jako u času. */
+.smeny_classic_plan .smeny_classic_heading{height:34px;min-height:34px;}
+.smeny_classic_plan .smeny_classic_hour{line-height:1;}
+.smeny_classic_heading{position:sticky;top:0;z-index:4;display:flex;align-items:center;justify-content:center;min-height:32px;padding:4px;background:var(--cb-bg-panel,#fff);border-bottom:2px solid var(--cb-border);font-weight:700;color:var(--cb-text-main);}
+.smeny_classic_hours{position:sticky;left:0;z-index:5;background:var(--cb-bg-panel,#fff);box-shadow:2px 0 3px #0002;}
+.smeny_classic_hour{height:32px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--cb-border);font-size:12px;white-space:nowrap;}
+.smeny_classic_lane{border-right:1px solid var(--cb-border);--smeny-slot-bg:#dce8f5;--smeny-shift-bg:#bdd3ea;--smeny-shift-accent:#38658f;}
+/* Světlý podklad je šablona; samostatná sytější výplň a tmavý pruh označují skutečnou směnu. */
+.smeny_slot_color_1{--smeny-slot-bg:#f4d5d9;--smeny-shift-bg:#eaa7b3;--smeny-shift-accent:#9b2c43;}
+.smeny_slot_color_2,.smeny_slot_color_8{--smeny-slot-bg:#dfdcf7;--smeny-shift-bg:#b5a6e6;--smeny-shift-accent:#5b3b99;}
+.smeny_slot_color_5{--smeny-slot-bg:#cfe9de;--smeny-shift-bg:#9ed1b6;--smeny-shift-accent:#2e6b4b;}
+.smeny_slot_color_3{--smeny-slot-bg:#f5e8c8;--smeny-shift-bg:#eacb88;--smeny-shift-accent:#8a651d;}
+.smeny_slot_color_4{--smeny-slot-bg:#d5e9f4;--smeny-shift-bg:#98c7e4;--smeny-shift-accent:#2d658b;}
+.smeny_slot_color_6{--smeny-slot-bg:#e5edcb;--smeny-shift-bg:#c6d68b;--smeny-shift-accent:#5f732b;}
+.smeny_classic_body{position:relative;}
+.smeny_classic_guide{position:absolute;inset-inline:0;background:var(--smeny-slot-bg);pointer-events:none;}
+.smeny_classic_tick{position:relative;display:block;width:100%;height:32px;border:0;border-bottom:1px solid var(--cb-border);border-radius:0;background:transparent;color:var(--cb-text-muted,#567);font-size:16px;cursor:pointer;}
+/* Poslední úsek před přesným zavřením může mít jen čtvrt hodiny; výška musí souhlasit s osou času. */
+.smeny_content .smeny_classic_tick{min-height:0;}
+.smeny_classic_tick:disabled{cursor:default;}
+.smeny_classic_tick:not(:disabled):hover{background:#1683e822;}
+.smeny_classic_tick.is-start{background:#1683e855;outline:2px solid #1683e8;outline-offset:-2px;}
+.smeny_classic_event{position:absolute;left:3px;right:3px;display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;gap:4px;margin:0;padding:8px;border:1px solid #718397;border-radius:7px;background:var(--smeny-slot-bg);box-shadow:0 1px 3px #0002;color:#183148;text-align:left;overflow:hidden;cursor:pointer;font:inherit;}
+.smeny_classic_event span{font-size:12px;}
+/* Rovný blok vyplní celou šířku sloupce a uzavírá jej levý i spodní pruh; šablona po stranách neprosvítá. */
+.smeny_classic_plan .smeny_classic_event{left:0;right:0;border:0;border-left:4px solid var(--smeny-shift-accent);border-bottom:4px solid var(--smeny-shift-accent);border-radius:0;box-shadow:none;background:var(--smeny-shift-bg);}
+.smeny_classic_plan .smeny_classic_event>strong{overflow-wrap:anywhere;line-height:1.15;}
+.smeny_classic_plan .smeny_classic_event>.smeny_shift_given_name{font-size:inherit;font-weight:400;overflow-wrap:anywhere;line-height:1.15;}
+.smeny_classic_plan .smeny_classic_event:hover{background:color-mix(in srgb,var(--smeny-shift-bg) 85%,var(--smeny-shift-accent));}
+.smeny_classic_template .smeny_classic_event{border:0;box-shadow:none;padding:5px 6px;cursor:default;}
+/* Křížek v záhlaví obsluhuje týž slot ve formuláři, ne samostatný zápis. */
+.smeny_content .smeny_classic_remove{position:absolute;right:4px;z-index:2;width:24px;height:24px;min-height:0;padding:0;border:0;border-radius:4px;background:transparent;color:#183148;font-size:20px;line-height:1;cursor:pointer;}
+.smeny_classic_remove:hover{background:#0002;}
+.smeny_classic_tools{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;}
+.smeny_classic_tools button{min-height:30px;padding:3px 8px;border:1px solid var(--cb-border);border-radius:6px;background:var(--cb-bg-panel);color:var(--cb-text-main);}
+/* Stejná kompaktní nabídka dalších slotů patří plánovači i editoru šablony. */
+.smeny_slot_picker{position:relative;}
+.smeny_slot_picker>summary{list-style:none;cursor:pointer;min-height:30px;box-sizing:border-box;padding:5px 8px;border:1px solid var(--cb-border);border-radius:6px;background:var(--cb-bg-panel);color:var(--cb-text-main);white-space:nowrap;}
+.smeny_slot_picker>summary::-webkit-details-marker{display:none;}
+.smeny_slot_picker_options{position:absolute;z-index:10;right:0;top:calc(100% + 3px);display:grid;gap:3px;min-width:140px;padding:4px;border:1px solid var(--cb-border);border-radius:6px;background:var(--cb-bg-panel);box-shadow:0 3px 8px #0003;}
+.smeny_slot_picker_options button{text-align:left;white-space:nowrap;}
+.smeny_template_column[hidden]{display:none;}
+.smeny_planner_day>header .smeny_classic_tools{margin:0 0 0 auto;}
+.smeny_content .smeny_planner_people{position:fixed;inset:8vh 16px auto auto;z-index:1200;width:320px;max-width:calc(100vw - 32px);max-height:84vh;max-height:84dvh;box-shadow:0 8px 40px #0005;}
+/* Čas se nastaví před kliknutím na osobu; popisky a běžně vysoká pole patří na jediný řádek. */
+.smeny_classic_assignment{display:flex;align-items:center;gap:10px;margin:8px 0;}
+.smeny_classic_assignment label{display:flex;align-items:center;gap:5px;min-width:0;}
+.smeny_classic_assignment input{width:100px;min-width:0;height:32px;min-height:32px;padding:3px 5px;font:inherit;box-sizing:border-box;}
+/* Detail zůstává vedle směny bez clony; úzká obrazovka omezí šířku na dostupné místo. */
+.smeny_shift_panel{position:fixed;inset:auto;margin:0;width:min(340px,calc(100vw - 16px));max-height:calc(100dvh - 16px);overflow:auto;padding:12px;border:1px solid var(--cb-border);border-radius:5px;background:var(--cb-bg-panel,#fff);color:var(--cb-text-main);box-shadow:0 3px 14px #0003;box-sizing:border-box;}
+.smeny_shift_panel::backdrop{background:transparent;pointer-events:none;}
+.smeny_shift_panel>header{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.smeny_shift_panel>header button{font:inherit;font-size:22px;min-width:32px;min-height:32px;}
+.smeny_shift_panel .smeny_planner_assigned{position:static;margin:0;padding:0;border:0;background:transparent;box-shadow:none;}
+.smeny_shift_panel .smeny_planner_assigned>strong,.smeny_shift_panel summary{display:none;}
+.smeny_shift_panel .smeny_shift_edit{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
+.smeny_shift_panel .smeny_shift_edit label{display:flex;align-items:center;gap:6px;min-width:0;}
+.smeny_shift_panel .smeny_shift_edit input{min-width:0;width:100%;min-height:34px;font:inherit;}
+.smeny_shift_panel .smeny_shift_edit button{width:100%;min-height:34px;}
+.smeny_shift_hours{margin-top:8px;font-size:13px;}
+.smeny_shift_hours p{margin:5px 0;}
+.smeny_shift_hours_total{font-weight:bold;}
+/* Rozměr horních řádků přebírá renderer od selectu šablony; týden ustoupí, poslední volba zůstane vpravo. */
+.smeny_planning_controls{display:grid;gap:6px;width:fit-content;max-width:100%;}
+.smeny_planning_controls>.pp_header{display:flex;justify-content:space-between;align-items:center;width:100%;gap:6px 12px;flex-wrap:wrap;margin:0;}
+.smeny_planning_controls>.pp_header form{margin:0;}
+.smeny_planning_controls .smeny_planning_top{flex-wrap:nowrap;}
+.smeny_planning_controls .smeny_planning_filters{flex:1 1 auto;min-width:0;flex-wrap:nowrap;}
+.smeny_planning_controls .smeny_planning_filters>label:last-child{flex:1 1 auto;min-width:0;}
+.smeny_planning_controls .smeny_planning_filters select[name=week]{width:100%;min-width:0;}
+.smeny_planning_controls .smeny_planning_settings{flex:0 0 auto;margin-left:auto;}
+@media(max-width:700px){.smeny_planning_controls .smeny_planning_top,.smeny_planning_controls .smeny_planning_filters{flex-wrap:wrap;}}
+.smeny_content[data-page=planovani_smen] .smeny_day_navigation button{width:64px;min-width:64px;flex:0 0 64px;}
+
+/* Klasická šablona upravuje časy ve slotech; zdrojové řádky zůstávají jediným datovým formulářem. */
+.smeny_style--classic .smeny_template_week{display:block;width:fit-content;max-width:100%;}
+.smeny_style--classic .smeny_template_editor{width:fit-content;}
+.smeny_style--classic .smeny_template_day{display:block;width:fit-content;max-width:100%;}
+.smeny_style--classic .smeny_template_day_name{display:block;}
+.smeny_style--classic .smeny_template_column>header{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.smeny_style--classic .smeny_grid_ready .smeny_template_columns{display:none;}
+.smeny_style--classic .smeny_template_column{flex:0 1 240px;max-width:100%;}
+.smeny_template_resolution{display:flex;flex:0 0 auto;align-items:center;gap:5px;margin:0;white-space:nowrap;}
+.smeny_planning_day_toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+/* Rozměry navigace patří pouze editoru šablon; den má přirozenou šířku a šipky přesně 64 px. */
+.smeny_template_toolbar .smeny_day_navigation{width:fit-content;flex:0 0 auto;}
+.smeny_template_toolbar .smeny_day_navigation button{width:64px;min-width:64px;flex:0 0 64px;}
+/* Výšku této mřížky počítá její geometrie; pevný limit 72vh by ji zbytečně ořezával. */
+.smeny_classic_template>.smeny_classic_scroll,.smeny_classic_plan>.smeny_classic_scroll{max-height:none;}
+.smeny_classic_template .smeny_classic_heading{height:32px;min-height:32px;white-space:nowrap;gap:3px;}
+.smeny_classic_heading_label{min-width:0;overflow:hidden;text-overflow:ellipsis;}
+.smeny_classic_heading--removable{justify-content:space-between;}
+.smeny_content .smeny_classic_heading>.smeny_classic_remove{position:static;flex:0 0 24px;}
+.smeny_classic_hour{align-items:center;line-height:16px;}
+.smeny_content :is(.smeny_classic_template,.smeny_classic_plan) .smeny_classic_tick{min-height:0;padding:0;font-size:12px;line-height:1;}
+.smeny_content .smeny_template_inline_times{display:flex;gap:3px;width:100%;}
+.smeny_content .smeny_template_inline_times input{width:52px;min-width:0;min-height:24px;padding:1px 2px;font-size:12px;border:1px solid var(--cb-border);border-radius:4px;background:var(--cb-bg-panel);color:inherit;}
+.smeny_template_inline_times input::-webkit-calendar-picker-indicator{display:none;}
+.smeny_content .smeny_classic_template .smeny_template_inline_times input{min-height:24px;font-size:12px;}
+.smeny_classic_template .smeny_classic_event.is-short{padding:2px;overflow:visible;}
+.smeny_template_save_state{font-size:var(--cb-font-14);}
+.smeny_template_save_state:empty{display:none;}
+.smeny_template_slot input[type=time]{width:100px;min-width:0;}
+/* Nastavení rozpisu patří do horního řádku, potvrzení obsazeného sloupce do malého dialogu. */
+.smeny_planning_settings{margin:0;}
+/* Výška řádku checkboxů odpovídá selectům, nikoli selectům včetně horních popisků. */
+.smeny_planning_settings fieldset{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin:0;padding:0;border:0;}
+.smeny_planning_settings label{display:flex;align-items:center;min-height:34px;box-sizing:border-box;gap:5px;white-space:nowrap;}
+.smeny_column_confirm{max-width:min(340px,calc(100vw - 24px));padding:14px;border:1px solid var(--cb-border);border-radius:8px;background:var(--cb-bg-panel,#fff);color:var(--cb-text-main);}
+.smeny_column_confirm::backdrop{background:#0005;}
+.smeny_column_confirm p{margin:0 0 12px;}
+.smeny_column_confirm button{min-width:85px;margin-right:8px;}
+.smeny_planner_row_title>[data-smeny-column-remove]{display:inline-flex;margin:0;}
+
+/* Výběr člověka nesmí na užším displeji překrýt konec směny potřebný k potvrzení. */
+@media(max-width:980px){
+ .smeny_content .smeny_planner_people{position:fixed;inset:8px;z-index:1200;width:auto;max-width:none;max-height:calc(100vh - 16px);max-height:calc(100dvh - 16px);padding:12px;}
+ .smeny_style--new .smeny_planner_tick{width:44px;min-width:44px;height:52px;}
+}
+/* Telefon na výšku je plnohodnotný pracovní režim obou vzhledů. */
+@media(max-width:700px){
+ .smeny_content{padding:10px;}
+ .smeny_content .pp_header{flex-wrap:wrap;gap:8px;}
+ .smeny_content h1{font-size:20px;}
+ .smeny_content :is(button,summary,select,input[type=time],input[type=text]){min-height:36px;}
+ .smeny_content :is(input[type=checkbox],input[type=radio]){min-width:20px;min-height:20px;}
+ .smeny_content :is(select,input[type=time],input[type=text],textarea){font-size:16px;}
+ .smeny_content>.smeny_overview_header{grid-template-columns:minmax(0,1fr);}
+ .smeny_style_switch{grid-column:1;width:max-content;justify-self:center;}
+ .smeny_style_switch fieldset{justify-content:center;}
+ .smeny_style_switch label{flex:0 0 auto;justify-content:center;}
+ .smeny_planning_filters{width:100%;align-items:stretch;}
+ .smeny_planning_filters label{flex:1 1 100%;}
+ .smeny_planning_filters select{width:100%;}
+ .smeny_planning_top,.smeny_planning_actions{align-items:stretch;}
+ .smeny_planning_actions>*{flex:1 1 100%;}
+ .smeny_planning_empty form,.smeny_template_create{display:flex;flex-direction:column;width:100%;align-items:stretch;}
+ .smeny_planning_empty label,.smeny_template_create label{width:100%;}
+ .smeny_template_editor,.smeny_template_list,.smeny_template_card{width:100%;max-width:100%;}
+ .smeny_template_card{padding:10px;}
+ .smeny_template_card_day{flex-wrap:wrap;}
+ .smeny_template_day,.smeny_template_week,.smeny_style--new .smeny_template_day{width:100%;max-width:100%;min-width:0;grid-template-columns:minmax(0,1fr);}
+ .smeny_template_columns,.smeny_style--new .smeny_template_columns{grid-template-columns:minmax(0,1fr);flex-wrap:wrap;}
+ .smeny_style--new .smeny_template_closing{grid-column:1;}
+ .smeny_template_column>header{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+ .smeny_template_column{width:100%;flex:1 1 100%;min-width:0;}
+ .smeny_template_slot{flex-wrap:wrap;}
+ .smeny_template_slot select{flex:1 1 80px;min-width:0;}
+ .smeny_template_name{grid-template-columns:auto minmax(0,1fr);width:100%;max-width:100%;}
+ .smeny_template_name input{width:100%;}
+ .smeny_template_save_all{position:sticky;bottom:8px;z-index:5;width:100%;}
+ .smeny_planner_day{padding:6px;}
+ .smeny_style--new .smeny_planner_row{grid-template-columns:minmax(0,1fr);}
+ .smeny_style--new .smeny_planner_timeline{max-width:100%;}
+ .smeny_planner_people>header button{min-width:44px;}
+
+ .smeny_planning_days article{grid-template-columns:minmax(0,1fr);}
+ .smeny_planning_block{grid-column:1;grid-template-columns:90px minmax(0,1fr);}
+ .smeny_planning_block strong{grid-column:1/-1;}
+ .smeny_requests_header,.smeny_requests_meta,.smeny_requests_help{flex-wrap:wrap;}
+ .smeny_week_navigation{width:100%;justify-content:space-between;}
+ .smeny_week_navigation strong{font-size:14px;}
+ /* Název a vymazání sdílejí horní řádek; posuvník má celou šířku bez třetí prázdné úrovně. */
+ .smeny_request_day{grid-template-columns:minmax(0,1fr) auto;gap:2px 6px;max-width:100%;min-width:0;}
+ .smeny_request_day_name{grid-column:1;grid-row:1;gap:4px;}
+ .smeny_request_range{grid-column:1/-1;grid-row:2;}
+ .smeny_request_clear{grid-column:2;grid-row:1;}
+ .smeny_request_copy_next{width:44px;flex-basis:44px;}
+ .smeny_request_range_track,.smeny_request_range_track input[type=range]{height:32px;}
+ .smeny_request_range_track::before{top:13px;}
+ .smeny_request_range_track input[type=range]::-webkit-slider-thumb{width:26px;height:26px;margin-top:-10px;}
+ .smeny_request_range_track input[type=range]::-moz-range-thumb{width:24px;height:24px;}
+ .smeny_requests_actions{flex-wrap:wrap;}
+ .smeny_settings{width:100%;}
+ .smeny_settings_form{align-items:stretch;}
+ .smeny_settings_form label{flex-wrap:wrap;}
+ /* Čtecí tabulky se na mobilu čtou jako karty se skutečnými názvy sloupců. */
+ .smeny_table_scroll:has(.smeny_overview_table){overflow:visible;}
+ .smeny_overview_table,.smeny_overview_table tbody,.smeny_overview_table tr{display:block;width:100%;}
+ .smeny_overview_table thead{display:none;}
+ .smeny_overview_table tbody tr{margin:4px 0;padding:5px;border:1px solid var(--cb-border);border-radius:8px;background:var(--cb-bg-panel);}
+ .smeny_overview_table :is(th,td){display:grid;grid-template-columns:minmax(100px,38%) minmax(0,1fr);gap:5px;padding:3px 2px;overflow-wrap:anywhere;}
+ .smeny_overview_table :is(th,td)::before{content:attr(data-label);font-weight:600;color:var(--cb-text-muted);}
+ .smeny_overview_table small{grid-column:2;}
+ /* Sdílené filtry zůstávají skutečnými vstupy společného tabulkového handleru. */
+ .smeny_shift_table_view .cb_table_wrap{overflow:visible;max-height:none;}
+ .smeny_shift_table,.smeny_shift_table :is(thead,tbody,tr){display:block;width:100%;min-width:0;}
+ .smeny_shift_table thead>tr:last-child{display:none;}
+ .smeny_shift_table .filter-row{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;}
+ .smeny_shift_table .filter-row th{display:block;position:static;width:100%;height:auto;padding:0;}
+ .smeny_shift_table .filter-row th:has(.filter-input)::before{content:attr(data-label);display:block;margin:4px 0;font-weight:600;}
+ .smeny_shift_table .filter-input{position:static;display:block;width:100%;min-height:44px;}
+ .smeny_shift_table .filter-reset-btn{width:44px;height:44px;}
+ .smeny_shift_table .filter-actions{height:auto;justify-content:flex-end;}
+ .smeny_shift_table tbody tr{margin:4px 0;padding:5px;border:1px solid var(--cb-border);border-radius:8px;}
+ .smeny_shift_table tbody td{display:grid;grid-template-columns:minmax(75px,32%) minmax(0,1fr);gap:5px;width:auto!important;white-space:normal!important;padding:3px 2px;}
+ .smeny_shift_table tbody td::before{content:attr(data-label);font-weight:600;color:var(--cb-text-muted);}
+ .smeny_shift_table tbody td[colspan]{grid-template-columns:minmax(0,1fr);}
+ .smeny_shift_table tbody td[colspan]::before{display:none;}
+}

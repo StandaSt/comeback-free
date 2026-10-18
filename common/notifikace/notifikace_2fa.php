@@ -558,7 +558,7 @@ function cb_push_send_first_entry_admin(string $fullName, int $adminUserId = 1):
     $payloadArr = [
         'type' => 'FIRST_ENTRY_ADMIN',
         'title' => 'Comeback',
-        'body' => 'První vstup: ' . $fullName,
+        'body' => 'Registrace zařízení: ' . $fullName,
         'url' => cb_url_abs(''),
     ];
 
@@ -615,6 +615,7 @@ function cb_push_send_first_entry_admin(string $fullName, int $adminUserId = 1):
     return true;
 }
 
+/** Uloží plný detail zprávy; volitelný stručný text použije pouze pro samotnou push notifikaci. */
 function cb_push_send_admin_info(
     array $idUsers,
     string $typ,
@@ -622,7 +623,8 @@ function cb_push_send_admin_info(
     string $nadpis = 'Admin info',
     string $pozn = '',
     ?int $idOdeslal = null,
-    string $detailUrl = ''
+    string $detailUrl = '',
+    string $notificationBody = ''
 ): array {
     global $PROSTREDI;
 
@@ -705,7 +707,9 @@ function cb_push_send_admin_info(
     ];
     $webPush = new Minishlink\WebPush\WebPush($auth);
     $odeslano = 0;
-    $body = preg_replace('/\s+/', ' ', $obsah) ?? $obsah;
+    // Bez výslovného stručného textu zůstává ostatním odesílatelům dosavadní náhled detailu.
+    $bodySource = trim($notificationBody) !== '' ? trim($notificationBody) : $obsah;
+    $body = preg_replace('/\s+/', ' ', $bodySource) ?? $bodySource;
     if (mb_strlen($body, 'UTF-8') > 140) {
         $body = mb_substr($body, 0, 137, 'UTF-8') . '...';
     }

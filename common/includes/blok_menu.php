@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+/* Účel: Jediný HTML renderer menu a uživatelského zápatí; přijímá výslovný kontext modulu i při předvykreslení skrytých šablon. */
 
 if (!function_exists('cb_blok_menu_h')) {
     function cb_blok_menu_h(string $value): string
@@ -13,7 +14,8 @@ if (!function_exists('cb_blok_menu_h')) {
 }
 
 if (!function_exists('cb_render_blok_menu_user')) {
-    function cb_render_blok_menu_user(): void
+    /** Zápatí dostává kontext výslovně, aby skryté šablony nepřebíraly modul právě vykreslované stránky. */
+    function cb_render_blok_menu_user(string $module = ''): void
     {
         $user = $_SESSION['cb_user'] ?? [];
         $userName = 'Uzivatel';
@@ -65,7 +67,7 @@ if (!function_exists('cb_render_blok_menu_user')) {
 
         $postUrl = function_exists('cb_root_url') ? cb_root_url('index.php') : 'index.php';
         $themeLevel = function_exists('cb_user_setting') ? max(0, min(6, (int)cb_user_setting('dark', 0))) : 0;
-        $themeModule = defined('CB_EMBEDDED_MODULE') ? (string)constant('CB_EMBEDDED_MODULE') : (string)($GLOBALS['CURRENT_MODULE'] ?? 'provoz');
+        $themeModule = $module !== '' ? $module : (defined('CB_EMBEDDED_MODULE') ? (string)constant('CB_EMBEDDED_MODULE') : (string)($GLOBALS['CURRENT_MODULE'] ?? 'provoz'));
         if (!in_array($themeModule, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'], true)) {
             $themeModule = 'provoz';
         }
@@ -106,9 +108,10 @@ if (!function_exists('cb_render_blok_menu_user')) {
 }
 
 if (!function_exists('cb_render_blok_menu_admin')) {
-    function cb_render_blok_menu_admin(): void
+    /** Odkaz do Administrace patří do ostatních povolených modulů, nikoli do jejího vlastního menu. */
+    function cb_render_blok_menu_admin(string $module = ''): void
     {
-        $currentModule = defined('CB_EMBEDDED_MODULE') ? (string)constant('CB_EMBEDDED_MODULE') : (string)($GLOBALS['CURRENT_MODULE'] ?? '');
+        $currentModule = $module !== '' ? $module : (defined('CB_EMBEDDED_MODULE') ? (string)constant('CB_EMBEDDED_MODULE') : (string)($GLOBALS['CURRENT_MODULE'] ?? ''));
         if (
             $currentModule === 'administrace'
             || !function_exists('cb_pravo_ma')
@@ -131,13 +134,15 @@ if (!function_exists('cb_render_blok_menu_admin')) {
 }
 
 if (!function_exists('cb_render_blok_menu')) {
+    /** Vykreslí stejnou podobu viditelného menu i jeho inertní šablony; metadata řídí pouze aktivní označení. */
     function cb_render_blok_menu(array $menu): void
     {
         $title = (string)($menu['title'] ?? '');
         $ariaLabel = (string)($menu['aria_label'] ?? $title);
         $items = is_array($menu['items'] ?? null) ? $menu['items'] : [];
+        $module=(string)($menu['module'] ?? '');
         ?>
-        <nav id="cb-main-menu" class="blok_menu" aria-label="<?= cb_blok_menu_h($ariaLabel) ?>">
+        <nav id="cb-main-menu" class="blok_menu" aria-label="<?= cb_blok_menu_h($ariaLabel) ?>" data-menu-module="<?= cb_blok_menu_h($module) ?>" data-menu-key="<?= cb_blok_menu_h((string)($menu['key'] ?? 'page')) ?>" data-menu-default="<?= cb_blok_menu_h((string)($menu['default_page'] ?? 'prehled')) ?>">
             <div class="blok_menu_mobile_head">
                 <strong>Menu</strong>
                 <button type="button" class="blok_menu_close" data-cb-menu-close="1" aria-label="Zavřít menu">×</button>
@@ -169,7 +174,7 @@ if (!function_exists('cb_render_blok_menu')) {
                         ? ' onclick="var i=this.closest(\'.blok_menu_item\');var m=this.closest(\'.blok_menu\');var s=i.querySelector(\'.blok_submenu\');var c=this.querySelector(\'.blok_menu_chev\');var o=s&&s.classList.contains(\'blok_submenu_open\');m.querySelectorAll(\'.blok_menu_item\').forEach(function(x){x.classList.remove(\'is-open\');var xs=x.querySelector(\'.blok_submenu\');var xc=x.querySelector(\'.blok_menu_chev\');if(xs){xs.classList.remove(\'blok_submenu_open\');}if(xc){xc.classList.remove(\'blok_menu_chev_open\');}});if(!o){i.classList.add(\'is-open\');if(s){s.classList.add(\'blok_submenu_open\');}if(c){c.classList.add(\'blok_menu_chev_open\');}}"'
                         : '';
                     ?>
-                    <li class="blok_menu_item">
+                    <li class="blok_menu_item" data-menu-pages="<?= cb_blok_menu_h(json_encode($item['active_pages'] ?? [],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR)) ?>">
                         <?php if ($url !== ''): ?>
                             <a class="<?= cb_blok_menu_h($buttonClass) ?>" href="<?= cb_blok_menu_h($url) ?>"<?= $moduleAttrs ?>>
                                 <span><?= cb_blok_menu_h($label) ?></span>
@@ -210,8 +215,8 @@ if (!function_exists('cb_render_blok_menu')) {
             </ul>
 
             <div class="blok_menu_bottom">
-                <?php cb_render_blok_menu_admin(); ?>
-                <?php cb_render_blok_menu_user(); ?>
+                <?php cb_render_blok_menu_admin($module); ?>
+                <?php cb_render_blok_menu_user($module); ?>
             </div>
         </nav>
         <?php

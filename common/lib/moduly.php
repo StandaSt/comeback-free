@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+/* Účel: Řídí přístup a načítání modulů a zaznamená požadavek na otevření s dostupným kontextem navigace. */
 
 function cb_moduly_povolene(): array
 {
@@ -68,6 +69,10 @@ function cb_modul_nacti(string $module): void
                 'detail' => [
                     'module' => $module,
                     'page' => $page,
+                    'faze' => 'pozadovano',
+                    'puvod' => 'server',
+                    'week' => $module==='smeny' && is_scalar($_GET['week'] ?? null) ? (string)$_GET['week'] : null,
+                    'id_pob' => $module==='smeny' && is_scalar($_GET['id_pob'] ?? null) ? (int)$_GET['id_pob'] : null,
                 ],
             ]);
         } else {

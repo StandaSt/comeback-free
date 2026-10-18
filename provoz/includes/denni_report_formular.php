@@ -1,5 +1,5 @@
 <?php
-// Vykresluje denní report včetně průběžných polí, storen, vysvětlení COL a údajů o finálním uložení.
+// Vykresluje denni report vcetne prestavek, COL a povinnych duvodu storen s ulozenim pod jejich seznamem.
 declare(strict_types=1);
 
 $zrEditableDisabledAttr = !empty($isReadOnlyForm) ? ' disabled' : '';
@@ -72,7 +72,23 @@ $renderTimeInput = static function (string $name, string $selected, string $data
     return '<input class="zr_time_input" type="text" inputmode="numeric"' . $attrName . ' value="' . h($selected) . '" style="width:100%;text-align:center;" ' . $dataAttr . $attrExtra . '>';
 };
 
-$renderInstorSavedRow = static function (array $row, callable $renderTimeInput) use ($zrEditableDisabledAttr, $zrEditableReadonlyAttr, $zrRemoveButtonHtml): string {
+// Jedna dvojice casu; historickou delku bez casu ukazuje oddelene a zachovava pri oprave.
+$renderPauseInput = static function (string $type, array $row) use ($renderTimeInput, $zrEditableDisabledAttr, $zrEditableReadonlyAttr): string {
+    $from = (string)($row['break_start'] ?? '');
+    $to = (string)($row['break_end'] ?? '');
+    $legacy = $from === '' && $to === '' ? (string)($row['break'] ?? '0') : '0';
+    $attrs = trim($zrEditableDisabledAttr . ' ' . $zrEditableReadonlyAttr);
+    $html = '<input type="hidden" name="' . h($type) . '_pauza_hod[]" value="' . h($legacy) . '" data-zr-break data-zr-legacy-break="' . h($legacy) . '">';
+    $html .= '<span class="zr_pause_pair">'
+        . $renderTimeInput($type . '_pauza_od[]', $from, 'data-zr-break-start aria-label="Pauza od"', $attrs)
+        . $renderTimeInput($type . '_pauza_do[]', $to, 'data-zr-break-end aria-label="Pauza do"', $attrs) . '</span>';
+    if ((float)$legacy > 0) {
+        $html .= '<small data-zr-legacy-label>Historicky ' . h($legacy) . ' h, cas neznamy</small>';
+    }
+    return $html;
+};
+
+$renderInstorSavedRow = static function (array $row, callable $renderTimeInput) use ($zrEditableDisabledAttr, $zrEditableReadonlyAttr, $zrRemoveButtonHtml, $renderPauseInput): string {
     $idDrOsoby = (int)($row['id_dr_osoby'] ?? 0);
     $idUser = (int)($row['id_user'] ?? 0);
     $name = trim((string)($row['name'] ?? ''));
@@ -89,13 +105,13 @@ $renderInstorSavedRow = static function (array $row, callable $renderTimeInput) 
         . '</td>'
         . '<td style="width:58px;">' . $renderTimeInput('instor_zacatek[]', $start, 'data-zr-start', trim($zrEditableDisabledAttr . ' ' . $zrEditableReadonlyAttr)) . '</td>'
         . '<td style="width:58px;">' . $renderTimeInput('instor_konec[]', $end, 'data-zr-end', trim($zrEditableDisabledAttr . ' ' . $zrEditableReadonlyAttr)) . '</td>'
-        . '<td class="zr_person_cell_break" style="width:44px;"><input type="text" inputmode="decimal" name="instor_pauza_hod[]" value="' . h($break) . '" style="width:100%;text-align:center;" data-zr-break' . $zrEditableReadonlyAttr . $zrEditableDisabledAttr . '></td>'
+        . '<td class="zr_person_cell_break" style="width:126px;">' . $renderPauseInput('instor', $row) . '</td>'
         . '<td style="width:70px;"><strong class="zr_saved_value" data-zr-hours>' . h($hours) . ' hod.</strong><input type="hidden" name="instor_hodiny[]" value="' . h($hours) . '" data-zr-hours-hidden></td>'
         . '<td></td>'
         . '</tr>';
 };
 
-$renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) use ($zrEditableDisabledAttr, $zrEditableReadonlyAttr, $zrRemoveButtonHtml): string {
+$renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) use ($zrEditableDisabledAttr, $zrEditableReadonlyAttr, $zrRemoveButtonHtml, $renderPauseInput): string {
     $idDrOsoby = (int)($row['id_dr_osoby'] ?? 0);
     $idUser = (int)($row['id_user'] ?? 0);
     $name = trim((string)($row['name'] ?? ''));
@@ -118,7 +134,7 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
         . '</td>'
         . '<td style="width:58px;">' . $renderTimeInput('kuryr_zacatek[]', $start, 'data-zr-start', trim($zrEditableDisabledAttr . ' ' . $zrEditableReadonlyAttr)) . '</td>'
         . '<td style="width:58px;">' . $renderTimeInput('kuryr_konec[]', $end, 'data-zr-end', trim($zrEditableDisabledAttr . ' ' . $zrEditableReadonlyAttr)) . '</td>'
-        . '<td class="zr_person_cell_break" style="width:44px;"><input type="text" inputmode="decimal" name="kuryr_pauza_hod[]" value="' . h($break) . '" style="width:100%;text-align:center;" data-zr-break' . $zrEditableReadonlyAttr . $zrEditableDisabledAttr . '></td>'
+        . '<td class="zr_person_cell_break" style="width:126px;">' . $renderPauseInput('kuryr', $row) . '</td>'
         . '<td style="width:70px;"><strong class="zr_saved_value" data-zr-hours>' . h($hours) . ' hod.</strong><input type="hidden" name="kuryr_hodiny[]" value="' . h($hours) . '" data-zr-hours-hidden></td>'
         . '<td class="txt_c" style="width:48px;"><strong class="zr_saved_value" data-zr-delivery-restia-value>' . h((string)$deliveryRestia) . '</strong><input type="hidden" name="kuryr_pocet_rozvozu_restia[]" value="' . h((string)$deliveryRestia) . '" data-zr-editor-field="delivery_restia"></td>'
         . '<td class="txt_c" style="width:48px;"><input class="zr_delivery_input txt_c" type="text" inputmode="numeric" name="kuryr_pocet_rozvozu_manual[]" value="' . h((string)$deliveryManual) . '" style="width:100%;" data-zr-editor-field="delivery_manual" data-zr-int-short' . $zrEditableReadonlyAttr . $zrEditableDisabledAttr . '>'
@@ -243,9 +259,9 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
             <thead>
               <tr>
                 <th class="zr_req_label txt_l" style="width:220px;white-space:nowrap;" data-zr-required-label="instor_jmeno"><?= h($slotLabels[1] ?? 'Slot 1') ?></th>
-                <th class="zr_req_label txt_l" style="width:58px;white-space:nowrap;" data-zr-required-label="instor_zacatek">Směna od</th>
-                <th class="zr_req_label txt_l" style="width:58px;white-space:nowrap;" data-zr-required-label="instor_konec">Směna do</th>
-                <th class="txt_l" style="width:44px;white-space:nowrap;">Pauza</th>
+                <th class="zr_req_label txt_l" style="width:58px;white-space:nowrap;" data-zr-required-label="instor_zacatek"><span class="zr_time_label">Směna od</span></th>
+                <th class="zr_req_label txt_l" style="width:58px;white-space:nowrap;" data-zr-required-label="instor_konec"><span class="zr_time_label">Směna do</span></th>
+                <th class="zr_pause_heading"><span class="zr_pause_pair"><span>Pauza od</span><span>Pauza do</span></span></th>
                 <th class="txt_l" style="width:70px;white-space:nowrap;">Odprac.</th>
                 <th class="txt_l" style="white-space:nowrap;"></th>
               </tr>
@@ -332,9 +348,9 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
             <thead>
               <tr>
                 <th class="txt_l" style="width:220px;white-space:nowrap;"><?= h($slotLabels[2] ?? 'Slot 2') ?></th>
-                <th class="txt_l" style="width:58px;white-space:nowrap;">Směna od</th>
-                <th class="txt_l" style="width:58px;white-space:nowrap;">Směna do</th>
-                <th class="txt_l" style="width:44px;white-space:nowrap;">Pauza</th>
+                <th class="txt_l" style="width:58px;white-space:nowrap;"><span class="zr_time_label">Směna od</span></th>
+                <th class="txt_l" style="width:58px;white-space:nowrap;"><span class="zr_time_label">Směna do</span></th>
+                <th class="zr_pause_heading"><span class="zr_pause_pair"><span>Pauza od</span><span>Pauza do</span></span></th>
                 <th class="txt_l" style="width:70px;white-space:nowrap;">Odprac.</th>
                 <th class="txt_l" style="width:48px;white-space:nowrap;">Rozvozů</th>
                 <th class="txt_l" style="width:48px;white-space:nowrap;">Ručně</th>
@@ -444,26 +460,6 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
         </table>
       </section>
     </aside>
-    <?php if ($zrCanUnlockFinalReport && !$zrIsEditingFinalReport && ($formMode ?? '') === 'final_readonly' && $reportBranchId > 0): ?>
-      <button
-        type="button"
-        class="zr_submit"
-        data-zr-edit-final-button
-        style="background:#c62828;border-color:#b71c1c;color:#fff;cursor:pointer;opacity:1;"
-      >Editovat tento report</button>
-    <?php elseif (!empty($canEditReport) && $reportBranchId > 0): ?>
-      <button
-        type="button"
-        class="zr_submit"
-        disabled
-        data-zr-submit
-        data-zr-submit-locked-text="<?= h($zrSubmitLockedText) ?>"
-        data-zr-submit-ready-text="<?= h($zrSubmitReadyText) ?>"
-        data-zr-submit-missing-text="Vyplň všechna povinná data reportu"
-        data-zr-submit-at="<?= h((string)($zrIsEditingFinalReport ? 0 : $reportSaveAtTs)) ?>"
-        <?php if ($zrIsEditingFinalReport): ?>style="background:#2e7d32;border-color:#1b5e20;color:#fff;cursor:pointer;opacity:1;"<?php else: ?>style="background:#d9dee8;border-color:#c1c9d6;color:#5f6b7a;cursor:not-allowed;opacity:1;"<?php endif; ?>
-      ><?= h($zrIsEditingFinalReport ? $zrSubmitReadyText : 'Report bude možné uložit za 0:00:00') ?></button>
-    <?php endif; ?>
     <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section zr_storno_section">
     <h4 class="card_section_title txt_seda">Stornované objednávky</h4>
     <?php if ((array)($stornoRows ?? []) === []): ?>
@@ -508,6 +504,7 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
                   maxlength="255"
                   value="<?= h((string)($stornoRow['poznamka'] ?? '')) ?>"
                   data-zr-storno-note
+                  required
                   data-id-obj="<?= h((string)$zrStornoIdObj) ?>"
                   data-zr-storno-saved-value="<?= h((string)($stornoRow['poznamka'] ?? '')) ?>"
                   <?= $zrEditableReadonlyAttr ?>
@@ -547,6 +544,26 @@ $renderKuryrSavedRow = static function (array $row, callable $renderTimeInput) u
       </table>
     <?php endif; ?>
     </section>
+    <?php if ($zrCanUnlockFinalReport && !$zrIsEditingFinalReport && ($formMode ?? '') === 'final_readonly' && $reportBranchId > 0): ?>
+      <button
+        type="button"
+        class="zr_submit"
+        data-zr-edit-final-button
+        style="background:#c62828;border-color:#b71c1c;color:#fff;cursor:pointer;opacity:1;"
+      >Editovat tento report</button>
+    <?php elseif (!empty($canEditReport) && $reportBranchId > 0): ?>
+      <button
+        type="button"
+        class="zr_submit"
+        disabled
+        data-zr-submit
+        data-zr-submit-locked-text="<?= h($zrSubmitLockedText) ?>"
+        data-zr-submit-ready-text="<?= h($zrSubmitReadyText) ?>"
+        data-zr-submit-missing-text="Vyplň všechna povinná data reportu"
+        data-zr-submit-at="<?= h((string)($zrIsEditingFinalReport ? 0 : $reportSaveAtTs)) ?>"
+        <?php if ($zrIsEditingFinalReport): ?>style="background:#2e7d32;border-color:#1b5e20;color:#fff;cursor:pointer;opacity:1;"<?php else: ?>style="background:#d9dee8;border-color:#c1c9d6;color:#5f6b7a;cursor:not-allowed;opacity:1;"<?php endif; ?>
+      ><?= h($zrIsEditingFinalReport ? $zrSubmitReadyText : 'Report bude možné uložit za 0:00:00') ?></button>
+    <?php endif; ?>
   </div>
   <?php if ($zrHasManualDifferences): ?>
     <section class="zr_manual_differences" aria-label="Informace o rozdílech oproti Google reportu">

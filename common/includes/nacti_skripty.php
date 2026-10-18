@@ -3,12 +3,13 @@
  * Ucel souboru: Vypise konfiguraci pro prohlizec a JS soubory spolecne HTML kostry.
  * Poradi skriptu je zavisle na soucasne aplikaci a odpovida puvodnimu rozlozeni.
  * Historie Franty ma oddelenou obsluhu zobrazeni a navratu do stranky.
+ * Menu a jeho oprávnění dodává společná PHP příprava HTML šablon; konfigurace neobsahuje druhý seznam položek.
+ * Směny při plném otevření použijí hotový serverový obsah; ostatní moduly si zachovávají úvodní obnovu dat.
  */
 declare(strict_types=1);
 
 // MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
 require_once __DIR__ . '/../lib/hr_pracoviste_main.php';
-require_once __DIR__ . '/../../helpdesk/hl_lib/hl_pages.php';
 $cbNavUser = $_SESSION['cb_user'] ?? [];
 $cbNavUserId = is_array($cbNavUser) ? (int)($cbNavUser['id_user'] ?? 0) : 0;
 $cbNavMainBranchId = 0;
@@ -21,9 +22,13 @@ if ($cbNavUserId > 0) {
 window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
 window.CB_CRF_TOKEN = <?= json_encode(function_exists('cb_crf_token') ? cb_crf_token() : '', JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
 window.CB_PC_SESSION_TOKEN = <?= json_encode((string)($_SESSION['cb_pc_session_token'] ?? ''), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+// Fronta patří skutečnému loginu, nikoliv převzatému profilu práv.
+window.CB_AKTIVITA = <?= json_encode($cbNavUserId>0 ? ['url'=>cb_root_url('index.php?cb_aktivita=1'),'owner'=>(string)(int)($_SESSION['cb_id_login'] ?? 0).':'.$cbNavUserId] : null,JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR) ?>;
 </script>
 <?php // Jednotná ochrana zápisových požadavků. ?>
 <script src="<?= h(cb_public_url('js/ochrana_crf.js') . '?v=' . (is_file(__DIR__ . '/../js/ochrana_crf.js') ? (string)filemtime(__DIR__ . '/../js/ochrana_crf.js') : '1')) ?>"></script>
+<?php // Společné dávkování činnosti; moduly dodávají významové události ze svého ovládání. ?>
+<script src="<?= h(cb_public_url('js/user_aktivita.js').'?v='.(string)filemtime(__DIR__.'/../js/user_aktivita.js')) ?>"></script>
 <?php // Jednotné zpracování chybových odpovědí v prohlížeči. ?>
 <script src="<?= h($cbChybyJsUrl) ?>"></script>
 <?php // Knihovna grafu. ?>
@@ -86,8 +91,14 @@ window.CB_PC_SESSION_TOKEN = <?= json_encode((string)($_SESSION['cb_pc_session_t
 <script src="<?= h(cb_root_url('smeny/js/pozadavky.js') . '?v=' . (is_file(__DIR__ . '/../../smeny/js/pozadavky.js') ? (string)filemtime(__DIR__ . '/../../smeny/js/pozadavky.js') : '1')) ?>"></script>
 <?php // Ovládání editoru šablon směn. ?>
 <script src="<?= h(cb_root_url('smeny/js/sablony.js') . '?v=' . (is_file(__DIR__ . '/../../smeny/js/sablony.js') ? (string)filemtime(__DIR__ . '/../../smeny/js/sablony.js') : '1')) ?>"></script>
+<?php // Společná preference vzhledu a klasická denní mřížka pro šablony i plánování. ?>
+<script src="<?= h(cb_root_url('smeny/js/styly.js') . '?v=' . (string)filemtime(__DIR__ . '/../../smeny/js/styly.js')) ?>"></script>
+<?php // Životnost zámku, aktivita a bezpečný odchod ze stránky plánování. ?>
+<script src="<?= h(cb_root_url('smeny/js/planovani_zamek.js') . '?v=' . (string)filemtime(__DIR__ . '/../../smeny/js/planovani_zamek.js')) ?>"></script>
 <?php // Klikací plánování zaměstnanců do směn. ?>
 <script src="<?= h(cb_root_url('smeny/js/planovani.js') . '?v=' . (is_file(__DIR__ . '/../../smeny/js/planovani.js') ? (string)filemtime(__DIR__ . '/../../smeny/js/planovani.js') : '1')) ?>"></script>
+<?php // Adaptér běží po směnových editorech a čte jejich výsledný DOM i hodnoty. ?>
+<script src="<?= h(cb_root_url('smeny/js/aktivita.js').'?v='.(string)filemtime(__DIR__.'/../../smeny/js/aktivita.js')) ?>"></script>
 <?php // Otevření oznámení směn a souhlasu v modálu. ?>
 <script src="<?= h(cb_root_url('smeny/js/oznameni.js') . '?v=' . (string)filemtime(__DIR__ . '/../../smeny/js/oznameni.js')) ?>"></script>
 <?php // Jednotné uživatelské texty chyb Administrace. ?>
@@ -122,18 +133,8 @@ window.CB_MODULY_NAVIGACE = {
   publicShellUrl: <?= json_encode($cbPublicShellUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,
   activeMainModule: <?= json_encode($cbInitialModule, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,
   denniReportMainBranchId: <?= $cbNavMainBranchId ?>,
-  helpdeskAllowedViews: <?= json_encode(array_values(array_filter(array_keys(cb_helpdesk_views()), 'cb_helpdesk_view_allowed')), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,
-  smenyPozadavky: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(405) ? 'true' : 'false' ?>,
-  smenySablony: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(404) ? 'true' : 'false' ?>,
-  smenyPlanovani: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(403) ? 'true' : 'false' ?>,
-  smenyNastaveni: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(407) ? 'true' : 'false' ?>,
-  adminFirmaPridat: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(105) ? 'true' : 'false' ?>,
-  adminLogChyby: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(106) ? 'true' : 'false' ?>,
-  adminUzivatele: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(107) ? 'true' : 'false' ?>,
-  adminIndividualniPrava: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(103) ? 'true' : 'false' ?>,
-  adminExportDb: <?= function_exists('cb_pravo_ma') && cb_pravo_ma(109) ? 'true' : 'false' ?>,
-  aiAnalytikAllowed: <?= function_exists('cb_pravo_ma') && is_array($_SESSION['prava_stav'] ?? null) && array_key_exists(210, $_SESSION['prava_stav']) && cb_pravo_ma(210) ? 'true' : 'false' ?>,
-  initialAutoLoad: true
+  <?php // Směny už byly vykreslené serverem, včetně výsledku POST. Druhý GET by zahodil flash a znovu přestavěl PP. ?>
+  initialAutoLoad: <?= $cbInitialModule === 'smeny' ? 'false' : 'true' ?>
 };
 </script>
 <?php // Klientska navigace mezi moduly. ?>

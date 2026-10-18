@@ -1,11 +1,18 @@
 <?php
 declare(strict_types=1);
-/* Účel: Úvodní přehled směn – zaměstnanec vidí své úkoly, vedoucí rozpisy, souhlasy a žádosti povolených poboček. */
+/* Účel: Úvodní přehled směn ukazuje rozpisy a souhlasy; uprostřed hlavičky nabízí společný přepínač vzhledu modulu. */
 $smReadPage='prehled';
 ?>
-<section class="pp smeny_content smeny_planning" data-module="smeny" data-page="prehled">
-  <header class="pp_header"><h1>Přehled směn</h1></header>
-  <p><a href="<?= h(cb_root_url('index.php?m=smeny&page=me_smeny')) ?>">Mé směny a oznámení k potvrzení</a></p>
+<section class="pp smeny_content <?= cb_smeny_styl_trida($smStyl) ?> smeny_planning" data-module="smeny" data-page="prehled">
+  <header class="pp_header smeny_overview_header"><h1>Přehled směn</h1>
+    <form method="post" action="<?= h(cb_root_url('index.php?m=smeny&page=prehled')) ?>" class="smeny_style_switch" data-smeny-style-form>
+      <input type="hidden" name="action" value="smeny_styl_ulozit"><input type="hidden" name="cb_crf" value="<?= h(cb_crf_token()) ?>">
+      <fieldset><legend>Vzhled Směn</legend>
+        <label><input type="radio" name="smeny_styl" value="1"<?= $smStyl===1?' checked':'' ?>> Klasický</label>
+        <label><input type="radio" name="smeny_styl" value="2"<?= $smStyl===2?' checked':'' ?>> Nový</label>
+      </fieldset><span role="status" data-smeny-style-status></span>
+    </form>
+  </header>
   <?php if(!cb_smeny_planovani_vidi()): ?>
     <?php $smPersonalNotices=cb_smeny_verejne_oznameni($smDb,cb_smeny_sablony_id_person($smDb)); ?>
     <p>Čeká na váš souhlas: <strong><?= count($smPersonalNotices) ?><?= count($smPersonalNotices)===100?'+':'' ?></strong> oznámení.</p>
@@ -13,7 +20,6 @@ $smReadPage='prehled';
   <?php else:
     $smOverviewPlans=cb_smeny_prehled_rozpisy($smDb,$smReadBranches,$smReadWeek['start_day']);
     $smOverviewNotices=cb_smeny_prehled_souhlasy($smDb,$smReadBranches,$smReadWeek['start_day']);
-    $smOverviewCancellations=cb_smeny_zruseni_nacist($smDb,$smReadWeek['start_day'],0,$smReadBranches,true);
     $smPendingCount=count(array_filter($smOverviewNotices,static fn(array $n):bool=>$n['potvrzeno']===null));
   ?>
     <?php require __DIR__.'/tyden_filtr.php'; ?>
@@ -34,15 +40,5 @@ $smReadPage='prehled';
       <td><?= $smOverviewNotice['potvrzeno']===null?'Čeká':h((new DateTimeImmutable($smOverviewNotice['potvrzeno']))->format('j. n. Y H:i')) ?></td>
     </tr><?php endforeach; ?></tbody></table></div>
     <?php endif; ?>
-    <h2>Žádosti o zrušení směn</h2>
-    <?php if($smOverviewCancellations===[]): ?><p>V tomto týdnu nejsou žádné žádosti.</p><?php endif; ?>
-    <?php foreach($smOverviewCancellations as $smOverviewCancel): ?>
-      <article class="smeny_notice"><strong><?= h($smOverviewCancel['jmeno'].' · '.$smOverviewCancel['pobocka']) ?></strong>
-        <p><?= h((new DateTimeImmutable($smOverviewCancel['zacatek']))->format('j. n. Y H:i').' · '.cb_smeny_zruseni_stav($smOverviewCancel['stav'])) ?></p>
-        <?php $smCancelWeekIndex=array_search($smOverviewCancel['tyden_od'],array_column($smReadWeeks,'start_day'),true); if($smCancelWeekIndex!==false): ?>
-          <a href="<?= h(cb_root_url('index.php?m=smeny&page=planovani_smen&id_pob='.(int)$smOverviewCancel['id_pob'].'&week='.$smCancelWeekIndex)) ?>">Otevřít v plánování</a>
-        <?php endif; ?>
-      </article>
-    <?php endforeach; ?>
   <?php endif; ?>
 </section>

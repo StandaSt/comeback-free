@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /*
- * Desktopový formulář týdenní dostupnosti V2: intervaly, Kdykoliv nebo den volna HPP.
+ * Formulář dostupnosti pro oba vzhledy: Kdykoliv předvyplní upravitelné dny, Reset vyprázdní týden a HPP vybírá den volna.
  */
 
 $smFlash = $_SESSION['cb_smeny_pozadavky_flash'] ?? null;
@@ -12,6 +12,13 @@ $smCopiedWeek = cb_smeny_pozadavky_kopie($smDb, $smPerson, $smWeeks, $smWeekInde
 if ($smCopiedWeek !== null) {
     $smData['blocks'] = $smCopiedWeek['blocks'];
     $smData['anytime'] = $smCopiedWeek['anytime'];
+}
+// I starší záznam Kdykoliv bez denních řádků otevřeme jako běžné plné intervaly aktuálního týdne.
+if ($smPerson !== null && $smData['anytime'] && (int)$smPerson['je_hpp'] !== 1) {
+    foreach ($smWeek['days'] as $smAnyDay) {
+        $smAnyClosing=substr(trim((string)($smPerson[$smAnyDay['closing_key']] ?? '')),0,5);
+        if ($smAnyClosing !== '') $smData['blocks'][$smAnyDay['date']]=['od'=>'10:00','do'=>$smAnyClosing];
+    }
 }
 $smHasMainBranch = $smPerson !== null && (int)$smPerson['id_pob'] > 0;
 $smHasHppSetup = $smHasMainBranch && (int)$smPerson['id_slot'] > 0;
@@ -37,7 +44,7 @@ if ((string)$smData['saved_at'] !== '') {
     $smSavedAtLabel = $smSavedAt ? $smSavedAt->format('j. n. Y \v H:i') : (string)$smData['saved_at'];
 }
 ?>
-<section class="pp smeny_content smeny_requests" data-module="smeny" data-page="pozadavky">
+<section class="pp smeny_content <?= cb_smeny_styl_trida($smStyl) ?> smeny_requests" data-module="smeny" data-page="pozadavky">
     <header class="pp_header smeny_requests_header">
         <h1>Požadavky na směny</h1>
         <div class="smeny_week_navigation" aria-label="Volba týdne">
@@ -65,7 +72,6 @@ if ((string)$smData['saved_at'] !== '') {
         <div class="smeny_requests_meta">
             <span><strong><?= h((string)($smPerson['jmeno'] ?: 'Pracovník')) ?></strong></span>
             <span>Hlavní pobočka: <strong><?= h((string)($smPerson['pobocka'] ?: 'není nastavena')) ?></strong></span>
-            <span>Pracovní slot: <strong><?= h((string)($smPerson['pozice'] ?: 'není nastaven')) ?></strong></span>
             <span>Termín: <strong><?= h(cb_smeny_uzaverka_dny()[(int)$smWeek['deadline']->format('N')]) ?> <?= h($smWeek['deadline']->format('j. n. Y')) ?> v <?= h($smWeek['deadline']->format('H:i')) ?></strong></span>
             <?php if ($smCopiedWeek !== null): ?>
                 <span class="smeny_request_state smeny_request_state--changed" data-smeny-save-state>Požadavky byly převzaty z týdne <?= h($smCopiedWeek['source_label']) ?> a zatím nejsou uložené.</span>
@@ -110,13 +116,15 @@ if ((string)$smData['saved_at'] !== '') {
                 </div>
             <?php else: ?>
                 <div class="smeny_requests_help">
-                    <strong>Nastavte pouze dny, kdy chcete pracovat</strong>
-                    <label><input type="checkbox" name="kdykoliv" value="1" data-smeny-anytime<?= $smData['anytime'] ? ' checked' : '' ?><?= !$smCanSave ? ' disabled' : '' ?>> Kdykoliv – celý týden po celou otevírací dobu hlavní pobočky</label>
+                    <div class="smeny_requests_bulk">
+                        <label><input type="checkbox" name="kdykoliv" value="1" data-smeny-anytime<?= $smData['anytime'] ? ' checked' : '' ?><?= !$smCanSave ? ' disabled' : '' ?>> Kdykoliv – celý týden po celou otevírací dobu hlavní pobočky</label>
+                        <button type="button" class="smeny_secondary_button" data-smeny-reset-week aria-label="Reset celého týdne"<?= !$smCanSave ? ' disabled' : '' ?>>Reset</button>
+                    </div>
                 </div>
                 <?php if (!$smHasMainBranch): ?>
                     <p class="smeny_notice smeny_notice--error">V HR chybí hlavní pobočka. Bez ní nelze požadavky uložit ani určit výchozí konec pracovní doby.</p>
                 <?php endif; ?>
-                <fieldset class="smeny_request_days smeny_request_intervals" data-smeny-intervals<?= $smData['anytime'] ? ' hidden disabled' : '' ?>>
+                <fieldset class="smeny_request_days smeny_request_intervals" data-smeny-intervals>
                     <?php foreach ($smWeek['days'] as $smDayIndex => $smDay): ?>
                         <?php
                         $smBlock = $smData['blocks'][$smDay['date']] ?? null;
@@ -164,7 +172,8 @@ if ((string)$smData['saved_at'] !== '') {
                                 </div>
                                 <div class="smeny_request_range_track" data-smeny-range-track style="--smeny-range-start:<?= h(number_format($smStartPercent, 3, '.', '')) ?>%;--smeny-range-end:<?= h(number_format($smEndPercent, 3, '.', '')) ?>%">
                                     <input type="range" min="<?= $smOpeningIndex ?>" max="<?= $smClosingIndex ?>" step="<?= $smRangeStep ?>" value="<?= $smStartIndex ?>" aria-label="Začátek požadavku" data-smeny-start<?= !$smDayAvailable ? ' disabled' : '' ?>>
-                                    <input type="range" min="<?= $smOpeningIndex ?>" max="<?= $smClosingIndex ?>" step="<?= $smRangeStep ?>" value="<?= $smEndIndex ?>" aria-label="Konec požadavku" data-smeny-end<?= !$smDayAvailable ? ' disabled' : '' ?>>
+                                    <?php // Jemný index dovolí i přesné zavření mimo hodinovou mřížku; JS zachová běžný krok ovládání. ?>
+                                    <input type="range" min="<?= $smOpeningIndex ?>" max="<?= $smClosingIndex ?>" step="1" value="<?= $smEndIndex ?>" aria-label="Konec požadavku" data-smeny-end<?= !$smDayAvailable ? ' disabled' : '' ?>>
                                 </div>
                                 <input type="hidden" name="blocks[<?= h($smDay['date']) ?>][od]" value="<?= $smBlock ? h($smStartTime) : '' ?>" data-smeny-start-value>
                                 <input type="hidden" name="blocks[<?= h($smDay['date']) ?>][do]" value="<?= $smBlock ? h($smEndTime) : '' ?>" data-smeny-end-value>

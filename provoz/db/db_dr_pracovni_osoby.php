@@ -1,5 +1,5 @@
 <?php
-// db/db_dr_pracovni_osoby.php * K10 osoby pracovního reportu
+// Osoby rozpracovaneho reportu vcetne jedne casove prestavky.
 declare(strict_types=1);
 
 /*
@@ -18,7 +18,7 @@ function cb_db_dr_pracovni_osoby_list(mysqli $conn, int $idDr): array
 
     $stmt = $conn->prepare('
         SELECT dpo.id_dr_osoby, dpo.id_dr, dpo.id_user, dpo.id_slot,
-               dpo.smena_od, dpo.smena_do, dpo.pauza, dpo.odpracovano,
+               dpo.smena_od, dpo.smena_do, dpo.pauza, dpo.pauza_od, dpo.pauza_do, dpo.odpracovano,
                dpo.rozvozu_manual, dpo.vlastni_vuz, dpo.vyplatit_phm, dpo.poradi,
                ou.jmeno, ou.prijmeni, COALESCE(hp.aktivni, 0) AS aktivni
         FROM dr_pracovni_osoby dpo
@@ -90,7 +90,8 @@ function cb_db_dr_pracovni_osoby_delete(mysqli $conn, int $idDr, int $idUser, in
     $stmt->close();
 }
 
-function cb_db_dr_pracovni_osoby_update_time(mysqli $conn, int $idDrOsoby, ?string $smenaOd, ?string $smenaDo, ?float $pauza, ?float $odpracovano): void
+// Ulozi casy i odvozenou delku prestavky jednim updatem cele smeny.
+function cb_db_dr_pracovni_osoby_update_time(mysqli $conn, int $idDrOsoby, ?string $smenaOd, ?string $smenaDo, ?float $pauza, ?float $odpracovano, ?string $pauzaOd = null, ?string $pauzaDo = null): void
 {
     if ($idDrOsoby <= 0) {
         throw new RuntimeException('Neplatny radek osoby pracovního reportu.');
@@ -98,14 +99,14 @@ function cb_db_dr_pracovni_osoby_update_time(mysqli $conn, int $idDrOsoby, ?stri
 
     $stmt = $conn->prepare('
         UPDATE dr_pracovni_osoby
-        SET smena_od = ?, smena_do = ?, pauza = ?, odpracovano = ?
+        SET smena_od = ?, smena_do = ?, pauza = ?, odpracovano = ?, pauza_od = ?, pauza_do = ?
         WHERE id_dr_osoby = ?
     ');
     if ($stmt === false) {
         throw new RuntimeException('Nepodarilo se pripravit update casu dr_pracovni_osoby.');
     }
 
-    $stmt->bind_param('ssddi', $smenaOd, $smenaDo, $pauza, $odpracovano, $idDrOsoby);
+    $stmt->bind_param('ssddssi', $smenaOd, $smenaDo, $pauza, $odpracovano, $pauzaOd, $pauzaDo, $idDrOsoby);
     $stmt->execute();
     $stmt->close();
 }

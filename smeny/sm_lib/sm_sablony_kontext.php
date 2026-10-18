@@ -1,7 +1,26 @@
 <?php
 declare(strict_types=1);
 
-/* Účel souboru: Připraví povolené pobočky, osobu a pracovní sloty pro práci se šablonami. */
+/* Účel souboru: Připraví pobočky a osobu; odděluje základní a povolené sloty podle typu pobočky, názvy přebírá z HR číselníku. */
+
+/** Názvy a aktivita slotů mají jediný zdroj v HR číselníku, nikoli v popiscích plánovače. */
+function cb_smeny_sloty_ciselnik(mysqli $db): array
+{
+    static $cache=[];
+    $key=spl_object_id($db);
+    if(isset($cache[$key])) return $cache[$key];
+    $rows=[];
+    $result=$db->query('SELECT id_slot,slot FROM cis_slot WHERE aktivni=1 ORDER BY id_slot');
+    while($row=$result->fetch_assoc()) $rows[(int)$row['id_slot']]=$row['slot'];
+    $result->close();
+    return $cache[$key]=$rows;
+}
+
+/** Povinné minimum se týká jen základních pozic; volitelné smějí z konkrétního dne úplně zmizet. */
+function cb_smeny_sloty_zakladni_id(array $branch): array
+{
+    return strcasecmp(trim((string)($branch['kod'] ?? '')),'Vyroba')===0 ? [5,8] : [1,2];
+}
 
 /** @return array<int,array<string,mixed>> */
 function cb_smeny_sablony_pobocky(mysqli $db): array
@@ -36,6 +55,7 @@ function cb_smeny_sablony_pobocky(mysqli $db): array
     while ($row = $result->fetch_assoc()) {
         $row['id_pob'] = (int)$row['id_pob'];
         $row['id_firma'] = (int)$row['id_firma'];
+        $row['sloty_nazvy'] = cb_smeny_sloty_ciselnik($db);
         $branches[(int)$row['id_pob']] = $row;
     }
     $result->close();
@@ -57,18 +77,32 @@ function cb_smeny_sablony_id_person(mysqli $db): int
     return $idPerson;
 }
 
-/** @return array<int,string> */
+/** Povolené sloty pro přidání, validaci a popisky. Jejich výčet neznamená povinné sloupce. */
 function cb_smeny_sablony_pozice(array $branch): array
 {
-    if (strcasecmp(trim((string)($branch['kod'] ?? '')), 'Vyroba') === 0) {
-        return [5 => 'Operátor výroby', 8 => 'Závoz'];
-    }
-    return [1 => 'Pizzař', 2 => 'Kurýr'];
+    $ids=cb_smeny_sloty_zakladni_id($branch);
+    if($ids===[1,2]) $ids=[1,2,6,3,4];
+    $positions=[];
+    foreach($ids as $id) if(isset($branch['sloty_nazvy'][$id])) $positions[$id]=$branch['sloty_nazvy'][$id];
+    return $positions;
 }
 
+/** Rychlá tlačítka a nová šablona začínají jen základními pozicemi pobočky. */
+function cb_smeny_sablony_zakladni_pozice(array $branch): array
+{
+    return array_intersect_key(cb_smeny_sablony_pozice($branch),array_flip(cb_smeny_sloty_zakladni_id($branch)));
+}
+
+/** Souhrny a historie ukazují vedle základu jen pozice skutečně přítomné v datech. */
+function cb_smeny_sloty_zobrazene(array $branch, array $usedIds): array
+{
+    return array_intersect_key(cb_smeny_sablony_pozice($branch),array_flip(array_merge(cb_smeny_sloty_zakladni_id($branch),array_map('intval',$usedIds))));
+}
+
+/** Čitelný název odpovídá HR číselníku i pro nepovolenou historickou pozici. */
 function cb_smeny_sablony_nazev_pozice(array $branch, int $idSlot, string $fallback = ''): string
 {
-    $positions = cb_smeny_sablony_pozice($branch);
+    $positions = $branch['sloty_nazvy'] ?? [];
     return $positions[$idSlot] ?? ($fallback !== '' ? $fallback : 'Slot #' . $idSlot);
 }
 

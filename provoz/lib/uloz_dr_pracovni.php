@@ -1,5 +1,5 @@
 <?php
-// lib/uloz_dr_pracovni.php * K10 prubezne ukladani draftu a prepocet formulare
+// Prubezne uklada rozpracovany report vcetne casove prestavky a prepocitava formular.
 declare(strict_types=1);
 
 if (
@@ -285,6 +285,11 @@ try {
             $sendJson(422, ['ok' => false, 'err' => 'Pauza musí být číslo.']);
         }
         $pauza = $pauzaRaw === '' ? 0.0 : (float)$pauzaRaw;
+        $pause = cb_smena_pauza($smenaOd, $smenaDo, $_POST['pauza_od'] ?? null, $_POST['pauza_do'] ?? null, $pauza);
+        if (!$pause['ok']) {
+            $sendJson(422, ['ok' => false, 'err' => cb_db_zapis_denni_report_user_label($conn, $idUser) . ': ' . $pause['reason']]);
+        }
+        $pauza = $pause['pause'];
         $workedHours = cb_db_zapis_denni_report_worked_hours($smenaOd, $smenaDo, $pauza);
         if (empty($workedHours['ok'])) {
             $personName = cb_denni_report_user_full_name_by_id($conn, $idUser);
@@ -302,7 +307,9 @@ try {
             $smenaOd === '' ? null : $smenaOd,
             $smenaDo === '' ? null : $smenaDo,
             $pauza,
-            $odpracovano
+            $odpracovano,
+            $pause['from'],
+            $pause['to']
         );
         $sendJson(200, ['ok' => true, 'id_dr' => $idDr]);
     }

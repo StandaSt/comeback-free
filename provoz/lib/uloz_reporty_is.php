@@ -1,5 +1,5 @@
 <?php
-// Ukládá finální denní report včetně důvodů storen a vrací klientovi konkrétní bezpečnou odpověď.
+// Ukládá finální denní report až po ověření povinných důvodů všech storen a vrací bezpečnou odpověď.
 declare(strict_types=1);
 
 if (
@@ -127,14 +127,22 @@ $historyRestiaSummary = static function (array $historyReport): array {
 
 // Důvody storen ověříme proti stejné pobočce a provoznímu dni, aby nešlo podvrhnout cizí objednávku.
 $saveStornoNotes = static function (array $notes) use ($conn, $idPob, $datum): void {
-    if ($notes === []) {
-        return;
-    }
     if (count($notes) > 100) {
         throw new CbUserVisibleException('Report obsahuje příliš mnoho důvodů stornovaných objednávek.');
     }
 
     $workdayRange = cb_dt_workday_range_utc($datum);
+    // Kontrolujeme celý skutečný seznam ještě před prvním zápisem, i když klient některé pole neposlal.
+    foreach (cb_denni_report_storno_rows($conn, $idPob, $workdayRange) as $stornoRow) {
+        $idObj = (int)$stornoRow['id_obj'];
+        $value = $notes[$idObj] ?? null;
+        if (!is_string($value) || trim($value) === '') {
+            throw new CbUserVisibleException('Vyplň všechna povinná data reportu');
+        }
+    }
+    if ($notes === []) {
+        return;
+    }
     $fromDb = (string)$workdayRange['from_db'];
     $toDb = (string)$workdayRange['to_db'];
     $stmtOrder = $conn->prepare("
@@ -172,6 +180,9 @@ $saveStornoNotes = static function (array $notes) use ($conn, $idPob, $datum): v
                 throw new CbUserVisibleException('Důvod storna obsahuje neplatnou objednávku.');
             }
             $value = trim((string)$rawValue);
+            if ($value === '') {
+                throw new CbUserVisibleException('Vyplň všechna povinná data reportu');
+            }
             $value = function_exists('mb_substr')
                 ? mb_substr($value, 0, 255, 'UTF-8')
                 : substr($value, 0, 255);
@@ -187,10 +198,6 @@ $saveStornoNotes = static function (array $notes) use ($conn, $idPob, $datum): v
                 throw new CbUserVisibleException('Stornovaná objednávka nepatří k tomuto reportu.');
             }
 
-            // Prázdný nový důvod nemusí vytvářet zbytečný řádek; prázdná hodnota ale umí smazat starý text.
-            if ($value === '' && $orderRow['saved_id'] === null) {
-                continue;
-            }
             $stmtSave->bind_param('is', $idObj, $value);
             $stmtSave->execute();
         }

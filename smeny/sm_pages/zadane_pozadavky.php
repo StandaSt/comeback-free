@@ -4,7 +4,7 @@ declare(strict_types=1);
 $smReadPage='zadane_pozadavky';
 $smRequestPeople=cb_smeny_zadane_pozadavky($smDb,$smReadBranches,$smReadWeek['start_day']);
 ?>
-<section class="pp smeny_content smeny_planning" data-module="smeny" data-page="zadane_pozadavky">
+<section class="pp smeny_content <?= cb_smeny_styl_trida($smStyl) ?> smeny_planning" data-module="smeny" data-page="zadane_pozadavky">
   <header class="pp_header"><h1>Zadané požadavky</h1></header>
   <?php if(!cb_smeny_planovani_vidi()): ?><p>Nemáte právo zobrazit požadavky ostatních zaměstnanců.</p><?php else: ?>
     <?php require __DIR__.'/tyden_filtr.php'; ?>

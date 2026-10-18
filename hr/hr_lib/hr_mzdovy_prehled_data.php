@@ -4,6 +4,7 @@ declare(strict_types=1);
 // Mzdove obdobi pouziva samostatnou historii MAIN k datu vybraneho obdobi.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 require_once __DIR__ . '/../hr_db/hr_zamestnanci_pristup.php';
+require_once __DIR__ . '/../../common/lib/smeny_hodiny.php';
 
 /*
  * Data první čtecí verze mzdového přehledu. Všechny hodnoty jsou načítané
@@ -11,6 +12,7 @@ require_once __DIR__ . '/../hr_db/hr_zamestnanci_pristup.php';
  * Tato vrstva neprovádí uzávěrku, nepřijímá ruční bonusy ani do DB nezapisuje.
  * Testovaci osoby vynechava ze mzdovych radku, nikoli z urceni firmy prihlaseneho uctu.
  * Osoby filtruje jednotnym rozsahem HR, nikoliv samotnou firmou prihlaseneho.
+ * Rozpad hodin pocita stejnou knihovnou jako Provoz - Prehled hodin.
  */
 
 function hr_mzdovy_prehled_id_firmy(mysqli $db, int $idUser): int
@@ -270,6 +272,40 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
     }
     $stmt->close();
 
+    // Detailni smeny cteme pouze pro osoby vybrane vyse; rozsah firem i obdobi zustava shodny.
+    $hourFields = ['nocni' => 'night', 'svatek' => 'holiday', 'svatek_noc' => 'holiday_night', 'vikend' => 'weekend'];
+    $personRows = [];
+    foreach ($rows as $index => &$row) {
+        $personRows[(int)$row['id_person']] = $index;
+        foreach ($hourFields as $field => $part) {
+            $row[$field] = 0.0;
+        }
+    }
+    unset($row);
+    if ($personRows !== []) {
+        $personIdsSql = implode(',', array_keys($personRows));
+        $shiftStmt = $db->prepare('
+            SELECT hp.id_person, r.datum_reportu, ro.smena_od, ro.smena_do, ro.pauza_od, ro.pauza_do, ro.odpracovano
+            FROM reporty_is_osoby ro
+            INNER JOIN reporty_is r ON r.id_reportu = ro.id_reportu
+            INNER JOIN hr_person hp ON hp.id_user = ro.id_user
+            WHERE hp.id_person IN (' . $personIdsSql . ') AND r.platny = 1
+              AND r.datum_reportu BETWEEN ? AND ? AND r.id_firma IN (' . $firmySql . ')
+        ');
+        $shiftStmt->bind_param('ss', $from, $to);
+        $shiftStmt->execute();
+        $shifts = $shiftStmt->get_result();
+        while ($shift = $shifts->fetch_assoc()) {
+            $parts = ps_shift_parts((string)$shift['datum_reportu'], (string)$shift['smena_od'], (string)$shift['smena_do'], (float)$shift['odpracovano'], $shift['pauza_od'], $shift['pauza_do']);
+            $index = $personRows[(int)$shift['id_person']];
+            foreach ($hourFields as $field => $part) {
+                $rows[$index][$field] += $parts[$part];
+            }
+        }
+        $shifts->free();
+        $shiftStmt->close();
+    }
+
     $branches = [];
     $branchIdsSql = implode(',', hr_zamestnanci_pobocky($db, $idUser)) ?: '-1';
     $branchStmt = $db->prepare('SELECT p.id_pob, p.nazev, f.obchodni_jmeno AS firma FROM pobocka p INNER JOIN firma f ON f.id_firma = p.id_firma WHERE p.id_pob IN (' . $branchIdsSql . ') AND p.aktivni = 1 AND f.aktivni = 1 AND f.platnost_do IS NULL ORDER BY p.id_pob');
@@ -373,8 +409,13 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
     });
 
     $totalHours = 0.0;
+    // Soucty pocitame po filtrech a pred strankovanim, stejne jako celkove hodiny.
+    $hourTotals = array_fill_keys(array_keys($hourFields), 0.0);
     foreach ($rows as $row) {
         $totalHours += (float)$row['odpracovano'];
+        foreach ($hourTotals as $field => $total) {
+            $hourTotals[$field] += (float)$row[$field];
+        }
     }
 
     $perOptions = [20, 50, 100, 500];
@@ -412,5 +453,6 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
         'last_row' => $totalRows === 0 ? 0 : $offset + count($pagedRows),
         'rows' => $pagedRows,
         'total_hours' => $totalHours,
+        'hour_totals' => $hourTotals,
     ];
 }

@@ -1,5 +1,5 @@
 <?php
-// CRON vyhleda chybejici povinne denni reporty, slouci je podle prijemce a odesle push upozorneni.
+// CRON slouci chybejici povinne reporty podle prijemce a odesle vecny push s detailem a jednim duvodem doruceni.
 declare(strict_types=1);
 
 // MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
@@ -287,6 +287,19 @@ try {
     foreach ($alertsByUser as $idUser => $userData) {
         $userBranches = (array)($userData['branches'] ?? []);
         $userReasons = (array)($userData['reasons'] ?? []);
+        // Při souběhu rolí uvedeme jediný důvod: odpovědný manažer, zavírající, restaurant manažer.
+        $reasonLabels = [
+            'manager' => 'jste odpovědný manažer',
+            'shift' => 'jste daný den zavíral/a',
+            'leader' => 'jste restaurant manažer',
+        ];
+        $selectedReason = '';
+        foreach ($reasonLabels as $reason => $label) {
+            if (in_array($reason, $userReasons, true)) {
+                $selectedReason = $reason;
+                break;
+            }
+        }
         $reportCount = 0;
         foreach ($userBranches as $branchData) {
             $reportCount += count((array)($branchData['dates'] ?? []));
@@ -297,6 +310,7 @@ try {
                 : 'Zjištěny chybějící denní reporty:',
         ];
         $structuredBranches = [];
+        $pushLines = [];
         foreach ($userBranches as $idPob => $branchData) {
             $lines[] = '';
             $lines[] = (string)$branchData['branch'];
@@ -310,12 +324,13 @@ try {
                 'branch' => (string)$branchData['branch'],
                 'dates' => $structuredDates,
             ];
+            $pushLines[] = (string)$branchData['branch'] . ' — '
+                . implode(', ', array_map('cb_cron_nezadane_reporty_date_label', $structuredDates));
         }
         $lines[] = '';
-        $lines[] = 'Tuto informaci jste dostal/a, protože:';
-        $lines[] = '- jste měl/a daný den směnu';
-        $lines[] = '- jste vedoucí pobočky';
-        $lines[] = '- jste odpovědný manager';
+        if ($selectedReason !== '') {
+            $lines[] = 'Tuto informaci jste dostal/a, protože ' . $reasonLabels[$selectedReason] . '.';
+        }
         $lines[] = '';
         $lines[] = 'Zajistěte, aby se reporty opravdu zadávaly každý den.';
 
@@ -325,7 +340,7 @@ try {
             'mode' => ($test === 1) ? 'TEST' : 'OSTRY',
             'checked_dates' => $dates,
             'branches' => $structuredBranches,
-            'reasons' => array_values($userReasons),
+            'reasons' => $selectedReason !== '' ? [$selectedReason] : [],
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         if (!is_string($pozn)) {
             throw new RuntimeException('Nepodarilo se pripravit data upozorneni.');
@@ -334,10 +349,11 @@ try {
             [(int)$idUser],
             $typ,
             implode("\n", $lines),
-            'Kritická chyba !',
+            $reportCount === 1 ? 'Comeback: chybí denní report' : 'Comeback: chybí denní reporty',
             $pozn,
             null,
-            cb_module_url('provoz') . 'mobil/nezadane_reporty.php'
+            cb_module_url('provoz') . 'mobil/nezadane_reporty.php',
+            implode('; ', $pushLines) . '. Prosíme o doplnění ' . ($reportCount === 1 ? 'reportu.' : 'reportů.')
         );
 
         $ok = (int)($result['ok'] ?? 0) === 1;

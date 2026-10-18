@@ -2,6 +2,7 @@
 /*
  * Ucel souboru: Hlavni vstup aplikace. Ridi prihlaseni, session, smerovani modulu
  * a casne zpracovani pozadavku pred jakymkoli HTML vystupem.
+ * Samostatny blok Objednavek overuje pravo 220; objednavkovy blok Prehledu pouziva svou puvodni cestu.
  */
 declare(strict_types=1);
 
@@ -95,6 +96,12 @@ if (!empty($_SESSION['login_ok'])) {
 
 if (!empty($_SESSION['login_ok']) && cb_crf_zapisova_metoda()) {
     cb_crf_vyzaduj();
+}
+// Dávka aktivity má vlastní vstup; nesmí se vydávat za otevření stránky ani obnovovat zámek plánování.
+if (($_GET['cb_aktivita'] ?? '') === '1') {
+    require_once __DIR__.'/common/lib/user_aktivita.php';
+    cb_aktivita_prijem();
+    exit;
 }
 // Opusteni testu musi fungovat i bez prevzatych prav na modul Administrace.
 cb_prebrani_prav_handle(db());
@@ -244,6 +251,14 @@ if (!empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POS
     }
 
     if ($cbGnModule === 'provoz' && $cbGnPage === 'objednavky' && $cbGnBlock === 'objednavky_prehled') {
+        require_once __DIR__ . '/provoz/lib/objednavky_prava.php';
+        // Stejné omezení jako stránka a menu; nevztahuje se na objednavky_online v Přehledu.
+        if (!cb_modul_ma_pristup('provoz') || !cb_objednavky_ma_pravo()) {
+            http_response_code(403);
+            header('Content-Type: text/plain; charset=utf-8');
+            echo 'Nemáte právo zobrazit Objednávky.';
+            exit;
+        }
         require_once __DIR__ . '/common/lib/pobocky_vyber.php';
         cb_pobocky_bootstrap_session();
 

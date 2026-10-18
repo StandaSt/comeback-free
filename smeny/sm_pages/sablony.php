@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-/* Účel souboru: Zobrazí seznam šablon a kompaktní týdenní editor slotů. */
+/* Účel souboru: Zobrazí souhrny a editor šablon s přímou úpravou časů; volitelné HR sloty přidává jen do zvoleného dne. */
 
 $smTemplateFlash = cb_smeny_sablony_flash_nacist();
 $smTemplates = cb_smeny_sablony_seznam($smDb, $smTemplateBranches);
@@ -14,7 +14,7 @@ $smDurationText = static function (int $minutes): string {
     return $remainingMinutes === 0 ? $hours . ' h' : $hours . ' h ' . $remainingMinutes . ' min';
 };
 ?>
-<section class="pp smeny_content smeny_templates" data-module="smeny" data-page="sablony">
+<section class="pp smeny_content <?= cb_smeny_styl_trida($smStyl) ?> smeny_templates" data-module="smeny" data-page="sablony">
     <header class="pp_header smeny_templates_header">
         <div class="smeny_templates_title">
             <?php if ($smTemplate !== null): ?>
@@ -49,10 +49,22 @@ $smDurationText = static function (int $minutes): string {
                 <p class="smeny_template_empty">Pro vybrané pobočky zatím není vytvořena žádná šablona.</p>
             <?php else: ?>
                 <?php foreach ($smTemplates as $smTemplateRow): ?>
-                    <?php $smCardPositions = cb_smeny_sablony_pozice($smTemplateBranches[(int)$smTemplateRow['id_pob']]); ?>
-                    <a class="smeny_template_card" href="<?= h(cb_root_url('index.php?m=smeny&page=sablony&id=' . (int)$smTemplateRow['id_smeny_sablona'])) ?>">
-                        <strong class="smeny_template_card_title"><span>Název šablony:</span> <?= h((string)$smTemplateRow['nazev']) ?></strong>
-                        <span class="smeny_template_card_summary">
+                    <?php
+                    $smCardUsed=[];
+                    foreach($smTemplateRow['souhrn_minuty'] as $smDaily) foreach($smDaily as $smSlotId=>$smMinutes) if($smMinutes>0) $smCardUsed[]=$smSlotId;
+                    $smCardPositions = cb_smeny_sloty_zobrazene($smTemplateBranches[(int)$smTemplateRow['id_pob']],$smCardUsed);
+                    ?>
+                    <article class="smeny_template_card">
+                        <div class="smeny_template_card_row">
+                          <a class="smeny_template_card_title" href="<?= h(cb_root_url('index.php?m=smeny&page=sablony&id=' . (int)$smTemplateRow['id_smeny_sablona'])) ?>"><span>Šablona:</span> <strong><?= h((string)$smTemplateRow['nazev']) ?></strong></a>
+                          <div class="smeny_template_week_totals">
+                          <?php foreach($smCardPositions as $smPositionId=>$smPositionName): $smTotal=0; foreach($smTemplateRow['souhrn_minuty'] as $smDaily) $smTotal+=(int)($smDaily[$smPositionId] ?? 0); ?>
+                            <span><?= h($smPositionName) ?> <strong><?= h($smDurationText($smTotal)) ?></strong></span>
+                          <?php endforeach; ?>
+                          </div>
+                          <button type="button" data-smeny-template-detail aria-expanded="false" aria-controls="smeny-template-summary-<?= (int)$smTemplateRow['id_smeny_sablona'] ?>">Detail</button>
+                        </div>
+                        <div class="smeny_template_card_summary" id="smeny-template-summary-<?= (int)$smTemplateRow['id_smeny_sablona'] ?>" hidden>
                             <?php foreach ($smDayNames as $smDay => $smDayName): ?>
                                 <span class="smeny_template_card_day">
                                     <strong><?= h($smDayName) ?></strong>
@@ -61,8 +73,8 @@ $smDurationText = static function (int $minutes): string {
                                     <?php endforeach; ?>
                                 </span>
                             <?php endforeach; ?>
-                        </span>
-                    </a>
+                        </div>
+                    </article>
                 <?php endforeach; ?>
             <?php endif; ?>
         </div>
@@ -73,27 +85,43 @@ $smDurationText = static function (int $minutes): string {
             <input type="hidden" name="cb_crf" value="<?= h(cb_crf_token()) ?>">
             <input type="hidden" name="id_smeny_sablona" value="<?= $smTemplateId ?>">
             <input type="hidden" name="id_pob" value="<?= (int)$smTemplate['id_pob'] ?>">
+            <input type="hidden" name="otisk" value="<?= h(cb_smeny_sablona_otisk($smTemplate)) ?>">
 
-            <label class="smeny_template_name"><span>Název šablony</span><input type="text" name="nazev" maxlength="120" value="<?= h((string)$smTemplate['nazev']) ?>" required></label>
+            <div class="smeny_template_toolbar">
+                <label class="smeny_template_name"><span>Název šablony</span><input type="text" name="nazev" maxlength="120" value="<?= h((string)$smTemplate['nazev']) ?>" required></label>
+                <label class="smeny_template_resolution"><input type="checkbox" data-smeny-half-hours> po 30 min.</label>
+            </div>
 
             <div class="smeny_template_week">
                 <?php foreach ($smDayNames as $smDay => $smDayName): ?>
-                    <?php $smClosing = cb_smeny_sablony_zaviraci_cas($smTemplateBranch, $smDay); $smStartTimes = cb_smeny_sablony_casy($smClosing, false); $smEndTimes = cb_smeny_sablony_casy($smClosing, true); $smBlockIndex = 0; ?>
-                    <article class="smeny_template_day" data-smeny-template-day="<?= $smDay ?>">
-                        <strong class="smeny_template_day_name"><?= h($smDayName) ?></strong>
+                    <?php $smClosing = cb_smeny_sablony_zaviraci_cas($smTemplateBranch, $smDay); $smBlockIndex = 0; ?>
+                    <article class="smeny_template_day" data-smeny-template-day="<?= $smDay ?>" data-closing="<?= h($smClosing) ?>">
+                        <header class="smeny_template_day_header">
+                            <strong class="smeny_template_day_name"><?= h($smDayName) ?></strong>
+                            <div class="smeny_classic_tools">
+                                <?php foreach (cb_smeny_sablony_zakladni_pozice($smTemplateBranch) as $smPositionId => $smPositionName): ?>
+                                    <button type="button" class="smeny_template_add" data-smeny-template-add data-slot="<?= $smPositionId ?>">+ <?= h($smPositionId === 5 ? 'Operátor' : $smPositionName) ?></button>
+                                <?php endforeach; ?>
+                                <?php $smOptionalPositions=array_diff_key($smTemplatePositions,cb_smeny_sablony_zakladni_pozice($smTemplateBranch)); if($smOptionalPositions!==[]): ?>
+                                <details class="smeny_slot_picker"><summary>+ Další slot</summary><div class="smeny_slot_picker_options">
+                                    <?php foreach($smOptionalPositions as $smPositionId=>$smPositionName): ?><button type="button" data-smeny-template-add data-slot="<?= $smPositionId ?>">+ <?= h($smPositionName) ?></button><?php endforeach; ?>
+                                </div></details>
+                                <?php endif; ?>
+                            </div>
+                        </header>
                         <div class="smeny_template_columns">
                             <?php foreach ($smTemplatePositions as $smPositionId => $smPositionName): ?>
-                                <section class="smeny_template_column" data-smeny-template-column data-day="<?= $smDay ?>" data-slot="<?= $smPositionId ?>">
-                                    <header><strong><?= h($smPositionName) ?></strong><button type="button" class="smeny_template_add" data-smeny-template-add>+ Přidat slot</button></header>
+                                <section class="smeny_template_column" data-smeny-template-column data-day="<?= $smDay ?>" data-slot="<?= $smPositionId ?>" data-optional="<?= in_array($smPositionId,cb_smeny_sloty_zakladni_id($smTemplateBranch),true)?'0':'1' ?>">
+                                    <header><strong><?= h($smPositionName) ?></strong></header>
                                     <div class="smeny_template_column_slots" data-smeny-template-column-slots>
                                         <?php foreach ($smTemplate['blocks'][$smDay] as $smBlock): ?>
                                             <?php if ((int)$smBlock['id_slot'] !== $smPositionId) { continue; } ?>
                                             <div class="smeny_template_slot" data-smeny-template-slot>
                                                 <input type="hidden" name="blocks[<?= $smDay ?>][<?= $smBlockIndex ?>][id]" value="<?= (int)$smBlock['id_smeny_sablona_blok'] ?>" data-smeny-field="id">
                                                 <input type="hidden" name="blocks[<?= $smDay ?>][<?= $smBlockIndex ?>][id_slot]" value="<?= $smPositionId ?>" data-smeny-field="id_slot">
-                                                <select name="blocks[<?= $smDay ?>][<?= $smBlockIndex ?>][cas_od]" aria-label="Začátek slotu <?= h($smPositionName) ?>" data-smeny-field="cas_od"><?php foreach ($smStartTimes as $smTime): ?><option value="<?= h($smTime) ?>"<?= (string)$smBlock['cas_od'] === $smTime ? ' selected' : '' ?>><?= h($smTime) ?></option><?php endforeach; ?></select>
+                                                <input type="time" step="60" required name="blocks[<?= $smDay ?>][<?= $smBlockIndex ?>][cas_od]" value="<?= h((string)$smBlock['cas_od']) ?>" aria-label="Začátek slotu <?= h($smPositionName) ?>" data-smeny-field="cas_od">
                                                 <span aria-hidden="true">–</span>
-                                                <select name="blocks[<?= $smDay ?>][<?= $smBlockIndex ?>][cas_do]" aria-label="Konec slotu <?= h($smPositionName) ?>" data-smeny-field="cas_do"><?php foreach ($smEndTimes as $smTime): ?><option value="<?= h($smTime) ?>"<?= (string)$smBlock['cas_do'] === $smTime ? ' selected' : '' ?>><?= h($smTime) ?></option><?php endforeach; ?></select>
+                                                <input type="time" step="60" required name="blocks[<?= $smDay ?>][<?= $smBlockIndex ?>][cas_do]" value="<?= h((string)$smBlock['cas_do']) ?>" aria-label="Konec slotu <?= h($smPositionName) ?>" data-smeny-field="cas_do">
                                                 <button type="button" class="smeny_template_remove" data-smeny-template-remove aria-label="Odstranit slot <?= h($smPositionName) ?>">×</button>
                                             </div>
                                             <?php $smBlockIndex++; ?>
@@ -103,9 +131,9 @@ $smDurationText = static function (int $minutes): string {
                                         <div class="smeny_template_slot" data-smeny-template-slot>
                                             <input type="hidden" value="0" data-smeny-field="id">
                                             <input type="hidden" value="<?= $smPositionId ?>" data-smeny-field="id_slot">
-                                            <select aria-label="Začátek slotu <?= h($smPositionName) ?>" data-smeny-field="cas_od"><?php foreach ($smStartTimes as $smTime): ?><option value="<?= h($smTime) ?>"<?= $smTime === '10:00' ? ' selected' : '' ?>><?= h($smTime) ?></option><?php endforeach; ?></select>
+                                            <input type="time" step="60" required value="10:00" aria-label="Začátek slotu <?= h($smPositionName) ?>" data-smeny-field="cas_od">
                                             <span aria-hidden="true">–</span>
-                                            <select aria-label="Konec slotu <?= h($smPositionName) ?>" data-smeny-field="cas_do"><?php foreach ($smEndTimes as $smTime): ?><option value="<?= h($smTime) ?>"<?= $smTime === $smClosing ? ' selected' : '' ?>><?= h($smTime) ?></option><?php endforeach; ?></select>
+                                            <input type="time" step="60" required value="<?= h($smClosing) ?>" aria-label="Konec slotu <?= h($smPositionName) ?>" data-smeny-field="cas_do">
                                             <button type="button" class="smeny_template_remove" data-smeny-template-remove aria-label="Odstranit slot <?= h($smPositionName) ?>">×</button>
                                         </div>
                                     </template>
@@ -117,7 +145,7 @@ $smDurationText = static function (int $minutes): string {
                 <?php endforeach; ?>
             </div>
 
-            <button type="submit" class="smeny_template_save_all" data-smeny-template-actions hidden>Uložit upravenou šablonu</button>
+            <div class="smeny_template_save_state" role="status" aria-live="polite" data-smeny-template-status></div>
         </form>
     <?php endif; ?>
 </section>

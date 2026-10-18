@@ -1,4 +1,4 @@
-// Správa řádků instorů a kurýrů denního reportu včetně klientských přepočtů.
+// Sprava smen a jedne prestavky od-do; sdilene casove nastroje pouziva i Vyroba.
 'use strict';
 
 (function (w) {
@@ -137,6 +137,7 @@
     return input instanceof HTMLInputElement ? String(input.value || '').trim() : '';
   }
 
+  // Prubezne predava casy prestavky spolu s celou smenou, pouze pokud je radek platny.
   function saveTimeForRow(root, row) {
     const type = getRowType(row);
     const idUser = getRowUserId(row);
@@ -150,6 +151,8 @@
       smena_od: getInputValue(row, '[data-zr-start]'),
       smena_do: getInputValue(row, '[data-zr-end]'),
       pauza: getInputValue(row, '[data-zr-break]'),
+      pauza_od: getInputValue(row, '[data-zr-break-start]'),
+      pauza_do: getInputValue(row, '[data-zr-break-end]'),
       odpracovano: getInputValue(row, '[data-zr-hours-hidden]')
     });
   }
@@ -236,7 +239,7 @@
   }
 
   function isTimeInput(el) {
-    return el instanceof HTMLInputElement && (el.hasAttribute('data-zr-start') || el.hasAttribute('data-zr-end'));
+    return el instanceof HTMLInputElement && (el.hasAttribute('data-zr-start') || el.hasAttribute('data-zr-end') || el.hasAttribute('data-zr-break-start') || el.hasAttribute('data-zr-break-end'));
   }
 
   function parseTimeValue(raw) {
@@ -292,6 +295,11 @@
   function normalizeTimeInput(input) {
     if (!isTimeInput(input)) return true;
 
+    // Prazdne casy prestavky jsou dovolene, smena zustava povinna.
+    if ((input.hasAttribute('data-zr-break-start') || input.hasAttribute('data-zr-break-end')) && input.value.trim() === '') {
+      markTimeInput(input, '');
+      return true;
+    }
     const parsed = parseTimeValue(input.value);
     if (parsed === null) {
       input.value = input.defaultValue;
@@ -313,7 +321,8 @@
     input.defaultValue = selected;
     input.className = 'zr_time_input';
     input.setAttribute('style', 'width:100%;text-align:center;');
-    input.setAttribute(kind === 'start' ? 'data-zr-start' : 'data-zr-end', '');
+    input.setAttribute({'start':'data-zr-start', 'end':'data-zr-end', 'break-start':'data-zr-break-start', 'break-end':'data-zr-break-end'}[kind], '');
+    if (kind.startsWith('break-')) input.setAttribute('aria-label', kind === 'break-start' ? 'Pauza od' : 'Pauza do');
     return input;
   }
 
@@ -342,6 +351,28 @@
       });
   }
 
+  // Jedna prestavka uvnitr smeny, vcetne pulnoci; prazdne casy zachovaji jen historickou delku.
+  function pauseHoursForShift(start, end, from, to, legacy = 0) {
+    const a = parseTimeValue(start), b = parseTimeValue(end);
+    const fail = (reason) => ({ok:false, hours:0, reason});
+    if (!a || !b || a.minutes === b.minutes) return fail('Zadejte platný začátek a konec směny.');
+    let finish = b.minutes;
+    if (finish < a.minutes) finish += 1440;
+    if (String(from).trim() === '' && String(to).trim() === '') {
+      const hours = Number(legacy);
+      return Number.isFinite(hours) && hours >= 0 && hours * 60 < finish - a.minutes
+        ? {ok:true, hours, reason:''} : fail('Pauza musí být kratší než směna.');
+    }
+    const c = parseTimeValue(from), d = parseTimeValue(to);
+    if (!c || !d) return fail('U přestávky vyplňte oba časy od–do.');
+    let x = c.minutes, y = d.minutes;
+    if (x < a.minutes) x += 1440;
+    if (y < a.minutes) y += 1440;
+    if (y <= x || y > finish || y - x >= finish - a.minutes) return fail('Přestávka musí být uvnitř směny a konec po začátku.');
+    return {ok:true, hours:(y-x)/60, reason:''};
+  }
+
+  // Prepocita radek podle jedne prestavky a neplatny interval nepusti k ulozeni.
   function syncHoursForRow(row) {
     if (!(row instanceof HTMLElement)) return false;
 
@@ -368,7 +399,6 @@
 
     const startParsed = parseTimeValue(startEl.value);
     const endParsed = parseTimeValue(endEl.value);
-    const breakRaw = String(breakEl.value || '').replace(',', '.');
 
     if (startParsed === null || endParsed === null) {
       if (startParsed === null) {
@@ -390,18 +420,15 @@
     markTimeInput(endEl, endEl.value !== endEl.defaultValue ? 'edit' : '');
     breakEl.classList.remove('err');
 
-    let totalHours = (endMin - startMin) / 60;
-    const pauseHours = breakRaw === '' ? 0 : parseFloat(breakRaw);
-    if (Number.isNaN(pauseHours)) {
-      return invalidate(breakEl, 'Pauza musí být číslo, například 0 nebo 0,5.');
-    }
-    if (pauseHours < 0) {
-      return invalidate(breakEl, 'Pauza nesmí být záporná.');
-    }
-    if (pauseHours >= totalHours) {
-      return invalidate(breakEl, 'Pauza musí být kratší než celá směna.');
-    }
-    totalHours -= pauseHours;
+    const pauseStart = row.querySelector('[data-zr-break-start]');
+    const pauseEnd = row.querySelector('[data-zr-break-end]');
+    if (!pauseStart || !pauseEnd) return false;
+    pauseStart.classList.remove('err');
+    pauseEnd.classList.remove('err');
+    const pause = pauseHoursForShift(startEl.value, endEl.value, pauseStart.value, pauseEnd.value, breakEl.getAttribute('data-zr-legacy-break') || 0);
+    if (!pause.ok) return invalidate(pauseEnd, pause.reason);
+    const totalHours = (endMin - startMin) / 60 - pause.hours;
+    breakEl.value = formatWorkedHours(pause.hours).stored;
 
     const hours = formatWorkedHours(totalHours);
     hoursEl.textContent = hours.label;
@@ -540,15 +567,16 @@
 
     const breakCell = document.createElement('td');
     breakCell.className = 'zr_person_cell_break';
-    breakCell.style.width = '44px';
-    const breakInput = document.createElement('input');
-    breakInput.type = 'text';
-    breakInput.inputMode = 'decimal';
-    breakInput.name = type + '_pauza_hod[]';
-    breakInput.value = '';
-    breakInput.setAttribute('style', 'width:100%;text-align:center;');
+    breakCell.style.width = '126px';
+    const breakInput = buildHidden(type + '_pauza_hod[]', '0');
     breakInput.setAttribute('data-zr-break', '');
+    breakInput.setAttribute('data-zr-legacy-break', '0');
     breakCell.appendChild(breakInput);
+    const breakTimes = document.createElement('span');
+    breakTimes.className = 'zr_pause_pair';
+    breakTimes.appendChild(buildTimeInput(type + '_pauza_od[]', '', 'break-start'));
+    breakTimes.appendChild(buildTimeInput(type + '_pauza_do[]', '', 'break-end'));
+    breakCell.appendChild(breakTimes);
     savedRow.appendChild(breakCell);
 
     const hoursCell = document.createElement('td');
@@ -724,6 +752,12 @@
         if (!row) return;
 
         if (normalized) {
+          // Zmena intervalu nahradi historickou pauzu; vymazani obou casu znamena nulu.
+          if ((target.hasAttribute('data-zr-break-start') || target.hasAttribute('data-zr-break-end')) && target.value !== target.defaultValue) {
+            row.querySelector('[data-zr-break]').setAttribute('data-zr-legacy-break', '0');
+            const label = row.querySelector('[data-zr-legacy-label]');
+            if (label) label.hidden = true;
+          }
           const timeValid = syncHoursForRow(row);
           sortPersonRows(list);
           if (timeValid) {
@@ -814,7 +848,7 @@
   }
 
   // Stejný převod času a formát hodin používá také samostatný report Výroby.
-  w.CB_DENNI_REPORT_TIME = Object.freeze({ parseTimeValue, formatWorkedHours });
+  w.CB_DENNI_REPORT_TIME = Object.freeze({ parseTimeValue, formatWorkedHours, pauseHoursForShift });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initDenniReportOsoby);

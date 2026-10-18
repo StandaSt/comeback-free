@@ -1,10 +1,11 @@
 <?php
-// Pripravuje hodiny a souhrny podle opravneni; export po pobockach sklada ze stavajicich detailu.
+// Pripravuje hodiny a souhrny podle opravneni; rozpad smen sdili s HR, export sklada ze stavajicich detailu.
 // lib/prehled_smen_data.php * Verze: V2 * Aktualizace: 04.06.2026
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../common/db/db_cis_slot.php';
 require_once __DIR__ . '/reporty_pristup.php';
+require_once __DIR__ . '/../../common/lib/smeny_hodiny.php';
 
 /*
  * Spolecna data pro Prehled hodin a jeho exporty.
@@ -86,113 +87,6 @@ if (!function_exists('ps_czech_month')) {
     }
 }
 
-if (!function_exists('ps_is_czech_holiday')) {
-    function ps_is_czech_holiday(DateTimeImmutable $date): bool
-    {
-        return ps_czech_holiday_name($date) !== '';
-    }
-}
-
-if (!function_exists('ps_czech_holiday_name')) {
-    function ps_czech_holiday_name(DateTimeImmutable $date): string
-    {
-        $ymd = $date->format('m-d');
-        $fixed = [
-            '01-01' => 'Den obnovy samostatného českého státu / Nový rok',
-            '05-01' => 'Svátek práce',
-            '05-08' => 'Den vítězství',
-            '07-05' => 'Den slovanských věrozvěstů Cyrila a Metoděje',
-            '07-06' => 'Den upálení mistra Jana Husa',
-            '09-28' => 'Den české státnosti',
-            '10-28' => 'Den vzniku samostatného československého státu',
-            '11-17' => 'Den boje za svobodu a demokracii',
-            '12-24' => 'Štědrý den',
-            '12-25' => '1. svátek vánoční',
-            '12-26' => '2. svátek vánoční',
-        ];
-        if (isset($fixed[$ymd])) {
-            return $fixed[$ymd];
-        }
-
-        $year = (int)$date->format('Y');
-        $easter = (new DateTimeImmutable('@' . (string)easter_date($year)))->setTimezone(new DateTimeZone(date_default_timezone_get()));
-        $goodFriday = $easter->modify('-2 days')->format('Y-m-d');
-        $easterMonday = $easter->modify('+1 day')->format('Y-m-d');
-
-        if ($date->format('Y-m-d') === $goodFriday) {
-            return 'Velký pátek';
-        }
-        if ($date->format('Y-m-d') === $easterMonday) {
-            return 'Velikonoční pondělí';
-        }
-
-        return '';
-    }
-}
-
-if (!function_exists('ps_shift_parts')) {
-    /**
-     * @return array{day:float, night:float, weekend:float, holiday:float, holiday_details:array<string,array{date:string,name:string,hours:float}>}
-     */
-    function ps_shift_parts(string $date, string $from, string $to, float $workedHours): array
-    {
-        $start = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $date . ' ' . $from);
-        $end = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $date . ' ' . $to);
-        if (!$start instanceof DateTimeImmutable || !$end instanceof DateTimeImmutable) {
-            return ['day' => 0.0, 'night' => 0.0, 'weekend' => 0.0, 'holiday' => 0.0, 'holiday_details' => []];
-        }
-        if ($end <= $start) {
-            $end = $end->modify('+1 day');
-        }
-
-        $duration = max(0.0, ($end->getTimestamp() - $start->getTimestamp()) / 3600);
-        if ($duration <= 0.0 || $workedHours <= 0.0) {
-            return ['day' => 0.0, 'night' => 0.0, 'weekend' => 0.0, 'holiday' => 0.0, 'holiday_details' => []];
-        }
-
-        $ratio = min(1.0, $workedHours / $duration);
-        $out = ['day' => 0.0, 'night' => 0.0, 'weekend' => 0.0, 'holiday' => 0.0, 'holiday_details' => []];
-        $cursor = $start;
-
-        while ($cursor < $end) {
-            $next = $cursor->modify('+1 hour');
-            if ($next > $end) {
-                $next = $end;
-            }
-
-            $hours = (($next->getTimestamp() - $cursor->getTimestamp()) / 3600) * $ratio;
-            $hour = (int)$cursor->format('G');
-            if ($hour >= 6 && $hour < 22) {
-                $out['day'] += $hours;
-            } else {
-                $out['night'] += $hours;
-            }
-
-            $dayNo = (int)$cursor->format('N');
-            if ($dayNo >= 6) {
-                $out['weekend'] += $hours;
-            }
-
-            $holidayName = ps_czech_holiday_name($cursor);
-            if ($holidayName !== '') {
-                $out['holiday'] += $hours;
-                $holidayKey = $cursor->format('Y-m-d') . '|' . $holidayName;
-                if (!isset($out['holiday_details'][$holidayKey])) {
-                    $out['holiday_details'][$holidayKey] = [
-                        'date' => $cursor->format('Y-m-d'),
-                        'name' => $holidayName,
-                        'hours' => 0.0,
-                    ];
-                }
-                $out['holiday_details'][$holidayKey]['hours'] += $hours;
-            }
-
-            $cursor = $next;
-        }
-
-        return $out;
-    }
-}
 
 if (!function_exists('ps_request_state')) {
     /**
@@ -320,6 +214,7 @@ if (!function_exists('ps_prehled_smen_data')) {
                     ro.slot,
                     ro.smena_od,
                     ro.smena_do,
+                    ro.pauza_od, ro.pauza_do,
                     ro.odpracovano,
                     r.id_pob,
                     COALESCE(p.nazev, "") AS pobocka
@@ -396,7 +291,9 @@ if (!function_exists('ps_prehled_smen_data')) {
                         (string)$row['datum_reportu'],
                         (string)($row['smena_od'] ?? '00:00:00'),
                         (string)($row['smena_do'] ?? '00:00:00'),
-                        $worked
+                        $worked,
+                        $row['pauza_od'] ?? null,
+                        $row['pauza_do'] ?? null
                     );
 
                     $rows[$key]['den'] += $parts['day'];

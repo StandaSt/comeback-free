@@ -6,7 +6,7 @@ declare(strict_types=1);
 if (!cb_smeny_nastaveni_ma_pravo()) {
     http_response_code(403);
     ?>
-    <section class="pp smeny_content" data-module="smeny" data-page="nastaveni">
+    <section class="pp smeny_content <?= cb_smeny_styl_trida($smStyl) ?>" data-module="smeny" data-page="nastaveni">
         <header class="pp_header"><h1>Nastavení</h1></header>
         <p class="smeny_notice smeny_notice--error">Nemáte právo měnit nastavení Směn.</p>
     </section>
@@ -19,7 +19,7 @@ $smUzaverka = cb_smeny_uzaverka_nacti(db());
 $smNastaveniFlash = $_SESSION['sm_nastaveni_flash'] ?? null;
 unset($_SESSION['sm_nastaveni_flash']);
 ?>
-<section class="pp smeny_content" data-module="smeny" data-page="nastaveni">
+<section class="pp smeny_content <?= cb_smeny_styl_trida($smStyl) ?>" data-module="smeny" data-page="nastaveni">
     <header class="pp_header">
         <h1>Nastavení směn</h1>
     </header>

@@ -1,4 +1,4 @@
-// js/tooltip.js * Verze: V2
+/* Účel: Společné tooltipy IS; výslovně označené prvky umísťují text nad kurzor, ostatní zachovávají umístění u prvku. */
 'use strict';
 
 (function (w, d) {
@@ -55,17 +55,19 @@
     panel.style.top = `${Math.round(position[1])}px`;
   }
 
-  function positionFloatingPanel(target, panel) {
+  // Polohu vůči kurzoru používá jen výslovná volba; klávesnice a ostatní tooltipy zůstávají u prvku.
+  function positionFloatingPanel(target, panel, pointer) {
     const targetRect = target.getBoundingClientRect();
     const panelRect = panel.getBoundingClientRect();
     const edgeGap = 8;
     const targetGap = 10;
-    let left = targetRect.left + ((targetRect.width - panelRect.width) / 2);
-    let top = targetRect.top - panelRect.height - targetGap;
+    const followPointer = target.dataset.cbTooltipPosition === 'pointer-top' && pointer && Number.isFinite(pointer.clientX) && Number.isFinite(pointer.clientY);
+    let left = followPointer ? pointer.clientX-panelRect.width/2 : targetRect.left + ((targetRect.width - panelRect.width) / 2);
+    let top = (followPointer ? pointer.clientY : targetRect.top) - panelRect.height - targetGap;
     let placement = 'top';
 
     left = Math.max(edgeGap, Math.min(left, w.innerWidth - panelRect.width - edgeGap));
-    if (top < edgeGap) {
+    if (!followPointer && top < edgeGap) {
       top = targetRect.bottom + targetGap;
       placement = 'bottom';
     }
@@ -75,7 +77,8 @@
     panel.dataset.placement = placement;
   }
 
-  function showFloatingPanel(target) {
+  // Text i vzhled sdílí všechny moduly; souřadnice myši jsou volitelné.
+  function showFloatingPanel(target, pointer) {
     const text = target.dataset.cbTooltipText || '';
     if (text === '') return;
 
@@ -92,7 +95,7 @@
     panel.classList.toggle('cb_tooltip_multiline', target.dataset.cbTooltipMultiline === '1');
     panel.style.setProperty('--cb-tooltip-accent', accent || '#2563eb');
     panel.classList.add('cb_tooltip_visible');
-    positionFloatingPanel(target, panel);
+    positionFloatingPanel(target, panel, pointer);
   }
 
   function hideFloatingPanel(target) {
@@ -130,7 +133,14 @@
       target.dataset.cbTooltipReady = '1';
       target.dataset.cbTooltipText = text;
       target.removeAttribute('title');
-      target.addEventListener('mouseenter', () => showFloatingPanel(target));
+      target.addEventListener('mouseenter', (event) => showFloatingPanel(target, event));
+      // Bez dalšího panelu nebo časovače přesuneme tutéž bublinu nad aktuální polohu kurzoru.
+      if (target.dataset.cbTooltipPosition === 'pointer-top') {
+        target.addEventListener('mousemove', (event) => {
+          if (activeTarget === target) positionFloatingPanel(target, floatingPanel, event);
+        });
+        target.addEventListener('click', () => hideFloatingPanel(target));
+      }
       target.addEventListener('focus', () => showFloatingPanel(target));
       target.addEventListener('mouseleave', () => hideFloatingPanel(target));
       target.addEventListener('blur', () => hideFloatingPanel(target));

@@ -1,6 +1,8 @@
 <?php
 // Pripravuje denni reporty a jejich historii; archivni detail chrani podle role, MAIN a autora.
 declare(strict_types=1);
+
+// Nacita reporty vcetne presne prestavky; stare zdroje mohou mit pouze delku.
 /* Veřejný zdroj směn respektuje publikaci celého týdne pobočky a mapování HR osoby. */
 require_once __DIR__ . '/../../common/lib/smeny_verejny_zdroj.php';
 
@@ -569,7 +571,7 @@ function cb_denni_report_history_load(mysqli $conn, int $idPob, string $reportDa
             COALESCE(udaje.prijmeni, osoba.prijmeni) AS prijmeni,
             osoba.smena_od,
             osoba.smena_do,
-            osoba.pauza,
+            osoba.pauza, osoba.pauza_od, osoba.pauza_do,
             osoba.odpracovano,
             osoba.rozvozu_manual,
             osoba.vlastni_vuz,
@@ -1448,6 +1450,8 @@ function cb_denni_report_person_rows(array $draftPersonRows): array
             // Čas je určený pro zobrazení vstupu; zdrojová hodnota směny zůstává beze změny.
             'start' => cb_format('t', $row['smena_od'] ?? null),
             'end' => cb_format('t', $row['smena_do'] ?? null),
+            'break_start' => substr((string)($row['pauza_od'] ?? ''), 0, 5),
+            'break_end' => substr((string)($row['pauza_do'] ?? ''), 0, 5),
             'break' => $row['pauza'] === null ? '' : cb_denni_report_format_input_number((float)$row['pauza']),
             'hours' => $row['odpracovano'] === null ? '0' : cb_denni_report_format_input_number((float)$row['odpracovano']),
             'delivery_restia' => (int)($row['rozvozu_restia'] ?? 0),

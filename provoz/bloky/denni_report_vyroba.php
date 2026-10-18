@@ -2,6 +2,8 @@
 // bloky/denni_report_vyroba.php * Samostatný formulář denního reportu výroby.
 declare(strict_types=1);
 
+// Formular Vyroby eviduje jednu prestavku od-do a zachovava historickou delku bez casu.
+
 require_once __DIR__ . '/../lib/format_datum_cas.php';
 require_once __DIR__ . '/../lib/denni_report_vyroba.php';
 
@@ -56,6 +58,8 @@ foreach ((array)($vyrobaHistory['people_rows'] ?? []) as $row) {
         'start' => substr((string)($row['smena_od'] ?? ''), 0, 5),
         'end' => substr((string)($row['smena_do'] ?? ''), 0, 5),
         'pause' => (string)($row['pauza'] ?? '0'),
+        'pause_from' => substr((string)($row['pauza_od'] ?? ''), 0, 5),
+        'pause_to' => substr((string)($row['pauza_do'] ?? ''), 0, 5),
         'hours' => (string)($row['odpracovano'] ?? '0'),
     ];
 }
@@ -70,6 +74,8 @@ if ($vyrobaFormPost !== []) {
             'start' => trim((string)($vyrobaFormPost['vyroba_zacatek'][$index] ?? '')),
             'end' => trim((string)($vyrobaFormPost['vyroba_konec'][$index] ?? '')),
             'pause' => trim((string)($vyrobaFormPost['vyroba_pauza'][$index] ?? '')),
+            'pause_from' => trim((string)($vyrobaFormPost['vyroba_pauza_od'][$index] ?? '')),
+            'pause_to' => trim((string)($vyrobaFormPost['vyroba_pauza_do'][$index] ?? '')),
             'hours' => '',
         ];
     }
@@ -154,14 +160,19 @@ $vyrobaRenderOptions = static function () use ($vyrobaOptions, $vyrobaUsedIds): 
             <h4 class="card_section_title txt_seda">Směny výroby</h4>
             <?php if ($vyrobaOptions === []): ?><p class="card_text">V HR zatím není k Výrobě přiřazen žádný aktivní pracovník.</p><?php endif; ?>
             <div class="vyroba_report_person_picker"><select data-vyroba-add-person aria-label="Vyber pracovníka výroby"<?= $vyrobaOptions === [] ? ' disabled' : '' ?>><?= $vyrobaRenderOptions() ?></select></div>
-            <div class="vyroba_report_table_wrap"><table class="zr_table zr_person_table vyroba_report_table"><thead><tr><th>Pracovník</th><th>Směna od</th><th>Směna do</th><th>Pauza</th><th>Odprac.</th><th></th></tr></thead><tbody data-vyroba-rows>
+            <div class="vyroba_report_table_wrap"><table class="zr_table zr_person_table vyroba_report_table"><thead><tr><th>Pracovník</th><th>Směna od</th><th>Směna do</th><th>Pauza od–do</th><th>Odprac.</th><th></th></tr></thead><tbody data-vyroba-rows>
               <?php foreach ($vyrobaRows as $person): ?>
                 <?php if ((int)$person['id_person'] <= 0) continue; ?>
                 <tr data-vyroba-row>
                   <td><button class="zr_row_remove" type="button" data-vyroba-remove title="Odebrat pracovníka" aria-label="Odebrat pracovníka">×</button><strong class="zr_saved_value" data-vyroba-person-name><?= h((string)$person['name']) ?></strong><input type="hidden" name="vyroba_id_person[]" value="<?= h((string)$person['id_person']) ?>"></td>
                   <td><input class="zr_time_input" type="text" inputmode="numeric" name="vyroba_zacatek[]" value="<?= h((string)$person['start']) ?>" required data-vyroba-time data-vyroba-start></td>
                   <td><input class="zr_time_input" type="text" inputmode="numeric" name="vyroba_konec[]" value="<?= h((string)$person['end']) ?>" required data-vyroba-time data-vyroba-end></td>
-                  <td class="zr_person_cell_break"><input type="text" inputmode="decimal" name="vyroba_pauza[]" value="<?= h((string)$person['pause']) ?>" data-vyroba-pause></td>
+                  <td class="zr_person_cell_break">
+                    <?php $legacyPause = $person['pause_from'] === '' && $person['pause_to'] === '' ? (string)$person['pause'] : '0'; ?>
+                    <input type="hidden" name="vyroba_pauza[]" value="<?= h($legacyPause) ?>" data-vyroba-pause data-pause-legacy="<?= h($legacyPause) ?>">
+                    <span style="display:flex;gap:3px;"><input class="zr_time_input" type="text" inputmode="numeric" name="vyroba_pauza_od[]" value="<?= h((string)$person['pause_from']) ?>" aria-label="Pauza od" data-vyroba-time data-vyroba-pause-start><input class="zr_time_input" type="text" inputmode="numeric" name="vyroba_pauza_do[]" value="<?= h((string)$person['pause_to']) ?>" aria-label="Pauza do" data-vyroba-time data-vyroba-pause-end></span>
+                    <?php if ((float)$legacyPause > 0): ?><small data-vyroba-legacy-label>Historicky <?= h($legacyPause) ?> h, cas neznamy</small><?php endif; ?>
+                  </td>
                   <td><strong class="zr_saved_value" data-vyroba-hours><?= h((string)$person['hours']) ?> hod.</strong></td><td></td>
                 </tr>
               <?php endforeach; ?>
@@ -173,7 +184,7 @@ $vyrobaRenderOptions = static function () use ($vyrobaOptions, $vyrobaUsedIds): 
           </section>
           <button class="zr_submit" type="submit"<?= $vyrobaOptions === [] && $vyrobaExistingId === 0 ? ' disabled' : '' ?>><?= $vyrobaExistingId > 0 ? 'Uložit opravený report' : 'Uložit report výroby' ?></button>
         </form>
-        <template data-vyroba-template><tr data-vyroba-row><td><button class="zr_row_remove" type="button" data-vyroba-remove title="Odebrat pracovníka" aria-label="Odebrat pracovníka">×</button><strong class="zr_saved_value" data-vyroba-person-name></strong><input type="hidden" name="vyroba_id_person[]"></td><td><input class="zr_time_input" type="text" inputmode="numeric" name="vyroba_zacatek[]" required data-vyroba-time data-vyroba-start></td><td><input class="zr_time_input" type="text" inputmode="numeric" name="vyroba_konec[]" required data-vyroba-time data-vyroba-end></td><td class="zr_person_cell_break"><input type="text" inputmode="decimal" name="vyroba_pauza[]" data-vyroba-pause></td><td><strong class="zr_saved_value" data-vyroba-hours>—</strong></td><td></td></tr></template>
+        <template data-vyroba-template><tr data-vyroba-row><td><button class="zr_row_remove" type="button" data-vyroba-remove title="Odebrat pracovníka" aria-label="Odebrat pracovníka">×</button><strong class="zr_saved_value" data-vyroba-person-name></strong><input type="hidden" name="vyroba_id_person[]"></td><td><input class="zr_time_input" type="text" inputmode="numeric" name="vyroba_zacatek[]" required data-vyroba-time data-vyroba-start></td><td><input class="zr_time_input" type="text" inputmode="numeric" name="vyroba_konec[]" required data-vyroba-time data-vyroba-end></td><td class="zr_person_cell_break"><input type="hidden" name="vyroba_pauza[]" value="0" data-vyroba-pause data-pause-legacy="0"><span style="display:flex;gap:3px;"><input class="zr_time_input" type="text" inputmode="numeric" name="vyroba_pauza_od[]" aria-label="Pauza od" data-vyroba-time data-vyroba-pause-start><input class="zr_time_input" type="text" inputmode="numeric" name="vyroba_pauza_do[]" aria-label="Pauza do" data-vyroba-time data-vyroba-pause-end></span></td><td><strong class="zr_saved_value" data-vyroba-hours>—</strong></td><td></td></tr></template>
       <?php else: ?>
         <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section vyroba_report_expense_section">
           <h4 class="card_section_title txt_seda">Výdaje</h4>
@@ -185,8 +196,8 @@ $vyrobaRenderOptions = static function () use ($vyrobaOptions, $vyrobaUsedIds): 
         </section>
         <section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section vyroba_report_people_section">
           <h4 class="card_section_title txt_seda">Směny výroby</h4>
-          <div class="vyroba_report_table_wrap"><table class="zr_table zr_person_table vyroba_report_table"><thead><tr><th>Pracovník</th><th>Směna od</th><th>Směna do</th><th>Pauza</th><th>Odprac.</th></tr></thead><tbody>
-            <?php foreach ($vyrobaRows as $person): ?><tr><td><?= h((string)($person['name'] !== '' ? $person['name'] : 'Neznámá osoba')) ?></td><td><?= h((string)$person['start']) ?></td><td><?= h((string)$person['end']) ?></td><td><?= h((string)$person['pause']) ?> hod.</td><td><?= h((string)$person['hours']) ?> hod.</td></tr><?php endforeach; ?>
+          <div class="vyroba_report_table_wrap"><table class="zr_table zr_person_table vyroba_report_table"><thead><tr><th>Pracovník</th><th>Směna od</th><th>Směna do</th><th>Pauza od–do</th><th>Odprac.</th></tr></thead><tbody>
+            <?php foreach ($vyrobaRows as $person): ?><tr><td><?= h((string)($person['name'] !== '' ? $person['name'] : 'Neznámá osoba')) ?></td><td><?= h((string)$person['start']) ?></td><td><?= h((string)$person['end']) ?></td><td><?php if ($person['pause_from'] !== '' && $person['pause_to'] !== ''): ?><?= h($person['pause_from'] . '–' . $person['pause_to']) ?><?php else: ?><?= h((string)$person['pause']) ?> hod.<?php endif; ?></td><td><?= h((string)$person['hours']) ?> hod.</td></tr><?php endforeach; ?>
           </tbody></table></div>
         </section>
         <?php if (trim($vyrobaNote) !== ''): ?><section class="card_section bg_bila zaobleni_10 odstup_vnitrni_10 zr_section vyroba_report_note_section"><h4 class="card_section_title txt_seda">Vzkaz pro další směnu nebo manažera</h4><p><?= nl2br(h($vyrobaNote)) ?></p></section><?php endif; ?>

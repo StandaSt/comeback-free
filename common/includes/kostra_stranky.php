@@ -2,6 +2,7 @@
 /*
  * Ucel souboru: Vykresli zakladni HTML kostru prihlasene aplikace.
  * Vsechna data a URL pripravuje common/lib/priprava_kostry_stranky.php.
+ * Kompletni menu povolenych modulu je predem vykreslene stejnou cestou jako aktivni menu.
  */
 declare(strict_types=1);
 ?>
@@ -19,6 +20,9 @@ cb_modul_nacti($cbInitialModule);
 ?>
 </main>
 <?php
+// Menu nesmí při přepnutí čekat na obsah modulu nebo aktualizaci Restie.
+require_once __DIR__.'/../lib/menu_modulu.php';
+cb_menu_modulu_sablony();
 // Vypise konfiguraci pro prohlizec a vsechny spolecne skripty.
 require __DIR__ . '/nacti_skripty.php';
 ?>

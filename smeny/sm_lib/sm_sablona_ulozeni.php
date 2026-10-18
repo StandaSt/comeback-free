@@ -3,11 +3,11 @@ declare(strict_types=1);
 
 /* Účel souboru: Vytvoří šablonu V2 pro pobočku nebo změní její název. Firma plyne z pobočky. */
 
-/** @return array<int,array{den_tydne:int,id_slot:int,cas_od:string,cas_do:string,poradi:int}> */
+/** Nová šablona začíná jen základními sloty; volitelné si uživatel přidá pro konkrétní den. */
 function cb_smeny_sablona_vychozi_bloky(array $branch): array
 {
     $blocks = [];
-    $positions = cb_smeny_sablony_pozice($branch);
+    $positions = cb_smeny_sablony_zakladni_pozice($branch);
     foreach (range(1, 7) as $day) {
         $closing = cb_smeny_sablony_zaviraci_cas($branch, $day);
         if ($closing === '') {

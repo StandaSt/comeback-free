@@ -1,5 +1,5 @@
 <?php
-// lib/denni_report_vyroba.php * Denní report pobočky Výroba bez Restie.
+// Denni report Vyroby bez Restie vcetne jedne casove prestavky.
 declare(strict_types=1);
 
 require_once __DIR__ . '/denni_report_data.php';
@@ -120,7 +120,7 @@ function cb_vyroba_shift_hours(string $start, string $end, float $pause): array
     return ['hours' => round($length - $pause, 2), 'reason' => ''];
 }
 
-/** @return array<int,array{id_person:int,start:string,end:string,pause:float,hours:float}> */
+/** Overi pracovniky i jednu prestavku a pripravi radky pro finalni zapis Vyroby. */
 function cb_vyroba_people_from_post(mysqli $conn, array $post, ?array $existing): array
 {
     $ids = $post['vyroba_id_person'] ?? [];
@@ -165,12 +165,16 @@ function cb_vyroba_people_from_post(mysqli $conn, array $post, ?array $existing)
         if (preg_match('/^\d{1,2}(?:\.\d{1,2})?$/', $pauseText) !== 1) {
             throw new CbUserVisibleException($personLabel . ': neplatná pauza.');
         }
-        $pause = (float)$pauseText;
+        $pauseInterval = cb_smena_pauza($start, $end, $post['vyroba_pauza_od'][$index] ?? null, $post['vyroba_pauza_do'][$index] ?? null, (float)$pauseText);
+        if (!$pauseInterval['ok']) {
+            throw new CbUserVisibleException($personLabel . ': ' . $pauseInterval['reason']);
+        }
+        $pause = $pauseInterval['pause'];
         $worked = cb_vyroba_shift_hours($start, $end, $pause);
         if ($worked['reason'] !== '') {
             throw new CbUserVisibleException($personLabel . ', směna ' . $start . '–' . $end . ': ' . $worked['reason']);
         }
-        $rows[] = ['id_person' => $id, 'start' => $start, 'end' => $end, 'pause' => $pause, 'hours' => $worked['hours']];
+        $rows[] = ['id_person' => $id, 'start' => $start, 'end' => $end, 'pause' => $pause, 'pause_from' => $pauseInterval['from'], 'pause_to' => $pauseInterval['to'], 'hours' => $worked['hours']];
     }
     if ($rows === []) {
         throw new CbUserVisibleException('Vyber alespoň jednoho pracovníka výroby.');
@@ -178,6 +182,7 @@ function cb_vyroba_people_from_post(mysqli $conn, array $post, ?array $existing)
     return $rows;
 }
 
+// Uklada report Vyroby vcetne presne prestavky ve stejne transakci jako ostatni data.
 function cb_vyroba_save(mysqli $conn, int $actorId, array $post): void
 {
     if ($actorId <= 0 || !cb_vyroba_user_has_branch($conn, $actorId)) {
@@ -242,14 +247,16 @@ function cb_vyroba_save(mysqli $conn, int $actorId, array $post): void
         $stmt->bind_param('iddd', $reportId, $fuel, $ingredients, $other);
         $stmt->execute();
         $stmt->close();
-        $stmt = $conn->prepare('INSERT INTO reporty_is_osoby (id_reportu, id_user, slot, smena_od, smena_do, pauza, odpracovano) VALUES (?, ?, ?, ?, ?, ?, ?)');
+        $stmt = $conn->prepare('INSERT INTO reporty_is_osoby (id_reportu, id_user, slot, smena_od, smena_do, pauza, pauza_od, pauza_do, odpracovano) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
         foreach ($people as $person) {
             $personId = $person['id_person'];
             $start = $person['start'];
             $end = $person['end'];
             $pause = $person['pause'];
+            $pauseFrom = $person['pause_from'];
+            $pauseTo = $person['pause_to'];
             $hours = $person['hours'];
-            $stmt->bind_param('iiissdd', $reportId, $personId, $slot, $start, $end, $pause, $hours);
+            $stmt->bind_param('iiissdssd', $reportId, $personId, $slot, $start, $end, $pause, $pauseFrom, $pauseTo, $hours);
             $stmt->execute();
         }
         $stmt->close();

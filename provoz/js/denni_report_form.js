@@ -1,4 +1,4 @@
-// Řídí formulář denního reportu a jeho ukládání; při načítání zachovává konkrétní důvod chyby.
+// Řídí formulář denního reportu, povinné důvody storen a ukládání; zachovává konkrétní důvod chyby.
 'use strict';
 
 (function (w) {
@@ -371,6 +371,12 @@
     button.textContent = text;
   }
 
+  // Každá stornovaná objednávka potřebuje před uzavřením reportu skutečný důvod.
+  function areStornoReasonsFilled(root) {
+    return Array.from(root.querySelectorAll('[data-zr-storno-note]'))
+      .every((input) => input instanceof HTMLInputElement && String(input.value || '').trim() !== '');
+  }
+
   function areSubmitRequiredFieldsFilled(root) {
     if (
       getFieldValue(root, '[data-zr-field="oteviral"]') === ''
@@ -397,7 +403,7 @@
       }
     }
 
-    return true;
+    return areStornoReasonsFilled(root);
   }
 
   function personRowsValidationError(root) {

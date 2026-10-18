@@ -18,6 +18,7 @@ require_once __DIR__ . '/sm_lib/sm_pozadavky_pravo.php';
 require_once __DIR__ . '/sm_lib/sm_sablony_pravo.php';
 require_once __DIR__ . '/sm_lib/sm_planovani_pravo.php';
 require_once __DIR__ . '/sm_lib/sm_pages.php';
+require_once __DIR__ . '/sm_lib/sm_styl.php';
 require_once __DIR__ . '/sm_lib/sm_nastaveni_pravo.php';
 require_once __DIR__ . '/sm_lib/sm_nastaveni_ulozeni.php';
 require_once __DIR__ . '/sm_lib/sm_pozadavky_osoba.php';
@@ -34,6 +35,7 @@ require_once __DIR__ . '/sm_lib/sm_sablona_tyden_ulozeni.php';
 require_once __DIR__ . '/sm_lib/sm_sablony_akce.php';
 require_once __DIR__ . '/sm_lib/sm_planovani_data.php';
 require_once __DIR__ . '/sm_lib/sm_planovani_zamek.php';
+require_once __DIR__ . '/sm_lib/sm_planovani_sloty.php';
 require_once __DIR__ . '/sm_lib/sm_planovani_obsazeni.php';
 require_once __DIR__ . '/sm_lib/sm_planovani_akce.php';
 require_once __DIR__ . '/sm_lib/sm_publikace.php';
@@ -45,10 +47,6 @@ require_once __DIR__ . '/sm_lib/sm_oznameni_potvrzeni.php';
 require_once __DIR__ . '/sm_lib/sm_prehled_tyden.php';
 require_once __DIR__ . '/sm_lib/sm_zadane_pozadavky.php';
 require_once __DIR__ . '/sm_lib/sm_prehled_data.php';
-require_once __DIR__ . '/sm_lib/sm_zruseni_nacteni.php';
-require_once __DIR__ . '/sm_lib/sm_zruseni_zadost.php';
-require_once __DIR__ . '/sm_lib/sm_zruseni_vyrizeni.php';
-require_once __DIR__ . '/sm_lib/sm_zruseni_publikace.php';
 
 cb_session_guard_entry();
 
@@ -76,6 +74,9 @@ if ($smPage === 'bez_prava') {
     http_response_code(403);
 }
 
+// Jedna preference v DB platí pro každou stránku i částečnou výměnu obsahu Směn.
+$smStyl = $smPage !== 'bez_prava' ? cb_smeny_styl_nacist(db()) : 1;
+
 // Čtecí přehledy smějí do historie, ale zápisové týdny plánovače se tím nemění.
 if (in_array($smPage, ['prehled','zadane_pozadavky'], true)) {
     $smDb = db();
@@ -93,6 +94,7 @@ if ($smPage === 'pozadavky') {
     try {
         cb_smeny_pozadavky_ulozit($smDb, $smPerson, $smWeeks);
     } catch (Throwable $e) {
+        cb_smeny_aktivita_chyba($e);
         cb_smeny_pozadavky_flash('error', cb_chyba_uzivatel($e, [
             'module' => 'smeny',
             'action' => 'Uložení požadavků na směny',
@@ -125,7 +127,6 @@ if (in_array($smPage, ['me_smeny','naplanovane_smeny'], true)) {
     $smPublicBranches = $smPage === 'naplanovane_smeny' && cb_smeny_planovani_vidi() ? cb_smeny_sablony_pobocky($smDb) : [];
     if ($smPage === 'me_smeny') {
         cb_smeny_verejne_potvrdit($smDb, $smPublicPerson);
-        cb_smeny_zruseni_zadost($smDb, $smPublicPerson);
     }
 }
 
@@ -163,7 +164,7 @@ if ($smPage === 'historie_smen') {
 <?php elseif (in_array($smPage, ['me_smeny','naplanovane_smeny'], true)): ?>
     <?php require __DIR__ . '/sm_pages/verejne_smeny.php'; ?>
 <?php else: ?>
-<section class="pp smeny_content" data-module="smeny" data-page="<?= h($smPage) ?>">
+<section class="pp smeny_content <?= cb_smeny_styl_trida($smStyl) ?>" data-module="smeny" data-page="<?= h($smPage) ?>">
     <header class="pp_header">
         <h1><?= h($smPageTitle) ?></h1>
     </header>

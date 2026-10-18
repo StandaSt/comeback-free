@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /*
- * Ověří a transakčně uloží týden požadavků V2, Kdykoliv nebo volno HPP.
+ * Ověří a transakčně uloží i audituje požadavky; po předvyplnění Kdykoliv zachová konkrétní úpravy dnů.
  */
 
 /** Přenese výsledek uložení do dalšího zobrazení formuláře. */
@@ -33,7 +33,7 @@ function cb_smeny_pozadavky_cas_overit(string $time, bool $isEnd): int
     return $value;
 }
 
-/** Připraví data bez zápisu; HPP ani Kdykoliv neukládají nadbytečné denní intervaly. */
+/** Připraví data bez zápisu; rozpracované denní intervaly mají přednost před zastaralým zaškrtnutím Kdykoliv. */
 function cb_smeny_pozadavky_pripravit(array $person, array $week, array $post): array
 {
     $allowedDates = [];
@@ -45,6 +45,17 @@ function cb_smeny_pozadavky_pripravit(array $person, array $week, array $post): 
     }
     $blocks = [];
     $dayOff = '';
+    $anytime = !empty($post['kdykoliv']);
+    // Starší formulář posílal jen checkbox. Nový posílá i dny; odlišný interval nesmíme ignorovat.
+    if ((int)$person['je_hpp'] !== 1 && $anytime && array_key_exists('blocks',$post)) {
+        $posted=$post['blocks'];
+        $anytime=is_array($posted) && count($posted)===count($allowedDates);
+        foreach ($allowedDates as $date=>$day) {
+            $block=is_array($posted)?($posted[$date] ?? null):null;
+            $closing=substr(trim((string)($person[$day['closing_key']] ?? '')),0,5);
+            if (!is_array($block) || ($block['od'] ?? null)!=='10:00' || $closing==='' || ($block['do'] ?? null)!==$closing) $anytime=false;
+        }
+    }
     if ((int)$person['je_hpp'] === 1) {
         $dayOff = trim((string)($post['datum_volna'] ?? ''));
         if ($dayOff !== '' && !isset($allowedDates[$dayOff])) {
@@ -53,7 +64,7 @@ function cb_smeny_pozadavky_pripravit(array $person, array $week, array $post): 
         if ($dayOff !== '' && ((int)$person['id_pob'] <= 0 || (int)$person['id_slot'] <= 0)) {
             throw new CbUserVisibleException('Pro volbu volna musí být v HR nastavena hlavní pobočka i hlavní pracovní slot.');
         }
-    } elseif (empty($post['kdykoliv'])) {
+    } elseif (!$anytime) {
         $postedBlocks = $post['blocks'] ?? [];
         if (!is_array($postedBlocks)) {
             throw new CbUserVisibleException('Odeslané požadavky nemají správný formát.');
@@ -63,6 +74,7 @@ function cb_smeny_pozadavky_pripravit(array $person, array $week, array $post): 
             if (!isset($allowedDates[$date]) || !is_array($postedBlock)) {
                 throw new CbUserVisibleException('Odeslaný den požadavku nepatří do týdne nebo nemá správný formát.');
             }
+            if (!is_string($postedBlock['od'] ?? '') || !is_string($postedBlock['do'] ?? '')) throw new CbUserVisibleException('Časy požadavku nemají správný formát.');
             $from = trim((string)($postedBlock['od'] ?? ''));
             $to = trim((string)($postedBlock['do'] ?? ''));
             if ($from === '' && $to === '') {
@@ -95,7 +107,7 @@ function cb_smeny_pozadavky_pripravit(array $person, array $week, array $post): 
     }
 
 
-    return ['rezim' => (int)$person['je_hpp'] === 1 ? 'hpp' : (!empty($post['kdykoliv']) ? 'kdykoliv' : 'intervaly'),
+    return ['rezim' => (int)$person['je_hpp'] === 1 ? 'hpp' : ($anytime ? 'kdykoliv' : 'intervaly'),
         'volno' => $dayOff === '' ? null : $dayOff, 'blocks' => $blocks];
 }
 
@@ -151,6 +163,8 @@ function cb_smeny_pozadavky_ulozit(mysqli $db, ?array $person, array $weeks): vo
         $stmt->execute();
         $idRequest = (int)($stmt->get_result()->fetch_assoc()['id_smeny_pozadavek'] ?? 0);
         $stmt->close();
+        // Původní dostupnost čteme po získání zámku osoby, aby audit odpovídal skutečně přepisovanému stavu.
+        $oldData=cb_smeny_pozadavky_nacist($db,$person,$week);
         // Nepoužít upsert: druhý unikátní klíč rezervuje HPP volno jiného pracovníka.
         if ($idRequest === 0) {
             $stmt = $db->prepare('INSERT INTO smeny_pozadavek
@@ -181,6 +195,7 @@ function cb_smeny_pozadavky_ulozit(mysqli $db, ?array $person, array $weeks): vo
             }
             $stmt->close();
         }
+        cb_smeny_audit_zapis($db,$idPerson,'pozadavky_ulozeny','pozadavek',$idRequest,$oldData,$data+['id_person'=>$idPerson,'tyden_od'=>$startDay]);
         $db->commit();
     } catch (mysqli_sql_exception $e) {
         $db->rollback();

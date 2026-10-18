@@ -1,19 +1,20 @@
 <?php
 declare(strict_types=1);
-/* Účel: Definuje stránky modulu Směny a skrývá vedoucí přehledy uživatelům bez příslušného práva. */
+/* Účel: Definuje ploché menu Směn podle oprávnění; výběr týdne patří na stránku, nikoli do podmenu. */
 
+/** Jedna položka otevře stránku; její vlastní filtry vybírají týden. */
 function cb_smeny_pages(): array
 {
     $pages = [
         ['page' => 'prehled', 'label' => 'Přehled'],
-        ['page' => 'me_smeny', 'label' => 'Mé směny', 'items' => ['Aktuální týden', 'Týden + 1', 'Týden + 2']],
+        ['page' => 'me_smeny', 'label' => 'Mé směny'],
         ['page' => 'historie_smen', 'label' => 'Historie směn'],
     ];
 
     if (function_exists('cb_smeny_planovani_vidi') && cb_smeny_planovani_vidi()) {
         $pages[] = ['page' => 'planovani_smen', 'label' => 'Plánování směn'];
-        $pages[] = ['page' => 'naplanovane_smeny', 'label' => 'Naplánované směny', 'items' => ['Aktuální týden', 'Týden + 1', 'Týden + 2']];
-        $pages[] = ['page' => 'zadane_pozadavky', 'label' => 'Zadané požadavky', 'items' => ['Aktuální týden', 'Týden + 1', 'Týden + 2']];
+        $pages[] = ['page' => 'naplanovane_smeny', 'label' => 'Naplánované směny'];
+        $pages[] = ['page' => 'zadane_pozadavky', 'label' => 'Zadané požadavky'];
     }
 
     if (function_exists('cb_smeny_sablony_ma_pravo') && cb_smeny_sablony_ma_pravo()) {

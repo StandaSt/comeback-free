@@ -1,8 +1,9 @@
 <?php
-// db/db_zapis_denni_report.php * K10 finalni zapis denniho reportu
+// Finalni zapis denniho reportu vcetne jedne casove prestavky a historicke delky pauzy.
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../common/db/db_cis_slot.php';
+require_once __DIR__ . '/../../common/lib/smeny_hodiny.php';
 
 function cb_db_zapis_denni_report_already_saved_message(): string
 {
@@ -121,6 +122,7 @@ function cb_db_reporty_is_release_lock(mysqli $conn, string $lockName): void
     $stmt->close();
 }
 
+// Nacte radky vcetne casu jedne prestavky; historicka delka se zachova samostatne.
 function cb_db_zapis_denni_report_people_from_post(array $post, string $type): array
 {
     $prefix = ($type === 'kuryr') ? 'kuryr' : 'instor';
@@ -129,6 +131,8 @@ function cb_db_zapis_denni_report_people_from_post(array $post, string $type): a
     $starts = $post[$prefix . '_zacatek'] ?? [];
     $ends = $post[$prefix . '_konec'] ?? [];
     $breaks = $post[$prefix . '_pauza_hod'] ?? [];
+    $breakStarts = $post[$prefix . '_pauza_od'] ?? [];
+    $breakEnds = $post[$prefix . '_pauza_do'] ?? [];
     $restias = $post[$prefix . '_pocet_rozvozu_restia'] ?? [];
     $manuals = $post[$prefix . '_pocet_rozvozu_manual'] ?? [];
     $cars = $post[$prefix . '_vlastni_vuz'] ?? [];
@@ -151,6 +155,8 @@ function cb_db_zapis_denni_report_people_from_post(array $post, string $type): a
             'smena_od' => trim((string)($starts[$index] ?? '')),
             'smena_do' => trim((string)($ends[$index] ?? '')),
             'pauza' => $pauseRaw === '' ? 0.0 : (float)$pauseRaw,
+            'pauza_od' => trim((string)($breakStarts[$index] ?? '')),
+            'pauza_do' => trim((string)($breakEnds[$index] ?? '')),
             'pauza_validni' => $pauseRaw === '' || is_numeric($pauseRaw),
             'odpracovano' => 0.0,
             'rozvozu_restia' => ($type === 'kuryr') ? max(0, (int)($restias[$index] ?? 0)) : 0,
@@ -340,6 +346,7 @@ function cb_db_zapis_denni_report_user_in_active_report(mysqli $conn, int $idPob
     return $exists;
 }
 
+// Pred zapisem overi osoby a odvozuje delku nove prestavky vyhradne z jejiho intervalu.
 function cb_db_zapis_denni_report_validate(mysqli $conn, int $idPob, string $datumReportu, array $post, array &$personRows, bool $allowExistingReportUsers): void
 {
     $oteviral = (int)($post['oteviral'] ?? 0);
@@ -385,7 +392,15 @@ function cb_db_zapis_denni_report_validate(mysqli $conn, int $idPob, string $dat
         if (!cb_db_zapis_denni_report_valid_time($start) || !cb_db_zapis_denni_report_valid_time($end)) {
             throw new CbUserVisibleException($userLabel . ' má neplatný čas směny: začátek „' . $start . '“, konec „' . $end . '“.');
         }
-        $workedHours = cb_db_zapis_denni_report_worked_hours($start, $end, (float)($row['pauza'] ?? 0));
+        // Delku nove prestavky urcuji casy, stary report muze mit jen historickou delku.
+        $pause = cb_smena_pauza($start, $end, $row['pauza_od'] ?? null, $row['pauza_do'] ?? null, (float)($row['pauza'] ?? 0));
+        if (!$pause['ok']) {
+            throw new CbUserVisibleException($userLabel . ': ' . $pause['reason']);
+        }
+        $personRows[$rowIndex]['pauza'] = $pause['pause'];
+        $personRows[$rowIndex]['pauza_od'] = $pause['from'];
+        $personRows[$rowIndex]['pauza_do'] = $pause['to'];
+        $workedHours = cb_db_zapis_denni_report_worked_hours($start, $end, $pause['pause']);
         if (empty($row['pauza_validni'])) {
             throw new CbUserVisibleException($userLabel . ' má neplatnou pauzu.');
         }
@@ -531,8 +546,8 @@ function cb_db_zapis_denni_report_from_form(mysqli $conn, int $idPob, string $da
 
         $stmtPerson = $conn->prepare('
             INSERT INTO reporty_is_osoby
-                (id_reportu, id_user, jmeno, prijmeni, slot, smena_od, smena_do, pauza, odpracovano, rozvozu_restia, rozvozu_manual, rozvozu_celkem, vlastni_vuz, vyplatit_phm)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (id_reportu, id_user, jmeno, prijmeni, slot, smena_od, smena_do, pauza, pauza_od, pauza_do, odpracovano, rozvozu_restia, rozvozu_manual, rozvozu_celkem, vlastni_vuz, vyplatit_phm)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ');
         if ($stmtPerson === false) {
             throw new RuntimeException('Nelze pripravit ulozeni osob reportu.');
@@ -554,13 +569,15 @@ function cb_db_zapis_denni_report_from_form(mysqli $conn, int $idPob, string $da
             $smenaOd = $smenaOd !== '' ? $smenaOd : null;
             $smenaDo = $smenaDo !== '' ? $smenaDo : null;
             $pauza = (float)($row['pauza'] ?? 0);
+            $pauzaOd = $row['pauza_od'];
+            $pauzaDo = $row['pauza_do'];
             $odpracovano = (float)($row['odpracovano'] ?? 0);
             $rozvozuRestia = ($slot === 2) ? max(0, (int)($row['rozvozu_restia'] ?? 0)) : 0;
             $rozvozuManual = (int)($row['rozvozu_manual'] ?? 0);
             $rozvozuCelkem = $slot === 2 ? ($rozvozuRestia + $rozvozuManual) : 0;
             $vlastniVuz = (int)($row['vlastni_vuz'] ?? 0);
             $vyplatitPhm = (float)($row['vyplatit_phm'] ?? 0);
-            $stmtPerson->bind_param('iississddiiiid', $idReportu, $idOsobyUser, $jmeno, $prijmeni, $slot, $smenaOd, $smenaDo, $pauza, $odpracovano, $rozvozuRestia, $rozvozuManual, $rozvozuCelkem, $vlastniVuz, $vyplatitPhm);
+            $stmtPerson->bind_param('iississdssdiiiid', $idReportu, $idOsobyUser, $jmeno, $prijmeni, $slot, $smenaOd, $smenaDo, $pauza, $pauzaOd, $pauzaDo, $odpracovano, $rozvozuRestia, $rozvozuManual, $rozvozuCelkem, $vlastniVuz, $vyplatitPhm);
             $stmtPerson->execute();
         }
         $stmtPerson->close();
