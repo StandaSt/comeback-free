@@ -1,56 +1,15 @@
 <?php
-// Souhrn tržeb podle kanálů; částky i případná chyba mají konkrétní společný výstup.
+// Souhrn tržeb podle kanálů za všechny povolené pobočky; chyby mají společný uživatelský výstup.
 declare(strict_types=1);
 
+require_once __DIR__ . '/../../common/db/db_user_pobocka.php';
+require_once __DIR__ . '/../../common/lib/obdobi_stranky.php';
+
 (static function (): void {
-    $tz = new DateTimeZone('Europe/Prague');
-    $now = new DateTimeImmutable('now', $tz);
-    $todayStart = new DateTimeImmutable($now->format('Y-m-d') . ' 06:00:00', $tz);
-    $fallbackFrom = ($now < $todayStart) ? $todayStart->modify('-1 day') : $todayStart;
-    $fallbackTo = $now->modify('+1 second');
-    $normalizeDateTime = static function (string $value): string {
-        $value = trim(str_replace('T', ' ', $value));
-        if ($value === '') {
-            return '';
-        }
-        if (preg_match('~^(\d{4})-(\d{2})-(\d{2})$~', $value, $m) === 1) {
-            $value = $m[1] . '-' . $m[2] . '-' . $m[3] . ' 06:00:00';
-        } elseif (preg_match('~^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$~', $value) === 1) {
-            $value .= ':00';
-        }
-        if (preg_match('~^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$~', $value, $m) !== 1) {
-            return '';
-        }
-        if (!checkdate((int)$m[2], (int)$m[3], (int)$m[1]) || (int)$m[4] > 23 || (int)$m[5] > 59 || (int)$m[6] > 59) {
-            return '';
-        }
-        return $value;
-    };
-    $fromSql = $normalizeDateTime((string)($_SESSION['cb_obdobi_od'] ?? ''));
-    $toSql = $normalizeDateTime((string)($_SESSION['cb_obdobi_do'] ?? ''));
-    if ($fromSql === '' || $toSql === '' || $fromSql > $toSql) {
-        $from = $fallbackFrom;
-        $to = $fallbackTo;
-        $fromSql = $from->format('Y-m-d H:i:s');
-        $toSql = $to->format('Y-m-d H:i:s');
-    } else {
-        $from = new DateTimeImmutable($fromSql, $tz);
-        $to = new DateTimeImmutable($toSql, $tz);
-    }
-    $periodLabel = $from->format('j.n.Y') === $to->format('j.n.Y')
-        ? $from->format('j.n.Y G:i') . ' - ' . $to->format('G:i')
-        : $from->format('j.n.Y G:i') . ' - ' . $to->format('j.n.Y G:i');
-    $selectedBranchIds = function_exists('get_selected_pobocky') ? get_selected_pobocky() : [];
-    if ($selectedBranchIds === []) {
-        $fallbackBranchId = (int)($_SESSION['cb_pobocka_id'] ?? 0);
-        if ($fallbackBranchId > 0) {
-            $selectedBranchIds = [$fallbackBranchId];
-        }
-    }
-    $selectedBranchIds = array_values(array_unique(array_filter(array_map('intval', $selectedBranchIds), static fn(int $id): bool => $id > 0)));
-    sort($selectedBranchIds);
-    $branchFilterSql = $selectedBranchIds !== [] ? ' AND o.id_pob IN (' . implode(',', $selectedBranchIds) . ')' : '';
-    $branchLabel = '';
+    // Časový filtr Top reportu je oddělen od Objednávek i Kontroly reportů.
+    $topPeriod = cb_obdobi_stranky_model('provoz.top_report');
+    $fromSql = $topPeriod['od'];
+    $toSql = $topPeriod['do'];
     $rows = [];
     $totalOrders = 0;
     $totalSales = 0.0;
@@ -66,37 +25,12 @@ declare(strict_types=1);
 
     try {
         $conn = db();
-        if ($selectedBranchIds !== []) {
-            $allBranchIds = [];
-            $cbUser = $_SESSION['cb_user'] ?? null;
-            $idUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
-            if ($idUser > 0 && function_exists('cb_pobocky_get_allowed_for_user')) {
-                $allowed = cb_pobocky_get_allowed_for_user($idUser);
-                $allBranchIds = array_values(array_unique(array_filter(array_map('intval', $allowed['ids'] ?? []), static fn(int $id): bool => $id > 0)));
-                sort($allBranchIds);
-            }
-
-            if ($allBranchIds === [] || $selectedBranchIds !== $allBranchIds) {
-                $branchNamesById = [];
-                $branchSql = 'SELECT id_pob, nazev FROM pobocka WHERE id_pob IN (' . implode(',', $selectedBranchIds) . ') ORDER BY nazev ASC';
-                $branchResult = $conn->query($branchSql);
-                if ($branchResult instanceof mysqli_result) {
-                    while ($branchRow = $branchResult->fetch_assoc()) {
-                        $idPob = (int)($branchRow['id_pob'] ?? 0);
-                        if ($idPob > 0) {
-                            $branchNamesById[$idPob] = trim((string)($branchRow['nazev'] ?? ''));
-                        }
-                    }
-                    $branchResult->free();
-                }
-
-                $branchNames = [];
-                foreach ($selectedBranchIds as $idPob) {
-                    $branchNames[] = ($branchNamesById[$idPob] ?? '') !== '' ? $branchNamesById[$idPob] : 'Pobočka ' . (string)$idPob;
-                }
-                $branchLabel = 'Pobočky: ' . implode(', ', $branchNames);
-            }
-        }
+        // Souhrn smí zahrnout jen povolené pobočky, i když uživatel nemá žádnou.
+        $idUser = (int)($_SESSION['cb_user']['id_user'] ?? 0);
+        $allowedBranchIds = array_values(array_filter(array_map('intval', array_column(cb_db_user_pobocky($conn, $idUser), 'id_pob')), static fn(int $id): bool => $id > 0));
+        $branchFilterSql = $allowedBranchIds !== []
+            ? ' AND o.id_pob IN (' . implode(',', $allowedBranchIds) . ')'
+            : ' AND 1 = 0';
 
         $sql = "
             SELECT
@@ -152,10 +86,7 @@ declare(strict_types=1);
     ?>
     <section class="blok" data-cb-restia-needed="1">
         <h2 class="blok_title">Top report</h2>
-        <p class="provoz_prehled_meta"><?= h($periodLabel) ?></p>
-        <?php if ($branchLabel !== ''): ?>
-            <p class="provoz_prehled_meta"><?= h($branchLabel) ?></p>
-        <?php endif; ?>
+        <?php $cbPeriodScope = 'provoz.top_report'; require __DIR__ . '/../../common/includes/vyber_obdobi.php'; ?>
         <p class="provoz_top_report_heading">Souhrn tržeb podle kanálů</p>
         <?php if ($rows === []): ?>
             <p class="provoz_prehled_text">Nejsou dostupná data kanálů.</p>

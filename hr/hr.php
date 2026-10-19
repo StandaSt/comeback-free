@@ -11,9 +11,6 @@ require_once __DIR__ . '/../common/lib/session_boot.php';
 require_once __DIR__ . '/../common/config/secrets.php';
 require_once __DIR__ . '/../common/lib/app.php';
 require_once __DIR__ . '/../common/lib/form_post.php';
-require_once __DIR__ . '/../common/lib/pobocky_vyber.php';
-require_once __DIR__ . '/../common/lib/handle_set_period.php';
-require_once __DIR__ . '/../common/lib/handle_set_pobocky.php';
 require_once __DIR__ . '/hr_includes/hr_data.php';
 require_once __DIR__ . '/hr_lib/hr_pages.php';
 require_once __DIR__ . '/hr_lib/hr_chyby.php';
@@ -38,7 +35,6 @@ if (!cb_pravo_ma(300)) {
     exit;
 }
 
-cb_pobocky_bootstrap_session();
 
 $currentPage = cb_hr_current_page();
 $page = $currentPage['key'];

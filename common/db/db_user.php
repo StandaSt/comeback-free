@@ -17,23 +17,14 @@ function cb_db_ensure_user_set(mysqli $conn, int $idUser): void
         throw new RuntimeException('Neplatne id_user pro user_set.');
     }
 
-    $now = new DateTimeImmutable('now');
-    $currentWorkdayDate = $now;
-    if ((int)$now->format('G') < 6) {
-        $currentWorkdayDate = $currentWorkdayDate->modify('-1 day');
-    }
-    $today = $currentWorkdayDate->setTime(6, 0, 0)->format('Y-m-d H:i:s');
-    $yesterday = $currentWorkdayDate->modify('-1 day')->setTime(6, 0, 0)->format('Y-m-d H:i:s');
-
-    $prodleva = 3000;
     $pismo = 2;
     $dark = 0;
 
     $aktivniModul = 'provoz';
 
     $stmt = $conn->prepare(
-        'INSERT INTO user_set (id_user, prodleva, pismo, dark, obdobi_od, obdobi_do, obdobi_mode, aktivni_modul)
-         SELECT ?, ?, ?, ?, ?, ?, ?, ?
+        'INSERT INTO user_set (id_user, pismo, dark, aktivni_modul)
+         SELECT ?, ?, ?, ?
          FROM DUAL
          WHERE NOT EXISTS (
              SELECT 1 FROM user_set WHERE id_user = ?
@@ -43,8 +34,7 @@ function cb_db_ensure_user_set(mysqli $conn, int $idUser): void
         throw new RuntimeException('Nepodarilo se pripravit insert user_set.');
     }
 
-    $obdobiMode = 'vcera';
-    $stmt->bind_param('iiiissssi', $idUser, $prodleva, $pismo, $dark, $yesterday, $today, $obdobiMode, $aktivniModul, $idUser);
+    $stmt->bind_param('iiisi', $idUser, $pismo, $dark, $aktivniModul, $idUser);
     $stmt->execute();
     $stmt->close();
 }

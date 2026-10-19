@@ -85,14 +85,6 @@ try {
         }
     }
 
-    $filterPob = [];
-    if (isset($_SESSION['selected_pobocky']) && is_array($_SESSION['selected_pobocky'])) {
-        $filterPob = $_SESSION['selected_pobocky'];
-    } elseif (isset($_SESSION['cb_pobocka_id'])) {
-        $filterPob = [(int)$_SESSION['cb_pobocka_id']];
-    }
-    $filterPob = array_values(array_filter(array_map('intval', $filterPob), static fn (int $id): bool => $id > 0));
-
     cb_tmp_measure_detail_add([
         'typ' => 'ajax',
         'nazev' => $event,
@@ -103,10 +95,6 @@ try {
             'href' => (string)($data['href'] ?? ''),
             'path' => (string)($data['path'] ?? ''),
             'data' => $traceData,
-            'filter_od' => trim((string)($_SESSION['cb_obdobi_od'] ?? '')),
-            'filter_do' => trim((string)($_SESSION['cb_obdobi_do'] ?? '')),
-            'filter_pob' => $filterPob,
-            'filter_mode' => trim((string)($_SESSION['selected_pobocky_mode'] ?? '')),
         ],
     ]);
 } catch (Throwable $e) {

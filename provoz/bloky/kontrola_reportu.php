@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
+// Zobrazí souhrn Kontroly reportů a místní výběr uzavřených provozních dnů.
 
 require_once __DIR__ . '/../lib/kontrola_reportu_data.php';
 require_once __DIR__ . '/../lib/format_datum_cas.php';
 
-$cbKontrolaPouzitGlobalniObdobi = !empty($cbKontrolaPouzitGlobalniObdobi);
 $cbKontrolaPozadovanaPobocka = (int)($cbKontrolaPozadovanaPobocka ?? 0);
 $cbKontrolaPorovnatGoogle = (string)($_POST['zr_google_compare'] ?? $_GET['zr_google_compare'] ?? '') === '1';
 $cbKontrolaData = null;
@@ -12,7 +12,6 @@ $cbKontrolaError = '';
 try {
     $cbKontrolaData = cb_kontrola_reportu_data(
         db(),
-        $cbKontrolaPouzitGlobalniObdobi,
         $cbKontrolaPozadovanaPobocka,
         $cbKontrolaPorovnatGoogle
     );
@@ -153,6 +152,7 @@ $cbKontrolaDifferenceDelta = static function (mixed $isValue, mixed $googleValue
         natcasesort($googleUnmatchedPeople);
     }
     ?>
+    <?php $cbPeriodScope = 'provoz.kontrola_reportu'; require __DIR__ . '/../../common/includes/vyber_obdobi.php'; ?>
     <?php if ($googleComparison !== []): ?>
         <div class="kontrola_reportu_google_status">
             <strong>Porovnání reportů v IS a reportů zadaných na Google</strong>

@@ -305,10 +305,6 @@
 
   function syncHeader(moduleName) {
     setActive(moduleName);
-    var box = root.querySelector('[data-cb-head-update="1"]');
-    if (box instanceof HTMLElement) {
-      box.hidden = moduleName !== 'provoz';
-    }
   }
 
   // Obsah modulu může obsahovat i dialogy; kopie menu z odpovědi nikdy nenahradí již zobrazené menu.

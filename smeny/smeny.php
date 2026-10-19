@@ -11,9 +11,6 @@ require_once __DIR__ . '/../common/lib/session_boot.php';
 require_once __DIR__ . '/../common/config/secrets.php';
 require_once __DIR__ . '/../common/lib/app.php';
 require_once __DIR__ . '/../common/lib/system.php';
-require_once __DIR__ . '/../common/lib/pobocky_vyber.php';
-require_once __DIR__ . '/../common/lib/handle_set_period.php';
-require_once __DIR__ . '/../common/lib/handle_set_pobocky.php';
 require_once __DIR__ . '/sm_lib/sm_pozadavky_pravo.php';
 require_once __DIR__ . '/sm_lib/sm_sablony_pravo.php';
 require_once __DIR__ . '/sm_lib/sm_planovani_pravo.php';
@@ -39,6 +36,7 @@ require_once __DIR__ . '/sm_lib/sm_planovani_sloty.php';
 require_once __DIR__ . '/sm_lib/sm_planovani_obsazeni.php';
 require_once __DIR__ . '/sm_lib/sm_planovani_akce.php';
 require_once __DIR__ . '/sm_lib/sm_publikace.php';
+require_once __DIR__ . '/sm_lib/sm_souhlasy.php';
 require_once __DIR__ . '/sm_lib/sm_verejne.php';
 require_once __DIR__ . '/sm_lib/sm_verejne_filtry.php';
 require_once __DIR__ . '/sm_lib/sm_historie.php';
@@ -61,7 +59,6 @@ if (empty($_SESSION['login_ok'])) {
     exit;
 }
 
-cb_pobocky_bootstrap_session();
 // Ulozeni nastaveni musi probehnout pred vyberem stranky i pred HTML vystupem.
 cb_smeny_nastaveni_ulozit();
 
@@ -130,7 +127,7 @@ if (in_array($smPage, ['me_smeny','naplanovane_smeny'], true)) {
     }
 }
 
-// Historie má vlastní jednoduchý výběr pobočky a záměrně nereaguje na globální výběr v hlavičce.
+// Historie má vlastní jednoduchý výběr pobočky a dokončeného týdne.
 if ($smPage === 'historie_smen') {
     $smDb = db();
     $smHistoryWeeks = cb_smeny_historie_tydny();

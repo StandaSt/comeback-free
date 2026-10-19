@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+/* Účel: Ukládá vzhled a aktivní modul uživatele; místní období spravuje společný panel stránky. */
+
 function cb_nastaveni_uzivatele_vyrid_post(): void
 {
     if (empty($_SESSION['login_ok']) || ($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
@@ -22,18 +24,6 @@ function cb_nastaveni_uzivatele_vyrid_post(): void
             $_SESSION['cb_flash'] = cb_chyba_uzivatel($error, $context);
             header('Location: ' . cb_nastaveni_uzivatele_theme_navrat());
             exit;
-        }
-    }
-
-    if (isset($_SERVER['HTTP_X_COMEBACK_SET_PRODLEVA'])) {
-        try {
-            cb_nastaveni_uzivatele_uloz_prodlevu();
-        } catch (Throwable $error) {
-            cb_chyba_json_odesli($error, [
-                'module' => 'SYSTEM',
-                'action' => 'Uložení prodlevy období',
-                'table' => 'user_set',
-            ]);
         }
     }
 
@@ -101,50 +91,6 @@ function cb_nastaveni_uzivatele_uloz_theme(): void
     }
 
     header('Location: ' . cb_nastaveni_uzivatele_theme_navrat());
-    exit;
-}
-
-function cb_nastaveni_uzivatele_uloz_prodlevu(): void
-{
-    header('Content-Type: application/json; charset=utf-8');
-
-    $cbProdlevaRaw = $_POST['prodleva'] ?? null;
-    if ($cbProdlevaRaw === null) {
-        $cbProdlevaInput = json_decode((string)file_get_contents('php://input'), true);
-        if (is_array($cbProdlevaInput)) {
-            $cbProdlevaRaw = $cbProdlevaInput['prodleva'] ?? null;
-        }
-    }
-
-    $cbProdlevaSec = (int)$cbProdlevaRaw;
-    if ($cbProdlevaSec < 1 || $cbProdlevaSec > 10) {
-        http_response_code(422);
-        echo json_encode(['ok' => false, 'err' => 'Prodleva musí být v rozsahu 1 až 10 sekund.'], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-
-    $cbProdlevaMs = $cbProdlevaSec * 1000;
-    $cbUser = $_SESSION['cb_user'] ?? null;
-    $cbIdUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
-    if ($cbIdUser <= 0) {
-        http_response_code(401);
-        echo json_encode(['ok' => false, 'err' => 'Platnost přihlášení vypršela. Přihlaste se prosím znovu.'], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-
-    $cbProdlevaStmt = db()->prepare('UPDATE user_set SET prodleva = ? WHERE id_user = ?');
-    if (!($cbProdlevaStmt instanceof mysqli_stmt)) {
-        throw new RuntimeException('Nepodařilo se připravit uložení prodlevy.');
-    }
-    $cbProdlevaStmt->bind_param('ii', $cbProdlevaMs, $cbIdUser);
-    $cbProdlevaSaved = $cbProdlevaStmt->execute();
-    $cbProdlevaStmt->close();
-    if (!$cbProdlevaSaved) {
-        throw new RuntimeException('Nepodařilo se uložit prodlevu.');
-    }
-
-    cb_store_user_settings(['prodleva' => $cbProdlevaMs]);
-    echo json_encode(['ok' => true, 'prodleva' => $cbProdlevaMs, 'sec' => $cbProdlevaSec], JSON_UNESCAPED_UNICODE);
     exit;
 }
 

@@ -11,9 +11,6 @@ require_once __DIR__ . '/../common/lib/session_boot.php';
 require_once __DIR__ . '/../common/config/secrets.php';
 require_once __DIR__ . '/../common/lib/app.php';
 require_once __DIR__ . '/../common/lib/system.php';
-require_once __DIR__ . '/../common/lib/pobocky_vyber.php';
-require_once __DIR__ . '/../common/lib/handle_set_period.php';
-require_once __DIR__ . '/../common/lib/handle_set_pobocky.php';
 require_once __DIR__ . '/uk_lib/uk_pages.php';
 
 cb_session_guard_entry();
@@ -29,7 +26,6 @@ if (empty($_SESSION['login_ok'])) {
     exit;
 }
 
-cb_pobocky_bootstrap_session();
 
 $ukMenuItems = cb_ukoly_pages();
 $ukCurrentPage = cb_ukoly_current_page($ukMenuItems);

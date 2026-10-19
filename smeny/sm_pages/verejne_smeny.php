@@ -1,11 +1,12 @@
 <?php
 declare(strict_types=1);
-/* Účel: Zobrazí aktuální vlastní směny nebo vedoucí tabulku naplánovaných směn bez historického výběru. */
+/* Účel: Zobrazí zveřejněné směny s potvrzením jejich aktuální podoby, vlastní výhrady a existující oznámení včetně odkazu na detail. */
 $smAll=$smPage==='naplanovane_smeny';
 $smPublicWeekIndex=max(0,min(count($smPublicWeeks)-1,(int)($_GET['week']??0)));
 $smPublicWeek=$smPublicWeeks[$smPublicWeekIndex];
 $smReadWeek=$smPublicWeek;$smReadWeeks=$smPublicWeeks;$smReadPage=$smPage;
 $smPublicRows=cb_smeny_verejne_smeny($smDb,$smPublicWeek['start_day'],$smPublicPerson,$smPublicBranches,$smAll);
+cb_smeny_souhlasy_doplnit($smDb,$smPublicRows);
 $smNotices=$smAll?[]:cb_smeny_verejne_oznameni($smDb,$smPublicPerson);
 $smPublicFlash=cb_smeny_sablony_flash_nacist();
 $smDetailId=$smAll?0:max(0,(int)($_GET['oznameni']??0));
@@ -24,7 +25,7 @@ $smDetail=cb_smeny_oznameni_detail($smDb,$smDetailId,$smPublicPerson);
     <div class="smeny_planning_days">
     <?php foreach($smPublicWeek['days'] as $day): ?><article><strong><?= h($day['name'].' '.$day['date_label']) ?></strong>
       <?php $found=false;foreach($smPublicRows as $row): if($row['datum']!==$day['date'])continue;$found=true; ?>
-        <div class="smeny_planning_block"><span><?= h(substr($row['cas_od'],0,5).'–'.substr($row['cas_do'],0,5)) ?></span><span><?= h($row['pobocka'].' · '.$row['slot']) ?></span><strong><?= h($smAll?$row['pracovnik']:((int)$row['zdroj']===2?'Zveřejněno v IS':'Externí plán')) ?></strong></div>
+        <div class="smeny_planning_block"><span><?= h(substr($row['cas_od'],0,5).'–'.substr($row['cas_do'],0,5)) ?></span><span><?= h($row['pobocka'].' · '.$row['slot']) ?></span><strong><?= h($row['souhlas_stav']??((int)$row['zdroj']===2?'Zveřejněno v IS':'Externí plán')) ?></strong></div>
       <?php endforeach;if(!$found): ?><small>Bez naplánovaných směn</small><?php endif; ?></article>
     <?php endforeach; ?></div>
       <h2>K potvrzení</h2>
@@ -33,6 +34,7 @@ $smDetail=cb_smeny_oznameni_detail($smDb,$smDetailId,$smPublicPerson);
       <?php foreach($smNotices as $notice): $content=json_decode($notice['obsah'],true,512,JSON_THROW_ON_ERROR); ?>
         <article class="smeny_notice">
           <strong><?= h($notice['pobocka']) ?></strong><p><?= h(cb_smeny_oznameni_text($notice['typ'],$content)) ?></p>
+          <?php if(!empty($notice['vyhrady_dny'])): ?><p>Máte výhrady k označeným směnám.</p><?php endif; ?>
           <a class="smeny_primary_button" href="<?= h(cb_root_url('index.php?m=smeny&page=me_smeny&week='.$smPublicWeekIndex.'&oznameni='.(int)$notice['id_smeny_oznameni'])) ?>">Zobrazit a potvrdit</a>
         </article>
       <?php endforeach; ?>

@@ -47,11 +47,6 @@ if (empty($_SESSION['login_ok'])) {
 }
 
 if (!empty($_SESSION['login_ok'])) {
-    require_once __DIR__ . '/../common/lib/pobocky_vyber.php';
-    require_once __DIR__ . '/../common/lib/handle_set_period.php';
-    require_once __DIR__ . '/../common/lib/handle_set_pobocky.php';
-
-    cb_pobocky_bootstrap_session();
 }
 
 require_once __DIR__ . '/lib/detektuj_neplatnou_url.php';
@@ -345,6 +340,7 @@ if ($cbPpOnly && !empty($_SESSION['login_ok'])) {
                 <?php else: ?>
                     <h1><?= h($cbProvozPageTitle) ?></h1>
                 <?php endif; ?>
+                <?php if ($cbPage === 'prehled'): require __DIR__ . '/includes/prehled_aktualizace.php'; endif; ?>
                 <?php if ($cbPage === 'denni_report' && !$cbIsVyrobaReport && ($cbKontrolaReportuAllowed || $cbReportPromenneAllowed)): ?>
                     <div class="pp_header_controls">
                     <?php if ($cbKontrolaReportuAllowed): ?>
@@ -397,7 +393,8 @@ if (!empty($_SESSION['login_ok'])) {
             <?php else: ?>
                 <h1><?= h($cbProvozPageTitle) ?></h1>
             <?php endif; ?>
-            <?php if ($cbPage === 'denni_report' && !$cbIsVyrobaReport && ($cbKontrolaReportuAllowed || $cbReportPromenneAllowed)): ?>
+            <?php if ($cbPage === 'prehled'): require __DIR__ . '/includes/prehled_aktualizace.php'; endif; ?>
+                <?php if ($cbPage === 'denni_report' && !$cbIsVyrobaReport && ($cbKontrolaReportuAllowed || $cbReportPromenneAllowed)): ?>
                 <div class="pp_header_controls">
                 <?php if ($cbKontrolaReportuAllowed): ?>
                     <a class="head_task_btn" href="<?= h($cbKontrolaReportUrl) ?>" data-zr-kontrola-link>Kontrola</a>

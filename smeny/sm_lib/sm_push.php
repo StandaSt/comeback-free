@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-/* Účel: Doručí uložená oznámení směn přes společný Web Push. Selhání nezruší zveřejněný rozpis. */
+/* Účel: Doručí stručná uložená oznámení směn přes stávající společný Web Push; podrobnosti otevře autorizovaný modál. Selhání nezruší zveřejněný rozpis. */
 
 /** Odešle jednu zprávu na zařízení zaměstnance a vrátí stav doručení; nic automaticky neopakuje. */
 function cb_smeny_push_odeslat(array $notice): string
@@ -14,9 +14,10 @@ function cb_smeny_push_odeslat(array $notice): string
     require_once cb_push_vendor_autoload();
     $push=new Minishlink\WebPush\WebPush(['VAPID'=>['subject'=>(string)CB_VAPID_SUBJECT,'publicKey'=>(string)CB_VAPID_PUBLIC,'privateKey'=>(string)CB_VAPID_PRIVATE]],[],10);
     $content=json_decode($notice['obsah'],true,512,JSON_THROW_ON_ERROR);
+    $text=cb_smeny_oznameni_push_text($notice['typ'],$content);
     // Absolutní odkaz vede na konkrétní oznámení; modál ověří přihlášeného příjemce.
     $root=$PROSTREDI==='SERVER'?cb_login_url():'http://localhost/comeback/';
-    $payload=json_encode(['type'=>'SMENY','title'=>'Comeback – směny','body'=>($notice['typ']==='tyden'?'Směny na další týden byly zveřejněny.':cb_smeny_oznameni_text($notice['typ'],$content)),
+    $payload=json_encode(['type'=>'SMENY','title'=>$text['title'],'body'=>$text['body'],
         'tag'=>'cb-smeny-'.(int)$notice['id_smeny_oznameni'],'url'=>rtrim($root,'/').'/index.php?m=smeny&page=me_smeny&oznameni='.(int)$notice['id_smeny_oznameni']],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
     $failed=false;$delivered=false;
     foreach($devices as $device) {

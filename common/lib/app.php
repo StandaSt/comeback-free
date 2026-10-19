@@ -329,7 +329,6 @@ if (!function_exists('cb_system_settings_defaults')) {
             'restia_online' => 0,
             'on_2fa' => 1,
             'system_logout' => 20,
-            'pauza_obdobi' => 1000,
             'log_akce' => 0,
             'log_1' => 0,
             'log_2' => 0,
@@ -357,12 +356,6 @@ if (!function_exists('cb_store_system_settings')) {
             $logout = 20;
         }
         $data['system_logout'] = $logout;
-
-        $pauza = (int)($values['pauza_obdobi'] ?? $data['pauza_obdobi']);
-        if (!in_array($pauza, [0, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000], true)) {
-            $pauza = 1000;
-        }
-        $data['pauza_obdobi'] = $pauza;
 
         $data['log_akce'] = ((int)($values['log_akce'] ?? $data['log_akce']) === 1) ? 1 : 0;
 
@@ -406,12 +399,8 @@ if (!function_exists('cb_user_settings_defaults')) {
     function cb_user_settings_defaults(): array
     {
         return [
-            'prodleva' => 3000,
             'pismo' => 2,
             'dark' => 0,
-            'obdobi_od' => '',
-            'obdobi_do' => '',
-            'obdobi_mode' => 'manual',
             'aktivni_modul' => 'provoz',
         ];
     }
@@ -430,12 +419,6 @@ if (!function_exists('cb_store_user_settings')) {
 
         $data = array_merge(cb_user_settings_defaults(), $current);
 
-        $prodleva = (int)($values['prodleva'] ?? $data['prodleva']);
-        if (!in_array($prodleva, range(1000, 10000, 1000), true)) {
-            $prodleva = 3000;
-        }
-        $data['prodleva'] = $prodleva;
-
         $pismo = (int)($values['pismo'] ?? $data['pismo']);
         if (!in_array($pismo, [1, 2, 3], true)) {
             $pismo = 2;
@@ -444,15 +427,6 @@ if (!function_exists('cb_store_user_settings')) {
 
         $dark = (int)($values['dark'] ?? $data['dark']);
         $data['dark'] = max(0, min(6, $dark));
-
-        $mode = trim((string)($values['obdobi_mode'] ?? $data['obdobi_mode']));
-        if (!in_array($mode, ['dnes', 'vcera', 'tyden', 'mesic', 'rok', 'vse', 'manual'], true)) {
-            $mode = 'manual';
-        }
-        $data['obdobi_mode'] = $mode;
-
-        $data['obdobi_od'] = trim((string)($values['obdobi_od'] ?? $data['obdobi_od']));
-        $data['obdobi_do'] = trim((string)($values['obdobi_do'] ?? $data['obdobi_do']));
 
         $aktivniModul = strtolower(trim((string)($values['aktivni_modul'] ?? $data['aktivni_modul'])));
         if ($aktivniModul === 'is') {

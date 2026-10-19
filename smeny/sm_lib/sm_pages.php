@@ -11,8 +11,11 @@ function cb_smeny_pages(): array
         ['page' => 'historie_smen', 'label' => 'Historie směn'],
     ];
 
-    if (function_exists('cb_smeny_planovani_vidi') && cb_smeny_planovani_vidi()) {
+    // Editační právo 407 zpřístupní plánovač i bez samostatného práva číst přehledy ostatních.
+    if ((function_exists('cb_smeny_planovani_vidi') && cb_smeny_planovani_vidi()) || (function_exists('cb_smeny_planovani_edituje') && cb_smeny_planovani_edituje())) {
         $pages[] = ['page' => 'planovani_smen', 'label' => 'Plánování směn'];
+    }
+    if (function_exists('cb_smeny_planovani_vidi') && cb_smeny_planovani_vidi()) {
         $pages[] = ['page' => 'naplanovane_smeny', 'label' => 'Naplánované směny'];
         $pages[] = ['page' => 'zadane_pozadavky', 'label' => 'Zadané požadavky'];
     }

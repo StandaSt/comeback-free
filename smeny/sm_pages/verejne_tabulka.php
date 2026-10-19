@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-/* Účel: Vykreslí kompaktní tabulku směn se společným filtrem z provoz/js/filtry.js. */
+/* Účel: Vykreslí kompaktní tabulku směn s potvrzením jejich aktuální podoby a se společným filtrem z provoz/js/filtry.js. */
 $smTableBranches=cb_smeny_verejne_moznosti($smPublicRowsAll,'id_pob','pobocka');
 $smTableSlots=cb_smeny_verejne_moznosti($smPublicRowsAll,'id_slot','slot');
 $smTableFilters=cb_smeny_verejne_filtry_hodnoty($_GET);
@@ -22,7 +22,7 @@ $smTableResetUrl=cb_root_url('index.php?m=smeny&page='.$smPage.'&week='.(int)$sm
     <tr><th>Den</th><th>Čas</th><th>Pobočka</th><th>Slot</th><th>Příjmení a jméno</th></tr>
   </thead><tbody>
   <?php foreach($smPublicRows as $smTableRow): $smTableDate=new DateTimeImmutable($smTableRow['datum']); ?>
-    <tr><td><?= h($smDayNames[(int)$smTableDate->format('N')].' '.$smTableDate->format('j. n. Y')) ?></td><td><?= h(substr($smTableRow['cas_od'],0,5).'–'.substr($smTableRow['cas_do'],0,5)) ?></td><td><?= h($smTableRow['pobocka']) ?></td><td><?= h($smTableRow['slot']) ?></td><td><strong><?= h($smTableRow['pracovnik']) ?></strong></td></tr>
+    <tr><td><?= h($smDayNames[(int)$smTableDate->format('N')].' '.$smTableDate->format('j. n. Y')) ?></td><td><?= h(substr($smTableRow['cas_od'],0,5).'–'.substr($smTableRow['cas_do'],0,5)) ?></td><td><?= h($smTableRow['pobocka']) ?></td><td><?= h($smTableRow['slot']) ?></td><td><strong><?= h($smTableRow['pracovnik']) ?></strong><?php if(isset($smTableRow['souhlas_stav'])): ?><small class="smeny_souhlas_stav"><?= h($smTableRow['souhlas_stav']) ?></small><?php endif; ?></td></tr>
   <?php endforeach; ?>
   <?php if($smPublicRows===[]): ?><tr><td colspan="5">Vybraným filtrům neodpovídá žádná směna.</td></tr><?php endif; ?>
   </tbody></table></div>

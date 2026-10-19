@@ -164,9 +164,5 @@ function cb_prebrani_prav_aktivuj(array $profile): void
     $_SESSION['cb_user']['sloty'] = $profile['sloty'];
     // Test nesmi zacit v adminove ulozene Administraci, na kterou prevzaty profil nemusi mit pravo.
     $_SESSION['cb_user_settings']['aktivni_modul'] = 'provoz';
-    // Nesmi zustat adminsky predvyber pobocek; ulozena nastaveni uctu v DB nemenime.
-    $_SESSION['selected_pobocky'] = array_map('intval', array_column($profile['pobocky'], 'id_pob'));
-    $_SESSION['cb_pobocka_id'] = $_SESSION['selected_pobocky'][0] ?? 0;
-    $_SESSION['selected_pobocky_mode'] = 'custom';
-    unset($_SESSION['selected_oblast'], $_SESSION['selected_oblasti'], $_SESSION['cb_user_branches']);
+    unset($_SESSION['cb_user_branches']);
 }

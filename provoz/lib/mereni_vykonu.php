@@ -1,37 +1,11 @@
 <?php
-// lib/mereni_vykonu.php * Verze: V2 * Aktualizace: 21.05.2026
+// Měření výkonu a diagnostika požadavků; zaznamenává dílčí operace.
 declare(strict_types=1);
 
 if (!function_exists('cb_tmp_log1_enabled')) {
     function cb_tmp_log1_enabled(): bool
     {
         return function_exists('cb_system_setting') && (int)cb_system_setting('log_1', 0) === 1;
-    }
-}
-
-if (!function_exists('cb_tmp_measure_filters')) {
-    function cb_tmp_measure_filters(): array
-    {
-        $od = trim((string)($_SESSION['cb_obdobi_od'] ?? ''));
-        $do = trim((string)($_SESSION['cb_obdobi_do'] ?? ''));
-
-        $pob = [];
-        if (function_exists('get_selected_pobocky')) {
-            $pob = get_selected_pobocky();
-        } elseif (isset($_SESSION['selected_pobocky']) && is_array($_SESSION['selected_pobocky'])) {
-            $pob = $_SESSION['selected_pobocky'];
-        } elseif (isset($_SESSION['cb_pobocka_id'])) {
-            $pob = [(int)$_SESSION['cb_pobocka_id']];
-        }
-
-        $pob = array_values(array_filter(array_map('intval', $pob), static fn (int $id): bool => $id > 0));
-
-        return [
-            'od' => $od,
-            'do' => $do,
-            'pobocky' => implode(',', $pob),
-            'pobocky_mode' => trim((string)($_SESSION['selected_pobocky_mode'] ?? '')),
-        ];
     }
 }
 

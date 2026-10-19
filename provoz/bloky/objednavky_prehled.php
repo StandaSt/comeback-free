@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /*
  * Jednotná obsluha filtrů je provoz/js/filtry.js.
- * Filtr provozniho dne v titulku je pres atribut form soucasti stejneho formulare.
+ * Mistni obdobi ovlada tabulku z titulku stranky.
  * Viditelné datumy a částky formátuje cb_format(); do data-* atributů a URL
  * zůstávají původní technické hodnoty.
  */

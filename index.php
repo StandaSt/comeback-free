@@ -109,10 +109,11 @@ cb_prebrani_prav_handle(db());
 $cbAuthOk = !empty($_SESSION['cb_auth_ok']);
 $cb2faPending = !empty($_SESSION['cb_2fa_token']);
 
-if (!empty($_SESSION['login_ok'])) {
-    require_once __DIR__ . '/common/lib/pobocky_vyber.php';
-    require_once __DIR__ . '/common/lib/handle_set_period.php';
-    require_once __DIR__ . '/common/lib/handle_set_pobocky.php';
+// Místní období má vlastní autorizovaný vstup a neukládá nic do user_set.
+if (isset($_SERVER['HTTP_X_COMEBACK_PAGE_PERIOD'])) {
+    require_once __DIR__ . '/common/lib/obdobi_stranky_vstup.php';
+    cb_obdobi_stranky_vyrid_pozadavek();
+    exit;
 }
 
 cb_nastaveni_uzivatele_vyrid_post();
@@ -238,8 +239,6 @@ if (!empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POS
         && $cbGnPage === 'prehled'
         && in_array($cbGnBlock, ['top_report', 'objednavky_online', 'uzivatele_online'], true)
     ) {
-        require_once __DIR__ . '/common/lib/pobocky_vyber.php';
-        cb_pobocky_bootstrap_session();
 
         $GLOBALS['CURRENT_MODULE'] = 'provoz';
         define('CB_EMBEDDED_MODULE', 'provoz');
@@ -259,8 +258,6 @@ if (!empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POS
             echo 'Nemáte právo zobrazit Objednávky.';
             exit;
         }
-        require_once __DIR__ . '/common/lib/pobocky_vyber.php';
-        cb_pobocky_bootstrap_session();
 
         $GLOBALS['CURRENT_MODULE'] = 'provoz';
         define('CB_EMBEDDED_MODULE', 'provoz');
@@ -275,9 +272,6 @@ if (!empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POS
         $GLOBALS['CURRENT_MODULE'] = 'provoz';
         define('CB_EMBEDDED_MODULE', 'provoz');
         require_once __DIR__ . '/provoz/lib/kontrola_reportu_data.php';
-        $cbKontrolaGnSource = strtolower(trim((string)($_POST['source'] ?? '')));
-        $cbKontrolaPouzitGlobalniObdobi = $cbKontrolaGnSource === 'obdobi'
-            || (string)($_SESSION['cb_kontrola_reportu_period_source'] ?? '') === 'global';
         $cbKontrolaPozadovanaPobocka = (int)($_SESSION['cb_kontrola_reportu_id_pob'] ?? 0);
         header('Content-Type: text/html; charset=utf-8');
         require __DIR__ . '/provoz/bloky/kontrola_reportu.php';
@@ -442,8 +436,6 @@ if (!empty($_SESSION['login_ok'])) {
 
     $GLOBALS['CURRENT_MODULE'] = $cbInitialModule;
     require_once __DIR__ . '/provoz/lib/asset_url.php';
-    require_once __DIR__ . '/common/lib/pobocky_vyber.php';
-    cb_pobocky_bootstrap_session();
 
     require __DIR__ . '/common/lib/priprava_kostry_stranky.php';
     require __DIR__ . '/common/includes/kostra_stranky.php';

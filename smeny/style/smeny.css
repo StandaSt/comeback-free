@@ -1,5 +1,5 @@
 /*
- * Ucel souboru: Sjednocuje obal Smen, stabilni mrizku s uzavrenymi bloky prijmeni a jmena, vyber pracovniku a detail; zdrojovy planovac skryva behem pripravy pohledu.
+ * Ucel souboru: Sjednocuje obal Smen, mrizku planovace, vyber pracovniku a detail; upravuje take existujici modal souhlasu s vyhradami k jednotlivym dnum.
  * Velikosti pisma vychazeji z pevne typograficke skaly aplikace.
  */
 
@@ -25,6 +25,10 @@
 .smeny_oznameni_dny dt{font-weight:600;}
 .smeny_oznameni_dny dd{margin:0;}
 .smeny_oznameni_dny span{display:block;}
+/* Výhrady patří konkrétnímu dni, tlačítka se na telefonu mohou zalomit. */
+.smeny_vyhrada_den{display:flex;align-items:center;gap:.5rem;margin-top:.4rem;}
+.smeny_oznameni_akce{display:flex;flex-wrap:wrap;gap:.65rem;}
+.smeny_souhlas_stav{display:block;font-size:var(--cb-font-12);}
 
 /* Skrytá dostupnost Kdykoliv nesmí zabírat místo; fieldset pouze seskupuje intervaly. */
 .smeny_request_intervals{border:0;padding:0;margin:0;min-width:0;}

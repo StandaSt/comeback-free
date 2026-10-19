@@ -2,7 +2,7 @@
 declare(strict_types=1);
 // Kmenovi prijemci publikace se urcuji ze samostatne MAIN historie v danem tydnu.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
-/* Účel: Atomicky zveřejní verzi rozpisu a uloží neměnná oznámení o směnách. Nic neodesílá. */
+/* Účel: Atomicky zveřejní verzi rozpisu a uloží týdenní souhlasy nebo jednotlivé změny definitivního plánu. Nic neodesílá. */
 
 /** Do potvrzované zprávy patří pouze význam směny, nikoliv technické ID kopie či čas uložení. */
 function cb_smeny_publikace_otisk(array $shift): array
@@ -33,8 +33,9 @@ function cb_smeny_publikace_zmeny(array $old, array $new): array
 /** Volat pouze uvnitř transakce dispatcheru pod zámkem pobočky. Push odešle dispatcher až po commitu. */
 function cb_smeny_publikace_zverejnit(mysqli $db,array $plan,int $publisher): void
 {
-    if(!cb_smeny_planovani_publikuje())throw new CbUserVisibleException('Nemáte právo zveřejnit směny.');
-    if($plan['pracovni_verze']===null || (int)$plan['pripraveno']!==1)throw new CbUserVisibleException('Nejprve označte pracovní týden jako připravený.');
+    if(!cb_smeny_planovani_edituje())throw new CbUserVisibleException('Nemáte právo upravovat a zveřejnit směny.');
+    if(!cb_smeny_souhlasy_schema($db))throw new CbUserVisibleException('Zveřejnění čeká na aktualizaci databáze pro souhlasy a výhrady.');
+    if($plan['pracovni_verze']===null)throw new CbUserVisibleException('Rozpis už byl zveřejněn. Obnovte stránku.');
     $id=(int)$plan['id_smeny_rozpis']; $version=(int)$plan['pracovni_verze'];
     // Stejné pořadí zámků osob omezuje souběh publikací a přidělování mezi pobočkami.
     $people=array_unique(array_map('intval',array_column($plan['blocks'],'id_person'))); sort($people,SORT_NUMERIC);
@@ -49,12 +50,21 @@ function cb_smeny_publikace_zverejnit(mysqli $db,array $plan,int $publisher): vo
         $stmt=cb_smeny_planovani_sql($db,'SELECT * FROM smeny_smena WHERE id_smeny_rozpis=? AND verze=?','ii',[$id,(int)$plan['zverejnena_verze']]);
         $old=$stmt->get_result()->fetch_all(MYSQLI_ASSOC);$stmt->close();
         $events=cb_smeny_publikace_zmeny($old,$plan['blocks']);
+        // Do prvního úplného souhlasu předáme dotčenému člověku nový celý týden.
+        // Nezměněným lidem zůstávají jejich předchozí souhlasy.
+        if($plan['definitivni_od']===null) {
+            $weekly=[];
+            foreach(array_unique(array_column($events,'id_person')) as $person) {
+                cb_smeny_planovani_sql($db,'UPDATE smeny_oznameni SET nahrazeno=COALESCE(nahrazeno,NOW()) WHERE id_smeny_rozpis=? AND id_person=? AND nahrazeno IS NULL','ii',[$id,$person])->close();
+                $shifts=array_values(array_filter($plan['blocks'],static fn(array $s):bool=>(int)$s['id_person']===$person));
+                if($shifts!==[])$weekly[]=['id_person'=>$person,'typ'=>'tyden','klic'=>'tyden','obsah'=>['smeny'=>array_map('cb_smeny_publikace_otisk',$shifts)]];
+                else foreach($events as $event)if($event['id_person']===$person)$weekly[]=$event;
+            }
+            $events=$weekly;
+        }
     } else {
-        // První týden dostanou i kmenoví pracovníci bez směn; cizí pracovníci pouze pokud mají směnu.
-        $stmt=cb_smeny_planovani_sql($db,'SELECT DISTINCT hp.id_person FROM hr_person hp JOIN ' . cb_hr_main_sql($db) . ' pr ON pr.id_person=hp.id_person WHERE hp.aktivni=1 AND pr.id_pob=? AND pr.hlavni=1 AND pr.platny=1 AND (pr.platnost_od IS NULL OR pr.platnost_od<=DATE_ADD(?,INTERVAL 6 DAY)) AND (pr.platnost_do IS NULL OR pr.platnost_do>=?)','iss',[(int)$plan['id_pob'],$plan['tyden_od'],$plan['tyden_od']]);
-        foreach($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $row)$people[]=(int)$row['id_person'];$stmt->close();
-        // Převzetí externího týdne oznámíme i člověku, který v novém interním plánu směnu nemá.
-        $stmt=cb_smeny_planovani_sql($db,'SELECT DISTINCT hp.id_person FROM smeny_plan e JOIN hr_person hp ON hp.id_user=e.id_user WHERE e.id_pob=? AND e.start_day=? AND e.zdroj=1','is',[(int)$plan['id_pob'],$plan['tyden_od']]);
+        // Bez směny informujeme jen MAIN pracovníky s uloženým požadavkem na tento týden.
+        $stmt=cb_smeny_planovani_sql($db,'SELECT DISTINCT hp.id_person FROM hr_person hp JOIN ' . cb_hr_main_sql($db) . ' pr ON pr.id_person=hp.id_person JOIN smeny_pozadavek poz ON poz.id_person=hp.id_person AND poz.tyden_od=? WHERE hp.aktivni=1 AND pr.id_pob=? AND pr.hlavni=1 AND pr.platny=1 AND (pr.platnost_od IS NULL OR pr.platnost_od<=DATE_ADD(?,INTERVAL 6 DAY)) AND (pr.platnost_do IS NULL OR pr.platnost_do>=?)','siss',[$plan['tyden_od'],(int)$plan['id_pob'],$plan['tyden_od'],$plan['tyden_od']]);
         foreach($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $row)$people[]=(int)$row['id_person'];$stmt->close();
         $events=[];
         foreach(array_unique($people) as $person) {
@@ -63,16 +73,21 @@ function cb_smeny_publikace_zverejnit(mysqli $db,array $plan,int $publisher): vo
         }
     }
     $roles=[];
+    $stmt=cb_smeny_planovani_sql($db,'SELECT nazev FROM pobocka WHERE id_pob=?','i',[(int)$plan['id_pob']]);
+    $branchName=(string)$stmt->get_result()->fetch_assoc()['nazev'];$stmt->close();
     $result=$db->query('SELECT id_slot,slot FROM cis_slot');
     while($row=$result->fetch_assoc())$roles[(int)$row['id_slot']]=$row['slot'];$result->close();
     foreach($events as $event) {
+        // Novější změna stejné směny nahradí staré potvrzování, nikoli jeho historii.
+        if($event['typ']!=='tyden')cb_smeny_planovani_sql($db,'UPDATE smeny_oznameni SET nahrazeno=COALESCE(nahrazeno,NOW()) WHERE id_smeny_rozpis=? AND id_person=? AND klic_udalosti=? AND nahrazeno IS NULL','iis',[$id,$event['id_person'],$event['klic']])->close();
         // Čitelné názvy jsou otiskem okamžiku publikace, změna číselníku potvrzení nemění.
         foreach(['pred','po'] as $side)if(isset($event['obsah'][$side]))$event['obsah'][$side]['pozice']=$roles[$event['obsah'][$side]['id_slot']]??'Pozice';
         if(isset($event['obsah']['smeny']))foreach($event['obsah']['smeny'] as &$shift)$shift['pozice']=$roles[$shift['id_slot']]??'Pozice';
         unset($shift);
-        $content=json_encode(['tyden_od'=>$plan['tyden_od'],'id_pob'=>(int)$plan['id_pob']]+$event['obsah'],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
+        $content=json_encode(['tyden_od'=>$plan['tyden_od'],'id_pob'=>(int)$plan['id_pob'],'pobocka'=>$branchName]+$event['obsah'],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
         cb_smeny_planovani_sql($db,'INSERT INTO smeny_oznameni (id_smeny_rozpis,verze,id_person,typ,klic_udalosti,obsah) VALUES (?,?,?,?,?,?)','iiisss',[$id,$version,$event['id_person'],$event['typ'],$event['klic'],$content])->close();
     }
     cb_smeny_planovani_sql($db,'UPDATE smeny_rozpis SET zverejnena_verze=?,pracovni_verze=NULL,pripraveno=0,zverejnil_id_person=?,zverejneno=NOW() WHERE id_smeny_rozpis=?','iii',[$version,$publisher,$id])->close();
     cb_smeny_audit_zapis($db,$publisher,'zverejneno','rozpis',$id,['verze'=>$plan['zverejnena_verze']],['verze'=>$version,'oznameni'=>count($events)]);
+    cb_smeny_souhlasy_definitivni($db,$id,$publisher);
 }

@@ -15,12 +15,8 @@ $cbAplikaceRoot = dirname(__DIR__, 2);
 /* Spolecne skripty s verzi podle casu posledni zmeny souboru. */
 $cbChybyJsPath = $cbAplikaceRoot . '/common/js/chyby.js';
 $cbChybyJsUrl = cb_public_url('js/chyby.js') . '?v=' . (is_file($cbChybyJsPath) ? (string)filemtime($cbChybyJsPath) : '1');
-$cbSelectPobockyJsPath = $cbAplikaceRoot . '/common/js/select_pobocky.js';
-$cbSelectPobockyJsUrl = cb_public_url('js/select_pobocky.js') . '?v=' . (is_file($cbSelectPobockyJsPath) ? (string)filemtime($cbSelectPobockyJsPath) : '1');
-$cbObdobiJsPath = $cbAplikaceRoot . '/common/js/obdobi.js';
-$cbObdobiJsUrl = cb_public_url('js/obdobi.js') . '?v=' . (is_file($cbObdobiJsPath) ? (string)filemtime($cbObdobiJsPath) : '1');
-$cbSetProdlevaJsPath = $cbAplikaceRoot . '/common/js/set_prodleva.js';
-$cbSetProdlevaJsUrl = cb_public_url('js/set_prodleva.js') . '?v=' . (is_file($cbSetProdlevaJsPath) ? (string)filemtime($cbSetProdlevaJsPath) : '1');
+$cbObdobiJsPath = $cbAplikaceRoot . '/common/js/obdobi_stranky.js';
+$cbObdobiJsUrl = cb_public_url('js/obdobi_stranky.js') . '?v=' . (is_file($cbObdobiJsPath) ? (string)filemtime($cbObdobiJsPath) : '1');
 $cbGnRefreshJsPath = $cbAplikaceRoot . '/common/js/gn_refresh.js';
 $cbGnRefreshJsUrl = cb_public_url('js/gn_refresh.js') . '?v=' . (is_file($cbGnRefreshJsPath) ? (string)filemtime($cbGnRefreshJsPath) : '1');
 $cbThemeJsPath = $cbAplikaceRoot . '/common/js/theme_level.js';

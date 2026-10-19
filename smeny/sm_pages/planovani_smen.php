@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-/* Účel: Plánovač zarovnává zahájení s horními volbami a nabízí přímé přiřazení osoby i detail s týdenními hodinami; příjmení a jméno předává odděleně z HR. */
+/* Účel: Plánovač přiřazuje směny a jedním dokončením zveřejní verzovaný rozpis; zobrazí jeho schválení a umožní oprávněné pozdější úpravy. */
 $smPlanBranchId = (int)($_GET['id_pob'] ?? array_key_first($smPlanBranches) ?? 0);
 $smPlanWeekIndex = max(0,min(count($smPlanWeeks)-1,(int)($_GET['week'] ?? 1)));
 $smPlanWeek = $smPlanWeeks[$smPlanWeekIndex];
@@ -17,7 +17,8 @@ $smPlanPerson = cb_smeny_sablony_id_person($smDb);
 $smPlanLock = $smPlanBranch ? cb_smeny_planovani_zamek_nacist($smDb,$smPlanBranchId) : null;
 $smPlanOwnLock = cb_smeny_planovani_zamek_vlastni($smPlanLock,$smPlanBranchId,$smPlanPerson);
 $smPlanCanEdit = $smPlanSchemaReady && cb_smeny_planovani_edituje() && $smPlanOwnLock && $smPlanCanStart;
-$smPlanCanPublish = $smPlanSchemaReady && cb_smeny_planovani_publikuje() && $smPlanOwnLock && $smPlanCanStart;
+$smPlanApprovalReady=cb_smeny_souhlasy_schema($smDb);
+$smPlanCanPublish = $smPlanCanEdit && $smPlanApprovalReady;
 $smPlanFlash = cb_smeny_sablony_flash_nacist();
 $smPlanUrl = cb_root_url('index.php?m=smeny&page=planovani_smen&id_pob='.$smPlanBranchId.'&week='.$smPlanWeekIndex);
 $smPlanCandidates = [];
@@ -73,6 +74,8 @@ $smPlanFields = static function () use ($smPlanBranchId,$smPlanWeekIndex,$smPlan
   </div>
   <?php if(!$smPlanSchemaReady): ?><p class="smeny_notice smeny_notice--error">Plánování čeká na aktualizaci databáze správcem. Stávající rozpis je zatím pouze ke čtení.</p><?php endif; ?>
   <?php if($smPlanFlash): ?><p class="smeny_notice smeny_notice--<?= $smPlanFlash['type']==='success'?'success':'error' ?>"><?= h($smPlanFlash['text']) ?></p><?php endif; ?>
+  <?php if($smPlan!==null && $smPlan['zverejnena_verze']!==null): ?><p class="smeny_notice">Zveřejněná verze <?= (int)$smPlan['zverejnena_verze'] ?> · <?= !empty($smPlan['definitivni_od'])?'Definitivně platný rozpis':'Čeká na souhlasy zaměstnanců' ?></p><?php endif; ?>
+  <?php if(!$smPlanApprovalReady): ?><p class="smeny_notice">Zveřejnění a souhlasy čekají na aktualizaci databáze.</p><?php endif; ?>
   <?php if(!$smPlanBranch): ?><p class="smeny_notice smeny_notice--error">Nemáte dostupnou pobočku pro plánování.</p>
   <?php else: ?>
     <?php if($smPlan === null): ?>
@@ -169,7 +172,7 @@ $smPlanFields = static function () use ($smPlanBranchId,$smPlanWeekIndex,$smPlan
       <?php endif; ?>
       <?php if($smPlanCanEdit || $smPlanCanPublish): ?><form method="post" action="<?= h($smPlanUrl) ?>" class="smeny_planning_actions"><?php $smPlanFields(); ?>
         <?php if($smPlanCanEdit): ?>
-          <?php if($smPlan['stav']==='rozpracovany'): ?><button name="action" value="smeny_plan_pripraven" class="smeny_primary_button">Týden je připravený ke zveřejnění</button>
+          <?php if($smPlan['stav']==='rozpracovany'): ?><button name="action" value="smeny_plan_pripraven" class="smeny_primary_button"<?= !$smPlanCanPublish?' disabled':'' ?>><?= $smPlan['zverejnena_verze']===null?'Týden je připravený ke zveřejnění':'Zveřejnit změny' ?></button>
           <?php else: ?><button name="action" value="smeny_plan_upravit" class="smeny_secondary_button"><?= $smPlan['zverejnena_verze']!==null?'Upravit pracovní kopii':'Ještě to upravím' ?></button><?php endif; ?>
         <?php endif; ?>
         <?php if($smPlan['stav']==='pripraveny' && $smPlanCanPublish): ?><button name="action" value="smeny_plan_zverejnit" class="smeny_primary_button"><?= $smPlan['zverejnena_verze']===null?'Zveřejnit směny':'Zveřejnit změny' ?></button><?php endif; ?>

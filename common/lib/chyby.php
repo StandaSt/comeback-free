@@ -86,10 +86,9 @@ function cb_chyba_globalni_format(): string
     }
 
     $jsonHeaders = [
-        'HTTP_X_COMEBACK_SET_PERIOD',
+        'HTTP_X_COMEBACK_PAGE_PERIOD',
         'HTTP_X_COMEBACK_SET_BRANCH',
         'HTTP_X_COMEBACK_SET_BRANCHES',
-        'HTTP_X_COMEBACK_SET_PRODLEVA',
         'HTTP_X_COMEBACK_ACTIVE_MODULE',
         'HTTP_X_COMEBACK_THEME',
         'HTTP_X_COMEBACK_HELPDESK',

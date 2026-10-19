@@ -1,11 +1,10 @@
 <?php
 /*
  * Ucel souboru: Pripravi data pro viditelnou hlavicku aplikace.
- * Soubor nema HTML vystup; sestavuje stav uzivatele, sluzeb, obdobi a navigace.
+ * Soubor nema HTML vystup; sestavuje stav uzivatele, sluzeb, hodin a navigace.
  */
 declare(strict_types=1);
 
-require_once __DIR__ . '/obdobi_vyber.php';
 
 if (!function_exists('cb_head_restia_token_is_valid')) {
     /**
@@ -78,14 +77,6 @@ try {
     $sysRestia = 'bad';
 }
 
-// Pripravi globalni vyber obdobi pouzivany hlavickou i dalsimi moduly.
-$cbObdobi = cb_obdobi_priprav_globalni_vyber();
-$cbObdobiOd = $cbObdobi['od'];
-$cbObdobiDo = $cbObdobi['do'];
-$cbObdobiMode = $cbObdobi['mode'];
-$cbProdlevaMs = $cbObdobi['prodleva_ms'];
-$cbObdobiMax = $cbObdobi['max'];
-
 // Pripravi statistiku prihlaseni a delku aktualni session.
 $cbLoginInfo = is_array($_SESSION['cb_login_info'] ?? null) ? $_SESSION['cb_login_info'] : [];
 $cbCurrent = is_array($cbLoginInfo['current'] ?? null) ? $cbLoginInfo['current'] : [];
@@ -109,13 +100,8 @@ if ($cbStartTs <= 0 || $cbStartTs > $cbNowTs) {
     $cbStartTs = $cbNowTs;
 }
 
-// Pripravi kontext aktualniho modulu, aktualizace dat a aktualni cas.
+// Pripravi kontext aktualniho modulu a aktualni cas.
 $cbHelpdeskApiUrl = cb_root_url('index.php');
-try {
-    $cbHeadAktualizaceDat = (new DateTimeImmutable((string)$cbObdobiMax))->format('H:i:s');
-} catch (Throwable $e) {
-    $cbHeadAktualizaceDat = '---';
-}
 $cbCurrentModule = function_exists('cb_current_module') ? cb_current_module() : 'provoz';
 if (!in_array($cbCurrentModule, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'], true)) {
     $cbCurrentModule = 'provoz';

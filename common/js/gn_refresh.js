@@ -1,3 +1,4 @@
+// Obnovuje jednotlivé bloky a pravidelná online data; místní období mění pouze svůj blok.
 (function () {
   'use strict';
 
@@ -34,6 +35,13 @@
     body.set('page', currentPage(block));
     body.set('block', blockName);
     body.set('source', String(changeSource || ''));
+    // Změna období zachová vyplněné místní filtry a řazení Objednávek.
+    if (blockName === 'objednavky_prehled') {
+      var form = block.querySelector('#provoz_objednavky_form');
+      if (form) new FormData(form).forEach(function (value, key) {
+        if (/^obj_(f\[|sort$|dir$|per$|p$)/.test(key)) body.set(key, String(value));
+      });
+    }
     if (block.getAttribute('data-google-compare') === '1') {
       body.set('zr_google_compare', '1');
     }
@@ -67,6 +75,9 @@
       })
       .catch(function (err) {
         block.classList.remove('is-loading');
+        if (changeSource === 'obdobi_stranky') {
+          window.alert('Období je uložené, ale data se nepodařilo obnovit. Obnovte stránku.');
+        }
         if (window.console && window.console.warn) {
           window.console.warn(err);
         }
@@ -93,9 +104,16 @@
     refreshBlock: refreshNamedBlock
   };
 
-  document.addEventListener('cb:gn-changed', function (event) {
-    var detail = event && event.detail ? event.detail : {};
-    refreshGnBlocks(detail.source || '');
+  document.addEventListener('cb:period-changed', function (event) {
+    var root = event.detail && event.detail.root;
+    var block = root && root.closest('[data-pp-block]');
+    // Panel v titulku ovlada jen pojmenovany blok ve stejne pracovni plose.
+    var target = root && root.closest('[data-period-block-target]');
+    var page = root && root.closest('.pp');
+    if (!block && target && page) {
+      block = page.querySelector('[data-pp-block="' + target.getAttribute('data-period-block-target') + '"]');
+    }
+    if (block && block.isConnected) event.detail.refreshPromise = refreshBlock(block, 'obdobi_stranky');
   });
 
   var periodicBlocks = {

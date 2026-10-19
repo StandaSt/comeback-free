@@ -1,7 +1,7 @@
 <?php
 /*
  * Ucel souboru: Vykresli viditelnou hlavicku aplikace z predem pripravenych dat.
- * Data pripravi common/lib/priprava_hlavicky.php; vybery jsou samostatne komponenty.
+ * Data pripravi common/lib/priprava_hlavicky.php; obdobi vybira kazda stranka samostatne.
  * Pruh prebranych prav je soucasti trvale hlavicky, aby nezmizel pri vymene modulu.
  */
 declare(strict_types=1);
@@ -56,23 +56,11 @@ $cbHeaderMaintenanceActive = $cbLoginOk
         <strong class="head_task_count" data-cb-helpdesk-header-count="all">0</strong>
       </button>
 
-      <div class="head_filters">
-        <?php require __DIR__ . '/vyber_pobocek.php'; ?>
-        <?php require __DIR__ . '/vyber_obdobi.php'; ?>
-      </div>
 
       <?php if ($cbHeaderMaintenanceActive): ?>
         <div class="head_update head_maintenance_status" role="status" aria-label="Údržba IS je zapnutá">
           <strong class="head_maintenance_long">ÚDRŽBA ZAPNUTA</strong>
           <strong class="head_maintenance_short">ÚDRŽBA</strong>
-        </div>
-      <?php else: ?>
-        <div class="head_update" aria-label="Aktualizace dat" data-cb-head-update="1"<?= $cbCurrentModule !== 'provoz' ? ' hidden' : '' ?>>
-          <span class="head_update_icon" aria-hidden="true">⟳</span>
-          <span>
-            <span class="head_block_label">Aktualizace dat</span>
-            <strong class="head_update_value"><?= h($cbHeadAktualizaceDat) ?></strong>
-          </span>
         </div>
       <?php endif; ?>
 
@@ -122,10 +110,10 @@ $cbHeaderMaintenanceActive = $cbLoginOk
 </script>
 <?php if ($cbLoginOk): ?>
 <script>
-/* Po potvrzenem dokonceni Restie nacte pouze aktualni cas do hlavicky. */
+/* Po dokonceni Restie obnovi cas v titulku Prehledu Provozu. */
 (function () {
   function refreshRestiaTime() {
-    var value = document.querySelector('[data-cb-head-update="1"] .head_update_value');
+    var value = document.querySelector('[data-cb-orders-update-time]');
     if (!(value instanceof HTMLElement)) { return; }
 
     fetch(String(window.CB_ENDPOINT || window.location.href), {

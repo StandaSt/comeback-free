@@ -1,8 +1,9 @@
-// Prehled objednavek v PP: rozbalovani polozek i po vymene tabulky a aktualizace Restie.
+// Prehled objednavek v PP: detaily, aktualizace Restie a zarovnani titulku podle sirky tabulky.
 (function () {
   'use strict';
 
   var loaderTimers = [];
+  var headerSizeObserver = null;
 
   function formatElapsed(ms) {
     return (Math.max(0, ms) / 1000).toFixed(1).replace('.', ',') + ' s';
@@ -87,11 +88,27 @@
     });
   }
 
+  // Tabulka meni sirku podle obsahu i pisma; titulek ji sleduje take po vymene filtru.
+  function alignHeader(root) {
+    var page = root.closest('.pp');
+    var header = page && page.querySelector('.provoz_objednavky_header_title');
+    var table = root.querySelector('.provoz_objednavky_table_wrap');
+    if (headerSizeObserver) headerSizeObserver.disconnect();
+    if (!header || !table) return;
+    function syncWidth() {
+      if (header.isConnected && table.isConnected) header.style.width = table.getBoundingClientRect().width + 'px';
+    }
+    syncWidth();
+    headerSizeObserver = new ResizeObserver(syncWidth);
+    headerSizeObserver.observe(table);
+  }
+
   // Kontejner zustava pri filtrovani stejny, ale jeho tlacitka se meni.
   function initRoot(root) {
     if (!(root instanceof HTMLElement)) {
       return;
     }
+    alignHeader(root);
     root.setAttribute('data-objednavky-ready', '1');
     bindOrderDetails(root);
   }
@@ -212,8 +229,8 @@
     bindRestiaRefresh(document);
   }
 
-  document.addEventListener('cb:gn-changed', function () {
-    startLoaderTimers();
+  document.addEventListener('cb:period-changed', function (event) {
+    if (event.detail && event.detail.root && event.detail.root.getAttribute('data-period-scope') === 'provoz.objednavky') startLoaderTimers();
   });
 
   document.addEventListener('cb:gn-block-refreshed', function (event) {

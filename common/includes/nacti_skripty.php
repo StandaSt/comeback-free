@@ -57,12 +57,8 @@ window.CB_AKTIVITA = <?= json_encode($cbNavUserId>0 ? ['url'=>cb_root_url('index
 <script src="<?= h(cb_asset_url('js/denni_report_osoby.js')) ?>"></script>
 <?php // Směny ve formuláři denního reportu výroby sdílí formát času s reportem restaurace. ?>
 <script src="<?= h(cb_asset_url('js/denni_report_vyroba.js')) ?>"></script>
-<?php // Vyber pobocky. ?>
-<script src="<?= h($cbSelectPobockyJsUrl) ?>"></script>
-<?php // Vyber obdobi. ?>
+<?php // Společný panel místního období. ?>
 <script src="<?= h($cbObdobiJsUrl) ?>"></script>
-<?php // Nastaveni prodlevy. ?>
-<script src="<?= h($cbSetProdlevaJsUrl) ?>"></script>
 <?php // Obnoveni bloku nacitanych postupne. ?>
 <script src="<?= h($cbGnRefreshJsUrl) ?>"></script>
 <?php // Prehled objednavek. ?>

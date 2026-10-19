@@ -1,7 +1,9 @@
 <?php
 declare(strict_types=1);
 
-/* Účel souboru: Připraví pobočky a osobu; odděluje základní a povolené sloty podle typu pobočky, názvy přebírá z HR číselníku. */
+/* Účel souboru: Připraví všechny oprávněné pobočky a osobu; odděluje základní a povolené sloty podle typu pobočky, názvy přebírá z HR číselníku. */
+
+require_once __DIR__ . '/../../common/db/db_user_pobocka.php';
 
 /** Názvy a aktivita slotů mají jediný zdroj v HR číselníku, nikoli v popiscích plánovače. */
 function cb_smeny_sloty_ciselnik(mysqli $db): array
@@ -22,7 +24,9 @@ function cb_smeny_sloty_zakladni_id(array $branch): array
     return strcasecmp(trim((string)($branch['kod'] ?? '')),'Vyroba')===0 ? [5,8] : [1,2];
 }
 
-/** @return array<int,array<string,mixed>> */
+/** Vrátí všechny povolené pobočky; místní výběr stránky nemění rozsah oprávnění pro její akce.
+ * @return array<int,array<string,mixed>>
+ */
 function cb_smeny_sablony_pobocky(mysqli $db): array
 {
     $sessionUser = $_SESSION['cb_user'] ?? [];
@@ -31,7 +35,7 @@ function cb_smeny_sablony_pobocky(mysqli $db): array
         return [];
     }
 
-    $allowedRows = cb_pobocky_get_allowed_rows_for_user($idUser);
+    $allowedRows = cb_db_user_pobocky($db, $idUser);
     $allowed = [];
     foreach ($allowedRows as $row) {
         $idPob = (int)($row['id_pob'] ?? 0);
@@ -40,11 +44,7 @@ function cb_smeny_sablony_pobocky(mysqli $db): array
         }
     }
 
-    $selected = get_selected_pobocky();
-    $ids = array_values(array_filter($selected, static fn(int $idPob): bool => isset($allowed[$idPob])));
-    if ($ids === []) {
-        $ids = array_keys($allowed);
-    }
+    $ids = array_keys($allowed);
     if ($ids === []) {
         return [];
     }

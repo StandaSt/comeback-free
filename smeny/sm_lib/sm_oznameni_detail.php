@@ -22,7 +22,7 @@ function cb_smeny_oznameni_dny(array $content): array
     $days = [];
     foreach ($names as $i => $name) {
         $date = $monday->modify('+'.$i.' days');
-        $days[$date->format('Y-m-d')] = ['nazev'=>$name, 'datum'=>$date->format('j. n.'), 'smeny'=>[]];
+        $days[$date->format('Y-m-d')] = ['nazev'=>$name, 'datum'=>$date->format('j. n.'), 'datum_iso'=>$date->format('Y-m-d'), 'smeny'=>[]];
     }
     $shifts = $content['smeny'] ?? [];
     usort($shifts, static fn(array $a, array $b): int => strcmp($a['zacatek'], $b['zacatek']));
@@ -30,7 +30,7 @@ function cb_smeny_oznameni_dny(array $content): array
         $start = new DateTimeImmutable($shift['zacatek'], new DateTimeZone('Europe/Prague'));
         $end = new DateTimeImmutable($shift['konec'], new DateTimeZone('Europe/Prague'));
         // Odečítáme místní hodinu, nikoli šest uplynulých hodin přes změnu letního času.
-        $day = ((int)$start->format('H') < 6 ? $start->modify('-1 day') : $start)->format('Y-m-d');
+        $day = cb_smeny_souhlasy_den($shift);
         if (isset($days[$day])) {
             $days[$day]['smeny'][] = $start->format('H:i').'–'.$end->format('H:i')
                 .($start->format('Y-m-d') !== $day ? ' ('.$start->format('j. n.').')' : '')

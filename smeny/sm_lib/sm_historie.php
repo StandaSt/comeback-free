@@ -87,7 +87,7 @@ function cb_smeny_historie_hlavni_pobocka(mysqli $db,int $idPerson): int
     return cb_hr_main_id($db, $idPerson);
 }
 
-/** Sestaví místní výběr historie, který je nezávislý na globální pobočce v hlavičce. */
+/** Sestaví místní výběr historie z povolených poboček a ověří požadovanou pobočku. */
 function cb_smeny_historie_kontext(mysqli $db,string $week,array $query): array
 {
     // Historie čte osobu přebraného účtu; společný helper autora zůstává beze změny.

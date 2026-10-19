@@ -315,15 +315,16 @@ main{
  */
 
 
+/* Zacatek prepinacu na desktopu odpovida PP: 8 + 70 + 4 + 144 + 4 = 230px (menu220 + mezera10). */
 .blok_hlavicka{
   grid-area:hlavicka;
   box-sizing:border-box;
   display:grid;
-  grid-template-columns:70px 130px 270px 112px 335px 160px;
+  grid-template-columns:70px 144px repeat(5,minmax(0,1fr));
   grid-template-rows:26px 26px;
   grid-template-areas:
-    "logo brand modules todo branch update"
-    "logo brand modules helpdesk period update";
+    "logo brand provoz hr smeny todo helpdesk"
+    "logo brand provoz hr smeny todo helpdesk";
   align-items:stretch;
   column-gap:4px;
   row-gap:3px;
@@ -361,10 +362,7 @@ main{
 .head_module_link,
 .head_task_btn,
 .head_task_count,
-.head_select,
 .head_period_btn,
-.head_branch_btn,
-.head_branch_btn_static,
 .head_update,
 .head_update_icon,
 .head_update_value,
@@ -386,15 +384,6 @@ main{
 .head_prodleva_slider,
 .head_interval_meter,
 .head_interval_meter_bar,
-.head_branch_panel,
-.head_branch_panel_grid,
-.head_branch_section,
-.head_branch_section_title,
-.head_branch_area_list,
-.head_branch_field,
-.head_branch_select_all_text,
-.head_branch_actions,
-.head_branch_save_btn,
 .head_guest{
   box-sizing:border-box;
   min-width:0;
@@ -405,16 +394,10 @@ main{
 .head_module_link,
 .head_task_btn,
 .head_period_btn,
-.head_branch_btn,
-.head_branch_btn_static,
 .head_update,
 .head_date_input,
 .head_time_select,
-.head_pill,
-.head_branch_save_btn,
-.cb-pob-area,
-.cb-pob-area-all,
-.cb-pob-item{
+.head_pill{
   font-family:Arial, Helvetica, sans-serif;
   font-size:var(--cb-font-14);
   line-height:1.2;
@@ -423,22 +406,15 @@ main{
 
 .head_task_btn,
 .head_period_btn,
-.head_branch_btn,
 .head_date_input,
 .head_time_select,
-.head_pill,
-.head_branch_save_btn,
-.cb-pob-area,
-.cb-pob-area-all,
-.cb-pob-item{
+.head_pill{
   margin:0;
 }
 
 .head_task_btn,
 .head_period_btn,
-.head_branch_btn,
-.head_pill,
-.head_branch_save_btn{
+.head_pill{
   appearance:none;
   background:transparent;
 }
@@ -451,8 +427,6 @@ main{
 
 /* ===== Karty (spolecny vzhled) ===== */
 .head_period_btn,
-.head_branch_btn,
-.head_branch_btn_static,
 .head_update{
   background:var(--clr_bila);
 }
@@ -608,24 +582,10 @@ main{
   font-weight:700;
 }
 
-/* ===== Vyber pobocek / obdobi ===== */
-.head_select{
-  position:relative;
-  min-width:0;
-  align-self:stretch;
-}
+/* ===== Vyber obdobi ===== */
 
-.head_select--branch{
-  grid-area:branch;
-}
 
-.head_select--period{
-  grid-area:period;
-}
 
-.head_filters{
-  display:contents;
-}
 
 .head_period_btn{
   display:flex;
@@ -792,115 +752,6 @@ main{
   accent-color:var(--clr_modra_6);
 }
 
-.head_branch_btn{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  justify-content:space-between;
-  width:100%;
-  height:26px;
-  min-height:26px;
-  padding:3px 8px;
-  border:var(--head-control-border);
-  border-radius:6px;
-  background:var(--cb-bg-control);
-  color:var(--cb-text-main);
-  cursor:pointer;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-.head_branch_btn_static{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  justify-content:space-between;
-  width:100%;
-  height:26px;
-  min-height:26px;
-  padding:3px 8px;
-  border:var(--head-control-border);
-  border-radius:6px;
-  background:var(--cb-bg-control);
-  color:var(--cb-text-main);
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-.head_branch_btn:hover{
-  background:var(--cb-bg-control-hover);
-}
-
-.head_branch_panel{
-  position:absolute;
-  top:calc(100% + 8px);
-  left:0;
-  width:max-content;
-  min-width:280px;
-  max-width:min(500px, 72vw);
-  z-index:120;
-  border:1px solid var(--clr_pruhledna_tmava_14);
-  box-shadow:0 14px 34px var(--clr_pruhledna_cerna_18);
-}
-
-.head_branch_panel_grid{
-  grid-template-columns:minmax(180px, auto) minmax(180px, auto);
-  column-gap:5px;
-  row-gap:8px;
-}
-
-.head_branch_panel_grid.is-single-col{
-  grid-template-columns:minmax(180px, auto);
-}
-
-.head_branch_section{
-  max-height:260px;
-  overflow:hidden;
-  padding-right:0;
-  display:flex;
-  flex-direction:column;
-}
-
-.head_branch_section_title{
-  margin-bottom:6px;
-}
-
-.head_branch_field{
-  margin-bottom:2px;
-}
-
-.head_branch_area_list{
-  flex:1 1 auto;
-  overflow:auto;
-  padding-right:4px;
-}
-
-.head_branch_field_select_all{
-  margin-top:auto;
-  margin-bottom:0;
-  padding-top:6px;
-}
-
-.head_branch_select_all_text{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  color:var(--clr_zelena);
-  font-weight:400;
-}
-
-.head_branch_actions{
-  margin-top:8px;
-  width:100%;
-}
-
-.head_branch_save_btn{
-  width:100%;
-  justify-content:center;
-}
-
 /* ===== Ukoly / HelpDesk / aktualizace ===== */
 .head_task_btn{
   display:flex;
@@ -919,6 +770,24 @@ main{
   font-weight:400;
   line-height:1;
   cursor:pointer;
+}
+
+/* Vsechny prepinace maji shodny font a stred textu; pocitadlo neposouva popisek. */
+.blok_hlavicka .head_module_link,
+.blok_hlavicka > .head_task_btn{
+  font-family:inherit;
+  font-size:var(--cb-font-16);
+  font-weight:400;
+  line-height:1.1;
+  text-align:center;
+  justify-content:center;
+  align-items:center;
+}
+.blok_hlavicka > .head_task_btn{position:relative;height:100%;min-height:0;padding:0 28px;}
+.blok_hlavicka > .head_task_btn .head_task_count{position:absolute;right:8px;}
+@media(max-width:767px){
+  .blok_hlavicka .head_module_link,
+  .blok_hlavicka > .head_task_btn{font-size:var(--cb-font-14);}
 }
 
 .head_task_btn--todo{
@@ -1071,44 +940,22 @@ main{
 
 @media (max-width:1359px){
   .obal_main{
-    grid-template-rows:96px minmax(0,1fr);
+    grid-template-rows:67px minmax(0,1fr);
   }
 
   .blok_hlavicka{
-    grid-template-columns:70px 130px minmax(210px,1fr) 112px 160px;
-    grid-template-rows:26px 26px 26px;
+    grid-template-columns:70px 144px repeat(5,minmax(0,1fr));
+    grid-template-rows:26px 26px;
     grid-template-areas:
-      "logo brand modules todo update"
-      "logo brand modules helpdesk update"
-      ". . filters filters filters";
-    height:96px;
-    min-height:96px;
+      "logo brand provoz hr smeny todo helpdesk"
+      "logo brand provoz hr smeny todo helpdesk";
+    height:67px;
+    min-height:67px;
   }
 
-  .head_filters{
-    grid-area:filters;
-    display:flex;
-    align-items:stretch;
-    gap:4px;
-    min-width:0;
-  }
 
-  .head_filters .head_select--branch{
-    flex:0 1 280px;
-    min-width:220px;
-    max-width:280px;
-  }
 
-  .head_filters .head_select--period{
-    flex:0 1 335px;
-    min-width:320px;
-    max-width:335px;
-  }
 
-  .head_select--period .head_period_panel{
-    right:0;
-    left:auto;
-  }
 }
 
 @media (max-width:899px){
@@ -1120,11 +967,10 @@ main{
   }
 
   .blok_hlavicka{
-    grid-template-columns:70px 44px minmax(260px,1fr) 112px 160px;
+    grid-template-columns:70px 44px repeat(5,minmax(0,1fr));
     grid-template-areas:
-      "logo menu_toggle modules todo update"
-      "logo menu_toggle modules helpdesk update"
-      ". . filters filters filters";
+      "logo menu_toggle provoz hr smeny todo helpdesk"
+      "logo menu_toggle provoz hr smeny todo helpdesk";
   }
 
   .head_brand_time{
@@ -1154,7 +1000,7 @@ main{
 
   .cb_menu_backdrop{
     position:fixed;
-    inset:96px 0 0;
+    inset:67px 0 0;
     z-index:190;
     display:block;
     border:0;
@@ -1175,11 +1021,10 @@ main{
 
 @media (max-width:767px){
   .blok_hlavicka{
-    grid-template-columns:55px 44px repeat(4,minmax(0,1fr));
+    grid-template-columns:55px 44px repeat(5,minmax(0,1fr));
     grid-template-areas:
-      "logo menu_toggle modules modules modules modules"
-      "logo todo todo helpdesk update update"
-      ". . filters filters filters filters";
+      "logo menu_toggle provoz hr smeny todo helpdesk"
+      "logo menu_toggle provoz hr smeny todo helpdesk";
   }
 
   .head_module_nav{
@@ -1223,30 +1068,19 @@ main{
 
 @media (max-width:619px) and (orientation:landscape){
   .obal_main{
-    grid-template-rows:125px minmax(0,1fr);
+    grid-template-rows:67px minmax(0,1fr);
   }
 
   .blok_hlavicka{
-    grid-template-rows:26px 26px 55px;
-    height:125px;
-    min-height:125px;
+    grid-template-rows:26px 26px;
+    height:67px;
+    min-height:67px;
   }
 
-  .head_filters{
-    flex-direction:column;
-    gap:3px;
-  }
 
-  .head_filters .head_select--branch,
-  .head_filters .head_select--period{
-    flex:0 0 26px;
-    width:100%;
-    min-width:0;
-    max-width:none;
-  }
 
   .cb_menu_backdrop{
-    inset-block-start:125px;
+    inset-block-start:67px;
   }
 }
 
@@ -1364,7 +1198,7 @@ align-items:center;
 @media (max-width:899px){
   .blok_menu{
     position:fixed;
-    inset:96px auto 0 0;
+    inset:67px auto 0 0;
     z-index:200;
     width:min(300px,86vw);
     height:auto;
@@ -1410,7 +1244,7 @@ align-items:center;
 
 @media (max-width:619px) and (orientation:landscape){
   .blok_menu{
-    inset-block-start:125px;
+    inset-block-start:67px;
   }
 }
 
@@ -1939,3 +1773,40 @@ align-items:center;
     grid-column:auto;
   }
 }
+
+/* Místní panel sdílí původní vzhled; v hlavičce již žádný filtr není. */
+.cb_period_select{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:6px 0 10px;min-width:0;}
+.cb_period_select .head_period_btn{width:auto;flex:0 0 auto;font:inherit;padding:3px 9px;}
+.cb_period_summary{font-size:var(--cb-font-12);color:var(--cb-text-muted);}
+.cb_period_select .head_period_panel{max-width:calc(100vw - 24px);}
+.cb_period_select .head_period_panel[hidden]{display:none;}
+.cb_period_select .head_time_select[hidden]{display:none;}
+@media(max-width:520px){
+  .cb_period_select .head_int_row{grid-template-columns:minmax(0,1fr);gap:6px;}
+  .cb_period_select .head_quick{width:100%;min-width:0;}
+  .cb_period_select .head_date{flex-wrap:wrap;}
+}
+
+/* Udrzba si zachovava vlastni stavovy blok i po presunu casu aktualizace. */
+.blok_hlavicka.cb-maintenance-active{
+  grid-template-columns:70px 144px repeat(5,minmax(0,1fr)) 160px;
+  grid-template-areas:"logo brand provoz hr smeny todo helpdesk update" "logo brand provoz hr smeny todo helpdesk update";
+}
+@media(max-width:899px){
+  .blok_hlavicka.cb-maintenance-active{
+    grid-template-columns:70px 44px repeat(5,minmax(0,1fr)) 100px;
+    grid-template-areas:"logo menu_toggle provoz hr smeny todo helpdesk update" "logo menu_toggle provoz hr smeny todo helpdesk update";
+  }
+}
+@media(max-width:767px){
+  .blok_hlavicka.cb-maintenance-active{
+    grid-template-columns:55px 44px repeat(5,minmax(0,1fr)) 70px;
+    grid-template-areas:"logo menu_toggle provoz hr smeny todo helpdesk update" "logo menu_toggle provoz hr smeny todo helpdesk update";
+  }
+}
+
+/* Vsech pet prepinacu sdili stejne sloupce hlavicky i pri zmene sirky okna. */
+.blok_hlavicka .head_module_nav{display:contents;}
+.head_module_link--provoz{grid-area:provoz;}
+.head_module_link--hr{grid-area:hr;}
+.head_module_link--smeny{grid-area:smeny;}

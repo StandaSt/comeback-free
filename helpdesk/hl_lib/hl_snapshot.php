@@ -108,20 +108,11 @@ function cb_helpdesk_snapshot_load_sloty(mysqli $conn, int $idUser): array
     return $out;
 }
 
+/** Zachová čtecí kontext jednotlivých stránek; historické snapshoty se nemění. */
 function cb_helpdesk_snapshot_load_obdobi(): array
 {
-    $out = [];
-    if (array_key_exists('cb_obdobi_od', $_SESSION)) {
-        $out['od'] = (string)$_SESSION['cb_obdobi_od'];
-    }
-    if (array_key_exists('cb_obdobi_do', $_SESSION)) {
-        $out['do'] = (string)$_SESSION['cb_obdobi_do'];
-    }
-    if (array_key_exists('cb_obdobi_mode', $_SESSION)) {
-        $out['mode'] = (string)$_SESSION['cb_obdobi_mode'];
-    }
-
-    return $out;
+    $periods = $_SESSION['cb_obdobi_stranek'] ?? [];
+    return is_array($periods) ? $periods : [];
 }
 
 function cb_helpdesk_snapshot_zapis(mysqli $conn, int $idHelpdesk, int $idZprava, int $idUser): void

@@ -2122,41 +2122,24 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
   max-width:100%;
 }
 
+/* Titulek ma sirku tabulky; stejne krajni sloupce drzi obdobi presne uprostred. */
 .provoz_objednavky_header_title{
   display:grid;
-  grid-template-columns:1fr auto 1fr;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
   width:100%;
+  max-width:100%;
   align-items:center;
   gap:10px;
   min-width:0;
 }
-
-.provoz_objednavky_header_title h1{
-  margin:0;
-}
-
-/* Provozni den patri do stejneho formulare jako filtry tabulky. */
-.provoz_objednavky_report_filter{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  white-space:nowrap;
-}
-.provoz_objednavky_report_filter input{
-  padding:4px 7px;
-  border:1px solid var(--cb-border);
-  border-radius:5px;
-  background:var(--cb-bg-control);
-  color:var(--cb-text-main);
-  font:inherit;
-}
-.provoz_objednavky_header_title .head_task_btn--restia-refresh{
-  justify-self:end;
-}
+.provoz_objednavky_header_title h1{margin:0;}
+.provoz_objednavky_header_controls{display:contents;}
+.provoz_objednavky_header_controls .cb_period_select{margin:0;justify-self:center;}
+.provoz_objednavky_header_controls .head_task_btn--restia-refresh{justify-self:end;}
 @media(max-width:700px){
-  .provoz_objednavky_header_title{grid-template-columns:1fr auto}
-  .provoz_objednavky_report_filter{grid-row:2;grid-column:1 / -1;justify-self:center}
-  .provoz_objednavky_header_title .head_task_btn--restia-refresh{grid-row:1;grid-column:2}
+  .provoz_objednavky_header_title{grid-template-columns:minmax(0,1fr) auto;}
+  .provoz_objednavky_header_controls .cb_period_select{grid-row:2;grid-column:1 / -1;}
+  .provoz_objednavky_header_controls .head_task_btn--restia-refresh{grid-row:1;grid-column:2;}
 }
 
 /* Objednavky - obal tabulky. */
@@ -3717,3 +3700,7 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
     grid-template-columns:minmax(0, 1fr);
   }
 }
+
+/* Cas aktualizace patri doprava do titulku Prehledu, mimo globalni hlavicku. */
+.pp[data-page="prehled"] > .pp_header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.provoz_orders_update{margin-left:auto;font-size:var(--cb-font-12);color:var(--cb-text-muted);white-space:nowrap;}

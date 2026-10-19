@@ -465,7 +465,6 @@ if (!function_exists('cb_restia_hist_pick_next_incomplete_branch')) {
     }
 }
 
-
 if (!function_exists('cb_restia_hist_branch_db_count')) {
     function cb_restia_hist_branch_db_count(mysqli $conn, int $idPob): int
     {
@@ -777,7 +776,6 @@ if (!function_exists('cb_restia_hist_run_batch')) {
         }
     }
 }
-
 
 if (!function_exists('cb_restia_hist_branch_start_date')) {
     function cb_restia_hist_branch_start_date(array $branch): string
@@ -2227,8 +2225,6 @@ if ($action === 'select_branch') {
     if ($inputBranchId > 0) {
         $_SESSION[$cbSelectedBranchKey] = $inputBranchId;
         unset($_SESSION[$cbStopKey], $_SESSION[$cbRowsKey], $_SESSION[$cbMsgKey]);
-        $_SESSION['cb_pobocka_id'] = $inputBranchId;
-        $_SESSION['selected_pobocky'] = [$inputBranchId];
         $branchSel = cb_restia_hist_get_branch_by_id($conn, $inputBranchId);
         $resumeSel = cb_restia_hist_resume_info($conn, $branchSel);
         $state = cb_restia_hist_default_state();
@@ -2253,9 +2249,10 @@ if ($action === 'start' && $auth !== null) {
         $_SESSION[$cbSelectedBranchKey] = $inputBranchId;
         $branch = cb_restia_hist_get_branch_by_id($conn, $inputBranchId);
     } else {
-        $legacyBranchId = (int)($_SESSION['cb_pobocka_id'] ?? 0);
-        if ($legacyBranchId > 0) {
-            $branch = cb_restia_hist_get_branch_by_id($conn, $legacyBranchId);
+        // Pokračování používá pouze vlastní výběr tohoto importu.
+        $importBranchId = (int)($_SESSION[$cbSelectedBranchKey] ?? 0);
+        if ($importBranchId > 0) {
+            $branch = cb_restia_hist_get_branch_by_id($conn, $importBranchId);
         } else {
             $branch = cb_restia_hist_pick_default_branch($conn);
         }
@@ -2263,9 +2260,6 @@ if ($action === 'start' && $auth !== null) {
     cb_restia_hist_ensure_default_customer($conn, (int)$branch['id_pob']);
     $resumeInfo = cb_restia_hist_resume_info($conn, $branch);
     $resumeDate = (string)$resumeInfo['next_date'];
-
-    $_SESSION['cb_pobocka_id'] = (int)$branch['id_pob'];
-    $_SESSION['selected_pobocky'] = [(int)$branch['id_pob']];
 
     $continueState = (
         $autoContinueRequest
@@ -2315,8 +2309,6 @@ if ($action === 'start' && $auth !== null) {
             $nextBranchId = (int)($nextBranch['id_pob'] ?? 0);
             $nextBranchName = (string)($nextBranch['nazev'] ?? '');
             $_SESSION[$cbSelectedBranchKey] = $nextBranchId;
-            $_SESSION['cb_pobocka_id'] = $nextBranchId;
-            $_SESSION['selected_pobocky'] = [$nextBranchId];
 
             $state = cb_restia_hist_default_state();
             $state['next_date'] = (string)($nextResume['next_date'] ?? '');
@@ -2356,17 +2348,15 @@ if ($action === 'auto_next' && $auth !== null) {
         $_SESSION[$cbSelectedBranchKey] = $autoBranchId;
         $branch = cb_restia_hist_get_branch_by_id($conn, $autoBranchId);
     } else {
-        $legacyBranchId = (int)($_SESSION['cb_pobocka_id'] ?? 0);
-        if ($legacyBranchId > 0) {
-            $branch = cb_restia_hist_get_branch_by_id($conn, $legacyBranchId);
+        // Pokračování používá pouze vlastní výběr tohoto importu.
+        $importBranchId = (int)($_SESSION[$cbSelectedBranchKey] ?? 0);
+        if ($importBranchId > 0) {
+            $branch = cb_restia_hist_get_branch_by_id($conn, $importBranchId);
         } else {
             $branch = cb_restia_hist_pick_default_branch($conn);
         }
         $_SESSION[$cbSelectedBranchKey] = (int)($branch['id_pob'] ?? 0);
     }
-
-    $_SESSION['cb_pobocka_id'] = (int)($branch['id_pob'] ?? 0);
-    $_SESSION['selected_pobocky'] = [(int)($branch['id_pob'] ?? 0)];
 
     if (trim((string)($state['next_date'] ?? '')) === '') {
         $resumeInfo = cb_restia_hist_resume_info($conn, $branch);
@@ -2394,8 +2384,6 @@ if ($action === 'auto_next' && $auth !== null) {
             $nextBranchId = (int)($nextBranch['id_pob'] ?? 0);
             $nextBranchName = (string)($nextBranch['nazev'] ?? '');
             $_SESSION[$cbSelectedBranchKey] = $nextBranchId;
-            $_SESSION['cb_pobocka_id'] = $nextBranchId;
-            $_SESSION['selected_pobocky'] = [$nextBranchId];
 
             $state = cb_restia_hist_default_state();
             $state['next_date'] = (string)($nextResume['next_date'] ?? '');
@@ -2619,7 +2607,6 @@ if (!$canStartImport) {
       </form>
     </div>
   <?php endif; ?>
-
 
   <?php
   $historyTz = new DateTimeZone('Europe/Prague');

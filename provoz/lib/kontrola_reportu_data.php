@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/pobocka_provoz.php';
+require_once __DIR__ . '/../../common/lib/obdobi_stranky.php';
 
 require_once __DIR__ . '/denni_report_data.php';
 require_once __DIR__ . '/../../common/db/db_cis_slot.php';
@@ -9,7 +10,7 @@ require_once __DIR__ . '/../../common/db/db_cis_slot.php';
 /*
  * Read-only souhrn uzavrenych dennich reportu pro jednu pobocku.
  * Pobocku prebera z otevreneho Denniho reportu, obdobi je pri prvnim vstupu
- * predchozi kalendarni tyden a po zmene GN presny globalni interval.
+ * posledni uzavreny tyden; mistni panel vybira cele uzavrene provozni dny.
  */
 
 const CB_KONTROLA_REPORTU_PRAVO = 212;
@@ -38,93 +39,12 @@ function cb_kontrola_reportu_valid_date(string $value): string
     return $date instanceof DateTimeImmutable && $date->format('Y-m-d') === $value ? $value : '';
 }
 
-/**
- * @return array{from:string,to:string,display_from:string,display_to:string,label:string,source:string}
- */
-function cb_kontrola_reportu_previous_week(): array
+/** Převádí místní celé provozní dny na včetně vymezené datumy denních reportů. */
+function cb_kontrola_reportu_period(): array
 {
-    $tz = new DateTimeZone('Europe/Prague');
-    $today = new DateTimeImmutable('today', $tz);
-    $thisMonday = $today->modify('monday this week');
-    $from = $thisMonday->modify('-7 days');
-    $to = $from->modify('+6 days');
-
-    return [
-        'from' => $from->format('Y-m-d'),
-        'to' => $to->format('Y-m-d'),
-        'display_from' => $from->format('Y-m-d'),
-        'display_to' => $to->format('Y-m-d'),
-        'label' => $from->format('j. n. Y') . ' - ' . $to->format('j. n. Y'),
-        'source' => 'previous_week',
-    ];
-}
-
-function cb_kontrola_reportu_workday_date(DateTimeImmutable $dateTime): string
-{
-    if ((int)$dateTime->format('G') < 6) {
-        $dateTime = $dateTime->modify('-1 day');
-    }
-
-    return $dateTime->format('Y-m-d');
-}
-
-/**
- * GN uklada interval pracovnich dnu s hranici v 06:00. Konec je vyhradni,
- * proto se pro urceni posledniho reportu posune o jednu sekundu zpet.
- *
- * @return array{from:string,to:string,display_from:string,display_to:string,label:string,source:string}
- */
-function cb_kontrola_reportu_global_period(): array
-{
-    $fallback = cb_kontrola_reportu_previous_week();
-    $fromRaw = trim((string)($_SESSION['cb_obdobi_od'] ?? ''));
-    $toRaw = trim((string)($_SESSION['cb_obdobi_do'] ?? ''));
-    if ($fromRaw === '' || $toRaw === '') {
-        return $fallback;
-    }
-
-    try {
-        $tz = new DateTimeZone('Europe/Prague');
-        $fromDateTime = new DateTimeImmutable($fromRaw, $tz);
-        $toDateTime = new DateTimeImmutable($toRaw, $tz);
-        if ($fromDateTime >= $toDateTime) {
-            return $fallback;
-        }
-
-        $from = cb_kontrola_reportu_workday_date($fromDateTime);
-        $to = cb_kontrola_reportu_workday_date($toDateTime->modify('-1 second'));
-        $displayTo = $toDateTime->format('Y-m-d');
-        $periodLabel = $fromDateTime->format('j. n. Y H:i') . ' - ' . $toDateTime->format('j. n. Y H:i');
-
-        $currentWorkday = DateTimeImmutable::createFromFormat(
-            '!Y-m-d',
-            cb_kontrola_reportu_workday_date(new DateTimeImmutable('now', $tz)),
-            $tz
-        );
-        if ($currentWorkday instanceof DateTimeImmutable) {
-            $lastClosedWorkday = $currentWorkday->modify('-1 day')->format('Y-m-d');
-            if ($to > $lastClosedWorkday) {
-                $to = $lastClosedWorkday;
-                $displayTo = $to;
-                $periodLabel = $fromDateTime->format('j. n. Y H:i') . ' - '
-                    . $currentWorkday->modify('-1 day')->format('j. n. Y');
-            }
-        }
-        if ($from > $to) {
-            return $fallback;
-        }
-
-        return [
-            'from' => $from,
-            'to' => $to,
-            'display_from' => $fromDateTime->format('Y-m-d'),
-            'display_to' => $displayTo,
-            'label' => $periodLabel,
-            'source' => 'global',
-        ];
-    } catch (Throwable $e) {
-        return $fallback;
-    }
+    $period = cb_obdobi_stranky_model('provoz.kontrola_reportu');
+    return ['from'=>$period['input_od'], 'to'=>$period['input_do'],
+        'display_from'=>$period['input_od'], 'display_to'=>$period['input_do'], 'label'=>$period['label'], 'source'=>'page'];
 }
 
 /**
@@ -1057,7 +977,6 @@ function cb_kontrola_reportu_missing_dates(mysqli $conn, int $branchId, string $
  */
 function cb_kontrola_reportu_data(
     mysqli $conn,
-    bool $useGlobalPeriod,
     int $requestedBranchId = 0,
     bool $withGoogleComparison = false
 ): array
@@ -1076,8 +995,7 @@ function cb_kontrola_reportu_data(
     }
     $_SESSION['cb_kontrola_reportu_id_pob'] = (int)$branch['id'];
 
-    $period = $useGlobalPeriod ? cb_kontrola_reportu_global_period() : cb_kontrola_reportu_previous_week();
-    $_SESSION['cb_kontrola_reportu_period_source'] = (string)$period['source'];
+    $period = cb_kontrola_reportu_period();
     $googlePeriodTruncatedTo = '';
     if ($withGoogleComparison) {
         $googleLastDate = cb_kontrola_reportu_google_last_date(

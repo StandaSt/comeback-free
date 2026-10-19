@@ -1,34 +1,20 @@
 <?php
-// Prehled objednavek v PP s filtry tabulky a volitelnym omezenim na provozni den.
+// Přehled objednávek z povolených poboček s místním obdobím a filtry tabulky.
 declare(strict_types=1);
+
+require_once __DIR__ . '/../../common/db/db_user_pobocka.php';
+require_once __DIR__ . '/../../common/lib/obdobi_stranky.php';
 
 function cb_db_objednavky_prehled_cancel_statuses(): array
 {
     return ['canceled', 'rejected', 'expired', 'not_accepted', 'cancel_accepted'];
 }
 
+/** Objednávky mají vlastní interval; bez volby začínají aktuálním provozním dnem i před šestou. */
 function cb_db_objednavky_prehled_period(): array
 {
-    $odRaw = trim((string)($_SESSION['cb_obdobi_od'] ?? ''));
-    $doRaw = trim((string)($_SESSION['cb_obdobi_do'] ?? ''));
-
-    try {
-        $od = $odRaw !== '' ? new DateTimeImmutable($odRaw) : new DateTimeImmutable('today 06:00');
-    } catch (Throwable $e) {
-        $od = new DateTimeImmutable('today 06:00');
-    }
-
-    try {
-        $do = $doRaw !== '' ? new DateTimeImmutable($doRaw) : new DateTimeImmutable('now');
-    } catch (Throwable $e) {
-        $do = new DateTimeImmutable('now');
-    }
-
-    if ($do <= $od) {
-        $do = $od->modify('+1 day');
-    }
-
-    return [$od, $do];
+    $period = cb_obdobi_stranky_model('provoz.objednavky');
+    return [new DateTimeImmutable($period['od']), new DateTimeImmutable($period['do'])];
 }
 
 function cb_db_objednavky_prehled_filter(string $key): string
@@ -41,31 +27,15 @@ function cb_db_objednavky_prehled_filter(string $key): string
     return trim((string)($filters[$key] ?? ''));
 }
 
-// Provozni den je dalsi filtr; pri obnove GN bloku zachovame posledni volbu v session.
-function cb_db_objednavky_prehled_report_filter(): string
-{
-    $params = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' ? $_POST : $_GET;
-    $filters = is_array($params['obj_f'] ?? null) ? $params['obj_f'] : [];
-    $value = trim((string)($filters['report'] ?? (isset($_SERVER['HTTP_X_COMEBACK_GN_BLOCK']) ? ($_SESSION['cb_objednavky_report_filter'] ?? '') : '')));
-    if ($value !== '') {
-        $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
-        if (!$date || $date->format('Y-m-d') !== $value) {
-            throw new CbUserVisibleException('Provozní den není platné datum. Vyberte datum v kalendáři.');
-        }
-    }
-    $_SESSION['cb_objednavky_report_filter'] = $value;
-    return $value;
-}
-
 /**
  * Vrati volby selectu filtru bez dalsich dotazu nad objednavkami.
- * Pobočky respektuji aktualni vyber pobocek uzivatele, ostatni hodnoty jsou
+ * Pobočky respektuji opravneni uzivatele, ostatni hodnoty jsou
  * stabilni ciselniky pouzivane pri zobrazeni objednavky.
  *
- * @param array<int, int> $selectedPobocky
+ * @param array<int, int> $allowedPobocky
  * @return array<string, array<int, string>>
  */
-function cb_db_objednavky_prehled_filter_options(mysqli $db, array $selectedPobocky): array
+function cb_db_objednavky_prehled_filter_options(mysqli $db, array $allowedPobocky): array
 {
     $queries = [
         'pobocka' => 'SELECT nazev AS value FROM pobocka WHERE nazev <> \'\'',
@@ -73,9 +43,9 @@ function cb_db_objednavky_prehled_filter_options(mysqli $db, array $selectedPobo
         'typ' => 'SELECT nazev AS value FROM cis_doruceni WHERE nazev <> \'\'',
         'platba' => 'SELECT nazev AS value FROM cis_obj_platby WHERE nazev <> \'\'',
     ];
-    if ($selectedPobocky !== []) {
-        $queries['pobocka'] .= ' AND id_pob IN (' . implode(',', $selectedPobocky) . ')';
-    }
+    $queries['pobocka'] .= $allowedPobocky !== []
+        ? ' AND id_pob IN (' . implode(',', $allowedPobocky) . ')'
+        : ' AND 1 = 0';
 
     $options = [];
     foreach ($queries as $key => $sql) {
@@ -110,7 +80,7 @@ function cb_db_objednavky_prehled_filter_options(mysqli $db, array $selectedPobo
     return $options;
 }
 
-// Nacte stranku objednavek jako prunik horniho obdobi, pobocek a vsech vyplnenych filtru.
+// Nacte stranku objednavek jako prunik horniho obdobi, povolenych pobocek a mistnich filtru.
 function cb_db_objednavky_prehled_nacti(): array
 {
     $db = db();
@@ -125,12 +95,10 @@ function cb_db_objednavky_prehled_nacti(): array
     $periodReportOdSql = $db->real_escape_string($periodOd->format('Y-m-d'));
     $periodReportDoSql = $db->real_escape_string($periodDo->modify('-1 second')->format('Y-m-d'));
 
-    $selectedPobocky = function_exists('get_selected_pobocky') ? get_selected_pobocky() : [];
-    $selectedPobocky = array_values(array_filter(array_map('intval', $selectedPobocky), static fn (int $id): bool => $id > 0));
-    if ($selectedPobocky === [] && (int)($_SESSION['cb_pobocka_id'] ?? 0) > 0) {
-        $selectedPobocky[] = (int)$_SESSION['cb_pobocka_id'];
-    }
-    $filterOptions = cb_db_objednavky_prehled_filter_options($db, $selectedPobocky);
+    // Přístup vychází z HR oprávnění; prázdný seznam nikdy neznamená všechny pobočky.
+    $idUser = (int)($_SESSION['cb_user']['id_user'] ?? 0);
+    $allowedPobocky = array_values(array_filter(array_map('intval', array_column(cb_db_user_pobocky($db, $idUser), 'id_pob')), static fn(int $id): bool => $id > 0));
+    $filterOptions = cb_db_objednavky_prehled_filter_options($db, $allowedPobocky);
 
     // Vyhledávání a řazení pracuje se všemi syrovými identifikátory Restie.
     // Jejich uživatelské složení provádí až cb_format('o') ve výstupní vrstvě.
@@ -170,7 +138,6 @@ function cb_db_objednavky_prehled_nacti(): array
     $dir = strtolower((string)($queryParams['obj_dir'] ?? 'desc')) === 'asc' ? 'asc' : 'desc';
 
     $filters = [
-        'report' => cb_db_objednavky_prehled_report_filter(),
         'cislo' => cb_db_objednavky_prehled_filter('cislo'),
         'vytvoreno' => cb_db_objednavky_prehled_filter('vytvoreno'),
         'pobocka' => cb_db_objednavky_prehled_filter('pobocka'),
@@ -185,15 +152,9 @@ function cb_db_objednavky_prehled_nacti(): array
     }
     $activeFilters = array_filter($filters, static fn (string $value): bool => $value !== '');
 
-    $where = [];
-    if ($selectedPobocky !== []) {
-        $where[] = 'o.id_pob IN (' . implode(',', $selectedPobocky) . ')';
-    }
-
-    // Ulozeny provozni den pouze zuzuje stavajici obdobi i ostatni filtry.
-    if ($filters['report'] !== '') {
-        $where[] = "o.report = '" . $db->real_escape_string($filters['report']) . "'";
-    }
+    $where = [$allowedPobocky !== []
+        ? 'o.id_pob IN (' . implode(',', $allowedPobocky) . ')'
+        : '1 = 0'];
 
     $filterSqlMap = [
         'cislo' => $orderNumberSearchSql,
