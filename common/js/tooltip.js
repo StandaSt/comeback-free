@@ -1,10 +1,11 @@
-/* Účel: Společné tooltipy IS; výslovně označené prvky umísťují text nad kurzor, ostatní zachovávají umístění u prvku. */
+/* Účel: Společné tooltipy IS; text i bezpečné tabulky se vejdou do okna nad nebo pod cílem, výslovné prvky sledují kurzor. */
 'use strict';
 
 (function (w, d) {
   const CB_TOOLTIP = w.CB_TOOLTIP || (w.CB_TOOLTIP = {});
   let activeTarget = null;
   let floatingPanel = null;
+  let hideTimer = null;
 
   function getFloatingPanel() {
     if (floatingPanel instanceof HTMLElement) return floatingPanel;
@@ -14,6 +15,9 @@
     floatingPanel.id = 'cb-global-tooltip';
     floatingPanel.setAttribute('role', 'tooltip');
     d.body.appendChild(floatingPanel);
+    // Velkou tabulku lze prohlížet myší i rolovat bez zmizení při přechodu ze štítku.
+    floatingPanel.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+    floatingPanel.addEventListener('mouseleave', () => hideFloatingPanel());
     return floatingPanel;
   }
 
@@ -67,9 +71,14 @@
     let placement = 'top';
 
     left = Math.max(edgeGap, Math.min(left, w.innerWidth - panelRect.width - edgeGap));
-    if (!followPointer && top < edgeGap) {
-      top = targetRect.bottom + targetGap;
-      placement = 'bottom';
+    if (!followPointer) {
+      const below = w.innerHeight - targetRect.bottom - targetGap - edgeGap;
+      const above = targetRect.top - targetGap - edgeGap;
+      if (panelRect.height > above && below >= above) {
+        top = targetRect.bottom + targetGap;
+        placement = 'bottom';
+      }
+      top = Math.max(edgeGap, Math.min(top, w.innerHeight - panelRect.height - edgeGap));
     }
 
     panel.style.left = `${Math.round(left)}px`;
@@ -84,14 +93,42 @@
 
     const panel = getFloatingPanel();
     const moduleRoot = target.closest('.obal_main') || d.querySelector('.obal_main');
+    // Hlavička patří modulu přepínače i při otevření jiné pracovní plochy.
+    const headerModule = target.closest('.head_module_link');
+    const headerAccent = headerModule ? w.getComputedStyle(headerModule).getPropertyValue('--head-module-color').trim() : '';
     const accent = target.dataset.cbTooltipWarning === '1'
       ? '#dc2626'
-      : (moduleRoot instanceof HTMLElement
+      : (headerAccent || (moduleRoot instanceof HTMLElement
         ? w.getComputedStyle(moduleRoot).getPropertyValue('--cb-module-accent').trim()
-        : '');
+        : ''));
 
+    if (activeTarget && activeTarget !== target) hideFloatingPanel(activeTarget);
     activeTarget = target;
+    const describedBy = new Set((target.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean));
+    describedBy.add(panel.id);
+    target.setAttribute('aria-describedby', Array.from(describedBy).join(' '));
+    clearTimeout(hideTimer);
     panel.textContent = text;
+    // Tabulka se skládá přes textContent, nikdy přes innerHTML z atributu nebo serveru.
+    let rows = [];
+    try { rows = JSON.parse(target.dataset.cbTooltipTable || '[]'); } catch (_) { rows = []; }
+    const hasTable = Array.isArray(rows) && rows.length > 0;
+    panel.classList.toggle('cb_tooltip_table', hasTable);
+    if (hasTable) {
+      const caption = d.createElement('p');
+      caption.textContent = text;
+      panel.replaceChildren(caption);
+      const table = d.createElement('table');
+      const head = d.createElement('thead');
+      const body = d.createElement('tbody');
+      rows.forEach((row, index) => {
+        if (!Array.isArray(row)) return;
+        const tr = d.createElement('tr');
+        row.forEach((value) => { const cell = d.createElement(index === 0 ? 'th' : 'td'); cell.textContent = String(value); tr.appendChild(cell); });
+        (index === 0 ? head : body).appendChild(tr);
+      });
+      table.append(head, body); panel.appendChild(table);
+    }
     panel.classList.toggle('cb_tooltip_multiline', target.dataset.cbTooltipMultiline === '1');
     panel.style.setProperty('--cb-tooltip-accent', accent || '#2563eb');
     panel.classList.add('cb_tooltip_visible');
@@ -100,6 +137,11 @@
 
   function hideFloatingPanel(target) {
     if (target && activeTarget !== target) return;
+    if (activeTarget) {
+      const ids = (activeTarget.getAttribute('aria-describedby') || '').split(/\s+/).filter((id) => id && id !== 'cb-global-tooltip');
+      if (ids.length) activeTarget.setAttribute('aria-describedby', ids.join(' '));
+      else activeTarget.removeAttribute('aria-describedby');
+    }
     if (floatingPanel instanceof HTMLElement) floatingPanel.classList.remove('cb_tooltip_visible');
     activeTarget = null;
   }
@@ -142,12 +184,16 @@
         target.addEventListener('click', () => hideFloatingPanel(target));
       }
       target.addEventListener('focus', () => showFloatingPanel(target));
-      target.addEventListener('mouseleave', () => hideFloatingPanel(target));
+      target.addEventListener('mouseleave', () => {
+        if (target.dataset.cbTooltipTable) hideTimer = setTimeout(() => hideFloatingPanel(target), 150);
+        else hideFloatingPanel(target);
+      });
       target.addEventListener('blur', () => hideFloatingPanel(target));
     });
   }
 
   function init(root) {
+    if (activeTarget && !activeTarget.isConnected) hideFloatingPanel();
     const scope = root instanceof HTMLElement ? root : d;
     initNativeTitles(scope);
     const tooltips = Array.from(scope.querySelectorAll('[data-tooltip="1"], .provoz_tooltip')).filter((node) => node instanceof HTMLElement);
@@ -179,7 +225,7 @@
 
   d.addEventListener('pointerdown', (event) => {
     const target = event.target instanceof Element ? event.target : null;
-    if (!target || !target.closest('[data-cb-tooltip-ready="1"], [data-tooltip="1"], .provoz_tooltip')) {
+    if (!target || !target.closest('[data-cb-tooltip-ready="1"], [data-tooltip="1"], .provoz_tooltip, #cb-global-tooltip')) {
       hideAllTooltips();
     }
   }, true);
@@ -192,7 +238,11 @@
     hideAllTooltips();
     init(detail && detail.block instanceof HTMLElement ? detail.block : d);
   });
-  w.addEventListener('scroll', hideAllTooltips, true);
+  // Rolování velké tabulky tooltip nezavírá; posun podkladové stránky ano.
+  w.addEventListener('scroll', (event) => {
+    if (!(floatingPanel && event.target instanceof Node && floatingPanel.contains(event.target))) hideAllTooltips();
+  }, true);
+  d.addEventListener('keydown', (event) => { if (event.key === 'Escape') hideAllTooltips(); });
   w.addEventListener('resize', hideAllTooltips);
   w.addEventListener('pagehide', hideAllTooltips);
 

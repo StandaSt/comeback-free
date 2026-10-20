@@ -106,6 +106,10 @@ if (($_GET['cb_aktivita'] ?? '') === '1') {
 // Opusteni testu musi fungovat i bez prevzatych prav na modul Administrace.
 cb_prebrani_prav_handle(db());
 
+// Vlastní přihlašovací údaje mají společný vstup a nikdy se neukládají přes HR.
+require_once __DIR__ . '/common/lib/profil.php';
+cb_profil_vyrid_post();
+
 $cbAuthOk = !empty($_SESSION['cb_auth_ok']);
 $cb2faPending = !empty($_SESSION['cb_2fa_token']);
 
@@ -117,6 +121,26 @@ if (isset($_SERVER['HTTP_X_COMEBACK_PAGE_PERIOD'])) {
 }
 
 cb_nastaveni_uzivatele_vyrid_post();
+
+// Osobní štítky hlavičky pouze čtou data; oprávnění se načetla společným loginovým tokem výše.
+if (($_GET['cb_header_tags'] ?? '') === '1') {
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    if (empty($_SESSION['login_ok'])) {
+        http_response_code(401);
+        echo json_encode(['ok'=>false], JSON_UNESCAPED_UNICODE);
+    } else {
+        try {
+            require_once __DIR__ . '/common/lib/hlavicka_stitky.php';
+            echo json_encode(['ok'=>true] + cb_hlavicka_stitky_data(db()), JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        } catch (Throwable $e) {
+            cb_chyba_oznam($e, ['module'=>'SYSTEM','action'=>'Načtení štítků hlavičky']);
+            http_response_code(500);
+            echo json_encode(['ok'=>false], JSON_UNESCAPED_UNICODE);
+        }
+    }
+    exit;
+}
 
 /* Otevre formular noveho hesla s jednorazove predvyplnenym emailem bez udaje v URL. */
 if (empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && (string)($_POST['cb_action'] ?? '') === 'nove_heslo_formular') {

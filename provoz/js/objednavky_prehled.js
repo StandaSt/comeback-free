@@ -1,4 +1,4 @@
-// Prehled objednavek v PP: detaily, aktualizace Restie a zarovnani titulku podle sirky tabulky.
+// Přehled objednávek: detaily, výběr poboček jednotlivě i podle oblastí, aktualizace Restie a zarovnání titulku.
 (function () {
   'use strict';
 
@@ -103,6 +103,38 @@
     headerSizeObserver.observe(table);
   }
 
+  // Panel používá společné filtrování formuláře; po výměně tabulky zůstane otevřený pro další volbu.
+  function bindBranches(root) {
+    var picker = root.querySelector('[data-objednavky-branches]');
+    if (!picker || picker.dataset.bound === '1') return;
+    picker.dataset.bound = '1';
+    // Pevný panel zarovnáme k ovladači i po změně šířky tabulky.
+    function positionPanel() {
+      var rect = picker.querySelector('summary').getBoundingClientRect();
+      var panel = picker.querySelector('.provoz_objednavky_branches_panel');
+      panel.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - panel.offsetWidth - 8)) + 'px';
+      panel.style.top = (rect.bottom + 4) + 'px';
+    }
+    picker.open = root.dataset.branchesOpen === '1';
+    if (picker.open) positionPanel();
+    picker.addEventListener('toggle', function () {
+      if (!picker.isConnected) return;
+      root.dataset.branchesOpen = picker.open ? '1' : '0';
+      if (picker.open) positionPanel();
+    });
+    // Oblast nahradí výběr odpovídajícími povolenými pobočkami; prázdná oblast znamená Vše.
+    picker.querySelectorAll('[data-objednavky-branches-group]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var region = button.getAttribute('data-objednavky-branches-group');
+        picker.querySelectorAll('input[type="checkbox"]').forEach(function (input) {
+          input.checked = region !== '' && input.getAttribute('data-branch-region') === region;
+        });
+        root.dataset.branchesOpen = '0';
+        picker.closest('form').requestSubmit();
+      });
+    });
+  }
+
   // Kontejner zustava pri filtrovani stejny, ale jeho tlacitka se meni.
   function initRoot(root) {
     if (!(root instanceof HTMLElement)) {
@@ -111,6 +143,7 @@
     alignHeader(root);
     root.setAttribute('data-objednavky-ready', '1');
     bindOrderDetails(root);
+    bindBranches(root);
   }
 
   function bindRestiaRefresh(scope) {
@@ -198,7 +231,9 @@
         if (form instanceof HTMLFormElement) {
           new FormData(form).forEach(function (value, key) {
             if (key !== 'm') {
-              params.set(key, String(value));
+              // Více poboček má opakovaný název; ostatní parametry zůstávají jediné.
+              if (/\[\]$/.test(key)) params.append(key, String(value));
+              else params.set(key, String(value));
             }
           });
         }
@@ -231,6 +266,20 @@
 
   document.addEventListener('cb:period-changed', function (event) {
     if (event.detail && event.detail.root && event.detail.root.getAttribute('data-period-scope') === 'provoz.objednavky') startLoaderTimers();
+  });
+
+  // Zavření mimo seznam a klávesou Escape zachová běžné chování rozbalovacího filtru.
+  document.addEventListener('click', function (event) {
+    document.querySelectorAll('[data-objednavky-branches][open]').forEach(function (picker) {
+      if (!picker.contains(event.target)) picker.open = false;
+    });
+  });
+  document.addEventListener('keydown', function (event) {
+    if (event.key !== 'Escape') return;
+    document.querySelectorAll('[data-objednavky-branches][open]').forEach(function (picker) {
+      picker.open = false;
+      picker.querySelector('summary').focus();
+    });
   });
 
   document.addEventListener('cb:gn-block-refreshed', function (event) {

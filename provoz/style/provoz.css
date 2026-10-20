@@ -1,5 +1,6 @@
 /* Modul Provoz: styly pracovni plochy vcetne dvojice casu jedne prestavky; role barvi jmena pouze v bloku dnes aktivnich uzivatelu.
- * Franta rozlisuje bloky promptu globalnim cislem a zarovnava odeslani k poli zadani. */
+ * Franta rozlisuje bloky promptu globalnim cislem a zarovnava odeslani k poli zadani.
+ * Filtr objednávek nabízí dvousloupcový seznam jednotlivých poboček a oblastí. */
 /* Historie Franty ma vlastni jednoúčelovy styl. */
 @import url("ai_analytik_historie.css");
 
@@ -273,6 +274,19 @@
 /* Tabulka prehledu - hlavicka a soucet. */
 .provoz_prehled_data_head{
 }
+
+/* Top report - období vpravo vedle titulku; úzký panel dovolí zalomení. */
+.provoz_top_report_head{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:space-between;
+  gap:4px 10px;
+  margin:0 0 10px;
+}
+.provoz_top_report_head .blok_title{margin:0;}
+.provoz_top_report_head .cb_period_select{margin:0 0 0 auto;justify-content:flex-end;}
+.provoz_top_report_head .head_period_panel{left:auto;right:0;}
 
 /* Top report - popis grafu. */
 .provoz_top_report_heading{
@@ -2216,6 +2230,19 @@ html[data-theme-level="dark"] .provoz_objednavky_block.is-loading::before{
 .provoz_objednavky_filter_row th:first-child .provoz_objednavky_filter{
   width:108px;
 }
+
+/* Více poboček zůstává kompaktní; pevný panel se neořízne rolováním tabulky. */
+.provoz_objednavky_branches{display:inline-block;font-weight:400;}
+/* Výška řádku vyplní obsah 26px ovladače po odečtení rámečku a odsazení. */
+.provoz_objednavky_branches summary{box-sizing:border-box;width:90px;line-height:20px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* Pravý sloupec nabízí hromadné volby bez zásahu do ručního zaškrtávání vlevo. */
+.provoz_objednavky_branches_panel{position:fixed;z-index:140;display:grid;grid-template-columns:minmax(0,1fr) 80px;gap:6px;box-sizing:border-box;width:270px;max-width:calc(100vw - 16px);max-height:260px;overflow:auto;padding:6px;border:1px solid var(--cb-border);border-radius:6px;background:var(--cb-bg-control);color:var(--cb-text-main);box-shadow:0 4px 14px #0003;text-align:left;}
+.provoz_objednavky_branches_groups{border-left:1px solid var(--cb-border);padding-left:6px;}
+.provoz_objednavky_branches:not([open]) .provoz_objednavky_branches_panel{display:none;}
+.provoz_objednavky_branches_panel label{display:flex;align-items:center;gap:7px;padding:5px;cursor:pointer;}
+.provoz_objednavky_branches_panel input{margin:0;}
+.provoz_objednavky_branches_panel button{display:block;width:100%;padding:5px;text-align:left;font:inherit;color:inherit;border:0;background:transparent;cursor:pointer;}
+.provoz_objednavky_branches_panel label:hover,.provoz_objednavky_branches_panel button:hover{background:var(--cb-bg-info);}
 
 .provoz_objednavky_filter_datetime{
   width:124px;

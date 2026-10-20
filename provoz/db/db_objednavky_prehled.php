@@ -1,5 +1,5 @@
 <?php
-// Přehled objednávek z povolených poboček s místním obdobím a filtry tabulky.
+// Přehled objednávek s místním obdobím a filtry; povolené pobočky i jejich oblasti slouží k výběru podle ID.
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../common/db/db_user_pobocka.php';
@@ -33,12 +33,12 @@ function cb_db_objednavky_prehled_filter(string $key): string
  * stabilni ciselniky pouzivane pri zobrazeni objednavky.
  *
  * @param array<int, int> $allowedPobocky
- * @return array<string, array<int, string>>
+ * @return array<string, array<int, string>> Pobočky mají jako klíč své ID.
  */
 function cb_db_objednavky_prehled_filter_options(mysqli $db, array $allowedPobocky): array
 {
     $queries = [
-        'pobocka' => 'SELECT nazev AS value FROM pobocka WHERE nazev <> \'\'',
+        'pobocka' => 'SELECT id_pob, nazev AS value FROM pobocka WHERE nazev <> \'\'',
         'stav' => 'SELECT nazev AS value FROM cis_obj_stav WHERE nazev <> \'\'',
         'typ' => 'SELECT nazev AS value FROM cis_doruceni WHERE nazev <> \'\'',
         'platba' => 'SELECT nazev AS value FROM cis_obj_platby WHERE nazev <> \'\'',
@@ -49,13 +49,21 @@ function cb_db_objednavky_prehled_filter_options(mysqli $db, array $allowedPoboc
 
     $options = [];
     foreach ($queries as $key => $sql) {
-        $result = $db->query($sql . ' ORDER BY value');
+        // Výrobu určuje stabilní kód; zůstane poslední i při jiném ID nebo změně zobrazovaného názvu.
+        $orderBy = $key === 'pobocka'
+            ? "CASE WHEN kod = 'Vyroba' THEN 1 ELSE 0 END, id_pob"
+            : 'value';
+        $result = $db->query($sql . ' ORDER BY ' . $orderBy);
         $values = [];
         if ($result instanceof mysqli_result) {
             while ($row = $result->fetch_assoc()) {
                 $value = trim((string)($row['value'] ?? ''));
                 if ($value !== '') {
-                    $values[] = $value;
+                    if ($key === 'pobocka') {
+                        $values[(int)$row['id_pob']] = $value;
+                    } else {
+                        $values[] = $value;
+                    }
                 }
             }
             $result->free();
@@ -80,6 +88,24 @@ function cb_db_objednavky_prehled_filter_options(mysqli $db, array $allowedPoboc
     return $options;
 }
 
+/** Přijme seznam ID i starý odkaz s názvem; neznámá volba nesmí rozšířit výsledek na všechny pobočky. */
+function cb_db_objednavky_prehled_branches(array $options): array
+{
+    $raw = $_GET['obj_f']['pobocka'] ?? [];
+    $values = is_array($raw) ? $raw : ($raw === '' ? [] : [$raw]);
+    $ids = [];
+    foreach ($values as $value) {
+        if (!is_scalar($value)) {
+            $ids[] = 0;
+            continue;
+        }
+        $text = trim((string)$value);
+        $id = ctype_digit($text) ? (int)$text : array_search($text, $options, true);
+        $ids[] = $id !== false && isset($options[$id]) ? (int)$id : 0;
+    }
+    return array_values(array_unique($ids));
+}
+
 // Nacte stranku objednavek jako prunik horniho obdobi, povolenych pobocek a mistnich filtru.
 function cb_db_objednavky_prehled_nacti(): array
 {
@@ -97,7 +123,8 @@ function cb_db_objednavky_prehled_nacti(): array
 
     // Přístup vychází z HR oprávnění; prázdný seznam nikdy neznamená všechny pobočky.
     $idUser = (int)($_SESSION['cb_user']['id_user'] ?? 0);
-    $allowedPobocky = array_values(array_filter(array_map('intval', array_column(cb_db_user_pobocky($db, $idUser), 'id_pob')), static fn(int $id): bool => $id > 0));
+    $allowedBranches = cb_db_user_pobocky($db, $idUser);
+    $allowedPobocky = array_values(array_filter(array_map('intval', array_column($allowedBranches, 'id_pob')), static fn(int $id): bool => $id > 0));
     $filterOptions = cb_db_objednavky_prehled_filter_options($db, $allowedPobocky);
 
     // Vyhledávání a řazení pracuje se všemi syrovými identifikátory Restie.
@@ -140,7 +167,7 @@ function cb_db_objednavky_prehled_nacti(): array
     $filters = [
         'cislo' => cb_db_objednavky_prehled_filter('cislo'),
         'vytvoreno' => cb_db_objednavky_prehled_filter('vytvoreno'),
-        'pobocka' => cb_db_objednavky_prehled_filter('pobocka'),
+        'pobocka' => cb_db_objednavky_prehled_branches($filterOptions['pobocka']),
         'stav' => cb_db_objednavky_prehled_filter('stav'),
         'typ' => cb_db_objednavky_prehled_filter('typ'),
         'platba' => cb_db_objednavky_prehled_filter('platba'),
@@ -150,7 +177,7 @@ function cb_db_objednavky_prehled_nacti(): array
     if (in_array($filters['stav'], cb_db_objednavky_prehled_cancel_statuses(), true)) {
         $filters['stav'] = '__storno__';
     }
-    $activeFilters = array_filter($filters, static fn (string $value): bool => $value !== '');
+    $activeFilters = array_filter($filters, static fn (string|array $value): bool => is_array($value) ? $value !== [] : $value !== '');
 
     $where = [$allowedPobocky !== []
         ? 'o.id_pob IN (' . implode(',', $allowedPobocky) . ')'
@@ -168,6 +195,11 @@ function cb_db_objednavky_prehled_nacti(): array
     ];
 
     foreach ($activeFilters as $key => $value) {
+        // Seznam ID se protíná s nezávislou podmínkou oprávněných poboček výše.
+        if ($key === 'pobocka') {
+            $where[] = 'o.id_pob IN (' . implode(',', $value) . ')';
+            continue;
+        }
         if (!isset($filterSqlMap[$key])) {
             continue;
         }
@@ -327,6 +359,8 @@ function cb_db_objednavky_prehled_nacti(): array
         'dir' => $dir,
         'filters' => $filters,
         'filter_options' => $filterOptions,
+        // Hromadné volby využívají oblasti již načtených povolených poboček.
+        'branch_regions' => array_column($allowedBranches, 'oblast', 'id_pob'),
         'active_filters' => $activeFilters,
         'rows' => $rows,
         'total_rows' => $totalRows,

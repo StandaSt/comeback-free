@@ -1,7 +1,7 @@
 <?php
 /*
  * Ucel souboru: Vykresli viditelnou hlavicku aplikace z predem pripravenych dat.
- * Data pripravi common/lib/priprava_hlavicky.php; obdobi vybira kazda stranka samostatne.
+ * Data pripravi common/lib/priprava_hlavicky.php; osobni stitky obnovuje hlavicka_stitky.js.
  * Pruh prebranych prav je soucasti trvale hlavicky, aby nezmizel pri vymene modulu.
  */
 declare(strict_types=1);
@@ -42,18 +42,18 @@ $cbHeaderMaintenanceActive = $cbLoginOk
 
     <?php if ($cbLoginOk): ?>
       <nav class="head_module_nav" aria-label="Moduly">
-        <a class="head_module_link head_module_link--provoz<?= $cbCurrentModule === 'provoz' ? ' is-active' : '' ?><?= !$cbHeaderModuleAllowed['provoz'] ? ' is-disabled' : '' ?>" href="<?= h(cb_root_url('')) ?>" data-cb-module-link="1" data-cb-module="provoz" data-cb-module-disabled="<?= $cbHeaderModuleAllowed['provoz'] ? '0' : '1' ?>" data-cb-tooltip-warning="<?= $cbHeaderModuleAllowed['provoz'] ? '0' : '1' ?>" aria-disabled="<?= $cbHeaderModuleAllowed['provoz'] ? 'false' : 'true' ?>"<?= !$cbHeaderModuleAllowed['provoz'] ? ' title="' . h($cbHeaderModuleDeniedText) . '"' : '' ?>>Provoz</a>
-        <a class="head_module_link head_module_link--hr<?= $cbCurrentModule === 'hr' ? ' is-active' : '' ?><?= !$cbHeaderModuleAllowed['hr'] ? ' is-disabled' : '' ?>" href="<?= h(cb_root_url('')) ?>" data-cb-module-link="1" data-cb-module="hr" data-cb-module-disabled="<?= $cbHeaderModuleAllowed['hr'] ? '0' : '1' ?>" data-cb-tooltip-warning="<?= $cbHeaderModuleAllowed['hr'] ? '0' : '1' ?>" aria-disabled="<?= $cbHeaderModuleAllowed['hr'] ? 'false' : 'true' ?>"<?= !$cbHeaderModuleAllowed['hr'] ? ' title="' . h($cbHeaderModuleDeniedText) . '"' : '' ?>>HR</a>
-        <a class="head_module_link head_module_link--smeny<?= $cbCurrentModule === 'smeny' ? ' is-active' : '' ?><?= !$cbHeaderModuleAllowed['smeny'] ? ' is-disabled' : '' ?>" href="<?= h(cb_root_url('')) ?>" data-cb-module-link="1" data-cb-module="smeny" data-cb-module-disabled="<?= $cbHeaderModuleAllowed['smeny'] ? '0' : '1' ?>" data-cb-tooltip-warning="<?= $cbHeaderModuleAllowed['smeny'] ? '0' : '1' ?>" aria-disabled="<?= $cbHeaderModuleAllowed['smeny'] ? 'false' : 'true' ?>"<?= !$cbHeaderModuleAllowed['smeny'] ? ' title="' . h($cbHeaderModuleDeniedText) . '"' : '' ?>>Směny</a>
+        <a class="head_module_link head_module_link--provoz<?= $cbCurrentModule === 'provoz' ? ' is-active' : '' ?><?= !$cbHeaderModuleAllowed['provoz'] ? ' is-disabled' : '' ?>" href="<?= h(cb_root_url('')) ?>" data-cb-module-link="1" data-cb-module="provoz" data-cb-module-disabled="<?= $cbHeaderModuleAllowed['provoz'] ? '0' : '1' ?>" data-cb-tooltip-warning="<?= $cbHeaderModuleAllowed['provoz'] ? '0' : '1' ?>" aria-disabled="<?= $cbHeaderModuleAllowed['provoz'] ? 'false' : 'true' ?>"<?= !$cbHeaderModuleAllowed['provoz'] ? ' title="' . h($cbHeaderModuleDeniedText) . '"' : '' ?>><span class="head_module_name">Provoz</span><span class="head_module_tags" data-cb-header-tags="provoz"></span></a>
+        <a class="head_module_link head_module_link--hr<?= $cbCurrentModule === 'hr' ? ' is-active' : '' ?><?= !$cbHeaderModuleAllowed['hr'] ? ' is-disabled' : '' ?>" href="<?= h(cb_root_url('')) ?>" data-cb-module-link="1" data-cb-module="hr" data-cb-module-disabled="<?= $cbHeaderModuleAllowed['hr'] ? '0' : '1' ?>" data-cb-tooltip-warning="<?= $cbHeaderModuleAllowed['hr'] ? '0' : '1' ?>" aria-disabled="<?= $cbHeaderModuleAllowed['hr'] ? 'false' : 'true' ?>"<?= !$cbHeaderModuleAllowed['hr'] ? ' title="' . h($cbHeaderModuleDeniedText) . '"' : '' ?>><span class="head_module_name">HR</span><span class="head_module_tags" data-cb-header-tags="hr"></span></a>
+        <a class="head_module_link head_module_link--smeny<?= $cbCurrentModule === 'smeny' ? ' is-active' : '' ?><?= !$cbHeaderModuleAllowed['smeny'] ? ' is-disabled' : '' ?>" href="<?= h(cb_root_url('')) ?>" data-cb-module-link="1" data-cb-module="smeny" data-cb-module-disabled="<?= $cbHeaderModuleAllowed['smeny'] ? '0' : '1' ?>" data-cb-tooltip-warning="<?= $cbHeaderModuleAllowed['smeny'] ? '0' : '1' ?>" aria-disabled="<?= $cbHeaderModuleAllowed['smeny'] ? 'false' : 'true' ?>"<?= !$cbHeaderModuleAllowed['smeny'] ? ' title="' . h($cbHeaderModuleDeniedText) . '"' : '' ?>><span class="head_module_name">Směny</span><span class="head_module_tags" data-cb-header-tags="smeny"></span></a>
       </nav>
 
       <button type="button" class="head_task_btn head_task_btn--todo<?= $cbCurrentModule === 'ukoly' ? ' is-active' : '' ?><?= !$cbHeaderModuleAllowed['ukoly'] ? ' is-disabled' : '' ?>" data-cb-module-link="1" data-cb-module="ukoly" data-cb-module-disabled="<?= $cbHeaderModuleAllowed['ukoly'] ? '0' : '1' ?>" data-cb-tooltip-warning="<?= $cbHeaderModuleAllowed['ukoly'] ? '0' : '1' ?>" aria-disabled="<?= $cbHeaderModuleAllowed['ukoly'] ? 'false' : 'true' ?>"<?= !$cbHeaderModuleAllowed['ukoly'] ? ' title="' . h($cbHeaderModuleDeniedText) . '"' : '' ?>>
-        <span>Úkoly</span>
-        <strong class="head_task_count">0</strong>
+        <span class="head_module_name">Úkoly</span>
+        <span class="head_module_tags" data-cb-header-tags="ukoly"></span>
       </button>
       <button type="button" class="head_task_btn head_task_btn--helpdesk<?= !$cbHeaderModuleAllowed['helpdesk'] ? ' is-disabled' : '' ?>" data-cb-module-link="1" data-cb-module="helpdesk" data-cb-module-disabled="<?= $cbHeaderModuleAllowed['helpdesk'] ? '0' : '1' ?>" data-cb-tooltip-warning="<?= $cbHeaderModuleAllowed['helpdesk'] ? '0' : '1' ?>" aria-disabled="<?= $cbHeaderModuleAllowed['helpdesk'] ? 'false' : 'true' ?>"<?= !$cbHeaderModuleAllowed['helpdesk'] ? ' title="' . h($cbHeaderModuleDeniedText) . '"' : '' ?>>
-        <span>HelpDesk</span>
-        <strong class="head_task_count" data-cb-helpdesk-header-count="all">0</strong>
+        <span class="head_module_name">HelpDesk</span>
+        <span class="head_module_tags" data-cb-header-tags="helpdesk"></span>
       </button>
 
 
@@ -140,162 +140,6 @@ $cbHeaderMaintenanceActive = $cbLoginOk
 </script>
 <?php endif; ?>
 <?php if ($cbLoginOk): ?>
-  <!-- Skript nacita a zobrazuje pocty tiketu Helpdesk. -->
-  <script>
-  (function () {
-    var apiUrl = <?= json_encode($cbHelpdeskApiUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-
-    // Najde prvek pro zadany pocet tiketu.
-    function countBox(key) {
-      return document.querySelector('[data-cb-helpdesk-header-count="' + key + '"]');
-    }
-
-    // Prevede hodnotu na nezaporne cele cislo.
-    function numberValue(value) {
-      var n = Number(value || 0);
-      if (!Number.isFinite(n) || n < 0) {
-        return 0;
-      }
-      return Math.trunc(n);
-    }
-
-    // Prepise vsechny viditelne pocty tiketu.
-    function setCounts(counts) {
-      var source = counts || {};
-      ['all', 'new', 'active', 'resolved'].forEach(function (key) {
-        var box = countBox(key);
-        if (box instanceof HTMLElement) {
-          box.textContent = String(numberValue(source[key]));
-        }
-      });
-    }
-
-    // Nacte aktualni pocty tiketu z Helpdesku.
-    function refresh() {
-      var moduleName = window.CB_HELPDESK_SOURCE_MODULE || window.CB_ACTIVE_MAIN_MODULE || 'provoz';
-      return fetch(apiUrl + '?helpdesk_action=stav_tiketu&cb_helpdesk_module=' + encodeURIComponent(String(moduleName)), {
-        method: 'GET',
-        credentials: 'same-origin',
-        headers: {
-          'X-Comeback-Helpdesk': '1'
-        }
-      })
-        .then(function (r) { return r.json().catch(function () { return {}; }); })
-        .then(function (data) {
-          if (data && data.ok === true && data.counts) {
-            setCounts(data.counts);
-          }
-        })
-        .catch(function () {
-        });
-    }
-
-    // Otevre Helpdesk s pozadovanym filtrem.
-    function openHelpdesk(filter) {
-      var filterValue = String(filter || 'all');
-      if (window.CB_HELPDESK && typeof window.CB_HELPDESK.openUnreadFilter === 'function') {
-        window.CB_HELPDESK.openUnreadFilter(filterValue);
-        return;
-      }
-
-      window.CB_HELPDESK_PENDING_FILTER = filterValue;
-
-      if (typeof window.CB_LOAD_MODULE === 'function') {
-        window.CB_LOAD_MODULE('helpdesk', true);
-      }
-    }
-
-    // Umiesti napovedu k polozce Helpdesku.
-    function placeTooltip(root, event) {
-      var panel = root.querySelector('[data-cb-helpdesk-head-tooltip="1"]');
-      if (!(panel instanceof HTMLElement)) { return; }
-      panel.classList.add('is-visible');
-
-      var rect = root.getBoundingClientRect();
-      var clientX = event && typeof event.clientX === 'number' ? event.clientX : rect.right;
-      var clientY = event && typeof event.clientY === 'number' ? event.clientY : rect.top;
-      var panelRect = panel.getBoundingClientRect();
-      var gap = 8;
-      var left = clientX + 14;
-      var top = clientY - panelRect.height - gap;
-      var viewWidth = window.innerWidth || document.documentElement.clientWidth || 0;
-
-      if (left + panelRect.width + gap > viewWidth) {
-        left = Math.max(gap, viewWidth - panelRect.width - gap);
-      }
-      if (top < gap) {
-        top = clientY + gap;
-      }
-
-      panel.style.left = String(left) + 'px';
-      panel.style.top = String(top) + 'px';
-    }
-
-    // Skryje napovedu k polozce Helpdesku.
-    function hideTooltip(root) {
-      var panel = root.querySelector('[data-cb-helpdesk-head-tooltip="1"]');
-      if (!(panel instanceof HTMLElement)) { return; }
-      panel.classList.remove('is-visible');
-      panel.style.left = '';
-      panel.style.top = '';
-    }
-
-    window.CB_HELPDESK_HEADER = {
-      refresh: refresh,
-      open: openHelpdesk
-    };
-
-    document.addEventListener('click', function (e) {
-      var target = e.target;
-      if (!(target instanceof Element)) { return; }
-      var item = target.closest('[data-cb-helpdesk-header-filter]');
-      if (!(item instanceof HTMLElement)) { return; }
-      openHelpdesk(item.getAttribute('data-cb-helpdesk-header-filter') || 'all');
-    });
-
-    document.addEventListener('mouseenter', function (e) {
-      var target = e.target;
-      var item = target instanceof Element ? target.closest('[data-cb-helpdesk-header-filter]') : null;
-      if (item instanceof HTMLElement) {
-        placeTooltip(item, e);
-      }
-    }, true);
-
-    document.addEventListener('mousemove', function (e) {
-      var target = e.target;
-      var item = target instanceof Element ? target.closest('[data-cb-helpdesk-header-filter]') : null;
-      if (item instanceof HTMLElement) {
-        placeTooltip(item, e);
-      }
-    }, true);
-
-    document.addEventListener('mouseleave', function (e) {
-      var target = e.target;
-      var item = target instanceof Element ? target.closest('[data-cb-helpdesk-header-filter]') : null;
-      var related = e.relatedTarget;
-      if (item instanceof HTMLElement && !(related instanceof Node && item.contains(related))) {
-        hideTooltip(item);
-      }
-    }, true);
-
-    document.addEventListener('focusin', function (e) {
-      var target = e.target;
-      var item = target instanceof Element ? target.closest('[data-cb-helpdesk-header-filter]') : null;
-      if (item instanceof HTMLElement) {
-        placeTooltip(item, null);
-      }
-    });
-
-    document.addEventListener('focusout', function (e) {
-      var target = e.target;
-      var item = target instanceof Element ? target.closest('[data-cb-helpdesk-header-filter]') : null;
-      var related = e.relatedTarget;
-      if (item instanceof HTMLElement && !(related instanceof Node && item.contains(related))) {
-        hideTooltip(item);
-      }
-    });
-
-    refresh();
-  })();
-  </script>
+  <!-- Štítky sdílí obnovu a tooltipy; každý modul dodává pouze povolené osobní informace. -->
+  <script src="<?= h(cb_public_url('js/hlavicka_stitky.js') . '?v=' . (string)filemtime(__DIR__ . '/../js/hlavicka_stitky.js')) ?>" defer></script>
 <?php endif; ?>

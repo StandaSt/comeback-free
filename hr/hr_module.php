@@ -3,6 +3,7 @@
  * Ucel souboru: Konfigurace stranek a menu modulu HR nacitana pres cb_hr_module_config.
  * Nazev polozky menu muze byt odlisny od titulku samotne stranky.
  * Neobsahuje HTML, DB logiku, layout, hlavicku, PP ani zpracovani pozadavku.
+ * Přehled neopakuje menu blokem rychlých odkazů; poslední zaměstnanci využívají celý řádek.
  */
 declare(strict_types=1);
 
@@ -61,12 +62,7 @@ return [
                 [
                     'key' => 'hr_prehled_posledni_zamestnanci',
                     'file' => __DIR__ . '/hr_blocks/hr_prehled_posledni_zamestnanci.php',
-                    'span' => 2,
-                ],
-                [
-                    'key' => 'hr_prehled_rychle_odkazy',
-                    'file' => __DIR__ . '/hr_blocks/hr_prehled_rychle_odkazy.php',
-                    'span' => 1,
+                    'span' => 3,
                 ],
                 [
                     'key' => 'hr_prehled_tabulka_zamestnancu',

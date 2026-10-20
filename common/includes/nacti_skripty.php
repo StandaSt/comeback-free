@@ -5,6 +5,7 @@
  * Historie Franty ma oddelenou obsluhu zobrazeni a navratu do stranky.
  * Menu a jeho oprávnění dodává společná PHP příprava HTML šablon; konfigurace neobsahuje druhý seznam položek.
  * Směny při plném otevření použijí hotový serverový obsah; ostatní moduly si zachovávají úvodní obnovu dat.
+ * Vlastní profil používá společnou delegovanou obsluhu formulářů a zobrazení hesel.
  */
 declare(strict_types=1);
 
@@ -26,6 +27,7 @@ window.CB_PC_SESSION_TOKEN = <?= json_encode((string)($_SESSION['cb_pc_session_t
 window.CB_AKTIVITA = <?= json_encode($cbNavUserId>0 ? ['url'=>cb_root_url('index.php?cb_aktivita=1'),'owner'=>(string)(int)($_SESSION['cb_id_login'] ?? 0).':'.$cbNavUserId] : null,JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR) ?>;
 </script>
 <?php // Jednotná ochrana zápisových požadavků. ?>
+<script src="<?= h(cb_public_url('js/profil.js') . '?v=' . (string)filemtime(__DIR__ . '/../js/profil.js')) ?>"></script>
 <script src="<?= h(cb_public_url('js/ochrana_crf.js') . '?v=' . (is_file(__DIR__ . '/../js/ochrana_crf.js') ? (string)filemtime(__DIR__ . '/../js/ochrana_crf.js') : '1')) ?>"></script>
 <?php // Společné dávkování činnosti; moduly dodávají významové události ze svého ovládání. ?>
 <script src="<?= h(cb_public_url('js/user_aktivita.js').'?v='.(string)filemtime(__DIR__.'/../js/user_aktivita.js')) ?>"></script>

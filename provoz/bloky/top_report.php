@@ -85,8 +85,11 @@ require_once __DIR__ . '/../../common/lib/obdobi_stranky.php';
     }
     ?>
     <section class="blok" data-cb-restia-needed="1">
-        <h2 class="blok_title">Top report</h2>
-        <?php $cbPeriodScope = 'provoz.top_report'; require __DIR__ . '/../../common/includes/vyber_obdobi.php'; ?>
+        <!-- Období patří vpravo k titulku tohoto souhrnu. -->
+        <div class="provoz_top_report_head">
+            <h2 class="blok_title">Top report</h2>
+            <?php $cbPeriodScope = 'provoz.top_report'; require __DIR__ . '/../../common/includes/vyber_obdobi.php'; ?>
+        </div>
         <p class="provoz_top_report_heading">Souhrn tržeb podle kanálů</p>
         <?php if ($rows === []): ?>
             <p class="provoz_prehled_text">Nejsou dostupná data kanálů.</p>

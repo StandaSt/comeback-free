@@ -2,6 +2,8 @@
  * Ucel souboru: Definuje spolecny zaklad vzhledu cele aplikace.
  * Typografie pouziva pouze centralne urcene pevne velikosti v px.
  * Vyvojove prebrani prav oznacuje pevnym upozornenim bez zmeny bezneho layoutu.
+ * Hlavička má zarovnané názvy a nejvýše dva osobní štítky s vlastními tooltipy.
+ * Vlastní profil odděluje údaje pro čtení od formulářů přihlašovacího účtu IS.
  */
 
 :root {
@@ -785,6 +787,23 @@ main{
 }
 .blok_hlavicka > .head_task_btn{position:relative;height:100%;min-height:0;padding:0 28px;}
 .blok_hlavicka > .head_task_btn .head_task_count{position:absolute;right:8px;}
+/* Druhý řádek zůstává vyhrazený i bez štítků; všechny názvy jsou na stejné úrovni. */
+.blok_hlavicka .head_module_link,.blok_hlavicka > .head_task_btn{
+  height:55px;min-height:55px;box-sizing:border-box;flex-direction:column;gap:3px;padding:4px;
+}
+.head_module_name{display:block;line-height:19px;min-height:19px;white-space:nowrap;}
+.head_module_tags{display:flex;align-items:center;justify-content:center;gap:4px;min-height:17px;max-width:100%;}
+.head_module_tag{display:inline-block;box-sizing:border-box;max-width:100%;height:17px;padding:0 5px;border:1px solid var(--cb-border);border-radius:9px;background:var(--cb-bg-panel);color:var(--cb-text-main);font:11px/15px Arial,Helvetica,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.head_module_tag:focus-visible{outline:2px solid var(--cb-module-accent);outline-offset:1px;}
+/* Štítek Směn si ponechá barvu svého modulu i při práci v HR nebo Provozu. */
+.head_module_link--smeny .head_module_tag{border-color:color-mix(in srgb,var(--head-module-color) 48%,var(--cb-border));background:var(--head-module-soft);}
+.head_module_link--smeny .head_module_tag:focus-visible{outline-color:var(--head-module-color);}
+/* Tabulka v tooltipu se může rolovat a neopírá se o HTML dodané ze zdrojů dat. */
+.cb_tooltip.cb_tooltip_table{max-width:calc(100vw - 16px);width:max-content;max-height:calc(100vh - 16px);overflow:auto;pointer-events:auto;}
+.cb_tooltip_table p{max-width:440px;margin:0 0 8px;}
+.cb_tooltip_table table{border-collapse:collapse;min-width:260px;max-width:100%;}
+.cb_tooltip_table th,.cb_tooltip_table td{padding:5px 9px;border-bottom:1px solid var(--cb-border);text-align:left;vertical-align:top;white-space:pre-line;}
+.cb_tooltip_table th:first-child,.cb_tooltip_table td:first-child{text-align:left;}
 @media(max-width:767px){
   .blok_hlavicka .head_module_link,
   .blok_hlavicka > .head_task_btn{font-size:var(--cb-font-14);}
@@ -1810,3 +1829,46 @@ align-items:center;
 .head_module_link--provoz{grid-area:provoz;}
 .head_module_link--hr{grid-area:hr;}
 .head_module_link--smeny{grid-area:smeny;}
+
+/* Stejně vysoké bloky po 400 px se přirozeně zalamují podle prostoru; na mobilu se šířka zmenší. */
+.common_profile_grid{display:grid;grid-template-columns:repeat(auto-fit,min(400px,100%));grid-auto-rows:1fr;gap:10px;max-width:1220px;align-items:stretch;}
+.common_profile_grid .common_profile_card{padding:12px;min-width:0;height:auto;box-sizing:border-box;align-self:stretch;}
+.common_profile_card .blok_title{margin:0 0 10px;font-size:var(--cb-font-16);font-weight:700;color:var(--cb-text-main);}
+.common_profile_details{margin:0;}
+.common_profile_details>div{display:grid;grid-template-columns:140px minmax(0,1fr);gap:8px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--cb-border);}
+/* Popisky mají ve všech třech kartách stejnou sazbu; hodnoty a pole rovněž. */
+.common_profile_details dt,.common_profile_form label{color:var(--cb-text-main);font-size:var(--cb-font-12);font-weight:600;line-height:1.5;}
+.common_profile_hint{color:var(--cb-text-muted);font-size:var(--cb-font-12);font-weight:400;line-height:1.5;}
+.common_profile_details dd{margin:0;overflow-wrap:anywhere;font-size:var(--cb-font-14);font-weight:400;color:var(--cb-text-main);}
+.common_profile_card h3{font-size:var(--cb-font-14);margin:12px 0 6px;}
+.common_profile_branches{list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:5px;}
+.common_profile_branches li{border:1px solid var(--cb-border);border-radius:5px;padding:3px 6px;background:var(--cb-bg-panel-soft);}
+.common_profile_main{font-size:var(--cb-font-11);color:var(--cb-text-muted);margin-left:5px;}
+.common_profile_form fieldset{border:0;padding:0;margin:0;min-width:0;}
+.common_profile_form label{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px;align-items:center;margin:8px 0;}
+.common_profile_field{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px;align-items:center;margin:8px 0;}
+.common_profile_field label{display:block;margin:0;}
+.common_profile_form input:not([type=hidden]){display:block;width:100%;min-width:0;box-sizing:border-box;margin:0;min-height:30px;padding:5px 8px;background:var(--cb-bg-control);border:1px solid var(--cb-border);border-radius:5px;color:var(--cb-text-main);font-family:inherit;font-size:var(--cb-font-14);font-weight:400;}
+/* Oko patří dovnitř pole; odsazení chrání text a tlačítko zůstává dostupné klávesnicí. */
+.common_profile_password{position:relative;margin:0;min-width:0;}
+.common_profile_password input:not([type=hidden]){margin:0;min-width:0;padding-right:36px;}
+.common_profile_password button{position:absolute;right:1px;top:1px;bottom:1px;width:32px;display:flex;align-items:center;justify-content:center;padding:0;border:0;border-radius:4px;background:transparent;color:var(--cb-text-muted);cursor:pointer;}
+.common_profile_password button:hover:not(:disabled){color:var(--cb-text-main);background:var(--cb-bg-control-hover);}
+.common_profile_password button:focus-visible{outline:2px solid var(--cb-text-muted);outline-offset:-3px;}
+.common_profile_eye_slash{display:none;}
+.common_profile_password button[aria-pressed=true] .common_profile_eye_slash{display:block;}
+.common_profile_submit{border:1px solid var(--cb-border);border-radius:5px;background:var(--cb-bg-control);color:var(--cb-text-main);font-family:inherit;font-size:var(--cb-font-14);padding:5px 8px;cursor:pointer;}
+.common_profile_hint{margin:6px 0;}
+.common_profile_submit{margin-top:4px;background:var(--cb-bg-control-hover);font-weight:600;}
+.common_profile_submit--right{display:block;margin-left:auto;}
+/* Neaktivní formulář nezprůhledňujeme celý, aby jeho text zůstal stejně čitelný. */
+.common_profile_form button:disabled{cursor:default;}
+.common_profile_notice{padding:8px;border:1px solid var(--cb-border);border-radius:6px;background:var(--cb-bg-panel-soft);max-width:922px;overflow-wrap:anywhere;}
+.common_profile_notice.is-error{color:var(--clr_cervena);}
+@media(max-width:480px){
+  .common_profile_grid .common_profile_card{padding:10px;}
+  .common_profile_details>div{grid-template-columns:120px minmax(0,1fr);gap:6px;}
+  .common_profile_form label,.common_profile_field{grid-template-columns:minmax(0,1fr);gap:4px;}
+  .common_profile_submit{min-height:36px;}
+  .common_profile_form input:not([type=hidden]){min-height:36px;}
+}

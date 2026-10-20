@@ -1,4 +1,4 @@
-// Obnovuje jednotlivé bloky a pravidelná online data; místní období mění pouze svůj blok.
+// Obnovuje jednotlivé bloky a pravidelná online data; místní období zachovává i více vybraných poboček.
 (function () {
   'use strict';
 
@@ -39,7 +39,7 @@
     if (blockName === 'objednavky_prehled') {
       var form = block.querySelector('#provoz_objednavky_form');
       if (form) new FormData(form).forEach(function (value, key) {
-        if (/^obj_(f\[|sort$|dir$|per$|p$)/.test(key)) body.set(key, String(value));
+        if (/^obj_(f\[|sort$|dir$|per$|p$)/.test(key)) body.append(key, String(value));
       });
     }
     if (block.getAttribute('data-google-compare') === '1') {

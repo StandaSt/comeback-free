@@ -4,10 +4,12 @@ declare(strict_types=1);
 /*
  * Účel souboru: Sestaví a odešle oznámení o čekající změně přihlašovacího e-mailu.
  * Token ani databázové změny sem nepatří.
+ * Potvrzovací odkaz dostává pouze nová adresa, původní adresa dostává oznámení.
  */
 
 require_once __DIR__ . '/mailer.php';
 
+// Novou adresu je nutné ověřit přímo v její schránce; odkaz se neposílá na původní adresu.
 function cb_email_zmena_oznameni_odeslat(string $staryEmail, string $novyEmail, string $odkaz): void
 {
     $safeStaryEmail = htmlspecialchars($staryEmail, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
@@ -18,22 +20,24 @@ function cb_email_zmena_oznameni_odeslat(string $staryEmail, string $novyEmail, 
         . '<table role="presentation" width="620" cellspacing="0" cellpadding="0" style="width:100%;max-width:620px;background:#ffffff;border-radius:12px;overflow:hidden;">'
         . '<tr><td style="padding:22px 30px;background:#e30613;color:#ffffff;font-size:22px;font-weight:bold;">IS Comeback</td></tr>'
         . '<tr><td style="padding:30px;font-size:16px;line-height:1.55;">'
-        . '<p style="margin:0 0 22px;">V IS Comeback vám byl změněn původní e-mail <strong>' . $safeStaryEmail . '</strong> na <strong>' . $safeNovyEmail . '</strong>.</p>'
+        . '<p style="margin:0 0 22px;">Byla vyžádána změna přihlašovacího e-mailu IS Comeback z <strong>' . $safeStaryEmail . '</strong> na <strong>' . $safeNovyEmail . '</strong>.</p>'
         . '<p style="margin:0 0 22px;">Použitím níže uvedeného odkazu berete změnu na vědomí a váš přihlašovací e-mail bude změněn na <strong>' . $safeNovyEmail . '</strong>.</p>'
         . '<p style="margin:0 0 22px;text-align:center;"><a href="' . $safeOdkaz . '" style="display:inline-block;padding:13px 24px;background:#e30613;border-radius:6px;color:#ffffff;font-weight:bold;text-decoration:none;">Potvrdit změnu</a></p>'
         . '<p style="margin:0 0 22px;color:#475569;font-size:14px;">Odkaz platí 3 dny. Do potvrzení se nadále přihlašujte původním e-mailem.</p>'
         . '<p style="margin:0;">admin IS Comeback</p></td></tr></table></td></tr></table></body></html>';
-    $altBody = "V IS Comeback vám byl změněn původní e-mail {$staryEmail} na {$novyEmail}.\n\nPoužitím níže uvedeného odkazu berete změnu na vědomí a váš přihlašovací e-mail bude změněn na {$novyEmail}.\n\nPotvrdit změnu: {$odkaz}\n\nOdkaz platí 3 dny. Do potvrzení se nadále přihlašujte původním e-mailem.\n\nadmin IS Comeback";
+    $altBody = "Byla vyžádána změna přihlašovacího e-mailu IS Comeback z {$staryEmail} na {$novyEmail}.\n\nPotvrdit změnu: {$odkaz}\n\nOdkaz platí 3 dny. Do potvrzení se nadále přihlašujte původním e-mailem. Kontaktní e-mail v HR se nemění.\n\nadmin IS Comeback";
 
-    $chyby = [];
-    foreach ([['typ' => 'původní', 'email' => $staryEmail], ['typ' => 'nový', 'email' => $novyEmail]] as $prijemce) {
-        try {
-            cb_mail_send('hr', $prijemce['email'], 'Potvrzení změny e-mailu v IS Comeback', $body, $altBody);
-        } catch (Throwable $e) {
-            $chyby[] = (string)$prijemce['typ'];
-        }
+    // Název transportu HR označuje existující SMTP konfiguraci, nikoli personální kontakt.
+    try {
+        cb_mail_send('hr', $novyEmail, 'Potvrzení změny e-mailu v IS Comeback', $body, $altBody);
+    } catch (Throwable $e) {
+        throw new RuntimeException('Potvrzení se nepodařilo odeslat na nový e-mail. Změnu zkuste znovu.');
     }
-    if ($chyby !== []) {
-        throw new RuntimeException('Oznámení se nepodařilo odeslat na ' . implode(' a ', $chyby) . ' e-mail.');
+    $notice = 'Byla vyžádána změna přihlašovacího e-mailu IS Comeback z ' . $staryEmail . ' na ' . $novyEmail . '. Do potvrzení odkazu v nové schránce zůstává původní e-mail platný. Kontaktní e-mail v HR se nemění. Pokud jste změnu nežádali, kontaktujte správce IS.';
+    try {
+        cb_mail_send('hr', $staryEmail, 'Žádost o změnu přihlašovacího e-mailu IS Comeback', '<p>' . nl2br(htmlspecialchars($notice, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')) . '</p>', $notice);
+    } catch (Throwable $e) {
+        // Selhání informativní kopie nesmí zneplatnit již odeslaný potvrzovací odkaz.
+        error_log('Změna e-mailu IS: nepodařilo se odeslat informaci na původní adresu.');
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 /*
  * Jednotná obsluha filtrů je provoz/js/filtry.js.
  * Mistni obdobi ovlada tabulku z titulku stranky.
+ * Pobočky mají dvousloupcový seznam: jednotlivé volby podle ID a hromadné volby oblastí.
  * Viditelné datumy a částky formátuje cb_format(); do data-* atributů a URL
  * zůstávají původní technické hodnoty.
  */
@@ -107,7 +108,24 @@ $lastRow = (int)$data['last_row'];
                     <tr class="provoz_objednavky_filter_row">
                         <th><input class="provoz_objednavky_filter filter-input" type="search" name="obj_f[cislo]" value="<?= h($filters['cislo']) ?>"></th>
                         <th><input class="provoz_objednavky_filter provoz_objednavky_filter_datetime filter-input" type="search" name="obj_f[vytvoreno]" value="<?= h($filters['vytvoreno']) ?>"></th>
-                        <th><select class="provoz_objednavky_filter filter-input" name="obj_f[pobocka]" aria-label="Filtrovat pobočku"><option value="">Vše</option><?php foreach ($filterOptions['pobocka'] as $option): ?><option value="<?= h($option) ?>"<?= $option === $filters['pobocka'] ? ' selected' : '' ?>><?= h($option) ?></option><?php endforeach; ?></select></th>
+                        <th>
+                            <details class="provoz_objednavky_branches" data-objednavky-branches>
+                                <summary class="provoz_objednavky_filter" aria-label="Filtrovat pobočku"><?= $filters['pobocka'] === [] ? 'Vše' : (count($filters['pobocka']) === 1 ? h($filterOptions['pobocka'][$filters['pobocka'][0]] ?? '—') : h((string)count($filters['pobocka'])) . (count($filters['pobocka']) < 5 ? ' pobočky' : ' poboček')) ?></summary>
+                                <div class="provoz_objednavky_branches_panel" role="group" aria-label="Filtrovat pobočku">
+                                    <div>
+                                        <?php foreach ($filterOptions['pobocka'] as $id => $option): ?>
+                                            <label><input type="checkbox" name="obj_f[pobocka][]" value="<?= (int)$id ?>" data-branch-region="<?= h($data['branch_regions'][$id] ?? '') ?>" aria-label="<?= h($option) ?>"<?= in_array((int)$id, $filters['pobocka'], true) ? ' checked' : '' ?>><?= h($option) ?></label>
+                                        <?php endforeach; ?>
+                                    </div>
+                                    <div class="provoz_objednavky_branches_groups">
+                                        <button type="button" data-objednavky-branches-group="">Vše</button>
+                                        <button type="button" data-objednavky-branches-group="Praha"<?= in_array('Praha', $data['branch_regions'], true) ? '' : ' disabled' ?>>Praha</button>
+                                        <!-- Západ je uživatelský název pro oblast Plzeň z číselníku poboček. -->
+                                        <button type="button" data-objednavky-branches-group="Plzeň"<?= in_array('Plzeň', $data['branch_regions'], true) ? '' : ' disabled' ?>>západ</button>
+                                    </div>
+                                </div>
+                            </details>
+                        </th>
                         <th><select class="provoz_objednavky_filter filter-input" name="obj_f[stav]" aria-label="Filtrovat stav"><option value="">Vše</option><?php foreach ($filterOptions['stav'] as $option): ?><option value="<?= h($option) ?>"<?= $option === $filters['stav'] ? ' selected' : '' ?>><?= h(cb_provoz_objednavky_stav_label($option)) ?></option><?php endforeach; ?></select></th>
                         <th><select class="provoz_objednavky_filter filter-input" name="obj_f[typ]" aria-label="Filtrovat typ"><option value="">Vše</option><?php foreach ($filterOptions['typ'] as $option): ?><option value="<?= h($option) ?>"<?= $option === $filters['typ'] ? ' selected' : '' ?>><?= h($option) ?></option><?php endforeach; ?></select></th>
                         <th><select class="provoz_objednavky_filter filter-input" name="obj_f[platba]" aria-label="Filtrovat platbu"><option value="">Vše</option><?php foreach ($filterOptions['platba'] as $option): ?><option value="<?= h($option) ?>"<?= $option === $filters['platba'] ? ' selected' : '' ?>><?= h($option) ?></option><?php endforeach; ?></select></th>
