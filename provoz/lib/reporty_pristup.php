@@ -1,10 +1,11 @@
 <?php
-// Určuje rozsah Archivu a Přehledu hodin podle HR profilu nebo jeho testovacího snímku; autor zůstává vlastní.
+// Rozsah reportu a kontrol podle HR; Admin/Top management sdili dynamicky firemni rozsah pobocek.
 declare(strict_types=1);
 
 // MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 require_once __DIR__ . '/../../common/lib/prebrani_prav.php';
+require_once __DIR__ . '/../../common/lib/firemni_pristup.php';
 
 // Načte osobu přes účet; historická ani zrušená pracoviště nerozhodují o dnešním přístupu.
 function cb_reporty_pristup_nacti(mysqli $conn, int $idUser): array
@@ -31,6 +32,8 @@ function cb_reporty_pristup_nacti(mysqli $conn, int $idUser): array
     }
     $personId = (int)$person['id_person'];
     $role = (int)$person['role_id'];
+    // Administratorsky firemni rozsah zahrne novou pobocku bez rucniho prirazeni do HR.
+    $companyIds = in_array($role, [1, 2], true) ? cb_firemni_pristup_firmy($conn, $idUser) : [];
     $stmt = $conn->prepare('SELECT p.id_pob, p.nazev, p.id_firma,
         EXISTS (SELECT 1 FROM hr_pracoviste pr WHERE pr.id_person=? AND pr.id_pob=p.id_pob
             AND pr.platny=1 AND pr.zruseno IS NULL
@@ -49,10 +52,10 @@ function cb_reporty_pristup_nacti(mysqli $conn, int $idUser): array
     while ($branch = $result->fetch_assoc()) {
         $id = (int)$branch['id_pob'];
         if ((int)$branch['main'] === 1) { $mainIds[] = $id; }
-        $allowed = in_array($role, [1, 2, 3], true)
+        $allowed = in_array($role, [1, 2], true) ? in_array((int)$branch['id_firma'], $companyIds, true) : ($role === 3
             ? ((int)$person['pristup_vsechny_pobocky'] === 1 || (int)$branch['assigned'] === 1)
             : ($role === 4 ? (int)$branch['id_firma'] === (int)$person['id_firma']
-                : (in_array($role, [5, 7], true) && (int)$branch['main'] === 1));
+                : (in_array($role, [5, 7], true) && (int)$branch['main'] === 1)));
         if ($allowed) {
             $branches[$id] = ['id' => $id, 'name' => (string)$branch['nazev'], 'main' => (int)$branch['main'] === 1];
         }

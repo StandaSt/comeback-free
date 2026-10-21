@@ -1,5 +1,5 @@
 <?php
-// Polozky kontroly trzeb a presne vypocty v halerich bez desetinne chyby.
+// Polozky a halerove soucty kontroly: trzba, rucni rozdily a rozdily vcetne agregatoru.
 declare(strict_types=1);
 
 // Pevne klice spojuji formular, vypocet a archiv nezavisle na popiscich.
@@ -45,4 +45,31 @@ function cb_kt_pokladna(array $values): ?int
         $sum += $values[$key];
     }
     return isset($values['trzba']) ? $sum - $values['trzba'] : null;
+}
+
+// Souhrny odvozujeme ze skutecnych polozek i u starsiho archivu; DJ Cash se nesmi zdvojit.
+function cb_kt_souhrn(array $rows): array
+{
+    $total = 0;
+    $complete = true;
+    $manualDiff = $allDiff = 0;
+    $checked = 0;
+    foreach (cb_kt_polozky() as $key => [$label, $manual]) {
+        if (in_array($key, ['trzba', 'rozdil'], true)) { continue; }
+        $left = $rows[$key]['left'];
+        $right = $rows[$key]['right'];
+        $rows[$key]['diff'] = $left === null || $right === null ? null : $right - $left;
+        if ($key === 'dj_cash') { continue; }
+        if ($right === null) { $complete = false; } else { $total += $right; }
+        if ($rows[$key]['diff'] !== null) {
+            $allDiff += $rows[$key]['diff'];
+            if ($manual) { $manualDiff += $rows[$key]['diff']; $checked++; }
+        }
+    }
+    $rows['trzba']['right'] = $complete ? $total : null;
+    $rows['trzba']['diff'] = !$complete || $rows['trzba']['left'] === null ? null : $total - $rows['trzba']['left'];
+    // Pokladna ma tri odlisne ukazatele: report, rucni kontrolu a celkovy rozdil.
+    $rows['rozdil']['right'] = $checked > 0 ? $manualDiff : null;
+    $rows['rozdil']['diff'] = $checked > 0 ? $allDiff : null;
+    return $rows;
 }

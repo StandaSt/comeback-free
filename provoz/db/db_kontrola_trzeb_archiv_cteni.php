@@ -1,5 +1,5 @@
 <?php
-// Cteni seznamu a nemenneho detailu ulozenych kontrol trzeb.
+// Cteni archivu kontrol s filtrem platnosti a nemennymi zdrojovymi polozkami.
 declare(strict_types=1);
 
 // Kontrola pritomnosti schematu je docasny provozni stav pred rucnim spustenim SQL.
@@ -11,22 +11,34 @@ function cb_kt_archiv_pripraven(mysqli $db): bool
 }
 
 // Dotaz je omezen povolenou pobockou jeste pred nactenim archivnich dat.
-function cb_kt_archiv_seznam(mysqli $db, int $branch, int $page): array
+function cb_kt_archiv_seznam(mysqli $db, int $branch, int $page, bool $invalid = false): array
 {
-    $stmt = $db->prepare('SELECT COUNT(*) AS n FROM provoz_kontrola_trzeb WHERE id_pob=?');
+    $ready = cb_kt_platnost_pripravena($db);
+    $where = $ready && !$invalid ? ' AND platny=1' : '';
+    $valid = $ready ? 'platny' : '1 AS platny';
+    $stmt = $db->prepare('SELECT COUNT(*) AS n FROM provoz_kontrola_trzeb WHERE id_pob=?' . $where);
     $stmt->bind_param('i', $branch);
     $stmt->execute();
     $count = (int)$stmt->get_result()->fetch_assoc()['n'];
     $stmt->close();
     $page = min(max(1, $page), max(1, (int)ceil($count / 30)));
     $offset = ($page - 1) * 30;
-    $stmt = $db->prepare('SELECT id_kontrola, datum_od, datum_do, ulozil_jmeno, ulozeno
-        FROM provoz_kontrola_trzeb WHERE id_pob=? ORDER BY ulozeno DESC, id_kontrola DESC LIMIT 30 OFFSET ?');
+    $stmt = $db->prepare('SELECT id_kontrola, datum_od, datum_do, ulozil_jmeno, ulozeno, ' . $valid . '
+        FROM provoz_kontrola_trzeb WHERE id_pob=?' . $where . ' ORDER BY ulozeno DESC, id_kontrola DESC LIMIT 30 OFFSET ?');
     $stmt->bind_param('ii', $branch, $offset);
     $stmt->execute();
     $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
     return ['rows' => $rows, 'count' => $count, 'page' => $page];
+}
+
+// Do rucniho pridani sloupcu lze archiv cist; zmenu platnosti nepovolime.
+function cb_kt_platnost_pripravena(mysqli $db): bool
+{
+    static $cache = [];
+    $key = spl_object_id($db);
+    return $cache[$key] ??= (int)$db->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE()
+        AND TABLE_NAME='provoz_kontrola_trzeb' AND COLUMN_NAME IN ('platny','platnost_zmenil','platnost_zmeneno')")->fetch_row()[0] === 3;
 }
 
 // Detail vraci ulozene hodnoty; zdrojove reporty ani objednavky znovu neprepocitava.

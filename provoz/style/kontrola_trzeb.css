@@ -26,6 +26,12 @@
 .kt_table .kt_positive { background: #e3f2df; color: #285a24; }
 .kt_total { font-weight: 700; border-top: 2px solid #72839a; }
 .kt_note { white-space: pre-wrap; overflow-wrap: anywhere; }
+.kt_table [data-kt-row] > td:last-child { width: 350px; max-width: 362px; white-space: normal; }
+.kt_note { display: block; width: 350px; font-weight: normal; }
+.kt_amount_wrap { display: flex; gap: 3px; align-items: center; }
+.kt_page .kt_copy { padding: 0 3px; line-height: 22px; }
+.kt_invalid { opacity: .65; }
+.kt_inline { display: inline; }
 .kt_warning { background: #fff0d6; color: #743d00; padding: 6px 8px; border-radius: 4px; }
 .kt_success { background: #e3f2df; color: #285a24; padding: 6px 8px; border-radius: 4px; }
 .kt_page p { margin: 6px 0; }

@@ -1,5 +1,5 @@
 <?php
-// Souhrn online objednávek; tooltip používá společné formátování uživatelských částek.
+// Souhrn online objednavek pro vsechny aktivni provozovny, vcetne novych bez Restia napojeni.
 declare(strict_types=1);
 
 // Nacte souhrn objednavek a vykresli stavove stitky, graf a detail po pobockach.
@@ -48,11 +48,11 @@ declare(strict_types=1);
         $conn = db();
         $conn->set_charset('utf8mb4');
 
+        // Chybejici API napojeni neskryva novou pobocku v prehledu; do importu ma nuly.
         $branchSql = '
             SELECT p.id_pob, p.nazev
             FROM pobocka p
-            WHERE p.restia_activePosId IS NOT NULL
-              AND p.restia_activePosId <> ""
+            WHERE p.aktivni=1 AND p.kod<>\'Vyroba\'
             ORDER BY p.id_pob ASC
         ';
         $branchResult = $conn->query($branchSql);

@@ -110,6 +110,10 @@ cb_prebrani_prav_handle(db());
 require_once __DIR__ . '/common/lib/profil.php';
 cb_profil_vyrid_post();
 
+// Sdělení mají vlastní tabulky a společný autorizovaný vstup nezávislý na modulu.
+require_once __DIR__.'/common/lib/admin_sdeleni.php';
+cb_sdeleni_vstup();
+
 $cbAuthOk = !empty($_SESSION['cb_auth_ok']);
 $cb2faPending = !empty($_SESSION['cb_2fa_token']);
 

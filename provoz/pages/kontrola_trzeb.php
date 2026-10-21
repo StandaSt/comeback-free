@@ -31,7 +31,7 @@ try {
         }
         $ktRows[$key] = ['left' => $ktSnapshot['left'][$key], 'right' => $ktRight[$key] ?? null, 'note' => ''];
     }
-    $ktRows['rozdil']['right'] = cb_kt_pokladna($ktRight);
+    $ktRows = cb_kt_souhrn($ktRows);
     $ktReady = cb_kt_archiv_pripraven(db());
 } catch (CbUserVisibleException $e) {
     echo '<p class="txt_cervena">' . h($e->getMessage()) . '</p>';

@@ -6,6 +6,7 @@
  * Menu a jeho oprávnění dodává společná PHP příprava HTML šablon; konfigurace neobsahuje druhý seznam položek.
  * Směny při plném otevření použijí hotový serverový obsah; ostatní moduly si zachovávají úvodní obnovu dat.
  * Vlastní profil používá společnou delegovanou obsluhu formulářů a zobrazení hesel.
+ * Sdělení správce mají společnou kartu a obsluhu náhledu příjemců i archivu.
  */
 declare(strict_types=1);
 
@@ -29,6 +30,7 @@ window.CB_AKTIVITA = <?= json_encode($cbNavUserId>0 ? ['url'=>cb_root_url('index
 <?php // Jednotná ochrana zápisových požadavků. ?>
 <script src="<?= h(cb_public_url('js/profil.js') . '?v=' . (string)filemtime(__DIR__ . '/../js/profil.js')) ?>"></script>
 <script src="<?= h(cb_public_url('js/ochrana_crf.js') . '?v=' . (is_file(__DIR__ . '/../js/ochrana_crf.js') ? (string)filemtime(__DIR__ . '/../js/ochrana_crf.js') : '1')) ?>"></script>
+<script src="<?= h(cb_public_url('js/admin_sdeleni.js').'?v='.(string)filemtime(__DIR__.'/../js/admin_sdeleni.js')) ?>" defer></script>
 <?php // Společné dávkování činnosti; moduly dodávají významové události ze svého ovládání. ?>
 <script src="<?= h(cb_public_url('js/user_aktivita.js').'?v='.(string)filemtime(__DIR__.'/../js/user_aktivita.js')) ?>"></script>
 <?php // Jednotné zpracování chybových odpovědí v prohlížeči. ?>

@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-/* Účel: Jediný HTML renderer menu a uživatelského zápatí; přijímá výslovný kontext modulu i při předvykreslení skrytých šablon. */
+/* Účel: Jediný renderer menu a uživatelského zápatí; přijímá výslovný kontext modulu. */
 
 if (!function_exists('cb_blok_menu_h')) {
     function cb_blok_menu_h(string $value): string

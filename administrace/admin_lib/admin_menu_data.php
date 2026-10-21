@@ -14,6 +14,7 @@ function cb_administrace_menu_data(): array
         ['page'=>'spousteni_scriptu','label'=>'Spouštění scriptů'],
         ['page'=>'export_db','label'=>'Export DB','pravo'=>109],
         ['page'=>'log_chyby','label'=>'Přehled chyb','pravo'=>106],
+        ['page'=>'sdeleni','label'=>'Info od admina','pravo'=>110],
     ];
     $items=array_values(array_filter($items,static fn(array $item):bool=>!isset($item['pravo']) || cb_pravo_ma((int)$item['pravo'])));
     return ['title'=>'Administrace','aria_label'=>'Menu administrace','default_page'=>'prava_roli','items'=>$items];

@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-/* Účel: Řídí přístup a načítání modulů a zaznamená požadavek na otevření s dostupným kontextem navigace. */
+/* Účel: Řídí přístup a načítání modulů a společného osobního archivu sdělení; zaznamenává otevření stránky. */
 
 function cb_moduly_povolene(): array
 {
@@ -88,6 +88,15 @@ function cb_modul_nacti(string $module): void
         }
     }
 
+    // Osobní archiv je dostupný v každém povoleném modulu stejnou cestou.
+    if (($_GET['page']??'')==='sdeleni_archiv' || ($_GET['hd']??'')==='sdeleni_archiv') {
+        if (!defined('CB_PP_ONLY') || CB_PP_ONLY!==true) {
+            require_once __DIR__.'/menu_modulu.php';
+            cb_menu_modulu_vykreslit($module,'sdeleni_archiv');
+        }
+        require dirname(__DIR__).'/pages/admin_sdeleni_archiv.php';
+        return;
+    }
     require $files[$module];
 }
 

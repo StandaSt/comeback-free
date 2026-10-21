@@ -1,5 +1,5 @@
 <?php
-// Overuje a zpracovava jedine ulozeni kontroly trzeb pred HTML vystupem.
+// Overuje uplnost kontroly a pred HTML smeruje ulozeni nebo samostatnou zmenu platnosti.
 declare(strict_types=1);
 require_once __DIR__ . '/kontrola_trzeb_formular.php';
 require_once __DIR__ . '/../db/db_kontrola_trzeb_archiv_zapis.php';
@@ -20,6 +20,7 @@ function cb_kt_radky(array $snapshot, array $post): array
             if (!is_scalar($raw)) { throw new CbUserVisibleException('Neplatná částka: ' . $label); }
             try { $right[$key] = cb_kt_halere((string)$raw); }
             catch (CbUserVisibleException $e) { throw new CbUserVisibleException($label . ': ' . $e->getMessage()); }
+            if ($right[$key] === null) { throw new CbUserVisibleException('Vyplňte spočítanou částku: ' . $label . '. Pro shodnou částku použijte šipku z Odevzdané.'); }
         }
         $note = $post['poznamka'][$key] ?? '';
         if (!is_scalar($note) || mb_strlen((string)$note, 'UTF-8') > 4000) {
@@ -27,13 +28,16 @@ function cb_kt_radky(array $snapshot, array $post): array
         }
         $rows[$key] = ['left' => $snapshot['left'][$key], 'right' => $right[$key] ?? null, 'note' => trim((string)$note)];
     }
-    $rows['rozdil']['right'] = cb_kt_pokladna($right);
-    return $rows;
+    return cb_kt_souhrn($rows);
 }
 
 // POST skonci presmerovanim; chyba zachova castky i puvodni serverove podklady.
 function cb_kt_handle_post(): never
 {
+    if (($_POST['cb_action'] ?? '') === 'kt_platnost') {
+        require_once __DIR__ . '/kontrola_trzeb_platnost.php';
+        cb_kt_platnost_post();
+    }
     $token = is_string($_POST['kt_token'] ?? null) ? $_POST['kt_token'] : '';
     $form = $_SESSION['kt_forms'][$token] ?? null;
     $snapshot = $form['snapshot'] ?? null;

@@ -1,5 +1,5 @@
 <?php
-// Automaticke filtry pobocky a tydne nebo validovaneho obdobi pro kontrolu a archiv.
+// Automaticke filtry pobocky a obdobi; archiv umoznuje zahrnout take neplatne kontroly.
 declare(strict_types=1);
 ?>
 <form class="kt_filters" method="get" action="<?= h(cb_root_url('index.php')) ?>" data-kt-filters>
@@ -13,4 +13,5 @@ declare(strict_types=1);
   <button type="submit" name="kt_posun" value="-1" data-kt-week title="Předchozí týden">‹</button>
   <button type="submit" name="kt_posun" value="1" data-kt-week title="Další týden">›</button>
   <?php endif; ?>
+  <?php if ($ktArchive): ?><label><input type="checkbox" name="kt_neplatne" value="1"<?= !empty($ktInvalid) ? ' checked' : '' ?>>Včetně neplatných</label><?php endif; ?>
 </form>
