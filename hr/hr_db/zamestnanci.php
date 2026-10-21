@@ -6,6 +6,7 @@ declare(strict_types=1);
  * Seznam, detail i volby filtru respektuji jednotny osobni rozsah HR podle role.
  * Tabulkovy seznam shrnuje pracovni vztahy do jednoho radku za osobu.
  * Prehledova casova osa spojuje HR historie podle zapisu; ucinnost zachovava v detailech.
+ * Kontrola kompletnosti respektuje nepovinnou MAIN u Personal managera.
  */
 
 require_once __DIR__ . '/hr_zamestnanci_pristup.php';
@@ -548,7 +549,9 @@ function hr_fetch_employee_missing_required_data(mysqli $db, int $idPerson): arr
     if ((int)($counts['pobocek'] ?? 0) < 1) {
         $missing[] = 'pobočka';
     }
-    if ((int)($counts['hlavnich'] ?? 0) !== 1) {
+    // Vyjimka dovoluje zadnou MAIN; nikdy vsak neomlouva vice soubeznych hlavnich pobocek.
+    if ((int)($counts['hlavnich'] ?? 0) !== 1
+        && !((int)($counts['hlavnich'] ?? 0) === 0 && cb_hr_main_nepovinne($db, $idPerson))) {
         $missing[] = 'jedna hlavní pobočka';
     }
     $stmt = $db->prepare("SELECT (SELECT COUNT(*) FROM hr_osobni_udaje WHERE id_person = ? AND platny = 1 AND pohlavi IS NOT NULL AND TRIM(pohlavi) <> '') AS pohlavi, (SELECT COUNT(*) FROM hr_email WHERE id_person = ? AND platny = 1 AND hlavni = 1 AND TRIM(email) <> '') AS email");

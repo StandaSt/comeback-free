@@ -2,6 +2,7 @@
 // Zpracuje pouze potvrzenou zmenu platnosti kontroly s pravy 218/219 a pobockovym rozsahem.
 declare(strict_types=1);
 require_once __DIR__ . '/../db/db_kontrola_trzeb_platnost.php';
+require_once __DIR__ . '/kontrola_trzeb_archiv_filtry.php';
 
 // POST i pri primem volani overuje prava, CRF, cilovou pobocku a povoleny stav.
 function cb_kt_platnost_post(): never
@@ -14,11 +15,12 @@ function cb_kt_platnost_post(): never
         if (!cb_crf_platny()) { throw new CbUserVisibleException('Platnost stránky vypršela. Obnovte ji a akci opakujte.'); }
         $branches = cb_kt_pobocky(db());
         $filters = cb_kt_filtry($_POST, $branches);
+        $archive = cb_kt_archiv_filtry($_POST, $branches);
         $valid = (string)($_POST['kt_platny'] ?? '');
         $id = filter_var($_POST['kt_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         if ($id === false || !in_array($valid, ['0','1'], true)) { throw new CbUserVisibleException('Neplatná změna platnosti.'); }
         cb_kt_platnost_uloz(db(), $id, $filters['branch'], (int)$valid, (int)$_SESSION['cb_user']['id_user']);
-        $url = cb_kt_url($filters, 'archiv_kontrol_trzeb', ['kt_id'=>$id, 'kt_neplatne'=>1]);
+        $url = cb_kt_archiv_url($filters, $archive, ['kt_id'=>$id, 'kt_neplatne'=>1]);
         $_SESSION['kt_flash'] = ['success'=>true, 'message'=>$valid === '1' ? 'Kontrola je opět platná.' : 'Kontrola byla označena jako neplatná.'];
     } catch (Throwable $e) {
         $_SESSION['kt_flash'] = ['success'=>false, 'message'=>$e instanceof CbUserVisibleException ? $e->getMessage()

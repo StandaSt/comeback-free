@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-// Ucel: Overi pravo a samostatna data ucinnosti povolenych pobocek a MAIN, pote ulozi rozdily.
+// Ucel: Overi pravo a samostatna data ucinnosti pobocek a MAIN; nula znamena vedomou volbu bez MAIN.
 
 // Odeslany formular ulozi atomicky; pouhe zaskrtnuti nikdy nic nezapisuje.
 function hr_post_zamestnanec_pobocky_zmenit(mysqli $db, int $idUser): void
@@ -13,7 +13,7 @@ function hr_post_zamestnanec_pobocky_zmenit(mysqli $db, int $idUser): void
         }
         $pobocky = hr_employee_normalize_branch_ids($_POST['id_pob'] ?? []);
         $hlavniText = trim((string)($_POST['id_pob_hlavni'] ?? ''));
-        if ($idPerson <= 0 || preg_match('/^\d+$/', $hlavniText) !== 1) {
+        if ($idPerson <= 0 || preg_match('/^(0|[1-9]\d*)$/', $hlavniText) !== 1) {
             throw new CbUserVisibleException('Vyberte zaměstnance, pobočky a hlavní pobočku.');
         }
         $platiOd = hr_pracovni_pomer_datum_z_postu((string)($_POST['platnost_od'] ?? ''), 'Platí od');

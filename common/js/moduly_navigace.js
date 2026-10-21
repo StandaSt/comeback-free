@@ -5,6 +5,7 @@
  * Chybové odpovědi načítání modulů čte společná knihovna, aby se neztratil konkrétní důvod.
  * Události navigace umožňují historii rozlišit požadavek, dokončené zobrazení i klik bez přechodu.
  * Kompletní menu připravuje PHP podle práv; přepnutí používá hotové šablony a obsah ani Restia menu nepřepisují.
+ * Zrusitelna udalost pred navigaci chrani rozpracovane formulare pred opustenim stranky.
  */
 (function(){
   'use strict';
@@ -410,13 +411,17 @@
       document.dispatchEvent(new CustomEvent('cb:menu-no-effect',{detail:{module:moduleName}}));
       return;
     }
+    // Rozpracovany formular muze zastavit i chybnou navigaci, ktera by jinak prepsala obsah chybou.
+    // Stranka planovace zde take uvolni svuj zamek pred nahrazenim obsahu.
+    if (!document.dispatchEvent(new CustomEvent('cb:main-before-load', {
+      cancelable: true,
+      detail: { module: moduleName, params: params instanceof URLSearchParams ? params.toString() : '' }
+    }))) return false;
     // Zastaralá nebo nepovolená adresa nesmí přepnout kontext a ponechat načítání zablokované.
     if (moduleName!==activeMainModule && !document.querySelector('template[data-cb-module-menu="'+moduleName+'"]')) {
       showModuleError(new Error('Tento modul není pro aktuální profil dostupný. Obnovte stránku.'));
       return;
     }
-    // Stránka plánovače uvolní svůj zámek před nahrazením obsahu navigací.
-    document.dispatchEvent(new CustomEvent('cb:main-before-load', { detail: { module: moduleName, params: params instanceof URLSearchParams ? params.toString() : '' } }));
     var sourceMainModule = activeMainModule;
     var moduleChanged = moduleName !== activeMainModule;
     moduleLoadRunning = true;
@@ -552,14 +557,13 @@
     if (moduleName === activeMainModule) {
       return;
     }
-    setClickedMenuActive(link);
     var params = null;
     try {
       params = new URL(link.href, window.location.href).searchParams;
     } catch (e) {
       params = null;
     }
-    loadModule(moduleName, true, params);
+    if (loadModule(moduleName, true, params) !== false) setClickedMenuActive(link);
   });
 
   root.addEventListener('click', function(event){
@@ -585,8 +589,7 @@
     if (pageBusyHandles.length > 0) {
       return;
     }
-    setClickedMenuActive(link);
-    loadModule(moduleName, true, url.searchParams);
+    if (loadModule(moduleName, true, url.searchParams) !== false) setClickedMenuActive(link);
   });
 
   root.addEventListener('click', function(event){

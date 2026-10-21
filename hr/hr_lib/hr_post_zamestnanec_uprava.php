@@ -8,6 +8,7 @@ require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
  * Ucel souboru: Zpracuje ulozeni zakladnich udaju a pracovniho pomeru zamestnance.
  * Soubor nema HTML vystup a po zpracovani vraci uzivatele zpet na kartu zamestnance.
  * Pred kazdym ulozenim kontroluje cil podle jednotneho osobniho rozsahu HR.
+ * Ulozeni ponechava kartu v editaci; odchod do jine zalozky ji ukonci.
  */
 require_once __DIR__ . '/../hr_db/hr_zamestnanci_pristup.php';
 
@@ -25,7 +26,7 @@ function hr_post_zamestnanec_uprava(mysqli $db, int $zadalUser): void
         hr_update_employee_basic_data($db, $idPerson, $_POST, $zadalUser);
         $message = 'Karta zaměstnance byla uložena.';
         cb_form_finish(
-            cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson) . '&sekce=osobni_udaje'),
+            cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson) . '&sekce=osobni_udaje&upravit=1'),
             true,
             $message
         );
@@ -160,10 +161,10 @@ function hr_post_pracovni_pomer_uprava(mysqli $db): void
         // Pracovni vztah, uvazek a mzda patri mezi povinne casti kompletni karty.
         hr_update_employee_completeness($db, $idPerson);
         $db->commit();
-        cb_form_finish(cb_root_url('index.php?m=hr&page=zamestnanec&id='.rawurlencode((string)$idPerson).'&sekce=pracovni_pomer'), true, 'Pracovní poměr byl uložen.');
+        cb_form_finish(hr_pracovni_pomer_url($idPerson), true, 'Pracovní poměr byl uložen.');
     } catch (Throwable $e) {
         try { $db->rollback(); } catch (Throwable $ignored) {}
-        cb_form_finish(cb_root_url('index.php?m=hr&page=zamestnanec&id='.rawurlencode((string)$idPerson).'&sekce=pracovni_pomer'), false, cb_hr_chyba_text($e, 'Uložení pracovního poměru', ['table' => 'hr_pracovni_vztah']), $_POST);
+        cb_form_finish(hr_pracovni_pomer_url($idPerson), false, cb_hr_chyba_text($e, 'Uložení pracovního poměru', ['table' => 'hr_pracovni_vztah']), $_POST);
     }
 }
 
@@ -415,7 +416,8 @@ function hr_pracovni_pomer_datum_z_postu(string $value, string $label): string
     return $date->format('Y-m-d');
 }
 
+// Spolecny navrat po ulozeni zachovava editaci vsech pracovnich bloku.
 function hr_pracovni_pomer_url(int $idPerson): string
 {
-    return cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson) . '&sekce=pracovni_pomer');
+    return cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson) . '&sekce=pracovni_pomer&upravit=1');
 }

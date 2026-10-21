@@ -1,4 +1,4 @@
-// Automaticke filtry, castky s menou, presne souhrny a rucne potvrzene ulozeni kontroly.
+// Filtry a vice pobocek archivu, castky s menou, presne souhrny a rucne potvrzene ulozeni.
 (() => {
   'use strict';
   // Inicializace funguje i po dynamickem vlozeni stranky do shellu IS.
@@ -16,6 +16,12 @@
       const mode = filters.querySelector('[name="kt_rezim"]');
       const from = filters.querySelector('[name="kt_od"]');
       const to = filters.querySelector('[name="kt_do"]');
+      const branchSelect = filters.querySelector('.kt_branch_select');
+      let branchesChanged = false;
+      // Vice checkboxu lze zmenit najednou; vyber se pouzije zavrenim nabidky.
+      branchSelect?.addEventListener('toggle', () => {
+        if (!branchSelect.open && branchesChanged) { branchesChanged = false; filters.requestSubmit(); }
+      });
       // Skryta pole nezucastnujeme validace; kalendare neomezuji poradi zmen mezi.
       const update = () => {
         if (!mode) return;
@@ -28,6 +34,17 @@
       };
       // requestSubmit zachova validaci i existujici ochranu neulozenych kontrolnich castek.
       filters.addEventListener('change', event => {
+        if (branchSelect?.contains(event.target)) {
+          const boxes = Array.from(branchSelect.querySelectorAll('[name="kt_pobocky[]"]'));
+          const all = branchSelect.querySelector('[data-kt-all]');
+          if (event.target === all) boxes.forEach(box => { box.checked = all.checked; });
+          const selected = boxes.filter(box => box.checked).length;
+          all.checked = selected === boxes.length;
+          all.indeterminate = selected > 0 && selected < boxes.length;
+          branchSelect.querySelector('summary').textContent = `Pobočky: ${all.checked ? 'všechny' : selected}`;
+          branchesChanged = true;
+          return;
+        }
         // Upravena mez ma prednost; druhou dorovname, aby uzivatel nemusel resit poradi.
         if (mode?.value === 'obdobi' && from.value !== '' && to.value !== '' && from.value > to.value) {
           if (event.target === from) to.value = from.value;
@@ -148,6 +165,30 @@
     });
   }
   init();
+  // Ovladac poctu radku patri k filtrovacimu formulari i mimo jeho HTML obal.
+  document.addEventListener('change', event => {
+    if (event.target.matches('select[name="kt_per"]') && event.target.form) event.target.form.requestSubmit();
+  });
+  document.addEventListener('click', event => {
+    document.querySelectorAll('.kt_branch_select[open]').forEach(select => {
+      if (!select.contains(event.target)) select.open = false;
+    });
+  });
+  // Filtry meni jen pracovni plochu; neni treba znovu spoustet shell ani aktualizaci Restie.
+  // Poslouchame az po formulari, aby nejdrive rozhodla ochrana neulozenych castek.
+  document.addEventListener('submit', event => {
+    const form = event.target;
+    if (event.defaultPrevented || !(form instanceof HTMLFormElement) || !form.matches('[data-kt-filters]') || typeof window.CB_LOAD_MODULE !== 'function') return;
+    event.preventDefault();
+    const params = new URLSearchParams();
+    let branchIndex = 0;
+    // Navigace prenasi parametry pres set(); indexy zabrani prepsani opakovanych checkboxu.
+    new FormData(form).forEach((value, key) => {
+      params.append(key === 'kt_pobocky[]' ? `kt_pobocky[${branchIndex++}]` : key, value);
+    });
+    if (event.submitter?.name) params.set(event.submitter.name, event.submitter.value);
+    window.CB_LOAD_MODULE('provoz', false, params);
+  });
   document.addEventListener('cb:filters-swapped', init);
   document.addEventListener('cb:main-swapped', init);
 })();

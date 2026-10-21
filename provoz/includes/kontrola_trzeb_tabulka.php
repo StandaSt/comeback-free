@@ -5,7 +5,6 @@ declare(strict_types=1);
 <div class="kt_table_wrap"><table class="kt_table">
   <?php if (!$ktArchive): ?>
   <caption class="kt_caption">
-    <div class="kt_heading"><strong><?= h($ktBranches[$ktFilters['branch']]['name']) ?> · <?= h(cb_format('d', $ktFilters['from'])) ?> – <?= h(cb_format('d', $ktFilters['to'])) ?></strong><a href="<?= h(cb_kt_url($ktFilters, 'archiv_kontrol_trzeb')) ?>">Archiv kontrol tržeb</a></div>
     <?php require __DIR__ . '/kontrola_trzeb_podklady.php'; ?>
   </caption>
   <?php endif; ?>

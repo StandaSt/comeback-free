@@ -1,4 +1,4 @@
-// Ovladani HR formularu a ciselniku; davkove ulozeni zachovava rozepsany druhy blok a meri sirky podle obsahu.
+// Ovladani HR formularu a ciselniku; karta uklada bloky, zvyraznuje trvale viditelne ulozeni a chrani neulozene zmeny.
 (() => {
     'use strict';
 
@@ -364,9 +364,11 @@
             const sync = () => {
                 const previous = main.value;
                 const selected = [...list.querySelectorAll('input:checked')];
+                const optional = main.dataset.hrMainOptional === '1';
                 main.replaceChildren(new Option('Vyberte', ''));
+                if (optional) main.add(new Option('Bez hlavní pobočky', '0'));
                 selected.forEach(input => main.add(new Option(input.dataset.hrBranchName, input.value)));
-                main.value = selected.some(input => input.value === previous) ? previous : '';
+                main.value = (optional && previous === '0') || selected.some(input => input.value === previous) ? previous : '';
             };
             list.addEventListener('change', sync);
             sync();
@@ -702,7 +704,229 @@
         });
     };
 
-    window.CB_HR_INIT = initHr;
-    initHr(document);
+    // Vychozi hodnoty vznikaji az po normalizaci telefonu, dat a zavislych poli.
+    const employeeForms = new WeakMap();
+    const employeeSaveDisabled = new WeakMap();
+    let employeeSaving = false;
+
+    // Identitu formulare urcuje stabilni ID, nikoli poradi jeho bloku na strance.
+    const employeeCard = () => document.querySelector('.pp[data-module="hr"][data-page="zamestnanec"]');
+    const editableForms = (card) => [...(card?.querySelectorAll('form[data-hr-employee-form][method="post"]') || [])];
+
+    // Porovnani zahrnuje i externi pole osobniho cisla a soubory, ale nikoli technicke hidden vstupy.
+    const employeeValues = (form) => JSON.stringify([...form.elements]
+        .filter(field => field.name && !['hidden', 'submit', 'button', 'fieldset'].includes(field.type))
+        .map(field => [field.name, field.type,
+            field.type === 'file' ? [...field.files].map(file => [file.name, file.size, file.lastModified]) :
+            ['checkbox', 'radio'].includes(field.type) ? field.checked :
+            field.multiple ? [...field.selectedOptions].map(option => option.value) : field.value]));
+
+    // Tlacitko patri formulari pres atribut form, proto funguje i v zahlavi mimo samotny formular.
+    const employeeChanged = (form) => employeeForms.has(form) && employeeValues(form) !== employeeForms.get(form);
+    const syncEmployeeSave = (form) => {
+        const changed = employeeChanged(form);
+        // Tlacitko stale zabira stejne misto; puvodni serverovy zakaz ulozeni zustava zachovan.
+        [...form.elements].filter(field => field.type === 'submit').forEach(button => {
+            if (!employeeSaveDisabled.has(button)) employeeSaveDisabled.set(button, button.disabled);
+            button.classList.toggle('hr_employee_save_idle', !changed);
+            button.disabled = employeeSaveDisabled.get(button) || !changed || form.hasAttribute('aria-busy');
+        });
+    };
+    const initEmployeeForms = (scope) => {
+        editableForms(scope).forEach(form => {
+            if (!employeeForms.has(form)) employeeForms.set(form, employeeValues(form));
+            syncEmployeeSave(form);
+            const card = form.closest('.pp');
+            if (card.dataset.hrEmployeeSubmitBound !== '1') {
+                card.dataset.hrEmployeeSubmitBound = '1';
+                card.addEventListener('submit', submitEmployeeForm);
+            }
+        });
+    };
+
+    // Jedina zprava u karty nahradi starsi vysledek, formular pri chybe zustava beze zmen.
+    const employeeNotice = (card, message, success) => {
+        card.querySelectorAll(':scope > .hr_notice').forEach(notice => notice.remove());
+        const notice = document.createElement('div');
+        notice.className = `hr_notice ${success ? 'hr_success' : 'hr_error'}`;
+        notice.setAttribute('role', 'status');
+        notice.textContent = message;
+        card.querySelector('.pp_header').after(notice);
+    };
+
+    // Obnovi ulozeny blok a zavisle casti; ostatni rozepsane formulare zustavaji stejnymi DOM uzly.
+    const refreshEmployeeBlock = (card, nextCard, form) => {
+        const key = form.dataset.hrEmployeeForm;
+        const keys = key === 'relation' ? ['relation', 'interruption', 'termination'] :
+            key === 'function' ? ['function', 'branches'] : [key];
+        keys.forEach(blockKey => {
+            const selector = `[data-hr-employee-block="${blockKey}"]`;
+            const current = card.querySelector(selector);
+            const next = nextCard.querySelector(selector);
+            if (!current) return;
+            if (!next) {
+                if (blockKey !== 'termination') throw new Error('Obnovená karta nemá požadovaný blok.');
+                current.remove();
+                return;
+            }
+            editableForms(current).filter(other => other !== form && employeeChanged(other)).forEach(other => {
+                const replacement = next.querySelector(`#${other.id}`);
+                if (!replacement) throw new Error('Rozpracovaný formulář nelze bezpečně zachovat.');
+                // Novy pracovni vztah musi prevzit i rozepsane preruseni; hodnoty uzivatele nemenime.
+                replacement.querySelectorAll('input[type="hidden"]').forEach(hidden => {
+                    const field = other.elements.namedItem(hidden.name);
+                    if (field instanceof HTMLInputElement) field.value = hidden.value;
+                });
+                // Zmena funkce upravi dostupnost volby bez MAIN i v rozpracovanych pobockach.
+                const main = other.querySelector('[data-hr-selected-main]');
+                const nextMain = replacement.querySelector('[data-hr-selected-main]');
+                if (main && nextMain) main.dataset.hrMainOptional = nextMain.dataset.hrMainOptional;
+                replacement.replaceWith(other);
+                // Externi tlacitko je soucasti zachovaneho formulare a nesmi ztratit stav disabled.
+                current.querySelectorAll(`[form="${other.id}"]`).forEach(control => {
+                    const nextControl = next.querySelector(`[form="${other.id}"]`);
+                    if (nextControl) nextControl.replaceWith(control);
+                });
+            });
+            current.replaceWith(next);
+        });
+        // Souhrn a historie odrazeji ulozenou skutecnost, nikoli hodnoty z jinych rozepsanych bloku.
+        const overview = card.querySelector('.hr_employee_overview');
+        const nextOverview = nextCard.querySelector('.hr_employee_overview');
+        if (overview && nextOverview) overview.replaceWith(nextOverview);
+        const history = card.querySelector('[data-hr-employee-history]')?.closest('section');
+        const nextHistory = nextCard.querySelector('[data-hr-employee-history]')?.closest('section');
+        if (history && nextHistory) history.replaceWith(nextHistory);
+        initHr(card);
+        // Jiz navazane checkboxy pouziji aktualni dostupnost MAIN a nezdvoji handlery.
+        card.querySelectorAll('[data-hr-branch-list]').forEach(list => list.dispatchEvent(new Event('change', { bubbles: true })));
+        initEmployeeForms(card);
+    };
+
+    // Karta zachyti bublajici submit az po puvodnich validacich formulare, ale pred shell handlerem.
+    const submitEmployeeForm = async event => {
+        const form = event.target;
+        const card = employeeCard();
+        if (!(form instanceof HTMLFormElement) || !card?.contains(form) || !employeeForms.has(form)) return;
+        if (event.defaultPrevented) { event.stopPropagation(); return; }
+        event.preventDefault();
+        event.stopPropagation();
+        if (employeeSaving || !employeeChanged(form) || !form.reportValidity()) return;
+        const body = new FormData(form);
+        const controls = [...form.elements].filter(control => 'disabled' in control);
+        const disabled = controls.map(control => control.disabled);
+        const scrollTop = card.scrollTop;
+        let stored = false;
+        employeeSaving = true;
+        controls.forEach(control => { control.disabled = true; });
+        form.setAttribute('aria-busy', 'true');
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST', credentials: 'same-origin',
+                headers: { 'X-Comeback-Form': '1', 'Accept': 'application/json' }, body
+            });
+            const result = await response.json();
+            if (!response.ok || typeof result.redirect !== 'string') {
+                throw new Error(window.CB_CHYBY.responseMessage(response, result, 'Formulář se nepodařilo odeslat.'));
+            }
+            stored = result.success === true;
+            if (stored) employeeForms.set(form, employeeValues(form));
+            const url = new URL(result.redirect, window.location.href);
+            const id = form.elements.namedItem('id_person').value;
+            if (url.origin !== location.origin || url.searchParams.get('page') !== 'zamestnanec' || url.searchParams.get('id') !== id) {
+                throw new Error('Server nevrátil očekávanou kartu zaměstnance.');
+            }
+            url.searchParams.set('upravit', '1');
+            // GET spotrebuje beznou flash zpravu i chybny vstup v session; chyba neprepise zadane hodnoty.
+            const refresh = await fetch(url, { credentials: 'same-origin', headers: { 'X-Comeback-PP-Only': '1' } });
+            const html = await window.CB_CHYBY.readHtml(refresh, 'Obnovení karty zaměstnance selhalo.');
+            const nextCard = new DOMParser().parseFromString(html, 'text/html').querySelector('.pp[data-page="zamestnanec"]');
+            if (!nextCard) throw new Error('Obnovená stránka nemá platnou kartu zaměstnance.');
+            if (stored) refreshEmployeeBlock(card, nextCard, form);
+            employeeNotice(card, result.message, stored);
+        } catch (error) {
+            // Po uspesnem POST a vypadku obnovy nesmime nabidnout nevedome opakovani uz provedeneho zapisu.
+            employeeNotice(card, (stored ? 'Změny byly uloženy, ale obnovení karty selhalo. ' : '') +
+                window.CB_CHYBY.errorMessage(error, 'Uložení změn selhalo.'), false);
+        } finally {
+            controls.forEach((control, index) => { control.disabled = disabled[index]; });
+            form.removeAttribute('aria-busy');
+            employeeSaving = false;
+            if (form.isConnected) syncEmployeeSave(form);
+            card.scrollTop = scrollTop;
+        }
+    };
+
+    // Navrat na puvodni hodnotu opet ztlumi ulozeni; platnost se kontroluje az pri odeslani.
+    ['input', 'change'].forEach(type => document.addEventListener(type, event => {
+        const form = event.target.form;
+        if (form && employeeForms.has(form)) syncEmployeeSave(form);
+    }));
+
+    let leaveDialog = null;
+    let approvedEmployeeNavigation = false;
+    let approvedEmployeeUnload = false;
+    const hasEmployeeChanges = () => editableForms(employeeCard()).some(employeeChanged);
+
+    // Vlastni neblokujici dialog ma jednoznacne volby; opakovane kliknuti neotevre dalsi potvrzeni.
+    const confirmEmployeeLeave = (onLeave) => {
+        if (leaveDialog || employeeSaving) return;
+        const card = employeeCard();
+        const dialog = document.createElement('dialog');
+        dialog.className = 'hr_employee_leave_dialog';
+        dialog.setAttribute('aria-labelledby', 'hr-employee-leave-title');
+        dialog.innerHTML = '<h2 id="hr-employee-leave-title">Neuložené změny</h2>' +
+            '<p>Máte neuložené změny. Opravdu chcete odejít a zahodit je?</p>' +
+            '<form method="dialog"><button class="hr_secondary_button" value="stay" autofocus>Zůstat a pokračovat v úpravách</button>' +
+            '<button class="hr_danger_button hr_secondary_button" value="leave">Odejít a zahodit změny</button></form>';
+        dialog.addEventListener('close', () => {
+            const leave = dialog.returnValue === 'leave';
+            dialog.remove();
+            leaveDialog = null;
+            if (leave && employeeCard() === card) onLeave();
+        }, { once: true });
+        leaveDialog = dialog;
+        card.append(dialog);
+        dialog.showModal();
+    };
+
+    // Zrusenou navigaci shell zopakuje az po vyslovne volbe zahodit zmeny.
+    document.addEventListener('cb:main-before-load', event => {
+        if (approvedEmployeeNavigation) { approvedEmployeeNavigation = false; return; }
+        if (!employeeSaving && !hasEmployeeChanges()) return;
+        event.preventDefault();
+        confirmEmployeeLeave(() => {
+            approvedEmployeeNavigation = true;
+            window.CB_LOAD_MODULE(event.detail.module, true, new URLSearchParams(event.detail.params));
+            // Odmitnuti navigace jeste pred udalosti nesmi schvalit nejaky pozdejsi odchod.
+            approvedEmployeeNavigation = false;
+        });
+    });
+    document.addEventListener('click', event => {
+        const link = event.target.closest?.('a[href]');
+        if (!employeeCard() || !link || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || link.target === '_blank' || link.hasAttribute('download')) return;
+        const url = new URL(link.href, location.href);
+        // Interni navigaci resi zrusitelna udalost shellu; kotva pouze posune stejnou stranku.
+        if (url.origin === location.origin && url.searchParams.has('m')) return;
+        if (url.href.split('#')[0] === location.href.split('#')[0] && url.hash) return;
+        if (!employeeSaving && !hasEmployeeChanges()) return;
+        event.preventDefault();
+        event.stopPropagation();
+        confirmEmployeeLeave(() => {
+            approvedEmployeeUnload = true;
+            window.location.assign(url.href);
+        });
+    }, true);
+    window.addEventListener('beforeunload', event => {
+        if (approvedEmployeeUnload) { approvedEmployeeUnload = false; return; }
+        if (employeeSaving || hasEmployeeChanges()) {
+            event.preventDefault();
+            event.returnValue = '';
+        }
+    });
+
+    // Spolecny vstup inicializuje i nove vymenene bloky bez dalsich globalnich posluchacu.
+    window.CB_HR_INIT = (scope) => { initHr(scope); initEmployeeForms(scope); };
+    window.CB_HR_INIT(document);
 
 })();

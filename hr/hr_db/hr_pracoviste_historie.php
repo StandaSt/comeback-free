@@ -5,6 +5,7 @@ declare(strict_types=1);
  * Ucel souboru: Nacita oddelene historie povolenych pobocek a MAIN a uklada pouze skutecne rozdily.
  * Nezmenena prirazeni zachovavaji puvodni platnost.
  * Cteni i zmeny chrani jednotny osobni rozsah HR.
+ * Personal manager muze ukoncit MAIN bez vytvoreni nahradni pobocky; historie zustava zachovana.
  */
 
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
@@ -92,12 +93,12 @@ function hr_pracoviste_rozdily(array $rows, array $idPobocky, int $idPobHlavni, 
     return ['ukoncit' => $ukoncit, 'zrusit' => $zrusit, 'pridat' => $pozadovane];
 }
 
-/** Ulozi pouze skutecne zmeny prirazeni. @param int[] $idPobocky */
+/** Ulozi rozdily obou evidenci atomicky a povoleni bez MAIN overi na serveru. @param int[] $idPobocky */
 function hr_pracoviste_zmenit(mysqli $db, int $idPerson, array $idPobocky, int $idPobHlavni, string $platiOd, int $idUser, string $mainOd): void
 {
     hr_zamestnanci_vyzaduj_osobu($db, $idUser, $idPerson);
     cb_hr_main_vyzaduj($db);
-    if ($idPobocky === [] || !in_array($idPobHlavni, $idPobocky, true)) {
+    if ($idPobocky === [] || ($idPobHlavni !== 0 && !in_array($idPobHlavni, $idPobocky, true))) {
         throw new CbUserVisibleException('Vyberte alespoň jednu pobočku a jednu z nich jako hlavní.');
     }
     $stmt = $db->prepare('SELECT id_firma FROM hr_person WHERE id_person = ? LIMIT 1');
@@ -127,6 +128,9 @@ function hr_pracoviste_zmenit(mysqli $db, int $idPerson, array $idPobocky, int $
         $stmt->execute();
         $stmt->get_result()->free();
         $stmt->close();
+        if ($idPobHlavni === 0 && !cb_hr_main_nepovinne($db, $idPerson, $mainOd)) {
+            throw new CbUserVisibleException('U této funkce je hlavní pobočka povinná.');
+        }
         $stmt = $db->prepare('SELECT id_pracoviste, id_pob, hlavni, platnost_od, platnost_do, platny, zruseno FROM hr_pracoviste WHERE id_person = ? AND platny = 1 FOR UPDATE');
         $stmt->bind_param('i', $idPerson);
         $stmt->execute();
@@ -138,7 +142,8 @@ function hr_pracoviste_zmenit(mysqli $db, int $idPerson, array $idPobocky, int $
         $stmt->execute();
         $mainRows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
-        $mainRozdily = hr_pracoviste_rozdily($mainRows, [$idPobHlavni], 0, $mainOd);
+        // Nula je vyslovne bez MAIN: uzavre dosavadni interval a nevklada fiktivni pobocku.
+        $mainRozdily = hr_pracoviste_rozdily($mainRows, $idPobHlavni === 0 ? [] : [$idPobHlavni], 0, $mainOd);
         // Nejprve overime obe cele casove osy; rozdilna data nesmi zpusobit MAIN mimo povolene pobocky.
         $novePobocky = hr_pracoviste_simulace($rows, $rozdily, $platiOd);
         $noveMain = hr_pracoviste_simulace($mainRows, $mainRozdily, $mainOd);

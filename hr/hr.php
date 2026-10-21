@@ -5,6 +5,7 @@ declare(strict_types=1);
  * Modulovy vstup HR.
  * Sem nepatri SQL dotazy, HTML bloky, AJAX handlery ani pomocne funkce.
  * Soubor ma pouze pripravit modul, predat akce dispatcheru a vybrat zpusob vykresleni stranky.
+ * Editaci karty ukoncuje odchod z aktualni zalozky, nikoli ulozeni jednotliveho bloku.
  */
 
 require_once __DIR__ . '/../common/lib/session_boot.php';
@@ -228,9 +229,7 @@ $cbHrUsesPpRenderer = is_array($cbHrPageDefinition['blocks'] ?? null) && $cbHrPa
             <a class="hr_panel_link" href="<?= h($hrEmployeeBackUrl) ?>">← <?= h($hrEmployeeBackLabel) ?></a>
             <?php if (is_array($hrEmployeeHeader)): ?>
                 <div class="hr_employee_profile_actions">
-                    <?php if ($hrEmployeeCanEditSection && isset($_GET['upravit']) && (string)$_GET['upravit'] === '1'): ?>
-                        <a class="hr_secondary_button hr_panel_button_secondary" href="<?= h(cb_root_url('index.php?' . http_build_query(['m' => 'hr', 'page' => 'zamestnanec', 'id' => (int)$hrEmployeeHeader['id_person'], 'sekce' => $hrEmployeeSection]))) ?>">Zrušit úpravy</a>
-                    <?php elseif ($hrEmployeeCanEditSection): ?>
+                    <?php if ($hrEmployeeCanEditSection && (string)($_GET['upravit'] ?? '') !== '1'): ?>
                         <a class="hr_primary_button hr_panel_button_primary" href="<?= h(cb_root_url('index.php?' . http_build_query(['m' => 'hr', 'page' => 'zamestnanec', 'id' => (int)$hrEmployeeHeader['id_person'], 'sekce' => $hrEmployeeEditSection, 'upravit' => 1]))) ?>">Upravit zaměstnance</a>
                     <?php endif; ?>
                     <?php if ((int)($hrEmployeeHeader['overen'] ?? 0) === 0): ?>

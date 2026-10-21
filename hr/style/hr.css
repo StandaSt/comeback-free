@@ -5,6 +5,9 @@
  * Zmensene svisle odstupy pracovniho pomeru plati jen uvnitr jeho vlastniho obalu.
  * Sprava ciselniku ma sirky podle obsahu a jedine podminene ulozeni zmen v kazdem bloku.
  * Casova osa karty oddeluje datum udalosti od jejiho pozdejsiho zapisu a rozbaluje historii.
+ * Ulozeni bloku karty je vzdy vpravo nahore; odkazy na spravu jsou pod nim.
+ * Nezmeneny blok ma stale viditelne sede ulozeni, aby zvyrazneni nemenilo rozlozeni.
+ * Sloty a funkce sdileji radky formulare s pravymi akcemi bez prazdneho mista pod titulkem.
  */
 
 /* Kompaktni casova osa v prehledu osoby; dlouhe poznamky nesmi roztahovat panel. */
@@ -1521,6 +1524,78 @@
     justify-content: flex-start;
     flex-wrap: wrap;
 }
+
+/* Vsech sest bloku pouziva shodne zarovnani akci a stale misto pro ulozeni. */
+[data-hr-employee-block] .hr_panel_header {
+    align-items: flex-start;
+}
+[data-hr-employee-block] .hr_panel_header > button,
+.hr_employee_block_actions {
+    margin-left: auto;
+    flex-shrink: 0;
+}
+.hr_employee_block_actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+}
+/* Akce zaberou vlastni pravy sloupec pres dva radky; formular muze navazat primo na titulek. */
+[data-hr-employee-block="slot"],
+[data-hr-employee-block="function"] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content;
+    column-gap: 12px;
+    row-gap: 4px;
+}
+:is([data-hr-employee-block="slot"], [data-hr-employee-block="function"]) > .hr_panel_header {
+    display: contents;
+}
+:is([data-hr-employee-block="slot"], [data-hr-employee-block="function"]) > .hr_panel_header > .hr_panel_title {
+    grid-column: 1;
+    grid-row: 1;
+}
+:is([data-hr-employee-block="slot"], [data-hr-employee-block="function"]) .hr_employee_block_actions {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+}
+:is([data-hr-employee-block="slot"], [data-hr-employee-block="function"]) > form {
+    grid-column: 1;
+    grid-row: 2;
+    flex-wrap: wrap;
+    margin-bottom: 0;
+}
+:is([data-hr-employee-block="slot"], [data-hr-employee-block="function"]) > :not(.hr_panel_header, form) {
+    grid-column: 1 / -1;
+}
+/* Na uzkem displeji zustanou akce a formular pod sebou, aby se jejich obsah neprekryval. */
+@media (max-width: 600px) {
+    [data-hr-employee-block="slot"],
+    [data-hr-employee-block="function"] { display: block; }
+    :is([data-hr-employee-block="slot"], [data-hr-employee-block="function"]) > .hr_panel_header { display: flex; }
+}
+/* Meni se pouze barvy a dostupnost; rozmery tlacitka i bloku zustavaji stejne. */
+[data-hr-employee-block] button.hr_employee_save_idle {
+    background: var(--cb-bg-panel-soft);
+    border-color: var(--cb-border);
+    color: var(--muted);
+    opacity: 1;
+    box-shadow: none;
+    cursor: default;
+}
+
+/* Potvrzeni odchodu s rozpracovanymi udaji je modalni a ma vychozi bezpecnou volbu zustat. */
+.hr_employee_leave_dialog {
+    max-width: min(520px, calc(100vw - 40px));
+    border: 1px solid var(--cb-border);
+    border-radius: 8px;
+    background: var(--cb-bg-panel);
+    color: var(--cb-text-main);
+    padding: 20px;
+}
+.hr_employee_leave_dialog::backdrop { background: rgba(0, 0, 0, .35); }
+.hr_employee_leave_dialog h2 { margin: 0 0 12px; font-size: 18px; }
+.hr_employee_leave_dialog form { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
 
 /* Schvalene svisle rozmery se tykaji pouze sekce Pracovni pomer, vcetne editace. */
 .hr_employee_work_compact {

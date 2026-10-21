@@ -4,6 +4,7 @@ declare(strict_types=1);
 /*
  * Ucel: Sdili samostatnou casovou evidenci MAIN mezi HR, Provozem a Smenami.
  * Pred rucni SQL migraci umoznuje cteni stare evidence; novy zapis vyzaduje novou tabulku.
+ * Personal manager muze byt bez MAIN; ostatni funkce zachovavaji dosavadni povinnost.
  */
 
 // Stav schematu pamatujeme jen pro dane spojeni a jeden PHP pozadavek.
@@ -48,6 +49,22 @@ function cb_hr_main_id(mysqli $db, int $idPerson): int
     $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
     return count($rows) === 1 ? (int)$rows[0]['id_pob'] : 0;
+}
+
+// Vyjimka patri overenemu ID funkce, nikoli jejimu premenovatelnemu nazvu ani roli.
+// Kontrolujeme ucinnost k datu zmeny; budouci funkce neopravnuje zrusit MAIN uz dnes.
+function cb_hr_main_nepovinne(mysqli $db, int $idPerson, ?string $datum = null): bool
+{
+    $datum ??= date('Y-m-d');
+    $table = cb_hr_schema_table($db, 'funkce');
+    $fk = cb_hr_funkce_fk($db);
+    $stmt = $db->prepare("SELECT 1 FROM {$table} WHERE id_person = ? AND {$fk} = 10 AND platny = 1
+        AND (platnost_od IS NULL OR platnost_od <= ?) AND (platnost_do IS NULL OR platnost_do >= ?) LIMIT 1");
+    $stmt->bind_param('iss', $idPerson, $datum, $datum);
+    $stmt->execute();
+    $optional = $stmt->get_result()->fetch_row() !== null;
+    $stmt->close();
+    return $optional;
 }
 
 // Zapis pred nasazenim schematu zastavime jeste pred prvni zmenou dat.
