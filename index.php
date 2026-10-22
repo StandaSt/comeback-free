@@ -265,7 +265,8 @@ if (!empty($_SESSION['login_ok']) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POS
     if (
         $cbGnModule === 'provoz'
         && $cbGnPage === 'prehled'
-        && in_array($cbGnBlock, ['top_report', 'objednavky_online', 'uzivatele_online'], true)
+        // Reporty se obnovuji stejnou cestou i pri prechodu pres uzaverku v 05:00.
+        && in_array($cbGnBlock, ['top_report', 'objednavky_online', 'uzivatele_online', 'denni_report_prehled'], true)
     ) {
 
         $GLOBALS['CURRENT_MODULE'] = 'provoz';

@@ -117,6 +117,8 @@
   });
 
   var periodicBlocks = {
+    // Prubezne zadane reporty i uzaverka v 05:00 se projevi bez rucni obnovy stranky.
+    denni_report_prehled: { interval: 30 * 1000, lastRefresh: Date.now(), running: false },
     uzivatele_online: { interval: 30 * 1000, lastRefresh: Date.now(), running: false },
     objednavky_online: { interval: 10 * 60 * 1000, lastRefresh: Date.now(), running: false }
   };

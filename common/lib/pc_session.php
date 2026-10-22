@@ -4,6 +4,7 @@ declare(strict_types=1);
 /*
  * Ucel souboru: Udrzet prave jednu aktivni identitu IS pro jeden browser
  * profil. Cookie obsahuje pouze nahodny identifikator; DB uklada jen jeho hash.
+ * Vazbu profilu uchovava take u prihlaseni, aby ji dalsi session neprepsala.
  */
 
 function cb_pc_session_timeout_sec(): int
@@ -61,6 +62,7 @@ function cb_pc_cookie_token(bool $create = false): string
     return $token;
 }
 
+// Aktivuje relaci a ve stejne transakci zachova identitu profilu v historii prihlaseni.
 function cb_pc_session_activate(mysqli $db, int $idUser, int $idLogin): void
 {
     if ($idUser <= 0 || $idLogin <= 0) {
@@ -124,6 +126,18 @@ function cb_pc_session_activate(mysqli $db, int $idUser, int $idLogin): void
             throw new RuntimeException('Nelze uložit session zařízení.');
         }
         $stmt->bind_param('siis', $pcToken, $idUser, $idLogin, $sessionToken);
+        $stmt->execute();
+        $stmt->close();
+
+        // Historie drzi stejny hash cookie i po odhlaseni nebo novem prihlaseni na tomto profilu.
+        $stmt = $db->prepare(
+            'UPDATE user_login SET pc_hash=UNHEX(SHA2(?,256))
+             WHERE id_login=? AND id_user=? AND akce=1'
+        );
+        if (!($stmt instanceof mysqli_stmt)) {
+            throw new RuntimeException('Nelze ulozit vazbu prihlaseni na zarizeni.');
+        }
+        $stmt->bind_param('sii', $pcToken, $idLogin, $idUser);
         $stmt->execute();
         $stmt->close();
         $db->commit();

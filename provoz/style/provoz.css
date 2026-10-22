@@ -1,6 +1,7 @@
 /* Modul Provoz: styly pracovni plochy vcetne dvojice casu jedne prestavky; role barvi jmena pouze v bloku dnes aktivnich uzivatelu.
  * Franta rozlisuje bloky promptu globalnim cislem a zarovnava odeslani k poli zadani.
- * Filtr objednávek nabízí dvousloupcový seznam jednotlivých poboček a oblastí. */
+ * Filtr objednávek nabízí dvousloupcový seznam jednotlivých poboček a oblastí.
+ * Prehled zobrazuje objednavky pres celou sirku a oba reporty pod sebou v jedne bunce. */
 /* Historie Franty ma vlastni jednoúčelovy styl. */
 @import url("ai_analytik_historie.css");
 
@@ -20,7 +21,7 @@
 @media (max-width:900px){.provoz_branch_field_code,.provoz_branch_field_postcode{grid-column:span 3}.provoz_branch_field_name,.provoz_branch_field_city,.provoz_branch_field_area{grid-column:span 4}.provoz_branch_field_street{grid-column:span 5}.provoz_branch_field_contacts{grid-column:span 6}}
 @media (max-width:760px){.provoz_branch_fields{grid-template-columns:1fr}.provoz_branch_fields>label{grid-column:auto}.provoz_branch_hours>label{min-width:calc(50% - 10px)}}
 
-/* Prehled 2x2 - rastr ctyr hlavnich bloku. */
+/* Dva rady prehledu: objednavky nahore, reporty a aktivni uzivatele dole. */
 .provoz_prehled_grid{
   display:grid;
   flex:1 1 auto;
@@ -32,26 +33,33 @@
   min-height:0;
 }
 
-/* Prehled 2x2 - jedna bunka rastru. */
+/* Prehled - jedna bunka rastru. */
 .provoz_prehled_cell{
   min-width:0;
   min-height:0;
   padding:0;
 }
 
-/* Pravy horni blok sklada mensi reporty a online uzivatele do puvodni vysky jedne bunky. */
+/* Identifikator bloku zachova celou sirku objednavek i po automaticke obnove. */
+.provoz_prehled_grid>[data-pp-block="objednavky_online"]{
+  grid-column:1 / -1;
+}
+
+/* Top report a nezadane reporty sdileji vysku puvodni leve dolni bunky. */
 .provoz_prehled_cell_stack{
   display:grid;
-  grid-template-rows:minmax(105px, 1fr) minmax(170px, 2fr);
+  grid-template-rows:minmax(170px, 2fr) minmax(105px, 1fr);
   gap:10px;
 }
 
-.provoz_prehled_stack_item{
+.provoz_prehled_stack_item,
+.provoz_prehled_cell_stack>[data-pp-block]{
   min-width:0;
   min-height:0;
 }
 
-.provoz_prehled_stack_item>.blok{
+.provoz_prehled_stack_item>.blok,
+.provoz_prehled_cell_stack>[data-pp-block]>.blok{
   box-sizing:border-box;
   height:100%;
 }

@@ -2,12 +2,13 @@
 declare(strict_types=1);
 
 /*
- * Ucel souboru: Zobrazit dnes aktivni uzivatele a cas jejich posledni skutecne
- * zaznamenane akce. Prihlasovaci den zacina po rannim odhlaseni v 08:00.
+ * Ucel souboru: Zobrazit uzivatele po profilech zarizeni za provozni den od 06:00,
+ * jejich prvni prihlaseni, posledni skutecnou akci a stav online/odhlasen.
  * Technicky heartbeat zarizeni neni uzivatelska aktivita.
  * Jen v tomto bloku barvi jmena podle skutecne HR role zobrazovane osoby.
- * Kazde prihlaseni ma vlastni radek; Android a iPhone oznacuje ikonou mobilu.
- * Vice pocitacovych prihlaseni rozlisuje PC1, PC2; jedine PC neoznacuje.
+ * Opakovana prihlaseni ze stejneho profilu sdileji radek i po odhlaseni.
+ * Android a iPhone oznacuje ikonou mobilu; vice PC profilu rozlisuje PC1, PC2.
+ * Starsi prihlaseni bez zachovane vazby neslucuje odhadem podle user-agentu.
  */
 
 (static function (): void {
@@ -15,40 +16,43 @@ declare(strict_types=1);
 
     try {
         $conn = db();
-        // Hranice 08:00 odpovida dennimu odhlaseni; pred osmou jeste bezi predchozi prihlasovaci den.
+        // Stejna hranice 06:00 jako u provozniho dne; pred sestou patri prihlaseni ke vcerejsku.
         $now = new DateTimeImmutable('now', new DateTimeZone('Europe/Prague'));
-        $todayStart = $now->setTime(8, 0, 0);
-        $loginDayStart = ($now < $todayStart ? $todayStart->modify('-1 day') : $todayStart)
-            ->format('Y-m-d H:i:s');
+        $todayStart = $now->setTime(6, 0, 0);
+        $dayStart = $now < $todayStart ? $todayStart->modify('-1 day') : $todayStart;
+        $loginDayStart = $dayStart->format('Y-m-d H:i:s');
+        $loginDayEnd = $dayStart->modify('+1 day')->format('Y-m-d H:i:s');
+        require_once __DIR__ . '/../../common/lib/pc_session.php';
+        $onlineSince = $now->modify('-' . cb_pc_session_timeout_sec() . ' seconds')->format('Y-m-d H:i:s');
+        // Historie je zdrojem radku. Session doplnuje jen stav a jeste zachovanou starsi vazbu.
         $sql = "
             SELECT
                 p.id_person AS id_user,
                 TRIM(CONCAT_WS(' ', ou.jmeno, ou.prijmeni)) AS cele_jmeno,
                 (SELECT MIN(r.id_role) FROM hr_pristupovy_profil r WHERE r.id_person = p.id_person) AS id_role,
-                ps.id_login,
-                ps.vytvoreno AS login_time,
+                MIN(ul.id_login) AS id_login,
+                MIN(ul.kdy) AS login_time,
                 MAX(spy.user_agent) AS user_agent,
-                MAX(ua.cas) AS last_action
-            FROM user_pc_session ps
-            INNER JOIN hr_person p ON p.id_person = ps.id_user AND p.aktivni = 1
+                MAX(ua.cas) AS last_action,
+                MAX(CASE WHEN ul.duvod = 2 AND ps.zruseno IS NULL
+                    AND ps.last_seen >= ? THEN 1 ELSE 0 END) AS is_online
+            FROM user_login ul
+            INNER JOIN hr_person p ON p.id_person = ul.id_user AND p.aktivni = 1
             INNER JOIN hr_osobni_udaje ou ON ou.id_person = p.id_person AND ou.platny = 1
-            INNER JOIN user_login ul ON ul.id_login = ps.id_login
-                AND ul.id_user = ps.id_user
-                AND ul.akce = 1
-                AND ul.duvod = 2
-            LEFT JOIN user_spy spy ON spy.id_login = ps.id_login AND spy.id_user = ps.id_user
-            LEFT JOIN user_akce_new ua ON ua.id_login = ps.id_login AND ua.id_user = ps.id_user
-            WHERE ps.zruseno IS NULL
-                AND ps.vytvoreno >= ?
-            GROUP BY p.id_person, ou.jmeno, ou.prijmeni, ps.id_login, ps.vytvoreno
-            ORDER BY COALESCE(MAX(ua.cas), ps.vytvoreno) DESC, cele_jmeno ASC, ps.id_login DESC
-            LIMIT 20
+            LEFT JOIN user_pc_session ps ON ps.id_login = ul.id_login AND ps.id_user = ul.id_user
+            LEFT JOIN user_spy spy ON spy.id_login = ul.id_login AND spy.id_user = ul.id_user
+            LEFT JOIN user_akce_new ua ON ua.id_login = ul.id_login AND ua.id_user = ul.id_user
+                AND ua.cas >= ? AND ua.cas < ?
+            WHERE ul.akce = 1 AND ul.kdy >= ? AND ul.kdy < ?
+            GROUP BY p.id_person, ou.jmeno, ou.prijmeni,
+                COALESCE(HEX(ul.pc_hash), HEX(ps.pc_hash), CONCAT('login:', ul.id_login))
+            ORDER BY COALESCE(MAX(ua.cas), MIN(ul.kdy)) DESC, cele_jmeno ASC, MIN(ul.id_login) DESC
         ";
         $stmt = $conn->prepare($sql);
         if (!($stmt instanceof mysqli_stmt)) {
             throw new RuntimeException('Nepodařilo se připravit přehled dnešních uživatelů.');
         }
-        $stmt->bind_param('s', $loginDayStart);
+        $stmt->bind_param('sssss', $onlineSince, $loginDayStart, $loginDayEnd, $loginDayStart, $loginDayEnd);
         $stmt->execute();
         $result = $stmt->get_result();
         while ($result instanceof mysqli_result && ($row = $result->fetch_assoc())) {
@@ -62,7 +66,7 @@ declare(strict_types=1);
         echo '<section class="blok"><h2 class="blok_title">Dnes aktivní uživatelé</h2><p class="txt_cervena">Data se nepodařilo načíst.</p></section>';
         return;
     }
-    // Cisla PC jsou podle poradi prihlaseni, nikoli podle prubezne se menici posledni akce.
+    // PC profily cislime podle jejich prvniho prihlaseni za den; dalsi prihlaseni cislo nemeni.
     $pcLogins = [];
     foreach ($rows as $row) {
         if (preg_match('/Android|iPhone/i', (string)($row['user_agent'] ?? '')) !== 1) {
@@ -84,10 +88,10 @@ declare(strict_types=1);
     <section class="blok provoz_aktivni_uzivatele">
         <h2 class="blok_title">Dnes aktivní uživatelé</h2>
         <table class="provoz_prehled_data">
-            <thead><tr><th class="provoz_prehled_data_cell provoz_prehled_data_cell_left provoz_prehled_data_head">Uživatel</th><th class="provoz_prehled_data_cell provoz_prehled_data_head">Přihlášení</th><th class="provoz_prehled_data_cell provoz_prehled_data_head">Poslední akce</th></tr></thead>
+            <thead><tr><th class="provoz_prehled_data_cell provoz_prehled_data_cell_left provoz_prehled_data_head">Uživatel</th><th class="provoz_prehled_data_cell provoz_prehled_data_head">Přihlášení</th><th class="provoz_prehled_data_cell provoz_prehled_data_head">Poslední akce</th><th class="provoz_prehled_data_cell provoz_prehled_data_head">Stav</th></tr></thead>
             <tbody>
                 <?php if ($rows === []): ?>
-                    <tr><td class="provoz_prehled_data_cell provoz_prehled_data_cell_left" colspan="3">Žádní přihlášení uživatelé</td></tr>
+                    <tr><td class="provoz_prehled_data_cell provoz_prehled_data_cell_left" colspan="4">Žádní přihlášení uživatelé</td></tr>
                 <?php endif; ?>
                 <?php foreach ($rows as $row): ?>
                     <?php
@@ -110,6 +114,7 @@ declare(strict_types=1);
                         <td class="provoz_prehled_data_cell provoz_prehled_data_cell_left"><span class="<?= h($nameClass) ?>"><?= h($name !== '' ? $name : ('ID ' . (string)$row['id_user'])) ?></span><?php if ($mobileSystem !== ''): ?> <span title="<?= h($mobileSystem) ?>" role="img" aria-label="<?= h('Mobil: ' . $mobileSystem) ?>">📱</span><?php elseif (isset($pcLabels[(int)$row['id_login']])): ?> <small title="Rozlišení přihlášení z počítače"><?= h($pcLabels[(int)$row['id_login']]) ?></small><?php endif; ?></td>
                         <td class="provoz_prehled_data_cell"><?= h($loginTime !== '' ? date('G:i:s', strtotime($loginTime)) : '-') ?></td>
                         <td class="provoz_prehled_data_cell"><?= h($lastAction !== '' ? date('G:i:s', strtotime($lastAction)) : '-') ?></td>
+                        <td class="provoz_prehled_data_cell"><?= (int)$row['is_online'] === 1 ? 'online' : 'odhlášen' ?></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>

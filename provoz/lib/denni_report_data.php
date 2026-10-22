@@ -1,5 +1,5 @@
 <?php
-// Pripravuje denni reporty a jejich historii; archivni detail chrani podle role, MAIN a autora.
+// Pripravuje denni reporty, historii a prehled s uzaverkou v 05:00; archiv chrani podle role, MAIN a autora.
 declare(strict_types=1);
 
 // Nacita reporty vcetne presne prestavky; stare zdroje mohou mit pouze delku.
@@ -348,10 +348,14 @@ function cb_denni_report_missing_reports_summary(mysqli $conn, string $date): ar
 
 // Spocita chybejici povinne reporty po pobockach pro aktualni mesic.
 // Vyroba ma vlastni pocet pracovnich dnu, protoze nedele se do jejiho ocekavaneho poctu nezahrnuji.
-function cb_denni_report_month_missing_reports_summary(mysqli $conn, DateTimeImmutable $currentWorkdayDt, bool $includeCurrentWorkday): array
+function cb_denni_report_month_missing_reports_summary(mysqli $conn, DateTimeImmutable $currentWorkdayDt, bool $includeCurrentWorkday, ?DateTimeImmutable $lastKnownDay = null): array
 {
     $monthStartDt = $currentWorkdayDt->modify('first day of this month');
     $monthEndDt = $includeCurrentWorkday ? $currentWorkdayDt : $currentWorkdayDt->modify('-1 day');
+    // Lokal nesmi zapocitat dny, ktere jeste nejsou pokryte dovezenymi daty.
+    if ($lastKnownDay !== null && $lastKnownDay < $monthEndDt) {
+        $monthEndDt = $lastKnownDay;
+    }
     if ($monthEndDt < $monthStartDt) {
         return [];
     }
@@ -1491,9 +1495,71 @@ function cb_denni_report_docs_count_from_person_rows(array $rows): int
     return $count;
 }
 
-function cb_denni_report_prehled_data(mysqli $conn): array
+// Prehled vyhodnocuje chybejici reporty az po uzaverce v 05:00; formular ma vlastni provozni den od 06:00.
+function cb_denni_report_prehled_data(mysqli $conn, ?DateTimeImmutable $now = null): array
 {
-    return cb_denni_report_prepare_data($conn, 'prehled');
+    $now = ($now ?? new DateTimeImmutable('now', new DateTimeZone('Europe/Prague')))
+        ->setTimezone(new DateTimeZone('Europe/Prague'));
+    $openDay = cb_dt_workday_start($now, 5);
+    $lastClosedDay = $openDay->modify('-1 day');
+    $isLocal = ($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL';
+    $lastImport = null;
+    if ($isLocal) {
+        // Rucni SQL import nema audit; podle dohody jej zastupuje posledni zadani platneho reportu.
+        $result = $conn->query('SELECT MAX(zadano) AS last_import FROM reporty_is WHERE platny = 1');
+        $value = (string)($result->fetch_assoc()['last_import'] ?? '');
+        $result->free();
+        if ($value !== '') {
+            $lastImport = new DateTimeImmutable($value, $now->getTimezone());
+            $knownDay = cb_dt_workday_start($lastImport < $now ? $lastImport : $now, 5)->modify('-1 day');
+            $lastClosedDay = $knownDay;
+        }
+    }
+    $submittedReports = [];
+    if (!$isLocal) {
+        $stmt = $conn->prepare('
+            SELECT DISTINCT p.id_pob, p.nazev
+            FROM reporty_is r
+            INNER JOIN pobocka p ON p.id_pob = r.id_pob
+            WHERE r.datum_reportu = ? AND r.platny = 1 AND p.aktivni = 1
+            ORDER BY p.id_pob
+        ');
+        $date = $openDay->format('Y-m-d');
+        $stmt->bind_param('s', $date);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            if (cb_pobocka_provoz_report_required((int)$row['id_pob'], $date)) {
+                $submittedReports[] = $row;
+            }
+        }
+        $result->free();
+        $stmt->close();
+    }
+
+    $missingReports = [];
+    for ($i = 0; $i < 40 && (!$isLocal || $lastImport !== null); $i++) {
+        $dayDt = $lastClosedDay->modify('-' . $i . ' day');
+        $missingBranches = cb_denni_report_missing_reports_summary($conn, $dayDt->format('Y-m-d'));
+        if ($missingBranches !== []) {
+            $missingReports[] = [
+                'date' => $dayDt->format('Y-m-d'),
+                'label' => cb_dt_weekday_date_label_cs($dayDt, true),
+                'branches' => $missingBranches,
+                'branches_text' => implode(', ', array_column($missingBranches, 'nazev')),
+            ];
+        }
+    }
+
+    return [
+        'missingReports' => $missingReports,
+        'missingReportsMonth' => (!$isLocal || $lastImport !== null)
+            ? cb_denni_report_month_missing_reports_summary($conn, $openDay, false, $lastClosedDay) : [],
+        'submittedReports' => $submittedReports,
+        'submittedReportDate' => cb_dt_weekday_date_label_cs($openDay, true),
+        'lastImport' => $lastImport,
+        'monthCovered' => !$isLocal || ($lastImport !== null && $lastClosedDay >= $openDay->modify('first day of this month')),
+    ];
 }
 
 function cb_denni_report_zadani_data(mysqli $conn): array
