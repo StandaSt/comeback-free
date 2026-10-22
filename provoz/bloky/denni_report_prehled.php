@@ -1,5 +1,5 @@
 <?php
-// Prehled reportu rozlisuje serverovou uzaverku v 05:00 a stav lokalniho importu; export nabizi server.
+// Prehled reportu rozlisuje serverovou uzaverku a lokalni import; export nabizi server jen pri chybejicich reportech.
 declare(strict_types=1);
 
 require_once __DIR__ . '/../lib/format_datum_cas.php';
@@ -33,7 +33,7 @@ require_once __DIR__ . '/../lib/nezadane_reporty_export_data.php';
     <section class="blok blok_denni_report">
         <div class="provoz_nezadane_head">
             <h2 class="blok_title"><?= $showSubmitted ? 'Dnes zadané reporty' : 'Nezadané denní reporty' ?></h2>
-            <?php if (!$isLocal): ?>
+            <?php if (!$isLocal && ($missingReports !== [] || $missingReportsMonth !== [])): ?>
             <div class="provoz_nezadane_export<?= $exportAllowed ? '' : ' cb_pravo_skryte' ?>" aria-label="Export nezadaných denních reportů"<?= $exportAllowed ? '' : ' aria-hidden="true" inert' ?>>
                 <span>Export měsíce:</span>
                 <button type="button" class="provoz_nezadane_export_btn" data-nezadane-export-open="current">aktuální</button>

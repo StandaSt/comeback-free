@@ -6,6 +6,7 @@
  * Události navigace umožňují historii rozlišit požadavek, dokončené zobrazení i klik bez přechodu.
  * Kompletní menu připravuje PHP podle práv; přepnutí používá hotové šablony a obsah ani Restia menu nepřepisují.
  * Zrusitelna udalost pred navigaci chrani rozpracovane formulare pred opustenim stranky.
+ * Opakovany klik na vybrane stranky Provozu znovu overi stari dat Restie pred nactenim obsahu.
  */
 (function(){
   'use strict';
@@ -407,7 +408,12 @@
     if (!moduleName) return;
     if (moduleLoadRunning) return;
     var requestedKey = makeShellKey(moduleName, params);
-    if (pushState && requestedKey === currentShellKey) {
+    // Stejne menu techto stranek slouzi take k obnove; limit Restie i ochrana formulare zustavaji spolecne.
+    var repeatedRestiaPage = moduleName === 'provoz'
+      && params instanceof URLSearchParams
+      && ['prehled', 'denni_report', 'objednavky'].indexOf(params.get('page')) !== -1
+      && provozPageNeedsRestia(params);
+    if (pushState && requestedKey === currentShellKey && !repeatedRestiaPage) {
       document.dispatchEvent(new CustomEvent('cb:menu-no-effect',{detail:{module:moduleName}}));
       return;
     }

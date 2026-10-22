@@ -1,4 +1,4 @@
-// Graf online objednávek; všechny uživatelské číselné údaje skládá ve stejném českém formátu.
+// Graf online objednavek s tooltipem pod blokem; uzivatelske ciselne udaje sklada v ceskem formatu.
 'use strict';
 
 (function (w) {
@@ -12,7 +12,7 @@
     bottom: 25,
     containLabel: true
   };
-  const MINI_SLOUPEC_BAR_MAX_WIDTH = 44;
+  const MINI_SLOUPEC_BAR_MAX_WIDTH = 88;
 
   function formatInt(value) {
     const intValue = Math.round(Number(value) || 0);
@@ -32,16 +32,15 @@
       .replace(/'/g, '&#039;');
   }
 
-  function positionTooltipOutsideBlock(canvas) {
+  // Podrobnosti pobočky zustanou pod celym blokem a neprekryji leve menu.
+  function positionTooltipBelowBlock(canvas) {
     return (point, params, dom, rect, size) => {
-      const contentSize = size && Array.isArray(size.contentSize) ? size.contentSize : [0, 0];
-      const width = Number(contentSize[0]) || 0;
-      const height = Number(contentSize[1]) || 0;
-      const boundaryRect = canvas instanceof HTMLElement ? canvas.getBoundingClientRect() : { left: 0, right: 0, top: 0 };
-      const canvasRect = canvas instanceof HTMLElement ? canvas.getBoundingClientRect() : { left: 0, top: 0 };
-      const position = w.CB_TOOLTIP && typeof w.CB_TOOLTIP.positionOutsideRect === 'function'
-        ? w.CB_TOOLTIP.positionOutsideRect(boundaryRect, width, height)
-        : [boundaryRect.right + 27, boundaryRect.top + 12];
+      const block = canvas instanceof HTMLElement ? canvas.closest('.blok_online') : null;
+      const canvasRect = canvas instanceof HTMLElement ? canvas.getBoundingClientRect() : { left: 0, top: 0, bottom: 0, width: 0 };
+      const boundaryRect = block instanceof HTMLElement ? block.getBoundingClientRect() : canvasRect;
+      const position = w.CB_TOOLTIP && typeof w.CB_TOOLTIP.positionBelowRect === 'function'
+        ? w.CB_TOOLTIP.positionBelowRect(boundaryRect, dom)
+        : [boundaryRect.left, boundaryRect.bottom + 6];
 
       return [
         position[0] - canvasRect.left,
@@ -102,7 +101,7 @@
         backgroundColor: 'transparent',
         borderWidth: 0,
         padding: 0,
-        position: positionTooltipOutsideBlock(canvas),
+        position: positionTooltipBelowBlock(canvas),
         formatter: (params) => {
           const items = Array.isArray(params) ? params : [];
           const name = items.length > 0 ? String(items[0].axisValue || '') : '';
@@ -153,7 +152,8 @@
           type: 'bar',
           yAxisIndex: 0,
           stack: 'online',
-          barGap: '25%',
+          // Mala mezera drzi sloupec trzby u objednavek; v bezne sirce prehledu odpovida priblizne 5 px.
+          barGap: '5%',
           barMaxWidth: MINI_SLOUPEC_BAR_MAX_WIDTH,
           itemStyle: { color: '#7bdca5' },
           emphasis: { disabled: true },
@@ -223,8 +223,8 @@
           name: 'Tržba',
           type: 'bar',
           yAxisIndex: 1,
-          barWidth: 5,
-          barMaxWidth: 5,
+          barWidth: 10,
+          barMaxWidth: 10,
           itemStyle: {
             color: '#cbd5e1',
             borderColor: '#64748b',

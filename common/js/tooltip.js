@@ -1,4 +1,4 @@
-/* Účel: Společné tooltipy IS; text i bezpečné tabulky se vejdou do okna nad nebo pod cílem, výslovné prvky sledují kurzor. */
+/* Účel: Společné tooltipy IS; text i tabulky se vejdou do okna, graf objednávek ukazuje podrobnosti pod celým blokem. */
 'use strict';
 
 (function (w, d) {
@@ -44,8 +44,22 @@
     ];
   }
 
-  function positionChartSidePanel(target, panel) {
-    if (target.dataset.tooltipPosition !== 'chart-right') return;
+  // Oba tooltipy objednavek sdileji polohu pod blokem; velka tabulka se posouva uvnitr dostupne plochy.
+  function positionBelowRect(boundaryRect, panel) {
+    const left = Math.max(8, boundaryRect.left);
+    const top = boundaryRect.bottom + 6;
+    panel.style.boxSizing = 'border-box';
+    panel.style.maxWidth = `${Math.max(0, Math.min(boundaryRect.width, w.innerWidth - left - 8))}px`;
+    panel.style.maxHeight = `${Math.max(80, w.innerHeight - top - 8)}px`;
+    panel.style.overflow = 'auto';
+    panel.dataset.tooltipScroll = '1';
+    return [left, top];
+  }
+
+  // Souhrn pouzije vyslovne umisteni grafu; ostatnim tooltipum se pravidla nemeni.
+  function positionChartPanel(target, panel) {
+    const below = target.dataset.tooltipPosition === 'chart-bottom';
+    if (!below && target.dataset.tooltipPosition !== 'chart-right') return;
 
     const root = target.closest('.provoz_prehled_online_root');
     const canvas = root instanceof HTMLElement ? root.querySelector('[data-graf-canvas="1"]') : null;
@@ -54,7 +68,10 @@
     panel.style.position = 'fixed';
     panel.style.right = 'auto';
     const panelRect = panel.getBoundingClientRect();
-    const position = positionOutsideRect(canvas.getBoundingClientRect(), panelRect.width, panelRect.height);
+    const block = target.closest('.blok_online');
+    const position = below && block instanceof HTMLElement
+      ? positionBelowRect(block.getBoundingClientRect(), panel)
+      : positionOutsideRect(canvas.getBoundingClientRect(), panelRect.width, panelRect.height);
     panel.style.left = `${Math.round(position[0])}px`;
     panel.style.top = `${Math.round(position[1])}px`;
   }
@@ -208,7 +225,7 @@
 
       const showPanel = () => {
         panel.classList.add('provoz_tooltip_panel_visible');
-        positionChartSidePanel(tooltip, panel);
+        positionChartPanel(tooltip, panel);
       };
       const hidePanel = () => panel.classList.remove('provoz_tooltip_panel_visible');
 
@@ -222,6 +239,7 @@
   CB_TOOLTIP.init = init;
   CB_TOOLTIP.hideAll = hideAllTooltips;
   CB_TOOLTIP.positionOutsideRect = positionOutsideRect;
+  CB_TOOLTIP.positionBelowRect = positionBelowRect;
 
   d.addEventListener('pointerdown', (event) => {
     const target = event.target instanceof Element ? event.target : null;
@@ -240,6 +258,8 @@
   });
   // Rolování velké tabulky tooltip nezavírá; posun podkladové stránky ano.
   w.addEventListener('scroll', (event) => {
+    // Podrobnosti pod grafem mohou mit vlastni rolovani pri mensim okne.
+    if (event.target instanceof HTMLElement && event.target.dataset.tooltipScroll === '1') return;
     if (!(floatingPanel && event.target instanceof Node && floatingPanel.contains(event.target))) hideAllTooltips();
   }, true);
   d.addEventListener('keydown', (event) => { if (event.key === 'Escape') hideAllTooltips(); });

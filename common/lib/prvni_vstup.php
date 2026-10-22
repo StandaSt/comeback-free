@@ -3,8 +3,9 @@ declare(strict_types=1);
 
 /*
  * Prvni vstup do IS.
- * Resi pouze overeni pozvanky, ulozeni lokalniho hesla a pripravu identity.
+ * Resi overeni pozvanky, ulozeni lokalniho hesla a pripravu identity.
  * Dokonceni loginu muze jednorazove aktivovat vyvojove prebrani prav USER 1.
+ * Kazdy dokonceny login overi stari objednavek Restie nezavisle na cilovem modulu.
  */
 
 require_once __DIR__ . '/duveryhodne_zarizeni.php';
@@ -95,7 +96,46 @@ function cb_prvni_vstup_over_token(mysqli $db, string $token): bool
     return true;
 }
 
-/* Dokonci lokalni prihlaseni a vytvori plnohodnotnou session. */
+/* Pouzije spolecnou kontrolu Restie; na jiz bezici import pocka pred predanim prihlaseneho IS. */
+function cb_login_restia_kontrola(): void
+{
+    $resumeSession = session_status() === PHP_SESSION_ACTIVE;
+    try {
+        if (!function_exists('cb_restia_online_kontrola')) {
+            require_once __DIR__ . '/../../provoz/lib/restia_online_kontrola.php';
+        }
+        // Vypnuta integrace v set_system nedefinuje kontrolni funkci.
+        if (!function_exists('cb_restia_online_kontrola')) {
+            return;
+        }
+        cb_restia_online_kontrola(false, 120);
+
+        // Souběžný login nezaklada dalsi import; vycka na stejny aktivni beh.
+        $deadline = microtime(true) + 180;
+        while (true) {
+            $result = db()->query('SELECT 1 FROM online_restia WHERE aktivni = 1 LIMIT 1');
+            $running = $result->num_rows > 0;
+            $result->free();
+            if (!$running) {
+                break;
+            }
+            if (microtime(true) >= $deadline) {
+                throw new RuntimeException('Aktualizace Restie běží příliš dlouho.');
+            }
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_write_close();
+            }
+            usleep(500000);
+        }
+    } finally {
+        // Import uvolnuje session; login po navratu jeste uklada cilovy modul a stav overeni zarizeni.
+        if ($resumeSession && session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+    }
+}
+
+/* Dokonci prihlaseni, vytvori plnohodnotnou session a pred navratem overi cerstvost objednavek. */
 function cb_prvni_vstup_dokonci_login(mysqli $db, array $user): void
 {
     unset($_SESSION['cb_prebrani_prav']);
@@ -142,6 +182,12 @@ function cb_prvni_vstup_dokonci_login(mysqli $db, array $user): void
         cb_pc_session_revoke_current($db, 'prebrani_prav_chyba');
         cb_session_forget_auth();
         throw $error;
+    }
+    try {
+        cb_login_restia_kontrola();
+    } catch (Throwable $error) {
+        // Vypadek Restie nesmi zrusit platny login; skutecne stari dat nadale ukazuje hlavicka.
+        error_log('Kontrola Restie po přihlášení: ' . $error->getMessage());
     }
 }
 
