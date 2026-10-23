@@ -4,8 +4,8 @@ declare(strict_types=1);
 /*
  * Ucel souboru: Vykresli kartu zamestnance po samostatnych sekcich nejprve pouze ke cteni.
  * Citaci a editacni rezim sdileji stejny skelet, aby udaje zustaly stale na stejnem miste.
- * Checkboxy povolenych pobocek a samostatna MAIN historie zachovavaji data nezmenenych prirazeni.
- * Aktualni povolene pobocky jsou viditelne i bez rozbaleni historie; MAIN je zvyraznena tucne.
+ * Mista vykonu prace oddeluji oblasti od konkretnich pobocek; MAIN je mnozina uvnitr tohoto rozsahu.
+ * Provozni funkce patri osobe v bloku slotu, skutecne manazerske pozice maji samostatny blok.
  * Prazdne stavy a souhrn pobocek pouzivaji kompaktni zobrazeni bez vnitrnich ramecku.
  * Samostatny obal pracovniho pomeru omezuje zmensene odstupy pouze na tuto sekci.
  * Odkazy na spravu ciselniku vyzaduji pravo 319; pridelovani Admin funkce existujiciho Admina.
@@ -50,9 +50,13 @@ if (!empty($editInput['datum_narozeni'])) {
 }
 $missingRequiredData = is_array($employee) ? hr_fetch_employee_missing_required_data($db, (int)$employee['id_person']) : [];
 $employeeFunctionData = is_array($employee) ? hr_funkce_historie($db, (int)$employee['id_person']) : ['funkce' => [], 'historie' => []];
+$assignmentErrors=is_array($employee)?cb_hr_zarazeni_chyby($db,(int)$employee['id_person']):[];
+$currentPersonFunction=is_array($employee)?cb_hr_funkce_osoby($db,(int)$employee['id_person']):null;
+// Stav karty se cte z aktualnich vazeb i pred dalsim zapisem ulozeneho priznaku kompletni.
+if (is_array($employee)) $employee['kompletni']=$missingRequiredData===[] && $assignmentErrors===[]?1:0;
 $currentFunctionName = '';
 foreach ($employeeFunctionData['historie'] as $employeeFunctionRow) {
-    if ((int)$employeeFunctionRow['platny'] === 1 && (int)$employeeFunctionRow['id_funkce'] !== 1) {
+    if ((int)$employeeFunctionRow['platny'] === 1 && (int)$employeeFunctionRow['id_funkce'] !== 1 && (empty($employeeFunctionRow['platnost_od']) || $employeeFunctionRow['platnost_od']<=date('Y-m-d')) && (empty($employeeFunctionRow['platnost_do']) || $employeeFunctionRow['platnost_do']>=date('Y-m-d'))) {
         $currentFunctionName = (string)$employeeFunctionRow['nazev'] . ((int)$employeeFunctionRow['v_treninku'] === 1 ? ' – v tréninku' : '');
         break;
     }
@@ -106,6 +110,7 @@ $employeeDocumentOpenUrl = static function (array $document): string {
         </section>
         <section class="hr_employee_overview_alerts hr_panel" aria-labelledby="hr-employee-alerts-title">
             <div class="hr_panel_header"><h3 id="hr-employee-alerts-title" class="hr_panel_title<?= (int)($employee['kompletni'] ?? 0) === 0 ? ' hr_employee_incomplete_status' : '' ?>"><?= (int)($employee['kompletni'] ?? 0) === 0 ? 'Karta není kompletní' : 'Upozornění na budoucí akce' ?></h3></div>
+            <?php if ($assignmentErrors!==[]): ?><div class="hr_employee_assignment_errors" role="alert"><strong>Chyba v HR</strong><ul><?php foreach ($assignmentErrors as $error): ?><li><?= h($error) ?></li><?php endforeach; ?></ul></div><?php endif; ?>
             <?php if ($missingRequiredData !== []): ?>
                 <div class="hr_employee_missing"><strong>Je třeba doplnit:</strong><ul><?php foreach ($missingRequiredData as $missingItem): ?><li><?= h($missingItem) ?></li><?php endforeach; ?></ul></div>
             <?php else: ?>
@@ -181,28 +186,15 @@ $employeeDocumentOpenUrl = static function (array $document): string {
         $positionData = hr_zarazeni_historie($db, (int)$employee['id_person']);
         $functionData = $employeeFunctionData;
         $workplaceData = hr_pracoviste_historie($db, (int)$employee['id_person'], $cbHrIdUser);
-        // Vychozi sada vychazi jen z dnes platnych pracovist, nikoli z minulych ci budoucich zaznamu.
-        $branchToday = date('Y-m-d');
-        $selectedWorkplaces = [];
-        $mainWorkplaces = [];
-        foreach ($workplaceData['historie'] as $workplace) {
-            if ((int)$workplace['platny'] !== 1 || !empty($workplace['zruseno'])
-                || (!empty($workplace['platnost_od']) && $workplace['platnost_od'] > $branchToday)
-                || (!empty($workplace['platnost_do']) && $workplace['platnost_do'] < $branchToday)) {
-                continue;
-            }
-            $selectedWorkplaces[(int)$workplace['id_pob']] = (string)$workplace['nazev'];
-        }
-        // Pri nejednoznacnych datech hlavni pobocku neodhadujeme; uzivatel ji zvoli.
-        // Vychozi MAIN vychazi z vlastni casove evidence, nezavisle na povolenych pobockach.
+        // Formular predvyplni vsechny dnes platne MAIN, archiv starych povoleni zustava oddeleny.
+        $branchToday=date('Y-m-d');
+        $mainWorkplaces=[];
         foreach ($workplaceData['main_historie'] as $mainRow) {
             if ((int)$mainRow['platny'] !== 1 || !empty($mainRow['zruseno'])
                 || (!empty($mainRow['platnost_od']) && $mainRow['platnost_od'] > $branchToday)
                 || (!empty($mainRow['platnost_do']) && $mainRow['platnost_do'] < $branchToday)) continue;
             $mainWorkplaces[(int)$mainRow['id_pob']] = true;
         }
-        $selectedMainWorkplace = count($mainWorkplaces) === 1 ? (int)array_key_first($mainWorkplaces) : 0;
-        $mainOptional = cb_hr_main_nepovinne($db, (int)$employee['id_person']);
         ?>
         <?php // Obal sjednocuje kompaktni odstupy v prohlizeni i editaci pracovniho pomeru. ?>
         <div class="hr_employee_work_compact">
@@ -277,73 +269,8 @@ $employeeDocumentOpenUrl = static function (array $document): string {
         <?php endif; ?>
 
         <div class="hr_assignments_grid">
-        <section class="hr_panel" data-hr-employee-block="slot">
-            <div class="hr_panel_header"><h2 class="hr_panel_title">Pracovní sloty</h2><div class="hr_employee_block_actions"><?php if ($isEdit && cb_pravo_ma(307)): ?><button class="hr_primary_button" type="submit" form="hr-slot-form" data-hr-employee-save>Přidat slot</button><?php endif; ?><?php if (cb_hr_nastaveni_ma_pravo()): ?><a class="hr_panel_link" href="<?= h(cb_root_url('index.php?m=hr&page=nastaveni&navrat_person=' . (int)$employee['id_person'] . '#hr-settings-slot')) ?>">Spravovat sloty</a><?php endif; ?></div></div>
-            <?php if ($isEdit && cb_pravo_ma(307)): ?>
-                <form id="hr-slot-form" data-hr-employee-form="slot" class="hr_form hr_assignment_form hr_assignment_form--position" method="post" action="<?= h(hr_pracovni_pomer_url((int)$employee['id_person'])) ?>">
-                    <input type="hidden" name="cb_action" value="hr_zamestnanec_pozice_zmenit"><input type="hidden" name="id_person" value="<?= h((string)$employee['id_person']) ?>">
-                    <label class="hr_form_label"><span class="hr_form_label_text">Přidat slot</span><select name="id_slot" required><option value="">Vyberte</option><?php foreach ($positionData['pozice'] as $pozice): ?><option value="<?= h((string)$pozice['id_slot']) ?>"><?= h($pozice['slot']) ?></option><?php endforeach; ?></select></label>
-                    <label class="hr_form_label"><span class="hr_form_label_text">Platí od</span><input name="platnost_od" data-cb-date required value="<?= h(date('d.m.Y')) ?>"></label>
-
-                </form>
-            <?php endif; ?>
-            <?php if ($positionData['historie'] === []): ?><p class="hr_employee_compact_note">Zaměstnanec nemá přidělen slot</p><?php else: ?>
-                <div class="hr_table_wrap hr_compact_table_wrap"><table class="hr_table hr_assignment_history_table"><thead><tr><th class="hr_table_cell hr_table_head">Slot</th><th class="hr_table_cell hr_table_head">Hlavní</th><th class="hr_table_cell hr_table_head">Od</th><th class="hr_table_cell hr_table_head">Do</th><th class="hr_table_cell hr_table_head">Stav záznamu</th></tr></thead><tbody><?php foreach ($positionData['historie'] as $polozka): ?><tr><td class="hr_table_cell"><strong><?= h((string)$polozka['slot']) ?></strong></td><td class="hr_table_cell"><?= (int)$polozka['hlavni'] === 1 ? 'Ano' : 'Ne' ?></td><td class="hr_table_cell"><?= h(hr_format_date((string)($polozka['platnost_od'] ?? ''))) ?></td><td class="hr_table_cell"><?= h(hr_format_date((string)($polozka['platnost_do'] ?? ''))) ?></td><td class="hr_table_cell"><?= (int)$polozka['platny'] === 1 ? 'Platný' : 'Ukončený' ?></td></tr><?php endforeach; ?></tbody></table></div>
-            <?php endif; ?>
-        </section>
-
-        <section class="hr_panel" data-hr-employee-block="function">
-            <div class="hr_panel_header"><h2 class="hr_panel_title">Funkce</h2><div class="hr_employee_block_actions"><?php if ($isEdit && cb_pravo_ma(307)): ?><button class="hr_primary_button" type="submit" form="hr-function-form" data-hr-employee-save>Uložit funkci</button><?php endif; ?><?php if (cb_hr_nastaveni_ma_pravo()): ?><a class="hr_panel_link" href="<?= h(cb_root_url('index.php?m=hr&page=nastaveni&navrat_person=' . (int)$employee['id_person'] . '#hr-settings-funkce')) ?>">Spravovat funkce</a><?php endif; ?></div></div>
-            <?php if ($isEdit && cb_pravo_ma(307)): ?>
-                <form id="hr-function-form" data-hr-employee-form="function" class="hr_form hr_assignment_form" method="post" action="<?= h(hr_pracovni_pomer_url((int)$employee['id_person'])) ?>">
-                    <input type="hidden" name="cb_action" value="hr_zamestnanec_funkce_zmenit"><input type="hidden" name="id_person" value="<?= h((string)$employee['id_person']) ?>">
-                    <label class="hr_form_label"><span class="hr_form_label_text">Funkce</span><select name="id_funkce"><option value="">Bez funkce</option><?php foreach ($functionData['funkce'] as $funkce): ?><?php if (((int)$funkce['id_role'] !== 3 || cb_pravo_ma(316)) && ((int)$funkce['id_role'] !== 1 || hr_ciselnik_je_admin($db))): ?><option value="<?= h((string)$funkce['id_funkce']) ?>"><?= h($funkce['nazev']) ?></option><?php endif; ?><?php endforeach; ?></select></label>
-                    <label class="hr_form_label"><span class="hr_form_label_text"><input type="checkbox" name="v_treninku" value="1"> V tréninku</span></label>
-                    <label class="hr_form_label"><span class="hr_form_label_text">Platí od</span><input name="platnost_od" data-cb-date required value="<?= h(date('d.m.Y')) ?>"></label>
-
-                </form>
-            <?php endif; ?>
-            <?php if ($functionData['historie'] === []): ?><p class="hr_empty_state">Funkce není evidována.</p><?php else: ?>
-                <div class="hr_table_wrap hr_compact_table_wrap"><table class="hr_table hr_assignment_history_table"><thead><tr><th class="hr_table_cell hr_table_head">Funkce</th><th class="hr_table_cell hr_table_head">Trénink</th><th class="hr_table_cell hr_table_head">Od</th><th class="hr_table_cell hr_table_head">Do</th><th class="hr_table_cell hr_table_head">Stav</th></tr></thead><tbody><?php foreach ($functionData['historie'] as $polozka): ?><tr><td class="hr_table_cell"><strong><?= h((string)$polozka['nazev']) ?></strong></td><td class="hr_table_cell"><?= (int)$polozka['v_treninku'] === 1 ? 'Ano' : 'Ne' ?></td><td class="hr_table_cell"><?= h(hr_format_date((string)($polozka['platnost_od'] ?? ''))) ?></td><td class="hr_table_cell"><?= h(hr_format_date((string)($polozka['platnost_do'] ?? ''))) ?></td><td class="hr_table_cell"><?= (int)$polozka['platny'] === 1 ? 'Platná' : 'Ukončená' ?></td></tr><?php endforeach; ?></tbody></table></div>
-            <?php endif; ?>
-        </section>
-
-        <section class="hr_panel" data-hr-employee-block="branches">
-            <div class="hr_panel_header hr_employee_branches_header"><h2 class="hr_panel_title">Povolené pobočky</h2>
-            <?php // Souhrn pouziva stejnou aktualni sadu jako checkboxy; minula prirazeni zustavaji v historii. ?>
-            <?php if ($selectedWorkplaces === []): ?>
-                <span class="hr_employee_compact_note">Zaměstnanec nemá povolenou žádnou pobočku</span>
-            <?php else: ?>
-                <span data-hr-current-branches><?php $branchSeparator = ''; foreach ($selectedWorkplaces as $branchId => $branchName): ?><?= $branchSeparator ?><?php if ($branchId === $selectedMainWorkplace): ?><strong><?= h($branchName) ?></strong><?php else: ?><?= h($branchName) ?><?php endif; ?><?php $branchSeparator = ', '; endforeach; ?></span>
-            <?php endif; ?>
-            <?php if ($isEdit && cb_pravo_ma(307)): ?><button class="hr_primary_button" type="submit" form="hr-branches-form" data-hr-employee-save<?= !$workplaceData['main_pripraveno'] ? ' disabled' : '' ?>>Uložit změnu poboček</button><?php endif; ?>
-            </div>
-            <?php if ($isEdit && cb_pravo_ma(307)): ?>
-                <form id="hr-branches-form" data-hr-employee-form="branches" class="hr_form hr_assignment_form hr_assignment_form--branches" method="post" action="<?= h(hr_pracovni_pomer_url((int)$employee['id_person'])) ?>">
-                    <input type="hidden" name="cb_action" value="hr_zamestnanec_pobocky_zmenit"><input type="hidden" name="id_person" value="<?= h((string)$employee['id_person']) ?>">
-                    <div class="hr_form_label"><span class="hr_form_label_text">Povolené pobočky</span><div data-hr-branch-list><?php foreach ($workplaceData['pobocky'] as $pobocka): ?><label><input type="checkbox" name="id_pob[]" value="<?= h((string)$pobocka['id_pob']) ?>" data-hr-selected-branch data-hr-branch-name="<?= h($pobocka['nazev']) ?>"<?= isset($selectedWorkplaces[(int)$pobocka['id_pob']]) ? ' checked' : '' ?>> <?= h($pobocka['nazev']) ?></label><?php endforeach; ?></div></div>
-                    <label class="hr_form_label"><span class="hr_form_label_text">Hlavní pobočka</span><select name="id_pob_hlavni" required data-hr-selected-main data-hr-main-optional="<?= $mainOptional ? '1' : '0' ?>"><option value="">Vyberte</option><?php if ($mainOptional): ?><option value="0"<?= $selectedMainWorkplace === 0 ? ' selected' : '' ?>>Bez hlavní pobočky</option><?php endif; ?><?php foreach ($selectedWorkplaces as $branchId => $branchName): ?><option value="<?= h((string)$branchId) ?>"<?= $branchId === $selectedMainWorkplace ? ' selected' : '' ?>><?= h($branchName) ?></option><?php endforeach; ?></select></label>
-                    <label class="hr_form_label"><span class="hr_form_label_text">Pobočky platí od</span><input name="platnost_od" data-cb-date required value="<?= h(date('d.m.Y')) ?>"></label>
-                    <label class="hr_form_label"><span class="hr_form_label_text">MAIN platí od</span><input name="main_platnost_od" data-cb-date required value="<?= h(date('d.m.Y')) ?>"></label>
-
-                    <?php if (!$workplaceData['main_pripraveno']): ?><p class="hr_empty_state">Ukládání vyžaduje spuštění připravené SQL migrace historie MAIN.</p><?php endif; ?>
-                </form>
-            <?php endif; ?>
-            <?php // Historie je oddelena od ovladani aktualniho vyberu a rozbali se pouze na zadost. ?>
-            <button type="button" class="hr_secondary_button" data-hr-history-toggle aria-expanded="false" aria-controls="hr-branch-history">Zobrazit historii poboček uživatele</button>
-            <div id="hr-branch-history" data-hr-branch-history hidden>
-                <h3>Historie povolených poboček</h3>
-                <?php if ($workplaceData['historie'] === []): ?><p class="hr_empty_state">Historie poboček není evidována.</p><?php else: ?>
-                <div class="hr_table_wrap hr_compact_table_wrap"><table class="hr_table hr_assignment_history_table"><thead><tr><th class="hr_table_cell hr_table_head">Pobočka</th><th class="hr_table_cell hr_table_head">Od</th><th class="hr_table_cell hr_table_head">Do</th><th class="hr_table_cell hr_table_head">Stav záznamu</th></tr></thead><tbody>
-                <?php foreach ($workplaceData['historie'] as $polozka): ?><tr><td class="hr_table_cell"><strong><?= h((string)$polozka['nazev']) ?></strong></td><td class="hr_table_cell"><?= h(hr_format_date((string)($polozka['platnost_od'] ?? ''))) ?></td><td class="hr_table_cell"><?= h(hr_format_date((string)($polozka['platnost_do'] ?? ''))) ?></td><td class="hr_table_cell"><?= (int)$polozka['platny'] !== 1 || !empty($polozka['zruseno']) ? 'Zrušený plán' : ((!empty($polozka['platnost_do']) && $polozka['platnost_do'] < date('Y-m-d')) ? 'Ukončený' : ((!empty($polozka['platnost_od']) && $polozka['platnost_od'] > date('Y-m-d')) ? 'Plánovaný' : 'Aktuální')) ?></td></tr><?php endforeach; ?>
-                </tbody></table></div><?php endif; ?>
-                <h3>Historie MAIN pobočky</h3>
-                <?php if ($workplaceData['main_historie'] === []): ?><p class="hr_empty_state">Historie MAIN není evidována.</p><?php else: ?>
-                <div class="hr_table_wrap hr_compact_table_wrap"><table class="hr_table hr_assignment_history_table"><thead><tr><th class="hr_table_cell hr_table_head">MAIN pobočka</th><th class="hr_table_cell hr_table_head">Od</th><th class="hr_table_cell hr_table_head">Do</th><th class="hr_table_cell hr_table_head">Stav záznamu</th></tr></thead><tbody>
-                <?php foreach ($workplaceData['main_historie'] as $polozka): ?><tr><td class="hr_table_cell"><strong><?= h((string)$polozka['nazev']) ?></strong></td><td class="hr_table_cell"><?= h(hr_format_date((string)($polozka['platnost_od'] ?? ''))) ?></td><td class="hr_table_cell"><?= h(hr_format_date((string)($polozka['platnost_do'] ?? ''))) ?></td><td class="hr_table_cell"><?= (int)$polozka['platny'] !== 1 || !empty($polozka['zruseno']) ? 'Zrušený plán' : ((!empty($polozka['platnost_do']) && $polozka['platnost_do'] < date('Y-m-d')) ? 'Ukončený' : ((!empty($polozka['platnost_od']) && $polozka['platnost_od'] > date('Y-m-d')) ? 'Plánovaný' : 'Aktuální')) ?></td></tr><?php endforeach; ?>
-                </tbody></table></div><?php endif; ?>
-            </div>
-        </section>
+        <?php require __DIR__ . '/../hr_includes/zamestnanec_zarazeni.php'; ?>
+        <?php require __DIR__ . '/../hr_includes/zamestnanec_mista.php'; ?>
         </div>
 
         <?php if ($isEdit && $workRelation !== null && empty($workRelation['id_pracovni_ukonceni'])): ?>

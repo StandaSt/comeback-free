@@ -5,7 +5,7 @@ declare(strict_types=1);
  * Prvni vstup do IS.
  * Resi overeni pozvanky, ulozeni lokalniho hesla a pripravu identity.
  * Dokonceni loginu muze jednorazove aktivovat vyvojove prebrani prav USER 1.
- * Kazdy dokonceny login overi stari objednavek Restie nezavisle na cilovem modulu.
+ * Dokonceny login pouze naplanuje kontrolu Restie po nacteni prihlaseneho IS.
  */
 
 require_once __DIR__ . '/duveryhodne_zarizeni.php';
@@ -96,7 +96,7 @@ function cb_prvni_vstup_over_token(mysqli $db, string $token): bool
     return true;
 }
 
-/* Pouzije spolecnou kontrolu Restie; na jiz bezici import pocka pred predanim prihlaseneho IS. */
+/* Samostatny pozadavek po nacteni IS pouzije spolecnou kontrolu a vycka na dokonceni importu. */
 function cb_login_restia_kontrola(): void
 {
     $resumeSession = session_status() === PHP_SESSION_ACTIVE;
@@ -128,14 +128,14 @@ function cb_login_restia_kontrola(): void
             usleep(500000);
         }
     } finally {
-        // Import uvolnuje session; login po navratu jeste uklada cilovy modul a stav overeni zarizeni.
+        // Import uvolnuje session; volajicimu vratime puvodni stav jejiho otevreni.
         if ($resumeSession && session_status() === PHP_SESSION_NONE) {
             session_start();
         }
     }
 }
 
-/* Dokonci prihlaseni, vytvori plnohodnotnou session a pred navratem overi cerstvost objednavek. */
+/* Dokonci prihlaseni bez cekani na Restii, kterou prohlizec overi az po nacteni IS. */
 function cb_prvni_vstup_dokonci_login(mysqli $db, array $user): void
 {
     unset($_SESSION['cb_prebrani_prav']);
@@ -183,12 +183,8 @@ function cb_prvni_vstup_dokonci_login(mysqli $db, array $user): void
         cb_session_forget_auth();
         throw $error;
     }
-    try {
-        cb_login_restia_kontrola();
-    } catch (Throwable $error) {
-        // Vypadek Restie nesmi zrusit platny login; skutecne stari dat nadale ukazuje hlavicka.
-        error_log('Kontrola Restie po přihlášení: ' . $error->getMessage());
-    }
+    // Nova session musi dorazit do prohlizece drive nez zacne pomaly import.
+    $_SESSION['cb_restia_po_loginu'] = 1;
 }
 
 /* Zahaji lokalni login a vrati prime presmerovani pro overeni na stejnem mobilu. */

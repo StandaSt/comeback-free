@@ -7,6 +7,7 @@
  * Směny při plném otevření použijí hotový serverový obsah; ostatní moduly si zachovávají úvodní obnovu dat.
  * Vlastní profil používá společnou delegovanou obsluhu formulářů a zobrazení hesel.
  * Sdělení správce mají společnou kartu a obsluhu náhledu příjemců i archivu.
+ * Klient Restie dostava priznak jednorazove kontroly az po nacteni prihlaseneho IS.
  */
 declare(strict_types=1);
 
@@ -24,6 +25,7 @@ if ($cbNavUserId > 0) {
 window.CB_ENDPOINT = <?= json_encode($cbShellUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
 window.CB_CRF_TOKEN = <?= json_encode(function_exists('cb_crf_token') ? cb_crf_token() : '', JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
 window.CB_PC_SESSION_TOKEN = <?= json_encode((string)($_SESSION['cb_pc_session_token'] ?? ''), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+window.CB_RESTIA_AFTER_LOGIN = <?= !empty($_SESSION['cb_restia_po_loginu']) ? 'true' : 'false' ?>;
 // Fronta patří skutečnému loginu, nikoliv převzatému profilu práv.
 window.CB_AKTIVITA = <?= json_encode($cbNavUserId>0 ? ['url'=>cb_root_url('index.php?cb_aktivita=1'),'owner'=>(string)(int)($_SESSION['cb_id_login'] ?? 0).':'.$cbNavUserId] : null,JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR) ?>;
 </script>

@@ -19,6 +19,17 @@ function cb_hr_request_dispatch(mysqli $db, string $page, array $user): void
     }
 
     $action = trim((string)($_POST['cb_action'] ?? ''));
+    // Sprava oblasti ma vlastni kontrolu prava a firem; GET nikdy nic neuklada.
+    if (in_array($action,['hr_oblast_ulozit','hr_pobocka_oblast_ulozit'],true)) {
+        require_once __DIR__ . '/../hr_db/hr_oblasti_sprava.php';
+        $url=cb_root_url('index.php?m=hr&page=nastaveni&navrat_person='.max(0,(int)($_POST['navrat_person']??0)));
+        try {
+            if ($action==='hr_oblast_ulozit') hr_oblast_ulozit($db,(int)($_POST['id']??0),(string)($_POST['nazev']??''),isset($_POST['aktivni']));
+            else hr_pobocka_oblast_ulozit($db,(int)($_POST['id_pob']??0),(int)($_POST['id_oblast_prace']??0),hr_pracovni_pomer_datum_z_postu((string)($_POST['platnost_od']??''),'Platí od'),(int)($user['id_user']??0));
+            cb_form_finish($url,true,'Oblast byla uložena.');
+        } catch (Throwable $e) { cb_form_finish($url,false,cb_hr_chyba_text($e,'Správa oblastí HR')); }
+        return;
+    }
     // Skryti testovaci osoby plati i pro rucne odeslany formular, nejen pro seznam.
     $employeeAction = str_starts_with($action, 'hr_zamestnanec_')
         || in_array($action, ['hr_pracovni_pomer_upravit', 'hr_pracovni_preruseni_ulozit',

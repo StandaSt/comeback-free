@@ -1,6 +1,9 @@
 <?php
+
+// Rozsah mist vykonu prace sdileji vsechny cteci dotazy tohoto souboru.
 // Finalni zapis denniho reportu vcetne jedne casove prestavky a historicke delky pauzy.
 declare(strict_types=1);
+require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
 require_once __DIR__ . '/../../common/db/db_cis_slot.php';
 require_once __DIR__ . '/../../common/lib/smeny_hodiny.php';
@@ -213,7 +216,7 @@ function cb_db_zapis_denni_report_user_allowed(mysqli $conn, int $idPob, int $id
     $slotTable = cb_hr_schema_table($conn, 'slot');
     $stmt = $conn->prepare('
         SELECT 1
-        FROM hr_pracoviste prac
+        FROM ' . cb_hr_pracoviste_sql($conn) . ' prac
         INNER JOIN ' . $slotTable . ' z ON z.id_person = prac.id_person AND z.platny = 1
         WHERE prac.id_pob = ?
           AND prac.id_person = ?
@@ -269,7 +272,7 @@ function cb_db_zapis_denni_report_user_access_error(mysqli $conn, int $idPob, in
     $slotTable = cb_hr_schema_table($conn, 'slot');
     $stmt = $conn->prepare('
         SELECT
-            EXISTS(SELECT 1 FROM hr_pracoviste WHERE id_person = ? AND id_pob = ? AND platny = 1) AS has_branch,
+            EXISTS(SELECT 1 FROM ' . cb_hr_pracoviste_sql($conn) . ' hr_mista_rozsah WHERE id_person = ? AND id_pob = ? AND platny = 1) AS has_branch,
             EXISTS(SELECT 1 FROM ' . $slotTable . ' WHERE id_person = ? AND id_slot = ? AND platny = 1) AS has_slot
     ');
     if ($stmt === false) {

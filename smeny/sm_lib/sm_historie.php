@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-// MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
+// Ucel rozsahu: MAIN je mnozina a viditelne pobocky vychazeji z mist vykonu prace.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 /* Účel: Připraví dokončené týdny a povolené pobočky historie; přebraná osoba slouží pro čtení, nikoli pro autorství změn. */
 require_once __DIR__ . '/../../common/lib/prebrani_prav.php';
@@ -39,13 +39,13 @@ function cb_smeny_historie_vidi_vsechny_pobocky(mysqli $db,int $idPerson): bool
 {
     // V testu rozhoduje prevzata role, ne skutecna adminova DB role.
     if (($profile=cb_prebrani_prav_profil())!==null) {
-        return $profile['role_id']>0 && $profile['role_id']<5;
+        return in_array((int)$profile['role_id'],[1,2,4],true);
     }
     if($idPerson<=0)return false;
     $stmt=$db->prepare('SELECT MIN(id_role) id_role FROM hr_pristupovy_profil WHERE id_person=?');
     $stmt->bind_param('i',$idPerson);$stmt->execute();
     $role=(int)($stmt->get_result()->fetch_assoc()['id_role']??0);$stmt->close();
-    return $role>0 && $role<5;
+    return in_array($role,[1,2,4],true);
 }
 
 /** Vrátí aktivní pobočky firem, které smí vyšší vedení spravovat. */
@@ -64,7 +64,7 @@ function cb_smeny_historie_vsechny_pobocky(mysqli $db,int $idPerson): array
 function cb_smeny_historie_osobni_pobocky(mysqli $db,int $idPerson): array
 {
     if($idPerson<=0)return [];
-    $stmt=$db->prepare('SELECT p.id_pob FROM hr_person osoba JOIN pobocka p ON p.id_firma=osoba.id_firma AND p.aktivni=1 LEFT JOIN hr_pracoviste prac ON prac.id_person=osoba.id_person AND prac.id_pob=p.id_pob AND prac.platny=1 AND (prac.platnost_od IS NULL OR prac.platnost_od<=CURDATE()) AND (prac.platnost_do IS NULL OR prac.platnost_do>=CURDATE()) WHERE osoba.id_person=? AND (prac.id_pob IS NOT NULL OR osoba.pristup_vsechny_pobocky=1) GROUP BY p.id_pob');
+    $stmt=$db->prepare('SELECT p.id_pob FROM hr_person osoba JOIN pobocka p ON p.id_firma=osoba.id_firma AND p.aktivni=1 LEFT JOIN ' . cb_hr_pracoviste_sql($db) . ' prac ON prac.id_person=osoba.id_person AND prac.id_pob=p.id_pob AND prac.platny=1 AND (prac.platnost_od IS NULL OR prac.platnost_od<=CURDATE()) AND (prac.platnost_do IS NULL OR prac.platnost_do>=CURDATE()) WHERE osoba.id_person=? AND (prac.id_pob IS NOT NULL ) GROUP BY p.id_pob');
     $stmt->bind_param('i',$idPerson);$stmt->execute();$result=$stmt->get_result();$allowed=[];
     while($row=$result->fetch_assoc()){$allowed[(int)$row['id_pob']]=true;}$stmt->close();
     if (($profile=cb_prebrani_prav_profil())!==null) {

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-// MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
+// Ucel: Overeni karty vyzaduje doplnene udaje a bezchybne mista, MAIN, sloty a pozici.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
 /* Zpracuje overeni karty v povolenem rozsahu HR; podminkou je alespon jeden slot nebo funkce. */
@@ -16,18 +16,8 @@ function hr_post_zamestnanec_overit(mysqli $db): void
             throw new CbUserVisibleException('Nemáte právo upravit zaměstnance.');
         }
         hr_zamestnanci_vyzaduj_osobu($db, $idUser, $idPerson);
-        $slotTable = cb_hr_schema_table($db, 'slot');
-        $functionTable = cb_hr_schema_table($db, 'funkce');
-        $functionFk = cb_hr_funkce_fk($db);
-        $stmt = $db->prepare("SELECT (SELECT COUNT(*) FROM {$slotTable} WHERE id_person = ? AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS slotu, (SELECT COUNT(*) FROM {$functionTable} WHERE id_person = ? AND {$functionFk} <> 1 AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS funkci, (SELECT COUNT(*) FROM hr_pracoviste WHERE id_person = ? AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS pobocek, (SELECT COUNT(*) FROM " . cb_hr_main_sql($db) . " m WHERE id_person = ? AND platny = 1 AND zruseno IS NULL AND hlavni = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS hlavnich");
-        $stmt->bind_param('iiii', $idPerson, $idPerson, $idPerson, $idPerson);
-        $stmt->execute();
-        $zarazeni = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-        // Osoba muze mit vice slotu, jednu funkci nebo kombinaci slotu s restauracni funkci.
-        if (((int)($zarazeni['slotu'] ?? 0) < 1 && (int)($zarazeni['funkci'] ?? 0) < 1) || (int)($zarazeni['pobocek'] ?? 0) < 1 || (int)($zarazeni['hlavnich'] ?? 0) !== 1) {
-            throw new CbUserVisibleException('Před ověřením nastavte alespoň jeden slot nebo funkci, alespoň jednu pobočku a právě jednu hlavní pobočku.');
-        }
+        $errors=cb_hr_zarazeni_chyby($db,$idPerson);
+        if ($errors!==[]) throw new CbUserVisibleException('Chyba zařazení: '.implode(' ',$errors));
         hr_update_employee_completeness($db, $idPerson);
         $stmt = $db->prepare('UPDATE hr_person SET overen = 1 WHERE id_person = ? AND overen = 0');
         $stmt->bind_param('i', $idPerson);

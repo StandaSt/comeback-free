@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-// MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
+// Ucel rozsahu: Prehled uzivatelu cte mista vykonu prace a zobrazuje vsechny MAIN.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
 /* Datove operace pro spravu uzivatelu vcetne slotu z aktualni faze HR migrace. */
@@ -91,7 +91,7 @@ function cb_admin_uzivatele_nacti(mysqli $db, array $source): array
     if ((int)$filters['firma'] > 0) { $where[] = 'hp.id_firma=?'; $params[] = (int)$filters['firma']; }
     if ((int)$filters['role'] > 0) { $where[] = 'EXISTS (SELECT 1 FROM hr_pristupovy_profil prf WHERE prf.id_person=hp.id_person AND prf.id_role=?)'; $params[] = (int)$filters['role']; }
     if ((int)$filters['slot'] >= 0) { $where[] = "EXISTS (SELECT 1 FROM {$slotTable} zf WHERE zf.id_person=hp.id_person AND zf.id_slot=? AND zf.platny=1)"; $params[] = (int)$filters['slot']; }
-    if ((int)$filters['pobocka'] >= 0) { $where[] = '(hp.pristup_vsechny_pobocky=1 OR EXISTS (SELECT 1 FROM hr_pracoviste pf WHERE pf.id_person=hp.id_person AND pf.id_pob=? AND pf.platny=1))'; $params[] = (int)$filters['pobocka']; }
+    if ((int)$filters['pobocka'] >= 0) { $where[] = '(hp.pristup_vsechny_pobocky=1 OR EXISTS (SELECT 1 FROM ' . cb_hr_pracoviste_sql($db) . ' pf WHERE pf.id_person=hp.id_person AND pf.id_pob=? AND pf.platny=1))'; $params[] = (int)$filters['pobocka']; }
     if ($filters['stav'] === 'aktivni') { $where[] = 'hp.aktivni=1'; }
     if ($filters['stav'] === 'neaktivni') { $where[] = 'hp.aktivni=0'; }
     $whereSql = $where === [] ? '' : ' WHERE ' . implode(' AND ', $where);
@@ -118,12 +118,12 @@ function cb_admin_uzivatele_nacti(mysqli $db, array $source): array
                    INNER JOIN cis_slot cs ON cs.id_slot=z.id_slot
                    WHERE z.id_person=hp.id_person AND z.platny=1
                ), "") AS slot,
-               (SELECT p.nazev FROM ' . cb_hr_main_sql($db) . ' prac INNER JOIN pobocka p ON p.id_pob=prac.id_pob WHERE prac.id_person=hp.id_person AND prac.platny=1 AND prac.zruseno IS NULL AND prac.hlavni=1 AND (prac.platnost_od IS NULL OR prac.platnost_od<=CURDATE()) AND (prac.platnost_do IS NULL OR prac.platnost_do>=CURDATE()) ORDER BY prac.id_pracoviste DESC LIMIT 1) AS pobocka_main,
+               (SELECT GROUP_CONCAT(DISTINCT p.nazev ORDER BY p.nazev SEPARATOR \', \') FROM ' . cb_hr_main_sql($db) . ' prac INNER JOIN pobocka p ON p.id_pob=prac.id_pob WHERE prac.id_person=hp.id_person AND prac.platny=1 AND prac.zruseno IS NULL AND prac.hlavni=1 AND (prac.platnost_od IS NULL OR prac.platnost_od<=CURDATE()) AND (prac.platnost_do IS NULL OR prac.platnost_do>=CURDATE())) AS pobocka_main,
                CASE
                    WHEN hp.pristup_vsechny_pobocky=1 THEN (
                        SELECT COUNT(*) FROM pobocka p_all WHERE p_all.id_firma=hp.id_firma AND p_all.aktivni=1
                    )
-                   ELSE (SELECT COUNT(DISTINCT prac.id_pob) FROM hr_pracoviste prac WHERE prac.id_person=hp.id_person AND prac.platny=1)
+                   ELSE (SELECT COUNT(DISTINCT prac.id_pob) FROM ' . cb_hr_pracoviste_sql($db) . ' prac WHERE prac.id_person=hp.id_person AND prac.platny=1)
                END AS pobocky_pocet,
                CASE WHEN u.heslo_hash IS NULL OR u.heslo_hash="" THEN 0 ELSE 1 END AS ma_heslo
         ' . $fromSql . '

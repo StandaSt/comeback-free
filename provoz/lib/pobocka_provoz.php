@@ -1,6 +1,9 @@
 <?php
+
+// Rozsah mist vykonu prace sdileji vsechny cteci dotazy tohoto souboru.
 // Pravidla provozu pobocek: zaviraci casy, globalni dny bez provozu a povinnost dennich reportu.
 declare(strict_types=1);
+require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
 require_once __DIR__ . '/report_promenne.php';
 require_once __DIR__ . '/../../common/lib/uloz_akci.php';
@@ -81,8 +84,8 @@ function cb_pobocka_provoz_branch(mysqli $conn, int $idPob, int $idUser): ?array
         SELECT p.id_pob, p.nazev, p.end_po, p.end_ut, p.end_st, p.end_ct, p.end_pa, p.end_so, p.end_ne
         FROM hr_person hp
         INNER JOIN pobocka p ON p.id_pob = ? AND p.aktivni = 1
-        WHERE hp.id_person = ? AND (hp.pristup_vsechny_pobocky = 1 OR EXISTS (
-            SELECT 1 FROM hr_pracoviste prac WHERE prac.id_person = hp.id_person AND prac.id_pob = p.id_pob AND prac.platny = 1
+        WHERE hp.id_person = ? AND (EXISTS (
+            SELECT 1 FROM ' . cb_hr_pracoviste_sql($conn) . ' prac WHERE prac.id_person = hp.id_person AND prac.id_pob = p.id_pob AND prac.platny = 1
         ))
         LIMIT 1
     ');

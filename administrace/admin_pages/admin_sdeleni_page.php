@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-/* Účel: Kompaktní správa sdělení s náhledem příjemců a sbaleným archivem jejich přečtení. */
+/* Účel: Kompaktní správa sdělení s náhledem příjemců a samostatně obnovovaným archivem jejich přečtení. */
 require_once __DIR__.'/../admin_lib/admin_sdeleni.php';
 require_once __DIR__.'/../../common/lib/admin_sdeleni.php';
 $sdFirmy=cb_admin_sdeleni_firmy(db(),cb_sdeleni_user());
@@ -41,6 +41,7 @@ $sdMore=count($sdArchive)>50;$sdArchive=array_slice($sdArchive,0,50);
             <button class="sd_button" type="button" data-sdeleni-publish>Zveřejnit sdělení</button>
         </section>
     </details>
+    <section data-sdeleni-admin-archive>
     <h2 class="sd_title">Archiv sdělení</h2>
     <?php if ($sdArchive===[]): ?><p>Žádná sdělení.</p><?php endif; ?>
     <?php foreach ($sdArchive as $sd): ?>
@@ -70,4 +71,5 @@ $sdMore=count($sdArchive)>50;$sdArchive=array_slice($sdArchive,0,50);
         <?php if ($sdPage>0): ?><a href="<?= h(cb_root_url('index.php?m=administrace&page=sdeleni&sd_strana='.($sdPage-1))) ?>">Novější</a><?php endif; ?>
         <?php if ($sdMore): ?><a href="<?= h(cb_root_url('index.php?m=administrace&page=sdeleni&sd_strana='.($sdPage+1))) ?>">Starší</a><?php endif; ?>
     </nav><?php endif; ?>
+    </section>
 </div>

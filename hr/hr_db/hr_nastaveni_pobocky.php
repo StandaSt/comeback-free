@@ -1,5 +1,8 @@
 <?php
 declare(strict_types=1);
+// Rozsah mist vykonu prace sdileji vsechny cteci dotazy tohoto souboru.
+require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
+
 
 /** @return array{firmy:array<int,array{id_firma:int,nazev:string}>,pobocky:array<int,array<string,mixed>>} */
 function hr_nastaveni_pobocky(mysqli $db, int $idUser): array
@@ -75,7 +78,7 @@ function hr_nastaveni_pobocka_zmenit_stav(mysqli $db, int $idPob, bool $aktivni,
         throw new CbUserVisibleException('Nemáte oprávnění změnit tuto pobočku.');
     }
     if (!$aktivni) {
-        $stmt = $db->prepare('SELECT COUNT(*) AS pocet FROM hr_pracoviste WHERE id_pob = ? AND platny = 1 AND (platnost_do IS NULL OR platnost_do >= CURDATE())');
+        $stmt = $db->prepare('SELECT COUNT(*) AS pocet FROM ' . cb_hr_mista_sql() . ' hr_mista_rozsah WHERE id_pob = ? AND platny = 1 AND (platnost_do IS NULL OR platnost_do >= CURDATE())');
         $stmt->bind_param('i', $idPob);
         $stmt->execute();
         $pocet = (int)($stmt->get_result()->fetch_assoc()['pocet'] ?? 0);

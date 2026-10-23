@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 /* Účel: Zobrazuje vlastní profil a formuláře pro přihlašovací heslo a e-mail IS.
- * Osobní a pracovní údaje se zobrazují pouze pro čtení, kontakty HR se neupravují.
+ * Osobni a pracovni udaje se zobrazuji pouze pro cteni; MAIN se zobrazi jako cely vycet.
  */
 require_once __DIR__ . '/../lib/profil.php';
 $profil = cb_profil_data(db());
@@ -10,11 +10,10 @@ $profilMessage = $_SESSION['cb_profil_zprava'] ?? null;
 unset($_SESSION['cb_profil_zprava']);
 $profilModule = defined('CB_EMBEDDED_MODULE') ? (string)constant('CB_EMBEDDED_MODULE') : (string)($GLOBALS['CURRENT_MODULE'] ?? 'provoz');
 // Hlavní pobočku a povolená pracoviště zobrazujeme stejnými řádky jako ostatní údaje.
-$profilMainName = '';
+$profilMainNames = [];
 foreach ($profil['pobocky'] as $branch) {
-    if ((int)$branch['id_pob'] === $profil['main']) {
-        $profilMainName = (string)$branch['nazev'];
-        break;
+    if (in_array((int)$branch['id_pob'], $profil['main'], true)) {
+        $profilMainNames[] = (string)$branch['nazev'];
     }
 }
 $profilFields = [
@@ -23,8 +22,8 @@ $profilFields = [
     'Telefon' => (string)($profilUser['telefon'] ?? ''),
     'Role v IS' => implode(', ', array_column($profil['role'], 'nazev')),
     'Pracovní zařazení' => implode(', ', array_column($profil['sloty'], 'nazev')),
-    'Hlavní' => $profilMainName,
-    'Povolené' => implode(', ', array_column($profil['pobocky'], 'nazev')),
+    'MAIN pobočky' => implode(', ', $profilMainNames),
+    'Místo výkonu práce' => cb_hr_mista_popis(db(),(int)($profilUser['id_user']??0)),
 ];
 // Jednotná dekorativní ikona; přístupný název a stav zůstávají na tlačítku.
 $profilOko = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path class="common_profile_eye_slash" d="m3 3 18 18"/></svg>';

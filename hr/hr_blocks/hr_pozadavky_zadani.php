@@ -28,7 +28,7 @@ declare(strict_types=1);
                     <option value="<?= h((string)$idSlot) ?>"><?= h($nazevSlotu) ?></option>
                 <?php endforeach; ?>
             </select>
-            <span class="hr_request_text">pro pobočku <?= h((string)$pozadavkyMainPobocka['nazev']) ?>.</span>
+            <label class="hr_request_text">pro pobočku <select name="id_pob" required><?php if (count($pozadavkyMainPobocky)>1): ?><option value="">Vyberte MAIN</option><?php endif; ?><?php foreach ($pozadavkyMainPobocky as $branch): ?><option value="<?= (int)$branch['id_pob'] ?>"><?= h($branch['nazev']) ?></option><?php endforeach; ?></select></label>
             <span class="hr_request_text">Poznámka:</span>
             <input class="hr_note_input hr_request_field" type="text" name="upresneni" maxlength="500" placeholder="Zde upřesněte, třeba termín nástupu.">
             <button class="hr_primary_button hr_request_submit" type="submit">Zadat požadavek</button>

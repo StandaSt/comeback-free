@@ -1,5 +1,8 @@
 <?php
 declare(strict_types=1);
+// Rozsah mist vykonu prace sdileji vsechny cteci dotazy tohoto souboru.
+require_once __DIR__ . '/../common/lib/hr_pracoviste_main.php';
+
 
 /*
  * Modulový vstup Provoz.
@@ -274,8 +277,8 @@ if (
             SELECT p.nazev
             FROM hr_person hp
             INNER JOIN pobocka p ON p.id_pob = ? AND p.aktivni = 1
-            WHERE hp.id_person = ? AND (hp.pristup_vsechny_pobocky = 1 OR EXISTS (
-                SELECT 1 FROM hr_pracoviste prac WHERE prac.id_person = hp.id_person AND prac.id_pob = p.id_pob AND prac.platny = 1
+            WHERE hp.id_person = ? AND (EXISTS (
+                SELECT 1 FROM ' . cb_hr_pracoviste_sql(db()) . ' prac WHERE prac.id_person = hp.id_person AND prac.id_pob = p.id_pob AND prac.platny = 1
             ))
             LIMIT 1
         ');

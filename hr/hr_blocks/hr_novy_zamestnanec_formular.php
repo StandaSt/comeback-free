@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 /* Formulář alternativního založení zaměstnance; role v IS se odvozuje z volitelné funkce.
+ * Misto prace je vyber oblasti nebo konkretnich pobocek; MAIN se vybira jako mnozina.
  * Pohlavi pouziva nazvy a ciselna ID ze spolecneho HR ciselniku. */
 // Funkce s roli Admin jsou v nabidce pouze existujicimu Adminovi.
 
@@ -22,7 +23,7 @@ $mainBranchValue = $formValue('id_pob_hlavni');
 <section class="hr_panel">
     <div class="hr_panel_header"><div><h2 class="hr_panel_title">Manuální vytvoření zaměstnance</h2><p class="hr_muted">Alternativní založení zaměstnance mimo náborový proces VD/ND</p></div></div>
 
-    <form class="hr_form hr_new_employee_form" method="post" enctype="multipart/form-data" action="<?= h(cb_root_url('index.php?m=hr&page=novy_zamestnanec')) ?>">
+    <form class="hr_form hr_new_employee_form" data-hr-places data-hr-new-person method="post" enctype="multipart/form-data" action="<?= h(cb_root_url('index.php?m=hr&page=novy_zamestnanec')) ?>">
         <input type="hidden" name="cb_action" value="hr_zamestnanec_ulozit">
 
         <section class="hr_new_employee_section">
@@ -69,10 +70,9 @@ $mainBranchValue = $formValue('id_pob_hlavni');
                     <td class="hr_new_employee_field hr_new_employee_field--start"><label class="hr_form_label"><span>Datum nástupu</span><input type="date" name="datum_nastupu" required value="<?= h($formValue('datum_nastupu', date('Y-m-d'))) ?>"></label></td>
                 </tr>
                 <tr>
-                    <td class="hr_new_employee_field hr_new_employee_field--branches"><div class="hr_form_label"><span>Pobočky</span><div class="hr_employee_branch_picker" data-hr-branch-picker><button class="hr_employee_branch_button" type="button" data-hr-branch-toggle>Vyberte pobočky</button><div class="hr_employee_branch_panel" data-hr-branch-panel hidden><?php foreach ($pobocky as $pobocka): ?><label><input type="checkbox" name="id_pob[]" value="<?= h($pobocka['id']) ?>" data-hr-branch-option data-hr-branch-name="<?= h($pobocka['label']) ?>"<?= isset($selectedBranches[(string)(int)$pobocka['id']]) ? ' checked' : '' ?>> <?= h($pobocka['label']) ?></label><?php endforeach; ?></div></div></div></td>
-                    <td class="hr_new_employee_field hr_new_employee_field--main-branch"><label class="hr_form_label"><span>Hlavní pobočka</span><select name="id_pob_hlavni" required<?= $selectedBranches === [] ? ' disabled' : '' ?> data-hr-main-branch><?php if ($selectedBranches === []): ?><option value="">Nejprve vyberte pobočky</option><?php else: ?><option value="">Vyberte</option><?php foreach ($pobocky as $pobocka): ?><?php if (isset($selectedBranches[(string)(int)$pobocka['id']])): ?><option value="<?= h($pobocka['id']) ?>"<?= $mainBranchValue === (string)$pobocka['id'] ? ' selected' : '' ?>><?= h($pobocka['label']) ?></option><?php endif; ?><?php endforeach; ?><?php endif; ?></select></label></td>
+                    <td colspan="2"><?php require __DIR__ . '/../hr_includes/novy_zamestnanec_mista.php'; ?></td>
                     <td class="hr_new_employee_field hr_new_employee_field--slot"><label class="hr_form_label"><span>Pracovní slot</span><select name="id_slot"><option value="">Bez slotu</option><?php foreach ($sloty as $slot): ?><option value="<?= h($slot['id']) ?>"<?= $formValue('id_slot') === (string)$slot['id'] ? ' selected' : '' ?>><?= h($slot['label']) ?></option><?php endforeach; ?></select></label></td>
-                    <td class="hr_new_employee_field"><label class="hr_form_label"><span>Funkce</span><select name="id_funkce"><option value="">Bez funkce</option><?php foreach ($funkce as $polozka): ?><?php if (((int)$polozka['id_role'] !== 3 || cb_pravo_ma(316)) && ((int)$polozka['id_role'] !== 1 || hr_ciselnik_je_admin($db))): ?><option value="<?= h((string)$polozka['id_funkce']) ?>"<?= $formValue('id_funkce') === (string)$polozka['id_funkce'] ? ' selected' : '' ?>><?= h($polozka['nazev']) ?></option><?php endif; ?><?php endforeach; ?></select></label><label class="hr_form_label"><span><input type="checkbox" name="v_treninku" value="1"<?= $formValue('v_treninku') === '1' ? ' checked' : '' ?>> V tréninku</span></label></td>
+                    <td class="hr_new_employee_field"><label class="hr_form_label"><span>Funkce nebo manažerská pozice</span><select name="id_funkce"><option value="">Bez funkce</option><?php foreach ($funkce as $polozka): ?><?php if (($polozka['zarazeni']!=='manazerske' || cb_pravo_ma(316) || $newPersonIsAdmin) && ((int)$polozka['pouze_admin']!==1 || $newPersonIsAdmin) && ((int)$polozka['id_role']!==1 || $newPersonIsAdmin)): ?><option data-kind="<?= h($polozka['zarazeni']) ?>" value="<?= h((string)$polozka['id_funkce']) ?>"<?= $formValue('id_funkce') === (string)$polozka['id_funkce'] ? ' selected' : '' ?>><?= h($polozka['nazev']) ?></option><?php endif; ?><?php endforeach; ?></select></label><label class="hr_form_label"><span><input type="checkbox" name="v_treninku" value="1"<?= $formValue('v_treninku') === '1' ? ' checked' : '' ?>> V tréninku</span></label></td>
                 </tr>
                 <tr>
                     <td class="hr_new_employee_field hr_new_employee_field--email"><label class="hr_form_label"><span>E-mail</span><input type="email" name="email" maxlength="150" autocomplete="email" required value="<?= h($formValue('email')) ?>"></label></td>

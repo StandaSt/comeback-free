@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-// MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
+// Ucel rozsahu: MAIN je mnozina a viditelne pobocky vychazeji z mist vykonu prace.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 /* Účel: Načte týdenní dostupnost pracovníků oprávněných poboček, včetně těch, kteří nic nevyplnili. */
 
@@ -21,7 +21,7 @@ function cb_smeny_zadane_pozadavky(mysqli $db, array $branches, string $week): a
         LEFT JOIN smeny_pozadavek q ON q.id_person=hp.id_person AND q.tyden_od=?
         LEFT JOIN smeny_pozadavek_den d ON d.id_smeny_pozadavek=q.id_smeny_pozadavek
         WHERE (hp.aktivni=1 OR q.id_smeny_pozadavek IS NOT NULL)
-        AND EXISTS(SELECT 1 FROM hr_pracoviste pr WHERE pr.id_person=hp.id_person AND pr.platny=1 AND pr.id_pob IN ('.$ids.') AND (pr.platnost_od IS NULL OR pr.platnost_od<=DATE_ADD(?,INTERVAL 6 DAY)) AND (pr.platnost_do IS NULL OR pr.platnost_do>=?))
+        AND EXISTS(SELECT 1 FROM ' . cb_hr_pracoviste_sql($db) . ' pr WHERE pr.id_person=hp.id_person AND pr.platny=1 AND pr.id_pob IN ('.$ids.') AND (pr.platnost_od IS NULL OR pr.platnost_od<=DATE_ADD(?,INTERVAL 6 DAY)) AND (pr.platnost_do IS NULL OR pr.platnost_do>=?))
         ORDER BY p.nazev,jmeno,hp.id_person,d.den_tydne';
     $stmt=cb_smeny_planovani_sql($db,$sql,'sssssss',array_fill(0,7,$week));
     $people=[];

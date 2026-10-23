@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-// MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
+// Ucel: Dostupnost a HPP volno pouziji vybranou MAIN; vice MAIN nikdy nezkracujeme na nahodny zaznam.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
 /*
@@ -15,13 +15,20 @@ function cb_smeny_pozadavky_osoba(mysqli $db, ?int $idUser = null): ?array
     $sessionUser = $_SESSION['cb_user'] ?? [];
     $idUser ??= is_array($sessionUser) ? (int)($sessionUser['id_user'] ?? 0) : 0;
     if (function_exists('cb_prebrani_prav_profil') && ($profile = cb_prebrani_prav_profil($idUser)) !== null) {
-        return $profile['smeny_osoba'] === null ? null : array_replace($profile['smeny_osoba'],
-            ['id_person'=>1, 'jmeno'=>trim(($sessionUser['surname'] ?? '') . ' ' . ($sessionUser['name'] ?? ''))]);
+        $source=(int)$profile['id_user_zdroj'];
+        $sourcePerson=$source>1?cb_smeny_pozadavky_osoba($db,$source):null;
+        return $sourcePerson===null?null:array_replace($sourcePerson,['id_person'=>1,'jmeno'=>trim(($sessionUser['surname']??'').' '.($sessionUser['name']??''))]);
     }
     if ($idUser <= 0) {
         return null;
     }
 
+    $stmt=$db->prepare('SELECT id_person FROM hr_person WHERE id_user=? AND aktivni=1');
+    $stmt->bind_param('i',$idUser); $stmt->execute(); $personId=(int)($stmt->get_result()->fetch_assoc()['id_person']??0); $stmt->close();
+    $mainIds=cb_hr_main_ids($db,$personId);
+    $selected=(int)($_POST['id_pob']??$_GET['id_pob']??0);
+    if ($selected===0 && count($mainIds)===1) $selected=$mainIds[0];
+    if (!in_array($selected,$mainIds,true)) $selected=0;
     $slotTable = cb_hr_schema_table($db, 'slot');
     $slotPk = cb_hr_slot_pk($db);
     $sql = '
@@ -57,15 +64,8 @@ function cb_smeny_pozadavky_osoba(mysqli $db, ?int $idUser = null): ?array
               WHERE ou2.id_person = hp.id_person AND ou2.platny = 1
           )
         LEFT JOIN ' . cb_hr_main_sql($db) . ' pracoviste
-          ON pracoviste.id_pracoviste = (
-              SELECT MAX(pr2.id_pracoviste)
-              FROM ' . cb_hr_main_sql($db) . ' pr2
-              WHERE pr2.id_person = hp.id_person
-                AND pr2.hlavni = 1
-                AND pr2.platny = 1 AND pr2.zruseno IS NULL
-                AND (pr2.platnost_od IS NULL OR pr2.platnost_od <= CURDATE())
-                AND (pr2.platnost_do IS NULL OR pr2.platnost_do >= CURDATE())
-          )
+          ON pracoviste.id_person=hp.id_person AND pracoviste.id_pob=' . $selected . '
+            AND ' . cb_hr_ucinne_sql('pracoviste') . '
         LEFT JOIN pobocka pob ON pob.id_pob = pracoviste.id_pob
         LEFT JOIN ' . $slotTable . ' zarazeni
           ON zarazeni.' . $slotPk . ' = (
@@ -95,5 +95,6 @@ function cb_smeny_pozadavky_osoba(mysqli $db, ?int $idUser = null): ?array
     foreach (['id_person', 'id_firma', 'id_pob', 'id_slot', 'je_hpp'] as $key) {
         $row[$key] = (int)($row[$key] ?? 0);
     }
+    $row['main_pobocky']=$mainIds===[]?[]:$db->query('SELECT id_pob,nazev FROM pobocka WHERE id_pob IN ('.implode(',',$mainIds).') ORDER BY nazev')->fetch_all(MYSQLI_ASSOC);
     return $row;
 }

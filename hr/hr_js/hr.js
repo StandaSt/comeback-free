@@ -1,4 +1,4 @@
-// Ovladani HR formularu a ciselniku; karta uklada bloky, zvyraznuje trvale viditelne ulozeni a chrani neulozene zmeny.
+// Ovladani kombinovaneho vyberu oblasti a pobocek, vice MAIN a HR formularu; karta chrani neulozene zmeny, ciselnik oblasti uklada stav okamzite.
 (() => {
     'use strict';
 
@@ -96,7 +96,8 @@
                 id: Number(row.dataset.id),
                 nazev: row.querySelector('[data-field="nazev"]').value,
                 aktivni: row.querySelector('[data-field="aktivni"]').checked ? 1 : 0,
-                id_role: Number(row.querySelector('[data-field="id_role"]')?.value || 0)
+                id_role: Number(row.querySelector('[data-field="id_role"]')?.value || 0),
+                zarazeni: row.querySelector('[data-field="zarazeni"]')?.value || null
             });
             const rows = () => Array.from(edit.querySelectorAll('[data-hr-catalog-row]'));
             rows().forEach((row) => baseline.set(Number(row.dataset.id), JSON.stringify(values(row))));
@@ -151,6 +152,8 @@
                         row.querySelector('[data-field="aktivni"]').checked = Number(item.aktivni) === 1;
                         const role = row.querySelector('[data-field="id_role"]');
                         if (role) role.value = String(item.id_role);
+                        const kind = row.querySelector('[data-field="zarazeni"]');
+                        if (kind) kind.value = item.zarazeni || 'provozni';
                         baseline.set(Number(item.id), JSON.stringify(values(row)));
                     });
                     if (adding) add.reset();
@@ -166,6 +169,41 @@
             edit.addEventListener('submit', (event) => submit(event, false));
             add.addEventListener('submit', (event) => submit(event, true));
             update();
+        });
+
+        // Prepnuti oblasti uklada jen stav; odmitnuti nebo chyba vrati posledni potvrzeny checkbox.
+        container.querySelectorAll('[data-hr-region-state]').forEach((form) => {
+            if (form.dataset.hrRegionBound === '1') return;
+            form.dataset.hrRegionBound = '1';
+            const input = form.querySelector('[name="aktivni"]');
+            const status = form.querySelector('[data-hr-region-status]');
+            form.addEventListener('submit', (event) => { event.preventDefault(); event.stopPropagation(); });
+            input.addEventListener('change', async () => {
+                if (input.disabled) return;
+                const previous = input.defaultChecked;
+                const body = new URLSearchParams(new FormData(form));
+                input.disabled = true;
+                status.hidden = false; status.textContent = 'Ukládám…';
+                try {
+                    const response = await fetch(form.action, {method:'POST',credentials:'same-origin',headers:{'X-Comeback-Form':'1','Accept':'application/json'},body});
+                    const result = await response.json();
+                    if (!response.ok || result.success !== true) throw new Error(result.message || 'Změnu se nepodařilo uložit.');
+                    input.defaultChecked = input.checked;
+                    status.textContent = result.message;
+                    // Nabidka oblasti pobocek se upravi bez obnovy jejich rozepsanych dat.
+                    const panel = form.closest('.hr_settings_grid');
+                    panel.querySelectorAll('.hr_branch_region_choice select').forEach((select) => {
+                        const option = Array.from(select.options).find((item) => item.value === form.dataset.regionId);
+                        if (!input.checked && option) option.remove();
+                        if (input.checked && !option) select.add(new Option(form.dataset.regionName, form.dataset.regionId));
+                    });
+                } catch (error) {
+                    input.checked = previous;
+                    status.textContent = error.message || 'Změnu se nepodařilo uložit.';
+                } finally {
+                    input.disabled = false;
+                }
+            });
         });
 
         container.querySelectorAll('[data-phone-cz]').forEach((input) => {
@@ -354,7 +392,33 @@
             input.addEventListener('blur', () => validateBirthNumber(input));
         });
 
-        // MAIN nabizi jen zaskrtnute pobocky; odebrani MAIN vyzaduje vedomou volbu nahrady.
+        // MAIN nabizi sjednoceni oblasti a jednotlivych pobocek; pobocka nikdy sama nezaskrtne oblast.
+        container.querySelectorAll('[data-hr-places]').forEach(form => {
+            if (form.dataset.hrPlacesBound === '1') return;
+            form.dataset.hrPlacesBound = '1';
+            const sync = () => {
+                if (form.hasAttribute('data-hr-new-person')) {
+                    const manager = form.querySelector('[name="id_funkce"]')?.selectedOptions[0]?.dataset.kind === 'manazerske';
+                    form.querySelector('[data-hr-main-choices]').disabled = manager;
+                    form.querySelector('[name="id_slot"]').disabled = manager;
+                }
+                const regions = new Set(Array.from(form.querySelectorAll('[name="id_oblast_prace[]"]:checked'), input => input.value));
+                const branches = new Set(Array.from(form.querySelectorAll('[name="id_pob[]"]:checked'), input => input.value));
+                form.querySelectorAll('[data-hr-main-choice]').forEach(label => {
+                    const input = label.querySelector('input');
+                    const covered = branches.has(input.value) ||
+                        input.dataset.hrRegions.split(',').some(id => regions.has(id));
+                    // Jiz vybrana chybna MAIN zustava viditelna, aby ji uzivatel mohl vedome odebrat.
+                    label.hidden = !covered && !input.checked;
+                    input.disabled = !covered && !input.checked;
+                    input.setCustomValidity(!covered && input.checked ? 'MAIN musí patřit do místa výkonu práce.' : '');
+                });
+            };
+            form.addEventListener('change', sync);
+            sync();
+        });
+
+        // Stary vyber pri zakladani karty zustava do inicializace noveho formulare oddeleny.
         container.querySelectorAll('[data-hr-branch-list]').forEach((list) => {
             if (list.dataset.hrBound === '1') return;
             const main = list.closest('form')?.querySelector('[data-hr-selected-main]');
@@ -758,7 +822,7 @@
     const refreshEmployeeBlock = (card, nextCard, form) => {
         const key = form.dataset.hrEmployeeForm;
         const keys = key === 'relation' ? ['relation', 'interruption', 'termination'] :
-            key === 'function' ? ['function', 'branches'] : [key];
+            (key === 'function' || key === 'slot') ? ['slot', 'function', 'branches'] : [key];
         keys.forEach(blockKey => {
             const selector = `[data-hr-employee-block="${blockKey}"]`;
             const current = card.querySelector(selector);

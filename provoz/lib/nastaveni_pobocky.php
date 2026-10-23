@@ -1,9 +1,12 @@
 <?php
+
+// Rozsah mist vykonu prace sdileji vsechny cteci dotazy tohoto souboru.
 /*
  * Sprava pobocek v modulu Provoz: nacita dostupne firmy a pobocky,
  * kontroluje vstupy a uklada zakladni udaje, kontakty a zaviraci dobu.
  */
 declare(strict_types=1);
+require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
 require_once __DIR__ . '/nastaveni_prava.php';
 require_once __DIR__ . '/pobocka_provoz.php';
@@ -285,7 +288,7 @@ function cb_provoz_nastaveni_zmenit_stav(mysqli $db, array $data, int $idUser): 
         throw new CbUserVisibleException('Vybraná pobočka není dostupná.');
     }
     if (!$aktivni) {
-        $stmt = $db->prepare('SELECT COUNT(*) AS pocet FROM hr_pracoviste WHERE id_pob = ? AND platny = 1 AND (platnost_do IS NULL OR platnost_do >= CURDATE())');
+        $stmt = $db->prepare('SELECT COUNT(*) AS pocet FROM ' . cb_hr_mista_sql() . ' hr_mista_rozsah WHERE id_pob = ? AND platny = 1 AND (platnost_do IS NULL OR platnost_do >= CURDATE())');
         $stmt->bind_param('i', $idPob);
         $stmt->execute();
         $pocet = (int)($stmt->get_result()->fetch_assoc()['pocet'] ?? 0);

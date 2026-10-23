@@ -29,6 +29,8 @@ function cb_smeny_planovani_akce(mysqli $db, array $branches, array $weeks): voi
         // Po čekání na zámek osoby musí následující čtení vidět poslední potvrzená data.
         $db->query('SET TRANSACTION ISOLATION LEVEL READ COMMITTED');
         $db->begin_transaction(); $inTransaction = true;
+        cb_hr_osobu_zamkni($db,cb_smeny_planovani_rozsah_osoba($db));
+        cb_smeny_planovani_vyzaduj_pobocku($db,$idBranch);
         $stmt = cb_smeny_planovani_sql($db, 'SELECT id_pob FROM pobocka WHERE id_pob=? AND aktivni=1 FOR UPDATE', 'i',[$idBranch]);
         $activeBranch = $stmt->get_result()->fetch_assoc(); $stmt->close();
         if ($activeBranch === null) throw new CbUserVisibleException('Pobočka již není aktivní.');

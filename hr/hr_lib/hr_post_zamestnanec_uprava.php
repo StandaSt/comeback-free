@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-// MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
+// Ucel pracovist: Pri ukonceni osoby uzavre mista vykonu prace i mnozinu MAIN, puvodni povolene pobocky zustavaji archivem.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
 /*
@@ -370,7 +370,7 @@ function hr_post_pracovni_pomer_ukoncit(mysqli $db, int $zadalUser): void
         $stmt->execute();
         $stmt->close();
         // Ukoncime jen presahujici prirazeni; budouci plan po konci pomeru zrusime.
-        foreach (cb_hr_main_pripraveno($db) ? ['hr_pracoviste', 'hr_pracoviste_main'] : ['hr_pracoviste'] as $tabulka) {
+        foreach (['hr_misto_vykonu_prace','hr_pracoviste_main'] as $tabulka) {
             $stmt = $db->prepare("UPDATE {$tabulka} SET platny=0,zruseno=NOW() WHERE id_person=? AND platny=1 AND platnost_od>?");
             $stmt->bind_param('is', $idPerson, $datumUkonceni);
             $stmt->execute();

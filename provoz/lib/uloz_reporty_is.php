@@ -1,6 +1,9 @@
 <?php
+
+// Rozsah mist vykonu prace sdileji vsechny cteci dotazy tohoto souboru.
 // Ukládá finální denní report až po ověření povinných důvodů všech storen a vrací bezpečnou odpověď.
 declare(strict_types=1);
+require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
 if (
     ($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST'
@@ -51,7 +54,7 @@ if (!cb_denni_report_ma_pravo(CB_DENNI_REPORT_ZOBRAZIT_PRAVO)) {
 $canCloseReport = cb_denni_report_ma_pravo(CB_DENNI_REPORT_UZAVRIT_PRAVO);
 $canEditSavedReport = cb_denni_report_ma_pravo(CB_DENNI_REPORT_EDITOVAT_PRAVO);
 
-$stmtAllowed = $conn->prepare('SELECT 1 FROM hr_person hp WHERE hp.id_person = ? AND (hp.pristup_vsechny_pobocky = 1 OR EXISTS (SELECT 1 FROM hr_pracoviste prac WHERE prac.id_person = hp.id_person AND prac.id_pob = ? AND prac.platny = 1)) LIMIT 1');
+$stmtAllowed = $conn->prepare('SELECT 1 FROM hr_person hp WHERE hp.id_person = ? AND (EXISTS (SELECT 1 FROM ' . cb_hr_pracoviste_sql($conn) . ' prac WHERE prac.id_person = hp.id_person AND prac.id_pob = ? AND prac.platny = 1)) LIMIT 1');
 if ($stmtAllowed === false) {
     $sendJson(500, ['ok' => false, 'err' => 'Nelze overit pobocku']);
 }

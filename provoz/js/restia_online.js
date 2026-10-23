@@ -4,6 +4,7 @@
 /*
  * Účel souboru: Spouští a sleduje online aktualizaci dat Restie.
  * Vizuální stav stránky řídí společná navigace PP, nikoli tento datový klient.
+ * Jednorazovou kontrolu po loginu spusti az nactena stranka v libovolnem modulu.
  */
 
 (function (w) {
@@ -104,6 +105,23 @@
     });
   }
 
+  // Login uz ma ulozenou novou relaci; aktualizace muze bez blokovani IS dobehnout na pozadi.
+  function checkAfterLogin() {
+    if (w.CB_RESTIA_AFTER_LOGIN !== true) return;
+    w.CB_RESTIA_AFTER_LOGIN = false;
+    fetch(String(w.CB_ENDPOINT || 'index.php'), {
+      method: 'POST',
+      headers: { 'X-Comeback-Restia-After-Login': '1', 'Accept': 'application/json' },
+      credentials: 'same-origin'
+    }).then(readJson).then((state) => {
+      if (state && state.ok === true && state.checked === true) {
+        w.dispatchEvent(new CustomEvent('cb:restia-finished'));
+      }
+    }).catch(() => {
+      // Neuspesna aktualizace nesmi prerusit praci; stari dat dal ukazuje hlavicka.
+    });
+  }
+
   CB_RESTIA.fetchState = fetchState;
   CB_RESTIA.run = function run(options) {
     const opts = (options && typeof options === 'object') ? options : {};
@@ -124,4 +142,9 @@
       return result.state;
     });
   };
+  if (document.readyState === 'complete') {
+    w.setTimeout(checkAfterLogin, 0);
+  } else {
+    w.addEventListener('load', checkAfterLogin, { once: true });
+  }
 })(window);

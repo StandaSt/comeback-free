@@ -3,11 +3,12 @@ declare(strict_types=1);
 
 /*
  * Ucel souboru: Nacita a meni jedinou firemni funkci zamestnance a z ni synchronizuje roli v IS.
- * Funkci s roli Admin smi pridelit pouze existujici Admin.
+ * Provozni funkce patri osobe se slotem; manazerska pozice nema slot ani MAIN. Top chrani Admin.
  * Cil zmeny kontroluje podle jednotneho osobniho rozsahu HR.
  */
 require_once __DIR__ . '/hr_nastaveni_ciselniky.php';
 require_once __DIR__ . '/hr_zamestnanci_pristup.php';
+require_once __DIR__ . '/hr_mista_zapis.php';
 
 /** @return array{funkce:array<int,array{id_funkce:int,nazev:string,id_role:int}>,historie:array<int,array<string,mixed>>} */
 function hr_funkce_historie(mysqli $db, int $idPerson): array
@@ -19,14 +20,14 @@ function hr_funkce_historie(mysqli $db, int $idPerson): array
     $functionFk = cb_hr_funkce_fk($db);
 
     $funkce = [];
-    // Obecny prevzaty zaznam a pevny Top manager nejsou volby pro personalistu.
-    $result = $db->query("SELECT {$catalogPk} AS id_funkce, nazev, id_role FROM {$catalogTable} WHERE aktivni = 1 AND {$catalogPk} NOT IN (1, 5, 6) ORDER BY id_role DESC, nazev");
+    // Prechodne zaznamy se nenabizeji; Top ma vlastni priznak pouze_admin, ktery chrani UI i zapis.
+    $result = $db->query("SELECT {$catalogPk} AS id_funkce, nazev, id_role, zarazeni, pouze_admin FROM {$catalogTable} WHERE aktivni = 1 AND {$catalogPk} NOT IN (1, 5) ORDER BY id_role DESC, nazev");
     while ($row = $result->fetch_assoc()) {
-        $funkce[] = ['id_funkce' => (int)$row['id_funkce'], 'nazev' => (string)$row['nazev'], 'id_role' => (int)$row['id_role']];
+        $funkce[] = ['id_funkce' => (int)$row['id_funkce'], 'nazev' => (string)$row['nazev'], 'id_role' => (int)$row['id_role'], 'zarazeni'=>$row['zarazeni'], 'pouze_admin'=>(int)$row['pouze_admin']];
     }
     $result->free();
 
-    $stmt = $db->prepare("SELECT hf.{$functionPk} AS id_hr_funkce, hf.{$functionFk} AS id_funkce, cf.nazev, cf.id_role, hf.v_treninku, hf.platnost_od, hf.platnost_do, hf.platny FROM {$functionTable} hf JOIN {$catalogTable} cf ON cf.{$catalogPk} = hf.{$functionFk} WHERE hf.id_person = ? AND hf.{$functionFk} <> 1 ORDER BY hf.platny DESC, COALESCE(hf.platnost_od, '1000-01-01') DESC, hf.{$functionPk} DESC");
+    $stmt = $db->prepare("SELECT hf.{$functionPk} AS id_hr_funkce, hf.{$functionFk} AS id_funkce, cf.nazev, cf.id_role, cf.zarazeni, cf.pouze_admin, hf.v_treninku, hf.platnost_od, hf.platnost_do, hf.platny FROM {$functionTable} hf JOIN {$catalogTable} cf ON cf.{$catalogPk} = hf.{$functionFk} WHERE hf.id_person = ? AND hf.{$functionFk} <> 1 ORDER BY hf.platny DESC, COALESCE(hf.platnost_od, '1000-01-01') DESC, hf.{$functionPk} DESC");
     $stmt->bind_param('i', $idPerson);
     $stmt->execute();
     $historie = [];
@@ -45,7 +46,7 @@ function hr_funkce_historie(mysqli $db, int $idPerson): array
 /**
  * Ulozi prave jednu funkci, pripadne funkci odebere; role se vzdy odvozuje automaticky.
  */
-function hr_funkce_zmenit(mysqli $db, int $idPerson, ?int $idFunkce, bool $vTreninku, string $platiOd, int $idUser): void
+function hr_funkce_zmenit(mysqli $db, int $idPerson, ?int $idFunkce, bool $vTreninku, string $platiOd, int $idUser, string $druh = 'manazerske', bool $ownTransaction = true): void
 {
     hr_zamestnanci_vyzaduj_osobu($db, $idUser, $idPerson);
     $catalogTable = cb_hr_schema_table($db, 'cis_funkce');
@@ -53,20 +54,8 @@ function hr_funkce_zmenit(mysqli $db, int $idPerson, ?int $idFunkce, bool $vTren
     $functionTable = cb_hr_schema_table($db, 'funkce');
     $functionFk = cb_hr_funkce_fk($db);
 
-    if ($idFunkce === null) {
-        $slotTable = cb_hr_schema_table($db, 'slot');
-        $stmt = $db->prepare("SELECT 1 FROM {$slotTable} WHERE id_person = ? AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= ?) AND (platnost_do IS NULL OR platnost_do >= ?) LIMIT 1");
-        $stmt->bind_param('iss', $idPerson, $platiOd, $platiOd);
-        $stmt->execute();
-        $hasSlot = $stmt->get_result()->fetch_row() !== null;
-        $stmt->close();
-        if (!$hasSlot) {
-            throw new CbUserVisibleException('Funkci nelze odebrat, dokud zaměstnanec nemá žádný pracovní slot.');
-        }
-    }
-
     if ($idFunkce !== null) {
-        $stmt = $db->prepare("SELECT id_role FROM {$catalogTable} WHERE {$catalogPk} = ? AND aktivni = 1 AND {$catalogPk} NOT IN (1, 5, 6) LIMIT 1");
+        $stmt = $db->prepare("SELECT id_role,zarazeni,pouze_admin FROM {$catalogTable} WHERE {$catalogPk} = ? AND aktivni = 1 AND {$catalogPk} NOT IN (1, 5) LIMIT 1");
         $stmt->bind_param('i', $idFunkce);
         $stmt->execute();
         $catalog = $stmt->get_result()->fetch_assoc();
@@ -74,17 +63,27 @@ function hr_funkce_zmenit(mysqli $db, int $idPerson, ?int $idFunkce, bool $vTren
         if (!is_array($catalog)) {
             throw new CbUserVisibleException('Vyberte platnou funkci.');
         }
+        if ($catalog['zarazeni']!==$druh) throw new CbUserVisibleException('Funkce nepatří do tohoto typu zařazení.');
+        if ((int)$catalog['pouze_admin']===1 && !hr_ciselnik_je_admin($db)) throw new CbUserVisibleException('Pozici Top manažer smí přidělit pouze Admin.');
         hr_funkce_roli_vyzaduj($db, (int)$catalog['id_role']);
-        if ((int)$catalog['id_role'] === 3 && !cb_pravo_ma(316)) {
+        if ($catalog['zarazeni'] === 'manazerske' && !hr_ciselnik_je_admin($db) && !cb_pravo_ma(316)) {
             throw new CbUserVisibleException('Nemáte právo přidělit manažerskou funkci.');
         }
     }
 
-    $db->begin_transaction();
+    if ($ownTransaction) $db->begin_transaction();
     try {
+        cb_hr_osobu_zamkni($db,$idPerson);
+        $stmt=$db->prepare("SELECT f.*,c.id_role,c.zarazeni,c.pouze_admin FROM {$functionTable} f JOIN {$catalogTable} c ON c.{$catalogPk}=f.{$functionFk} WHERE f.id_person=? AND f.platny=1 FOR UPDATE");
+        $stmt->bind_param('i',$idPerson); $stmt->execute(); $old=$stmt->get_result()->fetch_assoc(); $stmt->close();
+        if ($old && (int)$old['pouze_admin']===1 && !hr_ciselnik_je_admin($db)) throw new CbUserVisibleException('Pozici Top manažer smí měnit nebo odebrat pouze Admin.');
+        if ($old) hr_funkce_roli_vyzaduj($db,(int)$old['id_role']);
+        if ($old && $old['zarazeni']==='manazerske' && !hr_ciselnik_je_admin($db) && !cb_pravo_ma(316)) throw new CbUserVisibleException('Nemáte právo měnit manažerskou pozici.');
+        if ($old && !empty($old['platnost_od']) && $old['platnost_od']>$platiOd) throw new CbUserVisibleException('Nejprve upravte již naplánovanou funkci.');
+        if ($idFunkce===null && $old && $old['zarazeni']!==$druh) throw new CbUserVisibleException('Tento blok nemůže odebrat jiný typ zařazení.');
         $denPred = (new DateTimeImmutable($platiOd))->modify('-1 day')->format('Y-m-d');
-        $stmt = $db->prepare("UPDATE {$functionTable} SET platnost_do = ?, platny = 0 WHERE id_person = ? AND platny = 1");
-        $stmt->bind_param('si', $denPred, $idPerson);
+        $stmt = $db->prepare("UPDATE {$functionTable} SET platnost_do = CASE WHEN platnost_od IS NULL OR platnost_od<=? THEN ? ELSE platnost_do END, platny = 0 WHERE id_person = ? AND platny = 1");
+        $stmt->bind_param('ssi', $denPred, $denPred, $idPerson);
         $stmt->execute();
         $stmt->close();
         if ($idFunkce !== null) {
@@ -95,11 +94,12 @@ function hr_funkce_zmenit(mysqli $db, int $idPerson, ?int $idFunkce, bool $vTren
             $stmt->close();
         }
 
+        hr_mista_over_casovou_osu($db,$idPerson,$platiOd);
         hr_pristupovy_profil_synchronizovat($db, $idPerson, $idUser);
         hr_update_employee_completeness($db, $idPerson);
-        $db->commit();
+        if ($ownTransaction) $db->commit();
     } catch (Throwable $e) {
-        $db->rollback();
+        if ($ownTransaction) $db->rollback();
         throw $e;
     }
 }

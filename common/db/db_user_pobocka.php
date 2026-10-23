@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-// MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
+// Ucel rozsahu: MAIN je mnozina a viditelne pobocky vychazeji z mist vykonu prace.
 require_once __DIR__ . '/../lib/hr_pracoviste_main.php';
 
 require_once __DIR__ . '/../lib/firemni_pristup.php';
@@ -40,11 +40,11 @@ function cb_db_user_ma_pobocku(mysqli $db, int $idUser, int $idPob): bool
         INNER JOIN pobocka cil ON cil.id_pob = ? AND cil.aktivni = 1
         WHERE osoba.id_person = ?
           AND (EXISTS (
-              SELECT 1 FROM hr_pracoviste prima
+              SELECT 1 FROM ' . cb_hr_pracoviste_sql($db) . ' prima
               WHERE prima.id_person = osoba.id_person AND prima.id_pob = cil.id_pob
                 AND prima.platny = 1 AND (prima.platnost_od IS NULL OR prima.platnost_od <= CURRENT_DATE())
                 AND (prima.platnost_do IS NULL OR prima.platnost_do >= CURRENT_DATE())
-          ) OR (osoba.pristup_vsechny_pobocky = 1 AND cil.id_firma = osoba.id_firma))
+          ))
         LIMIT 1
     ');
     if ($stmt === false) {
@@ -94,10 +94,7 @@ function cb_db_user_pobocky(mysqli $db, int $idUser): array
             AND prac.platny = 1 AND (prac.platnost_od IS NULL OR prac.platnost_od <= CURRENT_DATE())
             AND (prac.platnost_do IS NULL OR prac.platnost_do >= CURRENT_DATE())
         WHERE osoba.id_person = ?
-          AND (
-              prac.id_pob IS NOT NULL
-              OR osoba.pristup_vsechny_pobocky = 1
-          )
+          AND prac.id_pob IS NOT NULL
         GROUP BY p.id_pob, p.nazev, p.oblast
         ORDER BY p.nazev ASC
     ');

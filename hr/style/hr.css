@@ -3,15 +3,22 @@
  * Velikosti pisma vychazeji z pevne typograficke skaly aplikace.
  * Karta zamestnance ma kompaktni prazdne stavy a souhrn pobocek vedle titulku.
  * Zmensene svisle odstupy pracovniho pomeru plati jen uvnitr jeho vlastniho obalu.
- * Sprava ciselniku ma sirky podle obsahu a jedine podminene ulozeni zmen v kazdem bloku.
+ * Sprava ciselniku sdili dva sloupce s oblastmi; oblasti maji prepinac stavu a pobocky kompaktni radky.
  * Casova osa karty oddeluje datum udalosti od jejiho pozdejsiho zapisu a rozbaluje historii.
  * Ulozeni bloku karty je vzdy vpravo nahore; odkazy na spravu jsou pod nim.
  * Nezmeneny blok ma stale viditelne sede ulozeni, aby zvyrazneni nemenilo rozlozeni.
- * Sloty a funkce sdileji radky formulare s pravymi akcemi bez prazdneho mista pod titulkem.
+ * Sloty, funkce osoby, manazerske pozice a mista vykonu prace maji kompaktni formulare a stale ulozeni.
  */
 
 /* Kompaktni casova osa v prehledu osoby; dlouhe poznamky nesmi roztahovat panel. */
 .hr_employee_timeline { list-style: none; margin: 0; padding: 0; }
+/* Vyber oblasti a vice MAIN zustava v prirozenem toku bez poskakovani pri zvyrazneni ulozeni. */
+.hr_place_choices { border: 0; padding: 0; margin: 8px 0; display: flex; flex-wrap: wrap; gap: 5px 14px; }
+.hr_place_choices legend { font-weight: 700; color: var(--muted); font-size: 12px; padding: 0; margin-bottom: 4px; }
+.hr_place_choices[hidden], .hr_place_choices label[hidden] { display: none; }
+.hr_assignment_fields { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; }
+[data-hr-places] > .hr_employee_mode_fields { width: 100%; }
+.hr_employee_assignment_errors { color: var(--danger, #b42332); border: 1px solid currentColor; border-radius: 6px; padding: 8px; margin: 6px 0; }
 .hr_employee_timeline_item { display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--cb-bg-panel-soft); }
 .hr_employee_timeline_item:last-child { border-bottom: 0; }
 .hr_employee_timeline_date { display: flex; flex-direction: column; font-size: 11px; color: var(--text); }
@@ -1641,7 +1648,7 @@
 }
 
 [data-type="funkce"] :is(.hr_catalog_row, .hr_catalog_head, .hr_catalog_new) {
-    grid-template-columns: minmax(0, var(--hr-catalog-name-width, 12ch)) var(--hr-catalog-role-width, max-content) auto;
+    grid-template-columns: minmax(0, var(--hr-catalog-name-width, 12ch)) var(--hr-catalog-role-width, max-content) max-content auto;
 }
 
 .hr_catalog_row { border-bottom: 1px solid var(--border); }
@@ -1662,8 +1669,45 @@
     grid-template-columns: repeat(2, minmax(0, max-content));
     max-width: 100%;
 }
+/* Sirky urcuji horni ciselniky; dolni formulare je nesmeji svou vnitrni sirkou roztahnout. */
+.hr_settings_grid--catalog > :is(#hr-settings-oblasti, #hr-settings-oblasti-pobocky) {
+    min-width: 0;
+    contain: inline-size;
+}
+.hr_region_form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 4px;
+    margin-bottom: 8px;
+    font-size: var(--cb-font-12);
+}
+.hr_region_form > label { min-width: 0; }
+.hr_region_form > label:not(.hr_form_label) { white-space: nowrap; }
+.hr_region_form input[name="nazev"] { width: 100%; min-width: 0; box-sizing: border-box; }
+.hr_region_form > .hr_primary_button { justify-self: end; }
+/* Existujici oblast ma pouze nemenny nazev a okamzite ukladany stav; zprava patri jejimu radku. */
+.hr_region_state { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px; margin-top: 6px; font-size: var(--cb-font-12); }
+.hr_region_state > span { overflow-wrap: anywhere; }
+.hr_region_state > label { white-space: nowrap; }
+.hr_region_status { grid-column: 1 / -1; color: var(--muted); }
+.hr_region_status[hidden] { display: none; }
+/* Nazev, oblast, popisek data, datum a ulozeni zustavaji na jednom radku pobocky. */
+.hr_branch_region_form, .hr_branch_region_choice, .hr_branch_region_date {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.hr_branch_region_form { margin-bottom: 6px; }
+.hr_branch_region_choice > span { width: 8ch; flex: 0 0 8ch; }
+.hr_branch_region_choice select { width: 110px; min-width: 0; }
+.hr_branch_region_date { white-space: nowrap; }
+.hr_branch_region_date input { width: 105px; min-width: 0; box-sizing: border-box; }
+.hr_branch_region_form > .hr_primary_button { margin-left: auto; white-space: nowrap; }
+.hr_region_form:last-child, .hr_branch_region_form:last-child { margin-bottom: 0; }
 @media (max-width: 900px) {
     .hr_settings_grid.hr_settings_grid--catalog { grid-template-columns: minmax(0, 1fr); }
+    .hr_branch_region_form { flex-wrap: wrap; }
 }
 
 .hr_employee_missing {

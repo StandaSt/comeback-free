@@ -21,15 +21,10 @@ function hr_pozadavky_data(mysqli $db): array
     $mainPobocka = [];
     $chybaZadani = '';
 
-    if ($idUser > 0 && ($muzeCistMain || $muzeZadat)) {
-        try {
-            $mainPobocka = hr_nacti_hlavni_pobocku_uzivatele($db, $idUser);
-        } catch (Throwable $e) {
-            $chybaZadani = cb_hr_chyba_text($e, 'Načtení hlavní pobočky pro HR požadavky', ['table' => 'user_pobocky']);
-        }
-    }
-
-    $muzeCist = $muzeCistVse || ($muzeCistMain && (int)($mainPobocka['id_pob'] ?? 0) > 0);
+    $mainPobocky=$idUser>0?hr_main_pobocky_uzivatele($db,$idUser):[];
+    if (count($mainPobocky)===1) $mainPobocka=$mainPobocky[0];
+    else $mainPobocka=['id_pob'=>0,'nazev'=>implode(', ',array_column($mainPobocky,'nazev'))];
+    $muzeCist=$muzeCistVse || ($muzeCistMain && $mainPobocky!==[]);
     $nove = [];
     $vyresene = [];
     $expirovane = [];
@@ -43,19 +38,21 @@ function hr_pozadavky_data(mysqli $db): array
         $expirovane = hr_nacti_pozadavky_podle_stavu($db, 3);
         $zrusene = hr_nacti_pozadavky_podle_stavu($db, 4);
     } elseif ($muzeCist) {
-        $idPob = (int)$mainPobocka['id_pob'];
-        $nove = hr_nacti_nove_pozadavky_pobocky($db, $idPob);
-        $vyresene = hr_nacti_pozadavky_pobocky_podle_stavu($db, $idPob, 2);
-        $expirovane = hr_nacti_pozadavky_pobocky_podle_stavu($db, $idPob, 3);
-        $zrusene = hr_nacti_pozadavky_pobocky_podle_stavu($db, $idPob, 4);
+        foreach ($mainPobocky as $branch) {
+            $idPob=(int)$branch['id_pob'];
+            $nove=array_merge($nove,hr_nacti_nove_pozadavky_pobocky($db,$idPob));
+            $vyresene=array_merge($vyresene,hr_nacti_pozadavky_pobocky_podle_stavu($db,$idPob,2));
+            $expirovane=array_merge($expirovane,hr_nacti_pozadavky_pobocky_podle_stavu($db,$idPob,3));
+            $zrusene=array_merge($zrusene,hr_nacti_pozadavky_pobocky_podle_stavu($db,$idPob,4));
+        }
     }
 
     return [
         'pozadavkyMuzeCist' => $muzeCist,
-        'pozadavkyMuzeZadat' => $muzeZadat && (int)($mainPobocka['id_pob'] ?? 0) > 0 && $idUser > 0,
+        'pozadavkyMuzeZadat' => $muzeZadat && $mainPobocky!==[] && $idUser>0,
         'pozadavkyMuzeZrusit' => $muzeZrusit && $idUser > 0,
-        'pozadavkyZobraziPobocku' => $muzeCistVse,
-        'pozadavkyMainPobocka' => $mainPobocka,
+        'pozadavkyZobraziPobocku' => $muzeCistVse || count($mainPobocky)>1,
+        'pozadavkyMainPobocka' => $mainPobocka, 'pozadavkyMainPobocky'=>$mainPobocky,
         'pozadavkyUserId' => $idUser,
         'pozadavkyChybaZadani' => $chybaZadani,
         'pozadavkyRozsah' => $muzeCistVse ? 'všech poboček' : 'pobočky ' . (string)($mainPobocka['nazev'] ?? ''),

@@ -1,6 +1,9 @@
 <?php
+
+// Rozsah mist vykonu prace sdileji vsechny cteci dotazy tohoto souboru.
 // Denni report Vyroby bez Restie vcetne jedne casove prestavky.
 declare(strict_types=1);
+require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
 require_once __DIR__ . '/denni_report_data.php';
 require_once __DIR__ . '/../db/db_zapis_denni_report.php';
@@ -10,7 +13,7 @@ const CB_VYROBA_REPORT_SLOT = 3; // Stejná technická hodnota jako u importovan
 
 function cb_vyroba_user_has_branch(mysqli $conn, int $idPerson): bool
 {
-    $stmt = $conn->prepare('SELECT 1 FROM hr_person hp WHERE hp.id_person = ? AND hp.aktivni = 1 AND (hp.pristup_vsechny_pobocky = 1 OR EXISTS (SELECT 1 FROM hr_pracoviste prac WHERE prac.id_person = hp.id_person AND prac.id_pob = ? AND prac.platny = 1)) LIMIT 1');
+    $stmt = $conn->prepare('SELECT 1 FROM hr_person hp WHERE hp.id_person = ? AND hp.aktivni = 1 AND (EXISTS (SELECT 1 FROM ' . cb_hr_pracoviste_sql($conn) . ' prac WHERE prac.id_person = hp.id_person AND prac.id_pob = ? AND prac.platny = 1)) LIMIT 1');
     $branch = CB_VYROBA_ID_POB;
     $stmt->bind_param('ii', $idPerson, $branch);
     $stmt->execute();
@@ -38,7 +41,7 @@ function cb_vyroba_should_render(mysqli $conn, int $idPerson): bool
 /** @return array<int,string> */
 function cb_vyroba_allowed_branches(mysqli $conn, int $idPerson): array
 {
-    $stmt = $conn->prepare('SELECT p.id_pob, p.nazev FROM pobocka p INNER JOIN hr_person hp ON hp.id_person = ? AND hp.aktivni = 1 WHERE p.aktivni = 1 AND (hp.pristup_vsechny_pobocky = 1 OR EXISTS (SELECT 1 FROM hr_pracoviste prac WHERE prac.id_person = hp.id_person AND prac.id_pob = p.id_pob AND prac.platny = 1)) ORDER BY p.id_pob');
+    $stmt = $conn->prepare('SELECT p.id_pob, p.nazev FROM pobocka p INNER JOIN hr_person hp ON hp.id_person = ? AND hp.aktivni = 1 WHERE p.aktivni = 1 AND (EXISTS (SELECT 1 FROM ' . cb_hr_pracoviste_sql($conn) . ' prac WHERE prac.id_person = hp.id_person AND prac.id_pob = p.id_pob AND prac.platny = 1)) ORDER BY p.id_pob');
     $stmt->bind_param('i', $idPerson);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -57,7 +60,7 @@ function cb_vyroba_allowed_branches(mysqli $conn, int $idPerson): array
 function cb_vyroba_people_options(mysqli $conn): array
 {
     $branch = CB_VYROBA_ID_POB;
-    $stmt = $conn->prepare('SELECT DISTINCT hp.id_person, TRIM(CONCAT_WS(" ", ou.prijmeni, ou.jmeno)) AS name FROM hr_person hp INNER JOIN `user` u ON u.id_user = hp.id_person INNER JOIN hr_osobni_udaje ou ON ou.id_person = hp.id_person AND ou.platny = 1 INNER JOIN hr_pracoviste prac ON prac.id_person = hp.id_person AND prac.id_pob = ? AND prac.platny = 1 WHERE hp.aktivni = 1 ORDER BY name, hp.id_person');
+    $stmt = $conn->prepare('SELECT DISTINCT hp.id_person, TRIM(CONCAT_WS(" ", ou.prijmeni, ou.jmeno)) AS name FROM hr_person hp INNER JOIN `user` u ON u.id_user = hp.id_person INNER JOIN hr_osobni_udaje ou ON ou.id_person = hp.id_person AND ou.platny = 1 INNER JOIN ' . cb_hr_pracoviste_sql($conn) . ' prac ON prac.id_person = hp.id_person AND prac.id_pob = ? AND prac.platny = 1 WHERE hp.aktivni = 1 ORDER BY name, hp.id_person');
     $stmt->bind_param('i', $branch);
     $stmt->execute();
     $result = $stmt->get_result();

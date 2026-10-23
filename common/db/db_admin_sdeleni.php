@@ -1,7 +1,11 @@
 <?php
 declare(strict_types=1);
+// Rozsah mist vykonu prace sdileji vsechny cteci dotazy tohoto souboru.
+require_once __DIR__ . '/../lib/hr_pracoviste_main.php';
+
 /* Účel: Datové operace výhradně nad administrátorskými sděleními a jejich příjemci.
- * Seznam příjemců je neměnný od zveřejnění; jiné druhy oznámení se sem neukládají.
+ * Seznam příjemců je neměnný od zveřejnění; výběr vrací také id_person pro rozlišení osob.
+ * Jiné druhy oznámení se sem neukládají.
  */
 
 /** Provede parametrizovaný dotaz a předá výsledek volajícímu. */
@@ -65,9 +69,9 @@ function cb_sdeleni_prijemci(mysqli $db, array $firmy, array $vyber): array
         if ($vyber['role'] !== []) { $or[]='EXISTS(SELECT 1 FROM hr_pristupovy_profil r WHERE r.id_person=p.id_person AND r.id_role IN ('.implode(',',$vyber['role']).'))'; }
         if ($vyber['sloty'] !== []) { $or[]='EXISTS(SELECT 1 FROM hr_slot r WHERE r.id_person=p.id_person AND r.id_slot IN ('.implode(',',$vyber['sloty']).') AND r.platny=1 AND r.zruseno IS NULL AND (r.platnost_od IS NULL OR r.platnost_od<=CURDATE()) AND (r.platnost_do IS NULL OR r.platnost_do>=CURDATE()))'; }
         if ($or === [] || $vyber['pobocky'] === []) { return []; }
-        $where .= ' AND ('.implode(' OR ',$or).') AND EXISTS(SELECT 1 FROM hr_pracoviste w WHERE w.id_person=p.id_person AND w.id_pob IN ('.implode(',',$vyber['pobocky']).') AND w.platny=1 AND w.zruseno IS NULL AND (w.platnost_od IS NULL OR w.platnost_od<=CURDATE()) AND (w.platnost_do IS NULL OR w.platnost_do>=CURDATE()))';
+        $where .= ' AND ('.implode(' OR ',$or).') AND EXISTS(SELECT 1 FROM ' . cb_hr_pracoviste_sql($db) . ' w WHERE w.id_person=p.id_person AND w.id_pob IN ('.implode(',',$vyber['pobocky']).') AND w.platny=1 AND w.zruseno IS NULL AND (w.platnost_od IS NULL OR w.platnost_od<=CURDATE()) AND (w.platnost_do IS NULL OR w.platnost_do>=CURDATE()))';
     }
-    return cb_sdeleni_rows($db, 'SELECT u.id_user,TRIM(CONCAT_WS(" ",ou.prijmeni,ou.jmeno)) jmeno
+    return cb_sdeleni_rows($db, 'SELECT u.id_user,p.id_person,TRIM(CONCAT_WS(" ",ou.prijmeni,ou.jmeno)) jmeno
         FROM user u JOIN hr_person p ON p.id_person=u.id_user AND p.id_user=u.id_user '
         .cb_sdeleni_jmeno_sql('p.id_person').' WHERE '.$where.' ORDER BY ou.prijmeni,ou.jmeno,u.id_user', $types,$params);
 }

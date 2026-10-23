@@ -63,7 +63,7 @@ $smPlanFields = static function () use ($smPlanBranchId,$smPlanWeekIndex,$smPlan
     <input type="hidden" name="action" value="smeny_plan_nastaveni">
     <fieldset<?= !$smPlanSchemaReady || !cb_smeny_planovani_edituje() || ($smPlanLock!==null && !$smPlanOwnLock) ? ' disabled':'' ?>>
       <label><input type="checkbox" name="planovat_kdykoliv" value="1"<?= $smPlanAnytime?' checked':'' ?> onchange="this.form.requestSubmit()"> Plánovat kdykoliv</label>
-      <label><input type="checkbox" name="bez_ohledu_na_pobocku" value="1"<?= $smPlanAllBranches?' checked':'' ?> onchange="this.form.requestSubmit()"> Bez ohledu na pobočku</label>
+      <label><input type="checkbox" name="bez_ohledu_na_pobocku" value="1"<?= $smPlanAllBranches?' checked':'' ?> onchange="this.form.requestSubmit()"> Bez ohledu na oblast</label>
     </fieldset>
   </form>
   <?php endif; ?>

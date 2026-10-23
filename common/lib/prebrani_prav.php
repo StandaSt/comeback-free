@@ -1,5 +1,8 @@
 <?php
 declare(strict_types=1);
+// Rozsah mist vykonu prace sdileji vsechny cteci dotazy tohoto souboru.
+require_once __DIR__ . '/../lib/hr_pracoviste_main.php';
+
 
 /* Prebrani prav pro vyvoj: pouze USER 1, skutecna identita a autorstvi zustavaji beze zmeny.
  * DB obsahuje jen jednorazovy pokyn. Profil se zachyti pri loginu a zije vyhradne v session.
@@ -78,7 +81,7 @@ function cb_prebrani_prav_nacti(mysqli $db, int $source): array
     $mainStmt->execute();
     $mainRows = $mainStmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $mainStmt->close();
-    $branchStmt = $db->prepare('SELECT DISTINCT id_pob FROM hr_pracoviste WHERE id_person=? AND platny=1
+    $branchStmt = $db->prepare('SELECT DISTINCT id_pob FROM ' . cb_hr_pracoviste_sql($db) . ' hr_mista_rozsah WHERE id_person=? AND platny=1
         AND zruseno IS NULL AND (platnost_od IS NULL OR platnost_od<=CURDATE())
         AND (platnost_do IS NULL OR platnost_do>=CURDATE())');
     $branchStmt->bind_param('i', $personId);
@@ -106,7 +109,7 @@ function cb_prebrani_prav_nacti(mysqli $db, int $source): array
     }
     return ['id_user_zdroj'=>$source, 'jmeno'=>(string)$person['jmeno'], 'id_firma'=>(int)$person['id_firma'],
         'role_id'=>min($roleIds), 'roles'=>$roles, 'role'=>$roleLabel, 'prava'=>$rights, 'prava_stav'=>$states,
-        'main'=>count($mainRows) === 1 ? $mainRows[0] : null,
+        'main'=>count($mainRows) === 1 ? $mainRows[0] : null, 'main_pobocky'=>$mainRows,
         'pobocky'=>cb_db_user_pobocky($db, $source), 'hr_pobocky'=>$hrBranches,
         'hr_scope_pobocky'=>hr_zamestnanci_pobocky($db, $source),
         'firmy'=>cb_firemni_pristup_firmy($db, $source), 'hr_firmy'=>hr_zamestnanci_firmy($db, $source),

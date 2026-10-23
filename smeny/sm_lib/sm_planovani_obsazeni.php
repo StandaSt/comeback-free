@@ -1,35 +1,49 @@
 <?php
 declare(strict_types=1);
 
-// MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
+// Ucel rozsahu: Kandidaty urcuji mista vykonu prace; vypomoc rozsiri oblasti, nikoli prava planovace.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 /* Účel: Nabízí kvalifikované netestovací pracovníky ve skupinách podle MAIN a požadavku; chrání zápis do sloupců i kolize napříč pobočkami. */
 
-/** Kandidáti musí mít platnou MAIN a slot k datu směny; povolené pobočky výběr neomezují. */
+/** Kandidati maji slot a alespon jednu MAIN; bezna nabidka vychazi z pokryti planovane pobocky mistem prace. */
 function cb_smeny_planovani_kandidati(mysqli $db, array $plan, string $date, int $idSlot): array
 {
     $slotTable = cb_hr_schema_table($db, 'slot');
     $day = (int)(new DateTimeImmutable($date))->format('N');
     $closingColumn = [1=>'end_po',2=>'end_ut',3=>'end_st',4=>'end_ct',5=>'end_pa',6=>'end_so',7=>'end_ne'][$day];
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/D',$date)!==1) throw new InvalidArgumentException('Neplatné datum směny.');
+    $branch=(int)$plan['id_pob'];
+    $places=cb_hr_mista_sql();
     $sql = 'SELECT hp.id_person,TRIM(CONCAT_WS(" ",ou.prijmeni,ou.jmeno)) jmeno,
-        COALESCE(pr.id_pob,0) id_hlavni_pob,COALESCE(p.nazev,"Bez hlavní pobočky") hlavni_pobocka,
+        pr.pocet ma_main,pr.nazvy hlavni_pobocka,
+        EXISTS(SELECT 1 FROM ' . $places . ' misto WHERE misto.id_person=hp.id_person AND misto.id_pob=' . $branch . '
+            AND ' . cb_hr_ucinne_sql('misto',"'".$date."'") . ') je_v_oblasti,
+        EXISTS(SELECT 1 FROM ' . cb_hr_main_sql($db) . ' main WHERE main.id_person=hp.id_person AND main.id_pob=' . $branch . '
+            AND ' . cb_hr_ucinne_sql('main',"'".$date."'") . ') je_hlavni_pobocka,
         EXISTS(SELECT 1 FROM hr_pracovni_vztah pv WHERE pv.id_person=hp.id_person AND pv.id_pracovni_vztah_typ=1 AND pv.platny=1 AND (pv.datum_nastupu IS NULL OR pv.datum_nastupu<=?) AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni>=?)) je_hpp,
         sp.rezim,sp.volno_datum,TIME_FORMAT(pd.cas_od,"%H:%i") pozadavek_od,TIME_FORMAT(pd.cas_do,"%H:%i") pozadavek_do,
         TIME_FORMAT(p.' . $closingColumn . ',"%H:%i") zavira,
         COALESCE((SELECT ROUND(SUM(TIMESTAMPDIFF(MINUTE,s.zacatek,s.konec))/60,1) FROM smeny_smena s JOIN smeny_rozpis r ON r.id_smeny_rozpis=s.id_smeny_rozpis WHERE s.id_person=hp.id_person AND r.tyden_od=? AND s.verze=COALESCE(r.pracovni_verze,r.zverejnena_verze)),0) hodin_tyden
         FROM hr_person hp
         LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje=(SELECT MAX(o.id_osobni_udaje) FROM hr_osobni_udaje o WHERE o.id_person=hp.id_person AND o.platny=1)
-        LEFT JOIN ' . cb_hr_main_sql($db) . ' pr ON pr.id_pracoviste=(SELECT MAX(x.id_pracoviste) FROM ' . cb_hr_main_sql($db) . ' x WHERE x.id_person=hp.id_person AND x.hlavni=1 AND x.platny=1 AND x.zruseno IS NULL AND (x.platnost_od IS NULL OR x.platnost_od<=?) AND (x.platnost_do IS NULL OR x.platnost_do>=?) HAVING COUNT(*)=1)
-        LEFT JOIN pobocka p ON p.id_pob=pr.id_pob
+        JOIN (SELECT m.id_person,COUNT(DISTINCT m.id_pob) pocet,GROUP_CONCAT(DISTINCT b.nazev ORDER BY b.nazev SEPARATOR ", ") nazvy
+            FROM hr_pracoviste_main m JOIN hr_person osoba ON osoba.id_person=m.id_person
+            JOIN pobocka b ON b.id_pob=m.id_pob AND b.id_firma=osoba.id_firma AND b.aktivni=1
+            WHERE ' . cb_hr_ucinne_sql('m','?') . ' GROUP BY m.id_person) pr ON pr.id_person=hp.id_person
+        JOIN pobocka p ON p.id_pob=' . $branch . '
         LEFT JOIN smeny_pozadavek sp ON sp.id_person=hp.id_person AND sp.tyden_od=?
         LEFT JOIN smeny_pozadavek_den pd ON pd.id_smeny_pozadavek=sp.id_smeny_pozadavek AND pd.den_tydne=?
-        WHERE pr.id_pob IS NOT NULL AND hp.aktivni=1 AND hp.testovaci=0 AND hp.id_firma=? AND EXISTS(SELECT 1 FROM ' . $slotTable . ' z WHERE z.id_person=hp.id_person AND z.id_slot=? AND z.platny=1 AND z.zruseno IS NULL AND (z.platnost_od IS NULL OR z.platnost_od<=?) AND (z.platnost_do IS NULL OR z.platnost_do>=?))';
+        WHERE pr.pocet>0 AND hp.aktivni=1 AND hp.testovaci=0 AND hp.id_firma=? AND EXISTS(SELECT 1 FROM ' . $slotTable . ' z WHERE z.id_person=hp.id_person AND z.id_slot=? AND z.platny=1 AND z.zruseno IS NULL AND (z.platnost_od IS NULL OR z.platnost_od<=?) AND (z.platnost_do IS NULL OR z.platnost_do>=?))';
     $stmt = cb_smeny_planovani_sql($db,$sql,'ssssssiiiss',[$date,$date,$plan['tyden_od'],$date,$date,$plan['tyden_od'],$day,(int)$plan['id_firma'],$idSlot,$date,$date]);
     $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC); $stmt->close();
     foreach ($rows as &$row) {
         $row['id_person'] = (int)$row['id_person'];
         $row['je_hpp'] = (int)$row['je_hpp'];
-        $row['je_hlavni_pobocka'] = (int)$row['id_hlavni_pob'] === (int)$plan['id_pob'] ? 1 : 0;
+        $row['je_v_oblasti']=(int)$row['je_v_oblasti'];
+        $row['je_hlavni_pobocka']=(int)$row['je_hlavni_pobocka'];
+        if (cb_hr_zarazeni_chyby($db,$row['id_person'],$date)!==[]) { $row['ma_main']=0; continue; }
+        $row['oblast']=cb_hr_mista_popis($db,$row['id_person'],$date);
+        if (!$row['je_v_oblasti']) $row['jmeno'].=' — '.$row['oblast'];
         $row['ma_volno'] = (string)$row['volno_datum'] === $date ? 1 : 0;
         if ($row['rezim'] === 'kdykoliv') {
             $row['pozadavek_od'] = $row['zavira'] ? '10:00' : null;
@@ -39,7 +53,8 @@ function cb_smeny_planovani_kandidati(mysqli $db, array $plan, string $date, int
         $row['hodin_tyden'] = (float)$row['hodin_tyden'];
     }
     unset($row);
-    usort($rows,static fn(array $a,array $b):int => ($b['je_hlavni_pobocka'] <=> $a['je_hlavni_pobocka']) ?: ((int)$b['podle_pozadavku'] <=> (int)$a['podle_pozadavku']) ?: strcoll($a['jmeno'],$b['jmeno']));
+    $rows=array_values(array_filter($rows,static fn($r)=>(int)$r['ma_main']>0));
+    usort($rows,static fn(array $a,array $b):int => ($b['je_v_oblasti'] <=> $a['je_v_oblasti']) ?: ((int)$b['podle_pozadavku'] <=> (int)$a['podle_pozadavku']) ?: strcoll($a['jmeno'],$b['jmeno']));
     return $rows;
 }
 
@@ -64,9 +79,9 @@ function cb_smeny_planovani_interval(array $branch, array $week, array $post): a
 /** Nabídku jiné MAIN rozšiřuje jen výslovná volba; kontrola platí i pro přímý POST. */
 function cb_smeny_planovani_main_overit(array $candidate, bool $ignoreBranch): void
 {
-    if ((int)$candidate['id_hlavni_pob'] <= 0) throw new CbUserVisibleException('Pracovník nemá platnou hlavní pobočku. Nejprve ji nastavte v HR.');
-    if (empty($candidate['je_hlavni_pobocka']) && !$ignoreBranch) {
-        throw new CbUserVisibleException('Pracovník má jinou hlavní pobočku. Použijte volbu Bez ohledu na pobočku.');
+    if ((int)$candidate['ma_main'] <= 0) throw new CbUserVisibleException('Pracovník nemá platnou hlavní pobočku. Nejprve ji nastavte v HR.');
+    if (empty($candidate['je_v_oblasti']) && !$ignoreBranch) {
+        throw new CbUserVisibleException('Místo výkonu práce pracovníka nepokrývá tuto pobočku. Použijte volbu Bez ohledu na oblast.');
     }
 }
 
@@ -145,8 +160,8 @@ function cb_smeny_planovani_priradit(mysqli $db, array $plan, array $branch, arr
     if ($active === null) throw new CbUserVisibleException('Pracovník již není aktivní v HR.');
     $candidate = null;
     foreach (cb_smeny_planovani_kandidati($db,$plan,$interval['datum'],$interval['id_slot']) as $row) if ($row['id_person'] === $idPerson) $candidate = $row;
-    if ($candidate === null) throw new CbUserVisibleException('Pracovník není pro tuto pozici dostupný v HR nebo nemá právě jednu platnou hlavní pobočku.');
-    // Výběr cizí MAIN musí povolit i server; seznam povolených pracovišť nerozhoduje.
+    if ($candidate === null) throw new CbUserVisibleException('Pracovník nemá pro tento den platný slot, MAIN nebo bezchybné zařazení v HR.');
+    // Rozsireni nabidky mimo misto vykonu prace vyzaduje vyslovnou volbu i pri primem POST.
     cb_smeny_planovani_main_overit($candidate, !empty($plan['bez_ohledu_na_pobocku']) || $editing);
     // Dostupnost podle požadavku řadí nabídku, ale neomezuje zápis. Auditní příznak popisuje skutečný interval.
     $ignore = !cb_smeny_planovani_pozadavek_odpovida($candidate,$interval);

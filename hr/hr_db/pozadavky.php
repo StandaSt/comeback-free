@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-// MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
+// Ucel rozsahu: HR pozadavky cte ze vsech MAIN; vytvoreni se vzdy vztahuje ke konkretni vybrane MAIN.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
 /**
@@ -9,50 +9,25 @@ require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
  * Pri prebrani prav pouziva MAIN ze snimku profilu, autor pozadavku zustava vlastni.
  */
 
-/**
- * Nacte jedinou dnes platnou hlavni pobocku pro HR pozadavky a rozsah zamestnancu.
- */
-function hr_nacti_hlavni_pobocku_uzivatele(mysqli $db, int $idUser): array
+// Nacte celou mnozinu MAIN; pri prevzeti prav pouzije skutecnou zdrojovou osobu.
+function hr_main_pobocky_uzivatele(mysqli $db,int $idUser): array
 {
-    // Pri testu prava pouzije prevzatou MAIN, autor pozadavku ale zustava USER 1.
-    if (function_exists('cb_prebrani_prav_profil') && ($profile = cb_prebrani_prav_profil($idUser)) !== null) {
-        if ($profile['main'] === null) {
-            throw new CbUserVisibleException('Testovaný profil nemá jednoznačnou aktuální MAIN.');
-        }
-        return ['id_pob'=>(int)$profile['main']['id_pob'], 'nazev'=>(string)$profile['main']['nazev']];
-    }
-    $stmt = $db->prepare("
-        SELECT DISTINCT p.id_pob, p.nazev
-        FROM " . cb_hr_main_sql($db) . " up
-        INNER JOIN pobocka p
-            ON p.id_pob = up.id_pob
-        WHERE up.id_person = ?
-          AND up.hlavni = 1 AND up.platny = 1
-          AND up.zruseno IS NULL
-          AND (up.platnost_od IS NULL OR up.platnost_od <= CURDATE())
-          AND (up.platnost_do IS NULL OR up.platnost_do >= CURDATE())
-        LIMIT 2
-    ");
-    $stmt->bind_param('i', $idUser);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $count = $result->num_rows;
-    $row = $result->fetch_assoc();
-    $stmt->close();
+    if (($profile=cb_prebrani_prav_profil($idUser))!==null) $idUser=(int)$profile['id_user_zdroj'];
+    $stmt=$db->prepare('SELECT id_person FROM hr_person WHERE id_user=? AND aktivni=1');
+    $stmt->bind_param('i',$idUser); $stmt->execute(); $id=(int)($stmt->get_result()->fetch_assoc()['id_person']??0); $stmt->close();
+    $ids=cb_hr_main_ids($db,$id);
+    if ($ids===[]) return [];
+    return $db->query('SELECT id_pob,nazev FROM pobocka WHERE id_pob IN ('.implode(',',$ids).') ORDER BY nazev')->fetch_all(MYSQLI_ASSOC);
+}
 
-    if (!is_array($row)) {
-        throw new CbUserVisibleException('Nemáte nastavenou hlavní pobočku. Obraťte se na administrátora.');
-    }
-
-    // Historicka ani nejednoznacna hlavni pobocka nesmi rozhodovat o opravneni.
-    if ($count !== 1) {
-        throw new CbUserVisibleException('Máte více platných hlavních poboček. Obraťte se na administrátora.');
-    }
-
-    return [
-        'id_pob' => (int)$row['id_pob'],
-        'nazev' => (string)$row['nazev'],
-    ];
+// Jedina MAIN se predvyplni; pri vice MAIN ji musi formular vyslovne vybrat a server overit clenstvi.
+function hr_nacti_hlavni_pobocku_uzivatele(mysqli $db,int $idUser): array
+{
+    $branches=hr_main_pobocky_uzivatele($db,$idUser);
+    $selected=(int)($_POST['id_pob']??$_GET['id_pob']??0);
+    if (count($branches)===1 && $selected===0) return $branches[0];
+    foreach ($branches as $branch) if ((int)$branch['id_pob']===$selected) return $branch;
+    throw new CbUserVisibleException($branches===[]?'Nemáte nastavenou MAIN pobočku.':'Vyberte jednu ze svých MAIN poboček.');
 }
 
 /**

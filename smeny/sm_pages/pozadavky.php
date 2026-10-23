@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 /*
+ * Pri vice MAIN volba pobocky urcuje zaviraci dobu a zaznam HPP volna.
  * Formulář dostupnosti pro oba vzhledy: Kdykoliv předvyplní upravitelné dny, Reset vyprázdní týden a HPP vybírá den volna.
  */
 
@@ -69,6 +70,9 @@ if ((string)$smData['saved_at'] !== '') {
     <?php if ($smPerson === null): ?>
         <p class="smeny_notice smeny_notice--error">Přihlášený účet není propojený s aktivní osobou v HR. Požadavky proto nelze zadat.</p>
     <?php else: ?>
+        <?php if (count($smPerson['main_pobocky']??[])>1): ?>
+        <form method="get" action="<?= h(cb_root_url('index.php')) ?>"><input type="hidden" name="m" value="smeny"><input type="hidden" name="page" value="pozadavky"><input type="hidden" name="week" value="<?= $smWeekIndex ?>"><label>MAIN pobočka <select name="id_pob" required><option value="">Vyberte MAIN</option><?php foreach ($smPerson['main_pobocky'] as $branch): ?><option value="<?= (int)$branch['id_pob'] ?>"<?= (int)$branch['id_pob']===(int)$smPerson['id_pob']?' selected':'' ?>><?= h($branch['nazev']) ?></option><?php endforeach; ?></select></label><button type="submit">Zobrazit</button></form>
+        <?php endif; ?>
         <div class="smeny_requests_meta">
             <span><strong><?= h((string)($smPerson['jmeno'] ?: 'Pracovník')) ?></strong></span>
             <span>Hlavní pobočka: <strong><?= h((string)($smPerson['pobocka'] ?: 'není nastavena')) ?></strong></span>
@@ -88,7 +92,7 @@ if ((string)$smData['saved_at'] !== '') {
 
         <form method="post" action="<?= h(cb_root_url('index.php?m=smeny&page=pozadavky&week=' . $smWeekIndex)) ?>" class="smeny_requests_form" data-smeny-requests-form data-smeny-saved="<?= !empty($smData['saved']) ? '1' : '0' ?>">
             <input type="hidden" name="action" value="smeny_pozadavky_ulozit">
-            <input type="hidden" name="week" value="<?= $smWeekIndex ?>">
+            <input type="hidden" name="week" value="<?= $smWeekIndex ?>"><input type="hidden" name="id_pob" value="<?= (int)($smPerson['id_pob']??0) ?>">
             <input type="hidden" name="tyden_od" value="<?= h((string)$smWeek['start_day']) ?>">
             <input type="hidden" name="cb_crf" value="<?= h(cb_crf_token()) ?>">
 

@@ -2,10 +2,12 @@
 declare(strict_types=1);
 
 /*
- * Ucel souboru: Nacita historii pracovnich slotu a pridava soubezne sloty zamestnance.
+ * Ucel souboru: Nacita historii, pridava a ukoncuje pracovni sloty; funkci ponechava osobe.
+ * Slot nema vlastni funkci; zarazeni osoby a MAIN se overuji po cele ucinnosti.
  * Cil zmeny musi spadat do jednotneho osobniho rozsahu HR.
  */
 require_once __DIR__ . '/hr_zamestnanci_pristup.php';
+require_once __DIR__ . '/hr_mista_zapis.php';
 
 /** @return array{pozice:array<int,array{id_slot:int,slot:string}>,historie:array<int,array<string,mixed>>} */
 function hr_zarazeni_historie(mysqli $db, int $idPerson): array
@@ -34,7 +36,26 @@ function hr_zarazeni_historie(mysqli $db, int $idPerson): array
     return ['pozice' => $pozice, 'historie' => $historie];
 }
 
-function hr_zarazeni_zmenit(mysqli $db, int $idPerson, int $idSlot, string $platiOd, int $idUser): void
+// Ukonceni slotu umozni prechod na manazerskou pozici bez mazani historie a bez zruseni ostatnich slotu.
+function hr_zarazeni_ukoncit(mysqli $db, int $idPerson, int $idZarazeni, string $od, int $idUser): void
+{
+    hr_zamestnanci_vyzaduj_osobu($db,$idUser,$idPerson);
+    cb_hr_osobu_zamkni($db,$idPerson);
+    $stmt=$db->prepare('SELECT * FROM hr_slot WHERE id_hr_slot=? AND id_person=? AND platny=1 AND zruseno IS NULL FOR UPDATE');
+    $stmt->bind_param('ii',$idZarazeni,$idPerson); $stmt->execute(); $row=$stmt->get_result()->fetch_assoc(); $stmt->close();
+    if (!$row || (!empty($row['platnost_do']) && $row['platnost_do']<$od)) throw new CbUserVisibleException('Vyberte platný slot k ukončení.');
+    if (!empty($row['platnost_od']) && $row['platnost_od']>=$od) {
+        $stmt=$db->prepare('UPDATE hr_slot SET platny=0,zruseno=NOW() WHERE id_hr_slot=? AND id_person=?');
+        $stmt->bind_param('ii',$idZarazeni,$idPerson);
+    } else {
+        $pred=(new DateTimeImmutable($od))->modify('-1 day')->format('Y-m-d');
+        $stmt=$db->prepare('UPDATE hr_slot SET platnost_do=? WHERE id_hr_slot=? AND id_person=?');
+        $stmt->bind_param('sii',$pred,$idZarazeni,$idPerson);
+    }
+    $stmt->execute(); $stmt->close();
+}
+
+function hr_zarazeni_zmenit(mysqli $db, int $idPerson, int $idSlot, string $platiOd, int $idUser, bool $ownTransaction = true): void
 {
     $slotTable = cb_hr_schema_table($db, 'slot');
     hr_zamestnanci_vyzaduj_osobu($db, $idUser, $idPerson);
@@ -46,8 +67,9 @@ function hr_zarazeni_zmenit(mysqli $db, int $idPerson, int $idSlot, string $plat
     if (!$exists) {
         throw new CbUserVisibleException('Vyberte aktivní pracovní slot.');
     }
-    $db->begin_transaction();
+    if ($ownTransaction) $db->begin_transaction();
     try {
+        cb_hr_osobu_zamkni($db,$idPerson);
         // Novy slot nerusi ostatni sloty; stejny aktivni slot se nesmi vlozit podruhe.
         $stmt = $db->prepare("SELECT 1 FROM {$slotTable} WHERE id_person = ? AND id_slot = ? AND platny = 1 AND (platnost_do IS NULL OR platnost_do >= ?) LIMIT 1");
         $stmt->bind_param('iis', $idPerson, $idSlot, $platiOd);
@@ -67,10 +89,11 @@ function hr_zarazeni_zmenit(mysqli $db, int $idPerson, int $idSlot, string $plat
         $stmt->execute();
         $stmt->close();
         // Alespon jeden aktualni slot nebo funkce je podminkou kompletni karty.
+        hr_mista_over_casovou_osu($db,$idPerson,$platiOd);
         hr_update_employee_completeness($db, $idPerson);
-        $db->commit();
+        if ($ownTransaction) $db->commit();
     } catch (Throwable $e) {
-        $db->rollback();
+        if ($ownTransaction) $db->rollback();
         throw $e;
     }
 }

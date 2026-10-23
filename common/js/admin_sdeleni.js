@@ -1,5 +1,7 @@
-/* Účel: Zobrazuje celá sdělení v kompaktní třísloupcové liště všech modulů a obsluhuje jejich správu s přesným náhledem příjemců.
+/* Účel: Zobrazuje celá sdělení v kompaktní třísloupcové liště všech modulů a obsluhuje jejich správu s přesným náhledem příjemců a id_person ve výběru.
  * Zobrazení se zapisuje až po skutečné viditelnosti karty; přečtení pouze výslovným tlačítkem.
+ * Po zveřejnění se samostatně obnoví archiv bez navigace a bez zásahu do formuláře nebo horní lišty.
+ * Potvrzovaci tlacitko ma text rozdeleny do ctyr pevnych radku.
  */
 (function () {
   'use strict';
@@ -14,7 +16,7 @@
   var title=document.createElement('h2');title.className='sd_title';
   var text=document.createElement('p');text.className='sd_text';
   var actions=document.createElement('div');actions.className='sd_banner_actions';
-  var ack=document.createElement('button');ack.type='button';ack.className='sd_button';ack.textContent='Přečteno, zavřít';
+  var ack=document.createElement('button');ack.type='button';ack.className='sd_button';ack.textContent='Přečteno\nzavřít\ntoto\ninfo';
   var status=document.createElement('p');status.className='sd_status';status.setAttribute('role','status');
   // Oddělené sloupce drží datum vlevo, celý text uprostřed a potvrzení vpravo.
   content.append(title,text,status);actions.append(ack);banner.append(heading,content,actions);
@@ -70,6 +72,20 @@
   // Opožděná starší odpověď nesmí vrátit již potvrzenou zprávu zpět na obrazovku.
   function refresh(){if(busy||ackPending)return;busy=true;var ticket=revision;request('seznam').then(function(data){if(ticket===revision)receive(data);}).catch(function(error){if(!banner.hidden)status.textContent=error.message;}).finally(function(){busy=false;});}
 
+  /** Nacte prvni stranu archivu stejnym HTML vystupem; jinou otevrenou stranku nikdy neprepise. */
+  function refreshAdminArchive(root){
+    var url=new URL('index.php?m=administrace&page=sdeleni',new URL(window.CB_ENDPOINT,window.location.href));
+    return fetch(url.toString(),{credentials:'same-origin',headers:{'X-Comeback-PP-Only':'1'}})
+      .then(function(response){return window.CB_CHYBY.readHtml(response,'Archiv sdělení se nepodařilo obnovit.');})
+      .then(function(html){
+        if(!root.isConnected)return;
+        var next=new DOMParser().parseFromString(html,'text/html').querySelector('[data-sdeleni-admin-archive]');
+        var current=root.querySelector('[data-sdeleni-admin-archive]');
+        if(!next||!current)throw new Error('Archiv sdělení se nepodařilo obnovit.');
+        current.replaceWith(next);
+      });
+  }
+
   /** Samostatná obsluha formuláře nezávislá na AJAX životním cyklu Administrace. */
   function initAdmin(){
     var root=document.querySelector('[data-sdeleni-admin]');if(!root||root.dataset.ready)return;root.dataset.ready='1';
@@ -91,8 +107,8 @@
       ['role','sloty','pobocky'].forEach(function(key){var list=form.querySelector('[data-sdeleni-list="'+key+'"]');
         data[key].forEach(function(item){var label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.name=key+'[]';input.value=item.id;label.append(input,document.createTextNode(item.nazev));list.append(label);});
       });
-      // Každý příjemce má vlastní checkbox; FormData předá stejný seznam ID jako serverový náhled.
-      data.lide.forEach(function(person){var label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.name='id_users[]';input.value=person.id_user;label.append(input,document.createTextNode(person.jmeno||'Uživatel #'+person.id_user));userList.append(label);});
+      // id_person rozlisi stejne nazvy; odesilany checkbox nadale nese puvodni id_user prijemce.
+      data.lide.forEach(function(person){var label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.name='id_users[]';input.value=person.id_user;label.append(input,document.createTextNode((person.jmeno||'Uživatel #'+person.id_user)+' (id_person: '+person.id_person+')'));userList.append(label);});
       mode();previewBtn.disabled=false;
     }).catch(function(error){notice.textContent=error.message;});
     form.addEventListener('submit',function(event){event.preventDefault();if(pending||!form.reportValidity())return;
@@ -110,8 +126,12 @@
       // Při zveřejňování nelze měnit formulář ani omylem odeslat jiný rozpracovaný obsah.
       var enabled=Array.from(form.querySelectorAll('input,select,textarea')).filter(function(e){return !e.disabled;});enabled.forEach(function(e){e.disabled=true;});
       request('zverejnit',params({token:token})).then(function(data){token='';preview.hidden=true;notice.textContent='Sdělení bylo zveřejněno pro '+data.pocet+' uživatelů.';form.reset();refresh();
-        // Archiv se obnoví stejnou navigací jako běžné stránky IS.
-        var link=document.createElement('a');link.href=new URL('index.php?m=administrace&page=sdeleni',new URL(window.CB_ENDPOINT,window.location.href)).toString();link.textContent='Obnovit archiv';notice.append(document.createTextNode(' '),link);
+        // Zverejneni uz uspelo; chyba nasledneho cteni archivu nesmi vyvolat dojem neuspesneho odeslani.
+        return refreshAdminArchive(root).catch(function(){
+          if(!root.isConnected)return;
+          notice.append(document.createTextNode(' Archiv se nepodařilo obnovit. '));
+          var link=document.createElement('a');link.href=new URL('index.php?m=administrace&page=sdeleni',new URL(window.CB_ENDPOINT,window.location.href)).toString();link.textContent='Obnovit archiv';notice.append(link);
+        });
       }).catch(function(error){notice.textContent=error.message;token='';preview.hidden=true;}).finally(function(){pending=false;previewBtn.disabled=false;enabled.forEach(function(e){e.disabled=false;});mode();});
     });
   }

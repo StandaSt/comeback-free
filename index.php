@@ -2,6 +2,7 @@
 /*
  * Ucel souboru: Hlavni vstup aplikace. Ridi prihlaseni, session, smerovani modulu
  * a casne zpracovani pozadavku pred jakymkoli HTML vystupem.
+ * Jednorazovou kontrolu Restie po loginu vyrizuje az samostatny pozadavek nacteneho IS.
  * Samostatny blok Objednavek overuje pravo 220; objednavkovy blok Prehledu pouziva svou puvodni cestu.
  */
 declare(strict_types=1);
@@ -96,6 +97,33 @@ if (!empty($_SESSION['login_ok'])) {
 
 if (!empty($_SESSION['login_ok']) && cb_crf_zapisova_metoda()) {
     cb_crf_vyzaduj();
+}
+
+// Pozadavek sdili ochranu session a CRF; opakovane nacteni nesmi zakladat dalsi kontrolu po loginu.
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
+    && (string)($_SERVER['HTTP_X_COMEBACK_RESTIA_AFTER_LOGIN'] ?? '') === '1') {
+    header('Content-Type: application/json; charset=utf-8');
+    if (empty($_SESSION['login_ok'])) {
+        http_response_code(401);
+        echo json_encode(['ok' => false], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    $cbRestiaPoLoginu = !empty($_SESSION['cb_restia_po_loginu']);
+    unset($_SESSION['cb_restia_po_loginu']);
+    // Priznak ulozime a odemkneme relaci pred importem, aby IS mohl dal odpovidat.
+    session_write_close();
+    try {
+        if ($cbRestiaPoLoginu) {
+            cb_login_restia_kontrola();
+        }
+        echo json_encode(['ok' => true, 'checked' => $cbRestiaPoLoginu], JSON_UNESCAPED_UNICODE);
+    } catch (Throwable $error) {
+        // Vypadek Restie nemeni dokoncene prihlaseni ani obsah nacteneho IS.
+        error_log('Kontrola Restie po přihlášení: ' . $error->getMessage());
+        http_response_code(500);
+        echo json_encode(['ok' => false], JSON_UNESCAPED_UNICODE);
+    }
+    exit;
 }
 // Dávka aktivity má vlastní vstup; nesmí se vydávat za otevření stránky ani obnovovat zámek plánování.
 if (($_GET['cb_aktivita'] ?? '') === '1') {

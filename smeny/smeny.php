@@ -112,7 +112,7 @@ if ($smPage === 'sablony') {
 
 if ($smPage === 'planovani_smen') {
     $smDb = db();
-    $smPlanBranches = cb_smeny_sablony_pobocky($smDb);
+    $smPlanBranches = cb_smeny_planovani_pobocky($smDb);
     $smPlanWeeks = cb_smeny_planovani_tydny();
     cb_smeny_planovani_akce($smDb, $smPlanBranches, $smPlanWeeks);
 }

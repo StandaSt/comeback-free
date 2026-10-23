@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-// Mzdove obdobi pouziva samostatnou historii MAIN k datu vybraneho obdobi.
+// Ucel rozsahu: Mzdove obdobi zobrazuje celou mnozinu MAIN k datu obdobi, kazdou osobu zapocita jen jednou.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 require_once __DIR__ . '/../hr_db/hr_zamestnanci_pristup.php';
 require_once __DIR__ . '/../../common/lib/smeny_hodiny.php';
@@ -158,23 +158,19 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
             ou.prijmeni,
             TRIM(CONCAT(COALESCE(ou.prijmeni, ""), " ", COALESCE(ou.jmeno, ""))) AS cele_jmeno,
             (
-                SELECT CASE WHEN prac.id_pob = 0 THEN \'Výroba\' ELSE p.nazev END
+                SELECT GROUP_CONCAT(DISTINCT p.nazev ORDER BY p.nazev SEPARATOR \', \')
                 FROM ' . cb_hr_main_sql($db) . ' prac
                 LEFT JOIN pobocka p ON p.id_pob = prac.id_pob
                 WHERE prac.id_person = hp.id_person AND prac.platny = 1
                   AND (prac.platnost_od IS NULL OR prac.platnost_od <= ?)
                   AND (prac.platnost_do IS NULL OR prac.platnost_do >= ?)
-                ORDER BY prac.hlavni DESC, COALESCE(prac.platnost_od, \'1000-01-01\') DESC, prac.id_pracoviste DESC
-                LIMIT 1
             ) AS pobocka,
             (
-                SELECT prac.id_pob
+                SELECT GROUP_CONCAT(DISTINCT prac.id_pob ORDER BY prac.id_pob SEPARATOR \',\')
                 FROM ' . cb_hr_main_sql($db) . ' prac
                 WHERE prac.id_person = hp.id_person AND prac.platny = 1
                   AND (prac.platnost_od IS NULL OR prac.platnost_od <= ?)
                   AND (prac.platnost_do IS NULL OR prac.platnost_do >= ?)
-                ORDER BY prac.hlavni DESC, COALESCE(prac.platnost_od, \'1000-01-01\') DESC, prac.id_pracoviste DESC
-                LIMIT 1
             ) AS id_pob,
             (
                 SELECT cs.slot
@@ -368,7 +364,7 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
         return ($filters['id'] === '' || str_contains((string)(int)$row['id_person'], $filters['id']))
             && $textContains((string)($row['jmeno'] ?? ''), $filters['jmeno'])
             && $textContains((string)($row['prijmeni'] ?? ''), $filters['prijmeni'])
-            && ($filters['pobocka'] === '' || (string)($row['id_pob'] ?? '') === $filters['pobocka'])
+            && ($filters['pobocka'] === '' || in_array($filters['pobocka'],explode(',',(string)($row['id_pob']??'')),true))
             && ($filters['pozice'] === '' || (string)($row['zarazeni'] ?? '') === $filters['pozice'])
             && ($filters['uvazek'] === '' || (string)($row['uvazek_text'] ?? '') === $filters['uvazek']);
     }));

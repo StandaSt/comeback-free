@@ -5,6 +5,7 @@
  * Hlavička má zarovnané názvy a nejvýše dva osobní štítky s vlastními tooltipy.
  * Vlastní profil odděluje údaje pro čtení od formulářů přihlašovacího účtu IS.
  * Info od admina má vlastní jednotnou typografii a kompaktní třísloupcovou lištu nezávislou na modulu.
+ * Potvrzení sdělení má velký text na čtyřech řádcích, vyplní výšku lišty a upozorňuje červeným pulzem.
  */
 
 :root {
@@ -1877,7 +1878,7 @@ align-items:center;
 .sd_banner_heading>strong{font-size:var(--cb-font-12);font-weight:600;}
 .sd_banner_heading>.sd_meta:empty{display:none;}
 .sd_banner_content{min-width:0;}
-.sd_banner_actions{justify-self:end;}
+.sd_banner_actions{justify-self:end;align-self:stretch;display:flex;}
 .sd_title{font-size:var(--cb-font-16);font-weight:600;color:var(--cb-text-main);margin:0 0 8px;}
 .sd_banner .sd_title{font-size:var(--cb-font-14);font-weight:600;color:var(--cb-text-main);margin:0 0 2px;}
 .sd_text,.sd_note p{white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0;font-size:var(--cb-font-14);font-weight:400;color:var(--cb-text-main);}
@@ -1885,6 +1886,14 @@ align-items:center;
 .sd_meta{font-size:var(--cb-font-12);font-weight:400;color:var(--cb-text-muted);}
 .sd_button{font-family:Arial,Helvetica,sans-serif;font-size:var(--cb-font-14);font-weight:600;color:var(--cb-text-main);background:var(--cb-bg-control-hover);border:1px solid var(--cb-border);border-radius:5px;padding:5px 9px;cursor:pointer;}
 .sd_button:disabled{cursor:default;opacity:.6;}
+/* Pouze potvrzeni sdeleni je vyrazne a vysoke; pulzuje barva, aby se obsah ani tlacitko nepohybovaly. */
+.sd_banner_actions>.sd_button{flex:1;min-height:44px;min-width:128px;padding:12px 14px;font-size:var(--cb-font-22);line-height:1.15;white-space:pre;color:#fff;background:#dc2626;border-color:#b91c1c;animation:sd_ack_pulse 2.4s ease-in-out infinite;}
+.sd_banner_actions>.sd_button:hover,.sd_banner_actions>.sd_button:focus-visible{animation:none;background:#b91c1c;}
+.sd_banner_actions>.sd_button:focus-visible{outline:2px solid #fff;outline-offset:-5px;}
+.sd_banner_actions>.sd_button:disabled{animation:none;}
+@keyframes sd_ack_pulse{0%,100%{background-color:#dc2626;}50%{background-color:#b91c1c;}}
+/* Pri systemovem omezeni animaci zustane vyrazna cervena bez pulzovani. */
+@media(prefers-reduced-motion:reduce){.sd_banner_actions>.sd_button{animation:none;}}
 .sd_status{font-size:var(--cb-font-12);color:var(--cb-text-main);margin:6px 0;overflow-wrap:anywhere;}
 .sd_status:empty{display:none;}
 .sd_admin{max-width:1000px;}

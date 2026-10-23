@@ -2,7 +2,7 @@
 // Rozsah reportu a kontrol podle HR; Admin/Top management sdili dynamicky firemni rozsah pobocek.
 declare(strict_types=1);
 
-// MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
+// Ucel rozsahu: MAIN je mnozina a viditelne pobocky vychazeji z mist vykonu prace.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 require_once __DIR__ . '/../../common/lib/prebrani_prav.php';
 require_once __DIR__ . '/../../common/lib/firemni_pristup.php';
@@ -35,7 +35,7 @@ function cb_reporty_pristup_nacti(mysqli $conn, int $idUser): array
     // Administratorsky firemni rozsah zahrne novou pobocku bez rucniho prirazeni do HR.
     $companyIds = in_array($role, [1, 2], true) ? cb_firemni_pristup_firmy($conn, $idUser) : [];
     $stmt = $conn->prepare('SELECT p.id_pob, p.nazev, p.id_firma,
-        EXISTS (SELECT 1 FROM hr_pracoviste pr WHERE pr.id_person=? AND pr.id_pob=p.id_pob
+        EXISTS (SELECT 1 FROM ' . cb_hr_pracoviste_sql($conn) . ' pr WHERE pr.id_person=? AND pr.id_pob=p.id_pob
             AND pr.platny=1 AND pr.zruseno IS NULL
             AND (pr.platnost_od IS NULL OR pr.platnost_od<=CURDATE())
             AND (pr.platnost_do IS NULL OR pr.platnost_do>=CURDATE())) AS assigned,
@@ -53,19 +53,14 @@ function cb_reporty_pristup_nacti(mysqli $conn, int $idUser): array
         $id = (int)$branch['id_pob'];
         if ((int)$branch['main'] === 1) { $mainIds[] = $id; }
         $allowed = in_array($role, [1, 2], true) ? in_array((int)$branch['id_firma'], $companyIds, true) : ($role === 3
-            ? ((int)$person['pristup_vsechny_pobocky'] === 1 || (int)$branch['assigned'] === 1)
+            ? ((int)$branch['id_firma']===(int)$person['id_firma'] && (int)$branch['assigned']===1)
             : ($role === 4 ? (int)$branch['id_firma'] === (int)$person['id_firma']
-                : (in_array($role, [5, 7], true) && (int)$branch['main'] === 1)));
+                : (in_array($role, [5, 7], true) && (int)$branch['id_firma']===(int)$person['id_firma'] && (int)$branch['assigned']===1)));
         if ($allowed) {
             $branches[$id] = ['id' => $id, 'name' => (string)$branch['nazev'], 'main' => (int)$branch['main'] === 1];
         }
     }
     $stmt->close();
-    if (in_array($role, [5, 7], true) && count($mainIds) !== 1) {
-        throw new CbUserVisibleException(count($mainIds) === 0
-            ? 'Nemáte nastavenou aktuálně platnou hlavní pobočku. Obraťte se na administrátora.'
-            : 'Máte více aktuálně platných hlavních poboček. Obraťte se na administrátora.');
-    }
     return $cache[$cacheKey] = ['user_id' => $idUser, 'person_id' => $personId, 'role' => $role,
         'company_id' => (int)$person['id_firma'], 'branches' => $branches,
         'own_reports' => in_array($role, [5, 7, 9], true)];
@@ -89,7 +84,7 @@ function cb_reporty_archiv_sql(array $scope, bool $google = false): string
 // Stejný rozsah hodin používá tabulka i exporty ještě před sčítáním a filtrováním.
 function cb_reporty_hodiny_sql(array $scope): string
 {
-    if (in_array($scope['role'], [1, 2, 3], true)) { return '1=1'; }
+    if (in_array($scope['role'], [1, 2], true)) { return '1=1'; }
     if ($scope['role'] === 4) {
         return 'EXISTS (SELECT 1 FROM pobocka scope_branch WHERE scope_branch.id_pob=r.id_pob
             AND scope_branch.id_firma=' . (int)$scope['company_id'] . ')';

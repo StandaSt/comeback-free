@@ -208,6 +208,6 @@ function cb_smeny_pozadavky_ulozit(mysqli $db, ?array $person, array $weeks): vo
         throw $e;
     }
     cb_smeny_pozadavky_flash('success', 'Požadavky na celý týden byly uloženy.');
-    header('Location: ' . cb_root_url('index.php?m=smeny&page=pozadavky&week=' . $weekIndex));
+    header('Location: ' . cb_root_url('index.php?m=smeny&page=pozadavky&week=' . $weekIndex . '&id_pob=' . (int)($person['id_pob']??0)));
     exit;
 }

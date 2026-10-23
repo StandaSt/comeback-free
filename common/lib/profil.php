@@ -51,7 +51,7 @@ function cb_profil_data(mysqli $db): array
         'email_pripraven' => cb_profil_email_pripraven($db), 'ceka_email' => null];
     unset($account);
     $queries = [
-        'pobocky' => 'SELECT DISTINCT b.id_pob, b.nazev FROM hr_pracoviste w JOIN pobocka b ON b.id_pob=w.id_pob
+        'pobocky' => 'SELECT DISTINCT b.id_pob, b.nazev FROM ' . cb_hr_pracoviste_sql($db) . ' w JOIN pobocka b ON b.id_pob=w.id_pob
             WHERE w.id_person=? AND w.platny=1 AND w.zruseno IS NULL
             AND (w.platnost_od IS NULL OR w.platnost_od<=CURDATE()) AND (w.platnost_do IS NULL OR w.platnost_do>=CURDATE())
             ORDER BY (b.kod=\'Vyroba\'),b.id_pob',
@@ -68,7 +68,7 @@ function cb_profil_data(mysqli $db): array
         $data[$key] = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
     }
-    $data['main'] = cb_hr_main_id($db, $id);
+    $data['main'] = cb_hr_main_ids($db, $id);
     if ($data['email_pripraven']) {
         $stmt = $db->prepare('SELECT novy_email, platnost_do FROM user_email_zmena WHERE id_user=? AND potvrzeno IS NULL AND zruseno IS NULL AND platnost_do>NOW() ORDER BY id_user_email_zmena DESC LIMIT 1');
         $stmt->bind_param('i', $id);

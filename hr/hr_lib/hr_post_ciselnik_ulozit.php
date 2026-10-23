@@ -15,7 +15,7 @@ function hr_post_ciselnik_ulozit(mysqli $db): void
             if (!is_array($rows)) throw new CbUserVisibleException('Neplatná sada změn.');
             $saved = hr_ciselnik_davka_ulozit($db, (string)($_POST['typ'] ?? ''), $rows);
         } else {
-            $saved = [hr_ciselnik_ulozit($db, (string)($_POST['typ'] ?? ''), (int)($_POST['id'] ?? 0), (string)($_POST['nazev'] ?? ''), isset($_POST['aktivni']), (int)($_POST['id_role'] ?? 0))];
+            $saved = [hr_ciselnik_ulozit($db, (string)($_POST['typ'] ?? ''), (int)($_POST['id'] ?? 0), (string)($_POST['nazev'] ?? ''), isset($_POST['aktivni']), (int)($_POST['id_role'] ?? 0), true, isset($_POST['zarazeni'])?(string)$_POST['zarazeni']:null)];
         }
         if ($async) {
             header('Content-Type: application/json; charset=UTF-8');

@@ -1,5 +1,5 @@
 <?php
-// Pripravuje denni reporty, historii a prehled s uzaverkou v 05:00; archiv chrani podle role, MAIN a autora.
+// Pripravuje denni reporty, historii a prehled s uzaverkou v 05:00; rozsah sdili mista vykonu prace a mnozinu MAIN.
 declare(strict_types=1);
 
 // Nacita reporty vcetne presne prestavky; stare zdroje mohou mit pouze delku.
@@ -761,7 +761,7 @@ function cb_denni_report_branch_slot_user_options(mysqli $conn, int $idPob, int 
         FROM hr_person hp
         INNER JOIN user u ON u.id_user = hp.id_person
         INNER JOIN hr_osobni_udaje ou ON ou.id_person = hp.id_person AND ou.platny = 1
-        INNER JOIN hr_pracoviste prac ON prac.id_person = hp.id_person AND prac.platny = 1
+        INNER JOIN " . cb_hr_pracoviste_sql($conn) . " prac ON prac.id_person = hp.id_person AND prac.platny = 1
         INNER JOIN {$slotTable} z ON z.id_person = hp.id_person AND z.platny = 1
         WHERE hp.aktivni = 1 AND prac.id_pob = ?
           AND z.id_slot = ?
@@ -1701,8 +1701,8 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
             FROM hr_person hp
             INNER JOIN pobocka p ON p.aktivni = 1
             WHERE hp.id_person = ? AND hp.aktivni = 1
-              AND (hp.pristup_vsechny_pobocky = 1 OR EXISTS (
-                  SELECT 1 FROM hr_pracoviste prac
+              AND (EXISTS (
+                  SELECT 1 FROM " . cb_hr_pracoviste_sql($conn) . " prac
                   WHERE prac.id_person = hp.id_person AND prac.id_pob = p.id_pob AND prac.platny = 1
               ))
             ORDER BY p.id_pob ASC

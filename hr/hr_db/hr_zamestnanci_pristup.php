@@ -1,8 +1,11 @@
 <?php
 declare(strict_types=1);
+// Rozsah mist vykonu prace sdileji vsechny cteci dotazy tohoto souboru.
+require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
+
 
 /**
- * Jednotny rozsah osob v HR podle role, firmy a aktualni MAIN pobocky.
+ * Jednotny rozsah osob v HR podle role, firmy a mist vykonu prace; MAIN nerozsiruje viditelnost.
  * Stejnou podminku pouziva cteni, dokumenty i kontrola cile zapisove akce.
  * Pri prebrani prav zachova vlastni osobu USER 1 a prevezme jen rozsah zdrojoveho profilu.
  * Testovaci identity ponechava pro prihlaseni, ale nezpristupnuje je jako zamestnance.
@@ -75,15 +78,11 @@ function hr_zamestnanci_pobocka_sql(mysqli $db, int $idUser, string $alias = 'p'
         if (in_array($role, [7, 9], true)) {
             return "{$base} AND {$own}";
         }
-        if ($role === 3 || $role === 5) {
-            $ids = $role === 5 ? ($profile['main'] !== null ? [(int)$profile['main']['id_pob']] : []) : $profile['hr_pobocky'];
-            $idsSql = implode(',', array_map('intval', $ids)) ?: '-1';
-            $target = $role === 5 ? cb_hr_main_sql($db) : 'hr_pracoviste';
-            return "{$base} AND ({$own} OR ({$alias}.id_firma = {$firm} AND EXISTS (
-                SELECT 1 FROM {$target} hr_scope WHERE hr_scope.id_person={$alias}.id_person
-                AND hr_scope.id_pob IN ({$idsSql}) AND hr_scope.platny=1 AND hr_scope.zruseno IS NULL
-                AND (hr_scope.platnost_od IS NULL OR hr_scope.platnost_od<=CURDATE())
-                AND (hr_scope.platnost_do IS NULL OR hr_scope.platnost_do>=CURDATE()))))";
+        if ($role===3 || $role===5) {
+            $idsSql=implode(',',array_map('intval',$profile['hr_pobocky']))?:'-1';
+            $target=cb_hr_pracoviste_sql($db);
+            return "{$base} AND ({$own} OR ({$alias}.id_firma={$firm} AND EXISTS(SELECT 1 FROM {$target} hr_scope
+                WHERE hr_scope.id_person={$alias}.id_person AND hr_scope.id_pob IN ({$idsSql}) AND ".cb_hr_ucinne_sql('hr_scope').")))";
         }
     }
     if (in_array($role, [1, 2], true)) {
@@ -97,29 +96,10 @@ function hr_zamestnanci_pobocka_sql(mysqli $db, int $idUser, string $alias = 'p'
     if (in_array($role, [7, 9], true)) {
         return "{$base} AND {$own}";
     }
-    if ($role === 5) {
-        try {
-            $main = (int)hr_nacti_hlavni_pobocku_uzivatele($db, $person)['id_pob'];
-        } catch (CbUserVisibleException $error) {
-            return "{$base} AND {$own}";
-        }
-        $mainTable = cb_hr_main_sql($db);
-        return "{$base} AND ({$own} OR EXISTS (SELECT 1 FROM {$mainTable} hr_scope
-            WHERE hr_scope.id_person = {$alias}.id_person AND hr_scope.id_pob = {$main}
-              AND hr_scope.platny = 1 AND hr_scope.zruseno IS NULL
-              AND (hr_scope.platnost_od IS NULL OR hr_scope.platnost_od <= CURDATE())
-              AND (hr_scope.platnost_do IS NULL OR hr_scope.platnost_do >= CURDATE())))";
-    }
-    // Manager se ridi prunikem platnych povolenych pobocek, nezavisle na MAIN.
-    $branches = "EXISTS (SELECT 1 FROM hr_pracoviste hr_scope
-        INNER JOIN hr_pracoviste hr_view ON hr_view.id_pob = hr_scope.id_pob
-        WHERE hr_scope.id_person = {$alias}.id_person AND hr_view.id_person = {$person}
-          AND hr_scope.platny = 1 AND hr_scope.zruseno IS NULL
-          AND hr_view.platny = 1 AND hr_view.zruseno IS NULL
-          AND (hr_scope.platnost_od IS NULL OR hr_scope.platnost_od <= CURDATE())
-          AND (hr_scope.platnost_do IS NULL OR hr_scope.platnost_do >= CURDATE())
-          AND (hr_view.platnost_od IS NULL OR hr_view.platnost_od <= CURDATE())
-          AND (hr_view.platnost_do IS NULL OR hr_view.platnost_do >= CURDATE()))";
+    $places=cb_hr_pracoviste_sql($db);
+    $branches="EXISTS(SELECT 1 FROM {$places} hr_scope JOIN {$places} hr_view ON hr_view.id_pob=hr_scope.id_pob
+        WHERE hr_scope.id_person={$alias}.id_person AND hr_view.id_person={$person}
+        AND ".cb_hr_ucinne_sql('hr_scope')." AND ".cb_hr_ucinne_sql('hr_view').")";
     return "{$base} AND ({$own} OR {$branches})";
 }
 
@@ -135,17 +115,10 @@ function hr_zamestnanci_pobocky(mysqli $db, int $idUser): array
     if (!in_array($role, [1, 2, 3, 4, 5], true)) {
         return [];
     }
-    if ($role === 5) {
-        try {
-            return [(int)hr_nacti_hlavni_pobocku_uzivatele($db, $person)['id_pob']];
-        } catch (CbUserVisibleException $error) {
-            return [];
-        }
-    }
     $firms = implode(',', hr_zamestnanci_firmy($db, $idUser)) ?: '0';
     $sql = "SELECT b.id_pob FROM pobocka b WHERE b.id_firma IN ({$firms})";
-    if ($role === 3) {
-        $sql .= " AND EXISTS (SELECT 1 FROM hr_pracoviste v WHERE v.id_person = {$person}
+    if ($role === 3 || $role === 5) {
+        $sql .= " AND EXISTS (SELECT 1 FROM " . cb_hr_pracoviste_sql($db) . " v WHERE v.id_person = {$person}
             AND v.id_pob = b.id_pob AND v.platny = 1 AND v.zruseno IS NULL
             AND (v.platnost_od IS NULL OR v.platnost_od <= CURDATE())
             AND (v.platnost_do IS NULL OR v.platnost_do >= CURDATE()))";

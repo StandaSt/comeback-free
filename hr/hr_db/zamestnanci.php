@@ -186,7 +186,7 @@ function hr_fetch_employee_list(mysqli $db): array
             SELECT
                 hp.id_person,
                 GROUP_CONCAT(DISTINCT pob.nazev ORDER BY hp.hlavni DESC, pob.nazev SEPARATOR ', ') AS pracoviste,
-                MAX(CASE WHEN hp.hlavni = 1 THEN pob.nazev END) AS pracoviste_hlavni
+                GROUP_CONCAT(DISTINCT CASE WHEN hp.hlavni=1 THEN pob.nazev END ORDER BY pob.nazev SEPARATOR ', ') AS pracoviste_hlavni
             FROM " . cb_hr_pracoviste_sql($db) . " hp
             INNER JOIN pobocka pob
                 ON pob.id_pob = hp.id_pob
@@ -295,7 +295,7 @@ function hr_fetch_employee_list(mysqli $db): array
 
     $optionQueries = [
         'zarazeni' => "SELECT DISTINCT cs.slot AS value FROM {$slotTable} pz INNER JOIN hr_person p ON p.id_person = pz.id_person INNER JOIN cis_slot cs ON cs.id_slot = pz.id_slot WHERE pz.platny = 1 AND (pz.platnost_od IS NULL OR pz.platnost_od <= CURDATE()) AND (pz.platnost_do IS NULL OR pz.platnost_do >= CURDATE()) AND p.id_firma IN ({$allowedFirmySql}) AND {$branchScopeSql} AND cs.slot <> '' ORDER BY cs.slot",
-        'pracoviste' => "SELECT DISTINCT pob.nazev AS value FROM hr_pracoviste pp INNER JOIN hr_person p ON p.id_person = pp.id_person INNER JOIN pobocka pob ON pob.id_pob = pp.id_pob WHERE pp.platny = 1 AND (pp.platnost_od IS NULL OR pp.platnost_od <= CURDATE()) AND (pp.platnost_do IS NULL OR pp.platnost_do >= CURDATE()) AND p.id_firma IN ({$allowedFirmySql}) AND {$branchScopeSql} AND pob.nazev <> '' ORDER BY pob.nazev",
+        'pracoviste' => "SELECT DISTINCT pob.nazev AS value FROM " . cb_hr_pracoviste_sql($db) . " pp INNER JOIN hr_person p ON p.id_person = pp.id_person INNER JOIN pobocka pob ON pob.id_pob = pp.id_pob WHERE pp.platny = 1 AND (pp.platnost_od IS NULL OR pp.platnost_od <= CURDATE()) AND (pp.platnost_do IS NULL OR pp.platnost_do >= CURDATE()) AND p.id_firma IN ({$allowedFirmySql}) AND {$branchScopeSql} AND pob.nazev <> '' ORDER BY pob.nazev",
         'vztah' => "SELECT DISTINCT pvt.nazev AS value FROM hr_pracovni_vztah pv INNER JOIN hr_person p ON p.id_person = pv.id_person INNER JOIN hr_cis_pracovni_vztah_typ pvt ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ WHERE pv.platny = 1 AND p.id_firma IN ({$allowedFirmySql}) AND {$branchScopeSql} AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE()) AND pvt.nazev <> '' ORDER BY pvt.nazev",
     ];
     $filterOptions = [];
@@ -537,23 +537,6 @@ function hr_fetch_employee_missing_required_data(mysqli $db, int $idPerson): arr
         $missing[] = 'typ a výše mzdy';
     }
 
-    $stmt = $db->prepare("SELECT (SELECT COUNT(*) FROM {$slotTable} WHERE id_person = ? AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS slotu, (SELECT COUNT(*) FROM {$functionTable} WHERE id_person = ? AND {$functionFk} <> 1 AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS funkci, (SELECT COUNT(*) FROM hr_pracoviste WHERE id_person = ? AND platny = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS pobocek, (SELECT COUNT(*) FROM " . cb_hr_main_sql($db) . " m WHERE id_person = ? AND platny = 1 AND hlavni = 1 AND (platnost_od IS NULL OR platnost_od <= CURDATE()) AND (platnost_do IS NULL OR platnost_do >= CURDATE())) AS hlavnich");
-    $stmt->bind_param('iiii', $idPerson, $idPerson, $idPerson, $idPerson);
-    $stmt->execute();
-    $counts = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
-    // Karta musi mit alespon jeden skutecny slot nebo jednu firemni funkci.
-    if ((int)($counts['slotu'] ?? 0) < 1 && (int)($counts['funkci'] ?? 0) < 1) {
-        $missing[] = 'slot nebo funkce';
-    }
-    if ((int)($counts['pobocek'] ?? 0) < 1) {
-        $missing[] = 'pobočka';
-    }
-    // Vyjimka dovoluje zadnou MAIN; nikdy vsak neomlouva vice soubeznych hlavnich pobocek.
-    if ((int)($counts['hlavnich'] ?? 0) !== 1
-        && !((int)($counts['hlavnich'] ?? 0) === 0 && cb_hr_main_nepovinne($db, $idPerson))) {
-        $missing[] = 'jedna hlavní pobočka';
-    }
     $stmt = $db->prepare("SELECT (SELECT COUNT(*) FROM hr_osobni_udaje WHERE id_person = ? AND platny = 1 AND pohlavi IS NOT NULL AND TRIM(pohlavi) <> '') AS pohlavi, (SELECT COUNT(*) FROM hr_email WHERE id_person = ? AND platny = 1 AND hlavni = 1 AND TRIM(email) <> '') AS email");
     $stmt->bind_param('ii', $idPerson, $idPerson);
     $stmt->execute();
@@ -573,7 +556,7 @@ function hr_fetch_employee_missing_required_data(mysqli $db, int $idPerson): arr
  */
 function hr_update_employee_completeness(mysqli $db, int $idPerson): bool
 {
-    $complete = hr_fetch_employee_missing_required_data($db, $idPerson) === [] ? 1 : 0;
+    $complete = hr_fetch_employee_missing_required_data($db,$idPerson)===[] && cb_hr_zarazeni_chyby($db,$idPerson)===[] ? 1 : 0;
     $stmt = $db->prepare('UPDATE hr_person SET kompletni = ? WHERE id_person = ? AND kompletni <> ?');
     $stmt->bind_param('iii', $complete, $idPerson, $complete);
     $stmt->execute();

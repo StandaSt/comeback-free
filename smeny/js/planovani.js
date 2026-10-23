@@ -1,4 +1,4 @@
-/* Účel: Nabídne kompaktní skupiny pracovníků a výběrem osoby rovnou uloží směnu pro zvolený čas; chrání kolize i odebrání sloupce. */
+/* Účel: Nabídne kompaktní skupiny pracovníků podle míst výkonu práce s označením cizí oblasti a výběrem osoby rovnou uloží směnu pro zvolený čas; chrání kolize i odebrání sloupce. */
 (function () {
   'use strict';
 
@@ -121,9 +121,9 @@
         peopleList.innerHTML = '';
         // MAIN a požadavky jsou nezávislé filtry; cizí MAIN vyžaduje výslovné rozšíření.
         var visible = rows.filter(function (person) {
-          return (allBranches || Number(person.je_hlavni_pobocka) === 1) && available(person,choiceFrom.value,choiceTo.value);
+          return (allBranches || Number(person.je_v_oblasti) === 1) && available(person,choiceFrom.value,choiceTo.value);
         });
-        function group(person) { return (Number(person.je_hlavni_pobocka)===1 ? 0 : 2)+(requestMatches(person)?0:1); }
+        function group(person) { return (Number(person.je_v_oblasti)===1 ? 0 : 2)+(requestMatches(person)?0:1); }
         visible.sort(function (a,b) { return group(a)-group(b) || String(a.jmeno).localeCompare(String(b.jmeno),'cs'); });
         if (visible.length === 0) {
           var empty = document.createElement('p');

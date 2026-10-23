@@ -1,10 +1,11 @@
 <?php
 declare(strict_types=1);
 
-// MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
+// Ucel zarazeni: Nova osoba dostane kombinaci oblasti a pobocek, mnozinu MAIN a bud slot s funkci, nebo manazerskou pozici.
 // Pridelovani funkce s roli Admin je vyhrazeno existujicimu Adminovi.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 require_once __DIR__ . '/hr_nastaveni_ciselniky.php';
+require_once __DIR__ . '/hr_mista_zapis.php';
 
 /**
  * DB zapis noveho zamestnance, pracovnich slotu a volitelne firemni funkce.
@@ -43,10 +44,9 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
     $osobniCislo = trim((string)($data['osobni_cislo'] ?? ''));
     $datumNastupu = trim((string)($data['datum_nastupu'] ?? ''));
     $idVztahTyp = (int)($data['id_pracovni_vztah_typ'] ?? 0);
-    $idPobocky = hr_employee_normalize_branch_ids($data['id_pob'] ?? []);
-    $hlavniPobockaVolba = trim((string)($data['id_pob_hlavni'] ?? ''));
-    $maHlavniPobocku = preg_match('/^\d+$/', $hlavniPobockaVolba) === 1;
-    $idPobHlavni = $maHlavniPobocku ? (int)$hlavniPobockaVolba : -1;
+    $oblasti=hr_mista_id((array)($data['id_oblast_prace']??[]));
+    $pobocky=hr_mista_id((array)($data['id_pob']??[]));
+    $main=hr_mista_id((array)($data['id_main']??[]));
     $slotVolba = trim((string)($data['id_slot'] ?? ''));
     $maSlot = preg_match('/^\d+$/', $slotVolba) === 1;
     $idSlot = $maSlot ? (int)$slotVolba : -1;
@@ -72,14 +72,8 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
     if ($datumNastupu === '' || strtotime($datumNastupu) === false) {
         throw new CbUserVisibleException('Vyplňte datum nástupu.');
     }
-    if (
-        $idVztahTyp <= 0
-        || $idPobocky === []
-        || !$maHlavniPobocku
-        || !in_array($idPobHlavni, $idPobocky, true)
-        || (!$maSlot && !$maFunkci)
-    ) {
-        throw new CbUserVisibleException('Vyberte typ vztahu, alespoň jednu pobočku, hlavní pobočku a alespoň jeden slot nebo funkci.');
+    if ($idVztahTyp<=0 || ($oblasti===[] && $pobocky===[]) || (!$maSlot && !$maFunkci)) {
+        throw new CbUserVisibleException('Vyberte typ vztahu, místo výkonu práce a pracovní slot nebo manažerskou pozici.');
     }
     if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
         throw new CbUserVisibleException('Pro založení uživatelského účtu vyplňte platný e-mail.');
@@ -130,20 +124,8 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
         $photoPath = hr_store_employee_photo($files['foto'] ?? null);
         $db->begin_transaction();
         $transactionStarted = true;
-        $marks = implode(',', array_fill(0, count($idPobocky), '?'));
-        $types = 'i' . str_repeat('i', count($idPobocky));
-        $stmt = $db->prepare('SELECT COUNT(*) AS pocet FROM pobocka WHERE id_firma = ? AND aktivni = 1 AND id_pob IN (' . $marks . ')');
-        $bind = [&$types, &$idFirma];
-        foreach ($idPobocky as $index => $idPob) {
-            $bind[] = &$idPobocky[$index];
-        }
-        call_user_func_array([$stmt, 'bind_param'], $bind);
-        $stmt->execute();
-        $platnePobocky = (int)($stmt->get_result()->fetch_assoc()['pocet'] ?? 0);
-        $stmt->close();
-        if ($platnePobocky !== count($idPobocky)) {
-            throw new CbUserVisibleException('Vybrané pobočky nepatří do firmy personalisty.');
-        }
+        $db->query('SELECT id_oblast_prace FROM cis_oblast_prace ORDER BY id_oblast_prace LOCK IN SHARE MODE')->free();
+        hr_mista_vyber_overit($db,$oblasti,$pobocky,$idFirma);
         if ($zdrPoj > 0) {
             $stmt = $db->prepare('SELECT id_pojistovna FROM hr_cis_pojistovny WHERE kod = ? AND aktivni = 1 LIMIT 1');
             $stmt->bind_param('i', $zdrPoj);
@@ -167,7 +149,7 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
         if ($maFunkci) {
             $catalogTable = cb_hr_schema_table($db, 'cis_funkce');
             $catalogPk = cb_hr_cis_funkce_pk($db);
-            $stmt = $db->prepare("SELECT id_role FROM {$catalogTable} WHERE {$catalogPk} = ? AND aktivni = 1 AND {$catalogPk} NOT IN (1, 5, 6) LIMIT 1");
+            $stmt = $db->prepare("SELECT id_role,zarazeni,pouze_admin FROM {$catalogTable} WHERE {$catalogPk} = ? AND aktivni = 1 AND {$catalogPk} NOT IN (1, 5) LIMIT 1");
             $stmt->bind_param('i', $idFunkce);
             $stmt->execute();
             $platnaFunkce = $stmt->get_result()->fetch_assoc();
@@ -176,10 +158,14 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
                 throw new CbUserVisibleException('Vyberte platnou funkci.');
             }
             hr_funkce_roli_vyzaduj($db, (int)$platnaFunkce['id_role']);
-            if ((int)$platnaFunkce['id_role'] === 3 && !cb_pravo_ma(316)) {
+            if (((int)$platnaFunkce['pouze_admin']===1 && !hr_ciselnik_je_admin($db)) || ($platnaFunkce['zarazeni']==='manazerske' && !hr_ciselnik_je_admin($db) && !cb_pravo_ma(316))) {
                 throw new CbUserVisibleException('Nemáte právo přidělit manažerskou funkci.');
             }
         }
+
+        $manager=$maFunkci && $platnaFunkce['zarazeni']==='manazerske';
+        if ($manager && ($maSlot || $main!==[])) throw new CbUserVisibleException('Manažerská pozice nesmí mít slot ani MAIN.');
+        if (!$manager && (!$maSlot || $main===[])) throw new CbUserVisibleException('Pracovník potřebuje slot a alespoň jednu MAIN pobočku.');
 
         // Při souběhu lokální a serverové migrace musí založení osoby fungovat
         // před i po odstranění historických profilových sloupců z user.
@@ -243,18 +229,11 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
         $stmt->execute();
         $stmt->close();
 
-        // Povolenym pobockam se MAIN nepripisuje; ma vlastni casovy zaznam.
-        $stmt = $db->prepare('
-            INSERT INTO hr_pracoviste (id_person, id_pob, hlavni, platnost_od, id_user_zadal, vytvoreno, platny)
-            VALUES (?, ?, ?, ?, ?, NOW(), 1)
-        ');
-        foreach ($idPobocky as $idPob) {
-            $hlavniPobocka = 0;
-            $stmt->bind_param('iiisi', $idPerson, $idPob, $hlavniPobocka, $datumNastupu, $zadalUser);
-            $stmt->execute();
-        }
-        $stmt->close();
-        cb_hr_main_vlozit($db, $idPerson, $idPobHlavni, $datumNastupu, $zadalUser);
+        // Jedna hlavicka zachycuje cely vyber mist; MAIN ma vlastni samostatnou historii.
+        $stmt=$db->prepare('INSERT INTO hr_misto_vykonu_prace(id_person,platnost_od,id_user_zadal) VALUES(?,?,?)');
+        $stmt->bind_param('isi',$idPerson,$datumNastupu,$zadalUser); $stmt->execute(); $mistoId=(int)$db->insert_id; $stmt->close();
+        hr_mista_polozky_vlozit($db,$mistoId,$oblasti,$pobocky);
+        foreach ($main as $id) cb_hr_main_vlozit($db,$idPerson,$id,$datumNastupu,$zadalUser);
 
         if ($maSlot) {
             // Prvni zvoleny slot je hlavni; dalsi lze pridat na karte pracovního pomeru.
@@ -306,6 +285,8 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
         // Nova karta ma mit kompletni=1 jen tehdy, pokud jsou opravdu splneny vsechny podminky.
         hr_update_employee_completeness($db, $idPerson);
 
+        hr_mista_over_casovou_osu($db,$idPerson,$datumNastupu);
+        hr_update_employee_completeness($db,$idPerson);
         $db->commit();
         $transactionStarted = false;
         return ['id_person' => $idPerson, 'id_user' => $idUser];
