@@ -1,5 +1,5 @@
 <?php
-// Pripravuje denni reporty, historii a prehled s uzaverkou v 05:00; rozsah sdili mista vykonu prace a mnozinu MAIN.
+// Pripravuje denni reporty vcetne rozpracovanych starsich dnu, historii a prehled s uzaverkou v 05:00; rozsah sdili mista vykonu prace a mnozinu MAIN.
 declare(strict_types=1);
 
 // Nacita reporty vcetne presne prestavky; stare zdroje mohou mit pouze delku.
@@ -1874,7 +1874,8 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         $formMode = 'closed_day';
     } else {
         $canEditReport = $isCurrentWorkday ? $canCloseReport : $isCreatingMissingFinalReport;
-        $usesDraftPersistence = $isCurrentWorkday && $canEditReport;
+        // I starsi neodevzdany report obnovuje a prubezne uklada svou pracovni verzi.
+        $usesDraftPersistence = $canEditReport;
         $isReadOnlyForm = !$canEditReport;
         $formMode = $isCurrentWorkday ? 'workday' : ($isCreatingMissingFinalReport ? 'final_edit' : 'history_readonly');
     }

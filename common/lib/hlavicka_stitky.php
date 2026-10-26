@@ -1,5 +1,5 @@
 <?php
-// Připravuje pouze čtením osobní štítky hlavičky v rozsahu modulů, firem a poboček uživatele.
+// Připravuje pouze čtením osobní štítky hlavičky; obsazení směn uvádí křestním jménem a příjmením bez prostředních jmen.
 declare(strict_types=1);
 require_once __DIR__ . '/../db/db_user_pobocka.php';
 require_once __DIR__ . '/smeny_verejny_zdroj.php';
@@ -56,7 +56,7 @@ function cb_hlavicka_provoz(mysqli $db, array $branches): array
     return [$tag];
 }
 
-/** Vedoucí vidí obsazení restaurací podle příjmení a slotu; zaměstnanci pouze vlastní budoucí směnu. */
+/** Vedoucí vidí obsazení restaurací se jmény a sloty; zaměstnanci pouze vlastní budoucí směnu. */
 function cb_hlavicka_smeny(mysqli $db, int $user, array $branches, DateTimeImmutable $now): array
 {
     $ids=implode(',',array_map('intval',array_column($branches,'id_pob')));
@@ -68,10 +68,10 @@ function cb_hlavicka_smeny(mysqli $db, int $user, array $branches, DateTimeImmut
     $time=$now->format('Y-m-d H:i:s');
     if($manager){
         // Levé spojení ponechá i neobsazené restaurace; Výrobu určuje stabilní kód pobočky.
-        // Příjmení bereme z posledního platného osobního záznamu, pozici ze skutečného slotu směny.
-        $stmt=$db->prepare("SELECT b.id_pob,b.nazev,team.id_person,team.id_slot,team.prijmeni
+        // Jméno bereme z posledního platného osobního záznamu, pozici ze skutečného slotu směny.
+        $stmt=$db->prepare("SELECT b.id_pob,b.nazev,team.id_person,team.id_slot,team.jmeno,team.prijmeni
             FROM pobocka b LEFT JOIN (
-                SELECT s.id_pob,s.id_person,s.id_slot,ou.prijmeni
+                SELECT s.id_pob,s.id_person,s.id_slot,ou.jmeno,ou.prijmeni
                 FROM ($source) s JOIN hr_person p ON p.id_person=s.id_person
                 LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje=(
                     SELECT MAX(o.id_osobni_udaje) FROM hr_osobni_udaje o WHERE o.id_person=p.id_person AND o.platny=1)
@@ -89,12 +89,14 @@ function cb_hlavicka_smeny(mysqli $db, int $user, array $branches, DateTimeImmut
             if($person<=0)continue;
             $people[$person]=true;
             $slot=(int)$row['id_slot'];
-            if(in_array($slot,[1,2],true))$byBranch[$branch][$slot][$person]=trim((string)$row['prijmeni'])?:'—';
+            // Další křestní jména vynecháme i tehdy, když jsou uložená přímo v poli jmeno.
+            $firstName=preg_split('/\s+/u',trim((string)$row['jmeno']),2)[0]??'';
+            if(in_array($slot,[1,2],true))$byBranch[$branch][$slot][$person]=trim($firstName.' '.(string)$row['prijmeni'])?:'—';
         }
         $table=[['Pobočka','Pizzař','Kurýr']];
         foreach($byBranch as $branch)$table[]=[$branch['name'],implode("\n",$branch[1])?:'—',implode("\n",$branch[2])?:'—'];
         return [cb_hlavicka_stitek('Ve směně '.count($people).' '.(count($people)===1?'člověk':(count($people)<5&&count($people)>0?'lidé':'lidí')),
-            'Právě probíhající zveřejněné směny v povolených restauracích, bez Výroby. Tabulka uvádí příjmení pizzařů a kurýrů; počet zahrnuje všechny pozice. Jde o rozpis, nikoli potvrzenou docházku. Stav k '.$now->format('j. n. Y H:i:s').'.',$table)];
+            'Právě probíhající zveřejněné směny v povolených restauracích, bez Výroby. Tabulka uvádí jména pizzařů a kurýrů; počet zahrnuje všechny pozice. Jde o rozpis, nikoli potvrzenou docházku. Stav k '.$now->format('j. n. Y H:i:s').'.',$table)];
     }
     $stmt=$db->prepare("SELECT s.zacatek,s.konec,b.nazev FROM ($source) s JOIN pobocka b ON b.id_pob=s.id_pob
         WHERE s.id_pob IN ($ids) AND s.id_user=? AND s.zacatek>? ORDER BY s.zacatek,s.id_pob LIMIT 1");

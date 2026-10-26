@@ -1,10 +1,12 @@
-// Řídí formulář denního reportu, povinné důvody storen a ukládání; zachovává konkrétní důvod chyby.
+// Řídí denní report, bubliny u chybějících polí až od času odevzdání, důvody storen a ukládání.
 'use strict';
 
 (function (w) {
   const FORM_CONTROL_SELECTOR = 'input, select, button';
   const reportCalcTimers = new WeakMap();
   const stornoSaveStates = new WeakMap();
+  const missingFieldHints = new WeakMap();
+  let missingFieldHintId = 0;
 
   function getFieldValue(root, selector) {
     const field = root.querySelector(selector);
@@ -427,6 +429,9 @@
       return true;
     }
 
+    // Stejný odpočet zapne upozornění i bez zásahu uživatele do formuláře.
+    syncMissingFieldHints(root);
+
     if (isSubmitBusy(root)) {
       setSubmitLocked(button, 'Ukládám report');
       return false;
@@ -439,14 +444,14 @@
     const missingText = String(button.getAttribute('data-zr-submit-missing-text') || 'Vyplň povinná pole');
     const remaining = targetTs - Math.floor(Date.now() / 1000);
 
-    const personError = personRowsValidationError(root);
-    if (personError !== '') {
-      setSubmitMissing(button, personError);
+    if (remaining > 0) {
+      setSubmitLocked(button, lockedText + ' ' + formatDuration(remaining));
       return false;
     }
 
-    if (remaining > 0) {
-      setSubmitLocked(button, lockedText + ' ' + formatDuration(remaining));
+    const personError = personRowsValidationError(root);
+    if (personError !== '') {
+      setSubmitMissing(button, personError);
       return false;
     }
 
@@ -622,8 +627,60 @@
     }
   }
 
+  // Každé chybějící povinné pole má vlastní bublinu; ostatní pole ani pravidla uložení neměníme.
+  function syncMissingFieldHints(root) {
+    const form = getForm(root);
+    if (!(form instanceof HTMLFormElement)) return;
+    const button = form.querySelector('[data-zr-submit]');
+    const submitAt = Number.parseInt(String(button?.getAttribute('data-zr-submit-at') || '0'), 10) || 0;
+    const showHints = button instanceof HTMLButtonElement && !isReadOnlyForm(form)
+      && (getFormMode(form) === 'final_edit' || submitAt <= Math.floor(Date.now() / 1000));
+    const selector = '[data-zr-field="oteviral"], [data-zr-field="zaviral"], '
+      + '[data-zr-field="pokladna_hotovost"], [data-zr-field="pokladna_terminal"], '
+      + '[data-zr-field="pokladna_stravenky"], [data-zr-start], [data-zr-end], '
+      + '[data-zr-break-start], [data-zr-break-end], [data-zr-storno-note]';
+    form.querySelectorAll(selector).forEach((field) => {
+      if (!(field instanceof HTMLInputElement) && !(field instanceof HTMLSelectElement)) return;
+      let required = true;
+      if (field.hasAttribute('data-zr-break-start') || field.hasAttribute('data-zr-break-end')) {
+        // Pauza je nepovinná, ale její rozepsaný interval potřebuje oba konce.
+        const row = field.closest('[data-zr-person-row]');
+        const other = row?.querySelector(field.hasAttribute('data-zr-break-start') ? '[data-zr-break-end]' : '[data-zr-break-start]');
+        required = other instanceof HTMLInputElement && String(other.value || '').trim() !== '';
+      }
+      const value = field.hasAttribute('data-zr-money')
+        ? parseMoneyValue(field.value, field.getAttribute('data-zr-money'))
+        : String(field.value || '').trim();
+      const missing = showHints && !field.disabled && !field.readOnly && required && value === '';
+      let hint = missingFieldHints.get(field);
+      if (missing && !hint) {
+        const bubble = document.createElement('span');
+        bubble.className = 'zr_missing_field_hint';
+        bubble.id = 'zr-missing-field-' + (++missingFieldHintId);
+        bubble.textContent = 'Doplň toto pole';
+        hint = { bubble, invalid: field.getAttribute('aria-invalid') };
+        missingFieldHints.set(field, hint);
+        field.insertAdjacentElement('afterend', bubble);
+        field.setAttribute('aria-invalid', 'true');
+        field.setAttribute('aria-describedby', [field.getAttribute('aria-describedby'), bubble.id].filter(Boolean).join(' '));
+        field.classList.add('zr_missing_field');
+      } else if (!missing && hint) {
+        hint.bubble.remove();
+        const describedBy = String(field.getAttribute('aria-describedby') || '').split(/\s+/).filter((id) => id && id !== hint.bubble.id).join(' ');
+        if (describedBy) field.setAttribute('aria-describedby', describedBy);
+        else field.removeAttribute('aria-describedby');
+        if (hint.invalid === null) field.removeAttribute('aria-invalid');
+        else field.setAttribute('aria-invalid', hint.invalid);
+        field.classList.remove('zr_missing_field');
+        missingFieldHints.delete(field);
+      }
+    });
+  }
+
   function syncRequiredState(root) {
     if (!(root instanceof HTMLElement)) return;
+
+    syncMissingFieldHints(root);
 
     root.querySelectorAll('[data-zr-required-label]').forEach((label) => {
       if (!(label instanceof HTMLElement)) return;
@@ -927,6 +984,14 @@
     syncRequiredState(root);
     syncSubmitButton(root);
   };
+  // Obnovený seznam storen potřebuje handlery i kontrolu nových povinných důvodů.
+  document.addEventListener('cb:report-storno-updated', (event) => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement)) return;
+    bindStornoNotes(form);
+    syncRequiredState(form);
+    syncSubmitButton(form);
+  });
   w.cbPrepocetReportValues = function (root) {
     const target = root instanceof HTMLElement ? root : document.querySelector('[data-zr-form]');
     return target instanceof HTMLElement ? requestReportCalculation(target) : Promise.resolve(null);

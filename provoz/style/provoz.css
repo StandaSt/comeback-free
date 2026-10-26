@@ -1,7 +1,8 @@
 /* Modul Provoz: styly pracovni plochy vcetne dvojice casu jedne prestavky; role barvi jmena pouze v bloku dnes aktivnich uzivatelu.
  * Franta rozlisuje bloky promptu globalnim cislem a zarovnava odeslani k poli zadani.
  * Filtr objednávek nabízí dvousloupcový seznam jednotlivých poboček a oblastí.
- * Prehled zobrazuje objednavky pres celou sirku a oba reporty pod sebou v jedne bunce. */
+ * Prehled zobrazuje objednavky pres celou sirku a oba reporty pod sebou v jedne bunce.
+ * Denni report ukazuje soucasne bubliny u vsech chybejicich povinnych poli. */
 /* Historie Franty ma vlastni jednoúčelovy styl. */
 @import url("ai_analytik_historie.css");
 
@@ -1485,6 +1486,39 @@
 .zr_req_label{
   color:var(--cb-text-main);
 }
+
+/* Bubliny jsou v toku formulare, aby se pri vice chybach neprekryvaly ani nezakryvaly pole. */
+.zr_missing_field_hint{
+  display:block;
+  position:relative;
+  width:fit-content;
+  max-width:100%;
+  box-sizing:border-box;
+  margin-top:6px;
+  padding:4px 7px;
+  border:1px solid #c62828;
+  border-radius:6px;
+  background:#fff2f2;
+  color:#a51f1f;
+  font-size:11px;
+  line-height:1.3;
+  font-weight:400;
+  white-space:normal;
+  text-align:left;
+}
+.zr_missing_field_hint::before{
+  content:"";
+  position:absolute;
+  top:-4px;
+  left:10px;
+  width:6px;
+  height:6px;
+  border-top:1px solid #c62828;
+  border-left:1px solid #c62828;
+  background:#fff2f2;
+  transform:rotate(45deg);
+}
+.zr_form .zr_missing_field{border-color:#c62828;}
 
 .zr_form input:focus,
 .zr_form select:focus{

@@ -1,7 +1,7 @@
 <?php
 
 // Rozsah mist vykonu prace sdileji vsechny cteci dotazy tohoto souboru.
-// Prubezne uklada rozpracovany report vcetne casove prestavky a prepocitava formular.
+// Prubezne uklada rozpracovany report aktualniho i starsiho neodevzdaneho dne vcetne prestavky a prepocitava formular.
 declare(strict_types=1);
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
@@ -76,11 +76,20 @@ if (!$isAllowed) {
     $sendJson(403, ['ok' => false, 'err' => 'Pobocka neni povolena']);
 }
 
-if (!$isCurrentWorkday) {
-    $sendJson(403, ['ok' => false, 'err' => 'Starsi provozni den nelze prubezne menit.']);
-}
-
 try {
+    // Doplneni starsiho dne smi menit jen pracovni verzi dosud neodevzdaneho reportu.
+    if (!$isCurrentWorkday) {
+        if (cb_pobocka_provoz_valid_date($datum) === '' || $datum > $currentWorkday) {
+            $sendJson(422, ['ok' => false, 'err' => 'Neplatny provozni den.']);
+        }
+        if (cb_pobocka_provoz_is_closed_date($conn, $datum)) {
+            $sendJson(403, ['ok' => false, 'err' => 'Restaurace jsou tento den zavrene.']);
+        }
+        if (cb_db_reporty_is_find_active_id($conn, $idPob, $datum) > 0) {
+            $sendJson(403, ['ok' => false, 'err' => 'Report je jiz odevzdany.']);
+        }
+    }
+
     $idDr = cb_db_dr_pracovni_ensure($conn, $idPob, $datum, $currentUserId, null, null);
 
     if ($action === 'prepocet_col_rozdil') {

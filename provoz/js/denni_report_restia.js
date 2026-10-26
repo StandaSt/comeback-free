@@ -1,7 +1,41 @@
-// js/denni_report_restia.js * Verze: V1
+// Obnovuje souhrn Restie a storna; od času odevzdání hlídá nové povinné důvody bez ztráty rozepsaných polí.
 'use strict';
 
 (function (w, d) {
+  const refreshRequests = new WeakMap();
+
+  // Existující řádky ponecháme v DOM, aby průběžná obnova nepřerušila psaní ani ukládání důvodu.
+  function syncStornoSection(form, wrap) {
+    const current = form.querySelector('.zr_storno_section');
+    const next = wrap.querySelector('.zr_storno_section');
+    if (!(current instanceof HTMLElement) || !(next instanceof HTMLElement)) return;
+    const currentNotes = Array.from(current.querySelectorAll('[data-zr-storno-note]'));
+    const nextNotes = Array.from(next.querySelectorAll('[data-zr-storno-note]'));
+    const tbody = current.querySelector('.zr_storno_table > tbody');
+    if (!currentNotes.length || !nextNotes.length || !(tbody instanceof HTMLElement)) {
+      current.replaceWith(next);
+    } else {
+      const nextIds = new Set(nextNotes.map((input) => input.getAttribute('data-id-obj')));
+      const currentIds = new Set(currentNotes.map((input) => input.getAttribute('data-id-obj')));
+      currentNotes.forEach((input) => {
+        if (nextIds.has(input.getAttribute('data-id-obj'))) return;
+        const row = input.closest('tr');
+        const detail = row?.nextElementSibling;
+        if (detail?.hasAttribute('data-zr-storno-detail')) detail.remove();
+        row?.remove();
+      });
+      nextNotes.forEach((input) => {
+        if (currentIds.has(input.getAttribute('data-id-obj'))) return;
+        const row = input.closest('tr');
+        const detail = row?.nextElementSibling;
+        if (!(row instanceof HTMLElement)) return;
+        tbody.append(row);
+        if (detail?.hasAttribute('data-zr-storno-detail')) tbody.append(detail);
+      });
+    }
+    form.dispatchEvent(new CustomEvent('cb:report-storno-updated', { bubbles: true }));
+  }
+
   function formatDuration(totalSeconds) {
     const safeSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
     const hours = Math.floor(safeSeconds / 3600);
@@ -11,6 +45,7 @@
   }
 
   function refreshReportParts(form) {
+    if (refreshRequests.has(form)) return refreshRequests.get(form);
     const idPobInput = form.querySelector('input[name="id_pob"]');
     const datumInput = form.querySelector('[name="datum_reportu"]');
     const idPob = idPobInput instanceof HTMLInputElement ? String(idPobInput.value || '') : '';
@@ -25,7 +60,7 @@
       body.set('datum_reportu', datum);
     }
 
-    return fetch(window.CB_ENDPOINT || 'index.php', {
+    const pending = fetch(form.action || window.CB_ENDPOINT || 'index.php', {
       method: 'POST',
       headers: {
         'X-Comeback-Shell-Module': '1',
@@ -37,12 +72,14 @@
       if (!res.ok) throw new Error('Nová data Restie se nepodařilo načíst.');
       return res.text();
     }).then((html) => {
+      if (!d.body.contains(form) || form.getAttribute('data-zr-submit-busy') === '1') return;
       const wrap = d.createElement('div');
       wrap.innerHTML = String(html || '').trim();
       const nextSide = wrap.querySelector('.zr_side');
       const currentSide = form.querySelector('.zr_side');
       if (nextSide instanceof HTMLElement && currentSide instanceof HTMLElement) {
         currentSide.replaceWith(nextSide);
+        syncStornoSection(form, wrap);
         const nextWarning = wrap.querySelector('[data-zr-delivery-warning-host]');
         const currentWarning = form.querySelector('[data-zr-delivery-warning-host]');
         if (nextWarning instanceof HTMLElement && currentWarning instanceof HTMLElement) {
@@ -56,7 +93,37 @@
       } else {
         throw new Error('Nová data Restie nemají platný obsah.');
       }
-    });
+    }).finally(() => refreshRequests.delete(form));
+    refreshRequests.set(form, pending);
+    return pending;
+  }
+
+  // Po dosažení času odevzdání načteme storna ihned a poté jednou za minutu; import Restie nespouštíme.
+  function bindStornoRefresh(root) {
+    const form = root instanceof HTMLFormElement ? root : root.querySelector('[data-zr-form]');
+    const submit = form?.querySelector('[data-zr-submit]');
+    if (!(form instanceof HTMLFormElement) || !(submit instanceof HTMLButtonElement)
+      || form.getAttribute('data-zr-readonly') === '1' || form.getAttribute('data-zr-storno-refresh-bound') === '1') return;
+    form.setAttribute('data-zr-storno-refresh-bound', '1');
+    const submitAt = Number.parseInt(String(submit.getAttribute('data-zr-submit-at') || '0'), 10) || 0;
+    let nextRefresh = 0;
+    const tick = () => {
+      const now = Math.floor(Date.now() / 1000);
+      if ((form.getAttribute('data-zr-form-mode') !== 'final_edit' && now < submitAt)
+        || now < nextRefresh || form.getAttribute('data-zr-submit-busy') === '1' || d.hidden) return;
+      nextRefresh = now + 60;
+      refreshReportParts(form).then(() => {
+        bindRestiaRefresh(form);
+        bindDeliveryWarning(form);
+      }).catch((err) => {
+        if (w.console && w.console.warn) w.console.warn(err);
+      });
+    };
+    tick();
+    const timer = w.setInterval(() => {
+      if (!d.body.contains(form)) { w.clearInterval(timer); return; }
+      tick();
+    }, 1000);
   }
 
   function setRefreshLocked(button) {
@@ -173,6 +240,7 @@
   function init(event) {
     bindRestiaRefresh(d);
     bindDeliveryWarning(d);
+    bindStornoRefresh(d);
   }
 
   if (d.readyState === 'loading') {

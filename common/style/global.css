@@ -2,7 +2,7 @@
  * Ucel souboru: Definuje spolecny zaklad vzhledu cele aplikace.
  * Typografie pouziva pouze centralne urcene pevne velikosti v px.
  * Vyvojove prebrani prav oznacuje pevnym upozornenim bez zmeny bezneho layoutu.
- * Hlavička má zarovnané názvy a nejvýše dva osobní štítky s vlastními tooltipy.
+ * Hlavička má zarovnané názvy a nejvýše dva osobní štítky; širší tabulka směn pojme jména zaměstnanců.
  * Vlastní profil odděluje údaje pro čtení od formulářů přihlašovacího účtu IS.
  * Info od admina má vlastní jednotnou typografii a kompaktní třísloupcovou lištu nezávislou na modulu.
  * Potvrzení sdělení má velký text na čtyřech řádcích, vyplní výšku lišty a upozorňuje červeným pulzem.
@@ -800,10 +800,10 @@ main{
 /* Štítek Směn si ponechá barvu svého modulu i při práci v HR nebo Provozu. */
 .head_module_link--smeny .head_module_tag{border-color:color-mix(in srgb,var(--head-module-color) 48%,var(--cb-border));background:var(--head-module-soft);}
 .head_module_link--smeny .head_module_tag:focus-visible{outline-color:var(--head-module-color);}
-/* Tabulka v tooltipu se může rolovat a neopírá se o HTML dodané ze zdrojů dat. */
+/* Širší tabulka pojme jméno i příjmení; v úzkém okně se může rolovat. */
 .cb_tooltip.cb_tooltip_table{max-width:calc(100vw - 16px);width:max-content;max-height:calc(100vh - 16px);overflow:auto;pointer-events:auto;}
-.cb_tooltip_table p{max-width:440px;margin:0 0 8px;}
-.cb_tooltip_table table{border-collapse:collapse;min-width:260px;max-width:100%;}
+.cb_tooltip_table p{max-width:560px;margin:0 0 8px;}
+.cb_tooltip_table table{border-collapse:collapse;min-width:560px;max-width:100%;}
 .cb_tooltip_table th,.cb_tooltip_table td{padding:5px 9px;border-bottom:1px solid var(--cb-border);text-align:left;vertical-align:top;white-space:pre-line;}
 .cb_tooltip_table th:first-child,.cb_tooltip_table td:first-child{text-align:left;}
 @media(max-width:767px){
