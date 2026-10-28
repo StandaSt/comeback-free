@@ -6,6 +6,7 @@ declare(strict_types=1);
  * Soucty, seznam a prime otevreni omezuje jednotnym osobnim rozsahem HR.
  * U importovanych smluv vraci take podpisy, casti a konkretni upozorneni pro personalistu.
  * Word otevre jako odvozeny PDF nahled; puvodni soubor zustava beze zmeny.
+ * Otevreni konkretniho dokumentu eviduje vcetne osoby a verze, nikoli obsahu souboru.
  */
 
 /**
@@ -14,6 +15,7 @@ declare(strict_types=1);
  * osobu a alespon jeden aktualni pracovni vztah.
  */
 require_once __DIR__ . '/hr_zamestnanci_pristup.php';
+require_once __DIR__ . '/../../common/lib/uloz_akci.php';
 
 function hr_fetch_prehled_document_summary(mysqli $db): array
 {
@@ -270,6 +272,10 @@ function hr_stream_employee_document(mysqli $db, int $idUser, int $idDocument, i
     }
     $inline = in_array($mime, ['application/pdf', 'image/jpeg', 'image/png'], true);
 
+    // Prohlížení dokumentu je samostatná akce, nesmí se vydávat za změnu údajů karty.
+    cb_user_akce_zapis(['id_user_akce_typ'=>17,'modul'=>'hr','objekt'=>'hr_dokument',
+        'id_objektu'=>$idDocument,'zdroj'=>'hr_dokument',
+        'detail'=>['id_person'=>$idPerson,'verze'=>$version,'akce'=>'otevreni']]);
     while (ob_get_level() > 0) {
         ob_end_clean();
     }

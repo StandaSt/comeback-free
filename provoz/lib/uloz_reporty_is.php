@@ -2,6 +2,7 @@
 
 // Rozsah mist vykonu prace sdileji vsechny cteci dotazy tohoto souboru.
 // Ukládá finální denní report až po ověření povinných důvodů všech storen a vrací bezpečnou odpověď.
+// Datum před první objednávkou a neotevřená pobočka nejsou platným cílem uložení.
 declare(strict_types=1);
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
@@ -45,6 +46,9 @@ if (method_exists($conn, 'set_charset')) {
 }
 
 $currentWorkday = cb_denni_report_current_workday_date()->format('Y-m-d');
+if (!cb_pobocka_provoz_report_started($conn,$idPob,$datum)) {
+    $sendJson(403, ['ok'=>false,'err'=>'Pobočka v tomto provozním dni ještě nebyla otevřena.']);
+}
 $isCurrentWorkday = ($datum === $currentWorkday);
 $requestedFinalEdit = ((int)($_POST['zr_edit_final'] ?? 0)) === 1;
 

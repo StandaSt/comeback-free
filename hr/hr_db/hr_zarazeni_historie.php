@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+/* Audit HR se potvrzuje spolecne se zmenou; neuspesny pokus zustava odlisnou udalosti. */
+require_once __DIR__ . '/../hr_lib/hr_audit.php';
+
 /*
  * Ucel souboru: Nacita historii, pridava a ukoncuje pracovni sloty; funkci ponechava osobe.
  * Slot nema vlastni funkci; zarazeni osoby a MAIN se overuji po cele ucinnosti.
@@ -67,7 +70,7 @@ function hr_zarazeni_zmenit(mysqli $db, int $idPerson, int $idSlot, string $plat
     if (!$exists) {
         throw new CbUserVisibleException('Vyberte aktivní pracovní slot.');
     }
-    if ($ownTransaction) $db->begin_transaction();
+    if ($ownTransaction) hr_audit_transaction_begin($db);
     try {
         cb_hr_osobu_zamkni($db,$idPerson);
         // Novy slot nerusi ostatni sloty; stejny aktivni slot se nesmi vlozit podruhe.
@@ -91,9 +94,9 @@ function hr_zarazeni_zmenit(mysqli $db, int $idPerson, int $idSlot, string $plat
         // Alespon jeden aktualni slot nebo funkce je podminkou kompletni karty.
         hr_mista_over_casovou_osu($db,$idPerson,$platiOd);
         hr_update_employee_completeness($db, $idPerson);
-        if ($ownTransaction) $db->commit();
+        if ($ownTransaction) hr_audit_transaction_commit($db);
     } catch (Throwable $e) {
-        if ($ownTransaction) $db->rollback();
+        if ($ownTransaction) hr_audit_transaction_rollback($db);
         throw $e;
     }
 }

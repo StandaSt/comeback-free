@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /* Formulář alternativního založení zaměstnance; role v IS se odvozuje z volitelné funkce.
  * Misto prace je vyber oblasti nebo konkretnich pobocek; MAIN se vybira jako mnozina.
- * Pohlavi pouziva nazvy a ciselna ID ze spolecneho HR ciselniku. */
+ * Pohlavi pouziva nazvy a ciselna ID ze spolecneho HR ciselniku; vyrez fotografie je ctvercovy. */
 // Funkce s roli Admin jsou v nabidce pouze existujicimu Adminovi.
 
 $formInput = is_array($formInput ?? null) ? $formInput : [];
@@ -84,5 +84,5 @@ $mainBranchValue = $formValue('id_pob_hlavni');
 
         <div class="hr_form_actions"><a class="hr_secondary_button hr_panel_button_secondary" href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanci')) ?>">Zrušit</a><button class="hr_primary_button" type="submit">Uložit zaměstnance</button></div>
     </form>
-    <dialog class="hr_photo_crop_dialog" data-photo-crop-dialog><div class="hr_photo_crop_dialog_content"><h3>Výřez fotografie</h3><p>Tažením myší označte část fotografie, která se má uložit.</p><div class="hr_photo_crop_surface" data-photo-crop-surface><img alt="Fotografie pro výřez" data-photo-crop-image><span class="hr_photo_crop_selection" data-photo-crop-selection></span></div><div class="hr_photo_crop_actions"><button class="hr_secondary_button" type="button" data-photo-crop-cancel>Zrušit</button><button class="hr_primary_button" type="button" data-photo-crop-apply>Použít výřez</button></div></div></dialog>
+    <dialog class="hr_photo_crop_dialog" data-photo-crop-dialog><div class="hr_photo_crop_dialog_content"><h3>Výřez fotografie</h3><p>Tažením myší vyberte čtverec, který se má uložit.</p><div class="hr_photo_crop_surface" data-photo-crop-surface><img alt="Fotografie pro výřez" data-photo-crop-image><span class="hr_photo_crop_selection" data-photo-crop-selection></span></div><div class="hr_photo_crop_actions"><button class="hr_secondary_button" type="button" data-photo-crop-cancel>Zrušit</button><button class="hr_primary_button" type="button" data-photo-crop-apply>Použít výřez</button></div></div></dialog>
 </section>

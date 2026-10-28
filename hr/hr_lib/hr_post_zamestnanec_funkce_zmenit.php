@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+/* Audit HR se potvrzuje spolecne se zmenou; neuspesny pokus zustava odlisnou udalosti. */
+require_once __DIR__ . '/hr_audit.php';
+
 /* Ucel souboru: Zpracuje zmenu nebo odebrani jedine firemni funkce zamestnance. */
 
 function hr_post_zamestnanec_funkce_zmenit(mysqli $db, int $idUser): void
@@ -17,9 +20,9 @@ function hr_post_zamestnanec_funkce_zmenit(mysqli $db, int $idUser): void
         }
         $platiOd = hr_pracovni_pomer_datum_z_postu((string)($_POST['platnost_od'] ?? ''), 'Platí od');
         hr_funkce_zmenit($db, $idPerson, $idFunkce, isset($_POST['v_treninku']), $platiOd, $idUser);
-        cb_form_finish(hr_pracovni_pomer_url($idPerson), true, $idFunkce === null ? 'Funkce byla odebrána.' : 'Funkce byla uložena.');
+        hr_audit_form_finish(hr_pracovni_pomer_url($idPerson), true, $idFunkce === null ? 'Funkce byla odebrána.' : 'Funkce byla uložena.');
     } catch (Throwable $e) {
-        cb_form_finish(hr_pracovni_pomer_url($idPerson), false, cb_hr_chyba_text($e, 'Změna funkce zaměstnance', ['table' => cb_hr_schema_table($db, 'funkce')]));
+        hr_audit_form_finish(hr_pracovni_pomer_url($idPerson), false, cb_hr_chyba_text($e, 'Změna funkce zaměstnance', ['table' => cb_hr_schema_table($db, 'funkce')]));
     }
 }
 

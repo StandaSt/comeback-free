@@ -1,4 +1,4 @@
-// Graf online objednavek s tooltipem pod blokem; uzivatelske ciselne udaje sklada v ceskem formatu.
+// Graf online objednavek s tooltipem pod prislusnym sloupcem tesne pod nazvy pobocek; udaje sklada v ceskem formatu.
 'use strict';
 
 (function (w) {
@@ -32,15 +32,19 @@
       .replace(/'/g, '&#039;');
   }
 
-  // Podrobnosti pobočky zustanou pod celym blokem a neprekryji leve menu.
+  // Podrobnosti centrujeme pod kategorii pobočky ve spolecne vysce tesne pod nazvy.
   function positionTooltipBelowBlock(canvas) {
     return (point, params, dom, rect, size) => {
       const block = canvas instanceof HTMLElement ? canvas.closest('.blok_online') : null;
       const canvasRect = canvas instanceof HTMLElement ? canvas.getBoundingClientRect() : { left: 0, top: 0, bottom: 0, width: 0 };
       const boundaryRect = block instanceof HTMLElement ? block.getBoundingClientRect() : canvasRect;
+      const item = Array.isArray(params) ? params[0] : params;
+      const chart = w.echarts && w.echarts.getInstanceByDom(canvas);
+      const columnX = chart && item ? chart.convertToPixel({ xAxisIndex: 0 }, item.dataIndex) : NaN;
+      const centerX = canvasRect.left + (Number.isFinite(columnX) ? columnX : point[0]);
       const position = w.CB_TOOLTIP && typeof w.CB_TOOLTIP.positionBelowRect === 'function'
-        ? w.CB_TOOLTIP.positionBelowRect(boundaryRect, dom)
-        : [boundaryRect.left, boundaryRect.bottom + 6];
+        ? w.CB_TOOLTIP.positionBelowRect(boundaryRect, dom, centerX, canvasRect)
+        : [boundaryRect.left, canvasRect.bottom - MINI_SLOUPEC_GRID.bottom + 10];
 
       return [
         position[0] - canvasRect.left,

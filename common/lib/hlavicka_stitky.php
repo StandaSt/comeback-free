@@ -51,7 +51,7 @@ function cb_hlavicka_provoz(mysqli $db, array $branches): array
         $ts=(new DateTimeImmutable($row['finished'],new DateTimeZone('Europe/Prague')))->getTimestamp();
         $oldest=$oldest===null?$ts:min($oldest,$ts);
     }
-    $tag=cb_hlavicka_stitek('Data …','Stáří nejstaršího z posledních úspěšných online importů objednávek bez chyb v pobočkách, které můžeš vidět. Pobočky bez online importů se nezapočítávají.');
+    $tag=cb_hlavicka_stitek('Data …','Čas od poslední úspěšné aktualizace dat z Restie');
     $tag['updated_at']=$oldest;
     return [$tag];
 }
@@ -96,7 +96,7 @@ function cb_hlavicka_smeny(mysqli $db, int $user, array $branches, DateTimeImmut
         $table=[['Pobočka','Pizzař','Kurýr']];
         foreach($byBranch as $branch)$table[]=[$branch['name'],implode("\n",$branch[1])?:'—',implode("\n",$branch[2])?:'—'];
         return [cb_hlavicka_stitek('Ve směně '.count($people).' '.(count($people)===1?'člověk':(count($people)<5&&count($people)>0?'lidé':'lidí')),
-            'Právě probíhající zveřejněné směny v povolených restauracích, bez Výroby. Tabulka uvádí jména pizzařů a kurýrů; počet zahrnuje všechny pozice. Jde o rozpis, nikoli potvrzenou docházku. Stav k '.$now->format('j. n. Y H:i:s').'.',$table)];
+            "Přehled aktuálního obsazení směn.\nJde o naplánované směny, není to doložená docházka.",$table)];
     }
     $stmt=$db->prepare("SELECT s.zacatek,s.konec,b.nazev FROM ($source) s JOIN pobocka b ON b.id_pob=s.id_pob
         WHERE s.id_pob IN ($ids) AND s.id_user=? AND s.zacatek>? ORDER BY s.zacatek,s.id_pob LIMIT 1");
@@ -125,7 +125,7 @@ function cb_hlavicka_hr(mysqli $db, int $user): array
     if(cb_pravo_ma(306)){
         $scope=hr_zamestnanci_pobocka_sql($db,$user);
         $unverified=(int)$db->query("SELECT COUNT(*) cnt FROM hr_person p WHERE p.aktivni=1 AND p.overen=0 AND ($scope)")->fetch_assoc()['cnt'];
-        if($unverified>0)$tags[]=cb_hlavicka_stitek($unverified.' k řešení','Aktivní neověření zaměstnanci, které máš oprávnění zobrazit v seznamu HR. Testovací osoby se nepočítají.');
+        if($unverified>0)$tags[]=cb_hlavicka_stitek($unverified.' k řešení','Počet zaměstnanců u kterých je nutné doplnit údaje.');
     }
     return $tags;
 }

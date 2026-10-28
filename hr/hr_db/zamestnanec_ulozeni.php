@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+/* Audit HR se potvrzuje spolecne se zmenou; neuspesny pokus zustava odlisnou udalosti. */
+require_once __DIR__ . '/../hr_lib/hr_audit.php';
+
 // Ucel zarazeni: Nova osoba dostane kombinaci oblasti a pobocek, mnozinu MAIN a bud slot s funkci, nebo manazerskou pozici.
 // Pridelovani funkce s roli Admin je vyhrazeno existujicimu Adminovi.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
@@ -122,7 +125,7 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
     $transactionStarted = false;
     try {
         $photoPath = hr_store_employee_photo($files['foto'] ?? null);
-        $db->begin_transaction();
+        hr_audit_transaction_begin($db);
         $transactionStarted = true;
         $db->query('SELECT id_oblast_prace FROM cis_oblast_prace ORDER BY id_oblast_prace LOCK IN SHARE MODE')->free();
         hr_mista_vyber_overit($db,$oblasti,$pobocky,$idFirma);
@@ -287,12 +290,12 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
 
         hr_mista_over_casovou_osu($db,$idPerson,$datumNastupu);
         hr_update_employee_completeness($db,$idPerson);
-        $db->commit();
+        hr_audit_transaction_commit($db);
         $transactionStarted = false;
         return ['id_person' => $idPerson, 'id_user' => $idUser];
     } catch (Throwable $e) {
         if ($transactionStarted) {
-            $db->rollback();
+            hr_audit_transaction_rollback($db);
         }
         if (is_string($photoPath) && $photoPath !== '') {
             $photoFile = dirname(__DIR__) . '/' . $photoPath;

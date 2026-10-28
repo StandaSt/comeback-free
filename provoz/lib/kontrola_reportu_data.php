@@ -14,6 +14,7 @@ require_once __DIR__ . '/../../common/db/db_cis_slot.php';
  * Read-only souhrn uzavrenych dennich reportu pro jednu pobocku.
  * Pobocku prebera z otevreneho Denniho reportu, obdobi je pri prvnim vstupu
  * posledni uzavreny tyden; mistni panel vybira cele uzavrene provozni dny.
+ * Neotevřené pobočky nezobrazuje a souhrn začíná nejdříve první objednávkou.
  */
 
 const CB_KONTROLA_REPORTU_PRAVO = 212;
@@ -62,7 +63,7 @@ function cb_kontrola_reportu_branch(mysqli $conn, int $userId, int $requestedBra
     $stmt = $conn->prepare('
         SELECT p.id_pob, p.nazev
         FROM hr_person hp
-        INNER JOIN pobocka p ON p.id_pob = ? AND p.aktivni = 1
+        INNER JOIN pobocka p ON p.id_pob = ? AND p.aktivni = 1 AND p.prvni_obj IS NOT NULL AND p.prvni_obj<=CURDATE()
         WHERE hp.id_person = ? AND (EXISTS (SELECT 1 FROM ' . cb_hr_pracoviste_sql($conn) . ' prac WHERE prac.id_person = hp.id_person AND prac.id_pob = p.id_pob AND prac.platny = 1))
         LIMIT 1
     ');
@@ -966,7 +967,7 @@ function cb_kontrola_reportu_missing_dates(mysqli $conn, int $branchId, string $
     $last = new DateTimeImmutable($to, $tz);
     while ($cursor <= $last) {
         $date = $cursor->format('Y-m-d');
-        if (!isset($present[$date]) && !isset($closedDates[$date])) {
+        if (!isset($present[$date]) && !isset($closedDates[$date]) && cb_pobocka_provoz_report_started($conn,$branchId,$date)) {
             $missing[] = $date;
         }
         $cursor = $cursor->modify('+1 day');
@@ -999,6 +1000,9 @@ function cb_kontrola_reportu_data(
     $_SESSION['cb_kontrola_reportu_id_pob'] = (int)$branch['id'];
 
     $period = cb_kontrola_reportu_period();
+    $branchStart=cb_pobocka_provoz_report_starts($conn)[(int)$branch['id']] ?? '';
+    if ($branchStart==='' || $period['to']<$branchStart) throw new CbUserVisibleException('Pobočka ve zvoleném období ještě nebyla otevřena.');
+    if ($period['from']<$branchStart) $period['from']=$period['display_from']=$branchStart;
     $googlePeriodTruncatedTo = '';
     if ($withGoogleComparison) {
         $googleLastDate = cb_kontrola_reportu_google_last_date(

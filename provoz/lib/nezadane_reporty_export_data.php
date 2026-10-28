@@ -1,5 +1,6 @@
 <?php
 // lib/nezadane_reporty_export_data.php * Data pro e-mailovy export nezadanych dennich reportu
+// Export obsahuje jen povinné dny od první objednávky; neotevřené pobočky vynechává.
 declare(strict_types=1);
 /* Zveřejněný interní týden má přednost před externími směnami pro celou pobočku. */
 require_once __DIR__ . '/../../common/lib/smeny_verejny_zdroj.php';
@@ -218,6 +219,7 @@ function cb_nezadane_reporty_export_rows(mysqli $conn, string $scope): array
             continue;
         }
         foreach ($branches as $idPob => $branchName) {
+            if (!cb_pobocka_provoz_report_required((int)$idPob,$date,$conn)) continue;
             $key = $date . ':' . $idPob;
             if (isset($submitted[$key])) {
                 continue;

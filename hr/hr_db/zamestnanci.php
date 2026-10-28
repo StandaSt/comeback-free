@@ -5,11 +5,13 @@ declare(strict_types=1);
  * DB dotazy pro seznam, detail a kontrolu kompletnosti zamestnancu v HR.
  * Seznam, detail i volby filtru respektuji jednotny osobni rozsah HR podle role.
  * Tabulkovy seznam shrnuje pracovni vztahy do jednoho radku za osobu.
- * Prehledova casova osa spojuje HR historie podle zapisu; ucinnost zachovava v detailech.
+ * Karta spojuje audit vsech zmen a starsi historie podle zapisu; ucinnost zachovava v detailech.
  * Kontrola kompletnosti respektuje nepovinnou MAIN u Personal managera.
+ * Prehled shrnuje dnes platne benefity osoby i pri vice soubeznych pracovnich vztazich.
  */
 
 require_once __DIR__ . '/hr_zamestnanci_pristup.php';
+require_once __DIR__ . '/hr_zamestnanec_historie.php';
 // Seznam, detail i kontrola kompletnosti sdili samostatnou historii MAIN.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
@@ -437,29 +439,29 @@ function hr_fetch_employee_work_timeline(mysqli $db, int $idPerson): array
 {
     $sql = '
         SELECT * FROM (
-            SELECT pv.vytvoreno AS kdy, CONCAT("Nástup / změna vztahu: ", pvt.nazev) AS akce, pv.datum_nastupu AS plati_od, pv.datum_ukonceni AS plati_do, CONCAT(uu.prijmeni, " ", uu.jmeno) AS zapsal, pv.poznamka
+            SELECT pv.vytvoreno AS kdy, CONCAT("Nástup / změna vztahu: ", pvt.nazev) AS akce, pv.datum_nastupu AS plati_od, pv.datum_ukonceni AS plati_do, CONCAT(uu.prijmeni, " ", uu.jmeno) AS zapsal, pv.poznamka, "hr_pracovni_vztah" AS tabulka, pv.id_pracovni_vztah AS id_zaznamu
             FROM hr_pracovni_vztah pv
             INNER JOIN hr_cis_pracovni_vztah_typ pvt ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ
-            LEFT JOIN hr_osobni_udaje uu ON uu.id_person = pv.id_user_zadal AND uu.platny = 1
+            LEFT JOIN hr_person autor ON autor.id_user = pv.id_user_zadal LEFT JOIN hr_osobni_udaje uu ON uu.id_person = autor.id_person AND uu.platny = 1
             WHERE pv.id_person = ?
             UNION ALL
-            SELECT m.vytvoreno, CONCAT("Změna mzdy: ", m.castka, " Kč / ", mt.nazev), m.platnost_od, m.platnost_do, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL
-            FROM hr_mzda m INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = m.id_pracovni_vztah INNER JOIN cis_mzda_typ mt ON mt.id_mzda_typ = m.id_mzda_typ LEFT JOIN hr_osobni_udaje uu ON uu.id_person = m.id_user_zadal AND uu.platny = 1 WHERE pv.id_person = ?
+            SELECT m.vytvoreno, CONCAT("Změna mzdy: ", m.castka, " Kč / ", mt.nazev), m.platnost_od, m.platnost_do, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL, "hr_mzda", m.id_mzda
+            FROM hr_mzda m INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = m.id_pracovni_vztah INNER JOIN cis_mzda_typ mt ON mt.id_mzda_typ = m.id_mzda_typ LEFT JOIN hr_person autor ON autor.id_user = m.id_user_zadal LEFT JOIN hr_osobni_udaje uu ON uu.id_person = autor.id_person AND uu.platny = 1 WHERE pv.id_person = ?
             UNION ALL
-            SELECT u.vytvoreno, CONCAT("Změna úvazku: ", u.hodin_tydne, " h/týdně"), u.platnost_od, u.platnost_do, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL
-            FROM hr_pracovni_uvazek u INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = u.id_pracovni_vztah LEFT JOIN hr_osobni_udaje uu ON uu.id_person = u.id_user_zadal AND uu.platny = 1 WHERE pv.id_person = ?
+            SELECT u.vytvoreno, CONCAT("Změna úvazku: ", COALESCE(CONCAT(u.hodin_tydne, " h/týdně"), "neuvedeno")), u.platnost_od, u.platnost_do, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL, "hr_pracovni_uvazek", u.id_pracovni_uvazek
+            FROM hr_pracovni_uvazek u INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = u.id_pracovni_vztah LEFT JOIN hr_person autor ON autor.id_user = u.id_user_zadal LEFT JOIN hr_osobni_udaje uu ON uu.id_person = autor.id_person AND uu.platny = 1 WHERE pv.id_person = ?
             UNION ALL
-            SELECT b.vytvoreno, CONCAT("Přidán benefit: ", cb.nazev), b.platnost_od, b.platnost_do, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL
-            FROM hr_benefit b INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = b.id_pracovni_vztah INNER JOIN hr_cis_benefit cb ON cb.id_cis_benefit = b.id_cis_benefit LEFT JOIN hr_osobni_udaje uu ON uu.id_person = b.id_user_zadal AND uu.platny = 1 WHERE pv.id_person = ?
+            SELECT b.vytvoreno, CONCAT("Přidán benefit: ", cb.nazev), b.platnost_od, b.platnost_do, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL, "hr_benefit", b.id_benefit
+            FROM hr_benefit b INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = b.id_pracovni_vztah INNER JOIN hr_cis_benefit cb ON cb.id_cis_benefit = b.id_cis_benefit LEFT JOIN hr_person autor ON autor.id_user = b.id_user_zadal LEFT JOIN hr_osobni_udaje uu ON uu.id_person = autor.id_person AND uu.platny = 1 WHERE pv.id_person = ?
             UNION ALL
-            SELECT b.zruseno, CONCAT("Odebrán benefit: ", cb.nazev), b.platnost_do, NULL, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL
-            FROM hr_benefit b INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = b.id_pracovni_vztah INNER JOIN hr_cis_benefit cb ON cb.id_cis_benefit = b.id_cis_benefit LEFT JOIN hr_osobni_udaje uu ON uu.id_person = b.id_user_zrusil AND uu.platny = 1 WHERE pv.id_person = ? AND b.zruseno IS NOT NULL
+            SELECT b.zruseno, CONCAT("Odebrán benefit: ", cb.nazev), b.platnost_do, NULL, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL, "hr_benefit", b.id_benefit
+            FROM hr_benefit b INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = b.id_pracovni_vztah INNER JOIN hr_cis_benefit cb ON cb.id_cis_benefit = b.id_cis_benefit LEFT JOIN hr_person autor ON autor.id_user = b.id_user_zrusil LEFT JOIN hr_osobni_udaje uu ON uu.id_person = autor.id_person AND uu.platny = 1 WHERE pv.id_person = ? AND b.zruseno IS NOT NULL
             UNION ALL
-            SELECT pp.vytvoreno, CONCAT("Přerušení: ", pt.nazev), pp.datum_od, pp.datum_do, CONCAT(uu.prijmeni, " ", uu.jmeno), pp.poznamka
-            FROM hr_pracovni_preruseni pp INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = pp.id_pracovni_vztah INNER JOIN hr_cis_pracovni_preruseni_typ pt ON pt.id_pracovni_preruseni_typ = pp.id_pracovni_preruseni_typ LEFT JOIN hr_osobni_udaje uu ON uu.id_person = pp.id_user_zadal AND uu.platny = 1 WHERE pv.id_person = ?
+            SELECT pp.vytvoreno, CONCAT("Přerušení: ", pt.nazev), pp.datum_od, pp.datum_do, CONCAT(uu.prijmeni, " ", uu.jmeno), pp.poznamka, "hr_pracovni_preruseni", pp.id_pracovni_preruseni
+            FROM hr_pracovni_preruseni pp INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = pp.id_pracovni_vztah INNER JOIN hr_cis_pracovni_preruseni_typ pt ON pt.id_pracovni_preruseni_typ = pp.id_pracovni_preruseni_typ LEFT JOIN hr_person autor ON autor.id_user = pp.id_user_zadal LEFT JOIN hr_osobni_udaje uu ON uu.id_person = autor.id_person AND uu.platny = 1 WHERE pv.id_person = ?
             UNION ALL
-            SELECT pu.vytvoreno, CONCAT("Ukončení: ", put.nazev), pu.datum_ukonceni, pu.datum_ukonceni, CONCAT(uu.prijmeni, " ", uu.jmeno), pu.poznamka
-            FROM hr_pracovni_ukonceni pu INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = pu.id_pracovni_vztah INNER JOIN hr_cis_pracovni_ukonceni_typ put ON put.id_pracovni_ukonceni_typ = pu.id_pracovni_ukonceni_typ LEFT JOIN hr_osobni_udaje uu ON uu.id_person = pu.id_user_zadal AND uu.platny = 1 WHERE pv.id_person = ?
+            SELECT pu.vytvoreno, CONCAT("Ukončení: ", put.nazev), pu.datum_ukonceni, pu.datum_ukonceni, CONCAT(uu.prijmeni, " ", uu.jmeno), pu.poznamka, "hr_pracovni_ukonceni", pu.id_pracovni_ukonceni
+            FROM hr_pracovni_ukonceni pu INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = pu.id_pracovni_vztah INNER JOIN hr_cis_pracovni_ukonceni_typ put ON put.id_pracovni_ukonceni_typ = pu.id_pracovni_ukonceni_typ LEFT JOIN hr_person autor ON autor.id_user = pu.id_user_zadal LEFT JOIN hr_osobni_udaje uu ON uu.id_person = autor.id_person AND uu.platny = 1 WHERE pv.id_person = ?
         ) timeline
         ORDER BY kdy DESC
     ';
@@ -468,38 +470,13 @@ function hr_fetch_employee_work_timeline(mysqli $db, int $idPerson): array
     $stmt->execute();
     $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
-    return $rows;
+    return hr_historie_spojit($db, $idPerson, $rows);
 }
 
 /** Spoji historii pomeru, prirazeni, poznamky a jiz autorizovane dokumenty karty. */
 function hr_fetch_employee_timeline(mysqli $db, int $idPerson, array $documents): array
 {
     $events = hr_fetch_employee_work_timeline($db, $idPerson);
-    $sql = '
-        SELECT s.vytvoreno AS kdy, CONCAT("Slot: ", c.slot) AS akce,
-               s.platnost_od AS plati_od, s.platnost_do AS plati_do,
-               NULL AS zapsal, NULL AS poznamka, s.platny
-        FROM hr_slot s JOIN cis_slot c ON c.id_slot=s.id_slot WHERE s.id_person=?
-        UNION ALL
-        SELECT f.vytvoreno, CONCAT("Funkce: ", c.nazev, IF(f.v_treninku=1," – v tréninku","")),
-               f.platnost_od, f.platnost_do, NULL, NULL, f.platny
-        FROM hr_funkce f JOIN cis_funkce c ON c.id_funkce=f.id_funkce WHERE f.id_person=?
-        UNION ALL
-        SELECT m.vytvoreno, CONCAT("Hlavní pobočka: ", p.nazev),
-               m.platnost_od, m.platnost_do, NULL, NULL, m.platny
-        FROM hr_pracoviste_main m JOIN pobocka p ON p.id_pob=m.id_pob WHERE m.id_person=?
-        UNION ALL
-        SELECT n.vytvoreno, "Přidána poznámka", NULL, NULL, NULL, n.text_poznamky, 1
-        FROM hr_poznamka n WHERE n.id_person=?
-    ';
-    $stmt = $db->prepare($sql);
-    $stmt->bind_param('iiii', $idPerson, $idPerson, $idPerson, $idPerson);
-    $stmt->execute();
-    foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $row) {
-        if ((int)$row['platny'] !== 1) $row['akce'] .= ' (neplatný záznam)';
-        $events[] = $row;
-    }
-    $stmt->close();
     // Dokumenty se znovu nedotazuji: seznam karty uz respektuje prava a firemni pristup.
     foreach ($documents as $document) {
         $events[] = [
@@ -618,6 +595,27 @@ function hr_fetch_employee_work_benefit_ids(mysqli $db, int $idPracovniVztah): a
     $stmt->close();
 
     return $ids;
+}
+
+/** Aktualni benefity autorizovane karty; stejny benefit z vice vztahu se zobrazi jen jednou. */
+function hr_fetch_employee_benefits(mysqli $db, int $idPerson): array
+{
+    $stmt = $db->prepare('SELECT DISTINCT cb.id_cis_benefit, cb.nazev, cb.poradi
+        FROM hr_benefit b
+        JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah=b.id_pracovni_vztah
+        JOIN hr_cis_benefit cb ON cb.id_cis_benefit=b.id_cis_benefit
+        WHERE pv.id_person=? AND pv.platny=1 AND pv.zruseno IS NULL
+          AND (pv.datum_nastupu IS NULL OR pv.datum_nastupu<=CURDATE())
+          AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni>=CURDATE())
+          AND b.platny=1 AND b.zruseno IS NULL
+          AND (b.platnost_od IS NULL OR b.platnost_od<=CURDATE())
+          AND (b.platnost_do IS NULL OR b.platnost_do>=CURDATE())
+        ORDER BY cb.poradi, cb.nazev');
+    $stmt->bind_param('i', $idPerson);
+    $stmt->execute();
+    $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+    return $rows;
 }
 
 /**

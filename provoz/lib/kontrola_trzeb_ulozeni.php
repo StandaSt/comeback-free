@@ -1,5 +1,5 @@
 <?php
-// Overuje uplnost kontroly a pred HTML smeruje ulozeni nebo samostatnou zmenu platnosti.
+// Overuje ulozeni a nahrazeni verze; po uspechu vraci vyplnenou kontrolu s novym tokenem pro dalsi praci.
 declare(strict_types=1);
 require_once __DIR__ . '/kontrola_trzeb_formular.php';
 require_once __DIR__ . '/../db/db_kontrola_trzeb_archiv_zapis.php';
@@ -53,15 +53,34 @@ function cb_kt_handle_post(): never
         cb_kt_vyzaduj_pobocku(db(), $snapshot['branch']);
         if (($_POST['cb_action'] ?? '') !== 'kt_ulozit') { throw new CbUserVisibleException('Neplatná akce.'); }
         if (!cb_kt_archiv_pripraven(db())) { throw new CbUserVisibleException('Archiv zatím není připraven k ukládání.'); }
+        unset($_SESSION['kt_forms'][$token]['saved_id']);
         $rows = cb_kt_radky($snapshot, $_POST);
         $user = $_SESSION['cb_user'];
         $name = trim((string)($user['name'] ?? '') . ' ' . (string)($user['surname'] ?? ''));
-        $id = cb_kt_archiv_uloz(db(), $snapshot, $rows, $token, (int)$user['id_user'], $name);
-        $_SESSION['kt_flash'] = ['success' => true, 'message' => 'Kontrola byla uložena do archivu.'];
-        $fallback = cb_kt_url($snapshot, 'archiv_kontrol_trzeb', ['kt_id' => $id]);
+        $offerKey = is_string($_POST['kt_offer'] ?? null) ? $_POST['kt_offer'] : '';
+        $confirmed = ($_POST['kt_nahradit'] ?? '') === '1' && is_array($form['replacement_offer'] ?? null)
+            && isset($form['replacement_offer_key']) && hash_equals($form['replacement_offer_key'], $offerKey) ? $form['replacement_offer'] : null;
+        $id = cb_kt_archiv_uloz(db(), $snapshot, $rows, $token, (int)$user['id_user'], $name, $confirmed);
+        // Zobrazime skutecne ulozene hodnoty i pri opakovanem odeslani puvodniho tokenu.
+        $saved = cb_kt_archiv_detail(db(), $id, $snapshot['branch']);
+        $input = ['spocitane'=>[], 'poznamka'=>[]];
+        foreach ($saved['rows'] as $row) {
+            $input['spocitane'][$row['polozka']] = $row['spocitane'];
+            $input['poznamka'][$row['polozka']] = $row['poznamka'];
+        }
+        // Puvodni token zustava idempotentni; dalsi uprava musi dostat vlastni token.
+        $nextToken = bin2hex(random_bytes(24));
+        while (count($_SESSION['kt_forms']) >= 20) { array_shift($_SESSION['kt_forms']); }
+        $_SESSION['kt_forms'][$nextToken] = ['time'=>time(), 'snapshot'=>$snapshot, 'input'=>$input, 'saved_id'=>$id];
+        unset($_SESSION['kt_flash']);
+        $fallback = cb_kt_url($snapshot, 'kontrola_trzeb', ['kt_resume' => $nextToken]);
     } catch (Throwable $e) {
-        $_SESSION['kt_flash'] = ['success' => false, 'message' => $e instanceof CbUserVisibleException
-            ? $e->getMessage() : cb_chyba_uzivatel($e, ['module' => 'PROVOZ', 'action' => 'Uložení kontroly tržeb'])];
+        if ($e instanceof CbKtKonflikt && is_array($form)) {
+            $_SESSION['kt_forms'][$token]['ask_replace'] = true;
+        } else {
+            $_SESSION['kt_flash'] = ['success' => false, 'message' => $e instanceof CbUserVisibleException
+                ? $e->getMessage() : cb_chyba_uzivatel($e, ['module' => 'PROVOZ', 'action' => 'Uložení kontroly tržeb'])];
+        }
         if (is_array($snapshot) && is_array($form)) {
             $input = [];
             foreach (['spocitane', 'poznamka'] as $field) {

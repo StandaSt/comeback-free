@@ -1,5 +1,6 @@
 <?php
 // CRON slouci chybejici povinne reporty podle prijemce a odesle vecny push s detailem a jednim duvodem doruceni.
+// Před prvním objednávkovým dnem ani při NULL se reporty nevyžadují a upozornění neposílají.
 declare(strict_types=1);
 
 // MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
@@ -216,7 +217,7 @@ try {
     // Provozni vyjimky se vyradi pred prirazenim prijemcu, aby kvuli nim push vubec nevznikl.
     foreach ($branches as $idPob => $branchName) {
         foreach ($dates as $date) {
-            if (!cb_pobocka_provoz_report_required((int)$idPob, (string)$date)) {
+            if (!cb_pobocka_provoz_report_required((int)$idPob, (string)$date, $conn)) {
                 continue;
             }
             if (!isset($submitted[$date . ':' . $idPob])) {

@@ -7,6 +7,7 @@
  * Kompletní menu připravuje PHP podle práv; přepnutí používá hotové šablony a obsah ani Restia menu nepřepisují.
  * Zrusitelna udalost pred navigaci chrani rozpracovane formulare pred opustenim stranky.
  * Opakovany klik na vybrane stranky Provozu znovu overi stari dat Restie pred nactenim obsahu.
+ * Nepovoleny modul se neotevira ani pres stary odkaz; dosavadni pracovni plocha zustava zobrazena.
  */
 (function(){
   'use strict';
@@ -407,6 +408,8 @@
   function loadModule(moduleName, pushState, params){
     if (!moduleName) return;
     if (moduleLoadRunning) return;
+    // Menu pripravuje server podle prav. Bez nej nesmime zahajit pozadavek ani menit obsah a aktivni modul.
+    if (!document.querySelector('template[data-cb-module-menu="'+moduleName+'"]')) return false;
     var requestedKey = makeShellKey(moduleName, params);
     // Stejne menu techto stranek slouzi take k obnove; limit Restie i ochrana formulare zustavaji spolecne.
     var repeatedRestiaPage = moduleName === 'provoz'
@@ -423,11 +426,6 @@
       cancelable: true,
       detail: { module: moduleName, params: params instanceof URLSearchParams ? params.toString() : '' }
     }))) return false;
-    // Zastaralá nebo nepovolená adresa nesmí přepnout kontext a ponechat načítání zablokované.
-    if (moduleName!==activeMainModule && !document.querySelector('template[data-cb-module-menu="'+moduleName+'"]')) {
-      showModuleError(new Error('Tento modul není pro aktuální profil dostupný. Obnovte stránku.'));
-      return;
-    }
     var sourceMainModule = activeMainModule;
     var moduleChanged = moduleName !== activeMainModule;
     moduleLoadRunning = true;

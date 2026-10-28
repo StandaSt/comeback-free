@@ -4,8 +4,10 @@
  * Nova akce se vybira podle cb_action; starsi stranky zustavaji beze zmeny
  * do sve samostatne migrace.
  * Akce na testovaci osoby odmita pred predanim zapisovacimu handleru.
+ * Všechny podporované změny potvrzuje až se společným auditem HR.
  */
 declare(strict_types=1);
+require_once __DIR__ . '/hr_audit.php';
 
 /**
  * Preda rozpoznanou POST akci HR prislusnemu handleru.
@@ -19,6 +21,13 @@ function cb_hr_request_dispatch(mysqli $db, string $page, array $user): void
     }
 
     $action = trim((string)($_POST['cb_action'] ?? ''));
+    // Všechny zapisovací handlery sdílejí audit i konečné potvrzení dat formuláře.
+    try { hr_audit_zahaj($db, $action, $_POST); }
+    catch (Throwable $e) {
+        error_log('Zahajeni auditu HR: ' . $e->getMessage());
+        cb_form_finish(cb_root_url('index.php?m=hr&page=' . rawurlencode($page)), false,
+            'Změny nebyly uloženy: nepodařilo se zahájit evidenci změn HR.');
+    }
     // Sprava oblasti ma vlastni kontrolu prava a firem; GET nikdy nic neuklada.
     if (in_array($action,['hr_oblast_ulozit','hr_pobocka_oblast_ulozit'],true)) {
         require_once __DIR__ . '/../hr_db/hr_oblasti_sprava.php';
@@ -26,8 +35,8 @@ function cb_hr_request_dispatch(mysqli $db, string $page, array $user): void
         try {
             if ($action==='hr_oblast_ulozit') hr_oblast_ulozit($db,(int)($_POST['id']??0),(string)($_POST['nazev']??''),isset($_POST['aktivni']));
             else hr_pobocka_oblast_ulozit($db,(int)($_POST['id_pob']??0),(int)($_POST['id_oblast_prace']??0),hr_pracovni_pomer_datum_z_postu((string)($_POST['platnost_od']??''),'Platí od'),(int)($user['id_user']??0));
-            cb_form_finish($url,true,'Oblast byla uložena.');
-        } catch (Throwable $e) { cb_form_finish($url,false,cb_hr_chyba_text($e,'Správa oblastí HR')); }
+            hr_audit_form_finish($url,true,'Oblast byla uložena.');
+        } catch (Throwable $e) { hr_audit_form_finish($url,false,cb_hr_chyba_text($e,'Správa oblastí HR')); }
         return;
     }
     // Skryti testovaci osoby plati i pro rucne odeslany formular, nejen pro seznam.
@@ -35,7 +44,7 @@ function cb_hr_request_dispatch(mysqli $db, string $page, array $user): void
         || in_array($action, ['hr_pracovni_pomer_upravit', 'hr_pracovni_preruseni_ulozit',
             'hr_pracovni_preruseni_uzavrit', 'hr_pracovni_pomer_ukoncit'], true);
     if ($employeeAction && hr_zamestnanci_je_testovaci($db, (int)($_POST['id_person'] ?? 0))) {
-        cb_form_finish(cb_root_url('index.php?m=hr&page=zamestnanci'), false,
+        hr_audit_form_finish(cb_root_url('index.php?m=hr&page=zamestnanci'), false,
             'Testovací účet není vedený jako zaměstnanec v HR.');
         return;
     }
@@ -50,6 +59,11 @@ function cb_hr_request_dispatch(mysqli $db, string $page, array $user): void
     }
     if ($action === 'hr_zamestnanec_upravit') {
         hr_post_zamestnanec_uprava($db, (int)($user['id_user'] ?? 0));
+        return;
+    }
+    if ($action === 'hr_zamestnanec_foto_ulozit') {
+        require_once __DIR__ . '/hr_post_zamestnanec_foto.php';
+        hr_post_zamestnanec_foto($db, (int)($user['id_user'] ?? 0));
         return;
     }
     if ($action === 'hr_pracovni_pomer_upravit') {
@@ -104,5 +118,8 @@ function cb_hr_request_dispatch(mysqli $db, string $page, array $user): void
     if ($action === 'hr_nabor_ulozit_akci' && $page === 'nabor') {
         hr_post_nabor($db);
     }
-
+    if (hr_audit_aktivni($db)) {
+        hr_audit_form_finish(cb_root_url('index.php?m=hr&page=' . rawurlencode($page)),false,
+            'Akce není na této stránce dostupná.');
+    }
 }

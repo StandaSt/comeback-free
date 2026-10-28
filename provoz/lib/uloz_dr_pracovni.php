@@ -3,6 +3,7 @@
 // Rozsah mist vykonu prace sdileji vsechny cteci dotazy tohoto souboru.
 // Prubezne uklada rozpracovany report aktualniho i starsiho neodevzdaneho dne vcetne prestavky a prepocitava formular.
 declare(strict_types=1);
+// Pracovní verze nemůže vzniknout před první objednávkou ani pro neotevřenou pobočku.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
 if (
@@ -51,6 +52,9 @@ if (method_exists($conn, 'set_charset')) {
 }
 
 $currentWorkday = cb_denni_report_current_workday_date()->format('Y-m-d');
+if (!cb_pobocka_provoz_report_started($conn,$idPob,$datum)) {
+    $sendJson(403, ['ok'=>false,'err'=>'Pobočka v tomto provozním dni ještě nebyla otevřena.']);
+}
 $isCurrentWorkday = ($datum === $currentWorkday);
 
 if (

@@ -1,5 +1,6 @@
 <?php
 // Pripravuje denni reporty vcetne rozpracovanych starsich dnu, historii a prehled s uzaverkou v 05:00; rozsah sdili mista vykonu prace a mnozinu MAIN.
+// Pobočky a očekávané reportové dny zahrnuje až od první objednávky; NULL zůstává mimo reporty.
 declare(strict_types=1);
 
 // Nacita reporty vcetne presne prestavky; stare zdroje mohou mit pouze delku.
@@ -213,7 +214,7 @@ function cb_denni_report_workday_options(DateTimeImmutable $currentWorkdayStart)
 
 function cb_denni_report_has_active_branch_report(mysqli $conn, int $idPob, string $date): bool
 {
-    if ($idPob <= 0 || $date === '') {
+    if ($idPob <= 0 || $date === '' || !cb_pobocka_provoz_report_started($conn,$idPob,$date)) {
         return false;
     }
 
@@ -331,7 +332,7 @@ function cb_denni_report_missing_reports_summary(mysqli $conn, string $date): ar
             while ($row = $result->fetch_assoc()) {
                 $idPob = (int)($row['id_pob'] ?? 0);
                 $name = trim((string)($row['nazev'] ?? ''));
-                if ($idPob > 0 && cb_pobocka_provoz_report_required($idPob, $date)) {
+                if ($idPob > 0 && cb_pobocka_provoz_report_required($idPob, $date, $conn)) {
                     $rows[] = [
                         'id_pob' => $idPob,
                         'nazev' => $name !== '' ? $name : ('Pobočka ' . $idPob),
@@ -347,7 +348,7 @@ function cb_denni_report_missing_reports_summary(mysqli $conn, string $date): ar
 }
 
 // Spocita chybejici povinne reporty po pobockach pro aktualni mesic.
-// Vyroba ma vlastni pocet pracovnich dnu, protoze nedele se do jejiho ocekavaneho poctu nezahrnuji.
+// Očekávané dny vycházejí pro každou pobočku z první objednávky a společných provozních výjimek.
 function cb_denni_report_month_missing_reports_summary(mysqli $conn, DateTimeImmutable $currentWorkdayDt, bool $includeCurrentWorkday, ?DateTimeImmutable $lastKnownDay = null): array
 {
     $monthStartDt = $currentWorkdayDt->modify('first day of this month');
@@ -368,31 +369,17 @@ function cb_denni_report_month_missing_reports_summary(mysqli $conn, DateTimeImm
         return [];
     }
     $vyrobaIdPob = CB_POBOCKA_PROVOZ_VYROBA_ID_POB;
-    $vyrobaRequiredDays = 0;
-    // Samostatny ocekavany pocet zabrani tomu, aby nedele umelo zvysovaly mesicni chyby Vyroby.
-    for ($dateDt = $monthStartDt; $dateDt <= $monthEndDt; $dateDt = $dateDt->modify('+1 day')) {
-        $date = $dateDt->format('Y-m-d');
-        if (
-            !isset($closedDates[$date])
-            && cb_pobocka_provoz_report_required($vyrobaIdPob, $date)
-        ) {
-            $vyrobaRequiredDays++;
-        }
-    }
-
     $sql = "
         SELECT
             p.id_pob,
             p.nazev,
-            GREATEST(
-                0,
-                CASE WHEN p.id_pob = ? THEN ? ELSE ? END - COUNT(DISTINCT r.datum_reportu)
-            ) AS missing_count
+            COUNT(DISTINCT r.datum_reportu) AS submitted_count
         FROM pobocka p
         LEFT JOIN reporty_is r
             ON r.id_pob = p.id_pob
            AND r.datum_reportu >= ?
            AND r.datum_reportu <= ?
+           AND r.datum_reportu >= p.prvni_obj
            AND r.platny = 1
            AND (p.id_pob <> ? OR DAYOFWEEK(r.datum_reportu) <> 1)
            AND NOT EXISTS (
@@ -403,8 +390,8 @@ function cb_denni_report_month_missing_reports_summary(mysqli $conn, DateTimeImm
            )
         WHERE p.aktivni = 1
           AND p.id_pob > 0
+          AND p.prvni_obj IS NOT NULL
         GROUP BY p.id_pob, p.nazev
-        HAVING missing_count > 0
         ORDER BY p.id_pob ASC
     ";
 
@@ -412,10 +399,7 @@ function cb_denni_report_month_missing_reports_summary(mysqli $conn, DateTimeImm
     $rows = [];
     if ($stmt !== false) {
         $stmt->bind_param(
-            'iiissi',
-            $vyrobaIdPob,
-            $vyrobaRequiredDays,
-            $totalDays,
+            'ssi',
             $monthStart,
             $monthEnd,
             $vyrobaIdPob
@@ -426,7 +410,13 @@ function cb_denni_report_month_missing_reports_summary(mysqli $conn, DateTimeImm
             while ($row = $result->fetch_assoc()) {
                 $idPob = (int)($row['id_pob'] ?? 0);
                 $name = trim((string)($row['nazev'] ?? ''));
-                $missingCount = (int)($row['missing_count'] ?? 0);
+                // Počet povinných dnů je individuální: otevření uprostřed měsíce nezačíná jeho prvním dnem.
+                $expected = 0;
+                for ($day=$monthStartDt; $day<=$monthEndDt; $day=$day->modify('+1 day')) {
+                    $date=$day->format('Y-m-d');
+                    if (!isset($closedDates[$date]) && cb_pobocka_provoz_report_required($idPob,$date,$conn)) $expected++;
+                }
+                $missingCount = max(0,$expected-(int)($row['submitted_count'] ?? 0));
                 if ($idPob > 0 && $missingCount > 0) {
                     $rows[] = [
                         'id_pob' => $idPob,
@@ -451,10 +441,10 @@ function cb_denni_report_has_any_report(mysqli $conn, string $date): bool
 
     $stmt = $conn->prepare('
         SELECT 1
-        FROM reporty_is
+        FROM reporty_is r
         WHERE datum_reportu = ?
           AND platny = 1
-        LIMIT 1
+          AND ' . cb_pobocka_provoz_report_sql() . ' LIMIT 1
     ');
     if ($stmt === false) {
         return false;
@@ -1529,7 +1519,7 @@ function cb_denni_report_prehled_data(mysqli $conn, ?DateTimeImmutable $now = nu
         $stmt->execute();
         $result = $stmt->get_result();
         while ($row = $result->fetch_assoc()) {
-            if (cb_pobocka_provoz_report_required((int)$row['id_pob'], $date)) {
+            if (cb_pobocka_provoz_report_required((int)$row['id_pob'], $date, $conn)) {
                 $submittedReports[] = $row;
             }
         }
@@ -1715,7 +1705,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
                 while ($row = $allowedBranchesResult->fetch_assoc()) {
                     $idPob = (int)($row['id_pob'] ?? 0);
                     $name = trim((string)($row['nazev'] ?? ''));
-                    if ($idPob > 0) {
+                    if ($idPob > 0 && cb_pobocka_provoz_report_started($conn,$idPob,$reportDate)) {
                         $allowedBranches[$idPob] = $name !== '' ? $name : ('Pobočka ' . $idPob);
                     }
                 }
@@ -1767,6 +1757,10 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
     if ($reportBranchId > 0) {
         foreach ($workdayOptions as $dayOptionIndex => $dayOption) {
             $dayValue = (string)($dayOption['value'] ?? '');
+            if (!cb_pobocka_provoz_report_started($conn,$reportBranchId,$dayValue)) {
+                unset($workdayOptions[$dayOptionIndex]);
+                continue;
+            }
             if ($dayValue === '' || $dayValue === $currentWorkdayDt->format('Y-m-d')) {
                 continue;
             }

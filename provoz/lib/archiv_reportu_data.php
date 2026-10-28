@@ -1,5 +1,6 @@
 <?php
 // Pripravuje archiv a porovnani podle role, MAIN a autorstvi; nedostupne doplnkove porovnani denniho reportu preskoci.
+// Pobočka bez první objednávky ani dny před otevřením nemají v archivu žádné řádky.
 declare(strict_types=1);
 
 require_once __DIR__ . '/denni_report_prava.php';
@@ -295,7 +296,8 @@ function cb_archiv_reportu_data(mysqli $conn, array $input): array
     // Ve filtru jsou i pobocky vlastnich reportu, jejich ostatni dny se ale nesmi odkryt.
     if ($scope['own_reports']) {
         $stmt = $conn->prepare('SELECT DISTINCT p.id_pob, p.nazev FROM reporty_is r
-            INNER JOIN pobocka p ON p.id_pob=r.id_pob WHERE r.platny=1 AND r.zadal=?');
+            INNER JOIN pobocka p ON p.id_pob=r.id_pob WHERE r.platny=1 AND r.zadal=?
+            AND p.prvni_obj IS NOT NULL AND r.datum_reportu>=p.prvni_obj');
         $stmt->bind_param('i', $userId);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -372,7 +374,7 @@ function cb_archiv_reportu_data(mysqli $conn, array $input): array
             $saved = $savedByKey[$date . ':' . $idBranch] ?? null;
             $isSaved = is_array($saved);
             // Vedlejsi vypomoc ukazuje pouze vlastni ulozeny report; nedelni Vyroba neni chybejici.
-            if (!cb_reporty_archiv_radek_viditelny($scope, (int)$idBranch, $day, $isSaved)) { continue; }
+            if (!cb_reporty_archiv_radek_viditelny($scope, (int)$idBranch, $day, $isSaved, $conn)) { continue; }
             if (($filters['status'] === 'saved' && !$isSaved) || ($filters['status'] === 'missing' && $isSaved)) {
                 continue;
             }

@@ -1,4 +1,4 @@
-/* Kompaktni vzhled formulare a archivu kontroly trzeb, omezeny na .kt_page. */
+/* Kompaktní formulář, archiv a náhled e-mailu Kontroly tržeb, omezené na vlastní třídy. */
 .kt_page { width: fit-content; max-width: 100%; box-sizing: border-box; padding: 8px; background: #fff; border-radius: 6px; color: #202b39; font-size: 13px; line-height: 1.2; }
 .kt_filters, .kt_heading, .kt_pager { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .kt_filters { margin-bottom: 8px; }
@@ -17,6 +17,16 @@
 .kt_page button:disabled { opacity: .5; cursor: default; }
 .kt_page [hidden] { display: none !important; }
 .kt_heading { justify-content: space-between; align-items: center; }
+/* Archiv má společnou horní navigaci a přesné šířky pouze pro tabulku uložené kontroly. */
+.kt_archive_actions { margin: 6px 0; }
+.kt_archive_actions > a:first-child { margin-left: 0; }
+.kt_archive_validity { margin-bottom: 10px; }
+.kt_archive_detail .kt_table tr > :nth-child(2),
+.kt_archive_detail .kt_table tr > :nth-child(3),
+.kt_archive_detail .kt_table tr > :nth-child(4) { width: 110px; min-width: 110px; max-width: 110px; box-sizing: border-box; }
+.kt_archive_detail .kt_table tr > :nth-child(5),
+.kt_archive_detail .kt_table [data-kt-row] > td:last-child { width: 380px; min-width: 380px; max-width: 380px; box-sizing: border-box; }
+.kt_archive_detail .kt_table .kt_note { width: auto; }
 .kt_table_wrap { overflow-x: auto; }
 .kt_table { width: auto; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 /* Popisek i paticka vyuzivaji sirku tabulky, aby zarovnani nezaviselo na sirce stranky. */
@@ -31,6 +41,11 @@
 /* Sloupce i cela tabulka sleduji obsah; poznamka ma sirku sveho vstupniho pole. */
 .kt_table [data-kt-row] > :nth-child(-n+4) { white-space: nowrap; }
 .kt_table td:nth-child(2), .kt_table td:nth-child(3), .kt_table td:nth-child(4) { text-align: right; white-space: nowrap; }
+/* Odevzdané a Rozdíl mají i v zadávacím formuláři pevnou šířku včetně okrajů. */
+[data-kt-form] .kt_table thead th:nth-child(2),
+[data-kt-form] .kt_table thead th:nth-child(4),
+[data-kt-form] .kt_table [data-kt-row] > td:nth-child(2),
+[data-kt-form] .kt_table [data-kt-row] > td:nth-child(4) { width: 110px; min-width: 110px; max-width: 110px; box-sizing: border-box; }
 .kt_page .kt_amount { width: 110px; height: 24px; min-height: 24px; text-align: right; background: #e1edff; }
 /* Blokove pole nema mezeru pro textovou zakladnu, ktera zbytecne zvysovala kazdy radek. */
 .kt_table textarea { display: block; width: 350px; min-width: 350px; height: 24px; min-height: 24px; margin: 0; background: #e1edff; resize: vertical; }
@@ -50,4 +65,24 @@
 .kt_hint, .kt_sources { color: #556174; font-size: .92em; }
 .kt_page .kt_save { display: block; width: 350px; background: #1764ab; color: #fff; padding: 4px 10px; }
 .kt_pager { justify-content: space-between; align-items: center; }
+/* Souhrn cte pouze archiv a je oddeleny od rozepsaneho formulare. */
+.kt_saved_summary { margin-top: 8px; width: 360px; }
+/* Odeslání patří vedle součtu; na úzké obrazovce se přesune pod něj. */
+.kt_summary_row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.kt_email { margin-top: 8px; }
+.kt_email_dialog { width: 960px; max-width: 94vw; max-height: 88vh; box-sizing: border-box; overflow: auto; padding: 12px; border: 1px solid #9cabbc; border-radius: 6px; color: #202b39; background: #fff; }
+.kt_email_dialog::backdrop { background: #0005; }
+.kt_email_dialog h2 { margin: 0 0 8px; font-size: 16px; }
+.kt_email_body { overflow-x: auto; border: 1px solid #cad3df; padding: 8px; background: #fff; }
+.kt_saved_summary h2 { margin: 0 0 8px; font-size: 14px; }
+.kt_saved_amounts { display: flex; flex-wrap: wrap; gap: 28px; }
+/* Stravenky sledují pravý vnitřní okraj rozšířeného souhrnu. */
+.kt_saved_amounts > div:last-child { margin-left: auto; text-align: right; }
+.kt_saved_amounts strong { display: block; margin-top: 4px; font-size: 15px; white-space: nowrap; }
+.kt_confirm_dialog { max-width: min(460px, 90vw); padding: 14px; border: 1px solid #9cabbc; border-radius: 6px; color: #202b39; background: #fff; }
+.kt_confirm_dialog::backdrop { background: #0005; }
+.kt_period_nowrap { white-space: nowrap; }
+.kt_table tfoot .kt_saved_cell { text-align: left; color: #285a24; }
+.kt_confirm_actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.kt_page .kt_confirm_save { background: var(--clr_modra_6); color: #fff; }
 @media(max-width: 700px) { .kt_page { padding: 6px; } .kt_filters { gap: 5px; } .kt_table th, .kt_table td { padding: 3px 5px; } }

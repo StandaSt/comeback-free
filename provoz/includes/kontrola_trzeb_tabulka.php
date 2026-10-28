@@ -1,5 +1,5 @@
 <?php
-// Kompaktni kontrola s povinnymi castkami, prevzetim odevzdanych hodnot a oddelenymi souhrny.
+// Kompaktni kontrola s povinnymi castkami, souhrny a stavem ulozeni vlevo pod tabulkou.
 declare(strict_types=1);
 ?>
 <div class="kt_table_wrap"><table class="kt_table">
@@ -25,6 +25,6 @@ declare(strict_types=1);
   <?php endforeach; ?>
   </tbody>
   <?php if (!$ktArchive && cb_kt_ma_pravo(CB_KT_ULOZIT)): ?>
-  <tfoot><tr><td colspan="4"></td><td><button class="kt_save" type="submit"<?= !$ktReady ? ' disabled' : '' ?>>Uložit kontrolu do archivu</button></td></tr></tfoot>
+  <tfoot><tr><td colspan="4" class="kt_saved_cell"><span data-kt-saved-status role="status"<?= empty($ktSavedId) ? ' hidden' : '' ?>>Uloženo v archivu</span></td><td><button class="kt_save" type="submit"<?= !$ktReady ? ' disabled' : '' ?>>Uložit kontrolu do archivu</button></td></tr></tfoot>
   <?php endif; ?>
 </table></div>

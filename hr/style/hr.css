@@ -8,6 +8,11 @@
  * Ulozeni bloku karty je vzdy vpravo nahore; odkazy na spravu jsou pod nim.
  * Nezmeneny blok ma stale viditelne sede ulozeni, aby zvyrazneni nemenilo rozlozeni.
  * Sloty, funkce osoby, manazerske pozice a mista vykonu prace maji kompaktni formulare a stale ulozeni.
+ * Telefon na kartě má samostatně upravitelnou mezinárodní předvolbu ve společném kompaktním rámečku.
+ * Poznamky historie maji omezenou sirku a cervene oznaceni zkraceneho textu.
+ * Vybrane benefity, oblasti a pobocky maji cerny text a zeleny checkbox i v rezimu pro cteni.
+ * Jmeno osoby ma dva stale radky; samotne datum ucinnosti casove osy je primo viditelne.
+ * Plus u portrétu otevře výběr čtvercového výřezu bez změny ostatních částí karty.
  */
 
 /* Kompaktni casova osa v prehledu osoby; dlouhe poznamky nesmi roztahovat panel. */
@@ -22,7 +27,11 @@
 .hr_employee_timeline_item { display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--cb-bg-panel-soft); }
 .hr_employee_timeline_item:last-child { border-bottom: 0; }
 .hr_employee_timeline_date { display: flex; flex-direction: column; font-size: 11px; color: var(--text); }
-.hr_employee_timeline_date span, .hr_employee_timeline_meta { font-size: 11px; opacity: .7; }
+.hr_employee_timeline_date span, .hr_employee_timeline_meta, .hr_employee_timeline_label { font-size: 11px; opacity: .7; }
+.hr_employee_timeline_label { margin: 0; }
+.hr_employee_timeline_effective { margin: 4px 0 0; font-size: 12px; }
+.hr_employee_benefit_list { margin: 0; padding-left: 16px; font-size: 12px; }
+.hr_employee_benefit_list li { margin: 3px 0; }
 .hr_employee_timeline_content { min-width: 0; overflow-wrap: anywhere; font-size: 12px; }
 .hr_employee_timeline_content strong { display: block; }
 .hr_employee_timeline_note { margin-top: 4px; }
@@ -1044,6 +1053,7 @@
 }
 
 .hr_photo_crop_selection {
+    box-sizing: border-box;
     position: absolute;
     display: block;
     border: 2px solid #fff;
@@ -1223,6 +1233,13 @@
     color: var(--muted);
     font-size: var(--cb-font-12);
     font-weight: 800;
+}
+
+/* Editovatelná předvolba drží stejnou kompaktní výšku jako samotné číslo. */
+.hr_phone_field--international { grid-template-columns: 62px minmax(0, 1fr); }
+.hr_phone_field--international .hr_phone_prefix_input {
+    width: 100%; min-width: 0; padding-left: 7px; padding-right: 4px;
+    border: 0; border-right: 1px solid var(--border); border-radius: 0; box-shadow: none;
 }
 
 .hr_phone_input {
@@ -1428,6 +1445,18 @@
     font-size: var(--cb-font-28);
 }
 
+/* Ovladač kotví k rozměru portrétu na páté hodině, nezávisle na šířce okolního sloupce. */
+.hr_employee_photo_edit { position: relative; width: 112px; height: 112px; }
+.hr_employee_photo_form { margin: 0; }
+.hr_employee_photo_form > [data-photo-preview], .hr_employee_photo_form > [data-photo-crop-open] { display: none; }
+.hr_pp .hr_employee_photo_add {
+    position: absolute; right: 2px; bottom: 2px; display: grid; place-items: center;
+    width: 28px; height: 28px; padding: 0; border: 2px solid var(--surface-strong);
+    border-radius: 50%; background: #16a34a; color: #fff; font-size: 23px; line-height: 1; cursor: pointer;
+}
+.hr_pp .hr_employee_photo_add:hover { background: #15803d; }
+.hr_pp .hr_employee_photo_add:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
 .hr_employee_avatar_placeholder {
     position: relative;
     overflow: hidden;
@@ -1467,7 +1496,12 @@
 .hr_employee_name_title {
     margin: 0;
     font-size: var(--cb-font-28);
+    min-width: 0;
+    max-width: 100%;
 }
+
+/* I kratka jmena maji prijmeni a krestni jmena zvlast; dlouha zustanou dostupna v tooltipu. */
+.hr_employee_name_part { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .hr_profile_facts {
     display: grid;
@@ -1751,6 +1785,24 @@
     width: 900px;
 }
 
+/* Poznamka nezvetsi tabulku ani pri dlouhe ceste k souboru; plny text poskytuje spolecny tooltip. */
+.hr_work_history_note {
+    display: inline-block;
+    max-width: 300px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    vertical-align: middle;
+}
+
+.hr_work_history_note[tabindex] {
+    cursor: help;
+}
+
+.hr_work_history_note_shortened {
+    color: #dc2626;
+    white-space: nowrap;
+}
+
 .hr_compact_table_wrap {
     display: inline-block;
     width: auto;
@@ -1977,6 +2029,34 @@
 
 .hr_employee_read_mode :is(input[type="radio"], input[type="checkbox"]):disabled {
     accent-color: var(--primary);
+}
+
+/* Vlastni vzhled zaskrtnuti zachova zelenou i u zakazaneho checkboxu; stav a ovladani zustavaji nativni. */
+.hr_pp :is(.hr_work_benefits, .hr_place_choices) label { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
+.hr_pp :is(.hr_work_benefits, .hr_place_choices) label:has(input[type="checkbox"]:checked) { color: #000; }
+.hr_pp :is(.hr_work_benefits, .hr_place_choices) input[type="checkbox"] { margin: 0; flex: 0 0 auto; accent-color: #16a34a; }
+.hr_pp :is(.hr_work_benefits, .hr_place_choices) input[type="checkbox"]:checked {
+    appearance: none;
+    display: inline-grid;
+    place-content: center;
+    vertical-align: middle;
+    box-sizing: border-box;
+    width: 13px;
+    height: 13px;
+    padding: 0;
+    border: 1px solid #16a34a;
+    border-radius: 2px;
+    background: #16a34a;
+    opacity: 1;
+}
+.hr_pp :is(.hr_work_benefits, .hr_place_choices) input[type="checkbox"]:checked::before {
+    content: "";
+    width: 7px;
+    height: 4px;
+    margin-top: -2px;
+    border: solid #fff;
+    border-width: 0 0 2px 2px;
+    transform: rotate(-45deg);
 }
 
 .hr_employee_edit_subtitle { margin: 8px 0 5px; font-size: var(--cb-font-12); }

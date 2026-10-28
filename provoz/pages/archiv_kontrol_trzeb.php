@@ -1,5 +1,5 @@
 <?php
-// Archiv za vice pobocek se strankovanim a zachovanim vyberu pri navratu z detailu.
+// Archiv všech povolených poboček s volitelným výběrem a kompaktním detailem s horní navigací.
 declare(strict_types=1);
 if (!defined('CB_EMBEDDED_MODULE') || CB_EMBEDDED_MODULE !== 'provoz') { http_response_code(403); exit; }
 require_once __DIR__ . '/../lib/kontrola_trzeb_formular.php';
@@ -43,15 +43,17 @@ try {
 }
 ?>
 <link rel="stylesheet" href="<?= h(cb_module_asset_url('style/kontrola_trzeb.css', 'provoz')) ?>?v=<?= filemtime(__DIR__ . '/../style/kontrola_trzeb.css') ?>">
-<section class="kt_page">
+<section class="kt_page<?= $ktDetail !== null ? ' kt_archive_detail' : '' ?>">
   <?php if (is_array($ktFlash)): ?><p class="<?= !empty($ktFlash['success']) ? 'kt_success' : 'kt_warning' ?>" role="status"><?= h($ktFlash['message']) ?></p><?php endif; ?>
-  <p><a class="kt_archive_button" href="<?= h(cb_kt_url($ktFilters)) ?>">Nová kontrola tržeb</a></p>
+  <div class="kt_heading kt_archive_actions"><a class="kt_archive_button" href="<?= h(cb_kt_url($ktFilters)) ?>">Nová kontrola tržeb</a>
+    <?php if ($ktDetail !== null): ?><a class="kt_archive_button" href="<?= h(cb_kt_archiv_url($ktFilters, $ktArchiveFilters)) ?>">Zpět do archivu</a><?php endif; ?>
+  </div>
   <?php require __DIR__ . '/../includes/kontrola_trzeb_filtry.php'; ?>
   <?php if (!$ktReady): ?><p class="kt_warning">Archiv zatím není připraven k ukládání.</p>
   <?php elseif ($ktDetail !== null): ?>
     <?php require __DIR__ . '/../includes/kontrola_trzeb_podklady.php'; ?>
-    <div class="kt_heading"><span>Uložil <?= h($ktDetail['ulozil_jmeno']) ?> · <?= h(cb_format('dcs', $ktDetail['ulozeno'])) ?></span><a href="<?= h(cb_kt_archiv_url($ktFilters, $ktArchiveFilters)) ?>">Zpět do archivu</a></div>
-    <div><strong><?= (int)($ktDetail['platny'] ?? 1) === 1 ? 'Platná kontrola' : 'Neplatná kontrola' ?></strong>
+    <div class="kt_heading"><span>Uložil <?= h($ktDetail['ulozil_jmeno']) ?> · <?= h(cb_format('dcs', $ktDetail['ulozeno'])) ?></span></div>
+    <div class="kt_archive_validity"><strong><?= (int)($ktDetail['platny'] ?? 1) === 1 ? 'Platná kontrola' : 'Neplatná kontrola' ?></strong>
     <?php if ($ktValidityReady && cb_kt_ma_pravo(CB_KT_ULOZIT)): ?>
       <form class="kt_inline" method="post" action="<?= h(cb_root_url('index.php?m=provoz&page=kontrola_trzeb')) ?>" data-kt-validity>
         <input type="hidden" name="cb_action" value="kt_platnost"><input type="hidden" name="cb_crf" value="<?= h(cb_crf_token()) ?>">

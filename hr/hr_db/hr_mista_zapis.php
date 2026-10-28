@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+/* Audit HR se potvrzuje spolecne se zmenou; neuspesny pokus zustava odlisnou udalosti. */
+require_once __DIR__ . '/../hr_lib/hr_audit.php';
+
 /* Ucel: Atomicky uklada kombinovany vyber oblasti a pobocek a mnozinu MAIN; chrani casove vazby na sloty a pozice. */
 require_once __DIR__ . '/hr_zamestnanci_pristup.php';
 require_once __DIR__ . '/hr_pracoviste_historie.php';
@@ -80,7 +83,7 @@ function hr_mista_zmenit(mysqli $db, int $idPerson, array $oblasti, array $poboc
     hr_zamestnanci_vyzaduj_osobu($db,$idUser,$idPerson);
     $oblasti=hr_mista_id($oblasti); $pobocky=hr_mista_id($pobocky); $main=hr_mista_id($main);
     if ($oblasti===[] && $pobocky===[]) throw new CbUserVisibleException('Vyberte alespoň jednu oblast nebo pobočku.');
-    $db->begin_transaction();
+    hr_audit_transaction_begin($db);
     try {
         cb_hr_osobu_zamkni($db,$idPerson);
         $company=(int)$db->query('SELECT id_firma FROM hr_person WHERE id_person='.(int)$idPerson)->fetch_row()[0];
@@ -128,6 +131,6 @@ function hr_mista_zmenit(mysqli $db, int $idPerson, array $oblasti, array $poboc
         foreach ($diff['pridat'] as $branch=>$unused) cb_hr_main_vlozit($db,$idPerson,(int)$branch,$mainOd,$idUser);
         hr_mista_over_casovou_osu($db,$idPerson,min($od,$mainOd));
         hr_update_employee_completeness($db,$idPerson);
-        $db->commit();
-    } catch (Throwable $e) { $db->rollback(); throw $e; }
+        hr_audit_transaction_commit($db);
+    } catch (Throwable $e) { hr_audit_transaction_rollback($db); throw $e; }
 }

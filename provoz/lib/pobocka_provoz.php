@@ -2,6 +2,7 @@
 
 // Rozsah mist vykonu prace sdileji vsechny cteci dotazy tohoto souboru.
 // Pravidla provozu pobocek: zaviraci casy, globalni dny bez provozu a povinnost dennich reportu.
+// Reportová agenda začíná až datumem první objednávky; NULL znamená dosud neotevřenou pobočku.
 declare(strict_types=1);
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
@@ -12,13 +13,43 @@ const CB_POBOCKA_PROVOZ_VYROBA_ID_POB = 7;
 
 // Vrati, zda ma dana pobocka pro konkretni datum odevzdat denni report.
 // Vyroba nema restauracni denni report, proto se mezi chybejici reporty nikdy nezarazuje.
-function cb_pobocka_provoz_report_required(int $idPob, string $date): bool
+function cb_pobocka_provoz_report_required(int $idPob, string $date, mysqli $conn): bool
 {
     $validDate = cb_pobocka_provoz_valid_date($date);
     if ($idPob <= 0 || $validDate === '') {
         return false;
     }
-    return $idPob !== CB_POBOCKA_PROVOZ_VYROBA_ID_POB;
+    return $idPob !== CB_POBOCKA_PROVOZ_VYROBA_ID_POB && cb_pobocka_provoz_report_started($conn,$idPob,$validDate);
+}
+
+/** Načte začátky jednou pro spojení; cykly přes dny a pobočky další SQL dotazy nevytvářejí. */
+function cb_pobocka_provoz_report_starts(mysqli $conn): array
+{
+    static $cache;
+    $cache ??= new WeakMap();
+    if (!isset($cache[$conn])) {
+        $starts=[];
+        foreach ($conn->query('SELECT id_pob,prvni_obj FROM pobocka')->fetch_all(MYSQLI_ASSOC) as $row) {
+            $starts[(int)$row['id_pob']]=cb_pobocka_provoz_valid_date(trim((string)($row['prvni_obj'] ?? '')));
+        }
+        $cache[$conn]=$starts;
+    }
+    return $cache[$conn];
+}
+
+/** Den první objednávky je zahrnutý. Neznámý nebo nevyplněný začátek nedává žádné reportové dny. */
+function cb_pobocka_provoz_report_started(mysqli $conn, int $idPob, string $date): bool
+{
+    $day=cb_pobocka_provoz_valid_date($date);
+    $start=cb_pobocka_provoz_report_starts($conn)[$idPob] ?? '';
+    return $day!=='' && $start!=='' && $day >= $start;
+}
+
+/** Stejná hranice pro čtení uložených reportů, součty a exporty; alias pochází pouze z kódu. */
+function cb_pobocka_provoz_report_sql(string $alias='r'): string
+{
+    if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/D',$alias)) throw new LogicException('Neplatný alias reportu.');
+    return "EXISTS (SELECT 1 FROM pobocka report_start WHERE report_start.id_pob={$alias}.id_pob AND report_start.prvni_obj IS NOT NULL AND {$alias}.datum_reportu>=report_start.prvni_obj)";
 }
 
 /** @return array<int,array{key:string,label:string}> */

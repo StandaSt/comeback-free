@@ -9,6 +9,10 @@ declare(strict_types=1);
 function cb_admin_pages(): array
 {
     return [
+        'historie_cinnosti' => [
+            'file' => __DIR__ . '/../admin_pages/admin_historie_page.php',
+            'title' => 'Historie činnosti',
+        ],
         'sdeleni' => [
             'file' => __DIR__ . '/../admin_pages/admin_sdeleni_page.php',
             'title' => 'Info od admina',

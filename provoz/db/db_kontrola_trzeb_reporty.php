@@ -1,6 +1,8 @@
 <?php
 // Cte platne denni reporty jako levou stranu kontroly, bez dvojiteho zapocteni starsich verzi.
+// Před prvním objednávkovým dnem podklady ani chybějící reporty nezapočítává.
 declare(strict_types=1);
+require_once __DIR__ . '/../lib/pobocka_provoz.php';
 
 // Vrati presne halerove soucty, ID podkladu a chybejici dny ci nekompletni podklady.
 function cb_kt_reporty(mysqli $db, int $branch, string $from, string $to): array
@@ -15,7 +17,7 @@ function cb_kt_reporty(mysqli $db, int $branch, string $from, string $to): array
         WHERE r.id_pob=? AND r.datum_reportu BETWEEN ? AND ? AND r.platny=1
         AND NOT EXISTS (SELECT 1 FROM reporty_is newer WHERE newer.id_pob=r.id_pob
             AND newer.datum_reportu=r.datum_reportu AND newer.platny=1 AND newer.id_reportu>r.id_reportu)
-        ORDER BY r.datum_reportu');
+        AND ' . cb_pobocka_provoz_report_sql() . ' ORDER BY r.datum_reportu');
     $stmt->bind_param('iss', $branch, $from, $to);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -33,7 +35,7 @@ function cb_kt_reporty(mysqli $db, int $branch, string $from, string $to): array
     $stmt->close();
     $missing = [];
     for ($day = new DateTimeImmutable($from); $day->format('Y-m-d') <= $to; $day = $day->modify('+1 day')) {
-        if (!in_array($day->format('Y-m-d'), $dates, true)) { $missing[] = $day->format('Y-m-d'); }
+        if (cb_pobocka_provoz_report_started($db,$branch,$day->format('Y-m-d')) && !in_array($day->format('Y-m-d'), $dates, true)) { $missing[] = $day->format('Y-m-d'); }
     }
     if ($ids === []) { $sums = array_fill_keys(array_keys($sums), null); }
     return ['values' => $sums, 'report_ids' => $ids, 'missing' => $missing, 'incomplete' => $incomplete];

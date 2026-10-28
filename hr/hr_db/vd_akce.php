@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+/* Audit HR se potvrzuje spolecne se zmenou; neuspesny pokus zustava odlisnou udalosti. */
+require_once __DIR__ . '/../hr_lib/hr_audit.php';
+
 /**
  * DB operace pro historii a ukladani akci u verejneho dotazniku.
  */
@@ -321,7 +324,7 @@ function hr_uloz_vd_akci(mysqli $db, int $idVd, int $idVdAkceVysledek, string $t
     $terminTime = trim($terminTime);
     $poznamkaDb = trim($poznamka) !== '' ? trim($poznamka) : null;
 
-    $db->begin_transaction();
+    hr_audit_transaction_begin($db);
     try {
         $stmt = $db->prepare('
             SELECT id_vychozi_vd_stav, id_cilovy_vd_stav, vyzaduje_termin_date, vyzaduje_termin_time
@@ -435,9 +438,9 @@ function hr_uloz_vd_akci(mysqli $db, int $idVd, int $idVdAkceVysledek, string $t
         $stmt->execute();
         $stmt->close();
 
-        $db->commit();
+        hr_audit_transaction_commit($db);
     } catch (Throwable $e) {
-        $db->rollback();
+        hr_audit_transaction_rollback($db);
         throw $e;
     }
 }

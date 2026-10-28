@@ -1,0 +1,21 @@
+/* Účel: Kompaktní filtry, tabulka a detail historie činnosti; delší údaje se zalamují bez rozšíření pracovní plochy. */
+.hc_prehled{display:flex;flex-direction:column;gap:10px;min-width:0;font-size:12px;padding:0 4px 10px}
+.hc_tabs{display:flex;gap:5px;flex-wrap:wrap}
+.hc_tabs a,.hc_akce button{padding:5px 9px;border:1px solid var(--cb-border,#b9c1cf);border-radius:5px;text-decoration:none;color:inherit;background:var(--cb-bg-panel,#fff)}
+.hc_tabs a[aria-current=page]{font-weight:700;border-color:var(--cb-module-accent,#5565a8);background:var(--cb-bg-panel-soft,#e8edf7)}
+.hc_filtry{display:flex;align-items:end;gap:7px 9px;flex-wrap:wrap;padding:9px;border:1px solid var(--cb-border,#cbd1dc);border-radius:6px}
+.hc_filtry label{display:flex;flex-direction:column;gap:3px;font-size:11px;min-width:105px;max-width:245px}
+/* Zvolený pohled zvýrazní svůj hlavní filtr; ostatní podmínky se zachovají a lze je kombinovat. */
+.hc_filtry[data-pohled=uzivatel] .hc_autor,.hc_filtry[data-pohled=agenda] .hc_modul,.hc_filtry[data-pohled=zaznam] .hc_zaznam{font-weight:700}
+.hc_filtry[data-pohled=agenda] .hc_modul,.hc_filtry[data-pohled=zaznam] .hc_zaznam{order:-1}
+.hc_filtry .hc_siroky{width:205px}.hc_filtry input,.hc_filtry select{height:29px;max-width:100%;min-width:0;border:1px solid var(--cb-border,#bcc4d1);border-radius:4px;padding:3px 5px;background:var(--cb-bg-panel,#fff);color:inherit;font:inherit;font-size:12px}
+.hc_akce{display:flex;align-items:center;gap:8px;height:29px}.hc_akce button{font:inherit;cursor:pointer}
+.hc_prehled .hc_poznamka{margin:0;font-size:11px;color:var(--cb-text-muted,#667085)}
+.hc_tabulka_wrap{overflow:auto;min-width:0}.hc_tabulka{width:100%;border-collapse:collapse;font-size:12px}
+.hc_tabulka th{text-align:left;background:var(--cb-bg-panel-soft,#edf0f6);white-space:nowrap}.hc_tabulka th,.hc_tabulka td{padding:5px 7px;border-bottom:1px solid var(--cb-border,#d8dde5);vertical-align:top}
+.hc_tabulka td{overflow-wrap:anywhere;max-width:330px}.hc_tabulka strong{font-weight:500}.hc_tabulka small{display:block;font-size:11px;color:var(--cb-text-muted,#667085)}
+.hc_cas{white-space:nowrap;font-variant-numeric:tabular-nums}.hc_stav{white-space:nowrap;font-size:11px}.hc_neuspech .hc_stav{color:var(--clr_cervena,#b42318)}
+.hc_strankovani,.hc_detail header{display:flex;align-items:center;justify-content:space-between;gap:10px}.hc_strankovani{font-size:12px;padding:3px 0}
+.hc_detail{padding:10px;border:1px solid var(--cb-border,#bdc7d9);border-radius:6px;background:var(--cb-bg-panel,#fff);scroll-margin-top:10px}.hc_detail p{margin:6px 0;font-size:12px}
+.hc_detail dl{display:flex;flex-wrap:wrap;gap:8px 20px;margin:8px 0}.hc_detail dl div{max-width:400px;min-width:120px}.hc_detail dt{font-size:11px;color:var(--cb-text-muted,#667085)}.hc_detail dd{margin:2px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:800px){.hc_filtry label,.hc_filtry .hc_siroky{flex:1 1 140px;max-width:none}.hc_tabulka{min-width:850px}}

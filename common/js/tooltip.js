@@ -1,4 +1,4 @@
-/* Účel: Společné tooltipy IS; text i tabulky se vejdou do okna, graf objednávek ukazuje podrobnosti pod celým blokem. */
+/* Účel: Společné tooltipy IS; text i tabulky se vejdou do okna, graf objednávek ukazuje podrobnosti pod názvy poboček. */
 'use strict';
 
 (function (w, d) {
@@ -44,16 +44,20 @@
     ];
   }
 
-  // Oba tooltipy objednavek sdileji polohu pod blokem; velka tabulka se posouva uvnitr dostupne plochy.
-  function positionBelowRect(boundaryRect, panel) {
+  // Tooltip grafu zacina cca 10 px pod nazvy: odecteme spodni rezervu grafu 25 px a pridame mezeru 10 px.
+  // Vodorovne centrujeme na blok nebo zadany sloupec a hlidame jeho okraje.
+  function positionBelowRect(boundaryRect, panel, centerX = boundaryRect.left + boundaryRect.width / 2, chartRect = null) {
     const left = Math.max(8, boundaryRect.left);
-    const top = boundaryRect.bottom + 6;
+    const top = chartRect ? chartRect.bottom - 25 + 10 : boundaryRect.bottom + 6;
     panel.style.boxSizing = 'border-box';
     panel.style.maxWidth = `${Math.max(0, Math.min(boundaryRect.width, w.innerWidth - left - 8))}px`;
     panel.style.maxHeight = `${Math.max(80, w.innerHeight - top - 8)}px`;
     panel.style.overflow = 'auto';
     panel.dataset.tooltipScroll = '1';
-    return [left, top];
+    const width = panel.getBoundingClientRect().width;
+    const right = Math.min(boundaryRect.right, w.innerWidth - 8);
+    const centeredLeft = Math.max(left, Math.min(centerX - width / 2, right - width));
+    return [centeredLeft, top];
   }
 
   // Souhrn pouzije vyslovne umisteni grafu; ostatnim tooltipum se pravidla nemeni.
@@ -70,7 +74,7 @@
     const panelRect = panel.getBoundingClientRect();
     const block = target.closest('.blok_online');
     const position = below && block instanceof HTMLElement
-      ? positionBelowRect(block.getBoundingClientRect(), panel)
+      ? positionBelowRect(block.getBoundingClientRect(), panel, undefined, canvas.getBoundingClientRect())
       : positionOutsideRect(canvas.getBoundingClientRect(), panelRect.width, panelRect.height);
     panel.style.left = `${Math.round(position[0])}px`;
     panel.style.top = `${Math.round(position[1])}px`;
@@ -95,6 +99,8 @@
         top = targetRect.bottom + targetGap;
         placement = 'bottom';
       }
+      // Tooltipy prepinacu modulu odsadime nize, aby je pri najeti nezakryval kurzor.
+      if (target.closest('.head_module_link, .head_task_btn')) top += 25;
       top = Math.max(edgeGap, Math.min(top, w.innerHeight - panelRect.height - edgeGap));
     }
 

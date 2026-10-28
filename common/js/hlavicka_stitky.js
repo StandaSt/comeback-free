@@ -19,6 +19,8 @@
         span.tabIndex = 0;
         span.textContent = String(tag.text || '');
         span.title = String(tag.tooltip || '');
+        // Zalomeni textu tooltipu zachovame jako novy radek bez vkladani HTML.
+        if (span.title.includes('\n')) span.dataset.cbTooltipMultiline = '1';
         if (Array.isArray(tag.table) && tag.table.length) span.dataset.cbTooltipTable = JSON.stringify(tag.table);
         if (Number(tag.updated_at) > 0) span.dataset.headerUpdatedAt = String(tag.updated_at);
         row.appendChild(span);

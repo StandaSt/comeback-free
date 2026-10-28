@@ -1,9 +1,11 @@
 <?php
 // Rozsah reportu a kontrol podle HR; Admin/Top management sdili dynamicky firemni rozsah pobocek.
+// Reporty i nabídky poboček respektují vyplněné datum první objednávky.
 declare(strict_types=1);
 
 // Ucel rozsahu: MAIN je mnozina a viditelne pobocky vychazeji z mist vykonu prace.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
+require_once __DIR__ . '/pobocka_provoz.php';
 require_once __DIR__ . '/../../common/lib/prebrani_prav.php';
 require_once __DIR__ . '/../../common/lib/firemni_pristup.php';
 
@@ -14,7 +16,12 @@ function cb_reporty_pristup_nacti(mysqli $conn, int $idUser): array
         if ($profile['reporty'] === null) {
             throw new CbUserVisibleException($profile['reporty_chyba']);
         }
-        return array_replace($profile['reporty'], ['user_id'=>1, 'person_id'=>1]);
+        $scope = array_replace($profile['reporty'], ['user_id'=>1, 'person_id'=>1]);
+        // Převzatý profil zachovává oprávnění, nikoli nabídku dosud neotevřených poboček.
+        foreach (array_keys($scope['branches']) as $branchId) {
+            if (!cb_pobocka_provoz_report_started($conn,(int)$branchId,date('Y-m-d'))) unset($scope['branches'][$branchId]);
+        }
+        return $scope;
     }
     // Porovnavani vice radku v jednom pozadavku znovu nenacita stejnou HR osobu a pobocky.
     static $cache = [];
@@ -43,7 +50,7 @@ function cb_reporty_pristup_nacti(mysqli $conn, int $idUser): array
             AND pr.hlavni=1 AND pr.platny=1 AND pr.zruseno IS NULL
             AND (pr.platnost_od IS NULL OR pr.platnost_od<=CURDATE())
             AND (pr.platnost_do IS NULL OR pr.platnost_do>=CURDATE())) AS main
-        FROM pobocka p WHERE p.aktivni=1 ORDER BY p.id_pob');
+        FROM pobocka p WHERE p.aktivni=1 AND p.prvni_obj IS NOT NULL AND p.prvni_obj<=CURDATE() ORDER BY p.id_pob');
     $stmt->bind_param('ii', $personId, $personId);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -71,32 +78,35 @@ function cb_reporty_archiv_sql(array $scope, bool $google = false): string
 {
     $ids = implode(',', array_map('intval', array_keys($scope['branches'])));
     $branchSql = $ids === '' ? '0=1' : 'r.id_pob IN (' . $ids . ')';
-    if (!$scope['own_reports']) { return '(' . $branchSql . ')'; }
+    $started=cb_pobocka_provoz_report_sql();
+    if (!$scope['own_reports']) { return '(' . $started . ' AND ' . $branchSql . ')'; }
     $userId = (int)$scope['user_id'];
     $ownSql = $google
         ? 'EXISTS (SELECT 1 FROM reporty_is own_report WHERE own_report.platny=1
             AND own_report.id_pob=r.id_pob AND own_report.datum_reportu=r.datum_reportu
             AND own_report.zadal=' . $userId . ')'
         : 'r.zadal=' . $userId;
-    return '(' . $branchSql . ' OR ' . $ownSql . ')';
+    return '(' . $started . ' AND (' . $branchSql . ' OR ' . $ownSql . '))';
 }
 
 // Stejný rozsah hodin používá tabulka i exporty ještě před sčítáním a filtrováním.
 function cb_reporty_hodiny_sql(array $scope): string
 {
-    if (in_array($scope['role'], [1, 2], true)) { return '1=1'; }
+    $started=cb_pobocka_provoz_report_sql();
+    if (in_array($scope['role'], [1, 2], true)) { return $started; }
     if ($scope['role'] === 4) {
-        return 'EXISTS (SELECT 1 FROM pobocka scope_branch WHERE scope_branch.id_pob=r.id_pob
+        return $started . ' AND EXISTS (SELECT 1 FROM pobocka scope_branch WHERE scope_branch.id_pob=r.id_pob
             AND scope_branch.id_firma=' . (int)$scope['company_id'] . ')';
     }
-    if ($scope['role'] === 9) { return 'ro.id_user=' . (int)$scope['user_id']; }
+    if ($scope['role'] === 9) { return $started . ' AND ro.id_user=' . (int)$scope['user_id']; }
     $ids = implode(',', array_map('intval', array_keys($scope['branches'])));
-    return $ids === '' ? '0=1' : 'r.id_pob IN (' . $ids . ')';
+    return $ids === '' ? '0=1' : $started . ' AND r.id_pob IN (' . $ids . ')';
 }
 
 // Detail a porovnání ověří konkrétní pobočku a datum, nikoli jen položku ve filtru poboček.
 function cb_reporty_archiv_muze_cist(mysqli $conn, array $scope, int $branchId, string $date): bool
 {
+    if (!cb_pobocka_provoz_report_started($conn,$branchId,$date)) { return false; }
     if (isset($scope['branches'][$branchId])) { return true; }
     if (!$scope['own_reports']) { return false; }
     $userId = (int)$scope['user_id'];
@@ -110,8 +120,9 @@ function cb_reporty_archiv_muze_cist(mysqli $conn, array $scope, int $branchId, 
 }
 
 // Výroba v neděli nevytváří report; případný skutečně uložený report zůstává viditelný.
-function cb_reporty_archiv_radek_viditelny(array $scope, int $branchId, DateTimeImmutable $day, bool $saved): bool
+function cb_reporty_archiv_radek_viditelny(array $scope, int $branchId, DateTimeImmutable $day, bool $saved, mysqli $conn): bool
 {
+    if (!cb_pobocka_provoz_report_started($conn,$branchId,$day->format('Y-m-d'))) { return false; }
     if ($saved) { return true; }
     return isset($scope['branches'][$branchId]) && !($branchId === 7 && $day->format('N') === '7');
 }

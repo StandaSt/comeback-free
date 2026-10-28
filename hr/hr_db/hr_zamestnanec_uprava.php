@@ -1,15 +1,19 @@
 <?php
 declare(strict_types=1);
 
+/* Audit HR se potvrzuje spolecne se zmenou; neuspesny pokus zustava odlisnou udalosti. */
+require_once __DIR__ . '/../hr_lib/hr_audit.php';
+
 /*
  * Ucel souboru: Uklada osobni a kontaktni udaje zamestnance; pristupovou roli zde nikdy nemeni.
  * Pohlavi overuje proti ciselniku a uklada jeho ID, vcetne volby Neuvedeno (0).
  * Cil ulozeni musi spadat do jednotneho osobniho rozsahu HR.
+ * Hlavní telefon přijímá mezinárodní předvolbu, česká čísla zachovává jako devět číslic.
  */
 require_once __DIR__ . '/hr_zamestnanci_pristup.php';
+require_once __DIR__ . '/../hr_lib/telefon.php';
 
-/**
- */
+/** Ověří osobní údaje včetně mezinárodního telefonu a uloží nové verze změněných kontaktů. */
 function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, int $zadalUser): void
 {
     if ($idPerson <= 0 || $zadalUser <= 0) {
@@ -32,7 +36,7 @@ function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, i
     $zdrPoj = (int)($data['zdr_poj'] ?? 0);
     $pohlavi = hr_employee_gender_id($db, $data['pohlavi'] ?? null);
     $poznamka = trim((string)($data['poznamka'] ?? ''));
-    $telefon = preg_replace('/\D+/', '', (string)($data['telefon'] ?? '')) ?? '';
+    $telefon = hr_telefon_sestav((string)($data['telefon_predvolba'] ?? '+420'), (string)($data['telefon'] ?? ''));
     $email = trim((string)($data['email'] ?? ''));
 
     if ($jmeno === '' || $prijmeni === '') {
@@ -41,11 +45,8 @@ function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, i
     if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
         throw new CbUserVisibleException('E-mail nemá platný tvar.');
     }
-    if ($telefon !== '' && strlen($telefon) !== 9) {
-        throw new CbUserVisibleException('Telefon musí být české číslo s 9 číslicemi.');
-    }
 
-    $db->begin_transaction();
+    hr_audit_transaction_begin($db);
     try {
         $stmt = $db->prepare('SELECT id_person, id_user FROM hr_person WHERE id_person = ? LIMIT 1 FOR UPDATE');
         $stmt->bind_param('i', $idPerson);
@@ -143,10 +144,10 @@ function hr_update_employee_basic_data(mysqli $db, int $idPerson, array $data, i
         // Priznak kompletnosti se meni spolu s osobnimi a kontaktnimi udaji.
         hr_update_employee_completeness($db, $idPerson);
 
-        $db->commit();
+        hr_audit_transaction_commit($db);
         return;
     } catch (Throwable $e) {
-        $db->rollback();
+        hr_audit_transaction_rollback($db);
         throw $e;
     }
 }
@@ -214,6 +215,7 @@ function hr_employee_parse_birth_date(string $value): string
     return $date->format('Y-m-d');
 }
 
+/** Zachová historii hlavního telefonu; předává se již ověřené číslo včetně zahraniční předvolby. */
 function hr_update_employee_main_phone(mysqli $db, int $idPerson, string $telefon, int $zadalUser): void
 {
     $stmt = $db->prepare('SELECT id_telefon, id_telefon_typ, telefon FROM hr_telefon WHERE id_person = ? AND platny = 1 AND hlavni = 1 ORDER BY id_telefon DESC LIMIT 1');

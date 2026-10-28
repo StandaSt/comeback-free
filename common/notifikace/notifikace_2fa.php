@@ -1,5 +1,5 @@
 <?php
-// Odesila Web Push notifikace a pro administratorske zpravy pripravuje bezpecny tokenizovany detail.
+// Odesila Web Push s uplnymi cilovymi adresami a pro administratorske zpravy pripravuje bezpecny tokenizovany detail.
 declare(strict_types=1);
 
 /*
@@ -18,6 +18,19 @@ declare(strict_types=1);
  * - log odeslání zapisuje do push_audit (pokud existuje)
  * - pokud není žádné aktivní zařízení, vrátí false (bez chyby)
  */
+/** Doplni k ceste od korene webu protokol a host; cilovy modul se uz nesmi odvozovat od odesilatele. */
+function cb_push_url_abs(string $url): string
+{
+    $url = trim($url);
+    if (preg_match('~^https?://~i', $url) === 1) {
+        return $url;
+    }
+
+    // Spolecny URL helper urci protokol i host vcetne lokalniho portu; jeho cestu nepouzivame.
+    preg_match('~^https?://[^/]+~i', cb_url_abs(''), $origin);
+    return $origin[0] . '/' . ltrim($url, '/');
+}
+
 function cb_push_has_vendor(): bool
 {
     return cb_push_vendor_autoload() !== '';
@@ -110,6 +123,7 @@ function cb_push_load_devices(int $idUser): array
     return $out;
 }
 
+/** Posle uzivateli uplny tokenizovany odkaz na schvaleni konkretniho prihlaseni. */
 function cb_push_send_2fa(int $idUser, string $token2fa): bool
 {
     if ($idUser <= 0 || $token2fa === '') {
@@ -141,7 +155,7 @@ function cb_push_send_2fa(int $idUser, string $token2fa): bool
 
     $webPush = new Minishlink\WebPush\WebPush($auth);
 
-    $url = cb_module_url('provoz') . 'mobil/mobil_overeni.php?t=' . rawurlencode($token2fa);
+    $url = cb_push_url_abs(cb_module_url('provoz') . 'mobil/mobil_overeni.php?t=' . rawurlencode($token2fa));
 
     $payloadArr = [
         'type' => '2FA_LOGIN',
@@ -209,6 +223,7 @@ function cb_push_send_2fa(int $idUser, string $token2fa): bool
     return true;
 }
 
+/** Upozorni administratora na neuspesny login; kliknuti vede na hlavni vstup IS. */
 function cb_push_send_bad_login_admin(string $email, ?string $ip, int $adminUserId = 1): bool
 {
     if (function_exists('cb_push_system_enabled') && !cb_push_system_enabled('notif_bad_login')) {
@@ -259,7 +274,7 @@ function cb_push_send_bad_login_admin(string $email, ?string $ip, int $adminUser
         'type' => 'BAD_LOGIN_ADMIN',
         'title' => 'Comeback',
         'body' => 'Neúspěšný pokus o přihlášení: ' . $email . ' IP ' . $ipText,
-        'url' => cb_url_abs(''),
+        'url' => cb_push_url_abs(cb_login_url()),
     ];
 
     $payload = json_encode($payloadArr, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -342,6 +357,7 @@ function cb_push_system_enabled(string $key): bool
     return false;
 }
 
+/** Ulozi technicky detail chyby a odesle administratorovi uplny odkaz s pristupovym tokenem. */
 function cb_push_send_error_admin(
     string $message,
     ?string $file = null,
@@ -432,7 +448,7 @@ function cb_push_send_error_admin(
     $stmtUser->execute();
     $stmtUser->close();
 
-    $modalUrl = cb_module_url('provoz') . 'mobil/admin_info.php?t=' . rawurlencode($token);
+    $modalUrl = cb_push_url_abs(cb_module_url('provoz') . 'mobil/admin_info.php?t=' . rawurlencode($token));
     $auth = [
         'VAPID' => [
             'subject' => (string)CB_VAPID_SUBJECT,
@@ -518,6 +534,7 @@ function cb_push_send_error_admin(
     return $delivered;
 }
 
+/** Oznami registraci zarizeni a pripoji uplnou adresu hlavniho vstupu IS. */
 function cb_push_send_first_entry_admin(string $fullName, int $adminUserId = 1): bool
 {
     $adminUserId = (int)$adminUserId;
@@ -559,7 +576,7 @@ function cb_push_send_first_entry_admin(string $fullName, int $adminUserId = 1):
         'type' => 'FIRST_ENTRY_ADMIN',
         'title' => 'Comeback',
         'body' => 'Registrace zařízení: ' . $fullName,
-        'url' => cb_url_abs(''),
+        'url' => cb_push_url_abs(cb_login_url()),
     ];
 
     $payload = json_encode($payloadArr, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -733,9 +750,10 @@ function cb_push_send_admin_info(
 
         $urlBase = trim($detailUrl);
         if ($urlBase === '') {
-            $urlBase = '/mobil/admin_info.php';
+            // Vychozi detail je v modulu Provoz; cesta od korene webu by koncila chybou 404.
+            $urlBase = cb_module_url('provoz') . 'mobil/admin_info.php';
         }
-        $url = $urlBase
+        $url = cb_push_url_abs($urlBase)
             . (str_contains($urlBase, '?') ? '&' : '?')
             . 't=' . rawurlencode($token);
         $payloadArr = [

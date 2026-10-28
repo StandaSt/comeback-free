@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+/* Audit HR se potvrzuje spolecne se zmenou; neuspesny pokus zustava odlisnou udalosti. */
+require_once __DIR__ . '/hr_audit.php';
+
 /**
  * Zpracuje POST formularu akce v naboru.
  */
@@ -19,13 +22,13 @@ function hr_post_nabor(mysqli $db): void
             hr_current_user_id(),
             $_POST
         );
-        cb_form_finish(
+        hr_audit_form_finish(
             cb_root_url('index.php?m=hr&page=nabor'),
             true,
             'Akce byla uložena.'
         );
     } catch (Throwable $e) {
-        cb_form_finish(
+        hr_audit_form_finish(
             cb_root_url('index.php?m=hr&page=nabor&id_vd=' . rawurlencode((string)$idVd)),
             false,
             cb_hr_chyba_text($e, 'Uložení náborové akce', ['table' => 'hr_vd_akce']),

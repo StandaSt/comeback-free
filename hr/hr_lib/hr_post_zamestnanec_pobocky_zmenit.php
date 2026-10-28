@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+/* Audit HR se potvrzuje spolecne se zmenou; neuspesny pokus zustava odlisnou udalosti. */
+require_once __DIR__ . '/hr_audit.php';
+
 // Ucel: Overi pravo, kombinovany vyber oblasti a pobocek a data ucinnosti mist a mnoziny MAIN.
 require_once __DIR__ . '/../hr_db/hr_mista_zapis.php';
 
@@ -19,8 +22,8 @@ function hr_post_zamestnanec_pobocky_zmenit(mysqli $db, int $idUser): void
         $platiOd = hr_pracovni_pomer_datum_z_postu((string)($_POST['platnost_od'] ?? ''), 'Platí od');
         $mainOd = hr_pracovni_pomer_datum_z_postu((string)($_POST['main_platnost_od'] ?? ''), 'MAIN platí od');
         hr_mista_zmenit($db,$idPerson,$oblasti,$pobocky,$main,$platiOd,$mainOd,$idUser);
-        cb_form_finish(hr_pracovni_pomer_url($idPerson), true, 'Místo výkonu práce a MAIN pobočky byly uloženy.');
+        hr_audit_form_finish(hr_pracovni_pomer_url($idPerson), true, 'Místo výkonu práce a MAIN pobočky byly uloženy.');
     } catch (Throwable $e) {
-        cb_form_finish(hr_pracovni_pomer_url($idPerson), false, cb_hr_chyba_text($e, 'Změna poboček zaměstnance', ['table' => 'hr_misto_vykonu_prace']));
+        hr_audit_form_finish(hr_pracovni_pomer_url($idPerson), false, cb_hr_chyba_text($e, 'Změna poboček zaměstnance', ['table' => 'hr_misto_vykonu_prace']));
     }
 }

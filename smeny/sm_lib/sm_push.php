@@ -16,7 +16,7 @@ function cb_smeny_push_odeslat(array $notice): string
     $content=json_decode($notice['obsah'],true,512,JSON_THROW_ON_ERROR);
     $text=cb_smeny_oznameni_push_text($notice['typ'],$content);
     // Absolutní odkaz vede na konkrétní oznámení; modál ověří přihlášeného příjemce.
-    $root=$PROSTREDI==='SERVER'?cb_login_url():'http://localhost/comeback/';
+    $root=cb_push_url_abs(cb_login_url());
     $payload=json_encode(['type'=>'SMENY','title'=>$text['title'],'body'=>$text['body'],
         'tag'=>'cb-smeny-'.(int)$notice['id_smeny_oznameni'],'url'=>rtrim($root,'/').'/index.php?m=smeny&page=me_smeny&oznameni='.(int)$notice['id_smeny_oznameni']],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
     $failed=false;$delivered=false;

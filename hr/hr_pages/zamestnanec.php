@@ -11,9 +11,16 @@ declare(strict_types=1);
  * Odkazy na spravu ciselniku vyzaduji pravo 319; pridelovani Admin funkce existujiciho Admina.
  * Dokumenty ukazuji importni podpisy, jednotlive casti a upozorneni k doreseni.
  * Volby pohlavi se nacitaji z ciselniku a formular prenasi ciselna ID.
- * Casova osa ukazuje zapis vlevo, ucinnost pouze v rozbalenych podrobnostech.
+ * Casova osa ukazuje zapis vlevo; samotne datum ucinnosti rovnou, vice udaju v podrobnostech.
+ * Zahlavi osoby oddeluje prijmeni a krestni jmena do dvou radku.
+ * Portrét lze samostatně vložit či vyměnit uložením čtvercového výřezu pod právem 307.
  * Samostatne bloky umoznuji ulozeni bez ztraty ostatnich zmen; tlacitka sdileji pravou horni pozici.
+ * Hlavní telefon rozděluje na editovatelnou předvolbu a číslo, včetně zahraničních kontaktů.
+ * Dlouhe poznamky historie zkracuje v tabulce, plny text zustava v zalomenem tooltipu.
+ * Prehled ukazuje aktualni benefity a spolecne zahlavi data zapisu casove osy.
+ * Historie karty zahrnuje audit vsech ulozenych zmen vcetne slotu, funkci a manazerskych pozic.
  */
+require_once __DIR__ . '/../hr_lib/telefon.php';
 $idPerson = (int)($_GET['id'] ?? 0);
 require_once __DIR__ . '/../hr_includes/hr_dokument_import_detail.php';
 $employee = isset($hrEmployeeHeader) && is_array($hrEmployeeHeader)
@@ -40,6 +47,11 @@ if (is_array($employee) && is_array($editInput) && (int)($editInput['id_person']
     $editData['adresa'] = array_replace($editData['adresa'] ?? [], ['ulice' => $editInput['adresa_ulice'] ?? '', 'cp' => $editInput['adresa_cp'] ?? '', 'mesto' => $editInput['adresa_mesto'] ?? '', 'psc' => $editInput['adresa_psc'] ?? '', 'stat' => $editInput['adresa_stat'] ?? '']);
     $editData['nouzovy_kontakt'] = array_replace($editData['nouzovy_kontakt'] ?? [], ['jmeno' => $editInput['nouzovy_jmeno'] ?? '', 'vztah' => $editInput['nouzovy_vztah'] ?? '', 'telefon' => $editInput['nouzovy_telefon'] ?? '', 'email' => $editInput['nouzovy_email'] ?? '']);
     $editData['bankovni_ucet'] = array_replace($editData['bankovni_ucet'] ?? [], ['cislo_uctu' => $editInput['ucet_cislo'] ?? '', 'kod_banky' => $editInput['ucet_kod_banky'] ?? '', 'iban' => $editInput['ucet_iban'] ?? '']);
+}
+// Po neúspěšném uložení zachováme obě rozepsané části, nikoli jen číslo z databáze.
+$phoneParts = hr_telefon_rozdel((string)($employee['telefon'] ?? ''));
+if (is_array($editInput) && (int)($editInput['id_person'] ?? 0) === $idPerson && array_key_exists('telefon_predvolba', $editInput)) {
+    $phoneParts = ['predvolba'=>(string)$editInput['telefon_predvolba'], 'cislo'=>(string)($editInput['telefon'] ?? '')];
 }
 $birthDateValue = '';
 if (!empty($editInput['datum_narozeni'])) {
@@ -81,11 +93,7 @@ $employeeDocumentOpenUrl = static function (array $document): string {
         <section class="hr_employee_overview_identity hr_panel">
             <span class="hr_employee_card_id hr_form_label_text">ID: <?= h((string)$employee['id_person']) ?></span>
             <div class="hr_employee_avatar_column">
-                <?php if (!empty($employee['foto'])): ?>
-                    <img class="hr_employee_photo hr_employee_photo_large" src="<?= h(cb_root_url((string)$employee['foto'])) ?>" alt="Fotografie zaměstnance <?= h((string)$employee['cele_jmeno']) ?>">
-                <?php else: ?>
-                    <div class="hr_employee_photo hr_employee_photo_large hr_employee_avatar_placeholder" role="img" aria-label="Fotografie zaměstnance zatím není vložena"></div>
-                <?php endif; ?>
+                <?php require __DIR__ . '/../hr_includes/zamestnanec_foto.php'; ?>
                 <span class="hr_badge <?= h($employee['stav_badge']) ?>"><?= h($employee['stav_label']) ?></span>
                 <?php if ((int)($employee['overen'] ?? 0) === 0 || (int)($employee['kompletni'] ?? 0) === 0): ?>
                     <div class="hr_employee_statuses">
@@ -99,7 +107,7 @@ $employeeDocumentOpenUrl = static function (array $document): string {
                 <?php endif; ?>
             </div>
             <div class="hr_employee_profile_info">
-                <div class="hr_employee_name_line hr_employee_name_line_large"><h2 class="hr_employee_name_title"><?= h($employee['cele_jmeno']) ?></h2></div>
+                <div class="hr_employee_name_line hr_employee_name_line_large"><h2 class="hr_employee_name_title" title="<?= h($employee['cele_jmeno']) ?>"><span class="hr_employee_name_part"><?= h(trim((string)($employee['prijmeni'] ?? ''))) ?></span><span class="hr_employee_name_part"><?= h(trim((string)($employee['jmeno'] ?? '') . ' ' . (string)($employee['druhe_jmeno'] ?? ''))) ?></span></h2></div>
                 <p class="hr_employee_profile_note"><?= h($currentAssignmentText !== '' ? $currentAssignmentText : 'Slot ani funkce nejsou doplněny') ?></p>
                 <dl class="hr_profile_facts">
                     <div class="hr_profile_fact_item"><dt class="hr_profile_fact_term">Pracoviště</dt><dd class="hr_profile_fact_value"><?= h((string)($employee['pracoviste'] ?? '-')) ?></dd></div>
@@ -161,7 +169,7 @@ $employeeDocumentOpenUrl = static function (array $document): string {
                         <div class="hr_employee_basic_row hr_employee_basic_row--contact">
                             <label class="hr_form_label"><span class="hr_form_label_text">Státní občanství</span><input name="statni_obcanstvi" maxlength="100" value="<?= h((string)($employee['statni_obcanstvi'] ?? '')) ?>"></label>
                             <label class="hr_form_label"><span class="hr_form_label_text">Poznámka</span><input name="poznamka" maxlength="1000" value="<?= h((string)($employee['poznamka'] ?? '')) ?>"></label>
-                            <label class="hr_form_label"><span class="hr_form_label_text">Telefon</span><span class="hr_phone_field"><span class="hr_phone_prefix">+420</span><input class="hr_phone_input" name="telefon" maxlength="11" value="<?= h((string)($employee['telefon'] ?? '')) ?>" autocomplete="tel" data-phone-cz></span></label>
+                            <?php require __DIR__.'/../hr_includes/zamestnanec_telefon.php'; ?>
                             <label class="hr_form_label"><span class="hr_form_label_text">E-mail</span><input type="email" name="email" maxlength="150" value="<?= h((string)($employee['email'] ?? '')) ?>" autocomplete="email"></label>
                         </div>
                     </div>
@@ -284,13 +292,18 @@ $employeeDocumentOpenUrl = static function (array $document): string {
         <?php endif; ?>
 
         <section class="hr_panel">
-            <div class="hr_panel_header"><h2 class="hr_panel_title" data-hr-employee-history>Historie pracovních poměrů</h2></div>
+            <div class="hr_panel_header"><h2 class="hr_panel_title" data-hr-employee-history>Historie změn zaměstnance</h2></div>
             <?php if ($workHistory === []): ?>
-                <p class="hr_empty_state">Historie pracovních poměrů není evidována.</p>
+                <p class="hr_empty_state">Historie změn zaměstnance není evidována.</p>
             <?php else: ?>
                 <div class="hr_table_wrap hr_compact_table_wrap"><table class="hr_table hr_work_history_table"><thead><tr><th class="hr_table_cell hr_table_head">Kdy</th><th class="hr_table_cell hr_table_head">Akce</th><th class="hr_table_cell hr_table_head">Platí od</th><th class="hr_table_cell hr_table_head">Platí do</th><th class="hr_table_cell hr_table_head">Zapsal</th><th class="hr_table_cell hr_table_head">Poznámka</th></tr></thead><tbody>
                 <?php foreach ($workHistory as $historyItem): ?>
-                    <tr><td class="hr_table_cell"><?= h(date('d. m. Y H:i', strtotime((string)$historyItem['kdy']))) ?></td><td class="hr_table_cell"><strong><?= h((string)$historyItem['akce']) ?></strong></td><td class="hr_table_cell"><?= h(hr_format_date((string)($historyItem['plati_od'] ?? ''))) ?></td><td class="hr_table_cell"><?= h(hr_format_date((string)($historyItem['plati_do'] ?? ''))) ?></td><td class="hr_table_cell"><?= h(trim((string)($historyItem['zapsal'] ?? '')) ?: '—') ?></td><td class="hr_table_cell"><?= h(trim((string)($historyItem['poznamka'] ?? '')) ?: '—') ?></td></tr>
+                    <?php
+                    // Kratky nahled nezahlti historii; tooltip uchova cely text vcetne puvodnich radku.
+                    $historyNote = trim((string)($historyItem['poznamka'] ?? ''));
+                    $historyNoteShortened = mb_strlen($historyNote, 'UTF-8') > 70;
+                    ?>
+                    <tr><td class="hr_table_cell"><?= h(date('d. m. Y H:i', strtotime((string)$historyItem['kdy']))) ?></td><td class="hr_table_cell"><strong><?= h((string)$historyItem['akce']) ?></strong></td><td class="hr_table_cell"><?= h(hr_format_date((string)($historyItem['plati_od'] ?? ''))) ?></td><td class="hr_table_cell"><?= h(hr_format_date((string)($historyItem['plati_do'] ?? ''))) ?></td><td class="hr_table_cell"><?= h(trim((string)($historyItem['zapsal'] ?? '')) ?: '—') ?></td><td class="hr_table_cell"><span class="hr_work_history_note"<?php if ($historyNoteShortened): ?> tabindex="0" title="<?= h($historyNote) ?>" data-cb-tooltip-multiline="1"<?php endif; ?>><?php if ($historyNoteShortened): ?><?= h(rtrim(mb_substr($historyNote, 0, 70, 'UTF-8'))) ?>… <span class="hr_work_history_note_shortened">zkráceno</span><?php else: ?><?= h($historyNote !== '' ? $historyNote : '—') ?><?php endif; ?></span></td></tr>
                 <?php endforeach; ?>
                 </tbody></table></div>
             <?php endif; ?>
@@ -304,6 +317,7 @@ $employeeDocumentOpenUrl = static function (array $document): string {
     <?php else: ?>
         <?php
         $employeeTimeline = hr_fetch_employee_timeline($db, (int)$employee['id_person'], $employeeDocuments);
+        $employeeBenefits = hr_fetch_employee_benefits($db, (int)$employee['id_person']);
         // Stejny vykreslovac pro prvnich deset udalosti i rozbaleny zbytek, bez dalsiho dotazu.
         $renderTimeline = static function (array $items, int $start = 1) use ($employeeDocumentOpenUrl): void {
             ?>
@@ -312,14 +326,16 @@ $employeeDocumentOpenUrl = static function (array $document): string {
                 <?php $effectiveDate = trim((string)($item['plati_od'] ?? '')); ?>
                 <li class="hr_employee_timeline_item">
                     <div class="hr_employee_timeline_date">
-                        <span>Zapsáno</span>
-                        <time><?= h(hr_format_date((string)$item['datum'])) ?></time>
+                        <time title="<?= h(date('j. n. Y H:i:s',strtotime((string)$item['kdy']))) ?>"><?= h(hr_format_date((string)$item['datum'])) ?></time>
                     </div>
                     <div class="hr_employee_timeline_content">
                         <strong><?= h((string)$item['akce']) ?></strong>
                         <?php if (trim((string)($item['zapsal'] ?? '')) !== ''): ?><div class="hr_employee_timeline_meta"><?= h((string)$item['zapsal']) ?></div><?php endif; ?>
                         <?php if (!empty($item['dokument'])): ?><a class="hr_table_link" href="<?= h($employeeDocumentOpenUrl($item['dokument'])) ?>" target="_blank" rel="noopener">Otevřít dokument</a><?php endif; ?>
-                        <?php if ($effectiveDate !== '' || !empty($item['plati_do']) || trim((string)($item['poznamka'] ?? '')) !== ''): ?>
+                        <?php // Jedine datum nema smysl schovavat za dalsi kliknuti. ?>
+                        <?php if ($effectiveDate !== '' && empty($item['plati_do']) && trim((string)($item['poznamka'] ?? '')) === ''): ?>
+                            <p class="hr_employee_timeline_effective">Platí od <?= h(hr_format_date($effectiveDate)) ?></p>
+                        <?php elseif ($effectiveDate !== '' || !empty($item['plati_do']) || trim((string)($item['poznamka'] ?? '')) !== ''): ?>
                             <details class="hr_employee_timeline_note"><summary>Podrobnosti</summary>
                                 <?php if ($effectiveDate !== '' || !empty($item['plati_do'])): ?><p><?php if ($effectiveDate !== ''): ?>Platí od <?= h(hr_format_date($effectiveDate)) ?><?php endif; ?><?php if (!empty($item['plati_do'])): ?> do <?= h(hr_format_date((string)$item['plati_do'])) ?><?php endif; ?></p><?php endif; ?>
                                 <?php if (trim((string)($item['poznamka'] ?? '')) !== ''): ?><p><?= nl2br(h((string)$item['poznamka'])) ?></p><?php endif; ?>
@@ -336,6 +352,7 @@ $employeeDocumentOpenUrl = static function (array $document): string {
             <article class="hr_panel hr_employee_timeline_panel"><div class="hr_panel_header"><h2 class="hr_panel_title">Časová osa</h2></div>
                 <?php if ($employeeTimeline === []): ?><p class="hr_employee_empty_block">Události k zaměstnanci zatím nejsou evidované.</p>
                 <?php else: ?>
+                    <p class="hr_employee_timeline_label">Zapsáno</p>
                     <?php $renderTimeline(array_slice($employeeTimeline, 0, 10)); ?>
                     <?php if (count($employeeTimeline) > 10): ?><details class="hr_employee_timeline_more"><summary>Zobrazit všechny (<?= count($employeeTimeline) ?>)</summary><?php $renderTimeline(array_slice($employeeTimeline, 10), 11); ?></details><?php endif; ?>
                 <?php endif; ?>
@@ -357,7 +374,10 @@ $employeeDocumentOpenUrl = static function (array $document): string {
                 </ul><?php endif; ?>
             </article>
             <article class="hr_panel"><div class="hr_panel_header"><h2 class="hr_panel_title">Nepřítomnosti</h2></div><p class="hr_employee_empty_block">Přejděte na záložku Docházka a dovolená.</p></article>
-            <article class="hr_panel"><div class="hr_panel_header"><h2 class="hr_panel_title">Benefity</h2></div><p class="hr_employee_empty_block">Přejděte na záložku Pracovní poměr.</p></article>
+            <article class="hr_panel"><div class="hr_panel_header"><h2 class="hr_panel_title">Benefity</h2></div>
+                <?php if ($employeeBenefits === []): ?><p class="hr_employee_empty_block">Přejděte na záložku Pracovní poměr.</p>
+                <?php else: ?><ul class="hr_employee_benefit_list"><?php foreach ($employeeBenefits as $benefit): ?><li><?= h((string)$benefit['nazev']) ?></li><?php endforeach; ?></ul><?php endif; ?>
+            </article>
         </section>
     <?php endif; ?>
 <?php endif; ?>

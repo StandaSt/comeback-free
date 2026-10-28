@@ -1,8 +1,59 @@
-// Filtry a vice pobocek archivu, castky s menou, presne souhrny a rucne potvrzene ulozeni.
+// Filtry, částky, potvrzení archivace a náhled s výslovným odesláním e-mailu kompletní kontroly.
 (() => {
   'use strict';
   // Inicializace funguje i po dynamickem vlozeni stranky do shellu IS.
   function init() {
+    // Náhled nikdy neposílá e-mail; klient předává při odeslání pouze jednorázový serverový token.
+    document.querySelectorAll('[data-kt-email]').forEach(panel => {
+      if (panel.dataset.ktReady) return;
+      panel.dataset.ktReady = '1';
+      const open = panel.querySelector('[data-kt-email-preview]');
+      const send = panel.querySelector('[data-kt-email-send]');
+      const close = panel.querySelector('[data-kt-email-close]');
+      const dialog = panel.querySelector('dialog');
+      const status = panel.querySelector('[data-kt-email-status]');
+      const result = panel.querySelector('[data-kt-email-result]');
+      let token = '';
+      let busy = false;
+      const message = (element, text, success = false) => {
+        element.textContent = text; element.hidden = false;
+        element.className = success ? 'kt_success' : 'kt_warning';
+      };
+      const request = async payload => {
+        const response = await fetch(panel.dataset.url, { method: 'POST', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Comeback-Crf': panel.dataset.crf },
+          body: JSON.stringify(payload) });
+        const data = await response.json();
+        if (!response.ok || !data.ok) throw new Error(data.message || 'Akci se nepodařilo dokončit.');
+        return data;
+      };
+      open.addEventListener('click', async () => {
+        if (busy) return;
+        busy = true; open.disabled = true; status.hidden = true; token = ''; send.disabled = true; result.hidden = true;
+        try {
+          const data = await request({ action: 'preview', kt_rezim: 'obdobi', kt_od: panel.dataset.from, kt_do: panel.dataset.to, kt_pob: panel.dataset.branch });
+          token = data.token;
+          panel.querySelector('[data-kt-email-addresses]').textContent = `Příjemce: ${data.recipient.name} <${data.recipient.email}> · Odesílatel: ${data.sender.name} · Odpověď na: ${data.sender.email}`;
+          panel.querySelector('[data-kt-email-subject]').textContent = data.subject;
+          panel.querySelector('[data-kt-email-body]').innerHTML = data.body;
+          send.disabled = false; dialog.showModal();
+        } catch (error) { message(status, error.message); }
+        finally { busy = false; open.disabled = false; }
+      });
+      close.addEventListener('click', () => { if (!busy) dialog.close(); });
+      dialog.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
+      // Zabráníme odeslání klávesou Enter; jde výhradně o vědomé kliknutí na tlačítko.
+      send.addEventListener('keydown', event => { if (event.key === 'Enter') event.preventDefault(); });
+      send.addEventListener('click', async () => {
+        if (busy || !token) return;
+        busy = true; send.disabled = close.disabled = true; result.hidden = true;
+        try {
+          const data = await request({ action: 'send', token });
+          token = ''; message(result, data.message, true); message(status, data.message, true);
+        } catch (error) { token = ''; message(result, `${error.message} Pro další pokus otevřete nový náhled.`); }
+        finally { busy = false; close.disabled = false; }
+      });
+    });
     document.querySelectorAll('[data-kt-validity]').forEach(form => {
       if (form.dataset.ktReady) return;
       form.dataset.ktReady = '1';
@@ -58,7 +109,7 @@
     document.querySelectorAll('[data-kt-form]').forEach(form => {
       if (form.dataset.ktReady) return;
       form.dataset.ktReady = '1';
-      let dirty = false;
+      let dirty = form.dataset.ktSaved !== '1' && Array.from(form.querySelectorAll('.kt_amount, textarea')).some(input => input.value.trim() !== '');
       // Zadani se nesmi zaokrouhlit ani prevest pres binarni desetinne cislo.
       const parse = raw => {
         const match = raw.trim().replace(/\s*Kč$/, '').replace(/[\s\u00a0]/g, '').replace('−', '-').replace(',', '.').match(/^(-?)(\d{1,11})(?:\.(\d{1,2}))?$/);
@@ -110,7 +161,14 @@
       // Poznamka roste jen podle obsahu; ostatni radky zustavaji kompaktni.
       const resizeNote = note => { note.style.height = '24px'; note.style.height = `${Math.max(24, note.scrollHeight + 2)}px`; };
       form.querySelectorAll('textarea').forEach(resizeNote);
-      form.addEventListener('input', event => { dirty = true; if (event.target.matches('textarea')) resizeNote(event.target); recalculate(); });
+      form.addEventListener('input', event => {
+        dirty = true;
+        form.dataset.ktSaved = '0';
+        const status = form.querySelector('[data-kt-saved-status]');
+        if (status) status.hidden = true;
+        if (event.target.matches('textarea')) resizeNote(event.target);
+        recalculate();
+      });
       form.addEventListener('click', event => {
         const button = event.target.closest('[data-kt-copy]');
         if (!button) return;
@@ -126,12 +184,33 @@
         if (event.key === 'Enter' && event.target.matches('input')) event.preventDefault();
       });
       let saveClicked = false;
+      let replacementConfirmed = false;
+      const replacement = form.querySelector('[data-kt-replace-dialog]');
+      const replacementFlag = form.querySelector('[name="kt_nahradit"]');
+      // Dialog nema vlastni odesilani; Ulozit projde stejnou validaci jako hlavni tlacitko.
+      replacement?.querySelector('[data-kt-replace-save]').addEventListener('click', () => {
+        replacementConfirmed = true;
+        replacementFlag.value = '1';
+        replacement.close();
+        form.querySelector('.kt_save')?.click();
+      });
+      replacement?.querySelector('[data-kt-replace-cancel]').addEventListener('click', () => {
+        replacementConfirmed = false;
+        replacementFlag.value = '0';
+        replacement.close();
+      });
+      replacement?.addEventListener('cancel', () => { replacementConfirmed = false; replacementFlag.value = '0'; });
       form.querySelector('.kt_save')?.addEventListener('click', () => {
         saveClicked = true;
         setTimeout(() => { saveClicked = false; }, 0);
       });
       form.addEventListener('submit', event => {
         if (!saveClicked || !form.checkValidity()) { event.preventDefault(); return; }
+        if (form.dataset.ktReplace === '1' && !replacementConfirmed) {
+          event.preventDefault();
+          replacement.showModal();
+          return;
+        }
         // PHP dostane puvodni ciselny format bez meny; zobrazeni nesmi ovlivnit ulozena data.
         form.querySelectorAll('.kt_amount').forEach(input => { input.value = decimal(parse(input.value)); });
         dirty = false;
@@ -162,6 +241,8 @@
         else dirty = false;
       });
       recalculate();
+      // Soubezna zmena zjistena serverem vraci stejna vyplnena pole a nove potvrzeni.
+      if (form.dataset.ktAskReplace === '1' && form.querySelector('.kt_save')) replacement?.showModal();
     });
   }
   init();

@@ -1,9 +1,10 @@
 <?php
 declare(strict_types=1);
 
-/* Ucel souboru: Zobrazi globalni prava roli a stav jejich skutecne funkcnosti. */
+/* Účel: Zobrazí globální práva, jejich funkčnost a tabulkový přehled členů prvních šesti rolí. */
 
 require_once __DIR__ . '/../admin_db/admin_prava_roli_db.php';
+require_once __DIR__ . '/../admin_db/admin_role_uzivatele_db.php';
 
 $adminPravaData = cb_admin_prava_roli_data();
 $adminRoles = $adminPravaData['roles'];
@@ -11,7 +12,10 @@ $adminModules = $adminPravaData['modules'];
 $adminRights = $adminPravaData['rights'];
 $adminAllowed = $adminPravaData['allowed'];
 $adminShowBlockChecks = function_exists('cb_pravo_ma') && cb_pravo_ma(101);
+$adminRoleMembers = cb_admin_role_uzivatele(db());
 ?>
+<link rel="stylesheet" href="<?= h(cb_root_url('administrace/style/admin_role_uzivatele.css')) ?>?v=<?= filemtime(__DIR__.'/../style/admin_role_uzivatele.css') ?>">
+<?php require __DIR__.'/../admin_includes/admin_role_uzivatele.php'; ?>
 <?php if ($adminRights === []): ?>
     <div class="admin_empty blok">
         <h2 class="blok_title">Globální práva</h2>
@@ -37,7 +41,13 @@ $adminShowBlockChecks = function_exists('cb_pravo_ma') && cb_pravo_ma(101);
                             <th class="admin_matrix_active_head">Aktivní</th>
                             <th style="white-space:nowrap;">Právo</th>
                             <?php foreach ($adminRoles as $role): ?>
-                                <th class="admin_matrix_role_head"><?= h($role['role']) ?></th>
+                                <th class="admin_matrix_role_head">
+                                    <?php if (in_array((int)$role['id_role'], [1,2,3,4,5,7], true)): ?>
+                                        <button type="button" class="admin_role_trigger" data-role-members="admin-role-members-<?= (int)$role['id_role'] ?>" aria-expanded="false" aria-controls="admin-role-popup" aria-label="Uživatelé role <?= h($role['role']) ?>">
+                                            <?= h($role['role']) ?>
+                                        </button>
+                                    <?php else: ?><?= h($role['role']) ?><?php endif; ?>
+                                </th>
                             <?php endforeach; ?>
                         </tr>
                     </thead>

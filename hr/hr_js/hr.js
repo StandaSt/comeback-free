@@ -1,4 +1,4 @@
-// Ovladani kombinovaneho vyberu oblasti a pobocek, vice MAIN a HR formularu; karta chrani neulozene zmeny, ciselnik oblasti uklada stav okamzite.
+// Ovladani oblasti, vice MAIN a HR formularu; karta chrani neulozene zmeny a uklada portret pouze jako ctvercovy vyrez.
 (() => {
     'use strict';
 
@@ -206,6 +206,35 @@
             });
         });
 
+        // Mezinárodní číslo nekrátíme; při vložení celého čísla oddělíme skutečnou předvolbu.
+        container.querySelectorAll('[data-phone-international]').forEach((field) => {
+            if (field.dataset.hrPhoneBound === '1') return;
+            field.dataset.hrPhoneBound = '1';
+            const prefix = field.querySelector('[name="telefon_predvolba"]');
+            const number = field.querySelector('[name="telefon"]');
+            const codes = JSON.parse(field.dataset.phoneShortPrefixes);
+            // České mezery doplníme jen u již krátkého vstupu; delší číslo nikdy neořízneme.
+            const formatNational = () => {
+                if (prefix.value.trim() === '+420' && /^[\d\s]*$/.test(number.value) && number.value.replace(/\D/g, '').length <= 9) {
+                    number.value = formatCzechPhone(number.value);
+                }
+            };
+            formatNational();
+            prefix.addEventListener('input', formatNational);
+            number.addEventListener('input', () => {
+                let full = number.value.trim().replace(/[\s().-]+/g, '');
+                if (full.startsWith('00')) full = '+' + full.slice(2);
+                if (!/^\+\d{5,}$/.test(full)) { formatNational(); return; }
+                const digits = full.slice(1);
+                const code = codes.find(value => digits.startsWith(value)) || digits.slice(0, 3);
+                prefix.value = '+' + code;
+                number.value = digits.slice(code.length);
+                formatNational();
+                // Programová změna předvolby musí být součástí sledování neuložených změn.
+                prefix.dispatchEvent(new Event('input', {bubbles: true}));
+            });
+        });
+
         container.querySelectorAll('[data-phone-cz]').forEach((input) => {
             if (input.dataset.hrPhoneBound === '1') {
                 return;
@@ -234,6 +263,7 @@
             const selection = dialog?.querySelector('[data-photo-crop-selection]');
             const cropApply = dialog?.querySelector('[data-photo-crop-apply]');
             const cropCancel = dialog?.querySelector('[data-photo-crop-cancel]');
+            const savePortrait = form?.hasAttribute('data-photo-square');
             if (!preview || !image || !cropOpen || !dialog || !cropSurface || !cropImage || !selection || !cropApply || !cropCancel) {
                 return;
             }
@@ -241,6 +271,8 @@
             let selectedFile = null;
             let cropUrl = '';
             let selecting = null;
+            let cropReady = false;
+            let cropGeneration = 0;
 
             const showPreview = (file) => {
                 const previousUrl = image.dataset.previewUrl;
@@ -284,9 +316,12 @@
                 const box = cropImage.getBoundingClientRect();
                 const size = Math.min(box.width, box.height) * .7;
                 setSelection((box.width - size) / 2, (box.height - size) / 2, size, size);
+                cropApply.disabled = false;
             };
 
-            const closeCropDialog = () => {
+            const closeCropDialog = (applied = false) => {
+                // Zrušený dialog nesmí později odeslat výřez z již rozběhnutého canvas.toBlob.
+                cropGeneration++;
                 if (dialog.open) {
                     dialog.close();
                 }
@@ -296,11 +331,24 @@
                 }
                 cropImage.removeAttribute('src');
                 selecting = null;
+                if (savePortrait && !applied) {
+                    selectedFile = null;
+                    input.value = '';
+                    cropReady = false;
+                    showPreview(null);
+                }
             };
 
             input.addEventListener('change', () => {
                 selectedFile = input.files?.[0] ?? null;
+                cropReady = false;
                 showPreview(selectedFile);
+                // Na kartě musí výběr vždy předcházet odeslání; původní soubor zůstane jen v prohlížeči.
+                if (savePortrait && selectedFile && input.validity.valid) cropOpen.click();
+            });
+            row.querySelector('[data-photo-choose]')?.addEventListener('click', () => input.click());
+            if (savePortrait) form.addEventListener('submit', (event) => {
+                if (!cropReady) { event.preventDefault(); event.stopPropagation(); }
             });
 
             cropOpen.addEventListener('click', () => {
@@ -311,12 +359,18 @@
                     URL.revokeObjectURL(cropUrl);
                 }
                 cropUrl = URL.createObjectURL(selectedFile);
+                cropGeneration++;
+                cropApply.disabled = true;
                 cropImage.src = cropUrl;
                 dialog.showModal();
             });
 
             cropImage.addEventListener('load', startSelection);
-            cropCancel.addEventListener('click', closeCropDialog);
+            cropCancel.addEventListener('click', () => closeCropDialog());
+            cropImage.addEventListener('error', () => {
+                closeCropDialog();
+                window.alert('Obrázek se nepodařilo načíst. Vyberte jinou fotografii.');
+            });
             dialog.addEventListener('cancel', (event) => {
                 event.preventDefault();
                 closeCropDialog();
@@ -338,7 +392,13 @@
                 const box = cropImage.getBoundingClientRect();
                 const x = Math.max(0, Math.min(event.clientX - box.left, box.width));
                 const y = Math.max(0, Math.min(event.clientY - box.top, box.height));
-                setSelection(Math.min(selecting.x, x), Math.min(selecting.y, y), Math.abs(x - selecting.x), Math.abs(y - selecting.y));
+                // Všechny směry tažení zachovají čtverec a jeho hranice uvnitř obrázku.
+                const dx = x - selecting.x;
+                const dy = y - selecting.y;
+                const size = Math.max(1, Math.min(Math.max(Math.abs(dx), Math.abs(dy)),
+                    dx < 0 ? selecting.x : box.width - selecting.x,
+                    dy < 0 ? selecting.y : box.height - selecting.y));
+                setSelection(dx < 0 ? selecting.x - size : selecting.x, dy < 0 ? selecting.y - size : selecting.y, size, size);
             });
 
             cropSurface.addEventListener('pointerup', () => {
@@ -352,8 +412,8 @@
                 const scaleY = cropImage.naturalHeight / imageBox.height;
                 const sourceX = Math.round((selectionBox.left - imageBox.left) * scaleX);
                 const sourceY = Math.round((selectionBox.top - imageBox.top) * scaleY);
-                const sourceWidth = Math.round(selectionBox.width * scaleX);
-                const sourceHeight = Math.round(selectionBox.height * scaleY);
+                const sourceWidth = Math.min(Math.round(selectionBox.width * scaleX), Math.round(selectionBox.height * scaleY), cropImage.naturalWidth-sourceX, cropImage.naturalHeight-sourceY);
+                const sourceHeight = sourceWidth;
                 if (sourceWidth < 1 || sourceHeight < 1) {
                     return;
                 }
@@ -367,7 +427,11 @@
                     return;
                 }
                 context.drawImage(cropImage, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
+                cropApply.disabled = true;
+                const generation = cropGeneration;
                 canvas.toBlob((blob) => {
+                    if (generation !== cropGeneration || !dialog.open) return;
+                    cropApply.disabled = false;
                     if (!blob) {
                         return;
                     }
@@ -376,8 +440,10 @@
                     transfer.items.add(croppedFile);
                     input.files = transfer.files;
                     selectedFile = croppedFile;
+                    cropReady = true;
                     showPreview(croppedFile);
-                    closeCropDialog();
+                    closeCropDialog(true);
+                    if (savePortrait) form.requestSubmit();
                 }, 'image/jpeg', .9);
             });
         });
@@ -808,14 +874,20 @@
         });
     };
 
-    // Jedina zprava u karty nahradi starsi vysledek, formular pri chybe zustava beze zmen.
-    const employeeNotice = (card, message, success) => {
-        card.querySelectorAll(':scope > .hr_notice').forEach(notice => notice.remove());
+    // Vysledek patri k ukladane casti, aby chyba nezustala mimo vyrez u zahlavi cele karty.
+    const employeeNotice = (card, key, message, success) => {
+        card.querySelectorAll(':scope > .hr_notice, [data-hr-employee-notice]').forEach(notice => notice.remove());
         const notice = document.createElement('div');
         notice.className = `hr_notice ${success ? 'hr_success' : 'hr_error'}`;
         notice.setAttribute('role', 'status');
+        notice.setAttribute('data-hr-employee-notice', '1');
         notice.textContent = message;
-        card.querySelector('.pp_header').after(notice);
+        const block = card.querySelector(`[data-hr-employee-block="${key}"]`);
+        const header = block?.querySelector('.hr_panel_header');
+        if (header) header.after(notice);
+        else if (block) block.prepend(notice);
+        else card.querySelector('.pp_header').after(notice);
+        return notice;
     };
 
     // Obnovi ulozeny blok a zavisle casti; ostatni rozepsane formulare zustavaji stejnymi DOM uzly.
@@ -861,6 +933,12 @@
         const history = card.querySelector('[data-hr-employee-history]')?.closest('section');
         const nextHistory = nextCard.querySelector('[data-hr-employee-history]')?.closest('section');
         if (history && nextHistory) history.replaceWith(nextHistory);
+        // Portrét se ukládá také z Přehledu, jeho časová osa musí hned ukázat novou událost.
+        if (key === 'photo') {
+            const timeline = card.querySelector('.hr_employee_timeline_panel');
+            const nextTimeline = nextCard.querySelector('.hr_employee_timeline_panel');
+            if (timeline && nextTimeline) timeline.replaceWith(nextTimeline);
+        }
         initHr(card);
         // Jiz navazane checkboxy pouziji aktualni dostupnost MAIN a nezdvoji handlery.
         card.querySelectorAll('[data-hr-branch-list]').forEach(list => list.dispatchEvent(new Event('change', { bubbles: true })));
@@ -880,6 +958,8 @@
         const controls = [...form.elements].filter(control => 'disabled' in control);
         const disabled = controls.map(control => control.disabled);
         const scrollTop = card.scrollTop;
+        const key = form.dataset.hrEmployeeForm;
+        let notice = null;
         let stored = false;
         employeeSaving = true;
         controls.forEach(control => { control.disabled = true; });
@@ -894,23 +974,29 @@
                 throw new Error(window.CB_CHYBY.responseMessage(response, result, 'Formulář se nepodařilo odeslat.'));
             }
             stored = result.success === true;
-            if (stored) employeeForms.set(form, employeeValues(form));
+            // Odmitnuty zapis neobnovujeme: jeho konkretni duvod nesmi prekryt chyba dalsiho pozadavku.
+            if (!stored) {
+                notice = employeeNotice(card, key, result.message, false);
+                return;
+            }
+            employeeForms.set(form, employeeValues(form));
             const url = new URL(result.redirect, window.location.href);
             const id = form.elements.namedItem('id_person').value;
-            if (url.origin !== location.origin || url.searchParams.get('page') !== 'zamestnanec' || url.searchParams.get('id') !== id) {
+            if (url.origin !== location.origin || url.searchParams.get('m') !== 'hr' || url.searchParams.get('page') !== 'zamestnanec' || url.searchParams.get('id') !== id) {
                 throw new Error('Server nevrátil očekávanou kartu zaměstnance.');
             }
-            url.searchParams.set('upravit', '1');
-            // GET spotrebuje beznou flash zpravu i chybny vstup v session; chyba neprepise zadane hodnoty.
-            const refresh = await fetch(url, { credentials: 'same-origin', headers: { 'X-Comeback-PP-Only': '1' } });
+            // Samostatná změna portrétu zachová původní režim karty i její otevřenou záložku.
+            if (key !== 'photo') url.searchParams.set('upravit', '1');
+            // Partial oznaceni zajisti, ze spolecny index respektuje m=hr misto vychoziho Provozu.
+            const refresh = await fetch(url, { credentials: 'same-origin', headers: { 'X-Comeback-PP-Only': '1', 'X-Comeback-Partial': '1' } });
             const html = await window.CB_CHYBY.readHtml(refresh, 'Obnovení karty zaměstnance selhalo.');
             const nextCard = new DOMParser().parseFromString(html, 'text/html').querySelector('.pp[data-page="zamestnanec"]');
             if (!nextCard) throw new Error('Obnovená stránka nemá platnou kartu zaměstnance.');
-            if (stored) refreshEmployeeBlock(card, nextCard, form);
-            employeeNotice(card, result.message, stored);
+            refreshEmployeeBlock(card, nextCard, form);
+            notice = employeeNotice(card, key, result.message, true);
         } catch (error) {
             // Po uspesnem POST a vypadku obnovy nesmime nabidnout nevedome opakovani uz provedeneho zapisu.
-            employeeNotice(card, (stored ? 'Změny byly uloženy, ale obnovení karty selhalo. ' : '') +
+            notice = employeeNotice(card, key, (stored ? 'Změny byly uloženy, ale obnovení karty selhalo. ' : '') +
                 window.CB_CHYBY.errorMessage(error, 'Uložení změn selhalo.'), false);
         } finally {
             controls.forEach((control, index) => { control.disabled = disabled[index]; });
@@ -918,6 +1004,7 @@
             employeeSaving = false;
             if (form.isConnected) syncEmployeeSave(form);
             card.scrollTop = scrollTop;
+            notice?.scrollIntoView({ block: 'nearest' });
         }
     };
 

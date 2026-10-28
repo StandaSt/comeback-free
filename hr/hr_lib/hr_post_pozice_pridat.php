@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+/* Účel: Zpracuje starší formulář přidání pracovního slotu včetně oprávnění a auditu HR. */
+require_once __DIR__ . '/hr_audit.php';
+
 function hr_post_pozice_pridat(mysqli $db): void
 {
     try {
@@ -8,8 +11,8 @@ function hr_post_pozice_pridat(mysqli $db): void
             throw new CbUserVisibleException('Nemáte právo spravovat nastavení HR.');
         }
         hr_nastaveni_pozice_pridat($db, (string)($_POST['slot'] ?? ''));
-        cb_form_finish(cb_root_url('index.php?m=hr&page=nastaveni'), true, 'Slot byl přidán.');
+        hr_audit_form_finish(cb_root_url('index.php?m=hr&page=nastaveni'), true, 'Slot byl přidán.');
     } catch (Throwable $e) {
-        cb_form_finish(cb_root_url('index.php?m=hr&page=nastaveni'), false, cb_hr_chyba_text($e, 'Přidání slotu', ['table' => 'cis_slot']), $_POST);
+        hr_audit_form_finish(cb_root_url('index.php?m=hr&page=nastaveni'), false, cb_hr_chyba_text($e, 'Přidání slotu', ['table' => 'cis_slot']), $_POST);
     }
 }

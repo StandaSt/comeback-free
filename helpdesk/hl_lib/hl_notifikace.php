@@ -1,5 +1,5 @@
 <?php
-// Ucel souboru: Uklada HelpDesk notifikace a odesila push s podepsanym odkazem na detail tiketu.
+// Ucel souboru: Uklada HelpDesk notifikace a odesila push s uplnym podepsanym odkazem na detail tiketu.
 declare(strict_types=1);
 
 require_once __DIR__ . '/hl_prava.php';
@@ -89,6 +89,7 @@ function cb_helpdesk_push_body(string $typ, string $text = ''): string
     };
 }
 
+/** Odesle prijemci zpravu s uplnou podepsanou adresou konkretni HelpDesk notifikace. */
 function cb_helpdesk_push_odeslat(int $idUser, int $idNotifikace, string $typ, string $text): void
 {
     global $PROSTREDI;
@@ -135,7 +136,7 @@ function cb_helpdesk_push_odeslat(int $idUser, int $idNotifikace, string $typ, s
         'title' => 'Comeback',
         'body' => cb_helpdesk_push_body($typ, $text),
         // Mobilni detail je fyzicky v modulu Provoz; aktualni modul HelpDesk by vytvoril neexistujici cestu.
-        'url' => cb_module_url('provoz') . 'mobil/mobil_helpdesk.php?t=' . rawurlencode($token),
+        'url' => cb_push_url_abs(cb_module_url('provoz') . 'mobil/mobil_helpdesk.php?t=' . rawurlencode($token)),
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     if (!is_string($payload) || $payload === '') {
         return;

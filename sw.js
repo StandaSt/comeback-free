@@ -1,7 +1,16 @@
-// Service Worker zobrazuje Web Push; změny směn mají samostatný tag, aby se vzájemně nepřepisovaly.
+// Service Worker zobrazuje Web Push a po kliknutí otevírá celou cílovou adresu zprávy; změny směn mají samostatný tag.
 
 const CB_SW_ROOT = new URL('./', self.registration.scope);
 const CB_LOGO_URL = new URL('common/img/logo_comeback.png', CB_SW_ROOT).toString();
+
+// Uložíme a otevíráme úplnou adresu nezávisle na stránce, která zůstala otevřená v mobilu.
+function cbPushTargetUrl(value) {
+  try {
+    return new URL(typeof value === 'string' && value !== '' ? value : CB_SW_ROOT.href, CB_SW_ROOT).href;
+  } catch (e) {
+    return CB_SW_ROOT.href;
+  }
+}
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -28,7 +37,7 @@ self.addEventListener('message', (event) => {
       badge: CB_LOGO_URL,
       tag: 'cb-test',
       renotify: false,
-      data: { url: '/' }
+      data: { url: CB_SW_ROOT.href }
     })
   );
 });
@@ -46,7 +55,7 @@ self.addEventListener('push', (event) => {
 
   let title = 'Comeback';
   let body = 'Notifikace';
-  let url = '/';
+  let url = CB_SW_ROOT.href;
   let type = '';
 
   if (data && typeof data === 'object') {
@@ -57,7 +66,7 @@ self.addEventListener('push', (event) => {
       body = data.body;
     }
     if (typeof data.url === 'string' && data.url !== '') {
-      url = data.url;
+      url = cbPushTargetUrl(data.url);
     }
     if (typeof data.type === 'string') {
       type = data.type;
@@ -87,25 +96,9 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  let url = '/';
-  try {
-    if (event.notification && event.notification.data && event.notification.data.url) {
-      url = event.notification.data.url;
-    }
-  } catch (e) {
-    url = '/';
-  }
-
-  event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-      for (const c of clients) {
-        if (c.url && c.url.indexOf(url) !== -1) {
-          return c.focus();
-        }
-      }
-      return self.clients.openWindow(url);
-    })
-  );
+  const url = cbPushTargetUrl(event.notification.data && event.notification.data.url);
+  // Vždy otevřeme cíl této zprávy; staré okno ani jeho URL se pro rozhodování nepoužívá.
+  event.waitUntil(self.clients.openWindow(url));
 });
 
 // Konec souboru

@@ -48,6 +48,9 @@ $cbAdministraceChybyJsPath = $cbAplikaceRoot . '/administrace/admin_js/admin_chy
 $cbAdministraceChybyJsUrl = cb_root_url('administrace/admin_js/admin_chyby.js') . '?v=' . (is_file($cbAdministraceChybyJsPath) ? (string)filemtime($cbAdministraceChybyJsPath) : '1');
 $cbAdministracePravaBlocksJsPath = $cbAplikaceRoot . '/administrace/admin_js/admin_prava_roli_blocks.js';
 $cbAdministracePravaBlocksJsUrl = cb_root_url('administrace/admin_js/admin_prava_roli_blocks.js') . '?v=' . (is_file($cbAdministracePravaBlocksJsPath) ? (string)filemtime($cbAdministracePravaBlocksJsPath) : '1');
+/* Samostatná delegovaná obsluha přehledu členů rolí funguje i po výměně pracovní plochy. */
+$cbAdministraceRoleUzivateleJsPath = $cbAplikaceRoot . '/administrace/admin_js/admin_role_uzivatele.js';
+$cbAdministraceRoleUzivateleJsUrl = cb_root_url('administrace/admin_js/admin_role_uzivatele.js') . '?v=' . (string)filemtime($cbAdministraceRoleUzivateleJsPath);
 $cbAdministraceIndividualSearchJsPath = $cbAplikaceRoot . '/administrace/admin_js/admin_individualni_prava_search.js';
 $cbAdministraceIndividualSearchJsUrl = cb_root_url('administrace/admin_js/admin_individualni_prava_search.js') . '?v=' . (is_file($cbAdministraceIndividualSearchJsPath) ? (string)filemtime($cbAdministraceIndividualSearchJsPath) : '1');
 $cbAdministraceIndividualSaveJsPath = $cbAplikaceRoot . '/administrace/admin_js/admin_individualni_prava_save.js';

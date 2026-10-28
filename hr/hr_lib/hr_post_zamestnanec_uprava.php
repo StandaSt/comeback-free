@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+/* Audit HR se potvrzuje spolecne se zmenou; neuspesny pokus zustava odlisnou udalosti. */
+require_once __DIR__ . '/hr_audit.php';
+
 // Ucel pracovist: Pri ukonceni osoby uzavre mista vykonu prace i mnozinu MAIN, puvodni povolene pobocky zustavaji archivem.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
@@ -25,14 +28,14 @@ function hr_post_zamestnanec_uprava(mysqli $db, int $zadalUser): void
         hr_zamestnanci_vyzaduj_osobu($db, $zadalUser, $idPerson);
         hr_update_employee_basic_data($db, $idPerson, $_POST, $zadalUser);
         $message = 'Karta zaměstnance byla uložena.';
-        cb_form_finish(
+        hr_audit_form_finish(
             cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson) . '&sekce=osobni_udaje&upravit=1'),
             true,
             $message
         );
     } catch (Throwable $e) {
         $_SESSION['hr_edit_input'] = $_POST;
-        cb_form_finish(
+        hr_audit_form_finish(
             cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson) . '&sekce=osobni_udaje&upravit=1'),
             false,
             cb_hr_chyba_text($e, 'Uložení karty zaměstnance', ['table' => 'hr_person']),
@@ -71,7 +74,7 @@ function hr_post_pracovni_pomer_uprava(mysqli $db): void
         if ($platnostOd < $nastup) {
             throw new CbUserVisibleException('Datum platnosti nesmí být před datem nástupu.');
         }
-        $db->begin_transaction();
+        hr_audit_transaction_begin($db);
         $current = hr_fetch_employee_work_relation($db, $idPerson);
         if (!is_array($current)) {
             throw new CbUserVisibleException('Aktuální pracovní poměr nebyl nalezen.');
@@ -160,11 +163,11 @@ function hr_post_pracovni_pomer_uprava(mysqli $db): void
         }
         // Pracovni vztah, uvazek a mzda patri mezi povinne casti kompletni karty.
         hr_update_employee_completeness($db, $idPerson);
-        $db->commit();
-        cb_form_finish(hr_pracovni_pomer_url($idPerson), true, 'Pracovní poměr byl uložen.');
+        hr_audit_transaction_commit($db);
+        hr_audit_form_finish(hr_pracovni_pomer_url($idPerson), true, 'Pracovní poměr byl uložen.');
     } catch (Throwable $e) {
-        try { $db->rollback(); } catch (Throwable $ignored) {}
-        cb_form_finish(hr_pracovni_pomer_url($idPerson), false, cb_hr_chyba_text($e, 'Uložení pracovního poměru', ['table' => 'hr_pracovni_vztah']), $_POST);
+        try { hr_audit_transaction_rollback($db); } catch (Throwable $ignored) {}
+        hr_audit_form_finish(hr_pracovni_pomer_url($idPerson), false, cb_hr_chyba_text($e, 'Uložení pracovního poměru', ['table' => 'hr_pracovni_vztah']), $_POST);
     }
 }
 
@@ -291,9 +294,9 @@ function hr_post_pracovni_preruseni_ulozit(mysqli $db, int $zadalUser): void
         $stmt->bind_param('iisssi', $idVztah, $idTyp, $datumOd, $datumDo, $poznamka, $zadalUser);
         $stmt->execute();
         $stmt->close();
-        cb_form_finish(hr_pracovni_pomer_url($idPerson), true, 'Přerušení pracovního poměru bylo uloženo.');
+        hr_audit_form_finish(hr_pracovni_pomer_url($idPerson), true, 'Přerušení pracovního poměru bylo uloženo.');
     } catch (Throwable $e) {
-        cb_form_finish(hr_pracovni_pomer_url($idPerson), false, cb_hr_chyba_text($e, 'Uložení přerušení pracovního poměru', ['table' => 'hr_pracovni_preruseni']), $_POST);
+        hr_audit_form_finish(hr_pracovni_pomer_url($idPerson), false, cb_hr_chyba_text($e, 'Uložení přerušení pracovního poměru', ['table' => 'hr_pracovni_preruseni']), $_POST);
     }
 }
 
@@ -320,9 +323,9 @@ function hr_post_pracovni_preruseni_uzavrit(mysqli $db, int $zadalUser): void
         $stmt->bind_param('sii', $datumDo, $zadalUser, $idPreruseni);
         $stmt->execute();
         $stmt->close();
-        cb_form_finish(hr_pracovni_pomer_url($idPerson), true, 'Přerušení pracovního poměru bylo uzavřeno.');
+        hr_audit_form_finish(hr_pracovni_pomer_url($idPerson), true, 'Přerušení pracovního poměru bylo uzavřeno.');
     } catch (Throwable $e) {
-        cb_form_finish(hr_pracovni_pomer_url($idPerson), false, cb_hr_chyba_text($e, 'Uzavření přerušení pracovního poměru', ['table' => 'hr_pracovni_preruseni']), $_POST);
+        hr_audit_form_finish(hr_pracovni_pomer_url($idPerson), false, cb_hr_chyba_text($e, 'Uzavření přerušení pracovního poměru', ['table' => 'hr_pracovni_preruseni']), $_POST);
     }
 }
 
@@ -360,7 +363,7 @@ function hr_post_pracovni_pomer_ukoncit(mysqli $db, int $zadalUser): void
         if (!is_array($typ)) {
             throw new CbUserVisibleException('Vyberte platný důvod ukončení.');
         }
-        $db->begin_transaction();
+        hr_audit_transaction_begin($db);
         $stmt = $db->prepare('INSERT INTO hr_pracovni_ukonceni (id_pracovni_vztah, id_pracovni_ukonceni_typ, datum_oznameni, datum_ukonceni, poznamka, id_user_zadal, vytvoreno) VALUES (?, ?, ?, ?, ?, ?, NOW())');
         $stmt->bind_param('iisssi', $idVztah, $idTyp, $datumOznameni, $datumUkonceni, $poznamka, $zadalUser);
         $stmt->execute();
@@ -380,14 +383,14 @@ function hr_post_pracovni_pomer_ukoncit(mysqli $db, int $zadalUser): void
             $stmt->execute();
             $stmt->close();
         }
-        $db->commit();
+        hr_audit_transaction_commit($db);
         require_once __DIR__ . '/../../common/lib/hr_user_sync.php';
         // Vyslovne ukonceni se tyka jen teto osoby, nikoliv ostatnich historickych smluv.
         cb_hr_user_sync_ukoncene($db, $idPerson);
-        cb_form_finish(hr_pracovni_pomer_url($idPerson), true, 'Ukončení pracovního poměru bylo uloženo.');
+        hr_audit_form_finish(hr_pracovni_pomer_url($idPerson), true, 'Ukončení pracovního poměru bylo uloženo.');
     } catch (Throwable $e) {
-        try { $db->rollback(); } catch (Throwable $ignored) {}
-        cb_form_finish(hr_pracovni_pomer_url($idPerson), false, cb_hr_chyba_text($e, 'Ukončení pracovního poměru', ['table' => 'hr_pracovni_ukonceni']), $_POST);
+        try { hr_audit_transaction_rollback($db); } catch (Throwable $ignored) {}
+        hr_audit_form_finish(hr_pracovni_pomer_url($idPerson), false, cb_hr_chyba_text($e, 'Ukončení pracovního poměru', ['table' => 'hr_pracovni_ukonceni']), $_POST);
     }
 }
 

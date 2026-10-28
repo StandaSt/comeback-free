@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+/* Audit HR se potvrzuje spolecne se zmenou; neuspesny pokus zustava odlisnou udalosti. */
+require_once __DIR__ . '/../hr_lib/hr_audit.php';
+
 /* Ucel: Zaklada aktivni oblasti, meni pouze jejich stav a spravuje casove prirazeni pobocek s ochranou existujicich vazeb. */
 require_once __DIR__ . '/hr_mista_zapis.php';
 
@@ -10,7 +13,7 @@ function hr_oblast_ulozit(mysqli $db, int $id, string $nazev, bool $aktivni): vo
     if (!cb_hr_nastaveni_ma_pravo()) throw new CbUserVisibleException('Nemáte právo spravovat oblasti.');
     $nazev=trim($nazev);
     if ($id<0 || ($id===0 && ($nazev==='' || mb_strlen($nazev)>100))) throw new CbUserVisibleException('Zadejte platný název oblasti.');
-    $db->begin_transaction();
+    hr_audit_transaction_begin($db);
     try {
         // Stejny zamek serializuje deaktivaci oblasti s presunem pobocky a zapisovaci kontrolou osob.
         $db->query('SELECT id_oblast_prace FROM cis_oblast_prace ORDER BY id_oblast_prace FOR UPDATE')->free();
@@ -31,8 +34,8 @@ function hr_oblast_ulozit(mysqli $db, int $id, string $nazev, bool $aktivni): vo
             $kod='oblast_'.bin2hex(random_bytes(8));
             $stmt=$db->prepare('INSERT INTO cis_oblast_prace(kod,nazev,aktivni) VALUES(?,?,1)'); $stmt->bind_param('ss',$kod,$nazev);
         }
-        $stmt->execute(); $stmt->close(); $db->commit();
-    } catch (Throwable $e) { $db->rollback(); throw $e; }
+        $stmt->execute(); $stmt->close(); hr_audit_transaction_commit($db);
+    } catch (Throwable $e) { hr_audit_transaction_rollback($db); throw $e; }
 }
 
 // Presun pobocky je nova casova verze; nelze jim zneplatnit MAIN lidi s oblastnim mistem vykonu prace.
@@ -40,7 +43,7 @@ function hr_pobocka_oblast_ulozit(mysqli $db, int $branch, int $region, string $
 {
     if (!cb_hr_nastaveni_ma_pravo()) throw new CbUserVisibleException('Nemáte právo spravovat oblasti.');
     $firms=implode(',',array_map('intval',cb_firemni_pristup_firmy($db,$idUser)))?:'0';
-    $db->begin_transaction();
+    hr_audit_transaction_begin($db);
     try {
         $db->query('SELECT id_oblast_prace FROM cis_oblast_prace ORDER BY id_oblast_prace FOR UPDATE')->free();
         $stmt=$db->prepare("SELECT id_pob FROM pobocka WHERE id_pob=? AND aktivni=1 AND id_firma IN ($firms) FOR UPDATE");
@@ -57,7 +60,7 @@ function hr_pobocka_oblast_ulozit(mysqli $db, int $branch, int $region, string $
                 $current=$row;
             }
         }
-        if ($current && (int)$current['id_oblast_prace']===$region) { $db->commit(); return; }
+        if ($current && (int)$current['id_oblast_prace']===$region) { hr_audit_transaction_commit($db); return; }
         if ($current) {
             $key=(int)$current['id_pobocka_oblast_prace'];
             if ($current['platnost_od']===$od) $db->query("UPDATE pobocka_oblast_prace SET platny=0,zruseno=NOW() WHERE id_pobocka_oblast_prace=$key");
@@ -74,6 +77,6 @@ function hr_pobocka_oblast_ulozit(mysqli $db, int $branch, int $region, string $
             AND (m.platnost_do IS NULL OR m.platnost_do>=?)');
         $stmt->bind_param('is',$branch,$od); $stmt->execute(); $people=$stmt->get_result()->fetch_all(MYSQLI_ASSOC); $stmt->close();
         foreach ($people as $person) { cb_hr_osobu_zamkni($db,(int)$person['id_person']); hr_mista_over_casovou_osu($db,(int)$person['id_person'],$od); }
-        $db->commit();
-    } catch (Throwable $e) { $db->rollback(); throw $e; }
+        hr_audit_transaction_commit($db);
+    } catch (Throwable $e) { hr_audit_transaction_rollback($db); throw $e; }
 }

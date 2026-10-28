@@ -8,6 +8,7 @@
  * Vlastní profil používá společnou delegovanou obsluhu formulářů a zobrazení hesel.
  * Sdělení správce mají společnou kartu a obsluhu náhledu příjemců i archivu.
  * Klient Restie dostava priznak jednorazove kontroly az po nacteni prihlaseneho IS.
+ * Přehled členů rolí má vlastní delegovaný skript, nezávislý na ukládání práv.
  */
 declare(strict_types=1);
 
@@ -109,6 +110,7 @@ window.CB_AKTIVITA = <?= json_encode($cbNavUserId>0 ? ['url'=>cb_root_url('index
 <script src="<?= h($cbAdministracePravaSaveJsUrl) ?>"></script>
 <?php // Bloky prav role v Administraci. ?>
 <script src="<?= h($cbAdministracePravaBlocksJsUrl) ?>"></script>
+<script src="<?= h($cbAdministraceRoleUzivateleJsUrl) ?>"></script>
 <?php // Vyhledani individualnich prav v Administraci. ?>
 <script src="<?= h($cbAdministraceIndividualSearchJsUrl) ?>"></script>
 <?php // Ulozeni individualnich prav v Administraci. ?>

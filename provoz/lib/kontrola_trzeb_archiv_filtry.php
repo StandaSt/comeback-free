@@ -1,12 +1,13 @@
 <?php
-// Vyber povolenych pobocek a strankovani archivu; kontext seznamu se zachova v detailu.
+// Výběr poboček archivu začíná všemi povolenými pobočkami; výslovný výběr se zachová v detailu.
 declare(strict_types=1);
 const CB_KT_ARCHIV_PER = [20, 50, 100, 500];
 
 // Vsechny vzdy znamena jen aktualne povolene pobocky, nikoli neomezeny dotaz.
 function cb_kt_archiv_filtry(array $input, array $branches): array
 {
-    $raw = $input['kt_pobocky'] ?? (isset($input['kt_vyber']) ? [] : (isset($input['kt_pob']) ? [$input['kt_pob']] : array_keys($branches)));
+    // Pobočka otevřené kontroly není filtrem seznamu; rozhodují pouze checkboxy archivu.
+    $raw = $input['kt_pobocky'] ?? (isset($input['kt_vyber']) ? [] : array_keys($branches));
     if (!is_array($raw)) { throw new CbUserVisibleException('Neplatný výběr poboček.'); }
     $ids = [];
     foreach ($raw as $id) {

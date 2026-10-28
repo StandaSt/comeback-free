@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+/* Audit HR se potvrzuje spolecne se zmenou; neuspesny pokus zustava odlisnou udalosti. */
+require_once __DIR__ . '/../hr_lib/hr_audit.php';
+
 /* Spravuje ciselniky pod pravem 319, zachovava historii a role; test prava nesmi pouzit skutecnou adminskou roli. Typ funkce oddeluje provozni funkce od manazerskych pozic. */
 require_once __DIR__ . '/../../common/lib/prebrani_prav.php';
 
@@ -69,7 +72,7 @@ function hr_ciselnik_ulozit(mysqli $db, string $typ, int $id, string $nazev, boo
         if ((int)($lock[0] ?? 0) !== 1) throw new CbUserVisibleException('Číselník právě upravuje jiný uživatel. Opakujte uložení.');
     }
     try {
-        if ($ownTransaction) $db->begin_transaction();
+        if ($ownTransaction) hr_audit_transaction_begin($db);
         $old = null;
         if ($id > 0) {
             $stmt = $db->prepare("SELECT * FROM {$table} WHERE {$pk}=? FOR UPDATE");
@@ -90,7 +93,7 @@ function hr_ciselnik_ulozit(mysqli $db, string $typ, int $id, string $nazev, boo
         // Opakovane ulozeni nezmenene polozky nevytvari zapis ani auditni sum.
         if ($old && $nazev === (string)$old[$nameColumn] && (int)$aktivni === (int)$old['aktivni']
             && ($typ === 'slot' || ($idRole === (int)$old['id_role'] && $zarazeni===$old['zarazeni']))) {
-            if ($ownTransaction) $db->commit();
+            if ($ownTransaction) hr_audit_transaction_commit($db);
             return ['id'=>$id,'nazev'=>$nazev,'aktivni'=>(int)$aktivni,'id_role'=>$idRole,'zarazeni'=>$zarazeni];
         }
         $stmt = $db->prepare("SELECT 1 FROM {$table} WHERE {$nameColumn}=? AND {$pk}<>? LIMIT 1");
@@ -131,16 +134,18 @@ function hr_ciselnik_ulozit(mysqli $db, string $typ, int $id, string $nazev, boo
                 hr_pristupovy_profil_synchronizovat($db,(int)$person['id_person'],$actor);
             }
         }
-        // Zaznam autora a puvodnich/novych hodnot patri do stejne transakce jako ciselnik.
-        $actorUser = hr_current_user_id();
-        $oldJson = $old ? json_encode($old, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) : null;
-        $newJson = json_encode(['nazev'=>$nazev,'aktivni'=>$stav,'id_role'=>$typ === 'funkce' ? $idRole : null,'zarazeni'=>$zarazeni], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
-        $stmt = $db->prepare("INSERT INTO user_akce_new (id_user,id_modul,id_user_akce_typ,objekt,id_objektu,hodnota_old,hodnota_new,detail_json) VALUES (?,3,14,?,?,?,?, '{\"zdroj\":\"hr_ciselniky\"}')");
-        $stmt->bind_param('isiss', $actorUser, $table, $id, $oldJson, $newJson);
-        $stmt->execute(); $stmt->close();
-        if ($ownTransaction) $db->commit();
+        // Formulář již zapisuje společný audit. Samostatný volající zachová původní audit ve své transakci.
+        if (!hr_audit_aktivni($db)) {
+            $actorUser = hr_current_user_id();
+            $oldJson = $old ? json_encode($old, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) : null;
+            $newJson = json_encode(['nazev'=>$nazev,'aktivni'=>$stav,'id_role'=>$typ === 'funkce' ? $idRole : null,'zarazeni'=>$zarazeni], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+            $stmt = $db->prepare("INSERT INTO user_akce_new (id_user,id_modul,id_user_akce_typ,objekt,id_objektu,hodnota_old,hodnota_new,detail_json) VALUES (?,3,14,?,?,?,?, '{\"zdroj\":\"hr_ciselniky\"}')");
+            $stmt->bind_param('isiss', $actorUser, $table, $id, $oldJson, $newJson);
+            $stmt->execute(); $stmt->close();
+        }
+        if ($ownTransaction) hr_audit_transaction_commit($db);
     } catch (Throwable $e) {
-        if ($ownTransaction) $db->rollback();
+        if ($ownTransaction) hr_audit_transaction_rollback($db);
         throw $e;
     } finally {
         if ($ownTransaction) $db->query("SELECT RELEASE_LOCK('hr_ciselniky_sprava')");
@@ -156,17 +161,17 @@ function hr_ciselnik_davka_ulozit(mysqli $db, string $typ, array $rows): array
     $lock = $db->query("SELECT GET_LOCK('hr_ciselniky_sprava',5)")->fetch_row();
     if ((int)($lock[0] ?? 0) !== 1) throw new CbUserVisibleException('Číselník právě upravuje jiný uživatel. Opakujte uložení.');
     try {
-        $db->begin_transaction();
+        hr_audit_transaction_begin($db);
         $saved = []; $seen = [];
         foreach ($rows as $row) {
             if (!is_array($row) || (int)($row['id'] ?? 0) <= 0 || isset($seen[(int)$row['id']])) throw new CbUserVisibleException('Neplatná nebo opakovaná položka.');
             $id = (int)$row['id']; $seen[$id] = true;
             $saved[] = hr_ciselnik_ulozit($db, $typ, $id, (string)($row['nazev'] ?? ''), (int)($row['aktivni'] ?? 0) === 1, (int)($row['id_role'] ?? 0), false, isset($row['zarazeni'])?(string)$row['zarazeni']:null);
         }
-        $db->commit();
+        hr_audit_transaction_commit($db);
         return $saved;
     } catch (Throwable $e) {
-        $db->rollback();
+        hr_audit_transaction_rollback($db);
         throw $e;
     } finally {
         $db->query("SELECT RELEASE_LOCK('hr_ciselniky_sprava')");

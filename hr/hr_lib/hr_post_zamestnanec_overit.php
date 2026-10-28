@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+/* Audit HR se potvrzuje spolecne se zmenou; neuspesny pokus zustava odlisnou udalosti. */
+require_once __DIR__ . '/hr_audit.php';
+
 // Ucel: Overeni karty vyzaduje doplnene udaje a bezchybne mista, MAIN, sloty a pozici.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
@@ -27,13 +30,13 @@ function hr_post_zamestnanec_overit(mysqli $db): void
         if ($updated !== 1) {
             throw new CbUserVisibleException('Kartu nelze ověřit nebo již byla ověřena.');
         }
-        cb_form_finish(
+        hr_audit_form_finish(
             cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson)),
             true,
             'Zaměstnanec byl ověřen.'
         );
     } catch (Throwable $e) {
-        cb_form_finish(
+        hr_audit_form_finish(
             cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$idPerson)),
             false,
             cb_hr_chyba_text($e, 'Ověření zaměstnance', ['table' => 'hr_person']),
