@@ -1,4 +1,4 @@
-// Obnovuje jednotlivé bloky a pravidelná online data; místní období zachovává i více vybraných poboček.
+// Obnovuje bloky a online data; automatickou kontrolu reportů omezuje na 23:00–03:45, místní období zachovává pobočky.
 (function () {
   'use strict';
 
@@ -117,18 +117,28 @@
   });
 
   var periodicBlocks = {
-    // Prubezne zadane reporty i uzaverka v 05:00 se projevi bez rucni obnovy stranky.
+    // Reporty kontrolujeme po 30 sekundách pouze v nočním okně jejich zadávání.
     denni_report_prehled: { interval: 30 * 1000, lastRefresh: Date.now(), running: false },
     uzivatele_online: { interval: 30 * 1000, lastRefresh: Date.now(), running: false },
     objednavky_online: { interval: 10 * 60 * 1000, lastRefresh: Date.now(), running: false }
   };
 
+  // Časové okno patří provozu v Praze, nezávisí na časovém pásmu počítače uživatele.
+  var reportRefreshClock = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Prague', hourCycle: 'h23', hour: '2-digit', minute: '2-digit'
+  });
+
+  // Automatická obnova reportů běží od 23:00 včetně celé minuty 03:45; ruční obnova používá vlastní vstup.
   function refreshPeriodicBlock(blockName, force) {
     var state = periodicBlocks[blockName];
     var block = document.querySelector('[data-gn="1"][data-pp-block="' + blockName + '"]');
     var now = Date.now();
     if (!state || !(block instanceof HTMLElement) || state.running) {
       return;
+    }
+    if (blockName === 'denni_report_prehled') {
+      var pragueTime = reportRefreshClock.format(now);
+      if (pragueTime > '03:45' && pragueTime < '23:00') return;
     }
     if (!force && (now - state.lastRefresh) < state.interval) {
       return;

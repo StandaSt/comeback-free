@@ -1,4 +1,4 @@
-// Graf online objednavek s tooltipem pod prislusnym sloupcem tesne pod nazvy pobocek; udaje sklada v ceskem formatu.
+// Graf online objednávek s tooltipem pod sloupci; názvy natáčí pouze při nedostatku místa pro skutečnou šířku textů.
 'use strict';
 
 (function (w) {
@@ -13,6 +13,19 @@
     containLabel: true
   };
   const MINI_SLOUPEC_BAR_MAX_WIDTH = 88;
+
+  // Sousední názvy potřebují součet svých polovin a malý odstup; krajní se musejí vejít do okrajů grafu.
+  function horizontalLabelsWidth(labels) {
+    const context = document.createElement('canvas').getContext('2d');
+    if (!context || labels.length === 0) return 0;
+    context.font = '12px sans-serif';
+    const widths = labels.map(label => context.measureText(label).width);
+    let step = Math.max(widths[0], widths[widths.length - 1]);
+    for (let index = 1; index < widths.length; index += 1) {
+      step = Math.max(step, (widths[index - 1] + widths[index]) / 2);
+    }
+    return Math.ceil((step + 8) * labels.length + MINI_SLOUPEC_GRID.left + MINI_SLOUPEC_GRID.right);
+  }
 
   function formatInt(value) {
     const intValue = Math.round(Number(value) || 0);
@@ -92,7 +105,7 @@
       return payloadValue > 0 ? payloadValue : stackValue;
     });
     const trzba = labels.map((label, index) => Number(trzbaRaw[index] || 0) || 0);
-    return {
+    const option = {
       grid: MINI_SLOUPEC_GRID,
       tooltip: {
         trigger: 'axis',
@@ -133,7 +146,9 @@
         data: labels,
         axisLabel: {
           interval: 0,
-          rotate: labels.length > 6 ? 20 : 0
+          fontSize: 12,
+          fontFamily: 'sans-serif',
+          rotate: 0
         }
       },
       yAxis: [
@@ -239,6 +254,14 @@
             show: false
           }
         }
+      ]
+    };
+    // Media pravidlo se znovu vyhodnotí i při chart.resize(), bez dalšího posluchače nebo pevného počtu poboček.
+    return {
+      baseOption: option,
+      media: [
+        { query: { maxWidth: horizontalLabelsWidth(labels) }, option: { xAxis: { axisLabel: { rotate: 20 } } } },
+        { option: { xAxis: { axisLabel: { rotate: 0 } } } }
       ]
     };
   });

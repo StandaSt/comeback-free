@@ -1,5 +1,5 @@
 <?php
-// Připravuje pouze čtením osobní štítky hlavičky; obsazení směn uvádí křestním jménem a příjmením bez prostředních jmen.
+// Připravuje pouze čtením osobní štítky hlavičky; od 08:00 ukazuje ranní nástupy, časy a zdroj směn, poslední tým drží do 04:00.
 declare(strict_types=1);
 require_once __DIR__ . '/../db/db_user_pobocka.php';
 require_once __DIR__ . '/smeny_verejny_zdroj.php';
@@ -56,7 +56,7 @@ function cb_hlavicka_provoz(mysqli $db, array $branches): array
     return [$tag];
 }
 
-/** Vedoucí vidí obsazení restaurací se jmény a sloty; zaměstnanci pouze vlastní budoucí směnu. */
+/** Vedoucí od 08:00 vidí i nástupy v 10 a 11, poslední tým do 04:00; zaměstnanci pouze vlastní budoucí směnu. */
 function cb_hlavicka_smeny(mysqli $db, int $user, array $branches, DateTimeImmutable $now): array
 {
     $ids=implode(',',array_map('intval',array_column($branches,'id_pob')));
@@ -67,35 +67,58 @@ function cb_hlavicka_smeny(mysqli $db, int $user, array $branches, DateTimeImmut
     $manager=$management && cb_pravo_ma(403);
     $time=$now->format('Y-m-d H:i:s');
     if($manager){
+        // Hranice patří pouze tomuto přehledu: po půlnoci držíme předchozí odpoledne, v 04:00 jej opustíme.
+        $dayStart=$now->setTime(4,0);
+        if($now<$dayStart)$dayStart=$dayStart->modify('-1 day');
+        $shiftDate=$dayStart->format('Y-m-d');
+        // Ranní tým lze prohlížet už od osmi; nástupy v jedenáct z náhledu v deset nezmizí.
+        $opening=$now->setTime(10,0);
+        $morningPreview=(int)($now>=$now->setTime(8,0) && $now<$now->setTime(11,0));
         // Levé spojení ponechá i neobsazené restaurace; Výrobu určuje stabilní kód pobočky.
         // Jméno bereme z posledního platného osobního záznamu, pozici ze skutečného slotu směny.
-        $stmt=$db->prepare("SELECT b.id_pob,b.nazev,team.id_person,team.id_slot,team.jmeno,team.prijmeni
+        // Poslední nástup určí odpolední tým pro danou pozici; zahrneme i dlouhou směnu přes tento nástup.
+        $stmt=$db->prepare("SELECT b.id_pob,b.nazev,team.id_person,team.id_slot,team.jmeno,team.prijmeni,team.zacatek,team.konec,team.zdroj
             FROM pobocka b LEFT JOIN (
-                SELECT s.id_pob,s.id_person,s.id_slot,ou.jmeno,ou.prijmeni
+                SELECT s.id_pob,s.id_person,s.id_slot,ou.jmeno,ou.prijmeni,s.zacatek,s.konec,s.zdroj
                 FROM ($source) s JOIN hr_person p ON p.id_person=s.id_person
+                LEFT JOIN (SELECT closing.id_pob,closing.id_slot,MAX(closing.zacatek) posledni_nastup
+                    FROM ($source) closing JOIN hr_person closing_person ON closing_person.id_person=closing.id_person
+                    WHERE closing.datum=? AND closing.id_pob IN ($ids) AND closing_person.aktivni=1 AND closing_person.testovaci=0
+                    GROUP BY closing.id_pob,closing.id_slot) last_team
+                    ON last_team.id_pob=s.id_pob AND last_team.id_slot=s.id_slot
                 LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje=(
                     SELECT MAX(o.id_osobni_udaje) FROM hr_osobni_udaje o WHERE o.id_person=p.id_person AND o.platny=1)
-                WHERE s.id_pob IN ($ids) AND p.aktivni=1 AND p.testovaci=0 AND s.zacatek<=? AND s.konec>?
+                WHERE s.id_pob IN ($ids) AND p.aktivni=1 AND p.testovaci=0
+                    AND ((s.zacatek<=? AND (s.konec>? OR (s.datum=? AND s.konec>last_team.posledni_nastup)))
+                        OR (?=1 AND s.datum=? AND s.cas_od IN ('10:00:00','11:00:00')))
             ) team ON team.id_pob=b.id_pob
             WHERE b.id_pob IN ($ids) AND b.kod<>'Vyroba'
-            ORDER BY b.id_pob,team.prijmeni,team.id_person");
-        $stmt->bind_param('ss',$time,$time);$stmt->execute();$rows=$stmt->get_result()->fetch_all(MYSQLI_ASSOC);$stmt->close();
+            ORDER BY b.id_pob,team.prijmeni,team.id_person,team.zacatek");
+        $stmt->bind_param('ssssis',$shiftDate,$time,$time,$shiftDate,$morningPreview,$shiftDate);$stmt->execute();$rows=$stmt->get_result()->fetch_all(MYSQLI_ASSOC);$stmt->close();
         if($rows===[])return [];
         $people=[];$byBranch=[];
         foreach($rows as $row){
             $branch=(int)$row['id_pob'];
-            $byBranch[$branch]??=['name'=>$row['nazev'],1=>[],2=>[]];
+            $byBranch[$branch]??=['name'=>$row['nazev'],'source'=>'',1=>[],2=>[]];
             $person=(int)($row['id_person']??0);
             if($person<=0)continue;
-            $people[$person]=true;
+            // Označení vychází ze skutečně vybraných zveřejněných směn; starý zdroj zůstává bez textu.
+            if((int)$row['zdroj']===2)$byBranch[$branch]['source']='IS';
+            // Budoucí ranní nástup patří do tooltipu, do počtu probíhajících směn až od skutečného začátku.
+            if((string)$row['zacatek']<=$time)$people[$person]=true;
             $slot=(int)$row['id_slot'];
             // Další křestní jména vynecháme i tehdy, když jsou uložená přímo v poli jmeno.
             $firstName=preg_split('/\s+/u',trim((string)$row['jmeno']),2)[0]??'';
-            if(in_array($slot,[1,2],true))$byBranch[$branch][$slot][$person]=trim($firstName.' '.(string)$row['prijmeni'])?:'—';
+            // Klíč zachová více různých směn stejné osoby; počet lidí zůstává počtem unikátních osob.
+            $shiftKey=$person.':'.(string)$row['zacatek'].':'.(string)$row['konec'];
+            if(in_array($slot,[1,2],true))$byBranch[$branch][$slot][$shiftKey]=
+                (trim($firstName.' '.(string)$row['prijmeni'])?:'—').' '.cb_format('t',$row['zacatek']).'-'.cb_format('t',$row['konec']);
         }
-        $table=[['Pobočka','Pizzař','Kurýr']];
-        foreach($byBranch as $branch)$table[]=[$branch['name'],implode("\n",$branch[1])?:'—',implode("\n",$branch[2])?:'—'];
-        return [cb_hlavicka_stitek('Ve směně '.count($people).' '.(count($people)===1?'člověk':(count($people)<5&&count($people)>0?'lidé':'lidí')),
+        $table=[['Pobočka','Pizzař','Kurýr','Zdroj']];
+        foreach($byBranch as $branch)$table[]=[$branch['name'],implode("\n",$branch[1])?:'—',implode("\n",$branch[2])?:'—',$branch['source']];
+        $label=$morningPreview && $now<$opening ? 'Směna začne v 10 hod.'
+            : 'Ve směně '.count($people).' '.(count($people)===1?'člověk':(count($people)<5&&count($people)>0?'lidé':'lidí'));
+        return [cb_hlavicka_stitek($label,
             "Přehled aktuálního obsazení směn.\nJde o naplánované směny, není to doložená docházka.",$table)];
     }
     $stmt=$db->prepare("SELECT s.zacatek,s.konec,b.nazev FROM ($source) s JOIN pobocka b ON b.id_pob=s.id_pob

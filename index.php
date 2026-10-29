@@ -4,6 +4,7 @@
  * a casne zpracovani pozadavku pred jakymkoli HTML vystupem.
  * Jednorazovou kontrolu Restie po loginu vyrizuje az samostatny pozadavek nacteneho IS.
  * Samostatny blok Objednavek overuje pravo 220; objednavkovy blok Prehledu pouziva svou puvodni cestu.
+ * Otazku na umisteni pobockoveho PC predava samostatnemu vstupu pred zobrazenim IS.
  */
 declare(strict_types=1);
 
@@ -98,6 +99,10 @@ if (!empty($_SESSION['login_ok'])) {
 if (!empty($_SESSION['login_ok']) && cb_crf_zapisova_metoda()) {
     cb_crf_vyzaduj();
 }
+
+// Potvrzeni PC ma vlastni vstup, kontrolu i sablonu; zde se pouze zapojuje do overene session.
+require_once __DIR__ . '/common/lib/pobockove_pc_potvrzeni.php';
+cb_pobockove_pc_vstup();
 
 // Pozadavek sdili ochranu session a CRF; opakovane nacteni nesmi zakladat dalsi kontrolu po loginu.
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
