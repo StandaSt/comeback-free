@@ -1,12 +1,15 @@
 <?php
 declare(strict_types=1);
-/* Účel: Řídí přístup a načítání modulů a společného osobního archivu sdělení; zaznamenává otevření stránky. */
+/* Samostatny E-mail se zapojuje s vlastnim pravem 800 a udalostmi navigace.
+ Účel: Řídí přístup a načítání modulů vcetne Co-Linku v PP a společného archivu; zaznamenává otevření stránky. */
 
+/** Jediny serverovy seznam modulu, ktere muze spolecna pracovni plocha nacist. */
 function cb_moduly_povolene(): array
 {
-    return ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'];
+    return ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace', 'co_link', 'email'];
 }
 
+/** Kazdy modul vcetne Co-Linku ma vlastni vstupni pravo. */
 function cb_modul_vstupni_pravo(string $module): int
 {
     return [
@@ -16,12 +19,18 @@ function cb_modul_vstupni_pravo(string $module): int
         'smeny' => 400,
         'ukoly' => 500,
         'helpdesk' => 600,
+        'co_link' => 700,
+        'email' => 800,
     ][$module] ?? 0;
 }
 
+/** Co-Link pred instalaci jeho prav zustava skryty; ostatni moduly zachovavaji stavajici kontrolu. */
 function cb_modul_ma_pristup(string $module): bool
 {
     $idPravo = cb_modul_vstupni_pravo(strtolower(trim($module)));
+    // Posta zustava skryta pred instalaci prav i pri prebrani identity.
+    if ($idPravo===800) { require_once __DIR__.'/../../email/core.php'; return em_pravo(800); }
+    if($idPravo===700 && !array_key_exists(700,$_SESSION['prava_stav']??[])) return false;
     return $idPravo > 0 && cb_pravo_ma($idPravo);
 }
 
@@ -31,6 +40,7 @@ function cb_modul_normalizuj(string $module, string $fallback = 'provoz'): strin
     return in_array($module, cb_moduly_povolene(), true) ? $module : $fallback;
 }
 
+/** Overi vstupni pravo a vykresli zvoleny modul do stejneho shellu IS. */
 function cb_modul_nacti(string $module): void
 {
     $module = cb_modul_normalizuj($module);
@@ -42,6 +52,8 @@ function cb_modul_nacti(string $module): void
         'ukoly' => $root . '/ukoly/ukoly.php',
         'helpdesk' => $root . '/helpdesk/helpdesk.php',
         'administrace' => $root . '/administrace/administrace.php',
+        'co_link' => $root . '/co_link/modul.php',
+        'email' => $root . '/email/modul.php',
     ];
 
     if (!cb_modul_ma_pristup($module)) {

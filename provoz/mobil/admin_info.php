@@ -1,6 +1,8 @@
 <?php
 // Verejny tokenizovany modal zobrazuje detail administratorske nebo systemove push zpravy bez prihlaseni do IS.
 declare(strict_types=1);
+// Jmeno odesilatele zobrazi vcetne titulu jediny zdroj osobnich udaju.
+require_once __DIR__.'/../../common/lib/osoba_jmeno.php';
 
 require_once __DIR__ . '/../../common/lib/session_boot.php';
 
@@ -13,6 +15,8 @@ function cb_admin_info_h(string $s): string
     return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+/** Token zpřístupní jediné sdělení; jméno odesílatele obsahuje aktuální titul HR osoby. */
+/** Token zpřístupní jediné sdělení; jméno odesílatele obsahuje aktuální titul HR osoby. */
 function cb_admin_info_fetch(string $token): ?array
 {
     if ($token === '') {
@@ -21,10 +25,10 @@ function cb_admin_info_fetch(string $token): ?array
 
     $stmt = db()->prepare('
         SELECT aiu.id_admin_info_user, ai.id_admin_info, ai.typ, ai.nadpis, ai.obsah, ai.vytvoreno, ai.id_odeslal,
-               u.jmeno, u.prijmeni
+               ' . cb_osoba_jmeno_sql('ai.id_odeslal') . ' AS cele_jmeno
         FROM admin_info_user aiu
         INNER JOIN admin_info ai ON ai.id_admin_info = aiu.id_admin_info
-        LEFT JOIN hr_osobni_udaje u ON u.id_person = ai.id_odeslal AND u.platny = 1
+        LEFT JOIN ' . cb_osoby_zdroj_sql() . ' u ON u.id_person = ai.id_odeslal AND u.platny = 1
         WHERE aiu.token = ?
         LIMIT 1
     ');
@@ -34,7 +38,7 @@ function cb_admin_info_fetch(string $token): ?array
 
     $stmt->bind_param('s', $token);
     $stmt->execute();
-    $stmt->bind_result($idAdminInfoUser, $idAdminInfo, $typ, $nadpis, $obsah, $vytvoreno, $idOdeslal, $jmeno, $prijmeni);
+    $stmt->bind_result($idAdminInfoUser, $idAdminInfo, $typ, $nadpis, $obsah, $vytvoreno, $idOdeslal, $celeJmeno);
     $ok = $stmt->fetch();
     $stmt->close();
 
@@ -50,7 +54,7 @@ function cb_admin_info_fetch(string $token): ?array
         'obsah' => (string)$obsah,
         'vytvoreno' => (string)$vytvoreno,
         'id_odeslal' => $idOdeslal === null ? null : (int)$idOdeslal,
-        'odeslal' => trim((string)($jmeno ?? '') . ' ' . (string)($prijmeni ?? '')),
+        'odeslal' => (string)($celeJmeno??''),
     ];
 }
 

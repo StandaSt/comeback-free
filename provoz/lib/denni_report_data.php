@@ -2,6 +2,8 @@
 // Pripravuje denni reporty vcetne rozpracovanych starsich dnu, historii a prehled s uzaverkou v 05:00; rozsah sdili mista vykonu prace a mnozinu MAIN.
 // Pobočky a očekávané reportové dny zahrnuje až od první objednávky; NULL zůstává mimo reporty.
 declare(strict_types=1);
+// Zobrazeni osob sdili aktualni HR zdroj; jmena pro parovani s Restii zustavaji bez titulu.
+require_once __DIR__.'/../../common/lib/osoba_jmeno.php';
 
 // Nacita reporty vcetne presne prestavky; stare zdroje mohou mit pouze delku.
 /* Veřejný zdroj směn respektuje publikaci celého týdne pobočky a mapování HR osoby. */
@@ -137,55 +139,23 @@ function cb_denni_report_match_courier_names(array $restiaCounts, array $kuryrOp
     return ['counts' => $counts, 'mismatches' => $mismatches, 'unmatched' => $unmatched, 'matches' => $matches];
 }
 
+/** Zachová původní surový text pro ukládání a párování, údaje načítá z jednotného zdroje. */
 function cb_denni_report_user_full_name_by_id(mysqli $conn, ?int $idUser): string
 {
-    if ($idUser === null || $idUser <= 0) {
-        return '';
-    }
-
-    $stmt = $conn->prepare('SELECT jmeno, prijmeni FROM hr_osobni_udaje WHERE id_person = ? AND platny = 1 ORDER BY id_osobni_udaje DESC LIMIT 1');
-    if ($stmt === false) {
-        return '';
-    }
-    $stmt->bind_param('i', $idUser);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $row = ($result instanceof mysqli_result) ? ($result->fetch_assoc() ?: null) : null;
-    if ($result instanceof mysqli_result) {
-        $result->free();
-    }
-    $stmt->close();
-
-    return is_array($row) ? cb_denni_report_person_full_name($row['jmeno'] ?? '', $row['prijmeni'] ?? '') : '';
+    // Tento starsi vstup slouzi i ukladani reportu; surove jmeno nesmi obsahovat zobrazovaci titul.
+    $row=cb_denni_report_user_name_parts_by_id($conn,$idUser);
+    return cb_denni_report_person_full_name($row['jmeno']??'',$row['prijmeni']??'');
 }
 
+/** Vrátí surové části jména z centrálního zdroje pro ukládání i následné zobrazení reportu. */
 function cb_denni_report_user_name_parts_by_id(mysqli $conn, ?int $idUser): array
 {
     if ($idUser === null || $idUser <= 0) {
         return ['jmeno' => '', 'prijmeni' => ''];
     }
 
-    $stmt = $conn->prepare('SELECT jmeno, prijmeni FROM hr_osobni_udaje WHERE id_person = ? AND platny = 1 ORDER BY id_osobni_udaje DESC LIMIT 1');
-    if ($stmt === false) {
-        return ['jmeno' => '', 'prijmeni' => ''];
-    }
-    $stmt->bind_param('i', $idUser);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $row = ($result instanceof mysqli_result) ? ($result->fetch_assoc() ?: null) : null;
-    if ($result instanceof mysqli_result) {
-        $result->free();
-    }
-    $stmt->close();
-
-    if (!is_array($row)) {
-        return ['jmeno' => '', 'prijmeni' => ''];
-    }
-
-    return [
-        'jmeno' => trim((string)($row['jmeno'] ?? '')),
-        'prijmeni' => trim((string)($row['prijmeni'] ?? '')),
-    ];
+    // Stejne nezformatovane udaje pouzije ulozeni, zobrazeni i vyber otevirajiciho/zavirajiciho.
+    return cb_osoby_nacist($conn,[$idUser])[$idUser]??['jmeno'=>'','prijmeni'=>'','druhe_jmeno'=>'','titul_za'=>''];
 }
 
 function cb_denni_report_current_workday_date(): DateTimeImmutable
@@ -563,6 +533,7 @@ function cb_denni_report_history_load(mysqli $conn, int $idPob, string $reportDa
             osoba.slot AS id_slot,
             COALESCE(udaje.jmeno, osoba.jmeno) AS jmeno,
             COALESCE(udaje.prijmeni, osoba.prijmeni) AS prijmeni,
+            udaje.druhe_jmeno,udaje.titul_za,
             osoba.smena_od,
             osoba.smena_do,
             osoba.pauza, osoba.pauza_od, osoba.pauza_do,
@@ -572,11 +543,7 @@ function cb_denni_report_history_load(mysqli $conn, int $idPob, string $reportDa
             osoba.vyplatit_phm,
             osoba.rozvozu_restia
         FROM reporty_is_osoby osoba
-        LEFT JOIN hr_osobni_udaje udaje ON udaje.id_osobni_udaje = (
-            SELECT MAX(nove.id_osobni_udaje)
-            FROM hr_osobni_udaje nove
-            WHERE nove.id_person = osoba.id_user AND nove.platny = 1
-        )
+        LEFT JOIN '.cb_osoby_zdroj_sql().' udaje ON udaje.id_person=osoba.id_user
         WHERE osoba.id_reportu = ?
         ORDER BY osoba.slot ASC, COALESCE(osoba.smena_od, "00:00:00") ASC,
             COALESCE(osoba.smena_do, "00:00:00") ASC,
@@ -652,11 +619,12 @@ function cb_denni_report_google_history_load(mysqli $conn, int $idPob, string $r
         return null;
     }
     $stmtPeople = $conn->prepare('
-        SELECT 0 AS id_dr_osoby, ro.id_user, ro.slot AS id_slot, ro.jmeno, ro.prijmeni,
+        SELECT 0 AS id_dr_osoby, ro.id_user, ro.slot AS id_slot, ro.jmeno, ro.prijmeni,udaje.druhe_jmeno,udaje.titul_za,
             ro.smena_od, ro.smena_do, ro.pauza, ro.odpracovano, ro.rozvozu_manual,
             ro.vlastni_vuz, ro.vyplatit_phm, ro.rozvozu_restia,
             COALESCE(hp.aktivni, 0) AS aktivni
         FROM reporty_osoby ro
+        LEFT JOIN '.cb_osoby_zdroj_sql().' udaje ON udaje.id_person=ro.id_user
         LEFT JOIN hr_person hp ON hp.id_user = ro.id_user
         WHERE ro.id_reportu = ?
         ORDER BY ro.slot ASC, COALESCE(ro.smena_od, "00:00:00") ASC,
@@ -747,10 +715,10 @@ function cb_denni_report_branch_slot_user_options(mysqli $conn, int $idPob, int 
             ou.jmeno,
             ou.prijmeni,
             TRIM(CONCAT_WS(' ', ou.jmeno, ou.prijmeni)) AS full_name,
-            TRIM(CONCAT_WS(' ', ou.prijmeni, ou.jmeno)) AS display_name
+            " . cb_osoba_jmeno_sql('ou.id_person',true) . " AS display_name
         FROM hr_person hp
         INNER JOIN user u ON u.id_user = hp.id_person
-        INNER JOIN hr_osobni_udaje ou ON ou.id_person = hp.id_person AND ou.platny = 1
+        INNER JOIN " . cb_osoby_zdroj_sql() . " ou ON ou.id_person = hp.id_person AND ou.platny = 1
         INNER JOIN " . cb_hr_pracoviste_sql($conn) . " prac ON prac.id_person = hp.id_person AND prac.platny = 1
         INNER JOIN {$slotTable} z ON z.id_person = hp.id_person AND z.platny = 1
         WHERE hp.aktivni = 1 AND prac.id_pob = ?
@@ -814,7 +782,7 @@ function cb_denni_report_shift_plan_people_rows(mysqli $conn, int $idPob, string
             0 AS rozvozu_restia
         FROM (" . cb_smeny_verejny_zdroj_sql() . ") sp
         INNER JOIN user u ON u.id_user = sp.id_user
-        INNER JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje=(SELECT MAX(o2.id_osobni_udaje) FROM hr_osobni_udaje o2 WHERE o2.id_person=sp.id_person AND o2.platny=1)
+        INNER JOIN " . cb_osoby_zdroj_sql() . " ou ON ou.id_person=sp.id_person
         WHERE sp.id_pob = ?
           AND sp.datum = ?
           AND sp.id_slot IN (1, 2)
@@ -1419,6 +1387,7 @@ function cb_denni_report_control_values(mysqli $conn, string $datumReportu, arra
     ];
 }
 
+/** Oddělí popisek s titulem od surového jména používaného při párování kurýrů s Restií. */
 function cb_denni_report_person_rows(array $draftPersonRows): array
 {
     $instorRows = [];
@@ -1431,7 +1400,7 @@ function cb_denni_report_person_rows(array $draftPersonRows): array
 
         $idSlot = (int)($row['id_slot'] ?? 0);
         $fullName = cb_denni_report_person_full_name($row['jmeno'] ?? '', $row['prijmeni'] ?? '');
-        $displayName = cb_denni_report_person_display_name($row['jmeno'] ?? '', $row['prijmeni'] ?? '');
+        $displayName = cb_osoba_jmeno($row,true);
         $personRow = [
             'id_dr_osoby' => (int)($row['id_dr_osoby'] ?? 0),
             'id_user' => (int)($row['id_user'] ?? 0),
@@ -1835,7 +1804,7 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
         $savedById = (int)($savedReport['zadal'] ?? 0);
         $savedAtRaw = trim((string)($savedReport['zadano'] ?? ''));
         $savedByParts = cb_denni_report_user_name_parts_by_id($conn, $savedById > 0 ? $savedById : null);
-        $savedByName = cb_denni_report_person_full_name($savedByParts['jmeno'] ?? '', $savedByParts['prijmeni'] ?? '');
+        $savedByName = cb_osoba_jmeno($savedByParts);
         if ($savedByName === '' && $savedById > 0) {
             $savedByName = 'ID ' . $savedById;
         }
@@ -2006,6 +1975,8 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
     } else {
         $draftPersonRows = [];
     }
+    // Seznam osob doplnime jednim dotazem; historicke texty bez vazby na ID zustavaji zachovane.
+    $draftPersonRows = cb_osoby_doplnit($conn,$draftPersonRows,'id_user');
     $reportPersonRows = cb_denni_report_person_rows($draftPersonRows);
     $instorRows = $reportPersonRows['instor'];
     $kuryrRows = $reportPersonRows['kuryr'];
@@ -2017,8 +1988,8 @@ function cb_denni_report_prepare_data(mysqli $conn, string $typ = 'prehled'): ar
     $closingId = isset($draftRow['zaviral']) ? (int)$draftRow['zaviral'] : 0;
     $openingParts = cb_denni_report_user_name_parts_by_id($conn, $openingId > 0 ? $openingId : null);
     $closingParts = cb_denni_report_user_name_parts_by_id($conn, $closingId > 0 ? $closingId : null);
-    $openingName = cb_denni_report_person_display_name($openingParts['jmeno'] ?? '', $openingParts['prijmeni'] ?? '');
-    $closingName = cb_denni_report_person_display_name($closingParts['jmeno'] ?? '', $closingParts['prijmeni'] ?? '');
+    $openingName = cb_osoba_jmeno($openingParts,true);
+    $closingName = cb_osoba_jmeno($closingParts,true);
     if ($openingName === '' && $historyReportExists) {
         $openingName = trim((string)($draftRow['oteviral_text'] ?? ''));
     }

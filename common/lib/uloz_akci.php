@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-/* Zapisuje skutecneho autora akce; pri testu prav doplni zdrojovy profil do detailu logu. */
+/* Zapisuje skutecneho autora akce vsech modulu vcetne Co-Linku a E-mailu; pri testu prav doplni zdrojovy profil do detailu logu. */
 require_once __DIR__ . '/prebrani_prav.php';
 
 require_once __DIR__ . '/../db/db_user_akce.php';
@@ -33,6 +33,8 @@ if (!function_exists('cb_user_akce_id_modul')) {
             'smeny' => 'Směny',
             'ukoly' => 'Úkoly',
             'helpdesk' => 'Helpdesk',
+            'co_link' => 'Co-Link',
+            'email' => 'E-mail',
         ];
         $fallback = [
             'administrace' => 1,
@@ -69,7 +71,8 @@ if (!function_exists('cb_user_akce_id_modul')) {
         }
 
         if ($id <= 0) {
-            $id = (int)$fallback[$module];
+            // Novy Co-Link pouziva ID z instalovaneho ciselniku, nikdy neodhadujeme jeho cislo.
+            $id = (int)($fallback[$module] ?? 0);
         }
         $cache[$module] = $id;
 

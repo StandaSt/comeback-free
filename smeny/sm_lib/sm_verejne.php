@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 /* Účel: Načítá veřejné směny a vlastní oznámení, formátuje jejich neměnný detail a stručné texty pro existující Web Push. */
 require_once __DIR__.'/../../common/lib/smeny_verejny_zdroj.php';
 
@@ -9,7 +11,7 @@ function cb_smeny_verejne_smeny(mysqli $db,string $week,int $person,array $branc
     if($all && (!cb_smeny_planovani_vidi() || $branches===[]))return [];
     if(!$all && $person<=0)return [];
     if($all)return cb_smeny_verejne_pobocky($db,$week,$branches);
-    $sql='SELECT v.*,p.nazev pobocka,cs.slot,TRIM(CONCAT_WS(" ",ou.prijmeni,ou.jmeno)) pracovnik FROM ('.cb_smeny_verejny_zdroj_sql().') v JOIN pobocka p ON p.id_pob=v.id_pob JOIN cis_slot cs ON cs.id_slot=v.id_slot LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje=(SELECT MAX(o.id_osobni_udaje) FROM hr_osobni_udaje o WHERE o.id_person=v.id_person AND o.platny=1) WHERE v.start_day=? AND v.id_person=? ORDER BY v.zacatek,p.nazev,cs.slot,pracovnik';
+    $sql='SELECT v.*,p.nazev pobocka,cs.slot,' . cb_osoba_jmeno_sql('ou.id_person',true) . ' pracovnik FROM ('.cb_smeny_verejny_zdroj_sql().') v JOIN pobocka p ON p.id_pob=v.id_pob JOIN cis_slot cs ON cs.id_slot=v.id_slot LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=v.id_person WHERE v.start_day=? AND v.id_person=? ORDER BY v.zacatek,p.nazev,cs.slot,pracovnik';
     $stmt=cb_smeny_planovani_sql($db,$sql,'si',[$week,$person]);$rows=$stmt->get_result()->fetch_all(MYSQLI_ASSOC);$stmt->close();return $rows;
 }
 
@@ -18,7 +20,7 @@ function cb_smeny_verejne_pobocky(mysqli $db,string $week,array $branches): arra
 {
     if($branches===[])return [];
     $ids=implode(',',array_map('intval',array_keys($branches)));
-    $sql='SELECT v.*,p.nazev pobocka,cs.slot,TRIM(CONCAT_WS(" ",ou.prijmeni,ou.jmeno)) pracovnik FROM ('.cb_smeny_verejny_zdroj_sql().') v JOIN pobocka p ON p.id_pob=v.id_pob JOIN cis_slot cs ON cs.id_slot=v.id_slot LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje=(SELECT MAX(o.id_osobni_udaje) FROM hr_osobni_udaje o WHERE o.id_person=v.id_person AND o.platny=1) WHERE v.start_day=? AND v.id_pob IN ('.$ids.') ORDER BY v.zacatek,p.nazev,cs.slot,pracovnik';
+    $sql='SELECT v.*,p.nazev pobocka,cs.slot,' . cb_osoba_jmeno_sql('ou.id_person',true) . ' pracovnik FROM ('.cb_smeny_verejny_zdroj_sql().') v JOIN pobocka p ON p.id_pob=v.id_pob JOIN cis_slot cs ON cs.id_slot=v.id_slot LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=v.id_person WHERE v.start_day=? AND v.id_pob IN ('.$ids.') ORDER BY v.zacatek,p.nazev,cs.slot,pracovnik';
     $stmt=cb_smeny_planovani_sql($db,$sql,'s',[$week]);$rows=$stmt->get_result()->fetch_all(MYSQLI_ASSOC);$stmt->close();return $rows;
 }
 

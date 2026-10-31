@@ -1,6 +1,7 @@
 <?php
 /*
  * Ucel souboru: Vypise CSS odkazy do head spolecne HTML kostry.
+ * Nacita take izolovane styly E-mailu pro jeho navigaci a PP.
  * Nacita globalni vzhled i styly jednotlivych modulu ve stejnem poradi jako dosud.
  */
 declare(strict_types=1);
@@ -28,4 +29,5 @@ declare(strict_types=1);
   <link rel="stylesheet" href="<?= h($cbAdministraceCssUrl) ?>">
   <?php // Styl střízlivého loaderu uvnitř PP. ?>
   <link rel="stylesheet" href="<?= h($cbPageLoaderCssUrl) ?>">
+  <link rel="stylesheet" href="<?= h(cb_root_url('email/email.css').'?v='.filemtime(__DIR__.'/../../email/email.css')) ?>">
 </head>

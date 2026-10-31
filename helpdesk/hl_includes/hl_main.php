@@ -1,6 +1,8 @@
 <?php
 // Ucel souboru: Sestavuje seznam, detailni plochu a formular HelpDesku vcetne vsech oblasti pro novy tiket.
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 require_once __DIR__ . '/../hl_lib/hl_prava.php';
 require_once __DIR__ . '/../hl_lib/hl_pages.php';
@@ -13,9 +15,10 @@ if (!function_exists('cb_helpdesk_ticket_h')) {
 }
 
 if (!function_exists('cb_helpdesk_ticket_author')) {
+    /** Autor tiketu má stejný popisek s titulem jako zprávy a mobilní detail. */
     function cb_helpdesk_ticket_author(array $row): string
     {
-        $author = trim((string)($row['jmeno'] ?? '') . ' ' . (string)($row['prijmeni'] ?? ''));
+        $author = cb_osoba_jmeno($row);
         if ($author !== '') {
             return $author;
         }
@@ -101,7 +104,7 @@ if ($isAdmin) {
     $stmtItems = $conn->prepare('
         SELECT h.id_helpdesk, h.id_user_zalozil, h.modul, h.typ, h.stav, h.verejny, h.predmet, h.vytvoreno, h.upraveno,
                h.pocet_zobrazeni, h.pocet_unikatnich_zobrazeni, h.pocet_zprav, TIMESTAMPDIFF(MINUTE, h.vytvoreno, NOW()) AS stari_minut,
-               ou.jmeno, ou.prijmeni,
+               ou.jmeno, ou.prijmeni,ou.druhe_jmeno,ou.titul_za,
                (SELECT GROUP_CONCAT(ur.id_role ORDER BY ur.id_role) FROM hr_pristupovy_profil ur WHERE ur.id_person = h.id_user_zalozil) AS role_ids,
                CASE
                    WHEN hr.id_helpdesk_read IS NULL THEN 1
@@ -115,7 +118,7 @@ if ($isAdmin) {
                      AND sw.id_user = ?
                ) AS is_watched
         FROM helpdesk h
-        LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje = (SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2 WHERE ou2.id_person = h.id_user_zalozil AND ou2.platny = 1)
+        LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=h.id_user_zalozil
         LEFT JOIN helpdesk_read hr ON hr.id_helpdesk = h.id_helpdesk AND hr.id_user = ?
         WHERE ' . $helpdeskAreaCondition . ' AND ' . $helpdeskCompanyCondition . '
         ORDER BY h.vytvoreno DESC, h.id_helpdesk DESC
@@ -125,7 +128,7 @@ if ($isAdmin) {
     $stmtItems = $conn->prepare('
         SELECT h.id_helpdesk, h.id_user_zalozil, h.modul, h.typ, h.stav, h.verejny, h.predmet, h.vytvoreno, h.upraveno,
                h.pocet_zobrazeni, h.pocet_unikatnich_zobrazeni, h.pocet_zprav, TIMESTAMPDIFF(MINUTE, h.vytvoreno, NOW()) AS stari_minut,
-               ou.jmeno, ou.prijmeni,
+               ou.jmeno, ou.prijmeni,ou.druhe_jmeno,ou.titul_za,
                (SELECT GROUP_CONCAT(ur.id_role ORDER BY ur.id_role) FROM hr_pristupovy_profil ur WHERE ur.id_person = h.id_user_zalozil) AS role_ids,
                CASE
                    WHEN hr.id_helpdesk_read IS NULL THEN 1
@@ -139,7 +142,7 @@ if ($isAdmin) {
                      AND sw.id_user = ?
                ) AS is_watched
         FROM helpdesk h
-        LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje = (SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2 WHERE ou2.id_person = h.id_user_zalozil AND ou2.platny = 1)
+        LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=h.id_user_zalozil
         LEFT JOIN helpdesk_read hr ON hr.id_helpdesk = h.id_helpdesk AND hr.id_user = ?
         WHERE ' . $helpdeskAreaCondition . ' AND ' . $helpdeskCompanyCondition . ' AND ' . $scope['sql'] . '
         ORDER BY h.vytvoreno DESC, h.id_helpdesk DESC
@@ -181,7 +184,7 @@ if (!isset($helpdeskAreas[$helpdeskSourceModule])) {
     $helpdeskSourceModule = (string)(array_key_first($helpdeskAreas) ?? '');
 }
 $helpdeskUser = $_SESSION['cb_user'] ?? [];
-$helpdeskUserName = trim((string)($helpdeskUser['name'] ?? '') . ' ' . (string)($helpdeskUser['surname'] ?? ''));
+$helpdeskUserName = cb_osoba_jmeno($helpdeskUser);
 if ($helpdeskUserName === '') {
     $helpdeskUserName = 'ID ' . (string)$idUser;
 }

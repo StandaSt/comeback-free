@@ -229,7 +229,8 @@ function cb_ai_analytik_gateway(): never
 
     if ($action === 'prompt_list') {
         $pouzeUlozene = ($input['filter'] ?? '') !== 'all';
-        $vsechnyUzivatele = !$pouzeUlozene && cb_ai_analytik_uzivatel_je_admin(db(), $idUser);
+        // Rozsirene cteni ALL sdili stejne opravneni jako detail cizi historie.
+        $vsechnyUzivatele = !$pouzeUlozene && cb_ai_analytik_muze_cist_vsechny_prompty(db(), $idUser);
         cb_ai_analytik_json(200, [
             'ok' => true,
             'prompts' => cb_ai_analytik_audit_prompty_uzivatele($idUser, $pouzeUlozene, $vsechnyUzivatele),

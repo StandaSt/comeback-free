@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 /*
  * Ucel souboru: Zobrazit uzivatele po profilech zarizeni za provozni den od 06:00,
@@ -38,7 +40,7 @@ declare(strict_types=1);
         $sql = "
             SELECT
                 p.id_person AS id_user,
-                TRIM(CONCAT_WS(' ', ou.jmeno, ou.prijmeni)) AS cele_jmeno,
+                " . cb_osoba_jmeno_sql('ou.id_person') . " AS cele_jmeno,
                 (SELECT MIN(r.id_role) FROM hr_pristupovy_profil r WHERE r.id_person = p.id_person) AS id_role,
                 MIN(ul.id_login) AS id_login,
                 MIN(ul.kdy) AS login_time,
@@ -49,7 +51,7 @@ declare(strict_types=1);
                     AND ps.last_seen >= ? THEN 1 ELSE 0 END) AS is_online
             FROM user_login ul
             INNER JOIN hr_person p ON p.id_person = ul.id_user AND p.aktivni = 1
-            INNER JOIN hr_osobni_udaje ou ON ou.id_person = p.id_person AND ou.platny = 1
+            INNER JOIN " . cb_osoby_zdroj_sql() . " ou ON ou.id_person = p.id_person AND ou.platny = 1
             LEFT JOIN user_pc_session ps ON ps.id_login = ul.id_login AND ps.id_user = ul.id_user
             $pcBranchJoin
             LEFT JOIN user_spy spy ON spy.id_login = ul.id_login AND spy.id_user = ul.id_user

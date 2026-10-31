@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
-/* Účel: Jediný renderer menu a uživatelského zápatí; přijímá výslovný kontext modulu. */
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../lib/osoba_jmeno.php';
+/* Samostatny E-mail se zapojuje s vlastnim pravem 800 a udalostmi navigace.
+ Účel: Jediný renderer menu a uživatelského zápatí vcetne Co-Linku; přijímá výslovný kontext modulu. */
 
 if (!function_exists('cb_blok_menu_h')) {
     function cb_blok_menu_h(string $value): string
@@ -22,7 +25,7 @@ if (!function_exists('cb_render_blok_menu_user')) {
         $userRole = '-';
 
         if (is_array($user)) {
-            $fullName = trim((string)($user['name'] ?? '') . ' ' . (string)($user['surname'] ?? ''));
+            $fullName = cb_osoba_jmeno($user);
             if ($fullName !== '') {
                 $userName = $fullName;
             } else {
@@ -68,7 +71,7 @@ if (!function_exists('cb_render_blok_menu_user')) {
         $postUrl = function_exists('cb_root_url') ? cb_root_url('index.php') : 'index.php';
         $themeLevel = function_exists('cb_user_setting') ? max(0, min(6, (int)cb_user_setting('dark', 0))) : 0;
         $themeModule = $module !== '' ? $module : (defined('CB_EMBEDDED_MODULE') ? (string)constant('CB_EMBEDDED_MODULE') : (string)($GLOBALS['CURRENT_MODULE'] ?? 'provoz'));
-        if (!in_array($themeModule, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'], true)) {
+        if (!in_array($themeModule, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace', 'co_link', 'email'], true)) {
             $themeModule = 'provoz';
         }
         $profileUrl = ($themeModule === 'helpdesk')

@@ -1,5 +1,5 @@
 <?php
-// Vyhledani osob a sprava individualnich vyjimek prav jsou dostupne pouze s pravem 103.
+// Hledani osob a jejich prava zobrazuje pred oddelenym seznamem vyjimek; pristup vyzaduje pravo 103.
 declare(strict_types=1);
 if (!function_exists('cb_pravo_ma') || !cb_pravo_ma(103)) {
     http_response_code(403);
@@ -19,10 +19,10 @@ if (!function_exists('cb_pravo_ma') || !cb_pravo_ma(103)) {
             data-admin-individual-search
         >
     </div>
-    <div class="admin_individual_results" data-admin-individual-results></div>
+    <div class="admin_individual_results" data-admin-individual-results aria-live="polite"></div>
+    <div class="admin_individual_detail" data-admin-individual-detail></div>
     <section class="admin_individual_exception_users" data-admin-individual-exception-users-wrap>
         <h2>Uzivatele s vyjimkami</h2>
         <div class="admin_individual_results" data-admin-individual-exception-users></div>
     </section>
-    <div class="admin_individual_detail" data-admin-individual-detail></div>
 </div>

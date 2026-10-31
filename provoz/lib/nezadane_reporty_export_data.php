@@ -2,6 +2,8 @@
 // lib/nezadane_reporty_export_data.php * Data pro e-mailovy export nezadanych dennich reportu
 // Export obsahuje jen povinné dny od první objednávky; neotevřené pobočky vynechává.
 declare(strict_types=1);
+// Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 /* Zveřejněný interní týden má přednost před externími směnami pro celou pobočku. */
 require_once __DIR__ . '/../../common/lib/smeny_verejny_zdroj.php';
 
@@ -37,13 +39,14 @@ function cb_nezadane_reporty_export_period(string $scope): array
     ];
 }
 
+/** Načte oprávněné příjemce exportu s jejich aktuálním celým jménem a titulem. */
 function cb_nezadane_reporty_export_recipients(mysqli $conn): array
 {
     $result = $conn->query("
-        SELECT DISTINCT u.id_user, ou.jmeno, ou.prijmeni, u.email
+        SELECT DISTINCT u.id_user, ou.jmeno, ou.prijmeni,ou.druhe_jmeno,ou.titul_za, u.email
         FROM user AS u
         INNER JOIN hr_pristupovy_profil AS ur ON ur.id_person = u.id_user AND ur.id_role < 4
-        INNER JOIN hr_osobni_udaje ou ON ou.id_person = u.id_user AND ou.platny = 1
+        INNER JOIN " . cb_osoby_zdroj_sql() . " ou ON ou.id_person = u.id_user AND ou.platny = 1
         WHERE TRIM(u.email) <> ''
         ORDER BY ou.prijmeni ASC, ou.jmeno ASC, u.id_user ASC
     ");
@@ -57,7 +60,7 @@ function cb_nezadane_reporty_export_recipients(mysqli $conn): array
             }
             $recipients[] = [
                 'id_user' => (int)($row['id_user'] ?? 0),
-                'name' => trim((string)($row['jmeno'] ?? '') . ' ' . (string)($row['prijmeni'] ?? '')),
+                'name' => cb_osoba_jmeno($row),
                 'email' => $email,
             ];
         }
@@ -74,9 +77,9 @@ function cb_nezadane_reporty_export_recipient(mysqli $conn, int $idUser): ?array
     }
 
     $stmt = $conn->prepare("
-        SELECT u.id_user, ou.jmeno, ou.prijmeni, u.email
+        SELECT u.id_user, ou.jmeno, ou.prijmeni,ou.druhe_jmeno,ou.titul_za, u.email
         FROM user AS u
-        INNER JOIN hr_osobni_udaje ou ON ou.id_person = u.id_user AND ou.platny = 1
+        INNER JOIN " . cb_osoby_zdroj_sql() . " ou ON ou.id_person = u.id_user AND ou.platny = 1
         WHERE u.id_user = ?
           AND TRIM(u.email) <> ''
           AND EXISTS (
@@ -108,7 +111,7 @@ function cb_nezadane_reporty_export_recipient(mysqli $conn, int $idUser): ?array
 
     return [
         'id_user' => (int)($row['id_user'] ?? 0),
-        'name' => trim((string)($row['jmeno'] ?? '') . ' ' . (string)($row['prijmeni'] ?? '')),
+        'name' => cb_osoba_jmeno($row),
         'email' => $email,
     ];
 }
@@ -165,10 +168,10 @@ function cb_nezadane_reporty_export_rows(mysqli $conn, string $scope): array
         SELECT
             sp.datum,
             sp.id_pob,
-            TRIM(CONCAT_WS(' ', ou.jmeno, ou.prijmeni)) AS full_name,
+            " . cb_osoba_jmeno_sql('ou.id_person') . " AS full_name,
             sp.konec AS end_dt
         FROM (" . cb_smeny_verejny_zdroj_sql() . ") sp
-        INNER JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje = (SELECT MAX(o2.id_osobni_udaje) FROM hr_osobni_udaje o2 WHERE o2.id_person = sp.id_person AND o2.platny = 1)
+        INNER JOIN " . cb_osoby_zdroj_sql() . " ou ON ou.id_person=sp.id_person
         WHERE sp.id_slot = 1
           AND sp.datum >= ?
           AND sp.datum <= ?

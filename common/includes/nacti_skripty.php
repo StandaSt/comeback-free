@@ -1,10 +1,11 @@
 <?php
 /*
  * Ucel souboru: Vypise konfiguraci pro prohlizec a JS soubory spolecne HTML kostry.
+ * E-mail se inicializuje pouze ve vlastni PP a chrani rozepsane odpovedi.
  * Poradi skriptu je zavisle na soucasne aplikaci a odpovida puvodnimu rozlozeni.
  * Historie Franty ma oddelenou obsluhu zobrazeni a navratu do stranky.
  * Menu a jeho oprávnění dodává společná PHP příprava HTML šablon; konfigurace neobsahuje druhý seznam položek.
- * Směny při plném otevření použijí hotový serverový obsah; ostatní moduly si zachovávají úvodní obnovu dat.
+ * Směny a E-mail při plném otevření použijí hotový serverový obsah; ostatní moduly si zachovávají úvodní obnovu dat.
  * Vlastní profil používá společnou delegovanou obsluhu formulářů a zobrazení hesel.
  * Sdělení správce mají společnou kartu a obsluhu náhledu příjemců i archivu.
  * Klient Restie dostava priznak jednorazove kontroly az po nacteni prihlaseneho IS.
@@ -138,9 +139,11 @@ window.CB_MODULY_NAVIGACE = {
   activeMainModule: <?= json_encode($cbInitialModule, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,
   denniReportMainBranchId: <?= $cbNavMainBranchId ?>,
   <?php // Směny už byly vykreslené serverem, včetně výsledku POST. Druhý GET by zahodil flash a znovu přestavěl PP. ?>
-  initialAutoLoad: <?= $cbInitialModule === 'smeny' ? 'false' : 'true' ?>
+  initialAutoLoad: <?= in_array($cbInitialModule, ['smeny','email'], true) ? 'false' : 'true' ?>
 };
 </script>
+<?php // E-mail reaguje take na vymenu pracovni plochy. ?>
+<script src="<?= h(cb_root_url('email/email.js').'?v='.filemtime(__DIR__.'/../../email/email.js')) ?>" defer></script>
 <?php // Klientska navigace mezi moduly. ?>
 <script src="<?= h($cbModulyNavigaceJsUrl) ?>"></script>
 <?php // Responzivni chovani spolecne hlavicky a menu. ?>

@@ -1,8 +1,11 @@
 <?php
 // lib/app.php * Verze: V7 * Aktualizace: 06.05.2026
 declare(strict_types=1);
+// Zpristupni oddelene nacitani osoby a sestaveni zobrazovaneho jmena vsem modulum bez dotazu do DB.
+require_once __DIR__.'/osoba_jmeno.php';
 
-/*
+/* Samostatny E-mail se zapojuje s vlastnim pravem 800 a udalostmi navigace.
+
  * lib/app.php
  * - zadna DB logika navic
  * - PROSTREDI (LOCAL / SERVER)
@@ -11,6 +14,7 @@ declare(strict_types=1);
  * - cb_header_info(): jedno misto pro technicka data do hlavicky (bez HTML)
  * - cb_format(): jednotny format hodnot urcenych pro zobrazeni uzivateli
  * - hr_schema.php: prechod mezi starymi a novymi nazvy HR tabulek bez vypadku aplikace
+ * - Co-Link je platny modul PP i samostatny mobilni vstup ve vlastnim adresari
  */
 
 date_default_timezone_set('Europe/Prague');
@@ -66,7 +70,7 @@ if ($JE_LOCAL || $IS_CLI) {
 
 // ====== BASE_PATH (neprustrelne) ======
 // 1) Primarne z URL: root projektu (funguje i kdyz se vola /lib/*.php primo)
-$CB_MODULES = ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'];
+$CB_MODULES = ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace', 'co_link', 'email'];
 $scriptName = (string)($_SERVER['SCRIPT_NAME'] ?? '');
 $baseFromUrl = '';
 $CURRENT_MODULE = '';
@@ -224,6 +228,7 @@ function cb_login_url(): string
     return 'https://comebacks.cz/';
 }
 
+/** Vrati koren platneho modulu, vcetne mobilniho adresare Co-Linku. */
 function cb_module_url(string $module): string
 {
     global $PROSTREDI;
@@ -232,7 +237,7 @@ function cb_module_url(string $module): string
     if ($module === 'is') {
         $module = 'provoz';
     }
-    if (!in_array($module, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'], true)) {
+    if (!in_array($module, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace', 'co_link', 'email'], true)) {
         $module = 'provoz';
     }
 
@@ -244,6 +249,7 @@ function cb_module_url(string $module): string
     return 'https://comebacks.cz/' . $module . '/';
 }
 
+/** Odlisi modulovy vstup do PP od samostatneho mobilniho indexu Co-Linku. */
 function cb_module_entry_file(string $module): string
 {
     $module = strtolower(trim($module));
@@ -257,6 +263,8 @@ function cb_module_entry_file(string $module): string
         'ukoly' => 'ukoly.php',
         'helpdesk' => 'helpdesk.php',
         'administrace' => 'administrace.php',
+        'co_link' => 'modul.php',
+        'email' => 'modul.php',
         default => 'provoz.php',
     };
 }
@@ -298,6 +306,7 @@ function cb_module_asset_url(string $path, string $module = ''): string
     return rtrim(cb_module_url($module), '/') . '/' . ltrim($path, '/');
 }
 
+/** Zachova povoleny cil prihlaseni nebo uzivateluv posledni modul, vcetne Co-Linku. */
 function cb_login_target_module(): string
 {
     $module = strtolower(trim((string)($_SESSION['cb_login_target_module'] ?? '')));
@@ -307,7 +316,7 @@ function cb_login_target_module(): string
     if ($module === 'is') {
         $module = 'provoz';
     }
-    if (!in_array($module, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'], true)) {
+    if (!in_array($module, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace', 'co_link', 'email'], true)) {
         return 'provoz';
     }
 
@@ -408,6 +417,7 @@ if (!function_exists('cb_user_settings_defaults')) {
 
 if (!function_exists('cb_store_user_settings')) {
     /**
+     * Obnovi nastaveni session a prijme pouze zname moduly vcetne Co-Linku.
      * @param array<string, mixed> $values
      */
     function cb_store_user_settings(array $values): void
@@ -432,7 +442,7 @@ if (!function_exists('cb_store_user_settings')) {
         if ($aktivniModul === 'is') {
             $aktivniModul = 'provoz';
         }
-        if (!in_array($aktivniModul, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'], true)) {
+        if (!in_array($aktivniModul, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace', 'co_link', 'email'], true)) {
             $aktivniModul = 'provoz';
         }
         $data['aktivni_modul'] = $aktivniModul;

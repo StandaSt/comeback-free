@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-/* Účel: Spojí datové definice modulů s jediným rendererem menu a předem připraví menu povolených modulů bez jejich obsahu. */
+/* Samostatny E-mail ma vlastni definici menu. Účel: Spojí definice modulů vcetne Co-Linku s rendererem menu a připraví šablony povolených modulů bez jejich obsahu. */
 require_once __DIR__.'/moduly.php';
 require_once __DIR__.'/../includes/blok_menu.php';
 
@@ -14,6 +14,8 @@ function cb_menu_modulu_data(string $module, string $page = '', string $source =
         'ukoly'=>['ukoly/uk_lib/uk_menu_data.php','cb_ukoly_menu_data'],
         'helpdesk'=>['helpdesk/hl_lib/hl_menu_data.php','cb_helpdesk_menu_data'],
         'administrace'=>['administrace/admin_lib/admin_menu_data.php','cb_administrace_menu_data'],
+        'co_link'=>['co_link/menu.php','cb_co_link_menu_data'],
+        'email'=>['email/menu.php','em_menu_data'],
     ];
     if(!isset($definitions[$module])) throw new InvalidArgumentException('Neznámý modul menu.');
     [$file,$provider]=$definitions[$module];

@@ -1,6 +1,8 @@
 <?php
 // Ucel souboru: Sestavuje HelpDesk snapshot uzivatele vcetne aktualnich HR slotu.
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 // MAIN se cte ze samostatne historie; povoleni pobocek zustava v hr_pracoviste.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
@@ -17,6 +19,8 @@ function cb_helpdesk_json(array $data): string
     return '{}';
 }
 
+/** Připraví osobní popisek a role pro nový snapshot; již uložené snapshoty nepřepisuje. */
+/** Připraví osobní popisek a role pro nový snapshot; již uložené snapshoty nepřepisuje. */
 function cb_helpdesk_snapshot_load_user(mysqli $conn, int $idUser): array
 {
     $data = [
@@ -29,22 +33,22 @@ function cb_helpdesk_snapshot_load_user(mysqli $conn, int $idUser): array
     $stmt = $conn->prepare("
         SELECT
             ou.jmeno,
-            ou.prijmeni,
+            ou.prijmeni,ou.druhe_jmeno,ou.titul_za,
             GROUP_CONCAT(DISTINCT cr.role ORDER BY ur.id_role SEPARATOR ', ') AS role_nazev
         FROM hr_person hp
-        LEFT JOIN hr_osobni_udaje ou ON ou.id_person = hp.id_person AND ou.platny = 1
+        LEFT JOIN " . cb_osoby_zdroj_sql() . " ou ON ou.id_person = hp.id_person AND ou.platny = 1
         LEFT JOIN hr_pristupovy_profil ur ON ur.id_person = hp.id_person
         LEFT JOIN cis_role cr ON cr.id_role = ur.id_role
         WHERE hp.id_person = ?
-        GROUP BY hp.id_person, ou.jmeno, ou.prijmeni
+        GROUP BY hp.id_person, ou.jmeno, ou.prijmeni,ou.druhe_jmeno,ou.titul_za
         LIMIT 1
     ");
     if ($stmt instanceof mysqli_stmt) {
         $stmt->bind_param('i', $idUser);
         $stmt->execute();
-        $stmt->bind_result($jmeno, $prijmeni, $roleNazev);
+        $stmt->bind_result($jmeno, $prijmeni, $druheJmeno, $titulZa, $roleNazev);
         if ($stmt->fetch()) {
-            $celeJmeno = trim((string)$jmeno . ' ' . (string)$prijmeni);
+            $celeJmeno = cb_osoba_jmeno(['jmeno'=>$jmeno,'prijmeni'=>$prijmeni,'druhe_jmeno'=>$druheJmeno,'titul_za'=>$titulZa]);
             $data['jmeno'] = $celeJmeno;
             $data['role'] = null;
             $data['role_nazev'] = (string)$roleNazev;

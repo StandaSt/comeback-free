@@ -3,6 +3,8 @@
  * Ucel souboru: Vykresli viditelnou hlavicku aplikace z predem pripravenych dat.
  * Data pripravi common/lib/priprava_hlavicky.php; osobni stitky obnovuje hlavicka_stitky.js.
  * Pruh prebranych prav je soucasti trvale hlavicky, aby nezmizel pri vymene modulu.
+ * E-mail ma vlastni prepinac a pocet neprectenych zprav jen s pravem 800.
+ * Co-Link se prepina do PP ikonou Co s indikaci neprectenych zprav; ikona je viditelna pouze s pravem 700.
  */
 declare(strict_types=1);
 require_once __DIR__ . '/../lib/priprava_hlavicky.php';
@@ -15,12 +17,14 @@ $cbHeaderModuleAllowed = [
     'helpdesk' => cb_modul_ma_pristup('helpdesk'),
 ];
 $cbHeaderModuleDeniedText = 'Tento modul nyní nemáte povolen.';
+$cbHeaderCoLinkAllowed = $cbLoginOk && array_key_exists(700, $_SESSION['prava_stav'] ?? []) && cb_pravo_ma(700);
+$cbHeaderEmailAllowed = $cbLoginOk && cb_modul_ma_pristup('email');
 $cbHeaderMaintenanceActive = $cbLoginOk
     && is_file(__DIR__ . '/../udrzba_on.php')
     && function_exists('cb_session_admin_pro_udrzbu')
     && cb_session_admin_pro_udrzbu();
 ?>
-<header class="blok_hlavicka sirka100<?= $cbHeaderMaintenanceActive ? ' cb-maintenance-active' : '' ?>">
+<header class="blok_hlavicka sirka100<?= $cbHeaderMaintenanceActive ? ' cb-maintenance-active' : '' ?><?= $cbHeaderCoLinkAllowed ? ' cb-has-colink' : '' ?><?= $cbHeaderEmailAllowed ? ' cb-has-email' : '' ?>">
 
     <?php if ($cbLoginOk): ?>
       <div class="cb_orientation_notice" role="status" aria-live="polite">
@@ -56,6 +60,13 @@ $cbHeaderMaintenanceActive = $cbLoginOk
         <span class="head_module_tags" data-cb-header-tags="helpdesk"></span>
       </button>
 
+
+      <?php if ($cbHeaderEmailAllowed): ?>
+        <a class="head_module_link head_module_link--email<?= $cbCurrentModule === 'email' ? ' is-active' : '' ?>" href="<?= h(cb_root_url('index.php?m=email')) ?>" data-cb-module-link="1" data-cb-module="email" data-cb-email-api="<?= h(cb_root_url('email/api.php')) ?>" aria-label="E-mail" title="E-mail"><span aria-hidden="true">✉</span><span class="head_colink_unread" data-cb-email-unread hidden></span></a>
+      <?php endif; ?>
+      <?php if ($cbHeaderCoLinkAllowed): ?>
+        <a class="head_module_link head_module_link--colink<?= $cbCurrentModule === 'co_link' ? ' is-active' : '' ?>" href="<?= h(cb_root_url('index.php?m=co_link')) ?>" data-cb-module-link="1" data-cb-module="co_link" aria-label="Co-Link" title="Co-Link"><span class="head_colink_icon" aria-hidden="true">Co</span><span class="head_colink_unread" data-cb-colink-unread hidden aria-hidden="true"></span></a>
+      <?php endif; ?>
 
       <?php if ($cbHeaderMaintenanceActive): ?>
         <div class="head_update head_maintenance_status" role="status" aria-label="Údržba IS je zapnutá">

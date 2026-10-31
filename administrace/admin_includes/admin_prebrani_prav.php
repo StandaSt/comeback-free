@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 /* Kompaktni vyvojovy vyber Prebrani prav; dostupny jen normalne prihlasenemu adminovi USER 1. */
 require_once __DIR__ . '/../../common/lib/prebrani_prav.php';
@@ -14,9 +16,9 @@ $ready = cb_prebrani_prav_pripraveno(db());
     <?php if (!$ready): ?>
         <p>Nejprve je třeba vytvořit tabulku admin_new_identita připraveným SQL.</p>
     <?php else:
-        $sources = db()->query('SELECT p.id_user,CONCAT_WS(" ",o.prijmeni,o.jmeno) AS jmeno
+        $sources = db()->query('SELECT p.id_user,' . cb_osoba_jmeno_sql('o.id_person',true) . ' AS jmeno
             FROM hr_person p JOIN user u ON u.id_user=p.id_user
-            JOIN hr_osobni_udaje o ON o.id_person=p.id_person AND o.platny=1
+            JOIN ' . cb_osoby_zdroj_sql() . ' o ON o.id_person=p.id_person AND o.platny=1
             WHERE p.aktivni=1 ORDER BY o.prijmeni,o.jmeno,p.id_user'); ?>
         <form method="post" action="<?= h(cb_root_url('index.php')) ?>">
             <input type="hidden" name="cb_action" value="admin_prebrani_prav">

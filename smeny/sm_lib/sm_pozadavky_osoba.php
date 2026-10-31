@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 // Ucel: Dostupnost a HPP volno pouziji vybranou MAIN; vice MAIN nikdy nezkracujeme na nahodny zaznam.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
@@ -17,7 +19,7 @@ function cb_smeny_pozadavky_osoba(mysqli $db, ?int $idUser = null): ?array
     if (function_exists('cb_prebrani_prav_profil') && ($profile = cb_prebrani_prav_profil($idUser)) !== null) {
         $source=(int)$profile['id_user_zdroj'];
         $sourcePerson=$source>1?cb_smeny_pozadavky_osoba($db,$source):null;
-        return $sourcePerson===null?null:array_replace($sourcePerson,['id_person'=>1,'jmeno'=>trim(($sessionUser['surname']??'').' '.($sessionUser['name']??''))]);
+        return $sourcePerson===null?null:array_replace($sourcePerson,['id_person'=>1,'jmeno'=>cb_osoba_jmeno($sessionUser,true)]);
     }
     if ($idUser <= 0) {
         return null;
@@ -35,7 +37,7 @@ function cb_smeny_pozadavky_osoba(mysqli $db, ?int $idUser = null): ?array
         SELECT
             hp.id_person,
             hp.id_firma,
-            TRIM(CONCAT_WS(" ", ou.prijmeni, ou.jmeno)) AS jmeno,
+            ' . cb_osoba_jmeno_sql('ou.id_person',true) . ' AS jmeno,
             pracoviste.id_pob,
             pob.nazev AS pobocka,
             pob.end_po,
@@ -57,12 +59,8 @@ function cb_smeny_pozadavky_osoba(mysqli $db, ?int $idUser = null): ?array
                   AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE())
             ) THEN 1 ELSE 0 END AS je_hpp
         FROM hr_person hp
-        LEFT JOIN hr_osobni_udaje ou
-          ON ou.id_osobni_udaje = (
-              SELECT MAX(ou2.id_osobni_udaje)
-              FROM hr_osobni_udaje ou2
-              WHERE ou2.id_person = hp.id_person AND ou2.platny = 1
-          )
+        LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou
+          ON ou.id_person=hp.id_person
         LEFT JOIN ' . cb_hr_main_sql($db) . ' pracoviste
           ON pracoviste.id_person=hp.id_person AND pracoviste.id_pob=' . $selected . '
             AND ' . cb_hr_ucinne_sql('pracoviste') . '

@@ -1,6 +1,6 @@
 <?php
 // lib/sesn_kontrola.php * Verze: V2 * Aktualizace: 18.07.2026
-/* Overuje vazbu a platnost prihlaseni; pri jeho zruseni odstrani i testovaci prebrani prav. */
+/* Overuje vazbu a platnost prihlaseni; pri jeho zruseni odstrani i prebrani prav a odemceni e-mailovych schranek. */
 declare(strict_types=1);
 
 require_once __DIR__ . '/pc_session.php';
@@ -202,6 +202,8 @@ if (!function_exists('cb_session_forget_auth')) {
         unset($_SESSION['cb_session_fingerprint']);
         unset($_SESSION['cb_pc_token']);
         unset($_SESSION['cb_pc_session_token']);
+        // Rucne odemcena posta nesmi prezit zadny zpusob ukonceni prihlaseni do IS.
+        unset($_SESSION['email_pristup'], $_SESSION['email_pokusy'], $_SESSION['email_posledni_pokus']);
     }
 }
 

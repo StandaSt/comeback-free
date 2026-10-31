@@ -129,7 +129,9 @@ $sortColumns = [
                     <?php else: ?>
                         <?php foreach ($data['chyby'] as $chyba): ?>
                             <?php
-                            $jmeno = trim((string)($chyba['user_jmeno'] ?? '') . ' ' . (string)($chyba['user_prijmeni'] ?? ''));
+                            // Aliasy z auditu prevedeme na stejnou strukturu osobniho jmena.
+                            $jmeno = cb_osoba_jmeno(['jmeno'=>$chyba['user_jmeno']??'','prijmeni'=>$chyba['user_prijmeni']??'',
+                                'druhe_jmeno'=>$chyba['user_druhe_jmeno']??'','titul_za'=>$chyba['user_titul_za']??'']);
                             $uzivatel = $jmeno !== '' ? $jmeno : trim((string)($chyba['user_email'] ?? ''));
                             if ($uzivatel === '') {
                                 $uzivatel = !empty($chyba['id_user']) ? 'Uživatel ID ' . (string)$chyba['id_user'] : 'Systém';

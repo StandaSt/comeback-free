@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
+require_once __DIR__ . '/osoba_jmeno.php';
 // Rozsah mist vykonu prace sdileji vsechny cteci dotazy tohoto souboru.
 require_once __DIR__ . '/../lib/hr_pracoviste_main.php';
 
@@ -47,8 +49,8 @@ function cb_prebrani_prav_nacti(mysqli $db, int $source): array
         throw new CbUserVisibleException('Nejprve opusťte aktuální přebrání práv.');
     }
     $stmt = $db->prepare('SELECT p.id_person,p.id_firma,p.pristup_vsechny_pobocky,
-        CONCAT_WS(" ",o.prijmeni,o.jmeno) AS jmeno FROM hr_person p JOIN user u ON u.id_user=p.id_user
-        LEFT JOIN hr_osobni_udaje o ON o.id_person=p.id_person AND o.platny=1 WHERE p.id_user=? AND p.aktivni=1');
+        ' . cb_osoba_jmeno_sql('o.id_person',true) . ' AS jmeno FROM hr_person p JOIN user u ON u.id_user=p.id_user
+        LEFT JOIN ' . cb_osoby_zdroj_sql() . ' o ON o.id_person=p.id_person AND o.platny=1 WHERE p.id_user=? AND p.aktivni=1');
     $stmt->bind_param('i', $source);
     $stmt->execute();
     $result = $stmt->get_result();

@@ -1,15 +1,19 @@
 <?php
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
+/* Spravuje audit Franty a cteni promptu; vsechny prompty mohou cist Admin a Top manazer. */
 require_once __DIR__ . '/../lib/ai_analytik_pravidla.php';
 
+/** Přehled oprávněných uživatelů a spotřeby doplní aktuálními osobními popisky včetně titulu. */
 function cb_ai_analytik_prehled_pristupu(mysqli $conn): array
 {
     $stmt = $conn->prepare(
         'SELECT
             u.id_user,
             ou.jmeno,
-            ou.prijmeni,
+            ou.prijmeni,ou.druhe_jmeno,ou.titul_za,
             COALESCE(stat.prompty, 0) AS prompty,
             COALESCE(stat.duration_ms, 0) AS duration_ms,
             COALESCE(stat.total_tokens, 0) AS total_tokens,
@@ -42,7 +46,7 @@ function cb_ai_analytik_prehled_pristupu(mysqli $conn): array
          ) AS stat
             ON stat.id_user = u.id_user
          INNER JOIN hr_person hp ON hp.id_person = u.id_user AND hp.aktivni = 1
-         INNER JOIN hr_osobni_udaje ou ON ou.id_person = hp.id_person AND ou.platny = 1
+         INNER JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person = hp.id_person AND ou.platny = 1
          WHERE (
                 (EXISTS (
                     SELECT 1
@@ -64,7 +68,7 @@ function cb_ai_analytik_prehled_pristupu(mysqli $conn): array
     while ($row = $result->fetch_assoc()) {
         $rows[] = [
             'id_user' => (int)$row['id_user'],
-            'jmeno' => trim((string)$row['jmeno'] . ' ' . (string)$row['prijmeni']),
+            'jmeno' => cb_osoba_jmeno($row),
             'prompty' => (int)$row['prompty'],
             'duration_ms' => (int)$row['duration_ms'],
             'total_tokens' => (int)$row['total_tokens'],
@@ -275,7 +279,8 @@ function cb_ai_analytik_audit_ulozit_prompt(int $idAudit, int $idUser): bool
     return (int)($row['ulozeno'] ?? 0) === 1;
 }
 
-function cb_ai_analytik_uzivatel_je_admin(mysqli $conn, int $idUser): bool
+/** Sdilena kontrola pro seznam ALL i cteni cizi historie: Admin (1) a Top manazer (2). */
+function cb_ai_analytik_muze_cist_vsechny_prompty(mysqli $conn, int $idUser): bool
 {
     if ($idUser <= 0) {
         return false;
@@ -284,15 +289,15 @@ function cb_ai_analytik_uzivatel_je_admin(mysqli $conn, int $idUser): bool
     $stmt = $conn->prepare(
         'SELECT 1
          FROM hr_pristupovy_profil
-         WHERE id_person = ? AND id_role = 1
+         WHERE id_person = ? AND id_role IN (1, 2)
          LIMIT 1'
     );
     $stmt->bind_param('i', $idUser);
     $stmt->execute();
-    $isAdmin = $stmt->get_result()->fetch_row() !== null;
+    $muzeCistVsechny = $stmt->get_result()->fetch_row() !== null;
     $stmt->close();
 
-    return $isAdmin;
+    return $muzeCistVsechny;
 }
 
 function cb_ai_analytik_audit_prompty_uzivatele(
@@ -305,16 +310,16 @@ function cb_ai_analytik_audit_prompty_uzivatele(
         return [];
     }
 
-    // Uložené prompty jsou vždy osobní. Seznam všech uživatelů je určen pouze pro administrátorské ALL.
+    // Ulozene prompty jsou vzdy osobni; ALL zpristupnuje vsechny uzivatele Adminovi a Top manazerovi.
     $vsechnyUzivatele = $vsechnyUzivatele && !$pouzeUlozene;
     $sql = 'SELECT audit.id_ai_analytik_audit, audit.created_at, audit.model, audit.prompt, audit.ulozeno,
                    audit.duration_ms, audit.requested_output_json,
                    audit.id_user,
-                   TRIM(CONCAT_WS(\' \', ou.jmeno, ou.prijmeni)) AS user_name,
+                   ' . cb_osoba_jmeno_sql('audit.id_user') . ' AS user_name,
                    COALESCE(usage_summary.total_tokens, 0) AS total_tokens,
                    COALESCE(usage_summary.cost_usd, 0) AS cost_usd
             FROM ai_analytik_audit AS audit
-            LEFT JOIN hr_osobni_udaje AS ou ON ou.id_osobni_udaje = (SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2 WHERE ou2.id_person = audit.id_user AND ou2.platny = 1)
+            LEFT JOIN ' . cb_osoby_zdroj_sql() . ' AS ou ON ou.id_person=audit.id_user
             LEFT JOIN (
                 SELECT id_ai_analytik_audit,
                        SUM(total_tokens) AS total_tokens,

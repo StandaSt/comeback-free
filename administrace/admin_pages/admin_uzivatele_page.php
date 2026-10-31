@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 /* Jednotná obsluha filtrů je provoz/js/filtry.js. */
 
@@ -79,7 +81,7 @@ $sortUrl = static function (string $key) use ($url, $data): string {
                     ?>
                         <tr data-admin-user-row="<?= h((string)$user['id_user']) ?>">
                             <td class="cb_table_number"><?= h((string)$user['id_user']) ?></td>
-                            <td><a href="<?= h($url(['usr_id' => $isDetail ? null : (int)$user['id_user']])) ?>" data-admin-user-detail data-cb-filter-ignore="1" aria-expanded="<?= $isDetail ? 'true' : 'false' ?>"><?= h(trim((string)$user['prijmeni'] . ' ' . (string)$user['jmeno'])) ?></a></td>
+                            <td><a href="<?= h($url(['usr_id' => $isDetail ? null : (int)$user['id_user']])) ?>" data-admin-user-detail data-cb-filter-ignore="1" aria-expanded="<?= $isDetail ? 'true' : 'false' ?>"><?= h(cb_osoba_jmeno($user,true)) ?></a></td>
                             <td><?= h((string)$user['email']) ?><br><?= h((string)$user['telefon']) ?></td>
                             <td><?= h((string)$user['obchodni_jmeno']) ?></td>
                             <td><?= h((string)$user['role']) ?></td>

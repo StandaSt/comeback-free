@@ -1,11 +1,14 @@
 <?php
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/osoba_jmeno.php';
 
 /*
  * Prvni vstup do IS.
  * Resi overeni pozvanky, ulozeni lokalniho hesla a pripravu identity.
  * Dokonceni loginu muze jednorazove aktivovat vyvojove prebrani prav USER 1.
  * Dokonceny login pouze naplanuje kontrolu Restie po nacteni prihlaseneho IS.
+ * Pri novem ci dokoncenem loginu uklizi priznak obnovy registrace 2FA notifikaci.
  */
 
 require_once __DIR__ . '/duveryhodne_zarizeni.php';
@@ -20,14 +23,14 @@ function cb_prvni_vstup_user(mysqli $db, int $idUser): ?array
         SELECT
             u.id_user,
             osobni.jmeno,
-            osobni.prijmeni,
+            osobni.prijmeni,osobni.druhe_jmeno,osobni.titul_za,
             u.email,
             (SELECT t.telefon FROM hr_telefon t WHERE t.id_person = p.id_person AND t.platny = 1 AND t.hlavni = 1 ORDER BY t.id_telefon DESC LIMIT 1) AS telefon,
             p.aktivni,
             u.heslo_hash
         FROM user u
         INNER JOIN hr_person p ON p.id_person = u.id_user AND p.id_user = u.id_user
-        INNER JOIN hr_osobni_udaje osobni ON osobni.id_person = p.id_person AND osobni.platny = 1
+        INNER JOIN ' . cb_osoby_zdroj_sql() . ' osobni ON osobni.id_person = p.id_person AND osobni.platny = 1
         WHERE u.id_user = ?
         LIMIT 1
     ');
@@ -143,11 +146,15 @@ function cb_prvni_vstup_dokonci_login(mysqli $db, array $user): void
         throw new RuntimeException('Osoba je v HR neaktivní a nemůže se přihlásit do IS.');
     }
     $idUser = (int)$user['id_user'];
+    // Profil pro zobrazeni vzdy pochazi ze stejneho aktualniho HR zdroje, i po prihlaseni jinou metodou.
+    $personal = cb_osoby_nacist($db,[$idUser])[$idUser] ?? [];
     cb_session_regenerate_after_login();
     $_SESSION['cb_user'] = [
         'id_user' => $idUser,
         'name' => (string)$user['jmeno'],
         'surname' => (string)$user['prijmeni'],
+        'druhe_jmeno' => (string)($personal['druhe_jmeno'] ?? ''),
+        'titul_za' => (string)($personal['titul_za'] ?? ''),
         'email' => (string)$user['email'],
         'telefon' => (string)($user['telefon'] ?? ''),
         'active' => (bool)$user['aktivni'],
@@ -171,7 +178,7 @@ function cb_prvni_vstup_dokonci_login(mysqli $db, array $user): void
     cb_db_fill_login_info_session($db, $idUser, $idLogin);
     cb_login_load_settings_to_session($idUser);
     $_SESSION['login_ok'] = 1;
-    unset($_SESSION['cb_auth_ok'], $_SESSION['cb_2fa_token'], $_SESSION['cb_token'], $_SESSION['cb_prvni_vstup_user_id'], $_SESSION['cb_prvni_vstup_platnost_do'], $_SESSION['cb_local_login_user_id']);
+    unset($_SESSION['cb_auth_ok'], $_SESSION['cb_2fa_token'], $_SESSION['cb_token'], $_SESSION['cb_prvni_vstup_user_id'], $_SESSION['cb_prvni_vstup_platnost_do'], $_SESSION['cb_local_login_user_id'], $_SESSION['cb_2fa_obnova_registrace']);
     $_SESSION['cb_timeout_min'] = 720;
     $_SESSION['cb_session_start_ts'] = time();
     try {
@@ -190,11 +197,15 @@ function cb_prvni_vstup_dokonci_login(mysqli $db, array $user): void
 /* Zahaji lokalni login a vrati prime presmerovani pro overeni na stejnem mobilu. */
 function cb_lokalni_login_zahaj(mysqli $db, array $user, string $deviceEndpoint = ''): ?string
 {
+    unset($_SESSION['cb_2fa_obnova_registrace']);
     if ((int)($user['aktivni'] ?? 0) !== 1) {
         throw new RuntimeException('Osoba je v HR neaktivní a nemůže se přihlásit do IS.');
     }
     $idUser = (int)$user['id_user'];
-    $_SESSION['cb_user'] = ['id_user' => $idUser, 'name' => (string)$user['jmeno'], 'surname' => (string)$user['prijmeni'], 'email' => (string)$user['email'], 'telefon' => (string)($user['telefon'] ?? ''), 'active' => true, 'roles' => [], 'sloty' => []];
+    $personal = cb_osoby_nacist($db,[$idUser])[$idUser] ?? [];
+    $_SESSION['cb_user'] = ['id_user' => $idUser, 'name' => (string)$user['jmeno'], 'surname' => (string)$user['prijmeni'],
+        'druhe_jmeno'=>(string)($personal['druhe_jmeno']??''),'titul_za'=>(string)($personal['titul_za']??''),
+        'email' => (string)$user['email'], 'telefon' => (string)($user['telefon'] ?? ''), 'active' => true, 'roles' => [], 'sloty' => []];
     $_SESSION['cb_auth_ok'] = 1;
     $_SESSION['cb_local_login_user_id'] = $idUser;
     require_once __DIR__ . '/../db/db_user.php';
@@ -209,6 +220,9 @@ function cb_lokalni_login_zahaj(mysqli $db, array $user, string $deviceEndpoint 
 
     $idZarizeni = cb_duveryhodne_zarizeni_aktivni_id($db, $idUser);
     if ($idZarizeni <= 0) {
+        require_once __DIR__ . '/push_odber.php';
+        // Obnova funguje i pri novem pokusu o login po predchozim zjisteni zanikleho odberu.
+        if (cb_push_obnova_drivejsi_registrace($db, $idUser)) $_SESSION['cb_2fa_obnova_registrace'] = 1;
         return null;
     }
 

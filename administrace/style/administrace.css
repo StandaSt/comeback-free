@@ -1062,6 +1062,11 @@ button.admin_matrix_right_id:disabled{
   width:min(720px, 100%);
 }
 
+/* Pri hledani nepletou vysledky se samostatnym seznamem lidi s vyjimkami. */
+.admin_individual_exception_users[hidden]{
+  display:none;
+}
+
 .admin_individual_exception_users h2{
   margin:0;
   color:var(--cb-text-main);

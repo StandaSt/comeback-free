@@ -469,7 +469,8 @@ if (!$cbEmbeddedModule && !empty($cbInvalidUrl)) {
     $cbUserForAlert = $_SESSION['cb_user'] ?? [];
     $cbUserName = trim((string)($cbUserForAlert['name'] ?? ''));
     $cbUserSurname = trim((string)($cbUserForAlert['surname'] ?? ''));
-    $cbAlertUserName = trim($cbUserName . ' ' . $cbUserSurname);
+    // Session uchovava titul oddelene; i upozorneni pouzije stejny osobni popisek.
+    $cbAlertUserName = cb_osoba_jmeno($cbUserForAlert);
     if ($cbAlertUserName === '') {
         $cbAlertUserName = 'Neznámý uživatel';
     }

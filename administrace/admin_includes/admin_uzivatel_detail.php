@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 /* HTML detailu účtu user; používá jej plná stránka i lokální AJAXové rozbalení řádku. */
 
@@ -24,13 +26,15 @@ function cb_admin_uzivatele_navrat_url(array $source): string
     return cb_root_url('index.php?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986));
 }
 
+/** Vykreslí detail účtu; osobní popisek obsahuje titul, formulářové údaje zůstávají oddělené. */
+/** Vykreslí detail účtu; osobní popisek obsahuje titul, formulářové údaje zůstávají oddělené. */
 function cb_admin_uzivatel_detail_html(array $detail, array $lists): string
 {
     ob_start();
     ?>
     <div class="admin_user_detail_transition"><div class="admin_users_form">
         <p>Jméno, telefon, role, sloty a pobočky se spravují pouze v HR.</p>
-        <p><?= h(trim((string)$detail['jmeno'] . ' ' . (string)$detail['prijmeni'])) ?> · přihlašovací e-mail: <?= h((string)$detail['email']) ?></p>
+        <p><?= h(cb_osoba_jmeno($detail)) ?> · přihlašovací e-mail: <?= h((string)$detail['email']) ?></p>
         <p>Stav přístupu: <strong><?= !empty($detail['aktivni']) ? 'aktivní osoba v HR' : 'neaktivní osoba v HR' ?></strong></p>
         <a href="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$detail['id_person']) . '&upravit=1')) ?>">Upravit v HR</a>
     </div></div>

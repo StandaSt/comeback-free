@@ -2,6 +2,8 @@
 // Pripravuje archiv a porovnani podle role, MAIN a autorstvi; nedostupne doplnkove porovnani denniho reportu preskoci.
 // Pobočka bez první objednávky ani dny před otevřením nemají v archivu žádné řádky.
 declare(strict_types=1);
+// Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 require_once __DIR__ . '/denni_report_prava.php';
 require_once __DIR__ . '/reporty_pristup.php';
@@ -76,7 +78,7 @@ function cb_archiv_reportu_comparison_rows(mysqli $conn, int $idPob, string $rep
                 continue;
             }
             $idUser = (int)($person['id_user'] ?? 0);
-            $name = trim((string)($person['jmeno'] ?? '') . ' ' . (string)($person['prijmeni'] ?? ''));
+            $name = cb_osoba_jmeno($person);
             $key = $idUser > 0
                 ? 'user:' . $idUser . ':slot:' . $slot
                 : 'name:' . mb_strtolower($name, 'UTF-8') . ':slot:' . $slot;
@@ -156,7 +158,7 @@ function cb_archiv_reportu_comparison_rows(mysqli $conn, int $idPob, string $rep
             if ((int)($person['id_slot'] ?? 0) !== 2) {
                 continue;
             }
-            $name = trim((string)($person['jmeno'] ?? '') . ' ' . (string)($person['prijmeni'] ?? ''));
+            $name = cb_osoba_jmeno($person);
             if ($name === '') {
                 continue;
             }
@@ -195,7 +197,7 @@ function cb_archiv_reportu_comparison_rows(mysqli $conn, int $idPob, string $rep
             if ((int)($person['id_slot'] ?? 0) !== 2) {
                 continue;
             }
-            $name = trim((string)($person['jmeno'] ?? '') . ' ' . (string)($person['prijmeni'] ?? ''));
+            $name = cb_osoba_jmeno($person);
             if ($name === '') {
                 continue;
             }
@@ -327,13 +329,13 @@ function cb_archiv_reportu_data(mysqli $conn, array $input): array
         && cb_denni_report_ma_pravo(CB_DENNI_REPORT_UZAVRIT_PRAVO);
     $reportStmt = $conn->prepare('
         SELECT r.id_reportu, r.zdroj, r.id_pob, r.datum_reportu,
-            COALESCE(NULLIF(TRIM(CONCAT_WS(" ", open_ou.jmeno, open_ou.prijmeni)), ""), r.oteviral_text) AS oteviral_text,
-            COALESCE(NULLIF(TRIM(CONCAT_WS(" ", close_ou.jmeno, close_ou.prijmeni)), ""), r.zaviral_text) AS zaviral_text,
+            COALESCE(NULLIF(' . cb_osoba_jmeno_sql('open_ou.id_person') . ', ""), r.oteviral_text) AS oteviral_text,
+            COALESCE(NULLIF(' . cb_osoba_jmeno_sql('close_ou.id_person') . ', ""), r.zaviral_text) AS zaviral_text,
             ri.trzba, ri.col_pomer, pk.rozdil,
             people.hodiny_celkem, people.hodiny_instor, people.hodiny_kuryr
         FROM reporty_is r
-        LEFT JOIN hr_osobni_udaje open_ou ON open_ou.id_osobni_udaje=(SELECT MAX(ou.id_osobni_udaje) FROM hr_osobni_udaje ou WHERE ou.id_person=r.oteviral AND ou.platny=1)
-        LEFT JOIN hr_osobni_udaje close_ou ON close_ou.id_osobni_udaje=(SELECT MAX(ou.id_osobni_udaje) FROM hr_osobni_udaje ou WHERE ou.id_person=r.zaviral AND ou.platny=1)
+        LEFT JOIN ' . cb_osoby_zdroj_sql() . ' open_ou ON open_ou.id_person=r.oteviral
+        LEFT JOIN ' . cb_osoby_zdroj_sql() . ' close_ou ON close_ou.id_person=r.zaviral
         LEFT JOIN reporty_is_restia ri ON ri.id_reportu=r.id_reportu
         LEFT JOIN reporty_is_pokladna pk ON pk.id_reportu=r.id_reportu
         LEFT JOIN (

@@ -1,11 +1,15 @@
 <?php
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 /*
  * Renderuje detail globalnich prav a individualnich vyjimek jednoho uzivatele.
+ * ID a prihlasovaci email rozlisuji osoby; cislo prava je viditelne pred nazvem ve vsech modulech.
  * Barevny ctverecek rozlisuje povolujici a zakazujici vyjimku.
  */
 
+/** Spolecny renderer pro hledani i obnoveni detailu po ulozeni zobrazi cisla prav a zachova vazby na vstup modulu. */
 function cb_admin_individualni_prava_html(array $data): string
 {
     $user = $data['user'] ?? [];
@@ -17,7 +21,8 @@ function cb_admin_individualni_prava_html(array $data): string
     ob_start();
     ?>
     <div class="admin_individual_user">
-        <strong>Nastavení výjimek pro: <?= h(trim((string)($user['prijmeni'] ?? '') . ' ' . (string)($user['jmeno'] ?? ''))) ?></strong>
+        <strong>Nastavení výjimek pro: <?= h(cb_osoba_jmeno($user,true)) ?></strong>
+        <span>ID: <?= h((string)($user['id_user'] ?? '')) ?> · E-mail: <?= h((string)($user['email'] ?? '')) ?></span>
         <span>Role: <?= h((string)($user['role'] ?? '')) ?></span>
         <span>Slot: <?= h((string)($user['slot'] ?? '')) ?></span>
     </div>
@@ -66,7 +71,7 @@ function cb_admin_individualni_prava_html(array $data): string
                             ?>
                             <tr<?= $rightActive ? '' : ' class="is-inactive"' ?>>
                                 <td style="white-space:nowrap;">
-                                    <strong><?= h((string)$right['nazev']) ?></strong>
+                                    <strong><?= h((string)$idPravo . ' – ' . (string)$right['nazev']) ?></strong>
                                     <?php if ((string)$right['popis'] !== ''): ?>
                                         <span><?= h((string)$right['popis']) ?></span>
                                     <?php endif; ?>

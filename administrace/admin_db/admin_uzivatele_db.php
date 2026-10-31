@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 // Ucel rozsahu: Prehled uzivatelu cte mista vykonu prace a zobrazuje vsechny MAIN.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
@@ -70,6 +72,8 @@ function cb_admin_uzivatele_filtry(array $source): array
     ];
 }
 
+/** Načte stránkovaný přehled účtů a aktuální osobní údaje včetně titulů. */
+/** Načte stránkovaný přehled účtů a aktuální osobní údaje včetně titulů. */
 function cb_admin_uzivatele_nacti(mysqli $db, array $source): array
 {
     $slotTable = cb_hr_schema_table($db, 'slot');
@@ -95,13 +99,13 @@ function cb_admin_uzivatele_nacti(mysqli $db, array $source): array
     if ($filters['stav'] === 'aktivni') { $where[] = 'hp.aktivni=1'; }
     if ($filters['stav'] === 'neaktivni') { $where[] = 'hp.aktivni=0'; }
     $whereSql = $where === [] ? '' : ' WHERE ' . implode(' AND ', $where);
-    $fromSql = ' FROM user u INNER JOIN hr_person hp ON hp.id_person=u.id_user AND hp.id_user=u.id_user LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje=(SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2 WHERE ou2.id_person=hp.id_person AND ou2.platny=1) LEFT JOIN firma f ON f.id_firma=hp.id_firma';
+    $fromSql = ' FROM user u INNER JOIN hr_person hp ON hp.id_person=u.id_user AND hp.id_user=u.id_user LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=hp.id_person LEFT JOIN firma f ON f.id_firma=hp.id_firma';
     $count = $db->prepare('SELECT COUNT(*) AS c' . $fromSql . $whereSql);
     if ($params !== []) { $types = implode('', array_map(static fn ($value): string => is_int($value) ? 'i' : 's', $params)); $bind = [&$types]; foreach ($params as $index => $value) { $bind[] = &$params[$index]; } call_user_func_array([$count, 'bind_param'], $bind); }
     $count->execute(); $total = (int)($count->get_result()->fetch_assoc()['c'] ?? 0); $count->close();
     $pages = max(1, (int)ceil($total / $perPage)); $page = min($page, $pages); $offset = ($page - 1) * $perPage;
     $stmt = $db->prepare('
-        SELECT u.id_user,ou.jmeno,ou.prijmeni,u.email,
+        SELECT u.id_user,ou.jmeno,ou.prijmeni,ou.druhe_jmeno,ou.titul_za,u.email,
                (SELECT t.telefon FROM hr_telefon t WHERE t.id_person=hp.id_person AND t.platny=1 AND t.hlavni=1 ORDER BY t.id_telefon DESC LIMIT 1) AS telefon,
                hp.aktivni,f.obchodni_jmeno,
                COALESCE((
@@ -140,10 +144,11 @@ function cb_admin_uzivatele_nacti(mysqli $db, array $source): array
     return ['rows'=>$rows,'total'=>$total,'page'=>$page,'pages'=>$pages,'per_page'=>$perPage,'per_options'=>$perOptions,'filters'=>$filters,'sort'=>$sort,'dir'=>$dir,'first_row'=>$total === 0 ? 0 : $offset + 1,'last_row'=>min($offset + $perPage, $total)];
 }
 
+/** Detail účtu načte současné HR části jména včetně samostatného titulu. */
 function cb_admin_uzivatel_detail(mysqli $db, int $idUser): ?array
 {
     if ($idUser <= 0) { return null; }
-    $stmt = $db->prepare('SELECT u.id_user,p.id_person,p.id_firma,ou.jmeno,ou.prijmeni,u.email,(SELECT t.telefon FROM hr_telefon t WHERE t.id_person=p.id_person AND t.platny=1 AND t.hlavni=1 ORDER BY t.id_telefon DESC LIMIT 1) AS telefon,p.aktivni FROM user u INNER JOIN hr_person p ON p.id_person=u.id_user AND p.id_user=u.id_user LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje=(SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2 WHERE ou2.id_person=p.id_person AND ou2.platny=1) WHERE u.id_user=? LIMIT 1');
+    $stmt = $db->prepare('SELECT u.id_user,p.id_person,p.id_firma,ou.jmeno,ou.prijmeni,ou.druhe_jmeno,ou.titul_za,u.email,(SELECT t.telefon FROM hr_telefon t WHERE t.id_person=p.id_person AND t.platny=1 AND t.hlavni=1 ORDER BY t.id_telefon DESC LIMIT 1) AS telefon,p.aktivni FROM user u INNER JOIN hr_person p ON p.id_person=u.id_user AND p.id_user=u.id_user LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=p.id_person WHERE u.id_user=? LIMIT 1');
     $stmt->bind_param('i', $idUser); $stmt->execute(); $user=$stmt->get_result()->fetch_assoc(); $stmt->close();
     if (!is_array($user)) { return null; }
     return $user;

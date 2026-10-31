@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 /* Účel: Načte uložený týden dostupnosti V2, volbu Kdykoliv a rezervace volna HPP. */
 
@@ -17,11 +19,9 @@ function cb_smeny_pozadavky_nacist(mysqli $db, array $person, array $week): arra
     $idPerson = (int)$person['id_person'];
     $startDay = (string)$week['start_day'];
     $stmt = $db->prepare('SELECT p.id_smeny_pozadavek, p.rezim, p.volno_datum, p.ulozeno,
-        TRIM(CONCAT_WS(" ", ou.prijmeni, ou.jmeno)) AS ulozil
+        ' . cb_osoba_jmeno_sql('ou.id_person',true) . ' AS ulozil
         FROM smeny_pozadavek p
-        LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje=(
-            SELECT MAX(o.id_osobni_udaje) FROM hr_osobni_udaje o
-            WHERE o.id_person=p.ulozil_id_person AND o.platny=1)
+        LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=p.ulozil_id_person
         WHERE p.id_person=? AND p.tyden_od=? LIMIT 1');
     $stmt->bind_param('is', $idPerson, $startDay);
     $stmt->execute();

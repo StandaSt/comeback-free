@@ -1,4 +1,4 @@
-// Ovládání HelpDesku včetně filtrů seznamu, formuláře a konkrétního zobrazení serverových chyb.
+// Ovládání HelpDesku, filtrů a formuláře; jména autorů včetně titulů přebírá z jednotného serverového zdroje.
 (function () {
   'use strict';
 
@@ -509,7 +509,8 @@
       var z = zpravy[i] || {};
       var first = text(z.jmeno || '');
       var last = text(z.prijmeni || '');
-      var author = (first + ' ' + last).trim();
+      // Zobrazene jmeno vcetne titulu pripravuje stejny zdroj jako ostatni moduly.
+      var author = text(z.cele_jmeno || (first + ' ' + last).trim());
       var isAdminMessage = text(z.typ_autora || '') === 'admin';
       if (isAdminMessage) {
         author = 'Admin';

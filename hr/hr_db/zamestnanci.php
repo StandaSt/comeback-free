@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 /**
  * DB dotazy pro seznam, detail a kontrolu kompletnosti zamestnancu v HR.
@@ -41,6 +43,7 @@ function hr_fetch_employees(mysqli $db, int $limit = 100): array
             ou.jmeno,
             ou.druhe_jmeno,
             ou.prijmeni,
+            ou.titul_za,
             pv.datum_nastupu,
             pv.id_pracovni_vztah,
             pob.nazev AS pracoviste,
@@ -55,7 +58,7 @@ function hr_fetch_employees(mysqli $db, int $limit = 100): array
             ) AS zarazeni,
             pvt.nazev AS vztah_kod
         FROM hr_person p
-        LEFT JOIN hr_osobni_udaje ou
+        LEFT JOIN " . cb_osoby_zdroj_sql() . " ou
             ON ou.id_person = p.id_person
            AND ou.platny = 1
         LEFT JOIN hr_pracovni_vztah pv
@@ -129,7 +132,7 @@ function hr_fetch_employee_list(mysqli $db): array
     $pageNum = max(1, (int)($queryParams['hr_emp_p'] ?? 1));
     $sortMap = [
         'id' => 'p.id_person',
-        'zamestnanec' => "TRIM(CONCAT(COALESCE(ou.prijmeni, ''), ' ', COALESCE(ou.jmeno, ''), ' ', COALESCE(ou.druhe_jmeno, '')))",
+        'zamestnanec' => cb_osoba_jmeno_sql('ou.id_person',true),
         'zarazeni' => 'zarazeni',
         'pracoviste' => 'pracoviste',
         'vztah' => 'vztah_kod',
@@ -169,7 +172,7 @@ function hr_fetch_employee_list(mysqli $db): array
     // Soubihajici DPP/DPC patri na jednu kartu; agregace pred JOINem chrani i pocet a strankovani.
     $fromSql = "
         FROM hr_person p
-        LEFT JOIN hr_osobni_udaje ou
+        LEFT JOIN " . cb_osoby_zdroj_sql() . " ou
             ON ou.id_person = p.id_person
            AND ou.platny = 1
         LEFT JOIN (
@@ -221,7 +224,7 @@ function hr_fetch_employee_list(mysqli $db): array
     $where = ['p.id_firma IN (' . $allowedFirmySql . ')', $branchScopeSql];
     $filterSqlMap = [
         'id' => 'CAST(p.id_person AS CHAR)',
-        'zamestnanec' => "TRIM(CONCAT(COALESCE(ou.prijmeni, ''), ' ', COALESCE(ou.jmeno, ''), ' ', COALESCE(ou.druhe_jmeno, '')))",
+        'zamestnanec' => cb_osoba_jmeno_sql('ou.id_person',true),
         'zarazeni' => "COALESCE(pz.zarazeni, '')",
         'pracoviste' => "COALESCE(pp.pracoviste, '')",
         'vztah' => "COALESCE(pv.vztah_kod, '')",
@@ -276,6 +279,7 @@ function hr_fetch_employee_list(mysqli $db): array
             ou.druhe_jmeno,
             ou.prijmeni,
             pv.datum_nastupu,
+            ou.titul_za,
             pv.id_pracovni_vztah,
             pp.pracoviste,
             pp.pracoviste_hlavni,
@@ -439,29 +443,29 @@ function hr_fetch_employee_work_timeline(mysqli $db, int $idPerson): array
 {
     $sql = '
         SELECT * FROM (
-            SELECT pv.vytvoreno AS kdy, CONCAT("Nástup / změna vztahu: ", pvt.nazev) AS akce, pv.datum_nastupu AS plati_od, pv.datum_ukonceni AS plati_do, CONCAT(uu.prijmeni, " ", uu.jmeno) AS zapsal, pv.poznamka, "hr_pracovni_vztah" AS tabulka, pv.id_pracovni_vztah AS id_zaznamu
+            SELECT pv.vytvoreno AS kdy, CONCAT("Nástup / změna vztahu: ", pvt.nazev) AS akce, pv.datum_nastupu AS plati_od, pv.datum_ukonceni AS plati_do, ' . cb_osoba_jmeno_sql('uu.id_person',true) . ' AS zapsal, pv.poznamka, "hr_pracovni_vztah" AS tabulka, pv.id_pracovni_vztah AS id_zaznamu
             FROM hr_pracovni_vztah pv
             INNER JOIN hr_cis_pracovni_vztah_typ pvt ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ
-            LEFT JOIN hr_person autor ON autor.id_user = pv.id_user_zadal LEFT JOIN hr_osobni_udaje uu ON uu.id_person = autor.id_person AND uu.platny = 1
+            LEFT JOIN hr_person autor ON autor.id_user = pv.id_user_zadal LEFT JOIN ' . cb_osoby_zdroj_sql() . ' uu ON uu.id_person = autor.id_person AND uu.platny = 1
             WHERE pv.id_person = ?
             UNION ALL
-            SELECT m.vytvoreno, CONCAT("Změna mzdy: ", m.castka, " Kč / ", mt.nazev), m.platnost_od, m.platnost_do, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL, "hr_mzda", m.id_mzda
-            FROM hr_mzda m INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = m.id_pracovni_vztah INNER JOIN cis_mzda_typ mt ON mt.id_mzda_typ = m.id_mzda_typ LEFT JOIN hr_person autor ON autor.id_user = m.id_user_zadal LEFT JOIN hr_osobni_udaje uu ON uu.id_person = autor.id_person AND uu.platny = 1 WHERE pv.id_person = ?
+            SELECT m.vytvoreno, CONCAT("Změna mzdy: ", m.castka, " Kč / ", mt.nazev), m.platnost_od, m.platnost_do, ' . cb_osoba_jmeno_sql('uu.id_person',true) . ', NULL, "hr_mzda", m.id_mzda
+            FROM hr_mzda m INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = m.id_pracovni_vztah INNER JOIN cis_mzda_typ mt ON mt.id_mzda_typ = m.id_mzda_typ LEFT JOIN hr_person autor ON autor.id_user = m.id_user_zadal LEFT JOIN ' . cb_osoby_zdroj_sql() . ' uu ON uu.id_person = autor.id_person AND uu.platny = 1 WHERE pv.id_person = ?
             UNION ALL
-            SELECT u.vytvoreno, CONCAT("Změna úvazku: ", COALESCE(CONCAT(u.hodin_tydne, " h/týdně"), "neuvedeno")), u.platnost_od, u.platnost_do, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL, "hr_pracovni_uvazek", u.id_pracovni_uvazek
-            FROM hr_pracovni_uvazek u INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = u.id_pracovni_vztah LEFT JOIN hr_person autor ON autor.id_user = u.id_user_zadal LEFT JOIN hr_osobni_udaje uu ON uu.id_person = autor.id_person AND uu.platny = 1 WHERE pv.id_person = ?
+            SELECT u.vytvoreno, CONCAT("Změna úvazku: ", COALESCE(CONCAT(u.hodin_tydne, " h/týdně"), "neuvedeno")), u.platnost_od, u.platnost_do, ' . cb_osoba_jmeno_sql('uu.id_person',true) . ', NULL, "hr_pracovni_uvazek", u.id_pracovni_uvazek
+            FROM hr_pracovni_uvazek u INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = u.id_pracovni_vztah LEFT JOIN hr_person autor ON autor.id_user = u.id_user_zadal LEFT JOIN ' . cb_osoby_zdroj_sql() . ' uu ON uu.id_person = autor.id_person AND uu.platny = 1 WHERE pv.id_person = ?
             UNION ALL
-            SELECT b.vytvoreno, CONCAT("Přidán benefit: ", cb.nazev), b.platnost_od, b.platnost_do, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL, "hr_benefit", b.id_benefit
-            FROM hr_benefit b INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = b.id_pracovni_vztah INNER JOIN hr_cis_benefit cb ON cb.id_cis_benefit = b.id_cis_benefit LEFT JOIN hr_person autor ON autor.id_user = b.id_user_zadal LEFT JOIN hr_osobni_udaje uu ON uu.id_person = autor.id_person AND uu.platny = 1 WHERE pv.id_person = ?
+            SELECT b.vytvoreno, CONCAT("Přidán benefit: ", cb.nazev), b.platnost_od, b.platnost_do, ' . cb_osoba_jmeno_sql('uu.id_person',true) . ', NULL, "hr_benefit", b.id_benefit
+            FROM hr_benefit b INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = b.id_pracovni_vztah INNER JOIN hr_cis_benefit cb ON cb.id_cis_benefit = b.id_cis_benefit LEFT JOIN hr_person autor ON autor.id_user = b.id_user_zadal LEFT JOIN ' . cb_osoby_zdroj_sql() . ' uu ON uu.id_person = autor.id_person AND uu.platny = 1 WHERE pv.id_person = ?
             UNION ALL
-            SELECT b.zruseno, CONCAT("Odebrán benefit: ", cb.nazev), b.platnost_do, NULL, CONCAT(uu.prijmeni, " ", uu.jmeno), NULL, "hr_benefit", b.id_benefit
-            FROM hr_benefit b INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = b.id_pracovni_vztah INNER JOIN hr_cis_benefit cb ON cb.id_cis_benefit = b.id_cis_benefit LEFT JOIN hr_person autor ON autor.id_user = b.id_user_zrusil LEFT JOIN hr_osobni_udaje uu ON uu.id_person = autor.id_person AND uu.platny = 1 WHERE pv.id_person = ? AND b.zruseno IS NOT NULL
+            SELECT b.zruseno, CONCAT("Odebrán benefit: ", cb.nazev), b.platnost_do, NULL, ' . cb_osoba_jmeno_sql('uu.id_person',true) . ', NULL, "hr_benefit", b.id_benefit
+            FROM hr_benefit b INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = b.id_pracovni_vztah INNER JOIN hr_cis_benefit cb ON cb.id_cis_benefit = b.id_cis_benefit LEFT JOIN hr_person autor ON autor.id_user = b.id_user_zrusil LEFT JOIN ' . cb_osoby_zdroj_sql() . ' uu ON uu.id_person = autor.id_person AND uu.platny = 1 WHERE pv.id_person = ? AND b.zruseno IS NOT NULL
             UNION ALL
-            SELECT pp.vytvoreno, CONCAT("Přerušení: ", pt.nazev), pp.datum_od, pp.datum_do, CONCAT(uu.prijmeni, " ", uu.jmeno), pp.poznamka, "hr_pracovni_preruseni", pp.id_pracovni_preruseni
-            FROM hr_pracovni_preruseni pp INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = pp.id_pracovni_vztah INNER JOIN hr_cis_pracovni_preruseni_typ pt ON pt.id_pracovni_preruseni_typ = pp.id_pracovni_preruseni_typ LEFT JOIN hr_person autor ON autor.id_user = pp.id_user_zadal LEFT JOIN hr_osobni_udaje uu ON uu.id_person = autor.id_person AND uu.platny = 1 WHERE pv.id_person = ?
+            SELECT pp.vytvoreno, CONCAT("Přerušení: ", pt.nazev), pp.datum_od, pp.datum_do, ' . cb_osoba_jmeno_sql('uu.id_person',true) . ', pp.poznamka, "hr_pracovni_preruseni", pp.id_pracovni_preruseni
+            FROM hr_pracovni_preruseni pp INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = pp.id_pracovni_vztah INNER JOIN hr_cis_pracovni_preruseni_typ pt ON pt.id_pracovni_preruseni_typ = pp.id_pracovni_preruseni_typ LEFT JOIN hr_person autor ON autor.id_user = pp.id_user_zadal LEFT JOIN ' . cb_osoby_zdroj_sql() . ' uu ON uu.id_person = autor.id_person AND uu.platny = 1 WHERE pv.id_person = ?
             UNION ALL
-            SELECT pu.vytvoreno, CONCAT("Ukončení: ", put.nazev), pu.datum_ukonceni, pu.datum_ukonceni, CONCAT(uu.prijmeni, " ", uu.jmeno), pu.poznamka, "hr_pracovni_ukonceni", pu.id_pracovni_ukonceni
-            FROM hr_pracovni_ukonceni pu INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = pu.id_pracovni_vztah INNER JOIN hr_cis_pracovni_ukonceni_typ put ON put.id_pracovni_ukonceni_typ = pu.id_pracovni_ukonceni_typ LEFT JOIN hr_person autor ON autor.id_user = pu.id_user_zadal LEFT JOIN hr_osobni_udaje uu ON uu.id_person = autor.id_person AND uu.platny = 1 WHERE pv.id_person = ?
+            SELECT pu.vytvoreno, CONCAT("Ukončení: ", put.nazev), pu.datum_ukonceni, pu.datum_ukonceni, ' . cb_osoba_jmeno_sql('uu.id_person',true) . ', pu.poznamka, "hr_pracovni_ukonceni", pu.id_pracovni_ukonceni
+            FROM hr_pracovni_ukonceni pu INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = pu.id_pracovni_vztah INNER JOIN hr_cis_pracovni_ukonceni_typ put ON put.id_pracovni_ukonceni_typ = pu.id_pracovni_ukonceni_typ LEFT JOIN hr_person autor ON autor.id_user = pu.id_user_zadal LEFT JOIN ' . cb_osoby_zdroj_sql() . ' uu ON uu.id_person = autor.id_person AND uu.platny = 1 WHERE pv.id_person = ?
         ) timeline
         ORDER BY kdy DESC
     ';
@@ -669,7 +673,7 @@ function hr_fetch_employee(mysqli $db, int $id): ?array
             tel.telefon,
             em.email
         FROM hr_person p
-        LEFT JOIN hr_osobni_udaje ou
+        LEFT JOIN " . cb_osoby_zdroj_sql() . " ou
             ON ou.id_person = p.id_person
            AND ou.platny = 1
         LEFT JOIN hr_pracovni_vztah pv
@@ -737,7 +741,8 @@ function hr_normalize_employee_row(array $row): array
     $jmeno = trim((string)($row['jmeno'] ?? ''));
     $druheJmeno = trim((string)($row['druhe_jmeno'] ?? ''));
     $prijmeni = trim((string)($row['prijmeni'] ?? ''));
-    $fullName = trim($prijmeni . ' ' . trim($jmeno . ' ' . $druheJmeno));
+    // Seznam i detail pouziji stejny osobni udaj; editor nadale pracuje se samostatnymi poli.
+    $fullName = cb_osoba_jmeno($row,true);
 
     return $row + [
         'cele_jmeno' => $fullName !== '' ? $fullName : 'Bez jména',

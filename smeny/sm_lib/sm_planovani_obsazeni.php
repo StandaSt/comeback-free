@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 // Ucel rozsahu: Kandidaty urcuji mista vykonu prace; vypomoc rozsiri oblasti, nikoli prava planovace.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
@@ -14,7 +16,7 @@ function cb_smeny_planovani_kandidati(mysqli $db, array $plan, string $date, int
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/D',$date)!==1) throw new InvalidArgumentException('Neplatné datum směny.');
     $branch=(int)$plan['id_pob'];
     $places=cb_hr_mista_sql();
-    $sql = 'SELECT hp.id_person,TRIM(CONCAT_WS(" ",ou.prijmeni,ou.jmeno)) jmeno,
+    $sql = 'SELECT hp.id_person,' . cb_osoba_jmeno_sql('ou.id_person',true) . ' jmeno,
         pr.pocet ma_main,pr.nazvy hlavni_pobocka,
         EXISTS(SELECT 1 FROM ' . $places . ' misto WHERE misto.id_person=hp.id_person AND misto.id_pob=' . $branch . '
             AND ' . cb_hr_ucinne_sql('misto',"'".$date."'") . ') je_v_oblasti,
@@ -25,7 +27,7 @@ function cb_smeny_planovani_kandidati(mysqli $db, array $plan, string $date, int
         TIME_FORMAT(p.' . $closingColumn . ',"%H:%i") zavira,
         COALESCE((SELECT ROUND(SUM(TIMESTAMPDIFF(MINUTE,s.zacatek,s.konec))/60,1) FROM smeny_smena s JOIN smeny_rozpis r ON r.id_smeny_rozpis=s.id_smeny_rozpis WHERE s.id_person=hp.id_person AND r.tyden_od=? AND s.verze=COALESCE(r.pracovni_verze,r.zverejnena_verze)),0) hodin_tyden
         FROM hr_person hp
-        LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje=(SELECT MAX(o.id_osobni_udaje) FROM hr_osobni_udaje o WHERE o.id_person=hp.id_person AND o.platny=1)
+        LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=hp.id_person
         JOIN (SELECT m.id_person,COUNT(DISTINCT m.id_pob) pocet,GROUP_CONCAT(DISTINCT b.nazev ORDER BY b.nazev SEPARATOR ", ") nazvy
             FROM hr_pracoviste_main m JOIN hr_person osoba ON osoba.id_person=m.id_person
             JOIN pobocka b ON b.id_pob=m.id_pob AND b.id_firma=osoba.id_firma AND b.aktivni=1

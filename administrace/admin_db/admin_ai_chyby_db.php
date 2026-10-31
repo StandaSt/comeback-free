@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 /*
  * Datova vrstva kategorie AI analytik v Administraci.
@@ -14,10 +16,10 @@ function cb_admin_ai_chyby_nacti(mysqli $db, int $limit): array
         SELECT a.id_ai_analytik_audit, a.created_at, a.completed_at,
                a.id_user, a.model, a.duration_ms, a.status,
                a.error_type, a.error_code, a.error_message,
-               ou.jmeno, ou.prijmeni, u.email
+               ou.jmeno, ou.prijmeni,ou.druhe_jmeno,ou.titul_za, u.email
         FROM ai_analytik_audit a
         LEFT JOIN user u ON u.id_user = a.id_user
-        LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje = (SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2 WHERE ou2.id_person = a.id_user AND ou2.platny = 1)
+        LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=a.id_user
         WHERE a.status <> \'cancelled\'
           AND (
             a.error_message IS NOT NULL

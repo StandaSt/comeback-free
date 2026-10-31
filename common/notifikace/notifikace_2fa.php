@@ -1,6 +1,7 @@
 <?php
-// Odesila Web Push s uplnymi cilovymi adresami a pro administratorske zpravy pripravuje bezpecny tokenizovany detail.
+// Odesila Web Push s uplnymi cily, vyrazuje zanikle 2FA odbery a pripravuje bezpecny tokenizovany detail administratorskych zprav.
 declare(strict_types=1);
+require_once __DIR__ . '/../lib/push_odber.php';
 
 /*
  * Web Push – odeslání notifikace (server -> mobil)
@@ -218,6 +219,12 @@ function cb_push_send_2fa(int $idUser, string $token2fa): bool
             $httpStatus,
             $chyba
         );
+        // QR zaloha zustava platna; dalsi push uz zanikly odber nepouzije.
+        try {
+            cb_push_odber_vyrad_zanikly(db(), $idUser, (int)$d['id'], $d['endpoint'], $httpStatus);
+        } catch (Throwable $error) {
+            error_log('2FA: nepodarilo se vyradit zanikly odber notifikaci.');
+        }
     }
 
     return true;

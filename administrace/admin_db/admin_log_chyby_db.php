@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 /*
  * Datova vrstva kategorie Aplikacni chyby v Administraci.
@@ -129,7 +131,7 @@ function cb_admin_log_chyby_nacti(mysqli $db, array $nastaveni): array
           AND (? < 0 OR l.vyreseno = ?)
     ";
 
-    $fromSql = ' FROM log_chyby l LEFT JOIN user u ON u.id_user = l.id_user LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje = (SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2 WHERE ou2.id_person = l.id_user AND ou2.platny = 1)';
+    $fromSql = ' FROM log_chyby l LEFT JOIN user u ON u.id_user = l.id_user LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=l.id_user';
     $countStmt = $db->prepare('SELECT COUNT(*) AS celkem' . $fromSql . $where);
     if ($countStmt === false) {
         throw new RuntimeException('Nelze připravit počet chyb.');
@@ -149,7 +151,7 @@ function cb_admin_log_chyby_nacti(mysqli $db, array $nastaveni): array
             l.detail, l.soubor, l.radek, l.url, l.data_json, l.vyreseno, l.poznamka,
             c.uroven AS cis_uroven, c.oblast AS cis_oblast,
             c.popis AS cis_popis, c.hint AS cis_hint,
-            ou.jmeno AS user_jmeno, ou.prijmeni AS user_prijmeni, u.email AS user_email
+            ou.jmeno AS user_jmeno, ou.prijmeni AS user_prijmeni,ou.druhe_jmeno AS user_druhe_jmeno,ou.titul_za AS user_titul_za, u.email AS user_email
         ' . $fromSql . '
         LEFT JOIN cis_chyby c ON c.kod = l.kod AND c.aktivni = 1
         ' . $where . '

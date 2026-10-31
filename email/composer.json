@@ -1,0 +1,6 @@
+{
+    "name": "comeback/email",
+    "description": "Samostatne zavislosti e-mailoveho klienta IS Comeback",
+    "config": { "vendor-dir": "../../vendor-email", "allow-plugins": false },
+    "require": { "webklex/php-imap": "^6.2" }
+}

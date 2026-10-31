@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 /* Účel: Čte aktivní členy prvních šesti rolí a jejich dnešní pracovní zařazení, bez změny dat. */
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
@@ -8,12 +10,11 @@ function cb_admin_role_uzivatele(mysqli $db): array
 {
     $people = []; $members = []; $out = [];
     $result = $db->query('SELECT DISTINCT r.id_role,p.id_person,p.aktivni,p.pristup_vsechny_pobocky,
-        ou.jmeno,ou.prijmeni
+        ou.jmeno,ou.prijmeni,ou.druhe_jmeno,ou.titul_za
         FROM hr_pristupovy_profil r JOIN cis_role cr ON cr.id_role=r.id_role AND cr.aktivni=1
         JOIN hr_person p ON p.id_person=r.id_person JOIN user u ON u.id_user=p.id_user
-        LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje=(SELECT MAX(o.id_osobni_udaje)
-            FROM hr_osobni_udaje o WHERE o.id_person=p.id_person AND o.platny=1)
-        WHERE r.id_role IN (1,2,3,4,5,7) AND p.aktivni=1 ORDER BY ou.prijmeni,ou.jmeno,p.id_person');
+        LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=p.id_person
+        WHERE r.id_role IN (1,2,3,4,5,7) AND p.aktivni=1 ORDER BY ou.prijmeni,ou.jmeno,ou.druhe_jmeno,ou.titul_za,p.id_person');
     foreach ($result->fetch_all(MYSQLI_ASSOC) as $row) {
         $id = (int)$row['id_person'];
         $people[$id] = $row + ['funkce'=>[], 'sloty'=>[], 'pobocky'=>[], 'main'=>[]];

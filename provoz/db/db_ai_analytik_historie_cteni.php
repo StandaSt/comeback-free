@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-/* Cte historii Franty a overuje vlastnictvi kazdeho pozadovaneho auditu. */
+/* Cte historii Franty pro vlastnika auditu, Admina nebo Top manazera. */
 
 /** Kontrola patri i na detail; znalost ciziho ID sama o sobe neopravnuje ke cteni. */
 function cb_ai_historie_audit(int $idAudit, int $idUser): array
@@ -14,7 +14,7 @@ function cb_ai_historie_audit(int $idAudit, int $idUser): array
     $stmt->execute();
     $row = $stmt->get_result()->fetch_assoc();
     $stmt->close();
-    if (!$row || ((int)$row['id_user'] !== $idUser && !cb_ai_analytik_uzivatel_je_admin(db(), $idUser))) {
+    if (!$row || ((int)$row['id_user'] !== $idUser && !cb_ai_analytik_muze_cist_vsechny_prompty(db(), $idUser))) {
         throw new CbAiAnalytikUzivatelskaChyba('Historie není dostupná nebo k ní nemáte oprávnění.');
     }
     return $row;

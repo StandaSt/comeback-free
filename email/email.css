@@ -1,0 +1,147 @@
+/* E-mail: kompaktni navigace a editor; otevrena napoveda zabezpeceni na desktopu rozsiri pripojovaci dialog do dvou sloupcu. */
+.em-client{display:grid!important;grid-template-columns:minmax(260px,340px) minmax(280px,1fr);grid-template-rows:auto minmax(0,1fr);gap:0!important;padding:0!important;background:#fff;color:#30383c;overflow:hidden!important;font:14px Arial,Helvetica,sans-serif;min-height:0;}
+.em-client *,.em-navigation *{box-sizing:border-box;}
+.em-client [hidden],.em-navigation [hidden]{display:none!important;}
+.em-client button,.em-navigation button{font:inherit;cursor:pointer;border:0;background:transparent;color:inherit;border-radius:0;padding:9px 10px;}
+.em-client button:hover,.em-navigation button:hover{background:#e8f5fb;}
+.em-client button:disabled{cursor:default;opacity:.4;}
+.em-client input,.em-client select,.em-client textarea,.em-navigation select{font:inherit;color:#30383c;background:#fff;border:1px solid #cbd2d6;border-radius:3px;padding:8px;min-width:0;max-width:100%;}
+.em-client input[type=checkbox]{width:auto;margin-right:7px;}
+.em-client button:focus-visible,.em-navigation button:focus-visible,.em-client input:focus-visible,.em-client select:focus-visible,.em-client textarea:focus-visible{outline:2px solid #159fc7;outline-offset:-2px;}
+.em-notice{grid-column:1/-1;padding:8px 12px;background:#eef7fb;border-bottom:1px solid #d7e3e9;font-size:13px;min-height:32px;}
+.em-notice.is-error{background:#fff0ee;color:#982c20;}
+.em-list-panel,.em-reader-panel{display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden;}
+.em-list-panel{border-right:1px solid #d7dce0;}
+.em-list-toolbar,.em-toolbar{display:flex;align-items:center;flex-wrap:wrap;min-height:49px;background:#f5f5f5;border-bottom:1px solid #d8dcdf;padding:3px 5px;gap:0;flex-shrink:0;}
+.em-list-toolbar button{padding:8px;font-size:12px;}
+.em-toolbar button{font-size:13px;padding:9px 10px;}
+.em-search{display:flex;align-items:center;border-bottom:1px solid #dce1e5;min-height:40px;padding:0 6px;background:#fafbfc;gap:3px;}
+.em-search input[type=search]{width:100%;border:0;background:transparent;padding:9px 2px;}
+.em-search label{font-size:11px;display:flex;align-items:center;white-space:nowrap;}
+.em-search input[type=checkbox]{margin:0 3px;}
+.em-message-list{flex:1;min-height:0;overflow:auto;}
+.em-message-row{display:flex;align-items:center;border-bottom:1px solid #e8ecef;padding:0 7px;min-height:58px;}
+.em-message-row.is-selected{background:#e5f5fc;box-shadow:inset 3px 0 #86d6ee;}
+.em-message-row.is-unseen .em-subject{font-weight:bold;}
+.em-message-row>button{display:block;text-align:left;flex:1;min-width:0;padding:7px 4px;}
+.em-message-top{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#6e787c;}
+.em-sender,.em-subject{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;}
+.em-message-top time{flex-shrink:0;font-size:11px;}
+.em-subject{margin-top:5px;font-size:13px;color:#30383c;}
+.em-mailbox-label{display:block;font-size:11px;color:#1483a4;margin-top:4px;}
+.em-work-label{font-size:11px;color:#736320;margin-left:4px;}
+.em-pages{display:flex;align-items:center;justify-content:space-between;min-height:36px;background:#fafafa;border-top:1px solid #ddd;flex-shrink:0;font-size:12px;}
+.em-reader{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;}
+.em-empty{padding:30px 20px;color:#788388;text-align:center;line-height:1.6;}
+.em-message-header{padding:16px;border-bottom:1px solid #ddd;}
+.em-message-header h2{font-size:20px;margin:0 0 12px;overflow-wrap:anywhere;}
+.em-message-header p{font-size:13px;margin:5px 0;overflow-wrap:anywhere;}
+.em-message-header .em-work{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:12px;padding:7px;background:#f6f5e9;}
+.em-message-header .em-work button{border:1px solid #d9d7bb;padding:5px 8px;background:#fff;}
+.em-message-body{border:0;width:100%;min-height:340px;flex:1;background:white;}
+.em-plain-body{margin:0;padding:18px;white-space:pre-wrap;overflow-wrap:anywhere;font:14px/1.6 Arial,sans-serif;}
+.em-attachments{display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px;border-bottom:1px solid #ddd;}
+.em-attachments button{border:1px solid #ddd;background:#fafafa;padding:7px;}
+.em-navigation{list-style:none;padding:0;display:flex;flex-direction:column;gap:3px;color:var(--cb-text-main,#30383c);font:13px Arial,sans-serif;}
+.em-navigation>button{padding:5px 8px;line-height:17px;}
+.em-navigation>select{width:100%;padding:5px;border:1px solid #ccc;border-radius:4px;}
+.em-navigation .em-new{background:#168fae;color:white;border-radius:4px;padding:7px;}
+.em-navigation .em-new:hover{background:#117c98;}
+.em-folders{display:flex;flex-direction:column;}
+/* Priblizne 26 px na slozku setri vysku menu pri zachovani stejne velikosti pisma. */
+.em-folders button{display:flex;align-items:center;justify-content:space-between;text-align:left;border-bottom:1px solid #e1e5e7;min-height:26px;padding:4px 7px;line-height:17px;gap:4px;}
+.em-folders button.is-active{background:#e7f6fc;color:#234756;}
+.em-folders button span{min-width:0;overflow-wrap:anywhere;}
+.em-folders button b{font-size:11px;}
+.em-folder-actions{display:flex;flex-wrap:wrap;justify-content:space-between;}
+.em-folder-actions button{font-size:12px;padding:5px 4px;line-height:17px;}
+.em-navigation hr{border:0;border-top:1px solid #ddd;margin:2px 0;}
+.em-dialog{width:min(490px,95vw);border:1px solid #ccd4da;border-radius:7px;padding:22px;box-shadow:0 12px 60px #0004;color:#30383c;background:#fff;max-height:92vh;overflow:auto;}
+.em-dialog::backdrop{background:#14232c66;}
+.em-dialog h2{margin:0 0 18px;font-size:21px;}
+/* Lehce cervene tlacitko vpravo rozbali vysvetleni bez opusteni rozpracovaneho pripojeni. */
+.em-connect-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
+.em-connect-heading h2{margin:0;}
+.em-client .em-security-button{margin-left:auto;padding:6px 8px;font-size:12px;line-height:17px;border:1px solid #e4b5b5;border-radius:4px;background:#fff0f0;color:#963d3d;}
+.em-client .em-security-button:hover{background:#fbe1e1;}
+.em-security-info{padding:4px 12px;margin-bottom:14px;border:1px solid #ead3d3;border-radius:4px;background:#fffafa;}
+.em-security-info a{color:#087c98;text-decoration:underline;}
+/* Sirku odvozujeme primo od otevrene napovedy, aby se po jejim zavreni nebo prepnuti typu automaticky vratila. */
+@media(min-width:900px){
+ .em-dialog[data-em-connect]:has([data-em-security-info]:not([hidden])){width:min(1180px,95vw);}
+ .em-dialog[data-em-connect]:has([data-em-security-info]:not([hidden]))>form{display:grid;grid-template-columns:minmax(300px,.85fr) minmax(440px,1.15fr);gap:0 24px;align-items:start;}
+ .em-dialog[data-em-connect]:has([data-em-security-info]:not([hidden])) .em-connect-heading{grid-column:1/-1;}
+ .em-dialog[data-em-connect]:has([data-em-security-info]:not([hidden])) .em-connect-fields{grid-column:1;grid-row:2;min-width:0;}
+ .em-dialog[data-em-connect]:has([data-em-security-info]:not([hidden])) .em-security-info{grid-column:2;grid-row:2;margin:0;min-width:0;}
+}
+/* Doporuceny rezim osobniho pripojeni odlisime pozadim i rameckem, aby byl v napovede snadno rozpoznatelny. */
+.em-security-info .em-security-recommended{padding:10px;border:1px solid #8ac8d8;border-left:4px solid #168fae;border-radius:3px;background:#e7f6fc;color:#164958;}
+.em-dialog label{display:flex;flex-direction:column;gap:5px;margin:10px 0;font-size:13px;}
+.em-dialog p{font-size:12px;line-height:1.5;color:#687278;}
+/* Seznam zustava nizky i pri vice pobockach; uprava adresy je dostupna primo z jejiho radku. */
+.em-shared-summary{margin:12px 0;font-size:13px;}
+.em-shared-list{margin-top:7px;max-height:170px;overflow:auto;border:1px solid #d5dde1;border-radius:3px;}
+.em-client .em-shared-row{display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;text-align:left;padding:5px 8px;border-bottom:1px solid #e1e5e7;font-size:12px;line-height:17px;white-space:nowrap;}
+.em-shared-row:last-child{border-bottom:0;}
+.em-shared-state{flex-shrink:0;color:#687278;}
+.em-shared-address{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;}
+.em-client .em-shared-row.is-selected{background:#e7f6fc;box-shadow:inset 3px 0 #168fae;}
+.em-shared-row>span:last-child{flex-shrink:0;color:#087c98;}
+.em-shared-list>p{margin:8px;}
+.em-dialog input,.em-dialog select,.em-dialog textarea{width:100%;}
+.em-dialog .em-address-input{display:flex;align-items:center;gap:8px;min-width:0;}
+.em-dialog .em-address-input input{flex:1;width:0;min-width:0;}
+.em-dialog .em-address-input>span{flex-shrink:0;white-space:nowrap;font-size:13px;}
+.em-dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+.em-dialog-actions button{border:1px solid #c8d2d9;border-radius:4px;background:#f6f8f9;}
+.em-dialog-actions button[type=submit]{background:#118eaf;color:#fff;border-color:#118eaf;}
+.em-form-error{color:#ad2727;font-size:13px;white-space:pre-wrap;}
+.em-compose{width:min(900px,96vw);}
+.em-compose .em-address-pair{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.em-compose textarea{resize:vertical;min-height:200px;line-height:1.5;}
+.em-body-label{margin:10px 0;font-size:13px;}
+.em-body-label>span{display:block;margin-bottom:5px;}
+.em-rich{background:white;color:#30383c;}
+.em-rich .ql-toolbar.ql-snow{border:1px solid #cbd2d6;border-radius:4px 4px 0 0;padding:6px;}
+.em-rich .ql-container.ql-snow{border:1px solid #cbd2d6;border-top:0;border-radius:0 0 4px 4px;font:14px Arial,sans-serif;}
+.em-rich .ql-editor{min-height:240px;max-height:45vh;overflow:auto;font:14px/1.5 Arial,sans-serif;}
+[data-em-signature-editor] .ql-editor{min-height:130px;max-height:35vh;}
+.em-rich .ql-toolbar .ql-formats{margin-right:8px;}
+/* Aktivni format ma trvale pozadi a ramecek; ikony nesmi stlacit obecne odsazeni tlacitek IS. */
+.em-client .em-rich .ql-toolbar.ql-snow button{padding:3px 5px;border-radius:3px;}
+.em-client .em-rich .ql-toolbar.ql-snow button.ql-active{background:#cceaf3;color:#075b73;box-shadow:inset 0 0 0 1px #168fae;}
+.em-client .em-rich .ql-toolbar.ql-snow button.ql-active .ql-stroke{stroke:#075b73;}
+.em-client .em-rich .ql-toolbar.ql-snow button.ql-active .ql-fill{fill:#075b73;}
+.em-client .em-rich .ql-toolbar.ql-snow button:focus-visible{outline:2px solid #168fae;outline-offset:2px;}
+.em-rich .ql-undo,.em-rich .ql-redo{font-size:20px;line-height:18px;}
+.em-rich .ql-picker.ql-font{width:115px;}
+.em-rich .ql-picker.ql-size{width:72px;}
+.em-rich .ql-picker.ql-font .ql-picker-label::before,.em-rich .ql-picker.ql-font .ql-picker-item::before,
+.em-rich .ql-picker.ql-size .ql-picker-label::before,.em-rich .ql-picker.ql-size .ql-picker-item::before{content:attr(data-em-label);}
+.em-rich .ql-snow .ql-tooltip::before{content:'Odkaz:';}
+.em-rich .ql-snow .ql-tooltip.ql-editing::before{content:'Adresa:';}
+.em-rich .ql-snow .ql-tooltip a.ql-action::after{content:'Upravit';}
+.em-rich .ql-snow .ql-tooltip.ql-editing a.ql-action::after{content:'Uložit';}
+.em-rich .ql-snow .ql-tooltip a.ql-remove::before{content:'Odstranit';}
+.em-order-list{max-height:52vh;overflow:auto;border:1px solid #d5dde1;border-radius:4px;}
+.em-order-row{display:flex;align-items:center;gap:7px;padding:4px 7px;border-bottom:1px solid #e3e8eb;background:#fff;}
+.em-order-row:last-child{border-bottom:0;}
+.em-order-row>span:first-child{cursor:grab;color:#7a898f;font-size:20px;}
+.em-order-row>span:nth-child(2){flex:1;min-width:0;overflow-wrap:anywhere;}
+.em-order-row button{padding:5px 10px;border:1px solid #d3dde2;border-radius:3px;font-size:18px;}
+/* Novy prepinac meni mrizku pouze uzivatelum s pristupem do E-mailu; ostatni hlavicky zustavaji beze zmeny. */
+.blok_hlavicka.cb-has-email{--em-logo:70px;--em-brand:144px;--em-update:160px;grid-template-columns:var(--em-logo) var(--em-brand) repeat(5,minmax(0,1fr)) 54px;grid-template-areas:"logo brand provoz hr smeny todo helpdesk email" "logo brand provoz hr smeny todo helpdesk email";}
+.blok_hlavicka.cb-has-email.cb-has-colink{grid-template-columns:var(--em-logo) var(--em-brand) repeat(5,minmax(0,1fr)) 54px 54px;grid-template-areas:"logo brand provoz hr smeny todo helpdesk email colink" "logo brand provoz hr smeny todo helpdesk email colink";}
+.blok_hlavicka.cb-has-email.cb-maintenance-active{grid-template-columns:var(--em-logo) var(--em-brand) repeat(5,minmax(0,1fr)) 54px var(--em-update);grid-template-areas:"logo brand provoz hr smeny todo helpdesk email update" "logo brand provoz hr smeny todo helpdesk email update";}
+.blok_hlavicka.cb-has-email.cb-has-colink.cb-maintenance-active{grid-template-columns:var(--em-logo) var(--em-brand) repeat(5,minmax(0,1fr)) 54px 54px var(--em-update);grid-template-areas:"logo brand provoz hr smeny todo helpdesk email colink update" "logo brand provoz hr smeny todo helpdesk email colink update";}
+.blok_hlavicka .head_module_link--email{grid-area:email;position:relative;width:44px;height:44px;min-height:44px;padding:0;align-self:center;justify-self:center;border:0;border-radius:10px;background:#248ca4;color:#fff;font:27px Arial,sans-serif;}
+.blok_hlavicka .head_module_link--email.is-active{box-shadow:0 0 0 2px #87c8d8;}
+.cb-context--email{--cb-module-accent:#168fae;--cb-module-soft:#e7f6fc;}
+@media(max-width:899px){
+ .blok_hlavicka.cb-has-email{--em-brand:44px;--em-update:100px;grid-template-areas:"logo menu_toggle provoz hr smeny todo helpdesk email" "logo menu_toggle provoz hr smeny todo helpdesk email";}
+ .blok_hlavicka.cb-has-email.cb-has-colink{grid-template-areas:"logo menu_toggle provoz hr smeny todo helpdesk email colink" "logo menu_toggle provoz hr smeny todo helpdesk email colink";}
+ .blok_hlavicka.cb-has-email.cb-maintenance-active{grid-template-areas:"logo menu_toggle provoz hr smeny todo helpdesk email update" "logo menu_toggle provoz hr smeny todo helpdesk email update";}
+ .blok_hlavicka.cb-has-email.cb-has-colink.cb-maintenance-active{grid-template-areas:"logo menu_toggle provoz hr smeny todo helpdesk email colink update" "logo menu_toggle provoz hr smeny todo helpdesk email colink update";}
+ .em-client{grid-template-columns:minmax(240px,36%) minmax(0,1fr);}
+}
+@media(max-width:767px){.blok_hlavicka.cb-has-email{--em-logo:55px;--em-update:70px;}.em-client{grid-template-columns:1fr;}.em-client.em-has-message .em-list-panel{display:none;}.em-client:not(.em-has-message) .em-reader-panel{display:none;}.em-compose .em-address-pair{grid-template-columns:1fr;gap:0;}}

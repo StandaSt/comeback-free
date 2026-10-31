@@ -1,4 +1,4 @@
-// Nacita seznam uzivatelu s vyjimkami, vyhledava uzivatele a otevre jejich detail prav.
+// Vyhledava uzivatele s ID, kontakty a serverovym jmenem vcetne titulu; vysledky oddeluje od seznamu vyjimek prav.
 'use strict';
 
 (function () {
@@ -57,12 +57,14 @@
     var countHeaders = withCounts ? '<th>Povoleno</th><th>Zakazano</th>' : '';
     return ''
       + '<table class="admin_individual_results_table">'
-      + '<thead><tr><th>Jméno</th>' + countHeaders + '<th>Email</th><th>Telefon</th></tr></thead>'
+      + '<thead><tr><th>ID</th><th>Jméno</th>' + countHeaders + '<th>Email</th><th>Telefon</th></tr></thead>'
       + '<tbody>'
       + users.map(function (user) {
-        var fullName = String(user.prijmeni || '') + ' ' + String(user.jmeno || '');
+        // Titul zahrnuje spolecny zdroj osoby; klient pouze vykresluje popisek.
+        var fullName = String(user.cele_jmeno || (String(user.prijmeni || '') + ' ' + String(user.jmeno || '')));
         return ''
           + '<tr class="admin_individual_result" data-admin-individual-user="' + escapeHtml(user.id_user) + '">'
+          + '<td>' + escapeHtml(user.id_user) + '</td>'
           + '<td><strong>' + escapeHtml(fullName.trim()) + '</strong></td>'
           + (withCounts ? '<td>' + escapeHtml(user.pocet_povoleno || 0) + '</td><td>' + escapeHtml(user.pocet_zakazano || 0) + '</td>' : '')
           + '<td>' + escapeHtml(user[emailField] || '') + '</td>'
@@ -79,8 +81,9 @@
       return;
     }
 
+    // Kontakty zustavaji viditelne i pri hledani jmen, aby se daly rozlisit shodne osoby.
     results.innerHTML = users.length
-      ? userTableHtml(users, 'email_match', 'telefon_match', false)
+      ? '<div class="admin_individual_hint">Výsledky hledání: ' + users.length + (users.length === 1 ? ' · Práva uživatele jsou otevřena níže.' : ' · Vyberte uživatele kliknutím na řádek.') + '</div>' + userTableHtml(users, 'email', 'telefon', false)
       : '<div class="admin_individual_hint">Nenalezen žádný uživatel.</div>';
   }
 
@@ -121,6 +124,7 @@
     if (!page) {
       return;
     }
+    var version = page.__adminIndividualSearchVersion;
 
     if (query.length < 2) {
       var results = page.querySelector('[data-admin-individual-results]');
@@ -133,18 +137,18 @@
 
     post('search', { q: query })
       .then(function (data) {
+        // Starsi odpoved nesmi prepsat vysledek novejsiho hledani.
+        if (version !== page.__adminIndividualSearchVersion) return;
         var users = Array.isArray(data.users) ? data.users : [];
-        if (users.length === 1 && data.detail_html) {
-          var results = page.querySelector('[data-admin-individual-results]');
-          if (results) {
-            results.innerHTML = '';
-          }
-        } else {
-          renderResults(page, users);
-        }
+        renderResults(page, users);
         setDetail(page, data.detail_html || '');
+        if (users.length === 1 && data.detail_html) {
+          var selected = page.querySelector('[data-admin-individual-results] [data-admin-individual-user]');
+          if (selected) selected.classList.add('is-active');
+        }
       })
       .catch(function (error) {
+        if (version !== page.__adminIndividualSearchVersion) return;
         setDetail(page, '');
         var results = page.querySelector('[data-admin-individual-results]');
         if (results) {
@@ -159,15 +163,20 @@
     if (!page || idUser === '0') {
       return;
     }
+    var version = page.__adminIndividualSearchVersion;
+    // Pri rychlem vyberu dvou osob zobrazime jen posledni zvolenou osobu.
+    page.__adminIndividualSelectedUser = idUser;
 
     post('detail', { id_user: idUser })
       .then(function (data) {
+        if (version !== page.__adminIndividualSearchVersion || page.__adminIndividualSelectedUser !== idUser) return;
         setDetail(page, data.detail_html || '');
         Array.prototype.slice.call(page.querySelectorAll('[data-admin-individual-user]')).forEach(function (userRow) {
           userRow.classList.toggle('is-active', userRow === row);
         });
       })
       .catch(function (error) {
+        if (version !== page.__adminIndividualSearchVersion || page.__adminIndividualSelectedUser !== idUser) return;
         window.alert(window.cbAdminErrorMessage(error, 'Načtení uživatele se nepodařilo.'));
       });
   }
@@ -205,6 +214,15 @@
     }
 
     window.clearTimeout(input.__adminIndividualTimer || 0);
+    var page = pageFor(input);
+    if (!page) return;
+    page.__adminIndividualSearchVersion = (page.__adminIndividualSearchVersion || 0) + 1;
+    var searching = input.value.trim().length >= 2;
+    var exceptions = page.querySelector('[data-admin-individual-exception-users-wrap]');
+    if (exceptions) exceptions.hidden = searching;
+    setDetail(page, '');
+    var results = page.querySelector('[data-admin-individual-results]');
+    if (results) results.innerHTML = searching ? '<div class="admin_individual_hint">Hledám…</div>' : '';
     input.__adminIndividualTimer = window.setTimeout(function () {
       search(input);
     }, 350);

@@ -1,6 +1,8 @@
 <?php
-// Připravuje pouze čtením osobní štítky hlavičky; od 08:00 ukazuje ranní nástupy, časy a zdroj směn, poslední tým drží do 04:00.
+// Připravuje pouze čtením osobní štítky a nepřečtené zprávy Co-Linku; směny ukazují ranní nástupy od 08:00 a poslední tým do 04:00.
 declare(strict_types=1);
+// Jmeno ve smenovem tooltipu zahrnuje titul ze stejneho osobniho zdroje jako ostatni moduly.
+require_once __DIR__.'/osoba_jmeno.php';
 require_once __DIR__ . '/../db/db_user_pobocka.php';
 require_once __DIR__ . '/smeny_verejny_zdroj.php';
 require_once __DIR__ . '/../../helpdesk/hl_lib/hl_prava.php';
@@ -77,17 +79,16 @@ function cb_hlavicka_smeny(mysqli $db, int $user, array $branches, DateTimeImmut
         // Levé spojení ponechá i neobsazené restaurace; Výrobu určuje stabilní kód pobočky.
         // Jméno bereme z posledního platného osobního záznamu, pozici ze skutečného slotu směny.
         // Poslední nástup určí odpolední tým pro danou pozici; zahrneme i dlouhou směnu přes tento nástup.
-        $stmt=$db->prepare("SELECT b.id_pob,b.nazev,team.id_person,team.id_slot,team.jmeno,team.prijmeni,team.zacatek,team.konec,team.zdroj
+        $stmt=$db->prepare("SELECT b.id_pob,b.nazev,team.id_person,team.id_slot,team.jmeno,team.prijmeni,team.titul_za,team.zacatek,team.konec,team.zdroj
             FROM pobocka b LEFT JOIN (
-                SELECT s.id_pob,s.id_person,s.id_slot,ou.jmeno,ou.prijmeni,s.zacatek,s.konec,s.zdroj
+                SELECT s.id_pob,s.id_person,s.id_slot,ou.jmeno,ou.prijmeni,ou.titul_za,s.zacatek,s.konec,s.zdroj
                 FROM ($source) s JOIN hr_person p ON p.id_person=s.id_person
                 LEFT JOIN (SELECT closing.id_pob,closing.id_slot,MAX(closing.zacatek) posledni_nastup
                     FROM ($source) closing JOIN hr_person closing_person ON closing_person.id_person=closing.id_person
                     WHERE closing.datum=? AND closing.id_pob IN ($ids) AND closing_person.aktivni=1 AND closing_person.testovaci=0
                     GROUP BY closing.id_pob,closing.id_slot) last_team
                     ON last_team.id_pob=s.id_pob AND last_team.id_slot=s.id_slot
-                LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje=(
-                    SELECT MAX(o.id_osobni_udaje) FROM hr_osobni_udaje o WHERE o.id_person=p.id_person AND o.platny=1)
+                LEFT JOIN " . cb_osoby_zdroj_sql() . " ou ON ou.id_person=p.id_person
                 WHERE s.id_pob IN ($ids) AND p.aktivni=1 AND p.testovaci=0
                     AND ((s.zacatek<=? AND (s.konec>? OR (s.datum=? AND s.konec>last_team.posledni_nastup)))
                         OR (?=1 AND s.datum=? AND s.cas_od IN ('10:00:00','11:00:00')))
@@ -112,7 +113,7 @@ function cb_hlavicka_smeny(mysqli $db, int $user, array $branches, DateTimeImmut
             // Klíč zachová více různých směn stejné osoby; počet lidí zůstává počtem unikátních osob.
             $shiftKey=$person.':'.(string)$row['zacatek'].':'.(string)$row['konec'];
             if(in_array($slot,[1,2],true))$byBranch[$branch][$slot][$shiftKey]=
-                (trim($firstName.' '.(string)$row['prijmeni'])?:'—').' '.cb_format('t',$row['zacatek']).'-'.cb_format('t',$row['konec']);
+                (cb_osoba_jmeno(['jmeno'=>$firstName,'prijmeni'=>$row['prijmeni'],'titul_za'=>$row['titul_za']])?:'—').' '.cb_format('t',$row['zacatek']).'-'.cb_format('t',$row['konec']);
         }
         $table=[['Pobočka','Pizzař','Kurýr','Zdroj']];
         foreach($byBranch as $branch)$table[]=[$branch['name'],implode("\n",$branch[1])?:'—',implode("\n",$branch[2])?:'—',$branch['source']];
@@ -174,6 +175,19 @@ function cb_hlavicka_stitky_data(mysqli $db): array
             $out['modules'][$module]=[];
             cb_chyba_oznam($e,['module'=>strtoupper($module),'action'=>'Načtení štítků hlavičky']);
         }
+    }
+    // Selhani Co-Linku nesmi vyradit stitky ostatnich modulu ani otevrit pristup bez prava 700.
+    $out['co_link_unread']=0;
+    if(array_key_exists(700,$_SESSION['prava_stav']??[]) && cb_pravo_ma(700)){
+        try{
+            require_once __DIR__.'/../../co_link/unread.php';
+            $out['co_link_unread']=co_neprecteno_hlavicka($user);
+        }catch(Throwable $e){cb_chyba_oznam($e,['module'=>'CO_LINK','action'=>'Nepřečtené zprávy v hlavičce']);}
+    }
+    $out['email_unread']=0;
+    if (cb_modul_ma_pristup('email')) {
+        try { require_once __DIR__.'/../../email/core.php'; $out['email_unread']=em_neprecteno($db); }
+        catch (Throwable) { /* Posta nesmi ovlivnit ostatni stitky ani zverejnit tajne hodnoty. */ }
     }
     return $out;
 }

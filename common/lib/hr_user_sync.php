@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/osoba_jmeno.php';
 
 /*
  * Obnovuje profil session a zpracuje výslovné ukončení konkrétního zaměstnance.
@@ -50,16 +52,13 @@ function cb_hr_session_profile_refresh(mysqli $db, int $idUser): bool
         return false;
     }
     $stmt = $db->prepare('
-        SELECT p.aktivni, ou.jmeno, ou.prijmeni, u.email,
+        SELECT p.aktivni, ou.jmeno, ou.prijmeni,ou.druhe_jmeno,ou.titul_za, u.email,
                (SELECT t.telefon FROM hr_telefon t
                 WHERE t.id_person=p.id_person AND t.platny=1 AND t.hlavni=1
                 ORDER BY t.id_telefon DESC LIMIT 1) AS telefon
         FROM user u
         INNER JOIN hr_person p ON p.id_person=u.id_user AND p.id_user=u.id_user
-        LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje=(
-            SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2
-            WHERE ou2.id_person=p.id_person AND ou2.platny=1
-        )
+        LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=p.id_person
         WHERE u.id_user=? LIMIT 1
     ');
     $stmt->bind_param('i', $idUser);
@@ -71,6 +70,9 @@ function cb_hr_session_profile_refresh(mysqli $db, int $idUser): bool
     }
     $_SESSION['cb_user']['name'] = (string)($person['jmeno'] ?? '');
     $_SESSION['cb_user']['surname'] = (string)($person['prijmeni'] ?? '');
+    // Titul a dalsi jmeno vedeme oddelene, aby se nikdy nestaly soucasti ulozeneho prijmeni.
+    $_SESSION['cb_user']['druhe_jmeno'] = (string)($person['druhe_jmeno'] ?? '');
+    $_SESSION['cb_user']['titul_za'] = (string)($person['titul_za'] ?? '');
     $_SESSION['cb_user']['telefon'] = (string)($person['telefon'] ?? '');
     $_SESSION['cb_user']['email'] = (string)$person['email'];
     $_SESSION['cb_user']['active'] = true;

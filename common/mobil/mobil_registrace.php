@@ -1,6 +1,8 @@
 <?php
 // mobil/mobil_registrace.php * Verze: V8 * Aktualizace: 09.09.2026
 declare(strict_types=1);
+// Potvrzeni registrace pouziva jednotne zobrazovane jmeno; logika overeni zarizeni se nemeni.
+require_once __DIR__.'/../lib/osoba_jmeno.php';
 
 /*
  * REGISTRACE ZARIZENI
@@ -10,6 +12,7 @@ declare(strict_types=1);
  * - vyzadat povoleni notifikaci
  * - zaregistruje Service Worker z verejneho rootu
  * - vytvorit a ulozit Push subscription
+ * - pri obnove zanikleho odberu ziskat novou subscription pouze pro korenovy worker IS
  * - deaktivovat predchozi zarizeni uzivatele
  * - ulozit podepsanou cookie duveryhodneho zarizeni
  *
@@ -83,9 +86,9 @@ function cb_pair_user_full_name(int $idUser): string
     }
 
     $stmt = db()->prepare('
-        SELECT ou.jmeno, ou.prijmeni, u.email
+        SELECT ' . cb_osoba_jmeno_sql('u.id_user') . ' AS cele_jmeno, u.email
         FROM user u
-        INNER JOIN hr_osobni_udaje ou ON ou.id_person = u.id_user AND ou.platny = 1
+        INNER JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person = u.id_user AND ou.platny = 1
         WHERE u.id_user=?
         LIMIT 1
     ');
@@ -95,7 +98,7 @@ function cb_pair_user_full_name(int $idUser): string
 
     $stmt->bind_param('i', $idUser);
     $stmt->execute();
-    $stmt->bind_result($jmeno, $prijmeni, $email);
+    $stmt->bind_result($fullName, $email);
     $ok = $stmt->fetch();
     $stmt->close();
 
@@ -103,7 +106,7 @@ function cb_pair_user_full_name(int $idUser): string
         return '';
     }
 
-    $fullName = trim((string)($jmeno ?? '') . ' ' . (string)($prijmeni ?? ''));
+    $fullName = trim((string)$fullName);
     if ($fullName !== '') {
         return $fullName;
     }
@@ -480,6 +483,7 @@ $pairUserName = $tokenOk ? cb_pair_user_full_name((int)($pair['id_user'] ?? 0)) 
 
   var vapidPublic = <?php echo json_encode($vapidPublic, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
   var token = <?php echo json_encode($token, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+  var obnovitOdber = <?= json_encode(($_GET['obnovit'] ?? '') === '1') ?>;
 
   /* Prevede verejny VAPID klic do formatu pro Push API. */
   function b64UrlToUint8Array(base64Url){
@@ -518,12 +522,19 @@ $pairUserName = $tokenOk ? cb_pair_user_full_name((int)($pair['id_user'] ?? 0)) 
     }
 
     navigator.serviceWorker.register(<?php echo json_encode(cb_root_url('sw.js'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>)
-      .then(function(){
-        return navigator.serviceWorker.ready;
+      .then(function(registrace){
+        // Obnovujeme pouze korenovou registraci IS, nikoli worker Co-Linku.
+        return navigator.serviceWorker.ready.then(function(){ return registrace; });
       })
       .then(function(reg){
       return reg.pushManager.getSubscription().then(function(sub){
         if (sub) {
+          // Zanikly odber muze byt stale ulozeny v prohlizeci; obnova vyzada novy.
+          if (obnovitOdber) {
+            return sub.unsubscribe().then(function(){
+              return reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64UrlToUint8Array(vapidPublic)});
+            });
+          }
           return sub;
         }
         return reg.pushManager.subscribe({

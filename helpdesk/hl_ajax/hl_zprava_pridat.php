@@ -1,6 +1,8 @@
 <?php
 // helpdesk/hl_ajax/hl_zprava_pridat.php * Verze: V1 * Aktualizace: 24.06.2026
 declare(strict_types=1);
+// Odesilatel notifikace pouzije zobrazovane jmeno ze session s oddelenym HR titulem.
+require_once __DIR__.'/../../common/lib/osoba_jmeno.php';
 
 if (!defined('CB_HELPDESK_DISPATCH_INTERNAL')) {
     require_once __DIR__ . '/../../common/lib/session_boot.php';
@@ -150,11 +152,7 @@ try {
             cb_helpdesk_notifikace_sledujicim_o_admin_odpovedi($conn, $idHelpdesk, $idZprava, $idUser, $zprava);
         }
     } else {
-        $jmenoAutora = cb_helpdesk_notifikace_full_name(
-            (string)($_SESSION['cb_user']['name'] ?? ''),
-            (string)($_SESSION['cb_user']['surname'] ?? ''),
-            $idUser
-        );
+        $jmenoAutora = cb_osoba_jmeno($_SESSION['cb_user']??[]) ?: 'Uživatel #'.$idUser;
 
         cb_helpdesk_notifikace_adminum(
             $conn,

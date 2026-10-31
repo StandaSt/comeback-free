@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 // Rozsah mist vykonu prace sdileji vsechny cteci dotazy tohoto souboru.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
@@ -282,6 +284,7 @@ function cb_kontrola_reportu_people(mysqli $conn, int $branchId, string $from, s
             o.id_user,
             o.jmeno,
             o.prijmeni,
+            ' . cb_osoba_jmeno_sql('o.id_user') . ' AS osobni_jmeno,
             o.slot,
             COUNT(DISTINCT r.datum_reportu) AS days_count,
             COALESCE(SUM(o.odpracovano), 0) AS hours_count,
@@ -313,7 +316,7 @@ function cb_kontrola_reportu_people(mysqli $conn, int $branchId, string $from, s
             $slot = (int)($row['slot'] ?? 0);
             $person = [
                 'id_user' => (int)($row['id_user'] ?? 0),
-                'name' => trim((string)($row['jmeno'] ?? '') . ' ' . (string)($row['prijmeni'] ?? '')),
+                'name' => (string)($row['osobni_jmeno']??'') ?: cb_osoba_jmeno($row),
                 'days' => (int)($row['days_count'] ?? 0),
                 'hours' => (float)($row['hours_count'] ?? 0),
                 'deliveries' => (int)($row['deliveries_count'] ?? 0),
@@ -366,7 +369,7 @@ function cb_kontrola_reportu_google_people_comparison(mysqli $conn, int $branchI
                 o.slot,
                 IF(
                     COALESCE(o.id_user, 0) > 0,
-                    TRIM(CONCAT_WS(" ", u.jmeno, u.prijmeni)),
+                    ' . cb_osoba_jmeno_sql('u.id_person') . ',
                     TRIM(CONCAT_WS(" ", o.prijmeni, o.jmeno))
                 ) AS name,
                 COUNT(DISTINCT r.datum_reportu) AS days_count,
@@ -374,7 +377,7 @@ function cb_kontrola_reportu_google_people_comparison(mysqli $conn, int $branchI
                 COALESCE(SUM(o.rozvozu_celkem), 0) AS deliveries_count
             FROM ' . $reportTable . ' r
             INNER JOIN ' . $peopleTable . ' o ON o.id_reportu = r.id_reportu
-            LEFT JOIN hr_osobni_udaje u ON u.id_person = o.id_user AND u.platny = 1
+            LEFT JOIN ' . cb_osoby_zdroj_sql() . ' u ON u.id_person = o.id_user AND u.platny = 1
             WHERE r.id_pob = ?
               AND r.platny = 1
               AND r.datum_reportu BETWEEN ? AND ?
@@ -608,13 +611,13 @@ function cb_kontrola_reportu_google_daily_differences(mysqli $conn, int $branchI
                 r.datum_reportu, o.id_user, o.slot,
                 IF(
                     COALESCE(o.id_user, 0) > 0,
-                    TRIM(CONCAT_WS(" ", u.jmeno, u.prijmeni)),
+                    ' . cb_osoba_jmeno_sql('u.id_person') . ',
                     TRIM(CONCAT_WS(" ", o.prijmeni, o.jmeno))
                 ) AS name,
                 COALESCE(SUM(o.odpracovano), 0) AS hours_count
             FROM ' . $reportTable . ' r
             INNER JOIN ' . $peopleTable . ' o ON o.id_reportu = r.id_reportu
-            LEFT JOIN hr_osobni_udaje u ON u.id_person = o.id_user AND u.platny = 1
+            LEFT JOIN ' . cb_osoby_zdroj_sql() . ' u ON u.id_person = o.id_user AND u.platny = 1
             WHERE r.id_pob = ? AND r.platny = 1
               AND r.datum_reportu BETWEEN ? AND ?
               AND o.slot IN (1, 2)' . $sourceCondition . '
@@ -806,6 +809,7 @@ function cb_kontrola_reportu_name_mismatches(mysqli $conn, int $branchId, string
             o.id_user,
             o.jmeno,
             o.prijmeni,
+            ' . cb_osoba_jmeno_sql('o.id_user',true) . ' AS osobni_jmeno,
             COALESCE(hp.aktivni, 0) AS aktivni
         FROM reporty_is r
         INNER JOIN reporty_is_osoby o ON o.id_reportu = r.id_reportu
@@ -834,7 +838,7 @@ function cb_kontrola_reportu_name_mismatches(mysqli $conn, int $branchId, string
             }
             $optionsByDate[$date][] = [
                 'id_user' => $idUser,
-                'name' => cb_denni_report_person_display_name($firstName, $lastName),
+                'name' => (string)($row['osobni_jmeno']??'') ?: cb_denni_report_person_display_name($firstName, $lastName),
                 'restia_name' => cb_denni_report_person_full_name($firstName, $lastName),
                 'aktivni' => (int)($row['aktivni'] ?? 0),
                 'jmeno' => $firstName,

@@ -1,6 +1,8 @@
 <?php
 // Osoby rozpracovaneho reportu vcetne jedne casove prestavky.
 declare(strict_types=1);
+// Osobni udaje rozpracovaneho reportu cte stejny aktualni HR zdroj jako ostatni moduly.
+require_once __DIR__.'/../../common/lib/osoba_udaje.php';
 
 /*
  * DB: dr_pracovni_osoby
@@ -20,10 +22,10 @@ function cb_db_dr_pracovni_osoby_list(mysqli $conn, int $idDr): array
         SELECT dpo.id_dr_osoby, dpo.id_dr, dpo.id_user, dpo.id_slot,
                dpo.smena_od, dpo.smena_do, dpo.pauza, dpo.pauza_od, dpo.pauza_do, dpo.odpracovano,
                dpo.rozvozu_manual, dpo.vlastni_vuz, dpo.vyplatit_phm, dpo.poradi,
-               ou.jmeno, ou.prijmeni, COALESCE(hp.aktivni, 0) AS aktivni
+               ou.jmeno, ou.prijmeni,ou.druhe_jmeno,ou.titul_za, COALESCE(hp.aktivni, 0) AS aktivni
         FROM dr_pracovni_osoby dpo
         LEFT JOIN hr_person hp ON hp.id_person = dpo.id_user
-        LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje = (SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2 WHERE ou2.id_person = dpo.id_user AND ou2.platny = 1)
+        LEFT JOIN '.cb_osoby_zdroj_sql().' ou ON ou.id_person=dpo.id_user
         WHERE dpo.id_dr = ?
         ORDER BY dpo.id_slot ASC, COALESCE(dpo.smena_od, "00:00:00") ASC, COALESCE(dpo.smena_do, "00:00:00") ASC, ou.jmeno ASC, ou.prijmeni ASC
     ');

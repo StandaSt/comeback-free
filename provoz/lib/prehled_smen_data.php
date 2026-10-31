@@ -2,6 +2,8 @@
 // Pripravuje hodiny a souhrny podle opravneni; rozpad smen sdili s HR, export sklada ze stavajicich detailu.
 // lib/prehled_smen_data.php * Verze: V2 * Aktualizace: 04.06.2026
 declare(strict_types=1);
+// Strukturovane jmeno a titul sdili centralni zdroj; stejne radky pouzivaji vsechny exporty.
+require_once __DIR__.'/../../common/lib/osoba_jmeno.php';
 
 require_once __DIR__ . '/../../common/db/db_cis_slot.php';
 require_once __DIR__ . '/reporty_pristup.php';
@@ -211,6 +213,7 @@ if (!function_exists('ps_prehled_smen_data')) {
                     ro.id_user,
                     COALESCE(NULLIF(ou.jmeno, ""), ro.jmeno) AS jmeno,
                     COALESCE(NULLIF(ou.prijmeni, ""), ro.prijmeni) AS prijmeni,
+                    ou.druhe_jmeno,ou.titul_za,
                     ro.slot,
                     ro.smena_od,
                     ro.smena_do,
@@ -221,10 +224,7 @@ if (!function_exists('ps_prehled_smen_data')) {
                 FROM reporty_is_osoby ro
                 INNER JOIN reporty_is r ON r.id_reportu = ro.id_reportu
 
-                LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje = (
-                    SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2
-                    WHERE ou2.id_person = ro.id_user AND ou2.platny = 1
-                )
+                LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=ro.id_user
                 LEFT JOIN pobocka p ON p.id_pob = r.id_pob
                 WHERE r.platny = 1
 
@@ -269,7 +269,7 @@ if (!function_exists('ps_prehled_smen_data')) {
                         'id_user' => $idUser,
                         'jmeno' => $jmeno,
                         'prijmeni' => $prijmeni,
-                        'cele_jmeno' => trim($prijmeni . ' ' . $jmeno),
+                        'cele_jmeno' => cb_osoba_jmeno($row,true),
                         'slot' => $slot,
                         'celkem' => 0.0,
                     ];

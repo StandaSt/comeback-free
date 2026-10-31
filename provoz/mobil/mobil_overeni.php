@@ -1,6 +1,8 @@
 <?php
 // mobil/mobil_overeni.php * Verze: V11 * Aktualizace: 12.09.2026
 declare(strict_types=1);
+// Zobrazovane jmeno nacita spolecny HR zdroj; rozhodovani 2FA se touto upravou nemeni.
+require_once __DIR__.'/../../common/lib/osoba_jmeno.php';
 
 /*
  * 2FA - SCHVALENI PRIHLASENI NA MOBILU
@@ -95,9 +97,9 @@ function cb_fetch_user_info(int $idUser): array
     }
 
     $stmt = db()->prepare('
-        SELECT ou.jmeno, ou.prijmeni, u.email
+        SELECT ' . cb_osoba_jmeno_sql('u.id_user') . ' AS cele_jmeno, u.email
         FROM user u
-        INNER JOIN hr_osobni_udaje ou ON ou.id_person = u.id_user AND ou.platny = 1
+        INNER JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person = u.id_user AND ou.platny = 1
         WHERE u.id_user=?
         LIMIT 1
     ');
@@ -107,7 +109,7 @@ function cb_fetch_user_info(int $idUser): array
 
     $stmt->bind_param('i', $idUser);
     $stmt->execute();
-    $stmt->bind_result($jmeno, $prijmeni, $email);
+    $stmt->bind_result($celeJmeno, $email);
     $ok = $stmt->fetch();
     $stmt->close();
 
@@ -115,7 +117,7 @@ function cb_fetch_user_info(int $idUser): array
         return ['cele_jmeno' => '', 'email' => ''];
     }
 
-    $celeJmeno = trim((string)($jmeno ?? '') . ' ' . (string)($prijmeni ?? ''));
+    $celeJmeno = trim((string)$celeJmeno);
 
     return [
         'cele_jmeno' => $celeJmeno,

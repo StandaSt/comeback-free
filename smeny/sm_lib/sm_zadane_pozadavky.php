@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 // Ucel rozsahu: MAIN je mnozina a viditelne pobocky vychazeji z mist vykonu prace.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
@@ -10,12 +12,12 @@ function cb_smeny_zadane_pozadavky(mysqli $db, array $branches, string $week): a
 {
     if(!cb_smeny_planovani_vidi() || $branches===[]) return [];
     $ids=implode(',',array_map('intval',array_keys($branches)));
-    $sql='SELECT hp.id_person,TRIM(CONCAT_WS(" ",ou.prijmeni,ou.jmeno)) jmeno,
+    $sql='SELECT hp.id_person,' . cb_osoba_jmeno_sql('ou.id_person',true) . ' jmeno,
         p.nazev pobocka,p.end_po,p.end_ut,p.end_st,p.end_ct,p.end_pa,p.end_so,p.end_ne,
         q.id_smeny_pozadavek,q.rezim,q.volno_datum,q.ulozeno,d.den_tydne,d.cas_od,d.cas_do,
         EXISTS(SELECT 1 FROM hr_pracovni_vztah pv WHERE pv.id_person=hp.id_person AND pv.platny=1 AND pv.id_pracovni_vztah_typ=1 AND (pv.datum_nastupu IS NULL OR pv.datum_nastupu<=DATE_ADD(?,INTERVAL 6 DAY)) AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni>=?)) je_hpp
         FROM hr_person hp
-        LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje=(SELECT MAX(x.id_osobni_udaje) FROM hr_osobni_udaje x WHERE x.id_person=hp.id_person AND x.platny=1)
+        LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=hp.id_person
         LEFT JOIN ' . cb_hr_main_sql($db) . ' main ON main.id_pracoviste=(SELECT MAX(x.id_pracoviste) FROM ' . cb_hr_main_sql($db) . ' x WHERE x.id_person=hp.id_person AND x.platny=1 AND x.zruseno IS NULL AND x.hlavni=1 AND (x.platnost_od IS NULL OR x.platnost_od<=DATE_ADD(?,INTERVAL 6 DAY)) AND (x.platnost_do IS NULL OR x.platnost_do>=?))
         LEFT JOIN pobocka p ON p.id_pob=main.id_pob
         LEFT JOIN smeny_pozadavek q ON q.id_person=hp.id_person AND q.tyden_od=?

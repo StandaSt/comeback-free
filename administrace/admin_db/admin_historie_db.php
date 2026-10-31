@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 /* Účel: Čte filtrované události a nabídky historie; všechny zdroje prochází omezeným obdobím a stránkuje na serveru. */
 require_once __DIR__.'/admin_historie_zdroje.php';
 
@@ -41,8 +43,8 @@ function cb_historie_cti(mysqli $db, array $sources, array $filters, ?array $det
 /** Jména autorů a cílových osob se čtou odděleně; osoba bez účtu může být cílem historie. */
 function cb_historie_jmena(mysqli $db, array $scope): array
 {
-    $rows = $db->query("SELECT hp.id_person,hp.id_user,TRIM(CONCAT_WS(' ',ou.prijmeni,ou.jmeno)) AS jmeno,({$scope['hr']}) AS hr_povoleno
-        FROM hr_person hp LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje=(SELECT MAX(o.id_osobni_udaje) FROM hr_osobni_udaje o WHERE o.id_person=hp.id_person AND o.platny=1)
+    $rows = $db->query("SELECT hp.id_person,hp.id_user," . cb_osoba_jmeno_sql('ou.id_person',true) . " AS jmeno,({$scope['hr']}) AS hr_povoleno
+        FROM hr_person hp LEFT JOIN " . cb_osoby_zdroj_sql() . " ou ON ou.id_person=hp.id_person
         ORDER BY jmeno,hp.id_person")->fetch_all(MYSQLI_ASSOC);
     $out = ['autori'=>[], 'osoby'=>[], 'jmena'=>[]];
     foreach ($rows as $r) {

@@ -1,4 +1,5 @@
-/*
+/* Samostatny E-mail se zapojuje s vlastnim pravem 800 a udalostmi navigace.
+
  * Ucel souboru: Ridi klientskou navigaci mezi moduly a internimi strankami aplikace.
  * Soubecne nacteni stejne hlida promenna moduleLoadRunning.
  * Výběr týdnů je přímo ve stránkách Směn; navigace zachovává jejich parametry i po AJAX výměně obsahu.
@@ -8,6 +9,7 @@
  * Zrusitelna udalost pred navigaci chrani rozpracovane formulare pred opustenim stranky.
  * Opakovany klik na vybrane stranky Provozu znovu overi stari dat Restie pred nactenim obsahu.
  * Nepovoleny modul se neotevira ani pres stary odkaz; dosavadni pracovni plocha zustava zobrazena.
+ * Co-Link se nacita stejnou cestou do PP; odstraneni jeho ramce zaroven ukonci klienta pri zmene modulu.
  */
 (function(){
   'use strict';
@@ -17,7 +19,7 @@
   var shellUrl = String(config.shellUrl || window.CB_ENDPOINT || 'index.php');
   var publicShellUrl = String(config.publicShellUrl || '');
   var activeMainModule = String(config.activeMainModule || 'provoz');
-  var povoleneModuly = ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'];
+  var povoleneModuly = ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace', 'co_link', 'email'];
   window.CB_ACTIVE_MAIN_MODULE = activeMainModule;
   if (!root) return;
   var initialParams = new URLSearchParams(window.location.search);
@@ -399,9 +401,9 @@
     activeMainModule = moduleName;
     window.CB_ACTIVE_MAIN_MODULE = activeMainModule;
     var visualModule = activeMainModule;
-    root.classList.remove('cb-context--provoz', 'cb-context--hr', 'cb-context--smeny', 'cb-context--ukoly', 'cb-context--helpdesk', 'cb-context--administrace');
+    root.classList.remove('cb-context--provoz', 'cb-context--hr', 'cb-context--smeny', 'cb-context--ukoly', 'cb-context--helpdesk', 'cb-context--administrace', 'cb-context--co_link', 'cb-context--email');
     root.classList.add('cb-context--' + visualModule);
-    document.body.classList.remove('cb-context--provoz', 'cb-context--hr', 'cb-context--smeny', 'cb-context--ukoly', 'cb-context--helpdesk', 'cb-context--administrace');
+    document.body.classList.remove('cb-context--provoz', 'cb-context--hr', 'cb-context--smeny', 'cb-context--ukoly', 'cb-context--helpdesk', 'cb-context--administrace', 'cb-context--co_link', 'cb-context--email');
     document.body.classList.add('cb-context--' + visualModule);
   }
 

@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 /* Účel: Načte týdenní hodiny, samostatné příjmení a jméno z HR a rozpis s názvy slotů a základními sloupci; šablona doplní i volitelné pozice a zachová pracovní i zveřejněné směny. */
 require_once __DIR__.'/../../common/lib/smeny_verejny_zdroj.php';
 
@@ -35,8 +37,15 @@ function cb_smeny_planovani_nacist(mysqli $db, int $idBranch, string $startDay):
     $stmt = cb_smeny_planovani_sql($db, 'SELECT * FROM smeny_rozpis_potreba WHERE id_smeny_rozpis=? ORDER BY den_tydne,poradi,id_smeny_rozpis_potreba', 'i', [$idPlan]);
     $plan['potreba'] = $stmt->get_result()->fetch_all(MYSQLI_ASSOC); $stmt->close();
     // Začátky po půlnoci do 04:00 stále patří k předchozímu provoznímu dni.
-    $stmt = cb_smeny_planovani_sql($db, 'SELECT s.*,DATE(DATE_SUB(s.zacatek,INTERVAL 6 HOUR)) datum,TIME_FORMAT(s.zacatek,"%H:%i") cas_od,TIME_FORMAT(s.konec,"%H:%i") cas_do,TRIM(CONCAT_WS(" ",ou.prijmeni,ou.jmeno)) pracovnik,ou.prijmeni pracovnik_prijmeni,ou.jmeno pracovnik_jmeno FROM smeny_smena s LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje=(SELECT MAX(o.id_osobni_udaje) FROM hr_osobni_udaje o WHERE o.id_person=s.id_person AND o.platny=1) WHERE s.id_smeny_rozpis=? AND s.verze=? ORDER BY s.zacatek,s.id_slot,s.id_smeny_smena', 'ii', [$idPlan,$plan['verze']]);
+    $stmt = cb_smeny_planovani_sql($db, 'SELECT s.*,DATE(DATE_SUB(s.zacatek,INTERVAL 6 HOUR)) datum,TIME_FORMAT(s.zacatek,"%H:%i") cas_od,TIME_FORMAT(s.konec,"%H:%i") cas_do,' . cb_osoba_jmeno_sql('s.id_person',true) . ' pracovnik,ou.prijmeni pracovnik_prijmeni,ou.jmeno pracovnik_jmeno,ou.druhe_jmeno pracovnik_druhe_jmeno,ou.titul_za pracovnik_titul_za FROM smeny_smena s LEFT JOIN '.cb_osoby_zdroj_sql().' ou ON ou.id_person=s.id_person WHERE s.id_smeny_rozpis=? AND s.verze=? ORDER BY s.zacatek,s.id_slot,s.id_smeny_smena', 'ii', [$idPlan,$plan['verze']]);
     $plan['blocks'] = $stmt->get_result()->fetch_all(MYSQLI_ASSOC); $stmt->close();
+    // Dvouřádková mřížka zachová samostatné příjmení, titul se zobrazí až za křestními jmény.
+    foreach($plan['blocks'] as &$block) {
+        $parts=cb_osoba_jmeno_radky(['jmeno'=>$block['pracovnik_jmeno'],'prijmeni'=>$block['pracovnik_prijmeni'],
+            'druhe_jmeno'=>$block['pracovnik_druhe_jmeno'],'titul_za'=>$block['pracovnik_titul_za']]);
+        $block['pracovnik_krestni']=$parts['zbytek'];
+    }
+    unset($block);
     cb_smeny_planovani_sloty_nacist($db,$plan);
     return $plan;
 }

@@ -3,6 +3,8 @@
 // Rozsah mist vykonu prace sdileji vsechny cteci dotazy tohoto souboru.
 // Denni report Vyroby bez Restie vcetne jedne casove prestavky.
 declare(strict_types=1);
+// Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
 require_once __DIR__ . '/denni_report_data.php';
@@ -60,7 +62,7 @@ function cb_vyroba_allowed_branches(mysqli $conn, int $idPerson): array
 function cb_vyroba_people_options(mysqli $conn): array
 {
     $branch = CB_VYROBA_ID_POB;
-    $stmt = $conn->prepare('SELECT DISTINCT hp.id_person, TRIM(CONCAT_WS(" ", ou.prijmeni, ou.jmeno)) AS name FROM hr_person hp INNER JOIN `user` u ON u.id_user = hp.id_person INNER JOIN hr_osobni_udaje ou ON ou.id_person = hp.id_person AND ou.platny = 1 INNER JOIN ' . cb_hr_pracoviste_sql($conn) . ' prac ON prac.id_person = hp.id_person AND prac.id_pob = ? AND prac.platny = 1 WHERE hp.aktivni = 1 ORDER BY name, hp.id_person');
+    $stmt = $conn->prepare('SELECT DISTINCT hp.id_person, ' . cb_osoba_jmeno_sql('ou.id_person',true) . ' AS name FROM hr_person hp INNER JOIN `user` u ON u.id_user = hp.id_person INNER JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person = hp.id_person AND ou.platny = 1 INNER JOIN ' . cb_hr_pracoviste_sql($conn) . ' prac ON prac.id_person = hp.id_person AND prac.id_pob = ? AND prac.platny = 1 WHERE hp.aktivni = 1 ORDER BY name, hp.id_person');
     $stmt->bind_param('i', $branch);
     $stmt->execute();
     $result = $stmt->get_result();

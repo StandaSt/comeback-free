@@ -1,6 +1,8 @@
 <?php
 // lib/login_smeny.php * Verze: V28 * Aktualizace: 12.09.2026
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/osoba_jmeno.php';
 
 /*
  * PRIHLASENI PRES SMENY NEBO LOKALNI HESLO + 2FA
@@ -91,14 +93,14 @@ try {
         SELECT
             u.id_user,
             osobni.jmeno,
-            osobni.prijmeni,
+            osobni.prijmeni,osobni.druhe_jmeno,osobni.titul_za,
             u.email,
             (SELECT t.telefon FROM hr_telefon t WHERE t.id_person = p.id_person AND t.platny = 1 AND t.hlavni = 1 ORDER BY t.id_telefon DESC LIMIT 1) AS telefon,
             p.aktivni,
             u.heslo_hash
         FROM user u
         INNER JOIN hr_person p ON p.id_person = u.id_user AND p.id_user = u.id_user
-        INNER JOIN hr_osobni_udaje osobni ON osobni.id_person = p.id_person AND osobni.platny = 1
+        INNER JOIN ' . cb_osoby_zdroj_sql() . ' osobni ON osobni.id_person = p.id_person AND osobni.platny = 1
         WHERE u.email = ?
         LIMIT 1
     ');

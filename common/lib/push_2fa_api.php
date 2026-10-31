@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 /*
  * 2FA API (polling z PC + zrušení požadavku)
+ * Po schvaleni pres QR nabidne obnovu registrace, pokud puvodni push odber zanikl.
  *
  * Použití:
  * - GET ?check=1   -> vrátí stav aktuální 2FA výzvy ze session (cb_2fa_token)
@@ -142,6 +143,12 @@ try {
             $localUser = cb_prvni_vstup_user($conn, $localUserId);
             if (!is_array($localUser)) {
                 throw new RuntimeException('Lokální účet neexistuje.');
+            }
+            require_once __DIR__ . '/push_odber.php';
+            // Stale vyzadujeme schvalene 2FA; teprve potom se smi obnovit nefunkcni registrace telefonu.
+            if (cb_push_obnova_po_schvaleni($conn, $localUserId)) {
+                echo json_encode(['ok' => true, 'stav' => 'ok'], JSON_UNESCAPED_UNICODE);
+                exit;
             }
             cb_prvni_vstup_dokonci_login($conn, $localUser);
             echo json_encode(['ok' => true, 'stav' => 'ok'], JSON_UNESCAPED_UNICODE);

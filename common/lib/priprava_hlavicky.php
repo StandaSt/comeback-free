@@ -1,9 +1,13 @@
 <?php
-/*
+/* Samostatny E-mail se zapojuje s vlastnim pravem 800 a udalostmi navigace.
+
  * Ucel souboru: Pripravi data pro viditelnou hlavicku aplikace.
  * Soubor nema HTML vystup; sestavuje stav uzivatele, sluzeb, hodin a navigace.
+ * Rozpoznava take Co-Link jako aktivni modul PP.
  */
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/osoba_jmeno.php';
 
 
 if (!function_exists('cb_head_restia_token_is_valid')) {
@@ -55,7 +59,7 @@ $cbUserName = 'Uzivatel';
 $cbUserRole = '-';
 $cbUserRoleLabel = '-';
 if (is_array($cbUser)) {
-    $fullName = trim((string)($cbUser['name'] ?? '') . ' ' . (string)($cbUser['surname'] ?? ''));
+    $fullName = cb_osoba_jmeno($cbUser);
     $cbUserName = $fullName !== '' ? $fullName : (string)($cbUser['jmeno'] ?? $cbUser['email'] ?? $cbUser['login'] ?? $cbUserName);
     $cbUserRole = (string)($cbUser['role'] ?? $cbUser['nazev_role'] ?? $cbUserRole);
     $cbUserRoleLabel = $cbUserRole;
@@ -103,7 +107,7 @@ if ($cbStartTs <= 0 || $cbStartTs > $cbNowTs) {
 // Pripravi kontext aktualniho modulu a aktualni cas.
 $cbHelpdeskApiUrl = cb_root_url('index.php');
 $cbCurrentModule = function_exists('cb_current_module') ? cb_current_module() : 'provoz';
-if (!in_array($cbCurrentModule, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'], true)) {
+if (!in_array($cbCurrentModule, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace', 'co_link', 'email'], true)) {
     $cbCurrentModule = 'provoz';
 }
 $cbHeaderNow = new DateTimeImmutable('now', new DateTimeZone('Europe/Prague'));

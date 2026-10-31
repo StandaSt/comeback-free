@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 /**
  * DB dotazy pro dokumenty zobrazovane v HR prehledu.
@@ -135,7 +137,7 @@ function hr_fetch_employee_documents(mysqli $db, int $idUser, ?int $idPerson = n
             d.vytvoreno,
             dt.nazev AS typ,
             ou.jmeno,
-            ou.prijmeni,
+            ou.prijmeni,ou.druhe_jmeno,ou.titul_za,
             ds.puvodni_nazev,
             ds.ulozeny_nazev,
             ds.mime_typ,
@@ -148,7 +150,7 @@ function hr_fetch_employee_documents(mysqli $db, int $idUser, ?int $idPerson = n
         INNER JOIN hr_person p
             ON p.id_person = d.id_person
            AND p.testovaci = 0
-        INNER JOIN hr_osobni_udaje ou
+        INNER JOIN " . cb_osoby_zdroj_sql() . " ou
             ON ou.id_person = p.id_person
            AND ou.platny = 1
         LEFT JOIN hr_dokument_soubor ds
@@ -185,7 +187,7 @@ function hr_fetch_employee_documents(mysqli $db, int $idUser, ?int $idPerson = n
             'id_person' => $rowPerson,
             'nazev' => (string)$row['nazev'],
             'typ' => (string)$row['typ'],
-            'osoba' => trim((string)$row['prijmeni'] . ' ' . (string)$row['jmeno']),
+            'osoba' => cb_osoba_jmeno($row,true),
             'platnost_od' => $row['platnost_od'],
             'platnost_do' => $row['platnost_do'],
             'vytvoreno' => (string)$row['vytvoreno'],

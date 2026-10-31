@@ -1,0 +1,5 @@
+# Modul nema verejny vypis adresare, interni knihovny spravy ani instalacni manifesty.
+Options -Indexes
+<FilesMatch "^(composer\.(json|lock)|core\.php|data\.php|posta\.php|odeslani\.php|menu\.php|nastaveni\.php|sprava\.php)$">
+    Require all denied
+</FilesMatch>

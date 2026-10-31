@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 /* Účel: Spravuje výhradní zámek plánování pobočky. Hlídá aktivitu, bezpečné uvolnění a expiraci; změny vlastnictví audituje bez logování každého heartbeat. */
 
 /** Provede parametrizované SQL; transakci řídí dispatcher celé uživatelské akce. */
@@ -14,7 +16,7 @@ function cb_smeny_planovani_sql(mysqli $db, string $sql, string $types = '', arr
 /** Vrátí pouze aktuální zámek podle času DB, bez jeho prodlužování při GET. */
 function cb_smeny_planovani_zamek_nacist(mysqli $db, int $idBranch): ?array
 {
-    $stmt = cb_smeny_planovani_sql($db, 'SELECT z.id_person,z.token,z.platny_do,TIMESTAMPDIFF(SECOND,NOW(),z.platny_do) zbyva_sekund,COALESCE((SELECT NULLIF(TRIM(CONCAT_WS(" ",o.jmeno,o.prijmeni)),"") FROM hr_osobni_udaje o WHERE o.id_person=z.id_person AND o.platny=1 ORDER BY o.id_osobni_udaje DESC LIMIT 1),CONCAT("Osoba #",z.id_person)) jmeno FROM smeny_zamek z WHERE z.id_pob=? AND z.platny_do>NOW()', 'i', [$idBranch]);
+    $stmt = cb_smeny_planovani_sql($db, 'SELECT z.id_person,z.token,z.platny_do,TIMESTAMPDIFF(SECOND,NOW(),z.platny_do) zbyva_sekund,COALESCE(NULLIF(' . cb_osoba_jmeno_sql('z.id_person') . ',""),CONCAT("Osoba #",z.id_person)) jmeno FROM smeny_zamek z WHERE z.id_pob=? AND z.platny_do>NOW()', 'i', [$idBranch]);
     $row = $stmt->get_result()->fetch_assoc();
     $stmt->close();
     return $row;

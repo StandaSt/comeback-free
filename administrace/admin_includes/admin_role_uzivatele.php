@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 /* Účel: Uchovává jednu kompaktní tabulku aktivních členů pro každou roli; hlavičky sdílejí její šablonu. */
 ?>
 <?php foreach ($adminRoles as $role): ?>
@@ -14,7 +16,7 @@ declare(strict_types=1);
             <table><thead><tr><th>Jméno</th><th>Funkce / sloty</th><th>Pobočky</th></tr></thead><tbody>
                 <?php foreach ($rows as $person): ?>
                 <tr>
-                    <td><strong title="ID osoby <?= (int)$person['id_person'] ?>"><?= h(trim((string)$person['prijmeni'].' '.(string)$person['jmeno']) ?: 'Osoba #'.$person['id_person']) ?></strong>
+                    <td><strong title="ID osoby <?= (int)$person['id_person'] ?>"><?= h(cb_osoba_jmeno($person,true) ?: 'Osoba #'.$person['id_person']) ?></strong>
                         <?php if (!(int)$person['aktivni']): ?><small>Neaktivní</small><?php endif; ?></td>
                     <td><?= h(implode(', ',array_keys($person['funkce'])) ?: '—') ?>
                         <?php if ($person['sloty']): ?><small>Sloty: <?= h(implode(', ',array_keys($person['sloty']))) ?></small><?php endif; ?></td>

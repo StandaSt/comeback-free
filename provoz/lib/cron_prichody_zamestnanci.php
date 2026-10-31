@@ -8,6 +8,7 @@ if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 require_once __DIR__ . '/../../common/lib/app.php';
 require_once __DIR__ . '/../../common/lib/system.php';
 require_once __DIR__ . '/kontrola_prichodu.php';
+require_once __DIR__ . '/prichody_notifikace.php';
 require_once __DIR__ . '/../../common/notifikace/notifikace_info.php';
 $preview = in_array('--nahled', $argv, true);
 $PROSTREDI = $preview ? 'LOCAL' : 'SERVER';
@@ -17,25 +18,7 @@ try {
     $db = db();
     if ($preview) { $db->begin_transaction(MYSQLI_TRANS_START_READ_ONLY); }
     $branches = cb_prichody_zkontroluj($db, $now);
-    $failed = false;
-    foreach ($branches as $branch) {
-        if (!$branch['overena']) {
-            $error = new RuntimeException('Pobočka ' . $branch['nazev'] . ' nemá potvrzený PC. Přítomnost nelze vyhodnotit.');
-            if (!$preview) { cb_chyba_oznam($error, ['module' => 'PROVOZ', 'action' => 'Kontrola příchodů 10:10']); }
-            fwrite(STDERR, $error->getMessage() . PHP_EOL);
-            $failed = true;
-            continue;
-        }
-        foreach ($branch['neprihlaseni'] as $person) {
-            if ($preview) { echo $branch['nazev'] . ': nepřihlášen ' . $person['jmeno'] . PHP_EOL; continue; }
-            $result = cb_info_posli_jednou([(int)$person['id_user']], 'prichody_zamestnanec', 'Přihlašte se do IS',
-                "Není evidováno Vaše přihlášení do IS, udělejte to prosím co nejdříve.\nDěkuji",
-                'prichody:' . $now->format('Y-m-d') . ':1010:' . $person['id_user'],
-                ['datum' => $now->format('Y-m-d'), 'kontrola' => '10:10', 'id_pob' => $branch['id_pob'], 'zamestnanec' => $person]);
-            echo json_encode($result, JSON_UNESCAPED_UNICODE) . PHP_EOL;
-            $failed = $failed || $result['selhalo'] > 0;
-        }
-    }
+    $failed = cb_prichody_upozorni_zamestnance($branches, $now, $preview);
     if ($preview) { $db->rollback(); }
     echo "Kontrola příchodů 10:10 dokončena.\n";
     exit($failed ? 1 : 0);

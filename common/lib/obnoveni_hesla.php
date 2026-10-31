@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/osoba_jmeno.php';
 
 /*
  * Obnoveni zapomenuteho hesla.
@@ -19,7 +21,7 @@ function cb_obnoveni_hesla_user_podle_email(mysqli $db, string $email): ?array
                 COALESCE(ou.jmeno, \'\') AS jmeno,
                 COALESCE(ou.prijmeni, \'\') AS prijmeni
          FROM user u
-         LEFT JOIN hr_osobni_udaje ou ON ou.id_person=u.id_user AND ou.platny=1
+         LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=u.id_user AND ou.platny=1
          WHERE u.email=?
          LIMIT 1'
     );
@@ -100,7 +102,7 @@ function cb_obnoveni_hesla_odeslat(mysqli $db, string $email): bool
 
     $token = cb_obnoveni_hesla_vytvor_token($db, (int)$user['id_user']);
     $link = cb_url_abs('?obnoveni_hesla=' . rawurlencode($token));
-    $name = trim((string)$user['jmeno'] . ' ' . (string)$user['prijmeni']);
+    $name = cb_osoba_jmeno($user);
     require_once __DIR__ . '/email_reset_hesla.php';
     $idAkceLog = db_obnoveni_hesla_log_zahaj($db, (int)$user['id_user']);
     try {

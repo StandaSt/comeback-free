@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 /* Audit HR se potvrzuje spolecne se zmenou; neuspesny pokus zustava odlisnou udalosti. */
 require_once __DIR__ . '/../hr_lib/hr_audit.php';
@@ -60,6 +62,8 @@ function hr_zapis_vd_otevreni(mysqli $db, int $idVd, int $idUser): bool
     }
 }
 
+/** Načte historii uchazeče s aktuálním osobním popiskem autora jednotlivých akcí. */
+/** Načte historii uchazeče s aktuálním osobním popiskem autora jednotlivých akcí. */
 function hr_nacti_vd_akce(mysqli $db, int $idVd): array
 {
     if ($idVd <= 0) {
@@ -76,13 +80,13 @@ function hr_nacti_vd_akce(mysqli $db, int $idVd): array
             v.vysledek,
             t.nazev AS akce_typ_nazev,
             u.jmeno AS zadal_jmeno,
-            u.prijmeni AS zadal_prijmeni
+            u.prijmeni AS zadal_prijmeni,u.druhe_jmeno AS zadal_druhe_jmeno,u.titul_za AS zadal_titul_za
         FROM hr_vd_akce a
         INNER JOIN hr_cis_vd_akce_vysledek v
             ON v.id_vd_akce_vysledek = a.id_vd_akce_vysledek
         INNER JOIN hr_cis_vd_akce_typ t
             ON t.id_vd_akce_typ = v.id_vd_akce_typ
-        LEFT JOIN hr_osobni_udaje u
+        LEFT JOIN ' . cb_osoby_zdroj_sql() . ' u
             ON u.id_person = a.id_user_zadal AND u.platny = 1
         WHERE a.id_vd = ?
         ORDER BY a.akce_kdy DESC, a.id_vd_akce DESC
@@ -93,7 +97,9 @@ function hr_nacti_vd_akce(mysqli $db, int $idVd): array
 
     $rows = [];
     while ($row = $result->fetch_assoc()) {
-        $zadal = trim((string)($row['zadal_prijmeni'] ?? '') . ' ' . (string)($row['zadal_jmeno'] ?? ''));
+        // Autor udalosti je HR osoba; uchazec sam ma vlastni data z dotazniku.
+        $zadal = cb_osoba_jmeno(['jmeno'=>$row['zadal_jmeno']??'','prijmeni'=>$row['zadal_prijmeni']??'',
+            'druhe_jmeno'=>$row['zadal_druhe_jmeno']??'','titul_za'=>$row['zadal_titul_za']??''],true);
         $rows[] = $row + [
             'zadal_label' => $zadal !== '' ? $zadal : '-',
             'poznamka' => trim((string)($row['poznamka'] ?? '')) !== '' ? (string)$row['poznamka'] : '-',
@@ -195,11 +201,11 @@ function hr_nacti_vd_akce(mysqli $db, int $idVd): array
             d.podpis_odeslano,
             d.podpis_podepsano,
             u.jmeno,
-            u.prijmeni
+            u.prijmeni,u.druhe_jmeno,u.titul_za
         FROM hr_dokument d
         INNER JOIN hr_cis_dokument_typ dt
             ON dt.id_dokument_typ = d.id_dokument_typ
-        LEFT JOIN hr_osobni_udaje u
+        LEFT JOIN ' . cb_osoby_zdroj_sql() . ' u
             ON u.id_person = d.id_user_zadal AND u.platny = 1
         WHERE d.id_vd = ?
           AND d.platny = 1
@@ -209,7 +215,7 @@ function hr_nacti_vd_akce(mysqli $db, int $idVd): array
     $stmt->execute();
     $result = $stmt->get_result();
     while ($row = $result->fetch_assoc()) {
-        $zadal = trim((string)($row['prijmeni'] ?? '') . ' ' . (string)($row['jmeno'] ?? ''));
+        $zadal = cb_osoba_jmeno($row,true);
         $nazev = trim((string)($row['nazev'] ?? ''));
         $typ = trim((string)($row['typ_nazev'] ?? ''));
         $detailDokumentu = $nazev !== '' ? $nazev : ($typ !== '' ? $typ : 'Dokument');

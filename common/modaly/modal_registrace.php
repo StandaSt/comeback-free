@@ -4,10 +4,12 @@ declare(strict_types=1);
 /*
  * Modal registrace zarizeni.
  * Vytvori parovaci pozadavek, zobrazi QR kod a automaticky sleduje jeho stav.
+ * Obnovu odberu predava technickym priznakem; pokyny ve svetlem boxu maji tmavy text.
  */
 
 $loginOk = !empty($_SESSION['login_ok']);
 $cbAuthOk = !empty($_SESSION['cb_auth_ok']);
+$obnovaNotifikaci = !empty($_SESSION['cb_2fa_obnova_registrace']);
 $cbUser = $_SESSION['cb_user'] ?? null;
 $idUser = (is_array($cbUser) && isset($cbUser['id_user'])) ? (int)$cbUser['id_user'] : 0;
 
@@ -40,7 +42,7 @@ if (($loginOk || $cbAuthOk) && $idUser > 0) {
         $stmt->close();
     }
 
-    $pairUrl = cb_public_url_abs('mobil/mobil_registrace.php?t=' . rawurlencode($token));
+    $pairUrl = cb_public_url_abs('mobil/mobil_registrace.php?t=' . rawurlencode($token) . ($obnovaNotifikaci ? '&obnovit=1' : ''));
 }
 ?>
 <div class="modal-overlay" role="dialog" aria-modal="true" aria-label="První přihlášení">
@@ -60,17 +62,14 @@ if (($loginOk || $cbAuthOk) && $idUser > 0) {
     <div class="modal-box" style="background:#eff6ff; border-color:#bfdbfe;">
       <div class="modal-copy">
         Při vstupu do IS Comeback se provádí ověřování pomocí registrovaného zařízení. Ideálně mobilním telefonem.<br><br>
-        Načtěte tedy tento QR kód Vaším mobilním telefonem a při vstupu do IS Comeback jej mějte u sebe.
+        Načtěte tedy tento QR kód Vaším mobilním telefonem a při vstupu do IS Comeback jej mějte u sebe.<br><br>
+        Po načtení QR kódu se řiďte pokyny na zařízení.<br><br>
+        Na mobilním telefonu musíte mít povolené notifikace z tohoto webu, jinak Vám nebude umožněn přístup.
       </div>
-      <p class="modal-sub">Po načtení QR kódu se řiďte pokyny na zařízení.</p>
     </div>
 
     <div class="modal-spacer"></div>
     <div class="modal-qr modal-qr-main" id="cbPrvniQr"></div>
-    <?php if ($pairUrl !== ''): ?>
-      <div class="modal-spacer"></div>
-      <a class="modal-btn primary modal-touch-register" id="cbPrvniTouchRegister" href="<?= h($pairUrl) ?>" hidden>Registrovat toto zařízení</a>
-    <?php endif; ?>
 
     <div class="modal-foot">
       <div class="modal-status" id="cbPrvniStatus">Čekám na spárování zařízení…</div>
@@ -83,18 +82,6 @@ if (($loginOk || $cbAuthOk) && $idUser > 0) {
 (function(){
   var st = document.getElementById('cbPrvniStatus');
   var x = document.getElementById('cbPrvniClose');
-  var touchRegister = document.getElementById('cbPrvniTouchRegister');
-
-  /* Pozna mobilni nebo jine dotykove zarizeni. */
-  function isTouchDevice(){
-    if (navigator && Number(navigator.maxTouchPoints || 0) > 0) {
-      return true;
-    }
-    if (window.matchMedia) {
-      return window.matchMedia('(pointer: coarse)').matches;
-    }
-    return false;
-  }
 
   /* Zapise aktualni stav parovani do modalu. */
   function setTxt(t){
@@ -129,9 +116,6 @@ if (($loginOk || $cbAuthOk) && $idUser > 0) {
 
   if (x) {
     x.addEventListener('click', doAbort);
-  }
-  if (touchRegister && isTouchDevice()) {
-    touchRegister.hidden = false;
   }
 
   try {

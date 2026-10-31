@@ -107,7 +107,9 @@ $employeeDocumentOpenUrl = static function (array $document): string {
                 <?php endif; ?>
             </div>
             <div class="hr_employee_profile_info">
-                <div class="hr_employee_name_line hr_employee_name_line_large"><h2 class="hr_employee_name_title" title="<?= h($employee['cele_jmeno']) ?>"><span class="hr_employee_name_part"><?= h(trim((string)($employee['prijmeni'] ?? ''))) ?></span><span class="hr_employee_name_part"><?= h(trim((string)($employee['jmeno'] ?? '') . ' ' . (string)($employee['druhe_jmeno'] ?? ''))) ?></span></h2></div>
+                <?php // Zachovame dva radky hlavicky; titul je soucasti zbytku celeho zobrazovaneho jmena.
+                $headerName=cb_osoba_jmeno_radky($employee); ?>
+                <div class="hr_employee_name_line hr_employee_name_line_large"><h2 class="hr_employee_name_title" title="<?= h($employee['cele_jmeno']) ?>"><span class="hr_employee_name_part"><?= h($headerName['prijmeni']) ?></span><span class="hr_employee_name_part"><?= h($headerName['zbytek']) ?></span></h2></div>
                 <p class="hr_employee_profile_note"><?= h($currentAssignmentText !== '' ? $currentAssignmentText : 'Slot ani funkce nejsou doplněny') ?></p>
                 <dl class="hr_profile_facts">
                     <div class="hr_profile_fact_item"><dt class="hr_profile_fact_term">Pracoviště</dt><dd class="hr_profile_fact_value"><?= h((string)($employee['pracoviste'] ?? '-')) ?></dd></div>

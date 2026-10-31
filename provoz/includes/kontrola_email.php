@@ -2,6 +2,8 @@
 // is/includes/kontrola_email.php * Verze: V2 * Aktualizace: 29.07.2026
 
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 require_once __DIR__ . '/../../common/lib/session_boot.php';
 require_once __DIR__ . '/../../common/db/db_connect.php';
@@ -61,9 +63,10 @@ function over_csrf(string $token): bool
     return $sessionToken !== '' && hash_equals($sessionToken, $token);
 }
 
+/** Sestaví popisek příjemce ze samostatných HR údajů, nikoli připojením titulu k příjmení. */
 function cele_jmeno(array $row): string
 {
-    return trim((string)($row['jmeno'] ?? '') . ' ' . (string)($row['prijmeni'] ?? ''));
+    return cb_osoba_jmeno($row);
 }
 
 function datum_cesky(?string $hodnota): string
@@ -88,12 +91,12 @@ function nacti_prehled_emailu(mysqli $db): array
 {
     return $db->query(
         "SELECT e.email,
-                TRIM(CONCAT(COALESCE(u.prijmeni, ''), ' ', COALESCE(u.jmeno, ''))) AS cele_jmeno,
+                " . cb_osoba_jmeno_sql('u.id_person',true) . " AS cele_jmeno,
                 e.stav,
                 e.odeslano,
                 e.potvrzeno
          FROM aaa_email_overeni e
-         LEFT JOIN hr_osobni_udaje u ON u.id_person = e.id_user AND u.platny = 1
+         LEFT JOIN " . cb_osoby_zdroj_sql() . " u ON u.id_person = e.id_user AND u.platny = 1
          WHERE e.id = (
              SELECT MAX(e2.id)
              FROM aaa_email_overeni e2
@@ -143,10 +146,10 @@ function nacti_aktivni_emaily(mysqli $db): array
 {
     $rows = [];
     $result = $db->query(
-        "SELECT u.id_user, ou.jmeno, ou.prijmeni, LOWER(TRIM(u.email)) AS email
+        "SELECT u.id_user, ou.jmeno, ou.prijmeni,ou.druhe_jmeno,ou.titul_za, LOWER(TRIM(u.email)) AS email
          FROM user u
          INNER JOIN hr_person hp ON hp.id_person = u.id_user AND hp.aktivni = 1
-         INNER JOIN hr_osobni_udaje ou ON ou.id_person = hp.id_person AND ou.platny = 1
+         INNER JOIN " . cb_osoby_zdroj_sql() . " ou ON ou.id_person = hp.id_person AND ou.platny = 1
          WHERE u.email IS NOT NULL
            AND TRIM(u.email) <> ''
            AND NOT EXISTS (
@@ -656,10 +659,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && trim((string)($_POST['ak
                 $idUser = 0;
                 $celeJmeno = '';
                 $stmt = $db->prepare(
-                    "SELECT u.id_user, ou.jmeno, ou.prijmeni
+                    "SELECT u.id_user, ou.jmeno, ou.prijmeni,ou.druhe_jmeno,ou.titul_za
                      FROM user u
                      INNER JOIN hr_person hp ON hp.id_person = u.id_user AND hp.aktivni = 1
-                     INNER JOIN hr_osobni_udaje ou ON ou.id_person = hp.id_person AND ou.platny = 1
+                     INNER JOIN " . cb_osoby_zdroj_sql() . " ou ON ou.id_person = hp.id_person AND ou.platny = 1
                      WHERE LOWER(TRIM(u.email)) = ?
                      ORDER BY u.id_user
                      LIMIT 1"
@@ -683,10 +686,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && trim((string)($_POST['ak
                 }
             }
         } elseif ($akce === 'vsem') {
-            $sql = "SELECT u.id_user, ou.jmeno, ou.prijmeni, LOWER(TRIM(u.email)) AS email
+            $sql = "SELECT u.id_user, ou.jmeno, ou.prijmeni,ou.druhe_jmeno,ou.titul_za, LOWER(TRIM(u.email)) AS email
                     FROM user u
                     INNER JOIN hr_person hp ON hp.id_person = u.id_user AND hp.aktivni = 1
-                    INNER JOIN hr_osobni_udaje ou ON ou.id_person = hp.id_person AND ou.platny = 1
+                    INNER JOIN " . cb_osoby_zdroj_sql() . " ou ON ou.id_person = hp.id_person AND ou.platny = 1
                     WHERE u.email IS NOT NULL
                       AND TRIM(u.email) <> ''
                       AND NOT EXISTS (

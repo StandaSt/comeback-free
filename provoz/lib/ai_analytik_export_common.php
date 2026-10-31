@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 require_once __DIR__ . '/../../common/db/db_prava.php';
 
@@ -50,13 +52,14 @@ function cb_ai_analytik_export_overit(string $payload, string $signature, string
     return $data;
 }
 
+/** Vrátí příjemce AI exportu; identifikace je podle ID, zobrazovaný popisek zahrnuje titul. */
 function cb_ai_analytik_export_prijemci(mysqli $conn): array
 {
     $result = $conn->query(
-        "SELECT DISTINCT u.id_user, ou.jmeno, ou.prijmeni, u.email
+        "SELECT DISTINCT u.id_user, ou.jmeno, ou.prijmeni,ou.druhe_jmeno,ou.titul_za, u.email
          FROM user AS u
          INNER JOIN hr_pristupovy_profil AS ur ON ur.id_person = u.id_user AND ur.id_role < 4
-         INNER JOIN hr_osobni_udaje ou ON ou.id_person = u.id_user AND ou.platny = 1
+         INNER JOIN " . cb_osoby_zdroj_sql() . " ou ON ou.id_person = u.id_user AND ou.platny = 1
          WHERE TRIM(u.email) <> ''
          ORDER BY ou.prijmeni ASC, ou.jmeno ASC, u.id_user ASC"
     );
@@ -68,7 +71,7 @@ function cb_ai_analytik_export_prijemci(mysqli $conn): array
         }
         $rows[] = [
             'id_user' => (int)$row['id_user'],
-            'name' => trim((string)$row['jmeno'] . ' ' . (string)$row['prijmeni']),
+            'name' => cb_osoba_jmeno($row),
             'email' => $email,
         ];
     }
@@ -79,9 +82,9 @@ function cb_ai_analytik_export_prijemci(mysqli $conn): array
 function cb_ai_analytik_export_prijemce(mysqli $conn, int $idUser): ?array
 {
     $stmt = $conn->prepare(
-        "SELECT u.id_user, ou.jmeno, ou.prijmeni, u.email
+        "SELECT u.id_user, ou.jmeno, ou.prijmeni,ou.druhe_jmeno,ou.titul_za, u.email
          FROM user AS u
-         INNER JOIN hr_osobni_udaje ou ON ou.id_person = u.id_user AND ou.platny = 1
+         INNER JOIN " . cb_osoby_zdroj_sql() . " ou ON ou.id_person = u.id_user AND ou.platny = 1
          WHERE u.id_user = ?
            AND TRIM(u.email) <> ''
            AND EXISTS (
@@ -104,7 +107,7 @@ function cb_ai_analytik_export_prijemce(mysqli $conn, int $idUser): ?array
     }
     return [
         'id_user' => (int)$row['id_user'],
-        'name' => trim((string)$row['jmeno'] . ' ' . (string)$row['prijmeni']),
+        'name' => cb_osoba_jmeno($row),
         'email' => $email,
     ];
 }

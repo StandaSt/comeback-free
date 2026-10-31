@@ -1,6 +1,8 @@
 <?php
 // Overuje ulozeni a nahrazeni verze; po uspechu vraci vyplnenou kontrolu s novym tokenem pro dalsi praci.
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 require_once __DIR__ . '/kontrola_trzeb_formular.php';
 require_once __DIR__ . '/../db/db_kontrola_trzeb_archiv_zapis.php';
 
@@ -56,7 +58,7 @@ function cb_kt_handle_post(): never
         unset($_SESSION['kt_forms'][$token]['saved_id']);
         $rows = cb_kt_radky($snapshot, $_POST);
         $user = $_SESSION['cb_user'];
-        $name = trim((string)($user['name'] ?? '') . ' ' . (string)($user['surname'] ?? ''));
+        $name = cb_osoba_jmeno($user);
         $offerKey = is_string($_POST['kt_offer'] ?? null) ? $_POST['kt_offer'] : '';
         $confirmed = ($_POST['kt_nahradit'] ?? '') === '1' && is_array($form['replacement_offer'] ?? null)
             && isset($form['replacement_offer_key']) && hash_equals($form['replacement_offer_key'], $offerKey) ? $form['replacement_offer'] : null;

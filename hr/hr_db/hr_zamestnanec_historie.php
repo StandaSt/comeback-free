@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 /* Účel: Spojuje dochovanou historii zaměstnance s auditem skutečných změn HR.
  * Datum zápisu neodvozuje z účinnosti. Neznámý historický autor a začátek zůstanou neuvedené.
@@ -64,9 +66,9 @@ function hr_historie_detail(mysqli $db, array $old, array $new): string
 /** Vrátí audit karty a označení založení, která nahrazuje starší odvozené události. */
 function hr_historie_audit(mysqli $db, int $idPerson): array
 {
-    $stmt = $db->prepare("SELECT a.*, CONCAT(u.prijmeni,' ',u.jmeno) AS zapsal FROM user_akce_new a
+    $stmt = $db->prepare("SELECT a.*, " . cb_osoba_jmeno_sql('u.id_person',true) . " AS zapsal FROM user_akce_new a
         LEFT JOIN hr_person p ON p.id_user=a.id_user
-        LEFT JOIN hr_osobni_udaje u ON u.id_person=p.id_person AND u.platny=1
+        LEFT JOIN " . cb_osoby_zdroj_sql() . " u ON u.id_person=p.id_person AND u.platny=1
         WHERE a.id_modul=3 AND a.objekt='hr_person' AND a.id_objektu=?
         AND JSON_UNQUOTE(JSON_EXTRACT(a.detail_json,'$.zdroj'))='hr_audit' ORDER BY a.cas DESC,a.id_user_akce DESC");
     $stmt->bind_param('i',$idPerson); $stmt->execute();
@@ -105,9 +107,9 @@ function hr_historie_starsi(mysqli $db, int $idPerson): array
     foreach ($definitions as [$table,$pk,$actor,$action,$join,$od,$do,$time]) {
         // Starý bankovní účet přepisoval autora při zneplatnění; neuvádíme jej jako autora založení.
         $actorJoin = $actor === null ? '' : ($actor === 'id_person_zadal'
-            ? 'LEFT JOIN hr_osobni_udaje au ON au.id_person=t.id_person_zadal AND au.platny=1'
-            : 'LEFT JOIN hr_person ap ON ap.id_user=t.'.$actor.' LEFT JOIN hr_osobni_udaje au ON au.id_person=ap.id_person AND au.platny=1');
-        $actorExpr = $actor === null ? 'NULL' : "CONCAT(au.prijmeni,' ',au.jmeno)";
+            ? 'LEFT JOIN ' . cb_osoby_zdroj_sql() . ' au ON au.id_person=t.id_person_zadal AND au.platny=1'
+            : 'LEFT JOIN hr_person ap ON ap.id_user=t.'.$actor.' LEFT JOIN ' . cb_osoby_zdroj_sql() . ' au ON au.id_person=ap.id_person AND au.platny=1');
+        $actorExpr = $actor === null ? 'NULL' : cb_osoba_jmeno_sql('au.id_person',true);
         $odExpr = $od === null ? 'NULL' : 't.'.$od; $doExpr = $do === null ? 'NULL' : 't.'.$do;
         $note = $table === 'hr_poznamka' ? 't.text_poznamky' : 'NULL';
         $sql = "SELECT t.{$time} AS kdy,{$action} AS akce,{$odExpr} AS plati_od,{$doExpr} AS plati_do,

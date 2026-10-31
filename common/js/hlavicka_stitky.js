@@ -1,4 +1,4 @@
-/* Osobní štítky hlavičky: bezpečný textový výstup, tooltipy a čas od úspěšných importů podle serverových hodin. */
+/* E-mail doplnuje autorizovany pocet neprectenych zprav. Osobní štítky a počet nepřečtených zpráv Co-Linku: bezpečný text, tooltipy a čas od importů podle serverových hodin. */
 (function () {
   'use strict';
   var endpoint = window.CB_ENDPOINT || 'index.php';
@@ -6,10 +6,29 @@
   var receivedAt = 0;
   var pending = null;
 
+  // Pocet zahrnuje dostupne soukrome chaty, skupiny i kanaly; ztiseni push jej neskrývá.
+  function setCoLinkUnread(value) {
+    var count=Math.max(0,Number(value)||0);
+    document.querySelectorAll('[data-cb-colink-unread]').forEach(function(dot){
+      dot.hidden=count===0;
+      dot.textContent=count>0?String(count):'';
+      var link=dot.closest('a');
+      var text=count>0?'Co-Link – nepřečtené zprávy: '+count:'Co-Link';
+      if(link){link.title=text;link.setAttribute('aria-label',text);}
+    });
+  }
+  window.CB_COLINK_HEADER={setUnread:setCoLinkUnread};
+
   // Při obnově nevkládáme HTML ze serveru; i tabulka tooltipu používá pouze textové buňky.
   function render(data) {
     serverTime = Number(data.server_ts);
     receivedAt = performance.now();
+    setCoLinkUnread(data.co_link_unread);
+    // Pocet patri pouze schrankam dostupnym aktualnimu prihlaseni.
+    document.querySelectorAll('[data-cb-email-unread]').forEach(function(dot){
+      var count=Math.max(0,Number(data.email_unread)||0);
+      dot.hidden=count===0; dot.textContent=count?String(count):'';
+    });
     document.querySelectorAll('[data-cb-header-tags]').forEach(function (row) {
       row.replaceChildren();
       var tags = data.modules && data.modules[row.dataset.cbHeaderTags] || [];

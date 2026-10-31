@@ -1,12 +1,14 @@
 <?php
 declare(strict_types=1);
 
+/* E-mail pridava vstupni pravo 800 pro skupinu 800+. Sdilene overeni prav IS a vstupnich prav modulu vcetne samostatneho Co-Linku. */
+
 if (!function_exists('cb_pravo_vstupni_pravo')) {
     function cb_pravo_vstupni_pravo(int $idPravo): int
     {
         $idVstupnihoPrava = intdiv($idPravo, 100) * 100;
 
-        return in_array($idVstupnihoPrava, [100, 200, 300, 400, 500, 600], true)
+        return in_array($idVstupnihoPrava, [100, 200, 300, 400, 500, 600, 700, 800], true)
             ? $idVstupnihoPrava
             : 0;
     }

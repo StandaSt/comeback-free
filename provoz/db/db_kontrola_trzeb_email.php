@@ -1,6 +1,8 @@
 <?php
 // Čte úplnou sadu platných archivních kontrol a HR kontakty pro e-mailový přehled.
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 require_once __DIR__ . '/../lib/kontrola_trzeb_formular.php';
 require_once __DIR__ . '/db_kontrola_trzeb_soucty.php';
 
@@ -43,8 +45,8 @@ function cb_kt_email_podklady(mysqli $db, array $allowed, string $from, string $
 // Jméno i adresa pocházejí z aktuální HR karty; adresa účtu ani text od klienta se nepoužijí.
 function cb_kt_email_kontakt(mysqli $db, int $id, bool $byUser=false): array
 {
-    $stmt=$db->prepare('SELECT p.id_person,o.jmeno,o.prijmeni,e.email FROM hr_person p
-        JOIN hr_osobni_udaje o ON o.id_person=p.id_person AND o.platny=1
+    $stmt=$db->prepare('SELECT p.id_person,o.jmeno,o.prijmeni,o.druhe_jmeno,o.titul_za,e.email FROM hr_person p
+        JOIN ' . cb_osoby_zdroj_sql() . ' o ON o.id_person=p.id_person AND o.platny=1
         JOIN hr_email e ON e.id_person=p.id_person AND e.platny=1 AND e.hlavni=1
         WHERE p.aktivni=1 AND p.' . ($byUser ? 'id_user' : 'id_person') . '=?');
     $stmt->bind_param('i',$id); $stmt->execute();
@@ -52,5 +54,5 @@ function cb_kt_email_kontakt(mysqli $db, int $id, bool $byUser=false): array
     if (count($rows)!==1 || !filter_var(trim((string)$rows[0]['email']),FILTER_VALIDATE_EMAIL)) {
         throw new CbUserVisibleException($byUser ? 'Na své HR kartě musíte mít jeden platný hlavní e-mail.' : 'Jan Hušner nemá v HR jednoznačný platný hlavní e-mail.');
     }
-    return ['name'=>trim($rows[0]['jmeno'].' '.$rows[0]['prijmeni']), 'email'=>trim($rows[0]['email'])];
+    return ['name'=>cb_osoba_jmeno($rows[0]), 'email'=>trim($rows[0]['email'])];
 }

@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 /* Účel: Načte definitivní stavy rozpisů a existující přehled souhlasů či výhrad pouze za povolené pobočky. */
 
 /** Pobočku bez publikace označíme jako externí zdroj, i když už má pracovní kopii. */
@@ -17,6 +19,6 @@ function cb_smeny_prehled_souhlasy(mysqli $db, array $branches, string $week): a
 {
     if(!cb_smeny_planovani_vidi() || $branches===[]) return [];
     $ids=implode(',',array_map('intval',array_keys($branches)));
-    $stmt=cb_smeny_planovani_sql($db,'SELECT o.*,p.nazev pobocka,TRIM(CONCAT_WS(" ",ou.prijmeni,ou.jmeno)) jmeno FROM smeny_oznameni o JOIN smeny_rozpis r ON r.id_smeny_rozpis=o.id_smeny_rozpis JOIN pobocka p ON p.id_pob=r.id_pob LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje=(SELECT MAX(x.id_osobni_udaje) FROM hr_osobni_udaje x WHERE x.id_person=o.id_person AND x.platny=1) WHERE r.tyden_od=? AND r.id_pob IN ('.$ids.') ORDER BY (o.potvrzeno IS NULL) DESC,p.nazev,jmeno,o.verze,o.id_smeny_oznameni','s',[$week]);
+    $stmt=cb_smeny_planovani_sql($db,'SELECT o.*,p.nazev pobocka,' . cb_osoba_jmeno_sql('ou.id_person',true) . ' jmeno FROM smeny_oznameni o JOIN smeny_rozpis r ON r.id_smeny_rozpis=o.id_smeny_rozpis JOIN pobocka p ON p.id_pob=r.id_pob LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=o.id_person WHERE r.tyden_od=? AND r.id_pob IN ('.$ids.') ORDER BY (o.potvrzeno IS NULL) DESC,p.nazev,jmeno,o.verze,o.id_smeny_oznameni','s',[$week]);
     $rows=$stmt->get_result()->fetch_all(MYSQLI_ASSOC);$stmt->close();return $rows;
 }

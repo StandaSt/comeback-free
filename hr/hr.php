@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../common/lib/osoba_jmeno.php';
 
 /*
  * Modulovy vstup HR.
@@ -46,7 +48,7 @@ $userName = '';
 $userRole = '';
 
 if (is_array($cbUser)) {
-    $userName = trim((string)($cbUser['name'] ?? '') . ' ' . (string)($cbUser['surname'] ?? ''));
+    $userName = cb_osoba_jmeno($cbUser);
     if ($userName === '') {
         $userName = trim((string)($cbUser['email'] ?? ''));
     }

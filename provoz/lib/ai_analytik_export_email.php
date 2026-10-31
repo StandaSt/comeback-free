@@ -1,6 +1,8 @@
 <?php
 // Odeslání podepsaného výsledku AI analytika jako PDF.
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 require_once __DIR__ . '/../../common/lib/session_boot.php';
 require_once __DIR__ . '/../../common/config/secrets.php';
@@ -60,7 +62,7 @@ try {
     $recipientEmail = (string)$recipient['email'];
 
     $sender = is_array($_SESSION['cb_user'] ?? null) ? $_SESSION['cb_user'] : [];
-    $senderName = trim((string)($sender['name'] ?? '') . ' ' . (string)($sender['surname'] ?? ''));
+    $senderName = cb_osoba_jmeno($sender);
     $senderEmail = trim((string)($sender['email'] ?? ''));
     if ($senderName === '') {
         $senderName = $senderEmail !== '' ? $senderEmail : 'AI analytik';

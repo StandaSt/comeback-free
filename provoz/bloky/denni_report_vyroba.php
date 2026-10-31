@@ -1,6 +1,8 @@
 <?php
 // bloky/denni_report_vyroba.php * Samostatný formulář denního reportu výroby.
 declare(strict_types=1);
+// Osobni popisky formulare vcetne titulu sdili centralni HR zdroj; ulozene reporty se neprepisuji.
+require_once __DIR__.'/../../common/lib/osoba_jmeno.php';
 
 // Formular Vyroby eviduje jednu prestavku od-do a zachovava historickou delku bez casu.
 
@@ -51,10 +53,10 @@ $vyrobaFormPost = $vyrobaEditable && isset($_POST['vyroba_report_save']) ? $_POS
 $vyrobaOptions = $vyrobaAllowed ? cb_vyroba_people_options($vyrobaConn) : [];
 $vyrobaOptionNames = array_column($vyrobaOptions, 'name', 'id_person');
 $vyrobaRows = [];
-foreach ((array)($vyrobaHistory['people_rows'] ?? []) as $row) {
+foreach (cb_osoby_doplnit($vyrobaConn,(array)($vyrobaHistory['people_rows'] ?? []),'id_user') as $row) {
     $vyrobaRows[] = [
         'id_person' => (int)($row['id_user'] ?? 0),
-        'name' => trim((string)($row['prijmeni'] ?? '') . ' ' . (string)($row['jmeno'] ?? '')),
+        'name' => cb_osoba_jmeno($row,true),
         'start' => substr((string)($row['smena_od'] ?? ''), 0, 5),
         'end' => substr((string)($row['smena_do'] ?? ''), 0, 5),
         'pause' => (string)($row['pauza'] ?? '0'),

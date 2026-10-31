@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-/* Účel: Plánovač přiřazuje směny a jedním dokončením zveřejní verzovaný rozpis; zobrazí jeho schválení a umožní oprávněné pozdější úpravy. */
+/* Účel: Plánovač zveřejňuje verzovaný rozpis a jeho schválení; popisky osob včetně titulů přebírá z datové vrstvy. */
 $smPlanBranchId = (int)($_GET['id_pob'] ?? array_key_first($smPlanBranches) ?? 0);
 $smPlanWeekIndex = max(0,min(count($smPlanWeeks)-1,(int)($_GET['week'] ?? 1)));
 $smPlanWeek = $smPlanWeeks[$smPlanWeekIndex];
@@ -125,7 +125,7 @@ $smPlanFields = static function () use ($smPlanBranchId,$smPlanWeekIndex,$smPlan
                 </form>
                 <?php endif; ?>
                 <?php foreach($assignments as $assigned): ?>
-                  <article class="smeny_planner_assigned" data-smeny-assigned data-shift-id="<?= (int)$assigned['id_smeny_smena'] ?>" data-assigned-person="<?= (int)$assigned['id_person'] ?>" data-from="<?= h($assigned['cas_od']) ?>" data-to="<?= h($assigned['cas_do']) ?>" data-name="<?= h($assigned['pracovnik']) ?>" data-surname="<?= h($assigned['pracovnik_prijmeni'] ?? '') ?>" data-given-name="<?= h($assigned['pracovnik_jmeno'] ?? '') ?>">
+                  <article class="smeny_planner_assigned" data-smeny-assigned data-shift-id="<?= (int)$assigned['id_smeny_smena'] ?>" data-assigned-person="<?= (int)$assigned['id_person'] ?>" data-from="<?= h($assigned['cas_od']) ?>" data-to="<?= h($assigned['cas_do']) ?>" data-name="<?= h($assigned['pracovnik']) ?>" data-surname="<?= h($assigned['pracovnik_prijmeni'] ?? '') ?>" data-given-name="<?= h($assigned['pracovnik_krestni'] ?? $assigned['pracovnik_jmeno'] ?? '') ?>">
                     <strong><?= h($assigned['cas_od'].'–'.$assigned['cas_do'].' '.$assigned['pracovnik']) ?></strong>
                     <?php if($smPlanCanEdit && $smPlan['stav']==='rozpracovany'): ?>
                     <details><summary>Upravit směnu</summary>

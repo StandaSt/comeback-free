@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
+require_once __DIR__ . '/../lib/osoba_jmeno.php';
 // Rozsah mist vykonu prace sdileji vsechny cteci dotazy tohoto souboru.
 require_once __DIR__ . '/../lib/hr_pracoviste_main.php';
 
@@ -29,7 +31,7 @@ function cb_sdeleni_rows(mysqli $db, string $sql, string $types = '', array $par
 /** Platné jméno se vybírá jedinou nejnovější verzí, aby se člověk nikdy nezdvojil. */
 function cb_sdeleni_jmeno_sql(string $person): string
 {
-    return "LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje=(SELECT MAX(x.id_osobni_udaje) FROM hr_osobni_udaje x WHERE x.id_person=$person AND x.platny=1)";
+    return 'LEFT JOIN '.cb_osoby_zdroj_sql().' ou ON ou.id_person='.$person;
 }
 
 /** Společný osobní seznam; prošlá i přečtená sdělení zůstávají v archivu. */
@@ -37,7 +39,7 @@ function cb_sdeleni_osobni(mysqli $db, int $user, bool $archiv = false, int $off
 {
     $where = $archiv ? '' : ' AND p.precteno IS NULL AND s.odeslano<=NOW() AND s.platnost_do>NOW()';
     return cb_sdeleni_rows($db, 'SELECT s.*,UNIX_TIMESTAMP(s.platnost_do) platnost_do_ts,p.zobrazeno,p.precteno,
-        TRIM(CONCAT_WS(" ",ou.jmeno,ou.prijmeni)) autor
+        ' . cb_osoba_jmeno_sql('ou.id_person') . ' autor
         FROM admin_sdeleni_prijemce p JOIN admin_sdeleni s ON s.id_sdeleni=p.id_sdeleni '
         . cb_sdeleni_jmeno_sql('s.id_user_vytvoril') . ' WHERE p.id_user=?' . $where
         . ($archiv ? ' ORDER BY s.odeslano DESC,s.id_sdeleni DESC LIMIT 51 OFFSET '.max(0,$offset) : ' ORDER BY s.odeslano,s.id_sdeleni'), 'i', [$user]);
@@ -71,7 +73,7 @@ function cb_sdeleni_prijemci(mysqli $db, array $firmy, array $vyber): array
         if ($or === [] || $vyber['pobocky'] === []) { return []; }
         $where .= ' AND ('.implode(' OR ',$or).') AND EXISTS(SELECT 1 FROM ' . cb_hr_pracoviste_sql($db) . ' w WHERE w.id_person=p.id_person AND w.id_pob IN ('.implode(',',$vyber['pobocky']).') AND w.platny=1 AND w.zruseno IS NULL AND (w.platnost_od IS NULL OR w.platnost_od<=CURDATE()) AND (w.platnost_do IS NULL OR w.platnost_do>=CURDATE()))';
     }
-    return cb_sdeleni_rows($db, 'SELECT u.id_user,p.id_person,TRIM(CONCAT_WS(" ",ou.prijmeni,ou.jmeno)) jmeno
+    return cb_sdeleni_rows($db, 'SELECT u.id_user,p.id_person,' . cb_osoba_jmeno_sql('ou.id_person',true) . ' jmeno
         FROM user u JOIN hr_person p ON p.id_person=u.id_user AND p.id_user=u.id_user '
         .cb_sdeleni_jmeno_sql('p.id_person').' WHERE '.$where.' ORDER BY ou.prijmeni,ou.jmeno,u.id_user', $types,$params);
 }
@@ -108,7 +110,7 @@ function cb_sdeleni_zverejni(mysqli $db, int $autor, array $draft): int
 function cb_sdeleni_admin_archiv(mysqli $db, array $firmy, int $id = 0, int $offset = 0): array
 {
     $scope=implode(',',array_map('intval',$firmy)) ?: '0';
-    return cb_sdeleni_rows($db,'SELECT s.*,TRIM(CONCAT_WS(" ",ou.jmeno,ou.prijmeni)) autor,
+    return cb_sdeleni_rows($db,'SELECT s.*,' . cb_osoba_jmeno_sql('ou.id_person') . ' autor,
         (SELECT COUNT(*) FROM admin_sdeleni_prijemce r WHERE r.id_sdeleni=s.id_sdeleni) celkem,
         (SELECT COUNT(*) FROM admin_sdeleni_prijemce r WHERE r.id_sdeleni=s.id_sdeleni AND r.zobrazeno IS NOT NULL) zobrazeno_pocet,
         (SELECT COUNT(*) FROM admin_sdeleni_prijemce r WHERE r.id_sdeleni=s.id_sdeleni AND r.precteno IS NOT NULL) precteno_pocet,
@@ -121,6 +123,6 @@ function cb_sdeleni_admin_archiv(mysqli $db, array $firmy, int $id = 0, int $off
 /** Detail se volá až po ověření přístupu ke konkrétnímu sdělení v archivu. */
 function cb_sdeleni_admin_prijemci(mysqli $db, int $id): array
 {
-    return cb_sdeleni_rows($db,'SELECT r.id_user,r.zobrazeno,r.precteno,TRIM(CONCAT_WS(" ",ou.prijmeni,ou.jmeno)) jmeno
+    return cb_sdeleni_rows($db,'SELECT r.id_user,r.zobrazeno,r.precteno,' . cb_osoba_jmeno_sql('ou.id_person',true) . ' jmeno
         FROM admin_sdeleni_prijemce r '.cb_sdeleni_jmeno_sql('r.id_user').' WHERE r.id_sdeleni=? ORDER BY ou.prijmeni,ou.jmeno,r.id_user','i',[$id]);
 }

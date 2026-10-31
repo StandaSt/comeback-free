@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 /*
  * Nacita a uklada individualni vyjimky prav uzivatelu.
@@ -8,6 +10,8 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/admin_prava_roli_db.php';
 
+/** Přehled výjimek doplní stejnými osobními popisky jako vyhledávání uživatelů. */
+/** Přehled výjimek doplní stejnými osobními popisky jako vyhledávání uživatelů. */
 function cb_admin_individualni_prava_uzivatele_s_vyjimkami(): array
 {
     $db = db();
@@ -15,17 +19,17 @@ function cb_admin_individualni_prava_uzivatele_s_vyjimkami(): array
         SELECT
             u.id_user,
             ou.jmeno,
-            ou.prijmeni,
+            ou.prijmeni,ou.druhe_jmeno,ou.titul_za,
             u.email,
             t.telefon,
             SUM(CASE WHEN vyjimka.povoleno = 1 THEN 1 ELSE 0 END) AS pocet_povoleno,
             SUM(CASE WHEN vyjimka.povoleno = 0 THEN 1 ELSE 0 END) AS pocet_zakazano
         FROM prava_vyjimky AS vyjimka
         INNER JOIN user AS u ON u.id_user = vyjimka.id_user
-        LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje = (SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2 WHERE ou2.id_person = u.id_user AND ou2.platny = 1)
+        LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=u.id_user
         LEFT JOIN hr_telefon t ON t.id_telefon = (SELECT MAX(t2.id_telefon) FROM hr_telefon t2 WHERE t2.id_person = u.id_user AND t2.platny = 1 AND t2.hlavni = 1)
-        GROUP BY u.id_user, ou.jmeno, ou.prijmeni, u.email, t.telefon
-        ORDER BY ou.prijmeni, ou.jmeno, u.id_user
+        GROUP BY u.id_user, ou.jmeno, ou.prijmeni,ou.druhe_jmeno,ou.titul_za, u.email, t.telefon
+        ORDER BY ou.prijmeni, ou.jmeno,ou.druhe_jmeno,ou.titul_za, u.id_user
     ');
     if ($stmt === false) {
         throw new RuntimeException('Nelze pripravit seznam uzivatelu s vyjimkami.');
@@ -39,6 +43,9 @@ function cb_admin_individualni_prava_uzivatele_s_vyjimkami(): array
             'id_user' => (int)$row['id_user'],
             'jmeno' => (string)$row['jmeno'],
             'prijmeni' => (string)$row['prijmeni'],
+            // Klient dostane hotovy popisek; surove jmeno zustava pro ostatni pouziti samostatne.
+            'cele_jmeno' => cb_osoba_jmeno($row,true),
+            'druhe_jmeno' => (string)($row['druhe_jmeno']??''),'titul_za' => (string)($row['titul_za']??''),
             'email' => (string)$row['email'],
             'telefon' => (string)($row['telefon'] ?? ''),
             'pocet_povoleno' => (int)$row['pocet_povoleno'],
@@ -50,6 +57,7 @@ function cb_admin_individualni_prava_uzivatele_s_vyjimkami(): array
     return $users;
 }
 
+/** Výsledky hledání vrátí s celým osobním popiskem; jednotlivé kontakty zůstávají oddělené. */
 function cb_admin_individualni_prava_hledej_uzivatele(string $query): array
 {
     $query = trim($query);
@@ -64,14 +72,14 @@ function cb_admin_individualni_prava_hledej_uzivatele(string $query): array
         SELECT
             u.id_user,
             ou.jmeno,
-            ou.prijmeni,
+            ou.prijmeni,ou.druhe_jmeno,ou.titul_za,
             u.email,
             t.telefon,
             GROUP_CONCAT(DISTINCT cr.role ORDER BY ur.id_role SEPARATOR ", ") AS role,
             GROUP_CONCAT(DISTINCT cs.slot ORDER BY us.id_slot SEPARATOR ", ") AS slot
         FROM user u
         INNER JOIN hr_person hp ON hp.id_person = u.id_user AND hp.aktivni = 1
-        LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje = (SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2 WHERE ou2.id_person = hp.id_person AND ou2.platny = 1)
+        LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=hp.id_person
         LEFT JOIN hr_telefon t ON t.id_telefon = (SELECT MAX(t2.id_telefon) FROM hr_telefon t2 WHERE t2.id_person = hp.id_person AND t2.platny = 1 AND t2.hlavni = 1)
         LEFT JOIN hr_pristupovy_profil ur ON ur.id_person = hp.id_person
         LEFT JOIN cis_role cr ON cr.id_role = ur.id_role
@@ -85,8 +93,8 @@ function cb_admin_individualni_prava_hledej_uzivatele(string $query): array
               OR CONCAT(ou.jmeno, " ", ou.prijmeni) LIKE ?
               OR CONCAT(ou.prijmeni, " ", ou.jmeno) LIKE ?
           )
-        GROUP BY u.id_user, ou.jmeno, ou.prijmeni, u.email, t.telefon
-        ORDER BY ou.prijmeni, ou.jmeno, u.id_user
+        GROUP BY u.id_user, ou.jmeno, ou.prijmeni,ou.druhe_jmeno,ou.titul_za, u.email, t.telefon
+        ORDER BY ou.prijmeni, ou.jmeno,ou.druhe_jmeno,ou.titul_za, u.id_user
         LIMIT 20
     ');
     if ($stmt === false) {
@@ -105,6 +113,8 @@ function cb_admin_individualni_prava_hledej_uzivatele(string $query): array
             'jmeno' => (string)$row['jmeno'],
             'prijmeni' => (string)$row['prijmeni'],
             'email' => $email,
+            'cele_jmeno' => cb_osoba_jmeno($row,true),
+            'druhe_jmeno' => (string)($row['druhe_jmeno']??''),'titul_za' => (string)($row['titul_za']??''),
             'telefon' => $telefon,
             'email_match' => mb_stripos($email, $query, 0, 'UTF-8') !== false ? $email : '',
             'telefon_match' => mb_stripos($telefon, $query, 0, 'UTF-8') !== false ? $telefon : '',
@@ -146,19 +156,19 @@ function cb_admin_individualni_prava_data(int $idUser): array
         SELECT
             u.id_user,
             ou.jmeno,
-            ou.prijmeni,
+            ou.prijmeni,ou.druhe_jmeno,ou.titul_za,
             u.email,
             COUNT(DISTINCT ur.id_role) AS role_count,
             GROUP_CONCAT(DISTINCT cr.role ORDER BY ur.id_role SEPARATOR ", ") AS role,
             GROUP_CONCAT(DISTINCT cs.slot ORDER BY us.id_slot SEPARATOR ", ") AS slot
         FROM user u
-        LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje = (SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2 WHERE ou2.id_person = u.id_user AND ou2.platny = 1)
+        LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=u.id_user
         LEFT JOIN hr_pristupovy_profil ur ON ur.id_person = u.id_user
         LEFT JOIN cis_role cr ON cr.id_role = ur.id_role
         LEFT JOIN ' . $slotTable . ' us ON us.id_person = u.id_user AND us.platny = 1
         LEFT JOIN cis_slot cs ON cs.id_slot = us.id_slot
         WHERE u.id_user = ?
-        GROUP BY u.id_user, ou.jmeno, ou.prijmeni, u.email
+        GROUP BY u.id_user, ou.jmeno, ou.prijmeni,ou.druhe_jmeno,ou.titul_za, u.email
         LIMIT 1
     ');
     if ($stmtUser === false) {

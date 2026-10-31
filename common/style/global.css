@@ -6,6 +6,9 @@
  * Vlastní profil odděluje údaje pro čtení od formulářů přihlašovacího účtu IS.
  * Info od admina má vlastní jednotnou typografii a kompaktní třísloupcovou lištu nezávislou na modulu.
  * Potvrzení sdělení má velký text na čtyřech řádcích, vyplní výšku lišty a upozorňuje červeným pulzem.
+ * Povoleny Co-Link pridava kompaktni ikonu Co s cervenym poctem neprectenych zprav, bez prazdneho sloupce ostatnim uzivatelum.
+ * Co-Link ma v PP vlastni ramec; jeho mobilni PWA zustava stejna i pri pouziti uvnitr IS.
+ * Co-Link vyuziva stejne menu, zapati a PP jako ostatni moduly; jeho nastaveni je nad Administraci.
  */
 
 :root {
@@ -1831,6 +1834,51 @@ align-items:center;
 .head_module_link--provoz{grid-area:provoz;}
 .head_module_link--hr{grid-area:hr;}
 .head_module_link--smeny{grid-area:smeny;}
+.head_module_link--colink{grid-area:colink;}
+.head_module_link--colink{position:relative;}
+/* Pocet zustava v pravem dolnim rohu ikony; sirka se prizpusobi vice cislicim. */
+.head_colink_unread{position:absolute;right:1px;bottom:1px;display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;box-sizing:border-box;border-radius:10px;background:#dc2626;color:#fff;border:1px solid #fff;font-family:Arial,Helvetica,sans-serif;font-size:var(--cb-font-11);font-weight:bold;line-height:1;letter-spacing:normal;white-space:nowrap;pointer-events:none;}
+.head_colink_unread[hidden]{display:none;}
+.co_link_content{overflow:hidden;}
+.co_link_frame{display:block;width:100%;height:100%;min-height:0;flex:1;border:0;}
+/* Zive konverzace pouzivaji spolecne radky menu; pouze nadpisy a pocty doplnuji komunikator. */
+.co_link_menu_filter{width:100%;min-width:0;min-height:32px;padding:6px 9px;box-sizing:border-box;border:1px solid var(--cb-border-soft);border-radius:8px;background:var(--cb-bg-control);color:var(--cb-text-main);font:14px Arial,Helvetica,sans-serif;}
+.co_link_menu_heading{display:flex;align-items:center;justify-content:space-between;gap:4px;margin-top:5px;font-size:var(--cb-font-12);font-weight:bold;}
+.co_link_menu_add{width:26px;min-height:26px;padding:0;border:0;background:transparent;color:var(--cb-text-main);font:20px Arial,Helvetica,sans-serif;cursor:pointer;}
+.co_link_menu_empty{font-size:var(--cb-font-12);color:var(--cb-text-muted);padding:2px 0 4px;}
+.co_link_menu_name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.co_link_menu_count{flex-shrink:0;font-size:var(--cb-font-12);font-weight:bold;}
+.co_link_menu_settings + .blok_menu_admin{margin-top:0;}
+.cb-context--co_link{--cb-module-accent:#123d45;--cb-module-soft:#e3efe7;}
+
+/* Ikona Co ma vlastni uzky sloupec; ostatni moduly si deli zbylou sirku hlavicky. */
+.blok_hlavicka .head_module_link--colink{width:44px;height:44px;min-height:44px;padding:0;align-self:center;justify-self:center;border:0;border-radius:13px;background:#123d45;color:#d9f0db;}
+.head_colink_icon{font-family:"Segoe UI",sans-serif;font-size:23px;font-weight:750;letter-spacing:-1px;}
+.blok_hlavicka .head_module_link--colink:hover{background:#225662;}
+.blok_hlavicka .head_module_link--colink.is-active{background:#123d45;color:#d9f0db;box-shadow:0 0 0 2px #82a99a;}
+.blok_hlavicka .head_module_link--colink.is-active::after{display:none;}
+.blok_hlavicka.cb-has-colink{
+  grid-template-columns:70px 144px repeat(5,minmax(0,1fr)) 54px;
+  grid-template-areas:"logo brand provoz hr smeny todo helpdesk colink" "logo brand provoz hr smeny todo helpdesk colink";
+}
+.blok_hlavicka.cb-has-colink.cb-maintenance-active{
+  grid-template-columns:70px 144px repeat(5,minmax(0,1fr)) 54px 160px;
+  grid-template-areas:"logo brand provoz hr smeny todo helpdesk colink update" "logo brand provoz hr smeny todo helpdesk colink update";
+}
+@media(max-width:899px){
+  .blok_hlavicka.cb-has-colink{
+    grid-template-columns:70px 44px repeat(5,minmax(0,1fr)) 54px;
+    grid-template-areas:"logo menu_toggle provoz hr smeny todo helpdesk colink" "logo menu_toggle provoz hr smeny todo helpdesk colink";
+  }
+  .blok_hlavicka.cb-has-colink.cb-maintenance-active{
+    grid-template-columns:70px 44px repeat(5,minmax(0,1fr)) 54px 100px;
+    grid-template-areas:"logo menu_toggle provoz hr smeny todo helpdesk colink update" "logo menu_toggle provoz hr smeny todo helpdesk colink update";
+  }
+}
+@media(max-width:767px){
+  .blok_hlavicka.cb-has-colink{grid-template-columns:55px 44px repeat(5,minmax(0,1fr)) 48px;}
+  .blok_hlavicka.cb-has-colink.cb-maintenance-active{grid-template-columns:55px 44px repeat(5,minmax(0,1fr)) 48px 70px;}
+}
 
 /* Stejně vysoké bloky po 400 px se přirozeně zalamují podle prostoru; na mobilu se šířka zmenší. */
 .common_profile_grid{display:grid;grid-template-columns:repeat(auto-fit,min(400px,100%));grid-auto-rows:1fr;gap:10px;max-width:1220px;align-items:stretch;}

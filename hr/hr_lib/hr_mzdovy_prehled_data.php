@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Mzdovy prehled cte zobrazovane jmeno vcetne titulu ze spolecneho osobniho zdroje.
+require_once __DIR__.'/../../common/lib/osoba_jmeno.php';
 
 // Ucel rozsahu: Mzdove obdobi zobrazuje celou mnozinu MAIN k datu obdobi, kazdou osobu zapocita jen jednou.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
@@ -92,6 +94,7 @@ function hr_mzdovy_prehled_dostupna_obdobi(mysqli $db, int $idFirma, ?array $fir
     return ['years' => $years, 'months_by_year' => $monthsByYear, 'latest_date' => $latestDate];
 }
 
+/** Čtecí mzdový přehled používá stejnou aktuální identitu osoby jako ostatní moduly IS. */
 function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
 {
     $slotTable = cb_hr_schema_table($db, 'slot');
@@ -156,7 +159,7 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
             hp.id_person,
             ou.jmeno,
             ou.prijmeni,
-            TRIM(CONCAT(COALESCE(ou.prijmeni, ""), " ", COALESCE(ou.jmeno, ""))) AS cele_jmeno,
+            ' . cb_osoba_jmeno_sql('ou.id_person',true) . ' AS cele_jmeno,
             (
                 SELECT GROUP_CONCAT(DISTINCT p.nazev ORDER BY p.nazev SEPARATOR \', \')
                 FROM ' . cb_hr_main_sql($db) . ' prac
@@ -225,7 +228,7 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
             ) AS mzda_castka,
             COALESCE(hodiny.odpracovano, 0) AS odpracovano
         FROM hr_person hp
-        INNER JOIN hr_osobni_udaje ou ON ou.id_person = hp.id_person AND ou.platny = 1
+        INNER JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person = hp.id_person AND ou.platny = 1
         LEFT JOIN (
             SELECT ro.id_user, SUM(ro.odpracovano) AS odpracovano
             FROM reporty_is_osoby ro

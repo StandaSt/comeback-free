@@ -1,7 +1,8 @@
 <?php
 declare(strict_types=1);
 
-/* Účel: Ukládá vzhled a aktivní modul uživatele; místní období spravuje společný panel stránky. */
+/* Samostatny E-mail se zapojuje s vlastnim pravem 800 a udalostmi navigace.
+ Účel: Ukládá vzhled a aktivní modul uživatele vcetne Co-Linku; místní období spravuje společný panel stránky. */
 
 function cb_nastaveni_uzivatele_vyrid_post(): void
 {
@@ -94,6 +95,7 @@ function cb_nastaveni_uzivatele_uloz_theme(): void
     exit;
 }
 
+/** Ulozi posledni platny modul; Co-Link se pri dalsim otevreni vrati do stejneho shellu IS. */
 function cb_nastaveni_uzivatele_uloz_aktivni_modul(): void
 {
     header('Content-Type: application/json; charset=utf-8');
@@ -110,7 +112,7 @@ function cb_nastaveni_uzivatele_uloz_aktivni_modul(): void
     if ($module === 'is') {
         $module = 'provoz';
     }
-    if (!in_array($module, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace'], true)) {
+    if (!in_array($module, ['provoz', 'hr', 'smeny', 'ukoly', 'helpdesk', 'administrace', 'co_link', 'email'], true)) {
         http_response_code(422);
         echo json_encode(['ok' => false, 'err' => 'Vybraný modul není platný.'], JSON_UNESCAPED_UNICODE);
         exit;

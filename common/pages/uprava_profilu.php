@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../lib/osoba_jmeno.php';
 /* Účel: Zobrazuje vlastní profil a formuláře pro přihlašovací heslo a e-mail IS.
  * Osobni a pracovni udaje se zobrazuji pouze pro cteni; MAIN se zobrazi jako cely vycet.
  */
@@ -17,7 +19,7 @@ foreach ($profil['pobocky'] as $branch) {
     }
 }
 $profilFields = [
-    'Jméno' => trim((string)($profilUser['name'] ?? '') . ' ' . (string)($profilUser['surname'] ?? '')),
+    'Jméno' => cb_osoba_jmeno($profilUser),
     'Přihlašovací e-mail IS' => $profil['email'],
     'Telefon' => (string)($profilUser['telefon'] ?? ''),
     'Role v IS' => implode(', ', array_column($profil['role'], 'nazev')),

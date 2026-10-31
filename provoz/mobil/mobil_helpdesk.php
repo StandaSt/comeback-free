@@ -1,6 +1,8 @@
 <?php
 // mobil/mobil_helpdesk.php * Verze: V1 * Aktualizace: 24.06.2026
 declare(strict_types=1);
+// Tokenizovany detail zobrazuje osoby z jednotneho HR zdroje vcetne titulu za jmenem.
+require_once __DIR__.'/../../common/lib/osoba_jmeno.php';
 
 require_once __DIR__ . '/../../common/lib/session_boot.php';
 require_once __DIR__ . '/../../common/lib/app.php';
@@ -13,6 +15,8 @@ function cb_mobil_helpdesk_h(string $s): string
     return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+/** Ověří podepsaný odkaz a načte tiket i popisky autora, příjemce a poslední zprávy. */
+/** Ověří podepsaný odkaz a načte tiket i popisky autora, příjemce a poslední zprávy. */
 function cb_mobil_helpdesk_fetch(string $token): ?array
 {
     $data = cb_helpdesk_push_token_parse($token);
@@ -40,20 +44,14 @@ function cb_mobil_helpdesk_fetch(string $token): ?array
             h.popis,
             h.verejny,
             h.typ AS typ_ticket,
-            u.jmeno,
-            u.prijmeni,
-            ur.jmeno AS prijemce_jmeno,
-            ur.prijmeni AS prijemce_prijmeni,
+            ' . cb_osoba_jmeno_sql('h.id_user_zalozil') . ' AS autor_cele_jmeno,
+            ' . cb_osoba_jmeno_sql('n.id_user') . ' AS prijemce_cele_jmeno,
             hz.zprava AS notifikace_zprava,
             hz.typ_autora AS zprava_typ_autora,
-            uz.jmeno AS zprava_jmeno,
-            uz.prijmeni AS zprava_prijmeni
+            ' . cb_osoba_jmeno_sql('hz.id_user') . ' AS zprava_cele_jmeno
         FROM helpdesk_notifikace n
         INNER JOIN helpdesk h ON h.id_helpdesk = n.id_helpdesk
-        LEFT JOIN hr_osobni_udaje u ON u.id_person = h.id_user_zalozil AND u.platny = 1
-        LEFT JOIN hr_osobni_udaje ur ON ur.id_person = n.id_user AND ur.platny = 1
         LEFT JOIN helpdesk_zprava hz ON hz.id_helpdesk_zprava = n.id_helpdesk_zprava
-        LEFT JOIN hr_osobni_udaje uz ON uz.id_person = hz.id_user AND uz.platny = 1
         WHERE n.id_helpdesk_notifikace = ? AND n.id_user = ?
         LIMIT 1
     ');
@@ -168,10 +166,10 @@ $ticketType = is_array($row) ? cb_mobil_helpdesk_type_label((string)($row['typ_t
 $ticketVisibility = is_array($row) ? cb_mobil_helpdesk_visibility_label($row['verejny'] ?? null) : '---';
 $createdAt = is_array($row) ? cb_mobil_helpdesk_format_datetime((string)($row['vytvoreno'] ?? '')) : '---';
 $ticketAuthorName = is_array($row)
-    ? cb_mobil_helpdesk_full_name((string)($row['jmeno'] ?? ''), (string)($row['prijmeni'] ?? ''))
+    ? ((string)($row['autor_cele_jmeno']??'')?:'---')
     : '---';
 $messageAuthorName = is_array($row)
-    ? cb_mobil_helpdesk_full_name((string)($row['zprava_jmeno'] ?? ''), (string)($row['zprava_prijmeni'] ?? ''))
+    ? ((string)($row['zprava_cele_jmeno']??'')?:'---')
     : '---';
 $authorName = $messageAuthorName !== '---' ? $messageAuthorName : $ticketAuthorName;
 $isAdminAuthor = is_array($row) && trim((string)($row['zprava_typ_autora'] ?? '')) === 'admin';
@@ -179,7 +177,7 @@ if ($isAdminAuthor) {
     $authorName = 'Admin IS Comeback';
 }
 $recipientName = is_array($row)
-    ? cb_mobil_helpdesk_full_name((string)($row['prijemce_jmeno'] ?? ''), (string)($row['prijemce_prijmeni'] ?? ''))
+    ? ((string)($row['prijemce_cele_jmeno']??'')?:'---')
     : '---';
 $infoLines = cb_mobil_helpdesk_info_lines($row, $createdAt, $recipientName);
 

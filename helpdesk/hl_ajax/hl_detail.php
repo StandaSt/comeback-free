@@ -1,6 +1,8 @@
 <?php
 // helpdesk/hl_ajax/hl_detail.php * Verze: V1 * Aktualizace: 20.06.2026
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 if (!defined('CB_HELPDESK_DISPATCH_INTERNAL')) {
     require_once __DIR__ . '/../../common/lib/session_boot.php';
@@ -35,9 +37,9 @@ try {
 
     $stmt = $conn->prepare('
         SELECT h.id_helpdesk, h.id_user_zalozil, h.modul, h.typ, h.stav, h.verejny, h.predmet, h.popis,
-               h.vytvoreno, h.upraveno, h.uzavreno, h.pocet_zobrazeni, h.pocet_unikatnich_zobrazeni, ou.jmeno, ou.prijmeni
+               h.vytvoreno, h.upraveno, h.uzavreno, h.pocet_zobrazeni, h.pocet_unikatnich_zobrazeni, ou.jmeno, ou.prijmeni,ou.druhe_jmeno,ou.titul_za
         FROM helpdesk h
-        LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje = (SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2 WHERE ou2.id_person = h.id_user_zalozil AND ou2.platny = 1)
+        LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=h.id_user_zalozil
         WHERE h.id_helpdesk = ?
         LIMIT 1
     ');
@@ -94,9 +96,9 @@ try {
     $zpravy = [];
     $stmtZ = $conn->prepare('
         SELECT z.id_helpdesk_zprava, z.id_helpdesk, z.id_user, z.typ_autora, z.zprava, z.systemova, z.vytvoreno,
-               ou.jmeno, ou.prijmeni
+               ou.jmeno, ou.prijmeni,ou.druhe_jmeno,ou.titul_za
         FROM helpdesk_zprava z
-        LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje = (SELECT MAX(ou2.id_osobni_udaje) FROM hr_osobni_udaje ou2 WHERE ou2.id_person = z.id_user AND ou2.platny = 1)
+        LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=z.id_user
         WHERE z.id_helpdesk = ?
         ORDER BY z.vytvoreno ASC, z.id_helpdesk_zprava ASC
     ');
@@ -106,6 +108,8 @@ try {
         $resZ = $stmtZ->get_result();
         if ($resZ instanceof mysqli_result) {
             while ($row = $resZ->fetch_assoc()) {
+                // Stejny osobni popisek pouzije desktopovy i mobilni klient.
+                $row['cele_jmeno']=cb_osoba_jmeno($row);
                 $zpravy[] = $row;
             }
             $resZ->free();

@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/osoba_jmeno.php';
 
 /*
  * Účel souboru: Pro připravený účet vytvoří první vstup a odešle pozvánku.
@@ -9,6 +11,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/prvni_vstup.php';
 require_once __DIR__ . '/email_prvni_vstup.php';
 
+/** Odešle pozvánku existující osobě a její zobrazované jméno převezme z aktuálního HR profilu. */
+/** Odešle pozvánku existující osobě a její zobrazované jméno převezme z aktuálního HR profilu. */
 function cb_user_spojeni_odeslat(mysqli $db, int $idUser): void
 {
     $user = cb_prvni_vstup_user($db, $idUser);
@@ -20,7 +24,7 @@ function cb_user_spojeni_odeslat(mysqli $db, int $idUser): void
     }
 
     $token = cb_prvni_vstup_vytvor_token($db, $idUser);
-    $name = trim((string)$user['jmeno'] . ' ' . (string)$user['prijmeni']);
+    $name = cb_osoba_jmeno($user);
     cb_email_prvni_vstup_odeslat(
         (string)$user['email'],
         $name,

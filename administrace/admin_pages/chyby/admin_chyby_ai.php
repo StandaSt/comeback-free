@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../../../common/lib/osoba_jmeno.php';
 
 /*
  * Pohled kategorie AI analytik.
@@ -35,7 +37,7 @@ $aiChyby = cb_admin_ai_chyby_nacti(db(), $limit);
                 <?php endif; ?>
                 <?php foreach ($aiChyby as $row): ?>
                     <?php
-                    $jmeno = trim((string)($row['jmeno'] ?? '') . ' ' . (string)($row['prijmeni'] ?? ''));
+                    $jmeno = cb_osoba_jmeno($row);
                     $detail = array_filter([
                         trim((string)($row['error_type'] ?? '')) !== '' ? 'Typ: ' . (string)$row['error_type'] : '',
                         trim((string)($row['error_code'] ?? '')) !== '' ? 'Kód: ' . (string)$row['error_code'] : '',

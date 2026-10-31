@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
+require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 /* Účel: Načte pouze vlastní oznámení pro modál a sestaví sedm dní jeho uloženého týdenního rozpisu. */
 
 /** Číselné ID v odkazu není oprávnění; cizí i neexistující zpráva vrací stejný prázdný výsledek. */
@@ -7,7 +9,7 @@ function cb_smeny_oznameni_detail(mysqli $db, int $id, int $person): ?array
 {
     if ($id <= 0 || $person <= 0) return null;
     $stmt = cb_smeny_planovani_sql($db,
-        'SELECT o.*,p.nazev pobocka,TRIM(CONCAT_WS(" ",ou.prijmeni,ou.jmeno)) jmeno FROM smeny_oznameni o JOIN smeny_rozpis r ON r.id_smeny_rozpis=o.id_smeny_rozpis JOIN pobocka p ON p.id_pob=r.id_pob LEFT JOIN hr_osobni_udaje ou ON ou.id_osobni_udaje=(SELECT MAX(x.id_osobni_udaje) FROM hr_osobni_udaje x WHERE x.id_person=o.id_person AND x.platny=1) WHERE o.id_smeny_oznameni=? AND o.id_person=?',
+        'SELECT o.*,p.nazev pobocka,' . cb_osoba_jmeno_sql('ou.id_person',true) . ' jmeno FROM smeny_oznameni o JOIN smeny_rozpis r ON r.id_smeny_rozpis=o.id_smeny_rozpis JOIN pobocka p ON p.id_pob=r.id_pob LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=o.id_person WHERE o.id_smeny_oznameni=? AND o.id_person=?',
         'ii', [$id, $person]);
     $notice = $stmt->get_result()->fetch_assoc();
     $stmt->close();

@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
+require_once __DIR__ . '/../../../common/lib/osoba_jmeno.php';
 
 /*
  * Pohled kategorie Prihlaseni a 2FA.
@@ -45,7 +47,7 @@ $twoFactorLabels = [
                 <?php foreach ($pokusy as $row): ?>
                     <?php
                     $hodnoceni = cb_admin_prihlaseni_hodnoceni($row);
-                    $jmeno = trim((string)($row['jmeno'] ?? '') . ' ' . (string)($row['prijmeni'] ?? ''));
+                    $jmeno = cb_osoba_jmeno($row);
                     $ua = trim((string)($row['user_agent'] ?? ''));
                     $rozmery = !empty($row['screen_w']) && !empty($row['screen_h'])
                         ? (string)$row['screen_w'] . ' × ' . (string)$row['screen_h']
@@ -86,7 +88,7 @@ $twoFactorLabels = [
                     <tr><td colspan="7" class="admin_rights_editor_empty">Nebyly nalezeny žádné 2FA výzvy.</td></tr>
                 <?php endif; ?>
                 <?php foreach ($twoFactor as $row): ?>
-                    <?php $jmeno = trim((string)($row['jmeno'] ?? '') . ' ' . (string)($row['prijmeni'] ?? '')); ?>
+                    <?php $jmeno = cb_osoba_jmeno($row); ?>
                     <tr>
                         <td><?= h((string)(int)$row['id']) ?></td>
                         <td><?= h($formatKdy($row['vytvoreno'] ?? null)) ?></td>
