@@ -5,7 +5,7 @@ require_once __DIR__ . '/../../common/db/db_cis_slot.php';
 require_once __DIR__ . '/hr_zamestnanci_pristup.php';
 
 /**
- * DB dotazy pro hlavni prehled HR modulu.
+ * DB dotazy pro hlavni prehled HR modulu; budouci vztah nepocita jako dnesni.
  * Zamestnance, smlouvy a pozadavky scita jen v povolenem osobnim/pobockovem rozsahu HR.
  */
 
@@ -58,6 +58,7 @@ function hr_fetch_prehled(mysqli $db): array
         INNER JOIN hr_pracovni_vztah pv
             ON pv.id_person = p.id_person
            AND pv.platny = 1
+           AND pv.datum_nastupu <= CURDATE()
            AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE())
         WHERE p.aktivni = 1
           AND p.testovaci = 0

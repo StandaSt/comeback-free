@@ -2,7 +2,7 @@
 declare(strict_types=1);
 // Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
 require_once __DIR__ . '/../common/lib/osoba_jmeno.php';
-/* Co-Link: opravneny pristup, transakcni formatovane zpravy, push a adresar s HR fotografii. */
+/* Co-Link: opravneny pristup, transakcni zpravy, push a adresar bez testovacich uctu s HR fotografii a aktualnimi MAIN pobockami. */
 require_once __DIR__ . '/lib.php';
 require_once __DIR__ . '/message_format.php';
 
@@ -49,12 +49,12 @@ function co_seznam(int $user): array
     return $list;
 }
 
-/** Zverejnuje pouze jmeno a identifikator aktivnich uctu, ktere smeji pouzivat link. */
+/** Zverejnuje pouze jmeno a identifikator aktivnich netestovacich uctu, ktere smeji pouzivat link. */
 function co_lide(): array
 {
-    // Jmena celeho adresare se nactou v jednom dotazu; kontroly pristupu zustavaji oddelene.
+    // Stejne jako HR vynechame testovaci identity; tento vyber chrani i volbu prijemcu a clenu skupin.
     $ids = co_rows('SELECT u.id_user,COALESCE('.cb_osoba_jmeno_sql('p.id_person').',u.email) jmeno
-        FROM user u JOIN hr_person p ON p.id_person=u.id_user AND p.id_user=u.id_user AND p.aktivni=1 ORDER BY u.id_user');
+        FROM user u JOIN hr_person p ON p.id_person=u.id_user AND p.id_user=u.id_user AND p.aktivni=1 AND p.testovaci=0 ORDER BY u.id_user');
     $people = [];
     foreach ($ids as $id) {
         $uid=(int)$id['id_user'];
@@ -64,7 +64,7 @@ function co_lide(): array
     return $people;
 }
 
-/** Filtry adresare pouze usnadnuji vyber; nemeni pravo vstupu ani automaticky nevybiraji prijemce. */
+/** Adresar filtruje podle vsech aktualnich MAIN; oblast ani vypomoc nejsou domovskou pobockou osoby. */
 function co_adresar(): array
 {
     require_once __DIR__.'/../common/lib/hr_pracoviste_main.php';
@@ -91,8 +91,11 @@ function co_adresar(): array
             $labels[(int)$r['id_person']][]=$r['slot'];
         }
         foreach(co_rows('SELECT DISTINCT f.id_person,c.nazev FROM hr_funkce f JOIN cis_funkce c ON c.id_funkce=f.id_funkce AND c.aktivni=1 WHERE f.id_person IN ('.$in.') AND f.platny=1 AND (f.platnost_od IS NULL OR f.platnost_od<=CURRENT_DATE()) AND (f.platnost_do IS NULL OR f.platnost_do>=CURRENT_DATE())') as $r) $labels[(int)$r['id_person']][]=$r['nazev'];
-        // Pro pobocky pouzivame cely platny rozsah mist vykonu prace, vcetne oblasti a vypomoci.
-        foreach(co_rows('SELECT DISTINCT w.id_person,w.id_pob FROM '.cb_hr_pracoviste_sql(db()).' w WHERE w.id_person IN ('.$in.')') as $r) $branches[(int)$r['id_person']][(int)$r['id_pob']]=true;
+        // MAIN je mnozina bez hlavni priority; zachovame vsechny dnes platne zaznamy ve firme osoby.
+        foreach(co_rows('SELECT DISTINCT m.id_person,m.id_pob FROM '.cb_hr_main_sql(db()).' m
+            JOIN hr_person p ON p.id_person=m.id_person
+            JOIN pobocka b ON b.id_pob=m.id_pob AND b.id_firma=p.id_firma AND b.aktivni=1
+            WHERE m.id_person IN ('.$in.') AND '.cb_hr_ucinne_sql('m')) as $r) $branches[(int)$r['id_person']][(int)$r['id_pob']]=true;
     }
     foreach($people as &$person) {
         $person['skupiny']=array_keys($groups[$person['id']]??[]);

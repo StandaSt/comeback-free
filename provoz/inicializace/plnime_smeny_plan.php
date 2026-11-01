@@ -1,4 +1,5 @@
 <?php
+// Import planu smen vraci CRONu souhrn i konkretni chybne pobocky a tydny.
 // inicializace/plnime_smeny_plan.php * Verze: V20 * Aktualizace: 09.06.2026
 
 declare(strict_types=1);
@@ -1047,6 +1048,7 @@ function runPlannedUpdate(array $branches): array
     $branchesDone = 0;
     $weeksDone = 0;
     $errors = 0;
+    $errorDetails = [];
 
     appendTxtLog(sprintf(
         'Start aktualizace naplánovaných směn | %s | poboček=%d | týdny=%s',
@@ -1079,6 +1081,7 @@ function runPlannedUpdate(array $branches): array
             $weeksDone++;
             if ((string)$weekResult['status'] !== 'OK') {
                 $errors++;
+                $errorDetails[]=['id_pob'=>$idPob,'pobocka'=>$nazevPob,'tyden'=>$weekResult['start_day'],'chyba'=>$weekResult['note']??'Neznámá chyba importu.'];
                 continue;
             }
 
@@ -1102,6 +1105,7 @@ function runPlannedUpdate(array $branches): array
         'branches_done' => $branchesDone,
         'weeks_done' => $weeksDone,
         'errors' => $errors,
+        'chyby' => $errorDetails,
         'brake_exists' => skipweekBrakeExists(),
     ];
 }
@@ -1119,9 +1123,8 @@ if (!empty($GLOBALS['cb_smeny_plan_cron'])) {
     }
 
     $branches = getBranches($token);
-    runPlannedUpdate($branches);
-
-    return;
+    // Include vrati souhrn volajicimu vstupu; ten z nej urci CLI navratovy kod.
+    return runPlannedUpdate($branches);
 }
 
 $token = (string)($_SESSION['cb_token'] ?? '');

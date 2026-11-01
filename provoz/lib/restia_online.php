@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /*
  * Online import objednavek Restia pro modul Provoz.
- * Nacita objednavky po pobockach a dnech, uklada je do IS a eviduje technicke chyby.
+ * Nacita objednavky po pobockach a dnech, uklada je do IS a vraci i dilci chyby pro planovac.
  */
 
 if (empty($GLOBALS['cb_restia_online_session_ready'])) {
@@ -1454,7 +1454,8 @@ if (!function_exists('cb_restia_online_import_day')) {
                     'PROVOZ',
                     'RESTIA_IMPORT_DN',
                     'FATAL_STEP',
-                    $e->getMessage(),
+                    // Strucna zprava respektuje VARCHAR(255); cely duvod zustava v detailu.
+                    mb_substr($e->getMessage(),0,255,'UTF-8'),
                     $fatalLine,
                     __FILE__,
                     __LINE__,
@@ -1673,6 +1674,7 @@ if (!function_exists('cb_restia_online_run')) {
         $aktualizace = 0;
         $ignore = 0;
         $chyba = '';
+        $errors = 0;
 
         try {
             $auth = cb_restia_online_get_auth();
@@ -1691,6 +1693,11 @@ if (!function_exists('cb_restia_online_run')) {
                 $dates = cb_restia_online_import_dates($conn, (int)($branch['id_pob'] ?? 0), $currentDate);
                 foreach ($dates as $date) {
                     $day = cb_restia_online_import_day($conn, $auth, $branch, $date);
+                    // I pri dokonceni dne mohou jednotlive objednavky selhat; planovac musi dostat neuspech.
+                    $dayErrors=(int)($day['errors']??0);
+                    $errors+=$dayErrors;
+                    if ($dayErrors>0) $chyba.='Pobočka '.$branchIdPob.', den '.$date.': chybných objednávek '.$dayErrors.'. ';
+
                     $dayZapisy = (int)($day['nove'] ?? 0);
                     $dayAktualizace = (int)($day['aktualizace'] ?? 0);
                     $dayIgnore = (int)($day['ignore'] ?? 0);
@@ -1731,7 +1738,7 @@ if (!function_exists('cb_restia_online_run')) {
                 }
             }
         } catch (Throwable $e) {
-            $chyba = $e->getMessage();
+            $chyba .= $e->getMessage();
         }
 
         cb_restia_online_progress_emit([
@@ -1746,6 +1753,7 @@ if (!function_exists('cb_restia_online_run')) {
             'aktualizace' => $aktualizace,
             'ignore' => $ignore,
             'chyba' => $chyba,
+            'errors' => $errors,
         ];
     }
 }

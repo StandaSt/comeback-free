@@ -3,6 +3,7 @@
  * Ucel souboru: Vypise CSS odkazy do head spolecne HTML kostry.
  * Nacita take izolovane styly E-mailu pro jeho navigaci a PP.
  * Nacita globalni vzhled i styly jednotlivych modulu ve stejnem poradi jako dosud.
+ * Tooltipy maji samostatny spolecny styl pouzitelny take v izolovanem Co-Linku.
  */
 declare(strict_types=1);
 ?>
@@ -13,6 +14,8 @@ declare(strict_types=1);
   <link rel="icon" type="image/png" href="<?= h($cbFavicon) ?>">
   <?php // Globalni styl aplikace. ?>
   <link rel="stylesheet" href="<?= h(cb_asset_url('style/global.css')) ?>">
+  <?php // Stejny vzhled tooltipu sdili hlavni IS i samostatny komunikator. ?>
+  <link rel="stylesheet" href="<?= h(cb_asset_url('style/tooltip.css')) ?>">
   <?php // Globalni styl modalnich oken. ?>
   <link rel="stylesheet" href="<?= h(cb_asset_url('style/modal_alert.css')) ?>">
   <?php // Styl modulu Provoz. ?>

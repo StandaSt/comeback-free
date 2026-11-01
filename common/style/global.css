@@ -9,6 +9,7 @@
  * Povoleny Co-Link pridava kompaktni ikonu Co s cervenym poctem neprectenych zprav, bez prazdneho sloupce ostatnim uzivatelum.
  * Co-Link ma v PP vlastni ramec; jeho mobilni PWA zustava stejna i pri pouziti uvnitr IS.
  * Co-Link vyuziva stejne menu, zapati a PP jako ostatni moduly; jeho nastaveni je nad Administraci.
+ * Radky konverzaci Co-Linku jsou nizsi nez ovladaci tlacitka menu, aby setrily mistem.
  */
 
 :root {
@@ -255,56 +256,7 @@ main{
   pointer-events:none !important;
 }
 
-.cb_tooltip{
-  --cb-tooltip-accent:#2563eb;
-  position:fixed;
-  z-index:10000;
-  max-width:min(320px, calc(100vw - 16px));
-  padding:7px 10px;
-  border:1px solid color-mix(in srgb, var(--cb-tooltip-accent) 48%, var(--cb-border));
-  border-radius:7px;
-  background:color-mix(in srgb, var(--cb-tooltip-accent) 14%, var(--cb-bg-panel));
-  box-shadow:0 7px 18px color-mix(in srgb, var(--cb-tooltip-accent) 18%, var(--cb-shadow));
-  color:var(--cb-text-main);
-  font:12px/1.35 Arial, Helvetica, sans-serif;
-  overflow-wrap:anywhere;
-  pointer-events:none;
-  opacity:0;
-  visibility:hidden;
-  transform:translateY(-2px);
-  transition:opacity .12s ease, transform .12s ease, visibility .12s ease;
-}
-
-.cb_tooltip::before{
-  content:"";
-  position:absolute;
-  left:50%;
-  width:8px;
-  height:8px;
-  border-top:1px solid color-mix(in srgb, var(--cb-tooltip-accent) 48%, var(--cb-border));
-  border-left:1px solid color-mix(in srgb, var(--cb-tooltip-accent) 48%, var(--cb-border));
-  background:color-mix(in srgb, var(--cb-tooltip-accent) 14%, var(--cb-bg-panel));
-}
-
-.cb_tooltip[data-placement="bottom"]::before{
-  top:-5px;
-  transform:translateX(-50%) rotate(45deg);
-}
-
-.cb_tooltip[data-placement="top"]::before{
-  bottom:-5px;
-  transform:translateX(-50%) rotate(225deg);
-}
-
-.cb_tooltip.cb_tooltip_visible{
-  opacity:1;
-  visibility:visible;
-  transform:translateY(0);
-}
-
-.cb_tooltip.cb_tooltip_multiline{
-  white-space:pre-line;
-}
+/* Spolecny vzhled tooltipu je v tooltip.css, nacitanem take v izolovanem Co-Linku. */
 
 .cb-module-load-error{
   padding:12px;
@@ -804,11 +756,7 @@ main{
 .head_module_link--smeny .head_module_tag{border-color:color-mix(in srgb,var(--head-module-color) 48%,var(--cb-border));background:var(--head-module-soft);}
 .head_module_link--smeny .head_module_tag:focus-visible{outline-color:var(--head-module-color);}
 /* Širší tabulka pojme jméno i příjmení; v úzkém okně se může rolovat. */
-.cb_tooltip.cb_tooltip_table{max-width:calc(100vw - 16px);width:max-content;max-height:calc(100vh - 16px);overflow:auto;pointer-events:auto;}
-.cb_tooltip_table p{max-width:560px;margin:0 0 8px;}
-.cb_tooltip_table table{border-collapse:collapse;min-width:560px;max-width:100%;}
-.cb_tooltip_table th,.cb_tooltip_table td{padding:5px 9px;border-bottom:1px solid var(--cb-border);text-align:left;vertical-align:top;white-space:pre-line;}
-.cb_tooltip_table th:first-child,.cb_tooltip_table td:first-child{text-align:left;}
+
 @media(max-width:767px){
   .blok_hlavicka .head_module_link,
   .blok_hlavicka > .head_task_btn{font-size:var(--cb-font-14);}
@@ -1847,6 +1795,9 @@ align-items:center;
 .co_link_menu_add{width:26px;min-height:26px;padding:0;border:0;background:transparent;color:var(--cb-text-main);font:20px Arial,Helvetica,sans-serif;cursor:pointer;}
 .co_link_menu_empty{font-size:var(--cb-font-12);color:var(--cb-text-muted);padding:2px 0 4px;}
 .co_link_menu_name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* Nizsi jsou jen konverzace, nikoli navigace a sprava v ostatnich modulech. */
+.blok_menu[data-menu-module="co_link"] .co_link_menu_conversations{gap:3px;}
+.blok_menu[data-menu-module="co_link"] .co_link_menu_conversation{min-height:26px;padding:3px 9px;}
 .co_link_menu_count{flex-shrink:0;font-size:var(--cb-font-12);font-weight:bold;}
 .co_link_menu_settings + .blok_menu_admin{margin-top:0;}
 .cb-context--co_link{--cb-module-accent:#123d45;--cb-module-soft:#e3efe7;}

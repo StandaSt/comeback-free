@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-/* Co-Link: komunikace s editorem a textovym tlacitkem Odeslat, kompaktnim hledanim, QR a vlastnim push odberem. */
+/* Co-Link: samostatny komunikator s editorem, QR, push a stejnymi tooltipy jako hlavni IS. */
 if(!defined('CO_LINK_VIEW')) { http_response_code(404); exit; }
 ?>
 <!doctype html>
@@ -11,6 +11,7 @@ if(!defined('CO_LINK_VIEW')) { http_response_code(404); exit; }
 <link rel="manifest" href="manifest.php"><link rel="icon" href="icon.php?size=192"><link rel="apple-touch-icon" href="icon.php?size=192">
 <link rel="stylesheet" href="style.css?v=<?= filemtime(__DIR__.'/style.css') ?>">
 <link rel="stylesheet" href="editor.css?v=<?= filemtime(__DIR__.'/editor.css') ?>">
+<link rel="stylesheet" href="../common/style/tooltip.css?v=<?= filemtime(__DIR__.'/../common/style/tooltip.css') ?>">
 </head><body>
 <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
 <section id="welcome" class="welcome" hidden>
@@ -65,5 +66,6 @@ if(!defined('CO_LINK_VIEW')) { http_response_code(404); exit; }
 <script src="installation.js?v=<?= filemtime(__DIR__.'/installation.js') ?>" defer></script>
 <script src="push.js?v=<?= filemtime(__DIR__.'/push.js') ?>" defer></script>
 <script src="auth_restore.js?v=<?= filemtime(__DIR__.'/auth_restore.js') ?>" defer></script>
+<script src="../common/js/tooltip.js?v=<?= filemtime(__DIR__.'/../common/js/tooltip.js') ?>" defer></script>
 <script src="app.js?v=<?= filemtime(__DIR__.'/app.js') ?>" defer></script>
 </body></html>

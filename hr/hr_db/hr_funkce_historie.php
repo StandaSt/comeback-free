@@ -5,13 +5,14 @@ declare(strict_types=1);
 require_once __DIR__ . '/../hr_lib/hr_audit.php';
 
 /*
- * Ucel souboru: Nacita a meni jedinou firemni funkci zamestnance a z ni synchronizuje roli v IS.
+ * Ucel souboru: Nacita historii a planuje casove neprekryvajici se funkce zamestnance a z ni synchronizuje roli v IS.
  * Provozni funkce patri osobe se slotem; manazerska pozice nema slot ani MAIN. Top chrani Admin.
  * Cil zmeny kontroluje podle jednotneho osobniho rozsahu HR.
  */
 require_once __DIR__ . '/hr_nastaveni_ciselniky.php';
 require_once __DIR__ . '/hr_zamestnanci_pristup.php';
 require_once __DIR__ . '/hr_mista_zapis.php';
+require_once __DIR__.'/../hr_lib/hr_casove_zmeny.php';
 
 /** @return array{funkce:array<int,array{id_funkce:int,nazev:string,id_role:int}>,historie:array<int,array<string,mixed>>} */
 function hr_funkce_historie(mysqli $db, int $idPerson): array
@@ -51,6 +52,8 @@ function hr_funkce_historie(mysqli $db, int $idPerson): array
  */
 function hr_funkce_zmenit(mysqli $db, int $idPerson, ?int $idFunkce, bool $vTreninku, string $platiOd, int $idUser, string $druh = 'manazerske', bool $ownTransaction = true): void
 {
+    hr_casove_schema_vyzaduj($db);
+    cb_hr_den($platiOd);
     hr_zamestnanci_vyzaduj_osobu($db, $idUser, $idPerson);
     $catalogTable = cb_hr_schema_table($db, 'cis_funkce');
     $catalogPk = cb_hr_cis_funkce_pk($db);
@@ -77,29 +80,35 @@ function hr_funkce_zmenit(mysqli $db, int $idPerson, ?int $idFunkce, bool $vTren
     if ($ownTransaction) hr_audit_transaction_begin($db);
     try {
         cb_hr_osobu_zamkni($db,$idPerson);
-        $stmt=$db->prepare("SELECT f.*,c.id_role,c.zarazeni,c.pouze_admin FROM {$functionTable} f JOIN {$catalogTable} c ON c.{$catalogPk}=f.{$functionFk} WHERE f.id_person=? AND f.platny=1 FOR UPDATE");
-        $stmt->bind_param('i',$idPerson); $stmt->execute(); $old=$stmt->get_result()->fetch_assoc(); $stmt->close();
+        $stmt=$db->prepare("SELECT f.*,c.id_role,c.zarazeni,c.pouze_admin FROM {$functionTable} f JOIN {$catalogTable} c ON c.{$catalogPk}=f.{$functionFk} WHERE f.id_person=? AND f.platny=1 AND (f.platnost_od IS NULL OR f.platnost_od<=?) AND (f.platnost_do IS NULL OR f.platnost_do>=?) FOR UPDATE");
+        $stmt->bind_param('iss',$idPerson,$platiOd,$platiOd); $stmt->execute(); $currentRows=$stmt->get_result()->fetch_all(MYSQLI_ASSOC); $stmt->close();
+        if (count($currentRows)>1) throw new CbUserVisibleException('Funkce osoby mají překrývající se platnost.');
+        $old=$currentRows[0]??null;
         if ($old && (int)$old['pouze_admin']===1 && !hr_ciselnik_je_admin($db)) throw new CbUserVisibleException('Pozici Top manažer smí měnit nebo odebrat pouze Admin.');
         if ($old) hr_funkce_roli_vyzaduj($db,(int)$old['id_role']);
         if ($old && $old['zarazeni']==='manazerske' && !hr_ciselnik_je_admin($db) && !cb_pravo_ma(316)) throw new CbUserVisibleException('Nemáte právo měnit manažerskou pozici.');
         if ($old && !empty($old['platnost_od']) && $old['platnost_od']>$platiOd) throw new CbUserVisibleException('Nejprve upravte již naplánovanou funkci.');
         if ($idFunkce===null && $old && $old['zarazeni']!==$druh) throw new CbUserVisibleException('Tento blok nemůže odebrat jiný typ zařazení.');
-        $denPred = (new DateTimeImmutable($platiOd))->modify('-1 day')->format('Y-m-d');
-        $stmt = $db->prepare("UPDATE {$functionTable} SET platnost_do = CASE WHEN platnost_od IS NULL OR platnost_od<=? THEN ? ELSE platnost_do END, platny = 0 WHERE id_person = ? AND platny = 1");
-        $stmt->bind_param('ssi', $denPred, $denPred, $idPerson);
-        $stmt->execute();
-        $stmt->close();
+        // Opakovane ulozeni stejne funkce nevytvari dalsi historicke verze.
+        if (($old && $idFunkce===(int)$old[$functionFk] && $vTreninku===(bool)$old['v_treninku']) || (!$old && $idFunkce===null)) {
+            hr_casovy_stav_obnovit($db,$idPerson,$idUser);
+            if ($ownTransaction) hr_audit_transaction_commit($db);
+            return;
+        }
+        // Nahrada zachova dosavadni funkci do dne pred ucinnosti a neprepise dalsi plan.
+        $plan=cb_hr_casovy_plan(hr_casove_verze($db,'hr_funkce',$idPerson),$platiOd,'id_hr_funkce');
+        hr_casovy_interval_uzavrit($db,'hr_funkce','id_hr_funkce',$plan,$idUser);
         if ($idFunkce !== null) {
             $training = $vTreninku ? 1 : 0;
-            $stmt = $db->prepare("INSERT INTO {$functionTable} (id_person, {$functionFk}, hlavni, v_treninku, platnost_od, id_person_zadal, platny) VALUES (?, ?, 1, ?, ?, ?, 1)");
-            $stmt->bind_param('iiisi', $idPerson, $idFunkce, $training, $platiOd, $idUser);
+            $stmt = $db->prepare("INSERT INTO {$functionTable} (id_person, {$functionFk}, hlavni, v_treninku, platnost_od, platnost_do, id_person_zadal, platny) VALUES (?, ?, 1, ?, ?, ?, ?, 1)");
+            $stmt->bind_param('iiissi', $idPerson, $idFunkce, $training, $platiOd, $plan['do'], $idUser);
             $stmt->execute();
             $stmt->close();
         }
 
+        // Dnesni interval se pri budouci zmene nemeni; kontrolujeme zmeneny den i dalsi hranice.
         hr_mista_over_casovou_osu($db,$idPerson,$platiOd);
-        hr_pristupovy_profil_synchronizovat($db, $idPerson, $idUser);
-        hr_update_employee_completeness($db, $idPerson);
+        hr_casovy_stav_obnovit($db,$idPerson,$idUser);
         if ($ownTransaction) hr_audit_transaction_commit($db);
     } catch (Throwable $e) {
         if ($ownTransaction) hr_audit_transaction_rollback($db);
@@ -107,55 +116,4 @@ function hr_funkce_zmenit(mysqli $db, int $idPerson, ?int $idFunkce, bool $vTren
     }
 }
 
-/**
- * Nastavi jedinou nejvyssi roli: pevny Admin/Top manager, zachovany Fransizant,
- * jinak role prislusne funkce nebo Zamestnanec bez funkce.
- */
-function hr_pristupovy_profil_synchronizovat(mysqli $db, int $idPerson, ?int $idPersonZadal): int
-{
-    $stmt = $db->prepare('SELECT id_user FROM hr_person WHERE id_person = ? LIMIT 1');
-    $stmt->bind_param('i', $idPerson);
-    $stmt->execute();
-    $person = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
-    if (!is_array($person)) {
-        throw new CbUserVisibleException('Zaměstnanec nebyl nalezen.');
-    }
-
-    $idUser = (int)($person['id_user'] ?? 0);
-    if ($idUser === 1) {
-        $idRole = 1;
-    } elseif ($idUser === 57) {
-        $idRole = 2;
-    } else {
-        $stmt = $db->prepare('SELECT 1 FROM hr_pristupovy_profil WHERE id_person = ? AND id_role = 4 LIMIT 1');
-        $stmt->bind_param('i', $idPerson);
-        $stmt->execute();
-        $jeFransizant = $stmt->get_result()->fetch_row() !== null;
-        $stmt->close();
-        if ($jeFransizant) {
-            $idRole = 4;
-        } else {
-            $functionTable = cb_hr_schema_table($db, 'funkce');
-            $functionFk = cb_hr_funkce_fk($db);
-            $catalogTable = cb_hr_schema_table($db, 'cis_funkce');
-            $catalogPk = cb_hr_cis_funkce_pk($db);
-            $stmt = $db->prepare("SELECT cf.id_role FROM {$functionTable} hf JOIN {$catalogTable} cf ON cf.{$catalogPk} = hf.{$functionFk} WHERE hf.id_person = ? AND hf.platny = 1 AND (hf.platnost_od IS NULL OR hf.platnost_od <= CURDATE()) AND (hf.platnost_do IS NULL OR hf.platnost_do >= CURDATE()) ORDER BY cf.id_role ASC LIMIT 1");
-            $stmt->bind_param('i', $idPerson);
-            $stmt->execute();
-            $role = $stmt->get_result()->fetch_assoc();
-            $stmt->close();
-            $idRole = is_array($role) ? (int)$role['id_role'] : 9;
-        }
-    }
-
-    $stmt = $db->prepare('DELETE FROM hr_pristupovy_profil WHERE id_person = ?');
-    $stmt->bind_param('i', $idPerson);
-    $stmt->execute();
-    $stmt->close();
-    $stmt = $db->prepare('INSERT INTO hr_pristupovy_profil (id_person, id_role, sub_role, id_person_zadal) VALUES (?, ?, NULL, ?)');
-    $stmt->bind_param('iii', $idPerson, $idRole, $idPersonZadal);
-    $stmt->execute();
-    $stmt->close();
-    return $idRole;
-}
+// Prepocet pristupoveho profilu sdili formular s nocnim servisem v hr_casove_zmeny.php.

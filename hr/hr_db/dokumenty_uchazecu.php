@@ -4,7 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 /**
- * DB dotazy pro dokumenty zobrazovane v HR prehledu.
+ * DB dotazy pro dokumenty zobrazovane v HR prehledu; aktivitu vztahu posuzuje k dnesku.
  * Soucty, seznam a prime otevreni omezuje jednotnym osobnim rozsahem HR.
  * U importovanych smluv vraci take podpisy, casti a konkretni upozorneni pro personalistu.
  * Word otevre jako odvozeny PDF nahled; puvodni soubor zustava beze zmeny.
@@ -59,6 +59,7 @@ function hr_fetch_prehled_document_summary(mysqli $db): array
                  INNER JOIN hr_pracovni_vztah pv2
                      ON pv2.id_person = p2.id_person
                     AND pv2.platny = 1
+                    AND pv2.datum_nastupu <= CURDATE()
                     AND (pv2.datum_ukonceni IS NULL OR pv2.datum_ukonceni >= CURDATE())
                  WHERE p2.aktivni = 1
                    AND p2.testovaci = 0
@@ -73,6 +74,7 @@ function hr_fetch_prehled_document_summary(mysqli $db): array
                  INNER JOIN hr_pracovni_vztah pv3
                      ON pv3.id_person = p3.id_person
                     AND pv3.platny = 1
+                    AND pv3.datum_nastupu <= CURDATE()
                     AND (pv3.datum_ukonceni IS NULL OR pv3.datum_ukonceni >= CURDATE())
                  WHERE p3.aktivni = 1
                    AND p3.testovaci = 0
@@ -84,6 +86,7 @@ function hr_fetch_prehled_document_summary(mysqli $db): array
             INNER JOIN hr_pracovni_vztah pv
                 ON pv.id_person = p.id_person
                AND pv.platny = 1
+               AND pv.datum_nastupu <= CURDATE()
                AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE())
             WHERE p.aktivni = 1
               AND {$scope}

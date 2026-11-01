@@ -1,8 +1,8 @@
-/* Co-Link: vizualni editor v barvach IS; psani zpravy ma alespon dva radky, rucni zmenu vysky a citelne tlacitko Odeslat. */
+/* Co-Link: kompaktni editor; vlastni tridy oddeluji ramecek najeti mysi od vyplne zapnuteho formatovani. */
 .rich-editor{position:relative;border:1px solid var(--line);border-radius:8px;background:var(--is-control,#f6f8f7);color:var(--ink);min-width:0;}
 .editor-toolbar,.editor-footer{display:flex;align-items:center;gap:3px;padding:2px 4px;flex-wrap:wrap;}
 .editor-toolbar{border-bottom:1px solid var(--line);}
-.editor-tool{width:30px;height:28px;min-height:28px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--ink);font-size:15px;}
+.editor-tool{width:30px;height:28px;min-height:28px;padding:0;border:1px solid transparent;border-radius:5px;background:transparent;color:var(--ink);font-size:15px;}
 .editor-tool[data-command="bold"]{font-weight:bold;}.editor-tool[data-command="italic"]{font-style:italic;}.editor-tool[data-command="underline"]{text-decoration:underline;}
 .editor-color{width:auto;max-width:150px;min-height:28px;padding:2px 6px;font-size:12px;background:transparent;color:var(--ink);border:0;}
 .rich-input{min-height:36px;max-height:170px;overflow-y:auto;padding:6px 8px;font-size:14px;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere;outline:none;}
@@ -18,7 +18,9 @@
 .emoji-picker select{min-height:32px;padding:4px 6px;font-size:13px;background:var(--is-control,#fff);color:var(--ink);}
 .emoji-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:2px;overflow:auto;min-height:48px;max-height:270px;}
 .emoji-grid button{min-height:34px;height:34px;padding:0;border:0;font-size:23px;background:transparent;}
-.emoji-grid button:hover,.editor-tool:hover,.editor-tool.is-active{background:var(--is-soft,#e5eee8);}
+/* Vypln oznacuje pouze zapnuty format. Ramecek se po kliku znovu ukaze az pri novem najeti mysi. */
+.editor-tool-selected{background:var(--is-soft,#e5eee8);}
+@media(hover:hover) and (pointer:fine){.editor-tool-hover{border-color:var(--ink);}.emoji-grid button:hover{background:var(--is-soft,#e5eee8);}}
 #panel-content>.rich-editor{margin-bottom:12px;}
 /* V dialogu je prehled soucasti toku, aby jej neorizl horni okraj modalniho okna. */
 #panel-content .emoji-picker{position:static;width:auto;max-width:none;max-height:min(360px,45dvh);margin:4px;}

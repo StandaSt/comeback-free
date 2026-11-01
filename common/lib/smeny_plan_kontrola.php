@@ -1,5 +1,5 @@
 <?php
-// lib/smeny_plan_kontrola.php
+// Koordinuje import planu smen; souhrn chyb pobocek a tydnu predava take navratovemu kodu CLI.
 // Verze: V1
 // Aktualizace: 16.06.2026
 declare(strict_types=1);
@@ -175,7 +175,7 @@ if (!function_exists('cb_smeny_plan_kontrola_lock_release')) {
 }
 
 if (!function_exists('cb_smeny_plan_kontrola')) {
-    function cb_smeny_plan_kontrola(bool $preserveSession = false): void
+    function cb_smeny_plan_kontrola(bool $preserveSession = false): array
     {
         $snapshot = $preserveSession ? cb_smeny_plan_session_snapshot() : [];
 
@@ -193,20 +193,28 @@ if (!function_exists('cb_smeny_plan_kontrola')) {
 
             $db = db();
             $lockName = '';
+            $flushError = null;
 
             try {
                 $lockName = cb_smeny_plan_kontrola_lock_acquire($db, 10);
-                include $file;
+                $result = include $file;
             } finally {
                 try {
                     db_api_smeny_flush($db, null, null);
                 } catch (Throwable $e) {
+                    $flushError = $e;
                     if (function_exists('error_log')) {
                         error_log('Směny cron api_smeny flush selhal: ' . $e->getMessage());
                     }
                 }
                 cb_smeny_plan_kontrola_lock_release($db, $lockName);
             }
+            if ($flushError !== null) throw new RuntimeException('Směny: uložení API auditu selhalo.',0,$flushError);
+            if (!is_array($result)) throw new RuntimeException('Import plánu směn nevrátil platný souhrn.');
+            if (($result['status']??'')!=='OK' || (int)($result['errors']??0)>0) {
+                throw new RuntimeException('Import plánu směn selhal: '.json_encode($result['chyby']??$result,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR));
+            }
+            return $result;
         } finally {
             if ($preserveSession) {
                 cb_smeny_plan_session_restore($snapshot);
@@ -216,5 +224,9 @@ if (!function_exists('cb_smeny_plan_kontrola')) {
 }
 
 if (!defined('CB_SMENY_PLAN_KONTROLA_AUTO_RUN') || CB_SMENY_PLAN_KONTROLA_AUTO_RUN !== false) {
+    if (PHP_SAPI==='cli' && isset($_SERVER['SCRIPT_FILENAME']) && realpath((string)$_SERVER['SCRIPT_FILENAME'])===__FILE__) {
+        try { echo json_encode(cb_smeny_plan_kontrola(),JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),PHP_EOL; exit(0); }
+        catch (Throwable $e) { fwrite(STDERR,'CHYBA: '.$e->getMessage().PHP_EOL); exit(1); }
+    }
     cb_smeny_plan_kontrola();
 }

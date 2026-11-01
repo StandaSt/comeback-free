@@ -3,7 +3,7 @@ declare(strict_types=1);
 // Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
 require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
-/* Účel: Spojuje dochovanou historii zaměstnance s auditem skutečných změn HR.
+/* Účel: Spojuje dochovanou historii zaměstnance s auditem změn HR i automatických časových přepočtů.
  * Datum zápisu neodvozuje z účinnosti. Neznámý historický autor a začátek zůstanou neuvedené.
  */
 
@@ -63,14 +63,14 @@ function hr_historie_detail(mysqli $db, array $old, array $new): string
     return implode("\n",$lines);
 }
 
-/** Vrátí audit karty a označení založení, která nahrazuje starší odvozené události. */
+/** Vrati audit karty vcetne automatickych casovych prepoctu a oznaceni zalozeni. */
 function hr_historie_audit(mysqli $db, int $idPerson): array
 {
     $stmt = $db->prepare("SELECT a.*, " . cb_osoba_jmeno_sql('u.id_person',true) . " AS zapsal FROM user_akce_new a
         LEFT JOIN hr_person p ON p.id_user=a.id_user
         LEFT JOIN " . cb_osoby_zdroj_sql() . " u ON u.id_person=p.id_person AND u.platny=1
         WHERE a.id_modul=3 AND a.objekt='hr_person' AND a.id_objektu=?
-        AND JSON_UNQUOTE(JSON_EXTRACT(a.detail_json,'$.zdroj'))='hr_audit' ORDER BY a.cas DESC,a.id_user_akce DESC");
+        AND JSON_UNQUOTE(JSON_EXTRACT(a.detail_json,'$.zdroj')) IN ('hr_audit','hr_casove_zmeny') ORDER BY a.cas DESC,a.id_user_akce DESC");
     $stmt->bind_param('i',$idPerson); $stmt->execute();
     $events = []; $created = [];
     foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $row) {
@@ -79,7 +79,7 @@ function hr_historie_audit(mysqli $db, int $idPerson): array
         if ($success && ($detail['udalost'] ?? '') === 'pridani') $created[$detail['tabulka'].':'.$detail['id_zaznamu']] = true;
         $events[] = ['kdy'=>$row['cas'],'akce'=>($success ? '' : 'Neuloženo: ').($detail['popis'] ?? 'Změna karty'),
             'plati_od'=>$detail['platnost_od'] ?? null,'plati_do'=>$detail['platnost_do'] ?? null,
-            'zapsal'=>$row['zapsal'] ?: 'Uživatel #'.$row['id_user'],
+            'zapsal'=>($detail['puvod']??'')==='automaticky' ? 'Automaticky' : ($row['zapsal'] ?: 'Uživatel #'.$row['id_user']),
             'poznamka'=>$success ? hr_historie_detail($db,json_decode((string)$row['hodnota_old'],true) ?: [],json_decode((string)$row['hodnota_new'],true) ?: []) : (string)$row['err_msg']];
     }
     $stmt->close();

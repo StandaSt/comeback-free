@@ -11,6 +11,7 @@ require_once __DIR__ . '/../../common/lib/smeny_hodiny.php';
 /*
  * Data první čtecí verze mzdového přehledu. Všechny hodnoty jsou načítané
  * z existující evidence HR a z finálně uložených denních reportů IS.
+ * Hodnoty respektuji prunik ucinnosti vztahu a mzdove verze; mesicni souhrn neni vypoctem mzdy.
  * Tato vrstva neprovádí uzávěrku, nepřijímá ruční bonusy ani do DB nezapisuje.
  * Testovaci osoby vynechava ze mzdovych radku, nikoli z urceni firmy prihlaseneho uctu.
  * Osoby filtruje jednotnym rozsahem HR, nikoliv samotnou firmou prihlaseneho.
@@ -199,9 +200,9 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
                 SELECT u.uvazek
                 FROM hr_pracovni_uvazek u
                 INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = u.id_pracovni_vztah
-                WHERE pv.id_person = hp.id_person AND pv.platny = 1 AND u.platny = 1
-                  AND (u.platnost_od IS NULL OR u.platnost_od <= ?)
-                  AND (u.platnost_do IS NULL OR u.platnost_do >= ?)
+                WHERE pv.id_person = hp.id_person AND pv.platny = 1 AND u.platny = 1 AND u.zruseno IS NULL AND pv.zruseno IS NULL
+                  AND GREATEST(COALESCE(u.platnost_od, \'1000-01-01\'),pv.datum_nastupu) <= ?
+                  AND LEAST(COALESCE(u.platnost_do, \'9999-12-31\'),COALESCE(pv.datum_ukonceni, \'9999-12-31\')) >= ?
                 ORDER BY u.platnost_od DESC, u.id_pracovni_uvazek DESC
                 LIMIT 1
             ) AS uvazek,
@@ -210,9 +211,9 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
                 FROM hr_mzda m
                 INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = m.id_pracovni_vztah
                 INNER JOIN cis_mzda_typ mt ON mt.id_mzda_typ = m.id_mzda_typ
-                WHERE pv.id_person = hp.id_person AND pv.platny = 1 AND m.platny = 1
-                  AND (m.platnost_od IS NULL OR m.platnost_od <= ?)
-                  AND (m.platnost_do IS NULL OR m.platnost_do >= ?)
+                WHERE pv.id_person = hp.id_person AND pv.platny = 1 AND m.platny = 1 AND m.zruseno IS NULL AND pv.zruseno IS NULL
+                  AND GREATEST(COALESCE(m.platnost_od, \'1000-01-01\'),pv.datum_nastupu) <= ?
+                  AND LEAST(COALESCE(m.platnost_do, \'9999-12-31\'),COALESCE(pv.datum_ukonceni, \'9999-12-31\')) >= ?
                 ORDER BY m.platnost_od DESC, m.id_mzda DESC
                 LIMIT 1
             ) AS mzda_typ,
@@ -220,9 +221,9 @@ function hr_mzdovy_prehled_data(mysqli $db, array $request, int $idUser): array
                 SELECT m.castka
                 FROM hr_mzda m
                 INNER JOIN hr_pracovni_vztah pv ON pv.id_pracovni_vztah = m.id_pracovni_vztah
-                WHERE pv.id_person = hp.id_person AND pv.platny = 1 AND m.platny = 1
-                  AND (m.platnost_od IS NULL OR m.platnost_od <= ?)
-                  AND (m.platnost_do IS NULL OR m.platnost_do >= ?)
+                WHERE pv.id_person = hp.id_person AND pv.platny = 1 AND m.platny = 1 AND m.zruseno IS NULL AND pv.zruseno IS NULL
+                  AND GREATEST(COALESCE(m.platnost_od, \'1000-01-01\'),pv.datum_nastupu) <= ?
+                  AND LEAST(COALESCE(m.platnost_do, \'9999-12-31\'),COALESCE(pv.datum_ukonceni, \'9999-12-31\')) >= ?
                 ORDER BY m.platnost_od DESC, m.id_mzda DESC
                 LIMIT 1
             ) AS mzda_castka,

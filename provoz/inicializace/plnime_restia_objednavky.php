@@ -2175,7 +2175,8 @@ if (!function_exists('cb_restia_hist_import_day')) {
                     'PROVOZ',
                     'RESTIA_IMPORT_DN',
                     'FATAL_STEP',
-                    $e->getMessage(),
+                    // Plny duvod patri do detailu, ne do kratkeho sloupce zprava.
+                    mb_substr($e->getMessage(),0,255,'UTF-8'),
                     $fatalLine,
                     __FILE__,
                     __LINE__,

@@ -34,7 +34,8 @@ function cb_hr_user_sync_ukoncene(mysqli $db, int $idPerson): int
               SELECT 1
               FROM hr_pracovni_vztah pv
               WHERE pv.id_person = p.id_person
-                AND pv.platny = 1
+                AND pv.platny = 1 AND pv.zruseno IS NULL
+                AND pv.datum_nastupu <= CURDATE()
                 AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE())
           )
     ');

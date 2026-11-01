@@ -1,4 +1,4 @@
-/* Co-Link: komunikace od nejnovejsich zprav a psani s uchovanim rucne zvetsene vysky; dalsi skripty resi prihlaseni, editor a push. */
+/* Co-Link: komunikace od nejnovejsich zprav, kompaktni menu a napovedy vyberu osob; dalsi skripty resi prihlaseni, editor a push. */
 (() => {
   'use strict';
   const boot=JSON.parse(document.getElementById('co-boot').textContent);
@@ -115,15 +115,15 @@
     for(const [local,shared]of [['--ink','--cb-text-main'],['--muted','--cb-text-muted'],['--line','--cb-border-soft'],['--paper','--cb-bg-panel'],['--is-soft','--cb-bg-panel-soft'],['--is-control','--cb-bg-control']])document.documentElement.style.setProperty(local,theme.getPropertyValue(shared).trim());
     return {list:shellList,filter:shellSearch.value.toLocaleLowerCase('cs'),menu};
   }
-  // Kanaly i soukrome chaty maji stejne kompaktni radky a aktivni stav jako ostatni moduly IS.
+  // Konverzace maji vlastni kompaktni radky; Adresar a sprava si ponechaji rozmery standardniho menu.
   function shellConversations(shell){
     const {list,filter,menu}=shell;list.replaceChildren();
     for(const [kind,label]of [['kanal','Kanály'],['soukroma','Soukromé zprávy'],['skupina','Skupiny']]){
       const group=node('li'),heading=node('div',undefined,'co_link_menu_heading');heading.append(node('span',label));
       if(kind!=='kanal'||state.rights[701]){const add=button('+',kind==='kanal'?()=>channelForm():kind==='soukroma'?directory:privateForm,'co_link_menu_add');add.setAttribute('aria-label',kind==='kanal'?'Vytvořit kanál':kind==='soukroma'?'Najít člověka v adresáři':'Vytvořit skupinu');heading.append(add);}
-      group.append(heading);const rows=node('ul',undefined,'blok_menu_list');group.append(rows);list.append(group);
+      group.append(heading);const rows=node('ul',undefined,'blok_menu_list co_link_menu_conversations');group.append(rows);list.append(group);
       const channels=state.conversations.filter(c=>c.typ===kind&&title(c).toLocaleLowerCase('cs').includes(filter));
-      for(const c of channels){const li=node('li'),b=button('',()=>{menu.querySelector('[data-cb-menu-close]')?.click();return openChat(Number(c.id));},'blok_menu_btn'+(state.cid===Number(c.id)?' is-active':''));b.append(node('span',(kind==='kanal'?'# ':'')+title(c)+(Number(c.archiv)?' · archiv':''),'co_link_menu_name'));if(Number(c.neprecteno))b.append(node('span',c.neprecteno,'co_link_menu_count'));li.append(b);rows.append(li);}
+      for(const c of channels){const li=node('li'),b=button('',()=>{menu.querySelector('[data-cb-menu-close]')?.click();return openChat(Number(c.id));},'blok_menu_btn co_link_menu_conversation'+(state.cid===Number(c.id)?' is-active':''));b.append(node('span',(kind==='kanal'?'# ':'')+title(c)+(Number(c.archiv)?' · archiv':''),'co_link_menu_name'));if(Number(c.neprecteno))b.append(node('span',c.neprecteno,'co_link_menu_count'));li.append(b);rows.append(li);}
       if(!channels.length){const li=node('li',filter?'Nic neodpovídá hledání.':kind==='kanal'?'Zatím žádné kanály.':kind==='soukroma'?'Kolegu najdete v adresáři.':'Zatím žádné skupiny.','co_link_menu_empty');rows.append(li);}
     }
   }
@@ -279,12 +279,26 @@
   function check(parent,label,checked=false){const wrap=node('label',undefined,'check'),input=node('input');input.type='checkbox';input.checked=checked;wrap.append(input,node('span',label));parent.append(wrap);return input;}
   // Sestavi vyber osob nebo pracovnich zarazeni podle jejich ID.
   function checklist(parent,label,items,selected=[]){parent.append(node('p',label,'section-label'));const list=node('div',undefined,'checks'),map=new Map();for(const item of items)map.set(Number(item.id),check(list,item.jmeno||item.nazev,selected.includes(Number(item.id))));parent.append(list);return ()=>[...map].filter(([,input])=>input.checked).map(([id])=>id);}
-  // Stejne filtry pouziva adresar i vyber clenu skupiny; nikdy samy nevybiraji prijemce.
-  function peopleFilters(parent,changed){
-    parent.append(node('p','Skupina','section-label'));
+  // Filtry sdili adresar a vyber clenu; adresar muze vlozit hledani pred skupinu do jednoho radku.
+  function peopleFilters(parent,changed,searchField=null){
+    const groupArea=searchField?node('div',undefined,'directory-group-filter'):parent;
+    if(searchField){
+      const row=node('div',undefined,'directory-groups-row');searchField.classList.add('directory-search');
+      row.append(searchField,groupArea);parent.append(row);
+    }
+    groupArea.append(node('p','Skupina','section-label'));
     const groups=node('div',undefined,'recipient-filters'),groupInputs=new Map();
-    for(const [key,label]of [['manager','Manager'],['vedouci','Ved. pobočky'],['kuryr','Kurýr'],['pizzar','Pizzař']])groupInputs.set(key,check(groups,label));
-    const allGroups=check(groups,'Všichni',true);parent.append(groups,node('p','Pobočky','section-label'));
+    const groupTips={manager:'Ve skupině jsou všichni manažeři.\nNepište jim zbytečnosti, díky.',vedouci:'Skupina zahrnuje restaurant manažery, jejich zástupce i vedoucí směn.'};
+    for(const [key,label]of [['manager','Manager'],['vedouci','Ved. pobočky'],['kuryr','Kurýr'],['pizzar','Pizzař']]){
+      const input=check(groups,label);groupInputs.set(key,input);
+      // Spolecny tooltip IS prevezme text i chovani; bublina sleduje kurzor zhora.
+      if(groupTips[key]){
+        const label=input.closest('label');label.title=groupTips[key];
+        label.dataset.cbTooltipPosition='pointer-top';label.dataset.cbTooltipMultiline='1';
+      }
+    }
+    window.CB_TOOLTIP?.init(groups);
+    const allGroups=check(groups,'Všichni',true);groupArea.append(groups);parent.append(node('p','MAIN pobočky','section-label'));
     const branches=node('div',undefined,'recipient-filters'),branchInputs=new Map();
     for(const branch of state.branches)branchInputs.set(Number(branch.id),check(branches,branch.nazev));
     const allBranches=check(branches,'Všechny pobočky',true);parent.append(branches);
@@ -314,7 +328,7 @@
     await contacts();if(state.view!=='directory')return;
     area.replaceChildren();
     const controls=node('div',undefined,'directory-controls'),search=field(controls,'Hledat podle jména','','search');search.placeholder='Jméno kolegy…';search.autocomplete='off';
-    const filters=peopleFilters(controls,()=>render());
+    const filters=peopleFilters(controls,()=>render(),search.closest('.field'));
     const count=node('p',undefined,'recipient-summary'),cards=node('div',undefined,'directory-grid');area.append(controls,count,cards);
     // Karty ukazuji jen firemni zarazeni a pobocky, nikoli soukrome udaje z HR.
     const render=()=>{
@@ -327,14 +341,20 @@
         const avatar=personAvatar(person.jmeno,person.foto,'directory-avatar');
         const heading=node('div',undefined,'person-heading');heading.append(node('h2',person.jmeno));card.append(avatar,heading);
         const labels=person.zarazeni||((person.skupiny||[]).map(g=>({manager:'Manager',vedouci:'Ved. pobočky',kuryr:'Kurýr',pizzar:'Pizzař'}[g]||g)));
-        card.append(node('p',labels.join(' · ')||'Uživatel Co-Linku','person-role'));
+        const role=node('p',labels.join(' · ')||'Uživatel Co-Linku','person-role');card.append(role);
         const branches=(person.pobocky||[]).map(id=>state.branches.find(b=>Number(b.id)===Number(id))?.nazev).filter(Boolean);
-        if(branches.length)card.append(node('p',branches.join(', '),'person-branches'));
+        const branchText=branches.length?node('p',branches.join(', '),'person-branches'):null;
+        if(branchText)card.append(branchText);
+        // Pevna vyska karty neztrati delsi obsah: cely text zpřístupní spolecny tooltip IS nad kurzorem.
+        for(const element of [heading.querySelector('h2'),role,branchText].filter(Boolean)){
+          element.title=element.textContent;element.dataset.cbTooltipPosition='pointer-top';element.dataset.cbTooltipMultiline='1';
+        }
         if(Number(person.id)===Number(state.me.id))card.append(node('span','Váš účet','person-self'));
         // Ikona vedle jmena zachova stejnou akci bez dalsiho radku na karte.
         else{const send=button('',async()=>{send.disabled=true;try{await writePerson(person);}finally{send.disabled=false;}},'person-write');send.title='Napsat zprávu: '+person.jmeno;send.setAttribute('aria-label',send.title);send.innerHTML='<svg class="chat-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 5H5v15h15v-8M16 3l5 5-9 9-5 1 1-5Z"></path></svg>';heading.append(send);}
         cards.append(card);
       }
+      window.CB_TOOLTIP?.init(cards);
       if(!people.length)cards.append(node('p','Tomuto hledání a filtrům neodpovídá žádný kolega.','hint'));
     };
     search.addEventListener('input',render);render();

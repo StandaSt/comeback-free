@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 /* Audit HR se potvrzuje spolecne se zmenou; neuspesny pokus zustava odlisnou udalosti. */
 require_once __DIR__ . '/hr_audit.php';
+require_once __DIR__.'/hr_casove_zmeny.php';
 
 // Ucel pracovist: Pri ukonceni osoby uzavre mista vykonu prace i mnozinu MAIN, puvodni povolene pobocky zustavaji archivem.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
@@ -63,7 +64,7 @@ function hr_post_pracovni_pomer_uprava(mysqli $db): void
         $nastupInput = str_replace(',', '.', trim((string)($_POST['datum_nastupu'] ?? '')));
         $nastupDate = DateTimeImmutable::createFromFormat('!d.m.Y', $nastupInput);
         $dateErrors = DateTimeImmutable::getLastErrors();
-        if (!in_array($typ, [1, 2, 3, 5], true) || $nastupDate === false || ($dateErrors !== false && ($dateErrors['warning_count'] > 0 || $dateErrors['error_count'] > 0)) || $nastupDate->format('d.m.Y') !== $nastupInput || $nastupDate > new DateTimeImmutable('today')) {
+        if (!in_array($typ, [1, 2, 3, 5], true) || $nastupDate === false || ($dateErrors !== false && ($dateErrors['warning_count'] > 0 || $dateErrors['error_count'] > 0)) || $nastupDate->format('d.m.Y') !== $nastupInput) {
             throw new CbUserVisibleException('Vyplňte platný typ vztahu a datum nástupu ve formátu DD.MM.RRRR.');
         }
         [$uvazek, $hodin] = hr_pracovni_pomer_uvazek_z_postu($typ, $_POST);
@@ -74,20 +75,37 @@ function hr_post_pracovni_pomer_uprava(mysqli $db): void
         if ($platnostOd < $nastup) {
             throw new CbUserVisibleException('Datum platnosti nesmí být před datem nástupu.');
         }
+        hr_casove_schema_vyzaduj($db);
         hr_audit_transaction_begin($db);
-        $current = hr_fetch_employee_work_relation($db, $idPerson);
+        cb_hr_osobu_zamkni($db,$idPerson);
+        // Upravujeme hodnoty platne k zadanemu dni; dnesni verze mohou byt odlisne.
+        $vybranyVztah=(int)($_POST['id_pracovni_vztah']??0);
+        $current = hr_fetch_employee_work_relation($db, $idPerson,$platnostOd,$vybranyVztah);
+        if (!$current) $current=hr_fetch_employee_work_relation($db,$idPerson,null,$vybranyVztah);
+        if (!$current) {
+            $stmt=$db->prepare('SELECT datum_nastupu FROM hr_pracovni_vztah WHERE id_person=? AND (?=0 OR id_pracovni_vztah=?) AND platny=1 AND zruseno IS NULL ORDER BY datum_nastupu DESC LIMIT 1');
+            $stmt->bind_param('iii',$idPerson,$vybranyVztah,$vybranyVztah); $stmt->execute(); $last=$stmt->get_result()->fetch_assoc(); $stmt->close();
+            if ($last) $current=hr_fetch_employee_work_relation($db,$idPerson,$last['datum_nastupu'],$vybranyVztah);
+        }
         if (!is_array($current)) {
             throw new CbUserVisibleException('Aktuální pracovní poměr nebyl nalezen.');
         }
         if ((int)$current['id_pracovni_vztah_typ'] !== $typ || (string)$current['datum_nastupu'] !== $nastup) {
             $oldRelationId = (int)$current['id_pracovni_vztah'];
-            $stmt = $db->prepare('UPDATE hr_pracovni_vztah SET platny = 0, zruseno = NOW() WHERE id_pracovni_vztah = ?');
-            $stmt->bind_param('i', $oldRelationId);
-            $stmt->execute();
-            $stmt->close();
-
-            $stmt = $db->prepare('INSERT INTO hr_pracovni_vztah (id_person, id_pracovni_vztah_typ, datum_nastupu, id_user_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, NOW(), 1)');
-            $stmt->bind_param('iisi', $idPerson, $typ, $nastup, $zadalUser);
+            // Novy vztah zacina ucinnosti zmeny; puvodni pomer zustane v historii.
+            $odVztahu=$typ===(int)$current['id_pracovni_vztah_typ'] ? $nastup : $platnostOd;
+            // DPP a DPC mohou soubezne existovat; zmena patri pouze vybranemu vztahu.
+            $verzeVztahu=array_values(array_filter(hr_casove_verze($db,'hr_pracovni_vztah',$idPerson),static fn($v)=>(int)$v['id_pracovni_vztah']===$oldRelationId));
+            $planVztahu=cb_hr_casovy_plan($verzeVztahu,$odVztahu,'id_pracovni_vztah','datum_nastupu','datum_ukonceni');
+            // Posun zacatku dosud budouciho vztahu je oprava jeho planu, nikoli druhy soubezny vztah.
+            if ($planVztahu['id']===null && $odVztahu<$current['datum_nastupu']) {
+                $planVztahu['id']=$oldRelationId;
+                $planVztahu['storno']=true;
+                $planVztahu['do']=$current['datum_ukonceni'];
+            }
+            hr_casovy_interval_uzavrit($db,'hr_pracovni_vztah','id_pracovni_vztah',$planVztahu,$zadalUser);
+            $stmt = $db->prepare('INSERT INTO hr_pracovni_vztah (id_person, id_pracovni_vztah_typ, datum_nastupu, datum_ukonceni, id_user_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, ?, NOW(), 1)');
+            $stmt->bind_param('iissi', $idPerson, $typ, $odVztahu, $planVztahu['do'], $zadalUser);
             $stmt->execute();
             $relationId = (int)$db->insert_id;
             $stmt->close();
@@ -102,13 +120,10 @@ function hr_post_pracovni_pomer_uprava(mysqli $db): void
             || $relationId !== (int)$current['id_pracovni_vztah'];
 
         if ($workloadChanged) {
-            $stmt = $db->prepare('UPDATE hr_pracovni_uvazek SET platny = 0, platnost_do = ?, zruseno = NOW(), id_user_zrusil = ? WHERE id_pracovni_vztah = ? AND platny = 1');
-            $stmt->bind_param('sii', $platnostOd, $zadalUser, $relationId);
-            $stmt->execute();
-            $stmt->close();
-
-            $stmt = $db->prepare('INSERT INTO hr_pracovni_uvazek (id_pracovni_vztah, uvazek, hodin_tydne, platnost_od, id_user_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, ?, NOW(), 1)');
-            $stmt->bind_param('iddsi', $relationId, $uvazek, $hodin, $platnostOd, $zadalUser);
+            $planUvazek=cb_hr_casovy_plan(hr_casove_verze($db,'hr_pracovni_uvazek',$relationId),$platnostOd,'id_pracovni_uvazek');
+            hr_casovy_interval_uzavrit($db,'hr_pracovni_uvazek','id_pracovni_uvazek',$planUvazek,$zadalUser);
+            $stmt = $db->prepare('INSERT INTO hr_pracovni_uvazek (id_pracovni_vztah, uvazek, hodin_tydne, platnost_od, platnost_do, id_user_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, ?, ?, NOW(), 1)');
+            $stmt->bind_param('iddssi', $relationId, $uvazek, $hodin, $platnostOd, $planUvazek['do'], $zadalUser);
             $stmt->execute();
             $stmt->close();
         }
@@ -119,50 +134,28 @@ function hr_post_pracovni_pomer_uprava(mysqli $db): void
             || $currentSalaryAmount !== $mzdaCastka
             || $relationId !== (int)$current['id_pracovni_vztah'];
         if ($salaryChanged) {
-            $stmt = $db->prepare('UPDATE hr_mzda SET platny = 0, platnost_do = ?, zruseno = NOW(), id_user_zrusil = ? WHERE id_pracovni_vztah = ? AND platny = 1');
-            $stmt->bind_param('sii', $platnostOd, $zadalUser, $relationId);
-            $stmt->execute();
-            $stmt->close();
-
-            $stmt = $db->prepare('INSERT INTO hr_mzda (id_pracovni_vztah, id_mzda_typ, castka, platnost_od, id_user_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, ?, NOW(), 1)');
-            $stmt->bind_param('iiisi', $relationId, $mzdaTyp, $mzdaCastka, $platnostOd, $zadalUser);
+            $planMzda=cb_hr_casovy_plan(hr_casove_verze($db,'hr_mzda',$relationId),$platnostOd,'id_mzda');
+            hr_casovy_interval_uzavrit($db,'hr_mzda','id_mzda',$planMzda,$zadalUser);
+            $stmt = $db->prepare('INSERT INTO hr_mzda (id_pracovni_vztah, id_mzda_typ, castka, platnost_od, platnost_do, id_user_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, ?, ?, NOW(), 1)');
+            $stmt->bind_param('iiissi', $relationId, $mzdaTyp, $mzdaCastka, $platnostOd, $planMzda['do'], $zadalUser);
             $stmt->execute();
             $stmt->close();
         }
 
-        $currentBenefits = hr_fetch_employee_work_benefit_ids($db, $relationId);
-        sort($currentBenefits);
-        if ($currentBenefits !== $benefity) {
-            $odebrane = array_values(array_diff($currentBenefits, $benefity));
-            $pridane = array_values(array_diff($benefity, $currentBenefits));
-            if ($odebrane !== []) {
-                $stmt = $db->prepare('UPDATE hr_benefit SET platny = 0, platnost_do = ?, zruseno = NOW(), id_user_zrusil = ? WHERE id_pracovni_vztah = ? AND id_cis_benefit = ? AND platny = 1');
-                foreach ($odebrane as $idBenefit) {
-                    $stmt->bind_param('siii', $platnostOd, $zadalUser, $relationId, $idBenefit);
-                    $stmt->execute();
-                }
-                $stmt->close();
-            }
-            if ($pridane !== []) {
-                $stmt = $db->prepare('INSERT INTO hr_benefit (id_pracovni_vztah, id_cis_benefit, platnost_od, id_user_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, NOW(), 1)');
-                foreach ($pridane as $idBenefit) {
-                    $stmt->bind_param('iisi', $relationId, $idBenefit, $platnostOd, $zadalUser);
-                    $stmt->execute();
-                }
-                $stmt->close();
+        $currentBenefits=hr_fetch_employee_work_benefit_ids($db,$relationId,$platnostOd);
+        // Kazdy benefit ma vlastni interval, pridani ani odebrani neprepise dalsi plan.
+        foreach(array_unique(array_merge($currentBenefits,$benefity)) as $idBenefit) {
+            if(in_array($idBenefit,$currentBenefits,true)===in_array($idBenefit,$benefity,true)) continue;
+            $plan=cb_hr_casovy_plan(hr_casove_verze($db,'hr_benefit',$relationId,$idBenefit),$platnostOd,'id_benefit');
+            hr_casovy_interval_uzavrit($db,'hr_benefit','id_benefit',$plan,$zadalUser);
+            if(in_array($idBenefit,$benefity,true)) {
+                $stmt=$db->prepare('INSERT INTO hr_benefit(id_pracovni_vztah,id_cis_benefit,platnost_od,platnost_do,id_user_zadal,vytvoreno,platny) VALUES(?,?,?,?,?,NOW(),1)');
+                $stmt->bind_param('iissi',$relationId,$idBenefit,$platnostOd,$plan['do'],$zadalUser); $stmt->execute(); $stmt->close();
             }
         }
-
-        $novyPracovniPomer = $relationId !== (int)$current['id_pracovni_vztah'];
-        $puvodniUkonceni = trim((string)($current['datum_ukonceni'] ?? ''));
-        if ($novyPracovniPomer || $puvodniUkonceni === '' || $puvodniUkonceni >= date('Y-m-d')) {
-            $stmt = $db->prepare('UPDATE hr_person SET aktivni = 1 WHERE id_person = ?');
-            $stmt->bind_param('i', $idPerson);
-            $stmt->execute();
-            $stmt->close();
-        }
+        if($relationId!==(int)$current['id_pracovni_vztah']) hr_casova_aktivace_naplanovat($db,$idPerson,$odVztahu);
         // Pracovni vztah, uvazek a mzda patri mezi povinne casti kompletni karty.
-        hr_update_employee_completeness($db, $idPerson);
+        hr_casovy_stav_obnovit($db,$idPerson,$zadalUser);
         hr_audit_transaction_commit($db);
         hr_audit_form_finish(hr_pracovni_pomer_url($idPerson), true, 'Pracovní poměr byl uložen.');
     } catch (Throwable $e) {
@@ -363,7 +356,9 @@ function hr_post_pracovni_pomer_ukoncit(mysqli $db, int $zadalUser): void
         if (!is_array($typ)) {
             throw new CbUserVisibleException('Vyberte platný důvod ukončení.');
         }
+        hr_casove_schema_vyzaduj($db);
         hr_audit_transaction_begin($db);
+        cb_hr_osobu_zamkni($db,$idPerson);
         $stmt = $db->prepare('INSERT INTO hr_pracovni_ukonceni (id_pracovni_vztah, id_pracovni_ukonceni_typ, datum_oznameni, datum_ukonceni, poznamka, id_user_zadal, vytvoreno) VALUES (?, ?, ?, ?, ?, ?, NOW())');
         $stmt->bind_param('iisssi', $idVztah, $idTyp, $datumOznameni, $datumUkonceni, $poznamka, $zadalUser);
         $stmt->execute();
@@ -383,10 +378,8 @@ function hr_post_pracovni_pomer_ukoncit(mysqli $db, int $zadalUser): void
             $stmt->execute();
             $stmt->close();
         }
+        hr_casovy_stav_obnovit($db,$idPerson,$zadalUser);
         hr_audit_transaction_commit($db);
-        require_once __DIR__ . '/../../common/lib/hr_user_sync.php';
-        // Vyslovne ukonceni se tyka jen teto osoby, nikoliv ostatnich historickych smluv.
-        cb_hr_user_sync_ukoncene($db, $idPerson);
         hr_audit_form_finish(hr_pracovni_pomer_url($idPerson), true, 'Ukončení pracovního poměru bylo uloženo.');
     } catch (Throwable $e) {
         try { hr_audit_transaction_rollback($db); } catch (Throwable $ignored) {}

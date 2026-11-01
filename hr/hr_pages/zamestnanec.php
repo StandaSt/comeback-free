@@ -66,13 +66,8 @@ $assignmentErrors=is_array($employee)?cb_hr_zarazeni_chyby($db,(int)$employee['i
 $currentPersonFunction=is_array($employee)?cb_hr_funkce_osoby($db,(int)$employee['id_person']):null;
 // Stav karty se cte z aktualnich vazeb i pred dalsim zapisem ulozeneho priznaku kompletni.
 if (is_array($employee)) $employee['kompletni']=$missingRequiredData===[] && $assignmentErrors===[]?1:0;
-$currentFunctionName = '';
-foreach ($employeeFunctionData['historie'] as $employeeFunctionRow) {
-    if ((int)$employeeFunctionRow['platny'] === 1 && (int)$employeeFunctionRow['id_funkce'] !== 1 && (empty($employeeFunctionRow['platnost_od']) || $employeeFunctionRow['platnost_od']<=date('Y-m-d')) && (empty($employeeFunctionRow['platnost_do']) || $employeeFunctionRow['platnost_do']>=date('Y-m-d'))) {
-        $currentFunctionName = (string)$employeeFunctionRow['nazev'] . ((int)$employeeFunctionRow['v_treninku'] === 1 ? ' – v tréninku' : '');
-        break;
-    }
-}
+// Nazev i opravneni vychazeji ze stejne funkce platne dnes, ne z posledniho zapisu.
+$currentFunctionName=$currentPersonFunction ? (string)$currentPersonFunction['nazev'].(!empty($currentPersonFunction['v_treninku'])?' – v tréninku':'') : '';
 $currentSlotsText = is_array($employee) ? trim((string)($employee['zarazeni'] ?? '')) : '';
 $currentAssignmentText = implode(' · ', array_values(array_filter([$currentSlotsText, $currentFunctionName], static fn(string $value): bool => $value !== '' && $value !== '-')));
 // Karta po hromadnem importu ukaze take starsi podklady, nikoli pouze poslednich dvacet.
@@ -185,7 +180,10 @@ $employeeDocumentOpenUrl = static function (array $document): string {
     <?php elseif ($employeeSection === 'pracovni_pomer'): ?>
         <?php
         // Data aktualniho vztahu a ciselniku pro samostatny formular pracovniho pomeru.
-        $workRelation = hr_fetch_employee_work_relation($db, (int)$employee['id_person']);
+        // Volba dne umozni prohlizet a opravovat plan bez zmeny dnesniho stavu.
+        $workDay=cb_hr_den();
+        try { if(isset($_GET['hr_den'])) $workDay=cb_hr_den((string)$_GET['hr_den']); } catch (InvalidArgumentException $e) {}
+        $workRelation = hr_fetch_employee_work_relation($db, (int)$employee['id_person'],$workDay);
         $workTypes = hr_fetch_lookup($db, 'hr_cis_pracovni_vztah_typ', 'id_pracovni_vztah_typ', 'nazev', "CASE nazev WHEN 'HPP' THEN 1 WHEN 'DPČ' THEN 2 WHEN 'DPP' THEN 3 ELSE 9 END, id_pracovni_vztah_typ");
         $salaryTypes = hr_fetch_work_salary_types($db);
         $activeBenefits = hr_fetch_active_benefits($db);
@@ -208,6 +206,11 @@ $employeeDocumentOpenUrl = static function (array $document): string {
         ?>
         <?php // Obal sjednocuje kompaktni odstupy v prohlizeni i editaci pracovniho pomeru. ?>
         <div class="hr_employee_work_compact">
+        <form method="get" action="<?= h(cb_root_url('index.php')) ?>" class="hr_assignment_fields">
+            <input type="hidden" name="m" value="hr"><input type="hidden" name="page" value="zamestnanec"><input type="hidden" name="id" value="<?= (int)$employee['id_person'] ?>"><input type="hidden" name="sekce" value="pracovni_pomer">
+            <?php if ($isEdit): ?><input type="hidden" name="upravit" value="1"><?php endif; ?>
+            <label class="hr_form_label">Stav pracovního poměru k <input type="date" name="hr_den" value="<?= h($workDay) ?>" required></label><button class="hr_secondary_button" type="submit">Zobrazit</button>
+        </form>
         <section class="hr_panel" data-hr-employee-block="relation">
             <div class="hr_panel_header"><h2 class="hr_panel_title">Pracovní poměr</h2><?php if ($isEdit && $workRelation !== null): ?><button class="hr_primary_button" type="submit" form="hr-work-relation-form" data-hr-employee-save>Uložit změny</button><?php endif; ?></div>
             <?php if ($workRelation === null): ?>
@@ -224,11 +227,11 @@ $employeeDocumentOpenUrl = static function (array $document): string {
                 $workHours = $workRelation['hodin_tydne'] === null ? '' : rtrim(rtrim(number_format((float)$workRelation['hodin_tydne'], 1, '.', ''), '0'), '.');
                 $salaryTypeId = $workRelation['id_mzda_typ'] === null ? null : (int)$workRelation['id_mzda_typ'];
                 $salaryAmount = $workRelation['mzda_castka'] === null ? '' : (string)$workRelation['mzda_castka'];
-                $selectedBenefitIds = hr_fetch_employee_work_benefit_ids($db, (int)$workRelation['id_pracovni_vztah']);
+                $selectedBenefitIds = hr_fetch_employee_work_benefit_ids($db, (int)$workRelation['id_pracovni_vztah'],$workDay);
                 ?>
                 <?php // Aktualni pracovni pomer pouziva stejna pole v obou rezimech; citaci rezim je pouze uzamkne. ?>
                 <form id="hr-work-relation-form" data-hr-employee-form="relation" class="hr_form<?= $isEdit ? '' : ' hr_employee_read_mode' ?>" data-hr-work-relation-form data-hr-work-type-hpp="1" data-hr-work-type-dpp="2" data-hr-work-type-dpc="3"<?= $isEdit ? ' method="post" action="' . h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$employee['id_person']) . '&sekce=pracovni_pomer&upravit=1')) . '"' : '' ?>>
-                    <?php if ($isEdit): ?><input type="hidden" name="cb_action" value="hr_pracovni_pomer_upravit"><input type="hidden" name="id_person" value="<?= h((string)$employee['id_person']) ?>"><?php endif; ?>
+                    <?php if ($isEdit): ?><input type="hidden" name="id_pracovni_vztah" value="<?= (int)$workRelation['id_pracovni_vztah'] ?>"><input type="hidden" name="cb_action" value="hr_pracovni_pomer_upravit"><input type="hidden" name="id_person" value="<?= h((string)$employee['id_person']) ?>"><?php endif; ?>
                     <fieldset class="hr_employee_mode_fields"<?= $isEdit ? '' : ' disabled' ?>>
                     <table class="hr_work_relation_table">
                         <colgroup><col><col><col><col><col><col><col><col></colgroup>
@@ -250,7 +253,7 @@ $employeeDocumentOpenUrl = static function (array $document): string {
                             <td data-hr-workload-dpp-cell hidden colspan="2" style="white-space:nowrap">Max. limit je 300 hod. za rok</td>
                             <td style="padding-right:10px"><select name="id_mzda_typ" data-hr-salary-type style="width:130px"><option value=""<?= $salaryTypeId === null ? ' selected' : '' ?>>Nezadáno</option><?php foreach ($salaryTypes as $salaryType): ?><option value="<?= h((string)$salaryType['id']) ?>"<?= $salaryTypeId === (int)$salaryType['id'] ? ' selected' : '' ?>><?= h($salaryType['label']) ?></option><?php endforeach; ?></select></td>
                             <td style="padding-right:10px"><input type="text" inputmode="numeric" pattern="[0-9]*" name="mzda_castka" data-hr-salary-amount required maxlength="10" style="width:100px" value="<?= h($salaryAmount) ?>"></td>
-                            <td><input name="platnost_od" data-cb-date required style="width:135px" value="<?= h($isEdit ? date('d.m.Y') : '—') ?>"></td>
+                            <td><input name="platnost_od" data-cb-date required style="width:135px" value="<?= h($isEdit ? (new DateTimeImmutable($workDay))->format('d.m.Y') : hr_format_date($workDay)) ?>"></td>
                         </tr>
                     </table>
                     <fieldset class="hr_work_benefits_fieldset">

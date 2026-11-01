@@ -2,6 +2,7 @@
 declare(strict_types=1);
 // Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
 require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
+require_once __DIR__.'/../../common/lib/hr_casova_platnost.php';
 
 /**
  * DB dotazy pro seznam, detail a kontrolu kompletnosti zamestnancu v HR.
@@ -63,7 +64,8 @@ function hr_fetch_employees(mysqli $db, int $limit = 100): array
            AND ou.platny = 1
         LEFT JOIN hr_pracovni_vztah pv
             ON pv.id_person = p.id_person
-           AND pv.platny = 1
+           AND pv.platny = 1 AND pv.zruseno IS NULL
+           AND pv.datum_nastupu <= CURDATE()
            AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni >= CURDATE())
         LEFT JOIN hr_cis_pracovni_vztah_typ pvt
             ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ
@@ -337,8 +339,10 @@ function hr_fetch_employee_list(mysqli $db): array
 /**
  * Nacte aktualni pracovni pomer vcetne uvazku a mzdy.
  */
-function hr_fetch_employee_work_relation(mysqli $db, int $idPerson): ?array
+function hr_fetch_employee_work_relation(mysqli $db, int $idPerson, ?string $datum = null, int $idVztah = 0): ?array
 {
+    // Stejny zdroj slouzi dnesni karte, planovani i cteni historickeho dne.
+    $datum=cb_hr_den($datum);
     $sql = '
         SELECT
             pv.id_pracovni_vztah,
@@ -358,20 +362,24 @@ function hr_fetch_employee_work_relation(mysqli $db, int $idPerson): ?array
             ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ
         LEFT JOIN hr_pracovni_uvazek u
             ON u.id_pracovni_vztah = pv.id_pracovni_vztah
-           AND u.platny = 1
+           AND u.platny = 1 AND u.zruseno IS NULL
+           AND (u.platnost_od IS NULL OR u.platnost_od<=?) AND (u.platnost_do IS NULL OR u.platnost_do>=?)
         LEFT JOIN hr_mzda m
             ON m.id_pracovni_vztah = pv.id_pracovni_vztah
-           AND m.platny = 1
+           AND m.platny = 1 AND m.zruseno IS NULL
+           AND (m.platnost_od IS NULL OR m.platnost_od<=?) AND (m.platnost_do IS NULL OR m.platnost_do>=?)
         LEFT JOIN hr_pracovni_ukonceni pu
             ON pu.id_pracovni_vztah = pv.id_pracovni_vztah
         WHERE pv.id_person = ?
-          AND pv.platny = 1
+          AND pv.platny = 1 AND pv.zruseno IS NULL
+          AND pv.datum_nastupu<=? AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni>=?)
+          AND (?=0 OR pv.id_pracovni_vztah=?)
         ORDER BY pv.id_pracovni_vztah DESC, u.id_pracovni_uvazek DESC, m.id_mzda DESC
         LIMIT 1
     ';
 
     $stmt = $db->prepare($sql);
-    $stmt->bind_param('i', $idPerson);
+    $stmt->bind_param('ssssissii',$datum,$datum,$datum,$datum,$idPerson,$datum,$datum,$idVztah,$idVztah);
     $stmt->execute();
     $row = $stmt->get_result()->fetch_assoc();
     $stmt->close();
@@ -385,6 +393,7 @@ function hr_fetch_employee_work_relation(mysqli $db, int $idPerson): ?array
  */
 function hr_fetch_employee_work_relation_history(mysqli $db, int $idPerson): array
 {
+    // Casovy snimek historie odpovida konci vztahu, budoucimu nastupu nebo dnesku.
     $sql = '
         SELECT
             pv.id_pracovni_vztah,
@@ -407,15 +416,21 @@ function hr_fetch_employee_work_relation_history(mysqli $db, int $idPerson): arr
             ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ
         LEFT JOIN hr_pracovni_uvazek u
             ON u.id_pracovni_vztah = pv.id_pracovni_vztah
-           AND u.platny = 1
+           AND u.platny = 1 AND u.zruseno IS NULL
+           AND (u.platnost_od IS NULL OR u.platnost_od<=(CASE WHEN pv.datum_ukonceni<CURDATE() THEN pv.datum_ukonceni WHEN pv.datum_nastupu>CURDATE() THEN pv.datum_nastupu ELSE CURDATE() END))
+           AND (u.platnost_do IS NULL OR u.platnost_do>=(CASE WHEN pv.datum_ukonceni<CURDATE() THEN pv.datum_ukonceni WHEN pv.datum_nastupu>CURDATE() THEN pv.datum_nastupu ELSE CURDATE() END))
         LEFT JOIN hr_mzda m
             ON m.id_pracovni_vztah = pv.id_pracovni_vztah
-           AND m.platny = 1
+           AND m.platny = 1 AND m.zruseno IS NULL
+           AND (m.platnost_od IS NULL OR m.platnost_od<=(CASE WHEN pv.datum_ukonceni<CURDATE() THEN pv.datum_ukonceni WHEN pv.datum_nastupu>CURDATE() THEN pv.datum_nastupu ELSE CURDATE() END))
+           AND (m.platnost_do IS NULL OR m.platnost_do>=(CASE WHEN pv.datum_ukonceni<CURDATE() THEN pv.datum_ukonceni WHEN pv.datum_nastupu>CURDATE() THEN pv.datum_nastupu ELSE CURDATE() END))
         LEFT JOIN cis_mzda_typ mt
             ON mt.id_mzda_typ = m.id_mzda_typ
         LEFT JOIN hr_benefit b
             ON b.id_pracovni_vztah = pv.id_pracovni_vztah
-           AND b.platny = 1
+           AND b.platny = 1 AND b.zruseno IS NULL
+           AND (b.platnost_od IS NULL OR b.platnost_od<=(CASE WHEN pv.datum_ukonceni<CURDATE() THEN pv.datum_ukonceni WHEN pv.datum_nastupu>CURDATE() THEN pv.datum_nastupu ELSE CURDATE() END))
+           AND (b.platnost_do IS NULL OR b.platnost_do>=(CASE WHEN pv.datum_ukonceni<CURDATE() THEN pv.datum_ukonceni WHEN pv.datum_nastupu>CURDATE() THEN pv.datum_nastupu ELSE CURDATE() END))
         LEFT JOIN hr_cis_benefit cb
             ON cb.id_cis_benefit = b.id_cis_benefit
         LEFT JOIN hr_pracovni_ukonceni pu
@@ -586,10 +601,12 @@ function hr_fetch_employee_work_event_types(mysqli $db, string $table, string $i
 /**
  * Nacte identifikatory aktualnich benefitu jednoho pracovniho vztahu.
  */
-function hr_fetch_employee_work_benefit_ids(mysqli $db, int $idPracovniVztah): array
+function hr_fetch_employee_work_benefit_ids(mysqli $db, int $idPracovniVztah, ?string $datum = null): array
 {
-    $stmt = $db->prepare('SELECT id_cis_benefit FROM hr_benefit WHERE id_pracovni_vztah = ? AND platny = 1 ORDER BY id_cis_benefit');
-    $stmt->bind_param('i', $idPracovniVztah);
+    // Benefity se porovnavaji k ucinnosti zmeny, nikoli podle posledniho zapisu.
+    $datum=cb_hr_den($datum);
+    $stmt = $db->prepare('SELECT id_cis_benefit FROM hr_benefit WHERE id_pracovni_vztah = ? AND platny = 1 AND zruseno IS NULL AND (platnost_od IS NULL OR platnost_od<=?) AND (platnost_do IS NULL OR platnost_do>=?) ORDER BY id_cis_benefit');
+    $stmt->bind_param('iss', $idPracovniVztah,$datum,$datum);
     $stmt->execute();
     $result = $stmt->get_result();
     $ids = [];
@@ -678,7 +695,8 @@ function hr_fetch_employee(mysqli $db, int $id): ?array
            AND ou.platny = 1
         LEFT JOIN hr_pracovni_vztah pv
             ON pv.id_person = p.id_person
-           AND pv.platny = 1
+           AND pv.platny = 1 AND pv.zruseno IS NULL
+           AND pv.datum_nastupu<=CURDATE() AND (pv.datum_ukonceni IS NULL OR pv.datum_ukonceni>=CURDATE())
         LEFT JOIN hr_cis_pracovni_vztah_typ pvt
             ON pvt.id_pracovni_vztah_typ = pv.id_pracovni_vztah_typ
         LEFT JOIN " . cb_hr_main_sql($db) . " pp

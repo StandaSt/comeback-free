@@ -4,6 +4,7 @@ declare(strict_types=1);
 /* Ucel: Jednotne cteni mist vykonu prace, zarazeni osoby a chyb jejich vzajemnych vazeb.
  * Oblasti a konkretni pobocky se sjednocuji; rozsah nikdy nenahrazuje pravo k akci.
  */
+require_once __DIR__.'/hr_casova_platnost.php';
 
 // Primo vybrana pobocka pokryje celou verzi a nema se znovu pridavat pres casove clenstvi v oblasti.
 function cb_hr_mista_sql(): string
@@ -43,13 +44,14 @@ function cb_hr_ucinne_sql(string $alias, string $datum = 'CURRENT_DATE()'): stri
 // Cte konkretni funkci k datu; nerozhoduje podle premenovatelneho nazvu ani samotne role.
 function cb_hr_funkce_osoby(mysqli $db, int $idPerson, ?string $datum = null): ?array
 {
-    $datum ??= date('Y-m-d');
+    $datum=cb_hr_den($datum);
     $stmt=$db->prepare('SELECT c.*,f.v_treninku FROM hr_funkce f JOIN cis_funkce c ON c.id_funkce=f.id_funkce
-        WHERE f.id_person=? AND f.platny=1 AND (f.platnost_od IS NULL OR f.platnost_od<=?)
-        AND (f.platnost_do IS NULL OR f.platnost_do>=?)');
+        WHERE f.id_person=? AND '.cb_hr_cas_sql('f','?'));
     $stmt->bind_param('iss',$idPerson,$datum,$datum); $stmt->execute();
     $rows=$stmt->get_result()->fetch_all(MYSQLI_ASSOC); $stmt->close();
-    return count($rows)===1 ? $rows[0] : null;
+    // Prekryv funkci neni absence funkce: nesmi potichu snizit pristupovou roli.
+    if (count($rows)>1) throw new DomainException('Funkce osoby mají překrývající se platnost.');
+    return $rows[0] ?? null;
 }
 
 // Nazev oblasti nebo vycet konkretnich pobocek se vypisuje i u vypomoci v planovani.

@@ -1,5 +1,5 @@
 <?php
-// lib/restia_online_kontrola.php
+// Orchestrace importu Restia: uzavre evidenci behu a skutecne selhani preda volajicimu i CLI planovaci.
 // Verze: V4
 // Aktualizace: 14.05.2026
 declare(strict_types=1);
@@ -255,6 +255,7 @@ if (!function_exists('cb_restia_online_kontrola')) {
         $zapisy = 0;
         $aktualizace = 0;
         $ignore = 0;
+        $failure = null;
 
         try {
             $file = __DIR__ . '/restia_online.php';
@@ -267,9 +268,7 @@ if (!function_exists('cb_restia_online_kontrola')) {
             }
 
             if (!file_exists($file)) {
-                if (function_exists('zapis_log_chyby')) {
-                    zapis_log_chyby('Restia online: Soubor nenalezen restia_online.php');
-                }
+                throw new RuntimeException('Restia online: Soubor nenalezen restia_online.php');
             } else {
                 $GLOBALS['cb_restia_online_progress_callback'] = static function (array $progress) use ($db, $idAkce, &$zapisy, &$aktualizace, &$ignore): void {
                     $zapisy = (int)($progress['zapisy'] ?? 0);
@@ -292,6 +291,13 @@ if (!function_exists('cb_restia_online_kontrola')) {
                     $zapisy = (int)($result['zapisy'] ?? 0);
                     $aktualizace = (int)($result['aktualizace'] ?? 0);
                     $ignore = (int)($result['ignore'] ?? 0);
+                    // Import muze vratit castecne pocty i chybu; pocty samy nejsou potvrzenim uspechu.
+                    if (trim((string)($result['chyba'] ?? '')) !== '' || (int)($result['errors'] ?? 0) > 0) {
+                        throw new RuntimeException('Import objednávek Restia selhal: '.
+                            ((string)($result['chyba'] ?? '') ?: 'chybné objednávky: '.(int)$result['errors']));
+                    }
+                } else {
+                    throw new RuntimeException('Import objednávek Restia nevrátil platný výsledek.');
                 }
             }
 
@@ -300,19 +306,30 @@ if (!function_exists('cb_restia_online_kontrola')) {
             }
             unset($GLOBALS['cb_restia_online_progress_callback']);
         } catch (Throwable $e) {
+            $failure = $e;
             unset($GLOBALS['cb_restia_online_session_ready'], $GLOBALS['cb_restia_online_progress_callback']);
 
             if (function_exists('zapis_log_chyby')) {
-                zapis_log_chyby('Restia online chyba: ' . $e->getMessage());
+                // Chyba vedlejsiho loggeru nesmi prekryt puvodni duvod neuspechu importu.
+                try { zapis_log_chyby(mb_substr('Restia online chyba: '.$e->getMessage(),0,255,'UTF-8')); }
+                catch (Throwable $logError) { error_log('Restia: zápis diagnostiky selhal: '.$logError->getMessage()); }
             }
         }
 
         cb_restia_online_kontrola_update_row($db, $idAkce, $zapisy, $aktualizace, $ignore, 0);
+        if ($failure !== null) throw $failure;
         cb_restia_online_kontrola_notify_admin($db, $idAkce, $zapisy, $aktualizace, $ignore);
         return true;
     }
 }
 
 if (isset($_SERVER['SCRIPT_FILENAME']) && realpath((string)$_SERVER['SCRIPT_FILENAME']) === __FILE__) {
+    if (PHP_SAPI === 'cli') {
+        try {
+            $ran=cb_restia_online_kontrola();
+            echo $ran ? "Import objednávek Restia dokončen.\n" : "Import nebyl spuštěn: interval nebo souběžný běh.\n";
+            exit(0);
+        } catch (Throwable $e) { fwrite(STDERR,'CHYBA: '.$e->getMessage().PHP_EOL); exit(1); }
+    }
     cb_restia_online_kontrola();
 }

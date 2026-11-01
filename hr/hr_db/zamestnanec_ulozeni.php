@@ -9,6 +9,7 @@ require_once __DIR__ . '/../hr_lib/hr_audit.php';
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 require_once __DIR__ . '/hr_nastaveni_ciselniky.php';
 require_once __DIR__ . '/hr_mista_zapis.php';
+require_once __DIR__.'/../hr_lib/hr_casove_zmeny.php';
 
 /**
  * DB zapis noveho zamestnance, pracovnich slotu a volitelne firemni funkce.
@@ -23,6 +24,7 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
     if ($zadalUser <= 0) {
         throw new CbUserVisibleException('Přihlášení vypršelo. Přihlaste se prosím znovu.');
     }
+    hr_casove_schema_vyzaduj($db);
     cb_hr_main_vyzaduj($db);
     $firemniUzivatel = cb_firemni_pristup_uzivatel($db, $zadalUser);
     $idFirma = (int)$firemniUzivatel['id_firma'];
@@ -196,10 +198,14 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
 
         // Jedine ID osoby i prihlasovaciho uctu; vazby a profil patri do HR.
         $stmt = $db->prepare('
-            INSERT INTO hr_person (id_person, id_firma, id_user, osobni_cislo, zdroj, id_user_zadal, vytvoreno, aktivni)
-            VALUES (?, ?, ?, ?, ?, ?, NOW(), 1)
+            INSERT INTO hr_person (id_person, id_firma, id_user, osobni_cislo, zdroj, id_user_zadal, vytvoreno, aktivni, casova_aktivace_od)
+            VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, ?)
         ');
-        $stmt->bind_param('iiissi', $idUser, $idFirma, $idUser, $osobniCisloDb, $zdroj, $zadalUser);
+        // Budouci nastup ma vlastni priznak; servis neaktivuje libovolne rucne vypnute ucty.
+        $nastupDen=cb_hr_den((new DateTimeImmutable($datumNastupu))->format('Y-m-d'));
+        $aktivni=$nastupDen<=cb_hr_den()?1:0;
+        $aktivace=$aktivni===1?null:$nastupDen;
+        $stmt->bind_param('iiissiis', $idUser, $idFirma, $idUser, $osobniCisloDb, $zdroj, $zadalUser,$aktivni,$aktivace);
         $stmt->execute();
         $idPerson = $idUser;
         $stmt->close();
@@ -248,7 +254,7 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
         }
 
         // Prihlasovaci role se nikdy nevybira rucne; plyne z jedine funkce.
-        hr_pristupovy_profil_synchronizovat($db, $idPerson, $zadalUser);
+        hr_casovy_stav_obnovit($db,$idPerson,$zadalUser);
 
         if ($telefon !== '') {
             // Ulozi hlavni telefon, pokud byl vyplnen.

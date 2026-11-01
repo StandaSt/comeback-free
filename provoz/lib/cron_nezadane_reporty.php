@@ -9,7 +9,7 @@ require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 require_once __DIR__ . '/../../common/lib/smeny_verejny_zdroj.php';
 
 /*
- * Spousteni: denne v 08:00 a 20:00 pres PHP CLI.
+ * Spousteni: denne v 09:00 a 20:00 pres PHP CLI.
  * Kontroluje tri predchozi provozni dny (provozni den zacina v 06:00).
  * Povinnost reportu urcuje spolecne pravidlo provozu pobocky; Vyroba v nedeli report nema.
  *
@@ -362,6 +362,7 @@ try {
         echo ($ok ? 'OK' : 'CHYBA')
             . ': id_user=' . (string)$idUser
             . ' | pobocky=' . implode(',', array_keys($userBranches))
+            . ' | predano_adminovi=' . (string)($result['predano_adminovi'] ?? 0)
             . ' | odeslano=' . (string)$sent
             . PHP_EOL;
         if (!$ok) {
