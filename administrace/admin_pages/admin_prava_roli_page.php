@@ -14,7 +14,7 @@ $adminAllowed = $adminPravaData['allowed'];
 $adminShowBlockChecks = function_exists('cb_pravo_ma') && cb_pravo_ma(101);
 $adminRoleMembers = cb_admin_role_uzivatele(db());
 ?>
-<link rel="stylesheet" href="<?= h(cb_root_url('administrace/style/admin_role_uzivatele.css')) ?>?v=<?= filemtime(__DIR__.'/../style/admin_role_uzivatele.css') ?>">
+<link rel="stylesheet" href="<?= h(cb_root_url('administrace/admin_style/admin_role_uzivatele.css')) ?>?v=<?= filemtime(__DIR__.'/../admin_style/admin_role_uzivatele.css') ?>">
 <?php require __DIR__.'/../admin_includes/admin_role_uzivatele.php'; ?>
 <?php if ($adminRights === []): ?>
     <div class="admin_empty blok">

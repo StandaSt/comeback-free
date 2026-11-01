@@ -180,7 +180,7 @@ function cb_hlavicka_stitky_data(mysqli $db): array
     $out['co_link_unread']=0;
     if(array_key_exists(700,$_SESSION['prava_stav']??[]) && cb_pravo_ma(700)){
         try{
-            require_once __DIR__.'/../../co_link/unread.php';
+            require_once __DIR__.'/../../co_link/co_db/co_unread.php';
             $out['co_link_unread']=co_neprecteno_hlavicka($user);
         }catch(Throwable $e){cb_chyba_oznam($e,['module'=>'CO_LINK','action'=>'Nepřečtené zprávy v hlavičce']);}
     }

@@ -1,0 +1,57 @@
+# Co-Link: zachova puvodni adresy API, statickych prostredku, PWA a chranenych priloh po presunech.
+RewriteEngine On
+
+# Prefixovane skripty zachovaji stare adresy v koreni i v co_js pro otevrene klienty.
+RewriteCond %{REQUEST_URI} ^(.*/)co_js/(?:emoji|auth_restore|installation|push)\.js$
+RewriteRule ^co_js/(emoji|auth_restore|installation|push)\.js$ %1co_js/co_$1.js [L]
+RewriteCond %{REQUEST_URI} ^(.*/)(?:emoji|auth_restore|installation|push)\.js$
+RewriteRule ^(emoji|auth_restore|installation|push)\.js$ %1co_js/co_$1.js [L]
+
+# Stare PWA adresy zustavaji dostupne; manifest zachova relativni identitu a rozsah.
+RewriteCond %{REQUEST_URI} ^(.*/)co_pwa/icon\.php$
+RewriteRule ^co_pwa/icon\.php$ %1co_pwa/co_icon.php [L]
+RewriteCond %{REQUEST_URI} ^(.*/)co_pwa/manifest\.php$
+RewriteRule ^co_pwa/manifest\.php$ %1co_pwa/co_manifest.php [R=308,L,NE]
+
+# Puvodni adresy formatovani vraceji stejny skript i starsim klientum a service workerum.
+RewriteCond %{REQUEST_URI} ^(.*/)co_js/message_format\.js$
+RewriteRule ^co_js/message_format\.js$ %1co_js/co_message_format.js [L]
+RewriteCond %{REQUEST_URI} ^(.*/)message_format\.js$
+RewriteRule ^message_format\.js$ %1co_js/co_message_format.js [L]
+
+# Puvodni adresy editoru v koreni i ucelovych adresarich zustavaji funkcni bez zmeny obsahu.
+RewriteCond %{REQUEST_URI} ^(.*/)co_js/editor\.js$
+RewriteRule ^co_js/editor\.js$ %1co_js/co_editor.js [L]
+RewriteCond %{REQUEST_URI} ^(.*/)co_style/editor\.css$
+RewriteRule ^co_style/editor\.css$ %1co_style/co_editor.css [L]
+RewriteCond %{REQUEST_URI} ^(.*/)editor\.js$
+RewriteRule ^editor\.js$ %1co_js/co_editor.js [L]
+RewriteCond %{REQUEST_URI} ^(.*/)editor\.css$
+RewriteRule ^editor\.css$ %1co_style/co_editor.css [L]
+
+# Stara adresa hlavniho klienta vraci presunuty skript i starsim strankam a service workerum.
+RewriteCond %{REQUEST_URI} ^(.*/)app\.js$
+RewriteRule ^app\.js$ %1co_js/co_app.js [L]
+
+# Vnitrni prepis API zachova metodu, POST telo, hlavicky i query bez presmerovani klienta.
+RewriteCond %{REQUEST_URI} ^(.*/)api\.php$
+RewriteRule ^api\.php$ %1co_ajax/co_api.php [L]
+
+# Stare odkazy na prilohy zachovaji ID i dalsi parametry; opravneni overuje cilovy PHP vstup.
+RewriteCond %{REQUEST_URI} ^(.*/)soubor\.php$
+RewriteRule ^soubor\.php$ %1co_ajax/co_priloha.php [R=308,L,NE]
+
+# Puvodni CSS adresa vraci celou rozdelenou sadu i starym strankam a service workerum.
+RewriteCond %{REQUEST_URI} ^(.*/)style\.css$
+RewriteRule ^style\.css$ %1co_style/co_styly.php [L]
+
+# Zachovani prefixu URL funguje v koreni webu i pod lokalnim aliasem /comeback/.
+RewriteCond %{REQUEST_URI} ^(.*/)(?:auth_restore|editor|emoji|installation|message_format|push)\.js$
+RewriteRule ^(auth_restore|editor|emoji|installation|message_format|push)\.js$ %1co_js/$1.js [R=308,L,NE]
+
+RewriteCond %{REQUEST_URI} ^(.*/)editor\.css$
+RewriteRule ^editor\.css$ %1co_style/editor.css [R=308,L,NE]
+
+# Presmerovani manifestu sjednoti zaklad relativnich URL a zachova puvodni identitu aplikace.
+RewriteCond %{REQUEST_URI} ^(.*/)(?:manifest|icon)\.php$
+RewriteRule ^(manifest|icon)\.php$ %1co_pwa/co_$1.php [R=308,L,NE]

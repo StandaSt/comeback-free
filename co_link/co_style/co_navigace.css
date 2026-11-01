@@ -1,0 +1,233 @@
+/* Postranni seznam konverzaci, hledani, neprectene pocty a stav pripojeni. */
+
+.sidebar {
+  background:#f1f5f3;
+  border-right:1px solid var(--line);
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  padding:0 15px
+}
+
+.sidebar-head {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  min-height:98px;
+  padding:12px 4px
+}
+
+.brand {
+  color:var(--brand);
+  text-decoration:none;
+  letter-spacing:-1.3px;
+  font-size:30px;
+  font-weight:750
+}
+
+.brand span {
+  display:block;
+  font-size:9px;
+  letter-spacing:3px;
+  font-weight:600;
+  margin-top:3px;
+  color:#728983
+}
+
+.new-chat {
+  text-align:left;
+  background:var(--accent);
+  border:0;
+  font-weight:650;
+  margin-bottom:16px
+}
+
+.filter {
+  border:0;
+  background:#e7eeea;
+  margin-bottom:15px;
+  font-size:14px
+}
+
+.conversation-list {
+  flex:1;
+  overflow-y:auto;
+  padding-bottom:15px
+}
+
+.list-title {
+  font-size:10px;
+  letter-spacing:1.6px;
+  text-transform:uppercase;
+  color:#718781;
+  margin:24px 10px 9px;
+  font-weight:750
+}
+
+.conversation {
+  width:100%;
+  text-align:left;
+  border:0;
+  background:transparent;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:3px 0;
+  padding:12px 10px;
+  font-size:14px
+}
+
+.conversation.active {
+  background:white;
+  box-shadow:0 1px 5px #123d4509;
+  color:#123d45;
+  font-weight:650
+}
+
+.conversation .label {
+  flex:1;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap
+}
+
+.conversation .count {
+  border-radius:7px;
+  background:var(--brand);
+  color:#fff;
+  font-size:11px;
+  padding:3px 6px
+}
+
+.conversation .symbol {
+  color:#708b81;
+  font-size:20px;
+  min-width:22px
+}
+
+.sidebar-foot {
+  border-top:1px solid #dfe7e1;
+  padding:17px 5px calc(17px + env(safe-area-inset-bottom));
+  font-size:13px;
+  display:flex;
+  flex-direction:column;
+  gap:6px
+}
+
+.connection {
+  font-size:11px;
+  color:#72867c
+}
+
+.connection::before {
+  content:'●';
+  font-size:8px;
+  margin-right:6px;
+  color:#62a075
+}
+
+.connection.offline::before {
+  color:#c99b4b
+}
+
+@media(max-width:700px) {
+  .sidebar {
+    padding-top:env(safe-area-inset-top);
+    border:0
+  }
+}
+
+@media(max-width:700px) {
+  .sidebar-head {
+    min-height:84px
+  }
+}
+
+/* Jedna leva navigace ukazuje existujici komunikaci; adresar zabira pravou pracovni plochu. */
+.sidebar-head {
+  min-height:72px;
+  padding:8px 4px;
+}
+
+.sidebar .brand {
+  font-size:26px;
+}
+
+.sidebar .filter {
+  min-height:36px;
+  padding:8px 10px;
+  margin-bottom:4px;
+}
+
+.sidebar .conversation {
+  min-height:34px;
+  padding:6px 10px;
+  margin:1px 0;
+  font-size:13px;
+}
+
+.sidebar-action {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  text-align:left;
+  border:0;
+  background:transparent;
+  width:100%;
+  min-height:36px;
+  padding:6px 10px;
+  margin-bottom:6px;
+  font-weight:600;
+}
+
+.sidebar-action span {
+  font-size:20px;
+  color:#5b7b70;
+}
+
+.sidebar-action.active {
+  background:#dcece0;
+}
+
+.list-heading {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-top:4px;
+}
+
+.list-heading .list-title {
+  margin:0 10px;
+}
+
+.list-add {
+  min-height:26px;
+  width:30px;
+  padding:0;
+  background:transparent;
+  border:0;
+  color:#53716b;
+  font-size:21px;
+}
+
+.list-empty {
+  font-size:12px;
+  color:#7a8d84;
+  margin:0 10px 6px;
+  line-height:1.4;
+}
+
+@media(max-width:700px) {
+  .sidebar .filter,.sidebar .conversation,.sidebar-action {
+    min-height:44px;
+  }
+}
+
+@media(max-width:700px) {
+  .list-add {
+    min-height:44px;
+    width:44px;
+  }
+}

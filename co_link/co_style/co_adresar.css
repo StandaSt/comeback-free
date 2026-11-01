@@ -1,0 +1,230 @@
+/* Adresar kolegu: filtry, fotografie a dvouradkove karty se jmenem a souhrnem pobocky, slotu a funkci. */
+
+.messages.directory-screen {
+  padding:12px 18px;
+  background:#f8faf9;
+}
+
+.directory-controls {
+  padding:12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:#fff;
+  margin-bottom:8px;
+}
+
+/* Nazev filtru i vstup jsou v jednom nizkem radku. */
+.directory-controls .field {
+  max-width:520px;
+  margin-bottom:8px;
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  gap:8px;
+  white-space:nowrap;
+}
+
+.directory-controls .field>input {
+  margin-top:0;
+  min-height:30px;
+  height:30px;
+  padding:4px 8px;
+  flex:1;
+  min-width:0;
+}
+
+/* Hledani pred skupinou sdili jediny radek; na uzkem displeji se cele bloky prirozene zalomi. */
+.directory-groups-row {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px 12px;
+}
+
+.directory-controls .directory-search {
+  flex:0 1 290px;
+  width:290px;
+  max-width:100%;
+  margin:0;
+}
+
+.directory-group-filter {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:4px 8px;
+  min-width:0;
+}
+
+.directory-controls .directory-group-filter>.section-label,.directory-controls .directory-group-filter>.recipient-filters {
+  margin:0;
+}
+
+.directory-controls .section-label {
+  margin:8px 0 4px;
+}
+
+.directory-controls .recipient-filters {
+  margin:4px 0 8px;
+  gap:4px;
+}
+
+.directory-controls .recipient-filters .check {
+  min-height:32px;
+  padding:3px 6px;
+}
+
+.directory-controls .recipient-filters:last-child {
+  margin-bottom:0;
+}
+
+/* Fotka a udaje vedle sebe zkracuji kartu bez zmensovani citelnosti textu. */
+.directory-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+  gap:6px 8px;
+  margin-top:8px;
+  padding-bottom:8px;
+  align-items:start;
+}
+
+.person-card {
+  display:grid;
+  grid-template-columns:40px minmax(0,1fr);
+  grid-template-rows:22px 16px;
+  height:50px;
+  gap:2px 8px;
+  align-items:start;
+  padding:4px 8px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:white;
+  min-width:0;
+}
+
+.directory-avatar {
+  grid-column:1;
+  grid-row:1 / span 2;
+  width:40px;
+  height:40px;
+  font-size:13px;
+  border-radius:10px;
+  overflow:hidden;
+  position:relative;
+}
+
+.directory-avatar img {
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+
+.person-card h2 {
+  grid-column:2;
+  font-size:14px;
+  line-height:1.35;
+  margin:0;
+  overflow-wrap:anywhere;
+}
+
+.person-heading {
+  grid-column:2;
+  grid-row:1;
+  display:flex;
+  align-self:stretch;
+  align-items:center;
+  justify-content:space-between;
+  gap:4px;
+  min-width:0;
+}
+
+.person-heading h2 {
+  min-width:0;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* Pobocka, sloty a funkce sdili druhy radek; zkraceny text zustava cely ve spolecnem tooltipu. */
+.person-details {
+  grid-column:2;
+  grid-row:2;
+  font-size:12px;
+  line-height:16px;
+  color:#5d776f;
+  margin:0;
+  min-width:0;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.person-write {
+  flex-shrink:0;
+  margin:0;
+  width:22px;
+  height:22px;
+  min-height:22px;
+  padding:1px;
+  background:transparent;
+  border-color:transparent;
+  display:inline-grid;
+  place-items:center;
+}
+
+.person-write .chat-action-icon {
+  width:18px;
+  height:18px;
+}
+
+.person-self {
+  flex-shrink:0;
+  padding:0;
+  color:#7a8a84;
+  font-size:10px;
+  line-height:16px;
+  white-space:nowrap;
+}
+
+@media(max-width:700px) {
+  .messages.directory-screen {
+    padding:10px;
+  }
+}
+
+@media(max-width:700px) {
+  .directory-controls {
+    padding:10px;
+  }
+}
+
+@media(max-width:700px) {
+  .directory-controls .field>input,.directory-controls .recipient-filters .check {
+    min-height:44px;
+  }
+}
+
+@media(max-width:700px) {
+  .directory-grid {
+    grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+    gap:6px 8px;
+  }
+}
+
+@media(max-width:700px) {
+  .person-write {
+    min-height:36px;
+    width:36px;
+  }
+}
+
+@media(max-width:700px) {
+  .person-card {
+    /* Vyssi prvni radek zachova dotykove tlacitko; treti radek uz neni potreba. */
+    grid-template-rows:36px 16px;
+    height:64px;
+  }
+}

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 /* Co-Link: samostatny vstup PWA s vlastnim zarizenim; overeny IS se pripoji automaticky bez dalsi volby. */
-require_once __DIR__.'/data.php';
+require_once __DIR__.'/co_lib/co_data.php';
 header('Cache-Control: no-store');
 header('Referrer-Policy: no-referrer');
 header('X-Robots-Tag: noindex, nofollow');
@@ -24,4 +24,5 @@ try {
 } catch(Throwable $e) { error_log('Co-Link vstup: '.get_class($e)); }
 $boot['is_url']=rtrim(dirname(rtrim(co_cesta(),'/')),'/') . '/index.php';
 define('CO_LINK_VIEW',true);
-require __DIR__.'/view.php';
+// Hlavni sablona sklada oddelene casti rozhrani komunikatoru.
+require __DIR__.'/co_pages/co_komunikator.php';

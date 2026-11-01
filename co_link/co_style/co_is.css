@@ -1,0 +1,97 @@
+/* Prizpusobeni spolecnych casti Co-Linku pri vlozeni do informacniho systemu. */
+
+/* Uvnitr IS patri navigace do jeho standardniho menu a obsah prejima jeho typografii a barvy. */
+body.is-embedded {
+  font-family:Arial,Helvetica,sans-serif;
+  background:var(--paper);
+}
+
+.is-embedded .app {
+  grid-template-columns:minmax(0,1fr);
+  max-width:none;
+  background:var(--paper);
+}
+
+.is-embedded .sidebar,.is-embedded .mobile-only {
+  display:none!important;
+}
+
+.is-embedded .chat {
+  display:flex;
+  background:var(--paper);
+  padding:0;
+}
+
+.is-embedded .chat-head {
+  min-height:46px;
+  padding:4px 0;
+}
+
+.is-embedded .chat-head h1 {
+  font-size:18px;
+  font-weight:400;
+  letter-spacing:0;
+  margin:0 0 2px;
+}
+
+.is-embedded .chat-head .icon-button {
+  width:32px;
+  height:32px;
+  min-height:32px;
+  font-size:20px;
+}
+
+.is-embedded .messages {
+  padding:6px 0;
+}
+
+.is-embedded .search-row,.is-embedded .composer {
+  padding:4px 0;
+}
+
+.is-embedded .composer {
+  background:var(--paper);
+}
+
+.is-embedded .message-text {
+  font-size:14px;
+  line-height:1.4;
+}
+
+.is-embedded .search-row input {
+  min-height:30px;
+  padding:5px 8px;
+  font-size:14px;
+}
+
+.is-embedded .search-row button {
+  min-height:30px;
+  padding:4px 8px;
+  font-size:12px;
+}
+
+.is-embedded .home {
+  background:var(--paper);
+}
+
+.is-embedded .messages.directory-screen {
+  background:var(--paper);
+  padding:10px 0;
+}
+
+.is-embedded .directory-controls,.is-embedded .person-card {
+  background:var(--paper);
+}
+
+.is-embedded input,.is-embedded textarea,.is-embedded select,.is-embedded button {
+  border-radius:8px;
+}
+
+.is-embedded input,.is-embedded textarea,.is-embedded select {
+  background:var(--is-control);
+  color:var(--ink);
+}
+
+.is-embedded .compose-row {
+  background:var(--is-soft);
+}

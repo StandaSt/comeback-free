@@ -4,7 +4,7 @@ declare(strict_types=1);
 $hcModuleNames = array_column($hcModules, 'modul', 'id_modul');
 $hcModeLabels = ['uzivatel'=>'Podle uživatele','agenda'=>'Podle agendy','zaznam'=>'Podle záznamu'];
 ?>
-<link rel="stylesheet" href="<?= h(cb_root_url('administrace/style/admin_historie.css').'?v='.filemtime(__DIR__.'/../style/admin_historie.css')) ?>">
+<link rel="stylesheet" href="<?= h(cb_root_url('administrace/admin_style/admin_historie.css').'?v='.filemtime(__DIR__.'/../admin_style/admin_historie.css')) ?>">
 <section class="hc_prehled" aria-label="Historie činnosti">
     <nav class="hc_tabs" aria-label="Pohled historie">
         <?php foreach ($hcModeLabels as $key=>$label): ?>

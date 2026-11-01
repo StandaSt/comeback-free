@@ -1,0 +1,285 @@
+/* Zobrazeni zprav, hledani, reakci, priloh, precteni a vlakna konverzace. */
+
+.search-row {
+  padding:10px 24px;
+  display:flex;
+  gap:6px;
+  border-bottom:1px solid var(--line)
+}
+
+.search-row input {
+  font-size:14px
+}
+
+.search-row button {
+  font-size:13px
+}
+
+.messages {
+  flex:1;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  padding:25px 34px 12px;
+  scroll-behavior:auto
+}
+
+.empty {
+  height:100%;
+  min-height:230px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  text-align:center;
+  color:var(--muted);
+  padding:20px
+}
+
+.empty-symbol {
+  font-size:44px;
+  background:#edf4ef;
+  border-radius:25px;
+  width:85px;
+  height:85px;
+  display:grid;
+  place-items:center;
+  color:#5d8a72;
+  margin-bottom:24px
+}
+
+.empty h2 {
+  color:var(--ink);
+  font-size:26px;
+  letter-spacing:-.8px;
+  margin-bottom:8px
+}
+
+.empty p {
+  max-width:340px;
+  line-height:1.6;
+  font-size:14px
+}
+
+.message {
+  display:flex;
+  gap:8px;
+  padding:4px 0;
+  position:relative;
+  max-width:1000px
+}
+
+.message.mine .avatar {
+  background:#e5edf2;
+  color:#52718a
+}
+
+.message-body {
+  min-width:0;
+  flex:1
+}
+
+.message-meta {
+  display:flex;
+  gap:6px;
+  align-items:baseline;
+  flex-wrap:wrap;
+  margin-bottom:2px
+}
+
+.message-meta strong {
+  font-size:13px;
+  font-weight:650
+}
+
+.message-meta time,.edited {
+  font-size:10px;
+  color:#84918e
+}
+
+.message-text {
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  line-height:1.4;
+  font-size:14px;
+  color:var(--ink)
+}
+
+.message-text a {
+  color:#126373
+}
+
+.mention {
+  background:#e2f1e6;
+  padding:1px 3px;
+  border-radius:4px;
+  color:#235638
+}
+
+.message-tools {
+  display:flex;
+  flex-wrap:wrap;
+  gap:1px;
+  margin-top:2px
+}
+
+.message-tools button {
+  min-height:22px;
+  padding:1px 5px;
+  font-size:11px;
+  border:0;
+  background:transparent;
+  color:#6f837d;
+  border-radius:7px
+}
+
+.message-tools button:hover {
+  background:#eef4ef
+}
+
+.message-tools .reaction {
+  border:1px solid #dce8df;
+  background:#f3f8f4
+}
+
+.message-tools .reaction.mine {
+  background:#daefdf;
+  border-color:#91b89c
+}
+
+.deleted {
+  font-style:italic;
+  color:#8a9592
+}
+
+.attachments {
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  margin-top:4px
+}
+
+.attachment {
+  font-size:12px;
+  text-decoration:none;
+  background:#f1f5f3;
+  border:1px solid #e0e8e2;
+  border-radius:9px;
+  padding:10px 12px;
+  max-width:100%;
+  overflow-wrap:anywhere
+}
+
+.attachment small {
+  display:block;
+  font-size:10px;
+  color:var(--muted);
+  margin-top:3px
+}
+
+.thread-banner {
+  padding:10px 25px;
+  background:#edf5ee;
+  font-size:12px;
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  align-items:center
+}
+
+.thread-banner button {
+  font-size:12px;
+  min-height:32px;
+  padding:5px 8px
+}
+
+.older {
+  display:block;
+  margin:0 auto 12px;
+  font-size:12px
+}
+
+.read-receipt {
+  font-size:11px;
+  color:var(--muted);
+  margin-top:5px
+}
+
+@media(min-width:1400px) {
+  .messages {
+    padding-left:12px;
+    padding-right:12px
+  }
+}
+
+@media(max-width:700px) {
+  .messages {
+    padding:12px 14px
+  }
+}
+
+@media(max-width:700px) {
+  .message {
+    gap:8px;
+    padding:4px 0
+  }
+}
+
+@media(max-width:700px) {
+  .message-text {
+    font-size:15px
+  }
+}
+
+@media(max-width:700px) {
+  .message-tools button {
+    min-height:24px;
+    padding:2px 5px
+  }
+}
+
+@media(max-width:700px) {
+  .search-row {
+    padding:8px 12px
+  }
+}
+
+@media(max-width:700px) {
+  .search-row button {
+    padding:8px
+  }
+}
+
+@media(max-width:700px) {
+  .thread-banner {
+    padding:8px 14px
+  }
+}
+
+/* Uvitani patri do plochy konverzace, aby bylo po otevreni vzdy videt i prihlasenemu uzivateli. */
+.messages.home-screen {
+  padding:0;
+}
+
+.message-read-status {
+  margin-left:auto;
+  font-size:11px;
+  color:var(--muted);
+  white-space:nowrap;
+}
+
+.message-tools .reaction:disabled {
+  cursor:default;
+  opacity:1;
+}
+
+/* Prazdne prilohy nesmi delat mezeru; uzsi PP na PC nezvetsuje text ani ovladani jako telefon. */
+.attachments:empty {
+  display:none;
+}
+
+@media(pointer:coarse) {
+  .message-tools button {
+    min-height:32px;
+    padding:4px 6px;
+  }
+}
