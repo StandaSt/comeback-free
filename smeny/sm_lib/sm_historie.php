@@ -3,8 +3,9 @@ declare(strict_types=1);
 
 // Ucel rozsahu: MAIN je mnozina a viditelne pobocky vychazeji z mist vykonu prace.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
-/* Účel: Připraví dokončené týdny a povolené pobočky historie; přebraná osoba slouží pro čtení, nikoli pro autorství změn. */
+/* Účel: Připraví dokončené týdny a povolené pobočky historie; manažery omezuje jejich platnými místy výkonu práce včetně oblastí. Přebraná osoba slouží pro čtení, nikoli pro autorství změn. */
 require_once __DIR__ . '/../../common/lib/prebrani_prav.php';
+require_once __DIR__ . '/sm_sablony_kontext.php';
 
 require_once __DIR__.'/../../common/lib/smeny_verejny_zdroj.php';
 
@@ -102,6 +103,9 @@ function cb_smeny_historie_kontext(mysqli $db,string $week,array $query): array
     }
     $all=cb_smeny_historie_vidi_vsechny_pobocky($db,$idPerson);
     $branches=$all?cb_smeny_historie_vsechny_pobocky($db,$idPerson):cb_smeny_historie_osobni_pobocky($db,$idPerson);
+    // Vyšší role ani podvržený výběr pobočky nesmějí manažerovi rozšířit jeho oblasti.
+    $managerIds=cb_smeny_manazer_pobocky_ids($db,$idPerson);
+    if ($managerIds!==null) $branches=array_intersect_key($branches,cb_smeny_sablony_pobocky($db));
     foreach($branches as &$branch) $branch['sloty_nazvy']=cb_smeny_sloty_ciselnik($db);
     unset($branch);
     $requested=filter_var($query['branch']??null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);

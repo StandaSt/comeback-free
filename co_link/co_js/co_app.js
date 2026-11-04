@@ -1,4 +1,4 @@
-/* Co-Link: spusteni, navigace, API a synchronizace; funkcni oblasti sdileji jeden soukromy stav. */
+/* Co-Link: spusteni, navigace, API a synchronizace s vypinatelnym merenim cekani a objemu dat; casti sdileji jeden stav. */
 (() => {
   'use strict';
   const parts=window.CoLinkParts ||= Object.create(null);
@@ -12,7 +12,7 @@
   const embedded=(()=>{try{return new URL(location.href).searchParams.get('is')==='1'&&window.parent!==window&&window.parent.location.origin===location.origin;}catch(_){return false;}})();
   const ctx={boot,$,state,embedded,pollTimer:null,noticeTimer:null,panelCleanup:null,homeQrTimer:null,activeRefresh:null,shellList:null,shellSearch:null,shellDirectory:null,composerEditor:null,searchOpen:false};
   // Verzi menit spolecne pri zmene kterekoli casti; stare HTML pouzije tento aktualni seznam take.
-  const partVersion='20261101-1';
+  const partVersion='20261102-audit-1';
   const partNames=["rozhrani","zpravy","psani","adresar","sprava_konverzaci","nastaveni"];
   // Vstup zustava samostatne pouzitelny i pres puvodni app.js; casti se nactou pred jedinym init.
   async function loadParts(){
@@ -62,20 +62,27 @@
   // Soukromy chat pojmenuje podle druheho ucastnika.
   function title(c){if(c.typ!=='soukroma')return c.nazev;const ids=(c.clenove||[]).filter(id=>Number(id)!==Number(state.me.id));return ids.map(id=>state.people.find(p=>Number(p.id)===Number(id))?.jmeno||'Uživatel').join(', ')||'Soukromá konverzace';}
   // Sitovy timeout neznamena odmitnuti serverem. Zprava si pri opakovani zachova stejne klient_id.
-  async function api(action,data=null,query={}){
+  async function api(action,data=null,query={},diagnosticGroup=null){
     const url=new URL('api.php',location.href);url.searchParams.set('akce',action);Object.entries(query).forEach(([k,v])=>url.searchParams.set(k,String(v)));
     const control=new AbortController();const timer=setTimeout(()=>control.abort(),30000);
+    window.CB_DIAG?.identity(state.me?.csrf);
+    const ownDiagnosticGroup=!diagnosticGroup && ['odeslat','nahrat','upravit','smazat','reakce','ztisit'].includes(action)
+      ?window.CB_DIAG?.action('co_link',action,{conversation:Number(data?.konverzace || 0)}):null;
+    diagnosticGroup=diagnosticGroup || ownDiagnosticGroup;
+    const measure=window.CB_DIAG?.request('co_link',action,url.href,{conversation:Number(query.konverzace || data?.konverzace || 0),search_chars:String(query.hledat || '').length,background:!diagnosticGroup && ['stav','zpravy'].includes(action)?1:0},diagnosticGroup);
+    let measureStatus='error';
     try{
-      const headers={Accept:'application/json'};
+      const headers={Accept:'application/json',...measure?.headers};
       if(state.me?.csrf)headers['X-Co-Csrf']=state.me.csrf;
       if(action==='is_pripojit')headers['X-Comeback-Crf']=boot.is_token;
       const form=data instanceof FormData;
       if(data!==null&&!form)headers['Content-Type']='application/json';
       const response=await fetch(url,{method:data===null?'GET':'POST',credentials:'same-origin',headers,body:data===null?undefined:form?data:JSON.stringify(data),signal:control.signal,cache:'no-store'});
+      window.CB_DIAG?.adopt(response,'co_link');measure?.received(response);
       let result;try{result=await response.json();}catch(_){throw new Error('Server odpověděl neplatně. Zkontrolujte připojení a velikost přílohy.');}
       if(!response.ok||!result.ok){const error=new Error(result.err||'Požadavek se nepodařilo dokončit.');error.status=response.status;throw error;}
-      return result;
-    }finally{clearTimeout(timer);}
+      measureStatus='ok';return result;
+    }catch(error){measureStatus=error.name==='AbortError'?'timeout':'error';throw error;}finally{clearTimeout(timer);measure?.end(measureStatus);ownDiagnosticGroup?.end(measureStatus);}
   }
   // V IS doplnujeme pouze seznam standardniho menu; profil, vzhled, odhlaseni i sirku resi spolecny shell.
   function shellNavigation(){
@@ -128,23 +135,23 @@
     }
   }
   // Pri otevreni chatu z adresare pockame i na uz bezici synchronizaci, aby stary seznam novy chat neodmitl.
-  function refresh(){
+  function refresh(diagnosticGroup=null){
     if(ctx.activeRefresh)return ctx.activeRefresh;
-    ctx.activeRefresh=refreshNow().finally(()=>{ctx.activeRefresh=null;});return ctx.activeRefresh;
+    ctx.activeRefresh=refreshNow(diagnosticGroup).finally(()=>{ctx.activeRefresh=null;});return ctx.activeRefresh;
   }
   // Aktualizujeme pouze potrebne zmeny; stejne DOM zpravy neztrati rolovani ani vyber textu.
-  async function refreshNow(){
+  async function refreshNow(diagnosticGroup=null){
     if(state.refreshing||!state.me||document.hidden)return;
     state.refreshing=true;
     try{
-      const s=await api('stav');state.rights=s.prava;state.conversations=s.konverzace;conversationList();
+      const s=await api('stav',null,{},diagnosticGroup);state.rights=s.prava;state.conversations=s.konverzace;conversationList();
       // PP aktualizuje indikaci hned pri synchronizaci; ostatni moduly ji ctou ze spolecne hlavicky.
       if(embedded)window.parent.CB_COLINK_HEADER?.setUnread(state.conversations.reduce((sum,c)=>sum+Number(c.neprecteno||0),0));
       $('connection').textContent='Připojeno';$('connection').classList.remove('offline');
       if(state.cid){
         if(!current()){$('messages').replaceChildren(node('p','Přístup do této konverzace byl ukončen.','hint'));$('composer').hidden=true;state.cid=0;return;}
         const requestedCid=state.cid,requestedThread=state.thread,requestedSearch=state.search,requestedEnd=state.windowEnd;
-        const d=await api('zpravy',null,{konverzace:requestedCid,hledat:requestedSearch,okolo:requestedEnd,vlakno:requestedThread});
+        const d=await api('zpravy',null,{konverzace:requestedCid,hledat:requestedSearch,okolo:requestedEnd,vlakno:requestedThread},diagnosticGroup);
         // Odpoved rozbehnute synchronizace nesmi vratit predchozi chat, vlakno ani starsi historii.
         if(Number(d.kanal.id)!==state.cid||requestedThread!==state.thread||requestedSearch!==state.search||requestedEnd!==state.windowEnd)return;
         // Ulozenou vlastni zpravu lze potvrdit take zpetnym nactenim po ztrate HTTP odpovedi.
@@ -159,7 +166,7 @@
         if(state.latestOnRender&&!state.search&&!state.windowEnd){$('messages').scrollTop=$('messages').scrollHeight;state.latestOnRender=false;}
         scheduleReads();
       }
-    }catch(e){$('connection').textContent=navigator.onLine?'Spojení přerušeno':'Bez připojení';$('connection').classList.add('offline');if(e.status===401){clearTimeout(ctx.pollTimer);$('app').hidden=true;$('welcome').hidden=false;$('welcome-text').textContent=e.message;state.me=null;$('panel').close();}else if(e.status===403){state.cid=0;$('messages').replaceChildren(node('p',e.message,'hint'));$('composer').hidden=true;}}
+    }catch(e){diagnosticGroup?.outcome('error');$('connection').textContent=navigator.onLine?'Spojení přerušeno':'Bez připojení';$('connection').classList.add('offline');if(e.status===401){clearTimeout(ctx.pollTimer);$('app').hidden=true;$('welcome').hidden=false;$('welcome-text').textContent=e.message;state.me=null;$('panel').close();}else if(e.status===403){state.cid=0;$('messages').replaceChildren(node('p',e.message,'hint'));$('composer').hidden=true;}}
     finally{state.refreshing=false;}
   }
   // Opakuje kratkou synchronizaci a zastavi ji pri konci prihlaseni.
@@ -177,13 +184,18 @@
     if(state.thread)$('thread-banner').querySelector('span').textContent='Vlákno zprávy #'+state.thread;
   }
   // Prechod zachova koncept, ale vzdy nacte nejnovejsi zpravy misto drive ulozene historie.
+  // Cela navigace ma vlastni ID; chyby refresh zustavaji obslouzene puvodnim rozhranim.
   async function openChat(id){
+    const task=group=>openChatCore(id,group);
+    return window.CB_DIAG?window.CB_DIAG.run('co_link','open_chat',{conversation:id},task):task(null);
+  }
+  async function openChatCore(id,diagnosticGroup=null){
     clearInterval(ctx.homeQrTimer);ctx.homeQrTimer=null;state.view='chat';$('app').classList.remove('show-home');$('messages').classList.remove('home-screen','directory-screen');$('messages').setAttribute('role','log');$('messages').setAttribute('aria-label','Zprávy');
     saveDraft();savePosition();state.cid=id;state.thread=0;state.search='';ctx.searchOpen=false;state.windowEnd=0;state.signature='';state.messages=[];state.staged=[];$('search').value='';$('app').classList.add('chat-open');
     state.latestOnRender=true;try{localStorage.setItem(storageKey()+':last-chat',String(id));}catch(_){}
-    history.replaceState(null,'',appLocation(id));if(embedded)window.focus();loadDraft();renderStaged();renderMessages();updateHeader();pending();await refresh();
+    history.replaceState(null,'',appLocation(id));if(embedded)window.focus();loadDraft();renderStaged();renderMessages();updateHeader();pending();await refresh(diagnosticGroup);
     // Pri prekryvu s predchozim pozadavkem dokoncime i nacteni nove otevrene konverzace.
-    if(state.cid===id&&state.latestOnRender)await refresh();
+    if(state.cid===id&&state.latestOnRender)await refresh(diagnosticGroup);
   }
   // Telefon otevre primo seznam konverzaci; uvitaci QR zustava jen na pocitaci pro pripojeni telefonu.
   async function home(){
@@ -204,10 +216,18 @@
     conversationList();await homeQr();
   }
   // Obnovi uzivatelske prostredi a posledni konverzaci.
+  // Prvni priprava modulu ma vlastni cas; jednotlive API se zpracovavaji puvodnim poradim.
   async function start(){
-    $('welcome').hidden=true;$('app').hidden=false;$('my-name').textContent=state.me.jmeno;restore();await contacts();await refresh();
+    window.CB_DIAG?.identity(state.me?.csrf);
+    const task=group=>startCore(group);
+    return window.CB_DIAG?window.CB_DIAG.run('co_link','open_colink',{},task):task(null);
+  }
+  async function startCore(diagnosticGroup=null){
+    $('welcome').hidden=true;$('app').hidden=false;$('my-name').textContent=state.me.jmeno;restore();await contacts();await refresh(diagnosticGroup);
     const wanted=Number(new URL(location.href).searchParams.get('konverzace'));
     if(wanted&&state.conversations.some(c=>Number(c.id)===wanted))await openChat(wanted);else await home();
+    // První dokončené otevření zapisujeme jednou za instanci aplikace, nikdy při pollingu.
+    if(!ctx.openAuditStarted){ctx.openAuditStarted=true;api('otevreno',{prostredi:embedded?'is':'pwa'}).catch(()=>{ctx.openAuditStarted=false;});}
     await flush();poll();const url=new URL(location.href);if(url.searchParams.has('instalace')){url.searchParams.delete('instalace');history.replaceState(null,'',url);phoneSetup();}
   }
   // Propoji ovladani a zvoli vstup pres IS, existujici zarizeni nebo QR.

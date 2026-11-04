@@ -5,6 +5,7 @@
  * Pruh prebranych prav je soucasti trvale hlavicky, aby nezmizel pri vymene modulu.
  * E-mail ma vlastni prepinac a pocet neprectenych zprav jen s pravem 800.
  * Co-Link se prepina do PP ikonou Co s indikaci neprectenych zprav; ikona je viditelna pouze s pravem 700.
+ * Mobilní Směny používají úspornou lištu; návrat do IS znovu zpřístupní celou hlavičku.
  */
 declare(strict_types=1);
 require_once __DIR__ . '/../lib/priprava_hlavicky.php';
@@ -34,6 +35,10 @@ $cbHeaderMaintenanceActive = $cbLoginOk
       <button type="button" class="cb_menu_toggle" data-cb-menu-toggle="1" aria-controls="cb-main-menu" aria-expanded="false" aria-label="Otevřít menu">
         <span aria-hidden="true">☰</span>
       </button>
+      <div class="smeny_mobile_bar">
+        <span>Směny<?= $cbHeaderMaintenanceActive ? ' · Údržba' : '' ?></span>
+        <button type="button" data-smeny-exit>Zpět do IS</button>
+      </div>
       <button type="button" class="cb_menu_backdrop" data-cb-menu-backdrop="1" aria-label="Zavřít menu" tabindex="-1"></button>
     <?php endif; ?>
 

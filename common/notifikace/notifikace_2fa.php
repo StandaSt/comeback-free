@@ -1,5 +1,5 @@
 <?php
-// Odesila Web Push s uplnymi cily, vyrazuje zanikle 2FA odbery a pripravuje bezpecny tokenizovany detail administratorskych zprav.
+// Odesila Web Push s uplnymi cily, vyrazuje zanikle 2FA odbery a pripravuje tokenizovany detail chyb vcetne ID z log_chyby, pokud je volajici zna.
 declare(strict_types=1);
 require_once __DIR__ . '/../lib/push_odber.php';
 
@@ -364,14 +364,15 @@ function cb_push_system_enabled(string $key): bool
     return false;
 }
 
-/** Ulozi technicky detail chyby a odesle administratorovi uplny odkaz s pristupovym tokenem. */
+/** Ulozi detail chyby a posle administratorovi odkaz; zname ID logu zobrazi v titulku i detailu bez zmeny starsich volani. */
 function cb_push_send_error_admin(
     string $message,
     ?string $file = null,
     ?int $line = null,
     int $adminUserId = 1,
     string $notificationTitle = 'Chyba IS',
-    string $notificationType = 'SYSTEM_ERROR_ADMIN'
+    string $notificationType = 'SYSTEM_ERROR_ADMIN',
+    ?int $idLogChyby = null
 ): bool
 {
     if (!cb_push_system_enabled('notif_chyby')) {
@@ -407,9 +408,13 @@ function cb_push_send_error_admin(
     if ($notificationTitle === '') {
         $notificationTitle = 'Chyba IS';
     }
-    if (mb_strlen($notificationTitle, 'UTF-8') > 90) {
-        $notificationTitle = mb_substr($notificationTitle, 0, 87, 'UTF-8') . '...';
+    // I u dlouheho specializovaneho titulku musi zustat cele kanonicke ID chyby viditelne.
+    $errorIdSuffix = $idLogChyby !== null && $idLogChyby > 0 ? ' #' . $idLogChyby : '';
+    $titleLimit = 90 - mb_strlen($errorIdSuffix, 'UTF-8');
+    if (mb_strlen($notificationTitle, 'UTF-8') > $titleLimit) {
+        $notificationTitle = mb_substr($notificationTitle, 0, $titleLimit - 3, 'UTF-8') . '...';
     }
+    $notificationTitle .= $errorIdSuffix;
     $notificationType = strtoupper(trim($notificationType));
     if (preg_match('/^[A-Z0-9_]+$/', $notificationType) !== 1) {
         $notificationType = 'SYSTEM_ERROR_ADMIN';
@@ -418,7 +423,11 @@ function cb_push_send_error_admin(
     $lineText = ($line !== null && $line > 0) ? ':' . (string)$line : '';
 
     // Přesný popis zůstává pouze v tokenizovaném modálu, aby nebyl vidět na zamčené obrazovce.
-    $detail = "IS zaznamenal neočekávanou technickou chybu.\n\n" . $message;
+    $detail = "IS zaznamenal neočekávanou technickou chybu.\n\n";
+    if ($idLogChyby !== null && $idLogChyby > 0) {
+        $detail .= 'ID chyby: ' . $idLogChyby . "\n\n";
+    }
+    $detail .= $message;
     if ($fileText !== '') {
         $detail .= "\nMísto v kódu: " . basename($fileText) . $lineText;
     }

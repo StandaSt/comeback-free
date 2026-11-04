@@ -1,6 +1,7 @@
 <?php
 // helpdesk/hl_ajax/hl_sledovat.php * Verze: V1 * Aktualizace: 20.06.2026
 declare(strict_types=1);
+/* Účel: Ukládá sledování tiketu a skutečnou změnu důvodu zaznamenává společným zapisovačem ve stejné transakci. */
 
 if (!defined('CB_HELPDESK_DISPATCH_INTERNAL')) {
     require_once __DIR__ . '/../../common/lib/session_boot.php';
@@ -9,6 +10,7 @@ if (!defined('CB_HELPDESK_DISPATCH_INTERNAL')) {
 require_once __DIR__ . '/../hl_lib/hl_prava.php';
 require_once __DIR__ . '/../hl_lib/hl_chyby.php';
 require_once __DIR__ . '/../hl_lib/hl_notifikace.php';
+require_once __DIR__ . '/../hl_lib/hl_cinnost.php';
 
 if (!headers_sent()) {
     header('Content-Type: application/json; charset=utf-8');
@@ -56,6 +58,9 @@ try {
         exit;
     }
 
+    // Původní důvod čteme pod zámkem, aby historie nepopisovala souběžně přepsanou hodnotu.
+    $conn->begin_transaction();
+    $before=cb_cinnost_db_jeden($conn,'SELECT duvod FROM helpdesk_sledujici WHERE id_helpdesk=? AND id_user=? FOR UPDATE',[$idHelpdesk,$idUser]);
     $stmt = $conn->prepare('
         INSERT INTO helpdesk_sledujici
         (id_helpdesk, id_user, duvod, vytvoreno)
@@ -70,12 +75,18 @@ try {
     $stmt->execute();
     $stmt->close();
 
+    if (($before['duvod'] ?? null)!==$duvod) {
+        cb_cinnost_zapsat(CbCinnostAkce::POLE_ULOZENO,cb_helpdesk_cinnost_cil($conn,$idHelpdesk)+[
+            'id_pole'=>CbHelpdeskCinnost::SLEDOVANI,'data'=>['puvodni'=>cb_helpdesk_cinnost_sledovani($before['duvod'] ?? null),'nova'=>cb_helpdesk_cinnost_sledovani($duvod)]]);
+    }
     if ($duvod === 'stejny_problem') {
         cb_helpdesk_notifikace_adminum($conn, $idHelpdesk, null, $idUser, 'stejny_problem', 'Další uživatel má stejný problém v HelpDesku #' . (string)$idHelpdesk);
     }
 
+    $conn->commit();
     echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
+    if (isset($conn)) { try { $conn->rollback(); } catch (Throwable $rollbackError) { error_log('Helpdesk: rollback sledování selhal.'); } }
     cb_helpdesk_json_chyba($e, 'Přidání sledujícího k tiketu', ['table' => 'helpdesk_sledujici']);
 }
 

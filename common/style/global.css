@@ -10,6 +10,7 @@
  * Co-Link ma v PP vlastni ramec; jeho mobilni PWA zustava stejna i pri pouziti uvnitr IS.
  * Co-Link vyuziva stejne menu, zapati a PP jako ostatni moduly; jeho nastaveni je nad Administraci.
  * Radky konverzaci Co-Linku jsou nizsi nez ovladaci tlacitka menu, aby setrily mistem.
+ * Informační kolečko sdílí řádek s odhlášením a otevírá společný přehled verzí.
  */
 
 :root {
@@ -1438,8 +1439,37 @@ align-items:center;
   background:var(--cb-bg-control-hover);
 }
 
-.blok_menu_user_logout{
+.blok_menu_user_actions{
+  display:grid;
+  grid-template-columns:32px minmax(0,1fr);
+  gap:8px;
+  align-items:center;
   margin-top:18px;
+}
+
+.blok_menu_verze{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:32px;
+  height:32px;
+  padding:0;
+  border:1px solid var(--cb-border-soft);
+  border-radius:50%;
+  background:var(--cb-border-soft);
+  color:var(--cb-text-muted);
+  font:700 18px Georgia,serif;
+  cursor:pointer;
+}
+
+.blok_menu_verze:hover{background:var(--cb-bg-control-hover);color:var(--cb-text-main);}
+.blok_menu_verze:focus-visible,.cb_verze_close:focus-visible{outline:2px solid var(--clr_modra_6);outline-offset:3px;}
+@media (pointer:coarse){
+  .blok_menu_user_actions{grid-template-columns:44px minmax(0,1fr);}
+  .blok_menu_verze{width:44px;height:44px;}
+}
+
+.blok_menu_user_logout{
   border-color:var(--clr_ruzova_1);
   background:var(--clr_ruzova_2);
 }
@@ -1448,6 +1478,34 @@ align-items:center;
   border-color:var(--clr_cervena_2);
   background:var(--clr_ruzova_1);
 }
+
+/* Nativní dialog drží fokus uvnitř a zobrazí přehled nad mobilním menu. */
+.cb_verze_dialog{
+  width:min(620px,calc(100vw - 24px));
+  max-height:calc(100dvh - 24px);
+  box-sizing:border-box;
+  padding:0;
+  border:1px solid var(--cb-border-soft);
+  border-radius:12px;
+  background:var(--cb-bg-control);
+  color:var(--cb-text-main);
+  font-size:var(--cb-font-14);
+  overflow:auto;
+}
+.cb_verze_dialog::backdrop{background:rgba(0,0,0,.45);}
+.cb_verze_head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid var(--cb-border-soft);}
+.cb_verze_head h2{margin:0;font-size:var(--cb-font-18);}
+.cb_verze_close{width:36px;height:36px;border:1px solid var(--cb-border-soft);border-radius:6px;background:var(--cb-bg-control);color:var(--cb-text-main);font-size:24px;cursor:pointer;}
+.cb_verze_close:hover{background:var(--cb-bg-control-hover);}
+.cb_verze_content{padding:16px 18px;overflow-wrap:anywhere;}
+.cb_verze_content p{margin:0;line-height:1.5;color:var(--cb-text-muted);}
+.cb_verze_release{padding:12px 0;border-bottom:1px solid var(--cb-border-soft);}
+.cb_verze_release:first-child{padding-top:0;}
+.cb_verze_release:last-child{border-bottom:0;}
+.cb_verze_release summary{cursor:pointer;line-height:1.6;}
+.cb_verze_release time{margin-left:8px;color:var(--cb-text-muted);font-size:var(--cb-font-12);}
+.cb_verze_release h3{margin:14px 0 5px;font-size:var(--cb-font-14);}
+.cb_verze_release ul{margin:0;padding-left:20px;line-height:1.6;}
 
 .pp{
   grid-area:pp;

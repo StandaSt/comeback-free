@@ -16,9 +16,13 @@ try {
     $hcSources = cb_historie_zdroje($hcDb, $hcScope);
     if ($hcFilters['zdroj'] !== '' && !isset($hcSources[$hcFilters['zdroj']])) throw new CbUserVisibleException('Zvolený zdroj historie není dostupný.');
     $hcNames = cb_historie_jmena($hcDb, $hcScope);
+    $hcFilters['viditelne_osoby']=array_keys($hcNames['jmena']);
     $hcModules = $hcDb->query('SELECT id_modul,modul FROM cis_moduly ORDER BY poradi,id_modul')->fetch_all(MYSQLI_ASSOC);
+    $hcTotal = (int)(cb_historie_cti($hcDb, $hcSources, $hcFilters, null, true)[0]['celkem'] ?? 0);
+    $hcPages = max(1, (int)ceil($hcTotal / $hcFilters['pocet']));
+    $hcFilters['strana'] = min($hcFilters['strana'], $hcPages);
     $hcRows = cb_historie_cti($hcDb, $hcSources, $hcFilters);
-    $hcMore = count($hcRows) > $hcFilters['pocet']; $hcRows = array_slice($hcRows,0,$hcFilters['pocet']);
+    $hcRows = array_slice($hcRows,0,$hcFilters['pocet']);
     $hcDetail = null;
     $hcDetailKey = is_string($_GET['hc_detail'] ?? null) ? $_GET['hc_detail'] : '';
     if ($hcDetailKey !== '') {

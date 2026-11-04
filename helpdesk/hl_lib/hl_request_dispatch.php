@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
+/* Účel: Směruje požadavky Helpdesku včetně ověřeného příjmu nové jednotné historie činnosti. */
 
+/** Vstup hlídá společný shell; jednotlivé handlery ověřují metodu, token a práva. */
 function cb_helpdesk_request_dispatch(): void
 {
     if (!isset($_GET['helpdesk_action']) && !isset($_POST['helpdesk_action'])) {
@@ -16,6 +18,7 @@ function cb_helpdesk_request_dispatch(): void
 
     $action = trim((string)($_GET['helpdesk_action'] ?? $_POST['helpdesk_action'] ?? ''));
     $routes = [
+        'cinnost' => __DIR__ . '/../hl_ajax/hl_cinnost.php',
         'detail' => __DIR__ . '/../hl_ajax/hl_detail.php',
         'notifikace_nacist' => __DIR__ . '/../hl_ajax/hl_notifikace_nacist.php',
         'notifikace_precteno' => __DIR__ . '/../hl_ajax/hl_notifikace_precteno.php',

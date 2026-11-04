@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-/* Účel souboru: Připraví všechny oprávněné pobočky a osobu; odděluje základní a povolené sloty podle typu pobočky, názvy přebírá z HR číselníku. */
+/* Účel souboru: Připraví oprávněné pobočky a osobu; manažerům sjednocuje rozsah podle platných míst výkonu práce včetně oblastí. Odděluje základní a povolené sloty podle typu pobočky, názvy přebírá z HR číselníku. */
 
 require_once __DIR__ . '/../../common/db/db_user_pobocka.php';
 
@@ -24,6 +24,23 @@ function cb_smeny_sloty_zakladni_id(array $branch): array
     return strcasecmp(trim((string)($branch['kod'] ?? '')),'Vyroba')===0 ? [5,8] : [1,2];
 }
 
+/** Manažer nemá MAIN; null zachová dosavadní pravidla ostatních, prázdné pole manažerovi přístup odmítne.
+ * Rozsah sám nepovoluje akci: její právo ověřuje příslušná stránka nebo handler.
+ */
+function cb_smeny_manazer_pobocky_ids(mysqli $db, int $idPerson): ?array
+{
+    // Ostatním pracovníkům nepřidáváme validaci funkcí, kterou jejich původní nabídka nevyžadovala.
+    $stmt=$db->prepare("SELECT 1 FROM hr_funkce f JOIN cis_funkce c ON c.id_funkce=f.id_funkce WHERE f.id_person=? AND c.zarazeni='manazerske' AND ".cb_hr_cas_sql('f').' LIMIT 1');
+    $stmt->bind_param('i',$idPerson); $stmt->execute();
+    $manager=$stmt->get_result()->fetch_row()!==null; $stmt->close();
+    if (!$manager) return null;
+    if (cb_hr_zarazeni_chyby($db,$idPerson)!==[]) return [];
+    $stmt=$db->prepare('SELECT DISTINCT w.id_pob FROM '.cb_hr_mista_sql().' w WHERE w.id_person=? AND '.cb_hr_ucinne_sql('w'));
+    $stmt->bind_param('i',$idPerson); $stmt->execute();
+    $ids=array_map('intval',array_column($stmt->get_result()->fetch_all(MYSQLI_ASSOC),'id_pob')); $stmt->close();
+    return $ids;
+}
+
 /** Vrátí všechny povolené pobočky; místní výběr stránky nemění rozsah oprávnění pro její akce.
  * @return array<int,array<string,mixed>>
  */
@@ -43,6 +60,19 @@ function cb_smeny_sablony_pobocky(mysqli $db): array
             $allowed[$idPob] = true;
         }
     }
+
+    // Převzatá práva omezujeme místy zdrojové osoby, nikdy místy přihlášeného admina.
+    $profile=cb_prebrani_prav_profil();
+    if ($profile!==null) {
+        $sourceUser=(int)$profile['id_user_zdroj'];
+        $stmt=$db->prepare('SELECT id_person FROM hr_person WHERE id_user=? AND aktivni=1');
+        $stmt->bind_param('i',$sourceUser); $stmt->execute();
+        $idPerson=(int)($stmt->get_result()->fetch_assoc()['id_person']??0); $stmt->close();
+    } else {
+        $idPerson=cb_smeny_sablony_id_person($db);
+    }
+    $managerIds=cb_smeny_manazer_pobocky_ids($db,$idPerson);
+    if ($managerIds!==null) $allowed=array_intersect_key($allowed,array_flip($managerIds));
 
     $ids = array_keys($allowed);
     if ($ids === []) {

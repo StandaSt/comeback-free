@@ -3,7 +3,8 @@ declare(strict_types=1);
 // Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
 require_once __DIR__ . '/../lib/osoba_jmeno.php';
 /* Samostatny E-mail se zapojuje s vlastnim pravem 800 a udalostmi navigace.
- Účel: Jediný renderer menu a uživatelského zápatí vcetne Co-Linku; přijímá výslovný kontext modulu. */
+ Účel: Jediný renderer menu a uživatelského zápatí vcetne Co-Linku; přijímá výslovný kontext modulu.
+ Přehled verzí otevírá informační kolečko vlevo vedle odhlášení. */
 
 if (!function_exists('cb_blok_menu_h')) {
     function cb_blok_menu_h(string $value): string
@@ -102,9 +103,12 @@ if (!function_exists('cb_render_blok_menu_user')) {
                     </form>
                 </div>
             </div>
-            <a class="blok_menu_btn blok_menu_user_logout" href="<?= cb_blok_menu_h($postUrl . '?action=logout&duvod=1') ?>">
-                <span>Odhlásit</span>
-            </a>
+            <div class="blok_menu_user_actions">
+                <button type="button" class="blok_menu_verze" data-cb-verze-open title="Verze a novinky" aria-label="Verze a novinky" aria-haspopup="dialog" aria-controls="cb-verze-dialog"><span aria-hidden="true">i</span></button>
+                <a class="blok_menu_btn blok_menu_user_logout" href="<?= cb_blok_menu_h($postUrl . '?action=logout&duvod=1') ?>">
+                    <span>Odhlásit</span>
+                </a>
+            </div>
         </div>
         <?php
     }

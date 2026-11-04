@@ -12,6 +12,7 @@ require_once __DIR__ . '/osoba_jmeno.php';
  * - predat push endpoint aktualniho prohlizece lokalnimu login toku
  * - presmerovat na prime mobilni schvaleni, cekaci 2FA nebo cilovy modul
  * - na vyzadani odeslat po overeni lokalniho hesla prihlasovaci e-mail
+ * - při chybném hesle sdělit zbývající pokusy a při blokaci skutečný čas jejího konce
  *
  * Dulezite:
  * - bez platneho hesla se zarizeni nikdy nevyhodnocuje
@@ -85,8 +86,9 @@ try {
     }
 
 
-    if (cb_user_bad_login_is_blocked($email, 5, 15)) {
-        throw new CbUserVisibleException('Přihlášení se nezdařilo.');
+    $blokaceZprava = cb_user_bad_login_zprava($email, '', true);
+    if ($blokaceZprava !== '') {
+        throw new CbUserVisibleException($blokaceZprava);
     }
 
     $stmtLocal = db()->prepare('
@@ -110,12 +112,12 @@ try {
     $stmtLocal->close();
     if (!is_array($localUser)) {
         cb_user_bad_login_log($email, $heslo);
-        throw new CbUserVisibleException('Neplatné přihlašovací údaje.');
+        throw new CbUserVisibleException(cb_user_bad_login_zprava($email, 'Neplatné přihlašovací údaje.'));
     }
     if (is_array($localUser) && trim((string)($localUser['heslo_hash'] ?? '')) !== '') {
         if (!password_verify($heslo, (string)$localUser['heslo_hash'])) {
             cb_user_bad_login_log($email, $heslo);
-            throw new CbUserVisibleException('Neplatné přihlašovací údaje.');
+            throw new CbUserVisibleException(cb_user_bad_login_zprava($email, 'Neplatné přihlašovací údaje.'));
         }
         if ((int)$localUser['aktivni'] !== 1) {
             throw new CbUserVisibleException(cb_login_neaktivni_zprava($localUser));
@@ -152,13 +154,13 @@ try {
         );
     } catch (Throwable $e) {
         cb_user_bad_login_log($email, $heslo);
-        throw new CbUserVisibleException(cb_login_smeny_selhalo_zprava($localUser));
+        throw new CbUserVisibleException(cb_user_bad_login_zprava($email, cb_login_smeny_selhalo_zprava($localUser)));
     }
 
     $overeniToken = $login['userLogin']['accessToken'] ?? null;
     if (!is_string($overeniToken) || $overeniToken === '') {
         cb_user_bad_login_log($email, $heslo);
-        throw new CbUserVisibleException(cb_login_smeny_selhalo_zprava($localUser));
+        throw new CbUserVisibleException(cb_user_bad_login_zprava($email, cb_login_smeny_selhalo_zprava($localUser)));
     }
     cb_prvni_vstup_priprav($localUser);
     header('Location: ' . cb_login_url());

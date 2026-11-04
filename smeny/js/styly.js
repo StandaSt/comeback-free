@@ -1,4 +1,4 @@
-/* Účel: Skládá plánovač se zarovnanými řádky, přizpůsobenou mřížkou a bloky odděleného příjmení a jména; časový tooltip sleduje kurzor a interval zůstává i v detailu. */
+/* Účel: Skládá plánovač se zarovnanými řádky, čitelnou mobilní mřížkou a bloky odděleného příjmení a jména; časový tooltip sleduje kurzor a interval zůstává i v detailu. */
 (function () {
   'use strict';
   var dayViews = [];
@@ -12,6 +12,8 @@
       layoutFrame=null;
       // Pevný referenční okraj dává select šablony; horní dva řádky se přizpůsobí jemu, nikoli naopak.
       document.querySelectorAll('.smeny_planning_controls').forEach(function (controls) {
+        // Na telefonu šířku určuje dostupný prostor, nikoli poloha selectu v dalším řádku.
+        if (window.matchMedia('(max-width:980px)').matches) { controls.style.removeProperty('width'); return; }
         var template=controls.closest('.smeny_content').querySelector('.smeny_planning_template_select select');
         if(!template || !template.getClientRects().length) return;
         var width=template.getBoundingClientRect().right-controls.getBoundingClientRect().left;
@@ -39,7 +41,20 @@
           if(!sibling.matches('dialog') && sibling.getClientRects().length) bottom-=sibling.getBoundingClientRect().height+6;
         }
         var tail=day.getBoundingClientRect().bottom-rect.bottom;
-        scroll.smenyFitHeight(Math.max(80,bottom-(rect.top+page.scrollTop)-tail));
+        // Telefon nesmí stlačit celý den do nečitelných proužků; na nízkém displeji roluje i stránka.
+        var mobile=window.matchMedia('(max-width:980px)').matches;
+        var minimum=mobile ? Math.min(420,Math.max(240,window.innerHeight*.5)) : 80;
+        scroll.smenyFitHeight(Math.max(minimum,bottom-(rect.top+page.scrollTop)-tail));
+      });
+      // Otevřený detail musí zůstat celý dostupný i po otočení telefonu nebo otevření klávesnice.
+      document.querySelectorAll('.smeny_shift_panel:popover-open').forEach(function (panel) {
+        var viewport=window.visualViewport;
+        var height=viewport ? viewport.height : window.innerHeight;
+        var top=viewport ? viewport.offsetTop : 0;
+        panel.style.maxHeight=Math.max(80,height-16)+'px';
+        var rect=panel.getBoundingClientRect();
+        panel.style.left=Math.max(8,Math.min(rect.left,window.innerWidth-rect.width-8))+'px';
+        panel.style.top=Math.max(top+8,Math.min(rect.top,top+height-rect.height-8))+'px';
       });
       // Plné načtení i AJAX mají stejnou hranici zobrazení; nečekáme odhadnutý počet milisekund.
       document.querySelectorAll('[data-smeny-view-pending]').forEach(function (page) {
@@ -213,7 +228,8 @@
         // Plán má stejně vysoká záhlaví i s křížkem. Rezerva kryje zaokrouhlení clientHeight při zoomu.
         // Půlhodiny mohou být nižší než 16 px; jinak vznikal přesah i na běžně vysokém okně.
         var available=scroll.clientHeight-headingHeight-(adaptHeight?1:0);
-        rowHeight=Math.max(adaptHeight?12:16,available/((end-start)/step+1));
+        var mobile=window.matchMedia('(max-width:980px)').matches;
+        rowHeight=Math.max(mobile?26:(adaptHeight?12:16),available/((end-start)/step+1));
         geometry.forEach(function (item) {
           var size=item.duration/step*rowHeight;
           if (item.offset !== null) item.element.style.top=(item.offset/step*rowHeight)+'px';

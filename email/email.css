@@ -1,4 +1,4 @@
-/* E-mail: kompaktni navigace a editor; otevrena napoveda zabezpeceni na desktopu rozsiri pripojovaci dialog do dvou sloupcu. */
+/* E-mail: kompaktni menu, seznam a izolovany nahled; puvodni citace ma vlastni ramec pod editorem. */
 .em-client{display:grid!important;grid-template-columns:minmax(260px,340px) minmax(280px,1fr);grid-template-rows:auto minmax(0,1fr);gap:0!important;padding:0!important;background:#fff;color:#30383c;overflow:hidden!important;font:14px Arial,Helvetica,sans-serif;min-height:0;}
 .em-client *,.em-navigation *{box-sizing:border-box;}
 .em-client [hidden],.em-navigation [hidden]{display:none!important;}
@@ -15,22 +15,44 @@
 .em-list-toolbar,.em-toolbar{display:flex;align-items:center;flex-wrap:wrap;min-height:49px;background:#f5f5f5;border-bottom:1px solid #d8dcdf;padding:3px 5px;gap:0;flex-shrink:0;}
 .em-list-toolbar button{padding:8px;font-size:12px;}
 .em-toolbar button{font-size:13px;padding:9px 10px;}
-.em-search{display:flex;align-items:center;border-bottom:1px solid #dce1e5;min-height:40px;padding:0 6px;background:#fafbfc;gap:3px;}
-.em-search input[type=search]{width:100%;border:0;background:transparent;padding:9px 2px;}
+.em-search{display:flex;flex-direction:column;align-items:stretch;border-bottom:1px solid #dce1e5;min-height:40px;padding:0 6px;background:#fafbfc;gap:0;}
+.em-search-query{display:flex;align-items:center;gap:3px;min-width:0;}
+.em-search-query .em-search-clear{padding:2px;width:18px;flex-shrink:0;color:#c52d36;font-size:18px;line-height:20px;font-weight:bold;}
+.em-search-options{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:3px 0 6px;}
+/* Stejna sirka praveho sloupce drzi oba checkboxy presne pod sebou. */
+.em-search-query>label,.em-search-options>label:last-child{flex:0 0 80px;}
+.em-search-query>button[type=submit]{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;padding:4px;flex-shrink:0;color:#087b9b;}
+.em-search-query>button[type=submit] svg{width:20px;height:20px;}
+.em-search .em-search-body{margin:0;}
+.em-search-active{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:4px 7px;background:#e8f5fb;border-bottom:1px solid #c7e2ed;font-size:12px;flex-shrink:0;}
+.em-search-active span{min-width:0;overflow-wrap:anywhere;}
+.em-search-active button{padding:4px;white-space:nowrap;color:#087b9b;text-decoration:underline;font-size:11px;}
+.em-search input[type=search]{width:100%;height:28px;border:0;background:transparent;padding:5px 2px;}
 .em-search label{font-size:11px;display:flex;align-items:center;white-space:nowrap;}
 .em-search input[type=checkbox]{margin:0 3px;}
 .em-message-list{flex:1;min-height:0;overflow:auto;}
 .em-message-row{display:flex;align-items:center;border-bottom:1px solid #e8ecef;padding:0 7px;min-height:58px;}
 .em-message-row.is-selected{background:#e5f5fc;box-shadow:inset 3px 0 #86d6ee;}
 .em-message-row.is-unseen .em-subject{font-weight:bold;}
-.em-message-row>button{display:block;text-align:left;flex:1;min-width:0;padding:7px 4px;}
-.em-message-top{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#6e787c;}
+.em-message-row>button{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:6px;text-align:left;flex:1;min-width:0;padding:7px 4px;}
+.em-message-top{grid-column:1/-1;display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#6e787c;}
 .em-sender,.em-subject{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;}
 .em-message-top time{flex-shrink:0;font-size:11px;}
-.em-subject{margin-top:5px;font-size:13px;color:#30383c;}
-.em-mailbox-label{display:block;font-size:11px;color:#1483a4;margin-top:4px;}
-.em-work-label{font-size:11px;color:#736320;margin-left:4px;}
+.em-subject{grid-column:1;margin-top:5px;font-size:13px;color:#30383c;}
+/* Pocet je ve stejnem radku jako predmet, vpravo primo pod datem; SVG zachova cervenou i na systemech s barevnymi emoji. */
+.em-attachment-count{grid-column:2;display:inline-flex;align-items:center;justify-self:end;gap:2px;margin-top:5px;color:#c52d36;line-height:17px;}
+.em-attachment-count svg{width:14px;height:14px;}
+.em-attachment-count small{font-size:10px;font-weight:700;}
+.em-mailbox-label{grid-column:1/-1;display:block;font-size:11px;color:#1483a4;margin-top:4px;}
+.em-work-label{grid-column:1/-1;font-size:11px;color:#736320;margin-left:4px;}
 .em-pages{display:flex;align-items:center;justify-content:space-between;min-height:36px;background:#fafafa;border-top:1px solid #ddd;flex-shrink:0;font-size:12px;}
+.em-pages{gap:3px;flex-wrap:wrap;padding:0 3px;}
+.em-pages>span{flex:1;text-align:center;white-space:nowrap;}
+.em-pages>button{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 5px;margin:2px 0;border:1px solid #64a8b8;border-radius:4px;background:#e5f4f9;color:#086b84;font-size:25px;font-weight:bold;line-height:1;}
+.em-pages>button:not(:disabled):hover{background:#ccebf4;border-color:#168fae;}
+.em-pages>button:disabled{opacity:1;color:#89969d;border-color:#d4dce0;background:#f2f4f5;}
+.em-pages>label{display:flex;align-items:center;gap:3px;font-size:11px;}
+.em-pages select{width:49px;padding:3px 1px;font-size:11px;}
 .em-reader{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;}
 .em-empty{padding:30px 20px;color:#788388;text-align:center;line-height:1.6;}
 .em-message-header{padding:16px;border-bottom:1px solid #ddd;}
@@ -42,8 +64,9 @@
 .em-plain-body{margin:0;padding:18px;white-space:pre-wrap;overflow-wrap:anywhere;font:14px/1.6 Arial,sans-serif;}
 .em-attachments{display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px;border-bottom:1px solid #ddd;}
 .em-attachments button{border:1px solid #ddd;background:#fafafa;padding:7px;}
-.em-navigation{list-style:none;padding:0;display:flex;flex-direction:column;gap:3px;color:var(--cb-text-main,#30383c);font:13px Arial,sans-serif;}
+.em-navigation{list-style:none;padding:0;display:flex;flex-direction:column;gap:2px;color:var(--cb-text-main,#30383c);font:13px Arial,sans-serif;}
 .em-navigation>button{padding:5px 8px;line-height:17px;}
+.em-navigation>button:not(.em-new){text-align:left;padding:2px 7px;line-height:17px;}
 .em-navigation>select{width:100%;padding:5px;border:1px solid #ccc;border-radius:4px;}
 .em-navigation .em-new{background:#168fae;color:white;border-radius:4px;padding:7px;}
 .em-navigation .em-new:hover{background:#117c98;}
@@ -97,10 +120,28 @@
 .em-dialog-actions button[type=submit]{background:#118eaf;color:#fff;border-color:#118eaf;}
 .em-form-error{color:#ad2727;font-size:13px;white-space:pre-wrap;}
 .em-compose{width:min(900px,96vw);}
+/* Nahled zustava v dialogu IS; obrazky ani PDF neposilame do externi zobrazovaci sluzby. */
+.em-attachment-dialog{width:min(1100px,96vw);}
+.em-attachment-dialog .em-dialog-actions{flex-wrap:wrap;}
+.em-attachment-dialog h2{overflow-wrap:anywhere;}
+.em-attachment-preview{min-height:120px;max-height:70vh;overflow:auto;}
+.em-attachment-preview>img{display:block;max-width:100%;max-height:68vh;margin:auto;object-fit:contain;}
+.em-attachment-preview>iframe{display:block;width:100%;height:68vh;border:0;}
+.em-attachment-preview>video{display:block;max-width:100%;max-height:68vh;margin:auto;}
+.em-attachment-preview>audio{display:block;width:100%;margin:16px 0;}
+.em-attachment-preview>pre{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:14px/1.5 monospace;}
+.em-attachment-dialog [data-em-attachment-save],.em-attachment-dialog [data-em-attachment-office]{align-self:center;color:#087c98;text-decoration:underline;}
 .em-compose .em-address-pair{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .em-compose textarea{resize:vertical;min-height:200px;line-height:1.5;}
 .em-body-label{margin:10px 0;font-size:13px;}
 .em-body-label>span{display:block;margin-bottom:5px;}
+/* Citace zustava celym dokumentem mimo editor; checkbox ma beznou sirku i v dialogu. */
+.em-compose [data-em-quote]{margin:12px 0;padding:10px;border:1px solid #d5dde1;border-radius:4px;}
+.em-compose [data-em-quote] input[type=checkbox]{width:auto;margin-right:6px;}
+.em-compose [data-em-quote-preview] .em-message-body{height:240px;min-height:160px;width:100%;margin-top:8px;}
+.em-message-header details{margin-top:8px;font-size:12px;}
+.em-message-header summary{cursor:pointer;color:#687278;}
+.em-message-header details label{display:inline-flex;align-items:center;gap:6px;margin:6px;}
 .em-rich{background:white;color:#30383c;}
 .em-rich .ql-toolbar.ql-snow{border:1px solid #cbd2d6;border-radius:4px 4px 0 0;padding:6px;}
 .em-rich .ql-container.ql-snow{border:1px solid #cbd2d6;border-top:0;border-radius:0 0 4px 4px;font:14px Arial,sans-serif;}
@@ -145,3 +186,13 @@
  .em-client{grid-template-columns:minmax(240px,36%) minmax(0,1fr);}
 }
 @media(max-width:767px){.blok_hlavicka.cb-has-email{--em-logo:55px;--em-update:70px;}.em-client{grid-template-columns:1fr;}.em-client.em-has-message .em-list-panel{display:none;}.em-client:not(.em-has-message) .em-reader-panel{display:none;}.em-compose .em-address-pair{grid-template-columns:1fr;gap:0;}}
+
+/* Nabidka prijemcu zustava uvnitr dialogu, neprekryje ostatni pole mimo svou sirku. */
+.em-recipient{position:relative;min-width:0;display:flex;flex-direction:column;gap:5px;margin:10px 0;}
+.em-recipient label{margin:0!important;}
+.em-recipient input{width:100%;}
+.em-recipient-options{position:absolute;top:100%;left:0;right:0;z-index:5;max-height:220px;overflow:auto;background:#fff;border:1px solid #99b7c3;box-shadow:0 4px 10px #0002;border-radius:3px;}
+.em-recipient-options [role=option]{padding:7px 10px;cursor:pointer;display:flex;flex-direction:column;gap:3px;overflow-wrap:anywhere;}
+.em-recipient-options [role=option]:hover,.em-recipient-options [aria-selected=true]{background:#e4f3fa;}
+.em-recipient-options strong{font-size:13px;font-weight:600;}
+.em-recipient-options span,.em-recipient-status{font-size:12px;color:#607583;}

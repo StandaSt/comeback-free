@@ -28,3 +28,9 @@ function co_podrobnosti_ztiseni_ulozit(int $user, int $id, int $muted): void
 {
     co_sql('INSERT INTO co_volba(uzivatel,konverzace,ztiseno) VALUES(?,?,?) ON DUPLICATE KEY UPDATE ztiseno=VALUES(ztiseno)', [$user, $id, $muted])->close();
 }
+
+/** Před uložením odliší skutečnou změnu od opakovaného požadavku. */
+function co_podrobnosti_ztiseni_nacist(int $user, int $id): int
+{
+    return (int)(co_rows('SELECT ztiseno FROM co_volba WHERE uzivatel=? AND konverzace=?',[$user,$id])[0]['ztiseno']??0);
+}

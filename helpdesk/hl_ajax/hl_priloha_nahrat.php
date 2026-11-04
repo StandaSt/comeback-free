@@ -1,6 +1,7 @@
 <?php
 // helpdesk/hl_ajax/hl_priloha_nahrat.php * Verze: V1 * Aktualizace: 20.06.2026
 declare(strict_types=1);
+/* Účel: Přijímá přílohu tiketu a její evidenci i historii ukládá společně; při neúspěchu odstraní nově uložený soubor. */
 
 if (!defined('CB_HELPDESK_DISPATCH_INTERNAL')) {
     require_once __DIR__ . '/../../common/lib/session_boot.php';
@@ -10,6 +11,7 @@ require_once __DIR__ . '/../hl_lib/hl_prava.php';
 require_once __DIR__ . '/../hl_lib/hl_chyby.php';
 require_once __DIR__ . '/../hl_lib/hl_upload.php';
 require_once __DIR__ . '/../hl_lib/hl_notifikace.php';
+require_once __DIR__ . '/../hl_lib/hl_cinnost.php';
 
 if (!headers_sent()) {
     header('Content-Type: application/json; charset=utf-8');
@@ -71,7 +73,9 @@ try {
         throw new CbUserVisibleException('Vyberte soubor, který chcete nahrát.');
     }
 
+    $conn->begin_transaction();
     $priloha = cb_helpdesk_upload_priloha($conn, $idHelpdesk, $idZpravaDb, $idUser, $_FILES['soubor']);
+    cb_cinnost_zapsat(CbHelpdeskCinnost::PRILOHA_PRIDANA,cb_helpdesk_cinnost_cil($conn,$idHelpdesk)+['data'=>['id_priloha'=>(int)$priloha['id_helpdesk_priloha']]]);
 
     if (cb_helpdesk_is_admin()) {
         cb_helpdesk_notifikace_ucastnikum($conn, $idHelpdesk, $idZpravaDb, $idUser, 'nova_priloha', 'Nová příloha v HelpDesku #' . (string)$idHelpdesk);
@@ -79,11 +83,14 @@ try {
         cb_helpdesk_notifikace_adminum($conn, $idHelpdesk, $idZpravaDb, $idUser, 'nova_priloha', 'Nová příloha v HelpDesku #' . (string)$idHelpdesk);
     }
 
+    $conn->commit();
     echo json_encode([
         'ok' => true,
         'priloha' => $priloha,
     ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
+    if (isset($conn)) { try { $conn->rollback(); } catch (Throwable $rollbackError) { error_log('Helpdesk: rollback přílohy selhal.'); } }
+    if (isset($priloha)) cb_helpdesk_upload_smazat($priloha);
     cb_helpdesk_json_chyba($e, 'Nahrání přílohy tiketu', ['table' => 'helpdesk_priloha']);
 }
 

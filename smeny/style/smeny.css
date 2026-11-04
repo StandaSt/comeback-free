@@ -1,11 +1,12 @@
 /*
- * Ucel souboru: Sjednocuje obal Smen, mrizku planovace, vyber pracovniku a detail; upravuje take existujici modal souhlasu s vyhradami k jednotlivym dnum.
+ * Ucel souboru: Sjednocuje obal Smen, mrizku planovace, vyber pracovniku a detail; mobilu poskytuje uspornou listu IS a kompaktni ovladani v obou orientacich. Upravuje take modal souhlasu s vyhradami k jednotlivym dnum.
  * Velikosti pisma vychazeji z pevne typograficke skaly aplikace.
  */
 
 .smeny_content{
     align-content:start;
 }
+.smeny_mobile_bar{display:none;}
 /* Visibility zachová měřitelné rozměry pro výpočet tabulky, ale nenechá probliknout zdrojový týdenní rozpis. */
 .smeny_content[data-smeny-view-pending]{visibility:hidden;}
 
@@ -1083,4 +1084,82 @@
  .smeny_shift_table tbody td::before{content:attr(data-label);font-weight:600;color:var(--cb-text-muted);}
  .smeny_shift_table tbody td[colspan]{grid-template-columns:minmax(0,1fr);}
  .smeny_shift_table tbody td[colspan]::before{display:none;}
+}
+
+/* Mobilní Směny: místo společné hlavičky zůstane jen menu, název a návrat do IS.
+ * Selektor kontextu obnoví plnou hlavičku i při přepnutí modulu přes AJAX. */
+@media(max-width:980px){
+ .obal_main.cb-context--smeny:not(.is-smeny-full-shell){grid-template-columns:minmax(0,1fr);grid-template-rows:30px minmax(0,1fr);grid-template-areas:"hlavicka" "pp";gap:4px;padding-bottom:4px;height:100dvh;}
+ .obal_main.cb-context--smeny:not(.is-smeny-full-shell)>.blok_hlavicka{display:flex;align-items:center;gap:6px;height:30px;min-height:30px;padding:1px 5px;border-bottom:1px solid var(--cb-module-accent);border-radius:0;box-shadow:none;}
+ .obal_main.cb-context--smeny:not(.is-smeny-full-shell)>.blok_hlavicka>:not(.cb_menu_toggle):not(.smeny_mobile_bar):not(.cb_menu_backdrop):not(.cb_prebrani_prav_notice){display:none;}
+ .obal_main.cb-context--smeny:not(.is-smeny-full-shell) .smeny_mobile_bar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:1;min-width:0;font-size:14px;}
+ .smeny_mobile_bar button{font:inherit;color:inherit;background:var(--cb-bg-control);border:1px solid var(--cb-border-soft);border-radius:4px;padding:2px 7px;min-height:26px;cursor:pointer;}
+ .obal_main.cb-context--smeny:not(.is-smeny-full-shell) .cb_menu_toggle{display:flex;align-items:center;justify-content:center;flex:0 0 28px;height:26px;min-height:0;padding:0;border:1px solid var(--cb-border-soft);border-radius:4px;background:var(--cb-bg-control);color:inherit;font-size:18px;cursor:pointer;}
+ .obal_main.cb-context--smeny:not(.is-smeny-full-shell) .cb_menu_backdrop{display:block;position:fixed;inset:30px 0 0;z-index:190;border:0;background:#0003;opacity:0;visibility:hidden;pointer-events:none;}
+ .obal_main.cb-context--smeny:not(.is-smeny-full-shell).is-menu-open .cb_menu_backdrop{opacity:1;visibility:visible;pointer-events:auto;}
+ .obal_main.cb-context--smeny:not(.is-smeny-full-shell)>.blok_menu{position:fixed;inset:30px auto 0 0;z-index:200;width:min(280px,86vw);height:auto;box-sizing:border-box;border-radius:0 6px 6px 0;box-shadow:6px 0 18px var(--cb-shadow);transform:translateX(calc(-100% - 12px));visibility:hidden;}
+ .obal_main.cb-context--smeny:not(.is-smeny-full-shell).is-menu-open>.blok_menu{transform:translateX(0);visibility:visible;}
+ .obal_main.cb-context--smeny:not(.is-smeny-full-shell) .blok_menu_mobile_head{display:flex;align-items:center;justify-content:space-between;min-height:28px;padding-bottom:3px;border-bottom:1px solid var(--cb-border-soft);}
+ .obal_main.cb-context--smeny:not(.is-smeny-full-shell) .blok_menu_close{display:block;width:28px;height:28px;padding:0;border:1px solid var(--cb-border-soft);border-radius:4px;background:var(--cb-bg-control);color:inherit;font-size:22px;}
+
+ /* Ovládání má přirozené rozměry a může se zalomit; vodorovný posuv patří pouze časové ose. */
+ .smeny_content{padding:5px;gap:4px;overflow-x:hidden;border-radius:5px;}
+ .smeny_content h1{font-size:18px;}
+ .smeny_content h2{font-size:16px;margin:5px 0 2px;}
+ .smeny_content .pp_header{gap:4px 8px;flex-wrap:wrap;}
+ .smeny_content :is(button,summary,select,input[type=time],input[type=text],input[type=search]){min-height:28px;box-sizing:border-box;}
+ .smeny_content :is(button,summary){padding:2px 6px;}
+ .smeny_content :is(select,input[type=time],input[type=text],input[type=search]){max-width:100%;padding:2px 4px;}
+ .smeny_content :is(input[type=checkbox],input[type=radio]){min-width:16px;min-height:16px;width:16px;height:16px;}
+ .smeny_content .smeny_planning_controls{width:100%;gap:4px;min-width:0;}
+ .smeny_content .smeny_planning_top{gap:3px 8px;align-items:center;}
+ .smeny_content .smeny_planning_filters{width:auto;max-width:100%;min-width:0;gap:3px 6px;flex-wrap:wrap;align-items:end;}
+ .smeny_content .smeny_planning_filters label{flex:0 1 auto;min-width:0;max-width:100%;gap:2px;}
+ .smeny_content .smeny_planning_controls .smeny_planning_filters>label:last-child{flex:1 1 14ch;}
+ .smeny_content .smeny_planning_filters select{width:auto;min-width:0;max-width:100%;}
+ .smeny_content .smeny_planning_filters select[name=week]{width:auto;max-width:min(100%,24ch);}
+ .smeny_content .smeny_planning_settings{margin:0;}
+ .smeny_content .smeny_planning_controls .smeny_planning_settings{flex:0 1 auto;min-width:0;max-width:100%;}
+ .smeny_content .smeny_planning_settings fieldset{gap:2px 8px;min-width:0;max-width:100%;}
+ .smeny_content .smeny_planning_settings label{min-height:26px;gap:3px;}
+ .smeny_content .smeny_day_navigation{width:auto;max-width:100%;min-width:0;gap:3px;}
+ .smeny_content .smeny_day_navigation select{width:auto;flex:1 1 auto;min-width:0;max-width:100%;}
+ .smeny_content[data-page=planovani_smen] .smeny_day_navigation button,
+ .smeny_content .smeny_template_toolbar .smeny_day_navigation button{width:28px;min-width:28px;flex:0 0 28px;}
+ .smeny_content .smeny_template_toolbar .smeny_day_navigation{flex:0 1 auto;min-width:0;}
+ .smeny_content .smeny_planning_day_toolbar,.smeny_content .smeny_template_toolbar{gap:3px 6px;min-width:0;max-width:100%;}
+ .smeny_content .smeny_template_resolution{gap:3px;font-size:12px;}
+ .smeny_content .smeny_planning_template_select{min-width:0;}
+ .smeny_content .smeny_planning_template_select select{max-width:20ch;min-height:28px;}
+ .smeny_content .smeny_planner_day{box-sizing:border-box;width:100%;padding:4px;}
+ .smeny_content .smeny_planner_day>header{align-items:center;gap:3px 6px;flex-wrap:wrap;margin-bottom:4px;}
+ .smeny_style--classic .smeny_planner_day>header>strong{flex:0 1 auto;}
+ .smeny_content .smeny_planner_day>header small{white-space:nowrap;}
+ .smeny_content .smeny_classic_tools{display:flex;gap:3px;flex-wrap:wrap;}
+ .smeny_content .smeny_planner_day>header .smeny_classic_tools{margin-left:auto;}
+ .smeny_content .smeny_classic_tools :is(button,summary){min-height:26px;font-size:12px;padding:2px 5px;}
+ .smeny_content .smeny_planner,.smeny_content .smeny_planner_days{width:100%;min-width:0;gap:4px;}
+ .smeny_content .smeny_classic_scroll{box-sizing:border-box;max-width:100%;}
+ .smeny_content .smeny_planning_actions{gap:3px 6px;}
+ .smeny_content .smeny_planning_actions>*{flex:0 1 auto;}
+ .smeny_content .smeny_notice{margin:0;padding:4px 6px;}
+ .smeny_content .smeny_template_create{gap:4px;padding:5px;margin-bottom:4px;}
+ .smeny_content .smeny_template_card{box-sizing:border-box;padding:5px 7px;gap:4px;}
+ .smeny_content .smeny_template_name{width:auto;max-width:100%;grid-template-columns:auto minmax(0,1fr);gap:5px;}
+ .smeny_content .smeny_template_name input{width:100%;}
+ .smeny_content .smeny_template_editor{width:100%;min-width:0;}
+ .smeny_content .smeny_template_save_all{position:static;width:auto;}
+ .smeny_content .smeny_requests_actions{gap:4px;justify-content:flex-start;}
+ .smeny_content .smeny_requests_save{min-width:0;padding:3px 8px;}
+ .smeny_content .smeny_request_copy_next{width:28px;flex-basis:28px;}
+ .smeny_content .smeny_week_navigation{width:auto;max-width:100%;gap:4px;}
+ .smeny_content .smeny_week_arrow{width:28px;height:28px;}
+ .smeny_content .smeny_request_state{padding:3px 5px;}
+ .smeny_content .smeny_shift_table .filter-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 6px;}
+ .smeny_content .smeny_shift_table .filter-input{min-height:28px;}
+ .smeny_content .smeny_shift_table .filter-reset-btn{width:28px;height:28px;}
+ .smeny_style--new .smeny_planner_tick{height:32px;}
+ .smeny_content .smeny_classic_assignment{gap:6px;flex-wrap:wrap;margin:4px 0;}
+ .smeny_content .smeny_shift_panel{padding:8px;}
+ .smeny_content .smeny_shift_panel .smeny_shift_edit{gap:5px;margin-top:6px;}
 }

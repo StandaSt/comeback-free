@@ -1,6 +1,7 @@
 /*
  * Ucel souboru: Globalni responzivni chovani prihlasene kostry IS.
  * Udrzuje upozorneni na orientaci telefonu a zasouvaci menu napric moduly.
+ * Mobilní Směny mají úspornou lištu s návratem k celé hlavičce bez změny přihlášení.
  */
 (function () {
   'use strict';
@@ -11,6 +12,12 @@
   }
 
   var narrowMenu = window.matchMedia('(max-width: 899px)');
+  var shiftsMobile = window.matchMedia('(max-width: 980px)');
+
+  // Směny podporují i širší telefon na šířku; ostatní moduly zachovávají svůj breakpoint.
+  function usesMobileMenu() {
+    return narrowMenu.matches || (shiftsMobile.matches && root.classList.contains('cb-context--smeny') && !root.classList.contains('is-smeny-full-shell'));
+  }
 
   function toggleButton() {
     return root.querySelector('[data-cb-menu-toggle="1"]');
@@ -19,7 +26,7 @@
   function setMenuOpen(open) {
     var portraitAllowed = root.classList.contains('cb-context--smeny');
     var shouldOpen = open === true
-      && narrowMenu.matches
+      && usesMobileMenu()
       && (!root.classList.contains('is-small-portrait') || portraitAllowed);
     root.classList.toggle('is-menu-open', shouldOpen);
     document.body.classList.toggle('cb-menu-open', shouldOpen);
@@ -49,7 +56,7 @@
 
   function syncShell() {
     syncOrientation();
-    if (!narrowMenu.matches) {
+    if (!usesMobileMenu()) {
       setMenuOpen(false);
     }
   }
@@ -57,6 +64,16 @@
   document.addEventListener('click', function (event) {
     var target = event.target;
     if (!(target instanceof Element)) {
+      return;
+    }
+
+    // Návrat pouze odkryje navigaci IS; nevybírá za uživatele jiný modul ani neopouští rozepsaný formulář.
+    if (target.closest('[data-smeny-exit]')) {
+      setMenuOpen(false);
+      root.classList.add('is-smeny-full-shell');
+      window.dispatchEvent(new Event('resize'));
+      var moduleLink=root.querySelector('.head_module_link:not(.is-disabled)');
+      if (moduleLink) moduleLink.focus();
       return;
     }
 
@@ -91,6 +108,7 @@
   });
   document.addEventListener('cb:main-swapped', function () {
     setMenuOpen(false);
+    root.classList.remove('is-smeny-full-shell');
     syncOrientation();
   });
 

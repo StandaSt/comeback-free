@@ -18,6 +18,7 @@ declare(strict_types=1);
  *    - user_agent
  *    - screen_w, screen_h, is_touch
  * 3) Vrátí id_bad_login (AUTO_INCREMENT)
+ * 4) Načte zbývající pokusy a přesný konec blokace v klouzavém časovém okně.
  *
  * Poznámky:
  * - tabulka user_bad_login má ip NOT NULL → když IP není k dispozici, uloží se prázdný string
@@ -135,6 +136,42 @@ if (!function_exists('db_bad_login_count_recent_by_email')) {
         $stmt->close();
 
         return (int)$cnt;
+    }
+}
+
+/** Načte nejnovější chyby; blokace skončí vypršením páté nejnovější, i při souběžných pokusech. */
+function db_bad_login_stav(string $email, int $maxAttempts = 5, int $minutes = 15): array
+{
+    $email = trim($email);
+    $maxAttempts = max(1, $maxAttempts);
+    $minutes = max(1, $minutes);
+    $stmt = db()->prepare(
+        'SELECT TIMESTAMPDIFF(SECOND, NOW(), kdy + INTERVAL ? MINUTE) + 1 AS sekund,
+                DATE_FORMAT(kdy + INTERVAL ? MINUTE + INTERVAL 1 SECOND, \'%H:%i:%s\') AS do_casu
+         FROM user_bad_login
+         WHERE email=? AND kdy >= NOW() - INTERVAL ? MINUTE
+         ORDER BY kdy DESC, id_bad_login DESC LIMIT ' . $maxAttempts
+    );
+    if (!$stmt) {
+        throw new RuntimeException('Nelze načíst stav omezení přihlášení.');
+    }
+    try {
+        $stmt->bind_param('iisi', $minutes, $minutes, $email, $minutes);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $blocked = count($rows) >= $maxAttempts;
+        // Hranice původního filtru je včetně poslední sekundy, proto přidáváme jednu sekundu.
+        $last = $blocked ? $rows[$maxAttempts - 1] : null;
+        return [
+            'zbyva' => max(0, $maxAttempts - count($rows)),
+            'blokovano' => $blocked,
+            'sekund' => $last !== null ? max(1, (int)$last['sekund']) : 0,
+            'do_casu' => $last !== null ? (string)$last['do_casu'] : '',
+            'limit' => $maxAttempts,
+            'minut' => $minutes,
+        ];
+    } finally {
+        $stmt->close();
     }
 }
 

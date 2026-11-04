@@ -3,14 +3,18 @@ declare(strict_types=1);
 
 /*
  * Účel souboru: Definuje povolené stránky Administrace a vybere aktuální kostru PP.
- * Vlastní zobrazované panely zůstávají v admin_includes.
+ * Vlastní zobrazované panely vcetne vypinatelne diagnostiky zůstávají v admin_includes.
  */
 
 function cb_admin_pages(): array
 {
     return [
+        'diagnostika_vykonu' => [
+            'file' => __DIR__ . '/../admin_pages/admin_diagnostika_page.php',
+            'title' => 'Diagnostika výkonu',
+        ],
         'historie_cinnosti' => [
-            'file' => __DIR__ . '/../admin_pages/admin_historie_page.php',
+            'file' => __DIR__ . '/../admin_pages/admin_cinnost_page.php',
             'title' => 'Historie činnosti',
         ],
         'sdeleni' => [

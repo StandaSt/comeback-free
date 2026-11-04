@@ -1,6 +1,7 @@
 <?php
 // helpdesk/hl_ajax/hl_zprava_pridat.php * Verze: V1 * Aktualizace: 24.06.2026
 declare(strict_types=1);
+/* Účel: Ukládá reakci a případnou změnu stavu tiketu; obě činnosti potvrzuje společným transakčním zápisem. */
 // Odesilatel notifikace pouzije zobrazovane jmeno ze session s oddelenym HR titulem.
 require_once __DIR__.'/../../common/lib/osoba_jmeno.php';
 
@@ -12,6 +13,7 @@ require_once __DIR__ . '/../hl_lib/hl_prava.php';
 require_once __DIR__ . '/../hl_lib/hl_chyby.php';
 require_once __DIR__ . '/../hl_lib/hl_snapshot.php';
 require_once __DIR__ . '/../hl_lib/hl_notifikace.php';
+require_once __DIR__ . '/../hl_lib/hl_cinnost.php';
 
 if (!headers_sent()) {
     header('Content-Type: application/json; charset=utf-8');
@@ -69,7 +71,7 @@ try {
     $conn->begin_transaction();
 
     $stavPred = '';
-    $stmtBefore = $conn->prepare('SELECT stav FROM helpdesk WHERE id_helpdesk = ? LIMIT 1');
+    $stmtBefore = $conn->prepare('SELECT stav FROM helpdesk WHERE id_helpdesk = ? LIMIT 1 FOR UPDATE');
     if ($stmtBefore instanceof mysqli_stmt) {
         $stmtBefore->bind_param('i', $idHelpdesk);
         $stmtBefore->execute();
@@ -136,6 +138,13 @@ try {
 
     cb_helpdesk_mark_read($conn, $idHelpdesk, $idUser);
 
+    // Obsah zprávy zůstává pouze v Helpdesku; historie uchová vazbu na reakci a případnou změnu stavu.
+    $cinnostCil=cb_helpdesk_cinnost_cil($conn,$idHelpdesk);
+    cb_cinnost_zapsat(CbHelpdeskCinnost::REAKCE_PRIDANA,$cinnostCil+['data'=>['id_zprava'=>$idZprava]]);
+    if ($novyStav!==$stavPred && $stavPred!=='') {
+        cb_cinnost_zapsat(CbCinnostAkce::POLE_ULOZENO,$cinnostCil+['id_pole'=>CbHelpdeskCinnost::STAV,
+            'data'=>['puvodni'=>cb_helpdesk_cinnost_stav($stavPred),'nova'=>cb_helpdesk_cinnost_stav($novyStav)]]);
+    }
     cb_helpdesk_snapshot_zapis($conn, $idHelpdesk, $idZprava, $idUser);
 
     if ($jeResitel) {

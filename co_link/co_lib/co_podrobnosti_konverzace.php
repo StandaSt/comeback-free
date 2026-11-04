@@ -2,6 +2,8 @@
 /* Co-Link: opravneny prehled clenu a precteni zpravy a ztiseni otevrene konverzace. */
 declare(strict_types=1);
 require_once __DIR__ . '/co_konverzace.php';
+require_once __DIR__ . '/co_audit_kontext.php';
+require_once __DIR__ . '/co_transakce.php';
 require_once __DIR__ . '/co_lide.php';
 require_once __DIR__ . '/../co_db/co_podrobnosti_konverzace_db.php';
 
@@ -28,6 +30,12 @@ function co_zprava_precteni(int $user, int $id): array
 /** Samotnou zmenu ztiseni povoli az po overeni pristupu do konverzace. */
 function co_konverzace_ztisit(int $user, array $d): void
 {
-    co_konverzace($user, (int)($d['konverzace'] ?? 0));
-    co_podrobnosti_ztiseni_ulozit($user, (int)$d['konverzace'], !empty($d['ztiseno']) ? 1 : 0);
+    co_transakce(static function() use ($user,$d): void {
+        $cid=(int)($d['konverzace']??0); $new=!empty($d['ztiseno'])?1:0;
+        $channel=co_konverzace($user,$cid,true);
+        $old=co_podrobnosti_ztiseni_nacist($user,$cid);
+        if ($old===$new) return;
+        co_podrobnosti_ztiseni_ulozit($user,$cid,$new);
+        co_audit($user,'ztiseni_zmeneno',$cid,co_audit_kontext($user,$channel)+['pole'=>'Ztišení oznámení','puvodni'=>$old?'Zapnuto':'Vypnuto','nova'=>$new?'Zapnuto':'Vypnuto']);
+    });
 }

@@ -2,6 +2,7 @@
 /* Co-Link: ve spolecne transakci overi moznost zmeny zpravy, provede upravu nebo smazani a zapise audit. */
 declare(strict_types=1);
 require_once __DIR__ . '/co_chyba.php';
+require_once __DIR__ . '/co_audit_kontext.php';
 require_once __DIR__ . '/co_transakce.php';
 require_once __DIR__ . '/co_konverzace.php';
 require_once __DIR__ . '/co_zprava_uprava.php';
@@ -23,7 +24,7 @@ function co_men_zpravu(int $user, array $d): array
         // Obe vetve i audit zustavaji pod stejnym zamkem a commitem jako puvodni zmena.
         if (($d['akce'] ?? '') === 'smazat') co_zprava_smazani($id);
         else co_zprava_uprava($id, (string)($d['text'] ?? ''));
-        co_audit($user, ($d['akce'] ?? '') === 'smazat' ? 'zprava_smazana' : 'zprava_upravena', $id);
+        co_audit($user, ($d['akce'] ?? '') === 'smazat' ? 'zprava_smazana' : 'zprava_upravena', $id, co_audit_kontext($user,$channel)+['zprava'=>$id,'revize'=>(int)$message['revize']]);
         return [];
     });
 }

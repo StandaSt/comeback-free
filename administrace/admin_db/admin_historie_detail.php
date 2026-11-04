@@ -31,6 +31,15 @@ function cb_historie_detail(mysqli $db, array $event, array $source, array $scop
             $stmt->bind_param('i',$id); $stmt->execute(); $places=$stmt->get_result()->fetch_all(MYSQLI_ASSOC); $stmt->close();
             $fields['Oblasti / pobočky']=implode(', ',array_map(static fn(array $place):string=>(string)($place['oblast']??$place['pobocka']),$places));
         }
+    } elseif ($key === 'co_link') {
+        // Detail je jen bezpečný výběr metadat z autorizované události; obsah komunikace se nečte.
+        $context=json_decode((string)($event['kontext']??''),true);
+        $context=is_array($context)?$context:[];
+        foreach (['cil'=>'Cíl','konverzace'=>'ID konverzace','zprava'=>'ID zprávy','priloha'=>'ID přílohy','autor'=>'ID autora zprávy',
+            'revize'=>'Revize','prostredi'=>'Prostředí','pole'=>'Změněné nastavení','puvodni'=>'Původní hodnota','nova'=>'Nová hodnota','emoji'=>'Reakce','zarizeni'=>'ID zařízení'] as $field=>$label) {
+            if (isset($context[$field]) && is_scalar($context[$field])) $fields[$label]=(string)$context[$field];
+        }
+        $note=$context===[]?'Starší základní audit. Podrobnosti změny nebyly evidované; zpětně se nedoplňují.':'Potvrzená operace Co-Linku. Text zprávy ani obsah příloh se do auditu neukládá.';
     } elseif ($key === 'akce') {
         $stmt = $db->prepare('SELECT pole,hodnota_old,hodnota_new,detail_json FROM user_akce_new WHERE id_user_akce=?');
         $id = (int)$event['id']; $stmt->bind_param('i', $id); $stmt->execute(); $data = $stmt->get_result()->fetch_assoc() ?: []; $stmt->close();

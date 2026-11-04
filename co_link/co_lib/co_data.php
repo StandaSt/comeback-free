@@ -2,10 +2,11 @@
 declare(strict_types=1);
 // Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
 require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
-/* Co-Link: sprava kanalu a spolecne nacitani sluzeb modulu; presun do co_lib zachovava funkce i SQL. */
+/* Co-Link: správa kanálů včetně auditu jednotlivých změn nastavení a společné načítání služeb modulu. */
 // Spolecny vstup nacita konfiguraci a rozdelene jednoucelove knihovny.
 require_once __DIR__ . '/co_lib.php';
 require_once __DIR__ . '/co_message_format.php';
+require_once __DIR__ . '/co_audit_kontext.php';
 
 // Pristup, sprava a seznam konverzaci jsou samostatne sluzby se zachovanymi verejnymi funkcemi.
 require_once __DIR__ . '/co_pristup_sql.php';
@@ -52,13 +53,31 @@ function co_kanal_uloz(int $user, array $d): array
         if(array_diff($values,$valid)) co_chyba('Výběr obsahuje neplatný slot nebo funkci.');
     }
     return co_transakce(static function() use($user,$d,$id,$name,$people,$slots,$functions,$all): array {
+        // Zámek chrání porovnání nastavení i audit před souběžnou změnou kanálu.
+        $old=$id?(co_rows('SELECT * FROM co_konverzace WHERE id=? FOR UPDATE',[$id])[0]??[]):[];
+        if ($id && (!$old || !co_spravce_kanalu($user,$old))) co_chyba('Nemáte právo spravovat tento kanál.',403);
+        $before=[];
+        if ($old) {
+            $before=['Název'=>$old['nazev'],'Přístup všem'=>(int)$old['pristup_vsem'],'Archivace'=>(int)$old['archiv'],
+                'Členové (ID)'=>array_map('intval',array_column(co_rows('SELECT uzivatel FROM co_clen WHERE konverzace=?',[$id]),'uzivatel')),
+                'Sloty (ID)'=>array_map('intval',array_column(co_rows("SELECT hodnota FROM co_pristup WHERE konverzace=? AND druh='slot'",[$id]),'hodnota')),
+                'Funkce (ID)'=>array_map('intval',array_column(co_rows("SELECT hodnota FROM co_pristup WHERE konverzace=? AND druh='funkce'",[$id]),'hodnota'))];
+        }
         if($id) co_sql('UPDATE co_konverzace SET nazev=?,pristup_vsem=?,archiv=?,zmeneno=NOW(6) WHERE id=?',[$name,$all,!empty($d['archiv'])?1:0,$id])->close();
         else { co_sql('INSERT INTO co_konverzace(typ,nazev,pristup_vsem,autor) VALUES("kanal",?,?,?)',[$name,$all,$user])->close(); $id=(int)db()->insert_id; }
         co_sql('DELETE FROM co_clen WHERE konverzace=?',[$id])->close();
         co_sql('DELETE FROM co_pristup WHERE konverzace=?',[$id])->close();
         foreach($people as $p) co_sql('INSERT INTO co_clen(konverzace,uzivatel) VALUES(?,?)',[$id,$p])->close();
         foreach(['slot'=>$slots,'funkce'=>$functions] as $kind=>$values) foreach($values as $v) co_sql('INSERT INTO co_pristup(konverzace,druh,hodnota) VALUES(?,?,?)',[$id,$kind,$v])->close();
-        co_audit($user,'kanal_nastaven',$id);
+        $context=co_audit_kontext($user,['id'=>$id,'typ'=>'kanal','nazev'=>$name]);
+        $after=['Název'=>$name,'Přístup všem'=>$all,'Archivace'=>$old?(!empty($d['archiv'])?1:0):0,'Členové (ID)'=>$people,'Sloty (ID)'=>$slots,'Funkce (ID)'=>$functions];
+        if (!$old) co_audit($user,'kanal_vytvoren',$id,$context);
+        foreach ($after as $field=>$value) {
+            $previous=$before[$field]??null;
+            if (is_array($value)) { sort($value); if (is_array($previous)) sort($previous); }
+            if ($previous===$value) continue;
+            co_audit($user,'kanal_nastaven',$id,$context+['pole'=>$field,'puvodni'=>is_array($previous)?implode(', ',$previous):$previous,'nova'=>is_array($value)?implode(', ',$value):$value]);
+        }
         return ['id'=>$id];
     });
 }

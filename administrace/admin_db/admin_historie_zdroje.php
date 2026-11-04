@@ -116,5 +116,8 @@ function cb_historie_zdroje(mysqli $db, array $scope): array
         $sources['push']['result']="CASE WHEN t.stav='ok' THEN 1 ELSE 0 END";
         foreach (['api_smeny','api_restia','vykon','push'] as $key) $sources[$key]['technical']=true;
     }
+    require_once __DIR__.'/admin_historie_co_link.php';
+    $coSource=cb_historie_co_link_zdroj($db,$scope);
+    if ($coSource!==null) $sources['co_link']=$coSource;
     return $sources;
 }

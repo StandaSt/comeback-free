@@ -4,9 +4,9 @@ declare(strict_types=1);
 require_once __DIR__ . '/../co_lib/co_rows.php';
 
 /** Vrati puvodni radek nastaveni bez doplnovani vychozich hodnot. */
-function co_nastaveni_db_nacist(): array
+function co_nastaveni_db_nacist(bool $lock = false): array
 {
-    return co_rows('SELECT priloha_mb FROM co_nastaveni WHERE id=1');
+    return co_rows('SELECT priloha_mb FROM co_nastaveni WHERE id=1'.($lock?' FOR UPDATE':''));
 }
 
 /** Jediny parametr zustava ciselny limit overeny sluzbou. */

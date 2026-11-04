@@ -1,5 +1,5 @@
 <?php
-/* E-mail: pracovni plocha a osobni nastaveni; manazerske vysvetleni zabezpeceni se na desktopu rozbaluje vedle formulare. */
+/* E-mail: pracovni plocha a editor; puvodni citace ma vlastni nahled mimo editor a doplnkove volby jsou v detailu zpravy. */
 declare(strict_types=1);
 if (!defined('CB_EMBEDDED_MODULE') || CB_EMBEDDED_MODULE!=='email' || empty($_SESSION['login_ok'])) { http_response_code(404); exit; }
 require_once __DIR__.'/core.php';
@@ -12,10 +12,11 @@ if (($_GET['page']??'')==='uprava_profilu') { require __DIR__.'/../common/pages/
 <section class="pp em-client" data-module="email" data-page="prehled" data-email-root data-api="<?= h(cb_root_url('email/api.php')) ?>" data-editor-src="<?= h(cb_root_url('email/editor.js').'?v='.filemtime(__DIR__.'/editor.js')) ?>" aria-label="E-mail">
     <div class="em-notice" role="status" aria-live="polite" data-em-notice>Načítám e-mail…</div>
     <div class="em-list-panel">
-        <div class="em-list-toolbar"><button type="button" data-em-action="refresh" title="Zkontrolovat nové zprávy">↻ Obnovit</button><button type="button" data-em-action="select">Vybrat vše</button><button type="button" data-em-action="bulk_move">Přesunout</button></div>
-        <form class="em-search" data-em-search><input name="search" type="search" placeholder="Hledat v poště…" aria-label="Hledat v poště"><button type="submit" title="Hledat">⌕</button><label title="Pouze nepřečtené"><input type="checkbox" name="unseen"> Nepřečtené</label></form>
+        <div class="em-list-toolbar"><button type="button" data-em-action="refresh" title="Zkontrolovat nové zprávy">↻ Obnovit</button><button type="button" data-em-action="select">Vybrat vše</button><button type="button" data-em-action="bulk_move">Přesunout</button><button type="button" data-em-action="bulk_trash">Do koše</button></div>
+        <form class="em-search" data-em-search><div class="em-search-query"><button type="button" class="em-search-clear" data-em-action="clear_search" data-em-search-clear aria-label="Vymazat hledání a obnovit seznam" title="Vymazat hledání a obnovit seznam" hidden>×</button><input name="search" type="search" maxlength="200" placeholder="Hledat v poště…" aria-label="Hledat v poště"><button type="submit" title="Hledat v předmětu a adresách; potvrďte Enterem nebo lupou" aria-label="Hledat"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg></button><label title="Pouze nepřečtené"><input type="checkbox" name="unseen"> Nepřečtené</label></div><div class="em-search-options"><label class="em-search-body" title="Pomalejší hledání také v textu zpráv; potvrďte Enterem nebo lupou"><input type="checkbox" name="body"> Hledat také v obsahu</label><label title="Při změně schránky zachovat potvrzené hledání"><input type="checkbox" name="remember"> Pamatuj filtr</label></div></form>
+        <div class="em-search-active" data-em-search-active hidden><span data-em-search-term></span><button type="button" data-em-action="clear_search">Zrušit hledání</button></div>
         <div class="em-message-list" data-em-list role="list" aria-label="Seznam zpráv"><div class="em-empty">Vyberte schránku.</div></div>
-        <div class="em-pages"><button type="button" data-em-action="prev" aria-label="Předchozí stránka">‹</button><span data-em-page>—</span><button type="button" data-em-action="next" aria-label="Další stránka">›</button></div>
+        <div class="em-pages"><button type="button" data-em-action="prev" aria-label="Předchozí stránka" title="Předchozí stránka">‹</button><span data-em-page aria-live="polite">—</span><button type="button" data-em-action="next" aria-label="Další stránka" title="Další stránka">›</button><label>Počet <select data-em-page-size aria-label="Počet zpráv na stránku"><option value="25">25</option><option value="50" selected>50</option><option value="100">100</option></select></label></div>
     </div>
     <div class="em-reader-panel">
         <div class="em-toolbar" data-em-toolbar>
@@ -23,6 +24,18 @@ if (($_GET['page']??'')==='uprava_profilu') { require __DIR__.'/../common/pages/
         </div>
         <div class="em-reader" data-em-reader><div class="em-empty">Vyberte zprávu ze seznamu.</div></div>
     </div>
+    <dialog class="em-dialog em-attachment-dialog" data-em-attachment-dialog>
+        <form><h2 data-em-attachment-title>Příloha</h2><div class="em-attachment-preview" data-em-attachment-preview></div>
+            <div class="em-dialog-actions"><a data-em-attachment-office hidden>Otevřít v aplikaci</a><a data-em-attachment-save hidden>Uložit přílohu</a><button type="button" data-em-close>Zavřít</button></div>
+        </form>
+    </dialog>
+    <dialog class="em-dialog" data-em-move>
+        <form data-em-move-form><h2 data-em-move-title>Přesunout zprávy</h2><p data-em-move-summary></p>
+            <label data-em-move-target-label>Cílová složka<select name="target" required></select></label>
+            <p data-em-move-trash-hint hidden>Zprávy se přesunou do koše své schránky. Z koše je můžete přesunout zpět.</p>
+            <div class="em-form-error" role="alert"></div><div class="em-dialog-actions"><button type="button" data-em-close>Zrušit</button><button type="submit">Přesunout</button></div>
+        </form>
+    </dialog>
     <dialog class="em-dialog" data-em-connect>
         <form data-em-connect-form autocomplete="off">
             <div class="em-connect-heading"><h2>Připojení schránky</h2><button type="button" class="em-security-button" data-em-action="security" data-em-security-toggle aria-expanded="false" aria-controls="em-mail-security" hidden>Zabezpečení schránky</button></div>
@@ -56,9 +69,15 @@ if (($_GET['page']??'')==='uprava_profilu') { require __DIR__.'/../common/pages/
     </dialog>
     <dialog class="em-dialog em-compose" data-em-compose>
         <form data-em-compose-form><h2 data-em-compose-title>Nová zpráva</h2>
-            <label>Od<select name="account" required></select></label><label>Komu<input name="to" required autocomplete="off"></label>
-            <div class="em-address-pair"><label>Kopie<input name="cc"></label><label>Skrytá kopie<input name="bcc"></label></div>
+            <label>Od<select name="account" required></select></label>
+            <?php foreach(['to'=>'Komu','cc'=>'Kopie','bcc'=>'Skrytá kopie'] as $field=>$caption): ?>
+            <?php if($field==='cc'): ?><div class="em-address-pair"><?php endif; ?>
+            <div class="em-recipient"><label for="em-recipient-<?= $field ?>"><?= $caption ?></label><input id="em-recipient-<?= $field ?>" name="<?= $field ?>" <?= $field==='to'?'required':'' ?> autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="em-options-<?= $field ?>" data-em-recipient><div id="em-options-<?= $field ?>" class="em-recipient-options" role="listbox" aria-label="Nabídka příjemců" hidden></div></div>
+            <?php if($field==='bcc'): ?></div><?php endif; ?>
+            <?php endforeach; ?>
+            <p class="em-recipient-status" data-em-recipient-status role="status" hidden></p>
             <label>Předmět<input name="subject" maxlength="998"></label><div class="em-body-label"><span>Zpráva</span><div data-em-compose-editor></div></div>
+            <section data-em-quote hidden><label><input type="checkbox" name="include_quote" checked> Připojit původní zprávu</label><div data-em-quote-preview></div></section>
             <label>Přílohy (celkem nejvýše 20 MB)<input name="attachments" type="file" multiple></label><p data-em-forward-files hidden>Původní přílohy budou přeposlány se zprávou.</p>
             <div class="em-form-error" role="alert"></div><div class="em-dialog-actions"><button type="button" data-em-close>Zrušit</button><button type="button" data-em-action="draft">Uložit koncept</button><button type="submit">Odeslat</button></div>
         </form>

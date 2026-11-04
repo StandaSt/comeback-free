@@ -27,7 +27,7 @@ function co_qr_pripoj(string $token, string $name): array
         $result = co_pripoj($user, $name);
         // Zarizeni, zruseni vsech nepouzitych kodu a audit musi uspet nebo selhat spolecne.
         co_qr_zneplatnit($user);
-        co_audit($user, 'zarizeni_pripojeno', (int)$result['zarizeni']);
+        co_audit($user, 'zarizeni_pripojeno', (int)$result['zarizeni'], ['zarizeni'=>(int)$result['zarizeni'],'prostredi'=>'QR']);
         return $result;
     });
 }

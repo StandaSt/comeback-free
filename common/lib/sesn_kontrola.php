@@ -1,6 +1,7 @@
 <?php
 // lib/sesn_kontrola.php * Verze: V2 * Aktualizace: 18.07.2026
-/* Overuje vazbu a platnost prihlaseni; pri jeho zruseni odstrani i prebrani prav a odemceni e-mailovych schranek. */
+/* Overuje vazbu a platnost prihlaseni; pri jeho zruseni odstrani i prebrani prav a odemceni e-mailovych schranek.
+ * Duvody zamitnuti zaznamenava bez prihlasovacich tajemstvi do neverejneho diagnostickeho logu. */
 declare(strict_types=1);
 
 require_once __DIR__ . '/pc_session.php';
@@ -39,6 +40,7 @@ if (!function_exists('cb_session_reject_replaced_request')) {
      */
     function cb_session_reject_replaced_request(): void
     {
+        cb_session_log_rejection('request_session_replaced');
         http_response_code(409);
         header('X-Comeback-Session-Replaced: 1');
         if (cb_session_is_internal_request()) {
@@ -68,6 +70,7 @@ if (!function_exists('cb_session_login_is_current')) {
         $idUser = is_array($user) ? (int)($user['id_user'] ?? 0) : 0;
         $idLogin = (int)($_SESSION['cb_id_login'] ?? 0);
         if ($idUser <= 0 || $idLogin <= 0 || !function_exists('db')) {
+            cb_session_log_rejection('login_identity_missing');
             return false;
         }
 
@@ -101,8 +104,11 @@ if (!function_exists('cb_session_login_is_current')) {
             $row = $stmt->get_result()->fetch_assoc();
             $stmt->close();
 
-            return is_array($row) && (int)($row['id_login'] ?? 0) === $idLogin;
+            $current = is_array($row) && (int)($row['id_login'] ?? 0) === $idLogin;
+            if (!$current) cb_session_log_rejection('login_not_current_or_person_inactive');
+            return $current;
         } catch (Throwable $e) {
+            cb_session_log_rejection('login_database_error');
             return false;
         }
     }
@@ -124,35 +130,58 @@ if (!function_exists('cb_session_validate_after_login')) {
 
         $stored = trim((string)($_SESSION['cb_session_fingerprint'] ?? ''));
         if ($stored === '') {
+            cb_session_log_rejection('client_fingerprint_missing');
             return false;
         }
 
         if (!hash_equals($stored, cb_session_client_fingerprint())) {
+            // Porovnani slozek je dostupne az po prvni uspesne kontrole teto relace.
+            $previous = $_SESSION['cb_session_diagnostic_client'] ?? [];
+            $checks = [];
+            foreach (['ua' => 'HTTP_USER_AGENT', 'language' => 'HTTP_ACCEPT_LANGUAGE'] as $part => $header) {
+                if (is_array($previous) && isset($previous[$part]) && is_string($previous[$part])) {
+                    $checks[$part === 'ua' ? 'ua_changed' : 'language_changed'] =
+                        !hash_equals($previous[$part], hash('sha256', trim((string)($_SERVER[$header] ?? ''))));
+                }
+            }
+            cb_session_log_rejection('client_fingerprint_changed', $checks);
             return false;
         }
 
         $nowTs = time();
         $sessionStartRaw = $_SESSION['cb_session_start_ts'] ?? null;
         if (!is_int($sessionStartRaw) && !is_string($sessionStartRaw)) {
+            cb_session_log_rejection('session_start_missing');
             return false;
         }
 
         $sessionStartTs = filter_var($sessionStartRaw, FILTER_VALIDATE_INT);
         if ($sessionStartTs === false || $sessionStartTs <= 0 || $sessionStartTs > $nowTs) {
+            cb_session_log_rejection('session_start_invalid');
             return false;
         }
 
         $maxSessionSeconds = 12 * 60 * 60;
         if (($nowTs - $sessionStartTs) >= $maxSessionSeconds) {
+            cb_session_log_rejection('session_max_age');
             return false;
         }
 
         $todayStart = (new DateTimeImmutable('today 08:00'))->getTimestamp();
         if ($nowTs >= $todayStart && $sessionStartTs < $todayStart) {
+            cb_session_log_rejection('session_daily_boundary');
             return false;
         }
 
-        return cb_session_login_is_current();
+        $current = cb_session_login_is_current();
+        if ($current) {
+            // Ukladame jen otisky hlavicek, aby dalsi zamitnuti rozlisilo zmenu UA od zmeny jazyka.
+            $_SESSION['cb_session_diagnostic_client'] = [
+                'ua' => hash('sha256', trim((string)($_SERVER['HTTP_USER_AGENT'] ?? ''))),
+                'language' => hash('sha256', trim((string)($_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? ''))),
+            ];
+        }
+        return $current;
     }
 }
 
@@ -200,6 +229,7 @@ if (!function_exists('cb_session_forget_auth')) {
         unset($_SESSION['cb_session_bound_at']);
         unset($_SESSION['cb_session_bound_id']);
         unset($_SESSION['cb_session_fingerprint']);
+        unset($_SESSION['cb_session_diagnostic_client']);
         unset($_SESSION['cb_pc_token']);
         unset($_SESSION['cb_pc_session_token']);
         // Rucne odemcena posta nesmi prezit zadny zpusob ukonceni prihlaseni do IS.
@@ -229,6 +259,7 @@ if (!function_exists('cb_session_guard_entry')) {
     {
         if (empty($_SESSION['login_ok'])) {
             if (cb_session_is_internal_request()) {
+                cb_session_log_rejection('authentication_missing');
                 http_response_code(401);
                 exit;
             }

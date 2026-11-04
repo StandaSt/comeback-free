@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-/* Ucel: Oddeluje pravo cist a planovat; planovani navic vyzaduje provozni funkci a vlastni MAIN mnozinu. */
+/* Účel: Odděluje právo číst a plánovat; manažerům vymezuje pobočky místem výkonu práce včetně oblastí, provozním pracovníkům vlastní množinou MAIN. */
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
 /** Přehled ostatních lidí vyžaduje čtecí oprávnění. */
@@ -22,21 +22,29 @@ function cb_smeny_planovani_rozsah_osoba(mysqli $db): int
     $id=(int)($stmt->get_result()->fetch_assoc()['id_person']??0); $stmt->close(); return $id;
 }
 
-// Ani individualne pravo nebo role vedeni neobchazi MAIN a provozni funkci planovace.
+// Manažer nemá MAIN; jeho rozsah určují platná místa výkonu práce včetně členství poboček v oblastech.
+// Průnik se společným přístupem zachová také omezení firmy a případného přebrání práv.
 function cb_smeny_planovani_pobocky(mysqli $db): array
 {
-    if (!cb_smeny_planovani_vidi()) return [];
     $person=cb_smeny_planovani_rozsah_osoba($db);
+    // Manažerský rozsah je nezávislý na 403; ostatní bez tohoto práva končí jako dosud.
+    $managerIds=cb_smeny_manazer_pobocky_ids($db,$person);
+    if ($managerIds===null && !cb_smeny_planovani_vidi()) return [];
     $function=cb_hr_funkce_osoby($db,$person);
-    if (($function['zarazeni']??'')!=='provozni' || cb_hr_zarazeni_chyby($db,$person)!==[]) return [];
-    return array_intersect_key(cb_smeny_sablony_pobocky($db),array_flip(cb_hr_main_ids($db,$person)));
+    $zarazeni=$function['zarazeni']??'';
+    if (!in_array($zarazeni,['provozni','manazerske'],true) || cb_hr_zarazeni_chyby($db,$person)!==[]) return [];
+    if ($zarazeni==='manazerske') {
+        return cb_smeny_sablony_pobocky($db);
+    }
+    $ids=cb_hr_main_ids($db,$person);
+    return array_intersect_key(cb_smeny_sablony_pobocky($db),array_flip($ids));
 }
 
 // Volano po zamceni osoby i v zapisove akci; soubezne HR nesmi zmenit opravneni uprostred zapisu.
 function cb_smeny_planovani_vyzaduj_pobocku(mysqli $db, int $idPob): void
 {
     if (!cb_smeny_planovani_edituje() || !isset(cb_smeny_planovani_pobocky($db)[$idPob])) {
-        throw new CbUserVisibleException('Plánování vyžaduje provozní funkci, právo plánovat a tuto pobočku mezi vlastními MAIN.');
+        throw new CbUserVisibleException('Plánování vyžaduje právo editovat plán směn a pobočku v povoleném rozsahu: u manažera podle místa výkonu práce, u provozního pracovníka podle MAIN.');
     }
 }
 

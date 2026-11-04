@@ -5,7 +5,42 @@ declare(strict_types=1);
  * Ucel souboru: Udrzet prave jednu aktivni identitu IS pro jeden browser
  * profil. Cookie obsahuje pouze nahodny identifikator; DB uklada jen jeho hash.
  * Vazbu profilu uchovava take u prihlaseni, aby ji dalsi session neprepsala.
+ * Zamitnute kontroly zaznamenava bez tokenu do neverejneho denniho diagnostickeho logu.
  */
+
+/** Zaznam duvodu nesmi zmenit vysledek overeni ani vypsat citliva data do odpovedi. */
+function cb_session_log_rejection(string $reason, array $checks = []): void
+{
+    static $written = [];
+    $idUser = (int)($_SESSION['cb_user']['id_user'] ?? 0);
+    $idLogin = (int)($_SESSION['cb_id_login'] ?? 0);
+    $key = $idUser . ':' . $idLogin . ':' . $reason;
+    if (isset($written[$key])) return;
+    $written[$key] = true;
+
+    // Pevny seznam dovoluje jen vysledky kontrol, nikdy obsah cookies, tokenu nebo SQL.
+    $safeChecks = [];
+    foreach (['ua_changed', 'language_changed', 'cookie_valid', 'pc_token_valid', 'session_token_valid',
+        'cookie_matches', 'device_exists', 'device_user_matches', 'device_login_matches',
+        'device_token_matches', 'device_revoked', 'device_fresh'] as $name) {
+        if (isset($checks[$name]) && is_bool($checks[$name])) $safeChecks[$name] = $checks[$name];
+    }
+    // URL muze obsahovat tajny udaj i v ceste; ukladame jen overenou cestu PHP vstupu.
+    $script = (string)($_SERVER['SCRIPT_NAME'] ?? '');
+    $row = ['cas' => (new DateTimeImmutable('now', new DateTimeZone('Europe/Prague')))->format(DATE_ATOM),
+        'id_user' => $idUser, 'id_login' => $idLogin, 'duvod' => $reason,
+        'skript' => preg_match('~^/[a-zA-Z0-9_./-]*\.php$~D', $script) === 1 ? $script : '',
+        'metoda' => in_array($_SERVER['REQUEST_METHOD'] ?? '', ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'], true)
+            ? $_SERVER['REQUEST_METHOD'] : '', 'kontroly' => $safeChecks];
+    try {
+        $directory = dirname(__DIR__, 3) . '/data/tmp/session_diagnostika';
+        if (!is_dir($directory) && !@mkdir($directory, 0700, true) && !is_dir($directory)) return;
+        $line = json_encode($row, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n";
+        @file_put_contents($directory . '/' . substr($row['cas'], 0, 10) . '.jsonl', $line, FILE_APPEND | LOCK_EX);
+    } catch (Throwable $error) {
+        // Diagnostika je vedlejsi; neplatna relace zustane zamitnuta i pri chybe uloziste.
+    }
+}
 
 function cb_pc_session_timeout_sec(): int
 {
@@ -163,6 +198,12 @@ function cb_pc_session_is_current(mysqli $db, int $idUser, int $idLogin): bool
         || preg_match('/^[a-f0-9]{64}$/', $sessionToken) !== 1
         || !hash_equals($pcToken, $cookieToken)
     ) {
+        cb_session_log_rejection('device_credentials_invalid', [
+            'cookie_valid' => preg_match('/^[a-f0-9]{64}$/', $cookieToken) === 1,
+            'pc_token_valid' => preg_match('/^[a-f0-9]{64}$/', $pcToken) === 1,
+            'session_token_valid' => preg_match('/^[a-f0-9]{64}$/', $sessionToken) === 1,
+            'cookie_matches' => $pcToken !== '' && hash_equals($pcToken, $cookieToken),
+        ]);
         return false;
     }
 
@@ -180,6 +221,7 @@ function cb_pc_session_is_current(mysqli $db, int $idUser, int $idLogin): bool
     ';
     $stmt = $db->prepare($sql);
     if (!($stmt instanceof mysqli_stmt)) {
+        cb_session_log_rejection('device_select_prepare_failed');
         return false;
     }
     $stmt->bind_param('ssii', $pcToken, $sessionToken, $idUser, $idLogin);
@@ -187,6 +229,28 @@ function cb_pc_session_is_current(mysqli $db, int $idUser, int $idLogin): bool
     $row = $stmt->get_result()->fetch_assoc();
     $stmt->close();
     if (!is_array($row)) {
+        // Doplneni priciny je pouze SELECT po zamitnuti; puvodni overovaci dotaz se nemeni.
+        $checks = [];
+        try {
+            $diagnostic = $db->prepare('SELECT id_user=?, id_login=?, session_hash=UNHEX(SHA2(?,256)),
+                zruseno IS NOT NULL, last_seen >= (NOW() - INTERVAL ' . $timeout . ' SECOND)
+                FROM user_pc_session WHERE pc_hash=UNHEX(SHA2(?,256)) LIMIT 1');
+            if ($diagnostic instanceof mysqli_stmt) {
+                $diagnostic->bind_param('iiss', $idUser, $idLogin, $sessionToken, $pcToken);
+                $diagnostic->execute();
+                $flags = $diagnostic->get_result()->fetch_row();
+                $diagnostic->close();
+                $checks['device_exists'] = is_array($flags);
+                if (is_array($flags)) {
+                    foreach (['device_user_matches', 'device_login_matches', 'device_token_matches', 'device_revoked', 'device_fresh'] as $index => $name) {
+                        $checks[$name] = (bool)$flags[$index];
+                    }
+                }
+            }
+        } catch (Throwable $error) {
+            // Chyba doplnujiciho SELECT nesmi potlacit zaznam puvodniho zamitnuti.
+        }
+        cb_session_log_rejection('device_session_not_current', $checks);
         return false;
     }
 
@@ -200,11 +264,13 @@ function cb_pc_session_is_current(mysqli $db, int $idUser, int $idLogin): bool
            AND zruseno IS NULL'
     );
     if (!($stmt instanceof mysqli_stmt)) {
+        cb_session_log_rejection('device_touch_prepare_failed');
         return false;
     }
     $stmt->bind_param('ssii', $pcToken, $sessionToken, $idUser, $idLogin);
     $ok = $stmt->execute();
     $stmt->close();
+    if (!$ok) cb_session_log_rejection('device_touch_failed');
     return $ok;
 }
 

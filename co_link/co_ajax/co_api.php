@@ -1,8 +1,11 @@
 <?php
 declare(strict_types=1);
+// Merime take bootstrap; zaznam je povolen az po overeni identity.
+require_once __DIR__.'/../../common/lib/diagnostika_vykonu.php';
+cb_diag_server_start('co_link');
 // Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
 require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
-/* Co-Link: HTTP kontroly, smerovani akci a JSON odpovedi; datove operace provadeji sluzby, puvodni URL api.php zustava funkcni. */
+/* Co-Link: HTTP kontroly, smerovani, JSON a vypinatelne mereni; datove operace provadeji sluzby, puvodni URL api.php zustava funkcni. */
 require_once __DIR__ . '/../co_lib/co_data.php';
 // QR sluzby nacitaji jednotlive DB operace; pri samotnem include zadny QR dotaz neprobehne.
 require_once __DIR__ . '/../co_lib/co_qr_vytvoreni.php';
@@ -42,7 +45,12 @@ try {
             cb_crf_vyzaduj();
             $pcToken=cb_pc_cookie_token(false);
             if($pcToken==='') co_chyba('Nelze ověřit zařízení IS.',401);
-            $out=co_pripoj((int)$_SESSION['cb_user']['id_user'],(string)($d['nazev']??'Počítač'),hash('sha256',$pcToken));
+            $out=co_transakce(static function() use ($d,$pcToken): array {
+                $user=(int)$_SESSION['cb_user']['id_user'];
+                $out=co_pripoj($user,(string)($d['nazev']??'Počítač'),hash('sha256',$pcToken));
+                co_audit($user,'zarizeni_pripojeno',(int)$out['zarizeni'],['zarizeni'=>(int)$out['zarizeni'],'prostredi'=>'IS']);
+                return $out;
+            });
         } else {
             $out=co_qr_pripoj((string)($d['token']??''),(string)($d['nazev']??'Telefon'));
         }
@@ -56,12 +64,15 @@ try {
         exit;
     }
     $user=(int)$identity['id_user'];
+    cb_diag_bind($user,['device'=>(int)$identity['zarizeni'],'conversation'=>(int)($_GET['konverzace']??$d['konverzace']??0),'search_chars'=>mb_strlen((string)($_GET['hledat']??''))]);
     // Vazba plati i pro cteni: stare okno po zmene uctu nesmi nacist konverzace nove identity.
     co_csrf($identity);
     $readActions=['stav','zpravy','lide','precteni','nastaveni','kanaly','zarizeni','clenove'];
     if($method==='GET' && !in_array($action,$readActions,true)) co_chyba('Tato akce vyžaduje POST.',405);
     $out=[];
     switch($action) {
+        case 'otevreno':
+            co_audit($user,'co_link_otevren',null,['prostredi'=>($d['prostredi']??'')==='is'?'IS':'Samostatný Co-Link','zarizeni'=>(int)$identity['zarizeni']]); break;
         case 'stav':
             $out=['ja'=>['id'=>$user,'jmeno'=>$identity['jmeno']],'prava'=>co_prava($user),'konverzace'=>co_seznam($user)]; break;
         case 'lide':
@@ -93,9 +104,9 @@ try {
         case 'odvolat':
             co_zarizeni_odvolat($user,(int)($d['id']??0)); break;
         case 'odhlasit':
-            co_zarizeni_odhlasit($identity['zarizeni']); break;
+            co_zarizeni_odhlasit($identity['zarizeni'],$user); break;
         case 'push':
-            co_zarizeni_push_ulozit($identity['zarizeni'],$d); break;
+            co_zarizeni_push_ulozit($identity['zarizeni'],$d,$user); break;
         case 'nastaveni':
             $out=co_nastaveni_nacist(); break;
         case 'nastaveni_ulozit':
@@ -110,13 +121,16 @@ try {
     $response=json_encode(['ok'=>true]+$out,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
     // co_odeslat uz dokoncilo transakci; push se nesmi spustit pro neulozenou zpravu.
     if($action==='odeslat') $pushMessage=(int)$out['id'];
+    cb_diag_response(strlen($response));
     echo $response;
 } catch(DomainException $e) {
     http_response_code(in_array($e->getCode(),[400,401,403,404,405,409,410,413,503],true)?$e->getCode():400);
+    cb_diag_response();
     echo json_encode(['ok'=>false,'err'=>$e->getMessage()],JSON_UNESCAPED_UNICODE);
 } catch(Throwable $e) {
     error_log('Co-Link API: '.get_class($e).' / '.$e->getCode());
     http_response_code(500);
+    cb_diag_response();
     echo json_encode(['ok'=>false,'err'=>'Požadavek se nepodařilo dokončit. Zkuste ho znovu.'],JSON_UNESCAPED_UNICODE);
 }
 

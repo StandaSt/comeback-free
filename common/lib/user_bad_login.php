@@ -17,6 +17,7 @@ declare(strict_types=1);
  *    - user_agent (HTTP_USER_AGENT)
  *    - screen_w, screen_h, is_touch (pokud jsou ve „wait spy info“ v session)
  * 2) zavolá db/db_bad_login.php → db_bad_login_log()
+ * 3) Připraví srozumitelnou informaci o zbývajících pokusech a době blokace.
  *
  * Pozn.:
  * - záznam se dělá pokaždé, když Směny nevrátí token
@@ -74,6 +75,33 @@ function cb_user_bad_login_is_blocked(string $email, int $maxAttempts = 5, int $
     } catch (Throwable $e) {
         return false;
     }
+}
+
+/** Doplní chybu o aktuální limit; při nedostupnosti diagnostiky zachová původní hlášení. */
+function cb_user_bad_login_zprava(string $email, string $message = '', bool $jenBlokace = false): string
+{
+    try {
+        $stav = db_bad_login_stav($email);
+    } catch (Throwable $e) {
+        return $message;
+    }
+    if ($stav['blokovano']) {
+        $seconds = (int)$stav['sekund'];
+        $wait = $seconds >= 60 ? intdiv($seconds, 60) . ' min ' . ($seconds % 60) . ' s' : $seconds . ' s';
+        return 'Přihlášení je dočasně zablokované: ' . $stav['limit'] . ' neúspěšných pokusů během '
+            . $stav['minut'] . ' minut. Další pokus je možný v ' . $stav['do_casu'] . ' (za ' . $wait
+            . '). Do té doby nelze přihlášení dokončit ani se správným heslem.';
+    }
+    if ($jenBlokace) {
+        return $message;
+    }
+    $remaining = (int)$stav['zbyva'];
+    $suffix = $remaining === 1 ? 'Zbývá 1 pokus' : 'Zbývají ' . $remaining . ' pokusy';
+    if ($remaining >= 5) {
+        $suffix = 'Zbývá ' . $remaining . ' pokusů';
+    }
+    return $message . ' ' . $suffix . ' do dočasné blokace (limit ' . $stav['limit'] . ' chyb za '
+        . $stav['minut'] . ' minut).';
 }
 
 // Konec souboru

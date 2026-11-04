@@ -1,6 +1,8 @@
 <?php
-/* E-mail: autorizovane API se session IS a CRF; cteni sdilene posty chrani 801, centralni spravu 802 a DB konfiguraci nacita pred session. */
+/* E-mail: autorizovane API, oddelene MIME casti a original EML; osobni precteni, presuny a potvrzene mazani z kose. */
 declare(strict_types=1);
+require_once __DIR__.'/../common/lib/diagnostika_vykonu.php';
+cb_diag_server_start('email');
 require_once __DIR__.'/../common/lib/chyby_bootstrap.php';
 require_once __DIR__.'/../common/lib/session_boot.php';
 require_once __DIR__.'/../common/lib/app.php';
@@ -9,8 +11,10 @@ require_once __DIR__.'/../common/config/secrets.php';
 require_once __DIR__.'/../common/lib/ochrana_crf.php';
 require_once __DIR__.'/../common/db/db_prava.php';
 require_once __DIR__.'/odeslani.php';
+require_once __DIR__.'/prilohy.php';
+require_once __DIR__.'/prijemci.php';
 header('Content-Type: application/json; charset=utf-8'); header('Cache-Control: no-store'); header('X-Content-Type-Options: nosniff');
-$client=null; $mutationLock='';
+$client=null; $mutationLock='';$streamingOriginal=false;
 try {
     cb_session_guard_entry();
     if (empty($_SESSION['login_ok'])) { http_response_code(401); throw new EmailChyba('Přihlášení do IS skončilo.'); }
@@ -22,8 +26,10 @@ try {
     $method=$_SERVER['REQUEST_METHOD']??'GET';
     if (!in_array($method,['GET','POST'],true)) { http_response_code(405); throw new EmailChyba('Nepodporovaná metoda.'); }
     cb_crf_vyzaduj(); $action=(string)($_GET['action']??'state');
+    cb_diag_bind((int)$_SESSION['cb_user']['id_user']);
     $d=$method==='POST'?(isset($_POST['data'])?json_decode((string)$_POST['data'],true,32,JSON_THROW_ON_ERROR):json_decode(file_get_contents('php://input'),true,32,JSON_THROW_ON_ERROR)):$_GET;
     if (!is_array($d)) throw new EmailChyba('Neplatný požadavek.');
+    cb_diag_bind((int)$_SESSION['cb_user']['id_user'],(array)$d+['search_chars'=>mb_strlen((string)($d['search']??'')),'background'=>$action==='background'?1:0]);
     if ($action==='state' && !em_schema($db)) { echo json_encode(['ok'=>true,'installed'=>false,'message'=>'Modul čeká na spuštění připraveného instalačního SQL.']); exit; }
     if (!em_schema($db)) throw new EmailChyba('Nejprve spusťte instalační SQL modulu E-mail.');
     if ($action==='state') {
@@ -41,18 +47,21 @@ try {
         foreach (em_ucty($db) as $one) {
             try { $accounts[]=['account'=>$one,'password'=>em_heslo($one)]; } catch (EmailChyba) {}
         }
-        session_write_close(); $checked=0;
+        session_write_close(); $checked=0;$counts=[];
         foreach ($accounts as $entry) {
             $connection=null;
             try {
                 $connection=em_imap($entry['account'],$entry['password']);
-                $unread=(int)(em_slozka($connection,'INBOX')->status()['unseen']??0); $id=(int)$entry['account']['id'];
-                $s=$db->prepare('INSERT INTO email_cache(ucet,neprecteno,aktualizovano) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE neprecteno=VALUES(neprecteno),aktualizovano=NOW()');
-                $s->bind_param('ii',$id,$unread); $s->execute(); $checked++;
+                $unread=em_precteni_pocet($db,$entry['account'],em_slozka($connection,'INBOX')); $id=(int)$entry['account']['id'];
+                if ($entry['account']['typ']==='osobni') {
+                    $s=$db->prepare('INSERT INTO email_cache(ucet,neprecteno,aktualizovano) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE neprecteno=VALUES(neprecteno),aktualizovano=NOW()');
+                    $s->bind_param('ii',$id,$unread); $s->execute();
+                }
+                $checked++;$counts[$id]=$unread;
             } catch (Throwable) { /* Posledni platny pocet se nesmi pri vypadku serveru vynulovat. */ }
             finally { if ($connection) { try { $connection->disconnect(); } catch (Throwable) {} } }
         }
-        $out=['checked'=>$checked];
+        $out=['checked'=>$checked,'unread'=>$counts];
     } elseif ($action==='connect') {
         if ($method!=='POST') throw new EmailChyba('Připojení vyžaduje formulář.');
         $attempt=$_SESSION['email_pokusy']??['start'=>time(),'count'=>0];
@@ -80,15 +89,31 @@ try {
             $out=em_stav($db);
         } else {
             $password=em_heslo($a);
+            // Obnovu hlaviček omezuje i server; opakovany POST nesmi znovu a znovu prochazet IMAP.
+            $contactSync=false;
+            if($action==='recipients') {
+                if($method!=='POST') throw new EmailChyba('Našeptávání vyžaduje formulář.');
+                $contactReady=em_kontakty_pripravene($db);
+                $contactKey=(int)$a['id'].':'.(int)$a['revize'];
+                if($contactReady && !empty($d['sync']) && time()-(int)($_SESSION['email_kontakty_obnova'][$contactKey]??0)>=300) {
+                    $_SESSION['email_kontakty_obnova'][$contactKey]=time(); $contactSync=true;
+                }
+            }
             // Pomalé IMAP/SMTP operace nezamykají session ostatním kartám a modulům.
             session_write_close();
-            if ($action==='list') {
-                $accounts=!empty($d['aggregate'])?array_values(array_filter(em_ucty($db),static fn($x)=>$x['typ']!=='osobni')):[$a];
+            if ($action==='recipients') {
+                if($contactSync) em_kontakty_obnov($db,$a,$password);
+                $out=['ready'=>$contactReady,'contacts'=>$contactReady?em_kontakty_hledej($db,(int)$a['id'],(string)($d['query']??'')):[]];
+            } elseif ($action==='list') {
+                if(!empty($d['paged']) && !empty($d['aggregate'])) throw new EmailChyba('Stránkovaný přehled načítejte po jednotlivých schránkách.');
+                // Dilci souhrn smi vratit jen konkretni sdileny ucet, nikdy cizi osobni postu.
+                if(!empty($d['aggregate_part']) && (!em_pravo(801) || !in_array($a['typ'],['pobocka','info'],true))) throw new EmailChyba('Společná pošta není povolená.');
+                $accounts=!empty($d['aggregate']) && empty($d['aggregate_part'])?array_values(array_filter(em_ucty($db),static fn($x)=>$x['typ']!=='osobni')):[$a];
                 if (!empty($d['aggregate']) && !em_pravo(801)) throw new EmailChyba('Společná pošta není povolená.');
                 $out=em_seznam($db,$accounts,$d);
             } else {
                 $client=em_imap($a,$password);
-                $writes=['read','move','flag','folder_create','folder_rename','folder_delete','claim','release','done','renew','send','draft','repair_sent'];
+                $writes=['read','move','delete','flag','folder_create','folder_rename','folder_delete','claim','release','done','renew','send','draft','repair_sent'];
                 if (in_array($action,$writes,true) && $method!=='POST') throw new EmailChyba('Tato akce vyžaduje potvrzený požadavek.');
                 if (in_array($action,$writes,true) && !in_array($action,['send','draft'],true)) {
                     // Zmenu stavu nebo presun nelze provest mezi posledni kontrolou odpovedi a SMTP prenosem.
@@ -96,38 +121,84 @@ try {
                     if ((int)$s->get_result()->fetch_assoc()['n']!==1) throw new EmailChyba('Ve schránce právě probíhá odesílání. Vyčkejte a akci opakujte.');
                     $mutationLock=$key;
                 }
-                if ($action==='folders') {
+                if ($action==='row_status') {
+                    $out=em_stavy_viditelnych($db,$client,$a,$d);
+                } elseif ($action==='folders') {
                     $folders=[];
                     foreach ($client->getFolders(false) as $f) {
                         $status=$f->no_select?[]:$f->status();
-                        $folders[]=['path'=>$f->path,'name'=>$f->full_name,'delimiter'=>$f->delimiter,'selectable'=>!$f->no_select,'unseen'=>(int)($status['unseen']??0)];
+                        $folders[]=['path'=>$f->path,'name'=>$f->full_name,'delimiter'=>$f->delimiter,'selectable'=>!$f->no_select,'unseen'=>$f->no_select?0:em_precteni_pocet($db,$a,$f)];
                     }
                     $unread=0; foreach ($folders as $f) if (strcasecmp($f['path'],'INBOX')===0) $unread=$f['unseen'];
-                    $s=$db->prepare('INSERT INTO email_cache(ucet,neprecteno,aktualizovano) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE neprecteno=VALUES(neprecteno),aktualizovano=NOW()');
-                    $s->bind_param('ii',$a['id'],$unread); $s->execute();
+                    if ($a['typ']==='osobni') {
+                        $s=$db->prepare('INSERT INTO email_cache(ucet,neprecteno,aktualizovano) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE neprecteno=VALUES(neprecteno),aktualizovano=NOW()');
+                        $s->bind_param('ii',$a['id'],$unread); $s->execute();
+                    }
                     $out=['folders'=>$folders,'special'=>em_config()['folders']??[],'order'=>em_poradi_cti($db,(int)$a['id'])];
                 } elseif ($action==='save_order') {
                     if ($method!=='POST' || !is_array($d['order']??null)) throw new EmailChyba('Neplatný požadavek na pořadí složek.');
                     $paths=[]; foreach ($client->getFolders(false) as $f) $paths[]=$f->path;
                     em_poradi_uloz($db,(int)$a['id'],$d['order'],$paths); $out=['order'=>$d['order']];
-                } elseif ($action==='message' || $action==='attachment') {
-                    $m=em_zprava($client,$d);
-                    if ($action==='attachment') {
-                        $att=$m->getAttachments()->values()->get((int)($d['part']??-1));
-                        if (!$att) throw new EmailChyba('Příloha již není dostupná.');
-                        header('Content-Type: application/octet-stream'); header("Content-Disposition: attachment; filename=\"priloha\"; filename*=UTF-8''".rawurlencode(em_nazev_prilohy((string)$att->name)));
-                        header("Content-Security-Policy: sandbox; default-src 'none'"); echo $att->content; exit;
+                } elseif (in_array($action,['message','attachment','original'],true)) {
+                    $m=em_zprava($client,$d,false);
+                    if ($action==='original') {
+                        $originalSize=(int)$m->size;
+                        if($originalSize<1)throw new EmailChyba('Server neposkytl velikost originálu zprávy.');
+                        header('Content-Type: message/rfc822');header('Content-Disposition: attachment; filename="zprava.eml"');
+                        header('Content-Length: '.$originalSize);$streamingOriginal=true;
+                        header("Content-Security-Policy: sandbox; default-src 'none'");
+                        // Bajty originalu se neprepisuji a nestava se z nich jeden velky retezec v pameti.
+                        for($offset=0;$offset<$originalSize;$offset+=65536){$chunk=em_mime_blok($client,(int)$d['uid'],'',$offset,min(65536,$originalSize-$offset));if(strlen($chunk)!==min(65536,$originalSize-$offset))throw new EmailChyba('Server vrátil neúplný originál zprávy.');echo $chunk;}
+                        exit;
                     }
-                    $attachments=[]; foreach ($m->getAttachments()->values() as $i=>$at) $attachments[]=['part'=>$i,'name'=>(string)$at->name,'size'=>(int)$at->size];
-                    $out=['message'=>em_radek($m,$a,(string)$d['folder'],(int)$d['validity'])+['text'=>$m->getTextBody(),'html'=>em_html($m->getHTMLBody(),!empty($d['remote'])),
+                    if ($action==='attachment') {
+                        $parts=em_mime_struktura($client,(int)$d['uid']);$att=null;
+                        foreach($parts as $part)if(!$part['body'] && $part['part']===(string)($d['part']??'')){$att=$part;break;}
+                        if (!$att) throw new EmailChyba('Příloha již není dostupná.');
+                        $content=em_mime_obsah($client,(int)$d['uid'],$att,!empty($d['inline'])?8388608:20971520); $type=em_priloha_typ($content);
+                        if(!empty($d['inline']) && !in_array($type,['image/png','image/jpeg','image/gif','image/webp','image/avif'],true))throw new EmailChyba('Tento vložený obrázek nelze bezpečně zobrazit.');
+                        $name=em_nazev_prilohy($att['name']);
+                        // Nepovinna priprava pro Office nesmi pri nedostupne cache zablokovat stazeni puvodni prilohy.
+                        try { if(empty($d['inline'])) {
+                            $office=em_priloha_office($content,$name);
+                            if ($office) {
+                                $token=em_priloha_odkaz($content,$name,$office['type']);
+                                header('X-Comeback-Office-Url: '.cb_root_url('email/otevrit.php/'.rawurlencode($name).'?token='.$token));
+                                header('X-Comeback-Office-Scheme: '.$office['scheme']); header('X-Comeback-Office-Label: '.$office['label']);
+                            } }
+                        } catch (Throwable $e) {error_log('EMAIL_ATTACHMENT_OFFICE class='.get_class($e).' at='.basename($e->getFile()).':'.$e->getLine());}
+                        header('Content-Type: '.$type); header("Content-Disposition: attachment; filename=\"priloha\"; filename*=UTF-8''".rawurlencode($name));
+                        header("Content-Security-Policy: sandbox; default-src 'none'"); cb_diag_response(strlen($content)); echo $content; exit;
+                    }
+                    $detail=em_mime_detail($client,$d,(string)($d['encoding']??'auto'));
+                    // Vychozi zobrazeni nacita vzdalene obrazky; explicitni remote=0 zustava respektovano.
+                    $out=['message'=>em_radek($m,$a,(string)$d['folder'],(int)$d['validity'])+['text'=>$detail['text'],'html'=>em_zobrazeni_html($detail['html'],!array_key_exists('remote',$d) || !empty($d['remote'])),'encoding'=>$detail['encoding'],
                         'draft_context'=>(string)$d['folder']===(em_config()['folders']['drafts']??'')?em_kontext_konceptu($a,$m):null,
-                        'reply_to'=>em_adresy($m->reply_to),'cc'=>em_adresy($m->cc),'bcc'=>em_adresy($m->bcc),'attachments'=>$attachments,'work'=>em_pracovni_stav($db,$a,$d)]];
+                        'reply_to'=>em_adresy($m->reply_to),'cc'=>em_adresy($m->cc),'bcc'=>em_adresy($m->bcc),'attachments'=>$detail['attachments'],'work'=>em_pracovni_stav($db,$a,$d)]];
+                    if ($a['typ']!=='osobni') {
+                        $map=em_precteni_mapa($db,$a,em_slozka($client,(string)$d['folder']),(int)$d['validity']);
+                        $out['message']['seen']=!empty($map[(int)$d['uid']]);
+                    }
+                    if ((int)($out['message']['draft_context']['format']??0)===2) {
+                        $draftParts=em_mime_koncept_casti($detail['html']);
+                        $out['message']['draft_editor_html']=em_html($draftParts['editor']);
+                        $out['message']['draft_quote_html']=em_zobrazeni_html($draftParts['quote'],!array_key_exists('remote',$d) || !empty($d['remote']));
+                    }
                 } elseif (in_array($action,['claim','release','done','renew'],true)) {
                     if ($a['typ']==='osobni') throw new EmailChyba('Pracovní stavy jsou určeny pro společné schránky.');
                     $message=em_zprava($client,$d,false); $out=['work'=>em_prevzit($db,$a,$d,$action,$message->flags->has('answered'))];
-                } elseif (in_array($action,['read','flag','move'],true)) {
+                } elseif (in_array($action,['read','flag','move','delete'],true)) {
                     $refs=$d['messages']??[$d]; if (!is_array($refs) || count($refs)>50) throw new EmailChyba('Vyberte nejvýše 50 zpráv.');
+                    // Cely vyber se autorizuje pred prvni nevratnou operaci.
+                    foreach ($refs as $ref) if (!is_array($ref) || (int)($ref['account']??0)!==(int)$a['id']) throw new EmailChyba('Hromadná akce musí patřit jedné schránce.');
+                    if ($action==='delete') {
+                        em_smazat_z_kose($client,$refs,(string)($d['confirm']??''));
+                        if (em_precteni_schema($db)) {
+                            $q=$db->prepare('DELETE FROM email_precteni_cache WHERE ucet=?'); $q->bind_param('i',$a['id']); $q->execute();
+                        }
+                    }
                     foreach ($refs as $ref) {
+                        if ($action==='delete') continue;
                         if ((int)($ref['account']??0)!==(int)$a['id']) throw new EmailChyba('Hromadná akce musí patřit jedné schránce.');
                         $m=em_zprava($client,$ref,false);
                         if ($action==='move') {
@@ -136,20 +207,38 @@ try {
                             $work=em_pracovni_stav($db,$a,$ref);
                             if ($work['stav']==='resi' && !empty($work['zamceno']) && (int)$work['resitel']!==(int)$_SESSION['cb_user']['id_user']) throw new EmailChyba('Zprávu právě vyřizuje jiný uživatel. Přesun nyní není možný.');
                             $messageId=trim((string)$m->message_id);
-                            if ((int)$work['verze']>0 && ($messageId==='' || $target->query()->whereMessageId($messageId)->whereUndeleted()->count()>0)) throw new EmailChyba('Nelze bezpečně přenést stav vyřízení. Zprávu ponechte v původní složce.');
+                            $transfer=(int)$work['verze']>0 || $a['typ']!=='osobni';
+                            $caps=$a['typ']!=='osobni'?array_map('strtoupper',(array)$client->getConnection()->getCapabilities()->validatedData()):[];
+                            $uidMove=(in_array('MOVE',$caps,true) && in_array('UIDPLUS',$caps,true)) || in_array('IMAP4REV2',$caps,true);
+                            if ($transfer && !$uidMove && ($messageId==='' || $target->query()->whereMessageId($messageId)->whereUndeleted()->count()>0)) throw new EmailChyba('Nelze bezpečně přenést stav zprávy. Zprávu ponechte v původní složce.');
+                            if ($a['typ']!=='osobni') {
+                                $baseline=em_precteni_zaklad($db,$a,em_slozka($client,(string)$ref['folder']),(int)$ref['validity']);
+                                em_precteni_zaklad($db,$a,$target,(int)$target->examine()['uidvalidity']);
+                            }
                             // Cil pochazi ze serveroveho seznamu, proto je uz v UTF7-IMAP a nesmi se znovu kodovat.
-                            if (!$m->move($target->path,false,true)) throw new EmailChyba('Zprávu se nepodařilo přesunout.');
-                            if ((int)$work['verze']>0) {
-                                $found=$target->query()->whereMessageId($messageId)->whereUndeleted()->fetchBody(false)->get();
-                                if ($found->count()!==1) throw new EmailChyba('Zpráva byla přesunuta, ale stav vyřízení se nepodařilo jednoznačně přenést. Obnovte složku.');
-                                $newHash=hash('sha256',$target->path); $newValidity=(int)$target->examine()['uidvalidity']; $newUid=(int)$found->first()->uid;
+                            $moved=$uidMove?em_presun_uid($client,$ref,$target->path):null;
+                            if (!$uidMove && !$m->move($target->path,false,true)) throw new EmailChyba('Zprávu se nepodařilo přesunout.');
+                            if ($transfer) {
+                                if (!$uidMove) {
+                                    $found=$target->query()->whereMessageId($messageId)->whereUndeleted()->fetchBody(false)->get();
+                                    if ($found->count()!==1) throw new EmailChyba('Zpráva byla přesunuta, ale stav vyřízení se nepodařilo jednoznačně přenést. Obnovte složku.');
+                                    $moved=['validity'=>(int)$target->examine()['uidvalidity'],'uid'=>(int)$found->first()->uid];
+                                }
+                                $newHash=hash('sha256',$target->path); $newValidity=$moved['validity']; $newUid=$moved['uid'];
                                 [$oldId,$oldHash,$oldValidity,$oldUid]=em_ref($a,$ref);
+                                if ($a['typ']!=='osobni') em_precteni_presun($db,$a,$ref,['folder'=>$target->path,'validity'=>$newValidity,'uid'=>$newUid],!empty($baseline[$oldUid]));
                                 $q=$db->prepare('UPDATE email_stav SET slozka_hash=?,slozka=?,uidvalidity=?,uid=? WHERE ucet=? AND slozka_hash=? AND uidvalidity=? AND uid=?');
                                 $q->bind_param('ssiiisii',$newHash,$target->path,$newValidity,$newUid,$oldId,$oldHash,$oldValidity,$oldUid); $q->execute();
                             }
+                        } elseif ($action==='read' && $a['typ']!=='osobni') {
+                            em_precteni_zaklad($db,$a,em_slozka($client,(string)$ref['folder']),(int)$ref['validity']);
+                            em_precteni_uloz($db,$a,$ref,!empty($d['value']));
                         } else { $flag=$action==='read'?'Seen':'Flagged'; if (!empty($d['value'])) $m->setFlag($flag); else $m->unsetFlag($flag); }
                     }
                     em_audit($db,(int)$a['id'],$action,(string)count($refs)); $out=[];
+                    if ($a['typ']!=='osobni') {
+                        $out['unread']=[(int)$a['id']=>em_precteni_pocet($db,$a,em_slozka($client,'INBOX'))];
+                    }
                 } elseif (str_starts_with($action,'folder_')) {
                     $path=(string)($d['folder']??''); $protected=array_merge(['INBOX'],array_values(em_config()['folders']??[]));
                     if ($action!=='folder_create' && in_array($path,$protected,true)) throw new EmailChyba('Zvláštní složku nelze přejmenovat nebo smazat.');
@@ -159,6 +248,7 @@ try {
                     elseif ($action==='folder_rename') {
                         $oldFolder=em_slozka($client,$path); $delimiter=$oldFolder->delimiter;
                         $oldFolder->rename($name,false);
+                        em_precteni_prejmenovat($db,(int)$a['id'],$path,$name,$delimiter);
                         // Prejmenovani slozky nebo jejiho predka zachovava vazbu pracovnich stavu na presnou novou cestu.
                         $s=$db->prepare('SELECT * FROM email_stav WHERE ucet=?'); $s->bind_param('i',$a['id']); $s->execute();
                         foreach ($s->get_result()->fetch_all(MYSQLI_ASSOC) as $work) {
@@ -173,7 +263,19 @@ try {
                         em_slozka($client,$path)->delete(false);
                     } else throw new EmailChyba('Neznámá akce složky.');
                     em_audit($db,(int)$a['id'],$action,$path?:$name); $out=[];
-                } elseif ($action==='send' || $action==='draft') $out=em_odeslat($db,$a,$d,$client,$action==='draft');
+                } elseif ($action==='send' || $action==='draft') {
+                    $out=em_odeslat($db,$a,$d,$client,$action==='draft');
+                    // Potvrzene adresy jsou ihned k dispozici i pred dalsi obnovou hlavicek; chyba adresare nesmi zpochybnit odeslani.
+                    if($action==='send' && !empty($out['sent'])) {
+                        try {
+                            if(em_kontakty_pripravene($db)) {
+                                $addresses=[];
+                                foreach(['to','cc','bcc'] as $field) foreach(preg_split('/[;,]/',(string)($d[$field]??'')) as $email) $addresses[]=['email'=>$email,'name'=>''];
+                                em_kontakty_uloz($db,(int)$a['id'],$addresses);
+                            }
+                        } catch(Throwable $e) {error_log('EMAIL_CONTACT_SAVE account='.(int)$a['id'].' class='.get_class($e));}
+                    }
+                }
                 elseif ($action==='repair_sent') {
                     $token=(string)($d['token']??''); $user=(int)$_SESSION['cb_user']['id_user'];
                     $s=$db->prepare('SELECT * FROM email_odeslani WHERE token=? AND ucet=? AND autor=? AND stav="odeslano"');
@@ -184,11 +286,13 @@ try {
             }
         }
     }
-    echo json_encode(['ok'=>true]+$out,JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE|JSON_THROW_ON_ERROR);
+    $response=json_encode(['ok'=>true]+$out,JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE|JSON_THROW_ON_ERROR);
+    cb_diag_response(strlen($response)); echo $response;
 } catch (Throwable $e) {
-    if (http_response_code()<400) http_response_code($e instanceof EmailChyba?400:502);
+    if (!headers_sent() && http_response_code()<400) http_response_code($e instanceof EmailChyba?400:502);
+    cb_diag_response();
     // Protokolové výjimky mohou obsahovat heslo nebo MIME; nesmějí do společného chybového logu.
-    echo json_encode(['ok'=>false,'error'=>$e instanceof EmailChyba?$e->getMessage():'Poštovní operaci se nepodařilo dokončit. Zkontrolujte připojení nebo přihlašovací údaje.'],JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE);
+    if(!$streamingOriginal)echo json_encode(['ok'=>false,'error'=>$e instanceof EmailChyba?$e->getMessage():'Poštovní operaci se nepodařilo dokončit. Zkontrolujte připojení nebo přihlašovací údaje.'],JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE);
 } finally {
     if ($mutationLock!=='' && isset($db)) { try { $s=$db->prepare('SELECT RELEASE_LOCK(?)'); $s->bind_param('s',$mutationLock); $s->execute(); } catch (Throwable) {} }
     if ($client) { try { $client->disconnect(); } catch (Throwable) {} }

@@ -1,5 +1,5 @@
 <?php
-// Zapisuje technickou chybu do log_chyby a podle zadání předá konkrétní adminskou push notifikaci.
+// Zapisuje technickou chybu do log_chyby a jeji skutecne ID predava do titulku a detailu administratorske notifikace.
 declare(strict_types=1);
 
 /*
@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 if (!function_exists('db_zapis_log_chyby')) {
 
+    /** Ulozi chybu a volitelnemu odesilaci preda ID prave vlozeneho zaznamu, nikoli ID uzivatele nebo notifikace. */
     function db_zapis_log_chyby(
         mysqli $conn,
         ?int $idUser,
@@ -59,6 +60,8 @@ if (!function_exists('db_zapis_log_chyby')) {
         );
 
         $stmt->execute();
+        // ID zachytime pred dalsimi INSERTy odesilace, ktere uz vytvareji jine zaznamy.
+        $idLogChyby = (int)$stmt->insert_id;
         $stmt->close();
 
         if (!$sendPush) {
@@ -73,7 +76,8 @@ if (!function_exists('db_zapis_log_chyby')) {
                 $radek,
                 1,
                 $pushTitle ?? 'Chyba IS',
-                $pushType
+                $pushType,
+                $idLogChyby > 0 ? $idLogChyby : null
             );
         } catch (Throwable $e) {
             error_log('[cb_error_push_failed] ' . get_class($e) . ': ' . $e->getMessage());

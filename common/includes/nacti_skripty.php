@@ -10,6 +10,11 @@
  * Sdělení správce mají společnou kartu a obsluhu náhledu příjemců i archivu.
  * Klient Restie dostava priznak jednorazove kontroly az po nacteni prihlaseneho IS.
  * Přehled členů rolí má vlastní delegovaný skript, nezávislý na ukládání práv.
+ * Vypinatelna diagnostika meri pouze Co-Link a E-mail bez zmeny jejich sitoveho transportu.
+ * Administracni prehled diagnostiky ma vlastni lokalni hodiny a detail pod radkem bez sitoveho dotazovani.
+ * Nová historie má společný odesílač, aktivní jen v modulech s výslovným serverovým kontextem.
+ * Nový přehled činnosti umožňuje nezávislé otevření více detailů.
+ * Přehled verzí se vykreslí jednou mimo měněné menu a otevírá se delegovanou obsluhou.
  */
 declare(strict_types=1);
 
@@ -31,6 +36,9 @@ window.CB_RESTIA_AFTER_LOGIN = <?= !empty($_SESSION['cb_restia_po_loginu']) ? 't
 // Fronta patří skutečnému loginu, nikoliv převzatému profilu práv.
 window.CB_AKTIVITA = <?= json_encode($cbNavUserId>0 ? ['url'=>cb_root_url('index.php?cb_aktivita=1'),'owner'=>(string)(int)($_SESSION['cb_id_login'] ?? 0).':'.$cbNavUserId] : null,JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR) ?>;
 </script>
+<?php // Společný přehled vydání zůstává dostupný i po výměně menu modulu. ?>
+<?php require __DIR__ . '/../modaly/modal_verze.php'; ?>
+<script src="<?= h(cb_public_url('js/verze.js') . '?v=' . filemtime(__DIR__ . '/../js/verze.js')) ?>" defer></script>
 <?php // Jednotná ochrana zápisových požadavků. ?>
 <script src="<?= h(cb_public_url('js/profil.js') . '?v=' . (string)filemtime(__DIR__ . '/../js/profil.js')) ?>"></script>
 <script src="<?= h(cb_public_url('js/ochrana_crf.js') . '?v=' . (is_file(__DIR__ . '/../js/ochrana_crf.js') ? (string)filemtime(__DIR__ . '/../js/ochrana_crf.js') : '1')) ?>"></script>
@@ -90,6 +98,8 @@ window.CB_AKTIVITA = <?= json_encode($cbNavUserId>0 ? ['url'=>cb_root_url('index
 <?php // Chovani modulu HR v prohlizeci. ?>
 <script src="<?= h($cbHrJsUrl) ?>"></script>
 <?php // Chovani modulu Helpdesk v prohlizeci. ?>
+<?php // Jednotný odesílač nové historie musí být dostupný před adaptérem Helpdesku. ?>
+<script src="<?= h(cb_root_url('common/js/cinnost.js').'?v='.(string)filemtime(__DIR__.'/../js/cinnost.js')) ?>"></script>
 <script src="<?= h(cb_root_url('helpdesk/hl_js/hl_helpdesk.js') . '?v=' . (is_file(__DIR__ . '/../../helpdesk/hl_js/hl_helpdesk.js') ? (string)filemtime(__DIR__ . '/../../helpdesk/hl_js/hl_helpdesk.js') : '1')) ?>"></script>
 <?php // Ovládání týdenních požadavků v modulu Směny. ?>
 <script src="<?= h(cb_root_url('smeny/js/pozadavky.js') . '?v=' . (is_file(__DIR__ . '/../../smeny/js/pozadavky.js') ? (string)filemtime(__DIR__ . '/../../smeny/js/pozadavky.js') : '1')) ?>"></script>
@@ -142,9 +152,15 @@ window.CB_MODULY_NAVIGACE = {
   initialAutoLoad: <?= in_array($cbInitialModule, ['smeny','email'], true) ? 'false' : 'true' ?>
 };
 </script>
+<?php // Diagnostika musi byt pripravena pred klientem E-mailu; vypnuta neodesila zaznamy. ?>
+<?php require_once __DIR__.'/../lib/diagnostika_vykonu.php'; ?>
+<script src="<?= h(cb_root_url('common/js/diagnostika_vykonu.js').'?v='.filemtime(__DIR__.'/../js/diagnostika_vykonu.js')) ?>" data-until="<?= cb_diag_boot($cbNavUserId) ?>" defer></script>
 <?php // E-mail reaguje take na vymenu pracovni plochy. ?>
 <script src="<?= h(cb_root_url('email/email.js').'?v='.filemtime(__DIR__.'/../../email/email.js')) ?>" defer></script>
 <?php // Klientska navigace mezi moduly. ?>
+<?php // Detail a hodiny Administrace preziji AJAX vymenu PP bez zdvojeni obsluh. ?>
+<script src="<?= h(cb_root_url('administrace/admin_js/admin_cinnost.js').'?v='.filemtime(__DIR__.'/../../administrace/admin_js/admin_cinnost.js')) ?>" defer></script>
+<script src="<?= h(cb_root_url('administrace/admin_js/admin_diagnostika.js').'?v='.filemtime(__DIR__.'/../../administrace/admin_js/admin_diagnostika.js')) ?>" defer></script>
 <script src="<?= h($cbModulyNavigaceJsUrl) ?>"></script>
 <?php // Responzivni chovani spolecne hlavicky a menu. ?>
 <script src="<?= h(cb_public_url('js/responzivni_shell.js') . '?v=' . (is_file(__DIR__ . '/../js/responzivni_shell.js') ? (string)filemtime(__DIR__ . '/../js/responzivni_shell.js') : '1')) ?>"></script>

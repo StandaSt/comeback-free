@@ -20,7 +20,9 @@ function co_nastaveni_ulozit(int $user, array $d): void
     $mb = filter_var($d['priloha_mb'] ?? null, FILTER_VALIDATE_INT);
     if ($mb === false || $mb < 1 || $mb > 2048) co_chyba('Příloha může mít 1–2048 MB.');
     co_transakce(static function() use ($user, $mb): void {
+        $old=(int)(co_nastaveni_db_nacist(true)[0]['priloha_mb']??0);
+        if ($old===$mb) return;
         co_nastaveni_db_ulozit($mb);
-        co_audit($user, 'nastaveni_zmeneno');
+        co_audit($user, 'nastaveni_zmeneno', null, ['pole'=>'Limit přílohy (MB)','puvodni'=>$old,'nova'=>$mb]);
     });
 }

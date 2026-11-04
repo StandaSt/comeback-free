@@ -1,8 +1,9 @@
 <?php
-/* E-mail: konfigurace, sifrovani a oddelena prava 800/801/802; pobockova posta vyzaduje roli 5 nebo 7, MAIN a overene PC. */
+/* E-mail: konfigurace, sifrovani, prava 800/801/802 a osobni pocty; pobockova posta vyzaduje roli 5 nebo 7, MAIN a overene PC. */
 declare(strict_types=1);
 require_once __DIR__.'/../common/lib/hr_pracoviste_main.php';
 require_once __DIR__.'/../common/lib/pobockove_pc.php';
+require_once __DIR__.'/precteni.php';
 
 /** Veřejné chyby modulu nikdy nepřebírají protokolové výpisy obsahující přihlašovací údaje. */
 final class EmailChyba extends RuntimeException {}
@@ -161,10 +162,9 @@ function em_audit(mysqli $db, int $account, string $action, string $object=''): 
 function em_neprecteno(mysqli $db): int
 {
     if (!em_pravo(800) || !em_schema($db)) return 0;
-    $ids=[];
+    $accounts=[];
     foreach (em_ucty($db) as $a) {
-        try { em_heslo($a); $ids[]=(int)$a['id']; } catch (EmailChyba) {}
+        try { em_heslo($a); $accounts[]=$a; } catch (EmailChyba) {}
     }
-    if (!$ids) return 0;
-    return (int)$db->query('SELECT COALESCE(SUM(neprecteno),0) n FROM email_cache WHERE ucet IN('.implode(',',$ids).')')->fetch_assoc()['n'];
+    return (int)array_sum(em_precteni_pocty($db,$accounts));
 }

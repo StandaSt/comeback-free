@@ -1,0 +1,5 @@
+/* Účel: Udržuje nové nezávislé detaily přes celou šířku tabulky a zachovává kompaktní ovládání historie. */
+[data-nc-prehled] tr[hidden]{display:none}
+[data-nc-prehled] .hc_detail_radek>td{max-width:none}
+[data-nc-prehled] .hc_tabulka td:nth-child(3){max-width:600px}
+[data-nc-prehled] [data-nc-toggle]{font:inherit;color:inherit;cursor:pointer;background:var(--cb-bg-panel,#fff);border:1px solid var(--cb-border,#bcc4d1);border-radius:4px;padding:3px 7px;white-space:nowrap}

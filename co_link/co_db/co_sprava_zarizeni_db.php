@@ -32,3 +32,9 @@ function co_zarizeni_aktivitu_obnovit(int $id): void
 {
     co_sql('UPDATE co_zarizeni SET naposledy=NOW() WHERE id=?', [$id])->close();
 }
+
+/** Ověřený vlastník a zámek drží změnu zařízení a audit pohromadě, nevrací žádný token. */
+function co_sprava_zarizeni_audit_nacist(int $id, int $user): array
+{
+    return co_rows('SELECT id,nazev,zruseno,endpoint,klic_public,klic_auth FROM co_zarizeni WHERE id=? AND uzivatel=? FOR UPDATE',[$id,$user])[0]??[];
+}

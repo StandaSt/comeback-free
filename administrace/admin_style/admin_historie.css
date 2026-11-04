@@ -13,9 +13,12 @@
 .hc_prehled .hc_poznamka{margin:0;font-size:11px;color:var(--cb-text-muted,#667085)}
 .hc_tabulka_wrap{overflow:auto;min-width:0}.hc_tabulka{width:100%;border-collapse:collapse;font-size:12px}
 .hc_tabulka th{text-align:left;background:var(--cb-bg-panel-soft,#edf0f6);white-space:nowrap}.hc_tabulka th,.hc_tabulka td{padding:5px 7px;border-bottom:1px solid var(--cb-border,#d8dde5);vertical-align:top}
-.hc_tabulka td{overflow-wrap:anywhere;max-width:330px}.hc_tabulka strong{font-weight:500}.hc_tabulka small{display:block;font-size:11px;color:var(--cb-text-muted,#667085)}
-.hc_cas{white-space:nowrap;font-variant-numeric:tabular-nums}.hc_stav{white-space:nowrap;font-size:11px}.hc_neuspech .hc_stav{color:var(--clr_cervena,#b42318)}
-.hc_strankovani,.hc_detail header{display:flex;align-items:center;justify-content:space-between;gap:10px}.hc_strankovani{font-size:12px;padding:3px 0}
+.hc_tabulka td{white-space:normal;overflow-wrap:anywhere;max-width:330px}.hc_tabulka strong{font-weight:500}.hc_tabulka small{display:block;font-size:11px;color:var(--cb-text-muted,#667085)}
+.hc_tabulka .hc_cas{white-space:nowrap;font-variant-numeric:tabular-nums}.hc_stav{white-space:nowrap;font-size:11px}.hc_neuspech .hc_stav{color:var(--clr_cervena,#b42318)}
+.hc_detail header{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .hc_detail{padding:10px;border:1px solid var(--cb-border,#bdc7d9);border-radius:6px;background:var(--cb-bg-panel,#fff);scroll-margin-top:10px}.hc_detail p{margin:6px 0;font-size:12px}
 .hc_detail dl{display:flex;flex-wrap:wrap;gap:8px 20px;margin:8px 0}.hc_detail dl div{max-width:400px;min-width:120px}.hc_detail dt{font-size:11px;color:var(--cb-text-muted,#667085)}.hc_detail dd{margin:2px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
 @media(max-width:800px){.hc_filtry label,.hc_filtry .hc_siroky{flex:1 1 140px;max-width:none}.hc_tabulka{min-width:850px}}
+
+/* Filtry i patičku obsluhuje společný filtry.js a vzhled cb_table_footer. */
+.hc_form{display:flex;flex-direction:column;gap:10px;min-width:0}.hc_form>.table-wrap{display:flex;flex-direction:column;gap:10px;min-width:0}

@@ -1,6 +1,7 @@
 <?php
 // Založí tiket ve zvolené oblasti v jedné transakci a při technickém selhání připraví konkrétní adminskou notifikaci.
 declare(strict_types=1);
+/* Účel: Zakládá tiket s první zprávou a přílohami; jejich činnost zapisuje společnou funkcí ve stejné transakci. */
 
 if (!defined('CB_HELPDESK_DISPATCH_INTERNAL')) {
     require_once __DIR__ . '/../../common/lib/session_boot.php';
@@ -12,6 +13,7 @@ require_once __DIR__ . '/../hl_lib/hl_pages.php';
 require_once __DIR__ . '/../hl_lib/hl_snapshot.php';
 require_once __DIR__ . '/../hl_lib/hl_notifikace.php';
 require_once __DIR__ . '/../hl_lib/hl_upload.php';
+require_once __DIR__ . '/../hl_lib/hl_cinnost.php';
 
 $redirectBase = cb_root_url('index.php?m=helpdesk&src=' . rawurlencode((string)($_SESSION['cb_helpdesk_source_module'] ?? 'provoz')));
 
@@ -145,6 +147,11 @@ try {
         }
     }
 
+    // Záznam činnosti se potvrdí stejným commitem jako založení tiketu.
+    cb_cinnost_zapsat(CbCinnostAkce::ZAZNAM_VYTVOREN, cb_helpdesk_cinnost_cil($conn,$idHelpdesk));
+    foreach ($uploadedAttachments as $attachment) {
+        cb_cinnost_zapsat(CbHelpdeskCinnost::PRILOHA_PRIDANA, cb_helpdesk_cinnost_cil($conn,$idHelpdesk)+['data'=>['id_priloha'=>(int)$attachment['id_helpdesk_priloha']]]);
+    }
     cb_helpdesk_snapshot_zapis($conn, $idHelpdesk, $idZprava, $idUser);
     cb_helpdesk_notifikace_adminum($conn, $idHelpdesk, $idZprava, $idUser, 'novy_pozadavek', 'Nový HelpDesk požadavek #' . (string)$idHelpdesk . ': ' . $predmet);
 

@@ -1,11 +1,17 @@
-// Ovládání HelpDesku, filtrů a formuláře; jména autorů včetně titulů přebírá z jednotného serverového zdroje.
+// Ovládání HelpDesku a významové události nové společné historie; obsah zpráv a formulářových textů se do ní nekopíruje.
 (function () {
   'use strict';
+  var viewedPage='';
+  // Odchod do jiného modulu ukončí návštěvu; vnitřní výměna pohledu nevytváří druhé otevření modulu.
+  document.addEventListener('cb:main-swapped',function(){if(!document.querySelector('[data-cb-helpdesk-module="1"]'))viewedPage='';});
 
+  // Inicializuje skutečně vložený pohled jednou a naváže jeho ovládání na společný odesílač.
   function initHelpdesk(root) {
     var scope = root && root.querySelector ? root : document;
     var container = scope.querySelector('[data-cb-helpdesk-module="1"]');
     if (!(container instanceof HTMLElement)) { return; }
+    if (container.dataset.cbCinnostInit==='1') return;
+    container.dataset.cbCinnostInit='1';
 
     if (typeof window.__CB_HELPDESK_CLEANUP__ === 'function') {
       window.__CB_HELPDESK_CLEANUP__();
@@ -14,6 +20,53 @@
     var apiUrl = container.getAttribute('data-cb-hd-api-url') || window.CB_ENDPOINT || 'index.php';
     var isAdmin = container.getAttribute('data-cb-hd-is-admin') === '1';
     var authorId = Number(container.getAttribute('data-cb-hd-author-id') || '0');
+    var activityPage=Number(container.dataset.cbCinnostPage);
+    var activityPages=JSON.parse(container.dataset.cbCinnostPages || '{}');
+    var fieldValues=new WeakMap(),fieldTimers=new Map();
+    // Každé místo ovládání používá stejné volání; identitu i modul doplní server.
+    function activity(action,parameters){if(window.CB_CINNOST)window.CB_CINNOST.zapsat(action,Object.assign({id_stranka:activityPage},parameters||{}));}
+    if(!viewedPage)activity(1);
+    if(viewedPage!==String(activityPage)){activity(2);viewedPage=String(activityPage);}
+    // Sdílený profil má vlastní obsluhu; Helpdesk zde zaznamená pouze otevření pohledu.
+    if(container.dataset.page==='uprava_profilu')return;
+
+    // Textová pole evidují pouze skutečnost změny. Hodnoty voleb mají číselníkové ID.
+    function activityField(field){
+      if(field.matches('#hl-ticket-typ'))return {id:6002,value:{chyba:1,dotaz:2,navrh:3}[field.value]};
+      if(field.matches('#hl-ticket-modul'))return {id:6003,value:{provoz:1,hr:2,smeny:3,ukoly:4,obecne:5}[field.value]};
+      if(field.matches('[name="urceni"]'))return {id:6004,value:{admin:1,reagovat:2,cist:3}[field.value]};
+      if(field.matches('#hl-ticket-predmet'))return {id:6007,value:field.value};
+      if(field.matches('#hl-ticket-popis'))return {id:6008,value:field.value};
+      if(field.matches('[data-cb-hd-reply-text]'))return {id:6009,value:field.value};
+      if(field.matches('#hl-ticket-prilohy'))return {id:6010,value:Array.from(field.files||[]).map(function(f){return f.name+':'+f.size;}).join('|')};
+      return null;
+    }
+    // Výchozí hodnoty se pouze zapamatují; naplnění nebo obnova formuláře nejsou ruční změna.
+    function rememberFields(){container.querySelectorAll('input,select,textarea').forEach(function(field){var def=activityField(field);if(def && !fieldValues.has(field))fieldValues.set(field,def.value);});}
+    // Jedna skutečná změna má jeden záznam i při posloupnosti input a change.
+    function changedField(field){
+      var def=activityField(field);if(!def)return;
+      var old=fieldValues.get(field),next=def.value;
+      if(def.id===6004){old=container.dataset.cbCinnostUrceni || '2';container.dataset.cbCinnostUrceni=String(next);if(Number(old)===next)return;}
+      if(old===next)return;
+      fieldValues.set(field,next);
+      var p={id_pole:def.id};if(activeDetailId)p.cil_id=Number(activeDetailId);
+      if(def.id<6007){p.data={puvodni:old===undefined?null:Number(old),nova:next};activity(6002,p);}else activity(6001,p);
+    }
+    // Před odesláním nebo odchodem se zachytí i poslední ještě odložená editace.
+    function flushFields(){fieldTimers.forEach(function(timer,field){clearTimeout(timer);changedField(field);});fieldTimers.clear();}
+    // Psaní se sloučí do změny po krátké odmlce, nikoli do záznamu každého znaku.
+    function fieldInput(event){var field=event.target;if(!(field instanceof Element)||!activityField(field))return;clearTimeout(fieldTimers.get(field));fieldTimers.set(field,setTimeout(function(){fieldTimers.delete(field);changedField(field);},600));}
+    // Potvrzená volba zruší čekající odklad stejného prvku.
+    function fieldChange(event){if(!(event.target instanceof Element))return;clearTimeout(fieldTimers.get(event.target));fieldTimers.delete(event.target);changedField(event.target);}
+    // Odeslání formuláře ještě není potvrzení jeho uložení.
+    function activitySubmit(){flushFields();activity(11);window.CB_CINNOST?.flush(true);}
+    // Menu se zaznamená ještě před výměnou pracovní plochy.
+    function activityMenu(event){
+      var link=event.target.closest?.('#cb-main-menu a');if(!link)return;
+      var url=new URL(link.href,location.href),page=activityPages[url.searchParams.get('hd')||'all'];
+      if(url.searchParams.get('m')==='helpdesk' && page){flushFields();activity(18,{id_stranka:page});window.CB_CINNOST?.flush(true);}
+    }
 
   function apiActionUrl(action) {
     var moduleName = window.CB_HELPDESK_SOURCE_MODULE || window.CB_ACTIVE_MAIN_MODULE || 'provoz';
@@ -367,14 +420,19 @@
     return listState instanceof HTMLElement && listState.getAttribute('data-cb-hd-include-closed') === '1';
   }
 
+  // Ruční výběr z upozornění zaznamená jen změněné filtry; běžný polling tento postup nevolá.
   function setFilterValue(value, unreadOnly) {
     var listState = getListStateBox();
     if (!(listState instanceof HTMLElement)) { return; }
-    listState.setAttribute('data-cb-hd-filter-value', normalizeFilterValue(value));
+    var oldFilter=getCurrentFilterValue(),nextFilter=normalizeFilterValue(value),oldUnread=getUnreadOnlyValue();
+    listState.setAttribute('data-cb-hd-filter-value', nextFilter);
     if (arguments.length > 1) {
       listState.setAttribute('data-cb-hd-unread-only', unreadOnly ? '1' : '0');
     }
     applyFilter();
+    var filterIds={all:0,new:1,active:2,resolved:3,closed:4,mine:5,watched:6};
+    if(oldFilter!==nextFilter)activity(5,{id_pole:6012,data:{puvodni:filterIds[oldFilter],nova:filterIds[nextFilter]}});
+    if(arguments.length>1 && oldUnread!==!!unreadOnly)activity(5,{id_pole:6011,data:{puvodni:oldUnread,nova:!!unreadOnly}});
   }
 
   function openUnreadFilter(value) {
@@ -425,12 +483,15 @@
 
   }
 
-  function closeActiveDetail() {
+  // Ruční odchod se odlišuje od interní obnovy detailu a od automatického filtrování.
+  function closeActiveDetail(userAction) {
+    if(activeDetailId){flushFields();if(userAction)activity(17,{cil_id:Number(activeDetailId)});}
     activeDetailId = '';
     refreshActiveRowUi();
     renderEmptyDetailPanel();
   }
 
+  // Obnova po odeslané reakci není nové uživatelské otevření stejného tiketu.
   function reloadOpenDetail(id) {
     var targetId = String(id || '').trim();
     if (targetId === '') {
@@ -440,7 +501,7 @@
     if (activeDetailId === targetId) {
       activeDetailId = '';
     }
-    loadDetail(targetId);
+    loadDetail(targetId,true);
   }
 
   function scrollDetailToBottom() {
@@ -474,6 +535,7 @@
     });
   }
 
+  // Příloha nese své ID pro historii kliknutí; původní adresa a způsob otevření zůstávají zachované.
   function renderAttachments(prilohy) {
     if (!Array.isArray(prilohy) || !prilohy.length) {
       return '';
@@ -486,7 +548,7 @@
       var name = text(p.puvodni_nazev || p.ulozeny_nazev || ('Příloha ' + String(i + 1)));
       var path = text(p.cesta || '');
       if (path === '') { continue; }
-      html += '<a class="helpdesk_attachment_link" href="' + esc(path) + '" target="_blank" rel="noopener">' + esc(name) + '</a>';
+      html += '<a class="helpdesk_attachment_link" data-cb-hd-priloha="' + Number(p.id_helpdesk_priloha || 0) + '" href="' + esc(path) + '" target="_blank" rel="noopener">' + esc(name) + '</a>';
     }
     html += '</div>';
     return html;
@@ -576,6 +638,7 @@
     return html;
   }
 
+  // Po vykreslení se zapamatují výchozí hodnoty nových polí bez záznamu falešné editace.
   function renderDetail(data, row) {
     var ticket = data && data.ticket ? data.ticket : {};
     var detailBox = getDetailPanelBox();
@@ -593,6 +656,7 @@
     html += '</div>';
 
     detailBox.innerHTML = html;
+    rememberFields();
     activeDetailId = text(ticket.id_helpdesk || row.getAttribute('data-hd-item') || '');
     updateRowHasNewReply(activeDetailId, data && data.has_new_reply ? data.has_new_reply : 0);
     updateRowViewCount(activeDetailId, ticket.pocet_zobrazeni, ticket.pocet_unikatnich_zobrazeni);
@@ -611,18 +675,19 @@
     }
   }
 
-  function loadDetail(id) {
+  // Otevření se eviduje až po úspěšném vykreslení odpovědi, nikoli při chybném načtení.
+  function loadDetail(id,automatic) {
     var row = getItemRow(id);
     if (!(row instanceof HTMLElement)) { return; }
     var detailBox = getDetailPanelBox();
     if (!(detailBox instanceof HTMLElement)) { return; }
 
     if (activeDetailId === String(id)) {
-      closeActiveDetail();
+      closeActiveDetail(!automatic);
       return;
     }
 
-    closeActiveDetail();
+    closeActiveDetail(!automatic);
     activeDetailId = String(id);
     scrollDetailToBottomOnRender = true;
     refreshActiveRowUi();
@@ -650,6 +715,7 @@
           return;
         }
         renderDetail(data, row);
+        if(!automatic)activity(3,{cil_id:Number(id)});
       })
       .catch(function () {
         detailBox.innerHTML = '<div class="helpdesk_detail_notice helpdesk_state_error ram_normal zaobleni_10">Spojení se serverem se nezdařilo. Zkontrolujte připojení a zkuste to znovu.</div>';
@@ -742,12 +808,15 @@
       });
   }
 
+  // Význam kliknutí předává historii; ukládání reakcí a sledování nadále potvrzují serverové handlery.
   function handleClick(e) {
     var target = e.target;
     if (!(target instanceof Element)) { return; }
+    var attachment=target.closest('[data-cb-hd-priloha]');
+    if(attachment && activeDetailId){activity(6005,{cil_id:Number(activeDetailId),data:{id_priloha:Number(attachment.dataset.cbHdPriloha)}});return;}
 
     if (target.closest('[data-cb-hd-close-detail="1"]')) {
-      closeActiveDetail();
+      closeActiveDetail(true);
       return;
     }
 
@@ -778,6 +847,7 @@
         return;
       }
       var replyId = replyBtn.getAttribute('data-cb-hd-send-reply') || '';
+      flushFields();activity(11,{cil_id:Number(replyId)});
       var replyPayload = {
         id_helpdesk: replyId,
         zprava: replyText
@@ -810,6 +880,7 @@
     }
   }
 
+  // Přepínač uzavřených tiketů zachová původní filtrování a doplní jeho číselníkový záznam.
   function handleChange(e) {
     var target = e.target;
     if (!(target instanceof HTMLInputElement) || !target.matches('[data-cb-hd-include-closed="1"]')) { return; }
@@ -817,10 +888,17 @@
     var listState = getListStateBox();
     if (!(listState instanceof HTMLElement)) { return; }
     listState.setAttribute('data-cb-hd-include-closed', target.checked ? '1' : '0');
+    activity(5,{id_pole:6001,data:{puvodni:!target.checked,nova:target.checked}});
     applyFilter();
   }
 
   var cleanupNewTicketForm = initNewTicketForm();
+  rememberFields();
+  container.addEventListener('input',fieldInput);
+  container.addEventListener('change',fieldChange);
+  container.addEventListener('submit',activitySubmit);
+  document.addEventListener('click',activityMenu,true);
+  document.addEventListener('cb:main-before-load',flushFields);
   container.addEventListener('click', handleClick);
   container.addEventListener('change', handleChange);
 
@@ -838,6 +916,12 @@
     }
 
   window.__CB_HELPDESK_CLEANUP__ = function () {
+      flushFields();
+      container.removeEventListener('input',fieldInput);
+      container.removeEventListener('change',fieldChange);
+      container.removeEventListener('submit',activitySubmit);
+      document.removeEventListener('click',activityMenu,true);
+      document.removeEventListener('cb:main-before-load',flushFields);
       cleanupNewTicketForm();
       container.removeEventListener('click', handleClick);
       container.removeEventListener('change', handleChange);

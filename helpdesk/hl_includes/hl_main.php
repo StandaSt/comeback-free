@@ -1,11 +1,12 @@
 <?php
-// Ucel souboru: Sestavuje seznam, detailni plochu a formular HelpDesku vcetne vsech oblasti pro novy tiket.
+// Ucel souboru: Sestavuje seznam, detail a formular HelpDesku i serverovy kontext jednotne evidence ovladani.
 declare(strict_types=1);
 // Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
 require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 require_once __DIR__ . '/../hl_lib/hl_prava.php';
 require_once __DIR__ . '/../hl_lib/hl_pages.php';
+require_once __DIR__ . '/../hl_lib/hl_cinnost.php';
 
 if (!function_exists('cb_helpdesk_ticket_h')) {
     function cb_helpdesk_ticket_h(string $value): string
@@ -221,10 +222,12 @@ foreach ($items as $item) {
     <?php require __DIR__ . '/hl_menu.php'; ?>
 <?php endif; ?>
 <?php if ($helpdeskView === 'uprava_profilu'): ?>
+    <div class="helpdesk_module_content" data-page="uprava_profilu" data-cb-helpdesk-module="1" data-cb-cinnost-url="<?= h(cb_root_url('index.php?helpdesk_action=cinnost')) ?>" data-cb-cinnost-owner="<?= (int)($_SESSION['cb_id_login'] ?? 0).':'.(int)$idUser ?>" data-cb-cinnost-page="<?= cb_helpdesk_cinnost_stranky()[$helpdeskView] ?>" data-cb-cinnost-pages="<?= h(json_encode(cb_helpdesk_cinnost_stranky(),JSON_THROW_ON_ERROR)) ?>">
     <?php require __DIR__ . '/../../common/pages/uprava_profilu.php'; ?>
+    </div>
     <?php return; ?>
 <?php endif; ?>
-<section class="pp helpdesk_module_content" data-module="helpdesk" data-page="<?= h($helpdeskView) ?>" data-cb-helpdesk-module="1" data-cb-hd-api-url="<?= h($helpdeskApiUrl) ?>" data-cb-hd-is-admin="<?= $isAdmin ? '1' : '0' ?>" data-cb-hd-author-id="<?= (int)$idUser ?>">
+<section class="pp helpdesk_module_content" data-module="helpdesk" data-page="<?= h($helpdeskView) ?>" data-cb-helpdesk-module="1" data-cb-hd-api-url="<?= h($helpdeskApiUrl) ?>" data-cb-hd-is-admin="<?= $isAdmin ? '1' : '0' ?>" data-cb-hd-author-id="<?= (int)$idUser ?>" data-cb-cinnost-url="<?= h(cb_root_url('index.php?helpdesk_action=cinnost')) ?>" data-cb-cinnost-owner="<?= (int)($_SESSION['cb_id_login'] ?? 0).':'.(int)$idUser ?>" data-cb-cinnost-page="<?= cb_helpdesk_cinnost_stranky()[$helpdeskView] ?>" data-cb-cinnost-pages="<?= h(json_encode(cb_helpdesk_cinnost_stranky(),JSON_THROW_ON_ERROR)) ?>">
 <header class="pp_header helpdesk_page_header">
 <div class="helpdesk_list_header">
   <h1><?= h($helpdeskPageTitle) ?></h1>

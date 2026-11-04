@@ -6,7 +6,7 @@ require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 // Ucel rozsahu: Prehled uzivatelu cte mista vykonu prace a zobrazuje vsechny MAIN.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
 
-/* Datove operace pro spravu uzivatelu vcetne slotu z aktualni faze HR migrace. */
+/* Datove operace pro spravu uzivatelu vcetne slotu HR a cteciho prehledu prihlaseni, zarizeni a obnovy hesla. */
 
 function cb_admin_uzivatele_sloty_text(string $rawSlots): string
 {
@@ -144,12 +144,33 @@ function cb_admin_uzivatele_nacti(mysqli $db, array $source): array
     return ['rows'=>$rows,'total'=>$total,'page'=>$page,'pages'=>$pages,'per_page'=>$perPage,'per_options'=>$perOptions,'filters'=>$filters,'sort'=>$sort,'dir'=>$dir,'first_row'=>$total === 0 ? 0 : $offset + 1,'last_row'=>min($offset + $perPage, $total)];
 }
 
-/** Detail účtu načte současné HR části jména včetně samostatného titulu. */
+/** Detail účtu doplní o stav přístupu; provozní dotazy se spouštějí jen pro rozbalenou osobu. */
 function cb_admin_uzivatel_detail(mysqli $db, int $idUser): ?array
 {
     if ($idUser <= 0) { return null; }
-    $stmt = $db->prepare('SELECT u.id_user,p.id_person,p.id_firma,ou.jmeno,ou.prijmeni,ou.druhe_jmeno,ou.titul_za,u.email,(SELECT t.telefon FROM hr_telefon t WHERE t.id_person=p.id_person AND t.platny=1 AND t.hlavni=1 ORDER BY t.id_telefon DESC LIMIT 1) AS telefon,p.aktivni FROM user u INNER JOIN hr_person p ON p.id_person=u.id_user AND p.id_user=u.id_user LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=p.id_person WHERE u.id_user=? LIMIT 1');
+    $stmt = $db->prepare('SELECT u.id_user,p.id_person,p.id_firma,ou.jmeno,ou.prijmeni,ou.druhe_jmeno,ou.titul_za,u.email,(u.heslo_hash IS NOT NULL AND TRIM(u.heslo_hash)<>\'\') AS ma_heslo,(SELECT t.telefon FROM hr_telefon t WHERE t.id_person=p.id_person AND t.platny=1 AND t.hlavni=1 ORDER BY t.id_telefon DESC LIMIT 1) AS telefon,p.aktivni FROM user u INNER JOIN hr_person p ON p.id_person=u.id_user AND p.id_user=u.id_user LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=p.id_person WHERE u.id_user=? LIMIT 1');
     $stmt->bind_param('i', $idUser); $stmt->execute(); $user=$stmt->get_result()->fetch_assoc(); $stmt->close();
     if (!is_array($user)) { return null; }
+    $stmt = $db->prepare('SELECT
+        (SELECT MAX(kdy) FROM user_login WHERE id_user=? AND akce=1) AS posledni_vstup,
+        (SELECT MAX(kdy) FROM user_bad_login WHERE email=?) AS posledni_chyba,
+        (SELECT COUNT(*) FROM user_bad_login WHERE email=? AND kdy>=NOW()-INTERVAL 15 MINUTE) AS chyby_15_min,
+        (SELECT kdy + INTERVAL 15 MINUTE + INTERVAL 1 SECOND FROM user_bad_login
+         WHERE email=? AND kdy>=NOW()-INTERVAL 15 MINUTE ORDER BY kdy DESC,id_bad_login DESC LIMIT 1 OFFSET 4) AS blokace_do,
+        (SELECT COUNT(*) FROM push_zarizeni WHERE id_user=? AND aktivni=1) AS aktivnich_zarizeni');
+    $stmt->bind_param('isssi', $idUser, $user['email'], $user['email'], $user['email'], $idUser);
+    $stmt->execute(); $user['pristup_info'] = $stmt->get_result()->fetch_assoc(); $stmt->close();
+
+    // Aktivní odběr má přednost; bez něj zachováme informaci o poslední historické registraci.
+    $stmt = $db->prepare('SELECT nazev,aktivni,vytvoreno,naposledy FROM push_zarizeni WHERE id_user=? ORDER BY aktivni DESC,id DESC LIMIT 1');
+    $stmt->bind_param('i', $idUser); $stmt->execute(); $user['zarizeni_info'] = $stmt->get_result()->fetch_assoc(); $stmt->close();
+
+    // Pozvánky sdílejí tabulku tokenů, proto obnovu vybíráme podle skutečné žádosti typu 21.
+    $stmt = $db->prepare('SELECT a.cas,a.vysledek,a.detail_json,t.pouzito,t.zruseno,t.platnost_do,
+        (t.platnost_do<=NOW()) AS vyprselo
+        FROM user_akce_new a LEFT JOIN user_prvni_vstup_token t ON t.id=(
+            SELECT tok.id FROM user_prvni_vstup_token tok WHERE tok.id_user=a.id_user AND tok.vytvoreno<=a.cas ORDER BY tok.vytvoreno DESC,tok.id DESC LIMIT 1)
+        WHERE a.id_user=? AND a.id_user_akce_typ=21 ORDER BY a.cas DESC,a.id_user_akce DESC LIMIT 1');
+    $stmt->bind_param('i', $idUser); $stmt->execute(); $user['obnova_info'] = $stmt->get_result()->fetch_assoc(); $stmt->close();
     return $user;
 }

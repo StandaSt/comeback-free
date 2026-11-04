@@ -2,6 +2,7 @@
  * Ucel souboru: Definuje vzhled administrace, spravy roli a individualnich vyjimek prav.
  * Velikosti pisma vychazeji z pevne typograficke skaly aplikace.
  * Vyvojovy vyber Prebrani prav ma vysku podle obsahu, ne podle tabulkoveho panelu.
+ * Rozbaleny uzivatel ma kompaktni prehled pristupu, zarizeni a prihlaseni.
  */
 
 .admin_pp{
@@ -585,6 +586,17 @@
 .admin_user_detail_row .admin_users_form{ padding:14px; }
 .admin_user_detail_transition{ width:100%; max-height:0; overflow:hidden; opacity:0; contain:inline-size; box-sizing:border-box; transition:max-height .18s ease,opacity .18s ease; }
 .admin_user_detail_row.is-open .admin_user_detail_transition{ max-height:900px; opacity:1; }
+
+/* Provozní údaje účtu jsou ve třech sloupcích, na úzké obrazovce pod sebou. */
+.admin_user_summary{padding:12px 14px;}
+.admin_user_summary_grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 20px;}
+.admin_user_summary_grid section{min-width:0;}
+.admin_user_summary_grid h3{margin:0 0 8px;font-size:var(--cb-font-14);color:var(--cb-text-main);}
+.admin_user_summary_grid dl{display:grid;gap:3px;margin:0;}
+.admin_user_summary_grid dt{color:var(--cb-text-muted);font-size:var(--cb-font-12);}
+.admin_user_summary_grid dd{margin:0 0 6px;overflow-wrap:anywhere;font-size:var(--cb-font-14);}
+.admin_user_summary_links{display:flex;flex-wrap:wrap;gap:10px 20px;margin-top:8px;}
+@media(max-width:800px){.admin_user_summary_grid{grid-template-columns:1fr;}.admin_user_detail_row.is-open .admin_user_detail_transition{max-height:none;}}
 
 .admin_user_branch_picker{ display:grid; gap:8px; min-width:250px; }
 .admin_user_branch_all{ font-weight:700; }
