@@ -3,6 +3,7 @@
  * Stejny planovac pro nahled i zapis chrani pozdejsi rucni zmeny, validuje hodnoty podle DB a zachovava neplatne zaznamy.
  * Nacteni nic nespousti; puvodni import dokumentu zustava samostatny.
  * Starsi texty pohlavi z manifestu prevadi na ID aktualniho HR ciselniku.
+ * Pracovni sloty importuje jako rovnocenna prirazeni bez hlavni priority.
  */
 declare(strict_types=1);
 require_once __DIR__.'/hr_import_smlouvy.php';
@@ -22,7 +23,7 @@ function hru_tables(): array
         'hr_telefon'=>'id_telefon,id_person,id_telefon_typ,telefon,telefon_normalizovany,hlavni,poznamka,id_user_zadal,vytvoreno,platny,zruseno',
         'hr_adresa'=>'id_adresa,id_person,ulice,cp,mesto,psc,stat,typ,id_user_zadal,vytvoreno,platny,zruseno',
         'hr_zdravotni_pojisteni'=>'id_zdravotni_pojisteni,id_person,stat,kod_pojistovny,nazev_pojistovny,cislo_pojistence,cislo_prukazu,platnost_od,platnost_do,poznamka,id_user_zadal,vytvoreno,platny,zruseno,id_user_zrusil',
-        'hr_slot'=>'id_hr_slot,id_person,id_slot,hlavni,platnost_od,platnost_do,id_user_zadal,vytvoreno,platny,zruseno',
+        'hr_slot'=>'id_hr_slot,id_person,id_slot,platnost_od,platnost_do,id_user_zadal,vytvoreno,platny,zruseno',
         'hr_funkce'=>'id_hr_funkce,id_person,id_funkce,hlavni,v_treninku,platnost_od,platnost_do,platny,id_person_zadal,vytvoreno',
         'hr_pracoviste'=>'id_pracoviste,id_person,id_pob,hlavni,platnost_od,platnost_do,id_user_zadal,vytvoreno,platny,zruseno',
         'hr_pracoviste_main'=>'id_main,id_person,id_pob,platnost_od,platnost_do,id_user_zadal,vytvoreno,platny,zruseno',
@@ -293,7 +294,7 @@ function hru_redirect(HrUdajePlanner $p, mysqli $db): void
             foreach ($p->find($table,['id_person'=>$old]) as $row) {
                 // Historicke zarazeni duplicity neprebije aktualni zarazeni spravne osoby.
                 $values=['id_person'=>$target,'platny'=>0,'zruseno'=>date('Y-m-d H:i:s')];
-                if (array_key_exists('hlavni',$row)) $values['hlavni']=0;
+                if ($table!=='hr_slot' && array_key_exists('hlavni',$row)) $values['hlavni']=0;
                 $p->update($table,$row,$values,$target);
             }
         }
@@ -524,8 +525,8 @@ function hru_entities(HrUdajePlanner $p, mysqli $db): void
         if (count($slot)!==1) throw new HrUdajeImportException('Chybí slot '.$r['slot'].'.');
         $pid=$r['id_person']; $id=(int)$slot[0]['id_slot'];
         if ($p->find('hr_slot',['id_person'=>$pid,'id_slot'=>$id,'platny'=>1])) continue;
-        if ($p->find('hr_slot',['id_person'=>$pid,'hlavni'=>1,'platny'=>1])) { $p->warn($pid,'Slot ze zdroje '.$r['slot'].' se liší od hlavního slotu; ponechán k ověření.'); continue; }
-        $p->insert('hr_slot',['id_person'=>$pid,'id_slot'=>$id,'hlavni'=>1,'platnost_od'=>$r['od'],'platny'=>1],$pid);
+        // Dolozene sloty mohou existovat soubezne, zadny z nich nema hlavni prioritu.
+        $p->insert('hr_slot',['id_person'=>$pid,'id_slot'=>$id,'platnost_od'=>$r['od'],'platny'=>1],$pid);
     }
     $branchCounts=array_count_values(array_column($p->plan['workplaces'],'id_person'));
     foreach ($p->plan['workplaces'] as $r) {

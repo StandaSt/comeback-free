@@ -2,26 +2,39 @@
 declare(strict_types=1);
 // Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
 require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
-/* Účel: Načítá veřejné směny a vlastní oznámení, formátuje jejich neměnný detail a stručné texty pro existující Web Push. */
+/* Účel: Načítá veřejné směny a vlastní pobočky s volbou výhradně zveřejněného IS zdroje; zpracuje vlastní oznámení a jejich texty pro Web Push. */
 require_once __DIR__.'/../../common/lib/smeny_verejny_zdroj.php';
 
-/** Vlastní směny jsou přes všechny pobočky, cizí pouze z oprávněných poboček plánovače. */
-function cb_smeny_verejne_smeny(mysqli $db,string $week,int $person,array $branches,bool $all): array
+/** Vlastní směny jsou přes všechny pobočky, cizí jen z povolených; interní režim nepoužívá externí náhradu. */
+function cb_smeny_verejne_smeny(mysqli $db,string $week,int $person,array $branches,bool $all,bool $internalOnly=false): array
 {
     if($all && (!cb_smeny_planovani_vidi() || $branches===[]))return [];
     if(!$all && $person<=0)return [];
-    if($all)return cb_smeny_verejne_pobocky($db,$week,$branches);
-    $sql='SELECT v.*,p.nazev pobocka,cs.slot,' . cb_osoba_jmeno_sql('ou.id_person',true) . ' pracovnik FROM ('.cb_smeny_verejny_zdroj_sql().') v JOIN pobocka p ON p.id_pob=v.id_pob JOIN cis_slot cs ON cs.id_slot=v.id_slot LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=v.id_person WHERE v.start_day=? AND v.id_person=? ORDER BY v.zacatek,p.nazev,cs.slot,pracovnik';
+    if($all)return cb_smeny_verejne_pobocky($db,$week,$branches,$internalOnly);
+    $sql='SELECT v.*,p.nazev pobocka,cs.slot,' . cb_osoba_jmeno_sql('ou.id_person',true) . ' pracovnik FROM ('.cb_smeny_verejny_zdroj_sql($internalOnly).') v JOIN pobocka p ON p.id_pob=v.id_pob JOIN cis_slot cs ON cs.id_slot=v.id_slot LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=v.id_person WHERE v.start_day=? AND v.id_person=? ORDER BY v.zacatek,p.nazev,cs.slot,pracovnik';
     $stmt=cb_smeny_planovani_sql($db,$sql,'si',[$week,$person]);$rows=$stmt->get_result()->fetch_all(MYSQLI_ASSOC);$stmt->close();return $rows;
 }
 
-/** Načte směny pouze z poboček povolených uživateli; případné zúžení zajišťuje místní filtr stránky. */
-function cb_smeny_verejne_pobocky(mysqli $db,string $week,array $branches): array
+/** Načte povolené pobočky ze zvoleného zdroje; výchozí zdroj zachová chování samostatné historie. */
+function cb_smeny_verejne_pobocky(mysqli $db,string $week,array $branches,bool $internalOnly=false): array
 {
     if($branches===[])return [];
     $ids=implode(',',array_map('intval',array_keys($branches)));
-    $sql='SELECT v.*,p.nazev pobocka,cs.slot,' . cb_osoba_jmeno_sql('ou.id_person',true) . ' pracovnik FROM ('.cb_smeny_verejny_zdroj_sql().') v JOIN pobocka p ON p.id_pob=v.id_pob JOIN cis_slot cs ON cs.id_slot=v.id_slot LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=v.id_person WHERE v.start_day=? AND v.id_pob IN ('.$ids.') ORDER BY v.zacatek,p.nazev,cs.slot,pracovnik';
+    $sql='SELECT v.*,p.nazev pobocka,cs.slot,' . cb_osoba_jmeno_sql('ou.id_person',true) . ' pracovnik FROM ('.cb_smeny_verejny_zdroj_sql($internalOnly).') v JOIN pobocka p ON p.id_pob=v.id_pob JOIN cis_slot cs ON cs.id_slot=v.id_slot LEFT JOIN ' . cb_osoby_zdroj_sql() . ' ou ON ou.id_person=v.id_person WHERE v.start_day=? AND v.id_pob IN ('.$ids.') ORDER BY v.zacatek,p.nazev,cs.slot,pracovnik';
     $stmt=cb_smeny_planovani_sql($db,$sql,'s',[$week]);$rows=$stmt->get_result()->fetch_all(MYSQLI_ASSOC);$stmt->close();return $rows;
+}
+
+/** Nabídka vlastní osoby zůstává stejná i při přepnutí na prázdný týden; nezpřístupňuje cizí rozpis. */
+function cb_smeny_verejne_osobni_pobocky(mysqli $db, int $person, string $from, string $to, bool $internal): array
+{
+    if ($person<=0) return [];
+    $stmt=cb_smeny_planovani_sql($db,'SELECT DISTINCT v.id_pob,p.nazev FROM ('.cb_smeny_verejny_zdroj_sql($internal).') v
+        JOIN pobocka p ON p.id_pob=v.id_pob WHERE v.id_person=? AND v.start_day>=? AND v.start_day<=?'
+        .' ORDER BY p.nazev','iss',[$person,$from,$to]);
+    $options=[];
+    foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $row) $options[(int)$row['id_pob']]=$row['nazev'];
+    $stmt->close();
+    return $options;
 }
 
 /** Nepotvrzené zprávy neomezujeme vybraným týdnem, aby nezmizela starší změna. */

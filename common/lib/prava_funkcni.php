@@ -5,6 +5,7 @@ declare(strict_types=1);
  * Ucel souboru: Obsahuje jediny seznam prav, ktera jsou skutecne zapojena v aplikaci.
  * E-mail pouziva prava 800, 801 a 802 pro vstup, spolecnou postu a spravu pripojeni.
  * Administrace tento seznam pouze cte; stav se nikde rucne neuklada.
+ * Soubezna prihlaseni jsou povolena vsem a nemaji vlastni pravo.
  * Pri zapojeni dalsiho prava do kontrol pristupu se jeho ID doplni take sem.
  */
 
@@ -12,7 +13,7 @@ if (!function_exists('cb_prava_funkcni_ids')) {
     function cb_prava_funkcni_ids(): array
     {
         return [
-            100, 101, 102, 103, 105, 106, 107, 108, 109,
+            100, 101, 102, 103, 105, 106, 107, 109,
             200, 201, 202, 203, 204, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 220,
             300, 301, 305, 306, 307, 311, 312, 313, 314, 316, 318, 319,
             400, 403, 404, 405, 407, 409,

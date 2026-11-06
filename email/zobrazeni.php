@@ -1,5 +1,5 @@
 <?php
-/* E-mail: samostatne HTML/CSS prijate posty, izolovane styly a zachovani odkazu, tabulek i CID obrazku. */
+/* E-mail: samostatne HTML/CSS prijate posty s jednoznacnym UTF-8, izolovane styly a zachovani odkazu, tabulek i CID obrazku. */
 declare(strict_types=1);
 
 /** Hodnoty CSS smi popisovat vzhled, nikoli sitove zdroje, skripty nebo presah mimo dokument zpravy. */
@@ -54,7 +54,7 @@ function em_zobrazeni_html(string $html, bool $remote=false, bool $mimeCid=false
 {
     if($html==='')return '';em_knihovny();
     $doc=new DOMDocument();$old=libxml_use_internal_errors(true);
-    try {$doc->loadHTML('<?xml encoding="UTF-8">'.$html,LIBXML_NONET|LIBXML_NOERROR|LIBXML_NOWARNING);}
+    try {$doc->loadHTML('<?xml encoding="UTF-8">'.em_html_utf8($html),LIBXML_NONET|LIBXML_NOERROR|LIBXML_NOWARNING);}
     finally {libxml_clear_errors();libxml_use_internal_errors($old);}
     $css='';foreach(iterator_to_array($doc->getElementsByTagName('style')) as $style) {
         if(strlen($style->textContent)<=131072)try{$css.=em_zobrazeni_css((new Sabberworm\CSS\Parser($style->textContent))->parse());}catch(Throwable){}

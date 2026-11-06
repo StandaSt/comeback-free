@@ -1,3 +1,4 @@
+// Dokumenty se prenaseji po jednom s moznosti opakovani; HR zapis a obnova karty zustavaji spolecne pro cely vyber.
 // Ovladani oblasti, vice MAIN a HR formularu; karta chrani neulozene zmeny a uklada portret pouze jako ctvercovy vyrez.
 (() => {
     'use strict';
@@ -836,6 +837,7 @@
 
     // Vychozi hodnoty vznikaji az po normalizaci telefonu, dat a zavislych poli.
     const employeeForms = new WeakMap();
+    const employeeDocumentTransfers = new WeakMap();
     const employeeSaveDisabled = new WeakMap();
     let employeeSaving = false;
 
@@ -945,6 +947,34 @@
         initEmployeeForms(card);
     };
 
+    // Jednotlive prenosy nemaji limit souctu velikosti. Uspesne tokeny si pri chybe pamatujeme pro dalsi pokus.
+    const prepareEmployeeDocuments = async (form, body, card, key) => {
+        const input=form.querySelector('[data-hr-document-files]');
+        if (!input) return;
+        const files=[...input.files],purpose=String(body.get('cb_action')),person=String(body.get('id_person')),type=String(body.get('id_dokument_typ') || '0');
+        body.delete(input.name);
+        if (!files.length) return;
+        let pending=employeeDocumentTransfers.get(form);
+        if (!pending || pending.purpose!==purpose || pending.person!==person || pending.type!==type || pending.files.length!==files.length || files.some((file,i)=>pending.files[i]!==file)) {
+            pending={purpose,person,type,files,tokens:files.map(()=>null),keys:files.map(()=>Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join(''))};
+            employeeDocumentTransfers.set(form,pending);
+        }
+        for (let i=0;i<files.length;i++) {
+            if (pending.tokens[i]) continue;
+            employeeNotice(card,key,`Nahrávám dokument ${i+1} z ${files.length}: ${files[i].name}`,true);
+            const upload=new FormData();
+            for (const [name,value] of body) if (!(value instanceof File)) upload.append(name,value);
+            upload.set('cb_action','hr_zamestnanec_dokument_pripravit');upload.set('document_purpose',purpose);upload.set('upload_key',pending.keys[i]);
+            upload.append(input.name,files[i],files[i].name);
+            const response=await fetch(form.action,{method:'POST',credentials:'same-origin',headers:{'X-Comeback-Form':'1','Accept':'application/json'},body:upload});
+            const result=await response.json();
+            if (!response.ok || result.success!==true || !/^[a-f0-9]{64}$/.test(result.token || '')) throw new Error(window.CB_CHYBY.responseMessage(response,result,'Přenos dokumentu selhal. Zkuste uložení znovu; již přenesené dokumenty se neopakují.'));
+            pending.tokens[i]=result.token;
+        }
+        for (const token of pending.tokens) body.append('dokument_tokeny[]',token);
+        employeeNotice(card,key,'Ukládám dokumenty a změny…',true);
+    };
+
     // Karta zachyti bublajici submit az po puvodnich validacich formulare, ale pred shell handlerem.
     const submitEmployeeForm = async event => {
         const form = event.target;
@@ -965,6 +995,7 @@
         controls.forEach(control => { control.disabled = true; });
         form.setAttribute('aria-busy', 'true');
         try {
+            await prepareEmployeeDocuments(form,body,card,key);
             const response = await fetch(form.action, {
                 method: 'POST', credentials: 'same-origin',
                 headers: { 'X-Comeback-Form': '1', 'Accept': 'application/json' }, body
@@ -974,6 +1005,7 @@
                 throw new Error(window.CB_CHYBY.responseMessage(response, result, 'Formulář se nepodařilo odeslat.'));
             }
             stored = result.success === true;
+            if (stored) employeeDocumentTransfers.delete(form);
             // Odmitnuty zapis neobnovujeme: jeho konkretni duvod nesmi prekryt chyba dalsiho pozadavku.
             if (!stored) {
                 notice = employeeNotice(card, key, result.message, false);
@@ -986,7 +1018,7 @@
                 throw new Error('Server nevrátil očekávanou kartu zaměstnance.');
             }
             // Samostatná změna portrétu zachová původní režim karty i její otevřenou záložku.
-            if (key !== 'photo') url.searchParams.set('upravit', '1');
+            if (!['photo','documents'].includes(key)) url.searchParams.set('upravit', '1');
             // Partial oznaceni zajisti, ze spolecny index respektuje m=hr misto vychoziho Provozu.
             const refresh = await fetch(url, { credentials: 'same-origin', headers: { 'X-Comeback-PP-Only': '1', 'X-Comeback-Partial': '1' } });
             const html = await window.CB_CHYBY.readHtml(refresh, 'Obnovení karty zaměstnance selhalo.');
@@ -1010,6 +1042,17 @@
 
     // Navrat na puvodni hodnotu opet ztlumi ulozeni; platnost se kontroluje az pri odeslani.
     ['input', 'change'].forEach(type => document.addEventListener(type, event => {
+        // Kazdy HTTP prenos obsahuje jen jeden dokument, proto se kontroluje pouze jeho limit a pocet vyberu.
+        const field=event.target;
+        if (field.matches?.('[data-hr-document-files]')) {
+            const files=[...field.files];
+            const error=files.length>Number(field.dataset.maxCount)?'Vyberte méně dokumentů.':
+                files.some(file=>file.size>Number(field.dataset.maxFile))?'Jeden z dokumentů překračuje limit velikosti.':'';
+            field.setCustomValidity(error);
+            // Popisek akce vzdy odpovida aktualnimu poctu vybranych souboru, i po vycisteni vyberu.
+            const save=field.form?.querySelector('[data-hr-document-save]');
+            if (save) save.textContent=files.length>1?'Uložit vybrané dokumenty':'Uložit vybraný dokument';
+        }
         const form = event.target.form;
         if (form && employeeForms.has(form)) syncEmployeeSave(form);
     }));

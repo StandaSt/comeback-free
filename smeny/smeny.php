@@ -45,6 +45,7 @@ require_once __DIR__ . '/sm_lib/sm_oznameni_potvrzeni.php';
 require_once __DIR__ . '/sm_lib/sm_prehled_tyden.php';
 require_once __DIR__ . '/sm_lib/sm_zadane_pozadavky.php';
 require_once __DIR__ . '/sm_lib/sm_prehled_data.php';
+require_once __DIR__ . '/sm_lib/sm_prehled_osobni.php';
 
 cb_session_guard_entry();
 
@@ -78,8 +79,18 @@ $smStyl = $smPage !== 'bez_prava' ? cb_smeny_styl_nacist(db()) : 1;
 if (in_array($smPage, ['prehled','zadane_pozadavky'], true)) {
     $smDb = db();
     $smReadWeeks = cb_smeny_planovani_tydny();
-    $smReadWeek = cb_smeny_prehled_tyden($smReadWeeks, $_GET);
+    // Nový Přehled nabízí pouze týdny, které umí otevřít také cílové Naplánované směny.
+    $smReadWeek = $smPage === 'prehled'
+        ? $smReadWeeks[max(0,min(count($smReadWeeks)-1,(int)($_GET['week']??0)))]
+        : cb_smeny_prehled_tyden($smReadWeeks, $_GET);
     $smReadBranches = cb_smeny_planovani_vidi() ? cb_smeny_sablony_pobocky($smDb) : [];
+}
+
+// Přehled připraví osobní souhrn podle HR slotu, jinak ponechá oprávněný rozsah vedení.
+if ($smPage === 'prehled') {
+    $smOverviewPerson = cb_smeny_planovani_rozsah_osoba($smDb);
+    $smOverviewPersonal = cb_smeny_prehled_ma_slot($smDb, $smOverviewPerson);
+    $smOverviewData = $smOverviewPersonal ? cb_smeny_prehled_osobni($smDb, $smOverviewPerson) : null;
 }
 
 if ($smPage === 'pozadavky') {

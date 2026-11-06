@@ -1,5 +1,5 @@
 <?php
-/* E-mail: CLI kontrola posty na pozadi; sdilena pripojeni bere z centralni spravy v DB, osobni rucni rezim vynechava. */
+/* E-mail: CLI kontrola posty; osobni pripojeni ridi spolecny rezim vlastnika, rucni hesla worker nepouziva. */
 declare(strict_types=1);
 if (PHP_SAPI!=='cli') { http_response_code(404); exit; }
 require_once __DIR__.'/posta.php';
@@ -21,12 +21,14 @@ try {
     $cfg=em_config(); $db=em_worker_db();
     if (!em_schema($db)) throw new EmailChyba('Nejprve nainstalujte modul.');
     if ((int)$db->query("SELECT GET_LOCK('email:worker',0)")->fetch_row()[0]!==1) exit;
-    $accounts=$db->query('SELECT * FROM email_ucet WHERE aktivni=1 AND rezim="is" AND heslo_sifra IS NOT NULL ORDER BY id')->fetch_all(MYSQLI_ASSOC);
+    // Osobni rezim se posuzuje podle vlastnika nize; technicka kopie rezimu uctu neni druhym rozhodovacim mistem.
+    $accounts=$db->query('SELECT * FROM email_ucet WHERE aktivni=1 AND heslo_sifra IS NOT NULL ORDER BY id')->fetch_all(MYSQLI_ASSOC);
     $failed=0;
     foreach ($accounts as $a) {
         $client=null;
         try {
             if ($a['typ']==='osobni') {
+                if(em_osobni_rezim($db,(int)$a['id_user'],$a['rezim'])['mode']!=='is')continue;
                 $p=em_osoba($db,(int)$a['id_user']);
                 if (!$p['manager'] || (int)$p['id_firma']!==(int)$a['id_firma']) continue;
             } elseif ($a['typ']==='pobocka') {

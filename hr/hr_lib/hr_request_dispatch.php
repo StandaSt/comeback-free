@@ -5,6 +5,7 @@
  * do sve samostatne migrace.
  * Akce na testovaci osoby odmita pred predanim zapisovacimu handleru.
  * Všechny podporované změny potvrzuje až se společným auditem HR.
+ * Vice dokumentu zamestnance predava spolecne obsluze nahravani.
  */
 declare(strict_types=1);
 require_once __DIR__ . '/hr_audit.php';
@@ -60,6 +61,15 @@ function cb_hr_request_dispatch(mysqli $db, string $page, array $user): void
     if ($action === 'hr_zamestnanec_upravit') {
         hr_post_zamestnanec_uprava($db, (int)($user['id_user'] ?? 0));
         return;
+    }
+    if ($action === 'hr_zamestnanec_dokumenty_pridat') {
+        require_once __DIR__.'/hr_dokumenty_upload.php';
+        hr_post_zamestnanec_dokumenty($db,(int)($user['id_user']??0));
+        return;
+    }
+    if ($action === 'hr_zamestnanec_dokument_pripravit') {
+        require_once __DIR__.'/hr_dokumenty_upload.php';
+        hr_post_dokument_pripravit($db,(int)($user['id_user']??0));
     }
     if ($action === 'hr_zamestnanec_foto_ulozit') {
         require_once __DIR__ . '/hr_post_zamestnanec_foto.php';

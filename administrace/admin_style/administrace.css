@@ -3,11 +3,19 @@
  * Velikosti pisma vychazeji z pevne typograficke skaly aplikace.
  * Vyvojovy vyber Prebrani prav ma vysku podle obsahu, ne podle tabulkoveho panelu.
  * Rozbaleny uzivatel ma kompaktni prehled pristupu, zarizeni a prihlaseni.
+ * Správa změn IS má úsporný formulář nad společným přehledem verzí.
  */
 
 .admin_pp{
   min-width:0;
 }
+
+.admin_verzovani{display:block;}
+.admin_verze_form{display:grid;gap:10px;margin-bottom:20px;max-width:760px;}
+.admin_verze_form label{display:grid;gap:5px;}
+.admin_verze_form select{width:180px;max-width:100%;}
+.admin_verze_form textarea{width:100%;min-height:90px;resize:vertical;box-sizing:border-box;}
+.admin_verze_paging{display:flex;gap:16px;margin-top:12px;}
 
 .admin_empty{
   display:grid;

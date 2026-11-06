@@ -1,14 +1,15 @@
 <?php
-/* Co-Link: overi cesty HR fotografii a priradi je osobam bez dalsich osobnich udaju. */
+/* Co-Link: přiřadí aktuální fotografie ze společné složky HR přímo podle ID osob. */
 declare(strict_types=1);
+require_once __DIR__ . '/../../common/lib/osoba_foto.php';
 
-/** Povolena je jen puvodni cesta HR a nahodny nazev s podporovanou priponou. */
-function co_adresar_fotografie(array $rows): array
+/** Stejný zdroj jako v HR nepotřebuje načítat cesty fotografií z osobních údajů. */
+function co_adresar_fotografie(array $ids): array
 {
     $photos = [];
-    foreach ($rows as $r) {
-        $photo = (string)($r['foto'] ?? '');
-        if (preg_match('~^hr/img/zamestnanci/[a-f0-9]{32}\.(jpg|png|webp)$~D', $photo)) $photos[(int)$r['id_person']] = '../' . $photo;
+    foreach ($ids as $id) {
+        $photo = cb_osoba_foto((int)$id);
+        if ($photo !== null) $photos[(int)$id] = '../' . $photo;
     }
     return $photos;
 }

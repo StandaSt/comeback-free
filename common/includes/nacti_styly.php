@@ -3,7 +3,9 @@
  * Ucel souboru: Vypise CSS odkazy do head spolecne HTML kostry.
  * Nacita take izolovane styly E-mailu pro jeho navigaci a PP.
  * Nacita globalni vzhled i styly jednotlivych modulu ve stejnem poradi jako dosud.
+ * Mobilni hlavicka se nacita posledni, aby sjednotila uzky rezim i s E-mailem.
  * Tooltipy maji samostatny spolecny styl pouzitelny take v izolovanem Co-Linku.
+ * Dvousloupcovy vyber sdili jednotny vzhled mezi moduly.
  */
 declare(strict_types=1);
 ?>
@@ -16,6 +18,7 @@ declare(strict_types=1);
   <link rel="stylesheet" href="<?= h(cb_asset_url('style/global.css')) ?>">
   <?php // Stejny vzhled tooltipu sdili hlavni IS i samostatny komunikator. ?>
   <link rel="stylesheet" href="<?= h(cb_asset_url('style/tooltip.css')) ?>">
+  <link rel="stylesheet" href="<?= h(cb_root_url('common/style/vyber_sloupce.css').'?v='.filemtime(__DIR__.'/../style/vyber_sloupce.css')) ?>">
   <?php // Globalni styl modalnich oken. ?>
   <link rel="stylesheet" href="<?= h(cb_asset_url('style/modal_alert.css')) ?>">
   <?php // Styl modulu Provoz. ?>
@@ -33,4 +36,6 @@ declare(strict_types=1);
   <?php // Styl střízlivého loaderu uvnitř PP. ?>
   <link rel="stylesheet" href="<?= h($cbPageLoaderCssUrl) ?>">
   <link rel="stylesheet" href="<?= h(cb_root_url('email/email.css').'?v='.filemtime(__DIR__.'/../../email/email.css')) ?>">
+  <?php // Kompaktni hlavicka meni pouze uzky prihlaseny IS; desktop zustava ve spolecnem stylu. ?>
+  <link rel="stylesheet" href="<?= h(cb_public_url('style/hlavicka_mobil.css') . '?v=' . (string)filemtime(__DIR__ . '/../style/hlavicka_mobil.css')) ?>">
 </head>

@@ -1,16 +1,18 @@
 <?php
 declare(strict_types=1);
-/* Účel: Jediný veřejný zdroj směn pro zaměstnance a provoz. Publikace nahrazuje celý týden pobočky. */
+/* Účel: Jediný veřejný zdroj směn pro zaměstnance a provoz; umí výhradně zveřejněné IS verze i dosavadní zdroj s externí historií. */
 
 /** Vrací SQL poddotaz bez parametrů; filtr období/osoby přidává volající. Pracovní verze se sem nedostane. */
-function cb_smeny_verejny_zdroj_sql(): string
+function cb_smeny_verejny_zdroj_sql(bool $internalOnly=false): string
 {
-    return 'SELECT r.tyden_od start_day,DATE(DATE_SUB(s.zacatek,INTERVAL 6 HOUR)) datum,
+    $internal='SELECT r.tyden_od start_day,DATE(DATE_SUB(s.zacatek,INTERVAL 6 HOUR)) datum,
         r.id_pob,hp.id_user,s.id_person,s.id_slot,TIME(s.zacatek) cas_od,TIME(s.konec) cas_do,
         s.zacatek,s.konec,2 zdroj,s.id_smeny_smena,r.id_smeny_rozpis,s.verze
         FROM smeny_rozpis r JOIN smeny_smena s ON s.id_smeny_rozpis=r.id_smeny_rozpis AND s.verze=r.zverejnena_verze
-        JOIN hr_person hp ON hp.id_person=s.id_person
-        UNION ALL
+        JOIN hr_person hp ON hp.id_person=s.id_person';
+    // Přehled IS nesmí ani číst externí plán; ostatní odběratelé zachovají původní zdroj.
+    if ($internalOnly) return $internal;
+    return $internal.' UNION ALL
         SELECT e.start_day,e.datum,e.id_pob,e.id_user,hp.id_person,e.id_slot,e.cas_od,e.cas_do,
         TIMESTAMP(e.datum,e.cas_od),TIMESTAMP(DATE_ADD(e.datum,INTERVAL (e.cas_do<=e.cas_od) DAY),e.cas_do),
         1,NULL,NULL,NULL FROM smeny_plan e

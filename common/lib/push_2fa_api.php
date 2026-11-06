@@ -5,6 +5,7 @@ declare(strict_types=1);
 /*
  * 2FA API (polling z PC + zrušení požadavku)
  * Po schvaleni pres QR nabidne obnovu registrace, pokud puvodni push odber zanikl.
+ * Uctum s PINem potvrzuje soubeznou notifikaci bez obchazeni povinne prvni zmeny PINu.
  *
  * Použití:
  * - GET ?check=1   -> vrátí stav aktuální 2FA výzvy ze session (cb_2fa_token)
@@ -21,6 +22,13 @@ require_once __DIR__ . '/app.php';
 require_once __DIR__ . '/system.php';
 require_once __DIR__ . '/../config/secrets.php';
 header('Content-Type: application/json; charset=utf-8');
+
+// PIN ma vlastni omezenou session; puvodni polling nesmi vynulovat jeho stav pri pouhe expiraci notifikace.
+if (isset($_SESSION['cb_pin_ceka'])) {
+    require_once __DIR__ . '/prvni_vstup.php';
+    require_once __DIR__ . '/login_pin_vstup.php';
+    cb_pin_push_vstup();
+}
 
 function cb_2fa_cleanup_session(): void
 {

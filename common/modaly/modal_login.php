@@ -5,6 +5,7 @@ declare(strict_types=1);
  * Ucel souboru: Zobrazeni prihlasovaciho formulare a predani identity
  * aktualni push registrace serveru pro rozpoznani registrovaneho mobilu.
  * Nabizi take prihlaseni jednorazovym e-mailovym odkazem po overeni hesla.
+ * U uctu bez hesla nabizi primo pod vysvetlenim prechod na nastaveni hesla s predvyplnenym e-mailem.
  */
 
 require_once __DIR__ . '/../funkce/last_aktualizace_systemu.php';
@@ -17,7 +18,9 @@ $loginDbOk = !empty($cbLoginDbOk);
 $loginDisabled = $loginDbOk ? '' : ' disabled';
 $loginFlash = trim((string)($_SESSION['cb_flash'] ?? ''));
 $loginEmailPrefill = trim((string)($_SESSION['cb_password_reset_email_prefill'] ?? ''));
-unset($_SESSION['cb_flash']);
+// Jednorazovy priznak pochazi z overeni uctu; pri dalsim zobrazeni nezustane nabidka jinemu uzivateli.
+$loginNeedsPassword = !empty($_SESSION['cb_login_nastavit_heslo']) && $loginEmailPrefill !== '';
+unset($_SESSION['cb_flash'], $_SESSION['cb_login_nastavit_heslo']);
 ?>
 <div id="cb-login-overlay" class="modal-overlay" aria-modal="true" role="dialog" aria-label="Přihlášení Comeback">
   <div class="modal">
@@ -66,9 +69,21 @@ unset($_SESSION['cb_flash']);
           <span class="modal-btn-main"><span aria-hidden="true">✉</span> Přihlásit bez mobilu</span>
         </button>
       </div>
+      <?php if (!$loginNeedsPassword): ?>
       <p class="modal-login-link"><a href="<?= h(cb_root_url('?zapomenute_heslo=1')) ?>">Nastavit nové heslo</a></p>
+      <?php endif; ?>
       <p class="modal-login-status" id="cbLoginStatus" aria-live="polite"><?= h($loginFlash) ?></p>
     </form>
+    <?php if ($loginNeedsPassword): ?>
+    <?php // Samostatny formular nevyzaduje znovu zadat heslo a jen otevre existujici cestu; e-mail se jeste neposila. ?>
+    <form method="post" action="<?= h(cb_root_url('')) ?>" class="modal-form" id="cbLoginSetPasswordForm">
+      <input type="hidden" name="cb_action" value="nove_heslo_formular">
+      <input type="hidden" name="email" value="<?= h($loginEmailPrefill) ?>">
+      <div class="modal-actions">
+        <button class="modal-btn primary" type="submit"<?= $loginDisabled ?>><span class="modal-btn-main">Nastavit nové heslo</span></button>
+      </div>
+    </form>
+    <?php endif; ?>
   </div>
   <?php if (!empty($cbLoginBackgroundLabel)): ?>
   <p class="modal-login-count"><?= h((string)$cbLoginBackgroundLabel) ?></p>

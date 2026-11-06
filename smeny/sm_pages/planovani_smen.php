@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-/* Účel: Plánovač zveřejňuje verzovaný rozpis a jeho schválení; popisky osob včetně titulů přebírá z datové vrstvy. */
+/* Účel: Plánovač zveřejňuje verzovaný rozpis a jeho schválení; šablonu nabízí v záhlaví a odděluje volbu půlhodin od zapisovacích nastavení. Popisky osob přebírá z datové vrstvy. */
 $smPlanBranchId = (int)($_GET['id_pob'] ?? array_key_first($smPlanBranches) ?? 0);
 $smPlanWeekIndex = max(0,min(count($smPlanWeeks)-1,(int)($_GET['week'] ?? 1)));
 $smPlanWeek = $smPlanWeeks[$smPlanWeekIndex];
@@ -51,6 +51,20 @@ $smPlanFields = static function () use ($smPlanBranchId,$smPlanWeekIndex,$smPlan
     <?php if(!$smPlanOwnLock && $smPlanLock===null && $smPlanSchemaReady && $smPlanBranch && $smPlanCanStart && (cb_smeny_planovani_edituje() || cb_smeny_planovani_publikuje())): ?>
       <form method="post" action="<?= h($smPlanUrl) ?>"><?php $smPlanFields(); ?><button name="action" value="smeny_plan_zamek" class="smeny_primary_button">Plánovat zvolený týden</button></form>
     <?php endif; ?>
+    <?php if ($smPlan!==null): ?>
+        <form method="post" action="<?= h($smPlanUrl) ?>" class="smeny_planning_template_select"><?php $smPlanFields(); ?>
+          <input type="hidden" name="action" value="smeny_plan_sablona_obnovit">
+          <?php // Název je uloženým otiskem podkladu; smazanou šablonu nepřepínáme samovolně na jinou. ?>
+          <?php $smCurrentTemplateFound=$smPlan['sablona_nazev']===null || in_array($smPlan['sablona_nazev'],array_column($smPlanTemplates,'nazev'),true); ?>
+          <label>Šablona:
+            <select name="id_smeny_sablona" aria-label="Šablona plánování" onchange="this.form.requestSubmit()"<?= !$smPlanCanEdit || $smPlan['stav']!=='rozpracovany'?' disabled':'' ?><?= !$smPlanCanEdit?' title="Nejprve zahajte plánování zvoleného týdne."':'' ?>>
+              <?php if(!$smCurrentTemplateFound): ?><option value="" selected disabled><?= h($smPlan['sablona_nazev']) ?></option><?php endif; ?>
+              <option value="0"<?= $smPlan['sablona_nazev']===null?' selected':'' ?>>Bez šablony</option>
+              <?php foreach($smPlanTemplates as $template): ?><option value="<?= (int)$template['id_smeny_sablona'] ?>"<?= $template['nazev']===$smPlan['sablona_nazev']?' selected':'' ?>><?= h($template['nazev']) ?></option><?php endforeach; ?>
+            </select>
+          </label>
+        </form>
+    <?php endif; ?>
   </header>
   <div class="smeny_planning_top">
   <form method="get" action="<?= h(cb_root_url('index.php')) ?>" class="smeny_planning_filters">
@@ -58,6 +72,8 @@ $smPlanFields = static function () use ($smPlanBranchId,$smPlanWeekIndex,$smPlan
     <label>Pobočka<select name="id_pob" onchange="this.form.requestSubmit()"><?php foreach($smPlanBranches as $row): ?><option value="<?= (int)$row['id_pob'] ?>"<?= (int)$row['id_pob']===$smPlanBranchId?' selected':'' ?>><?= h($row['nazev']) ?></option><?php endforeach; ?></select></label>
     <label>Týden<select name="week" onchange="this.form.requestSubmit()"><?php foreach($smPlanWeeks as $index=>$week): ?><option value="<?= $index ?>"<?= $index===$smPlanWeekIndex?' selected':'' ?>><?= h($week['start']->format('j. n.').'–'.$week['end']->format('j. n. Y').($index===0?' – aktuální týden':'').($smPlanNow<$week['deadline']?' – požadavky otevřené':'')) ?></option><?php endforeach; ?></select></label>
   </form>
+  </div>
+  <div class="smeny_planning_options">
   <?php if($smPlanBranch): ?>
   <form method="post" action="<?= h($smPlanUrl) ?>" class="smeny_planning_settings"><?php $smPlanFields(); ?>
     <input type="hidden" name="action" value="smeny_plan_nastaveni">
@@ -66,6 +82,10 @@ $smPlanFields = static function () use ($smPlanBranchId,$smPlanWeekIndex,$smPlan
       <label><input type="checkbox" name="bez_ohledu_na_pobocku" value="1"<?= $smPlanAllBranches?' checked':'' ?> onchange="this.form.requestSubmit()"> Bez ohledu na oblast</label>
     </fieldset>
   </form>
+  <?php endif; ?>
+  <?php // Půlhodiny jsou jen volbou zobrazení a patří vedle nastavení, mimo jejich zapisovací formulář. ?>
+  <?php if($smPlan!==null && (($smPlanCanEdit && $smPlan['stav']==='rozpracovany') || $smStyl===1)): ?>
+    <label class="smeny_template_resolution" data-smeny-planning-resolution><input type="checkbox" data-smeny-half-hours> po 30 min.</label>
   <?php endif; ?>
   <?php if(!$smPlanOwnLock && $smPlanLock!==null): ?><div class="smeny_planning_lock">
     <p>Plánování směn je nyní používáno uživatelem <?= h($smPlanLock['jmeno']) ?>.</p>
@@ -85,23 +105,7 @@ $smPlanFields = static function () use ($smPlanBranchId,$smPlanWeekIndex,$smPlan
         <button name="action" value="smeny_plan_zalozit" class="smeny_primary_button">Založit pracovní rozpis</button>
       </form><?php endif; ?></div>
     <?php else: ?>
-      <div class="smeny_planning_day_toolbar">
-        <?php if(($smPlanCanEdit && $smPlan['stav']==='rozpracovany') || $smStyl===1): ?>
-          <label class="smeny_template_resolution" data-smeny-planning-resolution><input type="checkbox" data-smeny-half-hours> po 30 min.</label>
-        <?php endif; ?>
-        <form method="post" action="<?= h($smPlanUrl) ?>" class="smeny_planning_template_select"><?php $smPlanFields(); ?>
-          <input type="hidden" name="action" value="smeny_plan_sablona_obnovit">
-          <?php // Název je uloženým otiskem podkladu; smazanou šablonu nepřepínáme samovolně na jinou. ?>
-          <?php $smCurrentTemplateFound=$smPlan['sablona_nazev']===null || in_array($smPlan['sablona_nazev'],array_column($smPlanTemplates,'nazev'),true); ?>
-          <label>Šablona:
-            <select name="id_smeny_sablona" aria-label="Šablona plánování" onchange="this.form.requestSubmit()"<?= !$smPlanCanEdit || $smPlan['stav']!=='rozpracovany'?' disabled':'' ?><?= !$smPlanCanEdit?' title="Nejprve zahajte plánování zvoleného týdne."':'' ?>>
-              <?php if(!$smCurrentTemplateFound): ?><option value="" selected disabled><?= h($smPlan['sablona_nazev']) ?></option><?php endif; ?>
-              <option value="0"<?= $smPlan['sablona_nazev']===null?' selected':'' ?>>Bez šablony</option>
-              <?php foreach($smPlanTemplates as $template): ?><option value="<?= (int)$template['id_smeny_sablona'] ?>"<?= $template['nazev']===$smPlan['sablona_nazev']?' selected':'' ?>><?= h($template['nazev']) ?></option><?php endforeach; ?>
-            </select>
-          </label>
-        </form>
-      </div>
+      <div class="smeny_planning_day_toolbar"></div>
       <?php if(($smPlanCanEdit && $smPlan['stav']==='rozpracovany') || $smStyl===1): ?>
         <div class="smeny_planner" data-current-branch="<?= $smPlanBranchId ?>" data-smeny-planner data-can-edit="<?= $smPlanCanEdit && $smPlan['stav']==='rozpracovany'?'1':'0' ?>" data-all-branches="<?= $smPlanAllBranches?'1':'0' ?>">
           <div class="smeny_planner_days">

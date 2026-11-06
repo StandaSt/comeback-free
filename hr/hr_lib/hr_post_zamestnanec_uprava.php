@@ -4,6 +4,7 @@ declare(strict_types=1);
 /* Audit HR se potvrzuje spolecne se zmenou; neuspesny pokus zustava odlisnou udalosti. */
 require_once __DIR__ . '/hr_audit.php';
 require_once __DIR__.'/hr_casove_zmeny.php';
+require_once __DIR__.'/hr_dokumenty_upload.php';
 
 // Ucel pracovist: Pri ukonceni osoby uzavre mista vykonu prace i mnozinu MAIN, puvodni povolene pobocky zustavaji archivem.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
@@ -13,6 +14,7 @@ require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
  * Soubor nema HTML vystup a po zpracovani vraci uzivatele zpet na kartu zamestnance.
  * Pred kazdym ulozenim kontroluje cil podle jednotneho osobniho rozsahu HR.
  * Ulozeni ponechava kartu v editaci; odchod do jine zalozky ji ukonci.
+ * Ukonceni potvrzuje i nepovinne dokumenty v jedne transakci s auditem.
  */
 require_once __DIR__ . '/../hr_db/hr_zamestnanci_pristup.php';
 
@@ -322,10 +324,11 @@ function hr_post_pracovni_preruseni_uzavrit(mysqli $db, int $zadalUser): void
     }
 }
 
-/** Eviduje ukonceni aktualniho pracovniho pomeru. */
+/** Eviduje ukonceni a nepovinne dokumenty spolecne; chyba souboru ci auditu vraci cely zapis. */
 function hr_post_pracovni_pomer_ukoncit(mysqli $db, int $zadalUser): void
 {
     $idPerson = (int)($_POST['id_person'] ?? 0);
+    $documentPaths=[];
     try {
         if (!cb_pravo_ma(307)) {
             throw new CbUserVisibleException('Nemáte právo ukončit pracovní poměr.');
@@ -357,6 +360,7 @@ function hr_post_pracovni_pomer_ukoncit(mysqli $db, int $zadalUser): void
             throw new CbUserVisibleException('Vyberte platný důvod ukončení.');
         }
         hr_casove_schema_vyzaduj($db);
+        $documents=hr_dokumenty_vyber($idPerson,$zadalUser,'hr_pracovni_pomer_ukoncit',0);
         hr_audit_transaction_begin($db);
         cb_hr_osobu_zamkni($db,$idPerson);
         $stmt = $db->prepare('INSERT INTO hr_pracovni_ukonceni (id_pracovni_vztah, id_pracovni_ukonceni_typ, datum_oznameni, datum_ukonceni, poznamka, id_user_zadal, vytvoreno) VALUES (?, ?, ?, ?, ?, ?, NOW())');
@@ -379,10 +383,19 @@ function hr_post_pracovni_pomer_ukoncit(mysqli $db, int $zadalUser): void
             $stmt->close();
         }
         hr_casovy_stav_obnovit($db,$idPerson,$zadalUser);
+        if ($documents) {
+            $documentType=$db->query("SELECT id_dokument_typ FROM hr_cis_dokument_typ WHERE kod_souboru='ukonceni_vztahu' AND aktivni=1")->fetch_assoc();
+            hr_dokumenty_uloz($db,$idPerson,$zadalUser,$documents,(int)($documentType['id_dokument_typ']??0),$documentPaths);
+        }
         hr_audit_transaction_commit($db);
+        // Soubory potvrdime az s auditem; jeho selhani se tak vrati do stejneho catch jako chyba DB.
+        hr_audit_dokoncit($db,true,'Ukončení pracovního poměru bylo uloženo.');
+        hr_dokumenty_potvrd($documents);
+        $documentPaths=[];
         hr_audit_form_finish(hr_pracovni_pomer_url($idPerson), true, 'Ukončení pracovního poměru bylo uloženo.');
     } catch (Throwable $e) {
         try { hr_audit_transaction_rollback($db); } catch (Throwable $ignored) {}
+        hr_dokumenty_vrat_soubory($documentPaths);
         hr_audit_form_finish(hr_pracovni_pomer_url($idPerson), false, cb_hr_chyba_text($e, 'Ukončení pracovního poměru', ['table' => 'hr_pracovni_ukonceni']), $_POST);
     }
 }
@@ -406,7 +419,8 @@ function hr_pracovni_pomer_datum_z_postu(string $value, string $label): string
     $value = str_replace(',', '.', trim($value));
     $date = DateTimeImmutable::createFromFormat('!d.m.Y', $value);
     $errors = DateTimeImmutable::getLastErrors();
-    if ($date === false || ($errors !== false && ($errors['warning_count'] > 0 || $errors['error_count'] > 0)) || $date->format('d.m.Y') !== $value) {
+    // Jednociferny den i mesic jsou platny vstup; neexistujici datum se nesmi prelit do dalsiho mesice.
+    if (!preg_match('/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/D',$value,$parts) || !checkdate((int)($parts[2]??0),(int)($parts[1]??0),(int)($parts[3]??0)) || $date === false || ($errors !== false && ($errors['warning_count'] > 0 || $errors['error_count'] > 0))) {
         throw new CbUserVisibleException('Vyplňte platné ' . $label . ' ve formátu DD.MM.RRRR.');
     }
     return $date->format('Y-m-d');

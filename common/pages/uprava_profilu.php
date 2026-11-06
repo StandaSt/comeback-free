@@ -3,6 +3,7 @@ declare(strict_types=1);
 // Udaje a zobrazovane jmeno osoby vcetne titulu sdili centralni cteci zdroj.
 require_once __DIR__ . '/../lib/osoba_jmeno.php';
 /* Účel: Zobrazuje vlastní profil a formuláře pro přihlašovací heslo a e-mail IS.
+ * Formular zmeny PINu nabizi pouze uctu, ktery ma PIN skutecne nastaveny.
  * Osobni a pracovni udaje se zobrazuji pouze pro cteni; MAIN se zobrazi jako cely vycet.
  */
 require_once __DIR__ . '/../lib/profil.php';
@@ -85,5 +86,25 @@ $profilOko = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke
                     </fieldset>
                 </form>
             </article>
+        <?php if (!empty($profil['pin_povoleno'])): ?>
+            <article class="blok common_profile_card">
+                <h2 class="blok_title">Změna přihlašovacího PINu</h2>
+                <?php if (empty($profil['pin_pripraven'])): ?>
+                    <p class="common_profile_hint">Změna PINu zatím není připravena. Kontaktujte správce IS.</p>
+                <?php else: ?>
+                    <form method="post" action="<?= h(cb_root_url('index.php')) ?>" class="common_profile_form">
+                        <input type="hidden" name="cb_action" value="profil_pin">
+                        <input type="hidden" name="cb_crf" value="<?= h(cb_crf_token()) ?>">
+                        <input type="hidden" name="profil_modul" value="<?= h($profilModule) ?>">
+                        <label>Současné heslo<input type="password" name="soucasne_heslo" autocomplete="current-password" required></label>
+                        <label>Současný PIN<input type="password" name="soucasny_pin" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" autocomplete="off" required></label>
+                        <label>Nový PIN<input type="password" name="novy_pin" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" autocomplete="off" required></label>
+                        <label>Nový PIN znovu<input type="password" name="novy_pin_znovu" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" autocomplete="off" required></label>
+                        <p class="common_profile_hint">PIN má čtyři číslice. Nový PIN musí být jiný než současný.</p>
+                        <button class="common_profile_submit common_profile_submit--right" type="submit">Změnit PIN</button>
+                    </form>
+                <?php endif; ?>
+            </article>
+        <?php endif; ?>
     </div>
 </section>

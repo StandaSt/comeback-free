@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-/* Účel: Vyhodnocuje souhlasy nad přesnými verzemi směn a uchovává okamžik prvního definitivního schválení. Využívá existující oznámení a audit. */
+/* Účel: Vyhodnocuje souhlasy nad přesnými verzemi směn, poskytuje text i strukturovaný stav přehledům a uchovává první definitivní schválení. Využívá existující oznámení a audit. */
 
 /** Čtecí kontrola připravené migrace nikdy sama neupravuje schéma ani data. */
 function cb_smeny_souhlasy_schema(mysqli $db): bool
@@ -91,10 +91,16 @@ function cb_smeny_souhlasy_doplnit(mysqli $db,array &$rows): void
         $states=cb_smeny_souhlasy_stavy($planShifts,array_filter($notices,static fn(array $n):bool=>$n['id_smeny_rozpis']===$plan));
         foreach($planShifts as $shift) {
             $state=$states[(int)$shift['id_person'].':'.$shift['klic_smeny']];
-            $byId[(int)$shift['id_smeny_smena']]=($shift['definitivni_od']!==null?'Definitivní rozpis · ':'').$state['text'];
+            $state['definitivni']=$shift['definitivni_od']!==null;
+            $byId[(int)$shift['id_smeny_smena']]=$state;
         }
     }
-    foreach($rows as &$row)if(isset($byId[(int)($row['id_smeny_smena']??0)]))$row['souhlas_stav']=$byId[(int)$row['id_smeny_smena']];
+    // Přehled rozhoduje podle příznaků, nikoli porovnáváním přeložených textů.
+    foreach($rows as &$row)if(isset($byId[(int)($row['id_smeny_smena']??0)])) {
+        $state=$byId[(int)$row['id_smeny_smena']];
+        $row['souhlas']=$state;
+        $row['souhlas_stav']=($state['definitivni']?'Definitivní rozpis · ':'').$state['text'];
+    }
     unset($row);
 }
 

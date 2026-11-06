@@ -2,6 +2,7 @@
 
  * Ucel souboru: Ridi klientskou navigaci mezi moduly a internimi strankami aplikace.
  * Soubecne nacteni stejne hlida promenna moduleLoadRunning.
+ * Sdileny zamek operaci blokuje dalsi ovladani i navigaci do dokonceni vsech drzitelu.
  * Výběr týdnů je přímo ve stránkách Směn; navigace zachovává jejich parametry i po AJAX výměně obsahu.
  * Chybové odpovědi načítání modulů čte společná knihovna, aby se neztratil konkrétní důvod.
  * Události navigace umožňují historii rozlišit požadavek, dokončené zobrazení i klik bez přechodu.
@@ -30,6 +31,7 @@
   var pageBusyHandles = [];
   var pageBusyHandleSequence = 0;
   var pageBusyLoaderTimer = 0;
+  var pageBusyInertElements = [];
 
   function makeShellKey(moduleName, params){
     var normalized = new URLSearchParams();
@@ -150,8 +152,16 @@
     }, 100);
   }
 
+  // Inert zabrani i ovladani ramcu a dialogu; puvodni stav vratime az po posledni operaci.
   function startPageBusy(text, detail) {
     var handle = ++pageBusyHandleSequence;
+    if (pageBusyHandles.length === 0) {
+      pageBusyInertElements = [root].concat(Array.from(root.querySelectorAll('dialog'))).map(function (element) {
+        var previous = element.inert;
+        element.inert = true;
+        return { element: element, previous: previous };
+      });
+    }
     pageBusyHandles.push(handle);
     document.body.classList.add('cb-page-busy');
     root.setAttribute('aria-busy', 'true');
@@ -166,6 +176,8 @@
     if (index === -1) return;
     pageBusyHandles.splice(index, 1);
     if (pageBusyHandles.length > 0) return;
+    pageBusyInertElements.forEach(function (entry) { entry.element.inert = entry.previous; });
+    pageBusyInertElements = [];
     document.body.classList.remove('cb-page-busy');
     root.removeAttribute('aria-busy');
     removePageBusyLoader();
@@ -173,17 +185,22 @@
 
   window.CB_PAGE_BUSY = {
     start: startPageBusy,
-    stop: stopPageBusy
+    stop: stopPageBusy,
+    active: function () { return pageBusyHandles.length > 0; }
   };
 
   function blockPageBusyEvent(event) {
     if (pageBusyHandles.length === 0) return;
+    // Dokoncena operace smi sama spustit stazeni souboru; nejde o dalsi uzivatelskou akci.
+    if (event.type === 'click' && !event.isTrusted && event.target instanceof HTMLAnchorElement && event.target.hasAttribute('download')) return;
     event.preventDefault();
     event.stopImmediatePropagation();
   }
 
-  document.addEventListener('pointerdown', blockPageBusyEvent, true);
-  document.addEventListener('click', blockPageBusyEvent, true);
+  // Samotna pruhledna vrstva nestaci pro klavesnici, Enter ve formulari nebo Escape v dialogu.
+  ['pointerdown', 'click', 'dblclick', 'auxclick', 'keydown', 'beforeinput', 'change', 'submit', 'cancel', 'dragstart', 'drop'].forEach(function (type) {
+    document.addEventListener(type, blockPageBusyEvent, true);
+  });
 
   function setPageLoaderDetail(text) {
     var detailNode = root.querySelector('.cb_page_loader_detail');
@@ -409,7 +426,8 @@
 
   function loadModule(moduleName, pushState, params){
     if (!moduleName) return;
-    if (moduleLoadRunning) return;
+    // Stejny zakaz plati i pro prime volani CB_LOAD_MODULE mimo obsluhu kliknuti.
+    if (moduleLoadRunning || pageBusyHandles.length > 0) return false;
     // Menu pripravuje server podle prav. Bez nej nesmime zahajit pozadavek ani menit obsah a aktivni modul.
     if (!document.querySelector('template[data-cb-module-menu="'+moduleName+'"]')) return false;
     var requestedKey = makeShellKey(moduleName, params);

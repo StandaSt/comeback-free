@@ -1,5 +1,5 @@
 /*
- * Ucel souboru: Definuje vzhled interniho HR modulu.
+ * Ucel souboru: Definuje vzhled interniho HR modulu vcetne kompaktniho vyberu vice dokumentu.
  * Velikosti pisma vychazeji z pevne typograficke skaly aplikace.
  * Karta zamestnance ma kompaktni prazdne stavy a souhrn pobocek vedle titulku.
  * Zmensene svisle odstupy pracovniho pomeru plati jen uvnitr jeho vlastniho obalu.
@@ -1641,6 +1641,8 @@
 /* Schvalene svisle rozmery se tykaji pouze sekce Pracovni pomer, vcetne editace. */
 .hr_employee_work_compact {
     display: grid;
+    /* Siroka historie nesmi zvetsit mobilni sloupec s formulari; tabulka ma vlastni posuv. */
+    grid-template-columns: minmax(0, 1fr);
     gap: 6px;
     min-width: 0;
 }
@@ -1650,6 +1652,7 @@
 }
 
 .hr_employee_work_compact .hr_panel {
+    min-width: 0;
     padding-top: 6px;
     padding-bottom: 6px;
 }
@@ -2670,3 +2673,22 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Dokumenty sdili kompaktni vyber pro kartu i ukonceni; soubory nikdy neroztahuji mobilni formular. */
+.hr_document_upload_form{margin:8px 0;}
+/* Vlozeni a ulozeny prehled maji vlastni titulky; desktop ovladani zustava na jedinem radku. */
+.hr_document_upload_title{font-size:13px;margin:0 0 8px;}
+.hr_document_upload_title small{font-size:12px;font-weight:normal;}
+.hr_document_upload_row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;}
+.hr_document_upload_form label{display:flex;flex-direction:row;align-items:center;gap:6px;min-width:0;max-width:100%;font-size:12px;margin:0;}
+.hr_document_upload_form label>span{white-space:nowrap;flex:0 0 auto;}
+.hr_document_upload_form select{min-width:0;max-width:240px;}
+.hr_document_upload_row button{margin-left:auto;white-space:nowrap;}
+.hr_documents_list_title{font-size:13px;margin:18px 0 8px;}
+.hr_document_upload_form .hr_document_upload{flex:1 1 220px;}
+.hr_document_upload input[type=file],.hr_document_upload_form input[type=file]{max-width:100%;min-width:0;width:100%;font-size:12px;}
+.hr_document_upload small{font-size:11px;line-height:1.3;color:#66747e;}
+.hr_work_event_form .hr_document_upload{min-width:170px;}
+@media(max-width:600px){.hr_document_upload_form label{flex:1 1 100%;flex-wrap:wrap;}.hr_document_upload_form select{max-width:100%;}.hr_work_event_form .hr_document_upload{min-width:0;}.hr_document_upload_form button{min-height:40px;}}
+
+@media(min-width:901px){#hr-termination-form .hr_form_grid{grid-template-columns:max-content max-content max-content minmax(160px,1fr) minmax(190px,1fr);}}

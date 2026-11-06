@@ -1,13 +1,15 @@
 <?php
 declare(strict_types=1);
-/* Účel: Zobrazí portrét; vložení či výměnu čtvercového výřezu nabídne pouze v režimu úprav pod právem 307. */
+/* Účel: Zobrazí aktuální portrét podle ID osoby; výměnu nabídne v režimu úprav pod právem 307. */
+require_once __DIR__ . '/../../common/lib/osoba_foto.php';
+$photoUrl = cb_osoba_foto($idPerson);
 $photoReturn = cb_root_url('index.php?' . http_build_query(array_filter([
     'm'=>'hr','page'=>'zamestnanec','id'=>$idPerson,'sekce'=>$employeeSection,'upravit'=>$isEdit ? '1' : null,
 ],static fn($value):bool=>$value!==null)));
 ?>
 <div class="hr_employee_photo_edit">
-    <?php if (!empty($employee['foto'])): ?>
-        <img class="hr_employee_photo hr_employee_photo_large" src="<?= h(cb_root_url((string)$employee['foto'])) ?>" alt="Fotografie zaměstnance <?= h((string)$employee['cele_jmeno']) ?>">
+    <?php if ($photoUrl !== null): ?>
+        <img class="hr_employee_photo hr_employee_photo_large" src="<?= h(cb_root_url($photoUrl)) ?>" alt="Fotografie zaměstnance <?= h((string)$employee['cele_jmeno']) ?>">
     <?php else: ?>
         <div class="hr_employee_photo hr_employee_photo_large hr_employee_avatar_placeholder" role="img" aria-label="Fotografie zaměstnance zatím není vložena"></div>
     <?php endif; ?>
@@ -18,7 +20,7 @@ $photoReturn = cb_root_url('index.php?' . http_build_query(array_filter([
             <input type="hidden" name="sekce" value="<?= h($employeeSection) ?>">
             <input type="hidden" name="upravit" value="<?= $isEdit ? '1' : '0' ?>">
             <input type="file" name="foto" accept="image/jpeg,image/png,image/webp" data-photo-input hidden>
-            <button class="hr_employee_photo_add" type="button" data-photo-choose aria-label="<?= !empty($employee['foto']) ? 'Změnit fotografii zaměstnance' : 'Vložit fotografii zaměstnance' ?>" title="<?= !empty($employee['foto']) ? 'Změnit fotografii' : 'Vložit fotografii' ?>">+</button>
+            <button class="hr_employee_photo_add" type="button" data-photo-choose aria-label="<?= $photoUrl !== null ? 'Změnit fotografii zaměstnance' : 'Vložit fotografii zaměstnance' ?>" title="<?= $photoUrl !== null ? 'Změnit fotografii' : 'Vložit fotografii' ?>">+</button>
             <button type="button" data-photo-crop-open hidden>Vybrat výřez</button>
             <figure data-photo-preview hidden><img alt="Náhled vybrané fotografie"></figure>
             <dialog class="hr_photo_crop_dialog" data-photo-crop-dialog aria-label="Čtvercový výřez fotografie">

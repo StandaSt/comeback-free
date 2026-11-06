@@ -1,0 +1,135 @@
+/*
+ * Ucel souboru: Kompaktni hlavicka prihlaseneho IS do sirky 600 px.
+ * Puvodni prepinace vcetne stitku sdili jednu rozbalovaci nabidku; zpravy zustavaji primo dostupne.
+ * Aktivaci ridi responzivni_shell.js pro vsechny moduly vcetne Smen; sirsi hlavicka si zachovava vlastni vzhled.
+ */
+.head_mobile_module_toggle,
+.head_mobile_module_backdrop,
+.blok_hlavicka .head_module_link--mobile-admin{display:none;}
+
+@media(max-width:600px){
+  /* ID kostry zabrani tomu, aby sloupce E-mailu nebo udrzby prepsaly kompaktni listu. */
+  #obal_main.is-compact-header{
+    --cb-mobile-head-height:52px;
+    grid-template-rows:var(--cb-mobile-head-height) minmax(0,1fr);
+  }
+  #obal_main.is-compact-header:has(>.cb-maintenance-active){--cb-mobile-head-height:72px;}
+  #obal_main.is-compact-header>.blok_hlavicka{
+    position:relative;
+    display:grid;
+    grid-template-columns:44px minmax(0,1fr);
+    grid-template-rows:44px;
+    grid-template-areas:"menu_toggle current";
+    align-items:center;
+    gap:4px;
+    height:var(--cb-mobile-head-height);
+    min-height:var(--cb-mobile-head-height);
+    padding:3px 4px;
+    border-bottom:2px solid var(--cb-module-accent);
+    border-radius:0;
+  }
+  #obal_main.is-compact-header>.blok_hlavicka.cb-has-email{
+    grid-template-columns:44px minmax(0,1fr) 44px;
+    grid-template-areas:"menu_toggle current email";
+  }
+  #obal_main.is-compact-header>.blok_hlavicka.cb-has-colink{
+    grid-template-columns:44px minmax(0,1fr) 44px;
+    grid-template-areas:"menu_toggle current colink";
+  }
+  #obal_main.is-compact-header>.blok_hlavicka.cb-has-email.cb-has-colink{
+    grid-template-columns:44px minmax(0,1fr) 44px 44px;
+    grid-template-areas:"menu_toggle current email colink";
+  }
+  #obal_main.is-compact-header .head_logo,
+  #obal_main.is-compact-header .head_brand_time{display:none;}
+  #obal_main.is-compact-header .cb_menu_toggle{height:44px;min-height:44px;}
+  #obal_main.is-compact-header .head_mobile_module_toggle{
+    grid-area:current;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:6px;
+    min-width:0;
+    height:44px;
+    padding:0 10px;
+    border:1px solid var(--cb-border-soft);
+    border-radius:7px;
+    background:var(--cb-bg-control);
+    color:var(--cb-text-main);
+    font:700 16px/1.2 Arial,Helvetica,sans-serif;
+    cursor:pointer;
+  }
+  #obal_main.is-compact-header [data-cb-module-current]{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  #obal_main.is-compact-header .head_mobile_module_toggle[aria-expanded="true"]{background:var(--cb-module-soft);border-color:var(--cb-module-accent);}
+  #obal_main.is-compact-header .head_mobile_module_toggle[aria-expanded="true"]>span:last-child{transform:rotate(180deg);}
+  #obal_main.is-compact-header .head_module_nav{
+    display:none;
+    position:absolute;
+    inset:var(--cb-mobile-head-height) 0 auto;
+    z-index:300;
+    grid-area:auto;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:6px;
+    height:auto;
+    min-height:0;
+    max-height:calc(100dvh - var(--cb-mobile-head-height) - 8px);
+    overflow:auto;
+    overscroll-behavior:contain;
+    padding:8px;
+    border:1px solid var(--cb-border);
+    border-radius:0 0 8px 8px;
+    background:var(--cb-bg-panel);
+    box-shadow:0 8px 18px var(--cb-shadow);
+  }
+  #obal_main.is-compact-header.is-modules-open .head_module_nav{display:grid;}
+  #obal_main.is-compact-header .head_module_nav>[data-cb-module-link]{
+    grid-area:auto;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    gap:3px;
+    min-width:0;
+    height:auto;
+    min-height:55px;
+    padding:6px 4px;
+    border:1px solid var(--cb-border);
+    border-radius:6px;
+    font-size:14px;
+  }
+  /* Odkazy i tlacitka maji jednotne aktivni oznaceni bez puvodniho rozdilneho podtrzeni. */
+  #obal_main.is-compact-header .head_module_nav>[aria-current="page"]{color:var(--cb-text-main);background:var(--cb-module-soft);border-color:var(--cb-module-accent);font-weight:700;}
+  #obal_main.is-compact-header .head_module_nav>[data-cb-module-link]::after{content:none;}
+  #obal_main.is-compact-header .head_module_nav .head_module_tags:empty{display:none;}
+  #obal_main.is-compact-header .head_module_nav .head_module_tags{flex-wrap:wrap;}
+  #obal_main.is-compact-header .head_mobile_module_backdrop{
+    position:fixed;
+    inset:var(--cb-mobile-head-height) 0 0;
+    z-index:290;
+    width:100%;
+    border:0;
+    padding:0;
+    background:var(--clr_pruhledna_cerna_18);
+  }
+  #obal_main.is-compact-header.is-modules-open .head_mobile_module_backdrop{display:block;}
+  #obal_main.is-compact-header .cb_menu_backdrop,
+  #obal_main.is-compact-header>.blok_menu{inset-block-start:var(--cb-mobile-head-height);}
+  /* Stav udrzby je trvale viditelny i se zavrenym vyberem modulu. */
+  #obal_main.is-compact-header .head_maintenance_status{
+    position:absolute;
+    inset:auto 0 0;
+    grid-area:auto;
+    height:20px;
+    min-height:20px;
+    padding:2px 8px;
+    border:0;
+    border-radius:0;
+    background:var(--clr_cervena);
+    color:#fff;
+  }
+  #obal_main.is-compact-header .head_maintenance_short{display:block;font-size:12px;}
+  #obal_main.is-compact-header .head_maintenance_long{display:none;}
+  #obal_main.is-compact-header .cb_prebrani_prav_notice{z-index:950;}
+  #obal_main.is-compact-header .head_mobile_module_toggle:focus-visible,
+  #obal_main.is-compact-header .head_module_nav>[data-cb-module-link]:focus-visible{outline:2px solid var(--cb-module-accent);outline-offset:2px;}
+}

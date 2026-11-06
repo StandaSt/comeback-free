@@ -1,4 +1,4 @@
-/* Co-Link: spusteni, navigace, API a synchronizace s vypinatelnym merenim cekani a objemu dat; casti sdileji jeden stav. */
+/* Co-Link: spusteni, navigace s aktivitou kolegu v IS, API a synchronizace s vypinatelnym merenim; casti sdileji jeden stav. */
 (() => {
   'use strict';
   const parts=window.CoLinkParts ||= Object.create(null);
@@ -12,7 +12,7 @@
   const embedded=(()=>{try{return new URL(location.href).searchParams.get('is')==='1'&&window.parent!==window&&window.parent.location.origin===location.origin;}catch(_){return false;}})();
   const ctx={boot,$,state,embedded,pollTimer:null,noticeTimer:null,panelCleanup:null,homeQrTimer:null,activeRefresh:null,shellList:null,shellSearch:null,shellDirectory:null,composerEditor:null,searchOpen:false};
   // Verzi menit spolecne pri zmene kterekoli casti; stare HTML pouzije tento aktualni seznam take.
-  const partVersion='20261102-audit-1';
+  const partVersion='20261105-online-vzhled-1';
   const partNames=["rozhrani","zpravy","psani","adresar","sprava_konverzaci","nastaveni"];
   // Vstup zustava samostatne pouzitelny i pres puvodni app.js; casti se nactou pred jedinym init.
   async function loadParts(){
@@ -105,6 +105,8 @@
     for(const [local,shared]of [['--ink','--cb-text-main'],['--muted','--cb-text-muted'],['--line','--cb-border-soft'],['--paper','--cb-bg-panel'],['--is-soft','--cb-bg-panel-soft'],['--is-control','--cb-bg-control']])document.documentElement.style.setProperty(local,theme.getPropertyValue(shared).trim());
     return {list:ctx.shellList,filter:ctx.shellSearch.value.toLocaleLowerCase('cs'),menu};
   }
+  // Tecka vyjadruje serverem overenou aktivitu v IS, nikoli pouhe otevreni Co-Linku.
+  function onlineMark(c){if(c.typ!=='soukroma'||!c.online)return null;const dot=node('span',undefined,'co_link_online');dot.setAttribute('role','img');dot.setAttribute('aria-label','Aktivní v IS během posledních 10 minut');dot.title='Aktivní v IS během posledních 10 minut';return dot;}
   // Konverzace maji vlastni kompaktni radky; Adresar a sprava si ponechaji rozmery standardniho menu.
   function shellConversations(shell){
     const {list,filter,menu}=shell;list.replaceChildren();
@@ -113,7 +115,7 @@
       if(kind!=='kanal'||state.rights[701]){const add=button('+',kind==='kanal'?()=>channelForm():kind==='soukroma'?directory:privateForm,'co_link_menu_add');add.setAttribute('aria-label',kind==='kanal'?'Vytvořit kanál':kind==='soukroma'?'Najít člověka v adresáři':'Vytvořit skupinu');heading.append(add);}
       group.append(heading);const rows=node('ul',undefined,'blok_menu_list co_link_menu_conversations');group.append(rows);list.append(group);
       const channels=state.conversations.filter(c=>c.typ===kind&&title(c).toLocaleLowerCase('cs').includes(filter));
-      for(const c of channels){const li=node('li'),b=button('',()=>{menu.querySelector('[data-cb-menu-close]')?.click();return openChat(Number(c.id));},'blok_menu_btn co_link_menu_conversation'+(state.cid===Number(c.id)?' is-active':''));b.append(node('span',(kind==='kanal'?'# ':'')+title(c)+(Number(c.archiv)?' · archiv':''),'co_link_menu_name'));if(Number(c.neprecteno))b.append(node('span',c.neprecteno,'co_link_menu_count'));li.append(b);rows.append(li);}
+      for(const c of channels){const li=node('li'),b=button('',()=>{menu.querySelector('[data-cb-menu-close]')?.click();return openChat(Number(c.id));},'blok_menu_btn co_link_menu_conversation'+(state.cid===Number(c.id)?' is-active':''));b.append(node('span',(kind==='kanal'?'# ':'')+title(c)+(Number(c.archiv)?' · archiv':''),'co_link_menu_name'));if(Number(c.neprecteno))b.append(node('span',c.neprecteno,'co_link_menu_count'));const dot=onlineMark(c);if(dot)b.append(dot);li.append(b);rows.append(li);}
       if(!channels.length){const li=node('li',filter?'Nic neodpovídá hledání.':kind==='kanal'?'Zatím žádné kanály.':kind==='soukroma'?'Kolegu najdete v adresáři.':'Zatím žádné skupiny.','co_link_menu_empty');rows.append(li);}
     }
   }
@@ -130,7 +132,7 @@
         add.setAttribute('aria-label',kind==='kanal'?'Vytvořit kanál':kind==='soukroma'?'Najít člověka v adresáři':'Vytvořit skupinu');heading.append(add);
       }
       list.append(heading);
-      channels.forEach(c=>{const b=button('',()=>openChat(Number(c.id)),'conversation'+(state.cid===Number(c.id)?' active':''));b.append(node('span',kind==='kanal'?'#':'○','symbol'),node('span',title(c)+(Number(c.archiv)?' · archiv':''),'label'));if(Number(c.neprecteno))b.append(node('span',c.neprecteno,'count'));list.append(b);});
+      channels.forEach(c=>{const b=button('',()=>openChat(Number(c.id)),'conversation'+(state.cid===Number(c.id)?' active':''));b.append(node('span',kind==='kanal'?'#':'○','symbol'),node('span',title(c)+(Number(c.archiv)?' · archiv':''),'label'));if(Number(c.neprecteno))b.append(node('span',c.neprecteno,'count'));const dot=onlineMark(c);if(dot)b.append(dot);list.append(b);});
       if(!channels.length)list.append(node('p',filter?'Nic neodpovídá hledání.':kind==='kanal'?'Zatím žádné kanály.':kind==='soukroma'?'Kolegu najdete v adresáři lidí.':'Zatím žádné skupiny.','list-empty'));
     }
   }

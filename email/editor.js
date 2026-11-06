@@ -1,4 +1,4 @@
-/* E-mail: lokalni Quill editor s ceskou listou a zachovanim vyberu pri prepinani formatu; bez externi sluzby. */
+/* E-mail: lokalni Quill editor s ceskou listou; psani posty podporuje vystrizky ze schranky a export MIME obrazku. */
 let library;
 
 /** Quill pouziva pro odrazky take OL s data-list; prevedeme jej na skutecne UL/OL a zachovame zarovnani jednotlivych LI. */
@@ -36,7 +36,7 @@ async function quillLibrary() {
 }
 
 /** Kazdy formular ma vlastni dokument a historii; nacitani konceptu ani podpisu neoznaci formular jako rozepsany. */
-export async function createEditor(host, label, onChange) {
+export async function createEditor(host, label, onChange, images = null) {
   const Quill=await quillLibrary();
   host.classList.add('em-rich');
   const toolbar=document.createElement('div'); toolbar.className='em-rich-toolbar';
@@ -50,7 +50,7 @@ export async function createEditor(host, label, onChange) {
   toolbar.addEventListener('mousedown',event=>{
     if (event.button===0 && event.target instanceof Element && event.target.closest('button')) event.preventDefault();
   });
-  const quill=new Quill(body,{theme:'snow',formats:['bold','italic','underline','font','size','color','align','list','link','blockquote'],
+  const quill=new Quill(body,{theme:'snow',formats:['bold','italic','underline','font','size','color','align','list','link','blockquote',...(images?['image']:[])],
     modules:{history:{userOnly:true},toolbar:{container:toolbar,handlers:{
       undo(){this.quill.history.undo();}, redo(){this.quill.history.redo();},
       link(value){
@@ -62,7 +62,41 @@ export async function createEditor(host, label, onChange) {
       }
     }}}});
   quill.root.setAttribute('role','textbox'); quill.root.setAttribute('aria-label',label); quill.root.setAttribute('aria-multiline','true');
+  // HTML ze schranky nesmi do editoru zavest externi obrazek a samovolny sitovy pozadavek.
+  if(images)quill.clipboard.addMatcher('IMG',(node,delta)=>/^data:image\/(png|jpeg|gif|webp|avif);base64,[A-Za-z0-9+/]*={0,2}$/.test(node.getAttribute('src') || '')?delta:new (Quill.import('delta'))());
   quill.on('text-change',(_delta,_old,source)=>{if(source==='user')onChange();});
+  let pasteTask=Promise.resolve(), documentVersion=0, pasteError='';
+  // Paste zachyti take systemovy vystrizek bez HTML; Quill nesmi soubezne vlozit druhou kopii.
+  if(images)quill.root.addEventListener('paste',event=>{
+    const files=Array.from(event.clipboardData?.items || []).filter(item=>item.kind==='file' && item.type.startsWith('image/')).map(item=>item.getAsFile()).filter(Boolean);
+    if(!files.length)return;
+    event.preventDefault();event.stopImmediatePropagation();
+    if(!quill.isEnabled())return;
+    pasteError='';
+    const version=documentVersion,range=quill.getSelection() || {index:quill.getLength()-1,length:0};
+    pasteTask=pasteTask.then(async()=>{
+      try {
+        const urls=[];
+        for(const file of files){
+          if(!/^image\/(png|jpeg|gif|webp|avif)$/.test(file.type))throw new Error('Vložte rastrový obrázek PNG, JPEG, GIF, WebP nebo AVIF.');
+          urls.push(await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('Obrázek ze schránky se nepodařilo načíst.'));reader.readAsDataURL(file);}));
+        }
+        if(version!==documentVersion || !quill.isEnabled())return;
+        images.validate([...imageData(),...urls.map((url,i)=>({src:url,size:files[i].size}))]);
+        quill.history.cutoff();if(range.length)quill.deleteText(range.index,range.length,'user');
+        urls.forEach((url,i)=>quill.insertEmbed(range.index+i,'image',url,'user'));
+        quill.setSelection(range.index+urls.length,0,'silent');quill.history.cutoff();
+      }catch(error){if(version===documentVersion){pasteError=error.message;images.error(error.message);}}
+    });
+  },true);
+  // Data zustavaji jen v editoru; pri odeslani se prevedou na soubory a kratke CID odkazy.
+  function imageData() {
+    return Array.from(new Set(Array.from(quill.root.querySelectorAll('img')).map(img=>img.getAttribute('src')))).map(src=>{
+      const match=/^data:(image\/(?:png|jpeg|gif|webp|avif));base64,([A-Za-z0-9+/]*={0,2})$/.exec(src || '');
+      if(!match)throw new Error('Obrázek v editoru nemá podporovaný formát.');
+      return {src,type:match[1],base64:match[2],size:match[2].length*3/4-(match[2].endsWith('==')?2:match[2].endsWith('=')?1:0)};
+    });
+  }
   // Popisky voleb Snow by jinak pouzily anglicke vychozi nazvy i pri ceskych option prvcich.
   toolbar.querySelectorAll('.ql-picker').forEach(picker=>{
     const select=picker.nextElementSibling;
@@ -74,8 +108,19 @@ export async function createEditor(host, label, onChange) {
     select.addEventListener('change',update); update();
   });
   return {
-    setHtml(html){quill.setContents(quill.clipboard.convert({html:html || '<p><br></p>'}),'silent');quill.history.clear();quill.setSelection(0,0,'silent');},
-    getHtml(){return quill.getText().trim()===''?'':exportHtml(quill.root);},
+    setHtml(html){documentVersion++;pasteError='';quill.setContents(quill.clipboard.convert({html:html || '<p><br></p>'}),'silent');quill.history.clear();quill.setSelection(0,0,'silent');},
+    getHtml(){return quill.getText().trim()==='' && !quill.root.querySelector('img')?'':exportHtml(quill.root);},
+    imageSummary(){const data=imageData();return {count:data.length,bytes:data.reduce((n,img)=>n+img.size,0)};},
+    async ready(){await pasteTask;if(pasteError){const error=pasteError;pasteError='';throw new Error(error);}},
+    mailContent(){
+      const data=imageData(),clone=quill.root.cloneNode(true),files=[],inline=[];
+      data.forEach((img,i)=>{
+        const cid='cbpaste-'+crypto.randomUUID()+'@comeback',raw=atob(img.base64),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));
+        files.push(new File([bytes],'obrazek-'+(i+1)+'.'+img.type.split('/')[1],{type:img.type}));inline.push({index:i,cid});
+        clone.querySelectorAll('img').forEach(el=>{if(el.getAttribute('src')===img.src)el.setAttribute('src','cid:'+cid);});
+      });
+      return {html:quill.getText().trim()==='' && !clone.querySelector('img')?'':exportHtml(clone),files,inline};
+    },
     getText(){return quill.getText().replace(/\n$/,'');},
     focus(){quill.focus();quill.setSelection(0,0,'silent');},
     enable(value){quill.enable(value);toolbar.querySelectorAll('button,select').forEach(el=>{el.disabled=!value;});}

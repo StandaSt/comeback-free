@@ -5,14 +5,16 @@ declare(strict_types=1);
 require_once __DIR__ . '/osoba_jmeno.php';
 
 /*
- * PRIHLASENI PRES SMENY NEBO LOKALNI HESLO + 2FA
+ * PRIHLASENI UCTEM IS + 2FA
  *
  * Ucel souboru:
- * - overit email a heslo proti lokalnimu uctu nebo API Smeny
+ * - overit evidenci e-mailu a heslo vyhradne proti uctu IS
+ * - ucet bez hesla navest na jeho nastaveni e-mailem bez pocitani chybnych pokusu
  * - predat push endpoint aktualniho prohlizece lokalnimu login toku
  * - presmerovat na prime mobilni schvaleni, cekaci 2FA nebo cilovy modul
  * - na vyzadani odeslat po overeni lokalniho hesla prihlasovaci e-mail
  * - při chybném hesle sdělit zbývající pokusy a při blokaci skutečný čas jejího konce
+ * - po platnem hesle nabidnout PIN podle nastaveni uctu; nouzovy e-mail zustava samostatnou cestou
  *
  * Dulezite:
  * - bez platneho hesla se zarizeni nikdy nevyhodnocuje
@@ -23,12 +25,9 @@ require_once __DIR__ . '/session_boot.php';
 require_once __DIR__ . '/app.php';
 require_once __DIR__ . '/system.php';
 require_once __DIR__ . '/../config/secrets.php';
-require_once __DIR__ . '/smeny_graphql.php';
 require_once __DIR__ . '/user_bad_login.php';
 require_once __DIR__ . '/prvni_vstup.php';
 require_once __DIR__ . '/ochrana_crf.php';
-
-require_once __DIR__ . '/../db/db_api_smeny.php';
 
 /* Vrati orezanou textovou hodnotu z prihlasovaciho formulare. */
 function post_str(string $k): string
@@ -53,16 +52,7 @@ function post_module(): string
 /* Vysvetli, ze o pristupu do IS rozhoduje aktivni osoba v HR. */
 function cb_login_neaktivni_zprava(array $user): string
 {
-    return 'Vaše osoba je v HR neaktivní, proto se nemůžete přihlásit do IS. Obraťte se prosím na vedoucího.';
-}
-
-/* Vysvetli selhani jednorazoveho overeni prvniho vstupu ve Smenach. */
-function cb_login_smeny_selhalo_zprava(?array $user): string
-{
-    if (is_array($user) && trim((string)($user['heslo_hash'] ?? '')) === '') {
-        return 'První vstup se nepodařilo ověřit. Zkontrolujte heslo používané ve Směnách.';
-    }
-    return 'Neplatné přihlašovací údaje.';
+    return 'Váš účet má zablokovaný přístup do IS, protože je vaše osoba v systému vedena jako neaktivní. Obraťte se na vedoucího nebo správce IS.';
 }
 
 try {
@@ -70,6 +60,9 @@ try {
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
         throw new CbUserVisibleException('Neplatný požadavek.');
     }
+
+    // Nova prihlasovaci zadost nesmi ponechat vyzvu PIN po predchozim overeni jineho hesla.
+    unset($_SESSION['cb_pin_ceka'], $_SESSION['cb_pin_zprava'], $_SESSION['cb_login_nastavit_heslo']);
 
     $email = post_str('email');
     $heslo = post_str('heslo');
@@ -86,11 +79,7 @@ try {
     }
 
 
-    $blokaceZprava = cb_user_bad_login_zprava($email, '', true);
-    if ($blokaceZprava !== '') {
-        throw new CbUserVisibleException($blokaceZprava);
-    }
-
+    // LEFT JOIN zachova existujici ucet i bez pouzitelne HR identity; takovy ucet nesmi projit loginem.
     $stmtLocal = db()->prepare('
         SELECT
             u.id_user,
@@ -99,10 +88,12 @@ try {
             u.email,
             (SELECT t.telefon FROM hr_telefon t WHERE t.id_person = p.id_person AND t.platny = 1 AND t.hlavni = 1 ORDER BY t.id_telefon DESC LIMIT 1) AS telefon,
             p.aktivni,
+            p.id_person,
+            osobni.id_osobni_udaje,
             u.heslo_hash
         FROM user u
-        INNER JOIN hr_person p ON p.id_person = u.id_user AND p.id_user = u.id_user
-        INNER JOIN ' . cb_osoby_zdroj_sql() . ' osobni ON osobni.id_person = p.id_person AND osobni.platny = 1
+        LEFT JOIN hr_person p ON p.id_person = u.id_user AND p.id_user = u.id_user
+        LEFT JOIN ' . cb_osoby_zdroj_sql() . ' osobni ON osobni.id_person = p.id_person AND osobni.platny = 1
         WHERE u.email = ?
         LIMIT 1
     ');
@@ -112,58 +103,42 @@ try {
     $stmtLocal->close();
     if (!is_array($localUser)) {
         cb_user_bad_login_log($email, $heslo);
-        throw new CbUserVisibleException(cb_user_bad_login_zprava($email, 'Neplatné přihlašovací údaje.'));
+        throw new CbUserVisibleException('Tento e-mail není v systému evidován. Zkontrolujte, zda je napsaný správně. Pokud ano, obraťte se na svého nadřízeného kvůli založení účtu.');
     }
-    if (is_array($localUser) && trim((string)($localUser['heslo_hash'] ?? '')) !== '') {
-        if (!password_verify($heslo, (string)$localUser['heslo_hash'])) {
-            cb_user_bad_login_log($email, $heslo);
-            throw new CbUserVisibleException(cb_user_bad_login_zprava($email, 'Neplatné přihlašovací údaje.'));
-        }
-        if ((int)$localUser['aktivni'] !== 1) {
+    // Chybejici heslo neni chybny pokus. Ani starsi blokace nesmi skryt cestu k jeho nastaveni.
+    if (trim((string)($localUser['heslo_hash'] ?? '')) === '') {
+        if ((int)($localUser['aktivni'] ?? 0) !== 1 || empty($localUser['id_person']) || empty($localUser['id_osobni_udaje'])) {
             throw new CbUserVisibleException(cb_login_neaktivni_zprava($localUser));
         }
-        if ($emailLogin) {
-            require_once __DIR__ . '/login_email.php';
-            cb_login_email_odeslat(db(), $localUser, post_module());
-            cb_session_forget_auth();
-            unset($_SESSION['cb_local_login_user_id'], $_SESSION['cb_prvni_vstup_user_id'], $_SESSION['cb_obnoveni_hesla_user_id']);
-            // Uspech zobrazi samostatny informacni modal, nikoli stav pod prihlasovacim formularem.
-            unset($_SESSION['cb_flash']);
-            $_SESSION['cb_login_email_odeslan'] = 1;
-            header('Location: ' . cb_login_url(), true, 303);
-            exit;
-        }
-        $primePresmerovani = cb_lokalni_login_zahaj(db(), $localUser, $deviceEndpoint);
-        header('Location: ' . ($primePresmerovani ?? cb_login_target_url()));
-        exit;
+        $_SESSION['cb_login_nastavit_heslo'] = 1;
+        throw new CbUserVisibleException('Pro tento účet ještě není nastavené heslo do IS. Klikněte na „Nastavit nové heslo“. Na váš evidovaný e-mail vám pošleme odkaz, přes který si heslo vytvoříte.');
     }
 
-    if ((int)$localUser['aktivni'] !== 1) {
+    // Limit se vztahuje na overovani existujiciho hesla, nikoli na pripravu prvniho vstupu.
+    $blokaceZprava = cb_user_bad_login_zprava($email, '', true);
+    if ($blokaceZprava !== '') {
+        throw new CbUserVisibleException($blokaceZprava);
+    }
+    if (!password_verify($heslo, (string)$localUser['heslo_hash'])) {
+        cb_user_bad_login_log($email, $heslo);
+        throw new CbUserVisibleException(cb_user_bad_login_zprava($email, 'Heslo není správné.'));
+    }
+    if ((int)($localUser['aktivni'] ?? 0) !== 1 || empty($localUser['id_person']) || empty($localUser['id_osobni_udaje'])) {
         throw new CbUserVisibleException(cb_login_neaktivni_zprava($localUser));
     }
-
-    try {
-        $login = cb_smeny_graphql(
-            CB_SMENY_GQL_URL,
-            'query($email:String!,$password:String!){
-                userLogin(email:$email,password:$password){
-                    accessToken
-                }
-            }',
-            ['email' => $email, 'password' => $heslo]
-        );
-    } catch (Throwable $e) {
-        cb_user_bad_login_log($email, $heslo);
-        throw new CbUserVisibleException(cb_user_bad_login_zprava($email, cb_login_smeny_selhalo_zprava($localUser)));
+    if ($emailLogin) {
+        require_once __DIR__ . '/login_email.php';
+        cb_login_email_odeslat(db(), $localUser, post_module());
+        cb_session_forget_auth();
+        unset($_SESSION['cb_local_login_user_id'], $_SESSION['cb_prvni_vstup_user_id'], $_SESSION['cb_obnoveni_hesla_user_id']);
+        // Uspech zobrazi samostatny informacni modal, nikoli stav pod prihlasovacim formularem.
+        unset($_SESSION['cb_flash']);
+        $_SESSION['cb_login_email_odeslan'] = 1;
+        header('Location: ' . cb_login_url(), true, 303);
+        exit;
     }
-
-    $overeniToken = $login['userLogin']['accessToken'] ?? null;
-    if (!is_string($overeniToken) || $overeniToken === '') {
-        cb_user_bad_login_log($email, $heslo);
-        throw new CbUserVisibleException(cb_user_bad_login_zprava($email, cb_login_smeny_selhalo_zprava($localUser)));
-    }
-    cb_prvni_vstup_priprav($localUser);
-    header('Location: ' . cb_login_url());
+    $primePresmerovani = cb_lokalni_login_zahaj(db(), $localUser, $deviceEndpoint);
+    header('Location: ' . ($primePresmerovani ?? cb_login_target_url()));
     exit;
 
 } catch (Throwable $e) {
@@ -175,18 +150,6 @@ try {
         'actor' => filter_var($cbLoginFailedEmail, FILTER_VALIDATE_EMAIL) !== false ? $cbLoginFailedEmail : '',
         'table' => 'user',
     ]);
-
-    /*
-         * Neuspesny login nebo chyba:
-         * - zapiseme log volani Smen i bez id_user a id_login
-         * - logovani nesmi zmenit presmerovani ani chovani loginu
-     */
-    try {
-        db_api_smeny_flush(db(), null, null);
-    } catch (Throwable $eLog) {
-        error_log('api_smeny flush (fail) selhal: ' . $eLog->getMessage());
-    }
-
 
     unset($_SESSION['login_ok']);
     unset($_SESSION['cb_user']);

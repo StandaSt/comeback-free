@@ -6,7 +6,7 @@ declare(strict_types=1);
  * ZÁPIS PŘIHLÁŠENÍ DO DB
  *
  * Účel:
- * - vloží 1 řádek do user_login (akce=1, duvod=0)
+ * - vloží 1 řádek do user_login (akce=1, duvod=2), ostatní přihlášení uživatele zachová
  * - vloží 1 řádek do user_spy (navázaný přes id_login)
  *
  * Důležité:
@@ -30,7 +30,7 @@ if (!function_exists('cb_db_insert_login_and_spy')) {
      * Vloží záznam o přihlášení do user_login a navazující user_spy.
      *
      * Co ukládáme:
-     * - user_login: id_user, kdy (auto), akce=1, duvod=0, ip
+     * - user_login: id_user, kdy (auto), akce=1, duvod=2, ip; souběžná přihlášení jsou povolena všem
      * - user_spy:  id_login (FK), id_user, user_agent (+ do budoucna screen/touch)
      *
      * Vrací:
@@ -41,22 +41,7 @@ if (!function_exists('cb_db_insert_login_and_spy')) {
      */
     function cb_db_insert_login_and_spy(mysqli $conn, int $idUser): int
     {
-        $viceLoginuPovoleno = false;
-        if (function_exists('cb_pravo_ma')) {
-            try {
-                $viceLoginuPovoleno = cb_pravo_ma(108);
-            } catch (Throwable $e) {
-                $viceLoginuPovoleno = false;
-            }
-        }
-
-        if (!$viceLoginuPovoleno) {
-            if (!function_exists('cb_db_clear_online_login_flags')) {
-                throw new RuntimeException('Chybí funkce pro ukončení předchozího přihlášení.');
-            }
-            cb_db_clear_online_login_flags($conn, $idUser);
-        }
-
+        // Každé zařízení má vlastní přihlášení; nový login ostatní relace uživatele neukončuje.
         // IP adresa – může být prázdná nebo chybět (např. CLI).
         $ip = $_SERVER['REMOTE_ADDR'] ?? null;
         if (is_string($ip)) {

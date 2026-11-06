@@ -3,7 +3,10 @@ declare(strict_types=1);
 
 /* Účel: Vymezuje skutečné zapisovací akce HR a bezpečné snímky jejich dat pro audit.
  * Identifikátory tabulek a podmínky pocházejí výhradně z této pevné definice, nikdy z POST.
+ * U fotografie porovnává aktuální soubor podle ID osoby bez verzování osobních údajů.
+ * Nahrani dokumentu i ukonceni zahrnuje jejich metadata; obsah souboru se do auditu nekopiruje.
  */
+require_once __DIR__ . '/../../common/lib/osoba_foto.php';
 
 /** Každá akce dispatcheru má výslovně určený rozsah a srozumitelný název. */
 function hr_audit_plan(string $action, array $input): ?array
@@ -12,6 +15,7 @@ function hr_audit_plan(string $action, array $input): ?array
         'hr_zamestnanec_ulozit'=>['Založen zaměstnanec','osoba'],
         'hr_zamestnanec_upravit'=>['Změněny osobní údaje','osoba'],
         'hr_zamestnanec_foto_ulozit'=>['Fotografie zaměstnance','osoba'],
+        'hr_zamestnanec_dokumenty_pridat'=>['Přidán dokument','osoba'],
         'hr_zamestnanec_overit'=>['Ověřena karta zaměstnance','osoba'],
         'hr_pracovni_pomer_upravit'=>['Změněn pracovní poměr','osoba'],
         'hr_pracovni_preruseni_ulozit'=>['Evidováno přerušení','osoba'],
@@ -44,6 +48,9 @@ function hr_audit_plan(string $action, array $input): ?array
 function hr_audit_snimky(mysqli $db, array $plan): array
 {
     $person = (int)$plan['person']; $id = (int)$plan['id'];
+    if (($plan['action'] ?? '') === 'hr_zamestnanec_foto_ulozit') {
+        return ['hr_fotografie'=>[$person=>['id_person'=>$person,'foto'=>cb_osoba_foto($person)]]];
+    }
     $definitions = [];
     if ($plan['group'] === 'osoba' && $person > 0) {
         foreach (['hr_person'=>'id_person','hr_osobni_udaje'=>'id_osobni_udaje','hr_telefon'=>'id_telefon',
@@ -58,6 +65,9 @@ function hr_audit_snimky(mysqli $db, array $plan): array
             $definitions[$table] = [$pk, "SELECT t.* FROM {$table} t JOIN hr_pracovni_vztah v ON v.id_pracovni_vztah=t.id_pracovni_vztah WHERE v.id_person={$person} ORDER BY t.{$pk} FOR UPDATE"];
         }
         $definitions['hr_misto_vykonu_prace_polozka'] = ['id_hr_misto_vykonu_prace_polozka', "SELECT t.* FROM hr_misto_vykonu_prace_polozka t JOIN hr_misto_vykonu_prace m ON m.id_hr_misto_vykonu_prace=t.id_hr_misto_vykonu_prace WHERE m.id_person={$person} ORDER BY t.id_hr_misto_vykonu_prace_polozka FOR UPDATE"];
+        if (in_array($plan['action'],['hr_zamestnanec_dokumenty_pridat','hr_pracovni_pomer_ukoncit'],true)) {
+            $definitions['hr_dokument']=['id_dokument',"SELECT t.* FROM hr_dokument t WHERE t.id_person={$person} AND t.platny=1 ORDER BY t.id_dokument FOR UPDATE"];
+        }
         // USER již může obsahovat jen přihlášení, zatímco starší server má ještě profilové sloupce.
         $userColumns = array_column($db->query('SHOW COLUMNS FROM user')->fetch_all(MYSQLI_ASSOC),'Field');
         $safeColumns = array_intersect(['id_user','email','aktivni','in_system','schvalen','id_firma','zdroj','jmeno','prijmeni'],$userColumns);
@@ -98,7 +108,7 @@ function hr_audit_popis_udalosti(mysqli $db, array $event, string $fallback): st
 {
     $table = $event['table']; $row = $event['row'];
     $added = $event['kind'] === 'pridani';
-    if ($fallback==='Fotografie zaměstnance' && $table==='hr_osobni_udaje') {
+    if ($fallback==='Fotografie zaměstnance' && $table==='hr_fotografie') {
         return empty($event['old']['foto']) ? 'Vložena fotografie zaměstnance' : 'Změněna fotografie zaměstnance';
     }
     if ($table === 'hr_slot') {
@@ -123,18 +133,11 @@ function hr_audit_popis_udalosti(mysqli $db, array $event, string $fallback): st
     return isset($names[$table]) ? $names[$table].' — '.($added ? 'přidání' : ($event['kind'] === 'odebrani' ? 'odebrání' : 'změna')) : $fallback;
 }
 
-/** Výměna verze kvůli portrétu je jediná změna fotografie, nikoli změna všech zkopírovaných osobních údajů. */
+/** Audit zaznamená pouze změnu aktuálního souboru, bez uchovávání dřívějšího portrétu. */
 function hr_audit_foto_udalosti(array $before, array $after): array
 {
-    $active = static function (array $snapshot): ?array {
-        $rows=array_filter($snapshot['hr_osobni_udaje'] ?? [],static fn(array $row):bool=>(int)$row['platny']===1);
-        krsort($rows,SORT_NUMERIC);
-        return $rows===[] ? null : reset($rows);
-    };
-    $old=$active($before);$new=$active($after);
-    if ($old===null || $new===null) throw new LogicException('Audit fotografie nemá původní nebo novou verzi.');
+    $old=reset($before['hr_fotografie']);$new=reset($after['hr_fotografie']);
     if (($old['foto'] ?? null)===($new['foto'] ?? null)) return [];
-    // ID nové verze zabrání druhému zobrazení jejího založení v odvozené starší historii.
-    return [['table'=>'hr_osobni_udaje','id'=>(int)$new['id_osobni_udaje'],'kind'=>'pridani','row'=>$new,
+    return [['table'=>'hr_fotografie','id'=>(int)$new['id_person'],'kind'=>empty($old['foto'])?'pridani':'zmena','row'=>$new,
         'old'=>['foto'=>$old['foto'] ?? null],'new'=>['foto'=>$new['foto'] ?? null]]];
 }

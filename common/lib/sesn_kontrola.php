@@ -1,10 +1,13 @@
 <?php
 // lib/sesn_kontrola.php * Verze: V2 * Aktualizace: 18.07.2026
 /* Overuje vazbu a platnost prihlaseni; pri jeho zruseni odstrani i prebrani prav a odemceni e-mailovych schranek.
+ * Kazde prihlaseni overuje samostatne; pocet soubeznych prihlaseni uzivatele neni omezen.
+ * Zruseni identity odstrani i rozpracovanou vyzvu PIN; novy otevreny PIN zablokuje stare prihlaseni do jeho zmeny.
  * Duvody zamitnuti zaznamenava bez prihlasovacich tajemstvi do neverejneho diagnostickeho logu. */
 declare(strict_types=1);
 
 require_once __DIR__ . '/pc_session.php';
+require_once __DIR__ . '/login_pin.php';
 
 if (!function_exists('cb_session_client_fingerprint')) {
     /**
@@ -16,21 +19,6 @@ if (!function_exists('cb_session_client_fingerprint')) {
         $lang = trim((string)($_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? ''));
 
         return hash('sha256', $ua . '|' . $lang);
-    }
-}
-
-if (!function_exists('cb_session_multiple_logins_allowed')) {
-    function cb_session_multiple_logins_allowed(): bool
-    {
-        if (!function_exists('cb_pravo_ma')) {
-            return false;
-        }
-
-        try {
-            return cb_pravo_ma(108);
-        } catch (Throwable $e) {
-            return false;
-        }
     }
 }
 
@@ -62,7 +50,7 @@ if (!function_exists('cb_session_reject_replaced_request')) {
 
 if (!function_exists('cb_session_login_is_current')) {
     /**
-     * Overi, ze login v session je stale aktivni a u bezneho usera take posledni.
+     * Overi konkretni aktivni login a aktivitu osoby bez omezeni soubeznych prihlaseni.
      */
     function cb_session_login_is_current(): bool
     {
@@ -76,29 +64,24 @@ if (!function_exists('cb_session_login_is_current')) {
 
         try {
             $conn = db();
+            // Spravcem zadany pocatecni PIN nesmi jit obejit drive otevrenou relaci.
+            $pinSettings = cb_pin_nastaveni($conn, $idUser);
+            if ($pinSettings !== null && cb_pin_pocatecni($pinSettings)) {
+                cb_session_log_rejection('pin_initial_change_required');
+                return false;
+            }
             if (!cb_pc_session_is_current($conn, $idUser, $idLogin)) {
                 return false;
             }
-            if (cb_session_multiple_logins_allowed()) {
-                $stmt = $conn->prepare(
-                    'SELECT ul.id_login
-                     FROM user_login ul
-                     INNER JOIN hr_person p ON p.id_user = ul.id_user AND p.aktivni = 1
-                     WHERE ul.id_login = ? AND ul.id_user = ? AND ul.akce = 1 AND ul.duvod = 2
-                     LIMIT 1'
-                );
-                $stmt->bind_param('ii', $idLogin, $idUser);
-            } else {
-                $stmt = $conn->prepare(
-                    'SELECT ul.id_login
-                     FROM user_login ul
-                     INNER JOIN hr_person p ON p.id_user = ul.id_user AND p.aktivni = 1
-                     WHERE ul.id_user = ? AND ul.akce = 1 AND ul.duvod = 2
-                     ORDER BY ul.kdy DESC, ul.id_login DESC
-                     LIMIT 1'
-                );
-                $stmt->bind_param('i', $idUser);
-            }
+            // Platnost patri tomuto loginu, nikoli poslednimu prihlaseni celeho uzivatele.
+            $stmt = $conn->prepare(
+                'SELECT ul.id_login
+                 FROM user_login ul
+                 INNER JOIN hr_person p ON p.id_user = ul.id_user AND p.aktivni = 1
+                 WHERE ul.id_login = ? AND ul.id_user = ? AND ul.akce = 1 AND ul.duvod = 2
+                 LIMIT 1'
+            );
+            $stmt->bind_param('ii', $idLogin, $idUser);
 
             $stmt->execute();
             $row = $stmt->get_result()->fetch_assoc();
@@ -212,6 +195,7 @@ if (!function_exists('cb_session_forget_auth')) {
         unset($_SESSION['cb_prebrani_prav']);
         unset($_SESSION['login_ok']);
         unset($_SESSION['cb_auth_ok']);
+        unset($_SESSION['cb_pin_ceka'], $_SESSION['cb_pin_zprava']);
         unset($_SESSION['cb_2fa_token']);
         unset($_SESSION['cb_user']);
         unset($_SESSION['cb_token']);

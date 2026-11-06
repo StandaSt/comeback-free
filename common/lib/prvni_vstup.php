@@ -9,12 +9,14 @@ require_once __DIR__ . '/osoba_jmeno.php';
  * Dokonceni loginu muze jednorazove aktivovat vyvojove prebrani prav USER 1.
  * Dokonceny login pouze naplanuje kontrolu Restie po nacteni prihlaseneho IS.
  * Pri novem ci dokoncenem loginu uklizi priznak obnovy registrace 2FA notifikaci.
+ * Ucet s nastavenym PINem nabizi PIN i push; otevreny PIN musi byt zmenen pred dokoncenim kterekoli cesty.
  */
 
 require_once __DIR__ . '/duveryhodne_zarizeni.php';
 require_once __DIR__ . '/login_nastaveni.php';
 require_once __DIR__ . '/pc_session.php';
 require_once __DIR__ . '/prebrani_prav.php';
+require_once __DIR__ . '/login_pin.php';
 
 /* Nacte lokalniho uzivatele podle jeho id. */
 function cb_prvni_vstup_user(mysqli $db, int $idUser): ?array
@@ -139,13 +141,15 @@ function cb_login_restia_kontrola(): void
 }
 
 /* Dokonci prihlaseni bez cekani na Restii, kterou prohlizec overi az po nacteni IS. */
-function cb_prvni_vstup_dokonci_login(mysqli $db, array $user): void
+function cb_prvni_vstup_dokonci_login(mysqli $db, array $user): bool
 {
     unset($_SESSION['cb_prebrani_prav']);
     if ((int)($user['aktivni'] ?? 0) !== 1) {
         throw new RuntimeException('Osoba je v HR neaktivní a nemůže se přihlásit do IS.');
     }
     $idUser = (int)$user['id_user'];
+    // Tato centralni kontrola plati i pro schvalene QR, push, e-mail a duveryhodny telefon.
+    if (cb_pin_pred_dokoncenim($db, $user)) return false;
     // Profil pro zobrazeni vzdy pochazi ze stejneho aktualniho HR zdroje, i po prihlaseni jinou metodou.
     $personal = cb_osoby_nacist($db,[$idUser])[$idUser] ?? [];
     cb_session_regenerate_after_login();
@@ -178,6 +182,7 @@ function cb_prvni_vstup_dokonci_login(mysqli $db, array $user): void
     cb_db_fill_login_info_session($db, $idUser, $idLogin);
     cb_login_load_settings_to_session($idUser);
     $_SESSION['login_ok'] = 1;
+    unset($_SESSION['cb_pin_ceka'], $_SESSION['cb_pin_zprava']);
     unset($_SESSION['cb_auth_ok'], $_SESSION['cb_2fa_token'], $_SESSION['cb_token'], $_SESSION['cb_prvni_vstup_user_id'], $_SESSION['cb_prvni_vstup_platnost_do'], $_SESSION['cb_local_login_user_id'], $_SESSION['cb_2fa_obnova_registrace']);
     $_SESSION['cb_timeout_min'] = 720;
     $_SESSION['cb_session_start_ts'] = time();
@@ -192,6 +197,7 @@ function cb_prvni_vstup_dokonci_login(mysqli $db, array $user): void
     }
     // Nova session musi dorazit do prohlizece drive nez zacne pomaly import.
     $_SESSION['cb_restia_po_loginu'] = 1;
+    return true;
 }
 
 /* Zahaji lokalni login a vrati prime presmerovani pro overeni na stejnem mobilu. */
@@ -202,6 +208,15 @@ function cb_lokalni_login_zahaj(mysqli $db, array $user, string $deviceEndpoint 
         throw new RuntimeException('Osoba je v HR neaktivní a nemůže se přihlásit do IS.');
     }
     $idUser = (int)$user['id_user'];
+    // Nastaveni se cte z uctu; PIN nevylucuje odeslani notifikace a nezavisi na ID osoby.
+    $on2fa = 1;
+    $row = $db->query('SELECT on_2fa FROM set_system WHERE id_set=1 LIMIT 1')->fetch_assoc();
+    if (is_array($row)) { $on2fa = (int)$row['on_2fa']; }
+    $pinSettings = cb_pin_nastaveni($db, $idUser);
+    if ($pinSettings !== null && cb_pin_nastaven($pinSettings)) {
+        cb_pin_zahaj($db, $user, (string)($GLOBALS['PROSTREDI'] ?? '') !== 'LOCAL' && $on2fa === 1);
+        return cb_login_url();
+    }
     $personal = cb_osoby_nacist($db,[$idUser])[$idUser] ?? [];
     $_SESSION['cb_user'] = ['id_user' => $idUser, 'name' => (string)$user['jmeno'], 'surname' => (string)$user['prijmeni'],
         'druhe_jmeno'=>(string)($personal['druhe_jmeno']??''),'titul_za'=>(string)($personal['titul_za']??''),
@@ -210,9 +225,6 @@ function cb_lokalni_login_zahaj(mysqli $db, array $user, string $deviceEndpoint 
     $_SESSION['cb_local_login_user_id'] = $idUser;
     require_once __DIR__ . '/../db/db_user.php';
     cb_db_ensure_user_set($db, $idUser);
-    $on2fa = 1;
-    $row = $db->query('SELECT on_2fa FROM set_system WHERE id_set=1 LIMIT 1')->fetch_assoc();
-    if (is_array($row)) { $on2fa = (int)$row['on_2fa']; }
     if ((string)($GLOBALS['PROSTREDI'] ?? '') === 'LOCAL' || $on2fa !== 1) {
         cb_prvni_vstup_dokonci_login($db, $user);
         return null;

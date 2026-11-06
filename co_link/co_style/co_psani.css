@@ -6,8 +6,11 @@
   border-color:var(--brand)
 }
 
-.send:hover {
-  background:#225662
+/* Konkretni stav ma prednost pred obecnym hoverem tlacitek a zachova kontrast bileho textu. */
+button.send:hover,button.send:focus-visible {
+  background:#225662;
+  color:#fff;
+  border-color:#225662
 }
 
 .composer {

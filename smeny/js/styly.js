@@ -1,4 +1,4 @@
-/* Účel: Skládá plánovač se zarovnanými řádky, čitelnou mobilní mřížkou a bloky odděleného příjmení a jména; časový tooltip sleduje kurzor a interval zůstává i v detailu. */
+/* Účel: Skládá plánovač s čitelnou mobilní mřížkou a samostatnou navigací dne nezávislou na umístění půlhodin; obnovuje popisky stavů denního přehledu po filtrování. Časový tooltip sleduje kurzor a interval zůstává i v detailu. */
 (function () {
   'use strict';
   var dayViews = [];
@@ -10,15 +10,7 @@
     if (layoutFrame !== null) return;
     layoutFrame=requestAnimationFrame(function () {
       layoutFrame=null;
-      // Pevný referenční okraj dává select šablony; horní dva řádky se přizpůsobí jemu, nikoli naopak.
-      document.querySelectorAll('.smeny_planning_controls').forEach(function (controls) {
-        // Na telefonu šířku určuje dostupný prostor, nikoli poloha selectu v dalším řádku.
-        if (window.matchMedia('(max-width:980px)').matches) { controls.style.removeProperty('width'); return; }
-        var template=controls.closest('.smeny_content').querySelector('.smeny_planning_template_select select');
-        if(!template || !template.getClientRects().length) return;
-        var width=template.getBoundingClientRect().right-controls.getBoundingClientRect().left;
-        if(width>0) controls.style.width=width+'px';
-      });
+      // Šířku horního ovládání nyní řídí CSS; šablona je uvnitř záhlaví a není měřítkem jeho šířky.
       gridObserved.forEach(function (element) {
         if (!element.isConnected) { gridObserver.unobserve(element); gridObserved.delete(element); }
       });
@@ -270,11 +262,10 @@
     }
     nav.append(previous,select,next);
     var toolbar=container.closest('[data-smeny-template-form]')?.querySelector('.smeny_template_toolbar');
-    var resolution=container.closest('.smeny_content').querySelector('[data-smeny-planning-resolution]');
+    var dayToolbar=container.closest('.smeny_content').querySelector('.smeny_planning_day_toolbar');
     if (toolbar) toolbar.insertBefore(nav,toolbar.querySelector('.smeny_template_resolution'));
-    else if(resolution) {
-      // Přepínač zůstane viditelný i v týdenním pohledu, kde se navigace jednotlivých dní schová.
-      var dayToolbar=resolution.closest('.smeny_planning_day_toolbar');
+    else if(dayToolbar) {
+      // Navigace dne má vlastní místo nezávislé na půlhodinách v horním řádku nastavení.
       dayToolbar.prepend(nav);
     } else container.before(nav);
     select.addEventListener('change',update);
@@ -460,6 +451,11 @@
   });
   document.addEventListener('DOMContentLoaded',init);
   document.addEventListener('cb:main-swapped',init);
-  document.addEventListener('cb:filters-swapped',function () { document.querySelectorAll('.smeny_content').forEach(tables); });
+  // Po společném filtrování obnovíme také přístupné popisky stavů v nových denních blocích.
+  document.addEventListener('cb:filters-swapped',function (event) {
+    document.querySelectorAll('.smeny_content').forEach(tables);
+    var form=event.detail && event.detail.form;
+    if(form && form.classList.contains('smeny_public_view') && window.CB_TOOLTIP) window.CB_TOOLTIP.init(form);
+  });
   init();
 }());

@@ -1,5 +1,5 @@
 <?php
-/* Co-Link: slozi verejny adresar z osob a samostatne pripravenych HR udaju. */
+/* Co-Link: složí veřejný adresář z HR údajů a fotografií podle ID osob bez dotazu na jejich cesty. */
 declare(strict_types=1);
 require_once __DIR__ . '/co_lide.php';
 require_once __DIR__ . '/co_adresar_fotografie.php';
@@ -7,7 +7,6 @@ require_once __DIR__ . '/co_adresar_role.php';
 require_once __DIR__ . '/co_adresar_sloty.php';
 require_once __DIR__ . '/co_adresar_funkce.php';
 require_once __DIR__ . '/co_adresar_pobocky.php';
-require_once __DIR__ . '/../co_db/co_adresar_fotografie_nacist.php';
 require_once __DIR__ . '/../co_db/co_adresar_role_nacist.php';
 require_once __DIR__ . '/../co_db/co_adresar_sloty_nacist.php';
 require_once __DIR__ . '/../co_db/co_adresar_funkce_nacist.php';
@@ -22,7 +21,7 @@ function co_adresar(): array
     $groups = []; $branches = []; $labels = []; $roleLabels = []; $photos = [];
     if ($ids !== []) {
         // Poradi dotazu i pripojovani nazvu zustava stejne jako v puvodnim adresari.
-        $photos = co_adresar_fotografie(co_adresar_fotografie_nacist($ids));
+        $photos = co_adresar_fotografie($ids);
         $roles = co_adresar_role(co_adresar_role_nacist($ids));
         $groups = $roles['skupiny']; $roleLabels = $roles['nazvy'];
         $slots = co_adresar_sloty(co_adresar_sloty_nacist($ids));

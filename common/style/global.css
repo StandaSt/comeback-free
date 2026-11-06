@@ -2,6 +2,7 @@
  * Ucel souboru: Definuje spolecny zaklad vzhledu cele aplikace.
  * Typografie pouziva pouze centralne urcene pevne velikosti v px.
  * Vyvojove prebrani prav oznacuje pevnym upozornenim bez zmeny bezneho layoutu.
+ * Prepinace hlavicky sdili navigacni obal s display:contents pro zachovani desktopove mrizky.
  * Hlavička má zarovnané názvy a nejvýše dva osobní štítky; širší tabulka směn pojme jména zaměstnanců.
  * Vlastní profil odděluje údaje pro čtení od formulářů přihlašovacího účtu IS.
  * Info od admina má vlastní jednotnou typografii a kompaktní třísloupcovou lištu nezávislou na modulu.
@@ -10,7 +11,8 @@
  * Co-Link ma v PP vlastni ramec; jeho mobilni PWA zustava stejna i pri pouziti uvnitr IS.
  * Co-Link vyuziva stejne menu, zapati a PP jako ostatni moduly; jeho nastaveni je nad Administraci.
  * Radky konverzaci Co-Linku jsou nizsi nez ovladaci tlacitka menu, aby setrily mistem.
- * Informační kolečko sdílí řádek s odhlášením a otevírá společný přehled verzí.
+ * Informační kolečko sdílí řádek s odhlášením; menší symbol je vystředěný ve větší klikací ploše.
+ * Ručně zadané změny zobrazují verzi, typ a původní prostý text.
  */
 
 :root {
@@ -734,7 +736,7 @@ main{
 
 /* Vsechny prepinace maji shodny font a stred textu; pocitadlo neposouva popisek. */
 .blok_hlavicka .head_module_link,
-.blok_hlavicka > .head_task_btn{
+.blok_hlavicka .head_task_btn{
   font-family:inherit;
   font-size:var(--cb-font-16);
   font-weight:400;
@@ -743,10 +745,10 @@ main{
   justify-content:center;
   align-items:center;
 }
-.blok_hlavicka > .head_task_btn{position:relative;height:100%;min-height:0;padding:0 28px;}
-.blok_hlavicka > .head_task_btn .head_task_count{position:absolute;right:8px;}
+.blok_hlavicka .head_task_btn{position:relative;height:100%;min-height:0;padding:0 28px;}
+.blok_hlavicka .head_task_btn .head_task_count{position:absolute;right:8px;}
 /* Druhý řádek zůstává vyhrazený i bez štítků; všechny názvy jsou na stejné úrovni. */
-.blok_hlavicka .head_module_link,.blok_hlavicka > .head_task_btn{
+.blok_hlavicka .head_module_link,.blok_hlavicka .head_task_btn{
   height:55px;min-height:55px;box-sizing:border-box;flex-direction:column;gap:3px;padding:4px;
 }
 .head_module_name{display:block;line-height:19px;min-height:19px;white-space:nowrap;}
@@ -760,7 +762,7 @@ main{
 
 @media(max-width:767px){
   .blok_hlavicka .head_module_link,
-  .blok_hlavicka > .head_task_btn{font-size:var(--cb-font-14);}
+  .blok_hlavicka .head_task_btn{font-size:var(--cb-font-14);}
 }
 
 .head_task_btn--todo{
@@ -880,31 +882,6 @@ main{
   border-radius:8px;
 }
 .cb_prebrani_prav_notice form{margin-left:auto;}
-
-.cb_orientation_notice{
-  position:fixed;
-  inset:0;
-  z-index:1000;
-  display:none;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-  padding:28px;
-  color:var(--cb-text-main);
-  text-align:center;
-  background:var(--cb-bg-page);
-}
-
-.cb_orientation_notice strong{
-  font-size:var(--cb-font-22);
-}
-
-.cb_orientation_notice span{
-  max-width:360px;
-  color:var(--cb-text-muted);
-  font-size:var(--cb-font-14);
-}
 
 .cb_menu_toggle,
 .cb_menu_backdrop{
@@ -1054,16 +1031,6 @@ main{
 
   .cb_menu_backdrop{
     inset-block-start:67px;
-  }
-}
-
-.obal_main.is-small-portrait .cb_orientation_notice{
-  display:flex;
-}
-
-@media (max-width:767px) and (orientation:portrait){
-  .cb_orientation_notice{
-    display:flex;
   }
 }
 
@@ -1448,21 +1415,32 @@ align-items:center;
 }
 
 .blok_menu_verze{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
+  display:grid;
+  place-items:center;
+  place-self:center;
   width:32px;
   height:32px;
   padding:0;
+  border:0;
+  background:transparent;
+  cursor:pointer;
+}
+
+/* Viditelné kolečko je o čtvrtinu menší; klikací plocha zůstává pohodlná i na telefonu. */
+.blok_menu_verze > span{
+  display:grid;
+  place-items:center;
+  box-sizing:border-box;
+  width:24px;
+  height:24px;
   border:1px solid var(--cb-border-soft);
   border-radius:50%;
   background:var(--cb-border-soft);
   color:var(--cb-text-muted);
-  font:700 18px Georgia,serif;
-  cursor:pointer;
+  font:700 14px/1 Arial,sans-serif;
 }
 
-.blok_menu_verze:hover{background:var(--cb-bg-control-hover);color:var(--cb-text-main);}
+.blok_menu_verze:hover > span{background:var(--cb-bg-control-hover);color:var(--cb-text-main);}
 .blok_menu_verze:focus-visible,.cb_verze_close:focus-visible{outline:2px solid var(--clr_modra_6);outline-offset:3px;}
 @media (pointer:coarse){
   .blok_menu_user_actions{grid-template-columns:44px minmax(0,1fr);}
@@ -1506,6 +1484,11 @@ align-items:center;
 .cb_verze_release time{margin-left:8px;color:var(--cb-text-muted);font-size:var(--cb-font-12);}
 .cb_verze_release h3{margin:14px 0 5px;font-size:var(--cb-font-14);}
 .cb_verze_release ul{margin:0;padding-left:20px;line-height:1.6;}
+.cb_verze_meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:7px;}
+.cb_verze_meta span{color:var(--cb-text-muted);font-size:var(--cb-font-12);}
+.cb_verze_text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5;}
+.cb_verze_more{padding:0 18px 14px;}
+.cb_verze_more button[hidden]{display:none;}
 
 .pp{
   grid-area:pp;
@@ -1857,6 +1840,8 @@ align-items:center;
 .blok_menu[data-menu-module="co_link"] .co_link_menu_conversations{gap:3px;}
 .blok_menu[data-menu-module="co_link"] .co_link_menu_conversation{min-height:26px;padding:3px 9px;}
 .co_link_menu_count{flex-shrink:0;font-size:var(--cb-font-12);font-weight:bold;}
+/* Zelena tecka oznacuje kolegu s posledni zaznamenanou akci v IS mladsi nez deset minut. */
+.co_link_menu_conversation .co_link_online{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:#18794e;margin-left:auto;}
 .co_link_menu_settings + .blok_menu_admin{margin-top:0;}
 .cb-context--co_link{--cb-module-accent:#123d45;--cb-module-soft:#e3efe7;}
 

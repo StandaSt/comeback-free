@@ -4,11 +4,16 @@ declare(strict_types=1);
 /*
  * Účel souboru: Definuje povolené stránky Administrace a vybere aktuální kostru PP.
  * Vlastní zobrazované panely vcetne vypinatelne diagnostiky zůstávají v admin_includes.
+ * Správa změn IS má samostatnou stránku chráněnou právem 112.
  */
 
 function cb_admin_pages(): array
 {
     return [
+        'zmeny_is' => [
+            'file' => __DIR__ . '/../admin_pages/admin_verzovani_page.php',
+            'title' => 'Změny v IS',
+        ],
         'diagnostika_vykonu' => [
             'file' => __DIR__ . '/../admin_pages/admin_diagnostika_page.php',
             'title' => 'Diagnostika výkonu',

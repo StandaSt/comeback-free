@@ -1,5 +1,5 @@
 <?php
-/* E-mail: ucty, osobni pocty a precteni sdilene posty; souhrn nacita radky az po globalnim datumovem vyberu. */
+/* E-mail: ucty, spravcem prirazene osobni pripojeni a seznamy posty; cizi osobni posta se spravci neodemyka. */
 declare(strict_types=1);
 // Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
 require_once __DIR__ . '/../common/lib/osoba_jmeno.php';
@@ -12,55 +12,28 @@ require_once __DIR__.'/sprava.php';
 function em_stav(mysqli $db): array
 {
     $person=em_osoba($db); $accounts=[];$available=em_ucty($db,$person);$counts=[];
+    // Zobrazovany nazev cteme z ciselniku stejne firmy; identita a opravneni nadale pouzivaji ID uctu.
+    $branchNames=[];
+    if(array_filter($available,static fn($a)=>$a['typ']==='pobocka')){
+        $s=$db->prepare('SELECT id_pob,nazev FROM pobocka WHERE id_firma=?');$s->bind_param('i',$person['id_firma']);$s->execute();
+        foreach($s->get_result()->fetch_all(MYSQLI_ASSOC) as $branch)$branchNames[(int)$branch['id_pob']]=$branch['nazev'];
+    }
     $counts=em_precteni_pocty($db,$available);
     foreach ($available as $a) {
         $unlocked=true; try { em_heslo($a); } catch (EmailChyba) { $unlocked=false; }
-        $accounts[]=['id'=>(int)$a['id'],'email'=>$a['email'],'type'=>$a['typ'],'mode'=>$a['rezim'],'unlocked'=>$unlocked,'unread'=>$unlocked?($counts[(int)$a['id']]??null):null];
+        $accounts[]=['id'=>(int)$a['id'],'email'=>$a['email'],'name'=>$a['typ']==='pobocka'?($branchNames[(int)$a['id_pob']]??''):'','type'=>$a['typ'],'mode'=>$a['rezim'],'unlocked'=>$unlocked,'unread'=>$unlocked?($counts[(int)$a['id']]??null):null];
     }
-    return ['accounts'=>$accounts,'manager'=>$person['manager'],
+    return ['accounts'=>$accounts,'manager'=>$person['manager'],'attachment_limit'=>em_limit_priloh($person['manager']),
         'shared'=>em_pravo(801),'manage_shared'=>em_pravo(802),'shared_management'=>em_sprava_cti($db,$person),
         'owner'=>em_identita(),'preferences'=>em_nastaveni_cti($db)];
 }
 
-/** Uložení připojení mění jen vlastní osobní účet nebo předem povolenou sdílenou adresu. */
+/** Sdilena a osobni pripojeni maji vlastni autorizovanou obsluhu bez duplicitni zapisove logiky. */
 function em_pripojit(mysqli $db, array $d): void
 {
     if (($d['type']??'osobni')==='shared') { em_sdilena_uloz($db,$d); return; }
-    $p=em_osoba($db); $email=em_firemni_adresa((string)($d['local_part']??'')); $pw=(string)($d['password']??'');
-    $mode=(string)($d['mode']??'is'); $type=(string)($d['type']??'osobni');
-    if (!filter_var($email,FILTER_VALIDATE_EMAIL) || !str_ends_with($email,'@pizzacomeback.cz') || $pw==='' || strlen($pw)>1024
-        || !in_array($mode,['is','heslo'],true)) throw new EmailChyba('Vyplňte firemní e-mail, heslo a způsob přihlášení.');
-    $branch=null; $user=null;
-    if ($type==='osobni') {
-        if (!$p['manager']) throw new EmailChyba('Osobní připojení firemní schránky je dostupné uživatelům s manažerským zařazením.');
-        $user=$p['id_user'];
-    } else throw new EmailChyba('Neplatný typ schránky.');
-    // Před změnou připojení ověříme oba protokoly, SMTP bez odeslání jakékoli zprávy.
-    $a=['email'=>$email,'id'=>0,'rezim'=>'is','heslo_sifra'=>em_zasifruj($pw,'ucet:'.$email)];
-    $client=em_imap($a,$pw);
-    try {
-        $mail=em_mailer($a,['to'=>$email]);
-        if (!$mail->smtpConnect()) throw new EmailChyba('SMTP přihlášení se nepodařilo.');
-        $mail->smtpClose();
-    } finally { $client->disconnect(); }
-    $cipher=$mode==='is'?$a['heslo_sifra']:null;
-    $db->begin_transaction();
-    try {
-        $s=$db->prepare('SELECT * FROM email_ucet WHERE email=? OR (id_user IS NOT NULL AND id_user=?) FOR UPDATE');
-        $s->bind_param('si',$email,$user); $s->execute(); $rows=$s->get_result()->fetch_all(MYSQLI_ASSOC);
-        if (count($rows)>1) throw new EmailChyba('Připojení koliduje s existující schránkou.');
-        $old=$rows[0]??null;
-        if ($old) {
-            if ($old['typ']!==$type || (int)$old['id_firma']!==(int)$p['id_firma'] || (int)$old['id_user']!==(int)$user || (int)$old['id_pob']!==(int)$branch || $old['email']!==$email) throw new EmailChyba('Existující schránka má jiné přiřazení.');
-            $id=(int)$old['id']; $rev=(int)$old['revize']+1;
-            $s=$db->prepare('UPDATE email_ucet SET heslo_sifra=?,rezim=?,revize=?,aktivni=1 WHERE id=?'); $s->bind_param('ssii',$cipher,$mode,$rev,$id); $s->execute();
-        } else {
-            $s=$db->prepare('INSERT INTO email_ucet(id_firma,typ,id_user,id_pob,email,heslo_sifra,rezim) VALUES(?,?,?,?,?,?,?)');
-            $s->bind_param('isiisss',$p['id_firma'],$type,$user,$branch,$email,$cipher,$mode); $s->execute(); $id=(int)$db->insert_id; $rev=1;
-        }
-        em_audit($db,$id,'pripojeni'); $db->commit();
-    } catch (Throwable $e) { $db->rollback(); throw $e; }
-    $_SESSION['email_pristup'][$id]=['identita'=>em_identita(),'revize'=>$rev,'heslo'=>em_zasifruj($pw,'session:'.em_identita().':'.$id)];
+    if (($d['type']??'osobni')!=='osobni') throw new EmailChyba('Neplatny typ schranky.');
+    em_osobni_pripojit($db,$d);
 }
 
 /** Jednotný klíč pracovního stavu odolá přesunu, opětovnému použití UID a změně kódování názvu složky. */
@@ -187,7 +160,7 @@ function em_seznam(mysqli $db, array $accounts, array $d): array
     if($indexOnly && !$paged)throw new EmailChyba('Datumový index vyžaduje stránkovaný přehled.');
     if($selectedUids!==null && (!$paged || $indexOnly || (int)($d['snapshot_validity']??0)<1))throw new EmailChyba('Chybí platná identifikace seznamu.');
     $limit=(int)($d['limit']??50);if(!in_array($limit,[25,50,100],true))$limit=50;if($part)$limit=50;
-    $page=max(1,min($paged?100000:100,(int)($d['page']??1))); $multi=count($accounts)>1 || $part; $rows=[]; $total=0; $errors=[];$snapshot=[];
+    $page=max(1,min($paged?100000:100,(int)($d['page']??1))); $multi=count($accounts)>1 || $part; $rows=[]; $total=0; $errors=[];$errorDetails=[];$snapshot=[];
     if (!$paged && $multi && $page>20) throw new EmailChyba('Pro starší zprávy vyberte konkrétní schránku nebo použijte hledání.');
     foreach ($accounts as $a) {
         $client=null; $phase='pripojeni';
@@ -243,14 +216,14 @@ function em_seznam(mysqli $db, array $accounts, array $d): array
                 finally {cb_diag_span('rows_and_work_sql',$diagStart);}
             }
         } catch (Throwable $e) {
-            // Zprava vyjimky ani argumenty stacku sem nepatri: mohou obsahovat hesla nebo obsah posty.
-            error_log('EMAIL_READ account='.(int)$a['id'].' phase='.$phase.' class='.get_class($e).' at='.basename($e->getFile()).':'.$e->getLine());
-            $errors[]=$a['email'].': schránku se nepodařilo načíst.';
+            // Castecne selhani souhrnu se take musi ulozit, prestoze cele API vraci HTTP 200.
+            $failure=em_chyba_vysledek($e,['action'=>'list','phase'=>$phase,'account'=>$a['id']]);
+            $errors[]=$a['email'].': '.$failure['error'];$errorDetails[]=$failure['error_detail'];
         }
         finally { if ($client) $client->disconnect(); }
     }
     // IMAP vybira stranku od nejnovejsich UID, ale hlavicky muze vratit vzestupne; vystup proto vzdy radime podle skutecneho casu vcetne pasma.
     usort($rows,static fn($a,$b)=>((strtotime($b['date'])?:0)<=>(strtotime($a['date'])?:0))?:($paged?($a['uid']<=>$b['uid']):($b['uid']<=>$a['uid']))?:($a['account']<=>$b['account']));
     if ($multi && !$part && !$paged) $rows=array_slice($rows,($page-1)*$limit,$limit);
-    return ['messages'=>$rows,'total'=>$total,'page'=>$page,'limit'=>$limit,'snapshot'=>$snapshot,'errors'=>$errors];
+    return ['messages'=>$rows,'total'=>$total,'page'=>$page,'limit'=>$limit,'snapshot'=>$snapshot,'errors'=>$errors,'error_details'=>$errorDetails];
 }

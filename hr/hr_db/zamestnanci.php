@@ -7,7 +7,7 @@ require_once __DIR__.'/../../common/lib/hr_casova_platnost.php';
 /**
  * DB dotazy pro seznam, detail a kontrolu kompletnosti zamestnancu v HR.
  * Seznam, detail i volby filtru respektuji jednotny osobni rozsah HR podle role.
- * Tabulkovy seznam shrnuje pracovni vztahy do jednoho radku za osobu.
+ * Tabulkovy seznam shrnuje pracovni vztahy do jednoho radku a zobrazuje vsechny rovnocenne platne sloty.
  * Karta spojuje audit vsech zmen a starsi historie podle zapisu; ucinnost zachovava v detailech.
  * Kontrola kompletnosti respektuje nepovinnou MAIN u Personal managera.
  * Prehled shrnuje dnes platne benefity osoby i pri vice soubeznych pracovnich vztazich.
@@ -49,7 +49,7 @@ function hr_fetch_employees(mysqli $db, int $limit = 100): array
             pv.id_pracovni_vztah,
             pob.nazev AS pracoviste,
             (
-                SELECT GROUP_CONCAT(DISTINCT cs2.slot ORDER BY hz2.hlavni DESC, cs2.slot SEPARATOR ', ')
+                SELECT GROUP_CONCAT(DISTINCT cs2.slot ORDER BY cs2.slot SEPARATOR ', ')
                 FROM {$slotTable} hz2
                 INNER JOIN cis_slot cs2 ON cs2.id_slot = hz2.id_slot
                 WHERE hz2.id_person = p.id_person
@@ -677,7 +677,7 @@ function hr_fetch_employee(mysqli $db, int $id): ?array
             pv.datum_ukonceni,
             pob.nazev AS pracoviste,
             (
-                SELECT GROUP_CONCAT(DISTINCT cs2.slot ORDER BY hz2.hlavni DESC, cs2.slot SEPARATOR ', ')
+                SELECT GROUP_CONCAT(DISTINCT cs2.slot ORDER BY cs2.slot SEPARATOR ', ')
                 FROM {$slotTable} hz2
                 INNER JOIN cis_slot cs2 ON cs2.id_slot = hz2.id_slot
                 WHERE hz2.id_person = p.id_person

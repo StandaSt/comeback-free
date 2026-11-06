@@ -2,11 +2,13 @@
 declare(strict_types=1);
 
 /* Účel: Načítá vlastní profil a mění výhradně přihlašovací údaje účtu IS.
+ * Uctu s nastavenym PINem umoznuje jeho zmenu po overeni hesla a dosavadniho PINu.
  * Kontakty, osobní údaje ani pracovní zařazení v HR se zde nikdy nezapisují.
  */
 require_once __DIR__ . '/obnoveni_hesla.php';
 require_once __DIR__ . '/email_zmena.php';
 require_once __DIR__ . '/hr_pracoviste_main.php';
+require_once __DIR__ . '/login_pin.php';
 
 /** Identita pochází pouze z přihlášení, nikdy z formuláře nebo převzatých práv. */
 function cb_profil_id(): int
@@ -49,6 +51,10 @@ function cb_profil_data(mysqli $db): array
     $id = (int)$account['id_user'];
     $data = ['email' => (string)$account['email'], 'ma_heslo' => trim((string)$account['heslo_hash']) !== '',
         'email_pripraven' => cb_profil_email_pripraven($db), 'ceka_email' => null];
+    // Pole se nabizi pouze skutecne prihlasene identite, nikoli adminovi s prevzatymi pravy.
+    $pinSettings = cb_pin_nastaveni($db, $id);
+    $data['pin_povoleno'] = $pinSettings !== null && cb_pin_nastaven($pinSettings);
+    $data['pin_pripraven'] = $data['pin_povoleno'];
     unset($account);
     $queries = [
         'pobocky' => 'SELECT DISTINCT b.id_pob, b.nazev FROM ' . cb_hr_pracoviste_sql($db) . ' w JOIN pobocka b ON b.id_pob=w.id_pob
@@ -163,11 +169,26 @@ function cb_profil_zmen_email(mysqli $db, array $post): void
     }
 }
 
-/** Běžný POST/redirect drží hesla mimo URL, session i AJAX historii modulu HR. */
+/** Zmeni jen vlastni PIN; stejne pocitadlo jako pri loginu brani hadani v profilu. */
+function cb_profil_zmen_pin(mysqli $db, array $post): void
+{
+    $id = cb_profil_id();
+    $pinSettings = cb_pin_nastaveni($db, $id);
+    if ($pinSettings === null || !cb_pin_nastaven($pinSettings)) throw new RuntimeException('Přihlašovací PIN není pro tento účet nastaven.');
+    $new = (string)($post['novy_pin'] ?? '');
+    if (!cb_pin_format($new) || !hash_equals($new, (string)($post['novy_pin_znovu'] ?? ''))) {
+        throw new RuntimeException('Nový PIN musí mít přesně čtyři číslice a obě zadání se musí shodovat.');
+    }
+    $account = cb_profil_ucet($db);
+    cb_profil_over_heslo($account, (string)($post['soucasne_heslo'] ?? ''));
+    cb_pin_over($db, $id, (string)($post['soucasny_pin'] ?? ''), $new);
+}
+
+/** Běžný POST/redirect drží hesla a PINy mimo URL, session i AJAX historii modulu HR. */
 function cb_profil_vyrid_post(): void
 {
     $action = (string)($_POST['cb_action'] ?? '');
-    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST' || !in_array($action, ['profil_heslo', 'profil_email', 'profil_nastavit_heslo'], true)) {
+    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST' || !in_array($action, ['profil_heslo', 'profil_email', 'profil_nastavit_heslo', 'profil_pin'], true)) {
         return;
     }
     $module = (string)($_POST['profil_modul'] ?? 'provoz');
@@ -184,6 +205,9 @@ function cb_profil_vyrid_post(): void
             cb_profil_zmen_heslo(db(), $_POST);
             $_SESSION['cb_flash'] = 'Heslo pro IS bylo změněno. Přihlaste se novým heslem.';
             $url = cb_root_url('');
+        } elseif ($action === 'profil_pin') {
+            cb_profil_zmen_pin(db(), $_POST);
+            $_SESSION['cb_profil_zprava'] = ['ok' => true, 'text' => 'Přihlašovací PIN byl změněn. Při dalším přihlášení použijte nový PIN.'];
         } elseif ($action === 'profil_email') {
             cb_profil_zmen_email(db(), $_POST);
             $_SESSION['cb_profil_zprava'] = ['ok' => true, 'text' => 'Na nový e-mail jsme odeslali potvrzovací odkaz. Do potvrzení používejte původní e-mail.'];

@@ -5,6 +5,7 @@
  * Pruh prebranych prav je soucasti trvale hlavicky, aby nezmizel pri vymene modulu.
  * E-mail ma vlastni prepinac a pocet neprectenych zprav jen s pravem 800.
  * Co-Link se prepina do PP ikonou Co s indikaci neprectenych zprav; ikona je viditelna pouze s pravem 700.
+ * Na uzkem mobilu sdili puvodni prepinace rozbalovaci nabidku; prava i osobni stitky zustavaji stejne.
  * Mobilní Směny používají úspornou lištu; návrat do IS znovu zpřístupní celou hlavičku.
  */
 declare(strict_types=1);
@@ -16,6 +17,7 @@ $cbHeaderModuleAllowed = [
     'smeny' => cb_modul_ma_pristup('smeny'),
     'ukoly' => cb_modul_ma_pristup('ukoly'),
     'helpdesk' => cb_modul_ma_pristup('helpdesk'),
+    'administrace' => cb_modul_ma_pristup('administrace'),
 ];
 $cbHeaderModuleDeniedText = 'Tento modul nyní nemáte povolen.';
 $cbHeaderCoLinkAllowed = $cbLoginOk && array_key_exists(700, $_SESSION['prava_stav'] ?? []) && cb_pravo_ma(700);
@@ -28,13 +30,13 @@ $cbHeaderMaintenanceActive = $cbLoginOk
 <header class="blok_hlavicka sirka100<?= $cbHeaderMaintenanceActive ? ' cb-maintenance-active' : '' ?><?= $cbHeaderCoLinkAllowed ? ' cb-has-colink' : '' ?><?= $cbHeaderEmailAllowed ? ' cb-has-email' : '' ?>">
 
     <?php if ($cbLoginOk): ?>
-      <div class="cb_orientation_notice" role="status" aria-live="polite">
-        <strong>Otočte zařízení na šířku</strong>
-        <span>Pro pohodlné používání informačního systému je potřeba širší pracovní plocha.</span>
-      </div>
       <button type="button" class="cb_menu_toggle" data-cb-menu-toggle="1" aria-controls="cb-main-menu" aria-expanded="false" aria-label="Otevřít menu">
         <span aria-hidden="true">☰</span>
       </button>
+      <button type="button" class="head_mobile_module_toggle" data-cb-module-toggle aria-controls="cb-header-modules" aria-expanded="false" aria-label="Vybrat modul">
+        <span data-cb-module-current>Moduly</span><span aria-hidden="true">▾</span>
+      </button>
+      <button type="button" class="head_mobile_module_backdrop" data-cb-module-backdrop aria-label="Zavřít výběr modulu" tabindex="-1"></button>
       <div class="smeny_mobile_bar">
         <span>Směny<?= $cbHeaderMaintenanceActive ? ' · Údržba' : '' ?></span>
         <button type="button" data-smeny-exit>Zpět do IS</button>
@@ -50,11 +52,10 @@ $cbHeaderMaintenanceActive = $cbLoginOk
     </div>
 
     <?php if ($cbLoginOk): ?>
-      <nav class="head_module_nav" aria-label="Moduly">
+      <nav id="cb-header-modules" class="head_module_nav" aria-label="Moduly">
         <a class="head_module_link head_module_link--provoz<?= $cbCurrentModule === 'provoz' ? ' is-active' : '' ?><?= !$cbHeaderModuleAllowed['provoz'] ? ' is-disabled' : '' ?>" href="<?= h(cb_root_url('')) ?>" data-cb-module-link="1" data-cb-module="provoz" data-cb-module-disabled="<?= $cbHeaderModuleAllowed['provoz'] ? '0' : '1' ?>" data-cb-tooltip-warning="<?= $cbHeaderModuleAllowed['provoz'] ? '0' : '1' ?>" aria-disabled="<?= $cbHeaderModuleAllowed['provoz'] ? 'false' : 'true' ?>"<?= !$cbHeaderModuleAllowed['provoz'] ? ' title="' . h($cbHeaderModuleDeniedText) . '"' : '' ?>><span class="head_module_name">Provoz</span><span class="head_module_tags" data-cb-header-tags="provoz"></span></a>
         <a class="head_module_link head_module_link--hr<?= $cbCurrentModule === 'hr' ? ' is-active' : '' ?><?= !$cbHeaderModuleAllowed['hr'] ? ' is-disabled' : '' ?>" href="<?= h(cb_root_url('')) ?>" data-cb-module-link="1" data-cb-module="hr" data-cb-module-disabled="<?= $cbHeaderModuleAllowed['hr'] ? '0' : '1' ?>" data-cb-tooltip-warning="<?= $cbHeaderModuleAllowed['hr'] ? '0' : '1' ?>" aria-disabled="<?= $cbHeaderModuleAllowed['hr'] ? 'false' : 'true' ?>"<?= !$cbHeaderModuleAllowed['hr'] ? ' title="' . h($cbHeaderModuleDeniedText) . '"' : '' ?>><span class="head_module_name">HR</span><span class="head_module_tags" data-cb-header-tags="hr"></span></a>
         <a class="head_module_link head_module_link--smeny<?= $cbCurrentModule === 'smeny' ? ' is-active' : '' ?><?= !$cbHeaderModuleAllowed['smeny'] ? ' is-disabled' : '' ?>" href="<?= h(cb_root_url('')) ?>" data-cb-module-link="1" data-cb-module="smeny" data-cb-module-disabled="<?= $cbHeaderModuleAllowed['smeny'] ? '0' : '1' ?>" data-cb-tooltip-warning="<?= $cbHeaderModuleAllowed['smeny'] ? '0' : '1' ?>" aria-disabled="<?= $cbHeaderModuleAllowed['smeny'] ? 'false' : 'true' ?>"<?= !$cbHeaderModuleAllowed['smeny'] ? ' title="' . h($cbHeaderModuleDeniedText) . '"' : '' ?>><span class="head_module_name">Směny</span><span class="head_module_tags" data-cb-header-tags="smeny"></span></a>
-      </nav>
 
       <button type="button" class="head_task_btn head_task_btn--todo<?= $cbCurrentModule === 'ukoly' ? ' is-active' : '' ?><?= !$cbHeaderModuleAllowed['ukoly'] ? ' is-disabled' : '' ?>" data-cb-module-link="1" data-cb-module="ukoly" data-cb-module-disabled="<?= $cbHeaderModuleAllowed['ukoly'] ? '0' : '1' ?>" data-cb-tooltip-warning="<?= $cbHeaderModuleAllowed['ukoly'] ? '0' : '1' ?>" aria-disabled="<?= $cbHeaderModuleAllowed['ukoly'] ? 'false' : 'true' ?>"<?= !$cbHeaderModuleAllowed['ukoly'] ? ' title="' . h($cbHeaderModuleDeniedText) . '"' : '' ?>>
         <span class="head_module_name">Úkoly</span>
@@ -66,8 +67,12 @@ $cbHeaderMaintenanceActive = $cbLoginOk
       </button>
 
 
+      <?php // Administrace doplnuje mobilni vyber; jeji serverova kontrola prav zustava v modulu. ?>
+      <a class="head_module_link head_module_link--mobile-admin<?= $cbCurrentModule === 'administrace' ? ' is-active' : '' ?><?= !$cbHeaderModuleAllowed['administrace'] ? ' is-disabled' : '' ?>" href="<?= h(cb_root_url('index.php?m=administrace')) ?>" data-cb-module-link="1" data-cb-module="administrace" data-cb-module-disabled="<?= $cbHeaderModuleAllowed['administrace'] ? '0' : '1' ?>" aria-disabled="<?= !$cbHeaderModuleAllowed['administrace'] ? 'true' : 'false' ?>"><span class="head_module_name">Administrace</span></a>
+      </nav>
+
       <?php if ($cbHeaderEmailAllowed): ?>
-        <a class="head_module_link head_module_link--email<?= $cbCurrentModule === 'email' ? ' is-active' : '' ?>" href="<?= h(cb_root_url('index.php?m=email')) ?>" data-cb-module-link="1" data-cb-module="email" data-cb-email-api="<?= h(cb_root_url('email/api.php')) ?>" aria-label="E-mail" title="E-mail"><span aria-hidden="true">✉</span><span class="head_colink_unread" data-cb-email-unread hidden></span></a>
+        <a class="head_module_link head_module_link--email<?= $cbCurrentModule === 'email' ? ' is-active' : '' ?>" href="<?= h(cb_root_url('index.php?m=email')) ?>" data-cb-module-link="1" data-cb-module="email" data-cb-email-api="<?= h(cb_root_url('email/email_pozadavky.php')) ?>" aria-label="E-mail" title="E-mail"><span aria-hidden="true">✉</span><span class="head_colink_unread" data-cb-email-unread hidden></span></a>
       <?php endif; ?>
       <?php if ($cbHeaderCoLinkAllowed): ?>
         <a class="head_module_link head_module_link--colink<?= $cbCurrentModule === 'co_link' ? ' is-active' : '' ?>" href="<?= h(cb_root_url('index.php?m=co_link')) ?>" data-cb-module-link="1" data-cb-module="co_link" aria-label="Co-Link" title="Co-Link"><span class="head_colink_icon" aria-hidden="true">Co</span><span class="head_colink_unread" data-cb-colink-unread hidden aria-hidden="true"></span></a>

@@ -5,6 +5,8 @@
  * Jednorazovou kontrolu Restie po loginu vyrizuje az samostatny pozadavek nacteneho IS.
  * Samostatny blok Objednavek overuje pravo 220; objednavkovy blok Prehledu pouziva svou puvodni cestu.
  * Otazku na umisteni pobockoveho PC predava samostatnemu vstupu pred zobrazenim IS.
+ * Přehled změn IS a jejich uložení vyřizuje před HTML společný vstup verzování.
+ * Vyzvu PIN podle nastaveni uctu a povinnou prvni zmenu vyrizuje pred HTML oddeleny vstup.
  */
 declare(strict_types=1);
 
@@ -22,6 +24,8 @@ require_once __DIR__ . '/common/lib/email_zmena.php';
 require_once __DIR__ . '/common/lib/hr_user_sync.php';
 require_once __DIR__ . '/common/lib/moduly.php';
 require_once __DIR__ . '/common/lib/nastaveni_uzivatele.php';
+require_once __DIR__ . '/common/lib/login_pin_vstup.php';
+cb_pin_vstup();
 // ID push oznámení uchováme i tehdy, když kontrola session přesměruje prošlé přihlášení.
 require_once __DIR__ . '/smeny/sm_lib/sm_oznameni_navrat.php';
 cb_smeny_oznameni_zapamatovat();
@@ -146,6 +150,10 @@ cb_profil_vyrid_post();
 // Sdělení mají vlastní tabulky a společný autorizovaný vstup nezávislý na modulu.
 require_once __DIR__.'/common/lib/admin_sdeleni.php';
 cb_sdeleni_vstup();
+
+// Čtení změn je společné všem modulům; zápis navíc ověřuje práva 100 a 112.
+require_once __DIR__ . '/common/lib/verzovani.php';
+cb_verze_vstup();
 
 $cbAuthOk = !empty($_SESSION['cb_auth_ok']);
 $cb2faPending = !empty($_SESSION['cb_2fa_token']);

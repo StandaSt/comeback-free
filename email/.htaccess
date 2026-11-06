@@ -1,5 +1,16 @@
+# Prilohy emailu: HTTP dovoluje100MB souboru a rezervu pro formular, aplikace overuje HR limit.
+# Apache s PHP modulem; pri PHP-FPM musi stejne hodnoty nastavit spravce v konfiguraci poolu.
+<IfModule php_module>
+    php_value upload_max_filesize 100M
+    php_value post_max_size 110M
+    php_value memory_limit 1024M
+    php_value max_execution_time 300
+    php_value max_input_time 300
+</IfModule>
+LimitRequestBody 115343360
+
 # Modul nema verejny vypis adresare, interni knihovny kontaktu, spravy a priloh ani instalacni manifesty.
 Options -Indexes
-<FilesMatch "^(composer\.(json|lock)|core\.php|data\.php|posta\.php|odeslani\.php|menu\.php|nastaveni\.php|sprava\.php|prilohy\.php|struktura\.php|prijemci\.php)$">
+<FilesMatch "^(composer\.(json|lock)|core\.php|chyby\.php|pristup\.php|osobni\.php|data\.php|posta\.php|odeslani\.php|fronta_odeslani\.php|menu\.php|nastaveni\.php|sprava\.php|prilohy\.php|struktura\.php|prijemci\.php)$">
     Require all denied
 </FilesMatch>

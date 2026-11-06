@@ -1,5 +1,5 @@
 <?php
-// Odesila Web Push s uplnymi cily, vyrazuje zanikle 2FA odbery a pripravuje tokenizovany detail chyb vcetne ID z log_chyby, pokud je volajici zna.
+// Odesila Web Push, vyrazuje zanikle odbery a pripravuje detail chyb; E-mail zobrazuje bezpecny souhrn i primo v push.
 declare(strict_types=1);
 require_once __DIR__ . '/../lib/push_odber.php';
 
@@ -422,7 +422,7 @@ function cb_push_send_error_admin(
     $fileText = trim((string)$file);
     $lineText = ($line !== null && $line > 0) ? ':' . (string)$line : '';
 
-    // Přesný popis zůstává pouze v tokenizovaném modálu, aby nebyl vidět na zamčené obrazovce.
+    // Uplny detail ma tokenizovany modal; E-mail navic zobrazi predem sestaveny bezpecny souhrn v push.
     $detail = "IS zaznamenal neočekávanou technickou chybu.\n\n";
     if ($idLogChyby !== null && $idLogChyby > 0) {
         $detail .= 'ID chyby: ' . $idLogChyby . "\n\n";
@@ -478,7 +478,7 @@ function cb_push_send_error_admin(
     $payloadArr = [
         'type' => $notificationType,
         'title' => $notificationTitle,
-        'body' => '',
+        'body' => $notificationType === 'EMAIL_ERROR_ADMIN' ? mb_substr($message, 0, 600, 'UTF-8') : '',
         'url' => $modalUrl,
     ];
 

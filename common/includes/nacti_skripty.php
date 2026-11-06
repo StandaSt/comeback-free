@@ -15,6 +15,7 @@
  * Nová historie má společný odesílač, aktivní jen v modulech s výslovným serverovým kontextem.
  * Nový přehled činnosti umožňuje nezávislé otevření více detailů.
  * Přehled verzí se vykreslí jednou mimo měněné menu a otevírá se delegovanou obsluhou.
+ * Spolecny dvousloupcovy vyber je dostupny pred inicializaci E-mailu i pro dalsi formulare.
  */
 declare(strict_types=1);
 
@@ -155,6 +156,7 @@ window.CB_MODULY_NAVIGACE = {
 <?php // Diagnostika musi byt pripravena pred klientem E-mailu; vypnuta neodesila zaznamy. ?>
 <?php require_once __DIR__.'/../lib/diagnostika_vykonu.php'; ?>
 <script src="<?= h(cb_root_url('common/js/diagnostika_vykonu.js').'?v='.filemtime(__DIR__.'/../js/diagnostika_vykonu.js')) ?>" data-until="<?= cb_diag_boot($cbNavUserId) ?>" defer></script>
+<script src="<?= h(cb_root_url('common/js/vyber_sloupce.js').'?v='.filemtime(__DIR__.'/../js/vyber_sloupce.js')) ?>" defer></script>
 <?php // E-mail reaguje take na vymenu pracovni plochy. ?>
 <script src="<?= h(cb_root_url('email/email.js').'?v='.filemtime(__DIR__.'/../../email/email.js')) ?>" defer></script>
 <?php // Klientska navigace mezi moduly. ?>

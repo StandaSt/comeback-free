@@ -9,6 +9,7 @@ require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
  * U importovanych smluv vraci take podpisy, casti a konkretni upozorneni pro personalistu.
  * Word otevre jako odvozeny PDF nahled; puvodni soubor zustava beze zmeny.
  * Otevreni konkretniho dokumentu eviduje vcetne osoby a verze, nikoli obsahu souboru.
+ * Povoluje importni uloziste i nove dokumenty v chranene datove slozce mimo aktivni web.
  */
 
 /**
@@ -237,11 +238,13 @@ function hr_stream_employee_document(mysqli $db, int $idUser, int $idDocument, i
     }
 
     $documentsRoot = realpath(__DIR__ . '/../hr_dokumenty');
+    $uploadedRoot = realpath(dirname(__DIR__,3).'/data/hr_dokumenty');
     $wwwRoot = realpath(dirname(__DIR__, 2));
     $relative = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, ltrim((string)$row['relativni_cesta'], '/\\'));
     $path = $wwwRoot === false ? false : realpath($wwwRoot . DIRECTORY_SEPARATOR . $relative);
-    if ($documentsRoot === false || $path === false
-        || !str_starts_with($path, $documentsRoot . DIRECTORY_SEPARATOR)
+    $allowedPath=$path!==false && (($documentsRoot!==false && str_starts_with($path,$documentsRoot.DIRECTORY_SEPARATOR))
+        || ($uploadedRoot!==false && str_starts_with($path,$uploadedRoot.DIRECTORY_SEPARATOR)));
+    if (!$allowedPath || $path === false
         || !is_file($path)) {
         http_response_code(404);
         exit;

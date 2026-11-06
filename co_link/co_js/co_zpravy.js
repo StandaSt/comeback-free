@@ -43,7 +43,7 @@
       article.append(personAvatar(m.jmeno,state.people.find(p=>Number(p.id)===Number(m.autor))?.foto));
       const body=node('div',undefined,'message-body'),meta=node('div',undefined,'message-meta');meta.append(node('strong',m.jmeno),node('time',date(m.vytvoreno)));if(m.upraveno)meta.append(node('span','upraveno','edited'));body.append(meta);
       // Prvni cizi precteni je videt primo u vlastni zpravy; podrobny seznam zustava dostupny pod ni.
-      if(mine&&!m.smazano)meta.append(node('span','Přečteno: '+(m.prvni_precteni?date(m.prvni_precteni):'NE'),'message-read-status'));
+      if(mine&&!m.smazano){const status=node('span','Přečteno: ','message-read-status');status.append(node('span',m.prvni_precteni?date(m.prvni_precteni):'NE',m.prvni_precteni?'':'message-unread'));meta.append(status);}
       const text=node('div',undefined,'message-text'+(m.smazano?' deleted':''));if(m.smazano)text.textContent='Zpráva byla smazána.';else textContent(text,m.text);body.append(text);
       // Priloha vede pres chraneny vstup; klient nikdy nedostava primou cestu do uloziste.
       const attachments=node('div',undefined,'attachments');for(const f of m.prilohy){const a=node('a','↗ '+f.nazev,'attachment');a.href='co_ajax/co_priloha.php?id='+f.id;a.append(node('small',bytes(f.velikost)));attachments.append(a);}body.append(attachments);
@@ -53,7 +53,8 @@
         // U vlastni zpravy zustavaji reakce ostatnich viditelne, ale nelze pridat vlastni reakci.
         for(const r of m.reakce){const b=button(r.emoji+' '+r.pocet,()=>react(m,r.emoji),'reaction'+(Number(r.moje)?' mine':''));b.disabled=archived||mine;tools.append(b);}
         if(!archived&&!mine)tools.append(button('Reagovat',()=>reactionPanel(m)));
-        if(!m.rodic)tools.append(button(Number(m.odpovedi)?'Vlákno · '+m.odpovedi:'Vlákno',()=>openThread(Number(m.id))));
+        // Pocet odpovedi pochazi ze serveru; prazdne vlakno zustava bez zvyrazneni.
+        if(!m.rodic)tools.append(button(Number(m.odpovedi)?'Vlákno · '+m.odpovedi:'Vlákno',()=>openThread(Number(m.id)),Number(m.odpovedi)>0?'has-replies':''));
         tools.append(button(Number(m.precteno_pocet)?'Přečetli '+m.precteno_pocet:'Přečtení',()=>readers(m)));
         if(m.lze_menit&&!archived){tools.append(button('Upravit',()=>editMessage(m)),button('Smazat',()=>deleteMessage(m)));}
         body.append(tools);

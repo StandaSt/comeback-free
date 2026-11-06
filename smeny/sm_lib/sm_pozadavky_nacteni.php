@@ -2,8 +2,9 @@
 declare(strict_types=1);
 // Zobrazovane jmeno vcetne titulu cteme pres spolecny zdroj osoby.
 require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
+require_once __DIR__ . '/sm_pozadavky_sloty.php';
 
-/* Účel: Načte uložený týden dostupnosti V2, volbu Kdykoliv a rezervace volna HPP. */
+/* Nacte dostupnost osoby a obsazene dny HPP napric vsemi MAIN a sloty platnymi v den volna. */
 
 /** Vrátí jednotný prázdný stav pro formulář i osobu bez uloženého týdne. */
 function cb_smeny_pozadavky_prazdne(): array
@@ -46,12 +47,24 @@ function cb_smeny_pozadavky_nacist(mysqli $db, array $person, array $week): arra
         }
         $stmt->close();
     }
-    if ((int)$person['je_hpp'] === 1 && (int)$person['id_pob'] > 0 && (int)$person['id_slot'] > 0) {
-        $idBranch = (int)$person['id_pob'];
-        $idSlot = (int)$person['id_slot'];
-        $stmt = $db->prepare('SELECT volno_datum FROM smeny_pozadavek
-            WHERE volno_id_pob=? AND volno_id_slot=? AND tyden_od=? AND id_person<>?');
-        $stmt->bind_param('iisi', $idBranch, $idSlot, $startDay, $idPerson);
+    if ((int)$person['je_hpp'] === 1) {
+        cb_smeny_pozadavky_rezervace_schema($db);
+        $slotPerson=(int)($person['id_person_sloty']??$idPerson);
+        $slotTable=cb_hr_schema_table($db,'slot');
+        // Rezervace druhe osoby se porovna s kazdym nasim slotem ucinnym v den volna.
+        $stmt = $db->prepare('SELECT DISTINCT r.datum AS volno_datum FROM smeny_pozadavek_volno_slot r
+            JOIN smeny_pozadavek p ON p.id_smeny_pozadavek=r.id_smeny_pozadavek
+            JOIN '.$slotTable.' s ON s.id_slot=r.id_slot AND s.id_person=? AND s.platny=1 AND s.zruseno IS NULL
+                AND (s.platnost_od IS NULL OR s.platnost_od<=r.datum)
+                AND (s.platnost_do IS NULL OR s.platnost_do>=r.datum)
+            WHERE p.tyden_od=? AND p.id_person<>?
+                AND EXISTS (SELECT 1 FROM hr_pracoviste_main m
+                    JOIN hr_person hp ON hp.id_person=m.id_person
+                    JOIN pobocka b ON b.id_pob=m.id_pob AND b.id_firma=hp.id_firma AND b.aktivni=1
+                    WHERE m.id_person=? AND m.id_pob=r.id_pob AND m.platny=1 AND m.zruseno IS NULL
+                        AND (m.platnost_od IS NULL OR m.platnost_od<=r.datum)
+                        AND (m.platnost_do IS NULL OR m.platnost_do>=r.datum))');
+        $stmt->bind_param('isii', $slotPerson, $startDay, $idPerson, $slotPerson);
         $stmt->execute();
         $result = $stmt->get_result();
         while ($row = $result->fetch_assoc()) {

@@ -1,16 +1,19 @@
 <?php
 declare(strict_types=1);
-/* Účel: Připraví a aplikuje filtry tabulky veřejných směn bez rozšiřování oprávněného rozsahu dat. */
+/* Účel: Připraví a aplikuje filtry veřejných směn; vlastní režim určuje server, nikdy zadané jméno nebo ID osoby. */
 
 /** Načte hodnoty ve společném formátu prefix_f[sloupec], který obsluhuje provoz/js/filtry.js. */
 function cb_smeny_verejne_filtry_hodnoty(array $query): array
 {
     $raw=is_array($query['sm_f']??null)?$query['sm_f']:[];
+    // Ručně sestavený URL nesmí do skalárního filtru podstrčit pole.
+    $value=static fn(string $key):string=>is_scalar($raw[$key]??null)?(string)$raw[$key]:'';
     return [
-        'den'=>max(0,min(7,(int)($raw['den']??0))),
-        'pobocka'=>max(0,(int)($raw['pobocka']??0)),
-        'slot'=>max(0,(int)($raw['slot']??0)),
-        'jmeno'=>trim((string)($raw['jmeno']??'')),
+        'den'=>max(0,min(7,(int)$value('den'))),
+        'pobocka'=>max(0,(int)$value('pobocka')),
+        'slot'=>max(0,(int)$value('slot')),
+        'jmeno'=>trim($value('jmeno')),
+        'moje'=>$value('moje')==='1',
     ];
 }
 

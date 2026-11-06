@@ -1,4 +1,4 @@
-/* Účel: Ovládá požadavky a kopírování dnů; Kdykoliv předvyplní upravitelné dny a Reset vyprázdní celý rozpracovaný týden. */
+/* Účel: Ovládá dostupnost osoby bez pobočky; Kdykoliv předvyplní celé dny a Reset vyprázdní týden. */
 (function () {
     'use strict';
 
@@ -58,10 +58,7 @@
         var minimum = Number(start.min);
         var maximum = Number(start.max);
         var step = Number(start.step) || 1;
-        // Konec drží původní hodinový krok a navíc přesné zavření, i když končí např. v 01:15.
-        var snappedEnd = Math.min(maximum, minimum + Math.round((endIndex-minimum)/step)*step);
-        endIndex = Math.abs(maximum-endIndex) < Math.abs(snappedEnd-endIndex) ? maximum : snappedEnd;
-        end.value = String(endIndex);
+        // Konec ma vlastni ctvrt hodinovy krok; nepouzivame zaviraci dobu ani krok zacatku.
         var minimumDuration = 12;
         var length = Math.max(1, maximum - minimum);
 
@@ -142,13 +139,12 @@
         }
     });
 
-    // Klávesnice prochází stejné body jako myš; jemný HTML krok slouží pouze přesnému zavření.
+    // Klavesnice i mys pouzivaji stejny ctvrt hodinovy krok konce dostupnosti.
     document.addEventListener('keydown', function (event) {
         var end=event.target;
         if (!(end instanceof HTMLInputElement) || !end.matches('[data-smeny-end]') || end.disabled) return;
         if (!['ArrowLeft','ArrowDown','ArrowRight','ArrowUp','Home','End','PageUp','PageDown'].includes(event.key)) return;
-        var day=dayFor(end), start=day.querySelector('[data-smeny-start]');
-        var min=Number(end.min), max=Number(end.max), step=Number(start.step)||1, old=Number(end.value);
+        var min=Number(end.min), max=Number(end.max), step=Number(end.step)||1, old=Number(end.value);
         var down=['ArrowLeft','ArrowDown','PageDown'].includes(event.key);
         var next=down ? min+(Math.ceil((old-min)/step)-1)*step : min+(Math.floor((old-min)/step)+1)*step;
         if(event.key==='Home') next=min;

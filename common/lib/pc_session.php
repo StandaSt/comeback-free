@@ -5,6 +5,7 @@ declare(strict_types=1);
  * Ucel souboru: Udrzet prave jednu aktivni identitu IS pro jeden browser
  * profil. Cookie obsahuje pouze nahodny identifikator; DB uklada jen jeho hash.
  * Vazbu profilu uchovava take u prihlaseni, aby ji dalsi session neprepsala.
+ * Posledni kontakt urcuje stav online, nikoli platnost prihlaseni po uspani nebo vypadku site.
  * Zamitnute kontroly zaznamenava bez tokenu do neverejneho denniho diagnostickeho logu.
  */
 
@@ -42,6 +43,7 @@ function cb_session_log_rejection(string $reason, array $checks = []): void
     }
 }
 
+/** Hranice stavu online v prehledu zarizeni; nejde o dobu platnosti prihlaseni. */
 function cb_pc_session_timeout_sec(): int
 {
     return 150;
@@ -185,6 +187,7 @@ function cb_pc_session_activate(mysqli $db, int $idUser, int $idLogin): void
     $_SESSION['cb_pc_session_token'] = $sessionToken;
 }
 
+/** Overi nezrusenou vazbu zarizeni a obnovi kontakt i po delsi odmlce prohlizece. */
 function cb_pc_session_is_current(mysqli $db, int $idUser, int $idLogin): bool
 {
     $cookieToken = cb_pc_cookie_token(false);
@@ -207,7 +210,7 @@ function cb_pc_session_is_current(mysqli $db, int $idUser, int $idLogin): bool
         return false;
     }
 
-    $timeout = cb_pc_session_timeout_sec();
+    // Odmlka prohlizece nerusi prihlaseni; jeho casovou platnost overuje sesn_kontrola.php.
     $sql = '
         SELECT id_login
         FROM user_pc_session
@@ -216,7 +219,6 @@ function cb_pc_session_is_current(mysqli $db, int $idUser, int $idLogin): bool
           AND id_user=?
           AND id_login=?
           AND zruseno IS NULL
-          AND last_seen >= (NOW() - INTERVAL ' . $timeout . ' SECOND)
         LIMIT 1
     ';
     $stmt = $db->prepare($sql);
@@ -229,11 +231,11 @@ function cb_pc_session_is_current(mysqli $db, int $idUser, int $idLogin): bool
     $row = $stmt->get_result()->fetch_assoc();
     $stmt->close();
     if (!is_array($row)) {
-        // Doplneni priciny je pouze SELECT po zamitnuti; puvodni overovaci dotaz se nemeni.
+        // Doplneni priciny je pouze SELECT po zamitnuti vazby; stari kontaktu neni duvod zamitnuti.
         $checks = [];
         try {
             $diagnostic = $db->prepare('SELECT id_user=?, id_login=?, session_hash=UNHEX(SHA2(?,256)),
-                zruseno IS NOT NULL, last_seen >= (NOW() - INTERVAL ' . $timeout . ' SECOND)
+                zruseno IS NOT NULL
                 FROM user_pc_session WHERE pc_hash=UNHEX(SHA2(?,256)) LIMIT 1');
             if ($diagnostic instanceof mysqli_stmt) {
                 $diagnostic->bind_param('iiss', $idUser, $idLogin, $sessionToken, $pcToken);
@@ -242,7 +244,7 @@ function cb_pc_session_is_current(mysqli $db, int $idUser, int $idLogin): bool
                 $diagnostic->close();
                 $checks['device_exists'] = is_array($flags);
                 if (is_array($flags)) {
-                    foreach (['device_user_matches', 'device_login_matches', 'device_token_matches', 'device_revoked', 'device_fresh'] as $index => $name) {
+                    foreach (['device_user_matches', 'device_login_matches', 'device_token_matches', 'device_revoked'] as $index => $name) {
                         $checks[$name] = (bool)$flags[$index];
                     }
                 }

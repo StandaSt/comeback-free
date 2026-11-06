@@ -1,4 +1,9 @@
-/* Zobrazeni zprav, hledani, reakci, priloh, precteni a vlakna konverzace. */
+/* Zobrazeni zprav, precteni a aktivnich vlaken; take indikace nedavne aktivity kolegu v navigaci. */
+
+/* Zvyraznujeme jen zaporny stav a vlakna, ktera uz obsahuji odpovedi. */
+.message-read-status .message-unread{color:#b42318;font-weight:700;}
+.message-tools button.has-replies{color:var(--ink);font-weight:700;text-decoration:underline;text-underline-offset:2px;}
+.conversation .co_link_online{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:#18794e;margin-left:auto;}
 
 .search-row {
   padding:10px 24px;

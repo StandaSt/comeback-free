@@ -1,5 +1,5 @@
 <?php
-/* E-mail: IMAP/SMTP a vazby na samostatne MIME/HTML zobrazeni; editor ma vlastni prisne formatovani, citace zachova MIME obsah. */
+/* E-mail: IMAP/SMTP a MIME sestaveni; overene CID obrazky a citace s oddelovacem pod podpisem se zachovaji v UTF-8. */
 declare(strict_types=1);
 require_once __DIR__.'/core.php';
 require_once __DIR__.'/../common/lib/diagnostika_vykonu.php';
@@ -123,14 +123,14 @@ function em_html_styl(string $style, string $classes=''): string
     return implode(';',array_map(static fn($key,$value)=>$key.':'.$value,array_keys($safe),array_values($safe)));
 }
 
-/** Povolena HTML podmnozina se zakladnim formatovanim; bez skriptu, formularu a automatickych sitovych pozadavku. */
-function em_html(string $html, bool $remote=false): string
+/** HTML editoru bez aktivniho obsahu; CID povolujeme jen pro serverem overene prilohy teto zpravy. */
+function em_html(string $html, bool $remote=false, array $cids=[]): string
 {
     $doc=new DOMDocument(); $old=libxml_use_internal_errors(true);
-    $doc->loadHTML('<?xml encoding="UTF-8"><body>'.$html.'</body>',LIBXML_NONET|LIBXML_NOERROR|LIBXML_NOWARNING);
+    $doc->loadHTML('<?xml encoding="UTF-8"><body>'.em_html_utf8($html).'</body>',LIBXML_NONET|LIBXML_NOERROR|LIBXML_NOWARNING);
     libxml_clear_errors(); libxml_use_internal_errors($old);
     $allow=['p','br','div','span','strong','b','em','i','u','s','blockquote','pre','code','ul','ol','li','table','thead','tbody','tr','td','th','hr','h1','h2','h3','h4','a','img'];
-    $walk=function(DOMNode $node) use (&$walk,$allow,$remote): void {
+    $walk=function(DOMNode $node) use (&$walk,$allow,$remote,$cids): void {
         foreach (iterator_to_array($node->childNodes) as $child) {
             if (!$child instanceof DOMElement) { if (!$child instanceof DOMText) $node->removeChild($child); continue; }
             $tag=strtolower($child->tagName);
@@ -144,6 +144,7 @@ function em_html(string $html, bool $remote=false): string
             if ($tag==='a' && preg_match('~^(https?://|mailto:)[^\x00-\x20]+$~i',$href)) { $child->setAttribute('href',$href); $child->setAttribute('target','_blank'); $child->setAttribute('rel','noopener noreferrer'); }
             if ($tag==='img') {
                 $child->setAttribute('alt',$alt?:'[obrázek]');
+                if (str_starts_with($src,'cid:') && in_array(substr($src,4),$cids,true)) $child->setAttribute('src',$src);
                 if ($remote && preg_match('~^https://[^\x00-\x20]+$~i',$src)) { $child->setAttribute('src',$src); $child->setAttribute('referrerpolicy','no-referrer'); }
             }
         }
@@ -194,11 +195,13 @@ function em_mailer(array $a, array $input, array $files=[]): PHPMailer\PHPMailer
     if (array_key_exists('body_html',$input)) {
         $html=(string)$input['body_html'];
         if (strlen($html)>1048576) throw new EmailChyba('Text zprávy je příliš dlouhý.');
-        $m->Body=em_html($html); $m->AltBody=em_html_text($m->Body); $m->isHTML(true);
+        $m->Body=em_html($html,false,array_column($files,'cid')); $m->AltBody=em_html_text($m->Body); $m->isHTML(true);
         if(!empty($input['_draft_format']))$m->Body='<div data-em-draft-editor="1">'.$m->Body.'</div>';
         // Citace pochazi ze serverem overene puvodni zpravy, nikoli z HTML zaslaneho klientem.
         if (!empty($input['_quote_html'])) {
-            $m->Body.='<blockquote data-em-draft-quote="1">'.$input['_quote_html'].'</blockquote>';$m->AltBody.="\n\n".em_zobrazeni_text($input['_quote_html']);
+            // Oddelovac je mimo ulozenou citaci, proto se pri opetovnem ulozeni konceptu nezdvoji.
+            $m->Body.='<div data-em-draft-separator="1" style="border-top:1px solid #cbd2d6;margin-top:12px;padding-top:6px;font-weight:bold">Původní zpráva</div><blockquote data-em-draft-quote="1">'.$input['_quote_html'].'</blockquote>';
+            $m->AltBody.="\n\n--- Původní zpráva ---\n".em_zobrazeni_text($input['_quote_html']);
         }
     }
     if (strlen($m->Body)>8*1024*1024) throw new EmailChyba('Text zprávy je příliš dlouhý.');

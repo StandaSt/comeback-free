@@ -1,8 +1,9 @@
 <?php
 declare(strict_types=1);
 
-/* Audit HR se potvrzuje spolecne se zmenou; neuspesny pokus zustava odlisnou udalosti. */
+/* Účel: Založí zaměstnance s HR údaji a aktuální fotografií podle přiděleného ID; změnu potvrzuje s auditem. */
 require_once __DIR__ . '/../hr_lib/hr_audit.php';
+require_once __DIR__ . '/../hr_lib/hr_fotografie.php';
 
 // Ucel zarazeni: Nova osoba dostane kombinaci oblasti a pobocek, mnozinu MAIN a bud slot s funkci, nebo manazerskou pozici.
 // Pridelovani funkce s roli Admin je vyhrazeno existujicimu Adminovi.
@@ -126,7 +127,6 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
     $photoPath = null;
     $transactionStarted = false;
     try {
-        $photoPath = hr_store_employee_photo($files['foto'] ?? null);
         hr_audit_transaction_begin($db);
         $transactionStarted = true;
         $db->query('SELECT id_oblast_prace FROM cis_oblast_prace ORDER BY id_oblast_prace LOCK IN SHARE MODE')->free();
@@ -210,6 +210,9 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
         $idPerson = $idUser;
         $stmt->close();
 
+        // Název portrétu lze určit až po skutečném přidělení ID osoby.
+        $photoPath = hr_store_employee_photo($files['foto'] ?? null, $idPerson);
+
         if ($maFunkci) {
             $functionTable = cb_hr_schema_table($db, 'funkce');
             $functionFk = cb_hr_funkce_fk($db);
@@ -245,10 +248,10 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
         foreach ($main as $id) cb_hr_main_vlozit($db,$idPerson,$id,$datumNastupu,$zadalUser);
 
         if ($maSlot) {
-            // Prvni zvoleny slot je hlavni; dalsi lze pridat na karte pracovního pomeru.
+            // Pracovni slot nema prioritu; dalsi rovnocenne sloty lze pridat na karte pracovniho pomeru.
             $slotTable = cb_hr_schema_table($db, 'slot');
-            $stmt = $db->prepare("INSERT INTO {$slotTable} (id_person, id_slot, hlavni, platnost_od, id_user_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, ?, NOW(), 1)");
-            $stmt->bind_param('iiisi', $idPerson, $idSlot, $hlavni, $datumNastupu, $zadalUser);
+            $stmt = $db->prepare("INSERT INTO {$slotTable} (id_person, id_slot, platnost_od, id_user_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, NOW(), 1)");
+            $stmt->bind_param('iisi', $idPerson, $idSlot, $datumNastupu, $zadalUser);
             $stmt->execute();
             $stmt->close();
         }
@@ -298,13 +301,13 @@ function hr_insert_employee(mysqli $db, array $data, array $files, int $zadalUse
         hr_update_employee_completeness($db,$idPerson);
         hr_audit_transaction_commit($db);
         $transactionStarted = false;
-        return ['id_person' => $idPerson, 'id_user' => $idUser];
+        return ['id_person' => $idPerson, 'id_user' => $idUser, 'foto' => $photoPath];
     } catch (Throwable $e) {
         if ($transactionStarted) {
             hr_audit_transaction_rollback($db);
         }
         if (is_string($photoPath) && $photoPath !== '') {
-            $photoFile = dirname(__DIR__) . '/' . $photoPath;
+            $photoFile = dirname(__DIR__, 2) . '/' . $photoPath;
             if (is_file($photoFile)) {
                 unlink($photoFile);
             }
@@ -383,38 +386,4 @@ function hr_employee_validate_birth_number(string $value): string
     }
 
     return substr($number, 0, 6) . '/' . substr($number, 6);
-}
-
-function hr_store_employee_photo(mixed $upload): ?string
-{
-    if (!is_array($upload) || (int)($upload['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
-        return null;
-    }
-    if ((int)($upload['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
-        throw new CbUserVisibleException('Fotografii se nepodařilo přijmout. Vyberte ji znovu.');
-    }
-    if ((int)($upload['size'] ?? 0) < 1 || (int)$upload['size'] > 2 * 1024 * 1024) {
-        throw new CbUserVisibleException('Fotografie může mít nejvýše 2 MB.');
-    }
-    $temporaryFile = (string)($upload['tmp_name'] ?? '');
-    if ($temporaryFile === '' || !is_uploaded_file($temporaryFile)) {
-        throw new CbUserVisibleException('Nahraný soubor fotografie není platný.');
-    }
-    $mime = (new finfo(FILEINFO_MIME_TYPE))->file($temporaryFile);
-    $extensions = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
-    if (!isset($extensions[$mime])) {
-        throw new CbUserVisibleException('Fotografie musí být JPEG, PNG nebo WebP.');
-    }
-    if (@getimagesize($temporaryFile) === false) {
-        throw new CbUserVisibleException('Nahraný soubor není čitelný obrázek.');
-    }
-    $directory = dirname(__DIR__) . '/img/zamestnanci';
-    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
-        throw new RuntimeException('Nelze připravit úložiště fotografií.');
-    }
-    $filename = bin2hex(random_bytes(16)) . '.' . $extensions[$mime];
-    if (!move_uploaded_file($temporaryFile, $directory . '/' . $filename)) {
-        throw new RuntimeException('Fotografii se nepodařilo uložit.');
-    }
-    return 'hr/img/zamestnanci/' . $filename;
 }

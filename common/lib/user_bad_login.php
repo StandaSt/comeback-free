@@ -17,10 +17,11 @@ declare(strict_types=1);
  *    - user_agent (HTTP_USER_AGENT)
  *    - screen_w, screen_h, is_touch (pokud jsou ve „wait spy info“ v session)
  * 2) zavolá db/db_bad_login.php → db_bad_login_log()
- * 3) Připraví srozumitelnou informaci o zbývajících pokusech a době blokace.
+ * 3) Připraví informaci o zbývajících pokusech, době blokace a nastavení nového hesla.
  *
  * Pozn.:
- * - záznam se dělá pokaždé, když Směny nevrátí token
+ * - zaznam se dela pri neznamem e-mailu nebo nespravnem hesle do IS
+ * - ucet bez nastaveneho hesla se neloguje jako chybny pokus
  * - pokud DB zápis selže, login se tím neblokuje (jen se zapíše diagnostika)
  */
 require_once __DIR__ . '/../db/db_bad_login.php';
@@ -80,17 +81,19 @@ function cb_user_bad_login_is_blocked(string $email, int $maxAttempts = 5, int $
 /** Doplní chybu o aktuální limit; při nedostupnosti diagnostiky zachová původní hlášení. */
 function cb_user_bad_login_zprava(string $email, string $message = '', bool $jenBlokace = false): string
 {
+    // Nabidka obnovy zustane citelna i pri nedostupnem poctu pokusu; samotna kontrola nic nenabizi.
+    $hint = ' Pokud heslo neznáte, klikněte na „Nastavit nové heslo“.';
     try {
         $stav = db_bad_login_stav($email);
     } catch (Throwable $e) {
-        return $message;
+        return $jenBlokace ? $message : $message . $hint;
     }
     if ($stav['blokovano']) {
         $seconds = (int)$stav['sekund'];
         $wait = $seconds >= 60 ? intdiv($seconds, 60) . ' min ' . ($seconds % 60) . ' s' : $seconds . ' s';
         return 'Přihlášení je dočasně zablokované: ' . $stav['limit'] . ' neúspěšných pokusů během '
             . $stav['minut'] . ' minut. Další pokus je možný v ' . $stav['do_casu'] . ' (za ' . $wait
-            . '). Do té doby nelze přihlášení dokončit ani se správným heslem.';
+            . '). Do té doby nelze přihlášení dokončit ani se správným heslem.' . $hint;
     }
     if ($jenBlokace) {
         return $message;
@@ -101,7 +104,7 @@ function cb_user_bad_login_zprava(string $email, string $message = '', bool $jen
         $suffix = 'Zbývá ' . $remaining . ' pokusů';
     }
     return $message . ' ' . $suffix . ' do dočasné blokace (limit ' . $stav['limit'] . ' chyb za '
-        . $stav['minut'] . ' minut).';
+        . $stav['minut'] . ' minut).' . $hint;
 }
 
 // Konec souboru

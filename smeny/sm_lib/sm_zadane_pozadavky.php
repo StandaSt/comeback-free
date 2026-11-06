@@ -5,7 +5,7 @@ require_once __DIR__ . '/../../common/lib/osoba_jmeno.php';
 
 // Ucel rozsahu: MAIN je mnozina a viditelne pobocky vychazeji z mist vykonu prace.
 require_once __DIR__ . '/../../common/lib/hr_pracoviste_main.php';
-/* Účel: Načte týdenní dostupnost pracovníků oprávněných poboček, včetně těch, kteří nic nevyplnili. */
+/* Účel: Načte osobní dostupnost pracovníků oprávněných poboček; Kdykoliv neodvozuje od jedné MAIN. */
 
 /** Jediný dotaz vrací hlavičky i dny. Oprávnění poboček ověřujeme přes pracovní zařazení v daném týdnu. */
 function cb_smeny_zadane_pozadavky(mysqli $db, array $branches, string $week): array
@@ -44,8 +44,7 @@ function cb_smeny_zadane_den(array $person, array $day, int $number): string
     }
     if($person['id_smeny_pozadavek']===null) return 'Nezadáno';
     if($person['rezim']==='kdykoliv') {
-        $closing=substr((string)($person[$day['closing_key']]??''),0,5);
-        return $closing!=='' ? '10:00–'.$closing : 'Kdykoliv (provozní doba chybí)';
+        return 'Kdykoliv';
     }
     return $person['dny'][$number]??'Nechce pracovat';
 }

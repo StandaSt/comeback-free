@@ -1,7 +1,49 @@
 <?php
-/* E-mail: MIME hlavicky, znakove sady a cteni jednotlivych casti pres BODY.PEEK bez stahovani vsech priloh. */
+/* E-mail: MIME znakove sady jednotlivych casti, opatrna obnova jiz poskozeneho textu a BODY.PEEK bez stahovani vsech priloh. */
 declare(strict_types=1);
 require_once __DIR__.'/struktura.php';
+
+/** HTML je po MIME dekodovani UTF-8; ciselne entity zabrani meta znacce v jeho opetovnem prekodovani. */
+function em_html_utf8(string $html): string
+{
+    return mb_encode_numericentity($html,[0x80,0x10FFFF,0,0x1FFFFF],'UTF-8');
+}
+
+/** Obnovime jen vratne poskozena slova; automatika vyzaduje nejmene tri opravy, ne izolovany cizi znak. */
+function em_mime_obnovit_text(string $text, bool $automatic=false, ?int &$changes=null): string
+{
+    $changes=0;
+    $result=preg_replace_callback('/[^\s<>]+/u',static function(array $m)use(&$changes): string {
+        $word=$m[0];
+        if(!preg_match('/[ĂÄĹÃÂ]/u',$word))return $word;
+        foreach (['ISO-8859-2','Windows-1250','Windows-1252'] as $charset) {
+            $bytes=@iconv('UTF-8',$charset,$word);
+            if ($bytes===false || $bytes===$word || !mb_check_encoding($bytes,'UTF-8')) continue;
+            if (@iconv($charset,'UTF-8',$bytes)!==$word) continue;
+            // Kandidat musi obsahovat cestinu a odstranit typicke stopy chybneho prevodu UTF-8.
+            if (preg_match('/[ĂÄĹÃÂ]/u',$word) && !preg_match('/[ĂÄĹÃÂ\x{0080}-\x{009F}]/u',$bytes)
+                && !preg_match('/[^\x00-\x7FáčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ\p{P}\p{S}\s]/u',$bytes)
+                && preg_match('/[áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/u',$bytes)) {$changes++;return $bytes;}
+        }
+        return $word;
+    },$text);
+    return !$automatic || $changes>=3?$result:$text;
+}
+
+/** Obnova HTML pracuje s textovymi uzly; automaticky prevod se povoli az podle celeho tela, ne podle jedineho slova. */
+function em_mime_obnovit_html(string $html, bool $automatic=false): string
+{
+    if ($html==='' || !preg_match('/[ĂÄĹÃÂ]/u',$html)) return $html;
+    $doc=new DOMDocument();$old=libxml_use_internal_errors(true);
+    try {$doc->loadHTML('<?xml encoding="UTF-8">'.em_html_utf8($html),LIBXML_NONET|LIBXML_NOERROR|LIBXML_NOWARNING);}
+    finally {libxml_clear_errors();libxml_use_internal_errors($old);}
+    $xpath=new DOMXPath($doc);
+    $changes=0;
+    foreach ($xpath->query('//text()[not(ancestor::style) and not(ancestor::script)]') as $node) {
+        $count=0;$node->nodeValue=em_mime_obnovit_text($node->nodeValue,false,$count);$changes+=$count;
+    }
+    return $changes>0 && (!$automatic || $changes>=3)?$doc->saveHTML():$html;
+}
 
 /** Nazvy MIME znakovych sad prevedeme na jednoznacne podporovane varianty. */
 function em_mime_charset(string $value): string
@@ -21,6 +63,8 @@ function em_mime_text(string $bytes, string $declared='', string $override='auto
     elseif (str_starts_with($bytes,"\xFF\xFE")) { $bytes=substr($bytes,2); $charset='UTF-16LE'; }
     elseif (str_starts_with($bytes,"\xFE\xFF")) { $bytes=substr($bytes,2); $charset='UTF-16BE'; }
     elseif (preg_match('/^utf-(?:16|32)(?:le|be)?$/iD',$declared)) $charset=$declared;
+    // Platna deklarace konkretni MIME casti ma prednost pred odhadem podle bajtu cele zpravy.
+    elseif ($declared!=='' && !in_array($declared,['UTF-8','ASCII'],true)) $charset=$declared;
     elseif (mb_check_encoding($bytes,'UTF-8')) { $charset='UTF-8'; }
     else {
         $charset=$declared;
@@ -137,11 +181,14 @@ function em_mime_obsah(Webklex\PHPIMAP\Client $client, int $uid, array $part, in
 /** Detail zpravy vraci telo a metadata, ale nikdy automaticky nestahuje obsah souborovych priloh. */
 function em_mime_detail(Webklex\PHPIMAP\Client $client, array $ref, string $override='auto'): array
 {
+    $repair=$override==='repair_utf8';$decodeOverride=$repair?'auto':$override;$automatic=$override==='auto';
     $parts=em_mime_struktura($client,(int)$ref['uid']);$text=[];$html=[];$files=[];$charsets=[];$uncertain=false;
     if(array_sum(array_column(array_filter($parts,static fn($p)=>$p['body']),'size'))>8*1024*1024)throw new EmailChyba('Tělo zprávy přesahuje limit náhledu. Můžete stáhnout originál.');
     foreach($parts as $part) {
         if(!$part['body']){$files[]=$part;continue;}
-        $decoded=em_mime_text(em_mime_obsah($client,(int)$ref['uid'],$part,4194304),$part['charset'],$override);
+        $decoded=em_mime_text(em_mime_obsah($client,(int)$ref['uid'],$part,4194304),$part['charset'],$decodeOverride);
+        // Obnova jiz poskozeneho textu je samostatny krok po respektovani MIME charsetu dane casti.
+        if($repair || $automatic)$decoded['text']=$part['type']==='text/html'?em_mime_obnovit_html($decoded['text'],$automatic):em_mime_obnovit_text($decoded['text'],$automatic);
         if($part['type']==='text/html')$html[]=$decoded['text'];else $text[]=$decoded['text'];
         $charsets[]=$decoded['charset'];$uncertain=$uncertain||$decoded['uncertain'];
     }
@@ -152,7 +199,7 @@ function em_mime_detail(Webklex\PHPIMAP\Client $client, array $ref, string $over
 function em_mime_koncept_casti(string $html): array
 {
     $doc=new DOMDocument();$old=libxml_use_internal_errors(true);
-    try{$doc->loadHTML('<?xml encoding="UTF-8"><body>'.$html.'</body>',LIBXML_NONET|LIBXML_NOERROR|LIBXML_NOWARNING);}
+    try{$doc->loadHTML('<?xml encoding="UTF-8"><body>'.em_html_utf8($html).'</body>',LIBXML_NONET|LIBXML_NOERROR|LIBXML_NOWARNING);}
     finally{libxml_clear_errors();libxml_use_internal_errors($old);}
     $out=['editor'=>'','quote'=>''];$body=$doc->getElementsByTagName('body')->item(0);
     if(!$body)return $out;
@@ -170,13 +217,14 @@ function em_mime_citace(array $detail, Webklex\PHPIMAP\Message $message, string 
 }
 
 /** Pri odpovedi preneseme pouze vlozene obrazky; pri preposlani i bezne prilohy. */
-function em_mime_soubory(Webklex\PHPIMAP\Client $client, array $ref, array $parts, bool $all): array
+function em_mime_soubory(Webklex\PHPIMAP\Client $client, array $ref, array $parts, bool $all, int $limit=20971520): array
 {
     $files=[];$size=0;
     foreach($parts as $part) {
         if(!$all && $part['cid']==='')continue;
-        $size+=$part['size'];if($size>28*1024*1024 || count($files)>=20)throw new EmailChyba('Původní přílohy přesahují limit odeslání.');
-        $files[]=['name'=>em_nazev_prilohy($part['name']),'content'=>em_mime_obsah($client,(int)$ref['uid'],$part),'type'=>$part['type'],'cid'=>$part['cid']];
+        $wireLimit=(int)ceil($limit/3)*4+(int)ceil($limit/57)*2;
+        $size+=$part['size'];if($size>$wireLimit || count($files)>=20)throw new EmailChyba('Původní přílohy přesahují limit odeslání.');
+        $files[]=['name'=>em_nazev_prilohy($part['name']),'content'=>em_mime_obsah($client,(int)$ref['uid'],$part,$wireLimit),'type'=>$part['type'],'cid'=>$part['cid']];
     }
     return $files;
 }

@@ -1,8 +1,10 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/sm_pozadavky_sloty.php';
 
 /*
- * Ověří a transakčně uloží i audituje požadavky; po předvyplnění Kdykoliv zachová konkrétní úpravy dnů.
+ * Transakcne ulozi dostupnost osoby bez pobocky; HPP volno rezervuje na vsech platnych MAIN a slotech.
+ * Po predvyplneni Kdykoliv zachova konkretni upravy dnu.
  */
 
 /** Přenese výsledek uložení do dalšího zobrazení formuláře. */
@@ -40,7 +42,6 @@ function cb_smeny_pozadavky_pripravit(array $person, array $week, array $post): 
     foreach ($week['days'] as $day) {
         $allowedDates[(string)$day['date']] = [
             'name' => (string)$day['name'],
-            'closing_key' => (string)$day['closing_key'],
         ];
     }
     $blocks = [];
@@ -52,8 +53,7 @@ function cb_smeny_pozadavky_pripravit(array $person, array $week, array $post): 
         $anytime=is_array($posted) && count($posted)===count($allowedDates);
         foreach ($allowedDates as $date=>$day) {
             $block=is_array($posted)?($posted[$date] ?? null):null;
-            $closing=substr(trim((string)($person[$day['closing_key']] ?? '')),0,5);
-            if (!is_array($block) || ($block['od'] ?? null)!=='10:00' || $closing==='' || ($block['do'] ?? null)!==$closing) $anytime=false;
+            if (!is_array($block) || ($block['od'] ?? null)!=='06:00' || ($block['do'] ?? null)!=='04:00') $anytime=false;
         }
     }
     if ((int)$person['je_hpp'] === 1) {
@@ -61,8 +61,11 @@ function cb_smeny_pozadavky_pripravit(array $person, array $week, array $post): 
         if ($dayOff !== '' && !isset($allowedDates[$dayOff])) {
             throw new CbUserVisibleException('Vybraný den volna nepatří do ukládaného týdne.');
         }
-        if ($dayOff !== '' && ((int)$person['id_pob'] <= 0 || (int)$person['id_slot'] <= 0)) {
-            throw new CbUserVisibleException('Pro volbu volna musí být v HR nastavena hlavní pobočka i hlavní pracovní slot.');
+        if ($dayOff !== '' && cb_smeny_pozadavky_main_den($person['main_pobocky']??[],$dayOff)===[]) {
+            throw new CbUserVisibleException('Pro volbu volna musí být v HR nastavena MAIN pobočka.');
+        }
+        if ($dayOff !== '' && cb_smeny_pozadavky_sloty_den($person['sloty']??[],$dayOff)===[]) {
+            throw new CbUserVisibleException('Pro vybraný den nemáte v HR žádný platný pracovní slot.');
         }
     } elseif (!$anytime) {
         $postedBlocks = $post['blocks'] ?? [];
@@ -85,22 +88,12 @@ function cb_smeny_pozadavky_pripravit(array $person, array $week, array $post): 
             }
             $fromValue = cb_smeny_pozadavky_cas_overit($from, false);
             $toValue = cb_smeny_pozadavky_cas_overit($to, true);
-            $closing = substr(trim((string)($person[$allowedDates[$date]['closing_key']] ?? '')), 0, 5);
-            if ($closing === '') {
-                throw new CbUserVisibleException($allowedDates[$date]['name'] . ': pobočka nemá nastavený zavírací čas.');
-            }
-            $closingValue = cb_smeny_pozadavky_cas_overit($closing, true);
-            if ($fromValue < 600 || (($fromValue - 600) % 30) !== 0) {
-                throw new CbUserVisibleException($allowedDates[$date]['name'] . ': začátek musí být od 10:00 po 30 minutách.');
-            }
-            if ($to !== $closing && (($toValue - 600) % 30) !== 0) {
-                throw new CbUserVisibleException($allowedDates[$date]['name'] . ': konec musí být po 30 minutách nebo přesně v zavírací čas.');
+            // Dostupnost neomezujeme oteviraci dobou zadne pobocky. Provoz ji oreze az pri planovani.
+            if ((($fromValue - 360) % 30) !== 0) {
+                throw new CbUserVisibleException($allowedDates[$date]['name'] . ': začátek musí být po 30 minutách.');
             }
             if (($toValue - $fromValue) < 180) {
                 throw new CbUserVisibleException($allowedDates[$date]['name'] . ': požadavek musí trvat alespoň 3 hodiny.');
-            }
-            if ($toValue > $closingValue) {
-                throw new CbUserVisibleException($allowedDates[$date]['name'] . ': konec nelze nastavit po zavírací době pobočky.');
             }
             $blocks[$date] = ['od' => $from, 'do' => $to];
         }
@@ -133,16 +126,14 @@ function cb_smeny_pozadavky_ulozit(mysqli $db, ?array $person, array $weeks): vo
     if (empty($week['open'])) {
         throw new CbUserVisibleException('Termín pro zadání požadavků skončil ' . $week['deadline']->format('j. n. Y v H:i') . '.');
     }
-    if ((int)$person['id_pob'] <= 0 || ((int)$person['je_hpp'] === 1 && (int)$person['id_slot'] <= 0)) {
-        throw new CbUserVisibleException('V HR chybí hlavní pobočka nebo hlavní pozice HPP pracovníka.');
-    }
+    if ((int)$person['je_hpp']===1) cb_smeny_pozadavky_rezervace_schema($db);
     $data = cb_smeny_pozadavky_pripravit($person, $week, $_POST);
     $idPerson = (int)$person['id_person'];
     $startDay = (string)$week['start_day'];
     $mode = $data['rezim'];
     $dayOff = $data['volno'];
-    $idBranch = $dayOff === null ? null : (int)$person['id_pob'];
-    $idSlot = $dayOff === null ? null : (int)$person['id_slot'];
+    $reservedBranches=[];
+    $idBranch=null;
 
     $db->begin_transaction();
     try {
@@ -155,6 +146,18 @@ function cb_smeny_pozadavky_ulozit(mysqli $db, ?array $person, array $weeks): vo
         if ($active === null) {
             throw new CbUserVisibleException('Osoba už není v HR aktivní.');
         }
+        // HR zapis zamyka stejnou osobu. Po zamku znovu nacteme sloty, aby formular nepouzil zastarale zarazeni.
+        $slotRows=cb_smeny_pozadavky_sloty($db,(int)($person['id_person_sloty']??$idPerson));
+        $reservedSlots=$dayOff===null?[]:cb_smeny_pozadavky_sloty_den($slotRows,$dayOff);
+        if($dayOff!==null && $reservedSlots===[]) throw new CbUserVisibleException('Pro vybraný den už nemáte v HR platný pracovní slot. Obnovte požadavky.');
+        if($dayOff!==null) {
+            $mainRows=cb_smeny_pozadavky_main($db,(int)($person['id_person_sloty']??$idPerson));
+            $reservedBranches=cb_smeny_pozadavky_main_den($mainRows,$dayOff);
+            if($reservedBranches===[]) throw new CbUserVisibleException('Pro vybraný den už nemáte v HR platnou MAIN pobočku. Obnovte požadavky.');
+            // Stavajici schema vyzaduje pobocku v hlavicce. Prvni ID je jen kompatibilni kotva;
+            // autoritou pro kolize je cela mnozina rezervaci, dostupnost nadale patri osobe.
+            $idBranch=$reservedBranches[0];
+        }
         if (new DateTimeImmutable('now', new DateTimeZone('Europe/Prague')) > $week['deadline']) {
             throw new CbUserVisibleException('Během ukládání skončila uzávěrka požadavků.');
         }
@@ -165,21 +168,23 @@ function cb_smeny_pozadavky_ulozit(mysqli $db, ?array $person, array $weeks): vo
         $stmt->close();
         // Původní dostupnost čteme po získání zámku osoby, aby audit odpovídal skutečně přepisovanému stavu.
         $oldData=cb_smeny_pozadavky_nacist($db,$person,$week);
-        // Nepoužít upsert: druhý unikátní klíč rezervuje HPP volno jiného pracovníka.
+        // Hlavicka patri osobe a tydnu, jednotlive pozice rezervuje samostatna vazebni tabulka.
         if ($idRequest === 0) {
             $stmt = $db->prepare('INSERT INTO smeny_pozadavek
-                (id_person,tyden_od,rezim,volno_datum,volno_id_pob,volno_id_slot,ulozil_id_person)
-                VALUES (?,?,?,?,?,?,?)');
-            $stmt->bind_param('isssiii', $idPerson, $startDay, $mode, $dayOff, $idBranch, $idSlot, $idPerson);
+                (id_person,tyden_od,rezim,volno_datum,volno_id_pob,ulozil_id_person)
+                VALUES (?,?,?,?,?,?)');
+            $stmt->bind_param('isssii', $idPerson, $startDay, $mode, $dayOff, $idBranch, $idPerson);
             $stmt->execute();
             $idRequest = (int)$db->insert_id;
         } else {
             $stmt = $db->prepare('UPDATE smeny_pozadavek SET rezim=?,volno_datum=?,volno_id_pob=?,
-                volno_id_slot=?,ulozil_id_person=?,ulozeno=NOW() WHERE id_smeny_pozadavek=?');
-            $stmt->bind_param('ssiiii', $mode, $dayOff, $idBranch, $idSlot, $idPerson, $idRequest);
+                ulozil_id_person=?,ulozeno=NOW() WHERE id_smeny_pozadavek=?');
+            $stmt->bind_param('ssiii', $mode, $dayOff, $idBranch, $idPerson, $idRequest);
             $stmt->execute();
         }
         $stmt->close();
+        // Pri kolizi jedine pozice se vrati zpet hlavicka i vsechny dosavadni rezervace a intervaly.
+        cb_smeny_pozadavky_rezervace_ulozit($db,$idRequest,$reservedBranches,$dayOff,$reservedSlots);
         $stmt = $db->prepare('DELETE FROM smeny_pozadavek_den WHERE id_smeny_pozadavek=?');
         $stmt->bind_param('i', $idRequest);
         $stmt->execute();
@@ -195,7 +200,7 @@ function cb_smeny_pozadavky_ulozit(mysqli $db, ?array $person, array $weeks): vo
             }
             $stmt->close();
         }
-        cb_smeny_audit_zapis($db,$idPerson,'pozadavky_ulozeny','pozadavek',$idRequest,$oldData,$data+['id_person'=>$idPerson,'tyden_od'=>$startDay]);
+        cb_smeny_audit_zapis($db,$idPerson,'pozadavky_ulozeny','pozadavek',$idRequest,$oldData,$data+['id_person'=>$idPerson,'tyden_od'=>$startDay,'volno_sloty'=>$reservedSlots,'volno_pobocky'=>$reservedBranches]);
         $db->commit();
     } catch (mysqli_sql_exception $e) {
         $db->rollback();
@@ -208,6 +213,6 @@ function cb_smeny_pozadavky_ulozit(mysqli $db, ?array $person, array $weeks): vo
         throw $e;
     }
     cb_smeny_pozadavky_flash('success', 'Požadavky na celý týden byly uloženy.');
-    header('Location: ' . cb_root_url('index.php?m=smeny&page=pozadavky&week=' . $weekIndex . '&id_pob=' . (int)($person['id_pob']??0)));
+    header('Location: ' . cb_root_url('index.php?m=smeny&page=pozadavky&week=' . $weekIndex));
     exit;
 }

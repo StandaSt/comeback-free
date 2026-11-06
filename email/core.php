@@ -1,9 +1,12 @@
 <?php
-/* E-mail: konfigurace, sifrovani, prava 800/801/802 a osobni pocty; pobockova posta vyzaduje roli 5 nebo 7, MAIN a overene PC. */
+/* E-mail: MAIN vedoucich a volba treninku ve sdilenych schrankach; konfigurace, sifrovani, prava a jednotne rozhodnuti o schrankach vcetne duvodu pristupu pro spravu. */
 declare(strict_types=1);
 require_once __DIR__.'/../common/lib/hr_pracoviste_main.php';
 require_once __DIR__.'/../common/lib/pobockove_pc.php';
 require_once __DIR__.'/precteni.php';
+require_once __DIR__.'/chyby.php';
+require_once __DIR__.'/pristup.php';
+require_once __DIR__.'/osobni.php';
 
 /** Veřejné chyby modulu nikdy nepřebírají protokolové výpisy obsahující přihlašovací údaje. */
 final class EmailChyba extends RuntimeException {}
@@ -19,10 +22,10 @@ function em_firemni_adresa(string $localPart): string
     return $email;
 }
 
-/** Před instalací zůstává zbytek IS i navigace funkční. */
+/** Pred instalaci zustava IS funkcni; docasne odesilani pouziva soubory a nevyzaduje vlastni DB tabulku. */
 function em_schema(mysqli $db): bool
 {
-    foreach (['email_ucet','email_stav','email_odeslani','email_audit','email_cache'] as $table) {
+    foreach (['email_ucet','email_stav','email_audit','email_cache'] as $table) {
         $r=$db->query("SHOW TABLES LIKE '".str_replace('_','\\_',$table)."'");
         if ($r->num_rows!==1) return false;
     }
@@ -82,22 +85,33 @@ function em_osoba(mysqli $db, ?int $userId=null): array
     $p['manager']=($function['zarazeni']??'')==='manazerske' && $slots===0;
     $p['branch_user']=$slots>0 && ($function['zarazeni']??'')!=='manazerske';
     // Role se overuje primo pro osobu v HR, nikoli podle nazvu funkce nebo neaktualniho stavu prohlizece.
-    $stmt=$db->prepare('SELECT 1 FROM hr_pristupovy_profil p JOIN cis_role r ON r.id_role=p.id_role AND r.aktivni=1 WHERE p.id_person=? AND p.id_role IN(5,7) LIMIT 1');
+    $stmt=$db->prepare('SELECT p.id_role,r.role FROM hr_pristupovy_profil p JOIN cis_role r ON r.id_role=p.id_role AND r.aktivni=1 WHERE p.id_person=? AND p.id_role IN(5,7)');
     $stmt->bind_param('i',$p['id_person']); $stmt->execute();
-    $p['branch_mail_role']=(bool)$stmt->get_result()->fetch_row();
+    $p['branch_mail_roles']=array_column($stmt->get_result()->fetch_all(MYSQLI_ASSOC),'role','id_role');
+    $p['branch_mail_role']=(bool)$p['branch_mail_roles'];
+    // Trenink cteme z dnes platne funkce, vcetne role ktera jeste nemusi byt v pristupovem profilu.
+    $p['training']=!empty($function['v_treninku']);$p['function_role']=(int)($function['id_role']??0);
+    if($p['training'] && in_array($p['function_role'],[5,7],true)){
+        $stmt=$db->prepare('SELECT id_role,role FROM cis_role WHERE id_role=? AND aktivni=1');
+        $stmt->bind_param('i',$p['function_role']);$stmt->execute();
+        foreach($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $role)$p['branch_mail_roles'][(int)$role['id_role']]=$role['role'];
+        $p['branch_mail_role']=(bool)$p['branch_mail_roles'];
+    }
     $p['id_user']=$id;
     return $p;
 }
 
-/** Používá pouze výslovně potvrzený profil PC, současný login a všechny aktuální MAIN pobočky. */
-function em_pobocka_pc(mysqli $db, array $person): int
+/** Limit priloh urcuje aktualni HR odesilatele, nikoli schranka ani hodnota z prohlizece. */
+function em_limit_priloh(bool $manager): int
 {
-    if (!$person['branch_user'] || !cb_pobockove_pc_schema($db)) return 0;
-    $hash=cb_pobockove_pc_hash($db);
-    if ($hash==='') return 0;
-    $stmt=$db->prepare('SELECT id_pob FROM pobockove_pc WHERE pc_hash=UNHEX(?) AND stav=1');
-    $stmt->bind_param('s',$hash); $stmt->execute(); $branch=(int)($stmt->get_result()->fetch_assoc()['id_pob']??0);
-    return in_array($branch,cb_hr_main_ids($db,(int)$person['id_person']),true)?$branch:0;
+    return ($manager?100:20)*1024*1024;
+}
+
+/** Pobockovou postu urcuji vsechny dnes platne MAIN osoby; zarizeni ani jeho registrace nerozhoduji. */
+function em_pobocky_main(mysqli $db, array $person): array
+{
+    if (!$person['branch_user']) return [];
+    return cb_hr_main_ids($db,(int)$person['id_person']);
 }
 
 /** Obě práva musí být aktivní a skutečně přidělená; obecné vypnutí kontroly práv zde nesmí otevřít poštu. */
@@ -112,21 +126,37 @@ function em_pravo(int $id): bool
 function em_ucty(mysqli $db, ?array $person=null): array
 {
     if (!em_pravo(800)) return [];
-    $p=$person??em_osoba($db); $branch=em_pobocka_pc($db,$p); $shared=em_pravo(801);
+    $p=$person??em_osoba($db); $branches=em_pobocky_main($db,$p); $shared=em_pravo(801);$access=em_pristup_mapa($db,$p);
     $stmt=$db->prepare('SELECT * FROM email_ucet WHERE aktivni=1 AND id_firma=? ORDER BY typ,email');
     $stmt->bind_param('i',$p['id_firma']); $stmt->execute(); $out=[];
+    $personalMode=null;
     foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $a) {
-        if (em_vidi_ucet($p,$a,$branch,$shared)) $out[]=$a;
+        if (!em_vidi_ucet($p,$a,$branches,$shared,$access[(int)$a['id']]??null)) continue;
+        // Vsechny prihlasovaci cesty dostavaji volbu vlastnika; sdilena posta se tim nemeni.
+        if($a['typ']==='osobni'){$personalMode??=em_osobni_rezim($db,(int)$p['id_user'],$a['rezim']);$a['rezim']=$personalMode['mode'];}
+        $out[]=$a;
     }
     return $out;
 }
 
-/** Cista rozhodovaci matice zachovava oddeleni osobni, pobockove a spolecne posty i pri chybnych vstupnich datech. */
-function em_vidi_ucet(array $p, array $a, int $branch, bool $shared): bool
+/** Pristup k pobockove schrance porovnavame s MAIN osoby; cizi firmy a osobni posta zustavaji oddelene. */
+function em_vidi_ucet(array $p, array $a, array $branches, bool $shared, ?array $access=null): bool
 {
-    if ((int)$a['id_firma']!==(int)$p['id_firma']) return false;
-    if ($a['typ']==='osobni') return $p['manager'] && (int)$a['id_user']===(int)$p['id_user'];
-    return in_array($a['typ'],['pobocka','info'],true) && ($shared || ($p['branch_user'] && !empty($p['branch_mail_role']) && $a['typ']==='pobocka' && $branch>0 && (int)$a['id_pob']===$branch));
+    return em_pristup_cesty($p,$a,$branches,$shared,$access)!==[];
+}
+
+/** Cteni posty i spravni prehled sdileji jedine rozhodnuti; soubezne platne duvody se neztrati za OR. */
+function em_pristup_cesty(array $p, array $a, array $branches, bool $shared, ?array $access=null): array
+{
+    if ((int)$a['id_firma']!==(int)$p['id_firma']) return [];
+    if ($a['typ']==='osobni') return $p['manager'] && (int)$a['id_user']===(int)$p['id_user']?['personal']:[];
+    if(!in_array($a['typ'],['pobocka','info'],true))return [];
+    $main=$p['branch_user'] && !empty($p['branch_mail_role']) && $a['typ']==='pobocka' && (int)$a['id_pob']>0 && in_array((int)$a['id_pob'],$branches,true);
+    // Po ulozeni vlastniho seznamu uz pravo 801 ani sprava 802 nesmi tento seznam obejit.
+    $out=[];
+    if($access!==null){if(!empty($access['granted']))$out[]='assigned';if(!empty($access['main']) && $main && (empty($p['training']) || !empty($access['training'])))$out[]='main';}
+    else{if($shared)$out[]='shared';if($main && empty($p['training']))$out[]='main';}
+    return $out;
 }
 
 /** ID z prohlížeče samo o sobě přístup nikdy neuděluje. */

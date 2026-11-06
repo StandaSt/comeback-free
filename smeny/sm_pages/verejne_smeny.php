@@ -1,12 +1,22 @@
 <?php
 declare(strict_types=1);
-/* Účel: Zobrazí zveřejněné směny s potvrzením jejich aktuální podoby, vlastní výhrady a existující oznámení včetně odkazu na detail. */
+/* Účel: Denní přehledy naplánovaných i vlastních směn čte výhradně ze zveřejněných verzí IS; připravuje také vlastní oznámení bez rozšíření oprávnění. */
+require_once __DIR__.'/../sm_lib/sm_verejne_prehled.php';
 $smAll=$smPage==='naplanovane_smeny';
 $smPublicWeekIndex=max(0,min(count($smPublicWeeks)-1,(int)($_GET['week']??0)));
 $smPublicWeek=$smPublicWeeks[$smPublicWeekIndex];
 $smReadWeek=$smPublicWeek;$smReadWeeks=$smPublicWeeks;$smReadPage=$smPage;
-$smPublicRows=cb_smeny_verejne_smeny($smDb,$smPublicWeek['start_day'],$smPublicPerson,$smPublicBranches,$smAll);
+// Zdroj obou denních přehledů je pevné pravidlo stránky, nelze ho vypnout parametrem URL.
+$smInternalOnly = true;
+if ($smAll) $smPublicBranches=cb_smeny_verejne_rozsah($smDb);
+$smOwnBranches=cb_smeny_verejne_osobni_pobocky($smDb,$smPublicPerson,$smPublicWeeks[0]['start_day'],$smPublicWeeks[count($smPublicWeeks)-1]['start_day'],$smInternalOnly);
+$smPublicSlots=cb_smeny_sloty_ciselnik($smDb);
+// Osobu přebíráme výhradně z přihlášení; filtr nedovoluje zadat cizí ID.
+$smOwnRows=cb_smeny_verejne_smeny($smDb,$smPublicWeek['start_day'],$smPublicPerson,[],false,$smInternalOnly);
+$smPublicRows=$smAll?cb_smeny_verejne_smeny($smDb,$smPublicWeek['start_day'],$smPublicPerson,$smPublicBranches,true,$smInternalOnly):$smOwnRows;
 cb_smeny_souhlasy_doplnit($smDb,$smPublicRows);
+if ($smAll) cb_smeny_souhlasy_doplnit($smDb,$smOwnRows);
+else $smOwnRows=$smPublicRows;
 $smNotices=$smAll?[]:cb_smeny_verejne_oznameni($smDb,$smPublicPerson);
 $smPublicFlash=cb_smeny_sablony_flash_nacist();
 $smDetailId=$smAll?0:max(0,(int)($_GET['oznameni']??0));
@@ -18,16 +28,8 @@ $smDetail=cb_smeny_oznameni_detail($smDb,$smDetailId,$smPublicPerson);
   <?php if($smAll && !cb_smeny_planovani_vidi()): ?><p class="smeny_notice">Nemáte právo zobrazit směny ostatních pracovníků.</p>
   <?php elseif(!$smAll && $smPublicPerson<=0): ?><p class="smeny_notice">Účet není propojený s osobou v HR.</p>
   <?php else: ?>
-    <?php require __DIR__.'/tyden_filtr.php'; ?>
-    <?php if($smAll): ?>
-      <?php $smPublicRowsAll=$smPublicRows;$smTableWeekIndex=$smPublicWeekIndex;require __DIR__.'/verejne_tabulka.php'; ?>
-    <?php else: ?>
-    <div class="smeny_planning_days">
-    <?php foreach($smPublicWeek['days'] as $day): ?><article><strong><?= h($day['name'].' '.$day['date_label']) ?></strong>
-      <?php $found=false;foreach($smPublicRows as $row): if($row['datum']!==$day['date'])continue;$found=true; ?>
-        <div class="smeny_planning_block"><span><?= h(substr($row['cas_od'],0,5).'–'.substr($row['cas_do'],0,5)) ?></span><span><?= h($row['pobocka'].' · '.$row['slot']) ?></span><strong><?= h($row['souhlas_stav']??((int)$row['zdroj']===2?'Zveřejněno v IS':'Externí plán')) ?></strong></div>
-      <?php endforeach;if(!$found): ?><small>Bez naplánovaných směn</small><?php endif; ?></article>
-    <?php endforeach; ?></div>
+    <?php require __DIR__.'/verejne_tabulka.php'; ?>
+    <?php if(!$smAll): ?>
       <h2>K potvrzení</h2>
       <?php if($smDetailId>0 && $smDetail===null): ?><p class="smeny_notice">Oznámení není dostupné pro váš účet.</p><?php endif; ?>
       <?php if($smNotices===[]): ?><p>Nemáte žádný týden ani změnu k potvrzení.</p><?php endif; ?>

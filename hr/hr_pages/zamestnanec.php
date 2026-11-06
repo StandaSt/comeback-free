@@ -19,10 +19,14 @@ declare(strict_types=1);
  * Dlouhe poznamky historie zkracuje v tabulce, plny text zustava v zalomenem tooltipu.
  * Prehled ukazuje aktualni benefity a spolecne zahlavi data zapisu casove osy.
  * Historie karty zahrnuje audit vsech ulozenych zmen vcetne slotu, funkci a manazerskych pozic.
+ * Karta i ukonceni prenaseji vice dokumentu po jednom; tokeny se potvrdi spolecne s HR daty.
  */
 require_once __DIR__ . '/../hr_lib/telefon.php';
 $idPerson = (int)($_GET['id'] ?? 0);
 require_once __DIR__ . '/../hr_includes/hr_dokument_import_detail.php';
+require_once __DIR__ . '/../hr_lib/hr_dokumenty_upload.php';
+$documentLimits=hr_dokumenty_limity();
+$documentLimitText='PDF, JPG, PNG · nejvýše '.$documentLimits['count'].' souborů · '.round($documentLimits['file']/1048576,1).' MB/soubor · jednotlivé soubory se nahrávají postupně';
 $employee = isset($hrEmployeeHeader) && is_array($hrEmployeeHeader)
     ? $hrEmployeeHeader
     : ($idPerson > 0 ? hr_fetch_employee($db, $idPerson) : null);
@@ -74,6 +78,8 @@ $currentAssignmentText = implode(' · ', array_values(array_filter([$currentSlot
 $employeeDocuments = is_array($employee) && cb_pravo_ma(301)
     ? hr_fetch_employee_documents($db, hr_current_user_id(), (int)$employee['id_person'])
     : [];
+$employeeDocumentTypes=$employeeSection==='dokumenty' && cb_pravo_ma(301) && cb_pravo_ma(307)
+    ? $db->query('SELECT id_dokument_typ,nazev,kod_souboru FROM hr_cis_dokument_typ WHERE aktivni=1 ORDER BY nazev')->fetch_all(MYSQLI_ASSOC) : [];
 $employeeDocumentOpenUrl = static function (array $document): string {
     return cb_root_url('hr/hr_download/hr_dokument.php?' . http_build_query([
         'id_dokument' => (int)$document['id_dokument'],
@@ -289,9 +295,9 @@ $employeeDocumentOpenUrl = static function (array $document): string {
         <?php if ($isEdit && $workRelation !== null && empty($workRelation['id_pracovni_ukonceni'])): ?>
             <section class="hr_panel" data-hr-employee-block="termination">
                 <div class="hr_panel_header"><h2 class="hr_panel_title">Ukončení pracovního poměru</h2><button class="hr_danger_button hr_secondary_button hr_panel_button_secondary" type="submit" form="hr-termination-form" data-hr-employee-save>Uložit ukončení</button></div>
-                <form id="hr-termination-form" data-hr-employee-form="termination" class="hr_form hr_work_event_form" method="post" action="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$employee['id_person']) . '&sekce=pracovni_pomer&upravit=1')) ?>">
+                <form id="hr-termination-form" enctype="multipart/form-data" data-hr-employee-form="termination" class="hr_form hr_work_event_form" method="post" action="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id=' . rawurlencode((string)$employee['id_person']) . '&sekce=pracovni_pomer&upravit=1')) ?>">
                     <input type="hidden" name="cb_action" value="hr_pracovni_pomer_ukoncit"><input type="hidden" name="id_person" value="<?= h((string)$employee['id_person']) ?>"><input type="hidden" name="id_pracovni_vztah" value="<?= h((string)$workRelation['id_pracovni_vztah']) ?>">
-                    <div class="hr_form_grid"><label class="hr_form_label"><span class="hr_form_label_text">Důvod ukončení</span><select name="id_pracovni_ukonceni_typ" required><option value="">Vyberte</option><?php foreach ($terminationTypes as $terminationType): ?><option value="<?= h((string)$terminationType['id']) ?>"><?= h((string)$terminationType['label']) ?></option><?php endforeach; ?></select></label><label class="hr_form_label"><span class="hr_form_label_text">Datum oznámení</span><input name="datum_oznameni" data-cb-date></label><label class="hr_form_label"><span class="hr_form_label_text">Datum ukončení</span><input name="datum_ukonceni" data-cb-date required></label><label class="hr_form_label hr_work_event_note"><span class="hr_form_label_text">Poznámka</span><input name="poznamka" maxlength="1000"></label></div>
+                    <div class="hr_form_grid"><label class="hr_form_label"><span class="hr_form_label_text">Důvod ukončení</span><select name="id_pracovni_ukonceni_typ" required><option value="">Vyberte</option><?php foreach ($terminationTypes as $terminationType): ?><option value="<?= h((string)$terminationType['id']) ?>"><?= h((string)$terminationType['label']) ?></option><?php endforeach; ?></select></label><label class="hr_form_label"><span class="hr_form_label_text">Datum oznámení</span><input name="datum_oznameni" data-cb-date></label><label class="hr_form_label"><span class="hr_form_label_text">Datum ukončení</span><input name="datum_ukonceni" data-cb-date required value="<?= h((string)($editInput['datum_ukonceni'] ?? date('d.m.Y'))) ?>"></label><label class="hr_form_label hr_work_event_note"><span class="hr_form_label_text">Poznámka</span><input name="poznamka" maxlength="1000"></label><?php if (cb_pravo_ma(301)): ?><label class="hr_form_label hr_document_upload"><span class="hr_form_label_text">Předat dokument</span><input type="file" name="dokumenty[]" data-hr-document-files data-max-file="<?= $documentLimits['file'] ?>" data-max-count="<?= $documentLimits['count'] ?>" multiple accept=".pdf,.jpg,.jpeg,.png" aria-label="Dokumenty k ukončení pracovního poměru" title="<?= h($documentLimitText) ?>"></label><?php endif; ?></div>
                 </form>
             </section>
         <?php endif; ?>
@@ -315,7 +321,20 @@ $employeeDocumentOpenUrl = static function (array $document): string {
         </section>
         </div>
     <?php elseif ($employeeSection === 'dokumenty'): ?>
-        <section class="hr_panel" id="hr-employee-documents"><div class="hr_panel_header"><h2 class="hr_panel_title">Dokumenty</h2><?php if ($employeeDocuments !== []): ?><a class="hr_panel_link" href="<?= h(cb_root_url('index.php?m=hr&page=dokumenty')) ?>">Zobrazit všechny</a><?php endif; ?></div><?php if ($employeeDocuments === []): ?><p class="hr_employee_empty_block">Zatím nejsou evidované žádné dokumenty.</p><?php else: ?><ul class="hr_activity_list"><?php foreach ($employeeDocuments as $document): ?><li class="hr_activity_item"><span class="hr_dot hr_blue"></span><strong class="hr_activity_name"><?= h((string)$document['typ']) ?></strong><a class="hr_table_link" href="<?= h($employeeDocumentOpenUrl($document)) ?>" target="_blank" rel="noopener"><?= h($document['ulozeny_nazev'] !== '' ? $document['ulozeny_nazev'] : $document['nazev']) ?></a><?php hr_document_import_detail($document, $employeeDocumentOpenUrl($document)); ?><time class="hr_activity_time"><?= h(hr_format_date($document['vytvoreno'])) ?></time></li><?php endforeach; ?></ul><?php endif; ?></section>
+        <section class="hr_panel" id="hr-employee-documents" data-hr-employee-block="documents"><div class="hr_panel_header"><h2 class="hr_panel_title">Přehled a správa dokumentů</h2><?php if ($employeeDocuments !== []): ?><a class="hr_panel_link" href="<?= h(cb_root_url('index.php?m=hr&page=dokumenty')) ?>">Zobrazit všechny</a><?php endif; ?></div>
+            <?php if (cb_pravo_ma(301) && cb_pravo_ma(307)): ?>
+            <form id="hr-documents-form" data-hr-employee-form="documents" class="hr_form hr_document_upload_form" method="post" enctype="multipart/form-data" action="<?= h(cb_root_url('index.php?m=hr&page=zamestnanec&id='.(int)$employee['id_person'].'&sekce=dokumenty')) ?>">
+                <input type="hidden" name="cb_action" value="hr_zamestnanec_dokumenty_pridat"><input type="hidden" name="id_person" value="<?= (int)$employee['id_person'] ?>">
+                <h3 class="hr_document_upload_title">Přidání dokumentu k zaměstnanci <small>(povolené typy jsou PDF, JPG, PNG)</small></h3>
+                <div class="hr_document_upload_row">
+                    <label><span>Typ dokumentu</span><select name="id_dokument_typ" required><?php foreach ($employeeDocumentTypes as $documentType): ?><option value="<?= (int)$documentType['id_dokument_typ'] ?>"<?= $documentType['kod_souboru']==='ostatni'?' selected':'' ?>><?= h($documentType['nazev']) ?></option><?php endforeach; ?></select></label>
+                    <label class="hr_document_upload"><span>Zvolit dokument</span><input type="file" name="dokumenty[]" data-hr-document-files data-max-file="<?= $documentLimits['file'] ?>" data-max-count="<?= $documentLimits['count'] ?>" multiple required accept=".pdf,.jpg,.jpeg,.png" title="<?= h($documentLimitText) ?>"></label>
+                    <button type="submit" class="hr_secondary_button" data-hr-employee-save data-hr-document-save>Uložit vybraný dokument</button>
+                </div>
+            </form>
+            <?php endif; ?>
+            <h3 class="hr_documents_list_title">Přehled uložených dokumentů</h3>
+            <?php if ($employeeDocuments === []): ?><p class="hr_employee_empty_block">Zatím nejsou evidované žádné dokumenty.</p><?php else: ?><ul class="hr_activity_list"><?php foreach ($employeeDocuments as $document): ?><li class="hr_activity_item"><span class="hr_dot hr_blue"></span><strong class="hr_activity_name"><?= h((string)$document['typ']) ?></strong><a class="hr_table_link" href="<?= h($employeeDocumentOpenUrl($document)) ?>" target="_blank" rel="noopener"><?= h($document['ulozeny_nazev'] !== '' ? $document['ulozeny_nazev'] : $document['nazev']) ?></a><?php hr_document_import_detail($document, $employeeDocumentOpenUrl($document)); ?><time class="hr_activity_time"><?= h(hr_format_date($document['vytvoreno'])) ?></time></li><?php endforeach; ?></ul><?php endif; ?></section>
     <?php elseif (in_array($employeeSection, ['dochazka', 'hodnoceni', 'vybaveni', 'onboarding', 'poznamky'], true)): ?>
         <?php $sectionTitles = ['dochazka' => 'Docházka a dovolená', 'hodnoceni' => 'Hodnocení', 'vybaveni' => 'Vybavení', 'onboarding' => 'Onboarding', 'poznamky' => 'Poznámky']; ?>
         <section class="hr_panel"><div class="hr_panel_header"><h2 class="hr_panel_title"><?= h($sectionTitles[$employeeSection]) ?></h2></div><p class="hr_employee_empty_block">Tato část karty zatím nemá vlastní evidenci.</p></section>

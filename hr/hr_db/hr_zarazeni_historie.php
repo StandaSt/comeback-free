@@ -6,7 +6,7 @@ require_once __DIR__ . '/../hr_lib/hr_audit.php';
 
 /*
  * Ucel souboru: Nacita historii, pridava a ukoncuje pracovni sloty; funkci ponechava osobe.
- * Slot nema vlastni funkci; zarazeni osoby a MAIN se overuji po cele ucinnosti.
+ * Sloty jsou rovnocenne a nemaji hlavni prioritu; zarazeni osoby a MAIN se overuji po cele ucinnosti.
  * Cil zmeny musi spadat do jednotneho osobniho rozsahu HR.
  */
 require_once __DIR__ . '/hr_zamestnanci_pristup.php';
@@ -24,7 +24,7 @@ function hr_zarazeni_historie(mysqli $db, int $idPerson): array
     }
     $result->free();
 
-    $stmt = $db->prepare("SELECT hz.{$slotPk} AS id_zarazeni, hz.id_slot, hz.hlavni, cs.slot, hz.platnost_od, hz.platnost_do, hz.platny, hz.zruseno FROM {$slotTable} hz JOIN cis_slot cs ON cs.id_slot = hz.id_slot WHERE hz.id_person = ? ORDER BY COALESCE(hz.platnost_od, '1000-01-01') DESC, hz.{$slotPk} DESC");
+    $stmt = $db->prepare("SELECT hz.{$slotPk} AS id_zarazeni, hz.id_slot, cs.slot, hz.platnost_od, hz.platnost_do, hz.platny, hz.zruseno FROM {$slotTable} hz JOIN cis_slot cs ON cs.id_slot = hz.id_slot WHERE hz.id_person = ? ORDER BY COALESCE(hz.platnost_od, '1000-01-01') DESC, hz.{$slotPk} DESC");
     $stmt->bind_param('i', $idPerson);
     $stmt->execute();
     $historie = [];
@@ -82,13 +82,9 @@ function hr_zarazeni_zmenit(mysqli $db, int $idPerson, int $idSlot, string $plat
         if ($duplicate) {
             throw new CbUserVisibleException('Tento slot už zaměstnanec má aktivní.');
         }
-        $stmt = $db->prepare("SELECT 1 FROM {$slotTable} WHERE id_person = ? AND hlavni = 1 AND platny = 1 LIMIT 1");
-        $stmt->bind_param('i', $idPerson);
-        $stmt->execute();
-        $hlavni = $stmt->get_result()->fetch_row() === null ? 1 : 0;
-        $stmt->close();
-        $stmt = $db->prepare("INSERT INTO {$slotTable} (id_person, id_slot, hlavni, platnost_od, id_user_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, ?, NOW(), 1)");
-        $stmt->bind_param('iiisi', $idPerson, $idSlot, $hlavni, $platiOd, $idUser);
+        // Pridany slot nema prioritu pred ostatnimi platnymi sloty osoby.
+        $stmt = $db->prepare("INSERT INTO {$slotTable} (id_person, id_slot, platnost_od, id_user_zadal, vytvoreno, platny) VALUES (?, ?, ?, ?, NOW(), 1)");
+        $stmt->bind_param('iisi', $idPerson, $idSlot, $platiOd, $idUser);
         $stmt->execute();
         $stmt->close();
         // Alespon jeden aktualni slot nebo funkce je podminkou kompletni karty.

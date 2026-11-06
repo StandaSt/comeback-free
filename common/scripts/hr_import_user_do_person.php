@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /*
  * Stary reset HR. Import USER -> PERSON a reset zamestnancu byly nahrazeny;
- * zbyla obsluha aktualniho nazvu tabulky slotu pro omezeny lokalni reset.
+ * zbyla obsluha aktualni tabulky rovnocennych slotu bez hlavni priority pro omezeny lokalni reset.
  * potvrzenými kroky v Administraci.
  *
  * Nyní je povolen pouze lokální reset VD bez importu zaměstnanců:
@@ -311,8 +311,8 @@ function hr_import_users(mysqli $db): array
         ORDER BY id_slot
     ');
     $insertAssignment = $db->prepare('
-        INSERT INTO ' . $slotTable . ' (id_person, id_slot, hlavni, platnost_od, id_user_zadal, vytvoreno, platny)
-        VALUES (?, ?, 0, ?, NULL, NOW(), 1)
+        INSERT INTO ' . $slotTable . ' (id_person, id_slot, platnost_od, id_user_zadal, vytvoreno, platny)
+        VALUES (?, ?, ?, NULL, NOW(), 1)
     ');
 
     while ($user = $users->fetch_assoc()) {

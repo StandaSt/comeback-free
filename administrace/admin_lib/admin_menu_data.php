@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-/* Účel: Jediná datová definice menu Administrace vcetne diagnostiky, filtrovaná aktuálním přístupovým profilem. */
+/* Účel: Menu Administrace včetně změn IS s právem 112, filtrované aktuálním přístupovým profilem. */
 
 /** Položky jsou shodné pro serverové zobrazení a předem připravené menu aplikace. */
 function cb_administrace_menu_data(): array
@@ -17,6 +17,7 @@ function cb_administrace_menu_data(): array
         ['page'=>'log_chyby','label'=>'Přehled chyb','pravo'=>106],
         ['page'=>'historie_cinnosti','label'=>'Historie činnosti','pravo'=>111],
         ['page'=>'sdeleni','label'=>'Info od admina','pravo'=>110],
+        ['page'=>'zmeny_is','label'=>'Změny v IS','pravo'=>112],
     ];
     $items=array_values(array_filter($items,static fn(array $item):bool=>!isset($item['pravo']) || cb_pravo_ma((int)$item['pravo'])));
     return ['title'=>'Administrace','aria_label'=>'Menu administrace','default_page'=>'prava_roli','items'=>$items];

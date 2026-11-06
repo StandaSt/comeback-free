@@ -1,8 +1,8 @@
-/* Co-Link: editor se zachovanim kurzoru, oddelenym stavem najeti a zapnuteho formatovani, navratem k cernemu psani a emoji. */
+/* Co-Link: editor se zachovanim kurzoru, formatovanim, emoji a predanim souboru ze schranky k priloham zpravy. */
 (() => {
   'use strict';
   // Kazda instance ma vlastni vyber, obsah i ovladani; pouziva se pro novou zpravu i jeji upravu.
-  function create(host,{id='',label='Zpráva',onChange=()=>{},onMention=null}={}){
+  function create(host,{id='',label='Zpráva',onChange=()=>{},onMention=null,onPasteFiles=null}={}){
     host.classList.add('rich-editor');const toolbar=document.createElement('div');toolbar.className='editor-toolbar';toolbar.setAttribute('role','toolbar');toolbar.setAttribute('aria-label','Formátování textu');
     const body=document.createElement('div');body.className='rich-input';body.contentEditable='true';body.role='textbox';body.setAttribute('aria-label',label);body.setAttribute('aria-multiline','true');body.dataset.placeholder='Napište zprávu…';body.style.color='#000000';if(id)body.id=id;
     const footer=document.createElement('div');footer.className='editor-footer';host.append(toolbar,body,footer);let saved=null;
@@ -33,7 +33,15 @@
     function plain(host,text){for(const part of text.split(/(@\[[^\]\r\n]{1,100}\]\([0-9]+\))/g)){const match=part.match(/^@\[([^\]]+)\]\(([0-9]+)\)$/);if(match){const span=document.createElement('span');span.className='mention';span.contentEditable='false';span.dataset.mention=match[2];span.textContent='@'+match[1];host.append(span);}else host.append(document.createTextNode(part));}}
     // Pouze vlastni textove uzly se pripadne prevedou na HTML pro nativni vlozeni zminky.
     function insert(text){focus();if(/^@\[[^\]]+\]\([0-9]+\)\s*$/.test(text)){const holder=document.createElement('span');plain(holder,text);document.execCommand('insertHTML',false,holder.innerHTML);}else document.execCommand('insertText',false,text);changed();}
-    body.addEventListener('paste',e=>{e.preventDefault();remember();insert((e.clipboardData?.getData('text/plain')||'').slice(0,20000));});
+    // Soubory (vcetne vystrizku bez HTML) prevezme formular; text vlozime jen jednou a bez ciziho HTML.
+    body.addEventListener('paste',e=>{
+      e.preventDefault();remember();
+      const clipboard=e.clipboardData,text=(clipboard?.getData('text/plain')||'').slice(0,20000);
+      const files=Array.from(clipboard?.files||[]);
+      if(!files.length)for(const item of Array.from(clipboard?.items||[])){if(item.kind==='file'){const file=item.getAsFile();if(file)files.push(file);}}
+      if(text)insert(text);
+      if(files.length&&onPasteFiles)onPasteFiles(files);
+    });
     body.addEventListener('drop',e=>e.preventDefault());body.addEventListener('input',changed);
     for(const event of ['keyup','mouseup','touchend','blur'])body.addEventListener(event,remember);
     // Take pohyb vyberu klavesnici nebo mysi musi hned aktualizovat tlacitka a paletu.
